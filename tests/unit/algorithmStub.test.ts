@@ -20,7 +20,7 @@ function piece(id: string): PreparedPiece {
     id: id as PreparedPiece['id'],
     sourcePieceId: id as PreparedPiece['id'],
     realBounds: { x: 0, y: 0, width: 10, height: 5 },
-    paddedBounds: { width: 14, height: 9 },
+    paddedBounds: { x: 0, y: 0, width: 14, height: 9 },
     padding: 2,
     allowRotation: true
   }

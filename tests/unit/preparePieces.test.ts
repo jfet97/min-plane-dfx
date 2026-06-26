@@ -3,12 +3,12 @@ import { preparePieces } from '@shared/preparePieces.js'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type { JobId } from '@shared/domain/ids.js'
 
-function piece(id: string, width: number, height: number): ImportedPiece {
+function piece(id: string, width: number, height: number, offsetX?: number, offsetY?: number): ImportedPiece {
   return {
     id: id as ImportedPiece['id'],
     sourceFileId: 'sf-1' as ImportedPiece['sourceFileId'],
     label: id,
-    realBounds: { x: 0, y: 0, width, height },
+    realBounds: { x: offsetX ?? 0, y: offsetY ?? 0, width, height },
     geometry: {
       entityType: 'LWPOLYLINE',
       closed: true,
@@ -24,7 +24,12 @@ const jobId = 'job-1' as JobId
 describe('preparePieces', () => {
   it('produces paddedBounds = real + 2*padding for each piece', () => {
     const result = preparePieces([piece('p-1', 10, 5)], sheet, 2, jobId)
-    expect(result.pieces[0]?.paddedBounds).toEqual({ width: 14, height: 9 })
+    expect(result.pieces[0]?.paddedBounds).toEqual({
+      x: 0,
+      y: 0,
+      width: 14,
+      height: 9
+    })
     expect(result.warnings.length).toBe(0)
   })
 
@@ -47,7 +52,7 @@ describe('preparePieces', () => {
 
   it('handles zero padding', () => {
     const result = preparePieces([piece('p-1', 10, 5)], sheet, 0, jobId)
-    expect(result.pieces[0]?.paddedBounds).toEqual({ width: 10, height: 5 })
+    expect(result.pieces[0]?.paddedBounds).toEqual({ x: 0, y: 0, width: 10, height: 5 })
   })
 
   it('produces no warnings when every piece fits comfortably', () => {
@@ -58,5 +63,15 @@ describe('preparePieces', () => {
       jobId
     )
     expect(result.warnings.length).toBe(0)
+  })
+
+  it('paddedBounds inherits the source piece x/y so placement offsets are easy', () => {
+    const result = preparePieces([piece('p-1', 10, 5, 42, 17)], sheet, 2, jobId)
+    expect(result.pieces[0]?.paddedBounds).toEqual({
+      x: 42,
+      y: 17,
+      width: 14,
+      height: 9
+    })
   })
 })

@@ -48,6 +48,8 @@ export function preparePieces(
       sourcePieceId: p.id as PieceId,
       realBounds: p.realBounds,
       paddedBounds: {
+        x: p.realBounds.x,
+        y: p.realBounds.y,
         width: paddedWidth,
         height: paddedHeight
       },

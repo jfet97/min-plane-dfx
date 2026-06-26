@@ -40,6 +40,8 @@ export const NestingRequestStrict = Schema.Struct({
         height: PositiveHeight
       }),
       paddedBounds: Schema.Struct({
+        x: Schema.Number,
+        y: Schema.Number,
         width: PositiveWidth,
         height: PositiveHeight
       }),
