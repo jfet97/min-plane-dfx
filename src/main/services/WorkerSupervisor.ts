@@ -2,7 +2,7 @@ import { Worker as NodeThreadWorker } from 'node:worker_threads'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { Effect, Exit, ManagedRuntime, Schema } from 'effect'
-import { NodeWorker } from '@effect/platform-node'
+import * as NodeWorker from '@effect/platform-node/NodeWorker'
 import * as EffectWorker from 'effect/unstable/workers/Worker'
 import {
   WorkerRequest,

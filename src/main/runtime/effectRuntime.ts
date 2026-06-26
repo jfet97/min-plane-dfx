@@ -1,5 +1,6 @@
 import { ManagedRuntime, Layer, type FileSystem, type Path } from 'effect'
-import { NodeFileSystem, NodePath } from '@effect/platform-node'
+import * as NodeFileSystem from '@effect/platform-node/NodeFileSystem'
+import * as NodePath from '@effect/platform-node/NodePath'
 
 /**
  * Main-process Effect runtime.

@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { NodeFileSystem, NodePath, NodeWorkerRunner } from '@effect/platform-node'
+import * as NodeFileSystem from '@effect/platform-node/NodeFileSystem'
+import * as NodePath from '@effect/platform-node/NodePath'
+import * as NodeWorkerRunner from '@effect/platform-node/NodeWorkerRunner'
 import { computeNestingStub } from './algorithm/computeNestingStub.js'
 import {
   WorkerRequest as WorkerRequestSchema,
