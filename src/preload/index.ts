@@ -61,6 +61,12 @@ const api: AppApi = {
       paths
     ).then((r) => r.documents),
 
+  removeImportedDxf: (pieceId) =>
+    invokeEnvelope<[typeof pieceId], void>('dxf:remove-import', pieceId).then(() => undefined),
+
+  clearImportedDxfs: () =>
+    invokeEnvelope<[], void>('dxf:clear-imports').then(() => undefined),
+
   exportNestingRequest: (request) =>
     invokeEnvelope<[NestingRequest], { readonly path: string }>(
       'nesting:export-request',

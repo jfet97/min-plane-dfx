@@ -42,4 +42,4 @@ IPC handlers are the Promise boundary for main-process services. Validate render
 
 The worker receives a validated `NestingWorkerRequest`, runs the computation workflow, writes optional NDJSON history, and sends typed `WorkerResponse` messages.
 
-The worker protocol is app-owned. Do not switch to Effect worker primitives unless the protocol migration is explicit and complete.
+The worker transport is Effect-owned through `NodeWorker` and `NodeWorkerRunner`. The app-owned payload protocol remains `WorkerRequest -> WorkerResponse` inside that transport.

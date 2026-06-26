@@ -1,10 +1,11 @@
-import DxfParser, { type IDxf } from 'dxf-parser'
+import DxfParser from 'dxf-parser'
 import { readFile } from 'node:fs/promises'
-import { basename } from 'node:path'
+import { basename, extname } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { EntityName } from 'dxf-parser/dist/entities/geomtry.js'
 import { entityToGeometry, unionBounds } from './DxfBbox.js'
 import type {
+  DxfGeometrySummary,
   ImportedDxfDocument,
   ImportedPiece,
   ImportWarning
@@ -36,10 +37,60 @@ export class DxfImportError extends Error {
   }
 }
 
+type Entity = Parameters<typeof entityToGeometry>[0]
+type Segment = DxfGeometrySummary['segments'][number]
+type Bounds = ImportedPiece['realBounds']
+
+function isDxfDocument(value: unknown): value is { readonly entities?: ReadonlyArray<Entity> } {
+  if (typeof value !== 'object' || value === null) return false
+  const entities = (value as { readonly entities?: unknown }).entities
+  return entities === undefined || Array.isArray(entities)
+}
+
+function scaleSegment(segment: Segment, factor: number): Segment {
+  if (segment.kind === 'line') {
+    return {
+      kind: 'line',
+      x1: segment.x1 * factor,
+      y1: segment.y1 * factor,
+      x2: segment.x2 * factor,
+      y2: segment.y2 * factor
+    }
+  }
+  return {
+    kind: 'arc',
+    x1: segment.x1 * factor,
+    y1: segment.y1 * factor,
+    x2: segment.x2 * factor,
+    y2: segment.y2 * factor,
+    ...(segment.cx !== undefined ? { cx: segment.cx * factor } : {}),
+    ...(segment.cy !== undefined ? { cy: segment.cy * factor } : {}),
+    ...(segment.radius !== undefined ? { radius: segment.radius * factor } : {}),
+    ...(segment.startAngle !== undefined ? { startAngle: segment.startAngle } : {}),
+    ...(segment.endAngle !== undefined ? { endAngle: segment.endAngle } : {})
+  }
+}
+
+function scaleBounds(bounds: Bounds, factor: number): Bounds {
+  return {
+    x: bounds.x * factor,
+    y: bounds.y * factor,
+    width: bounds.width * factor,
+    height: bounds.height * factor
+  }
+}
+
+function commonLayer(layers: ReadonlyArray<string | undefined>): string | undefined {
+  const defined = layers.filter((layer): layer is string => layer !== undefined && layer.length > 0)
+  if (defined.length === 0) return undefined
+  const first = defined[0]
+  return defined.every((layer) => layer === first) ? first : 'multiple'
+}
+
 /**
  * Reads a DXF file from disk, parses it, and converts supported entities
- * into compact pieces + per-document warnings. Unsupported entities are
- * skipped with a warning so the import never crashes.
+ * into one selectable imported shape per file. Unsupported entities are
+ * skipped with document warnings so the import never crashes.
  */
 export async function importDxfFile(
   path: string,
@@ -54,17 +105,21 @@ export async function importDxfFile(
   })
 
   const parser = new DxfParser()
-  const dxf = parser.parseSync(text) as IDxf | null
-  if (!dxf) {
+  const parsed = parser.parseSync(text)
+  if (!isDxfDocument(parsed)) {
     throw new DxfImportError('dxf_parse_error', path, 'DXF parser returned no document')
   }
 
   const sourceFileId = randomUUID() as SourceFileId
-  const pieces: ImportedPiece[] = []
   const warnings: ImportWarning[] = []
   const millimetersPerUnit = options.millimetersPerUnit ?? 1
+  const convertedSegments: Segment[] = []
+  const convertedBounds: Bounds[] = []
+  const convertedEntityTypes = new Set<string>()
+  const convertedLayers: Array<string | undefined> = []
+  let convertedEntityCount = 0
 
-  const entities = dxf.entities ?? []
+  const entities = parsed.entities ?? []
   for (const entity of entities) {
     const entityType = entity.type as EntityName
     if (!SUPPORTED_ENTITIES.has(entityType)) {
@@ -88,25 +143,36 @@ export async function importDxfFile(
       continue
     }
 
-    const scaled = {
-      x: converted.bounds.x * millimetersPerUnit,
-      y: converted.bounds.y * millimetersPerUnit,
-      width: converted.bounds.width * millimetersPerUnit,
-      height: converted.bounds.height * millimetersPerUnit
-    }
-
-    pieces.push({
-      id: randomUUID() as ImportedPiece['id'],
-      sourceFileId,
-      sourceLayer: entity.layer,
-      label: `${entityType}-${entity.handle ?? pieces.length + 1}`,
-      realBounds: scaled,
-      geometry: converted.geometry,
-      warnings: []
-    })
+    convertedEntityTypes.add(entityType)
+    convertedEntityCount++
+    convertedLayers.push(entity.layer)
+    convertedSegments.push(
+      ...converted.geometry.segments.map((segment) => scaleSegment(segment, millimetersPerUnit))
+    )
+    convertedBounds.push(scaleBounds(converted.bounds, millimetersPerUnit))
   }
 
-  const overallBounds = unionBounds(pieces.map((p) => p.realBounds))
+  const overallBounds = unionBounds(convertedBounds)
+  const pieces: ImportedPiece[] = overallBounds
+    ? [
+        {
+          id: randomUUID() as ImportedPiece['id'],
+          sourceFileId,
+          sourceLayer: commonLayer(convertedLayers),
+          label: basename(path, extname(path)),
+          realBounds: overallBounds,
+          geometry: {
+            entityType:
+              convertedEntityCount === 1
+                ? [...convertedEntityTypes][0] ?? 'DXF_SHAPE'
+                : 'DXF_SHAPE',
+            closed: convertedSegments.length > 0,
+            segments: convertedSegments
+          },
+          warnings: []
+        }
+      ]
+    : []
 
   return {
     id: sourceFileId,
@@ -122,7 +188,7 @@ export async function importDxfFile(
             {
               code: 'unsupported_dxf_entity',
               message: 'No supported entities were found in this DXF file.'
-            } as ImportWarning
+            }
           ])
     ]
   }

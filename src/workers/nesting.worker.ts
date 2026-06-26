@@ -1,6 +1,5 @@
-import { parentPort } from 'node:worker_threads'
 import { randomUUID } from 'node:crypto'
-import { NodeFileSystem, NodePath } from '@effect/platform-node'
+import { NodeFileSystem, NodePath, NodeWorkerRunner } from '@effect/platform-node'
 import { computeNestingStub } from './algorithm/computeNestingStub.js'
 import {
   WorkerRequest as WorkerRequestSchema,
@@ -13,7 +12,8 @@ import type {
   NestingHistorySummary,
   NestingRequest
 } from '@shared/domain/nesting.js'
-import { Effect, Exit, FileSystem, Layer, ManagedRuntime, Path, Schema } from 'effect'
+import { Cause, Effect, Exit, FileSystem, Layer, ManagedRuntime, Path, Schema } from 'effect'
+import * as WorkerRunner from 'effect/unstable/workers/WorkerRunner'
 
 /**
  * Nesting worker thread. Receives a validated WorkerRequest, runs the
@@ -28,22 +28,15 @@ import { Effect, Exit, FileSystem, Layer, ManagedRuntime, Path, Schema } from 'e
  * The path is returned inside the `history_complete` event so the renderer
  * can hand it to the user via Export History.
  */
-const port = parentPort
-if (!port) {
-  throw new Error('nesting.worker.ts must be loaded as a worker_threads module')
-}
-const workerPort = port
-
-function send(response: WorkerResponse): void {
-  workerPort.postMessage(response)
-}
+type SendResponse = (response: WorkerResponse) => Effect.Effect<void>
 
 function sendProgress(
+  send: SendResponse,
   requestId: string,
   jobId: NestingRequest['jobId'],
   phase: WorkerProgress['phase']
-): void {
-  send({
+): Effect.Effect<void> {
+  return send({
     type: 'progress',
     requestId,
     jobId,
@@ -60,7 +53,7 @@ function sendProgress(
 const HISTORY_DIR_ENV = (globalThis as { process?: { env?: Record<string, string | undefined> } })
   .process?.env?.['MIN_PLANE_HISTORY_DIR']
 
-const WorkerLiveLayer = Layer.mergeAll(NodeFileSystem.layer, NodePath.layer)
+const WorkerLiveLayer = Layer.mergeAll(NodeFileSystem.layer, NodePath.layer, NodeWorkerRunner.layer)
 const workerRuntime = ManagedRuntime.make(WorkerLiveLayer)
 
 function prepareHistoryFile(jobId: string, historyMode: NestingRequest['options']['historyMode']) {
@@ -100,20 +93,21 @@ function buildInitialFrame(request: NestingRequest, runId: string): NestingHisto
   }
 }
 
-async function handleRunNesting(requestId: string, payload: NestingRequest): Promise<void> {
+function handleRunNesting(
+  send: SendResponse,
+  requestId: string,
+  payload: NestingRequest
+): Effect.Effect<void, never, FileSystem.FileSystem | Path.Path> {
   const jobId = payload.jobId
   const startedAt = Date.now()
 
-  // History file setup must be inside the try block: if mkdir or the
-  // truncating writeFile throws before the algorithm runs, the supervisor
-  // would otherwise wait the full timeout before giving up. Round 2 (F3).
-  try {
-    sendProgress(requestId, jobId, 'received')
-    sendProgress(requestId, jobId, 'validated')
-    sendProgress(requestId, jobId, 'started')
+  return Effect.gen(function* () {
+    yield* sendProgress(send, requestId, jobId, 'received')
+    yield* sendProgress(send, requestId, jobId, 'validated')
+    yield* sendProgress(send, requestId, jobId, 'started')
 
     const historyMode = payload.options.historyMode
-    const historyPath = await workerRuntime.runPromise(prepareHistoryFile(jobId, historyMode))
+    const historyPath = yield* prepareHistoryFile(jobId, historyMode)
     const result = computeNestingStub(payload, Date.now() - startedAt)
     const strategyRunIds = result.strategyResults.map((s) => s.strategyRunId)
 
@@ -126,10 +120,10 @@ async function handleRunNesting(requestId: string, payload: NestingRequest): Pro
       // history_frame events live; final mode delivers them through the
       // NDJSON replay instead.
       if (historyPath) {
-        await workerRuntime.runPromise(appendFrame(historyPath, frame))
+        yield* appendFrame(historyPath, frame)
       }
       if (historyMode === 'stream') {
-        send({
+        yield* send({
           type: 'history_frame',
           requestId,
           jobId,
@@ -147,61 +141,73 @@ async function handleRunNesting(requestId: string, payload: NestingRequest): Pro
       strategyRunIds,
       ...(historyPath ? { ndjsonPath: historyPath } : {})
     }
-    send({
+    yield* send({
       type: 'history_complete',
       requestId,
       jobId,
       payload: summary
     })
 
-    sendProgress(requestId, jobId, 'completed')
-    send({
+    yield* sendProgress(send, requestId, jobId, 'completed')
+    yield* send({
       type: 'success',
       requestId,
       jobId,
       payload: result
     })
-  } catch (err) {
-    send({
-      type: 'failure',
-      requestId,
-      jobId,
-      error: {
-        code: 'unknown_error',
-        message: err instanceof Error ? err.message : 'unknown error'
-      }
-    })
-  }
+  }).pipe(
+    Effect.catchCause((cause) =>
+      send({
+        type: 'failure',
+        requestId,
+        jobId,
+        error: {
+          code: 'unknown_error',
+          message: Cause.pretty(cause)
+        }
+      })
+    )
+  )
 }
 
-port.on('message', (raw: unknown) => {
-  // Validate the incoming message at the boundary. Anything malformed is
-  // rejected with a failure response that does not require a jobId, since we
-  // cannot trust the sender.
-  const exit = Schema.decodeUnknownExit(WorkerRequestSchema)(raw)
-  if (Exit.isFailure(exit)) {
-    send({
-      type: 'failure',
-      requestId: 'unknown',
-      error: {
-        code: 'worker_protocol_error',
-        message: 'Worker received an invalid request'
-      }
-    })
-    return
-  }
-  const request: WorkerRequest = exit.value
-  if (request.type === 'run_nesting') {
-    void handleRunNesting(request.requestId, request.payload)
-  } else if (request.type === 'cancel') {
-    send({
-      type: 'failure',
-      requestId: request.requestId,
-      jobId: request.jobId,
-      error: {
-        code: 'worker_cancelled',
-        message: 'Job cancelled by renderer request'
-      }
-    })
-  }
+const workerProgram = Effect.gen(function* () {
+  const platform = yield* WorkerRunner.WorkerRunnerPlatform
+  const runner = yield* platform.start<WorkerResponse, unknown>()
+  yield* runner.run((portId, raw) => {
+    const send: SendResponse = (response) => runner.send(portId, response)
+
+    // Validate the incoming message at the boundary. Anything malformed is
+    // rejected with a failure response that does not require a jobId, since we
+    // cannot trust the sender.
+    const exit = Schema.decodeUnknownExit(WorkerRequestSchema)(raw)
+    if (Exit.isFailure(exit)) {
+      return send({
+        type: 'failure',
+        requestId: 'unknown',
+        error: {
+          code: 'worker_protocol_error',
+          message: 'Worker received an invalid request'
+        }
+      })
+    }
+    const request: WorkerRequest = exit.value
+    if (request.type === 'run_nesting') {
+      return handleRunNesting(send, request.requestId, request.payload)
+    }
+    if (request.type === 'cancel') {
+      return send({
+        type: 'failure',
+        requestId: request.requestId,
+        jobId: request.jobId,
+        error: {
+          code: 'worker_cancelled',
+          message: 'Job cancelled by renderer request'
+        }
+      })
+    }
+  })
+})
+
+void workerRuntime.runPromise(workerProgram).catch((err: unknown) => {
+  console.error('[nesting.worker] fatal worker runner error:', err)
 })

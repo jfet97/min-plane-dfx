@@ -1,12 +1,12 @@
-import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron'
 import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Exit, Schema } from 'effect'
-import { importDxfFiles } from '../services/DxfImportService.js'
 import { WorkerSupervisor, SupervisorError } from '../services/WorkerSupervisor.js'
 import { saveProjectFile, loadProjectFile, ProjectFileError } from '../services/ProjectFileService.js'
 import { exportNestingResultToFile } from '../services/ExportService.js'
+import { WorkspaceProjectService, WorkspaceProjectError } from '../services/WorkspaceProjectService.js'
 import { NestingHistoryFrame } from '@shared/domain/nesting.js'
 import type { IpcResult } from '@shared/protocol/ipc.js'
 import type { Unsubscribe, NestingHistoryEvent } from '@shared/protocol/ipc.js'
@@ -27,6 +27,8 @@ export const IPC_CHANNELS = [
   'app:ping',
   'dxf:select-files',
   'dxf:import-files',
+  'dxf:remove-import',
+  'dxf:clear-imports',
   'nesting:export-request',
   'nesting:export-result',
   'nesting:export-history',
@@ -41,6 +43,7 @@ export type IpcChannel = (typeof IPC_CHANNELS)[number]
 
 let pongTimer: NodeJS.Timeout | null = null
 let supervisor: WorkerSupervisor | null = null
+let workspace: WorkspaceProjectService | null = null
 let resultBroadcastRegistered = false
 const historyListenersByJob = new Map<JobId, Set<(event: NestingHistoryEvent) => void>>()
 
@@ -49,6 +52,26 @@ function getSupervisor(): WorkerSupervisor {
     supervisor = createSupervisor()
   }
   return supervisor
+}
+
+function getWorkspace(): WorkspaceProjectService {
+  if (!workspace) {
+    workspace = new WorkspaceProjectService(app.getPath('userData'))
+  }
+  return workspace
+}
+
+function fromWorkspaceError(err: unknown): IpcResult<never> {
+  if (err instanceof WorkspaceProjectError) {
+    return { ok: false, error: { code: 'dxf_parse_error', message: err.message } }
+  }
+  return {
+    ok: false,
+    error: {
+      code: 'dxf_parse_error',
+      message: err instanceof Error ? err.message : 'unknown error'
+    }
+  }
 }
 
 function createSupervisor(): WorkerSupervisor {
@@ -84,6 +107,10 @@ function fromSupervisorError(err: unknown): IpcResult<never> {
       message: err instanceof Error ? err.message : 'unknown error'
     }
   }
+}
+
+export async function initializeWorkspaceProject(): Promise<void> {
+  await getWorkspace().initialize()
 }
 
 export function registerIpcHandlers(): void {
@@ -133,17 +160,10 @@ export function registerIpcHandlers(): void {
         return { ok: true, value: { documents: [] } }
       }
       try {
-        const results = await importDxfFiles(dlg.filePaths)
-        const documents = results.flatMap((r) => ('error' in r ? [] : [r]))
+        const documents = await getWorkspace().importDxfFiles(dlg.filePaths)
         return { ok: true, value: { documents } }
       } catch (err) {
-        return {
-          ok: false,
-          error: {
-            code: 'dxf_parse_error',
-            message: err instanceof Error ? err.message : 'unknown error'
-          }
-        }
+        return fromWorkspaceError(err)
       }
     }
   )
@@ -155,17 +175,34 @@ export function registerIpcHandlers(): void {
       paths: ReadonlyArray<string>
     ): Promise<IpcResult<{ readonly documents: ReadonlyArray<ImportedDxfDocument> }>> => {
       try {
-        const results = await importDxfFiles(paths)
-        const documents = results.flatMap((r) => ('error' in r ? [] : [r]))
+        const documents = await getWorkspace().importDxfFiles(paths)
         return { ok: true, value: { documents } }
       } catch (err) {
-        return {
-          ok: false,
-          error: {
-            code: 'dxf_parse_error',
-            message: err instanceof Error ? err.message : 'unknown error'
-          }
-        }
+        return fromWorkspaceError(err)
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'dxf:remove-import',
+    async (_event: IpcMainInvokeEvent, pieceId: string): Promise<IpcResult<void>> => {
+      try {
+        await getWorkspace().removeImportedDxf(pieceId)
+        return { ok: true, value: undefined }
+      } catch (err) {
+        return fromWorkspaceError(err)
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'dxf:clear-imports',
+    async (): Promise<IpcResult<void>> => {
+      try {
+        await getWorkspace().clearImportedDxfs()
+        return { ok: true, value: undefined }
+      } catch (err) {
+        return fromWorkspaceError(err)
       }
     }
   )
@@ -408,6 +445,7 @@ export function registerIpcHandlers(): void {
       }
       try {
         await saveProjectFile(dlg.filePath, project)
+        await getWorkspace().promoteCurrentProject(dlg.filePath)
         return { ok: true, value: { path: dlg.filePath } }
       } catch (err) {
         if (err instanceof ProjectFileError) {
@@ -482,6 +520,7 @@ export function unregisterIpcHandlers(): void {
     ipcMain.removeHandler(channel)
   }
   supervisor = null
+  workspace = null
   resultBroadcastRegistered = false
   historyListenersByJob.clear()
 }

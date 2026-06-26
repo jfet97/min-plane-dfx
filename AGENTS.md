@@ -31,7 +31,7 @@ If a task touches Effect APIs, inspect the installed packages in `node_modules` 
 - Avoid non-null assertions in runtime code. Use guards or explicit errors.
 - Use `@effect/platform-node` for Node filesystem/path services. Do not hand-roll FileSystem or Path layers.
 - Renderer state writes go through composable actions such as hydration, replacement, or reset methods.
-- There is no app database in the first version. A project is a user-selected JSON snapshot.
+- The app uses an Effect SQLite workspace in Electron `userData` for imported DXF copies and temporary project metadata. A user-selected JSON project is still the portable snapshot/export format.
 
 ## UI Rules
 

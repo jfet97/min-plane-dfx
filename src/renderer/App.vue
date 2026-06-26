@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import AppShell from './components/AppShell.vue'
 import SheetSettingsPanel from './components/SheetSettingsPanel.vue'
 import PieceTable from './components/PieceTable.vue'
@@ -16,8 +16,11 @@ import { newJobId } from './utils/ids.js'
 import type { NestingRequest, NestingWarning } from '@shared/domain/nesting.js'
 import type { Unsubscribe } from '@shared/protocol/ipc.js'
 
+type CenterView = 'import' | 'result'
+
 const lastPong = ref<string | null>(null)
 const lastPing = ref<string | null>(null)
+const centerView = ref<CenterView>('import')
 let unsubscribe: Unsubscribe | null = null
 const store = useAppStore()
 const settings = useSettings()
@@ -27,6 +30,14 @@ const runner = useJobRunner()
 
 const preparationWarnings = ref<ReadonlyArray<NestingWarning>>([])
 const projectWarning = ref<string | null>(null)
+
+watch(store.importRevision, () => {
+  runner.clear()
+  history.clear()
+  finalSelection.syncFromResult(null)
+  preparationWarnings.value = []
+  projectWarning.value = null
+})
 
 onMounted(() => {
   const api = window.appApi
@@ -51,14 +62,15 @@ function buildRequest(): NestingRequest | null {
   const sheet = settings.state.value.sheet
   const padding = settings.state.value.padding
   if (sheet.width <= 0 || sheet.height <= 0) return null
-  if (store.pieceCount.value === 0) return null
+  if (store.selectedPieceCount.value === 0) return null
 
-  const prep = preparePieces(store.state.value.pieces, sheet, padding, newJobId())
+  const jobId = newJobId()
+  const prep = preparePieces(store.selectedPieces.value, sheet, padding, jobId)
   preparationWarnings.value = prep.warnings
 
   return {
     version: 1,
-    jobId: newJobId(),
+    jobId,
     sheet: { ...sheet },
     padding,
     pieces: prep.pieces,
@@ -172,8 +184,8 @@ async function openProject(): Promise<void> {
     <template #toolbar>
       <button
         type="button"
-        :disabled="store.pieceCount.value === 0 || runner.status.value === 'running'"
-        :title="store.pieceCount.value === 0 ? 'Sends the prepared nesting request to the worker. Disabled until at least one piece is imported.' : 'Sends the prepared nesting request to the worker using the current sheet, padding, pieces, and strategy configuration.'"
+        :disabled="store.selectedPieceCount.value === 0 || runner.status.value === 'running'"
+        :title="store.selectedPieceCount.value === 0 ? 'Sends the prepared nesting request to the worker. Disabled until at least one imported shape is selected.' : 'Sends the prepared nesting request to the worker using the current sheet, padding, selected pieces, and strategy configuration.'"
         @click="runNesting"
       >
         {{ runner.status.value === 'running' ? 'Running...' : 'Run' }}
@@ -188,8 +200,8 @@ async function openProject(): Promise<void> {
       </button>
       <button
         type="button"
-        :disabled="store.pieceCount.value === 0"
-        title="Exports the exact JSON request sent to the worker, useful for debugging and reproducing algorithm runs."
+        :disabled="store.selectedPieceCount.value === 0"
+        title="Exports the exact JSON request sent to the worker for the selected pieces, useful for debugging and reproducing algorithm runs."
         @click="exportRequest"
       >
         Export Request
@@ -231,8 +243,26 @@ async function openProject(): Promise<void> {
     </template>
 
     <template #canvas>
-      <h2>Preview / Result</h2>
-      <DxfPreviewCanvas />
+      <div class="center-header">
+        <h2>{{ centerView === 'import' ? 'Import Preview' : 'Result' }}</h2>
+        <div class="center-tabs" title="Switch between imported-object inspection and worker result output.">
+          <button
+            type="button"
+            :class="{ active: centerView === 'import' }"
+            @click="centerView = 'import'"
+          >
+            Import
+          </button>
+          <button
+            type="button"
+            :class="{ active: centerView === 'result' }"
+            @click="centerView = 'result'"
+          >
+            Result
+          </button>
+        </div>
+      </div>
+      <DxfPreviewCanvas :mode="centerView" />
     </template>
 
     <template #pieces>
@@ -240,6 +270,9 @@ async function openProject(): Promise<void> {
         Pieces
         <span class="counter">{{ store.pieceCount.value }}</span>
       </h2>
+      <p v-if="store.state.value.lastSkippedDuplicateCount > 0" class="muted">
+        {{ store.state.value.lastSkippedDuplicateCount }} already imported file(s) skipped.
+      </p>
       <PieceTable />
     </template>
 
@@ -264,6 +297,7 @@ async function openProject(): Promise<void> {
       <span class="muted">
         {{ store.documentCount.value }} document(s) /
         {{ store.pieceCount.value }} piece(s) /
+        {{ store.selectedPieceCount.value }} selected /
         {{ store.warningCount.value }} warning(s) ·
         worker: {{ runner.status.value }}
         <span v-if="history.hasResult.value" class="empty-msg">
@@ -278,6 +312,32 @@ async function openProject(): Promise<void> {
 </template>
 
 <style scoped>
+.center-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.center-header h2 {
+  margin: 0;
+}
+
+.center-tabs {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.center-tabs button {
+  font-size: 12px;
+  padding: 3px 8px;
+}
+
+.center-tabs button.active {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
 .muted {
   color: var(--text-muted);
   font-size: 12px;

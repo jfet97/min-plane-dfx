@@ -46,15 +46,20 @@ function lwPolylineSegments(verts: ReadonlyArray<IPoint>): Segment[] {
 }
 
 function circleSegments(circle: ICircleEntity): Segment[] {
-  // Conservative approximation as two cardinal line segments forming the bbox.
-  // The actual circle is later redrawn from center+radius; this is enough for
-  // visual fidelity in the preview without computing exact arc samples here.
   const c = circle.center
   const r = circle.radius
-  return [
-    { kind: 'line', x1: c.x - r, y1: c.y, x2: c.x + r, y2: c.y },
-    { kind: 'line', x1: c.x + r, y1: c.y, x2: c.x - r, y2: c.y }
-  ]
+  return [0, 90, 180, 270].map((startAngle) => ({
+      kind: 'arc',
+      x1: 0,
+      y1: 0,
+      x2: 0,
+      y2: 0,
+      cx: c.x,
+      cy: c.y,
+      radius: r,
+      startAngle,
+      endAngle: startAngle + 90
+    }))
 }
 
 function arcSegments(arc: IArcEntity): Segment[] {

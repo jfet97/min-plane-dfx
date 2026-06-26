@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import DxfParser, { type IDxf } from 'dxf-parser'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
+import { randomUUID } from 'node:crypto'
 import { entityToGeometry, unionBounds } from '@main/services/DxfBbox.js'
+import { importDxfFile } from '@main/services/DxfImportService.js'
 
 /**
  * Helper: parse a minimal DXF (one entity) and return the single entity.
@@ -109,5 +114,32 @@ describe('unionBounds', () => {
   it('handles a single rectangle', () => {
     const result = unionBounds([{ x: 1, y: 2, width: 3, height: 4 }])
     expect(result).toEqual({ x: 1, y: 2, width: 3, height: 4 })
+  })
+})
+
+describe('importDxfFile', () => {
+  it('groups supported entities from one DXF file into one selectable imported piece', async () => {
+    const dir = join(tmpdir(), `min-plane-dxf-import-${randomUUID()}`)
+    const path = join(dir, 'rectangle.dxf')
+    const dxf = baseOpen() +
+      section('ENTITIES') +
+      '0\nLINE\n10\n0\n20\n0\n30\n0\n11\n154\n21\n0\n31\n0\n' +
+      '0\nLINE\n10\n154\n20\n0\n30\n0\n11\n154\n21\n104\n31\n0\n' +
+      '0\nLINE\n10\n154\n20\n104\n30\n0\n11\n0\n21\n104\n31\n0\n' +
+      '0\nLINE\n10\n0\n20\n104\n30\n0\n11\n0\n21\n0\n31\n0\n' +
+      endsec() + baseClose()
+
+    try {
+      await mkdir(dir, { recursive: true })
+      await writeFile(path, dxf, 'utf8')
+      const document = await importDxfFile(path)
+      expect(document.pieces.length).toBe(1)
+      const piece = document.pieces[0]
+      expect(piece?.label).toBe('rectangle')
+      expect(piece?.geometry.segments.length).toBe(4)
+      expect(piece?.realBounds).toEqual({ x: 0, y: 0, width: 154, height: 104 })
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 })

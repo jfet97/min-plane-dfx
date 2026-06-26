@@ -26,17 +26,23 @@ Do not import the main runtime into the worker. Worker lifecycle is separate fro
 
 ## Worker Protocol
 
-The current worker protocol is app-owned:
+The worker transport uses Effect's Node worker platform:
+
+```text
+@effect/platform-node/NodeWorker
+  -> effect/unstable/workers/Worker
+  -> @effect/platform-node/NodeWorkerRunner
+```
+
+Effect owns the worker framing and lifecycle messages. The app still owns the payload protocol:
 
 ```text
 WorkerRequest -> WorkerResponse
 ```
 
-`WorkerSupervisor` uses `node:worker_threads` directly and validates each custom response variant before forwarding history or resolving a result.
+`WorkerSupervisor` validates every `WorkerResponse` before forwarding history or resolving a result. `nesting.worker.ts` validates every `WorkerRequest` before running the stub workflow.
 
-Effect also ships `effect/unstable/workers` plus `@effect/platform-node/NodeWorker` and `NodeWorkerRunner`. That is a separate protocol with Effect-owned framing and close messages. Migrating to it is valid future work, but it is not a drop-in replacement for the current `WorkerRequest` / `WorkerResponse` stream.
-
-Do not mix both protocols in one worker.
+Do not bypass `NodeWorker` / `NodeWorkerRunner` with direct `parentPort` listeners in the same worker.
 
 ## Error Model
 

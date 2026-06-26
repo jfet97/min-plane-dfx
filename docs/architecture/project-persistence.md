@@ -1,8 +1,21 @@
 # Project Persistence
 
-There is no database in the first version.
+The app uses an Effect SQLite workspace in Electron `userData` for imported DXF copies and temporary project metadata.
 
-A project is a single user-selected JSON snapshot saved through the native save dialog and opened through the native open dialog.
+A project also has a portable user-selected JSON snapshot saved through the native save dialog and opened through the native open dialog.
+
+## Workspace
+
+On startup, main creates or opens:
+
+```text
+app.getPath('userData')/temporary-project/workspace.sqlite
+app.getPath('userData')/temporary-project/sources/
+```
+
+DXF imports are copied into `sources/` before parsing. SQLite stores original path, copied path, imported document JSON, and temporary project metadata.
+
+The temporary workspace survives renderer hot reload and app close/reopen. On startup, staging files from interrupted imports are cleaned. On project save, the workspace row is promoted with the saved JSON path.
 
 ## Saved State
 

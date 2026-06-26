@@ -35,3 +35,7 @@ Components may read composable state. Writes should go through named actions suc
 - `resetTransientJobState`.
 
 Avoid direct nested mutation from unrelated modules.
+
+## Imported Shapes
+
+Supported DXF entities are collected into selectable imported shapes. The renderer may show all imported source geometry, but worker requests should include only the pieces selected by the user.

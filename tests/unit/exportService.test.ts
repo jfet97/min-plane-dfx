@@ -33,7 +33,7 @@ const sampleRequest: NestingRequest = {
     historyMode: 'final',
     historyScope: 'winning_path',
     strategySelectionMode: 'single',
-    strategyIds: ['balanced_compactness/rr'],
+    strategyIds: ['balanced-preserve-free-then-bottom-left'],
     finalSelectionMode: 'manual'
   }
 }
@@ -59,7 +59,7 @@ const sampleFrame: NestingHistoryFrame = {
   frameId: 'f-1',
   jobId: 'job-1' as JobId,
   strategyRunId: 'run-1',
-  strategyLabel: 'Balanced / right-then-right',
+  strategyLabel: 'Balanced / preserve free space first',
   stepIndex: 0,
   beamRank: 0,
   title: 'frame 0',

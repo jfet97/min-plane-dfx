@@ -1,7 +1,9 @@
-import { Worker } from 'node:worker_threads'
+import { Worker as NodeThreadWorker } from 'node:worker_threads'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { Exit, Schema } from 'effect'
+import { Effect, Exit, ManagedRuntime, Schema } from 'effect'
+import { NodeWorker } from '@effect/platform-node'
+import * as EffectWorker from 'effect/unstable/workers/Worker'
 import {
   WorkerRequest,
   WorkerResponse,
@@ -26,7 +28,7 @@ interface PendingJob {
   readonly reject: (err: SupervisorError) => void
   readonly listeners: Set<HistoryEventListener>
   readonly timer: NodeJS.Timeout
-  readonly worker: Worker
+  readonly dispose: () => Promise<void>
 }
 
 /**
@@ -100,7 +102,6 @@ export class WorkerSupervisor {
       )
     }
 
-    const worker = new Worker(this.options.workerPath)
     const requestId = cryptoRandomId()
     const listeners = new Set<HistoryEventListener>([listener])
     // Round 2 (F1 partial): honor the per-request timeout when present,
@@ -113,8 +114,11 @@ export class WorkerSupervisor {
         : this.options.defaultTimeoutMs
 
     return new Promise<NestingResult>((resolve, reject) => {
+      const runtime = ManagedRuntime.make(
+        NodeWorker.layer(() => new NodeThreadWorker(this.options.workerPath))
+      )
       const timer = setTimeout(() => {
-        this.teardownWorker(worker, 'timeout')
+        this.teardownWorker(runtime.dispose, 'timeout')
         this.current = null
         reject(
           new SupervisorError(
@@ -132,35 +136,41 @@ export class WorkerSupervisor {
         reject,
         listeners,
         timer,
-        worker
+        dispose: runtime.dispose
       }
-
-      worker.on('message', (raw: unknown) => this.handleWorkerMessage(raw))
-      worker.on('error', (err) => this.handleWorkerError(err))
-      worker.on('exit', (code) => this.handleWorkerExit(code))
 
       const req: WorkerRequest = {
         type: 'run_nesting',
         requestId,
         payload: request
       }
-      worker.postMessage(req)
+      const handleWorkerMessage = this.handleWorkerMessage.bind(this)
+      const program = Effect.gen(function* () {
+        const platform = yield* EffectWorker.WorkerPlatform
+        const worker = yield* platform.spawn<WorkerResponse, WorkerRequest>(0)
+        yield* worker.send(req)
+        yield* worker.run((raw) => Effect.sync(() => handleWorkerMessage(raw)))
+      })
+
+      void runtime.runPromise(program).catch((err: unknown) => {
+        this.handleWorkerError(err)
+      })
     })
   }
 
   cancelJob(jobId: JobId): void {
     if (!this.current || this.current.request.jobId !== jobId) return
-    const { worker, timer } = this.current
+    const { dispose, timer } = this.current
     clearTimeout(timer)
-    this.teardownWorker(worker, 'cancel')
+    this.teardownWorker(dispose, 'cancel')
     this.current.reject(
       new SupervisorError('worker_cancelled', `Job ${jobId} cancelled by renderer request.`)
     )
     this.current = null
   }
 
-  private teardownWorker(worker: Worker, _reason: 'cancel' | 'timeout' | 'success'): void {
-    void worker.terminate().catch(() => undefined)
+  private teardownWorker(dispose: () => Promise<void>, _reason: 'cancel' | 'timeout' | 'success'): void {
+    void dispose().catch(() => undefined)
   }
 
   private handleWorkerMessage(raw: unknown): void {
@@ -198,7 +208,7 @@ export class WorkerSupervisor {
       const result: NestingResult = parsed.payload
       const jobId = this.current.request.jobId
       clearTimeout(this.current.timer)
-      this.teardownWorker(this.current.worker, 'success')
+      this.teardownWorker(this.current.dispose, 'success')
       this.current.resolve(result)
       this.current = null
       for (const handler of this.resultListeners) {
@@ -219,22 +229,15 @@ export class WorkerSupervisor {
     }
   }
 
-  private handleWorkerError(err: Error): void {
-    this.failCurrent('worker_crashed', err.message)
-  }
-
-  private handleWorkerExit(code: number): void {
-    if (!this.current) return
-    if (code !== 0) {
-      this.failCurrent('worker_crashed', `Worker exited with code ${code}.`)
-    }
+  private handleWorkerError(err: unknown): void {
+    this.failCurrent('worker_crashed', err instanceof Error ? err.message : String(err))
   }
 
   private failCurrent(code: AppErrorCode, message: string): void {
     if (!this.current) return
     clearTimeout(this.current.timer)
     const err = new SupervisorError(code, message, { jobId: this.current.request.jobId })
-    this.teardownWorker(this.current.worker, 'cancel')
+    this.teardownWorker(this.current.dispose, 'cancel')
     this.current.reject(err)
     this.current = null
   }

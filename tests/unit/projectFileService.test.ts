@@ -38,7 +38,7 @@ const VALID_PROJECT = {
     historyMode: 'final',
     historyScope: 'winning_path',
     strategySelectionMode: 'single',
-    strategyIds: ['balanced_compactness/rr'],
+    strategyIds: ['balanced-preserve-free-then-bottom-left'],
     finalSelectionMode: 'manual'
   }
 }
@@ -62,7 +62,7 @@ describe('ProjectFileService', () => {
     const loaded = await loadProjectFile(path)
     expect(loaded.version).toBe(1)
     expect(loaded.sheet.width).toBe(100)
-    expect(loaded.options.strategyIds).toEqual(['balanced_compactness/rr'])
+    expect(loaded.options.strategyIds).toEqual(['balanced-preserve-free-then-bottom-left'])
   })
 
   it('writes pretty JSON', async () => {

@@ -1,9 +1,33 @@
 import { Schema } from 'effect'
 import { ProjectDocument } from '../domain/project.js'
-import { ImportedDxfDocument, ImportedPiece } from '../domain/dxf.js'
+import { DxfGeometrySummary, ImportWarning } from '../domain/dxf.js'
 import { NestingResult } from '../domain/nesting.js'
-import { JobId, SourceFileId } from '../domain/ids.js'
+import { JobId, PieceId, SourceFileId } from '../domain/ids.js'
 import { PositiveWidth, PositiveHeight, NonNegativePadding } from './geometrySchemas.js'
+
+const StrictImportedPiece = Schema.Struct({
+  id: PieceId,
+  sourceFileId: SourceFileId,
+  sourceLayer: Schema.optional(Schema.String),
+  label: Schema.String,
+  realBounds: Schema.Struct({
+    x: Schema.Number,
+    y: Schema.Number,
+    width: PositiveWidth,
+    height: PositiveHeight
+  }),
+  geometry: DxfGeometrySummary,
+  warnings: Schema.Array(ImportWarning)
+})
+
+const StrictImportedDxfDocument = Schema.Struct({
+  id: SourceFileId,
+  path: Schema.String,
+  fileName: Schema.String,
+  millimetersPerUnit: Schema.Number.check(Schema.isGreaterThan(0)),
+  pieces: Schema.Array(StrictImportedPiece),
+  warnings: Schema.Array(ImportWarning)
+})
 
 export const ProjectDocumentStrict = Schema.Struct({
   version: Schema.Literal(1),
@@ -16,8 +40,8 @@ export const ProjectDocumentStrict = Schema.Struct({
       available: Schema.Boolean
     })
   ),
-  importedPieces: Schema.Array(ImportedPiece),
-  importedDocuments: Schema.optional(Schema.Array(ImportedDxfDocument)),
+  importedPieces: Schema.Array(StrictImportedPiece),
+  importedDocuments: Schema.optional(Schema.Array(StrictImportedDxfDocument)),
   sheet: Schema.Struct({
     width: PositiveWidth,
     height: PositiveHeight,

@@ -93,5 +93,5 @@ function resolveStrategyIds(request: NestingRequest): ReadonlyArray<string> {
   if (request.options.strategyIds.length > 0) {
     return request.options.strategyIds
   }
-  return [STRATEGY_DEFINITIONS[0]?.id ?? 'balanced_compactness/rr']
+  return [STRATEGY_DEFINITIONS[0]?.id ?? 'balanced-preserve-free-then-bottom-left']
 }

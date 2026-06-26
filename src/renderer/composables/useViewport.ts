@@ -24,36 +24,22 @@ const state: UnwrapNestedRefs<MutableViewportState> = reactive<MutableViewportSt
   isPanning: false
 })
 
-let dragOrigin: { readonly x: number; readonly y: number; readonly startX: number; readonly startY: number } | null = null
-
 export function useViewport() {
   return {
     state: computed(() => state),
-    beginPan(clientX: number, clientY: number): void {
-      state.isPanning = true
-      dragOrigin = { x: clientX, y: clientY, startX: state.offsetX, startY: state.offsetY }
+    beginPan(): void {
+      state.isPanning = false
     },
-    updatePan(clientX: number, clientY: number): void {
-      if (!dragOrigin || !state.isPanning) return
-      state.offsetX = dragOrigin.startX + (clientX - dragOrigin.x) / state.scale
-      state.offsetY = dragOrigin.startY + (clientY - dragOrigin.y) / state.scale
+    updatePan(): void {
+      state.isPanning = false
     },
     endPan(): void {
       state.isPanning = false
-      dragOrigin = null
     },
-    zoom(factor: number, around?: { readonly x: number; readonly y: number }): void {
-      const next = Math.max(0.1, Math.min(20, state.scale * factor))
-      if (around) {
-        // Keep the world point under the cursor stable while scaling.
-        const wx = (around.x - state.offsetX) / state.scale
-        const wy = (around.y - state.offsetY) / state.scale
-        state.scale = next
-        state.offsetX = around.x / next - wx
-        state.offsetY = around.y / next - wy
-      } else {
-        state.scale = next
-      }
+    zoom(factor: number): void {
+      state.scale = Math.max(0.25, Math.min(6, state.scale * factor))
+      state.offsetX = 0
+      state.offsetY = 0
     },
     reset(): void {
       state.offsetX = 0

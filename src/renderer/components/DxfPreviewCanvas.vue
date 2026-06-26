@@ -7,6 +7,12 @@ import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type { Placement } from '@shared/domain/nesting.js'
 
 type Segment = NonNullable<ImportedPiece['geometry']['segments'][number]>
+type VisualMode = 'shape' | 'footprint'
+type CanvasMode = 'import' | 'result'
+
+const props = defineProps<{
+  readonly mode: CanvasMode
+}>()
 
 const store = useAppStore()
 const history = useHistoryStore()
@@ -34,20 +40,48 @@ interface ViewBox {
 }
 
 const padding = 10
+const sourceGap = 40
+
+interface SourcePreviewItem {
+  readonly piece: ImportedPiece
+  readonly offsetX: number
+  readonly offsetY: number
+  readonly bounds: ViewBox
+}
+
+const sourcePreviewItems = computed<ReadonlyArray<SourcePreviewItem>>(() => {
+  let cursorX = 0
+  return store.state.value.pieces.map((piece) => {
+    const bounds = {
+      x: cursorX,
+      y: 0,
+      width: piece.realBounds.width,
+      height: piece.realBounds.height
+    }
+    const item = {
+      piece,
+      offsetX: cursorX - piece.realBounds.x,
+      offsetY: -piece.realBounds.y,
+      bounds
+    }
+    cursorX += piece.realBounds.width + sourceGap
+    return item
+  })
+})
 
 /**
  * Bounds union of either the imported pieces (when no result is available)
  * or the placements of the selected history frame or final result.
  */
 const sourceBounds = computed<ViewBox | null>(() => {
-  const pieces = store.state.value.pieces
-  if (pieces.length === 0) return null
+  const items = sourcePreviewItems.value
+  if (items.length === 0) return null
   let minX = Infinity
   let minY = Infinity
   let maxX = -Infinity
   let maxY = -Infinity
-  for (const p of pieces) {
-    const b = p.realBounds
+  for (const item of items) {
+    const b = item.bounds
     minX = Math.min(minX, b.x)
     minY = Math.min(minY, b.y)
     maxX = Math.max(maxX, b.x + b.width)
@@ -57,6 +91,7 @@ const sourceBounds = computed<ViewBox | null>(() => {
 })
 
 const placementBounds = computed<ViewBox | null>(() => {
+  if (props.mode !== 'result') return null
   const frame = history.selectedFrame.value
   const placements: ReadonlyArray<Placement> = frame?.plate.placements ?? history.selectedRun.value?.placements ?? []
   if (placements.length === 0) return null
@@ -74,7 +109,7 @@ const placementBounds = computed<ViewBox | null>(() => {
 })
 
 const viewBox = computed<ViewBox>(() => {
-  const bounds = placementBounds.value ?? sourceBounds.value
+  const bounds = props.mode === 'result' ? placementBounds.value : sourceBounds.value
   if (bounds) return bounds
   return { x: 0, y: 0, width: 100, height: 100 }
 })
@@ -82,37 +117,43 @@ const viewBox = computed<ViewBox>(() => {
 const sheetOutline = computed(() => history.selectedRun.value?.placements ?? null)
 
 const selectedId = ref<string | null>(null)
-const visualMode = ref<'rectangles' | 'both'>('rectangles')
+const visualMode = ref<VisualMode>('shape')
 const showFreeRectangles = ref(true)
 
-function drawSegment(s: Segment): string {
+function linePath(s: Segment): string {
   if (s.kind === 'line') {
     return `M ${s.x1} ${s.y1} L ${s.x2} ${s.y2}`
   }
-  return `M ${s.cx ?? 0} ${s.cy ?? 0} L ${s.cx ?? 0} ${s.cy ?? 0}`
+  return ''
 }
 
-function arcPath(s: Segment): string | null {
-  if (s.kind !== 'arc') return null
+function arcPath(s: Segment): string {
+  if (s.kind !== 'arc') return ''
   const cx = s.cx ?? 0
   const cy = s.cy ?? 0
   const r = s.radius ?? 0
+  if (r <= 0) return ''
   const start = ((s.startAngle ?? 0) * Math.PI) / 180
   const end = ((s.endAngle ?? 0) * Math.PI) / 180
   const x1 = cx + r * Math.cos(start)
   const y1 = cy + r * Math.sin(start)
   const x2 = cx + r * Math.cos(end)
   const y2 = cy + r * Math.sin(end)
-  const largeArc = Math.abs(end - start) > Math.PI ? 1 : 0
+  const rawDelta = (s.endAngle ?? 0) - (s.startAngle ?? 0)
+  const normalizedDelta = ((rawDelta % 360) + 360) % 360
+  const largeArc = normalizedDelta > 180 ? 1 : 0
   return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`
 }
 
-function circlePath(p: ImportedPiece): string | null {
-  if (p.geometry.entityType !== 'CIRCLE') return null
-  const r = p.realBounds.width / 2
-  const cx = p.realBounds.x + r
-  const cy = p.realBounds.y + r
-  return `M ${cx - r} ${cy} A ${r} ${r} 0 1 1 ${cx + r} ${cy} A ${r} ${r} 0 1 1 ${cx - r} ${cy} Z`
+function segmentPath(s: Segment): string {
+  return s.kind === 'line' ? linePath(s) : arcPath(s)
+}
+
+function circlePath(piece: ImportedPiece): string {
+  const radius = Math.min(piece.realBounds.width, piece.realBounds.height) / 2
+  const cx = piece.realBounds.x + piece.realBounds.width / 2
+  const cy = piece.realBounds.y + piece.realBounds.height / 2
+  return `M ${cx - radius} ${cy} A ${radius} ${radius} 0 1 1 ${cx + radius} ${cy} A ${radius} ${radius} 0 1 1 ${cx - radius} ${cy}`
 }
 
 /**
@@ -130,48 +171,47 @@ const viewBoxString = computed(() => {
 })
 
 const placementsToRender = computed<ReadonlyArray<Placement>>(() => {
+  if (props.mode !== 'result') return []
   const frame = history.selectedFrame.value
   return frame?.plate.placements ?? history.selectedRun.value?.placements ?? []
 })
 
 const freeRectanglesToRender = computed(() => {
-  if (!showFreeRectangles.value) return []
+  if (props.mode !== 'result' || !showFreeRectangles.value) return []
   return history.selectedFrame.value?.plate.freeRectangles ?? []
 })
 
-const canShowPlacedDxfShapes = computed(() => false)
+const showSourceGeometry = computed(() => props.mode === 'import')
+const showSourceRectangles = computed(
+  () => props.mode === 'import' && visualMode.value === 'footprint'
+)
+const showResultRectangles = computed(() => placementsToRender.value.length > 0)
 
-function onMouseDown(event: MouseEvent): void {
-  viewport.beginPan(event.clientX, event.clientY)
-  window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('mouseup', onMouseUp, { once: true })
+function setVisualMode(mode: VisualMode): void {
+  if (props.mode !== 'import') return
+  visualMode.value = mode
 }
 
-function onMouseMove(event: MouseEvent): void {
-  viewport.updatePan(event.clientX, event.clientY)
+function isSelected(piece: ImportedPiece): boolean {
+  return selectedId.value === piece.id || store.isPieceSelected(piece.id)
 }
 
-function onMouseUp(): void {
-  viewport.endPan()
-  window.removeEventListener('mousemove', onMouseMove)
+function selectPiece(piece: ImportedPiece): void {
+  selectedId.value = piece.id
+  store.setPieceSelected(piece.id, !store.isPieceSelected(piece.id))
 }
 
 function onWheel(event: WheelEvent): void {
   event.preventDefault()
   const factor = event.deltaY < 0 ? 1.1 : 0.9
-  const rect = containerRef.value?.getBoundingClientRect()
-  if (!rect) {
-    viewport.zoom(factor)
-    return
-  }
-  viewport.zoom(factor, { x: event.clientX - rect.left, y: event.clientY - rect.top })
+  viewport.zoom(factor)
 }
 </script>
 
 <template>
-  <div class="canvas" ref="containerRef" @mousedown="onMouseDown" @wheel="onWheel">
+  <div class="canvas" ref="containerRef" @wheel="onWheel">
     <svg
-      v-if="store.state.value.pieces.length > 0 || placementsToRender.length > 0"
+      v-if="(props.mode === 'import' && store.state.value.pieces.length > 0) || placementsToRender.length > 0"
       :viewBox="viewBoxString"
       preserveAspectRatio="xMidYMid meet"
     >
@@ -189,49 +229,53 @@ function onWheel(event: WheelEvent): void {
 
       <!-- Imported source geometry (rendered only when no placements are present,
            so the preview view is the source and the result view is the placements). -->
-      <g v-if="placementsToRender.length === 0">
-        <g v-for="piece in store.state.value.pieces" :key="piece.id">
-          <path
-            v-if="piece.geometry.entityType === 'ARC' && piece.geometry.segments[0]"
-            :d="arcPath(piece.geometry.segments[0]) ?? ''"
-            :stroke="selectedId === piece.id ? 'var(--accent)' : 'var(--text-secondary)'"
-            stroke-width="0.5"
-            fill="none"
-          />
-          <path
-            v-else-if="piece.geometry.entityType === 'CIRCLE'"
-            :d="circlePath(piece) ?? ''"
-            :stroke="selectedId === piece.id ? 'var(--accent)' : 'var(--text-secondary)'"
-            stroke-width="0.5"
-            fill="none"
-          />
-          <template v-else>
+      <g v-if="props.mode === 'import'">
+        <g
+          v-for="item in sourcePreviewItems"
+          :key="item.piece.id"
+          :transform="`translate(${item.offsetX}, ${item.offsetY})`"
+        >
+          <template v-if="showSourceGeometry">
             <path
-              v-for="(seg, i) in piece.geometry.segments"
-              :key="`seg-${piece.id}-${i}`"
-              :d="drawSegment(seg)"
-              :stroke="selectedId === piece.id ? 'var(--accent)' : 'var(--text-secondary)'"
-              stroke-width="0.5"
+              v-if="item.piece.geometry.entityType === 'CIRCLE'"
+              :d="circlePath(item.piece)"
+              :stroke="isSelected(item.piece) ? 'var(--accent)' : 'var(--text-primary)'"
+              :stroke-opacity="store.isPieceSelected(item.piece.id) ? 1 : 0.65"
+              stroke-width="2"
               fill="none"
+              @click.stop="selectPiece(item.piece)"
+            />
+            <path
+              v-else
+              v-for="(seg, i) in item.piece.geometry.segments"
+              :key="`seg-${item.piece.id}-${i}`"
+              :d="segmentPath(seg)"
+              :stroke="isSelected(item.piece) ? 'var(--accent)' : 'var(--text-primary)'"
+              :stroke-opacity="store.isPieceSelected(item.piece.id) ? 1 : 0.45"
+              stroke-width="1.8"
+              fill="none"
+              @click.stop="selectPiece(item.piece)"
             />
           </template>
           <rect
-            :x="piece.realBounds.x"
-            :y="piece.realBounds.y"
-            :width="piece.realBounds.width"
-            :height="piece.realBounds.height"
+            v-if="showSourceRectangles"
+            :x="item.piece.realBounds.x"
+            :y="item.piece.realBounds.y"
+            :width="item.piece.realBounds.width"
+            :height="item.piece.realBounds.height"
             fill="none"
-            :stroke="selectedId === piece.id ? 'var(--accent)' : 'var(--warning)'"
-            stroke-width="0.25"
-            stroke-dasharray="2 2"
-            @click.stop="selectedId = piece.id"
+            :stroke="isSelected(item.piece) ? 'var(--accent)' : 'var(--warning)'"
+            :stroke-opacity="store.isPieceSelected(item.piece.id) ? 1 : 0.55"
+            stroke-width="1"
+            stroke-dasharray="4 3"
+            @click.stop="selectPiece(item.piece)"
             class="bbox"
           />
         </g>
       </g>
 
       <!-- Result rectangles are driven by the selected run or selected frame. -->
-      <g v-if="placementsToRender.length > 0 && (visualMode === 'rectangles' || visualMode === 'both')">
+      <g v-if="showResultRectangles">
         <rect
           v-for="(p, i) in placementsToRender"
           :key="`place-${i}-${p.pieceId}`"
@@ -262,11 +306,15 @@ function onWheel(event: WheelEvent): void {
       </g>
     </svg>
 
-    <div v-else class="empty">
+    <div v-else-if="props.mode === 'import'" class="empty">
       <p>Import a DXF file to preview shapes and bounding boxes.</p>
     </div>
 
-    <div v-if="placementsToRender.length === 0 && history.selectedRun.value" class="empty-state">
+    <div v-else class="empty">
+      <p>No result yet. Run sends selected imported objects to the worker; the algorithm is still a stub.</p>
+    </div>
+
+    <div v-if="props.mode === 'result' && placementsToRender.length === 0 && history.selectedRun.value" class="empty-state">
       <p>
         No placements yet. The worker pipeline is connected, but the nesting
         algorithm is intentionally still a stub.
@@ -283,30 +331,22 @@ function onWheel(event: WheelEvent): void {
       </span>
     </div>
 
-    <div class="view-controls">
+    <div v-if="props.mode === 'import'" class="view-controls">
       <button
         type="button"
-        :class="{ active: visualMode === 'rectangles' }"
-        title="Show padded rectangular footprints used by the nesting algorithm."
-        @click="visualMode = 'rectangles'"
+        :class="{ active: visualMode === 'shape' }"
+        title="Show imported DXF geometry as source shapes."
+        @click="setVisualMode('shape')"
       >
-        Rectangles
+        Shapes
       </button>
       <button
         type="button"
-        :disabled="!canShowPlacedDxfShapes"
-        title="Show original DXF geometry transformed into placed positions, once supported."
+        :class="{ active: visualMode === 'footprint' }"
+        title="Overlay bounding footprints for the imported objects."
+        @click="setVisualMode('footprint')"
       >
-        DXF shapes
-      </button>
-      <button
-        type="button"
-        :class="{ active: visualMode === 'both' }"
-        :disabled="!canShowPlacedDxfShapes"
-        title="Overlay true geometry and padded footprints once placed DXF transforms are supported."
-        @click="visualMode = 'both'"
-      >
-        Both
+        Footprints
       </button>
       <label
         v-if="history.selectedFrame.value?.plate.freeRectangles.length"
@@ -317,9 +357,9 @@ function onWheel(event: WheelEvent): void {
       </label>
     </div>
 
-    <div v-if="store.state.value.pieces.length > 0" class="legend">
+    <div v-if="props.mode === 'import' && store.state.value.pieces.length > 0" class="legend">
+      <span><i class="box"></i> Imported object footprint</span>
       <span><i class="line"></i> Real DXF geometry</span>
-      <span><i class="box"></i> Bounding box / padded footprint</span>
     </div>
   </div>
 </template>
@@ -335,11 +375,6 @@ function onWheel(event: WheelEvent): void {
   justify-content: stretch;
   overflow: hidden;
   position: relative;
-  cursor: grab;
-}
-
-.canvas:active {
-  cursor: grabbing;
 }
 
 svg {

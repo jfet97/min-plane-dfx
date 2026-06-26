@@ -35,7 +35,7 @@ const validProject = {
     historyMode: 'final' as const,
     historyScope: 'winning_path' as const,
     strategySelectionMode: 'single' as const,
-    strategyIds: ['balanced_compactness/rr'],
+    strategyIds: ['balanced-preserve-free-then-bottom-left'],
     finalSelectionMode: 'manual' as const
   }
 }
@@ -87,7 +87,7 @@ const validRequest = {
       id: 'p-1',
       sourcePieceId: 'p-1',
       realBounds: { x: 0, y: 0, width: 10, height: 5 },
-      paddedBounds: { width: 14, height: 9 },
+      paddedBounds: { x: 0, y: 0, width: 14, height: 9 },
       padding: 2,
       allowRotation: true
     }
@@ -99,7 +99,7 @@ const validRequest = {
     historyMode: 'final' as const,
     historyScope: 'winning_path' as const,
     strategySelectionMode: 'single' as const,
-    strategyIds: ['balanced_compactness/rr'],
+      strategyIds: ['balanced-preserve-free-then-bottom-left'],
     finalSelectionMode: 'manual' as const
   }
 }

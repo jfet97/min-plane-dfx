@@ -11,6 +11,8 @@ const requiredKeys: ReadonlyArray<keyof AppApi> = [
   'onPong',
   'selectDxfFiles',
   'importDxfFiles',
+  'removeImportedDxf',
+  'clearImportedDxfs',
   'exportNestingRequest',
   'runNesting',
   'cancelJob',
@@ -32,6 +34,8 @@ describe('AppApi contract', () => {
       onPong: () => () => {},
       selectDxfFiles: () => Promise.resolve([]),
       importDxfFiles: () => Promise.resolve([]),
+      removeImportedDxf: () => Promise.resolve(),
+      clearImportedDxfs: () => Promise.resolve(),
       exportNestingRequest: () => Promise.resolve(),
       runNesting: () =>
         Promise.reject(new Error('not implemented') as never) as never,

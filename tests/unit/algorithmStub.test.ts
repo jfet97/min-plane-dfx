@@ -66,8 +66,8 @@ describe('sortPiecesForNesting', () => {
 
 describe('selectFinalStrategyResult', () => {
   it('returns the first strategy result when one or more are available', () => {
-    const runA = makeStrategy('run-1', 'balanced_compactness/rr')
-    const runB = makeStrategy('run-2', 'short_side_fill/ss')
+    const runA = makeStrategy('run-1', 'balanced-preserve-free-then-bottom-left')
+    const runB = makeStrategy('run-2', 'short-fill-short-side-fit-then-bottom-left')
     const selected = selectFinalStrategyResult([runA, runB], baseRequest())
     expect(selected?.strategyRunId).toBe('run-1')
   })
@@ -77,8 +77,8 @@ describe('selectFinalStrategyResult', () => {
   })
 
   it('does not invent fake scoring for `best` or `top_n`', () => {
-    const runA = makeStrategy('run-1', 'balanced_compactness/rr')
-    const runB = makeStrategy('run-2', 'short_side_fill/ss')
+    const runA = makeStrategy('run-1', 'balanced-preserve-free-then-bottom-left')
+    const runB = makeStrategy('run-2', 'short-fill-short-side-fit-then-bottom-left')
     const reqBest = baseRequest({ options: options({ finalSelectionMode: 'best' }) })
     const reqTopN = baseRequest({ options: options({ finalSelectionMode: 'top_n' }) })
     expect(selectFinalStrategyResult([runA, runB], reqBest)?.strategyRunId).toBe('run-1')
@@ -114,14 +114,17 @@ describe('computeNestingStub', () => {
     const req = baseRequest({
       options: options({
         strategySelectionMode: 'single',
-        strategyIds: ['balanced_compactness/rr', 'short_side_fill/ss']
+        strategyIds: [
+          'balanced-preserve-free-then-bottom-left',
+          'short-fill-short-side-fit-then-bottom-left'
+        ]
       })
     })
     const result = computeNestingStub(req, 5)
     expect(result.strategyResults.length).toBe(2)
     expect(result.strategyResults.map((s) => s.strategyId)).toEqual([
-      'balanced_compactness/rr',
-      'short_side_fill/ss'
+      'balanced-preserve-free-then-bottom-left',
+      'short-fill-short-side-fit-then-bottom-left'
     ])
   })
 
@@ -135,7 +138,12 @@ describe('computeNestingStub', () => {
 
   it('points selectedStrategyRunId at the first strategy run', () => {
     const req = baseRequest({
-      options: options({ strategyIds: ['balanced_compactness/rr', 'short_side_fill/ss'] })
+      options: options({
+        strategyIds: [
+          'balanced-preserve-free-then-bottom-left',
+          'short-fill-short-side-fit-then-bottom-left'
+        ]
+      })
     })
     const result = computeNestingStub(req, 5)
     expect(result.selectedStrategyRunId).toBe(result.strategyResults[0]?.strategyRunId)
@@ -171,15 +179,15 @@ describe('strategies data', () => {
 
   it('keeps strategy ids descriptive (no opaque A.1 codes)', () => {
     for (const def of STRATEGY_DEFINITIONS) {
-      expect(def.id).toMatch(/^[a-z_]+\/[a-z]+$/)
+      expect(def.id).toMatch(/^[a-z]+(?:-[a-z]+)+$/)
       expect(def.label.length).toBeGreaterThan(0)
       expect(def.description.length).toBeGreaterThan(0)
     }
   })
 
   it('findStrategy returns the matching definition', () => {
-    const def = findStrategy('short_side_fill/sx')
-    expect(def?.label).toContain('Short-side')
+    const def = findStrategy('short-fill-short-side-fit-then-bottom-left')
+    expect(def?.label).toContain('Short-fill')
   })
 })
 

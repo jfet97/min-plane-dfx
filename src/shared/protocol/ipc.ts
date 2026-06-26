@@ -46,6 +46,8 @@ export interface AppApi {
   // Phase 3
   readonly selectDxfFiles: () => Promise<ReadonlyArray<ImportedDxfDocument>>
   readonly importDxfFiles: (paths: ReadonlyArray<string>) => Promise<ReadonlyArray<ImportedDxfDocument>>
+  readonly removeImportedDxf: (pieceId: PieceId) => Promise<void>
+  readonly clearImportedDxfs: () => Promise<void>
 
   // Phase 4
   readonly exportNestingRequest: (request: NestingRequest) => Promise<void>

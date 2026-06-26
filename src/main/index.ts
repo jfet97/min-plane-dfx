@@ -2,7 +2,11 @@ import { app, BrowserWindow, shell } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { createWindow } from './app/createWindow.js'
-import { registerIpcHandlers, unregisterIpcHandlers } from './ipc/handlers.js'
+import {
+  initializeWorkspaceProject,
+  registerIpcHandlers,
+  unregisterIpcHandlers
+} from './ipc/handlers.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -45,7 +49,8 @@ app.on('web-contents-created', (_event, contents) => {
   })
 })
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await initializeWorkspaceProject()
   registerIpcHandlers()
 
   createWindow({ preloadPath: join(__dirname, '../preload/index.cjs') })
