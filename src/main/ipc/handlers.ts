@@ -25,6 +25,7 @@ import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
  */
 export const IPC_CHANNELS = [
   'app:ping',
+  'dxf:list-imports',
   'dxf:select-files',
   'dxf:import-files',
   'dxf:remove-import',
@@ -137,6 +138,18 @@ export function registerIpcHandlers(): void {
       value: { at: new Date().toISOString() }
     }
   })
+
+  ipcMain.handle(
+    'dxf:list-imports',
+    async (): Promise<IpcResult<{ readonly documents: ReadonlyArray<ImportedDxfDocument> }>> => {
+      try {
+        const documents = await getWorkspace().listImportedDxfs()
+        return { ok: true, value: { documents } }
+      } catch (err) {
+        return fromWorkspaceError(err)
+      }
+    }
+  )
 
   ipcMain.handle(
     'dxf:select-files',
