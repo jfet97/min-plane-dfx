@@ -9,6 +9,7 @@ import type { AppApi } from '@shared/protocol/ipc.js'
 const requiredKeys: ReadonlyArray<keyof AppApi> = [
   'ping',
   'onPong',
+  'listImportedDxfs',
   'selectDxfFiles',
   'importDxfFiles',
   'removeImportedDxf',
@@ -32,6 +33,7 @@ describe('AppApi contract', () => {
     const sample: AppApi = {
       ping: () => Promise.resolve({ at: '' }),
       onPong: () => () => {},
+      listImportedDxfs: () => Promise.resolve([]),
       selectDxfFiles: () => Promise.resolve([]),
       importDxfFiles: () => Promise.resolve([]),
       removeImportedDxf: () => Promise.resolve(),

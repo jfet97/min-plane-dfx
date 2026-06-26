@@ -50,6 +50,11 @@ const api: AppApi = {
     return () => ipcRenderer.removeListener('app:pong', listener)
   },
 
+  listImportedDxfs: () =>
+    invokeEnvelope<[], { readonly documents: ReadonlyArray<ImportedDxfDocument> }>(
+      'dxf:list-imports'
+    ).then((r) => r.documents),
+
   selectDxfFiles: () =>
     invokeEnvelope<[], { readonly documents: ReadonlyArray<ImportedDxfDocument> }>(
       'dxf:select-files'

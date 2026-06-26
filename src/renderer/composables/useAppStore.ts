@@ -111,6 +111,14 @@ function appendDocuments(documents: ReadonlyArray<ImportedDxfDocument>): void {
   state.importRevision++
 }
 
+function replaceImportedDocuments(documents: ReadonlyArray<ImportedDxfDocument>): void {
+  state.documents = [...documents]
+  state.failures = []
+  state.lastSkippedDuplicateCount = 0
+  recomputeAggregates()
+  state.importRevision++
+}
+
 function recomputeAggregates(): void {
   const allPieces: ImportedPiece[] = []
   const allWarnings: ImportWarning[] = []
@@ -128,6 +136,18 @@ function recomputeAggregates(): void {
     .map((piece) => piece.id)
     .filter((id) => !current.has(id))
   state.selectedPieceIds = [...currentSelection, ...importedSelection]
+}
+
+async function loadPersistedImports(): Promise<void> {
+  const api = window.appApi
+  if (!api) return
+  state.isImporting = true
+  try {
+    const documents = await api.listImportedDxfs()
+    replaceImportedDocuments(documents)
+  } finally {
+    state.isImporting = false
+  }
 }
 
 async function importPaths(paths: ReadonlyArray<string>): Promise<void> {
@@ -239,6 +259,8 @@ export function useAppStore() {
     warningCount: computed(() => state.warnings.length),
     selectAndImport,
     importPaths,
+    loadPersistedImports,
+    replaceImportedDocuments,
     hydrateFromProject,
     isPieceSelected,
     setPieceSelected,

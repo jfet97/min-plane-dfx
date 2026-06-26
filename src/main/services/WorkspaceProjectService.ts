@@ -25,6 +25,10 @@ interface StoredDxfRow {
 
 function firstRow(rows: ReadonlyArray<unknown>): StoredDxfRow | null {
   const row = rows[0]
+  return storedDxfRow(row)
+}
+
+function storedDxfRow(row: unknown): StoredDxfRow | null {
   if (typeof row !== 'object' || row === null) return null
   const documentJson = (row as { readonly document_json?: unknown }).document_json
   return typeof documentJson === 'string' ? { document_json: documentJson } : null
@@ -101,6 +105,27 @@ export class WorkspaceProjectService {
   importDxfFiles(paths: ReadonlyArray<string>): Promise<ReadonlyArray<ImportedDxfDocument>> {
     return this.run(
       Effect.forEach(paths, (path) => this.importDxfFile(path), { concurrency: 2 })
+    )
+  }
+
+  listImportedDxfs(): Promise<ReadonlyArray<ImportedDxfDocument>> {
+    const decodeStoredDocument = this.decodeStoredDocument.bind(this)
+    return this.run(
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient
+        const rows = yield* sql`
+          SELECT document_json
+          FROM imported_dxf
+          ORDER BY imported_at ASC, id ASC
+        `
+        return rows.map((row) => {
+          const stored = storedDxfRow(row)
+          if (!stored) {
+            throw new WorkspaceProjectError('Stored DXF row has an invalid shape.')
+          }
+          return decodeStoredDocument(stored.document_json)
+        })
+      })
     )
   }
 

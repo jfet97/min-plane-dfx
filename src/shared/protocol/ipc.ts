@@ -44,6 +44,7 @@ export interface AppApi {
   readonly onPong: (callback: (at: string) => void) => Unsubscribe
 
   // Phase 3
+  readonly listImportedDxfs: () => Promise<ReadonlyArray<ImportedDxfDocument>>
   readonly selectDxfFiles: () => Promise<ReadonlyArray<ImportedDxfDocument>>
   readonly importDxfFiles: (paths: ReadonlyArray<string>) => Promise<ReadonlyArray<ImportedDxfDocument>>
   readonly removeImportedDxf: (pieceId: PieceId) => Promise<void>

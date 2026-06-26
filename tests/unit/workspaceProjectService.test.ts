@@ -21,7 +21,7 @@ const baseOpen = (): string => header() + section('TABLES') + endsec() + section
 const baseClose = (): string => '0\nEOF\n'
 
 describe('WorkspaceProjectService', () => {
-  it('creates a temporary SQLite workspace, copies DXF files, and returns one object per file', async () => {
+  it('creates a temporary SQLite workspace, copies DXF files, and lists persisted imports from a fresh service', async () => {
     const dir = join(tmpdir(), `min-plane-workspace-${randomUUID()}`)
     const sourceDir = join(dir, 'source')
     const sourcePath = join(sourceDir, 'rectangle.dxf')
@@ -59,6 +59,12 @@ describe('WorkspaceProjectService', () => {
       if (document) {
         await expect(stat(document.path)).resolves.toBeTruthy()
       }
+
+      const reloadedService = new WorkspaceProjectService(dir)
+      await reloadedService.initialize()
+      const persistedDocuments = await reloadedService.listImportedDxfs()
+
+      expect(persistedDocuments).toEqual(documents)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }

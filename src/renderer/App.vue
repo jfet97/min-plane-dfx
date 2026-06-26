@@ -42,6 +42,9 @@ watch(store.importRevision, () => {
 onMounted(() => {
   const api = window.appApi
   if (!api) return
+  void store.loadPersistedImports().catch((error: unknown) => {
+    console.error('[imports] failed to load persisted DXFs:', error)
+  })
   unsubscribe = api.onPong((at) => {
     lastPong.value = at
   })
