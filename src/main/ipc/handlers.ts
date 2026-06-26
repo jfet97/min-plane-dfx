@@ -41,6 +41,7 @@ export type IpcChannel = (typeof IPC_CHANNELS)[number]
 
 let pongTimer: NodeJS.Timeout | null = null
 let supervisor: WorkerSupervisor | null = null
+let resultBroadcastRegistered = false
 const historyListenersByJob = new Map<JobId, Set<(event: NestingHistoryEvent) => void>>()
 
 function getSupervisor(): WorkerSupervisor {
@@ -68,7 +69,7 @@ function getWorkerPath(): string {
   for (const candidate of candidates) {
     if (existsSync(candidate)) return candidate
   }
-  return candidates[0]!
+  return candidates[0] ?? join(__dirname, 'workers', 'nesting.worker.cjs')
 }
 
 function fromSupervisorError(err: unknown): IpcResult<never> {
@@ -86,6 +87,23 @@ function fromSupervisorError(err: unknown): IpcResult<never> {
 }
 
 export function registerIpcHandlers(): void {
+  // Register the result-broadcast listener exactly once for the whole
+  // supervisor lifetime. Round 1 registered a fresh listener on every
+  // nesting:run call (handlers.ts old lines 315-325), so the N-th run
+  // broadcast results N times and permanently captured the originating
+  // window. Round 2 (F2) captures the windows at broadcast time so a
+  // closed window is never held.
+  if (!resultBroadcastRegistered) {
+    getSupervisor().onResult((jobId, result) => {
+      for (const w of BrowserWindow.getAllWindows()) {
+        if (!w.isDestroyed()) {
+          w.webContents.send('nesting:result-event', jobId, result)
+        }
+      }
+    })
+    resultBroadcastRegistered = true
+  }
+
   ipcMain.handle('app:ping', (_event: IpcMainInvokeEvent): IpcResult<{ readonly at: string }> => {
     return {
       ok: true,
@@ -306,33 +324,14 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     'nesting:run',
     async (
-      event: IpcMainInvokeEvent,
+      _event: IpcMainInvokeEvent,
       request: NestingRequest
     ): Promise<IpcResult<{ readonly jobId: JobId }>> => {
-      const win = BrowserWindow.fromWebContents(event.sender)
-      const sup = getSupervisor()
-
-      // Broadcast the final result so the renderer can resolve its pending
-      // runNesting promise even though `nesting:run` returns only the jobId.
-      sup.onResult((jobId, result) => {
-        if (win) {
-          win.webContents.send('nesting:result-event', jobId, result)
-        } else {
-          for (const w of BrowserWindow.getAllWindows()) {
-            w.webContents.send('nesting:result-event', jobId, result)
-          }
-        }
-      })
-
       try {
-        await sup.runNesting(request, (event) => {
-          const listeners = historyListenersByJob.get(request.jobId)
-          if (!listeners) return
-          for (const l of listeners) {
-            try {
-              l(event)
-            } catch (err) {
-              console.error('[ipc] history listener threw:', err)
+        await getSupervisor().runNesting(request, (event) => {
+          for (const w of BrowserWindow.getAllWindows()) {
+            if (!w.isDestroyed()) {
+              w.webContents.send('nesting:history-event', event)
             }
           }
         })
@@ -443,8 +442,12 @@ export function registerIpcHandlers(): void {
       if (dlg.canceled || dlg.filePaths.length === 0) {
         return { ok: false, error: { code: 'project_read_error', message: 'Open cancelled' } }
       }
+      const selectedPath = dlg.filePaths[0]
+      if (!selectedPath) {
+        return { ok: false, error: { code: 'project_read_error', message: 'No project file selected' } }
+      }
       try {
-        const project = await loadProjectFile(dlg.filePaths[0]!)
+        const project = await loadProjectFile(selectedPath)
         return { ok: true, value: project }
       } catch (err) {
         if (err instanceof ProjectFileError) {
@@ -479,5 +482,6 @@ export function unregisterIpcHandlers(): void {
     ipcMain.removeHandler(channel)
   }
   supervisor = null
+  resultBroadcastRegistered = false
   historyListenersByJob.clear()
 }

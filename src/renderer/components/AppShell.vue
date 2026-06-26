@@ -12,8 +12,20 @@ defineProps<{
       <span class="brand">Min Plane DXF</span>
       <slot name="toolbar" />
       <span class="spacer" />
-      <span class="status-pill" v-if="lastPing" :title="`ping at ${lastPing}`">ping: {{ lastPing }}</span>
-      <span class="status-pill" v-if="lastPong" :title="`pong at ${lastPong}`">pong: {{ lastPong }}</span>
+      <span
+        class="status-pill"
+        v-if="lastPing"
+        :title="`Internal IPC health check from renderer to main process at ${lastPing}.`"
+      >
+        ping: {{ lastPing }}
+      </span>
+      <span
+        class="status-pill"
+        v-if="lastPong"
+        :title="`Internal IPC health check broadcast from main process at ${lastPong}.`"
+      >
+        pong: {{ lastPong }}
+      </span>
     </header>
 
     <main class="workspace">
@@ -88,12 +100,19 @@ defineProps<{
 }
 
 .timeline {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.1fr) minmax(280px, 1fr) minmax(240px, 0.8fr);
+  gap: 12px;
+  min-height: 0;
   background: var(--bg-panel);
   border-top: 1px solid var(--border);
   padding: 12px;
+  overflow: hidden;
 }
 
 .status-strip {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   padding: 0 12px;

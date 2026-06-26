@@ -31,7 +31,7 @@ export const STRATEGY_DEFINITIONS: ReadonlyArray<NestingStrategyDefinition> =
 
 /** Default strategy id used by the stub when the request does not specify one. */
 export const DEFAULT_STRATEGY_ID =
-  STRATEGY_DEFINITIONS[0]?.id ?? 'balanced_compactness/rr'
+  STRATEGY_DEFINITIONS[0]?.id ?? 'balanced-preserve-free-then-bottom-left'
 
 /** Lookup helper used by the worker stub and the renderer. */
 export function findStrategy(id: string): NestingStrategyDefinition | undefined {

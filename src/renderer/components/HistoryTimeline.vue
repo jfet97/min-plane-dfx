@@ -3,22 +3,23 @@ import { useHistoryStore } from '../composables/useHistoryStore.js'
 
 const history = useHistoryStore()
 
+function inputValue(event: Event): string {
+  return event.target instanceof HTMLInputElement ? event.target.value : ''
+}
+
 function onSliderInput(event: Event): void {
-  const target = event.target as HTMLInputElement
-  const value = Number(target.value)
-  history.selectFrameIndex(value)
+  history.selectFrameIndex(Number(inputValue(event)))
 }
 
 function onSpeedChange(event: Event): void {
-  const target = event.target as HTMLInputElement
-  history.setSpeed(Number(target.value))
+  history.setSpeed(Number(inputValue(event)))
 }
 </script>
 
 <template>
   <div class="timeline">
     <header class="head">
-      <h2>History timeline</h2>
+      <h2 title="Frames appear only when the algorithm emits them.">History timeline</h2>
       <div class="run-label" v-if="history.selectedRun.value">
         <span class="muted">Run:</span>
         <strong>{{ history.selectedRun.value.strategyLabel }}</strong>
@@ -35,6 +36,7 @@ function onSpeedChange(event: Event): void {
     <div v-else class="controls">
       <input
         type="range"
+        title="Scrub through emitted algorithm frames for the selected strategy run."
         min="0"
         :max="Math.max(0, history.frameCount.value - 1)"
         :value="history.state.value.selectedFrameIndex"
@@ -42,20 +44,21 @@ function onSpeedChange(event: Event): void {
         class="slider"
       />
       <div class="buttons">
-        <button type="button" :disabled="history.frameCount.value === 0" @click="history.stepFrame(-1)">
+        <button type="button" :disabled="history.frameCount.value === 0" title="Move to the previous emitted frame." @click="history.stepFrame(-1)">
           Prev
         </button>
         <button
           type="button"
           :disabled="history.frameCount.value === 0"
+          title="Play or pause timeline playback for emitted frames."
           @click="history.togglePlayback"
         >
           {{ history.state.value.isPlaying ? 'Pause' : 'Play' }}
         </button>
-        <button type="button" :disabled="history.frameCount.value === 0" @click="history.stepFrame(1)">
+        <button type="button" :disabled="history.frameCount.value === 0" title="Move to the next emitted frame." @click="history.stepFrame(1)">
           Next
         </button>
-        <label class="speed">
+        <label class="speed" title="Timeline playback speed multiplier.">
           Speed
           <input
             type="number"

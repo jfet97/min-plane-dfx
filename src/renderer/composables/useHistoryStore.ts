@@ -6,6 +6,8 @@ import type {
   NestingStrategyResult,
   ProjectHistoryRef
 } from '@shared/domain/nesting.js'
+import type { JobId } from '@shared/domain/ids.js'
+import type { ProjectDocument } from '@shared/domain/project.js'
 import { newJobId } from '../utils/ids.js'
 
 /**
@@ -128,13 +130,13 @@ export function useHistoryStore() {
       }
     },
 
-    completeRun(jobId: string, summary: NestingHistorySummary): void {
+    completeRun(jobId: JobId, summary: NestingHistorySummary): void {
       // Persist a ProjectHistoryRef so the renderer can offer NDJSON export
       // even when the renderer has only a bounded in-memory window.
       if (summary.ndjsonPath) {
         const ref: ProjectHistoryRef = {
           kind: 'ndjson_replay',
-          jobId: jobId as ProjectHistoryRef['jobId'],
+          jobId,
           path: summary.ndjsonPath,
           frameCount: summary.frameCount,
           createdAt: new Date().toISOString()
@@ -188,6 +190,20 @@ export function useHistoryStore() {
 
     setLastHistoryRef(ref: ProjectHistoryRef | null): void {
       state.lastHistoryRef = ref
+    },
+
+    hydrateFromProject(project: ProjectDocument): void {
+      stopPlayback()
+      state.result = project.lastResult ?? null
+      state.framesByRun = {}
+      state.selectedStrategyRunId =
+        project.lastResult?.selectedStrategyRunId ??
+        project.lastResult?.strategyResults[0]?.strategyRunId ??
+        null
+      state.selectedFrameIndex = -1
+      state.isPlaying = false
+      state.truncated = false
+      state.lastHistoryRef = project.lastHistory ?? null
     },
 
     clear(): void {

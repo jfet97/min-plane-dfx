@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { useHistoryStore } from '../composables/useHistoryStore.js'
-import { useFinalSelection } from '../composables/useFinalSelection.js'
 
 const history = useHistoryStore()
-const finalSelection = useFinalSelection()
 
 function stats(run: NonNullable<typeof history.selectedRun.value>) {
   return {
@@ -19,17 +17,22 @@ function stats(run: NonNullable<typeof history.selectedRun.value>) {
 function isSelected(runId: string): boolean {
   return history.state.value.selectedStrategyRunId === runId
 }
+
 </script>
 
 <template>
   <div class="runs">
     <header>
-      <h2>Strategy runs</h2>
+      <h2 title="Worker-reported runs for each selected strategy configuration.">Strategy runs</h2>
       <p class="muted">
         Each run is independent. The selected run drives the result view and the
         history timeline.
       </p>
     </header>
+
+    <p v-if="history.strategyResults.value.length === 0" class="empty">
+      No strategy runs yet. Import pieces, configure the sheet, then run the worker.
+    </p>
 
     <ul class="run-list">
       <li
@@ -46,60 +49,19 @@ function isSelected(runId: string): boolean {
           <header class="card-head">
             <strong>{{ run.strategyLabel }}</strong>
             <code>{{ run.strategyId }}</code>
+            <small v-if="run.strategyDescription">{{ run.strategyDescription }}</small>
           </header>
           <dl class="metrics">
-            <div><dt>Status</dt><dd>{{ stats(run).status }}</dd></div>
-            <div><dt>Placed</dt><dd>{{ stats(run).placed }}</dd></div>
-            <div><dt>Unplaced</dt><dd>{{ stats(run).unplaced }}</dd></div>
-            <div><dt>Elapsed</dt><dd>{{ stats(run).elapsedMs }} ms</dd></div>
+            <div title="Worker-reported status for this strategy run."><dt>Status</dt><dd>{{ stats(run).status }}</dd></div>
+            <div title="Number of pieces placed by this strategy run."><dt>Placed</dt><dd>{{ stats(run).placed }}</dd></div>
+            <div title="For real algorithm runs, any unplaced piece is fatal/failed, not partial success."><dt>Unplaced</dt><dd>{{ stats(run).unplaced }}</dd></div>
+            <div title="Runtime reported by the worker."><dt>Elapsed</dt><dd>{{ stats(run).elapsedMs }} ms</dd></div>
             <div><dt>Pieces</dt><dd>{{ stats(run).pieceCount }}</dd></div>
-            <div><dt>Warnings</dt><dd>{{ stats(run).warningCount }}</dd></div>
+            <div title="Non-fatal warnings emitted while preparing or running this strategy."><dt>Warnings</dt><dd>{{ stats(run).warningCount }}</dd></div>
           </dl>
         </button>
       </li>
     </ul>
-
-    <section class="final-selection">
-      <h3>Final selection</h3>
-      <div class="row">
-        <label>
-          Mode
-          <select
-            :value="finalSelection.state.value.mode"
-            @change="
-              finalSelection.setMode(
-                ($event.target as HTMLSelectElement).value as 'manual' | 'best' | 'top_n'
-              )
-            "
-          >
-            <option value="manual">manual</option>
-            <option value="best" disabled title="Scoring criteria not implemented yet">best</option>
-            <option value="top_n" disabled title="Scoring criteria not implemented yet">top N</option>
-          </select>
-        </label>
-        <label>
-          Top N
-          <input
-            type="number"
-            min="1"
-            step="1"
-            :value="finalSelection.state.value.topN"
-            @input="finalSelection.setTopN(Number(($event.target as HTMLInputElement).value))"
-          />
-        </label>
-      </div>
-      <p class="muted">
-        <span v-if="finalSelection.state.value.mode === 'best'">
-          "best" is reserved for the user-written scoring layer.
-        </span>
-        <span v-else-if="finalSelection.state.value.mode === 'top_n'">
-          "top N" ranking is reserved for the user-written scoring layer.
-        </span>
-        <span v-else>
-          Manual selection: pick a run above. The final result will follow the selected run.
-        </span>
-      </p>
-    </section>
   </div>
 </template>
 
@@ -166,6 +128,12 @@ li.selected .run-card {
   color: var(--text-muted);
 }
 
+.card-head small,
+.empty {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -190,32 +158,4 @@ dd {
   font-family: var(--font-mono);
 }
 
-.final-selection {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-}
-
-.final-selection h3 {
-  margin: 0 0 4px 0;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-}
-
-.row {
-  display: grid;
-  grid-template-columns: 1fr 80px;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
 </style>

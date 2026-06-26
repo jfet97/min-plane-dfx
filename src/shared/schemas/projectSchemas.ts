@@ -1,5 +1,8 @@
 import { Schema } from 'effect'
 import { ProjectDocument } from '../domain/project.js'
+import { ImportedDxfDocument, ImportedPiece } from '../domain/dxf.js'
+import { NestingResult } from '../domain/nesting.js'
+import { JobId, SourceFileId } from '../domain/ids.js'
 import { PositiveWidth, PositiveHeight, NonNegativePadding } from './geometrySchemas.js'
 
 export const ProjectDocumentStrict = Schema.Struct({
@@ -7,53 +10,14 @@ export const ProjectDocumentStrict = Schema.Struct({
   savedAt: Schema.String,
   sourceFiles: Schema.Array(
     Schema.Struct({
-      id: Schema.String.check(Schema.isMinLength(1)),
+      id: SourceFileId,
       path: Schema.String,
       fileName: Schema.String,
       available: Schema.Boolean
     })
   ),
-  importedPieces: Schema.Array(
-    Schema.Struct({
-      id: Schema.String.check(Schema.isMinLength(1)),
-      sourceFileId: Schema.String.check(Schema.isMinLength(1)),
-      sourceLayer: Schema.optional(Schema.String),
-      label: Schema.String,
-      realBounds: Schema.Struct({
-        x: Schema.Number,
-        y: Schema.Number,
-        width: PositiveWidth,
-        height: PositiveHeight
-      }),
-      geometry: Schema.Struct({
-        entityType: Schema.String,
-        closed: Schema.Boolean,
-        segments: Schema.Array(
-          Schema.Struct({
-            kind: Schema.Union([Schema.Literal('line'), Schema.Literal('arc')]),
-            x1: Schema.Number,
-            y1: Schema.Number,
-            x2: Schema.Number,
-            y2: Schema.Number,
-            cx: Schema.optional(Schema.Number),
-            cy: Schema.optional(Schema.Number),
-            radius: Schema.optional(Schema.Number),
-            startAngle: Schema.optional(Schema.Number),
-            endAngle: Schema.optional(Schema.Number)
-          })
-        )
-      }),
-      warnings: Schema.Array(
-        Schema.Struct({
-          code: Schema.String,
-          message: Schema.String,
-          entityType: Schema.optional(Schema.String),
-          entityHandle: Schema.optional(Schema.Union([Schema.String, Schema.Number]))
-        })
-      )
-    })
-  ),
-  importedDocuments: Schema.optional(Schema.Array(Schema.Unknown)),
+  importedPieces: Schema.Array(ImportedPiece),
+  importedDocuments: Schema.optional(Schema.Array(ImportedDxfDocument)),
   sheet: Schema.Struct({
     width: PositiveWidth,
     height: PositiveHeight,
@@ -72,11 +36,11 @@ export const ProjectDocumentStrict = Schema.Struct({
     topN: Schema.optional(Schema.Number),
     maxHistoryEvents: Schema.optional(Schema.Number)
   }),
-  lastResult: Schema.optional(Schema.Unknown),
+  lastResult: Schema.optional(NestingResult),
   lastHistory: Schema.optional(
     Schema.Struct({
       kind: Schema.Literal('ndjson_replay'),
-      jobId: Schema.String,
+      jobId: JobId,
       path: Schema.String,
       frameCount: Schema.Number,
       createdAt: Schema.String

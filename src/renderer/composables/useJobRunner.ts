@@ -23,7 +23,7 @@ let historyUnsub: Unsubscribe | null = null
 
 export interface RunNestingBindings {
   readonly onHistoryFrame: (frame: NestingHistoryFrame) => void
-  readonly onHistoryComplete: (jobId: string, summary: NestingHistorySummary) => void
+  readonly onHistoryComplete: (jobId: JobId, summary: NestingHistorySummary) => void
   readonly onResult: (result: NestingResult) => void
   readonly onError: (message: string) => void
 }
@@ -51,10 +51,13 @@ export function useJobRunner() {
       })
 
       try {
-        await api.runNesting(request)
-        // The result arrives via the history stream's `history_complete` payload
-        // through the supervisor. We do not block here; the result lands in
-        // bindings.onResult once the worker emits `success`.
+        const result = await api.runNesting(request)
+        state.result = result
+        state.status = 'completed'
+        state.activeJobId = null
+        historyUnsub?.()
+        historyUnsub = null
+        bindings.onResult(result)
       } catch (err) {
         state.status = 'failed'
         state.lastError = err instanceof Error ? err.message : String(err)
@@ -103,8 +106,7 @@ function handleHistoryEvent(event: NestingHistoryEvent, bindings: RunNestingBind
     return
   }
   if (event.type === 'history_complete') {
-    const summary = event.payload as NestingHistorySummary
-    bindings.onHistoryComplete(event.jobId, summary)
+    bindings.onHistoryComplete(event.jobId, event.payload)
     return
   }
 }

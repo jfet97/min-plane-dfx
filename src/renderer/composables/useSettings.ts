@@ -1,5 +1,6 @@
 import { reactive, computed, type UnwrapNestedRefs } from 'vue'
 import type { SheetSpec, NestingOptions } from '@shared/domain/nesting.js'
+import type { ProjectDocument } from '@shared/domain/project.js'
 import { DEFAULT_STRATEGY_ID } from '@shared/domain/strategies.js'
 
 export interface SettingsState {
@@ -21,7 +22,7 @@ interface MutableSettingsState {
     strategyIds: string[]
     finalSelectionMode: 'manual' | 'best' | 'top_n'
     topN?: number | undefined
-    maxHistoryEvents?: number
+    maxHistoryEvents?: number | undefined
   }
 }
 
@@ -44,6 +45,19 @@ export function makeDefaultSettings(): MutableSettingsState {
 }
 
 const state: UnwrapNestedRefs<MutableSettingsState> = reactive<MutableSettingsState>(makeDefaultSettings())
+
+function replaceOptions(options: NestingOptions): void {
+  state.options.allowGlobalRotation = options.allowGlobalRotation
+  state.options.timeoutMs = options.timeoutMs
+  state.options.workerMode = options.workerMode
+  state.options.historyMode = options.historyMode
+  state.options.historyScope = options.historyScope
+  state.options.strategySelectionMode = options.strategySelectionMode
+  state.options.strategyIds = [...options.strategyIds]
+  state.options.finalSelectionMode = options.finalSelectionMode
+  state.options.topN = options.topN
+  state.options.maxHistoryEvents = options.maxHistoryEvents
+}
 
 export function useSettings() {
   return {
@@ -96,13 +110,14 @@ export function useSettings() {
       state.sheet.height = defaults.sheet.height
       state.sheet.label = defaults.sheet.label
       state.padding = defaults.padding
-      state.options.allowGlobalRotation = defaults.options.allowGlobalRotation
-      state.options.timeoutMs = defaults.options.timeoutMs
-      state.options.historyMode = defaults.options.historyMode
-      state.options.strategySelectionMode = defaults.options.strategySelectionMode
-      state.options.strategyIds = [...defaults.options.strategyIds]
-      state.options.finalSelectionMode = defaults.options.finalSelectionMode
-      state.options.topN = defaults.options.topN
+      replaceOptions(defaults.options)
+    },
+    hydrateFromProject: (project: ProjectDocument): void => {
+      state.sheet.width = project.sheet.width
+      state.sheet.height = project.sheet.height
+      state.sheet.label = project.sheet.label
+      state.padding = project.padding
+      replaceOptions(project.options)
     }
   }
 }

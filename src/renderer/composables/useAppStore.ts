@@ -1,5 +1,6 @@
 import { reactive, computed, type UnwrapNestedRefs } from 'vue'
 import type { ImportedDxfDocument, ImportedPiece, ImportWarning } from '@shared/domain/dxf.js'
+import type { ProjectDocument } from '@shared/domain/project.js'
 
 export interface ImportFailure {
   readonly path: string
@@ -69,6 +70,20 @@ function clear(): void {
   state.failures = []
 }
 
+function hydrateFromProject(project: ProjectDocument): void {
+  state.documents = [...(project.importedDocuments ?? [])]
+  state.pieces =
+    project.importedDocuments !== undefined
+      ? state.documents.flatMap((document) => document.pieces)
+      : [...project.importedPieces]
+  state.warnings =
+    project.importedDocuments !== undefined
+      ? state.documents.flatMap((document) => document.warnings)
+      : project.importedPieces.flatMap((piece) => piece.warnings)
+  state.failures = []
+  state.isImporting = false
+}
+
 export function useAppStore() {
   return {
     state: computed(() => state),
@@ -77,6 +92,7 @@ export function useAppStore() {
     warningCount: computed(() => state.warnings.length),
     selectAndImport,
     importPaths,
+    hydrateFromProject,
     clear
   }
 }

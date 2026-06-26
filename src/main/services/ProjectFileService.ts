@@ -56,5 +56,5 @@ export async function loadProjectFile(path: string): Promise<ProjectDocument> {
   if (Exit.isFailure(exit)) {
     throw new ProjectFileError('project_read_error', 'Project file failed schema validation.')
   }
-  return exit.value as ProjectDocument
+  return exit.value
 }

@@ -30,13 +30,15 @@ function lwPolylineSegments(verts: ReadonlyArray<IPoint>): Segment[] {
   if (verts.length === 0) return []
   const segs: Segment[] = []
   for (let i = 0; i < verts.length - 1; i++) {
-    const a = verts[i]!
-    const b = verts[i + 1]!
+    const a = verts[i]
+    const b = verts[i + 1]
+    if (!a || !b) continue
     segs.push({ kind: 'line', x1: a.x, y1: a.y, x2: b.x, y2: b.y })
   }
   // Close the loop for closed polylines (last -> first).
-  const last = verts[verts.length - 1]!
-  const first = verts[0]!
+  const last = verts[verts.length - 1]
+  const first = verts[0]
+  if (!last || !first) return segs
   if (first.x !== last.x || first.y !== last.y) {
     segs.push({ kind: 'line', x1: last.x, y1: last.y, x2: first.x, y2: first.y })
   }

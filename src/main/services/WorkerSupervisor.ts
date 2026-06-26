@@ -103,6 +103,14 @@ export class WorkerSupervisor {
     const worker = new Worker(this.options.workerPath)
     const requestId = cryptoRandomId()
     const listeners = new Set<HistoryEventListener>([listener])
+    // Round 2 (F1 partial): honor the per-request timeout when present,
+    // fall back to the supervisor default otherwise. The next round will
+    // rewire this through an Effect race, but respecting the field now
+    // removes a real divergence from NestingOptions.
+    const timeoutMs =
+      request.options.timeoutMs && request.options.timeoutMs > 0
+        ? request.options.timeoutMs
+        : this.options.defaultTimeoutMs
 
     return new Promise<NestingResult>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -111,11 +119,11 @@ export class WorkerSupervisor {
         reject(
           new SupervisorError(
             'worker_timeout',
-            `Worker exceeded the configured timeout of ${this.options.defaultTimeoutMs}ms.`,
-            { requestId, jobId: request.jobId }
+            `Worker exceeded the configured timeout of ${timeoutMs}ms.`,
+            { requestId, jobId: request.jobId, timeoutMs }
           )
         )
-      }, this.options.defaultTimeoutMs)
+      }, timeoutMs)
 
       this.current = {
         requestId,

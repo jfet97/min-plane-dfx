@@ -26,6 +26,7 @@ const finalSelection = useFinalSelection()
 const runner = useJobRunner()
 
 const preparationWarnings = ref<ReadonlyArray<NestingWarning>>([])
+const projectWarning = ref<string | null>(null)
 
 onMounted(() => {
   const api = window.appApi
@@ -76,6 +77,7 @@ async function exportRequest(): Promise<void> {
 async function runNesting(): Promise<void> {
   const request = buildRequest()
   if (!request) return
+  projectWarning.value = null
   history.clear()
   await runner.start(request, {
     onHistoryFrame: (frame) => history.pushFrame(frame),
@@ -98,11 +100,6 @@ async function exportHistory(): Promise<void> {
   const ref = history.state.value.lastHistoryRef
   if (!ref) {
     console.warn('No history ref available for export')
-    return
-  }
-  const allFrames = Object.values(history.state.value.framesByRun).flat()
-  if (allFrames.length === 0) {
-    console.warn('No history frames to export')
     return
   }
   await api.exportNestingHistory(ref)
@@ -135,36 +132,72 @@ async function saveProject(): Promise<void> {
     savedAt: new Date().toISOString(),
     sourceFiles,
     importedPieces: [...store.state.value.pieces],
+    importedDocuments: [...store.state.value.documents],
     sheet: { ...settings.state.value.sheet },
     padding: settings.state.value.padding,
     options: { ...settings.state.value.options },
-    ...(history.hasResult.value && history.result.value ? { lastResult: history.result.value } : {})
+    ...(history.hasResult.value && history.result.value ? { lastResult: history.result.value } : {}),
+    ...(history.state.value.lastHistoryRef ? { lastHistory: history.state.value.lastHistoryRef } : {})
   })
 }
 
 async function openProject(): Promise<void> {
   const api = window.appApi
   if (!api) return
-  await api.openProject()
+  const project = await api.openProject()
+  projectWarning.value = null
+  runner.clear()
+  store.hydrateFromProject(project)
+  settings.hydrateFromProject(project)
+  history.hydrateFromProject(project)
+  finalSelection.hydrateFromProject(project)
+  preparationWarnings.value = []
+
+  if (project.lastHistory) {
+    try {
+      const frames = await api.loadHistoryReplay(project.lastHistory)
+      for (const frame of frames) {
+        history.pushFrame(frame)
+      }
+    } catch {
+      projectWarning.value =
+        'Saved result loaded, but the referenced NDJSON history file is missing or unreadable.'
+    }
+  }
 }
 </script>
 
 <template>
   <AppShell :last-ping="lastPing" :last-pong="lastPong">
     <template #toolbar>
-      <button type="button" :disabled="store.pieceCount.value === 0 || runner.status.value === 'running'" @click="runNesting">
+      <button
+        type="button"
+        :disabled="store.pieceCount.value === 0 || runner.status.value === 'running'"
+        :title="store.pieceCount.value === 0 ? 'Sends the prepared nesting request to the worker. Disabled until at least one piece is imported.' : 'Sends the prepared nesting request to the worker using the current sheet, padding, pieces, and strategy configuration.'"
+        @click="runNesting"
+      >
         {{ runner.status.value === 'running' ? 'Running...' : 'Run' }}
       </button>
-      <button type="button" :disabled="runner.status.value !== 'running'" @click="cancelJob">
+      <button
+        type="button"
+        :disabled="runner.status.value !== 'running'"
+        title="Cancels the active worker job."
+        @click="cancelJob"
+      >
         Cancel
       </button>
-      <button type="button" :disabled="store.pieceCount.value === 0" @click="exportRequest">
+      <button
+        type="button"
+        :disabled="store.pieceCount.value === 0"
+        title="Exports the exact JSON request sent to the worker, useful for debugging and reproducing algorithm runs."
+        @click="exportRequest"
+      >
         Export Request
       </button>
       <button
         type="button"
         :disabled="!history.hasResult.value"
-        :title="history.hasResult.value ? '' : 'No nesting result yet'"
+        :title="history.hasResult.value ? 'Exports the latest worker result.' : 'Exports the latest worker result. Disabled until a result exists.'"
         @click="exportResult"
       >
         Export Result
@@ -172,13 +205,25 @@ async function openProject(): Promise<void> {
       <button
         type="button"
         :disabled="!history.state.value.lastHistoryRef"
-        :title="history.state.value.lastHistoryRef ? '' : 'No history ref available'"
+        :title="history.state.value.lastHistoryRef ? 'Exports emitted history frames for replay or debugging.' : 'Exports emitted history frames. Disabled until history exists.'"
         @click="exportHistory"
       >
         Export History
       </button>
-      <button type="button" @click="saveProject">Save Project</button>
-      <button type="button" @click="openProject">Open Project</button>
+      <button
+        type="button"
+        title="Saves a user-chosen JSON project snapshot with imports, sheet/settings, options, latest result, and history reference when available."
+        @click="saveProject"
+      >
+        Save Project
+      </button>
+      <button
+        type="button"
+        title="Opens and validates a saved JSON project, hydrates renderer state, and resets transient worker state to idle."
+        @click="openProject"
+      >
+        Open Project
+      </button>
     </template>
 
     <template #settings>
@@ -207,6 +252,7 @@ async function openProject(): Promise<void> {
       </div>
       <div class="warnings-slot">
         <h3>Preparation warnings</h3>
+        <p v-if="projectWarning" class="project-warning">{{ projectWarning }}</p>
         <ul v-if="preparationWarnings.length > 0" class="warnings">
           <li v-for="(w, i) in preparationWarnings" :key="i">{{ w.message }}</li>
         </ul>
@@ -260,6 +306,12 @@ async function openProject(): Promise<void> {
   color: var(--warning);
 }
 
+.project-warning {
+  margin: 0 0 4px 0;
+  font-size: 12px;
+  color: var(--warning);
+}
+
 .warnings li {
   margin-bottom: 2px;
 }
@@ -267,7 +319,10 @@ async function openProject(): Promise<void> {
 .strategy-runs-slot,
 .history-slot,
 .warnings-slot {
-  margin-bottom: 8px;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .warnings-slot h3 {

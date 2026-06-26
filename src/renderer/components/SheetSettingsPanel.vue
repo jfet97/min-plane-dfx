@@ -1,9 +1,39 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useSettings } from '../composables/useSettings.js'
 import FileDropZone from './FileDropZone.vue'
 import { STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js'
+import type { NestingOptions } from '@shared/domain/nesting.js'
 
 const settings = useSettings()
+
+const sheetInvalid = computed(
+  () => settings.state.value.sheet.width <= 0 || settings.state.value.sheet.height <= 0
+)
+
+function inputValue(event: Event): string {
+  return event.target instanceof HTMLInputElement ? event.target.value : ''
+}
+
+function inputChecked(event: Event): boolean {
+  return event.target instanceof HTMLInputElement ? event.target.checked : false
+}
+
+function selectValue(event: Event): string {
+  return event.target instanceof HTMLSelectElement ? event.target.value : ''
+}
+
+function setHistoryMode(event: Event): void {
+  settings.setHistoryMode(selectValue(event) as NestingOptions['historyMode'])
+}
+
+function setStrategySelectionMode(event: Event): void {
+  settings.setStrategySelectionMode(selectValue(event) as NestingOptions['strategySelectionMode'])
+}
+
+function setFinalSelectionMode(event: Event): void {
+  settings.setFinalSelectionMode(selectValue(event) as NestingOptions['finalSelectionMode'])
+}
 </script>
 
 <template>
@@ -13,96 +43,98 @@ const settings = useSettings()
 
     <h3>Sheet</h3>
     <div class="grid">
-      <label>
+      <label title="Usable sheet width in millimeters.">
         Width (mm)
         <input
           type="number"
           min="0"
           step="1"
           :value="settings.state.value.sheet.width"
-          @input="settings.setSheetWidth(Number(($event.target as HTMLInputElement).value))"
+          @input="settings.setSheetWidth(Number(inputValue($event)))"
         />
       </label>
-      <label>
+      <label title="Usable sheet height in millimeters.">
         Height (mm)
         <input
           type="number"
           min="0"
           step="1"
           :value="settings.state.value.sheet.height"
-          @input="settings.setSheetHeight(Number(($event.target as HTMLInputElement).value))"
+          @input="settings.setSheetHeight(Number(inputValue($event)))"
         />
       </label>
-      <label class="span-2">
+      <label class="span-2" title="Human-readable sheet name used in saved projects and exports.">
         Label
         <input
           type="text"
           :value="settings.state.value.sheet.label"
-          @input="settings.setSheetLabel(($event.target as HTMLInputElement).value)"
+          @input="settings.setSheetLabel(inputValue($event))"
         />
       </label>
+      <p v-if="sheetInvalid" class="warning span-2">Sheet width and height must be greater than zero.</p>
     </div>
 
     <h3>Cutting</h3>
     <div class="grid">
-      <label>
+      <label title="Clearance added around each imported shape. The algorithm works with padded rectangular footprints.">
         Padding (mm)
         <input
           type="number"
           min="0"
           step="0.1"
           :value="settings.state.value.padding"
-          @input="settings.setPadding(Number(($event.target as HTMLInputElement).value))"
+          @input="settings.setPadding(Number(inputValue($event)))"
         />
       </label>
-      <label>
+      <label title="Passed to the worker for future algorithms. The current stub does not use rotation.">
         Allow rotation
         <input
           type="checkbox"
           :checked="settings.state.value.options.allowGlobalRotation"
-          @change="settings.setAllowGlobalRotation(($event.target as HTMLInputElement).checked)"
+          @change="settings.setAllowGlobalRotation(inputChecked($event))"
         />
       </label>
     </div>
 
     <h3>Job</h3>
     <div class="grid">
-      <label>
+      <label title="Maximum worker runtime before the job should be cancelled or reported as timed out.">
         Timeout (ms)
         <input
           type="number"
           min="1000"
           step="1000"
           :value="settings.state.value.options.timeoutMs"
-          @input="settings.setTimeoutMs(Number(($event.target as HTMLInputElement).value))"
+          @input="settings.setTimeoutMs(Number(inputValue($event)))"
         />
       </label>
-      <label>
+      <label title="Controls whether worker-emitted algorithm frames are retained or streamed. The stub only emits placeholder lifecycle history.">
         History mode
         <select
           :value="settings.state.value.options.historyMode"
-          @change="settings.setHistoryMode(($event.target as HTMLSelectElement).value as 'stream' | 'final' | 'off')"
+          @change="setHistoryMode"
         >
-          <option value="off">off</option>
-          <option value="final">final</option>
-          <option value="stream">stream</option>
+          <option value="off" title="Do not collect algorithm history.">off</option>
+          <option value="final" title="Collect history and return it at the end of the run.">final</option>
+          <option value="stream" title="Stream history frames while the worker runs.">stream</option>
         </select>
       </label>
     </div>
 
-    <h3>Strategies</h3>
-    <label class="span-2 full">
+    <h3 title="A strategy is a named scoring/order configuration for the future nesting algorithm.">
+      Strategies
+    </h3>
+    <p class="hint">
+      Strategy IDs are saved as data; the current worker still uses the algorithm stub.
+    </p>
+    <label class="span-2 full" title="Single runs only the checked strategy IDs. All configured runs every listed strategy.">
       Selection mode
       <select
         :value="settings.state.value.options.strategySelectionMode"
-        @change="
-          settings.setStrategySelectionMode(
-            ($event.target as HTMLSelectElement).value as 'single' | 'all_configured'
-          )
-        "
+        @change="setStrategySelectionMode"
       >
-        <option value="single">Single (use strategyIds)</option>
-        <option value="all_configured">All configured</option>
+        <option value="single" title="Run only the checked strategy IDs.">Single</option>
+        <option value="all_configured" title="Run every strategy listed in the strategy configuration.">All configured</option>
       </select>
     </label>
     <ul class="strategy-list">
@@ -114,7 +146,7 @@ const settings = useSettings()
             :checked="settings.state.value.options.strategyIds.includes(strategy.id)"
             @change="settings.toggleStrategyId(strategy.id)"
           />
-          <span class="strategy-meta">
+          <span class="strategy-meta" :title="strategy.description">
             <strong>{{ strategy.label }}</strong>
             <code class="muted">{{ strategy.id }}</code>
             <small>{{ strategy.description }}</small>
@@ -125,29 +157,25 @@ const settings = useSettings()
 
     <h3>Final selection</h3>
     <div class="grid">
-      <label>
+      <label title="Manual mode uses the strategy run selected in the Strategy Runs panel.">
         Mode
         <select
           :value="settings.state.value.options.finalSelectionMode"
-          @change="
-            settings.setFinalSelectionMode(
-              ($event.target as HTMLSelectElement).value as 'manual' | 'best' | 'top_n'
-            )
-          "
+          @change="setFinalSelectionMode"
         >
-          <option value="manual">manual</option>
-          <option value="best" disabled>best (scoring TBD)</option>
-          <option value="top_n" disabled>top N (scoring TBD)</option>
+          <option value="manual" title="Manual mode uses the strategy run selected in the Strategy Runs panel.">manual</option>
+          <option value="best" disabled title="Reserved for the future final-result scoring layer. Disabled until scoring is implemented.">best (scoring TBD)</option>
+          <option value="top_n" disabled title="Reserved for returning the top N completed strategy runs. Disabled until final ranking is implemented.">top N (scoring TBD)</option>
         </select>
       </label>
-      <label>
+      <label title="Number of ranked results to keep when top-N final selection is implemented.">
         Top N
         <input
           type="number"
           min="1"
           step="1"
           :value="settings.state.value.options.topN ?? 3"
-          @input="settings.setTopN(Number(($event.target as HTMLInputElement).value))"
+          @input="settings.setTopN(Number(inputValue($event)))"
         />
       </label>
     </div>
@@ -234,5 +262,19 @@ select {
 
 .muted {
   color: var(--text-muted);
+}
+
+.hint,
+.warning {
+  margin: 0;
+  font-size: 11px;
+}
+
+.hint {
+  color: var(--text-muted);
+}
+
+.warning {
+  color: var(--warning);
 }
 </style>

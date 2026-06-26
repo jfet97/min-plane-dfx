@@ -1,7 +1,6 @@
 import { parentPort } from 'node:worker_threads'
-import { mkdir, writeFile } from 'node:fs/promises'
-import { join, dirname } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { NodeFileSystem, NodePath } from '@effect/platform-node'
 import { computeNestingStub } from './algorithm/computeNestingStub.js'
 import {
   WorkerRequest as WorkerRequestSchema,
@@ -14,7 +13,7 @@ import type {
   NestingHistorySummary,
   NestingRequest
 } from '@shared/domain/nesting.js'
-import { Exit, Schema } from 'effect'
+import { Effect, Exit, FileSystem, Layer, ManagedRuntime, Path, Schema } from 'effect'
 
 /**
  * Nesting worker thread. Receives a validated WorkerRequest, runs the
@@ -33,9 +32,10 @@ const port = parentPort
 if (!port) {
   throw new Error('nesting.worker.ts must be loaded as a worker_threads module')
 }
+const workerPort = port
 
 function send(response: WorkerResponse): void {
-  port!.postMessage(response)
+  workerPort.postMessage(response)
 }
 
 function sendProgress(
@@ -60,19 +60,30 @@ function sendProgress(
 const HISTORY_DIR_ENV = (globalThis as { process?: { env?: Record<string, string | undefined> } })
   .process?.env?.['MIN_PLANE_HISTORY_DIR']
 
-function resolveHistoryDir(): string {
-  if (HISTORY_DIR_ENV) return HISTORY_DIR_ENV
-  // Fallback: alongside the worker bundle under `out/main/history`.
-  return join(dirname(new URL(import.meta.url).pathname), 'history')
+const WorkerLiveLayer = Layer.mergeAll(NodeFileSystem.layer, NodePath.layer)
+const workerRuntime = ManagedRuntime.make(WorkerLiveLayer)
+
+function prepareHistoryFile(jobId: string, historyMode: NestingRequest['options']['historyMode']) {
+  return Effect.gen(function* () {
+    if (historyMode === 'off') return null
+    const path = yield* Path.Path
+    const fs = yield* FileSystem.FileSystem
+    const historyDir =
+      HISTORY_DIR_ENV ?? path.join(path.dirname(new URL(import.meta.url).pathname), 'history')
+    const historyPath = path.join(historyDir, `${jobId}.ndjson`)
+    yield* fs.makeDirectory(path.dirname(historyPath), { recursive: true })
+    yield* fs.writeFileString(historyPath, '', { flag: 'w' })
+    return historyPath
+  })
 }
 
-function historyPathFor(jobId: string): string {
-  return join(resolveHistoryDir(), `${jobId}.ndjson`)
-}
-
-async function appendFrame(path: string, frame: NestingHistoryFrame): Promise<void> {
-  await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, `${JSON.stringify(frame)}\n`, { flag: 'a', encoding: 'utf8' })
+function appendFrame(path: string, frame: NestingHistoryFrame) {
+  return Effect.gen(function* () {
+    const filePath = yield* Path.Path
+    const fs = yield* FileSystem.FileSystem
+    yield* fs.makeDirectory(filePath.dirname(path), { recursive: true })
+    yield* fs.writeFileString(path, `${JSON.stringify(frame)}\n`, { flag: 'a' })
+  })
 }
 
 function buildInitialFrame(request: NestingRequest, runId: string): NestingHistoryFrame {
@@ -93,19 +104,16 @@ async function handleRunNesting(requestId: string, payload: NestingRequest): Pro
   const jobId = payload.jobId
   const startedAt = Date.now()
 
-  sendProgress(requestId, jobId, 'received')
-  sendProgress(requestId, jobId, 'validated')
-  sendProgress(requestId, jobId, 'started')
-
-  const historyMode = payload.options.historyMode
-  const historyPath = historyMode === 'off' ? null : historyPathFor(jobId)
-
-  if (historyPath) {
-    await mkdir(dirname(historyPath), { recursive: true })
-    await writeFile(historyPath, '', { flag: 'w', encoding: 'utf8' })
-  }
-
+  // History file setup must be inside the try block: if mkdir or the
+  // truncating writeFile throws before the algorithm runs, the supervisor
+  // would otherwise wait the full timeout before giving up. Round 2 (F3).
   try {
+    sendProgress(requestId, jobId, 'received')
+    sendProgress(requestId, jobId, 'validated')
+    sendProgress(requestId, jobId, 'started')
+
+    const historyMode = payload.options.historyMode
+    const historyPath = await workerRuntime.runPromise(prepareHistoryFile(jobId, historyMode))
     const result = computeNestingStub(payload, Date.now() - startedAt)
     const strategyRunIds = result.strategyResults.map((s) => s.strategyRunId)
 
@@ -118,7 +126,7 @@ async function handleRunNesting(requestId: string, payload: NestingRequest): Pro
       // history_frame events live; final mode delivers them through the
       // NDJSON replay instead.
       if (historyPath) {
-        await appendFrame(historyPath, frame)
+        await workerRuntime.runPromise(appendFrame(historyPath, frame))
       }
       if (historyMode === 'stream') {
         send({

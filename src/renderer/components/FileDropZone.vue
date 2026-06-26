@@ -6,10 +6,15 @@ const store = useAppStore()
 
 <template>
   <div class="dropzone">
-    <button type="button" @click="store.selectAndImport" :disabled="store.state.value.isImporting">
+    <button
+      type="button"
+      title="Import one or more DXF files. Supported entities become nesting pieces; real geometry and bounding boxes are stored separately."
+      @click="store.selectAndImport"
+      :disabled="store.state.value.isImporting"
+    >
       {{ store.state.value.isImporting ? 'Importing...' : 'Open DXF' }}
     </button>
-    <p class="hint">Pick one or more .dxf files to import shapes.</p>
+    <p class="hint">Supported: LINE, LWPOLYLINE, POLYLINE, CIRCLE, ARC, ELLIPSE.</p>
     <p v-if="store.state.value.failures.length > 0" class="failures">
       {{ store.state.value.failures.length }} file(s) failed to import.
     </p>

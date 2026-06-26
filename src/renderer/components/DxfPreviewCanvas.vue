@@ -82,6 +82,8 @@ const viewBox = computed<ViewBox>(() => {
 const sheetOutline = computed(() => history.selectedRun.value?.placements ?? null)
 
 const selectedId = ref<string | null>(null)
+const visualMode = ref<'rectangles' | 'both'>('rectangles')
+const showFreeRectangles = ref(true)
 
 function drawSegment(s: Segment): string {
   if (s.kind === 'line') {
@@ -131,6 +133,13 @@ const placementsToRender = computed<ReadonlyArray<Placement>>(() => {
   const frame = history.selectedFrame.value
   return frame?.plate.placements ?? history.selectedRun.value?.placements ?? []
 })
+
+const freeRectanglesToRender = computed(() => {
+  if (!showFreeRectangles.value) return []
+  return history.selectedFrame.value?.plate.freeRectangles ?? []
+})
+
+const canShowPlacedDxfShapes = computed(() => false)
 
 function onMouseDown(event: MouseEvent): void {
   viewport.beginPan(event.clientX, event.clientY)
@@ -221,8 +230,8 @@ function onWheel(event: WheelEvent): void {
         </g>
       </g>
 
-      <!-- Result placements (driven by the selected run or frame). -->
-      <g v-if="placementsToRender.length > 0">
+      <!-- Result rectangles are driven by the selected run or selected frame. -->
+      <g v-if="placementsToRender.length > 0 && (visualMode === 'rectangles' || visualMode === 'both')">
         <rect
           v-for="(p, i) in placementsToRender"
           :key="`place-${i}-${p.pieceId}`"
@@ -237,9 +246,9 @@ function onWheel(event: WheelEvent): void {
       </g>
 
       <!-- Free-rectangle overlays from the selected frame. -->
-      <g v-if="history.selectedFrame.value?.plate.freeRectangles">
+      <g v-if="freeRectanglesToRender.length > 0">
         <rect
-          v-for="fr in history.selectedFrame.value.plate.freeRectangles"
+          v-for="fr in freeRectanglesToRender"
           :key="`fr-${fr.id}`"
           :x="fr.x"
           :y="fr.y"
@@ -254,7 +263,7 @@ function onWheel(event: WheelEvent): void {
     </svg>
 
     <div v-else class="empty">
-      <p>Import a DXF file to see its shapes here.</p>
+      <p>Import a DXF file to preview shapes and bounding boxes.</p>
     </div>
 
     <div v-if="placementsToRender.length === 0 && history.selectedRun.value" class="empty-state">
@@ -265,13 +274,52 @@ function onWheel(event: WheelEvent): void {
     </div>
 
     <div class="viewport-controls">
-      <button type="button" @click="viewport.zoom(1.2)">+</button>
-      <button type="button" @click="viewport.zoom(0.8)">−</button>
-      <button type="button" @click="viewport.reset">Reset</button>
+      <button type="button" title="Zoom in" @click="viewport.zoom(1.2)">+</button>
+      <button type="button" title="Zoom out" @click="viewport.zoom(0.8)">−</button>
+      <button type="button" title="Reset pan and zoom to fit the current preview/result." @click="viewport.reset">Reset</button>
       <span class="scale">{{ viewport.state.value.scale.toFixed(2) }}x</span>
       <span v-if="containerSize.width > 0" class="dim">
         {{ Math.round(containerSize.width) }} × {{ Math.round(containerSize.height) }}
       </span>
+    </div>
+
+    <div class="view-controls">
+      <button
+        type="button"
+        :class="{ active: visualMode === 'rectangles' }"
+        title="Show padded rectangular footprints used by the nesting algorithm."
+        @click="visualMode = 'rectangles'"
+      >
+        Rectangles
+      </button>
+      <button
+        type="button"
+        :disabled="!canShowPlacedDxfShapes"
+        title="Show original DXF geometry transformed into placed positions, once supported."
+      >
+        DXF shapes
+      </button>
+      <button
+        type="button"
+        :class="{ active: visualMode === 'both' }"
+        :disabled="!canShowPlacedDxfShapes"
+        title="Overlay true geometry and padded footprints once placed DXF transforms are supported."
+        @click="visualMode = 'both'"
+      >
+        Both
+      </button>
+      <label
+        v-if="history.selectedFrame.value?.plate.freeRectangles.length"
+        title="Shows the current MaxRects free-rectangle candidates emitted by the algorithm history frame."
+      >
+        <input v-model="showFreeRectangles" type="checkbox" />
+        Free rectangles
+      </label>
+    </div>
+
+    <div v-if="store.state.value.pieces.length > 0" class="legend">
+      <span><i class="line"></i> Real DXF geometry</span>
+      <span><i class="box"></i> Bounding box / padded footprint</span>
     </div>
   </div>
 </template>
@@ -342,6 +390,69 @@ svg {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   font-size: 11px;
+}
+
+.view-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 11px;
+}
+
+.view-controls button {
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+.view-controls button.active {
+  border-color: var(--accent);
+}
+
+.view-controls label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: flex;
+  gap: 10px;
+  padding: 4px 6px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend i {
+  display: inline-block;
+  width: 14px;
+  height: 8px;
+}
+
+.legend .line {
+  border-top: 1px solid var(--text-secondary);
+}
+
+.legend .box {
+  border: 1px dashed var(--warning);
 }
 
 .viewport-controls button {

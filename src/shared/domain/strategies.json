@@ -2,60 +2,60 @@
   "version": 1,
   "strategies": [
     {
-      "id": "balanced_compactness/rr",
-      "label": "Balanced / right-then-right",
-      "description": "Compactness-first, double right sweep.",
+      "id": "balanced-preserve-free-then-bottom-left",
+      "label": "Balanced / preserve free space first",
+      "description": "Balanced compactness prefix with local remaining free area, local short-side leftover, then global bottom-left tie-breakers.",
       "prefix": "balanced_compactness",
-      "tail": ["r", "r", "r"]
+      "tail": ["r", "s", "y", "x"]
     },
     {
-      "id": "balanced_compactness/rs",
-      "label": "Balanced / right then short-side",
-      "description": "Compactness-first, right sweep then short-side fill.",
+      "id": "balanced-short-side-fit-then-bottom-left",
+      "label": "Balanced / short-side fit first",
+      "description": "Balanced compactness prefix with local short-side leftover, local remaining free area, then global bottom-left tie-breakers.",
       "prefix": "balanced_compactness",
-      "tail": ["r", "s", "s"]
+      "tail": ["s", "r", "y", "x"]
     },
     {
-      "id": "balanced_compactness/ry",
-      "label": "Balanced / right then yield-by-y",
-      "description": "Compactness-first, right sweep then sort by y dimension.",
+      "id": "balanced-bottom-left-then-short-side-fit",
+      "label": "Balanced / bottom-left, then short-side fit",
+      "description": "Balanced compactness prefix with global bottom-left placement before local short-side and remaining-free tie-breakers.",
       "prefix": "balanced_compactness",
-      "tail": ["r", "y", "x"]
+      "tail": ["y", "x", "s", "r"]
     },
     {
-      "id": "balanced_compactness/rx",
-      "label": "Balanced / right then x-axis",
-      "description": "Compactness-first, right sweep then x-axis bias.",
+      "id": "balanced-bottom-left-then-preserve-free",
+      "label": "Balanced / bottom-left, then preserve free space",
+      "description": "Balanced compactness prefix with global bottom-left placement before local remaining-free and short-side tie-breakers.",
       "prefix": "balanced_compactness",
-      "tail": ["r", "x", "x"]
+      "tail": ["y", "x", "r", "s"]
     },
     {
-      "id": "short_side_fill/ss",
-      "label": "Short-side / short-side",
-      "description": "Short-side fill, double short-side.",
+      "id": "short-fill-preserve-free-then-bottom-left",
+      "label": "Short-fill / preserve free space first",
+      "description": "Short-side-fill prefix with local remaining free area, local short-side leftover, then global bottom-left tie-breakers.",
       "prefix": "short_side_fill",
-      "tail": ["s", "s", "s"]
+      "tail": ["r", "s", "y", "x"]
     },
     {
-      "id": "short_side_fill/sy",
-      "label": "Short-side / sort by y",
-      "description": "Short-side fill, then sort by y.",
+      "id": "short-fill-short-side-fit-then-bottom-left",
+      "label": "Short-fill / short-side fit first",
+      "description": "Short-side-fill prefix with local short-side leftover, local remaining free area, then global bottom-left tie-breakers.",
       "prefix": "short_side_fill",
-      "tail": ["s", "y", "x"]
+      "tail": ["s", "r", "y", "x"]
     },
     {
-      "id": "short_side_fill/sx",
-      "label": "Short-side / sort by x",
-      "description": "Short-side fill, then sort by x.",
+      "id": "short-fill-bottom-left-then-short-side-fit",
+      "label": "Short-fill / bottom-left, then short-side fit",
+      "description": "Short-side-fill prefix with global bottom-left placement before local short-side and remaining-free tie-breakers.",
       "prefix": "short_side_fill",
-      "tail": ["s", "x", "x"]
+      "tail": ["y", "x", "s", "r"]
     },
     {
-      "id": "short_side_fill/yr",
-      "label": "Short-side / yield-by-y then right",
-      "description": "Short-side fill, yield-by-y, right sweep.",
+      "id": "short-fill-bottom-left-then-preserve-free",
+      "label": "Short-fill / bottom-left, then preserve free space",
+      "description": "Short-side-fill prefix with global bottom-left placement before local remaining-free and short-side tie-breakers.",
       "prefix": "short_side_fill",
-      "tail": ["y", "r", "r"]
+      "tail": ["y", "x", "r", "s"]
     }
   ]
 }
