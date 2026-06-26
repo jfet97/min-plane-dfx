@@ -110,10 +110,9 @@ async function handleRunNesting(requestId: string, payload: NestingRequest): Pro
     const strategyRunIds = result.strategyResults.map((s) => s.strategyRunId)
 
     let frameCount = 0
-    const initialFrames: NestingHistoryFrame[] = []
     for (const strategy of result.strategyResults) {
+      if (historyMode === 'off') continue
       const frame = buildInitialFrame(payload, strategy.strategyRunId)
-      initialFrames.push(frame)
       frameCount++
       // Streaming + final both persist to NDJSON. Only stream mode emits
       // history_frame events live; final mode delivers them through the

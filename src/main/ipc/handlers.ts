@@ -2,10 +2,12 @@ import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electro
 import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { Exit, Schema } from 'effect'
 import { importDxfFiles } from '../services/DxfImportService.js'
 import { WorkerSupervisor, SupervisorError } from '../services/WorkerSupervisor.js'
 import { saveProjectFile, loadProjectFile, ProjectFileError } from '../services/ProjectFileService.js'
 import { exportNestingResultToFile } from '../services/ExportService.js'
+import { NestingHistoryFrame } from '@shared/domain/nesting.js'
 import type { IpcResult } from '@shared/protocol/ipc.js'
 import type { Unsubscribe, NestingHistoryEvent } from '@shared/protocol/ipc.js'
 import type { JobId } from '@shared/domain/ids.js'
@@ -13,8 +15,7 @@ import type { ProjectDocument } from '@shared/domain/project.js'
 import type {
   NestingRequest,
   NestingResult,
-  ProjectHistoryRef,
-  NestingHistoryFrame
+  ProjectHistoryRef
 } from '@shared/domain/nesting.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
 
@@ -29,6 +30,7 @@ export const IPC_CHANNELS = [
   'nesting:export-request',
   'nesting:export-result',
   'nesting:export-history',
+  'nesting:load-replay',
   'nesting:run',
   'nesting:cancel',
   'nesting:on-history',
@@ -67,6 +69,20 @@ function getWorkerPath(): string {
     if (existsSync(candidate)) return candidate
   }
   return candidates[0]!
+}
+
+function fromSupervisorError(err: unknown): IpcResult<never> {
+  if (err instanceof SupervisorError) {
+    const ctx = err.context ? { context: err.context } : {}
+    return { ok: false, error: { code: err.code, message: err.message, ...ctx } }
+  }
+  return {
+    ok: false,
+    error: {
+      code: 'unknown_error',
+      message: err instanceof Error ? err.message : 'unknown error'
+    }
+  }
 }
 
 export function registerIpcHandlers(): void {
@@ -176,123 +192,6 @@ export function registerIpcHandlers(): void {
   )
 
   ipcMain.handle(
-    'nesting:run',
-    async (
-      event: IpcMainInvokeEvent,
-      request: NestingRequest
-    ): Promise<IpcResult<{ readonly jobId: JobId }>> => {
-      const win = BrowserWindow.fromWebContents(event.sender)
-      const sup = getSupervisor()
-
-      // Broadcast the final result so the renderer can resolve its pending
-      // runNesting promise even though `nesting:run` returns only the jobId.
-      sup.onResult((jobId, result) => {
-        if (win) {
-          win.webContents.send('nesting:result-event', jobId, result)
-        } else {
-          for (const w of BrowserWindow.getAllWindows()) {
-            w.webContents.send('nesting:result-event', jobId, result)
-          }
-        }
-      })
-
-      try {
-        await sup.runNesting(request, (event) => {
-          const listeners = historyListenersByJob.get(request.jobId)
-          if (!listeners) return
-          for (const l of listeners) {
-            try {
-              l(event)
-            } catch (err) {
-              console.error('[ipc] history listener threw:', err)
-            }
-          }
-        })
-        return { ok: true, value: { jobId: request.jobId } }
-      } catch (err) {
-        return fromSupervisorError(err)
-      }
-    }
-  )
-
-  ipcMain.handle(
-    'nesting:cancel',
-    async (_event: IpcMainInvokeEvent, jobId: JobId): Promise<IpcResult<void>> => {
-      try {
-        getSupervisor().cancelJob(jobId)
-        return { ok: true, value: undefined }
-      } catch (err) {
-        return fromSupervisorError(err)
-      }
-    }
-  )
-
-  ipcMain.handle(
-    'nesting:on-history',
-    (
-      event: IpcMainInvokeEvent,
-      jobId: JobId
-    ): IpcResult<{ readonly unsubscribe: Unsubscribe }> => {
-      const win = BrowserWindow.fromWebContents(event.sender)
-      if (!win) {
-        return { ok: false, error: { code: 'unknown_error', message: 'No window for subscriber' } }
-      }
-      const listener = (e: NestingHistoryEvent): void => {
-        win.webContents.send('nesting:history-event', e)
-      }
-      const existing = historyListenersByJob.get(jobId) ?? new Set()
-      existing.add(listener)
-      historyListenersByJob.set(jobId, existing)
-      return {
-        ok: true,
-        value: {
-          unsubscribe: () => {
-            const set = historyListenersByJob.get(jobId)
-            if (!set) return
-            set.delete(listener)
-            if (set.size === 0) historyListenersByJob.delete(jobId)
-          }
-        }
-      }
-    }
-  )
-
-  // Tiny courtesy push the renderer can subscribe to.
-  pongTimer = setInterval(() => {
-    const at = new Date().toISOString()
-    for (const window of BrowserWindow.getAllWindows()) {
-      window.webContents.send('app:pong', at)
-    }
-  }, 5000)
-}
-
-export function unregisterIpcHandlers(): void {
-  if (pongTimer) {
-    clearInterval(pongTimer)
-    pongTimer = null
-  }
-  for (const channel of IPC_CHANNELS) {
-    ipcMain.removeHandler(channel)
-  }
-  supervisor = null
-  historyListenersByJob.clear()
-}
-
-function fromSupervisorError(err: unknown): IpcResult<never> {
-  if (err instanceof SupervisorError) {
-    const ctx = err.context ? { context: err.context } : {}
-    return { ok: false, error: { code: err.code, message: err.message, ...ctx } }
-  }
-  return {
-    ok: false,
-    error: {
-      code: 'unknown_error',
-      message: err instanceof Error ? err.message : 'unknown error'
-    }
-  }
-}
-
-  ipcMain.handle(
     'nesting:export-result',
     async (
       event: IpcMainInvokeEvent,
@@ -383,8 +282,10 @@ function fromSupervisorError(err: unknown): IpcResult<never> {
           .filter((line) => line.length > 0)
           .flatMap((line) => {
             try {
-              const obj = JSON.parse(line) as NestingHistoryFrame
-              return [obj]
+              const parsed: unknown = JSON.parse(line)
+              const exit = Schema.decodeUnknownExit(NestingHistoryFrame)(parsed)
+              if (Exit.isFailure(exit)) return []
+              return [exit.value]
             } catch {
               return []
             }
@@ -396,6 +297,88 @@ function fromSupervisorError(err: unknown): IpcResult<never> {
           error: {
             code: 'file_read_error',
             message: err instanceof Error ? err.message : 'unknown error'
+          }
+        }
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'nesting:run',
+    async (
+      event: IpcMainInvokeEvent,
+      request: NestingRequest
+    ): Promise<IpcResult<{ readonly jobId: JobId }>> => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      const sup = getSupervisor()
+
+      // Broadcast the final result so the renderer can resolve its pending
+      // runNesting promise even though `nesting:run` returns only the jobId.
+      sup.onResult((jobId, result) => {
+        if (win) {
+          win.webContents.send('nesting:result-event', jobId, result)
+        } else {
+          for (const w of BrowserWindow.getAllWindows()) {
+            w.webContents.send('nesting:result-event', jobId, result)
+          }
+        }
+      })
+
+      try {
+        await sup.runNesting(request, (event) => {
+          const listeners = historyListenersByJob.get(request.jobId)
+          if (!listeners) return
+          for (const l of listeners) {
+            try {
+              l(event)
+            } catch (err) {
+              console.error('[ipc] history listener threw:', err)
+            }
+          }
+        })
+        return { ok: true, value: { jobId: request.jobId } }
+      } catch (err) {
+        return fromSupervisorError(err)
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'nesting:cancel',
+    async (_event: IpcMainInvokeEvent, jobId: JobId): Promise<IpcResult<void>> => {
+      try {
+        getSupervisor().cancelJob(jobId)
+        return { ok: true, value: undefined }
+      } catch (err) {
+        return fromSupervisorError(err)
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'nesting:on-history',
+    (
+      event: IpcMainInvokeEvent,
+      jobId: JobId
+    ): IpcResult<{ readonly unsubscribe: Unsubscribe }> => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) {
+        return { ok: false, error: { code: 'unknown_error', message: 'No window for subscriber' } }
+      }
+      const listener = (e: NestingHistoryEvent): void => {
+        win.webContents.send('nesting:history-event', e)
+      }
+      const existing = historyListenersByJob.get(jobId) ?? new Set()
+      existing.add(listener)
+      historyListenersByJob.set(jobId, existing)
+      return {
+        ok: true,
+        value: {
+          unsubscribe: () => {
+            const set = historyListenersByJob.get(jobId)
+            if (!set) return
+            set.delete(listener)
+            if (set.size === 0) historyListenersByJob.delete(jobId)
           }
         }
       }
@@ -479,3 +462,22 @@ function fromSupervisorError(err: unknown): IpcResult<never> {
   )
 
   // Tiny courtesy push the renderer can subscribe to.
+  pongTimer = setInterval(() => {
+    const at = new Date().toISOString()
+    for (const window of BrowserWindow.getAllWindows()) {
+      window.webContents.send('app:pong', at)
+    }
+  }, 5000)
+}
+
+export function unregisterIpcHandlers(): void {
+  if (pongTimer) {
+    clearInterval(pongTimer)
+    pongTimer = null
+  }
+  for (const channel of IPC_CHANNELS) {
+    ipcMain.removeHandler(channel)
+  }
+  supervisor = null
+  historyListenersByJob.clear()
+}

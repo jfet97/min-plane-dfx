@@ -22,15 +22,23 @@ async function invokeEnvelope<Args extends ReadonlyArray<unknown>, T>(
   channel: string,
   ...args: Args
 ): Promise<T> {
-  const raw = await ipcRenderer.invoke(channel, ...args)
-  if (!raw || typeof raw !== 'object' || !('ok' in raw)) {
+  const raw: unknown = await ipcRenderer.invoke(channel, ...args)
+  if (!isIpcEnvelope<T>(raw)) {
     throw new Error(`IPC channel ${channel} returned a non-IpcResult envelope`)
   }
-  const result = raw as IpcResult<T>
-  if (result.ok) return result.value
-  const message = result.error?.message ?? 'IPC error'
-  const code = result.error?.code ?? 'unknown_error'
-  throw new Error(`[${code}] ${message}`)
+  if (raw.ok) return raw.value
+  throw new Error(`[${raw.error.code}] ${raw.error.message}`)
+}
+
+function isIpcEnvelope<T>(value: unknown): value is IpcResult<T> {
+  if (!value || typeof value !== 'object') return false
+  const v = value as { ok?: unknown; value?: unknown; error?: unknown }
+  if (v.ok === true) return 'value' in v
+  if (v.ok === false && v.error && typeof v.error === 'object') {
+    const e = v.error as { code?: unknown; message?: unknown }
+    return typeof e.code === 'string' && typeof e.message === 'string'
+  }
+  return false
 }
 
 const api: AppApi = {
@@ -60,21 +68,21 @@ const api: AppApi = {
     ).then(() => undefined),
 
   runNesting: (request) =>
-    invokeEnvelope<[NestingRequest], { readonly jobId: JobId }>(
-      'nesting:run',
-      request
-    ).then(async () => {
-      // The supervisor delivers the final NestingResult via a `nesting:result-event`
-      // push that this bridge subscribes to. The renderer awaits it through the
-      // subscribe path below; here we resolve a placeholder so the AppApi contract
-      // stays Promise<NestingResult>.
-      return new Promise<NestingResult>((resolve) => {
-        const listener = (_event: IpcRendererEvent, payload: NestingResult): void => {
-          resolve(payload)
+    new Promise<NestingResult>((resolve, reject) => {
+      // Subscribe BEFORE invoking `nesting:run` so we never miss the
+      // `nesting:result-event` broadcast that the main handler emits during
+      // its awaited supervisor run.
+      const listener = (_event: IpcRendererEvent, _jobId: JobId, payload: NestingResult): void => {
+        resolve(payload)
+        ipcRenderer.removeListener('nesting:result-event', listener)
+      }
+      ipcRenderer.on('nesting:result-event', listener)
+      void invokeEnvelope<[NestingRequest], { readonly jobId: JobId }>('nesting:run', request).catch(
+        (err: unknown) => {
           ipcRenderer.removeListener('nesting:result-event', listener)
+          reject(err instanceof Error ? err : new Error(String(err)))
         }
-        ipcRenderer.on('nesting:result-event', listener)
-      })
+      )
     }),
 
   cancelJob: (jobId) =>
