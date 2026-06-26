@@ -1,23 +1,40 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import type { AppApi, HistoryEventEnvelope } from '@shared/protocol/ipc.js'
+import type { AppApi, HistoryEventEnvelope, IpcResult } from '@shared/protocol/ipc.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
-import type { NestingRequest, NestingResult, ProjectHistoryRef } from '@shared/domain/nesting.js'
+import type {
+  NestingRequest,
+  NestingResult,
+  NestingHistoryFrame,
+  ProjectHistoryRef
+} from '@shared/domain/nesting.js'
 import type { ProjectDocument } from '@shared/domain/project.js'
-
-/** Wraps a Promise-returning IPC invoke into a typed result. */
-function invoke<Args extends ReadonlyArray<unknown>, Result>(
-  channel: string
-): (...args: Args) => Promise<Result> {
-  return (...args) => ipcRenderer.invoke(channel, ...args) as unknown as Promise<Result>
-}
+import type { JobId } from '@shared/domain/ids.js'
 
 /**
- * Preload bridge exposed via contextBridge. The renderer never sees raw IPC
- * channels; it talks to typed methods. Channels are added in later phases.
+ * Strongly-typed envelope-aware invoke helper.
+ *
+ * The main side wraps every reply in `IpcResult<T>`. This helper:
+ *   - validates that the shape matches IpcResult<T>
+ *   - throws on error envelopes (so the renderer can use a regular try/catch)
+ *   - unwraps `.value` on success
  */
+async function invokeEnvelope<Args extends ReadonlyArray<unknown>, T>(
+  channel: string,
+  ...args: Args
+): Promise<T> {
+  const raw = await ipcRenderer.invoke(channel, ...args)
+  if (!raw || typeof raw !== 'object' || !('ok' in raw)) {
+    throw new Error(`IPC channel ${channel} returned a non-IpcResult envelope`)
+  }
+  const result = raw as IpcResult<T>
+  if (result.ok) return result.value
+  const message = result.error?.message ?? 'IPC error'
+  const code = result.error?.code ?? 'unknown_error'
+  throw new Error(`[${code}] ${message}`)
+}
+
 const api: AppApi = {
-  ping: () =>
-    ipcRenderer.invoke('app:ping') as unknown as Promise<{ readonly at: string }>,
+  ping: () => invokeEnvelope<[], { readonly at: string }>('app:ping'),
 
   onPong: (callback) => {
     const listener = (_event: IpcRendererEvent, at: string): void => callback(at)
@@ -26,53 +43,73 @@ const api: AppApi = {
   },
 
   selectDxfFiles: () =>
-    invoke<[], { readonly paths: ReadonlyArray<string> }>('dxf:select-files')().then((r) =>
-      r.paths.length === 0 ? [] : Promise.reject(new Error('user cancelled'))
-    ),
+    invokeEnvelope<[], { readonly documents: ReadonlyArray<ImportedDxfDocument> }>(
+      'dxf:select-files'
+    ).then((r) => r.documents),
 
   importDxfFiles: (paths) =>
-    invoke<[ReadonlyArray<string>], {
-      readonly documents: ReadonlyArray<ImportedDxfDocument | { readonly path: string; readonly error: unknown }>
-    }>('dxf:import-files')(paths).then((r) => {
-      // Filter out failures; the renderer treats the absence of a document
-      // as a soft error surfaced through the import store.
-      return r.documents.filter(
-        (d): d is ImportedDxfDocument => !('error' in d)
-      )
-    }),
+    invokeEnvelope<[ReadonlyArray<string>], { readonly documents: ReadonlyArray<ImportedDxfDocument> }>(
+      'dxf:import-files',
+      paths
+    ).then((r) => r.documents),
 
-  // Phase 4 placeholder
-  exportNestingRequest: (request: NestingRequest): Promise<void> =>
-    invoke<[NestingRequest], { readonly path: string }>('nesting:export-request')(request).then(
-      () => undefined
-    ),
+  exportNestingRequest: (request) =>
+    invokeEnvelope<[NestingRequest], { readonly path: string }>(
+      'nesting:export-request',
+      request
+    ).then(() => undefined),
 
-  // Phase 5
   runNesting: (request) =>
-    invoke<[NestingRequest], { readonly jobId: string }>('nesting:run')(request).then(() => {
-      // The supervisor does the heavy lifting; the renderer awaits the result
-      // by listening for `nesting:result-event` push (added below). Return a
-      // throwaway promise so the AppApi contract still resolves.
-      return undefined as unknown as NestingResult
+    invokeEnvelope<[NestingRequest], { readonly jobId: JobId }>(
+      'nesting:run',
+      request
+    ).then(async () => {
+      // The supervisor delivers the final NestingResult via a `nesting:result-event`
+      // push that this bridge subscribes to. The renderer awaits it through the
+      // subscribe path below; here we resolve a placeholder so the AppApi contract
+      // stays Promise<NestingResult>.
+      return new Promise<NestingResult>((resolve) => {
+        const listener = (_event: IpcRendererEvent, payload: NestingResult): void => {
+          resolve(payload)
+          ipcRenderer.removeListener('nesting:result-event', listener)
+        }
+        ipcRenderer.on('nesting:result-event', listener)
+      })
     }),
+
   cancelJob: (jobId) =>
-    invoke<[string], { readonly ok: boolean }>('nesting:cancel')(jobId).then(() => undefined),
+    invokeEnvelope<[JobId], { readonly ok: boolean }>('nesting:cancel', jobId).then(() => undefined),
+
   onNestingHistory: (callback) => {
     const listener = (_event: IpcRendererEvent, event: HistoryEventEnvelope): void => callback(event)
     ipcRenderer.on('nesting:history-event', listener)
     return () => ipcRenderer.removeListener('nesting:history-event', listener)
   },
-  loadHistoryReplay: (_ref: ProjectHistoryRef): Promise<ReadonlyArray<NestingResult>> => Promise.resolve([]),
 
-  // Phase 8 placeholders
+  loadHistoryReplay: (ref) =>
+    invokeEnvelope<[ProjectHistoryRef], { readonly frames: ReadonlyArray<NestingHistoryFrame> }>(
+      'nesting:load-replay',
+      ref
+    ).then((r) => r.frames),
+
   saveProject: (project) =>
-    invoke<[ProjectDocument], { readonly path: string }>('project:save')(project).then((r) => r.path),
-  openProject: () =>
-    invoke<[], ProjectDocument>('project:open')().then((p) => p),
+    invokeEnvelope<[ProjectDocument], { readonly path: string }>('project:save', project).then(
+      (r) => r.path
+    ),
+
+  openProject: () => invokeEnvelope<[], ProjectDocument>('project:open'),
+
   exportNestingResult: (result) =>
-    invoke<[NestingResult], { readonly path: string }>('nesting:export-result')(result).then(() => undefined),
-  exportNestingHistory: (_ref) =>
-    invoke<[], { readonly path: string }>('nesting:export-history')().then(() => undefined)
+    invokeEnvelope<[NestingResult], { readonly path: string }>(
+      'nesting:export-result',
+      result
+    ).then(() => undefined),
+
+  exportNestingHistory: (ref) =>
+    invokeEnvelope<[ProjectHistoryRef], { readonly path: string }>(
+      'nesting:export-history',
+      ref
+    ).then(() => undefined)
 }
 
 try {

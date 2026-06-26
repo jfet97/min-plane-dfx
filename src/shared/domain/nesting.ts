@@ -33,11 +33,14 @@ export const StrategySelectionMode = Schema.Literals(['single', 'all_configured'
  */
 export const FinalSelectionMode = Schema.Literals(['manual', 'best', 'top_n'])
 
-/** Naming fragment for a strategy. */
-export const StrategyPrefix = Schema.Literals(['balanced_compactness', 'short_side_fill'])
+/** Naming fragment for a strategy. Free-form string in the data file; the
+ *  schema accepts any descriptive string. The default vocabulary
+ *  (`balanced_compactness`, `short_side_fill`) is a starting convention, not
+ *  a closed set. */
+export const StrategyPrefix = Schema.String
 
-/** Single letter that composes the strategy id after the prefix. */
-export const StrategyTailToken = Schema.Literals(['r', 's', 'y', 'x'])
+/** Single token that composes the strategy id after the prefix. Free-form. */
+export const StrategyTailToken = Schema.String
 
 export const SheetSpec = Schema.Struct({
   width: Millimeters,

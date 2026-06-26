@@ -53,7 +53,10 @@ async function selectAndImport(): Promise<void> {
   state.isImporting = true
   try {
     const docs = await api.selectDxfFiles()
-    if (docs.length > 0) await importPaths(docs.map((d) => d.path))
+    if (docs.length > 0) {
+      state.documents = [...state.documents, ...docs]
+      recomputeAggregates()
+    }
   } finally {
     state.isImporting = false
   }

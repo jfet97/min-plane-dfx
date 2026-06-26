@@ -3,6 +3,44 @@
 These are working notes for the future nesting algorithm.
 The app implementer must not implement the algorithm yet.
 
+## Initial Rectangle Ordering
+
+Use one initial piece ordering for now.
+Compute these values from padded rectangle dimensions:
+
+```text
+u_i = padded width
+v_i = padded height
+
+longSide_i = max(u_i, v_i)
+area_i = u_i * v_i
+imbalance_i = abs(u_i - v_i)
+```
+
+Sort descending lexicographically:
+
+```text
+(
+  -longSide_i,
+  -area_i,
+  -imbalance_i
+)
+```
+
+Equivalent plain-English order:
+
+1. longest side descending;
+2. area descending;
+3. imbalance descending.
+
+Rationale:
+
+- long pieces are harder to place after the sheet has been fragmented;
+- larger pieces are generally harder to place than smaller pieces;
+- more imbalanced pieces are less flexible than square-ish pieces.
+
+This ordering is part of the future algorithm and must not be implemented by the app shell.
+
 ## Shared Setup
 
 For each candidate placement, compute the used cluster size after the move:

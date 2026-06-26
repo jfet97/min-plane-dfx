@@ -1,19 +1,22 @@
 import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron'
-import { writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
+import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { importDxfFiles } from '../services/DxfImportService.js'
 import { WorkerSupervisor, SupervisorError } from '../services/WorkerSupervisor.js'
 import { saveProjectFile, loadProjectFile, ProjectFileError } from '../services/ProjectFileService.js'
-import {
-  exportNestingResultToFile,
-  exportHistoryToFile
-} from '../services/ExportService.js'
+import { exportNestingResultToFile } from '../services/ExportService.js'
 import type { IpcResult } from '@shared/protocol/ipc.js'
-import type { HistoryEventEnvelope, Unsubscribe, NestingHistoryEvent } from '@shared/protocol/ipc.js'
+import type { Unsubscribe, NestingHistoryEvent } from '@shared/protocol/ipc.js'
 import type { JobId } from '@shared/domain/ids.js'
 import type { ProjectDocument } from '@shared/domain/project.js'
-import type { NestingRequest, NestingResult, ProjectHistoryRef, NestingHistoryFrame } from '@shared/domain/nesting.js'
+import type {
+  NestingRequest,
+  NestingResult,
+  ProjectHistoryRef,
+  NestingHistoryFrame
+} from '@shared/domain/nesting.js'
+import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
 
 /**
  * Allowlist of channels the renderer can invoke.
@@ -76,9 +79,11 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     'dxf:select-files',
-    async (event: IpcMainInvokeEvent): Promise<IpcResult<{ readonly paths: ReadonlyArray<string> }>> => {
+    async (
+      event: IpcMainInvokeEvent
+    ): Promise<IpcResult<{ readonly documents: ReadonlyArray<ImportedDxfDocument> }>> => {
       const win = BrowserWindow.fromWebContents(event.sender) ?? BrowserWindow.getFocusedWindow()
-      const result = win
+      const dlg = win
         ? await dialog.showOpenDialog(win, {
             title: 'Select DXF files',
             properties: ['openFile', 'multiSelections'],
@@ -90,10 +95,22 @@ export function registerIpcHandlers(): void {
             filters: [{ name: 'DXF', extensions: ['dxf'] }]
           })
 
-      if (result.canceled) {
-        return { ok: true, value: { paths: [] } }
+      if (dlg.canceled) {
+        return { ok: true, value: { documents: [] } }
       }
-      return { ok: true, value: { paths: result.filePaths } }
+      try {
+        const results = await importDxfFiles(dlg.filePaths)
+        const documents = results.flatMap((r) => ('error' in r ? [] : [r]))
+        return { ok: true, value: { documents } }
+      } catch (err) {
+        return {
+          ok: false,
+          error: {
+            code: 'dxf_parse_error',
+            message: err instanceof Error ? err.message : 'unknown error'
+          }
+        }
+      }
     }
   )
 
@@ -102,12 +119,10 @@ export function registerIpcHandlers(): void {
     async (
       _event: IpcMainInvokeEvent,
       paths: ReadonlyArray<string>
-    ): Promise<IpcResult<{ readonly documents: ReadonlyArray<unknown> }>> => {
+    ): Promise<IpcResult<{ readonly documents: ReadonlyArray<ImportedDxfDocument> }>> => {
       try {
         const results = await importDxfFiles(paths)
-        const documents = results.map((r) =>
-          'error' in r ? { path: r.path, error: { code: r.error.code, message: r.error.message } } : r
-        )
+        const documents = results.flatMap((r) => ('error' in r ? [] : [r]))
         return { ok: true, value: { documents } }
       } catch (err) {
         return {
@@ -163,16 +178,35 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     'nesting:run',
     async (
-      _event: IpcMainInvokeEvent,
+      event: IpcMainInvokeEvent,
       request: NestingRequest
     ): Promise<IpcResult<{ readonly jobId: JobId }>> => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      const sup = getSupervisor()
+
+      // Broadcast the final result so the renderer can resolve its pending
+      // runNesting promise even though `nesting:run` returns only the jobId.
+      sup.onResult((jobId, result) => {
+        if (win) {
+          win.webContents.send('nesting:result-event', jobId, result)
+        } else {
+          for (const w of BrowserWindow.getAllWindows()) {
+            w.webContents.send('nesting:result-event', jobId, result)
+          }
+        }
+      })
+
       try {
-        const sup = getSupervisor()
-        // Fire-and-forget listener registration is handled by the renderer via
-        // `nesting:on-history`; here we just start the run and return the
-        // jobId immediately so the UI can react before the worker completes.
-        void sup.runNesting(request, () => undefined).catch((err) => {
-          console.error('[ipc] runNesting rejected:', err)
+        await sup.runNesting(request, (event) => {
+          const listeners = historyListenersByJob.get(request.jobId)
+          if (!listeners) return
+          for (const l of listeners) {
+            try {
+              l(event)
+            } catch (err) {
+              console.error('[ipc] history listener threw:', err)
+            }
+          }
         })
         return { ok: true, value: { jobId: request.jobId } }
       } catch (err) {
@@ -203,20 +237,6 @@ export function registerIpcHandlers(): void {
       if (!win) {
         return { ok: false, error: { code: 'unknown_error', message: 'No window for subscriber' } }
       }
-      const envelope: HistoryEventEnvelope = {
-        type: 'history_frame',
-        requestId: 'pending',
-        jobId,
-        // payload field carries NestingResult shape; the renderer accepts any
-        // structured result when streaming. The shape is intentionally lossy
-        // here because the supervisor is the source of truth; we always send
-        // a fully-populated NestingHistoryFrame through `payload` for the
-        // worker-level envelope, but the renderer's envelope alias uses the
-        // `NestingResult` placeholder so the IPC API stays stable across
-        // schema revisions. Real history frames arrive as `history_frame`.
-        payload: undefined as never
-      }
-      void envelope
       const listener = (e: NestingHistoryEvent): void => {
         win.webContents.send('nesting:history-event', e)
       }
@@ -313,10 +333,10 @@ function fromSupervisorError(err: unknown): IpcResult<never> {
     'nesting:export-history',
     async (
       event: IpcMainInvokeEvent,
-      payload: { readonly ref: ProjectHistoryRef; readonly frames: ReadonlyArray<NestingHistoryFrame> }
+      ref: ProjectHistoryRef
     ): Promise<IpcResult<{ readonly path: string }>> => {
       const win = BrowserWindow.fromWebContents(event.sender) ?? BrowserWindow.getFocusedWindow()
-      const defaultName = `history-${payload.ref.jobId}.ndjson`
+      const defaultName = `history-${ref.jobId}.ndjson`
       const dlg = win
         ? await dialog.showSaveDialog(win, {
             title: 'Export History (NDJSON)',
@@ -332,13 +352,49 @@ function fromSupervisorError(err: unknown): IpcResult<never> {
         return { ok: false, error: { code: 'export_error', message: 'Export cancelled' } }
       }
       try {
-        const path = await exportHistoryToFile(dlg.filePath, payload.frames)
-        return { ok: true, value: { path } }
+        // Copy the worker-written NDJSON replay file to the user-chosen path
+        // instead of regenerating it from in-memory frames. The source file
+        // is the source of truth.
+        const sourceText = await readFile(ref.path, 'utf8')
+        await writeFile(dlg.filePath, sourceText, 'utf8')
+        return { ok: true, value: { path: dlg.filePath } }
       } catch (err) {
         return {
           ok: false,
           error: {
             code: 'export_error',
+            message: err instanceof Error ? err.message : 'unknown error'
+          }
+        }
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'nesting:load-replay',
+    async (
+      _event: IpcMainInvokeEvent,
+      ref: ProjectHistoryRef
+    ): Promise<IpcResult<{ readonly frames: ReadonlyArray<NestingHistoryFrame> }>> => {
+      try {
+        const text = await readFile(ref.path, 'utf8')
+        const frames = text
+          .split('\n')
+          .filter((line) => line.length > 0)
+          .flatMap((line) => {
+            try {
+              const obj = JSON.parse(line) as NestingHistoryFrame
+              return [obj]
+            } catch {
+              return []
+            }
+          })
+        return { ok: true, value: { frames } }
+      } catch (err) {
+        return {
+          ok: false,
+          error: {
+            code: 'file_read_error',
             message: err instanceof Error ? err.message : 'unknown error'
           }
         }

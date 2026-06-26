@@ -29,6 +29,7 @@
     "src/main/**/*",
     "src/preload/**/*",
     "src/shared/**/*",
+    "src/shared/**/*.json",
     "src/workers/**/*",
     "electron.vite.config.ts",
     "tests/**/*"

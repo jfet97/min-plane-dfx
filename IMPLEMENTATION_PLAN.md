@@ -24,6 +24,8 @@ The future algorithm versions will be written manually by the user later.
 The implementation agent must not invent or implement those versions.
 The first real algorithm version will likely be a single strategy; the app must not require multiple strategies to exist.
 The app must be ready for user-written algorithm versions to be inserted behind a stable TypeScript interface.
+The initial rectangle ordering for the future algorithm is documented in `SCORING_CRITERIA_NOTES.md`: padded longest side descending, then padded area descending, then padded imbalance descending.
+The implementation agent must not implement that ordering now; the current stub sort still returns the input unchanged.
 
 ## 1. Source Material Read Before Planning
 

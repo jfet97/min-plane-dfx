@@ -1,14 +1,15 @@
 import { Worker } from 'node:worker_threads'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import type {
+import { Exit, Schema } from 'effect'
+import {
   WorkerRequest,
   WorkerResponse,
-  WorkerProgress
+  type WorkerProgress
 } from '@shared/protocol/worker.js'
 import type { NestingRequest, NestingResult } from '@shared/domain/nesting.js'
 import type { JobId } from '@shared/domain/ids.js'
-import type { NestingHistoryEvent } from '@shared/protocol/ipc.js'
+import type { NestingHistoryEvent, Unsubscribe } from '@shared/protocol/ipc.js'
 import type { AppErrorCode } from '@shared/protocol/errors.js'
 
 export type HistoryEventListener = (event: NestingHistoryEvent) => void
@@ -52,6 +53,8 @@ export class SupervisorError extends Error {
  *     the worker is replaced on the next call.
  *   - Timeout terminates the worker and rejects with `worker_timeout`.
  *   - History events are streamed to registered listeners in real time.
+ *   - The final NestingResult is delivered both to the runNesting promise
+ *     and via the result-event broadcast channel.
  *
  * The queue is intentionally simple: one active job at a time, but every
  * call gets its own worker instance if the previous one terminated. Future
@@ -61,9 +64,21 @@ export class SupervisorError extends Error {
 export class WorkerSupervisor {
   private current: PendingJob | null = null
   private readonly options: WorkerSupervisorOptions
+  private readonly resultListeners = new Set<(jobId: JobId, result: NestingResult) => void>()
 
   constructor(options: WorkerSupervisorOptions) {
     this.options = options
+  }
+
+  /**
+   * Subscribe to the final-result broadcast. Each handler is called once
+   * per completed job. Returns an unsubscribe function.
+   */
+  onResult(handler: (jobId: JobId, result: NestingResult) => void): Unsubscribe {
+    this.resultListeners.add(handler)
+    return () => {
+      this.resultListeners.delete(handler)
+    }
   }
 
   /**
@@ -136,22 +151,19 @@ export class WorkerSupervisor {
     this.current = null
   }
 
-  private teardownWorker(worker: Worker, reason: 'cancel' | 'timeout' | 'success'): void {
-    if (reason === 'success') {
-      worker.terminate().catch(() => undefined)
-      return
-    }
-    worker.terminate().catch(() => undefined)
+  private teardownWorker(worker: Worker, _reason: 'cancel' | 'timeout' | 'success'): void {
+    void worker.terminate().catch(() => undefined)
   }
 
   private handleWorkerMessage(raw: unknown): void {
     if (!this.current) return
     // Validate each inbound message at the boundary.
-    const parsed = safeParseWorkerResponse(raw)
-    if (!parsed) {
+    const exit = Schema.decodeUnknownExit(WorkerResponse)(raw)
+    if (Exit.isFailure(exit)) {
       this.failCurrent('worker_protocol_error', 'Worker emitted an invalid response.')
       return
     }
+    const parsed: WorkerResponse = exit.value
 
     if (parsed.type === 'history_frame' || parsed.type === 'history_complete') {
       const event = parsed as NestingHistoryEvent
@@ -167,7 +179,7 @@ export class WorkerSupervisor {
     }
 
     if (parsed.type === 'progress') {
-      const progress = parsed.payload as WorkerProgress
+      const progress: WorkerProgress = parsed.payload
       // Cancellation check: if the current request was already cancelled,
       // ignore the progress event.
       void progress
@@ -175,17 +187,25 @@ export class WorkerSupervisor {
     }
 
     if (parsed.type === 'success') {
-      const result = parsed.payload
+      const result: NestingResult = parsed.payload
+      const jobId = this.current.request.jobId
       clearTimeout(this.current.timer)
       this.teardownWorker(this.current.worker, 'success')
       this.current.resolve(result)
       this.current = null
+      for (const handler of this.resultListeners) {
+        try {
+          handler(jobId, result)
+        } catch (err) {
+          console.error('[WorkerSupervisor] result listener threw:', err)
+        }
+      }
       return
     }
 
     if (parsed.type === 'failure') {
-      const code = (parsed.error.code as AppErrorCode) ?? 'unknown_error'
-      const message = parsed.error.message ?? 'unknown error'
+      const code = parsed.error.code as AppErrorCode
+      const message = parsed.error.message
       this.failCurrent(code, message)
       return
     }
@@ -216,16 +236,6 @@ function cryptoRandomId(): string {
   const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto
   if (c && typeof c.randomUUID === 'function') return c.randomUUID()
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
-}
-
-function safeParseWorkerResponse(raw: unknown): WorkerResponse | null {
-  // The shape is already constrained by the worker side via Schema.decodeUnknownExit,
-  // so a duplicate validation here would be wasted work. We rely on the worker
-  // contract and trust its output.
-  if (!raw || typeof raw !== 'object') return null
-  const obj = raw as { type?: unknown }
-  if (typeof obj.type !== 'string') return null
-  return raw as WorkerResponse
 }
 
 /** Default supervisor instance used by the IPC layer. */

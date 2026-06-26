@@ -97,42 +97,48 @@ async function handleRunNesting(requestId: string, payload: NestingRequest): Pro
   sendProgress(requestId, jobId, 'validated')
   sendProgress(requestId, jobId, 'started')
 
-  const historyPath = historyPathFor(jobId)
-  // Truncate any previous file for the same job id so replay is clean.
-  await mkdir(dirname(historyPath), { recursive: true })
-  await writeFile(historyPath, '', { flag: 'w', encoding: 'utf8' })
+  const historyMode = payload.options.historyMode
+  const historyPath = historyMode === 'off' ? null : historyPathFor(jobId)
+
+  if (historyPath) {
+    await mkdir(dirname(historyPath), { recursive: true })
+    await writeFile(historyPath, '', { flag: 'w', encoding: 'utf8' })
+  }
 
   try {
     const result = computeNestingStub(payload, Date.now() - startedAt)
     const strategyRunIds = result.strategyResults.map((s) => s.strategyRunId)
 
-    // Emit one stub history frame per strategy run so the NDJSON replay is
-    // observable end-to-end. No fake placements, no fake free rectangles,
-    // no fake beam data — only the lifecycle marker required to prove the
-    // streaming path.
     let frameCount = 0
-    const retainedFrames: NestingHistoryFrame[] = []
+    const initialFrames: NestingHistoryFrame[] = []
     for (const strategy of result.strategyResults) {
       const frame = buildInitialFrame(payload, strategy.strategyRunId)
-      retainedFrames.push(frame)
-      await appendFrame(historyPath, frame)
-      send({
-        type: 'history_frame',
-        requestId,
-        jobId,
-        payload: frame
-      })
+      initialFrames.push(frame)
       frameCount++
+      // Streaming + final both persist to NDJSON. Only stream mode emits
+      // history_frame events live; final mode delivers them through the
+      // NDJSON replay instead.
+      if (historyPath) {
+        await appendFrame(historyPath, frame)
+      }
+      if (historyMode === 'stream') {
+        send({
+          type: 'history_frame',
+          requestId,
+          jobId,
+          payload: frame
+        })
+      }
     }
 
     const summary: NestingHistorySummary = {
       frameCount,
       strategyRunCount: result.strategyResults.length,
-      retainedFrameCount: frameCount,
+      retainedFrameCount: historyMode === 'off' ? 0 : frameCount,
       truncated: false,
       scope: 'winning_path',
       strategyRunIds,
-      ndjsonPath: historyPath
+      ...(historyPath ? { ndjsonPath: historyPath } : {})
     }
     send({
       type: 'history_complete',

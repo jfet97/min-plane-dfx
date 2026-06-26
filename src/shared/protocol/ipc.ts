@@ -7,8 +7,8 @@ import {
   ProjectHistoryRef
 } from '../domain/nesting.js'
 import { ProjectDocument } from '../domain/project.js'
-import type { SerializedAppError } from './errors.js'
 import type { JobId, PieceId, SourceFileId } from '../domain/ids.js'
+import type { SerializedAppError } from './errors.js'
 
 export type Unsubscribe = () => void
 
@@ -54,7 +54,7 @@ export interface AppApi {
   readonly runNesting: (request: NestingRequest) => Promise<NestingResult>
   readonly cancelJob: (jobId: JobId) => Promise<void>
   readonly onNestingHistory: (callback: (event: HistoryEventEnvelope) => void) => Unsubscribe
-  readonly loadHistoryReplay: (ref: ProjectHistoryRef) => Promise<ReadonlyArray<NestingResult>>
+  readonly loadHistoryReplay: (ref: ProjectHistoryRef) => Promise<ReadonlyArray<NestingHistoryFrame>>
 
   // Phase 8
   readonly saveProject: (project: ProjectDocument) => Promise<string>
