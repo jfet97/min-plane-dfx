@@ -1,0 +1,198 @@
+import { describe, expect, it } from 'vitest'
+import { sortPiecesForNesting } from '../../src/workers/algorithm/sortPiecesForNesting.js'
+import { computeNestingStub } from '../../src/workers/algorithm/computeNestingStub.js'
+import { selectFinalStrategyResult } from '../../src/workers/algorithm/selectFinalStrategyResult.js'
+import {
+  DEFAULT_STRATEGY_ID,
+  STRATEGY_DEFINITIONS,
+  findStrategy
+} from '../../src/shared/domain/strategies.js'
+import type {
+  NestingRequest,
+  PreparedPiece,
+  NestingOptions,
+  NestingStrategyResult
+} from '@shared/domain/nesting.js'
+import type { JobId, PieceId } from '@shared/domain/ids.js'
+
+function piece(id: string): PreparedPiece {
+  return {
+    id: id as PreparedPiece['id'],
+    sourcePieceId: id as PreparedPiece['id'],
+    realBounds: { x: 0, y: 0, width: 10, height: 5 },
+    paddedBounds: { width: 14, height: 9 },
+    padding: 2,
+    allowRotation: true
+  }
+}
+
+function options(overrides: Partial<NestingOptions> = {}): NestingOptions {
+  return {
+    allowGlobalRotation: true,
+    timeoutMs: 5000,
+    workerMode: 'stub',
+    historyMode: 'final',
+    historyScope: 'winning_path',
+    strategySelectionMode: 'single',
+    strategyIds: [DEFAULT_STRATEGY_ID],
+    finalSelectionMode: 'manual',
+    ...overrides
+  }
+}
+
+function baseRequest(overrides: Partial<NestingRequest> = {}): NestingRequest {
+  return {
+    version: 1,
+    jobId: 'job-1' as JobId,
+    sheet: { width: 100, height: 100, label: 'default' },
+    padding: 2,
+    pieces: [piece('a'), piece('b')],
+    options: options(),
+    ...overrides
+  }
+}
+
+describe('sortPiecesForNesting', () => {
+  it('returns the same array contents in the same order', () => {
+    const input = [piece('a'), piece('b'), piece('c')]
+    const output = sortPiecesForNesting(input)
+    expect(output.map((p) => p.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('returns an empty array when given an empty array', () => {
+    expect(sortPiecesForNesting([])).toEqual([])
+  })
+})
+
+describe('selectFinalStrategyResult', () => {
+  it('returns the first strategy result when one or more are available', () => {
+    const runA = makeStrategy('run-1', 'balanced_compactness/rr')
+    const runB = makeStrategy('run-2', 'short_side_fill/ss')
+    const selected = selectFinalStrategyResult([runA, runB], baseRequest())
+    expect(selected?.strategyRunId).toBe('run-1')
+  })
+
+  it('returns null when no strategy results are available', () => {
+    expect(selectFinalStrategyResult([], baseRequest())).toBeNull()
+  })
+
+  it('does not invent fake scoring for `best` or `top_n`', () => {
+    const runA = makeStrategy('run-1', 'balanced_compactness/rr')
+    const runB = makeStrategy('run-2', 'short_side_fill/ss')
+    const reqBest = baseRequest({ options: options({ finalSelectionMode: 'best' }) })
+    const reqTopN = baseRequest({ options: options({ finalSelectionMode: 'top_n' }) })
+    expect(selectFinalStrategyResult([runA, runB], reqBest)?.strategyRunId).toBe('run-1')
+    expect(selectFinalStrategyResult([runA, runB], reqTopN)?.strategyRunId).toBe('run-1')
+  })
+})
+
+describe('computeNestingStub', () => {
+  it('returns a stub result with status="stub"', () => {
+    const result = computeNestingStub(baseRequest(), 12)
+    expect(result.status).toBe('stub')
+  })
+
+  it('emits empty placements at every level', () => {
+    const result = computeNestingStub(baseRequest(), 12)
+    expect(result.placements.length).toBe(0)
+    for (const strategy of result.strategyResults) {
+      expect(strategy.placements.length).toBe(0)
+    }
+  })
+
+  it('preserves input order in sortedPieceIds at the top level', () => {
+    const result = computeNestingStub(baseRequest(), 12)
+    expect(result.sortedPieceIds).toEqual(['a', 'b'])
+  })
+
+  it('marks every input piece as unplaced', () => {
+    const result = computeNestingStub(baseRequest(), 12)
+    expect(result.unplacedPieceIds).toEqual(['a', 'b'])
+  })
+
+  it('emits one strategy result per requested strategy id', () => {
+    const req = baseRequest({
+      options: options({
+        strategySelectionMode: 'single',
+        strategyIds: ['balanced_compactness/rr', 'short_side_fill/ss']
+      })
+    })
+    const result = computeNestingStub(req, 5)
+    expect(result.strategyResults.length).toBe(2)
+    expect(result.strategyResults.map((s) => s.strategyId)).toEqual([
+      'balanced_compactness/rr',
+      'short_side_fill/ss'
+    ])
+  })
+
+  it('emits one strategy result per configured strategy when mode is all_configured', () => {
+    const req = baseRequest({
+      options: options({ strategySelectionMode: 'all_configured', strategyIds: [] })
+    })
+    const result = computeNestingStub(req, 5)
+    expect(result.strategyResults.length).toBe(STRATEGY_DEFINITIONS.length)
+  })
+
+  it('points selectedStrategyRunId at the first strategy run', () => {
+    const req = baseRequest({
+      options: options({ strategyIds: ['balanced_compactness/rr', 'short_side_fill/ss'] })
+    })
+    const result = computeNestingStub(req, 5)
+    expect(result.selectedStrategyRunId).toBe(result.strategyResults[0]?.strategyRunId)
+  })
+
+  it('emits the algorithm_not_implemented warning at every level', () => {
+    const result = computeNestingStub(baseRequest(), 0)
+    expect(result.warnings.some((w) => w.code === 'algorithm_not_implemented')).toBe(true)
+    for (const strategy of result.strategyResults) {
+      expect(strategy.warnings.some((w) => w.code === 'algorithm_not_implemented')).toBe(true)
+    }
+  })
+
+  it('does not produce any fake history, beam, or split events', () => {
+    const result = computeNestingStub(baseRequest(), 0)
+    expect(result.historySummary).toBeUndefined()
+    for (const strategy of result.strategyResults) {
+      expect(strategy.historySummary).toBeUndefined()
+    }
+  })
+
+  it('records elapsed time and piece count in stats', () => {
+    const result = computeNestingStub(baseRequest(), 42)
+    expect(result.stats.elapsedMs).toBe(42)
+    expect(result.stats.pieceCount).toBe(2)
+  })
+})
+
+describe('strategies data', () => {
+  it('registers exactly eight initial strategy definitions', () => {
+    expect(STRATEGY_DEFINITIONS.length).toBe(8)
+  })
+
+  it('keeps strategy ids descriptive (no opaque A.1 codes)', () => {
+    for (const def of STRATEGY_DEFINITIONS) {
+      expect(def.id).toMatch(/^[a-z_]+\/[a-z]+$/)
+      expect(def.label.length).toBeGreaterThan(0)
+      expect(def.description.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('findStrategy returns the matching definition', () => {
+    const def = findStrategy('short_side_fill/sx')
+    expect(def?.label).toContain('Short-side')
+  })
+})
+
+function makeStrategy(runId: string, strategyId: string): NestingStrategyResult {
+  return {
+    strategyRunId: runId,
+    strategyId,
+    strategyLabel: strategyId,
+    status: 'stub',
+    sortedPieceIds: ['a' as PieceId],
+    placements: [],
+    unplacedPieceIds: ['a' as PieceId],
+    warnings: [{ code: 'algorithm_not_implemented', message: 'stub' }],
+    stats: { elapsedMs: 0, pieceCount: 1 }
+  }
+}

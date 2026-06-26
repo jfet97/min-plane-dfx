@@ -1,0 +1,113 @@
+import { describe, expect, it } from 'vitest'
+import DxfParser, { type IDxf } from 'dxf-parser'
+import { entityToGeometry, unionBounds } from '@main/services/DxfBbox.js'
+
+/**
+ * Helper: parse a minimal DXF (one entity) and return the single entity.
+ * Test fixtures are inline to avoid filesystem dependencies.
+ */
+function parseFirstEntity(dxf: string): import('dxf-parser/dist/entities/geomtry.js').IEntity {
+  const parser = new DxfParser()
+  const parsed = parser.parseSync(dxf) as IDxf | null
+  if (!parsed) throw new Error('Parser returned null')
+  const entity = parsed.entities[0]
+  if (!entity) throw new Error('No entity parsed')
+  return entity
+}
+
+function section(name: string): string {
+  return `0\nSECTION\n2\n${name}\n`
+}
+
+function endsec(): string {
+  return '0\nENDSEC\n'
+}
+
+function header(): string {
+  return section('HEADER') + '0\nENDSEC\n'
+}
+
+const baseOpen = (): string => header() + section('TABLES') + endsec() + section('BLOCKS') + endsec()
+const baseClose = (): string => '0\nEOF\n'
+
+describe('entityToGeometry', () => {
+  it('converts a single LINE into a 1-segment line geometry', () => {
+    const dxf = baseOpen() + section('ENTITIES') + '0\nLINE\n10\n0\n20\n0\n30\n0\n11\n10\n21\n5\n31\n0\n' + endsec() + baseClose()
+    const entity = parseFirstEntity(dxf)
+    const result = entityToGeometry(entity)
+    expect(result).not.toBeNull()
+    if (!result) return
+    expect(result.geometry.entityType).toBe('LINE')
+    expect(result.geometry.segments.length).toBe(1)
+    expect(result.geometry.segments[0]?.kind).toBe('line')
+    expect(result.bounds).toEqual({ x: 0, y: 0, width: 10, height: 5 })
+  })
+
+  it('converts a closed LWPOLYLINE (4 verts) into line segments and matching bbox', () => {
+    const dxf = baseOpen() +
+      section('ENTITIES') +
+      '0\nLWPOLYLINE\n70\n1\n90\n4\n' +
+      '10\n0\n20\n0\n10\n10\n20\n0\n10\n10\n20\n5\n10\n0\n20\n5\n' +
+      endsec() + baseClose()
+    const entity = parseFirstEntity(dxf)
+    const result = entityToGeometry(entity)
+    expect(result).not.toBeNull()
+    if (!result) return
+    expect(result.geometry.entityType).toBe('LWPOLYLINE')
+    expect(result.geometry.closed).toBe(true)
+    expect(result.geometry.segments.length).toBe(4)
+    expect(result.bounds).toEqual({ x: 0, y: 0, width: 10, height: 5 })
+  })
+
+  it('converts a CIRCLE into a 2x-radius bbox', () => {
+    const dxf = baseOpen() +
+      section('ENTITIES') +
+      '0\nCIRCLE\n10\n5\n20\n5\n30\n0\n40\n3\n' +
+      endsec() + baseClose()
+    const entity = parseFirstEntity(dxf)
+    const result = entityToGeometry(entity)
+    expect(result).not.toBeNull()
+    if (!result) return
+    expect(result.geometry.entityType).toBe('CIRCLE')
+    expect(result.bounds).toEqual({ x: 2, y: 2, width: 6, height: 6 })
+  })
+
+  it('converts an ARC into a conservative bbox equal to the parent circle', () => {
+    const dxf = baseOpen() +
+      section('ENTITIES') +
+      '0\nARC\n10\n0\n20\n0\n30\n0\n40\n5\n50\n0\n51\n90\n' +
+      endsec() + baseClose()
+    const entity = parseFirstEntity(dxf)
+    const result = entityToGeometry(entity)
+    expect(result).not.toBeNull()
+    if (!result) return
+    expect(result.geometry.entityType).toBe('ARC')
+    expect(result.bounds).toEqual({ x: -5, y: -5, width: 10, height: 10 })
+    expect(result.geometry.segments[0]?.kind).toBe('arc')
+  })
+
+  it('returns null for unsupported entity types (e.g. SPLINE)', () => {
+    const dxf = baseOpen() + section('ENTITIES') + '0\nSPLINE\n70\n0\n' + endsec() + baseClose()
+    const entity = parseFirstEntity(dxf)
+    expect(entityToGeometry(entity)).toBeNull()
+  })
+})
+
+describe('unionBounds', () => {
+  it('returns null for an empty list', () => {
+    expect(unionBounds([])).toBeNull()
+  })
+
+  it('returns the union of multiple rectangles', () => {
+    const result = unionBounds([
+      { x: 0, y: 0, width: 10, height: 5 },
+      { x: 5, y: 3, width: 8, height: 4 }
+    ])
+    expect(result).toEqual({ x: 0, y: 0, width: 13, height: 7 })
+  })
+
+  it('handles a single rectangle', () => {
+    const result = unionBounds([{ x: 1, y: 2, width: 3, height: 4 }])
+    expect(result).toEqual({ x: 1, y: 2, width: 3, height: 4 })
+  })
+})

@@ -1,0 +1,33 @@
+# Node / pnpm
+node_modules
+.pnpm-store
+dist
+out
+*.log
+.DS_Store
+
+# Build artifacts
+release
+.tmp
+.cache
+.vite
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+
+# Nix
+.direnv
+
+# Knowledge base (LLM-managed, git-ignored)
+knowledge/
+
+# Local Effect reference (cloned from Effect-TS/effect-smol, NOT a dependency).
+# Read docs/source here, but never import from this folder.
+repos/
+
+# pnpm temp dirs we created for workaround
+.pnpm-store/
+.pnpm-cache/
