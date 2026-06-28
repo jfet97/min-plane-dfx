@@ -327,6 +327,28 @@ export class NestingHistoryFrame extends Schema.Class<NestingHistoryFrame>('Nest
       createdAt: input.createdAt
     })
   }
+
+  static initialBeamSnapshot(input: {
+    readonly frameId: string
+    readonly request: NestingRequest
+    readonly strategyRunId: string
+    readonly strategyLabel: string
+    readonly beamRank: number
+    readonly plate: PlateSnapshot
+    readonly createdAt: string
+  }): NestingHistoryFrame {
+    return new NestingHistoryFrame({
+      frameId: input.frameId,
+      jobId: input.request.jobId,
+      strategyRunId: input.strategyRunId,
+      strategyLabel: input.strategyLabel,
+      stepIndex: 0,
+      beamRank: input.beamRank,
+      title: 'stub-initial',
+      plate: input.plate,
+      createdAt: input.createdAt
+    })
+  }
 }
 
 export class ProjectHistoryRef extends Schema.Class<ProjectHistoryRef>('ProjectHistoryRef')({

@@ -29,6 +29,12 @@ padding are non-negative integers; widths and heights are positive integers.
 DXF fractional geometry is normalized by main before the worker request is
 created, so the algorithm must not perform float rounding or unit conversion.
 
+`NestingAlgorithmState` is the retained beam for one algorithm step: rank 0 is
+stored as `top`, and the other retained states live in `alternatives`. The order
+used to choose survivors compares individual beam states, not the container.
+History translation emits one frame per retained state with `beamRank`, so main
+and renderer can inspect the top state and the other retained alternatives.
+
 The core emits algorithm events, not history frames. The event stream is the
 raw material for history: initial states, future beam steps, selected states,
 placements, split/prune events, and completion can be translated by the wrapper

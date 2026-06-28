@@ -2,20 +2,29 @@ import type { Order } from 'effect'
 import { FreeRectangle, Placement, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
 import type { PieceId } from '@shared/domain/ids.js'
 
-// it's the beam width
-const K = 5
+// retained beam width
+export const MAX_RETAINED_STATES = 5
 
-// it's the number of free rectangles to keep per candidate (at most)
-const freeRectFanout = 2
+// free rectangles considered per state/piece/orientation at most
+export const FREE_RECTANGLE_FANOUT = 2
 
 /**
- * Partial layout owned by the algorithm core.
- * This is the state compared by the beam order and later rendered as history.
+ * One partial layout kept inside the beam.
+ * This is the unit compared by the state order and rendered as one history rank.
  */
-export interface NestingAlgorithmState {
+export interface NestingBeamState {
   readonly placements: ReadonlyArray<Placement>
   readonly freeRectangles: ReadonlyArray<FreeRectangle>
   readonly remainingPieces: ReadonlyArray<PreparedPiece>
+}
+
+/**
+ * Ranked beam container for one algorithm step.
+ * `top` is rank 0; `alternatives` contains the remaining retained states.
+ */
+export interface NestingAlgorithmState {
+  readonly top: NestingBeamState
+  readonly alternatives: ReadonlyArray<NestingBeamState>
 }
 
 /**
@@ -23,29 +32,37 @@ export interface NestingAlgorithmState {
  * The wrapper owns how configured strategy ids become this function.
  */
 export type FreeRectangleOrder = (context: {
-  state: NestingAlgorithmState
+  state: NestingBeamState
   piece: PreparedPiece
   rotated: boolean
 }) => Order.Order<FreeRectangle>
 
 /**
- * Beam survivor order for partial states.
+ * Beam survivor order for partial layout states.
  * After expansion, this decides which states stay alive for the next piece.
  */
-export type NestingStateOrder = () => Order.Order<NestingAlgorithmState>
+export type NestingStateOrder = () => Order.Order<NestingBeamState>
 
 /**
  * One legal placement candidate produced while expanding a state.
- * It carries enough data for history and scoring without exposing worker types.
+ * It always includes the concrete placement it would commit.
  */
 export interface NestingAlgorithmCandidate {
   readonly candidateId: string
-  readonly state: NestingAlgorithmState
+  readonly state: NestingBeamState
   readonly piece: PreparedPiece
   readonly freeRectangle: FreeRectangle
   readonly rotated: boolean
-  readonly placement?: Placement
-  readonly score?: ReadonlyArray<number>
+  readonly placement: Placement
+}
+
+/**
+ * Ranked view of a generated candidate.
+ * Scoring is a separate phase, so unranked candidates do not carry score data.
+ */
+export interface NestingAlgorithmScoredCandidate {
+  readonly candidate: NestingAlgorithmCandidate
+  readonly score: ReadonlyArray<number>
 }
 
 /**
@@ -69,7 +86,7 @@ export namespace NestingAlgorithmEvent {
   export interface BeamStep {
     readonly type: 'beam_step'
     readonly stepIndex: number
-    readonly beam: ReadonlyArray<NestingAlgorithmState>
+    readonly state: NestingAlgorithmState
     readonly candidates: ReadonlyArray<NestingAlgorithmCandidate>
   }
 
@@ -80,7 +97,7 @@ export namespace NestingAlgorithmEvent {
   export interface CandidateRanked {
     readonly type: 'candidate_ranked'
     readonly stepIndex: number
-    readonly candidate: NestingAlgorithmCandidate
+    readonly scoredCandidate: NestingAlgorithmScoredCandidate
   }
 
   /**
@@ -91,7 +108,7 @@ export namespace NestingAlgorithmEvent {
     readonly type: 'state_selected'
     readonly stepIndex: number
     readonly beamRank: number
-    readonly state: NestingAlgorithmState
+    readonly state: NestingBeamState
   }
 
   /**
@@ -102,8 +119,8 @@ export namespace NestingAlgorithmEvent {
     readonly type: 'placement_committed'
     readonly stepIndex: number
     readonly beamRank: number
-    readonly previousState: NestingAlgorithmState
-    readonly nextState: NestingAlgorithmState
+    readonly previousState: NestingBeamState
+    readonly nextState: NestingBeamState
     readonly candidate: NestingAlgorithmCandidate
   }
 
@@ -150,7 +167,7 @@ export namespace NestingAlgorithmEvent {
     | Completed
 }
 
-const FreeRectangleOps = {
+export const FreeRectangleOps = {
   /**
    * Adds a free rectangle unless it is fully contained by an existing one.
    * The free-rectangle set is kept maximal by invariant: new rectangles come
@@ -253,7 +270,7 @@ export function runMaxRectsBeamSearch(input: {
     readonly onEvent?: (event: NestingAlgorithmEvent.Event) => void
   }
 }) {
-  const state = {
+  const top = {
     placements: [],
     freeRectangles: [
       new FreeRectangle({
@@ -264,6 +281,10 @@ export function runMaxRectsBeamSearch(input: {
       })
     ],
     remainingPieces: input.pieces
+  } satisfies NestingBeamState
+  const state = {
+    top,
+    alternatives: []
   } satisfies NestingAlgorithmState
 
   input.hooks?.onEvent?.({

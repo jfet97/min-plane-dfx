@@ -6,10 +6,15 @@ import {
   NestingStrategyResult,
   NestingResult as NestingResultModel,
   NestingHistoryFrame as NestingHistoryFrameModel,
+  PlateSnapshot,
   type NestingStrategyDefinition
 } from '@shared/domain/nesting.js'
 import { findStrategy, STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js'
-import { runMaxRectsBeamSearch } from './nestingAlgorithm.js'
+import {
+  runMaxRectsBeamSearch,
+  type NestingAlgorithmState,
+  type NestingBeamState
+} from './nestingAlgorithm.js'
 import { makeStrategyOrders } from './strategyOrders.js'
 
 export interface ComputeNestingOptions {
@@ -94,25 +99,45 @@ function runStrategyStub(
     hooks: {
       onEvent: (event) => {
         if (event.type === 'initial_state') {
-          options.emitFrame(buildInitialFrame(request, strategyRunId, strategyLabel))
+          for (const frame of buildStateFrames(
+            request,
+            strategyRunId,
+            strategyLabel,
+            event.state
+          )) {
+            options.emitFrame(frame)
+          }
         }
       }
     }
   })
 }
 
-function buildInitialFrame(
+function beamMembers(state: NestingAlgorithmState): ReadonlyArray<NestingBeamState> {
+  return [state.top, ...state.alternatives]
+}
+
+function buildStateFrames(
   request: NestingRequest,
   runId: string,
-  strategyLabel: string
-): NestingHistoryFrame {
-  return NestingHistoryFrameModel.initial({
-    frameId: randomUUID(),
-    request,
-    strategyRunId: runId,
-    strategyLabel,
-    createdAt: new Date().toISOString()
-  })
+  strategyLabel: string,
+  state: NestingAlgorithmState
+): ReadonlyArray<NestingHistoryFrame> {
+  const createdAt = new Date().toISOString()
+  return beamMembers(state).map((member, beamRank) =>
+    NestingHistoryFrameModel.initialBeamSnapshot({
+      frameId: randomUUID(),
+      request,
+      strategyRunId: runId,
+      strategyLabel,
+      beamRank,
+      plate: new PlateSnapshot({
+        placements: [...member.placements],
+        freeRectangles: [...member.freeRectangles]
+      }),
+      createdAt
+    })
+  )
 }
 
 /**

@@ -103,16 +103,17 @@ describe('runMaxRectsBeamSearch', () => {
 
     expect(events.map((event) => event.type)).toEqual(['initial_state', 'completed'])
     expect(initialStates.length).toBe(1)
-    expect(initialStates[0]?.placements).toEqual([])
-    expect(initialStates[0]?.freeRectangles).toHaveLength(1)
-    expect(initialStates[0]?.freeRectangles[0]).toMatchObject({
+    expect(initialStates[0]?.top.placements).toEqual([])
+    expect(initialStates[0]?.alternatives).toEqual([])
+    expect(initialStates[0]?.top.freeRectangles).toHaveLength(1)
+    expect(initialStates[0]?.top.freeRectangles[0]).toMatchObject({
       x: 0,
       y: 0,
       width: 100,
       height: 100
     })
-    expect(initialStates[0]?.freeRectangles[0]?.id).toEqual(expect.any(String))
-    expect(initialStates[0]?.remainingPieces.map((p) => p.id)).toEqual(['a', 'b'])
+    expect(initialStates[0]?.top.freeRectangles[0]?.id).toEqual(expect.any(String))
+    expect(initialStates[0]?.top.remainingPieces.map((p) => p.id)).toEqual(['a', 'b'])
     expect(result.placements).toEqual([])
     expect(result.unplacedPieceIds).toEqual(['a', 'b'])
   })
@@ -313,6 +314,8 @@ describe('computeNestingStub', () => {
       'run-1-balanced-preserve-free-then-bottom-left',
       'run-2-short-fill-short-side-fit-then-bottom-left'
     ])
+    expect(frames.map((frame) => frame.beamRank)).toEqual([0, 0])
+    expect(frames.every((frame) => frame.plate.freeRectangles.length === 1)).toBe(true)
   })
 
   it('records elapsed time and piece count in stats', () => {

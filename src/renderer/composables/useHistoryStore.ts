@@ -74,6 +74,16 @@ function currentFrames(): NestingHistoryFrame[] {
   return state.framesByRun[state.selectedStrategyRunId] ?? []
 }
 
+function latestTopFrameIndex(frames: ReadonlyArray<NestingHistoryFrame>): number {
+  if (frames.length === 0) return -1
+  const latestStep = Math.max(...frames.map((frame) => frame.stepIndex))
+  const topIndex = frames.findIndex(
+    (frame) => frame.stepIndex === latestStep && frame.beamRank === 0
+  )
+  if (topIndex >= 0) return topIndex
+  return frames.findIndex((frame) => frame.stepIndex === latestStep)
+}
+
 export function useHistoryStore() {
   const result = computed(() => state.result)
   const strategyResults = computed<ReadonlyArray<NestingStrategyResult>>(
@@ -93,6 +103,13 @@ export function useHistoryStore() {
     if (idx < 0 || idx >= list.length) return null
     return list[idx] ?? null
   })
+  const selectedStepFrames = computed<ReadonlyArray<NestingHistoryFrame>>(() => {
+    const selected = selectedFrame.value
+    if (!selected) return []
+    return [...currentFrames()]
+      .filter((frame) => frame.stepIndex === selected.stepIndex)
+      .sort((a, b) => a.beamRank - b.beamRank)
+  })
   const frameCount = computed(() => currentFrames().length)
   const hasResult = computed(() => state.result !== null)
 
@@ -103,17 +120,17 @@ export function useHistoryStore() {
     selectedRun,
     frames,
     selectedFrame,
+    selectedStepFrames,
     frameCount,
     hasResult,
 
     setResult(result: NestingResult): void {
       stopPlayback()
       state.result = result
-      state.framesByRun = {}
       state.truncated = false
       const first = result.strategyResults[0]
       state.selectedStrategyRunId = result.selectedStrategyRunId ?? first?.strategyRunId ?? null
-      state.selectedFrameIndex = -1
+      state.selectedFrameIndex = latestTopFrameIndex(currentFrames())
     },
 
     pushFrame(frame: NestingHistoryFrame): void {
@@ -151,7 +168,7 @@ export function useHistoryStore() {
       stopPlayback()
       state.selectedStrategyRunId = runId
       const list = state.framesByRun[runId] ?? []
-      state.selectedFrameIndex = list.length - 1
+      state.selectedFrameIndex = latestTopFrameIndex(list)
     },
 
     selectFrameIndex(idx: number): void {
@@ -162,6 +179,19 @@ export function useHistoryStore() {
         return
       }
       state.selectedFrameIndex = Math.max(0, Math.min(idx, list.length - 1))
+    },
+
+    selectBeamRank(rank: number): void {
+      stopPlayback()
+      const selected = selectedFrame.value
+      const list = currentFrames()
+      if (!selected || list.length === 0) return
+      const nextIndex = list.findIndex(
+        (frame) => frame.stepIndex === selected.stepIndex && frame.beamRank === rank
+      )
+      if (nextIndex >= 0) {
+        state.selectedFrameIndex = nextIndex
+      }
     },
 
     stepFrame(direction: -1 | 1): void {

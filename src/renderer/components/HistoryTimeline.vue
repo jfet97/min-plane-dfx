@@ -85,6 +85,19 @@ function onSpeedChange(event: Event): void {
           >(truncated; see NDJSON replay)</span
         >
       </p>
+      <div v-if="history.selectedStepFrames.value.length > 1" class="beam-ranks">
+        <span class="muted">Beam</span>
+        <button
+          v-for="frame in history.selectedStepFrames.value"
+          :key="`${frame.strategyRunId}-${frame.stepIndex}-${frame.beamRank}`"
+          type="button"
+          :class="{ active: frame.frameId === history.selectedFrame.value?.frameId }"
+          :title="`Show retained state rank ${frame.beamRank}`"
+          @click="history.selectBeamRank(frame.beamRank)"
+        >
+          {{ frame.beamRank + 1 }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -159,6 +172,23 @@ h2 {
 .frame-info {
   font-size: 11px;
   color: var(--text-secondary);
+}
+
+.beam-ranks {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.beam-ranks button {
+  min-width: 22px;
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.beam-ranks button.active {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .warn {
