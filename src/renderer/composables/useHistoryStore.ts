@@ -6,9 +6,8 @@ import type {
   NestingStrategyResult,
   ProjectHistoryRef
 } from '@shared/domain/nesting.js'
-import type { JobId } from '@shared/domain/ids.js'
+import { JobId } from '@shared/domain/ids.js'
 import type { ProjectDocument } from '@shared/domain/project.js'
-import { newJobId } from '../utils/ids.js'
 
 /**
  * Bounded history retention policy. Keeps the most recent N frames in memory;
@@ -222,4 +221,4 @@ export function useHistoryStore() {
 }
 
 // Exported for tests; not part of the public API surface.
-export const __test = { newJobId }
+export const __test = { newJobId: JobId.make }

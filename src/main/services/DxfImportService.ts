@@ -1,7 +1,6 @@
 import DxfParser from 'dxf-parser'
 import { readFile } from 'node:fs/promises'
 import { basename, extname } from 'node:path'
-import { randomUUID } from 'node:crypto'
 import { EntityName } from 'dxf-parser/dist/entities/geomtry.js'
 import { entityToGeometry, unionBounds } from './DxfBbox.js'
 import {
@@ -10,7 +9,7 @@ import {
   ImportedPiece,
   ImportWarning
 } from '@shared/domain/dxf.js'
-import type { SourceFileId } from '@shared/domain/ids.js'
+import { SourceFileId } from '@shared/domain/ids.js'
 import { Rect } from '@shared/domain/geometry.js'
 
 const SUPPORTED_ENTITIES: ReadonlySet<EntityName> = new Set<EntityName>([
@@ -111,7 +110,7 @@ export async function importDxfFile(
     throw new DxfImportError('dxf_parse_error', path, 'DXF parser returned no document')
   }
 
-  const sourceFileId = randomUUID() as SourceFileId
+  const sourceFileId = SourceFileId.make()
   const warnings: ImportWarning[] = []
   const millimetersPerUnit = options.millimetersPerUnit ?? 1
   const convertedSegments: Segment[] = []
@@ -161,7 +160,6 @@ export async function importDxfFile(
   const pieces: ImportedPiece[] = overallBounds
     ? [
         new ImportedPiece({
-          id: randomUUID() as ImportedPiece['id'],
           sourceFileId,
           sourceLayer: commonLayer(convertedLayers),
           label: basename(path, extname(path)),

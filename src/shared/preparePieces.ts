@@ -1,7 +1,7 @@
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 import { NestingWarning, PreparedPiece, type SheetSpec } from '@shared/domain/nesting.js'
 import { RectWith } from '@shared/domain/geometry.js'
-import type { JobId, PieceId } from '@shared/domain/ids.js'
+import type { JobId } from '@shared/domain/ids.js'
 
 export interface PreparedPieceWithWarnings {
   readonly pieces: ReadonlyArray<PreparedPiece>
@@ -35,7 +35,7 @@ export function preparePieces(
         new NestingWarning({
           code: 'piece_does_not_fit',
           message: `Piece ${p.label} (${paddedWidth.toFixed(2)} x ${paddedHeight.toFixed(2)}) cannot fit on the sheet (${sheet.width} x ${sheet.height}), even after rotation.`,
-          pieceId: p.id as PieceId
+          pieceId: p.id
         })
       )
     } else if (!fitsAsIs) {
@@ -43,15 +43,15 @@ export function preparePieces(
         new NestingWarning({
           code: 'piece_requires_rotation',
           message: `Piece ${p.label} only fits rotated 90 degrees.`,
-          pieceId: p.id as PieceId
+          pieceId: p.id
         })
       )
     }
 
     pieces.push(
       new PreparedPiece({
-        id: p.id as PieceId,
-        sourcePieceId: p.id as PieceId,
+        id: p.id,
+        sourcePieceId: p.id,
         realBounds: p.realBounds,
         paddedBounds: new RectWith({
           x: p.realBounds.x,

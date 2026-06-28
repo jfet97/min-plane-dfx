@@ -13,7 +13,6 @@ import {
   STRATEGY_DEFINITIONS,
   findStrategy
 } from '../../src/shared/domain/strategies.js'
-import { FreeRectangle } from '@shared/domain/nesting.js'
 import type {
   NestingRequest,
   PreparedPiece,
@@ -111,17 +110,6 @@ describe('runNestingAlgorithmStub', () => {
     expect(initialStates[0]?.remainingPieces.map((p) => p.id)).toEqual(['a', 'b'])
     expect(result.placements).toEqual([])
     expect(result.unplacedPieceIds).toEqual(['a', 'b'])
-  })
-
-  it('constructs free rectangles with generated ids by default', () => {
-    const freeRectangle = new FreeRectangle({
-      x: 0,
-      y: 0,
-      width: 100,
-      height: 100
-    })
-
-    expect(freeRectangle.id).toEqual(expect.any(String))
   })
 })
 

@@ -1,5 +1,5 @@
 import { Effect, Schema } from 'effect'
-import { FreeRectId, JobId, PieceId, newFreeRectId } from './ids.js'
+import { FreeRectId, JobId, PieceId } from './ids.js'
 import { Millimeters, Rect, RectWithFromRect } from './geometry.js'
 
 /** History scope. Only the winning path is required to be retained. */
@@ -76,7 +76,7 @@ export class NestingOptions extends Schema.Class<NestingOptions>('NestingOptions
 }) {}
 
 export class PreparedPiece extends Schema.Class<PreparedPiece>('PreparedPiece')({
-  id: PieceId,
+  id: PieceId.withDefault,
   sourcePieceId: PieceId,
   realBounds: Rect,
   paddedBounds: RectWithFromRect,
@@ -86,7 +86,7 @@ export class PreparedPiece extends Schema.Class<PreparedPiece>('PreparedPiece')(
 
 export class NestingRequest extends Schema.Class<NestingRequest>('NestingRequest')({
   version: Schema.Literal(1),
-  jobId: JobId,
+  jobId: JobId.withDefault,
   sheet: SheetSpec,
   padding: Millimeters,
   pieces: Schema.Array(PreparedPiece),
@@ -243,7 +243,7 @@ export const FreeRectangleSource = Schema.Union([
 ])
 
 export class FreeRectangle extends Schema.Class<FreeRectangle>('FreeRectangle')({
-  id: FreeRectId.pipe(Schema.withConstructorDefault(Effect.sync(newFreeRectId))),
+  id: FreeRectId.withDefault,
   x: Millimeters,
   y: Millimeters,
   width: Millimeters,

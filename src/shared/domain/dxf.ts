@@ -37,7 +37,7 @@ export class DxfGeometrySummary extends Schema.Class<DxfGeometrySummary>('DxfGeo
 }) {}
 
 export class ImportedPiece extends Schema.Class<ImportedPiece>('ImportedPiece')({
-  id: PieceId,
+  id: PieceId.withDefault,
   sourceFileId: SourceFileId,
   sourceLayer: Schema.optional(Schema.String),
   label: Schema.String,
@@ -47,7 +47,7 @@ export class ImportedPiece extends Schema.Class<ImportedPiece>('ImportedPiece')(
 }) {}
 
 export class ImportedDxfDocument extends Schema.Class<ImportedDxfDocument>('ImportedDxfDocument')({
-  id: SourceFileId,
+  id: SourceFileId.withDefault,
   path: Schema.String,
   fileName: Schema.String,
   /** User-declared unit interpretation in millimeters per DXF unit. */

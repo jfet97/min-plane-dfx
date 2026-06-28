@@ -12,7 +12,7 @@ import { useHistoryStore } from './composables/useHistoryStore.js'
 import { useFinalSelection } from './composables/useFinalSelection.js'
 import { useJobRunner } from './composables/useJobRunner.js'
 import { preparePieces } from '@shared/preparePieces.js'
-import { newJobId } from './utils/ids.js'
+import { JobId } from '@shared/domain/ids.js'
 import type { NestingRequest, NestingWarning } from '@shared/domain/nesting.js'
 import type { Unsubscribe } from '@shared/protocol/ipc.js'
 
@@ -67,7 +67,7 @@ function buildRequest(): NestingRequest | null {
   if (sheet.width <= 0 || sheet.height <= 0) return null
   if (store.selectedPieceCount.value === 0) return null
 
-  const jobId = newJobId()
+  const jobId = JobId.make()
   const prep = preparePieces(store.selectedPieces.value, sheet, padding, jobId)
   preparationWarnings.value = prep.warnings
 

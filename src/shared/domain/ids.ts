@@ -1,4 +1,4 @@
-import { Schema } from 'effect'
+import { Effect, Schema } from 'effect'
 
 /**
  * Brand symbols for nominal typing on string/number primitives that must not
@@ -14,15 +14,14 @@ const SourceFileBrand = Schema.brand('SourceFileId')
 const JobBrand = Schema.brand('JobId')
 const FreeRectBrand = Schema.brand('FreeRectId')
 
-export const PieceId = PieceBrand(Schema.String)
-export const SourceFileId = SourceFileBrand(Schema.String)
-export const JobId = JobBrand(Schema.String)
-export const FreeRectId = FreeRectBrand(Schema.String)
+type GeneratedIdBase = Schema.Codec<string, string, never, never> & Schema.WithoutConstructorDefault
 
-export type PieceId = Schema.Schema.Type<typeof PieceId>
-export type SourceFileId = Schema.Schema.Type<typeof SourceFileId>
-export type JobId = Schema.Schema.Type<typeof JobId>
-export type FreeRectId = Schema.Schema.Type<typeof FreeRectId>
+type GeneratedIdSchema<S extends GeneratedIdBase> = S & {
+  make(): S['Type']
+  make(input: string): S['Type']
+  readonly withConstructorDefault: Schema.withConstructorDefault<S>
+  readonly withDefault: Schema.withConstructorDefault<S>
+}
 
 function newId(): string {
   const globalCrypto = globalThis as { crypto?: { randomUUID?: () => string } }
@@ -32,6 +31,28 @@ function newId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-export function newFreeRectId(): FreeRectId {
-  return newId() as FreeRectId
+function withGeneratedId<S extends GeneratedIdBase>(schema: S): GeneratedIdSchema<S> {
+  function make(): S['Type']
+  function make(input: string): S['Type']
+  function make(input?: string): S['Type'] {
+    if (input !== undefined) return Schema.decodeSync(schema)(input)
+    return newId() as S['Type']
+  }
+
+  const withConstructorDefault = schema.pipe(Schema.withConstructorDefault(Effect.sync(make)))
+  return Object.assign(schema, {
+    make,
+    withConstructorDefault,
+    withDefault: withConstructorDefault
+  })
 }
+
+export const PieceId = withGeneratedId(PieceBrand(Schema.String))
+export const SourceFileId = withGeneratedId(SourceFileBrand(Schema.String))
+export const JobId = withGeneratedId(JobBrand(Schema.String))
+export const FreeRectId = withGeneratedId(FreeRectBrand(Schema.String))
+
+export type PieceId = Schema.Schema.Type<typeof PieceId>
+export type SourceFileId = Schema.Schema.Type<typeof SourceFileId>
+export type JobId = Schema.Schema.Type<typeof JobId>
+export type FreeRectId = Schema.Schema.Type<typeof FreeRectId>
