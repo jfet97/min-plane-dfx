@@ -1,5 +1,5 @@
 import type { Order } from 'effect'
-import type { FreeRectangle, Placement, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
+import { FreeRectangle, Placement, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
 import type { PieceId } from '@shared/domain/ids.js'
 
 /**
@@ -167,11 +167,18 @@ export function runNestingAlgorithmStub(input: {
   readonly stateOrder: NestingStateOrder
   readonly hooks?: NestingAlgorithmHooks
 }) {
-  const initialState: NestingAlgorithmState = {
+  const initialState = {
     placements: [],
-    freeRectangles: [],
+    freeRectangles: [
+      new FreeRectangle({
+        width: input.sheet.width,
+        height: input.sheet.height,
+        x: 0,
+        y: 0
+      })
+    ],
     remainingPieces: input.pieces
-  }
+  } satisfies NestingAlgorithmState
 
   input.hooks?.onEvent?.({
     type: 'initial_state',
@@ -183,6 +190,7 @@ export function runNestingAlgorithmStub(input: {
     placements: [],
     unplacedPieceIds: input.pieces.map((piece) => piece.id)
   }
+
   input.hooks?.onEvent?.({
     type: 'completed',
     outcome

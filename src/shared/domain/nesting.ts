@@ -1,5 +1,5 @@
 import { Effect, Schema } from 'effect'
-import { FreeRectId, JobId, PieceId } from './ids.js'
+import { FreeRectId, JobId, PieceId, newFreeRectId } from './ids.js'
 import { Millimeters, Rect, RectWithFromRect } from './geometry.js'
 
 /** History scope. Only the winning path is required to be retained. */
@@ -243,7 +243,7 @@ export const FreeRectangleSource = Schema.Union([
 ])
 
 export class FreeRectangle extends Schema.Class<FreeRectangle>('FreeRectangle')({
-  id: FreeRectId,
+  id: FreeRectId.pipe(Schema.withConstructorDefault(Effect.sync(newFreeRectId))),
   x: Millimeters,
   y: Millimeters,
   width: Millimeters,

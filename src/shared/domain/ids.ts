@@ -23,3 +23,15 @@ export type PieceId = Schema.Schema.Type<typeof PieceId>
 export type SourceFileId = Schema.Schema.Type<typeof SourceFileId>
 export type JobId = Schema.Schema.Type<typeof JobId>
 export type FreeRectId = Schema.Schema.Type<typeof FreeRectId>
+
+function newId(): string {
+  const globalCrypto = globalThis as { crypto?: { randomUUID?: () => string } }
+  if (typeof globalCrypto.crypto?.randomUUID === 'function') {
+    return globalCrypto.crypto.randomUUID()
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+export function newFreeRectId(): FreeRectId {
+  return newId() as FreeRectId
+}
