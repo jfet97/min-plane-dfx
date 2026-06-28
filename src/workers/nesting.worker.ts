@@ -18,7 +18,7 @@ import type {
   NestingHistorySummary,
   NestingRequest
 } from '@shared/domain/nesting.js'
-import { Cause, Effect, FileSystem, Layer, Path, PlatformError, Queue } from 'effect'
+import { Cause, Effect, Fiber, FileSystem, Layer, Path, PlatformError, Queue, Stream } from 'effect'
 import * as RpcServer from 'effect/unstable/rpc/RpcServer'
 
 /**
@@ -131,10 +131,23 @@ function handleRunNesting(
     const historyPath = yield* prepareHistoryFile(jobId, historyMode)
 
     let frameCount = 0
+    const frameQueue = yield* Queue.unbounded<NestingHistoryFrame, Cause.Done>()
     const emitFrame = makeFrameEmitter(send, requestId, jobId, historyMode, historyPath, () => {
       frameCount++
     })
-    const result = yield* computeNestingStub(payload, Date.now() - startedAt, { emitFrame })
+    const frameConsumer = yield* Stream.fromQueue(frameQueue).pipe(
+      Stream.runForEach(emitFrame),
+      Effect.forkDetach
+    )
+    const result = yield* Effect.sync(() =>
+      computeNestingStub(payload, Date.now() - startedAt, {
+        emitFrame: (frame) => {
+          Queue.offerUnsafe(frameQueue, frame)
+        }
+      })
+    ).pipe(Effect.ensuring(Queue.end(frameQueue)))
+    yield* Fiber.join(frameConsumer)
+
     const strategyRunIds = result.strategyResults.map((s) => s.strategyRunId)
 
     const summary: NestingHistorySummary = {

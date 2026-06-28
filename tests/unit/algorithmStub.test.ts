@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { Effect } from 'effect'
+import { Order } from 'effect'
 import { sortPiecesForNesting } from '../../src/workers/algorithm/sortPiecesForNesting.js'
 import { computeNestingStub } from '../../src/workers/algorithm/computeNestingStub.js'
 import { selectFinalStrategyResult } from '../../src/workers/algorithm/selectFinalStrategyResult.js'
+import {
+  runNestingAlgorithmStub,
+  type NestingAlgorithmEvent,
+  type NestingAlgorithmState
+} from '../../src/workers/algorithm/nestingAlgorithm.js'
 import {
   DEFAULT_STRATEGY_ID,
   STRATEGY_DEFINITIONS,
@@ -12,7 +17,8 @@ import type {
   NestingRequest,
   PreparedPiece,
   NestingOptions,
-  NestingStrategyResult
+  NestingStrategyResult,
+  NestingHistoryFrame
 } from '@shared/domain/nesting.js'
 import type { JobId, PieceId } from '@shared/domain/ids.js'
 
@@ -54,11 +60,9 @@ function baseRequest(overrides: Partial<NestingRequest> = {}): NestingRequest {
 }
 
 function runNestingStub(request: NestingRequest, elapsedMs: number) {
-  return Effect.runSync(
-    computeNestingStub(request, elapsedMs, {
-      emitFrame: () => Effect.void
-    })
-  )
+  return computeNestingStub(request, elapsedMs, {
+    emitFrame: () => {}
+  })
 }
 
 describe('sortPiecesForNesting', () => {
@@ -70,6 +74,35 @@ describe('sortPiecesForNesting', () => {
 
   it('returns an empty array when given an empty array', () => {
     expect(sortPiecesForNesting([])).toEqual([])
+  })
+})
+
+describe('runNestingAlgorithmStub', () => {
+  it('exposes algorithm events without creating placements or Effectful history', () => {
+    const initialStates: NestingAlgorithmState[] = []
+    const events: NestingAlgorithmEvent[] = []
+    const result = runNestingAlgorithmStub({
+      sheet: baseRequest().sheet,
+      pieces: [piece('a'), piece('b')],
+      freeRectangleOrder: () => Order.make(() => 0),
+      stateOrder: Order.make(() => 0),
+      hooks: {
+        onEvent: (event) => {
+          events.push(event)
+          if (event.type === 'initial_state') {
+            initialStates.push(event.state)
+          }
+        }
+      }
+    })
+
+    expect(events.map((event) => event.type)).toEqual(['initial_state', 'completed'])
+    expect(initialStates.length).toBe(1)
+    expect(initialStates[0]?.placements).toEqual([])
+    expect(initialStates[0]?.freeRectangles).toEqual([])
+    expect(initialStates[0]?.remainingPieces.map((p) => p.id)).toEqual(['a', 'b'])
+    expect(result.placements).toEqual([])
+    expect(result.unplacedPieceIds).toEqual(['a', 'b'])
   })
 })
 
@@ -172,6 +205,30 @@ describe('computeNestingStub', () => {
     for (const strategy of result.strategyResults) {
       expect(strategy.historySummary).toBeUndefined()
     }
+  })
+
+  it('emits one initial history frame per strategy from the wrapper layer', () => {
+    const frames: NestingHistoryFrame[] = []
+    const req = baseRequest({
+      options: options({
+        strategyIds: [
+          'balanced-preserve-free-then-bottom-left',
+          'short-fill-short-side-fit-then-bottom-left'
+        ]
+      })
+    })
+
+    computeNestingStub(req, 0, {
+      emitFrame: (frame) => {
+        frames.push(frame)
+      }
+    })
+
+    expect(frames.length).toBe(2)
+    expect(frames.map((frame) => frame.strategyRunId)).toEqual([
+      'run-1-balanced-preserve-free-then-bottom-left',
+      'run-2-short-fill-short-side-fit-then-bottom-left'
+    ])
   })
 
   it('records elapsed time and piece count in stats', () => {
