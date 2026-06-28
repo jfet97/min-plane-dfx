@@ -1,6 +1,11 @@
 import { Effect, Schema } from 'effect'
 import { FreeRectId, JobId, PieceId } from './ids.js'
-import { Millimeters, Rect, RectWithFromRect } from './geometry.js'
+import {
+  NonNegativeIntegerMillimeters,
+  PositiveIntegerMillimeters,
+  Rect,
+  RectWithFromRect
+} from './geometry.js'
 
 /** History scope. Only the winning path is required to be retained. */
 export const HistoryScope = Schema.Literal('winning_path')
@@ -43,8 +48,8 @@ export const StrategyPrefix = Schema.String
 export const StrategyTailToken = Schema.String
 
 export class SheetSpec extends Schema.Class<SheetSpec>('SheetSpec')({
-  width: Millimeters,
-  height: Millimeters,
+  width: PositiveIntegerMillimeters,
+  height: PositiveIntegerMillimeters,
   label: Schema.String
 }) {}
 
@@ -80,7 +85,7 @@ export class PreparedPiece extends Schema.Class<PreparedPiece>('PreparedPiece')(
   sourcePieceId: PieceId,
   realBounds: Rect,
   paddedBounds: RectWithFromRect,
-  padding: Millimeters,
+  padding: NonNegativeIntegerMillimeters,
   allowRotation: Schema.Boolean
 }) {}
 
@@ -88,7 +93,7 @@ export class NestingRequest extends Schema.Class<NestingRequest>('NestingRequest
   version: Schema.Literal(1),
   jobId: JobId.withDefault,
   sheet: SheetSpec,
-  padding: Millimeters,
+  padding: NonNegativeIntegerMillimeters,
   pieces: Schema.Array(PreparedPiece),
   options: NestingOptions
 }) {}
@@ -98,10 +103,10 @@ export const NestingResultStatus = Schema.Literals(['stub', 'ok', 'partial', 'fa
 
 export class Placement extends Schema.Class<Placement>('Placement')({
   pieceId: PieceId,
-  x: Millimeters,
-  y: Millimeters,
-  width: Millimeters,
-  height: Millimeters,
+  x: NonNegativeIntegerMillimeters,
+  y: NonNegativeIntegerMillimeters,
+  width: PositiveIntegerMillimeters,
+  height: PositiveIntegerMillimeters,
   rotation: Schema.Union([Schema.Literal(0), Schema.Literal(90)])
 }) {}
 
@@ -244,10 +249,10 @@ export const FreeRectangleSource = Schema.Union([
 
 export class FreeRectangle extends Schema.Class<FreeRectangle>('FreeRectangle')({
   id: FreeRectId.withDefault,
-  x: Millimeters,
-  y: Millimeters,
-  width: Millimeters,
-  height: Millimeters,
+  x: NonNegativeIntegerMillimeters,
+  y: NonNegativeIntegerMillimeters,
+  width: PositiveIntegerMillimeters,
+  height: PositiveIntegerMillimeters,
   source: Schema.optional(FreeRectangleSource)
 }) {}
 

@@ -3,7 +3,12 @@ import { ProjectDocument } from '../domain/project.js'
 import { DxfGeometrySummary, ImportWarning } from '../domain/dxf.js'
 import { NestingResult } from '../domain/nesting.js'
 import { JobId, PieceId, SourceFileId } from '../domain/ids.js'
-import { PositiveWidth, PositiveHeight, NonNegativePadding } from './geometrySchemas.js'
+import {
+  NonNegativeCoordinate,
+  PositiveWidth,
+  PositiveHeight,
+  NonNegativePadding
+} from './geometrySchemas.js'
 
 const StrictImportedPiece = Schema.Struct({
   id: PieceId,
@@ -11,8 +16,8 @@ const StrictImportedPiece = Schema.Struct({
   sourceLayer: Schema.optional(Schema.String),
   label: Schema.String,
   realBounds: Schema.Struct({
-    x: Schema.Number,
-    y: Schema.Number,
+    x: NonNegativeCoordinate,
+    y: NonNegativeCoordinate,
     width: PositiveWidth,
     height: PositiveHeight
   }),

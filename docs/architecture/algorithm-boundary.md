@@ -24,6 +24,11 @@ and synchronous event hooks. It returns only algorithm outcome data. It does not
 know about worker requests, configured strategy ids, protocol result envelopes,
 Effect, or history persistence.
 
+The core operates on integer-millimeter rectangles only. Coordinates and
+padding are non-negative integers; widths and heights are positive integers.
+DXF fractional geometry is normalized by main before the worker request is
+created, so the algorithm must not perform float rounding or unit conversion.
+
 The core emits algorithm events, not history frames. The event stream is the
 raw material for history: initial states, future beam steps, selected states,
 placements, split/prune events, and completion can be translated by the wrapper

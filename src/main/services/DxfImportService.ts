@@ -39,7 +39,20 @@ export class DxfImportError extends Error {
 
 type Entity = Parameters<typeof entityToGeometry>[0]
 type Segment = DxfGeometrySummary['segments'][number]
-type Bounds = ImportedPiece['realBounds']
+type RawBounds = {
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+}
+
+interface IntegerContainer {
+  readonly bounds: Rect
+  readonly offsetX: number
+  readonly offsetY: number
+}
+
+const INTEGER_MM_EPSILON = 1e-6
 
 function isDxfDocument(value: unknown): value is { readonly entities?: ReadonlyArray<Entity> } {
   if (typeof value !== 'object' || value === null) return false
@@ -71,13 +84,62 @@ function scaleSegment(segment: Segment, factor: number): Segment {
   }
 }
 
-function scaleBounds(bounds: Bounds, factor: number): Bounds {
-  return new Rect({
+function snapIntegerNoise(value: number): number {
+  const rounded = Math.round(value)
+  return Math.abs(value - rounded) <= INTEGER_MM_EPSILON ? rounded : value
+}
+
+function scaleBounds(bounds: RawBounds, factor: number): RawBounds {
+  return {
     x: bounds.x * factor,
     y: bounds.y * factor,
     width: bounds.width * factor,
     height: bounds.height * factor
-  })
+  }
+}
+
+function integerContainingBounds(bounds: RawBounds): IntegerContainer | null {
+  const originX = Math.floor(snapIntegerNoise(bounds.x))
+  const originY = Math.floor(snapIntegerNoise(bounds.y))
+  const maxX = Math.ceil(snapIntegerNoise(bounds.x + bounds.width))
+  const maxY = Math.ceil(snapIntegerNoise(bounds.y + bounds.height))
+  const width = maxX - originX
+  const height = maxY - originY
+  if (width <= 0 || height <= 0) return null
+  return {
+    bounds: new Rect({
+      x: 0,
+      y: 0,
+      width,
+      height
+    }),
+    offsetX: -originX,
+    offsetY: -originY
+  }
+}
+
+function translateSegment(segment: Segment, dx: number, dy: number): Segment {
+  if (segment.kind === 'line') {
+    return {
+      kind: 'line',
+      x1: segment.x1 + dx,
+      y1: segment.y1 + dy,
+      x2: segment.x2 + dx,
+      y2: segment.y2 + dy
+    }
+  }
+  return {
+    kind: 'arc',
+    x1: segment.x1 + dx,
+    y1: segment.y1 + dy,
+    x2: segment.x2 + dx,
+    y2: segment.y2 + dy,
+    ...(segment.cx !== undefined ? { cx: segment.cx + dx } : {}),
+    ...(segment.cy !== undefined ? { cy: segment.cy + dy } : {}),
+    ...(segment.radius !== undefined ? { radius: segment.radius } : {}),
+    ...(segment.startAngle !== undefined ? { startAngle: segment.startAngle } : {}),
+    ...(segment.endAngle !== undefined ? { endAngle: segment.endAngle } : {})
+  }
 }
 
 function commonLayer(layers: ReadonlyArray<string | undefined>): string | undefined {
@@ -114,7 +176,7 @@ export async function importDxfFile(
   const warnings: ImportWarning[] = []
   const millimetersPerUnit = options.millimetersPerUnit ?? 1
   const convertedSegments: Segment[] = []
-  const convertedBounds: Bounds[] = []
+  const convertedBounds: RawBounds[] = []
   const convertedEntityTypes = new Set<string>()
   const convertedLayers: Array<string | undefined> = []
   let convertedEntityCount = 0
@@ -156,7 +218,18 @@ export async function importDxfFile(
     convertedBounds.push(scaleBounds(converted.bounds, millimetersPerUnit))
   }
 
-  const overallBounds = unionBounds(convertedBounds)
+  const rawOverallBounds = unionBounds(convertedBounds)
+  const integerContainer = rawOverallBounds ? integerContainingBounds(rawOverallBounds) : null
+  const overallBounds = integerContainer?.bounds ?? null
+  const emptyImportMessage =
+    rawOverallBounds === null
+      ? 'No supported entities were found in this DXF file.'
+      : 'No supported entities with a positive-area integer millimeter footprint were found in this DXF file.'
+  const geometrySegments = integerContainer
+    ? convertedSegments.map((segment) =>
+        translateSegment(segment, integerContainer.offsetX, integerContainer.offsetY)
+      )
+    : []
   const pieces: ImportedPiece[] = overallBounds
     ? [
         new ImportedPiece({
@@ -169,8 +242,8 @@ export async function importDxfFile(
               convertedEntityCount === 1
                 ? ([...convertedEntityTypes][0] ?? 'DXF_SHAPE')
                 : 'DXF_SHAPE',
-            closed: convertedSegments.length > 0,
-            segments: convertedSegments
+            closed: geometrySegments.length > 0,
+            segments: geometrySegments
           }),
           warnings: []
         })
@@ -190,7 +263,7 @@ export async function importDxfFile(
         : [
             new ImportWarning({
               code: 'unsupported_dxf_entity',
-              message: 'No supported entities were found in this DXF file.'
+              message: emptyImportMessage
             })
           ])
     ]

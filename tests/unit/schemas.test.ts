@@ -75,6 +75,21 @@ describe('ProjectDocumentStrict', () => {
     const result = validate(ProjectDocumentStrict, invalid)
     expect(Exit.isFailure(result)).toBe(true)
   })
+
+  it('rejects a project with fractional nesting bounds', () => {
+    const basePiece = validProject.importedPieces[0]!
+    const invalid = {
+      ...validProject,
+      importedPieces: [
+        {
+          ...basePiece,
+          realBounds: { x: 0.5, y: 0, width: 10, height: 5 }
+        }
+      ]
+    }
+    const result = validate(ProjectDocumentStrict, invalid)
+    expect(Exit.isFailure(result)).toBe(true)
+  })
 })
 
 const validRequest = {
@@ -126,6 +141,21 @@ describe('NestingRequestStrict', () => {
     const invalid = {
       ...validRequest,
       options: { ...validRequest.options, timeoutMs: 0 }
+    }
+    const result = validate(NestingRequestStrict, invalid)
+    expect(Exit.isFailure(result)).toBe(true)
+  })
+
+  it('rejects a request with fractional piece bounds before it reaches the worker', () => {
+    const basePiece = validRequest.pieces[0]!
+    const invalid = {
+      ...validRequest,
+      pieces: [
+        {
+          ...basePiece,
+          realBounds: { x: 0, y: 0, width: 10.5, height: 5 }
+        }
+      ]
     }
     const result = validate(NestingRequestStrict, invalid)
     expect(Exit.isFailure(result)).toBe(true)

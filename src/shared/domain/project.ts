@@ -2,7 +2,7 @@ import { Schema } from 'effect'
 import { SourceFileId } from './ids.js'
 import { ImportedPiece, ImportedDxfDocument } from './dxf.js'
 import { NestingOptions, NestingResult, ProjectHistoryRef, SheetSpec } from './nesting.js'
-import { Millimeters } from './geometry.js'
+import { NonNegativeIntegerMillimeters } from './geometry.js'
 
 export class ProjectSourceFileRef extends Schema.Class<ProjectSourceFileRef>(
   'ProjectSourceFileRef'
@@ -25,7 +25,7 @@ export class ProjectDocument extends Schema.Class<ProjectDocument>('ProjectDocum
    */
   importedDocuments: Schema.optional(Schema.Array(ImportedDxfDocument)),
   sheet: SheetSpec,
-  padding: Millimeters,
+  padding: NonNegativeIntegerMillimeters,
   options: NestingOptions,
   lastResult: Schema.optional(NestingResult),
   lastHistory: Schema.optional(ProjectHistoryRef)

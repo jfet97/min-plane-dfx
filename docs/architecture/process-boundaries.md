@@ -38,9 +38,19 @@ Main owns:
 
 IPC handlers are the Promise boundary for main-process services. Validate renderer payloads before service work and return stable `IpcResult` envelopes.
 
+DXF geometry may contain fractional coordinates. Main normalizes imported
+objects into integer-millimeter containing rectangles before they become project
+or worker data: `realBounds`, `paddedBounds`, sheet dimensions, placements, and
+free rectangles are integer grid values. The original DXF geometry remains
+fractional inside that container and is translated for preview/export.
+
 ## Worker
 
 The worker receives schema-decoded `RunNestingPayload` values through `NestingWorkerRpcs`, runs the computation workflow, writes optional NDJSON history, and streams typed `WorkerResponse` messages.
+
+The worker must not perform unit conversion or float-to-grid normalization.
+Its rectangle inputs are already non-negative integer millimeters, with positive
+integer width and height.
 
 The worker transport is Effect-owned through `NodeWorker`, `NodeWorkerRunner`, and Effect RPC. The app-owned payload protocol is `RunNestingPayload -> Stream<WorkerResponse>`.
 

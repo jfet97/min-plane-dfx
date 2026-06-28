@@ -156,4 +156,33 @@ describe('importDxfFile', () => {
       await rm(dir, { recursive: true, force: true })
     }
   })
+
+  it('normalizes fractional DXF bounds into an integer millimeter container', async () => {
+    const dir = join(tmpdir(), `min-plane-dxf-import-${randomUUID()}`)
+    const path = join(dir, 'fractional.dxf')
+    const dxf =
+      baseOpen() +
+      section('ENTITIES') +
+      '0\nLWPOLYLINE\n70\n1\n90\n4\n' +
+      '10\n10.2\n20\n5.7\n10\n20.1\n20\n5.7\n10\n20.1\n20\n11.2\n10\n10.2\n20\n11.2\n' +
+      endsec() +
+      baseClose()
+
+    try {
+      await mkdir(dir, { recursive: true })
+      await writeFile(path, dxf, 'utf8')
+      const document = await importDxfFile(path)
+      const piece = document.pieces[0]
+      expect(piece?.realBounds).toEqual({ x: 0, y: 0, width: 11, height: 7 })
+      const segment = piece?.geometry.segments[0]
+      expect(segment?.kind).toBe('line')
+      if (segment?.kind !== 'line') return
+      expect(segment.x1).toBeCloseTo(0.2)
+      expect(segment.y1).toBeCloseTo(0.7)
+      expect(segment.x2).toBeCloseTo(10.1)
+      expect(segment.y2).toBeCloseTo(0.7)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
 })
