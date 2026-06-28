@@ -1,11 +1,18 @@
+import { randomUUID } from 'node:crypto'
+import { Effect } from 'effect'
 import { sortPiecesForNesting } from './sortPiecesForNesting.js'
 import { selectFinalStrategyResult } from './selectFinalStrategyResult.js'
 import type {
+  NestingHistoryFrame,
   NestingRequest,
   NestingResult,
   NestingStrategyResult
 } from '@shared/domain/nesting.js'
 import { findStrategy, STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js'
+
+export interface ComputeNestingOptions<R = never, E = never> {
+  readonly emitFrame: (frame: NestingHistoryFrame) => Effect.Effect<void, E, R>
+}
 
 /**
  * Build a stub NestingResult for the still-missing nesting algorithm.
@@ -19,32 +26,67 @@ import { findStrategy, STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js
  * `selectFinalStrategyResult`, and the per-strategy body here. The worker
  * protocol, IPC, validation, and UI boundaries stay stable.
  */
-export function computeNestingStub(request: NestingRequest, elapsedMs: number): NestingResult {
-  const sortedPieces = sortPiecesForNesting(request.pieces)
-  const pieceIds = sortedPieces.map((piece) => piece.id)
+export function computeNestingStub<R = never, E = never>(
+  request: NestingRequest,
+  elapsedMs: number,
+  options: ComputeNestingOptions<R, E>
+): Effect.Effect<NestingResult, E, R> {
+  return Effect.gen(function* () {
+    const sortedPieces = sortPiecesForNesting(request.pieces)
+    const pieceIds = sortedPieces.map((piece) => piece.id)
 
-  // Build one stub strategy result per requested strategy id. Unrecognized
-  // ids get a generic stub entry so the response shape stays stable when the
-  // user wires a custom algorithm version with its own strategy ids.
-  const strategyIds = resolveStrategyIds(request)
-  const strategyResults: NestingStrategyResult[] = strategyIds.map((strategyId, index) => {
-    const def = findStrategy(strategyId)
-    const label = def?.label ?? strategyId
-    const description = def?.description
-    const strategyRunId = `run-${index + 1}-${strategyId}`
+    // build one stub strategy result per requested strategy id. Unrecognized
+    // ids get a generic stub entry so the response shape stays stable when the
+    // user wires a custom algorithm version with its own strategy ids.
+    const strategyIds = resolveStrategyIds(request)
+    const strategyResults: NestingStrategyResult[] = []
+    for (const [index, strategyId] of strategyIds.entries()) {
+      const def = findStrategy(strategyId)
+      const label = def?.label ?? strategyId
+      const description = def?.description
+      const strategyRunId = `run-${index + 1}-${strategyId}`
+      strategyResults.push({
+        strategyRunId,
+        strategyId,
+        strategyLabel: label,
+        ...(description !== undefined ? { strategyDescription: description } : {}),
+        status: 'stub',
+        sortedPieceIds: pieceIds,
+        placements: [],
+        unplacedPieceIds: pieceIds,
+        warnings: [
+          {
+            code: 'algorithm_not_implemented',
+            message: `Strategy "${strategyId}" is intentionally not implemented yet.`
+          }
+        ],
+        stats: {
+          elapsedMs,
+          pieceCount: request.pieces.length
+        }
+      })
+
+      yield* options.emitFrame(buildInitialFrame(request, strategyRunId, label))
+    }
+
+    const selected = selectFinalStrategyResult(strategyResults, request)
+
+    const aggregatedPlacements = selected?.placements ?? []
+    const aggregatedUnplaced = selected?.unplacedPieceIds ?? pieceIds
+
     return {
-      strategyRunId,
-      strategyId,
-      strategyLabel: label,
-      ...(description !== undefined ? { strategyDescription: description } : {}),
+      version: 1,
+      jobId: request.jobId,
       status: 'stub',
+      strategyResults,
+      ...(selected ? { selectedStrategyRunId: selected.strategyRunId } : {}),
       sortedPieceIds: pieceIds,
-      placements: [],
-      unplacedPieceIds: pieceIds,
+      placements: aggregatedPlacements,
+      unplacedPieceIds: aggregatedUnplaced,
       warnings: [
         {
           code: 'algorithm_not_implemented',
-          message: `Strategy "${strategyId}" is intentionally not implemented yet.`
+          message: 'The nesting algorithm is intentionally not implemented yet.'
         }
       ],
       stats: {
@@ -53,31 +95,23 @@ export function computeNestingStub(request: NestingRequest, elapsedMs: number): 
       }
     }
   })
+}
 
-  const selected = selectFinalStrategyResult(strategyResults, request)
-
-  const aggregatedPlacements = selected?.placements ?? []
-  const aggregatedUnplaced = selected?.unplacedPieceIds ?? pieceIds
-
+function buildInitialFrame(
+  request: NestingRequest,
+  runId: string,
+  strategyLabel: string
+): NestingHistoryFrame {
   return {
-    version: 1,
+    frameId: randomUUID(),
     jobId: request.jobId,
-    status: 'stub',
-    strategyResults,
-    ...(selected ? { selectedStrategyRunId: selected.strategyRunId } : {}),
-    sortedPieceIds: pieceIds,
-    placements: aggregatedPlacements,
-    unplacedPieceIds: aggregatedUnplaced,
-    warnings: [
-      {
-        code: 'algorithm_not_implemented',
-        message: 'The nesting algorithm is intentionally not implemented yet.'
-      }
-    ],
-    stats: {
-      elapsedMs,
-      pieceCount: request.pieces.length
-    }
+    strategyRunId: runId,
+    strategyLabel,
+    stepIndex: 0,
+    beamRank: 0,
+    title: 'stub-initial',
+    plate: { placements: [], freeRectangles: [] },
+    createdAt: new Date().toISOString()
   }
 }
 

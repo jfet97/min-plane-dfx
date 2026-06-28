@@ -1,4 +1,6 @@
 import { Schema } from 'effect'
+import * as Rpc from 'effect/unstable/rpc/Rpc'
+import * as RpcGroup from 'effect/unstable/rpc/RpcGroup'
 import { JobId } from '../domain/ids.js'
 import { NestingRequest, NestingResult, NestingHistoryFrame } from '../domain/nesting.js'
 import type { SerializedAppError } from './errors.js'
@@ -80,6 +82,20 @@ export const WorkerResponse = Schema.Union([
   })
 ])
 export type WorkerResponse = Schema.Schema.Type<typeof WorkerResponse>
+
+export const RunNestingPayload = Schema.Struct({
+  requestId: Schema.String,
+  request: NestingRequest
+})
+export type RunNestingPayload = Schema.Schema.Type<typeof RunNestingPayload>
+
+export const NestingWorkerRpcs = RpcGroup.make(
+  Rpc.make('RunNesting', {
+    payload: RunNestingPayload,
+    success: WorkerResponse,
+    stream: true
+  })
+)
 
 /** Allow consumers to type-guard a thrown error. */
 export type WorkerFailure = Extract<Schema.Schema.Type<typeof WorkerResponse>, { type: 'failure' }>

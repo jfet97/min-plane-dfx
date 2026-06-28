@@ -51,7 +51,10 @@ export function preparePieces(
         x: p.realBounds.x,
         y: p.realBounds.y,
         width: paddedWidth,
-        height: paddedHeight
+        height: paddedHeight,
+        longestEdge: Math.max(paddedWidth, paddedHeight),
+        area: paddedWidth * paddedHeight,
+        imbalance: Math.abs(paddedWidth - paddedHeight)
       },
       padding,
       allowRotation: fitsRotated

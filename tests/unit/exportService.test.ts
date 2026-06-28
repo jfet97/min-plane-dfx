@@ -15,7 +15,7 @@ const piece: PreparedPiece = {
   id: 'p-1' as PreparedPiece['id'],
   sourcePieceId: 'p-1' as PreparedPiece['id'],
   realBounds: { x: 0, y: 0, width: 10, height: 5 },
-  paddedBounds: { x: 0, y: 0, width: 14, height: 9 },
+  paddedBounds: { x: 0, y: 0, width: 14, height: 9, longestEdge: 14, area: 126, imbalance: 5 },
   padding: 2,
   allowRotation: true
 }

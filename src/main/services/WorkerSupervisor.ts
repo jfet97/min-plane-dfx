@@ -1,12 +1,12 @@
 import { Worker as NodeThreadWorker } from 'node:worker_threads'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { Effect, Exit, ManagedRuntime, Schema } from 'effect'
+import { Effect, Layer, ManagedRuntime, Stream } from 'effect'
 import * as NodeWorker from '@effect/platform-node/NodeWorker'
-import * as EffectWorker from 'effect/unstable/workers/Worker'
+import * as RpcClient from 'effect/unstable/rpc/RpcClient'
 import {
-  WorkerRequest,
-  WorkerResponse,
+  NestingWorkerRpcs,
+  type WorkerResponse,
   type WorkerProgress
 } from '@shared/protocol/worker.js'
 import type { NestingRequest, NestingResult } from '@shared/domain/nesting.js'
@@ -114,9 +114,10 @@ export class WorkerSupervisor {
         : this.options.defaultTimeoutMs
 
     return new Promise<NestingResult>((resolve, reject) => {
-      const runtime = ManagedRuntime.make(
-        NodeWorker.layer(() => new NodeThreadWorker(this.options.workerPath))
+      const WorkerProtocolLive = RpcClient.layerProtocolWorker({ size: 1 }).pipe(
+        Layer.provide(NodeWorker.layer(() => new NodeThreadWorker(this.options.workerPath)))
       )
+      const runtime = ManagedRuntime.make(WorkerProtocolLive)
       const timer = setTimeout(() => {
         this.teardownWorker(runtime.dispose, 'timeout')
         this.current = null
@@ -139,20 +140,17 @@ export class WorkerSupervisor {
         dispose: runtime.dispose
       }
 
-      const req: WorkerRequest = {
-        type: 'run_nesting',
-        requestId,
-        payload: request
-      }
       const handleWorkerMessage = this.handleWorkerMessage.bind(this)
       const program = Effect.gen(function* () {
-        const platform = yield* EffectWorker.WorkerPlatform
-        const worker = yield* platform.spawn<WorkerResponse, WorkerRequest>(0)
-        yield* worker.send(req)
-        yield* worker.run((raw) => Effect.sync(() => handleWorkerMessage(raw)))
+        const client = yield* RpcClient.make(NestingWorkerRpcs)
+        yield* Effect.scoped(
+          client.RunNesting({ requestId, request }).pipe(
+            Stream.runForEach((message) => Effect.sync(() => handleWorkerMessage(message)))
+          )
+        )
       })
 
-      void runtime.runPromise(program).catch((err: unknown) => {
+      void runtime.runPromise(Effect.scoped(program)).catch((err: unknown) => {
         this.handleWorkerError(err)
       })
     })
@@ -173,15 +171,8 @@ export class WorkerSupervisor {
     void dispose().catch(() => undefined)
   }
 
-  private handleWorkerMessage(raw: unknown): void {
+  private handleWorkerMessage(parsed: WorkerResponse): void {
     if (!this.current) return
-    // Validate each inbound message at the boundary.
-    const exit = Schema.decodeUnknownExit(WorkerResponse)(raw)
-    if (Exit.isFailure(exit)) {
-      this.failCurrent('worker_protocol_error', 'Worker emitted an invalid response.')
-      return
-    }
-    const parsed: WorkerResponse = exit.value
 
     if (parsed.type === 'history_frame' || parsed.type === 'history_complete') {
       const event = parsed as NestingHistoryEvent

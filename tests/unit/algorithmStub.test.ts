@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { Effect } from 'effect'
 import { sortPiecesForNesting } from '../../src/workers/algorithm/sortPiecesForNesting.js'
 import { computeNestingStub } from '../../src/workers/algorithm/computeNestingStub.js'
 import { selectFinalStrategyResult } from '../../src/workers/algorithm/selectFinalStrategyResult.js'
@@ -20,7 +21,7 @@ function piece(id: string): PreparedPiece {
     id: id as PreparedPiece['id'],
     sourcePieceId: id as PreparedPiece['id'],
     realBounds: { x: 0, y: 0, width: 10, height: 5 },
-    paddedBounds: { x: 0, y: 0, width: 14, height: 9 },
+    paddedBounds: { x: 0, y: 0, width: 14, height: 9, longestEdge: 14, area: 126, imbalance: 5 },
     padding: 2,
     allowRotation: true
   }
@@ -50,6 +51,14 @@ function baseRequest(overrides: Partial<NestingRequest> = {}): NestingRequest {
     options: options(),
     ...overrides
   }
+}
+
+function runNestingStub(request: NestingRequest, elapsedMs: number) {
+  return Effect.runSync(
+    computeNestingStub(request, elapsedMs, {
+      emitFrame: () => Effect.void
+    })
+  )
 }
 
 describe('sortPiecesForNesting', () => {
@@ -88,12 +97,12 @@ describe('selectFinalStrategyResult', () => {
 
 describe('computeNestingStub', () => {
   it('returns a stub result with status="stub"', () => {
-    const result = computeNestingStub(baseRequest(), 12)
+    const result = runNestingStub(baseRequest(), 12)
     expect(result.status).toBe('stub')
   })
 
   it('emits empty placements at every level', () => {
-    const result = computeNestingStub(baseRequest(), 12)
+    const result = runNestingStub(baseRequest(), 12)
     expect(result.placements.length).toBe(0)
     for (const strategy of result.strategyResults) {
       expect(strategy.placements.length).toBe(0)
@@ -101,12 +110,12 @@ describe('computeNestingStub', () => {
   })
 
   it('preserves input order in sortedPieceIds at the top level', () => {
-    const result = computeNestingStub(baseRequest(), 12)
+    const result = runNestingStub(baseRequest(), 12)
     expect(result.sortedPieceIds).toEqual(['a', 'b'])
   })
 
   it('marks every input piece as unplaced', () => {
-    const result = computeNestingStub(baseRequest(), 12)
+    const result = runNestingStub(baseRequest(), 12)
     expect(result.unplacedPieceIds).toEqual(['a', 'b'])
   })
 
@@ -120,7 +129,7 @@ describe('computeNestingStub', () => {
         ]
       })
     })
-    const result = computeNestingStub(req, 5)
+    const result = runNestingStub(req, 5)
     expect(result.strategyResults.length).toBe(2)
     expect(result.strategyResults.map((s) => s.strategyId)).toEqual([
       'balanced-preserve-free-then-bottom-left',
@@ -132,7 +141,7 @@ describe('computeNestingStub', () => {
     const req = baseRequest({
       options: options({ strategySelectionMode: 'all_configured', strategyIds: [] })
     })
-    const result = computeNestingStub(req, 5)
+    const result = runNestingStub(req, 5)
     expect(result.strategyResults.length).toBe(STRATEGY_DEFINITIONS.length)
   })
 
@@ -145,12 +154,12 @@ describe('computeNestingStub', () => {
         ]
       })
     })
-    const result = computeNestingStub(req, 5)
+    const result = runNestingStub(req, 5)
     expect(result.selectedStrategyRunId).toBe(result.strategyResults[0]?.strategyRunId)
   })
 
   it('emits the algorithm_not_implemented warning at every level', () => {
-    const result = computeNestingStub(baseRequest(), 0)
+    const result = runNestingStub(baseRequest(), 0)
     expect(result.warnings.some((w) => w.code === 'algorithm_not_implemented')).toBe(true)
     for (const strategy of result.strategyResults) {
       expect(strategy.warnings.some((w) => w.code === 'algorithm_not_implemented')).toBe(true)
@@ -158,7 +167,7 @@ describe('computeNestingStub', () => {
   })
 
   it('does not produce any fake history, beam, or split events', () => {
-    const result = computeNestingStub(baseRequest(), 0)
+    const result = runNestingStub(baseRequest(), 0)
     expect(result.historySummary).toBeUndefined()
     for (const strategy of result.strategyResults) {
       expect(strategy.historySummary).toBeUndefined()
@@ -166,7 +175,7 @@ describe('computeNestingStub', () => {
   })
 
   it('records elapsed time and piece count in stats', () => {
-    const result = computeNestingStub(baseRequest(), 42)
+    const result = runNestingStub(baseRequest(), 42)
     expect(result.stats.elapsedMs).toBe(42)
     expect(result.stats.pieceCount).toBe(2)
   })

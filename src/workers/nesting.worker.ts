@@ -1,12 +1,11 @@
-import { randomUUID } from 'node:crypto'
 import * as NodeFileSystem from '@effect/platform-node/NodeFileSystem'
 import * as NodePath from '@effect/platform-node/NodePath'
 import * as NodeWorkerRunner from '@effect/platform-node/NodeWorkerRunner'
 import { computeNestingStub } from './algorithm/computeNestingStub.js'
 import {
-  WorkerRequest as WorkerRequestSchema,
+  NestingWorkerRpcs,
+  type RunNestingPayload,
   type WorkerProgress,
-  type WorkerRequest,
   type WorkerResponse
 } from '@shared/protocol/worker.js'
 import type {
@@ -14,21 +13,18 @@ import type {
   NestingHistorySummary,
   NestingRequest
 } from '@shared/domain/nesting.js'
-import { Cause, Effect, Exit, FileSystem, Layer, ManagedRuntime, Path, Schema } from 'effect'
-import * as WorkerRunner from 'effect/unstable/workers/WorkerRunner'
+import { Cause, Effect, FileSystem, Layer, Path, PlatformError, Queue } from 'effect'
+import * as RpcServer from 'effect/unstable/rpc/RpcServer'
 
 /**
- * Nesting worker thread. Receives a validated WorkerRequest, runs the
- * computation, and emits progress + history + success/failure events back to
- * the supervisor via postMessage.
+ * Nesting worker thread. Receives schema-validated RPC requests, runs the
+ * computation, and streams progress + history + success/failure events back to
+ * the supervisor.
  *
- * For now this only invokes the algorithm stub. The user-written algorithm
- * replaces the body of `computeNestingStub` without changing this file.
- *
- * History persistence: the worker writes each frame it would emit to a
- * per-job NDJSON file under `<projectRoot>/out/history/<jobId>.ndjson`.
- * The path is returned inside the `history_complete` event so the renderer
- * can hand it to the user via Export History.
+ * History persistence: the worker writes each emitted frame to a per-job NDJSON
+ * file under `<projectRoot>/out/history/<jobId>.ndjson`. The path is returned
+ * inside the `history_complete` event so the renderer can hand it to the user
+ * via Export History.
  */
 type SendResponse = (response: WorkerResponse) => Effect.Effect<void>
 
@@ -55,9 +51,6 @@ function sendProgress(
 const HISTORY_DIR_ENV = (globalThis as { process?: { env?: Record<string, string | undefined> } })
   .process?.env?.['MIN_PLANE_HISTORY_DIR']
 
-const WorkerLiveLayer = Layer.mergeAll(NodeFileSystem.layer, NodePath.layer, NodeWorkerRunner.layer)
-const workerRuntime = ManagedRuntime.make(WorkerLiveLayer)
-
 function prepareHistoryFile(jobId: string, historyMode: NestingRequest['options']['historyMode']) {
   return Effect.gen(function* () {
     if (historyMode === 'off') return null
@@ -81,18 +74,37 @@ function appendFrame(path: string, frame: NestingHistoryFrame) {
   })
 }
 
-function buildInitialFrame(request: NestingRequest, runId: string): NestingHistoryFrame {
-  return {
-    frameId: randomUUID(),
-    jobId: request.jobId,
-    strategyRunId: runId,
-    strategyLabel: 'stub',
-    stepIndex: 0,
-    beamRank: 0,
-    title: 'stub-initial',
-    plate: { placements: [], freeRectangles: [] },
-    createdAt: new Date().toISOString()
+function makeFrameEmitter(
+  send: SendResponse,
+  requestId: string,
+  jobId: NestingRequest['jobId'],
+  historyMode: NestingRequest['options']['historyMode'],
+  historyPath: string | null,
+  incrementFrameCount: () => void
+): (
+  frame: NestingHistoryFrame
+) => Effect.Effect<void, PlatformError.PlatformError, FileSystem.FileSystem | Path.Path> {
+  if (historyMode === 'off') {
+    return (_frame: NestingHistoryFrame) => Effect.void
   }
+  return (frame: NestingHistoryFrame) =>
+    Effect.gen(function* () {
+      incrementFrameCount()
+      if (historyPath) {
+        yield* appendFrame(historyPath, frame)
+      }
+      if (historyMode === 'stream') {
+        yield* send({
+          type: 'history_frame',
+          requestId,
+          jobId,
+          payload: frame
+        }).pipe(
+          Effect.catchCause(() => Effect.void),
+          Effect.asVoid
+        )
+      }
+    })
 }
 
 function handleRunNesting(
@@ -110,29 +122,13 @@ function handleRunNesting(
 
     const historyMode = payload.options.historyMode
     const historyPath = yield* prepareHistoryFile(jobId, historyMode)
-    const result = computeNestingStub(payload, Date.now() - startedAt)
-    const strategyRunIds = result.strategyResults.map((s) => s.strategyRunId)
 
     let frameCount = 0
-    for (const strategy of result.strategyResults) {
-      if (historyMode === 'off') continue
-      const frame = buildInitialFrame(payload, strategy.strategyRunId)
+    const emitFrame = makeFrameEmitter(send, requestId, jobId, historyMode, historyPath, () => {
       frameCount++
-      // Streaming + final both persist to NDJSON. Only stream mode emits
-      // history_frame events live; final mode delivers them through the
-      // NDJSON replay instead.
-      if (historyPath) {
-        yield* appendFrame(historyPath, frame)
-      }
-      if (historyMode === 'stream') {
-        yield* send({
-          type: 'history_frame',
-          requestId,
-          jobId,
-          payload: frame
-        })
-      }
-    }
+    })
+    const result = yield* computeNestingStub(payload, Date.now() - startedAt, { emitFrame })
+    const strategyRunIds = result.strategyResults.map((s) => s.strategyRunId)
 
     const summary: NestingHistorySummary = {
       frameCount,
@@ -172,44 +168,33 @@ function handleRunNesting(
   )
 }
 
-const workerProgram = Effect.gen(function* () {
-  const platform = yield* WorkerRunner.WorkerRunnerPlatform
-  const runner = yield* platform.start<WorkerResponse, unknown>()
-  yield* runner.run((portId, raw) => {
-    const send: SendResponse = (response) => runner.send(portId, response)
+const NestingWorkerHandlers = NestingWorkerRpcs.toLayer(
+  Effect.succeed(
+    NestingWorkerRpcs.of({
+      RunNesting: (payload: RunNestingPayload) =>
+        Effect.gen(function* () {
+          const queue = yield* Queue.unbounded<WorkerResponse, Cause.Done>()
+          const send: SendResponse = (response) =>
+            Queue.offer(queue, response).pipe(Effect.catchCause(() => Effect.void), Effect.asVoid)
+          yield* handleRunNesting(send, payload.requestId, payload.request).pipe(
+            Effect.ensuring(Queue.end(queue)),
+            Effect.forkScoped
+          )
+          return queue
+        })
+    })
+  )
+)
 
-    // Validate the incoming message at the boundary. Anything malformed is
-    // rejected with a failure response that does not require a jobId, since we
-    // cannot trust the sender.
-    const exit = Schema.decodeUnknownExit(WorkerRequestSchema)(raw)
-    if (Exit.isFailure(exit)) {
-      return send({
-        type: 'failure',
-        requestId: 'unknown',
-        error: {
-          code: 'worker_protocol_error',
-          message: 'Worker received an invalid request'
-        }
-      })
-    }
-    const request: WorkerRequest = exit.value
-    if (request.type === 'run_nesting') {
-      return handleRunNesting(send, request.requestId, request.payload)
-    }
-    if (request.type === 'cancel') {
-      return send({
-        type: 'failure',
-        requestId: request.requestId,
-        jobId: request.jobId,
-        error: {
-          code: 'worker_cancelled',
-          message: 'Job cancelled by renderer request'
-        }
-      })
-    }
-  })
-})
+const WorkerServices = Layer.mergeAll(NodeFileSystem.layer, NodePath.layer)
 
-void workerRuntime.runPromise(workerProgram).catch((err: unknown) => {
+const WorkerLive = RpcServer.layer(NestingWorkerRpcs, { disableFatalDefects: true }).pipe(
+  Layer.provide(NestingWorkerHandlers),
+  Layer.provide(WorkerServices),
+  Layer.provide(RpcServer.layerProtocolWorkerRunner),
+  Layer.provide(NodeWorkerRunner.layer)
+)
+
+void Effect.runPromise(Layer.launch(WorkerLive)).catch((err: unknown) => {
   console.error('[nesting.worker] fatal worker runner error:', err)
 })
