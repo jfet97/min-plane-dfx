@@ -346,6 +346,64 @@ snap pieces into locally tight slots and avoid thin awkward gaps
 
 This is closer to classic Best Short Side Fit behavior.
 
+## Beam Search Working Model
+
+Use beam search inside a single strategy run after the initial piece order has
+already been fixed.
+
+Current working parameters:
+
+```text
+beamWidth = 5
+freeRectFanout = 2
+orientations = normal, rotated when allowed
+```
+
+Meaning:
+
+- `beamWidth` is the maximum number of partial layout states kept alive after
+  each placed piece;
+- `freeRectFanout` is the number of top free rectangles considered for each
+  current state, next piece, and orientation;
+- rotation is not the beam width; it only doubles the candidate list when the
+  piece can legally rotate.
+
+For each current partial state and next piece `X`:
+
+```text
+for orientation in allowed orientations for X:
+  score/order legal free rectangles using the chosen strategy
+  keep the first freeRectFanout free rectangles
+  create one successor state for each kept free rectangle
+```
+
+With `beamWidth = 5`, `freeRectFanout = 2`, and two legal orientations, each
+state produces at most four successors:
+
+```text
+(X,    fr1(X))
+(X,    fr2(X))
+(X_90, fr1(X_90))
+(X_90, fr2(X_90))
+```
+
+The ordered free-rectangle list may differ between `X` and `X_90`, because the
+candidate score depends on the placed dimensions and resulting state.
+
+At the end of the step:
+
+```text
+current states <= 5
+successors <= 5 * 2 * 2 = 20
+rank successor states with the chosen beam/state comparison metric
+keep the best 5 successor states
+```
+
+The eight placement strategies are therefore best read as free-rectangle /
+candidate ordering rules for the current state, piece, and orientation. The
+beam/state comparison metric decides which successor states survive after all
+current states have been expanded.
+
 ## Final Layout Ranking
 
 This is separate from candidate scoring during placement.
