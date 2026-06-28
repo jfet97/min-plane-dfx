@@ -1,16 +1,19 @@
 import type { PreparedPiece } from '@shared/domain/nesting.js'
+import { Order } from 'effect'
 
-/**
- * The identity sort. Returns the input unchanged so that:
- *   - the worker has a stable, real function behind the sort boundary
- *   - sorting can be swapped for a real strategy without touching callers
- *   - tests can prove input order is preserved
- *
- * This function is deliberately a no-op. It does not place pieces, score them,
- * or pick a winning run. Any future algorithm will replace this body only.
- */
+// combineAll keeps the "and then" chain explicit: longestEdge, then area, then imbalance.
+// flip makes each numeric comparison descending, so larger candidates sort first.
+const paddedBoundsOrder = Order.combineAll<PreparedPiece['paddedBounds']>([
+  Order.mapInput(Order.flip(Order.Number), (piece) => piece.longestEdge),
+  Order.mapInput(Order.flip(Order.Number), (piece) => piece.area),
+  Order.mapInput(Order.flip(Order.Number), (piece) => piece.imbalance)
+])
+
+const order = Order.mapInput(paddedBoundsOrder, (piece: PreparedPiece) => piece.paddedBounds)
+
+
 export function sortPiecesForNesting(
   pieces: ReadonlyArray<PreparedPiece>
 ): ReadonlyArray<PreparedPiece> {
-  return pieces
+  return pieces.toSorted(order)
 }

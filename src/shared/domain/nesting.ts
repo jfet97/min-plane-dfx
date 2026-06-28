@@ -1,6 +1,6 @@
 import { Schema } from 'effect'
 import { FreeRectId, JobId, PieceId } from './ids.js'
-import { Millimeters, Rect } from './geometry.js'
+import { Millimeters, Rect, RectWithFromRect } from './geometry.js'
 
 /** History scope. Only the winning path is required to be retained. */
 export const HistoryScope = Schema.Literal('winning_path')
@@ -80,7 +80,7 @@ export const PreparedPiece = Schema.Struct({
   id: PieceId,
   sourcePieceId: PieceId,
   realBounds: Rect,
-  paddedBounds: Rect,
+  paddedBounds: RectWithFromRect,
   padding: Millimeters,
   allowRotation: Schema.Boolean
 })
