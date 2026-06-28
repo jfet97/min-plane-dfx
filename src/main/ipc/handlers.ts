@@ -4,19 +4,22 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Exit, Schema } from 'effect'
 import { WorkerSupervisor, SupervisorError } from '../services/WorkerSupervisor.js'
-import { saveProjectFile, loadProjectFile, ProjectFileError } from '../services/ProjectFileService.js'
+import {
+  saveProjectFile,
+  loadProjectFile,
+  ProjectFileError
+} from '../services/ProjectFileService.js'
 import { exportNestingResultToFile } from '../services/ExportService.js'
-import { WorkspaceProjectService, WorkspaceProjectError } from '../services/WorkspaceProjectService.js'
+import {
+  WorkspaceProjectService,
+  WorkspaceProjectError
+} from '../services/WorkspaceProjectService.js'
 import { NestingHistoryFrame } from '@shared/domain/nesting.js'
 import type { IpcResult } from '@shared/protocol/ipc.js'
 import type { Unsubscribe, NestingHistoryEvent } from '@shared/protocol/ipc.js'
 import type { JobId } from '@shared/domain/ids.js'
 import type { ProjectDocument } from '@shared/domain/project.js'
-import type {
-  NestingRequest,
-  NestingResult,
-  ProjectHistoryRef
-} from '@shared/domain/nesting.js'
+import type { NestingRequest, NestingResult, ProjectHistoryRef } from '@shared/domain/nesting.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
 
 /**
@@ -208,17 +211,14 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  ipcMain.handle(
-    'dxf:clear-imports',
-    async (): Promise<IpcResult<void>> => {
-      try {
-        await getWorkspace().clearImportedDxfs()
-        return { ok: true, value: undefined }
-      } catch (err) {
-        return fromWorkspaceError(err)
-      }
+  ipcMain.handle('dxf:clear-imports', async (): Promise<IpcResult<void>> => {
+    try {
+      await getWorkspace().clearImportedDxfs()
+      return { ok: true, value: undefined }
+    } catch (err) {
+      return fromWorkspaceError(err)
     }
-  )
+  })
 
   ipcMain.handle(
     'nesting:export-request',
@@ -308,12 +308,18 @@ export function registerIpcHandlers(): void {
         ? await dialog.showSaveDialog(win, {
             title: 'Export History (NDJSON)',
             defaultPath: defaultName,
-            filters: [{ name: 'NDJSON', extensions: ['ndjson'] }, { name: 'JSON', extensions: ['json'] }]
+            filters: [
+              { name: 'NDJSON', extensions: ['ndjson'] },
+              { name: 'JSON', extensions: ['json'] }
+            ]
           })
         : await dialog.showSaveDialog({
             title: 'Export History (NDJSON)',
             defaultPath: defaultName,
-            filters: [{ name: 'NDJSON', extensions: ['ndjson'] }, { name: 'JSON', extensions: ['json'] }]
+            filters: [
+              { name: 'NDJSON', extensions: ['ndjson'] },
+              { name: 'JSON', extensions: ['json'] }
+            ]
           })
       if (dlg.canceled || !dlg.filePath) {
         return { ok: false, error: { code: 'export_error', message: 'Export cancelled' } }
@@ -406,10 +412,7 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     'nesting:on-history',
-    (
-      event: IpcMainInvokeEvent,
-      jobId: JobId
-    ): IpcResult<{ readonly unsubscribe: Unsubscribe }> => {
+    (event: IpcMainInvokeEvent, jobId: JobId): IpcResult<{ readonly unsubscribe: Unsubscribe }> => {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (!win) {
         return { ok: false, error: { code: 'unknown_error', message: 'No window for subscriber' } }
@@ -495,7 +498,10 @@ export function registerIpcHandlers(): void {
       }
       const selectedPath = dlg.filePaths[0]
       if (!selectedPath) {
-        return { ok: false, error: { code: 'project_read_error', message: 'No project file selected' } }
+        return {
+          ok: false,
+          error: { code: 'project_read_error', message: 'No project file selected' }
+        }
       }
       try {
         const project = await loadProjectFile(selectedPath)

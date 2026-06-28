@@ -17,7 +17,8 @@ function header(): string {
   return section('HEADER') + '0\nENDSEC\n'
 }
 
-const baseOpen = (): string => header() + section('TABLES') + endsec() + section('BLOCKS') + endsec()
+const baseOpen = (): string =>
+  header() + section('TABLES') + endsec() + section('BLOCKS') + endsec()
 const baseClose = (): string => '0\nEOF\n'
 
 describe('WorkspaceProjectService', () => {
@@ -25,13 +26,15 @@ describe('WorkspaceProjectService', () => {
     const dir = join(tmpdir(), `min-plane-workspace-${randomUUID()}`)
     const sourceDir = join(dir, 'source')
     const sourcePath = join(sourceDir, 'rectangle.dxf')
-    const dxf = baseOpen() +
+    const dxf =
+      baseOpen() +
       section('ENTITIES') +
       '0\nLINE\n10\n0\n20\n0\n30\n0\n11\n154\n21\n0\n31\n0\n' +
       '0\nLINE\n10\n154\n20\n0\n30\n0\n11\n154\n21\n104\n31\n0\n' +
       '0\nLINE\n10\n154\n20\n104\n30\n0\n11\n0\n21\n104\n31\n0\n' +
       '0\nLINE\n10\n0\n20\n104\n30\n0\n11\n0\n21\n0\n31\n0\n' +
-      endsec() + baseClose()
+      endsec() +
+      baseClose()
 
     try {
       await mkdir(sourceDir, { recursive: true })

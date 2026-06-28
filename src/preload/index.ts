@@ -61,16 +61,15 @@ const api: AppApi = {
     ).then((r) => r.documents),
 
   importDxfFiles: (paths) =>
-    invokeEnvelope<[ReadonlyArray<string>], { readonly documents: ReadonlyArray<ImportedDxfDocument> }>(
-      'dxf:import-files',
-      paths
-    ).then((r) => r.documents),
+    invokeEnvelope<
+      [ReadonlyArray<string>],
+      { readonly documents: ReadonlyArray<ImportedDxfDocument> }
+    >('dxf:import-files', paths).then((r) => r.documents),
 
   removeImportedDxf: (pieceId) =>
     invokeEnvelope<[typeof pieceId], void>('dxf:remove-import', pieceId).then(() => undefined),
 
-  clearImportedDxfs: () =>
-    invokeEnvelope<[], void>('dxf:clear-imports').then(() => undefined),
+  clearImportedDxfs: () => invokeEnvelope<[], void>('dxf:clear-imports').then(() => undefined),
 
   exportNestingRequest: (request) =>
     invokeEnvelope<[NestingRequest], { readonly path: string }>(
@@ -88,19 +87,23 @@ const api: AppApi = {
         ipcRenderer.removeListener('nesting:result-event', listener)
       }
       ipcRenderer.on('nesting:result-event', listener)
-      void invokeEnvelope<[NestingRequest], { readonly jobId: JobId }>('nesting:run', request).catch(
-        (err: unknown) => {
-          ipcRenderer.removeListener('nesting:result-event', listener)
-          reject(err instanceof Error ? err : new Error(String(err)))
-        }
-      )
+      void invokeEnvelope<[NestingRequest], { readonly jobId: JobId }>(
+        'nesting:run',
+        request
+      ).catch((err: unknown) => {
+        ipcRenderer.removeListener('nesting:result-event', listener)
+        reject(err instanceof Error ? err : new Error(String(err)))
+      })
     }),
 
   cancelJob: (jobId) =>
-    invokeEnvelope<[JobId], { readonly ok: boolean }>('nesting:cancel', jobId).then(() => undefined),
+    invokeEnvelope<[JobId], { readonly ok: boolean }>('nesting:cancel', jobId).then(
+      () => undefined
+    ),
 
   onNestingHistory: (callback) => {
-    const listener = (_event: IpcRendererEvent, event: HistoryEventEnvelope): void => callback(event)
+    const listener = (_event: IpcRendererEvent, event: HistoryEventEnvelope): void =>
+      callback(event)
     ipcRenderer.on('nesting:history-event', listener)
     return () => ipcRenderer.removeListener('nesting:history-event', listener)
   },

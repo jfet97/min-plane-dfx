@@ -10,7 +10,8 @@
   --warning: #d7a85c;
   --error: #d45a5a;
   --ok: #6fbf73;
-  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   --radius: 4px;
   --toolbar-height: 40px;

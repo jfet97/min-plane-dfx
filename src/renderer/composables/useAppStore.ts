@@ -80,9 +80,10 @@ function documentObjectPiece(document: ImportedDxfDocument): ImportedPiece | nul
     label: document.fileName.replace(/\.dxf$/i, ''),
     realBounds: bounds,
     geometry: {
-      entityType: document.pieces.length === 1 && entityTypes.size === 1
-        ? firstPiece.geometry.entityType
-        : 'DXF_SHAPE',
+      entityType:
+        document.pieces.length === 1 && entityTypes.size === 1
+          ? firstPiece.geometry.entityType
+          : 'DXF_SHAPE',
       closed: segments.length > 0,
       segments
     },
@@ -130,11 +131,11 @@ function recomputeAggregates(): void {
   state.pieces = allPieces
   state.warnings = allWarnings
   const validIds = new Set(allPieces.map((piece) => piece.id))
-  const currentSelection = state.selectedPieceIds.filter((id) => validIds.has(id as ImportedPiece['id']))
+  const currentSelection = state.selectedPieceIds.filter((id) =>
+    validIds.has(id as ImportedPiece['id'])
+  )
   const current = new Set(currentSelection)
-  const importedSelection = allPieces
-    .map((piece) => piece.id)
-    .filter((id) => !current.has(id))
+  const importedSelection = allPieces.map((piece) => piece.id).filter((id) => !current.has(id))
   state.selectedPieceIds = [...currentSelection, ...importedSelection]
 }
 
@@ -203,7 +204,8 @@ async function removePiece(pieceId: ImportedPiece['id']): Promise<void> {
   let changed = false
   state.documents = state.documents.filter((document) => {
     const objectPiece = documentObjectPiece(document)
-    const keep = objectPiece?.id !== pieceId && !document.pieces.some((piece) => piece.id === pieceId)
+    const keep =
+      objectPiece?.id !== pieceId && !document.pieces.some((piece) => piece.id === pieceId)
     if (!keep) changed = true
     return keep
   })

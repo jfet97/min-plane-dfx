@@ -151,8 +151,12 @@ async function saveProject(): Promise<void> {
     sheet: { ...settings.state.value.sheet },
     padding: settings.state.value.padding,
     options: { ...settings.state.value.options },
-    ...(history.hasResult.value && history.result.value ? { lastResult: history.result.value } : {}),
-    ...(history.state.value.lastHistoryRef ? { lastHistory: history.state.value.lastHistoryRef } : {})
+    ...(history.hasResult.value && history.result.value
+      ? { lastResult: history.result.value }
+      : {}),
+    ...(history.state.value.lastHistoryRef
+      ? { lastHistory: history.state.value.lastHistoryRef }
+      : {})
   })
 }
 
@@ -188,7 +192,11 @@ async function openProject(): Promise<void> {
       <button
         type="button"
         :disabled="store.selectedPieceCount.value === 0 || runner.status.value === 'running'"
-        :title="store.selectedPieceCount.value === 0 ? 'Sends the prepared nesting request to the worker. Disabled until at least one imported shape is selected.' : 'Sends the prepared nesting request to the worker using the current sheet, padding, selected pieces, and strategy configuration.'"
+        :title="
+          store.selectedPieceCount.value === 0
+            ? 'Sends the prepared nesting request to the worker. Disabled until at least one imported shape is selected.'
+            : 'Sends the prepared nesting request to the worker using the current sheet, padding, selected pieces, and strategy configuration.'
+        "
         @click="runNesting"
       >
         {{ runner.status.value === 'running' ? 'Running...' : 'Run' }}
@@ -212,7 +220,11 @@ async function openProject(): Promise<void> {
       <button
         type="button"
         :disabled="!history.hasResult.value"
-        :title="history.hasResult.value ? 'Exports the latest worker result.' : 'Exports the latest worker result. Disabled until a result exists.'"
+        :title="
+          history.hasResult.value
+            ? 'Exports the latest worker result.'
+            : 'Exports the latest worker result. Disabled until a result exists.'
+        "
         @click="exportResult"
       >
         Export Result
@@ -220,7 +232,11 @@ async function openProject(): Promise<void> {
       <button
         type="button"
         :disabled="!history.state.value.lastHistoryRef"
-        :title="history.state.value.lastHistoryRef ? 'Exports emitted history frames for replay or debugging.' : 'Exports emitted history frames. Disabled until history exists.'"
+        :title="
+          history.state.value.lastHistoryRef
+            ? 'Exports emitted history frames for replay or debugging.'
+            : 'Exports emitted history frames. Disabled until history exists.'
+        "
         @click="exportHistory"
       >
         Export History
@@ -248,7 +264,10 @@ async function openProject(): Promise<void> {
     <template #canvas>
       <div class="center-header">
         <h2>{{ centerView === 'import' ? 'Import Preview' : 'Result' }}</h2>
-        <div class="center-tabs" title="Switch between imported-object inspection and worker result output.">
+        <div
+          class="center-tabs"
+          title="Switch between imported-object inspection and worker result output."
+        >
           <button
             type="button"
             :class="{ active: centerView === 'import' }"
@@ -298,17 +317,13 @@ async function openProject(): Promise<void> {
 
     <template #status>
       <span class="muted">
-        {{ store.documentCount.value }} document(s) /
-        {{ store.pieceCount.value }} piece(s) /
-        {{ store.selectedPieceCount.value }} selected /
-        {{ store.warningCount.value }} warning(s) ·
+        {{ store.documentCount.value }} document(s) / {{ store.pieceCount.value }} piece(s) /
+        {{ store.selectedPieceCount.value }} selected / {{ store.warningCount.value }} warning(s) ·
         worker: {{ runner.status.value }}
         <span v-if="history.hasResult.value" class="empty-msg">
           · {{ history.strategyResults.value.length }} strategy run(s) available
         </span>
-        <span v-else class="empty-msg">
-          · Algorithm intentionally not implemented.
-        </span>
+        <span v-else class="empty-msg"> · Algorithm intentionally not implemented. </span>
       </span>
     </template>
   </AppShell>

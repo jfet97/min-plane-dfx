@@ -8,7 +8,12 @@ import {
   exportNestingResultToFile,
   exportHistoryToFile
 } from '../../src/main/services/ExportService.js'
-import type { NestingHistoryFrame, NestingRequest, NestingResult, PreparedPiece } from '@shared/domain/nesting.js'
+import type {
+  NestingHistoryFrame,
+  NestingRequest,
+  NestingResult,
+  PreparedPiece
+} from '@shared/domain/nesting.js'
 import type { JobId } from '@shared/domain/ids.js'
 
 const piece: PreparedPiece = {

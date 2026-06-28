@@ -50,11 +50,7 @@ export class WorkspaceProjectService {
     const dbPath = join(this.workspaceRoot, 'workspace.sqlite')
     mkdirSync(this.workspaceRoot, { recursive: true })
     this.runtime = ManagedRuntime.make(
-      Layer.mergeAll(
-        NodeFileSystem.layer,
-        NodePath.layer,
-        SqliteClient.layer({ filename: dbPath })
-      )
+      Layer.mergeAll(NodeFileSystem.layer, NodePath.layer, SqliteClient.layer({ filename: dbPath }))
     )
   }
 
@@ -103,9 +99,7 @@ export class WorkspaceProjectService {
   }
 
   importDxfFiles(paths: ReadonlyArray<string>): Promise<ReadonlyArray<ImportedDxfDocument>> {
-    return this.run(
-      Effect.forEach(paths, (path) => this.importDxfFile(path), { concurrency: 2 })
-    )
+    return this.run(Effect.forEach(paths, (path) => this.importDxfFile(path), { concurrency: 2 }))
   }
 
   listImportedDxfs(): Promise<ReadonlyArray<ImportedDxfDocument>> {
@@ -207,7 +201,8 @@ export class WorkspaceProjectService {
       return yield* Effect.gen(function* () {
         const document = yield* Effect.tryPromise({
           try: () => importDxfFile(stagingPath),
-          catch: (cause) => new WorkspaceProjectError(cause instanceof Error ? cause.message : String(cause))
+          catch: (cause) =>
+            new WorkspaceProjectError(cause instanceof Error ? cause.message : String(cause))
         })
         yield* fs.rename(stagingPath, storedPath)
         const storedDocument: ImportedDxfDocument = {
@@ -232,10 +227,10 @@ export class WorkspaceProjectService {
         return storedDocument
       }).pipe(
         Effect.tapError(() =>
-          Effect.all([
-            fs.remove(stagingPath).pipe(Effect.ignore),
-            fs.remove(storedPath).pipe(Effect.ignore)
-          ], { discard: true })
+          Effect.all(
+            [fs.remove(stagingPath).pipe(Effect.ignore), fs.remove(storedPath).pipe(Effect.ignore)],
+            { discard: true }
+          )
         )
       )
     })
@@ -250,7 +245,13 @@ export class WorkspaceProjectService {
     return exit.value
   }
 
-  private run<A, E>(effect: Effect.Effect<A, E, FileSystem.FileSystem | Path.Path | SqliteClient.SqliteClient | SqlClient.SqlClient>): Promise<A> {
+  private run<A, E>(
+    effect: Effect.Effect<
+      A,
+      E,
+      FileSystem.FileSystem | Path.Path | SqliteClient.SqliteClient | SqlClient.SqlClient
+    >
+  ): Promise<A> {
     return this.runtime.runPromise(effect)
   }
 }

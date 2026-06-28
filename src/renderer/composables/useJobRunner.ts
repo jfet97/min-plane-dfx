@@ -1,5 +1,10 @@
 import { reactive, computed, type UnwrapNestedRefs } from 'vue'
-import type { NestingRequest, NestingResult, NestingHistoryFrame, NestingHistorySummary } from '@shared/domain/nesting.js'
+import type {
+  NestingRequest,
+  NestingResult,
+  NestingHistoryFrame,
+  NestingHistorySummary
+} from '@shared/domain/nesting.js'
 import type { NestingHistoryEvent, Unsubscribe } from '@shared/protocol/ipc.js'
 import type { JobId } from '@shared/domain/ids.js'
 
@@ -33,10 +38,7 @@ export function useJobRunner() {
     state: computed(() => state),
     status: computed(() => state.status),
 
-    async start(
-      request: NestingRequest,
-      bindings: RunNestingBindings
-    ): Promise<void> {
+    async start(request: NestingRequest, bindings: RunNestingBindings): Promise<void> {
       const api = window.appApi
       if (!api) return
 

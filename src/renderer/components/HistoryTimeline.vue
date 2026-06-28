@@ -28,9 +28,7 @@ function onSpeedChange(event: Event): void {
     </header>
 
     <div v-if="history.frameCount.value === 0" class="empty">
-      <p class="muted">
-        No history frames yet. Real history starts when the algorithm emits it.
-      </p>
+      <p class="muted">No history frames yet. Real history starts when the algorithm emits it.</p>
     </div>
 
     <div v-else class="controls">
@@ -44,7 +42,12 @@ function onSpeedChange(event: Event): void {
         class="slider"
       />
       <div class="buttons">
-        <button type="button" :disabled="history.frameCount.value === 0" title="Move to the previous emitted frame." @click="history.stepFrame(-1)">
+        <button
+          type="button"
+          :disabled="history.frameCount.value === 0"
+          title="Move to the previous emitted frame."
+          @click="history.stepFrame(-1)"
+        >
           Prev
         </button>
         <button
@@ -55,7 +58,12 @@ function onSpeedChange(event: Event): void {
         >
           {{ history.state.value.isPlaying ? 'Pause' : 'Play' }}
         </button>
-        <button type="button" :disabled="history.frameCount.value === 0" title="Move to the next emitted frame." @click="history.stepFrame(1)">
+        <button
+          type="button"
+          :disabled="history.frameCount.value === 0"
+          title="Move to the next emitted frame."
+          @click="history.stepFrame(1)"
+        >
           Next
         </button>
         <label class="speed" title="Timeline playback speed multiplier.">
@@ -73,7 +81,9 @@ function onSpeedChange(event: Event): void {
       </div>
       <p class="frame-info">
         Frame {{ history.state.value.selectedFrameIndex + 1 }} of {{ history.frameCount.value }}
-        <span v-if="history.state.value.truncated" class="warn">(truncated; see NDJSON replay)</span>
+        <span v-if="history.state.value.truncated" class="warn"
+          >(truncated; see NDJSON replay)</span
+        >
       </p>
     </div>
   </div>

@@ -44,7 +44,8 @@ export function makeDefaultSettings(): MutableSettingsState {
   }
 }
 
-const state: UnwrapNestedRefs<MutableSettingsState> = reactive<MutableSettingsState>(makeDefaultSettings())
+const state: UnwrapNestedRefs<MutableSettingsState> =
+  reactive<MutableSettingsState>(makeDefaultSettings())
 
 function replaceOptions(options: NestingOptions): void {
   state.options.allowGlobalRotation = options.allowGlobalRotation

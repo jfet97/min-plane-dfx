@@ -1,11 +1,7 @@
 import { Schema } from 'effect'
 import { NestingRequest, NestingResult } from '../domain/nesting.js'
 import { WorkerRequest, WorkerResponse } from '../protocol/worker.js'
-import {
-  PositiveWidth,
-  PositiveHeight,
-  NonNegativePadding
-} from './geometrySchemas.js'
+import { PositiveWidth, PositiveHeight, NonNegativePadding } from './geometrySchemas.js'
 
 export const NestingOptionsStrictSchema = Schema.Struct({
   allowGlobalRotation: Schema.Boolean,

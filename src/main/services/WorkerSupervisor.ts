@@ -88,10 +88,7 @@ export class WorkerSupervisor {
    * arrive. Resolves with the final NestingResult, or rejects with a
    * SupervisorError when the worker fails or times out.
    */
-  runNesting(
-    request: NestingRequest,
-    listener: HistoryEventListener
-  ): Promise<NestingResult> {
+  runNesting(request: NestingRequest, listener: HistoryEventListener): Promise<NestingResult> {
     if (this.current) {
       return Promise.reject(
         new SupervisorError(
@@ -144,9 +141,9 @@ export class WorkerSupervisor {
       const program = Effect.gen(function* () {
         const client = yield* RpcClient.make(NestingWorkerRpcs)
         yield* Effect.scoped(
-          client.RunNesting({ requestId, request }).pipe(
-            Stream.runForEach((message) => Effect.sync(() => handleWorkerMessage(message)))
-          )
+          client
+            .RunNesting({ requestId, request })
+            .pipe(Stream.runForEach((message) => Effect.sync(() => handleWorkerMessage(message))))
         )
       })
 
@@ -167,7 +164,10 @@ export class WorkerSupervisor {
     this.current = null
   }
 
-  private teardownWorker(dispose: () => Promise<void>, _reason: 'cancel' | 'timeout' | 'success'): void {
+  private teardownWorker(
+    dispose: () => Promise<void>,
+    _reason: 'cancel' | 'timeout' | 'success'
+  ): void {
     void dispose().catch(() => undefined)
   }
 

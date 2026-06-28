@@ -164,7 +164,7 @@ export async function importDxfFile(
           geometry: {
             entityType:
               convertedEntityCount === 1
-                ? [...convertedEntityTypes][0] ?? 'DXF_SHAPE'
+                ? ([...convertedEntityTypes][0] ?? 'DXF_SHAPE')
                 : 'DXF_SHAPE',
             closed: convertedSegments.length > 0,
             segments: convertedSegments
@@ -198,7 +198,9 @@ export async function importDxfFile(
 export async function importDxfFiles(
   paths: ReadonlyArray<string>,
   options: DxfImportOptions = {}
-): Promise<ReadonlyArray<ImportedDxfDocument | { readonly path: string; readonly error: DxfImportError }>> {
+): Promise<
+  ReadonlyArray<ImportedDxfDocument | { readonly path: string; readonly error: DxfImportError }>
+> {
   return Promise.all(
     paths.map(async (path) => {
       try {

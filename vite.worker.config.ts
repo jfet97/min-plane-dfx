@@ -14,7 +14,14 @@ export default defineConfig({
       fileName: () => 'nesting.worker.cjs'
     },
     rollupOptions: {
-      external: ['electron', 'node:worker_threads', 'node:fs', 'node:path', 'node:url', 'node:crypto'],
+      external: [
+        'electron',
+        'node:worker_threads',
+        'node:fs',
+        'node:path',
+        'node:url',
+        'node:crypto'
+      ],
       output: {
         format: 'cjs',
         entryFileNames: 'nesting.worker.cjs'

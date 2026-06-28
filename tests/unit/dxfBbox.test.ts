@@ -32,12 +32,18 @@ function header(): string {
   return section('HEADER') + '0\nENDSEC\n'
 }
 
-const baseOpen = (): string => header() + section('TABLES') + endsec() + section('BLOCKS') + endsec()
+const baseOpen = (): string =>
+  header() + section('TABLES') + endsec() + section('BLOCKS') + endsec()
 const baseClose = (): string => '0\nEOF\n'
 
 describe('entityToGeometry', () => {
   it('converts a single LINE into a 1-segment line geometry', () => {
-    const dxf = baseOpen() + section('ENTITIES') + '0\nLINE\n10\n0\n20\n0\n30\n0\n11\n10\n21\n5\n31\n0\n' + endsec() + baseClose()
+    const dxf =
+      baseOpen() +
+      section('ENTITIES') +
+      '0\nLINE\n10\n0\n20\n0\n30\n0\n11\n10\n21\n5\n31\n0\n' +
+      endsec() +
+      baseClose()
     const entity = parseFirstEntity(dxf)
     const result = entityToGeometry(entity)
     expect(result).not.toBeNull()
@@ -49,11 +55,13 @@ describe('entityToGeometry', () => {
   })
 
   it('converts a closed LWPOLYLINE (4 verts) into line segments and matching bbox', () => {
-    const dxf = baseOpen() +
+    const dxf =
+      baseOpen() +
       section('ENTITIES') +
       '0\nLWPOLYLINE\n70\n1\n90\n4\n' +
       '10\n0\n20\n0\n10\n10\n20\n0\n10\n10\n20\n5\n10\n0\n20\n5\n' +
-      endsec() + baseClose()
+      endsec() +
+      baseClose()
     const entity = parseFirstEntity(dxf)
     const result = entityToGeometry(entity)
     expect(result).not.toBeNull()
@@ -65,10 +73,12 @@ describe('entityToGeometry', () => {
   })
 
   it('converts a CIRCLE into a 2x-radius bbox', () => {
-    const dxf = baseOpen() +
+    const dxf =
+      baseOpen() +
       section('ENTITIES') +
       '0\nCIRCLE\n10\n5\n20\n5\n30\n0\n40\n3\n' +
-      endsec() + baseClose()
+      endsec() +
+      baseClose()
     const entity = parseFirstEntity(dxf)
     const result = entityToGeometry(entity)
     expect(result).not.toBeNull()
@@ -78,10 +88,12 @@ describe('entityToGeometry', () => {
   })
 
   it('converts an ARC into a conservative bbox equal to the parent circle', () => {
-    const dxf = baseOpen() +
+    const dxf =
+      baseOpen() +
       section('ENTITIES') +
       '0\nARC\n10\n0\n20\n0\n30\n0\n40\n5\n50\n0\n51\n90\n' +
-      endsec() + baseClose()
+      endsec() +
+      baseClose()
     const entity = parseFirstEntity(dxf)
     const result = entityToGeometry(entity)
     expect(result).not.toBeNull()
@@ -121,13 +133,15 @@ describe('importDxfFile', () => {
   it('groups supported entities from one DXF file into one selectable imported piece', async () => {
     const dir = join(tmpdir(), `min-plane-dxf-import-${randomUUID()}`)
     const path = join(dir, 'rectangle.dxf')
-    const dxf = baseOpen() +
+    const dxf =
+      baseOpen() +
       section('ENTITIES') +
       '0\nLINE\n10\n0\n20\n0\n30\n0\n11\n154\n21\n0\n31\n0\n' +
       '0\nLINE\n10\n154\n20\n0\n30\n0\n11\n154\n21\n104\n31\n0\n' +
       '0\nLINE\n10\n154\n20\n104\n30\n0\n11\n0\n21\n104\n31\n0\n' +
       '0\nLINE\n10\n0\n20\n104\n30\n0\n11\n0\n21\n0\n31\n0\n' +
-      endsec() + baseClose()
+      endsec() +
+      baseClose()
 
     try {
       await mkdir(dir, { recursive: true })

@@ -7,10 +7,7 @@ import type {
   NestingHistoryFrame
 } from '@shared/domain/nesting.js'
 import { Exit, Schema } from 'effect'
-import {
-  NestingRequestStrict,
-  NestingResultStrict
-} from '@shared/schemas/nestingSchemas.js'
+import { NestingRequestStrict, NestingResultStrict } from '@shared/schemas/nestingSchemas.js'
 import { NestingHistoryFrame as NestingHistoryFrameSchema } from '@shared/domain/nesting.js'
 
 /**

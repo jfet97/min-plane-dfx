@@ -39,8 +39,7 @@ describe('AppApi contract', () => {
       removeImportedDxf: () => Promise.resolve(),
       clearImportedDxfs: () => Promise.resolve(),
       exportNestingRequest: () => Promise.resolve(),
-      runNesting: () =>
-        Promise.reject(new Error('not implemented') as never) as never,
+      runNesting: () => Promise.reject(new Error('not implemented') as never) as never,
       cancelJob: () => Promise.resolve(),
       onNestingHistory: () => () => {},
       loadHistoryReplay: () => Promise.resolve([]),

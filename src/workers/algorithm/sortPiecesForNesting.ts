@@ -11,7 +11,6 @@ const paddedBoundsOrder = Order.combineAll<PreparedPiece['paddedBounds']>([
 
 const order = Order.mapInput(paddedBoundsOrder, (piece: PreparedPiece) => piece.paddedBounds)
 
-
 export function sortPiecesForNesting(
   pieces: ReadonlyArray<PreparedPiece>
 ): ReadonlyArray<PreparedPiece> {

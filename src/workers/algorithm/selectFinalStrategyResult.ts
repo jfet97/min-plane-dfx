@@ -1,7 +1,4 @@
-import type {
-  NestingRequest,
-  NestingStrategyResult
-} from '@shared/domain/nesting.js'
+import type { NestingRequest, NestingStrategyResult } from '@shared/domain/nesting.js'
 
 /**
  * Cross-strategy final selection stub. Picks the strategy run that should

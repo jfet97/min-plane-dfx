@@ -53,18 +53,21 @@ function startPlayback(): void {
   if (state.isPlaying) return
   state.isPlaying = true
   const baseIntervalMs = 250
-  playbackTimer = setInterval(() => {
-    const frames = currentFrames()
-    if (frames.length === 0) {
-      stopPlayback()
-      return
-    }
-    if (state.selectedFrameIndex >= frames.length - 1) {
-      stopPlayback()
-      return
-    }
-    state.selectedFrameIndex = Math.min(frames.length - 1, state.selectedFrameIndex + 1)
-  }, Math.max(50, Math.round(baseIntervalMs / Math.max(0.25, state.speed))))
+  playbackTimer = setInterval(
+    () => {
+      const frames = currentFrames()
+      if (frames.length === 0) {
+        stopPlayback()
+        return
+      }
+      if (state.selectedFrameIndex >= frames.length - 1) {
+        stopPlayback()
+        return
+      }
+      state.selectedFrameIndex = Math.min(frames.length - 1, state.selectedFrameIndex + 1)
+    },
+    Math.max(50, Math.round(baseIntervalMs / Math.max(0.25, state.speed)))
+  )
 }
 
 function currentFrames(): NestingHistoryFrame[] {

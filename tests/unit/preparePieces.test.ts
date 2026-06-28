@@ -3,7 +3,13 @@ import { preparePieces } from '@shared/preparePieces.js'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type { JobId } from '@shared/domain/ids.js'
 
-function piece(id: string, width: number, height: number, offsetX?: number, offsetY?: number): ImportedPiece {
+function piece(
+  id: string,
+  width: number,
+  height: number,
+  offsetX?: number,
+  offsetY?: number
+): ImportedPiece {
   return {
     id: id as ImportedPiece['id'],
     sourceFileId: 'sf-1' as ImportedPiece['sourceFileId'],
@@ -56,12 +62,7 @@ describe('preparePieces', () => {
   })
 
   it('produces no warnings when every piece fits comfortably', () => {
-    const result = preparePieces(
-      [piece('p-1', 10, 10), piece('p-2', 20, 15)],
-      sheet,
-      2,
-      jobId
-    )
+    const result = preparePieces([piece('p-1', 10, 10), piece('p-2', 20, 15)], sheet, 2, jobId)
     expect(result.warnings.length).toBe(0)
   })
 

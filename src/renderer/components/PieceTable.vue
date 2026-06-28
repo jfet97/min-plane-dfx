@@ -22,8 +22,8 @@ const rows = computed(() => {
   }))
 })
 
-const allSelected = computed(() =>
-  store.pieceCount.value > 0 && store.selectedPieceCount.value === store.pieceCount.value
+const allSelected = computed(
+  () => store.pieceCount.value > 0 && store.selectedPieceCount.value === store.pieceCount.value
 )
 </script>
 
@@ -57,7 +57,9 @@ const allSelected = computed(() =>
           <th title="Imported DXF object name.">Object</th>
           <th title="Real geometry bounding size before padding.">Bounds</th>
           <th title="Effective nesting footprint size after padding on both sides.">Footprint</th>
-          <th title="Raw DXF entity summary kept for inspection, not as separate nesting objects.">Detail</th>
+          <th title="Raw DXF entity summary kept for inspection, not as separate nesting objects.">
+            Detail
+          </th>
           <th title="Remove this imported shape from the in-memory session.">Remove</th>
         </tr>
       </thead>

@@ -99,7 +99,7 @@ const validRequest = {
     historyMode: 'final' as const,
     historyScope: 'winning_path' as const,
     strategySelectionMode: 'single' as const,
-      strategyIds: ['balanced-preserve-free-then-bottom-left'],
+    strategyIds: ['balanced-preserve-free-then-bottom-left'],
     finalSelectionMode: 'manual' as const
   }
 }

@@ -46,7 +46,9 @@ export interface AppApi {
   // Phase 3
   readonly listImportedDxfs: () => Promise<ReadonlyArray<ImportedDxfDocument>>
   readonly selectDxfFiles: () => Promise<ReadonlyArray<ImportedDxfDocument>>
-  readonly importDxfFiles: (paths: ReadonlyArray<string>) => Promise<ReadonlyArray<ImportedDxfDocument>>
+  readonly importDxfFiles: (
+    paths: ReadonlyArray<string>
+  ) => Promise<ReadonlyArray<ImportedDxfDocument>>
   readonly removeImportedDxf: (pieceId: PieceId) => Promise<void>
   readonly clearImportedDxfs: () => Promise<void>
 
@@ -57,7 +59,9 @@ export interface AppApi {
   readonly runNesting: (request: NestingRequest) => Promise<NestingResult>
   readonly cancelJob: (jobId: JobId) => Promise<void>
   readonly onNestingHistory: (callback: (event: HistoryEventEnvelope) => void) => Unsubscribe
-  readonly loadHistoryReplay: (ref: ProjectHistoryRef) => Promise<ReadonlyArray<NestingHistoryFrame>>
+  readonly loadHistoryReplay: (
+    ref: ProjectHistoryRef
+  ) => Promise<ReadonlyArray<NestingHistoryFrame>>
 
   // Phase 8
   readonly saveProject: (project: ProjectDocument) => Promise<string>

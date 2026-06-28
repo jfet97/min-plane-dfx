@@ -175,7 +175,10 @@ const NestingWorkerHandlers = NestingWorkerRpcs.toLayer(
         Effect.gen(function* () {
           const queue = yield* Queue.unbounded<WorkerResponse, Cause.Done>()
           const send: SendResponse = (response) =>
-            Queue.offer(queue, response).pipe(Effect.catchCause(() => Effect.void), Effect.asVoid)
+            Queue.offer(queue, response).pipe(
+              Effect.catchCause(() => Effect.void),
+              Effect.asVoid
+            )
           yield* handleRunNesting(send, payload.requestId, payload.request).pipe(
             Effect.ensuring(Queue.end(queue)),
             Effect.forkScoped

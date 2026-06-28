@@ -1,12 +1,7 @@
 import { Schema } from 'effect'
 import { SourceFileId } from './ids.js'
 import { ImportedPiece, ImportedDxfDocument } from './dxf.js'
-import {
-  NestingOptions,
-  NestingResult,
-  ProjectHistoryRef,
-  SheetSpec
-} from './nesting.js'
+import { NestingOptions, NestingResult, ProjectHistoryRef, SheetSpec } from './nesting.js'
 import { Millimeters } from './geometry.js'
 
 export const ProjectSourceFileRef = Schema.Struct({

@@ -12,9 +12,7 @@ import {
 const VALID_PROJECT = {
   version: 1,
   savedAt: '2025-01-01T00:00:00.000Z',
-  sourceFiles: [
-    { id: 'sf-1', path: '/tmp/a.dxf', fileName: 'a.dxf', available: true }
-  ],
+  sourceFiles: [{ id: 'sf-1', path: '/tmp/a.dxf', fileName: 'a.dxf', available: true }],
   importedPieces: [
     {
       id: 'p-1',

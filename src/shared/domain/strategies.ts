@@ -20,14 +20,15 @@ interface StrategiesData {
 
 const loaded = data as StrategiesData
 
-export const STRATEGY_DEFINITIONS: ReadonlyArray<NestingStrategyDefinition> =
-  loaded.strategies.map((s) => ({
+export const STRATEGY_DEFINITIONS: ReadonlyArray<NestingStrategyDefinition> = loaded.strategies.map(
+  (s) => ({
     id: s.id,
     label: s.label,
     description: s.description,
     prefix: s.prefix,
     tail: [...s.tail]
-  }))
+  })
+)
 
 /** Default strategy id used by the stub when the request does not specify one. */
 export const DEFAULT_STRATEGY_ID =

@@ -17,7 +17,6 @@ function stats(run: NonNullable<typeof history.selectedRun.value>) {
 function isSelected(runId: string): boolean {
   return history.state.value.selectedStrategyRunId === runId
 }
-
 </script>
 
 <template>
@@ -25,8 +24,7 @@ function isSelected(runId: string): boolean {
     <header>
       <h2 title="Worker-reported runs for each selected strategy configuration.">Strategy runs</h2>
       <p class="muted">
-        Each run is independent. The selected run drives the result view and the
-        history timeline.
+        Each run is independent. The selected run drives the result view and the history timeline.
       </p>
     </header>
 
@@ -52,12 +50,32 @@ function isSelected(runId: string): boolean {
             <small v-if="run.strategyDescription">{{ run.strategyDescription }}</small>
           </header>
           <dl class="metrics">
-            <div title="Worker-reported status for this strategy run."><dt>Status</dt><dd>{{ stats(run).status }}</dd></div>
-            <div title="Number of pieces placed by this strategy run."><dt>Placed</dt><dd>{{ stats(run).placed }}</dd></div>
-            <div title="For real algorithm runs, any unplaced piece is fatal/failed, not partial success."><dt>Unplaced</dt><dd>{{ stats(run).unplaced }}</dd></div>
-            <div title="Runtime reported by the worker."><dt>Elapsed</dt><dd>{{ stats(run).elapsedMs }} ms</dd></div>
-            <div><dt>Pieces</dt><dd>{{ stats(run).pieceCount }}</dd></div>
-            <div title="Non-fatal warnings emitted while preparing or running this strategy."><dt>Warnings</dt><dd>{{ stats(run).warningCount }}</dd></div>
+            <div title="Worker-reported status for this strategy run.">
+              <dt>Status</dt>
+              <dd>{{ stats(run).status }}</dd>
+            </div>
+            <div title="Number of pieces placed by this strategy run.">
+              <dt>Placed</dt>
+              <dd>{{ stats(run).placed }}</dd>
+            </div>
+            <div
+              title="For real algorithm runs, any unplaced piece is fatal/failed, not partial success."
+            >
+              <dt>Unplaced</dt>
+              <dd>{{ stats(run).unplaced }}</dd>
+            </div>
+            <div title="Runtime reported by the worker.">
+              <dt>Elapsed</dt>
+              <dd>{{ stats(run).elapsedMs }} ms</dd>
+            </div>
+            <div>
+              <dt>Pieces</dt>
+              <dd>{{ stats(run).pieceCount }}</dd>
+            </div>
+            <div title="Non-fatal warnings emitted while preparing or running this strategy.">
+              <dt>Warnings</dt>
+              <dd>{{ stats(run).warningCount }}</dd>
+            </div>
           </dl>
         </button>
       </li>
@@ -157,5 +175,4 @@ dd {
   color: var(--text-primary);
   font-family: var(--font-mono);
 }
-
 </style>

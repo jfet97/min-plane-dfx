@@ -87,13 +87,19 @@ const sourceBounds = computed<ViewBox | null>(() => {
     maxX = Math.max(maxX, b.x + b.width)
     maxY = Math.max(maxY, b.y + b.height)
   }
-  return { x: minX - padding, y: minY - padding, width: maxX - minX + padding * 2, height: maxY - minY + padding * 2 }
+  return {
+    x: minX - padding,
+    y: minY - padding,
+    width: maxX - minX + padding * 2,
+    height: maxY - minY + padding * 2
+  }
 })
 
 const placementBounds = computed<ViewBox | null>(() => {
   if (props.mode !== 'result') return null
   const frame = history.selectedFrame.value
-  const placements: ReadonlyArray<Placement> = frame?.plate.placements ?? history.selectedRun.value?.placements ?? []
+  const placements: ReadonlyArray<Placement> =
+    frame?.plate.placements ?? history.selectedRun.value?.placements ?? []
   if (placements.length === 0) return null
   let minX = Infinity
   let minY = Infinity
@@ -105,7 +111,12 @@ const placementBounds = computed<ViewBox | null>(() => {
     maxX = Math.max(maxX, p.x + p.width)
     maxY = Math.max(maxY, p.y + p.height)
   }
-  return { x: minX - padding, y: minY - padding, width: maxX - minX + padding * 2, height: maxY - minY + padding * 2 }
+  return {
+    x: minX - padding,
+    y: minY - padding,
+    width: maxX - minX + padding * 2,
+    height: maxY - minY + padding * 2
+  }
 })
 
 const viewBox = computed<ViewBox>(() => {
@@ -211,7 +222,10 @@ function onWheel(event: WheelEvent): void {
 <template>
   <div class="canvas" ref="containerRef" @wheel="onWheel">
     <svg
-      v-if="(props.mode === 'import' && store.state.value.pieces.length > 0) || placementsToRender.length > 0"
+      v-if="
+        (props.mode === 'import' && store.state.value.pieces.length > 0) ||
+        placementsToRender.length > 0
+      "
       :viewBox="viewBoxString"
       preserveAspectRatio="xMidYMid meet"
     >
@@ -311,20 +325,32 @@ function onWheel(event: WheelEvent): void {
     </div>
 
     <div v-else class="empty">
-      <p>No result yet. Run sends selected imported objects to the worker; the algorithm is still a stub.</p>
+      <p>
+        No result yet. Run sends selected imported objects to the worker; the algorithm is still a
+        stub.
+      </p>
     </div>
 
-    <div v-if="props.mode === 'result' && placementsToRender.length === 0 && history.selectedRun.value" class="empty-state">
+    <div
+      v-if="props.mode === 'result' && placementsToRender.length === 0 && history.selectedRun.value"
+      class="empty-state"
+    >
       <p>
-        No placements yet. The worker pipeline is connected, but the nesting
-        algorithm is intentionally still a stub.
+        No placements yet. The worker pipeline is connected, but the nesting algorithm is
+        intentionally still a stub.
       </p>
     </div>
 
     <div class="viewport-controls">
       <button type="button" title="Zoom in" @click="viewport.zoom(1.2)">+</button>
       <button type="button" title="Zoom out" @click="viewport.zoom(0.8)">−</button>
-      <button type="button" title="Reset pan and zoom to fit the current preview/result." @click="viewport.reset">Reset</button>
+      <button
+        type="button"
+        title="Reset pan and zoom to fit the current preview/result."
+        @click="viewport.reset"
+      >
+        Reset
+      </button>
       <span class="scale">{{ viewport.state.value.scale.toFixed(2) }}x</span>
       <span v-if="containerSize.width > 0" class="dim">
         {{ Math.round(containerSize.width) }} × {{ Math.round(containerSize.height) }}

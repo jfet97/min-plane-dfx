@@ -8,9 +8,7 @@ export const err = (
   context?: Readonly<Record<string, unknown>>
 ): { readonly ok: false; readonly error: SerializedAppError } => {
   const error: SerializedAppError =
-    context === undefined
-      ? { code, message }
-      : { code, message, context }
+    context === undefined ? { code, message } : { code, message, context }
   return { ok: false, error }
 }
 

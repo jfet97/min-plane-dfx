@@ -49,17 +49,17 @@ function circleSegments(circle: ICircleEntity): Segment[] {
   const c = circle.center
   const r = circle.radius
   return [0, 90, 180, 270].map((startAngle) => ({
-      kind: 'arc',
-      x1: 0,
-      y1: 0,
-      x2: 0,
-      y2: 0,
-      cx: c.x,
-      cy: c.y,
-      radius: r,
-      startAngle,
-      endAngle: startAngle + 90
-    }))
+    kind: 'arc',
+    x1: 0,
+    y1: 0,
+    x2: 0,
+    y2: 0,
+    cx: c.x,
+    cy: c.y,
+    radius: r,
+    startAngle,
+    endAngle: startAngle + 90
+  }))
 }
 
 function arcSegments(arc: IArcEntity): Segment[] {
@@ -114,7 +114,12 @@ function polylineVertices(poly: IPolylineEntity): ReadonlyArray<IPoint> {
  */
 export function entityToGeometry(entity: IEntity): {
   readonly geometry: DxfGeometrySummary
-  readonly bounds: { readonly x: number; readonly y: number; readonly width: number; readonly height: number }
+  readonly bounds: {
+    readonly x: number
+    readonly y: number
+    readonly width: number
+    readonly height: number
+  }
 } | null {
   switch (entity.type) {
     case 'LINE': {
@@ -229,8 +234,18 @@ export function entityToGeometry(entity: IEntity): {
 
 /** Returns the union bounds across all provided rectangles. */
 export function unionBounds(
-  rectangles: ReadonlyArray<{ readonly x: number; readonly y: number; readonly width: number; readonly height: number }>
-): { readonly x: number; readonly y: number; readonly width: number; readonly height: number } | null {
+  rectangles: ReadonlyArray<{
+    readonly x: number
+    readonly y: number
+    readonly width: number
+    readonly height: number
+  }>
+): {
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+} | null {
   if (rectangles.length === 0) return null
   let minX = Infinity
   let minY = Infinity
