@@ -183,7 +183,44 @@ const FreeRectangleOps = {
       throw new Error(`Piece ${piece.id} does not fit inside free rectangle ${rect.id}`)
     }
 
-    return []
+    const leftRect =
+      piece.paddedBounds.x - rect.x > 0
+        ? new FreeRectangle({
+            x: rect.x,
+            y: rect.y,
+            width: piece.paddedBounds.x - rect.x,
+            height: rect.height
+          })
+        : null
+    const rightRect =
+      piece.paddedBounds.x + piece.paddedBounds.width < rect.x + rect.width
+        ? new FreeRectangle({
+            x: piece.paddedBounds.x + piece.paddedBounds.width,
+            y: rect.y,
+            width: rect.x + rect.width - (piece.paddedBounds.x + piece.paddedBounds.width),
+            height: rect.height
+          })
+        : null
+    const topRect =
+      piece.paddedBounds.y - rect.y > 0
+        ? new FreeRectangle({
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: piece.paddedBounds.y - rect.y
+          })
+        : null
+    const bottomRect =
+      piece.paddedBounds.y + piece.paddedBounds.height < rect.y + rect.height
+        ? new FreeRectangle({
+            x: rect.x,
+            y: piece.paddedBounds.y + piece.paddedBounds.height,
+            width: rect.width,
+            height: rect.y + rect.height - (piece.paddedBounds.y + piece.paddedBounds.height)
+          })
+        : null
+
+    return [leftRect, rightRect, topRect, bottomRect].filter((r): r is FreeRectangle => !!r)
   }
 } as const
 
