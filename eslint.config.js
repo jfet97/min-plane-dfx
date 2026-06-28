@@ -22,6 +22,7 @@ export default [
     rules: {
       ...tsPlugin.configs.recommended.rules,
       ...vue.configs['flat/recommended'].rules,
+      '@typescript-eslint/no-namespace': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'vue/multi-word-component-names': 'off'
     }
@@ -40,6 +41,7 @@ export default [
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
+      '@typescript-eslint/no-namespace': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
     }
   },

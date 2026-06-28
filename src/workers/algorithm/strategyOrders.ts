@@ -1,13 +1,13 @@
 import { Order } from 'effect'
 import type { FreeRectangle, NestingStrategyDefinition } from '@shared/domain/nesting.js'
 import type {
-  FreeRectangleOrderForPiece,
+  FreeRectangleOrder,
   NestingAlgorithmState,
   NestingStateOrder
 } from './nestingAlgorithm.js'
 
 export interface StrategyOrders {
-  readonly freeRectangleOrder: FreeRectangleOrderForPiece
+  readonly freeRectangleOrder: FreeRectangleOrder.ForPiece
   readonly stateOrder: NestingStateOrder
 }
 
