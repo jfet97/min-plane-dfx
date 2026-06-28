@@ -43,16 +43,6 @@ export interface NestingAlgorithmCandidate {
 }
 
 /**
- * Free-rectangle split details produced by one committed placement.
- * The wrapper can translate this into history without owning split logic.
- */
-export interface NestingAlgorithmFreeRectangleSplit {
-  readonly before: FreeRectangle
-  readonly after: ReadonlyArray<FreeRectangle>
-  readonly pruned: ReadonlyArray<FreeRectangle>
-}
-
-/**
  * Algorithm events emitted synchronously by the core.
  * The worker wrapper translates these events into persisted history frames.
  */
@@ -120,7 +110,11 @@ export namespace NestingAlgorithmEvent {
     readonly stepIndex: number
     readonly beamRank: number
     readonly piece: PreparedPiece
-    readonly split: NestingAlgorithmFreeRectangleSplit
+    readonly split: {
+      readonly before: FreeRectangle
+      readonly after: ReadonlyArray<FreeRectangle>
+      readonly pruned: ReadonlyArray<FreeRectangle>
+    }
   }
 
   /**
