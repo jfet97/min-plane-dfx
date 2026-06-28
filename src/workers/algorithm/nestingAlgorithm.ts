@@ -129,7 +129,11 @@ export namespace NestingAlgorithmEvent {
    */
   export interface Completed {
     readonly type: 'completed'
-    readonly outcome: NestingAlgorithmOutcome
+    readonly outcome: {
+      readonly sortedPieceIds: ReadonlyArray<PieceId>
+      readonly placements: ReadonlyArray<Placement>
+      readonly unplacedPieceIds: ReadonlyArray<PieceId>
+    }
   }
 
   /**
@@ -155,28 +159,6 @@ export interface NestingAlgorithmHooks {
 }
 
 /**
- * Complete input for one strategy run of the algorithm core.
- * It contains domain data plus ordering hooks, but no worker/protocol concerns.
- */
-export interface NestingAlgorithmInput {
-  readonly sheet: SheetSpec
-  readonly pieces: ReadonlyArray<PreparedPiece>
-  readonly freeRectangleOrder: FreeRectangleOrder
-  readonly stateOrder: NestingStateOrder
-  readonly hooks?: NestingAlgorithmHooks
-}
-
-/**
- * Minimal result returned by the algorithm core.
- * The worker wrapper turns this into protocol-facing result envelopes.
- */
-export interface NestingAlgorithmOutcome {
-  readonly sortedPieceIds: ReadonlyArray<PieceId>
-  readonly placements: ReadonlyArray<Placement>
-  readonly unplacedPieceIds: ReadonlyArray<PieceId>
-}
-
-/**
  * Algorithm-core boundary for the future placement implementation.
  *
  * The real algorithm will use `freeRectangleOrder` to rank legal free
@@ -184,7 +166,13 @@ export interface NestingAlgorithmOutcome {
  * the beam survivors. This stub only exposes that shape; it does not place,
  * split, rank, or score anything.
  */
-export function runNestingAlgorithmStub(input: NestingAlgorithmInput): NestingAlgorithmOutcome {
+export function runNestingAlgorithmStub(input: {
+  readonly sheet: SheetSpec
+  readonly pieces: ReadonlyArray<PreparedPiece>
+  readonly freeRectangleOrder: FreeRectangleOrder
+  readonly stateOrder: NestingStateOrder
+  readonly hooks?: NestingAlgorithmHooks
+}) {
   const initialState: NestingAlgorithmState = {
     placements: [],
     freeRectangles: [],

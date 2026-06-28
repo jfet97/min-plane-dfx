@@ -9,7 +9,7 @@ import {
   type NestingStrategyDefinition
 } from '@shared/domain/nesting.js'
 import { findStrategy, STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js'
-import { runNestingAlgorithmStub, type NestingAlgorithmOutcome } from './nestingAlgorithm.js'
+import { runNestingAlgorithmStub } from './nestingAlgorithm.js'
 import { makeStrategyOrders } from './strategyOrders.js'
 
 export interface ComputeNestingOptions {
@@ -84,7 +84,7 @@ function runStrategyStub(
   strategyRunId: string,
   strategyLabel: string,
   options: ComputeNestingOptions
-): NestingAlgorithmOutcome {
+) {
   const orders = makeStrategyOrders(strategy)
   return runNestingAlgorithmStub({
     sheet: request.sheet,
