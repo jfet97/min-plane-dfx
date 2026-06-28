@@ -7,7 +7,7 @@ import type {
 } from './nestingAlgorithm.js'
 
 export interface StrategyOrders {
-  readonly freeRectangleOrder: FreeRectangleOrder.ForPiece
+  readonly freeRectangleOrder: FreeRectangleOrder
   readonly stateOrder: NestingStateOrder
 }
 
@@ -26,6 +26,6 @@ export function makeStrategyOrders(
 ): StrategyOrders {
   return {
     freeRectangleOrder: () => neutralFreeRectangleOrder,
-    stateOrder: neutralStateOrder
+    stateOrder: () => neutralStateOrder
   }
 }
