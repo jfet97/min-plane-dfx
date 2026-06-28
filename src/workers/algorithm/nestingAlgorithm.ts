@@ -2,6 +2,12 @@ import type { Order } from 'effect'
 import { FreeRectangle, Placement, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
 import type { PieceId } from '@shared/domain/ids.js'
 
+// it's the beam width
+const K = 5
+
+// it's the number of free rectangles to keep per candidate (at most)
+const freeRectFanout = 2
+
 /**
  * Partial layout owned by the algorithm core.
  * This is the state compared by the beam order and later rendered as history.
@@ -144,13 +150,42 @@ export namespace NestingAlgorithmEvent {
     | Completed
 }
 
-/**
- * Synchronous hooks exposed by the algorithm core.
- * The wrapper bridges these events to Effect queues, files, and worker sends.
- */
-export interface NestingAlgorithmHooks {
-  readonly onEvent?: (event: NestingAlgorithmEvent.Event) => void
-}
+const FreeRectangleOps = {
+  /**
+   * Adds a free rectangle unless it is fully contained by an existing one.
+   * The free-rectangle set is kept maximal by invariant: new rectangles come
+   * from splits, so they can be redundant only by being smaller than an
+   * existing rectangle, not by containing one.
+   */
+  add(rects: readonly FreeRectangle[], newRect: FreeRectangle): FreeRectangle[] {
+    for (const rect of rects) {
+      if (
+        newRect.x >= rect.x &&
+        newRect.x + newRect.width <= rect.x + rect.width &&
+        newRect.y >= rect.y &&
+        newRect.y + newRect.height <= rect.y + rect.height
+      ) {
+        return [...rects]
+      }
+    }
+
+    return [newRect, ...rects]
+  },
+
+  split(rect: FreeRectangle, piece: PreparedPiece, rotated: boolean): FreeRectangle[] {
+    // invariant check: the piece must fit inside the free rectangle
+    if (
+      piece.paddedBounds.x < rect.x ||
+      piece.paddedBounds.y < rect.y ||
+      piece.paddedBounds.x + piece.paddedBounds.width > rect.x + rect.width ||
+      piece.paddedBounds.y + piece.paddedBounds.height > rect.y + rect.height
+    ) {
+      throw new Error(`Piece ${piece.id} does not fit inside free rectangle ${rect.id}`)
+    }
+
+    return []
+  }
+} as const
 
 /**
  * Algorithm-core boundary for the future placement implementation.
@@ -160,14 +195,17 @@ export interface NestingAlgorithmHooks {
  * the beam survivors. This stub only exposes that shape; it does not place,
  * split, rank, or score anything.
  */
-export function runNestingAlgorithmStub(input: {
+export function runMaxRectsBeamSearch(input: {
   readonly sheet: SheetSpec
   readonly pieces: ReadonlyArray<PreparedPiece>
   readonly freeRectangleOrder: FreeRectangleOrder
   readonly stateOrder: NestingStateOrder
-  readonly hooks?: NestingAlgorithmHooks
+  // synchronous hooks
+  readonly hooks?: {
+    readonly onEvent?: (event: NestingAlgorithmEvent.Event) => void
+  }
 }) {
-  const initialState = {
+  const state = {
     placements: [],
     freeRectangles: [
       new FreeRectangle({
@@ -182,8 +220,12 @@ export function runNestingAlgorithmStub(input: {
 
   input.hooks?.onEvent?.({
     type: 'initial_state',
-    state: initialState
+    state: state
   })
+
+  for (const [stepIndex, piece] of input.pieces.entries()) {
+    console.log(`Processing piece ${stepIndex + 1}/${input.pieces.length} (id=${piece.id})`)
+  }
 
   const outcome = {
     sortedPieceIds: input.pieces.map((piece) => piece.id),

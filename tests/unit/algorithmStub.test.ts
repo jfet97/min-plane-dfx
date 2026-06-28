@@ -4,7 +4,7 @@ import { sortPiecesForNesting } from '../../src/workers/algorithm/sortPiecesForN
 import { computeNestingStub } from '../../src/workers/algorithm/computeNestingStub.js'
 import { selectFinalStrategyResult } from '../../src/workers/algorithm/selectFinalStrategyResult.js'
 import {
-  runNestingAlgorithmStub,
+  runMaxRectsBeamSearch,
   type NestingAlgorithmEvent,
   type NestingAlgorithmState
 } from '../../src/workers/algorithm/nestingAlgorithm.js'
@@ -77,11 +77,11 @@ describe('sortPiecesForNesting', () => {
   })
 })
 
-describe('runNestingAlgorithmStub', () => {
+describe('runMaxRectsBeamSearch', () => {
   it('exposes algorithm events without creating placements or Effectful history', () => {
     const initialStates: NestingAlgorithmState[] = []
     const events: NestingAlgorithmEvent.Event[] = []
-    const result = runNestingAlgorithmStub({
+    const result = runMaxRectsBeamSearch({
       sheet: baseRequest().sheet,
       pieces: [piece('a'), piece('b')],
       freeRectangleOrder: () => Order.make(() => 0),

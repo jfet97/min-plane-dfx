@@ -18,7 +18,7 @@ Do not implement:
 
 `sortPiecesForNesting` is the user-owned initial ordering boundary. It may contain user-provided ordering logic, but it must not place pieces, score placements, split free rectangles, or produce history.
 
-`runNestingAlgorithmStub` is the algorithm-core boundary. It accepts the fixed
+`runMaxRectsBeamSearch` is the algorithm-core boundary. It accepts the fixed
 piece list, sheet, a free-rectangle ordering function, a state ordering function,
 and synchronous event hooks. It returns only algorithm outcome data. It does not
 know about worker requests, configured strategy ids, protocol result envelopes,
