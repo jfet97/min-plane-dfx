@@ -1,6 +1,7 @@
 import { Order } from 'effect'
 import type { FreeRectangle, NestingStrategyDefinition } from '@shared/domain/nesting.js'
-import type { FreeRectangleOrder, NestingBeamState, NestingStateOrder } from './nestingAlgorithm.js'
+import type { NestingBeamState } from './beam/state.js'
+import type { FreeRectangleOrder, NestingStateOrder } from './nestingAlgorithm.js'
 
 export interface StrategyOrders {
   readonly freeRectangleOrder: FreeRectangleOrder

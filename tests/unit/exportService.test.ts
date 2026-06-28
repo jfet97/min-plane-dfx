@@ -69,6 +69,7 @@ const sampleFrame: NestingHistoryFrame = {
   beamRank: 0,
   title: 'frame 0',
   plate: { placements: [], freeRectangles: [] },
+  state: { remainingPieceIds: [], unplacedPieceIds: [] },
   createdAt: '2025-01-01T00:00:00.000Z'
 }
 

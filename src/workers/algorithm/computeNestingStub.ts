@@ -6,6 +6,7 @@ import {
   NestingStrategyResult,
   NestingResult as NestingResultModel,
   NestingHistoryFrame as NestingHistoryFrameModel,
+  BeamStateSnapshot,
   PlateSnapshot,
   type NestingStrategyDefinition
 } from '@shared/domain/nesting.js'
@@ -134,6 +135,10 @@ function buildStateFrames(
       plate: new PlateSnapshot({
         placements: [...member.placements],
         freeRectangles: [...member.freeRectangles]
+      }),
+      state: new BeamStateSnapshot({
+        remainingPieceIds: member.remainingPieces.map((piece) => piece.id),
+        unplacedPieceIds: member.unplacedPieces.map((piece) => piece.id)
       }),
       createdAt
     })

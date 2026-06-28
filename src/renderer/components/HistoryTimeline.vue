@@ -85,6 +85,14 @@ function onSpeedChange(event: Event): void {
           >(truncated; see NDJSON replay)</span
         >
       </p>
+      <div v-if="history.selectedFrame.value" class="state-info">
+        <span title="Pieces still queued for future placement attempts in the selected beam state.">
+          Remaining {{ history.selectedFrame.value.state.remainingPieceIds.length }}
+        </span>
+        <span title="Pieces already rejected as not fitting in the selected beam state.">
+          Unplaced {{ history.selectedFrame.value.state.unplacedPieceIds.length }}
+        </span>
+      </div>
       <div v-if="history.selectedStepFrames.value.length > 1" class="beam-ranks">
         <span class="muted">Beam</span>
         <button
@@ -170,6 +178,13 @@ h2 {
 }
 
 .frame-info {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.state-info {
+  display: flex;
+  gap: 10px;
   font-size: 11px;
   color: var(--text-secondary);
 }

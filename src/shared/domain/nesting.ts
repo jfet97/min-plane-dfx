@@ -262,6 +262,11 @@ export class PlateSnapshot extends Schema.Class<PlateSnapshot>('PlateSnapshot')(
   usedBounds: Schema.optional(Rect)
 }) {}
 
+export class BeamStateSnapshot extends Schema.Class<BeamStateSnapshot>('BeamStateSnapshot')({
+  remainingPieceIds: Schema.Array(PieceId),
+  unplacedPieceIds: Schema.Array(PieceId)
+}) {}
+
 export class BeamCandidateTrace extends Schema.Class<BeamCandidateTrace>('BeamCandidateTrace')({
   candidateId: Schema.String,
   pieceId: PieceId,
@@ -303,6 +308,7 @@ export class NestingHistoryFrame extends Schema.Class<NestingHistoryFrame>('Nest
   beamRank: Schema.Number,
   title: Schema.String,
   plate: PlateSnapshot,
+  state: BeamStateSnapshot,
   beam: Schema.optional(BeamStepTrace),
   candidates: Schema.optional(Schema.Array(BeamCandidateTrace)),
   freeRectangleSplit: Schema.optional(FreeRectangleSplitTrace),
@@ -324,6 +330,7 @@ export class NestingHistoryFrame extends Schema.Class<NestingHistoryFrame>('Nest
       beamRank: 0,
       title: 'stub-initial',
       plate: new PlateSnapshot({ placements: [], freeRectangles: [] }),
+      state: new BeamStateSnapshot({ remainingPieceIds: [], unplacedPieceIds: [] }),
       createdAt: input.createdAt
     })
   }
@@ -335,6 +342,7 @@ export class NestingHistoryFrame extends Schema.Class<NestingHistoryFrame>('Nest
     readonly strategyLabel: string
     readonly beamRank: number
     readonly plate: PlateSnapshot
+    readonly state: BeamStateSnapshot
     readonly createdAt: string
   }): NestingHistoryFrame {
     return new NestingHistoryFrame({
@@ -346,6 +354,7 @@ export class NestingHistoryFrame extends Schema.Class<NestingHistoryFrame>('Nest
       beamRank: input.beamRank,
       title: 'stub-initial',
       plate: input.plate,
+      state: input.state,
       createdAt: input.createdAt
     })
   }

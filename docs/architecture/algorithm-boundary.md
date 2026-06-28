@@ -34,6 +34,14 @@ stored as `top`, and the other retained states live in `alternatives`. The order
 used to choose survivors compares individual beam states, not the container.
 History translation emits one frame per retained state with `beamRank`, so main
 and renderer can inspect the top state and the other retained alternatives.
+Inside a beam member, `remainingPieces` is the future placement queue, while
+`unplacedPieces` is the branch-local bucket for pieces already rejected as not
+fitting.
+
+Algorithm internals are grouped by domain under `src/workers/algorithm/`:
+`beam/` owns retained-state shape and seed construction, while `maxRects/` owns
+placement anchors and free-rectangle mechanics. The root files stay focused on
+strategy orchestration, ordering adapters, and worker-facing wrappers.
 
 The core emits algorithm events, not history frames. The event stream is the
 raw material for history: initial states, future beam steps, selected states,

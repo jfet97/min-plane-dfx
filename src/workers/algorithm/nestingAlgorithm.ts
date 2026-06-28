@@ -1,31 +1,14 @@
 import type { Order } from 'effect'
-import { FreeRectangle, Placement, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
+import type { FreeRectangle, Placement, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
 import type { PieceId } from '@shared/domain/ids.js'
-
-// retained beam width
-export const MAX_RETAINED_STATES = 5
+import { initialState } from './beam/seed.js'
+import type { NestingAlgorithmState, NestingBeamState } from './beam/state.js'
+export { K } from './beam/state.js'
+export type { NestingAlgorithmState, NestingBeamState } from './beam/state.js'
+export { initialState } from './beam/seed.js'
 
 // free rectangles considered per state/piece/orientation at most
-export const FREE_RECTANGLE_FANOUT = 2
-
-/**
- * One partial layout kept inside the beam.
- * This is the unit compared by the state order and rendered as one history rank.
- */
-export interface NestingBeamState {
-  readonly placements: ReadonlyArray<Placement>
-  readonly freeRectangles: ReadonlyArray<FreeRectangle>
-  readonly remainingPieces: ReadonlyArray<PreparedPiece>
-}
-
-/**
- * Ranked beam container for one algorithm step.
- * `top` is rank 0; `alternatives` contains the remaining retained states.
- */
-export interface NestingAlgorithmState {
-  readonly top: NestingBeamState
-  readonly alternatives: ReadonlyArray<NestingBeamState>
-}
+export const freeRectFanout = 2
 
 /**
  * Strategy hook that returns the free-rectangle order for one decision point.
@@ -167,91 +150,6 @@ export namespace NestingAlgorithmEvent {
     | Completed
 }
 
-export const FreeRectangleOps = {
-  /**
-   * Adds a free rectangle unless it is fully contained by an existing one.
-   * The free-rectangle set is kept maximal by invariant: new rectangles come
-   * from splits, so they can be redundant only by being smaller than an
-   * existing rectangle, not by containing one.
-   */
-  add(rects: readonly FreeRectangle[], newRect: FreeRectangle): FreeRectangle[] {
-    for (const rect of rects) {
-      if (
-        newRect.x >= rect.x &&
-        newRect.x + newRect.width <= rect.x + rect.width &&
-        newRect.y >= rect.y &&
-        newRect.y + newRect.height <= rect.y + rect.height
-      ) {
-        return [...rects]
-      }
-    }
-
-    return [newRect, ...rects]
-  },
-
-  split(rect: FreeRectangle, placement: Placement): FreeRectangle[] {
-    const rectRight = rect.x + rect.width
-    const rectBottom = rect.y + rect.height
-    const placementRight = placement.x + placement.width
-    const placementBottom = placement.y + placement.height
-
-    // invariant check: the placement must fit inside the free rectangle
-    if (
-      placement.x < rect.x ||
-      placement.y < rect.y ||
-      placementRight > rectRight ||
-      placementBottom > rectBottom
-    ) {
-      throw new Error(
-        `Placement for piece ${placement.pieceId} does not fit inside free rectangle ${rect.id}`
-      )
-    }
-
-    const leftRect =
-      placement.x - rect.x > 0
-        ? new FreeRectangle({
-            x: rect.x,
-            y: rect.y,
-            width: placement.x - rect.x,
-            height: rect.height,
-            source: 'split'
-          })
-        : null
-    const rightRect =
-      placementRight < rectRight
-        ? new FreeRectangle({
-            x: placementRight,
-            y: rect.y,
-            width: rectRight - placementRight,
-            height: rect.height,
-            source: 'split'
-          })
-        : null
-    const topRect =
-      placement.y - rect.y > 0
-        ? new FreeRectangle({
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: placement.y - rect.y,
-            source: 'split'
-          })
-        : null
-    const bottomRect =
-      placementBottom < rectBottom
-        ? new FreeRectangle({
-            x: rect.x,
-            y: placementBottom,
-            width: rect.width,
-            height: rectBottom - placementBottom,
-            source: 'split'
-          })
-        : null
-
-    return [leftRect, rightRect, topRect, bottomRect].filter((r): r is FreeRectangle => !!r)
-  }
-} as const
-
 /**
  * Algorithm-core boundary for the future placement implementation.
  *
@@ -270,22 +168,7 @@ export function runMaxRectsBeamSearch(input: {
     readonly onEvent?: (event: NestingAlgorithmEvent.Event) => void
   }
 }) {
-  const top = {
-    placements: [],
-    freeRectangles: [
-      new FreeRectangle({
-        width: input.sheet.width,
-        height: input.sheet.height,
-        x: 0,
-        y: 0
-      })
-    ],
-    remainingPieces: input.pieces
-  } satisfies NestingBeamState
-  const state = {
-    top,
-    alternatives: []
-  } satisfies NestingAlgorithmState
+  const state = initialState(input)
 
   input.hooks?.onEvent?.({
     type: 'initial_state',

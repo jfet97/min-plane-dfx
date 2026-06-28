@@ -6,8 +6,9 @@ import { selectFinalStrategyResult } from '../../src/workers/algorithm/selectFin
 import {
   makeBottomLeftPlacement,
   makeTopLeftPlacement
-} from '../../src/workers/algorithm/candidateGeneration.js'
+} from '../../src/workers/algorithm/maxRects/placements.js'
 import {
+  initialState,
   runMaxRectsBeamSearch,
   type NestingAlgorithmEvent,
   type NestingAlgorithmState
@@ -35,6 +36,22 @@ function piece(id: string): PreparedPiece {
     paddedBounds: { x: 0, y: 0, width: 14, height: 9, longestEdge: 14, area: 126, imbalance: 5 },
     padding: 2,
     allowRotation: true
+  }
+}
+
+function sizedPiece(id: string, width: number, height: number): PreparedPiece {
+  return {
+    ...piece(id),
+    realBounds: { x: 0, y: 0, width, height },
+    paddedBounds: {
+      x: 0,
+      y: 0,
+      width,
+      height,
+      longestEdge: Math.max(width, height),
+      area: width * height,
+      imbalance: Math.abs(width - height)
+    }
   }
 }
 
@@ -83,7 +100,93 @@ describe('sortPiecesForNesting', () => {
 })
 
 describe('runMaxRectsBeamSearch', () => {
-  it('exposes algorithm events without creating placements or Effectful history', () => {
+  it('builds the initial beam from the first two pieces and both orientations', () => {
+    const state = initialState({
+      sheet: baseRequest().sheet,
+      pieces: [piece('a'), piece('b'), piece('c')]
+    })
+    const members = [state.top, ...state.alternatives]
+
+    expect(members.length).toBe(4)
+    expect(members.map((member) => member.placements[0]?.pieceId)).toEqual(['a', 'a', 'b', 'b'])
+    expect(members.map((member) => member.placements[0]?.rotation)).toEqual([0, 90, 0, 90])
+    expect(members.map((member) => member.remainingPieces.map((p) => p.id))).toEqual([
+      ['b', 'c'],
+      ['b', 'c'],
+      ['a', 'c'],
+      ['a', 'c']
+    ])
+    expect(members.map((member) => member.unplacedPieces)).toEqual([[], [], [], []])
+    expect(members.every((member) => member.freeRectangles.length === 2)).toBe(true)
+  })
+
+  it('builds two initial beam states when only one piece exists', () => {
+    const state = initialState({
+      sheet: baseRequest().sheet,
+      pieces: [piece('a')]
+    })
+    const members = [state.top, ...state.alternatives]
+
+    expect(members.length).toBe(2)
+    expect(members.map((member) => member.placements[0]?.rotation)).toEqual([0, 90])
+    expect(members.map((member) => member.remainingPieces)).toEqual([[], []])
+    expect(members.map((member) => member.unplacedPieces)).toEqual([[], []])
+  })
+
+  it('falls back to an empty beam state with no pieces', () => {
+    const state = initialState({
+      sheet: baseRequest().sheet,
+      pieces: []
+    })
+
+    expect(state.top.placements).toEqual([])
+    expect(state.alternatives).toEqual([])
+    expect(state.top.freeRectangles).toHaveLength(1)
+    expect(state.top.remainingPieces).toEqual([])
+    expect(state.top.unplacedPieces).toEqual([])
+  })
+
+  it('keeps failed seed attempts as states with the piece marked unplaced', () => {
+    const state = initialState({
+      sheet: { width: 10, height: 10, label: 'small' },
+      pieces: [sizedPiece('a', 20, 10)]
+    })
+    const members = [state.top, ...state.alternatives]
+
+    expect(members.length).toBe(2)
+    expect(members.map((member) => member.placements)).toEqual([[], []])
+    expect(members.map((member) => member.remainingPieces.map((p) => p.id))).toEqual([[], []])
+    expect(members.map((member) => member.unplacedPieces.map((p) => p.id))).toEqual([['a'], ['a']])
+    expect(members.every((member) => member.freeRectangles.length === 1)).toBe(true)
+  })
+
+  it('removes a failed second seed from the future queue while preserving earlier pieces', () => {
+    const state = initialState({
+      sheet: { width: 10, height: 10, label: 'small' },
+      pieces: [sizedPiece('a', 1, 1), sizedPiece('b', 20, 10)]
+    })
+    const members = [state.top, ...state.alternatives]
+
+    expect(members[2]?.placements).toEqual([])
+    expect(members[2]?.remainingPieces.map((p) => p.id)).toEqual(['a'])
+    expect(members[2]?.unplacedPieces.map((p) => p.id)).toEqual(['b'])
+  })
+
+  it('does not reject a seed when the next remaining piece has no split space yet', () => {
+    const state = initialState({
+      sheet: { width: 10, height: 10, label: 'small' },
+      pieces: [sizedPiece('a', 10, 10), sizedPiece('b', 1, 1)]
+    })
+    const members = [state.top, ...state.alternatives]
+
+    expect(members.length).toBe(4)
+    expect(members[0]?.placements[0]?.pieceId).toBe('a')
+    expect(members[0]?.freeRectangles).toEqual([])
+    expect(members[0]?.remainingPieces.map((p) => p.id)).toEqual(['b'])
+    expect(members[0]?.unplacedPieces).toEqual([])
+  })
+
+  it('exposes algorithm events without creating Effectful history', () => {
     const initialStates: NestingAlgorithmState[] = []
     const events: NestingAlgorithmEvent.Event[] = []
     const result = runMaxRectsBeamSearch({
@@ -103,17 +206,18 @@ describe('runMaxRectsBeamSearch', () => {
 
     expect(events.map((event) => event.type)).toEqual(['initial_state', 'completed'])
     expect(initialStates.length).toBe(1)
-    expect(initialStates[0]?.top.placements).toEqual([])
-    expect(initialStates[0]?.alternatives).toEqual([])
-    expect(initialStates[0]?.top.freeRectangles).toHaveLength(1)
-    expect(initialStates[0]?.top.freeRectangles[0]).toMatchObject({
+    expect(initialStates[0]?.top.placements[0]).toMatchObject({
+      pieceId: 'a',
       x: 0,
       y: 0,
-      width: 100,
-      height: 100
+      width: 14,
+      height: 9,
+      rotation: 0
     })
-    expect(initialStates[0]?.top.freeRectangles[0]?.id).toEqual(expect.any(String))
-    expect(initialStates[0]?.top.remainingPieces.map((p) => p.id)).toEqual(['a', 'b'])
+    expect(initialStates[0]?.alternatives).toHaveLength(3)
+    expect(initialStates[0]?.top.freeRectangles).toHaveLength(2)
+    expect(initialStates[0]?.top.remainingPieces.map((p) => p.id)).toEqual(['b'])
+    expect(initialStates[0]?.top.unplacedPieces).toEqual([])
     expect(result.placements).toEqual([])
     expect(result.unplacedPieceIds).toEqual(['a', 'b'])
   })
@@ -292,7 +396,7 @@ describe('computeNestingStub', () => {
     }
   })
 
-  it('emits one initial history frame per strategy from the wrapper layer', () => {
+  it('emits one initial history frame per retained beam state from the wrapper layer', () => {
     const frames: NestingHistoryFrame[] = []
     const req = baseRequest({
       options: options({
@@ -309,13 +413,22 @@ describe('computeNestingStub', () => {
       }
     })
 
-    expect(frames.length).toBe(2)
+    expect(frames.length).toBe(8)
     expect(frames.map((frame) => frame.strategyRunId)).toEqual([
       'run-1-balanced-preserve-free-then-bottom-left',
+      'run-1-balanced-preserve-free-then-bottom-left',
+      'run-1-balanced-preserve-free-then-bottom-left',
+      'run-1-balanced-preserve-free-then-bottom-left',
+      'run-2-short-fill-short-side-fit-then-bottom-left',
+      'run-2-short-fill-short-side-fit-then-bottom-left',
+      'run-2-short-fill-short-side-fit-then-bottom-left',
       'run-2-short-fill-short-side-fit-then-bottom-left'
     ])
-    expect(frames.map((frame) => frame.beamRank)).toEqual([0, 0])
-    expect(frames.every((frame) => frame.plate.freeRectangles.length === 1)).toBe(true)
+    expect(frames.map((frame) => frame.beamRank)).toEqual([0, 1, 2, 3, 0, 1, 2, 3])
+    expect(frames.every((frame) => frame.plate.placements.length === 1)).toBe(true)
+    expect(frames.every((frame) => frame.plate.freeRectangles.length === 2)).toBe(true)
+    expect(frames[0]?.state.remainingPieceIds).toEqual(['b'])
+    expect(frames[0]?.state.unplacedPieceIds).toEqual([])
   })
 
   it('records elapsed time and piece count in stats', () => {
