@@ -172,51 +172,62 @@ const FreeRectangleOps = {
     return [newRect, ...rects]
   },
 
-  split(rect: FreeRectangle, piece: PreparedPiece, rotated: boolean): FreeRectangle[] {
-    // invariant check: the piece must fit inside the free rectangle
+  split(rect: FreeRectangle, placement: Placement): FreeRectangle[] {
+    const rectRight = rect.x + rect.width
+    const rectBottom = rect.y + rect.height
+    const placementRight = placement.x + placement.width
+    const placementBottom = placement.y + placement.height
+
+    // invariant check: the placement must fit inside the free rectangle
     if (
-      piece.paddedBounds.x < rect.x ||
-      piece.paddedBounds.y < rect.y ||
-      piece.paddedBounds.x + piece.paddedBounds.width > rect.x + rect.width ||
-      piece.paddedBounds.y + piece.paddedBounds.height > rect.y + rect.height
+      placement.x < rect.x ||
+      placement.y < rect.y ||
+      placementRight > rectRight ||
+      placementBottom > rectBottom
     ) {
-      throw new Error(`Piece ${piece.id} does not fit inside free rectangle ${rect.id}`)
+      throw new Error(
+        `Placement for piece ${placement.pieceId} does not fit inside free rectangle ${rect.id}`
+      )
     }
 
     const leftRect =
-      piece.paddedBounds.x - rect.x > 0
+      placement.x - rect.x > 0
         ? new FreeRectangle({
             x: rect.x,
             y: rect.y,
-            width: piece.paddedBounds.x - rect.x,
-            height: rect.height
+            width: placement.x - rect.x,
+            height: rect.height,
+            source: 'split'
           })
         : null
     const rightRect =
-      piece.paddedBounds.x + piece.paddedBounds.width < rect.x + rect.width
+      placementRight < rectRight
         ? new FreeRectangle({
-            x: piece.paddedBounds.x + piece.paddedBounds.width,
+            x: placementRight,
             y: rect.y,
-            width: rect.x + rect.width - (piece.paddedBounds.x + piece.paddedBounds.width),
-            height: rect.height
+            width: rectRight - placementRight,
+            height: rect.height,
+            source: 'split'
           })
         : null
     const topRect =
-      piece.paddedBounds.y - rect.y > 0
+      placement.y - rect.y > 0
         ? new FreeRectangle({
             x: rect.x,
             y: rect.y,
             width: rect.width,
-            height: piece.paddedBounds.y - rect.y
+            height: placement.y - rect.y,
+            source: 'split'
           })
         : null
     const bottomRect =
-      piece.paddedBounds.y + piece.paddedBounds.height < rect.y + rect.height
+      placementBottom < rectBottom
         ? new FreeRectangle({
             x: rect.x,
-            y: piece.paddedBounds.y + piece.paddedBounds.height,
+            y: placementBottom,
             width: rect.width,
-            height: rect.y + rect.height - (piece.paddedBounds.y + piece.paddedBounds.height)
+            height: rectBottom - placementBottom,
+            source: 'split'
           })
         : null
 

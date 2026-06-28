@@ -4,6 +4,10 @@ import { sortPiecesForNesting } from '../../src/workers/algorithm/sortPiecesForN
 import { computeNestingStub } from '../../src/workers/algorithm/computeNestingStub.js'
 import { selectFinalStrategyResult } from '../../src/workers/algorithm/selectFinalStrategyResult.js'
 import {
+  makeBottomLeftPlacement,
+  makeTopLeftPlacement
+} from '../../src/workers/algorithm/candidateGeneration.js'
+import {
   runMaxRectsBeamSearch,
   type NestingAlgorithmEvent,
   type NestingAlgorithmState
@@ -20,6 +24,7 @@ import type {
   NestingStrategyResult,
   NestingHistoryFrame
 } from '@shared/domain/nesting.js'
+import { FreeRectangle } from '@shared/domain/nesting.js'
 import type { JobId, PieceId } from '@shared/domain/ids.js'
 
 function piece(id: string): PreparedPiece {
@@ -110,6 +115,78 @@ describe('runMaxRectsBeamSearch', () => {
     expect(initialStates[0]?.remainingPieces.map((p) => p.id)).toEqual(['a', 'b'])
     expect(result.placements).toEqual([])
     expect(result.unplacedPieceIds).toEqual(['a', 'b'])
+  })
+})
+
+describe('makeBottomLeftPlacement', () => {
+  it('places the unrotated piece at the free rectangle origin', () => {
+    const placement = makeBottomLeftPlacement(
+      new FreeRectangle({ x: 20, y: 10, width: 100, height: 80 }),
+      piece('a'),
+      false
+    )
+
+    expect(placement).toMatchObject({
+      pieceId: 'a',
+      x: 20,
+      y: 10,
+      width: 14,
+      height: 9,
+      rotation: 0
+    })
+  })
+
+  it('swaps padded dimensions for rotated placements', () => {
+    const placement = makeBottomLeftPlacement(
+      new FreeRectangle({ x: 20, y: 10, width: 100, height: 80 }),
+      piece('a'),
+      true
+    )
+
+    expect(placement).toMatchObject({
+      pieceId: 'a',
+      x: 20,
+      y: 10,
+      width: 9,
+      height: 14,
+      rotation: 90
+    })
+  })
+})
+
+describe('makeTopLeftPlacement', () => {
+  it('places the unrotated piece at the top-left of the free rectangle', () => {
+    const placement = makeTopLeftPlacement(
+      new FreeRectangle({ x: 20, y: 10, width: 100, height: 80 }),
+      piece('a'),
+      false
+    )
+
+    expect(placement).toMatchObject({
+      pieceId: 'a',
+      x: 20,
+      y: 81,
+      width: 14,
+      height: 9,
+      rotation: 0
+    })
+  })
+
+  it('uses the rotated height when anchoring to the top edge', () => {
+    const placement = makeTopLeftPlacement(
+      new FreeRectangle({ x: 20, y: 10, width: 100, height: 80 }),
+      piece('a'),
+      true
+    )
+
+    expect(placement).toMatchObject({
+      pieceId: 'a',
+      x: 20,
+      y: 76,
+      width: 9,
+      height: 14,
+      rotation: 90
+    })
   })
 })
 
