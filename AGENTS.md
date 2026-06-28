@@ -24,7 +24,8 @@ If a task touches Effect APIs, inspect the installed packages in `node_modules` 
 
 - Do not implement the nesting algorithm.
 - Do not add fake placements, fake free rectangles, fake scores, fake ranking, or fake history.
-- `src/workers/algorithm/sortPiecesForNesting.ts` must remain identity-only until the user explicitly implements the real algorithm.
+- Keep docs up to date with code changes. If implementation changes architecture, protocols, workflows, validation, persistence, or agent conventions, update the relevant `docs/` page and/or this file in the same development cycle.
+- `src/workers/algorithm/sortPiecesForNesting.ts` is the user-owned initial ordering boundary. Do not change its behavior unless the user explicitly asks for algorithm work.
 - Strategy IDs are descriptive strings loaded from configuration, not TypeScript unions.
 - Use schema decoding at untrusted boundaries: IPC payloads, worker messages, loaded JSON, imported files, and replay NDJSON.
 - No `as any`, `as unknown as`, or `as never` in app code. Prefer typed adapters, discriminated unions, guards, and explicit errors.

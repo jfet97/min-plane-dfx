@@ -1,6 +1,6 @@
 # Algorithm Boundary
 
-The nesting algorithm is intentionally absent.
+The placement algorithm is still intentionally absent from the app shell. The user may implement algorithm pieces explicitly inside `src/workers/algorithm/`; infrastructure work must not invent placements or scoring behavior on its own.
 
 Do not implement:
 
@@ -14,11 +14,11 @@ Do not implement:
 - fake history frames;
 - OCaml integration.
 
-## Allowed Stub Behavior
+## Current Stub Behavior
 
-`sortPiecesForNesting` may return the input unchanged.
+`sortPiecesForNesting` is the user-owned initial ordering boundary. It may contain user-provided ordering logic, but it must not place pieces, score placements, split free rectangles, or produce history.
 
-The worker may produce a typed stub result that clearly marks pieces as unplaced and warns that the algorithm is not implemented.
+`computeNestingStub` produces a typed stub result that clearly marks pieces as unplaced and warns that the placement algorithm is not implemented. It accepts an `emitFrame` callback so real algorithm work can emit history while running; the stub only exercises the history pipeline with an initial frame.
 
 ## Strategy Configuration
 

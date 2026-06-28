@@ -2,11 +2,11 @@ import { randomUUID } from 'node:crypto'
 import { Effect } from 'effect'
 import { sortPiecesForNesting } from './sortPiecesForNesting.js'
 import { selectFinalStrategyResult } from './selectFinalStrategyResult.js'
-import type {
-  NestingHistoryFrame,
-  NestingRequest,
-  NestingResult,
-  NestingStrategyResult
+import type { NestingHistoryFrame, NestingRequest, NestingResult } from '@shared/domain/nesting.js'
+import {
+  NestingStrategyResult,
+  NestingResult as NestingResultModel,
+  NestingHistoryFrame as NestingHistoryFrameModel
 } from '@shared/domain/nesting.js'
 import { findStrategy, STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js'
 
@@ -45,26 +45,17 @@ export function computeNestingStub<R = never, E = never>(
       const label = def?.label ?? strategyId
       const description = def?.description
       const strategyRunId = `run-${index + 1}-${strategyId}`
-      strategyResults.push({
-        strategyRunId,
-        strategyId,
-        strategyLabel: label,
-        ...(description !== undefined ? { strategyDescription: description } : {}),
-        status: 'stub',
-        sortedPieceIds: pieceIds,
-        placements: [],
-        unplacedPieceIds: pieceIds,
-        warnings: [
-          {
-            code: 'algorithm_not_implemented',
-            message: `Strategy "${strategyId}" is intentionally not implemented yet.`
-          }
-        ],
-        stats: {
+      strategyResults.push(
+        NestingStrategyResult.stub({
+          strategyRunId,
+          strategyId,
+          strategyLabel: label,
+          ...(description !== undefined ? { strategyDescription: description } : {}),
+          sortedPieceIds: pieceIds,
           elapsedMs,
           pieceCount: request.pieces.length
-        }
-      })
+        })
+      )
 
       yield* options.emitFrame(buildInitialFrame(request, strategyRunId, label))
     }
@@ -74,26 +65,15 @@ export function computeNestingStub<R = never, E = never>(
     const aggregatedPlacements = selected?.placements ?? []
     const aggregatedUnplaced = selected?.unplacedPieceIds ?? pieceIds
 
-    return {
-      version: 1,
-      jobId: request.jobId,
-      status: 'stub',
+    return NestingResultModel.stub({
+      request,
       strategyResults,
       ...(selected ? { selectedStrategyRunId: selected.strategyRunId } : {}),
       sortedPieceIds: pieceIds,
       placements: aggregatedPlacements,
       unplacedPieceIds: aggregatedUnplaced,
-      warnings: [
-        {
-          code: 'algorithm_not_implemented',
-          message: 'The nesting algorithm is intentionally not implemented yet.'
-        }
-      ],
-      stats: {
-        elapsedMs,
-        pieceCount: request.pieces.length
-      }
-    }
+      elapsedMs
+    })
   })
 }
 
@@ -102,17 +82,13 @@ function buildInitialFrame(
   runId: string,
   strategyLabel: string
 ): NestingHistoryFrame {
-  return {
+  return NestingHistoryFrameModel.initial({
     frameId: randomUUID(),
-    jobId: request.jobId,
+    request,
     strategyRunId: runId,
     strategyLabel,
-    stepIndex: 0,
-    beamRank: 0,
-    title: 'stub-initial',
-    plate: { placements: [], freeRectangles: [] },
     createdAt: new Date().toISOString()
-  }
+  })
 }
 
 /**

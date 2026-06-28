@@ -1,5 +1,6 @@
 import type { ImportedPiece } from '@shared/domain/dxf.js'
-import type { NestingWarning, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
+import { NestingWarning, PreparedPiece, type SheetSpec } from '@shared/domain/nesting.js'
+import { RectWith } from '@shared/domain/geometry.js'
 import type { JobId, PieceId } from '@shared/domain/ids.js'
 
 export interface PreparedPieceWithWarnings {
@@ -30,35 +31,41 @@ export function preparePieces(
     const fitsRotated = paddedHeight <= sheet.width && paddedWidth <= sheet.height
 
     if (!fitsAsIs && !fitsRotated) {
-      warnings.push({
-        code: 'piece_does_not_fit',
-        message: `Piece ${p.label} (${paddedWidth.toFixed(2)} x ${paddedHeight.toFixed(2)}) cannot fit on the sheet (${sheet.width} x ${sheet.height}), even after rotation.`,
-        pieceId: p.id as PieceId
-      })
+      warnings.push(
+        new NestingWarning({
+          code: 'piece_does_not_fit',
+          message: `Piece ${p.label} (${paddedWidth.toFixed(2)} x ${paddedHeight.toFixed(2)}) cannot fit on the sheet (${sheet.width} x ${sheet.height}), even after rotation.`,
+          pieceId: p.id as PieceId
+        })
+      )
     } else if (!fitsAsIs) {
-      warnings.push({
-        code: 'piece_requires_rotation',
-        message: `Piece ${p.label} only fits rotated 90 degrees.`,
-        pieceId: p.id as PieceId
-      })
+      warnings.push(
+        new NestingWarning({
+          code: 'piece_requires_rotation',
+          message: `Piece ${p.label} only fits rotated 90 degrees.`,
+          pieceId: p.id as PieceId
+        })
+      )
     }
 
-    pieces.push({
-      id: p.id as PieceId,
-      sourcePieceId: p.id as PieceId,
-      realBounds: p.realBounds,
-      paddedBounds: {
-        x: p.realBounds.x,
-        y: p.realBounds.y,
-        width: paddedWidth,
-        height: paddedHeight,
-        longestEdge: Math.max(paddedWidth, paddedHeight),
-        area: paddedWidth * paddedHeight,
-        imbalance: Math.abs(paddedWidth - paddedHeight)
-      },
-      padding,
-      allowRotation: fitsRotated
-    })
+    pieces.push(
+      new PreparedPiece({
+        id: p.id as PieceId,
+        sourcePieceId: p.id as PieceId,
+        realBounds: p.realBounds,
+        paddedBounds: new RectWith({
+          x: p.realBounds.x,
+          y: p.realBounds.y,
+          width: paddedWidth,
+          height: paddedHeight,
+          longestEdge: Math.max(paddedWidth, paddedHeight),
+          area: paddedWidth * paddedHeight,
+          imbalance: Math.abs(paddedWidth - paddedHeight)
+        }),
+        padding,
+        allowRotation: fitsRotated
+      })
+    )
   }
 
   return { pieces, warnings }

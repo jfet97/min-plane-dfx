@@ -4,13 +4,14 @@ import { basename, extname } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { EntityName } from 'dxf-parser/dist/entities/geomtry.js'
 import { entityToGeometry, unionBounds } from './DxfBbox.js'
-import type {
+import {
   DxfGeometrySummary,
   ImportedDxfDocument,
   ImportedPiece,
   ImportWarning
 } from '@shared/domain/dxf.js'
 import type { SourceFileId } from '@shared/domain/ids.js'
+import { Rect } from '@shared/domain/geometry.js'
 
 const SUPPORTED_ENTITIES: ReadonlySet<EntityName> = new Set<EntityName>([
   'LINE',
@@ -72,12 +73,12 @@ function scaleSegment(segment: Segment, factor: number): Segment {
 }
 
 function scaleBounds(bounds: Bounds, factor: number): Bounds {
-  return {
+  return new Rect({
     x: bounds.x * factor,
     y: bounds.y * factor,
     width: bounds.width * factor,
     height: bounds.height * factor
-  }
+  })
 }
 
 function commonLayer(layers: ReadonlyArray<string | undefined>): string | undefined {
@@ -123,23 +124,27 @@ export async function importDxfFile(
   for (const entity of entities) {
     const entityType = entity.type as EntityName
     if (!SUPPORTED_ENTITIES.has(entityType)) {
-      warnings.push({
-        code: 'unsupported_dxf_entity',
-        message: `Entity type ${entityType} is not supported and was skipped.`,
-        entityType,
-        entityHandle: entity.handle
-      })
+      warnings.push(
+        new ImportWarning({
+          code: 'unsupported_dxf_entity',
+          message: `Entity type ${entityType} is not supported and was skipped.`,
+          entityType,
+          entityHandle: entity.handle
+        })
+      )
       continue
     }
 
     const converted = entityToGeometry(entity)
     if (!converted) {
-      warnings.push({
-        code: 'unsupported_dxf_entity',
-        message: `Entity ${entityType} did not yield a usable geometry and was skipped.`,
-        entityType,
-        entityHandle: entity.handle
-      })
+      warnings.push(
+        new ImportWarning({
+          code: 'unsupported_dxf_entity',
+          message: `Entity ${entityType} did not yield a usable geometry and was skipped.`,
+          entityType,
+          entityHandle: entity.handle
+        })
+      )
       continue
     }
 
@@ -155,26 +160,26 @@ export async function importDxfFile(
   const overallBounds = unionBounds(convertedBounds)
   const pieces: ImportedPiece[] = overallBounds
     ? [
-        {
+        new ImportedPiece({
           id: randomUUID() as ImportedPiece['id'],
           sourceFileId,
           sourceLayer: commonLayer(convertedLayers),
           label: basename(path, extname(path)),
           realBounds: overallBounds,
-          geometry: {
+          geometry: new DxfGeometrySummary({
             entityType:
               convertedEntityCount === 1
                 ? ([...convertedEntityTypes][0] ?? 'DXF_SHAPE')
                 : 'DXF_SHAPE',
             closed: convertedSegments.length > 0,
             segments: convertedSegments
-          },
+          }),
           warnings: []
-        }
+        })
       ]
     : []
 
-  return {
+  return new ImportedDxfDocument({
     id: sourceFileId,
     path,
     fileName: basename(path),
@@ -185,13 +190,13 @@ export async function importDxfFile(
       ...(overallBounds
         ? []
         : [
-            {
+            new ImportWarning({
               code: 'unsupported_dxf_entity',
               message: 'No supported entities were found in this DXF file.'
-            }
+            })
           ])
     ]
-  }
+  })
 }
 
 /** Imports multiple DXF files, returning each result; failures become a placeholder. */

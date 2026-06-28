@@ -40,6 +40,8 @@ IPC handlers are the Promise boundary for main-process services. Validate render
 
 ## Worker
 
-The worker receives a validated `NestingWorkerRequest`, runs the computation workflow, writes optional NDJSON history, and sends typed `WorkerResponse` messages.
+The worker receives schema-decoded `RunNestingPayload` values through `NestingWorkerRpcs`, runs the computation workflow, writes optional NDJSON history, and streams typed `WorkerResponse` messages.
 
-The worker transport is Effect-owned through `NodeWorker` and `NodeWorkerRunner`. The app-owned payload protocol remains `WorkerRequest -> WorkerResponse` inside that transport.
+The worker transport is Effect-owned through `NodeWorker`, `NodeWorkerRunner`, and Effect RPC. The app-owned payload protocol is `RunNestingPayload -> Stream<WorkerResponse>`.
+
+History persistence is authoritative: frames are appended to NDJSON before optional live streaming. Live `history_frame` delivery is best-effort; persistence failures still fail the job.

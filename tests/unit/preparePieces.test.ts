@@ -34,7 +34,10 @@ describe('preparePieces', () => {
       x: 0,
       y: 0,
       width: 14,
-      height: 9
+      height: 9,
+      longestEdge: 14,
+      area: 126,
+      imbalance: 5
     })
     expect(result.warnings.length).toBe(0)
   })
@@ -58,7 +61,15 @@ describe('preparePieces', () => {
 
   it('handles zero padding', () => {
     const result = preparePieces([piece('p-1', 10, 5)], sheet, 0, jobId)
-    expect(result.pieces[0]?.paddedBounds).toEqual({ x: 0, y: 0, width: 10, height: 5 })
+    expect(result.pieces[0]?.paddedBounds).toEqual({
+      x: 0,
+      y: 0,
+      width: 10,
+      height: 5,
+      longestEdge: 10,
+      area: 50,
+      imbalance: 5
+    })
   })
 
   it('produces no warnings when every piece fits comfortably', () => {
@@ -72,7 +83,10 @@ describe('preparePieces', () => {
       x: 42,
       y: 17,
       width: 14,
-      height: 9
+      height: 9,
+      longestEdge: 14,
+      area: 126,
+      imbalance: 5
     })
   })
 })

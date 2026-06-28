@@ -1,4 +1,4 @@
-import { Schema } from 'effect'
+import { Effect, Schema } from 'effect'
 import { FreeRectId, JobId, PieceId } from './ids.js'
 import { Millimeters, Rect, RectWithFromRect } from './geometry.js'
 
@@ -13,8 +13,8 @@ export const WorkerMode = Schema.Literal('stub')
 
 /**
  * Strategy selection mode for a single nesting run.
- *   - `single`            → run exactly the strategies in `strategyIds`
- *   - `all_configured`    → run every strategy registered in the app
+ *   - `single`            -> run exactly the strategies in `strategyIds`
+ *   - `all_configured`    -> run every strategy registered in the app
  *
  * The first real algorithm version may use a single strategy; the field
  * exists now so the request payload stays stable when the user wires the
@@ -24,9 +24,9 @@ export const StrategySelectionMode = Schema.Literals(['single', 'all_configured'
 
 /**
  * Final cross-strategy selection layer.
- *   - `manual`            → user picks one strategy run from the list
- *   - `best`              → pick the highest-scoring run (criteria TBD)
- *   - `top_n`             → keep the top N runs as the final candidate set
+ *   - `manual`            -> user picks one strategy run from the list
+ *   - `best`              -> pick the highest-scoring run (criteria TBD)
+ *   - `top_n`             -> keep the top N runs as the final candidate set
  *
  * The criteria for "best" / "top N" are intentionally undecided. The app
  * shell must surface the controls as placeholders without picking.
@@ -42,27 +42,27 @@ export const StrategyPrefix = Schema.String
 /** Single token that composes the strategy id after the prefix. Free-form. */
 export const StrategyTailToken = Schema.String
 
-export const SheetSpec = Schema.Struct({
+export class SheetSpec extends Schema.Class<SheetSpec>('SheetSpec')({
   width: Millimeters,
   height: Millimeters,
   label: Schema.String
-})
-export type SheetSpec = Schema.Schema.Type<typeof SheetSpec>
+}) {}
 
 /** A nesting strategy id is a descriptive string, not an opaque code. */
 export const NestingStrategyId = Schema.String
 export type NestingStrategyId = Schema.Schema.Type<typeof NestingStrategyId>
 
-export const NestingStrategyDefinition = Schema.Struct({
+export class NestingStrategyDefinition extends Schema.Class<NestingStrategyDefinition>(
+  'NestingStrategyDefinition'
+)({
   id: Schema.String,
   label: Schema.String,
   description: Schema.String,
   prefix: StrategyPrefix,
   tail: Schema.Array(StrategyTailToken)
-})
-export type NestingStrategyDefinition = Schema.Schema.Type<typeof NestingStrategyDefinition>
+}) {}
 
-export const NestingOptions = Schema.Struct({
+export class NestingOptions extends Schema.Class<NestingOptions>('NestingOptions')({
   allowGlobalRotation: Schema.Boolean,
   timeoutMs: Schema.Number,
   workerMode: WorkerMode,
@@ -73,61 +73,84 @@ export const NestingOptions = Schema.Struct({
   finalSelectionMode: FinalSelectionMode,
   topN: Schema.optional(Schema.Number),
   maxHistoryEvents: Schema.optional(Schema.Number)
-})
-export type NestingOptions = Schema.Schema.Type<typeof NestingOptions>
+}) {}
 
-export const PreparedPiece = Schema.Struct({
+export class PreparedPiece extends Schema.Class<PreparedPiece>('PreparedPiece')({
   id: PieceId,
   sourcePieceId: PieceId,
   realBounds: Rect,
   paddedBounds: RectWithFromRect,
   padding: Millimeters,
   allowRotation: Schema.Boolean
-})
-export type PreparedPiece = Schema.Schema.Type<typeof PreparedPiece>
+}) {}
 
-export const NestingRequest = Schema.Struct({
+export class NestingRequest extends Schema.Class<NestingRequest>('NestingRequest')({
   version: Schema.Literal(1),
   jobId: JobId,
   sheet: SheetSpec,
   padding: Millimeters,
   pieces: Schema.Array(PreparedPiece),
   options: NestingOptions
-})
-export type NestingRequest = Schema.Schema.Type<typeof NestingRequest>
+}) {}
 
 /** Stub result or a future real result; the union stays open for the algorithm. */
 export const NestingResultStatus = Schema.Literals(['stub', 'ok', 'partial', 'failed'])
 
-export const Placement = Schema.Struct({
+export class Placement extends Schema.Class<Placement>('Placement')({
   pieceId: PieceId,
   x: Millimeters,
   y: Millimeters,
   width: Millimeters,
   height: Millimeters,
   rotation: Schema.Union([Schema.Literal(0), Schema.Literal(90)])
-})
-export type Placement = Schema.Schema.Type<typeof Placement>
+}) {}
 
-export const NestingWarning = Schema.Struct({
+export class NestingWarning extends Schema.Class<NestingWarning>('NestingWarning')({
   code: Schema.String,
   message: Schema.String,
   pieceId: Schema.optional(PieceId)
-})
-export type NestingWarning = Schema.Schema.Type<typeof NestingWarning>
+}) {
+  static algorithmNotImplemented(strategyId?: string): NestingWarning {
+    return new NestingWarning({
+      code: 'algorithm_not_implemented',
+      message:
+        strategyId === undefined
+          ? 'The nesting algorithm is intentionally not implemented yet.'
+          : `Strategy "${strategyId}" is intentionally not implemented yet.`
+    })
+  }
+}
 
-export const FinalResultScore = Schema.Struct({
+export class FinalResultScore extends Schema.Class<FinalResultScore>('FinalResultScore')({
   strategyRunId: Schema.String,
   rank: Schema.optional(Schema.Number),
   tuple: Schema.optional(Schema.Array(Schema.Number)),
   label: Schema.String
-})
-export type FinalResultScore = Schema.Schema.Type<typeof FinalResultScore>
+}) {}
 
 /** Status of a single strategy run, distinct from the overall NestingResult.status. */
 export const NestingStrategyStatus = Schema.Literals(['stub', 'completed', 'failed', 'cancelled'])
 
-export const NestingStrategyResult = Schema.Struct({
+export class NestingHistorySummary extends Schema.Class<NestingHistorySummary>(
+  'NestingHistorySummary'
+)({
+  frameCount: Schema.Number,
+  strategyRunCount: Schema.Number,
+  retainedFrameCount: Schema.Number,
+  truncated: Schema.Boolean,
+  scope: HistoryScope,
+  strategyRunIds: Schema.Array(Schema.String),
+  ndjsonPath: Schema.optional(Schema.String)
+}) {}
+
+export class NestingStats extends Schema.Class<NestingStats>('NestingStats')({
+  elapsedMs: Schema.Number,
+  pieceCount: Schema.Number
+}) {}
+
+export class NestingStrategyResult extends Schema.Class<NestingStrategyResult>(
+  'NestingStrategyResult'
+)({
   strategyRunId: Schema.String,
   strategyId: NestingStrategyId,
   strategyLabel: Schema.String,
@@ -136,27 +159,41 @@ export const NestingStrategyResult = Schema.Struct({
   sortedPieceIds: Schema.Array(PieceId),
   placements: Schema.Array(Placement),
   unplacedPieceIds: Schema.Array(PieceId),
-  historySummary: Schema.optional(
-    Schema.Struct({
-      frameCount: Schema.Number,
-      strategyRunCount: Schema.Number,
-      retainedFrameCount: Schema.Number,
-      truncated: Schema.Boolean,
-      scope: HistoryScope,
-      strategyRunIds: Schema.Array(Schema.String),
-      ndjsonPath: Schema.optional(Schema.String)
-    })
-  ),
+  historySummary: Schema.optional(NestingHistorySummary),
   finalScore: Schema.optional(FinalResultScore),
-  stats: Schema.Struct({
-    elapsedMs: Schema.Number,
-    pieceCount: Schema.Number
-  }),
+  stats: NestingStats,
   warnings: Schema.Array(NestingWarning)
-})
-export type NestingStrategyResult = Schema.Schema.Type<typeof NestingStrategyResult>
+}) {
+  static stub(input: {
+    readonly strategyRunId: string
+    readonly strategyId: NestingStrategyId
+    readonly strategyLabel: string
+    readonly strategyDescription?: string
+    readonly sortedPieceIds: ReadonlyArray<PieceId>
+    readonly elapsedMs: number
+    readonly pieceCount: number
+  }): NestingStrategyResult {
+    return new NestingStrategyResult({
+      strategyRunId: input.strategyRunId,
+      strategyId: input.strategyId,
+      strategyLabel: input.strategyLabel,
+      ...(input.strategyDescription !== undefined
+        ? { strategyDescription: input.strategyDescription }
+        : {}),
+      status: 'stub',
+      sortedPieceIds: input.sortedPieceIds,
+      placements: [],
+      unplacedPieceIds: input.sortedPieceIds,
+      warnings: [NestingWarning.algorithmNotImplemented(input.strategyId)],
+      stats: new NestingStats({
+        elapsedMs: input.elapsedMs,
+        pieceCount: input.pieceCount
+      })
+    })
+  }
+}
 
-export const NestingResult = Schema.Struct({
+export class NestingResult extends Schema.Class<NestingResult>('NestingResult')({
   version: Schema.Literal(1),
   jobId: JobId,
   status: NestingResultStatus,
@@ -165,60 +202,71 @@ export const NestingResult = Schema.Struct({
   sortedPieceIds: Schema.Array(PieceId),
   placements: Schema.Array(Placement),
   unplacedPieceIds: Schema.Array(PieceId),
-  historySummary: Schema.optional(
-    Schema.Struct({
-      frameCount: Schema.Number,
-      strategyRunCount: Schema.Number,
-      retainedFrameCount: Schema.Number,
-      truncated: Schema.Boolean,
-      scope: HistoryScope,
-      strategyRunIds: Schema.Array(Schema.String),
-      ndjsonPath: Schema.optional(Schema.String)
-    })
-  ),
+  historySummary: Schema.optional(NestingHistorySummary),
   warnings: Schema.Array(NestingWarning),
-  stats: Schema.Struct({
-    elapsedMs: Schema.Number,
-    pieceCount: Schema.Number
-  })
-})
-export type NestingResult = Schema.Schema.Type<typeof NestingResult>
+  stats: NestingStats
+}) {
+  static stub(input: {
+    readonly request: NestingRequest
+    readonly strategyResults: ReadonlyArray<NestingStrategyResult>
+    readonly selectedStrategyRunId?: string
+    readonly sortedPieceIds: ReadonlyArray<PieceId>
+    readonly placements?: ReadonlyArray<Placement>
+    readonly unplacedPieceIds?: ReadonlyArray<PieceId>
+    readonly elapsedMs: number
+  }): NestingResult {
+    return new NestingResult({
+      version: 1,
+      jobId: input.request.jobId,
+      status: 'stub',
+      strategyResults: input.strategyResults,
+      ...(input.selectedStrategyRunId !== undefined
+        ? { selectedStrategyRunId: input.selectedStrategyRunId }
+        : {}),
+      sortedPieceIds: input.sortedPieceIds,
+      placements: input.placements ?? [],
+      unplacedPieceIds: input.unplacedPieceIds ?? input.sortedPieceIds,
+      warnings: [NestingWarning.algorithmNotImplemented()],
+      stats: new NestingStats({
+        elapsedMs: input.elapsedMs,
+        pieceCount: input.request.pieces.length
+      })
+    })
+  }
+}
 
-export const FreeRectangle = Schema.Struct({
+export const FreeRectangleSource = Schema.Union([
+  Schema.Literal('initial'),
+  Schema.Literal('split'),
+  Schema.Literal('pruned'),
+  Schema.Literal('algorithm')
+])
+
+export class FreeRectangle extends Schema.Class<FreeRectangle>('FreeRectangle')({
   id: FreeRectId,
   x: Millimeters,
   y: Millimeters,
   width: Millimeters,
   height: Millimeters,
-  source: Schema.optional(
-    Schema.Union([
-      Schema.Literal('initial'),
-      Schema.Literal('split'),
-      Schema.Literal('pruned'),
-      Schema.Literal('algorithm')
-    ])
-  )
-})
-export type FreeRectangle = Schema.Schema.Type<typeof FreeRectangle>
+  source: Schema.optional(FreeRectangleSource)
+}) {}
 
-export const PlateSnapshot = Schema.Struct({
+export class PlateSnapshot extends Schema.Class<PlateSnapshot>('PlateSnapshot')({
   placements: Schema.Array(Placement),
   freeRectangles: Schema.Array(FreeRectangle),
   usedBounds: Schema.optional(Rect)
-})
-export type PlateSnapshot = Schema.Schema.Type<typeof PlateSnapshot>
+}) {}
 
-export const BeamCandidateTrace = Schema.Struct({
+export class BeamCandidateTrace extends Schema.Class<BeamCandidateTrace>('BeamCandidateTrace')({
   candidateId: Schema.String,
   pieceId: PieceId,
   placement: Schema.optional(Placement),
   score: Schema.optional(Schema.Array(Schema.Number)),
   accepted: Schema.Boolean,
   reason: Schema.optional(Schema.String)
-})
-export type BeamCandidateTrace = Schema.Schema.Type<typeof BeamCandidateTrace>
+}) {}
 
-export const BeamStepTrace = Schema.Struct({
+export class BeamStepTrace extends Schema.Class<BeamStepTrace>('BeamStepTrace')({
   strategyRunId: Schema.String,
   strategyLabel: Schema.String,
   stepIndex: Schema.Number,
@@ -227,10 +275,11 @@ export const BeamStepTrace = Schema.Struct({
   beamWidth: Schema.Number,
   candidateCount: Schema.optional(Schema.Number),
   selectedCandidateId: Schema.optional(Schema.String)
-})
-export type BeamStepTrace = Schema.Schema.Type<typeof BeamStepTrace>
+}) {}
 
-export const FreeRectangleSplitTrace = Schema.Struct({
+export class FreeRectangleSplitTrace extends Schema.Class<FreeRectangleSplitTrace>(
+  'FreeRectangleSplitTrace'
+)({
   strategyRunId: Schema.String,
   stepIndex: Schema.Number,
   beamRank: Schema.Number,
@@ -238,10 +287,9 @@ export const FreeRectangleSplitTrace = Schema.Struct({
   before: FreeRectangle,
   after: Schema.Array(FreeRectangle),
   pruned: Schema.Array(FreeRectangle)
-})
-export type FreeRectangleSplitTrace = Schema.Schema.Type<typeof FreeRectangleSplitTrace>
+}) {}
 
-export const NestingHistoryFrame = Schema.Struct({
+export class NestingHistoryFrame extends Schema.Class<NestingHistoryFrame>('NestingHistoryFrame')({
   frameId: Schema.String,
   jobId: JobId,
   strategyRunId: Schema.String,
@@ -254,25 +302,34 @@ export const NestingHistoryFrame = Schema.Struct({
   candidates: Schema.optional(Schema.Array(BeamCandidateTrace)),
   freeRectangleSplit: Schema.optional(FreeRectangleSplitTrace),
   createdAt: Schema.String
-})
-export type NestingHistoryFrame = Schema.Schema.Type<typeof NestingHistoryFrame>
+}) {
+  static initial(input: {
+    readonly frameId: string
+    readonly request: NestingRequest
+    readonly strategyRunId: string
+    readonly strategyLabel: string
+    readonly createdAt: string
+  }): NestingHistoryFrame {
+    return new NestingHistoryFrame({
+      frameId: input.frameId,
+      jobId: input.request.jobId,
+      strategyRunId: input.strategyRunId,
+      strategyLabel: input.strategyLabel,
+      stepIndex: 0,
+      beamRank: 0,
+      title: 'stub-initial',
+      plate: new PlateSnapshot({ placements: [], freeRectangles: [] }),
+      createdAt: input.createdAt
+    })
+  }
+}
 
-export const NestingHistorySummary = Schema.Struct({
-  frameCount: Schema.Number,
-  strategyRunCount: Schema.Number,
-  retainedFrameCount: Schema.Number,
-  truncated: Schema.Boolean,
-  scope: HistoryScope,
-  strategyRunIds: Schema.Array(Schema.String),
-  ndjsonPath: Schema.optional(Schema.String)
-})
-export type NestingHistorySummary = Schema.Schema.Type<typeof NestingHistorySummary>
-
-export const ProjectHistoryRef = Schema.Struct({
-  kind: Schema.Literal('ndjson_replay'),
+export class ProjectHistoryRef extends Schema.Class<ProjectHistoryRef>('ProjectHistoryRef')({
+  kind: Schema.Literal('ndjson_replay').pipe(
+    Schema.withConstructorDefault(Effect.succeed('ndjson_replay' as const))
+  ),
   jobId: JobId,
   path: Schema.String,
   frameCount: Schema.Number,
   createdAt: Schema.String
-})
-export type ProjectHistoryRef = Schema.Schema.Type<typeof ProjectHistoryRef>
+}) {}

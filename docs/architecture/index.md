@@ -4,6 +4,7 @@ Read the docs that match the task. For broad implementation work, read all of th
 
 - [Process Boundaries](./process-boundaries.md): renderer, preload, main, services, supervisor, and worker responsibilities.
 - [Effect Runtime](./effect-runtime.md): where Effect layers live and where Promise escape hatches are allowed.
+- [Schema Models](./schema-models.md): class-first schema conventions, named models, and constructor/factory usage.
 - [Project Persistence](./project-persistence.md): single JSON snapshots, hydration, history references, and missing replay behavior.
 - [UI Clarity](./ui-clarity.md): desktop-tool UI expectations and honest stub wording.
 - [Algorithm Boundary](./algorithm-boundary.md): what must remain a stub until the real algorithm is written.

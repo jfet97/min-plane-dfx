@@ -4,6 +4,11 @@ import * as NodeWorkerRunner from '@effect/platform-node/NodeWorkerRunner'
 import { computeNestingStub } from './algorithm/computeNestingStub.js'
 import {
   NestingWorkerRpcs,
+  WorkerFailureResponse,
+  WorkerHistoryCompleteResponse,
+  WorkerHistoryFrameResponse,
+  WorkerProgressResponse,
+  WorkerSuccessResponse,
   type RunNestingPayload,
   type WorkerProgress,
   type WorkerResponse
@@ -34,12 +39,13 @@ function sendProgress(
   jobId: NestingRequest['jobId'],
   phase: WorkerProgress['phase']
 ): Effect.Effect<void> {
-  return send({
-    type: 'progress',
-    requestId,
-    jobId,
-    payload: { phase, at: new Date().toISOString() }
-  })
+  return send(
+    WorkerProgressResponse.forPhase({
+      requestId,
+      jobId,
+      phase
+    })
+  )
 }
 
 /**
@@ -94,12 +100,13 @@ function makeFrameEmitter(
         yield* appendFrame(historyPath, frame)
       }
       if (historyMode === 'stream') {
-        yield* send({
-          type: 'history_frame',
-          requestId,
-          jobId,
-          payload: frame
-        }).pipe(
+        yield* send(
+          new WorkerHistoryFrameResponse({
+            requestId,
+            jobId,
+            payload: frame
+          })
+        ).pipe(
           Effect.catchCause(() => Effect.void),
           Effect.asVoid
         )
@@ -139,31 +146,31 @@ function handleRunNesting(
       strategyRunIds,
       ...(historyPath ? { ndjsonPath: historyPath } : {})
     }
-    yield* send({
-      type: 'history_complete',
-      requestId,
-      jobId,
-      payload: summary
-    })
-
-    yield* sendProgress(send, requestId, jobId, 'completed')
-    yield* send({
-      type: 'success',
-      requestId,
-      jobId,
-      payload: result
-    })
-  }).pipe(
-    Effect.catchCause((cause) =>
-      send({
-        type: 'failure',
+    yield* send(
+      new WorkerHistoryCompleteResponse({
         requestId,
         jobId,
-        error: {
-          code: 'unknown_error',
-          message: Cause.pretty(cause)
-        }
+        payload: summary
       })
+    )
+
+    yield* sendProgress(send, requestId, jobId, 'completed')
+    yield* send(
+      new WorkerSuccessResponse({
+        requestId,
+        jobId,
+        payload: result
+      })
+    )
+  }).pipe(
+    Effect.catchCause((cause) =>
+      send(
+        WorkerFailureResponse.unknown({
+          requestId,
+          jobId,
+          message: Cause.pretty(cause)
+        })
+      )
     )
   )
 }

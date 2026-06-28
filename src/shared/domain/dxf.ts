@@ -3,20 +3,19 @@ import { PieceId, SourceFileId } from './ids.js'
 import { Rect } from './geometry.js'
 
 /** Generic warning produced during import. */
-export const ImportWarning = Schema.Struct({
+export class ImportWarning extends Schema.Class<ImportWarning>('ImportWarning')({
   code: Schema.String,
   message: Schema.String,
   entityType: Schema.optional(Schema.String),
   entityHandle: Schema.optional(Schema.Union([Schema.String, Schema.Number]))
-})
-export type ImportWarning = Schema.Schema.Type<typeof ImportWarning>
+}) {}
 
 /**
  * Compact, parser-agnostic summary of a single DXF entity.
  * The renderer uses this to redraw true geometry. The algorithm only sees
  * bounding boxes and sizes; raw geometry stays out of the worker protocol.
  */
-export const DxfGeometrySummary = Schema.Struct({
+export class DxfGeometrySummary extends Schema.Class<DxfGeometrySummary>('DxfGeometrySummary')({
   entityType: Schema.String,
   closed: Schema.Boolean,
   /** Rasterized line/arc samples in entity-local coordinates. */
@@ -35,10 +34,9 @@ export const DxfGeometrySummary = Schema.Struct({
       endAngle: Schema.optional(Schema.Number)
     })
   )
-})
-export type DxfGeometrySummary = Schema.Schema.Type<typeof DxfGeometrySummary>
+}) {}
 
-export const ImportedPiece = Schema.Struct({
+export class ImportedPiece extends Schema.Class<ImportedPiece>('ImportedPiece')({
   id: PieceId,
   sourceFileId: SourceFileId,
   sourceLayer: Schema.optional(Schema.String),
@@ -46,10 +44,9 @@ export const ImportedPiece = Schema.Struct({
   realBounds: Rect,
   geometry: DxfGeometrySummary,
   warnings: Schema.Array(ImportWarning)
-})
-export type ImportedPiece = Schema.Schema.Type<typeof ImportedPiece>
+}) {}
 
-export const ImportedDxfDocument = Schema.Struct({
+export class ImportedDxfDocument extends Schema.Class<ImportedDxfDocument>('ImportedDxfDocument')({
   id: SourceFileId,
   path: Schema.String,
   fileName: Schema.String,
@@ -57,5 +54,4 @@ export const ImportedDxfDocument = Schema.Struct({
   millimetersPerUnit: Schema.Number,
   pieces: Schema.Array(ImportedPiece),
   warnings: Schema.Array(ImportWarning)
-})
-export type ImportedDxfDocument = Schema.Schema.Type<typeof ImportedDxfDocument>
+}) {}

@@ -26,21 +26,24 @@ Do not import the main runtime into the worker. Worker lifecycle is separate fro
 
 ## Worker Protocol
 
-The worker transport uses Effect's Node worker platform:
+The worker transport uses Effect RPC over Effect's Node worker platform:
 
 ```text
 @effect/platform-node/NodeWorker
   -> effect/unstable/workers/Worker
+  -> effect/unstable/rpc/RpcClient.layerProtocolWorker
   -> @effect/platform-node/NodeWorkerRunner
+  -> effect/unstable/rpc/RpcServer.layerProtocolWorkerRunner
 ```
 
-Effect owns the worker framing and lifecycle messages. The app still owns the payload protocol:
+Effect owns worker framing, lifecycle messages, and schema-backed RPC boundary decoding.
+The app-owned protocol is the `NestingWorkerRpcs` group:
 
 ```text
-WorkerRequest -> WorkerResponse
+RunNestingPayload -> Stream<WorkerResponse>
 ```
 
-`WorkerSupervisor` validates every `WorkerResponse` before forwarding history or resolving a result. `nesting.worker.ts` validates every `WorkerRequest` before running the stub workflow.
+`WorkerSupervisor` consumes the `RunNesting` response stream and forwards history events or resolves the final result. `nesting.worker.ts` exposes the RPC handler and streams `WorkerResponse` class instances through an endable queue.
 
 Do not bypass `NodeWorker` / `NodeWorkerRunner` with direct `parentPort` listeners in the same worker.
 
