@@ -24,8 +24,7 @@ const lastPing = ref<string | null>(null)
 const centerView = ref<CenterView>('import')
 let unsubscribe: Unsubscribe | null = null
 let workspaceSettingsReady = false
-let workspaceSettingsSaveInFlight = false
-let workspaceSettingsSaveRequested = false
+let workspaceSettingsRevision = 0
 const store = useAppStore()
 const settings = useSettings()
 const history = useHistoryStore()
@@ -43,17 +42,8 @@ watch(store.importRevision, () => {
   projectWarning.value = null
 })
 
-watch(
-  () => [
-    settings.state.value.sheet.width,
-    settings.state.value.sheet.height,
-    settings.state.value.sheet.label,
-    settings.state.value.padding,
-    JSON.stringify(settings.state.value.options),
-    JSON.stringify(store.state.value.pieceQuantities)
-  ],
-  () => scheduleWorkspaceSettingsSave()
-)
+settings.setWorkspaceSettingsPersistor(scheduleWorkspaceSettingsSave)
+store.setWorkspaceSettingsPersistor(scheduleWorkspaceSettingsSave)
 
 onMounted(() => {
   const api = window.appApi
@@ -72,6 +62,8 @@ onUnmounted(() => {
     unsubscribe()
     unsubscribe = null
   }
+  settings.setWorkspaceSettingsPersistor(null)
+  store.setWorkspaceSettingsPersistor(null)
   runner.clear()
 })
 
@@ -82,6 +74,7 @@ async function hydrateWorkspaceState(): Promise<void> {
     const persistedSettings = await api.loadWorkspaceSettings()
     await store.loadPersistedImports()
     if (persistedSettings) {
+      workspaceSettingsRevision = persistedSettings.revision ?? 0
       settings.hydrateWorkspaceSettings(persistedSettings)
       store.hydratePieceQuantities(persistedSettings.pieceQuantities)
     }
@@ -94,6 +87,7 @@ async function hydrateWorkspaceState(): Promise<void> {
 
 function buildWorkspaceSettings(): WorkspaceProjectSettings {
   return {
+    revision: workspaceSettingsRevision,
     sheet: { ...settings.state.value.sheet },
     padding: settings.state.value.padding,
     pieceQuantities: { ...store.state.value.pieceQuantities },
@@ -103,26 +97,15 @@ function buildWorkspaceSettings(): WorkspaceProjectSettings {
 
 function scheduleWorkspaceSettingsSave(): void {
   if (!workspaceSettingsReady) return
-  workspaceSettingsSaveRequested = true
-  if (!workspaceSettingsSaveInFlight) {
-    void drainWorkspaceSettingsSaves()
-  }
+  workspaceSettingsRevision++
+  saveWorkspaceSettingsSnapshot(buildWorkspaceSettings())
 }
 
-async function drainWorkspaceSettingsSaves(): Promise<void> {
-  workspaceSettingsSaveInFlight = true
-  while (workspaceSettingsSaveRequested) {
-    workspaceSettingsSaveRequested = false
-    await saveWorkspaceSettingsSnapshot(buildWorkspaceSettings())
-  }
-  workspaceSettingsSaveInFlight = false
-}
-
-async function saveWorkspaceSettingsSnapshot(snapshot: WorkspaceProjectSettings): Promise<void> {
+function saveWorkspaceSettingsSnapshot(snapshot: WorkspaceProjectSettings): void {
   const api = window.appApi
   if (!api || !workspaceSettingsReady) return
   try {
-    await api.saveWorkspaceSettings(snapshot)
+    api.saveWorkspaceSettings(snapshot)
   } catch (error: unknown) {
     console.error('[workspace] failed to persist temporary project settings:', error)
   }

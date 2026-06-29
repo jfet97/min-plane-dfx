@@ -29,6 +29,7 @@ interface StoredDxfRow {
 
 interface StoredSettingsRow {
   readonly settings_json: string | null
+  readonly settings_revision: number | null
 }
 
 function firstRow(rows: ReadonlyArray<unknown>): StoredDxfRow | null {
@@ -45,8 +46,11 @@ function storedDxfRow(row: unknown): StoredDxfRow | null {
 function storedSettingsRow(row: unknown): StoredSettingsRow | null {
   if (typeof row !== 'object' || row === null) return null
   const settingsJson = (row as { readonly settings_json?: unknown }).settings_json
+  const settingsRevision = (row as { readonly settings_revision?: unknown }).settings_revision
+  const revision =
+    typeof settingsRevision === 'number' ? settingsRevision : settingsRevision === null ? null : 0
   return settingsJson === null || typeof settingsJson === 'string'
-    ? { settings_json: settingsJson }
+    ? { settings_json: settingsJson, settings_revision: revision }
     : null
 }
 
@@ -104,6 +108,7 @@ export class WorkspaceProjectService {
         yield* sql`ALTER TABLE projects ADD COLUMN saved_path TEXT`.pipe(Effect.ignore)
         yield* sql`ALTER TABLE projects ADD COLUMN promoted_at TEXT`.pipe(Effect.ignore)
         yield* sql`ALTER TABLE projects ADD COLUMN settings_json TEXT`.pipe(Effect.ignore)
+        yield* sql`ALTER TABLE projects ADD COLUMN settings_revision INTEGER`.pipe(Effect.ignore)
         yield* sql`ALTER TABLE imported_dxf ADD COLUMN piece_id TEXT`.pipe(Effect.ignore)
         const now = new Date().toISOString()
         yield* sql`
@@ -129,7 +134,7 @@ export class WorkspaceProjectService {
       Effect.gen(function* () {
         const sql = yield* SqlClient.SqlClient
         const rows = yield* sql`
-          SELECT settings_json FROM projects WHERE id = 'temporary'
+          SELECT settings_json, settings_revision FROM projects WHERE id = 'temporary'
         `
         const stored = storedSettingsRow(rows[0])
         if (!stored?.settings_json) return null
@@ -142,12 +147,15 @@ export class WorkspaceProjectService {
     return this.run(
       Effect.gen(function* () {
         const sql = yield* SqlClient.SqlClient
-        const json = JSON.stringify(settings)
+        const revision = settings.revision ?? Date.now()
+        const storedSettings = new WorkspaceProjectSettings({ ...settings, revision })
+        const json = JSON.stringify(storedSettings)
         const now = new Date().toISOString()
         yield* sql`
           UPDATE projects
-          SET settings_json = ${json}, updated_at = ${now}
+          SET settings_json = ${json}, settings_revision = ${revision}, updated_at = ${now}
           WHERE id = 'temporary'
+            AND (settings_revision IS NULL OR settings_revision <= ${revision})
         `
       })
     )

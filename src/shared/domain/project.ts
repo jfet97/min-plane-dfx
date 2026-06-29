@@ -35,6 +35,7 @@ export class ProjectDocument extends Schema.Class<ProjectDocument>('ProjectDocum
 export class WorkspaceProjectSettings extends Schema.Class<WorkspaceProjectSettings>(
   'WorkspaceProjectSettings'
 )({
+  revision: Schema.optional(Schema.Number),
   sheet: SheetSpec,
   padding: NonNegativeIntegerMillimeters,
   pieceQuantities: Schema.Record(Schema.String, Schema.Number),

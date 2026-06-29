@@ -20,7 +20,8 @@ Preset source shapes are stored in the same import table as document JSON with
 
 The `projects` row for `temporary` also stores `settings_json`, a
 schema-decoded `WorkspaceProjectSettings` payload containing sheet settings,
-padding, nesting options, and cut-list quantities.
+padding, nesting options, cut-list quantities, and an optional monotonic
+revision.
 
 The temporary workspace survives renderer hot reload and app close/reopen. On
 startup, staging files from interrupted imports are cleaned, imports are
@@ -48,9 +49,13 @@ one source-shape model.
 
 Unsaved project settings also live in the temporary workspace: sheet size/label,
 padding, nesting options, and cut-list quantities. Renderer reload should not
-reset those values to defaults. The renderer writes those settings immediately
-through a serialized save queue whenever the user edits them; delayed debounce
-timers are not acceptable for values that must survive `Ctrl+R`.
+reset those values to defaults. The renderer writes those settings directly from
+the same composable actions that mutate sheet fields, cutting settings, strategy
+settings, and quantities; delayed debounce timers or broad reactive watchers are
+not acceptable for values that must survive `Ctrl+R`. Autosave uses one-way IPC
+so main can finish the SQLite write even if the renderer reloads before a
+Promise reply would return. Since multiple IPC writes can overlap, main stores
+the revision next to the JSON payload and ignores stale writes.
 
 ## Open Behavior
 

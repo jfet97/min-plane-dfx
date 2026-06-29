@@ -26,6 +26,10 @@ interface MutableAppState {
   lastSkippedDuplicateCount: number
 }
 
+type WorkspaceSettingsPersistor = () => void
+
+let workspaceSettingsPersistor: WorkspaceSettingsPersistor | null = null
+
 const state: UnwrapNestedRefs<MutableAppState> = reactive<MutableAppState>({
   documents: [],
   pieces: [],
@@ -37,6 +41,10 @@ const state: UnwrapNestedRefs<MutableAppState> = reactive<MutableAppState>({
   importRevision: 0,
   lastSkippedDuplicateCount: 0
 })
+
+function notifyWorkspaceSettingsChanged(): void {
+  workspaceSettingsPersistor?.()
+}
 
 function normalizePath(path: string): string {
   return path.trim()
@@ -155,6 +163,12 @@ function recomputeAggregates(): void {
     .map((piece) => piece.id)
 }
 
+function syncSelectedPiecesFromQuantities(): void {
+  state.selectedPieceIds = state.pieces
+    .filter((piece) => getPieceQuantity(piece.id) > 0)
+    .map((piece) => piece.id)
+}
+
 async function loadPersistedImports(): Promise<void> {
   const api = window.appApi
   if (!api) return
@@ -211,6 +225,7 @@ async function clear(): Promise<void> {
   state.failures = []
   state.importRevision++
   state.lastSkippedDuplicateCount = 0
+  notifyWorkspaceSettingsChanged()
 }
 
 async function removePiece(pieceId: ImportedPiece['id']): Promise<void> {
@@ -230,6 +245,7 @@ async function removePiece(pieceId: ImportedPiece['id']): Promise<void> {
   delete state.pieceQuantities[pieceId]
   recomputeAggregates()
   state.importRevision++
+  notifyWorkspaceSettingsChanged()
 }
 
 function hydrateFromProject(project: ProjectDocument): void {
@@ -279,6 +295,7 @@ function setPieceSelected(pieceId: ImportedPiece['id'], selected: boolean): void
   }
   state.selectedPieceIds = [...current]
   state.pieceQuantities[pieceId] = selected ? Math.max(1, state.pieceQuantities[pieceId] ?? 1) : 0
+  notifyWorkspaceSettingsChanged()
 }
 
 function setAllPiecesSelected(selected: boolean): void {
@@ -288,6 +305,7 @@ function setAllPiecesSelected(selected: boolean): void {
       ? Math.max(1, state.pieceQuantities[piece.id] ?? 1)
       : 0
   }
+  notifyWorkspaceSettingsChanged()
 }
 
 function getPieceQuantity(pieceId: ImportedPiece['id']): number {
@@ -299,7 +317,8 @@ function setPieceQuantity(pieceId: ImportedPiece['id'], quantity: number): void 
   if (!exists) return
   const next = Number.isFinite(quantity) ? Math.max(0, Math.floor(quantity)) : 0
   state.pieceQuantities[pieceId] = next
-  setPieceSelected(pieceId, next > 0)
+  syncSelectedPiecesFromQuantities()
+  notifyWorkspaceSettingsChanged()
 }
 
 function requestCopies(piece: ImportedPiece): ReadonlyArray<ImportedPiece> {
@@ -314,6 +333,9 @@ function requestCopies(piece: ImportedPiece): ReadonlyArray<ImportedPiece> {
 export function useAppStore() {
   return {
     state: computed(() => state),
+    setWorkspaceSettingsPersistor: (persistor: WorkspaceSettingsPersistor | null): void => {
+      workspaceSettingsPersistor = persistor
+    },
     documentCount: computed(() => state.documents.length),
     pieceCount: computed(() => state.pieces.length),
     selectedSourcePieceCount: computed(

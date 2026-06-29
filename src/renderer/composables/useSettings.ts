@@ -28,6 +28,14 @@ interface MutableSettingsState {
   }
 }
 
+type WorkspaceSettingsPersistor = () => void
+
+let workspaceSettingsPersistor: WorkspaceSettingsPersistor | null = null
+
+function notifyWorkspaceSettingsChanged(): void {
+  workspaceSettingsPersistor?.()
+}
+
 export function makeDefaultSettings(): MutableSettingsState {
   return {
     sheet: { width: 1000, height: 1000, label: 'default 1x1 m' },
@@ -67,42 +75,52 @@ function replaceOptions(options: NestingOptions): void {
 export function useSettings() {
   return {
     state: computed(() => state),
+    setWorkspaceSettingsPersistor: (persistor: WorkspaceSettingsPersistor | null): void => {
+      workspaceSettingsPersistor = persistor
+    },
     setSheetWidth: (width: number): void => {
       state.sheet.width = Math.max(0, Math.round(width))
+      notifyWorkspaceSettingsChanged()
     },
     setSheetHeight: (height: number): void => {
       state.sheet.height = Math.max(0, Math.round(height))
+      notifyWorkspaceSettingsChanged()
     },
     setSheetLabel: (label: string): void => {
       state.sheet.label = label
+      notifyWorkspaceSettingsChanged()
     },
     setPadding: (padding: number): void => {
       state.padding = Math.max(0, Math.round(padding))
+      notifyWorkspaceSettingsChanged()
     },
     setAllowGlobalRotation: (allow: boolean): void => {
       state.options.allowGlobalRotation = allow
+      notifyWorkspaceSettingsChanged()
     },
     setTimeoutMs: (timeoutMs: number): void => {
       state.options.timeoutMs = Math.max(1000, timeoutMs)
+      notifyWorkspaceSettingsChanged()
     },
     setHistoryMode: (mode: 'stream' | 'final' | 'off'): void => {
       state.options.historyMode = mode
+      notifyWorkspaceSettingsChanged()
     },
     setStrategySelectionMode: (mode: 'single' | 'all_configured'): void => {
       state.options.strategySelectionMode = mode
+      notifyWorkspaceSettingsChanged()
     },
     setLayoutSelectionStrategyId: (id: string): void => {
       state.options.layoutSelectionStrategyId = id
+      notifyWorkspaceSettingsChanged()
     },
     setFinalSelectionMode: (mode: 'manual' | 'best' | 'top_n'): void => {
       state.options.finalSelectionMode = mode
+      notifyWorkspaceSettingsChanged()
     },
     setTopN: (n: number): void => {
-      if (state.options.topN === undefined) {
-        state.options.topN = Math.max(1, n)
-      } else {
-        state.options.topN = Math.max(1, n)
-      }
+      state.options.topN = Math.max(1, n)
+      notifyWorkspaceSettingsChanged()
     },
     toggleStrategyId: (id: string): void => {
       const idx = state.options.strategyIds.indexOf(id)
@@ -111,9 +129,11 @@ export function useSettings() {
       } else {
         state.options.strategyIds.push(id)
       }
+      notifyWorkspaceSettingsChanged()
     },
     setStrategyIds: (ids: ReadonlyArray<string>): void => {
       state.options.strategyIds = [...ids]
+      notifyWorkspaceSettingsChanged()
     },
     resetDefaults: (): void => {
       const defaults = makeDefaultSettings()
@@ -122,6 +142,7 @@ export function useSettings() {
       state.sheet.label = defaults.sheet.label
       state.padding = defaults.padding
       replaceOptions(defaults.options)
+      notifyWorkspaceSettingsChanged()
     },
     hydrateFromProject: (project: ProjectDocument): void => {
       state.sheet.width = project.sheet.width

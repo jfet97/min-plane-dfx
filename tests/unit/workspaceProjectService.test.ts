@@ -115,6 +115,7 @@ describe('WorkspaceProjectService', () => {
   it('persists temporary workspace settings across a fresh service instance', async () => {
     const dir = join(tmpdir(), `min-plane-workspace-${randomUUID()}`)
     const settings = {
+      revision: 1,
       sheet: { width: 2000, height: 1000, label: 'shop sheet' },
       padding: 10,
       pieceQuantities: { source_a: 3 },
@@ -146,6 +147,49 @@ describe('WorkspaceProjectService', () => {
       await reloadedService.initialize()
 
       await expect(reloadedService.loadWorkspaceSettings()).resolves.toEqual(settings)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('ignores stale temporary workspace settings writes', async () => {
+    const dir = join(tmpdir(), `min-plane-workspace-${randomUUID()}`)
+    const newerSettings = {
+      revision: 2,
+      sheet: { width: 4000, height: 1000, label: 'new' },
+      padding: 10,
+      pieceQuantities: {},
+      options: {
+        allowGlobalRotation: true,
+        timeoutMs: 30000,
+        workerMode: 'maxrects-beam-search' as const,
+        historyMode: 'final' as const,
+        historyScope: 'winning_path' as const,
+        strategySelectionMode: 'single' as const,
+        strategyIds: [DEFAULT_STRATEGY_ID],
+        layoutSelectionStrategyId: DEFAULT_LAYOUT_SELECTION_STRATEGY_ID,
+        finalSelectionMode: 'manual' as const,
+        topN: 3
+      }
+    }
+    const staleSettings = {
+      ...newerSettings,
+      revision: 1,
+      sheet: { width: 1000, height: 1000, label: 'stale' }
+    }
+
+    try {
+      const service = new WorkspaceProjectService(dir)
+      try {
+        await service.initialize()
+        await service.saveWorkspaceSettings(newerSettings)
+        await service.saveWorkspaceSettings(staleSettings)
+      } catch (error) {
+        if (skipIfNativeSqliteMismatch(error)) return
+        throw error
+      }
+
+      await expect(service.loadWorkspaceSettings()).resolves.toEqual(newerSettings)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }
