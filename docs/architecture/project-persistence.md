@@ -79,10 +79,13 @@ Opening a project resets transient worker state to idle. It must not invent, res
 History frames may live in a worker-written NDJSON file referenced by
 `ProjectHistoryRef`.
 
-Replay loading validates NDJSON frames in main, encodes them back to plain
-schema data before returning through IPC, and lets preload decode the renderer
-API result back into history frame domain values. Main must not return decoded
-`Schema.Class` instances from the `nesting:load-replay` invoke handler.
+Worker history files belong under Electron `userData/dfx-min-project/history`,
+not under `out/` or any build output directory. Build artifacts are disposable;
+saved run records must only point at durable workspace files.
+
+Replay loading validates NDJSON frames in main and returns the parsed plain JSON
+objects through IPC. Main must not return decoded `Schema.Class` instances from
+the `nesting:load-replay` invoke handler.
 
 If that file is missing or unreadable on open, keep the loaded result visible,
 drop the stale replay reference from the run record, and keep the issue out of

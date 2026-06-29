@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useHistoryStore } from '../composables/useHistoryStore.js'
 import type { ProjectRunRecord } from '@shared/domain/project.js'
+import type { ProjectHistoryRef } from '@shared/domain/nesting.js'
 
 const history = useHistoryStore()
 
@@ -43,19 +44,62 @@ function deleteAllRuns(): void {
   history.clearRunRecords()
 }
 
+function shouldClearReplayReference(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('[file_read_error]')
+}
+
+function cloneHistoryRefForApi(ref: ProjectHistoryRef): ProjectHistoryRef {
+  return {
+    kind: ref.kind,
+    jobId: ref.jobId,
+    path: ref.path,
+    frameCount: ref.frameCount,
+    createdAt: ref.createdAt
+  }
+}
+
 async function selectRunRecord(record: ProjectRunRecord): Promise<void> {
   history.selectRunRecord(record)
   const api = window.appApi
   if (api && record.history) {
     try {
-      const frames = await api.loadHistoryReplay(record.history)
+      console.info('[runs:loadReplay] loading', {
+        path: record.history.path,
+        frameCount: record.history.frameCount,
+        selectedStrategyRunId: record.result.selectedStrategyRunId,
+        resultRunIds: record.result.strategyResults.map((run) => run.strategyRunId)
+      })
+      const frames = await api.loadHistoryReplay(cloneHistoryRefForApi(record.history))
+      const lastFrame = frames[frames.length - 1]
+      console.info('[runs:loadReplay] loaded', {
+        count: frames.length,
+        frameRunIds: Array.from(new Set(frames.map((frame) => frame.strategyRunId))),
+        firstFrame: frames[0]
+          ? {
+              stepIndex: frames[0].stepIndex,
+              beamRank: frames[0].beamRank,
+              strategyRunId: frames[0].strategyRunId
+            }
+          : null,
+        lastFrame: lastFrame
+          ? {
+              stepIndex: lastFrame.stepIndex,
+              beamRank: lastFrame.beamRank,
+              strategyRunId: lastFrame.strategyRunId
+            }
+          : null
+      })
       for (const frame of frames) {
         history.pushFrame(frame)
       }
     } catch (error: unknown) {
       console.warn('[history] failed to load archived run replay:', error)
-      history.clearRunRecordHistory(record.jobId)
+      if (shouldClearReplayReference(error)) {
+        history.clearRunRecordHistory(record.jobId)
+      }
     }
+  } else {
+    console.info('[runs:loadReplay] skipped', { hasApi: !!api, hasHistory: !!record.history })
   }
   const runId =
     record.result.selectedStrategyRunId ?? record.result.strategyResults[0]?.strategyRunId

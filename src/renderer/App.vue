@@ -23,6 +23,7 @@ import type {
   NestingWarning,
   Placement,
   PreparedPiece,
+  ProjectHistoryRef,
   SheetSpec
 } from '@shared/domain/nesting.js'
 import {
@@ -30,7 +31,6 @@ import {
   type ProjectRunRecord as ProjectRunRecordModel,
   type WorkspaceProjectSettings
 } from '@shared/domain/project.js'
-import { ProjectHistoryRef } from '@shared/domain/nesting.js'
 import type { Unsubscribe } from '@shared/protocol/ipc.js'
 
 type CenterView = 'import' | 'result'
@@ -278,6 +278,10 @@ function cloneResult(result: NestingResult): NestingResult {
 
 function cloneHistoryRef(ref: ProjectHistoryRef | null): ProjectHistoryRef | null {
   if (!ref) return null
+  return cloneRequiredHistoryRef(ref)
+}
+
+function cloneRequiredHistoryRef(ref: ProjectHistoryRef): ProjectHistoryRef {
   return {
     kind: ref.kind,
     jobId: ref.jobId,
@@ -285,6 +289,10 @@ function cloneHistoryRef(ref: ProjectHistoryRef | null): ProjectHistoryRef | nul
     frameCount: ref.frameCount,
     createdAt: ref.createdAt
   }
+}
+
+function shouldClearReplayReference(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('[file_read_error]')
 }
 
 function cloneRunRecord(record: ProjectRunRecordModel): ProjectRunRecordModel {
@@ -364,15 +372,14 @@ async function runNesting(): Promise<void> {
       const api = window.appApi
       if (!api || !summary.ndjsonPath) return
       try {
-        const frames = await api.loadHistoryReplay(
-          new ProjectHistoryRef({
-            kind: 'ndjson_replay',
-            jobId,
-            path: summary.ndjsonPath,
-            frameCount: summary.frameCount,
-            createdAt: new Date().toISOString()
-          })
-        )
+        const ref = cloneRequiredHistoryRef({
+          kind: 'ndjson_replay',
+          jobId,
+          path: summary.ndjsonPath,
+          frameCount: summary.frameCount,
+          createdAt: new Date().toISOString()
+        })
+        const frames = await api.loadHistoryReplay(ref)
         for (const frame of frames) {
           history.pushFrame(frame)
         }
@@ -410,7 +417,7 @@ async function exportHistory(): Promise<void> {
     console.warn('No history ref available for export')
     return
   }
-  await api.exportNestingHistory(ref)
+  await api.exportNestingHistory(cloneRequiredHistoryRef(ref))
 }
 
 async function exportResult(): Promise<void> {
@@ -450,7 +457,7 @@ async function saveProject(): Promise<void> {
       ? { lastResult: history.result.value }
       : {}),
     ...(history.state.value.lastHistoryRef
-      ? { lastHistory: history.state.value.lastHistoryRef }
+      ? { lastHistory: cloneRequiredHistoryRef(history.state.value.lastHistoryRef) }
       : {})
   })
 }
@@ -475,14 +482,16 @@ async function loadCurrentHistoryReplay(): Promise<void> {
   const ref = history.state.value.lastHistoryRef
   if (!api || !ref) return
   try {
-    const frames = await api.loadHistoryReplay(ref)
+    const frames = await api.loadHistoryReplay(cloneRequiredHistoryRef(ref))
     for (const frame of frames) {
       history.pushFrame(frame)
     }
   } catch (error: unknown) {
     console.warn('[history] failed to load current replay:', error)
-    history.clearRunRecordHistory(ref.jobId)
-    await saveWorkspaceSettingsNow()
+    if (shouldClearReplayReference(error)) {
+      history.clearRunRecordHistory(ref.jobId)
+      await saveWorkspaceSettingsNow()
+    }
   }
 }
 </script>

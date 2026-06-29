@@ -16,7 +16,7 @@ import type {
   ProjectHistoryRef,
   PreparedPiece
 } from '@shared/domain/nesting.js'
-import type { JobId } from '@shared/domain/ids.js'
+import type { FreeRectId, JobId } from '@shared/domain/ids.js'
 
 const piece: PreparedPiece = {
   id: 'p-1' as PreparedPiece['id'],
@@ -130,7 +130,27 @@ describe('ExportService', () => {
 
   it('loads replay frames as schema-encoded IPC-cloneable objects', async () => {
     const file = join(dir, 'history.ndjson')
-    await writeFile(file, `${JSON.stringify(sampleFrame)}\n`, 'utf8')
+    const frameWithNestedTrace: NestingHistoryFrame = {
+      ...sampleFrame,
+      plate: {
+        placements: [
+          { pieceId: 'p-1' as PreparedPiece['id'], x: 0, y: 0, width: 10, height: 5, rotation: 0 }
+        ],
+        freeRectangles: [{ id: 'free-1' as FreeRectId, x: 10, y: 0, width: 90, height: 100 }]
+      },
+      beam: {
+        strategyRunId: 'run-1',
+        strategyLabel: 'Balanced / preserve free space first',
+        stepIndex: 1,
+        insertedPieceId: 'p-1' as PreparedPiece['id'],
+        beamRank: 0,
+        beamWidth: 16,
+        candidateCount: 4,
+        selectedCandidateId: 'candidate-1',
+        selectedCandidateOrderId: 'order-1'
+      }
+    }
+    await writeFile(file, `${JSON.stringify(frameWithNestedTrace)}\n`, 'utf8')
     const ref: ProjectHistoryRef = {
       kind: 'ndjson_replay',
       jobId: 'job-1' as JobId,
@@ -145,8 +165,11 @@ describe('ExportService', () => {
     if (!frame) throw new Error('expected replay frame')
 
     expect(frame.frameId).toBe('f-1')
+    expect(frame.beam?.selectedCandidateOrderId).toBe('order-1')
     expect(Object.getPrototypeOf(frame)).toBe(Object.prototype)
     expect(Object.getPrototypeOf(frame.plate)).toBe(Object.prototype)
+    expect(Object.getPrototypeOf(frame.plate.placements[0])).toBe(Object.prototype)
+    expect(Object.getPrototypeOf(frame.beam)).toBe(Object.prototype)
     expect(() => structuredClone(frames)).not.toThrow()
   })
 })

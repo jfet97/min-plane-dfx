@@ -41,6 +41,16 @@ function isIpcEnvelope<T>(value: unknown): value is IpcResult<T> {
   return false
 }
 
+function cloneHistoryRefForIpc(ref: ProjectHistoryRef): ProjectHistoryRef {
+  return {
+    kind: ref.kind,
+    jobId: ref.jobId,
+    path: ref.path,
+    frameCount: ref.frameCount,
+    createdAt: ref.createdAt
+  }
+}
+
 const api: AppApi = {
   ping: () => invokeEnvelope<[], { readonly at: string }>('app:ping'),
 
@@ -115,10 +125,23 @@ const api: AppApi = {
   },
 
   loadHistoryReplay: (ref) =>
-    invokeEnvelope<[ProjectHistoryRef], { readonly frames: ReadonlyArray<NestingHistoryFrame> }>(
-      'nesting:load-replay',
-      ref
-    ).then((r) => r.frames),
+    Promise.resolve(cloneHistoryRefForIpc(ref)).then((clonedRef) => {
+      console.info('[preload:loadReplay] invoke', {
+        path: clonedRef.path,
+        frameCount: clonedRef.frameCount,
+        refPrototype: Object.getPrototypeOf(clonedRef).constructor.name
+      })
+      return invokeEnvelope<
+        [ProjectHistoryRef],
+        { readonly frames: ReadonlyArray<NestingHistoryFrame> }
+      >('nesting:load-replay', clonedRef).then((r) => {
+        console.info('[preload:loadReplay] resolved', {
+          count: r.frames.length,
+          firstPrototype: r.frames[0] ? Object.getPrototypeOf(r.frames[0]).constructor.name : null
+        })
+        return r.frames
+      })
+    }),
 
   loadWorkspaceSettings: () =>
     invokeEnvelope<[], { readonly settings: WorkspaceProjectSettings | null }>(
@@ -149,7 +172,7 @@ const api: AppApi = {
   exportNestingHistory: (ref) =>
     invokeEnvelope<[ProjectHistoryRef], { readonly path: string }>(
       'nesting:export-history',
-      ref
+      cloneHistoryRefForIpc(ref)
     ).then(() => undefined)
 }
 

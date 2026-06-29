@@ -99,6 +99,7 @@ function createSupervisor(): WorkerSupervisor {
   // that case rather than silently swallowing it.
   return new WorkerSupervisor({
     workerPath: getWorkerPath(),
+    historyDirectory: join(app.getPath('userData'), 'dfx-min-project', 'history'),
     defaultTimeoutMs: 60_000
   })
 }
@@ -455,6 +456,23 @@ export function registerIpcHandlers(): void {
     ): Promise<IpcResult<{ readonly frames: ReadonlyArray<EncodedNestingHistoryFrame> }>> => {
       try {
         const frames = await loadHistoryReplayFromFile(ref)
+        try {
+          structuredClone({ ok: true, value: { frames } })
+          console.info('[main:loadReplay] cloneable return', {
+            path: ref.path,
+            count: frames.length,
+            firstPrototype: frames[0] ? Object.getPrototypeOf(frames[0]).constructor.name : null,
+            firstPlatePrototype: frames[0]
+              ? Object.getPrototypeOf(frames[0].plate).constructor.name
+              : null
+          })
+        } catch (cloneError: unknown) {
+          console.error('[main:loadReplay] non-cloneable return', {
+            path: ref.path,
+            count: frames.length,
+            error: cloneError instanceof Error ? cloneError.message : String(cloneError)
+          })
+        }
         return { ok: true, value: { frames } }
       } catch (err) {
         return {

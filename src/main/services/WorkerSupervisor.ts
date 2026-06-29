@@ -18,6 +18,7 @@ export type HistoryEventListener = (event: NestingHistoryEvent) => void
 
 export interface WorkerSupervisorOptions {
   readonly workerPath: string
+  readonly historyDirectory: string
   readonly defaultTimeoutMs: number
 }
 
@@ -181,9 +182,14 @@ export class WorkerSupervisor {
     console.info('[main:worker] spawning thread', {
       jobId,
       requestId,
-      workerPath: this.options.workerPath
+      workerPath: this.options.workerPath,
+      historyDirectory: this.options.historyDirectory
     })
     const worker = new NodeThreadWorker(this.options.workerPath, {
+      env: {
+        ...process.env,
+        MIN_PLANE_HISTORY_DIR: this.options.historyDirectory
+      },
       stdout: true,
       stderr: true
     })

@@ -29,7 +29,7 @@ console.info('[worker:nesting] bootstrap')
  * the supervisor.
  *
  * History persistence: the worker writes each emitted frame to a per-job NDJSON
- * file under `<projectRoot>/out/history/<jobId>.ndjson`. The path is returned
+ * file under the main-provided durable history directory. The path is returned
  * inside the `history_complete` event so the renderer can hand it to the user
  * via Export History.
  */
@@ -51,10 +51,9 @@ function sendProgress(
 }
 
 /**
- * Where history files live. The supervisor overrides this through the
- * WorkerRequest payload options when it owns the file layout. For the
- * first version we resolve it next to the worker bundle so production
- * builds land somewhere predictable.
+ * Where history files live. Main owns the durable file layout and passes this
+ * via the worker environment. The bundle-adjacent fallback is only for direct
+ * worker execution outside Electron.
  */
 const HISTORY_DIR_ENV = (globalThis as { process?: { env?: Record<string, string | undefined> } })
   .process?.env?.['MIN_PLANE_HISTORY_DIR']

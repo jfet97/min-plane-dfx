@@ -93,9 +93,7 @@ export async function loadHistoryReplayFromFile(
         const parsed: unknown = JSON.parse(line)
         const decoded = Schema.decodeUnknownExit(NestingHistoryFrameSchema)(parsed)
         if (Exit.isFailure(decoded)) return []
-        const encoded = Schema.encodeExit(NestingHistoryFrameSchema)(decoded.value)
-        if (Exit.isFailure(encoded)) return []
-        return [encoded.value]
+        return [parsed as EncodedNestingHistoryFrame]
       } catch {
         return []
       }

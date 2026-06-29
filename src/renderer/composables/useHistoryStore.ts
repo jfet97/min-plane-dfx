@@ -134,6 +134,25 @@ function preserveOrResetBeamRank(): void {
   }
 }
 
+function recoverRunRecordHistory(record: ProjectRunRecord): ProjectHistoryRef | null {
+  if (record.history) return record.history
+  const summary = record.result.historySummary
+  if (!summary?.ndjsonPath) return null
+  return new ProjectHistoryRefModel({
+    kind: 'ndjson_replay',
+    jobId: record.jobId,
+    path: summary.ndjsonPath,
+    frameCount: summary.frameCount,
+    createdAt: record.createdAt
+  })
+}
+
+function recoverRunRecord(record: ProjectRunRecord): ProjectRunRecord {
+  const recovered = recoverRunRecordHistory(record)
+  if (recovered === record.history) return record
+  return { ...record, history: recovered }
+}
+
 export function useHistoryStore() {
   const result = computed(() => state.result)
   const strategyResults = computed<ReadonlyArray<NestingStrategyResult>>(
@@ -200,9 +219,10 @@ export function useHistoryStore() {
     },
 
     addRunRecord(record: ProjectRunRecord): void {
+      const normalizedRecord = recoverRunRecord(record)
       state.runRecords = [
-        record,
-        ...state.runRecords.filter((existing) => existing.jobId !== record.jobId)
+        normalizedRecord,
+        ...state.runRecords.filter((existing) => existing.jobId !== normalizedRecord.jobId)
       ]
       notifyWorkspaceSettingsChanged()
     },
@@ -237,23 +257,46 @@ export function useHistoryStore() {
 
     selectRunRecord(record: ProjectRunRecord): void {
       stopPlayback()
-      state.result = record.result
+      const normalizedRecord = recoverRunRecord(record)
+      console.info('[history:selectRunRecord]', {
+        jobId: normalizedRecord.jobId,
+        hasHistory: normalizedRecord.history !== null,
+        historyPath: normalizedRecord.history?.path,
+        historyFrameCount: normalizedRecord.history?.frameCount,
+        selectedStrategyRunId:
+          normalizedRecord.result.selectedStrategyRunId ??
+          normalizedRecord.result.strategyResults[0]?.strategyRunId ??
+          null,
+        resultRunIds: normalizedRecord.result.strategyResults.map((run) => run.strategyRunId)
+      })
+      state.runRecords = state.runRecords.map((existing) =>
+        existing.jobId === normalizedRecord.jobId ? normalizedRecord : existing
+      )
+      state.result = normalizedRecord.result
       state.framesByRun = {}
       state.selectedStrategyRunId =
-        record.result.selectedStrategyRunId ??
-        record.result.strategyResults[0]?.strategyRunId ??
+        normalizedRecord.result.selectedStrategyRunId ??
+        normalizedRecord.result.strategyResults[0]?.strategyRunId ??
         null
       state.selectedStepIndex = -1
       state.selectedBeamRank = 0
       state.isPlaying = false
       state.truncated = false
-      state.lastHistoryRef = record.history
+      state.lastHistoryRef = normalizedRecord.history
     },
 
     pushFrame(frame: NestingHistoryFrame): void {
       const runId = frame.strategyRunId
       const existing = state.framesByRun[runId] ?? []
       const next = [...existing, frame]
+      console.info('[history:pushFrame]', {
+        runId,
+        stepIndex: frame.stepIndex,
+        beamRank: frame.beamRank,
+        totalForRun: next.length,
+        selectedRunId: state.selectedStrategyRunId,
+        selectedStepIndex: state.selectedStepIndex
+      })
       if (next.length > MAX_RETAINED_FRAMES) {
         next.splice(0, next.length - MAX_RETAINED_FRAMES)
         state.truncated = true
@@ -355,7 +398,7 @@ export function useHistoryStore() {
 
     hydrateFromProject(project: ProjectDocument): void {
       stopPlayback()
-      state.runRecords = [...(project.runRecords ?? [])]
+      state.runRecords = (project.runRecords ?? []).map(recoverRunRecord)
       state.result = project.lastResult ?? state.runRecords[0]?.result ?? null
       state.framesByRun = {}
       state.selectedStrategyRunId =
@@ -371,7 +414,7 @@ export function useHistoryStore() {
 
     hydrateWorkspaceSettings(settings: WorkspaceProjectSettings): void {
       stopPlayback()
-      state.runRecords = [...(settings.runRecords ?? [])]
+      state.runRecords = (settings.runRecords ?? []).map(recoverRunRecord)
       state.result = state.runRecords[0]?.result ?? null
       state.framesByRun = {}
       state.selectedStrategyRunId =
