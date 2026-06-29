@@ -9,7 +9,11 @@ function doesPlacementFit(freeRectangle: FreeRectangle, placement: Placement): b
   )
 }
 
-function doesPieceFit(freeRectangle: FreeRectangle, piece: PreparedPiece, rotated: boolean): boolean {
+function doesPieceFit(
+  freeRectangle: FreeRectangle,
+  piece: PreparedPiece,
+  rotated: boolean
+): boolean {
   const width = rotated ? piece.paddedBounds.height : piece.paddedBounds.width
   const height = rotated ? piece.paddedBounds.width : piece.paddedBounds.height
   return width <= freeRectangle.width && height <= freeRectangle.height

@@ -54,9 +54,7 @@ export function beamMembers(state: NestingAlgorithmState): ReadonlyArray<Nesting
  * An empty beam is invalid: failed placements must still produce unplaced-piece
  * successors instead of dropping every branch.
  */
-export function beamFromMembers(
-  members: ReadonlyArray<NestingBeamState>
-): NestingAlgorithmState {
+export function beamFromMembers(members: ReadonlyArray<NestingBeamState>): NestingAlgorithmState {
   const top = members[0]
   if (top === undefined) {
     throw new Error('Cannot build a beam from zero states')
