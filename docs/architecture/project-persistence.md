@@ -48,7 +48,9 @@ one source-shape model.
 
 Unsaved project settings also live in the temporary workspace: sheet size/label,
 padding, nesting options, and cut-list quantities. Renderer reload should not
-reset those values to defaults.
+reset those values to defaults. The renderer writes those settings immediately
+through a serialized save queue whenever the user edits them; delayed debounce
+timers are not acceptable for values that must survive `Ctrl+R`.
 
 ## Open Behavior
 

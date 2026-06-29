@@ -24,7 +24,8 @@ const lastPing = ref<string | null>(null)
 const centerView = ref<CenterView>('import')
 let unsubscribe: Unsubscribe | null = null
 let workspaceSettingsReady = false
-let workspaceSettingsSaveTimer: ReturnType<typeof setTimeout> | null = null
+let workspaceSettingsSaveInFlight = false
+let workspaceSettingsSaveRequested = false
 const store = useAppStore()
 const settings = useSettings()
 const history = useHistoryStore()
@@ -67,10 +68,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (workspaceSettingsSaveTimer) {
-    clearTimeout(workspaceSettingsSaveTimer)
-    workspaceSettingsSaveTimer = null
-  }
   if (unsubscribe) {
     unsubscribe()
     unsubscribe = null
@@ -106,20 +103,26 @@ function buildWorkspaceSettings(): WorkspaceProjectSettings {
 
 function scheduleWorkspaceSettingsSave(): void {
   if (!workspaceSettingsReady) return
-  if (workspaceSettingsSaveTimer) {
-    clearTimeout(workspaceSettingsSaveTimer)
+  workspaceSettingsSaveRequested = true
+  if (!workspaceSettingsSaveInFlight) {
+    void drainWorkspaceSettingsSaves()
   }
-  workspaceSettingsSaveTimer = setTimeout(() => {
-    workspaceSettingsSaveTimer = null
-    void saveWorkspaceSettings()
-  }, 150)
 }
 
-async function saveWorkspaceSettings(): Promise<void> {
+async function drainWorkspaceSettingsSaves(): Promise<void> {
+  workspaceSettingsSaveInFlight = true
+  while (workspaceSettingsSaveRequested) {
+    workspaceSettingsSaveRequested = false
+    await saveWorkspaceSettingsSnapshot(buildWorkspaceSettings())
+  }
+  workspaceSettingsSaveInFlight = false
+}
+
+async function saveWorkspaceSettingsSnapshot(snapshot: WorkspaceProjectSettings): Promise<void> {
   const api = window.appApi
   if (!api || !workspaceSettingsReady) return
   try {
-    await api.saveWorkspaceSettings(buildWorkspaceSettings())
+    await api.saveWorkspaceSettings(snapshot)
   } catch (error: unknown) {
     console.error('[workspace] failed to persist temporary project settings:', error)
   }
