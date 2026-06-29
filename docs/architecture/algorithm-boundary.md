@@ -21,7 +21,8 @@ Do not implement:
 `runMaxRectsBeamSearch` is the algorithm-core boundary. It accepts the fixed
 piece list, sheet, adaptive beam width, a non-empty list of candidate ordering
 functions, a state ordering function, and synchronous event hooks. It
-returns only algorithm outcome data. It does not know about worker requests,
+owns beam expansion, candidate application, and unplaced-piece transitions, then
+returns algorithm outcome data. It does not know about worker requests,
 configured strategy ids, protocol result envelopes, Effect, or history
 persistence.
 

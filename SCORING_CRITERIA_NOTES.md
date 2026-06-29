@@ -405,6 +405,15 @@ The eight placement strategies are therefore candidate ordering rules for the
 current state and next piece. The beam/state comparison metric decides which
 successor states survive after all current states have been expanded.
 
+The outer loop continues while at least one retained state still has
+`remainingPieces`. A completed state has no remaining pieces and is carried
+forward as a survivor candidate while the rest of the beam keeps expanding.
+
+If a state has a next piece but no legal candidate placement in any selected
+strategy, the algorithm still creates one successor: the piece is removed from
+`remainingPieces` and appended to `unplacedPieces`. Therefore an empty next beam
+is an internal invariant failure, not the normal loop termination signal.
+
 ## Final Layout Ranking
 
 This is separate from candidate scoring during placement.

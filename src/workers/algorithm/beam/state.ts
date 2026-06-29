@@ -40,3 +40,55 @@ export interface NestingAlgorithmState {
   readonly top: NestingBeamState
   readonly alternatives: ReadonlyArray<NestingBeamState>
 }
+
+/**
+ * Flattens the ranked beam container into rank order.
+ * The top state is always first, followed by retained alternatives.
+ */
+export function beamMembers(state: NestingAlgorithmState): ReadonlyArray<NestingBeamState> {
+  return [state.top, ...state.alternatives]
+}
+
+/**
+ * Rebuilds the ranked beam container from already-ranked members.
+ * An empty beam is invalid: failed placements must still produce unplaced-piece
+ * successors instead of dropping every branch.
+ */
+export function beamFromMembers(
+  members: ReadonlyArray<NestingBeamState>
+): NestingAlgorithmState {
+  const top = members[0]
+  if (top === undefined) {
+    throw new Error('Cannot build a beam from zero states')
+  }
+
+  return {
+    top,
+    alternatives: members.slice(1)
+  }
+}
+
+/**
+ * A beam is complete only when every retained branch has consumed its queue.
+ * Pieces may be either placed or recorded in that branch's unplaced bucket.
+ */
+export function isBeamComplete(state: NestingAlgorithmState): boolean {
+  return beamMembers(state).every((member) => member.remainingPieces.length === 0)
+}
+
+/**
+ * Advances one branch when its next piece cannot be placed.
+ * This keeps the beam non-empty and lets later pieces still be attempted.
+ */
+export function markNextPieceUnplaced(state: NestingBeamState): NestingBeamState {
+  const piece = state.remainingPieces[0]
+  if (piece === undefined) return state
+
+  return new NestingBeamState({
+    placements: state.placements,
+    freeRectangles: state.freeRectangles,
+    // failed placement consumes only the current piece
+    remainingPieces: state.remainingPieces.slice(1),
+    unplacedPieces: [...state.unplacedPieces, piece]
+  })
+}

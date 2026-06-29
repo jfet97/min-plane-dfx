@@ -3,7 +3,14 @@ import type { FreeRectangle, Placement, PreparedPiece, SheetSpec } from '@shared
 import type { PieceId } from '@shared/domain/ids.js'
 import { applyCandidate, NestingAlgorithmCandidate } from './beam/candidates.js'
 import { initialState } from './beam/seed.js'
-import type { NestingAlgorithmState, NestingBeamState } from './beam/state.js'
+import {
+  beamFromMembers,
+  beamMembers,
+  isBeamComplete,
+  markNextPieceUnplaced,
+  type NestingAlgorithmState,
+  type NestingBeamState
+} from './beam/state.js'
 import { makeBottomLeftPlacement } from './maxRects/placements.js'
 import { FreeRectangles } from './maxRects/freeRectangles.js'
 export { K } from './beam/state.js'
@@ -161,57 +168,78 @@ export function runMaxRectsBeamSearch(input: {
     readonly onEvent?: (event: NestingAlgorithmEvent.Event) => void
   }
 }) {
-  const state = initialState(input)
+  let state = initialState(input)
 
   input.hooks?.onEvent?.({
     type: 'initial_state',
     state: state
   })
 
-  for (const s of [state.top, ...state.alternatives]) {
-    const piece = s.remainingPieces[0]
+  while (!isBeamComplete(state)) {
+    // collect every branch produced by expanding the current retained beam
+    const successorStates: NestingBeamState[] = []
 
-    if (piece === undefined) {
-      // this branch has no more pieces to place
-      continue
-    }
+    for (const s of beamMembers(state)) {
+      const piece = s.remainingPieces[0]
 
-    for (const candidateOrder of input.candidateOrder) {
-      const candidates: NestingAlgorithmCandidate[] = []
-      const order = candidateOrder({ sheet: input.sheet })
+      if (piece === undefined) {
+        // this branch is terminal: carry it unchanged
+        successorStates.push(s)
+        continue
+      }
 
-      for (const rotated of piece.allowRotation ? [false, true] : [false]) {
-        for (const freeRectangle of s.freeRectangles) {
-          const placement = makeBottomLeftPlacement(freeRectangle, piece, rotated)
+      // tracks whether this branch placed its next piece through any strategy
+      let producedSuccessor = false
 
-          if (!FreeRectangles.doesPlacementFit(freeRectangle, placement)) {
-            continue
+      for (const candidateOrder of input.candidateOrder) {
+        const candidates: NestingAlgorithmCandidate[] = []
+        const order = candidateOrder({ sheet: input.sheet })
+
+        // normal and rotated placements compete in one candidate pool
+        for (const rotated of piece.allowRotation ? [false, true] : [false]) {
+          for (const freeRectangle of s.freeRectangles) {
+            const placement = makeBottomLeftPlacement(freeRectangle, piece, rotated)
+
+            if (!FreeRectangles.doesPlacementFit(freeRectangle, placement)) {
+              continue
+            }
+
+            candidates.push(
+              new NestingAlgorithmCandidate({
+                state: s,
+                piece,
+                freeRectangle,
+                rotated,
+                placement
+              })
+            )
           }
+        }
 
-          candidates.push(
-            new NestingAlgorithmCandidate({
-              state: s,
-              piece,
-              freeRectangle,
-              rotated,
-              placement
-            })
-          )
+        // fanout limits committed successors, not the free rectangles scanned
+        const selectedCandidates = candidates.toSorted(order).slice(0, freeRectFanout)
+        if (selectedCandidates.length > 0) {
+          producedSuccessor = true
+          successorStates.push(...selectedCandidates.map((candidate) => applyCandidate(candidate)))
         }
       }
 
-      const selectedCandidates = candidates.toSorted(order).slice(0, freeRectFanout)
-      const successorStates = selectedCandidates.map(applyCandidate)
-      if (successorStates.length === 0) {
-        continue
+      if (!producedSuccessor) {
+        // no legal placement is still progress: reject this piece and keep the branch alive
+        successorStates.push(markNextPieceUnplaced(s))
       }
     }
+
+    // all generated branches compete globally; only the best beamWidth survive
+    const nextBeamMembers = successorStates.toSorted(input.stateOrder()).slice(0, input.beamWidth)
+
+    state = beamFromMembers(nextBeamMembers)
   }
 
   const outcome = {
     sortedPieceIds: input.pieces.map((piece) => piece.id),
-    placements: [],
-    unplacedPieceIds: input.pieces.map((piece) => piece.id)
+    placements: state.top.placements,
+    unplacedPieceIds: state.top.unplacedPieces.map((piece) => piece.id)
   }
 
   input.hooks?.onEvent?.({

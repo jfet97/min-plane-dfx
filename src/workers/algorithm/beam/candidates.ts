@@ -36,7 +36,7 @@ export class NestingAlgorithmCandidate {
  * Candidate generation only describes possible moves; this is the transition
  * point that mutates placements, free rectangles, and the remaining queue.
  */
-export function applyCandidate(candidate: NestingAlgorithmCandidate) {
+export function applyCandidate(candidate: NestingAlgorithmCandidate): NestingBeamState {
   const splitRectangles = FreeRectangles.split(candidate.freeRectangle, candidate.placement)
 
   // split output is re-added through the maximal-rectangle dedupe rule

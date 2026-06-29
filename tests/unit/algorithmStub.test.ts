@@ -233,8 +233,8 @@ describe('runMaxRectsBeamSearch', () => {
     expect(initialStates[0]?.top.freeRectangles).toHaveLength(2)
     expect(initialStates[0]?.top.remainingPieces.map((p) => p.id)).toEqual(['b'])
     expect(initialStates[0]?.top.unplacedPieces).toEqual([])
-    expect(result.placements).toEqual([])
-    expect(result.unplacedPieceIds).toEqual(['a', 'b'])
+    expect(result.placements.map((placement) => placement.pieceId)).toEqual(['a', 'b'])
+    expect(result.unplacedPieceIds).toEqual([])
   })
 })
 
