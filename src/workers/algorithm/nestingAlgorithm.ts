@@ -10,20 +10,18 @@ export { K } from './beam/state.js'
 export type { NestingAlgorithmState, NestingBeamState } from './beam/state.js'
 export { initialState } from './beam/seed.js'
 
-// free rectangles considered per state/piece/orientation at most
+// candidate placements retained per state/piece/strategy at most
 export const freeRectFanout = 2
 
 /**
- * Strategy hook that returns the free-rectangle order for one decision point.
+ * Strategy hook that returns the candidate placement order for one decision point.
  * The wrapper owns how configured strategy ids become this function.
  */
-export type FreeRectangleOrder = (context: {
-  state: NestingBeamState
-  piece: PreparedPiece
-  rotated: boolean
-}) => Order.Order<FreeRectangle>
+export type CandidateOrder = (context: {
+  sheet: SheetSpec
+}) => Order.Order<NestingAlgorithmCandidate>
 
-export type FreeRectangleOrders = readonly [FreeRectangleOrder, ...FreeRectangleOrder[]]
+export type CandidateOrders = readonly [CandidateOrder, ...CandidateOrder[]]
 
 /**
  * Beam survivor order for partial layout states.
@@ -173,16 +171,16 @@ export namespace NestingAlgorithmEvent {
 /**
  * Algorithm-core boundary for the future placement implementation.
  *
- * The real algorithm will use each `freeRectangleOrder` entry to rank legal
- * free rectangles for the current state/piece/orientation, and `stateOrder` to
- * keep the beam survivors. This stub only exposes that shape; it does not
- * place, split, rank, or score anything.
+ * The real algorithm will use each `candidateOrder` entry to rank legal
+ * placement candidates for the current state/piece, and `stateOrder` to keep
+ * the beam survivors. This stub only exposes that shape; it does not commit
+ * placements, split next states, or score real results.
  */
 export function runMaxRectsBeamSearch(input: {
   readonly sheet: SheetSpec
   readonly pieces: ReadonlyArray<PreparedPiece>
   readonly beamWidth: number
-  readonly freeRectangleOrder: FreeRectangleOrders
+  readonly candidateOrder: CandidateOrders
   readonly stateOrder: NestingStateOrder
   // synchronous hooks
   readonly hooks?: {
@@ -196,10 +194,7 @@ export function runMaxRectsBeamSearch(input: {
     state: state
   })
 
-  for (const [beamRank, s] of [state.top, ...state.alternatives].entries()) {
-    console.log(
-      `beamRank: ${beamRank}, placements: ${s.placements.length}, freeRectangles: ${s.freeRectangles.length}, remainingPieces: ${s.remainingPieces.length}, unplacedPieces: ${s.unplacedPieces.length}`
-    )
+  for (const s of [state.top, ...state.alternatives]) {
     const piece = s.remainingPieces[0]
 
     if (piece === undefined) {
@@ -207,15 +202,12 @@ export function runMaxRectsBeamSearch(input: {
       continue
     }
 
-    for (const rectangleOrder of input.freeRectangleOrder) {
+    for (const candidateOrder of input.candidateOrder) {
       const candidates: NestingAlgorithmCandidate[] = []
+      const order = candidateOrder({ sheet: input.sheet })
 
-      for (const rotated of [false, true]) {
-        const order = rectangleOrder({ state: s, piece, rotated })
-
-        const freeRectangles = s.freeRectangles.toSorted(order).slice(0, freeRectFanout)
-
-        for (const freeRectangle of freeRectangles) {
+      for (const rotated of piece.allowRotation ? [false, true] : [false]) {
+        for (const freeRectangle of s.freeRectangles) {
           const placement = makeBottomLeftPlacement(freeRectangle, piece, rotated)
 
           if (!placementFitsFreeRectangle(freeRectangle, placement)) {
@@ -232,6 +224,11 @@ export function runMaxRectsBeamSearch(input: {
             })
           )
         }
+      }
+
+      const selectedCandidates = candidates.toSorted(order).slice(0, freeRectFanout)
+      if (selectedCandidates.length === 0) {
+        continue
       }
     }
   }

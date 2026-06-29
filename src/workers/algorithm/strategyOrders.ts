@@ -1,14 +1,18 @@
 import { Order } from 'effect'
-import type { FreeRectangle, NestingStrategyDefinition } from '@shared/domain/nesting.js'
+import type { NestingStrategyDefinition } from '@shared/domain/nesting.js'
 import type { NestingBeamState } from './beam/state.js'
-import type { FreeRectangleOrders, NestingStateOrder } from './nestingAlgorithm.js'
+import type {
+  CandidateOrders,
+  NestingAlgorithmCandidate,
+  NestingStateOrder
+} from './nestingAlgorithm.js'
 
 export interface StrategyOrders {
-  readonly freeRectangleOrder: FreeRectangleOrders
+  readonly candidateOrder: CandidateOrders
   readonly stateOrder: NestingStateOrder
 }
 
-const neutralFreeRectangleOrder: Order.Order<FreeRectangle> = Order.make(() => 0)
+const neutralCandidateOrder: Order.Order<NestingAlgorithmCandidate> = Order.make(() => 0)
 const neutralStateOrder: Order.Order<NestingBeamState> = Order.make(() => 0)
 
 /**
@@ -22,7 +26,7 @@ export function makeStrategyOrders(
   _strategy: NestingStrategyDefinition | undefined
 ): StrategyOrders {
   return {
-    freeRectangleOrder: [() => neutralFreeRectangleOrder],
+    candidateOrder: [() => neutralCandidateOrder],
     stateOrder: () => neutralStateOrder
   }
 }

@@ -364,22 +364,22 @@ Meaning:
 - `beamWidth` is the maximum number of partial layout states kept alive after
   each placed piece;
 - `selectedStrategyCount` is the number of selected placement-order strategies;
-- `freeRectFanout` is the number of top free rectangles considered for each
-  current state, next piece, and orientation;
+- `freeRectFanout` is the number of top candidate placements retained for each
+  current state, next piece, and placement-order strategy;
 - rotation is not the beam width; it only doubles the candidate list when the
   piece can legally rotate.
 
 For each current partial state and next piece `X`:
 
 ```text
-for orientation in allowed orientations for X:
-  score/order legal free rectangles using the chosen strategy
-  keep the first freeRectFanout free rectangles
-  create one successor state for each kept free rectangle
+generate legal candidate placements from all fitting free rectangles and allowed orientations
+score/order candidates using the chosen strategy
+keep the first freeRectFanout candidates
+create one successor state for each kept candidate
 ```
 
-With `freeRectFanout = 2` and two legal orientations, each state produces at
-most four successors per placement order:
+With `freeRectFanout = 2`, each state produces at most two successors per
+placement order. Candidate generation may inspect both orientations:
 
 ```text
 (X,    fr1(X))
@@ -388,22 +388,22 @@ most four successors per placement order:
 (X_90, fr2(X_90))
 ```
 
-The ordered free-rectangle list may differ between `X` and `X_90`, because the
-candidate score depends on the placed dimensions and resulting state.
+Normal and rotated candidates compete in the same ordered candidate list,
+because the candidate score depends on the placed dimensions and resulting
+state.
 
 At the end of the step:
 
 ```text
 current states <= beamWidth
-successors <= beamWidth * selectedStrategyCount * 2 * 2
+successors <= beamWidth * selectedStrategyCount * freeRectFanout
 rank successor states with the chosen beam/state comparison metric
 keep the best beamWidth successor states
 ```
 
-The eight placement strategies are therefore best read as free-rectangle /
-candidate ordering rules for the current state, piece, and orientation. The
-beam/state comparison metric decides which successor states survive after all
-current states have been expanded.
+The eight placement strategies are therefore candidate ordering rules for the
+current state and next piece. The beam/state comparison metric decides which
+successor states survive after all current states have been expanded.
 
 ## Final Layout Ranking
 

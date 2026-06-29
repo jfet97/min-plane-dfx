@@ -207,7 +207,7 @@ describe('runMaxRectsBeamSearch', () => {
       sheet: baseRequest().sheet,
       pieces: [piece('a'), piece('b')],
       beamWidth: K(1),
-      freeRectangleOrder: [() => Order.make(() => 0)],
+      candidateOrder: [() => Order.make(() => 0)],
       stateOrder: () => Order.make(() => 0),
       hooks: {
         onEvent: (event) => {

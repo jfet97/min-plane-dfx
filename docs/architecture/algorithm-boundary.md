@@ -19,8 +19,8 @@ Do not implement:
 `sortPiecesForNesting` is the user-owned initial ordering boundary. It may contain user-provided ordering logic, but it must not place pieces, score placements, split free rectangles, or produce history.
 
 `runMaxRectsBeamSearch` is the algorithm-core boundary. It accepts the fixed
-piece list, sheet, adaptive beam width, a non-empty list of free-rectangle
-ordering functions, a state ordering function, and synchronous event hooks. It
+piece list, sheet, adaptive beam width, a non-empty list of candidate ordering
+functions, a state ordering function, and synchronous event hooks. It
 returns only algorithm outcome data. It does not know about worker requests,
 configured strategy ids, protocol result envelopes, Effect, or history
 persistence.

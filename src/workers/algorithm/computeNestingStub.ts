@@ -107,7 +107,7 @@ function runStrategyStub(
     sheet: request.sheet,
     pieces: sortedPieces,
     beamWidth,
-    freeRectangleOrder: orders.freeRectangleOrder,
+    candidateOrder: orders.candidateOrder,
     stateOrder: orders.stateOrder,
     hooks: {
       onEvent: (event) => {
