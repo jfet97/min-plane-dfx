@@ -1,3 +1,4 @@
+import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type { NestingHistoryFrame, Placement, SheetSpec } from '@shared/domain/nesting.js'
 import {
   encodeIndexedGif,
@@ -8,6 +9,7 @@ import {
 export interface RunHistoryGifOptions {
   readonly sheet: SheetSpec
   readonly strategyRunId: string
+  readonly sourcePieces: ReadonlyArray<ImportedPiece>
   readonly width?: number
   readonly frameDelayMs?: number
 }
@@ -67,7 +69,14 @@ export function createRunHistoryGif(
   const delayCs = Math.max(5, Math.round((options.frameDelayMs ?? 220) / 10))
   const finalDelayCs = Math.max(delayCs, 90)
   const gifFrames = sequence.map((frame, index) => ({
-    indexes: renderFrameIndexes(ctx, size.width, size.height, options.sheet, frame),
+    indexes: renderFrameIndexes(
+      ctx,
+      size.width,
+      size.height,
+      options.sheet,
+      options.sourcePieces,
+      frame
+    ),
     delayCs: index === sequence.length - 1 ? finalDelayCs : delayCs
   }))
   return encodeIndexedGif(size.width, size.height, gifFrames)
@@ -88,6 +97,7 @@ function renderFrameIndexes(
   width: number,
   height: number,
   sheet: SheetSpec,
+  sourcePieces: ReadonlyArray<ImportedPiece>,
   frame: NestingHistoryFrame
 ): Uint8Array {
   ctx.imageSmoothingEnabled = false
@@ -113,8 +123,13 @@ function renderFrameIndexes(
   ctx.strokeRect(ox + 0.5, oy + 0.5, Math.max(1, sheetWidth - 1), Math.max(1, sheetHeight - 1))
 
   const insertedPieceId = frame.beam?.insertedPieceId ?? null
+  const sourcePiecesById = new Map(sourcePieces.map((piece) => [piece.id, piece]))
   for (const placement of frame.plate.placements) {
     drawPlacement(ctx, sheet, placement, scale, ox, oy, placement.pieceId === insertedPieceId)
+    const sourcePiece = sourcePieceForPlacement(sourcePiecesById, placement)
+    if (sourcePiece) {
+      drawSourceGeometry(ctx, sheet, placement, sourcePiece, scale, ox, oy)
+    }
   }
 
   ctx.strokeStyle = gifPaletteCssColor(5)
@@ -133,6 +148,14 @@ function renderFrameIndexes(
   ctx.setLineDash([])
 
   return quantize(ctx.getImageData(0, 0, width, height).data)
+}
+
+function sourcePieceForPlacement(
+  sourcePiecesById: ReadonlyMap<string, ImportedPiece>,
+  placement: Placement
+): ImportedPiece | null {
+  const id = placement.pieceId
+  return sourcePiecesById.get(id) ?? sourcePiecesById.get(id.replace(/-copy-\d+$/, '')) ?? null
 }
 
 function drawHeader(
@@ -168,6 +191,87 @@ function drawPlacement(
   ctx.lineWidth = 1
   ctx.fillRect(x, y, width, height)
   ctx.strokeRect(x + 0.5, y + 0.5, Math.max(1, width - 1), Math.max(1, height - 1))
+}
+
+function drawSourceGeometry(
+  ctx: CanvasRenderingContext2D,
+  sheet: SheetSpec,
+  placement: Placement,
+  piece: ImportedPiece,
+  scale: number,
+  ox: number,
+  oy: number
+): void {
+  const bounds = piece.realBounds
+  const placementY = sheet.height - placement.y - placement.height
+  ctx.save()
+  ctx.lineWidth = 1.8
+  ctx.strokeStyle = gifPaletteCssColor(8)
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+
+  if (placement.rotation === 0) {
+    const padX = Math.max(0, (placement.width - bounds.width) / 2)
+    const padY = Math.max(0, (placement.height - bounds.height) / 2)
+    ctx.setTransform(
+      scale,
+      0,
+      0,
+      scale,
+      ox + (placement.x + padX - bounds.x) * scale,
+      oy + (placementY + padY - bounds.y) * scale
+    )
+  } else {
+    const padX = Math.max(0, (placement.width - bounds.height) / 2)
+    const padY = Math.max(0, (placement.height - bounds.width) / 2)
+    ctx.setTransform(
+      0,
+      scale,
+      -scale,
+      0,
+      ox + (placement.x + padX + bounds.y + bounds.height) * scale,
+      oy + (placementY + padY - bounds.x) * scale
+    )
+  }
+
+  if (piece.geometry.entityType === 'CIRCLE') {
+    drawCircleGeometry(ctx, piece)
+  } else {
+    for (const segment of piece.geometry.segments) {
+      drawSegment(ctx, segment)
+    }
+  }
+  ctx.restore()
+}
+
+function drawCircleGeometry(ctx: CanvasRenderingContext2D, piece: ImportedPiece): void {
+  const radius = Math.min(piece.realBounds.width, piece.realBounds.height) / 2
+  if (radius <= 0) return
+  const cx = piece.realBounds.x + piece.realBounds.width / 2
+  const cy = piece.realBounds.y + piece.realBounds.height / 2
+  ctx.beginPath()
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2)
+  ctx.stroke()
+}
+
+function drawSegment(
+  ctx: CanvasRenderingContext2D,
+  segment: ImportedPiece['geometry']['segments'][number]
+): void {
+  ctx.beginPath()
+  ctx.moveTo(segment.x1, segment.y1)
+  if (segment.kind === 'line') {
+    ctx.lineTo(segment.x2, segment.y2)
+  } else {
+    const cx = segment.cx ?? 0
+    const cy = segment.cy ?? 0
+    const radius = segment.radius ?? 0
+    if (radius <= 0) return
+    const start = ((segment.startAngle ?? 0) * Math.PI) / 180
+    const end = ((segment.endAngle ?? 0) * Math.PI) / 180
+    ctx.arc(cx, cy, radius, start, end)
+  }
+  ctx.stroke()
 }
 
 function placementSignature(frame: NestingHistoryFrame): string {

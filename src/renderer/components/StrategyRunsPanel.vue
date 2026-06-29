@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { useHistoryStore } from '../composables/useHistoryStore.js'
+import { useAppStore } from '../composables/useAppStore.js'
 import { createRunHistoryGif } from '../utils/runHistoryGif.js'
 import type { ProjectRunRecord } from '@shared/domain/project.js'
 import type { ProjectHistoryRef } from '@shared/domain/nesting.js'
 
 const history = useHistoryStore()
+const store = useAppStore()
 
 function stats(run: NonNullable<typeof history.selectedRun.value>) {
   return {
@@ -95,7 +97,8 @@ async function exportRunGif(record: ProjectRunRecord): Promise<void> {
     if (!strategyRunId) throw new Error('Run has no strategy result to export.')
     const bytes = createRunHistoryGif(frames, {
       sheet: record.sheet,
-      strategyRunId
+      strategyRunId,
+      sourcePieces: store.state.value.pieces
     })
     await api.exportRunGif({
       defaultName: runGifName(record),
