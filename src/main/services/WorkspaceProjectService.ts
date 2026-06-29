@@ -362,7 +362,10 @@ export class WorkspaceProjectService {
 function dropRunRecords(value: unknown): unknown {
   if (!isRecord(value)) return value
   // a bad archived run must not prevent the current workspace setup loading
-  return { ...Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'runRecords')), runRecords: [] }
+  return {
+    ...Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'runRecords')),
+    runRecords: []
+  }
 }
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
