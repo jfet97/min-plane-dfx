@@ -119,21 +119,26 @@ function candidatePrefixOrders(
 ): ReadonlyArray<Order.Order<NestingAlgorithmCandidate>> {
   // prefix criteria are the shared global placement score from the notes
   // they evaluate the used cluster after the candidate is committed
+  // U' and V' are the candidate cluster width and height; W and H are the sheet size
   if (prefix === 'balanced_compactness') {
     // (U' * V', max(U' / W, V' / H), U' / W + V' / H, U' + V')
     return [
+      // 1. used cluster area: keep the bounding rectangle around placed pieces compact
       Order.mapInput(Order.Number, (candidate) => {
         const extents = ScoringGeometry.candidateExtents(candidate)
-        return extents.width * extents.height
+        return ScoringGeometry.area(extents)
       }),
+      // 2. worst normalized consumption: avoid stretching too far in either sheet direction
       Order.mapInput(Order.Number, (candidate) => {
         const extents = ScoringGeometry.candidateExtents(candidate)
         return Math.max(extents.width / sheet.width, extents.height / sheet.height)
       }),
+      // 3. normalized perimeter-like tie-breaker: make growth in the tighter axis cost more
       Order.mapInput(Order.Number, (candidate) => {
         const extents = ScoringGeometry.candidateExtents(candidate)
         return extents.width / sheet.width + extents.height / sheet.height
       }),
+      // 4. absolute perimeter-like tie-breaker: prefer fewer occupied millimeters after shape ties
       Order.mapInput(Order.Number, (candidate) => {
         const extents = ScoringGeometry.candidateExtents(candidate)
         return extents.width + extents.height
@@ -146,26 +151,31 @@ function candidatePrefixOrders(
   if (prefix === 'short_side_fill') {
     // (U' * V', -shortFill, longFill, U' / W + V' / H, U' + V')
     return [
+      // 1. used cluster area: keep compactness as the hard first comparison
       Order.mapInput(Order.Number, (candidate) => {
         const extents = ScoringGeometry.candidateExtents(candidate)
         return extents.width * extents.height
       }),
+      // 2. short-side fill: negate it because larger short-axis usage is better
       Order.mapInput(descendingNumber, (candidate) => {
         const extents = ScoringGeometry.candidateExtents(candidate)
         return sheet.height <= sheet.width
           ? extents.height / sheet.height
           : extents.width / sheet.width
       }),
+      // 3. long-side fill: after short-side progress ties, avoid spreading along the long axis
       Order.mapInput(Order.Number, (candidate) => {
         const extents = ScoringGeometry.candidateExtents(candidate)
         return sheet.height <= sheet.width
           ? extents.width / sheet.width
           : extents.height / sheet.height
       }),
+      // 4. normalized perimeter-like tie-breaker: respect rectangular sheet proportions
       Order.mapInput(Order.Number, (candidate) => {
         const extents = ScoringGeometry.candidateExtents(candidate)
         return extents.width / sheet.width + extents.height / sheet.height
       }),
+      // 5. absolute perimeter-like tie-breaker: prefer smaller final occupied millimeters
       Order.mapInput(Order.Number, (candidate) => {
         const extents = ScoringGeometry.candidateExtents(candidate)
         return extents.width + extents.height
