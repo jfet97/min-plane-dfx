@@ -28,12 +28,12 @@ interface MutableSettingsState {
   }
 }
 
-type WorkspaceSettingsPersistor = () => void
+type WorkspaceSettingsPersistor = (mode?: 'queued' | 'immediate') => void
 
 let workspaceSettingsPersistor: WorkspaceSettingsPersistor | null = null
 
-function notifyWorkspaceSettingsChanged(): void {
-  workspaceSettingsPersistor?.()
+function notifyWorkspaceSettingsChanged(mode: 'queued' | 'immediate' = 'queued'): void {
+  workspaceSettingsPersistor?.(mode)
 }
 
 export function makeDefaultSettings(): MutableSettingsState {
@@ -108,7 +108,7 @@ export function useSettings() {
     },
     setStrategySelectionMode: (mode: 'single' | 'all_configured'): void => {
       state.options.strategySelectionMode = mode
-      notifyWorkspaceSettingsChanged()
+      notifyWorkspaceSettingsChanged('immediate')
     },
     setLayoutSelectionStrategyId: (id: string): void => {
       state.options.layoutSelectionStrategyId = id
@@ -129,11 +129,11 @@ export function useSettings() {
       } else {
         state.options.strategyIds.push(id)
       }
-      notifyWorkspaceSettingsChanged()
+      notifyWorkspaceSettingsChanged('immediate')
     },
     setStrategyIds: (ids: ReadonlyArray<string>): void => {
       state.options.strategyIds = [...ids]
-      notifyWorkspaceSettingsChanged()
+      notifyWorkspaceSettingsChanged('immediate')
     },
     resetDefaults: (): void => {
       const defaults = makeDefaultSettings()

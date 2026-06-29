@@ -8,7 +8,7 @@ function inputValue(event: Event): string {
 }
 
 function onSliderInput(event: Event): void {
-  history.selectFrameIndex(Number(inputValue(event)))
+  history.selectStepPosition(Number(inputValue(event)))
 }
 
 function onSpeedChange(event: Event): void {
@@ -27,7 +27,7 @@ function onSpeedChange(event: Event): void {
       </div>
     </header>
 
-    <div v-if="history.frameCount.value === 0" class="empty">
+    <div v-if="history.stepCount.value === 0" class="empty">
       <p class="muted">No history frames yet. Real history starts when the algorithm emits it.</p>
     </div>
 
@@ -36,32 +36,32 @@ function onSpeedChange(event: Event): void {
         type="range"
         title="Scrub through emitted algorithm frames for the selected strategy run."
         min="0"
-        :max="Math.max(0, history.frameCount.value - 1)"
-        :value="history.state.value.selectedFrameIndex"
+        :max="Math.max(0, history.stepCount.value - 1)"
+        :value="history.selectedStepPosition.value"
         @input="onSliderInput"
         class="slider"
       />
       <div class="buttons">
         <button
           type="button"
-          :disabled="history.frameCount.value === 0"
-          title="Move to the previous emitted frame."
+          :disabled="history.stepCount.value === 0"
+          title="Move to the previous emitted algorithm step."
           @click="history.stepFrame(-1)"
         >
           Prev
         </button>
         <button
           type="button"
-          :disabled="history.frameCount.value === 0"
-          title="Play or pause timeline playback for emitted frames."
+          :disabled="history.stepCount.value === 0"
+          title="Play or pause timeline playback by algorithm step."
           @click="history.togglePlayback"
         >
           {{ history.state.value.isPlaying ? 'Pause' : 'Play' }}
         </button>
         <button
           type="button"
-          :disabled="history.frameCount.value === 0"
-          title="Move to the next emitted frame."
+          :disabled="history.stepCount.value === 0"
+          title="Move to the next emitted algorithm step."
           @click="history.stepFrame(1)"
         >
           Next
@@ -80,12 +80,22 @@ function onSpeedChange(event: Event): void {
         </label>
       </div>
       <p class="frame-info">
-        Frame {{ history.state.value.selectedFrameIndex + 1 }} of {{ history.frameCount.value }}
+        Step {{ history.selectedStepPosition.value + 1 }} of {{ history.stepCount.value }}
+        <span v-if="history.selectedFrame.value" class="rank">
+          History step {{ history.selectedFrame.value.stepIndex }} · Beam rank
+          {{ history.selectedFrame.value.beamRank + 1 }}
+        </span>
         <span v-if="history.state.value.truncated" class="warn"
           >(truncated; see NDJSON replay)</span
         >
       </p>
       <div v-if="history.selectedFrame.value" class="state-info">
+        <span title="Number of committed placements in this retained beam state.">
+          Placed {{ history.selectedFrame.value.plate.placements.length }}
+        </span>
+        <span title="Number of MaxRects free rectangles in this retained beam state.">
+          Free rects {{ history.selectedFrame.value.plate.freeRectangles.length }}
+        </span>
         <span title="Pieces still queued for future placement attempts in the selected beam state.">
           Remaining {{ history.selectedFrame.value.state.remainingPieceIds.length }}
         </span>
@@ -94,13 +104,13 @@ function onSpeedChange(event: Event): void {
         </span>
       </div>
       <div v-if="history.selectedStepFrames.value.length > 1" class="beam-ranks">
-        <span class="muted">Beam</span>
+        <span class="muted">Beam rank</span>
         <button
           v-for="frame in history.selectedStepFrames.value"
           :key="`${frame.strategyRunId}-${frame.stepIndex}-${frame.beamRank}`"
           type="button"
           :class="{ active: frame.frameId === history.selectedFrame.value?.frameId }"
-          :title="`Show retained state rank ${frame.beamRank}`"
+          :title="`Show retained beam state rank ${frame.beamRank + 1} for this step.`"
           @click="history.selectBeamRank(frame.beamRank)"
         >
           {{ frame.beamRank + 1 }}
@@ -180,6 +190,11 @@ h2 {
 .frame-info {
   font-size: 11px;
   color: var(--text-secondary);
+}
+
+.rank {
+  margin-left: 8px;
+  color: var(--text-primary);
 }
 
 .state-info {

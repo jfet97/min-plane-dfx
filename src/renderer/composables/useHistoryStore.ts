@@ -25,7 +25,8 @@ interface MutableHistoryState {
   result: NestingResult | null
   framesByRun: Record<string, NestingHistoryFrame[]>
   selectedStrategyRunId: string | null
-  selectedFrameIndex: number
+  selectedStepIndex: number
+  selectedBeamRank: number
   isPlaying: boolean
   speed: number
   truncated: boolean
@@ -37,7 +38,8 @@ const state: UnwrapNestedRefs<MutableHistoryState> = reactive<MutableHistoryStat
   result: null,
   framesByRun: {},
   selectedStrategyRunId: null,
-  selectedFrameIndex: -1,
+  selectedStepIndex: -1,
+  selectedBeamRank: 0,
   isPlaying: false,
   speed: 1,
   truncated: false,
@@ -67,16 +69,18 @@ function startPlayback(): void {
   const baseIntervalMs = 250
   playbackTimer = setInterval(
     () => {
-      const frames = currentFrames()
-      if (frames.length === 0) {
+      const steps = currentStepIndexes()
+      if (steps.length === 0) {
         stopPlayback()
         return
       }
-      if (state.selectedFrameIndex >= frames.length - 1) {
+      const current = currentStepPosition(steps)
+      if (current >= steps.length - 1) {
         stopPlayback()
         return
       }
-      state.selectedFrameIndex = Math.min(frames.length - 1, state.selectedFrameIndex + 1)
+      state.selectedStepIndex = steps[Math.min(steps.length - 1, current + 1)] ?? -1
+      preserveOrResetBeamRank()
     },
     Math.max(50, Math.round(baseIntervalMs / Math.max(0.25, state.speed)))
   )
@@ -87,14 +91,43 @@ function currentFrames(): NestingHistoryFrame[] {
   return state.framesByRun[state.selectedStrategyRunId] ?? []
 }
 
-function latestTopFrameIndex(frames: ReadonlyArray<NestingHistoryFrame>): number {
+function currentStepIndexes(): ReadonlyArray<number> {
+  return [...new Set(currentFrames().map((frame) => frame.stepIndex))].sort((a, b) => a - b)
+}
+
+function currentStepPosition(steps: ReadonlyArray<number>): number {
+  if (steps.length === 0) return -1
+  const exact = steps.indexOf(state.selectedStepIndex)
+  if (exact >= 0) return exact
+  return Math.max(0, steps.length - 1)
+}
+
+function latestStepIndex(frames: ReadonlyArray<NestingHistoryFrame>): number {
   if (frames.length === 0) return -1
   const latestStep = Math.max(...frames.map((frame) => frame.stepIndex))
-  const topIndex = frames.findIndex(
-    (frame) => frame.stepIndex === latestStep && frame.beamRank === 0
+  return latestStep
+}
+
+function selectedFrameFromList(frames: ReadonlyArray<NestingHistoryFrame>): NestingHistoryFrame | null {
+  if (frames.length === 0 || state.selectedStepIndex < 0) return null
+  const exact = frames.find(
+    (frame) => frame.stepIndex === state.selectedStepIndex && frame.beamRank === state.selectedBeamRank
   )
-  if (topIndex >= 0) return topIndex
-  return frames.findIndex((frame) => frame.stepIndex === latestStep)
+  if (exact) return exact
+  return (
+    frames
+      .filter((frame) => frame.stepIndex === state.selectedStepIndex)
+      .sort((a, b) => a.beamRank - b.beamRank)[0] ?? null
+  )
+}
+
+function preserveOrResetBeamRank(): void {
+  const exists = currentFrames().some(
+    (frame) => frame.stepIndex === state.selectedStepIndex && frame.beamRank === state.selectedBeamRank
+  )
+  if (!exists) {
+    state.selectedBeamRank = 0
+  }
 }
 
 export function useHistoryStore() {
@@ -111,10 +144,7 @@ export function useHistoryStore() {
   })
   const frames = computed(() => currentFrames())
   const selectedFrame = computed<NestingHistoryFrame | null>(() => {
-    const list = currentFrames()
-    const idx = state.selectedFrameIndex
-    if (idx < 0 || idx >= list.length) return null
-    return list[idx] ?? null
+    return selectedFrameFromList(currentFrames())
   })
   const selectedStepFrames = computed<ReadonlyArray<NestingHistoryFrame>>(() => {
     const selected = selectedFrame.value
@@ -124,6 +154,9 @@ export function useHistoryStore() {
       .sort((a, b) => a.beamRank - b.beamRank)
   })
   const frameCount = computed(() => currentFrames().length)
+  const stepIndexes = computed(() => currentStepIndexes())
+  const stepCount = computed(() => stepIndexes.value.length)
+  const selectedStepPosition = computed(() => currentStepPosition(stepIndexes.value))
   const hasResult = computed(() => state.result !== null)
   const runRecords = computed<ReadonlyArray<ProjectRunRecord>>(() => state.runRecords)
   const selectedRunRecord = computed<ProjectRunRecord | null>(() => {
@@ -141,6 +174,9 @@ export function useHistoryStore() {
     selectedFrame,
     selectedStepFrames,
     frameCount,
+    stepIndexes,
+    stepCount,
+    selectedStepPosition,
     hasResult,
     runRecords,
     selectedRunRecord,
@@ -155,7 +191,8 @@ export function useHistoryStore() {
       state.truncated = false
       const first = result.strategyResults[0]
       state.selectedStrategyRunId = result.selectedStrategyRunId ?? first?.strategyRunId ?? null
-      state.selectedFrameIndex = latestTopFrameIndex(currentFrames())
+      state.selectedStepIndex = latestStepIndex(currentFrames())
+      state.selectedBeamRank = 0
     },
 
     addRunRecord(record: ProjectRunRecord): void {
@@ -173,7 +210,8 @@ export function useHistoryStore() {
         state.result = null
         state.framesByRun = {}
         state.selectedStrategyRunId = null
-        state.selectedFrameIndex = -1
+        state.selectedStepIndex = -1
+        state.selectedBeamRank = 0
         state.truncated = false
         state.lastHistoryRef = null
       }
@@ -188,7 +226,8 @@ export function useHistoryStore() {
         record.result.selectedStrategyRunId ??
         record.result.strategyResults[0]?.strategyRunId ??
         null
-      state.selectedFrameIndex = -1
+      state.selectedStepIndex = -1
+      state.selectedBeamRank = 0
       state.isPlaying = false
       state.truncated = false
       state.lastHistoryRef = record.history
@@ -203,10 +242,10 @@ export function useHistoryStore() {
         state.truncated = true
       }
       state.framesByRun[runId] = next
-      // Snap selectedFrameIndex to the latest frame when the user has not
-      // explicitly chosen one yet for this run.
-      if (state.selectedStrategyRunId === runId && state.selectedFrameIndex < 0) {
-        state.selectedFrameIndex = next.length - 1
+      // snap to the latest top state until the user chooses a step/rank
+      if (state.selectedStrategyRunId === runId && state.selectedStepIndex < 0) {
+        state.selectedStepIndex = frame.stepIndex
+        state.selectedBeamRank = 0
       }
     },
 
@@ -229,40 +268,41 @@ export function useHistoryStore() {
       stopPlayback()
       state.selectedStrategyRunId = runId
       const list = state.framesByRun[runId] ?? []
-      state.selectedFrameIndex = latestTopFrameIndex(list)
+      state.selectedStepIndex = latestStepIndex(list)
+      state.selectedBeamRank = 0
     },
 
-    selectFrameIndex(idx: number): void {
+    selectStepPosition(idx: number): void {
       stopPlayback()
-      const list = currentFrames()
-      if (list.length === 0) {
-        state.selectedFrameIndex = -1
+      const steps = currentStepIndexes()
+      if (steps.length === 0) {
+        state.selectedStepIndex = -1
+        state.selectedBeamRank = 0
         return
       }
-      state.selectedFrameIndex = Math.max(0, Math.min(idx, list.length - 1))
+      state.selectedStepIndex = steps[Math.max(0, Math.min(idx, steps.length - 1))] ?? -1
+      preserveOrResetBeamRank()
     },
 
     selectBeamRank(rank: number): void {
       stopPlayback()
       const selected = selectedFrame.value
-      const list = currentFrames()
-      if (!selected || list.length === 0) return
-      const nextIndex = list.findIndex(
+      if (!selected) return
+      const exists = currentFrames().some(
         (frame) => frame.stepIndex === selected.stepIndex && frame.beamRank === rank
       )
-      if (nextIndex >= 0) {
-        state.selectedFrameIndex = nextIndex
+      if (exists) {
+        state.selectedBeamRank = rank
       }
     },
 
     stepFrame(direction: -1 | 1): void {
       stopPlayback()
-      const list = currentFrames()
-      if (list.length === 0) return
-      state.selectedFrameIndex = Math.max(
-        0,
-        Math.min(list.length - 1, state.selectedFrameIndex + direction)
-      )
+      const steps = currentStepIndexes()
+      if (steps.length === 0) return
+      const current = currentStepPosition(steps)
+      state.selectedStepIndex = steps[Math.max(0, Math.min(steps.length - 1, current + direction))] ?? -1
+      preserveOrResetBeamRank()
     },
 
     togglePlayback(): void {
@@ -294,7 +334,8 @@ export function useHistoryStore() {
         state.result?.selectedStrategyRunId ??
         state.result?.strategyResults[0]?.strategyRunId ??
         null
-      state.selectedFrameIndex = -1
+      state.selectedStepIndex = -1
+      state.selectedBeamRank = 0
       state.isPlaying = false
       state.truncated = false
       state.lastHistoryRef = project.lastHistory ?? state.runRecords[0]?.history ?? null
@@ -309,7 +350,8 @@ export function useHistoryStore() {
         state.result?.selectedStrategyRunId ??
         state.result?.strategyResults[0]?.strategyRunId ??
         null
-      state.selectedFrameIndex = -1
+      state.selectedStepIndex = -1
+      state.selectedBeamRank = 0
       state.isPlaying = false
       state.truncated = false
       state.lastHistoryRef = state.runRecords[0]?.history ?? null
@@ -320,7 +362,8 @@ export function useHistoryStore() {
       state.result = null
       state.framesByRun = {}
       state.selectedStrategyRunId = null
-      state.selectedFrameIndex = -1
+      state.selectedStepIndex = -1
+      state.selectedBeamRank = 0
       state.truncated = false
       state.lastHistoryRef = null
     }

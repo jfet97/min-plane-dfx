@@ -7,6 +7,8 @@ import { WorkspaceProjectService } from '@main/services/WorkspaceProjectService.
 import { makePresetShapeDocument } from '@shared/presetShapes.js'
 import { DEFAULT_STRATEGY_ID } from '@shared/domain/strategies.js'
 import { DEFAULT_LAYOUT_SELECTION_STRATEGY_ID } from '@shared/domain/layoutSelectionStrategies.js'
+import { JobId, PieceId } from '@shared/domain/ids.js'
+import type { WorkspaceProjectSettings } from '@shared/domain/project.js'
 
 function section(name: string): string {
   return `0\nSECTION\n2\n${name}\n`
@@ -128,6 +130,81 @@ describe('WorkspaceProjectService', () => {
     }
   })
 
+  it('persists archived run records across a fresh service instance', async () => {
+    const dir = join(tmpdir(), `min-plane-workspace-${randomUUID()}`)
+    const jobId = JobId.make('job-1')
+    const pieceId = PieceId.make('piece-1')
+    const settings: WorkspaceProjectSettings = {
+      revision: 1,
+      sheet: { width: 2000, height: 1000, label: 'shop sheet' },
+      padding: 10,
+      pieceQuantities: { source_a: 3 },
+      options: defaultOptions(),
+      runRecords: [
+        {
+          jobId,
+          createdAt: '2026-06-29T14:00:00.000Z',
+          label: 'MaxRects beam search',
+          pieceCount: 1,
+          result: {
+            version: 1,
+            jobId,
+            status: 'ok',
+            strategyResults: [
+              {
+                strategyRunId: 'run-1-maxrects-beam-search',
+                strategyId: 'maxrects-beam-search',
+                strategyLabel: 'MaxRects beam search',
+                status: 'completed',
+                sortedPieceIds: [pieceId],
+                placements: [
+                  { pieceId, x: 0, y: 0, width: 100, height: 100, rotation: 0 }
+                ],
+                unplacedPieceIds: [],
+                warnings: [],
+                stats: {
+                  elapsedMs: 1,
+                  pieceCount: 1,
+                  algorithm: benchmark()
+                }
+              }
+            ],
+            selectedStrategyRunId: 'run-1-maxrects-beam-search',
+            sortedPieceIds: [pieceId],
+            placements: [{ pieceId, x: 0, y: 0, width: 100, height: 100, rotation: 0 }],
+            unplacedPieceIds: [],
+            warnings: [],
+            stats: {
+              elapsedMs: 1,
+              pieceCount: 1,
+              algorithm: benchmark()
+            }
+          },
+          history: {
+            kind: 'ndjson_replay',
+            jobId,
+            path: '/tmp/history-job-1.ndjson',
+            frameCount: 3,
+            createdAt: '2026-06-29T14:00:01.000Z'
+          }
+        }
+      ]
+    }
+
+    try {
+      const service = new WorkspaceProjectService(dir)
+      await service.initialize()
+      await service.saveWorkspaceSettings(settings)
+
+      const reloadedService = new WorkspaceProjectService(dir)
+      await reloadedService.initialize()
+
+      await expect(reloadedService.loadWorkspaceSettings()).resolves.toEqual(settings)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
   it('ignores stale temporary workspace settings writes', async () => {
     const dir = join(tmpdir(), `min-plane-workspace-${randomUUID()}`)
     const newerSettings = {
@@ -166,3 +243,26 @@ describe('WorkspaceProjectService', () => {
     }
   })
 })
+
+function defaultOptions(): WorkspaceProjectSettings['options'] {
+  return {
+    allowGlobalRotation: true,
+    timeoutMs: 30000,
+    workerMode: 'maxrects-beam-search',
+    historyMode: 'final',
+    historyScope: 'winning_path',
+    strategySelectionMode: 'single',
+    strategyIds: [DEFAULT_STRATEGY_ID],
+    layoutSelectionStrategyId: DEFAULT_LAYOUT_SELECTION_STRATEGY_ID,
+    finalSelectionMode: 'manual',
+    topN: 3
+  }
+}
+
+function benchmark() {
+  return {
+    startedAt: '2026-06-29T14:00:00.000Z',
+    endedAt: '2026-06-29T14:00:00.001Z',
+    elapsedMs: 1
+  }
+}

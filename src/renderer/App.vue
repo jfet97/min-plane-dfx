@@ -33,6 +33,7 @@ let workspaceSettingsReady = false
 let workspaceSettingsRevision = 0
 let workspaceSettingsSaveInFlight = false
 let workspaceSettingsSaveRequested = false
+let workspaceHydrating = false
 const store = useAppStore()
 const settings = useSettings()
 const history = useHistoryStore()
@@ -43,6 +44,7 @@ const preparationWarnings = ref<ReadonlyArray<NestingWarning>>([])
 const projectWarning = ref<string | null>(null)
 
 watch(store.importRevision, () => {
+  if (workspaceHydrating) return
   runner.clear()
   history.clear()
   finalSelection.syncFromResult(null)
@@ -50,7 +52,7 @@ watch(store.importRevision, () => {
   projectWarning.value = null
 })
 
-settings.setWorkspaceSettingsPersistor(scheduleWorkspaceSettingsSave)
+settings.setWorkspaceSettingsPersistor(persistWorkspaceSettings)
 store.setWorkspaceSettingsPersistor(scheduleWorkspaceSettingsSave)
 history.setWorkspaceSettingsPersistor(scheduleWorkspaceSettingsSave)
 
@@ -80,6 +82,7 @@ onUnmounted(() => {
 async function hydrateWorkspaceState(): Promise<void> {
   const api = window.appApi
   if (!api) return
+  workspaceHydrating = true
   try {
     const persistedSettings = await api.loadWorkspaceSettings()
     await store.loadPersistedImports()
@@ -94,6 +97,7 @@ async function hydrateWorkspaceState(): Promise<void> {
     console.error('[workspace] failed to hydrate temporary project state:', error)
   } finally {
     workspaceSettingsReady = true
+    workspaceHydrating = false
   }
 }
 
@@ -106,6 +110,14 @@ function buildWorkspaceSettings(): WorkspaceProjectSettings {
     options: cloneOptions(settings.state.value.options),
     runRecords: [...history.runRecords.value]
   }
+}
+
+function persistWorkspaceSettings(mode: 'queued' | 'immediate' = 'queued'): void {
+  if (mode === 'immediate') {
+    void saveWorkspaceSettingsNow()
+    return
+  }
+  scheduleWorkspaceSettingsSave()
 }
 
 function scheduleWorkspaceSettingsSave(): void {
@@ -124,6 +136,13 @@ async function drainWorkspaceSettingsSaves(): Promise<void> {
     await saveWorkspaceSettingsSnapshot(buildWorkspaceSettings())
   }
   workspaceSettingsSaveInFlight = false
+}
+
+async function saveWorkspaceSettingsNow(): Promise<void> {
+  if (!workspaceSettingsReady) return
+  workspaceSettingsSaveRequested = false
+  workspaceSettingsRevision++
+  await saveWorkspaceSettingsSnapshot(buildWorkspaceSettings())
 }
 
 async function saveWorkspaceSettingsSnapshot(snapshot: WorkspaceProjectSettings): Promise<void> {
@@ -224,7 +243,7 @@ async function runNesting(): Promise<void> {
     onHistoryComplete: (jobId, summary) => {
       history.completeRun(jobId, summary)
     },
-    onResult: (result) => {
+    onResult: async (result) => {
       history.setResult(result)
       history.addRunRecord(
         new ProjectRunRecord({
@@ -236,6 +255,7 @@ async function runNesting(): Promise<void> {
           history: history.state.value.lastHistoryRef
         })
       )
+      await saveWorkspaceSettingsNow()
       finalSelection.syncFromResult(result)
     },
     onError: (message) => {

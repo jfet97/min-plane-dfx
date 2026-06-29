@@ -148,8 +148,7 @@ export class WorkspaceProjectService {
       Effect.gen(function* () {
         const sql = yield* SqlClient.SqlClient
         const revision = settings.revision ?? Date.now()
-        const storedSettings = new WorkspaceProjectSettings({ ...settings, revision })
-        const json = JSON.stringify(storedSettings)
+        const json = JSON.stringify({ ...settings, revision })
         const now = new Date().toISOString()
         yield* sql`
           UPDATE projects

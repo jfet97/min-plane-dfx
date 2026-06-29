@@ -60,10 +60,9 @@ async function selectRunRecord(record: ProjectRunRecord): Promise<void> {
 <template>
   <div class="runs">
     <header>
-      <h2 title="Worker-reported runs for each selected strategy configuration.">Strategy runs</h2>
+      <h2 title="Completed worker runs saved for this temporary or saved project.">Saved runs</h2>
       <p class="muted">
-        Candidate strategies feed one beam run. The selected row drives the result view and
-        timeline.
+        Each saved run stores one beam-search result and its NDJSON history reference.
       </p>
     </header>
 
@@ -72,7 +71,6 @@ async function selectRunRecord(record: ProjectRunRecord): Promise<void> {
     </p>
 
     <section v-if="history.runRecords.value.length > 0" class="archive">
-      <h3 title="Completed runs saved in the temporary workspace or saved project.">Run archive</h3>
       <ul class="archive-list">
         <li
           v-for="record in history.runRecords.value"
@@ -101,6 +99,12 @@ async function selectRunRecord(record: ProjectRunRecord): Promise<void> {
       </ul>
     </section>
 
+    <h3
+      v-if="history.strategyResults.value.length > 0"
+      title="The currently restored run has one result row: the MaxRects beam-search outcome."
+    >
+      Current result
+    </h3>
     <ul class="run-list">
       <li
         v-for="run in history.strategyResults.value"
@@ -196,7 +200,7 @@ header h2 {
   gap: 4px;
 }
 
-.archive h3 {
+h3 {
   margin: 4px 0 0;
   font-size: 10px;
   text-transform: uppercase;

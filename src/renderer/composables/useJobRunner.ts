@@ -29,7 +29,7 @@ let historyUnsub: Unsubscribe | null = null
 export interface RunNestingBindings {
   readonly onHistoryFrame: (frame: NestingHistoryFrame) => void
   readonly onHistoryComplete: (jobId: JobId, summary: NestingHistorySummary) => void
-  readonly onResult: (result: NestingResult) => void
+  readonly onResult: (result: NestingResult) => void | Promise<void>
   readonly onError: (message: string) => void
 }
 
@@ -73,7 +73,7 @@ export function useJobRunner() {
         state.activeJobId = null
         historyUnsub?.()
         historyUnsub = null
-        bindings.onResult(result)
+        await bindings.onResult(result)
       } catch (err) {
         state.status = 'failed'
         state.lastError = err instanceof Error ? err.message : String(err)

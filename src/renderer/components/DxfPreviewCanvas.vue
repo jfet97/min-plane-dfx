@@ -51,6 +51,12 @@ interface SourcePreviewItem {
   readonly bounds: ViewBox
 }
 
+interface ResultPlacementItem {
+  readonly placement: Placement
+  readonly piece: ImportedPiece | null
+  readonly geometryTransform: string | null
+}
+
 const sourcePreviewItems = computed<ReadonlyArray<SourcePreviewItem>>(() => {
   let cursorX = 0
   return store.state.value.pieces.map((piece) => {
@@ -180,6 +186,25 @@ const placementsToRender = computed<ReadonlyArray<Placement>>(() => {
   return frame?.plate.placements ?? history.selectedRun.value?.placements ?? []
 })
 
+const sourcePiecesById = computed(() => {
+  const byId = new Map<string, ImportedPiece>()
+  for (const piece of store.state.value.pieces) {
+    byId.set(piece.id, piece)
+  }
+  return byId
+})
+
+const resultPlacementItems = computed<ReadonlyArray<ResultPlacementItem>>(() =>
+  placementsToRender.value.map((placement) => {
+    const piece = sourcePieceForPlacement(placement)
+    return {
+      placement,
+      piece,
+      geometryTransform: piece ? resultGeometryTransform(placement, piece) : null
+    }
+  })
+)
+
 const freeRectanglesToRender = computed(() => {
   if (props.mode !== 'result' || !showFreeRectangles.value) return []
   return history.selectedFrame.value?.plate.freeRectangles ?? []
@@ -203,6 +228,32 @@ function isSelected(piece: ImportedPiece): boolean {
 function selectPiece(piece: ImportedPiece): void {
   selectedId.value = piece.id
   store.setPieceSelected(piece.id, !store.isPieceSelected(piece.id))
+}
+
+function sourcePieceForPlacement(placement: Placement): ImportedPiece | null {
+  const id = placement.pieceId
+  return (
+    sourcePiecesById.value.get(id) ??
+    sourcePiecesById.value.get(id.replace(/-copy-\d+$/, '')) ??
+    null
+  )
+}
+
+function resultGeometryTransform(placement: Placement, piece: ImportedPiece): string {
+  const bounds = piece.realBounds
+  if (placement.rotation === 0) {
+    const padX = Math.max(0, (placement.width - bounds.width) / 2)
+    const padY = Math.max(0, (placement.height - bounds.height) / 2)
+    const e = placement.x + padX - bounds.x
+    const f = placement.y + padY - bounds.y
+    return `matrix(1 0 0 1 ${e} ${f})`
+  }
+
+  const padX = Math.max(0, (placement.width - bounds.height) / 2)
+  const padY = Math.max(0, (placement.height - bounds.width) / 2)
+  const e = placement.x + padX + bounds.y + bounds.height
+  const f = placement.y + padY - bounds.x
+  return `matrix(0 1 -1 0 ${e} ${f})`
 }
 
 function onWheel(event: WheelEvent): void {
@@ -285,16 +336,52 @@ function onWheel(event: WheelEvent): void {
       <!-- Result rectangles are driven by the selected run or selected frame. -->
       <g v-if="showResultRectangles">
         <rect
-          v-for="(p, i) in placementsToRender"
-          :key="`place-${i}-${p.pieceId}`"
-          :x="p.x"
-          :y="p.y"
-          :width="p.width"
-          :height="p.height"
+          v-for="(item, i) in resultPlacementItems"
+          :key="`place-footprint-${i}-${item.placement.pieceId}`"
+          :x="item.placement.x"
+          :y="item.placement.y"
+          :width="item.placement.width"
+          :height="item.placement.height"
           fill="rgba(0, 122, 204, 0.1)"
           stroke="var(--accent)"
           stroke-width="0.4"
         />
+        <g
+          v-for="(item, i) in resultPlacementItems"
+          :key="`place-shape-${i}-${item.placement.pieceId}`"
+        >
+          <g v-if="item.piece && item.geometryTransform" :transform="item.geometryTransform">
+            <path
+              v-if="item.piece.geometry.entityType === 'CIRCLE'"
+              :d="circlePath(item.piece)"
+              stroke="var(--text-primary)"
+              stroke-opacity="0.9"
+              stroke-width="1.4"
+              fill="none"
+            />
+            <path
+              v-else
+              v-for="(seg, segIndex) in item.piece.geometry.segments"
+              :key="`result-seg-${item.placement.pieceId}-${segIndex}`"
+              :d="segmentPath(seg)"
+              stroke="var(--text-primary)"
+              stroke-opacity="0.85"
+              stroke-width="1.2"
+              fill="none"
+            />
+          </g>
+          <rect
+            v-else
+            :x="item.placement.x"
+            :y="item.placement.y"
+            :width="item.placement.width"
+            :height="item.placement.height"
+            fill="none"
+            stroke="var(--warning)"
+            stroke-width="0.8"
+            stroke-dasharray="4 3"
+          />
+        </g>
       </g>
 
       <!-- Free-rectangle overlays from the selected frame. -->
