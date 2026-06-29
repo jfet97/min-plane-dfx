@@ -140,9 +140,7 @@ function setLayoutSelectionStrategyId(event: Event): void {
     <h3 title="Candidate strategies order legal placements before they are applied to the beam.">
       Candidate strategies
     </h3>
-    <p class="hint">
-      Selected ids feed one beam run; they are not separate worker runs.
-    </p>
+    <p class="hint">Selected ids feed one beam run; they are not separate worker runs.</p>
     <label
       class="span-2 full"
       title="Single runs only the checked strategy IDs. All configured runs every listed strategy."

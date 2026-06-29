@@ -24,6 +24,65 @@ const neutralStateOrder: Order.Order<NestingBeamState> = Order.make(() => 0)
 const descendingNumber = Order.flip(Order.Number)
 
 /**
+ * Geometry terms used by the scoring notes.
+ *
+ * A cluster is the bounding rectangle that contains every committed placement
+ * in a beam state. Its extents are the cluster width and height measured from
+ * the sheet origin, so a placement ending at x = 10 contributes width 10.
+ */
+namespace ScoringGeometry {
+  export interface ClusterExtents {
+    readonly width: number
+    readonly height: number
+  }
+
+  // candidate scores use the cluster extents after committing the candidate
+  export function candidateExtents(candidate: NestingAlgorithmCandidate): ClusterExtents {
+    return usedClusterExtents([...candidate.state.placements, candidate.placement])
+  }
+
+  // used area is the bounding cluster area, not the sum of placed piece areas
+  export function usedClusterArea(placements: ReadonlyArray<Placement>): number {
+    const extents = usedClusterExtents(placements)
+    return area(extents)
+  }
+
+  // residual-space metrics look only at MaxRects records, which may overlap
+  export function largestFreeRectangleArea(freeRectangles: ReadonlyArray<FreeRectangle>): number {
+    return freeRectangles.reduce(
+      (largest, freeRectangle) => Math.max(largest, area(freeRectangle)),
+      0
+    )
+  }
+
+  // short-side quality avoids preferring a huge but unusably thin remainder
+  export function largestFreeRectangleShortSide(
+    freeRectangles: ReadonlyArray<FreeRectangle>
+  ): number {
+    return freeRectangles.reduce(
+      (largest, freeRectangle) =>
+        Math.max(largest, Math.min(freeRectangle.width, freeRectangle.height)),
+      0
+    )
+  }
+
+  export function area(rectangle: Pick<FreeRectangle | Placement, 'width' | 'height'>): number {
+    return rectangle.width * rectangle.height
+  }
+
+  // returns the bounding cluster width and height for a set of placements
+  function usedClusterExtents(placements: ReadonlyArray<Placement>): ClusterExtents {
+    let width = 0
+    let height = 0
+    for (const placement of placements) {
+      width = Math.max(width, placement.x + placement.width)
+      height = Math.max(height, placement.y + placement.height)
+    }
+    return { width, height }
+  }
+}
+
+/**
  * Adapter from persisted strategy configuration to algorithm ordering hooks.
  *
  * Candidate strategies all feed the same beam run. The layout-selection
@@ -64,19 +123,19 @@ function candidatePrefixOrders(
     // (U' * V', max(U' / W, V' / H), U' / W + V' / H, U' + V')
     return [
       Order.mapInput(Order.Number, (candidate) => {
-        const extents = candidateExtents(candidate)
+        const extents = ScoringGeometry.candidateExtents(candidate)
         return extents.width * extents.height
       }),
       Order.mapInput(Order.Number, (candidate) => {
-        const extents = candidateExtents(candidate)
+        const extents = ScoringGeometry.candidateExtents(candidate)
         return Math.max(extents.width / sheet.width, extents.height / sheet.height)
       }),
       Order.mapInput(Order.Number, (candidate) => {
-        const extents = candidateExtents(candidate)
+        const extents = ScoringGeometry.candidateExtents(candidate)
         return extents.width / sheet.width + extents.height / sheet.height
       }),
       Order.mapInput(Order.Number, (candidate) => {
-        const extents = candidateExtents(candidate)
+        const extents = ScoringGeometry.candidateExtents(candidate)
         return extents.width + extents.height
       })
     ]
@@ -88,27 +147,27 @@ function candidatePrefixOrders(
     // (U' * V', -shortFill, longFill, U' / W + V' / H, U' + V')
     return [
       Order.mapInput(Order.Number, (candidate) => {
-        const extents = candidateExtents(candidate)
+        const extents = ScoringGeometry.candidateExtents(candidate)
         return extents.width * extents.height
       }),
       Order.mapInput(descendingNumber, (candidate) => {
-        const extents = candidateExtents(candidate)
+        const extents = ScoringGeometry.candidateExtents(candidate)
         return sheet.height <= sheet.width
           ? extents.height / sheet.height
           : extents.width / sheet.width
       }),
       Order.mapInput(Order.Number, (candidate) => {
-        const extents = candidateExtents(candidate)
+        const extents = ScoringGeometry.candidateExtents(candidate)
         return sheet.height <= sheet.width
           ? extents.width / sheet.width
           : extents.height / sheet.height
       }),
       Order.mapInput(Order.Number, (candidate) => {
-        const extents = candidateExtents(candidate)
+        const extents = ScoringGeometry.candidateExtents(candidate)
         return extents.width / sheet.width + extents.height / sheet.height
       }),
       Order.mapInput(Order.Number, (candidate) => {
-        const extents = candidateExtents(candidate)
+        const extents = ScoringGeometry.candidateExtents(candidate)
         return extents.width + extents.height
       })
     ]
@@ -124,7 +183,8 @@ function candidateTailOrder(token: string): Order.Order<NestingAlgorithmCandidat
     // r: remaining area in the selected free rectangle; smaller preserves larger clean rectangles
     return Order.mapInput(
       Order.Number,
-      (candidate) => area(candidate.freeRectangle) - area(candidate.placement)
+      (candidate) =>
+        ScoringGeometry.area(candidate.freeRectangle) - ScoringGeometry.area(candidate.placement)
     )
   }
   if (token === 's') {
@@ -161,55 +221,19 @@ function stateCriterionOrder(token: string): Order.Order<NestingBeamState> {
   // layout criteria compare successor beam states after candidate application
   // the three configured modes are just different priorities over these metrics
   if (token === 'used_area') {
-    return Order.mapInput(Order.Number, (state) => usedArea(state.placements))
+    return Order.mapInput(Order.Number, (state) =>
+      ScoringGeometry.usedClusterArea(state.placements)
+    )
   }
   if (token === '-largest_free_rect_area') {
-    return Order.mapInput(descendingNumber, (state) => largestFreeRectangleArea(state.freeRectangles))
+    return Order.mapInput(descendingNumber, (state) =>
+      ScoringGeometry.largestFreeRectangleArea(state.freeRectangles)
+    )
   }
   if (token === '-largest_free_rect_short_side') {
     return Order.mapInput(descendingNumber, (state) =>
-      largestFreeRectangleShortSide(state.freeRectangles)
+      ScoringGeometry.largestFreeRectangleShortSide(state.freeRectangles)
     )
   }
   return neutralStateOrder
-}
-
-function candidateExtents(candidate: NestingAlgorithmCandidate): {
-  readonly width: number
-  readonly height: number
-} {
-  return usedClusterExtents([...candidate.state.placements, candidate.placement])
-}
-
-function usedArea(placements: ReadonlyArray<Placement>): number {
-  const extents = usedClusterExtents(placements)
-  return extents.width * extents.height
-}
-
-function usedClusterExtents(placements: ReadonlyArray<Placement>): {
-  readonly width: number
-  readonly height: number
-} {
-  let width = 0
-  let height = 0
-  for (const placement of placements) {
-    width = Math.max(width, placement.x + placement.width)
-    height = Math.max(height, placement.y + placement.height)
-  }
-  return { width, height }
-}
-
-function largestFreeRectangleArea(freeRectangles: ReadonlyArray<FreeRectangle>): number {
-  return freeRectangles.reduce((largest, freeRectangle) => Math.max(largest, area(freeRectangle)), 0)
-}
-
-function largestFreeRectangleShortSide(freeRectangles: ReadonlyArray<FreeRectangle>): number {
-  return freeRectangles.reduce(
-    (largest, freeRectangle) => Math.max(largest, Math.min(freeRectangle.width, freeRectangle.height)),
-    0
-  )
-}
-
-function area(rectangle: Pick<FreeRectangle | Placement, 'width' | 'height'>): number {
-  return rectangle.width * rectangle.height
 }
