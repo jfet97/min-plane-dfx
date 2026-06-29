@@ -2,11 +2,13 @@ import { randomUUID } from 'node:crypto'
 import { sortPiecesForNesting } from './sortPiecesForNesting.js'
 import { selectFinalStrategyResult } from './selectFinalStrategyResult.js'
 import type {
+  AlgorithmBenchmark,
   LayoutSelectionStrategyDefinition,
   NestingHistoryFrame,
   NestingRequest,
   NestingResult,
-  NestingStrategyDefinition
+  NestingStrategyDefinition,
+  Placement
 } from '@shared/domain/nesting.js'
 import {
   NestingStrategyResult,
@@ -28,6 +30,7 @@ import {
   type NestingBeamState
 } from './nestingAlgorithm.js'
 import { makeStrategyOrders } from './strategyOrders.js'
+import type { PieceId } from '@shared/domain/ids.js'
 
 export interface ComputeNestingOptions {
   readonly emitFrame: (frame: NestingHistoryFrame) => void
@@ -35,6 +38,13 @@ export interface ComputeNestingOptions {
 
 const BEAM_SEARCH_STRATEGY_ID = 'maxrects-beam-search'
 const BEAM_SEARCH_STRATEGY_LABEL = 'MaxRects beam search'
+
+interface RunBeamSearchOutcome {
+  readonly sortedPieceIds: ReadonlyArray<PieceId>
+  readonly placements: ReadonlyArray<Placement>
+  readonly unplacedPieceIds: ReadonlyArray<PieceId>
+  readonly algorithmBenchmark: AlgorithmBenchmark
+}
 
 /**
  * Worker-facing orchestration wrapper for a nesting run.
@@ -45,7 +55,6 @@ const BEAM_SEARCH_STRATEGY_LABEL = 'MaxRects beam search'
  */
 export function computeNesting(
   request: NestingRequest,
-  elapsedMs: number,
   options: ComputeNestingOptions
 ): NestingResult {
   // piece ordering is still a separate boundary so it can evolve independently
@@ -73,6 +82,7 @@ export function computeNesting(
     beamWidth,
     options
   )
+  const elapsedMs = outcome.algorithmBenchmark.elapsedMs
 
   // the UI still expects result rows; the beam search is currently one row
   const strategyResults = [
@@ -88,7 +98,8 @@ export function computeNesting(
       placements: outcome.placements,
       unplacedPieceIds: outcome.unplacedPieceIds,
       elapsedMs,
-      pieceCount: request.pieces.length
+      pieceCount: request.pieces.length,
+      algorithmBenchmark: outcome.algorithmBenchmark
     })
   ]
 
@@ -106,7 +117,8 @@ export function computeNesting(
     sortedPieceIds: outcome.sortedPieceIds,
     placements: aggregatedPlacements,
     unplacedPieceIds: aggregatedUnplaced,
-    elapsedMs
+    elapsedMs,
+    algorithmBenchmark: outcome.algorithmBenchmark
   })
 }
 
@@ -119,10 +131,11 @@ function runBeamSearch(
   strategyLabel: string,
   beamWidth: number,
   options: ComputeNestingOptions
-) {
+): RunBeamSearchOutcome {
   // json strategy definitions become executable `Order` instances here
   const orders = makeStrategyOrders(candidateStrategies, layoutSelectionStrategy)
-  return runMaxRectsBeamSearch({
+  let algorithmBenchmark: AlgorithmBenchmark | null = null
+  const outcome = runMaxRectsBeamSearch({
     sheet: request.sheet,
     pieces: sortedPieces,
     beamWidth,
@@ -130,6 +143,13 @@ function runBeamSearch(
     stateOrder: orders.stateOrder,
     hooks: {
       onEvent: (event) => {
+        if (event.type === 'algorithm_started') {
+          return
+        }
+        if (event.type === 'completed') {
+          algorithmBenchmark = event.benchmark
+          return
+        }
         if (event.type === 'initial_state') {
           // history is a worker concern, so algorithm state is translated here
           for (const frame of buildStateFrames(
@@ -144,6 +164,14 @@ function runBeamSearch(
       }
     }
   })
+  return { ...outcome, algorithmBenchmark: requireAlgorithmBenchmark(algorithmBenchmark) }
+}
+
+function requireAlgorithmBenchmark(benchmark: AlgorithmBenchmark | null): AlgorithmBenchmark {
+  if (benchmark === null) {
+    throw new Error('Algorithm completed without emitting benchmark timings.')
+  }
+  return benchmark
 }
 
 function beamMembers(state: NestingAlgorithmState): ReadonlyArray<NestingBeamState> {

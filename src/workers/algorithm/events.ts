@@ -1,4 +1,4 @@
-import type { FreeRectangle, Placement } from '@shared/domain/nesting.js'
+import type { AlgorithmBenchmark, FreeRectangle, Placement } from '@shared/domain/nesting.js'
 import type { FreeRectId, PieceId } from '@shared/domain/ids.js'
 import type { AppliedCandidate } from './beam/candidates.js'
 import type { NestingAlgorithmState, NestingBeamState } from './beam/state.js'
@@ -10,6 +10,19 @@ import type { NestingAlgorithmState, NestingBeamState } from './beam/state.js'
 export interface NestingAlgorithmScoredCandidate {
   readonly candidateId: string
   readonly score: ReadonlyArray<number>
+}
+
+/**
+ * First lifecycle event for the core algorithm.
+ * It marks the benchmark start before seed construction or candidate work.
+ */
+export class AlgorithmStartedEvent {
+  readonly type = 'algorithm_started'
+  readonly startedAt: string
+
+  constructor(input: { readonly startedAt: string }) {
+    this.startedAt = input.startedAt
+  }
 }
 
 /**
@@ -135,6 +148,7 @@ export class PlacementAppliedEvent {
  */
 export class CompletedEvent {
   readonly type = 'completed'
+  readonly benchmark: AlgorithmBenchmark
   readonly outcome: {
     readonly sortedPieceIds: ReadonlyArray<PieceId>
     readonly placements: ReadonlyArray<Placement>
@@ -147,8 +161,10 @@ export class CompletedEvent {
       readonly placements: ReadonlyArray<Placement>
       readonly unplacedPieceIds: ReadonlyArray<PieceId>
     }
+    readonly benchmark: AlgorithmBenchmark
   }) {
     this.outcome = input.outcome
+    this.benchmark = input.benchmark
   }
 }
 
@@ -157,6 +173,7 @@ export class CompletedEvent {
  * Consumers should switch on `type` and translate only the events they need.
  */
 export type NestingAlgorithmEvent =
+  | AlgorithmStartedEvent
   | InitialStateEvent
   | BeamStepEvent
   | CandidateRankedEvent
@@ -165,6 +182,9 @@ export type NestingAlgorithmEvent =
   | CompletedEvent
 
 export const NestingAlgorithmEvents = {
+  started(input: { readonly startedAt: string }): AlgorithmStartedEvent {
+    return new AlgorithmStartedEvent(input)
+  },
   initialState(state: NestingAlgorithmState): InitialStateEvent {
     return new InitialStateEvent({ state })
   },
@@ -205,7 +225,10 @@ export const NestingAlgorithmEvents = {
       split: input.applied.split
     })
   },
-  completed(outcome: CompletedEvent['outcome']): CompletedEvent {
-    return new CompletedEvent({ outcome })
+  completed(input: {
+    readonly outcome: CompletedEvent['outcome']
+    readonly benchmark: AlgorithmBenchmark
+  }): CompletedEvent {
+    return new CompletedEvent(input)
   }
 }

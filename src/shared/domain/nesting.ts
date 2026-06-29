@@ -166,9 +166,16 @@ export class NestingHistorySummary extends Schema.Class<NestingHistorySummary>(
   ndjsonPath: Schema.optional(Schema.String)
 }) {}
 
+export class AlgorithmBenchmark extends Schema.Class<AlgorithmBenchmark>('AlgorithmBenchmark')({
+  startedAt: Schema.String,
+  endedAt: Schema.String,
+  elapsedMs: Schema.Number
+}) {}
+
 export class NestingStats extends Schema.Class<NestingStats>('NestingStats')({
   elapsedMs: Schema.Number,
-  pieceCount: Schema.Number
+  pieceCount: Schema.Number,
+  algorithm: AlgorithmBenchmark
 }) {}
 
 export class NestingStrategyResult extends Schema.Class<NestingStrategyResult>(
@@ -197,6 +204,7 @@ export class NestingStrategyResult extends Schema.Class<NestingStrategyResult>(
     readonly unplacedPieceIds: ReadonlyArray<PieceId>
     readonly elapsedMs: number
     readonly pieceCount: number
+    readonly algorithmBenchmark: AlgorithmBenchmark
   }): NestingStrategyResult {
     return new NestingStrategyResult({
       strategyRunId: input.strategyRunId,
@@ -212,7 +220,8 @@ export class NestingStrategyResult extends Schema.Class<NestingStrategyResult>(
       warnings: [],
       stats: new NestingStats({
         elapsedMs: input.elapsedMs,
-        pieceCount: input.pieceCount
+        pieceCount: input.pieceCount,
+        algorithm: input.algorithmBenchmark
       })
     })
   }
@@ -239,6 +248,7 @@ export class NestingResult extends Schema.Class<NestingResult>('NestingResult')(
     readonly placements: ReadonlyArray<Placement>
     readonly unplacedPieceIds: ReadonlyArray<PieceId>
     readonly elapsedMs: number
+    readonly algorithmBenchmark: AlgorithmBenchmark
   }): NestingResult {
     return new NestingResult({
       version: 1,
@@ -254,7 +264,8 @@ export class NestingResult extends Schema.Class<NestingResult>('NestingResult')(
       warnings: [],
       stats: new NestingStats({
         elapsedMs: input.elapsedMs,
-        pieceCount: input.request.pieces.length
+        pieceCount: input.request.pieces.length,
+        algorithm: input.algorithmBenchmark
       })
     })
   }

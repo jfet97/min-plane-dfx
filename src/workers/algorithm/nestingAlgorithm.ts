@@ -7,6 +7,7 @@ import {
   beamMembers,
   isBeamComplete,
   markNextPieceUnplaced,
+  type NestingAlgorithmState,
   type NestingBeamState
 } from './beam/state.js'
 import { NestingAlgorithmEvents, type NestingAlgorithmEvent } from './events.js'
@@ -59,13 +60,24 @@ export function runMaxRectsBeamSearch(input: {
     readonly onEvent?: (event: NestingAlgorithmEvent) => void
   }
 }) {
+  const startedAtMs = Date.now()
+  const startedAt = new Date(startedAtMs).toISOString()
+  input.hooks?.onEvent?.(NestingAlgorithmEvents.started({ startedAt }))
+
   let state = initialState(input)
 
   input.hooks?.onEvent?.(NestingAlgorithmEvents.initialState(state))
 
   let stepIndex = 0
+  let previousMaxRemaining = maxRemainingPieces(state)
 
   while (!isBeamComplete(state)) {
+    if (stepIndex > input.pieces.length) {
+      throw new Error(
+        `Beam search did not terminate after ${stepIndex} steps for ${input.pieces.length} pieces.`
+      )
+    }
+
     // collect every branch produced by expanding the current retained beam
     const successorStates: NestingBeamState[] = []
     // aggregate generated candidates for the step-level history event
@@ -145,6 +157,13 @@ export function runMaxRectsBeamSearch(input: {
     const nextBeamMembers = successorStates.toSorted(input.stateOrder()).slice(0, input.beamWidth)
 
     state = beamFromMembers(nextBeamMembers)
+    const nextMaxRemaining = maxRemainingPieces(state)
+    if (nextMaxRemaining >= previousMaxRemaining && !isBeamComplete(state)) {
+      throw new Error(
+        `Beam search made no progress at step ${stepIndex}: remaining pieces stayed at ${nextMaxRemaining}.`
+      )
+    }
+    previousMaxRemaining = nextMaxRemaining
     for (const [beamRank, member] of nextBeamMembers.entries()) {
       input.hooks?.onEvent?.(
         NestingAlgorithmEvents.stateSelected({ stepIndex, beamRank, state: member })
@@ -159,8 +178,18 @@ export function runMaxRectsBeamSearch(input: {
     placements: state.top.placements,
     unplacedPieceIds: state.top.unplacedPieces.map((piece) => piece.id)
   }
+  const endedAtMs = Date.now()
+  const benchmark = {
+    startedAt,
+    endedAt: new Date(endedAtMs).toISOString(),
+    elapsedMs: endedAtMs - startedAtMs
+  }
 
-  input.hooks?.onEvent?.(NestingAlgorithmEvents.completed(outcome))
+  input.hooks?.onEvent?.(NestingAlgorithmEvents.completed({ outcome, benchmark }))
 
   return outcome
+}
+
+function maxRemainingPieces(state: NestingAlgorithmState): number {
+  return Math.max(...beamMembers(state).map((member) => member.remainingPieces.length))
 }

@@ -53,7 +53,15 @@ const sampleResult: NestingResult = {
   placements: [],
   unplacedPieceIds: ['p-1' as PreparedPiece['id']],
   warnings: [],
-  stats: { elapsedMs: 5, pieceCount: 1 }
+  stats: {
+    elapsedMs: 5,
+    pieceCount: 1,
+    algorithm: {
+      startedAt: '2026-01-01T00:00:00.000Z',
+      endedAt: '2026-01-01T00:00:00.005Z',
+      elapsedMs: 5
+    }
+  }
 }
 
 const sampleFrame: NestingHistoryFrame = {

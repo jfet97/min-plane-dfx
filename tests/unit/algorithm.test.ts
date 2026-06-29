@@ -92,8 +92,8 @@ function baseRequest(overrides: Partial<NestingRequest> = {}): NestingRequest {
   }
 }
 
-function runNesting(request: NestingRequest, elapsedMs: number) {
-  return computeNesting(request, elapsedMs, {
+function runNesting(request: NestingRequest) {
+  return computeNesting(request, {
     emitFrame: () => {}
   })
 }
@@ -435,12 +435,12 @@ describe('selectFinalStrategyResult', () => {
 
 describe('computeNesting', () => {
   it('returns an ok result when the selected beam places every piece', () => {
-    const result = runNesting(baseRequest(), 12)
+    const result = runNesting(baseRequest())
     expect(result.status).toBe('ok')
   })
 
   it('returns placements from the selected beam at every result level', () => {
-    const result = runNesting(baseRequest(), 12)
+    const result = runNesting(baseRequest())
     expect(result.placements.map((placement) => placement.pieceId)).toEqual(['a', 'b'])
     expect(result.strategyResults[0]?.placements.map((placement) => placement.pieceId)).toEqual([
       'a',
@@ -449,12 +449,12 @@ describe('computeNesting', () => {
   })
 
   it('preserves input order in sortedPieceIds at the top level', () => {
-    const result = runNesting(baseRequest(), 12)
+    const result = runNesting(baseRequest())
     expect(result.sortedPieceIds).toEqual(['a', 'b'])
   })
 
   it('returns only pieces the selected beam could not place', () => {
-    const result = runNesting(baseRequest(), 12)
+    const result = runNesting(baseRequest())
     expect(result.unplacedPieceIds).toEqual([])
   })
 
@@ -468,7 +468,7 @@ describe('computeNesting', () => {
         ]
       })
     })
-    const result = runNesting(req, 5)
+    const result = runNesting(req)
     expect(result.strategyResults).toHaveLength(1)
     expect(result.strategyResults[0]?.strategyId).toBe('maxrects-beam-search')
     expect(result.strategyResults[0]?.strategyDescription).toContain(
@@ -483,7 +483,7 @@ describe('computeNesting', () => {
     const req = baseRequest({
       options: options({ strategySelectionMode: 'all_configured', strategyIds: [] })
     })
-    const result = runNesting(req, 5)
+    const result = runNesting(req)
     const firstConfigured = STRATEGY_DEFINITIONS[0]
     const lastConfigured = STRATEGY_DEFINITIONS.at(-1)
     expect(result.strategyResults).toHaveLength(1)
@@ -502,12 +502,12 @@ describe('computeNesting', () => {
         ]
       })
     })
-    const result = runNesting(req, 5)
+    const result = runNesting(req)
     expect(result.selectedStrategyRunId).toBe(result.strategyResults[0]?.strategyRunId)
   })
 
   it('returns no implementation-placeholder warnings', () => {
-    const result = runNesting(baseRequest(), 0)
+    const result = runNesting(baseRequest())
     expect(result.warnings).toEqual([])
     for (const strategy of result.strategyResults) {
       expect(strategy.warnings).toEqual([])
@@ -515,7 +515,7 @@ describe('computeNesting', () => {
   })
 
   it('does not produce any fake history, beam, or split events', () => {
-    const result = runNesting(baseRequest(), 0)
+    const result = runNesting(baseRequest())
     expect(result.historySummary).toBeUndefined()
     for (const strategy of result.strategyResults) {
       expect(strategy.historySummary).toBeUndefined()
@@ -533,7 +533,7 @@ describe('computeNesting', () => {
       })
     })
 
-    computeNesting(req, 0, {
+    computeNesting(req, {
       emitFrame: (frame) => {
         frames.push(frame)
       }
@@ -554,8 +554,9 @@ describe('computeNesting', () => {
   })
 
   it('records elapsed time and piece count in stats', () => {
-    const result = runNesting(baseRequest(), 42)
-    expect(result.stats.elapsedMs).toBe(42)
+    const result = runNesting(baseRequest())
+    expect(result.stats.elapsedMs).toBeGreaterThanOrEqual(0)
+    expect(result.stats.algorithm.elapsedMs).toBe(result.stats.elapsedMs)
     expect(result.stats.pieceCount).toBe(2)
   })
 })
@@ -604,7 +605,15 @@ function makeStrategy(runId: string, strategyId: string): NestingStrategyResult 
     placements: [placementAt(0, 0, 10, 10, 'a')],
     unplacedPieceIds: [],
     warnings: [],
-    stats: { elapsedMs: 0, pieceCount: 1 }
+    stats: {
+      elapsedMs: 0,
+      pieceCount: 1,
+      algorithm: {
+        startedAt: '2026-01-01T00:00:00.000Z',
+        endedAt: '2026-01-01T00:00:00.000Z',
+        elapsedMs: 0
+      }
+    }
   }
 }
 

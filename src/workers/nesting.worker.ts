@@ -120,7 +120,6 @@ function handleRunNesting(
   payload: NestingRequest
 ): Effect.Effect<void, never, FileSystem.FileSystem | Path.Path> {
   const jobId = payload.jobId
-  const startedAt = Date.now()
 
   return Effect.gen(function* () {
     yield* sendProgress(send, requestId, jobId, 'received')
@@ -140,7 +139,7 @@ function handleRunNesting(
       Effect.forkDetach
     )
     const result = yield* Effect.sync(() =>
-      computeNesting(payload, Date.now() - startedAt, {
+      computeNesting(payload, {
         emitFrame: (frame) => {
           Queue.offerUnsafe(frameQueue, frame)
         }

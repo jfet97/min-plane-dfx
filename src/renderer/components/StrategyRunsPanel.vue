@@ -8,10 +8,23 @@ function stats(run: NonNullable<typeof history.selectedRun.value>) {
     status: run.status,
     placed: run.placements.length,
     unplaced: run.unplacedPieceIds.length,
-    elapsedMs: run.stats.elapsedMs,
+    elapsedMs: run.stats.algorithm.elapsedMs,
+    startedAt: run.stats.algorithm.startedAt,
+    endedAt: run.stats.algorithm.endedAt,
     pieceCount: run.stats.pieceCount,
     warningCount: run.warnings.length
   }
+}
+
+function formatTime(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  const time = date.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+  return `${time}.${date.getMilliseconds().toString().padStart(3, '0')}`
 }
 
 function isSelected(runId: string): boolean {
@@ -63,9 +76,19 @@ function isSelected(runId: string): boolean {
               <dt>Unplaced</dt>
               <dd>{{ stats(run).unplaced }}</dd>
             </div>
-            <div title="Runtime reported by the worker.">
-              <dt>Elapsed</dt>
+            <div
+              :title="`Algorithm start: ${stats(run).startedAt}\nAlgorithm end: ${stats(run).endedAt}`"
+            >
+              <dt>Algorithm</dt>
               <dd>{{ stats(run).elapsedMs }} ms</dd>
+            </div>
+            <div title="Algorithm run start time.">
+              <dt>Start</dt>
+              <dd>{{ formatTime(stats(run).startedAt) }}</dd>
+            </div>
+            <div title="Algorithm run end time.">
+              <dt>End</dt>
+              <dd>{{ formatTime(stats(run).endedAt) }}</dd>
             </div>
             <div>
               <dt>Pieces</dt>
