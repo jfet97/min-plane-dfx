@@ -13,6 +13,7 @@ type CanvasMode = 'import' | 'result'
 
 const props = defineProps<{
   readonly mode: CanvasMode
+  readonly isRunning?: boolean
 }>()
 
 const store = useAppStore()
@@ -129,6 +130,12 @@ const sheetOutline = computed(() => {
 const selectedId = ref<string | null>(null)
 const visualMode = ref<VisualMode>('shape')
 const showFreeRectangles = ref(true)
+const panStart = ref<{
+  readonly clientX: number
+  readonly clientY: number
+  readonly offsetX: number
+  readonly offsetY: number
+} | null>(null)
 
 function linePath(s: Segment): string {
   if (s.kind === 'line') {
@@ -239,21 +246,64 @@ function sourcePieceForPlacement(placement: Placement): ImportedPiece | null {
   )
 }
 
+function resultY(rect: { readonly y: number; readonly height: number }): number {
+  return settings.state.value.sheet.height - rect.y - rect.height
+}
+
 function resultGeometryTransform(placement: Placement, piece: ImportedPiece): string {
   const bounds = piece.realBounds
+  const placementY = resultY(placement)
   if (placement.rotation === 0) {
     const padX = Math.max(0, (placement.width - bounds.width) / 2)
     const padY = Math.max(0, (placement.height - bounds.height) / 2)
     const e = placement.x + padX - bounds.x
-    const f = placement.y + padY - bounds.y
+    const f = placementY + padY - bounds.y
     return `matrix(1 0 0 1 ${e} ${f})`
   }
 
   const padX = Math.max(0, (placement.width - bounds.height) / 2)
   const padY = Math.max(0, (placement.height - bounds.width) / 2)
   const e = placement.x + padX + bounds.y + bounds.height
-  const f = placement.y + padY - bounds.x
+  const f = placementY + padY - bounds.x
   return `matrix(0 1 -1 0 ${e} ${f})`
+}
+
+function panScale(): { readonly x: number; readonly y: number } {
+  const size = containerSize.value
+  const vb = viewBox.value
+  return {
+    x: size.width > 0 ? vb.width / viewport.state.value.scale / size.width : 0,
+    y: size.height > 0 ? vb.height / viewport.state.value.scale / size.height : 0
+  }
+}
+
+function onPointerDown(event: PointerEvent): void {
+  if (event.button !== 0) return
+  panStart.value = {
+    clientX: event.clientX,
+    clientY: event.clientY,
+    offsetX: viewport.state.value.offsetX,
+    offsetY: viewport.state.value.offsetY
+  }
+  viewport.beginPan()
+  event.currentTarget instanceof Element && event.currentTarget.setPointerCapture(event.pointerId)
+}
+
+function onPointerMove(event: PointerEvent): void {
+  const start = panStart.value
+  if (!start) return
+  const scale = panScale()
+  viewport.updatePan({
+    offsetX: start.offsetX - (event.clientX - start.clientX) * scale.x,
+    offsetY: start.offsetY - (event.clientY - start.clientY) * scale.y
+  })
+}
+
+function onPointerUp(event: PointerEvent): void {
+  panStart.value = null
+  viewport.endPan()
+  event.currentTarget instanceof Element &&
+    event.currentTarget.releasePointerCapture(event.pointerId)
 }
 
 function onWheel(event: WheelEvent): void {
@@ -264,7 +314,16 @@ function onWheel(event: WheelEvent): void {
 </script>
 
 <template>
-  <div class="canvas" ref="containerRef" @wheel="onWheel">
+  <div
+    class="canvas"
+    :class="{ panning: viewport.state.value.isPanning }"
+    ref="containerRef"
+    @pointerdown="onPointerDown"
+    @pointermove="onPointerMove"
+    @pointerup="onPointerUp"
+    @pointercancel="onPointerUp"
+    @wheel="onWheel"
+  >
     <svg
       v-if="
         (props.mode === 'import' && store.state.value.pieces.length > 0) ||
@@ -339,7 +398,7 @@ function onWheel(event: WheelEvent): void {
           v-for="(item, i) in resultPlacementItems"
           :key="`place-footprint-${i}-${item.placement.pieceId}`"
           :x="item.placement.x"
-          :y="item.placement.y"
+          :y="resultY(item.placement)"
           :width="item.placement.width"
           :height="item.placement.height"
           fill="rgba(0, 122, 204, 0.1)"
@@ -373,7 +432,7 @@ function onWheel(event: WheelEvent): void {
           <rect
             v-else
             :x="item.placement.x"
-            :y="item.placement.y"
+            :y="resultY(item.placement)"
             :width="item.placement.width"
             :height="item.placement.height"
             fill="none"
@@ -390,7 +449,7 @@ function onWheel(event: WheelEvent): void {
           v-for="fr in freeRectanglesToRender"
           :key="`fr-${fr.id}`"
           :x="fr.x"
-          :y="fr.y"
+          :y="resultY(fr)"
           :width="fr.width"
           :height="fr.height"
           fill="none"
@@ -403,6 +462,10 @@ function onWheel(event: WheelEvent): void {
 
     <div v-else-if="props.mode === 'import'" class="empty">
       <p>Import a DXF file to preview shapes and bounding boxes.</p>
+    </div>
+
+    <div v-else-if="props.isRunning" class="empty">
+      <p>Running nesting algorithm...</p>
     </div>
 
     <div v-else class="empty">
@@ -481,6 +544,12 @@ function onWheel(event: WheelEvent): void {
   justify-content: stretch;
   overflow: hidden;
   position: relative;
+  cursor: grab;
+  touch-action: none;
+}
+
+.canvas.panning {
+  cursor: grabbing;
 }
 
 svg {

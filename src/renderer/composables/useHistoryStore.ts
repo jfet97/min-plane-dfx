@@ -108,10 +108,13 @@ function latestStepIndex(frames: ReadonlyArray<NestingHistoryFrame>): number {
   return latestStep
 }
 
-function selectedFrameFromList(frames: ReadonlyArray<NestingHistoryFrame>): NestingHistoryFrame | null {
+function selectedFrameFromList(
+  frames: ReadonlyArray<NestingHistoryFrame>
+): NestingHistoryFrame | null {
   if (frames.length === 0 || state.selectedStepIndex < 0) return null
   const exact = frames.find(
-    (frame) => frame.stepIndex === state.selectedStepIndex && frame.beamRank === state.selectedBeamRank
+    (frame) =>
+      frame.stepIndex === state.selectedStepIndex && frame.beamRank === state.selectedBeamRank
   )
   if (exact) return exact
   return (
@@ -123,7 +126,8 @@ function selectedFrameFromList(frames: ReadonlyArray<NestingHistoryFrame>): Nest
 
 function preserveOrResetBeamRank(): void {
   const exists = currentFrames().some(
-    (frame) => frame.stepIndex === state.selectedStepIndex && frame.beamRank === state.selectedBeamRank
+    (frame) =>
+      frame.stepIndex === state.selectedStepIndex && frame.beamRank === state.selectedBeamRank
   )
   if (!exists) {
     state.selectedBeamRank = 0
@@ -301,7 +305,8 @@ export function useHistoryStore() {
       const steps = currentStepIndexes()
       if (steps.length === 0) return
       const current = currentStepPosition(steps)
-      state.selectedStepIndex = steps[Math.max(0, Math.min(steps.length - 1, current + direction))] ?? -1
+      state.selectedStepIndex =
+        steps[Math.max(0, Math.min(steps.length - 1, current + direction))] ?? -1
       preserveOrResetBeamRank()
     },
 

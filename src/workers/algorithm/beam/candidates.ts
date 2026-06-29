@@ -62,30 +62,46 @@ export class AppliedCandidate {
  */
 export function applyCandidate(candidate: NestingAlgorithmCandidate): AppliedCandidate {
   const splitRectangles = FreeRectangles.split(candidate.freeRectangle, candidate.placement)
-
-  // split output is re-added through the maximal-rectangle dedupe rule
-  const freeRectangles = splitRectangles.reduce(
-    (rectangles, freeRectangle) => FreeRectangles.add(rectangles, freeRectangle),
-    // the selected free rectangle is consumed by the placement
-    candidate.state.freeRectangles.filter(
-      (freeRectangle) => freeRectangle.id !== candidate.freeRectangle.id
-    )
+  const prunedRectangles = candidate.state.freeRectangles.filter(
+    (freeRectangle) =>
+      freeRectangle.id !== candidate.freeRectangle.id &&
+      FreeRectangles.intersects(freeRectangle, candidate.placement)
   )
+
+  // the placement must be subtracted from every intersecting free rectangle
+  const freeRectangles = candidate.state.freeRectangles.reduce<FreeRectangle[]>(
+    (rectangles, freeRectangle) =>
+      FreeRectangles.split(freeRectangle, candidate.placement).reduce(
+        (next, splitRectangle) => FreeRectangles.add(next, splitRectangle),
+        rectangles
+      ),
+    []
+  )
+
+  const remainingPieces = candidate.state.remainingPieces.filter(
+    (piece) => piece.id !== candidate.piece.id
+  )
+
+  for (const freeRectangle of freeRectangles) {
+    if (FreeRectangles.intersects(freeRectangle, candidate.placement)) {
+      throw new Error(
+        `Free rectangle ${freeRectangle.id} still intersects placement ${candidate.placement.pieceId}`
+      )
+    }
+  }
 
   return new AppliedCandidate({
     candidate,
     state: new NestingBeamState({
       placements: [...candidate.state.placements, candidate.placement],
       freeRectangles,
-      remainingPieces: candidate.state.remainingPieces.filter(
-        (piece) => piece.id !== candidate.piece.id
-      ),
+      remainingPieces,
       unplacedPieces: candidate.state.unplacedPieces
     }),
     split: {
       before: candidate.freeRectangle,
       after: splitRectangles,
-      pruned: []
+      pruned: prunedRectangles
     }
   })
 }

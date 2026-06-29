@@ -238,6 +238,7 @@ async function runNesting(): Promise<void> {
   if (!request) return
   projectWarning.value = null
   history.clear()
+  centerView.value = 'result'
   await runner.start(request, {
     onHistoryFrame: (frame) => history.pushFrame(frame),
     onHistoryComplete: (jobId, summary) => {
@@ -446,7 +447,7 @@ async function loadCurrentHistoryReplay(): Promise<void> {
           </button>
         </div>
       </div>
-      <DxfPreviewCanvas :mode="centerView" />
+      <DxfPreviewCanvas :mode="centerView" :is-running="runner.status.value === 'running'" />
     </template>
 
     <template #pieces>

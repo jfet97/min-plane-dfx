@@ -20,6 +20,21 @@ function doesPieceFit(
 }
 
 /**
+ * Returns true only when the placement overlaps the free rectangle with
+ * positive area. Touching edges are allowed: rectangles use half-open spans
+ * `[x, x + width)` and `[y, y + height)`, so adjacent integer-mm rectangles do
+ * not steal cells from each other.
+ */
+function intersects(rect: FreeRectangle, placement: Placement): boolean {
+  return (
+    placement.x < rect.x + rect.width &&
+    placement.x + placement.width > rect.x &&
+    placement.y < rect.y + rect.height &&
+    placement.y + placement.height > rect.y
+  )
+}
+
+/**
  * Adds a free rectangle unless it is fully contained by an existing one.
  * The free-rectangle set is kept maximal by invariant: new rectangles come
  * from splits, so they can be redundant only by being smaller than an
@@ -42,19 +57,18 @@ function add(rects: readonly FreeRectangle[], newRect: FreeRectangle): FreeRecta
 
 function split(rect: FreeRectangle, placement: Placement): FreeRectangle[] {
   const rectRight = rect.x + rect.width
-  const rectBottom = rect.y + rect.height
+  const rectTop = rect.y + rect.height
   const placementRight = placement.x + placement.width
-  const placementBottom = placement.y + placement.height
+  const placementTop = placement.y + placement.height
 
-  // invariant check: the placement must fit inside the free rectangle
-  if (!doesPlacementFit(rect, placement)) {
-    throw new Error(
-      `Placement for piece ${placement.pieceId} does not fit inside free rectangle ${rect.id}`
-    )
+  // no overlap means this rectangle remains available as-is
+  if (!intersects(rect, placement)) {
+    return [rect]
   }
 
+  // split along the occupied projection, keeping only positive-area remnants
   const leftRect =
-    placement.x - rect.x > 0
+    placement.x > rect.x
       ? new FreeRectangle({
           x: rect.x,
           y: rect.y,
@@ -73,8 +87,8 @@ function split(rect: FreeRectangle, placement: Placement): FreeRectangle[] {
           source: 'split'
         })
       : null
-  const topRect =
-    placement.y - rect.y > 0
+  const lowerRect =
+    placement.y > rect.y
       ? new FreeRectangle({
           x: rect.x,
           y: rect.y,
@@ -83,23 +97,24 @@ function split(rect: FreeRectangle, placement: Placement): FreeRectangle[] {
           source: 'split'
         })
       : null
-  const bottomRect =
-    placementBottom < rectBottom
+  const upperRect =
+    placementTop < rectTop
       ? new FreeRectangle({
           x: rect.x,
-          y: placementBottom,
+          y: placementTop,
           width: rect.width,
-          height: rectBottom - placementBottom,
+          height: rectTop - placementTop,
           source: 'split'
         })
       : null
 
-  return [leftRect, rightRect, topRect, bottomRect].filter((r): r is FreeRectangle => !!r)
+  return [leftRect, rightRect, lowerRect, upperRect].filter((r): r is FreeRectangle => !!r)
 }
 
 export const FreeRectangles = {
   add,
   doesPieceFit,
   doesPlacementFit,
+  intersects,
   split
 }

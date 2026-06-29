@@ -157,9 +157,7 @@ describe('WorkspaceProjectService', () => {
                 strategyLabel: 'MaxRects beam search',
                 status: 'completed',
                 sortedPieceIds: [pieceId],
-                placements: [
-                  { pieceId, x: 0, y: 0, width: 100, height: 100, rotation: 0 }
-                ],
+                placements: [{ pieceId, x: 0, y: 0, width: 100, height: 100, rotation: 0 }],
                 unplacedPieceIds: [],
                 warnings: [],
                 stats: {

@@ -28,18 +28,18 @@ export function useViewport() {
   return {
     state: computed(() => state),
     beginPan(): void {
-      state.isPanning = false
+      state.isPanning = true
     },
-    updatePan(): void {
-      state.isPanning = false
+    updatePan(offset: { readonly offsetX: number; readonly offsetY: number }): void {
+      state.offsetX = offset.offsetX
+      state.offsetY = offset.offsetY
+      state.isPanning = true
     },
     endPan(): void {
       state.isPanning = false
     },
     zoom(factor: number): void {
       state.scale = Math.max(0.25, Math.min(6, state.scale * factor))
-      state.offsetX = 0
-      state.offsetY = 0
     },
     reset(): void {
       state.offsetX = 0

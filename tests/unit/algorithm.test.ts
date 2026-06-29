@@ -4,12 +4,16 @@ import { sortPiecesForNesting } from '../../src/workers/algorithm/sortPiecesForN
 import { computeNesting } from '../../src/workers/algorithm/computeNesting.js'
 import { selectFinalStrategyResult } from '../../src/workers/algorithm/selectFinalStrategyResult.js'
 import { makeStrategyOrders } from '../../src/workers/algorithm/strategyOrders.js'
-import { NestingAlgorithmCandidate } from '../../src/workers/algorithm/beam/candidates.js'
+import {
+  applyCandidate,
+  NestingAlgorithmCandidate
+} from '../../src/workers/algorithm/beam/candidates.js'
 import { NestingBeamState } from '../../src/workers/algorithm/beam/state.js'
 import {
   makeBottomLeftPlacement,
   makeTopLeftPlacement
 } from '../../src/workers/algorithm/maxRects/placements.js'
+import { FreeRectangles } from '../../src/workers/algorithm/maxRects/freeRectangles.js'
 import {
   K,
   initialState,
@@ -261,6 +265,30 @@ describe('runMaxRectsBeamSearch', () => {
     expect(initialStates[0]?.top.unplacedPieces).toEqual([])
     expect(result.placements.map((placement) => placement.pieceId)).toEqual(['a', 'b'])
     expect(result.unplacedPieceIds).toEqual([])
+  })
+
+  it('subtracts a committed placement from every overlapping free rectangle', () => {
+    const selected = freeRectangleAt(0, 0, 100, 100)
+    const overlapping = freeRectangleAt(0, 0, 50, 100)
+    const candidate = new NestingAlgorithmCandidate({
+      state: beamState({
+        freeRectangles: [selected, overlapping],
+        remainingPieces: [sizedPiece('a', 50, 50)]
+      }),
+      piece: sizedPiece('a', 50, 50),
+      freeRectangle: selected,
+      rotated: false,
+      placement: placementAt(0, 0, 50, 50, 'a')
+    })
+
+    const applied = applyCandidate(candidate)
+
+    expect(applied.split.pruned.map((fr) => fr.id)).toEqual([overlapping.id])
+    expect(
+      applied.state.freeRectangles.every(
+        (freeRectangle) => !FreeRectangles.intersects(freeRectangle, candidate.placement)
+      )
+    ).toBe(true)
   })
 })
 
@@ -623,12 +651,13 @@ function makeStrategy(runId: string, strategyId: string): NestingStrategyResult 
 function beamState(input: {
   readonly placements?: ReadonlyArray<Placement>
   readonly freeRectangles?: ReadonlyArray<FreeRectangle>
+  readonly remainingPieces?: ReadonlyArray<PreparedPiece>
   readonly unplacedPieces?: ReadonlyArray<PreparedPiece>
 }): NestingBeamState {
   return new NestingBeamState({
     placements: input.placements ?? [],
     freeRectangles: input.freeRectangles ?? [],
-    remainingPieces: [],
+    remainingPieces: input.remainingPieces ?? [],
     unplacedPieces: input.unplacedPieces ?? []
   })
 }
