@@ -1,17 +1,19 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
-import { mkdir, readFile, rm } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import {
   exportNestingRequestToFile,
   exportNestingResultToFile,
-  exportHistoryToFile
+  exportHistoryToFile,
+  loadHistoryReplayFromFile
 } from '../../src/main/services/ExportService.js'
 import type {
   NestingHistoryFrame,
   NestingRequest,
   NestingResult,
+  ProjectHistoryRef,
   PreparedPiece
 } from '@shared/domain/nesting.js'
 import type { JobId } from '@shared/domain/ids.js'
@@ -124,5 +126,27 @@ describe('ExportService', () => {
     await exportHistoryToFile(file, [])
     const text = await readFile(file, 'utf8')
     expect(text).toBe('')
+  })
+
+  it('loads replay frames as schema-encoded IPC-cloneable objects', async () => {
+    const file = join(dir, 'history.ndjson')
+    await writeFile(file, `${JSON.stringify(sampleFrame)}\n`, 'utf8')
+    const ref: ProjectHistoryRef = {
+      kind: 'ndjson_replay',
+      jobId: 'job-1' as JobId,
+      path: file,
+      frameCount: 1,
+      createdAt: '2025-01-01T00:00:00.000Z'
+    }
+
+    const frames = await loadHistoryReplayFromFile(ref)
+    expect(frames.length).toBe(1)
+    const frame = frames[0]
+    if (!frame) throw new Error('expected replay frame')
+
+    expect(frame.frameId).toBe('f-1')
+    expect(Object.getPrototypeOf(frame)).toBe(Object.prototype)
+    expect(Object.getPrototypeOf(frame.plate)).toBe(Object.prototype)
+    expect(() => structuredClone(frames)).not.toThrow()
   })
 })

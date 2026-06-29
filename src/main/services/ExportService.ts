@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import type {
   NestingRequest,
@@ -9,6 +9,8 @@ import type {
 import { Exit, Schema } from 'effect'
 import { NestingRequestStrict, NestingResultStrict } from '@shared/schemas/nestingSchemas.js'
 import { NestingHistoryFrame as NestingHistoryFrameSchema } from '@shared/domain/nesting.js'
+
+export type EncodedNestingHistoryFrame = Schema.Codec.Encoded<typeof NestingHistoryFrameSchema>
 
 /**
  * Append a history frame to the optional NDJSON replay file referenced by
@@ -73,4 +75,29 @@ export async function exportHistoryToFile(
   const body = frames.map((f) => JSON.stringify(f)).join('\n')
   await writeFile(path, body.length > 0 ? `${body}\n` : '', 'utf8')
   return path
+}
+
+/**
+ * Load a worker-written NDJSON history replay and return schema-encoded
+ * objects that are safe to send through Electron IPC.
+ */
+export async function loadHistoryReplayFromFile(
+  ref: ProjectHistoryRef
+): Promise<ReadonlyArray<EncodedNestingHistoryFrame>> {
+  const text = await readFile(ref.path, 'utf8')
+  return text
+    .split('\n')
+    .filter((line) => line.length > 0)
+    .flatMap((line) => {
+      try {
+        const parsed: unknown = JSON.parse(line)
+        const decoded = Schema.decodeUnknownExit(NestingHistoryFrameSchema)(parsed)
+        if (Exit.isFailure(decoded)) return []
+        const encoded = Schema.encodeExit(NestingHistoryFrameSchema)(decoded.value)
+        if (Exit.isFailure(encoded)) return []
+        return [encoded.value]
+      } catch {
+        return []
+      }
+    })
 }

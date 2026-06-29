@@ -16,12 +16,13 @@ import {
   loadProjectFile,
   ProjectFileError
 } from '../services/ProjectFileService.js'
-import { exportNestingResultToFile } from '../services/ExportService.js'
+import { exportNestingResultToFile, loadHistoryReplayFromFile } from '../services/ExportService.js'
+import type { EncodedNestingHistoryFrame } from '../services/ExportService.js'
 import {
   WorkspaceProjectService,
   WorkspaceProjectError
 } from '../services/WorkspaceProjectService.js'
-import { NestingHistoryFrame, NestingRequest } from '@shared/domain/nesting.js'
+import { NestingRequest } from '@shared/domain/nesting.js'
 import type { IpcResult } from '@shared/protocol/ipc.js'
 import type { Unsubscribe, NestingHistoryEvent } from '@shared/protocol/ipc.js'
 import type { JobId } from '@shared/domain/ids.js'
@@ -451,22 +452,9 @@ export function registerIpcHandlers(): void {
     async (
       _event: IpcMainInvokeEvent,
       ref: ProjectHistoryRef
-    ): Promise<IpcResult<{ readonly frames: ReadonlyArray<NestingHistoryFrame> }>> => {
+    ): Promise<IpcResult<{ readonly frames: ReadonlyArray<EncodedNestingHistoryFrame> }>> => {
       try {
-        const text = await readFile(ref.path, 'utf8')
-        const frames = text
-          .split('\n')
-          .filter((line) => line.length > 0)
-          .flatMap((line) => {
-            try {
-              const parsed: unknown = JSON.parse(line)
-              const exit = Schema.decodeUnknownExit(NestingHistoryFrame)(parsed)
-              if (Exit.isFailure(exit)) return []
-              return [exit.value]
-            } catch {
-              return []
-            }
-          })
+        const frames = await loadHistoryReplayFromFile(ref)
         return { ok: true, value: { frames } }
       } catch (err) {
         return {

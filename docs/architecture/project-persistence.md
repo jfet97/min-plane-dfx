@@ -79,6 +79,11 @@ Opening a project resets transient worker state to idle. It must not invent, res
 History frames may live in a worker-written NDJSON file referenced by
 `ProjectHistoryRef`.
 
+Replay loading validates NDJSON frames in main, encodes them back to plain
+schema data before returning through IPC, and lets preload decode the renderer
+API result back into history frame domain values. Main must not return decoded
+`Schema.Class` instances from the `nesting:load-replay` invoke handler.
+
 If that file is missing or unreadable on open, keep the loaded result visible,
 drop the stale replay reference from the run record, and keep the issue out of
 preparation warnings. Missing history is not a reason to reject a valid project
