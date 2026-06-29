@@ -23,6 +23,7 @@ import {
   WorkspaceProjectError
 } from '../services/WorkspaceProjectService.js'
 import { NestingRequest } from '@shared/domain/nesting.js'
+import { RunGifExportPayload } from '@shared/protocol/ipc.js'
 import type { IpcResult } from '@shared/protocol/ipc.js'
 import type { Unsubscribe, NestingHistoryEvent } from '@shared/protocol/ipc.js'
 import type { JobId } from '@shared/domain/ids.js'
@@ -51,6 +52,7 @@ export const IPC_CHANNELS = [
   'nesting:export-request',
   'nesting:export-result',
   'nesting:export-history',
+  'nesting:export-run-gif',
   'nesting:load-replay',
   'nesting:run',
   'nesting:cancel',
@@ -470,6 +472,63 @@ export function registerIpcHandlers(): void {
   )
 
   ipcMain.handle(
+    'nesting:export-run-gif',
+    async (
+      event: IpcMainInvokeEvent,
+      raw: unknown
+    ): Promise<IpcResult<{ readonly path: string }>> => {
+      const decoded = Schema.decodeUnknownExit(RunGifExportPayload)(raw)
+      if (Exit.isFailure(decoded)) {
+        return {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: 'Invalid GIF export payload.'
+          }
+        }
+      }
+      const payload = decoded.value
+      if (payload.bytes.length === 0) {
+        return {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: 'GIF export payload is empty.'
+          }
+        }
+      }
+
+      const win = BrowserWindow.fromWebContents(event.sender) ?? BrowserWindow.getFocusedWindow()
+      const dlg = win
+        ? await dialog.showSaveDialog(win, {
+            title: 'Export Run GIF',
+            defaultPath: payload.defaultName,
+            filters: [{ name: 'GIF', extensions: ['gif'] }]
+          })
+        : await dialog.showSaveDialog({
+            title: 'Export Run GIF',
+            defaultPath: payload.defaultName,
+            filters: [{ name: 'GIF', extensions: ['gif'] }]
+          })
+      if (dlg.canceled || !dlg.filePath) {
+        return { ok: false, error: { code: 'export_error', message: 'Export cancelled' } }
+      }
+      try {
+        await writeFile(dlg.filePath, Buffer.from(payload.bytes))
+        return { ok: true, value: { path: dlg.filePath } }
+      } catch (err) {
+        return {
+          ok: false,
+          error: {
+            code: 'export_error',
+            message: err instanceof Error ? err.message : 'unknown error'
+          }
+        }
+      }
+    }
+  )
+
+  ipcMain.handle(
     'nesting:run',
     async (
       _event: IpcMainInvokeEvent,
@@ -486,12 +545,6 @@ export function registerIpcHandlers(): void {
         }
       }
       const request = decoded.value
-      console.info('[main:nesting] run received', {
-        jobId: request.jobId,
-        pieces: request.pieces.length,
-        strategies: request.options.strategyIds.length,
-        historyMode: request.options.historyMode
-      })
       try {
         await getSupervisor().runNesting(request, (event) => {
           for (const w of BrowserWindow.getAllWindows()) {
@@ -500,7 +553,6 @@ export function registerIpcHandlers(): void {
             }
           }
         })
-        console.info('[main:nesting] run completed', { jobId: request.jobId })
         return { ok: true, value: { jobId: request.jobId } }
       } catch (err) {
         console.error('[main:nesting] run failed', {

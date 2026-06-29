@@ -26,7 +26,8 @@ const requiredKeys: ReadonlyArray<keyof AppApi> = [
   'saveProject',
   'openProject',
   'exportNestingResult',
-  'exportNestingHistory'
+  'exportNestingHistory',
+  'exportRunGif'
 ]
 
 describe('AppApi contract', () => {
@@ -54,7 +55,8 @@ describe('AppApi contract', () => {
       saveProject: () => Promise.resolve(''),
       openProject: () => Promise.reject(new Error('not implemented') as never) as never,
       exportNestingResult: () => Promise.resolve(),
-      exportNestingHistory: () => Promise.resolve()
+      exportNestingHistory: () => Promise.resolve(),
+      exportRunGif: () => Promise.resolve()
     }
 
     for (const key of requiredKeys) {

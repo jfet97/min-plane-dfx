@@ -1,3 +1,4 @@
+import { Schema } from 'effect'
 import type { ImportedDxfDocument } from '../domain/dxf.js'
 import {
   NestingResult,
@@ -11,6 +12,11 @@ import type { JobId, PieceId, SourceFileId } from '../domain/ids.js'
 import type { SerializedAppError } from './errors.js'
 
 export type Unsubscribe = () => void
+
+export class RunGifExportPayload extends Schema.Class<RunGifExportPayload>('RunGifExportPayload')({
+  defaultName: Schema.String,
+  bytes: Schema.Uint8Array
+}) {}
 
 /**
  * A history event emitted by the worker over the wire. Shape-compatible
@@ -72,6 +78,7 @@ export interface AppApi {
   readonly openProject: () => Promise<ProjectDocument>
   readonly exportNestingResult: (result: NestingResult) => Promise<void>
   readonly exportNestingHistory: (ref: ProjectHistoryRef) => Promise<void>
+  readonly exportRunGif: (payload: RunGifExportPayload) => Promise<void>
 }
 
 export type HistoryEventEnvelope = NestingHistoryEvent

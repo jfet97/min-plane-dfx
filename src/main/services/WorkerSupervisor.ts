@@ -309,6 +309,7 @@ export function createDefaultSupervisor(): WorkerSupervisor {
   const workerPath = join(here, 'workers', 'nesting.worker.mjs')
   return new WorkerSupervisor({
     workerPath,
+    historyDirectory: process.env['MIN_PLANE_HISTORY_DIR'] ?? join(here, 'history'),
     defaultTimeoutMs: 60_000
   })
 }

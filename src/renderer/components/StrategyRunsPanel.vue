@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useHistoryStore } from '../composables/useHistoryStore.js'
+import { createRunHistoryGif } from '../utils/runHistoryGif.js'
 import type { ProjectRunRecord } from '@shared/domain/project.js'
 import type { ProjectHistoryRef } from '@shared/domain/nesting.js'
 
@@ -78,6 +79,35 @@ async function selectRunRecord(record: ProjectRunRecord): Promise<void> {
     record.result.selectedStrategyRunId ?? record.result.strategyResults[0]?.strategyRunId
   if (runId) history.selectStrategyRun(runId)
 }
+
+function runGifName(record: ProjectRunRecord): string {
+  const createdAt = record.createdAt.replace(/[:.]/g, '-')
+  return `${record.label}-${createdAt}.gif`.replace(/[^a-z0-9._-]+/gi, '-')
+}
+
+async function exportRunGif(record: ProjectRunRecord): Promise<void> {
+  const api = window.appApi
+  if (!api || !record.history) return
+  try {
+    const frames = await api.loadHistoryReplay(cloneHistoryRefForApi(record.history))
+    const strategyRunId =
+      record.result.selectedStrategyRunId ?? record.result.strategyResults[0]?.strategyRunId
+    if (!strategyRunId) throw new Error('Run has no strategy result to export.')
+    const bytes = createRunHistoryGif(frames, {
+      sheet: record.sheet,
+      strategyRunId
+    })
+    await api.exportRunGif({
+      defaultName: runGifName(record),
+      bytes
+    })
+  } catch (error: unknown) {
+    console.warn('[history] failed to export run GIF:', error)
+    if (shouldClearReplayReference(error)) {
+      history.clearRunRecordHistory(record.jobId)
+    }
+  }
+}
 </script>
 
 <template>
@@ -128,6 +158,19 @@ async function selectRunRecord(record: ProjectRunRecord): Promise<void> {
             @click="history.removeRunRecord(record.jobId)"
           >
             Delete
+          </button>
+          <button
+            type="button"
+            class="export-gif"
+            :disabled="!record.history"
+            :title="
+              record.history
+                ? 'Export an animated GIF from the first retained beam of this run.'
+                : 'GIF export needs a saved history replay for this run.'
+            "
+            @click="exportRunGif(record)"
+          >
+            GIF
           </button>
         </li>
       </ul>
@@ -260,7 +303,7 @@ h3 {
 
 .archive-list li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 4px;
 }
 
@@ -296,6 +339,11 @@ h3 {
 }
 
 .delete {
+  font-size: 10px;
+  padding: 2px 6px;
+}
+
+.export-gif {
   font-size: 10px;
   padding: 2px 6px;
 }

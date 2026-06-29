@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { AppApi, HistoryEventEnvelope, IpcResult } from '@shared/protocol/ipc.js'
+import type { RunGifExportPayload } from '@shared/protocol/ipc.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
 import type {
   NestingHistoryFrame,
@@ -160,6 +161,12 @@ const api: AppApi = {
     invokeEnvelope<[ProjectHistoryRef], { readonly path: string }>(
       'nesting:export-history',
       cloneHistoryRefForIpc(ref)
+    ).then(() => undefined),
+
+  exportRunGif: (payload) =>
+    invokeEnvelope<[RunGifExportPayload], { readonly path: string }>(
+      'nesting:export-run-gif',
+      payload
     ).then(() => undefined)
 }
 
