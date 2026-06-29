@@ -26,6 +26,7 @@ export class ProjectDocument extends Schema.Class<ProjectDocument>('ProjectDocum
   importedDocuments: Schema.optional(Schema.Array(ImportedDxfDocument)),
   sheet: SheetSpec,
   padding: NonNegativeIntegerMillimeters,
+  pieceQuantities: Schema.optional(Schema.Record(Schema.String, Schema.Number)),
   options: NestingOptions,
   lastResult: Schema.optional(NestingResult),
   lastHistory: Schema.optional(ProjectHistoryRef)

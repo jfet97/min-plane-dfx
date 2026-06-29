@@ -24,7 +24,8 @@ function isSelected(runId: string): boolean {
     <header>
       <h2 title="Worker-reported runs for each selected strategy configuration.">Strategy runs</h2>
       <p class="muted">
-        Each run is independent. The selected run drives the result view and the history timeline.
+        Candidate strategies feed one beam run. The selected row drives the result view and
+        timeline.
       </p>
     </header>
 
@@ -58,9 +59,7 @@ function isSelected(runId: string): boolean {
               <dt>Placed</dt>
               <dd>{{ stats(run).placed }}</dd>
             </div>
-            <div
-              title="For real algorithm runs, any unplaced piece is fatal/failed, not partial success."
-            >
+            <div title="Pieces the selected beam could not place.">
               <dt>Unplaced</dt>
               <dd>{{ stats(run).unplaced }}</dd>
             </div>

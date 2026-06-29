@@ -9,30 +9,36 @@ const settings = useSettings()
 
 const rows = computed(() => {
   const padding = settings.state.value.padding
+  const sidePadding = Math.ceil(Math.max(0, Math.round(padding)) / 2)
   return store.state.value.pieces.map((piece: ImportedPiece) => ({
     id: piece.id,
-    selected: store.isPieceSelected(piece.id),
+    quantity: store.getPieceQuantity(piece.id),
     label: piece.label,
-    width: piece.realBounds.width.toFixed(2),
-    height: piece.realBounds.height.toFixed(2),
-    paddedWidth: (piece.realBounds.width + padding * 2).toFixed(2),
-    paddedHeight: (piece.realBounds.height + padding * 2).toFixed(2),
+    width: piece.realBounds.width.toFixed(0),
+    height: piece.realBounds.height.toFixed(0),
+    paddedWidth: (piece.realBounds.width + sidePadding * 2).toFixed(0),
+    paddedHeight: (piece.realBounds.height + sidePadding * 2).toFixed(0),
     entityType: piece.geometry.entityType,
     segmentCount: piece.geometry.segments.length
   }))
 })
 
 const allSelected = computed(
-  () => store.pieceCount.value > 0 && store.selectedPieceCount.value === store.pieceCount.value
+  () =>
+    store.pieceCount.value > 0 && store.selectedSourcePieceCount.value === store.pieceCount.value
 )
+
+function inputValue(event: Event): string {
+  return event.target instanceof HTMLInputElement ? event.target.value : ''
+}
 </script>
 
 <template>
   <div class="table-wrap">
-    <div class="piece-actions" title="Choose which imported shapes are sent to the worker.">
-      <span>{{ store.selectedPieceCount.value }} selected</span>
+    <div class="piece-actions" title="Choose source shapes and copy counts for the worker request.">
+      <span>{{ store.selectedPieceCount.value }} cut piece(s)</span>
       <button type="button" :disabled="allSelected" @click="store.setAllPiecesSelected(true)">
-        All
+        Qty 1 all
       </button>
       <button
         type="button"
@@ -53,8 +59,8 @@ const allSelected = computed(
     <table>
       <thead>
         <tr>
-          <th title="Whether this imported shape is included in the next worker request.">Use</th>
-          <th title="Imported DXF object name.">Object</th>
+          <th title="Number of copies sent to the worker. Zero excludes the source shape.">Qty</th>
+          <th title="Imported or preset source object name.">Source</th>
           <th title="Real geometry bounding size before padding.">Bounds</th>
           <th title="Effective nesting footprint size after padding on both sides.">Footprint</th>
           <th title="Raw DXF entity summary kept for inspection, not as separate nesting objects.">
@@ -70,10 +76,13 @@ const allSelected = computed(
         <tr v-for="row in rows" :key="row.id">
           <td>
             <input
-              type="checkbox"
-              :checked="row.selected"
-              title="Include this shape in the next worker request."
-              @change="store.setPieceSelected(row.id, !row.selected)"
+              class="qty"
+              type="number"
+              min="0"
+              step="1"
+              :value="row.quantity"
+              title="How many copies of this source shape to place."
+              @input="store.setPieceQuantity(row.id, Number(inputValue($event)))"
             />
           </td>
           <td>{{ row.label }}</td>
@@ -149,6 +158,10 @@ td {
 .remove {
   font-size: 11px;
   padding: 2px 6px;
+}
+
+.qty {
+  width: 52px;
 }
 
 .empty {

@@ -26,6 +26,8 @@ The core operates on integer-millimeter rectangles only. Coordinates and
 padding are non-negative integers; widths and heights are positive integers.
 DXF fractional geometry is normalized by main before the worker request is
 created, so the algorithm must not perform float rounding or unit conversion.
+Padding in the UI is total clearance; the prepared piece footprint has
+`ceil(padding / 2)` added per side before it crosses the worker boundary.
 
 `NestingAlgorithmState` is the retained beam for one algorithm step: rank 0 is
 stored as `top`, and the other retained states live in `alternatives`. The order

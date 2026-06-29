@@ -24,10 +24,16 @@ A project should include:
 - source file references;
 - imported piece metadata;
 - imported DXF document summaries when available;
+- cut-list quantities for each source shape;
 - sheet settings;
 - nesting options;
 - latest worker result when available;
 - latest NDJSON history reference when available.
+
+Preset shapes are persisted as imported document summaries with `preset://`
+paths. They do not need copied source files in the temporary workspace, but they
+must hydrate through the same renderer actions as DXF imports so the cut list,
+preview, request export, and worker request all see one source-shape model.
 
 ## Open Behavior
 

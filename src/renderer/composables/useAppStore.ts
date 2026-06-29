@@ -6,6 +6,7 @@ import type {
   ImportWarning
 } from '@shared/domain/dxf.js'
 import type { ProjectDocument } from '@shared/domain/project.js'
+import { PieceId } from '@shared/domain/ids.js'
 
 export interface ImportFailure {
   readonly path: string
@@ -17,6 +18,7 @@ interface MutableAppState {
   documents: ImportedDxfDocument[]
   pieces: ImportedPiece[]
   selectedPieceIds: string[]
+  pieceQuantities: Record<string, number>
   warnings: ImportWarning[]
   failures: ImportFailure[]
   isImporting: boolean
@@ -28,6 +30,7 @@ const state: UnwrapNestedRefs<MutableAppState> = reactive<MutableAppState>({
   documents: [],
   pieces: [],
   selectedPieceIds: [],
+  pieceQuantities: {},
   warnings: [],
   failures: [],
   isImporting: false,
@@ -112,6 +115,16 @@ function appendDocuments(documents: ReadonlyArray<ImportedDxfDocument>): void {
   state.importRevision++
 }
 
+function appendPresetDocument(document: ImportedDxfDocument): void {
+  state.documents = [...state.documents, document]
+  recomputeAggregates()
+  const piece = documentObjectPiece(document)
+  if (piece) {
+    setPieceQuantity(piece.id, 1)
+  }
+  state.importRevision++
+}
+
 function replaceImportedDocuments(documents: ReadonlyArray<ImportedDxfDocument>): void {
   state.documents = [...documents]
   state.failures = []
@@ -130,13 +143,15 @@ function recomputeAggregates(): void {
   }
   state.pieces = allPieces
   state.warnings = allWarnings
-  const validIds = new Set(allPieces.map((piece) => piece.id))
-  const currentSelection = state.selectedPieceIds.filter((id) =>
-    validIds.has(id as ImportedPiece['id'])
-  )
-  const current = new Set(currentSelection)
-  const importedSelection = allPieces.map((piece) => piece.id).filter((id) => !current.has(id))
-  state.selectedPieceIds = [...currentSelection, ...importedSelection]
+
+  const nextQuantities: Record<string, number> = {}
+  for (const piece of allPieces) {
+    nextQuantities[piece.id] = state.pieceQuantities[piece.id] ?? 1
+  }
+  state.pieceQuantities = nextQuantities
+  state.selectedPieceIds = allPieces
+    .filter((piece) => (nextQuantities[piece.id] ?? 0) > 0)
+    .map((piece) => piece.id)
 }
 
 async function loadPersistedImports(): Promise<void> {
@@ -190,6 +205,7 @@ async function clear(): Promise<void> {
   state.documents = []
   state.pieces = []
   state.selectedPieceIds = []
+  state.pieceQuantities = {}
   state.warnings = []
   state.failures = []
   state.importRevision++
@@ -210,6 +226,7 @@ async function removePiece(pieceId: ImportedPiece['id']): Promise<void> {
     return keep
   })
   if (!changed) return
+  delete state.pieceQuantities[pieceId]
   recomputeAggregates()
   state.importRevision++
 }
@@ -222,14 +239,20 @@ function hydrateFromProject(project: ProjectDocument): void {
     state.pieces = [...project.importedPieces]
     state.warnings = project.importedPieces.flatMap((piece) => piece.warnings)
   }
-  state.selectedPieceIds = state.pieces.map((piece) => piece.id)
+  state.pieceQuantities = {}
+  for (const piece of state.pieces) {
+    state.pieceQuantities[piece.id] = project.pieceQuantities?.[piece.id] ?? 1
+  }
+  state.selectedPieceIds = state.pieces
+    .filter((piece) => getPieceQuantity(piece.id) > 0)
+    .map((piece) => piece.id)
   state.failures = []
   state.isImporting = false
   state.lastSkippedDuplicateCount = 0
 }
 
 function isPieceSelected(pieceId: ImportedPiece['id']): boolean {
-  return state.selectedPieceIds.includes(pieceId)
+  return getPieceQuantity(pieceId) > 0
 }
 
 function setPieceSelected(pieceId: ImportedPiece['id'], selected: boolean): void {
@@ -242,10 +265,37 @@ function setPieceSelected(pieceId: ImportedPiece['id'], selected: boolean): void
     current.delete(pieceId)
   }
   state.selectedPieceIds = [...current]
+  state.pieceQuantities[pieceId] = selected ? Math.max(1, state.pieceQuantities[pieceId] ?? 1) : 0
 }
 
 function setAllPiecesSelected(selected: boolean): void {
   state.selectedPieceIds = selected ? state.pieces.map((piece) => piece.id) : []
+  for (const piece of state.pieces) {
+    state.pieceQuantities[piece.id] = selected
+      ? Math.max(1, state.pieceQuantities[piece.id] ?? 1)
+      : 0
+  }
+}
+
+function getPieceQuantity(pieceId: ImportedPiece['id']): number {
+  return Math.max(0, Math.floor(state.pieceQuantities[pieceId] ?? 0))
+}
+
+function setPieceQuantity(pieceId: ImportedPiece['id'], quantity: number): void {
+  const exists = state.pieces.some((piece) => piece.id === pieceId)
+  if (!exists) return
+  const next = Number.isFinite(quantity) ? Math.max(0, Math.floor(quantity)) : 0
+  state.pieceQuantities[pieceId] = next
+  setPieceSelected(pieceId, next > 0)
+}
+
+function requestCopies(piece: ImportedPiece): ReadonlyArray<ImportedPiece> {
+  const quantity = getPieceQuantity(piece.id)
+  return Array.from({ length: quantity }, (_, index) => ({
+    ...piece,
+    id: PieceId.make(`${piece.id}-copy-${index + 1}`),
+    label: quantity === 1 ? piece.label : `${piece.label} #${index + 1}`
+  }))
 }
 
 export function useAppStore() {
@@ -253,19 +303,25 @@ export function useAppStore() {
     state: computed(() => state),
     documentCount: computed(() => state.documents.length),
     pieceCount: computed(() => state.pieces.length),
-    selectedPieceCount: computed(() => state.selectedPieceIds.length),
-    selectedPieces: computed(() =>
-      state.pieces.filter((piece) => state.selectedPieceIds.includes(piece.id))
+    selectedSourcePieceCount: computed(
+      () => state.pieces.filter((piece) => isPieceSelected(piece.id)).length
     ),
+    selectedPieceCount: computed(() =>
+      state.pieces.reduce((total, piece) => total + getPieceQuantity(piece.id), 0)
+    ),
+    selectedPieces: computed(() => state.pieces.flatMap((piece) => requestCopies(piece))),
     importRevision: computed(() => state.importRevision),
     warningCount: computed(() => state.warnings.length),
     selectAndImport,
     importPaths,
+    appendPresetDocument,
     loadPersistedImports,
     replaceImportedDocuments,
     hydrateFromProject,
     isPieceSelected,
     setPieceSelected,
+    getPieceQuantity,
+    setPieceQuantity,
     setAllPiecesSelected,
     removePiece,
     clear

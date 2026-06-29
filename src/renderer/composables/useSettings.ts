@@ -31,7 +31,7 @@ interface MutableSettingsState {
 export function makeDefaultSettings(): MutableSettingsState {
   return {
     sheet: { width: 1000, height: 1000, label: 'default 1x1 m' },
-    padding: 2,
+    padding: 10,
     options: {
       allowGlobalRotation: true,
       timeoutMs: 30000,
@@ -68,16 +68,16 @@ export function useSettings() {
   return {
     state: computed(() => state),
     setSheetWidth: (width: number): void => {
-      state.sheet.width = Math.max(0, width)
+      state.sheet.width = Math.max(0, Math.round(width))
     },
     setSheetHeight: (height: number): void => {
-      state.sheet.height = Math.max(0, height)
+      state.sheet.height = Math.max(0, Math.round(height))
     },
     setSheetLabel: (label: string): void => {
       state.sheet.label = label
     },
     setPadding: (padding: number): void => {
-      state.padding = Math.max(0, padding)
+      state.padding = Math.max(0, Math.round(padding))
     },
     setAllowGlobalRotation: (allow: boolean): void => {
       state.options.allowGlobalRotation = allow

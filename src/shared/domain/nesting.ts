@@ -147,7 +147,12 @@ export class FinalResultScore extends Schema.Class<FinalResultScore>('FinalResul
 }) {}
 
 // status of one result row, distinct from the overall NestingResult.status
-export const NestingStrategyStatus = Schema.Literals(['completed', 'partial', 'failed', 'cancelled'])
+export const NestingStrategyStatus = Schema.Literals([
+  'completed',
+  'partial',
+  'failed',
+  'cancelled'
+])
 
 export class NestingHistorySummary extends Schema.Class<NestingHistorySummary>(
   'NestingHistorySummary'

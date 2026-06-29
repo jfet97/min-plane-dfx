@@ -38,4 +38,11 @@ Avoid direct nested mutation from unrelated modules.
 
 ## Imported Shapes
 
-Supported DXF entities are collected into selectable imported shapes. The renderer may show all imported source geometry, but worker requests should include only the pieces selected by the user.
+Supported DXF entities are collected into source shapes. Preset shapes are also
+source shapes: the left panel creates one source object, then the right-side
+cut list controls how many copies are sent to the worker.
+
+The renderer may show all source geometry, but worker requests should include
+only cut-list entries whose quantity is greater than zero. Quantity expansion is
+a request-preparation concern; it must not create fake result placements or
+pretend the algorithm has already nested anything.

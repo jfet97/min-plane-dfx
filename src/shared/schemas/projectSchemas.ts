@@ -53,6 +53,9 @@ export const ProjectDocumentStrict = Schema.Struct({
     label: Schema.String
   }),
   padding: NonNegativePadding,
+  pieceQuantities: Schema.optional(
+    Schema.Record(Schema.String, Schema.Number.check(Schema.isGreaterThanOrEqualTo(0)))
+  ),
   options: Schema.Struct({
     allowGlobalRotation: Schema.Boolean,
     timeoutMs: Schema.Number.check(Schema.isGreaterThan(0)),

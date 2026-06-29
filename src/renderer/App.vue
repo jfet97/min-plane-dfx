@@ -150,6 +150,7 @@ async function saveProject(): Promise<void> {
     importedDocuments: [...store.state.value.documents],
     sheet: { ...settings.state.value.sheet },
     padding: settings.state.value.padding,
+    pieceQuantities: { ...store.state.value.pieceQuantities },
     options: { ...settings.state.value.options },
     ...(history.hasResult.value && history.result.value
       ? { lastResult: history.result.value }
@@ -194,8 +195,8 @@ async function openProject(): Promise<void> {
         :disabled="store.selectedPieceCount.value === 0 || runner.status.value === 'running'"
         :title="
           store.selectedPieceCount.value === 0
-            ? 'Sends the prepared nesting request to the worker. Disabled until at least one imported shape is selected.'
-            : 'Sends the prepared nesting request to the worker using the current sheet, padding, selected pieces, and strategy configuration.'
+            ? 'Sends the prepared nesting request to the worker. Disabled until at least one source shape has quantity greater than zero.'
+            : 'Sends the prepared nesting request to the worker using the current sheet, padding, quantities, and strategy configuration.'
         "
         @click="runNesting"
       >
@@ -212,7 +213,7 @@ async function openProject(): Promise<void> {
       <button
         type="button"
         :disabled="store.selectedPieceCount.value === 0"
-        title="Exports the exact JSON request sent to the worker for the selected pieces, useful for debugging and reproducing algorithm runs."
+        title="Exports the exact JSON request sent to the worker for the current cut-list quantities."
         @click="exportRequest"
       >
         Export Request
@@ -289,7 +290,7 @@ async function openProject(): Promise<void> {
 
     <template #pieces>
       <h2>
-        Pieces
+        Cut list
         <span class="counter">{{ store.pieceCount.value }}</span>
       </h2>
       <p v-if="store.state.value.lastSkippedDuplicateCount > 0" class="muted">
@@ -318,12 +319,11 @@ async function openProject(): Promise<void> {
     <template #status>
       <span class="muted">
         {{ store.documentCount.value }} document(s) / {{ store.pieceCount.value }} piece(s) /
-        {{ store.selectedPieceCount.value }} selected / {{ store.warningCount.value }} warning(s) ·
-        worker: {{ runner.status.value }}
+        {{ store.selectedPieceCount.value }} cut piece(s) /
+        {{ store.warningCount.value }} warning(s) · worker: {{ runner.status.value }}
         <span v-if="history.hasResult.value" class="empty-msg">
           · {{ history.strategyResults.value.length }} strategy run(s) available
         </span>
-        <span v-else class="empty-msg"> · Algorithm intentionally not implemented. </span>
       </span>
     </template>
   </AppShell>

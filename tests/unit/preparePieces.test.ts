@@ -28,25 +28,40 @@ const sheet = { width: 100, height: 100, label: 'default' }
 const jobId = 'job-1' as JobId
 
 describe('preparePieces', () => {
-  it('produces paddedBounds = real + 2*padding for each piece', () => {
-    const result = preparePieces([piece('p-1', 10, 5)], sheet, 2, jobId)
+  it('splits total padding across both sides before building padded bounds', () => {
+    const result = preparePieces([piece('p-1', 10, 5)], sheet, 10, jobId)
     expect(result.pieces[0]?.paddedBounds).toEqual({
       x: 0,
       y: 0,
-      width: 14,
-      height: 9,
-      longestEdge: 14,
-      area: 126,
+      width: 20,
+      height: 15,
+      longestEdge: 20,
+      area: 300,
       imbalance: 5
     })
+    expect(result.pieces[0]?.padding).toBe(5)
     expect(result.warnings.length).toBe(0)
   })
 
+  it('rounds odd total padding upward per side', () => {
+    const result = preparePieces([piece('p-1', 10, 5)], sheet, 5, jobId)
+    expect(result.pieces[0]?.paddedBounds).toEqual({
+      x: 0,
+      y: 0,
+      width: 16,
+      height: 11,
+      longestEdge: 16,
+      area: 176,
+      imbalance: 5
+    })
+    expect(result.pieces[0]?.padding).toBe(3)
+  })
+
   it('marks allowRotation=true and warns when only the rotated orientation fits', () => {
-    // tall narrow sheet: piece 30x20 + padding 2 = 34x24. Fits only rotated.
+    // tall narrow sheet: piece 30x20 + side padding 2 = 34x24. Fits only rotated.
     const tallSheet = { width: 30, height: 100, label: 'tall' }
     const wide = piece('p-1', 30, 20)
-    const result = preparePieces([wide], tallSheet, 2, jobId)
+    const result = preparePieces([wide], tallSheet, 4, jobId)
     expect(result.pieces[0]?.allowRotation).toBe(true)
     const warnings = result.warnings.filter((w) => w.code === 'piece_requires_rotation')
     expect(warnings.length).toBe(1)
@@ -78,7 +93,7 @@ describe('preparePieces', () => {
   })
 
   it('paddedBounds inherits the source piece x/y so placement offsets are easy', () => {
-    const result = preparePieces([piece('p-1', 10, 5, 42, 17)], sheet, 2, jobId)
+    const result = preparePieces([piece('p-1', 10, 5, 42, 17)], sheet, 4, jobId)
     expect(result.pieces[0]?.paddedBounds).toEqual({
       x: 42,
       y: 17,

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useSettings } from '../composables/useSettings.js'
 import FileDropZone from './FileDropZone.vue'
+import PresetShapePanel from './PresetShapePanel.vue'
 import { STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js'
 import { LAYOUT_SELECTION_STRATEGIES } from '@shared/domain/layoutSelectionStrategies.js'
 import type { NestingOptions } from '@shared/domain/nesting.js'
@@ -44,7 +45,10 @@ function setLayoutSelectionStrategyId(event: Event): void {
 <template>
   <div class="panel-content">
     <h2>Settings</h2>
+
+    <h3>Source shapes</h3>
     <FileDropZone />
+    <PresetShapePanel />
 
     <h3>Sheet</h3>
     <div class="grid">
@@ -84,13 +88,13 @@ function setLayoutSelectionStrategyId(event: Event): void {
     <h3>Cutting</h3>
     <div class="grid">
       <label
-        title="Clearance added around each imported shape. The algorithm works with padded rectangular footprints."
+        title="Total integer clearance around each source shape. Odd values round outward per side."
       >
         Padding (mm)
         <input
           type="number"
           min="0"
-          step="0.1"
+          step="1"
           :value="settings.state.value.padding"
           @input="settings.setPadding(Number(inputValue($event)))"
         />
@@ -121,9 +125,7 @@ function setLayoutSelectionStrategyId(event: Event): void {
           @input="settings.setTimeoutMs(Number(inputValue($event)))"
         />
       </label>
-      <label
-        title="Controls whether worker-emitted algorithm frames are retained or streamed."
-      >
+      <label title="Controls whether worker-emitted algorithm frames are retained or streamed.">
         History mode
         <select :value="settings.state.value.options.historyMode" @change="setHistoryMode">
           <option value="off" title="Do not collect algorithm history.">off</option>
@@ -259,7 +261,7 @@ h3 {
 
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -273,6 +275,7 @@ h3 {
 
 label {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 2px;
   font-size: 11px;
@@ -280,6 +283,8 @@ label {
 
 input,
 select {
+  width: 100%;
+  min-width: 0;
   font-size: 12px;
 }
 

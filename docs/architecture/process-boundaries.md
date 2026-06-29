@@ -44,6 +44,10 @@ or worker data: `realBounds`, `paddedBounds`, sheet dimensions, placements, and
 free rectangles are integer grid values. The original DXF geometry remains
 fractional inside that container and is translated for preview/export.
 
+Renderer cutting settings store padding as total integer clearance. Request
+preparation expands each side by `ceil(padding / 2)`, so odd padding values
+round outward and the worker still receives integer-millimeter rectangles only.
+
 ## Worker
 
 The worker receives schema-decoded `RunNestingPayload` values through `NestingWorkerRpcs`, runs the computation workflow, writes optional NDJSON history, and streams typed `WorkerResponse` messages.
