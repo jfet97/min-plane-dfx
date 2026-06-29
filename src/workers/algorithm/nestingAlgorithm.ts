@@ -1,8 +1,11 @@
+import { randomUUID } from 'node:crypto'
 import type { Order } from 'effect'
 import type { FreeRectangle, Placement, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
 import type { PieceId } from '@shared/domain/ids.js'
 import { initialState } from './beam/seed.js'
 import type { NestingAlgorithmState, NestingBeamState } from './beam/state.js'
+import { makeBottomLeftPlacement } from './maxRects/placements.js'
+import { placementFitsFreeRectangle } from './maxRects/freeRectangles.js'
 export { K } from './beam/state.js'
 export type { NestingAlgorithmState, NestingBeamState } from './beam/state.js'
 export { initialState } from './beam/seed.js'
@@ -32,13 +35,28 @@ export type NestingStateOrder = () => Order.Order<NestingBeamState>
  * One legal placement candidate produced while expanding a state.
  * It always includes the concrete placement it would commit.
  */
-export interface NestingAlgorithmCandidate {
+export class NestingAlgorithmCandidate {
   readonly candidateId: string
   readonly state: NestingBeamState
   readonly piece: PreparedPiece
   readonly freeRectangle: FreeRectangle
   readonly rotated: boolean
   readonly placement: Placement
+
+  constructor(input: {
+    readonly state: NestingBeamState
+    readonly piece: PreparedPiece
+    readonly freeRectangle: FreeRectangle
+    readonly rotated: boolean
+    readonly placement: Placement
+  }) {
+    this.candidateId = randomUUID()
+    this.state = input.state
+    this.piece = input.piece
+    this.freeRectangle = input.freeRectangle
+    this.rotated = input.rotated
+    this.placement = input.placement
+  }
 }
 
 /**
@@ -178,8 +196,44 @@ export function runMaxRectsBeamSearch(input: {
     state: state
   })
 
-  for (const [stepIndex, piece] of input.pieces.entries()) {
-    console.log(`Processing piece ${stepIndex + 1}/${input.pieces.length} (id=${piece.id})`)
+  for (const [beamRank, s] of [state.top, ...state.alternatives].entries()) {
+    console.log(
+      `beamRank: ${beamRank}, placements: ${s.placements.length}, freeRectangles: ${s.freeRectangles.length}, remainingPieces: ${s.remainingPieces.length}, unplacedPieces: ${s.unplacedPieces.length}`
+    )
+    const piece = s.remainingPieces[0]
+
+    if (piece === undefined) {
+      // this branch has no more pieces to place
+      continue
+    }
+
+    for (const rectangleOrder of input.freeRectangleOrder) {
+      const candidates: NestingAlgorithmCandidate[] = []
+
+      for (const rotated of [false, true]) {
+        const order = rectangleOrder({ state: s, piece, rotated })
+
+        const freeRectangles = s.freeRectangles.toSorted(order).slice(0, freeRectFanout)
+
+        for (const freeRectangle of freeRectangles) {
+          const placement = makeBottomLeftPlacement(freeRectangle, piece, rotated)
+
+          if (!placementFitsFreeRectangle(freeRectangle, placement)) {
+            continue
+          }
+
+          candidates.push(
+            new NestingAlgorithmCandidate({
+              state: s,
+              piece,
+              freeRectangle,
+              rotated,
+              placement
+            })
+          )
+        }
+      }
+    }
   }
 
   const outcome = {
