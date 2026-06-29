@@ -165,44 +165,19 @@ function makeBitWriter(): BitWriter {
 function lzwCompress(indexes: Uint8Array, minCodeSize: number): ReadonlyArray<number> {
   const clearCode = 1 << minCodeSize
   const endCode = clearCode + 1
-  let nextCode = endCode + 1
-  let codeSize = minCodeSize + 1
-  let dictionary = new Map<string, number>()
+  const codeSize = minCodeSize + 1
+  const resetEvery = 8
   const writer = makeBitWriter()
 
-  const reset = (): void => {
-    dictionary = new Map<string, number>()
-    nextCode = endCode + 1
-    codeSize = minCodeSize + 1
-  }
-
   writer.write(clearCode, codeSize)
-  let prefix = indexes[0] ?? 0
 
-  for (let i = 1; i < indexes.length; i += 1) {
-    const value = indexes[i] ?? 0
-    const key = `${prefix},${value}`
-    const existing = dictionary.get(key)
-    if (existing !== undefined) {
-      prefix = existing
-      continue
-    }
-
-    writer.write(prefix, codeSize)
-    if (nextCode < 4096) {
-      dictionary.set(key, nextCode)
-      nextCode += 1
-      if (nextCode === 1 << codeSize && codeSize < 12) {
-        codeSize += 1
-      }
-    } else {
+  for (let i = 0; i < indexes.length; i += 1) {
+    if (i > 0 && i % resetEvery === 0) {
       writer.write(clearCode, codeSize)
-      reset()
     }
-    prefix = value
+    writer.write(indexes[i] ?? 0, codeSize)
   }
 
-  writer.write(prefix, codeSize)
   writer.write(endCode, codeSize)
   writer.finish()
   return writer.bytes
