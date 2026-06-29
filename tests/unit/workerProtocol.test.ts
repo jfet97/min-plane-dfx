@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Exit, Schema } from 'effect'
+import { Cause, Exit, Schema } from 'effect'
 import { RunNestingPayload, WorkerRequest, WorkerResponse } from '@shared/protocol/worker.js'
 
 const validate = (schema: Schema.Top, input: unknown) =>
@@ -20,7 +20,15 @@ describe('WorkerRequest', () => {
             id: 'p-1',
             sourcePieceId: 'p-1',
             realBounds: { x: 0, y: 0, width: 10, height: 5 },
-            paddedBounds: { x: 0, y: 0, width: 14, height: 9 },
+            paddedBounds: {
+              x: 0,
+              y: 0,
+              width: 14,
+              height: 9,
+              longestEdge: 14,
+              area: 126,
+              imbalance: 5
+            },
             padding: 2,
             allowRotation: true
           }
@@ -82,7 +90,15 @@ describe('WorkerRequest', () => {
       }
     }
 
-    const encoded = Schema.encodeUnknownExit(RunNestingPayload)(payload)
+    const decoded = Schema.decodeUnknownExit(RunNestingPayload)(payload)
+    if (Exit.isFailure(decoded)) {
+      throw new Error(Cause.pretty(decoded.cause))
+    }
+
+    const encoded = Schema.encodeUnknownExit(RunNestingPayload)(decoded.value)
+    if (Exit.isFailure(encoded)) {
+      throw new Error(Cause.pretty(encoded.cause))
+    }
     expect(Exit.isSuccess(encoded)).toBe(true)
   })
 

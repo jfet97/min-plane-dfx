@@ -14,14 +14,14 @@ import {
   WorkspaceProjectService,
   WorkspaceProjectError
 } from '../services/WorkspaceProjectService.js'
-import { NestingHistoryFrame } from '@shared/domain/nesting.js'
+import { NestingHistoryFrame, NestingRequest } from '@shared/domain/nesting.js'
 import type { IpcResult } from '@shared/protocol/ipc.js'
 import type { Unsubscribe, NestingHistoryEvent } from '@shared/protocol/ipc.js'
 import type { JobId } from '@shared/domain/ids.js'
 import type { ProjectDocument } from '@shared/domain/project.js'
 import { WorkspaceProjectSettings } from '@shared/domain/project.js'
 import type { WorkspaceProjectSettings as WorkspaceProjectSettingsModel } from '@shared/domain/project.js'
-import type { NestingRequest, NestingResult, ProjectHistoryRef } from '@shared/domain/nesting.js'
+import type { NestingResult, ProjectHistoryRef } from '@shared/domain/nesting.js'
 import { ImportedDxfDocument as ImportedDxfDocumentSchema } from '@shared/domain/dxf.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
 
@@ -289,8 +289,19 @@ export function registerIpcHandlers(): void {
     'nesting:export-request',
     async (
       event: IpcMainInvokeEvent,
-      request: NestingRequest
+      raw: unknown
     ): Promise<IpcResult<{ readonly path: string }>> => {
+      const decoded = Schema.decodeUnknownExit(NestingRequest)(raw)
+      if (Exit.isFailure(decoded)) {
+        return {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: 'Invalid nesting request payload.'
+          }
+        }
+      }
+      const request = decoded.value
       const win = BrowserWindow.fromWebContents(event.sender) ?? BrowserWindow.getFocusedWindow()
       const defaultName = `nesting-request-${request.jobId}.json`
       const result = win
@@ -446,8 +457,19 @@ export function registerIpcHandlers(): void {
     'nesting:run',
     async (
       _event: IpcMainInvokeEvent,
-      request: NestingRequest
+      raw: unknown
     ): Promise<IpcResult<{ readonly jobId: JobId }>> => {
+      const decoded = Schema.decodeUnknownExit(NestingRequest)(raw)
+      if (Exit.isFailure(decoded)) {
+        return {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: 'Invalid nesting request payload.'
+          }
+        }
+      }
+      const request = decoded.value
       try {
         await getSupervisor().runNesting(request, (event) => {
           for (const w of BrowserWindow.getAllWindows()) {

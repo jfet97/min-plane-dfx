@@ -4,7 +4,7 @@ import {
   NonNegativeIntegerMillimeters,
   PositiveIntegerMillimeters,
   Rect,
-  RectWithFromRect
+  RectWith
 } from './geometry.js'
 
 /** History scope. Only the winning path is required to be retained. */
@@ -107,7 +107,7 @@ export class PreparedPiece extends Schema.Class<PreparedPiece>('PreparedPiece')(
   id: PieceId.withDefault,
   sourcePieceId: PieceId,
   realBounds: Rect,
-  paddedBounds: RectWithFromRect,
+  paddedBounds: RectWith,
   padding: NonNegativeIntegerMillimeters,
   allowRotation: Schema.Boolean
 }) {}
