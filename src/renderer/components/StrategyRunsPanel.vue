@@ -63,32 +63,7 @@ async function selectRunRecord(record: ProjectRunRecord): Promise<void> {
   const api = window.appApi
   if (api && record.history) {
     try {
-      console.info('[runs:loadReplay] loading', {
-        path: record.history.path,
-        frameCount: record.history.frameCount,
-        selectedStrategyRunId: record.result.selectedStrategyRunId,
-        resultRunIds: record.result.strategyResults.map((run) => run.strategyRunId)
-      })
       const frames = await api.loadHistoryReplay(cloneHistoryRefForApi(record.history))
-      const lastFrame = frames[frames.length - 1]
-      console.info('[runs:loadReplay] loaded', {
-        count: frames.length,
-        frameRunIds: Array.from(new Set(frames.map((frame) => frame.strategyRunId))),
-        firstFrame: frames[0]
-          ? {
-              stepIndex: frames[0].stepIndex,
-              beamRank: frames[0].beamRank,
-              strategyRunId: frames[0].strategyRunId
-            }
-          : null,
-        lastFrame: lastFrame
-          ? {
-              stepIndex: lastFrame.stepIndex,
-              beamRank: lastFrame.beamRank,
-              strategyRunId: lastFrame.strategyRunId
-            }
-          : null
-      })
       for (const frame of frames) {
         history.pushFrame(frame)
       }
@@ -98,8 +73,6 @@ async function selectRunRecord(record: ProjectRunRecord): Promise<void> {
         history.clearRunRecordHistory(record.jobId)
       }
     }
-  } else {
-    console.info('[runs:loadReplay] skipped', { hasApi: !!api, hasHistory: !!record.history })
   }
   const runId =
     record.result.selectedStrategyRunId ?? record.result.strategyResults[0]?.strategyRunId

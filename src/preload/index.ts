@@ -125,23 +125,10 @@ const api: AppApi = {
   },
 
   loadHistoryReplay: (ref) =>
-    Promise.resolve(cloneHistoryRefForIpc(ref)).then((clonedRef) => {
-      console.info('[preload:loadReplay] invoke', {
-        path: clonedRef.path,
-        frameCount: clonedRef.frameCount,
-        refPrototype: Object.getPrototypeOf(clonedRef).constructor.name
-      })
-      return invokeEnvelope<
-        [ProjectHistoryRef],
-        { readonly frames: ReadonlyArray<NestingHistoryFrame> }
-      >('nesting:load-replay', clonedRef).then((r) => {
-        console.info('[preload:loadReplay] resolved', {
-          count: r.frames.length,
-          firstPrototype: r.frames[0] ? Object.getPrototypeOf(r.frames[0]).constructor.name : null
-        })
-        return r.frames
-      })
-    }),
+    invokeEnvelope<[ProjectHistoryRef], { readonly frames: ReadonlyArray<NestingHistoryFrame> }>(
+      'nesting:load-replay',
+      cloneHistoryRefForIpc(ref)
+    ).then((r) => r.frames),
 
   loadWorkspaceSettings: () =>
     invokeEnvelope<[], { readonly settings: WorkspaceProjectSettings | null }>(

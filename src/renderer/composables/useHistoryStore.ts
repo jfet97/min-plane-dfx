@@ -258,17 +258,6 @@ export function useHistoryStore() {
     selectRunRecord(record: ProjectRunRecord): void {
       stopPlayback()
       const normalizedRecord = recoverRunRecord(record)
-      console.info('[history:selectRunRecord]', {
-        jobId: normalizedRecord.jobId,
-        hasHistory: normalizedRecord.history !== null,
-        historyPath: normalizedRecord.history?.path,
-        historyFrameCount: normalizedRecord.history?.frameCount,
-        selectedStrategyRunId:
-          normalizedRecord.result.selectedStrategyRunId ??
-          normalizedRecord.result.strategyResults[0]?.strategyRunId ??
-          null,
-        resultRunIds: normalizedRecord.result.strategyResults.map((run) => run.strategyRunId)
-      })
       state.runRecords = state.runRecords.map((existing) =>
         existing.jobId === normalizedRecord.jobId ? normalizedRecord : existing
       )
@@ -289,14 +278,6 @@ export function useHistoryStore() {
       const runId = frame.strategyRunId
       const existing = state.framesByRun[runId] ?? []
       const next = [...existing, frame]
-      console.info('[history:pushFrame]', {
-        runId,
-        stepIndex: frame.stepIndex,
-        beamRank: frame.beamRank,
-        totalForRun: next.length,
-        selectedRunId: state.selectedStrategyRunId,
-        selectedStepIndex: state.selectedStepIndex
-      })
       if (next.length > MAX_RETAINED_FRAMES) {
         next.splice(0, next.length - MAX_RETAINED_FRAMES)
         state.truncated = true
