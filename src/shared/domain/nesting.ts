@@ -300,6 +300,9 @@ export class BeamStateSnapshot extends Schema.Class<BeamStateSnapshot>('BeamStat
 
 export class BeamCandidateTrace extends Schema.Class<BeamCandidateTrace>('BeamCandidateTrace')({
   candidateId: Schema.String,
+  // null while the candidate sits in the strategy-agnostic pool before any
+  // order claims it; non-optional so consumers narrow on null, not undefined
+  candidateOrderId: Schema.Union([Schema.String, Schema.Null]),
   pieceId: PieceId,
   placement: Schema.optional(Placement),
   score: Schema.optional(Schema.Array(Schema.Number)),
@@ -311,11 +314,13 @@ export class BeamStepTrace extends Schema.Class<BeamStepTrace>('BeamStepTrace')(
   strategyRunId: Schema.String,
   strategyLabel: Schema.String,
   stepIndex: Schema.Number,
-  insertedPieceId: Schema.optional(PieceId),
+  insertedPieceId: Schema.NullOr(PieceId),
   beamRank: Schema.Number,
   beamWidth: Schema.Number,
-  candidateCount: Schema.optional(Schema.Number),
-  selectedCandidateId: Schema.optional(Schema.String)
+  candidateCount: Schema.NullOr(Schema.Number),
+  selectedCandidateId: Schema.NullOr(Schema.String),
+  // null means "no winning candidate order attribution" for this step
+  selectedCandidateOrderId: Schema.NullOr(Schema.String)
 }) {}
 
 export class FreeRectangleSplitTrace extends Schema.Class<FreeRectangleSplitTrace>(

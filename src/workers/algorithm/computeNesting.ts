@@ -140,6 +140,11 @@ function runBeamSearch(
     number,
     { readonly beamSize: number; readonly candidateCount: number }
   >()
+  // placements per (stepIndex, beamRank) so state_selected can attribute the winner
+  const placementsByStep = new Map<
+    number,
+    Map<number, { readonly candidateId: string; readonly candidateOrderId: string }>
+  >()
   const outcome = runMaxRectsBeamSearch({
     sheet: request.sheet,
     pieces: sortedPieces,
@@ -162,6 +167,19 @@ function runBeamSearch(
           })
           return
         }
+        if (event.type === 'placement_applied') {
+          // track so the subsequent state-selected event can attribute the move
+          let perRank = placementsByStep.get(event.stepIndex)
+          if (perRank === undefined) {
+            perRank = new Map()
+            placementsByStep.set(event.stepIndex, perRank)
+          }
+          perRank.set(event.beamRank, {
+            candidateId: event.candidateId,
+            candidateOrderId: event.candidateOrderId
+          })
+          return
+        }
         if (event.type === 'initial_state') {
           // history is a worker concern, so algorithm state is translated here
           for (const frame of buildStateFrames(
@@ -178,6 +196,7 @@ function runBeamSearch(
           // algorithm step 0 follows the initial seed, so history displays it as step 1
           const frameStepIndex = event.stepIndex + 1
           const stepTrace = stepTraces.get(event.stepIndex)
+          const applied = placementsByStep.get(event.stepIndex)?.get(event.beamRank)
           const beam =
             stepTrace === undefined
               ? {}
@@ -186,10 +205,13 @@ function runBeamSearch(
                     strategyRunId,
                     strategyLabel,
                     stepIndex: frameStepIndex,
-                    insertedPieceId: event.state.placements.at(-1)?.pieceId,
+                    insertedPieceId: event.state.placements.at(-1)?.pieceId ?? null,
                     beamRank: event.beamRank,
                     beamWidth,
-                    candidateCount: stepTrace.candidateCount
+                    candidateCount: stepTrace.candidateCount,
+                    // null when no placement was applied for this step/rank
+                    selectedCandidateId: applied?.candidateId ?? null,
+                    selectedCandidateOrderId: applied?.candidateOrderId ?? null
                   })
                 }
           options.emitFrame(

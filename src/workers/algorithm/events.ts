@@ -107,6 +107,9 @@ export class PlacementAppliedEvent {
   readonly stepIndex: number
   readonly beamRank: number
   readonly candidateId: string
+  // strategy id of the order that claimed this placement; always a string
+  // because a placement is only applied after an order claims it
+  readonly candidateOrderId: string
   readonly pieceId: PieceId
   readonly freeRectangleId: FreeRectId
   readonly rotated: boolean
@@ -121,6 +124,7 @@ export class PlacementAppliedEvent {
     readonly stepIndex: number
     readonly beamRank: number
     readonly candidateId: string
+    readonly candidateOrderId: string
     readonly pieceId: PieceId
     readonly freeRectangleId: FreeRectId
     readonly rotated: boolean
@@ -134,6 +138,7 @@ export class PlacementAppliedEvent {
     this.stepIndex = input.stepIndex
     this.beamRank = input.beamRank
     this.candidateId = input.candidateId
+    this.candidateOrderId = input.candidateOrderId
     this.pieceId = input.pieceId
     this.freeRectangleId = input.freeRectangleId
     this.rotated = input.rotated
@@ -214,10 +219,19 @@ export const NestingAlgorithmEvents = {
     readonly applied: AppliedCandidate
   }): PlacementAppliedEvent {
     const { candidate } = input.applied
+    // a placement is only ever applied after an order claims the candidate, so
+    // candidateOrderId is a real strategy id here; guard enforces the invariant
+    const candidateOrderId = candidate.candidateOrderId
+    if (candidateOrderId === null) {
+      throw new Error(
+        `PlacementAppliedEvent emitted for unclaimed candidate ${candidate.candidateId}`
+      )
+    }
     return new PlacementAppliedEvent({
       stepIndex: input.stepIndex,
       beamRank: input.beamRank,
       candidateId: candidate.candidateId,
+      candidateOrderId,
       pieceId: candidate.piece.id,
       freeRectangleId: candidate.freeRectangle.id,
       rotated: candidate.rotated,

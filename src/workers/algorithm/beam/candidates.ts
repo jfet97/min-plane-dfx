@@ -14,6 +14,9 @@ export class NestingAlgorithmCandidate {
   readonly freeRectangle: FreeRectangle
   readonly rotated: boolean
   readonly placement: Placement
+  // strategy id of the candidate order that claimed this placement, or null
+  // while it still sits in the strategy-agnostic pool before being claimed
+  readonly candidateOrderId: string | null
 
   constructor(input: {
     readonly state: NestingBeamState
@@ -21,6 +24,7 @@ export class NestingAlgorithmCandidate {
     readonly freeRectangle: FreeRectangle
     readonly rotated: boolean
     readonly placement: Placement
+    readonly candidateOrderId: string | null
   }) {
     this.candidateId = randomUUID()
     this.state = input.state
@@ -28,6 +32,7 @@ export class NestingAlgorithmCandidate {
     this.freeRectangle = input.freeRectangle
     this.rotated = input.rotated
     this.placement = input.placement
+    this.candidateOrderId = input.candidateOrderId
   }
 }
 

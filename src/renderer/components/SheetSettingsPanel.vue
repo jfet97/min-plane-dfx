@@ -25,11 +25,10 @@ const selectedLayoutStrategy = computed(() => {
   if (current !== undefined) return current
   return LAYOUT_SELECTION_STRATEGIES[0]
 })
-const selectedLayoutStrategyTooltip = computed(
-  () =>
-    selectedLayoutStrategy.value === undefined
-      ? 'Used by the beam to keep the best retained states.'
-      : `${selectedLayoutStrategy.value.label}: ${selectedLayoutStrategy.value.description}`
+const selectedLayoutStrategyTooltip = computed(() =>
+  selectedLayoutStrategy.value === undefined
+    ? 'Used by the beam to keep the best retained states.'
+    : `${selectedLayoutStrategy.value.label}: ${selectedLayoutStrategy.value.description}`
 )
 
 function inputValue(event: Event): string {
@@ -218,7 +217,9 @@ function setLayoutSelectionStrategyId(event: Event): void {
       </li>
     </ul>
 
-    <h3 title="Beam survivor metric used after each candidate is applied to decide which retained states survive the next expansion.">
+    <h3
+      title="Beam survivor metric used after each candidate is applied to decide which retained states survive the next expansion."
+    >
       Layout selection
     </h3>
     <label class="span-2 full">
@@ -237,7 +238,11 @@ function setLayoutSelectionStrategyId(event: Event): void {
         </option>
       </select>
     </label>
-    <p v-if="selectedLayoutStrategy" class="strategy-description" :title="selectedLayoutStrategy.description">
+    <p
+      v-if="selectedLayoutStrategy"
+      class="strategy-description"
+      :title="selectedLayoutStrategy.description"
+    >
       <small>{{ selectedLayoutStrategy.description }}</small>
     </p>
 

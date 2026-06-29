@@ -15,6 +15,7 @@ import {
 } from '../../src/workers/algorithm/maxRects/placements.js'
 import { FreeRectangles } from '../../src/workers/algorithm/maxRects/freeRectangles.js'
 import {
+  CandidateOrderEntry,
   K,
   initialState,
   runMaxRectsBeamSearch,
@@ -221,7 +222,9 @@ describe('runMaxRectsBeamSearch', () => {
       sheet: baseRequest().sheet,
       pieces: [piece('a'), piece('b')],
       beamWidth: K(1),
-      candidateOrder: [() => Order.make(() => 0)],
+      candidateOrder: [
+        new CandidateOrderEntry({ strategyId: 's1', order: () => Order.make(() => 0) })
+      ],
       stateOrder: () => Order.make(() => 0),
       hooks: {
         onEvent: (event) => {
@@ -248,6 +251,7 @@ describe('runMaxRectsBeamSearch', () => {
     expect(beamStepEvent?.candidateCount).toBe(16)
     const appliedEvent = events.find((event) => event.type === 'placement_applied')
     expect(appliedEvent?.pieceId).toBe('b')
+    expect(appliedEvent?.candidateOrderId).toBe('s1')
     expect(appliedEvent?.freeRectangleId).toBeDefined()
     expect(appliedEvent?.split.before.id).toBeDefined()
     expect(initialStates.length).toBe(1)
@@ -278,7 +282,8 @@ describe('runMaxRectsBeamSearch', () => {
       piece: sizedPiece('a', 50, 50),
       freeRectangle: selected,
       rotated: false,
-      placement: placementAt(0, 0, 50, 50, 'a')
+      placement: placementAt(0, 0, 50, 50, 'a'),
+      candidateOrderId: 'test-strategy'
     })
 
     const applied = applyCandidate(candidate)
@@ -298,7 +303,10 @@ describe('runMaxRectsBeamSearch', () => {
       sheet: baseRequest().sheet,
       pieces: [piece('a'), piece('b')],
       beamWidth: K(2),
-      candidateOrder: [() => Order.make(() => 0), () => Order.make(() => 0)],
+      candidateOrder: [
+        new CandidateOrderEntry({ strategyId: 's1', order: () => Order.make(() => 0) }),
+        new CandidateOrderEntry({ strategyId: 's2', order: () => Order.make(() => 0) })
+      ],
       stateOrder: () => Order.make(() => 0),
       hooks: {
         onEvent: (event) => events.push(event)
@@ -356,7 +364,7 @@ describe('strategyOrders', () => {
       baseRequest().sheet,
       [strategy],
       layoutStrategy
-    ).candidateOrder[0]({
+    ).candidateOrder[0]!.order({
       sheet: baseRequest().sheet
     })
     const higherButCompact = candidateAt({
@@ -379,14 +387,14 @@ describe('strategyOrders', () => {
       baseRequest().sheet,
       [preserveFree],
       layoutStrategy
-    ).candidateOrder[0]({
+    ).candidateOrder[0]!.order({
       sheet: baseRequest().sheet
     })
     const bottomLeftOrder = makeStrategyOrders(
       baseRequest().sheet,
       [bottomLeft],
       layoutStrategy
-    ).candidateOrder[0]({
+    ).candidateOrder[0]!.order({
       sheet: baseRequest().sheet
     })
     const tightButHigher = candidateAt({
@@ -406,7 +414,11 @@ describe('strategyOrders', () => {
     const shortFill = requireDefined(findStrategy('short-fill-preserve-free-then-bottom-left'))
     const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
     const squareSheet = { width: 100, height: 100, label: 'square' }
-    const order = makeStrategyOrders(squareSheet, [shortFill], layoutStrategy).candidateOrder[0]({
+    const order = makeStrategyOrders(
+      squareSheet,
+      [shortFill],
+      layoutStrategy
+    ).candidateOrder[0]!.order({
       sheet: squareSheet
     })
     const freeRectangle = freeRectangleAt(0, 0, 100, 100)
@@ -426,7 +438,7 @@ describe('strategyOrders', () => {
     const balanced = requireDefined(findStrategy('balanced-bottom-left-then-preserve-free'))
     const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
     const sheet = { width: 5000, height: 10000, label: 'tall' }
-    const order = makeStrategyOrders(sheet, [balanced], layoutStrategy).candidateOrder[0]({
+    const order = makeStrategyOrders(sheet, [balanced], layoutStrategy).candidateOrder[0]!.order({
       sheet
     })
     const freeRectangle = freeRectangleAt(0, 0, sheet.width, sheet.height)
@@ -446,7 +458,7 @@ describe('strategyOrders', () => {
     const shortFill = requireDefined(findStrategy('short-fill-preserve-free-then-bottom-left'))
     const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
     const sheet = { width: 5000, height: 10000, label: 'tall' }
-    const order = makeStrategyOrders(sheet, [shortFill], layoutStrategy).candidateOrder[0]({
+    const order = makeStrategyOrders(sheet, [shortFill], layoutStrategy).candidateOrder[0]!.order({
       sheet
     })
     const freeRectangle = freeRectangleAt(0, 0, sheet.width, sheet.height)
@@ -826,13 +838,15 @@ function beamState(input: {
 function candidateAt(input: {
   readonly freeRectangle: FreeRectangle
   readonly piece: PreparedPiece
+  readonly candidateOrderId?: string
 }): NestingAlgorithmCandidate {
   return new NestingAlgorithmCandidate({
     state: beamState({ freeRectangles: [input.freeRectangle] }),
     piece: input.piece,
     freeRectangle: input.freeRectangle,
     rotated: false,
-    placement: makeBottomLeftPlacement(input.freeRectangle, input.piece, false)
+    placement: makeBottomLeftPlacement(input.freeRectangle, input.piece, false),
+    candidateOrderId: input.candidateOrderId ?? 'test-strategy'
   })
 }
 

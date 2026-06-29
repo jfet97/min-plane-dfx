@@ -69,7 +69,9 @@ function replaceOptions(options: NestingOptions): void {
   state.options.historyScope = options.historyScope
   state.options.strategySelectionMode = options.strategySelectionMode
   state.options.strategyIds = [...options.strategyIds]
-  state.options.layoutSelectionStrategyId = findLayoutSelectionStrategy(options.layoutSelectionStrategyId)
+  state.options.layoutSelectionStrategyId = findLayoutSelectionStrategy(
+    options.layoutSelectionStrategyId
+  )
     ? options.layoutSelectionStrategyId
     : DEFAULT_LAYOUT_SELECTION_STRATEGY_ID
   state.options.finalSelectionMode = options.finalSelectionMode

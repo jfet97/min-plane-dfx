@@ -9,13 +9,22 @@ import type {
 import type { NestingBeamState } from './beam/state.js'
 import type {
   CandidateOrder,
-  CandidateOrders,
   NestingAlgorithmCandidate,
   NestingStateOrder
 } from './nestingAlgorithm.js'
 
+export class StrategyOrderEntry {
+  readonly strategyId: string
+  readonly order: CandidateOrder
+
+  constructor(input: { readonly strategyId: string; readonly order: CandidateOrder }) {
+    this.strategyId = input.strategyId
+    this.order = input.order
+  }
+}
+
 export interface StrategyOrders {
-  readonly candidateOrder: CandidateOrders
+  readonly candidateOrder: ReadonlyArray<StrategyOrderEntry>
   readonly stateOrder: NestingStateOrder
 }
 
@@ -118,14 +127,20 @@ export function makeStrategyOrders(
   candidateStrategies: ReadonlyArray<NestingStrategyDefinition>,
   layoutSelectionStrategy: LayoutSelectionStrategyDefinition
 ): StrategyOrders {
-  const candidateOrders = candidateStrategies.map((strategy) => makeCandidateOrder(strategy))
-  const firstCandidateOrder = candidateOrders[0]
+  const candidateOrders: ReadonlyArray<StrategyOrderEntry> = candidateStrategies.map(
+    (strategy) =>
+      new StrategyOrderEntry({
+        strategyId: strategy.id,
+        order: makeCandidateOrder(strategy)
+      })
+  )
+  const firstEntry = candidateOrders[0]
 
   return {
     candidateOrder:
-      firstCandidateOrder === undefined
-        ? [() => neutralCandidateOrder]
-        : [firstCandidateOrder, ...candidateOrders.slice(1)],
+      firstEntry === undefined
+        ? [new StrategyOrderEntry({ strategyId: '', order: () => neutralCandidateOrder })]
+        : [firstEntry, ...candidateOrders.slice(1)],
     stateOrder: () => makeStateOrder(sheet, layoutSelectionStrategy)
   }
 }

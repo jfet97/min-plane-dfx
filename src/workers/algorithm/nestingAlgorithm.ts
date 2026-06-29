@@ -38,7 +38,17 @@ export type CandidateOrder = (context: {
   sheet: SheetSpec
 }) => Order.Order<NestingAlgorithmCandidate>
 
-export type CandidateOrders = readonly [CandidateOrder, ...CandidateOrder[]]
+export class CandidateOrderEntry {
+  readonly strategyId: string
+  readonly order: CandidateOrder
+
+  constructor(input: { readonly strategyId: string; readonly order: CandidateOrder }) {
+    this.strategyId = input.strategyId
+    this.order = input.order
+  }
+}
+
+export type CandidateOrders = ReadonlyArray<CandidateOrderEntry>
 
 /**
  * Beam survivor order for partial layout states.
@@ -121,7 +131,10 @@ export function runMaxRectsBeamSearch(input: {
               piece,
               freeRectangle,
               rotated,
-              placement
+              placement,
+              // null until a candidate order claims this placement
+              // (distinct from any real strategy id, including "")
+              candidateOrderId: null
             })
           )
         }
@@ -129,13 +142,27 @@ export function runMaxRectsBeamSearch(input: {
       stepCandidates.push(...candidates)
 
       const selectedCandidates = new Map<string, NestingAlgorithmCandidate>()
-      for (const candidateOrder of input.candidateOrder) {
+      for (const { strategyId, order: candidateOrder } of input.candidateOrder) {
         const order = candidateOrder({ sheet: input.sheet })
 
-        // each strategy gets its own top-N view, then identical placements are
-        // collapsed so two agreeing strategies do not duplicate a beam branch.
+        // each strategy gets its own top-N view; duplicates are collapsed so
+        // agreeing strategies do not fork the beam. First claim wins attribution.
         for (const candidate of candidates.toSorted(order).slice(0, freeRectFanout)) {
-          selectedCandidates.set(candidatePlacementKey(candidate), candidate)
+          const key = candidatePlacementKey(candidate)
+          if (selectedCandidates.has(key)) {
+            continue
+          }
+          selectedCandidates.set(
+            key,
+            new NestingAlgorithmCandidate({
+              state: candidate.state,
+              piece: candidate.piece,
+              freeRectangle: candidate.freeRectangle,
+              rotated: candidate.rotated,
+              placement: candidate.placement,
+              candidateOrderId: strategyId
+            })
+          )
         }
       }
 
