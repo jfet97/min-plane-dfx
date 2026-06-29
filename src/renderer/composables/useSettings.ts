@@ -112,6 +112,9 @@ export function useSettings() {
         state.options.strategyIds.push(id)
       }
     },
+    setStrategyIds: (ids: ReadonlyArray<string>): void => {
+      state.options.strategyIds = [...ids]
+    },
     resetDefaults: (): void => {
       const defaults = makeDefaultSettings()
       state.sheet.width = defaults.sheet.width

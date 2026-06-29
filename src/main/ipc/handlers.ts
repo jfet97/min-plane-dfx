@@ -20,6 +20,7 @@ import type { Unsubscribe, NestingHistoryEvent } from '@shared/protocol/ipc.js'
 import type { JobId } from '@shared/domain/ids.js'
 import type { ProjectDocument } from '@shared/domain/project.js'
 import type { NestingRequest, NestingResult, ProjectHistoryRef } from '@shared/domain/nesting.js'
+import { ImportedDxfDocument as ImportedDxfDocumentSchema } from '@shared/domain/dxf.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
 
 /**
@@ -31,6 +32,7 @@ export const IPC_CHANNELS = [
   'dxf:list-imports',
   'dxf:select-files',
   'dxf:import-files',
+  'dxf:persist-source-document',
   'dxf:remove-import',
   'dxf:clear-imports',
   'nesting:export-request',
@@ -193,6 +195,31 @@ export function registerIpcHandlers(): void {
       try {
         const documents = await getWorkspace().importDxfFiles(paths)
         return { ok: true, value: { documents } }
+      } catch (err) {
+        return fromWorkspaceError(err)
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'dxf:persist-source-document',
+    async (
+      _event: IpcMainInvokeEvent,
+      raw: unknown
+    ): Promise<IpcResult<{ readonly document: ImportedDxfDocument }>> => {
+      const decoded = Schema.decodeUnknownExit(ImportedDxfDocumentSchema)(raw)
+      if (Exit.isFailure(decoded)) {
+        return {
+          ok: false,
+          error: {
+            code: 'ipc_protocol_error',
+            message: 'Invalid source document payload.'
+          }
+        }
+      }
+      try {
+        const document = await getWorkspace().storeSourceDocument(decoded.value)
+        return { ok: true, value: { document } }
       } catch (err) {
         return fromWorkspaceError(err)
       }

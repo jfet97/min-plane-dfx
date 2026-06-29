@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { WorkspaceProjectService } from '@main/services/WorkspaceProjectService.js'
+import { makePresetShapeDocument } from '@shared/presetShapes.js'
 
 function section(name: string): string {
   return `0\nSECTION\n2\n${name}\n`
@@ -68,6 +69,43 @@ describe('WorkspaceProjectService', () => {
       const persistedDocuments = await reloadedService.listImportedDxfs()
 
       expect(persistedDocuments).toEqual(documents)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('persists preset source documents across a fresh service instance', async () => {
+    const dir = join(tmpdir(), `min-plane-workspace-${randomUUID()}`)
+
+    try {
+      const service = new WorkspaceProjectService(dir)
+      const preset = makePresetShapeDocument({
+        kind: 'trapezoid',
+        width: 120,
+        height: 80,
+        topWidth: 70,
+        label: 'trap'
+      })
+      let stored
+      try {
+        await service.initialize()
+        stored = await service.storeSourceDocument(preset)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        if (message.includes('NODE_MODULE_VERSION')) {
+          console.warn('Skipping SQLite workspace smoke test:', message)
+          return
+        }
+        throw error
+      }
+
+      expect(stored).toEqual(preset)
+
+      const reloadedService = new WorkspaceProjectService(dir)
+      await reloadedService.initialize()
+      const persistedDocuments = await reloadedService.listImportedDxfs()
+
+      expect(persistedDocuments).toEqual([preset])
     } finally {
       await rm(dir, { recursive: true, force: true })
     }

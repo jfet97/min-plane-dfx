@@ -102,6 +102,10 @@ export class WorkspaceProjectService {
     return this.run(Effect.forEach(paths, (path) => this.importDxfFile(path), { concurrency: 2 }))
   }
 
+  storeSourceDocument(document: ImportedDxfDocument): Promise<ImportedDxfDocument> {
+    return this.run(this.storeSourceDocumentEffect(document))
+  }
+
   listImportedDxfs(): Promise<ReadonlyArray<ImportedDxfDocument>> {
     const decodeStoredDocument = this.decodeStoredDocument.bind(this)
     return this.run(
@@ -233,6 +237,36 @@ export class WorkspaceProjectService {
           )
         )
       )
+    })
+  }
+
+  private storeSourceDocumentEffect(document: ImportedDxfDocument) {
+    const decodeStoredDocument = this.decodeStoredDocument.bind(this)
+    return Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient
+      const existingRows = yield* sql`
+        SELECT document_json FROM imported_dxf WHERE source_path = ${document.path}
+      `
+      const existing = firstRow(existingRows)
+      if (existing) {
+        return decodeStoredDocument(existing.document_json)
+      }
+
+      const pieceId = document.pieces[0]?.id ?? document.id
+      const json = JSON.stringify(document)
+      const now = new Date().toISOString()
+      yield* sql.withTransaction(
+        Effect.gen(function* () {
+          yield* sql`
+            INSERT INTO imported_dxf (id, source_path, stored_path, piece_id, file_name, document_json, imported_at)
+            VALUES (${document.id}, ${document.path}, ${document.path}, ${pieceId}, ${document.fileName}, ${json}, ${now})
+          `
+          yield* sql`
+            UPDATE projects SET updated_at = ${now} WHERE id = 'temporary'
+          `
+        })
+      )
+      return document
     })
   }
 

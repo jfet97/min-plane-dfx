@@ -49,6 +49,7 @@ export interface AppApi {
   readonly importDxfFiles: (
     paths: ReadonlyArray<string>
   ) => Promise<ReadonlyArray<ImportedDxfDocument>>
+  readonly persistSourceDocument: (document: ImportedDxfDocument) => Promise<ImportedDxfDocument>
   readonly removeImportedDxf: (pieceId: PieceId) => Promise<void>
   readonly clearImportedDxfs: () => Promise<void>
 

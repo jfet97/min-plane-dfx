@@ -7,6 +7,7 @@ export type PresetShapeKind =
   | 'rectangle'
   | 'circle'
   | 'triangle'
+  | 'trapezoid'
   | 'pentagon'
   | 'hexagon'
   | 'star'
@@ -15,6 +16,7 @@ export interface PresetShapeInput {
   readonly kind: PresetShapeKind
   readonly width: number
   readonly height: number
+  readonly topWidth?: number
   readonly label: string
 }
 
@@ -79,6 +81,7 @@ function segmentsFor(kind: PresetShapeKind, width: number, height: number): Read
       [width, height]
     ])
   }
+  if (kind === 'trapezoid') return []
   if (kind === 'pentagon') return regularPolygon(5, width, height)
   if (kind === 'hexagon') return regularPolygon(6, width, height)
   if (kind === 'star') return star(width, height)
@@ -96,6 +99,7 @@ export function makePresetShapeDocument(input: PresetShapeInput): ImportedDxfDoc
     input.kind === 'square' || input.kind === 'circle'
       ? width
       : positiveInteger(input.height, width)
+  const topWidth = Math.min(width, positiveInteger(input.topWidth ?? width * 0.6, width))
   const sourceFileId = SourceFileId.make()
   const pieceId = PieceId.make()
   const label = input.label.trim() || input.kind
@@ -109,7 +113,16 @@ export function makePresetShapeDocument(input: PresetShapeInput): ImportedDxfDoc
     geometry: new DxfGeometrySummary({
       entityType: input.kind === 'circle' ? 'CIRCLE' : 'PRESET_SHAPE',
       closed: true,
-      segments: [...segmentsFor(input.kind, width, height)]
+      segments: [
+        ...(input.kind === 'trapezoid'
+          ? closePolyline([
+              [(width - topWidth) / 2, 0],
+              [(width + topWidth) / 2, 0],
+              [width, height],
+              [0, height]
+            ])
+          : segmentsFor(input.kind, width, height))
+      ]
     }),
     warnings: []
   })

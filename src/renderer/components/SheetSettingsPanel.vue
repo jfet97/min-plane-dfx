@@ -12,6 +12,12 @@ const settings = useSettings()
 const sheetInvalid = computed(
   () => settings.state.value.sheet.width <= 0 || settings.state.value.sheet.height <= 0
 )
+const allStrategyIds = computed(() => STRATEGY_DEFINITIONS.map((strategy) => strategy.id))
+const allStrategiesChecked = computed(
+  () =>
+    allStrategyIds.value.length > 0 &&
+    allStrategyIds.value.every((id) => settings.state.value.options.strategyIds.includes(id))
+)
 
 function inputValue(event: Event): string {
   return event.target instanceof HTMLInputElement ? event.target.value : ''
@@ -142,22 +148,42 @@ function setLayoutSelectionStrategyId(event: Event): void {
     <h3 title="Candidate strategies order legal placements before they are applied to the beam.">
       Candidate strategies
     </h3>
-    <p class="hint">Selected ids feed one beam run; they are not separate worker runs.</p>
+    <div class="section-actions">
+      <p class="hint">Selected ids feed one beam run; they are not separate worker runs.</p>
+      <button
+        type="button"
+        :disabled="allStrategiesChecked"
+        title="Check every candidate strategy in the list."
+        @click="settings.setStrategyIds(allStrategyIds)"
+      >
+        All
+      </button>
+      <button
+        type="button"
+        :disabled="settings.state.value.options.strategyIds.length === 0"
+        title="Clear the checked candidate strategy list."
+        @click="settings.setStrategyIds([])"
+      >
+        None
+      </button>
+    </div>
     <label
       class="span-2 full"
       title="Single runs only the checked strategy IDs. All configured runs every listed strategy."
     >
-      Selection mode
+      Candidate set
       <select
         :value="settings.state.value.options.strategySelectionMode"
         @change="setStrategySelectionMode"
       >
-        <option value="single" title="Run only the checked strategy IDs.">Single</option>
+        <option value="single" title="Use only the checked candidate strategy IDs.">
+          Checked only
+        </option>
         <option
           value="all_configured"
-          title="Run every strategy listed in the strategy configuration."
+          title="Use every candidate strategy listed in the strategy configuration."
         >
-          All configured
+          All candidate orders
         </option>
       </select>
     </label>
@@ -295,6 +321,21 @@ select {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-actions .hint {
+  flex: 1;
+}
+
+.section-actions button {
+  font-size: 11px;
+  padding: 2px 6px;
 }
 
 .strategy-row {

@@ -44,4 +44,20 @@ describe('makePresetShapeDocument', () => {
     expect(piece?.label).toBe('hexagon')
     expect(piece?.geometry.segments).toHaveLength(6)
   })
+
+  it('uses top width for trapezoid outlines', () => {
+    const document = makePresetShapeDocument({
+      kind: 'trapezoid',
+      width: 100,
+      height: 50,
+      topWidth: 40,
+      label: 'trap'
+    })
+    const piece = document.pieces[0]
+    const first = piece?.geometry.segments[0]
+
+    expect(piece?.realBounds).toMatchObject({ x: 0, y: 0, width: 100, height: 50 })
+    expect(piece?.geometry.segments).toHaveLength(4)
+    expect(first).toMatchObject({ x1: 30, y1: 0, x2: 70, y2: 0 })
+  })
 })

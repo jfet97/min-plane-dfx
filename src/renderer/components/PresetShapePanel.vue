@@ -15,6 +15,7 @@ const options: ReadonlyArray<ShapeOption> = [
   { kind: 'square', label: 'Square' },
   { kind: 'circle', label: 'Circle' },
   { kind: 'triangle', label: 'Triangle' },
+  { kind: 'trapezoid', label: 'Trapezoid' },
   { kind: 'pentagon', label: 'Pentagon' },
   { kind: 'hexagon', label: 'Hexagon' },
   { kind: 'star', label: 'Star' }
@@ -24,10 +25,15 @@ const form = reactive({
   kind: 'rectangle' as PresetShapeKind,
   width: 100,
   height: 60,
+  topWidth: 60,
   label: ''
 })
 
-const primaryDimensionLabel = computed(() => (form.kind === 'circle' ? 'Diameter' : 'Width'))
+const primaryDimensionLabel = computed(() => {
+  if (form.kind === 'circle') return 'Diameter'
+  if (form.kind === 'trapezoid') return 'Bottom width'
+  return 'Width'
+})
 const secondaryDimensionLabel = computed(() => {
   if (form.kind === 'circle') return 'Diameter'
   if (form.kind === 'triangle') return 'Height'
@@ -35,6 +41,7 @@ const secondaryDimensionLabel = computed(() => {
 })
 
 const locksHeight = computed(() => form.kind === 'square' || form.kind === 'circle')
+const usesTopWidth = computed(() => form.kind === 'trapezoid')
 
 function inputValue(event: Event): string {
   return event.target instanceof HTMLInputElement ? event.target.value : ''
@@ -56,20 +63,32 @@ function setWidth(value: number): void {
   if (locksHeight.value) {
     form.height = form.width
   }
+  if (form.topWidth > form.width) {
+    form.topWidth = form.width
+  }
 }
 
 function setHeight(value: number): void {
   form.height = Math.max(1, Math.round(value))
 }
 
-function addPreset(): void {
+function setTopWidth(value: number): void {
+  form.topWidth = Math.min(form.width, Math.max(1, Math.round(value)))
+}
+
+async function addPreset(): Promise<void> {
   const document = makePresetShapeDocument({
     kind: form.kind,
     width: form.width,
     height: locksHeight.value ? form.width : form.height,
+    ...(usesTopWidth.value ? { topWidth: form.topWidth } : {}),
     label: form.label
   })
-  store.appendPresetDocument(document)
+  try {
+    await store.appendPresetDocument(document)
+  } catch (error) {
+    console.error('[presets] failed to persist source shape:', error)
+  }
 }
 </script>
 
@@ -108,17 +127,41 @@ function addPreset(): void {
       </label>
     </div>
 
+    <label
+      v-if="usesTopWidth"
+      class="label"
+      title="Top edge width in integer millimeters. It cannot exceed the bottom width."
+    >
+      Top width
+      <input
+        type="number"
+        min="1"
+        :max="form.width"
+        step="1"
+        :value="form.topWidth"
+        @input="setTopWidth(Number(inputValue($event)))"
+      />
+    </label>
+
     <label class="label" title="Optional source label shown in the cut list.">
       Label
       <input
         type="text"
-        :placeholder="`${form.kind} ${form.width}x${locksHeight ? form.width : form.height}`"
+        :placeholder="
+          usesTopWidth
+            ? `${form.kind} ${form.width}/${form.topWidth}x${form.height}`
+            : `${form.kind} ${form.width}x${locksHeight ? form.width : form.height}`
+        "
         :value="form.label"
         @input="form.label = inputValue($event)"
       />
     </label>
 
-    <button type="button" title="Add this preset as a reusable source shape." @click="addPreset">
+    <button
+      type="button"
+      title="Add this preset as a reusable source shape."
+      @click="void addPreset()"
+    >
       Add preset
     </button>
   </div>

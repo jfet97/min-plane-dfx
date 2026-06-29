@@ -115,10 +115,11 @@ function appendDocuments(documents: ReadonlyArray<ImportedDxfDocument>): void {
   state.importRevision++
 }
 
-function appendPresetDocument(document: ImportedDxfDocument): void {
-  state.documents = [...state.documents, document]
+async function appendPresetDocument(document: ImportedDxfDocument): Promise<void> {
+  const persisted = window.appApi ? await window.appApi.persistSourceDocument(document) : document
+  state.documents = [...state.documents, persisted]
   recomputeAggregates()
-  const piece = documentObjectPiece(document)
+  const piece = documentObjectPiece(persisted)
   if (piece) {
     setPieceQuantity(piece.id, 1)
   }

@@ -66,6 +66,12 @@ const api: AppApi = {
       { readonly documents: ReadonlyArray<ImportedDxfDocument> }
     >('dxf:import-files', paths).then((r) => r.documents),
 
+  persistSourceDocument: (document) =>
+    invokeEnvelope<[ImportedDxfDocument], { readonly document: ImportedDxfDocument }>(
+      'dxf:persist-source-document',
+      document
+    ).then((r) => r.document),
+
   removeImportedDxf: (pieceId) =>
     invokeEnvelope<[typeof pieceId], void>('dxf:remove-import', pieceId).then(() => undefined),
 
