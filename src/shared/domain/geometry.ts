@@ -52,18 +52,20 @@ export const RectWithFromRect = Rect.pipe(
   Schema.decodeTo(
     RectWith,
     SchemaTransformation.transform({
-      decode: (rect) => ({
-        ...rect,
-        longestEdge: Math.max(rect.height, rect.width),
-        area: rect.height * rect.width,
-        imbalance: Math.abs(rect.height - rect.width)
-      }),
-      encode: ({ x, y, width, height }) => ({
-        x,
-        y,
-        width,
-        height
-      })
+      decode: (rect) =>
+        new RectWith({
+          ...rect,
+          longestEdge: Math.max(rect.height, rect.width),
+          area: rect.height * rect.width,
+          imbalance: Math.abs(rect.height - rect.width)
+        }),
+      encode: ({ x, y, width, height }) =>
+        new Rect({
+          x,
+          y,
+          width,
+          height
+        })
     })
   )
 )

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Exit, Schema } from 'effect'
-import { WorkerRequest, WorkerResponse } from '@shared/protocol/worker.js'
+import { RunNestingPayload, WorkerRequest, WorkerResponse } from '@shared/protocol/worker.js'
 
 const validate = (schema: Schema.Top, input: unknown) =>
   Schema.decodeUnknownExit(schema as never)(input)
@@ -40,6 +40,50 @@ describe('WorkerRequest', () => {
     }
     const result = validate(WorkerRequest, request)
     expect(Exit.isSuccess(result)).toBe(true)
+  })
+
+  it('encodes prepared piece padded bounds for the RPC worker boundary', () => {
+    const payload = {
+      requestId: 'r-1',
+      request: {
+        version: 1,
+        jobId: 'job-1',
+        sheet: { width: 100, height: 100, label: 'default' },
+        padding: 2,
+        pieces: [
+          {
+            id: 'p-1',
+            sourcePieceId: 'p-1',
+            realBounds: { x: 0, y: 0, width: 10, height: 5 },
+            paddedBounds: {
+              x: 0,
+              y: 0,
+              width: 14,
+              height: 9,
+              longestEdge: 14,
+              area: 126,
+              imbalance: 5
+            },
+            padding: 2,
+            allowRotation: true
+          }
+        ],
+        options: {
+          allowGlobalRotation: true,
+          timeoutMs: 5000,
+          workerMode: 'maxrects-beam-search' as const,
+          historyMode: 'final' as const,
+          historyScope: 'winning_path' as const,
+          strategySelectionMode: 'single' as const,
+          strategyIds: ['balanced-preserve-free-then-bottom-left'],
+          layoutSelectionStrategyId: 'compact-first',
+          finalSelectionMode: 'manual' as const
+        }
+      }
+    }
+
+    const encoded = Schema.encodeUnknownExit(RunNestingPayload)(payload)
+    expect(Exit.isSuccess(encoded)).toBe(true)
   })
 
   it('rejects a request with unknown type', () => {

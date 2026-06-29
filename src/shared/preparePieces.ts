@@ -1,6 +1,6 @@
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 import { NestingWarning, PreparedPiece, type SheetSpec } from '@shared/domain/nesting.js'
-import { RectWith } from '@shared/domain/geometry.js'
+import { Rect, RectWith } from '@shared/domain/geometry.js'
 import type { JobId } from '@shared/domain/ids.js'
 
 export interface PreparedPieceWithWarnings {
@@ -55,7 +55,7 @@ export function preparePieces(
       new PreparedPiece({
         id: p.id,
         sourcePieceId: p.id,
-        realBounds: p.realBounds,
+        realBounds: new Rect(p.realBounds),
         paddedBounds: new RectWith({
           x: p.realBounds.x,
           y: p.realBounds.y,
