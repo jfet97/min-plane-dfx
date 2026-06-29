@@ -37,13 +37,16 @@ export const StrategySelectionMode = Schema.Literals(['single', 'all_configured'
  */
 export const FinalSelectionMode = Schema.Literals(['manual', 'best', 'top_n'])
 
-/** Naming fragment for a strategy. Free-form string in the data file; the
- *  schema accepts any descriptive string. The default vocabulary
- *  (`balanced_compactness`, `short_side_fill`) is a starting convention, not
- *  a closed set. */
+/**
+ * Candidate-score prefix name from `strategies.json`.
+ * This selects the shared first part of the placement score tuple.
+ */
 export const StrategyPrefix = Schema.String
 
-/** Single token that composes the strategy id after the prefix. Free-form. */
+/**
+ * Candidate-score tail token from `strategies.json`.
+ * The worker interprets known tokens like `r`, `s`, `y`, and `x`.
+ */
 export const StrategyTailToken = Schema.String
 
 export class SheetSpec extends Schema.Class<SheetSpec>('SheetSpec')({
@@ -52,26 +55,35 @@ export class SheetSpec extends Schema.Class<SheetSpec>('SheetSpec')({
   label: Schema.String
 }) {}
 
-/** A nesting strategy id is a descriptive string, not an opaque code. */
+// a nesting strategy id is a descriptive string, not an opaque code
 export const NestingStrategyId = Schema.String
 export type NestingStrategyId = Schema.Schema.Type<typeof NestingStrategyId>
 
 export class NestingStrategyDefinition extends Schema.Class<NestingStrategyDefinition>(
   'NestingStrategyDefinition'
 )({
+  // stable candidate strategy id saved in project files and requests
   id: Schema.String,
+  // short UI label for the candidate strategy
   label: Schema.String,
+  // human-readable explanation for tooltips and settings panels
   description: Schema.String,
+  // shared global score tuple family, e.g. balanced compactness or short-fill
   prefix: StrategyPrefix,
+  // ordered tie-breaker tokens applied after the prefix via `Order.combineAll`
   tail: Schema.Array(StrategyTailToken)
 }) {}
 
 export class LayoutSelectionStrategyDefinition extends Schema.Class<LayoutSelectionStrategyDefinition>(
   'LayoutSelectionStrategyDefinition'
 )({
+  // stable layout selection id saved in project files and requests
   id: Schema.String,
+  // short UI label for the beam survivor metric
   label: Schema.String,
+  // human-readable explanation for tooltips and settings panels
   description: Schema.String,
+  // ordered state-score criteria used after candidate application
   criteria: Schema.Array(Schema.String)
 }) {}
 
@@ -82,7 +94,9 @@ export class NestingOptions extends Schema.Class<NestingOptions>('NestingOptions
   historyMode: HistoryMode,
   historyScope: HistoryScope,
   strategySelectionMode: StrategySelectionMode,
+  // candidate strategy ids used as alternative placement orders inside one beam run
   strategyIds: Schema.Array(Schema.String),
+  // layout metric id used to decide which successor beam states survive
   layoutSelectionStrategyId: Schema.String,
   finalSelectionMode: FinalSelectionMode,
   topN: Schema.optional(Schema.Number),
@@ -142,7 +156,7 @@ export class FinalResultScore extends Schema.Class<FinalResultScore>('FinalResul
   label: Schema.String
 }) {}
 
-/** Status of a single strategy run, distinct from the overall NestingResult.status. */
+// status of one result row, distinct from the overall NestingResult.status
 export const NestingStrategyStatus = Schema.Literals(['stub', 'completed', 'failed', 'cancelled'])
 
 export class NestingHistorySummary extends Schema.Class<NestingHistorySummary>(

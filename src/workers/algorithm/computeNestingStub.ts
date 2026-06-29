@@ -57,8 +57,8 @@ export function computeNestingStub(
 
   // selected candidate strategies are alternatives inside one beam run
   const candidateStrategyIds = resolveCandidateStrategyIds(request)
-  const candidateStrategies = candidateStrategyIds.map((id) => findStrategy(id))
-  const layoutSelectionStrategy = findLayoutSelectionStrategy(
+  const candidateStrategies = candidateStrategyIds.map(resolveCandidateStrategy)
+  const layoutSelectionStrategy = resolveLayoutSelectionStrategy(
     request.options.layoutSelectionStrategyId
   )
   const beamWidth = K(candidateStrategyIds.length)
@@ -107,8 +107,8 @@ export function computeNestingStub(
 function runBeamSearchStub(
   request: NestingRequest,
   sortedPieces: ReadonlyArray<NestingRequest['pieces'][number]>,
-  candidateStrategies: ReadonlyArray<NestingStrategyDefinition | undefined>,
-  layoutSelectionStrategy: LayoutSelectionStrategyDefinition | undefined,
+  candidateStrategies: ReadonlyArray<NestingStrategyDefinition>,
+  layoutSelectionStrategy: LayoutSelectionStrategyDefinition,
   strategyRunId: string,
   strategyLabel: string,
   beamWidth: number,
@@ -184,4 +184,20 @@ function resolveCandidateStrategyIds(request: NestingRequest): ReadonlyArray<str
     return request.options.strategyIds
   }
   return [DEFAULT_STRATEGY_ID]
+}
+
+function resolveCandidateStrategy(id: string): NestingStrategyDefinition {
+  const strategy = findStrategy(id)
+  if (strategy === undefined) {
+    throw new Error(`Unknown candidate strategy id: ${id}`)
+  }
+  return strategy
+}
+
+function resolveLayoutSelectionStrategy(id: string): LayoutSelectionStrategyDefinition {
+  const strategy = findLayoutSelectionStrategy(id)
+  if (strategy === undefined) {
+    throw new Error(`Unknown layout selection strategy id: ${id}`)
+  }
+  return strategy
 }

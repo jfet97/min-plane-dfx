@@ -3,6 +3,9 @@ import { Order } from 'effect'
 import { sortPiecesForNesting } from '../../src/workers/algorithm/sortPiecesForNesting.js'
 import { computeNestingStub } from '../../src/workers/algorithm/computeNestingStub.js'
 import { selectFinalStrategyResult } from '../../src/workers/algorithm/selectFinalStrategyResult.js'
+import { makeStrategyOrders } from '../../src/workers/algorithm/strategyOrders.js'
+import { NestingAlgorithmCandidate } from '../../src/workers/algorithm/beam/candidates.js'
+import { NestingBeamState } from '../../src/workers/algorithm/beam/state.js'
 import {
   makeBottomLeftPlacement,
   makeTopLeftPlacement
@@ -29,7 +32,8 @@ import type {
   PreparedPiece,
   NestingOptions,
   NestingStrategyResult,
-  NestingHistoryFrame
+  NestingHistoryFrame,
+  Placement
 } from '@shared/domain/nesting.js'
 import { FreeRectangle } from '@shared/domain/nesting.js'
 import type { JobId, PieceId } from '@shared/domain/ids.js'
@@ -293,6 +297,84 @@ describe('makeBottomLeftPlacement', () => {
   })
 })
 
+describe('strategyOrders', () => {
+  it('uses candidate prefix criteria before tail criteria', () => {
+    const strategy = requireDefined(findStrategy('balanced-bottom-left-then-preserve-free'))
+    const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
+    const order = makeStrategyOrders([strategy], layoutStrategy).candidateOrder[0]({
+      sheet: baseRequest().sheet
+    })
+    const higherButCompact = candidateAt({
+      freeRectangle: freeRectangleAt(10, 10, 10, 10),
+      piece: sizedPiece('a', 10, 10)
+    })
+    const lowerButLargerCluster = candidateAt({
+      freeRectangle: freeRectangleAt(0, 0, 80, 10),
+      piece: sizedPiece('b', 80, 10)
+    })
+
+    expect(order(higherButCompact, lowerButLargerCluster)).toBeLessThan(0)
+  })
+
+  it('uses tail order to choose between prefix-tied candidates', () => {
+    const preserveFree = requireDefined(findStrategy('balanced-preserve-free-then-bottom-left'))
+    const bottomLeft = requireDefined(findStrategy('balanced-bottom-left-then-preserve-free'))
+    const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
+    const preserveFreeOrder = makeStrategyOrders([preserveFree], layoutStrategy).candidateOrder[0]({
+      sheet: baseRequest().sheet
+    })
+    const bottomLeftOrder = makeStrategyOrders([bottomLeft], layoutStrategy).candidateOrder[0]({
+      sheet: baseRequest().sheet
+    })
+    const tightButHigher = candidateAt({
+      freeRectangle: freeRectangleAt(0, 10, 10, 10),
+      piece: sizedPiece('a', 10, 10)
+    })
+    const lowerButWasteful = candidateAt({
+      freeRectangle: freeRectangleAt(10, 0, 100, 100),
+      piece: sizedPiece('b', 10, 10)
+    })
+
+    expect(preserveFreeOrder(tightButHigher, lowerButWasteful)).toBeLessThan(0)
+    expect(bottomLeftOrder(lowerButWasteful, tightButHigher)).toBeLessThan(0)
+  })
+
+  it('uses the selected layout metric to order beam states', () => {
+    const compactFirst = requireDefined(findLayoutSelectionStrategy('compact-first'))
+    const largestFreeAreaFirst = requireDefined(
+      findLayoutSelectionStrategy('largest-free-area-first')
+    )
+    const compactOrder = makeStrategyOrders([], compactFirst).stateOrder()
+    const largestFreeAreaOrder = makeStrategyOrders([], largestFreeAreaFirst).stateOrder()
+    const compactState = beamState({
+      placements: [placementAt(0, 0, 10, 10, 'a')],
+      freeRectangles: [freeRectangleAt(20, 0, 5, 10)]
+    })
+    const roomierState = beamState({
+      placements: [placementAt(0, 0, 20, 10, 'b')],
+      freeRectangles: [freeRectangleAt(30, 0, 40, 40)]
+    })
+
+    expect(compactOrder(compactState, roomierState)).toBeLessThan(0)
+    expect(largestFreeAreaOrder(roomierState, compactState)).toBeLessThan(0)
+  })
+
+  it('keeps states with fewer unplaced pieces ahead of compact failed states', () => {
+    const compactFirst = requireDefined(findLayoutSelectionStrategy('compact-first'))
+    const order = makeStrategyOrders([], compactFirst).stateOrder()
+    const placedState = beamState({
+      placements: [placementAt(0, 0, 20, 20, 'a')],
+      unplacedPieces: []
+    })
+    const failedState = beamState({
+      placements: [],
+      unplacedPieces: [piece('b')]
+    })
+
+    expect(order(placedState, failedState)).toBeLessThan(0)
+  })
+})
+
 describe('makeTopLeftPlacement', () => {
   it('places the unrotated piece at the top-left of the free rectangle', () => {
     const placement = makeTopLeftPlacement(
@@ -523,4 +605,59 @@ function makeStrategy(runId: string, strategyId: string): NestingStrategyResult 
     warnings: [{ code: 'algorithm_not_implemented', message: 'stub' }],
     stats: { elapsedMs: 0, pieceCount: 1 }
   }
+}
+
+function beamState(input: {
+  readonly placements?: ReadonlyArray<Placement>
+  readonly freeRectangles?: ReadonlyArray<FreeRectangle>
+  readonly unplacedPieces?: ReadonlyArray<PreparedPiece>
+}): NestingBeamState {
+  return new NestingBeamState({
+    placements: input.placements ?? [],
+    freeRectangles: input.freeRectangles ?? [],
+    remainingPieces: [],
+    unplacedPieces: input.unplacedPieces ?? []
+  })
+}
+
+function candidateAt(input: {
+  readonly freeRectangle: FreeRectangle
+  readonly piece: PreparedPiece
+}): NestingAlgorithmCandidate {
+  return new NestingAlgorithmCandidate({
+    state: beamState({ freeRectangles: [input.freeRectangle] }),
+    piece: input.piece,
+    freeRectangle: input.freeRectangle,
+    rotated: false,
+    placement: makeBottomLeftPlacement(input.freeRectangle, input.piece, false)
+  })
+}
+
+function freeRectangleAt(x: number, y: number, width: number, height: number): FreeRectangle {
+  return new FreeRectangle({ x, y, width, height })
+}
+
+function placementAt(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  pieceId: string
+): Placement {
+  return {
+    pieceId: pieceId as PieceId,
+    x,
+    y,
+    width,
+    height,
+    rotation: 0
+  }
+}
+
+function requireDefined<T>(value: T | undefined): T {
+  expect(value).toBeDefined()
+  if (value === undefined) {
+    throw new Error('Expected test fixture to resolve')
+  }
+  return value
 }

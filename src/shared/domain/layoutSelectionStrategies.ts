@@ -1,29 +1,23 @@
-import type { LayoutSelectionStrategyDefinition } from './nesting.js'
+import { Schema } from 'effect'
+import { LayoutSelectionStrategyDefinition } from './nesting.js'
 import data from './layoutSelectionStrategies.json'
 
-interface LayoutSelectionStrategiesData {
-  readonly version: number
-  readonly strategies: ReadonlyArray<{
-    readonly id: string
-    readonly label: string
-    readonly description: string
-    readonly criteria: ReadonlyArray<string>
-  }>
-}
+const LayoutSelectionStrategiesData = Schema.Struct({
+  version: Schema.Literal(1),
+  strategies: Schema.Array(LayoutSelectionStrategyDefinition)
+})
 
-const loaded = data as LayoutSelectionStrategiesData
+const loaded = Schema.decodeUnknownSync(LayoutSelectionStrategiesData)(data)
 
+// beam survivor/layout definitions loaded from JSON and validated at module load
 export const LAYOUT_SELECTION_STRATEGIES: ReadonlyArray<LayoutSelectionStrategyDefinition> =
-  loaded.strategies.map((s) => ({
-    id: s.id,
-    label: s.label,
-    description: s.description,
-    criteria: [...s.criteria]
-  }))
+  loaded.strategies
 
+// default survivor metric used by new settings
 export const DEFAULT_LAYOUT_SELECTION_STRATEGY_ID =
   LAYOUT_SELECTION_STRATEGIES[0]?.id ?? 'compact-first'
 
+// lookup keeps caller-side error handling explicit
 export function findLayoutSelectionStrategy(
   id: string
 ): LayoutSelectionStrategyDefinition | undefined {
