@@ -34,6 +34,9 @@ stored as `top`, and the other retained states live in `alternatives`. The order
 used to choose survivors compares individual beam states, not the container.
 History translation emits one frame per retained state with `beamRank`, so main
 and renderer can inspect the top state and the other retained alternatives.
+Scrubbing rank 1 across steps shows the rank-1 snapshot at each step, not the
+ancestry path of one final branch; lineage replay requires explicit parent
+links that the current history model does not store.
 Inside a beam member, `remainingPieces` is the future placement queue, while
 `unplacedPieces` is the branch-local bucket for pieces already rejected as not
 fitting.

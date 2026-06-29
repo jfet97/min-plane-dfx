@@ -40,7 +40,7 @@ A project should include:
 - nesting options;
 - latest worker result when available;
 - latest NDJSON history reference when available.
-- saved run records with their result, piece count, and NDJSON history
+- saved run records with their result, run sheet, piece count, and NDJSON history
   reference when available.
 
 Preset shapes are persisted in the temporary workspace as imported document
@@ -61,11 +61,12 @@ the SQLite write. Since multiple IPC writes can overlap across reload timing,
 main stores the revision next to the JSON payload and ignores stale writes.
 
 Completed runs are saved as project run records in the same temporary settings
-payload. A run record keeps the result and the NDJSON replay reference, so it
-can be restored after renderer reload even if the user later changes source
-shapes, quantities, or sheet settings. Deleting a run record only removes that
-archive entry; it does not delete imported source shapes or mutate the current
-project setup.
+payload. A run record keeps the result, the sheet used for that run, and the
+NDJSON replay reference, so it can be restored after renderer reload even if
+the user later changes source shapes, quantities, or sheet settings. Result
+rendering uses the run sheet, not the current settings sheet. Deleting a run
+record only removes that archive entry; it does not delete imported source
+shapes or mutate the current project setup.
 
 ## Open Behavior
 
@@ -78,7 +79,10 @@ Opening a project resets transient worker state to idle. It must not invent, res
 History frames may live in a worker-written NDJSON file referenced by
 `ProjectHistoryRef`.
 
-If that file is missing or unreadable on open, keep the loaded result visible and show a compact recoverable warning. Missing history is not a reason to reject a valid project snapshot.
+If that file is missing or unreadable on open, keep the loaded result visible,
+drop the stale replay reference from the run record, and keep the issue out of
+preparation warnings. Missing history is not a reason to reject a valid project
+snapshot.
 
 ## Validation
 

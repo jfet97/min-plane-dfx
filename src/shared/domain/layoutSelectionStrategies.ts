@@ -14,8 +14,7 @@ export const LAYOUT_SELECTION_STRATEGIES: ReadonlyArray<LayoutSelectionStrategyD
   loaded.strategies
 
 // default survivor metric used by new settings
-export const DEFAULT_LAYOUT_SELECTION_STRATEGY_ID =
-  LAYOUT_SELECTION_STRATEGIES[0]?.id ?? 'compact-first'
+export const DEFAULT_LAYOUT_SELECTION_STRATEGY_ID = 'largest-free-area-first'
 
 // lookup keeps caller-side error handling explicit
 export function findLayoutSelectionStrategy(

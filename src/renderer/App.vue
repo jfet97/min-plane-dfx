@@ -14,13 +14,23 @@ import { useJobRunner } from './composables/useJobRunner.js'
 import { preparePieces } from '@shared/preparePieces.js'
 import { JobId } from '@shared/domain/ids.js'
 import type {
+  NestingHistorySummary,
   NestingOptions,
   NestingRequest,
+  NestingResult,
+  NestingStats,
+  NestingStrategyResult,
   NestingWarning,
+  Placement,
   PreparedPiece,
+  ProjectHistoryRef,
   SheetSpec
 } from '@shared/domain/nesting.js'
-import { ProjectRunRecord, type WorkspaceProjectSettings } from '@shared/domain/project.js'
+import {
+  ProjectRunRecord,
+  type ProjectRunRecord as ProjectRunRecordModel,
+  type WorkspaceProjectSettings
+} from '@shared/domain/project.js'
 import type { Unsubscribe } from '@shared/protocol/ipc.js'
 
 type CenterView = 'import' | 'result'
@@ -108,7 +118,7 @@ function buildWorkspaceSettings(): WorkspaceProjectSettings {
     padding: settings.state.value.padding,
     pieceQuantities: { ...store.state.value.pieceQuantities },
     options: cloneOptions(settings.state.value.options),
-    runRecords: [...history.runRecords.value]
+    runRecords: history.runRecords.value.map(cloneRunRecord)
   }
 }
 
@@ -178,6 +188,105 @@ function cloneOptions(options: NestingOptions): NestingOptions {
     ...(options.maxHistoryEvents !== undefined
       ? { maxHistoryEvents: options.maxHistoryEvents }
       : {})
+  }
+}
+
+function cloneHistorySummary(summary: NestingHistorySummary): NestingHistorySummary {
+  return {
+    frameCount: summary.frameCount,
+    strategyRunCount: summary.strategyRunCount,
+    retainedFrameCount: summary.retainedFrameCount,
+    truncated: summary.truncated,
+    scope: summary.scope,
+    strategyRunIds: [...summary.strategyRunIds],
+    ...(summary.ndjsonPath ? { ndjsonPath: summary.ndjsonPath } : {})
+  }
+}
+
+function clonePlacement(placement: Placement): Placement {
+  return {
+    pieceId: placement.pieceId,
+    x: placement.x,
+    y: placement.y,
+    width: placement.width,
+    height: placement.height,
+    rotation: placement.rotation
+  }
+}
+
+function cloneStats(stats: NestingStats): NestingStats {
+  return {
+    elapsedMs: stats.elapsedMs,
+    pieceCount: stats.pieceCount,
+    algorithm: {
+      startedAt: stats.algorithm.startedAt,
+      endedAt: stats.algorithm.endedAt,
+      elapsedMs: stats.algorithm.elapsedMs
+    }
+  }
+}
+
+function cloneStrategyResult(result: NestingStrategyResult): NestingStrategyResult {
+  return {
+    strategyRunId: result.strategyRunId,
+    strategyId: result.strategyId,
+    strategyLabel: result.strategyLabel,
+    ...(result.strategyDescription !== undefined
+      ? { strategyDescription: result.strategyDescription }
+      : {}),
+    status: result.status,
+    sortedPieceIds: [...result.sortedPieceIds],
+    placements: result.placements.map(clonePlacement),
+    unplacedPieceIds: [...result.unplacedPieceIds],
+    ...(result.historySummary
+      ? { historySummary: cloneHistorySummary(result.historySummary) }
+      : {}),
+    ...(result.finalScore ? { finalScore: { ...result.finalScore } } : {}),
+    stats: cloneStats(result.stats),
+    warnings: result.warnings.map((warning) => ({ ...warning }))
+  }
+}
+
+function cloneResult(result: NestingResult): NestingResult {
+  return {
+    version: result.version,
+    jobId: result.jobId,
+    status: result.status,
+    strategyResults: result.strategyResults.map(cloneStrategyResult),
+    ...(result.selectedStrategyRunId
+      ? { selectedStrategyRunId: result.selectedStrategyRunId }
+      : {}),
+    sortedPieceIds: [...result.sortedPieceIds],
+    placements: result.placements.map(clonePlacement),
+    unplacedPieceIds: [...result.unplacedPieceIds],
+    ...(result.historySummary
+      ? { historySummary: cloneHistorySummary(result.historySummary) }
+      : {}),
+    warnings: result.warnings.map((warning) => ({ ...warning })),
+    stats: cloneStats(result.stats)
+  }
+}
+
+function cloneHistoryRef(ref: ProjectHistoryRef | null): ProjectHistoryRef | null {
+  if (!ref) return null
+  return {
+    kind: ref.kind,
+    jobId: ref.jobId,
+    path: ref.path,
+    frameCount: ref.frameCount,
+    createdAt: ref.createdAt
+  }
+}
+
+function cloneRunRecord(record: ProjectRunRecordModel): ProjectRunRecordModel {
+  return {
+    jobId: record.jobId,
+    createdAt: record.createdAt,
+    label: record.label,
+    pieceCount: record.pieceCount,
+    sheet: cloneSheet(record.sheet),
+    result: cloneResult(record.result),
+    history: cloneHistoryRef(record.history)
   }
 }
 
@@ -252,6 +361,7 @@ async function runNesting(): Promise<void> {
           createdAt: new Date().toISOString(),
           label: result.strategyResults[0]?.strategyLabel ?? `Run ${result.jobId}`,
           pieceCount: request.pieces.length,
+          sheet: cloneSheet(request.sheet),
           result,
           history: history.state.value.lastHistoryRef
         })
@@ -308,7 +418,7 @@ async function saveProject(): Promise<void> {
     padding: settings.state.value.padding,
     pieceQuantities: { ...store.state.value.pieceQuantities },
     options: { ...settings.state.value.options },
-    runRecords: [...history.runRecords.value],
+    runRecords: history.runRecords.value.map(cloneRunRecord),
     ...(history.hasResult.value && history.result.value
       ? { lastResult: history.result.value }
       : {}),
@@ -342,9 +452,10 @@ async function loadCurrentHistoryReplay(): Promise<void> {
     for (const frame of frames) {
       history.pushFrame(frame)
     }
-  } catch {
-    projectWarning.value =
-      'Saved result loaded, but the referenced NDJSON history file is missing or unreadable.'
+  } catch (error: unknown) {
+    console.warn('[history] failed to load current replay:', error)
+    history.clearRunRecordHistory(ref.jobId)
+    await saveWorkspaceSettingsNow()
   }
 }
 </script>

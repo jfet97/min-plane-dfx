@@ -330,6 +330,16 @@ export function useHistoryStore() {
       state.lastHistoryRef = ref
     },
 
+    clearRunRecordHistory(jobId: JobId): void {
+      state.runRecords = state.runRecords.map((record) =>
+        record.jobId === jobId ? { ...record, history: null } : record
+      )
+      if (state.result?.jobId === jobId) {
+        state.lastHistoryRef = null
+      }
+      notifyWorkspaceSettingsChanged()
+    },
+
     hydrateFromProject(project: ProjectDocument): void {
       stopPlayback()
       state.runRecords = [...(project.runRecords ?? [])]

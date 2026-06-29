@@ -5,7 +5,7 @@ import { useHistoryStore } from '../composables/useHistoryStore.js'
 import { useSettings } from '../composables/useSettings.js'
 import { useViewport } from '../composables/useViewport.js'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
-import type { Placement } from '@shared/domain/nesting.js'
+import type { Placement, SheetSpec } from '@shared/domain/nesting.js'
 
 type Segment = NonNullable<ImportedPiece['geometry']['segments'][number]>
 type VisualMode = 'shape' | 'footprint'
@@ -107,7 +107,7 @@ const sourceBounds = computed<ViewBox | null>(() => {
 const placementBounds = computed<ViewBox | null>(() => {
   if (props.mode !== 'result') return null
   if (!history.selectedRun.value) return null
-  const sheet = settings.state.value.sheet
+  const sheet = resultSheet.value
   return {
     x: -padding,
     y: -padding,
@@ -122,9 +122,13 @@ const viewBox = computed<ViewBox>(() => {
   return { x: 0, y: 0, width: 100, height: 100 }
 })
 
+const resultSheet = computed<SheetSpec>(
+  () => history.selectedRunRecord.value?.sheet ?? settings.state.value.sheet
+)
+
 const sheetOutline = computed(() => {
   if (props.mode !== 'result' || !history.selectedRun.value) return null
-  return settings.state.value.sheet
+  return resultSheet.value
 })
 
 const selectedId = ref<string | null>(null)
@@ -247,7 +251,7 @@ function sourcePieceForPlacement(placement: Placement): ImportedPiece | null {
 }
 
 function resultY(rect: { readonly y: number; readonly height: number }): number {
-  return settings.state.value.sheet.height - rect.y - rect.height
+  return resultSheet.value.height - rect.y - rect.height
 }
 
 function resultGeometryTransform(placement: Placement, piece: ImportedPiece): string {
@@ -286,7 +290,9 @@ function onPointerDown(event: PointerEvent): void {
     offsetY: viewport.state.value.offsetY
   }
   viewport.beginPan()
-  event.currentTarget instanceof Element && event.currentTarget.setPointerCapture(event.pointerId)
+  if (event.currentTarget instanceof Element) {
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
 }
 
 function onPointerMove(event: PointerEvent): void {
@@ -302,8 +308,9 @@ function onPointerMove(event: PointerEvent): void {
 function onPointerUp(event: PointerEvent): void {
   panStart.value = null
   viewport.endPan()
-  event.currentTarget instanceof Element &&
+  if (event.currentTarget instanceof Element) {
     event.currentTarget.releasePointerCapture(event.pointerId)
+  }
 }
 
 function onWheel(event: WheelEvent): void {

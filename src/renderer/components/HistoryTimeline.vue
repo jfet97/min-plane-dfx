@@ -116,6 +116,9 @@ function onSpeedChange(event: Event): void {
           {{ frame.beamRank + 1 }}
         </button>
       </div>
+      <p v-if="history.selectedStepFrames.value.length > 1" class="beam-note">
+        Beam rank is a snapshot at this step; rank 1 across steps can switch lineage.
+      </p>
     </div>
   </div>
 </template>
@@ -219,6 +222,12 @@ h2 {
 .beam-ranks button.active {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.beam-note {
+  margin: -2px 0 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 .warn {

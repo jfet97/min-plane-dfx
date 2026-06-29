@@ -1,4 +1,4 @@
-import { Schema } from 'effect'
+import { Effect, Schema } from 'effect'
 import { JobId, SourceFileId } from './ids.js'
 import { ImportedPiece, ImportedDxfDocument } from './dxf.js'
 import { NestingOptions, NestingResult, ProjectHistoryRef, SheetSpec } from './nesting.js'
@@ -19,6 +19,12 @@ export class ProjectRunRecord extends Schema.Class<ProjectRunRecord>('ProjectRun
   createdAt: Schema.String,
   label: Schema.String,
   pieceCount: Schema.Number,
+  // the run renders against the sheet used when the worker produced it
+  sheet: SheetSpec.pipe(
+    Schema.withDecodingDefaultTypeKey(
+      Effect.succeed({ width: 1000, height: 1000, label: 'legacy run sheet' })
+    )
+  ),
   result: NestingResult,
   history: Schema.Union([ProjectHistoryRef, Schema.Null])
 }) {}

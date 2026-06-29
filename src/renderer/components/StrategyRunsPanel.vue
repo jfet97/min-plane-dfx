@@ -49,6 +49,7 @@ async function selectRunRecord(record: ProjectRunRecord): Promise<void> {
       }
     } catch (error: unknown) {
       console.warn('[history] failed to load archived run replay:', error)
+      history.clearRunRecordHistory(record.jobId)
     }
   }
   const runId =

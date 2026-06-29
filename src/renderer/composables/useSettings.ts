@@ -112,7 +112,7 @@ export function useSettings() {
     },
     setLayoutSelectionStrategyId: (id: string): void => {
       state.options.layoutSelectionStrategyId = id
-      notifyWorkspaceSettingsChanged()
+      notifyWorkspaceSettingsChanged('immediate')
     },
     setFinalSelectionMode: (mode: 'manual' | 'best' | 'top_n'): void => {
       state.options.finalSelectionMode = mode
