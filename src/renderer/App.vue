@@ -23,7 +23,6 @@ import type {
   NestingWarning,
   Placement,
   PreparedPiece,
-  ProjectHistoryRef,
   SheetSpec
 } from '@shared/domain/nesting.js'
 import {
@@ -31,6 +30,7 @@ import {
   type ProjectRunRecord as ProjectRunRecordModel,
   type WorkspaceProjectSettings
 } from '@shared/domain/project.js'
+import { ProjectHistoryRef } from '@shared/domain/nesting.js'
 import type { Unsubscribe } from '@shared/protocol/ipc.js'
 
 type CenterView = 'import' | 'result'
@@ -359,8 +359,26 @@ async function runNesting(): Promise<void> {
   centerView.value = 'result'
   await runner.start(request, {
     onHistoryFrame: (frame) => history.pushFrame(frame),
-    onHistoryComplete: (jobId, summary) => {
+    onHistoryComplete: async (jobId, summary) => {
       history.completeRun(jobId, summary)
+      const api = window.appApi
+      if (!api || !summary.ndjsonPath) return
+      try {
+        const frames = await api.loadHistoryReplay(
+          new ProjectHistoryRef({
+            kind: 'ndjson_replay',
+            jobId,
+            path: summary.ndjsonPath,
+            frameCount: summary.frameCount,
+            createdAt: new Date().toISOString()
+          })
+        )
+        for (const frame of frames) {
+          history.pushFrame(frame)
+        }
+      } catch (error: unknown) {
+        console.warn('[history] failed to load replay for completed run:', error)
+      }
     },
     onResult: async (result) => {
       history.setResult(result)
