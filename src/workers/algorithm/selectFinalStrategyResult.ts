@@ -1,15 +1,13 @@
 import type { NestingRequest, NestingStrategyResult } from '@shared/domain/nesting.js'
 
 /**
- * Result-envelope selection stub. Picks the worker result row that should
- * populate the top-level NestingResult fields.
+ * Result-envelope selection layer.
  *
- * For now the stub always returns the first strategy run when one exists,
- * regardless of `finalSelectionMode` (`manual` / `best` / `top_n`). Candidate
- * strategy ids already compete inside the single beam run before this point.
+ * There is currently one worker result row: the beam search run. Candidate
+ * strategy ids already compete inside that run before this point.
  *
  * Returning `null` is allowed and means "no strategy is selected". The
- * aggregator in `computeNestingStub` falls back to the empty input order.
+ * aggregator in `computeNesting` falls back to the core outcome fields.
  */
 export function selectFinalStrategyResult(
   strategyResults: ReadonlyArray<NestingStrategyResult>,

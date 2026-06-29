@@ -28,7 +28,7 @@ describe('WorkerRequest', () => {
         options: {
           allowGlobalRotation: true,
           timeoutMs: 5000,
-          workerMode: 'stub' as const,
+          workerMode: 'maxrects-beam-search' as const,
           historyMode: 'final' as const,
           historyScope: 'winning_path' as const,
           strategySelectionMode: 'single' as const,
@@ -69,7 +69,7 @@ describe('WorkerResponse', () => {
         frameId: 'f-1',
         jobId: 'job-1',
         strategyRunId: 's-1',
-        strategyLabel: 'stub',
+        strategyLabel: 'maxrects-beam-search',
         stepIndex: 0,
         beamRank: 0,
         title: 'frame 0',

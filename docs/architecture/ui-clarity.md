@@ -10,11 +10,11 @@ Always make the current implementation level clear:
 
 - worker pipeline can run;
 - strategy configuration is data-driven;
-- final ranking is not implemented;
-- real nesting placement is not implemented;
+- final ranking has one current worker result row;
+- nesting placements come from the worker algorithm;
 - history frames only exist when emitted by the worker.
 
-Do not make the UI look like the algorithm works when it is still a stub.
+Do not invent result previews, scores, or history that were not emitted by the worker.
 
 ## Tooltips
 

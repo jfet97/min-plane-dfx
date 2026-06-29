@@ -1,20 +1,16 @@
 # Algorithm Boundary
 
-The placement algorithm is still intentionally absent from the app shell. The user may implement algorithm pieces explicitly inside `src/workers/algorithm/`; infrastructure work must not invent placements or scoring behavior on its own.
+The placement algorithm lives behind the worker boundary in `src/workers/algorithm/`. Infrastructure code must not invent placements, scores, history, or strategy behavior outside that path.
 
-Do not implement:
+Do not add unrelated algorithm systems or fabricated output without an explicit design decision:
 
-- MaxRects;
-- candidate scoring;
-- final ranking;
-- beam search;
 - branch and bound;
 - fake placements;
 - fake free rectangles;
 - fake history frames;
 - OCaml integration.
 
-## Current Stub Behavior
+## Current Behavior
 
 `sortPiecesForNesting` is the user-owned initial ordering boundary. It may contain user-provided ordering logic, but it must not place pieces, score placements, split free rectangles, or produce history.
 
@@ -52,7 +48,7 @@ placement applications with ids plus split/prune data, and completion can be
 translated by the wrapper into whichever schema-backed history or worker
 protocol format it needs.
 
-`computeNestingStub` is the worker-facing wrapper around that boundary. It
+`computeNesting` is the worker-facing wrapper around that boundary. It
 resolves configured strategy ids, adapts strategy definitions into ordering
 functions, calls the core boundary, turns algorithm events into history frames, and
 wraps the outcome into `NestingStrategyResult` / `NestingResult`.
@@ -69,9 +65,8 @@ Strategies are data, not TypeScript unions. Persistent IDs should be descriptive
 The app may display strategy labels and descriptions, and it may send selected
 candidate strategy IDs to the worker. Inside the wrapper, those IDs select
 candidate ordering rules for one beam run. They are not part of the algorithm
-core itself, and the app must not implement the scoring criteria behind those
-IDs until the user writes the algorithm.
+core itself.
 
-## Real Algorithm Contract
+## Algorithm Contract
 
-When a real algorithm is implemented later, a successful run must place all pieces. For real runs, unplaced pieces are fatal validation failures, not partial success.
+An `ok` run places all pieces. A `partial` run returns concrete placements plus the pieces the selected beam could not place.

@@ -25,13 +25,11 @@ Vue renderer
   -> Effect-backed main services
   -> WorkerSupervisor
   -> worker_threads nesting worker
-  -> identity algorithm stub
+  -> MaxRects beam search
 ```
 
 Main owns filesystem, dialogs, project files, imports, exports, and worker lifecycle. The renderer owns UI state only. The worker owns computation workflow and history emission for a single job.
 
 ## Non-Negotiable Boundary
 
-The algorithm is not implemented in this repository state. Infrastructure may prepare requests, validate data, display imported DXF geometry, show worker results, and replay emitted history. It must not fabricate algorithm behavior.
-
-The only allowed algorithm-like behavior is the existing identity sort stub.
+The worker owns nesting computation. Infrastructure may prepare requests, validate data, display imported DXF geometry, show worker results, and replay emitted history. It must not fabricate placements, scores, history, or strategy output outside the algorithm path.

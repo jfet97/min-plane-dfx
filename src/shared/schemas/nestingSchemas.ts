@@ -11,7 +11,7 @@ import {
 export const NestingOptionsStrictSchema = Schema.Struct({
   allowGlobalRotation: Schema.Boolean,
   timeoutMs: Schema.Number.check(Schema.isGreaterThan(0)),
-  workerMode: Schema.Literal('stub'),
+  workerMode: Schema.Literal('maxrects-beam-search'),
   historyMode: Schema.Literals(['stream', 'final', 'off']),
   historyScope: Schema.Literal('winning_path'),
   strategySelectionMode: Schema.Literals(['single', 'all_configured']),

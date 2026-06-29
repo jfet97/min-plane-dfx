@@ -14,7 +14,7 @@ function options(): NestingOptions {
   return new NestingOptions({
     allowGlobalRotation: true,
     timeoutMs: 5000,
-    workerMode: 'stub',
+    workerMode: 'maxrects-beam-search',
     historyMode: 'final',
     historyScope: 'winning_path',
     strategySelectionMode: 'single',

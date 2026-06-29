@@ -37,33 +37,33 @@ const BEAM_SEARCH_STRATEGY_ID = 'maxrects-beam-search'
 const BEAM_SEARCH_STRATEGY_LABEL = 'MaxRects beam search'
 
 /**
- * Build a stub NestingResult for the still-missing nesting algorithm.
+ * Worker-facing orchestration wrapper for a nesting run.
  *
- * This is the worker-facing orchestration wrapper: it resolves configured
- * candidate strategy ids, adapts them into algorithm ordering hooks, calls the
- * algorithm-core boundary, emits history through the worker callback, and wraps
+ * It resolves configured strategy ids, adapts them into ordering hooks, calls
+ * the algorithm core, translates algorithm state into history frames, and wraps
  * the core outcome into protocol-facing result envelopes.
- *
- * No real placements, free rectangles, beam candidates, split events, or
- * scoring are produced.
  */
-export function computeNestingStub(
+export function computeNesting(
   request: NestingRequest,
   elapsedMs: number,
   options: ComputeNestingOptions
 ): NestingResult {
+  // piece ordering is still a separate boundary so it can evolve independently
   const sortedPieces = sortPiecesForNesting(request.pieces)
-  const pieceIds = sortedPieces.map((piece) => piece.id)
 
-  // selected candidate strategies are alternatives inside one beam run
+  // selected candidate strategies are competing candidate orders in one beam run
   const candidateStrategyIds = resolveCandidateStrategyIds(request)
   const candidateStrategies = candidateStrategyIds.map(resolveCandidateStrategy)
   const layoutSelectionStrategy = resolveLayoutSelectionStrategy(
     request.options.layoutSelectionStrategyId
   )
+
+  // beam width grows with the number of selected candidate-order strategies
   const beamWidth = K(candidateStrategyIds.length)
   const strategyRunId = `run-1-${BEAM_SEARCH_STRATEGY_ID}`
-  const outcome = runBeamSearchStub(
+
+  // the core returns plain algorithm output; this wrapper owns protocol models
+  const outcome = runBeamSearch(
     request,
     sortedPieces,
     candidateStrategies,
@@ -73,8 +73,10 @@ export function computeNestingStub(
     beamWidth,
     options
   )
+
+  // the UI still expects result rows; the beam search is currently one row
   const strategyResults = [
-    NestingStrategyResult.stub({
+    NestingStrategyResult.fromAlgorithm({
       strategyRunId,
       strategyId: BEAM_SEARCH_STRATEGY_ID,
       strategyLabel: BEAM_SEARCH_STRATEGY_LABEL,
@@ -83,28 +85,32 @@ export function computeNestingStub(
         request.options.layoutSelectionStrategyId
       ),
       sortedPieceIds: outcome.sortedPieceIds,
+      placements: outcome.placements,
+      unplacedPieceIds: outcome.unplacedPieceIds,
       elapsedMs,
       pieceCount: request.pieces.length
     })
   ]
 
+  // final selection is trivial while there is one result row, but kept isolated
   const selected = selectFinalStrategyResult(strategyResults, request)
 
+  // selected row fields become the top-level result summary
   const aggregatedPlacements = selected?.placements ?? []
-  const aggregatedUnplaced = selected?.unplacedPieceIds ?? pieceIds
+  const aggregatedUnplaced = selected?.unplacedPieceIds ?? outcome.unplacedPieceIds
 
-  return NestingResultModel.stub({
+  return NestingResultModel.fromAlgorithm({
     request,
     strategyResults,
     ...(selected ? { selectedStrategyRunId: selected.strategyRunId } : {}),
-    sortedPieceIds: pieceIds,
+    sortedPieceIds: outcome.sortedPieceIds,
     placements: aggregatedPlacements,
     unplacedPieceIds: aggregatedUnplaced,
     elapsedMs
   })
 }
 
-function runBeamSearchStub(
+function runBeamSearch(
   request: NestingRequest,
   sortedPieces: ReadonlyArray<NestingRequest['pieces'][number]>,
   candidateStrategies: ReadonlyArray<NestingStrategyDefinition>,
@@ -114,6 +120,7 @@ function runBeamSearchStub(
   beamWidth: number,
   options: ComputeNestingOptions
 ) {
+  // json strategy definitions become executable `Order` instances here
   const orders = makeStrategyOrders(candidateStrategies, layoutSelectionStrategy)
   return runMaxRectsBeamSearch({
     sheet: request.sheet,
@@ -124,6 +131,7 @@ function runBeamSearchStub(
     hooks: {
       onEvent: (event) => {
         if (event.type === 'initial_state') {
+          // history is a worker concern, so algorithm state is translated here
           for (const frame of buildStateFrames(
             request,
             strategyRunId,
@@ -142,6 +150,13 @@ function beamMembers(state: NestingAlgorithmState): ReadonlyArray<NestingBeamSta
   return [state.top, ...state.alternatives]
 }
 
+/**
+ * Convert the retained beam into history frames.
+ *
+ * Each retained state becomes one frame with its `beamRank`, so the renderer can
+ * show the top branch and the alternative branches without knowing algorithm
+ * internals.
+ */
 function buildStateFrames(
   request: NestingRequest,
   runId: string,
@@ -176,6 +191,7 @@ function describeBeamSearchRun(
   return `Candidate orders: ${candidateStrategyIds.join(', ')}. Layout selection: ${layoutSelectionStrategyId}.`
 }
 
+// request ids are optional in the UI; default to the first configured strategy
 function resolveCandidateStrategyIds(request: NestingRequest): ReadonlyArray<string> {
   if (request.options.strategySelectionMode === 'all_configured') {
     return STRATEGY_DEFINITIONS.map((s) => s.id)
@@ -186,6 +202,7 @@ function resolveCandidateStrategyIds(request: NestingRequest): ReadonlyArray<str
   return [DEFAULT_STRATEGY_ID]
 }
 
+// fail fast at the worker boundary if a persisted strategy id is unknown
 function resolveCandidateStrategy(id: string): NestingStrategyDefinition {
   const strategy = findStrategy(id)
   if (strategy === undefined) {
@@ -194,6 +211,7 @@ function resolveCandidateStrategy(id: string): NestingStrategyDefinition {
   return strategy
 }
 
+// layout selection is required because it decides beam survivors after expansion
 function resolveLayoutSelectionStrategy(id: string): LayoutSelectionStrategyDefinition {
   const strategy = findLayoutSelectionStrategy(id)
   if (strategy === undefined) {

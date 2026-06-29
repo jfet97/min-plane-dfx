@@ -6,23 +6,22 @@
 - `src/preload/`: context bridge API exposed to the renderer.
 - `src/renderer/`: Vue UI, composables, canvas preview, desktop-tool interaction state.
 - `src/shared/`: domain models, schemas, IPC and worker protocols.
-- `src/workers/`: Node worker entry point and the nesting algorithm stub.
+- `src/workers/`: Node worker entry point and the nesting algorithm.
 - Package manager: `pnpm`.
 
 ## Read First
 
 For implementation work, read these files before editing:
 
-1. [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md)
-2. [`SCORING_CRITERIA_NOTES.md`](./SCORING_CRITERIA_NOTES.md)
-3. [`docs/architecture.md`](./docs/architecture.md)
-4. The relevant narrower docs under [`docs/architecture/`](./docs/architecture/index.md)
+1. [`SCORING_CRITERIA_NOTES.md`](./SCORING_CRITERIA_NOTES.md)
+2. [`docs/architecture.md`](./docs/architecture.md)
+3. The relevant narrower docs under [`docs/architecture/`](./docs/architecture/index.md)
 
 If a task touches Effect APIs, inspect the installed packages in `node_modules` first. Prefer local installed types and source over memory or web docs.
 
 ## Hard Rules
 
-- Do not implement the nesting algorithm.
+- Keep algorithm behavior inside `src/workers/algorithm/`.
 - Do not add fake placements, fake free rectangles, fake scores, fake ranking, or fake history.
 - Keep docs up to date with code changes. If implementation changes architecture, protocols, workflows, validation, persistence, or agent conventions, update the relevant `docs/` page and/or this file in the same development cycle.
 - `src/workers/algorithm/sortPiecesForNesting.ts` is the user-owned initial ordering boundary. Do not change its behavior unless the user explicitly asks for algorithm work.
@@ -38,7 +37,7 @@ If a task touches Effect APIs, inspect the installed packages in `node_modules` 
 
 - Keep the UI dense, restrained, and CAD/tool-like.
 - Prefer compact labels, native titles/tooltips, helper rows, and disabled-state explanations over large explanatory blocks.
-- Make algorithm status honest: show `stub` / `algorithm not implemented` when no real algorithm exists.
+- Make algorithm status honest: show worker-reported statuses and unplaced pieces directly.
 - Result rendering must be driven by real worker results or imported source geometry. Do not invent preview data.
 
 ## Validation

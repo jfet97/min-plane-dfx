@@ -11,8 +11,7 @@ export interface PreparedPieceWithWarnings {
 /**
  * Build the validation-time piece list sent to the worker. Padding is
  * applied symmetrically to both sides; the worker algorithm does not sort
- * pieces here. Sorting belongs behind the worker boundary (currently the
- * identity sort stub).
+ * pieces here. Sorting belongs behind the worker boundary.
  */
 export function preparePieces(
   imported: ReadonlyArray<ImportedPiece>,

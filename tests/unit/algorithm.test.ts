@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Order } from 'effect'
 import { sortPiecesForNesting } from '../../src/workers/algorithm/sortPiecesForNesting.js'
-import { computeNestingStub } from '../../src/workers/algorithm/computeNestingStub.js'
+import { computeNesting } from '../../src/workers/algorithm/computeNesting.js'
 import { selectFinalStrategyResult } from '../../src/workers/algorithm/selectFinalStrategyResult.js'
 import { makeStrategyOrders } from '../../src/workers/algorithm/strategyOrders.js'
 import { NestingAlgorithmCandidate } from '../../src/workers/algorithm/beam/candidates.js'
@@ -69,7 +69,7 @@ function options(overrides: Partial<NestingOptions> = {}): NestingOptions {
   return {
     allowGlobalRotation: true,
     timeoutMs: 5000,
-    workerMode: 'stub',
+    workerMode: 'maxrects-beam-search',
     historyMode: 'final',
     historyScope: 'winning_path',
     strategySelectionMode: 'single',
@@ -92,8 +92,8 @@ function baseRequest(overrides: Partial<NestingRequest> = {}): NestingRequest {
   }
 }
 
-function runNestingStub(request: NestingRequest, elapsedMs: number) {
-  return computeNestingStub(request, elapsedMs, {
+function runNesting(request: NestingRequest, elapsedMs: number) {
+  return computeNesting(request, elapsedMs, {
     emitFrame: () => {}
   })
 }
@@ -433,28 +433,29 @@ describe('selectFinalStrategyResult', () => {
   })
 })
 
-describe('computeNestingStub', () => {
-  it('returns a stub result with status="stub"', () => {
-    const result = runNestingStub(baseRequest(), 12)
-    expect(result.status).toBe('stub')
+describe('computeNesting', () => {
+  it('returns an ok result when the selected beam places every piece', () => {
+    const result = runNesting(baseRequest(), 12)
+    expect(result.status).toBe('ok')
   })
 
-  it('emits empty placements at every level', () => {
-    const result = runNestingStub(baseRequest(), 12)
-    expect(result.placements.length).toBe(0)
-    for (const strategy of result.strategyResults) {
-      expect(strategy.placements.length).toBe(0)
-    }
+  it('returns placements from the selected beam at every result level', () => {
+    const result = runNesting(baseRequest(), 12)
+    expect(result.placements.map((placement) => placement.pieceId)).toEqual(['a', 'b'])
+    expect(result.strategyResults[0]?.placements.map((placement) => placement.pieceId)).toEqual([
+      'a',
+      'b'
+    ])
   })
 
   it('preserves input order in sortedPieceIds at the top level', () => {
-    const result = runNestingStub(baseRequest(), 12)
+    const result = runNesting(baseRequest(), 12)
     expect(result.sortedPieceIds).toEqual(['a', 'b'])
   })
 
-  it('marks every input piece as unplaced', () => {
-    const result = runNestingStub(baseRequest(), 12)
-    expect(result.unplacedPieceIds).toEqual(['a', 'b'])
+  it('returns only pieces the selected beam could not place', () => {
+    const result = runNesting(baseRequest(), 12)
+    expect(result.unplacedPieceIds).toEqual([])
   })
 
   it('uses requested strategy ids as candidate orders inside one beam run', () => {
@@ -467,7 +468,7 @@ describe('computeNestingStub', () => {
         ]
       })
     })
-    const result = runNestingStub(req, 5)
+    const result = runNesting(req, 5)
     expect(result.strategyResults).toHaveLength(1)
     expect(result.strategyResults[0]?.strategyId).toBe('maxrects-beam-search')
     expect(result.strategyResults[0]?.strategyDescription).toContain(
@@ -482,7 +483,7 @@ describe('computeNestingStub', () => {
     const req = baseRequest({
       options: options({ strategySelectionMode: 'all_configured', strategyIds: [] })
     })
-    const result = runNestingStub(req, 5)
+    const result = runNesting(req, 5)
     const firstConfigured = STRATEGY_DEFINITIONS[0]
     const lastConfigured = STRATEGY_DEFINITIONS.at(-1)
     expect(result.strategyResults).toHaveLength(1)
@@ -501,20 +502,20 @@ describe('computeNestingStub', () => {
         ]
       })
     })
-    const result = runNestingStub(req, 5)
+    const result = runNesting(req, 5)
     expect(result.selectedStrategyRunId).toBe(result.strategyResults[0]?.strategyRunId)
   })
 
-  it('emits the algorithm_not_implemented warning at every level', () => {
-    const result = runNestingStub(baseRequest(), 0)
-    expect(result.warnings.some((w) => w.code === 'algorithm_not_implemented')).toBe(true)
+  it('returns no implementation-placeholder warnings', () => {
+    const result = runNesting(baseRequest(), 0)
+    expect(result.warnings).toEqual([])
     for (const strategy of result.strategyResults) {
-      expect(strategy.warnings.some((w) => w.code === 'algorithm_not_implemented')).toBe(true)
+      expect(strategy.warnings).toEqual([])
     }
   })
 
   it('does not produce any fake history, beam, or split events', () => {
-    const result = runNestingStub(baseRequest(), 0)
+    const result = runNesting(baseRequest(), 0)
     expect(result.historySummary).toBeUndefined()
     for (const strategy of result.strategyResults) {
       expect(strategy.historySummary).toBeUndefined()
@@ -532,7 +533,7 @@ describe('computeNestingStub', () => {
       })
     })
 
-    computeNestingStub(req, 0, {
+    computeNesting(req, 0, {
       emitFrame: (frame) => {
         frames.push(frame)
       }
@@ -553,7 +554,7 @@ describe('computeNestingStub', () => {
   })
 
   it('records elapsed time and piece count in stats', () => {
-    const result = runNestingStub(baseRequest(), 42)
+    const result = runNesting(baseRequest(), 42)
     expect(result.stats.elapsedMs).toBe(42)
     expect(result.stats.pieceCount).toBe(2)
   })
@@ -598,11 +599,11 @@ function makeStrategy(runId: string, strategyId: string): NestingStrategyResult 
     strategyRunId: runId,
     strategyId,
     strategyLabel: strategyId,
-    status: 'stub',
+    status: 'completed',
     sortedPieceIds: ['a' as PieceId],
-    placements: [],
-    unplacedPieceIds: ['a' as PieceId],
-    warnings: [{ code: 'algorithm_not_implemented', message: 'stub' }],
+    placements: [placementAt(0, 0, 10, 10, 'a')],
+    unplacedPieceIds: [],
+    warnings: [],
     stats: { elapsedMs: 0, pieceCount: 1 }
   }
 }

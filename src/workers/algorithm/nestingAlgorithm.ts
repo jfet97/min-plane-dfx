@@ -43,12 +43,10 @@ export type NestingStateOrder = () => Order.Order<NestingBeamState>
 export { NestingAlgorithmCandidate } from './beam/candidates.js'
 
 /**
- * Algorithm-core boundary for the future placement implementation.
+ * Algorithm-core boundary for MaxRects beam search.
  *
- * The real algorithm will use each `candidateOrder` entry to rank legal
- * placement candidates for the current state/piece, and `stateOrder` to keep
- * the beam survivors. This stub only exposes that shape; it does not commit
- * placements, split next states, or score real results.
+ * Each `candidateOrder` entry ranks legal placement candidates for the current
+ * state/piece, and `stateOrder` keeps the beam survivors after expansion.
  */
 export function runMaxRectsBeamSearch(input: {
   readonly sheet: SheetSpec

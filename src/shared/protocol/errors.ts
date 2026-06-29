@@ -16,7 +16,6 @@ export const AppErrorCode = [
   'worker_timeout',
   'worker_cancelled',
   'worker_protocol_error',
-  'algorithm_not_implemented',
   'unknown_error'
 ] as const
 export type AppErrorCode = (typeof AppErrorCode)[number]

@@ -31,7 +31,7 @@ const validProject = {
   options: {
     allowGlobalRotation: true,
     timeoutMs: 5000,
-    workerMode: 'stub' as const,
+    workerMode: 'maxrects-beam-search' as const,
     historyMode: 'final' as const,
     historyScope: 'winning_path' as const,
     strategySelectionMode: 'single' as const,
@@ -111,7 +111,7 @@ const validRequest = {
   options: {
     allowGlobalRotation: true,
     timeoutMs: 5000,
-    workerMode: 'stub' as const,
+    workerMode: 'maxrects-beam-search' as const,
     historyMode: 'final' as const,
     historyScope: 'winning_path' as const,
     strategySelectionMode: 'single' as const,

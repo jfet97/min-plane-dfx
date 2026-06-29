@@ -16,7 +16,7 @@ interface MutableSettingsState {
   options: {
     allowGlobalRotation: boolean
     timeoutMs: number
-    workerMode: 'stub'
+    workerMode: 'maxrects-beam-search'
     historyMode: 'stream' | 'final' | 'off'
     historyScope: 'winning_path'
     strategySelectionMode: 'single' | 'all_configured'
@@ -35,7 +35,7 @@ export function makeDefaultSettings(): MutableSettingsState {
     options: {
       allowGlobalRotation: true,
       timeoutMs: 30000,
-      workerMode: 'stub',
+      workerMode: 'maxrects-beam-search',
       historyMode: 'final',
       historyScope: 'winning_path',
       strategySelectionMode: 'single',

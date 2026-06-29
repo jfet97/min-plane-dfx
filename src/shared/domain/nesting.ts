@@ -13,8 +13,8 @@ export const HistoryScope = Schema.Literal('winning_path')
 /** History delivery mode. */
 export const HistoryMode = Schema.Literals(['stream', 'final', 'off'])
 
-/** Worker mode. The plan keeps only the stub. */
-export const WorkerMode = Schema.Literal('stub')
+/** Worker mode currently supported by the local nesting worker. */
+export const WorkerMode = Schema.Literal('maxrects-beam-search')
 
 /**
  * Candidate placement strategy selection for a single beam run.
@@ -121,8 +121,8 @@ export class NestingRequest extends Schema.Class<NestingRequest>('NestingRequest
   options: NestingOptions
 }) {}
 
-/** Stub result or a future real result; the union stays open for the algorithm. */
-export const NestingResultStatus = Schema.Literals(['stub', 'ok', 'partial', 'failed'])
+/** Top-level result status for a completed worker run. */
+export const NestingResultStatus = Schema.Literals(['ok', 'partial', 'failed'])
 
 export class Placement extends Schema.Class<Placement>('Placement')({
   pieceId: PieceId,
@@ -137,17 +137,7 @@ export class NestingWarning extends Schema.Class<NestingWarning>('NestingWarning
   code: Schema.String,
   message: Schema.String,
   pieceId: Schema.optional(PieceId)
-}) {
-  static algorithmNotImplemented(strategyId?: string): NestingWarning {
-    return new NestingWarning({
-      code: 'algorithm_not_implemented',
-      message:
-        strategyId === undefined
-          ? 'The nesting algorithm is intentionally not implemented yet.'
-          : `Strategy "${strategyId}" is intentionally not implemented yet.`
-    })
-  }
-}
+}) {}
 
 export class FinalResultScore extends Schema.Class<FinalResultScore>('FinalResultScore')({
   strategyRunId: Schema.String,
@@ -157,7 +147,7 @@ export class FinalResultScore extends Schema.Class<FinalResultScore>('FinalResul
 }) {}
 
 // status of one result row, distinct from the overall NestingResult.status
-export const NestingStrategyStatus = Schema.Literals(['stub', 'completed', 'failed', 'cancelled'])
+export const NestingStrategyStatus = Schema.Literals(['completed', 'partial', 'failed', 'cancelled'])
 
 export class NestingHistorySummary extends Schema.Class<NestingHistorySummary>(
   'NestingHistorySummary'
@@ -192,12 +182,14 @@ export class NestingStrategyResult extends Schema.Class<NestingStrategyResult>(
   stats: NestingStats,
   warnings: Schema.Array(NestingWarning)
 }) {
-  static stub(input: {
+  static fromAlgorithm(input: {
     readonly strategyRunId: string
     readonly strategyId: NestingStrategyId
     readonly strategyLabel: string
     readonly strategyDescription?: string
     readonly sortedPieceIds: ReadonlyArray<PieceId>
+    readonly placements: ReadonlyArray<Placement>
+    readonly unplacedPieceIds: ReadonlyArray<PieceId>
     readonly elapsedMs: number
     readonly pieceCount: number
   }): NestingStrategyResult {
@@ -208,11 +200,11 @@ export class NestingStrategyResult extends Schema.Class<NestingStrategyResult>(
       ...(input.strategyDescription !== undefined
         ? { strategyDescription: input.strategyDescription }
         : {}),
-      status: 'stub',
+      status: input.unplacedPieceIds.length === 0 ? 'completed' : 'partial',
       sortedPieceIds: input.sortedPieceIds,
-      placements: [],
-      unplacedPieceIds: input.sortedPieceIds,
-      warnings: [NestingWarning.algorithmNotImplemented(input.strategyId)],
+      placements: input.placements,
+      unplacedPieceIds: input.unplacedPieceIds,
+      warnings: [],
       stats: new NestingStats({
         elapsedMs: input.elapsedMs,
         pieceCount: input.pieceCount
@@ -234,27 +226,27 @@ export class NestingResult extends Schema.Class<NestingResult>('NestingResult')(
   warnings: Schema.Array(NestingWarning),
   stats: NestingStats
 }) {
-  static stub(input: {
+  static fromAlgorithm(input: {
     readonly request: NestingRequest
     readonly strategyResults: ReadonlyArray<NestingStrategyResult>
     readonly selectedStrategyRunId?: string
     readonly sortedPieceIds: ReadonlyArray<PieceId>
-    readonly placements?: ReadonlyArray<Placement>
-    readonly unplacedPieceIds?: ReadonlyArray<PieceId>
+    readonly placements: ReadonlyArray<Placement>
+    readonly unplacedPieceIds: ReadonlyArray<PieceId>
     readonly elapsedMs: number
   }): NestingResult {
     return new NestingResult({
       version: 1,
       jobId: input.request.jobId,
-      status: 'stub',
+      status: input.unplacedPieceIds.length === 0 ? 'ok' : 'partial',
       strategyResults: input.strategyResults,
       ...(input.selectedStrategyRunId !== undefined
         ? { selectedStrategyRunId: input.selectedStrategyRunId }
         : {}),
       sortedPieceIds: input.sortedPieceIds,
-      placements: input.placements ?? [],
-      unplacedPieceIds: input.unplacedPieceIds ?? input.sortedPieceIds,
-      warnings: [NestingWarning.algorithmNotImplemented()],
+      placements: input.placements,
+      unplacedPieceIds: input.unplacedPieceIds,
+      warnings: [],
       stats: new NestingStats({
         elapsedMs: input.elapsedMs,
         pieceCount: input.request.pieces.length
@@ -351,7 +343,7 @@ export class NestingHistoryFrame extends Schema.Class<NestingHistoryFrame>('Nest
       strategyLabel: input.strategyLabel,
       stepIndex: 0,
       beamRank: 0,
-      title: 'stub-initial',
+      title: 'initial-beam',
       plate: new PlateSnapshot({ placements: [], freeRectangles: [] }),
       state: new BeamStateSnapshot({ remainingPieceIds: [], unplacedPieceIds: [] }),
       createdAt: input.createdAt
@@ -375,7 +367,7 @@ export class NestingHistoryFrame extends Schema.Class<NestingHistoryFrame>('Nest
       strategyLabel: input.strategyLabel,
       stepIndex: 0,
       beamRank: input.beamRank,
-      title: 'stub-initial',
+      title: 'initial-beam',
       plate: input.plate,
       state: input.state,
       createdAt: input.createdAt

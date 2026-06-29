@@ -1,7 +1,7 @@
 import * as NodeFileSystem from '@effect/platform-node/NodeFileSystem'
 import * as NodePath from '@effect/platform-node/NodePath'
 import * as NodeWorkerRunner from '@effect/platform-node/NodeWorkerRunner'
-import { computeNestingStub } from './algorithm/computeNestingStub.js'
+import { computeNesting } from './algorithm/computeNesting.js'
 import {
   NestingWorkerRpcs,
   WorkerFailureResponse,
@@ -140,7 +140,7 @@ function handleRunNesting(
       Effect.forkDetach
     )
     const result = yield* Effect.sync(() =>
-      computeNestingStub(payload, Date.now() - startedAt, {
+      computeNesting(payload, Date.now() - startedAt, {
         emitFrame: (frame) => {
           Queue.offerUnsafe(frameQueue, frame)
         }

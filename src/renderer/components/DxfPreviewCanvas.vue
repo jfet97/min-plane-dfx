@@ -326,8 +326,8 @@ function onWheel(event: WheelEvent): void {
 
     <div v-else class="empty">
       <p>
-        No result yet. Run sends selected imported objects to the worker; the algorithm is still a
-        stub.
+        No result yet. Run sends selected imported objects to the worker and renders the returned
+        placements.
       </p>
     </div>
 
@@ -336,8 +336,7 @@ function onWheel(event: WheelEvent): void {
       class="empty-state"
     >
       <p>
-        No placements yet. The worker pipeline is connected, but the nesting algorithm is
-        intentionally still a stub.
+        No placements in the selected result. Check unplaced pieces and the selected beam frame.
       </p>
     </div>
 

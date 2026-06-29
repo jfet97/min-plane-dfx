@@ -96,7 +96,7 @@ function setLayoutSelectionStrategyId(event: Event): void {
         />
       </label>
       <label
-        title="Passed to the worker for future algorithms. The current stub does not use rotation."
+        title="Allows candidate generation to try rotated placements when the piece fits that way."
       >
         Allow rotation
         <input
@@ -122,7 +122,7 @@ function setLayoutSelectionStrategyId(event: Event): void {
         />
       </label>
       <label
-        title="Controls whether worker-emitted algorithm frames are retained or streamed. The stub only emits placeholder lifecycle history."
+        title="Controls whether worker-emitted algorithm frames are retained or streamed."
       >
         History mode
         <select :value="settings.state.value.options.historyMode" @change="setHistoryMode">

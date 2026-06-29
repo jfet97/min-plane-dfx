@@ -34,7 +34,7 @@ const sampleRequest: NestingRequest = {
   options: {
     allowGlobalRotation: true,
     timeoutMs: 5000,
-    workerMode: 'stub',
+    workerMode: 'maxrects-beam-search',
     historyMode: 'final',
     historyScope: 'winning_path',
     strategySelectionMode: 'single',
@@ -47,17 +47,12 @@ const sampleRequest: NestingRequest = {
 const sampleResult: NestingResult = {
   version: 1,
   jobId: 'job-1' as JobId,
-  status: 'stub',
+  status: 'partial',
   strategyResults: [],
   sortedPieceIds: ['p-1' as PreparedPiece['id']],
   placements: [],
   unplacedPieceIds: ['p-1' as PreparedPiece['id']],
-  warnings: [
-    {
-      code: 'algorithm_not_implemented',
-      message: 'The nesting algorithm is intentionally not implemented yet.'
-    }
-  ],
+  warnings: [],
   stats: { elapsedMs: 5, pieceCount: 1 }
 }
 
@@ -102,7 +97,7 @@ describe('ExportService', () => {
     expect(out).toBe(file)
     const text = await readFile(file, 'utf8')
     const parsed = JSON.parse(text)
-    expect(parsed.status).toBe('stub')
+    expect(parsed.status).toBe('partial')
   })
 
   it('writes history frames as one NDJSON line per frame', async () => {

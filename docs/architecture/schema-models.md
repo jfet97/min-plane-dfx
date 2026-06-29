@@ -17,11 +17,11 @@ Prefer constructors or semantic factories over large open object literals:
 
 ```ts
 new PreparedPiece({ ... })
-NestingStrategyResult.stub(...)
-NestingWarning.algorithmNotImplemented(...)
+NestingStrategyResult.fromAlgorithm(...)
+NestingResult.fromAlgorithm(...)
 ```
 
-Factories should encode defaults and invariants such as stub status, empty placement arrays, standard warnings, generated history frame shape, and response tags. Call sites should not repeatedly spell those defaults out by hand.
+Factories should encode defaults and invariants such as status derivation, generated history frame shape, and response tags. Call sites should not repeatedly spell those defaults out by hand.
 
 ## Boundaries
 
