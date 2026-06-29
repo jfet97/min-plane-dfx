@@ -5,13 +5,13 @@ export default defineConfig({
   build: {
     target: 'node20',
     outDir: 'out/workers',
-    emptyOutDir: false,
+    emptyOutDir: true,
     minify: false,
     ssr: true,
     lib: {
       entry: resolve('src/workers/nesting.worker.ts'),
-      formats: ['cjs'],
-      fileName: () => 'nesting.worker.cjs'
+      formats: ['es'],
+      fileName: () => 'nesting.worker.mjs'
     },
     rollupOptions: {
       external: [
@@ -23,8 +23,8 @@ export default defineConfig({
         'node:crypto'
       ],
       output: {
-        format: 'cjs',
-        entryFileNames: 'nesting.worker.cjs'
+        format: 'es',
+        entryFileNames: 'nesting.worker.mjs'
       }
     }
   },

@@ -96,13 +96,13 @@ function createSupervisor(): WorkerSupervisor {
 
 function getWorkerPath(): string {
   const candidates = [
-    join(__dirname, 'workers', 'nesting.worker.cjs'),
-    join(__dirname, '..', 'workers', 'nesting.worker.cjs')
+    join(__dirname, 'workers', 'nesting.worker.mjs'),
+    join(__dirname, '..', 'workers', 'nesting.worker.mjs')
   ]
   for (const candidate of candidates) {
     if (existsSync(candidate)) return candidate
   }
-  return candidates[0] ?? join(__dirname, 'workers', 'nesting.worker.cjs')
+  return candidates[0] ?? join(__dirname, 'workers', 'nesting.worker.mjs')
 }
 
 function fromSupervisorError(err: unknown): IpcResult<never> {

@@ -300,7 +300,7 @@ export function createDefaultSupervisor(): WorkerSupervisor {
   // The compiled worker is shipped at out/main/index.js. Resolve the
   // bundled worker relative to that location so production runs find it.
   const here = dirname(fileURLToPath(import.meta.url))
-  const workerPath = join(here, 'workers', 'nesting.worker.cjs')
+  const workerPath = join(here, 'workers', 'nesting.worker.mjs')
   return new WorkerSupervisor({
     workerPath,
     defaultTimeoutMs: 60_000
