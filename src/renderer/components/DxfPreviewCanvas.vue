@@ -318,6 +318,10 @@ function onWheel(event: WheelEvent): void {
   const factor = event.deltaY < 0 ? 1.1 : 0.9
   viewport.zoom(factor)
 }
+
+function stopCanvasGesture(): void {
+  // controls sit inside the canvas; consuming pointer events keeps them from starting a pan
+}
 </script>
 
 <template>
@@ -491,13 +495,20 @@ function onWheel(event: WheelEvent): void {
       </p>
     </div>
 
-    <div class="viewport-controls">
-      <button type="button" title="Zoom in" @click="viewport.zoom(1.2)">+</button>
-      <button type="button" title="Zoom out" @click="viewport.zoom(0.8)">−</button>
+    <div
+      class="viewport-controls"
+      @pointerdown.stop="stopCanvasGesture"
+      @pointermove.stop="stopCanvasGesture"
+      @pointerup.stop="stopCanvasGesture"
+      @pointercancel.stop="stopCanvasGesture"
+      @wheel.stop="stopCanvasGesture"
+    >
+      <button type="button" title="Zoom in" @click.stop="viewport.zoom(1.2)">+</button>
+      <button type="button" title="Zoom out" @click.stop="viewport.zoom(0.8)">−</button>
       <button
         type="button"
         title="Reset pan and zoom to fit the current preview/result."
-        @click="viewport.reset"
+        @click.stop="viewport.reset()"
       >
         Reset
       </button>
@@ -507,7 +518,15 @@ function onWheel(event: WheelEvent): void {
       </span>
     </div>
 
-    <div v-if="props.mode === 'import'" class="view-controls">
+    <div
+      v-if="props.mode === 'import'"
+      class="view-controls"
+      @pointerdown.stop="stopCanvasGesture"
+      @pointermove.stop="stopCanvasGesture"
+      @pointerup.stop="stopCanvasGesture"
+      @pointercancel.stop="stopCanvasGesture"
+      @wheel.stop="stopCanvasGesture"
+    >
       <button
         type="button"
         :class="{ active: visualMode === 'shape' }"

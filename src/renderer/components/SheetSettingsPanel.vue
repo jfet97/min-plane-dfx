@@ -28,6 +28,11 @@ const selectedLayoutStrategyDescription = computed(
     selectedLayoutStrategy.value?.description ??
     'Used by the beam to keep the best retained states.'
 )
+const selectedLayoutStrategyTooltip = computed(() =>
+  selectedLayoutStrategy.value === undefined
+    ? selectedLayoutStrategyDescription.value
+    : `${selectedLayoutStrategy.value.label}: ${selectedLayoutStrategy.value.description}`
+)
 
 function inputValue(event: Event): string {
   return event.target instanceof HTMLInputElement ? event.target.value : ''
@@ -215,14 +220,12 @@ function setLayoutSelectionStrategyId(event: Event): void {
       </li>
     </ul>
 
-    <h3 title="This metric chooses which beam states survive after candidate expansion.">
-      Layout selection
-    </h3>
-    <label class="span-2 full" :title="selectedLayoutStrategyDescription">
+    <h3 :title="selectedLayoutStrategyTooltip">Layout selection</h3>
+    <label class="span-2 full" :title="selectedLayoutStrategyTooltip">
       Survivor metric
       <select
         :value="settings.state.value.options.layoutSelectionStrategyId"
-        :title="selectedLayoutStrategyDescription"
+        :title="selectedLayoutStrategyTooltip"
         @change="setLayoutSelectionStrategyId"
       >
         <option
