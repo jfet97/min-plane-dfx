@@ -8,6 +8,7 @@ import {
   makeTopLeftPlacement
 } from '../../src/workers/algorithm/maxRects/placements.js'
 import {
+  K,
   initialState,
   runMaxRectsBeamSearch,
   type NestingAlgorithmEvent,
@@ -100,10 +101,18 @@ describe('sortPiecesForNesting', () => {
 })
 
 describe('runMaxRectsBeamSearch', () => {
+  it('derives K from the selected strategy count with a minimum of five', () => {
+    expect(K(1)).toBe(5)
+    expect(K(2)).toBe(5)
+    expect(K(4)).toBe(8)
+    expect(K(8)).toBe(16)
+  })
+
   it('builds the initial beam from the first two pieces and both orientations', () => {
     const state = initialState({
       sheet: baseRequest().sheet,
-      pieces: [piece('a'), piece('b'), piece('c')]
+      pieces: [piece('a'), piece('b'), piece('c')],
+      beamWidth: K(1)
     })
     const members = [state.top, ...state.alternatives]
 
@@ -123,7 +132,8 @@ describe('runMaxRectsBeamSearch', () => {
   it('builds two initial beam states when only one piece exists', () => {
     const state = initialState({
       sheet: baseRequest().sheet,
-      pieces: [piece('a')]
+      pieces: [piece('a')],
+      beamWidth: K(1)
     })
     const members = [state.top, ...state.alternatives]
 
@@ -136,7 +146,8 @@ describe('runMaxRectsBeamSearch', () => {
   it('falls back to an empty beam state with no pieces', () => {
     const state = initialState({
       sheet: baseRequest().sheet,
-      pieces: []
+      pieces: [],
+      beamWidth: K(1)
     })
 
     expect(state.top.placements).toEqual([])
@@ -149,7 +160,8 @@ describe('runMaxRectsBeamSearch', () => {
   it('keeps failed seed attempts as states with the piece marked unplaced', () => {
     const state = initialState({
       sheet: { width: 10, height: 10, label: 'small' },
-      pieces: [sizedPiece('a', 20, 10)]
+      pieces: [sizedPiece('a', 20, 10)],
+      beamWidth: K(1)
     })
     const members = [state.top, ...state.alternatives]
 
@@ -163,7 +175,8 @@ describe('runMaxRectsBeamSearch', () => {
   it('removes a failed second seed from the future queue while preserving earlier pieces', () => {
     const state = initialState({
       sheet: { width: 10, height: 10, label: 'small' },
-      pieces: [sizedPiece('a', 1, 1), sizedPiece('b', 20, 10)]
+      pieces: [sizedPiece('a', 1, 1), sizedPiece('b', 20, 10)],
+      beamWidth: K(1)
     })
     const members = [state.top, ...state.alternatives]
 
@@ -175,7 +188,8 @@ describe('runMaxRectsBeamSearch', () => {
   it('does not reject a seed when the next remaining piece has no split space yet', () => {
     const state = initialState({
       sheet: { width: 10, height: 10, label: 'small' },
-      pieces: [sizedPiece('a', 10, 10), sizedPiece('b', 1, 1)]
+      pieces: [sizedPiece('a', 10, 10), sizedPiece('b', 1, 1)],
+      beamWidth: K(1)
     })
     const members = [state.top, ...state.alternatives]
 
@@ -192,7 +206,8 @@ describe('runMaxRectsBeamSearch', () => {
     const result = runMaxRectsBeamSearch({
       sheet: baseRequest().sheet,
       pieces: [piece('a'), piece('b')],
-      freeRectangleOrder: () => Order.make(() => 0),
+      beamWidth: K(1),
+      freeRectangleOrder: [() => Order.make(() => 0)],
       stateOrder: () => Order.make(() => 0),
       hooks: {
         onEvent: (event) => {

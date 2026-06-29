@@ -1,7 +1,11 @@
 import type { FreeRectangle, Placement, PreparedPiece } from '@shared/domain/nesting.js'
 
-// retained beam width
-export const K = 5
+const minimumK = 5
+
+// retained beam width from selected placement-order count
+export function K(selectedStrategyCount: number): number {
+  return Math.max(minimumK, selectedStrategyCount * 2)
+}
 
 /**
  * One partial layout kept inside the beam.

@@ -20,6 +20,8 @@ export type FreeRectangleOrder = (context: {
   rotated: boolean
 }) => Order.Order<FreeRectangle>
 
+export type FreeRectangleOrders = readonly [FreeRectangleOrder, ...FreeRectangleOrder[]]
+
 /**
  * Beam survivor order for partial layout states.
  * After expansion, this decides which states stay alive for the next piece.
@@ -153,15 +155,16 @@ export namespace NestingAlgorithmEvent {
 /**
  * Algorithm-core boundary for the future placement implementation.
  *
- * The real algorithm will use `freeRectangleOrder` to rank legal free
- * rectangles for the current state/piece/orientation, and `stateOrder` to keep
- * the beam survivors. This stub only exposes that shape; it does not place,
- * split, rank, or score anything.
+ * The real algorithm will use each `freeRectangleOrder` entry to rank legal
+ * free rectangles for the current state/piece/orientation, and `stateOrder` to
+ * keep the beam survivors. This stub only exposes that shape; it does not
+ * place, split, rank, or score anything.
  */
 export function runMaxRectsBeamSearch(input: {
   readonly sheet: SheetSpec
   readonly pieces: ReadonlyArray<PreparedPiece>
-  readonly freeRectangleOrder: FreeRectangleOrder
+  readonly beamWidth: number
+  readonly freeRectangleOrder: FreeRectangleOrders
   readonly stateOrder: NestingStateOrder
   // synchronous hooks
   readonly hooks?: {

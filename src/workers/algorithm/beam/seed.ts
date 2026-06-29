@@ -1,7 +1,7 @@
 import { FreeRectangle, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
 import { makeBottomLeftPlacement } from '../maxRects/placements.js'
 import { placementFitsFreeRectangle, splitFreeRectangle } from '../maxRects/freeRectangles.js'
-import { K, type NestingAlgorithmState, type NestingBeamState } from './state.js'
+import type { NestingAlgorithmState, NestingBeamState } from './state.js'
 
 function emptyBeamState(sheet: SheetSpec, pieces: ReadonlyArray<PreparedPiece>): NestingBeamState {
   return {
@@ -68,6 +68,7 @@ function placedInitialBeamState(input: {
 export function initialState(input: {
   readonly sheet: SheetSpec
   readonly pieces: ReadonlyArray<PreparedPiece>
+  readonly beamWidth: number
 }): NestingAlgorithmState {
   // try a small seed fanout: first piece first, second piece first, both orientations
   const states = input.pieces
@@ -76,7 +77,7 @@ export function initialState(input: {
       placedInitialBeamState({ ...input, selectedPieceIndex, rotated: false }),
       placedInitialBeamState({ ...input, selectedPieceIndex, rotated: true })
     ])
-    .slice(0, K)
+    .slice(0, input.beamWidth)
 
   const top = states[0]
   if (top === undefined) {

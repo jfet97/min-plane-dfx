@@ -12,6 +12,7 @@ import {
 } from '@shared/domain/nesting.js'
 import { findStrategy, STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js'
 import {
+  K,
   runMaxRectsBeamSearch,
   type NestingAlgorithmState,
   type NestingBeamState
@@ -47,13 +48,22 @@ export function computeNestingStub(
   // ids select configured ordering rules; they are not part of the core
   // placement algorithm itself.
   const strategyIds = resolveStrategyIds(request)
+  const beamWidth = K(strategyIds.length)
   const strategyResults: NestingStrategyResult[] = []
   for (const [index, strategyId] of strategyIds.entries()) {
     const def = findStrategy(strategyId)
     const label = def?.label ?? strategyId
     const description = def?.description
     const strategyRunId = `run-${index + 1}-${strategyId}`
-    const outcome = runStrategyStub(request, sortedPieces, def, strategyRunId, label, options)
+    const outcome = runStrategyStub(
+      request,
+      sortedPieces,
+      def,
+      strategyRunId,
+      label,
+      beamWidth,
+      options
+    )
     strategyResults.push(
       NestingStrategyResult.stub({
         strategyRunId,
@@ -89,12 +99,14 @@ function runStrategyStub(
   strategy: NestingStrategyDefinition | undefined,
   strategyRunId: string,
   strategyLabel: string,
+  beamWidth: number,
   options: ComputeNestingOptions
 ) {
   const orders = makeStrategyOrders(strategy)
   return runMaxRectsBeamSearch({
     sheet: request.sheet,
     pieces: sortedPieces,
+    beamWidth,
     freeRectangleOrder: orders.freeRectangleOrder,
     stateOrder: orders.stateOrder,
     hooks: {

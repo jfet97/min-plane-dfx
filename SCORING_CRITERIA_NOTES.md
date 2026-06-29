@@ -354,7 +354,7 @@ already been fixed.
 Current working parameters:
 
 ```text
-beamWidth = 5
+beamWidth = max(5, selectedStrategyCount * 2)
 freeRectFanout = 2
 orientations = normal, rotated when allowed
 ```
@@ -363,6 +363,7 @@ Meaning:
 
 - `beamWidth` is the maximum number of partial layout states kept alive after
   each placed piece;
+- `selectedStrategyCount` is the number of selected placement-order strategies;
 - `freeRectFanout` is the number of top free rectangles considered for each
   current state, next piece, and orientation;
 - rotation is not the beam width; it only doubles the candidate list when the
@@ -377,8 +378,8 @@ for orientation in allowed orientations for X:
   create one successor state for each kept free rectangle
 ```
 
-With `beamWidth = 5`, `freeRectFanout = 2`, and two legal orientations, each
-state produces at most four successors:
+With `freeRectFanout = 2` and two legal orientations, each state produces at
+most four successors per placement order:
 
 ```text
 (X,    fr1(X))
@@ -393,10 +394,10 @@ candidate score depends on the placed dimensions and resulting state.
 At the end of the step:
 
 ```text
-current states <= 5
-successors <= 5 * 2 * 2 = 20
+current states <= beamWidth
+successors <= beamWidth * selectedStrategyCount * 2 * 2
 rank successor states with the chosen beam/state comparison metric
-keep the best 5 successor states
+keep the best beamWidth successor states
 ```
 
 The eight placement strategies are therefore best read as free-rectangle /
@@ -575,3 +576,40 @@ Avoid pruning based on:
 
 Keep the first version of branch-and-bound conservative.
 Wrong pruning is worse than no pruning.
+
+## Final Benchmark Questions
+
+Use real jobs to compare beam/search freedom against runtime cost.
+
+For each benchmark case, run several widths:
+
+```text
+beamWidth = 5
+beamWidth = 8
+beamWidth = max(5, selectedStrategyCount * 2)
+beamWidth = 16
+beamWidth = 32
+```
+
+Track final quality:
+
+- How many pieces were placed?
+- If all pieces were placed, which run has the smaller final used cluster area?
+- Which run preserves the largest clean remaining free rectangle?
+- Which run preserves the best remaining short side?
+
+Track cost:
+
+- How many candidates were generated?
+- How long did the run take?
+- How much history was emitted?
+- Does increasing `beamWidth` improve quality enough to justify the extra time?
+
+Track strategy dominance:
+
+- After each step, how many selected placement strategies are still represented
+  among the retained states?
+- Does one strategy dominate the beam early and eliminate the others?
+- Does keeping at least one survivor per strategy improve final quality?
+- If a strategy rarely survives, is it genuinely weak or is the survivor
+  pruning policy too aggressive?

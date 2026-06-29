@@ -1,10 +1,10 @@
 import { Order } from 'effect'
 import type { FreeRectangle, NestingStrategyDefinition } from '@shared/domain/nesting.js'
 import type { NestingBeamState } from './beam/state.js'
-import type { FreeRectangleOrder, NestingStateOrder } from './nestingAlgorithm.js'
+import type { FreeRectangleOrders, NestingStateOrder } from './nestingAlgorithm.js'
 
 export interface StrategyOrders {
-  readonly freeRectangleOrder: FreeRectangleOrder
+  readonly freeRectangleOrder: FreeRectangleOrders
   readonly stateOrder: NestingStateOrder
 }
 
@@ -22,7 +22,7 @@ export function makeStrategyOrders(
   _strategy: NestingStrategyDefinition | undefined
 ): StrategyOrders {
   return {
-    freeRectangleOrder: () => neutralFreeRectangleOrder,
+    freeRectangleOrder: [() => neutralFreeRectangleOrder],
     stateOrder: () => neutralStateOrder
   }
 }
