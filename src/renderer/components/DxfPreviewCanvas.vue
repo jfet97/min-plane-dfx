@@ -90,7 +90,10 @@ const sourceBounds = computed<ViewBox | null>(() => {
   let maxX = -Infinity
   let maxY = -Infinity
   for (const item of items) {
-    const b = item.bounds
+    const b =
+      visualMode.value === 'footprint' && showSourcePadding.value
+        ? sourcePaddingRect(item.piece)
+        : item.bounds
     minX = Math.min(minX, b.x)
     minY = Math.min(minY, b.y)
     maxX = Math.max(maxX, b.x + b.width)
@@ -133,6 +136,7 @@ const sheetOutline = computed(() => {
 
 const selectedId = ref<string | null>(null)
 const visualMode = ref<VisualMode>('shape')
+const showSourcePadding = ref(true)
 const showFreeRectangles = ref(true)
 const panStart = ref<{
   readonly clientX: number
@@ -226,6 +230,9 @@ const showSourceRectangles = computed(
   () => props.mode === 'import' && visualMode.value === 'footprint'
 )
 const showResultRectangles = computed(() => placementsToRender.value.length > 0)
+const sourceSidePadding = computed(() =>
+  Math.ceil(Math.max(0, Math.round(settings.state.value.padding)) / 2)
+)
 
 function setVisualMode(mode: VisualMode): void {
   if (props.mode !== 'import') return
@@ -322,6 +329,16 @@ function onWheel(event: WheelEvent): void {
 function stopCanvasGesture(): void {
   // controls sit inside the canvas; consuming pointer events keeps them from starting a pan
 }
+
+function sourcePaddingRect(piece: ImportedPiece): ViewBox {
+  const side = sourceSidePadding.value
+  return {
+    x: piece.realBounds.x - side,
+    y: piece.realBounds.y - side,
+    width: piece.realBounds.width + side * 2,
+    height: piece.realBounds.height + side * 2
+  }
+}
 </script>
 
 <template>
@@ -397,6 +414,20 @@ function stopCanvasGesture(): void {
             :stroke-opacity="store.isPieceSelected(item.piece.id) ? 1 : 0.55"
             stroke-width="1"
             stroke-dasharray="4 3"
+            @click.stop="selectPiece(item.piece)"
+            class="bbox"
+          />
+          <rect
+            v-if="showSourceRectangles && showSourcePadding && sourceSidePadding > 0"
+            :x="sourcePaddingRect(item.piece).x"
+            :y="sourcePaddingRect(item.piece).y"
+            :width="sourcePaddingRect(item.piece).width"
+            :height="sourcePaddingRect(item.piece).height"
+            fill="rgba(0, 122, 204, 0.08)"
+            stroke="var(--accent)"
+            stroke-opacity="0.85"
+            stroke-width="1"
+            stroke-dasharray="6 3"
             @click.stop="selectPiece(item.piece)"
             class="bbox"
           />
@@ -544,16 +575,36 @@ function stopCanvasGesture(): void {
         Footprints
       </button>
       <label
-        v-if="history.selectedFrame.value?.plate.freeRectangles.length"
-        title="Shows the current MaxRects free-rectangle candidates emitted by the algorithm history frame."
+        v-if="visualMode === 'footprint' && sourceSidePadding > 0"
+        title="Overlay the effective padded footprint sent to the nesting worker."
+      >
+        <input v-model="showSourcePadding" type="checkbox" />
+        Padding
+      </label>
+    </div>
+
+    <div
+      v-if="props.mode === 'result' && history.selectedFrame.value?.plate.freeRectangles.length"
+      class="view-controls"
+      @pointerdown.stop="stopCanvasGesture"
+      @pointermove.stop="stopCanvasGesture"
+      @pointerup.stop="stopCanvasGesture"
+      @pointercancel.stop="stopCanvasGesture"
+      @wheel.stop="stopCanvasGesture"
+    >
+      <label
+        title="Shows the current MaxRects free-rectangle candidates emitted by the selected history frame."
       >
         <input v-model="showFreeRectangles" type="checkbox" />
-        Free rectangles
+        Free rects
       </label>
     </div>
 
     <div v-if="props.mode === 'import' && store.state.value.pieces.length > 0" class="legend">
       <span><i class="box"></i> Imported object footprint</span>
+      <span v-if="visualMode === 'footprint' && showSourcePadding && sourceSidePadding > 0">
+        <i class="padding-box"></i> Padded footprint
+      </span>
       <span><i class="line"></i> Real DXF geometry</span>
     </div>
   </div>
@@ -689,6 +740,11 @@ svg {
 
 .legend .box {
   border: 1px dashed var(--warning);
+}
+
+.legend .padding-box {
+  border: 1px dashed var(--accent);
+  background: rgba(0, 122, 204, 0.12);
 }
 
 .viewport-controls button {

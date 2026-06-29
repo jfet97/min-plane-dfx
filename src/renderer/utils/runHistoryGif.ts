@@ -32,7 +32,20 @@ export function selectFirstBeamSequence(
       }
     }
   }
-  return [...selectedByStep.values()].sort((a, b) => a.stepIndex - b.stepIndex)
+  const sorted = [...selectedByStep.values()].sort((a, b) => a.stepIndex - b.stepIndex)
+  const meaningful: NestingHistoryFrame[] = []
+  let previousSignature = ''
+  for (const frame of sorted) {
+    const signature = placementSignature(frame)
+    if (frame.plate.placements.length === 0 && sorted.some((f) => f.plate.placements.length > 0)) {
+      continue
+    }
+    if (signature !== previousSignature) {
+      meaningful.push(frame)
+      previousSignature = signature
+    }
+  }
+  return meaningful.length > 0 ? meaningful : sorted
 }
 
 export function createRunHistoryGif(
@@ -51,10 +64,11 @@ export function createRunHistoryGif(
   const ctx = canvas.getContext('2d', { willReadFrequently: true })
   if (!ctx) throw new Error('Could not create a canvas context for GIF export.')
 
-  const delayCs = Math.max(2, Math.round((options.frameDelayMs ?? 180) / 10))
-  const gifFrames = sequence.map((frame) => ({
+  const delayCs = Math.max(5, Math.round((options.frameDelayMs ?? 220) / 10))
+  const finalDelayCs = Math.max(delayCs, 90)
+  const gifFrames = sequence.map((frame, index) => ({
     indexes: renderFrameIndexes(ctx, size.width, size.height, options.sheet, frame),
-    delayCs
+    delayCs: index === sequence.length - 1 ? finalDelayCs : delayCs
   }))
   return encodeIndexedGif(size.width, size.height, gifFrames)
 }
@@ -63,10 +77,10 @@ function fitCanvasSize(
   sheet: SheetSpec,
   preferredWidth: number
 ): { readonly width: number; readonly height: number } {
-  const rawWidth = Math.max(240, Math.min(960, Math.round(preferredWidth)))
-  const rawHeight = Math.max(180, Math.round((rawWidth * sheet.height) / sheet.width))
+  const rawWidth = Math.max(360, Math.min(960, Math.round(preferredWidth)))
+  const rawHeight = Math.max(260, Math.round((rawWidth * sheet.height) / sheet.width) + 44)
   if (rawHeight <= 720) return { width: rawWidth, height: rawHeight }
-  return { width: Math.max(240, Math.round((720 * sheet.width) / sheet.height)), height: 720 }
+  return { width: Math.max(360, Math.round((676 * sheet.width) / sheet.height)), height: 720 }
 }
 
 function renderFrameIndexes(
@@ -80,13 +94,18 @@ function renderFrameIndexes(
   ctx.fillStyle = gifPaletteCssColor(0)
   ctx.fillRect(0, 0, width, height)
 
-  const margin = 10
-  const scale = Math.min((width - margin * 2) / sheet.width, (height - margin * 2) / sheet.height)
+  const margin = 18
+  const headerHeight = 40
+  const scale = Math.min(
+    (width - margin * 2) / sheet.width,
+    (height - headerHeight - margin * 2) / sheet.height
+  )
   const sheetWidth = sheet.width * scale
   const sheetHeight = sheet.height * scale
   const ox = (width - sheetWidth) / 2
-  const oy = (height - sheetHeight) / 2
+  const oy = headerHeight + (height - headerHeight - sheetHeight) / 2
 
+  drawHeader(ctx, width, frame)
   ctx.fillStyle = gifPaletteCssColor(1)
   ctx.fillRect(ox, oy, sheetWidth, sheetHeight)
   ctx.strokeStyle = gifPaletteCssColor(2)
@@ -116,6 +135,21 @@ function renderFrameIndexes(
   return quantize(ctx.getImageData(0, 0, width, height).data)
 }
 
+function drawHeader(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  frame: NestingHistoryFrame
+): void {
+  ctx.fillStyle = gifPaletteCssColor(9)
+  ctx.fillRect(0, 0, width, 40)
+  ctx.fillStyle = gifPaletteCssColor(8)
+  ctx.font = '600 16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillText(`Step ${frame.stepIndex + 1}`, 18, 25)
+  ctx.font = '12px system-ui, -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillStyle = gifPaletteCssColor(7)
+  ctx.fillText(`placed ${frame.plate.placements.length} · first beam`, 96, 25)
+}
+
 function drawPlacement(
   ctx: CanvasRenderingContext2D,
   sheet: SheetSpec,
@@ -134,6 +168,12 @@ function drawPlacement(
   ctx.lineWidth = 1
   ctx.fillRect(x, y, width, height)
   ctx.strokeRect(x + 0.5, y + 0.5, Math.max(1, width - 1), Math.max(1, height - 1))
+}
+
+function placementSignature(frame: NestingHistoryFrame): string {
+  return frame.plate.placements
+    .map((p) => `${p.pieceId}:${p.x}:${p.y}:${p.width}:${p.height}:${p.rotation}`)
+    .join('|')
 }
 
 function quantize(data: Uint8ClampedArray): Uint8Array {
