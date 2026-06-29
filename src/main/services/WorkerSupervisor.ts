@@ -118,7 +118,7 @@ export class WorkerSupervisor {
 
     return new Promise<NestingResult>((resolve, reject) => {
       const WorkerProtocolLive = RpcClient.layerProtocolWorker({ size: 1 }).pipe(
-        Layer.provide(NodeWorker.layer(() => new NodeThreadWorker(this.options.workerPath)))
+        Layer.provide(NodeWorker.layer(() => this.makeWorkerThread(requestId, request.jobId)))
       )
       const runtime = ManagedRuntime.make(WorkerProtocolLive)
       const timer = setTimeout(() => {
@@ -175,6 +175,39 @@ export class WorkerSupervisor {
     _reason: 'cancel' | 'timeout' | 'success'
   ): void {
     void dispose().catch(() => undefined)
+  }
+
+  private makeWorkerThread(requestId: string, jobId: JobId): NodeThreadWorker {
+    console.info('[main:worker] spawning thread', {
+      jobId,
+      requestId,
+      workerPath: this.options.workerPath
+    })
+    const worker = new NodeThreadWorker(this.options.workerPath, {
+      stdout: true,
+      stderr: true
+    })
+    worker.once('online', () => {
+      console.info('[main:worker] thread online', { jobId, requestId })
+    })
+    worker.once('error', (error) => {
+      console.error('[main:worker] thread error', {
+        jobId,
+        requestId,
+        message: error.message,
+        stack: error.stack
+      })
+    })
+    worker.once('exit', (code) => {
+      console.info('[main:worker] thread exit', { jobId, requestId, code })
+    })
+    worker.stdout?.on('data', (chunk: Buffer) => {
+      process.stdout.write(`[worker:stdout] ${chunk.toString()}`)
+    })
+    worker.stderr?.on('data', (chunk: Buffer) => {
+      process.stderr.write(`[worker:stderr] ${chunk.toString()}`)
+    })
+    return worker
   }
 
   private handleWorkerMessage(parsed: WorkerResponse): void {

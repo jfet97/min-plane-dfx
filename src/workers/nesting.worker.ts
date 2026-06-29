@@ -21,6 +21,8 @@ import type {
 import { Cause, Effect, Fiber, FileSystem, Layer, Path, PlatformError, Queue, Stream } from 'effect'
 import * as RpcServer from 'effect/unstable/rpc/RpcServer'
 
+console.info('[worker:nesting] bootstrap')
+
 /**
  * Nesting worker thread. Receives schema-validated RPC requests, runs the
  * computation, and streams progress + history + success/failure events back to
