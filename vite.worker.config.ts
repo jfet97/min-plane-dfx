@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 export default defineConfig({
   build: {
     target: 'node20',
-    outDir: 'out/main/workers',
+    outDir: 'out/workers',
     emptyOutDir: false,
     minify: false,
     ssr: true,
