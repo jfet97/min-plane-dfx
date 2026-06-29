@@ -202,7 +202,7 @@ describe('runMaxRectsBeamSearch', () => {
 
   it('exposes algorithm events without creating Effectful history', () => {
     const initialStates: NestingAlgorithmState[] = []
-    const events: NestingAlgorithmEvent.Event[] = []
+    const events: NestingAlgorithmEvent[] = []
     const result = runMaxRectsBeamSearch({
       sheet: baseRequest().sheet,
       pieces: [piece('a'), piece('b')],
@@ -226,9 +226,13 @@ describe('runMaxRectsBeamSearch', () => {
     expect(eventTypes.filter((type) => type === 'placement_applied')).toHaveLength(8)
     expect(eventTypes.filter((type) => type === 'state_selected')).toHaveLength(K(1))
     expect(eventTypes).not.toContain('candidate_ranked')
+    const beamStepEvent = events.find((event) => event.type === 'beam_step')
+    expect(beamStepEvent?.beamSize).toBe(4)
+    expect(beamStepEvent?.candidateCount).toBe(16)
     const appliedEvent = events.find((event) => event.type === 'placement_applied')
-    expect(appliedEvent?.applied.candidate.piece.id).toBe('b')
-    expect(appliedEvent?.applied.split.before.id).toBeDefined()
+    expect(appliedEvent?.pieceId).toBe('b')
+    expect(appliedEvent?.freeRectangleId).toBeDefined()
+    expect(appliedEvent?.split.before.id).toBeDefined()
     expect(initialStates.length).toBe(1)
     expect(initialStates[0]?.top.placements[0]).toMatchObject({
       pieceId: 'a',

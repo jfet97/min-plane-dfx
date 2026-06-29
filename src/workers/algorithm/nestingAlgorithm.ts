@@ -1,25 +1,25 @@
 import type { Order } from 'effect'
-import type { Placement, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
-import type { PieceId } from '@shared/domain/ids.js'
-import {
-  applyCandidate,
-  NestingAlgorithmCandidate,
-  type AppliedCandidate
-} from './beam/candidates.js'
+import type { PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
+import { applyCandidate, NestingAlgorithmCandidate } from './beam/candidates.js'
 import { initialState } from './beam/seed.js'
 import {
   beamFromMembers,
   beamMembers,
   isBeamComplete,
   markNextPieceUnplaced,
-  type NestingAlgorithmState,
   type NestingBeamState
 } from './beam/state.js'
+import { NestingAlgorithmEvents, type NestingAlgorithmEvent } from './events.js'
 import { makeBottomLeftPlacement } from './maxRects/placements.js'
 import { FreeRectangles } from './maxRects/freeRectangles.js'
 export { K } from './beam/state.js'
 export type { NestingAlgorithmState, NestingBeamState } from './beam/state.js'
 export { initialState } from './beam/seed.js'
+export {
+  NestingAlgorithmEvents,
+  type NestingAlgorithmEvent,
+  type NestingAlgorithmScoredCandidate
+} from './events.js'
 
 // candidate placements retained per state/piece/strategy at most
 export const freeRectFanout = 2
@@ -43,98 +43,6 @@ export type NestingStateOrder = () => Order.Order<NestingBeamState>
 export { NestingAlgorithmCandidate } from './beam/candidates.js'
 
 /**
- * Ranked view of a generated candidate.
- * Scoring is a separate phase, so unranked candidates do not carry score data.
- */
-export interface NestingAlgorithmScoredCandidate {
-  readonly candidate: NestingAlgorithmCandidate
-  readonly score: ReadonlyArray<number>
-}
-
-/**
- * Algorithm events emitted synchronously by the core.
- * The worker wrapper translates these events into persisted history frames.
- */
-export namespace NestingAlgorithmEvent {
-  /**
-   * First event for a strategy run.
-   * It gives the wrapper a concrete starting state for history.
-   */
-  export interface InitialState {
-    readonly type: 'initial_state'
-    readonly state: NestingAlgorithmState
-  }
-
-  /**
-   * Candidate-expansion event for one algorithm step.
-   * It reports the current beam and the candidates considered for the next beam.
-   */
-  export interface BeamStep {
-    readonly type: 'beam_step'
-    readonly stepIndex: number
-    readonly state: NestingAlgorithmState
-    readonly candidates: ReadonlyArray<NestingAlgorithmCandidate>
-  }
-
-  /**
-   * Candidate scoring event.
-   * It lets history explain why a candidate was ranked before selection.
-   */
-  export interface CandidateRanked {
-    readonly type: 'candidate_ranked'
-    readonly stepIndex: number
-    readonly scoredCandidate: NestingAlgorithmScoredCandidate
-  }
-
-  /**
-   * Beam survivor event.
-   * It records which partial state survived and at which beam rank.
-   */
-  export interface StateSelected {
-    readonly type: 'state_selected'
-    readonly stepIndex: number
-    readonly beamRank: number
-    readonly state: NestingBeamState
-  }
-
-  /**
-   * Placement application event.
-   * It records the committed candidate plus the resulting split/prune data.
-   */
-  export interface PlacementApplied {
-    readonly type: 'placement_applied'
-    readonly stepIndex: number
-    readonly beamRank: number
-    readonly applied: AppliedCandidate
-  }
-
-  /**
-   * Final event for a strategy run.
-   * It gives the wrapper the same outcome returned by the algorithm core.
-   */
-  export interface Completed {
-    readonly type: 'completed'
-    readonly outcome: {
-      readonly sortedPieceIds: ReadonlyArray<PieceId>
-      readonly placements: ReadonlyArray<Placement>
-      readonly unplacedPieceIds: ReadonlyArray<PieceId>
-    }
-  }
-
-  /**
-   * Union of every algorithm event state.
-   * Consumers should switch on `type` and translate only the events they need.
-   */
-  export type Event =
-    | InitialState
-    | BeamStep
-    | CandidateRanked
-    | StateSelected
-    | PlacementApplied
-    | Completed
-}
-
-/**
  * Algorithm-core boundary for the future placement implementation.
  *
  * The real algorithm will use each `candidateOrder` entry to rank legal
@@ -150,15 +58,12 @@ export function runMaxRectsBeamSearch(input: {
   readonly stateOrder: NestingStateOrder
   // synchronous hooks
   readonly hooks?: {
-    readonly onEvent?: (event: NestingAlgorithmEvent.Event) => void
+    readonly onEvent?: (event: NestingAlgorithmEvent) => void
   }
 }) {
   let state = initialState(input)
 
-  input.hooks?.onEvent?.({
-    type: 'initial_state',
-    state: state
-  })
+  input.hooks?.onEvent?.(NestingAlgorithmEvents.initialState(state))
 
   let stepIndex = 0
 
@@ -213,12 +118,13 @@ export function runMaxRectsBeamSearch(input: {
           for (const candidate of selectedCandidates) {
             const applied = applyCandidate(candidate)
             successorStates.push(applied.state)
-            input.hooks?.onEvent?.({
-              type: 'placement_applied',
-              stepIndex,
-              beamRank,
-              applied
-            })
+            input.hooks?.onEvent?.(
+              NestingAlgorithmEvents.placementApplied({
+                stepIndex,
+                beamRank,
+                applied
+              })
+            )
           }
         }
       }
@@ -229,24 +135,22 @@ export function runMaxRectsBeamSearch(input: {
       }
     }
 
-    input.hooks?.onEvent?.({
-      type: 'beam_step',
-      stepIndex,
-      state,
-      candidates: stepCandidates
-    })
+    input.hooks?.onEvent?.(
+      NestingAlgorithmEvents.beamStep({
+        stepIndex,
+        beamSize: beamMembers(state).length,
+        candidateCount: stepCandidates.length
+      })
+    )
 
     // all generated branches compete globally; only the best beamWidth survive
     const nextBeamMembers = successorStates.toSorted(input.stateOrder()).slice(0, input.beamWidth)
 
     state = beamFromMembers(nextBeamMembers)
     for (const [beamRank, member] of nextBeamMembers.entries()) {
-      input.hooks?.onEvent?.({
-        type: 'state_selected',
-        stepIndex,
-        beamRank,
-        state: member
-      })
+      input.hooks?.onEvent?.(
+        NestingAlgorithmEvents.stateSelected({ stepIndex, beamRank, state: member })
+      )
     }
     stepIndex++
   }
@@ -258,10 +162,7 @@ export function runMaxRectsBeamSearch(input: {
     unplacedPieceIds: state.top.unplacedPieces.map((piece) => piece.id)
   }
 
-  input.hooks?.onEvent?.({
-    type: 'completed',
-    outcome
-  })
+  input.hooks?.onEvent?.(NestingAlgorithmEvents.completed(outcome))
 
   return outcome
 }

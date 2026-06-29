@@ -45,10 +45,12 @@ Algorithm internals are grouped by domain under `src/workers/algorithm/`:
 placement anchors and free-rectangle mechanics. The root files stay focused on
 strategy orchestration, ordering adapters, and worker-facing wrappers.
 
-The core emits algorithm events, not history frames. The event stream is the
-raw material for history: initial states, future beam steps, selected states,
-placement applications with split/prune data, and completion can be translated
-by the wrapper into whichever history format the worker needs.
+The core emits algorithm events from `src/workers/algorithm/events.ts`, not
+history frames and not worker-wire payloads. The event stream is the raw
+material for history: initial states, future beam-step counts, selected states,
+placement applications with ids plus split/prune data, and completion can be
+translated by the wrapper into whichever schema-backed history or worker
+protocol format it needs.
 
 `computeNestingStub` is the worker-facing wrapper around that boundary. It
 resolves configured strategy ids, adapts strategy definitions into ordering
