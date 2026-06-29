@@ -38,6 +38,11 @@ function formatDate(value: string): string {
   return date.toLocaleString()
 }
 
+function deleteAllRuns(): void {
+  if (!window.confirm('Delete all saved runs for this project?')) return
+  history.clearRunRecords()
+}
+
 async function selectRunRecord(record: ProjectRunRecord): Promise<void> {
   history.selectRunRecord(record)
   const api = window.appApi
@@ -61,7 +66,18 @@ async function selectRunRecord(record: ProjectRunRecord): Promise<void> {
 <template>
   <div class="runs">
     <header>
-      <h2 title="Completed worker runs saved for this temporary or saved project.">Saved runs</h2>
+      <div class="archive-head">
+        <h2 title="Completed worker runs saved for this temporary or saved project.">Saved runs</h2>
+        <button
+          v-if="history.runRecords.value.length > 0"
+          type="button"
+          class="delete-all"
+          title="Delete every saved run record. Source shapes and settings are unchanged."
+          @click="deleteAllRuns"
+        >
+          Delete all
+        </button>
+      </div>
       <p class="muted">
         Each saved run stores one beam-search result and its NDJSON history reference.
       </p>
@@ -180,6 +196,13 @@ header h2 {
   color: var(--text-secondary);
 }
 
+.archive-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .muted {
   color: var(--text-muted);
   font-size: 11px;
@@ -256,6 +279,11 @@ h3 {
 }
 
 .delete {
+  font-size: 10px;
+  padding: 2px 6px;
+}
+
+.delete-all {
   font-size: 10px;
   padding: 2px 6px;
 }

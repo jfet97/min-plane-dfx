@@ -222,6 +222,19 @@ export function useHistoryStore() {
       notifyWorkspaceSettingsChanged()
     },
 
+    clearRunRecords(): void {
+      stopPlayback()
+      state.runRecords = []
+      state.result = null
+      state.framesByRun = {}
+      state.selectedStrategyRunId = null
+      state.selectedStepIndex = -1
+      state.selectedBeamRank = 0
+      state.truncated = false
+      state.lastHistoryRef = null
+      notifyWorkspaceSettingsChanged()
+    },
+
     selectRunRecord(record: ProjectRunRecord): void {
       stopPlayback()
       state.result = record.result
