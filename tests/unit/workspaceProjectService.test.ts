@@ -204,7 +204,7 @@ describe('WorkspaceProjectService', () => {
     }
   })
 
-  it('ignores stale temporary workspace settings writes', async () => {
+  it('accepts later temporary workspace settings writes regardless of revision', async () => {
     const dir = join(tmpdir(), `min-plane-workspace-${randomUUID()}`)
     const newerSettings = {
       revision: 2,
@@ -224,19 +224,19 @@ describe('WorkspaceProjectService', () => {
         topN: 3
       }
     }
-    const staleSettings = {
+    const laterSettings = {
       ...newerSettings,
       revision: 1,
-      sheet: { width: 1000, height: 1000, label: 'stale' }
+      sheet: { width: 1000, height: 1000, label: 'later' }
     }
 
     try {
       const service = new WorkspaceProjectService(dir)
       await service.initialize()
       await service.saveWorkspaceSettings(newerSettings)
-      await service.saveWorkspaceSettings(staleSettings)
+      await service.saveWorkspaceSettings(laterSettings)
 
-      await expect(service.loadWorkspaceSettings()).resolves.toEqual(newerSettings)
+      await expect(service.loadWorkspaceSettings()).resolves.toEqual(laterSettings)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }

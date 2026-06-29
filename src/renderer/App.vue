@@ -70,6 +70,7 @@ onMounted(() => {
   const api = window.appApi
   if (!api) return
   void hydrateWorkspaceState()
+  window.addEventListener('beforeunload', flushWorkspaceSettingsBeforeUnload)
   unsubscribe = api.onPong((at) => {
     lastPong.value = at
   })
@@ -83,6 +84,7 @@ onUnmounted(() => {
     unsubscribe()
     unsubscribe = null
   }
+  window.removeEventListener('beforeunload', flushWorkspaceSettingsBeforeUnload)
   settings.setWorkspaceSettingsPersistor(null)
   store.setWorkspaceSettingsPersistor(null)
   history.setWorkspaceSettingsPersistor(null)
@@ -163,6 +165,13 @@ async function saveWorkspaceSettingsSnapshot(snapshot: WorkspaceProjectSettings)
   } catch (error: unknown) {
     console.error('[workspace] failed to persist temporary project settings:', error)
   }
+}
+
+function flushWorkspaceSettingsBeforeUnload(): void {
+  if (!workspaceSettingsReady) return
+  workspaceSettingsSaveRequested = false
+  workspaceSettingsRevision++
+  window.appApi?.saveWorkspaceSettingsSync(buildWorkspaceSettings())
 }
 
 function cloneSheet(sheet: SheetSpec): SheetSpec {

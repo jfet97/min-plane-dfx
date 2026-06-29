@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -39,6 +39,7 @@ export const IPC_CHANNELS = [
   'dxf:clear-imports',
   'workspace:load-settings',
   'workspace:save-settings',
+  'workspace:save-settings-sync',
   'nesting:export-request',
   'nesting:export-result',
   'nesting:export-history',
@@ -282,6 +283,28 @@ export function registerIpcHandlers(): void {
       } catch (err) {
         return fromWorkspaceError(err)
       }
+    }
+  )
+
+  ipcMain.on(
+    'workspace:save-settings-sync',
+    (_event: IpcMainEvent, raw: unknown): void => {
+      const decoded = Schema.decodeUnknownExit(WorkspaceProjectSettings)(raw)
+      if (Exit.isFailure(decoded)) {
+        _event.returnValue = {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: 'Invalid workspace settings payload.'
+          }
+        }
+        return
+      }
+      // The renderer is about to tear down on reload. Fire the save and return
+      // immediately; the main process outlives the renderer, so the Effect write
+      // commits on its event loop even after teardown.
+      void getWorkspace().saveWorkspaceSettings(decoded.value)
+      _event.returnValue = { ok: true, value: undefined }
     }
   )
 

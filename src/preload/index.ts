@@ -129,6 +129,9 @@ const api: AppApi = {
     invokeEnvelope<[WorkspaceProjectSettings], void>('workspace:save-settings', settings).then(
       () => undefined
     ),
+  saveWorkspaceSettingsSync: (settings) => {
+    ipcRenderer.sendSync('workspace:save-settings-sync', settings)
+  },
 
   saveProject: (project) =>
     invokeEnvelope<[ProjectDocument], { readonly path: string }>('project:save', project).then(

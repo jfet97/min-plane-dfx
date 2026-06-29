@@ -62,6 +62,8 @@ export class WorkspaceProjectService {
     FileSystem.FileSystem | Path.Path | SqliteClient.SqliteClient | SqlClient.SqlClient,
     never
   >
+  /** Serializes workspace settings writes so dispatch order equals commit order. */
+  private settingsWriteQueue: Promise<void> = Promise.resolve()
 
   constructor(userDataPath: string) {
     this.workspaceRoot = join(userDataPath, 'temporary-project')
@@ -144,20 +146,23 @@ export class WorkspaceProjectService {
   }
 
   saveWorkspaceSettings(settings: WorkspaceProjectSettingsModel): Promise<void> {
-    return this.run(
-      Effect.gen(function* () {
-        const sql = yield* SqlClient.SqlClient
-        const revision = settings.revision ?? Date.now()
-        const json = JSON.stringify({ ...settings, revision })
-        const now = new Date().toISOString()
-        yield* sql`
-          UPDATE projects
-          SET settings_json = ${json}, settings_revision = ${revision}, updated_at = ${now}
-          WHERE id = 'temporary'
-            AND (settings_revision IS NULL OR settings_revision <= ${revision})
-        `
-      })
-    )
+    const performWrite = () =>
+      this.run(
+        Effect.gen(function* () {
+          const sql = yield* SqlClient.SqlClient
+          const revision = settings.revision ?? Date.now()
+          const json = JSON.stringify({ ...settings, revision })
+          const now = new Date().toISOString()
+          yield* sql`
+            UPDATE projects
+            SET settings_json = ${json}, settings_revision = ${revision}, updated_at = ${now}
+            WHERE id = 'temporary'
+          `
+        })
+      )
+    const enqueued = this.settingsWriteQueue.then(performWrite, performWrite)
+    this.settingsWriteQueue = enqueued.catch(() => undefined)
+    return enqueued
   }
 
   listImportedDxfs(): Promise<ReadonlyArray<ImportedDxfDocument>> {
