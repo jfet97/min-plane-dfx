@@ -10,7 +10,7 @@
     "pnpm": ">=11.0.0"
   },
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "pnpm native:electron && electron-vite dev",
     "build": "electron-vite build && vite build --config vite.worker.config.ts",
     "build:renderer": "electron-vite build",
     "build:worker": "vite build --config vite.worker.config.ts",
@@ -22,9 +22,11 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "postinstall": "electron-builder install-app-deps"
+    "native:node": "pnpm rebuild better-sqlite3",
+    "native:electron": "electron-builder install-app-deps",
+    "test": "pnpm native:node && vitest run",
+    "test:watch": "pnpm native:node && vitest",
+    "postinstall": "pnpm native:electron"
   },
   "dependencies": {
     "@effect/atom-vue": "^4.0.0-beta.88",

@@ -1,7 +1,11 @@
 import type { Order } from 'effect'
-import type { FreeRectangle, Placement, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
+import type { Placement, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
 import type { PieceId } from '@shared/domain/ids.js'
-import { applyCandidate, NestingAlgorithmCandidate } from './beam/candidates.js'
+import {
+  applyCandidate,
+  NestingAlgorithmCandidate,
+  type AppliedCandidate
+} from './beam/candidates.js'
 import { initialState } from './beam/seed.js'
 import {
   beamFromMembers,
@@ -94,32 +98,14 @@ export namespace NestingAlgorithmEvent {
   }
 
   /**
-   * Placement transition event.
-   * It records the exact candidate that moved the algorithm between two states.
+   * Placement application event.
+   * It records the committed candidate plus the resulting split/prune data.
    */
-  export interface PlacementCommitted {
-    readonly type: 'placement_committed'
+  export interface PlacementApplied {
+    readonly type: 'placement_applied'
     readonly stepIndex: number
     readonly beamRank: number
-    readonly previousState: NestingBeamState
-    readonly nextState: NestingBeamState
-    readonly candidate: NestingAlgorithmCandidate
-  }
-
-  /**
-   * Free-rectangle mutation event.
-   * It records split and pruning output for the committed placement.
-   */
-  export interface FreeRectanglesSplit {
-    readonly type: 'free_rectangles_split'
-    readonly stepIndex: number
-    readonly beamRank: number
-    readonly piece: PreparedPiece
-    readonly split: {
-      readonly before: FreeRectangle
-      readonly after: ReadonlyArray<FreeRectangle>
-      readonly pruned: ReadonlyArray<FreeRectangle>
-    }
+    readonly applied: AppliedCandidate
   }
 
   /**
@@ -144,8 +130,7 @@ export namespace NestingAlgorithmEvent {
     | BeamStep
     | CandidateRanked
     | StateSelected
-    | PlacementCommitted
-    | FreeRectanglesSplit
+    | PlacementApplied
     | Completed
 }
 
@@ -229,19 +214,10 @@ export function runMaxRectsBeamSearch(input: {
             const applied = applyCandidate(candidate)
             successorStates.push(applied.state)
             input.hooks?.onEvent?.({
-              type: 'placement_committed',
+              type: 'placement_applied',
               stepIndex,
               beamRank,
-              previousState: s,
-              nextState: applied.state,
-              candidate
-            })
-            input.hooks?.onEvent?.({
-              type: 'free_rectangles_split',
-              stepIndex,
-              beamRank,
-              piece,
-              split: applied.split
+              applied
             })
           }
         }

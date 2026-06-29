@@ -47,8 +47,8 @@ strategy orchestration, ordering adapters, and worker-facing wrappers.
 
 The core emits algorithm events, not history frames. The event stream is the
 raw material for history: initial states, future beam steps, selected states,
-placements, split/prune events, and completion can be translated by the wrapper
-into whichever history format the worker needs.
+placement applications with split/prune data, and completion can be translated
+by the wrapper into whichever history format the worker needs.
 
 `computeNestingStub` is the worker-facing wrapper around that boundary. It
 resolves configured strategy ids, adapts strategy definitions into ordering

@@ -223,10 +223,12 @@ describe('runMaxRectsBeamSearch', () => {
     expect(eventTypes[0]).toBe('initial_state')
     expect(eventTypes.at(-1)).toBe('completed')
     expect(eventTypes.filter((type) => type === 'beam_step')).toHaveLength(1)
-    expect(eventTypes.filter((type) => type === 'placement_committed')).toHaveLength(8)
-    expect(eventTypes.filter((type) => type === 'free_rectangles_split')).toHaveLength(8)
+    expect(eventTypes.filter((type) => type === 'placement_applied')).toHaveLength(8)
     expect(eventTypes.filter((type) => type === 'state_selected')).toHaveLength(K(1))
     expect(eventTypes).not.toContain('candidate_ranked')
+    const appliedEvent = events.find((event) => event.type === 'placement_applied')
+    expect(appliedEvent?.applied.candidate.piece.id).toBe('b')
+    expect(appliedEvent?.applied.split.before.id).toBeDefined()
     expect(initialStates.length).toBe(1)
     expect(initialStates[0]?.top.placements[0]).toMatchObject({
       pieceId: 'a',
