@@ -470,6 +470,12 @@ export function registerIpcHandlers(): void {
         }
       }
       const request = decoded.value
+      console.info('[main:nesting] run received', {
+        jobId: request.jobId,
+        pieces: request.pieces.length,
+        strategies: request.options.strategyIds.length,
+        historyMode: request.options.historyMode
+      })
       try {
         await getSupervisor().runNesting(request, (event) => {
           for (const w of BrowserWindow.getAllWindows()) {
@@ -478,8 +484,13 @@ export function registerIpcHandlers(): void {
             }
           }
         })
+        console.info('[main:nesting] run completed', { jobId: request.jobId })
         return { ok: true, value: { jobId: request.jobId } }
       } catch (err) {
+        console.error('[main:nesting] run failed', {
+          jobId: request.jobId,
+          message: err instanceof Error ? err.message : String(err)
+        })
         return fromSupervisorError(err)
       }
     }

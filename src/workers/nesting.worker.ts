@@ -122,6 +122,12 @@ function handleRunNesting(
   const jobId = payload.jobId
 
   return Effect.gen(function* () {
+    console.info('[worker:nesting] run received', {
+      requestId,
+      jobId,
+      pieces: payload.pieces.length,
+      historyMode: payload.options.historyMode
+    })
     yield* sendProgress(send, requestId, jobId, 'received')
     yield* sendProgress(send, requestId, jobId, 'validated')
     yield* sendProgress(send, requestId, jobId, 'started')
@@ -138,13 +144,22 @@ function handleRunNesting(
       Stream.runForEach(emitFrame),
       Effect.forkDetach
     )
-    const result = yield* Effect.sync(() =>
-      computeNesting(payload, {
+    const result = yield* Effect.sync(() => {
+      console.info('[worker:nesting] compute start', { requestId, jobId })
+      const computed = computeNesting(payload, {
         emitFrame: (frame) => {
           Queue.offerUnsafe(frameQueue, frame)
         }
       })
-    ).pipe(Effect.ensuring(Queue.end(frameQueue)))
+      console.info('[worker:nesting] compute end', {
+        requestId,
+        jobId,
+        elapsedMs: computed.stats.algorithm.elapsedMs,
+        placed: computed.placements.length,
+        unplaced: computed.unplacedPieceIds.length
+      })
+      return computed
+    }).pipe(Effect.ensuring(Queue.end(frameQueue)))
     yield* Fiber.join(frameConsumer)
 
     const strategyRunIds = result.strategyResults.map((s) => s.strategyRunId)

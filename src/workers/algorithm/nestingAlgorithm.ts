@@ -62,6 +62,12 @@ export function runMaxRectsBeamSearch(input: {
 }) {
   const startedAtMs = Date.now()
   const startedAt = new Date(startedAtMs).toISOString()
+  console.info('[algorithm] started', {
+    pieces: input.pieces.length,
+    beamWidth: input.beamWidth,
+    candidateOrders: input.candidateOrder.length,
+    startedAt
+  })
   input.hooks?.onEvent?.(NestingAlgorithmEvents.started({ startedAt }))
 
   let state = initialState(input)
@@ -152,12 +158,23 @@ export function runMaxRectsBeamSearch(input: {
         candidateCount: stepCandidates.length
       })
     )
+    console.info('[algorithm] step expanded', {
+      stepIndex,
+      beamSize: beamMembers(state).length,
+      candidates: stepCandidates.length,
+      successors: successorStates.length
+    })
 
     // all generated branches compete globally; only the best beamWidth survive
     const nextBeamMembers = successorStates.toSorted(input.stateOrder()).slice(0, input.beamWidth)
 
     state = beamFromMembers(nextBeamMembers)
     const nextMaxRemaining = maxRemainingPieces(state)
+    console.info('[algorithm] step selected', {
+      stepIndex,
+      retained: nextBeamMembers.length,
+      maxRemaining: nextMaxRemaining
+    })
     if (nextMaxRemaining >= previousMaxRemaining && !isBeamComplete(state)) {
       throw new Error(
         `Beam search made no progress at step ${stepIndex}: remaining pieces stayed at ${nextMaxRemaining}.`
@@ -184,6 +201,11 @@ export function runMaxRectsBeamSearch(input: {
     endedAt: new Date(endedAtMs).toISOString(),
     elapsedMs: endedAtMs - startedAtMs
   }
+  console.info('[algorithm] completed', {
+    elapsedMs: benchmark.elapsedMs,
+    placed: outcome.placements.length,
+    unplaced: outcome.unplacedPieceIds.length
+  })
 
   input.hooks?.onEvent?.(NestingAlgorithmEvents.completed({ outcome, benchmark }))
 

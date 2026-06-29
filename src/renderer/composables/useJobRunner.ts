@@ -42,6 +42,13 @@ export function useJobRunner() {
       const api = window.appApi
       if (!api) return
 
+      console.info('[renderer:nesting] run requested', {
+        jobId: request.jobId,
+        pieces: request.pieces.length,
+        strategies: request.options.strategyIds.length,
+        historyMode: request.options.historyMode
+      })
+
       state.status = 'running'
       state.activeJobId = request.jobId
       state.lastError = null
@@ -54,6 +61,13 @@ export function useJobRunner() {
 
       try {
         const result = await api.runNesting(request)
+        console.info('[renderer:nesting] run completed', {
+          jobId: request.jobId,
+          status: result.status,
+          elapsedMs: result.stats.algorithm.elapsedMs,
+          placed: result.placements.length,
+          unplaced: result.unplacedPieceIds.length
+        })
         state.result = result
         state.status = 'completed'
         state.activeJobId = null
@@ -63,6 +77,10 @@ export function useJobRunner() {
       } catch (err) {
         state.status = 'failed'
         state.lastError = err instanceof Error ? err.message : String(err)
+        console.error('[renderer:nesting] run failed', {
+          jobId: request.jobId,
+          message: state.lastError
+        })
         bindings.onError(state.lastError)
         historyUnsub?.()
         historyUnsub = null

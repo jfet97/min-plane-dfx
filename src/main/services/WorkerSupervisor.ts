@@ -110,6 +110,12 @@ export class WorkerSupervisor {
         ? request.options.timeoutMs
         : this.options.defaultTimeoutMs
 
+    console.info('[main:worker] starting worker job', {
+      jobId: request.jobId,
+      requestId,
+      timeoutMs
+    })
+
     return new Promise<NestingResult>((resolve, reject) => {
       const WorkerProtocolLive = RpcClient.layerProtocolWorker({ size: 1 }).pipe(
         Layer.provide(NodeWorker.layer(() => new NodeThreadWorker(this.options.workerPath)))
@@ -189,6 +195,11 @@ export class WorkerSupervisor {
 
     if (parsed.type === 'progress') {
       const progress: WorkerProgress = parsed.payload
+      console.info('[main:worker] progress', {
+        jobId: this.current.request.jobId,
+        phase: progress.phase,
+        at: progress.at
+      })
       // Cancellation check: if the current request was already cancelled,
       // ignore the progress event.
       void progress
@@ -198,6 +209,12 @@ export class WorkerSupervisor {
     if (parsed.type === 'success') {
       const result: NestingResult = parsed.payload
       const jobId = this.current.request.jobId
+      console.info('[main:worker] success', {
+        jobId,
+        elapsedMs: result.stats.algorithm.elapsedMs,
+        placed: result.placements.length,
+        unplaced: result.unplacedPieceIds.length
+      })
       clearTimeout(this.current.timer)
       this.teardownWorker(this.current.dispose, 'success')
       this.current.resolve(result)
@@ -215,6 +232,11 @@ export class WorkerSupervisor {
     if (parsed.type === 'failure') {
       const code = parsed.error.code as AppErrorCode
       const message = parsed.error.message
+      console.error('[main:worker] failure', {
+        jobId: this.current.request.jobId,
+        code,
+        message
+      })
       this.failCurrent(code, message)
       return
     }
