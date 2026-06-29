@@ -1,9 +1,6 @@
 import { FreeRectangle, Placement, PreparedPiece } from '@shared/domain/nesting.js'
 
-export function placementFitsFreeRectangle(
-  freeRectangle: FreeRectangle,
-  placement: Placement
-): boolean {
+function doesPlacementFit(freeRectangle: FreeRectangle, placement: Placement): boolean {
   return (
     placement.x >= freeRectangle.x &&
     placement.y >= freeRectangle.y &&
@@ -12,11 +9,7 @@ export function placementFitsFreeRectangle(
   )
 }
 
-export function pieceFitsFreeRectangle(
-  freeRectangle: FreeRectangle,
-  piece: PreparedPiece,
-  rotated: boolean
-): boolean {
+function doesPieceFit(freeRectangle: FreeRectangle, piece: PreparedPiece, rotated: boolean): boolean {
   const width = rotated ? piece.paddedBounds.height : piece.paddedBounds.width
   const height = rotated ? piece.paddedBounds.width : piece.paddedBounds.height
   return width <= freeRectangle.width && height <= freeRectangle.height
@@ -28,10 +21,7 @@ export function pieceFitsFreeRectangle(
  * from splits, so they can be redundant only by being smaller than an
  * existing rectangle, not by containing one.
  */
-export function addFreeRectangle(
-  rects: readonly FreeRectangle[],
-  newRect: FreeRectangle
-): FreeRectangle[] {
+function add(rects: readonly FreeRectangle[], newRect: FreeRectangle): FreeRectangle[] {
   for (const rect of rects) {
     if (
       newRect.x >= rect.x &&
@@ -46,14 +36,14 @@ export function addFreeRectangle(
   return [newRect, ...rects]
 }
 
-export function splitFreeRectangle(rect: FreeRectangle, placement: Placement): FreeRectangle[] {
+function split(rect: FreeRectangle, placement: Placement): FreeRectangle[] {
   const rectRight = rect.x + rect.width
   const rectBottom = rect.y + rect.height
   const placementRight = placement.x + placement.width
   const placementBottom = placement.y + placement.height
 
   // invariant check: the placement must fit inside the free rectangle
-  if (!placementFitsFreeRectangle(rect, placement)) {
+  if (!doesPlacementFit(rect, placement)) {
     throw new Error(
       `Placement for piece ${placement.pieceId} does not fit inside free rectangle ${rect.id}`
     )
@@ -101,4 +91,11 @@ export function splitFreeRectangle(rect: FreeRectangle, placement: Placement): F
       : null
 
   return [leftRect, rightRect, topRect, bottomRect].filter((r): r is FreeRectangle => !!r)
+}
+
+export const FreeRectangles = {
+  add,
+  doesPieceFit,
+  doesPlacementFit,
+  split
 }

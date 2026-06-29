@@ -1,10 +1,10 @@
 import { FreeRectangle, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
 import { makeBottomLeftPlacement } from '../maxRects/placements.js'
-import { placementFitsFreeRectangle, splitFreeRectangle } from '../maxRects/freeRectangles.js'
-import type { NestingAlgorithmState, NestingBeamState } from './state.js'
+import { FreeRectangles } from '../maxRects/freeRectangles.js'
+import { NestingBeamState, type NestingAlgorithmState } from './state.js'
 
 function emptyBeamState(sheet: SheetSpec, pieces: ReadonlyArray<PreparedPiece>): NestingBeamState {
-  return {
+  return new NestingBeamState({
     placements: [],
     freeRectangles: [
       new FreeRectangle({
@@ -16,7 +16,7 @@ function emptyBeamState(sheet: SheetSpec, pieces: ReadonlyArray<PreparedPiece>):
     ],
     remainingPieces: pieces,
     unplacedPieces: []
-  }
+  })
 }
 
 function placedInitialBeamState(input: {
@@ -33,31 +33,33 @@ function placedInitialBeamState(input: {
 
   const freeRectangle = unchanged.freeRectangles[0]
   if (freeRectangle === undefined) {
-    return {
-      ...unchanged,
+    return new NestingBeamState({
+      placements: unchanged.placements,
+      freeRectangles: unchanged.freeRectangles,
       remainingPieces,
       unplacedPieces: [piece]
-    }
+    })
   }
 
   const placement = makeBottomLeftPlacement(freeRectangle, piece, input.rotated)
   // failed seed attempts are retained, but the selected piece leaves the future queue
-  if (!placementFitsFreeRectangle(freeRectangle, placement)) {
-    return {
-      ...unchanged,
+  if (!FreeRectangles.doesPlacementFit(freeRectangle, placement)) {
+    return new NestingBeamState({
+      placements: unchanged.placements,
+      freeRectangles: unchanged.freeRectangles,
       remainingPieces,
       unplacedPieces: [piece]
-    }
+    })
   }
 
-  const freeRectangles = splitFreeRectangle(freeRectangle, placement)
+  const freeRectangles = FreeRectangles.split(freeRectangle, placement)
 
-  return {
+  return new NestingBeamState({
     placements: [placement],
     freeRectangles,
     remainingPieces,
     unplacedPieces: []
-  }
+  })
 }
 
 /**

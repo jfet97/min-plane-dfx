@@ -1,11 +1,11 @@
-import { randomUUID } from 'node:crypto'
 import type { Order } from 'effect'
 import type { FreeRectangle, Placement, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
 import type { PieceId } from '@shared/domain/ids.js'
+import { applyCandidate, NestingAlgorithmCandidate } from './beam/candidates.js'
 import { initialState } from './beam/seed.js'
 import type { NestingAlgorithmState, NestingBeamState } from './beam/state.js'
 import { makeBottomLeftPlacement } from './maxRects/placements.js'
-import { placementFitsFreeRectangle } from './maxRects/freeRectangles.js'
+import { FreeRectangles } from './maxRects/freeRectangles.js'
 export { K } from './beam/state.js'
 export type { NestingAlgorithmState, NestingBeamState } from './beam/state.js'
 export { initialState } from './beam/seed.js'
@@ -29,33 +29,7 @@ export type CandidateOrders = readonly [CandidateOrder, ...CandidateOrder[]]
  */
 export type NestingStateOrder = () => Order.Order<NestingBeamState>
 
-/**
- * One legal placement candidate produced while expanding a state.
- * It always includes the concrete placement it would commit.
- */
-export class NestingAlgorithmCandidate {
-  readonly candidateId: string
-  readonly state: NestingBeamState
-  readonly piece: PreparedPiece
-  readonly freeRectangle: FreeRectangle
-  readonly rotated: boolean
-  readonly placement: Placement
-
-  constructor(input: {
-    readonly state: NestingBeamState
-    readonly piece: PreparedPiece
-    readonly freeRectangle: FreeRectangle
-    readonly rotated: boolean
-    readonly placement: Placement
-  }) {
-    this.candidateId = randomUUID()
-    this.state = input.state
-    this.piece = input.piece
-    this.freeRectangle = input.freeRectangle
-    this.rotated = input.rotated
-    this.placement = input.placement
-  }
-}
+export { NestingAlgorithmCandidate } from './beam/candidates.js'
 
 /**
  * Ranked view of a generated candidate.
@@ -210,7 +184,7 @@ export function runMaxRectsBeamSearch(input: {
         for (const freeRectangle of s.freeRectangles) {
           const placement = makeBottomLeftPlacement(freeRectangle, piece, rotated)
 
-          if (!placementFitsFreeRectangle(freeRectangle, placement)) {
+          if (!FreeRectangles.doesPlacementFit(freeRectangle, placement)) {
             continue
           }
 
@@ -227,7 +201,8 @@ export function runMaxRectsBeamSearch(input: {
       }
 
       const selectedCandidates = candidates.toSorted(order).slice(0, freeRectFanout)
-      if (selectedCandidates.length === 0) {
+      const successorStates = selectedCandidates.map(applyCandidate)
+      if (successorStates.length === 0) {
         continue
       }
     }

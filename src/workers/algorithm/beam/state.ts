@@ -11,13 +11,25 @@ export function K(selectedStrategyCount: number): number {
  * One partial layout kept inside the beam.
  * This is the unit compared by the state order and rendered as one history rank.
  */
-export interface NestingBeamState {
+export class NestingBeamState {
   readonly placements: ReadonlyArray<Placement>
   readonly freeRectangles: ReadonlyArray<FreeRectangle>
   /** Pieces still scheduled for future placement attempts, in original order. */
   readonly remainingPieces: ReadonlyArray<PreparedPiece>
   /** Pieces already rejected by this beam state because they did not fit. */
   readonly unplacedPieces: ReadonlyArray<PreparedPiece>
+
+  constructor(input: {
+    readonly placements: ReadonlyArray<Placement>
+    readonly freeRectangles: ReadonlyArray<FreeRectangle>
+    readonly remainingPieces: ReadonlyArray<PreparedPiece>
+    readonly unplacedPieces: ReadonlyArray<PreparedPiece>
+  }) {
+    this.placements = input.placements
+    this.freeRectangles = input.freeRectangles
+    this.remainingPieces = input.remainingPieces
+    this.unplacedPieces = input.unplacedPieces
+  }
 }
 
 /**
