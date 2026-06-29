@@ -212,7 +212,7 @@ export function registerIpcHandlers(): void {
         return {
           ok: false,
           error: {
-            code: 'ipc_protocol_error',
+            code: 'validation_error',
             message: 'Invalid source document payload.'
           }
         }
