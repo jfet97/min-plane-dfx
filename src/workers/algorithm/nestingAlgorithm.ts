@@ -1,13 +1,18 @@
 import type { Order } from 'effect'
 import type { PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
-import { applyCandidate, NestingAlgorithmCandidate } from './beam/candidates.js'
+import {
+  applyCandidate,
+  candidatePlacementKey,
+  NestingAlgorithmCandidate
+} from './beam/candidates.js'
 import { initialState } from './beam/seed.js'
 import {
   beamFromMembers,
   beamMembers,
+  dedupeBeamStates,
   isBeamComplete,
   markNextPieceUnplaced,
-  type NestingAlgorithmState,
+  maxRemainingPieces,
   type NestingBeamState
 } from './beam/state.js'
 import { NestingAlgorithmEvents, type NestingAlgorithmEvent } from './events.js'
@@ -98,54 +103,55 @@ export function runMaxRectsBeamSearch(input: {
         continue
       }
 
-      // tracks whether this branch placed its next piece through any strategy
-      let producedSuccessor = false
+      const candidates: NestingAlgorithmCandidate[] = []
 
+      // build the legal move list once for this beam member and next piece.
+      // selected strategies are only different orderings over this same list.
+      for (const rotated of piece.allowRotation ? [false, true] : [false]) {
+        for (const freeRectangle of s.freeRectangles) {
+          const placement = makeBottomLeftPlacement(freeRectangle, piece, rotated)
+
+          if (!FreeRectangles.doesPlacementFit(freeRectangle, placement)) {
+            continue
+          }
+
+          candidates.push(
+            new NestingAlgorithmCandidate({
+              state: s,
+              piece,
+              freeRectangle,
+              rotated,
+              placement
+            })
+          )
+        }
+      }
+      stepCandidates.push(...candidates)
+
+      const selectedCandidates = new Map<string, NestingAlgorithmCandidate>()
       for (const candidateOrder of input.candidateOrder) {
-        const candidates: NestingAlgorithmCandidate[] = []
         const order = candidateOrder({ sheet: input.sheet })
 
-        // normal and rotated placements compete in one candidate pool
-        for (const rotated of piece.allowRotation ? [false, true] : [false]) {
-          for (const freeRectangle of s.freeRectangles) {
-            const placement = makeBottomLeftPlacement(freeRectangle, piece, rotated)
-
-            if (!FreeRectangles.doesPlacementFit(freeRectangle, placement)) {
-              continue
-            }
-
-            candidates.push(
-              new NestingAlgorithmCandidate({
-                state: s,
-                piece,
-                freeRectangle,
-                rotated,
-                placement
-              })
-            )
-          }
-        }
-        stepCandidates.push(...candidates)
-
-        // fanout limits committed successors, not the free rectangles scanned
-        const selectedCandidates = candidates.toSorted(order).slice(0, freeRectFanout)
-        if (selectedCandidates.length > 0) {
-          producedSuccessor = true
-          for (const candidate of selectedCandidates) {
-            const applied = applyCandidate(candidate)
-            successorStates.push(applied.state)
-            input.hooks?.onEvent?.(
-              NestingAlgorithmEvents.placementApplied({
-                stepIndex,
-                beamRank,
-                applied
-              })
-            )
-          }
+        // each strategy gets its own top-N view, then identical placements are
+        // collapsed so two agreeing strategies do not duplicate a beam branch.
+        for (const candidate of candidates.toSorted(order).slice(0, freeRectFanout)) {
+          selectedCandidates.set(candidatePlacementKey(candidate), candidate)
         }
       }
 
-      if (!producedSuccessor) {
+      if (selectedCandidates.size > 0) {
+        for (const candidate of selectedCandidates.values()) {
+          const applied = applyCandidate(candidate)
+          successorStates.push(applied.state)
+          input.hooks?.onEvent?.(
+            NestingAlgorithmEvents.placementApplied({
+              stepIndex,
+              beamRank,
+              applied
+            })
+          )
+        }
+      } else {
         // no legal placement is still progress: reject this piece and keep the branch alive
         successorStates.push(markNextPieceUnplaced(s))
       }
@@ -165,8 +171,11 @@ export function runMaxRectsBeamSearch(input: {
       successors: successorStates.length
     })
 
-    // all generated branches compete globally; only the best beamWidth survive
-    const nextBeamMembers = successorStates.toSorted(input.stateOrder()).slice(0, input.beamWidth)
+    // all unique generated branches compete globally; only the best beamWidth survive.
+    // without this, two strategies that pick the same move can waste beam slots.
+    const nextBeamMembers = dedupeBeamStates(successorStates)
+      .toSorted(input.stateOrder())
+      .slice(0, input.beamWidth)
 
     state = beamFromMembers(nextBeamMembers)
     const nextMaxRemaining = maxRemainingPieces(state)
@@ -210,8 +219,4 @@ export function runMaxRectsBeamSearch(input: {
   input.hooks?.onEvent?.(NestingAlgorithmEvents.completed({ outcome, benchmark }))
 
   return outcome
-}
-
-function maxRemainingPieces(state: NestingAlgorithmState): number {
-  return Math.max(...beamMembers(state).map((member) => member.remainingPieces.length))
 }

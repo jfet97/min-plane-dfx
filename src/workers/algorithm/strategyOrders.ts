@@ -47,6 +47,30 @@ namespace ScoringGeometry {
     return area(extents)
   }
 
+  // worst normalized fill catches tall-thin or wide-thin layouts with the same area
+  export function maxUsedSheetRatio(
+    placements: ReadonlyArray<Placement>,
+    sheet: SheetSpec
+  ): number {
+    const extents = usedClusterExtents(placements)
+    return Math.max(extents.width / sheet.width, extents.height / sheet.height)
+  }
+
+  // normalized span sum prefers using less of the sheet perimeter after ratio ties
+  export function normalizedUsedSpanSum(
+    placements: ReadonlyArray<Placement>,
+    sheet: SheetSpec
+  ): number {
+    const extents = usedClusterExtents(placements)
+    return extents.width / sheet.width + extents.height / sheet.height
+  }
+
+  // absolute span sum is the final compactness tie-breaker in millimeters
+  export function usedSpanSum(placements: ReadonlyArray<Placement>): number {
+    const extents = usedClusterExtents(placements)
+    return extents.width + extents.height
+  }
+
   // residual-space metrics look only at MaxRects records, which may overlap
   export function largestFreeRectangleArea(freeRectangles: ReadonlyArray<FreeRectangle>): number {
     return freeRectangles.reduce(
@@ -90,6 +114,7 @@ namespace ScoringGeometry {
  * lexicographic "criterion 1, then criterion 2, then ..." semantics explicit.
  */
 export function makeStrategyOrders(
+  sheet: SheetSpec,
   candidateStrategies: ReadonlyArray<NestingStrategyDefinition>,
   layoutSelectionStrategy: LayoutSelectionStrategyDefinition
 ): StrategyOrders {
@@ -101,7 +126,7 @@ export function makeStrategyOrders(
       firstCandidateOrder === undefined
         ? [() => neutralCandidateOrder]
         : [firstCandidateOrder, ...candidateOrders.slice(1)],
-    stateOrder: () => makeStateOrder(layoutSelectionStrategy)
+    stateOrder: () => makeStateOrder(sheet, layoutSelectionStrategy)
   }
 }
 
@@ -121,34 +146,17 @@ function candidatePrefixOrders(
   // they evaluate the used cluster after the candidate is committed
   // U' and V' are the candidate cluster width and height; W and H are the sheet size
   if (prefix === 'balanced_compactness') {
-    // (U' * V', max(U' / W, V' / H), U' / W + V' / H, U' + V')
-    return [
-      // 1. used cluster area: keep the bounding rectangle around placed pieces compact
-      Order.mapInput(Order.Number, (candidate) => {
-        const extents = ScoringGeometry.candidateExtents(candidate)
-        return ScoringGeometry.area(extents)
-      }),
-      // 2. worst normalized consumption: avoid stretching too far in either sheet direction
-      Order.mapInput(Order.Number, (candidate) => {
-        const extents = ScoringGeometry.candidateExtents(candidate)
-        return Math.max(extents.width / sheet.width, extents.height / sheet.height)
-      }),
-      // 3. normalized perimeter-like tie-breaker: make growth in the tighter axis cost more
-      Order.mapInput(Order.Number, (candidate) => {
-        const extents = ScoringGeometry.candidateExtents(candidate)
-        return extents.width / sheet.width + extents.height / sheet.height
-      }),
-      // 4. absolute perimeter-like tie-breaker: prefer fewer occupied millimeters after shape ties
-      Order.mapInput(Order.Number, (candidate) => {
-        const extents = ScoringGeometry.candidateExtents(candidate)
-        return extents.width + extents.height
-      })
-    ]
+    return balancedCompactnessOrders(sheet)
   }
 
   // short-fill keeps the same compactness guard, then prefers filling the
   // sheet's short direction before spreading along the long direction
   if (prefix === 'short_side_fill') {
+    if (sheet.width === sheet.height) {
+      // a square sheet has no short direction; falling back avoids an arbitrary vertical bias
+      return balancedCompactnessOrders(sheet)
+    }
+
     // (U' * V', -shortFill, longFill, U' / W + V' / H, U' + V')
     return [
       // 1. used cluster area: keep compactness as the hard first comparison
@@ -186,6 +194,34 @@ function candidatePrefixOrders(
   return []
 }
 
+function balancedCompactnessOrders(
+  sheet: SheetSpec
+): ReadonlyArray<Order.Order<NestingAlgorithmCandidate>> {
+  // (U' * V', max(U' / W, V' / H), U' / W + V' / H, U' + V')
+  return [
+    // 1. used cluster area: keep the bounding rectangle around placed pieces compact
+    Order.mapInput(Order.Number, (candidate) => {
+      const extents = ScoringGeometry.candidateExtents(candidate)
+      return ScoringGeometry.area(extents)
+    }),
+    // 2. worst normalized consumption: avoid stretching too far in either sheet direction
+    Order.mapInput(Order.Number, (candidate) => {
+      const extents = ScoringGeometry.candidateExtents(candidate)
+      return Math.max(extents.width / sheet.width, extents.height / sheet.height)
+    }),
+    // 3. normalized perimeter-like tie-breaker: make growth in the tighter axis cost more
+    Order.mapInput(Order.Number, (candidate) => {
+      const extents = ScoringGeometry.candidateExtents(candidate)
+      return extents.width / sheet.width + extents.height / sheet.height
+    }),
+    // 4. absolute perimeter-like tie-breaker: prefer fewer occupied millimeters after shape ties
+    Order.mapInput(Order.Number, (candidate) => {
+      const extents = ScoringGeometry.candidateExtents(candidate)
+      return extents.width + extents.height
+    })
+  ]
+}
+
 function candidateTailOrder(token: string): Order.Order<NestingAlgorithmCandidate> {
   // tail tokens are local tie-breakers. `strategies.json` chooses their order,
   // and `Order.combineAll` applies them only after the prefix criteria tie
@@ -218,29 +254,49 @@ function candidateTailOrder(token: string): Order.Order<NestingAlgorithmCandidat
 }
 
 function makeStateOrder(
+  sheet: SheetSpec,
   strategy: LayoutSelectionStrategyDefinition
 ): Order.Order<NestingBeamState> {
   return Order.combineAll<NestingBeamState>([
     // hard requirement from the notes: layouts with fewer rejected pieces dominate
     Order.mapInput(Order.Number, (state) => state.unplacedPieces.length),
-    ...strategy.criteria.map(stateCriterionOrder)
+    ...strategy.criteria.map((criterion) => stateCriterionOrder(criterion, sheet))
   ])
 }
 
-function stateCriterionOrder(token: string): Order.Order<NestingBeamState> {
-  // layout criteria compare successor beam states after candidate application
-  // the three configured modes are just different priorities over these metrics
+function stateCriterionOrder(token: string, sheet: SheetSpec): Order.Order<NestingBeamState> {
+  // layout criteria compare successor beam states after candidate application.
+  // smaller values win, except criteria prefixed with "-" use a flipped order.
   if (token === 'used_area') {
+    // U * V: bounding cluster area, not the sum of individual piece areas
     return Order.mapInput(Order.Number, (state) =>
       ScoringGeometry.usedClusterArea(state.placements)
     )
   }
+  if (token === 'max_used_sheet_ratio') {
+    // max(U / W, V / H): penalizes skinny columns or rows with compact area
+    return Order.mapInput(Order.Number, (state) =>
+      ScoringGeometry.maxUsedSheetRatio(state.placements, sheet)
+    )
+  }
+  if (token === 'normalized_used_span_sum') {
+    // U / W + V / H: prefers balanced sheet usage after worst-axis ties
+    return Order.mapInput(Order.Number, (state) =>
+      ScoringGeometry.normalizedUsedSpanSum(state.placements, sheet)
+    )
+  }
+  if (token === 'used_span_sum') {
+    // U + V: final millimeter-scale compactness tie-breaker
+    return Order.mapInput(Order.Number, (state) => ScoringGeometry.usedSpanSum(state.placements))
+  }
   if (token === '-largest_free_rect_area') {
+    // larger is better: preserve a large clean rectangle for future pieces
     return Order.mapInput(descendingNumber, (state) =>
       ScoringGeometry.largestFreeRectangleArea(state.freeRectangles)
     )
   }
   if (token === '-largest_free_rect_short_side') {
+    // larger is better: avoid preserving only long, thin leftovers
     return Order.mapInput(descendingNumber, (state) =>
       ScoringGeometry.largestFreeRectangleShortSide(state.freeRectangles)
     )

@@ -56,19 +56,40 @@ export class AppliedCandidate {
 }
 
 /**
+ * Stable placement identity used only while selecting successors.
+ * Candidate ids are unique object ids, but dedupe needs semantic identity:
+ * same piece, same bottom-left point, same size, same rotation.
+ */
+export function candidatePlacementKey(candidate: NestingAlgorithmCandidate): string {
+  const placement = candidate.placement
+  return [
+    placement.pieceId,
+    placement.x,
+    placement.y,
+    placement.width,
+    placement.height,
+    placement.rotation
+  ].join(':')
+}
+
+/**
  * Commits a selected candidate into the next beam state.
  * Candidate generation only describes possible moves; this is the transition
  * point that mutates placements, free rectangles, and the remaining queue.
  */
 export function applyCandidate(candidate: NestingAlgorithmCandidate): AppliedCandidate {
   const splitRectangles = FreeRectangles.split(candidate.freeRectangle, candidate.placement)
+
+  // maxRects records can overlap, so the selected rectangle is not the only
+  // availability record that may contain the committed placement.
   const prunedRectangles = candidate.state.freeRectangles.filter(
     (freeRectangle) =>
       freeRectangle.id !== candidate.freeRectangle.id &&
       FreeRectangles.intersects(freeRectangle, candidate.placement)
   )
 
-  // the placement must be subtracted from every intersecting free rectangle
+  // subtract from every free rectangle, then re-add only positive remnants.
+  // this keeps later candidates from being generated inside occupied space.
   const freeRectangles = candidate.state.freeRectangles.reduce<FreeRectangle[]>(
     (rectangles, freeRectangle) =>
       FreeRectangles.split(freeRectangle, candidate.placement).reduce(
@@ -82,6 +103,7 @@ export function applyCandidate(candidate: NestingAlgorithmCandidate): AppliedCan
     (piece) => piece.id !== candidate.piece.id
   )
 
+  // fail loudly if the split/add pipeline leaves any occupied overlap behind
   for (const freeRectangle of freeRectangles) {
     if (FreeRectangles.intersects(freeRectangle, candidate.placement)) {
       throw new Error(

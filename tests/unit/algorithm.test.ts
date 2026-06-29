@@ -290,6 +290,26 @@ describe('runMaxRectsBeamSearch', () => {
       )
     ).toBe(true)
   })
+
+  it('deduplicates candidates selected by multiple placement orders', () => {
+    const events: NestingAlgorithmEvent[] = []
+
+    runMaxRectsBeamSearch({
+      sheet: baseRequest().sheet,
+      pieces: [piece('a'), piece('b')],
+      beamWidth: K(2),
+      candidateOrder: [() => Order.make(() => 0), () => Order.make(() => 0)],
+      stateOrder: () => Order.make(() => 0),
+      hooks: {
+        onEvent: (event) => events.push(event)
+      }
+    })
+
+    const beamStepEvent = events.find((event) => event.type === 'beam_step')
+    expect(beamStepEvent?.candidateCount).toBe(16)
+    expect(events.filter((event) => event.type === 'placement_applied')).toHaveLength(8)
+    expect(events.filter((event) => event.type === 'state_selected')).toHaveLength(K(2))
+  })
 })
 
 describe('makeBottomLeftPlacement', () => {
@@ -332,7 +352,11 @@ describe('strategyOrders', () => {
   it('uses candidate prefix criteria before tail criteria', () => {
     const strategy = requireDefined(findStrategy('balanced-bottom-left-then-preserve-free'))
     const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
-    const order = makeStrategyOrders([strategy], layoutStrategy).candidateOrder[0]({
+    const order = makeStrategyOrders(
+      baseRequest().sheet,
+      [strategy],
+      layoutStrategy
+    ).candidateOrder[0]({
       sheet: baseRequest().sheet
     })
     const higherButCompact = candidateAt({
@@ -351,10 +375,18 @@ describe('strategyOrders', () => {
     const preserveFree = requireDefined(findStrategy('balanced-preserve-free-then-bottom-left'))
     const bottomLeft = requireDefined(findStrategy('balanced-bottom-left-then-preserve-free'))
     const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
-    const preserveFreeOrder = makeStrategyOrders([preserveFree], layoutStrategy).candidateOrder[0]({
+    const preserveFreeOrder = makeStrategyOrders(
+      baseRequest().sheet,
+      [preserveFree],
+      layoutStrategy
+    ).candidateOrder[0]({
       sheet: baseRequest().sheet
     })
-    const bottomLeftOrder = makeStrategyOrders([bottomLeft], layoutStrategy).candidateOrder[0]({
+    const bottomLeftOrder = makeStrategyOrders(
+      baseRequest().sheet,
+      [bottomLeft],
+      layoutStrategy
+    ).candidateOrder[0]({
       sheet: baseRequest().sheet
     })
     const tightButHigher = candidateAt({
@@ -370,13 +402,37 @@ describe('strategyOrders', () => {
     expect(bottomLeftOrder(lowerButWasteful, tightButHigher)).toBeLessThan(0)
   })
 
+  it('does not invent a short-side fill direction on square sheets', () => {
+    const shortFill = requireDefined(findStrategy('short-fill-preserve-free-then-bottom-left'))
+    const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
+    const squareSheet = { width: 100, height: 100, label: 'square' }
+    const order = makeStrategyOrders(squareSheet, [shortFill], layoutStrategy).candidateOrder[0]({
+      sheet: squareSheet
+    })
+    const freeRectangle = freeRectangleAt(0, 0, 100, 100)
+    const vertical = candidateAt({
+      freeRectangle,
+      piece: sizedPiece('vertical', 10, 50)
+    })
+    const horizontal = candidateAt({
+      freeRectangle,
+      piece: sizedPiece('horizontal', 50, 10)
+    })
+
+    expect(order(vertical, horizontal)).toBe(0)
+  })
+
   it('uses the selected layout metric to order beam states', () => {
     const compactFirst = requireDefined(findLayoutSelectionStrategy('compact-first'))
     const largestFreeAreaFirst = requireDefined(
       findLayoutSelectionStrategy('largest-free-area-first')
     )
-    const compactOrder = makeStrategyOrders([], compactFirst).stateOrder()
-    const largestFreeAreaOrder = makeStrategyOrders([], largestFreeAreaFirst).stateOrder()
+    const compactOrder = makeStrategyOrders(baseRequest().sheet, [], compactFirst).stateOrder()
+    const largestFreeAreaOrder = makeStrategyOrders(
+      baseRequest().sheet,
+      [],
+      largestFreeAreaFirst
+    ).stateOrder()
     const compactState = beamState({
       placements: [placementAt(0, 0, 10, 10, 'a')],
       freeRectangles: [freeRectangleAt(20, 0, 5, 10)]
@@ -392,7 +448,7 @@ describe('strategyOrders', () => {
 
   it('keeps states with fewer unplaced pieces ahead of compact failed states', () => {
     const compactFirst = requireDefined(findLayoutSelectionStrategy('compact-first'))
-    const order = makeStrategyOrders([], compactFirst).stateOrder()
+    const order = makeStrategyOrders(baseRequest().sheet, [], compactFirst).stateOrder()
     const placedState = beamState({
       placements: [placementAt(0, 0, 20, 20, 'a')],
       unplacedPieces: []
@@ -595,6 +651,57 @@ describe('computeNesting', () => {
 describe('strategies data', () => {
   it('registers exactly eight initial strategy definitions', () => {
     expect(STRATEGY_DEFINITIONS.length).toBe(8)
+  })
+
+  it('matches the eight scoring-note candidate strategy orders', () => {
+    expect(
+      STRATEGY_DEFINITIONS.map((strategy) => ({
+        id: strategy.id,
+        prefix: strategy.prefix,
+        tail: strategy.tail
+      }))
+    ).toEqual([
+      {
+        id: 'balanced-preserve-free-then-bottom-left',
+        prefix: 'balanced_compactness',
+        tail: ['r', 's', 'y', 'x']
+      },
+      {
+        id: 'balanced-short-side-fit-then-bottom-left',
+        prefix: 'balanced_compactness',
+        tail: ['s', 'r', 'y', 'x']
+      },
+      {
+        id: 'balanced-bottom-left-then-short-side-fit',
+        prefix: 'balanced_compactness',
+        tail: ['y', 'x', 's', 'r']
+      },
+      {
+        id: 'balanced-bottom-left-then-preserve-free',
+        prefix: 'balanced_compactness',
+        tail: ['y', 'x', 'r', 's']
+      },
+      {
+        id: 'short-fill-preserve-free-then-bottom-left',
+        prefix: 'short_side_fill',
+        tail: ['r', 's', 'y', 'x']
+      },
+      {
+        id: 'short-fill-short-side-fit-then-bottom-left',
+        prefix: 'short_side_fill',
+        tail: ['s', 'r', 'y', 'x']
+      },
+      {
+        id: 'short-fill-bottom-left-then-short-side-fit',
+        prefix: 'short_side_fill',
+        tail: ['y', 'x', 's', 'r']
+      },
+      {
+        id: 'short-fill-bottom-left-then-preserve-free',
+        prefix: 'short_side_fill',
+        tail: ['y', 'x', 'r', 's']
+      }
+    ])
   })
 
   it('keeps strategy ids descriptive (no opaque A.1 codes)', () => {

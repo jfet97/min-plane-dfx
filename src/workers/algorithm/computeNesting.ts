@@ -134,7 +134,7 @@ function runBeamSearch(
   options: ComputeNestingOptions
 ): RunBeamSearchOutcome {
   // json strategy definitions become executable `Order` instances here
-  const orders = makeStrategyOrders(candidateStrategies, layoutSelectionStrategy)
+  const orders = makeStrategyOrders(request.sheet, candidateStrategies, layoutSelectionStrategy)
   let algorithmBenchmark: AlgorithmBenchmark | null = null
   const stepTraces = new Map<
     number,

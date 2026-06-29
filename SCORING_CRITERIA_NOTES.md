@@ -119,6 +119,8 @@ Meaning:
 
 - if the sheet is wider than tall, the short direction is height, so `shortFill = V' / H`;
 - if the sheet is taller than wide, the short direction is width, so `shortFill = U' / W`;
+- if the sheet is square, there is no short direction, so this prefix must fall
+  back to balanced compactness;
 - `longFill` is the normalized consumption of the other direction.
 
 Because the score tuple is smaller-is-better, prefer larger short-side fill by negating it:
@@ -373,9 +375,10 @@ For each current partial state and next piece `X`:
 
 ```text
 generate legal candidate placements from all fitting free rectangles and allowed orientations
-score/order candidates using the chosen strategy
-keep the first freeRectFanout candidates
-create one successor state for each kept candidate
+score/order that same candidate list using each chosen strategy
+keep the first freeRectFanout candidates from each chosen strategy
+deduplicate candidates that describe the same placement
+create one successor state for each unique kept candidate
 ```
 
 With `freeRectFanout = 2`, each state produces at most two successors per
@@ -397,13 +400,15 @@ At the end of the step:
 ```text
 current states <= beamWidth
 successors <= beamWidth * selectedStrategyCount * freeRectFanout
+deduplicate equivalent successor states
 rank successor states with the chosen layout-selection metric
 keep the best beamWidth successor states
 ```
 
 The eight placement strategies are therefore candidate ordering rules for the
-current state and next piece. The layout-selection metric decides which
-successor states survive after all current states have been expanded.
+current state and next piece. They do not create independent copies of the same
+candidate placement. The layout-selection metric decides which successor states
+survive after all current states have been expanded.
 
 The outer loop continues while at least one retained state still has
 `remainingPieces`. A completed state has no remaining pieces and is carried
@@ -438,6 +443,9 @@ Current final-ranking ingredients:
 
 ```text
 usedArea = U * V
+maxUsedSheetRatio = max(U / W, V / H)
+normalizedUsedSpanSum = U / W + V / H
+usedSpanSum = U + V
 largestFreeRectArea = max_j(FW_j * FH_j)
 largestFreeRectShortSide = max_j(min(FW_j, FH_j))
 ```
@@ -446,7 +454,13 @@ Where:
 
 - `U`: final used cluster width.
 - `V`: final used cluster height.
+- `W`: sheet width.
+- `H`: sheet height.
 - `U * V`: final used cluster area.
+- `max(U / W, V / H)`: worst occupied sheet axis; this catches skinny strips
+  whose area looks small but whose span is bad.
+- `U / W + V / H`: balanced normalized span tie-breaker.
+- `U + V`: absolute millimeter span tie-breaker.
 - `FW_j`: free rectangle `j` width.
 - `FH_j`: free rectangle `j` height.
 - `largestFreeRectArea`: area of the largest remaining clean free rectangle.
@@ -475,26 +489,35 @@ They are used after candidate application to decide which beam states survive.
 ```text
 (
   U * V,
+  max(U / W, V / H),
+  U / W + V / H,
+  U + V,
   -largestFreeRectArea,
   -largestFreeRectShortSide
 )
 ```
 
 Use this when the primary goal is the smallest occupied cluster.
-Residual free space breaks ties or near-ties.
+The span criteria are deliberately before residual free space: area alone can
+make a tall skinny column look as good as a blockier layout, so compact-first
+also penalizes the worst occupied sheet axis and total occupied span.
 
 ### Layout Mode 2: Largest Free Area First
 
 ```text
 (
   -largestFreeRectArea,
+  -largestFreeRectShortSide,
   U * V,
-  -largestFreeRectShortSide
+  max(U / W, V / H),
+  U / W + V / H,
+  U + V
 )
 ```
 
 Use this when preserving the largest clean remaining rectangle is more important than the absolute smallest used cluster.
-Used area becomes the second criterion.
+The preserved free rectangle's short side is checked before compactness so the
+survivor does not win by keeping a large but unusably thin strip.
 
 ### Layout Mode 3: Widest Usable Free Rectangle First
 
@@ -502,7 +525,10 @@ Used area becomes the second criterion.
 (
   -largestFreeRectShortSide,
   -largestFreeRectArea,
-  U * V
+  U * V,
+  max(U / W, V / H),
+  U / W + V / H,
+  U + V
 )
 ```
 

@@ -90,3 +90,44 @@ export function markNextPieceUnplaced(state: NestingBeamState): NestingBeamState
     unplacedPieces: [...state.unplacedPieces, piece]
   })
 }
+
+// maximum remaining queue length across retained beam members
+export function maxRemainingPieces(state: NestingAlgorithmState): number {
+  return Math.max(...beamMembers(state).map((member) => member.remainingPieces.length))
+}
+
+/**
+ * Removes beam states that are equivalent for future search.
+ * Free-rectangle ids are intentionally ignored because split ids are generated;
+ * the geometry and queued/rejected pieces are what affect later decisions.
+ */
+export function dedupeBeamStates(
+  states: ReadonlyArray<NestingBeamState>
+): ReadonlyArray<NestingBeamState> {
+  const byKey = new Map<string, NestingBeamState>()
+  for (const state of states) {
+    byKey.set(beamStateKey(state), state)
+  }
+  return [...byKey.values()]
+}
+
+/**
+ * Serializes the search-relevant shape of a beam state.
+ * Placement order is kept because it is the committed history for rendering;
+ * free rectangles are sorted because MaxRects availability is a set.
+ */
+function beamStateKey(state: NestingBeamState): string {
+  const placements = state.placements
+    .map(
+      (placement) =>
+        `${placement.pieceId}:${placement.x}:${placement.y}:${placement.width}:${placement.height}:${placement.rotation}`
+    )
+    .join('|')
+  const freeRectangles = state.freeRectangles
+    .map((rect) => `${rect.x}:${rect.y}:${rect.width}:${rect.height}`)
+    .toSorted()
+    .join('|')
+  const remaining = state.remainingPieces.map((piece) => piece.id).join('|')
+  const unplaced = state.unplacedPieces.map((piece) => piece.id).join('|')
+  return `${placements}::${freeRectangles}::${remaining}::${unplaced}`
+}
