@@ -13,7 +13,13 @@ import { useFinalSelection } from './composables/useFinalSelection.js'
 import { useJobRunner } from './composables/useJobRunner.js'
 import { preparePieces } from '@shared/preparePieces.js'
 import { JobId } from '@shared/domain/ids.js'
-import type { NestingRequest, NestingWarning } from '@shared/domain/nesting.js'
+import type {
+  NestingOptions,
+  NestingRequest,
+  NestingWarning,
+  PreparedPiece,
+  SheetSpec
+} from '@shared/domain/nesting.js'
 import type { WorkspaceProjectSettings } from '@shared/domain/project.js'
 import type { Unsubscribe } from '@shared/protocol/ipc.js'
 
@@ -25,6 +31,8 @@ const centerView = ref<CenterView>('import')
 let unsubscribe: Unsubscribe | null = null
 let workspaceSettingsReady = false
 let workspaceSettingsRevision = 0
+let workspaceSettingsSaveInFlight = false
+let workspaceSettingsSaveRequested = false
 const store = useAppStore()
 const settings = useSettings()
 const history = useHistoryStore()
@@ -88,27 +96,89 @@ async function hydrateWorkspaceState(): Promise<void> {
 function buildWorkspaceSettings(): WorkspaceProjectSettings {
   return {
     revision: workspaceSettingsRevision,
-    sheet: { ...settings.state.value.sheet },
+    sheet: cloneSheet(settings.state.value.sheet),
     padding: settings.state.value.padding,
     pieceQuantities: { ...store.state.value.pieceQuantities },
-    options: { ...settings.state.value.options }
+    options: cloneOptions(settings.state.value.options)
   }
 }
 
 function scheduleWorkspaceSettingsSave(): void {
   if (!workspaceSettingsReady) return
-  workspaceSettingsRevision++
-  saveWorkspaceSettingsSnapshot(buildWorkspaceSettings())
+  workspaceSettingsSaveRequested = true
+  if (!workspaceSettingsSaveInFlight) {
+    void drainWorkspaceSettingsSaves()
+  }
 }
 
-function saveWorkspaceSettingsSnapshot(snapshot: WorkspaceProjectSettings): void {
+async function drainWorkspaceSettingsSaves(): Promise<void> {
+  workspaceSettingsSaveInFlight = true
+  while (workspaceSettingsSaveRequested) {
+    workspaceSettingsSaveRequested = false
+    workspaceSettingsRevision++
+    await saveWorkspaceSettingsSnapshot(buildWorkspaceSettings())
+  }
+  workspaceSettingsSaveInFlight = false
+}
+
+async function saveWorkspaceSettingsSnapshot(snapshot: WorkspaceProjectSettings): Promise<void> {
   const api = window.appApi
   if (!api || !workspaceSettingsReady) return
   try {
-    api.saveWorkspaceSettings(snapshot)
+    await api.saveWorkspaceSettings(snapshot)
   } catch (error: unknown) {
     console.error('[workspace] failed to persist temporary project settings:', error)
   }
+}
+
+function cloneSheet(sheet: SheetSpec): SheetSpec {
+  return {
+    width: sheet.width,
+    height: sheet.height,
+    label: sheet.label
+  }
+}
+
+function cloneOptions(options: NestingOptions): NestingOptions {
+  return {
+    allowGlobalRotation: options.allowGlobalRotation,
+    timeoutMs: options.timeoutMs,
+    workerMode: options.workerMode,
+    historyMode: options.historyMode,
+    historyScope: options.historyScope,
+    strategySelectionMode: options.strategySelectionMode,
+    strategyIds: [...options.strategyIds],
+    layoutSelectionStrategyId: options.layoutSelectionStrategyId,
+    finalSelectionMode: options.finalSelectionMode,
+    ...(options.topN !== undefined ? { topN: options.topN } : {}),
+    ...(options.maxHistoryEvents !== undefined
+      ? { maxHistoryEvents: options.maxHistoryEvents }
+      : {})
+  }
+}
+
+function clonePreparedPieces(pieces: ReadonlyArray<PreparedPiece>): ReadonlyArray<PreparedPiece> {
+  return pieces.map((piece) => ({
+    id: piece.id,
+    sourcePieceId: piece.sourcePieceId,
+    realBounds: {
+      x: piece.realBounds.x,
+      y: piece.realBounds.y,
+      width: piece.realBounds.width,
+      height: piece.realBounds.height
+    },
+    paddedBounds: {
+      x: piece.paddedBounds.x,
+      y: piece.paddedBounds.y,
+      width: piece.paddedBounds.width,
+      height: piece.paddedBounds.height,
+      longestEdge: piece.paddedBounds.longestEdge,
+      area: piece.paddedBounds.area,
+      imbalance: piece.paddedBounds.imbalance
+    },
+    padding: piece.padding,
+    allowRotation: piece.allowRotation
+  }))
 }
 
 function buildRequest(): NestingRequest | null {
@@ -124,10 +194,10 @@ function buildRequest(): NestingRequest | null {
   return {
     version: 1,
     jobId,
-    sheet: { ...sheet },
+    sheet: cloneSheet(sheet),
     padding,
-    pieces: prep.pieces,
-    options: { ...settings.state.value.options }
+    pieces: clonePreparedPieces(prep.pieces),
+    options: cloneOptions(settings.state.value.options)
   }
 }
 

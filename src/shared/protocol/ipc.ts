@@ -66,7 +66,7 @@ export interface AppApi {
 
   // Phase 8
   readonly loadWorkspaceSettings: () => Promise<WorkspaceProjectSettings | null>
-  readonly saveWorkspaceSettings: (settings: WorkspaceProjectSettings) => void
+  readonly saveWorkspaceSettings: (settings: WorkspaceProjectSettings) => Promise<void>
   readonly saveProject: (project: ProjectDocument) => Promise<string>
   readonly openProject: () => Promise<ProjectDocument>
   readonly exportNestingResult: (result: NestingResult) => Promise<void>

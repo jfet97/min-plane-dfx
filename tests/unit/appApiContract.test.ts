@@ -48,7 +48,7 @@ describe('AppApi contract', () => {
       onNestingHistory: () => () => {},
       loadHistoryReplay: () => Promise.resolve([]),
       loadWorkspaceSettings: () => Promise.resolve(null),
-      saveWorkspaceSettings: () => undefined,
+      saveWorkspaceSettings: () => Promise.resolve(),
       saveProject: () => Promise.resolve(''),
       openProject: () => Promise.reject(new Error('not implemented') as never) as never,
       exportNestingResult: () => Promise.resolve(),

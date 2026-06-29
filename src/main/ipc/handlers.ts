@@ -1,11 +1,4 @@
-import {
-  app,
-  BrowserWindow,
-  dialog,
-  ipcMain,
-  type IpcMainEvent,
-  type IpcMainInvokeEvent
-} from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron'
 import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -270,21 +263,27 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  ipcMain.on('workspace:save-settings', (_event: IpcMainEvent, raw: unknown): void => {
-    const decoded = Schema.decodeUnknownExit(WorkspaceProjectSettings)(raw)
-    if (Exit.isFailure(decoded)) {
-      console.error('[workspace] invalid workspace settings payload')
-      return
+  ipcMain.handle(
+    'workspace:save-settings',
+    async (_event: IpcMainInvokeEvent, raw: unknown): Promise<IpcResult<void>> => {
+      const decoded = Schema.decodeUnknownExit(WorkspaceProjectSettings)(raw)
+      if (Exit.isFailure(decoded)) {
+        return {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: 'Invalid workspace settings payload.'
+          }
+        }
+      }
+      try {
+        await getWorkspace().saveWorkspaceSettings(decoded.value)
+        return { ok: true, value: undefined }
+      } catch (err) {
+        return fromWorkspaceError(err)
+      }
     }
-    void getWorkspace()
-      .saveWorkspaceSettings(decoded.value)
-      .catch((err: unknown) => {
-        console.error(
-          '[workspace] failed to persist workspace settings:',
-          err instanceof Error ? err.message : 'unknown error'
-        )
-      })
-  })
+  )
 
   ipcMain.handle(
     'nesting:export-request',

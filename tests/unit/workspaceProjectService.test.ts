@@ -24,13 +24,6 @@ const baseOpen = (): string =>
   header() + section('TABLES') + endsec() + section('BLOCKS') + endsec()
 const baseClose = (): string => '0\nEOF\n'
 
-function skipIfNativeSqliteMismatch(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error)
-  if (!message.includes('NODE_MODULE_VERSION')) return false
-  console.warn('Skipping SQLite workspace smoke test:', message)
-  return true
-}
-
 describe('WorkspaceProjectService', () => {
   it('creates a temporary SQLite workspace, copies DXF files, and lists persisted imports from a fresh service', async () => {
     const dir = join(tmpdir(), `min-plane-workspace-${randomUUID()}`)
@@ -50,14 +43,8 @@ describe('WorkspaceProjectService', () => {
       await mkdir(sourceDir, { recursive: true })
       await writeFile(sourcePath, dxf, 'utf8')
       const service = new WorkspaceProjectService(dir)
-      let documents
-      try {
-        await service.initialize()
-        documents = await service.importDxfFiles([sourcePath])
-      } catch (error) {
-        if (skipIfNativeSqliteMismatch(error)) return
-        throw error
-      }
+      await service.initialize()
+      const documents = await service.importDxfFiles([sourcePath])
 
       expect(documents.length).toBe(1)
       const document = documents[0]
@@ -91,14 +78,8 @@ describe('WorkspaceProjectService', () => {
         topWidth: 70,
         label: 'trap'
       })
-      let stored
-      try {
-        await service.initialize()
-        stored = await service.storeSourceDocument(preset)
-      } catch (error) {
-        if (skipIfNativeSqliteMismatch(error)) return
-        throw error
-      }
+      await service.initialize()
+      const stored = await service.storeSourceDocument(preset)
 
       expect(stored).toEqual(preset)
 
@@ -135,13 +116,8 @@ describe('WorkspaceProjectService', () => {
 
     try {
       const service = new WorkspaceProjectService(dir)
-      try {
-        await service.initialize()
-        await service.saveWorkspaceSettings(settings)
-      } catch (error) {
-        if (skipIfNativeSqliteMismatch(error)) return
-        throw error
-      }
+      await service.initialize()
+      await service.saveWorkspaceSettings(settings)
 
       const reloadedService = new WorkspaceProjectService(dir)
       await reloadedService.initialize()
@@ -180,14 +156,9 @@ describe('WorkspaceProjectService', () => {
 
     try {
       const service = new WorkspaceProjectService(dir)
-      try {
-        await service.initialize()
-        await service.saveWorkspaceSettings(newerSettings)
-        await service.saveWorkspaceSettings(staleSettings)
-      } catch (error) {
-        if (skipIfNativeSqliteMismatch(error)) return
-        throw error
-      }
+      await service.initialize()
+      await service.saveWorkspaceSettings(newerSettings)
+      await service.saveWorkspaceSettings(staleSettings)
 
       await expect(service.loadWorkspaceSettings()).resolves.toEqual(newerSettings)
     } finally {

@@ -125,9 +125,10 @@ const api: AppApi = {
       'workspace:load-settings'
     ).then((r) => r.settings),
 
-  saveWorkspaceSettings: (settings) => {
-    ipcRenderer.send('workspace:save-settings', settings)
-  },
+  saveWorkspaceSettings: (settings) =>
+    invokeEnvelope<[WorkspaceProjectSettings], void>('workspace:save-settings', settings).then(
+      () => undefined
+    ),
 
   saveProject: (project) =>
     invokeEnvelope<[ProjectDocument], { readonly path: string }>('project:save', project).then(

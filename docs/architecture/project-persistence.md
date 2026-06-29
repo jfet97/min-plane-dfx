@@ -52,10 +52,11 @@ padding, nesting options, and cut-list quantities. Renderer reload should not
 reset those values to defaults. The renderer writes those settings directly from
 the same composable actions that mutate sheet fields, cutting settings, strategy
 settings, and quantities; delayed debounce timers or broad reactive watchers are
-not acceptable for values that must survive `Ctrl+R`. Autosave uses one-way IPC
-so main can finish the SQLite write even if the renderer reloads before a
-Promise reply would return. Since multiple IPC writes can overlap, main stores
-the revision next to the JSON payload and ignores stale writes.
+not acceptable for values that must survive `Ctrl+R`. Autosave uses an
+acknowledged IPC call and a renderer-side last-write queue, matching the
+persisted-source-shape path closely enough that edits wait for main to finish
+the SQLite write. Since multiple IPC writes can overlap across reload timing,
+main stores the revision next to the JSON payload and ignores stale writes.
 
 ## Open Behavior
 

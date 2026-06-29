@@ -22,10 +22,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "native:node": "pnpm rebuild better-sqlite3",
     "native:electron": "electron-rebuild -f -w better-sqlite3",
-    "test": "pnpm native:node && vitest run",
-    "test:watch": "pnpm native:node && vitest",
+    "test": "pnpm native:electron && ELECTRON_RUN_AS_NODE=1 electron ./node_modules/vitest/vitest.mjs run",
+    "test:watch": "pnpm native:electron && ELECTRON_RUN_AS_NODE=1 electron ./node_modules/vitest/vitest.mjs",
     "postinstall": "pnpm native:electron"
   },
   "dependencies": {
