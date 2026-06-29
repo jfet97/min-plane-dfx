@@ -18,6 +18,16 @@ const allStrategiesChecked = computed(
     allStrategyIds.value.length > 0 &&
     allStrategyIds.value.every((id) => settings.state.value.options.strategyIds.includes(id))
 )
+const selectedLayoutStrategy = computed(() =>
+  LAYOUT_SELECTION_STRATEGIES.find(
+    (strategy) => strategy.id === settings.state.value.options.layoutSelectionStrategyId
+  )
+)
+const selectedLayoutStrategyDescription = computed(
+  () =>
+    selectedLayoutStrategy.value?.description ??
+    'Used by the beam to keep the best retained states.'
+)
 
 function inputValue(event: Event): string {
   return event.target instanceof HTMLInputElement ? event.target.value : ''
@@ -208,10 +218,11 @@ function setLayoutSelectionStrategyId(event: Event): void {
     <h3 title="This metric chooses which beam states survive after candidate expansion.">
       Layout selection
     </h3>
-    <label class="span-2 full" title="Used by the beam to keep the best retained states.">
+    <label class="span-2 full" :title="selectedLayoutStrategyDescription">
       Survivor metric
       <select
         :value="settings.state.value.options.layoutSelectionStrategyId"
+        :title="selectedLayoutStrategyDescription"
         @change="setLayoutSelectionStrategyId"
       >
         <option

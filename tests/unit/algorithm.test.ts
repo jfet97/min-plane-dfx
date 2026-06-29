@@ -422,6 +422,46 @@ describe('strategyOrders', () => {
     expect(order(vertical, horizontal)).toBe(0)
   })
 
+  it('prefers blockier balanced candidates over slightly smaller skinny clusters', () => {
+    const balanced = requireDefined(findStrategy('balanced-bottom-left-then-preserve-free'))
+    const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
+    const sheet = { width: 5000, height: 10000, label: 'tall' }
+    const order = makeStrategyOrders(sheet, [balanced], layoutStrategy).candidateOrder[0]({
+      sheet
+    })
+    const freeRectangle = freeRectangleAt(0, 0, sheet.width, sheet.height)
+    const skinnySmallerArea = candidateAt({
+      freeRectangle,
+      piece: sizedPiece('skinny', 760, 3290)
+    })
+    const blockierLargerArea = candidateAt({
+      freeRectangle,
+      piece: sizedPiece('blockier', 1270, 1980)
+    })
+
+    expect(order(blockierLargerArea, skinnySmallerArea)).toBeLessThan(0)
+  })
+
+  it('fills the short sheet direction before area in short-fill candidate order', () => {
+    const shortFill = requireDefined(findStrategy('short-fill-preserve-free-then-bottom-left'))
+    const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
+    const sheet = { width: 5000, height: 10000, label: 'tall' }
+    const order = makeStrategyOrders(sheet, [shortFill], layoutStrategy).candidateOrder[0]({
+      sheet
+    })
+    const freeRectangle = freeRectangleAt(0, 0, sheet.width, sheet.height)
+    const wider = candidateAt({
+      freeRectangle,
+      piece: sizedPiece('wider', 1980, 1010)
+    })
+    const taller = candidateAt({
+      freeRectangle,
+      piece: sizedPiece('taller', 1010, 1980)
+    })
+
+    expect(order(wider, taller)).toBeLessThan(0)
+  })
+
   it('uses the selected layout metric to order beam states', () => {
     const compactFirst = requireDefined(findLayoutSelectionStrategy('compact-first'))
     const largestFreeAreaFirst = requireDefined(
@@ -444,6 +484,20 @@ describe('strategyOrders', () => {
 
     expect(compactOrder(compactState, roomierState)).toBeLessThan(0)
     expect(largestFreeAreaOrder(roomierState, compactState)).toBeLessThan(0)
+  })
+
+  it('prefers blockier survivor states over slightly smaller skinny clusters', () => {
+    const compactFirst = requireDefined(findLayoutSelectionStrategy('compact-first'))
+    const sheet = { width: 5000, height: 10000, label: 'tall' }
+    const order = makeStrategyOrders(sheet, [], compactFirst).stateOrder()
+    const skinnySmallerArea = beamState({
+      placements: [placementAt(0, 0, 760, 3290, 'skinny')]
+    })
+    const blockierLargerArea = beamState({
+      placements: [placementAt(0, 0, 1270, 1980, 'blockier')]
+    })
+
+    expect(order(blockierLargerArea, skinnySmallerArea)).toBeLessThan(0)
   })
 
   it('keeps states with fewer unplaced pieces ahead of compact failed states', () => {

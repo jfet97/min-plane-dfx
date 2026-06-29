@@ -4,11 +4,11 @@
     {
       "id": "compact-first",
       "label": "Compact first",
-      "description": "Prefer the smallest used cluster area, then avoid skinny stretched layouts before preserving clean free space.",
+      "description": "Prefer balanced occupied sheet span first, then used cluster area and clean free space.",
       "criteria": [
-        "used_area",
         "max_used_sheet_ratio",
         "normalized_used_span_sum",
+        "used_area",
         "used_span_sum",
         "-largest_free_rect_area",
         "-largest_free_rect_short_side"

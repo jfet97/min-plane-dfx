@@ -57,23 +57,14 @@ Smaller values are better.
 
 ```text
 (
-  U' * V',
   max(U' / W, V' / H),
   U' / W + V' / H,
+  U' * V',
   U' + V'
 )
 ```
 
-## 1. Used Cluster Area
-
-```text
-U' * V'
-```
-
-This keeps the placed pieces compact.
-It measures the area of the bounding rectangle around the placed cluster, not the real area of the pieces and not the sheet area.
-
-## 2. Worst Normalized Sheet Consumption
+## 1. Worst Normalized Sheet Consumption
 
 ```text
 max(U' / W, V' / H)
@@ -81,8 +72,10 @@ max(U' / W, V' / H)
 
 This avoids stretching the used cluster too aggressively in one sheet direction.
 It asks which sheet direction is most consumed after this placement.
+This comes before raw area so a skinny column does not win only because its
+bounding area is slightly smaller.
 
-## 3. Normalized Perimeter-Like Criterion
+## 2. Normalized Perimeter-Like Criterion
 
 ```text
 U' / W + V' / H
@@ -90,6 +83,15 @@ U' / W + V' / H
 
 This is like a perimeter tie-breaker, but normalized by the sheet dimensions.
 It treats growth in the tighter sheet dimension as more expensive.
+
+## 3. Used Cluster Area
+
+```text
+U' * V'
+```
+
+This keeps the placed pieces compact.
+It measures the area of the bounding rectangle around the placed cluster, not the real area of the pieces and not the sheet area.
 
 ## 4. Absolute Perimeter-Like Criterion
 
@@ -127,25 +129,26 @@ Because the score tuple is smaller-is-better, prefer larger short-side fill by n
 
 ```text
 (
-  U' * V',
   -shortFill,
   longFill,
   U' / W + V' / H,
+  U' * V',
   U' + V'
 )
 ```
 
 Interpretation:
 
-1. Keep the used cluster area compact.
-2. Among similar areas, prefer filling the sheet's short direction first.
-3. Then avoid expanding too much along the long direction.
-4. Then use normalized perimeter-like compactness.
+1. Prefer filling the sheet's short direction first.
+2. Then avoid expanding too much along the long direction.
+3. Then use normalized perimeter-like compactness.
+4. Then keep the used cluster area compact.
 5. Then use absolute perimeter-like compactness.
 
 Open question:
 
-- Should `-shortFill` be an exact criterion after area, or should it only apply when `U' * V'` is within a tolerance?
+- Should `-shortFill` be an exact first criterion, or should it use tolerance
+  bands to avoid overfilling the short side too aggressively?
 
 ## Tail Criteria
 
@@ -488,19 +491,19 @@ They are used after candidate application to decide which beam states survive.
 
 ```text
 (
-  U * V,
   max(U / W, V / H),
   U / W + V / H,
+  U * V,
   U + V,
   -largestFreeRectArea,
   -largestFreeRectShortSide
 )
 ```
 
-Use this when the primary goal is the smallest occupied cluster.
-The span criteria are deliberately before residual free space: area alone can
-make a tall skinny column look as good as a blockier layout, so compact-first
-also penalizes the worst occupied sheet axis and total occupied span.
+Use this when the primary goal is a balanced occupied cluster.
+The span criteria are deliberately before raw area: area alone can make a tall
+skinny column beat a blockier layout by a tiny margin, which is not useful
+nesting behavior.
 
 ### Layout Mode 2: Largest Free Area First
 
