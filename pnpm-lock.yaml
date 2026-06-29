@@ -27,6 +27,9 @@ importers:
         specifier: ^4.0.0-beta.88
         version: 4.0.0-beta.89
     devDependencies:
+      '@electron/rebuild':
+        specifier: 3.6.1
+        version: 3.6.1
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.2

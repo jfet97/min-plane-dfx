@@ -23,7 +23,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "native:node": "pnpm rebuild better-sqlite3",
-    "native:electron": "electron-builder install-app-deps",
+    "native:electron": "electron-rebuild -f -w better-sqlite3",
     "test": "pnpm native:node && vitest run",
     "test:watch": "pnpm native:node && vitest",
     "postinstall": "pnpm native:electron"
@@ -37,6 +37,7 @@
     "effect": "^4.0.0-beta.88"
   },
   "devDependencies": {
+    "@electron/rebuild": "3.6.1",
     "@types/node": "^24.0.0",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
