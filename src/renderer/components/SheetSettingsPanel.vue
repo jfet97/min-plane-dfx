@@ -18,20 +18,18 @@ const allStrategiesChecked = computed(
     allStrategyIds.value.length > 0 &&
     allStrategyIds.value.every((id) => settings.state.value.options.strategyIds.includes(id))
 )
-const selectedLayoutStrategy = computed(() =>
-  LAYOUT_SELECTION_STRATEGIES.find(
+const selectedLayoutStrategy = computed(() => {
+  const current = LAYOUT_SELECTION_STRATEGIES.find(
     (strategy) => strategy.id === settings.state.value.options.layoutSelectionStrategyId
   )
-)
-const selectedLayoutStrategyDescription = computed(
+  if (current !== undefined) return current
+  return LAYOUT_SELECTION_STRATEGIES[0]
+})
+const selectedLayoutStrategyTooltip = computed(
   () =>
-    selectedLayoutStrategy.value?.description ??
-    'Used by the beam to keep the best retained states.'
-)
-const selectedLayoutStrategyTooltip = computed(() =>
-  selectedLayoutStrategy.value === undefined
-    ? selectedLayoutStrategyDescription.value
-    : `${selectedLayoutStrategy.value.label}: ${selectedLayoutStrategy.value.description}`
+    selectedLayoutStrategy.value === undefined
+      ? 'Used by the beam to keep the best retained states.'
+      : `${selectedLayoutStrategy.value.label}: ${selectedLayoutStrategy.value.description}`
 )
 
 function inputValue(event: Event): string {
@@ -220,12 +218,13 @@ function setLayoutSelectionStrategyId(event: Event): void {
       </li>
     </ul>
 
-    <h3 :title="selectedLayoutStrategyTooltip">Layout selection</h3>
-    <label class="span-2 full" :title="selectedLayoutStrategyTooltip">
+    <h3 title="Beam survivor metric used after each candidate is applied to decide which retained states survive the next expansion.">
+      Layout selection
+    </h3>
+    <label class="span-2 full">
       Survivor metric
       <select
         :value="settings.state.value.options.layoutSelectionStrategyId"
-        :title="selectedLayoutStrategyTooltip"
         @change="setLayoutSelectionStrategyId"
       >
         <option
@@ -238,6 +237,9 @@ function setLayoutSelectionStrategyId(event: Event): void {
         </option>
       </select>
     </label>
+    <p v-if="selectedLayoutStrategy" class="strategy-description" :title="selectedLayoutStrategy.description">
+      <small>{{ selectedLayoutStrategy.description }}</small>
+    </p>
 
     <h3>Result selection</h3>
     <div class="grid">
@@ -377,6 +379,21 @@ select {
 .strategy-meta small {
   color: var(--text-muted);
   font-size: 10px;
+}
+
+.strategy-description {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  font-size: 11px;
+  color: var(--text);
+}
+
+.strategy-description small {
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .muted {

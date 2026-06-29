@@ -2,7 +2,10 @@ import { reactive, computed, type UnwrapNestedRefs } from 'vue'
 import type { SheetSpec, NestingOptions } from '@shared/domain/nesting.js'
 import type { ProjectDocument, WorkspaceProjectSettings } from '@shared/domain/project.js'
 import { DEFAULT_STRATEGY_ID } from '@shared/domain/strategies.js'
-import { DEFAULT_LAYOUT_SELECTION_STRATEGY_ID } from '@shared/domain/layoutSelectionStrategies.js'
+import {
+  DEFAULT_LAYOUT_SELECTION_STRATEGY_ID,
+  findLayoutSelectionStrategy
+} from '@shared/domain/layoutSelectionStrategies.js'
 
 export interface SettingsState {
   sheet: SheetSpec
@@ -66,7 +69,9 @@ function replaceOptions(options: NestingOptions): void {
   state.options.historyScope = options.historyScope
   state.options.strategySelectionMode = options.strategySelectionMode
   state.options.strategyIds = [...options.strategyIds]
-  state.options.layoutSelectionStrategyId = options.layoutSelectionStrategyId
+  state.options.layoutSelectionStrategyId = findLayoutSelectionStrategy(options.layoutSelectionStrategyId)
+    ? options.layoutSelectionStrategyId
+    : DEFAULT_LAYOUT_SELECTION_STRATEGY_ID
   state.options.finalSelectionMode = options.finalSelectionMode
   state.options.topN = options.topN
   state.options.maxHistoryEvents = options.maxHistoryEvents
@@ -111,7 +116,9 @@ export function useSettings() {
       notifyWorkspaceSettingsChanged('immediate')
     },
     setLayoutSelectionStrategyId: (id: string): void => {
-      state.options.layoutSelectionStrategyId = id
+      const known = findLayoutSelectionStrategy(id)
+      if (known === undefined) return
+      state.options.layoutSelectionStrategyId = known.id
       notifyWorkspaceSettingsChanged('immediate')
     },
     setFinalSelectionMode: (mode: 'manual' | 'best' | 'top_n'): void => {
