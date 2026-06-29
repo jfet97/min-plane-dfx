@@ -175,11 +175,15 @@ export function runMaxRectsBeamSearch(input: {
     state: state
   })
 
+  let stepIndex = 0
+
   while (!isBeamComplete(state)) {
     // collect every branch produced by expanding the current retained beam
     const successorStates: NestingBeamState[] = []
+    // aggregate generated candidates for the step-level history event
+    const stepCandidates: NestingAlgorithmCandidate[] = []
 
-    for (const s of beamMembers(state)) {
+    for (const [beamRank, s] of beamMembers(state).entries()) {
       const piece = s.remainingPieces[0]
 
       if (piece === undefined) {
@@ -215,12 +219,31 @@ export function runMaxRectsBeamSearch(input: {
             )
           }
         }
+        stepCandidates.push(...candidates)
 
         // fanout limits committed successors, not the free rectangles scanned
         const selectedCandidates = candidates.toSorted(order).slice(0, freeRectFanout)
         if (selectedCandidates.length > 0) {
           producedSuccessor = true
-          successorStates.push(...selectedCandidates.map((candidate) => applyCandidate(candidate)))
+          for (const candidate of selectedCandidates) {
+            const applied = applyCandidate(candidate)
+            successorStates.push(applied.state)
+            input.hooks?.onEvent?.({
+              type: 'placement_committed',
+              stepIndex,
+              beamRank,
+              previousState: s,
+              nextState: applied.state,
+              candidate
+            })
+            input.hooks?.onEvent?.({
+              type: 'free_rectangles_split',
+              stepIndex,
+              beamRank,
+              piece,
+              split: applied.split
+            })
+          }
         }
       }
 
@@ -230,12 +253,29 @@ export function runMaxRectsBeamSearch(input: {
       }
     }
 
+    input.hooks?.onEvent?.({
+      type: 'beam_step',
+      stepIndex,
+      state,
+      candidates: stepCandidates
+    })
+
     // all generated branches compete globally; only the best beamWidth survive
     const nextBeamMembers = successorStates.toSorted(input.stateOrder()).slice(0, input.beamWidth)
 
     state = beamFromMembers(nextBeamMembers)
+    for (const [beamRank, member] of nextBeamMembers.entries()) {
+      input.hooks?.onEvent?.({
+        type: 'state_selected',
+        stepIndex,
+        beamRank,
+        state: member
+      })
+    }
+    stepIndex++
   }
 
+  // sortedPieceIds is the attempted order, including pieces that ended up unplaced
   const outcome = {
     sortedPieceIds: input.pieces.map((piece) => piece.id),
     placements: state.top.placements,

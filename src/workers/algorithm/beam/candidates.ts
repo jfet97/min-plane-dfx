@@ -31,12 +31,36 @@ export class NestingAlgorithmCandidate {
   }
 }
 
+export class AppliedCandidate {
+  readonly candidate: NestingAlgorithmCandidate
+  readonly state: NestingBeamState
+  readonly split: {
+    readonly before: FreeRectangle
+    readonly after: ReadonlyArray<FreeRectangle>
+    readonly pruned: ReadonlyArray<FreeRectangle>
+  }
+
+  constructor(input: {
+    readonly candidate: NestingAlgorithmCandidate
+    readonly state: NestingBeamState
+    readonly split: {
+      readonly before: FreeRectangle
+      readonly after: ReadonlyArray<FreeRectangle>
+      readonly pruned: ReadonlyArray<FreeRectangle>
+    }
+  }) {
+    this.candidate = input.candidate
+    this.state = input.state
+    this.split = input.split
+  }
+}
+
 /**
  * Commits a selected candidate into the next beam state.
  * Candidate generation only describes possible moves; this is the transition
  * point that mutates placements, free rectangles, and the remaining queue.
  */
-export function applyCandidate(candidate: NestingAlgorithmCandidate): NestingBeamState {
+export function applyCandidate(candidate: NestingAlgorithmCandidate): AppliedCandidate {
   const splitRectangles = FreeRectangles.split(candidate.freeRectangle, candidate.placement)
 
   // split output is re-added through the maximal-rectangle dedupe rule
@@ -48,12 +72,20 @@ export function applyCandidate(candidate: NestingAlgorithmCandidate): NestingBea
     )
   )
 
-  return new NestingBeamState({
-    placements: [...candidate.state.placements, candidate.placement],
-    freeRectangles,
-    remainingPieces: candidate.state.remainingPieces.filter(
-      (piece) => piece.id !== candidate.piece.id
-    ),
-    unplacedPieces: candidate.state.unplacedPieces
+  return new AppliedCandidate({
+    candidate,
+    state: new NestingBeamState({
+      placements: [...candidate.state.placements, candidate.placement],
+      freeRectangles,
+      remainingPieces: candidate.state.remainingPieces.filter(
+        (piece) => piece.id !== candidate.piece.id
+      ),
+      unplacedPieces: candidate.state.unplacedPieces
+    }),
+    split: {
+      before: candidate.freeRectangle,
+      after: splitRectangles,
+      pruned: []
+    }
   })
 }
