@@ -252,6 +252,18 @@ function hydrateFromProject(project: ProjectDocument): void {
   state.lastSkippedDuplicateCount = 0
 }
 
+function hydratePieceQuantities(quantities: Readonly<Record<string, number>>): void {
+  const nextQuantities: Record<string, number> = {}
+  for (const piece of state.pieces) {
+    const quantity = quantities[piece.id] ?? state.pieceQuantities[piece.id] ?? 1
+    nextQuantities[piece.id] = Number.isFinite(quantity) ? Math.max(0, Math.floor(quantity)) : 0
+  }
+  state.pieceQuantities = nextQuantities
+  state.selectedPieceIds = state.pieces
+    .filter((piece) => getPieceQuantity(piece.id) > 0)
+    .map((piece) => piece.id)
+}
+
 function isPieceSelected(pieceId: ImportedPiece['id']): boolean {
   return getPieceQuantity(pieceId) > 0
 }
@@ -319,6 +331,7 @@ export function useAppStore() {
     loadPersistedImports,
     replaceImportedDocuments,
     hydrateFromProject,
+    hydratePieceQuantities,
     isPieceSelected,
     setPieceSelected,
     getPieceQuantity,

@@ -42,6 +42,29 @@ function closePolyline(points: ReadonlyArray<readonly [number, number]>): Readon
   return segments
 }
 
+function fitPointsToBounds(
+  points: ReadonlyArray<readonly [number, number]>,
+  width: number,
+  height: number
+): ReadonlyArray<readonly [number, number]> {
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const [x, y] of points) {
+    minX = Math.min(minX, x)
+    minY = Math.min(minY, y)
+    maxX = Math.max(maxX, x)
+    maxY = Math.max(maxY, y)
+  }
+  const sourceWidth = Math.max(1, maxX - minX)
+  const sourceHeight = Math.max(1, maxY - minY)
+  return points.map(([x, y]) => [
+    ((x - minX) / sourceWidth) * width,
+    ((y - minY) / sourceHeight) * height
+  ])
+}
+
 function regularPolygon(sides: number, width: number, height: number): ReadonlyArray<Segment> {
   const cx = width / 2
   const cy = height / 2
@@ -52,7 +75,7 @@ function regularPolygon(sides: number, width: number, height: number): ReadonlyA
     const angle = -Math.PI / 2 + (Math.PI * 2 * i) / sides
     points.push([cx + Math.cos(angle) * rx, cy + Math.sin(angle) * ry])
   }
-  return closePolyline(points)
+  return closePolyline(fitPointsToBounds(points, width, height))
 }
 
 function star(width: number, height: number): ReadonlyArray<Segment> {
@@ -69,7 +92,7 @@ function star(width: number, height: number): ReadonlyArray<Segment> {
     const angle = -Math.PI / 2 + (Math.PI * 2 * i) / 10
     points.push([cx + Math.cos(angle) * radiusX, cy + Math.sin(angle) * radiusY])
   }
-  return closePolyline(points)
+  return closePolyline(fitPointsToBounds(points, width, height))
 }
 
 function segmentsFor(kind: PresetShapeKind, width: number, height: number): ReadonlyArray<Segment> {

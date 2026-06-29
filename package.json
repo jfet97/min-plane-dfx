@@ -10,7 +10,7 @@
     "pnpm": ">=11.0.0"
   },
   "scripts": {
-    "dev": "pnpm native:electron && electron-vite dev",
+    "dev": "pnpm native:electron && pnpm build:worker && electron-vite dev",
     "build": "electron-vite build && vite build --config vite.worker.config.ts",
     "build:renderer": "electron-vite build",
     "build:worker": "vite build --config vite.worker.config.ts",

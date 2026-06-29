@@ -6,7 +6,7 @@ import {
   NestingHistorySummary,
   ProjectHistoryRef
 } from '../domain/nesting.js'
-import { ProjectDocument } from '../domain/project.js'
+import { ProjectDocument, WorkspaceProjectSettings } from '../domain/project.js'
 import type { JobId, PieceId, SourceFileId } from '../domain/ids.js'
 import type { SerializedAppError } from './errors.js'
 
@@ -65,6 +65,8 @@ export interface AppApi {
   ) => Promise<ReadonlyArray<NestingHistoryFrame>>
 
   // Phase 8
+  readonly loadWorkspaceSettings: () => Promise<WorkspaceProjectSettings | null>
+  readonly saveWorkspaceSettings: (settings: WorkspaceProjectSettings) => Promise<void>
   readonly saveProject: (project: ProjectDocument) => Promise<string>
   readonly openProject: () => Promise<ProjectDocument>
   readonly exportNestingResult: (result: NestingResult) => Promise<void>

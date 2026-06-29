@@ -7,7 +7,7 @@ import type {
   NestingHistoryFrame,
   ProjectHistoryRef
 } from '@shared/domain/nesting.js'
-import type { ProjectDocument } from '@shared/domain/project.js'
+import type { ProjectDocument, WorkspaceProjectSettings } from '@shared/domain/project.js'
 import type { JobId } from '@shared/domain/ids.js'
 
 /**
@@ -119,6 +119,16 @@ const api: AppApi = {
       'nesting:load-replay',
       ref
     ).then((r) => r.frames),
+
+  loadWorkspaceSettings: () =>
+    invokeEnvelope<[], { readonly settings: WorkspaceProjectSettings | null }>(
+      'workspace:load-settings'
+    ).then((r) => r.settings),
+
+  saveWorkspaceSettings: (settings) =>
+    invokeEnvelope<[WorkspaceProjectSettings], void>('workspace:save-settings', settings).then(
+      () => undefined
+    ),
 
   saveProject: (project) =>
     invokeEnvelope<[ProjectDocument], { readonly path: string }>('project:save', project).then(

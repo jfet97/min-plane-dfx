@@ -13,9 +13,19 @@ app.getPath('userData')/temporary-project/workspace.sqlite
 app.getPath('userData')/temporary-project/sources/
 ```
 
-DXF imports are copied into `sources/` before parsing. SQLite stores original path, copied path, imported document JSON, and temporary project metadata.
+DXF imports are copied into `sources/` before parsing. SQLite stores original
+path, copied path, imported document JSON, and temporary project metadata.
+Preset source shapes are stored in the same import table as document JSON with
+`preset://` paths.
 
-The temporary workspace survives renderer hot reload and app close/reopen. On startup, staging files from interrupted imports are cleaned. On project save, the workspace row is promoted with the saved JSON path.
+The `projects` row for `temporary` also stores `settings_json`, a
+schema-decoded `WorkspaceProjectSettings` payload containing sheet settings,
+padding, nesting options, and cut-list quantities.
+
+The temporary workspace survives renderer hot reload and app close/reopen. On
+startup, staging files from interrupted imports are cleaned, imports are
+rehydrated, and then workspace settings are applied to the renderer stores. On
+project save, the workspace row is promoted with the saved JSON path.
 
 ## Saved State
 
@@ -35,6 +45,10 @@ summaries with `preset://` paths. They do not need copied source files, but they
 must survive renderer reload and hydrate through the same renderer actions as
 DXF imports so the cut list, preview, request export, and worker request all see
 one source-shape model.
+
+Unsaved project settings also live in the temporary workspace: sheet size/label,
+padding, nesting options, and cut-list quantities. Renderer reload should not
+reset those values to defaults.
 
 ## Open Behavior
 

@@ -31,12 +31,17 @@ Main owns:
 - Electron dialogs;
 - filesystem access;
 - DXF file import;
+- temporary workspace settings persistence;
 - project save/open;
 - export requests/results/history;
 - worker supervision;
 - IPC result translation.
 
 IPC handlers are the Promise boundary for main-process services. Validate renderer payloads before service work and return stable `IpcResult` envelopes.
+
+The renderer may request temporary workspace settings through preload, but it
+must not write SQLite or files directly. Persisted temporary settings are
+schema-decoded at the IPC boundary and hydrated through composable actions.
 
 DXF geometry may contain fractional coordinates. Main normalizes imported
 objects into integer-millimeter containing rectangles before they become project

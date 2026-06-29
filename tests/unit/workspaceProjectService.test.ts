@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { WorkspaceProjectService } from '@main/services/WorkspaceProjectService.js'
 import { makePresetShapeDocument } from '@shared/presetShapes.js'
+import { DEFAULT_STRATEGY_ID } from '@shared/domain/strategies.js'
+import { DEFAULT_LAYOUT_SELECTION_STRATEGY_ID } from '@shared/domain/layoutSelectionStrategies.js'
 
 function section(name: string): string {
   return `0\nSECTION\n2\n${name}\n`
@@ -21,6 +23,13 @@ function header(): string {
 const baseOpen = (): string =>
   header() + section('TABLES') + endsec() + section('BLOCKS') + endsec()
 const baseClose = (): string => '0\nEOF\n'
+
+function skipIfNativeSqliteMismatch(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  if (!message.includes('NODE_MODULE_VERSION')) return false
+  console.warn('Skipping SQLite workspace smoke test:', message)
+  return true
+}
 
 describe('WorkspaceProjectService', () => {
   it('creates a temporary SQLite workspace, copies DXF files, and lists persisted imports from a fresh service', async () => {
@@ -46,11 +55,7 @@ describe('WorkspaceProjectService', () => {
         await service.initialize()
         documents = await service.importDxfFiles([sourcePath])
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        if (message.includes('NODE_MODULE_VERSION')) {
-          console.warn('Skipping SQLite workspace smoke test:', message)
-          return
-        }
+        if (skipIfNativeSqliteMismatch(error)) return
         throw error
       }
 
@@ -91,11 +96,7 @@ describe('WorkspaceProjectService', () => {
         await service.initialize()
         stored = await service.storeSourceDocument(preset)
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        if (message.includes('NODE_MODULE_VERSION')) {
-          console.warn('Skipping SQLite workspace smoke test:', message)
-          return
-        }
+        if (skipIfNativeSqliteMismatch(error)) return
         throw error
       }
 
@@ -106,6 +107,45 @@ describe('WorkspaceProjectService', () => {
       const persistedDocuments = await reloadedService.listImportedDxfs()
 
       expect(persistedDocuments).toEqual([preset])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('persists temporary workspace settings across a fresh service instance', async () => {
+    const dir = join(tmpdir(), `min-plane-workspace-${randomUUID()}`)
+    const settings = {
+      sheet: { width: 2000, height: 1000, label: 'shop sheet' },
+      padding: 10,
+      pieceQuantities: { source_a: 3 },
+      options: {
+        allowGlobalRotation: true,
+        timeoutMs: 30000,
+        workerMode: 'maxrects-beam-search' as const,
+        historyMode: 'final' as const,
+        historyScope: 'winning_path' as const,
+        strategySelectionMode: 'single' as const,
+        strategyIds: [DEFAULT_STRATEGY_ID],
+        layoutSelectionStrategyId: DEFAULT_LAYOUT_SELECTION_STRATEGY_ID,
+        finalSelectionMode: 'manual' as const,
+        topN: 3
+      }
+    }
+
+    try {
+      const service = new WorkspaceProjectService(dir)
+      try {
+        await service.initialize()
+        await service.saveWorkspaceSettings(settings)
+      } catch (error) {
+        if (skipIfNativeSqliteMismatch(error)) return
+        throw error
+      }
+
+      const reloadedService = new WorkspaceProjectService(dir)
+      await reloadedService.initialize()
+
+      await expect(reloadedService.loadWorkspaceSettings()).resolves.toEqual(settings)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }

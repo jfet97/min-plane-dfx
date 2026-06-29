@@ -19,6 +19,8 @@ import type { IpcResult } from '@shared/protocol/ipc.js'
 import type { Unsubscribe, NestingHistoryEvent } from '@shared/protocol/ipc.js'
 import type { JobId } from '@shared/domain/ids.js'
 import type { ProjectDocument } from '@shared/domain/project.js'
+import { WorkspaceProjectSettings } from '@shared/domain/project.js'
+import type { WorkspaceProjectSettings as WorkspaceProjectSettingsModel } from '@shared/domain/project.js'
 import type { NestingRequest, NestingResult, ProjectHistoryRef } from '@shared/domain/nesting.js'
 import { ImportedDxfDocument as ImportedDxfDocumentSchema } from '@shared/domain/dxf.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
@@ -35,6 +37,8 @@ export const IPC_CHANNELS = [
   'dxf:persist-source-document',
   'dxf:remove-import',
   'dxf:clear-imports',
+  'workspace:load-settings',
+  'workspace:save-settings',
   'nesting:export-request',
   'nesting:export-result',
   'nesting:export-history',
@@ -246,6 +250,40 @@ export function registerIpcHandlers(): void {
       return fromWorkspaceError(err)
     }
   })
+
+  ipcMain.handle(
+    'workspace:load-settings',
+    async (): Promise<IpcResult<{ readonly settings: WorkspaceProjectSettingsModel | null }>> => {
+      try {
+        const settings = await getWorkspace().loadWorkspaceSettings()
+        return { ok: true, value: { settings } }
+      } catch (err) {
+        return fromWorkspaceError(err)
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'workspace:save-settings',
+    async (_event: IpcMainInvokeEvent, raw: unknown): Promise<IpcResult<void>> => {
+      const decoded = Schema.decodeUnknownExit(WorkspaceProjectSettings)(raw)
+      if (Exit.isFailure(decoded)) {
+        return {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: 'Invalid workspace settings payload.'
+          }
+        }
+      }
+      try {
+        await getWorkspace().saveWorkspaceSettings(decoded.value)
+        return { ok: true, value: undefined }
+      } catch (err) {
+        return fromWorkspaceError(err)
+      }
+    }
+  )
 
   ipcMain.handle(
     'nesting:export-request',

@@ -14,6 +14,7 @@ import { useJobRunner } from './composables/useJobRunner.js'
 import { preparePieces } from '@shared/preparePieces.js'
 import { JobId } from '@shared/domain/ids.js'
 import type { NestingRequest, NestingWarning } from '@shared/domain/nesting.js'
+import type { WorkspaceProjectSettings } from '@shared/domain/project.js'
 import type { Unsubscribe } from '@shared/protocol/ipc.js'
 
 type CenterView = 'import' | 'result'
@@ -22,6 +23,8 @@ const lastPong = ref<string | null>(null)
 const lastPing = ref<string | null>(null)
 const centerView = ref<CenterView>('import')
 let unsubscribe: Unsubscribe | null = null
+let workspaceSettingsReady = false
+let workspaceSettingsSaveTimer: ReturnType<typeof setTimeout> | null = null
 const store = useAppStore()
 const settings = useSettings()
 const history = useHistoryStore()
@@ -39,12 +42,22 @@ watch(store.importRevision, () => {
   projectWarning.value = null
 })
 
+watch(
+  () => [
+    settings.state.value.sheet.width,
+    settings.state.value.sheet.height,
+    settings.state.value.sheet.label,
+    settings.state.value.padding,
+    JSON.stringify(settings.state.value.options),
+    JSON.stringify(store.state.value.pieceQuantities)
+  ],
+  () => scheduleWorkspaceSettingsSave()
+)
+
 onMounted(() => {
   const api = window.appApi
   if (!api) return
-  void store.loadPersistedImports().catch((error: unknown) => {
-    console.error('[imports] failed to load persisted DXFs:', error)
-  })
+  void hydrateWorkspaceState()
   unsubscribe = api.onPong((at) => {
     lastPong.value = at
   })
@@ -54,12 +67,63 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (workspaceSettingsSaveTimer) {
+    clearTimeout(workspaceSettingsSaveTimer)
+    workspaceSettingsSaveTimer = null
+  }
   if (unsubscribe) {
     unsubscribe()
     unsubscribe = null
   }
   runner.clear()
 })
+
+async function hydrateWorkspaceState(): Promise<void> {
+  const api = window.appApi
+  if (!api) return
+  try {
+    const persistedSettings = await api.loadWorkspaceSettings()
+    await store.loadPersistedImports()
+    if (persistedSettings) {
+      settings.hydrateWorkspaceSettings(persistedSettings)
+      store.hydratePieceQuantities(persistedSettings.pieceQuantities)
+    }
+  } catch (error: unknown) {
+    console.error('[workspace] failed to hydrate temporary project state:', error)
+  } finally {
+    workspaceSettingsReady = true
+  }
+}
+
+function buildWorkspaceSettings(): WorkspaceProjectSettings {
+  return {
+    sheet: { ...settings.state.value.sheet },
+    padding: settings.state.value.padding,
+    pieceQuantities: { ...store.state.value.pieceQuantities },
+    options: { ...settings.state.value.options }
+  }
+}
+
+function scheduleWorkspaceSettingsSave(): void {
+  if (!workspaceSettingsReady) return
+  if (workspaceSettingsSaveTimer) {
+    clearTimeout(workspaceSettingsSaveTimer)
+  }
+  workspaceSettingsSaveTimer = setTimeout(() => {
+    workspaceSettingsSaveTimer = null
+    void saveWorkspaceSettings()
+  }, 150)
+}
+
+async function saveWorkspaceSettings(): Promise<void> {
+  const api = window.appApi
+  if (!api || !workspaceSettingsReady) return
+  try {
+    await api.saveWorkspaceSettings(buildWorkspaceSettings())
+  } catch (error: unknown) {
+    console.error('[workspace] failed to persist temporary project settings:', error)
+  }
+}
 
 function buildRequest(): NestingRequest | null {
   const sheet = settings.state.value.sheet
@@ -309,10 +373,15 @@ async function openProject(): Promise<void> {
       <div class="warnings-slot">
         <h3>Preparation warnings</h3>
         <p v-if="projectWarning" class="project-warning">{{ projectWarning }}</p>
+        <p v-if="runner.state.value.lastError" class="project-warning">
+          {{ runner.state.value.lastError }}
+        </p>
         <ul v-if="preparationWarnings.length > 0" class="warnings">
           <li v-for="(w, i) in preparationWarnings" :key="i">{{ w.message }}</li>
         </ul>
-        <p v-else class="muted">No preparation issues yet.</p>
+        <p v-else-if="!projectWarning && !runner.state.value.lastError" class="muted">
+          No preparation issues yet.
+        </p>
       </div>
     </template>
 

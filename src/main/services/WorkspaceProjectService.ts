@@ -9,6 +9,10 @@ import * as SqlClient from 'effect/unstable/sql/SqlClient'
 import { importDxfFile } from './DxfImportService.js'
 import { ImportedDxfDocument as ImportedDxfDocumentSchema } from '@shared/domain/dxf.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
+import {
+  WorkspaceProjectSettings,
+  type WorkspaceProjectSettings as WorkspaceProjectSettingsModel
+} from '@shared/domain/project.js'
 
 export class WorkspaceProjectError extends Error {
   readonly code: 'workspace_error'
@@ -23,6 +27,10 @@ interface StoredDxfRow {
   readonly document_json: string
 }
 
+interface StoredSettingsRow {
+  readonly settings_json: string | null
+}
+
 function firstRow(rows: ReadonlyArray<unknown>): StoredDxfRow | null {
   const row = rows[0]
   return storedDxfRow(row)
@@ -32,6 +40,14 @@ function storedDxfRow(row: unknown): StoredDxfRow | null {
   if (typeof row !== 'object' || row === null) return null
   const documentJson = (row as { readonly document_json?: unknown }).document_json
   return typeof documentJson === 'string' ? { document_json: documentJson } : null
+}
+
+function storedSettingsRow(row: unknown): StoredSettingsRow | null {
+  if (typeof row !== 'object' || row === null) return null
+  const settingsJson = (row as { readonly settings_json?: unknown }).settings_json
+  return settingsJson === null || typeof settingsJson === 'string'
+    ? { settings_json: settingsJson }
+    : null
 }
 
 export class WorkspaceProjectService {
@@ -87,6 +103,7 @@ export class WorkspaceProjectService {
         `
         yield* sql`ALTER TABLE projects ADD COLUMN saved_path TEXT`.pipe(Effect.ignore)
         yield* sql`ALTER TABLE projects ADD COLUMN promoted_at TEXT`.pipe(Effect.ignore)
+        yield* sql`ALTER TABLE projects ADD COLUMN settings_json TEXT`.pipe(Effect.ignore)
         yield* sql`ALTER TABLE imported_dxf ADD COLUMN piece_id TEXT`.pipe(Effect.ignore)
         const now = new Date().toISOString()
         yield* sql`
@@ -104,6 +121,36 @@ export class WorkspaceProjectService {
 
   storeSourceDocument(document: ImportedDxfDocument): Promise<ImportedDxfDocument> {
     return this.run(this.storeSourceDocumentEffect(document))
+  }
+
+  loadWorkspaceSettings(): Promise<WorkspaceProjectSettingsModel | null> {
+    const decodeWorkspaceSettings = this.decodeWorkspaceSettings.bind(this)
+    return this.run(
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient
+        const rows = yield* sql`
+          SELECT settings_json FROM projects WHERE id = 'temporary'
+        `
+        const stored = storedSettingsRow(rows[0])
+        if (!stored?.settings_json) return null
+        return decodeWorkspaceSettings(stored.settings_json)
+      })
+    )
+  }
+
+  saveWorkspaceSettings(settings: WorkspaceProjectSettingsModel): Promise<void> {
+    return this.run(
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient
+        const json = JSON.stringify(settings)
+        const now = new Date().toISOString()
+        yield* sql`
+          UPDATE projects
+          SET settings_json = ${json}, updated_at = ${now}
+          WHERE id = 'temporary'
+        `
+      })
+    )
   }
 
   listImportedDxfs(): Promise<ReadonlyArray<ImportedDxfDocument>> {
@@ -275,6 +322,15 @@ export class WorkspaceProjectService {
     const exit = Schema.decodeUnknownExit(ImportedDxfDocumentSchema)(parsed)
     if (Exit.isFailure(exit)) {
       throw new WorkspaceProjectError('Stored DXF document failed schema validation.')
+    }
+    return exit.value
+  }
+
+  private decodeWorkspaceSettings(json: string): WorkspaceProjectSettingsModel {
+    const parsed: unknown = JSON.parse(json)
+    const exit = Schema.decodeUnknownExit(WorkspaceProjectSettings)(parsed)
+    if (Exit.isFailure(exit)) {
+      throw new WorkspaceProjectError('Stored workspace settings failed schema validation.')
     }
     return exit.value
   }

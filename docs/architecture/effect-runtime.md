@@ -24,6 +24,11 @@ The worker may use its own small runtime with `NodeFileSystem.layer` and `NodePa
 
 Do not import the main runtime into the worker. Worker lifecycle is separate from Electron main lifecycle.
 
+`pnpm dev` must build the worker bundle before Electron starts. The main
+process resolves `out/main/workers/nesting.worker.cjs`; if that file is missing,
+`Run` fails before the algorithm starts. Keep `build:worker` in the dev startup
+path whenever the worker stays outside the electron-vite main bundle.
+
 ## Worker Protocol
 
 The worker transport uses Effect RPC over Effect's Node worker platform:

@@ -1,6 +1,6 @@
 import { reactive, computed, type UnwrapNestedRefs } from 'vue'
 import type { SheetSpec, NestingOptions } from '@shared/domain/nesting.js'
-import type { ProjectDocument } from '@shared/domain/project.js'
+import type { ProjectDocument, WorkspaceProjectSettings } from '@shared/domain/project.js'
 import { DEFAULT_STRATEGY_ID } from '@shared/domain/strategies.js'
 import { DEFAULT_LAYOUT_SELECTION_STRATEGY_ID } from '@shared/domain/layoutSelectionStrategies.js'
 
@@ -129,6 +129,13 @@ export function useSettings() {
       state.sheet.label = project.sheet.label
       state.padding = project.padding
       replaceOptions(project.options)
+    },
+    hydrateWorkspaceSettings: (settings: WorkspaceProjectSettings): void => {
+      state.sheet.width = settings.sheet.width
+      state.sheet.height = settings.sheet.height
+      state.sheet.label = settings.sheet.label
+      state.padding = settings.padding
+      replaceOptions(settings.options)
     }
   }
 }

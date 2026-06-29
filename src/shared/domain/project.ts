@@ -31,3 +31,12 @@ export class ProjectDocument extends Schema.Class<ProjectDocument>('ProjectDocum
   lastResult: Schema.optional(NestingResult),
   lastHistory: Schema.optional(ProjectHistoryRef)
 }) {}
+
+export class WorkspaceProjectSettings extends Schema.Class<WorkspaceProjectSettings>(
+  'WorkspaceProjectSettings'
+)({
+  sheet: SheetSpec,
+  padding: NonNegativeIntegerMillimeters,
+  pieceQuantities: Schema.Record(Schema.String, Schema.Number),
+  options: NestingOptions
+}) {}
