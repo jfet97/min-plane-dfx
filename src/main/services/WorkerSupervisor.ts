@@ -111,12 +111,6 @@ export class WorkerSupervisor {
         ? request.options.timeoutMs
         : this.options.defaultTimeoutMs
 
-    console.info('[main:worker] starting worker job', {
-      jobId: request.jobId,
-      requestId,
-      timeoutMs
-    })
-
     return new Promise<NestingResult>((resolve, reject) => {
       const WorkerProtocolLive = RpcClient.layerProtocolWorker({ size: 1 }).pipe(
         Layer.provide(NodeWorker.layer(() => this.makeWorkerThread(requestId, request.jobId)))
@@ -179,12 +173,6 @@ export class WorkerSupervisor {
   }
 
   private makeWorkerThread(requestId: string, jobId: JobId): NodeThreadWorker {
-    console.info('[main:worker] spawning thread', {
-      jobId,
-      requestId,
-      workerPath: this.options.workerPath,
-      historyDirectory: this.options.historyDirectory
-    })
     const worker = new NodeThreadWorker(this.options.workerPath, {
       env: {
         ...process.env,
@@ -193,9 +181,6 @@ export class WorkerSupervisor {
       stdout: true,
       stderr: true
     })
-    worker.once('online', () => {
-      console.info('[main:worker] thread online', { jobId, requestId })
-    })
     worker.once('error', (error) => {
       console.error('[main:worker] thread error', {
         jobId,
@@ -203,9 +188,6 @@ export class WorkerSupervisor {
         message: error.message,
         stack: error.stack
       })
-    })
-    worker.once('exit', (code) => {
-      console.info('[main:worker] thread exit', { jobId, requestId, code })
     })
     worker.stdout?.on('data', (chunk: Buffer) => {
       process.stdout.write(`[worker:stdout] ${chunk.toString()}`)
@@ -234,11 +216,6 @@ export class WorkerSupervisor {
 
     if (parsed.type === 'progress') {
       const progress: WorkerProgress = parsed.payload
-      console.info('[main:worker] progress', {
-        jobId: this.current.request.jobId,
-        phase: progress.phase,
-        at: progress.at
-      })
       // Cancellation check: if the current request was already cancelled,
       // ignore the progress event.
       void progress
@@ -248,12 +225,6 @@ export class WorkerSupervisor {
     if (parsed.type === 'success') {
       const result: NestingResult = parsed.payload
       const jobId = this.current.request.jobId
-      console.info('[main:worker] success', {
-        jobId,
-        elapsedMs: result.stats.algorithm.elapsedMs,
-        placed: result.placements.length,
-        unplaced: result.unplacedPieceIds.length
-      })
       clearTimeout(this.current.timer)
       this.teardownWorker(this.current.dispose, 'success')
       this.current.resolve(result)

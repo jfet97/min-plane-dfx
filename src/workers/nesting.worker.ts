@@ -21,8 +21,6 @@ import type {
 import { Cause, Effect, Fiber, FileSystem, Layer, Path, PlatformError, Queue, Stream } from 'effect'
 import * as RpcServer from 'effect/unstable/rpc/RpcServer'
 
-console.info('[worker:nesting] bootstrap')
-
 /**
  * Nesting worker thread. Receives schema-validated RPC requests, runs the
  * computation, and streams progress + history + success/failure events back to
@@ -123,12 +121,6 @@ function handleRunNesting(
   const jobId = payload.jobId
 
   return Effect.gen(function* () {
-    console.info('[worker:nesting] run received', {
-      requestId,
-      jobId,
-      pieces: payload.pieces.length,
-      historyMode: payload.options.historyMode
-    })
     yield* sendProgress(send, requestId, jobId, 'received')
     yield* sendProgress(send, requestId, jobId, 'validated')
     yield* sendProgress(send, requestId, jobId, 'started')
@@ -146,18 +138,10 @@ function handleRunNesting(
       Effect.forkDetach
     )
     const result = yield* Effect.sync(() => {
-      console.info('[worker:nesting] compute start', { requestId, jobId })
       const computed = computeNesting(payload, {
         emitFrame: (frame) => {
           Queue.offerUnsafe(frameQueue, frame)
         }
-      })
-      console.info('[worker:nesting] compute end', {
-        requestId,
-        jobId,
-        elapsedMs: computed.stats.algorithm.elapsedMs,
-        placed: computed.placements.length,
-        unplaced: computed.unplacedPieceIds.length
       })
       return computed
     }).pipe(Effect.ensuring(Queue.end(frameQueue)))

@@ -502,12 +502,12 @@ export function registerIpcHandlers(): void {
       const dlg = win
         ? await dialog.showSaveDialog(win, {
             title: 'Export Run GIF',
-            defaultPath: payload.defaultName,
+            defaultPath: join(app.getPath('downloads'), payload.defaultName),
             filters: [{ name: 'GIF', extensions: ['gif'] }]
           })
         : await dialog.showSaveDialog({
             title: 'Export Run GIF',
-            defaultPath: payload.defaultName,
+            defaultPath: join(app.getPath('downloads'), payload.defaultName),
             filters: [{ name: 'GIF', extensions: ['gif'] }]
           })
       if (dlg.canceled || !dlg.filePath) {
