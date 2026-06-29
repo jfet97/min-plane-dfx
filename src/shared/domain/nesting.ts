@@ -17,21 +17,20 @@ export const HistoryMode = Schema.Literals(['stream', 'final', 'off'])
 export const WorkerMode = Schema.Literal('stub')
 
 /**
- * Strategy selection mode for a single nesting run.
- *   - `single`            -> run exactly the strategies in `strategyIds`
- *   - `all_configured`    -> run every strategy registered in the app
+ * Candidate placement strategy selection for a single beam run.
+ *   - `single`            -> use exactly the candidate orders in `strategyIds`
+ *   - `all_configured`    -> use every candidate order registered in the app
  *
- * The first real algorithm version may use a single strategy; the field
- * exists now so the request payload stays stable when the user wires the
- * multi-strategy layer later.
+ * These ids are not separate runs. They are candidate-order alternatives used
+ * while expanding the same beam.
  */
 export const StrategySelectionMode = Schema.Literals(['single', 'all_configured'])
 
 /**
- * Final cross-strategy selection layer.
- *   - `manual`            -> user picks one strategy run from the list
- *   - `best`              -> pick the highest-scoring run (criteria TBD)
- *   - `top_n`             -> keep the top N runs as the final candidate set
+ * Result-envelope selection layer.
+ *   - `manual`            -> user picks one result row from the list
+ *   - `best`              -> pick the highest-scoring row (criteria TBD)
+ *   - `top_n`             -> keep the top N rows as the final candidate set
  *
  * The criteria for "best" / "top N" are intentionally undecided. The app
  * shell must surface the controls as placeholders without picking.
@@ -67,6 +66,15 @@ export class NestingStrategyDefinition extends Schema.Class<NestingStrategyDefin
   tail: Schema.Array(StrategyTailToken)
 }) {}
 
+export class LayoutSelectionStrategyDefinition extends Schema.Class<LayoutSelectionStrategyDefinition>(
+  'LayoutSelectionStrategyDefinition'
+)({
+  id: Schema.String,
+  label: Schema.String,
+  description: Schema.String,
+  criteria: Schema.Array(Schema.String)
+}) {}
+
 export class NestingOptions extends Schema.Class<NestingOptions>('NestingOptions')({
   allowGlobalRotation: Schema.Boolean,
   timeoutMs: Schema.Number,
@@ -75,6 +83,7 @@ export class NestingOptions extends Schema.Class<NestingOptions>('NestingOptions
   historyScope: HistoryScope,
   strategySelectionMode: StrategySelectionMode,
   strategyIds: Schema.Array(Schema.String),
+  layoutSelectionStrategyId: Schema.String,
   finalSelectionMode: FinalSelectionMode,
   topN: Schema.optional(Schema.Number),
   maxHistoryEvents: Schema.optional(Schema.Number)

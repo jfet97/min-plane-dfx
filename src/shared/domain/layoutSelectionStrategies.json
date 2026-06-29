@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "strategies": [
+    {
+      "id": "compact-first",
+      "label": "Compact first",
+      "description": "Prefer the smallest used cluster area, then preserve the largest clean free rectangle.",
+      "criteria": ["used_area", "-largest_free_rect_area", "-largest_free_rect_short_side"]
+    },
+    {
+      "id": "largest-free-area-first",
+      "label": "Largest free area first",
+      "description": "Prefer preserving the largest clean remaining rectangle, then compactness.",
+      "criteria": ["-largest_free_rect_area", "used_area", "-largest_free_rect_short_side"]
+    },
+    {
+      "id": "widest-usable-free-rectangle-first",
+      "label": "Widest usable free rectangle first",
+      "description": "Prefer the most usable remaining free rectangle, avoiding long thin leftover strips.",
+      "criteria": ["-largest_free_rect_short_side", "-largest_free_rect_area", "used_area"]
+    }
+  ]
+}

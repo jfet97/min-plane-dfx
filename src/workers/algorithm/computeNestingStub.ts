@@ -1,16 +1,26 @@
 import { randomUUID } from 'node:crypto'
 import { sortPiecesForNesting } from './sortPiecesForNesting.js'
 import { selectFinalStrategyResult } from './selectFinalStrategyResult.js'
-import type { NestingHistoryFrame, NestingRequest, NestingResult } from '@shared/domain/nesting.js'
+import type {
+  LayoutSelectionStrategyDefinition,
+  NestingHistoryFrame,
+  NestingRequest,
+  NestingResult,
+  NestingStrategyDefinition
+} from '@shared/domain/nesting.js'
 import {
   NestingStrategyResult,
   NestingResult as NestingResultModel,
   NestingHistoryFrame as NestingHistoryFrameModel,
   BeamStateSnapshot,
-  PlateSnapshot,
-  type NestingStrategyDefinition
+  PlateSnapshot
 } from '@shared/domain/nesting.js'
-import { findStrategy, STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js'
+import {
+  DEFAULT_STRATEGY_ID,
+  STRATEGY_DEFINITIONS,
+  findStrategy
+} from '@shared/domain/strategies.js'
+import { findLayoutSelectionStrategy } from '@shared/domain/layoutSelectionStrategies.js'
 import {
   K,
   runMaxRectsBeamSearch,
@@ -23,16 +33,19 @@ export interface ComputeNestingOptions {
   readonly emitFrame: (frame: NestingHistoryFrame) => void
 }
 
+const BEAM_SEARCH_STRATEGY_ID = 'maxrects-beam-search'
+const BEAM_SEARCH_STRATEGY_LABEL = 'MaxRects beam search'
+
 /**
  * Build a stub NestingResult for the still-missing nesting algorithm.
  *
  * This is the worker-facing orchestration wrapper: it resolves configured
- * strategy ids, adapts each strategy into algorithm ordering hooks, calls the
+ * candidate strategy ids, adapts them into algorithm ordering hooks, calls the
  * algorithm-core boundary, emits history through the worker callback, and wraps
- * the core outcome into protocol-facing strategy / result envelopes.
+ * the core outcome into protocol-facing result envelopes.
  *
  * No real placements, free rectangles, beam candidates, split events, or
- * cross-strategy scoring are produced.
+ * scoring are produced.
  */
 export function computeNestingStub(
   request: NestingRequest,
@@ -42,40 +55,38 @@ export function computeNestingStub(
   const sortedPieces = sortPiecesForNesting(request.pieces)
   const pieceIds = sortedPieces.map((piece) => piece.id)
 
-  // build one stub strategy result per requested strategy id. Unrecognized
-  // ids get a generic stub entry so the response shape stays stable when the
-  // user wires a custom algorithm version with its own strategy ids. Strategy
-  // ids select configured ordering rules; they are not part of the core
-  // placement algorithm itself.
-  const strategyIds = resolveStrategyIds(request)
-  const beamWidth = K(strategyIds.length)
-  const strategyResults: NestingStrategyResult[] = []
-  for (const [index, strategyId] of strategyIds.entries()) {
-    const def = findStrategy(strategyId)
-    const label = def?.label ?? strategyId
-    const description = def?.description
-    const strategyRunId = `run-${index + 1}-${strategyId}`
-    const outcome = runStrategyStub(
-      request,
-      sortedPieces,
-      def,
+  // selected candidate strategies are alternatives inside one beam run
+  const candidateStrategyIds = resolveCandidateStrategyIds(request)
+  const candidateStrategies = candidateStrategyIds.map((id) => findStrategy(id))
+  const layoutSelectionStrategy = findLayoutSelectionStrategy(
+    request.options.layoutSelectionStrategyId
+  )
+  const beamWidth = K(candidateStrategyIds.length)
+  const strategyRunId = `run-1-${BEAM_SEARCH_STRATEGY_ID}`
+  const outcome = runBeamSearchStub(
+    request,
+    sortedPieces,
+    candidateStrategies,
+    layoutSelectionStrategy,
+    strategyRunId,
+    BEAM_SEARCH_STRATEGY_LABEL,
+    beamWidth,
+    options
+  )
+  const strategyResults = [
+    NestingStrategyResult.stub({
       strategyRunId,
-      label,
-      beamWidth,
-      options
-    )
-    strategyResults.push(
-      NestingStrategyResult.stub({
-        strategyRunId,
-        strategyId,
-        strategyLabel: label,
-        ...(description !== undefined ? { strategyDescription: description } : {}),
-        sortedPieceIds: outcome.sortedPieceIds,
-        elapsedMs,
-        pieceCount: request.pieces.length
-      })
-    )
-  }
+      strategyId: BEAM_SEARCH_STRATEGY_ID,
+      strategyLabel: BEAM_SEARCH_STRATEGY_LABEL,
+      strategyDescription: describeBeamSearchRun(
+        candidateStrategyIds,
+        request.options.layoutSelectionStrategyId
+      ),
+      sortedPieceIds: outcome.sortedPieceIds,
+      elapsedMs,
+      pieceCount: request.pieces.length
+    })
+  ]
 
   const selected = selectFinalStrategyResult(strategyResults, request)
 
@@ -93,16 +104,17 @@ export function computeNestingStub(
   })
 }
 
-function runStrategyStub(
+function runBeamSearchStub(
   request: NestingRequest,
   sortedPieces: ReadonlyArray<NestingRequest['pieces'][number]>,
-  strategy: NestingStrategyDefinition | undefined,
+  candidateStrategies: ReadonlyArray<NestingStrategyDefinition | undefined>,
+  layoutSelectionStrategy: LayoutSelectionStrategyDefinition | undefined,
   strategyRunId: string,
   strategyLabel: string,
   beamWidth: number,
   options: ComputeNestingOptions
 ) {
-  const orders = makeStrategyOrders(strategy)
+  const orders = makeStrategyOrders(candidateStrategies, layoutSelectionStrategy)
   return runMaxRectsBeamSearch({
     sheet: request.sheet,
     pieces: sortedPieces,
@@ -157,17 +169,19 @@ function buildStateFrames(
   )
 }
 
-/**
- * Pick which strategy results belong in the final envelope for a given
- * request. Centralized so the manual / best / top N logic lives in one
- * place when the user writes the final-selection layer.
- */
-function resolveStrategyIds(request: NestingRequest): ReadonlyArray<string> {
+function describeBeamSearchRun(
+  candidateStrategyIds: ReadonlyArray<string>,
+  layoutSelectionStrategyId: string
+): string {
+  return `Candidate orders: ${candidateStrategyIds.join(', ')}. Layout selection: ${layoutSelectionStrategyId}.`
+}
+
+function resolveCandidateStrategyIds(request: NestingRequest): ReadonlyArray<string> {
   if (request.options.strategySelectionMode === 'all_configured') {
     return STRATEGY_DEFINITIONS.map((s) => s.id)
   }
   if (request.options.strategyIds.length > 0) {
     return request.options.strategyIds
   }
-  return [STRATEGY_DEFINITIONS[0]?.id ?? 'balanced-preserve-free-then-bottom-left']
+  return [DEFAULT_STRATEGY_ID]
 }

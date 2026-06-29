@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useSettings } from '../composables/useSettings.js'
 import FileDropZone from './FileDropZone.vue'
 import { STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js'
+import { LAYOUT_SELECTION_STRATEGIES } from '@shared/domain/layoutSelectionStrategies.js'
 import type { NestingOptions } from '@shared/domain/nesting.js'
 
 const settings = useSettings()
@@ -33,6 +34,10 @@ function setStrategySelectionMode(event: Event): void {
 
 function setFinalSelectionMode(event: Event): void {
   settings.setFinalSelectionMode(selectValue(event) as NestingOptions['finalSelectionMode'])
+}
+
+function setLayoutSelectionStrategyId(event: Event): void {
+  settings.setLayoutSelectionStrategyId(selectValue(event))
 }
 </script>
 
@@ -132,11 +137,11 @@ function setFinalSelectionMode(event: Event): void {
       </label>
     </div>
 
-    <h3 title="A strategy is a named scoring/order configuration for the future nesting algorithm.">
-      Strategies
+    <h3 title="Candidate strategies order legal placements before they are applied to the beam.">
+      Candidate strategies
     </h3>
     <p class="hint">
-      Strategy IDs are saved as data; the current worker still uses the algorithm stub.
+      Selected ids feed one beam run; they are not separate worker runs.
     </p>
     <label
       class="span-2 full"
@@ -174,9 +179,29 @@ function setFinalSelectionMode(event: Event): void {
       </li>
     </ul>
 
-    <h3>Final selection</h3>
+    <h3 title="This metric chooses which beam states survive after candidate expansion.">
+      Layout selection
+    </h3>
+    <label class="span-2 full" title="Used by the beam to keep the best retained states.">
+      Survivor metric
+      <select
+        :value="settings.state.value.options.layoutSelectionStrategyId"
+        @change="setLayoutSelectionStrategyId"
+      >
+        <option
+          v-for="strategy in LAYOUT_SELECTION_STRATEGIES"
+          :key="strategy.id"
+          :value="strategy.id"
+          :title="strategy.description"
+        >
+          {{ strategy.label }}
+        </option>
+      </select>
+    </label>
+
+    <h3>Result selection</h3>
     <div class="grid">
-      <label title="Manual mode uses the strategy run selected in the Strategy Runs panel.">
+      <label title="Manual mode uses the result row selected in the Strategy Runs panel.">
         Mode
         <select
           :value="settings.state.value.options.finalSelectionMode"
@@ -184,7 +209,7 @@ function setFinalSelectionMode(event: Event): void {
         >
           <option
             value="manual"
-            title="Manual mode uses the strategy run selected in the Strategy Runs panel."
+            title="Manual mode uses the result row selected in the Strategy Runs panel."
           >
             manual
           </option>
@@ -198,7 +223,7 @@ function setFinalSelectionMode(event: Event): void {
           <option
             value="top_n"
             disabled
-            title="Reserved for returning the top N completed strategy runs. Disabled until final ranking is implemented."
+            title="Reserved for returning the top N completed result rows. Disabled until final ranking is implemented."
           >
             top N (scoring TBD)
           </option>

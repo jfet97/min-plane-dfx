@@ -19,6 +19,7 @@ function options(): NestingOptions {
     historyScope: 'winning_path',
     strategySelectionMode: 'single',
     strategyIds: [],
+    layoutSelectionStrategyId: 'compact-first',
     finalSelectionMode: 'manual'
   })
 }

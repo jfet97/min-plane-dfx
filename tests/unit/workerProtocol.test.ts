@@ -33,6 +33,7 @@ describe('WorkerRequest', () => {
           historyScope: 'winning_path' as const,
           strategySelectionMode: 'single' as const,
           strategyIds: ['balanced-preserve-free-then-bottom-left'],
+          layoutSelectionStrategyId: 'compact-first',
           finalSelectionMode: 'manual' as const
         }
       }

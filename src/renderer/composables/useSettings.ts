@@ -2,6 +2,7 @@ import { reactive, computed, type UnwrapNestedRefs } from 'vue'
 import type { SheetSpec, NestingOptions } from '@shared/domain/nesting.js'
 import type { ProjectDocument } from '@shared/domain/project.js'
 import { DEFAULT_STRATEGY_ID } from '@shared/domain/strategies.js'
+import { DEFAULT_LAYOUT_SELECTION_STRATEGY_ID } from '@shared/domain/layoutSelectionStrategies.js'
 
 export interface SettingsState {
   sheet: SheetSpec
@@ -20,6 +21,7 @@ interface MutableSettingsState {
     historyScope: 'winning_path'
     strategySelectionMode: 'single' | 'all_configured'
     strategyIds: string[]
+    layoutSelectionStrategyId: string
     finalSelectionMode: 'manual' | 'best' | 'top_n'
     topN?: number | undefined
     maxHistoryEvents?: number | undefined
@@ -38,6 +40,7 @@ export function makeDefaultSettings(): MutableSettingsState {
       historyScope: 'winning_path',
       strategySelectionMode: 'single',
       strategyIds: [DEFAULT_STRATEGY_ID],
+      layoutSelectionStrategyId: DEFAULT_LAYOUT_SELECTION_STRATEGY_ID,
       finalSelectionMode: 'manual',
       topN: 3
     }
@@ -55,6 +58,7 @@ function replaceOptions(options: NestingOptions): void {
   state.options.historyScope = options.historyScope
   state.options.strategySelectionMode = options.strategySelectionMode
   state.options.strategyIds = [...options.strategyIds]
+  state.options.layoutSelectionStrategyId = options.layoutSelectionStrategyId
   state.options.finalSelectionMode = options.finalSelectionMode
   state.options.topN = options.topN
   state.options.maxHistoryEvents = options.maxHistoryEvents
@@ -86,6 +90,9 @@ export function useSettings() {
     },
     setStrategySelectionMode: (mode: 'single' | 'all_configured'): void => {
       state.options.strategySelectionMode = mode
+    },
+    setLayoutSelectionStrategyId: (id: string): void => {
+      state.options.layoutSelectionStrategyId = id
     },
     setFinalSelectionMode: (mode: 'manual' | 'best' | 'top_n'): void => {
       state.options.finalSelectionMode = mode

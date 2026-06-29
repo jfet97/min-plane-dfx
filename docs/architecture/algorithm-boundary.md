@@ -20,9 +20,9 @@ Do not implement:
 
 `runMaxRectsBeamSearch` is the algorithm-core boundary. It accepts the fixed
 piece list, sheet, adaptive beam width, a non-empty list of candidate ordering
-functions, a state ordering function, and synchronous event hooks. It
-owns beam expansion, candidate application, and unplaced-piece transitions, then
-returns algorithm outcome data. It does not know about worker requests,
+functions, a layout/state ordering function, and synchronous event hooks. It
+owns one beam run: selected candidate strategies are alternatives inside that
+beam, not separate worker runs. It does not know about worker requests,
 configured strategy ids, protocol result envelopes, Effect, or history
 persistence.
 
@@ -66,7 +66,11 @@ and live `history_frame` sends outside the algorithm.
 
 Strategies are data, not TypeScript unions. Persistent IDs should be descriptive strings from `SCORING_CRITERIA_NOTES.md`.
 
-The app may display strategy labels and descriptions, and it may send selected strategy IDs to the worker. Inside the wrapper, strategy IDs select configured ordering rules for a strategy run. They are not part of the algorithm core itself, and the app must not implement the scoring criteria behind those IDs until the user writes the algorithm.
+The app may display strategy labels and descriptions, and it may send selected
+candidate strategy IDs to the worker. Inside the wrapper, those IDs select
+candidate ordering rules for one beam run. They are not part of the algorithm
+core itself, and the app must not implement the scoring criteria behind those
+IDs until the user writes the algorithm.
 
 ## Real Algorithm Contract
 

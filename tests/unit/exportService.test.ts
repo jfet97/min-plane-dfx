@@ -39,6 +39,7 @@ const sampleRequest: NestingRequest = {
     historyScope: 'winning_path',
     strategySelectionMode: 'single',
     strategyIds: ['balanced-preserve-free-then-bottom-left'],
+    layoutSelectionStrategyId: 'compact-first',
     finalSelectionMode: 'manual'
   }
 }

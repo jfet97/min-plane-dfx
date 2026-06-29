@@ -19,6 +19,11 @@ import {
   STRATEGY_DEFINITIONS,
   findStrategy
 } from '../../src/shared/domain/strategies.js'
+import {
+  DEFAULT_LAYOUT_SELECTION_STRATEGY_ID,
+  LAYOUT_SELECTION_STRATEGIES,
+  findLayoutSelectionStrategy
+} from '../../src/shared/domain/layoutSelectionStrategies.js'
 import type {
   NestingRequest,
   PreparedPiece,
@@ -65,6 +70,7 @@ function options(overrides: Partial<NestingOptions> = {}): NestingOptions {
     historyScope: 'winning_path',
     strategySelectionMode: 'single',
     strategyIds: [DEFAULT_STRATEGY_ID],
+    layoutSelectionStrategyId: DEFAULT_LAYOUT_SELECTION_STRATEGY_ID,
     finalSelectionMode: 'manual',
     ...overrides
   }
@@ -369,7 +375,7 @@ describe('computeNestingStub', () => {
     expect(result.unplacedPieceIds).toEqual(['a', 'b'])
   })
 
-  it('emits one strategy result per requested strategy id', () => {
+  it('uses requested strategy ids as candidate orders inside one beam run', () => {
     const req = baseRequest({
       options: options({
         strategySelectionMode: 'single',
@@ -380,19 +386,28 @@ describe('computeNestingStub', () => {
       })
     })
     const result = runNestingStub(req, 5)
-    expect(result.strategyResults.length).toBe(2)
-    expect(result.strategyResults.map((s) => s.strategyId)).toEqual([
-      'balanced-preserve-free-then-bottom-left',
+    expect(result.strategyResults).toHaveLength(1)
+    expect(result.strategyResults[0]?.strategyId).toBe('maxrects-beam-search')
+    expect(result.strategyResults[0]?.strategyDescription).toContain(
+      'balanced-preserve-free-then-bottom-left'
+    )
+    expect(result.strategyResults[0]?.strategyDescription).toContain(
       'short-fill-short-side-fit-then-bottom-left'
-    ])
+    )
   })
 
-  it('emits one strategy result per configured strategy when mode is all_configured', () => {
+  it('uses all configured strategies as candidate orders when requested', () => {
     const req = baseRequest({
       options: options({ strategySelectionMode: 'all_configured', strategyIds: [] })
     })
     const result = runNestingStub(req, 5)
-    expect(result.strategyResults.length).toBe(STRATEGY_DEFINITIONS.length)
+    const firstConfigured = STRATEGY_DEFINITIONS[0]
+    const lastConfigured = STRATEGY_DEFINITIONS.at(-1)
+    expect(result.strategyResults).toHaveLength(1)
+    expect(firstConfigured).toBeDefined()
+    expect(lastConfigured).toBeDefined()
+    expect(result.strategyResults[0]?.strategyDescription).toContain(firstConfigured?.id)
+    expect(result.strategyResults[0]?.strategyDescription).toContain(lastConfigured?.id)
   })
 
   it('points selectedStrategyRunId at the first strategy run', () => {
@@ -441,18 +456,14 @@ describe('computeNestingStub', () => {
       }
     })
 
-    expect(frames.length).toBe(8)
+    expect(frames.length).toBe(4)
     expect(frames.map((frame) => frame.strategyRunId)).toEqual([
-      'run-1-balanced-preserve-free-then-bottom-left',
-      'run-1-balanced-preserve-free-then-bottom-left',
-      'run-1-balanced-preserve-free-then-bottom-left',
-      'run-1-balanced-preserve-free-then-bottom-left',
-      'run-2-short-fill-short-side-fit-then-bottom-left',
-      'run-2-short-fill-short-side-fit-then-bottom-left',
-      'run-2-short-fill-short-side-fit-then-bottom-left',
-      'run-2-short-fill-short-side-fit-then-bottom-left'
+      'run-1-maxrects-beam-search',
+      'run-1-maxrects-beam-search',
+      'run-1-maxrects-beam-search',
+      'run-1-maxrects-beam-search'
     ])
-    expect(frames.map((frame) => frame.beamRank)).toEqual([0, 1, 2, 3, 0, 1, 2, 3])
+    expect(frames.map((frame) => frame.beamRank)).toEqual([0, 1, 2, 3])
     expect(frames.every((frame) => frame.plate.placements.length === 1)).toBe(true)
     expect(frames.every((frame) => frame.plate.freeRectangles.length === 2)).toBe(true)
     expect(frames[0]?.state.remainingPieceIds).toEqual(['b'])
@@ -482,6 +493,21 @@ describe('strategies data', () => {
   it('findStrategy returns the matching definition', () => {
     const def = findStrategy('short-fill-short-side-fit-then-bottom-left')
     expect(def?.label).toContain('Short-fill')
+  })
+})
+
+describe('layout selection strategy data', () => {
+  it('registers the three layout selection definitions', () => {
+    expect(LAYOUT_SELECTION_STRATEGIES.map((s) => s.id)).toEqual([
+      'compact-first',
+      'largest-free-area-first',
+      'widest-usable-free-rectangle-first'
+    ])
+  })
+
+  it('findLayoutSelectionStrategy returns the matching definition', () => {
+    const def = findLayoutSelectionStrategy('largest-free-area-first')
+    expect(def?.label).toContain('Largest free area')
   })
 })
 

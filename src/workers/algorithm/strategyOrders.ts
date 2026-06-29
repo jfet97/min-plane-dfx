@@ -1,7 +1,11 @@
 import { Order } from 'effect'
-import type { NestingStrategyDefinition } from '@shared/domain/nesting.js'
+import type {
+  LayoutSelectionStrategyDefinition,
+  NestingStrategyDefinition
+} from '@shared/domain/nesting.js'
 import type { NestingBeamState } from './beam/state.js'
 import type {
+  CandidateOrder,
   CandidateOrders,
   NestingAlgorithmCandidate,
   NestingStateOrder
@@ -15,18 +19,31 @@ export interface StrategyOrders {
 const neutralCandidateOrder: Order.Order<NestingAlgorithmCandidate> = Order.make(() => 0)
 const neutralStateOrder: Order.Order<NestingBeamState> = Order.make(() => 0)
 
+function neutralCandidateOrderFactory(): Order.Order<NestingAlgorithmCandidate> {
+  return neutralCandidateOrder
+}
+
+function nonEmptyCandidateOrders(orders: ReadonlyArray<CandidateOrder>): CandidateOrders {
+  const first = orders[0]
+  if (first === undefined) return [neutralCandidateOrderFactory]
+  return [first, ...orders.slice(1)]
+}
+
 /**
  * Adapter from persisted strategy configuration to algorithm ordering hooks.
  *
- * The future algorithm will interpret `prefix` and `tail` from the strategy
- * definition here. For now the adapter is deliberately neutral so the app shell
- * does not invent placement scoring before the real algorithm exists.
+ * Candidate strategies all feed the same beam run. The layout-selection
+ * strategy chooses survivors after expansion. For now both adapters stay
+ * neutral until the scoring formulas are implemented.
  */
 export function makeStrategyOrders(
-  _strategy: NestingStrategyDefinition | undefined
+  candidateStrategies: ReadonlyArray<NestingStrategyDefinition | undefined>,
+  _layoutSelectionStrategy: LayoutSelectionStrategyDefinition | undefined
 ): StrategyOrders {
+  const candidateOrders = candidateStrategies.map(() => neutralCandidateOrderFactory)
+
   return {
-    candidateOrder: [() => neutralCandidateOrder],
+    candidateOrder: nonEmptyCandidateOrders(candidateOrders),
     stateOrder: () => neutralStateOrder
   }
 }

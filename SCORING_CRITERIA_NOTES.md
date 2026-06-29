@@ -348,7 +348,7 @@ This is closer to classic Best Short Side Fit behavior.
 
 ## Beam Search Working Model
 
-Use beam search inside a single strategy run after the initial piece order has
+Use beam search inside a single beam run after the initial piece order has
 already been fixed.
 
 Current working parameters:
@@ -397,12 +397,12 @@ At the end of the step:
 ```text
 current states <= beamWidth
 successors <= beamWidth * selectedStrategyCount * freeRectFanout
-rank successor states with the chosen beam/state comparison metric
+rank successor states with the chosen layout-selection metric
 keep the best beamWidth successor states
 ```
 
 The eight placement strategies are therefore candidate ordering rules for the
-current state and next piece. The beam/state comparison metric decides which
+current state and next piece. The layout-selection metric decides which
 successor states survive after all current states have been expanded.
 
 The outer loop continues while at least one retained state still has
@@ -414,10 +414,16 @@ strategy, the algorithm still creates one successor: the piece is removed from
 `remainingPieces` and appended to `unplacedPieces`. Therefore an empty next beam
 is an internal invariant failure, not the normal loop termination signal.
 
-## Final Layout Ranking
+## Layout Selection Ranking
 
 This is separate from candidate scoring during placement.
-Each strategy run produces one complete layout, and final ranking compares complete layouts across strategy runs.
+The selected candidate strategies all feed one beam run; after each expansion,
+the layout-selection metric compares successor states and keeps the best beam
+members.
+
+The same metric family can also compare complete layouts later if the app ever
+needs to choose between multiple completed layouts, but the first model is one
+beam run that selects its own best retained state.
 
 Hard requirement:
 
@@ -459,12 +465,12 @@ Confirmed so far:
 2. Smaller final used area matters.
 3. Large/clean residual free space matters strongly.
 
-## Final Cross-Strategy Ranking Modes
+## Layout Selection Modes
 
-These compare complete strategy results against each other.
-They are not used for candidate placement inside a strategy run.
+These compare layout states, not individual placement candidates.
+They are used after candidate application to decide which beam states survive.
 
-### Final Mode 1: Compact First
+### Layout Mode 1: Compact First
 
 ```text
 (
@@ -474,10 +480,10 @@ They are not used for candidate placement inside a strategy run.
 )
 ```
 
-Use this when the primary final goal is the smallest occupied cluster.
+Use this when the primary goal is the smallest occupied cluster.
 Residual free space breaks ties or near-ties.
 
-### Final Mode 2: Largest Free Area First
+### Layout Mode 2: Largest Free Area First
 
 ```text
 (
@@ -490,7 +496,7 @@ Residual free space breaks ties or near-ties.
 Use this when preserving the largest clean remaining rectangle is more important than the absolute smallest used cluster.
 Used area becomes the second criterion.
 
-### Final Mode 3: Widest Usable Free Rectangle First
+### Layout Mode 3: Widest Usable Free Rectangle First
 
 ```text
 (
@@ -505,7 +511,7 @@ This avoids choosing a long thin leftover strip over a more usable rectangular f
 
 Open questions:
 
-- Should these final modes use strict lexicographic comparison or tolerance bands?
+- Should these layout modes use strict lexicographic comparison or tolerance bands?
 - Should the UI default to Compact First or Largest Free Area First?
 
 ## Future Branch-And-Bound Notes

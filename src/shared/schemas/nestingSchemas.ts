@@ -16,6 +16,7 @@ export const NestingOptionsStrictSchema = Schema.Struct({
   historyScope: Schema.Literal('winning_path'),
   strategySelectionMode: Schema.Literals(['single', 'all_configured']),
   strategyIds: Schema.Array(Schema.String).check(Schema.isNonEmpty()),
+  layoutSelectionStrategyId: Schema.String.check(Schema.isMinLength(1)),
   finalSelectionMode: Schema.Literals(['manual', 'best', 'top_n']),
   topN: Schema.optional(Schema.Number.check(Schema.isGreaterThan(0))),
   maxHistoryEvents: Schema.optional(Schema.Number)
