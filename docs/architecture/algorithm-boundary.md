@@ -45,15 +45,16 @@ strategy orchestration, ordering adapters, and worker-facing wrappers.
 
 The core emits algorithm events from `src/workers/algorithm/events.ts`, not
 history frames and not worker-wire payloads. The event stream is the raw
-material for history: initial states, future beam-step counts, selected states,
+material for history: initial states, beam-step counts, selected states,
 placement applications with ids plus split/prune data, and completion can be
-translated by the wrapper into whichever schema-backed history or worker
-protocol format it needs.
+translated by the wrapper into schema-backed history or worker protocol
+payloads.
 
 `computeNesting` is the worker-facing wrapper around that boundary. It
 resolves configured strategy ids, adapts strategy definitions into ordering
-functions, calls the core boundary, turns algorithm events into history frames, and
-wraps the outcome into `NestingStrategyResult` / `NestingResult`.
+functions, calls the core boundary, turns the initial beam and every selected
+beam survivor into history frames, and wraps the outcome into
+`NestingStrategyResult` / `NestingResult`.
 
 The hook path must stream events as the algorithm runs. Do not collect frames in
 the wrapper and flush them after the algorithm returns. In the worker, the sync

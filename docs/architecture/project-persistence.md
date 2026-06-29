@@ -20,8 +20,8 @@ Preset source shapes are stored in the same import table as document JSON with
 
 The `projects` row for `temporary` also stores `settings_json`, a
 schema-decoded `WorkspaceProjectSettings` payload containing sheet settings,
-padding, nesting options, cut-list quantities, and an optional monotonic
-revision.
+padding, nesting options, cut-list quantities, saved run records, and an
+optional monotonic revision.
 
 The temporary workspace survives renderer hot reload and app close/reopen. On
 startup, staging files from interrupted imports are cleaned, imports are
@@ -40,6 +40,8 @@ A project should include:
 - nesting options;
 - latest worker result when available;
 - latest NDJSON history reference when available.
+- saved run records with their result, piece count, and NDJSON history
+  reference when available.
 
 Preset shapes are persisted in the temporary workspace as imported document
 summaries with `preset://` paths. They do not need copied source files, but they
@@ -58,6 +60,13 @@ persisted-source-shape path closely enough that edits wait for main to finish
 the SQLite write. Since multiple IPC writes can overlap across reload timing,
 main stores the revision next to the JSON payload and ignores stale writes.
 
+Completed runs are saved as project run records in the same temporary settings
+payload. A run record keeps the result and the NDJSON replay reference, so it
+can be restored after renderer reload even if the user later changes source
+shapes, quantities, or sheet settings. Deleting a run record only removes that
+archive entry; it does not delete imported source shapes or mutate the current
+project setup.
+
 ## Open Behavior
 
 Opening a project must hydrate renderer stores. It must not merely validate the file.
@@ -66,7 +75,8 @@ Opening a project resets transient worker state to idle. It must not invent, res
 
 ## History References
 
-History frames may live in a worker-written NDJSON file referenced by `ProjectHistoryRef`.
+History frames may live in a worker-written NDJSON file referenced by
+`ProjectHistoryRef`.
 
 If that file is missing or unreadable on open, keep the loaded result visible and show a compact recoverable warning. Missing history is not a reason to reject a valid project snapshot.
 

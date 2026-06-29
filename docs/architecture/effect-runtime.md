@@ -53,6 +53,10 @@ RunNestingPayload -> Stream<WorkerResponse>
 
 Do not bypass `NodeWorker` / `NodeWorkerRunner` with direct `parentPort` listeners in the same worker.
 
+When the parent worker thread is closed after a completed run, Effect may report
+`All fibers interrupted without error` from `Layer.launch`. Treat that exact
+condition as normal worker shutdown, not a fatal nesting failure.
+
 ## Error Model
 
 Prefer tagged/domain errors inside services. Convert to renderer-safe `AppErrorCode` only at IPC boundaries.

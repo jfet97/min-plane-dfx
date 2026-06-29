@@ -14,6 +14,7 @@ import {
   NestingStrategyResult,
   NestingResult as NestingResultModel,
   NestingHistoryFrame as NestingHistoryFrameModel,
+  BeamStepTrace,
   BeamStateSnapshot,
   PlateSnapshot
 } from '@shared/domain/nesting.js'
@@ -135,6 +136,7 @@ function runBeamSearch(
   // json strategy definitions become executable `Order` instances here
   const orders = makeStrategyOrders(candidateStrategies, layoutSelectionStrategy)
   let algorithmBenchmark: AlgorithmBenchmark | null = null
+  const stepTraces = new Map<number, { readonly beamSize: number; readonly candidateCount: number }>()
   const outcome = runMaxRectsBeamSearch({
     sheet: request.sheet,
     pieces: sortedPieces,
@@ -150,6 +152,13 @@ function runBeamSearch(
           algorithmBenchmark = event.benchmark
           return
         }
+        if (event.type === 'beam_step') {
+          stepTraces.set(event.stepIndex, {
+            beamSize: event.beamSize,
+            candidateCount: event.candidateCount
+          })
+          return
+        }
         if (event.type === 'initial_state') {
           // history is a worker concern, so algorithm state is translated here
           for (const frame of buildStateFrames(
@@ -160,6 +169,38 @@ function runBeamSearch(
           )) {
             options.emitFrame(frame)
           }
+          return
+        }
+        if (event.type === 'state_selected') {
+          // algorithm step 0 follows the initial seed, so history displays it as step 1
+          const frameStepIndex = event.stepIndex + 1
+          const stepTrace = stepTraces.get(event.stepIndex)
+          const beam =
+            stepTrace === undefined
+              ? {}
+              : {
+                  beam: new BeamStepTrace({
+                    strategyRunId,
+                    strategyLabel,
+                    stepIndex: frameStepIndex,
+                    insertedPieceId: event.state.placements.at(-1)?.pieceId,
+                    beamRank: event.beamRank,
+                    beamWidth,
+                    candidateCount: stepTrace.candidateCount
+                  })
+                }
+          options.emitFrame(
+            buildBeamStateFrame({
+              request,
+              runId: strategyRunId,
+              strategyLabel,
+              member: event.state,
+              stepIndex: frameStepIndex,
+              beamRank: event.beamRank,
+              title: 'beam-state-selected',
+              ...beam
+            })
+          )
         }
       }
     }
@@ -191,25 +232,48 @@ function buildStateFrames(
   strategyLabel: string,
   state: NestingAlgorithmState
 ): ReadonlyArray<NestingHistoryFrame> {
-  const createdAt = new Date().toISOString()
   return beamMembers(state).map((member, beamRank) =>
-    NestingHistoryFrameModel.initialBeamSnapshot({
-      frameId: randomUUID(),
+    buildBeamStateFrame({
       request,
-      strategyRunId: runId,
+      runId,
       strategyLabel,
+      member,
+      stepIndex: 0,
       beamRank,
-      plate: new PlateSnapshot({
-        placements: [...member.placements],
-        freeRectangles: [...member.freeRectangles]
-      }),
-      state: new BeamStateSnapshot({
-        remainingPieceIds: member.remainingPieces.map((piece) => piece.id),
-        unplacedPieceIds: member.unplacedPieces.map((piece) => piece.id)
-      }),
-      createdAt
+      title: 'initial-beam'
     })
   )
+}
+
+function buildBeamStateFrame(input: {
+  readonly request: NestingRequest
+  readonly runId: string
+  readonly strategyLabel: string
+  readonly member: NestingBeamState
+  readonly stepIndex: number
+  readonly beamRank: number
+  readonly title: string
+  readonly beam?: BeamStepTrace
+}): NestingHistoryFrame {
+  return new NestingHistoryFrameModel({
+    frameId: randomUUID(),
+    jobId: input.request.jobId,
+    strategyRunId: input.runId,
+    strategyLabel: input.strategyLabel,
+    stepIndex: input.stepIndex,
+    beamRank: input.beamRank,
+    title: input.title,
+    plate: new PlateSnapshot({
+      placements: [...input.member.placements],
+      freeRectangles: [...input.member.freeRectangles]
+    }),
+    state: new BeamStateSnapshot({
+      remainingPieceIds: input.member.remainingPieces.map((piece) => piece.id),
+      unplacedPieceIds: input.member.unplacedPieces.map((piece) => piece.id)
+    }),
+    ...(input.beam !== undefined ? { beam: input.beam } : {}),
+    createdAt: new Date().toISOString()
+  })
 }
 
 function describeBeamSearchRun(

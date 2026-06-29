@@ -7,7 +7,11 @@ import type {
   ProjectHistoryRef
 } from '@shared/domain/nesting.js'
 import { JobId } from '@shared/domain/ids.js'
-import type { ProjectDocument } from '@shared/domain/project.js'
+import type {
+  ProjectDocument,
+  ProjectRunRecord,
+  WorkspaceProjectSettings
+} from '@shared/domain/project.js'
 
 /**
  * Bounded history retention policy. Keeps the most recent N frames in memory;
@@ -25,6 +29,7 @@ interface MutableHistoryState {
   speed: number
   truncated: boolean
   lastHistoryRef: ProjectHistoryRef | null
+  runRecords: ProjectRunRecord[]
 }
 
 const state: UnwrapNestedRefs<MutableHistoryState> = reactive<MutableHistoryState>({
@@ -35,10 +40,17 @@ const state: UnwrapNestedRefs<MutableHistoryState> = reactive<MutableHistoryStat
   isPlaying: false,
   speed: 1,
   truncated: false,
-  lastHistoryRef: null
+  lastHistoryRef: null,
+  runRecords: []
 })
 
 let playbackTimer: ReturnType<typeof setInterval> | null = null
+type WorkspaceSettingsPersistor = () => void
+let workspaceSettingsPersistor: WorkspaceSettingsPersistor | null = null
+
+function notifyWorkspaceSettingsChanged(): void {
+  workspaceSettingsPersistor?.()
+}
 
 function stopPlayback(): void {
   if (playbackTimer !== null) {
@@ -112,6 +124,12 @@ export function useHistoryStore() {
   })
   const frameCount = computed(() => currentFrames().length)
   const hasResult = computed(() => state.result !== null)
+  const runRecords = computed<ReadonlyArray<ProjectRunRecord>>(() => state.runRecords)
+  const selectedRunRecord = computed<ProjectRunRecord | null>(() => {
+    const jobId = state.result?.jobId
+    if (!jobId) return null
+    return state.runRecords.find((record) => record.jobId === jobId) ?? null
+  })
 
   return {
     state: computed(() => state),
@@ -123,6 +141,12 @@ export function useHistoryStore() {
     selectedStepFrames,
     frameCount,
     hasResult,
+    runRecords,
+    selectedRunRecord,
+
+    setWorkspaceSettingsPersistor(persistor: WorkspaceSettingsPersistor | null): void {
+      workspaceSettingsPersistor = persistor
+    },
 
     setResult(result: NestingResult): void {
       stopPlayback()
@@ -131,6 +155,40 @@ export function useHistoryStore() {
       const first = result.strategyResults[0]
       state.selectedStrategyRunId = result.selectedStrategyRunId ?? first?.strategyRunId ?? null
       state.selectedFrameIndex = latestTopFrameIndex(currentFrames())
+    },
+
+    addRunRecord(record: ProjectRunRecord): void {
+      state.runRecords = [
+        record,
+        ...state.runRecords.filter((existing) => existing.jobId !== record.jobId)
+      ]
+      notifyWorkspaceSettingsChanged()
+    },
+
+    removeRunRecord(jobId: JobId): void {
+      state.runRecords = state.runRecords.filter((record) => record.jobId !== jobId)
+      if (state.result?.jobId === jobId) {
+        stopPlayback()
+        state.result = null
+        state.framesByRun = {}
+        state.selectedStrategyRunId = null
+        state.selectedFrameIndex = -1
+        state.truncated = false
+        state.lastHistoryRef = null
+      }
+      notifyWorkspaceSettingsChanged()
+    },
+
+    selectRunRecord(record: ProjectRunRecord): void {
+      stopPlayback()
+      state.result = record.result
+      state.framesByRun = {}
+      state.selectedStrategyRunId =
+        record.result.selectedStrategyRunId ?? record.result.strategyResults[0]?.strategyRunId ?? null
+      state.selectedFrameIndex = -1
+      state.isPlaying = false
+      state.truncated = false
+      state.lastHistoryRef = record.history
     },
 
     pushFrame(frame: NestingHistoryFrame): void {
@@ -226,16 +284,30 @@ export function useHistoryStore() {
 
     hydrateFromProject(project: ProjectDocument): void {
       stopPlayback()
-      state.result = project.lastResult ?? null
+      state.runRecords = [...(project.runRecords ?? [])]
+      state.result = project.lastResult ?? state.runRecords[0]?.result ?? null
       state.framesByRun = {}
       state.selectedStrategyRunId =
-        project.lastResult?.selectedStrategyRunId ??
-        project.lastResult?.strategyResults[0]?.strategyRunId ??
+        state.result?.selectedStrategyRunId ??
+        state.result?.strategyResults[0]?.strategyRunId ??
         null
       state.selectedFrameIndex = -1
       state.isPlaying = false
       state.truncated = false
-      state.lastHistoryRef = project.lastHistory ?? null
+      state.lastHistoryRef = project.lastHistory ?? state.runRecords[0]?.history ?? null
+    },
+
+    hydrateWorkspaceSettings(settings: WorkspaceProjectSettings): void {
+      stopPlayback()
+      state.runRecords = [...(settings.runRecords ?? [])]
+      state.result = state.runRecords[0]?.result ?? null
+      state.framesByRun = {}
+      state.selectedStrategyRunId =
+        state.result?.selectedStrategyRunId ?? state.result?.strategyResults[0]?.strategyRunId ?? null
+      state.selectedFrameIndex = -1
+      state.isPlaying = false
+      state.truncated = false
+      state.lastHistoryRef = state.runRecords[0]?.history ?? null
     },
 
     clear(): void {

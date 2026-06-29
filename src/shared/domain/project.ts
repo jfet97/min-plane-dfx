@@ -1,5 +1,5 @@
 import { Schema } from 'effect'
-import { SourceFileId } from './ids.js'
+import { JobId, SourceFileId } from './ids.js'
 import { ImportedPiece, ImportedDxfDocument } from './dxf.js'
 import { NestingOptions, NestingResult, ProjectHistoryRef, SheetSpec } from './nesting.js'
 import { NonNegativeIntegerMillimeters } from './geometry.js'
@@ -12,6 +12,15 @@ export class ProjectSourceFileRef extends Schema.Class<ProjectSourceFileRef>(
   fileName: Schema.String,
   /** False when the original file is missing on reopen. */
   available: Schema.Boolean
+}) {}
+
+export class ProjectRunRecord extends Schema.Class<ProjectRunRecord>('ProjectRunRecord')({
+  jobId: JobId,
+  createdAt: Schema.String,
+  label: Schema.String,
+  pieceCount: Schema.Number,
+  result: NestingResult,
+  history: Schema.Union([ProjectHistoryRef, Schema.Null])
 }) {}
 
 export class ProjectDocument extends Schema.Class<ProjectDocument>('ProjectDocument')({
@@ -29,7 +38,8 @@ export class ProjectDocument extends Schema.Class<ProjectDocument>('ProjectDocum
   pieceQuantities: Schema.optional(Schema.Record(Schema.String, Schema.Number)),
   options: NestingOptions,
   lastResult: Schema.optional(NestingResult),
-  lastHistory: Schema.optional(ProjectHistoryRef)
+  lastHistory: Schema.optional(ProjectHistoryRef),
+  runRecords: Schema.optional(Schema.Array(ProjectRunRecord))
 }) {}
 
 export class WorkspaceProjectSettings extends Schema.Class<WorkspaceProjectSettings>(
@@ -39,5 +49,6 @@ export class WorkspaceProjectSettings extends Schema.Class<WorkspaceProjectSetti
   sheet: SheetSpec,
   padding: NonNegativeIntegerMillimeters,
   pieceQuantities: Schema.Record(Schema.String, Schema.Number),
-  options: NestingOptions
+  options: NestingOptions,
+  runRecords: Schema.optional(Schema.Array(ProjectRunRecord))
 }) {}

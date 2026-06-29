@@ -235,5 +235,10 @@ const WorkerLive = RpcServer.layer(NestingWorkerRpcs, { disableFatalDefects: tru
 )
 
 void Effect.runPromise(Layer.launch(WorkerLive)).catch((err: unknown) => {
+  if (isNormalWorkerShutdown(err)) return
   console.error('[nesting.worker] fatal worker runner error:', err)
 })
+
+function isNormalWorkerShutdown(err: unknown): boolean {
+  return err instanceof Error && err.message === 'All fibers interrupted without error'
+}

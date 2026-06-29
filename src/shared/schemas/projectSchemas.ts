@@ -1,5 +1,5 @@
 import { Schema } from 'effect'
-import { ProjectDocument } from '../domain/project.js'
+import { ProjectDocument, ProjectRunRecord } from '../domain/project.js'
 import { DxfGeometrySummary, ImportWarning } from '../domain/dxf.js'
 import { NestingResult } from '../domain/nesting.js'
 import { JobId, PieceId, SourceFileId } from '../domain/ids.js'
@@ -78,7 +78,8 @@ export const ProjectDocumentStrict = Schema.Struct({
       frameCount: Schema.Number,
       createdAt: Schema.String
     })
-  )
+  ),
+  runRecords: Schema.optional(Schema.Array(ProjectRunRecord))
 })
 
 export type { ProjectDocument }

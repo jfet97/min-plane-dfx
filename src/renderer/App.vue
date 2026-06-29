@@ -20,7 +20,7 @@ import type {
   PreparedPiece,
   SheetSpec
 } from '@shared/domain/nesting.js'
-import type { WorkspaceProjectSettings } from '@shared/domain/project.js'
+import { ProjectRunRecord, type WorkspaceProjectSettings } from '@shared/domain/project.js'
 import type { Unsubscribe } from '@shared/protocol/ipc.js'
 
 type CenterView = 'import' | 'result'
@@ -52,6 +52,7 @@ watch(store.importRevision, () => {
 
 settings.setWorkspaceSettingsPersistor(scheduleWorkspaceSettingsSave)
 store.setWorkspaceSettingsPersistor(scheduleWorkspaceSettingsSave)
+history.setWorkspaceSettingsPersistor(scheduleWorkspaceSettingsSave)
 
 onMounted(() => {
   const api = window.appApi
@@ -72,6 +73,7 @@ onUnmounted(() => {
   }
   settings.setWorkspaceSettingsPersistor(null)
   store.setWorkspaceSettingsPersistor(null)
+  history.setWorkspaceSettingsPersistor(null)
   runner.clear()
 })
 
@@ -85,6 +87,8 @@ async function hydrateWorkspaceState(): Promise<void> {
       workspaceSettingsRevision = persistedSettings.revision ?? 0
       settings.hydrateWorkspaceSettings(persistedSettings)
       store.hydratePieceQuantities(persistedSettings.pieceQuantities)
+      history.hydrateWorkspaceSettings(persistedSettings)
+      await loadCurrentHistoryReplay()
     }
   } catch (error: unknown) {
     console.error('[workspace] failed to hydrate temporary project state:', error)
@@ -99,7 +103,8 @@ function buildWorkspaceSettings(): WorkspaceProjectSettings {
     sheet: cloneSheet(settings.state.value.sheet),
     padding: settings.state.value.padding,
     pieceQuantities: { ...store.state.value.pieceQuantities },
-    options: cloneOptions(settings.state.value.options)
+    options: cloneOptions(settings.state.value.options),
+    runRecords: [...history.runRecords.value]
   }
 }
 
@@ -221,6 +226,16 @@ async function runNesting(): Promise<void> {
     },
     onResult: (result) => {
       history.setResult(result)
+      history.addRunRecord(
+        new ProjectRunRecord({
+          jobId: result.jobId,
+          createdAt: new Date().toISOString(),
+          label: result.strategyResults[0]?.strategyLabel ?? `Run ${result.jobId}`,
+          pieceCount: request.pieces.length,
+          result,
+          history: history.state.value.lastHistoryRef
+        })
+      )
       finalSelection.syncFromResult(result)
     },
     onError: (message) => {
@@ -272,6 +287,7 @@ async function saveProject(): Promise<void> {
     padding: settings.state.value.padding,
     pieceQuantities: { ...store.state.value.pieceQuantities },
     options: { ...settings.state.value.options },
+    runRecords: [...history.runRecords.value],
     ...(history.hasResult.value && history.result.value
       ? { lastResult: history.result.value }
       : {}),
@@ -293,16 +309,21 @@ async function openProject(): Promise<void> {
   finalSelection.hydrateFromProject(project)
   preparationWarnings.value = []
 
-  if (project.lastHistory) {
-    try {
-      const frames = await api.loadHistoryReplay(project.lastHistory)
-      for (const frame of frames) {
-        history.pushFrame(frame)
-      }
-    } catch {
-      projectWarning.value =
-        'Saved result loaded, but the referenced NDJSON history file is missing or unreadable.'
+  await loadCurrentHistoryReplay()
+}
+
+async function loadCurrentHistoryReplay(): Promise<void> {
+  const api = window.appApi
+  const ref = history.state.value.lastHistoryRef
+  if (!api || !ref) return
+  try {
+    const frames = await api.loadHistoryReplay(ref)
+    for (const frame of frames) {
+      history.pushFrame(frame)
     }
+  } catch {
+    projectWarning.value =
+      'Saved result loaded, but the referenced NDJSON history file is missing or unreadable.'
   }
 }
 </script>

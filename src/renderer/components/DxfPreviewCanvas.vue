@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useAppStore } from '../composables/useAppStore.js'
 import { useHistoryStore } from '../composables/useHistoryStore.js'
+import { useSettings } from '../composables/useSettings.js'
 import { useViewport } from '../composables/useViewport.js'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type { Placement } from '@shared/domain/nesting.js'
@@ -16,6 +17,7 @@ const props = defineProps<{
 
 const store = useAppStore()
 const history = useHistoryStore()
+const settings = useSettings()
 const viewport = useViewport()
 
 const containerRef = ref<HTMLDivElement | null>(null)
@@ -97,25 +99,13 @@ const sourceBounds = computed<ViewBox | null>(() => {
 
 const placementBounds = computed<ViewBox | null>(() => {
   if (props.mode !== 'result') return null
-  const frame = history.selectedFrame.value
-  const placements: ReadonlyArray<Placement> =
-    frame?.plate.placements ?? history.selectedRun.value?.placements ?? []
-  if (placements.length === 0) return null
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-  for (const p of placements) {
-    minX = Math.min(minX, p.x)
-    minY = Math.min(minY, p.y)
-    maxX = Math.max(maxX, p.x + p.width)
-    maxY = Math.max(maxY, p.y + p.height)
-  }
+  if (!history.selectedRun.value) return null
+  const sheet = settings.state.value.sheet
   return {
-    x: minX - padding,
-    y: minY - padding,
-    width: maxX - minX + padding * 2,
-    height: maxY - minY + padding * 2
+    x: -padding,
+    y: -padding,
+    width: sheet.width + padding * 2,
+    height: sheet.height + padding * 2
   }
 })
 
@@ -125,7 +115,10 @@ const viewBox = computed<ViewBox>(() => {
   return { x: 0, y: 0, width: 100, height: 100 }
 })
 
-const sheetOutline = computed(() => history.selectedRun.value?.placements ?? null)
+const sheetOutline = computed(() => {
+  if (props.mode !== 'result' || !history.selectedRun.value) return null
+  return settings.state.value.sheet
+})
 
 const selectedId = ref<string | null>(null)
 const visualMode = ref<VisualMode>('shape')
@@ -230,14 +223,15 @@ function onWheel(event: WheelEvent): void {
       preserveAspectRatio="xMidYMid meet"
     >
       <!-- Sheet outline (only visible when a result is loaded) -->
-      <g v-if="history.selectedRun.value">
+      <g v-if="sheetOutline">
         <rect
-          v-if="sheetOutline && sheetOutline.length > 0"
-          :x="store.state.value.pieces[0]?.realBounds.x ?? 0"
-          :y="store.state.value.pieces[0]?.realBounds.y ?? 0"
-          width="0"
-          height="0"
-          fill="none"
+          x="0"
+          y="0"
+          :width="sheetOutline.width"
+          :height="sheetOutline.height"
+          fill="rgba(0, 122, 204, 0.04)"
+          stroke="var(--accent)"
+          stroke-width="1"
         />
       </g>
 

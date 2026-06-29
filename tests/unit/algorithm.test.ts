@@ -525,7 +525,7 @@ describe('computeNesting', () => {
     }
   })
 
-  it('emits one initial history frame per retained beam state from the wrapper layer', () => {
+  it('emits initial and selected beam states from the wrapper layer', () => {
     const frames: NestingHistoryFrame[] = []
     const req = baseRequest({
       options: options({
@@ -542,16 +542,18 @@ describe('computeNesting', () => {
       }
     })
 
-    expect(frames.length).toBe(4)
-    expect(frames.map((frame) => frame.strategyRunId)).toEqual([
-      'run-1-maxrects-beam-search',
-      'run-1-maxrects-beam-search',
-      'run-1-maxrects-beam-search',
-      'run-1-maxrects-beam-search'
-    ])
-    expect(frames.map((frame) => frame.beamRank)).toEqual([0, 1, 2, 3])
-    expect(frames.every((frame) => frame.plate.placements.length === 1)).toBe(true)
-    expect(frames.every((frame) => frame.plate.freeRectangles.length === 2)).toBe(true)
+    const initialFrames = frames.filter((frame) => frame.stepIndex === 0)
+    const selectedFrames = frames.filter((frame) => frame.stepIndex > 0)
+
+    expect(initialFrames).toHaveLength(4)
+    expect(selectedFrames.length).toBeGreaterThan(0)
+    expect(frames.every((frame) => frame.strategyRunId === 'run-1-maxrects-beam-search')).toBe(
+      true
+    )
+    expect(initialFrames.map((frame) => frame.beamRank)).toEqual([0, 1, 2, 3])
+    expect(initialFrames.every((frame) => frame.plate.placements.length === 1)).toBe(true)
+    expect(initialFrames.every((frame) => frame.plate.freeRectangles.length === 2)).toBe(true)
+    expect(selectedFrames.every((frame) => frame.beam !== undefined)).toBe(true)
     expect(frames[0]?.state.remainingPieceIds).toEqual(['b'])
     expect(frames[0]?.state.unplacedPieceIds).toEqual([])
   })

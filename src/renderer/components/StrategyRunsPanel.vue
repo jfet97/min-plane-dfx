@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useHistoryStore } from '../composables/useHistoryStore.js'
+import type { ProjectRunRecord } from '@shared/domain/project.js'
 
 const history = useHistoryStore()
 
@@ -30,6 +31,29 @@ function formatTime(value: string): string {
 function isSelected(runId: string): boolean {
   return history.state.value.selectedStrategyRunId === runId
 }
+
+function formatDate(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString()
+}
+
+async function selectRunRecord(record: ProjectRunRecord): Promise<void> {
+  history.selectRunRecord(record)
+  const api = window.appApi
+  if (api && record.history) {
+    try {
+      const frames = await api.loadHistoryReplay(record.history)
+      for (const frame of frames) {
+        history.pushFrame(frame)
+      }
+    } catch (error: unknown) {
+      console.warn('[history] failed to load archived run replay:', error)
+    }
+  }
+  const runId = record.result.selectedStrategyRunId ?? record.result.strategyResults[0]?.strategyRunId
+  if (runId) history.selectStrategyRun(runId)
+}
 </script>
 
 <template>
@@ -45,6 +69,36 @@ function isSelected(runId: string): boolean {
     <p v-if="history.strategyResults.value.length === 0" class="empty">
       No strategy runs yet. Import pieces, configure the sheet, then run the worker.
     </p>
+
+    <section v-if="history.runRecords.value.length > 0" class="archive">
+      <h3 title="Completed runs saved in the temporary workspace or saved project.">Run archive</h3>
+      <ul class="archive-list">
+        <li
+          v-for="record in history.runRecords.value"
+          :key="record.jobId"
+          :class="{ selected: history.result.value?.jobId === record.jobId }"
+        >
+          <button
+            type="button"
+            class="archive-row"
+            :title="`Restore run ${record.jobId}`"
+            @click="selectRunRecord(record)"
+          >
+            <strong>{{ record.label }}</strong>
+            <span>{{ formatDate(record.createdAt) }}</span>
+            <code>{{ record.result.placements.length }}/{{ record.pieceCount }}</code>
+          </button>
+          <button
+            type="button"
+            class="delete"
+            title="Delete this saved run record. The source project and imports are unchanged."
+            @click="history.removeRunRecord(record.jobId)"
+          >
+            Delete
+          </button>
+        </li>
+      </ul>
+    </section>
 
     <ul class="run-list">
       <li
@@ -133,6 +187,71 @@ header h2 {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.archive {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.archive h3 {
+  margin: 4px 0 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.archive-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.archive-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px;
+}
+
+.archive-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  align-items: baseline;
+  text-align: left;
+  color: inherit;
+}
+
+.archive-row strong,
+.archive-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-row span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.archive-row code {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.archive-list li.selected .archive-row {
+  border-color: var(--accent);
+  background: rgba(0, 122, 204, 0.08);
+}
+
+.delete {
+  font-size: 10px;
+  padding: 2px 6px;
 }
 
 .run-card {
