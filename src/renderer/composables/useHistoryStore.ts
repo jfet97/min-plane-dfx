@@ -1,4 +1,5 @@
 import { reactive, computed, type UnwrapNestedRefs } from 'vue'
+import { ProjectHistoryRef as ProjectHistoryRefModel } from '@shared/domain/nesting.js'
 import type {
   NestingHistoryFrame,
   NestingHistorySummary,
@@ -184,7 +185,9 @@ export function useHistoryStore() {
       state.result = record.result
       state.framesByRun = {}
       state.selectedStrategyRunId =
-        record.result.selectedStrategyRunId ?? record.result.strategyResults[0]?.strategyRunId ?? null
+        record.result.selectedStrategyRunId ??
+        record.result.strategyResults[0]?.strategyRunId ??
+        null
       state.selectedFrameIndex = -1
       state.isPlaying = false
       state.truncated = false
@@ -211,13 +214,13 @@ export function useHistoryStore() {
       // Persist a ProjectHistoryRef so the renderer can offer NDJSON export
       // even when the renderer has only a bounded in-memory window.
       if (summary.ndjsonPath) {
-        const ref: ProjectHistoryRef = {
+        const ref = new ProjectHistoryRefModel({
           kind: 'ndjson_replay',
           jobId,
           path: summary.ndjsonPath,
           frameCount: summary.frameCount,
           createdAt: new Date().toISOString()
-        }
+        })
         state.lastHistoryRef = ref
       }
     },
@@ -303,7 +306,9 @@ export function useHistoryStore() {
       state.result = state.runRecords[0]?.result ?? null
       state.framesByRun = {}
       state.selectedStrategyRunId =
-        state.result?.selectedStrategyRunId ?? state.result?.strategyResults[0]?.strategyRunId ?? null
+        state.result?.selectedStrategyRunId ??
+        state.result?.strategyResults[0]?.strategyRunId ??
+        null
       state.selectedFrameIndex = -1
       state.isPlaying = false
       state.truncated = false

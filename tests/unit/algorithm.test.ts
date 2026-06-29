@@ -547,9 +547,7 @@ describe('computeNesting', () => {
 
     expect(initialFrames).toHaveLength(4)
     expect(selectedFrames.length).toBeGreaterThan(0)
-    expect(frames.every((frame) => frame.strategyRunId === 'run-1-maxrects-beam-search')).toBe(
-      true
-    )
+    expect(frames.every((frame) => frame.strategyRunId === 'run-1-maxrects-beam-search')).toBe(true)
     expect(initialFrames.map((frame) => frame.beamRank)).toEqual([0, 1, 2, 3])
     expect(initialFrames.every((frame) => frame.plate.placements.length === 1)).toBe(true)
     expect(initialFrames.every((frame) => frame.plate.freeRectangles.length === 2)).toBe(true)

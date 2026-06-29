@@ -136,7 +136,10 @@ function runBeamSearch(
   // json strategy definitions become executable `Order` instances here
   const orders = makeStrategyOrders(candidateStrategies, layoutSelectionStrategy)
   let algorithmBenchmark: AlgorithmBenchmark | null = null
-  const stepTraces = new Map<number, { readonly beamSize: number; readonly candidateCount: number }>()
+  const stepTraces = new Map<
+    number,
+    { readonly beamSize: number; readonly candidateCount: number }
+  >()
   const outcome = runMaxRectsBeamSearch({
     sheet: request.sheet,
     pieces: sortedPieces,

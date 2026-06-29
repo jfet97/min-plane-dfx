@@ -51,7 +51,8 @@ async function selectRunRecord(record: ProjectRunRecord): Promise<void> {
       console.warn('[history] failed to load archived run replay:', error)
     }
   }
-  const runId = record.result.selectedStrategyRunId ?? record.result.strategyResults[0]?.strategyRunId
+  const runId =
+    record.result.selectedStrategyRunId ?? record.result.strategyResults[0]?.strategyRunId
   if (runId) history.selectStrategyRun(runId)
 }
 </script>

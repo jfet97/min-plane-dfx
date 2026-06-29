@@ -338,6 +338,11 @@ export class WorkspaceProjectService {
     const parsed: unknown = JSON.parse(json)
     const exit = Schema.decodeUnknownExit(WorkspaceProjectSettings)(parsed)
     if (Exit.isFailure(exit)) {
+      const withoutRunRecords = dropRunRecords(parsed)
+      const fallback = Schema.decodeUnknownExit(WorkspaceProjectSettings)(withoutRunRecords)
+      if (Exit.isSuccess(fallback)) {
+        return fallback.value
+      }
       throw new WorkspaceProjectError('Stored workspace settings failed schema validation.')
     }
     return exit.value
@@ -352,4 +357,14 @@ export class WorkspaceProjectService {
   ): Promise<A> {
     return this.runtime.runPromise(effect)
   }
+}
+
+function dropRunRecords(value: unknown): unknown {
+  if (!isRecord(value)) return value
+  // a bad archived run must not prevent the current workspace setup loading
+  return { ...Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'runRecords')), runRecords: [] }
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
