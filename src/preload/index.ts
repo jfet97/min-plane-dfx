@@ -1,9 +1,12 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import { Exit, Schema } from 'effect'
 import type { AppApi, HistoryEventEnvelope, IpcResult } from '@shared/protocol/ipc.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
-import { NestingHistoryFrame } from '@shared/domain/nesting.js'
-import type { NestingRequest, NestingResult, ProjectHistoryRef } from '@shared/domain/nesting.js'
+import type {
+  NestingHistoryFrame,
+  NestingRequest,
+  NestingResult,
+  ProjectHistoryRef
+} from '@shared/domain/nesting.js'
 import type { ProjectDocument, WorkspaceProjectSettings } from '@shared/domain/project.js'
 import type { JobId } from '@shared/domain/ids.js'
 
@@ -36,18 +39,6 @@ function isIpcEnvelope<T>(value: unknown): value is IpcResult<T> {
     return typeof e.code === 'string' && typeof e.message === 'string'
   }
   return false
-}
-
-function decodeHistoryReplayFrames(
-  raw: ReadonlyArray<unknown>
-): ReadonlyArray<NestingHistoryFrame> {
-  return raw.map((frame) => {
-    const decoded = Schema.decodeUnknownExit(NestingHistoryFrame)(frame)
-    if (Exit.isFailure(decoded)) {
-      throw new Error('IPC channel nesting:load-replay returned invalid history frames')
-    }
-    return decoded.value
-  })
 }
 
 const api: AppApi = {
@@ -124,10 +115,10 @@ const api: AppApi = {
   },
 
   loadHistoryReplay: (ref) =>
-    invokeEnvelope<[ProjectHistoryRef], { readonly frames: ReadonlyArray<unknown> }>(
+    invokeEnvelope<[ProjectHistoryRef], { readonly frames: ReadonlyArray<NestingHistoryFrame> }>(
       'nesting:load-replay',
       ref
-    ).then((r) => decodeHistoryReplayFrames(r.frames)),
+    ).then((r) => r.frames),
 
   loadWorkspaceSettings: () =>
     invokeEnvelope<[], { readonly settings: WorkspaceProjectSettings | null }>(
