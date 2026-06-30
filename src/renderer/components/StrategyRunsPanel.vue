@@ -4,7 +4,12 @@ import { useHistoryStore } from '../composables/useHistoryStore.js'
 import { useAppStore } from '../composables/useAppStore.js'
 import { createRunHistoryGif } from '../utils/runHistoryGif.js'
 import type { ProjectRunRecord } from '@shared/domain/project.js'
-import type { ProjectHistoryRef, NestingHistoryFrame, NestingSubRun, SheetSpec } from '@shared/domain/nesting.js'
+import type {
+  ProjectHistoryRef,
+  NestingHistoryFrame,
+  NestingSubRun,
+  SheetSpec
+} from '@shared/domain/nesting.js'
 
 const history = useHistoryStore()
 const store = useAppStore()

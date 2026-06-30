@@ -32,9 +32,12 @@ import type {
   SheetSpec
 } from '@shared/domain/nesting.js'
 import type {
+  CsvCutRow,
+  CsvRunRecord,
+  ProjectCsvImport,
   ProjectRunRecord as ProjectRunRecordModel,
-  WorkspaceProjectSettings,
-  CsvRunRecord
+  ProjectRunConfiguration,
+  WorkspaceProjectSettings
 } from '@shared/domain/project.js'
 import type { Unsubscribe } from '@shared/protocol/ipc.js'
 
@@ -162,6 +165,8 @@ async function loadPersistedCsvImports(): Promise<void> {
 }
 
 function buildWorkspaceSettings(): WorkspaceProjectSettings {
+  const selectedCsvId = csvStore.state.value.selectedCsvId
+  const csvRunRecords = csvStore.getCsvRunRecords().map(cloneCsvRunRecord)
   return {
     revision: workspaceSettingsRevision,
     sheet: cloneSheet(settings.state.value.sheet),
@@ -169,8 +174,8 @@ function buildWorkspaceSettings(): WorkspaceProjectSettings {
     pieceQuantities: { ...store.state.value.pieceQuantities },
     options: cloneOptions(settings.state.value.options),
     runRecords: history.runRecords.value.map(cloneRunRecord),
-    selectedCsvId: csvStore.state.value.selectedCsvId ?? undefined,
-    csvRunRecords: csvStore.getCsvRunRecords()
+    ...(selectedCsvId !== null ? { selectedCsvId } : {}),
+    ...(csvRunRecords.length > 0 ? { csvRunRecords } : {})
   }
 }
 
@@ -314,6 +319,43 @@ function clonePreparedPieces(pieces: ReadonlyArray<PreparedPiece>): ReadonlyArra
   return pieces.map(clonePreparedPiece)
 }
 
+function cloneCsvCutRow(row: CsvCutRow): CsvCutRow {
+  return {
+    id: row.id,
+    reference: row.reference,
+    customerName: row.customerName,
+    amount: row.amount,
+    ...(row.linkedPieceId !== undefined ? { linkedPieceId: row.linkedPieceId } : {})
+  }
+}
+
+function cloneRunConfiguration(configuration: ProjectRunConfiguration): ProjectRunConfiguration {
+  return {
+    runId: configuration.runId,
+    label: configuration.label,
+    defaultSheet: cloneSheet(configuration.defaultSheet),
+    padding: configuration.padding,
+    options: cloneOptions(configuration.options),
+    ...(configuration.materialFilter !== undefined
+      ? { materialFilter: configuration.materialFilter }
+      : {})
+  }
+}
+
+function cloneCsvImport(csvImport: ProjectCsvImport): ProjectCsvImport {
+  return {
+    id: csvImport.id,
+    sourcePath: csvImport.sourcePath,
+    fileName: csvImport.fileName,
+    materialCode: csvImport.materialCode,
+    materialDescription: csvImport.materialDescription,
+    thicknessMm: csvImport.thicknessMm,
+    ...(csvImport.jobDate !== undefined ? { jobDate: csvImport.jobDate } : {}),
+    rows: csvImport.rows.map(cloneCsvCutRow),
+    runConfiguration: cloneRunConfiguration(csvImport.runConfiguration)
+  }
+}
+
 function cloneSubRun(subRun: NestingSubRun): NestingSubRun {
   return {
     subRunId: subRun.subRunId,
@@ -417,6 +459,19 @@ function cloneRunRecord(record: ProjectRunRecordModel): ProjectRunRecordModel {
   }
 }
 
+function cloneCsvRunRecord(record: CsvRunRecord): CsvRunRecord {
+  return {
+    csvImportId: record.csvImportId,
+    runId: record.runId,
+    label: record.label,
+    subRuns: record.subRuns.map(cloneSubRun),
+    unplacedPieceIds: [...record.unplacedPieceIds],
+    preparedPieces: record.preparedPieces.map(clonePreparedPiece),
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt
+  }
+}
+
 function buildRequest(): NestingRequest | null {
   const sheet = settings.state.value.sheet
   const padding = settings.state.value.padding
@@ -493,6 +548,8 @@ function aggregateNormalSubrunResult(
   )
   const elapsedMs = previous.stats.elapsedMs + incoming.stats.elapsedMs
   const algorithmElapsedMs = previous.stats.algorithm.elapsedMs + incoming.stats.algorithm.elapsedMs
+  const selectedStrategyRunId =
+    incoming.selectedStrategyRunId ?? incoming.strategyResults[0]?.strategyRunId
   const runSummary: NestingRunSummary = {
     runId: previous.runSummary?.runId ?? previous.jobId,
     subRuns,
@@ -513,8 +570,7 @@ function aggregateNormalSubrunResult(
       ...previous.strategyResults.map(cloneStrategyResult),
       ...incoming.strategyResults.map(cloneStrategyResult)
     ],
-    selectedStrategyRunId:
-      incoming.selectedStrategyRunId ?? incoming.strategyResults[0]?.strategyRunId,
+    ...(selectedStrategyRunId !== undefined ? { selectedStrategyRunId } : {}),
     sortedPieceIds: [...new Set([...previous.sortedPieceIds, ...incoming.sortedPieceIds])],
     placements,
     unplacedPieceIds,
@@ -855,7 +911,7 @@ async function exportCsvResult(): Promise<void> {
     } else {
       projectWarning.value = null
     }
-    const path = await api.exportCsvResult(csv, record)
+    const path = await api.exportCsvResult(cloneCsvImport(csv), cloneCsvRunRecord(record))
     console.log('[app] exported CSV result to', path)
   } catch (error: unknown) {
     console.error('[app] failed to export CSV result:', error)
@@ -877,7 +933,7 @@ async function exportResult(): Promise<void> {
   const api = window.appApi
   const result = history.result.value
   if (!api || !result) return
-  await api.exportNestingResult(result)
+  await api.exportNestingResult(cloneResult(result))
 }
 
 function cancelJob(): void {
@@ -901,15 +957,15 @@ async function saveProject(): Promise<void> {
     sourceFiles,
     importedPieces: [...store.state.value.pieces],
     importedDocuments: [...store.state.value.documents],
-    sheet: { ...settings.state.value.sheet },
+    sheet: cloneSheet(settings.state.value.sheet),
     padding: settings.state.value.padding,
     pieceQuantities: { ...store.state.value.pieceQuantities },
-    options: { ...settings.state.value.options },
+    options: cloneOptions(settings.state.value.options),
     runRecords: history.runRecords.value.map(cloneRunRecord),
-    csvImports: [...csvStore.state.value.csvImports],
-    csvRunRecords: csvStore.getCsvRunRecords(),
+    csvImports: csvStore.state.value.csvImports.map(cloneCsvImport),
+    csvRunRecords: csvStore.getCsvRunRecords().map(cloneCsvRunRecord),
     ...(history.hasResult.value && history.result.value
-      ? { lastResult: history.result.value }
+      ? { lastResult: cloneResult(history.result.value) }
       : {}),
     ...(history.state.value.lastHistoryRef
       ? { lastHistory: cloneRequiredHistoryRef(history.state.value.lastHistoryRef) }
