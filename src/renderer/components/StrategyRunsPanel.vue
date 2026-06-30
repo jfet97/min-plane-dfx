@@ -4,7 +4,7 @@ import { useHistoryStore } from '../composables/useHistoryStore.js'
 import { useAppStore } from '../composables/useAppStore.js'
 import { createRunHistoryGif } from '../utils/runHistoryGif.js'
 import type { ProjectRunRecord } from '@shared/domain/project.js'
-import type { ProjectHistoryRef, NestingSubRun } from '@shared/domain/nesting.js'
+import type { ProjectHistoryRef, NestingHistoryFrame, NestingSubRun, SheetSpec } from '@shared/domain/nesting.js'
 
 const history = useHistoryStore()
 const store = useAppStore()
@@ -118,13 +118,22 @@ async function exportRunGif(record: ProjectRunRecord): Promise<void> {
   const api = window.appApi
   if (!api || !record.history) return
   try {
-    const frames = await api.loadHistoryReplay(cloneHistoryRefForApi(record.history))
+    const replayFrames = await api.loadHistoryReplay(cloneHistoryRefForApi(record.history))
     const strategyRunId =
       record.result.selectedStrategyRunId ?? record.result.strategyResults[0]?.strategyRunId
     if (!strategyRunId) throw new Error('Run has no strategy result to export.')
+    const subRuns = record.result.runSummary?.subRuns ?? []
+    const strategyRunIds =
+      subRuns.length > 0 ? subRuns.map((subRun) => subRun.subRunId) : [strategyRunId]
+    const sheetsByStrategyRunId = Object.fromEntries(
+      subRuns.map((subRun): [string, SheetSpec] => [subRun.subRunId, subRun.sheet])
+    )
+    const inMemoryFrames = Object.values(history.state.value.framesByRun).flat()
+    const frames = uniqueFrames([...inMemoryFrames, ...replayFrames])
     const bytes = createRunHistoryGif(frames, {
       sheet: record.sheet,
-      strategyRunId,
+      strategyRunIds,
+      sheetsByStrategyRunId,
       sourcePieces: store.state.value.pieces
     })
     await api.exportRunGif({
@@ -137,6 +146,14 @@ async function exportRunGif(record: ProjectRunRecord): Promise<void> {
       history.clearRunRecordHistory(record.jobId)
     }
   }
+}
+
+function uniqueFrames(frames: ReadonlyArray<NestingHistoryFrame>): NestingHistoryFrame[] {
+  const byId = new Map<string, NestingHistoryFrame>()
+  for (const frame of frames) {
+    byId.set(frame.frameId, frame)
+  }
+  return [...byId.values()]
 }
 
 function selectSubRun(subRun: NestingSubRun): void {

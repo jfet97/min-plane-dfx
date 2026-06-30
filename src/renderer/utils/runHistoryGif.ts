@@ -8,7 +8,9 @@ import {
 
 export interface RunHistoryGifOptions {
   readonly sheet: SheetSpec
-  readonly strategyRunId: string
+  readonly strategyRunId?: string
+  readonly strategyRunIds?: ReadonlyArray<string>
+  readonly sheetsByStrategyRunId?: Readonly<Record<string, SheetSpec>>
   readonly sourcePieces: ReadonlyArray<ImportedPiece>
   readonly width?: number
   readonly frameDelayMs?: number
@@ -54,7 +56,15 @@ export function createRunHistoryGif(
   frames: ReadonlyArray<NestingHistoryFrame>,
   options: RunHistoryGifOptions
 ): Uint8Array {
-  const sequence = selectFirstBeamSequence(frames, options.strategyRunId)
+  const strategyRunIds =
+    options.strategyRunIds && options.strategyRunIds.length > 0
+      ? options.strategyRunIds
+      : options.strategyRunId
+        ? [options.strategyRunId]
+        : []
+  const sequence = strategyRunIds.flatMap((strategyRunId) =>
+    selectFirstBeamSequence(frames, strategyRunId)
+  )
   if (sequence.length === 0) {
     throw new Error('No first-beam history frames available for this run.')
   }
@@ -68,17 +78,13 @@ export function createRunHistoryGif(
 
   const delayCs = Math.max(5, Math.round((options.frameDelayMs ?? 220) / 10))
   const finalDelayCs = Math.max(delayCs, 90)
-  const gifFrames = sequence.map((frame, index) => ({
-    indexes: renderFrameIndexes(
-      ctx,
-      size.width,
-      size.height,
-      options.sheet,
-      options.sourcePieces,
-      frame
-    ),
-    delayCs: index === sequence.length - 1 ? finalDelayCs : delayCs
-  }))
+  const gifFrames = sequence.map((frame, index) => {
+    const sheet = options.sheetsByStrategyRunId?.[frame.strategyRunId] ?? options.sheet
+    return {
+      indexes: renderFrameIndexes(ctx, size.width, size.height, sheet, options.sourcePieces, frame),
+      delayCs: index === sequence.length - 1 ? finalDelayCs : delayCs
+    }
+  })
   return encodeIndexedGif(size.width, size.height, gifFrames)
 }
 
