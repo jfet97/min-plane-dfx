@@ -16,7 +16,12 @@ import {
   loadProjectFile,
   ProjectFileError
 } from '../services/ProjectFileService.js'
-import { exportNestingResultToFile, loadHistoryReplayFromFile } from '../services/ExportService.js'
+import {
+  buildCsvExportFileName,
+  exportCsvResultToFile,
+  exportNestingResultToFile,
+  loadHistoryReplayFromFile
+} from '../services/ExportService.js'
 import type { EncodedNestingHistoryFrame } from '../services/ExportService.js'
 import {
   WorkspaceProjectService,
@@ -27,9 +32,15 @@ import { RunGifExportPayload } from '@shared/protocol/ipc.js'
 import type { IpcResult } from '@shared/protocol/ipc.js'
 import type { Unsubscribe, NestingHistoryEvent } from '@shared/protocol/ipc.js'
 import type { JobId } from '@shared/domain/ids.js'
-import type { ProjectDocument } from '@shared/domain/project.js'
-import { WorkspaceProjectSettings } from '@shared/domain/project.js'
-import type { WorkspaceProjectSettings as WorkspaceProjectSettingsModel } from '@shared/domain/project.js'
+import {
+  CsvRunRecord as CsvRunRecordSchema,
+  ProjectCsvImport as ProjectCsvImportSchema,
+  WorkspaceProjectSettings,
+  type CsvRunRecord,
+  type ProjectCsvImport,
+  type ProjectDocument,
+  type WorkspaceProjectSettings as WorkspaceProjectSettingsModel
+} from '@shared/domain/project.js'
 import type { NestingResult, ProjectHistoryRef } from '@shared/domain/nesting.js'
 import { ImportedDxfDocument as ImportedDxfDocumentSchema } from '@shared/domain/dxf.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
@@ -46,6 +57,14 @@ export const IPC_CHANNELS = [
   'dxf:persist-source-document',
   'dxf:remove-import',
   'dxf:clear-imports',
+  'csv:list-imports',
+  'csv:select-files',
+  'csv:import-files',
+  'csv:import-documents-from-project',
+  'csv:update-import',
+  'csv:remove-import',
+  'csv:clear-imports',
+  'csv:export-result',
   'workspace:load-settings',
   'workspace:save-settings',
   'workspace:save-settings-sync',
@@ -90,6 +109,19 @@ function fromWorkspaceError(err: unknown): IpcResult<never> {
     ok: false,
     error: {
       code: 'dxf_parse_error',
+      message: err instanceof Error ? err.message : 'unknown error'
+    }
+  }
+}
+
+function fromCsvError(err: unknown): IpcResult<never> {
+  if (err instanceof WorkspaceProjectError) {
+    return { ok: false, error: { code: 'dxf_parse_error', message: err.message } }
+  }
+  return {
+    ok: false,
+    error: {
+      code: 'unknown_error',
       message: err instanceof Error ? err.message : 'unknown error'
     }
   }
@@ -262,6 +294,221 @@ export function registerIpcHandlers(): void {
       return fromWorkspaceError(err)
     }
   })
+
+  ipcMain.handle(
+    'csv:list-imports',
+    async (): Promise<IpcResult<{ readonly documents: ProjectCsvImport[] }>> => {
+      try {
+        const documents = await getWorkspace().listImportedCsvs()
+        return { ok: true, value: { documents } }
+      } catch (err) {
+        return fromCsvError(err)
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'csv:select-files',
+    async (
+      event: IpcMainInvokeEvent
+    ): Promise<
+      IpcResult<{
+        readonly documents: ProjectCsvImport[]
+        readonly failures: Array<{ path: string; error: unknown }>
+      }>
+    > => {
+      const win = BrowserWindow.fromWebContents(event.sender) ?? BrowserWindow.getFocusedWindow()
+      const dlg = win
+        ? await dialog.showOpenDialog(win, {
+            title: 'Select CSV files',
+            properties: ['openFile', 'multiSelections'],
+            filters: [{ name: 'CSV', extensions: ['csv'] }]
+          })
+        : await dialog.showOpenDialog({
+            title: 'Select CSV files',
+            properties: ['openFile', 'multiSelections'],
+            filters: [{ name: 'CSV', extensions: ['csv'] }]
+          })
+
+      if (dlg.canceled) {
+        return { ok: true, value: { documents: [], failures: [] } }
+      }
+      try {
+        return { ok: true, value: await getWorkspace().importCsvFiles(dlg.filePaths) }
+      } catch (err) {
+        return fromCsvError(err)
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'csv:import-files',
+    async (
+      _event: IpcMainInvokeEvent,
+      paths: ReadonlyArray<string>
+    ): Promise<
+      IpcResult<{
+        readonly documents: ProjectCsvImport[]
+        readonly failures: Array<{ path: string; error: unknown }>
+      }>
+    > => {
+      try {
+        return { ok: true, value: await getWorkspace().importCsvFiles(paths) }
+      } catch (err) {
+        return fromCsvError(err)
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'csv:import-documents-from-project',
+    async (
+      _event: IpcMainInvokeEvent,
+      raw: unknown
+    ): Promise<IpcResult<{ readonly documents: ProjectCsvImport[] }>> => {
+      const decoded = Schema.decodeUnknownExit(Schema.Array(ProjectCsvImportSchema))(raw)
+      if (Exit.isFailure(decoded)) {
+        return {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: 'Invalid CSV import documents payload.'
+          }
+        }
+      }
+      try {
+        const documents = await getWorkspace().importCsvDocumentsFromProject(decoded.value)
+        return { ok: true, value: { documents } }
+      } catch (err) {
+        return fromCsvError(err)
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'csv:update-import',
+    async (
+      _event: IpcMainInvokeEvent,
+      raw: unknown
+    ): Promise<IpcResult<{ readonly document: ProjectCsvImport }>> => {
+      const decoded = Schema.decodeUnknownExit(ProjectCsvImportSchema)(raw)
+      if (Exit.isFailure(decoded)) {
+        return {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: 'Invalid CSV import payload.'
+          }
+        }
+      }
+      try {
+        const document = decoded.value
+        await getWorkspace().updateImportedCsv(document)
+        return { ok: true, value: { document } }
+      } catch (err) {
+        return fromCsvError(err)
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'csv:remove-import',
+    async (_event: IpcMainInvokeEvent, id: string): Promise<IpcResult<void>> => {
+      try {
+        await getWorkspace().removeImportedCsv(id)
+        return { ok: true, value: undefined }
+      } catch (err) {
+        return fromCsvError(err)
+      }
+    }
+  )
+
+  ipcMain.handle('csv:clear-imports', async (): Promise<IpcResult<void>> => {
+    try {
+      await getWorkspace().clearImportedCsvs()
+      return { ok: true, value: undefined }
+    } catch (err) {
+      return fromCsvError(err)
+    }
+  })
+
+  ipcMain.handle(
+    'csv:export-result',
+    async (
+      event: IpcMainInvokeEvent,
+      csvImport: ProjectCsvImport,
+      csvRunRecord: CsvRunRecord,
+      outPath?: string
+    ): Promise<IpcResult<{ readonly path: string }>> => {
+      const importDecoded = Schema.decodeUnknownExit(ProjectCsvImportSchema)(csvImport)
+      if (Exit.isFailure(importDecoded)) {
+        return {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: 'Invalid CSV import payload.'
+          }
+        }
+      }
+      const recordDecoded = Schema.decodeUnknownExit(CsvRunRecordSchema)(csvRunRecord)
+      if (Exit.isFailure(recordDecoded)) {
+        return {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: 'Invalid CSV run record payload.'
+          }
+        }
+      }
+
+      let resolvedOutPath = outPath
+      if (!resolvedOutPath) {
+        const win = BrowserWindow.fromWebContents(event.sender) ?? BrowserWindow.getFocusedWindow()
+        const defaultName = buildCsvExportFileName(
+          importDecoded.value.jobDate,
+          importDecoded.value.materialDescription
+        )
+        const dlg = win
+          ? await dialog.showSaveDialog(win, {
+              title: 'Export CSV Result',
+              defaultPath: join(app.getPath('downloads'), defaultName),
+              filters: [{ name: 'CSV', extensions: ['csv'] }]
+            })
+          : await dialog.showSaveDialog({
+              title: 'Export CSV Result',
+              defaultPath: join(app.getPath('downloads'), defaultName),
+              filters: [{ name: 'CSV', extensions: ['csv'] }]
+            })
+        if (dlg.canceled || !dlg.filePath) {
+          return {
+            ok: false,
+            error: {
+              code: 'export_error',
+              message: 'CSV export cancelled by user.'
+            }
+          }
+        }
+        resolvedOutPath = dlg.filePath
+      }
+
+      try {
+        const path = await exportCsvResultToFile(
+          resolvedOutPath,
+          importDecoded.value,
+          recordDecoded.value
+        )
+        return { ok: true, value: { path } }
+      } catch (err) {
+        return {
+          ok: false,
+          error: {
+            code: 'export_error',
+            message: err instanceof Error ? err.message : 'unknown error'
+          }
+        }
+      }
+    }
+  )
 
   ipcMain.handle(
     'workspace:load-settings',

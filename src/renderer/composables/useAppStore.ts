@@ -5,8 +5,9 @@ import type {
   ImportedPiece,
   ImportWarning
 } from '@shared/domain/dxf.js'
-import type { ProjectDocument } from '@shared/domain/project.js'
+import type { ProjectCsvImport, ProjectDocument } from '@shared/domain/project.js'
 import { PieceId } from '@shared/domain/ids.js'
+import type { PreparedPiece } from '@shared/domain/nesting.js'
 
 export interface ImportFailure {
   readonly path: string
@@ -24,6 +25,7 @@ interface MutableAppState {
   isImporting: boolean
   importRevision: number
   lastSkippedDuplicateCount: number
+  csvImportsForCounting: ProjectCsvImport[]
 }
 
 type WorkspaceSettingsPersistor = () => void
@@ -39,7 +41,8 @@ const state: UnwrapNestedRefs<MutableAppState> = reactive<MutableAppState>({
   failures: [],
   isImporting: false,
   importRevision: 0,
-  lastSkippedDuplicateCount: 0
+  lastSkippedDuplicateCount: 0,
+  csvImportsForCounting: []
 })
 
 function notifyWorkspaceSettingsChanged(): void {
@@ -321,6 +324,28 @@ function setPieceQuantity(pieceId: ImportedPiece['id'], quantity: number): void 
   notifyWorkspaceSettingsChanged()
 }
 
+function csvLinkedPieceCount(imports: ReadonlyArray<ProjectCsvImport>): number {
+  return imports.reduce(
+    (total, csv) =>
+      total +
+      csv.rows.filter((row) => row.linkedPieceId !== undefined && row.linkedPieceId !== null)
+        .length,
+    0
+  )
+}
+
+function setCsvImportsForCounting(imports: ReadonlyArray<ProjectCsvImport>): void {
+  state.csvImportsForCounting = [...imports]
+}
+
+export function computeRemainingPieces(
+  previousSubrunUnplacedPieceIds: ReadonlyArray<PieceId>,
+  allPreparedPieces: ReadonlyArray<PreparedPiece>
+): PreparedPiece[] {
+  const remaining = new Set(previousSubrunUnplacedPieceIds)
+  return allPreparedPieces.filter((piece) => remaining.has(piece.id))
+}
+
 function requestCopies(piece: ImportedPiece): ReadonlyArray<ImportedPiece> {
   const quantity = getPieceQuantity(piece.id)
   return Array.from({ length: quantity }, (_, index) => ({
@@ -347,6 +372,9 @@ export function useAppStore() {
     selectedPieces: computed(() => state.pieces.flatMap((piece) => requestCopies(piece))),
     importRevision: computed(() => state.importRevision),
     warningCount: computed(() => state.warnings.length),
+    csvLinkedPieceCount: computed(() => csvLinkedPieceCount(state.csvImportsForCounting)),
+    setCsvImportsForCounting,
+    computeRemainingPieces,
     selectAndImport,
     importPaths,
     appendPresetDocument,

@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto'
+import { Schema } from 'effect'
+import { PreparedPiece } from '@shared/domain/nesting.js'
 import { sortPiecesForNesting } from './sortPiecesForNesting.js'
 import { selectFinalStrategyResult } from './selectFinalStrategyResult.js'
 import type {
@@ -16,7 +18,9 @@ import {
   NestingHistoryFrame as NestingHistoryFrameModel,
   BeamStepTrace,
   BeamStateSnapshot,
-  PlateSnapshot
+  PlateSnapshot,
+  NestingSubRun,
+  NestingRunSummary
 } from '@shared/domain/nesting.js'
 import {
   DEFAULT_STRATEGY_ID,
@@ -70,7 +74,7 @@ export function computeNesting(
 
   // beam width grows with the number of selected candidate-order strategies
   const beamWidth = K(candidateStrategyIds.length)
-  const strategyRunId = `run-1-${BEAM_SEARCH_STRATEGY_ID}`
+  const strategyRunId = request.strategyRunId ?? `run-1-${BEAM_SEARCH_STRATEGY_ID}`
 
   // the core returns plain algorithm output; this wrapper owns protocol models
   const outcome = runBeamSearch(
@@ -111,6 +115,38 @@ export function computeNesting(
   const aggregatedPlacements = selected?.placements ?? []
   const aggregatedUnplaced = selected?.unplacedPieceIds ?? outcome.unplacedPieceIds
 
+  // a single worker call represents one subrun; include its summary so the
+  // renderer can aggregate multi-plate CSV runs without re-deriving metadata
+  const requestPieceIds = request.pieces.map((piece) => piece.id)
+  const subRun = new NestingSubRun({
+    subRunId: strategyRunId,
+    parentRunId: request.strategyRunId ?? request.jobId,
+    index: 0,
+    sheet: request.sheet,
+    padding: request.padding,
+    options: request.options,
+    placements: aggregatedPlacements,
+    unplacedPieceIds: aggregatedUnplaced,
+    pieceIds: requestPieceIds,
+    requestPieceIds
+  })
+  const subRuns = [subRun]
+  const runSummary = new NestingRunSummary({
+    runId: strategyRunId,
+    subRuns,
+    totalPlaced: aggregatedPlacements.length,
+    totalUnplaced: aggregatedUnplaced.length,
+    totalSheetAreaMm2: request.sheet.width * request.sheet.height * subRuns.length,
+    usedAreaMm2: aggregatedPlacements.reduce(
+      (sum, placement) => sum + placement.width * placement.height,
+      0
+    )
+  })
+
+  const preparedPieces = request.pieces.map((piece) =>
+    Schema.decodeUnknownSync(PreparedPiece)(piece)
+  )
+
   return NestingResultModel.fromAlgorithm({
     request,
     strategyResults,
@@ -119,7 +155,9 @@ export function computeNesting(
     placements: aggregatedPlacements,
     unplacedPieceIds: aggregatedUnplaced,
     elapsedMs,
-    algorithmBenchmark: outcome.algorithmBenchmark
+    algorithmBenchmark: outcome.algorithmBenchmark,
+    runSummary,
+    preparedPieces
   })
 }
 

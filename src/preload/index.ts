@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import type { AppApi, HistoryEventEnvelope, IpcResult } from '@shared/protocol/ipc.js'
+import type {
+  AppApi,
+  CsvImportResult,
+  HistoryEventEnvelope,
+  IpcResult
+} from '@shared/protocol/ipc.js'
 import type { RunGifExportPayload } from '@shared/protocol/ipc.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
 import type {
@@ -8,7 +13,12 @@ import type {
   NestingResult,
   ProjectHistoryRef
 } from '@shared/domain/nesting.js'
-import type { ProjectDocument, WorkspaceProjectSettings } from '@shared/domain/project.js'
+import type {
+  CsvRunRecord,
+  ProjectCsvImport,
+  ProjectDocument,
+  WorkspaceProjectSettings
+} from '@shared/domain/project.js'
 import type { JobId } from '@shared/domain/ids.js'
 
 /**
@@ -167,7 +177,42 @@ const api: AppApi = {
     invokeEnvelope<[RunGifExportPayload], { readonly path: string }>(
       'nesting:export-run-gif',
       payload
-    ).then(() => undefined)
+    ).then(() => undefined),
+
+  listImportedCsvs: () =>
+    invokeEnvelope<[], { readonly documents: ReadonlyArray<ProjectCsvImport> }>(
+      'csv:list-imports'
+    ).then((r) => r.documents),
+
+  selectCsvFiles: () => invokeEnvelope<[], CsvImportResult>('csv:select-files'),
+
+  importCsvFiles: (paths) =>
+    invokeEnvelope<[ReadonlyArray<string>], CsvImportResult>('csv:import-files', paths),
+
+  importCsvDocumentsFromProject: (documents) =>
+    invokeEnvelope<
+      [ReadonlyArray<ProjectCsvImport>],
+      { readonly documents: ReadonlyArray<ProjectCsvImport> }
+    >('csv:import-documents-from-project', documents).then((r) => r.documents),
+
+  updateImportedCsv: (document) =>
+    invokeEnvelope<[ProjectCsvImport], { readonly document: ProjectCsvImport }>(
+      'csv:update-import',
+      document
+    ).then((r) => r.document),
+
+  removeImportedCsv: (id) =>
+    invokeEnvelope<[typeof id], void>('csv:remove-import', id).then(() => undefined),
+
+  clearImportedCsvs: () => invokeEnvelope<[], void>('csv:clear-imports').then(() => undefined),
+
+  exportCsvResult: (csvImport, csvRunRecord, outPath) =>
+    invokeEnvelope<[ProjectCsvImport, CsvRunRecord, string | undefined], { readonly path: string }>(
+      'csv:export-result',
+      csvImport,
+      csvRunRecord,
+      outPath
+    ).then((r) => r.path)
 }
 
 try {

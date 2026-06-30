@@ -48,10 +48,18 @@ export const NestingRequestStrict = Schema.Struct({
         height: PositiveHeight
       }),
       padding: NonNegativePadding,
-      allowRotation: Schema.Boolean
+      allowRotation: Schema.Boolean,
+      cutRowRef: Schema.optional(
+        Schema.Struct({
+          reference: Schema.String,
+          customerName: Schema.String,
+          csvRowId: Schema.String
+        })
+      )
     })
   ).check(Schema.isNonEmpty()),
-  options: NestingOptionsStrictSchema
+  options: NestingOptionsStrictSchema,
+  strategyRunId: Schema.optional(Schema.String.check(Schema.isMinLength(1)))
 })
 
 export const NestingResultStrict = NestingResult

@@ -5,7 +5,7 @@ import { useHistoryStore } from '../composables/useHistoryStore.js'
 import { useSettings } from '../composables/useSettings.js'
 import { useViewport } from '../composables/useViewport.js'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
-import type { Placement, SheetSpec } from '@shared/domain/nesting.js'
+import type { NestingSubRun, Placement, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
 
 type Segment = NonNullable<ImportedPiece['geometry']['segments'][number]>
 type VisualMode = 'shape' | 'footprint'
@@ -125,8 +125,17 @@ const viewBox = computed<ViewBox>(() => {
   return { x: 0, y: 0, width: 100, height: 100 }
 })
 
+const selectedSubRun = computed<NestingSubRun | null>(() => {
+  const id = history.state.value.selectedStrategyRunId
+  if (!id) return null
+  return history.result.value?.runSummary?.subRuns.find((subRun) => subRun.subRunId === id) ?? null
+})
+
 const resultSheet = computed<SheetSpec>(
-  () => history.selectedRunRecord.value?.sheet ?? settings.state.value.sheet
+  () =>
+    selectedSubRun.value?.sheet ??
+    history.selectedRunRecord.value?.sheet ??
+    settings.state.value.sheet
 )
 
 const sheetOutline = computed(() => {
@@ -198,13 +207,24 @@ const viewBoxString = computed(() => {
 const placementsToRender = computed<ReadonlyArray<Placement>>(() => {
   if (props.mode !== 'result') return []
   const frame = history.selectedFrame.value
-  return frame?.plate.placements ?? history.selectedRun.value?.placements ?? []
+  if (frame && frame.plate.placements.length > 0) {
+    return frame.plate.placements
+  }
+  return selectedSubRun.value?.placements ?? history.selectedRun.value?.placements ?? []
 })
 
 const sourcePiecesById = computed(() => {
   const byId = new Map<string, ImportedPiece>()
   for (const piece of store.state.value.pieces) {
     byId.set(piece.id, piece)
+  }
+  return byId
+})
+
+const preparedPiecesById = computed(() => {
+  const byId = new Map<string, PreparedPiece>()
+  for (const prepared of history.result.value?.preparedPieces ?? []) {
+    byId.set(prepared.id, prepared)
   }
   return byId
 })
@@ -248,13 +268,22 @@ function selectPiece(piece: ImportedPiece): void {
   store.setPieceSelected(piece.id, !store.isPieceSelected(piece.id))
 }
 
+function originalPieceId(id: string): string {
+  return id.replace(/-copy-\d+$/, '')
+}
+
 function sourcePieceForPlacement(placement: Placement): ImportedPiece | null {
   const id = placement.pieceId
-  return (
-    sourcePiecesById.value.get(id) ??
-    sourcePiecesById.value.get(id.replace(/-copy-\d+$/, '')) ??
-    null
-  )
+  const prepared = preparedPiecesById.value.get(id)
+  if (prepared !== undefined) {
+    return (
+      sourcePiecesById.value.get(prepared.sourcePieceId) ??
+      sourcePiecesById.value.get(originalPieceId(prepared.sourcePieceId)) ??
+      sourcePiecesById.value.get(originalPieceId(id)) ??
+      null
+    )
+  }
+  return sourcePiecesById.value.get(id) ?? sourcePiecesById.value.get(originalPieceId(id)) ?? null
 }
 
 function resultY(rect: { readonly y: number; readonly height: number }): number {

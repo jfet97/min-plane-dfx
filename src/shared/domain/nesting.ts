@@ -109,7 +109,14 @@ export class PreparedPiece extends Schema.Class<PreparedPiece>('PreparedPiece')(
   realBounds: Rect,
   paddedBounds: RectWith,
   padding: NonNegativeIntegerMillimeters,
-  allowRotation: Schema.Boolean
+  allowRotation: Schema.Boolean,
+  cutRowRef: Schema.optional(
+    Schema.Struct({
+      reference: Schema.String,
+      customerName: Schema.String,
+      csvRowId: Schema.String
+    })
+  )
 }) {}
 
 export class NestingRequest extends Schema.Class<NestingRequest>('NestingRequest')({
@@ -118,7 +125,8 @@ export class NestingRequest extends Schema.Class<NestingRequest>('NestingRequest
   sheet: SheetSpec,
   padding: NonNegativeIntegerMillimeters,
   pieces: Schema.Array(PreparedPiece),
-  options: NestingOptions
+  options: NestingOptions,
+  strategyRunId: Schema.optional(Schema.String)
 }) {}
 
 /** Top-level result status for a completed worker run. */
@@ -131,6 +139,30 @@ export class Placement extends Schema.Class<Placement>('Placement')({
   width: PositiveIntegerMillimeters,
   height: PositiveIntegerMillimeters,
   rotation: Schema.Union([Schema.Literal(0), Schema.Literal(90)])
+}) {}
+
+/** One subrun within a manual multi-plate CSV run. */
+export class NestingSubRun extends Schema.Class<NestingSubRun>('NestingSubRun')({
+  subRunId: Schema.String,
+  parentRunId: Schema.String,
+  index: Schema.Number,
+  sheet: SheetSpec,
+  padding: NonNegativeIntegerMillimeters,
+  options: NestingOptions,
+  placements: Schema.Array(Placement),
+  unplacedPieceIds: Schema.Array(PieceId),
+  pieceIds: Schema.Array(PieceId),
+  requestPieceIds: Schema.Array(PieceId)
+}) {}
+
+/** Aggregate summary for a run composed of one or more subruns. */
+export class NestingRunSummary extends Schema.Class<NestingRunSummary>('NestingRunSummary')({
+  runId: Schema.String,
+  subRuns: Schema.Array(NestingSubRun),
+  totalPlaced: Schema.Number,
+  totalUnplaced: Schema.Number,
+  totalSheetAreaMm2: Schema.Number,
+  usedAreaMm2: Schema.Number
 }) {}
 
 export class NestingWarning extends Schema.Class<NestingWarning>('NestingWarning')({
@@ -238,7 +270,10 @@ export class NestingResult extends Schema.Class<NestingResult>('NestingResult')(
   unplacedPieceIds: Schema.Array(PieceId),
   historySummary: Schema.optional(NestingHistorySummary),
   warnings: Schema.Array(NestingWarning),
-  stats: NestingStats
+  stats: NestingStats,
+  runSummary: Schema.optional(NestingRunSummary),
+  preparedPieces: Schema.optional(Schema.Array(PreparedPiece)),
+  csvImportId: Schema.optional(Schema.String)
 }) {
   static fromAlgorithm(input: {
     readonly request: NestingRequest
@@ -249,6 +284,9 @@ export class NestingResult extends Schema.Class<NestingResult>('NestingResult')(
     readonly unplacedPieceIds: ReadonlyArray<PieceId>
     readonly elapsedMs: number
     readonly algorithmBenchmark: AlgorithmBenchmark
+    readonly runSummary?: NestingRunSummary
+    readonly preparedPieces?: ReadonlyArray<PreparedPiece>
+    readonly csvImportId?: string
   }): NestingResult {
     return new NestingResult({
       version: 1,
@@ -266,7 +304,10 @@ export class NestingResult extends Schema.Class<NestingResult>('NestingResult')(
         elapsedMs: input.elapsedMs,
         pieceCount: input.request.pieces.length,
         algorithm: input.algorithmBenchmark
-      })
+      }),
+      ...(input.runSummary !== undefined ? { runSummary: input.runSummary } : {}),
+      ...(input.preparedPieces !== undefined ? { preparedPieces: input.preparedPieces } : {}),
+      ...(input.csvImportId !== undefined ? { csvImportId: input.csvImportId } : {})
     })
   }
 }

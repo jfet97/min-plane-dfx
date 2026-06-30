@@ -19,7 +19,8 @@ export function preparePieces(
   imported: ReadonlyArray<ImportedPiece>,
   sheet: SheetSpec,
   padding: number,
-  _jobId: JobId
+  _jobId: JobId,
+  cutRowRef?: PreparedPiece['cutRowRef']
 ): PreparedPieceWithWarnings {
   const pieces: PreparedPiece[] = []
   const warnings: NestingWarning[] = []
@@ -66,7 +67,8 @@ export function preparePieces(
           imbalance: Math.abs(paddedWidth - paddedHeight)
         }),
         padding: sidePadding,
-        allowRotation: fitsRotated
+        allowRotation: fitsRotated,
+        ...(cutRowRef !== undefined ? { cutRowRef } : {})
       })
     )
   }

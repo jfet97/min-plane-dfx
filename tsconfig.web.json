@@ -15,7 +15,8 @@
     "src/renderer/**/*",
     "src/shared/**/*",
     "src/shared/**/*.json",
-    "src/preload/api.d.ts"
+    "src/preload/api.d.ts",
+    "tests/renderer/**/*"
   ],
   "exclude": ["node_modules", "out", "dist", "repos", ".direnv"]
 }

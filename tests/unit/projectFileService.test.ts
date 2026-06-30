@@ -42,6 +42,91 @@ const VALID_PROJECT = {
   }
 }
 
+const NESTING_OPTIONS_V2 = {
+  allowGlobalRotation: true,
+  timeoutMs: 30000,
+  workerMode: 'maxrects-beam-search',
+  historyMode: 'final',
+  historyScope: 'winning_path',
+  strategySelectionMode: 'single',
+  strategyIds: ['balanced-preserve-free-then-bottom-left'],
+  layoutSelectionStrategyId: 'compact-first',
+  finalSelectionMode: 'manual'
+}
+
+const PREPARED_PIECE_V2 = {
+  id: 'copy-0-of-p-1-for-row-1',
+  sourcePieceId: 'p-1',
+  realBounds: { x: 0, y: 0, width: 10, height: 5 },
+  paddedBounds: { x: 0, y: 0, width: 14, height: 9, longestEdge: 14, area: 126, imbalance: 5 },
+  padding: 2,
+  allowRotation: true,
+  cutRowRef: {
+    reference: '3282597_2',
+    customerName: 'Customer A',
+    csvRowId: 'row-1'
+  }
+}
+
+const VALID_PROJECT_V2 = {
+  ...VALID_PROJECT,
+  version: 2,
+  csvImports: [
+    {
+      id: 'csv-1',
+      sourcePath: '/workspace/jobs/sample.csv',
+      fileName: 'sample.csv',
+      materialCode: '8669',
+      materialDescription: 'ACRYL 5MM GEGOSSEN SATIN',
+      thicknessMm: 5,
+      jobDate: '20260630',
+      rows: [
+        {
+          id: 'row-1',
+          reference: '3282597_2',
+          customerName: 'Customer A',
+          amount: 3,
+          linkedPieceId: 'p-1'
+        }
+      ],
+      runConfiguration: {
+        runId: 'csv-1',
+        label: 'ACRYL 5MM GEGOSSEN SATIN',
+        defaultSheet: { width: 1500, height: 1500, label: 'mother plate 1500x1500' },
+        padding: 10,
+        options: NESTING_OPTIONS_V2
+      }
+    }
+  ],
+  csvRunRecords: [
+    {
+      csvImportId: 'csv-1',
+      runId: 'csv-1',
+      label: 'ACRYL 5MM GEGOSSEN SATIN',
+      subRuns: [
+        {
+          subRunId: 'csv-1-subrun-0',
+          parentRunId: 'csv-1',
+          index: 0,
+          sheet: { width: 1500, height: 1500, label: 'mother plate 1500x1500' },
+          padding: 10,
+          options: NESTING_OPTIONS_V2,
+          placements: [
+            { pieceId: 'copy-0-of-p-1-for-row-1', x: 0, y: 0, width: 14, height: 9, rotation: 0 }
+          ],
+          unplacedPieceIds: [],
+          pieceIds: ['copy-0-of-p-1-for-row-1'],
+          requestPieceIds: ['copy-0-of-p-1-for-row-1']
+        }
+      ],
+      unplacedPieceIds: [],
+      preparedPieces: [PREPARED_PIECE_V2],
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z'
+    }
+  ]
+}
+
 describe('ProjectFileService', () => {
   let dir: string
   let path: string
@@ -69,6 +154,27 @@ describe('ProjectFileService', () => {
     const text = await readFile(path, 'utf8')
     expect(text).toContain('\n')
     expect(text).toMatch(/{\s+"version"/)
+  })
+
+  it('round-trips a valid version-2 project document with CSV imports and run records', async () => {
+    await saveProjectFile(path, VALID_PROJECT_V2 as never)
+    const loaded = await loadProjectFile(path)
+    expect(loaded.version).toBe(2)
+    expect(loaded.csvImports).toHaveLength(1)
+    expect(loaded.csvImports?.[0]?.rows).toHaveLength(1)
+    expect(loaded.csvImports?.[0]?.rows[0]?.reference).toBe('3282597_2')
+    expect(loaded.csvRunRecords).toHaveLength(1)
+    expect(loaded.csvRunRecords?.[0]?.subRuns).toHaveLength(1)
+    expect(loaded.csvRunRecords?.[0]?.preparedPieces).toHaveLength(1)
+    expect(loaded.csvRunRecords?.[0]?.preparedPieces?.[0]?.cutRowRef?.reference).toBe('3282597_2')
+  })
+
+  it('round-trips a legacy version-1 project document without CSV fields', async () => {
+    await saveProjectFile(path, VALID_PROJECT as never)
+    const loaded = await loadProjectFile(path)
+    expect(loaded.version).toBe(1)
+    expect(loaded.csvImports).toBeUndefined()
+    expect(loaded.csvRunRecords).toBeUndefined()
   })
 
   it('rejects an invalid project on save', async () => {

@@ -27,7 +27,15 @@ const requiredKeys: ReadonlyArray<keyof AppApi> = [
   'openProject',
   'exportNestingResult',
   'exportNestingHistory',
-  'exportRunGif'
+  'exportRunGif',
+  'listImportedCsvs',
+  'selectCsvFiles',
+  'importCsvFiles',
+  'importCsvDocumentsFromProject',
+  'updateImportedCsv',
+  'removeImportedCsv',
+  'clearImportedCsvs',
+  'exportCsvResult'
 ]
 
 describe('AppApi contract', () => {
@@ -56,7 +64,15 @@ describe('AppApi contract', () => {
       openProject: () => Promise.reject(new Error('not implemented') as never) as never,
       exportNestingResult: () => Promise.resolve(),
       exportNestingHistory: () => Promise.resolve(),
-      exportRunGif: () => Promise.resolve()
+      exportRunGif: () => Promise.resolve(),
+      listImportedCsvs: () => Promise.resolve([]),
+      selectCsvFiles: () => Promise.resolve({ documents: [], failures: [] }),
+      importCsvFiles: () => Promise.resolve({ documents: [], failures: [] }),
+      importCsvDocumentsFromProject: () => Promise.resolve([]),
+      updateImportedCsv: (document) => Promise.resolve(document),
+      removeImportedCsv: () => Promise.resolve(),
+      clearImportedCsvs: () => Promise.resolve(),
+      exportCsvResult: () => Promise.resolve('')
     }
 
     for (const key of requiredKeys) {

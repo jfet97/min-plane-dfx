@@ -7,7 +7,12 @@ import {
   NestingHistorySummary,
   ProjectHistoryRef
 } from '../domain/nesting.js'
-import { ProjectDocument, WorkspaceProjectSettings } from '../domain/project.js'
+import {
+  ProjectDocument,
+  WorkspaceProjectSettings,
+  ProjectCsvImport,
+  CsvRunRecord
+} from '../domain/project.js'
 import type { JobId, PieceId, SourceFileId } from '../domain/ids.js'
 import type { SerializedAppError } from './errors.js'
 
@@ -79,6 +84,27 @@ export interface AppApi {
   readonly exportNestingResult: (result: NestingResult) => Promise<void>
   readonly exportNestingHistory: (ref: ProjectHistoryRef) => Promise<void>
   readonly exportRunGif: (payload: RunGifExportPayload) => Promise<void>
+
+  // CSV import/export
+  readonly selectCsvFiles: () => Promise<CsvImportResult>
+  readonly importCsvFiles: (paths: ReadonlyArray<string>) => Promise<CsvImportResult>
+  readonly importCsvDocumentsFromProject: (
+    documents: ReadonlyArray<ProjectCsvImport>
+  ) => Promise<ReadonlyArray<ProjectCsvImport>>
+  readonly listImportedCsvs: () => Promise<ReadonlyArray<ProjectCsvImport>>
+  readonly updateImportedCsv: (document: ProjectCsvImport) => Promise<ProjectCsvImport>
+  readonly removeImportedCsv: (id: string) => Promise<void>
+  readonly clearImportedCsvs: () => Promise<void>
+  readonly exportCsvResult: (
+    csvImport: ProjectCsvImport,
+    csvRunRecord: CsvRunRecord,
+    outPath?: string
+  ) => Promise<string>
+}
+
+export type CsvImportResult = {
+  readonly documents: ReadonlyArray<ProjectCsvImport>
+  readonly failures: ReadonlyArray<{ readonly path: string; readonly error: unknown }>
 }
 
 export type HistoryEventEnvelope = NestingHistoryEvent

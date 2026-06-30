@@ -5,22 +5,38 @@ import FileDropZone from './FileDropZone.vue'
 import PresetShapePanel from './PresetShapePanel.vue'
 import { STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js'
 import { LAYOUT_SELECTION_STRATEGIES } from '@shared/domain/layoutSelectionStrategies.js'
-import type { NestingOptions } from '@shared/domain/nesting.js'
+import type { NestingOptions, SheetSpec } from '@shared/domain/nesting.js'
+
+interface SettingsModel {
+  sheet: SheetSpec
+  padding: number
+  options: NestingOptions
+}
+
+const props = defineProps<{
+  modelValue?: SettingsModel
+  csvNote?: string | null
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [value: SettingsModel]
+}>()
 
 const settings = useSettings()
 
-const sheetInvalid = computed(
-  () => settings.state.value.sheet.width <= 0 || settings.state.value.sheet.height <= 0
-)
+const isLocal = computed(() => props.modelValue !== undefined)
+const model = computed<SettingsModel>(() => props.modelValue ?? settings.state.value)
+
+const sheetInvalid = computed(() => model.value.sheet.width <= 0 || model.value.sheet.height <= 0)
 const allStrategyIds = computed(() => STRATEGY_DEFINITIONS.map((strategy) => strategy.id))
 const allStrategiesChecked = computed(
   () =>
     allStrategyIds.value.length > 0 &&
-    allStrategyIds.value.every((id) => settings.state.value.options.strategyIds.includes(id))
+    allStrategyIds.value.every((id) => model.value.options.strategyIds.includes(id))
 )
 const selectedLayoutStrategy = computed(() => {
   const current = LAYOUT_SELECTION_STRATEGIES.find(
-    (strategy) => strategy.id === settings.state.value.options.layoutSelectionStrategyId
+    (strategy) => strategy.id === model.value.options.layoutSelectionStrategyId
   )
   if (current !== undefined) return current
   return LAYOUT_SELECTION_STRATEGIES[0]
@@ -43,20 +59,89 @@ function selectValue(event: Event): string {
   return event.target instanceof HTMLSelectElement ? event.target.value : ''
 }
 
+function updateModel(patch: Partial<SettingsModel>): void {
+  if (!props.modelValue) return
+  emit('update:modelValue', { ...props.modelValue, ...patch })
+}
+
+function updateSheet(patch: Partial<SheetSpec>): void {
+  if (isLocal.value) {
+    updateModel({ sheet: { ...model.value.sheet, ...patch } })
+  } else {
+    if (patch.width !== undefined) settings.setSheetWidth(patch.width)
+    if (patch.height !== undefined) settings.setSheetHeight(patch.height)
+    if (patch.label !== undefined) settings.setSheetLabel(patch.label)
+  }
+}
+
+function updatePadding(padding: number): void {
+  if (isLocal.value) {
+    updateModel({ padding })
+  } else {
+    settings.setPadding(padding)
+  }
+}
+
+function updateOptions(patch: Partial<NestingOptions>): void {
+  if (isLocal.value) {
+    updateModel({ options: { ...model.value.options, ...patch } })
+  } else {
+    if (patch.allowGlobalRotation !== undefined)
+      settings.setAllowGlobalRotation(patch.allowGlobalRotation)
+    if (patch.timeoutMs !== undefined) settings.setTimeoutMs(patch.timeoutMs)
+    if (patch.historyMode !== undefined) settings.setHistoryMode(patch.historyMode)
+    if (patch.strategySelectionMode !== undefined)
+      settings.setStrategySelectionMode(patch.strategySelectionMode)
+    if (patch.layoutSelectionStrategyId !== undefined)
+      settings.setLayoutSelectionStrategyId(patch.layoutSelectionStrategyId)
+    if (patch.finalSelectionMode !== undefined)
+      settings.setFinalSelectionMode(patch.finalSelectionMode)
+    if (patch.topN !== undefined) settings.setTopN(patch.topN)
+  }
+}
+
+function setStrategyIds(ids: ReadonlyArray<string>): void {
+  if (isLocal.value) {
+    updateModel({ options: { ...model.value.options, strategyIds: [...ids] } })
+  } else {
+    settings.setStrategyIds(ids)
+  }
+}
+
+function toggleStrategyId(id: string): void {
+  if (isLocal.value) {
+    const ids = [...model.value.options.strategyIds]
+    const idx = ids.indexOf(id)
+    if (idx >= 0) {
+      ids.splice(idx, 1)
+    } else {
+      ids.push(id)
+    }
+    updateModel({ options: { ...model.value.options, strategyIds: ids } })
+  } else {
+    settings.toggleStrategyId(id)
+  }
+}
+
 function setHistoryMode(event: Event): void {
-  settings.setHistoryMode(selectValue(event) as NestingOptions['historyMode'])
+  updateOptions({ historyMode: selectValue(event) as NestingOptions['historyMode'] })
 }
 
 function setStrategySelectionMode(event: Event): void {
-  settings.setStrategySelectionMode(selectValue(event) as NestingOptions['strategySelectionMode'])
+  updateOptions({
+    strategySelectionMode: selectValue(event) as NestingOptions['strategySelectionMode']
+  })
 }
 
 function setFinalSelectionMode(event: Event): void {
-  settings.setFinalSelectionMode(selectValue(event) as NestingOptions['finalSelectionMode'])
+  updateOptions({ finalSelectionMode: selectValue(event) as NestingOptions['finalSelectionMode'] })
 }
 
 function setLayoutSelectionStrategyId(event: Event): void {
-  settings.setLayoutSelectionStrategyId(selectValue(event))
+  const id = selectValue(event)
+  const known = LAYOUT_SELECTION_STRATEGIES.find((strategy) => strategy.id === id)
+  if (!known) return
+  updateOptions({ layoutSelectionStrategyId: known.id })
 }
 </script>
 
@@ -69,6 +154,7 @@ function setLayoutSelectionStrategyId(event: Event): void {
     <PresetShapePanel />
 
     <h3>Sheet</h3>
+    <p v-if="csvNote" class="csv-note">{{ csvNote }}</p>
     <div class="grid">
       <label title="Usable sheet width in millimeters.">
         Width (mm)
@@ -76,8 +162,8 @@ function setLayoutSelectionStrategyId(event: Event): void {
           type="number"
           min="0"
           step="1"
-          :value="settings.state.value.sheet.width"
-          @input="settings.setSheetWidth(Number(inputValue($event)))"
+          :value="model.sheet.width"
+          @input="updateSheet({ width: Number(inputValue($event)) })"
         />
       </label>
       <label title="Usable sheet height in millimeters.">
@@ -86,16 +172,16 @@ function setLayoutSelectionStrategyId(event: Event): void {
           type="number"
           min="0"
           step="1"
-          :value="settings.state.value.sheet.height"
-          @input="settings.setSheetHeight(Number(inputValue($event)))"
+          :value="model.sheet.height"
+          @input="updateSheet({ height: Number(inputValue($event)) })"
         />
       </label>
       <label class="span-2" title="Human-readable sheet name used in saved projects and exports.">
         Label
         <input
           type="text"
-          :value="settings.state.value.sheet.label"
-          @input="settings.setSheetLabel(inputValue($event))"
+          :value="model.sheet.label"
+          @input="updateSheet({ label: inputValue($event) })"
         />
       </label>
       <p v-if="sheetInvalid" class="warning span-2">
@@ -113,8 +199,8 @@ function setLayoutSelectionStrategyId(event: Event): void {
           type="number"
           min="0"
           step="1"
-          :value="settings.state.value.padding"
-          @input="settings.setPadding(Number(inputValue($event)))"
+          :value="model.padding"
+          @input="updatePadding(Number(inputValue($event)))"
         />
       </label>
       <label
@@ -123,8 +209,8 @@ function setLayoutSelectionStrategyId(event: Event): void {
         Allow rotation
         <input
           type="checkbox"
-          :checked="settings.state.value.options.allowGlobalRotation"
-          @change="settings.setAllowGlobalRotation(inputChecked($event))"
+          :checked="model.options.allowGlobalRotation"
+          @change="updateOptions({ allowGlobalRotation: inputChecked($event) })"
         />
       </label>
     </div>
@@ -139,13 +225,13 @@ function setLayoutSelectionStrategyId(event: Event): void {
           type="number"
           min="1000"
           step="1000"
-          :value="settings.state.value.options.timeoutMs"
-          @input="settings.setTimeoutMs(Number(inputValue($event)))"
+          :value="model.options.timeoutMs"
+          @input="updateOptions({ timeoutMs: Number(inputValue($event)) })"
         />
       </label>
       <label title="Controls whether worker-emitted algorithm frames are retained or streamed.">
         History mode
-        <select :value="settings.state.value.options.historyMode" @change="setHistoryMode">
+        <select :value="model.options.historyMode" @change="setHistoryMode">
           <option value="off" title="Do not collect algorithm history.">off</option>
           <option value="final" title="Collect history and return it at the end of the run.">
             final
@@ -166,15 +252,15 @@ function setLayoutSelectionStrategyId(event: Event): void {
         type="button"
         :disabled="allStrategiesChecked"
         title="Check every candidate strategy in the list."
-        @click="settings.setStrategyIds(allStrategyIds)"
+        @click="setStrategyIds(allStrategyIds)"
       >
         All
       </button>
       <button
         type="button"
-        :disabled="settings.state.value.options.strategyIds.length === 0"
+        :disabled="model.options.strategyIds.length === 0"
         title="Clear the checked candidate strategy list."
-        @click="settings.setStrategyIds([])"
+        @click="setStrategyIds([])"
       >
         None
       </button>
@@ -184,10 +270,7 @@ function setLayoutSelectionStrategyId(event: Event): void {
       title="Single runs only the checked strategy IDs. All configured runs every listed strategy."
     >
       Candidate set
-      <select
-        :value="settings.state.value.options.strategySelectionMode"
-        @change="setStrategySelectionMode"
-      >
+      <select :value="model.options.strategySelectionMode" @change="setStrategySelectionMode">
         <option value="single" title="Use only the checked candidate strategy IDs.">
           Checked only
         </option>
@@ -204,9 +287,9 @@ function setLayoutSelectionStrategyId(event: Event): void {
         <label class="strategy-row">
           <input
             type="checkbox"
-            :disabled="settings.state.value.options.strategySelectionMode === 'all_configured'"
-            :checked="settings.state.value.options.strategyIds.includes(strategy.id)"
-            @change="settings.toggleStrategyId(strategy.id)"
+            :disabled="model.options.strategySelectionMode === 'all_configured'"
+            :checked="model.options.strategyIds.includes(strategy.id)"
+            @change="toggleStrategyId(strategy.id)"
           />
           <span class="strategy-meta" :title="strategy.description">
             <strong>{{ strategy.label }}</strong>
@@ -225,7 +308,7 @@ function setLayoutSelectionStrategyId(event: Event): void {
     <label class="span-2 full">
       Survivor metric
       <select
-        :value="settings.state.value.options.layoutSelectionStrategyId"
+        :value="model.options.layoutSelectionStrategyId"
         @change="setLayoutSelectionStrategyId"
       >
         <option
@@ -241,7 +324,7 @@ function setLayoutSelectionStrategyId(event: Event): void {
     <p
       v-if="selectedLayoutStrategy"
       class="strategy-description"
-      :title="selectedLayoutStrategy.description"
+      :title="selectedLayoutStrategyTooltip"
     >
       <small>{{ selectedLayoutStrategy.description }}</small>
     </p>
@@ -250,10 +333,7 @@ function setLayoutSelectionStrategyId(event: Event): void {
     <div class="grid">
       <label title="Manual mode uses the result row selected in the Strategy Runs panel.">
         Mode
-        <select
-          :value="settings.state.value.options.finalSelectionMode"
-          @change="setFinalSelectionMode"
-        >
+        <select :value="model.options.finalSelectionMode" @change="setFinalSelectionMode">
           <option
             value="manual"
             title="Manual mode uses the result row selected in the Strategy Runs panel."
@@ -282,8 +362,8 @@ function setLayoutSelectionStrategyId(event: Event): void {
           type="number"
           min="1"
           step="1"
-          :value="settings.state.value.options.topN ?? 3"
-          @input="settings.setTopN(Number(inputValue($event)))"
+          :value="model.options.topN ?? 3"
+          @input="updateOptions({ topN: Number(inputValue($event)) })"
         />
       </label>
     </div>
@@ -417,5 +497,14 @@ select {
 
 .warning {
   color: var(--warning);
+}
+
+.csv-note {
+  margin: 0 0 6px;
+  padding: 4px 6px;
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 11px;
 }
 </style>

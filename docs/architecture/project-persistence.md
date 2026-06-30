@@ -18,10 +18,18 @@ path, copied path, imported document JSON, and temporary project metadata.
 Preset source shapes are stored in the same import table as document JSON with
 `preset://` paths.
 
+CSV imports are stored in a separate `imported_csv` table. The table keeps the
+original source path, file name, parsed `ProjectCsvImport` JSON, and import
+timestamp; CSV bytes are copied through the same workspace source area before
+parsing so interrupted imports can be cleaned from staging. Row-to-shape links
+and per-CSV run defaults live inside the stored `ProjectCsvImport`, so editing
+a row link or CSV run configuration updates that table directly.
+
 The `projects` row for `temporary` also stores `settings_json`, a
 schema-decoded `WorkspaceProjectSettings` payload containing sheet settings,
 padding, nesting options, cut-list quantities, saved run records, and an
-optional monotonic revision.
+optional monotonic revision. CSV imports are not duplicated in
+`settings_json`; only `selectedCsvId` and `csvRunRecords` are stored there.
 
 The temporary workspace survives renderer hot reload and app close/reopen. On
 startup, staging files from interrupted imports are cleaned, imports are
@@ -42,6 +50,9 @@ A project should include:
 - latest NDJSON history reference when available.
 - saved run records with their result, run sheet, piece count, and NDJSON history
   reference when available.
+- CSV imports with their embedded row links and per-CSV run configuration;
+- CSV run records with their subruns, prepared CSV pieces, and remaining
+  unplaced piece ids.
 
 Preset shapes are persisted in the temporary workspace as imported document
 summaries with `preset://` paths. They do not need copied source files, but they
@@ -60,19 +71,34 @@ persisted-source-shape path closely enough that edits wait for main to finish
 the SQLite write. Since multiple IPC writes can overlap across reload timing,
 main stores the revision next to the JSON payload and ignores stale writes.
 
-Completed runs are saved as project run records in the same temporary settings
-payload. A run record keeps the result, the sheet used for that run, and the
-NDJSON replay reference, so it can be restored after renderer reload even if
-the user later changes source shapes, quantities, or sheet settings. Result
-rendering uses the run sheet, not the current settings sheet. Deleting a run
-record only removes that archive entry; it does not delete imported source
-shapes or mutate the current project setup.
+Completed regular runs are saved as project run records in the same temporary
+settings payload. A run record keeps the result, the first sheet used for that
+run, and the NDJSON replay reference, so it can be restored after renderer
+reload even if the user later changes source shapes, quantities, or sheet
+settings. Regular run results may contain multiple manual subruns; each subrun
+keeps its own sheet snapshot in `runSummary.subRuns`. Result rendering uses the
+selected subrun sheet when one is selected, falling back to the run sheet.
+Deleting a run record only removes that archive entry; it does not delete
+imported source shapes or mutate the current project setup.
+
+CSV run records are separate from regular project run records. A CSV record is
+keyed by `csvImportId`, keeps every completed subrun in order, and retains the
+full prepared-piece catalog so export can map each placement back to the source
+CSV row metadata. In-progress CSV sessions with leftovers are stored in
+workspace settings as `csvRunRecords`; completed CSV records are saved in the
+portable project JSON.
 
 ## Open Behavior
 
 Opening a project must hydrate renderer stores. It must not merely validate the file.
 
 Opening a project resets transient worker state to idle. It must not invent, resume, or imply a running worker job.
+
+Opening a project also repopulates the temporary `imported_csv` table from the
+saved `csvImports` array, then hydrates the renderer CSV store from the decoded
+project document. Saved CSV run records are visible for export or review, while
+records with remaining pieces can be rehydrated as active sessions for manual
+follow-up subruns.
 
 ## History References
 

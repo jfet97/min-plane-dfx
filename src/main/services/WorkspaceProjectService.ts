@@ -7,10 +7,13 @@ import { SqliteClient } from '@effect/sql-sqlite-node'
 import { Effect, Exit, FileSystem, Layer, ManagedRuntime, Path, Schema } from 'effect'
 import * as SqlClient from 'effect/unstable/sql/SqlClient'
 import { importDxfFile } from './DxfImportService.js'
+import { importCsvFiles as parseAndImportCsvFiles } from './CsvImportService.js'
 import { ImportedDxfDocument as ImportedDxfDocumentSchema } from '@shared/domain/dxf.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
 import {
+  ProjectCsvImport as ProjectCsvImportSchema,
   WorkspaceProjectSettings,
+  type ProjectCsvImport,
   type WorkspaceProjectSettings as WorkspaceProjectSettingsModel
 } from '@shared/domain/project.js'
 
@@ -27,6 +30,10 @@ interface StoredDxfRow {
   readonly document_json: string
 }
 
+interface StoredCsvRow {
+  readonly document_json: string
+}
+
 interface StoredSettingsRow {
   readonly settings_json: string | null
   readonly settings_revision: number | null
@@ -37,7 +44,18 @@ function firstRow(rows: ReadonlyArray<unknown>): StoredDxfRow | null {
   return storedDxfRow(row)
 }
 
+function firstCsvRow(rows: ReadonlyArray<unknown>): StoredCsvRow | null {
+  const row = rows[0]
+  return storedCsvRow(row)
+}
+
 function storedDxfRow(row: unknown): StoredDxfRow | null {
+  if (typeof row !== 'object' || row === null) return null
+  const documentJson = (row as { readonly document_json?: unknown }).document_json
+  return typeof documentJson === 'string' ? { document_json: documentJson } : null
+}
+
+function storedCsvRow(row: unknown): StoredCsvRow | null {
   if (typeof row !== 'object' || row === null) return null
   const documentJson = (row as { readonly document_json?: unknown }).document_json
   return typeof documentJson === 'string' ? { document_json: documentJson } : null
@@ -107,6 +125,15 @@ export class WorkspaceProjectService {
             imported_at TEXT NOT NULL
           )
         `
+        yield* sql`
+          CREATE TABLE IF NOT EXISTS imported_csv (
+            id TEXT PRIMARY KEY,
+            source_path TEXT NOT NULL UNIQUE,
+            file_name TEXT NOT NULL,
+            document_json TEXT NOT NULL,
+            imported_at TEXT NOT NULL
+          )
+        `
         yield* sql`ALTER TABLE projects ADD COLUMN saved_path TEXT`.pipe(Effect.ignore)
         yield* sql`ALTER TABLE projects ADD COLUMN promoted_at TEXT`.pipe(Effect.ignore)
         yield* sql`ALTER TABLE projects ADD COLUMN settings_json TEXT`.pipe(Effect.ignore)
@@ -128,6 +155,141 @@ export class WorkspaceProjectService {
 
   storeSourceDocument(document: ImportedDxfDocument): Promise<ImportedDxfDocument> {
     return this.run(this.storeSourceDocumentEffect(document))
+  }
+
+  importCsvFiles(
+    paths: readonly string[]
+  ): Promise<{ documents: ProjectCsvImport[]; failures: Array<{ path: string; error: unknown }> }> {
+    return this.run(
+      Effect.forEach(
+        paths,
+        (path) =>
+          Effect.match(this.importCsvFile(path), {
+            onFailure: (error) => ({ kind: 'failure' as const, path, error }),
+            onSuccess: (document) => ({ kind: 'success' as const, document })
+          }),
+        { concurrency: 2 }
+      ).pipe(
+        Effect.map((results) => {
+          const documents: ProjectCsvImport[] = []
+          const failures: Array<{ path: string; error: unknown }> = []
+          for (const result of results) {
+            if (result.kind === 'success') {
+              documents.push(result.document)
+            } else {
+              failures.push({ path: result.path, error: result.error })
+            }
+          }
+          return { documents, failures }
+        })
+      )
+    )
+  }
+
+  storeSourceCsvDocument(document: ProjectCsvImport): Promise<ProjectCsvImport> {
+    const core = this.storeSourceCsvDocumentCoreEffect.bind(this)
+    return this.run(
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient
+        const result = yield* sql.withTransaction(core(document))
+        const now = new Date().toISOString()
+        yield* sql`UPDATE projects SET updated_at = ${now} WHERE id = 'temporary'`
+        return result
+      })
+    )
+  }
+
+  importCsvDocumentsFromProject(
+    documents: readonly ProjectCsvImport[]
+  ): Promise<ProjectCsvImport[]> {
+    const core = this.storeSourceCsvDocumentCoreEffect.bind(this)
+    return this.run(
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient
+        const stored: ProjectCsvImport[] = []
+        yield* sql.withTransaction(
+          Effect.gen(function* () {
+            for (const document of documents) {
+              stored.push(yield* core(document))
+            }
+          })
+        )
+        const now = new Date().toISOString()
+        yield* sql`UPDATE projects SET updated_at = ${now} WHERE id = 'temporary'`
+        return stored
+      })
+    )
+  }
+
+  listImportedCsvs(): Promise<ProjectCsvImport[]> {
+    const decodeStoredCsvDocument = this.decodeStoredCsvDocument.bind(this)
+    return this.run(
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient
+        const rows = yield* sql`
+          SELECT document_json
+          FROM imported_csv
+          ORDER BY imported_at ASC, id ASC
+        `
+        return rows.map((row) => {
+          const stored = storedCsvRow(row)
+          if (!stored) {
+            throw new WorkspaceProjectError('Stored CSV row has an invalid shape.')
+          }
+          return decodeStoredCsvDocument(stored.document_json)
+        })
+      })
+    )
+  }
+
+  updateImportedCsv(document: ProjectCsvImport): Promise<void> {
+    return this.run(
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient
+        const json = JSON.stringify(document)
+        const now = new Date().toISOString()
+        yield* sql.withTransaction(
+          Effect.gen(function* () {
+            const existing = yield* sql`
+              SELECT id FROM imported_csv WHERE id = ${document.id}
+            `
+            if (existing.length > 0) {
+              yield* sql`
+                UPDATE imported_csv
+                SET document_json = ${json}
+                WHERE id = ${document.id}
+              `
+            } else {
+              yield* sql`
+                INSERT INTO imported_csv (id, source_path, file_name, document_json, imported_at)
+                VALUES (${document.id}, ${document.sourcePath}, ${document.fileName}, ${json}, ${now})
+              `
+            }
+            yield* sql`
+              UPDATE projects SET updated_at = ${now} WHERE id = 'temporary'
+            `
+          })
+        )
+      })
+    )
+  }
+
+  removeImportedCsv(id: string): Promise<void> {
+    return this.run(
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient
+        yield* sql`DELETE FROM imported_csv WHERE id = ${id}`
+      })
+    )
+  }
+
+  clearImportedCsvs(): Promise<void> {
+    return this.run(
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient
+        yield* sql`DELETE FROM imported_csv`
+      })
+    )
   }
 
   loadWorkspaceSettings(): Promise<WorkspaceProjectSettingsModel | null> {
@@ -329,11 +491,120 @@ export class WorkspaceProjectService {
     })
   }
 
+  private importCsvFile(sourcePath: string) {
+    const filesRoot = this.filesRoot
+    const stagingRoot = this.stagingRoot
+    const decodeStoredCsvDocument = this.decodeStoredCsvDocument.bind(this)
+    return Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem
+      const sql = yield* SqlClient.SqlClient
+      yield* fs.makeDirectory(filesRoot, { recursive: true })
+
+      const existingRows = yield* sql`
+        SELECT document_json FROM imported_csv WHERE source_path = ${sourcePath}
+      `
+      const existing = firstCsvRow(existingRows)
+      if (existing) {
+        return decodeStoredCsvDocument(existing.document_json)
+      }
+
+      const storedName = `${randomUUID()}${extname(sourcePath) || '.csv'}`
+      const stagingPath = join(stagingRoot, storedName)
+      const storedPath = join(filesRoot, storedName)
+      yield* fs.copyFile(sourcePath, stagingPath)
+      return yield* Effect.gen(function* () {
+        const { successes, failures } = yield* Effect.tryPromise({
+          try: () => parseAndImportCsvFiles([stagingPath]),
+          catch: (cause) =>
+            new WorkspaceProjectError(cause instanceof Error ? cause.message : String(cause))
+        })
+        if (failures.length > 0) {
+          const failure = failures[0]
+          const failureError =
+            failure?.error instanceof Error
+              ? failure.error
+              : new WorkspaceProjectError(String(failure?.error ?? 'Unknown CSV import failure'))
+          return yield* Effect.fail(failureError)
+        }
+        const parsed = successes[0]
+        if (!parsed) {
+          return yield* Effect.fail(new WorkspaceProjectError('CSV import produced no document.'))
+        }
+        yield* fs.rename(stagingPath, storedPath)
+        const storedDocument = new ProjectCsvImportSchema({
+          ...parsed,
+          sourcePath,
+          fileName: basename(sourcePath)
+        })
+        const json = JSON.stringify(storedDocument)
+        const now = new Date().toISOString()
+        yield* sql.withTransaction(
+          Effect.gen(function* () {
+            yield* sql`
+              INSERT INTO imported_csv (id, source_path, file_name, document_json, imported_at)
+              VALUES (${storedDocument.id}, ${sourcePath}, ${storedDocument.fileName}, ${json}, ${now})
+            `
+            yield* sql`
+              UPDATE projects SET updated_at = ${now} WHERE id = 'temporary'
+            `
+          })
+        )
+        return storedDocument
+      }).pipe(
+        Effect.tapError(() =>
+          Effect.all(
+            [fs.remove(stagingPath).pipe(Effect.ignore), fs.remove(storedPath).pipe(Effect.ignore)],
+            { discard: true }
+          )
+        )
+      )
+    })
+  }
+
+  private storeSourceCsvDocumentCoreEffect(document: ProjectCsvImport) {
+    return Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient
+      const json = JSON.stringify(document)
+      const now = new Date().toISOString()
+
+      /*
+       * Remove any stale row tied to the same source path but a different id
+       * before upserting, so the unique source_path constraint is respected
+       * when a project rehydrates documents with new ids.
+       */
+      yield* sql`
+        DELETE FROM imported_csv
+        WHERE source_path = ${document.sourcePath} AND id != ${document.id}
+      `
+
+      yield* sql`
+        INSERT INTO imported_csv (id, source_path, file_name, document_json, imported_at)
+        VALUES (${document.id}, ${document.sourcePath}, ${document.fileName}, ${json}, ${now})
+        ON CONFLICT(id) DO UPDATE SET
+          source_path = excluded.source_path,
+          file_name = excluded.file_name,
+          document_json = excluded.document_json,
+          imported_at = excluded.imported_at
+      `
+
+      return document
+    })
+  }
+
   private decodeStoredDocument(json: string): ImportedDxfDocument {
     const parsed: unknown = JSON.parse(json)
     const exit = Schema.decodeUnknownExit(ImportedDxfDocumentSchema)(parsed)
     if (Exit.isFailure(exit)) {
       throw new WorkspaceProjectError('Stored DXF document failed schema validation.')
+    }
+    return exit.value
+  }
+
+  private decodeStoredCsvDocument(json: string): ProjectCsvImport {
+    const parsed: unknown = JSON.parse(json)
+    const exit = Schema.decodeUnknownExit(ProjectCsvImportSchema)(parsed)
+    if (Exit.isFailure(exit)) {
+      throw new WorkspaceProjectError('Stored CSV document failed schema validation.')
     }
     return exit.value
   }

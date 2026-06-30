@@ -34,5 +34,5 @@
     "electron.vite.config.ts",
     "tests/**/*"
   ],
-  "exclude": ["node_modules", "out", "dist", "repos", ".direnv"]
+  "exclude": ["node_modules", "out", "dist", "repos", ".direnv", "tests/renderer"]
 }

@@ -1,12 +1,18 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { useHistoryStore } from '../composables/useHistoryStore.js'
 import { useAppStore } from '../composables/useAppStore.js'
 import { createRunHistoryGif } from '../utils/runHistoryGif.js'
 import type { ProjectRunRecord } from '@shared/domain/project.js'
-import type { ProjectHistoryRef } from '@shared/domain/nesting.js'
+import type { ProjectHistoryRef, NestingSubRun } from '@shared/domain/nesting.js'
 
 const history = useHistoryStore()
 const store = useAppStore()
+const showSubRuns = ref(true)
+
+const emit = defineEmits<{
+  'start-next-subrun': []
+}>()
 
 function stats(run: NonNullable<typeof history.selectedRun.value>) {
   return {
@@ -19,6 +25,27 @@ function stats(run: NonNullable<typeof history.selectedRun.value>) {
     pieceCount: run.stats.pieceCount,
     warningCount: run.warnings.length
   }
+}
+
+const currentSubRuns = computed<ReadonlyArray<NestingSubRun>>(
+  () => history.result.value?.runSummary?.subRuns ?? []
+)
+
+const selectedSubRun = computed<NestingSubRun | null>(() => {
+  const id = history.state.value.selectedStrategyRunId
+  if (!id) return null
+  return currentSubRuns.value.find((subRun) => subRun.subRunId === id) ?? null
+})
+
+const leftoverCount = computed(() => history.result.value?.unplacedPieceIds.length ?? 0)
+
+function subRunUsedAreaMm2(subRun: NestingSubRun): number {
+  return subRun.placements.reduce((sum, placement) => sum + placement.width * placement.height, 0)
+}
+
+function formatAreaMm2(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)} m²`
+  return `${value.toLocaleString()} mm²`
 }
 
 function formatTime(value: string): string {
@@ -110,6 +137,18 @@ async function exportRunGif(record: ProjectRunRecord): Promise<void> {
       history.clearRunRecordHistory(record.jobId)
     }
   }
+}
+
+function selectSubRun(subRun: NestingSubRun): void {
+  history.selectStrategyRun(subRun.subRunId)
+}
+
+function startNextSubRun(): void {
+  emit('start-next-subrun')
+}
+
+function subRunLabel(subRun: NestingSubRun): string {
+  return `Plate ${subRun.index + 1}`
 }
 </script>
 
@@ -241,6 +280,70 @@ async function exportRunGif(record: ProjectRunRecord): Promise<void> {
         </button>
       </li>
     </ul>
+
+    <div v-if="leftoverCount > 0" class="leftovers">
+      <div>
+        <strong>{{ leftoverCount }} leftover piece(s)</strong>
+        <span>Start another plate from the current unplaced list.</span>
+      </div>
+      <button
+        type="button"
+        class="run-leftovers"
+        title="Start another subrun with the pieces that did not fit."
+        @click="startNextSubRun"
+      >
+        Run leftovers
+      </button>
+    </div>
+
+    <section v-if="currentSubRuns.length > 0" class="subruns">
+      <button
+        type="button"
+        class="subruns-toggle"
+        :aria-expanded="showSubRuns"
+        @click="showSubRuns = !showSubRuns"
+      >
+        <span>Subruns ({{ currentSubRuns.length }})</span>
+        <span class="toggle-icon">{{ showSubRuns ? '▾' : '▸' }}</span>
+      </button>
+
+      <ul v-show="showSubRuns" class="subrun-list">
+        <li
+          v-for="subRun in currentSubRuns"
+          :key="subRun.subRunId"
+          :class="{
+            selected: selectedSubRun?.subRunId === subRun.subRunId,
+            leftovers: subRun.unplacedPieceIds.length > 0
+          }"
+        >
+          <button
+            type="button"
+            class="subrun-card"
+            :aria-pressed="selectedSubRun?.subRunId === subRun.subRunId"
+            @click="selectSubRun(subRun)"
+          >
+            <header class="subrun-head">
+              <strong>{{ subRunLabel(subRun) }}</strong>
+              <code>{{ subRun.sheet.width }} × {{ subRun.sheet.height }} mm</code>
+            </header>
+            <dl class="subrun-metrics">
+              <div title="Pieces placed on this subrun.">
+                <dt>Placed</dt>
+                <dd>{{ subRun.placements.length }}</dd>
+              </div>
+              <div title="Pieces remaining unplaced after this subrun.">
+                <dt>Unplaced</dt>
+                <dd>{{ subRun.unplacedPieceIds.length }}</dd>
+              </div>
+              <div title="Area covered by placed piece footprints on this subrun.">
+                <dt>Used</dt>
+                <dd>{{ formatAreaMm2(subRunUsedAreaMm2(subRun)) }}</dd>
+              </div>
+            </dl>
+          </button>
+        </li>
+      </ul>
+    </section>
   </div>
 </template>
 
@@ -417,5 +520,144 @@ dd {
   margin: 0;
   color: var(--text-primary);
   font-family: var(--font-mono);
+}
+
+.subruns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.subruns-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.subruns-toggle:hover {
+  border-color: var(--accent);
+}
+
+.toggle-icon {
+  font-size: 12px;
+}
+
+.subrun-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subrun-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subrun-card {
+  width: 100%;
+  text-align: left;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.subrun-card:hover {
+  border-color: var(--accent);
+}
+
+li.selected .subrun-card {
+  border-color: var(--accent);
+  background: rgba(0, 122, 204, 0.08);
+}
+
+li.leftovers .subrun-card {
+  border-color: rgba(255, 176, 32, 0.65);
+}
+
+li.leftovers .subrun-metrics div:nth-child(2) dd {
+  color: var(--warning);
+}
+
+.subrun-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.subrun-head strong {
+  font-size: 11px;
+}
+
+.subrun-head code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.subrun-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px 6px;
+  margin: 0;
+  font-size: 10px;
+}
+
+.subrun-metrics > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.leftovers {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 176, 32, 0.55);
+  border-radius: var(--radius);
+  background: rgba(255, 176, 32, 0.08);
+}
+
+.leftovers div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.leftovers strong {
+  color: var(--warning);
+  font-size: 11px;
+}
+
+.leftovers span {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.run-leftovers {
+  flex: 0 0 auto;
+  font-size: 11px;
+  padding: 3px 8px;
 }
 </style>

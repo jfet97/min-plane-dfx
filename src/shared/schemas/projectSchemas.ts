@@ -1,5 +1,10 @@
 import { Schema } from 'effect'
-import { ProjectDocument, ProjectRunRecord } from '../domain/project.js'
+import {
+  ProjectDocument,
+  ProjectRunRecord,
+  ProjectCsvImport,
+  CsvRunRecord
+} from '../domain/project.js'
 import { DxfGeometrySummary, ImportWarning } from '../domain/dxf.js'
 import { NestingResult } from '../domain/nesting.js'
 import { JobId, PieceId, SourceFileId } from '../domain/ids.js'
@@ -35,7 +40,7 @@ const StrictImportedDxfDocument = Schema.Struct({
 })
 
 export const ProjectDocumentStrict = Schema.Struct({
-  version: Schema.Literal(1),
+  version: Schema.Union([Schema.Literal(1), Schema.Literal(2)]),
   savedAt: Schema.String,
   sourceFiles: Schema.Array(
     Schema.Struct({
@@ -79,7 +84,9 @@ export const ProjectDocumentStrict = Schema.Struct({
       createdAt: Schema.String
     })
   ),
-  runRecords: Schema.optional(Schema.Array(ProjectRunRecord))
+  runRecords: Schema.optional(Schema.Array(ProjectRunRecord)),
+  csvImports: Schema.optional(Schema.Array(ProjectCsvImport)),
+  csvRunRecords: Schema.optional(Schema.Array(CsvRunRecord))
 })
 
 export type { ProjectDocument }

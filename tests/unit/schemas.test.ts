@@ -41,12 +41,107 @@ const validProject = {
   }
 }
 
+const NESTING_OPTIONS_V2 = {
+  allowGlobalRotation: true,
+  timeoutMs: 30000,
+  workerMode: 'maxrects-beam-search' as const,
+  historyMode: 'final' as const,
+  historyScope: 'winning_path' as const,
+  strategySelectionMode: 'single' as const,
+  strategyIds: ['balanced-preserve-free-then-bottom-left'],
+  layoutSelectionStrategyId: 'compact-first',
+  finalSelectionMode: 'manual' as const
+}
+
+const PREPARED_PIECE_V2 = {
+  id: 'copy-0-of-p-1-for-row-1',
+  sourcePieceId: 'p-1',
+  realBounds: { x: 0, y: 0, width: 10, height: 5 },
+  paddedBounds: { x: 0, y: 0, width: 14, height: 9, longestEdge: 14, area: 126, imbalance: 5 },
+  padding: 2,
+  allowRotation: true,
+  cutRowRef: {
+    reference: '3282597_2',
+    customerName: 'Customer A',
+    csvRowId: 'row-1'
+  }
+}
+
+const validProjectV2 = {
+  ...validProject,
+  version: 2 as const,
+  csvImports: [
+    {
+      id: 'csv-1',
+      sourcePath: '/workspace/jobs/sample.csv',
+      fileName: 'sample.csv',
+      materialCode: '8669',
+      materialDescription: 'ACRYL 5MM GEGOSSEN SATIN',
+      thicknessMm: 5,
+      jobDate: '20260630',
+      rows: [
+        {
+          id: 'row-1',
+          reference: '3282597_2',
+          customerName: 'Customer A',
+          amount: 3,
+          linkedPieceId: 'p-1'
+        }
+      ],
+      runConfiguration: {
+        runId: 'csv-1',
+        label: 'ACRYL 5MM GEGOSSEN SATIN',
+        defaultSheet: { width: 1500, height: 1500, label: 'mother plate 1500x1500' },
+        padding: 10,
+        options: NESTING_OPTIONS_V2
+      }
+    }
+  ],
+  csvRunRecords: [
+    {
+      csvImportId: 'csv-1',
+      runId: 'csv-1',
+      label: 'ACRYL 5MM GEGOSSEN SATIN',
+      subRuns: [
+        {
+          subRunId: 'csv-1-subrun-0',
+          parentRunId: 'csv-1',
+          index: 0,
+          sheet: { width: 1500, height: 1500, label: 'mother plate 1500x1500' },
+          padding: 10,
+          options: NESTING_OPTIONS_V2,
+          placements: [
+            { pieceId: 'copy-0-of-p-1-for-row-1', x: 0, y: 0, width: 14, height: 9, rotation: 0 }
+          ],
+          unplacedPieceIds: [],
+          pieceIds: ['copy-0-of-p-1-for-row-1'],
+          requestPieceIds: ['copy-0-of-p-1-for-row-1']
+        }
+      ],
+      unplacedPieceIds: [],
+      preparedPieces: [PREPARED_PIECE_V2],
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z'
+    }
+  ]
+}
+
 const validate = (schema: Schema.Top, input: unknown) =>
   Schema.decodeUnknownExit(schema as never)(input)
 
 describe('ProjectDocumentStrict', () => {
   it('accepts a valid project document', () => {
     const result = validate(ProjectDocumentStrict, validProject)
+    expect(Exit.isSuccess(result)).toBe(true)
+  })
+
+  it('accepts a version-2 project document with CSV imports and run records', () => {
+    const result = validate(ProjectDocumentStrict, validProjectV2)
+    expect(Exit.isSuccess(result)).toBe(true)
+  })
+
+  it('decodes a version-1 project document', () => {
+    const result = validate(ProjectDocumentStrict, { ...validProject, version: 1 as const })
     expect(Exit.isSuccess(result)).toBe(true)
   })
 
