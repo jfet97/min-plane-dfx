@@ -56,7 +56,11 @@ function sendProgress(
 const HISTORY_DIR_ENV = (globalThis as { process?: { env?: Record<string, string | undefined> } })
   .process?.env?.['MIN_PLANE_HISTORY_DIR']
 
-function prepareHistoryFile(jobId: string, historyMode: NestingRequest['options']['historyMode']) {
+function prepareHistoryFile(
+  jobId: string,
+  historyMode: NestingRequest['options']['historyMode'],
+  mode: 'append' | 'truncate'
+) {
   return Effect.gen(function* () {
     if (historyMode === 'off') return null
     const path = yield* Path.Path
@@ -65,7 +69,7 @@ function prepareHistoryFile(jobId: string, historyMode: NestingRequest['options'
       HISTORY_DIR_ENV ?? path.join(path.dirname(new URL(import.meta.url).pathname), 'history')
     const historyPath = path.join(historyDir, `${jobId}.ndjson`)
     yield* fs.makeDirectory(path.dirname(historyPath), { recursive: true })
-    yield* fs.writeFileString(historyPath, '', { flag: 'w' })
+    yield* fs.writeFileString(historyPath, '', { flag: mode === 'append' ? 'a' : 'w' })
     return historyPath
   })
 }
@@ -126,7 +130,8 @@ function handleRunNesting(
     yield* sendProgress(send, requestId, jobId, 'started')
 
     const historyMode = payload.options.historyMode
-    const historyPath = yield* prepareHistoryFile(jobId, historyMode)
+    const historyFileMode = payload.strategyRunId !== undefined ? 'append' : 'truncate'
+    const historyPath = yield* prepareHistoryFile(jobId, historyMode, historyFileMode)
 
     let frameCount = 0
     const frameQueue = yield* Queue.unbounded<NestingHistoryFrame, Cause.Done>()

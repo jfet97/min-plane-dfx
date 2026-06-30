@@ -459,6 +459,31 @@ function cloneRunRecord(record: ProjectRunRecordModel): ProjectRunRecordModel {
   }
 }
 
+async function loadCompletedHistoryReplay(
+  jobId: NestingResult['jobId'],
+  summary: NestingHistorySummary,
+  context: string
+): Promise<void> {
+  history.completeRun(jobId, summary)
+  const api = window.appApi
+  if (!api || !summary.ndjsonPath) return
+  try {
+    const ref = cloneRequiredHistoryRef({
+      kind: 'ndjson_replay',
+      jobId,
+      path: summary.ndjsonPath,
+      frameCount: summary.frameCount,
+      createdAt: new Date().toISOString()
+    })
+    const frames = await api.loadHistoryReplay(ref)
+    for (const frame of frames) {
+      history.pushFrame(frame)
+    }
+  } catch (error: unknown) {
+    console.warn(`[history] failed to load replay for ${context}:`, error)
+  }
+}
+
 function cloneCsvRunRecord(record: CsvRunRecord): CsvRunRecord {
   return {
     csvImportId: record.csvImportId,
@@ -550,6 +575,35 @@ function aggregateNormalSubrunResult(
   const algorithmElapsedMs = previous.stats.algorithm.elapsedMs + incoming.stats.algorithm.elapsedMs
   const selectedStrategyRunId =
     incoming.selectedStrategyRunId ?? incoming.strategyResults[0]?.strategyRunId
+  const previousHistorySummary = previous.historySummary
+  const incomingHistorySummary = incoming.historySummary
+  const historySummary =
+    previousHistorySummary || incomingHistorySummary
+      ? ({
+          frameCount:
+            (previousHistorySummary?.frameCount ?? 0) + (incomingHistorySummary?.frameCount ?? 0),
+          strategyRunCount: new Set([
+            ...(previousHistorySummary?.strategyRunIds ?? []),
+            ...(incomingHistorySummary?.strategyRunIds ?? [])
+          ]).size,
+          retainedFrameCount:
+            (previousHistorySummary?.retainedFrameCount ?? 0) +
+            (incomingHistorySummary?.retainedFrameCount ?? 0),
+          truncated: Boolean(previousHistorySummary?.truncated || incomingHistorySummary?.truncated),
+          scope: incomingHistorySummary?.scope ?? previousHistorySummary?.scope ?? 'winning_path',
+          strategyRunIds: [
+            ...new Set([
+              ...(previousHistorySummary?.strategyRunIds ?? []),
+              ...(incomingHistorySummary?.strategyRunIds ?? [])
+            ])
+          ],
+          ...(incomingHistorySummary?.ndjsonPath
+            ? { ndjsonPath: incomingHistorySummary.ndjsonPath }
+            : previousHistorySummary?.ndjsonPath
+              ? { ndjsonPath: previousHistorySummary.ndjsonPath }
+              : {})
+        } as NestingHistorySummary)
+      : undefined
   const runSummary: NestingRunSummary = {
     runId: previous.runSummary?.runId ?? previous.jobId,
     subRuns,
@@ -588,7 +642,8 @@ function aggregateNormalSubrunResult(
       }
     },
     runSummary,
-    preparedPieces
+    preparedPieces,
+    ...(historySummary !== undefined ? { historySummary } : {})
   } as NestingResult
 }
 
@@ -628,27 +683,13 @@ async function runNesting(): Promise<void> {
   await runner.start(request, {
     onHistoryFrame: (frame) => history.pushFrame(frame),
     onHistoryComplete: async (jobId, summary) => {
-      history.completeRun(jobId, summary)
-      const api = window.appApi
-      if (!api || !summary.ndjsonPath) return
-      try {
-        const ref = cloneRequiredHistoryRef({
-          kind: 'ndjson_replay',
-          jobId,
-          path: summary.ndjsonPath,
-          frameCount: summary.frameCount,
-          createdAt: new Date().toISOString()
-        })
-        const frames = await api.loadHistoryReplay(ref)
-        for (const frame of frames) {
-          history.pushFrame(frame)
-        }
-      } catch (error: unknown) {
-        console.warn('[history] failed to load replay for completed run:', error)
-      }
+      await loadCompletedHistoryReplay(jobId, summary, 'completed run')
     },
     onResult: async (result) => {
       history.setResult(result)
+      if (result.historySummary) {
+        await loadCompletedHistoryReplay(result.jobId, result.historySummary, 'completed run')
+      }
       saveNormalRunRecord(result, request)
       projectWarning.value =
         result.unplacedPieceIds.length > 0
@@ -678,26 +719,12 @@ async function runCsvNestingRequest(request: NestingRequest, csvImportId: string
   await runner.start(request, {
     onHistoryFrame: (frame) => history.pushFrame(frame),
     onHistoryComplete: async (jobId, summary) => {
-      history.completeRun(jobId, summary)
-      const api = window.appApi
-      if (!api || !summary.ndjsonPath) return
-      try {
-        const ref = cloneRequiredHistoryRef({
-          kind: 'ndjson_replay',
-          jobId,
-          path: summary.ndjsonPath,
-          frameCount: summary.frameCount,
-          createdAt: new Date().toISOString()
-        })
-        const frames = await api.loadHistoryReplay(ref)
-        for (const frame of frames) {
-          history.pushFrame(frame)
-        }
-      } catch (error: unknown) {
-        console.warn('[history] failed to load replay for CSV subrun:', error)
-      }
+      await loadCompletedHistoryReplay(jobId, summary, 'CSV subrun')
     },
     onResult: async (result) => {
+      if (result.historySummary) {
+        await loadCompletedHistoryReplay(result.jobId, result.historySummary, 'CSV subrun')
+      }
       csvStore.appendSubrunResult(csvImportId, result)
       const partialResult = csvStore.getSessionAggregatedResult(csvImportId)
       if (partialResult) {
@@ -805,26 +832,12 @@ async function startNextNormalSubrun(): Promise<void> {
   await runner.start(request, {
     onHistoryFrame: (frame) => history.pushFrame(frame),
     onHistoryComplete: async (jobId, summary) => {
-      history.completeRun(jobId, summary)
-      const api = window.appApi
-      if (!api || !summary.ndjsonPath) return
-      try {
-        const ref = cloneRequiredHistoryRef({
-          kind: 'ndjson_replay',
-          jobId,
-          path: summary.ndjsonPath,
-          frameCount: summary.frameCount,
-          createdAt: new Date().toISOString()
-        })
-        const frames = await api.loadHistoryReplay(ref)
-        for (const frame of frames) {
-          history.pushFrame(frame)
-        }
-      } catch (error: unknown) {
-        console.warn('[history] failed to load replay for normal subrun:', error)
-      }
+      await loadCompletedHistoryReplay(jobId, summary, 'normal subrun')
     },
     onResult: async (result) => {
+      if (result.historySummary) {
+        await loadCompletedHistoryReplay(result.jobId, result.historySummary, 'normal subrun')
+      }
       const aggregated = aggregateNormalSubrunResult(previous, result)
       if (!aggregated) return
       history.setResult(aggregated)

@@ -277,6 +277,7 @@ export function useHistoryStore() {
     pushFrame(frame: NestingHistoryFrame): void {
       const runId = frame.strategyRunId
       const existing = state.framesByRun[runId] ?? []
+      if (existing.some((current) => current.frameId === frame.frameId)) return
       const next = [...existing, frame]
       if (next.length > MAX_RETAINED_FRAMES) {
         next.splice(0, next.length - MAX_RETAINED_FRAMES)
@@ -302,6 +303,10 @@ export function useHistoryStore() {
           createdAt: new Date().toISOString()
         })
         state.lastHistoryRef = ref
+        state.runRecords = state.runRecords.map((record) =>
+          record.jobId === jobId ? { ...record, history: ref } : record
+        )
+        notifyWorkspaceSettingsChanged()
       }
     },
 

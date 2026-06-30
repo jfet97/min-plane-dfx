@@ -81,6 +81,14 @@ selected subrun sheet when one is selected, falling back to the run sheet.
 Deleting a run record only removes that archive entry; it does not delete
 imported source shapes or mutate the current project setup.
 
+Manual subruns that belong to the same regular run append their worker-emitted
+history frames to the same durable NDJSON replay file. The first run truncates
+or creates the file; follow-up subrun requests carry an explicit
+`strategyRunId`, reuse the parent `jobId`, and append. The final `NestingResult`
+also carries the worker `historySummary`, so the renderer can recover the
+replay reference even if the separate `history_complete` event is delivered
+after the result IPC response.
+
 CSV run records are separate from regular project run records. A CSV record is
 keyed by `csvImportId`, keeps every completed subrun in order, and retains the
 full prepared-piece catalog so export can map each placement back to the source

@@ -9,7 +9,12 @@ import {
   type WorkerResponse,
   type WorkerProgress
 } from '@shared/protocol/worker.js'
-import type { NestingRequest, NestingResult } from '@shared/domain/nesting.js'
+import { NestingResult as NestingResultModel } from '@shared/domain/nesting.js'
+import type {
+  NestingHistorySummary,
+  NestingRequest,
+  NestingResult
+} from '@shared/domain/nesting.js'
 import type { JobId } from '@shared/domain/ids.js'
 import type { NestingHistoryEvent, Unsubscribe } from '@shared/protocol/ipc.js'
 import type { AppErrorCode } from '@shared/protocol/errors.js'
@@ -30,6 +35,7 @@ interface PendingJob {
   readonly listeners: Set<HistoryEventListener>
   readonly timer: NodeJS.Timeout
   readonly dispose: () => Promise<void>
+  historySummary: NestingHistorySummary | null
 }
 
 /**
@@ -135,7 +141,8 @@ export class WorkerSupervisor {
         reject,
         listeners,
         timer,
-        dispose: runtime.dispose
+        dispose: runtime.dispose,
+        historySummary: null
       }
 
       const handleWorkerMessage = this.handleWorkerMessage.bind(this)
@@ -202,6 +209,9 @@ export class WorkerSupervisor {
     if (!this.current) return
 
     if (parsed.type === 'history_frame' || parsed.type === 'history_complete') {
+      if (parsed.type === 'history_complete') {
+        this.current.historySummary = parsed.payload
+      }
       const event = parsed as NestingHistoryEvent
       for (const listener of this.current.listeners) {
         try {
@@ -223,7 +233,12 @@ export class WorkerSupervisor {
     }
 
     if (parsed.type === 'success') {
-      const result: NestingResult = parsed.payload
+      const result: NestingResult = this.current.historySummary
+        ? new NestingResultModel({
+            ...parsed.payload,
+            historySummary: this.current.historySummary
+          })
+        : parsed.payload
       const jobId = this.current.request.jobId
       clearTimeout(this.current.timer)
       this.teardownWorker(this.current.dispose, 'success')

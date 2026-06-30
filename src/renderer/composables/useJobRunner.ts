@@ -57,9 +57,9 @@ export function useJobRunner() {
         state.result = result
         state.status = 'completed'
         state.activeJobId = null
+        await bindings.onResult(result)
         historyUnsub?.()
         historyUnsub = null
-        await bindings.onResult(result)
       } catch (err) {
         state.status = 'failed'
         state.lastError = err instanceof Error ? err.message : String(err)
