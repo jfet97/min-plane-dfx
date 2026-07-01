@@ -13,6 +13,7 @@ import {
   isBeamComplete,
   markNextPieceUnplaced,
   maxRemainingPieces,
+  type NestingAlgorithmState,
   type NestingBeamState
 } from './beam/state.js'
 import { NestingAlgorithmEvents, type NestingAlgorithmEvent } from './events.js'
@@ -79,7 +80,7 @@ export function runMaxRectsBeamSearch(input: {
   const startedAt = new Date(startedAtMs).toISOString()
   input.hooks?.onEvent?.(NestingAlgorithmEvents.started({ startedAt }))
 
-  let state = initialState(input)
+  let state = rankBeam(initialState(input), input)
 
   input.hooks?.onEvent?.(NestingAlgorithmEvents.initialState(state))
 
@@ -224,4 +225,14 @@ export function runMaxRectsBeamSearch(input: {
   input.hooks?.onEvent?.(NestingAlgorithmEvents.completed({ outcome, benchmark }))
 
   return outcome
+}
+
+function rankBeam(
+  state: NestingAlgorithmState,
+  input: {
+    readonly beamWidth: number
+    readonly stateOrder: NestingStateOrder
+  }
+): NestingAlgorithmState {
+  return beamFromMembers(beamMembers(state).toSorted(input.stateOrder()).slice(0, input.beamWidth))
 }

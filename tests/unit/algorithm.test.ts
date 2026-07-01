@@ -187,6 +187,26 @@ describe('runMaxRectsBeamSearch', () => {
     expect(members.every((member) => member.freeRectangles.length === 1)).toBe(true)
   })
 
+  it('promotes a rotated seed when the unrotated seed does not fit', () => {
+    const sheet = { width: 5, height: 10, label: 'rotated-only' }
+    const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
+    const strategy = requireDefined(findStrategy(DEFAULT_STRATEGY_ID))
+    const orders = makeStrategyOrders(sheet, [strategy], layoutStrategy)
+
+    const result = runMaxRectsBeamSearch({
+      sheet,
+      pieces: [sizedPiece('a', 10, 5)],
+      beamWidth: K(1),
+      candidateOrder: orders.candidateOrder,
+      stateOrder: orders.stateOrder
+    })
+
+    expect(result.placements).toMatchObject([
+      { pieceId: 'a', width: 5, height: 10, rotation: 90 }
+    ])
+    expect(result.unplacedPieceIds).toEqual([])
+  })
+
   it('removes a failed second seed from the future queue while preserving earlier pieces', () => {
     const state = initialState({
       sheet: { width: 10, height: 10, label: 'small' },
