@@ -182,17 +182,43 @@ bounding rectangles for triangles, trapezoids, stars, circles approximated by
 polygons, and rotated/angled profiles, while avoiding the combinatorial and
 robustness risk of full concave NFP.
 
-Recommended initial representation:
+## DXF To Convex Collision Polygon
+
+The renderer or import layer can keep the original DXF geometry for display and
+export, but the nesting engine needs a simple convex collision polygon per
+piece.
+
+Pipeline:
 
 ```text
 DXF geometry
-  -> flatten to sampled points
-  -> normalize to local coordinates
+  -> flatten supported entities to sampled points
+  -> deduplicate / clean sampled points
   -> compute convex hull
-  -> optionally simplify/cap hull vertices by tolerance
+  -> normalize hull to local placement coordinates
   -> offset by padding / 2 + epsilon
   -> use as collision polygon for NFP/IFP
 ```
+
+Flattening should convert supported DXF entities into points at a configured
+tolerance:
+
+- lines and polyline segments contribute endpoints;
+- arcs, circles, and bulges are sampled into enough points to respect the
+  flattening tolerance;
+- unsupported or invalid entities should produce explicit import warnings rather
+  than fake geometry.
+
+Convex hull construction is app-owned geometry logic. Use robust predicates for
+the hull turn test, because the algorithm repeatedly asks whether three sampled
+points make a left turn, right turn, or are collinear. Do not use a raw floating
+cross-product as the only source of truth for that decision.
+
+Clipper2 is used after the hull exists, when we need polygon surgery:
+
+- offset the hull outward to create the padded collision polygon;
+- clean/simplify operation results when needed;
+- later, perform boolean/NFP/IFP region operations.
 
 Concavity recovery is not part of the default v2 collision model. If explored,
 it should be isolated behind controlled modes:
@@ -242,13 +268,18 @@ But they stop being the truth of occupied geometry.
 Padding must be handled geometrically before overlap/NFP work.
 
 Current rectangle preparation treats padding as total clearance split across
-sides. For irregular polygons, mirror that semantics:
+sides. For irregular polygons, mirror that semantics by making every collision
+polygon a little larger:
 
 ```text
 clearance = padding
 collisionOffset = padding / 2 + epsilon
 collisionPolygon = offset(cutPolygon, collisionOffset)
 ```
+
+Mathematically, `offset(polygon, d)` means moving every polygon edge outward by
+distance `d` and joining the result into a larger polygon. Clipper2 owns this
+offset operation.
 
 If two collision polygons touch, their real cut polygons have at least roughly
 `padding + 2 * epsilon` between them.
@@ -263,8 +294,9 @@ For the sheet border:
 collisionPolygon must be inside sheet
 ```
 
-This is equivalent to shrinking usable sheet space by the same clearance, but it
-is easier to express as an IFP constraint.
+This is equivalent to keeping a `padding / 2 + epsilon` internal border around
+the sheet, but it is easier to express as an IFP constraint: only placement
+points whose enlarged collision polygon remains inside the sheet are feasible.
 
 Score reporting should be explicit:
 
@@ -686,9 +718,11 @@ Goal: provide robust polygon operations outside the worker optimizer.
 
 Tasks:
 
-- flatten DXF-supported geometry to polygons at a configurable tolerance;
-- normalize local polygons to a stable placement point;
-- offset polygons by `padding / 2 + epsilon`;
+- flatten supported DXF entities to sampled points at a configurable tolerance;
+- compute convex hulls from sampled points using robust predicates for turn
+  tests;
+- normalize hulls to a stable local placement point;
+- offset hulls by `padding / 2 + epsilon` through the Clipper2 adapter;
 - compute area and bounding box;
 - run pairwise intersection tests;
 - run final clearance validation on sample placements;
