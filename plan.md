@@ -533,6 +533,9 @@ The GA must not encode raw `(x, y)` placement coordinates. Legal placement stays
 centralized in the placement kernel so every portfolio mode uses the same
 geometry rules.
 
+All placement policies consume the same validated NFP/IFP candidate set. They
+differ only in how they rank legal candidates.
+
 Beam search constructs layouts while keeping multiple partial states alive:
 
 For each beam state:
