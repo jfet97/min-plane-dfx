@@ -96,8 +96,9 @@ flattened polygon approximation.
 
 ### Collision Polygon
 
-The cut polygon inflated by clearance. This is the geometry used for overlap
-tests, NFP generation, and candidate validity.
+A conservative convex polygon derived from flattened cut geometry, then
+inflated by clearance. This is the geometry used for overlap tests, NFP
+generation, and candidate validity.
 
 ### Placement Point
 
@@ -156,7 +157,7 @@ four-rotation prototype and not a transitional rectangle wrapper. It should use:
 convex collision polygons
   + adaptive finite per-piece rotations
   + NFP/IFP placement legality
-  + a shared deterministic placement decoder
+  + a shared deterministic placement kernel
   + beam search and GA/search portfolio modes
   + final geometric validation
 ```
@@ -172,6 +173,8 @@ This keeps the geometry layer tractable:
   linear time in the number of polygon edges;
 - the NFP of two convex polygons remains manageable and does not require
   convex decomposition plus pairwise NFP fusion;
+- app code can construct convex pairwise NFP boundaries while the Clipper2
+  adapter owns polygon offsetting and region boolean operations;
 - candidate generation stays smaller and easier to debug;
 - offsetting, validation, and caching are much simpler.
 
@@ -268,8 +271,9 @@ But they stop being the truth of occupied geometry.
 Padding must be handled geometrically before overlap/NFP work.
 
 Current rectangle preparation treats padding as total clearance split across
-sides. For irregular polygons, mirror that semantics by making every collision
-polygon a little larger:
+sides, rounded with integer `ceil(padding / 2)` footprints. V2 intentionally
+keeps the same half-padding meaning but uses real-valued geometry, so the
+collision offset is the exact half-padding plus a conservative epsilon:
 
 ```text
 clearance = padding
@@ -323,15 +327,13 @@ DXF geometry
 ```
 
 Correctness must come from robust geometric decisions, not from pretending that
-ordinary floating-point equality is reliable. All topology-changing decisions
-should go through tested predicates or library operations:
+ordinary floating-point equality is reliable. App-owned low-level geometry
+decisions that are not delegated to Clipper2 should go through robust
+predicates:
 
 - orientation / left-right-on-edge tests;
 - segment intersection;
 - point-in-polygon and boundary classification;
-- polygon overlap and containment;
-- sheet inclusion;
-- final clearance validation.
 
 For constructive polygon operations such as offsetting, union, difference,
 intersection, IFP/NFP region operations, and Minkowski-style geometry, use a
@@ -422,8 +424,8 @@ be filtered and capped:
 - cap rotations per piece, for example top 12-24 candidates before benchmark
   tuning.
 
-The result is finite but adaptive: more useful than only `0/90`, without turning
-rotation into an unbounded continuous search problem.
+The result is finite but adaptive: more useful than only orthogonal rotations,
+without turning rotation into an unbounded continuous search problem.
 
 ## Candidate Generation With NFP
 
@@ -462,31 +464,31 @@ mandatory because polygon operations, simplification, and tolerances can fail.
 
 The optimizer should stay close to the current worker architecture, but v2
 should include both deterministic beam search and a GA/search portfolio. Both
-must use the same placement decoder, NFP/IFP cache, scoring primitives, and final
+must use the same placement kernel, NFP/IFP cache, scoring primitives, and final
 validator.
 
-The shared decoder is the core abstraction:
+The shared placement kernel is the core abstraction:
 
 ```text
 input:
-  ordered piece ids
-  selected rotation per piece
+  current placed state
+  candidate piece id
+  candidate rotation
   placement policy id
 
-decoder:
-  for each piece in order:
-    generate NFP/IFP candidate points for the selected rotation
-    score legal candidate placements using the selected policy
-    commit the best legal placement or mark the piece unplaced
+expandState:
+  generate NFP/IFP candidate points for the candidate rotation
+  score legal candidate placements using the selected policy
+  return successor states
 
 output:
-  concrete transforms
-  unplaced ids
-  score and diagnostics
+  concrete transform choices
+  successor scores and diagnostics
 ```
 
 The GA must not encode raw `(x, y)` placement coordinates. Legal placement stays
-centralized in the decoder so every portfolio mode uses the same geometry rules.
+centralized in the placement kernel so every portfolio mode uses the same
+geometry rules.
 
 Beam search constructs layouts while keeping multiple partial states alive:
 
@@ -509,7 +511,8 @@ chromosome =
   placement policy id
 
 fitness(layout) =
-  decode(chromosome) then rank the resulting validated layout
+  decode the chromosome by repeatedly calling expandState
+  then rank the resulting validated layout
 ```
 
 This is not the exact MIP approach from Lastra-Diaz/Ortuno. It is a practical
@@ -587,7 +590,7 @@ choice. The practical target is a portfolio:
 
 ```text
 deterministic convex-NFP beam
-  + time-budgeted GA/search using the same decoder and caches
+  + time-budgeted GA/search using the same placement kernel and caches
   + final validator shared by both
 ```
 
@@ -672,7 +675,7 @@ input pieces
   -> derive cut/collision polygons
   -> generate adaptive finite rotations per piece
   -> candidate generation via IFP/NFP placement regions
-  -> shared decoder
+  -> shared placement kernel
   -> deterministic beam and time-budgeted GA/search portfolio
   -> final validation
   -> render/export original geometry with stored transforms
@@ -699,9 +702,9 @@ Disadvantages:
 
 Target Option B.
 
-Do not make clustering the main architecture. Use clustering only as an optional
-enhancement, or as a short-lived prototype if the project needs a fast triangle
-improvement before the full optimizer.
+Do not make clustering the main architecture. Treat clustering as non-v2
+experimental work or an optional enhancement after the direct NFP engine is
+stable.
 
 The reason is simple: the real problem is irregular nesting. If we introduce
 NFP only to make better rectangles, we will still be fighting rectangle
@@ -806,8 +809,8 @@ Acceptance:
 
 ### GA/Search Portfolio
 
-Goal: improve order, rotation, and policy choices using the same decoder as the
-beam mode.
+Goal: improve order, rotation, and policy choices using the same placement
+kernel as the beam mode.
 
 Tasks:
 
@@ -822,7 +825,8 @@ Tasks:
 Acceptance:
 
 - GA results are reproducible when seeded;
-- every GA layout is produced by the shared decoder, not raw coordinate genes;
+- every GA layout is produced by the shared placement kernel, not raw coordinate
+  genes;
 - the best GA result can tie or beat deterministic beam on benchmark jobs;
 - failed or partial GA runs are reported honestly.
 
@@ -950,12 +954,11 @@ placement-space geometry:
 ```
 
 NFP gives feasible/contact candidate positions. Beam and GA/search modes choose
-among them through the shared decoder. Padding is handled by inflated collision
-polygons, robust geometric decisions, deterministic edge-case rules, and final
-validation.
+among them through the shared placement kernel. Padding is handled by inflated
+collision polygons, robust geometric decisions, deterministic edge-case rules,
+and final validation.
 
 The recommended path is to build a direct NFP-based irregular nesting engine,
 with adaptive finite rotations, deterministic beam search, and a time-budgeted
-GA/search portfolio. A cluster-to-rectangles prototype is acceptable as a
-short-term triangle improvement, but it should not become the architectural
-destination.
+GA/search portfolio. Cluster-to-rectangles work is optional/non-v2 experimental
+work and should not become the architectural destination.
