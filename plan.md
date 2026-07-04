@@ -215,6 +215,20 @@ DXF geometry
   -> use as collision polygon for NFP/IFP
 ```
 
+This preprocessing step is quality-critical. The same source DXF, flattening
+tolerance, padding, and import rules must always produce the same sampled
+points, convex hull, and padded collision polygon.
+
+Debug views should make the transformation inspectable:
+
+```text
+source DXF
+sampled points
+convex hull
+padded collision polygon
+warnings / unresolved geometry
+```
+
 Flattening should classify DXF entities and convert nestable cut geometry into
 points at a configured tolerance:
 
