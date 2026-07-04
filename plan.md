@@ -460,6 +460,40 @@ translated moving polygon does not overlap any placed collision polygon
 The NFP is a candidate generator and broad feasibility map. Validation remains
 mandatory because polygon operations, simplification, and tolerances can fail.
 
+## Geometry Cache Identity
+
+NFP and IFP generation are expensive, and both beam search and GA evaluate many
+states that reuse the same piece pairs and rotations. The engine should cache
+derived geometry so repeated branches do not recompute the same placement-space
+regions.
+
+Cacheable artifacts include:
+
+- rotated collision polygons;
+- pairwise outer NFPs;
+- sheet/piece IFPs;
+- bounding boxes and broad-phase data;
+- unioned forbidden regions for a beam state when profitable.
+
+The cache is correctness-sensitive. Reusing an NFP computed for a different
+clearance, rotation, placement reference, or geometry backend can create invalid
+placements. Cache keys must include the full derived-geometry identity:
+
+```text
+piece geometry digest
+rotation angle
+clearance / padding / epsilon
+flattening tolerance
+convex-hull simplification tolerance
+placement reference convention
+geometry backend name and version/config
+NFP/IFP algorithm version
+```
+
+Pairwise NFP keys must include both pieces and both rotations. IFP keys must
+include the sheet geometry and the moving piece rotation. If any input in the key
+changes, the cached artifact is stale and must not be reused.
+
 ## Shared Decoder And Optimizer Portfolio
 
 The optimizer should stay close to the current worker architecture, but v2
@@ -611,12 +645,9 @@ This is the key conceptual shift. Free space depends on the shape being placed.
 There is no single universal free-space polygon that is equally useful for all
 future shapes.
 
-For performance, cache:
-
-- NFPs for shape-pair plus rotation-pair;
-- IFPs for sheet plus shape rotation;
-- bounding boxes for broad-phase rejection;
-- unioned forbidden regions per beam state when feasible.
+Use the geometry cache for repeated NFP/IFP and broad-phase artifacts, but do
+not treat cached geometry as proof of validity. Candidate placements still need
+the final containment and overlap validation described above.
 
 ## Option A: Transitional NFP Clustering Then Rectangles
 
@@ -755,7 +786,7 @@ Tasks:
 - compute principal-axis / oriented-bounding-box angles;
 - deduplicate angles by tolerance;
 - cap the candidate set per piece and expose diagnostics for discarded angles;
-- cache rotated collision polygons by piece id and rotation.
+- cache rotated collision polygons by geometry digest and rotation.
 
 Acceptance:
 
