@@ -258,6 +258,12 @@ Do not make full concave NFP the default v2 path. For concave shapes, the
 number of edge interactions and fusion cases can grow quickly, and the candidate
 set can become noisy before the optimizer is mature.
 
+If precise concave or hole-aware NFPs become necessary later, use Rocha's
+approach as the reference direction: convex decomposition, pairwise convex NFPs,
+then graph-based merging that preserves outlines, holes, perfect sliding, and
+perfect-fit cases. Do not treat a plain polygon union as a complete replacement
+for that topology-aware merge.
+
 ## What Changes Compared With MaxRects
 
 Current MaxRects state:
@@ -533,7 +539,35 @@ should include both deterministic beam search and a GA/search portfolio. Both
 must use the same placement kernel, NFP/IFP cache, scoring primitives, and final
 validator.
 
-The shared placement kernel is the core abstraction:
+The shared placement kernel is the core abstraction. A complete layout is
+produced through an explicit decoder contract:
+
+```text
+decode(order, rotations, placementPolicy, geometryCache) -> layoutResult
+
+input:
+  ordered piece ids
+  selected rotation per piece
+  placement policy id
+  NFP/IFP geometry cache
+
+responsibility:
+  place pieces one by one through expandState
+  generate NFP/IFP candidates
+  rank legal candidates through the selected policy
+  validate accepted placements
+
+output:
+  placed transforms
+  unplaced pieces
+  score and diagnostics
+  validation result
+```
+
+Beam and GA differ in how they choose decoder inputs. They must not place
+geometry themselves.
+
+The one-step operation underneath `decode` is:
 
 ```text
 input:
