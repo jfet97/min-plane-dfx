@@ -148,13 +148,24 @@ This replaces free rectangles. The free space is not stored as rectangles or
 polygons on the sheet; it is represented as feasible placement regions for the
 next moving piece.
 
-## V2 Scope: Convex Collision Approximation
+## V2 Scope: Strong Convex Irregular Nesting
 
-The first irregular version should approximate each imported DXF shape with a
-convex collision polygon, not a concave polygon. Rendering and export should
-still use the original DXF geometry or a high-quality flattened representation;
-the convex polygon is only the conservative geometry consumed by the nesting
-engine.
+V2 should be a real shape-aware irregular nesting engine, not a minimal
+four-rotation prototype and not a transitional rectangle wrapper. It should use:
+
+```text
+convex collision polygons
+  + adaptive finite per-piece rotations
+  + NFP/IFP placement legality
+  + a shared deterministic placement decoder
+  + beam search and GA/search portfolio modes
+  + final geometric validation
+```
+
+Each imported DXF shape should initially be approximated with a convex collision
+polygon, not a concave polygon. Rendering and export should still use the
+original DXF geometry or a high-quality flattened representation; the convex
+polygon is only the conservative geometry consumed by the nesting engine.
 
 This keeps the geometry layer tractable:
 
@@ -167,7 +178,7 @@ This keeps the geometry layer tractable:
 
 The cost is conservative packing. Concavities and holes in the source DXF are
 not usable free space in v2 because the convex collision polygon covers them.
-That is acceptable for the first shape-aware engine: it should already beat
+That is acceptable for v2 because convex collision geometry should already beat
 bounding rectangles for triangles, trapezoids, stars, circles approximated by
 polygons, and rotated/angled profiles, while avoiding the combinatorial and
 robustness risk of full concave NFP.
@@ -184,7 +195,8 @@ DXF geometry
   -> use as collision polygon for NFP/IFP
 ```
 
-A later version can add concavity recovery in controlled forms:
+Concavity recovery is not part of the default v2 collision model. If explored,
+it should be isolated behind controlled modes:
 
 - convex decomposition for selected shapes only;
 - multi-convex-piece clusters that keep each component convex;
@@ -317,30 +329,37 @@ for every placed piece:
 The conservative offset should make this pass comfortably. If it fails, the
 result is invalid even if the heuristic thought it was valid.
 
-## Rotation Set
+## Adaptive Finite Rotation Set
 
-Do not search continuous rotation first.
+Do not search arbitrary continuous rotations. V2 should still use a strong
+finite per-piece rotation set generated from the piece geometry and shop
+constraints.
 
-Start with finite rotations:
-
-```text
-0, 90
-```
-
-If free rotation is enabled, add:
+Every piece should include the baseline orthogonal rotations when physically
+allowed:
 
 ```text
 0, 90, 180, 270
 ```
 
-Later add shape-derived angles:
+Then add piece-specific shape angles:
 
-- edge angles that make an edge horizontal or vertical;
-- principal-axis angles for elongated shapes;
+- edge angles that align important edges to the sheet X or Y axis;
+- principal-axis / oriented-bounding-box angles for elongated or diagonal
+  pieces;
 - configured machine-safe angles if the cutting workflow has constraints.
 
-This is a controlled approximation. Arbitrary continuous rotation can be added
-later as local refinement, but it should not be the first implementation.
+Do not add every tiny flattened segment as a rotation. Rotation candidates must
+be filtered and capped:
+
+- ignore very short/noisy edges from curve flattening;
+- prefer long edges and stable hull edges;
+- deduplicate near-equal angles by tolerance;
+- cap rotations per piece, for example top 12-24 candidates before benchmark
+  tuning.
+
+The result is finite but adaptive: more useful than only `0/90`, without turning
+rotation into an unbounded continuous search problem.
 
 ## Candidate Generation With NFP
 
@@ -375,9 +394,37 @@ translated moving polygon does not overlap any placed collision polygon
 The NFP is a candidate generator and broad feasibility map. Validation remains
 mandatory because polygon operations, simplification, and tolerances can fail.
 
-## Optimizer
+## Shared Decoder And Optimizer Portfolio
 
-The optimizer should stay close to the current worker architecture.
+The optimizer should stay close to the current worker architecture, but v2
+should include both deterministic beam search and a GA/search portfolio. Both
+must use the same placement decoder, NFP/IFP cache, scoring primitives, and final
+validator.
+
+The shared decoder is the core abstraction:
+
+```text
+input:
+  ordered piece ids
+  selected rotation per piece
+  placement policy id
+
+decoder:
+  for each piece in order:
+    generate NFP/IFP candidate points for the selected rotation
+    score legal candidate placements using the selected policy
+    commit the best legal placement or mark the piece unplaced
+
+output:
+  concrete transforms
+  unplaced ids
+  score and diagnostics
+```
+
+The GA must not encode raw `(x, y)` placement coordinates. Legal placement stays
+centralized in the decoder so every portfolio mode uses the same geometry rules.
+
+Beam search constructs layouts while keeping multiple partial states alive:
 
 For each beam state:
 
@@ -387,6 +434,18 @@ for each remaining piece:
     generate NFP/IFP candidate points
     score candidate placements
 keep top K successor states
+```
+
+GA/search explores the global choices that beam can miss:
+
+```text
+chromosome =
+  piece permutation
+  rotation index per piece
+  placement policy id
+
+fitness(layout) =
+  decode(chromosome) then rank the resulting validated layout
 ```
 
 This is not the exact MIP approach from Lastra-Diaz/Ortuno. It is a practical
@@ -404,24 +463,10 @@ Initial scoring should reuse ideas already present in the project:
 - prefer placements that increase contact without overlap.
 
 Avoid relying only on local best area. NFP gives more candidates and therefore
-more ways to make locally attractive mistakes. Beam width and scoring diversity
-matter.
+more ways to make locally attractive mistakes. Beam width, GA diversity, and
+scoring diversity matter.
 
-## Search Strategy Roadmap
-
-The first NFP implementation should keep a deterministic constructive solver so
-geometry bugs are easy to debug. Beam search remains useful for this because it
-keeps several partial layouts alive and produces inspectable history frames.
-
-After the convex NFP decoder works, add a genetic/metaheuristic outer loop as a
-second optimizer mode rather than replacing the beam immediately. The decoder
-should be shared:
-
-```text
-chromosome = ordered piece ids + rotation index per piece
-decoder(chromosome) = construct layout with convex NFP/IFP candidates
-fitness(layout) = lexicographic score tuple
-```
+## GA Search Model
 
 Recommended chromosome fields:
 
@@ -432,7 +477,8 @@ Recommended chromosome fields:
 Recommended initial population:
 
 - current `sortPiecesForNesting` order;
-- first-fit-decreasing by convex hull area, longest edge, and imbalance;
+- first-fit-decreasing by convex hull area, longest edge, height, width, and
+  imbalance;
 - a few strategy-derived permutations that put awkward/high-vertex pieces first;
 - random swaps/inversions from those seeds.
 
@@ -470,19 +516,16 @@ compactness once all pieces placed/unplaced status ties. That directly avoids
 the bad local behavior where a visually compact contact placement fragments the
 remaining sheet.
 
-Genetic search can outperform beam search when the main mistake is early piece
-order or rotation. Beam search is still better for debugging and for short
-time-budget deterministic runs. The practical target is a portfolio:
+Beam and GA are complementary v2 modes, not a first/later split. Beam search is
+the deterministic reference and gives inspectable partial-state history. GA can
+outperform beam when the main mistake is early piece order, rotation, or policy
+choice. The practical target is a portfolio:
 
 ```text
-fast deterministic convex-NFP beam
-  + time-budgeted genetic outer search using the same decoder and caches
+deterministic convex-NFP beam
+  + time-budgeted GA/search using the same decoder and caches
   + final validator shared by both
 ```
-
-Do not start the genetic version until the deterministic convex decoder, NFP
-cache, and final validation are stable. Otherwise the optimizer will hide
-geometry bugs behind noisy search behavior.
 
 ## Free Space Model
 
@@ -510,7 +553,7 @@ For performance, cache:
 
 ## Option A: Transitional NFP Clustering Then Rectangles
 
-This is the safer first prototype.
+This is a possible prototype, but it is not the v2 target.
 
 Pipeline:
 
@@ -551,19 +594,22 @@ Disadvantages:
 - cluster selection can consume pieces badly;
 - hard to make general without reimplementing much of the real optimizer.
 
-This should be considered a prototype or interim feature, not the final target.
+This should be considered a prototype or interim feature only, not the v2
+architecture.
 
 ## Option B: Direct NFP-Based Irregular Nesting
 
-This is the recommended long-term direction.
+This is the recommended v2 direction.
 
 Pipeline:
 
 ```text
 input pieces
   -> derive cut/collision polygons
-  -> worker beam search over irregular placements
+  -> generate adaptive finite rotations per piece
   -> candidate generation via IFP/NFP placement regions
+  -> shared decoder
+  -> deterministic beam and time-budgeted GA/search portfolio
   -> final validation
   -> render/export original geometry with stored transforms
 ```
@@ -590,19 +636,21 @@ Disadvantages:
 Target Option B.
 
 Do not make clustering the main architecture. Use clustering only as an optional
-enhancement after the NFP geometry layer exists, or as a short-lived prototype
-if the project needs a fast triangle improvement before the full optimizer.
+enhancement, or as a short-lived prototype if the project needs a fast triangle
+improvement before the full optimizer.
 
 The reason is simple: the real problem is irregular nesting. If we introduce
 NFP only to make better rectangles, we will still be fighting rectangle
 artifacts. The cleaner model is to let polygons be the occupied geometry and
 let NFP/IFP define feasible placement space.
 
-## Implementation Phases
+## V2 Delivery Workstreams
 
-### Phase 1: Geometry Kernel Spike
+These are workstreams for one strong v2, not separate product versions.
 
-Goal: prove robust polygon operations outside the worker optimizer.
+### Geometry Kernel
+
+Goal: provide robust polygon operations outside the worker optimizer.
 
 Tasks:
 
@@ -622,13 +670,35 @@ Acceptance:
 - deterministic integer-grid output;
 - final validation catches intentional clearance violations.
 
-### Phase 2: Pairwise NFP Prototype
+### Adaptive Rotation Generator
+
+Goal: generate strong bounded rotation candidates for each convex collision
+polygon.
+
+Tasks:
+
+- include baseline orthogonal rotations when allowed;
+- compute stable edge-alignment angles from long convex-hull edges;
+- compute principal-axis / oriented-bounding-box angles;
+- deduplicate angles by tolerance;
+- cap the candidate set per piece and expose diagnostics for discarded angles;
+- cache rotated collision polygons by piece id and rotation.
+
+Acceptance:
+
+- diagonal and elongated pieces receive useful non-orthogonal rotations;
+- tiny flattened curve segments do not explode the rotation set;
+- repeated runs produce identical rotation lists;
+- NFP cache keys include the selected rotation.
+
+### Pairwise NFP And IFP
 
 Goal: understand and test NFP semantics with real project shapes.
 
 Tasks:
 
 - compute or approximate NFP for two padded polygons and fixed rotations;
+- compute IFP for a rotated piece inside the sheet;
 - expose debug visualization of placement-space NFP;
 - generate contact candidate points from NFP boundary;
 - validate each candidate by real polygon intersection;
@@ -642,10 +712,10 @@ Acceptance:
 - padding is preserved by construction;
 - candidate generation is deterministic.
 
-### Phase 3: Single-Sheet NFP Constructive Solver
+### Shared Decoder And Beam Search
 
 Goal: replace free rectangles for one run while keeping the worker/history
-contract recognizable.
+contract recognizable and deterministic.
 
 Tasks:
 
@@ -664,7 +734,29 @@ Acceptance:
 - fallback handles invalid/empty feasible regions honestly;
 - no fake placements or fake history.
 
-### Phase 4: Multi-Plate And CSV Integration
+### GA/Search Portfolio
+
+Goal: improve order, rotation, and policy choices using the same decoder as the
+beam mode.
+
+Tasks:
+
+- encode chromosomes as piece permutation, rotation index per piece, and
+  placement policy id;
+- seed the population with deterministic orders and rotation choices;
+- add swap, move, subsequence-reversal, rotation, and policy mutations;
+- use order-preserving crossover for piece permutations;
+- rank decoded layouts with the same lexicographic final score family;
+- respect a time budget and return the best validated layout.
+
+Acceptance:
+
+- GA results are reproducible when seeded;
+- every GA layout is produced by the shared decoder, not raw coordinate genes;
+- the best GA result can tie or beat deterministic beam on benchmark jobs;
+- failed or partial GA runs are reported honestly.
+
+### Multi-Plate And CSV Integration
 
 Goal: preserve current subrun/CSV behavior while switching the geometry engine.
 
@@ -682,7 +774,7 @@ Acceptance:
 - CSV export still maps placements back to source rows;
 - saved projects reload with irregular geometry and histories.
 
-### Phase 5: Optional Clustering
+### Optional Clustering
 
 Goal: improve dense local arrangements without making clustering mandatory.
 
@@ -722,11 +814,12 @@ NFP creates many candidates, especially with many pieces and rotations.
 
 Mitigation:
 
-- finite rotation set;
+- finite adaptive rotation set with dedupe and per-piece caps;
 - top-N candidate pruning per piece;
 - broad-phase bounding boxes;
 - NFP cache by shape pair and rotation pair;
 - beam width cap;
+- GA population/time budget cap;
 - time budget with honest partial results.
 
 ### Local Minima
@@ -737,6 +830,7 @@ prefers a bad early contact.
 Mitigation:
 
 - beam search rather than greedy single path;
+- GA/search over order, rotations, and placement policy;
 - scoring diversity;
 - preserve multiple candidate types;
 - compare against current rectangle MaxRects as a baseline;
@@ -759,12 +853,11 @@ Mitigation:
 - Should padding mean total clearance between cuts, or clearance around each
   piece? Current rectangle semantics imply total clearance.
 - What flattening tolerance is acceptable for DXF arcs/circles?
-- Does the first irregular solver target fixed sheet nesting or strip-length
-  minimization?
+- Does v2 target fixed sheet nesting or strip-length minimization?
 - Should exact MIP be kept only as a benchmark/offline experiment, or ignored
   until the heuristic engine is mature?
 
-## Non-Goals For The First Irregular Version
+## Non-Goals For V2
 
 - exact global optimality;
 - arbitrary continuous rotation;
@@ -785,11 +878,13 @@ placement-space geometry:
   minus union of NFP(placed piece, moving piece)
 ```
 
-NFP gives feasible/contact candidate positions. Beam search or another
-heuristic chooses among them. Padding is handled by inflated collision polygons
-on an integer precision grid, with conservative epsilon and final validation.
+NFP gives feasible/contact candidate positions. Beam and GA/search modes choose
+among them through the shared decoder. Padding is handled by inflated collision
+polygons on an integer precision grid, with conservative epsilon and final
+validation.
 
 The recommended path is to build a direct NFP-based irregular nesting engine,
-with optional clustering later. A cluster-to-rectangles prototype is acceptable
-as a short-term triangle improvement, but it should not become the architectural
+with adaptive finite rotations, deterministic beam search, and a time-budgeted
+GA/search portfolio. A cluster-to-rectangles prototype is acceptable as a
+short-term triangle improvement, but it should not become the architectural
 destination.
