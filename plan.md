@@ -106,6 +106,16 @@ A fixed reference point used to describe a placed polygon. This should be a
 single convention across the engine, for example the lower-left corner of the
 collision polygon bounding box in local coordinates.
 
+Use a deterministic derived reference point, not the parser's first vertex or
+`path[0]`. The default convention should be the collision polygon bounding-box
+minimum corner:
+
+```text
+referencePoint = (minX(collisionPolygon), minY(collisionPolygon))
+```
+
+Normalize local geometry by translating that point to `(0, 0)`.
+
 The placement point is not a special geometric truth. It is just the coordinate
 used by the placement API:
 
@@ -187,9 +197,11 @@ robustness risk of full concave NFP.
 
 ## DXF To Convex Collision Polygon
 
-The renderer or import layer can keep the original DXF geometry for display and
-export, but the nesting engine needs a simple convex collision polygon per
-piece.
+The renderer or import layer should preserve the original DXF entities for
+display, traceability, and export. The nesting engine consumes a derived convex
+collision polygon per nestable piece. These are separate artifacts: source DXF
+geometry remains authoritative, while collision geometry is a conservative
+optimization aid.
 
 Pipeline:
 
@@ -198,19 +210,30 @@ DXF geometry
   -> flatten supported entities to sampled points
   -> deduplicate / clean sampled points
   -> compute convex hull
-  -> normalize hull to local placement coordinates
+  -> normalize hull so bbox min corner is the local placement origin
   -> offset by padding / 2 + epsilon
   -> use as collision polygon for NFP/IFP
 ```
 
-Flattening should convert supported DXF entities into points at a configured
-tolerance:
+Flattening should classify DXF entities and convert nestable cut geometry into
+points at a configured tolerance:
 
 - lines and polyline segments contribute endpoints;
 - arcs, circles, and bulges are sampled into enough points to respect the
   flattening tolerance;
-- unsupported or invalid entities should produce explicit import warnings rather
-  than fake geometry.
+- text, dimensions, construction helpers, blocks, layers, open contours, or
+  ambiguous contour groups may be valid DXF data without being directly nestable
+  cut geometry.
+
+Do not silently repair, drop, or reinterpret DXF entities to make them fit the
+nesting pipeline. Preserve the source entities and surface unresolved geometry
+as warnings or user decisions:
+
+```text
+source DXF entity is preserved
+nestable cut geometry contributes sampled points
+unresolved geometry is reported, not faked
+```
 
 Convex hull construction is app-owned geometry logic. Use robust predicates for
 the hull turn test, because the algorithm repeatedly asks whether three sampled
