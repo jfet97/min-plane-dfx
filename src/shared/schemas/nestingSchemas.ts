@@ -22,6 +22,45 @@ export const NestingOptionsStrictSchema = Schema.Struct({
   maxHistoryEvents: Schema.optional(Schema.Number)
 })
 
+const NestingRequestPieceStrict = Schema.Struct({
+  id: Schema.String.check(Schema.isMinLength(1)),
+  sourcePieceId: Schema.String.check(Schema.isMinLength(1)),
+  realBounds: Schema.Struct({
+    x: NonNegativeCoordinate,
+    y: NonNegativeCoordinate,
+    width: PositiveWidth,
+    height: PositiveHeight
+  }),
+  paddedBounds: Schema.Struct({
+    x: NonNegativeCoordinate,
+    y: NonNegativeCoordinate,
+    width: PositiveWidth,
+    height: PositiveHeight
+  }),
+  padding: NonNegativePadding,
+  allowRotation: Schema.Boolean,
+  cutRowRef: Schema.optional(
+    Schema.Struct({
+      reference: Schema.String,
+      customerName: Schema.String,
+      csvRowId: Schema.String
+    })
+  )
+})
+
+const piecesHaveUniqueIds = Schema.makeFilter<
+  ReadonlyArray<Schema.Schema.Type<typeof NestingRequestPieceStrict>>
+>((pieces) => {
+  const ids = new Set<string>()
+  for (const [index, piece] of pieces.entries()) {
+    if (ids.has(piece.id)) {
+      return { path: [index, 'id'], issue: `Duplicate piece id: ${piece.id}` }
+    }
+    ids.add(piece.id)
+  }
+  return undefined
+})
+
 export const NestingRequestStrict = Schema.Struct({
   version: Schema.Literal(1),
   jobId: Schema.String.check(Schema.isMinLength(1)),
@@ -31,33 +70,10 @@ export const NestingRequestStrict = Schema.Struct({
     label: Schema.String
   }),
   padding: NonNegativePadding,
-  pieces: Schema.Array(
-    Schema.Struct({
-      id: Schema.String.check(Schema.isMinLength(1)),
-      sourcePieceId: Schema.String.check(Schema.isMinLength(1)),
-      realBounds: Schema.Struct({
-        x: NonNegativeCoordinate,
-        y: NonNegativeCoordinate,
-        width: PositiveWidth,
-        height: PositiveHeight
-      }),
-      paddedBounds: Schema.Struct({
-        x: NonNegativeCoordinate,
-        y: NonNegativeCoordinate,
-        width: PositiveWidth,
-        height: PositiveHeight
-      }),
-      padding: NonNegativePadding,
-      allowRotation: Schema.Boolean,
-      cutRowRef: Schema.optional(
-        Schema.Struct({
-          reference: Schema.String,
-          customerName: Schema.String,
-          csvRowId: Schema.String
-        })
-      )
-    })
-  ).check(Schema.isNonEmpty()),
+  pieces: Schema.Array(NestingRequestPieceStrict).check(
+    Schema.isNonEmpty(),
+    piecesHaveUniqueIds
+  ),
   options: NestingOptionsStrictSchema,
   strategyRunId: Schema.optional(Schema.String.check(Schema.isMinLength(1)))
 })

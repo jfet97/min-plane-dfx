@@ -47,7 +47,13 @@ namespace ScoringGeometry {
 
   // candidate scores use the cluster extents after committing the candidate
   export function candidateExtents(candidate: NestingAlgorithmCandidate): ClusterExtents {
-    return usedClusterExtents([...candidate.state.placements, candidate.placement])
+    let width = candidate.placement.x + candidate.placement.width
+    let height = candidate.placement.y + candidate.placement.height
+    for (const placement of candidate.state.placements) {
+      width = Math.max(width, placement.x + placement.width)
+      height = Math.max(height, placement.y + placement.height)
+    }
+    return { width, height }
   }
 
   // used area is the bounding cluster area, not the sum of placed piece areas
@@ -131,7 +137,7 @@ export function makeStrategyOrders(
     (strategy) =>
       new StrategyOrderEntry({
         strategyId: strategy.id,
-        order: makeCandidateOrder(strategy)
+        order: makeCandidateOrder(sheet, strategy)
       })
   )
   const firstEntry = candidateOrders[0]
@@ -139,18 +145,20 @@ export function makeStrategyOrders(
   return {
     candidateOrder:
       firstEntry === undefined
-        ? [new StrategyOrderEntry({ strategyId: '', order: () => neutralCandidateOrder })]
+        ? [new StrategyOrderEntry({ strategyId: '', order: neutralCandidateOrder })]
         : [firstEntry, ...candidateOrders.slice(1)],
     stateOrder: () => makeStateOrder(sheet, layoutSelectionStrategy)
   }
 }
 
-function makeCandidateOrder(strategy: NestingStrategyDefinition): CandidateOrder {
-  return ({ sheet }) =>
-    Order.combineAll<NestingAlgorithmCandidate>([
-      ...candidatePrefixOrders(strategy.prefix, sheet),
-      ...strategy.tail.map(candidateTailOrder)
-    ])
+function makeCandidateOrder(
+  sheet: SheetSpec,
+  strategy: NestingStrategyDefinition
+): CandidateOrder {
+  return Order.combineAll<NestingAlgorithmCandidate>([
+    ...candidatePrefixOrders(strategy.prefix, sheet),
+    ...strategy.tail.map(candidateTailOrder)
+  ])
 }
 
 function candidatePrefixOrders(

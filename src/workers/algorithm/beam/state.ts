@@ -1,10 +1,11 @@
 import type { FreeRectangle, Placement, PreparedPiece } from '@shared/domain/nesting.js'
 
 const minimumK = 5
+const maximumK = 10
 
 // retained beam width from selected placement-order count
 export function K(selectedStrategyCount: number): number {
-  return Math.max(minimumK, selectedStrategyCount * 2)
+  return Math.min(maximumK, Math.max(minimumK, selectedStrategyCount * 2))
 }
 
 /**

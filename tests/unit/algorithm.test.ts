@@ -23,6 +23,7 @@ import {
   type NestingAlgorithmState
 } from '../../src/workers/algorithm/nestingAlgorithm.js'
 import {
+  ALL_STRATEGY_DEFINITIONS,
   DEFAULT_STRATEGY_ID,
   STRATEGY_DEFINITIONS,
   findStrategy
@@ -120,7 +121,7 @@ describe('runMaxRectsBeamSearch', () => {
     expect(K(1)).toBe(5)
     expect(K(2)).toBe(5)
     expect(K(4)).toBe(8)
-    expect(K(8)).toBe(16)
+    expect(K(8)).toBe(10)
   })
 
   it('builds the initial beam from the first two pieces and both orientations', () => {
@@ -243,7 +244,7 @@ describe('runMaxRectsBeamSearch', () => {
       pieces: [piece('a'), piece('b')],
       beamWidth: K(1),
       candidateOrder: [
-        new CandidateOrderEntry({ strategyId: 's1', order: () => Order.make(() => 0) })
+        new CandidateOrderEntry({ strategyId: 's1', order: Order.make(() => 0) })
       ],
       stateOrder: () => Order.make(() => 0),
       hooks: {
@@ -324,8 +325,8 @@ describe('runMaxRectsBeamSearch', () => {
       pieces: [piece('a'), piece('b')],
       beamWidth: K(2),
       candidateOrder: [
-        new CandidateOrderEntry({ strategyId: 's1', order: () => Order.make(() => 0) }),
-        new CandidateOrderEntry({ strategyId: 's2', order: () => Order.make(() => 0) })
+        new CandidateOrderEntry({ strategyId: 's1', order: Order.make(() => 0) }),
+        new CandidateOrderEntry({ strategyId: 's2', order: Order.make(() => 0) })
       ],
       stateOrder: () => Order.make(() => 0),
       hooks: {
@@ -380,13 +381,8 @@ describe('strategyOrders', () => {
   it('uses candidate prefix criteria before tail criteria', () => {
     const strategy = requireDefined(findStrategy('balanced-bottom-left-then-preserve-free'))
     const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
-    const order = makeStrategyOrders(
-      baseRequest().sheet,
-      [strategy],
-      layoutStrategy
-    ).candidateOrder[0]!.order({
-      sheet: baseRequest().sheet
-    })
+    const order = makeStrategyOrders(baseRequest().sheet, [strategy], layoutStrategy)
+      .candidateOrder[0]!.order
     const higherButCompact = candidateAt({
       freeRectangle: freeRectangleAt(10, 10, 10, 10),
       piece: sizedPiece('a', 10, 10)
@@ -403,20 +399,10 @@ describe('strategyOrders', () => {
     const preserveFree = requireDefined(findStrategy('balanced-preserve-free-then-bottom-left'))
     const bottomLeft = requireDefined(findStrategy('balanced-bottom-left-then-preserve-free'))
     const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
-    const preserveFreeOrder = makeStrategyOrders(
-      baseRequest().sheet,
-      [preserveFree],
-      layoutStrategy
-    ).candidateOrder[0]!.order({
-      sheet: baseRequest().sheet
-    })
-    const bottomLeftOrder = makeStrategyOrders(
-      baseRequest().sheet,
-      [bottomLeft],
-      layoutStrategy
-    ).candidateOrder[0]!.order({
-      sheet: baseRequest().sheet
-    })
+    const preserveFreeOrder = makeStrategyOrders(baseRequest().sheet, [preserveFree], layoutStrategy)
+      .candidateOrder[0]!.order
+    const bottomLeftOrder = makeStrategyOrders(baseRequest().sheet, [bottomLeft], layoutStrategy)
+      .candidateOrder[0]!.order
     const tightButHigher = candidateAt({
       freeRectangle: freeRectangleAt(0, 10, 10, 10),
       piece: sizedPiece('a', 10, 10)
@@ -434,13 +420,8 @@ describe('strategyOrders', () => {
     const shortFill = requireDefined(findStrategy('short-fill-preserve-free-then-bottom-left'))
     const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
     const squareSheet = { width: 100, height: 100, label: 'square' }
-    const order = makeStrategyOrders(
-      squareSheet,
-      [shortFill],
-      layoutStrategy
-    ).candidateOrder[0]!.order({
-      sheet: squareSheet
-    })
+    const order = makeStrategyOrders(squareSheet, [shortFill], layoutStrategy)
+      .candidateOrder[0]!.order
     const freeRectangle = freeRectangleAt(0, 0, 100, 100)
     const vertical = candidateAt({
       freeRectangle,
@@ -458,9 +439,7 @@ describe('strategyOrders', () => {
     const balanced = requireDefined(findStrategy('balanced-bottom-left-then-preserve-free'))
     const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
     const sheet = { width: 5000, height: 10000, label: 'tall' }
-    const order = makeStrategyOrders(sheet, [balanced], layoutStrategy).candidateOrder[0]!.order({
-      sheet
-    })
+    const order = makeStrategyOrders(sheet, [balanced], layoutStrategy).candidateOrder[0]!.order
     const freeRectangle = freeRectangleAt(0, 0, sheet.width, sheet.height)
     const skinnySmallerArea = candidateAt({
       freeRectangle,
@@ -478,9 +457,7 @@ describe('strategyOrders', () => {
     const shortFill = requireDefined(findStrategy('short-fill-preserve-free-then-bottom-left'))
     const layoutStrategy = requireDefined(findLayoutSelectionStrategy('compact-first'))
     const sheet = { width: 5000, height: 10000, label: 'tall' }
-    const order = makeStrategyOrders(sheet, [shortFill], layoutStrategy).candidateOrder[0]!.order({
-      sheet
-    })
+    const order = makeStrategyOrders(sheet, [shortFill], layoutStrategy).candidateOrder[0]!.order
     const freeRectangle = freeRectangleAt(0, 0, sheet.width, sheet.height)
     const wider = candidateAt({
       freeRectangle,
@@ -735,11 +712,11 @@ describe('computeNesting', () => {
 })
 
 describe('strategies data', () => {
-  it('registers exactly eight initial strategy definitions', () => {
-    expect(STRATEGY_DEFINITIONS.length).toBe(8)
+  it('keeps all eight strategy definitions available for explicit lookup', () => {
+    expect(ALL_STRATEGY_DEFINITIONS.length).toBe(8)
   })
 
-  it('matches the eight scoring-note candidate strategy orders', () => {
+  it('exposes the four dominant strategy definitions by default', () => {
     expect(
       STRATEGY_DEFINITIONS.map((strategy) => ({
         id: strategy.id,
@@ -753,9 +730,9 @@ describe('strategies data', () => {
         tail: ['r', 's', 'y', 'x']
       },
       {
-        id: 'balanced-short-side-fit-then-bottom-left',
-        prefix: 'balanced_compactness',
-        tail: ['s', 'r', 'y', 'x']
+        id: 'short-fill-preserve-free-then-bottom-left',
+        prefix: 'short_side_fill',
+        tail: ['r', 's', 'y', 'x']
       },
       {
         id: 'balanced-bottom-left-then-short-side-fit',
@@ -763,29 +740,9 @@ describe('strategies data', () => {
         tail: ['y', 'x', 's', 'r']
       },
       {
-        id: 'balanced-bottom-left-then-preserve-free',
+        id: 'balanced-short-side-fit-then-bottom-left',
         prefix: 'balanced_compactness',
-        tail: ['y', 'x', 'r', 's']
-      },
-      {
-        id: 'short-fill-preserve-free-then-bottom-left',
-        prefix: 'short_side_fill',
-        tail: ['r', 's', 'y', 'x']
-      },
-      {
-        id: 'short-fill-short-side-fit-then-bottom-left',
-        prefix: 'short_side_fill',
         tail: ['s', 'r', 'y', 'x']
-      },
-      {
-        id: 'short-fill-bottom-left-then-short-side-fit',
-        prefix: 'short_side_fill',
-        tail: ['y', 'x', 's', 'r']
-      },
-      {
-        id: 'short-fill-bottom-left-then-preserve-free',
-        prefix: 'short_side_fill',
-        tail: ['y', 'x', 'r', 's']
       }
     ])
   })

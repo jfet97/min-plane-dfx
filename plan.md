@@ -59,6 +59,34 @@ NFP/IFP geometry primitive
   + optional clustering
 ```
 
+## Practical Open-Source Reference: SVGNest / Deepnest
+
+SVGNest and Deepnest are useful implementation references because they separate
+the problem into the same two layers this app needs:
+
+```text
+NFP/IFP geometry decides legal placements
+search policy decides order, rotation, and which legal point to use
+```
+
+The relevant lessons are:
+
+- use NFPs for part-to-part forbidden placement regions;
+- use IFPs for sheet containment;
+- choose candidate points from NFP/IFP boundaries, not from a dense sheet grid;
+- start from first-fit-decreasing style ordering because large/hard pieces placed
+  late often create unrecoverable layouts;
+- cache NFPs by shape pair and rotation pair, because the optimizer evaluates
+  many similar individuals or beam branches;
+- treat the placement algorithm as a decoder: given an order and rotations, it
+  constructs one deterministic layout.
+
+Deepnest's genetic algorithm is most relevant as an outer search layer. Its gene
+is essentially piece order plus rotation choices. Fitness then measures how good
+the decoded layout is. This is a good fit for this project because the current
+worker already separates initial ordering, candidate ordering, and survivor
+selection.
+
 ## Terms
 
 ### Cut Polygon
@@ -119,6 +147,53 @@ IFP(sheet, B) minus union(NFP(placedPiece, B) for each placed piece)
 This replaces free rectangles. The free space is not stored as rectangles or
 polygons on the sheet; it is represented as feasible placement regions for the
 next moving piece.
+
+## V2 Scope: Convex Collision Approximation
+
+The first irregular version should approximate each imported DXF shape with a
+convex collision polygon, not a concave polygon. Rendering and export should
+still use the original DXF geometry or a high-quality flattened representation;
+the convex polygon is only the conservative geometry consumed by the nesting
+engine.
+
+This keeps the geometry layer tractable:
+
+- convex NFP construction can be implemented with edge-angle merging in roughly
+  linear time in the number of polygon edges;
+- the NFP of two convex polygons remains manageable and does not require
+  convex decomposition plus pairwise NFP fusion;
+- candidate generation stays smaller and easier to debug;
+- offsetting, validation, and caching are much simpler.
+
+The cost is conservative packing. Concavities and holes in the source DXF are
+not usable free space in v2 because the convex collision polygon covers them.
+That is acceptable for the first shape-aware engine: it should already beat
+bounding rectangles for triangles, trapezoids, stars, circles approximated by
+polygons, and rotated/angled profiles, while avoiding the combinatorial and
+robustness risk of full concave NFP.
+
+Recommended initial representation:
+
+```text
+DXF geometry
+  -> flatten to sampled points
+  -> normalize to local coordinates
+  -> compute convex hull
+  -> optionally simplify/cap hull vertices by tolerance
+  -> offset by padding / 2 + epsilon
+  -> use as collision polygon for NFP/IFP
+```
+
+A later version can add concavity recovery in controlled forms:
+
+- convex decomposition for selected shapes only;
+- multi-convex-piece clusters that keep each component convex;
+- opt-in precise concave NFP for small edge counts;
+- benchmark-only exact/concave mode for comparison.
+
+Do not make full concave NFP the default v2 path. For concave shapes, the
+number of edge interactions and fusion cases can grow quickly, and the candidate
+set can become noisy before the optimizer is mature.
 
 ## What Changes Compared With MaxRects
 
@@ -331,6 +406,83 @@ Initial scoring should reuse ideas already present in the project:
 Avoid relying only on local best area. NFP gives more candidates and therefore
 more ways to make locally attractive mistakes. Beam width and scoring diversity
 matter.
+
+## Search Strategy Roadmap
+
+The first NFP implementation should keep a deterministic constructive solver so
+geometry bugs are easy to debug. Beam search remains useful for this because it
+keeps several partial layouts alive and produces inspectable history frames.
+
+After the convex NFP decoder works, add a genetic/metaheuristic outer loop as a
+second optimizer mode rather than replacing the beam immediately. The decoder
+should be shared:
+
+```text
+chromosome = ordered piece ids + rotation index per piece
+decoder(chromosome) = construct layout with convex NFP/IFP candidates
+fitness(layout) = lexicographic score tuple
+```
+
+Recommended chromosome fields:
+
+- permutation of prepared piece ids;
+- rotation choice per piece from the finite rotation set;
+- optional placement policy id, e.g. compact, preserve-free, contact-heavy.
+
+Recommended initial population:
+
+- current `sortPiecesForNesting` order;
+- first-fit-decreasing by convex hull area, longest edge, and imbalance;
+- a few strategy-derived permutations that put awkward/high-vertex pieces first;
+- random swaps/inversions from those seeds.
+
+Recommended mutations:
+
+- swap two pieces;
+- move one piece earlier/later;
+- reverse a short subsequence;
+- rotate one piece to another allowed angle;
+- change placement policy id if that field is used.
+
+Recommended crossover:
+
+- order-preserving crossover for the permutation;
+- per-piece rotation inherited from either parent, then occasionally mutated.
+
+Fitness should stay lexicographic and conservative:
+
+```text
+(
+  unplaced_count,
+  sheets_used_or_partial_failure,
+  -largest_future_feasible_region_score,
+  feasible_region_fragmentation_score,
+  used_cluster_area_or_width,
+  max_used_sheet_ratio,
+  normalized_used_span_sum,
+  contact_bonus_as_negative,
+  bottom_left_tie_breakers
+)
+```
+
+For this app, preserving a large future usable region should rank ahead of pure
+compactness once all pieces placed/unplaced status ties. That directly avoids
+the bad local behavior where a visually compact contact placement fragments the
+remaining sheet.
+
+Genetic search can outperform beam search when the main mistake is early piece
+order or rotation. Beam search is still better for debugging and for short
+time-budget deterministic runs. The practical target is a portfolio:
+
+```text
+fast deterministic convex-NFP beam
+  + time-budgeted genetic outer search using the same decoder and caches
+  + final validator shared by both
+```
+
+Do not start the genetic version until the deterministic convex decoder, NFP
+cache, and final validation are stable. Otherwise the optimizer will hide
+geometry bugs behind noisy search behavior.
 
 ## Free Space Model
 

@@ -35,9 +35,7 @@ export const freeRectFanout = 2
  * Strategy hook that returns the candidate placement order for one decision point.
  * The wrapper owns how configured strategy ids become this function.
  */
-export type CandidateOrder = (context: {
-  sheet: SheetSpec
-}) => Order.Order<NestingAlgorithmCandidate>
+export type CandidateOrder = Order.Order<NestingAlgorithmCandidate>
 
 export class CandidateOrderEntry {
   readonly strategyId: string
@@ -137,12 +135,10 @@ export function runMaxRectsBeamSearch(input: {
       stepCandidates.push(...candidates)
 
       const selectedCandidates = new Map<string, NestingAlgorithmCandidate>()
-      for (const { strategyId, order: candidateOrder } of input.candidateOrder) {
-        const order = candidateOrder({ sheet: input.sheet })
-
+      for (const { strategyId, order } of input.candidateOrder) {
         // each strategy gets its own top-N view; duplicates are collapsed so
         // agreeing strategies do not fork the beam. First claim wins attribution.
-        for (const candidate of candidates.toSorted(order).slice(0, freeRectFanout)) {
+        for (const candidate of selectTop(candidates, freeRectFanout, order)) {
           const key = candidatePlacementKey(candidate)
           if (selectedCandidates.has(key)) {
             continue
@@ -235,4 +231,31 @@ function rankBeam(
   }
 ): NestingAlgorithmState {
   return beamFromMembers(beamMembers(state).toSorted(input.stateOrder()).slice(0, input.beamWidth))
+}
+
+function selectTop<T>(
+  values: ReadonlyArray<T>,
+  limit: number,
+  order: Order.Order<T>
+): ReadonlyArray<T> {
+  if (limit <= 0 || values.length === 0) {
+    return []
+  }
+
+  const selected: T[] = []
+  for (const value of values) {
+    let index = selected.length
+    while (index > 0 && order(value, selected[index - 1]!) < 0) {
+      index--
+    }
+    if (index >= limit) {
+      continue
+    }
+    selected.splice(index, 0, value)
+    if (selected.length > limit) {
+      selected.pop()
+    }
+  }
+
+  return selected
 }

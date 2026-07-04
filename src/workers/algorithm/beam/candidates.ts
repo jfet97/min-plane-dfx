@@ -104,9 +104,10 @@ export function applyCandidate(candidate: NestingAlgorithmCandidate): AppliedCan
     []
   )
 
-  const remainingPieces = candidate.state.remainingPieces.filter(
-    (piece) => piece.id !== candidate.piece.id
-  )
+  const nextPiece = candidate.state.remainingPieces[0]
+  if (nextPiece !== candidate.piece) {
+    throw new Error(`Candidate piece ${candidate.piece.id} is not the next remaining piece`)
+  }
 
   // fail loudly if the split/add pipeline leaves any occupied overlap behind
   for (const freeRectangle of freeRectangles) {
@@ -122,7 +123,8 @@ export function applyCandidate(candidate: NestingAlgorithmCandidate): AppliedCan
     state: new NestingBeamState({
       placements: [...candidate.state.placements, candidate.placement],
       freeRectangles,
-      remainingPieces,
+      // runMaxRectsBeamSearch only builds candidates for remainingPieces[0]
+      remainingPieces: candidate.state.remainingPieces.slice(1),
       unplacedPieces: candidate.state.unplacedPieces
     }),
     split: {

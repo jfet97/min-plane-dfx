@@ -242,6 +242,22 @@ describe('NestingRequestStrict', () => {
     expect(Exit.isFailure(result)).toBe(true)
   })
 
+  it('rejects a request with duplicate piece ids', () => {
+    const basePiece = validRequest.pieces[0]!
+    const invalid = {
+      ...validRequest,
+      pieces: [
+        basePiece,
+        {
+          ...basePiece,
+          sourcePieceId: 'p-2'
+        }
+      ]
+    }
+    const result = validate(NestingRequestStrict, invalid)
+    expect(Exit.isFailure(result)).toBe(true)
+  })
+
   it('rejects a request with non-positive timeout', () => {
     const invalid = {
       ...validRequest,
