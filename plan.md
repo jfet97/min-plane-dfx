@@ -979,6 +979,32 @@ Acceptance:
 - clustering never makes final validation fail;
 - the engine can disable clustering for debugging.
 
+### Benchmark And Debug Corpus
+
+Goal: keep v2 measurable against the current rectangle engine and make geometry
+failures reproducible.
+
+Tasks:
+
+- collect small deterministic fixtures for triangles, trapezoids, rectangles,
+  stars, circles/arcs approximated by polygons, and mixed repeated pieces;
+- include stress fixtures for near-collinear points, tiny segments, high
+  padding, duplicate points, open contours, unresolved DXF entities, and
+  rotation-heavy angled profiles;
+- store expected preprocessing diagnostics: sampled point count, convex hull,
+  padded collision polygon, unresolved geometry warnings, and rotation set;
+- compare v2 against current rectangle MaxRects on utilization, placed count,
+  runtime, and validation failures;
+- keep renderer/debug overlays able to show source DXF, sampled points, convex
+  hull, padded collision polygon, NFP/IFP candidates, and final placements.
+
+Acceptance:
+
+- every benchmark run is deterministic for the same seed and geometry settings;
+- v2 beats or ties rectangle MaxRects on triangle/trapezoid-heavy fixtures;
+- geometry failures can be reproduced from saved fixture inputs and diagnostics;
+- no benchmark layout is accepted without final validation.
+
 ## Risks
 
 ### Geometry Robustness
