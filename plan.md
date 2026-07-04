@@ -38,8 +38,7 @@ Relevant references:
 - Yang et al., "Learning based 2D Irregular Shape Packing",
   arXiv:2309.10329, 2023.
   https://arxiv.org/abs/2309.10329
-- Clipper2 documentation, for practical polygon clipping/offsetting and integer
-  coordinate robustness.
+- Clipper2 documentation, for practical polygon clipping/offsetting robustness.
   https://www.angusj.com/clipper2/Docs/Overview.htm
 
 The Lastra-Diaz/Ortuno paper is important because it frames the exact
@@ -274,30 +273,63 @@ Score reporting should be explicit:
 - envelope/bounds scoring may use collision bounds because that reflects actual
   machine clearance consumption.
 
-## Rounding And Numerical Robustness
+## Coordinates And Numerical Robustness
 
-The engine should not rely on floating-point equality.
+The engine should not force all geometry onto integer millimeter coordinates.
+Imported DXF geometry, adaptive rotations, edge-alignment angles, and
+principal-axis angles can naturally produce fractional coordinates.
 
-Use an internal integer precision grid:
+Use real-valued coordinates for source geometry, rotated collision polygons,
+placement candidates, and stored transforms:
 
 ```text
-1 mm = 1000 internal units
-10 mm padding = 10000 internal units
-epsilon = 50 or 100 internal units, i.e. 0.05mm or 0.1mm
+DXF geometry
+  -> flattened real-valued cut polygon
+  -> real-valued convex collision polygon
+  -> real-valued rotated candidates
+  -> real-valued placement transforms
 ```
 
-All derived nesting geometry should be integer-grid geometry:
+Correctness must come from robust geometric decisions, not from pretending that
+ordinary floating-point equality is reliable. All topology-changing decisions
+should go through tested predicates or library operations:
 
-- flattened vertices;
-- offsets;
-- intersections;
-- NFP vertices;
-- candidate placement points;
-- final transforms.
+- orientation / left-right-on-edge tests;
+- segment intersection;
+- point-in-polygon and boundary classification;
+- polygon overlap and containment;
+- sheet inclusion;
+- final clearance validation.
 
-This matches the practical direction of robust polygon libraries such as
-Clipper2, which performs clipping using integer coordinates internally for
-robustness.
+For constructive polygon operations such as offsetting, union, difference,
+intersection, IFP/NFP region operations, and Minkowski-style geometry, use a
+project-local geometry adapter backed by official Clipper2 C++. The preferred
+runtime boundary is WASM or a native addon/shared library so the same geometry
+backend can be reused by the Electron app and by a real service backend.
+
+Clipper2 exposes double-coordinate paths while internally scaling to integer
+arithmetic for robust clipping. Do not make an unofficial JavaScript/TypeScript
+port the production geometry backend. A JS port is acceptable only for quick
+experiments or differential tests against the official C++ backend.
+
+If app-owned code still makes low-level geometry decisions outside Clipper2,
+use robust predicates rather than ad hoc epsilon checks. In TypeScript that can
+mean `robust-predicates`; in a backend implementation it can mean equivalent
+robust predicate routines inside the geometry adapter.
+
+Do not make snap rounding or integer grid rounding the core legality model.
+Rounding may be used only at controlled boundaries such as cache keys, debug
+display, export normalization, or machine-output precision.
+
+Degenerate cases need explicit deterministic rules:
+
+- touching is allowed when the configured clearance is satisfied;
+- positive overlap is forbidden;
+- boundary points are classified consistently;
+- equal candidate scores use stable tie-breakers such as `y`, `x`, rotation, and
+  piece id;
+- duplicate candidate points from different NFP/IFP boundaries are deduplicated
+  deterministically.
 
 Final placement records should store transforms, not rewritten geometry:
 
@@ -382,7 +414,7 @@ Candidate points should initially include:
 - intersections between NFP and IFP boundaries;
 - bottom-left-like points;
 - low-y / low-x contact points;
-- optionally a small integer-grid fallback around best points.
+- optionally a small local fallback around best points.
 
 Every candidate must be validated:
 
@@ -660,14 +692,18 @@ Tasks:
 - compute area and bounding box;
 - run pairwise intersection tests;
 - run final clearance validation on sample placements;
-- choose or wrap a polygon library, likely Clipper2 or a JavaScript/WASM
-  equivalent that supports integer-coordinate clipping and offsetting.
+- wrap official Clipper2 C++ behind a geometry adapter exposed through
+  WASM/native bindings;
+- add robust predicates for any app-owned orientation, intersection,
+  containment, and boundary classification not delegated to Clipper2;
+- encode deterministic rules for touching, equal scores, duplicate candidates,
+  and boundary points.
 
 Acceptance:
 
 - triangles, trapezoids, rectangles, stars, circles approximated as polygons;
 - padded polygons visually inspectable in the renderer;
-- deterministic integer-grid output;
+- deterministic real-valued output and stable edge-case classification;
 - final validation catches intentional clearance violations.
 
 ### Adaptive Rotation Generator
@@ -801,10 +837,11 @@ create invalid output.
 
 Mitigation:
 
-- integer grid;
+- official Clipper2 C++ behind a local geometry adapter;
+- robust predicates for app-owned geometric truth decisions outside Clipper2;
+- deterministic boundary/tie-breaking rules;
 - simplify input polygons with tolerance;
 - conservative offset epsilon;
-- robust library;
 - final validation;
 - visual debug overlays.
 
@@ -880,7 +917,7 @@ placement-space geometry:
 
 NFP gives feasible/contact candidate positions. Beam and GA/search modes choose
 among them through the shared decoder. Padding is handled by inflated collision
-polygons on an integer precision grid, with conservative epsilon and final
+polygons, robust geometric decisions, deterministic edge-case rules, and final
 validation.
 
 The recommended path is to build a direct NFP-based irregular nesting engine,
