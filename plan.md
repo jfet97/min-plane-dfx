@@ -382,7 +382,10 @@ interface IrregularPlacement {
 Rendering/export applies the transform to original geometry or high-quality
 flattened geometry. The nesting engine consumes the derived collision polygon.
 
-Before accepting a result, run a final validation pass:
+## Validation Invariant
+
+NFP/IFP geometry proposes feasible placement candidates; it is not the final
+authority. Before accepting any beam or GA result, run a final validation pass:
 
 ```text
 for every placed pair:
@@ -390,10 +393,15 @@ for every placed pair:
 
 for every placed piece:
   collisionPolygon is inside sheet
+  collisionPolygon does not overlap any placed collision polygon
 ```
 
 The conservative offset should make this pass comfortably. If it fails, the
 result is invalid even if the heuristic thought it was valid.
+
+This validation is not debug-only. It is the shared legality gate for every
+optimizer mode, every cached NFP/IFP result, and every replayed or exported
+layout.
 
 ## Adaptive Finite Rotation Set
 
@@ -450,7 +458,8 @@ Candidate points should initially include:
 - low-y / low-x contact points;
 - optionally a small local fallback around best points.
 
-Every candidate must be validated:
+Candidate placements should also be locally validated before they are committed
+to a successor state:
 
 ```text
 translated moving polygon is inside sheet
