@@ -216,7 +216,7 @@ DXF geometry
   -> deduplicate / clean sampled points
   -> compute convex hull
   -> normalize hull so bbox min corner is the local placement origin
-  -> offset by padding / 2 + epsilon
+  -> offset by padding / 2 + clearanceSafetyMargin
   -> use as collision polygon for NFP/IFP
 ```
 
@@ -238,11 +238,22 @@ Flattening should classify DXF entities and convert nestable cut geometry into
 points at a configured tolerance:
 
 - lines and polyline segments contribute endpoints;
-- arcs, circles, and bulges are sampled into enough points to respect the
-  flattening tolerance;
+- LWPOLYLINE bulges, arcs, circles, and ellipses are sampled into enough points
+  to respect the flattening tolerance;
 - text, dimensions, construction helpers, blocks, layers, open contours, or
   ambiguous contour groups may be valid DXF data without being directly nestable
   cut geometry.
+
+The current preview/import geometry summaries are not nesting-grade polygon
+input. They are useful for display and bounds, but v2 must add a dedicated
+flattening path for collision geometry. In particular:
+
+- LWPOLYLINE bulges must be interpreted as arc segments, not silently connected
+  with straight lines;
+- ellipses must be polygonalized from their real ellipse parameters, not
+  approximated by bounding-box lines;
+- the flattening tolerance and safety margin become part of the derived
+  geometry identity.
 
 Do not silently repair, drop, or reinterpret DXF entities to make them fit the
 nesting pipeline. Preserve the source entities and surface unresolved geometry
@@ -323,11 +334,11 @@ Padding must be handled geometrically before overlap/NFP work.
 Current rectangle preparation treats padding as total clearance split across
 sides, rounded with integer `ceil(padding / 2)` footprints. V2 intentionally
 keeps the same half-padding meaning but uses real-valued geometry, so the
-collision offset is the exact half-padding plus a conservative epsilon:
+collision offset is the exact half-padding plus a named physical safety margin:
 
 ```text
 clearance = padding
-collisionOffset = padding / 2 + epsilon
+collisionOffset = padding / 2 + clearanceSafetyMargin
 collisionPolygon = offset(cutPolygon, collisionOffset)
 ```
 
@@ -337,7 +348,21 @@ owns this offset operation; its v2 implementation may be a direct convex offset,
 Clipper2, or a Clipper2-checked implementation.
 
 If two collision polygons touch, their real cut polygons have at least roughly
-`padding + 2 * epsilon` between them.
+`padding + 2 * clearanceSafetyMargin` between them before accounting for source
+curve approximation error.
+
+`clearanceSafetyMargin` is not an ad hoc floating-point comparison tolerance. It
+is a physical margin used to preserve clearance after flattening curves into
+segments. If arc/circle/ellipse flattening is allowed to approximate the real
+curve inward by at most `flatteningSagTolerance`, then:
+
+```text
+clearanceSafetyMargin >= flatteningSagTolerance
+```
+
+Alternatively, the flattening step may produce a conservative outward
+approximation, but the margin/tolerance relationship must still be explicit and
+owned by the geometry adapter.
 
 If product semantics change to "padding around each piece", then the offset
 would be full padding rather than half padding. For current app semantics,
@@ -349,9 +374,10 @@ For the sheet border:
 collisionPolygon must be inside sheet
 ```
 
-This is equivalent to keeping a `padding / 2 + epsilon` internal border around
-the sheet, but it is easier to express as an IFP constraint: only placement
-points whose enlarged collision polygon remains inside the sheet are feasible.
+This is equivalent to keeping a
+`padding / 2 + clearanceSafetyMargin` internal border around the sheet, but it
+is easier to express as an IFP constraint: only placement points whose enlarged
+collision polygon remains inside the sheet are feasible.
 
 Score reporting should be explicit:
 
@@ -400,7 +426,7 @@ JavaScript/TypeScript Clipper port as the production clipping backend. Plain
 TypeScript is acceptable for the convex operations that v2 owns directly.
 
 If app-owned code makes low-level geometry decisions, use robust predicates
-rather than ad hoc epsilon checks. In TypeScript that can mean
+rather than ad hoc numeric tolerance checks. In TypeScript that can mean
 `robust-predicates`; in a backend implementation it can mean equivalent robust
 predicate routines inside the geometry adapter.
 
@@ -556,7 +582,7 @@ placements. Cache keys must include the full derived-geometry identity:
 ```text
 piece geometry digest
 rotation angle
-clearance / padding / epsilon
+clearance / padding / clearanceSafetyMargin
 flattening tolerance
 convex-hull simplification tolerance
 placement reference convention
@@ -858,10 +884,14 @@ Goal: provide robust polygon operations outside the worker optimizer.
 Tasks:
 
 - flatten supported DXF entities to sampled points at a configurable tolerance;
+- add nesting-grade LWPOLYLINE bulge sampling;
+- add nesting-grade ellipse polygonalization;
+- keep preview/bounds summaries separate from collision-geometry flattening;
 - compute convex hulls from sampled points using robust predicates for turn
   tests;
 - normalize hulls to a stable local placement point;
-- offset hulls by `padding / 2 + epsilon` through the geometry adapter;
+- offset hulls by `padding / 2 + clearanceSafetyMargin` through the geometry
+  adapter;
 - compute area and bounding box;
 - run pairwise intersection tests;
 - run final clearance validation on sample placements;
@@ -1046,7 +1076,7 @@ Mitigation:
 - robust predicates for app-owned geometric truth decisions;
 - deterministic boundary/tie-breaking rules;
 - simplify input polygons with tolerance;
-- conservative offset epsilon;
+- conservative clearance safety margin tied to flattening tolerance;
 - final validation;
 - visual debug overlays.
 
@@ -1093,7 +1123,8 @@ Mitigation:
 Settled v2 decisions:
 
 - Padding means total clearance between cuts. V2 preserves current rectangle
-  semantics by offsetting each collision polygon by `padding / 2 + epsilon`.
+  semantics by offsetting each collision polygon by
+  `padding / 2 + clearanceSafetyMargin`.
 - The target is fixed rectangular sheet nesting, not strip-length minimization.
 - Exact MIP is a literature/benchmark reference only, not an implementation
   path for v2.
