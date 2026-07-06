@@ -148,15 +148,16 @@ the sheet boundary.
 For a sheet and a moving polygon `B`, the inner-fit polygon (IFP) is the region
 of placement points where `B` lies fully inside the sheet.
 
-Feasible placement space for `B` is:
+Feasible placement for `B` is classified in placement-coordinate space:
 
 ```text
-IFP(sheet, B) minus union(NFP(placedPiece, B) for each placed piece)
+placement point inside IFP(sheet, B)
+and not strictly inside any NFP(placedPiece, B)
 ```
 
 This replaces free rectangles. The free space is not stored as rectangles or
-polygons on the sheet; it is represented as feasible placement regions for the
-next moving piece.
+polygons on the sheet; it is represented by candidate placement points plus
+per-moving-piece feasibility tests.
 
 ## V2 Scope: Strong Convex Irregular Nesting
 
@@ -183,8 +184,12 @@ This keeps the geometry layer tractable:
   linear time in the number of polygon edges;
 - the NFP of two convex polygons remains manageable and does not require
   convex decomposition plus pairwise NFP fusion;
-- app code can construct convex pairwise NFP boundaries while the Clipper2
-  adapter owns polygon offsetting and region boolean operations;
+- app code can construct convex pairwise NFP boundaries and use direct
+  point-in-convex / SAT-style validation instead of constructing full
+  feasible-space boolean regions;
+- the geometry adapter can still use Clipper2 where it reduces risk, especially
+  for offsetting or cleanup, without making Clipper2 boolean union/difference
+  the runtime legality model;
 - candidate generation stays smaller and easier to debug;
 - offsetting, validation, and caching are much simpler.
 
@@ -254,29 +259,31 @@ the hull turn test, because the algorithm repeatedly asks whether three sampled
 points make a left turn, right turn, or are collinear. Do not use a raw floating
 cross-product as the only source of truth for that decision.
 
-Clipper2 is used after the hull exists, when we need polygon surgery:
+After the hull exists, polygon surgery belongs behind a project-local geometry
+adapter. For v2 that adapter is still convex-only. It may use a direct
+TypeScript implementation, Clipper2, or both, but the rest of the worker should
+not depend on library-specific shapes or tolerance policy.
+
+Adapter-owned operations include:
 
 - offset the hull outward to create the padded collision polygon;
 - clean/simplify operation results when needed;
-- later, perform boolean/NFP/IFP region operations.
+- compute convex pairwise NFP boundaries;
+- classify points against convex polygons;
+- validate containment and overlap.
 
-Concavity recovery is not part of the default v2 collision model. If explored,
-it should be isolated behind controlled modes:
+Do not make full feasible-space boolean construction a v2 requirement. With
+convex collision polygons and a rectangular sheet, candidate generation can use
+NFP boundaries/intersections plus direct feasibility tests. Clipper2 boolean
+union/difference is allowed for experiments, debug comparison, or offset
+implementation, but it should not be the central runtime model unless the
+convex candidate-and-validation path proves insufficient.
 
-- convex decomposition for selected shapes only;
-- multi-convex-piece clusters that keep each component convex;
-- opt-in precise concave NFP for small edge counts;
-- benchmark-only exact/concave mode for comparison.
-
-Do not make full concave NFP the default v2 path. For concave shapes, the
-number of edge interactions and fusion cases can grow quickly, and the candidate
-set can become noisy before the optimizer is mature.
-
-If precise concave or hole-aware NFPs become necessary later, use Rocha's
-approach as the reference direction: convex decomposition, pairwise convex NFPs,
-then graph-based merging that preserves outlines, holes, perfect sliding, and
-perfect-fit cases. Do not treat a plain polygon union as a complete replacement
-for that topology-aware merge.
+Concavity recovery is not part of the v2 collision model. Do not make full
+concave or hole-aware NFP a planned follow-up path in this document. Keep the
+convex engine honest and complete: concave source geometry is preserved for
+display/export, while its convex collision polygon is the conservative nesting
+geometry.
 
 ## What Changes Compared With MaxRects
 
@@ -325,8 +332,9 @@ collisionPolygon = offset(cutPolygon, collisionOffset)
 ```
 
 Mathematically, `offset(polygon, d)` means moving every polygon edge outward by
-distance `d` and joining the result into a larger polygon. Clipper2 owns this
-offset operation.
+distance `d` and joining the result into a larger polygon. The geometry adapter
+owns this offset operation; its v2 implementation may be a direct convex offset,
+Clipper2, or a Clipper2-checked implementation.
 
 If two collision polygons touch, their real cut polygons have at least roughly
 `padding + 2 * epsilon` between them.
@@ -371,28 +379,30 @@ DXF geometry
 
 Correctness must come from robust geometric decisions, not from pretending that
 ordinary floating-point equality is reliable. App-owned low-level geometry
-decisions that are not delegated to Clipper2 should go through robust
-predicates:
+decisions should go through the geometry adapter and use robust predicates where
+appropriate:
 
 - orientation / left-right-on-edge tests;
 - segment intersection;
-- point-in-polygon and boundary classification;
+- point-in-convex-polygon and boundary classification;
+- convex polygon overlap / separation tests.
 
-For constructive polygon operations such as offsetting, union, difference,
-intersection, IFP/NFP region operations, and Minkowski-style geometry, use a
-project-local geometry adapter backed by official Clipper2 C++. The preferred
-runtime boundary is WASM or a native addon/shared library so the same geometry
-backend can be reused by the Electron app and by a real service backend.
+For v2, the project-local geometry adapter is the boundary, not Clipper2 itself.
+The adapter should expose convex operations needed by the worker: flattening
+outputs, convex hull, convex offset, rotation, convex NFP, candidate
+classification, and final validation. It can be backed by direct TypeScript
+geometry, official Clipper2 C++ through WASM/native bindings, or a combination
+where Clipper2 is used for offsetting and differential checks.
 
 Clipper2 exposes double-coordinate paths while internally scaling to integer
-arithmetic for robust clipping. Do not make an unofficial JavaScript/TypeScript
-port the production geometry backend. A JS port is acceptable only for quick
-experiments or differential tests against the official C++ backend.
+arithmetic for robust clipping. Do not depend on an unofficial
+JavaScript/TypeScript Clipper port as the production clipping backend. Plain
+TypeScript is acceptable for the convex operations that v2 owns directly.
 
-If app-owned code still makes low-level geometry decisions outside Clipper2,
-use robust predicates rather than ad hoc epsilon checks. In TypeScript that can
-mean `robust-predicates`; in a backend implementation it can mean equivalent
-robust predicate routines inside the geometry adapter.
+If app-owned code makes low-level geometry decisions, use robust predicates
+rather than ad hoc epsilon checks. In TypeScript that can mean
+`robust-predicates`; in a backend implementation it can mean equivalent robust
+predicate routines inside the geometry adapter.
 
 Do not make snap rounding or integer grid rounding the core legality model.
 Rounding may be used only at controlled boundaries such as cache keys, debug
@@ -486,20 +496,29 @@ For one beam state and one moving piece:
 placed = already placed collision polygons
 moving = candidate collision polygon in one allowed rotation
 
-ifp = innerFitPolygon(sheet, moving)
-forbidden = union(nfp(placedPiece, moving) for placedPiece in placed)
-feasible = ifp - forbidden
-candidatePoints = sample boundary/vertices/intersections of feasible
+ifpBounds = rectangular placement interval where moving's bbox fits in sheet
+nfpBoundaries = convex NFP boundary for each placed piece vs moving
+candidatePoints = vertices/intersections/contact points from NFP and IFP bounds
 ```
 
 Candidate points should initially include:
 
-- feasible-region vertices;
+- IFP rectangle corners and edge contacts;
+- NFP vertices;
 - intersections between NFP boundaries;
 - intersections between NFP and IFP boundaries;
 - bottom-left-like points;
 - low-y / low-x contact points;
 - optionally a small local fallback around best points.
+
+Candidate points are accepted only after direct feasibility classification:
+
+```text
+point inside rectangular IFP bounds
+point not strictly inside any convex NFP
+translated moving polygon is inside the sheet
+translated moving polygon does not overlap any placed collision polygon
+```
 
 Candidate placements should also be locally validated before they are committed
 to a successor state:
@@ -509,23 +528,26 @@ translated moving polygon is inside sheet
 translated moving polygon does not overlap any placed collision polygon
 ```
 
-The NFP is a candidate generator and broad feasibility map. Validation remains
-mandatory because polygon operations, simplification, and tolerances can fail.
+The NFP is a candidate generator and broad feasibility map. V2 should not need
+to materialize `IFP - union(NFP)` as polygons during normal runtime. Validation
+remains mandatory because NFP generation, simplification, offsets, and
+tolerances can fail.
 
 ## Geometry Cache Identity
 
-NFP and IFP generation are expensive, and both beam search and GA evaluate many
-states that reuse the same piece pairs and rotations. The engine should cache
-derived geometry so repeated branches do not recompute the same placement-space
-regions.
+NFP generation, rotation, and validation metadata can be reused by both beam
+search and GA. The engine should keep derived geometry identity explicit and
+cache artifacts when benchmarks show repeated branches are spending material
+time recomputing the same pair/rotation data.
 
 Cacheable artifacts include:
 
 - rotated collision polygons;
 - pairwise outer NFPs;
-- sheet/piece IFPs;
+- sheet/piece IFP bounds;
 - bounding boxes and broad-phase data;
-- unioned forbidden regions for a beam state when profitable.
+- point-classification and segment-intersection acceleration data;
+- optional unioned/debug forbidden regions when useful outside the hot path.
 
 The cache is correctness-sensitive. Reusing an NFP computed for a different
 clearance, rotation, placement reference, or geometry backend can create invalid
@@ -839,14 +861,14 @@ Tasks:
 - compute convex hulls from sampled points using robust predicates for turn
   tests;
 - normalize hulls to a stable local placement point;
-- offset hulls by `padding / 2 + epsilon` through the Clipper2 adapter;
+- offset hulls by `padding / 2 + epsilon` through the geometry adapter;
 - compute area and bounding box;
 - run pairwise intersection tests;
 - run final clearance validation on sample placements;
-- wrap official Clipper2 C++ behind a geometry adapter exposed through
-  WASM/native bindings;
-- add robust predicates for any app-owned orientation, intersection,
-  containment, and boundary classification not delegated to Clipper2;
+- keep Clipper2 available behind the adapter for offsetting, cleanup, or
+  differential checks if that reduces risk;
+- add robust predicates for orientation, intersection, containment, and boundary
+  classification;
 - encode deterministic rules for touching, equal scores, duplicate candidates,
   and boundary points.
 
@@ -885,9 +907,11 @@ Goal: understand and test NFP semantics with real project shapes.
 Tasks:
 
 - compute or approximate NFP for two padded polygons and fixed rotations;
-- compute IFP for a rotated piece inside the sheet;
+- compute rectangular IFP bounds for a rotated piece inside the sheet;
 - expose debug visualization of placement-space NFP;
-- generate contact candidate points from NFP boundary;
+- generate contact candidate points from NFP boundaries, NFP intersections, and
+  IFP-bound intersections;
+- classify candidate points against IFP bounds and convex NFP interiors;
 - validate each candidate by real polygon intersection;
 - score pair placements by compact bounding envelope and real waste.
 
@@ -907,8 +931,9 @@ contract recognizable and deterministic.
 Tasks:
 
 - represent beam state as placed polygon transforms plus remaining ids;
-- for each candidate piece and rotation, compute feasible placement points from
-  IFP minus NFP union;
+- for each candidate piece and rotation, generate placement candidates from
+  rectangular IFP bounds plus convex NFP boundaries/intersections;
+- filter candidates with direct convex feasibility and final local validation;
 - score successors;
 - keep top beam states;
 - emit history frames with polygon placements and optional placement-space
@@ -1009,14 +1034,16 @@ Acceptance:
 
 ### Geometry Robustness
 
-Polygon offsetting and NFP generation are the main technical risks. Concave
-polygons, holes, near-collinear edges, tiny segments, and self-intersections can
-create invalid output.
+Polygon offsetting, convex NFP generation, and geometric classification are the
+main technical risks. Near-collinear edges, tiny segments, duplicate points,
+touching boundaries, and self-intersections in source geometry can create
+invalid output.
 
 Mitigation:
 
-- official Clipper2 C++ behind a local geometry adapter;
-- robust predicates for app-owned geometric truth decisions outside Clipper2;
+- local geometry adapter boundary with Clipper2 available where it reduces
+  offsetting or cleanup risk;
+- robust predicates for app-owned geometric truth decisions;
 - deterministic boundary/tie-breaking rules;
 - simplify input polygons with tolerance;
 - conservative offset epsilon;
@@ -1063,14 +1090,19 @@ Mitigation:
 
 ## Open Questions
 
+Settled v2 decisions:
+
+- Padding means total clearance between cuts. V2 preserves current rectangle
+  semantics by offsetting each collision polygon by `padding / 2 + epsilon`.
+- The target is fixed rectangular sheet nesting, not strip-length minimization.
+- Exact MIP is a literature/benchmark reference only, not an implementation
+  path for v2.
+
+Remaining product/geometry questions:
+
 - Which rotation set is acceptable for the shop workflow?
 - Is mirroring physically allowed, or only rotation?
-- Should padding mean total clearance between cuts, or clearance around each
-  piece? Current rectangle semantics imply total clearance.
 - What flattening tolerance is acceptable for DXF arcs/circles?
-- Does v2 target fixed sheet nesting or strip-length minimization?
-- Should exact MIP be kept only as a benchmark/offline experiment, or ignored
-  until the heuristic engine is mature?
 
 ## Non-Goals For V2
 
@@ -1089,8 +1121,9 @@ The replacement is not "free polygons". The replacement is:
 
 ```text
 placement-space geometry:
-  IFP(sheet, moving piece)
-  minus union of NFP(placed piece, moving piece)
+  rectangular IFP bounds for the moving piece
+  plus convex NFP boundaries against placed pieces
+  plus direct candidate feasibility classification
 ```
 
 NFP gives feasible/contact candidate positions. Beam and GA/search modes choose
