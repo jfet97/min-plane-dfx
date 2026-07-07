@@ -1122,6 +1122,11 @@ Acceptance:
 
 Goal: preserve current subrun/CSV behavior while switching the geometry engine.
 
+This is not a speculative v2 feature family. CSV import/export, row links,
+manual follow-up subruns, run records, and durable history references already
+exist in the rectangle workflow. V2 must carry those contracts forward while
+changing placement geometry from rectangles to transforms over source pieces.
+
 Tasks:
 
 - keep subruns as independent worker requests;
