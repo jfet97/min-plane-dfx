@@ -689,9 +689,9 @@ Initial scoring should reuse ideas already present in the project:
 - keep used extents compact;
 - prefer lower placements;
 - prefer left placements;
-- preserve future feasible area;
+- preserve future usable material;
 - penalize tiny unusable cavities;
-- penalize high fragmentation of feasible placement space;
+- penalize fragmentation of remaining material;
 - prefer placements that increase contact without overlap.
 
 Avoid relying only on local best area. NFP gives more candidates and therefore
@@ -733,8 +733,8 @@ Fitness should stay lexicographic and conservative:
 (
   unplaced_count,
   sheets_used_or_partial_failure,
-  -largest_future_feasible_region_score,
-  feasible_region_fragmentation_score,
+  -future_usability_score,
+  material_fragmentation_score,
   used_cluster_area_or_width,
   max_used_sheet_ratio,
   normalized_used_span_sum,
@@ -743,10 +743,12 @@ Fitness should stay lexicographic and conservative:
 )
 ```
 
-For this app, preserving a large future usable region should rank ahead of pure
-compactness once all pieces placed/unplaced status ties. That directly avoids
-the bad local behavior where a visually compact contact placement fragments the
-remaining sheet.
+For this app, preserving future usable material should rank ahead of pure
+compactness once all pieces placed/unplaced status ties. That score should be
+derived from the free material artifact and cheap proxies such as largest
+component area, cavity/sliver penalties, largest-empty-rectangle estimates, or
+limited probes against representative remaining pieces. It must not claim to be
+the exact feasible placement region for every future piece.
 
 Beam and GA are complementary v2 modes, not a first/later split. Beam search is
 the deterministic reference and gives inspectable partial-state history. GA can
@@ -761,8 +763,8 @@ deterministic convex-NFP beam
 
 ## Free Space Model
 
-The engine should not maintain "free polygons" as first-class sheet leftovers
-in the same way MaxRects maintains free rectangles.
+The engine should not use "free polygons" as the placement-legality model in the
+same way MaxRects uses free rectangles.
 
 Instead, free space is computed per candidate moving piece:
 
@@ -779,6 +781,36 @@ future shapes.
 Use the geometry cache for repeated NFP/IFP and broad-phase artifacts, but do
 not treat cached geometry as proof of validity. Candidate placements still need
 the final containment and overlap validation described above.
+
+### Derived Free Material Polygon
+
+V2 should maintain a derived sheet-space artifact when useful for scoring,
+debugging, and user inspection:
+
+```text
+freeMaterial = sheet rectangle - union(placed collision polygons)
+```
+
+This artifact answers "which sheet material is not occupied by placed collision
+geometry?" It is useful for:
+
+- renderer/debug overlays of remaining material;
+- utilization display;
+- connected-component, cavity, sliver, and fragmentation metrics;
+- largest empty rectangle or rectangle-proxy scoring;
+- future-usability scoring and branch comparison;
+- explaining why a compact-looking layout left poor remaining material.
+
+`freeMaterial` is not the placement legality authority. It should not replace
+per-moving-piece IFP/NFP candidate generation, and rectangle proxies derived
+from it must never prove that a placement is legal or impossible. Every accepted
+placement still needs direct containment and overlap validation.
+
+Computing `freeMaterial` is a sheet-space polygon union/difference problem, so
+Clipper2 is appropriate behind the geometry adapter if it reduces risk. This
+does not contradict avoiding Clipper2 boolean feasible regions for legality:
+the engine still does not need to materialize `IFP - union(NFP)` in placement
+space during normal placement.
 
 ## Option A: Transitional NFP Clustering Then Rectangles
 
@@ -1051,7 +1083,8 @@ Tasks:
 - compare v2 against current rectangle MaxRects on utilization, placed count,
   runtime, and validation failures;
 - keep renderer/debug overlays able to show source DXF, sampled points, convex
-  hull, padded collision polygon, NFP/IFP candidates, and final placements.
+  hull, padded collision polygon, derived free material, NFP/IFP candidates,
+  and final placements.
 
 Acceptance:
 
