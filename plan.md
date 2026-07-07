@@ -337,6 +337,70 @@ piece is left until the end, no amount of clever local placement may recover the
 layout. The GA tries many priority orders and transform choices, but every
 candidate still goes through the same deterministic decoder and final validator.
 
+### How GA And Beam Work Together
+
+GA and beam search solve different parts of the problem.
+
+The GA is the outer search. It asks broad questions:
+
+- Which piece priority order should we try?
+- Which rotation/mirror transform should each piece prefer?
+- Which placement policy should score local choices?
+
+Those choices are high-level. A GA chromosome does not say "put piece A at
+`x = 120`, `y = 40`". It says something closer to:
+
+```text
+try these pieces in this priority order
+use these transform choices
+rank legal placements with this policy
+```
+
+The beam decoder is the inner constructive search. Given one GA chromosome, it
+actually builds a layout. It walks through the priority order, generates legal
+NFP/IFP contact candidates, scores them, and keeps the best few partial layouts.
+
+The division is:
+
+```text
+GA:
+  explores global strategy across many possible layouts
+
+windowed beam decoder:
+  turns one global strategy into a concrete validated layout
+```
+
+The `orderWindow` is the bridge between them. With `orderWindow = 1`, the beam
+must follow the GA priority order strictly. With `orderWindow = 2` or `3`, the
+beam may choose among the next few eligible pieces when that gives a better
+local fit. This gives the decoder a small amount of local repair without making
+the GA order meaningless.
+
+That means the GA order is a priority order, not a rigid script. The GA still
+controls the broad sequence, while beam search handles local placement details:
+
+```text
+chromosome priority order:
+  [large triangle, long profile, trapezoid, small part, ...]
+
+orderWindow = 2:
+  at each step, beam may choose between the next two eligible pieces
+```
+
+Full free-order beam search would let the decoder pick any remaining piece at
+each step. That is intentionally not the normal model because it explodes the
+branching factor and weakens the GA chromosome: if the decoder can ignore most
+of the proposed order, the GA is no longer learning a meaningful ordering.
+
+So the intended v2 relationship is:
+
+1. Deterministic beam can run from the normal sorted order.
+2. GA creates many alternative priority orders and transform choices.
+3. Each GA candidate is decoded by the same windowed beam kernel.
+4. The portfolio compares the validated deterministic beam result and the best
+   validated GA result using the same score.
+5. The best validated layout wins.
+
 ## References
 
 This plan is aligned with irregular nesting literature and open-source nesting
