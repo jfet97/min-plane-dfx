@@ -200,6 +200,19 @@ bounding rectangles for triangles, trapezoids, stars, circles approximated by
 polygons, and rotated/angled profiles, while avoiding the combinatorial and
 robustness risk of full concave NFP.
 
+## V2 Scale Target
+
+V2 should be designed for jobs in the tens of pieces, with practical support for
+roughly 100-150 pieces and a hard input cap around the current 200-piece range.
+This target should guide rotation caps, `orderWindow`, beam width, candidate
+pruning, NFP/cache strategy, free-material metrics, GA population size, and time
+budgeting.
+
+Full free-order search, uncapped rotations, exhaustive candidate scoring, and
+expensive probe-heavy future-usability metrics are not the normal operating
+model for this scale. They belong in tiny fixtures, debug modes, or offline
+benchmarks.
+
 ## DXF To Convex Collision Polygon
 
 The renderer or import layer should preserve the original DXF entities for
@@ -779,6 +792,40 @@ deterministic convex-NFP windowed beam
   + final validator shared by both
 ```
 
+### GA Budget And Reproducibility
+
+GA/search uses an app-owned seeded deterministic PRNG and never depends on
+ambient `Math.random()`. Given the same inputs, settings, seed, algorithm
+version, and evaluation cap, it must produce the same sequence of chromosomes
+and scores.
+
+Wall-clock time is the user-facing budget for desktop UX, but it is not an exact
+cross-machine replay guarantee. The worker should also track generation and
+completed evaluation counts so runs can be explained and, when needed, replayed
+through an evaluation-count cap.
+
+The time budget is checked at deterministic scheduling checkpoints:
+
+- before starting a new chromosome evaluation;
+- after a completed layout has passed final validation.
+
+A layout is eligible to become best-so-far only after the shared final validator
+accepts it. Partial or in-flight layouts are never published as results. When
+the budget expires, the worker stops scheduling new evaluations and returns the
+best fully validated GA result seen so far. If no GA result has validated, the
+GA lane reports `no-valid-result` and the portfolio may still return the
+validated deterministic beam result.
+
+User cancellation follows the same best-so-far rule with status `cancelled`.
+The normal terminal statuses should distinguish `completed`, `budget-expired`,
+`cancelled`, and `no-valid-result`.
+
+The final portfolio result is the better validated layout between deterministic
+windowed beam and GA/search according to the shared lexicographic score.
+Progress reports should include generation, completed evaluations, population
+size, current best score, best source, elapsed time, remaining budget, and
+current phase.
+
 ## Free Space Model
 
 The engine should not use "free polygons" as the placement-legality model in the
@@ -1047,15 +1094,27 @@ Tasks:
 - decode chromosomes through the same `orderWindow` placement kernel as
   deterministic beam;
 - rank decoded layouts with the same lexicographic final score family;
-- respect a time budget and return the best validated layout.
+- use an app-owned seeded deterministic PRNG;
+- enforce wall-clock budget and cancellation at deterministic scheduling
+  checkpoints;
+- publish only fully validated layouts as best-so-far;
+- return the better validated portfolio result between deterministic windowed
+  beam and GA/search;
+- report GA status as `completed`, `budget-expired`, `cancelled`, or
+  `no-valid-result`;
+- stream progress with generation, completed evaluations, population size, best
+  score/source, elapsed time, remaining budget, and phase.
 
 Acceptance:
 
-- GA results are reproducible when seeded;
+- GA chromosome generation and scoring order are reproducible for the same
+  inputs, settings, seed, algorithm version, and evaluation cap;
 - every GA layout is produced by the shared placement kernel, not raw coordinate
   genes;
 - the priority-order chromosome remains meaningful with the configured
   `orderWindow`;
+- timeout or cancellation returns the last fully validated best-so-far layout,
+  or `no-valid-result` if none exists;
 - the best GA result can tie or beat deterministic beam on benchmark jobs;
 - failed or partial GA runs are reported honestly.
 
@@ -1103,6 +1162,9 @@ Tasks:
 
 - collect small deterministic fixtures for triangles, trapezoids, rectangles,
   stars, circles/arcs approximated by polygons, and mixed repeated pieces;
+- measure convex-vs-rectangle opportunity for presets and real jobs:
+  `area(convexHull) / area(boundingBox)` and
+  `area(collisionPolygon) / area(paddedBoundingBox)`;
 - include stress fixtures for near-collinear points, tiny segments, high
   padding, duplicate points, open contours, unresolved DXF entities, and
   rotation-heavy angled profiles;
@@ -1117,6 +1179,8 @@ Tasks:
 Acceptance:
 
 - every benchmark run is deterministic for the same seed and geometry settings;
+- benchmark reports show the expected upper-bound gain from convex collision
+  geometry before optimizer effects;
 - v2 beats or ties rectangle MaxRects on triangle/trapezoid-heavy fixtures;
 - geometry failures can be reproduced from saved fixture inputs and diagnostics;
 - no benchmark layout is accepted without final validation.
@@ -1153,7 +1217,7 @@ Mitigation:
 - NFP cache by shape pair and rotation pair;
 - beam width cap;
 - GA population/time budget cap;
-- time budget with honest partial results.
+- time budget with honest best-so-far and terminal-status reporting.
 
 ### Local Minima
 
