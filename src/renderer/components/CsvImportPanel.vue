@@ -14,7 +14,7 @@ import type { ProjectCsvImport } from '@shared/domain/project.js'
 interface MutableSubrunOptions {
   allowGlobalRotation: boolean
   timeoutMs: number
-  workerMode: 'maxrects-beam-search'
+  workerMode: NestingOptions['workerMode']
   historyMode: 'stream' | 'final' | 'off'
   historyScope: 'winning_path'
   strategySelectionMode: 'single' | 'all_configured'
@@ -260,6 +260,10 @@ function setMainTimeoutMs(csvImportId: string, value: number): void {
   setMainOption(csvImportId, { timeoutMs: Math.max(1000, value) })
 }
 
+function setMainWorkerMode(csvImportId: string, value: NestingOptions['workerMode']): void {
+  setMainOption(csvImportId, { workerMode: value })
+}
+
 function setMainStrategySelectionMode(
   csvImportId: string,
   value: 'single' | 'all_configured'
@@ -475,6 +479,21 @@ function onStartSubrun(csvImportId: string): void {
               @input="setMainTimeoutMs(selectedCsv.id, Number(inputValue($event)))"
             />
           </label>
+          <label title="Selects the worker engine for this CSV run.">
+            Engine
+            <select
+              :value="selectedCsv.runConfiguration.options.workerMode"
+              @change="
+                setMainWorkerMode(
+                  selectedCsv.id,
+                  selectValue($event) as NestingOptions['workerMode']
+                )
+              "
+            >
+              <option value="maxrects-beam-search">MaxRects beam</option>
+              <option value="irregular-convex-v2">Irregular convex</option>
+            </select>
+          </label>
           <label class="span-2 full" title="Single runs only the checked strategy IDs.">
             Candidate set
             <select
@@ -638,6 +657,20 @@ function onStartSubrun(csvImportId: string): void {
               :value="subrunConfig.options.timeoutMs"
               @input="patchSubrunOptions({ timeoutMs: Math.max(1000, Number(inputValue($event))) })"
             />
+          </label>
+          <label title="Selects the worker engine for this subrun.">
+            Engine
+            <select
+              :value="subrunConfig.options.workerMode"
+              @change="
+                patchSubrunOptions({
+                  workerMode: selectValue($event) as NestingOptions['workerMode']
+                })
+              "
+            >
+              <option value="maxrects-beam-search">MaxRects beam</option>
+              <option value="irregular-convex-v2">Irregular convex</option>
+            </select>
           </label>
           <label class="span-2 full" title="Single runs only the checked strategy IDs.">
             Candidate set

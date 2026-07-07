@@ -295,12 +295,13 @@ describe('runMaxRectsBeamSearch', () => {
   it('subtracts a committed placement from every overlapping free rectangle', () => {
     const selected = freeRectangleAt(0, 0, 100, 100)
     const overlapping = freeRectangleAt(0, 0, 50, 100)
+    const candidatePiece = sizedPiece('a', 50, 50)
     const candidate = new NestingAlgorithmCandidate({
       state: beamState({
         freeRectangles: [selected, overlapping],
-        remainingPieces: [sizedPiece('a', 50, 50)]
+        remainingPieces: [candidatePiece]
       }),
-      piece: sizedPiece('a', 50, 50),
+      piece: candidatePiece,
       freeRectangle: selected,
       rotated: false,
       placement: placementAt(0, 0, 50, 50, 'a'),

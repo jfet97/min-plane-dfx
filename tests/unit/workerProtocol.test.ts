@@ -142,6 +142,23 @@ describe('WorkerResponse', () => {
     expect(Exit.isSuccess(result)).toBe(true)
   })
 
+  it('accepts a not_implemented failure response with worker mode context', () => {
+    const response = {
+      type: 'failure' as const,
+      requestId: 'r-1',
+      jobId: 'job-1',
+      error: {
+        code: 'not_implemented',
+        message: 'Irregular convex nesting is wired but not implemented.',
+        context: {
+          workerMode: 'irregular-convex-v2'
+        }
+      }
+    }
+    const result = validate(WorkerResponse, response)
+    expect(Exit.isSuccess(result)).toBe(true)
+  })
+
   it('rejects a malformed progress phase', () => {
     const result = validate(WorkerResponse, {
       type: 'progress',

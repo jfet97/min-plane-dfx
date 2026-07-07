@@ -46,6 +46,13 @@ Algorithm internals are grouped by domain under `src/workers/algorithm/`:
 placement anchors and free-rectangle mechanics. The root files stay focused on
 strategy orchestration, ordering adapters, and worker-facing wrappers.
 
+Irregular v2 services live under `src/workers/irregular/`. They are Effect
+service boundaries and default unimplemented layers, not algorithm
+implementations. The `irregular-convex-v2` worker mode is exposed through the
+request schema and renderer, but the worker currently returns
+`not_implemented` before MaxRects is reached. Keep it that way until the real
+convex geometry and search implementations exist.
+
 The core emits algorithm events from `src/workers/algorithm/events.ts`, not
 history frames and not worker-wire payloads. The event stream is the raw
 material for history: initial states, beam-step counts, selected states,

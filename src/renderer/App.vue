@@ -7,12 +7,14 @@ import DxfPreviewCanvas from './components/DxfPreviewCanvas.vue'
 import HistoryTimeline from './components/HistoryTimeline.vue'
 import StrategyRunsPanel from './components/StrategyRunsPanel.vue'
 import CsvImportPanel from './components/CsvImportPanel.vue'
+import IrregularDebugPanel from './components/IrregularDebugPanel.vue'
 import { useAppStore } from './composables/useAppStore.js'
 import { useSettings } from './composables/useSettings.js'
 import { useHistoryStore } from './composables/useHistoryStore.js'
 import { useFinalSelection } from './composables/useFinalSelection.js'
 import { useJobRunner } from './composables/useJobRunner.js'
 import { useCsvImportStore } from './composables/useCsvImportStore.js'
+import { cloneImportedPiece, sourcePiecesForPreparedPieces } from '@shared/sourcePiecesForPreparedPieces.js'
 import { preparePieces } from '@shared/preparePieces.js'
 import { prepareCsvPieces } from '@shared/prepareCsvPieces.js'
 import { JobId, PieceId } from '@shared/domain/ids.js'
@@ -513,6 +515,7 @@ function buildRequest(): NestingRequest | null {
     sheet: cloneSheet(sheet),
     padding,
     pieces: clonePreparedPieces(prep.pieces),
+    sourcePieces: store.selectedPieces.value.map((piece) => cloneImportedPiece(piece)),
     options: cloneOptions(settings.state.value.options)
   }
 }
@@ -712,7 +715,15 @@ function buildCsvSubrunRequest(
   padding: number,
   options: NestingOptions
 ): NestingRequest {
-  return csvStore.startSubrun(csvImportId, subrunIndex, pieces, sheet, padding, options)
+  return csvStore.startSubrun(
+    csvImportId,
+    subrunIndex,
+    pieces,
+    sheet,
+    padding,
+    options,
+    sourcePiecesForPreparedPieces(pieces, store.state.value.pieces)
+  )
 }
 
 async function runCsvNestingRequest(request: NestingRequest, csvImportId: string): Promise<void> {
@@ -823,6 +834,7 @@ async function startNextNormalSubrun(): Promise<void> {
     sheet: cloneSheet(sheet),
     padding: settings.state.value.padding,
     pieces: clonePreparedPieces(remaining),
+    sourcePieces: sourcePiecesForPreparedPieces(remaining, store.state.value.pieces),
     options: cloneOptions(settings.state.value.options),
     strategyRunId: `${previous.jobId}-subrun-${subRunIndex}`
   }
@@ -1174,6 +1186,7 @@ async function loadCurrentHistoryReplay(): Promise<void> {
       <div class="history-slot">
         <HistoryTimeline />
       </div>
+      <IrregularDebugPanel />
       <div class="warnings-slot">
         <h3>Preparation warnings</h3>
         <p v-if="projectWarning" class="project-warning">{{ projectWarning }}</p>

@@ -1,4 +1,5 @@
 import { Schema } from 'effect'
+import { ImportedPiece } from '../domain/dxf.js'
 import { NestingRequest, NestingResult } from '../domain/nesting.js'
 import { WorkerRequest, WorkerResponse } from '../protocol/worker.js'
 import {
@@ -11,7 +12,7 @@ import {
 export const NestingOptionsStrictSchema = Schema.Struct({
   allowGlobalRotation: Schema.Boolean,
   timeoutMs: Schema.Number.check(Schema.isGreaterThan(0)),
-  workerMode: Schema.Literal('maxrects-beam-search'),
+  workerMode: Schema.Literals(['maxrects-beam-search', 'irregular-convex-v2']),
   historyMode: Schema.Literals(['stream', 'final', 'off']),
   historyScope: Schema.Literal('winning_path'),
   strategySelectionMode: Schema.Literals(['single', 'all_configured']),
@@ -74,6 +75,7 @@ export const NestingRequestStrict = Schema.Struct({
     Schema.isNonEmpty(),
     piecesHaveUniqueIds
   ),
+  sourcePieces: Schema.optional(Schema.Array(ImportedPiece)),
   options: NestingOptionsStrictSchema,
   strategyRunId: Schema.optional(Schema.String.check(Schema.isMinLength(1)))
 })

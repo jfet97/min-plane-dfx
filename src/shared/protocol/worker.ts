@@ -138,6 +138,25 @@ export class WorkerFailureResponse extends Schema.Class<WorkerFailureResponse>(
       })
     })
   }
+
+  static notImplemented(input: {
+    readonly requestId: string
+    readonly jobId: JobId
+    readonly mode: string
+    readonly message: string
+  }): WorkerFailureResponse {
+    return new WorkerFailureResponse({
+      requestId: input.requestId,
+      jobId: input.jobId,
+      error: new WorkerResponseFailureError({
+        code: 'not_implemented',
+        message: input.message,
+        context: {
+          workerMode: input.mode
+        }
+      })
+    })
+  }
 }
 
 export const WorkerResponse = Schema.Union([

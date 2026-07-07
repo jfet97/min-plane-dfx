@@ -1,4 +1,5 @@
 import { Effect, Schema } from 'effect'
+import { ImportedPiece } from './dxf.js'
 import { FreeRectId, JobId, PieceId } from './ids.js'
 import {
   NonNegativeIntegerMillimeters,
@@ -13,8 +14,9 @@ export const HistoryScope = Schema.Literal('winning_path')
 /** History delivery mode. */
 export const HistoryMode = Schema.Literals(['stream', 'final', 'off'])
 
-/** Worker mode currently supported by the local nesting worker. */
-export const WorkerMode = Schema.Literal('maxrects-beam-search')
+/** Worker modes supported by the local nesting worker protocol. */
+export const WorkerMode = Schema.Literals(['maxrects-beam-search', 'irregular-convex-v2'])
+export type WorkerMode = Schema.Schema.Type<typeof WorkerMode>
 
 /**
  * Candidate placement strategy selection for a single beam run.
@@ -125,6 +127,7 @@ export class NestingRequest extends Schema.Class<NestingRequest>('NestingRequest
   sheet: SheetSpec,
   padding: NonNegativeIntegerMillimeters,
   pieces: Schema.Array(PreparedPiece),
+  sourcePieces: Schema.optional(Schema.Array(ImportedPiece)),
   options: NestingOptions,
   strategyRunId: Schema.optional(Schema.String)
 }) {}

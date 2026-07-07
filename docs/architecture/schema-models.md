@@ -26,3 +26,12 @@ Factories should encode defaults and invariants such as status derivation, gener
 ## Boundaries
 
 Boundary schemas still decode untrusted data before use. Decoding may produce class instances, but renderer and persistence code must continue to treat data as immutable domain values and update state through composable actions.
+
+## Internal DTOs
+
+Plain interfaces are acceptable for internal algorithm or service DTOs that do
+not cross IPC, worker RPC, or persisted project boundaries. Shared irregular v2
+DTOs under `src/shared/irregular/` are schema-backed classes because they are
+app-level payloads intended for worker diagnostics, request/debug surfaces, and
+future history/progress envelopes. Worker service contracts may still use
+interfaces for operation inputs and Effect service shapes.

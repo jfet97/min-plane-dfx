@@ -19,7 +19,7 @@ interface MutableSettingsState {
   options: {
     allowGlobalRotation: boolean
     timeoutMs: number
-    workerMode: 'maxrects-beam-search'
+    workerMode: NestingOptions['workerMode']
     historyMode: 'stream' | 'final' | 'off'
     historyScope: 'winning_path'
     strategySelectionMode: 'single' | 'all_configured'
@@ -108,6 +108,10 @@ export function useSettings() {
     setTimeoutMs: (timeoutMs: number): void => {
       state.options.timeoutMs = Math.max(1000, timeoutMs)
       notifyWorkspaceSettingsChanged()
+    },
+    setWorkerMode: (mode: NestingOptions['workerMode']): void => {
+      state.options.workerMode = mode
+      notifyWorkspaceSettingsChanged('immediate')
     },
     setHistoryMode: (mode: 'stream' | 'final' | 'off'): void => {
       state.options.historyMode = mode

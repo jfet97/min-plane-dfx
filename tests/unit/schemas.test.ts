@@ -140,6 +140,17 @@ describe('ProjectDocumentStrict', () => {
     expect(Exit.isSuccess(result)).toBe(true)
   })
 
+  it('accepts irregular worker mode in saved project options', () => {
+    const result = validate(ProjectDocumentStrict, {
+      ...validProject,
+      options: {
+        ...validProject.options,
+        workerMode: 'irregular-convex-v2'
+      }
+    })
+    expect(Exit.isSuccess(result)).toBe(true)
+  })
+
   it('decodes a version-1 project document', () => {
     const result = validate(ProjectDocumentStrict, { ...validProject, version: 1 as const })
     expect(Exit.isSuccess(result)).toBe(true)
@@ -227,6 +238,18 @@ const validRequest = {
 describe('NestingRequestStrict', () => {
   it('accepts a valid nesting request', () => {
     const result = validate(NestingRequestStrict, validRequest)
+    expect(Exit.isSuccess(result)).toBe(true)
+  })
+
+  it('accepts irregular worker requests with source geometry', () => {
+    const result = validate(NestingRequestStrict, {
+      ...validRequest,
+      sourcePieces: validProject.importedPieces,
+      options: {
+        ...validRequest.options,
+        workerMode: 'irregular-convex-v2'
+      }
+    })
     expect(Exit.isSuccess(result)).toBe(true)
   })
 

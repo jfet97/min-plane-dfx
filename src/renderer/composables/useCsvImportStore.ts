@@ -1,5 +1,6 @@
 import { reactive, computed, type UnwrapNestedRefs } from 'vue'
 import { JobId, PieceId } from '@shared/domain/ids.js'
+import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type {
   AlgorithmBenchmark,
   NestingOptions,
@@ -483,7 +484,8 @@ function startSubrun(
   pieces: ReadonlyArray<PreparedPiece>,
   sheet: SheetSpec,
   padding: number,
-  options: NestingOptions
+  options: NestingOptions,
+  sourcePieces: ReadonlyArray<ImportedPiece> = []
 ): NestingRequest {
   const session = getOrCreateSession(csvImportId)
   const clonedPieces = clonePreparedPieces(pieces)
@@ -507,6 +509,7 @@ function startSubrun(
     sheet: cloneSheet(sheet),
     padding,
     pieces: clonedPieces,
+    sourcePieces,
     options: cloneOptions(options),
     strategyRunId: `${session.runId}-subrun-${subrunIndex}`
   }

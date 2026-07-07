@@ -89,6 +89,7 @@ function updateOptions(patch: Partial<NestingOptions>): void {
     if (patch.allowGlobalRotation !== undefined)
       settings.setAllowGlobalRotation(patch.allowGlobalRotation)
     if (patch.timeoutMs !== undefined) settings.setTimeoutMs(patch.timeoutMs)
+    if (patch.workerMode !== undefined) settings.setWorkerMode(patch.workerMode)
     if (patch.historyMode !== undefined) settings.setHistoryMode(patch.historyMode)
     if (patch.strategySelectionMode !== undefined)
       settings.setStrategySelectionMode(patch.strategySelectionMode)
@@ -125,6 +126,10 @@ function toggleStrategyId(id: string): void {
 
 function setHistoryMode(event: Event): void {
   updateOptions({ historyMode: selectValue(event) as NestingOptions['historyMode'] })
+}
+
+function setWorkerMode(event: Event): void {
+  updateOptions({ workerMode: selectValue(event) as NestingOptions['workerMode'] })
 }
 
 function setStrategySelectionMode(event: Event): void {
@@ -228,6 +233,20 @@ function setLayoutSelectionStrategyId(event: Event): void {
           :value="model.options.timeoutMs"
           @input="updateOptions({ timeoutMs: Number(inputValue($event)) })"
         />
+      </label>
+      <label title="Selects the worker engine for this nesting request.">
+        Engine
+        <select :value="model.options.workerMode" @change="setWorkerMode">
+          <option value="maxrects-beam-search" title="Current rectangular MaxRects beam worker.">
+            MaxRects beam
+          </option>
+          <option
+            value="irregular-convex-v2"
+            title="Irregular convex worker shell. Algorithms currently throw not implemented."
+          >
+            Irregular convex
+          </option>
+        </select>
       </label>
       <label title="Controls whether worker-emitted algorithm frames are retained or streamed.">
         History mode

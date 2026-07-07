@@ -262,7 +262,7 @@ export class WorkerSupervisor {
         code,
         message
       })
-      this.failCurrent(code, message)
+      this.failCurrent(code, message, parsed.error.context)
       return
     }
   }
@@ -271,10 +271,14 @@ export class WorkerSupervisor {
     this.failCurrent('worker_crashed', err instanceof Error ? err.message : String(err))
   }
 
-  private failCurrent(code: AppErrorCode, message: string): void {
+  private failCurrent(
+    code: AppErrorCode,
+    message: string,
+    context: Readonly<Record<string, unknown>> = {}
+  ): void {
     if (!this.current) return
     clearTimeout(this.current.timer)
-    const err = new SupervisorError(code, message, { jobId: this.current.request.jobId })
+    const err = new SupervisorError(code, message, { jobId: this.current.request.jobId, ...context })
     this.teardownWorker(this.current.dispose, 'cancel')
     this.current.reject(err)
     this.current = null

@@ -62,15 +62,19 @@ fractional inside that container and is translated for preview/export.
 
 Renderer cutting settings store padding as total integer clearance. Request
 preparation expands each side by `ceil(padding / 2)`, so odd padding values
-round outward and the worker still receives integer-millimeter rectangles only.
+round outward. The request always includes integer-millimeter prepared
+rectangles; irregular requests may also include `sourcePieces` with the original
+imported geometry summaries for polygon flattening.
 
 ## Worker
 
 The worker receives schema-decoded `RunNestingPayload` values through `NestingWorkerRpcs`, runs the computation workflow, writes optional NDJSON history, and streams typed `WorkerResponse` messages.
 
-The worker must not perform unit conversion or float-to-grid normalization.
-Its rectangle inputs are already non-negative integer millimeters, with positive
-integer width and height.
+The worker must not perform unit conversion for rectangle nesting. Its
+rectangle inputs are already non-negative integer millimeters, with positive
+integer width and height. Irregular geometry code may consume `sourcePieces`
+for flattening, but that belongs to the irregular worker path and must not
+change MaxRects behavior.
 
 The worker remains stateless for multi-plate runs. Each manual subrun is one
 normal worker request with a distinct `strategyRunId`; the renderer decides

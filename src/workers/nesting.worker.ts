@@ -2,6 +2,7 @@ import * as NodeFileSystem from '@effect/platform-node/NodeFileSystem'
 import * as NodePath from '@effect/platform-node/NodePath'
 import * as NodeWorkerRunner from '@effect/platform-node/NodeWorkerRunner'
 import { computeNesting } from './algorithm/computeNesting.js'
+import { IRREGULAR_WORKER_MODE } from '@shared/irregular/defaults.js'
 import {
   NestingWorkerRpcs,
   WorkerFailureResponse,
@@ -128,6 +129,19 @@ function handleRunNesting(
     yield* sendProgress(send, requestId, jobId, 'received')
     yield* sendProgress(send, requestId, jobId, 'validated')
     yield* sendProgress(send, requestId, jobId, 'started')
+
+    if (payload.options.workerMode === IRREGULAR_WORKER_MODE) {
+      yield* send(
+        WorkerFailureResponse.notImplemented({
+          requestId,
+          jobId,
+          mode: payload.options.workerMode,
+          message:
+            'Irregular convex nesting is wired to the worker, but the GA, beam, geometry, candidate generation, free-material, and scoring implementations are intentionally missing.'
+        })
+      )
+      return
+    }
 
     const historyMode = payload.options.historyMode
     const historyFileMode = payload.strategyRunId !== undefined ? 'append' : 'truncate'

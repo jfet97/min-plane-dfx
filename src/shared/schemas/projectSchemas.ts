@@ -64,7 +64,7 @@ export const ProjectDocumentStrict = Schema.Struct({
   options: Schema.Struct({
     allowGlobalRotation: Schema.Boolean,
     timeoutMs: Schema.Number.check(Schema.isGreaterThan(0)),
-    workerMode: Schema.Literal('maxrects-beam-search'),
+    workerMode: Schema.Literals(['maxrects-beam-search', 'irregular-convex-v2']),
     historyMode: Schema.Literals(['stream', 'final', 'off']),
     historyScope: Schema.Literal('winning_path'),
     strategySelectionMode: Schema.Literals(['single', 'all_configured']),
