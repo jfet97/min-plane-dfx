@@ -605,16 +605,19 @@ The shared placement kernel is the core abstraction. A complete layout is
 produced through an explicit decoder contract:
 
 ```text
-decode(order, rotations, placementPolicy, geometryCache) -> layoutResult
+decode(priorityOrder, rotations, placementPolicy, orderWindow, geometryCache)
+  -> layoutResult
 
 input:
-  ordered piece ids
+  priority-ordered piece ids
   selected rotation per piece
   placement policy id
+  order window size
   NFP/IFP geometry cache
 
 responsibility:
-  place pieces one by one through expandState
+  place pieces through bounded expandState steps
+  choose candidate pieces from the next orderWindow eligible ids
   generate NFP/IFP candidates
   rank legal candidates through the selected policy
   validate accepted placements
@@ -634,12 +637,12 @@ The one-step operation underneath `decode` is:
 ```text
 input:
   current placed state
-  candidate piece id
-  candidate rotation
+  candidate piece ids from the next orderWindow eligible ids
+  candidate rotation choices
   placement policy id
 
 expandState:
-  generate NFP/IFP candidate points for the candidate rotation
+  generate NFP/IFP candidate points for each candidate piece/rotation
   score legal candidate placements using the selected policy
   return successor states
 
@@ -660,23 +663,31 @@ Beam search constructs layouts while keeping multiple partial states alive:
 For each beam state:
 
 ```text
-for each remaining piece:
+for each candidate piece in next orderWindow eligible pieces:
   for each allowed rotation:
     generate NFP/IFP candidate points
     score candidate placements
 keep top K successor states
 ```
 
+Beam expansion is priority-bounded, not full free-order by default. The active
+priority order comes from either the deterministic seed order or the GA
+chromosome. The default v2 `orderWindow` should be small, for example `2` or
+`3`, with `1` available as strict-order decoding. Full free-order expansion over
+all remaining pieces is reserved for tiny fixtures, debugging, or benchmark
+experiments because its branching factor grows quickly and weakens the meaning
+of the GA order gene.
+
 GA/search explores the global choices that beam can miss:
 
 ```text
 chromosome =
-  piece permutation
+  piece priority order
   rotation index per piece
   placement policy id
 
 fitness(layout) =
-  decode the chromosome by repeatedly calling expandState
+  decode the chromosome priority order through the shared windowed decoder
   then rank the resulting validated layout
 ```
 
@@ -702,16 +713,22 @@ scoring diversity matter.
 
 Recommended chromosome fields:
 
-- permutation of prepared piece ids;
+- priority order of prepared piece ids;
 - rotation choice per piece from the finite rotation set;
 - optional placement policy id, e.g. compact, preserve-free, contact-heavy.
+
+The order gene is a priority order, not a raw coordinate plan and not an
+immutable trace when `orderWindow > 1`. This preserves the SVGNest/Deepnest
+model where GA explores insertion order and rotations, while allowing bounded
+local repair inside the decoder.
 
 Recommended initial population:
 
 - current `sortPiecesForNesting` order;
 - first-fit-decreasing by convex hull area, longest edge, height, width, and
   imbalance;
-- a few strategy-derived permutations that put awkward/high-vertex pieces first;
+- a few strategy-derived priority orders that put awkward/high-vertex pieces
+  first;
 - random swaps/inversions from those seeds.
 
 Recommended mutations:
@@ -724,7 +741,7 @@ Recommended mutations:
 
 Recommended crossover:
 
-- order-preserving crossover for the permutation;
+- order-preserving crossover for the priority order;
 - per-piece rotation inherited from either parent, then occasionally mutated.
 
 Fitness should stay lexicographic and conservative:
@@ -750,13 +767,14 @@ component area, cavity/sliver penalties, largest-empty-rectangle estimates, or
 limited probes against representative remaining pieces. It must not claim to be
 the exact feasible placement region for every future piece.
 
-Beam and GA are complementary v2 modes, not a first/later split. Beam search is
-the deterministic reference and gives inspectable partial-state history. GA can
-outperform beam when the main mistake is early piece order, rotation, or policy
-choice. The practical target is a portfolio:
+Beam and GA are complementary v2 modes, not a first/later split. Windowed beam
+search is the deterministic reference and gives inspectable partial-state
+history. GA is part of v2 and can outperform deterministic beam when the main
+mistake is early piece priority, rotation, or policy choice. The practical
+target is a portfolio:
 
 ```text
-deterministic convex-NFP beam
+deterministic convex-NFP windowed beam
   + time-budgeted GA/search using the same placement kernel and caches
   + final validator shared by both
 ```
@@ -993,8 +1011,11 @@ contract recognizable and deterministic.
 Tasks:
 
 - represent beam state as placed polygon transforms plus remaining ids;
-- for each candidate piece and rotation, generate placement candidates from
-  rectangular IFP bounds plus convex NFP boundaries/intersections;
+- define `orderWindow` and candidate-piece selection from the active priority
+  order;
+- for each candidate piece in the next `orderWindow` eligible ids and each
+  allowed rotation, generate placement candidates from rectangular IFP bounds
+  plus convex NFP boundaries/intersections;
 - filter candidates with direct convex feasibility and final local validation;
 - score successors;
 - keep top beam states;
@@ -1004,6 +1025,9 @@ Tasks:
 Acceptance:
 
 - triangle-heavy cases beat rectangle MaxRects on utilization;
+- `orderWindow = 1` behaves as strict priority-order decoding;
+- small windows such as `2` or `3` give bounded local repair without full
+  free-order branching;
 - final validator proves padding;
 - fallback handles invalid/empty feasible regions honestly;
 - no fake placements or fake history.
@@ -1015,11 +1039,13 @@ kernel as the beam mode.
 
 Tasks:
 
-- encode chromosomes as piece permutation, rotation index per piece, and
+- encode chromosomes as piece priority order, rotation index per piece, and
   placement policy id;
 - seed the population with deterministic orders and rotation choices;
 - add swap, move, subsequence-reversal, rotation, and policy mutations;
-- use order-preserving crossover for piece permutations;
+- use order-preserving crossover for piece priority orders;
+- decode chromosomes through the same `orderWindow` placement kernel as
+  deterministic beam;
 - rank decoded layouts with the same lexicographic final score family;
 - respect a time budget and return the best validated layout.
 
@@ -1028,6 +1054,8 @@ Acceptance:
 - GA results are reproducible when seeded;
 - every GA layout is produced by the shared placement kernel, not raw coordinate
   genes;
+- the priority-order chromosome remains meaningful with the configured
+  `orderWindow`;
 - the best GA result can tie or beat deterministic beam on benchmark jobs;
 - failed or partial GA runs are reported honestly.
 
