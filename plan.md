@@ -75,16 +75,16 @@ The relevant lessons are:
 - choose candidate points from NFP/IFP boundaries, not from a dense sheet grid;
 - start from first-fit-decreasing style ordering because large/hard pieces placed
   late often create unrecoverable layouts;
-- cache NFPs by shape pair and rotation pair, because the optimizer evaluates
+- cache NFPs by shape pair and transform pair, because the optimizer evaluates
   many similar individuals or beam branches;
-- treat the placement algorithm as a decoder: given an order and rotations, it
-  constructs one deterministic layout.
+- treat the placement algorithm as a decoder: given an order and transform
+  choices, it constructs one deterministic layout.
 
 Deepnest's genetic algorithm is most relevant as an outer search layer. Its gene
-is essentially piece order plus rotation choices. Fitness then measures how good
-the decoded layout is. This is a good fit for this project because the current
-worker already separates initial ordering, candidate ordering, and survivor
-selection.
+is essentially piece order plus rotation choices; this project extends that idea
+to mirror-aware transform choices. Fitness then measures how good the decoded
+layout is. This is a good fit for this project because the current worker
+already separates initial ordering, candidate ordering, and survivor selection.
 
 ## Terms
 
@@ -474,6 +474,13 @@ interface IrregularPlacement {
 Rendering/export applies the transform to original geometry or high-quality
 flattened geometry. The nesting engine consumes the derived collision polygon.
 
+Mirroring is a per-piece capability. V2 should default pieces to mirrorable,
+while allowing users or source metadata to disable mirroring for handed,
+front-faced, grain-sensitive, engraved, or otherwise orientation-sensitive
+parts. The optimizer may only generate mirrored variants for pieces whose
+`allowMirror` flag is true, and the final transform must record the chosen
+mirror state explicitly.
+
 ## Validation Invariant
 
 NFP/IFP geometry proposes feasible placement candidates; it is not the final
@@ -514,6 +521,11 @@ Then add piece-specific shape angles:
 - principal-axis / oriented-bounding-box angles for elongated or diagonal
   pieces;
 - configured machine-safe angles if the cutting workflow has constraints.
+
+For pieces with `allowMirror = true`, generate mirrored variants of the same
+bounded rotation set. For pieces with `allowMirror = false`, only unmirrored
+rotations are legal. Mirroring doubles the transform candidates for a piece, so
+it must count toward rotation/transform caps and diagnostics.
 
 Do not add every tiny flattened segment as a rotation. Rotation candidates must
 be filtered and capped:
@@ -595,6 +607,7 @@ placements. Cache keys must include the full derived-geometry identity:
 ```text
 piece geometry digest
 rotation angle
+mirror state
 clearance / padding / clearanceSafetyMargin
 flattening tolerance
 convex-hull simplification tolerance
@@ -603,9 +616,10 @@ geometry backend name and version/config
 NFP/IFP algorithm version
 ```
 
-Pairwise NFP keys must include both pieces and both rotations. IFP keys must
-include the sheet geometry and the moving piece rotation. If any input in the key
-changes, the cached artifact is stale and must not be reused.
+Pairwise NFP keys must include both pieces, both rotations, and both mirror
+states. IFP keys must include the sheet geometry plus the moving piece rotation
+and mirror state. If any input in the key changes, the cached artifact is stale
+and must not be reused.
 
 ## Shared Decoder And Optimizer Portfolio
 
@@ -651,11 +665,11 @@ The one-step operation underneath `decode` is:
 input:
   current placed state
   candidate piece ids from the next orderWindow eligible ids
-  candidate rotation choices
+  candidate transform choices
   placement policy id
 
 expandState:
-  generate NFP/IFP candidate points for each candidate piece/rotation
+  generate NFP/IFP candidate points for each candidate piece/transform
   score legal candidate placements using the selected policy
   return successor states
 
@@ -696,7 +710,7 @@ GA/search explores the global choices that beam can miss:
 ```text
 chromosome =
   piece priority order
-  rotation index per piece
+  transform index per piece
   placement policy id
 
 fitness(layout) =
@@ -1008,24 +1022,27 @@ Acceptance:
 
 ### Adaptive Rotation Generator
 
-Goal: generate strong bounded rotation candidates for each convex collision
-polygon.
+Goal: generate strong bounded rotation and mirror candidates for each convex
+collision polygon.
 
 Tasks:
 
 - include baseline orthogonal rotations when allowed;
+- carry per-piece `allowMirror`, defaulting to true but user-disableable;
 - compute stable edge-alignment angles from long convex-hull edges;
 - compute principal-axis / oriented-bounding-box angles;
 - deduplicate angles by tolerance;
 - cap the candidate set per piece and expose diagnostics for discarded angles;
-- cache rotated collision polygons by geometry digest and rotation.
+- cache transformed collision polygons by geometry digest, rotation, and mirror
+  state.
 
 Acceptance:
 
 - diagonal and elongated pieces receive useful non-orthogonal rotations;
+- orientation-sensitive pieces can disable mirrored transforms;
 - tiny flattened curve segments do not explode the rotation set;
-- repeated runs produce identical rotation lists;
-- NFP cache keys include the selected rotation.
+- repeated runs produce identical transform lists;
+- NFP cache keys include the selected rotation and mirror state.
 
 ### Pairwise NFP And IFP
 
@@ -1086,10 +1103,10 @@ kernel as the beam mode.
 
 Tasks:
 
-- encode chromosomes as piece priority order, rotation index per piece, and
-  placement policy id;
-- seed the population with deterministic orders and rotation choices;
-- add swap, move, subsequence-reversal, rotation, and policy mutations;
+- encode chromosomes as piece priority order, mirror-aware transform index per
+  piece, and placement policy id;
+- seed the population with deterministic orders and transform choices;
+- add swap, move, subsequence-reversal, transform, and policy mutations;
 - use order-preserving crossover for piece priority orders;
 - decode chromosomes through the same `orderWindow` placement kernel as
   deterministic beam;
@@ -1216,10 +1233,10 @@ NFP creates many candidates, especially with many pieces and rotations.
 
 Mitigation:
 
-- finite adaptive rotation set with dedupe and per-piece caps;
+- finite adaptive transform set with dedupe and per-piece caps;
 - top-N candidate pruning per piece;
 - broad-phase bounding boxes;
-- NFP cache by shape pair and rotation pair;
+- NFP cache by shape pair and transform pair;
 - beam width cap;
 - GA population/time budget cap;
 - time budget with honest best-so-far and terminal-status reporting.
@@ -1258,11 +1275,12 @@ Settled v2 decisions:
 - The target is fixed rectangular sheet nesting, not strip-length minimization.
 - Exact MIP is a literature/benchmark reference only, not an implementation
   path for v2.
+- Mirroring is a per-piece capability, defaulting to enabled and user-disableable
+  for orientation-sensitive pieces.
 
 Remaining product/geometry questions:
 
 - Which rotation set is acceptable for the shop workflow?
-- Is mirroring physically allowed, or only rotation?
 - What flattening tolerance is acceptable for DXF arcs/circles?
 
 ## Non-Goals For V2
