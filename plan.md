@@ -2,462 +2,187 @@
 
 ## Purpose
 
-This document captures the direction for moving `min-plane-dfx` from
-rectangle-based nesting toward shape-aware irregular nesting.
+`min-plane-dfx` currently nests parts as rectangles. That is simple and robust,
+but it wastes material whenever the real part is not rectangular. A triangle,
+trapezoid, angled profile, or approximated circle may occupy only part of its
+bounding rectangle, but the current algorithm treats the whole rectangle as
+blocked.
 
-The immediate motivation is visible with triangles and other non-rectangular
-shapes: packing each shape by its bounding rectangle wastes the interior voids
-of the rectangle. The long-term target is to stop treating bounding rectangles
-as the real occupied geometry.
+This plan describes the v2 target: a real shape-aware nesting engine for fixed
+rectangular sheets. V2 is not a temporary prototype and not a stepping stone to
+concave or hole-aware nesting. The final target is convex-only irregular nesting
+with a complete optimizer portfolio.
 
-The central geometric tool for this direction is the no-fit polygon (NFP). NFP
-does not solve nesting by itself. It provides the geometry primitive used to
-answer:
-
-```text
-Given already placed shapes, where can this moving shape be placed without
-overlap?
-```
-
-The optimizer still has to decide piece order, rotations, candidate position,
-and tie-breaking.
-
-## Literature Anchor
-
-This plan is aligned with the irregular strip-packing / nesting literature, but
-it is not a direct implementation of one paper.
-
-Relevant references:
-
-- Lastra-Diaz and Ortuno, "A new mixed-integer programming model for irregular
-  strip packing based on vertical slices with a reproducible survey",
-  arXiv:2206.00032, 2022.
-  https://arxiv.org/abs/2206.00032
-- Rocha, "Robust NFP generation for Nesting problems", arXiv:1903.11139, 2019.
-  https://arxiv.org/abs/1903.11139
-- Yang et al., "Learning based 2D Irregular Shape Packing",
-  arXiv:2309.10329, 2023.
-  https://arxiv.org/abs/2309.10329
-- Clipper2 documentation, for practical polygon clipping/offsetting robustness.
-  https://www.angusj.com/clipper2/Docs/Overview.htm
-
-The Lastra-Diaz/Ortuno paper is important because it frames the exact
-optimization side. It defines irregular strip packing as placing non-convex
-polygons without overlap on a rectangular strip, notes that heuristic nesting is
-the practical mature technology for large instances, and introduces an exact
-continuous MIP family based on the NoFit-Polygon Covering Model with vertical
-slices. That exact MIP direction is academically valuable, but it is probably
-not the first practical target for this desktop app.
-
-The practical direction for this project should be:
+The important shift is:
 
 ```text
-NFP/IFP geometry primitive
-  + constructive heuristic candidate placement
-  + beam search / metaheuristic policy
-  + optional clustering
+v1: rectangles are the occupied geometry
+v2: convex collision polygons are the occupied geometry
 ```
 
-## Practical Open-Source Reference: SVGNest / Deepnest
+The source DXF geometry remains authoritative for display and export. The
+nesting engine works on a derived conservative collision polygon that is easier
+to reason about and validate.
 
-SVGNest and Deepnest are useful implementation references because they separate
-the problem into the same two layers this app needs:
+## Executive Summary
+
+V2 should use:
 
 ```text
-NFP/IFP geometry decides legal placements
-search policy decides order, rotation, and which legal point to use
+DXF source geometry
+  -> nesting-grade flattening
+  -> convex hull
+  -> padded convex collision polygon
+  -> finite rotation/mirror transforms
+  -> NFP/IFP candidate generation
+  -> windowed beam decoder
+  -> GA/search portfolio
+  -> final validation
+  -> render/export original geometry with stored transforms
 ```
 
-The relevant lessons are:
+Core decisions:
 
-- use NFPs for part-to-part forbidden placement regions;
-- use IFPs for sheet containment;
-- choose candidate points from NFP/IFP boundaries, not from a dense sheet grid;
-- start from first-fit-decreasing style ordering because large/hard pieces placed
-  late often create unrecoverable layouts;
-- cache NFPs by shape pair and transform pair, because the optimizer evaluates
-  many similar individuals or beam branches;
-- treat the placement algorithm as a decoder: given an order and transform
-  choices, it constructs one deterministic layout.
+- The sheet is a fixed rectangle, not an infinite strip.
+- Collision geometry is convex-only.
+- Concave source DXF is preserved for display/export, but its convex hull is the
+  conservative collision shape.
+- Placement legality is based on NFP/IFP candidate generation plus direct
+  validation, not on accepting a free-space polygon as proof.
+- `freeMaterial = sheet - union(placed collision polygons)` is still useful for
+  visualization and scoring.
+- Clipper2 is allowed behind a geometry adapter for offsetting, cleanup, and
+  sheet-space polygon booleans, but it is not the definition of the whole
+  algorithm.
+- GA is part of v2. It explores priority order, transform choices, and placement
+  policy. The decoder remains shared and deterministic for a given chromosome.
+- Beam expansion is windowed by `orderWindow`, usually `2` or `3`, not full
+  free-order over all remaining pieces.
+- Mirroring is per-piece via `allowMirror`, default enabled and user-disableable.
 
-Deepnest's genetic algorithm is most relevant as an outer search layer. Its gene
-is essentially piece order plus rotation choices; this project extends that idea
-to mirror-aware transform choices. Fitness then measures how good the decoded
-layout is. This is a good fit for this project because the current worker
-already separates initial ordering, candidate ordering, and survivor selection.
+## How To Read This Plan
 
-## Terms
+This document has two audiences:
+
+- a human reader who wants to understand the algorithmic direction;
+- an implementer who needs concrete boundaries, data shapes, and acceptance
+  criteria.
+
+The first half explains the model: what the geometry means, how placements are
+generated, how beam search and GA cooperate, and why some tempting shortcuts are
+unsafe. The second half turns that model into workstreams.
+
+The important mental split is:
+
+```text
+geometry answers: "is this placement legal?"
+search answers:   "which legal placement should we try?"
+scoring answers:  "which partial or complete layout is better?"
+```
+
+Keeping those questions separate makes the implementation easier to debug. A
+bug in candidate generation should not be fixed by faking a score. A weak score
+should not be fixed by accepting illegal geometry. A UI preview should not
+invent placements that the worker did not emit.
+
+## Running Example
+
+Imagine two right triangles on a rectangular sheet.
+
+With the current rectangle engine, each triangle blocks its whole bounding
+rectangle. Two opposite triangles that could share one rectangle-like area are
+treated as two full rectangles, so the engine wastes the empty triangular voids.
+
+With v2:
+
+1. Each triangle becomes a convex collision polygon.
+2. The moving triangle is allowed to rotate and possibly mirror.
+3. NFP boundaries produce candidate positions where the moving triangle touches
+   the placed triangle without overlap.
+4. The decoder tests those contact points.
+5. The optimizer prefers the placement that keeps the used extents compact and
+   preserves useful remaining material.
+
+This same idea applies to trapezoids, angled profiles, hexagons, circles
+approximated by polygons, and mixed jobs.
+
+## Scale Target
+
+The expected job size is tens of pieces. V2 should remain practical around
+100-150 pieces and keep a hard input cap around the current 200-piece range.
+
+This target drives the caps:
+
+- finite transform sets per piece;
+- small `orderWindow`;
+- bounded beam width;
+- top-N candidate pruning;
+- cached transformed polygons and NFPs;
+- bounded GA population and wall-clock budget;
+- cheap free-material metrics by default.
+
+Full free-order search, uncapped rotations, exhaustive scoring, and expensive
+probe-heavy future-usability metrics are for tiny fixtures, debug modes, or
+offline benchmarks.
+
+## Main Concepts
 
 ### Cut Polygon
 
-The true shape outline used for rendering and export. For DXF curves, this may
-remain the original DXF geometry for export, while the nesting engine receives a
-flattened polygon approximation.
+The true part outline used for display and export. For DXF curves, this may be
+the original DXF entity data or a high-quality flattened export representation.
+
+The cut polygon is not what the optimizer mutates.
+
+Think of this as the customer's part. It is the shape that should appear in the
+preview and the shape that should be exported to downstream cutting workflows.
+If the optimizer simplifies or inflates geometry internally, that must not
+replace the source geometry.
 
 ### Collision Polygon
 
-A conservative convex polygon derived from flattened cut geometry, then
-inflated by clearance. This is the geometry used for overlap tests, NFP
-generation, and candidate validity.
+A conservative convex polygon derived from the source geometry and expanded by
+clearance. This is the geometry used by the nesting engine for overlap checks,
+NFP generation, candidate validity, and final validation.
+
+For v2:
+
+```text
+source shape -> sampled points -> convex hull -> padded collision polygon
+```
+
+If the source part is concave, the convex collision polygon covers the concavity.
+That loses some possible packing efficiency, but it keeps v2 robust and
+tractable.
+
+This polygon is deliberately conservative. If the collision polygons do not
+overlap, then the real parts should have the requested clearance, assuming the
+flattening and safety-margin rules are respected. The optimizer is allowed to be
+conservative; it is not allowed to create a layout that violates physical
+clearance.
 
 ### Placement Point
 
-A fixed reference point used to describe a placed polygon. This should be a
-single convention across the engine, for example the lower-left corner of the
-collision polygon bounding box in local coordinates.
-
-Use a deterministic derived reference point, not the parser's first vertex or
-`path[0]`. The default convention should be the collision polygon bounding-box
-minimum corner:
+The single coordinate used to say where a part is placed. The convention should
+be deterministic and shared across the engine:
 
 ```text
-referencePoint = (minX(collisionPolygon), minY(collisionPolygon))
+referencePoint = bbox minimum corner of the local collision polygon
 ```
 
-Normalize local geometry by translating that point to `(0, 0)`.
-
-The placement point is not a special geometric truth. It is just the coordinate
-used by the placement API:
+After normalization:
 
 ```text
-placedPolygon = translate(localPolygon, placementPoint)
+placedPolygon = translate(localCollisionPolygon, placementPoint)
 ```
 
-Changing the reference point shifts placement coordinates and shifts the NFP,
-but it does not change which physical placements overlap.
+The placement point is not a physical feature of the part. It is an API
+convention. Changing the convention shifts coordinates and NFPs, but it does not
+change which physical placements overlap.
 
-### No-Fit Polygon
+### Transform
 
-For a fixed polygon `A` and a moving polygon `B`, the NFP is the forbidden
-region in placement-coordinate space for `B`'s placement point.
-
-Using one fixed placement-point convention:
-
-```text
-point inside NFP boundary  -> B overlaps A
-point on NFP boundary      -> B touches A
-point outside NFP          -> B is separated from A
-```
-
-For candidate generation, the useful part is the boundary: compact placements
-usually occur when the moving shape touches something already placed or touches
-the sheet boundary.
-
-### Inner-Fit Polygon
-
-For a sheet and a moving polygon `B`, the inner-fit polygon (IFP) is the region
-of placement points where `B` lies fully inside the sheet.
-
-Feasible placement for `B` is classified in placement-coordinate space:
-
-```text
-placement point inside IFP(sheet, B)
-and not strictly inside any NFP(placedPiece, B)
-```
-
-This replaces free rectangles. The free space is not stored as rectangles or
-polygons on the sheet; it is represented by candidate placement points plus
-per-moving-piece feasibility tests.
-
-## V2 Scope: Strong Convex Irregular Nesting
-
-V2 should be a real shape-aware irregular nesting engine, not a minimal
-four-rotation prototype and not a transitional rectangle wrapper. It should use:
-
-```text
-convex collision polygons
-  + adaptive finite per-piece rotations
-  + NFP/IFP placement legality
-  + a shared deterministic placement kernel
-  + beam search and GA/search portfolio modes
-  + final geometric validation
-```
-
-Each imported DXF shape should initially be approximated with a convex collision
-polygon, not a concave polygon. Rendering and export should still use the
-original DXF geometry or a high-quality flattened representation; the convex
-polygon is only the conservative geometry consumed by the nesting engine.
-
-This keeps the geometry layer tractable:
-
-- convex NFP construction can be implemented with edge-angle merging in roughly
-  linear time in the number of polygon edges;
-- the NFP of two convex polygons remains manageable and does not require
-  convex decomposition plus pairwise NFP fusion;
-- app code can construct convex pairwise NFP boundaries and use direct
-  point-in-convex / SAT-style validation instead of constructing full
-  feasible-space boolean regions;
-- the geometry adapter can still use Clipper2 where it reduces risk, especially
-  for offsetting or cleanup, without making Clipper2 boolean union/difference
-  the runtime legality model;
-- candidate generation stays smaller and easier to debug;
-- offsetting, validation, and caching are much simpler.
-
-The cost is conservative packing. Concavities and holes in the source DXF are
-not usable free space in v2 because the convex collision polygon covers them.
-That is acceptable for v2 because convex collision geometry should already beat
-bounding rectangles for triangles, trapezoids, stars, circles approximated by
-polygons, and rotated/angled profiles, while avoiding the combinatorial and
-robustness risk of full concave NFP.
-
-## V2 Scale Target
-
-V2 should be designed for jobs in the tens of pieces, with practical support for
-roughly 100-150 pieces and a hard input cap around the current 200-piece range.
-This target should guide rotation caps, `orderWindow`, beam width, candidate
-pruning, NFP/cache strategy, free-material metrics, GA population size, and time
-budgeting.
-
-Full free-order search, uncapped rotations, exhaustive candidate scoring, and
-expensive probe-heavy future-usability metrics are not the normal operating
-model for this scale. They belong in tiny fixtures, debug modes, or offline
-benchmarks.
-
-## DXF To Convex Collision Polygon
-
-The renderer or import layer should preserve the original DXF entities for
-display, traceability, and export. The nesting engine consumes a derived convex
-collision polygon per nestable piece. These are separate artifacts: source DXF
-geometry remains authoritative, while collision geometry is a conservative
-optimization aid.
-
-Pipeline:
-
-```text
-DXF geometry
-  -> flatten supported entities to sampled points
-  -> deduplicate / clean sampled points
-  -> compute convex hull
-  -> normalize hull so bbox min corner is the local placement origin
-  -> offset by padding / 2 + clearanceSafetyMargin
-  -> use as collision polygon for NFP/IFP
-```
-
-This preprocessing step is quality-critical. The same source DXF, flattening
-tolerance, padding, and import rules must always produce the same sampled
-points, convex hull, and padded collision polygon.
-
-Debug views should make the transformation inspectable:
-
-```text
-source DXF
-sampled points
-convex hull
-padded collision polygon
-warnings / unresolved geometry
-```
-
-Flattening should classify DXF entities and convert nestable cut geometry into
-points at a configured tolerance:
-
-- lines and polyline segments contribute endpoints;
-- LWPOLYLINE bulges, arcs, circles, and ellipses are sampled into enough points
-  to respect the flattening tolerance;
-- text, dimensions, construction helpers, blocks, layers, open contours, or
-  ambiguous contour groups may be valid DXF data without being directly nestable
-  cut geometry.
-
-The current preview/import geometry summaries are not nesting-grade polygon
-input. They are useful for display and bounds, but v2 must add a dedicated
-flattening path for collision geometry. In particular:
-
-- LWPOLYLINE bulges must be interpreted as arc segments, not silently connected
-  with straight lines;
-- ellipses must be polygonalized from their real ellipse parameters, not
-  approximated by bounding-box lines;
-- the flattening tolerance and safety margin become part of the derived
-  geometry identity.
-
-Do not silently repair, drop, or reinterpret DXF entities to make them fit the
-nesting pipeline. Preserve the source entities and surface unresolved geometry
-as warnings or user decisions:
-
-```text
-source DXF entity is preserved
-nestable cut geometry contributes sampled points
-unresolved geometry is reported, not faked
-```
-
-Convex hull construction is app-owned geometry logic. Use robust predicates for
-the hull turn test, because the algorithm repeatedly asks whether three sampled
-points make a left turn, right turn, or are collinear. Do not use a raw floating
-cross-product as the only source of truth for that decision.
-
-After the hull exists, polygon surgery belongs behind a project-local geometry
-adapter. For v2 that adapter is still convex-only. It may use a direct
-TypeScript implementation, Clipper2, or both, but the rest of the worker should
-not depend on library-specific shapes or tolerance policy.
-
-Adapter-owned operations include:
-
-- offset the hull outward to create the padded collision polygon;
-- clean/simplify operation results when needed;
-- compute convex pairwise NFP boundaries;
-- classify points against convex polygons;
-- validate containment and overlap.
-
-Do not make full feasible-space boolean construction a v2 requirement. With
-convex collision polygons and a rectangular sheet, candidate generation can use
-NFP boundaries/intersections plus direct feasibility tests. Clipper2 boolean
-union/difference is allowed for experiments, debug comparison, or offset
-implementation, but it should not be the central runtime model unless the
-convex candidate-and-validation path proves insufficient.
-
-Concavity recovery is not part of the v2 collision model. Do not make full
-concave or hole-aware NFP a planned follow-up path in this document. Keep the
-convex engine honest and complete: concave source geometry is preserved for
-display/export, while its convex collision polygon is the conservative nesting
-geometry.
-
-## What Changes Compared With MaxRects
-
-Current MaxRects state:
-
-```text
-sheet rectangle
-free rectangles
-piece bounding rectangles
-candidate placement = place a rectangle into a free rectangle
-```
-
-NFP-based irregular nesting state:
-
-```text
-sheet polygon or rectangle
-placed collision polygons
-remaining collision polygons
-candidate placement = feasible placement point derived from IFP/NFP boundaries
-```
-
-Rectangles do not disappear completely. They remain useful for:
-
-- broad-phase acceleration;
-- bounding box filtering;
-- UI framing;
-- compactness scoring;
-- sheet extents;
-- optional transitional clustering.
-
-But they stop being the truth of occupied geometry.
-
-## Padding And Clearance
-
-Padding must be handled geometrically before overlap/NFP work.
-
-Current rectangle preparation treats padding as total clearance split across
-sides, rounded with integer `ceil(padding / 2)` footprints. V2 intentionally
-keeps the same half-padding meaning but uses real-valued geometry, so the
-collision offset is the exact half-padding plus a named physical safety margin:
-
-```text
-clearance = padding
-collisionOffset = padding / 2 + clearanceSafetyMargin
-collisionPolygon = offset(cutPolygon, collisionOffset)
-```
-
-Mathematically, `offset(polygon, d)` means moving every polygon edge outward by
-distance `d` and joining the result into a larger polygon. The geometry adapter
-owns this offset operation; its v2 implementation may be a direct convex offset,
-Clipper2, or a Clipper2-checked implementation.
-
-If two collision polygons touch, their real cut polygons have at least roughly
-`padding + 2 * clearanceSafetyMargin` between them before accounting for source
-curve approximation error.
-
-`clearanceSafetyMargin` is not an ad hoc floating-point comparison tolerance. It
-is a physical margin used to preserve clearance after flattening curves into
-segments. If arc/circle/ellipse flattening is allowed to approximate the real
-curve inward by at most `flatteningSagTolerance`, then:
-
-```text
-clearanceSafetyMargin >= flatteningSagTolerance
-```
-
-Alternatively, the flattening step may produce a conservative outward
-approximation, but the margin/tolerance relationship must still be explicit and
-owned by the geometry adapter.
-
-If product semantics change to "padding around each piece", then the offset
-would be full padding rather than half padding. For current app semantics,
-half-padding is the correct continuity with rectangle preparation.
-
-For the sheet border:
-
-```text
-collisionPolygon must be inside sheet
-```
-
-This is equivalent to keeping a
-`padding / 2 + clearanceSafetyMargin` internal border around the sheet, but it
-is easier to express as an IFP constraint: only placement points whose enlarged
-collision polygon remains inside the sheet are feasible.
-
-Score reporting should be explicit:
-
-- packing/collision uses collision polygons;
-- utilization reporting should normally use real cut polygon area;
-- envelope/bounds scoring may use collision bounds because that reflects actual
-  machine clearance consumption.
-
-## Coordinates And Numerical Robustness
-
-The engine should not force all geometry onto integer millimeter coordinates.
-Imported DXF geometry, adaptive rotations, edge-alignment angles, and
-principal-axis angles can naturally produce fractional coordinates.
-
-Use real-valued coordinates for source geometry, rotated collision polygons,
-placement candidates, and stored transforms:
-
-```text
-DXF geometry
-  -> flattened real-valued cut polygon
-  -> real-valued convex collision polygon
-  -> real-valued rotated candidates
-  -> real-valued placement transforms
-```
-
-Correctness must come from robust geometric decisions, not from pretending that
-ordinary floating-point equality is reliable. App-owned low-level geometry
-decisions should go through the geometry adapter and use robust predicates where
-appropriate:
-
-- orientation / left-right-on-edge tests;
-- segment intersection;
-- point-in-convex-polygon and boundary classification;
-- convex polygon overlap / separation tests.
-
-For v2, the project-local geometry adapter is the boundary, not Clipper2 itself.
-The adapter should expose convex operations needed by the worker: flattening
-outputs, convex hull, convex offset, rotation, convex NFP, candidate
-classification, and final validation. It can be backed by direct TypeScript
-geometry, official Clipper2 C++ through WASM/native bindings, or a combination
-where Clipper2 is used for offsetting and differential checks.
-
-Clipper2 exposes double-coordinate paths while internally scaling to integer
-arithmetic for robust clipping. Do not depend on an unofficial
-JavaScript/TypeScript Clipper port as the production clipping backend. Plain
-TypeScript is acceptable for the convex operations that v2 owns directly.
-
-If app-owned code makes low-level geometry decisions, use robust predicates
-rather than ad hoc numeric tolerance checks. In TypeScript that can mean
-`robust-predicates`; in a backend implementation it can mean equivalent robust
-predicate routines inside the geometry adapter.
-
-Do not make snap rounding or integer grid rounding the core legality model.
-Rounding may be used only at controlled boundaries such as cache keys, debug
-display, export normalization, or machine-output precision.
-
-Degenerate cases need explicit deterministic rules:
-
-- touching is allowed when the configured clearance is satisfied;
-- positive overlap is forbidden;
-- boundary points are classified consistently;
-- equal candidate scores use stable tie-breakers such as `y`, `x`, rotation, and
-  piece id;
-- duplicate candidate points from different NFP/IFP boundaries are deduplicated
-  deterministically.
-
-Final placement records should store transforms, not rewritten geometry:
+A placement stores a transform, not rewritten geometry:
 
 ```ts
 interface IrregularPlacement {
@@ -471,307 +196,714 @@ interface IrregularPlacement {
 }
 ```
 
-Rendering/export applies the transform to original geometry or high-quality
-flattened geometry. The nesting engine consumes the derived collision polygon.
+Rendering and export apply that transform to the original DXF geometry or to a
+high-quality flattened representation.
 
-Mirroring is a per-piece capability. V2 should default pieces to mirrorable,
-while allowing users or source metadata to disable mirroring for handed,
-front-faced, grain-sensitive, engraved, or otherwise orientation-sensitive
-parts. The optimizer may only generate mirrored variants for pieces whose
-`allowMirror` flag is true, and the final transform must record the chosen
-mirror state explicitly.
+### No-Fit Polygon
 
-## Validation Invariant
+For a fixed placed polygon `A` and a moving polygon `B`, the no-fit polygon
+describes where `B`'s placement point would make `B` touch or overlap `A`.
 
-NFP/IFP geometry proposes feasible placement candidates; it is not the final
-authority. Before accepting any beam or GA result, run a final validation pass:
+Using one placement-point convention:
 
 ```text
-for every placed pair:
-  distance(realGeometryA, realGeometryB) >= padding - tolerance
-
-for every placed piece:
-  collisionPolygon is inside sheet
-  collisionPolygon does not overlap any placed collision polygon
+point inside NFP boundary  -> B overlaps A
+point on NFP boundary      -> B touches A
+point outside NFP          -> B is separated from A
 ```
 
-The conservative offset should make this pass comfortably. If it fails, the
-result is invalid even if the heuristic thought it was valid.
+The useful part for nesting is usually the boundary. Good compact placements
+often happen when the moving piece touches another piece or touches the sheet
+boundary.
 
-This validation is not debug-only. It is the shared legality gate for every
-optimizer mode, every cached NFP/IFP result, and every replayed or exported
-layout.
+The NFP is easiest to understand as "forbidden placement coordinates". It is not
+drawn on the sheet where the part physically lies. It is drawn in placement
+coordinate space: every point represents one possible location of the moving
+piece's reference point.
 
-## Adaptive Finite Rotation Set
+That distinction matters. A shape on the sheet and its NFP are not the same
+kind of polygon. The sheet shape lives in material space. The NFP lives in
+"where could the next placement point go?" space.
 
-Do not search arbitrary continuous rotations. V2 should still use a strong
-finite per-piece rotation set generated from the piece geometry and shop
-constraints.
+### Inner-Fit Polygon
 
-Every piece should include the baseline orthogonal rotations when physically
-allowed:
+The inner-fit polygon describes where the moving polygon's placement point can
+go while keeping the whole polygon inside the sheet.
+
+Because v2 uses fixed rectangular sheets and convex collision polygons, the IFP
+for runtime placement can be represented as a rectangular placement interval:
+
+```text
+ifpBounds = [0, sheetWidth - movingBBoxWidth]
+          x [0, sheetHeight - movingBBoxHeight]
+```
+
+For a rectangular sheet, the IFP is simple because the moving convex polygon is
+normalized to a local bounding box. If the placement point goes outside this
+rectangle, some part of the moving collision polygon would leave the sheet.
+
+### Free Material Polygon
+
+This is a sheet-space artifact:
+
+```text
+freeMaterial = sheet rectangle - union(placed collision polygons)
+```
+
+It answers: "what material on the sheet is not occupied by placed collision
+geometry?"
+
+It is useful for visualization and scoring. It is not the placement legality
+model, because legality is piece-specific.
+
+Example: a long thin rectangle and a compact triangle can see the same leftover
+material very differently. The material polygon can say "there is empty sheet
+area here", but only the moving piece's IFP/NFP test can say whether that exact
+piece can be translated there without overlap.
+
+### Geometry Adapter
+
+The geometry adapter is the project-owned boundary around geometric operations.
+The worker should depend on the adapter, not on Clipper2 or any specific library
+shape directly.
+
+The adapter owns:
+
+- flattening outputs used for collision geometry;
+- convex hull;
+- convex offset;
+- rotation and mirroring;
+- convex NFP;
+- point classification;
+- overlap/containment validation;
+- optional `freeMaterial` polygon construction.
+
+The adapter may use direct TypeScript geometry, Clipper2, robust predicates, or a
+combination. The important rule is that library choices stay behind the adapter.
+
+### Beam Search
+
+Beam search keeps several partial layouts alive instead of committing to one
+greedy path.
+
+At each step:
+
+1. Expand each retained state into possible next states.
+2. Score the successors.
+3. Keep the best `K` states.
+4. Repeat until all pieces are placed or rejected.
+
+In v2, beam expansion is priority-bounded. It tries only the next
+`orderWindow` eligible pieces from the active priority order, not every
+remaining piece.
+
+Plainly: beam search is a controlled "keep a few good alternatives" strategy.
+It is useful when the best immediate-looking move is not actually best later.
+Instead of choosing only one move, the worker keeps the top few partial layouts
+and lets later pieces decide which branch was better.
+
+### Genetic Algorithm
+
+A genetic algorithm is a search method that keeps a population of candidate
+solutions. Each candidate has a "chromosome", which is just a compact encoding
+of the choices the optimizer wants to explore.
+
+For v2, a chromosome is:
+
+```text
+piece priority order
+transform index per piece
+placement policy id
+```
+
+The GA does not store raw `(x, y)` coordinates. It asks the shared decoder to
+turn the chromosome into a real layout, then scores the validated result.
+
+Common GA operations:
+
+- seed: create the first population from sensible orders and transforms;
+- mutate: make a small random change, such as swapping two pieces;
+- crossover: combine two parent priority orders;
+- fitness: score a decoded layout;
+- elitism: keep the best validated candidates so they are not lost.
+
+SVGNest and Deepnest use the same broad model: global search explores insertion
+order and rotations, while a placement decoder builds the actual layout.
+`min-plane-dfx` extends that model with per-piece mirroring and a windowed beam
+decoder.
+
+The GA is useful because the order of insertion matters. If a difficult large
+piece is left until the end, no amount of clever local placement may recover the
+layout. The GA tries many priority orders and transform choices, but every
+candidate still goes through the same deterministic decoder and final validator.
+
+## References
+
+This plan is aligned with irregular nesting literature and open-source nesting
+tools, but it is not a direct implementation of one paper.
+
+Useful anchors:
+
+- Lastra-Diaz and Ortuno, "A new mixed-integer programming model for irregular
+  strip packing based on vertical slices with a reproducible survey",
+  arXiv:2206.00032, 2022.
+  https://arxiv.org/abs/2206.00032
+- Rocha, "Robust NFP generation for Nesting problems", arXiv:1903.11139, 2019.
+  https://arxiv.org/abs/1903.11139
+- Yang et al., "Learning based 2D Irregular Shape Packing",
+  arXiv:2309.10329, 2023.
+  https://arxiv.org/abs/2309.10329
+- Clipper2 documentation, for practical polygon clipping and offsetting.
+  https://www.angusj.com/clipper2/Docs/Overview.htm
+- SVGNest and Deepnest, for the practical split between placement geometry and
+  GA order/rotation optimization.
+  https://github.com/Jack000/SVGnest
+  https://github.com/Jack000/Deepnest
+
+The exact MIP direction is useful academic context, but it is not the v2
+implementation path.
+
+## End-To-End Pipeline
+
+### 1. Import And Preserve Source Geometry
+
+The app keeps the source DXF geometry for display, traceability, and export.
+The optimizer receives a derived collision artifact.
+
+```text
+DXF source
+  -> preserved source entities
+  -> preview/display summaries
+  -> collision-geometry flattening
+```
+
+Preview/bounds summaries are not nesting-grade geometry. V2 needs a dedicated
+flattening path for collision geometry.
+
+Required flattening behavior:
+
+- lines and ordinary polyline segments contribute endpoints;
+- LWPOLYLINE bulges are sampled as arcs, not straight lines;
+- arcs, circles, and ellipses are sampled to respect `flatteningSagTolerance`;
+- ellipses are polygonalized from their real ellipse parameters, not from
+  bounding-box lines;
+- unresolved geometry is reported, not silently repaired or dropped.
+
+Examples of unresolved or non-nestable DXF data:
+
+- text;
+- dimensions;
+- construction helpers;
+- blocks that cannot be expanded safely;
+- open contours;
+- ambiguous contour groups.
+
+### 2. Build Collision Geometry
+
+For every nestable source shape:
+
+```text
+sampled points
+  -> deduplicate and clean
+  -> convex hull
+  -> normalize placement reference
+  -> offset by padding / 2 + clearanceSafetyMargin
+  -> collision polygon
+```
+
+The same source DXF, flattening tolerance, padding, and import settings must
+produce the same sampled points, hull, and collision polygon.
+
+Debug views should expose:
+
+- source DXF;
+- sampled points;
+- convex hull;
+- padded collision polygon;
+- warnings and unresolved geometry.
+
+Pseudocode:
+
+```text
+function buildCollisionGeometry(sourceShape, settings):
+  samples = flattenSourceShape(sourceShape, settings.flatteningTolerance)
+  samples = deduplicateAndClean(samples)
+
+  if samples cannot describe a nestable closed shape:
+    return warning("unresolved geometry")
+
+  hull = convexHull(samples)
+  localHull = translate(hull, -bboxMin(hull))
+
+  margin = settings.clearanceSafetyMargin
+  offset = settings.padding / 2 + margin
+
+  collision = offsetConvexPolygon(localHull, offset)
+
+  return {
+    sourcePieceId,
+    sampledPoints: samples,
+    convexHull: localHull,
+    collisionPolygon: collision,
+    diagnostics
+  }
+```
+
+The key invariant is that this step is deterministic. Re-importing the same DXF
+with the same settings should not produce a different hull or offset polygon.
+
+### 3. Generate Transform Choices
+
+V2 should not search arbitrary continuous rotations. It should generate a strong
+finite transform set per piece.
+
+Baseline rotations:
 
 ```text
 0, 90, 180, 270
 ```
 
-Then add piece-specific shape angles:
+Additional useful rotations:
 
-- edge angles that align important edges to the sheet X or Y axis;
-- principal-axis / oriented-bounding-box angles for elongated or diagonal
-  pieces;
-- configured machine-safe angles if the cutting workflow has constraints.
+- long edge alignment angles;
+- oriented-bounding-box or principal-axis angles;
+- configured machine-safe angles.
 
-For pieces with `allowMirror = true`, generate mirrored variants of the same
-bounded rotation set. For pieces with `allowMirror = false`, only unmirrored
-rotations are legal. Mirroring doubles the transform candidates for a piece, so
-it must count toward rotation/transform caps and diagnostics.
+Filtering rules:
 
-Do not add every tiny flattened segment as a rotation. Rotation candidates must
-be filtered and capped:
+- ignore very short noisy edges;
+- deduplicate near-equal angles;
+- cap transforms per piece;
+- include mirror variants only when `allowMirror = true`.
 
-- ignore very short/noisy edges from curve flattening;
-- prefer long edges and stable hull edges;
-- deduplicate near-equal angles by tolerance;
-- cap rotations per piece, for example top 12-24 candidates before benchmark
-  tuning.
+Mirroring:
 
-The result is finite but adaptive: more useful than only orthogonal rotations,
-without turning rotation into an unbounded continuous search problem.
+- per-piece `allowMirror`;
+- default enabled;
+- user-disableable for handed, front-faced, grain-sensitive, engraved, or
+  otherwise orientation-sensitive parts;
+- mirror state is stored in final transforms and cache keys.
 
-## Candidate Generation With NFP
+### 4. Generate Candidate Placement Points
 
-For one beam state and one moving piece:
+For one state, one moving piece, and one transform:
 
 ```text
 placed = already placed collision polygons
-moving = candidate collision polygon in one allowed rotation
+moving = transformed collision polygon
 
-ifpBounds = rectangular placement interval where moving's bbox fits in sheet
-nfpBoundaries = convex NFP boundary for each placed piece vs moving
+ifpBounds = rectangular placement interval where moving fits in sheet
+nfpBoundaries = convex NFP boundary for each placed polygon vs moving
 candidatePoints = vertices/intersections/contact points from NFP and IFP bounds
 ```
 
-Candidate points should initially include:
+Candidate sources:
 
-- IFP rectangle corners and edge contacts;
+- IFP rectangle corners;
+- IFP edge contacts;
 - NFP vertices;
 - intersections between NFP boundaries;
-- intersections between NFP and IFP boundaries;
+- intersections between NFP and IFP bounds;
 - bottom-left-like points;
 - low-y / low-x contact points;
-- optionally a small local fallback around best points.
+- optional local fallback around best points.
 
-Candidate points are accepted only after direct feasibility classification:
+Candidate filtering:
 
 ```text
-point inside rectangular IFP bounds
-point not strictly inside any convex NFP
-translated moving polygon is inside the sheet
-translated moving polygon does not overlap any placed collision polygon
+accept point if:
+  point inside rectangular IFP bounds
+  and point not strictly inside any convex NFP
+  and translated moving polygon is inside sheet
+  and translated moving polygon does not overlap placed polygons
 ```
 
-Candidate placements should also be locally validated before they are committed
-to a successor state:
+The NFP is a candidate generator and feasibility map. It is not the final
+authority. Final validation remains mandatory.
+
+Pseudocode:
 
 ```text
-translated moving polygon is inside sheet
-translated moving polygon does not overlap any placed collision polygon
+function generateLegalPlacements(state, piece, transform):
+  moving = transformedCollisionPolygon(piece, transform)
+  ifpBounds = rectangularIfpBounds(state.sheet, moving)
+
+  rawPoints = cornersAndEdges(ifpBounds)
+
+  for each placed in state.placed:
+    nfp = getOrComputeNfp(placed.collisionPolygon, moving)
+    rawPoints += vertices(nfp)
+    rawPoints += intersections(nfp, ifpBounds)
+    rawPoints += intersections(nfp, previousNfps)
+
+  points = dedupe(rawPoints)
+
+  legal = []
+  for point in points:
+    if point outside ifpBounds:
+      continue
+    if point strictly inside any NFP:
+      continue
+
+    candidate = translate(moving, point)
+    if validateLocalPlacement(candidate, state.placed, state.sheet):
+      legal.push({ point, transform, diagnostics })
+
+  return legal
 ```
 
-The NFP is a candidate generator and broad feasibility map. V2 should not need
-to materialize `IFP - union(NFP)` as polygons during normal runtime. Validation
-remains mandatory because NFP generation, simplification, offsets, and
-tolerances can fail.
+This avoids a dense grid. The engine looks at geometrically meaningful points:
+touching another piece, touching the sheet boundary, or sitting at intersections
+of those boundaries.
 
-## Geometry Cache Identity
+### 5. Decode A Layout
 
-NFP generation, rotation, and validation metadata can be reused by both beam
-search and GA. The engine should keep derived geometry identity explicit and
-cache artifacts when benchmarks show repeated branches are spending material
-time recomputing the same pair/rotation data.
-
-Cacheable artifacts include:
-
-- rotated collision polygons;
-- pairwise outer NFPs;
-- sheet/piece IFP bounds;
-- bounding boxes and broad-phase data;
-- point-classification and segment-intersection acceleration data;
-- optional unioned/debug forbidden regions when useful outside the hot path.
-
-The cache is correctness-sensitive. Reusing an NFP computed for a different
-clearance, rotation, placement reference, or geometry backend can create invalid
-placements. Cache keys must include the full derived-geometry identity:
+The shared decoder turns an order and transform choices into a concrete layout.
 
 ```text
-piece geometry digest
-rotation angle
-mirror state
-clearance / padding / clearanceSafetyMargin
-flattening tolerance
-convex-hull simplification tolerance
-placement reference convention
-geometry backend name and version/config
-NFP/IFP algorithm version
-```
-
-Pairwise NFP keys must include both pieces, both rotations, and both mirror
-states. IFP keys must include the sheet geometry plus the moving piece rotation
-and mirror state. If any input in the key changes, the cached artifact is stale
-and must not be reused.
-
-## Shared Decoder And Optimizer Portfolio
-
-The optimizer should stay close to the current worker architecture, but v2
-should include both deterministic beam search and a GA/search portfolio. Both
-must use the same placement kernel, NFP/IFP cache, scoring primitives, and final
-validator.
-
-The shared placement kernel is the core abstraction. A complete layout is
-produced through an explicit decoder contract:
-
-```text
-decode(priorityOrder, rotations, placementPolicy, orderWindow, geometryCache)
+decode(priorityOrder, transforms, placementPolicy, orderWindow, geometryCache)
   -> layoutResult
-
-input:
-  priority-ordered piece ids
-  selected rotation per piece
-  placement policy id
-  order window size
-  NFP/IFP geometry cache
-
-responsibility:
-  place pieces through bounded expandState steps
-  choose candidate pieces from the next orderWindow eligible ids
-  generate NFP/IFP candidates
-  rank legal candidates through the selected policy
-  validate accepted placements
-
-output:
-  placed transforms
-  unplaced pieces
-  score and diagnostics
-  validation result
 ```
 
-Beam and GA differ in how they choose decoder inputs. They must not place
-geometry themselves.
+Inputs:
 
-The one-step operation underneath `decode` is:
+- priority-ordered piece ids;
+- selected transform per piece;
+- placement policy id;
+- `orderWindow`;
+- geometry cache.
+
+Output:
+
+- placed transforms;
+- unplaced pieces;
+- score and diagnostics;
+- validation result.
+
+The decoder is shared by deterministic beam and GA. Neither optimizer is allowed
+to invent placements outside this kernel.
+
+## Placement Legality
+
+Every accepted placement must pass the same legality gate:
 
 ```text
-input:
-  current placed state
-  candidate piece ids from the next orderWindow eligible ids
-  candidate transform choices
-  placement policy id
+for every placed pair:
+  collision polygons do not positively overlap
+  real/cut geometry clearance is >= padding - accepted tolerance
 
-expandState:
-  generate NFP/IFP candidate points for each candidate piece/transform
-  score legal candidate placements using the selected policy
-  return successor states
-
-output:
-  concrete transform choices
-  successor scores and diagnostics
+for every placed piece:
+  collision polygon is inside the sheet
 ```
 
-The GA must not encode raw `(x, y)` placement coordinates. Legal placement stays
-centralized in the placement kernel so every portfolio mode uses the same
-geometry rules.
+Touching is allowed when the configured clearance is satisfied. Positive overlap
+is forbidden.
 
-All placement policies consume the same validated NFP/IFP candidate set. They
-differ only in how they rank legal candidates.
+Degenerate cases need deterministic rules:
 
-Beam search constructs layouts while keeping multiple partial states alive:
+- boundary points classify consistently;
+- duplicate candidates deduplicate deterministically;
+- equal scores use stable tie-breakers such as `y`, `x`, transform, and piece id;
+- rounding is only for controlled boundaries such as display, cache keys, or
+  export precision.
 
-For each beam state:
+## Padding And Clearance
+
+Current rectangle preparation treats padding as total clearance split across
+sides:
 
 ```text
-for each candidate piece in next orderWindow eligible pieces:
-  for each allowed rotation:
-    generate NFP/IFP candidate points
-    score candidate placements
-keep top K successor states
+sidePadding = ceil(padding / 2)
 ```
 
-Beam expansion is priority-bounded, not full free-order by default. The active
-priority order comes from either the deterministic seed order or the GA
-chromosome. The default v2 `orderWindow` should be small, for example `2` or
-`3`, with `1` available as strict-order decoding. Full free-order expansion over
-all remaining pieces is reserved for tiny fixtures, debugging, or benchmark
-experiments because its branching factor grows quickly and weakens the meaning
-of the GA order gene.
+V2 keeps the same meaning with real geometry:
 
-GA/search explores the global choices that beam can miss:
+```text
+clearance = padding
+collisionOffset = padding / 2 + clearanceSafetyMargin
+collisionPolygon = offset(cutPolygon, collisionOffset)
+```
+
+`clearanceSafetyMargin` is not a random floating-point epsilon. It is a physical
+margin used to preserve clearance after curves are flattened into segments.
+
+If flattening can approximate the true curve inward by at most
+`flatteningSagTolerance`, then:
+
+```text
+clearanceSafetyMargin >= flatteningSagTolerance
+```
+
+Alternatively, the flattening step may produce a conservative outward
+approximation, but the margin/tolerance relationship must be explicit and owned
+by the geometry adapter.
+
+For the sheet border, the collision polygon must be inside the sheet. This is
+equivalent to an internal border of:
+
+```text
+padding / 2 + clearanceSafetyMargin
+```
+
+## Geometry Robustness
+
+The engine should use real-valued coordinates for:
+
+- flattened cut geometry;
+- convex collision polygons;
+- transformed candidates;
+- final transforms.
+
+Do not force the core legality model onto an integer grid. Correctness should
+come from robust geometric decisions.
+
+Low-level geometry decisions should use robust predicates where appropriate:
+
+- orientation tests;
+- segment intersection;
+- point-in-convex-polygon classification;
+- convex polygon overlap or separation tests.
+
+Clipper2 can be used behind the adapter for:
+
+- offsetting;
+- cleaning/simplifying polygon operation results;
+- constructing `freeMaterial`;
+- differential checks.
+
+Do not make Clipper2 boolean construction of `IFP - union(NFP)` the normal
+placement legality model.
+
+The difference is important:
+
+```text
+sheet-space boolean:
+  freeMaterial = sheet - union(placed collision polygons)
+  useful for visualization and scoring
+
+placement-space boolean:
+  feasible = IFP - union(NFPs)
+  not required as the normal legality model
+```
+
+Both use polygon language, but they answer different questions. The first says
+what material remains. The second tries to describe every legal coordinate for a
+specific moving piece. V2 may use Clipper2 for the first without making the
+second the core algorithm.
+
+## Free Material For Scoring And Debug
+
+V2 should maintain a derived sheet-space artifact when useful:
+
+```text
+freeMaterial = sheet rectangle - union(placed collision polygons)
+```
+
+This is useful for:
+
+- rendering remaining material;
+- utilization display;
+- connected-component metrics;
+- cavity and sliver penalties;
+- largest empty rectangle or rectangle-proxy scoring;
+- future-usability scoring;
+- explaining why a compact-looking placement left poor remaining material.
+
+`freeMaterial` must not replace per-moving-piece NFP/IFP candidate generation.
+A rectangle proxy derived from `freeMaterial` can help score a state, but it
+must never prove that a placement is legal or impossible.
+
+## Search Architecture
+
+### Deterministic Windowed Beam
+
+Beam search keeps multiple partial layouts alive.
+
+V2 uses a priority-bounded beam:
+
+```text
+for each beam state:
+  candidatePieces = next orderWindow eligible pieces from priorityOrder
+
+  for each candidatePiece:
+    for each legal transform:
+      points = generateCandidatePoints(state, candidatePiece, transform)
+      for each point:
+        if placement is legal:
+          successor = state + placement
+          score successor
+
+keep best K successors
+```
+
+`orderWindow` controls local reordering:
+
+- `1`: strict priority-order decoding, closest to SVGNest/Deepnest;
+- `2` or `3`: default v2 range, allowing bounded local repair;
+- all remaining pieces: debug or tiny benchmark only.
+
+This avoids the explosion:
+
+```text
+all remaining pieces * all transforms * all candidate points
+```
+
+while still letting the beam recover from small ordering mistakes.
+
+More detailed pseudocode:
+
+```text
+function runWindowedBeam(priorityOrder, transformChoices, policy):
+  beam = [emptyState(priorityOrder)]
+
+  while beam has unfinished states:
+    successors = []
+
+    for state in beam:
+      candidates = nextEligiblePieces(state.remaining, priorityOrder, orderWindow)
+
+      for piece in candidates:
+        for transform in legalTransforms(piece, transformChoices):
+          placements = generateLegalPlacements(state, piece, transform)
+
+          for placement in topPlacements(placements, policy):
+            successors.push(applyPlacement(state, piece, placement))
+
+      if state produced no successor:
+        successors.push(markNextBlockedPieceUnplaced(state))
+
+    beam = bestK(dedupe(successors), beamWidth)
+
+  return bestCompleteOrPartialState(beam)
+```
+
+The beam does not invent an order from scratch. It receives a priority order,
+then allows bounded local lookahead. With `orderWindow = 1`, the decoder places
+pieces strictly in priority order. With `orderWindow = 2` or `3`, it can choose
+between the next few pieces when that clearly creates a better partial layout.
+
+### GA/Search Portfolio
+
+The GA explores global choices:
 
 ```text
 chromosome =
   piece priority order
   transform index per piece
   placement policy id
-
-fitness(layout) =
-  decode the chromosome priority order through the shared windowed decoder
-  then rank the resulting validated layout
 ```
 
-This is not the exact MIP approach from Lastra-Diaz/Ortuno. It is a practical
-heuristic. It is aligned with the broader literature direction where NFP
-handles geometry and heuristic/metaheuristic search handles sequencing.
+Fitness evaluation:
 
-Initial scoring should reuse ideas already present in the project:
+```text
+layout = decode(chromosome.priorityOrder,
+                chromosome.transforms,
+                chromosome.policy,
+                orderWindow,
+                geometryCache)
 
-- keep used extents compact;
-- prefer lower placements;
-- prefer left placements;
-- preserve future usable material;
-- penalize tiny unusable cavities;
-- penalize fragmentation of remaining material;
-- prefer placements that increase contact without overlap.
+fitness = score(validated layout)
+```
 
-Avoid relying only on local best area. NFP gives more candidates and therefore
-more ways to make locally attractive mistakes. Beam width, GA diversity, and
-scoring diversity matter.
+The GA must not encode raw placement coordinates. Legal placement remains inside
+the shared decoder.
 
-## GA Search Model
+One generation looks like this:
 
-Recommended chromosome fields:
+```text
+function evaluateGeneration(population):
+  scored = []
 
-- priority order of prepared piece ids;
-- rotation choice per piece from the finite rotation set;
-- optional placement policy id, e.g. compact, preserve-free, contact-heavy.
+  for chromosome in population:
+    layout = decode(
+      chromosome.priorityOrder,
+      chromosome.transforms,
+      chromosome.placementPolicy,
+      orderWindow,
+      geometryCache
+    )
 
-The order gene is a priority order, not a raw coordinate plan and not an
-immutable trace when `orderWindow > 1`. This preserves the SVGNest/Deepnest
-model where GA explores insertion order and rotations, while allowing bounded
-local repair inside the decoder.
+    if layout.validated:
+      scored.push({ chromosome, score(layout), layout })
+
+  elite = best(scored)
+  parents = selectParents(scored)
+  children = crossoverAndMutate(parents)
+
+  return nextPopulation(elite, children)
+```
+
+The GA explores "what should the decoder try?", not "where should every part be
+placed?". That keeps all physical validity inside one shared placement kernel.
 
 Recommended initial population:
 
 - current `sortPiecesForNesting` order;
 - first-fit-decreasing by convex hull area, longest edge, height, width, and
   imbalance;
-- a few strategy-derived priority orders that put awkward/high-vertex pieces
-  first;
+- priority orders that put awkward or high-vertex pieces first;
 - random swaps/inversions from those seeds.
 
 Recommended mutations:
 
 - swap two pieces;
-- move one piece earlier/later;
+- move one piece earlier or later;
 - reverse a short subsequence;
-- rotate one piece to another allowed angle;
-- change placement policy id if that field is used.
+- change one piece's transform;
+- change placement policy.
 
 Recommended crossover:
 
 - order-preserving crossover for the priority order;
-- per-piece rotation inherited from either parent, then occasionally mutated.
+- per-piece transform inherited from either parent, then occasionally mutated.
 
-Fitness should stay lexicographic and conservative:
+### GA Budget And Reproducibility
+
+GA/search uses an app-owned seeded deterministic PRNG. It must never depend on
+ambient `Math.random()`.
+
+Given the same inputs, settings, seed, algorithm version, and evaluation cap, it
+must produce the same chromosome sequence and scores.
+
+Wall-clock time is the user-facing budget, but it is not an exact cross-machine
+replay guarantee. Track generation and completed evaluation counts so runs can
+be explained and replayed with an evaluation-count cap when needed.
+
+Budget checks happen at deterministic scheduling checkpoints:
+
+- before starting a new chromosome evaluation;
+- after a completed layout has passed final validation.
+
+Only fully validated layouts can become best-so-far. Partial or in-flight
+layouts are never published as results.
+
+Terminal statuses:
+
+- `completed`;
+- `budget-expired`;
+- `cancelled`;
+- `no-valid-result`.
+
+The final portfolio result is the better validated layout between deterministic
+windowed beam and GA/search according to the shared score.
+
+Progress should report:
+
+- generation;
+- completed evaluations;
+- population size;
+- current best score;
+- best source;
+- elapsed time;
+- remaining budget;
+- current phase.
+
+## Scoring
+
+Scoring should remain lexicographic and conservative. Earlier tuple entries are
+more important than later entries.
+
+Recommended score family:
 
 ```text
 (
@@ -787,155 +919,126 @@ Fitness should stay lexicographic and conservative:
 )
 ```
 
-For this app, preserving future usable material should rank ahead of pure
-compactness once all pieces placed/unplaced status ties. That score should be
-derived from the free material artifact and cheap proxies such as largest
-component area, cavity/sliver penalties, largest-empty-rectangle estimates, or
-limited probes against representative remaining pieces. It must not claim to be
-the exact feasible placement region for every future piece.
+Plain-English meaning:
 
-Beam and GA are complementary v2 modes, not a first/later split. Windowed beam
-search is the deterministic reference and gives inspectable partial-state
-history. GA is part of v2 and can outperform deterministic beam when the main
-mistake is early piece priority, rotation, or policy choice. The practical
-target is a portfolio:
+- place more pieces before optimizing fine details;
+- prefer fewer sheets or less partial failure;
+- preserve usable remaining material;
+- avoid tiny cavities and long slivers;
+- keep the used extents compact;
+- prefer contact without overlap;
+- use bottom-left tie-breakers for stability.
 
-```text
-deterministic convex-NFP windowed beam
-  + time-budgeted GA/search using the same placement kernel and caches
-  + final validator shared by both
-```
+`future_usability_score` is not exact feasible area for every future piece. It
+is derived from `freeMaterial` and cheap proxies such as:
 
-### GA Budget And Reproducibility
+- largest component area;
+- component count;
+- sliver/cavity penalties;
+- largest-empty-rectangle estimate;
+- limited probes against representative remaining pieces.
 
-GA/search uses an app-owned seeded deterministic PRNG and never depends on
-ambient `Math.random()`. Given the same inputs, settings, seed, algorithm
-version, and evaluation cap, it must produce the same sequence of chromosomes
-and scores.
+How to read the tuple:
 
-Wall-clock time is the user-facing budget for desktop UX, but it is not an exact
-cross-machine replay guarantee. The worker should also track generation and
-completed evaluation counts so runs can be explained and, when needed, replayed
-through an evaluation-count cap.
+- `unplaced_count`: the first priority is placing parts. A layout with fewer
+  unplaced pieces beats a prettier layout that leaves more work behind.
+- `sheets_used_or_partial_failure`: once placed count ties, avoid opening extra
+  sheets or producing worse partial outcomes.
+- `-future_usability_score`: the negative sign means a larger usability score is
+  better, while the tuple still sorts smaller values first.
+- `material_fragmentation_score`: penalizes many disconnected scraps, tiny
+  cavities, and long thin regions that look like area but are hard to use.
+- `used_cluster_area_or_width`: keeps the placed group compact.
+- `max_used_sheet_ratio`: avoids consuming too much of one sheet dimension too
+  early.
+- `normalized_used_span_sum`: prefers balanced use of the sheet dimensions.
+- `contact_bonus_as_negative`: rewards stable touching placements without
+  allowing overlap.
+- `bottom_left_tie_breakers`: gives deterministic, visually stable choices when
+  higher-level scores tie.
 
-The time budget is checked at deterministic scheduling checkpoints:
+The exact formulas can evolve through benchmarks, but the ordering matters. The
+score should never reward a visually compact placement if it creates invalid
+geometry or strands obvious future material.
 
-- before starting a new chromosome evaluation;
-- after a completed layout has passed final validation.
+## Cache Identity
 
-A layout is eligible to become best-so-far only after the shared final validator
-accepts it. Partial or in-flight layouts are never published as results. When
-the budget expires, the worker stops scheduling new evaluations and returns the
-best fully validated GA result seen so far. If no GA result has validated, the
-GA lane reports `no-valid-result` and the portfolio may still return the
-validated deterministic beam result.
-
-User cancellation follows the same best-so-far rule with status `cancelled`.
-The normal terminal statuses should distinguish `completed`, `budget-expired`,
-`cancelled`, and `no-valid-result`.
-
-The final portfolio result is the better validated layout between deterministic
-windowed beam and GA/search according to the shared lexicographic score.
-Progress reports should include generation, completed evaluations, population
-size, current best score, best source, elapsed time, remaining budget, and
-current phase.
-
-## Free Space Model
-
-The engine should not use "free polygons" as the placement-legality model in the
-same way MaxRects uses free rectangles.
-
-Instead, free space is computed per candidate moving piece:
+Derived geometry is correctness-sensitive. Cache keys must include every input
+that can change validity:
 
 ```text
-free placement space for moving piece =
-  sheet containment region for that moving piece
-  minus forbidden placement regions induced by placed pieces
+piece geometry digest
+rotation angle
+mirror state
+clearance / padding / clearanceSafetyMargin
+flattening tolerance
+convex-hull simplification tolerance
+placement reference convention
+geometry backend name and version/config
+NFP/IFP algorithm version
 ```
 
-This is the key conceptual shift. Free space depends on the shape being placed.
-There is no single universal free-space polygon that is equally useful for all
-future shapes.
+Pairwise NFP keys include both pieces, both rotations, and both mirror states.
+IFP keys include the sheet geometry plus the moving piece rotation and mirror
+state.
 
-Use the geometry cache for repeated NFP/IFP and broad-phase artifacts, but do
-not treat cached geometry as proof of validity. Candidate placements still need
-the final containment and overlap validation described above.
+Cacheable artifacts:
 
-### Derived Free Material Polygon
+- transformed collision polygons;
+- pairwise outer NFPs;
+- sheet/piece IFP bounds;
+- bounding boxes;
+- broad-phase data;
+- point-classification acceleration data;
+- optional debug `freeMaterial` or forbidden-region artifacts.
 
-V2 should maintain a derived sheet-space artifact when useful for scoring,
-debugging, and user inspection:
+## Current App Contracts To Preserve
 
-```text
-freeMaterial = sheet rectangle - union(placed collision polygons)
-```
+The worker remains the owner of computation. Infrastructure may prepare
+requests, validate payloads, persist history, render results, and replay worker
+output. It must not fabricate placements, fake scores, fake history, or fake
+strategy output.
 
-This artifact answers "which sheet material is not occupied by placed collision
-geometry?" It is useful for:
+CSV and multi-plate/manual-subrun behavior already exists in the rectangle
+workflow. V2 must preserve those contracts while changing placement geometry
+from rectangles to transforms over source pieces:
 
-- renderer/debug overlays of remaining material;
-- utilization display;
-- connected-component, cavity, sliver, and fragmentation metrics;
-- largest empty rectangle or rectangle-proxy scoring;
-- future-usability scoring and branch comparison;
-- explaining why a compact-looking layout left poor remaining material.
+- subruns remain independent worker requests;
+- irregular placements are stored as transforms;
+- CSV row links survive through prepared polygon pieces;
+- CSV export maps placements back to source rows;
+- replay/history files remain durable under `userData`;
+- saved projects reload irregular geometry and histories.
 
-`freeMaterial` is not the placement legality authority. It should not replace
-per-moving-piece IFP/NFP candidate generation, and rectangle proxies derived
-from it must never prove that a placement is legal or impossible. Every accepted
-placement still needs direct containment and overlap validation.
+## Option A: NFP Clustering Then Rectangles
 
-Computing `freeMaterial` is a sheet-space polygon union/difference problem, so
-Clipper2 is appropriate behind the geometry adapter if it reduces risk. This
-does not contradict avoiding Clipper2 boolean feasible regions for legality:
-the engine still does not need to materialize `IFP - union(NFP)` in placement
-space during normal placement.
-
-## Option A: Transitional NFP Clustering Then Rectangles
-
-This is a possible prototype, but it is not the v2 target.
+This is not the recommended architecture. It is a possible experiment.
 
 Pipeline:
 
 ```text
 input pieces
-  -> derive cut/collision polygons
-  -> generate local clusters with NFP contacts
-  -> represent each cluster by a rectangular envelope
-  -> pack cluster envelopes with existing MaxRects
-  -> expand cluster placements back to real shape placements
+  -> derive collision polygons
+  -> create local clusters using NFP contacts
+  -> represent each cluster by a rectangle
+  -> pack cluster rectangles with MaxRects
+  -> expand cluster placements back to real transforms
 ```
-
-Cluster generation:
-
-```text
-start with one piece
-try adding compatible pieces using NFP boundary candidates
-validate against all cluster members
-score by low rectangular-envelope waste
-keep top B clusters
-repeat up to cluster size K
-```
-
-This directly addresses triangles and trapezoids because multiple shapes can
-share a compact envelope before MaxRects sees them.
 
 Advantages:
 
-- smaller architectural change;
-- reuses current MaxRects and history UI;
-- good quick win for repeated triangles;
-- useful testbed for polygon offset/intersection/NFP.
+- smaller change;
+- can improve repeated triangles/trapezoids;
+- useful testbed for polygon operations.
 
 Disadvantages:
 
-- still ultimately packs cluster bounding rectangles;
-- may miss global irregular placements;
-- cluster selection can consume pieces badly;
-- hard to make general without reimplementing much of the real optimizer.
+- still treats rectangles as the final packing truth;
+- cluster choice can consume pieces badly;
+- misses global irregular placements;
+- becomes a detour if we still need the real optimizer.
 
-This should be considered a prototype or interim feature only, not the v2
-architecture.
+Clustering should remain optional and non-v2-critical.
 
 ## Option B: Direct NFP-Based Irregular Nesting
 
@@ -945,372 +1048,314 @@ Pipeline:
 
 ```text
 input pieces
-  -> derive cut/collision polygons
-  -> generate adaptive finite rotations per piece
-  -> candidate generation via IFP/NFP placement regions
-  -> shared placement kernel
-  -> deterministic beam and time-budgeted GA/search portfolio
-  -> final validation
-  -> render/export original geometry with stored transforms
+  -> derive collision polygons
+  -> generate finite transforms
+  -> generate candidates via IFP/NFP
+  -> decode through windowed beam
+  -> optimize with GA/search portfolio
+  -> validate
+  -> render/export original geometry with transforms
 ```
 
 Advantages:
 
-- eliminates bounding-rectangle waste as the core model;
-- handles unknown DXF geometry generically;
+- removes bounding rectangles as the occupancy model;
+- handles unknown DXF geometry through one derived collision model;
 - aligns with irregular nesting literature;
-- gives a clean conceptual answer to free space;
-- avoids making cluster selection a prerequisite for correctness.
+- keeps legality, scoring, rendering, and export concepts separate.
 
 Disadvantages:
 
-- much larger implementation;
-- needs robust polygon operations;
-- performance must be managed carefully;
-- scoring is harder than rectangular MaxRects;
-- debugging history UI must show polygon placements and placement-space
-  candidates clearly.
-
-## Recommended Direction
-
-Target Option B.
-
-Do not make clustering the main architecture. Treat clustering as non-v2
-experimental work or an optional enhancement after the direct NFP engine is
-stable.
-
-The reason is simple: the real problem is irregular nesting. If we introduce
-NFP only to make better rectangles, we will still be fighting rectangle
-artifacts. The cleaner model is to let polygons be the occupied geometry and
-let NFP/IFP define feasible placement space.
+- larger implementation;
+- geometry robustness matters;
+- scoring is harder than MaxRects;
+- debug overlays need to show more internal state.
 
 ## V2 Delivery Workstreams
 
-These are workstreams for one strong v2, not separate product versions.
-
 ### Geometry Kernel
 
-Goal: provide robust polygon operations outside the worker optimizer.
+Goal: produce deterministic, inspectable convex collision geometry.
 
 Tasks:
 
-- flatten supported DXF entities to sampled points at a configurable tolerance;
-- add nesting-grade LWPOLYLINE bulge sampling;
-- add nesting-grade ellipse polygonalization;
-- keep preview/bounds summaries separate from collision-geometry flattening;
-- compute convex hulls from sampled points using robust predicates for turn
-  tests;
-- normalize hulls to a stable local placement point;
-- offset hulls by `padding / 2 + clearanceSafetyMargin` through the geometry
-  adapter;
+- flatten supported DXF entities at a configurable tolerance;
+- sample LWPOLYLINE bulges correctly;
+- polygonalize ellipses correctly;
+- keep preview/bounds summaries separate from collision flattening;
+- compute convex hulls with robust predicates;
+- normalize placement reference;
+- offset by `padding / 2 + clearanceSafetyMargin`;
 - compute area and bounding box;
-- run pairwise intersection tests;
-- run final clearance validation on sample placements;
-- keep Clipper2 available behind the adapter for offsetting, cleanup, or
-  differential checks if that reduces risk;
-- add robust predicates for orientation, intersection, containment, and boundary
-  classification;
-- encode deterministic rules for touching, equal scores, duplicate candidates,
-  and boundary points.
+- validate containment and pairwise overlap;
+- expose Clipper2 behind the adapter where useful;
+- define deterministic touching, boundary, duplicate, and tie rules.
 
 Acceptance:
 
-- triangles, trapezoids, rectangles, stars, circles approximated as polygons;
-- padded polygons visually inspectable in the renderer;
-- deterministic real-valued output and stable edge-case classification;
-- final validation catches intentional clearance violations.
+- triangles, trapezoids, rectangles, stars, circles, arcs, and ellipses produce
+  inspectable collision geometry;
+- intentional clearance violations fail validation;
+- repeated runs produce the same geometry.
 
-### Adaptive Rotation Generator
+### Transform Generator
 
-Goal: generate strong bounded rotation and mirror candidates for each convex
-collision polygon.
+Goal: generate bounded rotation and mirror choices.
 
 Tasks:
 
 - include baseline orthogonal rotations when allowed;
 - carry per-piece `allowMirror`, defaulting to true but user-disableable;
-- compute stable edge-alignment angles from long convex-hull edges;
-- compute principal-axis / oriented-bounding-box angles;
-- deduplicate angles by tolerance;
-- cap the candidate set per piece and expose diagnostics for discarded angles;
-- cache transformed collision polygons by geometry digest, rotation, and mirror
-  state.
+- compute long-edge and oriented-bounding-box angles;
+- deduplicate near-equal angles;
+- cap transform count per piece;
+- cache transformed polygons by geometry digest, rotation, and mirror state.
 
 Acceptance:
 
-- diagonal and elongated pieces receive useful non-orthogonal rotations;
-- orientation-sensitive pieces can disable mirrored transforms;
-- tiny flattened curve segments do not explode the rotation set;
-- repeated runs produce identical transform lists;
-- NFP cache keys include the selected rotation and mirror state.
+- diagonal parts get useful non-orthogonal rotations;
+- orientation-sensitive pieces can disable mirroring;
+- noisy curve segments do not explode the transform set;
+- repeated runs produce identical transform lists.
 
 ### Pairwise NFP And IFP
 
-Goal: understand and test NFP semantics with real project shapes.
+Goal: make placement-space geometry testable before the full optimizer.
 
 Tasks:
 
-- compute or approximate NFP for two padded polygons and fixed rotations;
-- compute rectangular IFP bounds for a rotated piece inside the sheet;
-- expose debug visualization of placement-space NFP;
-- generate contact candidate points from NFP boundaries, NFP intersections, and
-  IFP-bound intersections;
-- classify candidate points against IFP bounds and convex NFP interiors;
-- validate each candidate by real polygon intersection;
-- score pair placements by compact bounding envelope and real waste.
+- compute convex NFPs for two transformed padded polygons;
+- compute rectangular IFP bounds for transformed pieces;
+- generate NFP/IFP contact candidates;
+- classify candidate points;
+- validate candidates by real polygon checks;
+- expose debug visualization.
 
 Acceptance:
 
 - two triangles produce compact opposite-orientation candidates;
-- changing placement reference point only shifts the NFP, not physical
-  placement validity;
-- padding is preserved by construction;
+- changing placement reference only shifts coordinates, not physical validity;
+- padding is preserved;
 - candidate generation is deterministic.
 
-### Shared Decoder And Beam Search
+### Shared Decoder And Windowed Beam
 
-Goal: replace free rectangles for one run while keeping the worker/history
-contract recognizable and deterministic.
+Goal: replace free rectangles with polygon transforms while keeping worker and
+history behavior recognizable.
 
 Tasks:
 
-- represent beam state as placed polygon transforms plus remaining ids;
-- define `orderWindow` and candidate-piece selection from the active priority
-  order;
-- for each candidate piece in the next `orderWindow` eligible ids and each
-  allowed rotation, generate placement candidates from rectangular IFP bounds
-  plus convex NFP boundaries/intersections;
-- filter candidates with direct convex feasibility and final local validation;
+- represent state as placed transforms plus remaining ids;
+- implement `orderWindow`;
+- generate candidates for the next `orderWindow` eligible pieces;
+- filter by direct feasibility and validation;
 - score successors;
 - keep top beam states;
-- emit history frames with polygon placements and optional placement-space
-  diagnostics.
+- emit polygon-aware history frames and diagnostics.
 
 Acceptance:
 
-- triangle-heavy cases beat rectangle MaxRects on utilization;
 - `orderWindow = 1` behaves as strict priority-order decoding;
-- small windows such as `2` or `3` give bounded local repair without full
-  free-order branching;
-- final validator proves padding;
-- fallback handles invalid/empty feasible regions honestly;
+- `orderWindow = 2` or `3` gives bounded local repair;
+- triangle-heavy fixtures beat rectangle MaxRects;
 - no fake placements or fake history.
 
 ### GA/Search Portfolio
 
-Goal: improve order, rotation, and policy choices using the same placement
-kernel as the beam mode.
+Goal: improve global order, transform, and policy choices using the same
+decoder.
 
 Tasks:
 
-- encode chromosomes as piece priority order, mirror-aware transform index per
-  piece, and placement policy id;
-- seed the population with deterministic orders and transform choices;
-- add swap, move, subsequence-reversal, transform, and policy mutations;
-- use order-preserving crossover for piece priority orders;
-- decode chromosomes through the same `orderWindow` placement kernel as
-  deterministic beam;
-- rank decoded layouts with the same lexicographic final score family;
-- use an app-owned seeded deterministic PRNG;
-- enforce wall-clock budget and cancellation at deterministic scheduling
-  checkpoints;
-- publish only fully validated layouts as best-so-far;
-- return the better validated portfolio result between deterministic windowed
-  beam and GA/search;
-- report GA status as `completed`, `budget-expired`, `cancelled`, or
-  `no-valid-result`;
-- stream progress with generation, completed evaluations, population size, best
-  score/source, elapsed time, remaining budget, and phase.
+- encode chromosomes as priority order, transform index per piece, and policy;
+- seed deterministic populations;
+- implement mutation, crossover, elitism, and scoring;
+- use app-owned seeded PRNG;
+- decode through the same `orderWindow` kernel;
+- enforce wall-clock budget and cancellation checkpoints;
+- publish only validated best-so-far layouts;
+- report terminal status and progress.
 
 Acceptance:
 
-- GA chromosome generation and scoring order are reproducible for the same
-  inputs, settings, seed, algorithm version, and evaluation cap;
-- every GA layout is produced by the shared placement kernel, not raw coordinate
-  genes;
-- the priority-order chromosome remains meaningful with the configured
-  `orderWindow`;
-- timeout or cancellation returns the last fully validated best-so-far layout,
-  or `no-valid-result` if none exists;
-- the best GA result can tie or beat deterministic beam on benchmark jobs;
-- failed or partial GA runs are reported honestly.
+- seeded runs are reproducible for the same inputs/settings/version/evaluation
+  cap;
+- no raw coordinate genes are used;
+- timeout/cancellation returns best validated result or `no-valid-result`;
+- final portfolio result is the better validated beam or GA layout.
+
+### Free Material And Scoring
+
+Goal: make remaining material visible and useful for scoring without making it
+the legality model.
+
+Tasks:
+
+- compute `freeMaterial` behind the geometry adapter;
+- render it in debug views;
+- compute component, cavity, sliver, and rectangle-proxy metrics;
+- feed `future_usability_score` and `material_fragmentation_score`;
+- keep all placement legality inside NFP/IFP plus validation.
+
+Acceptance:
+
+- users can inspect remaining material visually;
+- scoring can distinguish compact-but-fragmented layouts;
+- free-material proxies never accept or reject placements by themselves.
 
 ### Multi-Plate And CSV Integration
 
-Goal: preserve current subrun/CSV behavior while switching the geometry engine.
-
-This is not a speculative v2 feature family. CSV import/export, row links,
-manual follow-up subruns, run records, and durable history references already
-exist in the rectangle workflow. V2 must carry those contracts forward while
-changing placement geometry from rectangles to transforms over source pieces.
+Goal: preserve existing CSV/manual-subrun behavior.
 
 Tasks:
 
 - keep subruns as independent worker requests;
 - store irregular placements as transforms;
-- preserve CSV row links through prepared polygon pieces;
-- export CSV by placed source rows, not by rectangle ids;
-- ensure replay/history files remain durable under `userData`.
+- preserve CSV row links;
+- export by source rows;
+- keep durable replay/history references under `userData`.
 
 Acceptance:
 
 - manual leftovers still work;
-- CSV export still maps placements back to source rows;
-- saved projects reload with irregular geometry and histories.
-
-### Optional Clustering
-
-Goal: improve dense local arrangements without making clustering mandatory.
-
-Tasks:
-
-- generate candidate clusters with local NFP search;
-- cap cluster size and beam width;
-- keep singleton candidates so clustering is never forced;
-- compare cluster-first runs against direct NFP runs.
-
-Acceptance:
-
-- repeated triangles/trapezoids improve or tie direct NFP;
-- clustering never makes final validation fail;
-- the engine can disable clustering for debugging.
+- CSV export maps placements back to source rows;
+- saved projects reload irregular results and histories.
 
 ### Benchmark And Debug Corpus
 
-Goal: keep v2 measurable against the current rectangle engine and make geometry
-failures reproducible.
+Goal: make v2 measurable and geometry failures reproducible.
 
 Tasks:
 
-- collect small deterministic fixtures for triangles, trapezoids, rectangles,
-  stars, circles/arcs approximated by polygons, and mixed repeated pieces;
-- measure convex-vs-rectangle opportunity for presets and real jobs:
-  `area(convexHull) / area(boundingBox)` and
-  `area(collisionPolygon) / area(paddedBoundingBox)`;
+- create deterministic fixtures for triangles, trapezoids, rectangles, stars,
+  circles/arcs, ellipses, and mixed repeated pieces;
 - include stress fixtures for near-collinear points, tiny segments, high
-  padding, duplicate points, open contours, unresolved DXF entities, and
-  rotation-heavy angled profiles;
-- store expected preprocessing diagnostics: sampled point count, convex hull,
-  padded collision polygon, unresolved geometry warnings, and rotation set;
-- compare v2 against current rectangle MaxRects on utilization, placed count,
+  padding, duplicate points, open contours, unresolved DXF entities, and angled
+  profiles;
+- measure convex-vs-rectangle opportunity:
+
+```text
+area(convexHull) / area(boundingBox)
+area(collisionPolygon) / area(paddedBoundingBox)
+```
+
+- compare against current rectangle MaxRects on utilization, placed count,
   runtime, and validation failures;
-- keep renderer/debug overlays able to show source DXF, sampled points, convex
-  hull, padded collision polygon, derived free material, NFP/IFP candidates,
-  and final placements.
+- show debug overlays for source DXF, sampled points, hull, collision polygon,
+  free material, NFP/IFP candidates, and final placements.
 
 Acceptance:
 
-- every benchmark run is deterministic for the same seed and geometry settings;
-- benchmark reports show the expected upper-bound gain from convex collision
-  geometry before optimizer effects;
+- every benchmark run is deterministic for the same seed and settings;
+- reports show the expected upper-bound gain from convex collision geometry;
 - v2 beats or ties rectangle MaxRects on triangle/trapezoid-heavy fixtures;
-- geometry failures can be reproduced from saved fixture inputs and diagnostics;
 - no benchmark layout is accepted without final validation.
 
 ## Risks
 
 ### Geometry Robustness
 
-Polygon offsetting, convex NFP generation, and geometric classification are the
-main technical risks. Near-collinear edges, tiny segments, duplicate points,
-touching boundaries, and self-intersections in source geometry can create
-invalid output.
+Risk: offsets, NFPs, and classifications can fail near tiny segments,
+near-collinear points, duplicate points, or touching boundaries.
 
 Mitigation:
 
-- local geometry adapter boundary with Clipper2 available where it reduces
-  offsetting or cleanup risk;
-- robust predicates for app-owned geometric truth decisions;
-- deterministic boundary/tie-breaking rules;
-- simplify input polygons with tolerance;
-- conservative clearance safety margin tied to flattening tolerance;
+- geometry adapter boundary;
+- robust predicates;
+- deterministic boundary rules;
+- conservative clearance safety margin;
 - final validation;
 - visual debug overlays.
 
 ### Candidate Explosion
 
-NFP creates many candidates, especially with many pieces and rotations.
+Risk: many pieces, transforms, and NFP intersections create too many candidates.
 
 Mitigation:
 
-- finite adaptive transform set with dedupe and per-piece caps;
-- top-N candidate pruning per piece;
+- transform caps;
+- small `orderWindow`;
+- top-N candidate pruning;
 - broad-phase bounding boxes;
-- NFP cache by shape pair and transform pair;
+- NFP cache by transform pair;
 - beam width cap;
-- GA population/time budget cap;
-- time budget with honest best-so-far and terminal-status reporting.
+- GA time/population budget.
 
 ### Local Minima
 
-More accurate geometry can still produce globally worse layouts if the scoring
-prefers a bad early contact.
+Risk: a locally compact placement can hurt the final layout.
 
 Mitigation:
 
-- beam search rather than greedy single path;
-- GA/search over order, rotations, and placement policy;
-- scoring diversity;
-- preserve multiple candidate types;
-- compare against current rectangle MaxRects as a baseline;
+- beam search keeps alternatives;
+- GA explores global priority orders and transforms;
+- free-material scoring penalizes bad fragmentation;
+- benchmark against MaxRects;
 - keep history rich enough to inspect decisions.
 
 ### Export Mapping
 
-The engine must never lose the connection to original DXF/CSV pieces.
+Risk: derived polygons could lose the connection to source geometry.
 
 Mitigation:
 
 - placements store `sourcePieceId` and transform;
-- derived polygons are cached artifacts, not authoritative source data;
-- export applies transforms to original or high-quality flattened geometry.
+- derived polygons remain cached artifacts;
+- export applies transforms to original or high-quality flattened geometry;
+- CSV row links remain part of prepared pieces.
+
+## Settled Decisions
+
+- V2 is convex-only irregular nesting.
+- V2 targets fixed rectangular sheets.
+- Padding means total clearance between cuts.
+- Collision offset is `padding / 2 + clearanceSafetyMargin`.
+- Mirroring is per-piece, default enabled, and user-disableable.
+- GA/search is part of v2.
+- The decoder uses priority-bounded `orderWindow`.
+- Exact MIP is not the implementation path.
+- Concave or hole-aware nesting is not planned.
 
 ## Open Questions
 
-Settled v2 decisions:
-
-- Padding means total clearance between cuts. V2 preserves current rectangle
-  semantics by offsetting each collision polygon by
-  `padding / 2 + clearanceSafetyMargin`.
-- The target is fixed rectangular sheet nesting, not strip-length minimization.
-- Exact MIP is a literature/benchmark reference only, not an implementation
-  path for v2.
-- Mirroring is a per-piece capability, defaulting to enabled and user-disableable
-  for orientation-sensitive pieces.
-
-Remaining product/geometry questions:
-
-- Which rotation set is acceptable for the shop workflow?
-- What flattening tolerance is acceptable for DXF arcs/circles?
+- Which rotation angles are acceptable for the shop workflow?
+- What flattening tolerance is acceptable for DXF arcs, circles, and ellipses?
+- What default values should be used for `orderWindow`, beam width, transform
+  cap, GA population, and GA time budget?
 
 ## Non-Goals For V2
 
 - exact global optimality;
 - arbitrary continuous rotation;
 - exact analytic curve NFPs;
-- replacing DXF export geometry with low-quality flattened polygons;
+- replacing export geometry with low-quality flattened polygons;
 - full MIP solver integration;
+- concave or hole-aware nesting;
 - clustering as a required correctness layer.
 
 ## Summary
 
-The project can abandon rectangle occupancy for the core algorithm.
+V2 replaces rectangle occupancy with convex collision polygon occupancy.
 
-The replacement is not "free polygons". The replacement is:
+The legality model is:
 
 ```text
-placement-space geometry:
-  rectangular IFP bounds for the moving piece
-  plus convex NFP boundaries against placed pieces
-  plus direct candidate feasibility classification
+rectangular IFP bounds for the moving piece
+plus convex NFP boundaries against placed pieces
+plus direct feasibility classification
+plus final validation
 ```
 
-NFP gives feasible/contact candidate positions. Beam and GA/search modes choose
-among them through the shared placement kernel. Padding is handled by inflated
-collision polygons, robust geometric decisions, deterministic edge-case rules,
-and final validation.
+The optimizer model is:
 
-The recommended path is to build a direct NFP-based irregular nesting engine,
-with adaptive finite rotations, deterministic beam search, and a time-budgeted
-GA/search portfolio. Cluster-to-rectangles work is optional/non-v2 experimental
-work and should not become the architectural destination.
+```text
+shared decoder
+  + deterministic windowed beam
+  + GA/search portfolio
+  + shared scoring
+  + shared validation
+```
+
+The user-visible result remains simple: original parts are rendered and exported
+with stored transforms, while the engine uses conservative convex geometry to
+find valid, material-efficient layouts.
