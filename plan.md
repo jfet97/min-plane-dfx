@@ -1379,13 +1379,33 @@ Mitigation:
 - The decoder uses priority-bounded `orderWindow`.
 - Exact MIP is not the implementation path.
 - Concave or hole-aware nesting is not planned.
+- The starting rotation set is orthogonal rotations plus selected stable
+  geometry-derived angles.
+- The starting curve flattening tolerance is `0.25 mm`, with `0.1 mm` as a high
+  precision option and `0.5 mm` as a coarse/fast option.
+- `clearanceSafetyMargin` should start at
+  `max(0.25 mm, flatteningSagTolerance)`.
+- Starting optimizer defaults:
 
-## Open Questions
+```text
+orderWindow = 2
+beamWidth = 24
+transformCap = 16 per piece, including mirrored variants
+GA population = 32
+GA time budget = 60 seconds
+```
 
-- Which rotation angles are acceptable for the shop workflow?
-- What flattening tolerance is acceptable for DXF arcs, circles, and ellipses?
-- What default values should be used for `orderWindow`, beam width, transform
-  cap, GA population, and GA time budget?
+These are starting defaults, not permanent laws. Benchmarks should tune them
+against real jobs and fixture corpora.
+
+## Assumptions To Revisit
+
+There are no known shop-specific rotation restrictions or per-material optimizer
+presets at this point. V2 should proceed with the default finite transform set
+and default optimizer budgets above.
+
+Keep these values configurable so future shop, material, machine, or job-level
+constraints can be added without changing the core architecture.
 
 ## Non-Goals For V2
 
