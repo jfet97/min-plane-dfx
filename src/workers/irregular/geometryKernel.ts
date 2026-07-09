@@ -6,6 +6,7 @@ import type {
   ValidatePlacementInput
 } from './services.js'
 import { IrregularNestingNotImplementedError } from './services.js'
+import { ArcFlattening } from './arcFlattening.js'
 import { DEFAULT_IRREGULAR_GEOMETRY_SETTINGS } from '@shared/irregular/defaults.js'
 import type {
   FlattenedGeometry,
@@ -14,7 +15,7 @@ import type {
   IrregularPolygon,
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
-import { DxfGeometrySegment } from '@shared/domain/dxf.js'
+import type { DxfGeometrySegment } from '@shared/domain/dxf.js'
 
 export class GeometrySettings extends Context.Service<
   GeometrySettings,
@@ -98,7 +99,12 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
               pointsStore.push(line.x1, line.y1)
               pointsStore.push(line.x2, line.y2)
             }),
-            Match.when({ kind: 'arc' }, (_arc) => {}),
+            Match.when({ kind: 'arc' }, (arc) => {
+              const points = ArcFlattening.samplePoints(arc, settings.flatteningSagToleranceMm)
+              for (const point of points) {
+                pointsStore.push(point.x, point.y)
+              }
+            }),
             Match.exhaustive
           )
         }
