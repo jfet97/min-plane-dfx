@@ -87,7 +87,7 @@ describe('entityToGeometry', () => {
     expect(result.bounds).toEqual({ x: 2, y: 2, width: 6, height: 6 })
   })
 
-  it('converts an ARC into a conservative bbox equal to the parent circle', () => {
+  it('converts an ARC into degree angles and exact arc bounds', () => {
     const dxf =
       baseOpen() +
       section('ENTITIES') +
@@ -99,8 +99,65 @@ describe('entityToGeometry', () => {
     expect(result).not.toBeNull()
     if (!result) return
     expect(result.geometry.entityType).toBe('ARC')
-    expect(result.bounds).toEqual({ x: -5, y: -5, width: 10, height: 10 })
-    expect(result.geometry.segments[0]?.kind).toBe('arc')
+    expect(result.bounds.x).toBeCloseTo(0)
+    expect(result.bounds.y).toBeCloseTo(0)
+    expect(result.bounds.width).toBeCloseTo(5)
+    expect(result.bounds.height).toBeCloseTo(5)
+    const segment = result.geometry.segments[0]
+    expect(segment?.kind).toBe('arc')
+    if (segment?.kind !== 'arc') return
+    expect(segment.startAngle).toBeCloseTo(0)
+    expect(segment.endAngle).toBeCloseTo(90)
+  })
+
+  it('keeps rounded rectangle ARC entities connected using degree angles', () => {
+    const dxf =
+      baseOpen() +
+      section('ENTITIES') +
+      '0\nLINE\n10\n0\n20\n0\n30\n0\n11\n800\n21\n0\n31\n0\n' +
+      '0\nLINE\n10\n800\n20\n0\n30\n0\n11\n800\n21\n520\n31\n0\n' +
+      '0\nARC\n10\n770\n20\n520\n30\n0\n40\n30\n50\n0\n51\n90\n' +
+      '0\nLINE\n10\n770\n20\n550\n30\n0\n11\n30\n21\n550\n31\n0\n' +
+      '0\nARC\n10\n30\n20\n520\n30\n0\n40\n30\n50\n90\n51\n180\n' +
+      '0\nLINE\n10\n0\n20\n520\n30\n0\n11\n0\n21\n0\n31\n0\n' +
+      endsec() +
+      baseClose()
+    const parser = new DxfParser()
+    const parsed = parser.parseSync(dxf) as IDxf | null
+    if (!parsed) throw new Error('Parser returned null')
+    const results = parsed.entities
+      .map((entity) => entityToGeometry(entity))
+      .filter((result): result is NonNullable<ReturnType<typeof entityToGeometry>> => result !== null)
+    const segments = results.flatMap((result) => result.geometry.segments)
+    const arcs = segments.filter((segment) => segment.kind === 'arc')
+    const bounds = unionBounds(results.map((result) => result.bounds))
+
+    expect(arcs.length).toBe(2)
+    expect(arcs[0]?.startAngle).toBeCloseTo(0)
+    expect(arcs[0]?.endAngle).toBeCloseTo(90)
+    expect(arcs[1]?.startAngle).toBeCloseTo(90)
+    expect(arcs[1]?.endAngle).toBeCloseTo(180)
+    expect(bounds).toEqual({ x: 0, y: 0, width: 800, height: 550 })
+  })
+
+  it('converts an ELLIPSE into a line approximation with matching bbox', () => {
+    const dxf =
+      baseOpen() +
+      section('ENTITIES') +
+      '0\nELLIPSE\n10\n20\n20\n10\n30\n0\n11\n40\n21\n0\n31\n0\n40\n0.5\n41\n0\n42\n6.283185307179586\n' +
+      endsec() +
+      baseClose()
+    const entity = parseFirstEntity(dxf)
+    const result = entityToGeometry(entity)
+    expect(result).not.toBeNull()
+    if (!result) return
+    expect(result.geometry.entityType).toBe('ELLIPSE')
+    expect(result.geometry.segments.length).toBeGreaterThan(16)
+    expect(result.geometry.segments.every((segment) => segment.kind === 'line')).toBe(true)
+    expect(result.bounds.x).toBeCloseTo(-20)
+    expect(result.bounds.y).toBeCloseTo(-10)
+    expect(result.bounds.width).toBeCloseTo(80)
+    expect(result.bounds.height).toBeCloseTo(40)
   })
 
   it('returns null for unsupported entity types (e.g. SPLINE)', () => {
