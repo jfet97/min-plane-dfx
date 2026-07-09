@@ -53,14 +53,26 @@ export type DxfArcSegment = Schema.Schema.Type<typeof DxfArcSegment>
 export const DxfGeometrySegment = Schema.Union([DxfLineSegment, DxfArcSegment])
 export type DxfGeometrySegment = Schema.Schema.Type<typeof DxfGeometrySegment>
 
+export const DxfGeometryEntityType = Schema.Literals([
+  'LINE',
+  'LWPOLYLINE',
+  'POLYLINE',
+  'CIRCLE',
+  'ARC',
+  'ELLIPSE',
+  'DXF_SHAPE',
+  'PRESET_SHAPE'
+])
+export type DxfGeometryEntityType = Schema.Schema.Type<typeof DxfGeometryEntityType>
+
 /**
  * Compact, parser-agnostic summary of a single DXF entity.
  * The renderer uses this to redraw true geometry. The algorithm only sees
  * bounding boxes and sizes; raw geometry stays out of the worker protocol.
  */
 export class DxfGeometrySummary extends Schema.Class<DxfGeometrySummary>('DxfGeometrySummary')({
-  /** DXF entity type, or DXF_SHAPE when multiple entities were grouped. */
-  entityType: Schema.String,
+  /** Supported source geometry type, or grouped/preset shape marker. */
+  entityType: DxfGeometryEntityType,
   /** Whether the imported summary should be treated as a closed outline. */
   closed: Schema.Boolean,
   /** Tagged line/arc segments in piece-local millimeter coordinates. */

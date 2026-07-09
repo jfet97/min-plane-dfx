@@ -1,10 +1,10 @@
 import DxfParser from 'dxf-parser'
 import { readFile } from 'node:fs/promises'
 import { basename, extname } from 'node:path'
-import { EntityName } from 'dxf-parser/dist/entities/geomtry.js'
 import { entityToGeometry, unionBounds } from './DxfBbox.js'
 import {
   DxfGeometrySummary,
+  type DxfGeometryEntityType,
   ImportedDxfDocument,
   ImportedPiece,
   ImportWarning
@@ -12,14 +12,18 @@ import {
 import { SourceFileId } from '@shared/domain/ids.js'
 import { Rect } from '@shared/domain/geometry.js'
 
-const SUPPORTED_ENTITIES: ReadonlySet<EntityName> = new Set<EntityName>([
+const SUPPORTED_DXF_ENTITY_TYPES = [
   'LINE',
   'LWPOLYLINE',
   'POLYLINE',
   'CIRCLE',
   'ARC',
   'ELLIPSE'
-])
+] as const satisfies ReadonlyArray<DxfGeometryEntityType>
+
+type SupportedDxfEntityType = (typeof SUPPORTED_DXF_ENTITY_TYPES)[number]
+
+const SUPPORTED_ENTITIES: ReadonlySet<string> = new Set(SUPPORTED_DXF_ENTITY_TYPES)
 
 export interface DxfImportOptions {
   /** Millimeters per DXF unit. Defaults to 1 (assume DXF is already in mm). */
@@ -58,6 +62,10 @@ function isDxfDocument(value: unknown): value is { readonly entities?: ReadonlyA
   if (typeof value !== 'object' || value === null) return false
   const entities = (value as { readonly entities?: unknown }).entities
   return entities === undefined || Array.isArray(entities)
+}
+
+function isSupportedDxfEntityType(value: string): value is SupportedDxfEntityType {
+  return SUPPORTED_ENTITIES.has(value)
 }
 
 function scaleSegment(segment: Segment, factor: number): Segment {
@@ -177,14 +185,14 @@ export async function importDxfFile(
   const millimetersPerUnit = options.millimetersPerUnit ?? 1
   const convertedSegments: Segment[] = []
   const convertedBounds: RawBounds[] = []
-  const convertedEntityTypes = new Set<string>()
+  const convertedEntityTypes = new Set<SupportedDxfEntityType>()
   const convertedLayers: Array<string | undefined> = []
   let convertedEntityCount = 0
 
   const entities = parsed.entities ?? []
   for (const entity of entities) {
-    const entityType = entity.type as EntityName
-    if (!SUPPORTED_ENTITIES.has(entityType)) {
+    const entityType = String(entity.type)
+    if (!isSupportedDxfEntityType(entityType)) {
       warnings.push(
         new ImportWarning({
           code: 'unsupported_dxf_entity',
