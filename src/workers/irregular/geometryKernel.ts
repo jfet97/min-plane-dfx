@@ -70,7 +70,9 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
     const settings = yield* GeometrySettings
 
     return GeometryKernel.of({
-      flattenSourceGeometry: () => failNotImplemented('flattenSourceGeometry', settings),
+      flattenSourceGeometry: ({ piece }) => {
+        return failNotImplemented('convexHull', settings)
+      },
       convexHull: () => failNotImplemented('convexHull', settings),
       offsetConvexPolygon: () => failNotImplemented('offsetConvexPolygon', settings),
       transformCollisionGeometry: () => failNotImplemented('transformCollisionGeometry', settings),

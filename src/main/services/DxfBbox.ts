@@ -58,34 +58,42 @@ function lwPolylineSegments(verts: ReadonlyArray<IPoint>, closed: boolean): Segm
 function circleSegments(circle: ICircleEntity): Segment[] {
   const c = circle.center
   const r = circle.radius
-  return [0, 90, 180, 270].map((startAngle) => ({
-    kind: 'arc',
-    x1: 0,
-    y1: 0,
-    x2: 0,
-    y2: 0,
-    cx: c.x,
-    cy: c.y,
-    radius: r,
-    startAngle,
-    endAngle: startAngle + 90
-  }))
+  return [0, 90, 180, 270].map((startAngle) => {
+    const endAngle = startAngle + 90
+    const start = arcPoint(c.x, c.y, r, degreesToRadians(startAngle))
+    const end = arcPoint(c.x, c.y, r, degreesToRadians(endAngle))
+    return {
+      kind: 'arc',
+      x1: start.x,
+      y1: start.y,
+      x2: end.x,
+      y2: end.y,
+      cx: c.x,
+      cy: c.y,
+      radius: r,
+      startAngle,
+      endAngle
+    }
+  })
 }
 
 function arcSegments(arc: IArcEntity): Segment[] {
   const a = arc.center
+  const endAngle = arcEndForSvg(arc.startAngle, arc.endAngle)
+  const start = arcPoint(a.x, a.y, arc.radius, arc.startAngle)
+  const end = arcPoint(a.x, a.y, arc.radius, endAngle)
   return [
     {
       kind: 'arc',
-      x1: 0,
-      y1: 0,
-      x2: 0,
-      y2: 0,
+      x1: start.x,
+      y1: start.y,
+      x2: end.x,
+      y2: end.y,
       cx: a.x,
       cy: a.y,
       radius: arc.radius,
       startAngle: radiansToDegrees(arc.startAngle),
-      endAngle: radiansToDegrees(arcEndForSvg(arc.startAngle, arc.endAngle))
+      endAngle: radiansToDegrees(endAngle)
     }
   ]
 }
@@ -182,11 +190,14 @@ function segmentBounds(segs: ReadonlyArray<Segment>): RawBounds | null {
 }
 
 function arcBoundsPoints(segment: Segment): ReadonlyArray<{ readonly x: number; readonly y: number }> {
-  const cx = segment.cx ?? 0
-  const cy = segment.cy ?? 0
-  const radius = segment.radius ?? 0
-  const start = degreesToRadians(segment.startAngle ?? 0)
-  const end = arcEndForSvg(start, degreesToRadians(segment.endAngle ?? 0))
+  if (segment.kind === 'line') {
+    return [
+      { x: segment.x1, y: segment.y1 },
+      { x: segment.x2, y: segment.y2 }
+    ]
+  }
+  const start = degreesToRadians(segment.startAngle)
+  const end = arcEndForSvg(start, degreesToRadians(segment.endAngle))
   const angles = [start, end]
   for (const cardinal of [0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2, FULL_CIRCLE_RADIANS]) {
     const candidate = cardinal < start ? cardinal + FULL_CIRCLE_RADIANS : cardinal
@@ -195,8 +206,8 @@ function arcBoundsPoints(segment: Segment): ReadonlyArray<{ readonly x: number; 
     }
   }
   return angles.map((angle) => ({
-    x: cx + radius * Math.cos(angle),
-    y: cy + radius * Math.sin(angle)
+    x: segment.cx + segment.radius * Math.cos(angle),
+    y: segment.cy + segment.radius * Math.sin(angle)
   }))
 }
 
@@ -214,6 +225,18 @@ function arcEndForSvg(start: number, end: number): number {
 
 function ellipseEndParameter(start: number, end: number): number {
   return end <= start ? end + FULL_CIRCLE_RADIANS : end
+}
+
+function arcPoint(
+  cx: number,
+  cy: number,
+  radius: number,
+  angleRadians: number
+): { readonly x: number; readonly y: number } {
+  return {
+    x: cx + radius * Math.cos(angleRadians),
+    y: cy + radius * Math.sin(angleRadians)
+  }
 }
 
 /**

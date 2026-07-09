@@ -76,11 +76,11 @@ function scaleSegment(segment: Segment, factor: number): Segment {
     y1: segment.y1 * factor,
     x2: segment.x2 * factor,
     y2: segment.y2 * factor,
-    ...(segment.cx !== undefined ? { cx: segment.cx * factor } : {}),
-    ...(segment.cy !== undefined ? { cy: segment.cy * factor } : {}),
-    ...(segment.radius !== undefined ? { radius: segment.radius * factor } : {}),
-    ...(segment.startAngle !== undefined ? { startAngle: segment.startAngle } : {}),
-    ...(segment.endAngle !== undefined ? { endAngle: segment.endAngle } : {})
+    cx: segment.cx * factor,
+    cy: segment.cy * factor,
+    radius: segment.radius * factor,
+    startAngle: segment.startAngle,
+    endAngle: segment.endAngle
   }
 }
 
@@ -134,11 +134,11 @@ function translateSegment(segment: Segment, dx: number, dy: number): Segment {
     y1: segment.y1 + dy,
     x2: segment.x2 + dx,
     y2: segment.y2 + dy,
-    ...(segment.cx !== undefined ? { cx: segment.cx + dx } : {}),
-    ...(segment.cy !== undefined ? { cy: segment.cy + dy } : {}),
-    ...(segment.radius !== undefined ? { radius: segment.radius } : {}),
-    ...(segment.startAngle !== undefined ? { startAngle: segment.startAngle } : {}),
-    ...(segment.endAngle !== undefined ? { endAngle: segment.endAngle } : {})
+    cx: segment.cx + dx,
+    cy: segment.cy + dy,
+    radius: segment.radius,
+    startAngle: segment.startAngle,
+    endAngle: segment.endAngle
   }
 }
 

@@ -163,17 +163,17 @@ function linePath(s: Segment): string {
 
 function arcPath(s: Segment): string {
   if (s.kind !== 'arc') return ''
-  const cx = s.cx ?? 0
-  const cy = s.cy ?? 0
-  const r = s.radius ?? 0
+  const cx = s.cx
+  const cy = s.cy
+  const r = s.radius
   if (r <= 0) return ''
-  const start = ((s.startAngle ?? 0) * Math.PI) / 180
-  const end = ((s.endAngle ?? 0) * Math.PI) / 180
+  const start = (s.startAngle * Math.PI) / 180
+  const end = (s.endAngle * Math.PI) / 180
   const x1 = cx + r * Math.cos(start)
   const y1 = cy + r * Math.sin(start)
   const x2 = cx + r * Math.cos(end)
   const y2 = cy + r * Math.sin(end)
-  const rawDelta = (s.endAngle ?? 0) - (s.startAngle ?? 0)
+  const rawDelta = s.endAngle - s.startAngle
   const normalizedDelta = ((rawDelta % 360) + 360) % 360
   const largeArc = normalizedDelta > 180 ? 1 : 0
   return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`

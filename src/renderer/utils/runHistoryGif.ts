@@ -269,12 +269,12 @@ function drawSegment(
   if (segment.kind === 'line') {
     ctx.lineTo(segment.x2, segment.y2)
   } else {
-    const cx = segment.cx ?? 0
-    const cy = segment.cy ?? 0
-    const radius = segment.radius ?? 0
+    const cx = segment.cx
+    const cy = segment.cy
+    const radius = segment.radius
     if (radius <= 0) return
-    const start = ((segment.startAngle ?? 0) * Math.PI) / 180
-    const end = ((segment.endAngle ?? 0) * Math.PI) / 180
+    const start = (segment.startAngle * Math.PI) / 180
+    const end = (segment.endAngle * Math.PI) / 180
     ctx.arc(cx, cy, radius, start, end)
   }
   ctx.stroke()
