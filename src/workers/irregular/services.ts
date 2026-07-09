@@ -4,7 +4,6 @@ import type { PieceId } from '@shared/domain/ids.js'
 import type { SheetSpec } from '@shared/domain/nesting.js'
 import type {
   CollisionGeometry,
-  FlattenedGeometry,
   FreeMaterialSnapshot,
   IrregularGeometryCacheKey,
   IrregularIfpBounds,
@@ -12,7 +11,6 @@ import type {
   IrregularNfp,
   IrregularPlacedPiece,
   IrregularPlacementCandidate,
-  IrregularPoint,
   IrregularPolygon,
   IrregularPortfolioProgress,
   IrregularPortfolioResult,
@@ -99,24 +97,6 @@ export interface RunPortfolioInput {
   readonly onProgress?: (progress: IrregularPortfolioProgress) => Effect.Effect<void>
 }
 
-export interface GeometryKernel {
-  readonly flattenSourceGeometry: (
-    input: FlattenSourceGeometryInput
-  ) => Effect.Effect<FlattenedGeometry, IrregularNestingNotImplementedError>
-  readonly convexHull: (
-    points: ReadonlyArray<IrregularPoint>
-  ) => Effect.Effect<IrregularPolygon, IrregularNestingNotImplementedError>
-  readonly offsetConvexPolygon: (
-    input: OffsetConvexPolygonInput
-  ) => Effect.Effect<IrregularPolygon, IrregularNestingNotImplementedError>
-  readonly transformCollisionGeometry: (
-    input: TransformCollisionGeometryInput
-  ) => Effect.Effect<TransformedCollisionGeometry, IrregularNestingNotImplementedError>
-  readonly validatePlacement: (
-    input: ValidatePlacementInput
-  ) => Effect.Effect<void, IrregularNestingNotImplementedError>
-}
-
 export interface CollisionGeometryBuilder {
   readonly buildPiece: (
     input: BuildCollisionGeometryInput
@@ -172,9 +152,6 @@ export interface GeometryCache {
   readonly clear: Effect.Effect<void>
 }
 
-export const GeometryKernel = Context.Service<GeometryKernel>(
-  'min-plane-dfx/irregular/GeometryKernel'
-)
 export const CollisionGeometryBuilder = Context.Service<CollisionGeometryBuilder>(
   'min-plane-dfx/irregular/CollisionGeometryBuilder'
 )
@@ -213,15 +190,6 @@ function failNotImplemented(
 function cacheKeyToString(key: IrregularGeometryCacheKey): string {
   return `${key.namespace}:${key.parts.join('|')}`
 }
-
-export const GeometryKernelUnimplemented = Layer.succeed(GeometryKernel, {
-  flattenSourceGeometry: () => failNotImplemented('GeometryKernel', 'flattenSourceGeometry'),
-  convexHull: () => failNotImplemented('GeometryKernel', 'convexHull'),
-  offsetConvexPolygon: () => failNotImplemented('GeometryKernel', 'offsetConvexPolygon'),
-  transformCollisionGeometry: () =>
-    failNotImplemented('GeometryKernel', 'transformCollisionGeometry'),
-  validatePlacement: () => failNotImplemented('GeometryKernel', 'validatePlacement')
-})
 
 export const CollisionGeometryBuilderUnimplemented = Layer.succeed(CollisionGeometryBuilder, {
   buildPiece: () => failNotImplemented('CollisionGeometryBuilder', 'buildPiece'),
@@ -269,14 +237,3 @@ export const GeometryCacheInMemory = Layer.sync(GeometryCache, () => {
     })
   }
 })
-
-export const IrregularNestingInfrastructureLive = Layer.mergeAll(
-  GeometryKernelUnimplemented,
-  CollisionGeometryBuilderUnimplemented,
-  TransformGeneratorUnimplemented,
-  NfpIfpServiceUnimplemented,
-  FreeMaterialServiceUnimplemented,
-  PriorityOrderServiceUnimplemented,
-  IrregularNestingPortfolioUnimplemented,
-  GeometryCacheInMemory
-)
