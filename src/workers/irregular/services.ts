@@ -29,7 +29,6 @@ export class IrregularNestingNotImplementedError extends Data.TaggedError(
 
 export interface FlattenSourceGeometryInput {
   readonly piece: ImportedPiece
-  readonly settings: IrregularNestingSettings['geometry']
 }
 
 export interface BuildCollisionGeometryInput {
@@ -41,7 +40,6 @@ export interface BuildCollisionGeometryInput {
 export interface OffsetConvexPolygonInput {
   readonly polygon: IrregularPolygon
   readonly distanceMm: number
-  readonly settings: IrregularNestingSettings['geometry']
 }
 
 export interface TransformCollisionGeometryInput {
