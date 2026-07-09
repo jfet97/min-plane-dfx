@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from 'effect'
+import { Context, Effect, Layer, Match } from 'effect'
 import type {
   FlattenSourceGeometryInput,
   OffsetConvexPolygonInput,
@@ -14,6 +14,7 @@ import type {
   IrregularPolygon,
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
+import { DxfGeometrySegment } from '@shared/domain/dxf.js'
 
 export class GeometrySettings extends Context.Service<
   GeometrySettings,
@@ -69,8 +70,38 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
   static readonly Make = Effect.gen(function* () {
     const settings = yield* GeometrySettings
 
+    const makePointsStore = () => {
+      const points: IrregularPoint[] = []
+      const seen = new Set<`${number}:${number}`>()
+      return {
+        push(x: number, y: number) {
+          // exact keys are intentional here: this only deduplicates points already emitted with identical coordinates
+          // it avoids introducing a hidden geometric tolerance, grid snapping, or arc-specific rounding policy
+          const key = `${x}:${y}` as const
+          if (seen.has(key)) return
+          seen.add(key)
+          points.push({ x, y })
+        },
+        get() {
+          return [...points]
+        }
+      }
+    }
+
     return GeometryKernel.of({
       flattenSourceGeometry: ({ piece }) => {
+        const pointsStore = makePointsStore()
+
+        for (const segment of piece.geometry.segments) {
+          Match.value<DxfGeometrySegment>(segment).pipe(
+            Match.when({ kind: 'line' }, (line) => {
+              pointsStore.push(line.x1, line.y1)
+              pointsStore.push(line.x2, line.y2)
+            }),
+            Match.when({ kind: 'arc' }, (_arc) => {}),
+            Match.exhaustive
+          )
+        }
         return failNotImplemented('convexHull', settings)
       },
       convexHull: () => failNotImplemented('convexHull', settings),
