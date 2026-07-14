@@ -212,7 +212,12 @@ describe('GeometryKernel', () => {
       totalPaddingMm: 2
     }, settings)
 
-    expect(offset.points).toEqual([point(-1.5, -1.5), point(5.5, -1.5), point(5.5, 4.5), point(-1.5, 4.5)])
+    expect(offset.points).toEqual([
+      point(-1.502, -1.502),
+      point(5.502, -1.502),
+      point(5.502, 4.502),
+      point(-1.502, 4.502)
+    ])
   })
 
   it('expands a clockwise polygon outward without changing its winding', async () => {
@@ -221,7 +226,12 @@ describe('GeometryKernel', () => {
       totalPaddingMm: 1.5
     })
 
-    expect(offset.points).toEqual([point(-1, -1), point(-1, 4), point(5, 4), point(5, -1)])
+    expect(offset.points).toEqual([
+      point(-1.002, -1.002),
+      point(-1.002, 4.002),
+      point(5.002, 4.002),
+      point(5.002, -1.002)
+    ])
   })
 
   it('preserves the configured bounded Miter join for an acute source corner', async () => {

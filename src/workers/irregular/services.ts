@@ -1,7 +1,6 @@
 import { Context, Data, Effect, Layer, Schema } from 'effect'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type { PieceId } from '@shared/domain/ids.js'
-import { NonNegativeIntegerMillimeters } from '@shared/domain/geometry.js'
 import type { SheetSpec } from '@shared/domain/nesting.js'
 import type {
   CollisionGeometry,
@@ -18,7 +17,7 @@ import type {
   IrregularTransformCandidate,
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
-import { IrregularPolygon } from '@shared/irregular/domain.js'
+import { IrregularPolygon, NonNegativeFiniteMillimeters } from '@shared/irregular/domain.js'
 
 export class IrregularNestingNotImplementedError extends Data.TaggedError(
   'IrregularNestingNotImplementedError'
@@ -44,12 +43,12 @@ export interface BuildCollisionGeometryInput {
 
 /**
  * Decoded boundary for deriving a collision offset from a prepared nesting
- * request. Padding is an integer millimeter value because it originates from
- * `NestingRequest.padding`, before the kernel adds its fractional safety margin.
+ * request. Padding remains a finite non-negative millimeter distance before the
+ * kernel adds its fractional safety margin.
  */
 export const OffsetConvexPolygonInput = Schema.Struct({
   polygon: IrregularPolygon,
-  totalPaddingMm: NonNegativeIntegerMillimeters
+  totalPaddingMm: NonNegativeFiniteMillimeters
 })
 export type OffsetConvexPolygonInput = Schema.Schema.Type<typeof OffsetConvexPolygonInput>
 

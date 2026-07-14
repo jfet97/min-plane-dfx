@@ -16,6 +16,7 @@ import { EllipseFlattening } from './ellipseFlattening.js'
 import { ConvexHull } from './convexHull.js'
 import { ConvexPolygonOffset } from './convexPolygonOffset.js'
 import { TransformCollisionGeometry } from './transformCollisionGeometry.js'
+import { PlacementValidation } from './placementValidation.js'
 import { DEFAULT_IRREGULAR_GEOMETRY_SETTINGS } from '@shared/irregular/defaults.js'
 import {
   FlattenedGeometry,
@@ -169,7 +170,7 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
           )
         ),
       transformCollisionGeometry: TransformCollisionGeometry.compute,
-      validatePlacement: () => failNotImplemented('validatePlacement', settings)
+      validatePlacement: PlacementValidation.validate
     })
   })
 
