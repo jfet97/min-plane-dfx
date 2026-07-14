@@ -52,32 +52,24 @@ function deduplicateSortedPoints(points: ReadonlyArray<IrregularPoint>): Irregul
 }
 
 /**
- * Builds one side of the rubber-band outline around a point cloud.
+ * Builds one open side of the convex-hull outline from unique points that are
+ * monotonic by x: either left to right or the same order reversed.
  *
- * Input: unique points ordered by x, from left to right. For example,
- * `[(0, 0), (0, 3), (4, 0), (4, 3)]`. With that order this function finds
- * the bottom side. Calling it with the same list reversed finds the top side.
- * The caller joins those two sides into the complete outline.
+ * Left-to-right input builds the bottom side. For kept points A and B plus
+ * candidate C, a right turn means B is above the direct edge A -> C, so the
+ * bottom outline can skip B. A straight turn means B is only an edge-middle
+ * point, so it is also skipped.
  *
- * For each candidate point C, A and B are the final two points currently
- * kept by this function. Imagine standing on B after walking from A to B;
- * then turn until you face C. A clockwise turn is a right turn, while a
- * counter-clockwise turn is a left turn.
+ * Right-to-left input builds the top side. Reversing the order changes which
+ * physical side is being traced: the same rule now skips B when it is below
+ * the direct edge A -> C. No separate upper-hull rule is needed.
  *
- * Example of a right turn: A = (0, 0), B = (0, 3), C = (4, 0). Walking from
- * A to B points up. Turning from up to face C points down and right, which is
- * a right turn. B is above the direct edge from A to C, so it cannot be a
- * corner on the bottom side; removing B leaves the correct edge A -> C.
+ * The first two points are added directly. From the third point onward, C is
+ * checked against the final kept A and B; if B is removed, the same C is
+ * checked again against the new final pair.
  *
- * Example of a left turn: A = (0, 0), B = (4, 0), C = (4, 3). Walking from A
- * to B points right. Turning from right to face C points up, which is a left
- * turn. B is a real corner of the bottom side, so it stays.
- *
- * If A, B, and C lie on one straight line, B is only an edge-middle point.
- * Removing it leaves the same shape with fewer unnecessary vertices.
- *
- * Output: one open side of the outline, including its two end corners. The
- * caller removes duplicate end corners when joining it with the other side.
+ * The returned side includes both end corners. The caller removes duplicate
+ * ends before joining this side with the side from the reverse pass.
  */
 function buildHullHalf(points: ReadonlyArray<IrregularPoint>): IrregularPoint[] {
   const hull: IrregularPoint[] = []
