@@ -35,12 +35,17 @@ dependency boundaries, not persisted payloads.
 - `GeometryCache`.
 
 `GeometryKernel.Live` currently implements DXF source flattening, convex hull,
-and strictly convex polygon offsetting. Offset derives its outward distance from
-half the caller-provided total padding plus `clearanceSafetyMarginMm`. Invalid or
-non-convex geometry is rejected instead of inventing a collision polygon. The
-remaining algorithm services, except for the in-memory cache, fail with
-`IrregularNestingNotImplementedError`. This is deliberate: the app must not
-emit fake placements, fake NFPs, fake scores, or fake history.
+and strictly convex polygon offsetting. `CollisionGeometryBuilder.Live` composes
+those operations for a closed imported outline: it preserves source samples,
+normalizes the convex hull to its lower-left placement reference, derives the
+padded collision polygon, and carries import warnings as diagnostics. Offset
+derives its outward distance from half the caller-provided total padding plus
+`clearanceSafetyMarginMm`. Invalid or non-convex geometry is rejected instead of
+inventing a collision polygon. Transform choices remain the responsibility of
+the unimplemented `TransformGenerator`. The remaining algorithm services, except
+for the in-memory cache, fail with `IrregularNestingNotImplementedError`. This is
+deliberate: the app must not emit fake placements, fake NFPs, fake scores, or
+fake history.
 
 ## Current Integration State
 

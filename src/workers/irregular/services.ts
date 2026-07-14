@@ -38,8 +38,7 @@ export interface FlattenSourceGeometryInput {
 
 export interface BuildCollisionGeometryInput {
   readonly piece: ImportedPiece
-  readonly allowMirror: boolean
-  readonly settings: IrregularNestingSettings
+  readonly totalPaddingMm: number
 }
 
 export interface OffsetConvexPolygonInput {
@@ -100,15 +99,6 @@ export interface RunPortfolioInput {
   readonly onProgress?: (progress: IrregularPortfolioProgress) => Effect.Effect<void>
 }
 
-export interface CollisionGeometryBuilder {
-  readonly buildPiece: (
-    input: BuildCollisionGeometryInput
-  ) => Effect.Effect<IrregularPreparedPiece, IrregularNestingNotImplementedError>
-  readonly buildPieces: (
-    input: ReadonlyArray<BuildCollisionGeometryInput>
-  ) => Effect.Effect<ReadonlyArray<IrregularPreparedPiece>, IrregularNestingNotImplementedError>
-}
-
 export interface TransformGenerator {
   readonly generateTransforms: (
     input: GenerateTransformsInput
@@ -155,9 +145,6 @@ export interface GeometryCache {
   readonly clear: Effect.Effect<void>
 }
 
-export const CollisionGeometryBuilder = Context.Service<CollisionGeometryBuilder>(
-  'min-plane-dfx/irregular/CollisionGeometryBuilder'
-)
 export const TransformGenerator = Context.Service<TransformGenerator>(
   'min-plane-dfx/irregular/TransformGenerator'
 )
@@ -193,11 +180,6 @@ function failNotImplemented(
 function cacheKeyToString(key: IrregularGeometryCacheKey): string {
   return `${key.namespace}:${key.parts.join('|')}`
 }
-
-export const CollisionGeometryBuilderUnimplemented = Layer.succeed(CollisionGeometryBuilder, {
-  buildPiece: () => failNotImplemented('CollisionGeometryBuilder', 'buildPiece'),
-  buildPieces: () => failNotImplemented('CollisionGeometryBuilder', 'buildPieces')
-})
 
 export const TransformGeneratorUnimplemented = Layer.succeed(TransformGenerator, {
   generateTransforms: () => failNotImplemented('TransformGenerator', 'generateTransforms')

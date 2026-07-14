@@ -1,7 +1,6 @@
 import { Layer } from 'effect'
-import { GeometryKernel } from './geometryKernel.js'
+import { CollisionGeometryBuilder } from './collisionGeometryBuilder.js'
 import {
-  CollisionGeometryBuilderUnimplemented,
   FreeMaterialServiceUnimplemented,
   GeometryCacheInMemory,
   IrregularNestingPortfolioUnimplemented,
@@ -11,8 +10,7 @@ import {
 } from './services.js'
 
 export const IrregularNestingInfrastructureLive = Layer.mergeAll(
-  GeometryKernel.Live,
-  CollisionGeometryBuilderUnimplemented,
+  CollisionGeometryBuilder.Live,
   TransformGeneratorUnimplemented,
   NfpIfpServiceUnimplemented,
   FreeMaterialServiceUnimplemented,
