@@ -1,11 +1,16 @@
-import type { DxfArcSegment } from '@shared/domain/dxf.js'
+/** Deterministic sag-tolerance sampling for DXF circular arcs and bulge chords. */
+
+import type { DxfArcSegment, DxfLineSegment } from '@shared/domain/dxf.js'
 import type { IrregularPoint } from '@shared/irregular/domain.js'
 
+/** Samples source circular curves without mutating their imported endpoints. */
 export const ArcFlattening = {
   samplePoints,
+  sampleBulgePoints,
   computeSampleCount
 } as const
 
+/** Samples a circular DXF arc with endpoints preserved exactly. */
 function samplePoints(arc: DxfArcSegment, sagToleranceMm: number): ReadonlyArray<IrregularPoint> {
   const points: IrregularPoint[] = []
 
@@ -39,30 +44,100 @@ function samplePoints(arc: DxfArcSegment, sagToleranceMm: number): ReadonlyArray
   return points
 }
 
-function computeSampleCount(arc: DxfArcSegment, sagToleranceMm: number): number {
-  // invalid or degenerate arcs can only contribute their imported endpoints
-  if (!Number.isFinite(arc.radius) || arc.radius <= 0) return 1
+/**
+ * Samples an LWPOLYLINE/POLYLINE bulge chord using its signed analytic arc.
+ *
+ * The preview keeps the chord as a line for compatibility, but collision
+ * geometry follows the signed bulge sweep so negative clockwise bulges are not
+ * silently converted into the opposite major arc.
+ */
+function sampleBulgePoints(
+  segment: DxfLineSegment,
+  sagToleranceMm: number
+): ReadonlyArray<IrregularPoint> {
+  const points: IrregularPoint[] = [{ x: segment.x1, y: segment.y1 }]
+  const arc = bulgeArcParameters(segment)
+  if (arc === null) {
+    points.push({ x: segment.x2, y: segment.y2 })
+    return points
+  }
 
-  // zero or invalid tolerance means no interior samples are requested
+  const sampleCount = computeSampleCountForSweep(arc.radius, Math.abs(arc.sweep), sagToleranceMm)
+  for (let sampleIndex = 1; sampleIndex < sampleCount; sampleIndex += 1) {
+    const sampleRatio = sampleIndex / sampleCount
+    const angle = arc.startAngle + arc.sweep * sampleRatio
+    points.push({
+      x: arc.centerX + Math.cos(angle) * arc.radius,
+      y: arc.centerY + Math.sin(angle) * arc.radius
+    })
+  }
+  points.push({ x: segment.x2, y: segment.y2 })
+  return points
+}
+
+interface BulgeArcParameters {
+  readonly centerX: number
+  readonly centerY: number
+  readonly radius: number
+  readonly startAngle: number
+  readonly sweep: number
+}
+
+/** Converts a signed bulge into center, radius, and sweep parameters. */
+function bulgeArcParameters(segment: DxfLineSegment): BulgeArcParameters | null {
+  const bulge = segment.bulge
+  if (
+    bulge === undefined ||
+    !Number.isFinite(bulge) ||
+    bulge === 0 ||
+    ![segment.x1, segment.y1, segment.x2, segment.y2].every(Number.isFinite)
+  ) {
+    return null
+  }
+
+  const dx = segment.x2 - segment.x1
+  const dy = segment.y2 - segment.y1
+  const chord = Math.hypot(dx, dy)
+  const sweep = 4 * Math.atan(bulge)
+  const radius = (chord * (1 + bulge * bulge)) / (4 * Math.abs(bulge))
+  if (
+    !Number.isFinite(chord) ||
+    chord <= 0 ||
+    !Number.isFinite(sweep) ||
+    !Number.isFinite(radius)
+  ) {
+    return null
+  }
+
+  const midpointX = (segment.x1 + segment.x2) / 2
+  const midpointY = (segment.y1 + segment.y2) / 2
+  const centerOffset = (chord * (1 - bulge * bulge)) / (4 * bulge)
+  const centerX = midpointX + (-dy / chord) * centerOffset
+  const centerY = midpointY + (dx / chord) * centerOffset
+  const startAngle = Math.atan2(segment.y1 - centerY, segment.x1 - centerX)
+  return { centerX, centerY, radius, startAngle, sweep }
+}
+
+/** Computes the chord count required by a radius and absolute angular sweep. */
+function computeSampleCountForSweep(
+  radius: number,
+  sweepRad: number,
+  sagToleranceMm: number
+): number {
+  if (!Number.isFinite(radius) || radius <= 0) return 1
+  if (!Number.isFinite(sweepRad) || sweepRad <= 0) return 1
   if (!Number.isFinite(sagToleranceMm) || sagToleranceMm <= 0) return 1
 
-  // compute the positive counter-clockwise DXF sweep in radians
-  const sweepRad = degreesToRadians(computeCounterClockwiseSweepDegrees(arc))
-
-  // degenerate sweeps can only contribute their imported endpoints
-  if (sweepRad <= 0) return 1
-
-  // cap the sagitta tolerance so the acos input always stays inside its domain
-  const cappedSagToleranceMm = Math.min(sagToleranceMm, arc.radius)
-
-  // derive the largest chord angle whose sagitta is still within tolerance
-  const maxStepRad = 2 * Math.acos(1 - cappedSagToleranceMm / arc.radius)
-
-  // fall back to endpoints if numeric inputs still produced an unusable step
+  const cappedSagToleranceMm = Math.min(sagToleranceMm, radius)
+  const maxStepRad = 2 * Math.acos(1 - cappedSagToleranceMm / radius)
   if (!Number.isFinite(maxStepRad) || maxStepRad <= 0) return 1
-
-  // return the number of chords, not the number of emitted points
   return Math.max(1, Math.ceil(sweepRad / maxStepRad))
+}
+
+/** Computes how many chords are needed for the configured sag tolerance. */
+function computeSampleCount(arc: DxfArcSegment, sagToleranceMm: number): number {
+  const sweepRad = degreesToRadians(computeCounterClockwiseSweepDegrees(arc))
+  return computeSampleCountForSweep(arc.radius, sweepRad, sagToleranceMm)
 }
 
 function computeSampleAngleDegrees(arc: DxfArcSegment, sampleRatio: number): number {

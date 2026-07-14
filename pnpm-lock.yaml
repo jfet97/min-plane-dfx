@@ -20,6 +20,9 @@ importers:
       '@effect/sql-sqlite-node':
         specifier: 4.0.0-beta.89
         version: 4.0.0-beta.89(effect@4.0.0-beta.89)
+      clipper2-ts:
+        specifier: 2.0.1-18
+        version: 2.0.1-18
       dxf-parser:
         specifier: ^1.1.2
         version: 1.1.2
@@ -1268,6 +1271,10 @@ packages:
   cli-truncate@2.1.0:
     resolution: {integrity: sha512-n8fOixwDD6b/ObinzTrp1ZKFzbgvKZvuz/TvejnLn1aQfC6r52XEx85FmuC+3HI+JM7coBRXUvNqEU2PHVrHpg==}
     engines: {node: '>=8'}
+
+  clipper2-ts@2.0.1-18:
+    resolution: {integrity: sha512-WuRO1ZHzyYTVHY78r4wVWVydvQ+1lx9qZ+DeZa/8zhvrxIgCVzElJ6lwSMGtUUKFPefhvfJsHZ5C9RNkgisCOQ==}
+    engines: {node: '>=14.0.0'}
 
   cliui@8.0.1:
     resolution: {integrity: sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==}
@@ -4149,6 +4156,8 @@ snapshots:
       slice-ansi: 3.0.0
       string-width: 4.2.3
     optional: true
+
+  clipper2-ts@2.0.1-18: {}
 
   cliui@8.0.1:
     dependencies:

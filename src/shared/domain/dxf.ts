@@ -1,3 +1,5 @@
+/** Shared DXF source, preview, warning, and imported-piece contracts. */
+
 import { Schema } from 'effect'
 import { PieceId, SourceFileId } from './ids.js'
 import { Rect } from './geometry.js'
@@ -14,6 +16,27 @@ export class ImportWarning extends Schema.Class<ImportWarning>('ImportWarning')(
   entityHandle: Schema.optional(Schema.Union([Schema.String, Schema.Number]))
 }) {}
 
+/**
+ * Preserved DXF ellipse parameters attached to preview segments.
+ *
+ * The major-axis values are a vector from the ellipse center, while the angles
+ * are DXF parameters in radians. `sourceId` identifies one original entity so
+ * the collision flattener can sample a repeated preview approximation once.
+ */
+export const DxfEllipseSource = Schema.Struct({
+  kind: Schema.Literal('ellipse'),
+  sourceId: Schema.String,
+  cx: Schema.Number,
+  cy: Schema.Number,
+  majorAxisX: Schema.Number,
+  majorAxisY: Schema.Number,
+  axisRatio: Schema.Number,
+  startAngle: Schema.Number,
+  endAngle: Schema.Number
+})
+export type DxfEllipseSource = Schema.Schema.Type<typeof DxfEllipseSource>
+
+/** Preview line or chord carrying optional source-level curve parameters. */
 export const DxfLineSegment = Schema.Struct({
   kind: Schema.Literal('line'),
   /** Segment start X in piece-local millimeters. */
@@ -23,7 +46,11 @@ export const DxfLineSegment = Schema.Struct({
   /** Segment end X in piece-local millimeters. */
   x2: Schema.Number,
   /** Segment end Y in piece-local millimeters. */
-  y2: Schema.Number
+  y2: Schema.Number,
+  /** Original LWPOLYLINE/POLYLINE bulge for the segment, when non-zero. */
+  bulge: Schema.optional(Schema.Number),
+  /** Original ellipse parameters when this line is only a preview approximation. */
+  sourceCurve: Schema.optional(DxfEllipseSource)
 })
 export type DxfLineSegment = Schema.Schema.Type<typeof DxfLineSegment>
 
@@ -66,9 +93,12 @@ export const DxfGeometryEntityType = Schema.Literals([
 export type DxfGeometryEntityType = Schema.Schema.Type<typeof DxfGeometryEntityType>
 
 /**
- * Compact, parser-agnostic summary of a single DXF entity.
- * The renderer uses this to redraw true geometry. The algorithm only sees
- * bounding boxes and sizes; raw geometry stays out of the worker protocol.
+ * Compact, parser-agnostic summary of imported DXF geometry.
+ *
+ * The renderer uses `segments` for a deterministic preview approximation. The
+ * irregular worker also consumes source parameters carried by those segments
+ * so collision sampling can use its configured sag tolerance instead of the
+ * preview resolution.
  */
 export class DxfGeometrySummary extends Schema.Class<DxfGeometrySummary>('DxfGeometrySummary')({
   /** Supported source geometry type, or grouped/preset shape marker. */

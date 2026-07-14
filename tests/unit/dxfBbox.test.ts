@@ -72,6 +72,28 @@ describe('entityToGeometry', () => {
     expect(result.bounds).toEqual({ x: 0, y: 0, width: 10, height: 5 })
   })
 
+  it('preserves an LWPOLYLINE bulge and includes its arc in the bounds', () => {
+    const dxf =
+      baseOpen() +
+      section('ENTITIES') +
+      '0\nLWPOLYLINE\n70\n0\n90\n2\n' +
+      '10\n0\n20\n0\n42\n1\n10\n10\n20\n0\n' +
+      endsec() +
+      baseClose()
+    const entity = parseFirstEntity(dxf)
+    const result = entityToGeometry(entity)
+    expect(result).not.toBeNull()
+    if (!result) return
+    const segment = result.geometry.segments[0]
+    expect(segment?.kind).toBe('line')
+    if (segment?.kind !== 'line') return
+    expect(segment.bulge).toBe(1)
+    expect(result.bounds.x).toBeCloseTo(0)
+    expect(result.bounds.y).toBeCloseTo(-5)
+    expect(result.bounds.width).toBeCloseTo(10)
+    expect(result.bounds.height).toBeCloseTo(5)
+  })
+
   it('converts a CIRCLE into a 2x-radius bbox', () => {
     const dxf =
       baseOpen() +
@@ -127,7 +149,9 @@ describe('entityToGeometry', () => {
     if (!parsed) throw new Error('Parser returned null')
     const results = parsed.entities
       .map((entity) => entityToGeometry(entity))
-      .filter((result): result is NonNullable<ReturnType<typeof entityToGeometry>> => result !== null)
+      .filter(
+        (result): result is NonNullable<ReturnType<typeof entityToGeometry>> => result !== null
+      )
     const segments = results.flatMap((result) => result.geometry.segments)
     const arcs = segments.filter((segment) => segment.kind === 'arc')
     const bounds = unionBounds(results.map((result) => result.bounds))
@@ -158,6 +182,37 @@ describe('entityToGeometry', () => {
     expect(result.bounds.y).toBeCloseTo(-10)
     expect(result.bounds.width).toBeCloseTo(80)
     expect(result.bounds.height).toBeCloseTo(40)
+    const sourceCurve = result.geometry.segments[0]
+    expect(sourceCurve?.kind).toBe('line')
+    if (sourceCurve?.kind !== 'line') return
+    expect(sourceCurve.sourceCurve).toMatchObject({
+      kind: 'ellipse',
+      cx: 20,
+      cy: 10,
+      majorAxisX: 40,
+      majorAxisY: 0,
+      axisRatio: 0.5,
+      startAngle: 0,
+      endAngle: 6.283185307179586
+    })
+  })
+
+  it('keeps a partial ELLIPSE open and computes bounds for only its sweep', () => {
+    const dxf =
+      baseOpen() +
+      section('ENTITIES') +
+      '0\nELLIPSE\n10\n20\n20\n10\n30\n0\n11\n40\n21\n0\n31\n0\n40\n0.5\n41\n0\n42\n1.5707963267948966\n' +
+      endsec() +
+      baseClose()
+    const entity = parseFirstEntity(dxf)
+    const result = entityToGeometry(entity)
+    expect(result).not.toBeNull()
+    if (!result) return
+    expect(result.geometry.closed).toBe(false)
+    expect(result.bounds.x).toBeCloseTo(20)
+    expect(result.bounds.y).toBeCloseTo(10)
+    expect(result.bounds.width).toBeCloseTo(40)
+    expect(result.bounds.height).toBeCloseTo(20)
   })
 
   it('returns null for unsupported entity types (e.g. SPLINE)', () => {

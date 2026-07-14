@@ -21,12 +21,22 @@ If a task touches Effect APIs, inspect the installed packages in `node_modules` 
 
 ## Hard Rules
 
-- Keep algorithm behavior inside `src/workers/algorithm/`.
+- Keep placement, candidate generation, scoring, and search behavior inside
+  `src/workers/algorithm/`. Deterministic irregular-v2 geometry kernels,
+  collision-artifact construction, and their Effect service boundaries live in
+  `src/workers/irregular/`; they must not invent placements, scores, history,
+  or search behavior.
 - Do not add fake placements, fake free rectangles, fake scores, fake ranking, or fake history.
 - Keep docs up to date with code changes. If implementation changes architecture, protocols, workflows, validation, persistence, or agent conventions, update the relevant `docs/` page and/or this file in the same development cycle.
 - `src/workers/algorithm/sortPiecesForNesting.ts` is the user-owned initial ordering boundary. Do not change its behavior unless the user explicitly asks for algorithm work.
 - Strategy IDs are descriptive strings loaded from configuration, not TypeScript unions.
 - Use schema decoding at untrusted boundaries: IPC payloads, worker messages, loaded JSON, imported files, and replay NDJSON.
+- Treat exported Effect Schemas as the single owner of validation for schema-backed
+  inputs. Put finite-number, range, enum, structural, and cross-field input
+  invariants in the relevant schema, then decode at the boundary. Do not repeat
+  those input checks inside services or algorithms. Runtime checks remain only
+  for values derived after decoding, external-library output, arithmetic
+  overflow, or invariants that cannot be represented by the input schema.
 - Treat exported Effect Schemas as the single owner of validation for schema-backed
   inputs. Put finite-number, range, enum, structural, and cross-field input
   invariants in the relevant schema, then decode at the boundary. Do not repeat

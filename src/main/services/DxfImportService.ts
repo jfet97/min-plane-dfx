@@ -1,3 +1,5 @@
+/** Imports DXF files, preserves source parameters, and classifies piece topology. */
+
 import DxfParser from 'dxf-parser'
 import { readFile } from 'node:fs/promises'
 import { basename, extname } from 'node:path'
@@ -5,6 +7,8 @@ import { entityToGeometry, unionBounds } from './DxfBbox.js'
 import {
   DxfGeometrySummary,
   type DxfGeometryEntityType,
+  type DxfEllipseSource,
+  type DxfGeometrySegment,
   ImportedDxfDocument,
   ImportedPiece,
   ImportWarning
@@ -25,11 +29,13 @@ type SupportedDxfEntityType = (typeof SUPPORTED_DXF_ENTITY_TYPES)[number]
 
 const SUPPORTED_ENTITIES: ReadonlySet<string> = new Set(SUPPORTED_DXF_ENTITY_TYPES)
 
+/** Options that control unit conversion while preserving source coordinates. */
 export interface DxfImportOptions {
   /** Millimeters per DXF unit. Defaults to 1 (assume DXF is already in mm). */
   readonly millimetersPerUnit?: number
 }
 
+/** Stable import failure carrying the source path and boundary-level error code. */
 export class DxfImportError extends Error {
   readonly code: 'file_read_error' | 'dxf_parse_error'
   readonly path: string
@@ -56,6 +62,21 @@ interface IntegerContainer {
   readonly offsetY: number
 }
 
+interface ConvertedEntity {
+  readonly geometry: DxfGeometrySummary
+  readonly bounds: RawBounds
+}
+
+interface Point2D {
+  readonly x: number
+  readonly y: number
+}
+
+interface OutlineClassification {
+  readonly closed: boolean
+  readonly warnings: ReadonlyArray<ImportWarning>
+}
+
 const INTEGER_MM_EPSILON = 1e-6
 
 function isDxfDocument(value: unknown): value is { readonly entities?: ReadonlyArray<Entity> } {
@@ -68,6 +89,7 @@ function isSupportedDxfEntityType(value: string): value is SupportedDxfEntityTyp
   return SUPPORTED_ENTITIES.has(value)
 }
 
+/** Scales segment coordinates and all attached source curve parameters together. */
 function scaleSegment(segment: Segment, factor: number): Segment {
   if (segment.kind === 'line') {
     return {
@@ -75,7 +97,11 @@ function scaleSegment(segment: Segment, factor: number): Segment {
       x1: segment.x1 * factor,
       y1: segment.y1 * factor,
       x2: segment.x2 * factor,
-      y2: segment.y2 * factor
+      y2: segment.y2 * factor,
+      ...(segment.bulge === undefined ? {} : { bulge: segment.bulge }),
+      ...(segment.sourceCurve === undefined
+        ? {}
+        : { sourceCurve: scaleEllipseSource(segment.sourceCurve, factor) })
     }
   }
   return {
@@ -89,6 +115,17 @@ function scaleSegment(segment: Segment, factor: number): Segment {
     radius: segment.radius * factor,
     startAngle: segment.startAngle,
     endAngle: segment.endAngle
+  }
+}
+
+/** Scales ellipse coordinates while leaving dimensionless ratios and angles intact. */
+function scaleEllipseSource(source: DxfEllipseSource, factor: number): DxfEllipseSource {
+  return {
+    ...source,
+    cx: source.cx * factor,
+    cy: source.cy * factor,
+    majorAxisX: source.majorAxisX * factor,
+    majorAxisY: source.majorAxisY * factor
   }
 }
 
@@ -126,6 +163,7 @@ function integerContainingBounds(bounds: RawBounds): IntegerContainer | null {
   }
 }
 
+/** Rebases preview and collision source coordinates into the integer container. */
 function translateSegment(segment: Segment, dx: number, dy: number): Segment {
   if (segment.kind === 'line') {
     return {
@@ -133,7 +171,11 @@ function translateSegment(segment: Segment, dx: number, dy: number): Segment {
       x1: segment.x1 + dx,
       y1: segment.y1 + dy,
       x2: segment.x2 + dx,
-      y2: segment.y2 + dy
+      y2: segment.y2 + dy,
+      ...(segment.bulge === undefined ? {} : { bulge: segment.bulge }),
+      ...(segment.sourceCurve === undefined
+        ? {}
+        : { sourceCurve: translateEllipseSource(segment.sourceCurve, dx, dy) })
     }
   }
   return {
@@ -150,6 +192,19 @@ function translateSegment(segment: Segment, dx: number, dy: number): Segment {
   }
 }
 
+/** Translates ellipse centers while keeping their local axis vectors unchanged. */
+function translateEllipseSource(
+  source: DxfEllipseSource,
+  dx: number,
+  dy: number
+): DxfEllipseSource {
+  return {
+    ...source,
+    cx: source.cx + dx,
+    cy: source.cy + dy
+  }
+}
+
 function commonLayer(layers: ReadonlyArray<string | undefined>): string | undefined {
   const defined = layers.filter((layer): layer is string => layer !== undefined && layer.length > 0)
   if (defined.length === 0) return undefined
@@ -157,10 +212,208 @@ function commonLayer(layers: ReadonlyArray<string | undefined>): string | undefi
   return defined.every((layer) => layer === first) ? first : 'multiple'
 }
 
+const TOPOLOGY_EPSILON_MM = 1e-7
+
+/** Returns a segment endpoint in the shared 2D coordinate system. */
+function segmentStart(segment: DxfGeometrySegment): Point2D {
+  return { x: segment.x1, y: segment.y1 }
+}
+
+/** Returns the endpoint used to connect this segment to the next one. */
+function segmentEnd(segment: DxfGeometrySegment): Point2D {
+  return { x: segment.x2, y: segment.y2 }
+}
+
+/** Compares imported endpoints without snapping or changing source coordinates. */
+function samePoint(leftPoint: Point2D, rightPoint: Point2D): boolean {
+  const scale = Math.max(
+    1,
+    Math.abs(leftPoint.x),
+    Math.abs(leftPoint.y),
+    Math.abs(rightPoint.x),
+    Math.abs(rightPoint.y)
+  )
+  return (
+    Math.abs(leftPoint.x - rightPoint.x) <= TOPOLOGY_EPSILON_MM * scale &&
+    Math.abs(leftPoint.y - rightPoint.y) <= TOPOLOGY_EPSILON_MM * scale
+  )
+}
+
+/** Validates one entity path and returns its two graph endpoints. */
+function entityEndpoints(
+  geometry: DxfGeometrySummary
+): { readonly start: Point2D; readonly end: Point2D } | null {
+  const first = geometry.segments[0]
+  if (first === undefined) return null
+
+  let previousEnd = segmentEnd(first)
+  for (const segment of geometry.segments.slice(1)) {
+    const start = segmentStart(segment)
+    if (!samePoint(previousEnd, start)) return null
+    previousEnd = segmentEnd(segment)
+  }
+
+  const start = segmentStart(first)
+  if (geometry.closed && !samePoint(start, previousEnd)) return null
+  return { start, end: previousEnd }
+}
+
+/** Creates a piece-level warning for an outline condition that disables nesting. */
+function outlineWarning(code: string, message: string): ImportWarning {
+  return new ImportWarning({ code, message })
+}
+
+/**
+ * Classifies the grouped entities as one nestable outline or an honest failure.
+ *
+ * A single entity must declare closure, while multiple open entities may form a
+ * closed outline only when their endpoint graph is one connected degree-two
+ * cycle. Unsupported entities force the piece invalid even when supported
+ * geometry happens to form a cycle, because the missing source cannot be
+ * represented safely by collision geometry.
+ */
+function classifyOutline(
+  entities: ReadonlyArray<ConvertedEntity>,
+  hasSkippedGeometry: boolean
+): OutlineClassification {
+  const warnings: ImportWarning[] = []
+  if (hasSkippedGeometry) {
+    warnings.push(
+      outlineWarning(
+        'partially_unsupported_outline',
+        'The DXF piece contains unsupported or unusable entities; collision geometry is disabled.'
+      )
+    )
+  }
+
+  const endpoints = entities.map((entity) => entityEndpoints(entity.geometry))
+  const hasInvalidPath = endpoints.some((endpoint) => endpoint === null)
+  if (hasInvalidPath) {
+    warnings.push(
+      outlineWarning(
+        'ambiguous_outline',
+        'The DXF piece contains an entity whose segments are disconnected or cannot be ordered into one path.'
+      )
+    )
+    return { closed: false, warnings }
+  }
+
+  const resolvedEndpoints = endpoints.filter(
+    (endpoint): endpoint is { readonly start: Point2D; readonly end: Point2D } => endpoint !== null
+  )
+  if (entities.length === 1) {
+    const entity = entities[0]
+    if (entity?.geometry.closed && resolvedEndpoints.length === 1) {
+      return { closed: warnings.length === 0, warnings }
+    }
+    warnings.push(
+      outlineWarning(
+        'open_outline',
+        'The DXF piece does not declare a closed outline; collision geometry is disabled.'
+      )
+    )
+    return { closed: false, warnings }
+  }
+
+  const closedEntityCount = entities.filter((entity) => entity.geometry.closed).length
+  if (closedEntityCount > 0) {
+    warnings.push(
+      outlineWarning(
+        closedEntityCount === entities.length ? 'disconnected_outline' : 'ambiguous_outline',
+        closedEntityCount === entities.length
+          ? 'The DXF piece groups multiple closed outlines; choose one outline per piece before nesting.'
+          : 'The DXF piece mixes closed entities with open entities, so its material boundary is ambiguous.'
+      )
+    )
+    return { closed: false, warnings }
+  }
+
+  const parent = entities.map((_, index) => index)
+  const nodes: Array<{ readonly point: Point2D; readonly edges: number[] }> = []
+
+  /** Finds a graph component representative with path compression. */
+  const find = (index: number): number => {
+    const parentIndex = parent[index]
+    if (parentIndex === undefined || parentIndex === index) return index
+    const root = find(parentIndex)
+    parent[index] = root
+    return root
+  }
+
+  /** Joins two entity edges that share an endpoint node. */
+  const union = (left: number, right: number): void => {
+    const leftRoot = find(left)
+    const rightRoot = find(right)
+    if (leftRoot !== rightRoot) parent[rightRoot] = leftRoot
+  }
+
+  /** Reuses an endpoint node without snapping the stored source coordinate. */
+  const nodeFor = (point: Point2D): number => {
+    const existing = nodes.findIndex((node) => samePoint(node.point, point))
+    if (existing >= 0) return existing
+    nodes.push({ point, edges: [] })
+    return nodes.length - 1
+  }
+
+  for (const [edgeIndex, endpoint] of resolvedEndpoints.entries()) {
+    if (samePoint(endpoint.start, endpoint.end)) {
+      warnings.push(
+        outlineWarning(
+          'ambiguous_outline',
+          'The DXF piece contains an open entity with identical endpoints, so its topology is ambiguous.'
+        )
+      )
+      return { closed: false, warnings }
+    }
+    const startNode = nodeFor(endpoint.start)
+    const endNode = nodeFor(endpoint.end)
+    const start = nodes[startNode]
+    const end = nodes[endNode]
+    if (!start || !end) return { closed: false, warnings }
+    start.edges.push(edgeIndex)
+    end.edges.push(edgeIndex)
+    for (const otherEdge of start.edges) union(edgeIndex, otherEdge)
+    for (const otherEdge of end.edges) union(edgeIndex, otherEdge)
+  }
+
+  const componentCount = new Set(resolvedEndpoints.map((_, index) => find(index))).size
+  if (componentCount > 1) {
+    warnings.push(
+      outlineWarning(
+        'disconnected_outline',
+        'The DXF piece contains multiple disconnected paths; collision geometry is disabled.'
+      )
+    )
+    return { closed: false, warnings }
+  }
+
+  if (nodes.some((node) => node.edges.length > 2)) {
+    warnings.push(
+      outlineWarning(
+        'ambiguous_outline',
+        'The DXF piece has a branched endpoint graph, so one material boundary cannot be determined.'
+      )
+    )
+    return { closed: false, warnings }
+  }
+
+  if (nodes.some((node) => node.edges.length !== 2)) {
+    warnings.push(
+      outlineWarning(
+        'open_outline',
+        'The DXF piece is connected but its endpoint graph remains open; collision geometry is disabled.'
+      )
+    )
+    return { closed: false, warnings }
+  }
+
+  return { closed: warnings.length === 0, warnings }
+}
+
 /**
  * Reads a DXF file from disk, parses it, and converts supported entities
- * into one selectable imported shape per file. Unsupported entities are
- * skipped with document warnings so the import never crashes.
+ * into one selectable imported shape per file. Unsupported entities remain
+ * document and piece warnings, and any affected piece is marked non-nestable.
  */
 export async function importDxfFile(
   path: string,
@@ -185,14 +438,16 @@ export async function importDxfFile(
   const millimetersPerUnit = options.millimetersPerUnit ?? 1
   const convertedSegments: Segment[] = []
   const convertedBounds: RawBounds[] = []
+  const convertedEntities: ConvertedEntity[] = []
   const convertedEntityTypes = new Set<SupportedDxfEntityType>()
   const convertedLayers: Array<string | undefined> = []
-  let convertedEntityCount = 0
+  let hasSkippedGeometry = false
 
   const entities = parsed.entities ?? []
-  for (const entity of entities) {
+  for (const [entityIndex, entity] of entities.entries()) {
     const entityType = String(entity.type)
     if (!isSupportedDxfEntityType(entityType)) {
+      hasSkippedGeometry = true
       warnings.push(
         new ImportWarning({
           code: 'unsupported_dxf_entity',
@@ -204,8 +459,9 @@ export async function importDxfFile(
       continue
     }
 
-    const converted = entityToGeometry(entity)
+    const converted = entityToGeometry(entity, entityIndex)
     if (!converted) {
+      hasSkippedGeometry = true
       warnings.push(
         new ImportWarning({
           code: 'unsupported_dxf_entity',
@@ -218,12 +474,19 @@ export async function importDxfFile(
     }
 
     convertedEntityTypes.add(entityType)
-    convertedEntityCount++
     convertedLayers.push(entity.layer)
-    convertedSegments.push(
-      ...converted.geometry.segments.map((segment) => scaleSegment(segment, millimetersPerUnit))
+    const scaledSegments = converted.geometry.segments.map((segment) =>
+      scaleSegment(segment, millimetersPerUnit)
     )
-    convertedBounds.push(scaleBounds(converted.bounds, millimetersPerUnit))
+    const scaledGeometry: DxfGeometrySummary = {
+      entityType: converted.geometry.entityType,
+      closed: converted.geometry.closed,
+      segments: scaledSegments
+    }
+    const scaledBounds = scaleBounds(converted.bounds, millimetersPerUnit)
+    convertedEntities.push({ geometry: scaledGeometry, bounds: scaledBounds })
+    convertedSegments.push(...scaledSegments)
+    convertedBounds.push(scaledBounds)
   }
 
   const rawOverallBounds = unionBounds(convertedBounds)
@@ -238,6 +501,7 @@ export async function importDxfFile(
         translateSegment(segment, integerContainer.offsetX, integerContainer.offsetY)
       )
     : []
+  const outline = classifyOutline(convertedEntities, hasSkippedGeometry)
   const pieces: ImportedPiece[] = overallBounds
     ? [
         new ImportedPiece({
@@ -247,13 +511,13 @@ export async function importDxfFile(
           realBounds: overallBounds,
           geometry: new DxfGeometrySummary({
             entityType:
-              convertedEntityCount === 1
+              convertedEntities.length === 1
                 ? ([...convertedEntityTypes][0] ?? 'DXF_SHAPE')
                 : 'DXF_SHAPE',
-            closed: geometrySegments.length > 0,
+            closed: outline.closed,
             segments: geometrySegments
           }),
-          warnings: []
+          warnings: [...outline.warnings, ...warnings]
         })
       ]
     : []

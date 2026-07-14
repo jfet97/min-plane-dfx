@@ -1,3 +1,5 @@
+/** Deterministic irregular geometry operations used by the worker boundary. */
+
 import { Context, Effect, Layer, Match } from 'effect'
 import type {
   FlattenSourceGeometryInput,
@@ -5,11 +7,9 @@ import type {
   TransformCollisionGeometryInput,
   ValidatePlacementInput
 } from './services.js'
-import {
-  IrregularGeometryInputError,
-  IrregularNestingNotImplementedError
-} from './services.js'
+import { IrregularGeometryInputError, IrregularNestingNotImplementedError } from './services.js'
 import { ArcFlattening } from './arcFlattening.js'
+import { EllipseFlattening } from './ellipseFlattening.js'
 import { ConvexHull } from './convexHull.js'
 import { ConvexPolygonOffset } from './convexPolygonOffset.js'
 import { TransformCollisionGeometry } from './transformCollisionGeometry.js'
@@ -104,10 +104,36 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
     return GeometryKernel.of({
       flattenSourceGeometry: ({ piece }) => {
         const pointsStore = makePointsStore()
+        const sampledSourceCurves = new Set<string>()
 
         for (const segment of piece.geometry.segments) {
           Match.value<DxfGeometrySegment>(segment).pipe(
             Match.when({ kind: 'line' }, (line) => {
+              const sourceCurve = line.sourceCurve
+              if (sourceCurve !== undefined) {
+                if (sampledSourceCurves.has(sourceCurve.sourceId)) return
+                sampledSourceCurves.add(sourceCurve.sourceId)
+                const points = EllipseFlattening.samplePoints(
+                  sourceCurve,
+                  settings.flatteningSagToleranceMm
+                )
+                for (const point of points) {
+                  pointsStore.push(point.x, point.y)
+                }
+                return
+              }
+
+              if (line.bulge !== undefined && line.bulge !== 0) {
+                const points = ArcFlattening.sampleBulgePoints(
+                  line,
+                  settings.flatteningSagToleranceMm
+                )
+                for (const point of points) {
+                  pointsStore.push(point.x, point.y)
+                }
+                return
+              }
+
               pointsStore.push(line.x1, line.y1)
               pointsStore.push(line.x2, line.y2)
             }),
