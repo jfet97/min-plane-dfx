@@ -829,6 +829,30 @@ Direct robust-predicate containment, overlap, and clearance validation remains
 the placement-legality authority. Clipper output is a conservative derived
 artifact and candidate aid, never proof that a placement is legal.
 
+### Future Enhancement: Convex Round Joins
+
+V2 remains convex-only; concave shapes and holes are not planned. The initial
+convex offset uses mitered corners because extending the two shifted edge lines
+to their intersection is simple and conservative, although acute angles can
+produce long spikes.
+
+A future round-join mode may connect the two shifted-edge endpoints with a
+circular arc centered on the original convex vertex and with radius equal to the
+collision offset. That is the exact Euclidean set of points within the offset
+distance of the original vertex. For example, at a right angle with offset `d`,
+the round arc contains `(-0.707d, -0.707d)`, exactly `d` from the vertex.
+
+`IrregularPolygon` stores points, so the round arc must be sampled into a
+deterministic polyline with an explicit sag tolerance. For an already validated
+convex hull, this is moderate direct TypeScript work: use robust predicates to
+preserve winding and reject invalid corners, then sample the outward arc. It does
+not require Clipper2. Clipper2 remains useful later for configurable joins,
+operation-result cleanup, and sheet-space boolean operations.
+
+Do not use a bevel join for collision geometry without additional compensation:
+the straight chamfer between shifted-edge endpoints cuts inside the round
+distance envelope at a convex vertex and can reduce the promised clearance.
+
 ## Free Material For Scoring And Debug
 
 V2 should maintain a derived sheet-space artifact when useful:
