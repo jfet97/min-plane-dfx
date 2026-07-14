@@ -31,10 +31,6 @@ function compute(
   input: TransformCollisionGeometryInput
 ): Effect.Effect<TransformedCollisionGeometry, IrregularGeometryInputError> {
   const { geometry, transform } = input
-  if (!Number.isFinite(transform.rotationDeg)) {
-    return failInvalidInput('transform rotationDeg must be finite.')
-  }
-
   // robust validation protects this direct service boundary as well as the builder pipeline
   const boundary = ConvexPolygonValidation.validateStrictBoundary(
     geometry.collisionPolygon.points

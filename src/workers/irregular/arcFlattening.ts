@@ -86,12 +86,7 @@ interface BulgeArcParameters {
 /** Converts a signed bulge into center, radius, and sweep parameters. */
 function bulgeArcParameters(segment: DxfLineSegment): BulgeArcParameters | null {
   const bulge = segment.bulge
-  if (
-    bulge === undefined ||
-    !Number.isFinite(bulge) ||
-    bulge === 0 ||
-    ![segment.x1, segment.y1, segment.x2, segment.y2].every(Number.isFinite)
-  ) {
+  if (bulge === undefined || bulge === 0) {
     return null
   }
 
@@ -126,7 +121,6 @@ function computeSampleCountForSweep(
 ): number {
   if (!Number.isFinite(radius) || radius <= 0) return 1
   if (!Number.isFinite(sweepRad) || sweepRad <= 0) return 1
-  if (!Number.isFinite(sagToleranceMm) || sagToleranceMm <= 0) return 1
 
   const cappedSagToleranceMm = Math.min(sagToleranceMm, radius)
   const maxStepRad = 2 * Math.acos(1 - cappedSagToleranceMm / radius)
@@ -146,9 +140,6 @@ function computeSampleAngleDegrees(arc: DxfArcSegment, sampleRatio: number): num
 }
 
 function computeCounterClockwiseSweepDegrees(arc: DxfArcSegment): number {
-  // non-finite angles are treated as degenerate so the caller emits endpoints only
-  if (!Number.isFinite(arc.startAngle) || !Number.isFinite(arc.endAngle)) return 0
-
   // compute the raw counter-clockwise sweep from the imported angle pair
   const rawSweepDeg = arc.endAngle - arc.startAngle
 

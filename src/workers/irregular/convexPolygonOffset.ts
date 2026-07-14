@@ -19,10 +19,6 @@ function compute(
   polygon: IrregularPolygon,
   distanceMm: number
 ): Effect.Effect<IrregularPolygon, IrregularGeometryInputError> {
-  if (!Number.isFinite(distanceMm) || distanceMm < 0) {
-    return failInvalidInput('distanceMm must be a finite non-negative millimeter distance.')
-  }
-
   const boundary = ConvexPolygonValidation.validateStrictBoundary(polygon.points)
   if ('message' in boundary) return failInvalidInput(boundary.message)
 

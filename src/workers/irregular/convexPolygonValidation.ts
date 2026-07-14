@@ -71,9 +71,6 @@ function validateStrictBoundary(
       return { message: 'polygon points must form a closed boundary.' }
     }
 
-    if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
-      return { message: 'polygon vertices must have finite coordinates.' }
-    }
   }
 
   const edges: BoundaryEdge[] = []

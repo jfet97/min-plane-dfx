@@ -4,6 +4,12 @@ import { Schema } from 'effect'
 import { PieceId, SourceFileId } from './ids.js'
 import { Rect } from './geometry.js'
 
+/** Finite numeric value retained from a DXF entity in millimeters or radians. */
+const FiniteDxfNumber = Schema.Finite
+
+/** Positive finite DXF length or ratio that cannot describe a degenerate curve. */
+const PositiveFiniteDxfNumber = Schema.Finite.check(Schema.isGreaterThan(0))
+
 /** Generic warning produced during import. */
 export class ImportWarning extends Schema.Class<ImportWarning>('ImportWarning')({
   /** Stable warning category used by UI and tests. */
@@ -23,60 +29,74 @@ export class ImportWarning extends Schema.Class<ImportWarning>('ImportWarning')(
  * are DXF parameters in radians. `sourceId` identifies one original entity so
  * the collision flattener can sample a repeated preview approximation once.
  */
-export const DxfEllipseSource = Schema.Struct({
+const DxfEllipseSourceFields = Schema.Struct({
   kind: Schema.Literal('ellipse'),
-  sourceId: Schema.String,
-  cx: Schema.Number,
-  cy: Schema.Number,
-  majorAxisX: Schema.Number,
-  majorAxisY: Schema.Number,
-  axisRatio: Schema.Number,
-  startAngle: Schema.Number,
-  endAngle: Schema.Number
-})
+  sourceId: Schema.NonEmptyString,
+  cx: FiniteDxfNumber,
+  cy: FiniteDxfNumber,
+  majorAxisX: FiniteDxfNumber,
+  majorAxisY: FiniteDxfNumber,
+  axisRatio: PositiveFiniteDxfNumber,
+  startAngle: FiniteDxfNumber,
+  endAngle: FiniteDxfNumber
+}).check(
+  Schema.makeFilter((ellipse) =>
+    ellipse.majorAxisX !== 0 || ellipse.majorAxisY !== 0
+      ? undefined
+      : {
+          path: ['majorAxisX'],
+          issue: 'ellipse major-axis vector must not be zero.'
+        }
+  )
+)
+
+/** Validated analytic ellipse source retained by preview line segments. */
+export const DxfEllipseSource = DxfEllipseSourceFields
 export type DxfEllipseSource = Schema.Schema.Type<typeof DxfEllipseSource>
 
 /** Preview line or chord carrying optional source-level curve parameters. */
 export const DxfLineSegment = Schema.Struct({
   kind: Schema.Literal('line'),
   /** Segment start X in piece-local millimeters. */
-  x1: Schema.Number,
+  x1: FiniteDxfNumber,
   /** Segment start Y in piece-local millimeters. */
-  y1: Schema.Number,
+  y1: FiniteDxfNumber,
   /** Segment end X in piece-local millimeters. */
-  x2: Schema.Number,
+  x2: FiniteDxfNumber,
   /** Segment end Y in piece-local millimeters. */
-  y2: Schema.Number,
+  y2: FiniteDxfNumber,
   /** Original LWPOLYLINE/POLYLINE bulge for the segment, when non-zero. */
-  bulge: Schema.optional(Schema.Number),
+  bulge: Schema.optional(FiniteDxfNumber),
   /** Original ellipse parameters when this line is only a preview approximation. */
   sourceCurve: Schema.optional(DxfEllipseSource)
 })
 export type DxfLineSegment = Schema.Schema.Type<typeof DxfLineSegment>
 
+/** Preview circular arc with source angles retained in degrees. */
 export const DxfArcSegment = Schema.Struct({
   kind: Schema.Literal('arc'),
   /** Arc start X in piece-local millimeters. */
-  x1: Schema.Number,
+  x1: FiniteDxfNumber,
   /** Arc start Y in piece-local millimeters. */
-  y1: Schema.Number,
+  y1: FiniteDxfNumber,
   /** Arc end X in piece-local millimeters. */
-  x2: Schema.Number,
+  x2: FiniteDxfNumber,
   /** Arc end Y in piece-local millimeters. */
-  y2: Schema.Number,
+  y2: FiniteDxfNumber,
   /** Arc center X in piece-local millimeters. */
-  cx: Schema.Number,
+  cx: FiniteDxfNumber,
   /** Arc center Y in piece-local millimeters. */
-  cy: Schema.Number,
+  cy: FiniteDxfNumber,
   /** Arc radius in millimeters. */
-  radius: Schema.Number,
+  radius: PositiveFiniteDxfNumber,
   /** Arc start angle in degrees. */
-  startAngle: Schema.Number,
+  startAngle: FiniteDxfNumber,
   /** Arc end angle in degrees. */
-  endAngle: Schema.Number
+  endAngle: FiniteDxfNumber
 })
 export type DxfArcSegment = Schema.Schema.Type<typeof DxfArcSegment>
 
+/** Preview segment union consumed by renderer and source-fidelity collision code. */
 export const DxfGeometrySegment = Schema.Union([DxfLineSegment, DxfArcSegment])
 export type DxfGeometrySegment = Schema.Schema.Type<typeof DxfGeometrySegment>
 

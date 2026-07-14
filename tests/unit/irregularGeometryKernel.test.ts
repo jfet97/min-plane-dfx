@@ -224,17 +224,19 @@ describe('GeometryKernel', () => {
     expect(offset.points).toEqual([point(-1, -1), point(-1, 4), point(5, 4), point(5, -1)])
   })
 
-  it('computes mitred corners by intersecting adjacent shifted edge lines', async () => {
+  it('preserves the configured bounded Miter join for an acute source corner', async () => {
     const offset = await runConvexOffset({
       polygon: polygon([point(0, 0), point(4, 0), point(0, 3)]),
       totalPaddingMm: 1.5
     })
 
-    expect(offset.points).toHaveLength(3)
-    expect(offset.points[0]).toEqual(point(-1, -1))
-    expect(offset.points[1]).toEqual(point(7, -1))
-    expect(offset.points[2]?.x).toBeCloseTo(-1, 12)
-    expect(offset.points[2]?.y).toBeCloseTo(5, 12)
+    expect(offset.points).toEqual([
+      point(-1, -1),
+      point(4.721, -1),
+      point(5.177, 0.368),
+      point(0.106, 4.171),
+      point(-1, 3.618)
+    ])
   })
 
   it('rejects a non-convex polygon instead of silently producing a false collision shape', async () => {
@@ -342,27 +344,6 @@ describe('GeometryKernel', () => {
     expect(transformed.bounds.minY).toBe(0)
     expect(transformed.bounds.maxX).toBeCloseTo(Math.SQRT2, 12)
     expect(transformed.bounds.maxY).toBeCloseTo(Math.SQRT2, 12)
-  })
-
-  it('rejects a non-finite transform angle', async () => {
-    const failure = await Effect.runPromise(
-      GeometryKernel.use((kernel) =>
-        kernel.transformCollisionGeometry({
-          geometry: collisionGeometry([point(0, 0), point(4, 0), point(0, 3)]),
-          transform: transformCandidate({ rotationDeg: Number.POSITIVE_INFINITY })
-        })
-      ).pipe(
-        Effect.match({
-          onFailure: (error) => error,
-          onSuccess: () => null
-        }),
-        Effect.provide(GeometryKernel.Live)
-      )
-    )
-
-    expect(failure).toBeInstanceOf(IrregularGeometryInputError)
-    expect(failure?.operation).toBe('transformCollisionGeometry')
-    expect(failure?.message).toBe('transform rotationDeg must be finite.')
   })
 
   it('rejects a collision polygon that is not strictly convex', async () => {

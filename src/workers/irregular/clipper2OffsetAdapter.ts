@@ -11,12 +11,11 @@ import {
 import { Effect } from 'effect'
 import { IrregularPoint, IrregularPolygon } from '@shared/irregular/domain.js'
 import { ConvexPolygonValidation } from './convexPolygonValidation.js'
-import { GeometryPredicates } from './geometryPredicates.js'
 import { CLIPPER2_OFFSET_POLICY, fromGrid, toGridMm } from './clipper2OffsetPolicy.js'
 import { IrregularGeometryInputError } from './services.js'
 
-/** Input to the integer-path Clipper2 offset adapter, measured in millimeters. */
-export interface Clipper2OffsetInput {
+/** Validated convex geometry and a derived non-negative offset in millimeters. */
+interface Clipper2OffsetInput {
   readonly polygon: IrregularPolygon
   readonly distanceMm: number
 }
@@ -37,15 +36,8 @@ export const Clipper2OffsetAdapter = {
 function compute(
   input: Clipper2OffsetInput
 ): Effect.Effect<IrregularPolygon, IrregularGeometryInputError> {
-  if (!Number.isFinite(input.distanceMm) || input.distanceMm < 0) {
-    return failInvalidInput('distanceMm must be a finite non-negative millimeter distance.')
-  }
-
   const boundary = ConvexPolygonValidation.validateStrictBoundary(input.polygon.points)
   if ('message' in boundary) return failInvalidInput(boundary.message)
-  if (!isSimpleBoundary(input.polygon.points)) {
-    return failInvalidInput('polygon must be a single simple convex closed ring.')
-  }
 
   const canonicalPoints =
     boundary.winding === 1 ? [...input.polygon.points] : [...input.polygon.points].reverse()
@@ -150,7 +142,6 @@ function validatePath(path: Path64, label: string): string | undefined {
   const points = toIrregularPoints(path)
   const boundary = ConvexPolygonValidation.validateStrictBoundary(points)
   if ('message' in boundary) return `${label} ${boundary.message}`
-  if (!isSimpleBoundary(points)) return `${label} must be a single simple convex closed ring.`
 
   const signedArea = area(path)
   if (!Number.isFinite(signedArea) || signedArea === 0) {
@@ -209,73 +200,6 @@ function rotateToStableStart(path: Path64): Path64 {
   }
 
   return [...path.slice(startIndex), ...path.slice(0, startIndex)]
-}
-
-/** Checks every pair of non-adjacent edges for robust self-intersection. */
-function isSimpleBoundary(points: ReadonlyArray<IrregularPoint>): boolean {
-  for (let firstEdgeIndex = 0; firstEdgeIndex < points.length; firstEdgeIndex += 1) {
-    const firstStart = points[firstEdgeIndex]
-    const firstEnd = points[(firstEdgeIndex + 1) % points.length]
-    if (firstStart === undefined || firstEnd === undefined) return false
-
-    for (
-      let secondEdgeIndex = firstEdgeIndex + 1;
-      secondEdgeIndex < points.length;
-      secondEdgeIndex += 1
-    ) {
-      if (edgesAreAdjacent(firstEdgeIndex, secondEdgeIndex, points.length)) continue
-
-      const secondStart = points[secondEdgeIndex]
-      const secondEnd = points[(secondEdgeIndex + 1) % points.length]
-      if (secondStart === undefined || secondEnd === undefined) return false
-      if (segmentsIntersect(firstStart, firstEnd, secondStart, secondEnd)) return false
-    }
-  }
-
-  return true
-}
-
-/** Identifies shared endpoints that are expected between neighboring polygon edges. */
-function edgesAreAdjacent(firstIndex: number, secondIndex: number, pointCount: number): boolean {
-  return (
-    firstIndex === secondIndex ||
-    (firstIndex + 1) % pointCount === secondIndex ||
-    (secondIndex + 1) % pointCount === firstIndex
-  )
-}
-
-/** Uses robust orientations to reject crossing or touching non-adjacent segments. */
-function segmentsIntersect(
-  firstStart: IrregularPoint,
-  firstEnd: IrregularPoint,
-  secondStart: IrregularPoint,
-  secondEnd: IrregularPoint
-): boolean {
-  const firstStartTurn = GeometryPredicates.orientation(firstStart, firstEnd, secondStart)
-  const firstEndTurn = GeometryPredicates.orientation(firstStart, firstEnd, secondEnd)
-  const secondStartTurn = GeometryPredicates.orientation(secondStart, secondEnd, firstStart)
-  const secondEndTurn = GeometryPredicates.orientation(secondStart, secondEnd, firstEnd)
-
-  if (firstStartTurn === 0 && isOnSegment(secondStart, firstStart, firstEnd)) return true
-  if (firstEndTurn === 0 && isOnSegment(secondEnd, firstStart, firstEnd)) return true
-  if (secondStartTurn === 0 && isOnSegment(firstStart, secondStart, secondEnd)) return true
-  if (secondEndTurn === 0 && isOnSegment(firstEnd, secondStart, secondEnd)) return true
-
-  return firstStartTurn !== firstEndTurn && secondStartTurn !== secondEndTurn
-}
-
-/** Checks a collinear point against the closed axis-aligned bounds of a segment. */
-function isOnSegment(
-  point: IrregularPoint,
-  segmentStart: IrregularPoint,
-  segmentEnd: IrregularPoint
-): boolean {
-  return (
-    point.x >= Math.min(segmentStart.x, segmentEnd.x) &&
-    point.x <= Math.max(segmentStart.x, segmentEnd.x) &&
-    point.y >= Math.min(segmentStart.y, segmentEnd.y) &&
-    point.y <= Math.max(segmentStart.y, segmentEnd.y)
-  )
 }
 
 /** Preserves external-library failure context in the typed domain error message. */

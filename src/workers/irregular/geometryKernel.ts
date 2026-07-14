@@ -23,6 +23,7 @@ import {
 } from '@shared/irregular/domain.js'
 import type { DxfGeometrySegment } from '@shared/domain/dxf.js'
 
+/** Effect service providing the decoded irregular geometry settings. */
 export class GeometrySettings extends Context.Service<
   GeometrySettings,
   IrregularGeometrySettings
@@ -77,6 +78,7 @@ export namespace GeometryKernel {
   }
 }
 
+/** Effect service for deterministic source flattening and collision geometry operations. */
 export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKernel.Service>()(
   'min-plane-dfx/irregular/GeometryKernel'
 ) {
@@ -199,13 +201,6 @@ function computeCollisionOffsetMm(
   totalPaddingMm: number,
   settings: IrregularGeometrySettings
 ): Effect.Effect<number, IrregularGeometryInputError> {
-  if (!Number.isFinite(totalPaddingMm) || totalPaddingMm < 0) {
-    return failInvalidGeometryInput(
-      'offsetConvexPolygon',
-      'totalPaddingMm must be a finite non-negative millimeter distance.'
-    )
-  }
-
   const distanceMm = totalPaddingMm / 2 + settings.clearanceSafetyMarginMm
   if (!Number.isFinite(distanceMm)) {
     return failInvalidGeometryInput(

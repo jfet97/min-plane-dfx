@@ -26,7 +26,10 @@ function samplePoints(
   sagToleranceMm: number
 ): ReadonlyArray<IrregularPoint> {
   const sweep = ellipseEndParameter(ellipse.startAngle, ellipse.endAngle) - ellipse.startAngle
-  if (!isValidEllipse(ellipse, sweep)) return []
+  const majorAxisLength = Math.hypot(ellipse.majorAxisX, ellipse.majorAxisY)
+  if (!Number.isFinite(sweep) || sweep <= 0 || !Number.isFinite(majorAxisLength) || majorAxisLength <= 0) {
+    return []
+  }
 
   const initialSegmentCount = Math.max(1, Math.ceil(sweep / INITIAL_MAX_SWEEP_RADIANS))
   const startPoint = ellipsePoint(ellipse, ellipse.startAngle)
@@ -71,7 +74,6 @@ function appendFlattenedInterval(
   if (
     recursionDepth >= MAX_RECURSION_DEPTH ||
     output.length >= MAX_SAMPLE_POINTS ||
-    sagToleranceMm <= 0 ||
     !needsSubdivision(ellipse, intervalStart, intervalEnd, startPoint, endPoint, sagToleranceMm)
   ) {
     output.push(endPoint)
@@ -166,23 +168,4 @@ function distanceToChord(
 /** Normalizes wrapped DXF ellipse angles into a positive parameter sweep. */
 function ellipseEndParameter(startAngle: number, endAngle: number): number {
   return endAngle <= startAngle ? endAngle + FULL_TURN_RADIANS : endAngle
-}
-
-/** Rejects non-finite or degenerate ellipse parameters before sampling. */
-function isValidEllipse(ellipse: DxfEllipseSource, sweep: number): boolean {
-  return (
-    [
-      ellipse.cx,
-      ellipse.cy,
-      ellipse.majorAxisX,
-      ellipse.majorAxisY,
-      ellipse.axisRatio,
-      ellipse.startAngle,
-      ellipse.endAngle,
-      sweep
-    ].every(Number.isFinite) &&
-    ellipse.axisRatio > 0 &&
-    Math.hypot(ellipse.majorAxisX, ellipse.majorAxisY) > 0 &&
-    sweep > 0
-  )
 }
