@@ -114,12 +114,19 @@ export class FlattenedGeometry extends Schema.Class<FlattenedGeometry>('Flattene
 }) {}
 
 export class CollisionGeometry extends Schema.Class<CollisionGeometry>('CollisionGeometry')({
+  /** Source piece that produced this derived collision artifact. */
   sourcePieceId: PieceId,
+  /** Unpadded convex-hull bounds in original source coordinates. */
   sourceBounds: IrregularBounds,
+  /** Flattened source points kept in original source coordinates for diagnostics. */
   sampledPoints: Schema.Array(IrregularPoint),
+  /** Convex hull rebased to the collision polygon's placement origin. */
   convexHull: IrregularPolygon,
+  /** Padded collision polygon whose lower-left bounds corner is local `(0, 0)`. */
   collisionPolygon: IrregularPolygon,
+  /** Source-space coordinate of the padded collision bounds corner used as placement origin. */
   placementReference: IrregularPoint,
+  /** Import and geometry diagnostics carried with this derived artifact. */
   diagnostics: Schema.Array(CollisionGeometryDiagnostic)
 }) {}
 

@@ -12,6 +12,7 @@ import {
 import { ArcFlattening } from './arcFlattening.js'
 import { ConvexHull } from './convexHull.js'
 import { ConvexPolygonOffset } from './convexPolygonOffset.js'
+import { TransformCollisionGeometry } from './transformCollisionGeometry.js'
 import { DEFAULT_IRREGULAR_GEOMETRY_SETTINGS } from '@shared/irregular/defaults.js'
 import {
   FlattenedGeometry,
@@ -62,7 +63,10 @@ export namespace GeometryKernel {
      */
     readonly transformCollisionGeometry: (
       input: TransformCollisionGeometryInput
-    ) => Effect.Effect<TransformedCollisionGeometry, IrregularNestingNotImplementedError>
+    ) => Effect.Effect<
+      TransformedCollisionGeometry,
+      IrregularNestingNotImplementedError | IrregularGeometryInputError
+    >
     /**
      * Validate that a candidate placement is inside the sheet and does not
      * overlap already placed collision polygons.
@@ -129,7 +133,7 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
         computeCollisionOffsetMm(totalPaddingMm, settings).pipe(
           Effect.flatMap((distanceMm) => ConvexPolygonOffset.compute(polygon, distanceMm))
         ),
-      transformCollisionGeometry: () => failNotImplemented('transformCollisionGeometry', settings),
+      transformCollisionGeometry: TransformCollisionGeometry.compute,
       validatePlacement: () => failNotImplemented('validatePlacement', settings)
     })
   })

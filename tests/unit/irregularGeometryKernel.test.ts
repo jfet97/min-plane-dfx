@@ -5,7 +5,14 @@ import {
   IrregularGeometryInputError,
   IrregularNestingNotImplementedError
 } from '../../src/workers/irregular/services.js'
-import { IrregularGeometrySettings, IrregularPoint, IrregularPolygon } from '@shared/irregular/domain.js'
+import {
+  CollisionGeometry,
+  IrregularBounds,
+  IrregularGeometrySettings,
+  IrregularPoint,
+  IrregularPolygon,
+  IrregularTransformCandidate
+} from '@shared/irregular/domain.js'
 import { DxfGeometrySummary, ImportedPiece } from '@shared/domain/dxf.js'
 import { PieceId, SourceFileId } from '@shared/domain/ids.js'
 import { Rect } from '@shared/domain/geometry.js'
@@ -45,6 +52,41 @@ function runConvexOffsetWithSettings(
     GeometryKernel.use((kernel) => kernel.offsetConvexPolygon(input)).pipe(
       Effect.provide(GeometryKernel.Layer),
       Effect.provide(Layer.succeed(GeometrySettings, settings))
+    )
+  )
+}
+
+function collisionGeometry(points: ReadonlyArray<IrregularPoint>): CollisionGeometry {
+  return new CollisionGeometry({
+    sourcePieceId: PieceId.make('transform-piece'),
+    sourceBounds: new IrregularBounds({ minX: 10, minY: 20, maxX: 14, maxY: 23 }),
+    sampledPoints: [point(10, 20), point(14, 20), point(14, 23), point(10, 23)],
+    convexHull: polygon([point(1.25, 1.25), point(5.25, 1.25), point(5.25, 4.25), point(1.25, 4.25)]),
+    collisionPolygon: polygon(points),
+    placementReference: point(8.75, 18.75),
+    diagnostics: []
+  })
+}
+
+function transformCandidate(input: {
+  readonly rotationDeg: number
+  readonly mirrored?: boolean
+}): IrregularTransformCandidate {
+  return new IrregularTransformCandidate({
+    index: 0,
+    rotationDeg: input.rotationDeg,
+    mirrored: input.mirrored ?? false,
+    reason: 'orthogonal'
+  })
+}
+
+function runCollisionTransform(input: {
+  readonly geometry: CollisionGeometry
+  readonly transform: IrregularTransformCandidate
+}) {
+  return Effect.runPromise(
+    GeometryKernel.use((kernel) => kernel.transformCollisionGeometry(input)).pipe(
+      Effect.provide(GeometryKernel.Live)
     )
   )
 }
@@ -201,6 +243,140 @@ describe('GeometryKernel', () => {
         kernel.offsetConvexPolygon({
           polygon: polygon([point(0, 0), point(4, 0), point(2, 1), point(4, 3), point(0, 3)]),
           totalPaddingMm: 1
+        })
+      ).pipe(
+        Effect.match({
+          onFailure: (error) => error,
+          onSuccess: () => null
+        }),
+        Effect.provide(GeometryKernel.Live)
+      )
+    )
+
+    expect(failure).toBeInstanceOf(IrregularGeometryInputError)
+    expect(failure?.message).toBe('polygon must be strictly convex with one consistent winding.')
+  })
+
+  it('rotates collision geometry counter-clockwise around its unchanged placement reference', async () => {
+    const source = collisionGeometry([
+      point(0, 0),
+      point(6.5, 0),
+      point(6.5, 5.5),
+      point(0, 5.5)
+    ])
+
+    const transformed = await runCollisionTransform({
+      geometry: source,
+      transform: transformCandidate({ rotationDeg: 90 })
+    })
+
+    expect(transformed.polygon.points).toEqual([
+      point(0, 0),
+      point(0, 6.5),
+      point(-5.5, 6.5),
+      point(-5.5, 0)
+    ])
+    expect(transformed.bounds).toEqual(
+      new IrregularBounds({ minX: -5.5, minY: 0, maxX: 0, maxY: 6.5 })
+    )
+    expect(source.collisionPolygon.points).toEqual([
+      point(0, 0),
+      point(6.5, 0),
+      point(6.5, 5.5),
+      point(0, 5.5)
+    ])
+  })
+
+  it('mirrors before rotating and keeps orthogonal rotations exact', async () => {
+    const transformed = await runCollisionTransform({
+      geometry: collisionGeometry([
+        point(0, 0),
+        point(6.5, 0),
+        point(6.5, 5.5),
+        point(0, 5.5)
+      ]),
+      transform: transformCandidate({ rotationDeg: 450, mirrored: true })
+    })
+
+    expect(transformed.polygon.points).toEqual([
+      point(0, 0),
+      point(0, -6.5),
+      point(-5.5, -6.5),
+      point(-5.5, 0)
+    ])
+    expect(transformed.bounds).toEqual(
+      new IrregularBounds({ minX: -5.5, minY: -6.5, maxX: 0, maxY: 0 })
+    )
+  })
+
+  it('keeps the other exact orthogonal rotations and negative rotations deterministic', async () => {
+    const source = collisionGeometry([point(0, 0), point(6.5, 0), point(0, 5.5)])
+
+    const [unrotated, halfTurn, clockwiseQuarterTurn] = await Promise.all([
+      runCollisionTransform({ geometry: source, transform: transformCandidate({ rotationDeg: 0 }) }),
+      runCollisionTransform({ geometry: source, transform: transformCandidate({ rotationDeg: 180 }) }),
+      runCollisionTransform({ geometry: source, transform: transformCandidate({ rotationDeg: -90 }) })
+    ])
+
+    expect(unrotated.polygon.points).toEqual([point(0, 0), point(6.5, 0), point(0, 5.5)])
+    expect(halfTurn.polygon.points).toEqual([point(0, 0), point(-6.5, 0), point(0, -5.5)])
+    expect(clockwiseQuarterTurn.polygon.points).toEqual([
+      point(0, 0),
+      point(0, -6.5),
+      point(5.5, 0)
+    ])
+  })
+
+  it('accepts one explicit non-orthogonal angle without enumerating other angles', async () => {
+    const transformed = await runCollisionTransform({
+      geometry: collisionGeometry([point(0, 0), point(2, 0), point(0, 2)]),
+      transform: transformCandidate({ rotationDeg: 45 })
+    })
+
+    expect(transformed.polygon.points[0]).toEqual(point(0, 0))
+    expect(transformed.polygon.points[1]?.x).toBeCloseTo(Math.SQRT2, 12)
+    expect(transformed.polygon.points[1]?.y).toBeCloseTo(Math.SQRT2, 12)
+    expect(transformed.polygon.points[2]?.x).toBeCloseTo(-Math.SQRT2, 12)
+    expect(transformed.polygon.points[2]?.y).toBeCloseTo(Math.SQRT2, 12)
+    expect(transformed.bounds.minX).toBeCloseTo(-Math.SQRT2, 12)
+    expect(transformed.bounds.minY).toBe(0)
+    expect(transformed.bounds.maxX).toBeCloseTo(Math.SQRT2, 12)
+    expect(transformed.bounds.maxY).toBeCloseTo(Math.SQRT2, 12)
+  })
+
+  it('rejects a non-finite transform angle', async () => {
+    const failure = await Effect.runPromise(
+      GeometryKernel.use((kernel) =>
+        kernel.transformCollisionGeometry({
+          geometry: collisionGeometry([point(0, 0), point(4, 0), point(0, 3)]),
+          transform: transformCandidate({ rotationDeg: Number.POSITIVE_INFINITY })
+        })
+      ).pipe(
+        Effect.match({
+          onFailure: (error) => error,
+          onSuccess: () => null
+        }),
+        Effect.provide(GeometryKernel.Live)
+      )
+    )
+
+    expect(failure).toBeInstanceOf(IrregularGeometryInputError)
+    expect(failure?.operation).toBe('transformCollisionGeometry')
+    expect(failure?.message).toBe('transform rotationDeg must be finite.')
+  })
+
+  it('rejects a collision polygon that is not strictly convex', async () => {
+    const failure = await Effect.runPromise(
+      GeometryKernel.use((kernel) =>
+        kernel.transformCollisionGeometry({
+          geometry: collisionGeometry([
+            point(0, 0),
+            point(4, 0),
+            point(2, 1),
+            point(4, 3),
+            point(0, 3)
+          ]),
+          transform: transformCandidate({ rotationDeg: 0 })
         })
       ).pipe(
         Effect.match({

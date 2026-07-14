@@ -80,7 +80,7 @@ describe('CollisionGeometryBuilder', () => {
     expect(geometry.sourceBounds).toEqual(
       new IrregularBounds({ minX: 10, minY: 20, maxX: 14, maxY: 23 })
     )
-    expect(geometry.placementReference).toEqual(point(10, 20))
+    expect(geometry.placementReference).toEqual(point(8.75, 18.75))
     expect(geometry.sampledPoints).toEqual([
       point(10, 20),
       point(14, 20),
@@ -88,11 +88,13 @@ describe('CollisionGeometryBuilder', () => {
       point(10, 23)
     ])
     expect(geometry.convexHull).toEqual(
-      new IrregularPolygon({ points: [point(0, 0), point(4, 0), point(4, 3), point(0, 3)] })
+      new IrregularPolygon({
+        points: [point(1.25, 1.25), point(5.25, 1.25), point(5.25, 4.25), point(1.25, 4.25)]
+      })
     )
     expect(geometry.collisionPolygon).toEqual(
       new IrregularPolygon({
-        points: [point(-1.25, -1.25), point(5.25, -1.25), point(5.25, 4.25), point(-1.25, 4.25)]
+        points: [point(0, 0), point(6.5, 0), point(6.5, 5.5), point(0, 5.5)]
       })
     )
     expect(geometry.diagnostics).toEqual([
@@ -118,10 +120,10 @@ describe('CollisionGeometryBuilder', () => {
     )
 
     expect(geometry.collisionPolygon.points).toEqual([
-      point(-1.5, -1.5),
-      point(5.5, -1.5),
-      point(5.5, 4.5),
-      point(-1.5, 4.5)
+      point(0, 0),
+      point(7, 0),
+      point(7, 6),
+      point(0, 6)
     ])
   })
 

@@ -1,23 +1,16 @@
 import { Effect } from 'effect'
 import { IrregularPolygon } from '@shared/irregular/domain.js'
 import type { IrregularPoint } from '@shared/irregular/domain.js'
-import { GeometryPredicates } from './geometryPredicates.js'
+import {
+  ConvexPolygonValidation,
+  type ConvexPolygonWinding
+} from './convexPolygonValidation.js'
 import { IrregularGeometryInputError } from './services.js'
-
-type Winding = -1 | 1
 
 interface OffsetLine {
   readonly point: IrregularPoint
   readonly directionX: number
   readonly directionY: number
-}
-
-interface ValidConvexBoundary {
-  readonly winding: Winding
-}
-
-interface InvalidConvexBoundary {
-  readonly message: string
 }
 
 export const ConvexPolygonOffset = {
@@ -51,7 +44,7 @@ function compute(
     return failInvalidInput('distanceMm must be a finite non-negative millimeter distance.')
   }
 
-  const boundary = validateConvexBoundary(polygon.points)
+  const boundary = ConvexPolygonValidation.validateStrictBoundary(polygon.points)
   if ('message' in boundary) return failInvalidInput(boundary.message)
 
   // zero distance has a useful deterministic meaning: preserve the validated boundary exactly
@@ -96,66 +89,6 @@ function compute(
 }
 
 /**
- * Validates the exact shape needed by the edge-shift construction and returns
- * its winding. The final edge is implicit: the last vertex connects back to
- * the first one, so every vertex has a previous and next corner to inspect.
- *
- * A strictly convex boundary turns the same way at every corner. For example,
- * a counter-clockwise rectangle turns left at all four corners. A concave dent
- * makes one turn go the other way, and a collinear edge-middle vertex makes no
- * turn at all. Either case would make the corresponding offset corner
- * ambiguous or unstable, so this operation rejects it rather than guessing.
- */
-function validateConvexBoundary(
-  points: ReadonlyArray<IrregularPoint>
-): ValidConvexBoundary | InvalidConvexBoundary {
-  if (points.length < 3) {
-    return { message: 'polygon must contain at least three vertices.' }
-  }
-
-  let winding: Winding | undefined
-
-  for (let index = 0; index < points.length; index += 1) {
-    const previous = points[(index - 1 + points.length) % points.length]
-    const current = points[index]
-    const next = points[(index + 1) % points.length]
-
-    if (previous === undefined || current === undefined || next === undefined) {
-      return { message: 'polygon points must form a closed boundary.' }
-    }
-
-    if (!Number.isFinite(current.x) || !Number.isFinite(current.y)) {
-      return { message: 'polygon vertices must have finite coordinates.' }
-    }
-
-    if (current.x === next.x && current.y === next.y) {
-      return { message: 'polygon must not repeat adjacent vertices.' }
-    }
-
-    // use the robust predicate so winding and convexity do not depend on a rounded determinant sign
-    const turn = GeometryPredicates.orientation(previous, current, next)
-    if (turn === 0) {
-      return { message: 'polygon must not contain collinear vertices.' }
-    }
-
-    if (winding === undefined) {
-      winding = turn
-      continue
-    }
-
-    if (turn !== winding) {
-      return { message: 'polygon must be strictly convex with one consistent winding.' }
-    }
-  }
-
-  if (winding === undefined) {
-    return { message: 'polygon must have a non-zero area.' }
-  }
-
-  return { winding }
-}
-
-/**
  * Creates the shifted infinite line for one polygon edge.
  *
  * For a counter-clockwise edge `A -> B`, the polygon interior is on its left,
@@ -168,7 +101,7 @@ function createOffsetLine(
   start: IrregularPoint,
   end: IrregularPoint,
   distanceMm: number,
-  winding: Winding
+  winding: ConvexPolygonWinding
 ): OffsetLine {
   const directionX = end.x - start.x
   const directionY = end.y - start.y

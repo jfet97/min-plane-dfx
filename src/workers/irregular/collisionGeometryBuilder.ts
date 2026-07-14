@@ -21,6 +21,11 @@ type CollisionGeometryBuilderError =
 interface NormalizedHull {
   readonly sourceBounds: IrregularBounds
   readonly convexHull: IrregularPolygon
+}
+
+interface NormalizedCollisionGeometry {
+  readonly convexHull: IrregularPolygon
+  readonly collisionPolygon: IrregularPolygon
   readonly placementReference: IrregularPoint
 }
 
@@ -67,7 +72,7 @@ export class CollisionGeometryBuilder extends Context.Service<
         // the hull removes concave detail conservatively before placement geometry is created
         const sourceHull = yield* geometryKernel.convexHull(flattened.sampledPoints)
 
-        // translating by the hull minimum gives every piece one stable local placement reference
+        // translate source coordinates before offsetting so the offset math stays near the local origin
         const normalizedHull = yield* normalizeHull(input.piece, sourceHull)
 
         // GeometryKernel owns the configured safety margin and derives the final offset distance
@@ -76,13 +81,20 @@ export class CollisionGeometryBuilder extends Context.Service<
           totalPaddingMm: input.totalPaddingMm
         })
 
+        // the collision bounds minimum is the placement origin used by NFPs, IFPs, and placements
+        const normalizedCollision = yield* normalizeCollisionGeometry(
+          input.piece,
+          normalizedHull,
+          collisionPolygon
+        )
+
         return new CollisionGeometry({
           sourcePieceId: input.piece.id,
           sourceBounds: normalizedHull.sourceBounds,
           sampledPoints: flattened.sampledPoints,
-          convexHull: normalizedHull.convexHull,
-          collisionPolygon,
-          placementReference: normalizedHull.placementReference,
+          convexHull: normalizedCollision.convexHull,
+          collisionPolygon: normalizedCollision.collisionPolygon,
+          placementReference: normalizedCollision.placementReference,
           diagnostics: [...flattened.diagnostics, ...importWarningDiagnostics(input.piece)]
         })
       })
@@ -107,13 +119,12 @@ export class CollisionGeometryBuilder extends Context.Service<
 }
 
 /**
- * Computes the source hull bounds and expresses the hull in a local coordinate
- * system whose origin is its lower-left bound corner.
+ * Computes source hull bounds and expresses the hull relative to its own bounds
+ * minimum so the subsequent offset calculation uses small local coordinates.
  *
- * The returned `placementReference` is that original source coordinate. A
- * future placement at `(x, y)` can therefore render the source outline by
- * translating it from `placementReference` to `(x, y)`, while collision and
- * transform calculations use the smaller local coordinates.
+ * This is only an intermediate coordinate system. The public placement origin
+ * is chosen later from the padded collision polygon bounds, as required by the
+ * engine-wide placement convention.
  */
 function normalizeHull(
   piece: ImportedPiece,
@@ -142,15 +153,76 @@ function normalizeHull(
     maxY = Math.max(maxY, point.y)
   }
 
-  const placementReference = new IrregularPoint({ x: minX, y: minY })
   return Effect.succeed({
     sourceBounds: new IrregularBounds({ minX, minY, maxX, maxY }),
     convexHull: new IrregularPolygon({
       points: sourceHull.points.map(
         (point) => new IrregularPoint({ x: point.x - minX, y: point.y - minY })
       )
-    }),
-    placementReference
+    })
+  })
+}
+
+/**
+ * Re-bases the hull and collision polygon to the collision polygon's lower-left
+ * bound corner, which is the single placement point convention for v2.
+ *
+ * The same translation is applied to both polygons so their overlap remains
+ * exact. The source-space placement reference records that padded bound corner
+ * before rebasing; it may lie outside cut material because padding is included.
+ */
+function normalizeCollisionGeometry(
+  piece: ImportedPiece,
+  normalizedHull: NormalizedHull,
+  collisionPolygon: IrregularPolygon
+): Effect.Effect<NormalizedCollisionGeometry, IrregularGeometryInputError> {
+  const collisionBounds = boundsForPolygon(collisionPolygon)
+  if (collisionBounds === undefined) {
+    return failInvalidSourceGeometry(piece, 'collision polygon must contain at least one finite vertex.')
+  }
+
+  const translateX = -collisionBounds.minX
+  const translateY = -collisionBounds.minY
+  return Effect.succeed({
+    convexHull: translatePolygon(normalizedHull.convexHull, translateX, translateY),
+    collisionPolygon: translatePolygon(collisionPolygon, translateX, translateY),
+    placementReference: new IrregularPoint({
+      x: normalizedHull.sourceBounds.minX + collisionBounds.minX,
+      y: normalizedHull.sourceBounds.minY + collisionBounds.minY
+    })
+  })
+}
+
+function boundsForPolygon(polygon: IrregularPolygon): IrregularBounds | undefined {
+  const firstPoint = polygon.points[0]
+  if (firstPoint === undefined || !Number.isFinite(firstPoint.x) || !Number.isFinite(firstPoint.y)) {
+    return undefined
+  }
+
+  let minX = firstPoint.x
+  let minY = firstPoint.y
+  let maxX = firstPoint.x
+  let maxY = firstPoint.y
+  for (const point of polygon.points.slice(1)) {
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return undefined
+    minX = Math.min(minX, point.x)
+    minY = Math.min(minY, point.y)
+    maxX = Math.max(maxX, point.x)
+    maxY = Math.max(maxY, point.y)
+  }
+
+  return new IrregularBounds({ minX, minY, maxX, maxY })
+}
+
+function translatePolygon(
+  polygon: IrregularPolygon,
+  translateX: number,
+  translateY: number
+): IrregularPolygon {
+  return new IrregularPolygon({
+    points: polygon.points.map(
+      (point) => new IrregularPoint({ x: point.x + translateX, y: point.y + translateY })
+    )
   })
 }
 

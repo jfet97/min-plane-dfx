@@ -470,8 +470,8 @@ For every nestable source shape:
 sampled points
   -> deduplicate and clean
   -> convex hull
-  -> normalize placement reference
   -> offset by padding / 2 + clearanceSafetyMargin
+  -> normalize collision polygon placement reference
   -> collision polygon
 ```
 
@@ -497,12 +497,15 @@ function buildCollisionGeometry(sourceShape, settings):
     return warning("unresolved geometry")
 
   hull = convexHull(samples)
-  localHull = translate(hull, -bboxMin(hull))
+  hullNearOrigin = translate(hull, -bboxMin(hull))
 
   margin = settings.clearanceSafetyMargin
   offset = settings.padding / 2 + margin
 
-  collision = offsetConvexPolygon(localHull, offset)
+  paddedCollision = offsetConvexPolygon(hullNearOrigin, offset)
+  collisionOrigin = bboxMin(paddedCollision)
+  localHull = translate(hullNearOrigin, -collisionOrigin)
+  collision = translate(paddedCollision, -collisionOrigin)
 
   return {
     sourcePieceId,
