@@ -41,7 +41,8 @@ function placedPiece(
   pieceId: string,
   points: ReadonlyArray<IrregularPoint>,
   translateX = 0,
-  translateY = 0
+  translateY = 0,
+  mirrored = false
 ): IrregularPlacedPiece {
   const collisionPolygon = polygon(points)
   return new IrregularPlacedPiece({
@@ -51,7 +52,7 @@ function placedPiece(
         translateX,
         translateY,
         rotationDeg: 0,
-        mirrored: false
+        mirrored
       })
     }),
     collisionGeometry: new TransformedCollisionGeometry({
@@ -59,7 +60,7 @@ function placedPiece(
       transform: new IrregularTransformCandidate({
         index: 0,
         rotationDeg: 0,
-        mirrored: false,
+        mirrored,
         reason: 'configured'
       }),
       polygon: collisionPolygon,
@@ -147,6 +148,21 @@ describe('FreeMaterialServiceLive', () => {
     const holes = snapshot.regions[0]?.holes ?? []
     expect(holes).toHaveLength(2)
     expect(holes.map((hole) => hole.points[0])).toEqual([point(1, 1), point(6, 3)])
+  })
+
+  it('canonicalizes mixed mirrored windings before the NonZero occupied union', async () => {
+    const clockwiseSquare = [point(0, 2), point(2, 2), point(2, 0), point(0, 0)]
+    const snapshot = await computeFreeMaterial(
+      input([
+        rectangle('unmirrored', 2, 2, 2, 2),
+        placedPiece('mirrored-clockwise', clockwiseSquare, 3, 2, true),
+        rectangle('touching', 2, 2, 5, 2)
+      ])
+    )
+
+    expect(snapshot.regions).toHaveLength(1)
+    expect(snapshot.regions[0]?.holes).toHaveLength(1)
+    expect(snapshot.regions[0]?.holes[0]?.points[0]).toEqual(point(2, 2))
   })
 
   it('returns no regions when the placed geometry covers the whole sheet', async () => {

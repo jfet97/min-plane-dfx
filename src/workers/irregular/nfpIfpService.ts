@@ -94,17 +94,27 @@ function computeNfp(
   )
 }
 
-/** Computes sheet translation bounds without rebasing a transformed local polygon. */
+/**
+ * Computes sheet translation bounds from the actual polygon vertices.
+ *
+ * `TransformedCollisionGeometry.bounds` is derived cache data and is not
+ * trusted at this legality boundary; a stale cache must not enlarge the IFP.
+ */
 function computeIfpBounds(
   input: ComputeIfpBoundsInput
 ): Effect.Effect<IrregularIfpBounds, IrregularGeometryInputError> {
   const validation = ConvexPolygonValidation.validateStrictBoundary(input.moving.polygon.points)
   if ('message' in validation) return failInvalidGeometry('computeIfpBounds', validation.message)
 
-  const minX = normalizeNegativeZero(-input.moving.bounds.minX)
-  const minY = normalizeNegativeZero(-input.moving.bounds.minY)
-  const maxX = normalizeNegativeZero(input.sheet.width - input.moving.bounds.maxX)
-  const maxY = normalizeNegativeZero(input.sheet.height - input.moving.bounds.maxY)
+  const polygonBounds = boundsForPoints(input.moving.polygon.points)
+  if (polygonBounds === undefined) {
+    return failInvalidGeometry('computeIfpBounds', 'moving polygon bounds must be finite.')
+  }
+
+  const minX = normalizeNegativeZero(-polygonBounds.minX)
+  const minY = normalizeNegativeZero(-polygonBounds.minY)
+  const maxX = normalizeNegativeZero(input.sheet.width - polygonBounds.maxX)
+  const maxY = normalizeNegativeZero(input.sheet.height - polygonBounds.maxY)
   if (
     !Number.isFinite(minX) ||
     !Number.isFinite(minY) ||
@@ -128,7 +138,7 @@ function computeIfpBounds(
   )
 }
 
-/** Builds deterministic IFP/NFP contact candidates and validates each result. */
+/** Builds deterministic IFP/NFP contact candidates and filters illegal results. */
 function generatePlacementCandidates(
   input: GeneratePlacementCandidatesInput
 ): Effect.Effect<ReadonlyArray<IrregularPlacementCandidate>, IrregularGeometryInputError> {
@@ -206,17 +216,47 @@ function generatePlacementCandidates(
         point,
         diagnostics: []
       })
-      yield* PlacementValidation.validate({
+      const legal = yield* PlacementValidation.check({
         sheet: input.sheet,
         placed: input.placed,
         moving: input.moving,
         candidate
       })
-      candidates.push(candidate)
+      if (legal) candidates.push(candidate)
     }
 
     return candidates
   })
+}
+
+function boundsForPoints(points: ReadonlyArray<IrregularPoint>): IrregularBounds | undefined {
+  const firstPoint = points[0]
+  if (firstPoint === undefined) return undefined
+  if (!Number.isFinite(firstPoint.x) || !Number.isFinite(firstPoint.y)) return undefined
+
+  let minX = firstPoint.x
+  let minY = firstPoint.y
+  let maxX = firstPoint.x
+  let maxY = firstPoint.y
+
+  for (const point of points.slice(1)) {
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return undefined
+    minX = Math.min(minX, point.x)
+    minY = Math.min(minY, point.y)
+    maxX = Math.max(maxX, point.x)
+    maxY = Math.max(maxY, point.y)
+  }
+
+  if (
+    !Number.isFinite(minX) ||
+    !Number.isFinite(minY) ||
+    !Number.isFinite(maxX) ||
+    !Number.isFinite(maxY)
+  ) {
+    return undefined
+  }
+
+  return new IrregularBounds({ minX, minY, maxX, maxY })
 }
 
 interface Segment {

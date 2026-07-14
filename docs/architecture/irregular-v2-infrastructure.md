@@ -48,8 +48,11 @@ Offset derives its outward distance from half the caller-provided total padding
 plus `clearanceSafetyMarginMm`. Invalid or non-convex geometry is rejected
 instead of inventing a collision polygon. `TransformGeneratorLive` now emits
 only a deterministic finite set of rotation/mirror metadata: orthogonal angles,
-configured angles, usable-edge alignments, and one longest-edge oriented-bounds
-choice. It does not transform polygons or place pieces. Its
+configured angles, and usable-edge alignments. For a convex polygon, the
+minimum-area oriented bounding box always has a side parallel to a polygon edge,
+so the complete edge-alignment set already contains every OBB orientation and
+there is no separate redundant `oriented_bounds` reason. It does not transform
+polygons or place pieces. Its
 `transformMinimumEdgeLengthMm` setting means that edges shorter than the
 configured physical millimeter threshold are ignored as geometric noise; the
 default is `1`. Its

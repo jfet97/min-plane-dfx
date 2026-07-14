@@ -200,6 +200,21 @@ describe('NfpIfpServiceLive', () => {
     expect(failure.message).toBe('moving polygon cannot fit inside the sheet.')
   })
 
+  it('recomputes IFP bounds from the polygon instead of trusting stale cached bounds', async () => {
+    const moving = transformedGeometry(
+      'stale-bounds',
+      [point(0, 0), point(4, 0), point(4, 4), point(0, 4)],
+      new IrregularBounds({ minX: 0, minY: 0, maxX: 2, maxY: 2 })
+    )
+
+    const failure = await captureFailure(computeIfpBounds({ sheet: sheet(3, 3), moving }))
+
+    expect(failure).toBeInstanceOf(IrregularGeometryInputError)
+    if (!(failure instanceof IrregularGeometryInputError))
+      throw new Error('expected geometry input error')
+    expect(failure.message).toBe('moving polygon cannot fit inside the sheet.')
+  })
+
   it('rejects non-convex polygon input', async () => {
     const moving = transformedGeometry('invalid-concave', [
       point(0, 0),
@@ -354,5 +369,30 @@ describe('NfpIfpServiceLive', () => {
       point(0, 8),
       point(8, 8)
     ])
+  })
+
+  it('keeps a rotated NFP boundary-touching candidate and filters positive overlap', async () => {
+    const moving = transformedGeometry('moving-rotated-contact', [
+      point(0, 0),
+      point(1, 1),
+      point(2, 0),
+      point(1, -1)
+    ])
+    const fixed = placedPiece(
+      'fixed-rotated-contact',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      0,
+      0
+    )
+
+    const candidates = await generateCandidates({
+      sheet: sheet(6, 6),
+      placed: [fixed],
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS
+    })
+
+    expect(candidatePoints(candidates)).toContainEqual(point(2, 1))
+    expect(candidatePoints(candidates)).not.toContainEqual(point(1, 1))
   })
 })

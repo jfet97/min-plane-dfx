@@ -23,9 +23,6 @@ interface AngleCandidate {
 }
 
 interface UsableEdge {
-  readonly start: IrregularPoint
-  readonly end: IrregularPoint
-  readonly length: number
   readonly rotationDeg: number
 }
 
@@ -46,11 +43,17 @@ export const TransformGeneratorLive = Layer.succeed(TransformGenerator, {
  * Generates the finite transform set for a prepared collision polygon.
  *
  * Every usable directed edge contributes the rotation by the negative of its
- * direction angle, which makes that edge horizontal. The longest usable edge contributes one bounded
- * oriented-bounds choice as the same rotation; this deliberately avoids an
- * unbounded principal-component analysis. Candidates are canonicalized to one
- * turn, deduplicated by circular angular distance, then mirrored and capped
- * in that order so the result is reproducible.
+ * direction angle, which makes that edge horizontal. For a convex polygon,
+ * minimum-area oriented bounding boxes have a side parallel to one of those
+ * edges, so the complete edge-alignment set already contains every OBB
+ * orientation; there is no separate redundant `oriented_bounds` source.
+ *
+ * Orthogonal choices are the baseline priority, followed by configured angles,
+ * followed by geometry-derived edge angles. When mirroring is enabled and the
+ * cap is larger than the baseline, extra choices are taken as mirrored and
+ * unmirrored pairs in that priority order, then mirrored baseline choices. This
+ * reserves mirror capacity without allowing noisy edge angles to displace
+ * configured choices. Candidate indexes are assigned only after capping.
  */
 function generateTransforms(
   input: GenerateTransformsInput
@@ -68,8 +71,6 @@ function generateTransforms(
         return failInvalidGeometry('generateTransforms', usableEdges.message)
       }
 
-      const longestEdge = findLongestEdge(usableEdges.value)
-
       const candidates = deduplicateAngles(
         [
           { rotationDeg: 0, reason: 'orthogonal' },
@@ -83,15 +84,7 @@ function generateTransforms(
           ...usableEdges.value.map(({ rotationDeg }) => ({
             rotationDeg,
             reason: 'edge_alignment' as const
-          })),
-          ...(longestEdge === undefined
-            ? []
-            : [
-                {
-                  rotationDeg: longestEdge.rotationDeg,
-                  reason: 'oriented_bounds' as const
-                }
-              ])
+          }))
         ],
         decoded.settings.transformAngleDeduplicationToleranceDeg
       )
@@ -99,17 +92,15 @@ function generateTransforms(
         return failInvalidGeometry('generateTransforms', candidates.message)
       }
 
-      const unmirrored = candidates.value.map(({ rotationDeg, reason }) => ({
-        rotationDeg,
-        reason,
-        mirrored: false
-      }))
-      const allCandidates = decoded.allowMirror
-        ? [...unmirrored, ...unmirrored.map((candidate) => ({ ...candidate, mirrored: true }))]
-        : unmirrored
+      const selectedCandidates = selectTransformChoices(
+        candidates.value,
+        decoded.settings.transformCap,
+        decoded.allowMirror,
+        decoded.settings.transformAngleDeduplicationToleranceDeg
+      )
 
       return Effect.succeed(
-        allCandidates.slice(0, decoded.settings.transformCap).map(
+        selectedCandidates.map(
           (candidate, index) =>
             new IrregularTransformCandidateSchema({
               index,
@@ -161,39 +152,11 @@ function deriveUsableEdges(
     }
 
     if (length >= minimumLength) {
-      usableEdges.push({ start, end, length, rotationDeg })
+      usableEdges.push({ rotationDeg })
     }
   }
 
   return { value: usableEdges }
-}
-
-function findLongestEdge(edges: ReadonlyArray<UsableEdge>): UsableEdge | undefined {
-  let longest: UsableEdge | undefined
-  for (const edge of edges) {
-    if (
-      longest === undefined ||
-      edge.length > longest.length ||
-      (edge.length === longest.length && compareEdges(edge, longest) < 0)
-    ) {
-      longest = edge
-    }
-  }
-  return longest
-}
-
-function compareEdges(first: UsableEdge, second: UsableEdge): number {
-  const startComparison = comparePoints(first.start, second.start)
-  if (startComparison !== 0) return startComparison
-  return comparePoints(first.end, second.end)
-}
-
-function comparePoints(first: IrregularPoint, second: IrregularPoint): number {
-  if (first.x < second.x) return -1
-  if (first.x > second.x) return 1
-  if (first.y < second.y) return -1
-  if (first.y > second.y) return 1
-  return 0
 }
 
 function deduplicateAngles(
@@ -220,6 +183,7 @@ function deduplicateAngles(
     if (
       retained.some(
         (existing) =>
+          !(candidate.reason === 'orthogonal' && existing.reason === 'orthogonal') &&
           circularDistanceDeg(existing.rotationDeg, candidate.rotationDeg) <= toleranceDeg
       )
     ) {
@@ -228,8 +192,72 @@ function deduplicateAngles(
     retained.push(candidate)
   }
 
-  retained.sort((first, second) => first.rotationDeg - second.rotationDeg)
   return { value: retained }
+}
+
+interface TransformChoice {
+  readonly rotationDeg: number
+  readonly reason: AngleReason
+  readonly mirrored: boolean
+}
+
+function selectTransformChoices(
+  angles: ReadonlyArray<AngleCandidate>,
+  transformCap: number,
+  allowMirror: boolean,
+  toleranceDeg: number
+): ReadonlyArray<TransformChoice> {
+  const baseline = angles.filter(({ reason }) => reason === 'orthogonal')
+  const baselineChoices = baseline.map((candidate) => toTransformChoice(candidate, false))
+  const selected: TransformChoice[] = baselineChoices.slice(0, transformCap)
+  if (selected.length >= transformCap || !allowMirror) {
+    if (!allowMirror) {
+      selected.push(
+        ...angles
+          .filter(({ reason }) => reason !== 'orthogonal')
+          .map((candidate) => toTransformChoice(candidate, false))
+          .slice(0, Math.max(0, transformCap - selected.length))
+      )
+    }
+    return selected.slice(0, transformCap)
+  }
+
+  const extraChoices: TransformChoice[] = []
+  for (const candidate of angles.filter(({ reason }) => reason !== 'orthogonal')) {
+    appendDistinctChoice(extraChoices, toTransformChoice(candidate, true), toleranceDeg)
+    appendDistinctChoice(extraChoices, toTransformChoice(candidate, false), toleranceDeg)
+  }
+  for (const candidate of baseline) {
+    appendDistinctChoice(extraChoices, toTransformChoice(candidate, true), toleranceDeg)
+  }
+
+  selected.push(...extraChoices.slice(0, transformCap - selected.length))
+  return selected
+}
+
+function appendDistinctChoice(
+  choices: TransformChoice[],
+  candidate: TransformChoice,
+  toleranceDeg: number
+): void {
+  if (
+    choices.some(
+      (existing) =>
+        existing.mirrored === candidate.mirrored &&
+        circularDistanceDeg(existing.rotationDeg, candidate.rotationDeg) <= toleranceDeg
+    )
+  ) {
+    return
+  }
+  choices.push(candidate)
+}
+
+function toTransformChoice(candidate: AngleCandidate, mirrored: boolean): TransformChoice {
+  const rotationDeg =
+    mirrored && candidate.reason === 'edge_alignment'
+      ? normalizeRotationDeg(180 - candidate.rotationDeg) ?? candidate.rotationDeg
+      : candidate.rotationDeg
+  return { rotationDeg, reason: candidate.reason, mirrored }
 }
 
 function reasonPriority(reason: AngleReason): number {
@@ -240,8 +268,6 @@ function reasonPriority(reason: AngleReason): number {
       return 1
     case 'edge_alignment':
       return 2
-    case 'oriented_bounds':
-      return 3
   }
 }
 

@@ -201,7 +201,16 @@ function toPlacedPath(placed: IrregularPlacedPiece, index: number): PathResult |
 
   const pathMessage = validatePath(path, `placed collision polygon ${index}`)
   if (pathMessage !== undefined) return { message: pathMessage }
-  return { path }
+  return { path: canonicalizeCounterClockwise(path) }
+}
+
+/**
+ * `NonZero` treats opposite windings as subtraction. Every occupied input must
+ * therefore use the same counter-clockwise winding before the union, including
+ * paths produced by mirrored transforms.
+ */
+function canonicalizeCounterClockwise(path: Path64): Path64 {
+  return area(path) < 0 ? [...path].reverse() : path
 }
 
 function validateCoordinateGuard(path: Path64): string | undefined {

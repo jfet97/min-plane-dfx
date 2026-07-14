@@ -12,6 +12,7 @@ import {
   IrregularGeometryInputError,
   TransformGenerator
 } from '../../src/workers/irregular/services.js'
+import { TransformCollisionGeometry } from '../../src/workers/irregular/transformCollisionGeometry.js'
 import { TransformGeneratorLive } from '../../src/workers/irregular/transformGenerator.js'
 
 function point(x: number, y: number): IrregularPoint {
@@ -100,6 +101,34 @@ describe('TransformGenerator.Live', () => {
     expect(candidates.map(({ index }) => index)).toEqual([0, 1, 2, 3, 4, 5])
   })
 
+  it('reserves mirror capacity after the orthogonal baseline', async () => {
+    const candidates = await generate(
+      [point(0, 0), point(4, 0), point(3, 2), point(1, 3)],
+      { allowMirror: true, settings: settings({ transformCap: 6 }) }
+    )
+
+    expect(candidates).toHaveLength(6)
+    expect(candidates.slice(0, 4).map(({ rotationDeg, mirrored }) => [rotationDeg, mirrored])).toEqual([
+      [0, false],
+      [90, false],
+      [180, false],
+      [270, false]
+    ])
+    expect(candidates.some(({ mirrored }) => mirrored)).toBe(true)
+  })
+
+  it('keeps configured angles ahead of derived edge noise under the cap', async () => {
+    const candidates = await generate(
+      [point(0, 0), point(4, 0), point(3, 2), point(1, 3)],
+      {
+        allowMirror: true,
+        settings: settings({ transformCap: 6, configuredRotationDeg: [12.5] })
+      }
+    )
+
+    expect(candidates.slice(4).every(({ reason }) => reason === 'configured')).toBe(true)
+  })
+
   it('does not let mirror variants bypass the transform cap', async () => {
     const candidates = await generate([point(0, 0), point(4, 0), point(4, 4), point(0, 4)], {
       allowMirror: true,
@@ -119,6 +148,29 @@ describe('TransformGenerator.Live', () => {
     )
   })
 
+  it('derives a mirrored diagonal alignment that makes the mirrored edge horizontal', async () => {
+    const diagonal = [point(0, 0), point(3, 3), point(0, 1)]
+    const candidates = await generate(diagonal, { allowMirror: true })
+    const mirrored = candidates.find(
+      ({ mirrored: isMirrored, reason, rotationDeg }) =>
+        isMirrored && reason === 'edge_alignment' && rotationDeg === 225
+    )
+
+    expect(mirrored?.rotationDeg).toBe(225)
+    if (mirrored === undefined) throw new Error('expected mirrored diagonal edge alignment')
+
+    const transformed = await Effect.runPromise(
+      TransformCollisionGeometry.compute({
+        geometry: collisionGeometry(diagonal),
+        transform: mirrored
+      })
+    )
+    const first = transformed.polygon.points[0]
+    const second = transformed.polygon.points[1]
+    if (first === undefined || second === undefined) throw new Error('expected transformed edge')
+    expect(Math.abs(first.y - second.y)).toBeLessThan(1e-12)
+  })
+
   it('ignores a short edge below the configured usable length', async () => {
     const candidates = await generate([point(0, 0), point(0.5, 0.5), point(4, 0.5)], {
       settings: settings({ transformMinimumEdgeLengthMm: 1 })
@@ -136,7 +188,14 @@ describe('TransformGenerator.Live', () => {
 
     const configured = candidates.filter(({ reason }) => reason === 'configured')
     expect(configured.map(({ rotationDeg }) => rotationDeg)).toEqual([44.996])
-    expect(candidates.map(({ rotationDeg }) => rotationDeg)).toEqual([0, 44.996, 90, 180, 270])
+    expect(candidates.map(({ rotationDeg }) => rotationDeg)).toEqual([0, 90, 180, 270, 44.996])
+  })
+
+  it('does not emit a redundant oriented-bounds source for convex polygons', async () => {
+    const candidates = await generate([point(0, 0), point(4, 0), point(3, 2), point(1, 3)])
+
+    expect(candidates.map(({ reason }) => String(reason))).not.toContain('oriented_bounds')
+    expect(candidates.some(({ reason }) => reason === 'edge_alignment')).toBe(true)
   })
 
   it('produces the same candidates for cyclically rotated input vertices', async () => {

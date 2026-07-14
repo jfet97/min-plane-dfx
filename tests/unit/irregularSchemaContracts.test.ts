@@ -66,6 +66,16 @@ describe('irregular schema contracts', () => {
         })
       )
     ).toBe(true)
+    expect(
+      Exit.isFailure(
+        decode(IrregularTransformCandidate, {
+          index: 0,
+          rotationDeg: 0,
+          mirrored: false,
+          reason: 'oriented_bounds'
+        })
+      )
+    ).toBe(true)
   })
 
   it('requires conservative geometry settings', () => {

@@ -14,7 +14,6 @@ export type IrregularWorkerMode = Schema.Schema.Type<typeof IrregularWorkerMode>
 export const IrregularTransformReason = Schema.Literals([
   'orthogonal',
   'edge_alignment',
-  'oriented_bounds',
   'configured'
 ])
 
@@ -163,6 +162,10 @@ export class IrregularOptimizerSettings extends Schema.Class<IrregularOptimizerS
 )({
   orderWindow: PositiveFiniteInteger,
   beamWidth: PositiveFiniteInteger,
+  /**
+   * Maximum emitted transforms: orthogonal baseline first, then configured
+   * choices, then edge-derived choices with reserved mirror capacity.
+   */
   transformCap: PositiveFiniteInteger,
   /** Edges shorter than this millimeter length are ignored as geometric noise. */
   transformMinimumEdgeLengthMm: NonNegativeFiniteMillimeters.pipe(

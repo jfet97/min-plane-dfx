@@ -111,6 +111,10 @@ function validatePlacement(value: ValidatePlacementInput) {
   return Effect.runPromise(PlacementValidation.validate(value))
 }
 
+function checkPlacement(value: ValidatePlacementInput) {
+  return Effect.runPromise(PlacementValidation.check(value))
+}
+
 async function captureFailure(value: Promise<void>) {
   try {
     await value
@@ -130,6 +134,43 @@ describe('PlacementValidation', () => {
     ).resolves.toBeUndefined()
   })
 
+  it('returns false for illegal candidates without failing the geometry effect', async () => {
+    const moving = movingSquare()
+
+    await expect(
+      checkPlacement(input(moving, candidate(moving, 1, 0), [squarePiece('overlap', 2, 0)]))
+    ).resolves.toBe(false)
+  })
+
+  it('allows exact rotated boundary contact and rejects rotated positive overlap', async () => {
+    const moving = transformedGeometry('rotated-moving', [
+      point(0, 0),
+      point(1, 1),
+      point(2, 0),
+      point(1, -1)
+    ])
+    const placed = [squarePiece('rotated-fixed')]
+
+    await expect(checkPlacement(input(moving, candidate(moving, 2, 1), placed))).resolves.toBe(true)
+    await expect(checkPlacement(input(moving, candidate(moving, 1.9, 1), placed))).resolves.toBe(
+      false
+    )
+  })
+
+  it('rejects positive-area overlap when a diamond is inscribed in a square', async () => {
+    const square = transformedGeometry('square', [
+      point(0, 0),
+      point(4, 0),
+      point(4, 4),
+      point(0, 4)
+    ])
+    const diamond = [point(2, 0), point(4, 2), point(2, 4), point(0, 2)]
+
+    await expect(
+      checkPlacement(input(square, candidate(square, 0, 0), [placedPiece('diamond', diamond, 0, 0)]))
+    ).resolves.toBe(false)
+  })
+
   it('rejects positive-area overlap', async () => {
     const moving = movingSquare()
     const failure = await captureFailure(
@@ -142,6 +183,14 @@ describe('PlacementValidation', () => {
     expect(failure.message).toBe(
       'moving polygon has positive-area overlap with placed collision geometry.'
     )
+  })
+
+  it('rejects identical polygons', async () => {
+    const moving = movingSquare()
+
+    await expect(
+      checkPlacement(input(moving, candidate(moving, 0, 0), [squarePiece('identical')]))
+    ).resolves.toBe(false)
   })
 
   it('rejects a translated moving polygon outside the sheet', async () => {
