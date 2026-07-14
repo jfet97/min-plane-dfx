@@ -111,4 +111,20 @@ describe('GeometryKernel', () => {
 
     expect(forward).toEqual(reverse)
   })
+
+  it('retains a near-collinear corner when the ordinary determinant rounds to zero', async () => {
+    const epsilon = Number.EPSILON
+
+    const hull = await runConvexHull([
+      point(0, 0),
+      point(1 + epsilon, 1),
+      point(1, 1 - epsilon)
+    ])
+
+    expect(hull.points).toEqual([
+      point(0, 0),
+      point(1, 1 - epsilon),
+      point(1 + epsilon, 1)
+    ])
+  })
 })

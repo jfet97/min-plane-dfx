@@ -1,5 +1,6 @@
 import { IrregularPolygon } from '@shared/irregular/domain.js'
 import type { IrregularPoint } from '@shared/irregular/domain.js'
+import { GeometryPredicates } from './geometryPredicates.js'
 
 export const ConvexHull = {
   compute
@@ -86,7 +87,7 @@ function buildHullHalf(points: ReadonlyArray<IrregularPoint>): IrregularPoint[] 
       // it is either inside the rubber band or belongs to the route built by the reverse pass
       // a straight turn means the previous point sits in the middle of an edge and does not need its own vertex
       // discard it so this route stays on the outside and uses only the corners it needs
-      if (signedCrossProduct(previousPoint, lastPoint, point) > 0) break
+      if (GeometryPredicates.orientation(previousPoint, lastPoint, point) > 0) break
 
       hull.pop()
     }
@@ -96,20 +97,4 @@ function buildHullHalf(points: ReadonlyArray<IrregularPoint>): IrregularPoint[] 
   }
 
   return hull
-}
-
-function signedCrossProduct(
-  origin: IrregularPoint,
-  first: IrregularPoint,
-  second: IrregularPoint
-): number {
-  // turn both origin-to-point edges into arrows that start at the same point
-  const firstVectorX = first.x - origin.x
-  const firstVectorY = first.y - origin.y
-  const secondVectorX = second.x - origin.x
-  const secondVectorY = second.y - origin.y
-
-  // x1 * y2 - y1 * x2 measures whether the second arrow points left or right of the first arrow
-  // positive means left, negative means right, and zero means both arrows lie on the same straight line
-  return firstVectorX * secondVectorY - firstVectorY * secondVectorX
 }

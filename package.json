@@ -34,7 +34,8 @@
     "@effect/sql-sqlite-node": "4.0.0-beta.89",
     "dxf-parser": "^1.1.2",
     "effect": "^4.0.0-beta.88",
-    "iconv-lite": "^0.7.2"
+    "iconv-lite": "^0.7.2",
+    "robust-predicates": "3.0.3"
   },
   "devDependencies": {
     "@electron/rebuild": "3.6.1",
