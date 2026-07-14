@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Exit, Schema } from 'effect'
+import { IrregularGeometrySettings } from '@shared/irregular/domain.js'
 import { ProjectDocumentStrict } from '@shared/schemas/projectSchemas.js'
 import { NestingRequestStrict } from '@shared/schemas/nestingSchemas.js'
 
@@ -303,5 +304,31 @@ describe('NestingRequestStrict', () => {
     }
     const result = validate(NestingRequestStrict, invalid)
     expect(Exit.isFailure(result)).toBe(true)
+  })
+})
+
+describe('IrregularGeometrySettings', () => {
+  it('requires finite non-negative millimeter settings', () => {
+    const valid = {
+      flatteningSagToleranceMm: 0.25,
+      clearanceSafetyMarginMm: 0.25,
+      geometryBackendId: 'test-backend',
+      geometryBackendVersion: '1'
+    }
+
+    expect(Exit.isSuccess(validate(IrregularGeometrySettings, valid))).toBe(true)
+    expect(
+      Exit.isFailure(
+        validate(IrregularGeometrySettings, { ...valid, clearanceSafetyMarginMm: -0.01 })
+      )
+    ).toBe(true)
+    expect(
+      Exit.isFailure(
+        validate(IrregularGeometrySettings, {
+          ...valid,
+          flatteningSagToleranceMm: Number.POSITIVE_INFINITY
+        })
+      )
+    ).toBe(true)
   })
 })

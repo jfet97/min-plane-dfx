@@ -27,6 +27,11 @@ export type IrregularPortfolioPhase = Schema.Schema.Type<typeof IrregularPortfol
 export const IrregularSearchSource = Schema.Literals(['beam', 'ga', 'none'])
 export type IrregularSearchSource = Schema.Schema.Type<typeof IrregularSearchSource>
 
+/** Finite non-negative millimeter distance used by irregular geometry settings. */
+export const NonNegativeFiniteMillimeters = Schema.Finite.check(
+  Schema.isGreaterThanOrEqualTo(0)
+)
+
 export const IrregularPortfolioStatus = Schema.Literals([
   'completed',
   'budget-expired',
@@ -70,9 +75,8 @@ export class IrregularTransformCandidate extends Schema.Class<IrregularTransform
 export class IrregularGeometrySettings extends Schema.Class<IrregularGeometrySettings>(
   'IrregularGeometrySettings'
 )({
-  flatteningSagToleranceMm: Schema.Number,
-  clearanceSafetyMarginMm: Schema.Number,
-  convexHullSimplificationToleranceMm: Schema.Number,
+  flatteningSagToleranceMm: NonNegativeFiniteMillimeters,
+  clearanceSafetyMarginMm: NonNegativeFiniteMillimeters,
   geometryBackendId: Schema.String,
   geometryBackendVersion: Schema.String
 }) {}

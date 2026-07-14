@@ -755,6 +755,80 @@ what material remains. The second tries to describe every legal coordinate for a
 specific moving piece. V2 may use Clipper2 for the first without making the
 second the core algorithm.
 
+### Initial Clipper2 Adapter Policy
+
+This is the starting adapter configuration for collision-polygon offsetting. It
+is configurable and must be validated against the geometry fixture corpus before
+it becomes a production default; it does not change the real-valued core model
+or make Clipper2 the legality authority.
+
+```text
+backend package = clipper2-ts@2.0.1-18
+adapter path mode = integer Paths64 via inflatePaths
+decimal precision = 3
+scale = 1000 integer units per mm
+grid step = 0.001 mm
+rounding = nearest grid point, ties away from zero
+join type = Miter
+miter limit = 2.0
+end type = Polygon
+future round-join arc tolerance = 0.01 mm
+fill rule = NonZero
+winding = normalize one outer collision ring counter-clockwise in Cartesian coordinates
+max scaled coordinate, including 2 * offset = 1,000,000,000
+adapter policy version = clipper2-offset-v1
+```
+
+The adapter converts real-valued coordinates at this one boundary only:
+
+```text
+toGrid(valueMm) = sign(valueMm) * floor(abs(valueMm) * 1000 + 0.5)
+fromGrid(value) = value / 1000
+```
+
+Convert the collision hull and the positive collision offset with `toGrid`, call
+the integer-path offset API, then dequantize with `fromGrid` without a second
+rounding pass. This avoids depending on library-internal floating-path conversion
+rules and keeps the quantization convention deterministic for cache identity.
+
+`0.001 mm` is 250 times finer than the starting `0.25 mm` flattening sag and
+safety-margin scale. A coordinate rounding error is at most `0.0005 mm`, so the
+grid is materially below the conservative clearance budget while still keeping
+the adapter's integer representation practical. Miter joins preserve the straight
+edges of convex collision hulls; the `2.0` limit prevents unbounded acute-angle
+spikes. The round-join tolerance is inactive for the initial Miter policy, but
+`0.01 mm` is reserved for any future Round policy so its approximation stays well
+below the `0.25 mm` flattening tolerance.
+
+Before calling Clipper, normalize the single convex collision ring to
+counter-clockwise Cartesian winding and use `NonZero` for any adapter-owned
+boolean operation. The collision model has no holes. Reject the operation with a
+reported unresolved/non-nestable geometry diagnostic when the input or result is
+non-finite, has fewer than three unique non-collinear points, has zero area, is
+not a single simple convex closed ring, or produces zero or multiple paths. Do
+not choose a largest component or silently repair such a result.
+
+The coordinate guard applies after quantization and before the call: every
+coordinate plus twice the absolute scaled offset must remain at most
+`1,000,000,000` in magnitude. At the initial scale, this leaves up to
+`1,000,000 mm` of coordinate range before offset headroom, far below the
+JavaScript safe-integer limit while comfortably exceeding expected fixed-sheet
+geometry.
+
+The derived collision-geometry cache identity includes the canonical source
+geometry digest, import and flattening settings, `flatteningSagTolerance`,
+padding, `clearanceSafetyMargin`, placement reference convention, backend package
+and version, and this full adapter policy tuple. Transformed-polygon cache
+entries also include rotation and mirror state; pairwise NFP and IFP entries
+additionally include their algorithm version. Any change to the package version,
+policy version, scale, rounding, join, miter limit, round tolerance, fill/winding
+rule, coordinate guard, or output-failure policy invalidates the relevant derived
+cache.
+
+Direct robust-predicate containment, overlap, and clearance validation remains
+the placement-legality authority. Clipper output is a conservative derived
+artifact and candidate aid, never proof that a placement is legal.
+
 ## Free Material For Scoring And Debug
 
 V2 should maintain a derived sheet-space artifact when useful:
@@ -1036,7 +1110,6 @@ rotation angle
 mirror state
 clearance / padding / clearanceSafetyMargin
 flattening tolerance
-convex-hull simplification tolerance
 placement reference convention
 geometry backend name and version/config
 NFP/IFP algorithm version

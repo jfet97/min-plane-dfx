@@ -17,7 +17,6 @@ export const DEFAULT_IRREGULAR_GEOMETRY_SETTINGS = new IrregularGeometrySettings
     DEFAULT_FLATTENING_SAG_TOLERANCE_MM,
     DEFAULT_FLATTENING_SAG_TOLERANCE_MM
   ),
-  convexHullSimplificationToleranceMm: 0,
   geometryBackendId: 'irregular-convex-v2-default',
   geometryBackendVersion: '0'
 })

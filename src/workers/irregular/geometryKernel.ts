@@ -5,9 +5,13 @@ import type {
   TransformCollisionGeometryInput,
   ValidatePlacementInput
 } from './services.js'
-import { IrregularNestingNotImplementedError } from './services.js'
+import {
+  IrregularGeometryInputError,
+  IrregularNestingNotImplementedError
+} from './services.js'
 import { ArcFlattening } from './arcFlattening.js'
 import { ConvexHull } from './convexHull.js'
+import { ConvexPolygonOffset } from './convexPolygonOffset.js'
 import { DEFAULT_IRREGULAR_GEOMETRY_SETTINGS } from '@shared/irregular/defaults.js'
 import {
   FlattenedGeometry,
@@ -36,19 +40,22 @@ export namespace GeometryKernel {
       input: FlattenSourceGeometryInput
     ) => Effect.Effect<FlattenedGeometry, IrregularNestingNotImplementedError>
     /**
-     * Compute the deterministic convex hull for already flattened sample
+     * Compute the exact deterministic convex hull for already flattened sample
      * points.
      */
     readonly convexHull: (
       points: ReadonlyArray<IrregularPoint>
     ) => Effect.Effect<IrregularPolygon, IrregularNestingNotImplementedError>
     /**
-     * Expand a convex polygon outward by a caller-provided distance, typically
-     * padding plus clearance margin.
+     * Expand a convex polygon by half of the caller-provided total padding plus
+     * the configured clearance safety margin.
      */
     readonly offsetConvexPolygon: (
       input: OffsetConvexPolygonInput
-    ) => Effect.Effect<IrregularPolygon, IrregularNestingNotImplementedError>
+    ) => Effect.Effect<
+      IrregularPolygon,
+      IrregularNestingNotImplementedError | IrregularGeometryInputError
+    >
     /**
      * Apply a rotation and mirror choice to collision geometry while preserving
      * the placement reference convention.
@@ -118,7 +125,10 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
         )
       },
       convexHull: (points) => Effect.succeed(ConvexHull.compute(points)),
-      offsetConvexPolygon: () => failNotImplemented('offsetConvexPolygon', settings),
+      offsetConvexPolygon: ({ polygon, totalPaddingMm }) =>
+        computeCollisionOffsetMm(totalPaddingMm, settings).pipe(
+          Effect.flatMap((distanceMm) => ConvexPolygonOffset.compute(polygon, distanceMm))
+        ),
       transformCollisionGeometry: () => failNotImplemented('transformCollisionGeometry', settings),
       validatePlacement: () => failNotImplemented('validatePlacement', settings)
     })
@@ -153,4 +163,33 @@ function failNotImplemented(
       message: `GeometryKernel.${operation} is intentionally unimplemented${suffix}`
     })
   )
+}
+
+function computeCollisionOffsetMm(
+  totalPaddingMm: number,
+  settings: IrregularGeometrySettings
+): Effect.Effect<number, IrregularGeometryInputError> {
+  if (!Number.isFinite(totalPaddingMm) || totalPaddingMm < 0) {
+    return failInvalidGeometryInput(
+      'offsetConvexPolygon',
+      'totalPaddingMm must be a finite non-negative millimeter distance.'
+    )
+  }
+
+  const distanceMm = totalPaddingMm / 2 + settings.clearanceSafetyMarginMm
+  if (!Number.isFinite(distanceMm)) {
+    return failInvalidGeometryInput(
+      'offsetConvexPolygon',
+      'totalPaddingMm plus clearanceSafetyMarginMm must produce a finite offset distance.'
+    )
+  }
+
+  return Effect.succeed(distanceMm)
+}
+
+function failInvalidGeometryInput(
+  operation: string,
+  message: string
+): Effect.Effect<never, IrregularGeometryInputError> {
+  return Effect.fail(new IrregularGeometryInputError({ operation, message }))
 }

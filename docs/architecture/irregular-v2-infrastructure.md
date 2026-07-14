@@ -34,10 +34,13 @@ dependency boundaries, not persisted payloads.
 - `IrregularNestingPortfolio`;
 - `GeometryCache`.
 
-The default layers are infrastructure only. Except for the in-memory cache, they
-fail with `IrregularNestingNotImplementedError`. This is deliberate: the app
-must not emit fake collision polygons, fake placements, fake NFPs, fake scores,
-or fake history.
+`GeometryKernel.Live` currently implements DXF source flattening, convex hull,
+and strictly convex polygon offsetting. Offset derives its outward distance from
+half the caller-provided total padding plus `clearanceSafetyMarginMm`. Invalid or
+non-convex geometry is rejected instead of inventing a collision polygon. The
+remaining algorithm services, except for the in-memory cache, fail with
+`IrregularNestingNotImplementedError`. This is deliberate: the app must not
+emit fake placements, fake NFPs, fake scores, or fake history.
 
 ## Current Integration State
 
@@ -76,5 +79,5 @@ Algorithm implementations should fill these service boundaries later:
 - GA/search;
 - free-material polygon construction and scoring.
 
-Until then, only infrastructure, settings, DTOs, and docs should depend on this
-shell.
+Until their algorithms are implemented, the remaining service boundaries stay
+as honest infrastructure-only failures.
