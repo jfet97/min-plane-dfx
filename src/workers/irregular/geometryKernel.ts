@@ -7,6 +7,7 @@ import type {
 } from './services.js'
 import { IrregularNestingNotImplementedError } from './services.js'
 import { ArcFlattening } from './arcFlattening.js'
+import { ConvexHull } from './convexHull.js'
 import { DEFAULT_IRREGULAR_GEOMETRY_SETTINGS } from '@shared/irregular/defaults.js'
 import {
   FlattenedGeometry,
@@ -116,7 +117,7 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
           })
         )
       },
-      convexHull: () => failNotImplemented('convexHull', settings),
+      convexHull: (points) => Effect.succeed(ConvexHull.compute(points)),
       offsetConvexPolygon: () => failNotImplemented('offsetConvexPolygon', settings),
       transformCollisionGeometry: () => failNotImplemented('transformCollisionGeometry', settings),
       validatePlacement: () => failNotImplemented('validatePlacement', settings)
