@@ -8,7 +8,7 @@ import type {
 import { IrregularNestingNotImplementedError } from './services.js'
 import { ArcFlattening } from './arcFlattening.js'
 import { DEFAULT_IRREGULAR_GEOMETRY_SETTINGS } from '@shared/irregular/defaults.js'
-import type {
+import {
   FlattenedGeometry,
   IrregularGeometrySettings,
   IrregularPoint,
@@ -108,7 +108,13 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
             Match.exhaustive
           )
         }
-        return failNotImplemented('convexHull', settings)
+        return Effect.succeed(
+          new FlattenedGeometry({
+            sourcePieceId: piece.id,
+            sampledPoints: pointsStore.get(),
+            diagnostics: []
+          })
+        )
       },
       convexHull: () => failNotImplemented('convexHull', settings),
       offsetConvexPolygon: () => failNotImplemented('offsetConvexPolygon', settings),

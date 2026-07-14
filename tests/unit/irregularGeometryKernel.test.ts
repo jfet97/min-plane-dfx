@@ -2,10 +2,53 @@ import { describe, expect, it } from 'vitest'
 import { Effect, Layer } from 'effect'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { IrregularNestingNotImplementedError } from '../../src/workers/irregular/services.js'
-import { IrregularGeometrySettings } from '@shared/irregular/domain.js'
+import { IrregularGeometrySettings, IrregularPoint } from '@shared/irregular/domain.js'
+import { DxfGeometrySummary, ImportedPiece } from '@shared/domain/dxf.js'
+import { PieceId, SourceFileId } from '@shared/domain/ids.js'
+import { Rect } from '@shared/domain/geometry.js'
+
+function point(x: number, y: number): IrregularPoint {
+  return new IrregularPoint({ x, y })
+}
+
+function runConvexHull(points: ReadonlyArray<IrregularPoint>) {
+  return Effect.runPromise(
+    GeometryKernel.use((kernel) => kernel.convexHull(points)).pipe(
+      Effect.provide(GeometryKernel.Live)
+    )
+  )
+}
+
+function quarterArcPiece(): ImportedPiece {
+  return new ImportedPiece({
+    id: PieceId.make('quarter-arc'),
+    sourceFileId: SourceFileId.make('test-source'),
+    label: 'Quarter arc',
+    realBounds: new Rect({ x: 0, y: 0, width: 10, height: 10 }),
+    geometry: new DxfGeometrySummary({
+      entityType: 'ARC',
+      closed: false,
+      segments: [
+        {
+          kind: 'arc',
+          x1: 10,
+          y1: 0,
+          x2: 0,
+          y2: 10,
+          cx: 0,
+          cy: 0,
+          radius: 10,
+          startAngle: 0,
+          endAngle: 90
+        }
+      ]
+    }),
+    warnings: []
+  })
+}
 
 describe('GeometryKernel', () => {
-  it('captures geometry settings from the provided settings service', async () => {
+  it('uses flattening tolerance from the provided settings service', async () => {
     const settings = new IrregularGeometrySettings({
       flatteningSagToleranceMm: 0.125,
       clearanceSafetyMarginMm: 0.25,
@@ -14,19 +57,14 @@ describe('GeometryKernel', () => {
       geometryBackendVersion: 'settings-proof'
     })
 
-    const failure = await Effect.runPromise(
-      GeometryKernel.use((kernel) => kernel.convexHull([])).pipe(
-        Effect.match({
-          onFailure: (err) => err,
-          onSuccess: () => null
-        }),
+    const flattened = await Effect.runPromise(
+      GeometryKernel.use((kernel) => kernel.flattenSourceGeometry({ piece: quarterArcPiece() })).pipe(
         Effect.provide(GeometryKernel.Layer),
         Effect.provide(Layer.succeed(GeometrySettings, settings))
       )
     )
 
-    expect(failure).toBeInstanceOf(IrregularNestingNotImplementedError)
-    expect(failure?.message).toContain('test-geometry-backend@settings-proof')
+    expect(flattened.sampledPoints).toHaveLength(6)
   })
 
   it('keeps Unimplemented independent from geometry settings', async () => {
@@ -42,5 +80,35 @@ describe('GeometryKernel', () => {
 
     expect(failure).toBeInstanceOf(IrregularNestingNotImplementedError)
     expect(failure?.message).toBe('GeometryKernel.convexHull is intentionally unimplemented.')
+  })
+
+  it('returns a canonical counter-clockwise hull without duplicate, interior, or collinear points', async () => {
+    const hull = await runConvexHull([
+      point(2, 1),
+      point(0, 3),
+      point(4, 0),
+      point(2, 0),
+      point(0, 0),
+      point(4, 3),
+      point(4, 0),
+      point(0, 0)
+    ])
+
+    expect(hull.points).toEqual([point(0, 0), point(4, 0), point(4, 3), point(0, 3)])
+  })
+
+  it('returns the same canonical hull regardless of source point order', async () => {
+    const points = [
+      point(4, 3),
+      point(0, 0),
+      point(0, 3),
+      point(4, 0),
+      point(2, 1),
+      point(2, 0)
+    ]
+
+    const [forward, reverse] = await Promise.all([runConvexHull(points), runConvexHull([...points].reverse())])
+
+    expect(forward).toEqual(reverse)
   })
 })
