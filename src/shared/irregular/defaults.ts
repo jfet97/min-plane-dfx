@@ -25,6 +25,9 @@ export const DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS = new IrregularOptimizerSettin
   orderWindow: 2,
   beamWidth: 24,
   transformCap: 16,
+  transformMinimumEdgeLengthMm: 1,
+  transformAngleDeduplicationToleranceDeg: 0.01,
+  configuredRotationDeg: [],
   gaPopulation: 32,
   gaTimeBudgetMs: 60_000,
   gaSeed: 'default'

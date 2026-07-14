@@ -1,5 +1,5 @@
 /** Schema-backed contracts for convex irregular nesting geometry and search data. */
-import { Schema } from 'effect'
+import { Effect, Schema } from 'effect'
 import { ImportedPiece } from '@shared/domain/dxf.js'
 import { PieceId } from '@shared/domain/ids.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
@@ -44,12 +44,16 @@ export type IrregularSearchSource = Schema.Schema.Type<typeof IrregularSearchSou
 const FiniteNumber = Schema.Finite
 
 /** Finite non-negative millimeter distance used by irregular geometry settings. */
-export const NonNegativeFiniteMillimeters = Schema.Finite.check(
-  Schema.isGreaterThanOrEqualTo(0)
-)
+export const NonNegativeFiniteMillimeters = Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0))
 
 /** Finite positive millimeter distance used for flattening tolerances. */
 export const PositiveFiniteMillimeters = Schema.Finite.check(Schema.isGreaterThan(0))
+
+/** Finite positive angular tolerance measured in degrees. */
+const PositiveFiniteDegrees = Schema.Finite.check(Schema.isGreaterThan(0))
+
+/** Finite rotation value measured in degrees before periodic normalization. */
+const FiniteDegrees = Schema.Finite
 
 /** Finite non-negative integer used for indexed irregular controls. */
 const NonNegativeFiniteInteger = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
@@ -150,13 +154,28 @@ export class IrregularGeometrySettings extends Schema.Class<IrregularGeometrySet
   'IrregularGeometrySettings'
 )(IrregularGeometrySettingsFields) {}
 
-/** Positive integer limits and reproducibility settings for irregular search. */
+/**
+ * Positive integer limits, finite-transform controls, and reproducibility
+ * settings for irregular search.
+ */
 export class IrregularOptimizerSettings extends Schema.Class<IrregularOptimizerSettings>(
   'IrregularOptimizerSettings'
 )({
   orderWindow: PositiveFiniteInteger,
   beamWidth: PositiveFiniteInteger,
   transformCap: PositiveFiniteInteger,
+  /** Edges shorter than this millimeter length are ignored as geometric noise. */
+  transformMinimumEdgeLengthMm: NonNegativeFiniteMillimeters.pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed(1))
+  ),
+  /** Circular angular distance at or below this degree value is one transform. */
+  transformAngleDeduplicationToleranceDeg: PositiveFiniteDegrees.pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed(0.01))
+  ),
+  /** Additional finite rotations in degrees, normalized by the transform generator. */
+  configuredRotationDeg: Schema.Array(FiniteDegrees).pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed([]))
+  ),
   gaPopulation: PositiveFiniteInteger,
   gaTimeBudgetMs: PositiveFiniteInteger,
   gaSeed: Schema.NonEmptyString
@@ -265,12 +284,25 @@ export class IrregularIfpBounds extends Schema.Class<IrregularIfpBounds>('Irregu
   bounds: IrregularBounds
 }) {}
 
+/**
+ * One sheet-space material region: material inside `boundary` except for its
+ * explicitly represented interior `holes`.
+ *
+ * This is a diagnostic and scoring display model, not a nesting-legality
+ * model. It must not be used as an implicit concave or hole-aware placement
+ * feature.
+ */
+export class FreeMaterialRegion extends Schema.Class<FreeMaterialRegion>('FreeMaterialRegion')({
+  boundary: IrregularPolygon,
+  holes: Schema.Array(IrregularPolygon)
+}) {}
+
 /** Remaining sheet-space material and diagnostics after placed collision geometry. */
 export class FreeMaterialSnapshot extends Schema.Class<FreeMaterialSnapshot>(
   'FreeMaterialSnapshot'
 )({
   sheet: SheetSpec,
-  regions: Schema.Array(IrregularPolygon),
+  regions: Schema.Array(FreeMaterialRegion),
   diagnostics: Schema.Array(CollisionGeometryDiagnostic)
 }) {}
 

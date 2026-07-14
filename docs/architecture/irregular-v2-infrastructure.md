@@ -14,7 +14,8 @@ the convex irregular engine shell:
 - geometry settings;
 - optimizer settings;
 - cache keys;
-- portfolio progress and result envelopes.
+- portfolio progress and result envelopes;
+- free-material regions with explicit boundaries and holes.
 
 These DTOs are named app payloads and should stay aligned with the rest of
 `src/shared/domain/`: use `Schema.Class` for exported data shapes. Service
@@ -45,11 +46,29 @@ preserves source samples, rebases both derived polygons to the padded collision
 polygon's lower-left bounds corner, and carries import warnings as diagnostics.
 Offset derives its outward distance from half the caller-provided total padding
 plus `clearanceSafetyMarginMm`. Invalid or non-convex geometry is rejected
-instead of inventing a collision polygon. Transform choices remain the
-responsibility of the unimplemented `TransformGenerator`. The remaining algorithm
-services, except for the in-memory cache, fail with
-`IrregularNestingNotImplementedError`. This is deliberate: the app must not emit
-fake placements, fake NFPs, fake scores, or fake history.
+instead of inventing a collision polygon. `TransformGeneratorLive` now emits
+only a deterministic finite set of rotation/mirror metadata: orthogonal angles,
+configured angles, usable-edge alignments, and one longest-edge oriented-bounds
+choice. It does not transform polygons or place pieces. Its
+`transformMinimumEdgeLengthMm` setting means that edges shorter than the
+configured physical millimeter threshold are ignored as geometric noise; the
+default is `1`. Its
+`transformAngleDeduplicationToleranceDeg` setting means that periodic angles
+within that circular degree distance are treated as one candidate; the default
+is `0.01` degrees. `configuredRotationDeg` defaults to an empty array and lets
+the optimizer add finite degree values explicitly. `NfpIfpServiceLive` computes
+convex no-fit boundaries, rectangular inner-fit bounds, and deterministic
+contact candidates; every candidate still passes direct convex placement
+validation, which remains the legality authority. The remaining algorithm
+services, except for these geometry services and the in-memory cache, fail with
+`IrregularNestingNotImplementedError`. This is deliberate: the app must not
+emit fake placements, fake scores, or fake history. `FreeMaterialServiceLive`
+computes the
+sheet-space difference between the sheet and the union of translated placed
+collision polygons through Clipper2's integer `Paths64` and `PolyTree64`
+boundary. Its output groups each outer material boundary with its direct holes
+for visualization and scoring; it is never used as placement legality or as an
+implicit concave/hole-aware nesting feature.
 
 ## Current Integration State
 
@@ -80,13 +99,12 @@ Algorithm implementations should fill these service boundaries later:
 
 - DXF-to-polygon flattening;
 - convex hull and offset;
-- transform generation;
-- convex NFP/IFP candidate generation;
-- placement validation;
 - priority ordering;
 - windowed beam;
 - GA/search;
-- free-material polygon construction and scoring.
+- free-material scoring beyond the current diagnostic region artifact.
 
 Until their algorithms are implemented, the remaining service boundaries stay
-as honest infrastructure-only failures.
+as honest infrastructure-only failures. Free-material regions remain a
+sheet-space diagnostic/scoring artifact and do not replace direct placement
+validation.

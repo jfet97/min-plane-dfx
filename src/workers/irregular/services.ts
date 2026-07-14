@@ -1,15 +1,13 @@
 import { Context, Data, Effect, Layer, Schema } from 'effect'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type { PieceId } from '@shared/domain/ids.js'
-import type { SheetSpec } from '@shared/domain/nesting.js'
+import { SheetSpec } from '@shared/domain/nesting.js'
 import type {
-  CollisionGeometry,
   FreeMaterialSnapshot,
   IrregularGeometryCacheKey,
   IrregularIfpBounds,
   IrregularNestingSettings,
   IrregularNfp,
-  IrregularPlacedPiece,
   IrregularPlacementCandidate,
   IrregularPortfolioProgress,
   IrregularPortfolioResult,
@@ -17,7 +15,14 @@ import type {
   IrregularTransformCandidate,
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
-import { IrregularPolygon, NonNegativeFiniteMillimeters } from '@shared/irregular/domain.js'
+import {
+  CollisionGeometry,
+  IrregularGeometrySettings,
+  IrregularOptimizerSettings,
+  IrregularPlacedPiece,
+  IrregularPolygon,
+  NonNegativeFiniteMillimeters
+} from '@shared/irregular/domain.js'
 
 export class IrregularNestingNotImplementedError extends Data.TaggedError(
   'IrregularNestingNotImplementedError'
@@ -57,11 +62,13 @@ export interface TransformCollisionGeometryInput {
   readonly transform: IrregularTransformCandidate
 }
 
-export interface GenerateTransformsInput {
-  readonly geometry: CollisionGeometry
-  readonly allowMirror: boolean
-  readonly settings: IrregularNestingSettings['optimizer']
-}
+/** Schema-backed boundary for finite transform generation. */
+export const GenerateTransformsInput = Schema.Struct({
+  geometry: CollisionGeometry,
+  allowMirror: Schema.Boolean,
+  settings: IrregularOptimizerSettings
+})
+export type GenerateTransformsInput = Schema.Schema.Type<typeof GenerateTransformsInput>
 
 export interface ComputeNfpInput {
   /** Fixed collision geometry together with its existing sheet translation. */
@@ -91,11 +98,13 @@ export interface ValidatePlacementInput {
   readonly candidate: IrregularPlacementCandidate
 }
 
-export interface ComputeFreeMaterialInput {
-  readonly sheet: SheetSpec
-  readonly placed: ReadonlyArray<IrregularPlacedPiece>
-  readonly settings: IrregularNestingSettings['geometry']
-}
+/** Schema-backed boundary for deriving sheet-space free-material diagnostics. */
+export const ComputeFreeMaterialInput = Schema.Struct({
+  sheet: SheetSpec,
+  placed: Schema.Array(IrregularPlacedPiece),
+  settings: IrregularGeometrySettings
+})
+export type ComputeFreeMaterialInput = Schema.Schema.Type<typeof ComputeFreeMaterialInput>
 
 export interface BuildPriorityOrderInput {
   readonly pieces: ReadonlyArray<IrregularPreparedPiece>
@@ -116,7 +125,10 @@ export interface TransformGenerator {
    */
   readonly generateTransforms: (
     input: GenerateTransformsInput
-  ) => Effect.Effect<ReadonlyArray<IrregularTransformCandidate>, IrregularNestingNotImplementedError>
+  ) => Effect.Effect<
+    ReadonlyArray<IrregularTransformCandidate>,
+    IrregularNestingNotImplementedError | IrregularGeometryInputError
+  >
 }
 
 export interface NfpIfpService {
@@ -126,7 +138,10 @@ export interface NfpIfpService {
    */
   readonly computeNfp: (
     input: ComputeNfpInput
-  ) => Effect.Effect<IrregularNfp, IrregularNestingNotImplementedError | IrregularGeometryInputError>
+  ) => Effect.Effect<
+    IrregularNfp,
+    IrregularNestingNotImplementedError | IrregularGeometryInputError
+  >
   /**
    * Computes the rectangular translation bounds that keep `moving` inside the
    * rectangular sheet before considering any already placed pieces.
@@ -156,7 +171,10 @@ export interface FreeMaterialService {
    */
   readonly computeFreeMaterial: (
     input: ComputeFreeMaterialInput
-  ) => Effect.Effect<FreeMaterialSnapshot, IrregularNestingNotImplementedError>
+  ) => Effect.Effect<
+    FreeMaterialSnapshot,
+    IrregularNestingNotImplementedError | IrregularGeometryInputError
+  >
 }
 
 export interface PriorityOrderService {
@@ -193,9 +211,7 @@ export interface GeometryCache {
 export const TransformGenerator = Context.Service<TransformGenerator>(
   'min-plane-dfx/irregular/TransformGenerator'
 )
-export const NfpIfpService = Context.Service<NfpIfpService>(
-  'min-plane-dfx/irregular/NfpIfpService'
-)
+export const NfpIfpService = Context.Service<NfpIfpService>('min-plane-dfx/irregular/NfpIfpService')
 export const FreeMaterialService = Context.Service<FreeMaterialService>(
   'min-plane-dfx/irregular/FreeMaterialService'
 )
@@ -205,9 +221,7 @@ export const PriorityOrderService = Context.Service<PriorityOrderService>(
 export const IrregularNestingPortfolio = Context.Service<IrregularNestingPortfolio>(
   'min-plane-dfx/irregular/IrregularNestingPortfolio'
 )
-export const GeometryCache = Context.Service<GeometryCache>(
-  'min-plane-dfx/irregular/GeometryCache'
-)
+export const GeometryCache = Context.Service<GeometryCache>('min-plane-dfx/irregular/GeometryCache')
 
 function failNotImplemented(
   service: string,

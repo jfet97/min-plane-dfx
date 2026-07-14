@@ -1,0 +1,156 @@
+import { Effect } from 'effect'
+import { describe, expect, it } from 'vitest'
+import {
+  CollisionGeometry,
+  IrregularBounds,
+  IrregularOptimizerSettings,
+  IrregularPoint,
+  IrregularPolygon
+} from '@shared/irregular/domain.js'
+import { PieceId } from '@shared/domain/ids.js'
+import {
+  IrregularGeometryInputError,
+  TransformGenerator
+} from '../../src/workers/irregular/services.js'
+import { TransformGeneratorLive } from '../../src/workers/irregular/transformGenerator.js'
+
+function point(x: number, y: number): IrregularPoint {
+  return new IrregularPoint({ x, y })
+}
+
+function polygon(points: ReadonlyArray<IrregularPoint>): IrregularPolygon {
+  return new IrregularPolygon({ points })
+}
+
+function collisionGeometry(points: ReadonlyArray<IrregularPoint>): CollisionGeometry {
+  return new CollisionGeometry({
+    sourcePieceId: PieceId.make('transform-test-piece'),
+    sourceBounds: new IrregularBounds({ minX: 0, minY: 0, maxX: 10, maxY: 10 }),
+    sampledPoints: [point(0, 0), point(10, 0), point(10, 10), point(0, 10)],
+    convexHull: polygon([point(0, 0), point(10, 0), point(10, 10), point(0, 10)]),
+    collisionPolygon: polygon(points),
+    placementReference: point(0, 0),
+    diagnostics: []
+  })
+}
+
+function settings(
+  overrides: {
+    readonly transformCap?: number
+    readonly transformMinimumEdgeLengthMm?: number
+    readonly transformAngleDeduplicationToleranceDeg?: number
+    readonly configuredRotationDeg?: ReadonlyArray<number>
+  } = {}
+): IrregularOptimizerSettings {
+  return new IrregularOptimizerSettings({
+    orderWindow: 2,
+    beamWidth: 8,
+    transformCap: overrides.transformCap ?? 16,
+    transformMinimumEdgeLengthMm: overrides.transformMinimumEdgeLengthMm ?? 1,
+    transformAngleDeduplicationToleranceDeg:
+      overrides.transformAngleDeduplicationToleranceDeg ?? 0.01,
+    configuredRotationDeg: overrides.configuredRotationDeg ?? [],
+    gaPopulation: 8,
+    gaTimeBudgetMs: 1000,
+    gaSeed: 'transform-test'
+  })
+}
+
+function generate(
+  points: ReadonlyArray<IrregularPoint>,
+  options: {
+    readonly allowMirror?: boolean
+    readonly settings?: IrregularOptimizerSettings
+  } = {}
+) {
+  return Effect.runPromise(
+    TransformGenerator.use((service) =>
+      service.generateTransforms({
+        geometry: collisionGeometry(points),
+        allowMirror: options.allowMirror ?? false,
+        settings: options.settings ?? settings()
+      })
+    ).pipe(Effect.provide(TransformGeneratorLive))
+  )
+}
+
+describe('TransformGenerator.Live', () => {
+  it('returns the four orthogonal baseline choices for a square', async () => {
+    const candidates = await generate([point(0, 0), point(4, 0), point(4, 4), point(0, 4)])
+
+    expect(candidates.map(({ rotationDeg }) => rotationDeg)).toEqual([0, 90, 180, 270])
+    expect(candidates.every(({ reason }) => reason === 'orthogonal')).toBe(true)
+  })
+
+  it('appends mirrors after unmirrored choices and caps the combined list', async () => {
+    const square = [point(0, 0), point(4, 0), point(4, 4), point(0, 4)]
+    const candidates = await generate(square, {
+      allowMirror: true,
+      settings: settings({ transformCap: 6 })
+    })
+
+    expect(candidates.map(({ mirrored }) => mirrored)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ])
+    expect(candidates.map(({ index }) => index)).toEqual([0, 1, 2, 3, 4, 5])
+  })
+
+  it('does not let mirror variants bypass the transform cap', async () => {
+    const candidates = await generate([point(0, 0), point(4, 0), point(4, 4), point(0, 4)], {
+      allowMirror: true,
+      settings: settings({ transformCap: 3 })
+    })
+
+    expect(candidates).toHaveLength(3)
+    expect(candidates.every(({ mirrored }) => !mirrored)).toBe(true)
+  })
+
+  it('adds a stable non-orthogonal alignment for a diagonal long edge', async () => {
+    const candidates = await generate([point(0, 0), point(3, 3), point(0, 1)])
+
+    expect(candidates.some(({ rotationDeg }) => Math.abs(rotationDeg - 315) < 1e-12)).toBe(true)
+    expect(candidates.find(({ rotationDeg }) => Math.abs(rotationDeg - 315) < 1e-12)?.reason).toBe(
+      'edge_alignment'
+    )
+  })
+
+  it('ignores a short edge below the configured usable length', async () => {
+    const candidates = await generate([point(0, 0), point(0.5, 0.5), point(4, 0.5)], {
+      settings: settings({ transformMinimumEdgeLengthMm: 1 })
+    })
+
+    expect(candidates.some(({ rotationDeg }) => Math.abs(rotationDeg - 315) < 1e-12)).toBe(false)
+  })
+
+  it('normalizes periodic configured angles and keeps the lower duplicate', async () => {
+    const candidates = await generate([point(0, 0), point(4, 0), point(4, 4), point(0, 4)], {
+      settings: settings({
+        configuredRotationDeg: [45, 405, -315, 44.996, 45.004, -0.004, 359.996]
+      })
+    })
+
+    const configured = candidates.filter(({ reason }) => reason === 'configured')
+    expect(configured.map(({ rotationDeg }) => rotationDeg)).toEqual([44.996])
+    expect(candidates.map(({ rotationDeg }) => rotationDeg)).toEqual([0, 44.996, 90, 180, 270])
+  })
+
+  it('produces the same candidates for cyclically rotated input vertices', async () => {
+    const first = await generate([point(0, 0), point(6, 0), point(6, 2), point(0, 2)])
+    const rotated = await generate([point(6, 2), point(0, 2), point(0, 0), point(6, 0)])
+
+    expect(rotated).toEqual(first)
+  })
+
+  it('rejects invalid polygon geometry with a typed error', async () => {
+    const failure = await generate([point(0, 0), point(4, 0), point(2, 1), point(0, 4)]).catch(
+      (error: unknown) => error
+    )
+
+    expect(failure).toBeInstanceOf(IrregularGeometryInputError)
+  })
+})
