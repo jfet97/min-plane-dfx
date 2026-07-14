@@ -7,6 +7,12 @@ export const GeometryPredicates = {
   orientation
 } as const
 
+/**
+ * Classifies the turn from `origin -> first` toward `origin -> second` using
+ * an exact-sign orientation predicate. Positive means the second point is on
+ * the left in the app's Y-up DXF coordinates, negative means right, and zero
+ * means the three points are collinear.
+ */
 function orientation(
   origin: IrregularPoint,
   first: IrregularPoint,

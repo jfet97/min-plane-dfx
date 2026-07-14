@@ -37,12 +37,6 @@ If a task touches Effect APIs, inspect the installed packages in `node_modules` 
   those input checks inside services or algorithms. Runtime checks remain only
   for values derived after decoding, external-library output, arithmetic
   overflow, or invariants that cannot be represented by the input schema.
-- Treat exported Effect Schemas as the single owner of validation for schema-backed
-  inputs. Put finite-number, range, enum, structural, and cross-field input
-  invariants in the relevant schema, then decode at the boundary. Do not repeat
-  those input checks inside services or algorithms. Runtime checks remain only
-  for values derived after decoding, external-library output, arithmetic
-  overflow, or invariants that cannot be represented by the input schema.
 - No `as any`, `as unknown as`, or `as never` in app code. Prefer typed adapters, discriminated unions, guards, and explicit errors.
 - Avoid non-null assertions in runtime code. Use guards or explicit errors.
 - Use `@effect/platform-node` for Node filesystem/path services. Do not hand-roll FileSystem or Path layers.

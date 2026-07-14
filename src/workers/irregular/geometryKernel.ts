@@ -1,13 +1,16 @@
 /** Deterministic irregular geometry operations used by the worker boundary. */
 
-import { Context, Effect, Layer, Match } from 'effect'
+import { Context, Effect, Exit, Layer, Match, Schema } from 'effect'
 import type {
   FlattenSourceGeometryInput,
-  OffsetConvexPolygonInput,
   TransformCollisionGeometryInput,
   ValidatePlacementInput
 } from './services.js'
-import { IrregularGeometryInputError, IrregularNestingNotImplementedError } from './services.js'
+import {
+  IrregularGeometryInputError,
+  IrregularNestingNotImplementedError,
+  OffsetConvexPolygonInput
+} from './services.js'
 import { ArcFlattening } from './arcFlattening.js'
 import { EllipseFlattening } from './ellipseFlattening.js'
 import { ConvexHull } from './convexHull.js'
@@ -74,7 +77,7 @@ export namespace GeometryKernel {
      */
     readonly validatePlacement: (
       input: ValidatePlacementInput
-    ) => Effect.Effect<void, IrregularNestingNotImplementedError>
+    ) => Effect.Effect<void, IrregularNestingNotImplementedError | IrregularGeometryInputError>
   }
 }
 
@@ -157,9 +160,13 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
         )
       },
       convexHull: (points) => Effect.succeed(ConvexHull.compute(points)),
-      offsetConvexPolygon: ({ polygon, totalPaddingMm }) =>
-        computeCollisionOffsetMm(totalPaddingMm, settings).pipe(
-          Effect.flatMap((distanceMm) => ConvexPolygonOffset.compute(polygon, distanceMm))
+      offsetConvexPolygon: (input) =>
+        decodeOffsetConvexPolygonInput(input).pipe(
+          Effect.flatMap(({ polygon, totalPaddingMm }) =>
+            computeCollisionOffsetMm(totalPaddingMm, settings).pipe(
+              Effect.flatMap((distanceMm) => ConvexPolygonOffset.compute(polygon, distanceMm))
+            )
+          )
         ),
       transformCollisionGeometry: TransformCollisionGeometry.compute,
       validatePlacement: () => failNotImplemented('validatePlacement', settings)
@@ -197,6 +204,7 @@ function failNotImplemented(
   )
 }
 
+/** Combines schema-validated request padding with the configured safety margin. */
 function computeCollisionOffsetMm(
   totalPaddingMm: number,
   settings: IrregularGeometrySettings
@@ -210,6 +218,21 @@ function computeCollisionOffsetMm(
   }
 
   return Effect.succeed(distanceMm)
+}
+
+/** Decodes the operation input so callers cannot request an inward collision offset. */
+function decodeOffsetConvexPolygonInput(
+  input: OffsetConvexPolygonInput
+): Effect.Effect<OffsetConvexPolygonInput, IrregularGeometryInputError> {
+  const decoded = Schema.decodeUnknownExit(OffsetConvexPolygonInput)(input)
+  if (Exit.isFailure(decoded)) {
+    return failInvalidGeometryInput(
+      'offsetConvexPolygon',
+      'offset input must satisfy the shared offset geometry schema.'
+    )
+  }
+
+  return Effect.succeed(decoded.value)
 }
 
 function failInvalidGeometryInput(

@@ -772,6 +772,7 @@ decimal precision = 3
 scale = 1000 integer units per mm
 grid step = 0.001 mm
 rounding = nearest grid point, ties away from zero
+conservative offset allowance = 0.002 mm
 join type = Miter
 miter limit = 2.0
 end type = Polygon
@@ -779,7 +780,7 @@ future round-join arc tolerance = 0.01 mm
 fill rule = NonZero
 winding = normalize one outer collision ring counter-clockwise in Cartesian coordinates
 max scaled coordinate, including 2 * offset = 1,000,000,000
-adapter policy version = clipper2-offset-v1
+adapter policy version = clipper2-offset-v2
 ```
 
 The adapter converts real-valued coordinates at this one boundary only:
@@ -789,19 +790,21 @@ toGrid(valueMm) = sign(valueMm) * floor(abs(valueMm) * 1000 + 0.5)
 fromGrid(value) = value / 1000
 ```
 
-Convert the collision hull and the positive collision offset with `toGrid`, call
-the integer-path offset API, then dequantize with `fromGrid` without a second
-rounding pass. This avoids depending on library-internal floating-path conversion
-rules and keeps the quantization convention deterministic for cache identity.
+Convert the collision hull with `toGrid`. Before converting the positive collision
+offset, add the fixed `0.002 mm` conservative allowance, then call the
+integer-path offset API and dequantize with `fromGrid` without a second rounding
+pass. This avoids depending on library-internal floating-path conversion rules
+and keeps the quantization convention deterministic for cache identity.
 
 `0.001 mm` is 250 times finer than the starting `0.25 mm` flattening sag and
-safety-margin scale. A coordinate rounding error is at most `0.0005 mm`, so the
-grid is materially below the conservative clearance budget while still keeping
-the adapter's integer representation practical. Miter joins preserve the straight
-edges of convex collision hulls; the `2.0` limit prevents unbounded acute-angle
-spikes. The round-join tolerance is inactive for the initial Miter policy, but
-`0.01 mm` is reserved for any future Round policy so its approximation stays well
-below the `0.25 mm` flattening tolerance.
+safety-margin scale. Nearest rounding moves one source point by at most
+`sqrt(2) * 0.0005 mm`, while the requested offset can round down by at most
+`0.0005 mm`. The fixed `0.002 mm` allowance exceeds their combined error, so a
+quantized Clipper result cannot shrink the requested collision envelope. Miter
+joins preserve the straight edges of convex collision hulls; the `2.0` limit
+prevents unbounded acute-angle spikes. The round-join tolerance is inactive for
+the initial Miter policy, but `0.01 mm` is reserved for any future Round policy
+so its approximation stays well below the `0.25 mm` flattening tolerance.
 
 Before calling Clipper, normalize the single convex collision ring to
 counter-clockwise Cartesian winding and use `NonZero` for any adapter-owned

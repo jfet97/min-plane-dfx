@@ -11,7 +11,12 @@ import {
 import { Effect } from 'effect'
 import { IrregularPoint, IrregularPolygon } from '@shared/irregular/domain.js'
 import { ConvexPolygonValidation } from './convexPolygonValidation.js'
-import { CLIPPER2_OFFSET_POLICY, fromGrid, toGridMm } from './clipper2OffsetPolicy.js'
+import {
+  CLIPPER2_OFFSET_POLICY,
+  conservativeOffsetMm,
+  fromGrid,
+  toGridMm
+} from './clipper2OffsetPolicy.js'
 import { IrregularGeometryInputError } from './services.js'
 
 /** Validated convex geometry and a derived non-negative offset in millimeters. */
@@ -47,7 +52,8 @@ function compute(
   const quantizedValidation = validatePath(integerPath.path, 'quantized input')
   if (quantizedValidation !== undefined) return failInvalidInput(quantizedValidation)
 
-  const scaledOffset = toGridMm(input.distanceMm)
+  // compensate for the one-time nearest-grid conversion before Clipper offsets the quantized hull
+  const scaledOffset = toGridMm(conservativeOffsetMm(input.distanceMm))
   if (scaledOffset === undefined) {
     return failInvalidInput('distanceMm cannot be represented by the Clipper2 integer grid.')
   }

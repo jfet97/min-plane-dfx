@@ -52,6 +52,22 @@ function closedPolyline(x: number, y: number): string {
   ].join('')
 }
 
+function closedBowTiePolyline(): string {
+  return [
+    pair(0, 'LWPOLYLINE'),
+    pair(70, 1),
+    pair(90, 4),
+    pair(10, 0),
+    pair(20, 0),
+    pair(10, 20),
+    pair(20, 10),
+    pair(10, 0),
+    pair(20, 10),
+    pair(10, 20),
+    pair(20, 0)
+  ].join('')
+}
+
 /** Writes one inline DXF and removes it after the import assertion. */
 async function withImportedDxf(
   entities: ReadonlyArray<string>,
@@ -135,6 +151,49 @@ describe('DXF outline topology', () => {
         const piece = document.pieces[0]
         expect(piece?.geometry.closed).toBe(false)
         expect(piece?.warnings.some((warning) => warning.code === 'ambiguous_outline')).toBe(true)
+      }
+    )
+  })
+
+  it('rejects a closed self-intersecting polyline before a hull can hide its boundary', async () => {
+    await withImportedDxf([closedBowTiePolyline()], async (path) => {
+      const document = await importDxfFile(path)
+      const piece = document.pieces[0]
+      expect(piece?.geometry.closed).toBe(false)
+      expect(piece?.warnings.some((warning) => warning.code === 'self_intersecting_outline')).toBe(
+        true
+      )
+    })
+  })
+
+  it('rejects a degree-two LINE bow tie before a hull can hide its boundary', async () => {
+    await withImportedDxf(
+      [line(0, 0, 20, 10), line(20, 10, 0, 10), line(0, 10, 20, 0), line(20, 0, 0, 0)],
+      async (path) => {
+        const document = await importDxfFile(path)
+        const piece = document.pieces[0]
+        expect(piece?.geometry.closed).toBe(false)
+        expect(piece?.warnings.some((warning) => warning.code === 'self_intersecting_outline')).toBe(
+          true
+        )
+      }
+    )
+  })
+
+  it('does not close a disconnected outline more loosely at large coordinates', async () => {
+    const base = 1_000_000_000
+    await withImportedDxf(
+      [
+        line(base, 0, base + 20, 0),
+        line(base + 20.01, 0, base + 20, 10),
+        line(base + 20, 10, base, 10),
+        line(base, 10, base, 0)
+      ],
+      async (path) => {
+        const document = await importDxfFile(path)
+        const piece = document.pieces[0]
+        expect(piece?.geometry.closed).toBe(false)
+        expect(piece?.warnings.some((warning) => warning.code === 'open_outline')).toBe(true)
       }
     )
   })

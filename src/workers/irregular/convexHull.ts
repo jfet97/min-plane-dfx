@@ -6,6 +6,12 @@ export const ConvexHull = {
   compute
 } as const
 
+/**
+ * Wraps a finite point cloud in its smallest convex polygon using the monotone
+ * chain algorithm. The input order is irrelevant: points are sorted by X then
+ * Y first, duplicate coordinates are removed exactly, and the result follows
+ * the deterministic counter-clockwise boundary convention.
+ */
 function compute(points: ReadonlyArray<IrregularPoint>): IrregularPolygon {
   // sort left to right by x; when points share x, sort lower to higher by y
   // example: [(4, 3), (0, 5), (0, 1), (2, 9)] becomes [(0, 1), (0, 5), (2, 9), (4, 3)]

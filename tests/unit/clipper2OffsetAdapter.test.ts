@@ -60,6 +60,7 @@ describe('Clipper2 offset adapter', () => {
       scale: 1000,
       gridStepMm: 0.001,
       rounding: 'nearest grid point, ties away from zero',
+      conservativeOffsetAllowanceMm: 0.002,
       joinType: 'Miter',
       miterLimit: 2,
       endType: 'Polygon',
@@ -67,7 +68,7 @@ describe('Clipper2 offset adapter', () => {
       fillRule: 'NonZero',
       winding: 'counter-clockwise',
       maxScaledCoordinate: 1_000_000_000,
-      adapterPolicyVersion: 'clipper2-offset-v1'
+      adapterPolicyVersion: 'clipper2-offset-v2'
     })
   })
 
@@ -85,7 +86,12 @@ describe('Clipper2 offset adapter', () => {
     })
 
     expect(result).toEqual(
-      polygon([point(-1.5, -1.5), point(5.5, -1.5), point(5.5, 4.5), point(-1.5, 4.5)])
+      polygon([
+        point(-1.502, -1.502),
+        point(5.502, -1.502),
+        point(5.502, 4.502),
+        point(-1.502, 4.502)
+      ])
     )
   })
 
@@ -96,7 +102,12 @@ describe('Clipper2 offset adapter', () => {
     )
 
     expect(result).toEqual(
-      polygon([point(-1.5, -1.5), point(-1.5, 4.5), point(5.5, 4.5), point(5.5, -1.5)])
+      polygon([
+        point(-1.502, -1.502),
+        point(-1.502, 4.502),
+        point(5.502, 4.502),
+        point(5.502, -1.502)
+      ])
     )
   })
 
@@ -108,12 +119,33 @@ describe('Clipper2 offset adapter', () => {
 
     expect(result).toEqual(
       polygon([
-        point(-1.5, -1.5),
-        point(5.081, -1.5),
-        point(5.765, 0.551),
-        point(0.158, 4.756),
-        point(-1.5, 3.927)
+        point(-1.502, -1.502),
+        point(5.083, -1.502),
+        point(5.767, 0.552),
+        point(0.159, 4.759),
+        point(-1.502, 3.928)
       ])
+    )
+  })
+
+  it('keeps the requested real-valued envelope after nearest-grid conversion', async () => {
+    const widthMm = 1.00049
+    const requestedOffsetMm = 0.25049
+    const result = await runAdapter({
+      polygon: polygon([
+        point(0, 0),
+        point(widthMm, 0),
+        point(widthMm, 1),
+        point(0, 1)
+      ]),
+      distanceMm: requestedOffsetMm
+    })
+
+    expect(result).not.toBeInstanceOf(IrregularGeometryInputError)
+    if (result instanceof IrregularGeometryInputError) return
+
+    expect(Math.max(...result.points.map((point) => point.x))).toBeGreaterThanOrEqual(
+      widthMm + requestedOffsetMm
     )
   })
 

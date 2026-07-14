@@ -3,6 +3,7 @@
 import DxfParser from 'dxf-parser'
 import { readFile } from 'node:fs/promises'
 import { basename, extname } from 'node:path'
+import { orient2d } from 'robust-predicates'
 import { entityToGeometry, unionBounds } from './DxfBbox.js'
 import {
   DxfGeometrySummary,
@@ -226,16 +227,140 @@ function segmentEnd(segment: DxfGeometrySegment): Point2D {
 
 /** Compares imported endpoints without snapping or changing source coordinates. */
 function samePoint(leftPoint: Point2D, rightPoint: Point2D): boolean {
-  const scale = Math.max(
-    1,
-    Math.abs(leftPoint.x),
-    Math.abs(leftPoint.y),
-    Math.abs(rightPoint.x),
-    Math.abs(rightPoint.y)
-  )
   return (
-    Math.abs(leftPoint.x - rightPoint.x) <= TOPOLOGY_EPSILON_MM * scale &&
-    Math.abs(leftPoint.y - rightPoint.y) <= TOPOLOGY_EPSILON_MM * scale
+    Math.abs(leftPoint.x - rightPoint.x) <= TOPOLOGY_EPSILON_MM &&
+    Math.abs(leftPoint.y - rightPoint.y) <= TOPOLOGY_EPSILON_MM
+  )
+}
+
+interface StraightSourceSegment {
+  readonly start: Point2D
+  readonly end: Point2D
+  readonly entityIndex: number
+  readonly segmentIndex: number
+  readonly segmentCount: number
+  readonly entityClosed: boolean
+}
+
+/**
+ * Rejects crossings and non-adjacent touches between exact straight source
+ * edges before a convex hull could hide an ambiguous material boundary.
+ *
+ * Curved source edges are intentionally not approximated here: their collision
+ * sampling happens later with the configured sag setting, while this importer
+ * check only rejects topology that is already unambiguously invalid in the
+ * stored straight DXF segments.
+ */
+function hasSelfIntersectionBetweenStraightSegments(
+  entities: ReadonlyArray<ConvertedEntity>
+): boolean {
+  const segments: StraightSourceSegment[] = []
+  for (const [entityIndex, entity] of entities.entries()) {
+    for (const [segmentIndex, segment] of entity.geometry.segments.entries()) {
+      if (segment.kind !== 'line' || segment.bulge !== undefined || segment.sourceCurve !== undefined) {
+        continue
+      }
+      segments.push({
+        start: segmentStart(segment),
+        end: segmentEnd(segment),
+        entityIndex,
+        segmentIndex,
+        segmentCount: entity.geometry.segments.length,
+        entityClosed: entity.geometry.closed
+      })
+    }
+  }
+
+  for (let firstIndex = 0; firstIndex < segments.length; firstIndex += 1) {
+    const first = segments[firstIndex]
+    if (first === undefined) return true
+    for (let secondIndex = firstIndex + 1; secondIndex < segments.length; secondIndex += 1) {
+      const second = segments[secondIndex]
+      if (second === undefined) return true
+      if (areAdjacentStraightSegments(first, second)) continue
+      if (straightSegmentsIntersect(first, second)) return true
+    }
+  }
+
+  return false
+}
+
+/** Identifies the shared endpoints that are required by one source outline. */
+function areAdjacentStraightSegments(
+  first: StraightSourceSegment,
+  second: StraightSourceSegment
+): boolean {
+  if (first.entityIndex !== second.entityIndex) {
+    return segmentsShareEndpoint(first, second)
+  }
+
+  const indexDifference = Math.abs(first.segmentIndex - second.segmentIndex)
+  return (
+    indexDifference === 1 ||
+    (first.entityClosed && indexDifference === first.segmentCount - 1)
+  )
+}
+
+/** Returns whether two source edges share one declared endpoint. */
+function segmentsShareEndpoint(first: StraightSourceSegment, second: StraightSourceSegment): boolean {
+  return (
+    samePoint(first.start, second.start) ||
+    samePoint(first.start, second.end) ||
+    samePoint(first.end, second.start) ||
+    samePoint(first.end, second.end)
+  )
+}
+
+/** Tests two finite straight source edges with robust orientation predicates. */
+function straightSegmentsIntersect(first: StraightSourceSegment, second: StraightSourceSegment): boolean {
+  const firstStartTurn = orient2d(
+    first.start.x,
+    first.start.y,
+    first.end.x,
+    first.end.y,
+    second.start.x,
+    second.start.y
+  )
+  const firstEndTurn = orient2d(
+    first.start.x,
+    first.start.y,
+    first.end.x,
+    first.end.y,
+    second.end.x,
+    second.end.y
+  )
+  const secondStartTurn = orient2d(
+    second.start.x,
+    second.start.y,
+    second.end.x,
+    second.end.y,
+    first.start.x,
+    first.start.y
+  )
+  const secondEndTurn = orient2d(
+    second.start.x,
+    second.start.y,
+    second.end.x,
+    second.end.y,
+    first.end.x,
+    first.end.y
+  )
+
+  if (firstStartTurn === 0 && pointIsOnStraightSegment(second.start, first)) return true
+  if (firstEndTurn === 0 && pointIsOnStraightSegment(second.end, first)) return true
+  if (secondStartTurn === 0 && pointIsOnStraightSegment(first.start, second)) return true
+  if (secondEndTurn === 0 && pointIsOnStraightSegment(first.end, second)) return true
+
+  return (firstStartTurn > 0) !== (firstEndTurn > 0) && (secondStartTurn > 0) !== (secondEndTurn > 0)
+}
+
+/** Checks whether a collinear source point lies on a finite source edge. */
+function pointIsOnStraightSegment(point: Point2D, segment: StraightSourceSegment): boolean {
+  return (
+    point.x >= Math.min(segment.start.x, segment.end.x) &&
+    point.x <= Math.max(segment.start.x, segment.end.x) &&
+    point.y >= Math.min(segment.start.y, segment.end.y) &&
+    point.y <= Math.max(segment.start.y, segment.end.y)
   )
 }
 
@@ -293,6 +418,16 @@ function classifyOutline(
       outlineWarning(
         'ambiguous_outline',
         'The DXF piece contains an entity whose segments are disconnected or cannot be ordered into one path.'
+      )
+    )
+    return { closed: false, warnings }
+  }
+
+  if (hasSelfIntersectionBetweenStraightSegments(entities)) {
+    warnings.push(
+      outlineWarning(
+        'self_intersecting_outline',
+        'The DXF piece contains intersecting straight source edges, so its material boundary is ambiguous.'
       )
     )
     return { closed: false, warnings }

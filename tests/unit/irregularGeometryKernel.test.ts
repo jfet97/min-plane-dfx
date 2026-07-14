@@ -231,12 +231,33 @@ describe('GeometryKernel', () => {
     })
 
     expect(offset.points).toEqual([
-      point(-1, -1),
-      point(4.721, -1),
-      point(5.177, 0.368),
-      point(0.106, 4.171),
-      point(-1, 3.618)
+      point(-1.002, -1.002),
+      point(4.722, -1.002),
+      point(5.179, 0.368),
+      point(0.106, 4.173),
+      point(-1.002, 3.619)
     ])
+  })
+
+  it('rejects a negative padding value through the offset input schema', async () => {
+    const failure = await Effect.runPromise(
+      GeometryKernel.use((kernel) =>
+        kernel.offsetConvexPolygon({
+          polygon: polygon([point(0, 0), point(4, 0), point(4, 3), point(0, 3)]),
+          totalPaddingMm: -1
+        })
+      ).pipe(
+        Effect.match({
+          onFailure: (error) => error,
+          onSuccess: () => null
+        }),
+        Effect.provide(GeometryKernel.Live)
+      )
+    )
+
+    expect(failure).toBeInstanceOf(IrregularGeometryInputError)
+    expect(failure?.operation).toBe('offsetConvexPolygon')
+    expect(failure?.message).toBe('offset input must satisfy the shared offset geometry schema.')
   })
 
   it('rejects a non-convex polygon instead of silently producing a false collision shape', async () => {

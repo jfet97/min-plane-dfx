@@ -11,6 +11,7 @@ export const CLIPPER2_OFFSET_POLICY = {
   scale: 1000,
   gridStepMm: 0.001,
   rounding: 'nearest grid point, ties away from zero',
+  conservativeOffsetAllowanceMm: 0.002,
   joinType: 'Miter',
   miterLimit: 2.0,
   endType: 'Polygon',
@@ -18,8 +19,21 @@ export const CLIPPER2_OFFSET_POLICY = {
   fillRule: 'NonZero',
   winding: 'counter-clockwise',
   maxScaledCoordinate: 1_000_000_000,
-  adapterPolicyVersion: 'clipper2-offset-v1'
+  adapterPolicyVersion: 'clipper2-offset-v2'
 } as const
+
+/**
+ * Adds the fixed allowance required to preserve the requested real-valued
+ * collision envelope after nearest-grid coordinate and offset rounding.
+ *
+ * A source point can move by at most half a grid step on each axis, or less
+ * than `sqrt(2) * gridStepMm / 2` in any direction. The requested offset can
+ * then round down by another half grid step. `0.002 mm` exceeds their combined
+ * `0.001208 mm` maximum while staying far below the configured curve sag.
+ */
+export function conservativeOffsetMm(distanceMm: number): number {
+  return distanceMm + CLIPPER2_OFFSET_POLICY.conservativeOffsetAllowanceMm
+}
 
 /**
  * Quantizes millimeters to the adapter grid using nearest rounding with ties
