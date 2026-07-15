@@ -19,6 +19,7 @@ import { Rect } from '@shared/domain/geometry.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
 import { GeometryKernel } from '../../src/workers/irregular/geometryKernel.js'
 import { decodeStrictPriorityOrder } from '../../src/workers/algorithm/irregular/strictPriorityDecoder.js'
+import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
 import {
   IrregularGeometryInfeasibleError,
@@ -36,6 +37,16 @@ function polygon(points: ReadonlyArray<IrregularPoint>): IrregularPolygon {
 
 function squarePoints(size: number): ReadonlyArray<IrregularPoint> {
   return rectanglePoints(size, size)
+}
+
+function centeredSquarePoints(size: number): ReadonlyArray<IrregularPoint> {
+  const halfSize = size / 2
+  return [
+    point(-halfSize, -halfSize),
+    point(halfSize, -halfSize),
+    point(halfSize, halfSize),
+    point(-halfSize, halfSize)
+  ]
 }
 
 function rectanglePoints(width: number, height: number): ReadonlyArray<IrregularPoint> {
@@ -116,7 +127,8 @@ function decode(
   return Effect.runPromise(
     decodeStrictPriorityOrder(currentSheet, pieces, DEFAULT_IRREGULAR_NESTING_SETTINGS).pipe(
       Effect.provide(GeometryKernel.Live),
-      Effect.provide(NfpIfpServiceLive)
+      Effect.provide(NfpIfpServiceLive),
+      Effect.provide(IrregularPlacementScorer.Live)
     )
   )
 }
@@ -159,11 +171,12 @@ function decodeWithEqualCandidatePoints(
 
   return Effect.runPromise(
     decodeStrictPriorityOrder(currentSheet, [
-      preparedPiece('metadata-tie', squarePoints(2), transforms),
+      preparedPiece('metadata-tie', centeredSquarePoints(2), transforms),
       preparedPiece('metadata-marker', squarePoints(1), [transform(0)])
     ], DEFAULT_IRREGULAR_NESTING_SETTINGS).pipe(
       Effect.provide(GeometryKernel.Live),
-      Effect.provide(candidateService)
+      Effect.provide(candidateService),
+      Effect.provide(IrregularPlacementScorer.Live)
     )
   )
 }
@@ -302,6 +315,46 @@ describe('decodeStrictPriorityOrder', () => {
     }
   })
 
+  it('lets balanced compactness prefer a higher candidate that forms a better cluster', async () => {
+    const candidateService = Layer.succeed(NfpIfpService, {
+      computeNfp: () => Effect.die('unused in scorer integration test'),
+      computeIfpBounds: () => Effect.die('unused in scorer integration test'),
+      generatePlacementCandidates: ({ moving, placed }) => {
+        const transformMetadata = moving.transform
+        const points = placed.length === 0 ? [point(0, 0)] : [point(0, 4), point(6, 0)]
+        return Effect.succeed(
+          points.map(
+            (candidatePoint) =>
+              new IrregularPlacementCandidate({
+                pieceId: moving.sourcePieceId,
+                transform: transformMetadata,
+                point: candidatePoint,
+                diagnostics: []
+              })
+          )
+        )
+      }
+    })
+
+    const result = await Effect.runPromise(
+      decodeStrictPriorityOrder(
+        sheet(10, 10),
+        [
+          preparedPiece('wide-first', rectanglePoints(6, 1), [transform(0)]),
+          preparedPiece('balanced-second', rectanglePoints(2, 2), [transform(0)])
+        ],
+        DEFAULT_IRREGULAR_NESTING_SETTINGS
+      ).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(candidateService),
+        Effect.provide(IrregularPlacementScorer.Live)
+      )
+    )
+
+    expect(result.placements[1]?.transform.translateY).toBe(4)
+    expect(result.placements[1]?.transform.translateX).toBe(0)
+  })
+
   it('propagates an invalid collision polygon as a typed geometry error', async () => {
     const invalidPiece = preparedPiece('invalid', [
       point(0, 0),
@@ -318,7 +371,8 @@ describe('decodeStrictPriorityOrder', () => {
           onSuccess: () => undefined
         }),
         Effect.provide(GeometryKernel.Live),
-        Effect.provide(NfpIfpServiceLive)
+        Effect.provide(NfpIfpServiceLive),
+        Effect.provide(IrregularPlacementScorer.Live)
       )
     )
 

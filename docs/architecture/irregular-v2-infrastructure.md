@@ -40,23 +40,27 @@ module rather than another Effect service. `decodeStrictPriorityOrder` consumes
 an already priority-ordered list, transforms each piece's existing transform
 candidates in deterministic metadata order, and asks `NfpIfpService` for legal
 candidates against the real placed collision geometries. It chooses by
-candidate point `(y, x)` followed by transform `(index, rotationDeg, mirrored,
-reason)`, retains the chosen transformed geometry for later candidates, and
-records an ordinary no-fit piece as unplaced before continuing. Transform
-indexes are normally unique because `TransformGenerator` emits them that way;
-the complete tie-break keeps malformed or replayed input deterministic.
+the local balanced-compactness score, then translated candidate bottom/left and
+transform `(index, rotationDeg, mirrored, reason)`, retains the chosen
+transformed geometry for later candidates, and records an ordinary no-fit piece
+as unplaced before continuing. Transform indexes are normally unique because
+`TransformGenerator` emits them that way; the complete tie-break keeps malformed
+or replayed input deterministic.
 
 This is an intermediate strict-order decoder, not the future windowed beam or
 portfolio result. It does not generate transforms, reorder pieces, score
 layouts, prune a beam, emit history, or invent placement data. Candidate
-generation and direct placement validation remain the legality authority; the
-decoder only composes those completed geometry services and selects among their
-real legal candidates. A valid transformed polygon that exceeds the sheet is an
-infeasible transform and produces zero candidates, allowing the decoder to try
-the next supplied transform; invalid geometry and invalid derived arithmetic
-remain typed geometry-input failures. The supplied order must remain untouched
-so future beam and portfolio layers can make their priority decisions outside
-this baseline.
+generation and direct placement validation remain the legality authority. The
+decoder uses `IrregularPlacementScorer.Live` only to compare those real legal
+candidates with the first explicit local policy: balanced compactness of the
+combined collision-polygon bounds, then translated bottom/left and stable
+transform metadata ties. It does not yet use free-material metrics, a
+short-side-fill policy, or any portfolio/layout score. A valid transformed
+polygon that exceeds the sheet is an infeasible transform and produces zero
+candidates, allowing the decoder to try the next supplied transform; invalid
+geometry and invalid derived arithmetic remain typed failures. The supplied
+order must remain untouched so future beam and portfolio layers can make their
+priority decisions outside this baseline.
 
 `GeometryKernel.Live` currently implements DXF source flattening, convex hull,
 strictly convex polygon offsetting, and transformation of one padded collision
@@ -123,7 +127,7 @@ polygons, collision polygons, free material, candidates, and irregular progress.
 
 Geometry services remain under `src/workers/irregular/`. Placement selection,
 scoring, beam state, and search belong under `src/workers/algorithm/`, including
-the strict-priority decoder and its future irregular scorer and beam/search
+the strict-priority decoder, local irregular scorer, and future beam/search
 layers:
 
 - priority ordering;
@@ -131,6 +135,11 @@ layers:
 - windowed beam;
 - scoring;
 - GA/search.
+
+`src/workers/algorithm/irregular/irregularPlacementScorer.ts` now owns the
+dependency-free local balanced-compactness score for candidates already accepted
+by NFP/IFP generation and direct validation. A separate layout score for beam
+survivors and final beam/GA portfolio comparison remains future work.
 
 Until those algorithms are implemented, the remaining service boundaries stay
 as honest infrastructure-only failures. Free-material regions remain a

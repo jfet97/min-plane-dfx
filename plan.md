@@ -635,7 +635,8 @@ decode(priorityOrder, transforms, placementPolicy, orderWindow, geometryCache)
 Inputs:
 
 - priority-ordered piece ids;
-- selected transform per piece;
+- allowed transforms per piece for the strict baseline decoder, or later
+  transform choices supplied by a GA chromosome;
 - placement policy id;
 - `orderWindow`;
 - geometry cache.
@@ -649,6 +650,13 @@ Output:
 
 The decoder is shared by deterministic beam and GA. Neither optimizer is allowed
 to invent placements outside this kernel.
+
+The initial strict decoder evaluates every allowed transform and lets the local
+placement policy choose among the legal results. This is a baseline before GA
+exists, not an implicit GA transform-gene rule. When the GA receives a transform
+gene, its contract must explicitly choose one behavior: either force that
+transform and allow a normal no-fit result, or prefer it and define the ordered
+fallback transforms. The worker must not silently ignore a GA transform choice.
 
 ## Placement Legality
 
@@ -972,6 +980,10 @@ layout = decode(chromosome.priorityOrder,
 
 fitness = score(validated layout)
 ```
+
+The transform index is a future GA decision, not a behavior already provided by
+the strict baseline decoder. Before GA implementation, define whether that index
+is forced or preferred with an explicit fallback order.
 
 The GA must not encode raw placement coordinates. Legal placement remains inside
 the shared decoder.

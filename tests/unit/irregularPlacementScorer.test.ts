@@ -1,0 +1,297 @@
+import { Effect } from 'effect'
+import { describe, expect, it } from 'vitest'
+import { PieceId } from '@shared/domain/ids.js'
+import { SheetSpec } from '@shared/domain/nesting.js'
+import {
+  IrregularBounds,
+  IrregularPlacedPiece,
+  IrregularPlacement,
+  IrregularPlacementCandidate,
+  IrregularPoint,
+  IrregularPolygon,
+  IrregularTransform,
+  IrregularTransformCandidate,
+  TransformedCollisionGeometry
+} from '@shared/irregular/domain.js'
+import {
+  IrregularPlacementScorer,
+  IrregularPlacementScoringError,
+  type IrregularPlacementScore,
+  type ScoreIrregularPlacementCandidateInput
+} from '../../src/workers/algorithm/irregular/irregularPlacementScorer.js'
+
+function point(x: number, y: number): IrregularPoint {
+  return new IrregularPoint({ x, y })
+}
+
+function rectanglePoints(width: number, height: number): ReadonlyArray<IrregularPoint> {
+  return [point(0, 0), point(width, 0), point(width, height), point(0, height)]
+}
+
+function polygon(points: ReadonlyArray<IrregularPoint>): IrregularPolygon {
+  return new IrregularPolygon({ points })
+}
+
+function bounds(points: ReadonlyArray<IrregularPoint>): IrregularBounds {
+  return new IrregularBounds({
+    minX: Math.min(...points.map(({ x }) => x)),
+    minY: Math.min(...points.map(({ y }) => y)),
+    maxX: Math.max(...points.map(({ x }) => x)),
+    maxY: Math.max(...points.map(({ y }) => y))
+  })
+}
+
+function transform(
+  index: number,
+  rotationDeg = 0,
+  mirrored = false,
+  reason: IrregularTransformCandidate['reason'] = 'configured'
+): IrregularTransformCandidate {
+  return new IrregularTransformCandidate({ index, rotationDeg, mirrored, reason })
+}
+
+function movingGeometry(
+  id: string,
+  points: ReadonlyArray<IrregularPoint>,
+  movingTransform = transform(0)
+): TransformedCollisionGeometry {
+  return new TransformedCollisionGeometry({
+    sourcePieceId: PieceId.make(id),
+    transform: movingTransform,
+    polygon: polygon(points),
+    bounds: bounds(points)
+  })
+}
+
+function placedGeometry(
+  id: string,
+  points: ReadonlyArray<IrregularPoint>,
+  translateX: number,
+  translateY: number,
+  placedTransform = transform(0)
+): IrregularPlacedPiece {
+  const geometry = movingGeometry(id, points, placedTransform)
+  const placement = new IrregularPlacement({
+    sourcePieceId: PieceId.make(id),
+    transform: new IrregularTransform({
+      translateX,
+      translateY,
+      rotationDeg: placedTransform.rotationDeg,
+      mirrored: placedTransform.mirrored
+    })
+  })
+  return new IrregularPlacedPiece({ placement, collisionGeometry: geometry })
+}
+
+function candidate(
+  id: string,
+  x: number,
+  y: number,
+  candidateTransform = transform(0)
+): IrregularPlacementCandidate {
+  return new IrregularPlacementCandidate({
+    pieceId: PieceId.make(id),
+    transform: candidateTransform,
+    point: point(x, y),
+    diagnostics: []
+  })
+}
+
+function sheet(width: number, height: number): SheetSpec {
+  return new SheetSpec({ width, height, label: 'scorer test sheet' })
+}
+
+function score(input: ScoreIrregularPlacementCandidateInput) {
+  return Effect.runPromise(
+    IrregularPlacementScorer.use((scorer) => scorer.scoreCandidate(input)).pipe(
+      Effect.provide(IrregularPlacementScorer.Live)
+    )
+  )
+}
+
+async function rank(
+  inputs: ReadonlyArray<ScoreIrregularPlacementCandidateInput>
+): Promise<IrregularPlacementScore> {
+  const scores = await Promise.all(inputs.map(score))
+  return scores.reduce((best, current) =>
+    IrregularPlacementScorer.Make.compare(current, best) < 0 ? current : best
+  )
+}
+
+function baseInput(
+  currentSheet: SheetSpec,
+  moving: TransformedCollisionGeometry,
+  currentCandidate: IrregularPlacementCandidate,
+  placed: ReadonlyArray<IrregularPlacedPiece> = []
+): ScoreIrregularPlacementCandidateInput {
+  return {
+    sheet: currentSheet,
+    placed,
+    moving,
+    candidate: currentCandidate
+  }
+}
+
+describe('IrregularPlacementScorer', () => {
+  it('ranks candidates by the balanced tuple in lexicographic order', async () => {
+    const moving = movingGeometry('piece', rectanglePoints(1, 1))
+    const placed = [placedGeometry('placed', rectanglePoints(1, 1), 0, 0)]
+    const firstWins = await rank([
+      baseInput(sheet(10, 10), moving, candidate('piece', 4, 4), placed),
+      baseInput(sheet(10, 10), moving, candidate('piece', 6, 0), placed)
+    ])
+    expect(firstWins.candidate.point).toEqual(point(4, 4))
+
+    const normalizedSumWins = await rank([
+      baseInput(sheet(10, 20), moving, candidate('piece', 3, 1), placed),
+      baseInput(sheet(10, 20), moving, candidate('piece', 1, 7), placed)
+    ])
+    expect(normalizedSumWins.candidate.point).toEqual(point(3, 1))
+
+    const absoluteSpanWins = await rank([
+      baseInput(sheet(10, 20), moving, candidate('piece', 3, 3), placed),
+      baseInput(sheet(10, 20), moving, candidate('piece', 1, 7), placed)
+    ])
+    expect(absoluteSpanWins.candidate.point).toEqual(point(3, 3))
+
+    const largePlaced = [placedGeometry('placed-large', rectanglePoints(10, 10), 0, 0)]
+    const bottomWins = await rank([
+      baseInput(sheet(20, 20), moving, candidate('piece', 1, 2), largePlaced),
+      baseInput(sheet(20, 20), moving, candidate('piece', 1, 1), largePlaced)
+    ])
+    expect(bottomWins.candidate.point).toEqual(point(1, 1))
+
+    const leftWins = await rank([
+      baseInput(sheet(20, 20), moving, candidate('piece', 2, 1), largePlaced),
+      baseInput(sheet(20, 20), moving, candidate('piece', 1, 1), largePlaced)
+    ])
+    expect(leftWins.candidate.point).toEqual(point(1, 1))
+  })
+
+  it('reports the area and perimeter terms from the true combined collision span', async () => {
+    const moving = movingGeometry('moving', rectanglePoints(2, 2))
+    const result = await score(
+      baseInput(
+        sheet(20, 10),
+        moving,
+        candidate('moving', 1, 1),
+        [placedGeometry('placed', rectanglePoints(2, 2), 10, 2)]
+      )
+    )
+
+    expect(result.worstNormalizedSheetConsumption).toBe(0.55)
+    expect(result.normalizedSheetSpanSum).toBeCloseTo(0.85)
+    expect(result.usedClusterAreaMm2).toBe(33)
+    expect(result.usedClusterSpanMm).toBe(14)
+    expect(result.candidateBottomMm).toBe(1)
+    expect(result.candidateLeftMm).toBe(1)
+  })
+
+  it('uses translated moving polygon bounds for bottom and left', async () => {
+    const moving = movingGeometry('moving', [
+      point(-3, -2),
+      point(1, -2),
+      point(1, 2),
+      point(-3, 2)
+    ])
+    const result = await score(baseInput(sheet(20, 20), moving, candidate('moving', 5, 6)))
+
+    expect(result.candidateBottomMm).toBe(4)
+    expect(result.candidateLeftMm).toBe(2)
+  })
+
+  it('derives the combined span from translated vertices when both polygons have negative local bounds', async () => {
+    const moving = movingGeometry('moving', [
+      point(-2, -1),
+      point(1, -1),
+      point(1, 2),
+      point(-2, 2)
+    ])
+    const placed = [
+      placedGeometry(
+        'placed',
+        [point(-4, -3), point(-1, -3), point(-1, 1), point(-4, 1)],
+        11,
+        7
+      )
+    ]
+
+    const result = await score(baseInput(sheet(20, 20), moving, candidate('moving', 3, 2), placed))
+
+    expect(result.worstNormalizedSheetConsumption).toBe(0.45)
+    expect(result.normalizedSheetSpanSum).toBe(0.8)
+    expect(result.usedClusterAreaMm2).toBe(63)
+    expect(result.usedClusterSpanMm).toBe(16)
+    expect(result.candidateBottomMm).toBe(1)
+    expect(result.candidateLeftMm).toBe(1)
+  })
+
+  it('selects the same winner when candidate input is reversed', async () => {
+    const moving = movingGeometry('piece', rectanglePoints(1, 1))
+    const inputs = [
+      baseInput(sheet(10, 10), moving, candidate('piece', 4, 4)),
+      baseInput(sheet(10, 10), moving, candidate('piece', 6, 0))
+    ]
+
+    const forward = await rank(inputs)
+    const reversed = await rank([...inputs].reverse())
+    expect(reversed.candidate).toEqual(forward.candidate)
+  })
+
+  it('resolves exact score ties by transform metadata and then piece id', async () => {
+    const scoreFor = async (id: string, candidateTransform: IrregularTransformCandidate) => {
+      const moving = movingGeometry(id, [
+        point(-1, -1),
+        point(1, -1),
+        point(1, 1),
+        point(-1, 1)
+      ], candidateTransform)
+      return score(baseInput(sheet(10, 10), moving, candidate(id, 1, 1, candidateTransform)))
+    }
+
+    const lowerIndex = await scoreFor('piece', transform(0))
+    const higherIndex = await scoreFor('piece', transform(1))
+    expect(IrregularPlacementScorer.Make.compare(higherIndex, lowerIndex)).toBeGreaterThan(0)
+
+    const lowerRotation = await scoreFor('piece', transform(1, 0))
+    const higherRotation = await scoreFor('piece', transform(1, 90))
+    expect(IrregularPlacementScorer.Make.compare(higherRotation, lowerRotation)).toBeGreaterThan(0)
+
+    const unmirrored = await scoreFor('piece', transform(1, 0, false))
+    const mirrored = await scoreFor('piece', transform(1, 0, true))
+    expect(IrregularPlacementScorer.Make.compare(mirrored, unmirrored)).toBeGreaterThan(0)
+
+    const configured = await scoreFor('piece', transform(1, 0, false, 'configured'))
+    const edgeAligned = await scoreFor('piece', transform(1, 0, false, 'edge_alignment'))
+    expect(IrregularPlacementScorer.Make.compare(edgeAligned, configured)).toBeGreaterThan(0)
+
+    const firstPiece = await scoreFor('a-piece', transform(1))
+    const secondPiece = await scoreFor('z-piece', transform(1))
+    expect(IrregularPlacementScorer.Make.compare(secondPiece, firstPiece)).toBeGreaterThan(0)
+  })
+
+  it('scores candidates without deciding whether they are legal', async () => {
+    const moving = movingGeometry('outside', rectanglePoints(1, 1))
+    const result = await score(baseInput(sheet(2, 2), moving, candidate('outside', 5, 5)))
+
+    expect(result.candidate.point).toEqual(point(5, 5))
+  })
+
+  it('returns a typed error for mismatched candidate metadata', async () => {
+    const moving = movingGeometry('moving', rectanglePoints(1, 1))
+    const failure = await Effect.runPromise(
+      IrregularPlacementScorer.use((scorer) =>
+        scorer.scoreCandidate(baseInput(sheet(10, 10), moving, candidate('other', 0, 0)))
+      ).pipe(
+        Effect.match({
+          onFailure: (error) => error,
+          onSuccess: () => undefined
+        }),
+        Effect.provide(IrregularPlacementScorer.Live)
+      )
+    )
+
+    expect(failure).toBeInstanceOf(IrregularPlacementScoringError)
+    expect(failure?.operation).toBe('scoreCandidate')
+  })
+})

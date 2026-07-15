@@ -1,4 +1,4 @@
-import { Effect } from 'effect'
+import { Effect, Order } from 'effect'
 import type { PieceId } from '@shared/domain/ids.js'
 import type { SheetSpec } from '@shared/domain/nesting.js'
 import {
@@ -17,6 +17,11 @@ import {
   IrregularNestingNotImplementedError,
   NfpIfpService
 } from '../../irregular/services.js'
+import {
+  IrregularPlacementScorer,
+  IrregularPlacementScoringError,
+  IrregularPlacementScore
+} from './irregularPlacementScorer.js'
 
 /**
  * The concrete result of the intermediate strict-priority decoder.
@@ -32,6 +37,14 @@ export interface IrregularStrictPriorityDecodeResult {
   readonly unplacedPieceIds: ReadonlyArray<PieceId>
 }
 
+/** Stable transform order used before scoring the legal candidates they produce. */
+const transformCandidateOrder = Order.combineAll<IrregularTransformCandidate>([
+  Order.mapInput(Order.Number, (transform) => transform.index),
+  Order.mapInput(Order.Number, (transform) => transform.rotationDeg),
+  Order.mapInput(Order.Boolean, (transform) => transform.mirrored),
+  Order.mapInput(Order.String, (transform) => transform.reason)
+])
+
 /**
  * Decodes one supplied priority order with deterministic baseline geometry.
  *
@@ -42,12 +55,11 @@ export interface IrregularStrictPriorityDecodeResult {
  * and compare the layouts it produces; re-sorting here would hide those
  * optimizer decisions.
  *
- * Candidate selection uses the lowest `(y, x)` point, followed by the supplied
- * transform metadata. This is only a deterministic baseline; it is not a
- * compactness scorer and must not be treated as the future material-efficiency
- * policy. A valid transformed polygon that cannot fit the sheet yields no
- * candidates, so the decoder tries the next supplied transform before marking
- * the piece unplaced.
+ * Strict means that the supplied piece order is preserved. Among the legal
+ * candidates produced for each piece, transform and candidate selection uses
+ * the explicit balanced compactness policy. A valid transformed polygon that
+ * cannot fit the sheet yields no candidates, so the decoder tries the next
+ * supplied transform before marking the piece unplaced.
  *
  * Transform indexes are normally unique because `TransformGenerator` emits
  * them that way. Comparing index, rotation, mirror, and reason nevertheless
@@ -63,19 +75,22 @@ export function decodeStrictPriorityOrder(
   settings: IrregularNestingSettings
 ): Effect.Effect<
   IrregularStrictPriorityDecodeResult,
-  IrregularNestingNotImplementedError | IrregularGeometryInputError,
-  GeometryKernel | NfpIfpService
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularPlacementScoringError,
+  GeometryKernel | NfpIfpService | IrregularPlacementScorer
 > {
   return Effect.gen(function* () {
     const geometryKernel = yield* GeometryKernel
     const nfpIfpService = yield* NfpIfpService
+    const placementScorer = yield* IrregularPlacementScorer
     const placements: IrregularPlacement[] = []
     const unplacedPieceIds: PieceId[] = []
     const placed: IrregularPlacedPiece[] = []
 
     for (const piece of pieces) {
       const candidates: DecoderCandidate[] = []
-      const transforms = [...piece.transforms].sort(compareTransformCandidates)
+      const transforms = [...piece.transforms].sort(transformCandidateOrder)
 
       for (const transform of transforms) {
         const moving = yield* geometryKernel.transformCollisionGeometry({
@@ -90,11 +105,17 @@ export function decodeStrictPriorityOrder(
         })
 
         for (const candidate of legalCandidates) {
-          candidates.push({ candidate, moving })
+          const score = yield* placementScorer.scoreCandidate({
+            sheet,
+            placed,
+            moving,
+            candidate
+          })
+          candidates.push({ candidate, moving, score })
         }
       }
 
-      const selected = selectCandidate(candidates)
+      const selected = selectCandidate(candidates, placementScorer)
       if (selected === undefined) {
         unplacedPieceIds.push(piece.source.id)
         continue
@@ -125,39 +146,15 @@ export function decodeStrictPriorityOrder(
 interface DecoderCandidate {
   readonly candidate: IrregularPlacementCandidate
   readonly moving: TransformedCollisionGeometry
-}
-
-function compareTransformCandidates(
-  first: IrregularTransformCandidate,
-  second: IrregularTransformCandidate
-): number {
-  if (first.index !== second.index) return first.index - second.index
-  if (first.rotationDeg !== second.rotationDeg) return first.rotationDeg - second.rotationDeg
-  if (first.mirrored !== second.mirrored) return Number(first.mirrored) - Number(second.mirrored)
-  return compareStrings(first.reason, second.reason)
+  readonly score: IrregularPlacementScore
 }
 
 function selectCandidate(
-  candidates: ReadonlyArray<DecoderCandidate>
+  candidates: ReadonlyArray<DecoderCandidate>,
+  scorer: IrregularPlacementScorer.Service
 ): DecoderCandidate | undefined {
   return candidates.reduce<DecoderCandidate | undefined>((selected, candidate) => {
-    if (selected === undefined || compareCandidates(candidate, selected) < 0) return candidate
+    if (selected === undefined || scorer.compare(candidate.score, selected.score) < 0) return candidate
     return selected
   }, undefined)
-}
-
-function compareCandidates(first: DecoderCandidate, second: DecoderCandidate): number {
-  const pointYComparison = first.candidate.point.y - second.candidate.point.y
-  if (pointYComparison !== 0) return pointYComparison
-
-  const pointXComparison = first.candidate.point.x - second.candidate.point.x
-  if (pointXComparison !== 0) return pointXComparison
-
-  return compareTransformCandidates(first.candidate.transform, second.candidate.transform)
-}
-
-function compareStrings(first: string, second: string): number {
-  if (first < second) return -1
-  if (first > second) return 1
-  return 0
 }

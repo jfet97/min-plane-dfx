@@ -51,7 +51,10 @@ directory owns deterministic collision-geometry preparation and geometry-kernel
 operations such as flattening, convex hulls, offsets, and transforms. It does
 not own placement generation, scoring, beam state, or search. Those algorithm
 behaviors belong under `src/workers/algorithm/`, including the strict-priority
-irregular decoder under `src/workers/algorithm/irregular/`.
+irregular decoder and its dependency-free local balanced-compactness scorer
+under `src/workers/algorithm/irregular/`. The scorer ranks candidates already
+accepted by geometry; it does not decide legality or replace a future
+beam/portfolio layout scorer.
 
 The `irregular-convex-v2` worker mode is exposed through the request schema and
 renderer, but the worker currently returns `not_implemented` before MaxRects is
