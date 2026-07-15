@@ -1,6 +1,7 @@
 import { Layer } from 'effect'
 import { CollisionGeometryBuilder } from './collisionGeometryBuilder.js'
 import { FreeMaterialServiceLive } from './freeMaterialService.js'
+import { GeometrySettings } from './geometryKernel.js'
 import { NfpIfpServiceLive } from './nfpIfpService.js'
 import { TransformGeneratorLive } from './transformGenerator.js'
 import {
@@ -17,4 +18,4 @@ export const IrregularNestingInfrastructureLive = Layer.mergeAll(
   PriorityOrderServiceUnimplemented,
   IrregularNestingPortfolioUnimplemented,
   GeometryCacheInMemory
-)
+).pipe(Layer.provideMerge(GeometrySettings.Live))

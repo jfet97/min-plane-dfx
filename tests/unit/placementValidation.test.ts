@@ -15,7 +15,7 @@ import { PieceId } from '@shared/domain/ids.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
 import type { ValidatePlacementInput } from '../../src/workers/irregular/services.js'
 import { IrregularGeometryInputError } from '../../src/workers/irregular/services.js'
-import { GeometryKernel } from '../../src/workers/irregular/geometryKernel.js'
+import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { PlacementValidation } from '../../src/workers/irregular/placementValidation.js'
 
 function point(x: number, y: number): IrregularPoint {
@@ -210,7 +210,8 @@ describe('PlacementValidation', () => {
     await expect(
       Effect.runPromise(
         GeometryKernel.use((kernel) => kernel.validatePlacement(value)).pipe(
-          Effect.provide(GeometryKernel.Live)
+          Effect.provide(GeometryKernel.Live),
+          Effect.provide(GeometrySettings.Live)
         )
       )
     ).resolves.toBeUndefined()

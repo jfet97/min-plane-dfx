@@ -5,7 +5,13 @@ import { useHistoryStore } from '../composables/useHistoryStore.js'
 import { useSettings } from '../composables/useSettings.js'
 import { useViewport } from '../composables/useViewport.js'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
-import type { NestingSubRun, Placement, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
+import {
+  isIrregularHistoryFrame,
+  type NestingSubRun,
+  type Placement,
+  type PreparedPiece,
+  type SheetSpec
+} from '@shared/domain/nesting.js'
 
 type Segment = NonNullable<ImportedPiece['geometry']['segments'][number]>
 type VisualMode = 'shape' | 'footprint'
@@ -207,10 +213,15 @@ const viewBoxString = computed(() => {
 const placementsToRender = computed<ReadonlyArray<Placement>>(() => {
   if (props.mode !== 'result') return []
   const frame = history.selectedFrame.value
-  if (frame && frame.plate.placements.length > 0) {
+  if (frame && !isIrregularHistoryFrame(frame) && frame.plate.placements.length > 0) {
     return frame.plate.placements
   }
   return selectedSubRun.value?.placements ?? history.selectedRun.value?.placements ?? []
+})
+
+const irregularLayout = computed(() => {
+  const layout = history.selectedRun.value?.layout ?? history.result.value?.layout
+  return layout?.kind === 'irregular' ? layout : null
 })
 
 const sourcePiecesById = computed(() => {
@@ -242,7 +253,8 @@ const resultPlacementItems = computed<ReadonlyArray<ResultPlacementItem>>(() =>
 
 const freeRectanglesToRender = computed(() => {
   if (props.mode !== 'result' || !showFreeRectangles.value) return []
-  return history.selectedFrame.value?.plate.freeRectangles ?? []
+  const frame = history.selectedFrame.value
+  return frame && !isIrregularHistoryFrame(frame) ? frame.plate.freeRectangles : []
 })
 
 const showSourceGeometry = computed(() => props.mode === 'import')
@@ -384,7 +396,8 @@ function sourcePaddingRect(piece: ImportedPiece): ViewBox {
     <svg
       v-if="
         (props.mode === 'import' && store.state.value.pieces.length > 0) ||
-        placementsToRender.length > 0
+        placementsToRender.length > 0 ||
+        irregularLayout !== null
       "
       :viewBox="viewBoxString"
       preserveAspectRatio="xMidYMid meet"
@@ -514,6 +527,16 @@ function sourcePaddingRect(piece: ImportedPiece): ViewBox {
         </g>
       </g>
 
+      <text
+        v-if="irregularLayout && !showResultRectangles"
+        x="8"
+        y="18"
+        fill="var(--text-secondary)"
+        font-size="11"
+      >
+        {{ irregularLayout.placements.length }} irregular transform placement(s); source-shape result rendering is not available yet.
+      </text>
+
       <!-- Free-rectangle overlays from the selected frame. -->
       <g v-if="freeRectanglesToRender.length > 0">
         <rect
@@ -613,7 +636,7 @@ function sourcePaddingRect(piece: ImportedPiece): ViewBox {
     </div>
 
     <div
-      v-if="props.mode === 'result' && history.selectedFrame.value?.plate.freeRectangles.length"
+      v-if="props.mode === 'result' && freeRectanglesToRender.length"
       class="view-controls"
       @pointerdown.stop="stopCanvasGesture"
       @pointermove.stop="stopCanvasGesture"

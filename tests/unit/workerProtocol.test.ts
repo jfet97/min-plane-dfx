@@ -142,16 +142,49 @@ describe('WorkerResponse', () => {
     expect(Exit.isSuccess(result)).toBe(true)
   })
 
-  it('accepts a not_implemented failure response with worker mode context', () => {
+  it('accepts a tagged irregular history frame without rectangular state', () => {
+    const response = {
+      type: 'history_frame' as const,
+      requestId: 'r-1',
+      jobId: 'job-1',
+      payload: {
+        kind: 'irregular' as const,
+        frameId: 'f-1',
+        jobId: 'job-1',
+        strategyRunId: 's-1',
+        strategyLabel: 'irregular beam',
+        stepIndex: 1,
+        title: 'beam step',
+        placements: [
+          {
+            pieceId: 'copy-1',
+            sourcePieceId: 'source-1',
+            transform: { translateX: 2, translateY: 3, rotationDeg: 0, mirrored: false }
+          }
+        ],
+        remainingPieceIds: ['copy-2'],
+        unplacedPieceIds: [],
+        beamRank: 0,
+        beamWidth: 4,
+        candidateCount: 2,
+        createdAt: '2026-07-15T00:00:00.000Z'
+      }
+    }
+    const result = validate(WorkerResponse, response)
+    expect(Exit.isSuccess(result)).toBe(true)
+  })
+
+  it('accepts a typed irregular source-geometry failure response', () => {
     const response = {
       type: 'failure' as const,
       requestId: 'r-1',
       jobId: 'job-1',
       error: {
-        code: 'not_implemented',
-        message: 'Irregular convex nesting is wired but not implemented.',
+        code: 'irregular_source_geometry_missing',
+        message: 'No imported source geometry was found for prepared piece p-1.',
         context: {
-          workerMode: 'irregular-convex-v2'
+          preparedPieceId: 'p-1',
+          sourcePieceId: 'source-1'
         }
       }
     }

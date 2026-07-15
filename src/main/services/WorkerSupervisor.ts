@@ -208,16 +208,37 @@ export class WorkerSupervisor {
   private handleWorkerMessage(parsed: WorkerResponse): void {
     if (!this.current) return
 
-    if (parsed.type === 'history_frame' || parsed.type === 'history_complete') {
-      if (parsed.type === 'history_complete') {
-        this.current.historySummary = parsed.payload
+    if (parsed.type === 'history_frame') {
+      const event: NestingHistoryEvent = {
+        type: parsed.type,
+        requestId: parsed.requestId,
+        jobId: parsed.jobId,
+        payload: parsed.payload
       }
-      const event = parsed as NestingHistoryEvent
       for (const listener of this.current.listeners) {
         try {
           listener(event)
         } catch (err) {
           // A misbehaving listener must not crash the worker pipeline.
+          console.error('[WorkerSupervisor] history listener threw:', err)
+        }
+      }
+      return
+    }
+
+    if (parsed.type === 'history_complete') {
+      this.current.historySummary = parsed.payload
+      const event: NestingHistoryEvent = {
+        type: parsed.type,
+        requestId: parsed.requestId,
+        jobId: parsed.jobId,
+        payload: parsed.payload
+      }
+      for (const listener of this.current.listeners) {
+        try {
+          listener(event)
+        } catch (err) {
+          // a misbehaving listener must not crash the worker pipeline
           console.error('[WorkerSupervisor] history listener threw:', err)
         }
       }
@@ -255,7 +276,7 @@ export class WorkerSupervisor {
     }
 
     if (parsed.type === 'failure') {
-      const code = parsed.error.code as AppErrorCode
+      const code: AppErrorCode = parsed.error.code
       const message = parsed.error.message
       console.error('[main:worker] failure', {
         jobId: this.current.request.jobId,

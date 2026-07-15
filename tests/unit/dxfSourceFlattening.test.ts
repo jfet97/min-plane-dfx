@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { importDxfFile } from '@main/services/DxfImportService.js'
 import { cloneImportedPiece } from '@shared/sourcePiecesForPreparedPieces.js'
-import { IrregularGeometrySettings } from '@shared/irregular/domain.js'
+import { IrregularGeometrySettings, IrregularNestingSettings } from '@shared/irregular/domain.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 
@@ -84,7 +84,15 @@ async function flatten(piece: ImportedPiece, sagToleranceMm: number) {
   return Effect.runPromise(
     GeometryKernel.use((kernel) => kernel.flattenSourceGeometry({ piece })).pipe(
       Effect.provide(GeometryKernel.Layer),
-      Effect.provide(Layer.succeed(GeometrySettings, settings))
+      Effect.provide(
+        Layer.succeed(
+          GeometrySettings,
+          new IrregularNestingSettings({
+            geometry: settings,
+            optimizer: GeometrySettings.Make.optimizer
+          })
+        )
+      )
     )
   )
 }

@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { importDxfFile } from '@main/services/DxfImportService.js'
 import { CollisionGeometryBuilder } from '../../src/workers/irregular/collisionGeometryBuilder.js'
+import { GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 
 function pair(code: number, value: number | string): string {
   return `${code}\n${value}\n`
@@ -126,7 +127,8 @@ describe('DXF outline topology', () => {
               onFailure: (error) => error,
               onSuccess: () => null
             }),
-            Effect.provide(CollisionGeometryBuilder.Live)
+            Effect.provide(CollisionGeometryBuilder.Live),
+            Effect.provide(GeometrySettings.Live)
           )
         )
         expect(collisionResult?._tag).toBe('IrregularGeometryInputError')

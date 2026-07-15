@@ -895,6 +895,26 @@ must never prove that a placement is legal or impossible.
 
 Beam search keeps multiple partial layouts alive.
 
+#### Current Baseline
+
+The deterministic convex baseline is implemented behind the worker boundary:
+
+- `GeometrySettings` yields one schema-validated `IrregularNestingSettings`
+  service value for geometry and optimizer configuration; the default layer is
+  replaceable in tests and future runtime configuration;
+- closed DXF outlines are flattened, hulled, offset, transformed, and validated;
+- `orderWindow = 1`, `2`, and `3` are supported by deterministic windowed beam
+  expansion with beam-width pruning, bounded local candidate alternatives, and
+  state deduplication;
+- beam survivor scoring uses unplaced count, free-material usability and
+  fragmentation metrics, then compact collision bounds;
+- real transform placements, including their source-space placement reference,
+  and tagged irregular NDJSON history frames cross the worker protocol without
+  rectangle stand-ins.
+
+The GA portfolio, GA-selected transforms, transform-aware result rendering, and
+CSV export of irregular transforms remain future work.
+
 V2 uses a priority-bounded beam:
 
 ```text

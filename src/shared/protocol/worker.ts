@@ -5,10 +5,10 @@ import { JobId } from '../domain/ids.js'
 import {
   NestingRequest,
   NestingResult,
-  NestingHistoryFrame,
+  NestingHistoryFramePayload,
   NestingHistorySummary
 } from '../domain/nesting.js'
-import type { SerializedAppError } from './errors.js'
+import { AppErrorCode, type SerializedAppError } from './errors.js'
 
 /** Worker progress phases. Honest, lifecycle-only: no fake algorithm %. */
 export const WorkerProgressPhase = [
@@ -49,7 +49,7 @@ export type WorkerRequest = Schema.Schema.Type<typeof WorkerRequest>
 export class WorkerResponseFailureError extends Schema.Class<WorkerResponseFailureError>(
   'WorkerResponseFailureError'
 )({
-  code: Schema.String,
+  code: Schema.Literals([...AppErrorCode]),
   message: Schema.String,
   context: Schema.optional(Schema.Record(Schema.String, Schema.Unknown))
 }) {}
@@ -89,7 +89,7 @@ export class WorkerHistoryFrameResponse extends Schema.Class<WorkerHistoryFrameR
   ),
   requestId: Schema.String,
   jobId: JobId,
-  payload: NestingHistoryFrame
+  payload: NestingHistoryFramePayload
 }) {}
 
 export class WorkerHistoryCompleteResponse extends Schema.Class<WorkerHistoryCompleteResponse>(
@@ -139,24 +139,6 @@ export class WorkerFailureResponse extends Schema.Class<WorkerFailureResponse>(
     })
   }
 
-  static notImplemented(input: {
-    readonly requestId: string
-    readonly jobId: JobId
-    readonly mode: string
-    readonly message: string
-  }): WorkerFailureResponse {
-    return new WorkerFailureResponse({
-      requestId: input.requestId,
-      jobId: input.jobId,
-      error: new WorkerResponseFailureError({
-        code: 'not_implemented',
-        message: input.message,
-        context: {
-          workerMode: input.mode
-        }
-      })
-    })
-  }
 }
 
 export const WorkerResponse = Schema.Union([

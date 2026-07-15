@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { isIrregularHistoryFrame } from '@shared/domain/nesting.js'
+import type { NestingHistoryFramePayload } from '@shared/domain/nesting.js'
 import { useHistoryStore } from '../composables/useHistoryStore.js'
 
 const history = useHistoryStore()
@@ -13,6 +15,26 @@ function onSliderInput(event: Event): void {
 
 function onSpeedChange(event: Event): void {
   history.setSpeed(Number(inputValue(event)))
+}
+
+function placedCount(frame: NestingHistoryFramePayload): number {
+  return isIrregularHistoryFrame(frame) ? frame.placements.length : frame.plate.placements.length
+}
+
+function remainingCount(frame: NestingHistoryFramePayload): number {
+  return isIrregularHistoryFrame(frame)
+    ? frame.remainingPieceIds.length
+    : frame.state.remainingPieceIds.length
+}
+
+function unplacedCount(frame: NestingHistoryFramePayload): number {
+  return isIrregularHistoryFrame(frame)
+    ? frame.unplacedPieceIds.length
+    : frame.state.unplacedPieceIds.length
+}
+
+function freeRectangleCount(frame: NestingHistoryFramePayload): number | null {
+  return isIrregularHistoryFrame(frame) ? null : frame.plate.freeRectangles.length
 }
 </script>
 
@@ -91,16 +113,19 @@ function onSpeedChange(event: Event): void {
       </p>
       <div v-if="history.selectedFrame.value" class="state-info">
         <span title="Number of committed placements in this retained beam state.">
-          Placed {{ history.selectedFrame.value.plate.placements.length }}
+          Placed {{ placedCount(history.selectedFrame.value) }}
         </span>
-        <span title="Number of MaxRects free rectangles in this retained beam state.">
-          Free rects {{ history.selectedFrame.value.plate.freeRectangles.length }}
+        <span
+          v-if="freeRectangleCount(history.selectedFrame.value) !== null"
+          title="Number of MaxRects free rectangles in this retained beam state."
+        >
+          Free rects {{ freeRectangleCount(history.selectedFrame.value) }}
         </span>
         <span title="Pieces still queued for future placement attempts in the selected beam state.">
-          Remaining {{ history.selectedFrame.value.state.remainingPieceIds.length }}
+          Remaining {{ remainingCount(history.selectedFrame.value) }}
         </span>
         <span title="Pieces already rejected as not fitting in the selected beam state.">
-          Unplaced {{ history.selectedFrame.value.state.unplacedPieceIds.length }}
+          Unplaced {{ unplacedCount(history.selectedFrame.value) }}
         </span>
       </div>
       <div v-if="history.selectedStepFrames.value.length > 1" class="beam-ranks">

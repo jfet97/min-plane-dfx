@@ -4,13 +4,16 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import { decode } from 'iconv-lite'
+import type { Schema } from 'effect'
+import { NestingHistoryFrame as NestingHistoryFrameSchema } from '@shared/domain/nesting.js'
 import {
   buildCsvExportFileName,
   exportCsvResultToFile,
   exportNestingRequestToFile,
   exportNestingResultToFile,
   exportHistoryToFile,
-  loadHistoryReplayFromFile
+  loadHistoryReplayFromFile,
+  type EncodedNestingHistoryFramePayload
 } from '../../src/main/services/ExportService.js'
 import type {
   NestingHistoryFrame,
@@ -82,6 +85,14 @@ const sampleFrame: NestingHistoryFrame = {
   plate: { placements: [], freeRectangles: [] },
   state: { remainingPieceIds: [], unplacedPieceIds: [] },
   createdAt: '2025-01-01T00:00:00.000Z'
+}
+
+type EncodedRectangularHistoryFrame = Schema.Codec.Encoded<typeof NestingHistoryFrameSchema>
+
+function isEncodedRectangularHistoryFrame(
+  frame: EncodedNestingHistoryFramePayload
+): frame is EncodedRectangularHistoryFrame {
+  return !('kind' in frame && frame.kind === 'irregular')
 }
 
 const defaultOptions: NestingRequest['options'] = {
@@ -243,6 +254,9 @@ describe('ExportService', () => {
     expect(frames.length).toBe(1)
     const frame = frames[0]
     if (!frame) throw new Error('expected replay frame')
+    if (!isEncodedRectangularHistoryFrame(frame)) {
+      throw new Error('expected a rectangular replay frame')
+    }
 
     expect(frame.frameId).toBe('f-1')
     expect(frame.beam?.selectedCandidateOrderId).toBe('order-1')

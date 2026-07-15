@@ -8,7 +8,7 @@ import type {
 import type { RunGifExportPayload } from '@shared/protocol/ipc.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
 import type {
-  NestingHistoryFrame,
+  NestingHistoryFramePayload,
   NestingRequest,
   NestingResult,
   ProjectHistoryRef
@@ -136,7 +136,10 @@ const api: AppApi = {
   },
 
   loadHistoryReplay: (ref) =>
-    invokeEnvelope<[ProjectHistoryRef], { readonly frames: ReadonlyArray<NestingHistoryFrame> }>(
+    invokeEnvelope<
+      [ProjectHistoryRef],
+      { readonly frames: ReadonlyArray<NestingHistoryFramePayload> }
+    >(
       'nesting:load-replay',
       cloneHistoryRefForIpc(ref)
     ).then((r) => r.frames),

@@ -1,7 +1,7 @@
 import { reactive, computed, type UnwrapNestedRefs } from 'vue'
 import { ProjectHistoryRef as ProjectHistoryRefModel } from '@shared/domain/nesting.js'
 import type {
-  NestingHistoryFrame,
+  NestingHistoryFramePayload,
   NestingHistorySummary,
   NestingResult,
   NestingStrategyResult,
@@ -23,7 +23,7 @@ const MAX_RETAINED_FRAMES = 500
 
 interface MutableHistoryState {
   result: NestingResult | null
-  framesByRun: Record<string, NestingHistoryFrame[]>
+  framesByRun: Record<string, NestingHistoryFramePayload[]>
   selectedStrategyRunId: string | null
   selectedStepIndex: number
   selectedBeamRank: number
@@ -86,7 +86,7 @@ function startPlayback(): void {
   )
 }
 
-function currentFrames(): NestingHistoryFrame[] {
+function currentFrames(): NestingHistoryFramePayload[] {
   if (!state.selectedStrategyRunId) return []
   return state.framesByRun[state.selectedStrategyRunId] ?? []
 }
@@ -102,15 +102,15 @@ function currentStepPosition(steps: ReadonlyArray<number>): number {
   return Math.max(0, steps.length - 1)
 }
 
-function latestStepIndex(frames: ReadonlyArray<NestingHistoryFrame>): number {
+function latestStepIndex(frames: ReadonlyArray<NestingHistoryFramePayload>): number {
   if (frames.length === 0) return -1
   const latestStep = Math.max(...frames.map((frame) => frame.stepIndex))
   return latestStep
 }
 
 function selectedFrameFromList(
-  frames: ReadonlyArray<NestingHistoryFrame>
-): NestingHistoryFrame | null {
+  frames: ReadonlyArray<NestingHistoryFramePayload>
+): NestingHistoryFramePayload | null {
   if (frames.length === 0 || state.selectedStepIndex < 0) return null
   const exact = frames.find(
     (frame) =>
@@ -166,10 +166,10 @@ export function useHistoryStore() {
     )
   })
   const frames = computed(() => currentFrames())
-  const selectedFrame = computed<NestingHistoryFrame | null>(() => {
+  const selectedFrame = computed<NestingHistoryFramePayload | null>(() => {
     return selectedFrameFromList(currentFrames())
   })
-  const selectedStepFrames = computed<ReadonlyArray<NestingHistoryFrame>>(() => {
+  const selectedStepFrames = computed<ReadonlyArray<NestingHistoryFramePayload>>(() => {
     const selected = selectedFrame.value
     if (!selected) return []
     return [...currentFrames()]
@@ -274,7 +274,7 @@ export function useHistoryStore() {
       state.lastHistoryRef = normalizedRecord.history
     },
 
-    pushFrame(frame: NestingHistoryFrame): void {
+    pushFrame(frame: NestingHistoryFramePayload): void {
       const runId = frame.strategyRunId
       const existing = state.framesByRun[runId] ?? []
       if (existing.some((current) => current.frameId === frame.frameId)) return

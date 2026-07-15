@@ -60,6 +60,7 @@ function settings(
 function generate(
   points: ReadonlyArray<IrregularPoint>,
   options: {
+    readonly allowRotation?: boolean
     readonly allowMirror?: boolean
     readonly settings?: IrregularOptimizerSettings
   } = {}
@@ -68,6 +69,7 @@ function generate(
     TransformGenerator.use((service) =>
       service.generateTransforms({
         geometry: collisionGeometry(points),
+        allowRotation: options.allowRotation ?? true,
         allowMirror: options.allowMirror ?? false,
         settings: options.settings ?? settings()
       })
@@ -76,6 +78,14 @@ function generate(
 }
 
 describe('TransformGenerator.Live', () => {
+  it('emits only the zero-degree orientation when rotation is disabled', async () => {
+    const candidates = await generate([point(0, 0), point(4, 0), point(4, 4), point(0, 4)], {
+      allowRotation: false
+    })
+
+    expect(candidates.map(({ rotationDeg }) => rotationDeg)).toEqual([0])
+  })
+
   it('returns the four orthogonal baseline choices for a square', async () => {
     const candidates = await generate([point(0, 0), point(4, 0), point(4, 4), point(0, 4)])
 

@@ -20,6 +20,7 @@ import { prepareCsvPieces } from '@shared/prepareCsvPieces.js'
 import { JobId, PieceId } from '@shared/domain/ids.js'
 import type {
   NestingHistorySummary,
+  NestingLayout,
   NestingOptions,
   NestingRequest,
   NestingResult,
@@ -33,6 +34,7 @@ import type {
   ProjectHistoryRef,
   SheetSpec
 } from '@shared/domain/nesting.js'
+import type { IrregularPlacement } from '@shared/irregular/domain.js'
 import type {
   CsvCutRow,
   CsvRunRecord,
@@ -280,6 +282,47 @@ function clonePlacement(placement: Placement): Placement {
   }
 }
 
+function cloneIrregularPlacement(placement: IrregularPlacement): IrregularPlacement {
+  return {
+    ...(placement.pieceId !== undefined ? { pieceId: placement.pieceId } : {}),
+    sourcePieceId: placement.sourcePieceId,
+    ...(placement.placementReference !== undefined
+      ? {
+          placementReference: {
+            x: placement.placementReference.x,
+            y: placement.placementReference.y
+          }
+        }
+      : {}),
+    transform: {
+      translateX: placement.transform.translateX,
+      translateY: placement.transform.translateY,
+      rotationDeg: placement.transform.rotationDeg,
+      mirrored: placement.transform.mirrored
+    }
+  }
+}
+
+function cloneNestingLayout(layout: NestingLayout): NestingLayout {
+  if (layout.kind === 'rectangular') {
+    return {
+      kind: 'rectangular',
+      placements: layout.placements.map(clonePlacement),
+      unplacedPieceIds: [...layout.unplacedPieceIds]
+    }
+  }
+
+  return {
+    kind: 'irregular',
+    placements: layout.placements.map(cloneIrregularPlacement),
+    unplacedPieceIds: [...layout.unplacedPieceIds],
+    score: { ...layout.score },
+    source: layout.source,
+    status: layout.status,
+    diagnostics: layout.diagnostics.map((diagnostic) => ({ ...diagnostic }))
+  }
+}
+
 function cloneStats(stats: NestingStats): NestingStats {
   return {
     elapsedMs: stats.elapsedMs,
@@ -368,6 +411,7 @@ function cloneSubRun(subRun: NestingSubRun): NestingSubRun {
     options: cloneOptions(subRun.options),
     placements: subRun.placements.map(clonePlacement),
     unplacedPieceIds: [...subRun.unplacedPieceIds],
+    ...(subRun.layout !== undefined ? { layout: cloneNestingLayout(subRun.layout) } : {}),
     pieceIds: [...subRun.pieceIds],
     requestPieceIds: [...subRun.requestPieceIds]
   } as NestingSubRun
@@ -396,6 +440,7 @@ function cloneStrategyResult(result: NestingStrategyResult): NestingStrategyResu
     sortedPieceIds: [...result.sortedPieceIds],
     placements: result.placements.map(clonePlacement),
     unplacedPieceIds: [...result.unplacedPieceIds],
+    ...(result.layout !== undefined ? { layout: cloneNestingLayout(result.layout) } : {}),
     ...(result.historySummary
       ? { historySummary: cloneHistorySummary(result.historySummary) }
       : {}),
@@ -417,6 +462,7 @@ function cloneResult(result: NestingResult): NestingResult {
     sortedPieceIds: [...result.sortedPieceIds],
     placements: result.placements.map(clonePlacement),
     unplacedPieceIds: [...result.unplacedPieceIds],
+    ...(result.layout !== undefined ? { layout: cloneNestingLayout(result.layout) } : {}),
     ...(result.historySummary
       ? { historySummary: cloneHistorySummary(result.historySummary) }
       : {}),
@@ -726,7 +772,17 @@ function buildCsvSubrunRequest(
   )
 }
 
+function rejectUnsupportedCsvIrregularMode(): void {
+  projectWarning.value =
+    'CSV multi-sheet nesting does not support irregular transform results yet.'
+}
+
 async function runCsvNestingRequest(request: NestingRequest, csvImportId: string): Promise<void> {
+  if (request.options.workerMode === 'irregular-convex-v2') {
+    rejectUnsupportedCsvIrregularMode()
+    return
+  }
+
   await runner.start(request, {
     onHistoryFrame: (frame) => history.pushFrame(frame),
     onHistoryComplete: async (jobId, summary) => {
@@ -773,6 +829,10 @@ async function runCsvSession(csvImportId: string): Promise<void> {
     projectWarning.value = 'No pieces to run. Link every CUT row to an available source shape.'
     return
   }
+  if (csv.runConfiguration.options.workerMode === 'irregular-convex-v2') {
+    rejectUnsupportedCsvIrregularMode()
+    return
+  }
 
   const request = buildCsvSubrunRequest(
     csvImportId,
@@ -803,6 +863,10 @@ async function startNextSubrun(
     projectWarning.value = 'No remaining pieces for the next subrun.'
     return
   }
+  if (options.workerMode === 'irregular-convex-v2') {
+    rejectUnsupportedCsvIrregularMode()
+    return
+  }
 
   const request = buildCsvSubrunRequest(
     csvImportId,
@@ -818,6 +882,14 @@ async function startNextSubrun(
 async function startNextNormalSubrun(): Promise<void> {
   const previous = history.result.value
   if (!previous || previous.csvImportId !== undefined) return
+  if (previous.layout?.kind === 'irregular') {
+    projectWarning.value = 'Multiple-sheet nesting does not support irregular transform results yet.'
+    return
+  }
+  if (settings.state.value.options.workerMode === 'irregular-convex-v2') {
+    projectWarning.value = 'Multiple-sheet nesting does not support irregular transform results yet.'
+    return
+  }
   const preparedPieces = previous.preparedPieces ?? []
   const remaining = store.computeRemainingPieces(previous.unplacedPieceIds, preparedPieces)
   if (remaining.length === 0) {

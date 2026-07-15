@@ -242,7 +242,7 @@ function setLayoutSelectionStrategyId(event: Event): void {
           </option>
           <option
             value="irregular-convex-v2"
-            title="Irregular convex worker shell. Algorithms currently throw not implemented."
+            title="Convex irregular windowed beam. Closed source outlines are required."
           >
             Irregular convex
           </option>

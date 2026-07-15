@@ -9,6 +9,7 @@ import {
   CollisionGeometry,
   IrregularBounds,
   IrregularGeometrySettings,
+  IrregularNestingSettings,
   IrregularPoint,
   IrregularPolygon,
   IrregularTransformCandidate
@@ -24,7 +25,8 @@ function point(x: number, y: number): IrregularPoint {
 function runConvexHull(points: ReadonlyArray<IrregularPoint>) {
   return Effect.runPromise(
     GeometryKernel.use((kernel) => kernel.convexHull(points)).pipe(
-      Effect.provide(GeometryKernel.Live)
+      Effect.provide(GeometryKernel.Live),
+      Effect.provide(GeometrySettings.Live)
     )
   )
 }
@@ -39,7 +41,8 @@ function runConvexOffset(input: {
 }) {
   return Effect.runPromise(
     GeometryKernel.use((kernel) => kernel.offsetConvexPolygon(input)).pipe(
-      Effect.provide(GeometryKernel.Live)
+      Effect.provide(GeometryKernel.Live),
+      Effect.provide(GeometrySettings.Live)
     )
   )
 }
@@ -51,7 +54,15 @@ function runConvexOffsetWithSettings(
   return Effect.runPromise(
     GeometryKernel.use((kernel) => kernel.offsetConvexPolygon(input)).pipe(
       Effect.provide(GeometryKernel.Layer),
-      Effect.provide(Layer.succeed(GeometrySettings, settings))
+      Effect.provide(
+        Layer.succeed(
+          GeometrySettings,
+          new IrregularNestingSettings({
+            geometry: settings,
+            optimizer: GeometrySettings.Make.optimizer
+          })
+        )
+      )
     )
   )
 }
@@ -86,7 +97,8 @@ function runCollisionTransform(input: {
 }) {
   return Effect.runPromise(
     GeometryKernel.use((kernel) => kernel.transformCollisionGeometry(input)).pipe(
-      Effect.provide(GeometryKernel.Live)
+      Effect.provide(GeometryKernel.Live),
+      Effect.provide(GeometrySettings.Live)
     )
   )
 }
@@ -131,7 +143,15 @@ describe('GeometryKernel', () => {
     const flattened = await Effect.runPromise(
       GeometryKernel.use((kernel) => kernel.flattenSourceGeometry({ piece: quarterArcPiece() })).pipe(
         Effect.provide(GeometryKernel.Layer),
-        Effect.provide(Layer.succeed(GeometrySettings, settings))
+        Effect.provide(
+          Layer.succeed(
+            GeometrySettings,
+            new IrregularNestingSettings({
+              geometry: settings,
+              optimizer: GeometrySettings.Make.optimizer
+            })
+          )
+        )
       )
     )
 
@@ -261,7 +281,8 @@ describe('GeometryKernel', () => {
           onFailure: (error) => error,
           onSuccess: () => null
         }),
-        Effect.provide(GeometryKernel.Live)
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live)
       )
     )
 
@@ -282,7 +303,8 @@ describe('GeometryKernel', () => {
           onFailure: (error) => error,
           onSuccess: () => null
         }),
-        Effect.provide(GeometryKernel.Live)
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live)
       )
     )
 
@@ -395,7 +417,8 @@ describe('GeometryKernel', () => {
           onFailure: (error) => error,
           onSuccess: () => null
         }),
-        Effect.provide(GeometryKernel.Live)
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live)
       )
     )
 

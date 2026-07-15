@@ -72,6 +72,7 @@ export interface TransformCollisionGeometryInput {
 /** Schema-backed boundary for finite transform generation. */
 export const GenerateTransformsInput = Schema.Struct({
   geometry: CollisionGeometry,
+  allowRotation: Schema.Boolean,
   allowMirror: Schema.Boolean,
   settings: IrregularOptimizerSettings
 })

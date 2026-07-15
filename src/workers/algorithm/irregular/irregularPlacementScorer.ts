@@ -65,7 +65,7 @@ export namespace IrregularPlacementScorer {
     readonly compare: (
       first: IrregularPlacementScore,
       second: IrregularPlacementScore
-    ) => number
+    ) => -1 | 0 | 1
   }
 }
 
@@ -154,7 +154,7 @@ function scoreCandidate(
   })
 }
 
-function compareScores(first: IrregularPlacementScore, second: IrregularPlacementScore): number {
+function compareScores(first: IrregularPlacementScore, second: IrregularPlacementScore): -1 | 0 | 1 {
   return balancedCompactnessOrder(first, second)
 }
 

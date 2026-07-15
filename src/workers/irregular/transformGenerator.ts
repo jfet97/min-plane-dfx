@@ -72,20 +72,7 @@ function generateTransforms(
       }
 
       const candidates = deduplicateAngles(
-        [
-          { rotationDeg: 0, reason: 'orthogonal' },
-          { rotationDeg: 90, reason: 'orthogonal' },
-          { rotationDeg: 180, reason: 'orthogonal' },
-          { rotationDeg: 270, reason: 'orthogonal' },
-          ...decoded.settings.configuredRotationDeg.map((rotationDeg) => ({
-            rotationDeg,
-            reason: 'configured' as const
-          })),
-          ...usableEdges.value.map(({ rotationDeg }) => ({
-            rotationDeg,
-            reason: 'edge_alignment' as const
-          }))
-        ],
+        transformAngleCandidates(decoded.allowRotation, decoded.settings, usableEdges.value),
         decoded.settings.transformAngleDeduplicationToleranceDeg
       )
       if ('message' in candidates) {
@@ -112,6 +99,30 @@ function generateTransforms(
       )
     })
   )
+}
+
+/** Builds legal orientation metadata after global and prepared-piece rotation gates. */
+function transformAngleCandidates(
+  allowRotation: boolean,
+  settings: GenerateTransformsInput['settings'],
+  usableEdges: ReadonlyArray<UsableEdge>
+): ReadonlyArray<AngleCandidate> {
+  if (!allowRotation) return [{ rotationDeg: 0, reason: 'orthogonal' }]
+
+  return [
+    { rotationDeg: 0, reason: 'orthogonal' },
+    { rotationDeg: 90, reason: 'orthogonal' },
+    { rotationDeg: 180, reason: 'orthogonal' },
+    { rotationDeg: 270, reason: 'orthogonal' },
+    ...settings.configuredRotationDeg.map((rotationDeg) => ({
+      rotationDeg,
+      reason: 'configured' as const
+    })),
+    ...usableEdges.map(({ rotationDeg }) => ({
+      rotationDeg,
+      reason: 'edge_alignment' as const
+    }))
+  ]
 }
 
 function decodeInput(

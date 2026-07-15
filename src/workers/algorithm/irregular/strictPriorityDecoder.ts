@@ -2,7 +2,6 @@ import { Effect, Order } from 'effect'
 import type { PieceId } from '@shared/domain/ids.js'
 import type { SheetSpec } from '@shared/domain/nesting.js'
 import {
-  IrregularNestingSettings,
   IrregularPlacedPiece,
   IrregularPlacement,
   IrregularPlacementCandidate,
@@ -11,7 +10,7 @@ import {
   IrregularTransformCandidate,
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
-import { GeometryKernel } from '../../irregular/geometryKernel.js'
+import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import {
   IrregularGeometryInputError,
   IrregularNestingNotImplementedError,
@@ -67,20 +66,19 @@ const transformCandidateOrder = Order.combineAll<IrregularTransformCandidate>([
  *
  * @param sheet rectangular sheet on which every collision polygon must fit
  * @param pieces already priority-ordered prepared pieces
- * @param settings geometry and optimizer settings forwarded to candidate generation
  */
 export function decodeStrictPriorityOrder(
   sheet: SheetSpec,
-  pieces: ReadonlyArray<IrregularPreparedPiece>,
-  settings: IrregularNestingSettings
+  pieces: ReadonlyArray<IrregularPreparedPiece>
 ): Effect.Effect<
   IrregularStrictPriorityDecodeResult,
   | IrregularNestingNotImplementedError
   | IrregularGeometryInputError
   | IrregularPlacementScoringError,
-  GeometryKernel | NfpIfpService | IrregularPlacementScorer
+  GeometryKernel | GeometrySettings | NfpIfpService | IrregularPlacementScorer
 > {
   return Effect.gen(function* () {
+    const settings = yield* GeometrySettings
     const geometryKernel = yield* GeometryKernel
     const nfpIfpService = yield* NfpIfpService
     const placementScorer = yield* IrregularPlacementScorer
@@ -117,19 +115,11 @@ export function decodeStrictPriorityOrder(
 
       const selected = selectCandidate(candidates, placementScorer)
       if (selected === undefined) {
-        unplacedPieceIds.push(piece.source.id)
+        unplacedPieceIds.push(piece.pieceId ?? piece.source.id)
         continue
       }
 
-      const placement = new IrregularPlacement({
-        sourcePieceId: piece.source.id,
-        transform: new IrregularTransform({
-          translateX: selected.candidate.point.x,
-          translateY: selected.candidate.point.y,
-          rotationDeg: selected.candidate.transform.rotationDeg,
-          mirrored: selected.candidate.transform.mirrored
-        })
-      })
+      const placement = makePlacement(piece, selected.candidate)
       placements.push(placement)
       placed.push(
         new IrregularPlacedPiece({
@@ -143,6 +133,25 @@ export function decodeStrictPriorityOrder(
   })
 }
 
+function makePlacement(
+  piece: IrregularPreparedPiece,
+  candidate: IrregularPlacementCandidate
+): IrregularPlacement {
+  const input = {
+    sourcePieceId: piece.source.id,
+    placementReference: piece.collisionGeometry.placementReference,
+    transform: new IrregularTransform({
+      translateX: candidate.point.x,
+      translateY: candidate.point.y,
+      rotationDeg: candidate.transform.rotationDeg,
+      mirrored: candidate.transform.mirrored
+    })
+  }
+  return piece.pieceId === undefined
+    ? new IrregularPlacement(input)
+    : new IrregularPlacement({ ...input, pieceId: piece.pieceId })
+}
+
 interface DecoderCandidate {
   readonly candidate: IrregularPlacementCandidate
   readonly moving: TransformedCollisionGeometry
@@ -153,8 +162,11 @@ function selectCandidate(
   candidates: ReadonlyArray<DecoderCandidate>,
   scorer: IrregularPlacementScorer.Service
 ): DecoderCandidate | undefined {
-  return candidates.reduce<DecoderCandidate | undefined>((selected, candidate) => {
-    if (selected === undefined || scorer.compare(candidate.score, selected.score) < 0) return candidate
-    return selected
-  }, undefined)
+  const candidateOrder = Order.combineAll<DecoderCandidate>([
+    Order.make((first, second) => scorer.compare(first.score, second.score)),
+    Order.mapInput(Order.Number, (candidate) => candidate.candidate.transform.index),
+    Order.mapInput(Order.Number, (candidate) => candidate.candidate.point.x),
+    Order.mapInput(Order.Number, (candidate) => candidate.candidate.point.y)
+  ])
+  return candidates.length === 0 ? undefined : candidates.reduce(Order.min(candidateOrder))
 }

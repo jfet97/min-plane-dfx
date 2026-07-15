@@ -7,6 +7,7 @@ import {
   Rect,
   RectWith
 } from './geometry.js'
+import { IrregularHistoryFrame, IrregularLayout } from '../irregular/domain.js'
 
 /** History scope. Only the winning path is required to be retained. */
 export const HistoryScope = Schema.Literal('winning_path')
@@ -144,8 +145,45 @@ export class Placement extends Schema.Class<Placement>('Placement')({
   rotation: Schema.Union([Schema.Literal(0), Schema.Literal(90)])
 }) {}
 
-/** One subrun within a manual multi-plate CSV run. */
-export class NestingSubRun extends Schema.Class<NestingSubRun>('NestingSubRun')({
+/** Tagged rectangular layout retained for existing result and project data. */
+export class RectangularLayout extends Schema.Class<RectangularLayout>('RectangularLayout')({
+  kind: Schema.Literal('rectangular'),
+  placements: Schema.Array(Placement),
+  unplacedPieceIds: Schema.Array(PieceId)
+}) {}
+
+/** Tagged layout union for rectangular and real irregular worker output. */
+export const NestingLayout = Schema.Union([
+  RectangularLayout,
+  Schema.suspend(() => IrregularLayout)
+])
+export type NestingLayout = Schema.Schema.Type<typeof NestingLayout>
+
+function validateIrregularLayoutEnvelope(input: {
+  readonly placements: ReadonlyArray<Placement>
+  readonly unplacedPieceIds: ReadonlyArray<PieceId>
+  readonly layout?: NestingLayout | undefined
+}) {
+  if (input.layout?.kind !== 'irregular') return undefined
+  if (input.placements.length > 0) {
+    return {
+      path: ['placements'],
+      issue: 'irregular layouts must keep legacy rectangular placements empty.'
+    }
+  }
+  if (
+    input.unplacedPieceIds.length === input.layout.unplacedPieceIds.length &&
+    input.unplacedPieceIds.every((pieceId, index) => pieceId === input.layout?.unplacedPieceIds[index])
+  ) {
+    return undefined
+  }
+  return {
+    path: ['unplacedPieceIds'],
+    issue: 'irregular layouts must use the same unplaced piece ids in the envelope and layout.'
+  }
+}
+
+const NestingSubRunFields = Schema.Struct({
   subRunId: Schema.String,
   parentRunId: Schema.String,
   index: Schema.Number,
@@ -154,9 +192,13 @@ export class NestingSubRun extends Schema.Class<NestingSubRun>('NestingSubRun')(
   options: NestingOptions,
   placements: Schema.Array(Placement),
   unplacedPieceIds: Schema.Array(PieceId),
+  layout: Schema.optional(NestingLayout),
   pieceIds: Schema.Array(PieceId),
   requestPieceIds: Schema.Array(PieceId)
-}) {}
+}).check(Schema.makeFilter(validateIrregularLayoutEnvelope))
+
+/** One subrun within a manual multi-plate CSV run. */
+export class NestingSubRun extends Schema.Class<NestingSubRun>('NestingSubRun')(NestingSubRunFields) {}
 
 /** Aggregate summary for a run composed of one or more subruns. */
 export class NestingRunSummary extends Schema.Class<NestingRunSummary>('NestingRunSummary')({
@@ -213,9 +255,7 @@ export class NestingStats extends Schema.Class<NestingStats>('NestingStats')({
   algorithm: AlgorithmBenchmark
 }) {}
 
-export class NestingStrategyResult extends Schema.Class<NestingStrategyResult>(
-  'NestingStrategyResult'
-)({
+const NestingStrategyResultFields = Schema.Struct({
   strategyRunId: Schema.String,
   strategyId: NestingStrategyId,
   strategyLabel: Schema.String,
@@ -224,11 +264,16 @@ export class NestingStrategyResult extends Schema.Class<NestingStrategyResult>(
   sortedPieceIds: Schema.Array(PieceId),
   placements: Schema.Array(Placement),
   unplacedPieceIds: Schema.Array(PieceId),
+  layout: Schema.optional(NestingLayout),
   historySummary: Schema.optional(NestingHistorySummary),
   finalScore: Schema.optional(FinalResultScore),
   stats: NestingStats,
   warnings: Schema.Array(NestingWarning)
-}) {
+}).check(Schema.makeFilter(validateIrregularLayoutEnvelope))
+
+export class NestingStrategyResult extends Schema.Class<NestingStrategyResult>(
+  'NestingStrategyResult'
+)(NestingStrategyResultFields) {
   static fromAlgorithm(input: {
     readonly strategyRunId: string
     readonly strategyId: NestingStrategyId
@@ -237,6 +282,7 @@ export class NestingStrategyResult extends Schema.Class<NestingStrategyResult>(
     readonly sortedPieceIds: ReadonlyArray<PieceId>
     readonly placements: ReadonlyArray<Placement>
     readonly unplacedPieceIds: ReadonlyArray<PieceId>
+    readonly layout?: NestingLayout
     readonly elapsedMs: number
     readonly pieceCount: number
     readonly algorithmBenchmark: AlgorithmBenchmark
@@ -252,6 +298,7 @@ export class NestingStrategyResult extends Schema.Class<NestingStrategyResult>(
       sortedPieceIds: input.sortedPieceIds,
       placements: input.placements,
       unplacedPieceIds: input.unplacedPieceIds,
+      ...(input.layout !== undefined ? { layout: input.layout } : {}),
       warnings: [],
       stats: new NestingStats({
         elapsedMs: input.elapsedMs,
@@ -262,7 +309,7 @@ export class NestingStrategyResult extends Schema.Class<NestingStrategyResult>(
   }
 }
 
-export class NestingResult extends Schema.Class<NestingResult>('NestingResult')({
+const NestingResultFields = Schema.Struct({
   version: Schema.Literal(1),
   jobId: JobId,
   status: NestingResultStatus,
@@ -271,13 +318,16 @@ export class NestingResult extends Schema.Class<NestingResult>('NestingResult')(
   sortedPieceIds: Schema.Array(PieceId),
   placements: Schema.Array(Placement),
   unplacedPieceIds: Schema.Array(PieceId),
+  layout: Schema.optional(NestingLayout),
   historySummary: Schema.optional(NestingHistorySummary),
   warnings: Schema.Array(NestingWarning),
   stats: NestingStats,
   runSummary: Schema.optional(NestingRunSummary),
   preparedPieces: Schema.optional(Schema.Array(PreparedPiece)),
   csvImportId: Schema.optional(Schema.String)
-}) {
+}).check(Schema.makeFilter(validateIrregularLayoutEnvelope))
+
+export class NestingResult extends Schema.Class<NestingResult>('NestingResult')(NestingResultFields) {
   static fromAlgorithm(input: {
     readonly request: NestingRequest
     readonly strategyResults: ReadonlyArray<NestingStrategyResult>
@@ -285,6 +335,7 @@ export class NestingResult extends Schema.Class<NestingResult>('NestingResult')(
     readonly sortedPieceIds: ReadonlyArray<PieceId>
     readonly placements: ReadonlyArray<Placement>
     readonly unplacedPieceIds: ReadonlyArray<PieceId>
+    readonly layout?: NestingLayout
     readonly elapsedMs: number
     readonly algorithmBenchmark: AlgorithmBenchmark
     readonly runSummary?: NestingRunSummary
@@ -302,6 +353,7 @@ export class NestingResult extends Schema.Class<NestingResult>('NestingResult')(
       sortedPieceIds: input.sortedPieceIds,
       placements: input.placements,
       unplacedPieceIds: input.unplacedPieceIds,
+      ...(input.layout !== undefined ? { layout: input.layout } : {}),
       warnings: [],
       stats: new NestingStats({
         elapsedMs: input.elapsedMs,
@@ -438,6 +490,20 @@ export class NestingHistoryFrame extends Schema.Class<NestingHistoryFrame>('Nest
       createdAt: input.createdAt
     })
   }
+}
+
+/** Worker history payload union that accepts legacy rectangular frames. */
+export const NestingHistoryFramePayload = Schema.Union([
+  NestingHistoryFrame,
+  Schema.suspend(() => IrregularHistoryFrame)
+])
+export type NestingHistoryFramePayload = Schema.Schema.Type<typeof NestingHistoryFramePayload>
+
+/** Narrows a history payload to a real transform-based irregular beam state. */
+export function isIrregularHistoryFrame(
+  frame: NestingHistoryFramePayload
+): frame is IrregularHistoryFrame {
+  return 'kind' in frame && frame.kind === 'irregular'
 }
 
 export class ProjectHistoryRef extends Schema.Class<ProjectHistoryRef>('ProjectHistoryRef')({

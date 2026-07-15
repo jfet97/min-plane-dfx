@@ -9,6 +9,7 @@ import {
 import {
   IrregularBounds,
   IrregularGeometrySettings,
+  IrregularNestingSettings,
   IrregularPoint,
   IrregularPolygon
 } from '@shared/irregular/domain.js'
@@ -47,7 +48,8 @@ function rectanglePiece(input?: {
 function runBuildPiece(input: { readonly piece: ImportedPiece; readonly totalPaddingMm: number }) {
   return Effect.runPromise(
     CollisionGeometryBuilder.use((builder) => builder.buildPiece(input)).pipe(
-      Effect.provide(CollisionGeometryBuilder.Live)
+      Effect.provide(CollisionGeometryBuilder.Live),
+      Effect.provide(GeometrySettings.Live)
     )
   )
 }
@@ -60,7 +62,15 @@ function runBuildPieceWithSettings(
     CollisionGeometryBuilder.use((builder) => builder.buildPiece(input)).pipe(
       Effect.provide(CollisionGeometryBuilder.Layer),
       Effect.provide(GeometryKernel.Layer),
-      Effect.provide(Layer.succeed(GeometrySettings, settings))
+      Effect.provide(
+        Layer.succeed(
+          GeometrySettings,
+          new IrregularNestingSettings({
+            geometry: settings,
+            optimizer: GeometrySettings.Make.optimizer
+          })
+        )
+      )
     )
   )
 }
@@ -139,7 +149,10 @@ describe('CollisionGeometryBuilder', () => {
           { piece: rectanglePiece({ id: 'first-piece' }), totalPaddingMm: 0 },
           { piece: rectanglePiece({ id: 'second-piece' }), totalPaddingMm: 0 }
         ])
-      ).pipe(Effect.provide(CollisionGeometryBuilder.Live))
+      ).pipe(
+        Effect.provide(CollisionGeometryBuilder.Live),
+        Effect.provide(GeometrySettings.Live)
+      )
     )
 
     expect(pieces.map((piece) => piece.sourcePieceId)).toEqual([
@@ -157,7 +170,8 @@ describe('CollisionGeometryBuilder', () => {
           onFailure: (error) => error,
           onSuccess: () => null
         }),
-        Effect.provide(CollisionGeometryBuilder.Live)
+        Effect.provide(CollisionGeometryBuilder.Live),
+        Effect.provide(GeometrySettings.Live)
       )
     )
 

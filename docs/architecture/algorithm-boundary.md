@@ -51,15 +51,17 @@ directory owns deterministic collision-geometry preparation and geometry-kernel
 operations such as flattening, convex hulls, offsets, and transforms. It does
 not own placement generation, scoring, beam state, or search. Those algorithm
 behaviors belong under `src/workers/algorithm/`, including the strict-priority
-irregular decoder and its dependency-free local balanced-compactness scorer
-under `src/workers/algorithm/irregular/`. The scorer ranks candidates already
-accepted by geometry; it does not decide legality or replace a future
-beam/portfolio layout scorer.
+decoder, local candidate scorer, whole-layout scorer, and windowed beam under
+`src/workers/algorithm/irregular/`. Candidate generation and direct validation
+remain the legality authority; scorers only rank already legal candidates or
+partial layouts.
 
-The `irregular-convex-v2` worker mode is exposed through the request schema and
-renderer, but the worker currently returns `not_implemented` before MaxRects is
-reached. Keep it that way until the real convex geometry and search
-implementations exist.
+The `irregular-convex-v2` worker mode runs this real convex baseline. The
+worker-facing adapter translates only algorithm-produced transform placements
+and tagged irregular history states into shared schemas; it never converts them
+into fake rectangle placements. `GeometrySettings` is yielded by the algorithm
+services and supplies the complete schema-validated geometry plus optimizer
+configuration for one run.
 
 The core emits algorithm events from `src/workers/algorithm/events.ts`, not
 history frames and not worker-wire payloads. The event stream is the raw
@@ -68,16 +70,18 @@ placement applications with ids plus split/prune data, and completion can be
 translated by the wrapper into schema-backed history or worker protocol
 payloads.
 
-`computeNesting` is the worker-facing wrapper around that boundary. It
+`computeNesting` is the worker-facing wrapper around the rectangular boundary. It
 resolves configured strategy ids, adapts strategy definitions into ordering
 functions, calls the core boundary, turns the initial beam and every selected
 beam survivor into history frames, and wraps the outcome into
 `NestingStrategyResult` / `NestingResult`.
 
-The hook path must stream events as the algorithm runs. Do not collect frames in
-the wrapper and flush them after the algorithm returns. In the worker, the sync
-hook offers frames into an Effect queue; a consumer fiber performs NDJSON writes
-and live `history_frame` sends outside the algorithm.
+The rectangular hook path must stream events as the algorithm runs. Do not
+collect frames in the wrapper and flush them after the algorithm returns. The
+current irregular beam records its selected states in algorithm memory, then its
+worker adapter emits only those actual tagged states to the same Effect queue.
+The queue consumer performs NDJSON writes and live `history_frame` sends outside
+the algorithm.
 
 ## Strategy Configuration
 

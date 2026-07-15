@@ -17,10 +17,11 @@ import { ConvexHull } from './convexHull.js'
 import { ConvexPolygonOffset } from './convexPolygonOffset.js'
 import { TransformCollisionGeometry } from './transformCollisionGeometry.js'
 import { PlacementValidation } from './placementValidation.js'
-import { DEFAULT_IRREGULAR_GEOMETRY_SETTINGS } from '@shared/irregular/defaults.js'
+import { DEFAULT_IRREGULAR_NESTING_SETTINGS } from '@shared/irregular/defaults.js'
 import {
   FlattenedGeometry,
   IrregularGeometrySettings,
+  IrregularNestingSettings,
   IrregularPoint,
   IrregularPolygon,
   TransformedCollisionGeometry
@@ -30,9 +31,9 @@ import type { DxfGeometrySegment } from '@shared/domain/dxf.js'
 /** Effect service providing the decoded irregular geometry settings. */
 export class GeometrySettings extends Context.Service<
   GeometrySettings,
-  IrregularGeometrySettings
+  IrregularNestingSettings
 >()('min-plane-dfx/irregular/GeometrySettings') {
-  static readonly Make = DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+  static readonly Make = DEFAULT_IRREGULAR_NESTING_SETTINGS
   static readonly Live = Layer.succeed(GeometrySettings, GeometrySettings.Make)
 }
 
@@ -121,7 +122,7 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
                 sampledSourceCurves.add(sourceCurve.sourceId)
                 const points = EllipseFlattening.samplePoints(
                   sourceCurve,
-                  settings.flatteningSagToleranceMm
+                  settings.geometry.flatteningSagToleranceMm
                 )
                 for (const point of points) {
                   pointsStore.push(point.x, point.y)
@@ -132,7 +133,7 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
               if (line.bulge !== undefined && line.bulge !== 0) {
                 const points = ArcFlattening.sampleBulgePoints(
                   line,
-                  settings.flatteningSagToleranceMm
+                  settings.geometry.flatteningSagToleranceMm
                 )
                 for (const point of points) {
                   pointsStore.push(point.x, point.y)
@@ -144,7 +145,7 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
               pointsStore.push(line.x2, line.y2)
             }),
             Match.when({ kind: 'arc' }, (arc) => {
-              const points = ArcFlattening.samplePoints(arc, settings.flatteningSagToleranceMm)
+              const points = ArcFlattening.samplePoints(arc, settings.geometry.flatteningSagToleranceMm)
               for (const point of points) {
                 pointsStore.push(point.x, point.y)
               }
@@ -164,7 +165,7 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
       offsetConvexPolygon: (input) =>
         decodeOffsetConvexPolygonInput(input).pipe(
           Effect.flatMap(({ polygon, totalPaddingMm }) =>
-            computeCollisionOffsetMm(totalPaddingMm, settings).pipe(
+            computeCollisionOffsetMm(totalPaddingMm, settings.geometry).pipe(
               Effect.flatMap((distanceMm) => ConvexPolygonOffset.compute(polygon, distanceMm))
             )
           )
@@ -175,7 +176,7 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
   })
 
   static readonly Layer = Layer.effect(GeometryKernel, GeometryKernel.Make)
-  static readonly Live = GeometryKernel.Layer.pipe(Layer.provide(GeometrySettings.Live))
+  static readonly Live = GeometryKernel.Layer
   static readonly Unimplemented = Layer.succeed(
     GeometryKernel,
     GeometryKernel.of({
@@ -190,12 +191,12 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
 
 function failNotImplemented(
   operation: string,
-  settings?: IrregularGeometrySettings
+  settings?: IrregularNestingSettings
 ): Effect.Effect<never, IrregularNestingNotImplementedError> {
   const suffix =
     settings === undefined
       ? '.'
-      : ` for ${settings.geometryBackendId}@${settings.geometryBackendVersion}.`
+      : ` for ${settings.geometry.geometryBackendId}@${settings.geometry.geometryBackendVersion}.`
   return Effect.fail(
     new IrregularNestingNotImplementedError({
       service: 'GeometryKernel',

@@ -22,7 +22,7 @@ import {
   exportNestingResultToFile,
   loadHistoryReplayFromFile
 } from '../services/ExportService.js'
-import type { EncodedNestingHistoryFrame } from '../services/ExportService.js'
+import type { EncodedNestingHistoryFramePayload } from '../services/ExportService.js'
 import {
   WorkspaceProjectService,
   WorkspaceProjectError
@@ -702,7 +702,7 @@ export function registerIpcHandlers(): void {
     async (
       _event: IpcMainInvokeEvent,
       ref: ProjectHistoryRef
-    ): Promise<IpcResult<{ readonly frames: ReadonlyArray<EncodedNestingHistoryFrame> }>> => {
+    ): Promise<IpcResult<{ readonly frames: ReadonlyArray<EncodedNestingHistoryFramePayload> }>> => {
       try {
         const frames = await loadHistoryReplayFromFile(ref)
         return { ok: true, value: { frames } }

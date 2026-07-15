@@ -16,6 +16,9 @@ export const AppErrorCode = [
   'worker_timeout',
   'worker_cancelled',
   'worker_protocol_error',
+  'irregular_source_geometry_missing',
+  'irregular_geometry_invalid',
+  'irregular_scoring_error',
   'not_implemented',
   'unknown_error'
 ] as const

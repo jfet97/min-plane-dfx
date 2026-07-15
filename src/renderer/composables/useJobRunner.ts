@@ -2,7 +2,7 @@ import { reactive, computed, type UnwrapNestedRefs } from 'vue'
 import type {
   NestingRequest,
   NestingResult,
-  NestingHistoryFrame,
+  NestingHistoryFramePayload,
   NestingHistorySummary
 } from '@shared/domain/nesting.js'
 import type { NestingHistoryEvent, Unsubscribe } from '@shared/protocol/ipc.js'
@@ -27,7 +27,7 @@ const state: UnwrapNestedRefs<MutableRunnerState> = reactive<MutableRunnerState>
 let historyUnsub: Unsubscribe | null = null
 
 export interface RunNestingBindings {
-  readonly onHistoryFrame: (frame: NestingHistoryFrame) => void
+  readonly onHistoryFrame: (frame: NestingHistoryFramePayload) => void
   readonly onHistoryComplete: (jobId: JobId, summary: NestingHistorySummary) => void
   readonly onResult: (result: NestingResult) => void | Promise<void>
   readonly onError: (message: string) => void

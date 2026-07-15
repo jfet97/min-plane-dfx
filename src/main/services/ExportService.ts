@@ -5,14 +5,16 @@ import type {
   NestingRequest,
   NestingResult,
   ProjectHistoryRef,
-  NestingHistoryFrame
+  NestingHistoryFramePayload
 } from '@shared/domain/nesting.js'
 import type { CsvRunRecord, ProjectCsvImport } from '@shared/domain/project.js'
 import { Exit, Schema } from 'effect'
 import { NestingRequestStrict, NestingResultStrict } from '@shared/schemas/nestingSchemas.js'
-import { NestingHistoryFrame as NestingHistoryFrameSchema } from '@shared/domain/nesting.js'
+import { NestingHistoryFramePayload as NestingHistoryFramePayloadSchema } from '@shared/domain/nesting.js'
 
-export type EncodedNestingHistoryFrame = Schema.Codec.Encoded<typeof NestingHistoryFrameSchema>
+export type EncodedNestingHistoryFramePayload = Schema.Codec.Encoded<
+  typeof NestingHistoryFramePayloadSchema
+>
 
 /** Characters that would break the semicolon-separated CSV format. */
 const CSV_DELIMITER_CHARS = /[;\r\n]/g
@@ -62,7 +64,7 @@ export function buildCsvExportFileName(
  */
 export async function appendHistoryFrame(
   ref: ProjectHistoryRef,
-  frame: NestingHistoryFrame
+  frame: NestingHistoryFramePayload
 ): Promise<void> {
   await mkdir(dirname(ref.path), { recursive: true })
   await writeFile(ref.path, `${JSON.stringify(frame)}\n`, { flag: 'a', encoding: 'utf8' })
@@ -172,11 +174,11 @@ export async function exportCsvResultToFile(
 
 export async function exportHistoryToFile(
   path: string,
-  frames: ReadonlyArray<NestingHistoryFrame>
+  frames: ReadonlyArray<NestingHistoryFramePayload>
 ): Promise<string> {
   // Validate each frame via its schema before serializing.
   for (const frame of frames) {
-    const exit = Schema.decodeUnknownExit(NestingHistoryFrameSchema)(frame)
+    const exit = Schema.decodeUnknownExit(NestingHistoryFramePayloadSchema)(frame)
     if (Exit.isFailure(exit)) {
       throw new Error('History frame failed schema validation')
     }
@@ -193,7 +195,7 @@ export async function exportHistoryToFile(
  */
 export async function loadHistoryReplayFromFile(
   ref: ProjectHistoryRef
-): Promise<ReadonlyArray<EncodedNestingHistoryFrame>> {
+): Promise<ReadonlyArray<EncodedNestingHistoryFramePayload>> {
   const text = await readFile(ref.path, 'utf8')
   return text
     .split('\n')
@@ -201,9 +203,10 @@ export async function loadHistoryReplayFromFile(
     .flatMap((line) => {
       try {
         const parsed: unknown = JSON.parse(line)
-        const decoded = Schema.decodeUnknownExit(NestingHistoryFrameSchema)(parsed)
+        const decoded = Schema.decodeUnknownExit(NestingHistoryFramePayloadSchema)(parsed)
         if (Exit.isFailure(decoded)) return []
-        return [parsed as EncodedNestingHistoryFrame]
+        const encoded = Schema.encodeUnknownExit(NestingHistoryFramePayloadSchema)(decoded.value)
+        return Exit.isFailure(encoded) ? [] : [encoded.value]
       } catch {
         return []
       }

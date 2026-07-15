@@ -3,7 +3,7 @@ import type { ImportedDxfDocument } from '../domain/dxf.js'
 import {
   NestingResult,
   NestingRequest,
-  NestingHistoryFrame,
+  NestingHistoryFramePayload,
   NestingHistorySummary,
   ProjectHistoryRef
 } from '../domain/nesting.js'
@@ -34,7 +34,7 @@ export type NestingHistoryEvent =
       readonly type: 'history_frame'
       readonly requestId: string
       readonly jobId: JobId
-      readonly payload: NestingHistoryFrame
+      readonly payload: NestingHistoryFramePayload
     }
   | {
       readonly type: 'history_complete'
@@ -73,7 +73,7 @@ export interface AppApi {
   readonly onNestingHistory: (callback: (event: HistoryEventEnvelope) => void) => Unsubscribe
   readonly loadHistoryReplay: (
     ref: ProjectHistoryRef
-  ) => Promise<ReadonlyArray<NestingHistoryFrame>>
+  ) => Promise<ReadonlyArray<NestingHistoryFramePayload>>
 
   // Phase 8
   readonly loadWorkspaceSettings: () => Promise<WorkspaceProjectSettings | null>

@@ -1,8 +1,10 @@
 # Irregular V2 Infrastructure
 
-Irregular v2 infrastructure is present as typed boundaries only. It must not be
-treated as a working nesting engine until the geometry and search algorithms are
-implemented intentionally.
+Irregular v2 has a real deterministic convex baseline. It flattens imported
+closed outlines, builds padded convex collision polygons, generates finite
+rotation/mirror choices, produces NFP/IFP contact candidates, validates each
+placement directly, and runs a configurable windowed beam. It is not yet the
+full GA portfolio or a concave/hole-aware nesting engine.
 
 ## Shared DTOs
 
@@ -47,9 +49,9 @@ as unplaced before continuing. Transform indexes are normally unique because
 `TransformGenerator` emits them that way; the complete tie-break keeps malformed
 or replayed input deterministic.
 
-This is an intermediate strict-order decoder, not the future windowed beam or
-portfolio result. It does not generate transforms, reorder pieces, score
-layouts, prune a beam, emit history, or invent placement data. Candidate
+This is the strict-order baseline for the real windowed beam. It does not
+generate transforms, reorder pieces, score layouts, prune a beam, emit history,
+or invent placement data. Candidate
 generation and direct placement validation remain the legality authority. The
 decoder uses `IrregularPlacementScorer.Live` only to compare those real legal
 candidates with the first explicit local policy: balanced compactness of the
@@ -61,6 +63,13 @@ candidates, allowing the decoder to try the next supplied transform; invalid
 geometry and invalid derived arithmetic remain typed failures. The supplied
 order must remain untouched so future beam and portfolio layers can make their
 priority decisions outside this baseline.
+
+`GeometrySettings` yields one `IrregularNestingSettings` value containing both
+geometry and optimizer settings. `GeometrySettings.Live` supplies the shared
+defaults only; tests and future worker configuration can replace that layer with
+arbitrary schema-validated settings. Algorithms yield the service instead of
+accepting positional settings arguments, so each run has one configuration
+source.
 
 `GeometryKernel.Live` currently implements DXF source flattening, convex hull,
 strictly convex polygon offsetting, and transformation of one padded collision
@@ -85,14 +94,13 @@ configured physical millimeter threshold are ignored as geometric noise; the
 default is `1`. Its
 `transformAngleDeduplicationToleranceDeg` setting means that periodic angles
 within that circular degree distance are treated as one candidate; the default
-is `0.01` degrees. `configuredRotationDeg` defaults to an empty array and lets
-the optimizer add finite degree values explicitly. `NfpIfpServiceLive` computes
+is `0.01` degrees. When global rotation or the prepared piece disables
+rotation, it emits `0` degrees only. `configuredRotationDeg` defaults to an
+empty array and lets the optimizer add finite degree values explicitly.
+`NfpIfpServiceLive` computes
 convex no-fit boundaries, rectangular inner-fit bounds, and deterministic
 contact candidates; every candidate still passes direct convex placement
-validation, which remains the legality authority. The remaining algorithm
-services, except for these geometry services and the in-memory cache, fail with
-`IrregularNestingNotImplementedError`. This is deliberate: the app must not
-emit fake placements, fake scores, or fake history. `FreeMaterialServiceLive`
+validation, which remains the legality authority. `FreeMaterialServiceLive`
 computes the
 sheet-space difference between the sheet and the union of translated placed
 collision polygons through Clipper2's integer `Paths64` and `PolyTree64`
@@ -112,23 +120,31 @@ run configuration can carry the irregular mode. `NestingRequest` also has an
 optional `sourcePieces` payload so the irregular worker can receive the original
 DXF geometry summaries instead of only rectangle-prepared pieces.
 
-The worker is callable in this mode, but it currently returns an honest
-`not_implemented` failure before MaxRects is reached. This keeps the vertical
-path testable without fake placements, fake polygons, fake scores, or fake
-history.
+The worker runs `computeIrregularNesting` for this mode. It preserves prepared
+copy ids and source ids, emits `IrregularLayout` transform placements with the
+source-space placement reference required to reproduce each transform rather
+than fabricated rectangle placements, and writes tagged `IrregularHistoryFrame`
+records to the normal NDJSON history path. Missing source geometry becomes the
+typed `irregular_source_geometry_missing` worker failure; invalid derived
+geometry and scoring become distinct typed failures.
 
 Do not route `irregular-convex-v2` requests to MaxRects.
 
-The renderer has a compact irregular debug panel. It displays real available
-inputs and empty diagnostic slots until worker events exist for flattened
-polygons, collision polygons, free material, candidates, and irregular progress.
+The renderer accepts tagged irregular history alongside existing rectangular
+history. Its current result canvas intentionally does not redraw source geometry
+from irregular transforms yet; it reports the real transform placement count
+instead of displaying substitute rectangles. CSV multi-sheet aggregation rejects
+irregular mode before it resets or mutates a CSV session because aggregation is
+rectangle-only and must not discard those transforms. The same rejection applies
+when starting another sheet from rectangular leftovers after switching the active
+worker mode to irregular.
 
 ## Ownership
 
 Geometry services remain under `src/workers/irregular/`. Placement selection,
 scoring, beam state, and search belong under `src/workers/algorithm/`, including
-the strict-priority decoder, local irregular scorer, and future beam/search
-layers:
+the strict-priority decoder, local irregular scorer, layout scorer, windowed
+beam, and future GA/search layers:
 
 - priority ordering;
 - placement candidate selection;
@@ -136,11 +152,14 @@ layers:
 - scoring;
 - GA/search.
 
-`src/workers/algorithm/irregular/irregularPlacementScorer.ts` now owns the
-dependency-free local balanced-compactness score for candidates already accepted
-by NFP/IFP generation and direct validation. A separate layout score for beam
-survivors and final beam/GA portfolio comparison remains future work.
+`src/workers/algorithm/irregular/irregularPlacementScorer.ts` owns the local
+balanced-compactness score for candidates already accepted by NFP/IFP generation
+and direct validation. `irregularLayoutScorer.ts` owns a separate lexicographic
+whole-layout score for beam retention: unplaced count first, then free-material
+usability/fragmentation metrics and compact collision bounds. Free material is
+scoring-only and never accepts or rejects a placement.
 
-Until those algorithms are implemented, the remaining service boundaries stay
-as honest infrastructure-only failures. Free-material regions remain a
-sheet-space diagnostic artifact and do not replace direct placement validation.
+The pending portfolio work is GA-selected transforms, seeded search, portfolio
+comparison, cancellation checkpoints, and visual rendering/export of transform
+placements. Free-material regions remain a sheet-space diagnostic artifact and
+do not replace direct placement validation.

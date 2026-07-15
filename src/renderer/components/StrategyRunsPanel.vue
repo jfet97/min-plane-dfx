@@ -7,9 +7,11 @@ import type { ProjectRunRecord } from '@shared/domain/project.js'
 import type {
   ProjectHistoryRef,
   NestingHistoryFrame,
+  NestingHistoryFramePayload,
   NestingSubRun,
   SheetSpec
 } from '@shared/domain/nesting.js'
+import { isIrregularHistoryFrame } from '@shared/domain/nesting.js'
 
 const history = useHistoryStore()
 const store = useAppStore()
@@ -22,7 +24,7 @@ const emit = defineEmits<{
 function stats(run: NonNullable<typeof history.selectedRun.value>) {
   return {
     status: run.status,
-    placed: run.placements.length,
+    placed: placementCount(run),
     unplaced: run.unplacedPieceIds.length,
     elapsedMs: run.stats.algorithm.elapsedMs,
     startedAt: run.stats.algorithm.startedAt,
@@ -30,6 +32,18 @@ function stats(run: NonNullable<typeof history.selectedRun.value>) {
     pieceCount: run.stats.pieceCount,
     warningCount: run.warnings.length
   }
+}
+
+function placementCount(run: NonNullable<typeof history.selectedRun.value>): number {
+  return run.layout?.kind === 'irregular' ? run.layout.placements.length : run.placements.length
+}
+
+function resultPlacementCount(result: NonNullable<typeof history.result.value>): number {
+  return result.layout?.kind === 'irregular' ? result.layout.placements.length : result.placements.length
+}
+
+function supportsGifExport(record: ProjectRunRecord): boolean {
+  return record.result.layout?.kind !== 'irregular'
 }
 
 const currentSubRuns = computed<ReadonlyArray<NestingSubRun>>(
@@ -153,9 +167,10 @@ async function exportRunGif(record: ProjectRunRecord): Promise<void> {
   }
 }
 
-function uniqueFrames(frames: ReadonlyArray<NestingHistoryFrame>): NestingHistoryFrame[] {
+function uniqueFrames(frames: ReadonlyArray<NestingHistoryFramePayload>): NestingHistoryFrame[] {
   const byId = new Map<string, NestingHistoryFrame>()
   for (const frame of frames) {
+    if (isIrregularHistoryFrame(frame)) continue
     byId.set(frame.frameId, frame)
   }
   return [...byId.values()]
@@ -213,7 +228,7 @@ function subRunLabel(subRun: NestingSubRun): string {
           >
             <strong>{{ record.label }}</strong>
             <span>{{ formatDate(record.createdAt) }}</span>
-            <code>{{ record.result.placements.length }}/{{ record.pieceCount }}</code>
+            <code>{{ resultPlacementCount(record.result) }}/{{ record.pieceCount }}</code>
           </button>
           <button
             type="button"
@@ -226,11 +241,13 @@ function subRunLabel(subRun: NestingSubRun): string {
           <button
             type="button"
             class="export-gif"
-            :disabled="!record.history"
+            :disabled="!record.history || !supportsGifExport(record)"
             :title="
-              record.history
-                ? 'Export an animated GIF from the first retained beam of this run.'
-                : 'GIF export needs a saved history replay for this run.'
+              !record.history
+                ? 'GIF export needs a saved history replay for this run.'
+                : !supportsGifExport(record)
+                  ? 'GIF export currently supports rectangular history only.'
+                  : 'Export an animated GIF from the first retained beam of this run.'
             "
             @click="exportRunGif(record)"
           >
@@ -242,7 +259,7 @@ function subRunLabel(subRun: NestingSubRun): string {
 
     <h3
       v-if="history.strategyResults.value.length > 0"
-      title="The currently restored run has one result row: the MaxRects beam-search outcome."
+      title="The currently restored run has one worker-owned result row."
     >
       Current result
     </h3>

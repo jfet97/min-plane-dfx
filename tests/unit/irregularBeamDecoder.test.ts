@@ -1,9 +1,6 @@
 import { Effect, Layer } from 'effect'
 import { describe, expect, it } from 'vitest'
 import {
-  DEFAULT_IRREGULAR_NESTING_SETTINGS
-} from '@shared/irregular/defaults.js'
-import {
   CollisionGeometry,
   IrregularBounds,
   IrregularPoint,
@@ -17,7 +14,7 @@ import { DxfGeometrySummary, ImportedPiece } from '@shared/domain/dxf.js'
 import { PieceId, SourceFileId } from '@shared/domain/ids.js'
 import { Rect } from '@shared/domain/geometry.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
-import { GeometryKernel } from '../../src/workers/irregular/geometryKernel.js'
+import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { decodeStrictPriorityOrder } from '../../src/workers/algorithm/irregular/strictPriorityDecoder.js'
 import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
@@ -125,8 +122,9 @@ function decode(
   pieces: ReadonlyArray<IrregularPreparedPiece>
 ) {
   return Effect.runPromise(
-    decodeStrictPriorityOrder(currentSheet, pieces, DEFAULT_IRREGULAR_NESTING_SETTINGS).pipe(
+    decodeStrictPriorityOrder(currentSheet, pieces).pipe(
       Effect.provide(GeometryKernel.Live),
+      Effect.provide(GeometrySettings.Live),
       Effect.provide(NfpIfpServiceLive),
       Effect.provide(IrregularPlacementScorer.Live)
     )
@@ -173,8 +171,9 @@ function decodeWithEqualCandidatePoints(
     decodeStrictPriorityOrder(currentSheet, [
       preparedPiece('metadata-tie', centeredSquarePoints(2), transforms),
       preparedPiece('metadata-marker', squarePoints(1), [transform(0)])
-    ], DEFAULT_IRREGULAR_NESTING_SETTINGS).pipe(
+    ]).pipe(
       Effect.provide(GeometryKernel.Live),
+      Effect.provide(GeometrySettings.Live),
       Effect.provide(candidateService),
       Effect.provide(IrregularPlacementScorer.Live)
     )
@@ -249,7 +248,10 @@ describe('decodeStrictPriorityOrder', () => {
           geometry: collisionGeometry('infeasible', rectanglePoints(6, 2)),
           transform: transform(0)
         })
-      ).pipe(Effect.provide(GeometryKernel.Live))
+      ).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live)
+      )
     )
 
     const failure = await Effect.runPromise(
@@ -343,9 +345,9 @@ describe('decodeStrictPriorityOrder', () => {
           preparedPiece('wide-first', rectanglePoints(6, 1), [transform(0)]),
           preparedPiece('balanced-second', rectanglePoints(2, 2), [transform(0)])
         ],
-        DEFAULT_IRREGULAR_NESTING_SETTINGS
       ).pipe(
         Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
         Effect.provide(candidateService),
         Effect.provide(IrregularPlacementScorer.Live)
       )
@@ -365,12 +367,13 @@ describe('decodeStrictPriorityOrder', () => {
     ], [transform(0)])
 
     const failure = await Effect.runPromise(
-      decodeStrictPriorityOrder(sheet(10, 10), [invalidPiece], DEFAULT_IRREGULAR_NESTING_SETTINGS).pipe(
+      decodeStrictPriorityOrder(sheet(10, 10), [invalidPiece]).pipe(
         Effect.match({
           onFailure: (error) => error,
           onSuccess: () => undefined
         }),
         Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
         Effect.provide(NfpIfpServiceLive),
         Effect.provide(IrregularPlacementScorer.Live)
       )

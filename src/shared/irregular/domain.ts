@@ -1,7 +1,7 @@
 /** Schema-backed contracts for convex irregular nesting geometry and search data. */
 import { Effect, Schema } from 'effect'
 import { ImportedPiece } from '@shared/domain/dxf.js'
-import { PieceId } from '@shared/domain/ids.js'
+import { JobId, PieceId } from '@shared/domain/ids.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
 
 /** Identifies the convex irregular worker implementation. */
@@ -44,6 +44,9 @@ const FiniteNumber = Schema.Finite
 
 /** Finite non-negative millimeter distance used by irregular geometry settings. */
 export const NonNegativeFiniteMillimeters = Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0))
+
+/** Finite non-negative scalar used by whole-layout score summaries. */
+const NonNegativeFiniteNumber = Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0))
 
 /** Finite positive millimeter distance used for flattening tolerances. */
 export const PositiveFiniteMillimeters = Schema.Finite.check(Schema.isGreaterThan(0))
@@ -243,15 +246,26 @@ export class TransformedCollisionGeometry extends Schema.Class<TransformedCollis
 export class IrregularPreparedPiece extends Schema.Class<IrregularPreparedPiece>(
   'IrregularPreparedPiece'
 )({
+  /** Prepared or copied identity; legacy payloads fall back to source.id. */
+  pieceId: Schema.optional(PieceId),
   source: ImportedPiece,
   allowMirror: Schema.Boolean,
   collisionGeometry: CollisionGeometry,
   transforms: Schema.Array(IrregularTransformCandidate)
 }) {}
 
-/** A source piece transform retained as part of a final irregular placement. */
+/**
+ * A prepared piece transform retained as part of a final irregular placement.
+ * Its translation positions `placementReference` after mirror-then-rotation
+ * around that same source-space point.
+ */
 export class IrregularPlacement extends Schema.Class<IrregularPlacement>('IrregularPlacement')({
+  /** Prepared or copied piece identity; new results must always emit this id. */
+  pieceId: Schema.optional(PieceId),
+  /** Original imported piece identity retained for source-geometry lookup. */
   sourcePieceId: PieceId,
+  /** Source-space pivot for the transform; new worker results always emit it. */
+  placementReference: Schema.optional(IrregularPoint),
   transform: IrregularTransform
 }) {}
 
@@ -282,7 +296,7 @@ export class IrregularNfp extends Schema.Class<IrregularNfp>('IrregularNfp')({
 
 /** A rectangular inner-fit bound for one transformed moving piece. */
 export class IrregularIfpBounds extends Schema.Class<IrregularIfpBounds>('IrregularIfpBounds')({
-  sheet: SheetSpec,
+  sheet: Schema.suspend(() => SheetSpec),
   movingPieceId: PieceId,
   bounds: IrregularBounds
 }) {}
@@ -304,7 +318,7 @@ export class FreeMaterialRegion extends Schema.Class<FreeMaterialRegion>('FreeMa
 export class FreeMaterialSnapshot extends Schema.Class<FreeMaterialSnapshot>(
   'FreeMaterialSnapshot'
 )({
-  sheet: SheetSpec,
+  sheet: Schema.suspend(() => SheetSpec),
   regions: Schema.Array(FreeMaterialRegion),
   diagnostics: Schema.Array(CollisionGeometryDiagnostic)
 }) {}
@@ -317,6 +331,55 @@ export class IrregularGeometryCacheKey extends Schema.Class<IrregularGeometryCac
   parts: Schema.Array(Schema.String)
 }) {}
 
+/** Named whole-layout criteria retained for an irregular result or progress update. */
+export class IrregularLayoutScoreSummary extends Schema.Class<IrregularLayoutScoreSummary>(
+  'IrregularLayoutScoreSummary'
+)({
+  unplacedCount: NonNegativeFiniteInteger,
+  largestNetFreeMaterialRegionAreaMm2: NonNegativeFiniteNumber,
+  freeMaterialRegionCount: NonNegativeFiniteInteger,
+  freeMaterialHoleCount: NonNegativeFiniteInteger,
+  freeMaterialSliverMetric: NonNegativeFiniteNumber,
+  collisionBoundsWorstNormalizedSheetConsumption: NonNegativeFiniteNumber,
+  collisionBoundsNormalizedSpanSum: NonNegativeFiniteNumber,
+  collisionBoundsAreaMm2: NonNegativeFiniteNumber,
+  collisionBoundsSpanMm: NonNegativeFiniteNumber
+}) {}
+
+/** A real irregular layout without legality or geometry-artifact claims. */
+export class IrregularLayout extends Schema.Class<IrregularLayout>('IrregularLayout')({
+  kind: Schema.Literal('irregular'),
+  placements: Schema.Array(IrregularPlacement),
+  unplacedPieceIds: Schema.Array(PieceId),
+  score: IrregularLayoutScoreSummary,
+  source: IrregularSearchSource,
+  status: IrregularPortfolioStatus,
+  diagnostics: Schema.Array(CollisionGeometryDiagnostic)
+}) {}
+
+/** One emitted irregular beam state for history replay. */
+export class IrregularHistoryFrame extends Schema.Class<IrregularHistoryFrame>(
+  'IrregularHistoryFrame'
+)({
+  kind: Schema.Literal('irregular'),
+  frameId: Schema.String,
+  jobId: JobId,
+  strategyRunId: Schema.String,
+  strategyLabel: Schema.String,
+  stepIndex: NonNegativeFiniteInteger,
+  title: Schema.String,
+  placements: Schema.Array(IrregularPlacement),
+  remainingPieceIds: Schema.Array(PieceId),
+  unplacedPieceIds: Schema.Array(PieceId),
+  beamRank: NonNegativeFiniteInteger,
+  beamWidth: PositiveFiniteInteger,
+  candidateCount: Schema.optional(NonNegativeFiniteInteger),
+  selectedCandidateId: Schema.optional(Schema.String),
+  selectedPieceId: Schema.optional(PieceId),
+  selectedTransform: Schema.optional(IrregularTransform),
+  createdAt: Schema.String
+}) {}
+
 /** Progress envelope emitted by the irregular search portfolio. */
 export class IrregularPortfolioProgress extends Schema.Class<IrregularPortfolioProgress>(
   'IrregularPortfolioProgress'
@@ -325,7 +388,7 @@ export class IrregularPortfolioProgress extends Schema.Class<IrregularPortfolioP
   generation: Schema.optional(Schema.Number),
   evaluationsCompleted: Schema.optional(Schema.Number),
   populationSize: Schema.optional(Schema.Number),
-  bestScore: Schema.optional(Schema.Array(Schema.Number)),
+  bestScore: Schema.optional(IrregularLayoutScoreSummary),
   bestSource: Schema.optional(Schema.Literals(['beam', 'ga'])),
   elapsedMs: Schema.Number,
   remainingMs: Schema.optional(Schema.Number)
@@ -339,6 +402,6 @@ export class IrregularPortfolioResult extends Schema.Class<IrregularPortfolioRes
   source: IrregularSearchSource,
   placements: Schema.Array(IrregularPlacement),
   unplacedPieceIds: Schema.Array(PieceId),
-  score: Schema.optional(Schema.Array(Schema.Number)),
+  score: Schema.optional(IrregularLayoutScoreSummary),
   diagnostics: Schema.Array(CollisionGeometryDiagnostic)
 }) {}

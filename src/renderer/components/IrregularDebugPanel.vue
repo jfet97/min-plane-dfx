@@ -31,19 +31,19 @@ const settingsSummary = computed(() => DEFAULT_IRREGULAR_NESTING_SETTINGS)
       </div>
       <div>
         <dt>flattened polygons</dt>
-        <dd>not emitted</dd>
+        <dd>used by worker geometry</dd>
       </div>
       <div>
         <dt>collision polygons</dt>
-        <dd>not emitted</dd>
+        <dd>used for placement legality</dd>
       </div>
       <div>
         <dt>free material</dt>
-        <dd>not emitted</dd>
+        <dd>used by layout scoring</dd>
       </div>
       <div>
         <dt>candidate points</dt>
-        <dd>not emitted</dd>
+        <dd>generated per beam expansion</dd>
       </div>
       <div>
         <dt>history</dt>

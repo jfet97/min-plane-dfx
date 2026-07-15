@@ -2,10 +2,28 @@ import * as NodeFileSystem from '@effect/platform-node/NodeFileSystem'
 import * as NodePath from '@effect/platform-node/NodePath'
 import * as NodeWorkerRunner from '@effect/platform-node/NodeWorkerRunner'
 import { computeNesting } from './algorithm/computeNesting.js'
+import {
+  computeIrregularNesting,
+  type IrregularComputeErrorType,
+  type IrregularStateSnapshot
+} from './algorithm/irregular/computeIrregularNesting.js'
+import {
+  irregularStrategyRunId,
+  makeIrregularHistoryFrame,
+  makeIrregularWorkerOutput
+} from './algorithm/irregular/irregularWorkerOutput.js'
+import { IrregularLayoutScorer } from './algorithm/irregular/irregularLayoutScorer.js'
+import { IrregularPlacementScorer } from './algorithm/irregular/irregularPlacementScorer.js'
 import { IRREGULAR_WORKER_MODE } from '@shared/irregular/defaults.js'
+import { CollisionGeometryBuilder } from './irregular/collisionGeometryBuilder.js'
+import { GeometrySettings } from './irregular/geometryKernel.js'
+import { FreeMaterialServiceLive } from './irregular/freeMaterialService.js'
+import { NfpIfpServiceLive } from './irregular/nfpIfpService.js'
+import { TransformGeneratorLive } from './irregular/transformGenerator.js'
 import {
   NestingWorkerRpcs,
   WorkerFailureResponse,
+  WorkerResponseFailureError,
   WorkerHistoryCompleteResponse,
   WorkerHistoryFrameResponse,
   WorkerProgressResponse,
@@ -15,9 +33,10 @@ import {
   type WorkerResponse
 } from '@shared/protocol/worker.js'
 import type {
-  NestingHistoryFrame,
+  NestingHistoryFramePayload,
   NestingHistorySummary,
-  NestingRequest
+  NestingRequest,
+  NestingResult
 } from '@shared/domain/nesting.js'
 import { Cause, Effect, Fiber, FileSystem, Layer, Path, PlatformError, Queue, Stream } from 'effect'
 import * as RpcServer from 'effect/unstable/rpc/RpcServer'
@@ -75,7 +94,7 @@ function prepareHistoryFile(
   })
 }
 
-function appendFrame(path: string, frame: NestingHistoryFrame) {
+function appendFrame(path: string, frame: NestingHistoryFramePayload) {
   return Effect.gen(function* () {
     const filePath = yield* Path.Path
     const fs = yield* FileSystem.FileSystem
@@ -92,12 +111,12 @@ function makeFrameEmitter(
   historyPath: string | null,
   incrementFrameCount: () => void
 ): (
-  frame: NestingHistoryFrame
+  frame: NestingHistoryFramePayload
 ) => Effect.Effect<void, PlatformError.PlatformError, FileSystem.FileSystem | Path.Path> {
   if (historyMode === 'off') {
-    return (_frame: NestingHistoryFrame) => Effect.void
+    return (_frame: NestingHistoryFramePayload) => Effect.void
   }
-  return (frame: NestingHistoryFrame) =>
+  return (frame: NestingHistoryFramePayload) =>
     Effect.gen(function* () {
       incrementFrameCount()
       if (historyPath) {
@@ -130,25 +149,12 @@ function handleRunNesting(
     yield* sendProgress(send, requestId, jobId, 'validated')
     yield* sendProgress(send, requestId, jobId, 'started')
 
-    if (payload.options.workerMode === IRREGULAR_WORKER_MODE) {
-      yield* send(
-        WorkerFailureResponse.notImplemented({
-          requestId,
-          jobId,
-          mode: payload.options.workerMode,
-          message:
-            'Irregular convex nesting is wired to the worker, but the GA, beam, geometry, candidate generation, free-material, and scoring implementations are intentionally missing.'
-        })
-      )
-      return
-    }
-
     const historyMode = payload.options.historyMode
     const historyFileMode = payload.strategyRunId !== undefined ? 'append' : 'truncate'
     const historyPath = yield* prepareHistoryFile(jobId, historyMode, historyFileMode)
 
     let frameCount = 0
-    const frameQueue = yield* Queue.unbounded<NestingHistoryFrame, Cause.Done>()
+    const frameQueue = yield* Queue.unbounded<NestingHistoryFramePayload, Cause.Done>()
     const emitFrame = makeFrameEmitter(send, requestId, jobId, historyMode, historyPath, () => {
       frameCount++
     })
@@ -156,15 +162,47 @@ function handleRunNesting(
       Stream.runForEach(emitFrame),
       Effect.forkDetach
     )
-    const result = yield* Effect.sync(() => {
-      const computed = computeNesting(payload, {
-        emitFrame: (frame) => {
-          Queue.offerUnsafe(frameQueue, frame)
-        }
-      })
-      return computed
-    }).pipe(Effect.ensuring(Queue.end(frameQueue)))
+    const computation: Effect.Effect<
+      NestingResult,
+      WorkerResponseFailureError
+    > =
+      payload.options.workerMode === IRREGULAR_WORKER_MODE
+        ? computeIrregularWorkerResult(
+            payload,
+            historyMode === 'off'
+              ? undefined
+              : (frame) => {
+                  Queue.offerUnsafe(frameQueue, frame)
+                }
+          )
+        : Effect.sync(() =>
+            computeNesting(payload, {
+              emitFrame: (frame) => {
+                Queue.offerUnsafe(frameQueue, frame)
+              }
+            })
+          )
+    const completion = yield* computation.pipe(
+      Effect.match({
+        onFailure: (error) => ({ type: 'failure' as const, error }),
+        onSuccess: (result) => ({ type: 'success' as const, result })
+      }),
+      Effect.ensuring(Queue.end(frameQueue))
+    )
     yield* Fiber.join(frameConsumer)
+
+    if (completion.type === 'failure') {
+      yield* send(
+        new WorkerFailureResponse({
+          requestId,
+          jobId,
+          error: completion.error
+        })
+      )
+      return
+    }
+
+    const result = completion.result
 
     const strategyRunIds = result.strategyResults.map((s) => s.strategyRunId)
 
@@ -204,6 +242,89 @@ function handleRunNesting(
       )
     )
   )
+}
+
+function computeIrregularWorkerResult(
+  request: NestingRequest,
+  emitFrame?: (frame: NestingHistoryFramePayload) => void
+): Effect.Effect<NestingResult, WorkerResponseFailureError> {
+  const startedAt = new Date().toISOString()
+  const startedAtMs = Date.now()
+  const strategyRunId = irregularStrategyRunId(request)
+
+  const options =
+    emitFrame === undefined
+      ? undefined
+      : {
+          emitStateSnapshot: (snapshot: IrregularStateSnapshot, beamWidth: number) => {
+            emitFrame(
+              makeIrregularHistoryFrame({
+                request,
+                strategyRunId,
+                snapshot,
+                beamWidth,
+                createdAt: new Date().toISOString()
+              })
+            )
+          }
+        }
+
+  return computeIrregularNesting(request, options).pipe(
+    Effect.map((computed) => {
+      const endedAt = new Date().toISOString()
+      const output = makeIrregularWorkerOutput({
+        request,
+        computed,
+        algorithmBenchmark: {
+          startedAt,
+          endedAt,
+          elapsedMs: Math.max(0, Date.now() - startedAtMs)
+        }
+      })
+      return output.result
+    }),
+    Effect.provide(CollisionGeometryBuilder.Live),
+    Effect.provide(TransformGeneratorLive),
+    Effect.provide(NfpIfpServiceLive),
+    Effect.provide(FreeMaterialServiceLive),
+    Effect.provide(IrregularPlacementScorer.Live),
+    Effect.provide(IrregularLayoutScorer.Live),
+    Effect.provide(GeometrySettings.Live),
+    Effect.mapError(toIrregularWorkerFailure)
+  )
+}
+
+function toIrregularWorkerFailure(error: IrregularComputeErrorType): WorkerResponseFailureError {
+  switch (error._tag) {
+    case 'IrregularComputeError':
+      return new WorkerResponseFailureError({
+        code: 'irregular_source_geometry_missing',
+        message: error.message,
+        context: {
+          preparedPieceId: error.preparedPieceId,
+          sourcePieceId: error.sourcePieceId
+        }
+      })
+    case 'IrregularGeometryInputError':
+      return new WorkerResponseFailureError({
+        code: 'irregular_geometry_invalid',
+        message: error.message,
+        context: { operation: error.operation }
+      })
+    case 'IrregularNestingNotImplementedError':
+      return new WorkerResponseFailureError({
+        code: 'not_implemented',
+        message: error.message,
+        context: { service: error.service, operation: error.operation }
+      })
+    case 'IrregularPlacementScoringError':
+    case 'IrregularLayoutScoringError':
+      return new WorkerResponseFailureError({
+        code: 'irregular_scoring_error',
+        message: error.message,
+        context: { operation: error.operation }
+      })
+  }
 }
 
 const NestingWorkerHandlers = NestingWorkerRpcs.toLayer(
