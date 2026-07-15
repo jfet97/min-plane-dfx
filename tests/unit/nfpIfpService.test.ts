@@ -22,7 +22,11 @@ import type {
   ComputeNfpInput,
   GeneratePlacementCandidatesInput
 } from '../../src/workers/irregular/services.js'
-import { IrregularGeometryInputError, NfpIfpService } from '../../src/workers/irregular/services.js'
+import {
+  IrregularGeometryInfeasibleError,
+  IrregularGeometryInputError,
+  NfpIfpService
+} from '../../src/workers/irregular/services.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -194,9 +198,11 @@ describe('NfpIfpServiceLive', () => {
 
     const failure = await captureFailure(computeIfpBounds({ sheet: sheet(10, 10), moving }))
 
-    expect(failure).toBeInstanceOf(IrregularGeometryInputError)
-    if (!(failure instanceof IrregularGeometryInputError))
-      throw new Error('expected geometry input error')
+    expect(failure).toBeInstanceOf(IrregularGeometryInfeasibleError)
+    expect(failure).not.toBeInstanceOf(IrregularGeometryInputError)
+    if (!(failure instanceof IrregularGeometryInfeasibleError))
+      throw new Error('expected geometry infeasible error')
+    expect(failure._tag).toBe('IrregularGeometryInfeasibleError')
     expect(failure.message).toBe('moving polygon cannot fit inside the sheet.')
   })
 
@@ -209,9 +215,11 @@ describe('NfpIfpServiceLive', () => {
 
     const failure = await captureFailure(computeIfpBounds({ sheet: sheet(3, 3), moving }))
 
-    expect(failure).toBeInstanceOf(IrregularGeometryInputError)
-    if (!(failure instanceof IrregularGeometryInputError))
-      throw new Error('expected geometry input error')
+    expect(failure).toBeInstanceOf(IrregularGeometryInfeasibleError)
+    expect(failure).not.toBeInstanceOf(IrregularGeometryInputError)
+    if (!(failure instanceof IrregularGeometryInfeasibleError))
+      throw new Error('expected geometry infeasible error')
+    expect(failure._tag).toBe('IrregularGeometryInfeasibleError')
     expect(failure.message).toBe('moving polygon cannot fit inside the sheet.')
   })
 

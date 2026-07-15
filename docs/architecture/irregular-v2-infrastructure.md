@@ -35,6 +35,29 @@ dependency boundaries, not persisted payloads.
 - `IrregularNestingPortfolio`;
 - `GeometryCache`.
 
+`src/workers/algorithm/irregular/strictPriorityDecoder.ts` is an algorithm
+module rather than another Effect service. `decodeStrictPriorityOrder` consumes
+an already priority-ordered list, transforms each piece's existing transform
+candidates in deterministic metadata order, and asks `NfpIfpService` for legal
+candidates against the real placed collision geometries. It chooses by
+candidate point `(y, x)` followed by transform `(index, rotationDeg, mirrored,
+reason)`, retains the chosen transformed geometry for later candidates, and
+records an ordinary no-fit piece as unplaced before continuing. Transform
+indexes are normally unique because `TransformGenerator` emits them that way;
+the complete tie-break keeps malformed or replayed input deterministic.
+
+This is an intermediate strict-order decoder, not the future windowed beam or
+portfolio result. It does not generate transforms, reorder pieces, score
+layouts, prune a beam, emit history, or invent placement data. Candidate
+generation and direct placement validation remain the legality authority; the
+decoder only composes those completed geometry services and selects among their
+real legal candidates. A valid transformed polygon that exceeds the sheet is an
+infeasible transform and produces zero candidates, allowing the decoder to try
+the next supplied transform; invalid geometry and invalid derived arithmetic
+remain typed geometry-input failures. The supplied order must remain untouched
+so future beam and portfolio layers can make their priority decisions outside
+this baseline.
+
 `GeometryKernel.Live` currently implements DXF source flattening, convex hull,
 strictly convex polygon offsetting, and transformation of one padded collision
 polygon. Transforming validates the strictly convex collision boundary with
@@ -98,16 +121,17 @@ polygons, collision polygons, free material, candidates, and irregular progress.
 
 ## Ownership
 
-Algorithm implementations should fill these service boundaries later:
+Geometry services remain under `src/workers/irregular/`. Placement selection,
+scoring, beam state, and search belong under `src/workers/algorithm/`, including
+the strict-priority decoder and its future irregular scorer and beam/search
+layers:
 
-- DXF-to-polygon flattening;
-- convex hull and offset;
 - priority ordering;
+- placement candidate selection;
 - windowed beam;
-- GA/search;
-- free-material scoring beyond the current diagnostic region artifact.
+- scoring;
+- GA/search.
 
-Until their algorithms are implemented, the remaining service boundaries stay
+Until those algorithms are implemented, the remaining service boundaries stay
 as honest infrastructure-only failures. Free-material regions remain a
-sheet-space diagnostic/scoring artifact and do not replace direct placement
-validation.
+sheet-space diagnostic artifact and do not replace direct placement validation.

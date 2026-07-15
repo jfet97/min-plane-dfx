@@ -49,8 +49,9 @@ strategy orchestration, ordering adapters, and worker-facing wrappers.
 Irregular v2 geometry services live under `src/workers/irregular/`. That
 directory owns deterministic collision-geometry preparation and geometry-kernel
 operations such as flattening, convex hulls, offsets, and transforms. It does
-not own placement generation, scoring, beam state, or search. Those future
-algorithm behaviors belong under `src/workers/algorithm/`.
+not own placement generation, scoring, beam state, or search. Those algorithm
+behaviors belong under `src/workers/algorithm/`, including the strict-priority
+irregular decoder under `src/workers/algorithm/irregular/`.
 
 The `irregular-convex-v2` worker mode is exposed through the request schema and
 renderer, but the worker currently returns `not_implemented` before MaxRects is

@@ -37,6 +37,13 @@ export class IrregularGeometryInputError extends Data.TaggedError('IrregularGeom
   readonly message: string
 }> {}
 
+export class IrregularGeometryInfeasibleError extends Data.TaggedError(
+  'IrregularGeometryInfeasibleError'
+)<{
+  readonly operation: string
+  readonly message: string
+}> {}
+
 export interface FlattenSourceGeometryInput {
   readonly piece: ImportedPiece
 }
@@ -150,7 +157,7 @@ export interface NfpIfpService {
     input: ComputeIfpBoundsInput
   ) => Effect.Effect<
     IrregularIfpBounds,
-    IrregularNestingNotImplementedError | IrregularGeometryInputError
+    IrregularNestingNotImplementedError | IrregularGeometryInputError | IrregularGeometryInfeasibleError
   >
   /**
    * Produces deterministic candidate placements from sheet bounds and placed

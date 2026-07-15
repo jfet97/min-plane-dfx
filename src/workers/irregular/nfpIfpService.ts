@@ -12,7 +12,11 @@ import type {
   ComputeNfpInput,
   GeneratePlacementCandidatesInput
 } from './services.js'
-import { IrregularGeometryInputError, NfpIfpService } from './services.js'
+import {
+  IrregularGeometryInfeasibleError,
+  IrregularGeometryInputError,
+  NfpIfpService
+} from './services.js'
 import { ConvexHull } from './convexHull.js'
 import { ConvexPolygonValidation } from './convexPolygonValidation.js'
 import { GeometryPredicates } from './geometryPredicates.js'
@@ -102,7 +106,10 @@ function computeNfp(
  */
 function computeIfpBounds(
   input: ComputeIfpBoundsInput
-): Effect.Effect<IrregularIfpBounds, IrregularGeometryInputError> {
+): Effect.Effect<
+  IrregularIfpBounds,
+  IrregularGeometryInputError | IrregularGeometryInfeasibleError
+> {
   const validation = ConvexPolygonValidation.validateStrictBoundary(input.moving.polygon.points)
   if ('message' in validation) return failInvalidGeometry('computeIfpBounds', validation.message)
 
@@ -124,7 +131,12 @@ function computeIfpBounds(
     return failInvalidGeometry('computeIfpBounds', 'IFP arithmetic must produce finite bounds.')
   }
   if (minX > maxX || minY > maxY) {
-    return failInvalidGeometry('computeIfpBounds', 'moving polygon cannot fit inside the sheet.')
+    return Effect.fail(
+      new IrregularGeometryInfeasibleError({
+        operation: 'computeIfpBounds',
+        message: 'moving polygon cannot fit inside the sheet.'
+      })
+    )
   }
 
   const bounds = new IrregularBounds({ minX, minY, maxX, maxY })
@@ -143,7 +155,10 @@ function generatePlacementCandidates(
   input: GeneratePlacementCandidatesInput
 ): Effect.Effect<ReadonlyArray<IrregularPlacementCandidate>, IrregularGeometryInputError> {
   return Effect.gen(function* () {
-    const ifp = yield* computeIfpBounds({ sheet: input.sheet, moving: input.moving })
+    const ifp = yield* computeIfpBounds({ sheet: input.sheet, moving: input.moving }).pipe(
+      Effect.catchTag('IrregularGeometryInfeasibleError', () => Effect.succeed(undefined))
+    )
+    if (ifp === undefined) return []
     const nfpBoundaries: NfpBoundary[] = []
 
     for (const placed of input.placed) {
