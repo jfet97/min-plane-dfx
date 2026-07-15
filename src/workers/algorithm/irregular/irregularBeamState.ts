@@ -16,6 +16,8 @@ export class IrregularBeamState {
   readonly unplacedSourcePieceIds: ReadonlyArray<PieceId>
   /** Prepared ids of committed placements, retained as a deterministic history. */
   readonly placementOrder: ReadonlyArray<PieceId>
+  /** Previous state on this branch, retained only while reconstructing winning history. */
+  readonly parent: IrregularBeamState | undefined
 
   constructor(input: {
     readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
@@ -23,6 +25,7 @@ export class IrregularBeamState {
     readonly unplacedPieceIds?: ReadonlyArray<PieceId>
     readonly unplacedSourcePieceIds?: ReadonlyArray<PieceId>
     readonly placementOrder: ReadonlyArray<PieceId>
+    readonly parent?: IrregularBeamState | undefined
   }) {
     this.remainingPreparedPieces = [...input.remainingPreparedPieces]
     this.placedCollisionGeometries = [...input.placedCollisionGeometries]
@@ -30,6 +33,7 @@ export class IrregularBeamState {
     this.unplacedPieceIds = [...unplacedPieceIds]
     this.unplacedSourcePieceIds = [...unplacedPieceIds]
     this.placementOrder = [...input.placementOrder]
+    this.parent = input.parent
   }
 
   /** Creates the empty layout state without inventing any geometry or result. */

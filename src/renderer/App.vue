@@ -144,6 +144,7 @@ async function hydrateWorkspaceState(): Promise<void> {
       workspaceSettingsRevision = persistedSettings.revision ?? 0
       settings.hydrateWorkspaceSettings(persistedSettings)
       store.hydratePieceQuantities(persistedSettings.pieceQuantities)
+      store.hydratePieceMirrorEnabled(persistedSettings.pieceMirrorEnabled)
       history.hydrateWorkspaceSettings(persistedSettings)
       csvStore.hydrateFromWorkspace(persistedSettings)
       store.setCsvImportsForCounting(csvStore.state.value.csvImports)
@@ -176,6 +177,7 @@ function buildWorkspaceSettings(): WorkspaceProjectSettings {
     sheet: cloneSheet(settings.state.value.sheet),
     padding: settings.state.value.padding,
     pieceQuantities: { ...store.state.value.pieceQuantities },
+    pieceMirrorEnabled: { ...store.state.value.pieceMirrorEnabled },
     options: cloneOptions(settings.state.value.options),
     runRecords: history.runRecords.value.map(cloneRunRecord),
     ...(selectedCsvId !== null ? { selectedCsvId } : {}),
@@ -244,6 +246,7 @@ function cloneSheet(sheet: SheetSpec): SheetSpec {
 function cloneOptions(options: NestingOptions): NestingOptions {
   return {
     allowGlobalRotation: options.allowGlobalRotation,
+    allowGlobalMirror: options.allowGlobalMirror ?? true,
     timeoutMs: options.timeoutMs,
     workerMode: options.workerMode,
     historyMode: options.historyMode,
@@ -255,6 +258,9 @@ function cloneOptions(options: NestingOptions): NestingOptions {
     ...(options.topN !== undefined ? { topN: options.topN } : {}),
     ...(options.maxHistoryEvents !== undefined
       ? { maxHistoryEvents: options.maxHistoryEvents }
+      : {}),
+    ...(options.irregularSettings !== undefined
+      ? { irregularSettings: options.irregularSettings }
       : {})
   }
 }
@@ -356,6 +362,7 @@ function clonePreparedPiece(piece: PreparedPiece): PreparedPiece {
     },
     padding: piece.padding,
     allowRotation: piece.allowRotation,
+    allowMirror: piece.allowMirror ?? true,
     ...(piece.cutRowRef !== undefined ? { cutRowRef: { ...piece.cutRowRef } } : {})
   }
 }
@@ -552,7 +559,14 @@ function buildRequest(): NestingRequest | null {
   if (store.selectedPieceCount.value === 0) return null
 
   const jobId = JobId.make()
-  const prep = preparePieces(store.selectedPieces.value, sheet, padding, jobId)
+  const prep = preparePieces(
+    store.selectedPieces.value,
+    sheet,
+    padding,
+    jobId,
+    undefined,
+    (pieceId) => store.getPieceMirrorEnabled(pieceId)
+  )
   preparationWarnings.value = prep.warnings
 
   return {
@@ -591,6 +605,18 @@ function normalizeIncomingSubRun(
     parentRunId: previous.jobId,
     index
   } as NestingSubRun
+}
+
+function subRunPlacedCount(subRun: NestingSubRun): number {
+  return subRun.layout?.kind === 'irregular'
+    ? subRun.layout.placements.length
+    : subRun.placements.length
+}
+
+function subRunUsedAreaMm2(subRun: NestingSubRun): number {
+  return subRun.layout?.kind === 'irregular'
+    ? subRun.layout.score.collisionBoundsAreaMm2
+    : subRun.placements.reduce((sum, placement) => sum + placement.width * placement.height, 0)
 }
 
 function aggregateNormalSubrunResult(
@@ -656,13 +682,13 @@ function aggregateNormalSubrunResult(
   const runSummary: NestingRunSummary = {
     runId: previous.runSummary?.runId ?? previous.jobId,
     subRuns,
-    totalPlaced: placements.length,
+    totalPlaced: subRuns.reduce((sum, subRun) => sum + subRunPlacedCount(subRun), 0),
     totalUnplaced: unplacedPieceIds.length,
     totalSheetAreaMm2: subRuns.reduce(
       (sum, subRun) => sum + subRun.sheet.width * subRun.sheet.height,
       0
     ),
-    usedAreaMm2: placements.reduce((sum, placement) => sum + placement.width * placement.height, 0)
+    usedAreaMm2: subRuns.reduce((sum, subRun) => sum + subRunUsedAreaMm2(subRun), 0)
   } as NestingRunSummary
 
   return {
@@ -772,17 +798,7 @@ function buildCsvSubrunRequest(
   )
 }
 
-function rejectUnsupportedCsvIrregularMode(): void {
-  projectWarning.value =
-    'CSV multi-sheet nesting does not support irregular transform results yet.'
-}
-
 async function runCsvNestingRequest(request: NestingRequest, csvImportId: string): Promise<void> {
-  if (request.options.workerMode === 'irregular-convex-v2') {
-    rejectUnsupportedCsvIrregularMode()
-    return
-  }
-
   await runner.start(request, {
     onHistoryFrame: (frame) => history.pushFrame(frame),
     onHistoryComplete: async (jobId, summary) => {
@@ -821,7 +837,8 @@ async function runCsvSession(csvImportId: string): Promise<void> {
     sourcePieces,
     csv.runConfiguration.defaultSheet,
     csv.runConfiguration.padding,
-    JobId.make()
+    JobId.make(),
+    (pieceId) => store.getPieceMirrorEnabled(pieceId)
   )
   preparationWarnings.value = prep.warnings
 
@@ -829,11 +846,6 @@ async function runCsvSession(csvImportId: string): Promise<void> {
     projectWarning.value = 'No pieces to run. Link every CUT row to an available source shape.'
     return
   }
-  if (csv.runConfiguration.options.workerMode === 'irregular-convex-v2') {
-    rejectUnsupportedCsvIrregularMode()
-    return
-  }
-
   const request = buildCsvSubrunRequest(
     csvImportId,
     0,
@@ -863,11 +875,6 @@ async function startNextSubrun(
     projectWarning.value = 'No remaining pieces for the next subrun.'
     return
   }
-  if (options.workerMode === 'irregular-convex-v2') {
-    rejectUnsupportedCsvIrregularMode()
-    return
-  }
-
   const request = buildCsvSubrunRequest(
     csvImportId,
     session.subRuns.length,
@@ -882,14 +889,6 @@ async function startNextSubrun(
 async function startNextNormalSubrun(): Promise<void> {
   const previous = history.result.value
   if (!previous || previous.csvImportId !== undefined) return
-  if (previous.layout?.kind === 'irregular') {
-    projectWarning.value = 'Multiple-sheet nesting does not support irregular transform results yet.'
-    return
-  }
-  if (settings.state.value.options.workerMode === 'irregular-convex-v2') {
-    projectWarning.value = 'Multiple-sheet nesting does not support irregular transform results yet.'
-    return
-  }
   const preparedPieces = previous.preparedPieces ?? []
   const remaining = store.computeRemainingPieces(previous.unplacedPieceIds, preparedPieces)
   if (remaining.length === 0) {
@@ -1012,6 +1011,7 @@ async function exportCsvResult(): Promise<void> {
     console.log('[app] exported CSV result to', path)
   } catch (error: unknown) {
     console.error('[app] failed to export CSV result:', error)
+    projectWarning.value = error instanceof Error ? error.message : String(error)
   }
 }
 
@@ -1057,6 +1057,7 @@ async function saveProject(): Promise<void> {
     sheet: cloneSheet(settings.state.value.sheet),
     padding: settings.state.value.padding,
     pieceQuantities: { ...store.state.value.pieceQuantities },
+    pieceMirrorEnabled: { ...store.state.value.pieceMirrorEnabled },
     options: cloneOptions(settings.state.value.options),
     runRecords: history.runRecords.value.map(cloneRunRecord),
     csvImports: csvStore.state.value.csvImports.map(cloneCsvImport),

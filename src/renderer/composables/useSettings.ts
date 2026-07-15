@@ -18,6 +18,7 @@ interface MutableSettingsState {
   padding: number
   options: {
     allowGlobalRotation: boolean
+    allowGlobalMirror: boolean
     timeoutMs: number
     workerMode: NestingOptions['workerMode']
     historyMode: 'stream' | 'final' | 'off'
@@ -28,6 +29,7 @@ interface MutableSettingsState {
     finalSelectionMode: 'manual' | 'best' | 'top_n'
     topN?: number | undefined
     maxHistoryEvents?: number | undefined
+    irregularSettings?: NestingOptions['irregularSettings']
   }
 }
 
@@ -45,6 +47,7 @@ export function makeDefaultSettings(): MutableSettingsState {
     padding: 10,
     options: {
       allowGlobalRotation: true,
+      allowGlobalMirror: true,
       timeoutMs: 30000,
       workerMode: 'maxrects-beam-search',
       historyMode: 'final',
@@ -63,6 +66,7 @@ const state: UnwrapNestedRefs<MutableSettingsState> =
 
 function replaceOptions(options: NestingOptions): void {
   state.options.allowGlobalRotation = options.allowGlobalRotation
+  state.options.allowGlobalMirror = options.allowGlobalMirror ?? true
   state.options.timeoutMs = options.timeoutMs
   state.options.workerMode = options.workerMode
   state.options.historyMode = options.historyMode
@@ -77,6 +81,7 @@ function replaceOptions(options: NestingOptions): void {
   state.options.finalSelectionMode = options.finalSelectionMode
   state.options.topN = options.topN
   state.options.maxHistoryEvents = options.maxHistoryEvents
+  state.options.irregularSettings = options.irregularSettings
 }
 
 export function useSettings() {
@@ -103,6 +108,14 @@ export function useSettings() {
     },
     setAllowGlobalRotation: (allow: boolean): void => {
       state.options.allowGlobalRotation = allow
+      notifyWorkspaceSettingsChanged()
+    },
+    setAllowGlobalMirror: (allow: boolean): void => {
+      state.options.allowGlobalMirror = allow
+      notifyWorkspaceSettingsChanged()
+    },
+    setIrregularSettings: (irregularSettings: NestingOptions['irregularSettings']): void => {
+      state.options.irregularSettings = irregularSettings
       notifyWorkspaceSettingsChanged()
     },
     setTimeoutMs: (timeoutMs: number): void => {

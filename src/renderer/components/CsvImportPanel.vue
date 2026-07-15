@@ -13,6 +13,7 @@ import type { ProjectCsvImport } from '@shared/domain/project.js'
  * TypeScript, so we build a mutable clone and cast it back when emitting. */
 interface MutableSubrunOptions {
   allowGlobalRotation: boolean
+  allowGlobalMirror: boolean
   timeoutMs: number
   workerMode: NestingOptions['workerMode']
   historyMode: 'stream' | 'final' | 'off'
@@ -23,6 +24,7 @@ interface MutableSubrunOptions {
   finalSelectionMode: 'manual' | 'best' | 'top_n'
   topN?: number
   maxHistoryEvents?: number
+  irregularSettings?: NestingOptions['irregularSettings']
 }
 
 const csvStore = useCsvImportStore()
@@ -76,6 +78,7 @@ const allRowsLinked = computed(() => {
 function makeDefaultOptions(): MutableSubrunOptions {
   return {
     allowGlobalRotation: true,
+    allowGlobalMirror: true,
     timeoutMs: 30000,
     workerMode: 'maxrects-beam-search',
     historyMode: 'final',
@@ -256,6 +259,10 @@ function setMainAllowGlobalRotation(csvImportId: string, value: boolean): void {
   setMainOption(csvImportId, { allowGlobalRotation: value })
 }
 
+function setMainAllowGlobalMirror(csvImportId: string, value: boolean): void {
+  setMainOption(csvImportId, { allowGlobalMirror: value })
+}
+
 function setMainTimeoutMs(csvImportId: string, value: number): void {
   setMainOption(csvImportId, { timeoutMs: Math.max(1000, value) })
 }
@@ -302,6 +309,7 @@ function openNextSubrunConfig(): void {
   subrunConfig.padding = cfg.padding
   subrunConfig.options = {
     allowGlobalRotation: cfg.options.allowGlobalRotation,
+    allowGlobalMirror: cfg.options.allowGlobalMirror ?? true,
     timeoutMs: cfg.options.timeoutMs,
     workerMode: cfg.options.workerMode,
     historyMode: cfg.options.historyMode,
@@ -313,6 +321,9 @@ function openNextSubrunConfig(): void {
     ...(cfg.options.topN !== undefined ? { topN: cfg.options.topN } : {}),
     ...(cfg.options.maxHistoryEvents !== undefined
       ? { maxHistoryEvents: cfg.options.maxHistoryEvents }
+      : {}),
+    ...(cfg.options.irregularSettings !== undefined
+      ? { irregularSettings: cfg.options.irregularSettings }
       : {})
   }
 }
@@ -358,6 +369,7 @@ function onStartSubrun(csvImportId: string): void {
   const options: NestingOptions = {
     ...subrunConfig.options,
     allowGlobalRotation: subrunConfig.options.allowGlobalRotation,
+    allowGlobalMirror: subrunConfig.options.allowGlobalMirror,
     timeoutMs: Math.max(1000, subrunConfig.options.timeoutMs),
     strategySelectionMode: subrunConfig.options.strategySelectionMode,
     strategyIds: [...subrunConfig.options.strategyIds]
@@ -467,6 +479,14 @@ function onStartSubrun(csvImportId: string): void {
               type="checkbox"
               :checked="selectedCsv.runConfiguration.options.allowGlobalRotation"
               @change="setMainAllowGlobalRotation(selectedCsv.id, inputChecked($event))"
+            />
+          </label>
+          <label title="Allows candidate generation to try mirrored placements for eligible source shapes.">
+            Allow mirror
+            <input
+              type="checkbox"
+              :checked="selectedCsv.runConfiguration.options.allowGlobalMirror ?? true"
+              @change="setMainAllowGlobalMirror(selectedCsv.id, inputChecked($event))"
             />
           </label>
           <label title="Maximum worker runtime before the job is reported as timed out.">
@@ -646,6 +666,14 @@ function onStartSubrun(csvImportId: string): void {
               type="checkbox"
               :checked="subrunConfig.options.allowGlobalRotation"
               @change="patchSubrunOptions({ allowGlobalRotation: inputChecked($event) })"
+            />
+          </label>
+          <label title="Allows candidate generation to try mirrored placements for eligible source shapes.">
+            Allow mirror
+            <input
+              type="checkbox"
+              :checked="subrunConfig.options.allowGlobalMirror"
+              @change="patchSubrunOptions({ allowGlobalMirror: inputChecked($event) })"
             />
           </label>
           <label title="Maximum worker runtime before the job is reported as timed out.">

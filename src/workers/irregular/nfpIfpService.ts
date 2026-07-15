@@ -14,6 +14,8 @@ import type {
 } from './services.js'
 import {
   IrregularGeometryInfeasibleError,
+  GeometryCache,
+  GeometryCacheInMemory,
   IrregularGeometryInputError,
   NfpIfpService
 } from './services.js'
@@ -21,13 +23,28 @@ import { ConvexHull } from './convexHull.js'
 import { ConvexPolygonValidation } from './convexPolygonValidation.js'
 import { GeometryPredicates } from './geometryPredicates.js'
 import { PlacementValidation } from './placementValidation.js'
+import {
+  innerFitBoundsCacheKey,
+  isValidCachedIfp,
+  isValidCachedNfp,
+  pairwiseNfpCacheKey
+} from './geometryCacheKeys.js'
 
 /** Provides deterministic convex IFP bounds and outer NFP boundaries. */
-export const NfpIfpServiceLive = Layer.succeed(NfpIfpService, {
-  computeNfp,
-  computeIfpBounds,
-  generatePlacementCandidates
-})
+export const NfpIfpServiceLayer = Layer.effect(
+  NfpIfpService,
+  Effect.gen(function* () {
+    const geometryCache = yield* GeometryCache
+    return NfpIfpService.of({
+      computeNfp: (input) => computeNfpCached(input, geometryCache),
+      computeIfpBounds: (input) => computeIfpBoundsCached(input, geometryCache),
+      generatePlacementCandidates: (input) => generatePlacementCandidates(input, geometryCache)
+    })
+  })
+)
+
+/** Standalone service layer with a private deterministic cache for direct callers. */
+export const NfpIfpServiceLive = NfpIfpServiceLayer.pipe(Layer.provideMerge(GeometryCacheInMemory))
 
 /**
  * Computes the outer forbidden translation boundary for two strict convex polygons.
@@ -44,7 +61,41 @@ export const NfpIfpServiceLive = Layer.succeed(NfpIfpService, {
  * positive-area overlap is forbidden, while its boundary means touching is
  * allowed.
  */
-function computeNfp(
+function computeNfpCached(
+  input: ComputeNfpInput,
+  geometryCache: GeometryCache
+): Effect.Effect<IrregularNfp, IrregularGeometryInputError> {
+  const fixedValidation = ConvexPolygonValidation.validateStrictBoundary(
+    input.fixed.collisionGeometry.polygon.points
+  )
+  if ('message' in fixedValidation)
+    return failInvalidGeometry('computeNfp', fixedValidation.message)
+  const movingValidation = ConvexPolygonValidation.validateStrictBoundary(
+    input.moving.polygon.points
+  )
+  if ('message' in movingValidation)
+    return failInvalidGeometry('computeNfp', movingValidation.message)
+
+  const key = pairwiseNfpCacheKey(input)
+  return geometryCache.get<IrregularNfp>(key).pipe(
+    Effect.flatMap((cached) => {
+      const cachedValidation = ConvexPolygonValidation.validateStrictBoundary(
+        cached?.boundary.points ?? []
+      )
+      if (isValidCachedNfp(cached, input) && !('message' in cachedValidation)) {
+        return Effect.succeed(cached)
+      }
+
+      const removeInvalid = cached === undefined ? Effect.void : geometryCache.remove(key)
+      return removeInvalid.pipe(
+        Effect.flatMap(() => computeNfpUncached(input)),
+        Effect.tap((computed) => geometryCache.set(key, computed))
+      )
+    })
+  )
+}
+
+function computeNfpUncached(
   input: ComputeNfpInput
 ): Effect.Effect<IrregularNfp, IrregularGeometryInputError> {
   const fixedValidation = ConvexPolygonValidation.validateStrictBoundary(
@@ -104,7 +155,30 @@ function computeNfp(
  * `TransformedCollisionGeometry.bounds` is derived cache data and is not
  * trusted at this legality boundary; a stale cache must not enlarge the IFP.
  */
-function computeIfpBounds(
+function computeIfpBoundsCached(
+  input: ComputeIfpBoundsInput,
+  geometryCache: GeometryCache
+): Effect.Effect<
+  IrregularIfpBounds,
+  IrregularGeometryInputError | IrregularGeometryInfeasibleError
+> {
+  const validation = ConvexPolygonValidation.validateStrictBoundary(input.moving.polygon.points)
+  if ('message' in validation) return failInvalidGeometry('computeIfpBounds', validation.message)
+
+  const key = innerFitBoundsCacheKey(input)
+  return geometryCache.get<IrregularIfpBounds>(key).pipe(
+    Effect.flatMap((cached) => {
+      if (isValidCachedIfp(cached, input)) return Effect.succeed(cached)
+      const removeInvalid = cached === undefined ? Effect.void : geometryCache.remove(key)
+      return removeInvalid.pipe(
+        Effect.flatMap(() => computeIfpBoundsUncached(input)),
+        Effect.tap((computed) => geometryCache.set(key, computed))
+      )
+    })
+  )
+}
+
+function computeIfpBoundsUncached(
   input: ComputeIfpBoundsInput
 ): Effect.Effect<
   IrregularIfpBounds,
@@ -152,21 +226,26 @@ function computeIfpBounds(
 
 /** Builds deterministic IFP/NFP contact candidates and filters illegal results. */
 function generatePlacementCandidates(
-  input: GeneratePlacementCandidatesInput
+  input: GeneratePlacementCandidatesInput,
+  geometryCache: GeometryCache
 ): Effect.Effect<ReadonlyArray<IrregularPlacementCandidate>, IrregularGeometryInputError> {
   return Effect.gen(function* () {
-    const ifp = yield* computeIfpBounds({ sheet: input.sheet, moving: input.moving }).pipe(
-      Effect.catchTag('IrregularGeometryInfeasibleError', () => Effect.succeed(undefined))
-    )
+    const ifp = yield* computeIfpBoundsCached(
+      { sheet: input.sheet, moving: input.moving },
+      geometryCache
+    ).pipe(Effect.catchTag('IrregularGeometryInfeasibleError', () => Effect.succeed(undefined)))
     if (ifp === undefined) return []
     const nfpBoundaries: NfpBoundary[] = []
 
     for (const placed of input.placed) {
-      const nfp = yield* computeNfp({
-        fixed: placed,
-        moving: input.moving,
-        settings: input.settings.geometry
-      })
+      const nfp = yield* computeNfpCached(
+        {
+          fixed: placed,
+          moving: input.moving,
+          settings: input.settings.geometry
+        },
+        geometryCache
+      )
       const validation = ConvexPolygonValidation.validateStrictBoundary(nfp.boundary.points)
       if ('message' in validation)
         return yield* failInvalidGeometry('generatePlacementCandidates', validation.message)

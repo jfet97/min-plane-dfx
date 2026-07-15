@@ -36,6 +36,28 @@ function unplacedCount(frame: NestingHistoryFramePayload): number {
 function freeRectangleCount(frame: NestingHistoryFramePayload): number | null {
   return isIrregularHistoryFrame(frame) ? null : frame.plate.freeRectangles.length
 }
+
+function candidateCount(frame: NestingHistoryFramePayload): number | null {
+  return isIrregularHistoryFrame(frame)
+    ? (frame.candidateCount ?? null)
+    : (frame.beam?.candidateCount ?? null)
+}
+
+function selectedTransform(frame: NestingHistoryFramePayload): string | null {
+  if (!isIrregularHistoryFrame(frame) || frame.selectedTransform === undefined) return null
+  const transform = frame.selectedTransform
+  const mirror = transform.mirrored ? ' mirrored' : ''
+  return (
+    String(transform.rotationDeg) +
+    '°' +
+    mirror +
+    ' at ' +
+    transform.translateX +
+    ', ' +
+    transform.translateY +
+    ' mm'
+  )
+}
 </script>
 
 <template>
@@ -126,6 +148,18 @@ function freeRectangleCount(frame: NestingHistoryFramePayload): number | null {
         </span>
         <span title="Pieces already rejected as not fitting in the selected beam state.">
           Unplaced {{ unplacedCount(history.selectedFrame.value) }}
+        </span>
+        <span
+          v-if="candidateCount(history.selectedFrame.value) !== null"
+          title="Real candidate count emitted for this beam expansion."
+        >
+          Candidates {{ candidateCount(history.selectedFrame.value) }}
+        </span>
+        <span
+          v-if="selectedTransform(history.selectedFrame.value)"
+          title="Real selected transform for this history frame."
+        >
+          Transform {{ selectedTransform(history.selectedFrame.value) }}
         </span>
       </div>
       <div v-if="history.selectedStepFrames.value.length > 1" class="beam-ranks">

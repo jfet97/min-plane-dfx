@@ -19,12 +19,14 @@ import type {
   NestingHistoryFrame,
   NestingRequest,
   NestingResult,
+  NestingSubRun,
   Placement,
   PreparedPiece,
   ProjectHistoryRef
 } from '@shared/domain/nesting.js'
 import type { FreeRectId, JobId, PieceId, SourceFileId } from '@shared/domain/ids.js'
 import type { CsvRunRecord, ProjectCsvImport } from '@shared/domain/project.js'
+import type { IrregularLayout, IrregularPlacement } from '@shared/irregular/domain.js'
 
 const piece: PreparedPiece = {
   id: 'p-1' as PreparedPiece['id'],
@@ -156,6 +158,42 @@ function makePlacement(pieceId: string): Placement {
   return { pieceId: pid(pieceId), x: 0, y: 0, width: 10, height: 5, rotation: 0 }
 }
 
+function makeIrregularPlacement(
+  pieceId: string | undefined,
+  sourcePieceId: string,
+  overrides?: Partial<IrregularPlacement>
+): IrregularPlacement {
+  return {
+    ...(pieceId !== undefined ? { pieceId: pid(pieceId) } : {}),
+    sourcePieceId: pid(sourcePieceId),
+    placementReference: { x: 1.25, y: 2.5 },
+    transform: { translateX: 12.5, translateY: 20.75, rotationDeg: 37.5, mirrored: true },
+    ...overrides
+  }
+}
+
+function makeIrregularLayout(placements: ReadonlyArray<IrregularPlacement>): IrregularLayout {
+  return {
+    kind: 'irregular',
+    placements,
+    unplacedPieceIds: [],
+    score: {
+      unplacedCount: 0,
+      largestNetFreeMaterialRegionAreaMm2: 100,
+      freeMaterialRegionCount: 1,
+      freeMaterialHoleCount: 0,
+      freeMaterialSliverMetric: 1,
+      collisionBoundsWorstNormalizedSheetConsumption: 0.5,
+      collisionBoundsNormalizedSpanSum: 0.8,
+      collisionBoundsAreaMm2: 240,
+      collisionBoundsSpanMm: 30
+    },
+    source: 'beam',
+    status: 'completed',
+    diagnostics: []
+  }
+}
+
 function makeCsvRunRecord(overrides?: Partial<CsvRunRecord>): CsvRunRecord {
   return {
     csvImportId: 'csv-import-1',
@@ -199,6 +237,81 @@ describe('ExportService', () => {
     const text = await readFile(file, 'utf8')
     const parsed = JSON.parse(text)
     expect(parsed.status).toBe('partial')
+  })
+
+  it('writes irregular results as explicit source-shape transforms with CSV row links', async () => {
+    const firstPlacement = makeIrregularPlacement('copy-1', 'source-1')
+    const legacyPlacement = makeIrregularPlacement(undefined, 'source-2', {
+      placementReference: undefined,
+      transform: { translateX: 4, translateY: 5, rotationDeg: 90, mirrored: false }
+    })
+    const firstSubRun: NestingSubRun = {
+      subRunId: 'sub-0',
+      parentRunId: 'run-irregular',
+      index: 0,
+      sheet: { width: 100, height: 100, label: 'sheet 0' },
+      padding: 2,
+      options: defaultOptions,
+      placements: [],
+      layout: makeIrregularLayout([firstPlacement]),
+      unplacedPieceIds: [],
+      pieceIds: [pid('copy-1')],
+      requestPieceIds: [pid('copy-1')]
+    }
+    const secondSubRun: NestingSubRun = {
+      ...firstSubRun,
+      subRunId: 'sub-1',
+      index: 1,
+      sheet: { width: 80, height: 90, label: 'sheet 1' },
+      layout: makeIrregularLayout([legacyPlacement]),
+      pieceIds: [pid('source-2')],
+      requestPieceIds: [pid('source-2')]
+    }
+    const result: NestingResult = {
+      ...sampleResult,
+      jobId: 'job-irregular' as JobId,
+      status: 'ok',
+      unplacedPieceIds: [],
+      runSummary: {
+        runId: 'run-irregular',
+        subRuns: [firstSubRun, secondSubRun],
+        totalPlaced: 2,
+        totalUnplaced: 0,
+        totalSheetAreaMm2: 17200,
+        usedAreaMm2: 480
+      },
+      preparedPieces: [
+        makePreparedPiece('copy-1', 'source-1', {
+          reference: '1000_1',
+          customerName: 'Customer A',
+          csvRowId: 'row-1'
+        }),
+        makePreparedPiece('source-2', 'source-2', undefined)
+      ]
+    }
+
+    const file = join(dir, 'irregular-result.json')
+    await exportNestingResultToFile(file, result)
+    const parsed = JSON.parse(await readFile(file, 'utf8'))
+    expect(parsed.format).toBe('min-plane-dfx/nesting-result-with-irregular-transforms')
+    expect(parsed.irregularTransformExport.format).toBe(
+      'min-plane-dfx/irregular-transform-export'
+    )
+    expect(parsed.irregularTransformExport.subRuns).toHaveLength(2)
+    expect(parsed.irregularTransformExport.subRuns[0].placements[0]).toMatchObject({
+      pieceId: 'copy-1',
+      sourcePieceId: 'source-1',
+      placementReference: { x: 1.25, y: 2.5 },
+      transform: { translateX: 12.5, translateY: 20.75, rotationDeg: 37.5, mirrored: true },
+      sourceRow: { reference: '1000_1', customerName: 'Customer A', csvRowId: 'row-1' }
+    })
+    expect(parsed.irregularTransformExport.subRuns[1].placements[0]).toMatchObject({
+      pieceId: 'source-2',
+      sourcePieceId: 'source-2',
+      transform: { translateX: 4, translateY: 5, rotationDeg: 90, mirrored: false }
+    })
+    expect(parsed.irregularTransformExport.subRuns[1].placements[0].placementReference).toBeUndefined()
+    expect(parsed.irregularTransformExport.subRuns[1].placements[0].sourceRow).toBeUndefined()
   })
 
   it('writes history frames as one NDJSON line per frame', async () => {
@@ -317,6 +430,28 @@ describe('ExportService', () => {
     expect(text).toContain('AUFTRAG;3282597;2;Customer A;1\r\n')
     expect(text).toContain('AUFTRAG;3282597;3;Customer B;1\r\n')
     expect(text.endsWith('\r\n')).toBe(true)
+  })
+
+  it('rejects irregular transforms only when writing the rectangular CSV format', async () => {
+    const csvImport = makeCsvImport()
+    const subRun: NestingSubRun = {
+      subRunId: 'sub-irregular',
+      parentRunId: 'run-1',
+      index: 0,
+      sheet: { width: 1000, height: 1000, label: 'mother plate' },
+      padding: 10,
+      options: { ...defaultOptions, workerMode: 'irregular-convex-v2' },
+      placements: [],
+      layout: makeIrregularLayout([makeIrregularPlacement('p-1', 'p-1')]),
+      unplacedPieceIds: [],
+      pieceIds: [pid('p-1')],
+      requestPieceIds: [pid('p-1')]
+    }
+    const runRecord = makeCsvRunRecord({ subRuns: [subRun] })
+
+    await expect(
+      exportCsvResultToFile(join(dir, 'irregular.csv'), csvImport, runRecord)
+    ).rejects.toThrow('CSV export cannot represent irregular transforms')
   })
 
   it('aggregates AUFTRAG amounts by pieceId and then by reference/customerName', async () => {

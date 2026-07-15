@@ -7,7 +7,11 @@ import {
   Rect,
   RectWith
 } from './geometry.js'
-import { IrregularHistoryFrame, IrregularLayout } from '../irregular/domain.js'
+import {
+  IrregularHistoryFrame,
+  IrregularLayout,
+  IrregularNestingSettings
+} from '../irregular/domain.js'
 
 /** History scope. Only the winning path is required to be retained. */
 export const HistoryScope = Schema.Literal('winning_path')
@@ -92,6 +96,11 @@ export class LayoutSelectionStrategyDefinition extends Schema.Class<LayoutSelect
 
 export class NestingOptions extends Schema.Class<NestingOptions>('NestingOptions')({
   allowGlobalRotation: Schema.Boolean,
+  allowGlobalMirror: Schema.Boolean.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(true)),
+    Schema.withDecodingDefaultKey(Effect.succeed(true))
+  ),
   timeoutMs: Schema.Number,
   workerMode: WorkerMode,
   historyMode: HistoryMode,
@@ -103,7 +112,9 @@ export class NestingOptions extends Schema.Class<NestingOptions>('NestingOptions
   layoutSelectionStrategyId: Schema.String,
   finalSelectionMode: FinalSelectionMode,
   topN: Schema.optional(Schema.Number),
-  maxHistoryEvents: Schema.optional(Schema.Number)
+  maxHistoryEvents: Schema.optional(Schema.Number),
+  /** Optional request-owned irregular settings decoded into GeometrySettings. */
+  irregularSettings: Schema.optional(Schema.suspend(() => IrregularNestingSettings))
 }) {}
 
 export class PreparedPiece extends Schema.Class<PreparedPiece>('PreparedPiece')({
@@ -113,6 +124,11 @@ export class PreparedPiece extends Schema.Class<PreparedPiece>('PreparedPiece')(
   paddedBounds: RectWith,
   padding: NonNegativeIntegerMillimeters,
   allowRotation: Schema.Boolean,
+  allowMirror: Schema.Boolean.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(true)),
+    Schema.withDecodingDefaultKey(Effect.succeed(true))
+  ),
   cutRowRef: Schema.optional(
     Schema.Struct({
       reference: Schema.String,
@@ -173,7 +189,9 @@ function validateIrregularLayoutEnvelope(input: {
   }
   if (
     input.unplacedPieceIds.length === input.layout.unplacedPieceIds.length &&
-    input.unplacedPieceIds.every((pieceId, index) => pieceId === input.layout?.unplacedPieceIds[index])
+    input.unplacedPieceIds.every(
+      (pieceId, index) => pieceId === input.layout?.unplacedPieceIds[index]
+    )
   ) {
     return undefined
   }
@@ -198,7 +216,9 @@ const NestingSubRunFields = Schema.Struct({
 }).check(Schema.makeFilter(validateIrregularLayoutEnvelope))
 
 /** One subrun within a manual multi-plate CSV run. */
-export class NestingSubRun extends Schema.Class<NestingSubRun>('NestingSubRun')(NestingSubRunFields) {}
+export class NestingSubRun extends Schema.Class<NestingSubRun>('NestingSubRun')(
+  NestingSubRunFields
+) {}
 
 /** Aggregate summary for a run composed of one or more subruns. */
 export class NestingRunSummary extends Schema.Class<NestingRunSummary>('NestingRunSummary')({
@@ -327,7 +347,9 @@ const NestingResultFields = Schema.Struct({
   csvImportId: Schema.optional(Schema.String)
 }).check(Schema.makeFilter(validateIrregularLayoutEnvelope))
 
-export class NestingResult extends Schema.Class<NestingResult>('NestingResult')(NestingResultFields) {
+export class NestingResult extends Schema.Class<NestingResult>('NestingResult')(
+  NestingResultFields
+) {
   static fromAlgorithm(input: {
     readonly request: NestingRequest
     readonly strategyResults: ReadonlyArray<NestingStrategyResult>

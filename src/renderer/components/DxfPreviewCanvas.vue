@@ -4,6 +4,11 @@ import { useAppStore } from '../composables/useAppStore.js'
 import { useHistoryStore } from '../composables/useHistoryStore.js'
 import { useSettings } from '../composables/useSettings.js'
 import { useViewport } from '../composables/useViewport.js'
+import {
+  buildIrregularCanvasModel,
+  rectangularPlacementSvgTransform,
+  type IrregularCanvasModel
+} from '../utils/resultCanvas.js'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 import {
   isIrregularHistoryFrame,
@@ -220,8 +225,22 @@ const placementsToRender = computed<ReadonlyArray<Placement>>(() => {
 })
 
 const irregularLayout = computed(() => {
+  const frame = history.selectedFrame.value
+  if (frame && isIrregularHistoryFrame(frame)) return frame
+  const subRunLayout = selectedSubRun.value?.layout
+  if (subRunLayout?.kind === 'irregular') return subRunLayout
   const layout = history.selectedRun.value?.layout ?? history.result.value?.layout
   return layout?.kind === 'irregular' ? layout : null
+})
+
+const irregularCanvasModel = computed<IrregularCanvasModel | null>(() => {
+  const source = irregularLayout.value
+  if (source === null) return null
+  return buildIrregularCanvasModel({
+    source,
+    sourcePieces: store.state.value.pieces,
+    sheet: resultSheet.value
+  })
 })
 
 const sourcePiecesById = computed(() => {
@@ -246,7 +265,9 @@ const resultPlacementItems = computed<ReadonlyArray<ResultPlacementItem>>(() =>
     return {
       placement,
       piece,
-      geometryTransform: piece ? resultGeometryTransform(placement, piece) : null
+      geometryTransform: piece
+        ? rectangularPlacementSvgTransform(placement, piece.realBounds, resultSheet.value.height)
+        : null
     }
   })
 )
@@ -300,24 +321,6 @@ function sourcePieceForPlacement(placement: Placement): ImportedPiece | null {
 
 function resultY(rect: { readonly y: number; readonly height: number }): number {
   return resultSheet.value.height - rect.y - rect.height
-}
-
-function resultGeometryTransform(placement: Placement, piece: ImportedPiece): string {
-  const bounds = piece.realBounds
-  const placementY = resultY(placement)
-  if (placement.rotation === 0) {
-    const padX = Math.max(0, (placement.width - bounds.width) / 2)
-    const padY = Math.max(0, (placement.height - bounds.height) / 2)
-    const e = placement.x + padX - bounds.x
-    const f = placementY + padY - bounds.y
-    return `matrix(1 0 0 1 ${e} ${f})`
-  }
-
-  const padX = Math.max(0, (placement.width - bounds.height) / 2)
-  const padY = Math.max(0, (placement.height - bounds.width) / 2)
-  const e = placement.x + padX + bounds.y + bounds.height
-  const f = placementY + padY - bounds.x
-  return `matrix(0 1 -1 0 ${e} ${f})`
 }
 
 function panScale(): { readonly x: number; readonly y: number } {
@@ -397,7 +400,7 @@ function sourcePaddingRect(piece: ImportedPiece): ViewBox {
       v-if="
         (props.mode === 'import' && store.state.value.pieces.length > 0) ||
         placementsToRender.length > 0 ||
-        irregularLayout !== null
+        irregularCanvasModel !== null
       "
       :viewBox="viewBoxString"
       preserveAspectRatio="xMidYMid meet"
@@ -527,14 +530,44 @@ function sourcePaddingRect(piece: ImportedPiece): ViewBox {
         </g>
       </g>
 
+      <!-- irregular results replay original source geometry with worker transforms. -->
+      <g v-if="irregularCanvasModel">
+        <g
+          v-for="(item, i) in irregularCanvasModel.placements"
+          :key="`irregular-place-${i}-${item.placement.pieceId ?? item.placement.sourcePieceId}`"
+        >
+          <g v-if="item.sourcePiece && item.svgTransform" :transform="item.svgTransform">
+            <path
+              v-if="item.sourcePiece.geometry.entityType === 'CIRCLE'"
+              :d="circlePath(item.sourcePiece)"
+              stroke="var(--text-primary)"
+              stroke-opacity="0.9"
+              stroke-width="1.4"
+              fill="none"
+            />
+            <path
+              v-else
+              v-for="(seg, segIndex) in item.sourcePiece.geometry.segments"
+              :key="`irregular-seg-${item.placement.sourcePieceId}-${segIndex}`"
+              :d="segmentPath(seg)"
+              stroke="var(--text-primary)"
+              stroke-opacity="0.85"
+              stroke-width="1.2"
+              fill="none"
+            />
+          </g>
+        </g>
+      </g>
+
       <text
-        v-if="irregularLayout && !showResultRectangles"
+        v-if="irregularCanvasModel && irregularCanvasModel.unrenderablePlacementCount > 0"
         x="8"
         y="18"
-        fill="var(--text-secondary)"
+        fill="var(--warning)"
         font-size="11"
       >
-        {{ irregularLayout.placements.length }} irregular transform placement(s); source-shape result rendering is not available yet.
+        {{ irregularCanvasModel.unrenderablePlacementCount }} irregular placement(s) have no
+        renderable source transform.
       </text>
 
       <!-- Free-rectangle overlays from the selected frame. -->

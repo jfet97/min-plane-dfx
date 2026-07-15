@@ -910,10 +910,18 @@ The deterministic convex baseline is implemented behind the worker boundary:
   fragmentation metrics, then compact collision bounds;
 - real transform placements, including their source-space placement reference,
   and tagged irregular NDJSON history frames cross the worker protocol without
-  rectangle stand-ins.
-
-The GA portfolio, GA-selected transforms, transform-aware result rendering, and
-CSV export of irregular transforms remain future work.
+  rectangle stand-ins;
+- the seeded GA portfolio evaluates priority-order, preferred-transform, and
+  local-policy chromosomes through the same decoder, then chooses the better
+  validated beam or GA result;
+- renderer replay applies the stored reference, mirror, rotation, and
+  translation to original source DXF segments instead of drawing rectangle
+  stand-ins;
+- regular result JSON has an explicit irregular-transform export, while legacy
+  CSV serialization truthfully rejects transform layouts it cannot represent;
+- benchmark requests can persist the complete `IrregularNestingSettings` matrix
+  through `NestingOptions.irregularSettings`, including beam width, candidate
+  fanout, transform controls, GA budgets, and individual chromosome-gene gates.
 
 V2 uses a priority-bounded beam:
 
@@ -1001,9 +1009,9 @@ layout = decode(chromosome.priorityOrder,
 fitness = score(validated layout)
 ```
 
-The transform index is a future GA decision, not a behavior already provided by
-the strict baseline decoder. Before GA implementation, define whether that index
-is forced or preferred with an explicit fallback order.
+The transform index is a GA preference, not a forced placement instruction. The
+decoder tries the preferred emitted transform first, then falls back through the
+remaining legal transform candidates in deterministic metadata order.
 
 The GA must not encode raw placement coordinates. Legal placement remains inside
 the shared decoder.
@@ -1056,6 +1064,14 @@ Recommended crossover:
 
 - order-preserving crossover for the priority order;
 - per-piece transform inherited from either parent, then occasionally mutated.
+
+Current v2 portfolio behavior is deliberately bounded: it seeds the deterministic
+baseline plus seeded mutations, retains a small elite set, applies
+order-preserving priority crossover and per-piece preference/policy inheritance,
+and checks cancellation, evaluation cap, generation cap, and wall-clock budget
+before each evaluation. Each gene can be independently disabled for an
+experiment; with every gene disabled the GA evaluates deterministic duplicates
+only, which is useful for wiring and benchmark-control tests.
 
 ### GA Budget And Reproducibility
 
@@ -1383,6 +1399,10 @@ Acceptance:
 - timeout/cancellation returns best validated result or `no-valid-result`;
 - final portfolio result is the better validated beam or GA layout.
 
+Current implementation status: complete for the bounded convex v2 portfolio.
+The remaining future work is empirical tuning against real jobs, not a second
+legality or coordinate-generation path.
+
 ### Free Material And Scoring
 
 Goal: make remaining material visible and useful for scoring without making it
@@ -1420,6 +1440,11 @@ Acceptance:
 - CSV export maps placements back to source rows;
 - saved projects reload irregular results and histories.
 
+Current implementation status: subrun aggregation and portable JSON transform
+export preserve irregular layouts. Legacy CSV rows deliberately remain
+rectangle-only and reject an irregular run at serialization rather than losing
+its transform data.
+
 ### Benchmark And Debug Corpus
 
 Goal: make v2 measurable and geometry failures reproducible.
@@ -1440,6 +1465,8 @@ area(collisionPolygon) / area(paddedBoundingBox)
 
 - compare against current rectangle MaxRects on utilization, placed count,
   runtime, and validation failures;
+- run named settings matrices that independently vary beam width, order window,
+  candidate fanout, transform choices, GA bounds, and enabled chromosome genes;
 - show debug overlays for source DXF, sampled points, hull, collision polygon,
   free material, NFP/IFP candidates, and final placements.
 
@@ -1525,8 +1552,11 @@ Mitigation:
 ```text
 orderWindow = 2
 beamWidth = 24
+localCandidateFanout = 24
 transformCap = 16 per piece, including mirrored variants
 GA population = 32
+GA generation budget = 4
+GA evaluation budget = 128
 GA time budget = 60 seconds
 ```
 

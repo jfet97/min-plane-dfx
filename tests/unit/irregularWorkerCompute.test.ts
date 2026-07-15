@@ -178,6 +178,11 @@ describe('computeIrregularNesting', () => {
     expect(layout.placements[0]?.pieceId).toBe(PieceId.make('piece-copy-1'))
     expect(layout.placements[0]?.sourcePieceId).toBe(PieceId.make('piece'))
     expect(layout.placements[0]?.placementReference).toBeDefined()
+    const summaryLayout = output.result.runSummary?.subRuns[0]?.layout
+    expect(summaryLayout?.kind).toBe('irregular')
+    if (summaryLayout?.kind === 'irregular') {
+      expect(summaryLayout.placements[0]?.transform).toEqual(layout.placements[0]?.transform)
+    }
     expect(output.historyFrames[0]?.kind).toBe('irregular')
     expect(output.historyFrames[0]?.remainingPieceIds).toEqual([PieceId.make('piece-copy-1')])
     expect(output.historyFrames.at(-1)?.placements).toHaveLength(1)

@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from 'vitest'
 import { useCsvImportStore } from '../../src/renderer/composables/useCsvImportStore.js'
 import type {
   NestingOptions,
+  NestingLayout,
   NestingResult,
   NestingSubRun,
   Placement,
@@ -9,6 +10,7 @@ import type {
   SheetSpec
 } from '@shared/domain/nesting.js'
 import { JobId, PieceId, SourceFileId } from '@shared/domain/ids.js'
+import { DEFAULT_IRREGULAR_NESTING_SETTINGS } from '@shared/irregular/defaults.js'
 import type { ProjectCsvImport } from '@shared/domain/project.js'
 
 function pid(value: string): PieceId {
@@ -51,6 +53,41 @@ function makePreparedPiece(id: string, cutRowRef?: PreparedPiece['cutRowRef']): 
 
 function makePlacement(pieceId: string): Placement {
   return { pieceId: pid(pieceId), x: 0, y: 0, width: 10, height: 5, rotation: 0 }
+}
+
+function makeIrregularLayout(
+  pieceId: string,
+  sourcePieceId: string,
+  translateX: number,
+  rotationDeg: number,
+  mirrored: boolean
+): NestingLayout {
+  return {
+    kind: 'irregular',
+    placements: [
+      {
+        pieceId: pid(pieceId),
+        sourcePieceId: pid(sourcePieceId),
+        placementReference: { x: 1.5, y: 2.5 },
+        transform: { translateX, translateY: 6, rotationDeg, mirrored }
+      }
+    ],
+    unplacedPieceIds: [],
+    score: {
+      unplacedCount: 0,
+      largestNetFreeMaterialRegionAreaMm2: 100,
+      freeMaterialRegionCount: 1,
+      freeMaterialHoleCount: 0,
+      freeMaterialSliverMetric: 1,
+      collisionBoundsWorstNormalizedSheetConsumption: 0.5,
+      collisionBoundsNormalizedSpanSum: 0.8,
+      collisionBoundsAreaMm2: 240,
+      collisionBoundsSpanMm: 30
+    },
+    source: 'beam',
+    status: 'completed',
+    diagnostics: []
+  }
 }
 
 function makeSubRun(index: number, overrides?: Partial<NestingSubRun>): NestingSubRun {
@@ -234,5 +271,106 @@ describe('useCsvImportStore', () => {
     const records = store.getCsvRunRecords()
     const ids = records.map((r) => r.csvImportId).sort()
     expect(ids).toEqual([activeId, finalizedId].sort())
+  })
+
+  it('preserves irregular transforms and layouts across independent CSV subruns', () => {
+    const csvImportId = 'csv-irregular'
+    store.appendCsvImports([makeCsvImport(csvImportId)])
+
+    const firstPiece = {
+      ...makePreparedPiece('copy-0'),
+      sourcePieceId: pid('source-0'),
+      allowMirror: false
+    }
+    const firstOptions = {
+      ...makeDefaultOptions(),
+      workerMode: 'irregular-convex-v2' as const,
+      allowGlobalMirror: false,
+      irregularSettings: DEFAULT_IRREGULAR_NESTING_SETTINGS
+    }
+    const firstRequest = store.startSubrun(
+      csvImportId,
+      0,
+      [firstPiece],
+      makeSheet(),
+      10,
+      firstOptions
+    )
+    expect(firstRequest.options.allowGlobalMirror).toBe(false)
+    expect(firstRequest.options.irregularSettings?.optimizer.beamWidth).toBe(
+      DEFAULT_IRREGULAR_NESTING_SETTINGS.optimizer.beamWidth
+    )
+    expect(firstRequest.pieces[0]?.allowMirror).toBe(false)
+    const firstSubRun = makeSubRun(0, {
+      placements: [],
+      layout: makeIrregularLayout('copy-0', 'source-0', 12.5, 37.5, true),
+      options: firstOptions,
+      unplacedPieceIds: [],
+      pieceIds: [pid('copy-0')],
+      requestPieceIds: [pid('copy-0')]
+    })
+    store.appendSubrunResult(
+      csvImportId,
+      makeNestingResult(csvImportId, firstSubRun, [firstPiece])
+    )
+
+    const secondPiece = {
+      ...makePreparedPiece('copy-1'),
+      sourcePieceId: pid('source-1')
+    }
+    store.startSubrun(
+      csvImportId,
+      1,
+      [secondPiece],
+      { width: 800, height: 700, label: 'second plate' },
+      8,
+      { ...makeDefaultOptions(), workerMode: 'irregular-convex-v2' }
+    )
+    const secondSubRun = makeSubRun(0, {
+      placements: [],
+      layout: makeIrregularLayout('copy-1', 'source-1', 4, 90, false),
+      unplacedPieceIds: [],
+      pieceIds: [pid('copy-1')],
+      requestPieceIds: [pid('copy-1')]
+    })
+    store.appendSubrunResult(
+      csvImportId,
+      makeNestingResult(csvImportId, secondSubRun, [secondPiece])
+    )
+
+    const outcome = store.finalizeSession(csvImportId)
+    expect(outcome).not.toBeNull()
+    if (!outcome) return
+
+    expect(outcome.csvRunRecord.subRuns).toHaveLength(2)
+    expect(outcome.csvRunRecord.subRuns.map((subRun) => subRun.layout?.kind)).toEqual([
+      'irregular',
+      'irregular'
+    ])
+    const firstPlacement = outcome.csvRunRecord.subRuns[0]?.layout
+    const secondPlacement = outcome.csvRunRecord.subRuns[1]?.layout
+    if (firstPlacement?.kind !== 'irregular' || secondPlacement?.kind !== 'irregular') return
+    expect(firstPlacement.placements[0]?.transform).toEqual({
+      translateX: 12.5,
+      translateY: 6,
+      rotationDeg: 37.5,
+      mirrored: true
+    })
+    expect(secondPlacement.placements[0]?.transform).toEqual({
+      translateX: 4,
+      translateY: 6,
+      rotationDeg: 90,
+      mirrored: false
+    })
+    expect(outcome.result.strategyResults.map((result) => result.layout?.kind)).toEqual([
+      'irregular',
+      'irregular'
+    ])
+    expect(outcome.result.runSummary?.totalPlaced).toBe(2)
+    expect(outcome.csvRunRecord.subRuns[0]?.options.allowGlobalMirror).toBe(false)
+    expect(outcome.csvRunRecord.subRuns[0]?.options.irregularSettings).toEqual(
+      DEFAULT_IRREGULAR_NESTING_SETTINGS
+    )
+    expect(outcome.csvRunRecord.preparedPieces[0]?.allowMirror).toBe(false)
   })
 })

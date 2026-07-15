@@ -39,6 +39,25 @@ export const IrregularSearchSource = Schema.Literals(['beam', 'ga', 'none'])
 /** Type of an irregular portfolio search source. */
 export type IrregularSearchSource = Schema.Schema.Type<typeof IrregularSearchSource>
 
+/** Explicit local policies used to rank already-legal placement candidates. */
+export const IrregularPlacementPolicyId = Schema.Literals([
+  'balanced-compactness',
+  'short-side-fill'
+])
+
+/** Type of a configured irregular local placement policy. */
+export type IrregularPlacementPolicyId = Schema.Schema.Type<typeof IrregularPlacementPolicyId>
+
+/** Stable default local policy retained for the deterministic beam baseline. */
+export const DEFAULT_IRREGULAR_PLACEMENT_POLICY_ID: IrregularPlacementPolicyId =
+  'balanced-compactness'
+
+/** Stable policy choices available to the irregular portfolio by default. */
+export const DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS: ReadonlyArray<IrregularPlacementPolicyId> = [
+  'balanced-compactness',
+  'short-side-fill'
+]
+
 /** Finite real-valued number used by irregular geometry contracts. */
 const FiniteNumber = Schema.Finite
 
@@ -62,6 +81,15 @@ const NonNegativeFiniteInteger = Schema.Int.check(Schema.isGreaterThanOrEqualTo(
 
 /** Finite positive integer used for bounded irregular controls. */
 const PositiveFiniteInteger = Schema.Int.check(Schema.isGreaterThan(0))
+
+/** Default local candidate fanout retained by the irregular beam baseline. */
+export const DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT = 24
+
+/** Default number of GA generations retained for bounded experiments. */
+export const DEFAULT_IRREGULAR_GA_GENERATION_BUDGET = 4
+
+/** Default deterministic GA evaluation cap. */
+export const DEFAULT_IRREGULAR_GA_EVALUATION_BUDGET = 128
 
 /** Terminal status of an irregular nesting portfolio. */
 export const IrregularPortfolioStatus = Schema.Literals([
@@ -156,19 +184,18 @@ export class IrregularGeometrySettings extends Schema.Class<IrregularGeometrySet
   'IrregularGeometrySettings'
 )(IrregularGeometrySettingsFields) {}
 
-/**
- * Positive integer limits, finite-transform controls, and reproducibility
- * settings for irregular search.
- */
-export class IrregularOptimizerSettings extends Schema.Class<IrregularOptimizerSettings>(
-  'IrregularOptimizerSettings'
-)({
+const IrregularOptimizerSettingsFields = Schema.Struct({
+  /** Number of queued pieces each beam state may reorder at one decision point. */
   orderWindow: PositiveFiniteInteger,
+  /** Maximum whole-layout states retained after every beam expansion. */
   beamWidth: PositiveFiniteInteger,
-  /**
-   * Maximum emitted transforms: orthogonal baseline first, then configured
-   * choices, then edge-derived choices with reserved mirror capacity.
-   */
+  /** Maximum legal local placements retained per eligible piece before beam scoring. */
+  localCandidateFanout: PositiveFiniteInteger.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT)),
+    Schema.withDecodingDefaultKey(Effect.succeed(DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT))
+  ),
+  /** Maximum orientation candidates emitted for one prepared collision polygon. */
   transformCap: PositiveFiniteInteger,
   /** Edges shorter than this millimeter length are ignored as geometric noise. */
   transformMinimumEdgeLengthMm: NonNegativeFiniteMillimeters.pipe(
@@ -178,13 +205,115 @@ export class IrregularOptimizerSettings extends Schema.Class<IrregularOptimizerS
   transformAngleDeduplicationToleranceDeg: PositiveFiniteDegrees.pipe(
     Schema.withDecodingDefaultKey(Effect.succeed(0.01))
   ),
-  /** Additional finite rotations in degrees, normalized by the transform generator. */
+  /** Enables the explicit angles in configuredRotationDeg without disabling derived angles. */
+  configuredRotationEnabled: Schema.Boolean.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(true)),
+    Schema.withDecodingDefaultKey(Effect.succeed(true))
+  ),
+  /** Explicit finite rotation angles to add to the orthogonal and edge-derived choices. */
   configuredRotationDeg: Schema.Array(FiniteDegrees).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed([]))
   ),
+  /** Enables seeded GA portfolio evaluations after the deterministic beam baseline. */
+  gaEnabled: Schema.Boolean.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(true)),
+    Schema.withDecodingDefaultKey(Effect.succeed(true))
+  ),
+  /** Keeps only the deterministic beam baseline regardless of other GA limits. */
+  baselineOnly: Schema.Boolean.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(false)),
+    Schema.withDecodingDefaultKey(Effect.succeed(false))
+  ),
+  /** Number of chromosomes evaluated in every GA generation. */
   gaPopulation: PositiveFiniteInteger,
-  gaTimeBudgetMs: PositiveFiniteInteger,
-  gaSeed: Schema.NonEmptyString
+  /** Maximum number of generated GA populations; zero disables GA evaluation. */
+  gaGenerationBudget: NonNegativeFiniteInteger.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(DEFAULT_IRREGULAR_GA_GENERATION_BUDGET)),
+    Schema.withDecodingDefaultKey(Effect.succeed(DEFAULT_IRREGULAR_GA_GENERATION_BUDGET))
+  ),
+  /** Maximum chromosome evaluations across all generations; zero disables GA evaluation. */
+  gaEvaluationBudget: NonNegativeFiniteInteger.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(DEFAULT_IRREGULAR_GA_EVALUATION_BUDGET)),
+    Schema.withDecodingDefaultKey(Effect.succeed(DEFAULT_IRREGULAR_GA_EVALUATION_BUDGET))
+  ),
+  /** Wall-clock budget in milliseconds for GA evaluation; zero disables GA evaluation. */
+  gaTimeBudgetMs: NonNegativeFiniteInteger,
+  /** Stable seed used for deterministic chromosome initialization and mutation. */
+  gaSeed: Schema.NonEmptyString,
+  /** Lets GA mutate the prepared-piece priority order gene. */
+  priorityOrderMutationEnabled: Schema.Boolean.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(true)),
+    Schema.withDecodingDefaultKey(Effect.succeed(true))
+  ),
+  /** Lets GA mutate the preferred transform index for each prepared piece. */
+  transformPreferenceMutationEnabled: Schema.Boolean.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(true)),
+    Schema.withDecodingDefaultKey(Effect.succeed(true))
+  ),
+  /** Lets GA mutate the local candidate-scoring policy gene. */
+  placementPolicyMutationEnabled: Schema.Boolean.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(true)),
+    Schema.withDecodingDefaultKey(Effect.succeed(true))
+  ),
+  /** Local policy used by the deterministic baseline and when the policy gene is disabled. */
+  placementPolicyId: IrregularPlacementPolicyId.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(DEFAULT_IRREGULAR_PLACEMENT_POLICY_ID)),
+    Schema.withDecodingDefaultKey(Effect.succeed(DEFAULT_IRREGULAR_PLACEMENT_POLICY_ID))
+  ),
+  /** Distinct local policies available to the baseline and GA policy gene. */
+  placementPolicyIds: Schema.Array(IrregularPlacementPolicyId)
+    .check(Schema.isNonEmpty())
+    .pipe(
+      Schema.optionalKey,
+      Schema.withConstructorDefault(Effect.succeed([...DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS])),
+      Schema.withDecodingDefaultKey(Effect.succeed([...DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS]))
+    )
+}).check(
+  Schema.makeFilter((settings) => {
+    const placementPolicyIds =
+      settings.placementPolicyIds ?? DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS
+    const placementPolicyId =
+      settings.placementPolicyId ?? DEFAULT_IRREGULAR_PLACEMENT_POLICY_ID
+    if (!placementPolicyIds.includes(placementPolicyId)) {
+      return {
+        path: ['placementPolicyId'],
+        issue: 'the selected placement policy must be allowed by placementPolicyIds.'
+      }
+    }
+    if (new Set(placementPolicyIds).size !== placementPolicyIds.length) {
+      return {
+        path: ['placementPolicyIds'],
+        issue: 'placementPolicyIds must not contain duplicates.'
+      }
+    }
+    return undefined
+  })
+)
+
+/**
+ * Positive integer limits, finite-transform controls, and reproducibility
+ * settings for irregular search.
+ */
+export class IrregularOptimizerSettings extends Schema.Class<IrregularOptimizerSettings>(
+  'IrregularOptimizerSettings'
+)(IrregularOptimizerSettingsFields) {}
+
+/** Priority key retained from the user-owned prepared rectangle ordering. */
+export class IrregularPriorityOrderKey extends Schema.Class<IrregularPriorityOrderKey>(
+  'IrregularPriorityOrderKey'
+)({
+  longSideMm: NonNegativeFiniteNumber,
+  areaMm2: NonNegativeFiniteNumber,
+  imbalanceMm: NonNegativeFiniteNumber
 }) {}
 
 /** Complete geometry and optimizer configuration for one irregular run. */
@@ -251,7 +380,8 @@ export class IrregularPreparedPiece extends Schema.Class<IrregularPreparedPiece>
   source: ImportedPiece,
   allowMirror: Schema.Boolean,
   collisionGeometry: CollisionGeometry,
-  transforms: Schema.Array(IrregularTransformCandidate)
+  transforms: Schema.Array(IrregularTransformCandidate),
+  priorityOrderKey: Schema.optional(IrregularPriorityOrderKey)
 }) {}
 
 /**
@@ -357,6 +487,51 @@ export class IrregularLayout extends Schema.Class<IrregularLayout>('IrregularLay
   diagnostics: Schema.Array(CollisionGeometryDiagnostic)
 }) {}
 
+/** csv-row identity carried into the transform-aware source-shape export. */
+export class IrregularExportSourceRow extends Schema.Class<IrregularExportSourceRow>(
+  'IrregularExportSourceRow'
+)({
+  reference: Schema.String,
+  customerName: Schema.String,
+  csvRowId: Schema.String
+}) {}
+
+/** one source-shape transform placement suitable for JSON export. */
+export class IrregularExportPlacement extends Schema.Class<IrregularExportPlacement>(
+  'IrregularExportPlacement'
+)({
+  /** prepared/copy identity used by the worker and CSV row mapping. */
+  pieceId: PieceId,
+  /** original imported source-shape identity. */
+  sourcePieceId: PieceId,
+  placementReference: Schema.optional(IrregularPoint),
+  transform: IrregularTransform,
+  sourceRow: Schema.optional(IrregularExportSourceRow)
+}) {}
+
+/** one independently nested sheet in a transform-aware export. */
+export class IrregularExportSubRun extends Schema.Class<IrregularExportSubRun>(
+  'IrregularExportSubRun'
+)({
+  subRunId: Schema.String,
+  parentRunId: Schema.String,
+  index: NonNegativeFiniteInteger,
+  sheet: Schema.optional(Schema.suspend(() => SheetSpec)),
+  placements: Schema.Array(IrregularExportPlacement),
+  unplacedPieceIds: Schema.Array(PieceId)
+}) {}
+
+/** explicit source-shape transform output; this is not transformed DXF bytes. */
+export class IrregularTransformExport extends Schema.Class<IrregularTransformExport>(
+  'IrregularTransformExport'
+)({
+  format: Schema.Literal('min-plane-dfx/irregular-transform-export'),
+  version: Schema.Literal(1),
+  jobId: JobId,
+  runId: Schema.String,
+  subRuns: Schema.Array(IrregularExportSubRun)
+}) {}
+
 /** One emitted irregular beam state for history replay. */
 export class IrregularHistoryFrame extends Schema.Class<IrregularHistoryFrame>(
   'IrregularHistoryFrame'
@@ -392,6 +567,19 @@ export class IrregularPortfolioProgress extends Schema.Class<IrregularPortfolioP
   bestSource: Schema.optional(Schema.Literals(['beam', 'ga'])),
   elapsedMs: Schema.Number,
   remainingMs: Schema.optional(Schema.Number)
+}) {}
+
+/** One actual selected beam state retained for portfolio history replay. */
+export class IrregularPortfolioHistoryState extends Schema.Class<IrregularPortfolioHistoryState>(
+  'IrregularPortfolioHistoryState'
+)({
+  stepIndex: NonNegativeFiniteInteger,
+  placements: Schema.Array(IrregularPlacement),
+  remainingPieceIds: Schema.Array(PieceId),
+  unplacedPieceIds: Schema.Array(PieceId),
+  beamRank: NonNegativeFiniteInteger,
+  beamWidth: PositiveFiniteInteger,
+  candidateCount: NonNegativeFiniteInteger
 }) {}
 
 /** Final irregular portfolio status, placements, score, and diagnostics. */

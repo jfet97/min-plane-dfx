@@ -19,7 +19,8 @@ const rows = computed(() => {
     paddedWidth: (piece.realBounds.width + sidePadding * 2).toFixed(0),
     paddedHeight: (piece.realBounds.height + sidePadding * 2).toFixed(0),
     entityType: piece.geometry.entityType,
-    segmentCount: piece.geometry.segments.length
+    segmentCount: piece.geometry.segments.length,
+    allowMirror: store.getPieceMirrorEnabled(piece.id)
   }))
 })
 
@@ -30,6 +31,10 @@ const allSelected = computed(
 
 function inputValue(event: Event): string {
   return event.target instanceof HTMLInputElement ? event.target.value : ''
+}
+
+function inputChecked(event: Event): boolean {
+  return event.target instanceof HTMLInputElement ? event.target.checked : false
 }
 </script>
 
@@ -66,12 +71,13 @@ function inputValue(event: Event): string {
           <th title="Raw DXF entity summary kept for inspection, not as separate nesting objects.">
             Detail
           </th>
+          <th title="Allow mirrored transforms for this source shape in the irregular worker.">Mirror</th>
           <th title="Remove this imported shape from the in-memory session.">Remove</th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="rows.length === 0">
-          <td colspan="6" class="empty">No imported objects yet. Import a DXF file.</td>
+          <td colspan="7" class="empty">No imported objects yet. Import a DXF file.</td>
         </tr>
         <tr v-for="row in rows" :key="row.id">
           <td>
@@ -89,6 +95,14 @@ function inputValue(event: Event): string {
           <td>{{ row.width }} × {{ row.height }}</td>
           <td>{{ row.paddedWidth }} × {{ row.paddedHeight }}</td>
           <td>{{ row.entityType }} · {{ row.segmentCount }} segment(s)</td>
+          <td>
+            <input
+              type="checkbox"
+              :checked="row.allowMirror"
+              :title="`Allow mirrored transforms for ${row.label}.`"
+              @change="store.setPieceMirrorEnabled(row.id, inputChecked($event))"
+            />
+          </td>
           <td>
             <button
               type="button"

@@ -140,6 +140,15 @@ describe('FreeMaterialServiceLive', () => {
     expect(snapshot.regions[0]?.holes).toEqual([])
   })
 
+  it('accepts occupied polygons that meet at one exact interior point', async () => {
+    const snapshot = await computeFreeMaterial(
+      input([rectangle('lower', 2, 2, 1, 1), rectangle('upper', 2, 2, 3, 3)])
+    )
+
+    expect(snapshot.regions).toHaveLength(1)
+    expect(snapshot.regions[0]?.holes).toHaveLength(2)
+  })
+
   it('orders holes deterministically by their stable lowest-y then lowest-x point', async () => {
     const snapshot = await computeFreeMaterial(
       input([rectangle('first-hole', 2, 2, 1, 1), rectangle('second-hole', 2, 2, 6, 3)])

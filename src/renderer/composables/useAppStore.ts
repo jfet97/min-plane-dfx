@@ -20,6 +20,7 @@ interface MutableAppState {
   pieces: ImportedPiece[]
   selectedPieceIds: string[]
   pieceQuantities: Record<string, number>
+  pieceMirrorEnabled: Record<string, boolean>
   warnings: ImportWarning[]
   failures: ImportFailure[]
   isImporting: boolean
@@ -37,6 +38,7 @@ const state: UnwrapNestedRefs<MutableAppState> = reactive<MutableAppState>({
   pieces: [],
   selectedPieceIds: [],
   pieceQuantities: {},
+  pieceMirrorEnabled: {},
   warnings: [],
   failures: [],
   isImporting: false,
@@ -157,10 +159,13 @@ function recomputeAggregates(): void {
   state.warnings = allWarnings
 
   const nextQuantities: Record<string, number> = {}
+  const nextPieceMirrorEnabled: Record<string, boolean> = {}
   for (const piece of allPieces) {
     nextQuantities[piece.id] = state.pieceQuantities[piece.id] ?? 1
+    nextPieceMirrorEnabled[piece.id] = state.pieceMirrorEnabled[piece.id] ?? true
   }
   state.pieceQuantities = nextQuantities
+  state.pieceMirrorEnabled = nextPieceMirrorEnabled
   state.selectedPieceIds = allPieces
     .filter((piece) => (nextQuantities[piece.id] ?? 0) > 0)
     .map((piece) => piece.id)
@@ -224,6 +229,7 @@ async function clear(): Promise<void> {
   state.pieces = []
   state.selectedPieceIds = []
   state.pieceQuantities = {}
+  state.pieceMirrorEnabled = {}
   state.warnings = []
   state.failures = []
   state.importRevision++
@@ -246,6 +252,7 @@ async function removePiece(pieceId: ImportedPiece['id']): Promise<void> {
   })
   if (!changed) return
   delete state.pieceQuantities[pieceId]
+  delete state.pieceMirrorEnabled[pieceId]
   recomputeAggregates()
   state.importRevision++
   notifyWorkspaceSettingsChanged()
@@ -260,8 +267,10 @@ function hydrateFromProject(project: ProjectDocument): void {
     state.warnings = project.importedPieces.flatMap((piece) => piece.warnings)
   }
   state.pieceQuantities = {}
+  state.pieceMirrorEnabled = {}
   for (const piece of state.pieces) {
     state.pieceQuantities[piece.id] = project.pieceQuantities?.[piece.id] ?? 1
+    state.pieceMirrorEnabled[piece.id] = project.pieceMirrorEnabled?.[piece.id] ?? true
   }
   state.selectedPieceIds = state.pieces
     .filter((piece) => getPieceQuantity(piece.id) > 0)
@@ -281,6 +290,14 @@ function hydratePieceQuantities(quantities: Readonly<Record<string, number>>): v
   state.selectedPieceIds = state.pieces
     .filter((piece) => getPieceQuantity(piece.id) > 0)
     .map((piece) => piece.id)
+}
+
+function hydratePieceMirrorEnabled(enabled: Readonly<Record<string, boolean>> | undefined): void {
+  const nextPieceMirrorEnabled: Record<string, boolean> = {}
+  for (const piece of state.pieces) {
+    nextPieceMirrorEnabled[piece.id] = enabled?.[piece.id] ?? state.pieceMirrorEnabled[piece.id] ?? true
+  }
+  state.pieceMirrorEnabled = nextPieceMirrorEnabled
 }
 
 function isPieceSelected(pieceId: ImportedPiece['id']): boolean {
@@ -321,6 +338,21 @@ function setPieceQuantity(pieceId: ImportedPiece['id'], quantity: number): void 
   const next = Number.isFinite(quantity) ? Math.max(0, Math.floor(quantity)) : 0
   state.pieceQuantities[pieceId] = next
   syncSelectedPiecesFromQuantities()
+  notifyWorkspaceSettingsChanged()
+}
+
+/** Returns mirror eligibility for a source shape or one of its generated request copies. */
+function getPieceMirrorEnabled(pieceId: ImportedPiece['id']): boolean {
+  const exact = state.pieces.find((piece) => piece.id === pieceId)
+  if (exact !== undefined) return state.pieceMirrorEnabled[exact.id] ?? true
+  const source = state.pieces.find((piece) => pieceId.startsWith(`${piece.id}-copy-`))
+  return source === undefined ? true : (state.pieceMirrorEnabled[source.id] ?? true)
+}
+
+function setPieceMirrorEnabled(pieceId: ImportedPiece['id'], enabled: boolean): void {
+  const exists = state.pieces.some((piece) => piece.id === pieceId)
+  if (!exists) return
+  state.pieceMirrorEnabled[pieceId] = enabled
   notifyWorkspaceSettingsChanged()
 }
 
@@ -382,10 +414,13 @@ export function useAppStore() {
     replaceImportedDocuments,
     hydrateFromProject,
     hydratePieceQuantities,
+    hydratePieceMirrorEnabled,
     isPieceSelected,
     setPieceSelected,
     getPieceQuantity,
     setPieceQuantity,
+    getPieceMirrorEnabled,
+    setPieceMirrorEnabled,
     setAllPiecesSelected,
     removePiece,
     clear

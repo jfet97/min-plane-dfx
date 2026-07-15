@@ -56,12 +56,15 @@ decoder, local candidate scorer, whole-layout scorer, and windowed beam under
 remain the legality authority; scorers only rank already legal candidates or
 partial layouts.
 
-The `irregular-convex-v2` worker mode runs this real convex baseline. The
-worker-facing adapter translates only algorithm-produced transform placements
-and tagged irregular history states into shared schemas; it never converts them
-into fake rectangle placements. `GeometrySettings` is yielded by the algorithm
-services and supplies the complete schema-validated geometry plus optimizer
-configuration for one run.
+The `irregular-convex-v2` worker mode runs a real convex beam and seeded
+portfolio. The worker-facing adapter translates only algorithm-produced
+transform placements and tagged irregular history states into shared schemas;
+it never converts them into fake rectangle placements. The selected portfolio
+replay follows explicit parent links from its selected terminal beam state, so
+the recorded irregular history is the actual winning path rather than a mixture
+of discarded beam alternatives. `GeometrySettings` is yielded by the
+algorithm services and supplies the complete schema-validated geometry plus
+optimizer configuration for one run.
 
 The core emits algorithm events from `src/workers/algorithm/events.ts`, not
 history frames and not worker-wire payloads. The event stream is the raw
@@ -78,10 +81,11 @@ beam survivor into history frames, and wraps the outcome into
 
 The rectangular hook path must stream events as the algorithm runs. Do not
 collect frames in the wrapper and flush them after the algorithm returns. The
-current irregular beam records its selected states in algorithm memory, then its
-worker adapter emits only those actual tagged states to the same Effect queue.
-The queue consumer performs NDJSON writes and live `history_frame` sends outside
-the algorithm.
+irregular portfolio needs its selected result before it can exclude losing beam
+alternatives, so it replays the selected chromosome, follows its beam-state
+parent links, then emits only those tagged states to the same Effect queue. The
+queue consumer performs NDJSON writes and live
+`history_frame` sends outside the algorithm.
 
 ## Strategy Configuration
 

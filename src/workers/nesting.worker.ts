@@ -16,7 +16,7 @@ import { IrregularLayoutScorer } from './algorithm/irregular/irregularLayoutScor
 import { IrregularPlacementScorer } from './algorithm/irregular/irregularPlacementScorer.js'
 import { IRREGULAR_WORKER_MODE } from '@shared/irregular/defaults.js'
 import { CollisionGeometryBuilder } from './irregular/collisionGeometryBuilder.js'
-import { GeometrySettings } from './irregular/geometryKernel.js'
+import { GeometryKernel, GeometrySettings } from './irregular/geometryKernel.js'
 import { FreeMaterialServiceLive } from './irregular/freeMaterialService.js'
 import { NfpIfpServiceLive } from './irregular/nfpIfpService.js'
 import { TransformGeneratorLive } from './irregular/transformGenerator.js'
@@ -38,6 +38,7 @@ import type {
   NestingRequest,
   NestingResult
 } from '@shared/domain/nesting.js'
+import type { IrregularPortfolioProgress } from '@shared/irregular/domain.js'
 import { Cause, Effect, Fiber, FileSystem, Layer, Path, PlatformError, Queue, Stream } from 'effect'
 import * as RpcServer from 'effect/unstable/rpc/RpcServer'
 
@@ -162,10 +163,7 @@ function handleRunNesting(
       Stream.runForEach(emitFrame),
       Effect.forkDetach
     )
-    const computation: Effect.Effect<
-      NestingResult,
-      WorkerResponseFailureError
-    > =
+    const computation: Effect.Effect<NestingResult, WorkerResponseFailureError> =
       payload.options.workerMode === IRREGULAR_WORKER_MODE
         ? computeIrregularWorkerResult(
             payload,
@@ -173,7 +171,15 @@ function handleRunNesting(
               ? undefined
               : (frame) => {
                   Queue.offerUnsafe(frameQueue, frame)
-                }
+                },
+            (progress) =>
+              send(
+                WorkerProgressResponse.forPortfolioProgress({
+                  requestId,
+                  jobId,
+                  progress
+                })
+              )
           )
         : Effect.sync(() =>
             computeNesting(payload, {
@@ -246,28 +252,35 @@ function handleRunNesting(
 
 function computeIrregularWorkerResult(
   request: NestingRequest,
-  emitFrame?: (frame: NestingHistoryFramePayload) => void
+  emitFrame?: (frame: NestingHistoryFramePayload) => void,
+  emitPortfolioProgress?: (progress: IrregularPortfolioProgress) => Effect.Effect<void>
 ): Effect.Effect<NestingResult, WorkerResponseFailureError> {
   const startedAt = new Date().toISOString()
   const startedAtMs = Date.now()
   const strategyRunId = irregularStrategyRunId(request)
 
   const options =
-    emitFrame === undefined
+    emitFrame === undefined && emitPortfolioProgress === undefined
       ? undefined
       : {
-          emitStateSnapshot: (snapshot: IrregularStateSnapshot, beamWidth: number) => {
-            emitFrame(
-              makeIrregularHistoryFrame({
-                request,
-                strategyRunId,
-                snapshot,
-                beamWidth,
-                createdAt: new Date().toISOString()
-              })
-            )
-          }
+          ...(emitFrame !== undefined
+            ? {
+                emitStateSnapshot: (snapshot: IrregularStateSnapshot, beamWidth: number) => {
+                  emitFrame(
+                    makeIrregularHistoryFrame({
+                      request,
+                      strategyRunId,
+                      snapshot,
+                      beamWidth,
+                      createdAt: new Date().toISOString()
+                    })
+                  )
+                }
+              }
+            : {}),
+          ...(emitPortfolioProgress !== undefined ? { emitPortfolioProgress } : {})
         }
+  const geometrySettings = request.options.irregularSettings ?? GeometrySettings.Make
 
   return computeIrregularNesting(request, options).pipe(
     Effect.map((computed) => {
@@ -287,9 +300,10 @@ function computeIrregularWorkerResult(
     Effect.provide(TransformGeneratorLive),
     Effect.provide(NfpIfpServiceLive),
     Effect.provide(FreeMaterialServiceLive),
-    Effect.provide(IrregularPlacementScorer.Live),
+    Effect.provide(IrregularPlacementScorer.Layer),
     Effect.provide(IrregularLayoutScorer.Live),
-    Effect.provide(GeometrySettings.Live),
+    Effect.provide(GeometryKernel.Live),
+    Effect.provide(Layer.succeed(GeometrySettings, geometrySettings)),
     Effect.mapError(toIrregularWorkerFailure)
   )
 }
@@ -323,6 +337,13 @@ function toIrregularWorkerFailure(error: IrregularComputeErrorType): WorkerRespo
         code: 'irregular_scoring_error',
         message: error.message,
         context: { operation: error.operation }
+      })
+    case 'IrregularPortfolioError':
+      return new WorkerResponseFailureError({
+        code:
+          error.category === 'geometry' ? 'irregular_geometry_invalid' : 'irregular_scoring_error',
+        message: error.message,
+        context: { operation: error.operation, category: error.category }
       })
   }
 }

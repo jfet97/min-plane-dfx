@@ -104,6 +104,7 @@ describe('WorkspaceProjectService', () => {
       pieceQuantities: { source_a: 3 },
       options: {
         allowGlobalRotation: true,
+        allowGlobalMirror: true,
         timeoutMs: 30000,
         workerMode: 'maxrects-beam-search' as const,
         historyMode: 'final' as const,
@@ -213,6 +214,7 @@ describe('WorkspaceProjectService', () => {
       pieceQuantities: {},
       options: {
         allowGlobalRotation: true,
+        allowGlobalMirror: true,
         timeoutMs: 30000,
         workerMode: 'maxrects-beam-search' as const,
         historyMode: 'final' as const,
@@ -246,6 +248,7 @@ describe('WorkspaceProjectService', () => {
 function defaultOptions(): WorkspaceProjectSettings['options'] {
   return {
     allowGlobalRotation: true,
+    allowGlobalMirror: true,
     timeoutMs: 30000,
     workerMode: 'maxrects-beam-search',
     historyMode: 'final',

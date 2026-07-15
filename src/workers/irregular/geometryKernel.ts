@@ -9,7 +9,8 @@ import type {
 import {
   IrregularGeometryInputError,
   IrregularNestingNotImplementedError,
-  OffsetConvexPolygonInput
+  OffsetConvexPolygonInput,
+  GeometryCache
 } from './services.js'
 import { ArcFlattening } from './arcFlattening.js'
 import { EllipseFlattening } from './ellipseFlattening.js'
@@ -27,12 +28,13 @@ import {
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import type { DxfGeometrySegment } from '@shared/domain/dxf.js'
+import { isValidCachedTransform, transformCollisionGeometryCacheKey } from './geometryCacheKeys.js'
+import { GeometryCacheInMemory } from './services.js'
 
 /** Effect service providing the decoded irregular geometry settings. */
-export class GeometrySettings extends Context.Service<
-  GeometrySettings,
-  IrregularNestingSettings
->()('min-plane-dfx/irregular/GeometrySettings') {
+export class GeometrySettings extends Context.Service<GeometrySettings, IrregularNestingSettings>()(
+  'min-plane-dfx/irregular/GeometrySettings'
+) {
   static readonly Make = DEFAULT_IRREGULAR_NESTING_SETTINGS
   static readonly Live = Layer.succeed(GeometrySettings, GeometrySettings.Make)
 }
@@ -89,6 +91,7 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
 ) {
   static readonly Make = Effect.gen(function* () {
     const settings = yield* GeometrySettings
+    const geometryCache = yield* GeometryCache
 
     const makePointsStore = () => {
       const points: IrregularPoint[] = []
@@ -145,7 +148,10 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
               pointsStore.push(line.x2, line.y2)
             }),
             Match.when({ kind: 'arc' }, (arc) => {
-              const points = ArcFlattening.samplePoints(arc, settings.geometry.flatteningSagToleranceMm)
+              const points = ArcFlattening.samplePoints(
+                arc,
+                settings.geometry.flatteningSagToleranceMm
+              )
               for (const point of points) {
                 pointsStore.push(point.x, point.y)
               }
@@ -170,12 +176,27 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
             )
           )
         ),
-      transformCollisionGeometry: TransformCollisionGeometry.compute,
+      transformCollisionGeometry: (input) => {
+        const key = transformCollisionGeometryCacheKey(input, settings.geometry)
+        return geometryCache.get<TransformedCollisionGeometry>(key).pipe(
+          Effect.flatMap((cached) => {
+            if (isValidCachedTransform(cached, input)) return Effect.succeed(cached)
+            const removeInvalid = cached === undefined ? Effect.void : geometryCache.remove(key)
+            return removeInvalid.pipe(
+              Effect.flatMap(() => TransformCollisionGeometry.compute(input)),
+              Effect.tap((computed) => geometryCache.set(key, computed))
+            )
+          })
+        )
+      },
       validatePlacement: PlacementValidation.validate
     })
   })
 
-  static readonly Layer = Layer.effect(GeometryKernel, GeometryKernel.Make)
+  static readonly Layer = Layer.effect(GeometryKernel, GeometryKernel.Make).pipe(
+    Layer.provideMerge(GeometryCacheInMemory)
+  )
+  static readonly LayerWithCache = Layer.effect(GeometryKernel, GeometryKernel.Make)
   static readonly Live = GeometryKernel.Layer
   static readonly Unimplemented = Layer.succeed(
     GeometryKernel,

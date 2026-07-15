@@ -1,14 +1,21 @@
 import { Context, Data, Effect, Layer, Order } from 'effect'
 import type { SheetSpec } from '@shared/domain/nesting.js'
 import {
+  DEFAULT_IRREGULAR_PLACEMENT_POLICY_ID,
+  DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS,
+  IrregularPlacementPolicyId,
   IrregularPlacedPiece,
   IrregularPlacementCandidate,
   IrregularTransformCandidate,
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
+import { GeometrySettings } from '../../irregular/geometryKernel.js'
 
-/** The only local irregular placement policy currently implemented. */
+/** The current deterministic compactness policy. */
 export const BALANCED_COMPACTNESS_POLICY_ID = 'balanced-compactness' as const
+
+/** Fill the shorter rectangular-sheet direction before spreading longways. */
+export const SHORT_SIDE_FILL_POLICY_ID = 'short-side-fill' as const
 
 /** A typed failure raised only when a candidate cannot produce a finite score. */
 export class IrregularPlacementScoringError extends Data.TaggedError(
@@ -34,12 +41,14 @@ export interface ScoreIrregularPlacementCandidateInput {
   readonly moving: TransformedCollisionGeometry
   /** Already-legal translation whose resulting cluster is being compared. */
   readonly candidate: IrregularPlacementCandidate
+  /** Optional explicit policy gene; absent means the configured service policy. */
+  readonly policyId?: IrregularPlacementPolicyId
 }
 
 /** One comparable score for an already-legal irregular placement candidate. */
 export interface IrregularPlacementScore {
   /** Explicit policy identity so later policies cannot be accidentally mixed. */
-  readonly policyId: typeof BALANCED_COMPACTNESS_POLICY_ID
+  readonly policyId: IrregularPlacementPolicyId
   /** Largest post-placement sheet-axis consumption, normalized by that axis. */
   readonly worstNormalizedSheetConsumption: number
   /** Sum of both post-placement normalized sheet-axis consumptions. */
@@ -48,6 +57,10 @@ export interface IrregularPlacementScore {
   readonly usedClusterAreaMm2: number
   /** Width plus height in millimeters of the post-placement collision bounds. */
   readonly usedClusterSpanMm: number
+  /** Normalized fill of the sheet's shorter direction. */
+  readonly shortSideFill: number
+  /** Normalized fill of the sheet's longer direction. */
+  readonly longSideFill: number
   /** Sheet-space bottom edge of the translated moving collision polygon. */
   readonly candidateBottomMm: number
   /** Sheet-space left edge of the translated moving collision polygon. */
@@ -58,7 +71,7 @@ export interface IrregularPlacementScore {
 
 export namespace IrregularPlacementScorer {
   export interface Service {
-    readonly policyId: typeof BALANCED_COMPACTNESS_POLICY_ID
+    readonly policyId: IrregularPlacementPolicyId
     readonly scoreCandidate: (
       input: ScoreIrregularPlacementCandidateInput
     ) => Effect.Effect<IrregularPlacementScore, IrregularPlacementScoringError>
@@ -90,6 +103,21 @@ const balancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
   Order.mapInput(Order.String, (score) => score.candidate.pieceId)
 ])
 
+const shortSideFillOrder = Order.combineAll<IrregularPlacementScore>([
+  Order.mapInput(Order.Number, (score) => -score.shortSideFill),
+  Order.mapInput(Order.Number, (score) => score.longSideFill),
+  Order.mapInput(Order.Number, (score) => score.normalizedSheetSpanSum),
+  Order.mapInput(Order.Number, (score) => score.usedClusterAreaMm2),
+  Order.mapInput(Order.Number, (score) => score.usedClusterSpanMm),
+  Order.mapInput(Order.Number, (score) => score.candidateBottomMm),
+  Order.mapInput(Order.Number, (score) => score.candidateLeftMm),
+  Order.mapInput(Order.Number, (score) => score.candidate.transform.index),
+  Order.mapInput(Order.Number, (score) => score.candidate.transform.rotationDeg),
+  Order.mapInput(Order.Boolean, (score) => score.candidate.transform.mirrored),
+  Order.mapInput(Order.String, (score) => score.candidate.transform.reason),
+  Order.mapInput(Order.String, (score) => score.candidate.pieceId)
+])
+
 /**
  * Ranks already-legal irregular candidates without participating in legality.
  *
@@ -102,13 +130,32 @@ export class IrregularPlacementScorer extends Context.Service<
 >()('min-plane-dfx/algorithm/irregular/IrregularPlacementScorer') {
   static readonly Make = IrregularPlacementScorer.of({
     policyId: BALANCED_COMPACTNESS_POLICY_ID,
-    scoreCandidate,
+    scoreCandidate: (input) =>
+      scoreCandidate({ ...input, policyId: input.policyId ?? BALANCED_COMPACTNESS_POLICY_ID }),
     compare: compareScores
   })
 
-  static readonly Live = Layer.succeed(IrregularPlacementScorer, IrregularPlacementScorer.Make)
-}
+  static readonly Layer = Layer.effect(
+    IrregularPlacementScorer,
+    Effect.gen(function* () {
+      const settings = yield* GeometrySettings
+      const configured = settings.optimizer.placementPolicyId
+      const available =
+        settings.optimizer.placementPolicyIds ?? DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS
+      const policyId =
+        configured !== undefined && available.includes(configured)
+          ? configured
+          : DEFAULT_IRREGULAR_PLACEMENT_POLICY_ID
+      return IrregularPlacementScorer.of({
+        policyId,
+        scoreCandidate: (input) => scoreCandidate({ ...input, policyId: input.policyId ?? policyId }),
+        compare: compareScores
+      })
+    })
+  )
 
+  static readonly Live = IrregularPlacementScorer.Layer.pipe(Layer.provide(GeometrySettings.Live))
+}
 function scoreCandidate(
   input: ScoreIrregularPlacementCandidateInput
 ): Effect.Effect<IrregularPlacementScore, IrregularPlacementScoringError> {
@@ -130,12 +177,25 @@ function scoreCandidate(
   const normalizedSheetSpanSum = normalizedWidth + normalizedHeight
   const usedClusterAreaMm2 = clusterWidth * clusterHeight
   const usedClusterSpanMm = clusterWidth + clusterHeight
+  const shortSideFill =
+    input.sheet.height <= input.sheet.width
+      ? clusterHeight / input.sheet.height
+      : clusterWidth / input.sheet.width
+  const longSideFill =
+    input.sheet.height <= input.sheet.width
+      ? clusterWidth / input.sheet.width
+      : clusterHeight / input.sheet.height
+  const requestedPolicyId = input.policyId ?? DEFAULT_IRREGULAR_PLACEMENT_POLICY_ID
+  const policyId =
+    input.sheet.width === input.sheet.height ? BALANCED_COMPACTNESS_POLICY_ID : requestedPolicyId
 
   if (
     !Number.isFinite(worstNormalizedSheetConsumption) ||
     !Number.isFinite(normalizedSheetSpanSum) ||
     !Number.isFinite(usedClusterAreaMm2) ||
     !Number.isFinite(usedClusterSpanMm) ||
+    !Number.isFinite(shortSideFill) ||
+    !Number.isFinite(longSideFill) ||
     !Number.isFinite(candidateBottom) ||
     !Number.isFinite(candidateLeft)
   ) {
@@ -143,18 +203,26 @@ function scoreCandidate(
   }
 
   return Effect.succeed({
-    policyId: BALANCED_COMPACTNESS_POLICY_ID,
+    policyId,
     worstNormalizedSheetConsumption,
     normalizedSheetSpanSum,
     usedClusterAreaMm2,
     usedClusterSpanMm,
+    shortSideFill,
+    longSideFill,
     candidateBottomMm: candidateBottom,
     candidateLeftMm: candidateLeft,
     candidate: input.candidate
   })
 }
 
-function compareScores(first: IrregularPlacementScore, second: IrregularPlacementScore): -1 | 0 | 1 {
+function compareScores(
+  first: IrregularPlacementScore,
+  second: IrregularPlacementScore
+): -1 | 0 | 1 {
+  if (first.policyId === SHORT_SIDE_FILL_POLICY_ID && first.policyId === second.policyId) {
+    return shortSideFillOrder(first, second)
+  }
   return balancedCompactnessOrder(first, second)
 }
 
@@ -173,7 +241,9 @@ interface Bounds {
   readonly maxY: number
 }
 
-function makeCombinedBounds(input: ScoreIrregularPlacementCandidateInput): CombinedBounds | undefined {
+function makeCombinedBounds(
+  input: ScoreIrregularPlacementCandidateInput
+): CombinedBounds | undefined {
   // derive every bound from polygon vertices so stale cached bounds cannot affect ranking
   const moving = translatedBounds(
     input.moving.polygon.points,

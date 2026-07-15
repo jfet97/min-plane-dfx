@@ -44,8 +44,10 @@ A project should include:
 - imported piece metadata;
 - imported DXF document summaries when available;
 - cut-list quantities for each source shape;
+- per-source mirror eligibility for irregular transform generation;
 - sheet settings;
-- nesting options;
+- nesting options, including optional schema-validated irregular geometry and
+  optimizer experiment settings;
 - latest worker result when available;
 - latest NDJSON history reference when available.
 - saved run records with their result, run sheet, piece count, and NDJSON history
@@ -94,7 +96,13 @@ keyed by `csvImportId`, keeps every completed subrun in order, and retains the
 full prepared-piece catalog so export can map each placement back to the source
 CSV row metadata. In-progress CSV sessions with leftovers are stored in
 workspace settings as `csvRunRecords`; completed CSV records are saved in the
-portable project JSON.
+portable project JSON. A subrun may retain a tagged irregular transform layout;
+aggregation must preserve that layout rather than converting it to rectangle
+placements or dropping it. The legacy CSV serializer rejects those records at
+serialization time because its row format cannot encode rotation, mirror, and
+placement-reference data. The portable nesting-result JSON instead carries a
+schema-validated irregular transform export with the source/copy identity and
+available source-row links.
 
 ## Open Behavior
 

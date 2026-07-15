@@ -5,9 +5,17 @@ import type {
   NestingRequest,
   NestingResult,
   ProjectHistoryRef,
-  NestingHistoryFramePayload
+  NestingHistoryFramePayload,
+  NestingSubRun,
+  PreparedPiece
 } from '@shared/domain/nesting.js'
 import type { CsvRunRecord, ProjectCsvImport } from '@shared/domain/project.js'
+import {
+  IrregularTransformExport,
+  type IrregularExportPlacement,
+  type IrregularLayout,
+  type IrregularPlacement
+} from '@shared/irregular/domain.js'
 import { Exit, Schema } from 'effect'
 import { NestingRequestStrict, NestingResultStrict } from '@shared/schemas/nestingSchemas.js'
 import { NestingHistoryFramePayload as NestingHistoryFramePayloadSchema } from '@shared/domain/nesting.js'
@@ -95,9 +103,146 @@ export async function exportNestingResultToFile(
   if (Exit.isFailure(exit)) {
     throw new Error('NestingResult failed schema validation')
   }
+  const decodedResult = exit.value
+  const irregularExport = hasIrregularLayout(decodedResult)
+    ? buildIrregularTransformExport(decodedResult)
+    : undefined
+  const output =
+    irregularExport !== undefined
+      ? {
+          format: 'min-plane-dfx/nesting-result-with-irregular-transforms',
+          version: 1,
+          result: decodedResult,
+          irregularTransformExport: irregularExport
+        }
+      : decodedResult
   await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, JSON.stringify(result, null, 2), 'utf8')
+  await writeFile(path, JSON.stringify(output, null, 2), 'utf8')
   return path
+}
+
+/** build the truthful JSON representation used for irregular result export. */
+export function buildIrregularTransformExport(result: NestingResult): IrregularTransformExport {
+  const subRuns = irregularSubRuns(result)
+  if (subRuns.length === 0) {
+    throw new Error('Irregular result has no transform layout to export.')
+  }
+
+  const preparedPieces = result.preparedPieces ?? []
+  const document = {
+    format: 'min-plane-dfx/irregular-transform-export' as const,
+    version: 1 as const,
+    jobId: result.jobId,
+    runId: result.runSummary?.runId ?? result.jobId,
+    subRuns: subRuns.map((subRun) => ({
+      subRunId: subRun.subRunId,
+      parentRunId: subRun.parentRunId,
+      index: subRun.index,
+      ...(subRun.sheet !== undefined ? { sheet: subRun.sheet } : {}),
+      placements: subRun.layout.placements.map((placement) =>
+        exportPlacement(placement, preparedPieces)
+      ),
+      unplacedPieceIds: [...subRun.layout.unplacedPieceIds]
+    }))
+  }
+  const decoded = Schema.decodeUnknownExit(IrregularTransformExport)(document)
+  if (Exit.isFailure(decoded)) {
+    throw new Error('Irregular transform export failed schema validation')
+  }
+  return decoded.value
+}
+
+function hasIrregularLayout(result: NestingResult): boolean {
+  return Boolean(
+    result.layout?.kind === 'irregular' ||
+      result.strategyResults.some((strategy) => strategy.layout?.kind === 'irregular') ||
+      result.runSummary?.subRuns.some((subRun) => subRun.layout?.kind === 'irregular')
+  )
+}
+
+function irregularSubRuns(
+  result: NestingResult
+): ReadonlyArray<{
+  readonly subRunId: string
+  readonly parentRunId: string
+  readonly index: number
+  readonly sheet?: NestingSubRun['sheet']
+  readonly layout: IrregularLayout
+}> {
+  const summarySubRuns = result.runSummary?.subRuns
+    .filter((subRun) => subRun.layout?.kind === 'irregular')
+    .map((subRun) => ({
+      subRunId: subRun.subRunId,
+      parentRunId: subRun.parentRunId,
+      index: subRun.index,
+      sheet: subRun.sheet,
+      layout: subRun.layout as IrregularLayout
+    }))
+  if (summarySubRuns !== undefined && summarySubRuns.length > 0) return summarySubRuns
+
+  if (result.layout?.kind === 'irregular') {
+    return [
+      {
+        subRunId: result.selectedStrategyRunId ?? result.jobId,
+        parentRunId: result.jobId,
+        index: 0,
+        layout: result.layout
+      }
+    ]
+  }
+
+  return result.strategyResults.flatMap((strategy) =>
+    strategy.layout?.kind === 'irregular'
+      ? [
+          {
+            subRunId: strategy.strategyRunId,
+            parentRunId: result.jobId,
+            index: 0,
+            layout: strategy.layout
+          }
+        ]
+      : []
+  )
+}
+
+function exportPlacement(
+  placement: IrregularPlacement,
+  preparedPieces: ReadonlyArray<PreparedPiece>
+): IrregularExportPlacement {
+  const pieceId = placement.pieceId ?? placement.sourcePieceId
+  const prepared = preparedPieces.find(
+    (candidate) =>
+      candidate.id === pieceId ||
+      candidate.id === placement.sourcePieceId ||
+      candidate.sourcePieceId === placement.sourcePieceId
+  )
+  return {
+    pieceId,
+    sourcePieceId: placement.sourcePieceId,
+    ...(placement.placementReference !== undefined
+      ? {
+          placementReference: {
+            x: placement.placementReference.x,
+            y: placement.placementReference.y
+          }
+        }
+      : {}),
+    transform: {
+      translateX: placement.transform.translateX,
+      translateY: placement.transform.translateY,
+      rotationDeg: placement.transform.rotationDeg,
+      mirrored: placement.transform.mirrored
+    },
+    ...(prepared?.cutRowRef !== undefined
+      ? {
+          sourceRow: {
+            reference: prepared.cutRowRef.reference,
+            customerName: prepared.cutRowRef.customerName,
+            csvRowId: prepared.cutRowRef.csvRowId
+          }
+        }
+      : {})
+  }
 }
 
 /**
@@ -120,6 +265,18 @@ export async function exportCsvResultToFile(
 ): Promise<string> {
   if (csvRunRecord.subRuns.length === 0) {
     throw new Error('CSV run record has no subruns; nothing to export.')
+  }
+
+  if (
+    csvRunRecord.subRuns.some(
+      (subrun) =>
+        subrun.layout?.kind === 'irregular' ||
+        subrun.options.workerMode === 'irregular-convex-v2'
+    )
+  ) {
+    throw new Error(
+      'CSV export cannot represent irregular transforms; export the Nesting Result JSON instead.'
+    )
   }
 
   const lines: string[] = []

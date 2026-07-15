@@ -20,7 +20,8 @@ export function preparePieces(
   sheet: SheetSpec,
   padding: number,
   _jobId: JobId,
-  cutRowRef?: PreparedPiece['cutRowRef']
+  cutRowRef?: PreparedPiece['cutRowRef'],
+  allowMirrorForPiece?: (pieceId: ImportedPiece['id']) => boolean
 ): PreparedPieceWithWarnings {
   const pieces: PreparedPiece[] = []
   const warnings: NestingWarning[] = []
@@ -68,6 +69,7 @@ export function preparePieces(
         }),
         padding: sidePadding,
         allowRotation: fitsRotated,
+        allowMirror: allowMirrorForPiece?.(p.id) ?? true,
         ...(cutRowRef !== undefined ? { cutRowRef } : {})
       })
     )

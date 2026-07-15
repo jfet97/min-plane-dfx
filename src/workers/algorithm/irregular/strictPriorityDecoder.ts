@@ -5,6 +5,7 @@ import {
   IrregularPlacedPiece,
   IrregularPlacement,
   IrregularPlacementCandidate,
+  IrregularPlacementPolicyId,
   IrregularPreparedPiece,
   IrregularTransform,
   IrregularTransformCandidate,
@@ -69,7 +70,10 @@ const transformCandidateOrder = Order.combineAll<IrregularTransformCandidate>([
  */
 export function decodeStrictPriorityOrder(
   sheet: SheetSpec,
-  pieces: ReadonlyArray<IrregularPreparedPiece>
+  pieces: ReadonlyArray<IrregularPreparedPiece>,
+  options: {
+    readonly policyId?: IrregularPlacementPolicyId
+  } = {}
 ): Effect.Effect<
   IrregularStrictPriorityDecodeResult,
   | IrregularNestingNotImplementedError
@@ -107,7 +111,8 @@ export function decodeStrictPriorityOrder(
             sheet,
             placed,
             moving,
-            candidate
+            candidate,
+            ...(options.policyId !== undefined ? { policyId: options.policyId } : {})
           })
           candidates.push({ candidate, moving, score })
         }

@@ -18,7 +18,8 @@ export function prepareCsvPieces(
   sourcePiecesById: ReadonlyMap<PieceId, ImportedPiece>,
   sheet: SheetSpec,
   padding: number,
-  _jobId: JobId
+  _jobId: JobId,
+  allowMirrorForSource?: (pieceId: PieceId) => boolean
 ): PreparedPieceWithWarnings {
   const pieces: PreparedPiece[] = []
   const warnings: NestingWarning[] = []
@@ -102,6 +103,7 @@ export function prepareCsvPieces(
           paddedBounds,
           padding: sidePadding,
           allowRotation: fitsRotated,
+          allowMirror: allowMirrorForSource?.(sourcePiece.id) ?? true,
           cutRowRef: {
             reference: row.reference,
             customerName: row.customerName,

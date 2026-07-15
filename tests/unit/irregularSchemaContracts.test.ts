@@ -154,6 +154,60 @@ describe('irregular schema contracts', () => {
     ).toBe(true)
   })
 
+  it('decodes bounded experiment controls and rejects inconsistent policy choices', () => {
+    const valid = {
+      orderWindow: 3,
+      beamWidth: 12,
+      localCandidateFanout: 5,
+      transformCap: 8,
+      gaPopulation: 10,
+      gaGenerationBudget: 2,
+      gaEvaluationBudget: 20,
+      gaTimeBudgetMs: 0,
+      gaSeed: 'experiment-seed',
+      configuredRotationEnabled: false,
+      configuredRotationDeg: [15, 45],
+      gaEnabled: false,
+      baselineOnly: true,
+      priorityOrderMutationEnabled: false,
+      transformPreferenceMutationEnabled: false,
+      placementPolicyMutationEnabled: false,
+      placementPolicyId: 'short-side-fill',
+      placementPolicyIds: ['short-side-fill']
+    }
+
+    const decoded = decode(IrregularOptimizerSettings, valid)
+    if (Exit.isFailure(decoded)) throw new Error('expected valid experiment controls')
+    expect(decoded.value.localCandidateFanout).toBe(5)
+    expect(decoded.value.gaTimeBudgetMs).toBe(0)
+    expect(decoded.value.placementPolicyId).toBe('short-side-fill')
+
+    expect(
+      Exit.isFailure(
+        decode(IrregularOptimizerSettings, {
+          ...valid,
+          localCandidateFanout: 0
+        })
+      )
+    ).toBe(true)
+    expect(
+      Exit.isFailure(
+        decode(IrregularOptimizerSettings, {
+          ...valid,
+          placementPolicyIds: ['balanced-compactness']
+        })
+      )
+    ).toBe(true)
+    expect(
+      Exit.isFailure(
+        decode(IrregularOptimizerSettings, {
+          ...valid,
+          placementPolicyIds: ['short-side-fill', 'short-side-fill']
+        })
+      )
+    ).toBe(true)
+  })
+
   it('keeps polygon vertices schema-backed as finite points', () => {
     expect(
       Exit.isSuccess(

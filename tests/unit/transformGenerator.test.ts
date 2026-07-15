@@ -40,6 +40,7 @@ function settings(
     readonly transformCap?: number
     readonly transformMinimumEdgeLengthMm?: number
     readonly transformAngleDeduplicationToleranceDeg?: number
+    readonly configuredRotationEnabled?: boolean
     readonly configuredRotationDeg?: ReadonlyArray<number>
   } = {}
 ): IrregularOptimizerSettings {
@@ -50,6 +51,7 @@ function settings(
     transformMinimumEdgeLengthMm: overrides.transformMinimumEdgeLengthMm ?? 1,
     transformAngleDeduplicationToleranceDeg:
       overrides.transformAngleDeduplicationToleranceDeg ?? 0.01,
+    configuredRotationEnabled: overrides.configuredRotationEnabled ?? true,
     configuredRotationDeg: overrides.configuredRotationDeg ?? [],
     gaPopulation: 8,
     gaTimeBudgetMs: 1000,
@@ -137,6 +139,17 @@ describe('TransformGenerator.Live', () => {
     )
 
     expect(candidates.slice(4).every(({ reason }) => reason === 'configured')).toBe(true)
+  })
+
+  it('can disable explicit configured angles without disabling the baseline rotations', async () => {
+    const candidates = await generate([point(0, 0), point(4, 0), point(4, 4), point(0, 4)], {
+      settings: settings({
+        configuredRotationEnabled: false,
+        configuredRotationDeg: [12.5]
+      })
+    })
+
+    expect(candidates.map(({ rotationDeg }) => rotationDeg)).toEqual([0, 90, 180, 270])
   })
 
   it('does not let mirror variants bypass the transform cap', async () => {

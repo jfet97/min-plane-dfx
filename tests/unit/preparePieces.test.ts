@@ -104,4 +104,10 @@ describe('preparePieces', () => {
       imbalance: 5
     })
   })
+
+  it('passes an explicit per-piece mirror restriction to the prepared request', () => {
+    const result = preparePieces([piece('p-1', 10, 5)], sheet, 0, jobId, undefined, () => false)
+
+    expect(result.pieces[0]?.allowMirror).toBe(false)
+  })
 })

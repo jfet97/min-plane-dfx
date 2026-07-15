@@ -8,7 +8,7 @@ Read the docs that match the task. For broad implementation work, read all of th
 - [Project Persistence](./project-persistence.md): single JSON snapshots, hydration, history references, and missing replay behavior.
 - [UI Clarity](./ui-clarity.md): desktop-tool UI expectations and honest algorithm state.
 - [Algorithm Boundary](./algorithm-boundary.md): worker algorithm ownership and wrapper responsibilities.
-- [Irregular V2 Infrastructure](./irregular-v2-infrastructure.md): convex irregular services, deterministic beam baseline, and default settings layers.
+- [Irregular V2 Infrastructure](./irregular-v2-infrastructure.md): convex irregular services, configurable beam/GA portfolio, and default settings layers.
 
 ## Adding Docs
 

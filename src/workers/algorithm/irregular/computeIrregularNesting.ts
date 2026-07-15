@@ -1,10 +1,13 @@
-import { Data, Effect } from 'effect'
+import { Data, Effect, Layer } from 'effect'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type { PieceId } from '@shared/domain/ids.js'
 import type { NestingRequest } from '@shared/domain/nesting.js'
 import {
   CollisionGeometryDiagnostic,
   IrregularPlacedPiece,
+  IrregularPortfolioResult,
+  IrregularPortfolioProgress,
+  IrregularPriorityOrderKey,
   IrregularPreparedPiece
 } from '@shared/irregular/domain.js'
 import { CollisionGeometryBuilder } from '../../irregular/collisionGeometryBuilder.js'
@@ -12,6 +15,8 @@ import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel
 import {
   IrregularGeometryInputError,
   IrregularNestingNotImplementedError,
+  IrregularNestingPortfolio,
+  IrregularPortfolioError,
   NfpIfpService,
   TransformGenerator
 } from '../../irregular/services.js'
@@ -26,10 +31,8 @@ import {
   IrregularPlacementScoringError
 } from './irregularPlacementScorer.js'
 import { IrregularBeamState } from './irregularBeamState.js'
-import {
-  decodeWindowedIrregularBeam,
-  IrregularWindowedBeamError
-} from './windowedBeam.js'
+import { IrregularNestingPortfolioLive } from './portfolioSearch.js'
+import { PriorityOrderServiceLive } from './priorityOrderService.js'
 
 /** Reports that a prepared piece has no imported geometry available to the worker. */
 export class IrregularComputeError extends Data.TaggedError('IrregularComputeError')<{
@@ -49,6 +52,8 @@ export interface IrregularStateSnapshot {
 /** Synchronous worker-facing notification for one selected real beam state. */
 export interface ComputeIrregularNestingOptions {
   readonly emitStateSnapshot?: (snapshot: IrregularStateSnapshot, beamWidth: number) => void
+  readonly emitPortfolioProgress?: (progress: IrregularPortfolioProgress) => Effect.Effect<void>
+  readonly isCancelled?: () => boolean
 }
 
 /** Plain algorithm output before any worker protocol or history DTO adaptation. */
@@ -60,13 +65,14 @@ export interface IrregularComputeResult {
   readonly sortedPieceIds: ReadonlyArray<PieceId>
   readonly stateSnapshots: ReadonlyArray<IrregularStateSnapshot>
   readonly beamWidth: number
+  readonly portfolio: IrregularPortfolioResult
 }
 
 export type IrregularComputeErrorType =
   | IrregularComputeError
   | IrregularGeometryInputError
   | IrregularNestingNotImplementedError
-  | IrregularWindowedBeamError
+  | IrregularPortfolioError
   | IrregularPlacementScoringError
   | IrregularLayoutScoringError
 
@@ -91,6 +97,7 @@ export function computeIrregularNesting(
     const preparedPieces: IrregularPreparedPiece[] = []
     const diagnostics: CollisionGeometryDiagnostic[] = []
     const geometryBuilder = yield* CollisionGeometryBuilder
+    const geometryKernel = yield* GeometryKernel
     const transformGenerator = yield* TransformGenerator
     const layoutScorer = yield* IrregularLayoutScorer
 
@@ -111,19 +118,25 @@ export function computeIrregularNesting(
         totalPaddingMm: request.padding
       })
       const allowRotation = request.options.allowGlobalRotation && prepared.allowRotation
+      const allowMirror = (request.options.allowGlobalMirror ?? true) && (prepared.allowMirror ?? true)
       const transforms = yield* transformGenerator.generateTransforms({
         geometry: collisionGeometry,
         allowRotation,
-        allowMirror: true,
+        allowMirror,
         settings: settings.optimizer
       })
       preparedPieces.push(
         new IrregularPreparedPiece({
           pieceId: prepared.id,
           source,
-          allowMirror: true,
+          allowMirror,
           collisionGeometry,
-          transforms
+          transforms,
+          priorityOrderKey: new IrregularPriorityOrderKey({
+            longSideMm: prepared.paddedBounds.longestEdge,
+            areaMm2: prepared.paddedBounds.area,
+            imbalanceMm: prepared.paddedBounds.imbalance
+          })
         })
       )
       diagnostics.push(...collisionGeometry.diagnostics)
@@ -131,41 +144,121 @@ export function computeIrregularNesting(
 
     const stateSnapshots: IrregularStateSnapshot[] = []
     const captureStateSnapshot = (snapshot: IrregularStateSnapshot): void => {
-      stateSnapshots.push(snapshot)
-      options?.emitStateSnapshot?.(snapshot, settings.optimizer.beamWidth)
+      stateSnapshots.push({
+        ...snapshot,
+        stepIndex: preparedPieces.length - snapshot.state.remainingPreparedPieces.length
+      })
     }
-    const beam = yield* decodeWindowedIrregularBeam(
-      request.sheet,
-      preparedPieces,
-      {
-        onInitialState: (state) => {
-          captureStateSnapshot({
-            stepIndex: 0,
-            beamRank: 0,
-            candidateCount: 0,
-            state
-          })
-        },
-        onStateSelected: (snapshot) => {
-          captureStateSnapshot({ ...snapshot, stepIndex: snapshot.stepIndex + 1 })
-        }
-      }
+    const portfolioService = yield* Effect.service(IrregularNestingPortfolio).pipe(
+      Effect.provide(
+        IrregularNestingPortfolioLive.pipe(Layer.provideMerge(PriorityOrderServiceLive))
+      )
     )
+    const portfolio = yield* portfolioService.run({
+      sheet: request.sheet,
+      pieces: preparedPieces,
+      onStateSnapshot: (snapshot) => {
+        captureStateSnapshot(snapshot)
+      },
+      ...(options?.emitPortfolioProgress !== undefined
+        ? {
+            onProgress: options.emitPortfolioProgress
+          }
+        : {}),
+      ...(options?.isCancelled !== undefined ? { isCancelled: options.isCancelled } : {})
+    })
+    const placedCollisionGeometries = yield* reconstructPlacedGeometry(
+      portfolio,
+      preparedPieces,
+      geometryKernel
+    )
+    const reconstructedState = new IrregularBeamState({
+      remainingPreparedPieces: [],
+      placedCollisionGeometries,
+      unplacedPieceIds: portfolio.unplacedPieceIds,
+      placementOrder: placedCollisionGeometries.map(
+        ({ placement }) => placement.pieceId ?? placement.sourcePieceId
+      )
+    })
     const score = yield* layoutScorer.scoreState({
       sheet: request.sheet,
-      state: beam.bestState
+      state: reconstructedState
     })
     diagnostics.push(...score.freeMaterialSnapshot.diagnostics)
+    for (const snapshot of stateSnapshots) {
+      options?.emitStateSnapshot?.(snapshot, settings.optimizer.beamWidth)
+    }
     return {
-      placedCollisionGeometries: beam.bestState.placedCollisionGeometries,
+      placedCollisionGeometries,
       score,
-      unplacedPieceIds: beam.bestState.unplacedPieceIds,
+      unplacedPieceIds: portfolio.unplacedPieceIds,
       diagnostics,
       sortedPieceIds: sortedPieces.map((piece) => piece.id),
       stateSnapshots,
-      beamWidth: settings.optimizer.beamWidth
+      beamWidth: settings.optimizer.beamWidth,
+      portfolio
     }
   })
+}
+
+function reconstructPlacedGeometry(
+  portfolio: IrregularPortfolioResult,
+  pieces: ReadonlyArray<IrregularPreparedPiece>,
+  geometryKernel: import('../../irregular/geometryKernel.js').GeometryKernel.Service
+): Effect.Effect<
+  ReadonlyArray<IrregularPlacedPiece>,
+  IrregularComputeError | IrregularGeometryInputError | IrregularNestingNotImplementedError
+> {
+  return Effect.forEach(
+    portfolio.placements,
+    (
+      placement
+    ): Effect.Effect<
+      IrregularPlacedPiece,
+      IrregularComputeError | IrregularGeometryInputError | IrregularNestingNotImplementedError
+    > => {
+      const prepared = pieces.find(
+        (piece) =>
+          (piece.pieceId ?? piece.source.id) === (placement.pieceId ?? placement.sourcePieceId) &&
+          piece.source.id === placement.sourcePieceId
+      )
+      if (prepared === undefined) {
+        return Effect.fail(
+          new IrregularComputeError({
+            preparedPieceId: placement.pieceId ?? placement.sourcePieceId,
+            sourcePieceId: placement.sourcePieceId,
+            message: `Portfolio placement ${placement.sourcePieceId} has no prepared piece.`
+          })
+        )
+      }
+      const transform = prepared.transforms
+        .toSorted((first, second) => first.index - second.index)
+        .find(
+          (candidate) =>
+            candidate.rotationDeg === placement.transform.rotationDeg &&
+            candidate.mirrored === placement.transform.mirrored
+        )
+      if (transform === undefined) {
+        return Effect.fail(
+          new IrregularGeometryInputError({
+            operation: 'reconstructPortfolioPlacement',
+            message: `Portfolio placement ${placement.sourcePieceId} has no matching transform candidate.`
+          })
+        )
+      }
+      return geometryKernel
+        .transformCollisionGeometry({
+          geometry: prepared.collisionGeometry,
+          transform
+        })
+        .pipe(
+          Effect.map(
+            (collisionGeometry) => new IrregularPlacedPiece({ placement, collisionGeometry })
+          )
+        )
+    },
+    { concurrency: 1 }
+  )
 }
 
 function findSourcePiece(
@@ -180,8 +273,6 @@ function findSourcePiece(
 
   const baseId = sourcePieceId.replace(/-copy-\d+$/, '')
   const preparedBaseId = preparedPieceId.replace(/-copy-\d+$/, '')
-  const base = sourcePieces.find(
-    (source) => source.id === baseId || source.id === preparedBaseId
-  )
+  const base = sourcePieces.find((source) => source.id === baseId || source.id === preparedBaseId)
   return base
 }

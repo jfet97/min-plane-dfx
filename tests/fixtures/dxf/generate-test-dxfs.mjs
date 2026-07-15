@@ -42,6 +42,10 @@ function line(x1, y1, x2, y2, layer = 'CUT') {
   ].join('')
 }
 
+function pointEntity(x, y, layer = 'REFERENCE') {
+  return [pair(0, 'POINT'), layerName(layer), pair(10, x), pair(20, y), pair(30, 0)].join('')
+}
+
 function lwpolyline(points, { closed = true, layer = 'CUT', bulges = [] } = {}) {
   return [
     pair(0, 'LWPOLYLINE'),
@@ -189,6 +193,15 @@ mkdirSync(outDir, { recursive: true })
 writeFixture('triangle.dxf', [triangle(0, 0, 90, 70)])
 writeFixture('trapezoid.dxf', [trapezoid(0, 0, 55, 115, 75)])
 writeFixture('rounded-rectangle.dxf', [...roundedRect(0, 0, 125, 70, 18)])
+writeFixture('angled-profile.dxf', [
+  lwpolyline([
+    [0, 0],
+    [135, 0],
+    [112, 28],
+    [94, 86],
+    [18, 72]
+  ])
+])
 writeFixture('star-5-point.dxf', [star(55, 55, 55, 24, 5)])
 writeFixture('circle-ellipse-arcs.dxf', [
   circle(35, 35, 30),
@@ -253,6 +266,45 @@ writeFixture('transform-cases.dxf', [
   trapezoid(270, 0, 45, 125, 95),
   diamond(480, 50, 145, 50),
   ...roundedRect(590, 10, 155, 65, 16)
+])
+writeFixture('near-collinear.dxf', [
+  lwpolyline([
+    [0, 0],
+    [100, 0],
+    [100.000001, 0.000001],
+    [100, 42],
+    [0, 42]
+  ])
+])
+writeFixture('tiny-segments.dxf', [
+  lwpolyline([
+    [0, 0],
+    [0.001, 0],
+    [80, 0],
+    [80, 0.001],
+    [80, 35],
+    [0, 35]
+  ])
+])
+writeFixture('duplicate-points.dxf', [
+  lwpolyline([
+    [0, 0],
+    [90, 0],
+    [90, 0],
+    [90, 45],
+    [0, 45],
+    [0, 0],
+    [0, 0]
+  ])
+])
+writeFixture('open-contour.dxf', [line(0, 0, 90, 0), line(90, 0, 90, 45), line(90, 45, 0, 45)])
+writeFixture('unsupported-entities.dxf', [rect(0, 0, 90, 45), pointEntity(25, 20)])
+writeFixture('high-padding.dxf', [triangle(0, 0, 70, 55)])
+writeFixture('repeated-mixed-pieces.dxf', [
+  rect(0, 0, 80, 40),
+  triangle(110, 0, 60, 50),
+  trapezoid(210, 0, 45, 80, 55),
+  star(330, 30, 32, 14, 5)
 ])
 
 console.log(`Generated DXF fixtures in ${outDir}`)

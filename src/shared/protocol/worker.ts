@@ -8,6 +8,7 @@ import {
   NestingHistoryFramePayload,
   NestingHistorySummary
 } from '../domain/nesting.js'
+import { IrregularPortfolioProgress } from '../irregular/domain.js'
 import { AppErrorCode, type SerializedAppError } from './errors.js'
 
 /** Worker progress phases. Honest, lifecycle-only: no fake algorithm %. */
@@ -22,7 +23,8 @@ export type WorkerProgressPhase = (typeof WorkerProgressPhase)[number]
 
 export class WorkerProgress extends Schema.Class<WorkerProgress>('WorkerProgress')({
   phase: Schema.Literals([...WorkerProgressPhase]),
-  at: Schema.String
+  at: Schema.String,
+  portfolio: Schema.optional(IrregularPortfolioProgress)
 }) {}
 
 export class RunNestingWorkerRequest extends Schema.Class<RunNestingWorkerRequest>(
@@ -76,6 +78,23 @@ export class WorkerProgressResponse extends Schema.Class<WorkerProgressResponse>
       payload: new WorkerProgress({
         phase: input.phase,
         at: input.at ?? new Date().toISOString()
+      })
+    })
+  }
+
+  static forPortfolioProgress(input: {
+    readonly requestId: string
+    readonly jobId: JobId
+    readonly progress: IrregularPortfolioProgress
+    readonly at?: string
+  }): WorkerProgressResponse {
+    return new WorkerProgressResponse({
+      requestId: input.requestId,
+      jobId: input.jobId,
+      payload: new WorkerProgress({
+        phase: 'started',
+        at: input.at ?? new Date().toISOString(),
+        portfolio: input.progress
       })
     })
   }
@@ -138,7 +157,6 @@ export class WorkerFailureResponse extends Schema.Class<WorkerFailureResponse>(
       })
     })
   }
-
 }
 
 export const WorkerResponse = Schema.Union([

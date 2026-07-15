@@ -1,26 +1,21 @@
-import type {
-  AlgorithmBenchmark,
-  NestingRequest,
-  NestingResult
-} from '@shared/domain/nesting.js'
+import type { AlgorithmBenchmark, NestingRequest, NestingResult } from '@shared/domain/nesting.js'
 import {
+  NestingRunSummary,
   NestingResult as NestingResultModel,
-  NestingStrategyResult
+  NestingStrategyResult,
+  NestingSubRun
 } from '@shared/domain/nesting.js'
 import {
   IrregularHistoryFrame,
   IrregularLayout,
   IrregularLayoutScoreSummary
 } from '@shared/irregular/domain.js'
-import type {
-  IrregularComputeResult,
-  IrregularStateSnapshot
-} from './computeIrregularNesting.js'
+import type { IrregularComputeResult, IrregularStateSnapshot } from './computeIrregularNesting.js'
 
 const IRREGULAR_BEAM_STRATEGY_ID = 'irregular-convex-windowed-beam'
 const IRREGULAR_BEAM_STRATEGY_LABEL = 'Irregular convex windowed beam'
 
-/** Real protocol-facing output derived from one completed irregular beam run. */
+/** Real protocol-facing output derived from one completed irregular portfolio run. */
 export interface IrregularWorkerOutput {
   readonly result: NestingResult
   readonly historyFrames: ReadonlyArray<IrregularHistoryFrame>
@@ -70,14 +65,15 @@ export function makeIrregularWorkerOutput(input: {
   readonly algorithmBenchmark: AlgorithmBenchmark
 }): IrregularWorkerOutput {
   const strategyRunId = irregularStrategyRunId(input.request)
+  const portfolio = input.computed.portfolio
   const layout = new IrregularLayout({
     kind: 'irregular',
     placements: input.computed.placedCollisionGeometries.map(({ placement }) => placement),
     unplacedPieceIds: input.computed.unplacedPieceIds,
     score: scoreSummary(input.computed),
-    source: 'beam',
-    status: 'completed',
-    diagnostics: input.computed.diagnostics
+    source: portfolio.source,
+    status: portfolio.status,
+    diagnostics: [...input.computed.diagnostics, ...portfolio.diagnostics]
   })
   const historyFrames = input.computed.stateSnapshots.map((snapshot) =>
     makeIrregularHistoryFrame({
@@ -93,7 +89,7 @@ export function makeIrregularWorkerOutput(input: {
     strategyId: IRREGULAR_BEAM_STRATEGY_ID,
     strategyLabel: IRREGULAR_BEAM_STRATEGY_LABEL,
     strategyDescription:
-      'Deterministic convex NFP/IFP search with configurable windowed beam retention.',
+      'Deterministic convex NFP/IFP search with a configurable windowed beam and seeded portfolio search.',
     sortedPieceIds: input.computed.sortedPieceIds,
     placements: [],
     unplacedPieceIds: input.computed.unplacedPieceIds,
@@ -101,6 +97,27 @@ export function makeIrregularWorkerOutput(input: {
     elapsedMs: input.algorithmBenchmark.elapsedMs,
     pieceCount: input.request.pieces.length,
     algorithmBenchmark: input.algorithmBenchmark
+  })
+  const subRun = new NestingSubRun({
+    subRunId: strategyRunId,
+    parentRunId: input.request.strategyRunId ?? input.request.jobId,
+    index: 0,
+    sheet: input.request.sheet,
+    padding: input.request.padding,
+    options: input.request.options,
+    placements: [],
+    unplacedPieceIds: input.computed.unplacedPieceIds,
+    layout,
+    pieceIds: input.request.pieces.map((piece) => piece.id),
+    requestPieceIds: input.request.pieces.map((piece) => piece.id)
+  })
+  const runSummary = new NestingRunSummary({
+    runId: strategyRunId,
+    subRuns: [subRun],
+    totalPlaced: layout.placements.length,
+    totalUnplaced: layout.unplacedPieceIds.length,
+    totalSheetAreaMm2: input.request.sheet.width * input.request.sheet.height,
+    usedAreaMm2: layout.score.collisionBoundsAreaMm2
   })
 
   return {
@@ -114,6 +131,7 @@ export function makeIrregularWorkerOutput(input: {
       layout,
       elapsedMs: input.algorithmBenchmark.elapsedMs,
       algorithmBenchmark: input.algorithmBenchmark,
+      runSummary,
       preparedPieces: input.request.pieces
     }),
     historyFrames

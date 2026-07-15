@@ -3,8 +3,8 @@
 Irregular v2 has a real deterministic convex baseline. It flattens imported
 closed outlines, builds padded convex collision polygons, generates finite
 rotation/mirror choices, produces NFP/IFP contact candidates, validates each
-placement directly, and runs a configurable windowed beam. It is not yet the
-full GA portfolio or a concave/hole-aware nesting engine.
+placement directly, and runs a configurable windowed beam plus a bounded seeded
+GA portfolio. It is not a concave/hole-aware nesting engine.
 
 ## Shared DTOs
 
@@ -42,8 +42,8 @@ module rather than another Effect service. `decodeStrictPriorityOrder` consumes
 an already priority-ordered list, transforms each piece's existing transform
 candidates in deterministic metadata order, and asks `NfpIfpService` for legal
 candidates against the real placed collision geometries. It chooses by
-the local balanced-compactness score, then translated candidate bottom/left and
-transform `(index, rotationDeg, mirrored, reason)`, retains the chosen
+the configured local candidate policy, then translated candidate bottom/left
+and transform `(index, rotationDeg, mirrored, reason)`, retains the chosen
 transformed geometry for later candidates, and records an ordinary no-fit piece
 as unplaced before continuing. Transform indexes are normally unique because
 `TransformGenerator` emits them that way; the complete tie-break keeps malformed
@@ -53,11 +53,11 @@ This is the strict-order baseline for the real windowed beam. It does not
 generate transforms, reorder pieces, score layouts, prune a beam, emit history,
 or invent placement data. Candidate
 generation and direct placement validation remain the legality authority. The
-decoder uses `IrregularPlacementScorer.Live` only to compare those real legal
-candidates with the first explicit local policy: balanced compactness of the
-combined collision-polygon bounds, then translated bottom/left and stable
-transform metadata ties. It does not yet use free-material metrics, a
-short-side-fill policy, or any portfolio/layout score. A valid transformed
+decoder uses `IrregularPlacementScorer` only to compare those real legal
+candidates with the requested explicit local policy: balanced compactness or
+short-side fill of the combined collision-polygon bounds, then stable metadata
+ties. It does not use free-material metrics to accept candidates; whole-layout
+metrics remain a separate beam-retention and portfolio concern. A valid transformed
 polygon that exceeds the sheet is an infeasible transform and produces zero
 candidates, allowing the decoder to try the next supplied transform; invalid
 geometry and invalid derived arithmetic remain typed failures. The supplied
@@ -70,6 +70,22 @@ defaults only; tests and future worker configuration can replace that layer with
 arbitrary schema-validated settings. Algorithms yield the service instead of
 accepting positional settings arguments, so each run has one configuration
 source.
+
+`IrregularOptimizerSettings` is the complete experiment surface. A request can
+persist an `options.irregularSettings` value, which the worker supplies through
+`GeometrySettings` for that run. It can independently vary `orderWindow`,
+`beamWidth`, local-candidate fanout, transform limits and configured-angle
+enablement, global rotation/mirror gates, local policy choices, GA population,
+generation/evaluation/time budgets, seed, and the three chromosome-gene toggles
+(priority order, transform preference, and policy). `gaEnabled`,
+`baselineOnly`, or a zero GA budget retain the deterministic beam-only baseline.
+This makes benchmark rows schema-validated and replayable without hidden
+process-global knobs.
+
+The renderer separately persists one mirror-eligibility flag per imported source
+shape. Both normal and CSV preparation copy that flag into every generated
+`PreparedPiece`, and the global mirror gate must also be enabled before a
+mirrored transform can be generated.
 
 `GeometryKernel.Live` currently implements DXF source flattening, convex hull,
 strictly convex polygon offsetting, and transformation of one padded collision
@@ -105,8 +121,11 @@ computes the
 sheet-space difference between the sheet and the union of translated placed
 collision polygons through Clipper2's integer `Paths64` and `PolyTree64`
 boundary. Its output groups each outer material boundary with its direct holes
-for visualization and scoring; it is never used as placement legality or as an
-implicit concave/hole-aware nesting feature.
+for visualization and scoring. An exact point contact can appear as a repeated
+non-adjacent vertex in a computed Clipper boundary; that winding is preserved
+for its correct net diagnostic area, while source polygons remain strictly
+unique-vertex validated. Free material is never used as placement legality or
+as an implicit concave/hole-aware nesting feature.
 
 ## Current Integration State
 
@@ -124,27 +143,35 @@ The worker runs `computeIrregularNesting` for this mode. It preserves prepared
 copy ids and source ids, emits `IrregularLayout` transform placements with the
 source-space placement reference required to reproduce each transform rather
 than fabricated rectangle placements, and writes tagged `IrregularHistoryFrame`
-records to the normal NDJSON history path. Missing source geometry becomes the
-typed `irregular_source_geometry_missing` worker failure; invalid derived
-geometry and scoring become distinct typed failures.
+records to the normal NDJSON history path. It replays the selected portfolio
+chromosome and follows explicit beam-state parent links from its terminal state
+back to the empty state, so persisted and emitted history contains only the
+actual winning branch rather than losing beam alternatives. Missing source geometry becomes the typed
+`irregular_source_geometry_missing` worker failure; invalid derived geometry
+and scoring become distinct typed failures.
 
 Do not route `irregular-convex-v2` requests to MaxRects.
 
 The renderer accepts tagged irregular history alongside existing rectangular
-history. Its current result canvas intentionally does not redraw source geometry
-from irregular transforms yet; it reports the real transform placement count
-instead of displaying substitute rectangles. CSV multi-sheet aggregation rejects
-irregular mode before it resets or mutates a CSV session because aggregation is
-rectangle-only and must not discard those transforms. The same rejection applies
-when starting another sheet from rectangular leftovers after switching the active
-worker mode to irregular.
+history. It redraws the original DXF segments using the stored placement
+reference, mirror, rotation, and translation; a placement missing its source or
+reference is reported as unrenderable rather than replaced with a rectangle.
+The debug and history panels expose real result status, transforms, candidate
+counts, free-material score metrics, unplaced ids, and diagnostics.
+
+CSV/manual subruns preserve tagged irregular layouts and transforms while they
+are aggregated. The rectangle CSV serializer rejects an irregular record only
+at export time because its rows cannot represent a transform placement; regular
+result JSON instead includes an explicit schema-validated irregular transform
+export with source/copy ids, placement reference, transform, subrun metadata,
+and CSV source-row links when available.
 
 ## Ownership
 
 Geometry services remain under `src/workers/irregular/`. Placement selection,
 scoring, beam state, and search belong under `src/workers/algorithm/`, including
 the strict-priority decoder, local irregular scorer, layout scorer, windowed
-beam, and future GA/search layers:
+beam, and seeded GA/search portfolio:
 
 - priority ordering;
 - placement candidate selection;
@@ -153,13 +180,18 @@ beam, and future GA/search layers:
 - GA/search.
 
 `src/workers/algorithm/irregular/irregularPlacementScorer.ts` owns the local
-balanced-compactness score for candidates already accepted by NFP/IFP generation
+candidate-policy score for candidates already accepted by NFP/IFP generation
 and direct validation. `irregularLayoutScorer.ts` owns a separate lexicographic
 whole-layout score for beam retention: unplaced count first, then free-material
 usability/fragmentation metrics and compact collision bounds. Free material is
 scoring-only and never accepts or rejects a placement.
 
-The pending portfolio work is GA-selected transforms, seeded search, portfolio
-comparison, cancellation checkpoints, and visual rendering/export of transform
-placements. Free-material regions remain a sheet-space diagnostic artifact and
-do not replace direct placement validation.
+`portfolioSearch.ts` owns chromosome construction, deterministic PRNG mutation,
+crossover, evaluation/generation/time checkpoints, progress, cancellation, and
+selection between the GA and beam results. Its transform gene is a preferred
+candidate index with deterministic fallback to the remaining legal transforms;
+it never encodes raw coordinates. `geometryCacheKeys.ts` namespaces transformed
+geometry, pairwise NFP, and IFP artifacts by their complete geometry/settings
+identity, and validates cached artifacts before reuse. Free-material regions
+remain a sheet-space diagnostic artifact and do not replace direct placement
+validation.

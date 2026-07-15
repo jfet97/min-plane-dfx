@@ -5,6 +5,7 @@ import {
   IrregularPlacement,
   IrregularPlacementCandidate,
   IrregularPlacedPiece,
+  IrregularPlacementPolicyId,
   IrregularNestingSettings,
   IrregularPreparedPiece,
   IrregularTransformCandidate,
@@ -32,6 +33,7 @@ import { IrregularBeamState } from './irregularBeamState.js'
 export interface IrregularWindowedBeamResult {
   readonly rankedStates: ReadonlyArray<IrregularBeamState>
   readonly bestState: IrregularBeamState
+  readonly bestScore: IrregularLayoutScore
 }
 
 export interface IrregularWindowedBeamHooks {
@@ -42,6 +44,12 @@ export interface IrregularWindowedBeamHooks {
     readonly state: IrregularBeamState
     readonly candidateCount: number
   }) => void
+}
+
+/** High-level chromosome choices applied by one deterministic beam decode. */
+export interface IrregularWindowedBeamOptions {
+  readonly policyId?: IrregularPlacementPolicyId
+  readonly transformPreferences?: ReadonlyMap<PieceId, number>
 }
 
 export type IrregularWindowedBeamError =
@@ -81,10 +89,15 @@ export function runWindowedIrregularBeam(input: {
   readonly sheet: SheetSpec
   readonly pieces: ReadonlyArray<IrregularPreparedPiece>
   readonly hooks?: IrregularWindowedBeamHooks
+  readonly options?: IrregularWindowedBeamOptions
 }): Effect.Effect<
   IrregularWindowedBeamResult,
   IrregularWindowedBeamError,
-  GeometryKernel | GeometrySettings | NfpIfpService | IrregularPlacementScorer | IrregularLayoutScorer
+  | GeometryKernel
+  | GeometrySettings
+  | NfpIfpService
+  | IrregularPlacementScorer
+  | IrregularLayoutScorer
 > {
   return Effect.gen(function* () {
     const settings = yield* GeometrySettings
@@ -94,8 +107,7 @@ export function runWindowedIrregularBeam(input: {
     const layoutScorer = yield* IrregularLayoutScorer
 
     let beam: ReadonlyArray<IrregularBeamState> = [IrregularBeamState.empty(input.pieces)]
-    input.hooks?.onInitialState?.(beam[0] ?? IrregularBeamState.empty(input.pieces))
-    let stepIndex = 0
+    const candidateCounts: number[] = []
     while (beam.some((state) => state.remainingPreparedPieces.length > 0)) {
       const successors: IrregularBeamState[] = []
       let candidateCount = 0
@@ -109,7 +121,7 @@ export function runWindowedIrregularBeam(input: {
         const legalSuccessors: IrregularBeamState[] = []
 
         const localCandidateLimit =
-          settings.optimizer.orderWindow === 1 ? 1 : settings.optimizer.beamWidth
+          settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth
         for (const [pieceIndex, piece] of eligiblePieces.entries()) {
           const localCandidates = yield* collectLocalCandidates({
             sheet: input.sheet,
@@ -118,13 +130,15 @@ export function runWindowedIrregularBeam(input: {
             piece,
             geometryKernel,
             nfpIfpService,
-            placementScorer
+            placementScorer,
+            ...(input.options !== undefined ? { options: input.options } : {})
           })
           candidateCount += localCandidates.length
           const selected = selectLocalCandidates(
             localCandidates,
             placementScorer,
-            localCandidateLimit
+            localCandidateLimit,
+            input.options?.transformPreferences?.get(preparedPieceId(piece))
           )
           for (const candidate of selected) {
             legalSuccessors.push(applyPlacement(state, pieceIndex, piece, candidate))
@@ -140,24 +154,23 @@ export function runWindowedIrregularBeam(input: {
 
       const scored = yield* scoreStates(successors, input.sheet, layoutScorer)
       beam = dedupeAndPrune(scored, settings.optimizer.beamWidth, layoutScorer)
-      for (const [beamRank, state] of beam.entries()) {
-        input.hooks?.onStateSelected?.({
-          stepIndex,
-          beamRank,
-          state,
-          candidateCount
-        })
-      }
-      stepIndex += 1
+      candidateCounts.push(candidateCount)
     }
 
-    const ranked = yield* scoreStates(beam, input.sheet, layoutScorer)
-    const rankedStates = rankScoredStates(ranked, layoutScorer).map(({ state }) => state)
-    const bestState = rankedStates[0]
-    if (bestState === undefined) {
+    const ranked = rankScoredStates(
+      yield* scoreStates(beam, input.sheet, layoutScorer),
+      layoutScorer
+    )
+    const best = ranked[0]
+    if (best === undefined) {
       return yield* Effect.die('windowed irregular beam produced no terminal state')
     }
-    return { rankedStates, bestState }
+    emitWinningPath(input.hooks, best.state, candidateCounts)
+    return {
+      rankedStates: ranked.map(({ state }) => state),
+      bestState: best.state,
+      bestScore: best.score
+    }
   })
 }
 
@@ -165,16 +178,22 @@ export function runWindowedIrregularBeam(input: {
 export function decodeWindowedIrregularBeam(
   sheet: SheetSpec,
   pieces: ReadonlyArray<IrregularPreparedPiece>,
-  hooks?: IrregularWindowedBeamHooks
+  hooks?: IrregularWindowedBeamHooks,
+  options?: IrregularWindowedBeamOptions
 ): Effect.Effect<
   IrregularWindowedBeamResult,
   IrregularWindowedBeamError,
-  GeometryKernel | GeometrySettings | NfpIfpService | IrregularPlacementScorer | IrregularLayoutScorer
+  | GeometryKernel
+  | GeometrySettings
+  | NfpIfpService
+  | IrregularPlacementScorer
+  | IrregularLayoutScorer
 > {
   return runWindowedIrregularBeam({
     sheet,
     pieces,
-    ...(hooks !== undefined ? { hooks } : {})
+    ...(hooks !== undefined ? { hooks } : {}),
+    ...(options !== undefined ? { options } : {})
   })
 }
 
@@ -186,13 +205,14 @@ function collectLocalCandidates(input: {
   readonly geometryKernel: GeometryKernel.Service
   readonly nfpIfpService: NfpIfpService
   readonly placementScorer: IrregularPlacementScorer.Service
+  readonly options?: IrregularWindowedBeamOptions
 }): Effect.Effect<
   ReadonlyArray<LocalCandidate>,
   IrregularNestingNotImplementedError | IrregularGeometryInputError | IrregularPlacementScoringError
 > {
   return Effect.gen(function* () {
     const candidates: LocalCandidate[] = []
-    for (const transform of input.piece.transforms.toSorted(transformOrder)) {
+    for (const transform of orderedTransforms(input.piece, input.options?.transformPreferences)) {
       const moving = yield* input.geometryKernel.transformCollisionGeometry({
         geometry: input.piece.collisionGeometry,
         transform
@@ -208,7 +228,8 @@ function collectLocalCandidates(input: {
           sheet: input.sheet,
           placed: input.state.placedCollisionGeometries,
           moving,
-          candidate
+          candidate,
+          ...(input.options?.policyId !== undefined ? { policyId: input.options.policyId } : {})
         })
         candidates.push({ candidate, moving, score })
       }
@@ -220,12 +241,24 @@ function collectLocalCandidates(input: {
 function selectLocalCandidates(
   candidates: ReadonlyArray<LocalCandidate>,
   placementScorer: IrregularPlacementScorer.Service,
-  maximumCount: number
+  maximumCount: number,
+  preferredTransformIndex: number | undefined
 ): ReadonlyArray<LocalCandidate> {
-  const candidateOrder = Order.combineAll<LocalCandidate>([
-    Order.make((first, second) => placementScorer.compare(first.score, second.score)),
-    Order.mapInput(Order.String, (candidate) => localCandidateKey(candidate))
-  ])
+  const candidateOrder = Order.combineAll<LocalCandidate>(
+    preferredTransformIndex === undefined
+      ? [
+          Order.make((first, second) => placementScorer.compare(first.score, second.score)),
+          Order.mapInput(Order.String, (candidate) => localCandidateKey(candidate))
+        ]
+      : [
+          // preserve the chromosome's transform choice before ranking its local placements
+          Order.mapInput(Order.Number, (candidate) =>
+            candidate.candidate.transform.index === preferredTransformIndex ? 0 : 1
+          ),
+          Order.make((first, second) => placementScorer.compare(first.score, second.score)),
+          Order.mapInput(Order.String, (candidate) => localCandidateKey(candidate))
+        ]
+  )
   return candidates.toSorted(candidateOrder).slice(0, maximumCount)
 }
 
@@ -258,7 +291,8 @@ function applyPlacement(
     remainingPreparedPieces: removeAt(state.remainingPreparedPieces, pieceIndex),
     placedCollisionGeometries: [...state.placedCollisionGeometries, placed],
     unplacedPieceIds: state.unplacedPieceIds,
-    placementOrder: [...state.placementOrder, pieceId]
+    placementOrder: [...state.placementOrder, pieceId],
+    parent: state
   })
 }
 
@@ -269,7 +303,8 @@ function markFirstRemainingUnplaced(state: IrregularBeamState): IrregularBeamSta
     remainingPreparedPieces: state.remainingPreparedPieces.slice(1),
     placedCollisionGeometries: state.placedCollisionGeometries,
     unplacedPieceIds: [...state.unplacedPieceIds, preparedPieceId(first)],
-    placementOrder: state.placementOrder
+    placementOrder: state.placementOrder,
+    parent: state
   })
 }
 
@@ -281,11 +316,65 @@ function preparedPieceId(piece: IrregularPreparedPiece): PieceId {
   return piece.pieceId ?? piece.source.id
 }
 
+function orderedTransforms(
+  piece: IrregularPreparedPiece,
+  transformPreferences: ReadonlyMap<PieceId, number> | undefined
+): ReadonlyArray<IrregularTransformCandidate> {
+  const ordered = piece.transforms.toSorted(transformOrder)
+  const preferredIndex = transformPreferences?.get(preparedPieceId(piece))
+  if (preferredIndex === undefined) return ordered
+  const preferred = ordered.find((transform) => transform.index === preferredIndex)
+  if (preferred === undefined) return fallbackTransforms(ordered)
+  return [preferred, ...ordered.filter((transform) => transform !== preferred)]
+}
+
+function fallbackTransforms(
+  transforms: ReadonlyArray<IrregularTransformCandidate>
+): ReadonlyArray<IrregularTransformCandidate> {
+  return transforms
+}
+
+/** Emits only the branch that produced the final best state, from empty to terminal. */
+function emitWinningPath(
+  hooks: IrregularWindowedBeamHooks | undefined,
+  bestState: IrregularBeamState,
+  candidateCounts: ReadonlyArray<number>
+): void {
+  if (hooks === undefined) return
+  const path = winningStatePath(bestState)
+  const initialState = path[0]
+  if (initialState !== undefined) hooks.onInitialState?.(initialState)
+  for (let index = 1; index < path.length; index += 1) {
+    const state = path[index]
+    if (state === undefined) continue
+    hooks.onStateSelected?.({
+      stepIndex: index - 1,
+      beamRank: 0,
+      state,
+      candidateCount: candidateCounts[index - 1] ?? 0
+    })
+  }
+}
+
+/** Walks parent links backward, then restores the natural empty-to-terminal order. */
+function winningStatePath(bestState: IrregularBeamState): ReadonlyArray<IrregularBeamState> {
+  const reversePath: IrregularBeamState[] = []
+  let state: IrregularBeamState | undefined = bestState
+  while (state !== undefined) {
+    reversePath.push(state)
+    state = state.parent
+  }
+  return reversePath.reverse()
+}
+
 function scoreStates(
   states: ReadonlyArray<IrregularBeamState>,
   sheet: SheetSpec,
   layoutScorer: IrregularLayoutScorer.Service
-): Effect.Effect<ReadonlyArray<ScoredState>, IrregularLayoutScoringError | IrregularGeometryInputError | IrregularNestingNotImplementedError> {
+): Effect.Effect<
+  ReadonlyArray<ScoredState>,
+  IrregularLayoutScoringError | IrregularGeometryInputError | IrregularNestingNotImplementedError
+> {
   return Effect.forEach(states, (state) =>
     layoutScorer
       .scoreState({ sheet, state })

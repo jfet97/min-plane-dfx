@@ -88,6 +88,7 @@ function updateOptions(patch: Partial<NestingOptions>): void {
   } else {
     if (patch.allowGlobalRotation !== undefined)
       settings.setAllowGlobalRotation(patch.allowGlobalRotation)
+    if (patch.allowGlobalMirror !== undefined) settings.setAllowGlobalMirror(patch.allowGlobalMirror)
     if (patch.timeoutMs !== undefined) settings.setTimeoutMs(patch.timeoutMs)
     if (patch.workerMode !== undefined) settings.setWorkerMode(patch.workerMode)
     if (patch.historyMode !== undefined) settings.setHistoryMode(patch.historyMode)
@@ -216,6 +217,14 @@ function setLayoutSelectionStrategyId(event: Event): void {
           type="checkbox"
           :checked="model.options.allowGlobalRotation"
           @change="updateOptions({ allowGlobalRotation: inputChecked($event) })"
+        />
+      </label>
+      <label title="Allows candidate generation to try mirrored placements for eligible source shapes.">
+        Allow mirror
+        <input
+          type="checkbox"
+          :checked="model.options.allowGlobalMirror ?? true"
+          @change="updateOptions({ allowGlobalMirror: inputChecked($event) })"
         />
       </label>
     </div>

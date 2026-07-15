@@ -114,10 +114,12 @@ function transformAngleCandidates(
     { rotationDeg: 90, reason: 'orthogonal' },
     { rotationDeg: 180, reason: 'orthogonal' },
     { rotationDeg: 270, reason: 'orthogonal' },
-    ...settings.configuredRotationDeg.map((rotationDeg) => ({
-      rotationDeg,
-      reason: 'configured' as const
-    })),
+    ...(settings.configuredRotationEnabled !== false
+      ? settings.configuredRotationDeg.map((rotationDeg) => ({
+          rotationDeg,
+          reason: 'configured' as const
+        }))
+      : []),
     ...usableEdges.map(({ rotationDeg }) => ({
       rotationDeg,
       reason: 'edge_alignment' as const

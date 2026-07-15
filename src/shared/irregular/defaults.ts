@@ -1,4 +1,9 @@
 import {
+  DEFAULT_IRREGULAR_GA_EVALUATION_BUDGET,
+  DEFAULT_IRREGULAR_GA_GENERATION_BUDGET,
+  DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT,
+  DEFAULT_IRREGULAR_PLACEMENT_POLICY_ID,
+  DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS,
   IrregularGeometrySettings,
   IrregularNestingSettings,
   IrregularOptimizerSettings
@@ -24,13 +29,24 @@ export const DEFAULT_IRREGULAR_GEOMETRY_SETTINGS = new IrregularGeometrySettings
 export const DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS = new IrregularOptimizerSettings({
   orderWindow: 2,
   beamWidth: 24,
+  localCandidateFanout: DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT,
   transformCap: 16,
   transformMinimumEdgeLengthMm: 1,
   transformAngleDeduplicationToleranceDeg: 0.01,
+  configuredRotationEnabled: true,
   configuredRotationDeg: [],
+  baselineOnly: false,
   gaPopulation: 32,
+  gaGenerationBudget: DEFAULT_IRREGULAR_GA_GENERATION_BUDGET,
+  gaEvaluationBudget: DEFAULT_IRREGULAR_GA_EVALUATION_BUDGET,
   gaTimeBudgetMs: 60_000,
-  gaSeed: 'default'
+  gaSeed: 'default',
+  gaEnabled: true,
+  priorityOrderMutationEnabled: true,
+  transformPreferenceMutationEnabled: true,
+  placementPolicyMutationEnabled: true,
+  placementPolicyId: DEFAULT_IRREGULAR_PLACEMENT_POLICY_ID,
+  placementPolicyIds: [...DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS]
 })
 
 export const DEFAULT_IRREGULAR_NESTING_SETTINGS = new IrregularNestingSettings({

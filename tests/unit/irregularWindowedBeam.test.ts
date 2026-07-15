@@ -21,7 +21,11 @@ import { NfpIfpService } from '../../src/workers/irregular/services.js'
 import { IrregularLayoutScorer } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { decodeStrictPriorityOrder } from '../../src/workers/algorithm/irregular/strictPriorityDecoder.js'
-import { decodeWindowedIrregularBeam } from '../../src/workers/algorithm/irregular/windowedBeam.js'
+import {
+  decodeWindowedIrregularBeam,
+  type IrregularWindowedBeamHooks,
+  type IrregularWindowedBeamOptions
+} from '../../src/workers/algorithm/irregular/windowedBeam.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -59,7 +63,8 @@ function preparedPiece(
   id: string,
   width: number,
   height: number,
-  pieceId?: string
+  pieceId?: string,
+  transforms?: ReadonlyArray<IrregularTransformCandidate>
 ): IrregularPreparedPiece {
   const points = rectangle(width, height)
   const geometry = new CollisionGeometry({
@@ -71,18 +76,21 @@ function preparedPiece(
     placementReference: point(0, 0),
     diagnostics: []
   })
-  const transform = new IrregularTransformCandidate({
-    index: 0,
-    rotationDeg: 0,
-    mirrored: false,
-    reason: 'configured'
-  })
   return new IrregularPreparedPiece({
     ...(pieceId === undefined ? {} : { pieceId: PieceId.make(pieceId) }),
     source: source(id),
     allowMirror: false,
     collisionGeometry: geometry,
-    transforms: [transform]
+    transforms:
+      transforms ??
+      [
+        new IrregularTransformCandidate({
+          index: 0,
+          rotationDeg: 0,
+          mirrored: false,
+          reason: 'configured'
+        })
+      ]
   })
 }
 
@@ -90,13 +98,19 @@ function sheet(width: number, height: number): SheetSpec {
   return new SheetSpec({ width, height, label: 'windowed beam test sheet' })
 }
 
-function settings(orderWindow: number, beamWidth = 4): IrregularNestingSettings {
+function settings(
+  orderWindow: number,
+  beamWidth = 4,
+  localCandidateFanout =
+    GeometrySettings.Make.optimizer.localCandidateFanout ?? GeometrySettings.Make.optimizer.beamWidth
+): IrregularNestingSettings {
   return new IrregularNestingSettings({
     geometry: GeometrySettings.Make.geometry,
     optimizer: new IrregularOptimizerSettings({
       ...GeometrySettings.Make.optimizer,
       orderWindow,
-      beamWidth
+      beamWidth,
+      localCandidateFanout
     })
   })
 }
@@ -131,10 +145,12 @@ function runWindowed(
   currentSheet: SheetSpec,
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   settingsLayer: Layer.Layer<GeometrySettings, never, never> = GeometrySettings.Live,
-  service: Layer.Layer<NfpIfpService, never, never> = NfpIfpServiceLive
+  service: Layer.Layer<NfpIfpService, never, never> = NfpIfpServiceLive,
+  options?: IrregularWindowedBeamOptions,
+  hooks?: IrregularWindowedBeamHooks
 ) {
   return Effect.runPromise(
-    decodeWindowedIrregularBeam(currentSheet, pieces).pipe(
+    decodeWindowedIrregularBeam(currentSheet, pieces, hooks, options).pipe(
       Effect.provide(GeometryKernel.Live),
       Effect.provide(service),
       Effect.provide(IrregularPlacementScorer.Live),
@@ -223,6 +239,73 @@ describe('decodeWindowedIrregularBeam', () => {
         (state) => state.placedCollisionGeometries[0]?.placement.transform.translateX
       )
     ).toEqual([0, 2])
+  })
+
+  it('uses localCandidateFanout independently from the retained beam width', async () => {
+    const result = await runWindowed(
+      sheet(4, 1),
+      [preparedPiece('a', 1, 1)],
+      Layer.succeed(GeometrySettings, settings(1, 3, 1)),
+      candidateService(({ moving }) => [
+        oneCandidate(moving, 2),
+        oneCandidate(moving, 0),
+        oneCandidate(moving, 1)
+      ])
+    )
+
+    expect(result.rankedStates).toHaveLength(1)
+    expect(result.bestState.placedCollisionGeometries[0]?.placement.transform.translateX).toBe(0)
+  })
+
+  it('retains candidates for a chromosome-preferred transform before better local scores', async () => {
+    const transforms = [
+      new IrregularTransformCandidate({
+        index: 0,
+        rotationDeg: 0,
+        mirrored: false,
+        reason: 'configured'
+      }),
+      new IrregularTransformCandidate({
+        index: 1,
+        rotationDeg: 90,
+        mirrored: false,
+        reason: 'configured'
+      })
+    ]
+    const result = await runWindowed(
+      sheet(4, 1),
+      [preparedPiece('a', 1, 1, undefined, transforms)],
+      Layer.succeed(GeometrySettings, settings(1, 1, 1)),
+      candidateService(({ moving }) => [oneCandidate(moving, moving.transform.index * 2)]),
+      { transformPreferences: new Map([[PieceId.make('a'), 1]]) }
+    )
+
+    expect(result.bestState.placedCollisionGeometries[0]?.placement.transform.rotationDeg).toBe(90)
+  })
+
+  it('emits only the winning state ancestry to history hooks', async () => {
+    const emittedPlacementCounts: number[] = []
+    await runWindowed(
+      sheet(4, 1),
+      [preparedPiece('a', 1, 1), preparedPiece('b', 1, 1)],
+      Layer.succeed(GeometrySettings, settings(1, 2, 2)),
+      candidateService(({ moving }) =>
+        moving.sourcePieceId === PieceId.make('a')
+          ? [oneCandidate(moving, 0), oneCandidate(moving, 1)]
+          : [oneCandidate(moving, 2)]
+      ),
+      undefined,
+      {
+        onInitialState: (state) => {
+          emittedPlacementCounts.push(state.placedCollisionGeometries.length)
+        },
+        onStateSelected: ({ state }) => {
+          emittedPlacementCounts.push(state.placedCollisionGeometries.length)
+        }
+      }
+    )
+
+    expect(emittedPlacementCounts).toEqual([0, 1, 2])
   })
 
   it('can select the second eligible piece when it produces the better branch', async () => {

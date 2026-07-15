@@ -15,6 +15,7 @@ import type {
   IrregularTransformCandidate,
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
+import type { IrregularBeamState } from '../algorithm/irregular/irregularBeamState.js'
 import {
   CollisionGeometry,
   IrregularGeometrySettings,
@@ -41,6 +42,13 @@ export class IrregularGeometryInfeasibleError extends Data.TaggedError(
   'IrregularGeometryInfeasibleError'
 )<{
   readonly operation: string
+  readonly message: string
+}> {}
+
+/** Typed failure raised when the portfolio cannot complete a real decoder step. */
+export class IrregularPortfolioError extends Data.TaggedError('IrregularPortfolioError')<{
+  readonly operation: string
+  readonly category: 'geometry' | 'scoring' | 'search'
   readonly message: string
 }> {}
 
@@ -122,8 +130,17 @@ export interface BuildPriorityOrderInput {
 export interface RunPortfolioInput {
   readonly sheet: SheetSpec
   readonly pieces: ReadonlyArray<IrregularPreparedPiece>
-  readonly settings: IrregularNestingSettings
   readonly onProgress?: (progress: IrregularPortfolioProgress) => Effect.Effect<void>
+  readonly onStateSnapshot?: (
+    snapshot: {
+      readonly stepIndex: number
+      readonly beamRank: number
+      readonly candidateCount: number
+      readonly state: IrregularBeamState
+    },
+    beamWidth: number
+  ) => void
+  readonly isCancelled?: () => boolean
 }
 
 export interface TransformGenerator {
@@ -158,7 +175,9 @@ export interface NfpIfpService {
     input: ComputeIfpBoundsInput
   ) => Effect.Effect<
     IrregularIfpBounds,
-    IrregularNestingNotImplementedError | IrregularGeometryInputError | IrregularGeometryInfeasibleError
+    | IrregularNestingNotImplementedError
+    | IrregularGeometryInputError
+    | IrregularGeometryInfeasibleError
   >
   /**
    * Produces deterministic candidate placements from sheet bounds and placed
@@ -192,7 +211,10 @@ export interface PriorityOrderService {
    */
   readonly buildPriorityOrder: (
     input: BuildPriorityOrderInput
-  ) => Effect.Effect<ReadonlyArray<PieceId>, IrregularNestingNotImplementedError>
+  ) => Effect.Effect<
+    ReadonlyArray<PieceId>,
+    IrregularNestingNotImplementedError | IrregularGeometryInputError
+  >
 }
 
 export interface IrregularNestingPortfolio {
@@ -202,7 +224,10 @@ export interface IrregularNestingPortfolio {
    */
   readonly run: (
     input: RunPortfolioInput
-  ) => Effect.Effect<IrregularPortfolioResult, IrregularNestingNotImplementedError>
+  ) => Effect.Effect<
+    IrregularPortfolioResult,
+    IrregularNestingNotImplementedError | IrregularPortfolioError
+  >
 }
 
 export interface GeometryCache {
@@ -244,8 +269,8 @@ function failNotImplemented(
   )
 }
 
-function cacheKeyToString(key: IrregularGeometryCacheKey): string {
-  return `${key.namespace}:${key.parts.join('|')}`
+export function cacheKeyToString(key: IrregularGeometryCacheKey): string {
+  return JSON.stringify([key.namespace, key.parts])
 }
 
 export const TransformGeneratorUnimplemented = Layer.succeed(TransformGenerator, {
@@ -263,15 +288,8 @@ export const FreeMaterialServiceUnimplemented = Layer.succeed(FreeMaterialServic
   computeFreeMaterial: () => failNotImplemented('FreeMaterialService', 'computeFreeMaterial')
 })
 
-export const PriorityOrderServiceUnimplemented = Layer.succeed(PriorityOrderService, {
-  buildPriorityOrder: () => failNotImplemented('PriorityOrderService', 'buildPriorityOrder')
-})
-
-export const IrregularNestingPortfolioUnimplemented = Layer.succeed(IrregularNestingPortfolio, {
-  run: () => failNotImplemented('IrregularNestingPortfolio', 'run')
-})
-
-export const GeometryCacheInMemory = Layer.sync(GeometryCache, () => {
+/** Deterministic per-worker cache with no failure entries. */
+export const GeometryCacheLive = Layer.sync(GeometryCache, () => {
   const cache = new Map<string, unknown>()
   return {
     get: <A>(key: IrregularGeometryCacheKey) =>
@@ -289,3 +307,6 @@ export const GeometryCacheInMemory = Layer.sync(GeometryCache, () => {
     })
   }
 })
+
+/** Backwards-compatible name for the real in-memory worker cache layer. */
+export const GeometryCacheInMemory = GeometryCacheLive

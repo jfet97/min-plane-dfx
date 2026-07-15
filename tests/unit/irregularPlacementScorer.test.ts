@@ -1,8 +1,10 @@
-import { Effect } from 'effect'
+import { Effect, Layer } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { PieceId } from '@shared/domain/ids.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
 import {
+  IrregularNestingSettings,
+  IrregularOptimizerSettings,
   IrregularBounds,
   IrregularPlacedPiece,
   IrregularPlacement,
@@ -13,6 +15,7 @@ import {
   IrregularTransformCandidate,
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
+import { GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import {
   IrregularPlacementScorer,
   IrregularPlacementScoringError,
@@ -109,6 +112,26 @@ function score(input: ScoreIrregularPlacementCandidateInput) {
   )
 }
 
+function scoreWithConfiguredPolicy(
+  input: ScoreIrregularPlacementCandidateInput,
+  policyId: 'balanced-compactness' | 'short-side-fill'
+) {
+  const settings = new IrregularNestingSettings({
+    geometry: GeometrySettings.Make.geometry,
+    optimizer: new IrregularOptimizerSettings({
+      ...GeometrySettings.Make.optimizer,
+      placementPolicyId: policyId,
+      placementPolicyIds: [policyId]
+    })
+  })
+  return Effect.runPromise(
+    IrregularPlacementScorer.use((scorer) => scorer.scoreCandidate(input)).pipe(
+      Effect.provide(IrregularPlacementScorer.Layer),
+      Effect.provide(Layer.succeed(GeometrySettings, settings))
+    )
+  )
+}
+
 async function rank(
   inputs: ReadonlyArray<ScoreIrregularPlacementCandidateInput>
 ): Promise<IrregularPlacementScore> {
@@ -168,15 +191,43 @@ describe('IrregularPlacementScorer', () => {
     expect(leftWins.candidate.point).toEqual(point(1, 1))
   })
 
+  it('lets short-side fill prefer the shorter sheet axis explicitly', async () => {
+    const moving = movingGeometry('piece', rectanglePoints(2, 2))
+    const placed = [placedGeometry('placed', rectanglePoints(2, 2), 50, 0)]
+    const currentSheet = sheet(100, 20)
+    const balancedCandidate = baseInput(currentSheet, moving, candidate('piece', 0, 0), placed)
+    const shortSideCandidate = baseInput(currentSheet, moving, candidate('piece', 0, 4), placed)
+
+    const balancedWinner = await rank([balancedCandidate, shortSideCandidate])
+    const shortSideWinner = await rank([
+      { ...balancedCandidate, policyId: 'short-side-fill' },
+      { ...shortSideCandidate, policyId: 'short-side-fill' }
+    ])
+
+    expect(balancedWinner.candidate.point).toEqual(point(0, 0))
+    expect(shortSideWinner.candidate.point).toEqual(point(0, 4))
+  })
+
+  it('uses the policy selected through GeometrySettings when callers omit a gene', async () => {
+    const moving = movingGeometry('piece', rectanglePoints(2, 2))
+    const placed = [placedGeometry('placed', rectanglePoints(2, 2), 50, 0)]
+    const currentSheet = sheet(100, 20)
+    const balancedCandidate = baseInput(currentSheet, moving, candidate('piece', 0, 0), placed)
+    const shortSideCandidate = baseInput(currentSheet, moving, candidate('piece', 0, 4), placed)
+
+    const balanced = await scoreWithConfiguredPolicy(balancedCandidate, 'balanced-compactness')
+    const shortSide = await scoreWithConfiguredPolicy(shortSideCandidate, 'short-side-fill')
+
+    expect(balanced.policyId).toBe('balanced-compactness')
+    expect(shortSide.policyId).toBe('short-side-fill')
+  })
+
   it('reports the area and perimeter terms from the true combined collision span', async () => {
     const moving = movingGeometry('moving', rectanglePoints(2, 2))
     const result = await score(
-      baseInput(
-        sheet(20, 10),
-        moving,
-        candidate('moving', 1, 1),
-        [placedGeometry('placed', rectanglePoints(2, 2), 10, 2)]
-      )
+      baseInput(sheet(20, 10), moving, candidate('moving', 1, 1), [
+        placedGeometry('placed', rectanglePoints(2, 2), 10, 2)
+      ])
     )
 
     expect(result.worstNormalizedSheetConsumption).toBe(0.55)
@@ -208,12 +259,7 @@ describe('IrregularPlacementScorer', () => {
       point(-2, 2)
     ])
     const placed = [
-      placedGeometry(
-        'placed',
-        [point(-4, -3), point(-1, -3), point(-1, 1), point(-4, 1)],
-        11,
-        7
-      )
+      placedGeometry('placed', [point(-4, -3), point(-1, -3), point(-1, 1), point(-4, 1)], 11, 7)
     ]
 
     const result = await score(baseInput(sheet(20, 20), moving, candidate('moving', 3, 2), placed))
@@ -240,12 +286,11 @@ describe('IrregularPlacementScorer', () => {
 
   it('resolves exact score ties by transform metadata and then piece id', async () => {
     const scoreFor = async (id: string, candidateTransform: IrregularTransformCandidate) => {
-      const moving = movingGeometry(id, [
-        point(-1, -1),
-        point(1, -1),
-        point(1, 1),
-        point(-1, 1)
-      ], candidateTransform)
+      const moving = movingGeometry(
+        id,
+        [point(-1, -1), point(1, -1), point(1, 1), point(-1, 1)],
+        candidateTransform
+      )
       return score(baseInput(sheet(10, 10), moving, candidate(id, 1, 1, candidateTransform)))
     }
 

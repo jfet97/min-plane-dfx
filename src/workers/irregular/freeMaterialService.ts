@@ -5,6 +5,7 @@ import {
   FillRule,
   type Path64,
   polyTreeToPaths64,
+  stripDuplicates,
   type Paths64,
   type PolyPath64,
   PolyTree64
@@ -97,7 +98,7 @@ function deriveFreeMaterial(
         const guardMessage = validateCoordinateGuard(unionPath)
         if (guardMessage !== undefined)
           return failInvalidGeometry('computeFreeMaterial', guardMessage)
-        const pathMessage = validatePath(unionPath, `Clipper2 union path ${index}`)
+        const pathMessage = validateClipperOutputPath(unionPath, `Clipper2 union path ${index}`)
         if (pathMessage !== undefined)
           return failInvalidGeometry('computeFreeMaterial', pathMessage)
       }
@@ -229,6 +230,23 @@ function validateCoordinateGuard(path: Path64): string | undefined {
 }
 
 function validatePath(path: Path64, label: string): string | undefined {
+  return validatePathStructure(path, label, true)
+}
+
+/**
+ * Validates a computed Clipper2 boundary without rejecting a non-adjacent
+ * repeated point created when material regions meet at one exact point.
+ * Winding retains the correct net area of that diagnostic-only topology.
+ */
+function validateClipperOutputPath(path: Path64, label: string): string | undefined {
+  return validatePathStructure(path, label, false)
+}
+
+function validatePathStructure(
+  path: Path64,
+  label: string,
+  requireUniqueVertices: boolean
+): string | undefined {
   if (path.length < 3) return `${label} must contain at least three vertices.`
 
   const uniquePoints = new Set<string>()
@@ -240,7 +258,8 @@ function validatePath(path: Path64, label: string): string | undefined {
     }
 
     const key = `${point.x}:${point.y}`
-    if (uniquePoints.has(key)) return `${label} must contain unique vertices.`
+    if (requireUniqueVertices && uniquePoints.has(key))
+      return `${label} must contain unique vertices.`
     uniquePoints.add(key)
   }
 
@@ -314,15 +333,26 @@ interface PolygonResult {
 }
 
 function polygonFromPath(path: Path64, label: string): PolygonResult | GeometryFailure {
-  const guardMessage = validateCoordinateGuard(path)
+  const normalizedPath = normalizeClipperOutputPath(path)
+  const guardMessage = validateCoordinateGuard(normalizedPath)
   if (guardMessage !== undefined) return { message: `${label}: ${guardMessage}` }
-  const pathMessage = validatePath(path, label)
+  const pathMessage = validateClipperOutputPath(normalizedPath, label)
   if (pathMessage !== undefined) return { message: pathMessage }
 
-  const points = path.map(
+  const points = normalizedPath.map(
     (point) => new IrregularPoint({ x: fromGrid(point.x), y: fromGrid(point.y) })
   )
   return { polygon: new IrregularPolygon({ points: rotateToStableStart(points) }) }
+}
+
+/**
+ * Normalizes redundant consecutive and closing vertices emitted by Clipper2.
+ * A non-adjacent repeated point is preserved because it can encode a valid
+ * point contact in the diagnostic material boundary; source input remains
+ * subject to strict unique-vertex validation before boolean operations.
+ */
+function normalizeClipperOutputPath(path: Path64): Path64 {
+  return stripDuplicates(path, true)
 }
 
 function compareRegions(first: MaterialRegionArtifact, second: MaterialRegionArtifact): number {

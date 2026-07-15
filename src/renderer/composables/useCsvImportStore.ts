@@ -1,9 +1,11 @@
 import { reactive, computed, type UnwrapNestedRefs } from 'vue'
+import { Schema } from 'effect'
 import { JobId, PieceId } from '@shared/domain/ids.js'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type {
   AlgorithmBenchmark,
   NestingOptions,
+  NestingLayout,
   NestingRequest,
   NestingResult,
   NestingStats,
@@ -12,7 +14,9 @@ import type {
   PreparedPiece,
   SheetSpec
 } from '@shared/domain/nesting.js'
+import type { IrregularPlacement } from '@shared/irregular/domain.js'
 import {
+  NestingLayout as NestingLayoutSchema,
   NestingRunSummary as NestingRunSummaryModel,
   NestingResult as NestingResultModel,
   NestingStrategyResult as NestingStrategyResultModel,
@@ -48,6 +52,9 @@ export interface CsvRunSession {
   preparedPieces: PreparedPiece[]
   /** Pieces most recently submitted to the worker for the current subrun. */
   currentRequestPieces?: PreparedPiece[]
+  currentRequestSheet?: SheetSpec
+  currentRequestPadding?: number
+  currentRequestOptions?: NestingOptions
   createdAt: string
   updatedAt: string
 }
@@ -100,6 +107,7 @@ function cloneSheet(sheet: SheetSpec): SheetSpec {
 function cloneOptions(options: NestingOptions): NestingOptions {
   return {
     allowGlobalRotation: options.allowGlobalRotation,
+    allowGlobalMirror: options.allowGlobalMirror ?? true,
     timeoutMs: options.timeoutMs,
     workerMode: options.workerMode,
     historyMode: options.historyMode,
@@ -111,6 +119,9 @@ function cloneOptions(options: NestingOptions): NestingOptions {
     ...(options.topN !== undefined ? { topN: options.topN } : {}),
     ...(options.maxHistoryEvents !== undefined
       ? { maxHistoryEvents: options.maxHistoryEvents }
+      : {}),
+    ...(options.irregularSettings !== undefined
+      ? { irregularSettings: options.irregularSettings }
       : {})
   }
 }
@@ -124,6 +135,47 @@ function clonePlacement(placement: Placement): Placement {
     height: placement.height,
     rotation: placement.rotation
   }
+}
+
+function cloneIrregularPlacement(placement: IrregularPlacement): IrregularPlacement {
+  return {
+    ...(placement.pieceId !== undefined ? { pieceId: placement.pieceId } : {}),
+    sourcePieceId: placement.sourcePieceId,
+    ...(placement.placementReference !== undefined
+      ? {
+          placementReference: {
+            x: placement.placementReference.x,
+            y: placement.placementReference.y
+          }
+        }
+      : {}),
+    transform: {
+      translateX: placement.transform.translateX,
+      translateY: placement.transform.translateY,
+      rotationDeg: placement.transform.rotationDeg,
+      mirrored: placement.transform.mirrored
+    }
+  }
+}
+
+function cloneLayout(layout: NestingLayout): NestingLayout {
+  const cloned =
+    layout.kind === 'rectangular'
+      ? {
+          kind: 'rectangular' as const,
+          placements: layout.placements.map(clonePlacement),
+          unplacedPieceIds: [...layout.unplacedPieceIds]
+        }
+      : {
+          kind: 'irregular' as const,
+          placements: layout.placements.map(cloneIrregularPlacement),
+          unplacedPieceIds: [...layout.unplacedPieceIds],
+          score: { ...layout.score },
+          source: layout.source,
+          status: layout.status,
+          diagnostics: layout.diagnostics.map((diagnostic) => ({ ...diagnostic }))
+        }
+  return Schema.decodeUnknownSync(NestingLayoutSchema)(cloned)
 }
 
 function clonePreparedPiece(piece: PreparedPiece): PreparedPiece {
@@ -147,6 +199,7 @@ function clonePreparedPiece(piece: PreparedPiece): PreparedPiece {
     },
     padding: piece.padding,
     allowRotation: piece.allowRotation,
+    allowMirror: piece.allowMirror ?? true,
     ...(piece.cutRowRef !== undefined ? { cutRowRef: { ...piece.cutRowRef } } : {})
   })
 }
@@ -255,12 +308,16 @@ function buildSyntheticStrategyResult(
   const algorithm = buildSyntheticAlgorithmBenchmark(session)
   return new NestingStrategyResultModel({
     strategyRunId: subRun.subRunId,
-    strategyId: 'maxrects-beam-search',
+    strategyId:
+      subRun.layout?.kind === 'irregular'
+        ? 'irregular-convex-windowed-beam'
+        : 'maxrects-beam-search',
     strategyLabel: `Subrun ${subRun.index + 1}`,
     status,
     sortedPieceIds: [...subRun.requestPieceIds],
     placements: subRun.placements.map(clonePlacement),
     unplacedPieceIds: [...subRun.unplacedPieceIds],
+    ...(subRun.layout !== undefined ? { layout: cloneLayout(subRun.layout) } : {}),
     stats: buildSyntheticStats(subRun.requestPieceIds.length, algorithm),
     warnings: []
   })
@@ -275,7 +332,14 @@ function buildAggregatedResult(session: CsvRunSession, csvImportId: string): Nes
   )
   const sortedPieceIds = [...new Set(strategyResults.flatMap((result) => result.sortedPieceIds))]
 
-  const totalPlaced = session.subRuns.reduce((sum, subRun) => sum + subRun.placements.length, 0)
+  const totalPlaced = session.subRuns.reduce(
+    (sum, subRun) =>
+      sum +
+      (subRun.layout?.kind === 'irregular'
+        ? subRun.layout.placements.length
+        : subRun.placements.length),
+    0
+  )
   const totalSheetAreaMm2 = session.subRuns.reduce(
     (sum, subRun) => sum + subRun.sheet.width * subRun.sheet.height,
     0
@@ -283,7 +347,9 @@ function buildAggregatedResult(session: CsvRunSession, csvImportId: string): Nes
   const usedAreaMm2 = session.subRuns.reduce(
     (sum, subRun) =>
       sum +
-      subRun.placements.reduce((area, placement) => area + placement.width * placement.height, 0),
+      (subRun.layout?.kind === 'irregular'
+        ? subRun.layout.score.collisionBoundsAreaMm2
+        : subRun.placements.reduce((area, placement) => area + placement.width * placement.height, 0)),
     0
   )
 
@@ -307,6 +373,9 @@ function buildAggregatedResult(session: CsvRunSession, csvImportId: string): Nes
     sortedPieceIds,
     placements,
     unplacedPieceIds,
+    ...(session.subRuns.length === 1 && session.subRuns[0]?.layout !== undefined
+      ? { layout: cloneLayout(session.subRuns[0].layout) }
+      : {}),
     runSummary,
     preparedPieces: clonePreparedPieces(session.preparedPieces),
     csvImportId,
@@ -500,6 +569,9 @@ function startSubrun(
   }
 
   session.currentRequestPieces = clonedPieces
+  session.currentRequestSheet = cloneSheet(sheet)
+  session.currentRequestPadding = padding
+  session.currentRequestOptions = cloneOptions(options)
   session.preparedPieces = mergePreparedPieces(session.preparedPieces, clonedPieces)
   session.updatedAt = nowIso()
 
@@ -520,14 +592,14 @@ function appendSubrunResult(csvImportId: string, result: NestingResult): void {
   if (!session) return
   const previousUnplacedPieceIds = [...session.unplacedPieceIds]
   const summary = result.runSummary
-  if (!summary || summary.subRuns.length === 0) return
-  const subRun = summary.subRuns[0]
+  const subRun = summary?.subRuns[0] ?? makeSubRunFromResult(session, result)
   if (!subRun) return
   // the worker always reports subRun.index = 0 because each subrun is a fresh
   // worker request. Override it with the session position so the runs panel and
   // export emit subruns in the correct order.
   const indexedSubRun = new NestingSubRun({
     ...subRun,
+    ...(subRun.layout !== undefined ? { layout: cloneLayout(subRun.layout) } : {}),
     parentRunId: session.runId,
     index: session.subRuns.length
   })
@@ -547,6 +619,28 @@ function appendSubrunResult(csvImportId: string, result: NestingResult): void {
   }
   session.updatedAt = nowIso()
   notifyWorkspaceSettingsChanged()
+}
+
+function makeSubRunFromResult(session: CsvRunSession, result: NestingResult): NestingSubRun | null {
+  const sheet = session.currentRequestSheet
+  const padding = session.currentRequestPadding
+  const options = session.currentRequestOptions
+  if (sheet === undefined || padding === undefined || options === undefined) return null
+  const layout = result.layout ?? result.strategyResults[0]?.layout
+  const requestPieceIds = session.currentRequestPieces?.map((piece) => piece.id) ?? []
+  return new NestingSubRun({
+    subRunId: result.selectedStrategyRunId ?? `${session.runId}-subrun-${session.subRuns.length}`,
+    parentRunId: session.runId,
+    index: 0,
+    sheet,
+    padding,
+    options,
+    placements: result.placements,
+    unplacedPieceIds: result.unplacedPieceIds,
+    ...(layout !== undefined ? { layout: cloneLayout(layout) } : {}),
+    pieceIds: requestPieceIds,
+    requestPieceIds
+  })
 }
 
 function finalizeSession(

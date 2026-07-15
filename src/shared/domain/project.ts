@@ -95,6 +95,8 @@ export class ProjectDocument extends Schema.Class<ProjectDocument>('ProjectDocum
   sheet: SheetSpec,
   padding: NonNegativeIntegerMillimeters,
   pieceQuantities: Schema.optional(Schema.Record(Schema.String, Schema.Number)),
+  /** Per-source eligibility for mirror transforms; missing entries default to enabled. */
+  pieceMirrorEnabled: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
   options: NestingOptions,
   lastResult: Schema.optional(NestingResult),
   lastHistory: Schema.optional(ProjectHistoryRef),
@@ -110,6 +112,8 @@ export class WorkspaceProjectSettings extends Schema.Class<WorkspaceProjectSetti
   sheet: SheetSpec,
   padding: NonNegativeIntegerMillimeters,
   pieceQuantities: Schema.Record(Schema.String, Schema.Number),
+  /** Per-source eligibility for mirror transforms; missing entries default to enabled. */
+  pieceMirrorEnabled: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
   options: NestingOptions,
   runRecords: Schema.optional(Schema.Array(ProjectRunRecord)),
   selectedCsvId: Schema.optional(Schema.String),

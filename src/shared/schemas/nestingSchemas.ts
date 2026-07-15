@@ -1,7 +1,8 @@
-import { Schema } from 'effect'
+import { Effect, Schema } from 'effect'
 import { ImportedPiece } from '../domain/dxf.js'
 import { NestingRequest, NestingResult } from '../domain/nesting.js'
 import { WorkerRequest, WorkerResponse } from '../protocol/worker.js'
+import { IrregularNestingSettings } from '../irregular/domain.js'
 import {
   NonNegativeCoordinate,
   PositiveWidth,
@@ -11,6 +12,7 @@ import {
 
 export const NestingOptionsStrictSchema = Schema.Struct({
   allowGlobalRotation: Schema.Boolean,
+  allowGlobalMirror: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(Effect.succeed(true))),
   timeoutMs: Schema.Number.check(Schema.isGreaterThan(0)),
   workerMode: Schema.Literals(['maxrects-beam-search', 'irregular-convex-v2']),
   historyMode: Schema.Literals(['stream', 'final', 'off']),
@@ -20,7 +22,8 @@ export const NestingOptionsStrictSchema = Schema.Struct({
   layoutSelectionStrategyId: Schema.String.check(Schema.isMinLength(1)),
   finalSelectionMode: Schema.Literals(['manual', 'best', 'top_n']),
   topN: Schema.optional(Schema.Number.check(Schema.isGreaterThan(0))),
-  maxHistoryEvents: Schema.optional(Schema.Number)
+  maxHistoryEvents: Schema.optional(Schema.Number),
+  irregularSettings: Schema.optional(IrregularNestingSettings)
 })
 
 const NestingRequestPieceStrict = Schema.Struct({
@@ -40,6 +43,7 @@ const NestingRequestPieceStrict = Schema.Struct({
   }),
   padding: NonNegativePadding,
   allowRotation: Schema.Boolean,
+  allowMirror: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(Effect.succeed(true))),
   cutRowRef: Schema.optional(
     Schema.Struct({
       reference: Schema.String,
@@ -71,10 +75,7 @@ export const NestingRequestStrict = Schema.Struct({
     label: Schema.String
   }),
   padding: NonNegativePadding,
-  pieces: Schema.Array(NestingRequestPieceStrict).check(
-    Schema.isNonEmpty(),
-    piecesHaveUniqueIds
-  ),
+  pieces: Schema.Array(NestingRequestPieceStrict).check(Schema.isNonEmpty(), piecesHaveUniqueIds),
   sourcePieces: Schema.optional(Schema.Array(ImportedPiece)),
   options: NestingOptionsStrictSchema,
   strategyRunId: Schema.optional(Schema.String.check(Schema.isMinLength(1)))
