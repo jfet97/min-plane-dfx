@@ -169,6 +169,13 @@ function cloneLayout(layout: NestingLayout): NestingLayout {
       : {
           kind: 'irregular' as const,
           placements: layout.placements.map(cloneIrregularPlacement),
+          ...(layout.collisionPolygons !== undefined
+            ? {
+                collisionPolygons: layout.collisionPolygons.map((polygon) => ({
+                  points: polygon.points.map((point) => ({ x: point.x, y: point.y }))
+                }))
+              }
+            : {}),
           unplacedPieceIds: [...layout.unplacedPieceIds],
           score: { ...layout.score },
           source: layout.source,

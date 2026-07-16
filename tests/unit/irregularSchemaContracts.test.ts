@@ -42,7 +42,7 @@ describe('irregular schema contracts', () => {
     expect(first.optimizer.orderWindow).toBe(1)
     expect(first.optimizer.beamWidth).toBe(1)
     expect(first.optimizer.localCandidateFanout).toBe(1)
-    expect(first.optimizer.transformCap).toBe(1)
+    expect(first.optimizer.transformCap).toBe(4)
     expect(first.optimizer.edgeAlignmentEnabled).toBe(true)
     expect(first.optimizer.gaEnabled).toBe(false)
     expect(first.optimizer.baselineOnly).toBe(true)
@@ -383,42 +383,64 @@ describe('irregular schema contracts', () => {
       collisionBoundsSpanMm: 20
     }
 
-    expect(
-      Exit.isSuccess(
-        decode(IrregularLayout, {
-          kind: 'irregular',
-          placements: [placement],
-          unplacedPieceIds: ['copy-2'],
-          score,
-          source: 'beam',
-          status: 'completed',
-          diagnostics: []
-        })
-      )
-    ).toBe(true)
-    expect(
-      Exit.isSuccess(
-        decode(IrregularHistoryFrame, {
-          kind: 'irregular',
-          frameId: 'frame-1',
-          jobId: 'job-1',
-          strategyRunId: 'run-1',
-          strategyLabel: 'irregular beam',
-          stepIndex: 2,
-          title: 'beam step',
-          placements: [placement],
-          remainingPieceIds: ['copy-2'],
-          unplacedPieceIds: [],
-          beamRank: 0,
-          beamWidth: 4,
-          candidateCount: 3,
-          selectedCandidateId: 'candidate-1',
-          selectedPieceId: 'copy-1',
-          selectedTransform: placement.transform,
-          createdAt: '2026-07-15T00:00:00.000Z'
-        })
-      )
-    ).toBe(true)
+    const layout = decode(IrregularLayout, {
+      kind: 'irregular',
+      placements: [placement],
+      unplacedPieceIds: ['copy-2'],
+      score,
+      source: 'beam',
+      status: 'completed',
+      diagnostics: []
+    })
+    if (Exit.isFailure(layout)) throw new Error('expected a valid irregular layout')
+    expect(layout.value.collisionPolygons).toEqual([])
+
+    const historyFrame = decode(IrregularHistoryFrame, {
+      kind: 'irregular',
+      frameId: 'frame-1',
+      jobId: 'job-1',
+      strategyRunId: 'run-1',
+      strategyLabel: 'irregular beam',
+      stepIndex: 2,
+      title: 'beam step',
+      placements: [placement],
+      remainingPieceIds: ['copy-2'],
+      unplacedPieceIds: [],
+      beamRank: 0,
+      beamWidth: 4,
+      candidateCount: 3,
+      selectedCandidateId: 'candidate-1',
+      selectedPieceId: 'copy-1',
+      selectedTransform: placement.transform,
+      createdAt: '2026-07-15T00:00:00.000Z'
+    })
+    if (Exit.isFailure(historyFrame)) throw new Error('expected a valid irregular history frame')
+    expect(historyFrame.value.collisionPolygons).toEqual([])
+  })
+
+  it('rejects collision hulls that do not align with irregular placements', () => {
+    const decoded = decode(IrregularLayout, {
+      kind: 'irregular',
+      placements: [],
+      collisionPolygons: [{ points: [{ x: 0, y: 0 }] }],
+      unplacedPieceIds: [],
+      score: {
+        unplacedCount: 0,
+        largestNetFreeMaterialRegionAreaMm2: 0,
+        freeMaterialRegionCount: 0,
+        freeMaterialHoleCount: 0,
+        freeMaterialSliverMetric: 0,
+        collisionBoundsWorstNormalizedSheetConsumption: 0,
+        collisionBoundsNormalizedSpanSum: 0,
+        collisionBoundsAreaMm2: 0,
+        collisionBoundsSpanMm: 0
+      },
+      source: 'beam',
+      status: 'completed',
+      diagnostics: []
+    })
+
+    expect(Exit.isFailure(decoded)).toBe(true)
   })
 
   it('rejects rectangular placement fields that contradict an irregular layout', () => {

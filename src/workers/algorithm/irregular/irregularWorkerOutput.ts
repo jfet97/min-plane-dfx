@@ -10,6 +10,7 @@ import {
   IrregularLayout,
   IrregularLayoutScoreSummary
 } from '@shared/irregular/domain.js'
+import { IrregularPoint, IrregularPolygon } from '@shared/irregular/domain.js'
 import type { IrregularComputeResult, IrregularStateSnapshot } from './computeIrregularNesting.js'
 
 const IRREGULAR_BEAM_STRATEGY_ID = 'irregular-convex-windowed-beam'
@@ -44,6 +45,7 @@ export function makeIrregularHistoryFrame(input: {
     stepIndex: snapshot.stepIndex,
     title: snapshot.stepIndex === 0 ? 'initial-beam' : 'beam-state-selected',
     placements: snapshot.state.placedCollisionGeometries.map(({ placement }) => placement),
+    collisionPolygons: translatedCollisionPolygons(snapshot.state.placedCollisionGeometries),
     remainingPieceIds: snapshot.state.remainingPreparedPieces.map(
       (piece) => piece.pieceId ?? piece.source.id
     ),
@@ -66,9 +68,11 @@ export function makeIrregularWorkerOutput(input: {
 }): IrregularWorkerOutput {
   const strategyRunId = irregularStrategyRunId(input.request)
   const portfolio = input.computed.portfolio
+  const collisionPolygons = translatedCollisionPolygons(input.computed.placedCollisionGeometries)
   const layout = new IrregularLayout({
     kind: 'irregular',
     placements: input.computed.placedCollisionGeometries.map(({ placement }) => placement),
+    collisionPolygons,
     unplacedPieceIds: input.computed.unplacedPieceIds,
     score: scoreSummary(input.computed),
     source: portfolio.source,
@@ -136,6 +140,19 @@ export function makeIrregularWorkerOutput(input: {
     }),
     historyFrames
   }
+}
+
+function translatedCollisionPolygons(
+  placedCollisionGeometries: IrregularComputeResult['placedCollisionGeometries']
+): ReadonlyArray<IrregularPolygon> {
+  return placedCollisionGeometries.map(({ placement, collisionGeometry }) => {
+    const { translateX, translateY } = placement.transform
+    return new IrregularPolygon({
+      points: collisionGeometry.polygon.points.map(
+        (point) => new IrregularPoint({ x: point.x + translateX, y: point.y + translateY })
+      )
+    })
+  })
 }
 
 function scoreSummary(computed: IrregularComputeResult): IrregularLayoutScoreSummary {

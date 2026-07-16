@@ -34,6 +34,13 @@ const configuredRotationsText = computed(() => optimizer.value.configuredRotatio
 const portfolioMayExceedTimeout = computed(
   () => portfolioEnabled.value && optimizer.value.gaTimeBudgetMs >= props.timeoutMs
 )
+const transformCapHelp = computed(() => {
+  const cap = optimizer.value.transformCap
+  if (cap === 1) return 'Identity only: 0°. The rotation and mirror gates cannot add another transform.'
+  if (cap < 4) return `Keeps the first ${cap} quarter-turns: 0°${cap >= 2 ? ', 90°' : ''}${cap >= 3 ? ', 180°' : ''}.`
+  if (cap === 4) return 'Uses the four quarter-turns: 0°, 90°, 180°, and 270°.'
+  return `Uses the four quarter-turns, then up to ${cap - 4} explicit or edge-derived orientations.`
+})
 
 const MIN_FLATTENING_SAG_TOLERANCE_MM = 0.001
 
@@ -130,7 +137,7 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
       </p>
     </div>
 
-    <h3>Geometry</h3>
+    <h3 title="Controls how source curves and padding become conservative collision geometry.">Geometry</h3>
     <div class="grid">
       <label
         title="Maximum inward curve approximation error in millimeters while flattening DXF arcs and ellipses."
@@ -143,6 +150,7 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           :value="geometry.flatteningSagToleranceMm"
           @input="updateGeometryField('flatteningSagToleranceMm', $event)"
         />
+        <span class="field-help">Smaller follows curves more closely but creates more polygon vertices.</span>
       </label>
       <label
         title="Extra conservative clearance added after flattening; it must be at least the sag tolerance."
@@ -155,10 +163,11 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           :value="geometry.clearanceSafetyMarginMm"
           @input="updateGeometryField('clearanceSafetyMarginMm', $event)"
         />
+        <span class="field-help">Extra outward buffer after half of the total cutting padding.</span>
       </label>
     </div>
 
-    <h3>Deterministic beam</h3>
+    <h3 title="The deterministic baseline explores several partial layouts and retains only the best ones.">Deterministic beam</h3>
     <div class="grid">
       <label
         title="How many remaining pieces each beam state may reorder at one decision point. Higher values branch more heavily."
@@ -171,6 +180,7 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           :value="optimizer.orderWindow"
           @input="updateOptimizer({ orderWindow: Number(inputValue($event)) })"
         />
+        <span class="field-help">`3` may choose among the next three unplaced pieces at each step.</span>
       </label>
       <label
         title="How many partial layouts survive each beam expansion. Higher values improve search breadth but can become expensive quickly."
@@ -183,6 +193,7 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           :value="optimizer.beamWidth"
           @input="updateOptimizer({ beamWidth: Number(inputValue($event)) })"
         />
+        <span class="field-help">`1` is greedy; higher values retain alternatives for later pieces.</span>
       </label>
       <label
         title="How many legal local placements are retained per selected piece before whole-layout beam scoring."
@@ -195,9 +206,10 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           :value="optimizer.localCandidateFanout"
           @input="updateOptimizer({ localCandidateFanout: Number(inputValue($event)) })"
         />
+        <span class="field-help">More contact positions per piece improve choices before beam pruning.</span>
       </label>
       <label
-        title="Maximum orientation candidates generated for one prepared polygon. With cap = 1, only the first emitted transform is used; later rotation or mirroring choices do not take effect."
+        title="Maximum orientation candidates generated for one prepared polygon. Cap 4 covers the four quarter-turns; larger caps also admit explicit and edge-derived angles."
       >
         Transform cap
         <input
@@ -207,10 +219,7 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           :value="optimizer.transformCap"
           @input="updateOptimizer({ transformCap: Number(inputValue($event)) })"
         />
-        <span class="field-help"
-          >Cap = 1 uses only the first emitted transform; later rotation or mirroring choices do not
-          take effect.</span
-        >
+        <span class="field-help">{{ transformCapHelp }}</span>
       </label>
       <label
         title="Ignores source edges shorter than this length when deriving useful rotation angles."
@@ -223,6 +232,7 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           :value="optimizer.transformMinimumEdgeLengthMm"
           @input="updateOptimizer({ transformMinimumEdgeLengthMm: Number(inputValue($event)) })"
         />
+        <span class="field-help">Shorter edges do not contribute derived angle candidates.</span>
       </label>
       <label title="Treats derived angles within this number of degrees as the same orientation.">
         Angle dedupe (deg)
@@ -235,11 +245,12 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
             updateOptimizer({ transformAngleDeduplicationToleranceDeg: Number(inputValue($event)) })
           "
         />
+        <span class="field-help">Larger values merge nearly equal derived angles and reduce work.</span>
       </label>
     </div>
 
     <details>
-      <summary>Additional rotations</summary>
+      <summary title="Adds non-quarter-turn orientations after the Transform cap has room beyond four.">Additional rotations</summary>
       <div class="grid details-grid">
         <label
           class="span-2"
@@ -264,10 +275,21 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           />
           Use explicit angles
         </label>
+        <label
+          class="checkbox-row"
+          title="Adds angles that align each usable convex-polygon edge with the sheet axes. They are considered only when Transform cap is greater than 4."
+        >
+          <input
+            type="checkbox"
+            :checked="optimizer.edgeAlignmentEnabled"
+            @change="updateOptimizer({ edgeAlignmentEnabled: inputChecked($event) })"
+          />
+          Use edge-derived angles
+        </label>
       </div>
     </details>
 
-    <h3>Local candidate scoring</h3>
+    <h3 title="Ranks legal contact positions for one piece before the beam compares whole partial layouts.">Local candidate scoring</h3>
     <div class="grid">
       <label
         title="The local candidate policy used by the deterministic beam and by GA when its policy gene is disabled."
@@ -302,7 +324,7 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
       </div>
     </div>
 
-    <h3>Portfolio search</h3>
+    <h3 title="Runs a bounded genetic search after the deterministic beam and keeps only a better legal layout.">Portfolio search</h3>
     <label
       class="checkbox-row"
       title="After the deterministic result, evaluates seeded genetic-search alternatives. This can take much longer."
@@ -314,6 +336,9 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
       />
       Enable GA portfolio after the deterministic beam
     </label>
+    <p v-if="portfolioEnabled" class="field-help">
+      The GA starts from the beam result. Generation, evaluation, and time budgets are independent stop limits; the first one reached ends it.
+    </p>
     <p v-if="portfolioMayExceedTimeout" class="warning">
       The GA time budget is at least as long as the worker timeout. Increase the job timeout or
       lower the GA time budget to avoid an intentional worker timeout.

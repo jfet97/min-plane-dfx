@@ -10,6 +10,7 @@ import {
   type IrregularCanvasModel
 } from '../utils/resultCanvas.js'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
+import type { IrregularPolygon } from '@shared/irregular/domain.js'
 import {
   isIrregularHistoryFrame,
   type NestingSubRun,
@@ -158,6 +159,7 @@ const selectedId = ref<string | null>(null)
 const visualMode = ref<VisualMode>('shape')
 const showSourcePadding = ref(true)
 const showFreeRectangles = ref(true)
+const showCollisionHulls = ref(true)
 const panStart = ref<{
   readonly clientX: number
   readonly clientY: number
@@ -249,6 +251,10 @@ const hasIrregularResultPlacements = computed(
 
 const hasResultPlacements = computed(
   () => placementsToRender.value.length > 0 || hasIrregularResultPlacements.value
+)
+
+const hasCollisionHulls = computed(
+  () => irregularCanvasModel.value?.placements.some((item) => item.collisionPolygon !== null) ?? false
 )
 
 const sourcePiecesById = computed(() => {
@@ -390,6 +396,13 @@ function sourcePaddingRect(piece: ImportedPiece): ViewBox {
     width: piece.realBounds.width + side * 2,
     height: piece.realBounds.height + side * 2
   }
+}
+
+function collisionHullSvgPoints(polygon: IrregularPolygon | null): string {
+  if (polygon === null) return ''
+  return polygon.points
+    .map((point) => `${point.x},${resultSheet.value.height - point.y}`)
+    .join(' ')
 }
 </script>
 
@@ -540,6 +553,17 @@ function sourcePaddingRect(piece: ImportedPiece): ViewBox {
 
       <!-- irregular results replay original source geometry with worker transforms. -->
       <g v-if="irregularCanvasModel">
+        <template v-for="(item, i) in irregularCanvasModel.placements" :key="`irregular-hull-${i}-${item.placement.pieceId ?? item.placement.sourcePieceId}`">
+          <polygon
+            v-if="showCollisionHulls && item.collisionPolygon"
+            :points="collisionHullSvgPoints(item.collisionPolygon)"
+            fill="rgba(0, 122, 204, 0.08)"
+            stroke="var(--accent)"
+            stroke-opacity="0.8"
+            stroke-width="0.8"
+            stroke-dasharray="3 2"
+          />
+        </template>
         <g
           v-for="(item, i) in irregularCanvasModel.placements"
           :key="`irregular-place-${i}-${item.placement.pieceId ?? item.placement.sourcePieceId}`"
@@ -677,7 +701,7 @@ function sourcePaddingRect(piece: ImportedPiece): ViewBox {
     </div>
 
     <div
-      v-if="props.mode === 'result' && freeRectanglesToRender.length"
+      v-if="props.mode === 'result' && (freeRectanglesToRender.length || hasCollisionHulls)"
       class="view-controls"
       @pointerdown.stop="stopCanvasGesture"
       @pointermove.stop="stopCanvasGesture"
@@ -687,9 +711,17 @@ function sourcePaddingRect(piece: ImportedPiece): ViewBox {
     >
       <label
         title="Shows the current MaxRects free-rectangle candidates emitted by the selected history frame."
+        v-if="freeRectanglesToRender.length"
       >
         <input v-model="showFreeRectangles" type="checkbox" />
         Free rects
+      </label>
+      <label
+        v-if="hasCollisionHulls"
+        title="Shows the exact padded convex collision polygon produced and validated by the irregular worker."
+      >
+        <input v-model="showCollisionHulls" type="checkbox" />
+        Collision hull
       </label>
     </div>
 

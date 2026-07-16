@@ -6,7 +6,8 @@ import type {
   IrregularHistoryFrame,
   IrregularLayout,
   IrregularPlacement,
-  IrregularLayoutScoreSummary
+  IrregularLayoutScoreSummary,
+  IrregularPolygon
 } from '@shared/irregular/domain.js'
 
 export interface CanvasPoint {
@@ -16,7 +17,7 @@ export interface CanvasPoint {
 
 export type IrregularCanvasSource = Pick<
   IrregularLayout | IrregularHistoryFrame,
-  'placements' | 'unplacedPieceIds'
+  'placements' | 'collisionPolygons' | 'unplacedPieceIds'
 > & {
   readonly score?: IrregularLayoutScoreSummary
   readonly diagnostics?: ReadonlyArray<CollisionGeometryDiagnostic>
@@ -29,6 +30,7 @@ export type IrregularCanvasPlacementStatus =
 
 export interface IrregularCanvasPlacement {
   readonly placement: IrregularPlacement
+  readonly collisionPolygon: IrregularPolygon | null
   readonly sourcePiece: ImportedPiece | null
   readonly svgTransform: string | null
   readonly status: IrregularCanvasPlacementStatus
@@ -114,9 +116,10 @@ export function buildIrregularCanvasModel(input: {
   readonly sourcePieces: ReadonlyArray<ImportedPiece>
   readonly sheet: Pick<SheetSpec, 'height'>
 }): IrregularCanvasModel {
-  const placements = input.source.placements.map((placement) => {
+  const placements = input.source.placements.map((placement, index) => {
     const sourcePiece = findSourcePiece(input.sourcePieces, placement)
     const svgTransform = irregularPlacementSvgTransform(placement, input.sheet.height)
+    const collisionPolygon = input.source.collisionPolygons?.[index] ?? null
     const status: IrregularCanvasPlacementStatus =
       sourcePiece === null
         ? 'source-missing'
@@ -125,6 +128,7 @@ export function buildIrregularCanvasModel(input: {
           : 'rendered'
     return {
       placement,
+      collisionPolygon,
       sourcePiece,
       svgTransform,
       status

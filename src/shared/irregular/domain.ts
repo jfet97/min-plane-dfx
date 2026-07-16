@@ -151,6 +151,17 @@ export class IrregularPolygon extends Schema.Class<IrregularPolygon>('IrregularP
   points: Schema.Array(IrregularPoint)
 }) {}
 
+/**
+ * Optional translated collision hulls retained for result and history display.
+ * When present, their order exactly matches the associated placement array;
+ * older persisted results omit the field and decode to an empty array.
+ */
+const IrregularCollisionPolygons = Schema.Array(IrregularPolygon).pipe(
+  Schema.optionalKey,
+  Schema.withConstructorDefault(Effect.succeed([])),
+  Schema.withDecodingDefaultKey(Effect.succeed([]))
+)
+
 /** A finite translation, rotation, and mirror transform for a placed piece. */
 export class IrregularTransform extends Schema.Class<IrregularTransform>('IrregularTransform')({
   translateX: FiniteNumber,
@@ -497,16 +508,32 @@ export class IrregularLayoutScoreSummary extends Schema.Class<IrregularLayoutSco
   collisionBoundsSpanMm: NonNegativeFiniteNumber
 }) {}
 
-/** A real irregular layout without legality or geometry-artifact claims. */
-export class IrregularLayout extends Schema.Class<IrregularLayout>('IrregularLayout')({
+const IrregularLayoutFields = Schema.Struct({
   kind: Schema.Literal('irregular'),
   placements: Schema.Array(IrregularPlacement),
+  collisionPolygons: IrregularCollisionPolygons,
   unplacedPieceIds: Schema.Array(PieceId),
   score: IrregularLayoutScoreSummary,
   source: IrregularSearchSource,
   status: IrregularPortfolioStatus,
   diagnostics: Schema.Array(CollisionGeometryDiagnostic)
-}) {}
+}).check(
+  Schema.makeFilter((layout) =>
+    layout.collisionPolygons === undefined ||
+    layout.collisionPolygons.length === 0 ||
+    layout.collisionPolygons.length === layout.placements.length
+      ? undefined
+      : {
+          path: ['collisionPolygons'],
+          issue: 'collisionPolygons must be empty or align one-to-one with placements.'
+        }
+  )
+)
+
+/** A real irregular layout with optional worker-derived collision hulls for display. */
+export class IrregularLayout extends Schema.Class<IrregularLayout>('IrregularLayout')(
+  IrregularLayoutFields
+) {}
 
 /** csv-row identity carried into the transform-aware source-shape export. */
 export class IrregularExportSourceRow extends Schema.Class<IrregularExportSourceRow>(
@@ -553,10 +580,7 @@ export class IrregularTransformExport extends Schema.Class<IrregularTransformExp
   subRuns: Schema.Array(IrregularExportSubRun)
 }) {}
 
-/** One emitted irregular beam state for history replay. */
-export class IrregularHistoryFrame extends Schema.Class<IrregularHistoryFrame>(
-  'IrregularHistoryFrame'
-)({
+const IrregularHistoryFrameFields = Schema.Struct({
   kind: Schema.Literal('irregular'),
   frameId: Schema.String,
   jobId: JobId,
@@ -565,6 +589,7 @@ export class IrregularHistoryFrame extends Schema.Class<IrregularHistoryFrame>(
   stepIndex: NonNegativeFiniteInteger,
   title: Schema.String,
   placements: Schema.Array(IrregularPlacement),
+  collisionPolygons: IrregularCollisionPolygons,
   remainingPieceIds: Schema.Array(PieceId),
   unplacedPieceIds: Schema.Array(PieceId),
   beamRank: NonNegativeFiniteInteger,
@@ -574,7 +599,23 @@ export class IrregularHistoryFrame extends Schema.Class<IrregularHistoryFrame>(
   selectedPieceId: Schema.optional(PieceId),
   selectedTransform: Schema.optional(IrregularTransform),
   createdAt: Schema.String
-}) {}
+}).check(
+  Schema.makeFilter((frame) =>
+    frame.collisionPolygons === undefined ||
+    frame.collisionPolygons.length === 0 ||
+    frame.collisionPolygons.length === frame.placements.length
+      ? undefined
+      : {
+          path: ['collisionPolygons'],
+          issue: 'collisionPolygons must be empty or align one-to-one with placements.'
+        }
+  )
+)
+
+/** One emitted irregular beam state with optional worker-derived collision hulls for replay. */
+export class IrregularHistoryFrame extends Schema.Class<IrregularHistoryFrame>(
+  'IrregularHistoryFrame'
+)(IrregularHistoryFrameFields) {}
 
 /** Progress envelope emitted by the irregular search portfolio. */
 export class IrregularPortfolioProgress extends Schema.Class<IrregularPortfolioProgress>(

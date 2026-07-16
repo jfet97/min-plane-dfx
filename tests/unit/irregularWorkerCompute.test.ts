@@ -192,6 +192,15 @@ describe('computeIrregularNesting', () => {
     expect(layout.placements[0]?.pieceId).toBe(PieceId.make('piece-copy-1'))
     expect(layout.placements[0]?.sourcePieceId).toBe(PieceId.make('piece'))
     expect(layout.placements[0]?.placementReference).toBeDefined()
+    const placed = computed.placedCollisionGeometries[0]
+    const collisionPolygon = layout.collisionPolygons?.[0]
+    expect(placed).toBeDefined()
+    expect(collisionPolygon?.points).toEqual(
+      placed?.collisionGeometry.polygon.points.map((point) => ({
+        x: point.x + (placed?.placement.transform.translateX ?? 0),
+        y: point.y + (placed?.placement.transform.translateY ?? 0)
+      }))
+    )
     const summaryLayout = output.result.runSummary?.subRuns[0]?.layout
     expect(summaryLayout?.kind).toBe('irregular')
     if (summaryLayout?.kind === 'irregular') {
@@ -200,6 +209,7 @@ describe('computeIrregularNesting', () => {
     expect(output.historyFrames[0]?.kind).toBe('irregular')
     expect(output.historyFrames[0]?.remainingPieceIds).toEqual([PieceId.make('piece-copy-1')])
     expect(output.historyFrames.at(-1)?.placements).toHaveLength(1)
+    expect(output.historyFrames.at(-1)?.collisionPolygons).toEqual(layout.collisionPolygons)
     expect(emittedStepIndexes).toEqual(output.historyFrames.map((frame) => frame.stepIndex))
   })
 

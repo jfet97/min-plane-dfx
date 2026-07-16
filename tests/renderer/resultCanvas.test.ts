@@ -122,6 +122,7 @@ describe('result canvas transforms', () => {
           rotationDeg: 0
         })
       ],
+      collisionPolygons: [{ points: [{ x: 1, y: 2 }] }],
       unplacedPieceIds: [pieceId('leftover-1')],
       score: {
         unplacedCount: 1,
@@ -144,6 +145,8 @@ describe('result canvas transforms', () => {
     })
 
     expect(model.placements[0]?.sourcePiece?.id).toBe(pieceId('source-1'))
+    expect(model.placements[0]?.collisionPolygon?.points).toEqual([{ x: 1, y: 2 }])
+    expect(model.placements[1]?.collisionPolygon).toBeNull()
     expect(model.placements[0]?.status).toBe('rendered')
     expect(model.placements[0]?.svgTransform).toBe('matrix(1 0 0 -1 20 180)')
     expect(model.placements[1]?.status).toBe('source-missing')
