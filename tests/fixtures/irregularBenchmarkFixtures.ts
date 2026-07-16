@@ -6,6 +6,8 @@ export interface IrregularBenchmarkCorpusCase {
   readonly id: string
   readonly description: string
   readonly fixtureNames: ReadonlyArray<string>
+  readonly fixtureAreasMm2: ReadonlyArray<number>
+  readonly fixtureBoundingBoxAreasMm2: ReadonlyArray<number>
   readonly repeatCount: number
   readonly pieceCount: number
   readonly sheetWidth: number
@@ -20,6 +22,8 @@ export const IRREGULAR_BENCHMARK_CORPUS: ReadonlyArray<IrregularBenchmarkCorpusC
     id: 'triangle-trapezoid-20-500x300',
     description: '20 repeated triangle/trapezoid pieces on a capacity-sensitive sheet.',
     fixtureNames: ['triangle.dxf', 'trapezoid.dxf'],
+    fixtureAreasMm2: [3150, 6375],
+    fixtureBoundingBoxAreasMm2: [6300, 8625],
     repeatCount: 10,
     pieceCount: 20,
     sheetWidth: 500,
@@ -30,13 +34,78 @@ export const IRREGULAR_BENCHMARK_CORPUS: ReadonlyArray<IrregularBenchmarkCorpusC
     id: 'triangle-trapezoid-20-550x300',
     description: '20 repeated triangle/trapezoid pieces with a wider feasible sheet.',
     fixtureNames: ['triangle.dxf', 'trapezoid.dxf'],
+    fixtureAreasMm2: [3150, 6375],
+    fixtureBoundingBoxAreasMm2: [6300, 8625],
     repeatCount: 10,
     pieceCount: 20,
     sheetWidth: 550,
     sheetHeight: 300,
     padding: 0
+  },
+  {
+    id: 'skewed-quad-12-330x160',
+    description:
+      '12 raw skewed quadrilaterals with a 3-by-4 axis-aligned feasibility witness.',
+    fixtureNames: ['benchmark-skewed-quad.dxf'],
+    fixtureAreasMm2: [3200],
+    fixtureBoundingBoxAreasMm2: [4400],
+    repeatCount: 12,
+    pieceCount: 12,
+    sheetWidth: 330,
+    sheetHeight: 160,
+    padding: 0
   }
 ]
+
+export interface IrregularBenchmarkAreaFeasibilityBounds {
+  readonly rawPieceAreaLowerBoundMm2: number
+  readonly axisAlignedBoundingBoxAreaMm2: number
+  readonly sheetAreaMm2: number
+  readonly rawAreaSlackMm2: number
+  readonly axisAlignedBoundingBoxAreaSlackMm2: number
+  readonly rawAreaNecessaryConditionPasses: boolean
+}
+
+export function calculateAreaFeasibilityBounds(
+  benchmarkCase: IrregularBenchmarkCorpusCase
+): IrregularBenchmarkAreaFeasibilityBounds {
+  if (
+    benchmarkCase.fixtureNames.length !== benchmarkCase.fixtureAreasMm2.length ||
+    benchmarkCase.fixtureNames.length !== benchmarkCase.fixtureBoundingBoxAreasMm2.length
+  ) {
+    throw new Error(`Area metadata does not match fixtures for ${benchmarkCase.id}.`)
+  }
+
+  const availablePieceCount = benchmarkCase.fixtureNames.length * benchmarkCase.repeatCount
+  if (benchmarkCase.pieceCount > availablePieceCount) {
+    throw new Error(`Piece budget exceeds repeated fixtures for ${benchmarkCase.id}.`)
+  }
+
+  let rawPieceAreaLowerBoundMm2 = 0
+  let axisAlignedBoundingBoxAreaMm2 = 0
+  let remainingPieceCount = benchmarkCase.pieceCount
+  for (let fixtureIndex = 0; fixtureIndex < benchmarkCase.fixtureNames.length; fixtureIndex += 1) {
+    const copyCount = Math.min(benchmarkCase.repeatCount, remainingPieceCount)
+    const fixtureArea = benchmarkCase.fixtureAreasMm2[fixtureIndex]
+    const fixtureBoundingBoxArea = benchmarkCase.fixtureBoundingBoxAreasMm2[fixtureIndex]
+    if (fixtureArea === undefined || fixtureBoundingBoxArea === undefined) {
+      throw new Error(`Area metadata is missing for ${benchmarkCase.id}.`)
+    }
+    rawPieceAreaLowerBoundMm2 += fixtureArea * copyCount
+    axisAlignedBoundingBoxAreaMm2 += fixtureBoundingBoxArea * copyCount
+    remainingPieceCount -= copyCount
+  }
+
+  const sheetAreaMm2 = benchmarkCase.sheetWidth * benchmarkCase.sheetHeight
+  return {
+    rawPieceAreaLowerBoundMm2,
+    axisAlignedBoundingBoxAreaMm2,
+    sheetAreaMm2,
+    rawAreaSlackMm2: sheetAreaMm2 - rawPieceAreaLowerBoundMm2,
+    axisAlignedBoundingBoxAreaSlackMm2: sheetAreaMm2 - axisAlignedBoundingBoxAreaMm2,
+    rawAreaNecessaryConditionPasses: rawPieceAreaLowerBoundMm2 <= sheetAreaMm2
+  }
+}
 
 export interface IrregularBenchmarkProfile {
   readonly id: string
@@ -165,10 +234,54 @@ export const IRREGULAR_BENCHMARK_PROFILES: ReadonlyArray<IrregularBenchmarkProfi
     priorityOrderMutationEnabled: true,
     transformPreferenceMutationEnabled: true,
     placementPolicyMutationEnabled: true
+  },
+  {
+    id: 'near-capacity-skewed-beam-1',
+    description: 'Narrow beam profile for the raw skewed-quad feasibility case.',
+    corpusCaseId: 'skewed-quad-12-330x160',
+    orderWindow: 1,
+    beamWidth: 1,
+    localCandidateFanout: 2,
+    transformCap: 4,
+    freeMaterialOperation: 'union-then-difference',
+    nfpConstruction: 'vertex-pair-hull',
+    gaEnabled: false,
+    baselineOnly: true,
+    gaPopulation: 4,
+    gaGenerationBudget: 3,
+    gaEvaluationBudget: 12,
+    gaTimeBudgetMs: DETERMINISTIC_GA_TIME_BUDGET_MS,
+    gaSeed: 'skewed-quad-12',
+    priorityOrderMutationEnabled: true,
+    transformPreferenceMutationEnabled: true,
+    placementPolicyMutationEnabled: true
+  },
+  {
+    id: 'near-capacity-skewed-beam-4',
+    description:
+      'Wider same-count profile for comparing raw skewed-quad layout usability.',
+    corpusCaseId: 'skewed-quad-12-330x160',
+    orderWindow: 2,
+    beamWidth: 4,
+    localCandidateFanout: 4,
+    transformCap: 4,
+    freeMaterialOperation: 'union-then-difference',
+    nfpConstruction: 'vertex-pair-hull',
+    gaEnabled: false,
+    baselineOnly: true,
+    gaPopulation: 4,
+    gaGenerationBudget: 3,
+    gaEvaluationBudget: 12,
+    gaTimeBudgetMs: DETERMINISTIC_GA_TIME_BUDGET_MS,
+    gaSeed: 'skewed-quad-12',
+    priorityOrderMutationEnabled: true,
+    transformPreferenceMutationEnabled: true,
+    placementPolicyMutationEnabled: true
   }
 ]
 
 export const IRREGULAR_DXF_FIXTURES = [
+  'benchmark-skewed-quad.dxf',
   'angled-profile.dxf',
   'circle-ellipse-arcs.dxf',
   'concave-and-stars.dxf',
@@ -190,6 +303,7 @@ export const IRREGULAR_DXF_FIXTURES = [
 ] as const
 
 export const VALID_SINGLE_OUTLINE_FIXTURES = [
+  'benchmark-skewed-quad.dxf',
   'angled-profile.dxf',
   'high-padding.dxf',
   'near-collinear.dxf',

@@ -1,4 +1,6 @@
 import { Effect, Layer } from 'effect'
+import { execFileSync } from 'node:child_process'
+import { hostname } from 'node:os'
 import { performance } from 'node:perf_hooks'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -40,6 +42,7 @@ import {
   type IrregularComputeResult
 } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import {
+  calculateAreaFeasibilityBounds,
   IRREGULAR_DXF_FIXTURES,
   IRREGULAR_BENCHMARK_CORPUS,
   IRREGULAR_BENCHMARK_PROFILES,
@@ -56,6 +59,8 @@ const DEFAULT_RUN_COUNT = 5
 const DEFAULT_FREE_MATERIAL_OPERATION: FreeMaterialOperation = 'union-then-difference'
 const DEFAULT_NFP_CONSTRUCTION: NfpConstructionAlgorithm = DEFAULT_NFP_CONSTRUCTION_ALGORITHM
 
+export const IRREGULAR_BENCHMARK_RUNNER_VERSION = '2'
+
 const flagAliases = new Map<string, string>([
   ['fixture', 'fixture'],
   ['fixtures', 'fixture'],
@@ -71,6 +76,8 @@ const flagAliases = new Map<string, string>([
   ['transform-cap', 'transform-cap'],
   ['free-material-operation', 'free-material-operation'],
   ['nfp-construction', 'nfp-construction'],
+  ['baseline-sha', 'baseline-sha'],
+  ['variant-sha', 'variant-sha'],
   ['profile', 'profile'],
   ['ga', 'ga-enabled'],
   ['ga-enabled', 'ga-enabled'],
@@ -132,6 +139,53 @@ export interface CliOptions {
   readonly runCount: number
 }
 
+export interface IrregularBenchmarkProvenance {
+  readonly baselineSha: string | null
+  readonly variantSha: string | null
+  readonly baselineRevision: IrregularBenchmarkRevision
+  readonly variantRevision: IrregularBenchmarkRevision
+  readonly nodeVersion: string
+  readonly pnpmVersion: string
+  readonly platform: string
+  readonly architecture: string
+  readonly hostIdentifier: string
+  readonly timestamp: string
+  readonly exactCommand: string | null
+  readonly runnerVersion: string
+}
+
+export type IrregularBenchmarkRevisionSource =
+  | 'cli'
+  | 'environment'
+  | 'default-ref'
+  | 'unavailable'
+
+export interface IrregularBenchmarkRevision {
+  readonly sha: string | null
+  readonly requested: string | null
+  readonly ref: string | null
+  readonly source: IrregularBenchmarkRevisionSource
+  readonly environmentVariable: string
+}
+
+export interface IrregularBenchmarkProvenanceOverrides {
+  readonly nodeVersion?: string
+  readonly pnpmVersion?: string
+  readonly platform?: string
+  readonly architecture?: string
+  readonly hostIdentifier?: string
+  readonly timestamp?: string
+  readonly runnerVersion?: string
+}
+
+export interface IrregularBenchmarkResolvedSettings extends CliOptions {
+  readonly profileDescription: string | undefined
+  readonly corpusCaseId: string | undefined
+  readonly areaFeasibilityBounds:
+    | ReturnType<typeof calculateAreaFeasibilityBounds>
+    | undefined
+}
+
 export interface IrregularBenchmarkTimedRun {
   readonly elapsedMs: number
   readonly placedCount: number
@@ -152,6 +206,8 @@ interface PreparedBenchmark {
 
 export interface IrregularBenchmarkExecution {
   readonly profileId: string | undefined
+  readonly provenance: IrregularBenchmarkProvenance
+  readonly resolvedSettings: IrregularBenchmarkResolvedSettings
   readonly fixtureNames: ReadonlyArray<string>
   readonly repeatCount: number
   readonly pieceCount: number
@@ -236,6 +292,8 @@ GA:
 Measurement:
   --warmup <n>                      Unmeasured warmup runs (default: 1)
   --runs <n>                        Measured runs (default: 5)
+  --baseline-sha <sha>              Baseline commit SHA (default: origin/main)
+  --variant-sha <sha>               Variant commit SHA (default: HEAD)
   --help                            Show this usage
 
 Available fixtures:
@@ -306,6 +364,173 @@ function singleValue(argumentsData: RawArguments, name: string): string | undefi
     throw new Error(`Option --${name} may only be provided once.`)
   }
   return values[0]
+}
+
+function commandOutput(
+  command: string,
+  argumentsList: ReadonlyArray<string>,
+  cwd: string
+): string | undefined {
+  try {
+    const output = execFileSync(command, [...argumentsList], {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    })
+    const value = output.trim()
+    return value.length === 0 ? undefined : value
+  } catch {
+    return undefined
+  }
+}
+
+function gitSha(repoRoot: string, ref: string): string | undefined {
+  return commandOutput('git', ['rev-parse', '--verify', ref], repoRoot)
+}
+
+const FULL_SHA_PATTERN = /^[0-9a-f]{40}$/i
+
+function verifiedSha(value: string, name: string): string {
+  const normalized = value.trim()
+  if (!FULL_SHA_PATTERN.test(normalized)) {
+    throw new Error(`${name} expects a full 40-character commit SHA.`)
+  }
+  return normalized.toLowerCase()
+}
+
+function verifiedCommitSha(repoRoot: string, requestedSha: string): string | undefined {
+  const resolved = gitSha(repoRoot, `${requestedSha}^{commit}`)
+  return resolved !== undefined && FULL_SHA_PATTERN.test(resolved)
+    ? resolved.toLowerCase()
+    : undefined
+}
+
+function resolveRevision(
+  argumentsData: RawArguments,
+  name: string,
+  environmentName: string,
+  fallbackRef: string,
+  repoRoot: string
+): IrregularBenchmarkRevision {
+  const explicit = singleValue(argumentsData, name)
+  if (explicit !== undefined) {
+    const requested = verifiedSha(explicit, `Option --${name}`)
+    const resolved = verifiedCommitSha(repoRoot, requested)
+    return {
+      sha: resolved ?? null,
+      requested: explicit,
+      ref: null,
+      source: resolved === undefined ? 'unavailable' : 'cli',
+      environmentVariable: environmentName
+    }
+  }
+
+  const environmentValue = process.env[environmentName]
+  if (environmentValue !== undefined) {
+    const requested = verifiedSha(environmentValue, environmentName)
+    const resolved = verifiedCommitSha(repoRoot, requested)
+    return {
+      sha: resolved ?? null,
+      requested: environmentValue,
+      ref: null,
+      source: resolved === undefined ? 'unavailable' : 'environment',
+      environmentVariable: environmentName
+    }
+  }
+
+  const resolved = gitSha(repoRoot, fallbackRef)
+  if (resolved !== undefined && FULL_SHA_PATTERN.test(resolved)) {
+    return {
+      sha: resolved.toLowerCase(),
+      requested: fallbackRef,
+      ref: fallbackRef,
+      source: 'default-ref',
+      environmentVariable: environmentName
+    }
+  }
+
+  return {
+    sha: null,
+    requested: fallbackRef,
+    ref: fallbackRef,
+    source: 'unavailable',
+    environmentVariable: environmentName
+  }
+}
+
+function shellQuote(argument: string): string {
+  if (/^[A-Za-z0-9_./:=+,-]+$/.test(argument)) return argument
+  return `'${argument.replaceAll("'", "'\\''")}'`
+}
+
+function exactBenchmarkCommand(
+  argumentsList: ReadonlyArray<string>,
+  baselineRevision: IrregularBenchmarkRevision,
+  variantRevision: IrregularBenchmarkRevision
+): string | null {
+  if (baselineRevision.sha === null || variantRevision.sha === null) return null
+
+  const replayArguments: string[] = []
+  for (let index = 0; index < argumentsList.length; index += 1) {
+    const argument = argumentsList[index]
+    if (argument === undefined) continue
+    const equalsIndex = argument.indexOf('=')
+    const rawName = argument.slice(2, equalsIndex === -1 ? undefined : equalsIndex)
+    if (rawName === 'baseline-sha' || rawName === 'variant-sha') {
+      if (equalsIndex === -1) index += 1
+      continue
+    }
+    replayArguments.push(argument)
+  }
+
+  return [
+    'pnpm',
+    'benchmark:irregular',
+    ...replayArguments,
+    '--baseline-sha',
+    baselineRevision.sha,
+    '--variant-sha',
+    variantRevision.sha
+  ]
+    .map(shellQuote)
+    .join(' ')
+}
+
+export function makeBenchmarkProvenance(
+  argumentsList: ReadonlyArray<string>,
+  repoRoot: string = process.cwd(),
+  overrides: IrregularBenchmarkProvenanceOverrides = {}
+): IrregularBenchmarkProvenance {
+  const argumentsData = parseArguments(argumentsList)
+  const baselineRevision = resolveRevision(
+    argumentsData,
+    'baseline-sha',
+    'IRREGULAR_BENCHMARK_BASELINE_SHA',
+    'origin/main',
+    repoRoot
+  )
+  const variantRevision = resolveRevision(
+    argumentsData,
+    'variant-sha',
+    'IRREGULAR_BENCHMARK_VARIANT_SHA',
+    'HEAD',
+    repoRoot
+  )
+  return {
+    baselineSha: baselineRevision.sha,
+    variantSha: variantRevision.sha,
+    baselineRevision,
+    variantRevision,
+    nodeVersion: overrides.nodeVersion ?? process.version,
+    pnpmVersion:
+      overrides.pnpmVersion ?? commandOutput('pnpm', ['--version'], repoRoot) ?? 'unavailable',
+    platform: overrides.platform ?? process.platform,
+    architecture: overrides.architecture ?? process.arch,
+    hostIdentifier: overrides.hostIdentifier ?? hostname(),
+    timestamp: overrides.timestamp ?? new Date().toISOString(),
+    exactCommand: exactBenchmarkCommand(argumentsList, baselineRevision, variantRevision),
+    runnerVersion: overrides.runnerVersion ?? IRREGULAR_BENCHMARK_RUNNER_VERSION
+  }
 }
 
 function parseBoolean(value: string, name: string): boolean {
@@ -587,6 +812,44 @@ function resolveOptions(argumentsData: RawArguments): CliOptions {
   }
 }
 
+function sameStringValues(
+  first: ReadonlyArray<string>,
+  second: ReadonlyArray<string>
+): boolean {
+  return first.length === second.length && first.every((value, index) => value === second[index])
+}
+
+function corpusCaseForResolvedOptions(
+  options: CliOptions
+): (typeof IRREGULAR_BENCHMARK_CORPUS)[number] | undefined {
+  return IRREGULAR_BENCHMARK_CORPUS.find(
+    (benchmarkCase) =>
+      sameStringValues(benchmarkCase.fixtureNames, options.fixtureNames) &&
+      benchmarkCase.repeatCount === options.repeatCount &&
+      benchmarkCase.pieceCount === options.pieceCount &&
+      benchmarkCase.sheetWidth === options.sheetWidth &&
+      benchmarkCase.sheetHeight === options.sheetHeight &&
+      benchmarkCase.padding === options.padding
+  )
+}
+
+export function summarizeResolvedBenchmarkSettings(
+  options: CliOptions
+): IrregularBenchmarkResolvedSettings {
+  const profile =
+    options.profileId === undefined
+      ? undefined
+      : IRREGULAR_BENCHMARK_PROFILES.find(({ id }) => id === options.profileId)
+  const corpusCase = corpusCaseForResolvedOptions(options)
+  return {
+    ...options,
+    profileDescription: profile?.description,
+    corpusCaseId: corpusCase?.id,
+    areaFeasibilityBounds:
+      corpusCase === undefined ? undefined : calculateAreaFeasibilityBounds(corpusCase)
+  }
+}
+
 export function resolveBenchmarkOptions(argumentsList: ReadonlyArray<string>): CliOptions {
   return resolveOptions(parseArguments(argumentsList))
 }
@@ -830,7 +1093,8 @@ async function prepareBenchmark(options: CliOptions, repoRoot: string): Promise<
 
 async function executeBenchmark(
   options: CliOptions,
-  repoRoot: string
+  repoRoot: string,
+  provenance: IrregularBenchmarkProvenance
 ): Promise<IrregularBenchmarkExecution> {
   const prepared = await prepareBenchmark(options, repoRoot)
   const warmupRuns: IrregularBenchmarkTimedRun[] = []
@@ -859,6 +1123,8 @@ async function executeBenchmark(
 
   return {
     profileId: options.profileId,
+    provenance,
+    resolvedSettings: summarizeResolvedBenchmarkSettings(options),
     fixtureNames: options.fixtureNames,
     repeatCount: options.repeatCount,
     pieceCount: prepared.sources.length,
@@ -873,15 +1139,17 @@ async function executeBenchmark(
 export async function runNamedBenchmarkProfile(
   profileId: string
 ): Promise<IrregularBenchmarkExecution> {
-  const options = resolveBenchmarkOptions([
+  const argumentsList = [
     '--profile',
     profileId,
     '--warmup',
     '0',
     '--runs',
     '1'
-  ])
-  return executeBenchmark(options, dirname(dirname(fileURLToPath(import.meta.url))))
+  ]
+  const options = resolveBenchmarkOptions(argumentsList)
+  const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)))
+  return executeBenchmark(options, repoRoot, makeBenchmarkProvenance(argumentsList, repoRoot))
 }
 
 function errorMessage(error: unknown): string {
@@ -890,18 +1158,22 @@ function errorMessage(error: unknown): string {
 }
 
 async function main(): Promise<void> {
-  const rawArguments = parseArguments(process.argv.slice(2))
+  const argumentsList = process.argv.slice(2)
+  const rawArguments = parseArguments(argumentsList)
   if (valuesFor(rawArguments, 'help').length > 0) {
     console.log(usage())
     return
   }
 
-  const options = resolveOptions(rawArguments)
   const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)))
-  const execution = await executeBenchmark(options, repoRoot)
+  const options = resolveOptions(rawArguments)
+  const provenance = makeBenchmarkProvenance(argumentsList, repoRoot)
+  const execution = await executeBenchmark(options, repoRoot, provenance)
   const settings = makeSettings(options)
 
   console.log('Irregular benchmark')
+  console.log(`provenance=${JSON.stringify(execution.provenance)}`)
+  console.log(`resolvedProfileSettings=${JSON.stringify(execution.resolvedSettings)}`)
   console.log(`profile=${options.profileId ?? 'custom'}`)
   console.log(`fixtures=${options.fixtureNames.join(',')} pieces=${execution.pieceCount}`)
   console.log(

@@ -1,12 +1,17 @@
 import { Effect, Layer } from 'effect'
 import { describe, expect, it } from 'vitest'
+import { execFileSync } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { importDxfFile } from '@main/services/DxfImportService.js'
 import { ImportedPiece, ImportWarning } from '@shared/domain/dxf.js'
 import { NestingOptions, NestingRequest, SheetSpec } from '@shared/domain/nesting.js'
 import { JobId } from '@shared/domain/ids.js'
-import { IrregularNestingSettings, IrregularOptimizerSettings } from '@shared/irregular/domain.js'
+import {
+  IrregularNestingSettings,
+  IrregularOptimizerSettings,
+  IrregularPoint
+} from '@shared/irregular/domain.js'
 import { preparePieces } from '@shared/preparePieces.js'
 import { computeNesting } from '../../src/workers/algorithm/computeNesting.js'
 import {
@@ -27,21 +32,75 @@ import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/
 import { IrregularGeometryInputError } from '../../src/workers/irregular/services.js'
 import { DEFAULT_STRATEGY_ID } from '@shared/domain/strategies.js'
 import {
+  IRREGULAR_BENCHMARK_RUNNER_VERSION,
+  makeBenchmarkProvenance,
   normalizeImportedPieceIdentities,
   resolveBenchmarkOptions,
   runNamedBenchmarkProfile,
-  summarizeBenchmarkScore
+  summarizeBenchmarkScore,
+  summarizeResolvedBenchmarkSettings
 } from '../../scripts/irregular-benchmark.js'
 import {
+  calculateAreaFeasibilityBounds,
   collisionOpportunityMetrics,
   DETERMINISTIC_GA_TIME_BUDGET_MS,
   IRREGULAR_BENCHMARK_CORPUS,
   IRREGULAR_BENCHMARK_PROFILES,
+  polygonArea,
+  polygonBoundingBoxArea,
   repeatImportedPieces
 } from '../fixtures/irregularBenchmarkFixtures.js'
 
 const repoRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))))
 const fixturesDir = join(repoRoot, 'tests', 'fixtures', 'dxf')
+
+function reachableCommitSha(ref: string): string | undefined {
+  try {
+    const output = execFileSync('git', ['rev-parse', '--verify', `${ref}^{commit}`], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    })
+    const sha = output.trim()
+    return /^[0-9a-f]{40}$/i.test(sha) ? sha.toLowerCase() : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function withBenchmarkRevisionEnvironment<T>(
+  baselineSha: string | undefined,
+  variantSha: string | undefined,
+  callback: () => T
+): T {
+  const previousBaselineSha = process.env.IRREGULAR_BENCHMARK_BASELINE_SHA
+  const previousVariantSha = process.env.IRREGULAR_BENCHMARK_VARIANT_SHA
+  if (baselineSha === undefined) {
+    delete process.env.IRREGULAR_BENCHMARK_BASELINE_SHA
+  } else {
+    process.env.IRREGULAR_BENCHMARK_BASELINE_SHA = baselineSha
+  }
+  if (variantSha === undefined) {
+    delete process.env.IRREGULAR_BENCHMARK_VARIANT_SHA
+  } else {
+    process.env.IRREGULAR_BENCHMARK_VARIANT_SHA = variantSha
+  }
+
+  try {
+    return callback()
+  } finally {
+    if (previousBaselineSha === undefined) {
+      delete process.env.IRREGULAR_BENCHMARK_BASELINE_SHA
+    } else {
+      process.env.IRREGULAR_BENCHMARK_BASELINE_SHA = previousBaselineSha
+    }
+    if (previousVariantSha === undefined) {
+      delete process.env.IRREGULAR_BENCHMARK_VARIANT_SHA
+    } else {
+      process.env.IRREGULAR_BENCHMARK_VARIANT_SHA = previousVariantSha
+    }
+  }
+}
 
 function experimentSettings(
   optimizer: Partial<ConstructorParameters<typeof IrregularOptimizerSettings>[0]> = {}
@@ -433,8 +492,8 @@ describe('irregular benchmark and debug corpus', () => {
     expect(computeKey(second)).toEqual(computeKey(first))
   })
 
-  it('keeps both capacity cases deterministic and within their source budgets', () => {
-    expect(IRREGULAR_BENCHMARK_CORPUS).toHaveLength(2)
+  it('keeps corpus cases deterministic and within their source budgets', () => {
+    expect(IRREGULAR_BENCHMARK_CORPUS).toHaveLength(3)
     for (const benchmarkCase of IRREGULAR_BENCHMARK_CORPUS) {
       expect(benchmarkCase.fixtureNames.length).toBeGreaterThan(0)
       expect(benchmarkCase.pieceCount).toBeLessThanOrEqual(
@@ -443,6 +502,240 @@ describe('irregular benchmark and debug corpus', () => {
       expect(benchmarkCase.sheetWidth).toBeGreaterThan(0)
       expect(benchmarkCase.sheetHeight).toBeGreaterThan(0)
     }
+  })
+
+  it('calculates deterministic raw-area feasibility bounds for every corpus case', () => {
+    const firstBounds = IRREGULAR_BENCHMARK_CORPUS.map(calculateAreaFeasibilityBounds)
+    const secondBounds = IRREGULAR_BENCHMARK_CORPUS.map(calculateAreaFeasibilityBounds)
+    expect(secondBounds).toEqual(firstBounds)
+
+    const skewedQuadCase = IRREGULAR_BENCHMARK_CORPUS.find(
+      ({ id }) => id === 'skewed-quad-12-330x160'
+    )
+    if (skewedQuadCase === undefined) throw new Error('expected skewed quad corpus case')
+    expect(calculateAreaFeasibilityBounds(skewedQuadCase)).toEqual({
+      rawPieceAreaLowerBoundMm2: 38_400,
+      axisAlignedBoundingBoxAreaMm2: 52_800,
+      sheetAreaMm2: 52_800,
+      rawAreaSlackMm2: 14_400,
+      axisAlignedBoundingBoxAreaSlackMm2: 0,
+      rawAreaNecessaryConditionPasses: true
+    })
+  })
+
+  it('validates declared corpus areas and bounds against checked-in DXF geometry', async () => {
+    for (const benchmarkCase of IRREGULAR_BENCHMARK_CORPUS) {
+      const pieces = await Promise.all(benchmarkCase.fixtureNames.map(importFixture))
+      expect(pieces).toHaveLength(benchmarkCase.fixtureNames.length)
+      expect(benchmarkCase.fixtureAreasMm2).toHaveLength(benchmarkCase.fixtureNames.length)
+      expect(benchmarkCase.fixtureBoundingBoxAreasMm2).toHaveLength(
+        benchmarkCase.fixtureNames.length
+      )
+
+      for (const [fixtureIndex, piece] of pieces.entries()) {
+        const declaredArea = benchmarkCase.fixtureAreasMm2[fixtureIndex]
+        const declaredBoundingBoxArea = benchmarkCase.fixtureBoundingBoxAreasMm2[fixtureIndex]
+        if (declaredArea === undefined || declaredBoundingBoxArea === undefined) {
+          throw new Error(`expected area metadata for ${benchmarkCase.id}`)
+        }
+
+        const points: IrregularPoint[] = []
+        for (const segment of piece.geometry.segments) {
+          if (segment.kind !== 'line') {
+            throw new Error(`expected straight benchmark geometry for ${benchmarkCase.id}`)
+          }
+          points.push(new IrregularPoint({ x: segment.x1, y: segment.y1 }))
+        }
+
+        expect(polygonArea(points)).toBeCloseTo(declaredArea, 8)
+        expect(polygonBoundingBoxArea(points)).toBeCloseTo(declaredBoundingBoxArea, 8)
+      }
+    }
+  })
+
+  it('reports replay provenance and resolved named-profile settings', () => {
+    const variantSha = reachableCommitSha('HEAD')
+    if (variantSha === undefined) throw new Error('expected HEAD to resolve to a commit SHA')
+    const baselineSha = reachableCommitSha('origin/main') ?? variantSha
+    const argumentsList = [
+      '--profile',
+      'near-capacity-skewed-beam-4',
+      '--baseline-sha',
+      baselineSha,
+      '--variant-sha',
+      variantSha
+    ]
+    const provenance = makeBenchmarkProvenance(argumentsList, repoRoot, {
+      nodeVersion: 'v-test',
+      pnpmVersion: '10.0.0',
+      platform: 'test-platform',
+      architecture: 'test-architecture',
+      hostIdentifier: 'test-host',
+      timestamp: '2026-07-16T00:00:00.000Z'
+    })
+    expect(provenance).toEqual({
+      baselineSha,
+      variantSha,
+      baselineRevision: {
+        sha: baselineSha,
+        requested: baselineSha,
+        ref: null,
+        source: 'cli',
+        environmentVariable: 'IRREGULAR_BENCHMARK_BASELINE_SHA'
+      },
+      variantRevision: {
+        sha: variantSha,
+        requested: variantSha,
+        ref: null,
+        source: 'cli',
+        environmentVariable: 'IRREGULAR_BENCHMARK_VARIANT_SHA'
+      },
+      nodeVersion: 'v-test',
+      pnpmVersion: '10.0.0',
+      platform: 'test-platform',
+      architecture: 'test-architecture',
+      hostIdentifier: 'test-host',
+      timestamp: '2026-07-16T00:00:00.000Z',
+      exactCommand:
+        `pnpm benchmark:irregular --profile near-capacity-skewed-beam-4 --baseline-sha ${baselineSha} --variant-sha ${variantSha}`,
+      runnerVersion: IRREGULAR_BENCHMARK_RUNNER_VERSION
+    })
+
+    expect(() => makeBenchmarkProvenance(['--baseline-sha', 'baseline-sha'], repoRoot)).toThrow(
+      'expects a full 40-character commit SHA'
+    )
+
+    const unavailableExplicitProvenance = makeBenchmarkProvenance(
+      ['--baseline-sha', '0'.repeat(40), '--variant-sha', variantSha],
+      repoRoot
+    )
+    expect(unavailableExplicitProvenance.baselineRevision).toEqual({
+      sha: null,
+      requested: '0'.repeat(40),
+      ref: null,
+      source: 'unavailable',
+      environmentVariable: 'IRREGULAR_BENCHMARK_BASELINE_SHA'
+    })
+    expect(unavailableExplicitProvenance.variantRevision.sha).toBe(variantSha)
+    expect(unavailableExplicitProvenance.exactCommand).toBeNull()
+
+    const environmentBaselineSha = baselineSha
+    const environmentVariantSha = variantSha
+    const environmentProvenance = withBenchmarkRevisionEnvironment(
+      environmentBaselineSha,
+      environmentVariantSha,
+      () => makeBenchmarkProvenance([], repoRoot)
+    )
+    expect(environmentProvenance.baselineRevision).toEqual({
+      sha: environmentBaselineSha,
+      requested: environmentBaselineSha,
+      ref: null,
+      source: 'environment',
+      environmentVariable: 'IRREGULAR_BENCHMARK_BASELINE_SHA'
+    })
+    expect(environmentProvenance.variantRevision).toEqual({
+      sha: environmentVariantSha,
+      requested: environmentVariantSha,
+      ref: null,
+      source: 'environment',
+      environmentVariable: 'IRREGULAR_BENCHMARK_VARIANT_SHA'
+    })
+
+    const defaultProvenance = withBenchmarkRevisionEnvironment(undefined, undefined, () =>
+      makeBenchmarkProvenance([], repoRoot, {
+        nodeVersion: 'v-test',
+        pnpmVersion: '10.0.0',
+        platform: 'test-platform',
+        architecture: 'test-architecture',
+        hostIdentifier: 'test-host',
+        timestamp: '2026-07-16T00:00:00.000Z'
+      })
+    )
+    const expectedDefaultBaselineSha = reachableCommitSha('origin/main')
+    const expectedDefaultVariantSha = reachableCommitSha('HEAD')
+    expect(defaultProvenance.baselineRevision).toEqual({
+      sha: expectedDefaultBaselineSha,
+      requested: 'origin/main',
+      ref: 'origin/main',
+      source: expectedDefaultBaselineSha === undefined ? 'unavailable' : 'default-ref',
+      environmentVariable: 'IRREGULAR_BENCHMARK_BASELINE_SHA'
+    })
+    expect(defaultProvenance.variantRevision).toEqual({
+      sha: expectedDefaultVariantSha,
+      requested: 'HEAD',
+      ref: 'HEAD',
+      source: expectedDefaultVariantSha === undefined ? 'unavailable' : 'default-ref',
+      environmentVariable: 'IRREGULAR_BENCHMARK_VARIANT_SHA'
+    })
+    expect(defaultProvenance.baselineRevision.ref).toBe('origin/main')
+    expect(defaultProvenance.variantRevision.ref).toBe('HEAD')
+    const defaultBaselineSha = defaultProvenance.baselineSha
+    const defaultVariantSha = defaultProvenance.variantSha
+    const defaultExactCommand = defaultProvenance.exactCommand
+    expect(defaultBaselineSha).toBe(expectedDefaultBaselineSha ?? null)
+    expect(defaultVariantSha).toBe(expectedDefaultVariantSha ?? null)
+    if (expectedDefaultBaselineSha === undefined || expectedDefaultVariantSha === undefined) {
+      expect(defaultExactCommand).toBeNull()
+    } else {
+      if (defaultExactCommand === null) {
+        throw new Error('expected reachable default revisions to produce an exact command')
+      }
+      expect(defaultExactCommand).toBe(
+        `pnpm benchmark:irregular --baseline-sha ${expectedDefaultBaselineSha} --variant-sha ${expectedDefaultVariantSha}`
+      )
+    }
+
+    const unavailableProvenance = withBenchmarkRevisionEnvironment(undefined, undefined, () =>
+      makeBenchmarkProvenance([], join(repoRoot, 'missing-benchmark-repository'))
+    )
+    expect(unavailableProvenance.baselineRevision).toEqual({
+      sha: null,
+      requested: 'origin/main',
+      ref: 'origin/main',
+      source: 'unavailable',
+      environmentVariable: 'IRREGULAR_BENCHMARK_BASELINE_SHA'
+    })
+    expect(unavailableProvenance.variantRevision).toEqual({
+      sha: null,
+      requested: 'HEAD',
+      ref: 'HEAD',
+      source: 'unavailable',
+      environmentVariable: 'IRREGULAR_BENCHMARK_VARIANT_SHA'
+    })
+    expect(unavailableProvenance.exactCommand).toBeNull()
+
+    const firstSettings = summarizeResolvedBenchmarkSettings(
+      resolveBenchmarkOptions(['--profile', 'near-capacity-skewed-beam-4'])
+    )
+    const secondSettings = summarizeResolvedBenchmarkSettings(
+      resolveBenchmarkOptions(['--profile', 'near-capacity-skewed-beam-4'])
+    )
+    expect(secondSettings).toEqual(firstSettings)
+    expect(firstSettings).toMatchObject({
+      profileId: 'near-capacity-skewed-beam-4',
+      fixtureNames: ['benchmark-skewed-quad.dxf'],
+      pieceCount: 12,
+      repeatCount: 12,
+      sheetWidth: 330,
+      sheetHeight: 160,
+      beamWidth: 4,
+      corpusCaseId: 'skewed-quad-12-330x160',
+      areaFeasibilityBounds: {
+        rawPieceAreaLowerBoundMm2: 38_400,
+        axisAlignedBoundingBoxAreaMm2: 52_800,
+        sheetAreaMm2: 52_800,
+        rawAreaSlackMm2: 14_400,
+        axisAlignedBoundingBoxAreaSlackMm2: 0,
+        rawAreaNecessaryConditionPasses: true
+      },
+      profileDescription: 'Wider same-count profile for comparing raw skewed-quad layout usability.'
+    })
+
+    const overriddenSettings = summarizeResolvedBenchmarkSettings(
+      resolveBenchmarkOptions(['--profile', 'near-capacity-skewed-beam-4', '--sheet', '330x161'])
+    )
+    expect(overriddenSettings.corpusCaseId).toBeUndefined()
+    expect(overriddenSettings.areaFeasibilityBounds).toBeUndefined()
   })
 
   it('gives explicit GA and baseline flags precedence over profile defaults', () => {
@@ -548,6 +841,40 @@ describe('irregular benchmark and debug corpus', () => {
         .filter(({ gaEnabled }) => gaEnabled)
         .every(({ gaTimeBudgetMs }) => gaTimeBudgetMs === DETERMINISTIC_GA_TIME_BUDGET_MS)
     ).toBe(true)
+  }, 60_000)
+
+  it('executes skewed profiles and proves a strict same-count usability ordering', async () => {
+    const narrowExecution = await runNamedBenchmarkProfile('near-capacity-skewed-beam-1')
+    const wideExecution = await runNamedBenchmarkProfile('near-capacity-skewed-beam-4')
+    const narrowRun = executionRun(narrowExecution)
+    const wideRun = executionRun(wideExecution)
+
+    expect(narrowExecution.sourceCount).toBe(12)
+    expect(wideExecution.sourceCount).toBe(12)
+    expect(narrowRun.auditStatus).toBe('passed')
+    expect(wideRun.auditStatus).toBe('passed')
+    expect(narrowRun.unplacedCount).toBe(wideRun.unplacedCount)
+
+    const usabilityDiffers = [
+      narrowRun.score.largestNetFreeMaterialRegionAreaMm2 !==
+        wideRun.score.largestNetFreeMaterialRegionAreaMm2,
+      narrowRun.score.freeMaterialRegionCount !== wideRun.score.freeMaterialRegionCount,
+      narrowRun.score.freeMaterialHoleCount !== wideRun.score.freeMaterialHoleCount,
+      narrowRun.score.freeMaterialSliverMetric !== wideRun.score.freeMaterialSliverMetric,
+      narrowRun.score.collisionBoundsWorstNormalizedSheetConsumption !==
+        wideRun.score.collisionBoundsWorstNormalizedSheetConsumption,
+      narrowRun.score.collisionBoundsNormalizedSpanSum !==
+        wideRun.score.collisionBoundsNormalizedSpanSum,
+      narrowRun.score.collisionBoundsAreaMm2 !== wideRun.score.collisionBoundsAreaMm2,
+      narrowRun.score.collisionBoundsSpanMm !== wideRun.score.collisionBoundsSpanMm
+    ].some(Boolean)
+    expect(usabilityDiffers).toBe(true)
+    expect(await compareScores(wideRun.score, narrowRun.score)).toBeLessThan(0)
+
+    const repeatedWideExecution = await runNamedBenchmarkProfile('near-capacity-skewed-beam-4')
+    expect(summarizeBenchmarkScore(executionRun(repeatedWideExecution).score)).toEqual(
+      summarizeBenchmarkScore(wideRun.score)
+    )
   }, 60_000)
 
   it('validates stress fixtures directly and preserves import warnings', async () => {

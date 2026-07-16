@@ -243,17 +243,52 @@ and CSV source-row links when available.
 The standalone `benchmark:irregular` runner has named deterministic corpus cases
 and search profiles so capacity-sensitive comparisons do not depend on hidden
 process state. The current cases use the imported triangle/trapezoid set with
-20 pieces on `500x300` and `550x300` sheets. The named profiles include narrow
-and wider deterministic beams, a low-budget seeded GA same-count comparison,
-and a bounded GA run that reaches all 20 pieces on the tighter sheet.
+20 pieces on `500x300` and `550x300` sheets, plus a raw skewed-quadrilateral
+case with 12 pieces on `330x160`. The named profiles include narrow and wider
+deterministic beams, a low-budget seeded GA same-count comparison, a bounded
+GA run that reaches all 20 pieces on the tighter sheet, and same-count beam
+profiles for the raw skewed-quadrilateral case.
 Named GA profiles use explicit generation/evaluation limits and a neutralized
 large time sentinel rather than a 15-second wall-clock cutoff, so the seed and
 those finite limits determine the comparison result.
+The skewed beam-1 and beam-4 profiles are executed through the shared runner
+in tests; they place the same count with passing audits, while beam-4 produces
+a strictly better whole-layout score.
 For option precedence, an explicit CLI value overrides the selected profile,
 which overrides general defaults. An explicit `--ga-enabled` also derives
 `baselineOnly` to its inverse when `--baseline-only` is omitted; an explicit
 `--baseline-only` value wins over that derivation, and the contradictory pair
 `gaEnabled=true` plus `baselineOnly=true` is rejected.
+
+Every invocation emits a `provenance` JSON record containing `baselineSha`,
+`variantSha`, Node and pnpm versions, platform, architecture, host identifier,
+UTC timestamp, exact replay command, and the benchmark runner version. The
+record also contains `baselineRevision` and `variantRevision`, each recording
+the verified full SHA (or `null` with an `unavailable` source), the requested
+CLI/environment value or default ref, and the source used to resolve it. The
+baseline revision defaults to `origin/main` and the variant revision to `HEAD`;
+explicit CLI values and the corresponding environment variables must be full
+40-character commit SHAs that resolve to commits in the current repository.
+When both revisions resolve, `exactCommand` pins those SHAs for replay; if
+either revision is unavailable, `exactCommand` is `null` rather than claiming
+an exact replay command. A
+`resolvedProfileSettings` JSON record follows it and contains the complete
+resolved CLI/profile settings, including fixture and piece budgets, search
+controls, GA controls, and measurement counts.
+Corpus id and area bounds are included only when the resolved fixture order,
+repeat count, piece count, sheet dimensions, and padding exactly match a
+declared corpus case; otherwise those corpus-specific fields are omitted.
+
+Each corpus case also carries raw polygon areas and axis-aligned bounding-box
+areas measured from its checked-in DXF source geometry. The triangle/trapezoid
+fixtures declare areas `3150` and `6375` square millimeters with bounding-box
+areas `6300` and `8625`; the skewed quadrilateral declares `3200` and `4400`.
+The runner-side bound reports the total raw piece area as a necessary lower
+bound, the summed axis-aligned box area as a conservative packing diagnostic,
+the sheet area, and both slacks. Passing the raw-area condition is necessary
+but not sufficient for legal nesting; the raw skewed-quadrilateral case has a
+deterministic 3-by-4 grid witness whose `12 * 110 * 40` bounding-box area
+exactly equals its `330 * 160` sheet area.
 
 Every measured row reports the elapsed time, placed and unplaced counts, the
 terminal legality-audit status, and the complete whole-layout score. The score
