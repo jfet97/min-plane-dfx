@@ -332,6 +332,8 @@ describe('irregular schema contracts', () => {
     const score = {
       unplacedCount: 1,
       sharedCollisionBoundaryLengthMm: 42,
+      sharedCollisionBoundaryContactUnits: 3.25,
+      sharedCollisionBoundaryContactBand: 3,
       largestNetFreeMaterialRegionAreaMm2: 200,
       freeMaterialRegionCount: 2,
       freeMaterialHoleCount: 1,

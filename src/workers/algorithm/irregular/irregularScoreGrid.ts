@@ -1,7 +1,10 @@
 /** Millimeter resolution used to canonicalize derived irregular score inputs. */
 export const IRREGULAR_SCORE_GRID_STEP_MM = 0.001
+/** Dimensionless resolution used before grouping normalized score values. */
+export const IRREGULAR_SCORE_SCALAR_STEP = 0.000001
 
 const IRREGULAR_SCORE_GRID_SCALE = 1 / IRREGULAR_SCORE_GRID_STEP_MM
+const IRREGULAR_SCORE_SCALAR_SCALE = 1 / IRREGULAR_SCORE_SCALAR_STEP
 
 /**
  * Canonicalizes one finite millimeter value to the explicit irregular score
@@ -18,4 +21,16 @@ export function canonicalizeIrregularScoreMillimeters(valueMm: number): number |
   const roundedAbsoluteValue = Math.floor(scaledAbsoluteValue + 0.5)
   const gridValue = Math.sign(valueMm) * roundedAbsoluteValue
   return Number.isSafeInteger(gridValue) ? gridValue / IRREGULAR_SCORE_GRID_SCALE : undefined
+}
+
+/** Canonicalizes one finite dimensionless score before deterministic banding. */
+export function canonicalizeIrregularScoreScalar(value: number): number | undefined {
+  if (!Number.isFinite(value)) return undefined
+
+  const scaledAbsoluteValue = Math.abs(value) * IRREGULAR_SCORE_SCALAR_SCALE
+  if (!Number.isFinite(scaledAbsoluteValue)) return undefined
+
+  const roundedAbsoluteValue = Math.floor(scaledAbsoluteValue + 0.5)
+  const gridValue = Math.sign(value) * roundedAbsoluteValue
+  return Number.isSafeInteger(gridValue) ? gridValue / IRREGULAR_SCORE_SCALAR_SCALE : undefined
 }

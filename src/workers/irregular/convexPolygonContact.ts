@@ -2,6 +2,12 @@ import type { InternalPoint, InternalPolygonWithBounds } from './internalGeometr
 import { areDisjoint } from './convexBounds.js'
 import { GeometryPredicates } from './geometryPredicates.js'
 
+/** Exact contact length plus a scale-normalized amount for whole-layout scoring. */
+export interface SharedConvexPolygonBoundaryContact {
+  readonly lengthMm: number
+  readonly normalizedUnits: number
+}
+
 /** Measures exact shared boundary length between two already-translated convex polygons. */
 export function sharedConvexPolygonBoundaryLength(
   first: InternalPolygonWithBounds,
@@ -21,6 +27,29 @@ export function sharedConvexPolygonBoundaryLength(
   return totalLength
 }
 
+/**
+ * Measures shared boundary relative to the smaller polygon's longest edge.
+ * One unit therefore represents contact comparable to one structural edge,
+ * while short offset chamfers contribute only a small fraction of one unit.
+ */
+export function measureSharedConvexPolygonBoundaryContact(
+  first: InternalPolygonWithBounds,
+  second: InternalPolygonWithBounds
+): SharedConvexPolygonBoundaryContact | undefined {
+  const lengthMm = sharedConvexPolygonBoundaryLength(first, second)
+  if (lengthMm === undefined) return undefined
+  if (lengthMm === 0) return { lengthMm: 0, normalizedUnits: 0 }
+
+  const firstLongestEdgeMm = longestPolygonEdgeLength(first.polygon.points)
+  const secondLongestEdgeMm = longestPolygonEdgeLength(second.polygon.points)
+  if (firstLongestEdgeMm === undefined || secondLongestEdgeMm === undefined) return undefined
+
+  const normalizationLengthMm = Math.min(firstLongestEdgeMm, secondLongestEdgeMm)
+  const normalizedUnits = lengthMm / normalizationLengthMm
+  if (!Number.isFinite(normalizedUnits) || normalizedUnits < 0) return undefined
+  return { lengthMm, normalizedUnits }
+}
+
 interface PolygonEdge {
   readonly start: InternalPoint
   readonly end: InternalPoint
@@ -35,6 +64,16 @@ function polygonEdges(points: ReadonlyArray<InternalPoint>): ReadonlyArray<Polyg
     edges.push({ start, end })
   }
   return edges
+}
+
+function longestPolygonEdgeLength(points: ReadonlyArray<InternalPoint>): number | undefined {
+  let longestEdgeLength = 0
+  for (const edge of polygonEdges(points)) {
+    const edgeLength = Math.hypot(edge.end.x - edge.start.x, edge.end.y - edge.start.y)
+    if (!Number.isFinite(edgeLength) || edgeLength <= 0) return undefined
+    longestEdgeLength = Math.max(longestEdgeLength, edgeLength)
+  }
+  return longestEdgeLength > 0 ? longestEdgeLength : undefined
 }
 
 function collinearOverlapLength(first: PolygonEdge, second: PolygonEdge): number | undefined {

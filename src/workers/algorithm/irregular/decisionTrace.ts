@@ -151,6 +151,8 @@ export class IrregularDecisionTraceLocalScore {
 export class IrregularDecisionTraceLayoutScore {
   readonly unplacedCount: number
   readonly sharedCollisionBoundaryLengthMm: number
+  readonly sharedCollisionBoundaryContactUnits: number
+  readonly sharedCollisionBoundaryContactBand: number
   readonly occupiedHullWasteRatio: number
   readonly collisionBoundsWorstNormalizedSheetConsumption: number
   readonly collisionBoundsNormalizedSpanSum: number
@@ -166,6 +168,8 @@ export class IrregularDecisionTraceLayoutScore {
   constructor(input: {
     readonly unplacedCount: number
     readonly sharedCollisionBoundaryLengthMm: number
+    readonly sharedCollisionBoundaryContactUnits: number
+    readonly sharedCollisionBoundaryContactBand: number
     readonly occupiedHullWasteRatio: number
     readonly collisionBoundsWorstNormalizedSheetConsumption: number
     readonly collisionBoundsNormalizedSpanSum: number
@@ -180,6 +184,8 @@ export class IrregularDecisionTraceLayoutScore {
   }) {
     this.unplacedCount = input.unplacedCount
     this.sharedCollisionBoundaryLengthMm = input.sharedCollisionBoundaryLengthMm
+    this.sharedCollisionBoundaryContactUnits = input.sharedCollisionBoundaryContactUnits
+    this.sharedCollisionBoundaryContactBand = input.sharedCollisionBoundaryContactBand
     this.occupiedHullWasteRatio = input.occupiedHullWasteRatio
     this.collisionBoundsWorstNormalizedSheetConsumption =
       input.collisionBoundsWorstNormalizedSheetConsumption

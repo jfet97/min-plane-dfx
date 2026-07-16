@@ -13,7 +13,10 @@ import { GeometrySettings } from '../../irregular/geometryKernel.js'
 import { GeometryPredicates } from '../../irregular/geometryPredicates.js'
 import type { InternalPoint } from '../../irregular/internalGeometry.js'
 import { IrregularBeamState } from './irregularBeamState.js'
-import { canonicalizeIrregularScoreMillimeters } from './irregularScoreGrid.js'
+import {
+  canonicalizeIrregularScoreMillimeters,
+  canonicalizeIrregularScoreScalar
+} from './irregularScoreGrid.js'
 
 /** A typed failure raised only when derived scoring arithmetic is non-finite. */
 export class IrregularLayoutScoringError extends Data.TaggedError('IrregularLayoutScoringError')<{
@@ -57,6 +60,10 @@ export interface IrregularLayoutScore {
   readonly unplacedCount: number
   /** Total exact boundary shared by translated padded collision polygons. */
   readonly sharedCollisionBoundaryLengthMm: number
+  /** Cumulative shared boundary normalized by each pair's structural edge scale. */
+  readonly sharedCollisionBoundaryContactUnits: number
+  /** Whole normalized contact units retained before compactness breaks the tie. */
+  readonly sharedCollisionBoundaryContactBand: number
   /** Largest net boundary-minus-holes material region; larger is better. */
   readonly largestNetFreeMaterialRegionAreaMm2: number
   /** Number of disconnected material regions; smaller is better. */
@@ -254,6 +261,13 @@ function scoreDerivedState(
   const sharedCollisionBoundaryLengthMm = canonicalizeIrregularScoreMillimeters(
     input.state.sharedCollisionBoundaryLengthMm ?? Number.NaN
   )
+  const sharedCollisionBoundaryContactUnits = canonicalizeIrregularScoreScalar(
+    input.state.sharedCollisionBoundaryContactUnits ?? Number.NaN
+  )
+  const sharedCollisionBoundaryContactBand =
+    sharedCollisionBoundaryContactUnits === undefined
+      ? undefined
+      : Math.floor(sharedCollisionBoundaryContactUnits)
   const occupiedHullWasteRatio = deriveOccupiedHullWasteRatio(input.state)
 
   if (
@@ -264,6 +278,9 @@ function scoreDerivedState(
     !Number.isFinite(collisionBoundsAreaMm2) ||
     !Number.isFinite(collisionBoundsSpanMm) ||
     sharedCollisionBoundaryLengthMm === undefined ||
+    sharedCollisionBoundaryContactUnits === undefined ||
+    sharedCollisionBoundaryContactBand === undefined ||
+    !Number.isSafeInteger(sharedCollisionBoundaryContactBand) ||
     occupiedHullWasteRatio === undefined ||
     !Number.isFinite(collisionBoundsBottomMm) ||
     !Number.isFinite(collisionBoundsLeftMm)
@@ -274,6 +291,8 @@ function scoreDerivedState(
   return Effect.succeed({
     unplacedCount: input.state.unplacedSourcePieceIds.length,
     sharedCollisionBoundaryLengthMm,
+    sharedCollisionBoundaryContactUnits,
+    sharedCollisionBoundaryContactBand,
     ...materialMetrics,
     collisionBoundsWorstNormalizedSheetConsumption,
     collisionBoundsNormalizedSpanSum,
@@ -469,12 +488,15 @@ function compareScores(first: IrregularLayoutScore, second: IrregularLayoutScore
 
 const layoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
   scoreCriterion((score) => score.unplacedCount),
-  descendingScoreCriterion((score) => score.sharedCollisionBoundaryLengthMm),
+  // a whole normalized edge-contact band matters; sub-band chamfer gains do not beat compactness
+  descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactBand),
   scoreCriterion((score) => score.collisionBoundsWorstNormalizedSheetConsumption),
   scoreCriterion((score) => score.collisionBoundsNormalizedSpanSum),
   scoreCriterion((score) => score.collisionBoundsAreaMm2),
   scoreCriterion((score) => score.collisionBoundsSpanMm),
   scoreCriterion((score) => score.occupiedHullWasteRatio),
+  descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactUnits),
+  descendingScoreCriterion((score) => score.sharedCollisionBoundaryLengthMm),
   scoreCriterion((score) => score.collisionBoundsBottomMm),
   scoreCriterion((score) => score.collisionBoundsLeftMm),
   // free area is almost constant when every placed polygon remains inside one sheet region

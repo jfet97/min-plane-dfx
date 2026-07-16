@@ -1041,6 +1041,8 @@ function scoreSummary(score: IrregularLayoutScore): IrregularLayoutScoreSummary 
   return new IrregularLayoutScoreSummary({
     unplacedCount: score.unplacedCount,
     sharedCollisionBoundaryLengthMm: score.sharedCollisionBoundaryLengthMm,
+    sharedCollisionBoundaryContactUnits: score.sharedCollisionBoundaryContactUnits,
+    sharedCollisionBoundaryContactBand: score.sharedCollisionBoundaryContactBand,
     largestNetFreeMaterialRegionAreaMm2: score.largestNetFreeMaterialRegionAreaMm2,
     freeMaterialRegionCount: score.freeMaterialRegionCount,
     freeMaterialHoleCount: score.freeMaterialHoleCount,

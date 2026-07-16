@@ -1001,6 +1001,8 @@ function decisionTraceLayoutScore(score: IrregularLayoutScore): IrregularDecisio
   return new IrregularDecisionTraceLayoutScore({
     unplacedCount: score.unplacedCount,
     sharedCollisionBoundaryLengthMm: score.sharedCollisionBoundaryLengthMm,
+    sharedCollisionBoundaryContactUnits: score.sharedCollisionBoundaryContactUnits,
+    sharedCollisionBoundaryContactBand: score.sharedCollisionBoundaryContactBand,
     occupiedHullWasteRatio: score.occupiedHullWasteRatio,
     collisionBoundsWorstNormalizedSheetConsumption:
       score.collisionBoundsWorstNormalizedSheetConsumption,

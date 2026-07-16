@@ -317,17 +317,20 @@ terminal legality-audit status, and the complete whole-layout score. The score
 is compared in this order:
 
 1. lower `unplacedCount`;
-2. higher `sharedCollisionBoundaryLengthMm`;
+2. higher whole `sharedCollisionBoundaryContactBand`, where each polygon-pair
+   contact is normalized by the smaller polygon's longest collision edge;
 3. lower `collisionBoundsWorstNormalizedSheetConsumption`;
 4. lower `collisionBoundsNormalizedSpanSum`;
 5. lower `collisionBoundsAreaMm2`;
 6. lower `collisionBoundsSpanMm`;
 7. lower `occupiedHullWasteRatio`;
-8. lower collision-bound `minY`, then `minX`, to anchor equivalent layouts at lower-left;
-9. higher `largestNetFreeMaterialRegionAreaMm2`;
-10. lower `freeMaterialRegionCount`;
-11. lower `freeMaterialHoleCount`;
-12. lower `freeMaterialSliverMetric`.
+8. higher normalized contact units, then exact shared boundary length, only
+   after compactness has decided within the same whole-contact band;
+9. lower collision-bound `minY`, then `minX`, to anchor equivalent layouts at lower-left;
+10. higher `largestNetFreeMaterialRegionAreaMm2`;
+11. lower `freeMaterialRegionCount`;
+12. lower `freeMaterialHoleCount`;
+13. lower `freeMaterialSliverMetric`.
 
 Collision-bound compactness intentionally comes before free-material diagnostics:
 when every piece stays within one connected sheet region, the total free area is

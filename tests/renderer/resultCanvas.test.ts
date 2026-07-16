@@ -127,6 +127,8 @@ describe('result canvas transforms', () => {
       score: {
         unplacedCount: 1,
         sharedCollisionBoundaryLengthMm: 12,
+        sharedCollisionBoundaryContactUnits: 1.5,
+        sharedCollisionBoundaryContactBand: 1,
         largestNetFreeMaterialRegionAreaMm2: 125,
         freeMaterialRegionCount: 2,
         freeMaterialHoleCount: 1,

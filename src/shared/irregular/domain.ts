@@ -502,6 +502,10 @@ export class IrregularLayoutScoreSummary extends Schema.Class<IrregularLayoutSco
   unplacedCount: NonNegativeFiniteInteger,
   /** Optional for backward-compatible decoding of results saved before contact scoring. */
   sharedCollisionBoundaryLengthMm: Schema.optional(NonNegativeFiniteNumber),
+  /** Optional for results saved before scale-normalized contact scoring. */
+  sharedCollisionBoundaryContactUnits: Schema.optional(NonNegativeFiniteNumber),
+  /** Optional whole-contact band used by the whole-layout comparator. */
+  sharedCollisionBoundaryContactBand: Schema.optional(NonNegativeFiniteInteger),
   largestNetFreeMaterialRegionAreaMm2: NonNegativeFiniteNumber,
   freeMaterialRegionCount: NonNegativeFiniteInteger,
   freeMaterialHoleCount: NonNegativeFiniteInteger,

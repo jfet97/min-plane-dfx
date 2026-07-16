@@ -343,22 +343,60 @@ describe('IrregularLayoutScorer', () => {
       label: 'shared-boundary score sheet'
     })
     const touching = state([
-      placedRectangle('touching-left', 4, 2, 0, 0),
-      placedRectangle('touching-right', 4, 2, 4, 0)
+      placedRectangle('touching-left', 2, 2, 0, 0),
+      placedRectangle('touching-right', 2, 2, 2, 0)
     ])
     const disconnected = state([
-      placedRectangle('disconnected-bottom', 4, 2, 0, 0),
-      placedRectangle('disconnected-top', 4, 2, 0, 3)
+      placedRectangle('disconnected-bottom', 2, 2, 0, 0),
+      placedRectangle('disconnected-top', 2, 2, 0, 3)
     ])
     const touchingScore = await score({ sheet: currentSheet, state: touching })
     const disconnectedScore = await score({ sheet: currentSheet, state: disconnected })
 
     expect(touchingScore.sharedCollisionBoundaryLengthMm).toBe(2)
+    expect(touchingScore.sharedCollisionBoundaryContactUnits).toBe(1)
+    expect(touchingScore.sharedCollisionBoundaryContactBand).toBe(1)
     expect(disconnectedScore.sharedCollisionBoundaryLengthMm).toBe(0)
+    expect(disconnectedScore.sharedCollisionBoundaryContactBand).toBe(0)
     expect(touchingScore.collisionBoundsWorstNormalizedSheetConsumption).toBeGreaterThan(
       disconnectedScore.collisionBoundsWorstNormalizedSheetConsumption
     )
     expect(await compareScores(touchingScore, disconnectedScore)).toBeLessThan(0)
+  })
+
+  it('lets compactness decide inside one normalized contact band', async () => {
+    const compact = await score(
+      state([
+        placedRectangle('compact-left', 2, 2, 0, 0),
+        placedRectangle('compact-right', 2, 2, 2, 0)
+      ])
+    )
+    const longerRawContact = await score(
+      state([
+        placedRectangle('tall-bottom', 4, 3, 0, 0),
+        placedRectangle('tall-top', 4, 3, 0, 3)
+      ])
+    )
+
+    expect(compact.sharedCollisionBoundaryContactBand).toBe(1)
+    expect(longerRawContact.sharedCollisionBoundaryContactBand).toBe(1)
+    expect(longerRawContact.sharedCollisionBoundaryLengthMm).toBeGreaterThan(
+      compact.sharedCollisionBoundaryLengthMm
+    )
+    expect(await compareScores(compact, longerRawContact)).toBeLessThan(0)
+  })
+
+  it('keeps short chamfer-sized contact below one structural contact band', async () => {
+    const chamferContact = await score(
+      state([
+        placedRectangle('wide-left', 10, 1, 0, 0),
+        placedRectangle('wide-right', 10, 1, 10, 0)
+      ])
+    )
+
+    expect(chamferContact.sharedCollisionBoundaryLengthMm).toBe(1)
+    expect(chamferContact.sharedCollisionBoundaryContactUnits).toBe(0.1)
+    expect(chamferContact.sharedCollisionBoundaryContactBand).toBe(0)
   })
 
   it('canonicalizes translated bounds and anchors symmetric layouts before free material', async () => {
@@ -727,6 +765,9 @@ describe('IrregularLayoutScorer', () => {
     })
     expect(child.translatedCollisionBounds).toEqual(rebuilt.translatedCollisionBounds)
     expect(child.sharedCollisionBoundaryLengthMm).toBe(rebuilt.sharedCollisionBoundaryLengthMm)
+    expect(child.sharedCollisionBoundaryContactUnits).toBe(
+      rebuilt.sharedCollisionBoundaryContactUnits
+    )
 
     const unplacedChild = child.withUnplacedPiece({
       remainingPreparedPieces: [],
@@ -736,6 +777,9 @@ describe('IrregularLayoutScorer', () => {
     expect(unplacedChild.translatedCollisionBounds).toEqual(child.translatedCollisionBounds)
     expect(unplacedChild.sharedCollisionBoundaryLengthMm).toBe(
       child.sharedCollisionBoundaryLengthMm
+    )
+    expect(unplacedChild.sharedCollisionBoundaryContactUnits).toBe(
+      child.sharedCollisionBoundaryContactUnits
     )
   })
 
