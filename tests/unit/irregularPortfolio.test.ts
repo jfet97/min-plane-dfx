@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { importDxfFile } from '@main/services/DxfImportService.js'
-import { JobId } from '@shared/domain/ids.js'
+import { JobId, PieceId } from '@shared/domain/ids.js'
 import { NestingOptions, NestingRequest, SheetSpec } from '@shared/domain/nesting.js'
 import { preparePieces } from '@shared/preparePieces.js'
 import {
@@ -19,6 +19,13 @@ import {
 } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { IrregularLayoutScorer } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/irregularPlacementScorer.js'
+import {
+  makeDeterministicInitialPopulation,
+  selectBetterIrregularPortfolioCandidate,
+  type IrregularChromosomeGeneControls,
+  type IrregularChromosomePiece,
+  type IrregularPortfolioChromosome
+} from '../../src/workers/algorithm/irregular/portfolioSearch.js'
 import { CollisionGeometryBuilder } from '../../src/workers/irregular/collisionGeometryBuilder.js'
 import { FreeMaterialServiceLive } from '../../src/workers/irregular/freeMaterialService.js'
 import { GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
@@ -125,7 +132,186 @@ function publicPortfolio(result: IrregularComputeResult): IrregularPortfolioResu
   return result.portfolio
 }
 
+function makeLayoutScorer(
+  geometrySettings: IrregularNestingSettings
+): Promise<IrregularLayoutScorer.Service> {
+  return Effect.runPromise(
+    IrregularLayoutScorer.use((service) => Effect.succeed(service)).pipe(
+      Effect.provide(IrregularLayoutScorer.Live),
+      Effect.provide(Layer.succeed(GeometrySettings, geometrySettings))
+    )
+  )
+}
+
+function chromosomeKey(chromosome: IrregularPortfolioChromosome): string {
+  const transforms = [...chromosome.transformPreferences.entries()]
+    .sort(([first], [second]) => first.localeCompare(second))
+    .map(([pieceId, transformIndex]) => `${pieceId}:${transformIndex}`)
+    .join(',')
+  return `${chromosome.priorityOrder.join('|')}::${transforms}::${chromosome.policyId}`
+}
+
 describe('irregular GA portfolio', () => {
+  it('creates deterministic diverse initial chromosomes around the baseline', () => {
+    const firstPieceId = PieceId.make('seed-piece-a')
+    const secondPieceId = PieceId.make('seed-piece-b')
+    const pieces: ReadonlyArray<IrregularChromosomePiece> = [
+      {
+        pieceId: firstPieceId,
+        source: { id: firstPieceId },
+        transforms: [{ index: 0 }, { index: 1 }, { index: 2 }]
+      },
+      {
+        pieceId: secondPieceId,
+        source: { id: secondPieceId },
+        transforms: [{ index: 0 }, { index: 1 }, { index: 2 }]
+      }
+    ]
+    const baseline: IrregularPortfolioChromosome = {
+      priorityOrder: [firstPieceId, secondPieceId],
+      transformPreferences: new Map(),
+      policyId: 'balanced-compactness'
+    }
+    const geneControls: IrregularChromosomeGeneControls = {
+      priorityOrderMutationEnabled: true,
+      transformPreferenceMutationEnabled: true,
+      placementPolicyMutationEnabled: true
+    }
+    const input = {
+      baseline,
+      pieces,
+      configuredPolicies: ['balanced-compactness', 'short-side-fill'] as const,
+      populationSize: 8,
+      gaSeed: 'diversity-regression-seed',
+      geneControls
+    }
+
+    const first = makeDeterministicInitialPopulation(input)
+    const second = makeDeterministicInitialPopulation(input)
+
+    expect(first[0]).toBe(baseline)
+    expect(first.map(chromosomeKey)).toEqual(second.map(chromosomeKey))
+    expect(new Set(first.map(chromosomeKey)).size).toBeGreaterThanOrEqual(4)
+  })
+
+  it('never lets GA selection regress the deterministic baseline score', async () => {
+    const sources = await sourcesPromise
+    const baseline = await Effect.runPromise(
+      run(
+        request(sources),
+        settings({
+          gaEnabled: false,
+          baselineOnly: true,
+          gaEvaluationBudget: 0,
+          gaGenerationBudget: 0,
+          gaTimeBudgetMs: 0
+        })
+      )
+    )
+    const ga = await Effect.runPromise(
+      run(
+        request(sources),
+        settings({
+          gaEnabled: true,
+          baselineOnly: false,
+          gaPopulation: 6,
+          gaGenerationBudget: 1,
+          gaEvaluationBudget: 6,
+          gaTimeBudgetMs: 60_000,
+          gaSeed: 'incumbent-regression-seed'
+        })
+      )
+    )
+
+    const scorer = await makeLayoutScorer(settings())
+    const comparison = scorer.compare(ga.score, baseline.score)
+    expect(comparison).toBeLessThanOrEqual(0)
+    if (comparison === 0) {
+      expect(ga.portfolio.placements).toEqual(baseline.portfolio.placements)
+    }
+    expect(ga.portfolio.unplacedPieceIds.length).toBeLessThanOrEqual(
+      baseline.portfolio.unplacedPieceIds.length
+    )
+  })
+
+  it('uses canonical placement and unplaced-id tie-breaks before incumbent fallback', async () => {
+    const sources = await sourcesPromise
+    const geometrySettings = settings({
+      gaEnabled: false,
+      baselineOnly: true,
+      gaEvaluationBudget: 0,
+      gaGenerationBudget: 0,
+      gaTimeBudgetMs: 0
+    })
+    const result = await Effect.runPromise(run(request(sources), geometrySettings))
+    const scorer = await makeLayoutScorer(geometrySettings)
+    const baselineScore = {
+      ...result.score,
+      placementOrder: [PieceId.make('z-placement')],
+      unplacedSourcePieceIds: [PieceId.make('z-unplaced')]
+    }
+    const placementTieBreakScore = {
+      ...baselineScore,
+      placementOrder: [PieceId.make('a-placement')]
+    }
+    const placementSelection = selectBetterIrregularPortfolioCandidate(
+      {
+        chromosomeKey: 'baseline',
+        score: baselineScore,
+        value: 'baseline'
+      },
+      {
+        chromosomeKey: 'candidate',
+        score: placementTieBreakScore,
+        value: 'candidate'
+      },
+      scorer,
+      'baseline'
+    )
+
+    expect(scorer.compare(placementTieBreakScore, baselineScore)).toBeLessThan(0)
+    expect(placementSelection).toBe('candidate')
+
+    const unplacedTieBreakScore = {
+      ...baselineScore,
+      unplacedSourcePieceIds: [PieceId.make('a-unplaced')]
+    }
+    const unplacedSelection = selectBetterIrregularPortfolioCandidate(
+      {
+        chromosomeKey: 'baseline',
+        score: baselineScore,
+        value: 'baseline'
+      },
+      {
+        chromosomeKey: 'candidate',
+        score: unplacedTieBreakScore,
+        value: 'candidate'
+      },
+      scorer,
+      'baseline'
+    )
+
+    expect(scorer.compare(unplacedTieBreakScore, baselineScore)).toBeLessThan(0)
+    expect(unplacedSelection).toBe('candidate')
+
+    const exactTieSelection = selectBetterIrregularPortfolioCandidate(
+      {
+        chromosomeKey: 'baseline',
+        score: baselineScore,
+        value: 'baseline'
+      },
+      {
+        chromosomeKey: 'candidate',
+        score: baselineScore,
+        value: 'candidate'
+      },
+      scorer,
+      'baseline'
+    )
+
+    expect(exactTieSelection).toBe('baseline')
+  })
+
   it('reproduces the validated result and deterministic progress sequence for a seed', async () => {
     const sources = await sourcesPromise
     const nestingRequest = request(sources)

@@ -289,11 +289,22 @@ score criteria, or the winning-path history.
 
 `portfolioSearch.ts` owns chromosome construction, deterministic PRNG mutation,
 crossover, evaluation/generation/time checkpoints, progress, cancellation, and
-selection between the GA and beam results. Its transform gene is a preferred
-candidate index with deterministic fallback to the remaining legal transforms;
-it never encodes raw coordinates. `geometryCacheKeys.ts` namespaces transformed
-geometry, pairwise NFP, and IFP artifacts by their complete geometry/settings
-identity, and validates cached artifacts before reuse. Pairwise NFP keys use
+selection between the GA and beam results. GA initialization always puts the
+deterministic priority-ordered chromosome first as the greedy incumbent. The
+remaining initial chromosomes use deterministic single-gene and multi-gene
+mutation strata derived from `gaSeed`, deduplicate when alternatives are
+available, and fall back to the incumbent only when the configured gene space
+cannot produce enough distinct chromosomes. Every later generation carries the
+same incumbent forward, and final portfolio selection compares it with every
+GA result, so broader search cannot discard a baseline result. Its transform
+gene is a preferred candidate index with deterministic fallback to the
+remaining legal transforms; it never encodes raw coordinates. Portfolio
+selection uses the same `IrregularLayoutScorer` ordering as beam retention,
+including placement order and unplaced source ids as final deterministic
+tie-breaks; the incumbent preference applies only on a complete score tie.
+`geometryCacheKeys.ts` namespaces transformed geometry, pairwise NFP, and IFP
+artifacts by their complete geometry/settings identity, and validates cached
+artifacts before reuse. Pairwise NFP keys use
 canonical transformed fixed and moving polygon geometry plus transform, settings,
 NFP operation, and construction algorithm identity; they deliberately exclude
 piece ids and fixed sheet translation. The pairwise cache stores only the

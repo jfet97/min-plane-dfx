@@ -22,7 +22,7 @@ import {
   type RunPortfolioInput
 } from '../../irregular/services.js'
 import { IrregularPlacementScorer } from './irregularPlacementScorer.js'
-import { IrregularLayoutScore, IrregularLayoutScorer } from './irregularLayoutScorer.js'
+import { IrregularLayoutScorer, type IrregularLayoutScore } from './irregularLayoutScorer.js'
 import {
   IrregularWindowedBeamOptions,
   IrregularWindowedBeamAbortedError,
@@ -31,16 +31,26 @@ import {
   runWindowedIrregularBeam
 } from './windowedBeam.js'
 
-interface Chromosome {
+export interface IrregularPortfolioChromosome {
   readonly priorityOrder: ReadonlyArray<PieceId>
   readonly transformPreferences: ReadonlyMap<PieceId, number>
   readonly policyId: IrregularPlacementPolicyId
 }
 
-interface ChromosomeGeneControls {
+type Chromosome = IrregularPortfolioChromosome
+
+export interface IrregularChromosomeGeneControls {
   readonly priorityOrderMutationEnabled: boolean
   readonly transformPreferenceMutationEnabled: boolean
   readonly placementPolicyMutationEnabled: boolean
+}
+
+type ChromosomeGeneControls = IrregularChromosomeGeneControls
+
+export interface IrregularChromosomePiece {
+  readonly pieceId?: PieceId | undefined
+  readonly source: { readonly id: PieceId }
+  readonly transforms: ReadonlyArray<{ readonly index: number }>
 }
 
 interface EvaluatedChromosome {
@@ -81,6 +91,24 @@ interface PortfolioDependencies {
   readonly nfpIfpService: NfpIfpService
   readonly placementScorer: IrregularPlacementScorer.Service
   readonly layoutScorer: IrregularLayoutScorer.Service
+}
+
+export function makeDeterministicInitialPopulation(input: {
+  readonly baseline: IrregularPortfolioChromosome
+  readonly pieces: ReadonlyArray<IrregularChromosomePiece>
+  readonly configuredPolicies: ReadonlyArray<IrregularPlacementPolicyId>
+  readonly populationSize: number
+  readonly gaSeed: string
+  readonly geneControls: IrregularChromosomeGeneControls
+}): ReadonlyArray<IrregularPortfolioChromosome> {
+  return makeInitialPopulation(
+    input.baseline,
+    input.pieces,
+    input.configuredPolicies,
+    input.populationSize,
+    new DeterministicPrng(input.gaSeed),
+    input.geneControls
+  )
 }
 
 /** Real deterministic implementation of the bounded irregular search portfolio. */
@@ -272,7 +300,12 @@ function runPortfolio(
         if (key !== baselineKey) {
           bestGa = chooseBetter(bestGa, evaluated, dependencies.layoutScorer)
         }
-        bestOverall = chooseBetter(bestOverall, evaluated, dependencies.layoutScorer)
+        bestOverall = chooseBetter(
+          bestOverall,
+          evaluated,
+          dependencies.layoutScorer,
+          baselineKey
+        )
         yield* reportProgress(input, {
           phase: 'ga_search',
           generation,
@@ -288,6 +321,7 @@ function runPortfolio(
       if (terminalStatus !== undefined || generationResults.length < population.length) break
       generation += 1
       population = nextPopulation(
+        baselineChromosome,
         generationResults.toSorted(evaluatedOrder(dependencies.layoutScorer)),
         baselinePieces,
         configuredPolicies,
@@ -301,7 +335,12 @@ function runPortfolio(
       terminalStatus = 'budget-expired'
       terminationReason = 'generation_budget'
     }
-    const selected = chooseBetter(bestOverall, bestGa, dependencies.layoutScorer)
+    const selected = chooseBetter(
+      bestOverall,
+      bestGa,
+      dependencies.layoutScorer,
+      baselineKey
+    )
     if (input.isCancelled?.() === true) {
       terminalStatus = 'cancelled'
       terminationReason = 'cancelled'
@@ -419,25 +458,71 @@ function decodeChromosome(input: {
 
 function makeInitialPopulation(
   baseline: Chromosome,
-  pieces: ReadonlyArray<IrregularPreparedPiece>,
+  pieces: ReadonlyArray<IrregularChromosomePiece>,
   configuredPolicies: ReadonlyArray<IrregularPlacementPolicyId>,
   populationSize: number,
   random: DeterministicPrng,
   geneControls: ChromosomeGeneControls
 ): ReadonlyArray<Chromosome> {
   const population: Chromosome[] = [baseline]
-  while (population.length < populationSize) {
-    const mutationCount = 1 + (population.length % 3)
-    let candidate = baseline
-    for (let mutationIndex = 0; mutationIndex < mutationCount; mutationIndex += 1) {
-      candidate = mutateChromosome(candidate, pieces, configuredPolicies, random, geneControls)
-    }
-    population.push(candidate)
+  const seen = new Set([chromosomeKey(baseline)])
+  const enabledGenes = enabledMutationGenes(geneControls)
+  if (enabledGenes.length === 0) {
+    return fillPopulation(population, baseline, populationSize)
   }
-  return population
+
+  let compatibilityCandidate = baseline
+  const compatibilityMutationCount = 1 + (population.length % 3)
+  for (let mutationIndex = 0; mutationIndex < compatibilityMutationCount; mutationIndex += 1) {
+    compatibilityCandidate = mutateChromosome(
+      compatibilityCandidate,
+      pieces,
+      configuredPolicies,
+      random,
+      geneControls
+    )
+  }
+  addUniqueChromosome(population, seen, compatibilityCandidate)
+
+  for (const plan of initialMutationPlans(enabledGenes, populationSize)) {
+    if (population.length >= populationSize) break
+    const candidate = applyMutationPlan(
+      baseline,
+      plan,
+      pieces,
+      configuredPolicies,
+      random,
+      geneControls
+    )
+    addUniqueChromosome(population, seen, candidate)
+  }
+
+  const maximumFallbackAttempts = Math.max(8, populationSize * 4)
+  let fallbackAttempt = 0
+  while (population.length < populationSize && fallbackAttempt < maximumFallbackAttempts) {
+    const mutationCount = 1 + random.nextInt(Math.min(4, enabledGenes.length + 1))
+    const plan: ChromosomeMutationGene[] = []
+    for (let mutationIndex = 0; mutationIndex < mutationCount; mutationIndex += 1) {
+      const gene = enabledGenes[random.nextInt(enabledGenes.length)]
+      if (gene !== undefined) plan.push(gene)
+    }
+    const candidate = applyMutationPlan(
+      baseline,
+      plan,
+      pieces,
+      configuredPolicies,
+      random,
+      geneControls
+    )
+    addUniqueChromosome(population, seen, candidate)
+    fallbackAttempt += 1
+  }
+
+  return fillPopulation(population, baseline, populationSize)
 }
 
 function nextPopulation(
+  baseline: Chromosome,
   scored: ReadonlyArray<EvaluatedChromosome>,
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   configuredPolicies: ReadonlyArray<IrregularPlacementPolicyId>,
@@ -448,7 +533,12 @@ function nextPopulation(
   const eliteCount = Math.max(1, Math.floor(populationSize / 8))
   const elites = scored.slice(0, eliteCount).map(({ chromosome }) => chromosome)
   const parentPool = scored.slice(0, Math.max(1, Math.ceil(scored.length / 2)))
-  const next: Chromosome[] = [...elites]
+  const baselineKey = chromosomeKey(baseline)
+  const next: Chromosome[] = [baseline]
+  for (const elite of elites) {
+    if (next.length >= populationSize) break
+    if (chromosomeKey(elite) !== baselineKey) next.push(elite)
+  }
   while (next.length < populationSize) {
     const firstParent = parentPool[random.nextInt(parentPool.length)]
     const secondParent = parentPool[random.nextInt(parentPool.length)]
@@ -466,6 +556,80 @@ function nextPopulation(
     )
   }
   return next
+}
+
+type ChromosomeMutationGene =
+  | 'priority-order'
+  | 'transform-preference'
+  | 'placement-policy'
+
+function enabledMutationGenes(
+  controls: ChromosomeGeneControls
+): ReadonlyArray<ChromosomeMutationGene> {
+  const genes: ChromosomeMutationGene[] = []
+  if (controls.priorityOrderMutationEnabled) genes.push('priority-order')
+  if (controls.transformPreferenceMutationEnabled) genes.push('transform-preference')
+  if (controls.placementPolicyMutationEnabled) genes.push('placement-policy')
+  return genes
+}
+
+function initialMutationPlans(
+  enabledGenes: ReadonlyArray<ChromosomeMutationGene>,
+  populationSize: number
+): ReadonlyArray<ReadonlyArray<ChromosomeMutationGene>> {
+  const plans: ChromosomeMutationGene[][] = []
+  for (let seedIndex = 0; seedIndex < populationSize - 1; seedIndex += 1) {
+    const mutationCount = Math.min(4, 1 + Math.floor(seedIndex / enabledGenes.length))
+    const plan: ChromosomeMutationGene[] = []
+    for (let mutationIndex = 0; mutationIndex < mutationCount; mutationIndex += 1) {
+      const gene = enabledGenes[(seedIndex + mutationIndex) % enabledGenes.length]
+      if (gene !== undefined) plan.push(gene)
+    }
+    plans.push(plan)
+  }
+  return plans
+}
+
+function applyMutationPlan(
+  baseline: Chromosome,
+  plan: ReadonlyArray<ChromosomeMutationGene>,
+  pieces: ReadonlyArray<IrregularChromosomePiece>,
+  configuredPolicies: ReadonlyArray<IrregularPlacementPolicyId>,
+  random: DeterministicPrng,
+  geneControls: ChromosomeGeneControls
+): Chromosome {
+  let candidate = baseline
+  for (const gene of plan) {
+    candidate = mutateChromosome(
+      candidate,
+      pieces,
+      configuredPolicies,
+      random,
+      geneControls,
+      gene
+    )
+  }
+  return candidate
+}
+
+function addUniqueChromosome(
+  population: Chromosome[],
+  seen: Set<string>,
+  candidate: Chromosome
+): void {
+  const key = chromosomeKey(candidate)
+  if (seen.has(key)) return
+  seen.add(key)
+  population.push(candidate)
+}
+
+function fillPopulation(
+  population: Chromosome[],
+  baseline: Chromosome,
+  populationSize: number
+): ReadonlyArray<Chromosome> {
+  while (population.length < populationSize) population.push(baseline)
+  return population
 }
 
 function crossoverChromosomes(
@@ -541,17 +705,25 @@ function crossoverTransformPreferences(
 
 function mutateChromosome(
   chromosome: Chromosome,
-  pieces: ReadonlyArray<IrregularPreparedPiece>,
+  pieces: ReadonlyArray<IrregularChromosomePiece>,
   configuredPolicies: ReadonlyArray<IrregularPlacementPolicyId>,
   random: DeterministicPrng,
-  geneControls: ChromosomeGeneControls
+  geneControls: ChromosomeGeneControls,
+  preferredGene: ChromosomeMutationGene | undefined = undefined
 ): Chromosome {
   const priorityOrder = [...chromosome.priorityOrder]
-  if (geneControls.priorityOrderMutationEnabled && priorityOrder.length > 1) {
-    const operation = random.nextInt(3)
+  if (
+    geneControls.priorityOrderMutationEnabled &&
+    (preferredGene === undefined || preferredGene === 'priority-order') &&
+    priorityOrder.length > 1
+  ) {
+    const operation = preferredGene === 'priority-order' ? 0 : random.nextInt(3)
     if (operation === 0) {
       const firstIndex = random.nextInt(priorityOrder.length)
-      const secondIndex = random.nextInt(priorityOrder.length)
+      const secondIndex =
+        preferredGene === 'priority-order'
+          ? differentIndex(random, priorityOrder.length, firstIndex)
+          : random.nextInt(priorityOrder.length)
       const firstPiece = priorityOrder[firstIndex]
       const secondPiece = priorityOrder[secondIndex]
       if (firstPiece !== undefined && secondPiece !== undefined) {
@@ -575,27 +747,51 @@ function mutateChromosome(
   }
 
   const transformPreferences = new Map(chromosome.transformPreferences)
-  if (geneControls.transformPreferenceMutationEnabled && pieces.length > 0) {
+  if (
+    geneControls.transformPreferenceMutationEnabled &&
+    (preferredGene === undefined || preferredGene === 'transform-preference') &&
+    pieces.length > 0
+  ) {
     const piece = pieces[random.nextInt(pieces.length)]
     if (piece !== undefined && piece.transforms.length > 0) {
-      const transform = piece.transforms[random.nextInt(piece.transforms.length)]
-      if (transform !== undefined) transformPreferences.set(preparedPieceId(piece), transform.index)
+      const pieceId = preparedPieceId(piece)
+      const currentPreference = transformPreferences.get(pieceId)
+      const availableTransforms =
+        preferredGene === 'transform-preference'
+          ? piece.transforms.filter(({ index }) => index !== currentPreference)
+          : piece.transforms
+      const transform =
+        availableTransforms.length === 0
+          ? undefined
+          : availableTransforms[random.nextInt(availableTransforms.length)]
+      if (transform !== undefined) transformPreferences.set(pieceId, transform.index)
     }
   }
 
+  const policyCandidates =
+    preferredGene === 'placement-policy'
+      ? configuredPolicies.filter((policyId) => policyId !== chromosome.policyId)
+      : configuredPolicies
   const policyId =
     geneControls.placementPolicyMutationEnabled &&
+    (preferredGene === undefined || preferredGene === 'placement-policy') &&
     configuredPolicies.length > 0 &&
-    random.chance(0.35)
-      ? (configuredPolicies[random.nextInt(configuredPolicies.length)] ?? chromosome.policyId)
+    policyCandidates.length > 0 &&
+    (preferredGene === 'placement-policy' || random.chance(0.35))
+      ? (policyCandidates[random.nextInt(policyCandidates.length)] ?? chromosome.policyId)
       : chromosome.policyId
   return { priorityOrder, transformPreferences, policyId }
+}
+
+function differentIndex(random: DeterministicPrng, length: number, excluded: number): number {
+  return (excluded + 1 + random.nextInt(length - 1)) % length
 }
 
 function chooseBetter(
   first: EvaluatedChromosome | undefined,
   second: EvaluatedChromosome | undefined,
-  scorer: IrregularLayoutScorer.Service
+  scorer: IrregularLayoutScorer.Service,
+  preferredChromosomeKey: string | undefined = undefined
 ): EvaluatedChromosome {
   if (first === undefined && second === undefined) {
     throw new Error('portfolio requires at least one validated layout')
@@ -605,10 +801,46 @@ function chooseBetter(
     return second
   }
   if (second === undefined) return first
+  return selectBetterIrregularPortfolioCandidate(
+    {
+      chromosomeKey: chromosomeKey(first.chromosome),
+      score: first.score,
+      value: first
+    },
+    {
+      chromosomeKey: chromosomeKey(second.chromosome),
+      score: second.score,
+      value: second
+    },
+    scorer,
+    preferredChromosomeKey
+  )
+}
+
+export function selectBetterIrregularPortfolioCandidate<T>(
+  first: {
+    readonly chromosomeKey: string
+    readonly score: IrregularLayoutScore
+    readonly value: T
+  },
+  second: {
+    readonly chromosomeKey: string
+    readonly score: IrregularLayoutScore
+    readonly value: T
+  },
+  scorer: IrregularLayoutScorer.Service,
+  preferredChromosomeKey: string | undefined = undefined
+): T {
   const comparison = scorer.compare(second.score, first.score)
-  if (comparison < 0) return second
-  if (comparison > 0) return first
-  return chromosomeKey(second.chromosome) < chromosomeKey(first.chromosome) ? second : first
+  if (comparison < 0) return second.value
+  if (comparison > 0) return first.value
+  if (preferredChromosomeKey !== undefined) {
+    const firstIsPreferred = first.chromosomeKey === preferredChromosomeKey
+    const secondIsPreferred = second.chromosomeKey === preferredChromosomeKey
+    if (firstIsPreferred && !secondIsPreferred) return first.value
+    if (secondIsPreferred && !firstIsPreferred) return second.value
+  }
+  return second.chromosomeKey < first.chromosomeKey ? second.value : first.value
 }
 
 function evaluatedOrder(scorer: IrregularLayoutScorer.Service): Order.Order<EvaluatedChromosome> {
@@ -725,7 +957,7 @@ function chromosomeKey(chromosome: Chromosome): string {
   return `${chromosome.priorityOrder.join('|')}::${transforms}::${chromosome.policyId}`
 }
 
-function preparedPieceId(piece: IrregularPreparedPiece): PieceId {
+function preparedPieceId(piece: IrregularChromosomePiece): PieceId {
   return piece.pieceId ?? piece.source.id
 }
 
