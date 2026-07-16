@@ -1043,6 +1043,7 @@ function scoreSummary(score: IrregularLayoutScore): IrregularLayoutScoreSummary 
     sharedCollisionBoundaryLengthMm: score.sharedCollisionBoundaryLengthMm,
     sharedCollisionBoundaryContactUnits: score.sharedCollisionBoundaryContactUnits,
     sharedCollisionBoundaryContactBand: score.sharedCollisionBoundaryContactBand,
+    nearCompleteStructuralContactCount: score.nearCompleteStructuralContactCount,
     largestNetFreeMaterialRegionAreaMm2: score.largestNetFreeMaterialRegionAreaMm2,
     freeMaterialRegionCount: score.freeMaterialRegionCount,
     freeMaterialHoleCount: score.freeMaterialHoleCount,

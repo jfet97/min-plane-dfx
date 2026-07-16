@@ -198,6 +198,8 @@ export function runWindowedIrregularBeam(input: {
     )
     const localCandidateFanout =
       settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth
+    const stateKey = (state: IrregularBeamState): string =>
+      beamStateKey(state, input.options?.transformPreferences)
 
     decisionTrace?.emit(new IrregularDecisionTraceDecodeStarted({
       decodeId: decisionTrace.decodeId,
@@ -244,7 +246,8 @@ export function runWindowedIrregularBeam(input: {
       for (const [parentIndex, state] of beam.entries()) {
         yield* controlCheckpoint(input.control, controlState)
         const isIncumbent = state === incumbentState
-        const parentStateId = decisionTrace?.stateIds.idFor(beamStateKey(state)) ?? ''
+        const parentStateKey = stateKey(state)
+        const parentStateId = decisionTrace?.stateIds.idFor(parentStateKey) ?? ''
         decisionTrace?.emit(new IrregularDecisionTraceParentState({
           decodeId: decisionTrace.decodeId,
           chromosomeId: decisionTrace.chromosomeId,
@@ -252,7 +255,7 @@ export function runWindowedIrregularBeam(input: {
           stepIndex,
           parentRank: parentIndex + 1,
           incumbent: isIncumbent,
-          state: decisionTraceState(state, decisionTrace)
+          state: decisionTraceState(state, decisionTrace, parentStateKey)
         }))
         const eligibleCount = Math.min(
           settings.optimizer.orderWindow,
@@ -310,7 +313,7 @@ export function runWindowedIrregularBeam(input: {
         }
       }
 
-      const uniqueSuccessors = dedupeRawSuccessors(successors, decisionTrace, stepIndex)
+      const uniqueSuccessors = dedupeRawSuccessors(successors, stateKey, decisionTrace, stepIndex)
       const scored = yield* scoreStates(
         uniqueSuccessors,
         input.sheet,
@@ -350,7 +353,7 @@ export function runWindowedIrregularBeam(input: {
     const ranked = rankScoredStates(
       scoredBeam ??
         (yield* scoreStates(
-          beam.map((state) => ({ state, key: beamStateKey(state), isIncumbent: false })),
+          beam.map((state) => ({ state, key: stateKey(state), isIncumbent: false })),
           input.sheet,
           layoutScorer,
           input.control,
@@ -370,7 +373,7 @@ export function runWindowedIrregularBeam(input: {
       decodeId: decisionTrace.decodeId,
       chromosomeId: decisionTrace.chromosomeId,
       decodeSource: decisionTrace.decodeSource,
-      state: decisionTraceState(best.state, decisionTrace),
+      state: decisionTraceState(best.state, decisionTrace, best.key),
       score: decisionTraceLayoutScore(best.score)
     }))
     return {
@@ -798,7 +801,7 @@ function scoreStates(
         chromosomeId: decisionTrace.chromosomeId,
         decodeSource: decisionTrace.decodeSource,
         stepIndex,
-        state: decisionTraceState(state, decisionTrace),
+        state: decisionTraceState(state, decisionTrace, key),
         score: decisionTraceLayoutScore(score)
       }))
       yield* controlCheckpoint(control, controlState)
@@ -809,13 +812,14 @@ function scoreStates(
 
 function dedupeRawSuccessors(
   states: ReadonlyArray<TaggedSuccessor>,
+  stateKey: (state: IrregularBeamState) => string,
   decisionTrace: ActiveDecisionTrace | undefined,
   stepIndex: number
 ): ReadonlyArray<KeyedState> {
   const deduped = new Map<string, KeyedState>()
   const countsByKey = new Map<string, number>()
   for (const { state, isIncumbent } of states) {
-    const current = { state, key: beamStateKey(state), isIncumbent }
+    const current = { state, key: stateKey(state), isIncumbent }
     countsByKey.set(current.key, (countsByKey.get(current.key) ?? 0) + 1)
     const previous = deduped.get(current.key)
     if (
@@ -829,7 +833,7 @@ function dedupeRawSuccessors(
   }
   if (decisionTrace !== undefined) {
     for (const { state, isIncumbent } of states) {
-      const key = beamStateKey(state)
+      const key = stateKey(state)
       const winner = deduped.get(key)
       const kept = winner?.state === state && winner.isIncumbent === isIncumbent
       decisionTrace.emit(new IrregularDecisionTraceSuccessorDeduplication({
@@ -951,10 +955,31 @@ function localCandidateKey(
   return `${candidate.candidate.pieceId}:${candidate.candidate.point.x}:${candidate.candidate.point.y}:${transform.index}:${transform.rotationDeg}:${Number(transform.mirrored)}:${transform.reason}:${points}`
 }
 
-function beamStateKey(state: IrregularBeamState): string {
-  const remaining = state.remainingPreparedPieces.map(preparedPieceId).join('|')
+function beamStateKey(
+  state: IrregularBeamState,
+  transformPreferences: ReadonlyMap<PieceId, number> | undefined
+): string {
+  const remaining = JSON.stringify(
+    state.remainingPreparedPieces.map((piece) =>
+      preparedPieceInterchangeabilitySignature(piece, transformPreferences)
+    )
+  )
   const unplaced = [...state.unplacedPieceIds].toSorted(Order.String).join('|')
   return `${state.canonicalOccupiedGeometryKey}::${remaining}::${unplaced}`
+}
+
+function preparedPieceInterchangeabilitySignature(
+  piece: IrregularPreparedPiece,
+  transformPreferences: ReadonlyMap<PieceId, number> | undefined
+): string {
+  return JSON.stringify({
+    interchangeabilityKey: piece.interchangeabilityKey ?? preparedPieceId(piece),
+    allowMirror: piece.allowMirror,
+    collisionPolygon: piece.collisionGeometry.collisionPolygon.points,
+    transforms: piece.transforms,
+    priorityOrderKey: piece.priorityOrderKey ?? null,
+    preferredTransformIndex: transformPreferences?.get(preparedPieceId(piece)) ?? null
+  })
 }
 
 function makeActiveDecisionTrace(
@@ -1003,6 +1028,7 @@ function decisionTraceLayoutScore(score: IrregularLayoutScore): IrregularDecisio
     sharedCollisionBoundaryLengthMm: score.sharedCollisionBoundaryLengthMm,
     sharedCollisionBoundaryContactUnits: score.sharedCollisionBoundaryContactUnits,
     sharedCollisionBoundaryContactBand: score.sharedCollisionBoundaryContactBand,
+    nearCompleteStructuralContactCount: score.nearCompleteStructuralContactCount,
     occupiedHullWasteRatio: score.occupiedHullWasteRatio,
     collisionBoundsWorstNormalizedSheetConsumption:
       score.collisionBoundsWorstNormalizedSheetConsumption,
@@ -1020,10 +1046,11 @@ function decisionTraceLayoutScore(score: IrregularLayoutScore): IrregularDecisio
 
 function decisionTraceState(
   state: IrregularBeamState,
-  decisionTrace: ActiveDecisionTrace
+  decisionTrace: ActiveDecisionTrace,
+  stateKey: string
 ): IrregularDecisionTraceState {
   return new IrregularDecisionTraceState({
-    stateId: decisionTrace.stateIds.idFor(beamStateKey(state)),
+    stateId: decisionTrace.stateIds.idFor(stateKey),
     placementOrder: state.placementOrder,
     remainingPieceIds: state.remainingPreparedPieces.map(preparedPieceId),
     unplacedPieceIds: state.unplacedPieceIds

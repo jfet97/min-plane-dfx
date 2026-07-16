@@ -6,7 +6,11 @@ import { GeometryPredicates } from './geometryPredicates.js'
 export interface SharedConvexPolygonBoundaryContact {
   readonly lengthMm: number
   readonly normalizedUnits: number
+  readonly nearCompleteStructuralContactCount: number
 }
+
+const MIN_STRUCTURAL_EDGE_LENGTH_RATIO = 0.5
+const MIN_NEAR_COMPLETE_EDGE_OVERLAP_RATIO = 0.95
 
 /** Measures exact shared boundary length between two already-translated convex polygons. */
 export function sharedConvexPolygonBoundaryLength(
@@ -38,7 +42,9 @@ export function measureSharedConvexPolygonBoundaryContact(
 ): SharedConvexPolygonBoundaryContact | undefined {
   const lengthMm = sharedConvexPolygonBoundaryLength(first, second)
   if (lengthMm === undefined) return undefined
-  if (lengthMm === 0) return { lengthMm: 0, normalizedUnits: 0 }
+  if (lengthMm === 0) {
+    return { lengthMm: 0, normalizedUnits: 0, nearCompleteStructuralContactCount: 0 }
+  }
 
   const firstLongestEdgeMm = longestPolygonEdgeLength(first.polygon.points)
   const secondLongestEdgeMm = longestPolygonEdgeLength(second.polygon.points)
@@ -47,7 +53,42 @@ export function measureSharedConvexPolygonBoundaryContact(
   const normalizationLengthMm = Math.min(firstLongestEdgeMm, secondLongestEdgeMm)
   const normalizedUnits = lengthMm / normalizationLengthMm
   if (!Number.isFinite(normalizedUnits) || normalizedUnits < 0) return undefined
-  return { lengthMm, normalizedUnits }
+  const nearCompleteStructuralContactCount = countNearCompleteStructuralContacts(
+    first.polygon.points,
+    second.polygon.points,
+    firstLongestEdgeMm,
+    secondLongestEdgeMm
+  )
+  if (nearCompleteStructuralContactCount === undefined) return undefined
+  return { lengthMm, normalizedUnits, nearCompleteStructuralContactCount }
+}
+
+function countNearCompleteStructuralContacts(
+  firstPoints: ReadonlyArray<InternalPoint>,
+  secondPoints: ReadonlyArray<InternalPoint>,
+  firstLongestEdgeMm: number,
+  secondLongestEdgeMm: number
+): number | undefined {
+  let count = 0
+  for (const firstEdge of polygonEdges(firstPoints)) {
+    const firstEdgeLengthMm = polygonEdgeLength(firstEdge)
+    if (firstEdgeLengthMm === undefined) return undefined
+    if (firstEdgeLengthMm < firstLongestEdgeMm * MIN_STRUCTURAL_EDGE_LENGTH_RATIO) continue
+
+    for (const secondEdge of polygonEdges(secondPoints)) {
+      const secondEdgeLengthMm = polygonEdgeLength(secondEdge)
+      if (secondEdgeLengthMm === undefined) return undefined
+      if (secondEdgeLengthMm < secondLongestEdgeMm * MIN_STRUCTURAL_EDGE_LENGTH_RATIO) continue
+
+      const overlapLengthMm = collinearOverlapLength(firstEdge, secondEdge)
+      if (overlapLengthMm === undefined) return undefined
+      const shorterEdgeLengthMm = Math.min(firstEdgeLengthMm, secondEdgeLengthMm)
+      if (overlapLengthMm >= shorterEdgeLengthMm * MIN_NEAR_COMPLETE_EDGE_OVERLAP_RATIO) {
+        count += 1
+      }
+    }
+  }
+  return count
 }
 
 interface PolygonEdge {
@@ -69,11 +110,16 @@ function polygonEdges(points: ReadonlyArray<InternalPoint>): ReadonlyArray<Polyg
 function longestPolygonEdgeLength(points: ReadonlyArray<InternalPoint>): number | undefined {
   let longestEdgeLength = 0
   for (const edge of polygonEdges(points)) {
-    const edgeLength = Math.hypot(edge.end.x - edge.start.x, edge.end.y - edge.start.y)
-    if (!Number.isFinite(edgeLength) || edgeLength <= 0) return undefined
+    const edgeLength = polygonEdgeLength(edge)
+    if (edgeLength === undefined) return undefined
     longestEdgeLength = Math.max(longestEdgeLength, edgeLength)
   }
   return longestEdgeLength > 0 ? longestEdgeLength : undefined
+}
+
+function polygonEdgeLength(edge: PolygonEdge): number | undefined {
+  const edgeLength = Math.hypot(edge.end.x - edge.start.x, edge.end.y - edge.start.y)
+  return Number.isFinite(edgeLength) && edgeLength > 0 ? edgeLength : undefined
 }
 
 function collinearOverlapLength(first: PolygonEdge, second: PolygonEdge): number | undefined {

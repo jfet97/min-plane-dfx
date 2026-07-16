@@ -397,6 +397,58 @@ describe('IrregularLayoutScorer', () => {
     expect(chamferContact.sharedCollisionBoundaryLengthMm).toBe(1)
     expect(chamferContact.sharedCollisionBoundaryContactUnits).toBe(0.1)
     expect(chamferContact.sharedCollisionBoundaryContactBand).toBe(0)
+    expect(chamferContact.nearCompleteStructuralContactCount).toBe(0)
+  })
+
+  it('rewards one complete triangle-scale edge before normalized units reach one', async () => {
+    const structuralContact = await score(
+      state([
+        placedRectangle('structural-left', 81.5056, 76.08, 0, 0),
+        placedRectangle('structural-right', 81.5056, 76.08, 81.5056, 0)
+      ])
+    )
+
+    expect(structuralContact.sharedCollisionBoundaryLengthMm).toBe(76.08)
+    expect(structuralContact.sharedCollisionBoundaryContactUnits).toBe(0.933433)
+    expect(structuralContact.sharedCollisionBoundaryContactBand).toBe(0)
+    expect(structuralContact.nearCompleteStructuralContactCount).toBe(1)
+  })
+
+  it('rejects a substantial but incomplete structural-edge overlap', async () => {
+    const partialContact = await score(
+      state([
+        placedRectangle('partial-bottom', 81.5056, 81.5056, 0, 0),
+        placedRectangle('partial-top', 81.5056, 81.5056, 12.2443, 81.5056)
+      ])
+    )
+
+    expect(partialContact.sharedCollisionBoundaryLengthMm).toBe(69.261)
+    expect(partialContact.nearCompleteStructuralContactCount).toBe(0)
+  })
+
+  it('lets compactness beat legacy contact totals when structural counts tie', async () => {
+    const compact = await score(
+      state([
+        placedRectangle('compact-left', 81.5056, 76.08, 0, 0),
+        placedRectangle('compact-right', 81.5056, 76.08, 81.5056, 0)
+      ])
+    )
+    const larger = await score(
+      state([
+        placedRectangle('larger-bottom', 100, 100, 0, 0),
+        placedRectangle('larger-top', 100, 100, 0, 100)
+      ])
+    )
+
+    expect(compact.nearCompleteStructuralContactCount).toBe(1)
+    expect(larger.nearCompleteStructuralContactCount).toBe(1)
+    expect(larger.sharedCollisionBoundaryContactBand).toBeGreaterThan(
+      compact.sharedCollisionBoundaryContactBand
+    )
+    expect(larger.sharedCollisionBoundaryLengthMm).toBeGreaterThan(
+      compact.sharedCollisionBoundaryLengthMm
+    )
+    expect(await compareScores(compact, larger)).toBeLessThan(0)
   })
 
   it('canonicalizes translated bounds and anchors symmetric layouts before free material', async () => {
@@ -768,6 +820,9 @@ describe('IrregularLayoutScorer', () => {
     expect(child.sharedCollisionBoundaryContactUnits).toBe(
       rebuilt.sharedCollisionBoundaryContactUnits
     )
+    expect(child.nearCompleteStructuralContactCount).toBe(
+      rebuilt.nearCompleteStructuralContactCount
+    )
 
     const unplacedChild = child.withUnplacedPiece({
       remainingPreparedPieces: [],
@@ -780,6 +835,9 @@ describe('IrregularLayoutScorer', () => {
     )
     expect(unplacedChild.sharedCollisionBoundaryContactUnits).toBe(
       child.sharedCollisionBoundaryContactUnits
+    )
+    expect(unplacedChild.nearCompleteStructuralContactCount).toBe(
+      child.nearCompleteStructuralContactCount
     )
   })
 

@@ -71,7 +71,8 @@ function preparedPiece(
   width: number,
   height: number,
   pieceId?: string,
-  transforms?: ReadonlyArray<IrregularTransformCandidate>
+  transforms?: ReadonlyArray<IrregularTransformCandidate>,
+  interchangeabilityKey?: string
 ): IrregularPreparedPiece {
   const points = rectangle(width, height)
   const geometry = new CollisionGeometry({
@@ -85,6 +86,7 @@ function preparedPiece(
   })
   return new IrregularPreparedPiece({
     ...(pieceId === undefined ? {} : { pieceId: PieceId.make(pieceId) }),
+    ...(interchangeabilityKey === undefined ? {} : { interchangeabilityKey }),
     source: source(id),
     allowMirror: false,
     collisionGeometry: geometry,
@@ -658,5 +660,84 @@ describe('decodeWindowedIrregularBeam', () => {
       PieceId.make('a')
     ])
     expect(history).toEqual([0, 1])
+  })
+
+  it('deduplicates permutations of interchangeable prepared copies', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const firstCopy = preparedPiece('source', 1, 1, 'copy-1', undefined, 'source-copies')
+    const secondCopy = preparedPiece('source', 1, 1, 'copy-2', undefined, 'source-copies')
+    const result = await runWindowed(
+      sheet(4, 1),
+      [firstCopy, secondCopy],
+      Layer.succeed(GeometrySettings, settings(2, 5, 1)),
+      candidateService(({ moving, placed }) => [oneCandidate(moving, placed.length)]),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_step_completed',
+        stepIndex: 0,
+        uniqueSuccessorCount: 1,
+        retainedStateCount: 1
+      })
+    )
+    expect(result.bestState.placementOrder).toEqual([
+      PieceId.make('copy-1'),
+      PieceId.make('copy-2')
+    ])
+  })
+
+  it('keeps distinct sources and per-copy transform preferences in the beam identity', async () => {
+    const distinctSourceEvents: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      sheet(4, 1),
+      [
+        preparedPiece('source-a', 1, 1, 'copy-a', undefined, 'source-a'),
+        preparedPiece('source-b', 1, 1, 'copy-b', undefined, 'source-b')
+      ],
+      Layer.succeed(GeometrySettings, settings(2, 5, 1)),
+      candidateService(({ moving, placed }) => [oneCandidate(moving, placed.length)]),
+      undefined,
+      undefined,
+      undefined,
+      (event) => distinctSourceEvents.push(event)
+    )
+    expect(distinctSourceEvents).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_step_completed',
+        stepIndex: 0,
+        uniqueSuccessorCount: 2
+      })
+    )
+
+    const preferenceEvents: IrregularDecisionTraceEvent[] = []
+    const firstCopy = preparedPiece('source', 1, 1, 'copy-1', undefined, 'source-copies')
+    const secondCopy = preparedPiece('source', 1, 1, 'copy-2', undefined, 'source-copies')
+    await runWindowed(
+      sheet(4, 1),
+      [firstCopy, secondCopy],
+      Layer.succeed(GeometrySettings, settings(2, 5, 1)),
+      candidateService(({ moving, placed }) => [oneCandidate(moving, placed.length)]),
+      {
+        transformPreferences: new Map([
+          [PieceId.make('copy-1'), 0],
+          [PieceId.make('copy-2'), 1]
+        ])
+      },
+      undefined,
+      undefined,
+      (event) => preferenceEvents.push(event)
+    )
+    expect(preferenceEvents).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_step_completed',
+        stepIndex: 0,
+        uniqueSuccessorCount: 2
+      })
+    )
   })
 })

@@ -353,6 +353,12 @@ function getPieceMirrorEnabled(pieceId: ImportedPiece['id']): boolean {
   return source === undefined ? true : (state.pieceMirrorEnabled[source.id] ?? true)
 }
 
+function getPieceInterchangeabilityKey(pieceId: ImportedPiece['id']): string {
+  const exact = state.pieces.find((piece) => piece.id === pieceId)
+  if (exact !== undefined) return exact.id
+  return state.pieces.find((piece) => pieceId.startsWith(`${piece.id}-copy-`))?.id ?? pieceId
+}
+
 function setPieceMirrorEnabled(pieceId: ImportedPiece['id'], enabled: boolean): void {
   const exists = state.pieces.some((piece) => piece.id === pieceId)
   if (!exists) return
@@ -424,6 +430,7 @@ export function useAppStore() {
     getPieceQuantity,
     setPieceQuantity,
     getPieceMirrorEnabled,
+    getPieceInterchangeabilityKey,
     setPieceMirrorEnabled,
     setAllPiecesSelected,
     removePiece,

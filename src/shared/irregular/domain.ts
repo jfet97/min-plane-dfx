@@ -411,6 +411,8 @@ export class IrregularPreparedPiece extends Schema.Class<IrregularPreparedPiece>
 )({
   /** Prepared or copied identity; legacy payloads fall back to source.id. */
   pieceId: Schema.optional(PieceId),
+  /** Search-equivalence class shared only by interchangeable prepared copies. */
+  interchangeabilityKey: Schema.optional(Schema.NonEmptyString),
   source: ImportedPiece,
   allowMirror: Schema.Boolean,
   collisionGeometry: CollisionGeometry,
@@ -506,6 +508,8 @@ export class IrregularLayoutScoreSummary extends Schema.Class<IrregularLayoutSco
   sharedCollisionBoundaryContactUnits: Schema.optional(NonNegativeFiniteNumber),
   /** Optional whole-contact band used by the whole-layout comparator. */
   sharedCollisionBoundaryContactBand: Schema.optional(NonNegativeFiniteInteger),
+  /** Optional for results saved before structural-contact classification. */
+  nearCompleteStructuralContactCount: Schema.optional(NonNegativeFiniteInteger),
   largestNetFreeMaterialRegionAreaMm2: NonNegativeFiniteNumber,
   freeMaterialRegionCount: NonNegativeFiniteInteger,
   freeMaterialHoleCount: NonNegativeFiniteInteger,

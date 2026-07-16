@@ -32,12 +32,14 @@ interface DerivedIrregularBeamStateMetadata {
   readonly translatedCollisionBounds: IrregularCollisionBounds | undefined
   readonly sharedCollisionBoundaryLengthMm: number | undefined
   readonly sharedCollisionBoundaryContactUnits: number | undefined
+  readonly nearCompleteStructuralContactCount: number | undefined
   readonly placedCollisionIndex: PlacedCollisionSpatialIndex
 }
 
 interface SharedCollisionBoundaryMetrics {
   readonly lengthMm: number
   readonly normalizedUnits: number
+  readonly nearCompleteStructuralContactCount: number
 }
 
 const derivedMetadata = Symbol('derivedMetadata')
@@ -68,6 +70,8 @@ export class IrregularBeamState {
   readonly sharedCollisionBoundaryLengthMm: number | undefined
   /** Shared boundary measured in fractions of the smaller polygon's longest edge. */
   readonly sharedCollisionBoundaryContactUnits: number | undefined
+  /** Near-complete overlaps between collision edges at structural polygon scale. */
+  readonly nearCompleteStructuralContactCount: number | undefined
   /** Persistent conservative index for translated placed collision bounds. */
   readonly placedCollisionIndex: PlacedCollisionSpatialIndex
 
@@ -93,6 +97,7 @@ export class IrregularBeamState {
     this.translatedCollisionBounds = metadata.translatedCollisionBounds
     this.sharedCollisionBoundaryLengthMm = metadata.sharedCollisionBoundaryLengthMm
     this.sharedCollisionBoundaryContactUnits = metadata.sharedCollisionBoundaryContactUnits
+    this.nearCompleteStructuralContactCount = metadata.nearCompleteStructuralContactCount
   }
 
   /** Creates the empty layout state without inventing any geometry or result. */
@@ -123,7 +128,8 @@ export class IrregularBeamState {
     const sharedBoundaryMetrics = extendSharedCollisionBoundaryMetrics(
       {
         lengthMm: this.sharedCollisionBoundaryLengthMm,
-        normalizedUnits: this.sharedCollisionBoundaryContactUnits
+        normalizedUnits: this.sharedCollisionBoundaryContactUnits,
+        nearCompleteStructuralContactCount: this.nearCompleteStructuralContactCount
       },
       this.placedCollisionIndex,
       addedEntry
@@ -145,6 +151,8 @@ export class IrregularBeamState {
             : extendCollisionBounds(this.translatedCollisionBounds, input.placedCollisionGeometry),
         sharedCollisionBoundaryLengthMm: sharedBoundaryMetrics?.lengthMm,
         sharedCollisionBoundaryContactUnits: sharedBoundaryMetrics?.normalizedUnits,
+        nearCompleteStructuralContactCount:
+          sharedBoundaryMetrics?.nearCompleteStructuralContactCount,
         placedCollisionIndex
       }
     )
@@ -168,6 +176,7 @@ export class IrregularBeamState {
         translatedCollisionBounds: this.translatedCollisionBounds,
         sharedCollisionBoundaryLengthMm: this.sharedCollisionBoundaryLengthMm,
         sharedCollisionBoundaryContactUnits: this.sharedCollisionBoundaryContactUnits,
+        nearCompleteStructuralContactCount: this.nearCompleteStructuralContactCount,
         placedCollisionIndex: this.placedCollisionIndex
       }
     )
@@ -194,6 +203,7 @@ function deriveMetadata(
     translatedCollisionBounds: deriveCollisionBounds(placedCollisionGeometries),
     sharedCollisionBoundaryLengthMm: sharedBoundaryMetrics?.lengthMm,
     sharedCollisionBoundaryContactUnits: sharedBoundaryMetrics?.normalizedUnits,
+    nearCompleteStructuralContactCount: sharedBoundaryMetrics?.nearCompleteStructuralContactCount,
     placedCollisionIndex: makePlacedCollisionSpatialIndex(placedCollisionGeometries)
   }
 }
@@ -204,20 +214,29 @@ function deriveSharedCollisionBoundaryMetrics(
   const index = makePlacedCollisionSpatialIndex(placedCollisionGeometries)
   let totalLengthMm = 0
   let totalNormalizedUnits = 0
+  let nearCompleteStructuralContactCount = 0
   for (const entry of index.entries) {
     const additional = sharedBoundaryWithEntries(entry, index.entries.slice(0, entry.ordinal))
     if (additional === undefined) return undefined
     totalLengthMm += additional.lengthMm
     totalNormalizedUnits += additional.normalizedUnits
-    if (!Number.isFinite(totalLengthMm) || !Number.isFinite(totalNormalizedUnits)) return undefined
+    nearCompleteStructuralContactCount += additional.nearCompleteStructuralContactCount
+    if (
+      !Number.isFinite(totalLengthMm) ||
+      !Number.isFinite(totalNormalizedUnits) ||
+      !Number.isSafeInteger(nearCompleteStructuralContactCount)
+    ) {
+      return undefined
+    }
   }
-  return { lengthMm: totalLengthMm, normalizedUnits: totalNormalizedUnits }
+  return { lengthMm: totalLengthMm, normalizedUnits: totalNormalizedUnits, nearCompleteStructuralContactCount }
 }
 
 function extendSharedCollisionBoundaryMetrics(
   current: {
     readonly lengthMm: number | undefined
     readonly normalizedUnits: number | undefined
+    readonly nearCompleteStructuralContactCount: number | undefined
   },
   existingIndex: PlacedCollisionSpatialIndex,
   addedEntry: PlacedCollisionSpatialEntry | undefined
@@ -225,6 +244,7 @@ function extendSharedCollisionBoundaryMetrics(
   if (
     current.lengthMm === undefined ||
     current.normalizedUnits === undefined ||
+    current.nearCompleteStructuralContactCount === undefined ||
     addedEntry?.translated === undefined
   ) {
     return undefined
@@ -236,8 +256,12 @@ function extendSharedCollisionBoundaryMetrics(
   if (additional === undefined) return undefined
   const lengthMm = current.lengthMm + additional.lengthMm
   const normalizedUnits = current.normalizedUnits + additional.normalizedUnits
-  return Number.isFinite(lengthMm) && Number.isFinite(normalizedUnits)
-    ? { lengthMm, normalizedUnits }
+  const nearCompleteStructuralContactCount =
+    current.nearCompleteStructuralContactCount + additional.nearCompleteStructuralContactCount
+  return Number.isFinite(lengthMm) &&
+    Number.isFinite(normalizedUnits) &&
+    Number.isSafeInteger(nearCompleteStructuralContactCount)
+    ? { lengthMm, normalizedUnits, nearCompleteStructuralContactCount }
     : undefined
 }
 
@@ -248,6 +272,7 @@ function sharedBoundaryWithEntries(
   if (addedEntry.translated === undefined) return undefined
   let totalLengthMm = 0
   let totalNormalizedUnits = 0
+  let nearCompleteStructuralContactCount = 0
   for (const existingEntry of existingEntries) {
     if (existingEntry.translated === undefined) return undefined
     const contact = measureSharedConvexPolygonBoundaryContact(
@@ -257,11 +282,16 @@ function sharedBoundaryWithEntries(
     if (contact === undefined) return undefined
     totalLengthMm += contact.lengthMm
     totalNormalizedUnits += contact.normalizedUnits
-    if (!Number.isFinite(totalLengthMm) || !Number.isFinite(totalNormalizedUnits)) {
+    nearCompleteStructuralContactCount += contact.nearCompleteStructuralContactCount
+    if (
+      !Number.isFinite(totalLengthMm) ||
+      !Number.isFinite(totalNormalizedUnits) ||
+      !Number.isSafeInteger(nearCompleteStructuralContactCount)
+    ) {
       return undefined
     }
   }
-  return { lengthMm: totalLengthMm, normalizedUnits: totalNormalizedUnits }
+  return { lengthMm: totalLengthMm, normalizedUnits: totalNormalizedUnits, nearCompleteStructuralContactCount }
 }
 
 type CanonicalPoint = readonly [x: number, y: number]

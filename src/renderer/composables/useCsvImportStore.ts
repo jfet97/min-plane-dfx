@@ -207,6 +207,9 @@ function clonePreparedPiece(piece: PreparedPiece): PreparedPiece {
     padding: piece.padding,
     allowRotation: piece.allowRotation,
     allowMirror: piece.allowMirror ?? true,
+    ...(piece.interchangeabilityKey !== undefined
+      ? { interchangeabilityKey: piece.interchangeabilityKey }
+      : {}),
     ...(piece.cutRowRef !== undefined ? { cutRowRef: { ...piece.cutRowRef } } : {})
   })
 }

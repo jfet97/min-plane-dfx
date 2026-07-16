@@ -120,6 +120,8 @@ export class NestingOptions extends Schema.Class<NestingOptions>('NestingOptions
 export class PreparedPiece extends Schema.Class<PreparedPiece>('PreparedPiece')({
   id: PieceId.withDefault,
   sourcePieceId: PieceId,
+  /** Search-equivalence class for interchangeable prepared copies. */
+  interchangeabilityKey: Schema.optional(Schema.NonEmptyString),
   realBounds: Rect,
   paddedBounds: RectWith,
   padding: NonNegativeIntegerMillimeters,

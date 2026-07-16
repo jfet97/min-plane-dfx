@@ -317,20 +317,29 @@ terminal legality-audit status, and the complete whole-layout score. The score
 is compared in this order:
 
 1. lower `unplacedCount`;
-2. higher whole `sharedCollisionBoundaryContactBand`, where each polygon-pair
-   contact is normalized by the smaller polygon's longest collision edge;
+2. higher `nearCompleteStructuralContactCount`;
 3. lower `collisionBoundsWorstNormalizedSheetConsumption`;
 4. lower `collisionBoundsNormalizedSpanSum`;
 5. lower `collisionBoundsAreaMm2`;
 6. lower `collisionBoundsSpanMm`;
 7. lower `occupiedHullWasteRatio`;
-8. higher normalized contact units, then exact shared boundary length, only
-   after compactness has decided within the same whole-contact band;
+8. higher legacy normalized contact band, continuous normalized units, then
+   exact shared boundary length, only after compactness has decided between
+   layouts with the same structural-contact count;
 9. lower collision-bound `minY`, then `minX`, to anchor equivalent layouts at lower-left;
 10. higher `largestNetFreeMaterialRegionAreaMm2`;
 11. lower `freeMaterialRegionCount`;
 12. lower `freeMaterialHoleCount`;
 13. lower `freeMaterialSliverMetric`.
+
+A structural contact is an exact collinear overlap between two collision edges
+that are each at least half as long as their polygon's longest edge. It counts
+only when the overlap covers at least 95 percent of the shorter contacting edge.
+This gives the beam an immediate discrete reward for a real near-complete edge
+mate while excluding short offset-join chamfers and substantial but incomplete
+edge fragments. The scale-normalized contact band and raw millimeters remain in
+results and traces as diagnostics and late tie-breaks; they do not outrank
+compactness once structural-contact counts tie.
 
 Collision-bound compactness intentionally comes before free-material diagnostics:
 when every piece stays within one connected sheet region, the total free area is
@@ -377,13 +386,20 @@ beam, and seeded GA/search portfolio:
 `src/workers/algorithm/irregular/irregularPlacementScorer.ts` owns the local
 candidate-policy score for candidates already accepted by NFP/IFP generation
 and direct validation. `irregularLayoutScorer.ts` owns a separate lexicographic
-whole-layout score for beam retention: unplaced count first, then shared padded
-boundary, compact collision bounds, occupied-hull waste, lower-left anchoring, and free-material
-usability/fragmentation diagnostics. Free material is scoring-only and never
-accepts or rejects a placement. Before a beam step calls
-that expensive scorer, it deduplicates successor states by canonical occupied
-geometry and retains a deterministic representative. The run also retains its
-scored beam states. A bounded cache owned by the layout-scorer service reuses
+   whole-layout score for beam retention: unplaced count first, then near-complete
+   structural contacts, compact collision bounds, occupied-hull waste, legacy
+   contact diagnostics, lower-left anchoring, and free-material usability and
+   fragmentation diagnostics. Free material is scoring-only and never accepts
+   or rejects a placement. Before a beam step calls that expensive scorer, it
+   deduplicates successor states by canonical occupied geometry and the ordered
+   remaining sequence of explicit interchangeability signatures. Normal quantity
+   copies share their original source signature; CSV copies additionally retain
+   their CSV row identity. Collision geometry, transform sets, and per-copy
+   transform preferences remain part of the signature, while concrete copy ids
+   remain on the deterministic representative used for history and output. This
+   prevents identical-copy permutations from consuming the beam without merging
+   distinct sources, customer rows, queue orders, or search behavior. The run also retains its
+   scored beam states. A bounded cache owned by the layout-scorer service reuses
 only Clipper2 free-material snapshots for identical sheet and occupied
 geometry, including across portfolio decodes. When a cached parent state gains
 one placement, it subtracts that collision polygon from the cached material

@@ -64,6 +64,8 @@ export interface IrregularLayoutScore {
   readonly sharedCollisionBoundaryContactUnits: number
   /** Whole normalized contact units retained before compactness breaks the tie. */
   readonly sharedCollisionBoundaryContactBand: number
+  /** Number of near-complete overlaps between structural-scale collision edges. */
+  readonly nearCompleteStructuralContactCount: number
   /** Largest net boundary-minus-holes material region; larger is better. */
   readonly largestNetFreeMaterialRegionAreaMm2: number
   /** Number of disconnected material regions; smaller is better. */
@@ -268,6 +270,7 @@ function scoreDerivedState(
     sharedCollisionBoundaryContactUnits === undefined
       ? undefined
       : Math.floor(sharedCollisionBoundaryContactUnits)
+  const nearCompleteStructuralContactCount = input.state.nearCompleteStructuralContactCount
   const occupiedHullWasteRatio = deriveOccupiedHullWasteRatio(input.state)
 
   if (
@@ -281,6 +284,9 @@ function scoreDerivedState(
     sharedCollisionBoundaryContactUnits === undefined ||
     sharedCollisionBoundaryContactBand === undefined ||
     !Number.isSafeInteger(sharedCollisionBoundaryContactBand) ||
+    nearCompleteStructuralContactCount === undefined ||
+    !Number.isSafeInteger(nearCompleteStructuralContactCount) ||
+    nearCompleteStructuralContactCount < 0 ||
     occupiedHullWasteRatio === undefined ||
     !Number.isFinite(collisionBoundsBottomMm) ||
     !Number.isFinite(collisionBoundsLeftMm)
@@ -293,6 +299,7 @@ function scoreDerivedState(
     sharedCollisionBoundaryLengthMm,
     sharedCollisionBoundaryContactUnits,
     sharedCollisionBoundaryContactBand,
+    nearCompleteStructuralContactCount,
     ...materialMetrics,
     collisionBoundsWorstNormalizedSheetConsumption,
     collisionBoundsNormalizedSpanSum,
@@ -488,13 +495,13 @@ function compareScores(first: IrregularLayoutScore, second: IrregularLayoutScore
 
 const layoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
   scoreCriterion((score) => score.unplacedCount),
-  // a whole normalized edge-contact band matters; sub-band chamfer gains do not beat compactness
-  descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactBand),
+  descendingScoreCriterion((score) => score.nearCompleteStructuralContactCount),
   scoreCriterion((score) => score.collisionBoundsWorstNormalizedSheetConsumption),
   scoreCriterion((score) => score.collisionBoundsNormalizedSpanSum),
   scoreCriterion((score) => score.collisionBoundsAreaMm2),
   scoreCriterion((score) => score.collisionBoundsSpanMm),
   scoreCriterion((score) => score.occupiedHullWasteRatio),
+  descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactBand),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactUnits),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryLengthMm),
   scoreCriterion((score) => score.collisionBoundsBottomMm),

@@ -147,6 +147,7 @@ export function computeIrregularNesting(
       preparedPieces.push(
         new IrregularPreparedPiece({
           pieceId: prepared.id,
+          interchangeabilityKey: prepared.interchangeabilityKey ?? prepared.id,
           source,
           allowMirror,
           collisionGeometry,

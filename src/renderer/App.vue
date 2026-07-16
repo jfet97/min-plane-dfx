@@ -398,6 +398,9 @@ function clonePreparedPiece(piece: PreparedPiece): PreparedPiece {
     padding: piece.padding,
     allowRotation: piece.allowRotation,
     allowMirror: piece.allowMirror ?? true,
+    ...(piece.interchangeabilityKey !== undefined
+      ? { interchangeabilityKey: piece.interchangeabilityKey }
+      : {}),
     ...(piece.cutRowRef !== undefined ? { cutRowRef: { ...piece.cutRowRef } } : {})
   }
 }
@@ -601,7 +604,8 @@ function buildRequest(): NestingRequest | null {
     padding,
     jobId,
     undefined,
-    (pieceId) => store.getPieceMirrorEnabled(pieceId)
+    (pieceId) => store.getPieceMirrorEnabled(pieceId),
+    (piece) => store.getPieceInterchangeabilityKey(piece.id)
   )
   preparationWarnings.value = prep.warnings
 

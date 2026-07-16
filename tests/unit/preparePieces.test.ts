@@ -110,4 +110,18 @@ describe('preparePieces', () => {
 
     expect(result.pieces[0]?.allowMirror).toBe(false)
   })
+
+  it('carries an explicit interchangeability key for equivalent request copies', () => {
+    const result = preparePieces(
+      [piece('p-1-copy-1', 10, 5)],
+      sheet,
+      0,
+      jobId,
+      undefined,
+      undefined,
+      () => 'p-1'
+    )
+
+    expect(result.pieces[0]?.interchangeabilityKey).toBe('p-1')
+  })
 })

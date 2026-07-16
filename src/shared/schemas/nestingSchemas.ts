@@ -41,6 +41,7 @@ export const NestingOptionsStrictSchema = NestingOptionsStrictFields.check(
 const NestingRequestPieceStrict = Schema.Struct({
   id: Schema.String.check(Schema.isMinLength(1)),
   sourcePieceId: Schema.String.check(Schema.isMinLength(1)),
+  interchangeabilityKey: Schema.optional(Schema.String.check(Schema.isMinLength(1))),
   realBounds: Schema.Struct({
     x: NonNegativeCoordinate,
     y: NonNegativeCoordinate,

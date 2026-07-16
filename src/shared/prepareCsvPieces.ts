@@ -99,6 +99,7 @@ export function prepareCsvPieces(
         new PreparedPiece({
           id: copyId,
           sourcePieceId: sourcePiece.id,
+          interchangeabilityKey: `${sourcePiece.id}:csv-row:${row.id}`,
           realBounds,
           paddedBounds,
           padding: sidePadding,

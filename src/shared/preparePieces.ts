@@ -21,7 +21,8 @@ export function preparePieces(
   padding: number,
   _jobId: JobId,
   cutRowRef?: PreparedPiece['cutRowRef'],
-  allowMirrorForPiece?: (pieceId: ImportedPiece['id']) => boolean
+  allowMirrorForPiece?: (pieceId: ImportedPiece['id']) => boolean,
+  interchangeabilityKeyForPiece?: (piece: ImportedPiece) => string
 ): PreparedPieceWithWarnings {
   const pieces: PreparedPiece[] = []
   const warnings: NestingWarning[] = []
@@ -57,6 +58,9 @@ export function preparePieces(
       new PreparedPiece({
         id: p.id,
         sourcePieceId: p.id,
+        ...(interchangeabilityKeyForPiece === undefined
+          ? {}
+          : { interchangeabilityKey: interchangeabilityKeyForPiece(p) }),
         realBounds: new Rect(p.realBounds),
         paddedBounds: new RectWith({
           x: p.realBounds.x,
