@@ -32,6 +32,32 @@ import {
   IrregularLayoutScoringError
 } from './irregularLayoutScorer.js'
 import { IrregularBeamState } from './irregularBeamState.js'
+import {
+  IrregularDecisionTraceBeamSelection,
+  IrregularDecisionTraceBeamStepCompleted,
+  IrregularDecisionTraceBeamStepStarted,
+  IrregularDecisionTraceDecodeStarted,
+  IrregularDecisionTraceDecodeWinner,
+  IrregularDecisionTraceEligiblePieces,
+  IrregularDecisionTraceLayoutScore,
+  IrregularDecisionTraceLocalCandidateScored,
+  IrregularDecisionTraceLocalCandidateSelection,
+  IrregularDecisionTraceLocalScore,
+  IrregularDecisionTraceParentState,
+  IrregularDecisionTracePoint,
+  IrregularDecisionTraceSearchSettings,
+  IrregularDecisionTraceSheet,
+  IrregularDecisionTraceState,
+  IrregularDecisionTraceSuccessorDeduplication,
+  IrregularDecisionTraceSuccessorLayoutScored,
+  IrregularDecisionTraceTransform,
+  IrregularDecisionTraceTransformCandidatesGenerated,
+  IrregularDecisionTraceTransformPreference
+} from './decisionTrace.js'
+import type {
+  EmitIrregularDecisionTrace,
+  IrregularDecisionTraceIdentity
+} from './decisionTrace.js'
 
 /** The terminal states retained by one deterministic irregular beam run. */
 export interface IrregularWindowedBeamResult {
@@ -96,6 +122,7 @@ interface LocalCandidate {
   readonly candidate: IrregularPlacementCandidate
   readonly moving: TransformedCollisionGeometry
   readonly score: IrregularPlacementScore
+  readonly traceCandidateId: string
 }
 
 interface ScoredState {
@@ -114,6 +141,10 @@ interface KeyedState {
 interface TaggedSuccessor {
   readonly state: IrregularBeamState
   readonly isIncumbent: boolean
+}
+
+interface ActiveDecisionTrace extends IrregularDecisionTraceIdentity {
+  readonly emit: EmitIrregularDecisionTrace
 }
 
 const pieceIdArrayOrder: Order.Order<ReadonlyArray<PieceId>> = Order.Array(Order.String)
@@ -140,6 +171,8 @@ export function runWindowedIrregularBeam(input: {
   readonly options?: IrregularWindowedBeamOptions
   readonly control?: IrregularWindowedBeamControl
   readonly instrumentation?: IrregularWindowedBeamInstrumentation
+  readonly emitDecisionTrace?: EmitIrregularDecisionTrace
+  readonly decisionTraceIdentity?: IrregularDecisionTraceIdentity
 }): Effect.Effect<
   IrregularWindowedBeamResult,
   IrregularWindowedBeamError,
@@ -155,6 +188,35 @@ export function runWindowedIrregularBeam(input: {
     const nfpIfpService = yield* NfpIfpService
     const placementScorer = yield* IrregularPlacementScorer
     const layoutScorer = yield* IrregularLayoutScorer
+    const decisionTrace = makeActiveDecisionTrace(
+      input.emitDecisionTrace,
+      input.decisionTraceIdentity
+    )
+    const localCandidateFanout =
+      settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth
+
+    decisionTrace?.emit(new IrregularDecisionTraceDecodeStarted({
+      decodeId: decisionTrace.decodeId,
+      chromosomeId: decisionTrace.chromosomeId,
+      decodeSource: decisionTrace.decodeSource,
+      sheet: new IrregularDecisionTraceSheet({
+        widthMm: input.sheet.width,
+        heightMm: input.sheet.height
+      }),
+      settings: new IrregularDecisionTraceSearchSettings({
+        orderWindow: settings.optimizer.orderWindow,
+        beamWidth: settings.optimizer.beamWidth,
+        localCandidateFanout,
+        policyId: input.options?.policyId ?? placementScorer.policyId
+      }),
+      priorityOrder: input.pieces.map((piece) => preparedPieceId(piece)),
+      transformPreferences: [...(input.options?.transformPreferences?.entries() ?? [])]
+        .toSorted(([first], [second]) => first.localeCompare(second))
+        .map(
+          ([pieceId, transformIndex]) =>
+            new IrregularDecisionTraceTransformPreference({ pieceId, transformIndex })
+        )
+    }))
 
     let beam: ReadonlyArray<IrregularBeamState> = [IrregularBeamState.empty(input.pieces)]
     let scoredBeam: ReadonlyArray<ScoredState> | undefined
@@ -162,23 +224,47 @@ export function runWindowedIrregularBeam(input: {
     let incumbentState: IrregularBeamState | undefined = protectIncumbent ? beam[0] : undefined
     const candidateCounts: number[] = []
     const controlState: ControlState = { checkpointsSinceYield: 0 }
+    let stepIndex = 0
     while (beam.some((state) => state.remainingPreparedPieces.length > 0)) {
       yield* controlCheckpoint(input.control, controlState)
+      decisionTrace?.emit(new IrregularDecisionTraceBeamStepStarted({
+        decodeId: decisionTrace.decodeId,
+        chromosomeId: decisionTrace.chromosomeId,
+        decodeSource: decisionTrace.decodeSource,
+        stepIndex,
+        parentCount: beam.length
+      }))
       const successors: TaggedSuccessor[] = []
       let candidateCount = 0
 
-      for (const state of beam) {
+      for (const [parentIndex, state] of beam.entries()) {
         yield* controlCheckpoint(input.control, controlState)
         const isIncumbent = state === incumbentState
+        const parentStateId = beamStateKey(state)
+        decisionTrace?.emit(new IrregularDecisionTraceParentState({
+          decodeId: decisionTrace.decodeId,
+          chromosomeId: decisionTrace.chromosomeId,
+          decodeSource: decisionTrace.decodeSource,
+          stepIndex,
+          parentRank: parentIndex + 1,
+          incumbent: isIncumbent,
+          state: decisionTraceState(state)
+        }))
         const eligibleCount = Math.min(
           settings.optimizer.orderWindow,
           state.remainingPreparedPieces.length
         )
         const eligiblePieces = state.remainingPreparedPieces.slice(0, eligibleCount)
+        decisionTrace?.emit(new IrregularDecisionTraceEligiblePieces({
+          decodeId: decisionTrace.decodeId,
+          chromosomeId: decisionTrace.chromosomeId,
+          decodeSource: decisionTrace.decodeSource,
+          stepIndex,
+          parentStateId,
+          pieceIds: eligiblePieces.map((piece) => preparedPieceId(piece))
+        }))
         const legalSuccessors: IrregularBeamState[] = []
 
-        const localCandidateLimit =
-          settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth
         for (const [pieceIndex, piece] of eligiblePieces.entries()) {
           yield* controlCheckpoint(input.control, controlState)
           const localCandidates = yield* collectLocalCandidates({
@@ -190,6 +276,9 @@ export function runWindowedIrregularBeam(input: {
             nfpIfpService,
             placementScorer,
             controlState,
+            stepIndex,
+            parentStateId,
+            ...(decisionTrace !== undefined ? { decisionTrace } : {}),
             ...(input.control !== undefined ? { control: input.control } : {}),
             ...(input.options !== undefined ? { options: input.options } : {})
           })
@@ -197,8 +286,12 @@ export function runWindowedIrregularBeam(input: {
           const selected = selectLocalCandidates(
             localCandidates,
             placementScorer,
-            localCandidateLimit,
-            input.options?.transformPreferences?.get(preparedPieceId(piece))
+            localCandidateFanout,
+            input.options?.transformPreferences?.get(preparedPieceId(piece)),
+            decisionTrace,
+            stepIndex,
+            parentStateId,
+            preparedPieceId(piece)
           )
           for (const candidate of selected) {
             yield* controlCheckpoint(input.control, controlState)
@@ -213,13 +306,15 @@ export function runWindowedIrregularBeam(input: {
         }
       }
 
-      const uniqueSuccessors = dedupeRawSuccessors(successors)
+      const uniqueSuccessors = dedupeRawSuccessors(successors, decisionTrace, stepIndex)
       const scored = yield* scoreStates(
         uniqueSuccessors,
         input.sheet,
         layoutScorer,
         input.control,
-        controlState
+        controlState,
+        decisionTrace,
+        stepIndex
       )
       const nextIncumbent = protectIncumbent
         ? selectIncumbentSuccessor(scored, layoutScorer)
@@ -228,12 +323,24 @@ export function runWindowedIrregularBeam(input: {
         scored,
         settings.optimizer.beamWidth,
         layoutScorer,
-        nextIncumbent
+        nextIncumbent,
+        decisionTrace,
+        stepIndex
       )
       beam = scoredBeam.map(({ state }) => state)
       incumbentState = nextIncumbent?.state
       candidateCounts.push(candidateCount)
       input.instrumentation?.onStepCompleted?.({ candidateCount })
+      decisionTrace?.emit(new IrregularDecisionTraceBeamStepCompleted({
+        decodeId: decisionTrace.decodeId,
+        chromosomeId: decisionTrace.chromosomeId,
+        decodeSource: decisionTrace.decodeSource,
+        stepIndex,
+        generatedCandidateCount: candidateCount,
+        uniqueSuccessorCount: uniqueSuccessors.length,
+        retainedStateCount: scoredBeam.length
+      }))
+      stepIndex += 1
     }
 
     const ranked = rankScoredStates(
@@ -243,7 +350,9 @@ export function runWindowedIrregularBeam(input: {
           input.sheet,
           layoutScorer,
           input.control,
-          controlState
+          controlState,
+          decisionTrace,
+          stepIndex
         )),
       layoutScorer
     )
@@ -253,6 +362,13 @@ export function runWindowedIrregularBeam(input: {
       return yield* Effect.die('windowed irregular beam produced no terminal state')
     }
     emitWinningPath(input.hooks, best.state, candidateCounts)
+    decisionTrace?.emit(new IrregularDecisionTraceDecodeWinner({
+      decodeId: decisionTrace.decodeId,
+      chromosomeId: decisionTrace.chromosomeId,
+      decodeSource: decisionTrace.decodeSource,
+      state: decisionTraceState(best.state),
+      score: decisionTraceLayoutScore(best.score)
+    }))
     return {
       rankedStates: ranked.map(({ state }) => state),
       bestState: best.state,
@@ -269,7 +385,9 @@ export function decodeWindowedIrregularBeam(
   hooks?: IrregularWindowedBeamHooks,
   options?: IrregularWindowedBeamOptions,
   control?: IrregularWindowedBeamControl,
-  instrumentation?: IrregularWindowedBeamInstrumentation
+  instrumentation?: IrregularWindowedBeamInstrumentation,
+  emitDecisionTrace?: EmitIrregularDecisionTrace,
+  decisionTraceIdentity?: IrregularDecisionTraceIdentity
 ): Effect.Effect<
   IrregularWindowedBeamResult,
   IrregularWindowedBeamError,
@@ -285,7 +403,9 @@ export function decodeWindowedIrregularBeam(
     ...(hooks !== undefined ? { hooks } : {}),
     ...(options !== undefined ? { options } : {}),
     ...(control !== undefined ? { control } : {}),
-    ...(instrumentation !== undefined ? { instrumentation } : {})
+    ...(instrumentation !== undefined ? { instrumentation } : {}),
+    ...(emitDecisionTrace !== undefined ? { emitDecisionTrace } : {}),
+    ...(decisionTraceIdentity !== undefined ? { decisionTraceIdentity } : {})
   })
 }
 
@@ -356,6 +476,9 @@ function collectLocalCandidates(input: {
   readonly control?: IrregularWindowedBeamControl
   readonly controlState: ControlState
   readonly options?: IrregularWindowedBeamOptions
+  readonly decisionTrace?: ActiveDecisionTrace
+  readonly stepIndex: number
+  readonly parentStateId: string
 }): Effect.Effect<
   ReadonlyArray<LocalCandidate>,
   | IrregularNestingNotImplementedError
@@ -389,6 +512,16 @@ function collectLocalCandidates(input: {
               control: nfpControl
             })
       yield* controlCheckpoint(input.control, input.controlState)
+      input.decisionTrace?.emit(new IrregularDecisionTraceTransformCandidatesGenerated({
+        decodeId: input.decisionTrace.decodeId,
+        chromosomeId: input.decisionTrace.chromosomeId,
+        decodeSource: input.decisionTrace.decodeSource,
+        stepIndex: input.stepIndex,
+        parentStateId: input.parentStateId,
+        pieceId: preparedPieceId(input.piece),
+        transform: decisionTraceTransform(transform),
+        legalCandidateCount: legalCandidates.length
+      }))
       for (const candidate of legalCandidates) {
         yield* controlCheckpoint(input.control, input.controlState)
         const score = yield* input.placementScorer.scoreCandidate({
@@ -398,7 +531,21 @@ function collectLocalCandidates(input: {
           candidate,
           ...(input.options?.policyId !== undefined ? { policyId: input.options.policyId } : {})
         })
-        candidates.push({ candidate, moving, score })
+        const traceCandidateId = `${localCandidateKey({ candidate, moving })}::${candidates.length}`
+        candidates.push({ candidate, moving, score, traceCandidateId })
+        input.decisionTrace?.emit(new IrregularDecisionTraceLocalCandidateScored({
+          decodeId: input.decisionTrace.decodeId,
+          chromosomeId: input.decisionTrace.chromosomeId,
+          decodeSource: input.decisionTrace.decodeSource,
+          stepIndex: input.stepIndex,
+          parentStateId: input.parentStateId,
+          pieceId: preparedPieceId(input.piece),
+          candidateId: traceCandidateId,
+          point: new IrregularDecisionTracePoint({ x: candidate.point.x, y: candidate.point.y }),
+          transform: decisionTraceTransform(candidate.transform),
+          policyId: score.policyId,
+          score: decisionTraceLocalScore(score)
+        }))
         yield* controlCheckpoint(input.control, input.controlState)
       }
     }
@@ -430,7 +577,11 @@ function selectLocalCandidates(
   candidates: ReadonlyArray<LocalCandidate>,
   placementScorer: IrregularPlacementScorer.Service,
   maximumCount: number,
-  preferredTransformIndex: number | undefined
+  preferredTransformIndex: number | undefined,
+  decisionTrace: ActiveDecisionTrace | undefined,
+  stepIndex: number,
+  parentStateId: string,
+  pieceId: PieceId
 ): ReadonlyArray<LocalCandidate> {
   const candidateOrder = Order.combineAll<LocalCandidate>(
     preferredTransformIndex === undefined
@@ -449,31 +600,67 @@ function selectLocalCandidates(
   )
   const rankedCandidates = candidates.toSorted(candidateOrder)
   const first = rankedCandidates[0]
+  let selected: ReadonlyArray<LocalCandidate>
+  let compactnessReserved: LocalCandidate | undefined
   if (
     maximumCount === 1 ||
     first?.score.policyId !== EDGE_CONTACT_THEN_BALANCED_COMPACTNESS_POLICY_ID
   ) {
-    return rankedCandidates.slice(0, maximumCount)
+    selected = rankedCandidates.slice(0, maximumCount)
+  } else {
+    const compactnessWinner = candidates.toSorted(
+      Order.combineAll<LocalCandidate>([
+        Order.make((first, second) =>
+          compareBalancedCompactnessPlacementScores(first.score, second.score)
+        ),
+        Order.mapInput(Order.String, (candidate) => localCandidateKey(candidate))
+      ])
+    )[0]
+    if (compactnessWinner === undefined) {
+      selected = rankedCandidates.slice(0, maximumCount)
+    } else {
+      const selectedCandidates = [compactnessWinner]
+      const selectedKeys = new Set([localCandidateKey(compactnessWinner)])
+      for (const candidate of rankedCandidates) {
+        if (selectedCandidates.length >= maximumCount) break
+        const key = localCandidateKey(candidate)
+        if (selectedKeys.has(key)) continue
+        selectedCandidates.push(candidate)
+        selectedKeys.add(key)
+      }
+      selected = selectedCandidates
+      if (!rankedCandidates.slice(0, maximumCount).includes(compactnessWinner)) {
+        compactnessReserved = compactnessWinner
+      }
+    }
   }
 
-  const compactnessWinner = candidates.toSorted(
-    Order.combineAll<LocalCandidate>([
-      Order.make((first, second) =>
-        compareBalancedCompactnessPlacementScores(first.score, second.score)
-      ),
-      Order.mapInput(Order.String, (candidate) => localCandidateKey(candidate))
-    ])
-  )[0]
-  if (compactnessWinner === undefined) return rankedCandidates.slice(0, maximumCount)
-
-  const selected = [compactnessWinner]
-  const selectedKeys = new Set([localCandidateKey(compactnessWinner)])
-  for (const candidate of rankedCandidates) {
-    if (selected.length >= maximumCount) break
-    const key = localCandidateKey(candidate)
-    if (selectedKeys.has(key)) continue
-    selected.push(candidate)
-    selectedKeys.add(key)
+  if (decisionTrace !== undefined) {
+    const selectedCandidates = new Set(selected)
+    for (const [candidateIndex, candidate] of rankedCandidates.entries()) {
+      const isSelected = selectedCandidates.has(candidate)
+      const displacedByReservation =
+        !isSelected && compactnessReserved !== undefined && candidateIndex < maximumCount
+      decisionTrace.emit(new IrregularDecisionTraceLocalCandidateSelection({
+        decodeId: decisionTrace.decodeId,
+        chromosomeId: decisionTrace.chromosomeId,
+        decodeSource: decisionTrace.decodeSource,
+        stepIndex,
+        parentStateId,
+        pieceId,
+        candidateId: candidate.traceCandidateId,
+        rank: candidateIndex + 1,
+        decision: isSelected ? 'selected' : 'rejected',
+        reason:
+          candidate === compactnessReserved
+            ? 'compactness_alternative_reserved'
+            : displacedByReservation
+              ? 'displaced_by_compactness_reservation'
+              : isSelected
+                ? 'within_local_candidate_fanout'
+                : 'outside_local_candidate_fanout'
+      }))
+    }
   }
   return selected
 }
@@ -583,7 +770,9 @@ function scoreStates(
   sheet: SheetSpec,
   layoutScorer: IrregularLayoutScorer.Service,
   control: IrregularWindowedBeamControl | undefined,
-  controlState: ControlState
+  controlState: ControlState,
+  decisionTrace: ActiveDecisionTrace | undefined,
+  stepIndex: number
 ): Effect.Effect<
   ReadonlyArray<ScoredState>,
   | IrregularLayoutScoringError
@@ -597,16 +786,30 @@ function scoreStates(
       yield* controlCheckpoint(control, controlState)
       const score = yield* layoutScorer.scoreState({ sheet, state })
       scored.push({ state, score, key, isIncumbent })
+      decisionTrace?.emit(new IrregularDecisionTraceSuccessorLayoutScored({
+        decodeId: decisionTrace.decodeId,
+        chromosomeId: decisionTrace.chromosomeId,
+        decodeSource: decisionTrace.decodeSource,
+        stepIndex,
+        state: decisionTraceState(state),
+        score: decisionTraceLayoutScore(score)
+      }))
       yield* controlCheckpoint(control, controlState)
     }
     return scored
   })
 }
 
-function dedupeRawSuccessors(states: ReadonlyArray<TaggedSuccessor>): ReadonlyArray<KeyedState> {
+function dedupeRawSuccessors(
+  states: ReadonlyArray<TaggedSuccessor>,
+  decisionTrace: ActiveDecisionTrace | undefined,
+  stepIndex: number
+): ReadonlyArray<KeyedState> {
   const deduped = new Map<string, KeyedState>()
+  const countsByKey = new Map<string, number>()
   for (const { state, isIncumbent } of states) {
     const current = { state, key: beamStateKey(state), isIncumbent }
+    countsByKey.set(current.key, (countsByKey.get(current.key) ?? 0) + 1)
     const previous = deduped.get(current.key)
     if (
       previous === undefined ||
@@ -615,6 +818,28 @@ function dedupeRawSuccessors(states: ReadonlyArray<TaggedSuccessor>): ReadonlyAr
         compareRepresentativeStates(current, previous) < 0)
     ) {
       deduped.set(current.key, current)
+    }
+  }
+  if (decisionTrace !== undefined) {
+    for (const { state, isIncumbent } of states) {
+      const key = beamStateKey(state)
+      const winner = deduped.get(key)
+      const kept = winner?.state === state && winner.isIncumbent === isIncumbent
+      decisionTrace.emit(new IrregularDecisionTraceSuccessorDeduplication({
+        decodeId: decisionTrace.decodeId,
+        chromosomeId: decisionTrace.chromosomeId,
+        decodeSource: decisionTrace.decodeSource,
+        stepIndex,
+        successorStateId: key,
+        deduplicationKey: key,
+        decision: kept ? 'kept' : 'dropped',
+        reason:
+          kept && countsByKey.get(key) === 1
+            ? 'unique_successor'
+            : kept
+              ? 'preferred_dedup_representative'
+              : 'duplicate_successor'
+      }))
     }
   }
   return [...deduped.values()]
@@ -634,15 +859,53 @@ function pruneScoredStates(
   states: ReadonlyArray<ScoredState>,
   beamWidth: number,
   layoutScorer: IrregularLayoutScorer.Service,
-  incumbent: ScoredState | undefined = undefined
+  incumbent: ScoredState | undefined = undefined,
+  decisionTrace: ActiveDecisionTrace | undefined = undefined,
+  stepIndex = 0
 ): ReadonlyArray<ScoredState> {
   const ranked = rankScoredStates(states, layoutScorer)
-  if (beamWidth <= 1 || incumbent === undefined) return ranked.slice(0, beamWidth)
+  const retained =
+    beamWidth <= 1 || incumbent === undefined
+      ? ranked.slice(0, beamWidth)
+      : rankScoredStates(
+          [
+            incumbent,
+            ...ranked
+              .filter(({ state }) => state !== incumbent.state)
+              .slice(0, beamWidth - 1)
+          ],
+          layoutScorer
+        )
 
-  const alternatives = ranked
-    .filter(({ state }) => state !== incumbent.state)
-    .slice(0, beamWidth - 1)
-  return rankScoredStates([incumbent, ...alternatives], layoutScorer)
+  if (decisionTrace !== undefined) {
+    const retainedStates = new Set(retained.map(({ state }) => state))
+    const incumbentRank = ranked.findIndex(({ state }) => state === incumbent?.state)
+    const incumbentDisplacedAlternative = incumbentRank >= beamWidth
+    for (const [stateIndex, scoredState] of ranked.entries()) {
+      const retainedState = retainedStates.has(scoredState.state)
+      const protectedIncumbent =
+        retainedState && incumbentDisplacedAlternative && scoredState.state === incumbent?.state
+      const displacedByIncumbent =
+        !retainedState && incumbentDisplacedAlternative && stateIndex < beamWidth
+      decisionTrace.emit(new IrregularDecisionTraceBeamSelection({
+        decodeId: decisionTrace.decodeId,
+        chromosomeId: decisionTrace.chromosomeId,
+        decodeSource: decisionTrace.decodeSource,
+        stepIndex,
+        stateId: scoredState.key,
+        rank: stateIndex + 1,
+        decision: retainedState ? 'retained' : 'pruned',
+        reason: protectedIncumbent
+          ? 'protected_incumbent'
+          : displacedByIncumbent
+            ? 'displaced_by_protected_incumbent'
+            : retainedState
+              ? 'within_beam_width'
+              : 'outside_beam_width'
+      }))
+    }
+  }
+  return retained
 }
 
 function compareRepresentativeStates(first: KeyedState, second: KeyedState): -1 | 0 | 1 {
@@ -674,7 +937,9 @@ function makeStateOrder(layoutScorer: IrregularLayoutScorer.Service): Order.Orde
   ])
 }
 
-function localCandidateKey(candidate: LocalCandidate): string {
+function localCandidateKey(
+  candidate: Pick<LocalCandidate, 'candidate' | 'moving'>
+): string {
   const transform = candidate.candidate.transform
   const points = candidate.moving.polygon.points.map((point) => `${point.x}:${point.y}`).join(',')
   return `${candidate.candidate.pieceId}:${candidate.candidate.point.x}:${candidate.candidate.point.y}:${transform.index}:${transform.rotationDeg}:${Number(transform.mirrored)}:${transform.reason}:${points}`
@@ -684,4 +949,69 @@ function beamStateKey(state: IrregularBeamState): string {
   const remaining = state.remainingPreparedPieces.map(preparedPieceId).join('|')
   const unplaced = [...state.unplacedPieceIds].toSorted(Order.String).join('|')
   return `${state.canonicalOccupiedGeometryKey}::${remaining}::${unplaced}`
+}
+
+function makeActiveDecisionTrace(
+  emit: EmitIrregularDecisionTrace | undefined,
+  identity: IrregularDecisionTraceIdentity | undefined
+): ActiveDecisionTrace | undefined {
+  if (emit === undefined) return undefined
+  return {
+    emit,
+    decodeId: identity?.decodeId ?? 'direct-0',
+    chromosomeId: identity?.chromosomeId ?? 'direct',
+    decodeSource: identity?.decodeSource ?? 'direct'
+  }
+}
+
+function decisionTraceTransform(
+  transform: IrregularTransformCandidate
+): IrregularDecisionTraceTransform {
+  return new IrregularDecisionTraceTransform({
+    index: transform.index,
+    rotationDeg: transform.rotationDeg,
+    mirrored: transform.mirrored,
+    reason: transform.reason
+  })
+}
+
+function decisionTraceLocalScore(score: IrregularPlacementScore): IrregularDecisionTraceLocalScore {
+  return new IrregularDecisionTraceLocalScore({
+    worstNormalizedSheetConsumption: score.worstNormalizedSheetConsumption,
+    normalizedSheetSpanSum: score.normalizedSheetSpanSum,
+    usedClusterAreaMm2: score.usedClusterAreaMm2,
+    usedClusterSpanMm: score.usedClusterSpanMm,
+    shortSideFill: score.shortSideFill,
+    longSideFill: score.longSideFill,
+    sharedCollisionBoundaryLengthMm: score.sharedCollisionBoundaryLengthMm,
+    candidateBottomMm: score.candidateBottomMm,
+    candidateLeftMm: score.candidateLeftMm
+  })
+}
+
+function decisionTraceLayoutScore(score: IrregularLayoutScore): IrregularDecisionTraceLayoutScore {
+  return new IrregularDecisionTraceLayoutScore({
+    unplacedCount: score.unplacedCount,
+    occupiedHullWasteRatio: score.occupiedHullWasteRatio,
+    collisionBoundsWorstNormalizedSheetConsumption:
+      score.collisionBoundsWorstNormalizedSheetConsumption,
+    collisionBoundsNormalizedSpanSum: score.collisionBoundsNormalizedSpanSum,
+    collisionBoundsAreaMm2: score.collisionBoundsAreaMm2,
+    collisionBoundsSpanMm: score.collisionBoundsSpanMm,
+    largestNetFreeMaterialRegionAreaMm2: score.largestNetFreeMaterialRegionAreaMm2,
+    freeMaterialRegionCount: score.freeMaterialRegionCount,
+    freeMaterialHoleCount: score.freeMaterialHoleCount,
+    freeMaterialSliverMetric: score.freeMaterialSliverMetric,
+    collisionBoundsBottomMm: score.collisionBoundsBottomMm,
+    collisionBoundsLeftMm: score.collisionBoundsLeftMm
+  })
+}
+
+function decisionTraceState(state: IrregularBeamState): IrregularDecisionTraceState {
+  return new IrregularDecisionTraceState({
+    stateId: beamStateKey(state),
+    placementOrder: state.placementOrder,
+    remainingPieceIds: state.remainingPreparedPieces.map(preparedPieceId),
+    unplacedPieceIds: state.unplacedPieceIds
+  })
 }

@@ -295,7 +295,13 @@ function cloneHistorySummary(summary: NestingHistorySummary): NestingHistorySumm
     truncated: summary.truncated,
     scope: summary.scope,
     strategyRunIds: [...summary.strategyRunIds],
-    ...(summary.ndjsonPath ? { ndjsonPath: summary.ndjsonPath } : {})
+    ...(summary.ndjsonPath ? { ndjsonPath: summary.ndjsonPath } : {}),
+    ...(summary.decisionTracePath
+      ? { decisionTracePath: summary.decisionTracePath }
+      : {}),
+    ...(summary.decisionTraceEventCount !== undefined
+      ? { decisionTraceEventCount: summary.decisionTraceEventCount }
+      : {})
   }
 }
 

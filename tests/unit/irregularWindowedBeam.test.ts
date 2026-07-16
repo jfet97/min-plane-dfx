@@ -27,6 +27,11 @@ import {
   type IrregularWindowedBeamHooks,
   type IrregularWindowedBeamOptions
 } from '../../src/workers/algorithm/irregular/windowedBeam.js'
+import {
+  IrregularDecisionTraceDecodeStarted,
+  type EmitIrregularDecisionTrace,
+  type IrregularDecisionTraceEvent
+} from '../../src/workers/algorithm/irregular/decisionTrace.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -152,14 +157,23 @@ function runWindowed(
   service: Layer.Layer<NfpIfpService, never, never> = NfpIfpServiceLive,
   options?: IrregularWindowedBeamOptions,
   hooks?: IrregularWindowedBeamHooks,
-  layoutScorer?: IrregularLayoutScorer.Service
+  layoutScorer?: IrregularLayoutScorer.Service,
+  emitDecisionTrace?: EmitIrregularDecisionTrace
 ) {
   const layoutScorerLayer =
     layoutScorer === undefined
       ? IrregularLayoutScorer.Live
       : Layer.succeed(IrregularLayoutScorer, layoutScorer)
   return Effect.runPromise(
-    decodeWindowedIrregularBeam(currentSheet, pieces, hooks, options).pipe(
+    decodeWindowedIrregularBeam(
+      currentSheet,
+      pieces,
+      hooks,
+      options,
+      undefined,
+      undefined,
+      emitDecisionTrace
+    ).pipe(
       Effect.provide(GeometryKernel.Live),
       Effect.provide(service),
       Effect.provide(IrregularPlacementScorer.Live),
@@ -539,6 +553,54 @@ describe('decodeWindowedIrregularBeam', () => {
 
     expect(stateSnapshot(reversed)).toEqual(stateSnapshot(forward))
     expect(reversed.bestState.placementOrder).toEqual(forward.bestState.placementOrder)
+  })
+
+  it('records local fanout rejection and beam pruning with explicit reasons', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      sheet(4, 1),
+      [preparedPiece('a', 1, 1)],
+      Layer.succeed(GeometrySettings, settings(1, 1, 2)),
+      candidateService(({ moving }) => [
+        oneCandidate(moving, 2),
+        oneCandidate(moving, 0),
+        oneCandidate(moving, 1)
+      ]),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(events[0]).toBeInstanceOf(IrregularDecisionTraceDecodeStarted)
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_selection',
+        rank: 3,
+        decision: 'rejected',
+        reason: 'outside_local_candidate_fanout'
+      })
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        rank: 2,
+        decision: 'pruned',
+        reason: 'outside_beam_width'
+      })
+    )
+  })
+
+  it('keeps decision tracing silent when the callback is absent', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      sheet(2, 1),
+      [preparedPiece('a', 1, 1)],
+      Layer.succeed(GeometrySettings, settings(1, 1, 1)),
+      candidateService(({ moving }) => [oneCandidate(moving, 0)])
+    )
+
+    expect(events).toEqual([])
   })
 
   it('deduplicates equivalent successors before whole-layout scoring without changing history', async () => {

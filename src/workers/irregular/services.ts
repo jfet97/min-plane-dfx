@@ -15,6 +15,7 @@ import type {
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import type { IrregularBeamState } from '../algorithm/irregular/irregularBeamState.js'
+import type { EmitIrregularDecisionTrace } from '../algorithm/irregular/decisionTrace.js'
 import type { PlacedCollisionSpatialIndex } from './placedCollisionSpatialIndex.js'
 import {
   CollisionGeometry,
@@ -182,6 +183,7 @@ export interface RunPortfolioInput {
     },
     beamWidth: number
   ) => void
+  readonly emitDecisionTrace?: EmitIrregularDecisionTrace
   readonly isCancelled?: () => boolean
 }
 

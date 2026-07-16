@@ -14,6 +14,7 @@ import {
 } from './algorithm/irregular/irregularWorkerOutput.js'
 import { IrregularLayoutScorer } from './algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from './algorithm/irregular/irregularPlacementScorer.js'
+import type { IrregularDecisionTraceEvent } from './algorithm/irregular/decisionTrace.js'
 import { IRREGULAR_WORKER_MODE } from '@shared/irregular/defaults.js'
 import { CollisionGeometryBuilder } from './irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from './irregular/geometryKernel.js'
@@ -104,6 +105,47 @@ function appendFrame(path: string, frame: NestingHistoryFramePayload) {
   })
 }
 
+function prepareDecisionTraceFile(
+  jobId: string,
+  historyPath: string | null,
+  mode: 'append' | 'truncate'
+) {
+  return Effect.gen(function* () {
+    if (historyPath === null) return null
+    const path = yield* Path.Path
+    const fs = yield* FileSystem.FileSystem
+    const decisionTracePath = path.join(
+      path.dirname(historyPath),
+      `${jobId}.decision-trace.ndjson`
+    )
+    yield* fs.writeFileString(decisionTracePath, '', { flag: mode === 'append' ? 'a' : 'w' })
+    return decisionTracePath
+  })
+}
+
+function appendDecisionTraceEvent(path: string, event: IrregularDecisionTraceEvent) {
+  return Effect.gen(function* () {
+    const filePath = yield* Path.Path
+    const fs = yield* FileSystem.FileSystem
+    yield* fs.makeDirectory(filePath.dirname(path), { recursive: true })
+    yield* fs.writeFileString(path, `${JSON.stringify(event)}\n`, { flag: 'a' })
+  })
+}
+
+function makeDecisionTraceEmitter(
+  decisionTracePath: string | null,
+  incrementEventCount: () => void
+): (
+  event: IrregularDecisionTraceEvent
+) => Effect.Effect<void, PlatformError.PlatformError, FileSystem.FileSystem | Path.Path> {
+  if (decisionTracePath === null) return (_event) => Effect.void
+  return (event) =>
+    Effect.gen(function* () {
+      incrementEventCount()
+      yield* appendDecisionTraceEvent(decisionTracePath, event)
+    })
+}
+
 function makeFrameEmitter(
   send: SendResponse,
   requestId: string,
@@ -153,14 +195,27 @@ function handleRunNesting(
     const historyMode = payload.options.historyMode
     const historyFileMode = payload.strategyRunId !== undefined ? 'append' : 'truncate'
     const historyPath = yield* prepareHistoryFile(jobId, historyMode, historyFileMode)
+    const decisionTracePath =
+      payload.options.workerMode === IRREGULAR_WORKER_MODE
+        ? yield* prepareDecisionTraceFile(jobId, historyPath, historyFileMode)
+        : null
 
     let frameCount = 0
+    let decisionTraceEventCount = 0
     const frameQueue = yield* Queue.unbounded<NestingHistoryFramePayload, Cause.Done>()
+    const decisionTraceQueue = yield* Queue.unbounded<IrregularDecisionTraceEvent, Cause.Done>()
     const emitFrame = makeFrameEmitter(send, requestId, jobId, historyMode, historyPath, () => {
       frameCount++
     })
     const frameConsumer = yield* Stream.fromQueue(frameQueue).pipe(
       Stream.runForEach(emitFrame),
+      Effect.forkDetach
+    )
+    const emitDecisionTrace = makeDecisionTraceEmitter(decisionTracePath, () => {
+      decisionTraceEventCount += 1
+    })
+    const decisionTraceConsumer = yield* Stream.fromQueue(decisionTraceQueue).pipe(
+      Stream.runForEach(emitDecisionTrace),
       Effect.forkDetach
     )
     const computation: Effect.Effect<NestingResult, WorkerResponseFailureError> =
@@ -179,7 +234,12 @@ function handleRunNesting(
                   jobId,
                   progress
                 })
-              )
+              ),
+            decisionTracePath === null
+              ? undefined
+              : (event) => {
+                  Queue.offerUnsafe(decisionTraceQueue, event)
+                }
           )
         : Effect.sync(() =>
             computeNesting(payload, {
@@ -193,9 +253,12 @@ function handleRunNesting(
         onFailure: (error) => ({ type: 'failure' as const, error }),
         onSuccess: (result) => ({ type: 'success' as const, result })
       }),
-      Effect.ensuring(Queue.end(frameQueue))
+      Effect.ensuring(
+        Queue.end(frameQueue).pipe(Effect.flatMap(() => Queue.end(decisionTraceQueue)))
+      )
     )
     yield* Fiber.join(frameConsumer)
+    yield* Fiber.join(decisionTraceConsumer)
 
     if (completion.type === 'failure') {
       yield* send(
@@ -219,7 +282,10 @@ function handleRunNesting(
       truncated: false,
       scope: 'winning_path',
       strategyRunIds,
-      ...(historyPath ? { ndjsonPath: historyPath } : {})
+      ...(historyPath ? { ndjsonPath: historyPath } : {}),
+      ...(decisionTracePath
+        ? { decisionTracePath, decisionTraceEventCount }
+        : {})
     }
     yield* send(
       new WorkerHistoryCompleteResponse({
@@ -253,14 +319,17 @@ function handleRunNesting(
 function computeIrregularWorkerResult(
   request: NestingRequest,
   emitFrame?: (frame: NestingHistoryFramePayload) => void,
-  emitPortfolioProgress?: (progress: IrregularPortfolioProgress) => Effect.Effect<void>
+  emitPortfolioProgress?: (progress: IrregularPortfolioProgress) => Effect.Effect<void>,
+  emitDecisionTrace?: (event: IrregularDecisionTraceEvent) => void
 ): Effect.Effect<NestingResult, WorkerResponseFailureError> {
   const startedAt = new Date().toISOString()
   const startedAtMs = Date.now()
   const strategyRunId = irregularStrategyRunId(request)
 
   const options =
-    emitFrame === undefined && emitPortfolioProgress === undefined
+    emitFrame === undefined &&
+    emitPortfolioProgress === undefined &&
+    emitDecisionTrace === undefined
       ? undefined
       : {
           ...(emitFrame !== undefined
@@ -278,7 +347,8 @@ function computeIrregularWorkerResult(
                 }
               }
             : {}),
-          ...(emitPortfolioProgress !== undefined ? { emitPortfolioProgress } : {})
+          ...(emitPortfolioProgress !== undefined ? { emitPortfolioProgress } : {}),
+          ...(emitDecisionTrace !== undefined ? { emitDecisionTrace } : {})
         }
   const geometrySettings = request.options.irregularSettings ?? GeometrySettings.Make
 

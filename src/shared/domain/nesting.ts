@@ -260,7 +260,9 @@ export class NestingHistorySummary extends Schema.Class<NestingHistorySummary>(
   truncated: Schema.Boolean,
   scope: HistoryScope,
   strategyRunIds: Schema.Array(Schema.String),
-  ndjsonPath: Schema.optional(Schema.String)
+  ndjsonPath: Schema.optional(Schema.String),
+  decisionTracePath: Schema.optional(Schema.String),
+  decisionTraceEventCount: Schema.optional(Schema.Number)
 }) {}
 
 export class AlgorithmBenchmark extends Schema.Class<AlgorithmBenchmark>('AlgorithmBenchmark')({

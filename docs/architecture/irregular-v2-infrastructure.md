@@ -102,6 +102,20 @@ identical, this guarantees that the wider beam cannot finish with more unplaced
 pieces than `beamWidth = 1`. This changes search retention only, not geometry
 legality.
 
+### Decision Trace
+
+When worker history is enabled, every irregular beam decode can synchronously
+emit plain internal decision-event classes. The trace identifies the executed
+baseline or GA chromosome and records generated legal candidates, named local
+and whole-layout scores, local fanout decisions, successor deduplication, beam
+retention or pruning, and the final winner. `historyMode: off` leaves the
+callback absent, so normal benchmark decodes do not construct trace events.
+
+The worker serializes these events as one JSON object per line in a separate
+`<jobId>.decision-trace.ndjson` file. Replay history remains the selected
+winning-state timeline used by the UI; the decision trace is a diagnostic audit
+of alternatives that disappeared before the winner was chosen.
+
 The shipped interactive profile is intentionally narrow: `orderWindow = 1`,
 `beamWidth = 1`, local candidate fanout `= 4`, transform cap `= 16`, and GA
 disabled. It produces a deterministic first result while retaining enough real

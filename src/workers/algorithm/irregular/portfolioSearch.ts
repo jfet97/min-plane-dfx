@@ -23,6 +23,10 @@ import {
 } from '../../irregular/services.js'
 import { IrregularPlacementScorer } from './irregularPlacementScorer.js'
 import { IrregularLayoutScorer, type IrregularLayoutScore } from './irregularLayoutScorer.js'
+import type {
+  EmitIrregularDecisionTrace,
+  IrregularDecisionTraceIdentity
+} from './decisionTrace.js'
 import {
   IrregularWindowedBeamOptions,
   IrregularWindowedBeamAbortedError,
@@ -232,6 +236,7 @@ function runPortfolio(
 
     const runBeam = (
       chromosome: Chromosome,
+      decisionTraceIdentity: IrregularDecisionTraceIdentity,
       control: IrregularWindowedBeamControl | undefined = undefined
     ) =>
       decodeChromosome({
@@ -239,6 +244,10 @@ function runPortfolio(
         pieces: baselinePieces,
         chromosome,
         captureSnapshots: input.onStateSnapshot !== undefined,
+        decisionTraceIdentity,
+        ...(input.emitDecisionTrace !== undefined
+          ? { emitDecisionTrace: input.emitDecisionTrace }
+          : {}),
         ...(control !== undefined ? { control } : {}),
         dependencies
       })
@@ -249,6 +258,11 @@ function runPortfolio(
     const baselineOutcome = yield* decodeWithOutcome(
       runBeam(
         baselineChromosome,
+        {
+          decodeId: 'baseline-0',
+          chromosomeId: chromosomeKey(baselineChromosome),
+          decodeSource: 'baseline'
+        },
         input.isCancelled === undefined ? undefined : { isCancelled: input.isCancelled }
       )
     )
@@ -348,10 +362,18 @@ function runPortfolio(
             })
           }
           const outcome = yield* decodeWithOutcome(
-            runBeam(chromosome, {
-              deadlineMs: deadline.value(),
-              ...(input.isCancelled !== undefined ? { isCancelled: input.isCancelled } : {})
-            })
+            runBeam(
+              chromosome,
+              {
+                decodeId: `ga-${generation}-${evaluationsCompleted}`,
+                chromosomeId: key,
+                decodeSource: 'ga'
+              },
+              {
+                deadlineMs: deadline.value(),
+                ...(input.isCancelled !== undefined ? { isCancelled: input.isCancelled } : {})
+              }
+            )
           )
           if (outcome._tag === 'failure') {
             if (isBeamAbortError(outcome.error)) {
@@ -463,6 +485,8 @@ function decodeChromosome(input: {
   readonly chromosome: Chromosome
   readonly captureSnapshots: boolean
   readonly control?: IrregularWindowedBeamControl
+  readonly emitDecisionTrace?: EmitIrregularDecisionTrace
+  readonly decisionTraceIdentity: IrregularDecisionTraceIdentity
   readonly dependencies: PortfolioDependencies
 }): Effect.Effect<
   EvaluatedChromosome,
@@ -496,7 +520,13 @@ function decodeChromosome(input: {
     pieces: orderedPieces,
     options,
     ...(hooks !== undefined ? { hooks } : {}),
-    ...(input.control !== undefined ? { control: input.control } : {})
+    ...(input.control !== undefined ? { control: input.control } : {}),
+    ...(input.emitDecisionTrace !== undefined
+      ? {
+          emitDecisionTrace: input.emitDecisionTrace,
+          decisionTraceIdentity: input.decisionTraceIdentity
+        }
+      : {})
   }).pipe(
     Effect.provideService(GeometrySettings, input.dependencies.settings),
     Effect.provideService(GeometryKernel, input.dependencies.geometryKernel),

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { Cause, Exit, Schema } from 'effect'
 import { RunNestingPayload, WorkerRequest, WorkerResponse } from '@shared/protocol/worker.js'
 import { NestingHistoryEvent } from '@shared/protocol/ipc.js'
+import { NestingHistorySummary } from '@shared/domain/nesting.js'
 
 const validate = (schema: Schema.Top, input: unknown) =>
   Schema.decodeUnknownExit(schema as never)(input)
@@ -110,6 +111,29 @@ describe('WorkerRequest', () => {
 })
 
 describe('WorkerResponse', () => {
+  it('accepts optional decision-trace metadata without requiring it for older summaries', () => {
+    const baseSummary = {
+      frameCount: 2,
+      strategyRunCount: 1,
+      retainedFrameCount: 2,
+      truncated: false,
+      scope: 'winning_path' as const,
+      strategyRunIds: ['run-1'],
+      ndjsonPath: '/tmp/job-1.ndjson'
+    }
+
+    expect(Exit.isSuccess(validate(NestingHistorySummary, baseSummary))).toBe(true)
+    expect(
+      Exit.isSuccess(
+        validate(NestingHistorySummary, {
+          ...baseSummary,
+          decisionTracePath: '/tmp/job-1.decision-trace.ndjson',
+          decisionTraceEventCount: 42
+        })
+      )
+    ).toBe(true)
+  })
+
   it('accepts a valid progress response', () => {
     const response = {
       type: 'progress' as const,

@@ -83,7 +83,17 @@ single-subrun result into the active regular run or CSV session.
 
 The worker transport is Effect-owned through `NodeWorker`, `NodeWorkerRunner`, and Effect RPC. The app-owned payload protocol is `RunNestingPayload -> Stream<WorkerResponse>`.
 
-History persistence is authoritative: frames are appended to NDJSON before optional live streaming. Live `history_frame` delivery is best-effort; persistence failures still fail the job.
+Replay history persistence is authoritative: selected-state frames are appended
+to the per-job NDJSON file before optional live streaming. Live `history_frame`
+delivery is best-effort; persistence failures still fail the job.
+
+Irregular runs with history enabled also write a separate
+`<jobId>.decision-trace.ndjson` file beside replay history. It records every
+executed baseline or GA beam decode decision, including local fanout,
+deduplication, whole-layout scoring, and beam pruning. The worker drains both
+queues before completion and reports the decision-trace path and event count in
+`NestingHistorySummary`. Decision traces are diagnostic data, not replay frames,
+and are not streamed to the renderer.
 
 The main supervisor guards every streamed response by both request id and job
 id before forwarding it. The preload decodes each `progress`, `history_frame`,

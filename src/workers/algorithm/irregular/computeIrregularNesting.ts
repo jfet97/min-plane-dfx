@@ -38,6 +38,7 @@ import {
   type IrregularPortfolioPhaseMeasurement
 } from './portfolioSearch.js'
 import { PriorityOrderServiceLive } from './priorityOrderService.js'
+import type { EmitIrregularDecisionTrace } from './decisionTrace.js'
 
 /** Reports that a prepared piece has no imported geometry available to the worker. */
 export class IrregularComputeError extends Data.TaggedError('IrregularComputeError')<{
@@ -63,6 +64,7 @@ export interface IrregularFinalizationMetrics {
 /** Synchronous worker-facing notification for one selected real beam state. */
 export interface ComputeIrregularNestingOptions {
   readonly emitStateSnapshot?: (snapshot: IrregularStateSnapshot, beamWidth: number) => void
+  readonly emitDecisionTrace?: EmitIrregularDecisionTrace
   readonly emitPortfolioProgress?: (progress: IrregularPortfolioProgress) => Effect.Effect<void>
   readonly isCancelled?: () => boolean
   /** standalone benchmark hook; measurements never enter normal app output. */
@@ -193,6 +195,9 @@ export function computeIrregularNesting(
               captureStateSnapshot(snapshot)
             }
           }
+        : {}),
+      ...(request.options.historyMode !== 'off' && options?.emitDecisionTrace !== undefined
+        ? { emitDecisionTrace: options.emitDecisionTrace }
         : {}),
       ...(options?.emitPortfolioProgress !== undefined
         ? { onProgress: options.emitPortfolioProgress }

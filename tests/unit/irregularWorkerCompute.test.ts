@@ -23,6 +23,7 @@ import {
 import { makeIrregularWorkerOutput } from '../../src/workers/algorithm/irregular/irregularWorkerOutput.js'
 import { IrregularLayoutScorer } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/irregularPlacementScorer.js'
+import type { IrregularDecisionTraceEvent } from '../../src/workers/algorithm/irregular/decisionTrace.js'
 
 const geometrySettings = new IrregularNestingSettings({
   geometry: {
@@ -157,6 +158,28 @@ describe('computeIrregularNesting', () => {
     expect(result.placedCollisionGeometries[0]?.placement.sourcePieceId).toBe(PieceId.make('piece'))
     expect(result.stateSnapshots[0]?.state.placedCollisionGeometries).toHaveLength(0)
     expect(result.stateSnapshots.at(-1)?.state.placedCollisionGeometries).toHaveLength(1)
+  })
+
+  it('emits decision traces only when history is enabled', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const emitDecisionTrace = (event: IrregularDecisionTraceEvent) => events.push(event)
+
+    await Effect.runPromise(
+      run(request([prepared('off-piece')], [source('off-piece')]), { emitDecisionTrace })
+    )
+    expect(events).toEqual([])
+
+    await Effect.runPromise(
+      run(request([prepared('traced-piece')], [source('traced-piece')], 'final'), {
+        emitDecisionTrace
+      })
+    )
+    expect(events[0]).toMatchObject({
+      kind: 'decode_started',
+      decodeId: 'baseline-0',
+      decodeSource: 'baseline'
+    })
+    expect(events.at(-1)?.kind).toBe('decode_winner')
   })
 
   it('keeps real transform placements and tagged beam history at the worker boundary', async () => {
