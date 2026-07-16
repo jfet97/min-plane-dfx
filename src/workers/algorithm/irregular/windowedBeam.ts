@@ -372,6 +372,7 @@ function collectLocalCandidates(input: {
       const candidateInput = {
         sheet: input.sheet,
         placed: input.state.placedCollisionGeometries,
+        placedCollisionIndex: input.state.placedCollisionIndex,
         moving,
         settings: input.settings
       }

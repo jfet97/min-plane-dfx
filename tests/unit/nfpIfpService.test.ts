@@ -30,6 +30,7 @@ import {
   NfpIfpServiceLive
 } from '../../src/workers/irregular/nfpIfpService.js'
 import { pairwiseNfpCacheKey } from '../../src/workers/irregular/geometryCacheKeys.js'
+import { makePlacedCollisionSpatialIndex } from '../../src/workers/irregular/placedCollisionSpatialIndex.js'
 import type {
   ComputeIfpBoundsInput,
   ComputeNfpInput,
@@ -98,6 +99,21 @@ function placedPiece(
     }),
     collisionGeometry: transformedGeometry(pieceId, points, bounds(points), transformCandidate)
   })
+}
+
+function workloadPlacedPieces(pieceCount: number): ReadonlyArray<IrregularPlacedPiece> {
+  const points = [point(0, 0), point(2, 0), point(2, 2), point(0, 2)]
+  const columns = 20
+  const spacing = 35
+
+  return Array.from({ length: pieceCount }, (_, index) =>
+    placedPiece(
+      `workload-fixed-${pieceCount}-${index}`,
+      points,
+      20 + (index % columns) * spacing,
+      20 + Math.floor(index / columns) * spacing
+    )
+  )
 }
 
 function transform(
@@ -658,6 +674,49 @@ describe('NfpIfpServiceLive', () => {
     }
   })
 
+  it.each([100, 200])(
+    'preserves unfiltered pre-Volta candidate and legality parity for a %i-piece workload',
+    async (pieceCount) => {
+      const moving = transformedGeometry(`moving-workload-${pieceCount}`, [
+        point(0, 0),
+        point(2, 0),
+        point(2, 2),
+        point(0, 2)
+      ])
+      const placed = workloadPlacedPieces(pieceCount)
+      const input: GeneratePlacementCandidatesInput = {
+        sheet: sheet(1000, 1000),
+        placed,
+        moving,
+        settings: DEFAULT_IRREGULAR_NESTING_SETTINGS
+      }
+      const indexedInput: GeneratePlacementCandidatesInput = {
+        ...input,
+        placedCollisionIndex: makePlacedCollisionSpatialIndex(placed)
+      }
+
+      const referenceCandidates = await generateCandidatesWithPruning(input, 'reference')
+      const indexedCandidates = await generateCandidatesWithPruning(indexedInput, 'reference')
+
+      expect(indexedCandidates).toEqual(referenceCandidates)
+
+      const directLegality = await Promise.all(
+        referenceCandidates.map((candidate) =>
+          Effect.runPromise(PlacementValidation.check({ ...input, candidate }))
+        )
+      )
+      const indexedLegality = await Promise.all(
+        indexedCandidates.map((candidate) =>
+          Effect.runPromise(PlacementValidation.check({ ...indexedInput, candidate }))
+        )
+      )
+
+      expect(indexedLegality).toEqual(directLegality)
+      expect(indexedLegality.every((isLegal) => isLegal)).toBe(true)
+    },
+    30_000
+  )
+
   it('rejects an IFP when the transformed polygon cannot fit', async () => {
     const moving = transformedGeometry('too-wide', [
       point(-1, 0),
@@ -946,6 +1005,42 @@ describe('NfpIfpServiceLive', () => {
       point(0, 8),
       point(6, 8)
     ])
+  })
+
+  it('keeps candidate generation identical with a persistent placed-collision index', async () => {
+    const moving = transformedGeometry('moving-index-parity', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const nearby = placedPiece(
+      'nearby-index-parity',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      4,
+      4
+    )
+    const outsideSheet = placedPiece(
+      'outside-index-parity',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      100,
+      100
+    )
+    const placed = [nearby, outsideSheet]
+    const input = {
+      sheet: sheet(10, 10),
+      placed,
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS
+    }
+
+    const withoutIndex = await generateCandidates(input)
+    const withIndex = await generateCandidates({
+      ...input,
+      placedCollisionIndex: makePlacedCollisionSpatialIndex(placed)
+    })
+
+    expect(withIndex).toEqual(withoutIndex)
   })
 
   it('keeps a rotated NFP boundary-touching candidate and filters positive overlap', async () => {

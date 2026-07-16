@@ -67,23 +67,43 @@ function assess(
 
   const placedPolygons: ValidatedPolygonWithBounds[] = []
 
-  for (const placed of input.placed) {
-    const placedPolygon = translateAndValidatePolygon(
-      placed.collisionGeometry.polygon,
-      {
-        x: placed.placement.transform.translateX,
-        y: placed.placement.transform.translateY
-      },
-      'placed'
-    )
-    if ('message' in placedPolygon) {
-      return failInvalidGeometry(
-        'validatePlacement',
-        placedPolygon.message
-      )
+  const spatialIndex = input.placedCollisionIndex
+  const indexedEntries =
+    spatialIndex !== undefined && spatialIndex.matches(input.placed)
+      ? spatialIndex.query(movingPolygon.bounds)
+      : undefined
+  if (indexedEntries !== undefined) {
+    for (const entry of indexedEntries) {
+      if (entry.validationMessage !== undefined) {
+        return failInvalidGeometry('validatePlacement', entry.validationMessage)
+      }
+      if (entry.translated === undefined) {
+        return failInvalidGeometry(
+          'validatePlacement',
+          'placed translation must produce finite polygon coordinates.'
+        )
+      }
+      placedPolygons.push(entry.translated)
     }
+  } else {
+    for (const placed of input.placed) {
+      const placedPolygon = translateAndValidatePolygon(
+        placed.collisionGeometry.polygon,
+        {
+          x: placed.placement.transform.translateX,
+          y: placed.placement.transform.translateY
+        },
+        'placed'
+      )
+      if ('message' in placedPolygon) {
+        return failInvalidGeometry(
+          'validatePlacement',
+          placedPolygon.message
+        )
+      }
 
-    placedPolygons.push(placedPolygon)
+      placedPolygons.push(placedPolygon)
+    }
   }
 
   if (!isInsideSheet(movingPolygon.polygon.points, input.sheet.width, input.sheet.height)) {

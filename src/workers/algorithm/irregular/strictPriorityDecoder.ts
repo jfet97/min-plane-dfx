@@ -17,6 +17,7 @@ import {
   IrregularNestingNotImplementedError,
   NfpIfpService
 } from '../../irregular/services.js'
+import { makeEmptyPlacedCollisionSpatialIndex } from '../../irregular/placedCollisionSpatialIndex.js'
 import {
   IrregularPlacementScorer,
   IrregularPlacementScoringError,
@@ -89,6 +90,7 @@ export function decodeStrictPriorityOrder(
     const placements: IrregularPlacement[] = []
     const unplacedPieceIds: PieceId[] = []
     const placed: IrregularPlacedPiece[] = []
+    let placedCollisionIndex = makeEmptyPlacedCollisionSpatialIndex()
 
     for (const piece of pieces) {
       const candidates: DecoderCandidate[] = []
@@ -102,6 +104,7 @@ export function decodeStrictPriorityOrder(
         const legalCandidates = yield* nfpIfpService.generatePlacementCandidates({
           sheet,
           placed,
+          placedCollisionIndex,
           moving,
           settings
         })
@@ -132,6 +135,8 @@ export function decodeStrictPriorityOrder(
           collisionGeometry: selected.moving
         })
       )
+      const committed = placed[placed.length - 1]
+      if (committed !== undefined) placedCollisionIndex = placedCollisionIndex.add(committed)
     }
 
     return { placements, unplacedPieceIds }

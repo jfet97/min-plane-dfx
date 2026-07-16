@@ -15,6 +15,7 @@ import type {
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import type { IrregularBeamState } from '../algorithm/irregular/irregularBeamState.js'
+import type { PlacedCollisionSpatialIndex } from './placedCollisionSpatialIndex.js'
 import {
   CollisionGeometry,
   FreeMaterialSnapshot,
@@ -124,6 +125,7 @@ export interface ComputeIfpBoundsInput {
 export interface GeneratePlacementCandidatesInput {
   readonly sheet: SheetSpec
   readonly placed: ReadonlyArray<IrregularPlacedPiece>
+  readonly placedCollisionIndex?: PlacedCollisionSpatialIndex
   readonly moving: TransformedCollisionGeometry
   readonly settings: IrregularNestingSettings
   readonly control?: IrregularNfpIfpControl
@@ -140,6 +142,7 @@ export type GeneratePlacementCandidatesInputWithoutControl = Omit<
 export interface ValidatePlacementInput {
   readonly sheet: SheetSpec
   readonly placed: ReadonlyArray<IrregularPlacedPiece>
+  readonly placedCollisionIndex?: PlacedCollisionSpatialIndex
   /** Moving polygon expressed around the same placement origin as `candidate.point`. */
   readonly moving: TransformedCollisionGeometry
   readonly candidate: IrregularPlacementCandidate

@@ -627,6 +627,10 @@ function generatePlacementCandidates(
     ).pipe(Effect.catchTag('IrregularGeometryInfeasibleError', () => Effect.succeed(undefined)))
     if (ifp === undefined) return []
     yield* nfpCheckpoint(input.control, 'ifp')
+    const placedCollisionIndex =
+      input.placedCollisionIndex !== undefined && input.placedCollisionIndex.matches(input.placed)
+        ? input.placedCollisionIndex
+        : undefined
     const nfpBoundaries: NfpBoundary[] = []
 
     for (const placed of input.placed) {
@@ -785,6 +789,7 @@ function generatePlacementCandidates(
       const legal = yield* PlacementValidation.check({
         sheet: input.sheet,
         placed: input.placed,
+        ...(placedCollisionIndex !== undefined ? { placedCollisionIndex } : {}),
         moving: input.moving,
         candidate
       })

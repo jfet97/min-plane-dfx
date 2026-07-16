@@ -177,6 +177,23 @@ numerically negligible but have no broad speed advantage; direct difference is
 exact-score equivalent but slower. The shipped vertex-pair-hull plus
 union-then-difference defaults therefore remain unchanged.
 
+`PlacedCollisionSpatialIndex` is a worker-private persistent uniform grid for
+translated placed-collision bounds. Each beam state carries the index for its
+branch and appends one committed placement when creating a successor; the
+strict decoder follows the same append-only path. Grid queries are conservative:
+large or non-finite cell ranges and invalid placed geometry remain in a fallback
+set, and exact convex validation still decides legality.
+
+NFP candidate generation deliberately iterates the supplied placed array; its
+separate NFP-boundary `BoundsIndex` pruning remains the mainline/reference
+differential path. The pre-Volta candidate reference supplies no spatial index
+and therefore performs the original full placed-array legality checks. A
+matched persistent index is used only by direct placement validation, where its
+translated moving bounds can exclude disjoint placed entries before the same
+exact positive-area overlap predicates run. A missing or mismatched index falls
+back to the full placed array, so the optimization cannot use stale branch
+state or change candidate legality.
+
 ## Current Integration State
 
 `NestingOptions.workerMode` accepts both:

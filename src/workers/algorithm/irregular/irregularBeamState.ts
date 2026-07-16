@@ -1,5 +1,9 @@
 import type { PieceId } from '@shared/domain/ids.js'
 import type { IrregularPlacedPiece, IrregularPreparedPiece } from '@shared/irregular/domain.js'
+import {
+  makePlacedCollisionSpatialIndex,
+  type PlacedCollisionSpatialIndex
+} from '../../irregular/placedCollisionSpatialIndex.js'
 
 export interface IrregularCollisionBounds {
   readonly minX: number
@@ -17,12 +21,14 @@ interface IrregularBeamStateInput {
   readonly unplacedSourcePieceIds?: ReadonlyArray<PieceId>
   readonly placementOrder: ReadonlyArray<PieceId>
   readonly parent?: IrregularBeamState | undefined
+  readonly placedCollisionIndex?: PlacedCollisionSpatialIndex
 }
 
 interface DerivedIrregularBeamStateMetadata {
   readonly canonicalEntryKeys: ReadonlyArray<string>
   readonly canonicalOccupiedGeometryKey: string
   readonly translatedCollisionBounds: IrregularCollisionBounds | undefined
+  readonly placedCollisionIndex: PlacedCollisionSpatialIndex
 }
 
 const derivedMetadata = Symbol('derivedMetadata')
@@ -49,6 +55,8 @@ export class IrregularBeamState {
   readonly canonicalOccupiedGeometryKey: string
   /** Bounds around translated collision polygons retained for derived scoring. */
   readonly translatedCollisionBounds: IrregularCollisionBounds | undefined
+  /** Persistent conservative index for translated placed collision bounds. */
+  readonly placedCollisionIndex: PlacedCollisionSpatialIndex
 
   private readonly canonicalEntryKeys: ReadonlyArray<string>
 
@@ -60,8 +68,13 @@ export class IrregularBeamState {
     this.unplacedSourcePieceIds = [...unplacedPieceIds]
     this.placementOrder = [...input.placementOrder]
     this.parent = input.parent
-
     const metadata = input[derivedMetadata] ?? deriveMetadata(this.placedCollisionGeometries)
+    const placedCollisionIndex = input.placedCollisionIndex ?? metadata.placedCollisionIndex
+    this.placedCollisionIndex =
+      placedCollisionIndex !== undefined && placedCollisionIndex.matches(this.placedCollisionGeometries)
+        ? placedCollisionIndex
+        : makePlacedCollisionSpatialIndex(this.placedCollisionGeometries)
+
     this.canonicalEntryKeys = metadata.canonicalEntryKeys
     this.canonicalOccupiedGeometryKey = metadata.canonicalOccupiedGeometryKey
     this.translatedCollisionBounds = metadata.translatedCollisionBounds
@@ -104,7 +117,8 @@ export class IrregularBeamState {
         translatedCollisionBounds:
           this.placedCollisionGeometries.length === 0
             ? derivePlacedCollisionBounds(input.placedCollisionGeometry)
-            : extendCollisionBounds(this.translatedCollisionBounds, input.placedCollisionGeometry)
+            : extendCollisionBounds(this.translatedCollisionBounds, input.placedCollisionGeometry),
+        placedCollisionIndex: this.placedCollisionIndex.add(input.placedCollisionGeometry)
       }
     )
   }
@@ -124,7 +138,8 @@ export class IrregularBeamState {
       {
         canonicalEntryKeys: this.canonicalEntryKeys,
         canonicalOccupiedGeometryKey: this.canonicalOccupiedGeometryKey,
-        translatedCollisionBounds: this.translatedCollisionBounds
+        translatedCollisionBounds: this.translatedCollisionBounds,
+        placedCollisionIndex: this.placedCollisionIndex
       }
     )
   }
@@ -146,7 +161,8 @@ function deriveMetadata(
   return {
     canonicalEntryKeys,
     canonicalOccupiedGeometryKey: canonicalEntryListKey(canonicalEntryKeys),
-    translatedCollisionBounds: deriveCollisionBounds(placedCollisionGeometries)
+    translatedCollisionBounds: deriveCollisionBounds(placedCollisionGeometries),
+    placedCollisionIndex: makePlacedCollisionSpatialIndex(placedCollisionGeometries)
   }
 }
 
