@@ -68,6 +68,10 @@ export interface IrregularLayoutScore {
   readonly collisionBoundsAreaMm2: number
   /** Width plus height of the placed collision-polygon bounds. */
   readonly collisionBoundsSpanMm: number
+  /** Sheet-space lower edge of the occupied collision envelope. */
+  readonly collisionBoundsBottomMm: number
+  /** Sheet-space left edge of the occupied collision envelope. */
+  readonly collisionBoundsLeftMm: number
   /** Clipper2-derived snapshot retained for diagnostics and later consumers. */
   readonly freeMaterialSnapshot: FreeMaterialSnapshot
   /** Stable prepared-id order of committed placements. */
@@ -219,6 +223,8 @@ function scoreDerivedState(
   const collisionBoundsNormalizedSpanSum = normalizedWidth + normalizedHeight
   const collisionBoundsAreaMm2 = collisionBounds.width * collisionBounds.height
   const collisionBoundsSpanMm = collisionBounds.width + collisionBounds.height
+  const collisionBoundsBottomMm = collisionBounds.minY
+  const collisionBoundsLeftMm = collisionBounds.minX
 
   if (
     !Number.isFinite(normalizedWidth) ||
@@ -226,7 +232,9 @@ function scoreDerivedState(
     !Number.isFinite(collisionBoundsWorstNormalizedSheetConsumption) ||
     !Number.isFinite(collisionBoundsNormalizedSpanSum) ||
     !Number.isFinite(collisionBoundsAreaMm2) ||
-    !Number.isFinite(collisionBoundsSpanMm)
+    !Number.isFinite(collisionBoundsSpanMm) ||
+    !Number.isFinite(collisionBoundsBottomMm) ||
+    !Number.isFinite(collisionBoundsLeftMm)
   ) {
     return failScoring('collision-bounds score arithmetic must remain finite.')
   }
@@ -238,6 +246,8 @@ function scoreDerivedState(
     collisionBoundsNormalizedSpanSum,
     collisionBoundsAreaMm2,
     collisionBoundsSpanMm,
+    collisionBoundsBottomMm,
+    collisionBoundsLeftMm,
     freeMaterialSnapshot,
     placementOrder: input.state.placementOrder,
     unplacedSourcePieceIds: input.state.unplacedSourcePieceIds
@@ -338,6 +348,9 @@ const layoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
   scoreCriterion((score) => score.collisionBoundsNormalizedSpanSum),
   scoreCriterion((score) => score.collisionBoundsAreaMm2),
   scoreCriterion((score) => score.collisionBoundsSpanMm),
+  // equally compact reflected layouts should always start from the same sheet corner
+  scoreCriterion((score) => score.collisionBoundsBottomMm),
+  scoreCriterion((score) => score.collisionBoundsLeftMm),
   // free area is almost constant when every placed polygon remains inside one sheet region
   // so compact bounds must decide before minor Clipper-area quantization differences
   descendingScoreCriterion((score) => score.largestNetFreeMaterialRegionAreaMm2),

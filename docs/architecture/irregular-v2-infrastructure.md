@@ -304,10 +304,11 @@ is compared in this order:
 3. lower `collisionBoundsNormalizedSpanSum`;
 4. lower `collisionBoundsAreaMm2`;
 5. lower `collisionBoundsSpanMm`;
-6. higher `largestNetFreeMaterialRegionAreaMm2`;
-7. lower `freeMaterialRegionCount`;
-8. lower `freeMaterialHoleCount`;
-9. lower `freeMaterialSliverMetric`.
+6. lower collision-bound `minY`, then `minX`, to anchor equivalent layouts at lower-left;
+7. higher `largestNetFreeMaterialRegionAreaMm2`;
+8. lower `freeMaterialRegionCount`;
+9. lower `freeMaterialHoleCount`;
+10. lower `freeMaterialSliverMetric`.
 
 Collision-bound compactness intentionally comes before free-material diagnostics:
 when every piece stays within one connected sheet region, the total free area is
