@@ -1,11 +1,10 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import { Option, Schema } from 'effect'
 import type {
   AppApi,
   CsvImportResult,
-  IpcResult
+  IpcResult,
+  NestingHistoryEvent
 } from '@shared/protocol/ipc.js'
-import { NestingHistoryEvent } from '@shared/protocol/ipc.js'
 import type { RunGifExportPayload } from '@shared/protocol/ipc.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
 import type {
@@ -128,17 +127,12 @@ const api: AppApi = {
   cancelJob: (jobId) =>
     invokeEnvelope<[JobId], { readonly ok: boolean }>('nesting:cancel', jobId).then(
       () => undefined
-    ),
+  ),
 
   onNestingHistory: (callback) => {
-    const listener = (_event: IpcRendererEvent, raw: unknown): void => {
-      const decoded = Schema.decodeUnknownOption(NestingHistoryEvent)(raw)
-      if (Option.isNone(decoded)) {
-        console.warn('[preload:nesting] ignored malformed history event')
-        return
-      }
-      callback(decoded.value)
-    }
+    // main emits only WorkerSupervisor-validated history events; the sandboxed
+    // preload stays dependency-free so Electron can load it before app modules.
+    const listener = (_event: IpcRendererEvent, event: NestingHistoryEvent): void => callback(event)
     ipcRenderer.on('nesting:history-event', listener)
     return () => ipcRenderer.removeListener('nesting:history-event', listener)
   },
