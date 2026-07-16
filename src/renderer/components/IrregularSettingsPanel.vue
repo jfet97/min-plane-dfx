@@ -318,6 +318,7 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
         >
           <option value="balanced-compactness">Balanced compactness</option>
           <option value="short-side-fill">Short-side fill</option>
+          <option value="edge-contact-then-balanced-compactness">Edge contact, then compactness</option>
         </select>
       </label>
       <div class="policy-list" title="Policies that an enabled GA may choose from.">
@@ -332,7 +333,13 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
             :checked="placementPolicyIds.includes(policyId)"
             @change="togglePolicy(policyId)"
           />
-          {{ policyId === 'balanced-compactness' ? 'Balanced compactness' : 'Short-side fill' }}
+          {{
+            policyId === 'balanced-compactness'
+              ? 'Balanced compactness'
+              : policyId === 'short-side-fill'
+                ? 'Short-side fill'
+                : 'Edge contact, then compactness'
+          }}
         </label>
       </div>
     </div>

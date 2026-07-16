@@ -208,6 +208,27 @@ describe('IrregularPlacementScorer', () => {
     expect(shortSideWinner.candidate.point).toEqual(point(0, 4))
   })
 
+  it('lets edge contact prefer a longer shared padded boundary before compactness', async () => {
+    const moving = movingGeometry('moving', rectanglePoints(4, 2))
+    const placed = [placedGeometry('placed', rectanglePoints(4, 2), 0, 0)]
+    const currentSheet = sheet(10, 10)
+    const compactCandidate = baseInput(currentSheet, moving, candidate('moving', 4, 0), placed)
+    const contactCandidate = baseInput(currentSheet, moving, candidate('moving', 0, 2), placed)
+
+    const compact = await score({
+      ...compactCandidate,
+      policyId: 'edge-contact-then-balanced-compactness'
+    })
+    const contact = await score({
+      ...contactCandidate,
+      policyId: 'edge-contact-then-balanced-compactness'
+    })
+
+    expect(compact.sharedCollisionBoundaryLengthMm).toBe(2)
+    expect(contact.sharedCollisionBoundaryLengthMm).toBe(4)
+    expect(IrregularPlacementScorer.Make.compare(contact, compact)).toBeLessThan(0)
+  })
+
   it('uses the policy selected through GeometrySettings when callers omit a gene', async () => {
     const moving = movingGeometry('piece', rectanglePoints(2, 2))
     const placed = [placedGeometry('placed', rectanglePoints(2, 2), 50, 0)]

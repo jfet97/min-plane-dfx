@@ -42,7 +42,8 @@ export type IrregularSearchSource = Schema.Schema.Type<typeof IrregularSearchSou
 /** Explicit local policies used to rank already-legal placement candidates. */
 export const IrregularPlacementPolicyId = Schema.Literals([
   'balanced-compactness',
-  'short-side-fill'
+  'short-side-fill',
+  'edge-contact-then-balanced-compactness'
 ])
 
 /** Type of a configured irregular local placement policy. */
@@ -55,7 +56,8 @@ export const DEFAULT_IRREGULAR_PLACEMENT_POLICY_ID: IrregularPlacementPolicyId =
 /** Stable policy choices available to the irregular portfolio by default. */
 export const DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS: ReadonlyArray<IrregularPlacementPolicyId> = [
   'balanced-compactness',
-  'short-side-fill'
+  'short-side-fill',
+  'edge-contact-then-balanced-compactness'
 ]
 
 /** Finite real-valued number used by irregular geometry contracts. */
@@ -83,7 +85,7 @@ const NonNegativeFiniteInteger = Schema.Int.check(Schema.isGreaterThanOrEqualTo(
 const PositiveFiniteInteger = Schema.Int.check(Schema.isGreaterThan(0))
 
 /** Default local candidate fanout for the first deterministic irregular result. */
-export const DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT = 1
+export const DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT = 4
 
 /** Default number of GA generations for an explicitly enabled experiment. */
 export const DEFAULT_IRREGULAR_GA_GENERATION_BUDGET = 2

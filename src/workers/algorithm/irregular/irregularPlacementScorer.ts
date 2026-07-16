@@ -10,12 +10,18 @@ import {
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import { GeometrySettings } from '../../irregular/geometryKernel.js'
+import { sharedConvexPolygonBoundaryLength } from '../../irregular/convexPolygonContact.js'
+import { translatePolygonWithBounds } from '../../irregular/convexBounds.js'
 
 /** The current deterministic compactness policy. */
 export const BALANCED_COMPACTNESS_POLICY_ID = 'balanced-compactness' as const
 
 /** Fill the shorter rectangular-sheet direction before spreading longways. */
 export const SHORT_SIDE_FILL_POLICY_ID = 'short-side-fill' as const
+
+/** Prefer the largest exact padded-edge contact before compactness tie-breakers. */
+export const EDGE_CONTACT_THEN_BALANCED_COMPACTNESS_POLICY_ID =
+  'edge-contact-then-balanced-compactness' as const
 
 /** A typed failure raised only when a candidate cannot produce a finite score. */
 export class IrregularPlacementScoringError extends Data.TaggedError(
@@ -61,6 +67,8 @@ export interface IrregularPlacementScore {
   readonly shortSideFill: number
   /** Normalized fill of the sheet's longer direction. */
   readonly longSideFill: number
+  /** Total length of shared padded collision boundaries with already placed pieces. */
+  readonly sharedCollisionBoundaryLengthMm: number
   /** Sheet-space bottom edge of the translated moving collision polygon. */
   readonly candidateBottomMm: number
   /** Sheet-space left edge of the translated moving collision polygon. */
@@ -118,6 +126,11 @@ const shortSideFillOrder = Order.combineAll<IrregularPlacementScore>([
   Order.mapInput(Order.String, (score) => score.candidate.pieceId)
 ])
 
+const edgeContactThenBalancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
+  Order.mapInput(Order.Number, (score) => -score.sharedCollisionBoundaryLengthMm),
+  balancedCompactnessOrder
+])
+
 /**
  * Ranks already-legal irregular candidates without participating in legality.
  *
@@ -166,6 +179,10 @@ function scoreCandidate(
   if (combinedBounds === undefined) {
     return failScoring('candidate and placed collision polygons must produce finite bounds.')
   }
+  const sharedCollisionBoundaryLengthMm = makeSharedCollisionBoundaryLength(input)
+  if (sharedCollisionBoundaryLengthMm === undefined) {
+    return failScoring('candidate and placed collision polygons must produce finite shared boundaries.')
+  }
 
   const clusterWidth = combinedBounds.maxX - combinedBounds.minX
   const clusterHeight = combinedBounds.maxY - combinedBounds.minY
@@ -196,6 +213,7 @@ function scoreCandidate(
     !Number.isFinite(usedClusterSpanMm) ||
     !Number.isFinite(shortSideFill) ||
     !Number.isFinite(longSideFill) ||
+    !Number.isFinite(sharedCollisionBoundaryLengthMm) ||
     !Number.isFinite(candidateBottom) ||
     !Number.isFinite(candidateLeft)
   ) {
@@ -210,6 +228,7 @@ function scoreCandidate(
     usedClusterSpanMm,
     shortSideFill,
     longSideFill,
+    sharedCollisionBoundaryLengthMm,
     candidateBottomMm: candidateBottom,
     candidateLeftMm: candidateLeft,
     candidate: input.candidate
@@ -223,7 +242,35 @@ function compareScores(
   if (first.policyId === SHORT_SIDE_FILL_POLICY_ID && first.policyId === second.policyId) {
     return shortSideFillOrder(first, second)
   }
+  if (
+    first.policyId === EDGE_CONTACT_THEN_BALANCED_COMPACTNESS_POLICY_ID &&
+    first.policyId === second.policyId
+  ) {
+    return edgeContactThenBalancedCompactnessOrder(first, second)
+  }
   return balancedCompactnessOrder(first, second)
+}
+
+function makeSharedCollisionBoundaryLength(
+  input: ScoreIrregularPlacementCandidateInput
+): number | undefined {
+  const moving = translatePolygonWithBounds(input.moving.polygon, input.candidate.point)
+  if (moving === undefined) return undefined
+
+  let totalLength = 0
+  for (const placed of input.placed) {
+    const translatedPlaced = translatePolygonWithBounds(placed.collisionGeometry.polygon, {
+      x: placed.placement.transform.translateX,
+      y: placed.placement.transform.translateY
+    })
+    if (translatedPlaced === undefined) return undefined
+
+    const contactLength = sharedConvexPolygonBoundaryLength(moving, translatedPlaced)
+    if (contactLength === undefined) return undefined
+    totalLength += contactLength
+    if (!Number.isFinite(totalLength)) return undefined
+  }
+  return totalLength
 }
 
 interface CombinedBounds {
