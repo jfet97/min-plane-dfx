@@ -979,19 +979,14 @@ function localCandidateKey(
 function localCandidateGeometryKey(candidate: LocalCandidate): string {
   const translateX = candidate.candidate.point.x
   const translateY = candidate.candidate.point.y
-  const points = candidate.moving.polygon.points.map((point) => ({
-    x: canonicalizeIrregularScoreMillimeters(point.x + translateX),
-    y: canonicalizeIrregularScoreMillimeters(point.y + translateY)
-  }))
-  if (points.some((point) => point.x === undefined || point.y === undefined)) {
-    return localCandidateKey(candidate)
+  const canonicalPoints: Array<{ readonly x: number; readonly y: number }> = []
+  for (const point of candidate.moving.polygon.points) {
+    const x = canonicalizeIrregularScoreMillimeters(point.x + translateX)
+    const y = canonicalizeIrregularScoreMillimeters(point.y + translateY)
+    if (x === undefined || y === undefined) return localCandidateKey(candidate)
+    canonicalPoints.push({ x, y })
   }
-  return canonicalCollisionPolygonKey(
-    points.map((point) => ({
-      x: point.x ?? 0,
-      y: point.y ?? 0
-    }))
-  )
+  return canonicalCollisionPolygonKey(canonicalPoints)
 }
 
 function beamStateKey(

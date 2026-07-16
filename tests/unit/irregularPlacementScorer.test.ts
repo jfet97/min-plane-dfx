@@ -263,6 +263,22 @@ describe('IrregularPlacementScorer', () => {
     expect(result.candidateLeftMm).toBe(1)
   })
 
+  it('canonicalizes translated local scores to the collision geometry grid', async () => {
+    const moving = movingGeometry('moving', rectanglePoints(7.123, 3.456))
+    const result = await score(
+      baseInput(
+        sheet(2_000_000, 2_000_000),
+        moving,
+        candidate('moving', 900_000.0004, 800_000.0004)
+      )
+    )
+
+    expect(result.candidateBottomMm).toBe(800_000)
+    expect(result.candidateLeftMm).toBe(900_000)
+    expect(result.usedClusterAreaMm2).toBe(7.123 * 3.456)
+    expect(result.usedClusterSpanMm).toBe(7.123 + 3.456)
+  })
+
   it('uses translated moving polygon bounds for bottom and left', async () => {
     const moving = movingGeometry('moving', [
       point(-3, -2),

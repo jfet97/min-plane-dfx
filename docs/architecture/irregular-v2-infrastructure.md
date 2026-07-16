@@ -72,6 +72,16 @@ geometry and invalid derived arithmetic remain typed failures. The supplied
 order must remain untouched so future beam and portfolio layers can make their
 priority decisions outside this baseline.
 
+Local compactness ranks the post-placement collision-bounds area before the
+normalized axis spans and absolute span. Bounds, anchor coordinates, and shared
+boundary length are canonicalized to the existing `0.001 mm` collision grid
+before comparison, so floating subtraction noise cannot change a fanout choice.
+Before applying the configured local fanout, the windowed beam also merges exact
+translated collision-ring duplicates after the same canonicalization. Transform
+metadata remains the deterministic representative tie-break, but equivalent
+rotation or mirror descriptions cannot consume separate fanout slots. Decision
+traces report rejected equivalents as `duplicate_local_geometry`.
+
 `GeometrySettings` yields one `IrregularNestingSettings` value containing both
 geometry and optimizer settings. `GeometrySettings.Live` supplies the shared
 defaults only; tests and future worker configuration can replace that layer with
@@ -409,20 +419,22 @@ beam, and seeded GA/search portfolio:
 `src/workers/algorithm/irregular/irregularPlacementScorer.ts` owns the local
 candidate-policy score for candidates already accepted by NFP/IFP generation
 and direct validation. `irregularLayoutScorer.ts` owns a separate lexicographic
-   whole-layout score for beam retention: unplaced count first, then near-complete
-   structural contacts, compact collision bounds, occupied-hull waste, legacy
-   contact diagnostics, lower-left anchoring, and free-material usability and
-   fragmentation diagnostics. Free material is scoring-only and never accepts
-   or rejects a placement. Before a beam step calls that expensive scorer, it
-   deduplicates successor states by canonical occupied geometry and the ordered
-   remaining sequence of explicit interchangeability signatures. Normal quantity
-   copies share their original source signature; CSV copies additionally retain
-   their CSV row identity. Collision geometry, transform sets, and per-copy
-   transform preferences remain part of the signature, while concrete copy ids
-   remain on the deterministic representative used for history and output. This
-   prevents identical-copy permutations from consuming the beam without merging
-   distinct sources, customer rows, queue orders, or search behavior. The run also retains its
-   scored beam states. A bounded cache owned by the layout-scorer service reuses
+whole-layout score for beam retention: unplaced count first, then near-complete
+structural contacts, compact collision bounds, occupied-hull waste, legacy
+contact diagnostics, lower-left anchoring, and free-material usability and
+fragmentation diagnostics. Free material is scoring-only and never accepts or
+rejects a placement. Local translated-ring deduplication happens before fanout;
+after expansion and before the expensive layout score, the beam separately
+deduplicates successor states by canonical occupied geometry and the ordered
+remaining sequence of explicit interchangeability signatures. Normal quantity
+copies share their original source signature; CSV copies additionally retain
+their CSV row identity. Collision geometry, transform sets, and per-copy
+transform preferences remain part of the signature, while concrete copy ids
+remain on the deterministic representative used for history and output. This
+prevents equivalent transforms and identical-copy permutations from consuming
+the configured diversity without merging distinct sources, customer rows, queue
+orders, or search behavior. The run also retains its scored beam states. A
+bounded cache owned by the layout-scorer service reuses
 only Clipper2 free-material snapshots for identical sheet and occupied
 geometry, including across portfolio decodes. When a cached parent state gains
 one placement, it subtracts that collision polygon from the cached material
