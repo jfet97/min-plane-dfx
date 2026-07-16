@@ -205,6 +205,41 @@ result JSON instead includes an explicit schema-validated irregular transform
 export with source/copy ids, placement reference, transform, subrun metadata,
 and CSV source-row links when available.
 
+## Benchmark Corpus Contract
+
+The standalone `benchmark:irregular` runner has named deterministic corpus cases
+and search profiles so capacity-sensitive comparisons do not depend on hidden
+process state. The current cases use the imported triangle/trapezoid set with
+20 pieces on `500x300` and `550x300` sheets. The named profiles include narrow
+and wider deterministic beams, a low-budget seeded GA same-count comparison,
+and a bounded GA run that reaches all 20 pieces on the tighter sheet.
+Named GA profiles use explicit generation/evaluation limits and a neutralized
+large time sentinel rather than a 15-second wall-clock cutoff, so the seed and
+those finite limits determine the comparison result.
+For option precedence, an explicit CLI value overrides the selected profile,
+which overrides general defaults. An explicit `--ga-enabled` also derives
+`baselineOnly` to its inverse when `--baseline-only` is omitted; an explicit
+`--baseline-only` value wins over that derivation, and the contradictory pair
+`gaEnabled=true` plus `baselineOnly=true` is rejected.
+
+Every measured row reports the elapsed time, placed and unplaced counts, the
+terminal legality-audit status, and the complete whole-layout score. The score
+is compared in this order:
+
+1. lower `unplacedCount`;
+2. higher `largestNetFreeMaterialRegionAreaMm2`;
+3. lower `freeMaterialRegionCount`;
+4. lower `freeMaterialHoleCount`;
+5. lower `freeMaterialSliverMetric`;
+6. lower `collisionBoundsWorstNormalizedSheetConsumption`;
+7. lower `collisionBoundsNormalizedSpanSum`;
+8. lower `collisionBoundsAreaMm2`;
+9. lower `collisionBoundsSpanMm`.
+
+Rows also include placement order and unplaced source ids for the scorer's
+final deterministic tie-breaks. A terminal audit failure makes the row invalid;
+placed count alone is not a quality result.
+
 ## Ownership
 
 Geometry services remain under `src/workers/irregular/`. Placement selection,

@@ -19,13 +19,24 @@ import { GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { FreeMaterialServiceLive } from '../../src/workers/irregular/freeMaterialService.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
 import { TransformGeneratorLive } from '../../src/workers/irregular/transformGenerator.js'
-import { IrregularLayoutScorer } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
+import {
+  IrregularLayoutScorer,
+  type IrregularLayoutScore
+} from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { IrregularGeometryInputError } from '../../src/workers/irregular/services.js'
 import { DEFAULT_STRATEGY_ID } from '@shared/domain/strategies.js'
-import { normalizeImportedPieceIdentities } from '../../scripts/irregular-benchmark.js'
+import {
+  normalizeImportedPieceIdentities,
+  resolveBenchmarkOptions,
+  runNamedBenchmarkProfile,
+  summarizeBenchmarkScore
+} from '../../scripts/irregular-benchmark.js'
 import {
   collisionOpportunityMetrics,
+  DETERMINISTIC_GA_TIME_BUDGET_MS,
+  IRREGULAR_BENCHMARK_CORPUS,
+  IRREGULAR_BENCHMARK_PROFILES,
   repeatImportedPieces
 } from '../fixtures/irregularBenchmarkFixtures.js'
 
@@ -119,6 +130,19 @@ function runIrregular(request: NestingRequest) {
   )
 }
 
+async function compareScores(
+  first: IrregularLayoutScore,
+  second: IrregularLayoutScore
+): Promise<number> {
+  const scorer = await Effect.runPromise(
+    IrregularLayoutScorer.use((service) => Effect.succeed(service)).pipe(
+      Effect.provide(IrregularLayoutScorer.Live),
+      Effect.provide(GeometrySettings.Live)
+    )
+  )
+  return scorer.compare(first, second)
+}
+
 function runRectangular(request: NestingRequest) {
   return computeNesting(request, { emitFrame: () => {} })
 }
@@ -179,6 +203,16 @@ function computeKey(result: IrregularComputeResult) {
       )
     }))
   }
+}
+
+type NamedProfileExecution = Awaited<ReturnType<typeof runNamedBenchmarkProfile>>
+
+function executionRun(
+  execution: NamedProfileExecution
+): NamedProfileExecution['measuredRuns'][number] {
+  const run = execution.measuredRuns[0]
+  if (run === undefined) throw new Error('expected one measured benchmark run')
+  return run
 }
 
 describe('irregular benchmark and debug corpus', () => {
@@ -306,6 +340,21 @@ describe('irregular benchmark and debug corpus', () => {
     const second = await Effect.runPromise(runIrregular(request))
     expect(computeKey(first)).toEqual(computeKey(second))
 
+    expect(summarizeBenchmarkScore(first.score)).toEqual({
+      unplacedCount: first.score.unplacedCount,
+      largestNetFreeMaterialRegionAreaMm2: first.score.largestNetFreeMaterialRegionAreaMm2,
+      freeMaterialRegionCount: first.score.freeMaterialRegionCount,
+      freeMaterialHoleCount: first.score.freeMaterialHoleCount,
+      freeMaterialSliverMetric: first.score.freeMaterialSliverMetric,
+      collisionBoundsWorstNormalizedSheetConsumption:
+        first.score.collisionBoundsWorstNormalizedSheetConsumption,
+      collisionBoundsNormalizedSpanSum: first.score.collisionBoundsNormalizedSpanSum,
+      collisionBoundsAreaMm2: first.score.collisionBoundsAreaMm2,
+      collisionBoundsSpanMm: first.score.collisionBoundsSpanMm,
+      placementOrder: [...first.score.placementOrder],
+      unplacedSourcePieceIds: [...first.score.unplacedSourcePieceIds]
+    })
+
     const output = makeIrregularWorkerOutput({
       request,
       computed: first,
@@ -383,6 +432,123 @@ describe('irregular benchmark and debug corpus', () => {
     )
     expect(computeKey(second)).toEqual(computeKey(first))
   })
+
+  it('keeps both capacity cases deterministic and within their source budgets', () => {
+    expect(IRREGULAR_BENCHMARK_CORPUS).toHaveLength(2)
+    for (const benchmarkCase of IRREGULAR_BENCHMARK_CORPUS) {
+      expect(benchmarkCase.fixtureNames.length).toBeGreaterThan(0)
+      expect(benchmarkCase.pieceCount).toBeLessThanOrEqual(
+        benchmarkCase.fixtureNames.length * benchmarkCase.repeatCount
+      )
+      expect(benchmarkCase.sheetWidth).toBeGreaterThan(0)
+      expect(benchmarkCase.sheetHeight).toBeGreaterThan(0)
+    }
+  })
+
+  it('gives explicit GA and baseline flags precedence over profile defaults', () => {
+    const enabledFromBeamProfile = resolveBenchmarkOptions([
+      '--profile',
+      'near-capacity-beam-1',
+      '--ga-enabled=true'
+    ])
+    expect(enabledFromBeamProfile.gaEnabled).toBe(true)
+    expect(enabledFromBeamProfile.baselineOnly).toBe(false)
+
+    const disabledFromGaProfile = resolveBenchmarkOptions([
+      '--profile',
+      'near-capacity-ga',
+      '--ga-enabled=false'
+    ])
+    expect(disabledFromGaProfile.gaEnabled).toBe(false)
+    expect(disabledFromGaProfile.baselineOnly).toBe(true)
+
+    const explicitBaselineOverride = resolveBenchmarkOptions([
+      '--profile',
+      'near-capacity-ga',
+      '--ga-enabled=false',
+      '--baseline-only=false'
+    ])
+    expect(explicitBaselineOverride.gaEnabled).toBe(false)
+    expect(explicitBaselineOverride.baselineOnly).toBe(false)
+
+    const baselineOverrideFromBeamProfile = resolveBenchmarkOptions([
+      '--profile',
+      'near-capacity-beam-1',
+      '--baseline-only=false'
+    ])
+    expect(baselineOverrideFromBeamProfile.gaEnabled).toBe(false)
+    expect(baselineOverrideFromBeamProfile.baselineOnly).toBe(false)
+
+    expect(() =>
+      resolveBenchmarkOptions(['--profile', 'near-capacity-ga', '--baseline-only=true'])
+    ).toThrow('GA is enabled but --baseline-only is true')
+
+    expect(() =>
+      resolveBenchmarkOptions([
+        '--profile',
+        'near-capacity-beam-1',
+        '--ga-enabled=true',
+        '--baseline-only=true'
+      ])
+    ).toThrow('GA is enabled but --baseline-only is true')
+  })
+
+  it('executes named capacity profiles through the shared runner path', async () => {
+    const beamExecution = await runNamedBenchmarkProfile('near-capacity-beam-1')
+    const gaLiteExecution = await runNamedBenchmarkProfile('near-capacity-ga-lite')
+    const gaExecution = await runNamedBenchmarkProfile('near-capacity-ga')
+    const wideExecution = await runNamedBenchmarkProfile('near-capacity-wide-beam-4')
+    const executions = [beamExecution, gaLiteExecution, gaExecution, wideExecution]
+
+    for (const execution of executions) {
+      const profile = IRREGULAR_BENCHMARK_PROFILES.find(({ id }) => id === execution.profileId)
+      if (profile === undefined) throw new Error('expected a named benchmark profile')
+      const corpusCase = IRREGULAR_BENCHMARK_CORPUS.find(({ id }) => id === profile.corpusCaseId)
+      if (corpusCase === undefined) throw new Error('expected a profile corpus case')
+
+      expect(execution.fixtureNames).toEqual(corpusCase.fixtureNames)
+      expect(execution.repeatCount).toBe(corpusCase.repeatCount)
+      expect(execution.pieceCount).toBe(corpusCase.pieceCount)
+      expect(execution.sheetWidth).toBe(corpusCase.sheetWidth)
+      expect(execution.sheetHeight).toBe(corpusCase.sheetHeight)
+      expect(execution.sourceCount).toBe(execution.pieceCount)
+      expect(execution.pieceCount).toBeLessThanOrEqual(
+        execution.fixtureNames.length * execution.repeatCount
+      )
+      expect(execution.measuredRuns).toHaveLength(1)
+      expect(execution.measuredRuns[0]?.auditStatus).toBe('passed')
+    }
+
+    const beamRun = executionRun(beamExecution)
+    const gaLiteRun = executionRun(gaLiteExecution)
+    const gaRun = executionRun(gaExecution)
+    const wideRun = executionRun(wideExecution)
+
+    expect(gaRun.placedCount).toBe(20)
+    expect(gaRun.unplacedCount).toBe(0)
+    expect(wideRun.placedCount).toBe(20)
+    expect(wideRun.unplacedCount).toBe(0)
+    expect(beamRun.unplacedCount).toBe(gaLiteRun.unplacedCount)
+    expect(await compareScores(gaLiteRun.score, beamRun.score)).toBeLessThan(0)
+    expect(gaLiteRun.portfolioTerminationReason).toBe('generation_budget')
+
+    const repeatedGaLiteExecution = await runNamedBenchmarkProfile('near-capacity-ga-lite')
+    const repeatedGaLiteRun = executionRun(repeatedGaLiteExecution)
+    expect(summarizeBenchmarkScore(repeatedGaLiteRun.score)).toEqual(
+      summarizeBenchmarkScore(gaLiteRun.score)
+    )
+    expect(repeatedGaLiteRun.portfolioSource).toBe(gaLiteRun.portfolioSource)
+    expect(repeatedGaLiteRun.portfolioStatus).toBe(gaLiteRun.portfolioStatus)
+    expect(repeatedGaLiteRun.portfolioTerminationReason).toBe(
+      gaLiteRun.portfolioTerminationReason
+    )
+
+    expect(
+      IRREGULAR_BENCHMARK_PROFILES
+        .filter(({ gaEnabled }) => gaEnabled)
+        .every(({ gaTimeBudgetMs }) => gaTimeBudgetMs === DETERMINISTIC_GA_TIME_BUDGET_MS)
+    ).toBe(true)
+  }, 60_000)
 
   it('validates stress fixtures directly and preserves import warnings', async () => {
     const validStressSources = await Promise.all([

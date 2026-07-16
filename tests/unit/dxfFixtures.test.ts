@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { importDxfFile } from '@main/services/DxfImportService.js'
 import {
   INVALID_OUTLINE_FIXTURES,
+  IRREGULAR_BENCHMARK_CORPUS,
   IRREGULAR_DXF_FIXTURES,
   VALID_SINGLE_OUTLINE_FIXTURES
 } from '../fixtures/irregularBenchmarkFixtures.js'
@@ -44,4 +45,25 @@ describe('DXF fixtures', () => {
       expect(document.pieces[0]?.warnings.length).toBeGreaterThan(0)
     }
   )
+
+  it.each(IRREGULAR_BENCHMARK_CORPUS)('keeps benchmark case $id legally importable', async (benchmarkCase) => {
+    const documents = await Promise.all(
+      benchmarkCase.fixtureNames.map((fixtureName) =>
+        importDxfFile(join(fixturesDir, fixtureName))
+      )
+    )
+
+    expect(benchmarkCase.pieceCount).toBeLessThanOrEqual(
+      benchmarkCase.fixtureNames.length * benchmarkCase.repeatCount
+    )
+    expect(
+      documents.every(
+        (document) =>
+          document.pieces.length === 1 &&
+          document.pieces[0]?.geometry.closed === true &&
+          document.pieces[0]?.warnings.length === 0 &&
+          document.warnings.length === 0
+      )
+    ).toBe(true)
+  })
 })

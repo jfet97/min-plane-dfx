@@ -13,6 +13,7 @@ import {
   IrregularPlacementCandidate,
   IrregularPoint
 } from '../src/shared/irregular/domain.js'
+import type { IrregularLayoutScore } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { preparePieces } from '../src/shared/preparePieces.js'
 import { DEFAULT_STRATEGY_ID } from '../src/shared/domain/strategies.js'
 import {
@@ -40,6 +41,8 @@ import {
 } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import {
   IRREGULAR_DXF_FIXTURES,
+  IRREGULAR_BENCHMARK_CORPUS,
+  IRREGULAR_BENCHMARK_PROFILES,
   repeatImportedPieces
 } from '../tests/fixtures/irregularBenchmarkFixtures.js'
 
@@ -68,6 +71,7 @@ const flagAliases = new Map<string, string>([
   ['transform-cap', 'transform-cap'],
   ['free-material-operation', 'free-material-operation'],
   ['nfp-construction', 'nfp-construction'],
+  ['profile', 'profile'],
   ['ga', 'ga-enabled'],
   ['ga-enabled', 'ga-enabled'],
   ['baseline-only', 'baseline-only'],
@@ -100,7 +104,8 @@ interface RawArguments {
   readonly values: ReadonlyMap<string, ReadonlyArray<string>>
 }
 
-interface CliOptions {
+export interface CliOptions {
+  readonly profileId: string | undefined
   readonly fixtureNames: ReadonlyArray<string>
   readonly pieceCount: number | undefined
   readonly repeatCount: number
@@ -127,14 +132,67 @@ interface CliOptions {
   readonly runCount: number
 }
 
-interface TimedRun {
+export interface IrregularBenchmarkTimedRun {
   readonly elapsedMs: number
   readonly placedCount: number
   readonly unplacedCount: number
   readonly auditStatus: 'passed'
+  readonly score: IrregularLayoutScore
   readonly portfolioSource: IrregularComputeResult['portfolio']['source']
   readonly portfolioStatus: IrregularComputeResult['portfolio']['status']
   readonly portfolioTerminationReason: IrregularComputeResult['portfolio']['terminationReason']
+}
+
+interface PreparedBenchmark {
+  readonly options: CliOptions
+  readonly sources: ReadonlyArray<ImportedPiece>
+  readonly settings: IrregularNestingSettings
+  readonly request: NestingRequest
+}
+
+export interface IrregularBenchmarkExecution {
+  readonly profileId: string | undefined
+  readonly fixtureNames: ReadonlyArray<string>
+  readonly repeatCount: number
+  readonly pieceCount: number
+  readonly sourceCount: number
+  readonly sheetWidth: number
+  readonly sheetHeight: number
+  readonly warmupRuns: ReadonlyArray<IrregularBenchmarkTimedRun>
+  readonly measuredRuns: ReadonlyArray<IrregularBenchmarkTimedRun>
+}
+
+export interface IrregularBenchmarkScoreSummary {
+  readonly unplacedCount: number
+  readonly largestNetFreeMaterialRegionAreaMm2: number
+  readonly freeMaterialRegionCount: number
+  readonly freeMaterialHoleCount: number
+  readonly freeMaterialSliverMetric: number
+  readonly collisionBoundsWorstNormalizedSheetConsumption: number
+  readonly collisionBoundsNormalizedSpanSum: number
+  readonly collisionBoundsAreaMm2: number
+  readonly collisionBoundsSpanMm: number
+  readonly placementOrder: ReadonlyArray<string>
+  readonly unplacedSourcePieceIds: ReadonlyArray<string>
+}
+
+export function summarizeBenchmarkScore(
+  score: IrregularLayoutScore
+): IrregularBenchmarkScoreSummary {
+  return {
+    unplacedCount: score.unplacedCount,
+    largestNetFreeMaterialRegionAreaMm2: score.largestNetFreeMaterialRegionAreaMm2,
+    freeMaterialRegionCount: score.freeMaterialRegionCount,
+    freeMaterialHoleCount: score.freeMaterialHoleCount,
+    freeMaterialSliverMetric: score.freeMaterialSliverMetric,
+    collisionBoundsWorstNormalizedSheetConsumption:
+      score.collisionBoundsWorstNormalizedSheetConsumption,
+    collisionBoundsNormalizedSpanSum: score.collisionBoundsNormalizedSpanSum,
+    collisionBoundsAreaMm2: score.collisionBoundsAreaMm2,
+    collisionBoundsSpanMm: score.collisionBoundsSpanMm,
+    placementOrder: [...score.placementOrder],
+    unplacedSourcePieceIds: [...score.unplacedSourcePieceIds]
+  }
 }
 
 function usage(): string {
@@ -143,6 +201,7 @@ function usage(): string {
 Run the real DXF importer and irregular-convex-v2 worker algorithm.
 
 Input:
+  --profile <name>                  Named repeatable corpus/search profile
   --fixtures <name,...>             DXF fixture names (default: triangle.dxf,trapezoid.dxf)
   --fixture <name>                  Additional fixture; may be repeated
   --piece-count <n>                 Total pieces after repetition (default: all selected)
@@ -181,6 +240,9 @@ Measurement:
 
 Available fixtures:
   ${IRREGULAR_DXF_FIXTURES.join(', ')}
+
+Available profiles:
+  ${IRREGULAR_BENCHMARK_PROFILES.map(({ id, description }) => `${id}: ${description}`).join('\n  ')}
 `
 }
 
@@ -282,14 +344,40 @@ function optionalInteger(
   return value === undefined ? defaultValue : parseInteger(value, name, minimum)
 }
 
-function parseFixtureNames(argumentsData: RawArguments): ReadonlyArray<string> {
+function selectedProfile(argumentsData: RawArguments) {
+  const profileId = singleValue(argumentsData, 'profile')
+  if (profileId === undefined) return undefined
+  const profile = IRREGULAR_BENCHMARK_PROFILES.find(({ id }) => id === profileId)
+  if (profile === undefined) {
+    throw new Error(
+      `Unknown benchmark profile ${profileId}. Use --help to see the available profiles.`
+    )
+  }
+  return profile
+}
+
+function corpusCaseForProfile(profileId: string | undefined) {
+  if (profileId === undefined) return undefined
+  const profile = IRREGULAR_BENCHMARK_PROFILES.find(({ id }) => id === profileId)
+  if (profile === undefined) return undefined
+  const corpusCase = IRREGULAR_BENCHMARK_CORPUS.find(({ id }) => id === profile.corpusCaseId)
+  if (corpusCase === undefined) {
+    throw new Error(`Benchmark profile ${profileId} references missing corpus case.`)
+  }
+  return corpusCase
+}
+
+function parseFixtureNames(
+  argumentsData: RawArguments,
+  defaultFixtureNames: ReadonlyArray<string>
+): ReadonlyArray<string> {
   const values = valuesFor(argumentsData, 'fixture')
   const fixtureNames = values
     .flatMap((value) => value.split(','))
     .map((value) => value.trim())
     .filter((value) => value.length > 0)
     .map((value) => (value.endsWith('.dxf') ? value : `${value}.dxf`))
-  if (fixtureNames.length === 0) return DEFAULT_FIXTURE_NAMES
+  if (fixtureNames.length === 0) return defaultFixtureNames
 
   const knownFixtures = new Set<string>(IRREGULAR_DXF_FIXTURES)
   for (const fixtureName of fixtureNames) {
@@ -302,7 +390,11 @@ function parseFixtureNames(argumentsData: RawArguments): ReadonlyArray<string> {
   return fixtureNames
 }
 
-function parseSheet(argumentsData: RawArguments): {
+function parseSheet(
+  argumentsData: RawArguments,
+  defaultWidth: number = DEFAULT_SHEET_WIDTH,
+  defaultHeight: number = DEFAULT_SHEET_HEIGHT
+): {
   readonly width: number
   readonly height: number
 } {
@@ -325,18 +417,21 @@ function parseSheet(argumentsData: RawArguments): {
   return {
     width:
       widthValue === undefined
-        ? DEFAULT_SHEET_WIDTH
+        ? defaultWidth
         : parseInteger(widthValue, 'sheet-width', 1),
     height:
       heightValue === undefined
-        ? DEFAULT_SHEET_HEIGHT
+        ? defaultHeight
         : parseInteger(heightValue, 'sheet-height', 1)
   }
 }
 
-function parseFreeMaterialOperation(argumentsData: RawArguments): FreeMaterialOperation {
+function parseFreeMaterialOperation(
+  argumentsData: RawArguments,
+  defaultOperation: FreeMaterialOperation = DEFAULT_FREE_MATERIAL_OPERATION
+): FreeMaterialOperation {
   const value = singleValue(argumentsData, 'free-material-operation')
-  const operation = value ?? DEFAULT_FREE_MATERIAL_OPERATION
+  const operation = value ?? defaultOperation
   if (operation !== 'union-then-difference' && operation !== 'direct-difference') {
     throw new Error(
       'Option --free-material-operation expects union-then-difference or direct-difference.'
@@ -345,9 +440,12 @@ function parseFreeMaterialOperation(argumentsData: RawArguments): FreeMaterialOp
   return operation
 }
 
-function parseNfpConstruction(argumentsData: RawArguments): NfpConstructionAlgorithm {
+function parseNfpConstruction(
+  argumentsData: RawArguments,
+  defaultConstruction: NfpConstructionAlgorithm = DEFAULT_NFP_CONSTRUCTION
+): NfpConstructionAlgorithm {
   const value = singleValue(argumentsData, 'nfp-construction')
-  const construction = value ?? DEFAULT_NFP_CONSTRUCTION
+  const construction = value ?? defaultConstruction
   if (construction !== 'linear-edge-merge' && construction !== 'vertex-pair-hull') {
     throw new Error(
       'Option --nfp-construction expects linear-edge-merge or vertex-pair-hull.'
@@ -357,95 +455,140 @@ function parseNfpConstruction(argumentsData: RawArguments): NfpConstructionAlgor
 }
 
 function resolveOptions(argumentsData: RawArguments): CliOptions {
+  const profile = selectedProfile(argumentsData)
+  const corpusCase = corpusCaseForProfile(profile?.id)
   const defaults = makeDefaultIrregularNestingSettings().optimizer
-  const sheet = parseSheet(argumentsData)
-  const gaEnabled = optionalBoolean(argumentsData, 'ga-enabled', defaults.gaEnabled ?? false)
+  const sheet = parseSheet(
+    argumentsData,
+    corpusCase?.sheetWidth,
+    corpusCase?.sheetHeight
+  )
+  const gaEnabledValue = singleValue(argumentsData, 'ga-enabled')
+  const gaEnabled =
+    gaEnabledValue === undefined
+      ? profile?.gaEnabled ?? defaults.gaEnabled ?? false
+      : parseBoolean(gaEnabledValue, 'ga-enabled')
   const baselineOnlyValue = singleValue(argumentsData, 'baseline-only')
   const baselineOnly =
-    baselineOnlyValue === undefined
-      ? gaEnabled
-        ? false
-        : (defaults.baselineOnly ?? true)
-      : parseBoolean(baselineOnlyValue, 'baseline-only')
+    baselineOnlyValue !== undefined
+      ? parseBoolean(baselineOnlyValue, 'baseline-only')
+      : gaEnabledValue !== undefined
+        ? !gaEnabled
+        : profile?.baselineOnly ?? (gaEnabled ? false : (defaults.baselineOnly ?? true))
   if (gaEnabled && baselineOnly) {
     throw new Error('GA is enabled but --baseline-only is true; omit --baseline-only or set it false.')
   }
-  const gaSeed = singleValue(argumentsData, 'ga-seed') ?? defaults.gaSeed
+  const gaSeed = singleValue(argumentsData, 'ga-seed') ?? profile?.gaSeed ?? defaults.gaSeed
   if (gaSeed.trim().length === 0) {
     throw new Error('Option --ga-seed expects a non-empty value.')
   }
 
   return {
-    fixtureNames: parseFixtureNames(argumentsData),
+    profileId: profile?.id,
+    fixtureNames: parseFixtureNames(
+      argumentsData,
+      corpusCase?.fixtureNames ?? DEFAULT_FIXTURE_NAMES
+    ),
     pieceCount: (() => {
       const value = singleValue(argumentsData, 'piece-count')
-      return value === undefined ? undefined : parseInteger(value, 'piece-count', 1)
+      return value === undefined
+        ? corpusCase?.pieceCount
+        : parseInteger(value, 'piece-count', 1)
     })(),
     repeatCount: optionalInteger(
       argumentsData,
       'repeat-count',
-      DEFAULT_REPEAT_COUNT,
+      corpusCase?.repeatCount ?? DEFAULT_REPEAT_COUNT,
       1
     ),
     sheetWidth: sheet.width,
     sheetHeight: sheet.height,
-    padding: optionalInteger(argumentsData, 'padding', DEFAULT_PADDING, 0),
-    orderWindow: optionalInteger(argumentsData, 'order-window', defaults.orderWindow, 1),
-    beamWidth: optionalInteger(argumentsData, 'beam-width', defaults.beamWidth, 1),
+    padding: optionalInteger(
+      argumentsData,
+      'padding',
+      corpusCase?.padding ?? DEFAULT_PADDING,
+      0
+    ),
+    orderWindow: optionalInteger(
+      argumentsData,
+      'order-window',
+      profile?.orderWindow ?? defaults.orderWindow,
+      1
+    ),
+    beamWidth: optionalInteger(
+      argumentsData,
+      'beam-width',
+      profile?.beamWidth ?? defaults.beamWidth,
+      1
+    ),
     localCandidateFanout: optionalInteger(
       argumentsData,
       'local-candidate-fanout',
-      defaults.localCandidateFanout ?? 1,
+      profile?.localCandidateFanout ?? defaults.localCandidateFanout ?? 1,
       1
     ),
-    transformCap: optionalInteger(argumentsData, 'transform-cap', defaults.transformCap, 1),
-    freeMaterialOperation: parseFreeMaterialOperation(argumentsData),
-    nfpConstruction: parseNfpConstruction(argumentsData),
+    transformCap: optionalInteger(
+      argumentsData,
+      'transform-cap',
+      profile?.transformCap ?? defaults.transformCap,
+      1
+    ),
+    freeMaterialOperation: parseFreeMaterialOperation(
+      argumentsData,
+      profile?.freeMaterialOperation
+    ),
+    nfpConstruction: parseNfpConstruction(argumentsData, profile?.nfpConstruction),
     gaEnabled,
     baselineOnly,
     gaPopulation: optionalInteger(
       argumentsData,
       'ga-population',
-      defaults.gaPopulation,
+      profile?.gaPopulation ?? defaults.gaPopulation,
       1
     ),
     gaGenerationBudget: optionalInteger(
       argumentsData,
       'ga-generation-budget',
-      defaults.gaGenerationBudget ?? 2,
+      profile?.gaGenerationBudget ?? defaults.gaGenerationBudget ?? 2,
       0
     ),
     gaEvaluationBudget: optionalInteger(
       argumentsData,
       'ga-evaluation-budget',
-      defaults.gaEvaluationBudget ?? 24,
+      profile?.gaEvaluationBudget ?? defaults.gaEvaluationBudget ?? 24,
       0
     ),
     gaTimeBudgetMs: optionalInteger(
       argumentsData,
       'ga-time-budget-ms',
-      defaults.gaTimeBudgetMs,
+      profile?.gaTimeBudgetMs ?? defaults.gaTimeBudgetMs,
       0
     ),
     gaSeed,
     priorityOrderMutationEnabled: optionalBoolean(
       argumentsData,
       'priority-order-mutation',
-      defaults.priorityOrderMutationEnabled ?? true
+      profile?.priorityOrderMutationEnabled ?? defaults.priorityOrderMutationEnabled ?? true
     ),
     transformPreferenceMutationEnabled: optionalBoolean(
       argumentsData,
       'transform-preference-mutation',
-      defaults.transformPreferenceMutationEnabled ?? true
+      profile?.transformPreferenceMutationEnabled ??
+        defaults.transformPreferenceMutationEnabled ??
+        true
     ),
     placementPolicyMutationEnabled: optionalBoolean(
       argumentsData,
       'placement-policy-mutation',
-      defaults.placementPolicyMutationEnabled ?? true
+      profile?.placementPolicyMutationEnabled ?? defaults.placementPolicyMutationEnabled ?? true
     ),
     warmupCount: optionalInteger(argumentsData, 'warmup', DEFAULT_WARMUP_COUNT, 0),
     runCount: optionalInteger(argumentsData, 'runs', DEFAULT_RUN_COUNT, 1)
   }
+}
+
+export function resolveBenchmarkOptions(argumentsList: ReadonlyArray<string>): CliOptions {
+  return resolveOptions(parseArguments(argumentsList))
 }
 
 function makeSettings(options: CliOptions): IrregularNestingSettings {
@@ -565,7 +708,7 @@ async function measureRun(
   settings: IrregularNestingSettings,
   freeMaterialOperation: FreeMaterialOperation,
   nfpConstruction: NfpConstructionAlgorithm
-): Promise<TimedRun> {
+): Promise<IrregularBenchmarkTimedRun> {
   const startedAt = performance.now()
   const result = await Effect.runPromise(
     runIrregular(request, settings, freeMaterialOperation, nfpConstruction)
@@ -577,6 +720,7 @@ async function measureRun(
     placedCount: result.placedCollisionGeometries.length,
     unplacedCount: result.unplacedPieceIds.length,
     auditStatus,
+    score: result.score,
     portfolioSource: result.portfolio.source,
     portfolioStatus: result.portfolio.status,
     portfolioTerminationReason: result.portfolio.terminationReason
@@ -654,12 +798,90 @@ function formatElapsed(elapsedMs: number): string {
   return `${elapsedMs.toFixed(2)} ms`
 }
 
-function printRun(label: string, run: TimedRun): void {
+function printRun(label: string, run: IrregularBenchmarkTimedRun): void {
   console.log(
     `${label}: ${formatElapsed(run.elapsedMs)} placed=${run.placedCount} ` +
       `unplaced=${run.unplacedCount} audit=${run.auditStatus} ` +
-      `portfolio=${run.portfolioSource}/${run.portfolioStatus}/${run.portfolioTerminationReason ?? 'unknown'}`
+      `portfolio=${run.portfolioSource}/${run.portfolioStatus}/${run.portfolioTerminationReason ?? 'unknown'} ` +
+      `score=${JSON.stringify(summarizeBenchmarkScore(run.score))}`
   )
+}
+
+async function prepareBenchmark(options: CliOptions, repoRoot: string): Promise<PreparedBenchmark> {
+  const importedSources = await importSources(options.fixtureNames, repoRoot)
+  const baseSources = normalizeImportedPieceIdentities(options.fixtureNames, importedSources)
+  const repeatedSources = repeatImportedPieces(baseSources, options.repeatCount)
+  const pieceCount = options.pieceCount ?? repeatedSources.length
+  if (pieceCount > repeatedSources.length) {
+    throw new Error(
+      `Requested ${pieceCount} pieces, but --repeat-count ${options.repeatCount} produced only ` +
+        `${repeatedSources.length} pieces from ${options.fixtureNames.length} fixtures.`
+    )
+  }
+  const sources = repeatedSources.slice(0, pieceCount)
+  const settings = makeSettings(options)
+  return {
+    options,
+    sources,
+    settings,
+    request: makeRequest(sources, options, settings)
+  }
+}
+
+async function executeBenchmark(
+  options: CliOptions,
+  repoRoot: string
+): Promise<IrregularBenchmarkExecution> {
+  const prepared = await prepareBenchmark(options, repoRoot)
+  const warmupRuns: IrregularBenchmarkTimedRun[] = []
+  for (let warmupIndex = 0; warmupIndex < options.warmupCount; warmupIndex += 1) {
+    warmupRuns.push(
+      await measureRun(
+        prepared.request,
+        prepared.settings,
+        options.freeMaterialOperation,
+        options.nfpConstruction
+      )
+    )
+  }
+
+  const measuredRuns: IrregularBenchmarkTimedRun[] = []
+  for (let runIndex = 0; runIndex < options.runCount; runIndex += 1) {
+    measuredRuns.push(
+      await measureRun(
+        prepared.request,
+        prepared.settings,
+        options.freeMaterialOperation,
+        options.nfpConstruction
+      )
+    )
+  }
+
+  return {
+    profileId: options.profileId,
+    fixtureNames: options.fixtureNames,
+    repeatCount: options.repeatCount,
+    pieceCount: prepared.sources.length,
+    sourceCount: prepared.sources.length,
+    sheetWidth: options.sheetWidth,
+    sheetHeight: options.sheetHeight,
+    warmupRuns,
+    measuredRuns
+  }
+}
+
+export async function runNamedBenchmarkProfile(
+  profileId: string
+): Promise<IrregularBenchmarkExecution> {
+  const options = resolveBenchmarkOptions([
+    '--profile',
+    profileId,
+    '--warmup',
+    '0',
+    '--runs',
+    '1'
+  ])
+  return executeBenchmark(options, dirname(dirname(fileURLToPath(import.meta.url))))
 }
 
 function errorMessage(error: unknown): string {
@@ -676,60 +898,37 @@ async function main(): Promise<void> {
 
   const options = resolveOptions(rawArguments)
   const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)))
-  const importedSources = await importSources(options.fixtureNames, repoRoot)
-  const baseSources = normalizeImportedPieceIdentities(options.fixtureNames, importedSources)
-  const repeatedSources = repeatImportedPieces(baseSources, options.repeatCount)
-  const pieceCount = options.pieceCount ?? repeatedSources.length
-  if (pieceCount > repeatedSources.length) {
-    throw new Error(
-      `Requested ${pieceCount} pieces, but --repeat-count ${options.repeatCount} produced only ` +
-        `${repeatedSources.length} pieces from ${options.fixtureNames.length} fixtures.`
-    )
-  }
-  const sources = repeatedSources.slice(0, pieceCount)
+  const execution = await executeBenchmark(options, repoRoot)
   const settings = makeSettings(options)
-  const request = makeRequest(sources, options, settings)
 
   console.log('Irregular benchmark')
-  console.log(`fixtures=${options.fixtureNames.join(',')} pieces=${sources.length}`)
+  console.log(`profile=${options.profileId ?? 'custom'}`)
+  console.log(`fixtures=${options.fixtureNames.join(',')} pieces=${execution.pieceCount}`)
   console.log(
-      `sheet=${options.sheetWidth}x${options.sheetHeight} padding=${options.padding} ` +
+    `sheet=${options.sheetWidth}x${options.sheetHeight} padding=${options.padding} ` +
       `orderWindow=${settings.optimizer.orderWindow} beamWidth=${settings.optimizer.beamWidth} ` +
       `localCandidateFanout=${settings.optimizer.localCandidateFanout} ` +
       `transformCap=${settings.optimizer.transformCap} ` +
       `freeMaterialOperation=${options.freeMaterialOperation} ` +
-      `nfpConstruction=${options.nfpConstruction}`
+      `nfpConstruction=${options.nfpConstruction} ` +
+      `gaTimeBudgetMs=${settings.optimizer.gaTimeBudgetMs}`
   )
   console.log(
     `gaEnabled=${settings.optimizer.gaEnabled} baselineOnly=${settings.optimizer.baselineOnly} ` +
       `warmup=${options.warmupCount} runs=${options.runCount}`
   )
 
-  for (let warmupIndex = 0; warmupIndex < options.warmupCount; warmupIndex += 1) {
-    const warmup = await measureRun(
-      request,
-      settings,
-      options.freeMaterialOperation,
-      options.nfpConstruction
-    )
+  for (const [warmupIndex, warmup] of execution.warmupRuns.entries()) {
     printRun(`warmup ${warmupIndex + 1}/${options.warmupCount}`, warmup)
   }
 
-  const measuredRuns: TimedRun[] = []
-  for (let runIndex = 0; runIndex < options.runCount; runIndex += 1) {
-    const measured = await measureRun(
-      request,
-      settings,
-      options.freeMaterialOperation,
-      options.nfpConstruction
-    )
-    measuredRuns.push(measured)
+  for (const [runIndex, measured] of execution.measuredRuns.entries()) {
     printRun(`run ${runIndex + 1}/${options.runCount}`, measured)
   }
 
-  const elapsedValues = measuredRuns.map((run) => run.elapsedMs)
-  const placedValues = measuredRuns.map((run) => run.placedCount)
-  const unplacedValues = measuredRuns.map((run) => run.unplacedCount)
+  const elapsedValues = execution.measuredRuns.map((run) => run.elapsedMs)
+  const placedValues = execution.measuredRuns.map((run) => run.placedCount)
+  const unplacedValues = execution.measuredRuns.map((run) => run.unplacedCount)
   console.log(
     `summary elapsedMs median=${formatElapsed(median(elapsedValues))} ` +
       `min=${formatElapsed(Math.min(...elapsedValues))} ` +
@@ -737,7 +936,7 @@ async function main(): Promise<void> {
   )
   console.log(`summary placed ${countSummary(placedValues)}`)
   console.log(`summary unplaced ${countSummary(unplacedValues)}`)
-  const auditStatus = measuredRuns.every((run) => run.auditStatus === 'passed')
+  const auditStatus = execution.measuredRuns.every((run) => run.auditStatus === 'passed')
     ? 'passed'
     : 'failed'
   console.log(`summary audit=${auditStatus}`)

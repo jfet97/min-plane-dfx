@@ -229,24 +229,25 @@ describe('IrregularLayoutScorer', () => {
     expect(comparison).toBeLessThan(0)
   })
 
-  it('orders states with real free-material usability and fragmentation metrics', async () => {
+  it('orders equal-count states by real free-material usability and fragmentation metrics', async () => {
     const preserved = await score(
       state([placedRectangle('left', 2, 8, 0, 0), placedRectangle('right', 2, 8, 8, 0)])
     )
     const fragmented = await score(
       state([
-        placedRectangle('bottom-left', 4, 4, 0, 0),
-        placedRectangle('bottom-right', 4, 4, 6, 0),
-        placedRectangle('top-middle', 2, 2, 4, 6)
+        placedRectangle('barrier', 2, 10, 4, 0),
+        placedRectangle('left-corner', 2, 2, 0, 0)
       ])
     )
 
+    expect(preserved.unplacedCount).toBe(fragmented.unplacedCount)
+    expect(preserved.placementOrder).toHaveLength(fragmented.placementOrder.length)
     expect(preserved.largestNetFreeMaterialRegionAreaMm2).toBeGreaterThan(
       fragmented.largestNetFreeMaterialRegionAreaMm2
     )
-    expect(preserved.freeMaterialRegionCount).toBeLessThanOrEqual(
-      fragmented.freeMaterialRegionCount
-    )
+    expect(preserved.freeMaterialRegionCount).toBeLessThan(fragmented.freeMaterialRegionCount)
+    expect(preserved.freeMaterialHoleCount).toBeLessThanOrEqual(fragmented.freeMaterialHoleCount)
+    expect(preserved.freeMaterialSliverMetric).toBeLessThan(fragmented.freeMaterialSliverMetric)
     expect(IrregularLayoutScorer.Make).toBeDefined()
     expect(await compareScores(preserved, fragmented)).toBeLessThan(0)
   })
