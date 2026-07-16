@@ -1,10 +1,7 @@
 import { Context, Data, Effect, Layer, Order } from 'effect'
 import type { PieceId } from '@shared/domain/ids.js'
 import type { SheetSpec } from '@shared/domain/nesting.js'
-import {
-  FreeMaterialSnapshot,
-  IrregularPolygon
-} from '@shared/irregular/domain.js'
+import { FreeMaterialSnapshot, IrregularPolygon } from '@shared/irregular/domain.js'
 import type { IrregularNestingSettings } from '@shared/irregular/domain.js'
 import {
   FreeMaterialService,
@@ -16,9 +13,7 @@ import { GeometrySettings } from '../../irregular/geometryKernel.js'
 import { IrregularBeamState } from './irregularBeamState.js'
 
 /** A typed failure raised only when derived scoring arithmetic is non-finite. */
-export class IrregularLayoutScoringError extends Data.TaggedError(
-  'IrregularLayoutScoringError'
-)<{
+export class IrregularLayoutScoringError extends Data.TaggedError('IrregularLayoutScoringError')<{
   readonly operation: string
   readonly message: string
 }> {}
@@ -36,17 +31,6 @@ function makeFreeMaterialCacheKey(
   input: ScoreIrregularLayoutInput,
   settings: IrregularNestingSettings
 ): string {
-  const placedGeometry = input.state.placedCollisionGeometries
-    .map(({ placement, collisionGeometry }) =>
-      JSON.stringify({
-        polygon: collisionGeometry.polygon.points.map(({ x, y }) => [
-          x + placement.transform.translateX,
-          y + placement.transform.translateY
-        ])
-      })
-    )
-    .toSorted(Order.String)
-
   return JSON.stringify({
     version: FREE_MATERIAL_CACHE_VERSION,
     sheet: {
@@ -60,7 +44,7 @@ function makeFreeMaterialCacheKey(
       geometryBackendId: settings.geometry.geometryBackendId,
       geometryBackendVersion: settings.geometry.geometryBackendVersion
     },
-    placedGeometry
+    placedGeometry: input.state.canonicalOccupiedGeometryKey
   })
 }
 
@@ -144,7 +128,9 @@ export class IrregularLayoutScorer extends Context.Service<
                 )
             : Effect.succeed(cachedSnapshot)
 
-        return snapshot.pipe(Effect.flatMap((freeMaterialSnapshot) => scoreDerivedState(input, freeMaterialSnapshot)))
+        return snapshot.pipe(
+          Effect.flatMap((freeMaterialSnapshot) => scoreDerivedState(input, freeMaterialSnapshot))
+        )
       },
       compare: compareScores
     })
@@ -165,17 +151,14 @@ function scoreDerivedState(
     return failScoring('free-material metrics must remain finite.')
   }
 
-  const collisionBounds = deriveCollisionBounds(input.state)
+  const collisionBounds = input.state.translatedCollisionBounds
   if (collisionBounds === undefined) {
     return failScoring('placed collision polygons must produce finite bounds.')
   }
 
   const normalizedWidth = collisionBounds.width / input.sheet.width
   const normalizedHeight = collisionBounds.height / input.sheet.height
-  const collisionBoundsWorstNormalizedSheetConsumption = Math.max(
-    normalizedWidth,
-    normalizedHeight
-  )
+  const collisionBoundsWorstNormalizedSheetConsumption = Math.max(normalizedWidth, normalizedHeight)
   const collisionBoundsNormalizedSpanSum = normalizedWidth + normalizedHeight
   const collisionBoundsAreaMm2 = collisionBounds.width * collisionBounds.height
   const collisionBoundsSpanMm = collisionBounds.width + collisionBounds.height
@@ -236,10 +219,7 @@ function deriveFreeMaterialMetrics(
     }
 
     const netArea = boundaryArea - holeArea
-    largestNetFreeMaterialRegionAreaMm2 = Math.max(
-      largestNetFreeMaterialRegionAreaMm2,
-      netArea
-    )
+    largestNetFreeMaterialRegionAreaMm2 = Math.max(largestNetFreeMaterialRegionAreaMm2, netArea)
     if (
       !Number.isFinite(boundaryArea) ||
       !Number.isFinite(boundaryPerimeter) ||
@@ -267,53 +247,6 @@ function deriveFreeMaterialMetrics(
     freeMaterialHoleCount,
     freeMaterialSliverMetric
   }
-}
-
-interface CollisionBounds {
-  readonly minX: number
-  readonly minY: number
-  readonly maxX: number
-  readonly maxY: number
-  readonly width: number
-  readonly height: number
-}
-
-function deriveCollisionBounds(state: IrregularBeamState): CollisionBounds | undefined {
-  if (state.placedCollisionGeometries.length === 0) {
-    return { minX: 0, minY: 0, maxX: 0, maxY: 0, width: 0, height: 0 }
-  }
-
-  let minX = Number.POSITIVE_INFINITY
-  let minY = Number.POSITIVE_INFINITY
-  let maxX = Number.NEGATIVE_INFINITY
-  let maxY = Number.NEGATIVE_INFINITY
-
-  for (const placed of state.placedCollisionGeometries) {
-    const translation = placed.placement.transform
-    for (const point of placed.collisionGeometry.polygon.points) {
-      const x = point.x + translation.translateX
-      const y = point.y + translation.translateY
-      if (!Number.isFinite(x) || !Number.isFinite(y)) return undefined
-      minX = Math.min(minX, x)
-      minY = Math.min(minY, y)
-      maxX = Math.max(maxX, x)
-      maxY = Math.max(maxY, y)
-    }
-  }
-
-  const width = maxX - minX
-  const height = maxY - minY
-  if (
-    !Number.isFinite(minX) ||
-    !Number.isFinite(minY) ||
-    !Number.isFinite(maxX) ||
-    !Number.isFinite(maxY) ||
-    !Number.isFinite(width) ||
-    !Number.isFinite(height)
-  ) {
-    return undefined
-  }
-  return { minX, minY, maxX, maxY, width, height }
 }
 
 function polygonArea(polygon: IrregularPolygon): number {

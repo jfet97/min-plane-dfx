@@ -161,11 +161,7 @@ export function runWindowedIrregularBeam(input: {
       }
 
       const uniqueSuccessors = dedupeRawSuccessors(successors)
-      const scored = yield* scoreStates(
-        uniqueSuccessors,
-        input.sheet,
-        layoutScorer
-      )
+      const scored = yield* scoreStates(uniqueSuccessors, input.sheet, layoutScorer)
       scoredBeam = pruneScoredStates(scored, settings.optimizer.beamWidth, layoutScorer)
       beam = scoredBeam.map(({ state }) => state)
       candidateCounts.push(candidateCount)
@@ -306,24 +302,19 @@ function applyPlacement(
     collisionGeometry: selected.moving
   })
   const pieceId = preparedPieceId(piece)
-  return new IrregularBeamState({
+  return state.withPlacement({
     remainingPreparedPieces: removeAt(state.remainingPreparedPieces, pieceIndex),
-    placedCollisionGeometries: [...state.placedCollisionGeometries, placed],
-    unplacedPieceIds: state.unplacedPieceIds,
-    placementOrder: [...state.placementOrder, pieceId],
-    parent: state
+    placedCollisionGeometry: placed,
+    placementOrderPieceId: pieceId
   })
 }
 
 function markFirstRemainingUnplaced(state: IrregularBeamState): IrregularBeamState {
   const first = state.remainingPreparedPieces[0]
   if (first === undefined) return state
-  return new IrregularBeamState({
+  return state.withUnplacedPiece({
     remainingPreparedPieces: state.remainingPreparedPieces.slice(1),
-    placedCollisionGeometries: state.placedCollisionGeometries,
-    unplacedPieceIds: [...state.unplacedPieceIds, preparedPieceId(first)],
-    placementOrder: state.placementOrder,
-    parent: state
+    unplacedPieceId: preparedPieceId(first)
   })
 }
 
@@ -416,8 +407,7 @@ function pruneScoredStates(
   beamWidth: number,
   layoutScorer: IrregularLayoutScorer.Service
 ): ReadonlyArray<ScoredState> {
-  return rankScoredStates(states, layoutScorer)
-    .slice(0, beamWidth)
+  return rankScoredStates(states, layoutScorer).slice(0, beamWidth)
 }
 
 function compareRepresentativeStates(first: KeyedState, second: KeyedState): -1 | 0 | 1 {
@@ -456,19 +446,7 @@ function localCandidateKey(candidate: LocalCandidate): string {
 }
 
 function beamStateKey(state: IrregularBeamState): string {
-  const placed = state.placedCollisionGeometries
-    .map((placedPiece) => {
-      const placement = placedPiece.placement
-      const transform = placement.transform
-      const pieceId = placement.pieceId ?? placement.sourcePieceId
-      const polygon = placedPiece.collisionGeometry.polygon.points
-        .map((point) => `${point.x}:${point.y}`)
-        .join(',')
-      return `${pieceId}:${placement.sourcePieceId}:${transform.translateX}:${transform.translateY}:${transform.rotationDeg}:${Number(transform.mirrored)}:${polygon}`
-    })
-    .toSorted(Order.String)
-    .join('|')
   const remaining = state.remainingPreparedPieces.map(preparedPieceId).join('|')
   const unplaced = [...state.unplacedPieceIds].toSorted(Order.String).join('|')
-  return `${placed}::${remaining}::${unplaced}`
+  return `${state.canonicalOccupiedGeometryKey}::${remaining}::${unplaced}`
 }

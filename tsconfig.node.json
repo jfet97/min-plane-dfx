@@ -31,6 +31,7 @@
     "src/shared/**/*",
     "src/shared/**/*.json",
     "src/workers/**/*",
+    "scripts/**/*",
     "electron.vite.config.ts",
     "tests/**/*"
   ],

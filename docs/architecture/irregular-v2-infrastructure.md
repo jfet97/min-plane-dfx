@@ -119,10 +119,18 @@ within that circular degree distance are treated as one candidate; the default
 is `0.01` degrees. When global rotation or the prepared piece disables
 rotation, it emits `0` degrees only. `configuredRotationDeg` defaults to an
 empty array and lets the optimizer add finite degree values explicitly.
-`NfpIfpServiceLive` computes
-convex no-fit boundaries, rectangular inner-fit bounds, and deterministic
-contact candidates; every candidate still passes direct convex placement
-validation, which remains the legality authority. Reusable axis-aligned bounds
+`NfpIfpServiceLive` defaults to the exact vertex-pair plus convex-hull
+construction for correctness. The linear edge-merge constructor remains
+available through the explicit `makeNfpIfpServiceLayer` and
+`makeNfpIfpServiceLive` factories for benchmark and differential-test wiring;
+its translated-ring canonicalization uses an exact hull fallback whenever the
+O(n) pass cannot prove strict convexity. Both factories accept
+`NfpConstructionAlgorithm` (`linear-edge-merge` or `vertex-pair-hull`) and
+default to `vertex-pair-hull`; the linear edge-merge path is an explicit
+differential/experimental construction, not the current performance default,
+because safe translated-ring canonicalization can require an exact hull
+fallback. Every candidate still passes direct
+convex placement validation, which remains the legality authority. Reusable axis-aligned bounds
 skip only provably disjoint NFP-boundary pairs, point-in-NFP checks, and
 collision pairs; exact contacts and every non-disjoint case continue to robust
 predicate classification. `FreeMaterialServiceLive`
@@ -214,6 +222,10 @@ selection between the GA and beam results. Its transform gene is a preferred
 candidate index with deterministic fallback to the remaining legal transforms;
 it never encodes raw coordinates. `geometryCacheKeys.ts` namespaces transformed
 geometry, pairwise NFP, and IFP artifacts by their complete geometry/settings
-identity, and validates cached artifacts before reuse. Free-material regions
-remain a sheet-space diagnostic artifact and do not replace direct placement
-validation.
+identity, and validates cached artifacts before reuse. Pairwise NFP keys use
+canonical transformed fixed and moving polygon geometry plus transform, settings,
+NFP operation, and construction algorithm identity; they deliberately exclude
+piece ids and fixed sheet translation. The pairwise cache stores only the
+relative NFP boundary, while `NfpIfpService` returns a fresh id-bearing result
+after applying the current fixed translation. Free-material regions remain a
+sheet-space diagnostic artifact and do not replace direct placement validation.

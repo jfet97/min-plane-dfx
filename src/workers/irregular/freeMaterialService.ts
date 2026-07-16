@@ -26,20 +26,20 @@ import {
 import { ConvexPolygonValidation } from './convexPolygonValidation.js'
 import { CLIPPER2_OFFSET_POLICY, fromGrid, toGridMm } from './clipper2OffsetPolicy.js'
 
-/** Effect layer providing topology-preserving sheet-space free material. */
-export const FreeMaterialServiceLive = Layer.succeed(FreeMaterialService, {
-  computeFreeMaterial
-})
+export type FreeMaterialOperation = 'union-then-difference' | 'direct-difference'
 
-/**
- * Computes `sheet - union(translated placed collision polygons)` for display
- * and scoring. The resulting regions preserve interior holes and never define
- * placement legality.
- */
-function computeFreeMaterial(
-  input: ComputeFreeMaterialInput
-): Effect.Effect<FreeMaterialSnapshot, IrregularGeometryInputError> {
-  return decodeInput(input).pipe(Effect.flatMap(deriveFreeMaterial))
+/** Effect layer providing topology-preserving sheet-space free material. */
+export const FreeMaterialServiceLive = Layer.succeed(
+  FreeMaterialService,
+  createFreeMaterialService('union-then-difference')
+)
+
+/** Creates a free-material service with an explicit local Clipper operation. */
+export function createFreeMaterialService(operation: FreeMaterialOperation): FreeMaterialService {
+  return {
+    computeFreeMaterial: (input) =>
+      decodeInput(input).pipe(Effect.flatMap((decoded) => deriveFreeMaterial(decoded, operation)))
+  }
 }
 
 function decodeInput(
@@ -57,7 +57,8 @@ function decodeInput(
 }
 
 function deriveFreeMaterial(
-  input: ComputeFreeMaterialInput
+  input: ComputeFreeMaterialInput,
+  operation: FreeMaterialOperation
 ): Effect.Effect<FreeMaterialSnapshot, IrregularGeometryInputError> {
   const sheetPath = toSheetPath(input)
   if ('message' in sheetPath) return failInvalidGeometry('computeFreeMaterial', sheetPath.message)
@@ -76,38 +77,14 @@ function deriveFreeMaterial(
 
   const tree = new PolyTree64()
   try {
-    let occupiedUnion: Paths64 | null = null
-    if (occupiedPaths.length > 0) {
-      const occupiedTree = new PolyTree64()
-      booleanOpWithPolyTree(ClipType.Union, occupiedPaths, null, occupiedTree, FillRule.NonZero)
-      occupiedUnion = polyTreeToPaths64(occupiedTree)
-      if (occupiedUnion.length === 0) {
-        return failInvalidGeometry(
-          'computeFreeMaterial',
-          'Clipper2 union returned no occupied geometry for non-empty input.'
-        )
-      }
-      for (let index = 0; index < occupiedUnion.length; index += 1) {
-        const unionPath = occupiedUnion[index]
-        if (unionPath === undefined) {
-          return failInvalidGeometry(
-            'computeFreeMaterial',
-            'Clipper2 union returned a missing path.'
-          )
-        }
-        const guardMessage = validateCoordinateGuard(unionPath)
-        if (guardMessage !== undefined)
-          return failInvalidGeometry('computeFreeMaterial', guardMessage)
-        const pathMessage = validateClipperOutputPath(unionPath, `Clipper2 union path ${index}`)
-        if (pathMessage !== undefined)
-          return failInvalidGeometry('computeFreeMaterial', pathMessage)
-      }
-    }
+    const occupiedClip = prepareOccupiedClip(operation, occupiedPaths)
+    if ('message' in occupiedClip)
+      return failInvalidGeometry('computeFreeMaterial', occupiedClip.message)
 
     booleanOpWithPolyTree(
       ClipType.Difference,
       [sheetPath.path],
-      occupiedUnion,
+      occupiedClip.paths,
       tree,
       FillRule.NonZero
     )
@@ -132,6 +109,36 @@ function deriveFreeMaterial(
       diagnostics: []
     })
   )
+}
+
+interface OccupiedClipResult {
+  readonly paths: Paths64 | null
+}
+
+function prepareOccupiedClip(
+  operation: FreeMaterialOperation,
+  occupiedPaths: Paths64
+): OccupiedClipResult | GeometryFailure {
+  if (occupiedPaths.length === 0) return { paths: null }
+  if (operation === 'direct-difference') return { paths: occupiedPaths }
+
+  const occupiedTree = new PolyTree64()
+  booleanOpWithPolyTree(ClipType.Union, occupiedPaths, null, occupiedTree, FillRule.NonZero)
+  const occupiedUnion = polyTreeToPaths64(occupiedTree)
+  if (occupiedUnion.length === 0) {
+    return { message: 'Clipper2 union returned no occupied geometry for non-empty input.' }
+  }
+
+  for (let index = 0; index < occupiedUnion.length; index += 1) {
+    const unionPath = occupiedUnion[index]
+    if (unionPath === undefined) return { message: 'Clipper2 union returned a missing path.' }
+    const guardMessage = validateCoordinateGuard(unionPath)
+    if (guardMessage !== undefined) return { message: guardMessage }
+    const pathMessage = validateClipperOutputPath(unionPath, `Clipper2 union path ${index}`)
+    if (pathMessage !== undefined) return { message: pathMessage }
+  }
+
+  return { paths: occupiedUnion }
 }
 
 interface PathResult {

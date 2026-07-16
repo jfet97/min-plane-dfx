@@ -6,6 +6,7 @@ import { DEFAULT_IRREGULAR_GEOMETRY_SETTINGS } from '@shared/irregular/defaults.
 import {
   CollisionGeometry,
   IrregularBounds,
+  IrregularGeometrySettings,
   IrregularPlacedPiece,
   IrregularPlacement,
   IrregularPoint,
@@ -20,7 +21,11 @@ import {
   NfpIfpService,
   cacheKeyToString
 } from '../../src/workers/irregular/services.js'
-import { transformCollisionGeometryCacheKey } from '../../src/workers/irregular/geometryCacheKeys.js'
+import type { ComputeNfpInput } from '../../src/workers/irregular/services.js'
+import {
+  pairwiseNfpCacheKey,
+  transformCollisionGeometryCacheKey
+} from '../../src/workers/irregular/geometryCacheKeys.js'
 import { NfpIfpServiceLayer } from '../../src/workers/irregular/nfpIfpService.js'
 
 interface CacheCounters {
@@ -59,28 +64,39 @@ function transform(index: number): IrregularTransformCandidate {
   })
 }
 
-function transformedGeometry(pieceId: string, size: number): TransformedCollisionGeometry {
-  const points = squarePoints(size)
+function transformedGeometry(
+  pieceId: string,
+  size: number,
+  transformCandidate = transform(0),
+  points = squarePoints(size)
+): TransformedCollisionGeometry {
   return new TransformedCollisionGeometry({
     sourcePieceId: PieceId.make(pieceId),
-    transform: transform(0),
+    transform: transformCandidate,
     polygon: polygon(points),
     bounds: bounds(points)
   })
 }
 
-function placedPiece(pieceId: string, size: number): IrregularPlacedPiece {
+function placedPiece(
+  pieceId: string,
+  size: number,
+  translateX = 0,
+  translateY = 0,
+  points = squarePoints(size),
+  transformCandidate = transform(0)
+): IrregularPlacedPiece {
   return new IrregularPlacedPiece({
     placement: new IrregularPlacement({
       sourcePieceId: PieceId.make(pieceId),
       transform: new IrregularTransform({
-        translateX: 0,
-        translateY: 0,
+        translateX,
+        translateY,
         rotationDeg: 0,
         mirrored: false
       })
     }),
-    collisionGeometry: transformedGeometry(pieceId, size)
+    collisionGeometry: transformedGeometry(pieceId, size, transformCandidate, points)
   })
 }
 
@@ -97,8 +113,7 @@ function collisionGeometry(pieceId: string): CollisionGeometry {
   })
 }
 
-function cacheLayer(counters: CacheCounters) {
-  const values = new Map<string, unknown>()
+function cacheLayer(counters: CacheCounters, values = new Map<string, unknown>()) {
   return Layer.sync(GeometryCache, () => ({
     get: <A>(key: Parameters<GeometryCache['get']>[0]) =>
       Effect.sync(() => {
@@ -119,6 +134,19 @@ function cacheLayer(counters: CacheCounters) {
       values.clear()
     })
   }))
+}
+
+function computeNfpWithCache(
+  input: ComputeNfpInput,
+  counters: CacheCounters,
+  values = new Map<string, unknown>()
+) {
+  return Effect.runPromise(
+    NfpIfpService.use((service) => service.computeNfp(input)).pipe(
+      Effect.provide(NfpIfpServiceLayer),
+      Effect.provide(cacheLayer(counters, values))
+    )
+  )
 }
 
 describe('irregular geometry caches', () => {
@@ -198,5 +226,153 @@ describe('irregular geometry caches', () => {
     )
 
     expect(failure?._tag).toBe('IrregularGeometryInputError')
+  })
+
+  it('shares one relative NFP boundary across copies with canonical equivalent geometry', async () => {
+    const counters = { gets: 0, sets: 0, removes: 0 }
+    const values = new Map<string, unknown>()
+    const firstInput = {
+      fixed: placedPiece('fixed-copy-a', 2),
+      moving: transformedGeometry('moving-copy-a', 1),
+      settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+    }
+    const secondInput = {
+      fixed: placedPiece('fixed-copy-b', 2, 0, 0, [
+        point(2, 2),
+        point(0, 2),
+        point(0, 0),
+        point(2, 0)
+      ]),
+      moving: transformedGeometry('moving-copy-b', 1, transform(0), [
+        point(1, 0),
+        point(1, 1),
+        point(0, 1),
+        point(0, 0)
+      ]),
+      settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+    }
+
+    const [first, second] = await Effect.runPromise(
+      NfpIfpService.use((service) =>
+        Effect.all([service.computeNfp(firstInput), service.computeNfp(secondInput)])
+      ).pipe(Effect.provide(NfpIfpServiceLayer), Effect.provide(cacheLayer(counters, values)))
+    )
+
+    expect(counters).toEqual({ gets: 2, sets: 1, removes: 0 })
+    expect(first.fixedPieceId).toBe('fixed-copy-a')
+    expect(first.movingPieceId).toBe('moving-copy-a')
+    expect(second.fixedPieceId).toBe('fixed-copy-b')
+    expect(second.movingPieceId).toBe('moving-copy-b')
+    expect(first.boundary).toEqual(second.boundary)
+
+    const firstKey = pairwiseNfpCacheKey(firstInput)
+    const secondKey = pairwiseNfpCacheKey(secondInput)
+    expect(firstKey).toEqual(secondKey)
+    const cachedBoundary = values.get(cacheKeyToString(firstKey))
+    expect(cachedBoundary).toEqual(first.boundary)
+    expect(cachedBoundary).not.toHaveProperty('fixedPieceId')
+    expect(cachedBoundary).not.toHaveProperty('movingPieceId')
+  })
+
+  it('translates a cached relative boundary without recomputing it', async () => {
+    const counters = { gets: 0, sets: 0, removes: 0 }
+    const firstInput = {
+      fixed: placedPiece('fixed-origin', 2),
+      moving: transformedGeometry('moving-origin', 2),
+      settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+    }
+    const translatedInput = {
+      fixed: placedPiece('fixed-translated-copy', 2, 10, -3),
+      moving: transformedGeometry('moving-translated-copy', 2),
+      settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+    }
+
+    const [first, translated] = await Effect.runPromise(
+      NfpIfpService.use((service) =>
+        Effect.all([service.computeNfp(firstInput), service.computeNfp(translatedInput)])
+      ).pipe(Effect.provide(NfpIfpServiceLayer), Effect.provide(cacheLayer(counters)))
+    )
+
+    expect(counters).toEqual({ gets: 2, sets: 1, removes: 0 })
+    expect(translated.boundary.points).toEqual(
+      first.boundary.points.map(({ x, y }) => point(x + 10, y - 3))
+    )
+    expect(translated).not.toBe(first)
+    expect(translated.boundary).not.toBe(first.boundary)
+  })
+
+  it('misses relative NFP entries when geometry, transform, or settings change', async () => {
+    const counters = { gets: 0, sets: 0, removes: 0 }
+    const fixed = placedPiece('fixed-identity', 2)
+    const moving = transformedGeometry('moving-identity', 2)
+    const settings = new IrregularGeometrySettings({
+      ...DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
+      geometryBackendVersion: '1'
+    })
+
+    await Effect.runPromise(
+      NfpIfpService.use((service) =>
+        Effect.all([
+          service.computeNfp({
+            fixed,
+            moving,
+            settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+          }),
+          service.computeNfp({
+            fixed,
+            moving: transformedGeometry('moving-geometry-change', 3),
+            settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+          }),
+          service.computeNfp({
+            fixed,
+            moving: transformedGeometry('moving-transform-change', 2, transform(1)),
+            settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+          }),
+          service.computeNfp({ fixed, moving, settings })
+        ])
+      ).pipe(Effect.provide(NfpIfpServiceLayer), Effect.provide(cacheLayer(counters)))
+    )
+
+    expect(counters).toEqual({ gets: 4, sets: 4, removes: 0 })
+  })
+
+  it('keeps cached and uncached NFP results identical', async () => {
+    const input = {
+      fixed: placedPiece('fixed-parity', 3, 4, 5),
+      moving: transformedGeometry('moving-parity', 2),
+      settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+    }
+    const uncachedCounters = { gets: 0, sets: 0, removes: 0 }
+    const cachedCounters = { gets: 0, sets: 0, removes: 0 }
+    const values = new Map<string, unknown>()
+
+    const uncached = await computeNfpWithCache(input, uncachedCounters)
+    const cachedFirst = await computeNfpWithCache(input, cachedCounters, values)
+    const cachedSecond = await computeNfpWithCache(input, cachedCounters, values)
+
+    expect(uncached).toEqual(cachedFirst)
+    expect(uncached).toEqual(cachedSecond)
+    expect(uncachedCounters).toEqual({ gets: 1, sets: 1, removes: 0 })
+    expect(cachedCounters).toEqual({ gets: 2, sets: 1, removes: 0 })
+  })
+
+  it('evicts cached values that are not valid strict convex boundaries', async () => {
+    const counters = { gets: 0, sets: 0, removes: 0 }
+    const values = new Map<string, unknown>()
+    const input = {
+      fixed: placedPiece('fixed-invalid-cache', 2),
+      moving: transformedGeometry('moving-invalid-cache', 2),
+      settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+    }
+    const key = pairwiseNfpCacheKey(input)
+    values.set(
+      cacheKeyToString(key),
+      polygon([point(0, 0), point(2, 0), point(1, 1), point(2, 2), point(0, 2)])
+    )
+
+    const result = await computeNfpWithCache(input, counters, values)
+
+    expect(result.boundary.points.length).toBeGreaterThanOrEqual(3)
+    expect(counters).toEqual({ gets: 1, sets: 1, removes: 1 })
   })
 })

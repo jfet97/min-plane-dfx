@@ -2,7 +2,7 @@ import type {
   CollisionGeometry,
   IrregularGeometryCacheKey,
   IrregularGeometrySettings,
-  IrregularNfp,
+  IrregularPolygon,
   IrregularTransformCandidate,
   IrregularIfpBounds,
   TransformedCollisionGeometry
@@ -14,9 +14,14 @@ import type {
 } from './services.js'
 import { ConvexPolygonValidation } from './convexPolygonValidation.js'
 
+/** Selects the relative convex NFP construction algorithm. */
+export const NFP_CONSTRUCTION_ALGORITHMS = ['linear-edge-merge', 'vertex-pair-hull'] as const
+export type NfpConstructionAlgorithm = (typeof NFP_CONSTRUCTION_ALGORITHMS)[number]
+export const DEFAULT_NFP_CONSTRUCTION_ALGORITHM: NfpConstructionAlgorithm = 'vertex-pair-hull'
+
 /** Versioned cache namespaces keep derived artifacts isolated across algorithms. */
 export const TRANSFORM_GEOMETRY_CACHE_NAMESPACE = 'transform-collision-v1'
-export const NFP_GEOMETRY_CACHE_NAMESPACE = 'pairwise-nfp-v1'
+export const NFP_GEOMETRY_CACHE_NAMESPACE = 'pairwise-nfp-relative-v3'
 export const IFP_GEOMETRY_CACHE_NAMESPACE = 'sheet-ifp-v1'
 
 /** Builds the complete identity for one transformed collision polygon. */
@@ -34,17 +39,18 @@ export function transformCollisionGeometryCacheKey(
 }
 
 /** Builds the complete identity for one fixed/moving pairwise NFP. */
-export function pairwiseNfpCacheKey(input: ComputeNfpInput): IrregularGeometryCacheKey {
+export function pairwiseNfpCacheKey(
+  input: ComputeNfpInput,
+  constructionAlgorithm: NfpConstructionAlgorithm = DEFAULT_NFP_CONSTRUCTION_ALGORITHM
+): IrregularGeometryCacheKey {
   return newKey(NFP_GEOMETRY_CACHE_NAMESPACE, [
-    `fixed-piece=${pieceIdentity(input.fixed.placement.pieceId, input.fixed.placement.sourcePieceId)}`,
-    `moving-piece=${input.moving.sourcePieceId}`,
-    `fixed-translation=${numberKey(input.fixed.placement.transform.translateX)},${numberKey(input.fixed.placement.transform.translateY)}`,
+    `fixed-polygon=${canonicalPolygonDigest(input.fixed.collisionGeometry.polygon.points)}`,
+    `moving-polygon=${canonicalPolygonDigest(input.moving.polygon.points)}`,
     `fixed-transform=${transformDigest(input.fixed.collisionGeometry.transform)}`,
     `moving-transform=${transformDigest(input.moving.transform)}`,
-    `fixed-polygon=${polygonDigest(input.fixed.collisionGeometry.polygon.points)}`,
-    `moving-polygon=${polygonDigest(input.moving.polygon.points)}`,
     ...geometrySettingsParts(input.settings),
-    'nfp-operation=convex-fixed-plus-negated-moving'
+    'nfp-algorithm=convex-fixed-plus-negated-moving-relative-v3',
+    `nfp-construction=${constructionAlgorithm}`
   ])
 }
 
@@ -81,17 +87,24 @@ export function isValidCachedTransform(
   )
 }
 
-/** Checks that a cached NFP still has the expected pair and strict convex boundary. */
-export function isValidCachedNfp(
-  value: IrregularNfp | undefined,
-  input: ComputeNfpInput
-): value is IrregularNfp {
-  return (
-    value !== undefined &&
-    value.fixedPieceId === input.fixed.placement.sourcePieceId &&
-    value.movingPieceId === input.moving.sourcePieceId &&
-    value.boundary.points.length >= 3
-  )
+/** Checks that a cached relative NFP has a finite strict convex boundary. */
+export function isValidCachedNfpBoundary(
+  value: IrregularPolygon | undefined
+): value is IrregularPolygon {
+  if (value === undefined || typeof value !== 'object' || value === null) return false
+  if (!Array.isArray(value.points) || value.points.length < 3) return false
+  if (
+    value.points.some(
+      (point) =>
+        point === undefined ||
+        point === null ||
+        !Number.isFinite(point.x) ||
+        !Number.isFinite(point.y)
+    )
+  ) {
+    return false
+  }
+  return !('message' in ConvexPolygonValidation.validateStrictBoundary(value.points))
 }
 
 /** Checks the finite bounds shape before a cached IFP is used by candidate generation. */
@@ -140,6 +153,40 @@ function collisionGeometryDigest(geometry: CollisionGeometry): string {
   ].join(';')
 }
 
+function canonicalPolygonDigest(
+  points: ReadonlyArray<{ readonly x: number; readonly y: number }>
+): string {
+  if (points.length === 0) return ''
+  let startIndex = 0
+  for (let index = 1; index < points.length; index += 1) {
+    const candidate = points[index]
+    const current = points[startIndex]
+    if (candidate === undefined || current === undefined) continue
+    if (candidate.x < current.x || (candidate.x === current.x && candidate.y < current.y)) {
+      startIndex = index
+    }
+  }
+
+  const forward = cyclicPolygonDigest(points, startIndex, 1)
+  const reverse = cyclicPolygonDigest(points, startIndex, -1)
+  return forward < reverse ? forward : reverse
+}
+
+function cyclicPolygonDigest(
+  points: ReadonlyArray<{ readonly x: number; readonly y: number }>,
+  startIndex: number,
+  direction: 1 | -1
+): string {
+  const pointKeys: string[] = []
+  for (let offset = 0; offset < points.length; offset += 1) {
+    const index = (startIndex + direction * offset + points.length * 2) % points.length
+    const point = points[index]
+    if (point === undefined) return ''
+    pointKeys.push(pointDigest(point))
+  }
+  return pointKeys.join(';')
+}
+
 function polygonDigest(points: ReadonlyArray<{ readonly x: number; readonly y: number }>): string {
   return points.map(pointDigest).join(';')
 }
@@ -164,10 +211,6 @@ function transformDigest(transform: IrregularTransformCandidate): string {
     `mirrored=${Number(transform.mirrored)}`,
     `reason=${transform.reason}`
   ].join(',')
-}
-
-function pieceIdentity(pieceId: string | undefined, sourcePieceId: string): string {
-  return pieceId === undefined ? sourcePieceId : `${pieceId}|source=${sourcePieceId}`
 }
 
 function numberKey(value: number): string {

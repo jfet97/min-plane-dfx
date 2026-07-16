@@ -53,6 +53,13 @@ function rectanglePoints(width: number, height: number): ReadonlyArray<Irregular
   return [point(0, 0), point(width, 0), point(width, height), point(0, height)]
 }
 
+function rotatePoints(
+  points: ReadonlyArray<IrregularPoint>,
+  startIndex: number
+): ReadonlyArray<IrregularPoint> {
+  return [...points.slice(startIndex), ...points.slice(0, startIndex)]
+}
+
 function transformedGeometry(
   id: string,
   points: ReadonlyArray<IrregularPoint>
@@ -70,10 +77,9 @@ function transformedGeometry(
   })
 }
 
-function placedRectangle(
+function placedPolygon(
   id: string,
-  width: number,
-  height: number,
+  points: ReadonlyArray<IrregularPoint>,
   translateX: number,
   translateY: number
 ): IrregularPlacedPiece {
@@ -87,8 +93,18 @@ function placedRectangle(
         mirrored: false
       })
     }),
-    collisionGeometry: transformedGeometry(id, rectanglePoints(width, height))
+    collisionGeometry: transformedGeometry(id, points)
   })
+}
+
+function placedRectangle(
+  id: string,
+  width: number,
+  height: number,
+  translateX: number,
+  translateY: number
+): IrregularPlacedPiece {
+  return placedPolygon(id, rectanglePoints(width, height), translateX, translateY)
 }
 
 function preparedPiece(id: string): IrregularPreparedPiece {
@@ -153,7 +169,9 @@ function scoreWith(
   )
 }
 
-function score(value: ScoreIrregularLayoutInput | IrregularBeamState): Promise<IrregularLayoutScore> {
+function score(
+  value: ScoreIrregularLayoutInput | IrregularBeamState
+): Promise<IrregularLayoutScore> {
   return scoreWith(
     IrregularLayoutScorer.Live,
     value instanceof IrregularBeamState ? input(value) : value
@@ -187,18 +205,14 @@ function scoreWithService(
   value: ScoreIrregularLayoutInput
 ): Promise<IrregularLayoutScore> {
   return Effect.runPromise(
-    scorer.scoreState(value).pipe(
-      Effect.provide(Layer.succeed(IrregularLayoutScorer, scorer))
-    )
+    scorer.scoreState(value).pipe(Effect.provide(Layer.succeed(IrregularLayoutScorer, scorer)))
   )
 }
 
 describe('IrregularLayoutScorer', () => {
   it('lets unplaced count dominate every prettier layout', async () => {
     const complete = await score(state([placedRectangle('placed', 8, 8, 0, 0)]))
-    const incomplete = await score(
-      state([placedRectangle('placed', 1, 1, 0, 0)], ['missing'])
-    )
+    const incomplete = await score(state([placedRectangle('placed', 1, 1, 0, 0)], ['missing']))
 
     expect(IrregularLayoutScorer.Make).toBeDefined()
     expect(incomplete.unplacedCount).toBe(1)
@@ -252,15 +266,9 @@ describe('IrregularLayoutScorer', () => {
   })
 
   it('keeps exact numeric ties deterministic by placement order and source ids', async () => {
-    const first = await score(
-      input(state([placedRectangle('a', 2, 2, 0, 0)], [], ['a', 'b']))
-    )
-    const second = await score(
-      input(state([placedRectangle('a', 2, 2, 0, 0)], [], ['a', 'c']))
-    )
-    const repeated = await score(
-      input(state([placedRectangle('a', 2, 2, 0, 0)], [], ['a', 'c']))
-    )
+    const first = await score(input(state([placedRectangle('a', 2, 2, 0, 0)], [], ['a', 'b'])))
+    const second = await score(input(state([placedRectangle('a', 2, 2, 0, 0)], [], ['a', 'c'])))
+    const repeated = await score(input(state([placedRectangle('a', 2, 2, 0, 0)], [], ['a', 'c'])))
 
     expect(await compareScores(first, second)).toBeLessThan(0)
     expect(await compareScores(second, repeated)).toBe(0)
@@ -376,6 +384,53 @@ describe('IrregularLayoutScorer', () => {
     expect(second.placementOrder).toEqual([PieceId.make('second')])
     expect(second.unplacedSourcePieceIds).toEqual([PieceId.make('unplaced')])
     expect(second.unplacedCount).toBe(1)
+  })
+
+  it('keeps occupancy identity independent of placement order and extends bounds incrementally', () => {
+    const firstPlaced = placedRectangle('first', 2, 2, 1, 1)
+    const secondPlaced = placedRectangle('second', 3, 1, 5, 4)
+    const parent = state([firstPlaced])
+    const child = parent.withPlacement({
+      remainingPreparedPieces: [],
+      placedCollisionGeometry: secondPlaced,
+      placementOrderPieceId: PieceId.make('second')
+    })
+    const rebuilt = state([firstPlaced, secondPlaced])
+    const reversed = state([secondPlaced, firstPlaced], [], ['second', 'first'])
+
+    expect(child.canonicalOccupiedGeometryKey).toBe(rebuilt.canonicalOccupiedGeometryKey)
+    expect(child.canonicalOccupiedGeometryKey).toBe(reversed.canonicalOccupiedGeometryKey)
+    expect(child.translatedCollisionBounds).toEqual({
+      minX: 1,
+      minY: 1,
+      maxX: 8,
+      maxY: 5,
+      width: 7,
+      height: 4
+    })
+    expect(child.translatedCollisionBounds).toEqual(rebuilt.translatedCollisionBounds)
+
+    const unplacedChild = child.withUnplacedPiece({
+      remainingPreparedPieces: [],
+      unplacedPieceId: PieceId.make('unplaced')
+    })
+    expect(unplacedChild.canonicalOccupiedGeometryKey).toBe(child.canonicalOccupiedGeometryKey)
+    expect(unplacedChild.translatedCollisionBounds).toEqual(child.translatedCollisionBounds)
+  })
+
+  it('canonicalizes translated polygon rings across cyclic starts and winding', () => {
+    const points = rectanglePoints(2, 1)
+    const first = state([placedPolygon('first', points, 3, 4)])
+    const cyclic = state([placedPolygon('cyclic', rotatePoints(points, 2), 3, 4)])
+    const reversed = state([placedPolygon('reversed', [...points].reverse(), 3, 4)])
+    const negativeZero = state([
+      placedPolygon('negative-zero', [point(-0, -0), point(2, -0), point(2, 1), point(-0, 1)], 0, 0)
+    ])
+    const zero = state([placedPolygon('zero', points, 0, 0)])
+
+    expect(cyclic.canonicalOccupiedGeometryKey).toBe(first.canonicalOccupiedGeometryKey)
+    expect(reversed.canonicalOccupiedGeometryKey).toBe(first.canonicalOccupiedGeometryKey)
+    expect(negativeZero.canonicalOccupiedGeometryKey).toBe(zero.canonicalOccupiedGeometryKey)
   })
 
   it('does not reuse free material after geometry or sheet inputs change', async () => {

@@ -25,6 +25,7 @@
     "native:electron": "electron-rebuild -f -w better-sqlite3",
     "test": "pnpm native:electron && ELECTRON_RUN_AS_NODE=1 electron ./node_modules/vitest/vitest.mjs run",
     "test:watch": "pnpm native:electron && ELECTRON_RUN_AS_NODE=1 electron ./node_modules/vitest/vitest.mjs",
+    "benchmark:irregular": "tsx --tsconfig tsconfig.node.json scripts/irregular-benchmark.ts",
     "postinstall": "pnpm native:electron"
   },
   "dependencies": {
@@ -51,6 +52,7 @@
     "eslint": "^9.16.0",
     "eslint-plugin-vue": "^9.32.0",
     "prettier": "^3.4.2",
+    "tsx": "^4.23.1",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",
     "vitest": "^2.1.8",
