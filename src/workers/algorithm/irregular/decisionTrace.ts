@@ -391,6 +391,7 @@ export class IrregularDecisionTraceLocalCandidateSelection
     | 'within_local_candidate_fanout'
     | 'compactness_alternative_reserved'
     | 'displaced_by_compactness_reservation'
+    | 'duplicate_local_geometry'
     | 'outside_local_candidate_fanout'
 
   constructor(
@@ -405,6 +406,7 @@ export class IrregularDecisionTraceLocalCandidateSelection
         | 'within_local_candidate_fanout'
         | 'compactness_alternative_reserved'
         | 'displaced_by_compactness_reservation'
+        | 'duplicate_local_geometry'
         | 'outside_local_candidate_fanout'
     }>
   ) {
