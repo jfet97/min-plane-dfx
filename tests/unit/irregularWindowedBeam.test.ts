@@ -434,7 +434,7 @@ describe('decodeWindowedIrregularBeam', () => {
       result.bestState.placedCollisionGeometries.map(
         ({ placement }) => placement.transform.translateX
       )
-    ).toEqual([0, 1])
+    ).toEqual([2, 3])
     expect(result.bestScore.nearCompleteStructuralContactCount).toBe(1)
     expect(emittedPlacementCounts).toEqual([0, 1, 2])
     expect(events).toContainEqual(
@@ -444,6 +444,10 @@ describe('decodeWindowedIrregularBeam', () => {
         pieceId: PieceId.make('a')
       })
     )
+    const acceptedRepair = events.findLast((event) => event.kind === 'local_repair_accepted')
+    const winner = events.findLast((event) => event.kind === 'decode_winner')
+    expect(winner?.state.stateId).toBe(acceptedRepair?.state.stateId)
+    expect(winner?.score).toEqual(acceptedRepair?.score)
   })
 
   it('keeps a compactness alternative beside the edge-contact winner', async () => {

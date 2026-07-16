@@ -1634,8 +1634,10 @@ pass instead uses the existing legal candidate generator and whole-layout score
 to reach 24 structural contacts, cycle rank `5`, collision-bounds area
 `80174.3328 mm2`, and hull waste ratio `0.047619` in about `4.53 s`.
 `localRepairBudget = 0` remains the fast default. The settings panel exposes the
-measured combination as `Compact quality` because broad search and repair should
-not silently apply to every large-piece-count job.
+measured combination as an explicit `Apply compact preset` action because broad
+search and repair should not silently apply to every large-piece-count job. A
+separate repair checkbox maps disabled to budget `0` and enabled to the measured
+budget `8`; the numeric budget remains editable while repair is enabled.
 
 ## Assumptions To Revisit
 

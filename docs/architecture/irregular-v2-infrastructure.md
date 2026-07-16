@@ -109,18 +109,22 @@ regenerates legal NFP/IFP candidates against the remaining layout, scores at
 most the configured budget of local candidates per removal, and commits only
 the single best strict whole-layout improvement. The pass uses the same geometry
 legality and whole-layout comparator as the beam; it does not move pieces to
-invented coordinates. The repaired cluster is translated to the lower-left
-sheet anchor without changing its relative geometry. Because the budget also
-bounds accepted iterations and per-piece candidate fanout, enabling repair is
-an explicit quality/cost choice and applies to every baseline or GA decode.
+invented coordinates. A strict improvement remains the terminal winner at its
+accepted legal coordinates; final selection does not rewrite or re-rank it
+against states that were already worse than the original beam winner. Because
+the budget also bounds accepted iterations and per-piece candidate fanout,
+enabling repair is an explicit quality/cost choice and applies to every baseline
+or GA decode.
 
 The concrete transform-profile factories are convenience bundles over those
 persisted explicit settings, not a separate configuration model. Fast identity
 (`cap1`) and orthogonal (`cap4`) disable configured and edge-derived angle
 sources; derived orientation (`cap16`) enables both. Mirror safety gates remain
-per job and per piece. `Compact quality` is the measured small repeated-shape
-profile: order window `4`, beam width `8`, local fanout `4`, local repair budget
-`8`, transform cap `8`, edge-contact policy, and GA disabled.
+per job and per piece. The `Compact quality` preset is the measured small
+repeated-shape profile: order window `4`, beam width `8`, local fanout `4`, local
+repair budget `8`, transform cap `8`, edge-contact policy, and GA disabled. The
+renderer labels it as an optimizer preset and exposes local repair separately as
+an explicit enable control plus its numeric budget.
 
 When `beamWidth > 1`, each step protects the exact width-one incumbent lineage
 and uses the remaining slots for ranked alternatives. With all other settings

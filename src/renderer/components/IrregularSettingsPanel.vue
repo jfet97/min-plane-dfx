@@ -33,6 +33,7 @@ const placementPolicyId = computed(
   () => optimizer.value.placementPolicyId ?? DEFAULT_IRREGULAR_PLACEMENT_POLICY_ID
 )
 const portfolioEnabled = computed(() => optimizer.value.gaEnabled && !optimizer.value.baselineOnly)
+const localRepairEnabled = computed(() => (optimizer.value.localRepairBudget ?? 0) > 0)
 const configuredRotationsText = computed(() => optimizer.value.configuredRotationDeg.join(', '))
 const portfolioMayExceedTimeout = computed(
   () => portfolioEnabled.value && optimizer.value.gaTimeBudgetMs >= props.timeoutMs
@@ -129,6 +130,10 @@ function useCompactQualityProfile(): void {
   replaceOptimizer(makeCompactQualityIrregularOptimizerSettings())
 }
 
+function setLocalRepairEnabled(enabled: boolean): void {
+  updateOptimizer({ localRepairBudget: enabled ? 8 : 0 })
+}
+
 function setPortfolioEnabled(enabled: boolean): void {
   updateOptimizer({ gaEnabled: enabled, baselineOnly: !enabled })
 }
@@ -166,12 +171,12 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
       </p>
       <button
         type="button"
-        title="Use the measured compact-search profile for small repeated-shape jobs."
+        title="Apply the measured compact-search preset for small repeated-shape jobs. This replaces the optimizer settings below."
         @click="useCompactQualityProfile"
       >
-        Compact quality
+        Apply compact preset
       </button>
-      <p class="field-help">Reorder 4, beam 8, fanout 4, repair 8, transform cap 8, edge contact.</p>
+      <p class="field-help">Sets reorder 4, beam 8, fanout 4, repair 8, transform cap 8, and edge contact.</p>
     </div>
 
     <h3 title="Controls how source curves and padding become conservative collision geometry.">Geometry</h3>
@@ -246,13 +251,25 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
         <span class="field-help">{{ localCandidateFanoutHelp }}</span>
       </label>
       <label
+        class="checkbox-row span-2"
+        title="Run deterministic remove-and-reinsert improvements after the beam completes."
+      >
+        <input
+          type="checkbox"
+          :checked="localRepairEnabled"
+          @change="setLocalRepairEnabled(inputChecked($event))"
+        />
+        Enable local repair
+      </label>
+      <label
         title="Maximum deterministic terminal repair iterations. Each iteration tries to remove and legally reinsert one placed piece."
       >
         Local repair budget
         <input
           type="number"
-          min="0"
+          min="1"
           step="1"
+          :disabled="!localRepairEnabled"
           :value="optimizer.localRepairBudget ?? 0"
           @input="updateOptimizer({ localRepairBudget: Number(inputValue($event)) })"
         />

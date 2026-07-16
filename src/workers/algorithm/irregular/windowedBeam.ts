@@ -415,20 +415,12 @@ export function runWindowedIrregularBeam(input: {
           score: decisionTraceLayoutScore(currentRepair.score)
         }))
       }
-      repairedBest = yield* anchorRepairedState(
-        currentRepair,
-        input.sheet,
-        layoutScorer,
-        input.options?.transformPreferences
-      )
+      repairedBest = currentRepair
     }
     const finalRanked =
       repairedBest === undefined || repairedBest === initialBest
         ? ranked
-        : rankScoredStates(
-            [repairedBest, ...ranked.filter(({ state }) => state !== initialBest.state)],
-            layoutScorer
-          )
+        : [repairedBest, ...ranked.slice(1)]
     const best = finalRanked[0]
     if (best === undefined) {
       return yield* Effect.die('windowed irregular beam produced no terminal state')
@@ -557,53 +549,6 @@ function repairTerminalState(input: {
     }
     return best
   })
-}
-
-function anchorRepairedState(
-  current: ScoredState,
-  sheet: SheetSpec,
-  layoutScorer: IrregularLayoutScorer.Service,
-  transformPreferences: ReadonlyMap<PieceId, number> | undefined
-): Effect.Effect<ScoredState, IrregularWindowedBeamError> {
-  const bounds = current.state.translatedCollisionBounds
-  if (bounds === undefined || (bounds.minX === 0 && bounds.minY === 0)) {
-    return Effect.succeed(current)
-  }
-  const translateX = -bounds.minX
-  const translateY = -bounds.minY
-  const placedCollisionGeometries = current.state.placedCollisionGeometries.map(
-    ({ placement, collisionGeometry }) =>
-      new IrregularPlacedPiece({
-        placement: new IrregularPlacement({
-          sourcePieceId: placement.sourcePieceId,
-          ...(placement.pieceId !== undefined ? { pieceId: placement.pieceId } : {}),
-          ...(placement.placementReference !== undefined
-            ? { placementReference: placement.placementReference }
-            : {}),
-          transform: {
-            ...placement.transform,
-            translateX: placement.transform.translateX + translateX,
-            translateY: placement.transform.translateY + translateY
-          }
-        }),
-        collisionGeometry
-      })
-  )
-  const state = new IrregularBeamState({
-    remainingPreparedPieces: [],
-    placedCollisionGeometries,
-    unplacedPieceIds: current.state.unplacedPieceIds,
-    placementOrder: current.state.placementOrder,
-    parent: current.state.parent
-  })
-  return layoutScorer.scoreState({ sheet, state }).pipe(
-    Effect.map((score) => ({
-      state,
-      score,
-      key: beamStateKey(state, transformPreferences),
-      isIncumbent: false
-    }))
-  )
 }
 
 /** Positional decoder alias matching the strict decoder's public shape. */
