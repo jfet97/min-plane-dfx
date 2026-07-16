@@ -12,6 +12,7 @@ import {
 import { GeometrySettings } from '../../irregular/geometryKernel.js'
 import { sharedConvexPolygonBoundaryLength } from '../../irregular/convexPolygonContact.js'
 import { translatePolygonWithBounds } from '../../irregular/convexBounds.js'
+import { canonicalizeIrregularScoreMillimeters } from './irregularScoreGrid.js'
 
 /** The current deterministic compactness policy. */
 export const BALANCED_COMPACTNESS_POLICY_ID = 'balanced-compactness' as const
@@ -98,9 +99,9 @@ export namespace IrregularPlacementScorer {
  * geometric score.
  */
 const balancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
+  Order.mapInput(Order.Number, (score) => score.usedClusterAreaMm2),
   Order.mapInput(Order.Number, (score) => score.worstNormalizedSheetConsumption),
   Order.mapInput(Order.Number, (score) => score.normalizedSheetSpanSum),
-  Order.mapInput(Order.Number, (score) => score.usedClusterAreaMm2),
   Order.mapInput(Order.Number, (score) => score.usedClusterSpanMm),
   Order.mapInput(Order.Number, (score) => score.candidateBottomMm),
   Order.mapInput(Order.Number, (score) => score.candidateLeftMm),
@@ -184,12 +185,28 @@ function scoreCandidate(
     return failScoring('candidate and placed collision polygons must produce finite shared boundaries.')
   }
 
-  const clusterWidth = combinedBounds.maxX - combinedBounds.minX
-  const clusterHeight = combinedBounds.maxY - combinedBounds.minY
+  const clusterWidth = canonicalizeIrregularScoreMillimeters(
+    combinedBounds.maxX - combinedBounds.minX
+  )
+  const clusterHeight = canonicalizeIrregularScoreMillimeters(
+    combinedBounds.maxY - combinedBounds.minY
+  )
+  const candidateBottom = canonicalizeIrregularScoreMillimeters(combinedBounds.moving.minY)
+  const candidateLeft = canonicalizeIrregularScoreMillimeters(combinedBounds.moving.minX)
+  const canonicalSharedCollisionBoundaryLengthMm = canonicalizeIrregularScoreMillimeters(
+    sharedCollisionBoundaryLengthMm
+  )
+  if (
+    clusterWidth === undefined ||
+    clusterHeight === undefined ||
+    candidateBottom === undefined ||
+    candidateLeft === undefined ||
+    canonicalSharedCollisionBoundaryLengthMm === undefined
+  ) {
+    return failScoring('candidate score values must fit the deterministic score grid.')
+  }
   const normalizedWidth = clusterWidth / input.sheet.width
   const normalizedHeight = clusterHeight / input.sheet.height
-  const candidateBottom = combinedBounds.moving.minY
-  const candidateLeft = combinedBounds.moving.minX
   const worstNormalizedSheetConsumption = Math.max(normalizedWidth, normalizedHeight)
   const normalizedSheetSpanSum = normalizedWidth + normalizedHeight
   const usedClusterAreaMm2 = clusterWidth * clusterHeight
@@ -213,7 +230,7 @@ function scoreCandidate(
     !Number.isFinite(usedClusterSpanMm) ||
     !Number.isFinite(shortSideFill) ||
     !Number.isFinite(longSideFill) ||
-    !Number.isFinite(sharedCollisionBoundaryLengthMm) ||
+    !Number.isFinite(canonicalSharedCollisionBoundaryLengthMm) ||
     !Number.isFinite(candidateBottom) ||
     !Number.isFinite(candidateLeft)
   ) {
@@ -228,7 +245,7 @@ function scoreCandidate(
     usedClusterSpanMm,
     shortSideFill,
     longSideFill,
-    sharedCollisionBoundaryLengthMm,
+      sharedCollisionBoundaryLengthMm: canonicalSharedCollisionBoundaryLengthMm,
     candidateBottomMm: candidateBottom,
     candidateLeftMm: candidateLeft,
     candidate: input.candidate

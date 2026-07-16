@@ -412,14 +412,24 @@ type CanonicalPoint = readonly [x: number, y: number]
 
 function canonicalPlacedGeometryKey(placed: IrregularPlacedPiece): string {
   const translation = placed.placement.transform
-  const translatedPoints: ReadonlyArray<CanonicalPoint> =
-    placed.collisionGeometry.polygon.points.map(
-      (point): CanonicalPoint => [
-        normalizeCanonicalCoordinate(point.x + translation.translateX),
-        normalizeCanonicalCoordinate(point.y + translation.translateY)
-      ]
-    )
-  return canonicalRecord([['polygon-ring', canonicalRingKey(translatedPoints)]])
+  const translatedPoints = placed.collisionGeometry.polygon.points.map((point) => ({
+    x: point.x + translation.translateX,
+    y: point.y + translation.translateY
+  }))
+  return canonicalCollisionPolygonKey(translatedPoints)
+}
+
+/** Canonicalizes one absolute collision ring independently of start vertex and winding. */
+export function canonicalCollisionPolygonKey(
+  points: ReadonlyArray<{ readonly x: number; readonly y: number }>
+): string {
+  const canonicalPoints: ReadonlyArray<CanonicalPoint> = points.map(
+    (point): CanonicalPoint => [
+      normalizeCanonicalCoordinate(point.x),
+      normalizeCanonicalCoordinate(point.y)
+    ]
+  )
+  return canonicalRecord([['polygon-ring', canonicalRingKey(canonicalPoints)]])
 }
 
 function canonicalRingKey(points: ReadonlyArray<CanonicalPoint>): string {

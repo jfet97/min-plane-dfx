@@ -451,6 +451,47 @@ describe('decodeWindowedIrregularBeam', () => {
     expect(result.bestState.placedCollisionGeometries[0]?.placement.transform.rotationDeg).toBe(90)
   })
 
+  it('deduplicates equivalent translated geometry before applying local fanout', async () => {
+    const transforms = [
+      new IrregularTransformCandidate({
+        index: 0,
+        rotationDeg: 0,
+        mirrored: false,
+        reason: 'configured'
+      }),
+      new IrregularTransformCandidate({
+        index: 1,
+        rotationDeg: 360,
+        mirrored: false,
+        reason: 'configured'
+      })
+    ]
+    const events: IrregularDecisionTraceEvent[] = []
+    const result = await runWindowed(
+      sheet(4, 1),
+      [preparedPiece('a', 1, 1, undefined, transforms)],
+      Layer.succeed(GeometrySettings, settings(1, 2, 2)),
+      candidateService(({ moving }) =>
+        moving.transform.index === 0
+          ? [oneCandidate(moving, 0)]
+          : [oneCandidate(moving, 0), oneCandidate(moving, 1)]
+      ),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(result.rankedStates).toHaveLength(2)
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_selection',
+        decision: 'rejected',
+        reason: 'duplicate_local_geometry'
+      })
+    )
+  })
+
   it('emits only the winning state ancestry to history hooks', async () => {
     const emittedPlacementCounts: number[] = []
     await runWindowed(

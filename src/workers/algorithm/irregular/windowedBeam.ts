@@ -31,7 +31,11 @@ import {
   IrregularLayoutScorer,
   IrregularLayoutScoringError
 } from './irregularLayoutScorer.js'
-import { IrregularBeamState } from './irregularBeamState.js'
+import {
+  canonicalCollisionPolygonKey,
+  IrregularBeamState
+} from './irregularBeamState.js'
+import { canonicalizeIrregularScoreMillimeters } from './irregularScoreGrid.js'
 import {
   IrregularDecisionTraceBeamSelection,
   IrregularDecisionTraceBeamStepCompleted,
@@ -608,7 +612,18 @@ function selectLocalCandidates(
           Order.mapInput(Order.String, (candidate) => localCandidateKey(candidate))
         ]
   )
-  const rankedCandidates = candidates.toSorted(candidateOrder)
+  const allRankedCandidates = candidates.toSorted(candidateOrder)
+  const duplicateCandidates = new Set<LocalCandidate>()
+  const representativesByGeometry = new Map<string, LocalCandidate>()
+  for (const candidate of allRankedCandidates) {
+    const geometryKey = localCandidateGeometryKey(candidate)
+    if (representativesByGeometry.has(geometryKey)) {
+      duplicateCandidates.add(candidate)
+    } else {
+      representativesByGeometry.set(geometryKey, candidate)
+    }
+  }
+  const rankedCandidates = [...representativesByGeometry.values()]
   const first = rankedCandidates[0]
   let selected: ReadonlyArray<LocalCandidate>
   let compactnessReserved: LocalCandidate | undefined
@@ -618,7 +633,7 @@ function selectLocalCandidates(
   ) {
     selected = rankedCandidates.slice(0, maximumCount)
   } else {
-    const compactnessWinner = candidates.toSorted(
+    const compactnessWinner = rankedCandidates.toSorted(
       Order.combineAll<LocalCandidate>([
         Order.make((first, second) =>
           compareBalancedCompactnessPlacementScores(first.score, second.score)
@@ -647,10 +662,14 @@ function selectLocalCandidates(
 
   if (decisionTrace !== undefined) {
     const selectedCandidates = new Set(selected)
-    for (const [candidateIndex, candidate] of rankedCandidates.entries()) {
+    for (const [candidateIndex, candidate] of allRankedCandidates.entries()) {
       const isSelected = selectedCandidates.has(candidate)
+      const duplicateGeometry = duplicateCandidates.has(candidate)
       const displacedByReservation =
-        !isSelected && compactnessReserved !== undefined && candidateIndex < maximumCount
+        !duplicateGeometry &&
+        !isSelected &&
+        compactnessReserved !== undefined &&
+        rankedCandidates.indexOf(candidate) < maximumCount
       decisionTrace.emit(new IrregularDecisionTraceLocalCandidateSelection({
         decodeId: decisionTrace.decodeId,
         chromosomeId: decisionTrace.chromosomeId,
@@ -662,7 +681,9 @@ function selectLocalCandidates(
         rank: candidateIndex + 1,
         decision: isSelected ? 'selected' : 'rejected',
         reason:
-          candidate === compactnessReserved
+          duplicateGeometry
+            ? 'duplicate_local_geometry'
+            : candidate === compactnessReserved
             ? 'compactness_alternative_reserved'
             : displacedByReservation
               ? 'displaced_by_compactness_reservation'
@@ -953,6 +974,24 @@ function localCandidateKey(
   const transform = candidate.candidate.transform
   const points = candidate.moving.polygon.points.map((point) => `${point.x}:${point.y}`).join(',')
   return `${candidate.candidate.pieceId}:${candidate.candidate.point.x}:${candidate.candidate.point.y}:${transform.index}:${transform.rotationDeg}:${Number(transform.mirrored)}:${transform.reason}:${points}`
+}
+
+function localCandidateGeometryKey(candidate: LocalCandidate): string {
+  const translateX = candidate.candidate.point.x
+  const translateY = candidate.candidate.point.y
+  const points = candidate.moving.polygon.points.map((point) => ({
+    x: canonicalizeIrregularScoreMillimeters(point.x + translateX),
+    y: canonicalizeIrregularScoreMillimeters(point.y + translateY)
+  }))
+  if (points.some((point) => point.x === undefined || point.y === undefined)) {
+    return localCandidateKey(candidate)
+  }
+  return canonicalCollisionPolygonKey(
+    points.map((point) => ({
+      x: point.x ?? 0,
+      y: point.y ?? 0
+    }))
+  )
 }
 
 function beamStateKey(
