@@ -274,6 +274,100 @@ describe('IrregularLayoutScorer', () => {
     expect(await compareScores(compactScore, wideScore)).toBeLessThan(0)
   })
 
+  it('scores empty hull space from translated polygons with winding and collinear points', async () => {
+    const compact = await score(
+      state([
+        placedPolygon(
+          'compact-a',
+          [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+          0,
+          0
+        ),
+        placedPolygon(
+          'compact-b',
+          [point(2, 0), point(4, 0), point(4, 2), point(2, 2)],
+          0,
+          0
+        )
+      ])
+    )
+    const separated = await score(
+      state([
+        placedPolygon(
+          'separated-a',
+          [point(2, 2), point(2, 0), point(0, 0), point(0, 2)],
+          0,
+          0
+        ),
+        placedRectangle('separated-b', 2, 2, 4, 0)
+      ])
+    )
+
+    expect(compact.occupiedHullWasteRatio).toBe(0)
+    expect(separated.occupiedHullWasteRatio).toBeCloseTo(1 / 3)
+    expect(await compareScores(compact, separated)).toBeLessThan(0)
+  })
+
+  it('ranks hull waste before free-material fragmentation', async () => {
+    const compact = state([placedRectangle('compact', 6, 2, 0, 0)])
+    const wasteful = state([
+      placedRectangle('wasteful-left', 2, 2, 0, 0),
+      placedRectangle('wasteful-right', 2, 2, 4, 0)
+    ])
+    const snapshot = new FreeMaterialSnapshot({
+      sheet: new SheetSpec({ width: 10, height: 10, label: 'hull-order sheet' }),
+      regions: [
+        new FreeMaterialRegion({
+          boundary: polygon(rectanglePoints(10, 10)),
+          holes: []
+        })
+      ],
+      diagnostics: []
+    })
+    const scorer = await scoreWith(materialSnapshot(snapshot), input(compact))
+    const wastefulScore = await scoreWith(materialSnapshot(snapshot), input(wasteful))
+
+    expect(scorer.largestNetFreeMaterialRegionAreaMm2).toBe(
+      wastefulScore.largestNetFreeMaterialRegionAreaMm2
+    )
+    expect(scorer.occupiedHullWasteRatio).toBeLessThan(wastefulScore.occupiedHullWasteRatio)
+    expect(await compareScores(scorer, wastefulScore)).toBeLessThan(0)
+  })
+
+  it('uses lower-left only after free-material fragmentation criteria', async () => {
+    const lower = state([placedRectangle('lower', 2, 2, 0, 0)])
+    const higher = state([placedRectangle('higher', 2, 2, 0, 1)])
+    const lowerScore = await scoreWith(
+      materialSnapshot(
+        new FreeMaterialSnapshot({
+          sheet: new SheetSpec({ width: 10, height: 10, label: 'lower-left order sheet' }),
+          regions: [
+            new FreeMaterialRegion({ boundary: polygon(rectanglePoints(1, 1)), holes: [] }),
+            new FreeMaterialRegion({ boundary: polygon(rectanglePoints(2, 2)), holes: [] })
+          ],
+          diagnostics: []
+        })
+      ),
+      input(lower)
+    )
+    const higherScore = await scoreWith(
+      materialSnapshot(
+        new FreeMaterialSnapshot({
+          sheet: new SheetSpec({ width: 10, height: 10, label: 'lower-left order sheet' }),
+          regions: [
+            new FreeMaterialRegion({ boundary: polygon(rectanglePoints(10, 10)), holes: [] })
+          ],
+          diagnostics: []
+        })
+      ),
+      input(higher)
+    )
+
+    expect(lowerScore.collisionBoundsBottomMm).toBeLessThan(higherScore.collisionBoundsBottomMm)
+    expect(lowerScore.freeMaterialRegionCount).toBeGreaterThan(higherScore.freeMaterialRegionCount)
+    expect(await compareScores(lowerScore, higherScore)).toBeGreaterThan(0)
+  })
+
   it('does not let tiny free-area variation beat a materially tighter cluster', async () => {
     const compact = state([
       placedRectangle('compact-left', 2, 2, 0, 0),

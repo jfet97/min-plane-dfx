@@ -10,6 +10,8 @@ import {
 } from '../../irregular/services.js'
 import { FreeMaterialServiceLive } from '../../irregular/freeMaterialService.js'
 import { GeometrySettings } from '../../irregular/geometryKernel.js'
+import { GeometryPredicates } from '../../irregular/geometryPredicates.js'
+import type { InternalPoint } from '../../irregular/internalGeometry.js'
 import { IrregularBeamState } from './irregularBeamState.js'
 
 /** A typed failure raised only when derived scoring arithmetic is non-finite. */
@@ -68,6 +70,8 @@ export interface IrregularLayoutScore {
   readonly collisionBoundsAreaMm2: number
   /** Width plus height of the placed collision-polygon bounds. */
   readonly collisionBoundsSpanMm: number
+  /** Empty fraction enclosed by the convex hull of the translated collision polygons. */
+  readonly occupiedHullWasteRatio: number
   /** Sheet-space lower edge of the occupied collision envelope. */
   readonly collisionBoundsBottomMm: number
   /** Sheet-space left edge of the occupied collision envelope. */
@@ -225,6 +229,7 @@ function scoreDerivedState(
   const collisionBoundsSpanMm = collisionBounds.width + collisionBounds.height
   const collisionBoundsBottomMm = collisionBounds.minY
   const collisionBoundsLeftMm = collisionBounds.minX
+  const occupiedHullWasteRatio = deriveOccupiedHullWasteRatio(input.state)
 
   if (
     !Number.isFinite(normalizedWidth) ||
@@ -233,6 +238,7 @@ function scoreDerivedState(
     !Number.isFinite(collisionBoundsNormalizedSpanSum) ||
     !Number.isFinite(collisionBoundsAreaMm2) ||
     !Number.isFinite(collisionBoundsSpanMm) ||
+    occupiedHullWasteRatio === undefined ||
     !Number.isFinite(collisionBoundsBottomMm) ||
     !Number.isFinite(collisionBoundsLeftMm)
   ) {
@@ -246,6 +252,7 @@ function scoreDerivedState(
     collisionBoundsNormalizedSpanSum,
     collisionBoundsAreaMm2,
     collisionBoundsSpanMm,
+    occupiedHullWasteRatio,
     collisionBoundsBottomMm,
     collisionBoundsLeftMm,
     freeMaterialSnapshot,
@@ -338,6 +345,97 @@ function polygonPerimeter(polygon: IrregularPolygon): number {
   return perimeter
 }
 
+function deriveOccupiedHullWasteRatio(state: IrregularBeamState): number | undefined {
+  const occupiedPoints: InternalPoint[] = []
+  let occupiedArea = 0
+
+  for (const placed of state.placedCollisionGeometries) {
+    const translation = placed.placement.transform
+    const points = placed.collisionGeometry.polygon.points
+    const translatedPoints: InternalPoint[] = points.map((point) => ({
+      x: point.x + translation.translateX,
+      y: point.y + translation.translateY
+    }))
+
+    if (translatedPoints.some((point) => !Number.isFinite(point.x) || !Number.isFinite(point.y))) {
+      return undefined
+    }
+
+    occupiedPoints.push(...translatedPoints)
+    const area = absolutePolygonArea(translatedPoints)
+    if (!Number.isFinite(area)) return undefined
+    occupiedArea += area
+  }
+
+  if (occupiedPoints.length === 0) return 0
+
+  const hull = convexHull(occupiedPoints)
+  const hullArea = absolutePolygonArea(hull)
+  if (!Number.isFinite(hullArea) || !Number.isFinite(occupiedArea)) return undefined
+  if (hullArea === 0) return 0
+
+  const waste = (hullArea - occupiedArea) / hullArea
+  return Number.isFinite(waste) ? Math.max(0, Math.min(1, waste)) : undefined
+}
+
+function absolutePolygonArea(points: ReadonlyArray<InternalPoint>): number {
+  if (points.length < 3) return 0
+
+  let crossSum = 0
+  for (let index = 0; index < points.length; index += 1) {
+    const first = points[index]
+    const second = points[(index + 1) % points.length]
+    if (first === undefined || second === undefined) return Number.NaN
+    crossSum += first.x * second.y - second.x * first.y
+  }
+  return Math.abs(crossSum / 2)
+}
+
+function convexHull(points: ReadonlyArray<InternalPoint>): ReadonlyArray<InternalPoint> {
+  const sorted = [...points].sort(compareInternalPoints)
+  const unique: InternalPoint[] = []
+  for (const point of sorted) {
+    const previous = unique[unique.length - 1]
+    if (previous === undefined || point.x !== previous.x || point.y !== previous.y) {
+      unique.push(point)
+    }
+  }
+
+  if (unique.length <= 2) return unique
+
+  const lower: InternalPoint[] = []
+  for (const point of unique) {
+    while (lower.length >= 2) {
+      const last = lower[lower.length - 1]
+      const beforeLast = lower[lower.length - 2]
+      if (last === undefined || beforeLast === undefined) break
+      if (GeometryPredicates.orientation(beforeLast, last, point) > 0) break
+      lower.pop()
+    }
+    lower.push(point)
+  }
+
+  const upper: InternalPoint[] = []
+  for (let index = unique.length - 1; index >= 0; index -= 1) {
+    const point = unique[index]
+    if (point === undefined) continue
+    while (upper.length >= 2) {
+      const last = upper[upper.length - 1]
+      const beforeLast = upper[upper.length - 2]
+      if (last === undefined || beforeLast === undefined) break
+      if (GeometryPredicates.orientation(beforeLast, last, point) > 0) break
+      upper.pop()
+    }
+    upper.push(point)
+  }
+
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)]
+}
+
+function compareInternalPoints(first: InternalPoint, second: InternalPoint): number {
+  return first.x - second.x || first.y - second.y
+}
+
 function compareScores(first: IrregularLayoutScore, second: IrregularLayoutScore): -1 | 0 | 1 {
   return layoutScoreOrder(first, second)
 }
@@ -348,15 +446,16 @@ const layoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
   scoreCriterion((score) => score.collisionBoundsNormalizedSpanSum),
   scoreCriterion((score) => score.collisionBoundsAreaMm2),
   scoreCriterion((score) => score.collisionBoundsSpanMm),
-  // equally compact reflected layouts should always start from the same sheet corner
-  scoreCriterion((score) => score.collisionBoundsBottomMm),
-  scoreCriterion((score) => score.collisionBoundsLeftMm),
+  scoreCriterion((score) => score.occupiedHullWasteRatio),
   // free area is almost constant when every placed polygon remains inside one sheet region
   // so compact bounds must decide before minor Clipper-area quantization differences
   descendingScoreCriterion((score) => score.largestNetFreeMaterialRegionAreaMm2),
   scoreCriterion((score) => score.freeMaterialRegionCount),
   scoreCriterion((score) => score.freeMaterialHoleCount),
   scoreCriterion((score) => score.freeMaterialSliverMetric),
+  // lower-left is only a tie-break after all layout-quality criteria
+  scoreCriterion((score) => score.collisionBoundsBottomMm),
+  scoreCriterion((score) => score.collisionBoundsLeftMm),
   Order.mapInput(Order.Array(Order.String), (score) => score.placementOrder),
   Order.mapInput(Order.Array(Order.String), (score) => score.unplacedSourcePieceIds)
 ])

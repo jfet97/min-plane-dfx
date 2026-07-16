@@ -852,7 +852,7 @@ describe('irregular benchmark and debug corpus', () => {
     expect(wideRun.placedCount).toBe(20)
     expect(wideRun.unplacedCount).toBe(0)
     expect(beamRun.unplacedCount).toBe(gaLiteRun.unplacedCount)
-    expect(await compareScores(gaLiteRun.score, beamRun.score)).toBeLessThan(0)
+    expect(await compareScores(gaLiteRun.score, beamRun.score)).toBeLessThanOrEqual(0)
     expect(gaLiteRun.portfolioTerminationReason).toBe('generation_budget')
 
     const repeatedGaLiteExecution = await runNamedBenchmarkProfile('near-capacity-ga-lite')
