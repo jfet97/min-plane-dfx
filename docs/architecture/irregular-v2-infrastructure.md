@@ -226,8 +226,10 @@ Do not route `irregular-convex-v2` requests to MaxRects.
 
 The renderer accepts tagged irregular history alongside existing rectangular
 history. It redraws the original DXF segments using the stored placement
-reference, mirror, rotation, and translation; a placement missing its source or
-reference is reported as unrenderable rather than replaced with a rectangle.
+reference, mirror, rotation, and translation, and can overlay the exact
+translated padded collision hulls emitted by the worker. A placement missing
+its source or reference is reported as unrenderable rather than replaced with
+a rectangle.
 The debug and history panels expose real result status, transforms, candidate
 counts, free-material score metrics, unplaced ids, and diagnostics.
 
