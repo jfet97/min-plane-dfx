@@ -442,11 +442,11 @@ function compareScores(first: IrregularLayoutScore, second: IrregularLayoutScore
 
 const layoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
   scoreCriterion((score) => score.unplacedCount),
+  scoreCriterion((score) => score.occupiedHullWasteRatio),
   scoreCriterion((score) => score.collisionBoundsWorstNormalizedSheetConsumption),
   scoreCriterion((score) => score.collisionBoundsNormalizedSpanSum),
   scoreCriterion((score) => score.collisionBoundsAreaMm2),
   scoreCriterion((score) => score.collisionBoundsSpanMm),
-  scoreCriterion((score) => score.occupiedHullWasteRatio),
   // free area is almost constant when every placed polygon remains inside one sheet region
   // so compact bounds must decide before minor Clipper-area quantization differences
   descendingScoreCriterion((score) => score.largestNetFreeMaterialRegionAreaMm2),

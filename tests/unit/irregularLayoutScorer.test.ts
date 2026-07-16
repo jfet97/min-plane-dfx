@@ -308,9 +308,9 @@ describe('IrregularLayoutScorer', () => {
     expect(await compareScores(compact, separated)).toBeLessThan(0)
   })
 
-  it('ranks hull waste before free-material fragmentation', async () => {
-    const compact = state([placedRectangle('compact', 6, 2, 0, 0)])
-    const wasteful = state([
+  it('ranks lower hull waste before slightly better collision bounds', async () => {
+    const lowerWaste = state([placedRectangle('lower-waste', 6.1, 2, 0, 0)])
+    const tighterBounds = state([
       placedRectangle('wasteful-left', 2, 2, 0, 0),
       placedRectangle('wasteful-right', 2, 2, 4, 0)
     ])
@@ -324,14 +324,16 @@ describe('IrregularLayoutScorer', () => {
       ],
       diagnostics: []
     })
-    const scorer = await scoreWith(materialSnapshot(snapshot), input(compact))
-    const wastefulScore = await scoreWith(materialSnapshot(snapshot), input(wasteful))
+    const lowerWasteScore = await scoreWith(materialSnapshot(snapshot), input(lowerWaste))
+    const tighterBoundsScore = await scoreWith(materialSnapshot(snapshot), input(tighterBounds))
 
-    expect(scorer.largestNetFreeMaterialRegionAreaMm2).toBe(
-      wastefulScore.largestNetFreeMaterialRegionAreaMm2
+    expect(lowerWasteScore.collisionBoundsWorstNormalizedSheetConsumption).toBeGreaterThan(
+      tighterBoundsScore.collisionBoundsWorstNormalizedSheetConsumption
     )
-    expect(scorer.occupiedHullWasteRatio).toBeLessThan(wastefulScore.occupiedHullWasteRatio)
-    expect(await compareScores(scorer, wastefulScore)).toBeLessThan(0)
+    expect(lowerWasteScore.occupiedHullWasteRatio).toBeLessThan(
+      tighterBoundsScore.occupiedHullWasteRatio
+    )
+    expect(await compareScores(lowerWasteScore, tighterBoundsScore)).toBeLessThan(0)
   })
 
   it('uses lower-left only after free-material fragmentation criteria', async () => {
