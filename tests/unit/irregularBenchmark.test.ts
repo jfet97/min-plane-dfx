@@ -32,11 +32,13 @@ import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/
 import { IrregularGeometryInputError } from '../../src/workers/irregular/services.js'
 import { DEFAULT_STRATEGY_ID } from '@shared/domain/strategies.js'
 import {
+  formatIrregularBenchmarkRunReport,
   IRREGULAR_BENCHMARK_RUNNER_VERSION,
   makeBenchmarkProvenance,
   normalizeImportedPieceIdentities,
   resolveBenchmarkOptions,
   runNamedBenchmarkProfile,
+  summarizeBenchmarkGaMetrics,
   summarizeBenchmarkScore,
   summarizeResolvedBenchmarkSettings
 } from '../../scripts/irregular-benchmark.js'
@@ -413,6 +415,34 @@ describe('irregular benchmark and debug corpus', () => {
       placementOrder: [...first.score.placementOrder],
       unplacedSourcePieceIds: [...first.score.unplacedSourcePieceIds]
     })
+
+    const gaMetrics = summarizeBenchmarkGaMetrics(
+      {
+        scheduledEvaluationSlots: 2,
+        distinctChromosomeKeys: 2,
+        evaluatedChromosomeCacheHits: 1,
+        evaluatedChromosomeCacheMisses: 1,
+        actualFullBeamDecodes: 2,
+        decodedBeamElapsedMs: 6.5,
+        decodedBeamCandidateCount: 42
+      },
+      {
+        reconstructionElapsedMs: 1.25,
+        finalScoreElapsedMs: 2.75
+      }
+    )
+    const report = formatIrregularBenchmarkRunReport('run 1/1', {
+      elapsedMs: 12.5,
+      placedCount: first.placedCollisionGeometries.length,
+      unplacedCount: first.unplacedPieceIds.length,
+      auditStatus: 'passed',
+      score: first.score,
+      portfolioSource: first.portfolio.source,
+      portfolioStatus: first.portfolio.status,
+      portfolioTerminationReason: first.portfolio.terminationReason,
+      gaMetrics
+    })
+    expect(report).toContain(`gaMetrics=${JSON.stringify(gaMetrics)}`)
 
     const output = makeIrregularWorkerOutput({
       request,

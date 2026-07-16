@@ -15,6 +15,7 @@ import {
 import {
   computeIrregularNesting,
   type ComputeIrregularNestingOptions,
+  type IrregularFinalizationMetrics,
   type IrregularComputeResult
 } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { IrregularLayoutScorer } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
@@ -24,7 +25,9 @@ import {
   selectBetterIrregularPortfolioCandidate,
   type IrregularChromosomeGeneControls,
   type IrregularChromosomePiece,
-  type IrregularPortfolioChromosome
+  type IrregularPortfolioChromosome,
+  type IrregularPortfolioPhaseMeasurement,
+  type IrregularPortfolioMetrics
 } from '../../src/workers/algorithm/irregular/portfolioSearch.js'
 import { CollisionGeometryBuilder } from '../../src/workers/irregular/collisionGeometryBuilder.js'
 import { FreeMaterialServiceLive } from '../../src/workers/irregular/freeMaterialService.js'
@@ -232,6 +235,71 @@ describe('irregular GA portfolio', () => {
     expect(ga.portfolio.unplacedPieceIds.length).toBeLessThanOrEqual(
       baseline.portfolio.unplacedPieceIds.length
     )
+  })
+
+  it('reports bounded deterministic GA decoder metrics', async () => {
+    const sources = await sourcesPromise
+    const portfolioMetrics: IrregularPortfolioMetrics[] = []
+    const phaseMeasurements: IrregularPortfolioPhaseMeasurement[] = []
+    const finalizationMetrics: IrregularFinalizationMetrics[] = []
+    const result = await Effect.runPromise(
+      run(
+        request(sources),
+        settings({
+          gaEnabled: true,
+          baselineOnly: false,
+          gaPopulation: 2,
+          gaGenerationBudget: 1,
+          gaEvaluationBudget: 2,
+          gaTimeBudgetMs: 60_000,
+          gaSeed: 'portfolio-metrics-regression-seed'
+        }),
+        {
+          onPortfolioMetrics: (metrics) => {
+            portfolioMetrics.push(metrics)
+          },
+          onPortfolioPhase: (measurement) => {
+            phaseMeasurements.push(measurement)
+          },
+          onFinalizationMetrics: (metrics) => {
+            finalizationMetrics.push(metrics)
+          }
+        }
+      )
+    )
+    const metrics = portfolioMetrics[0]
+    const finalization = finalizationMetrics[0]
+    if (metrics === undefined || finalization === undefined) {
+      throw new Error('expected benchmark-only instrumentation to report one completed run')
+    }
+
+    expect(result.portfolio.terminationReason).toBe('generation_budget')
+    expect(phaseMeasurements.map(({ phase }) => phase)).toEqual([
+      'baseline-decode',
+      'ga-decode'
+    ])
+    expect(metrics.scheduledEvaluationSlots).toBe(2)
+    expect(metrics.distinctChromosomeKeys).toBe(2)
+    expect(metrics.evaluatedChromosomeCacheHits).toBe(1)
+    expect(metrics.evaluatedChromosomeCacheMisses).toBe(1)
+    expect(metrics.actualFullBeamDecodes).toBe(2)
+    expect(
+      metrics.evaluatedChromosomeCacheHits + metrics.evaluatedChromosomeCacheMisses
+    ).toBe(metrics.scheduledEvaluationSlots)
+    expect(metrics.decodedBeamCandidateCount).toBe(
+      phaseMeasurements.reduce(
+        (candidateTotal, measurement) => candidateTotal + measurement.candidateCount,
+        0
+      )
+    )
+    expect(metrics.decodedBeamElapsedMs).toBe(
+      phaseMeasurements.reduce(
+        (elapsedTotal, measurement) => elapsedTotal + measurement.elapsedMs,
+        0
+      )
+    )
+    expect(finalization.reconstructionElapsedMs).toBeGreaterThanOrEqual(0)
+    expect(finalization.finalScoreElapsedMs).toBeGreaterThanOrEqual(0)
   })
 
   it('uses canonical placement and unplaced-id tie-breaks before incumbent fallback', async () => {

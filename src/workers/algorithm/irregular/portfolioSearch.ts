@@ -75,9 +75,28 @@ export interface IrregularPortfolioPhaseMeasurement {
   readonly candidateCount: number
 }
 
+/** Benchmark-only counters for one irregular portfolio run. */
+export interface IrregularPortfolioMetrics {
+  /** GA-loop population slots consumed before the evaluation budget check stops scheduling. */
+  readonly scheduledEvaluationSlots: number
+  /** Distinct chromosome keys encountered in those scheduled GA-loop slots. */
+  readonly distinctChromosomeKeys: number
+  /** Scheduled GA-loop slots served from evaluatedByChromosome. */
+  readonly evaluatedChromosomeCacheHits: number
+  /** Scheduled GA-loop slots that started a new beam decode. */
+  readonly evaluatedChromosomeCacheMisses: number
+  /** Baseline plus every cache miss that started a full beam decode. */
+  readonly actualFullBeamDecodes: number
+  /** Aggregate elapsed time from successful baseline and GA decode phase hooks. */
+  readonly decodedBeamElapsedMs: number
+  /** Aggregate candidate count from successful baseline and GA decode phase hooks. */
+  readonly decodedBeamCandidateCount: number
+}
+
 /** optional measurement sink; normal worker results do not contain these values. */
 export interface IrregularPortfolioInstrumentation {
   readonly onPhase?: (measurement: IrregularPortfolioPhaseMeasurement) => void
+  readonly onMetrics?: (metrics: IrregularPortfolioMetrics) => void
 }
 
 interface PortfolioRunInput extends RunPortfolioInput {
@@ -135,6 +154,10 @@ function runPortfolio(
   dependencies: PortfolioDependencies
 ): Effect.Effect<IrregularPortfolioResult, IrregularPortfolioError> {
   return Effect.gen(function* () {
+    const metrics =
+      input.instrumentation?.onMetrics === undefined
+        ? undefined
+        : new IrregularPortfolioMetricsCollector()
     const startedAtMs = Date.now()
     const settings = dependencies.settings
     const allPieceIds = input.pieces.map(preparedPieceId)
@@ -151,7 +174,7 @@ function runPortfolio(
     }
 
     if (input.isCancelled?.() === true) {
-      return emptyPortfolioResult('cancelled', allPieceIds)
+      return finishPortfolio(input, metrics, emptyPortfolioResult('cancelled', allPieceIds))
     }
 
     const configuredPolicies = configuredPoliciesFor(settings)
@@ -193,6 +216,7 @@ function runPortfolio(
 
     const gaEnabled = gaIsEnabled(settings)
     const baselineStartedAt = input.instrumentation === undefined ? 0 : performance.now()
+    metrics?.recordFullBeamDecode()
     const baselineOutcome = yield* decodeWithOutcome(
       runBeam(
         baselineChromosome,
@@ -202,7 +226,7 @@ function runPortfolio(
     if (baselineOutcome._tag === 'failure') {
       if (isBeamAbortError(baselineOutcome.error)) {
         if (baselineOutcome.error.reason === 'cancelled') {
-          return emptyPortfolioResult('cancelled', allPieceIds)
+          return finishPortfolio(input, metrics, emptyPortfolioResult('cancelled', allPieceIds))
         }
         return yield* failPortfolio(
           'decodeChromosome',
@@ -213,12 +237,16 @@ function runPortfolio(
       return yield* Effect.fail(baselineOutcome.error)
     }
     const baseline = baselineOutcome.value
-    reportPhaseMeasurement(input, 'baseline-decode', baselineStartedAt, baseline)
+    reportPhaseMeasurement(input, metrics, 'baseline-decode', baselineStartedAt, baseline)
     let bestOverall: EvaluatedChromosome = baseline
 
     if (!gaEnabled) {
       emitSnapshots(input, baseline, settings.optimizer.beamWidth)
-      return portfolioResultFrom(baseline, 'beam', 'completed', 'ga_disabled', baseline.score)
+      return finishPortfolio(
+        input,
+        metrics,
+        portfolioResultFrom(baseline, 'beam', 'completed', 'ga_disabled', baseline.score)
+      )
     }
 
     const random = new DeterministicPrng(settings.optimizer.gaSeed)
@@ -269,11 +297,15 @@ function runPortfolio(
         const key = chromosomeKey(chromosome)
         /** cached chromosomes still consume their scheduled GA slots. */
         evaluationsCompleted += 1
+        metrics?.recordScheduledEvaluationSlot(key)
         const cachedEvaluation = evaluatedByChromosome.get(key)
         let evaluated: EvaluatedChromosome
         if (cachedEvaluation !== undefined) {
+          metrics?.recordCacheHit()
           evaluated = cachedEvaluation
         } else {
+          metrics?.recordCacheMiss()
+          metrics?.recordFullBeamDecode()
           const gaDecodeStartedAt =
             input.instrumentation === undefined ? 0 : performance.now()
           const outcome = yield* decodeWithOutcome(
@@ -294,7 +326,7 @@ function runPortfolio(
           }
           evaluated = outcome.value
           evaluatedByChromosome.set(key, evaluated)
-          reportPhaseMeasurement(input, 'ga-decode', gaDecodeStartedAt, evaluated)
+          reportPhaseMeasurement(input, metrics, 'ga-decode', gaDecodeStartedAt, evaluated)
         }
         generationResults.push(evaluated)
         if (key !== baselineKey) {
@@ -347,12 +379,16 @@ function runPortfolio(
     }
 
     if (input.onStateSnapshot === undefined) {
-      return portfolioResultFrom(
-        selected,
-        sourceFor(selected, baselineKey),
-        terminalStatus,
-        terminationReason ?? 'generation_budget',
-        selected.score
+      return finishPortfolio(
+        input,
+        metrics,
+        portfolioResultFrom(
+          selected,
+          sourceFor(selected, baselineKey),
+          terminalStatus,
+          terminationReason ?? 'generation_budget',
+          selected.score
+        )
       )
     }
 
@@ -368,12 +404,16 @@ function runPortfolio(
       remainingMs: Math.max(0, deadlineMs - Date.now())
     })
     emitSnapshots(input, selected, settings.optimizer.beamWidth)
-    return portfolioResultFrom(
-      selected,
-      selectedSource,
-      terminalStatus,
-      terminationReason ?? 'generation_budget',
-      selected.score
+    return finishPortfolio(
+      input,
+      metrics,
+      portfolioResultFrom(
+        selected,
+        selectedSource,
+        terminalStatus,
+        terminationReason ?? 'generation_budget',
+        selected.score
+      )
     )
   })
 }
@@ -1017,16 +1057,73 @@ function decodeWithOutcome(
 
 function reportPhaseMeasurement(
   input: PortfolioRunInput,
+  metrics: IrregularPortfolioMetricsCollector | undefined,
   phase: IrregularPortfolioPhaseMeasurement['phase'],
   startedAtMs: number,
   evaluated: EvaluatedChromosome
 ): void {
-  if (input.instrumentation?.onPhase === undefined) return
-  input.instrumentation.onPhase({
+  if (input.instrumentation === undefined) return
+  const measurement: IrregularPortfolioPhaseMeasurement = {
     phase,
     elapsedMs: Math.max(0, performance.now() - startedAtMs),
     candidateCount: evaluated.candidateCount
-  })
+  }
+  metrics?.recordPhaseMeasurement(measurement)
+  input.instrumentation.onPhase?.(measurement)
+}
+
+function finishPortfolio(
+  input: PortfolioRunInput,
+  metrics: IrregularPortfolioMetricsCollector | undefined,
+  result: IrregularPortfolioResult
+): IrregularPortfolioResult {
+  if (metrics !== undefined) input.instrumentation?.onMetrics?.(metrics.snapshot())
+  return result
+}
+
+class IrregularPortfolioMetricsCollector {
+  private scheduledEvaluationSlots = 0
+  private readonly chromosomeKeys = new Set<string>()
+  private evaluatedChromosomeCacheHits = 0
+  private evaluatedChromosomeCacheMisses = 0
+  private actualFullBeamDecodes = 0
+  private decodedBeamElapsedMs = 0
+  private decodedBeamCandidateCount = 0
+
+  recordScheduledEvaluationSlot(chromosomeKey: string): void {
+    this.scheduledEvaluationSlots += 1
+    this.chromosomeKeys.add(chromosomeKey)
+  }
+
+  recordCacheHit(): void {
+    this.evaluatedChromosomeCacheHits += 1
+  }
+
+  recordCacheMiss(): void {
+    this.evaluatedChromosomeCacheMisses += 1
+  }
+
+  recordFullBeamDecode(): void {
+    this.actualFullBeamDecodes += 1
+  }
+
+  recordPhaseMeasurement(measurement: IrregularPortfolioPhaseMeasurement): void {
+    if (measurement.phase === 'replay') return
+    this.decodedBeamElapsedMs += measurement.elapsedMs
+    this.decodedBeamCandidateCount += measurement.candidateCount
+  }
+
+  snapshot(): IrregularPortfolioMetrics {
+    return {
+      scheduledEvaluationSlots: this.scheduledEvaluationSlots,
+      distinctChromosomeKeys: this.chromosomeKeys.size,
+      evaluatedChromosomeCacheHits: this.evaluatedChromosomeCacheHits,
+      evaluatedChromosomeCacheMisses: this.evaluatedChromosomeCacheMisses,
+      actualFullBeamDecodes: this.actualFullBeamDecodes,
+      decodedBeamElapsedMs: this.decodedBeamElapsedMs,
+      decodedBeamCandidateCount: this.decodedBeamCandidateCount
+    }
+  }
 }
 
 function emitSnapshots(

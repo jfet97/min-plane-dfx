@@ -308,6 +308,16 @@ Rows also include placement order and unplaced source ids for the scorer's
 final deterministic tie-breaks. A terminal audit failure makes the row invalid;
 placed count alone is not a quality result.
 
+Benchmark rows also include a `gaMetrics` JSON record that stays outside worker
+protocols and product output. `scheduledEvaluationSlots` and
+`distinctChromosomeKeys` describe GA-loop scheduling; evaluated-chromosome cache
+hits and misses distinguish reused results from new work. `actualFullBeamDecodes`
+includes the deterministic baseline plus every cache miss that starts a decoder.
+The decoded-beam elapsed and candidate totals aggregate successful baseline and
+GA phase measurements, while final reconstruction and final-score timings
+measure materializing the selected portfolio result separately. These counters
+are benchmark-only and do not alter optimizer decisions, scores, or legality.
+
 ## Ownership
 
 Geometry services remain under `src/workers/irregular/`. Placement selection,

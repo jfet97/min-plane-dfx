@@ -1,4 +1,5 @@
 import { Data, Effect, Layer } from 'effect'
+import { performance } from 'node:perf_hooks'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type { PieceId } from '@shared/domain/ids.js'
 import type { NestingRequest } from '@shared/domain/nesting.js'
@@ -31,8 +32,11 @@ import {
   IrregularPlacementScoringError
 } from './irregularPlacementScorer.js'
 import { IrregularBeamState } from './irregularBeamState.js'
-import { IrregularNestingPortfolioLive } from './portfolioSearch.js'
-import type { IrregularPortfolioPhaseMeasurement } from './portfolioSearch.js'
+import {
+  IrregularNestingPortfolioLive,
+  type IrregularPortfolioMetrics,
+  type IrregularPortfolioPhaseMeasurement
+} from './portfolioSearch.js'
 import { PriorityOrderServiceLive } from './priorityOrderService.js'
 
 /** Reports that a prepared piece has no imported geometry available to the worker. */
@@ -50,6 +54,12 @@ export interface IrregularStateSnapshot {
   readonly state: IrregularBeamState
 }
 
+/** Benchmark-only measurements for materializing the selected portfolio result. */
+export interface IrregularFinalizationMetrics {
+  readonly reconstructionElapsedMs: number
+  readonly finalScoreElapsedMs: number
+}
+
 /** Synchronous worker-facing notification for one selected real beam state. */
 export interface ComputeIrregularNestingOptions {
   readonly emitStateSnapshot?: (snapshot: IrregularStateSnapshot, beamWidth: number) => void
@@ -57,6 +67,10 @@ export interface ComputeIrregularNestingOptions {
   readonly isCancelled?: () => boolean
   /** standalone benchmark hook; measurements never enter normal app output. */
   readonly onPortfolioPhase?: (measurement: IrregularPortfolioPhaseMeasurement) => void
+  /** standalone benchmark hook; metrics never enter normal app output. */
+  readonly onPortfolioMetrics?: (metrics: IrregularPortfolioMetrics) => void
+  /** standalone benchmark hook; metrics never enter normal app output. */
+  readonly onFinalizationMetrics?: (metrics: IrregularFinalizationMetrics) => void
 }
 
 /** Plain algorithm output before any worker protocol or history DTO adaptation. */
@@ -159,6 +173,17 @@ export function computeIrregularNesting(
         IrregularNestingPortfolioLive.pipe(Layer.provideMerge(PriorityOrderServiceLive))
       )
     )
+    const instrumentation =
+      options?.onPortfolioPhase === undefined && options?.onPortfolioMetrics === undefined
+        ? undefined
+        : {
+            ...(options?.onPortfolioPhase !== undefined
+              ? { onPhase: options.onPortfolioPhase }
+              : {}),
+            ...(options?.onPortfolioMetrics !== undefined
+              ? { onMetrics: options.onPortfolioMetrics }
+              : {})
+          }
     const portfolioInput = {
       sheet: request.sheet,
       pieces: preparedPieces,
@@ -173,20 +198,20 @@ export function computeIrregularNesting(
         ? { onProgress: options.emitPortfolioProgress }
         : {}),
       ...(options?.isCancelled !== undefined ? { isCancelled: options.isCancelled } : {}),
-      ...(options?.onPortfolioPhase !== undefined
-        ? {
-            instrumentation: {
-              onPhase: options.onPortfolioPhase
-            }
-          }
-        : {})
+      ...(instrumentation !== undefined ? { instrumentation } : {})
     }
     const portfolio = yield* portfolioService.run(portfolioInput)
+    const reconstructionStartedAt =
+      options?.onFinalizationMetrics === undefined ? 0 : performance.now()
     const placedCollisionGeometries = yield* reconstructPlacedGeometry(
       portfolio,
       preparedPieces,
       geometryKernel
     )
+    const reconstructionElapsedMs =
+      options?.onFinalizationMetrics === undefined
+        ? 0
+        : Math.max(0, performance.now() - reconstructionStartedAt)
     const reconstructedState = new IrregularBeamState({
       remainingPreparedPieces: [],
       placedCollisionGeometries,
@@ -195,10 +220,18 @@ export function computeIrregularNesting(
         ({ placement }) => placement.pieceId ?? placement.sourcePieceId
       )
     })
+    const finalScoreStartedAt =
+      options?.onFinalizationMetrics === undefined ? 0 : performance.now()
     const score = yield* layoutScorer.scoreState({
       sheet: request.sheet,
       state: reconstructedState
     })
+    if (options?.onFinalizationMetrics !== undefined) {
+      options.onFinalizationMetrics({
+        reconstructionElapsedMs,
+        finalScoreElapsedMs: Math.max(0, performance.now() - finalScoreStartedAt)
+      })
+    }
     diagnostics.push(...score.freeMaterialSnapshot.diagnostics)
     return {
       placedCollisionGeometries,

@@ -39,8 +39,11 @@ import type { IrregularPlacedPiece } from '../src/shared/irregular/domain.js'
 import { FreeMaterialService } from '../src/workers/irregular/services.js'
 import {
   computeIrregularNesting,
-  type IrregularComputeResult
+  type ComputeIrregularNestingOptions,
+  type IrregularComputeResult,
+  type IrregularFinalizationMetrics
 } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
+import type { IrregularPortfolioMetrics } from '../src/workers/algorithm/irregular/portfolioSearch.js'
 import {
   calculateAreaFeasibilityBounds,
   IRREGULAR_DXF_FIXTURES,
@@ -59,7 +62,7 @@ const DEFAULT_RUN_COUNT = 5
 const DEFAULT_FREE_MATERIAL_OPERATION: FreeMaterialOperation = 'union-then-difference'
 const DEFAULT_NFP_CONSTRUCTION: NfpConstructionAlgorithm = DEFAULT_NFP_CONSTRUCTION_ALGORITHM
 
-export const IRREGULAR_BENCHMARK_RUNNER_VERSION = '2'
+export const IRREGULAR_BENCHMARK_RUNNER_VERSION = '3'
 
 const flagAliases = new Map<string, string>([
   ['fixture', 'fixture'],
@@ -195,6 +198,20 @@ export interface IrregularBenchmarkTimedRun {
   readonly portfolioSource: IrregularComputeResult['portfolio']['source']
   readonly portfolioStatus: IrregularComputeResult['portfolio']['status']
   readonly portfolioTerminationReason: IrregularComputeResult['portfolio']['terminationReason']
+  readonly gaMetrics: IrregularBenchmarkGaMetrics
+}
+
+/** Benchmark-only decoder and selected-output work observed for one run. */
+export interface IrregularBenchmarkGaMetrics {
+  readonly scheduledEvaluationSlots: number
+  readonly distinctChromosomeKeys: number
+  readonly evaluatedChromosomeCacheHits: number
+  readonly evaluatedChromosomeCacheMisses: number
+  readonly actualFullBeamDecodes: number
+  readonly decodedBeamElapsedMs: number
+  readonly decodedBeamCandidateCount: number
+  readonly finalReconstructionElapsedMs: number
+  readonly finalScoreElapsedMs: number
 }
 
 interface PreparedBenchmark {
@@ -248,6 +265,23 @@ export function summarizeBenchmarkScore(
     collisionBoundsSpanMm: score.collisionBoundsSpanMm,
     placementOrder: [...score.placementOrder],
     unplacedSourcePieceIds: [...score.unplacedSourcePieceIds]
+  }
+}
+
+export function summarizeBenchmarkGaMetrics(
+  portfolioMetrics: IrregularPortfolioMetrics,
+  finalizationMetrics: IrregularFinalizationMetrics
+): IrregularBenchmarkGaMetrics {
+  return {
+    scheduledEvaluationSlots: portfolioMetrics.scheduledEvaluationSlots,
+    distinctChromosomeKeys: portfolioMetrics.distinctChromosomeKeys,
+    evaluatedChromosomeCacheHits: portfolioMetrics.evaluatedChromosomeCacheHits,
+    evaluatedChromosomeCacheMisses: portfolioMetrics.evaluatedChromosomeCacheMisses,
+    actualFullBeamDecodes: portfolioMetrics.actualFullBeamDecodes,
+    decodedBeamElapsedMs: portfolioMetrics.decodedBeamElapsedMs,
+    decodedBeamCandidateCount: portfolioMetrics.decodedBeamCandidateCount,
+    finalReconstructionElapsedMs: finalizationMetrics.reconstructionElapsedMs,
+    finalScoreElapsedMs: finalizationMetrics.finalScoreElapsedMs
   }
 }
 
@@ -918,9 +952,10 @@ function runIrregular(
   request: NestingRequest,
   settings: IrregularNestingSettings,
   freeMaterialOperation: FreeMaterialOperation,
-  nfpConstruction: NfpConstructionAlgorithm
+  nfpConstruction: NfpConstructionAlgorithm,
+  options: ComputeIrregularNestingOptions = {}
 ): Effect.Effect<IrregularComputeResult, unknown> {
-  return computeIrregularNesting(request).pipe(
+  return computeIrregularNesting(request, options).pipe(
     Effect.provide(CollisionGeometryBuilder.Live),
     Effect.provide(TransformGeneratorLive),
     Effect.provide(makeNfpIfpServiceLive(nfpConstruction)),
@@ -972,12 +1007,24 @@ async function measureRun(
   freeMaterialOperation: FreeMaterialOperation,
   nfpConstruction: NfpConstructionAlgorithm
 ): Promise<IrregularBenchmarkTimedRun> {
+  let portfolioMetrics: IrregularPortfolioMetrics | undefined
+  let finalizationMetrics: IrregularFinalizationMetrics | undefined
   const startedAt = performance.now()
   const result = await Effect.runPromise(
-    runIrregular(request, settings, freeMaterialOperation, nfpConstruction)
+    runIrregular(request, settings, freeMaterialOperation, nfpConstruction, {
+      onPortfolioMetrics: (metrics) => {
+        portfolioMetrics = metrics
+      },
+      onFinalizationMetrics: (metrics) => {
+        finalizationMetrics = metrics
+      }
+    })
   )
   const elapsedMs = performance.now() - startedAt
   const auditStatus = await auditResult(result, request)
+  if (portfolioMetrics === undefined || finalizationMetrics === undefined) {
+    throw new Error('Benchmark run completed without required GA instrumentation.')
+  }
   return {
     elapsedMs,
     placedCount: result.placedCollisionGeometries.length,
@@ -986,7 +1033,8 @@ async function measureRun(
     score: result.score,
     portfolioSource: result.portfolio.source,
     portfolioStatus: result.portfolio.status,
-    portfolioTerminationReason: result.portfolio.terminationReason
+    portfolioTerminationReason: result.portfolio.terminationReason,
+    gaMetrics: summarizeBenchmarkGaMetrics(portfolioMetrics, finalizationMetrics)
   }
 }
 
@@ -1061,13 +1109,21 @@ function formatElapsed(elapsedMs: number): string {
   return `${elapsedMs.toFixed(2)} ms`
 }
 
-function printRun(label: string, run: IrregularBenchmarkTimedRun): void {
-  console.log(
+export function formatIrregularBenchmarkRunReport(
+  label: string,
+  run: IrregularBenchmarkTimedRun
+): string {
+  return (
     `${label}: ${formatElapsed(run.elapsedMs)} placed=${run.placedCount} ` +
-      `unplaced=${run.unplacedCount} audit=${run.auditStatus} ` +
-      `portfolio=${run.portfolioSource}/${run.portfolioStatus}/${run.portfolioTerminationReason ?? 'unknown'} ` +
-      `score=${JSON.stringify(summarizeBenchmarkScore(run.score))}`
+    `unplaced=${run.unplacedCount} audit=${run.auditStatus} ` +
+    `portfolio=${run.portfolioSource}/${run.portfolioStatus}/${run.portfolioTerminationReason ?? 'unknown'} ` +
+    `score=${JSON.stringify(summarizeBenchmarkScore(run.score))} ` +
+    `gaMetrics=${JSON.stringify(run.gaMetrics)}`
   )
+}
+
+function printRun(label: string, run: IrregularBenchmarkTimedRun): void {
+  console.log(formatIrregularBenchmarkRunReport(label, run))
 }
 
 async function prepareBenchmark(options: CliOptions, repoRoot: string): Promise<PreparedBenchmark> {
