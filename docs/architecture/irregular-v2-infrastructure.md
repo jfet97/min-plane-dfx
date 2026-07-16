@@ -300,14 +300,19 @@ terminal legality-audit status, and the complete whole-layout score. The score
 is compared in this order:
 
 1. lower `unplacedCount`;
-2. higher `largestNetFreeMaterialRegionAreaMm2`;
-3. lower `freeMaterialRegionCount`;
-4. lower `freeMaterialHoleCount`;
-5. lower `freeMaterialSliverMetric`;
-6. lower `collisionBoundsWorstNormalizedSheetConsumption`;
-7. lower `collisionBoundsNormalizedSpanSum`;
-8. lower `collisionBoundsAreaMm2`;
-9. lower `collisionBoundsSpanMm`.
+2. lower `collisionBoundsWorstNormalizedSheetConsumption`;
+3. lower `collisionBoundsNormalizedSpanSum`;
+4. lower `collisionBoundsAreaMm2`;
+5. lower `collisionBoundsSpanMm`;
+6. higher `largestNetFreeMaterialRegionAreaMm2`;
+7. lower `freeMaterialRegionCount`;
+8. lower `freeMaterialHoleCount`;
+9. lower `freeMaterialSliverMetric`.
+
+Collision-bound compactness intentionally comes before free-material diagnostics:
+when every piece stays within one connected sheet region, the total free area is
+nearly constant and small Clipper2 quantization differences must not steer the
+beam toward a looser cluster.
 
 Rows also include placement order and unplaced source ids for the scorer's
 final deterministic tie-breaks. A terminal audit failure makes the row invalid;

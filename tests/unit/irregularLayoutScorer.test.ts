@@ -229,7 +229,7 @@ describe('IrregularLayoutScorer', () => {
     expect(comparison).toBeLessThan(0)
   })
 
-  it('orders equal-count states by real free-material usability and fragmentation metrics', async () => {
+  it('ranks compact collision bounds before residual free-material diagnostics', async () => {
     const preserved = await score(
       state([placedRectangle('left', 2, 8, 0, 0), placedRectangle('right', 2, 8, 8, 0)])
     )
@@ -249,10 +249,10 @@ describe('IrregularLayoutScorer', () => {
     expect(preserved.freeMaterialHoleCount).toBeLessThanOrEqual(fragmented.freeMaterialHoleCount)
     expect(preserved.freeMaterialSliverMetric).toBeLessThan(fragmented.freeMaterialSliverMetric)
     expect(IrregularLayoutScorer.Make).toBeDefined()
-    expect(await compareScores(preserved, fragmented)).toBeLessThan(0)
+    expect(await compareScores(preserved, fragmented)).toBeGreaterThan(0)
   })
 
-  it('uses compact collision bounds only after free-material metrics tie', async () => {
+  it('uses compact collision bounds before residual free-material diagnostics', async () => {
     const snapshot = new FreeMaterialSnapshot({
       sheet: new SheetSpec({ width: 10, height: 10, label: 'snapshot sheet' }),
       regions: [
@@ -270,6 +270,42 @@ describe('IrregularLayoutScorer', () => {
 
     expect(compactScore.largestNetFreeMaterialRegionAreaMm2).toBe(
       wideScore.largestNetFreeMaterialRegionAreaMm2
+    )
+    expect(await compareScores(compactScore, wideScore)).toBeLessThan(0)
+  })
+
+  it('does not let tiny free-area variation beat a materially tighter cluster', async () => {
+    const compact = state([
+      placedRectangle('compact-left', 2, 2, 0, 0),
+      placedRectangle('compact-right', 2, 2, 2, 0)
+    ])
+    const wide = state([
+      placedRectangle('wide-left', 2, 2, 0, 0),
+      placedRectangle('wide-right', 2, 2, 8, 0)
+    ])
+    const scorer = await makeScorer((value) => {
+      const placed = value.placed[1]
+      const translateX = placed?.placement.transform.translateX
+      const width = translateX === 8 ? 10 : 9.999
+      return Effect.succeed(
+        new FreeMaterialSnapshot({
+          sheet: new SheetSpec({ width: 10, height: 10, label: 'precision-noise sheet' }),
+          regions: [
+            new FreeMaterialRegion({
+              boundary: polygon(rectanglePoints(width, 10)),
+              holes: []
+            })
+          ],
+          diagnostics: []
+        })
+      )
+    })
+
+    const compactScore = await scoreWithService(scorer, input(compact))
+    const wideScore = await scoreWithService(scorer, input(wide))
+
+    expect(wideScore.largestNetFreeMaterialRegionAreaMm2).toBeGreaterThan(
+      compactScore.largestNetFreeMaterialRegionAreaMm2
     )
     expect(await compareScores(compactScore, wideScore)).toBeLessThan(0)
   })
