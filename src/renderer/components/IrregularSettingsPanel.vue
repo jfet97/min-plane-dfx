@@ -305,9 +305,9 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
     <h3 title="Ranks legal contact positions for one piece before the beam compares whole partial layouts.">Local candidate scoring</h3>
     <div class="grid">
       <label
-        title="The local candidate policy used by the deterministic beam and by GA when its policy gene is disabled."
+        title="The one policy used by the deterministic beam. GA uses this only when policy mutation is disabled."
       >
-        Baseline policy
+        Deterministic beam policy
         <select
           :value="placementPolicyId"
           @change="
@@ -321,8 +321,11 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           <option value="edge-contact-then-balanced-compactness">Edge contact, then compactness</option>
         </select>
       </label>
-      <div class="policy-list" title="Policies that an enabled GA may choose from.">
-        <span>Portfolio policies</span>
+      <div class="policy-list" title="Policies that an enabled GA may choose among as chromosome values.">
+        <span>GA policy options</span>
+        <small class="field-help">
+          {{ portfolioEnabled ? 'GA may try any checked policy.' : 'Enable GA portfolio search to use these.' }}
+        </small>
         <label
           v-for="policyId in DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS"
           :key="policyId"
@@ -331,6 +334,7 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           <input
             type="checkbox"
             :checked="placementPolicyIds.includes(policyId)"
+            :disabled="!portfolioEnabled"
             @change="togglePolicy(policyId)"
           />
           {{
