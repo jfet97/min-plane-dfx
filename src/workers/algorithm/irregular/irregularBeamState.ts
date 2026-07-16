@@ -33,6 +33,8 @@ interface DerivedIrregularBeamStateMetadata {
   readonly sharedCollisionBoundaryLengthMm: number | undefined
   readonly sharedCollisionBoundaryContactUnits: number | undefined
   readonly nearCompleteStructuralContactCount: number | undefined
+  readonly dominantNearCompleteStructuralContactCount: number | undefined
+  readonly nearCompleteStructuralContactSignatureCounts: ReadonlyMap<string, number> | undefined
   readonly placedCollisionIndex: PlacedCollisionSpatialIndex
 }
 
@@ -40,6 +42,8 @@ interface SharedCollisionBoundaryMetrics {
   readonly lengthMm: number
   readonly normalizedUnits: number
   readonly nearCompleteStructuralContactCount: number
+  readonly dominantNearCompleteStructuralContactCount: number
+  readonly nearCompleteStructuralContactSignatureCounts: ReadonlyMap<string, number>
 }
 
 const derivedMetadata = Symbol('derivedMetadata')
@@ -72,10 +76,15 @@ export class IrregularBeamState {
   readonly sharedCollisionBoundaryContactUnits: number | undefined
   /** Near-complete overlaps between collision edges at structural polygon scale. */
   readonly nearCompleteStructuralContactCount: number | undefined
+  /** Largest repeated local structural-contact pattern frequency. */
+  readonly dominantNearCompleteStructuralContactCount: number | undefined
   /** Persistent conservative index for translated placed collision bounds. */
   readonly placedCollisionIndex: PlacedCollisionSpatialIndex
 
   private readonly canonicalEntryKeys: ReadonlyArray<string>
+  private readonly nearCompleteStructuralContactSignatureCounts:
+    | ReadonlyMap<string, number>
+    | undefined
 
   constructor(input: IrregularBeamStateConstructionInput) {
     this.remainingPreparedPieces = [...input.remainingPreparedPieces]
@@ -98,6 +107,10 @@ export class IrregularBeamState {
     this.sharedCollisionBoundaryLengthMm = metadata.sharedCollisionBoundaryLengthMm
     this.sharedCollisionBoundaryContactUnits = metadata.sharedCollisionBoundaryContactUnits
     this.nearCompleteStructuralContactCount = metadata.nearCompleteStructuralContactCount
+    this.dominantNearCompleteStructuralContactCount =
+      metadata.dominantNearCompleteStructuralContactCount
+    this.nearCompleteStructuralContactSignatureCounts =
+      metadata.nearCompleteStructuralContactSignatureCounts
   }
 
   /** Creates the empty layout state without inventing any geometry or result. */
@@ -129,7 +142,9 @@ export class IrregularBeamState {
       {
         lengthMm: this.sharedCollisionBoundaryLengthMm,
         normalizedUnits: this.sharedCollisionBoundaryContactUnits,
-        nearCompleteStructuralContactCount: this.nearCompleteStructuralContactCount
+        nearCompleteStructuralContactCount: this.nearCompleteStructuralContactCount,
+        nearCompleteStructuralContactSignatureCounts:
+          this.nearCompleteStructuralContactSignatureCounts
       },
       this.placedCollisionIndex,
       addedEntry
@@ -153,6 +168,10 @@ export class IrregularBeamState {
         sharedCollisionBoundaryContactUnits: sharedBoundaryMetrics?.normalizedUnits,
         nearCompleteStructuralContactCount:
           sharedBoundaryMetrics?.nearCompleteStructuralContactCount,
+        dominantNearCompleteStructuralContactCount:
+          sharedBoundaryMetrics?.dominantNearCompleteStructuralContactCount,
+        nearCompleteStructuralContactSignatureCounts:
+          sharedBoundaryMetrics?.nearCompleteStructuralContactSignatureCounts,
         placedCollisionIndex
       }
     )
@@ -177,6 +196,10 @@ export class IrregularBeamState {
         sharedCollisionBoundaryLengthMm: this.sharedCollisionBoundaryLengthMm,
         sharedCollisionBoundaryContactUnits: this.sharedCollisionBoundaryContactUnits,
         nearCompleteStructuralContactCount: this.nearCompleteStructuralContactCount,
+        dominantNearCompleteStructuralContactCount:
+          this.dominantNearCompleteStructuralContactCount,
+        nearCompleteStructuralContactSignatureCounts:
+          this.nearCompleteStructuralContactSignatureCounts,
         placedCollisionIndex: this.placedCollisionIndex
       }
     )
@@ -204,6 +227,10 @@ function deriveMetadata(
     sharedCollisionBoundaryLengthMm: sharedBoundaryMetrics?.lengthMm,
     sharedCollisionBoundaryContactUnits: sharedBoundaryMetrics?.normalizedUnits,
     nearCompleteStructuralContactCount: sharedBoundaryMetrics?.nearCompleteStructuralContactCount,
+    dominantNearCompleteStructuralContactCount:
+      sharedBoundaryMetrics?.dominantNearCompleteStructuralContactCount,
+    nearCompleteStructuralContactSignatureCounts:
+      sharedBoundaryMetrics?.nearCompleteStructuralContactSignatureCounts,
     placedCollisionIndex: makePlacedCollisionSpatialIndex(placedCollisionGeometries)
   }
 }
@@ -215,12 +242,21 @@ function deriveSharedCollisionBoundaryMetrics(
   let totalLengthMm = 0
   let totalNormalizedUnits = 0
   let nearCompleteStructuralContactCount = 0
+  const nearCompleteStructuralContactSignatureCounts = new Map<string, number>()
   for (const entry of index.entries) {
     const additional = sharedBoundaryWithEntries(entry, index.entries.slice(0, entry.ordinal))
     if (additional === undefined) return undefined
     totalLengthMm += additional.lengthMm
     totalNormalizedUnits += additional.normalizedUnits
     nearCompleteStructuralContactCount += additional.nearCompleteStructuralContactCount
+    if (
+      !mergeStructuralContactSignatureCounts(
+        nearCompleteStructuralContactSignatureCounts,
+        additional.nearCompleteStructuralContactSignatureCounts
+      )
+    ) {
+      return undefined
+    }
     if (
       !Number.isFinite(totalLengthMm) ||
       !Number.isFinite(totalNormalizedUnits) ||
@@ -229,7 +265,15 @@ function deriveSharedCollisionBoundaryMetrics(
       return undefined
     }
   }
-  return { lengthMm: totalLengthMm, normalizedUnits: totalNormalizedUnits, nearCompleteStructuralContactCount }
+  return {
+    lengthMm: totalLengthMm,
+    normalizedUnits: totalNormalizedUnits,
+    nearCompleteStructuralContactCount,
+    dominantNearCompleteStructuralContactCount: dominantSignatureCount(
+      nearCompleteStructuralContactSignatureCounts
+    ),
+    nearCompleteStructuralContactSignatureCounts
+  }
 }
 
 function extendSharedCollisionBoundaryMetrics(
@@ -237,6 +281,9 @@ function extendSharedCollisionBoundaryMetrics(
     readonly lengthMm: number | undefined
     readonly normalizedUnits: number | undefined
     readonly nearCompleteStructuralContactCount: number | undefined
+    readonly nearCompleteStructuralContactSignatureCounts:
+      | ReadonlyMap<string, number>
+      | undefined
   },
   existingIndex: PlacedCollisionSpatialIndex,
   addedEntry: PlacedCollisionSpatialEntry | undefined
@@ -245,6 +292,7 @@ function extendSharedCollisionBoundaryMetrics(
     current.lengthMm === undefined ||
     current.normalizedUnits === undefined ||
     current.nearCompleteStructuralContactCount === undefined ||
+    current.nearCompleteStructuralContactSignatureCounts === undefined ||
     addedEntry?.translated === undefined
   ) {
     return undefined
@@ -258,10 +306,29 @@ function extendSharedCollisionBoundaryMetrics(
   const normalizedUnits = current.normalizedUnits + additional.normalizedUnits
   const nearCompleteStructuralContactCount =
     current.nearCompleteStructuralContactCount + additional.nearCompleteStructuralContactCount
+  const nearCompleteStructuralContactSignatureCounts = new Map(
+    current.nearCompleteStructuralContactSignatureCounts
+  )
+  if (
+    !mergeStructuralContactSignatureCounts(
+      nearCompleteStructuralContactSignatureCounts,
+      additional.nearCompleteStructuralContactSignatureCounts
+    )
+  ) {
+    return undefined
+  }
   return Number.isFinite(lengthMm) &&
     Number.isFinite(normalizedUnits) &&
     Number.isSafeInteger(nearCompleteStructuralContactCount)
-    ? { lengthMm, normalizedUnits, nearCompleteStructuralContactCount }
+    ? {
+        lengthMm,
+        normalizedUnits,
+        nearCompleteStructuralContactCount,
+        dominantNearCompleteStructuralContactCount: dominantSignatureCount(
+          nearCompleteStructuralContactSignatureCounts
+        ),
+        nearCompleteStructuralContactSignatureCounts
+      }
     : undefined
 }
 
@@ -273,6 +340,7 @@ function sharedBoundaryWithEntries(
   let totalLengthMm = 0
   let totalNormalizedUnits = 0
   let nearCompleteStructuralContactCount = 0
+  const nearCompleteStructuralContactSignatureCounts = new Map<string, number>()
   for (const existingEntry of existingEntries) {
     if (existingEntry.translated === undefined) return undefined
     const contact = measureSharedConvexPolygonBoundaryContact(
@@ -284,6 +352,14 @@ function sharedBoundaryWithEntries(
     totalNormalizedUnits += contact.normalizedUnits
     nearCompleteStructuralContactCount += contact.nearCompleteStructuralContactCount
     if (
+      !addStructuralContactSignatures(
+        nearCompleteStructuralContactSignatureCounts,
+        contact.nearCompleteStructuralContactSignatures
+      )
+    ) {
+      return undefined
+    }
+    if (
       !Number.isFinite(totalLengthMm) ||
       !Number.isFinite(totalNormalizedUnits) ||
       !Number.isSafeInteger(nearCompleteStructuralContactCount)
@@ -291,7 +367,45 @@ function sharedBoundaryWithEntries(
       return undefined
     }
   }
-  return { lengthMm: totalLengthMm, normalizedUnits: totalNormalizedUnits, nearCompleteStructuralContactCount }
+  return {
+    lengthMm: totalLengthMm,
+    normalizedUnits: totalNormalizedUnits,
+    nearCompleteStructuralContactCount,
+    dominantNearCompleteStructuralContactCount: dominantSignatureCount(
+      nearCompleteStructuralContactSignatureCounts
+    ),
+    nearCompleteStructuralContactSignatureCounts
+  }
+}
+
+function addStructuralContactSignatures(
+  counts: Map<string, number>,
+  signatures: ReadonlyArray<string>
+): boolean {
+  for (const signature of signatures) {
+    const nextCount = (counts.get(signature) ?? 0) + 1
+    if (!Number.isSafeInteger(nextCount)) return false
+    counts.set(signature, nextCount)
+  }
+  return true
+}
+
+function mergeStructuralContactSignatureCounts(
+  target: Map<string, number>,
+  source: ReadonlyMap<string, number>
+): boolean {
+  for (const [signature, count] of source) {
+    const nextCount = (target.get(signature) ?? 0) + count
+    if (!Number.isSafeInteger(nextCount)) return false
+    target.set(signature, nextCount)
+  }
+  return true
+}
+
+function dominantSignatureCount(counts: ReadonlyMap<string, number>): number {
+  let dominantCount = 0
+  for (const count of counts.values()) dominantCount = Math.max(dominantCount, count)
+  return dominantCount
 }
 
 type CanonicalPoint = readonly [x: number, y: number]

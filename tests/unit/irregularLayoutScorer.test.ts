@@ -398,6 +398,7 @@ describe('IrregularLayoutScorer', () => {
     expect(chamferContact.sharedCollisionBoundaryContactUnits).toBe(0.1)
     expect(chamferContact.sharedCollisionBoundaryContactBand).toBe(0)
     expect(chamferContact.nearCompleteStructuralContactCount).toBe(0)
+    expect(chamferContact.dominantNearCompleteStructuralContactCount).toBe(0)
   })
 
   it('rewards one complete triangle-scale edge before normalized units reach one', async () => {
@@ -412,6 +413,7 @@ describe('IrregularLayoutScorer', () => {
     expect(structuralContact.sharedCollisionBoundaryContactUnits).toBe(0.933433)
     expect(structuralContact.sharedCollisionBoundaryContactBand).toBe(0)
     expect(structuralContact.nearCompleteStructuralContactCount).toBe(1)
+    expect(structuralContact.dominantNearCompleteStructuralContactCount).toBe(1)
   })
 
   it('rejects a substantial but incomplete structural-edge overlap', async () => {
@@ -424,6 +426,33 @@ describe('IrregularLayoutScorer', () => {
 
     expect(partialContact.sharedCollisionBoundaryLengthMm).toBe(69.261)
     expect(partialContact.nearCompleteStructuralContactCount).toBe(0)
+    expect(partialContact.dominantNearCompleteStructuralContactCount).toBe(0)
+  })
+
+  it('prefers a repeated structural-contact pattern over more mixed contacts', async () => {
+    const repeated = await score(
+      state([
+        placedRectangle('repeated-first', 4, 2, 0, 0),
+        placedRectangle('repeated-second', 4, 2, 4, 0),
+        placedRectangle('repeated-third', 4, 2, 8, 0)
+      ])
+    )
+    const mixed = await score(
+      state([
+        placedRectangle('mixed-a-left', 4, 2, 0, 0),
+        placedRectangle('mixed-a-right', 4, 2, 4, 0),
+        placedRectangle('mixed-b-left', 3, 2, 0, 4),
+        placedRectangle('mixed-b-right', 3, 2, 3, 4),
+        placedRectangle('mixed-c-left', 2.5, 2, 0, 8),
+        placedRectangle('mixed-c-right', 2.5, 2, 2.5, 8)
+      ])
+    )
+
+    expect(repeated.nearCompleteStructuralContactCount).toBe(2)
+    expect(repeated.dominantNearCompleteStructuralContactCount).toBe(2)
+    expect(mixed.nearCompleteStructuralContactCount).toBe(3)
+    expect(mixed.dominantNearCompleteStructuralContactCount).toBe(1)
+    expect(await compareScores(repeated, mixed)).toBeLessThan(0)
   })
 
   it('lets compactness beat legacy contact totals when structural counts tie', async () => {
@@ -823,6 +852,9 @@ describe('IrregularLayoutScorer', () => {
     expect(child.nearCompleteStructuralContactCount).toBe(
       rebuilt.nearCompleteStructuralContactCount
     )
+    expect(child.dominantNearCompleteStructuralContactCount).toBe(
+      rebuilt.dominantNearCompleteStructuralContactCount
+    )
 
     const unplacedChild = child.withUnplacedPiece({
       remainingPreparedPieces: [],
@@ -838,6 +870,9 @@ describe('IrregularLayoutScorer', () => {
     )
     expect(unplacedChild.nearCompleteStructuralContactCount).toBe(
       child.nearCompleteStructuralContactCount
+    )
+    expect(unplacedChild.dominantNearCompleteStructuralContactCount).toBe(
+      child.dominantNearCompleteStructuralContactCount
     )
   })
 

@@ -154,6 +154,7 @@ export class IrregularDecisionTraceLayoutScore {
   readonly sharedCollisionBoundaryContactUnits: number
   readonly sharedCollisionBoundaryContactBand: number
   readonly nearCompleteStructuralContactCount: number
+  readonly dominantNearCompleteStructuralContactCount: number
   readonly occupiedHullWasteRatio: number
   readonly collisionBoundsWorstNormalizedSheetConsumption: number
   readonly collisionBoundsNormalizedSpanSum: number
@@ -172,6 +173,7 @@ export class IrregularDecisionTraceLayoutScore {
     readonly sharedCollisionBoundaryContactUnits: number
     readonly sharedCollisionBoundaryContactBand: number
     readonly nearCompleteStructuralContactCount: number
+    readonly dominantNearCompleteStructuralContactCount: number
     readonly occupiedHullWasteRatio: number
     readonly collisionBoundsWorstNormalizedSheetConsumption: number
     readonly collisionBoundsNormalizedSpanSum: number
@@ -189,6 +191,8 @@ export class IrregularDecisionTraceLayoutScore {
     this.sharedCollisionBoundaryContactUnits = input.sharedCollisionBoundaryContactUnits
     this.sharedCollisionBoundaryContactBand = input.sharedCollisionBoundaryContactBand
     this.nearCompleteStructuralContactCount = input.nearCompleteStructuralContactCount
+    this.dominantNearCompleteStructuralContactCount =
+      input.dominantNearCompleteStructuralContactCount
     this.occupiedHullWasteRatio = input.occupiedHullWasteRatio
     this.collisionBoundsWorstNormalizedSheetConsumption =
       input.collisionBoundsWorstNormalizedSheetConsumption

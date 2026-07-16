@@ -66,6 +66,8 @@ export interface IrregularLayoutScore {
   readonly sharedCollisionBoundaryContactBand: number
   /** Number of near-complete overlaps between structural-scale collision edges. */
   readonly nearCompleteStructuralContactCount: number
+  /** Largest frequency of one invariant local structural-contact pattern. */
+  readonly dominantNearCompleteStructuralContactCount: number
   /** Largest net boundary-minus-holes material region; larger is better. */
   readonly largestNetFreeMaterialRegionAreaMm2: number
   /** Number of disconnected material regions; smaller is better. */
@@ -271,6 +273,8 @@ function scoreDerivedState(
       ? undefined
       : Math.floor(sharedCollisionBoundaryContactUnits)
   const nearCompleteStructuralContactCount = input.state.nearCompleteStructuralContactCount
+  const dominantNearCompleteStructuralContactCount =
+    input.state.dominantNearCompleteStructuralContactCount
   const occupiedHullWasteRatio = deriveOccupiedHullWasteRatio(input.state)
 
   if (
@@ -287,6 +291,10 @@ function scoreDerivedState(
     nearCompleteStructuralContactCount === undefined ||
     !Number.isSafeInteger(nearCompleteStructuralContactCount) ||
     nearCompleteStructuralContactCount < 0 ||
+    dominantNearCompleteStructuralContactCount === undefined ||
+    !Number.isSafeInteger(dominantNearCompleteStructuralContactCount) ||
+    dominantNearCompleteStructuralContactCount < 0 ||
+    dominantNearCompleteStructuralContactCount > nearCompleteStructuralContactCount ||
     occupiedHullWasteRatio === undefined ||
     !Number.isFinite(collisionBoundsBottomMm) ||
     !Number.isFinite(collisionBoundsLeftMm)
@@ -300,6 +308,7 @@ function scoreDerivedState(
     sharedCollisionBoundaryContactUnits,
     sharedCollisionBoundaryContactBand,
     nearCompleteStructuralContactCount,
+    dominantNearCompleteStructuralContactCount,
     ...materialMetrics,
     collisionBoundsWorstNormalizedSheetConsumption,
     collisionBoundsNormalizedSpanSum,
@@ -495,6 +504,7 @@ function compareScores(first: IrregularLayoutScore, second: IrregularLayoutScore
 
 const layoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
   scoreCriterion((score) => score.unplacedCount),
+  descendingScoreCriterion((score) => score.dominantNearCompleteStructuralContactCount),
   descendingScoreCriterion((score) => score.nearCompleteStructuralContactCount),
   scoreCriterion((score) => score.collisionBoundsWorstNormalizedSheetConsumption),
   scoreCriterion((score) => score.collisionBoundsNormalizedSpanSum),

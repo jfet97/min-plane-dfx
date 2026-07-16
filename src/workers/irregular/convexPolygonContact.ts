@@ -7,10 +7,13 @@ export interface SharedConvexPolygonBoundaryContact {
   readonly lengthMm: number
   readonly normalizedUnits: number
   readonly nearCompleteStructuralContactCount: number
+  readonly nearCompleteStructuralContactSignatures: ReadonlyArray<string>
 }
 
 const MIN_STRUCTURAL_EDGE_LENGTH_RATIO = 0.5
 const MIN_NEAR_COMPLETE_EDGE_OVERLAP_RATIO = 0.95
+const STRUCTURAL_CONTACT_RATIO_SIGNATURE_SCALE = 1_000
+const STRUCTURAL_CONTACT_TURN_SIGNATURE_SCALE = 1_000
 
 /** Measures exact shared boundary length between two already-translated convex polygons. */
 export function sharedConvexPolygonBoundaryLength(
@@ -43,7 +46,12 @@ export function measureSharedConvexPolygonBoundaryContact(
   const lengthMm = sharedConvexPolygonBoundaryLength(first, second)
   if (lengthMm === undefined) return undefined
   if (lengthMm === 0) {
-    return { lengthMm: 0, normalizedUnits: 0, nearCompleteStructuralContactCount: 0 }
+    return {
+      lengthMm: 0,
+      normalizedUnits: 0,
+      nearCompleteStructuralContactCount: 0,
+      nearCompleteStructuralContactSignatures: []
+    }
   }
 
   const firstLongestEdgeMm = longestPolygonEdgeLength(first.polygon.points)
@@ -53,23 +61,28 @@ export function measureSharedConvexPolygonBoundaryContact(
   const normalizationLengthMm = Math.min(firstLongestEdgeMm, secondLongestEdgeMm)
   const normalizedUnits = lengthMm / normalizationLengthMm
   if (!Number.isFinite(normalizedUnits) || normalizedUnits < 0) return undefined
-  const nearCompleteStructuralContactCount = countNearCompleteStructuralContacts(
+  const nearCompleteStructuralContactSignatures = deriveNearCompleteStructuralContactSignatures(
     first.polygon.points,
     second.polygon.points,
     firstLongestEdgeMm,
     secondLongestEdgeMm
   )
-  if (nearCompleteStructuralContactCount === undefined) return undefined
-  return { lengthMm, normalizedUnits, nearCompleteStructuralContactCount }
+  if (nearCompleteStructuralContactSignatures === undefined) return undefined
+  return {
+    lengthMm,
+    normalizedUnits,
+    nearCompleteStructuralContactCount: nearCompleteStructuralContactSignatures.length,
+    nearCompleteStructuralContactSignatures
+  }
 }
 
-function countNearCompleteStructuralContacts(
+function deriveNearCompleteStructuralContactSignatures(
   firstPoints: ReadonlyArray<InternalPoint>,
   secondPoints: ReadonlyArray<InternalPoint>,
   firstLongestEdgeMm: number,
   secondLongestEdgeMm: number
-): number | undefined {
-  let count = 0
+): ReadonlyArray<string> | undefined {
+  const signatures: string[] = []
   for (const firstEdge of polygonEdges(firstPoints)) {
     const firstEdgeLengthMm = polygonEdgeLength(firstEdge)
     if (firstEdgeLengthMm === undefined) return undefined
@@ -84,16 +97,127 @@ function countNearCompleteStructuralContacts(
       if (overlapLengthMm === undefined) return undefined
       const shorterEdgeLengthMm = Math.min(firstEdgeLengthMm, secondEdgeLengthMm)
       if (overlapLengthMm >= shorterEdgeLengthMm * MIN_NEAR_COMPLETE_EDGE_OVERLAP_RATIO) {
-        count += 1
+        const signature = structuralContactSignature(
+          firstEdge,
+          secondEdge,
+          firstPoints,
+          secondPoints,
+          firstLongestEdgeMm,
+          secondLongestEdgeMm
+        )
+        if (signature === undefined) return undefined
+        signatures.push(signature)
       }
     }
   }
-  return count
+  return signatures
+}
+
+function structuralContactSignature(
+  firstEdge: PolygonEdge,
+  secondEdge: PolygonEdge,
+  firstPoints: ReadonlyArray<InternalPoint>,
+  secondPoints: ReadonlyArray<InternalPoint>,
+  firstLongestEdgeMm: number,
+  secondLongestEdgeMm: number
+): string | undefined {
+  const firstDescriptor = structuralEdgeDescriptor(
+    firstEdge,
+    firstPoints,
+    firstLongestEdgeMm
+  )
+  const secondDescriptor = structuralEdgeDescriptor(
+    secondEdge,
+    secondPoints,
+    secondLongestEdgeMm
+  )
+  if (firstDescriptor === undefined || secondDescriptor === undefined) return undefined
+
+  return firstDescriptor <= secondDescriptor
+    ? `${firstDescriptor}|${secondDescriptor}`
+    : `${secondDescriptor}|${firstDescriptor}`
+}
+
+function structuralEdgeDescriptor(
+  edge: PolygonEdge,
+  points: ReadonlyArray<InternalPoint>,
+  longestEdgeMm: number
+): string | undefined {
+  const previousPoint = points[(edge.startIndex - 1 + points.length) % points.length]
+  const nextPoint = points[(edge.startIndex + 2) % points.length]
+  if (previousPoint === undefined || nextPoint === undefined) return undefined
+
+  const edgeLengthMm = polygonEdgeLength(edge)
+  const previousLengthMm = pointDistance(previousPoint, edge.start)
+  const nextLengthMm = pointDistance(edge.end, nextPoint)
+  const startTurnCosine = turnCosine(previousPoint, edge.start, edge.end)
+  const endTurnCosine = turnCosine(edge.start, edge.end, nextPoint)
+  if (
+    edgeLengthMm === undefined ||
+    previousLengthMm === undefined ||
+    nextLengthMm === undefined ||
+    startTurnCosine === undefined ||
+    endTurnCosine === undefined
+  ) {
+    return undefined
+  }
+
+  const edgeRatioKey = ratioSignatureKey(edgeLengthMm, longestEdgeMm)
+  const previousRatioKey = ratioSignatureKey(previousLengthMm, longestEdgeMm)
+  const nextRatioKey = ratioSignatureKey(nextLengthMm, longestEdgeMm)
+  const startTurnKey = Math.round(startTurnCosine * STRUCTURAL_CONTACT_TURN_SIGNATURE_SCALE)
+  const endTurnKey = Math.round(endTurnCosine * STRUCTURAL_CONTACT_TURN_SIGNATURE_SCALE)
+  if (
+    edgeRatioKey === undefined ||
+    previousRatioKey === undefined ||
+    nextRatioKey === undefined ||
+    !Number.isSafeInteger(startTurnKey) ||
+    !Number.isSafeInteger(endTurnKey)
+  ) {
+    return undefined
+  }
+
+  const firstEndpoint = `${previousRatioKey}:${startTurnKey}`
+  const secondEndpoint = `${nextRatioKey}:${endTurnKey}`
+  const endpointPair =
+    firstEndpoint <= secondEndpoint
+      ? `${firstEndpoint}:${secondEndpoint}`
+      : `${secondEndpoint}:${firstEndpoint}`
+  return `${edgeRatioKey}:${endpointPair}`
+}
+
+function ratioSignatureKey(value: number, longestEdgeMm: number): number | undefined {
+  const key = Math.round((value / longestEdgeMm) * STRUCTURAL_CONTACT_RATIO_SIGNATURE_SCALE)
+  return Number.isSafeInteger(key) ? key : undefined
+}
+
+function pointDistance(first: InternalPoint, second: InternalPoint): number | undefined {
+  const distance = Math.hypot(second.x - first.x, second.y - first.y)
+  return Number.isFinite(distance) && distance > 0 ? distance : undefined
+}
+
+function turnCosine(
+  previous: InternalPoint,
+  vertex: InternalPoint,
+  next: InternalPoint
+): number | undefined {
+  const previousX = previous.x - vertex.x
+  const previousY = previous.y - vertex.y
+  const nextX = next.x - vertex.x
+  const nextY = next.y - vertex.y
+  const previousLength = Math.hypot(previousX, previousY)
+  const nextLength = Math.hypot(nextX, nextY)
+  const denominator = previousLength * nextLength
+  if (!Number.isFinite(denominator) || denominator <= 0) return undefined
+
+  const cosine = (previousX * nextX + previousY * nextY) / denominator
+  return Number.isFinite(cosine) ? Math.max(-1, Math.min(1, cosine)) : undefined
 }
 
 interface PolygonEdge {
   readonly start: InternalPoint
   readonly end: InternalPoint
+  readonly startIndex: number
 }
 
 function polygonEdges(points: ReadonlyArray<InternalPoint>): ReadonlyArray<PolygonEdge> {
@@ -102,7 +226,7 @@ function polygonEdges(points: ReadonlyArray<InternalPoint>): ReadonlyArray<Polyg
     const start = points[index]
     const end = points[(index + 1) % points.length]
     if (start === undefined || end === undefined) return []
-    edges.push({ start, end })
+    edges.push({ start, end, startIndex: index })
   }
   return edges
 }

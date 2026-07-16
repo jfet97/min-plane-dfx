@@ -1029,6 +1029,8 @@ function decisionTraceLayoutScore(score: IrregularLayoutScore): IrregularDecisio
     sharedCollisionBoundaryContactUnits: score.sharedCollisionBoundaryContactUnits,
     sharedCollisionBoundaryContactBand: score.sharedCollisionBoundaryContactBand,
     nearCompleteStructuralContactCount: score.nearCompleteStructuralContactCount,
+    dominantNearCompleteStructuralContactCount:
+      score.dominantNearCompleteStructuralContactCount,
     occupiedHullWasteRatio: score.occupiedHullWasteRatio,
     collisionBoundsWorstNormalizedSheetConsumption:
       score.collisionBoundsWorstNormalizedSheetConsumption,

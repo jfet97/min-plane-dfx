@@ -317,20 +317,21 @@ terminal legality-audit status, and the complete whole-layout score. The score
 is compared in this order:
 
 1. lower `unplacedCount`;
-2. higher `nearCompleteStructuralContactCount`;
-3. lower `collisionBoundsWorstNormalizedSheetConsumption`;
-4. lower `collisionBoundsNormalizedSpanSum`;
-5. lower `collisionBoundsAreaMm2`;
-6. lower `collisionBoundsSpanMm`;
-7. lower `occupiedHullWasteRatio`;
-8. higher legacy normalized contact band, continuous normalized units, then
+2. higher `dominantNearCompleteStructuralContactCount`;
+3. higher `nearCompleteStructuralContactCount`;
+4. lower `collisionBoundsWorstNormalizedSheetConsumption`;
+5. lower `collisionBoundsNormalizedSpanSum`;
+6. lower `collisionBoundsAreaMm2`;
+7. lower `collisionBoundsSpanMm`;
+8. lower `occupiedHullWasteRatio`;
+9. higher legacy normalized contact band, continuous normalized units, then
    exact shared boundary length, only after compactness has decided between
-   layouts with the same structural-contact count;
-9. lower collision-bound `minY`, then `minX`, to anchor equivalent layouts at lower-left;
-10. higher `largestNetFreeMaterialRegionAreaMm2`;
-11. lower `freeMaterialRegionCount`;
-12. lower `freeMaterialHoleCount`;
-13. lower `freeMaterialSliverMetric`.
+   layouts with the same repeated and total structural-contact counts;
+10. lower collision-bound `minY`, then `minX`, to anchor equivalent layouts at lower-left;
+11. higher `largestNetFreeMaterialRegionAreaMm2`;
+12. lower `freeMaterialRegionCount`;
+13. lower `freeMaterialHoleCount`;
+14. lower `freeMaterialSliverMetric`.
 
 A structural contact is an exact collinear overlap between two collision edges
 that are each at least half as long as their polygon's longest edge. It counts
@@ -340,6 +341,19 @@ mate while excluding short offset-join chamfers and substantial but incomplete
 edge fragments. The scale-normalized contact band and raw millimeters remain in
 results and traces as diagnostics and late tie-breaks; they do not outrank
 compactness once structural-contact counts tie.
+
+Each qualifying contact also receives a local edge-shape signature. The
+signature contains the contacting edge length normalized by its polygon's
+longest edge plus the normalized adjacent-edge lengths and endpoint turn at
+both ends. Endpoint descriptors and the two participating edge descriptors are
+sorted, so the signature is invariant to placement, rotation, mirror, winding,
+and piece order. Values are quantized to deterministic `0.001` ratio/turn bands.
+`dominantNearCompleteStructuralContactCount` is the largest frequency in the
+layout's internal signature histogram. Ranking it first keeps one repeated
+edge-mating motif alive instead of letting a mixture of unrelated full-edge
+contacts form a branching contact graph. The histogram remains private beam
+metadata; results and decision traces expose only the dominant frequency and
+the total structural-contact count.
 
 Collision-bound compactness intentionally comes before free-material diagnostics:
 when every piece stays within one connected sheet region, the total free area is
