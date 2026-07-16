@@ -26,8 +26,9 @@ dependency boundaries, not persisted payloads.
 
 The verified derived-geometry hot path uses worker-private structural point,
 bounds, polygon, and polygon-with-bounds records. Schema-backed geometry is
-still accepted at service inputs and restored at output/cache boundaries; the
-private records avoid class construction while preserving those contracts.
+still accepted at service inputs and restored at public-service outputs; cache
+entries intentionally retain private records so hot cache hits avoid class
+construction while preserving those public contracts.
 
 ## Worker Services
 
@@ -160,6 +161,17 @@ non-adjacent vertex in a computed Clipper boundary; that winding is preserved
 for its correct net diagnostic area, while source polygons remain strictly
 unique-vertex validated. Free material is never used as placement legality or
 as an implicit concave/hole-aware nesting feature.
+
+The alternative geometry paths are parity-gated experiments, not interchangeable
+defaults. Focused tests compare NFP construction and free-material operations
+using convex fixture-derived geometry across winding, transforms, padding, and
+typed failures. A backend switch also requires the complete
+`IrregularLayoutScorer` tuple: elapsed time and placed count alone are not a
+quality equivalence proof. The hard benchmark corpus records exact score deltas
+and serial elapsed-time medians. Its measured linear-edge-merge variations are
+numerically negligible but have no broad speed advantage; direct difference is
+exact-score equivalent but slower. The shipped vertex-pair-hull plus
+union-then-difference defaults therefore remain unchanged.
 
 ## Current Integration State
 

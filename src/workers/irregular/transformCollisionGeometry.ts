@@ -8,6 +8,7 @@ import {
 import type { TransformCollisionGeometryInput } from './services.js'
 import { IrregularGeometryInputError } from './services.js'
 import { ConvexPolygonValidation } from './convexPolygonValidation.js'
+import type { InternalBounds, InternalPoint, InternalPolygon } from './internalGeometry.js'
 
 export const TransformCollisionGeometry = {
   compute
@@ -38,7 +39,7 @@ function compute(
   if ('message' in boundary) return failInvalidInput(boundary.message)
 
   const rotationDeg = normalizeRotationDegrees(transform.rotationDeg)
-  const transformedPoints: IrregularPoint[] = []
+  const transformedPoints: InternalPoint[] = []
   for (const point of geometry.collisionPolygon.points) {
     const transformedPoint = transformPoint(point, transform.mirrored, rotationDeg)
     if (!Number.isFinite(transformedPoint.x) || !Number.isFinite(transformedPoint.y)) {
@@ -57,8 +58,8 @@ function compute(
     new TransformedCollisionGeometry({
       sourcePieceId: geometry.sourcePieceId,
       transform,
-      polygon: new IrregularPolygon({ points: transformedPoints }),
-      bounds
+      polygon: toDomainPolygon({ points: transformedPoints }),
+      bounds: new IrregularBounds(bounds)
     })
   )
 }
@@ -83,31 +84,31 @@ function normalizeRotationDegrees(rotationDeg: number): number {
  * representable instead of producing values like `6.123e-17`.
  */
 function transformPoint(
-  point: IrregularPoint,
+  point: InternalPoint,
   mirrored: boolean,
   rotationDeg: number
-): IrregularPoint {
+): InternalPoint {
   // mirror first so every caller gets one deterministic operation order
   const x = mirrored ? -point.x : point.x
   const y = point.y
 
   switch (rotationDeg) {
     case 0:
-      return new IrregularPoint({ x: normalizeNegativeZero(x), y: normalizeNegativeZero(y) })
+      return { x: normalizeNegativeZero(x), y: normalizeNegativeZero(y) }
     case 90:
-      return new IrregularPoint({ x: normalizeNegativeZero(-y), y: normalizeNegativeZero(x) })
+      return { x: normalizeNegativeZero(-y), y: normalizeNegativeZero(x) }
     case 180:
-      return new IrregularPoint({ x: normalizeNegativeZero(-x), y: normalizeNegativeZero(-y) })
+      return { x: normalizeNegativeZero(-x), y: normalizeNegativeZero(-y) }
     case 270:
-      return new IrregularPoint({ x: normalizeNegativeZero(y), y: normalizeNegativeZero(-x) })
+      return { x: normalizeNegativeZero(y), y: normalizeNegativeZero(-x) }
     default: {
       const rotationRad = (rotationDeg * Math.PI) / 180
       const cos = Math.cos(rotationRad)
       const sin = Math.sin(rotationRad)
-      return new IrregularPoint({
+      return {
         x: normalizeNegativeZero(x * cos - y * sin),
         y: normalizeNegativeZero(x * sin + y * cos)
-      })
+      }
     }
   }
 }
@@ -116,7 +117,7 @@ function transformPoint(
  * Computes extents without changing any coordinates. Bounds are derived data,
  * not a reason to shift the polygon away from its stable placement origin.
  */
-function boundsForPoints(points: ReadonlyArray<IrregularPoint>): IrregularBounds | undefined {
+function boundsForPoints(points: ReadonlyArray<InternalPoint>): InternalBounds | undefined {
   const firstPoint = points[0]
   if (firstPoint === undefined) return undefined
 
@@ -125,14 +126,24 @@ function boundsForPoints(points: ReadonlyArray<IrregularPoint>): IrregularBounds
   let maxX = firstPoint.x
   let maxY = firstPoint.y
 
-  for (const point of points.slice(1)) {
+  for (let index = 1; index < points.length; index += 1) {
+    const point = points[index]
+    if (point === undefined) return undefined
     minX = Math.min(minX, point.x)
     minY = Math.min(minY, point.y)
     maxX = Math.max(maxX, point.x)
     maxY = Math.max(maxY, point.y)
   }
 
-  return new IrregularBounds({ minX, minY, maxX, maxY })
+  return { minX, minY, maxX, maxY }
+}
+
+function toDomainPolygon(polygon: InternalPolygon): IrregularPolygon {
+  return new IrregularPolygon({
+    points: polygon.points.map(
+      (point) => new IrregularPoint({ x: point.x, y: point.y })
+    )
+  })
 }
 
 /**

@@ -12,6 +12,7 @@ import type {
   ComputeNfpInput,
   GeneratePlacementCandidatesInput
 } from './services.js'
+import type { InternalBounds, InternalPoint, InternalPolygon } from './internalGeometry.js'
 import {
   IrregularGeometryInfeasibleError,
   GeometryCache,
@@ -39,6 +40,8 @@ import type { NfpConstructionAlgorithm } from './geometryCacheKeys.js'
 
 export { DEFAULT_NFP_CONSTRUCTION_ALGORITHM }
 export type { NfpConstructionAlgorithm }
+
+const ORIGIN: InternalPoint = { x: 0, y: 0 }
 
 /** Provides deterministic convex IFP bounds and outer NFP boundaries. */
 export function makeNfpIfpServiceLayer(
@@ -95,6 +98,22 @@ function computeNfpCached(
   geometryCache: GeometryCache,
   constructionAlgorithm: NfpConstructionAlgorithm
 ): Effect.Effect<IrregularNfp, IrregularGeometryInputError> {
+  return computeNfpBoundaryCached(input, geometryCache, constructionAlgorithm).pipe(
+    Effect.map((boundary) =>
+      new IrregularNfp({
+        fixedPieceId: input.fixed.placement.sourcePieceId,
+        movingPieceId: input.moving.sourcePieceId,
+        boundary: toDomainPolygon(boundary)
+      })
+    )
+  )
+}
+
+function computeNfpBoundaryCached(
+  input: ComputeNfpInput,
+  geometryCache: GeometryCache,
+  constructionAlgorithm: NfpConstructionAlgorithm
+): Effect.Effect<InternalPolygon, IrregularGeometryInputError> {
   const fixedValidation = ConvexPolygonValidation.validateStrictBoundary(
     input.fixed.collisionGeometry.polygon.points
   )
@@ -107,15 +126,15 @@ function computeNfpCached(
     return failInvalidGeometry('computeNfp', movingValidation.message)
 
   const key = pairwiseNfpCacheKey(input, constructionAlgorithm)
-  return geometryCache.get<IrregularPolygon>(key).pipe(
+  return geometryCache.get<InternalPolygon>(key).pipe(
     Effect.flatMap((cached) => {
-      if (isValidCachedNfpBoundary(cached)) return translateNfpBoundary(input, cached)
+      if (isValidCachedNfpBoundary(cached)) return translateNfpBoundaryInternal(input, cached)
 
       const removeInvalid = cached === undefined ? Effect.void : geometryCache.remove(key)
       return removeInvalid.pipe(
         Effect.flatMap(() => computeNfpBoundaryUncached(input, constructionAlgorithm)),
         Effect.tap((computed) => geometryCache.set(key, computed)),
-        Effect.flatMap((boundary) => translateNfpBoundary(input, boundary))
+        Effect.flatMap((boundary) => translateNfpBoundaryInternal(input, boundary))
       )
     })
   )
@@ -124,11 +143,11 @@ function computeNfpCached(
 function computeNfpBoundaryUncached(
   input: ComputeNfpInput,
   constructionAlgorithm: NfpConstructionAlgorithm
-): Effect.Effect<IrregularPolygon, IrregularGeometryInputError> {
+): Effect.Effect<InternalPolygon, IrregularGeometryInputError> {
   const construct =
     constructionAlgorithm === 'linear-edge-merge'
-      ? NfpBoundaryAlgorithms.linear
-      : NfpBoundaryAlgorithms.reference
+      ? computeRelativeNfpBoundaryLinearInternal
+      : computeRelativeNfpBoundaryReferenceInternal
   const boundary = construct(
     input.fixed.collisionGeometry.polygon.points,
     input.moving.polygon.points
@@ -138,11 +157,20 @@ function computeNfpBoundaryUncached(
 }
 
 export type NfpBoundaryConstructionResult = IrregularPolygon | { readonly message: string }
+type InternalNfpBoundaryConstructionResult =
+  | InternalPolygon
+  | { readonly message: string }
 
 /** Removes exact cyclic repeats and redundant collinear vertices in linear time. */
 export function canonicalizeTranslatedConvexRing(
-  points: ReadonlyArray<IrregularPoint>
+  points: ReadonlyArray<InternalPoint>
 ): NfpBoundaryConstructionResult {
+  return toPublicBoundary(canonicalizeTranslatedConvexRingInternal(points))
+}
+
+function canonicalizeTranslatedConvexRingInternal(
+  points: ReadonlyArray<InternalPoint>
+): InternalNfpBoundaryConstructionResult {
   if (points.length < 3) return { message: 'polygon must contain at least three vertices.' }
 
   const previousIndexes = points.map(
@@ -189,7 +217,7 @@ export function canonicalizeTranslatedConvexRing(
     return { message: 'polygon must contain at least three vertices.' }
   }
 
-  const canonicalPoints: IrregularPoint[] = []
+  const canonicalPoints: InternalPoint[] = []
   let currentIndex = firstActiveIndex
   do {
     const currentPoint = points[currentIndex]
@@ -206,7 +234,7 @@ export function canonicalizeTranslatedConvexRing(
 
   const validation = ConvexPolygonValidation.validateStrictBoundary(canonicalPoints)
   if ('message' in validation) return validation
-  return new IrregularPolygon({ points: rotateToStableStart(canonicalPoints) })
+  return { points: rotateToStableStart(canonicalPoints) }
 }
 
 /** Exposes the linear path and its hull-based differential oracle to focused tests. */
@@ -216,16 +244,23 @@ export const NfpBoundaryAlgorithms = {
 } as const
 
 function computeRelativeNfpBoundaryReference(
-  fixedPoints: ReadonlyArray<IrregularPoint>,
-  movingPoints: ReadonlyArray<IrregularPoint>
+  fixedPoints: ReadonlyArray<InternalPoint>,
+  movingPoints: ReadonlyArray<InternalPoint>
 ): NfpBoundaryConstructionResult {
+  return toPublicBoundary(computeRelativeNfpBoundaryReferenceInternal(fixedPoints, movingPoints))
+}
+
+function computeRelativeNfpBoundaryReferenceInternal(
+  fixedPoints: ReadonlyArray<InternalPoint>,
+  movingPoints: ReadonlyArray<InternalPoint>
+): InternalNfpBoundaryConstructionResult {
   const inputValidation = validateRelativeNfpInputs(fixedPoints, movingPoints)
   if ('message' in inputValidation) return inputValidation
 
   const negatedMovingPoints = movingPoints.map(
-    (point) => new IrregularPoint({ x: -point.x, y: -point.y })
+    (point) => ({ x: -point.x, y: -point.y })
   )
-  const minkowskiPoints: IrregularPoint[] = []
+  const minkowskiPoints: InternalPoint[] = []
   for (const fixedPoint of fixedPoints) {
     for (const movingPoint of negatedMovingPoints) {
       const sum = sumPoints(fixedPoint, movingPoint, 'Minkowski sum')
@@ -238,19 +273,26 @@ function computeRelativeNfpBoundaryReference(
   const boundaryValidation = ConvexPolygonValidation.validateStrictBoundary(boundary.points)
   if ('message' in boundaryValidation) return boundaryValidation
 
-  return new IrregularPolygon({ points: rotateToStableStart(boundary.points) })
+  return { points: rotateToStableStart(boundary.points) }
 }
 
 function computeRelativeNfpBoundaryLinear(
-  fixedPoints: ReadonlyArray<IrregularPoint>,
-  movingPoints: ReadonlyArray<IrregularPoint>
+  fixedPoints: ReadonlyArray<InternalPoint>,
+  movingPoints: ReadonlyArray<InternalPoint>
 ): NfpBoundaryConstructionResult {
+  return toPublicBoundary(computeRelativeNfpBoundaryLinearInternal(fixedPoints, movingPoints))
+}
+
+function computeRelativeNfpBoundaryLinearInternal(
+  fixedPoints: ReadonlyArray<InternalPoint>,
+  movingPoints: ReadonlyArray<InternalPoint>
+): InternalNfpBoundaryConstructionResult {
   const inputValidation = validateRelativeNfpInputs(fixedPoints, movingPoints)
   if ('message' in inputValidation) return inputValidation
 
   const fixedBoundary = counterClockwiseStablePoints(fixedPoints, inputValidation.fixedWinding)
   const negatedMovingPoints = movingPoints.map(
-    (point) => new IrregularPoint({ x: -point.x, y: -point.y })
+    (point) => ({ x: -point.x, y: -point.y })
   )
   const movingBoundary = counterClockwiseStablePoints(
     negatedMovingPoints,
@@ -271,7 +313,7 @@ function computeRelativeNfpBoundaryLinear(
 
   let fixedEdgeIndex = 0
   let movingEdgeIndex = 0
-  const boundaryPoints: IrregularPoint[] = [initialSum]
+  const boundaryPoints: InternalPoint[] = [initialSum]
   while (fixedEdgeIndex < fixedEdges.length || movingEdgeIndex < movingEdges.length) {
     if (fixedEdgeIndex < fixedEdges.length && movingEdgeIndex < movingEdges.length) {
       const fixedEdge = fixedEdges[fixedEdgeIndex]
@@ -300,7 +342,7 @@ function computeRelativeNfpBoundaryLinear(
     }
   }
 
-  const canonicalBoundary = canonicalizeTranslatedConvexRing(boundaryPoints)
+  const canonicalBoundary = canonicalizeTranslatedConvexRingInternal(boundaryPoints)
   if (!('message' in canonicalBoundary)) {
     const canonicalValidation = ConvexPolygonValidation.validateStrictBoundary(
       canonicalBoundary.points
@@ -310,7 +352,7 @@ function computeRelativeNfpBoundaryLinear(
         canonicalValidation.winding === 1
           ? canonicalBoundary.points
           : [...canonicalBoundary.points].reverse()
-      return new IrregularPolygon({ points: rotateToStableStart(counterClockwisePoints) })
+      return { points: rotateToStableStart(counterClockwisePoints) }
     }
   }
 
@@ -319,7 +361,7 @@ function computeRelativeNfpBoundaryLinear(
   if ('message' in boundaryValidation) return boundaryValidation
   const counterClockwisePoints =
     boundaryValidation.winding === 1 ? boundary.points : [...boundary.points].reverse()
-  return new IrregularPolygon({ points: rotateToStableStart(counterClockwisePoints) })
+  return { points: rotateToStableStart(counterClockwisePoints) }
 }
 
 interface ValidatedRelativeNfpInputs {
@@ -328,8 +370,8 @@ interface ValidatedRelativeNfpInputs {
 }
 
 function validateRelativeNfpInputs(
-  fixedPoints: ReadonlyArray<IrregularPoint>,
-  movingPoints: ReadonlyArray<IrregularPoint>
+  fixedPoints: ReadonlyArray<InternalPoint>,
+  movingPoints: ReadonlyArray<InternalPoint>
 ): ValidatedRelativeNfpInputs | { readonly message: string } {
   const fixedFiniteMessage = finitePointsMessage(fixedPoints)
   if (fixedFiniteMessage !== undefined) return { message: fixedFiniteMessage }
@@ -343,24 +385,24 @@ function validateRelativeNfpInputs(
   return { fixedWinding: fixedValidation.winding, movingWinding: movingValidation.winding }
 }
 
-function finitePointsMessage(points: ReadonlyArray<IrregularPoint>): string | undefined {
+function finitePointsMessage(points: ReadonlyArray<InternalPoint>): string | undefined {
   return points.every((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
     ? undefined
     : 'polygon coordinates must be finite.'
 }
 
 function counterClockwiseStablePoints(
-  points: ReadonlyArray<IrregularPoint>,
+  points: ReadonlyArray<InternalPoint>,
   winding: ConvexPolygonWinding
-): IrregularPoint[] {
+): InternalPoint[] {
   const counterClockwisePoints = winding === 1 ? [...points] : [...points].reverse()
   return rotateToStableStart(counterClockwisePoints)
 }
 
 function edgeVectors(
-  points: ReadonlyArray<IrregularPoint>
-): ReadonlyArray<IrregularPoint> | { readonly message: string } {
-  const vectors: IrregularPoint[] = []
+  points: ReadonlyArray<InternalPoint>
+): ReadonlyArray<InternalPoint> | { readonly message: string } {
+  const vectors: InternalPoint[] = []
   for (let index = 0; index < points.length; index += 1) {
     const start = points[index]
     const end = points[(index + 1) % points.length]
@@ -372,51 +414,47 @@ function edgeVectors(
     if (!Number.isFinite(x) || !Number.isFinite(y)) {
       return { message: 'Minkowski edge arithmetic must produce finite vectors.' }
     }
-    vectors.push(new IrregularPoint({ x, y }))
+    vectors.push({ x, y })
   }
   return vectors
 }
 
-function compareEdgeDirections(firstEdge: IrregularPoint, secondEdge: IrregularPoint): -1 | 0 | 1 {
+function compareEdgeDirections(firstEdge: InternalPoint, secondEdge: InternalPoint): -1 | 0 | 1 {
   const firstHalf = edgeDirectionHalf(firstEdge)
   const secondHalf = edgeDirectionHalf(secondEdge)
   if (firstHalf !== secondHalf) return firstHalf < secondHalf ? -1 : 1
 
-  const directionTurn = GeometryPredicates.orientation(
-    new IrregularPoint({ x: 0, y: 0 }),
-    firstEdge,
-    secondEdge
-  )
+  const directionTurn = GeometryPredicates.orientation(ORIGIN, firstEdge, secondEdge)
   if (directionTurn > 0) return -1
   if (directionTurn < 0) return 1
   return 0
 }
 
-function edgeDirectionHalf(edge: IrregularPoint): 0 | 1 {
+function edgeDirectionHalf(edge: InternalPoint): 0 | 1 {
   return edge.y > 0 || (edge.y === 0 && edge.x >= 0) ? 0 : 1
 }
 
 function sumPoints(
-  firstPoint: IrregularPoint,
-  secondPoint: IrregularPoint,
+  firstPoint: InternalPoint,
+  secondPoint: InternalPoint,
   operation: string
-): IrregularPoint | { readonly message: string } {
+): InternalPoint | { readonly message: string } {
   const x = firstPoint.x + secondPoint.x
   const y = firstPoint.y + secondPoint.y
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
     return { message: `${operation} must produce finite coordinates.` }
   }
-  return new IrregularPoint({ x, y })
+  return { x, y }
 }
 
-function pointsEqual(firstPoint: IrregularPoint, secondPoint: IrregularPoint): boolean {
+function pointsEqual(firstPoint: InternalPoint, secondPoint: InternalPoint): boolean {
   return firstPoint.x === secondPoint.x && firstPoint.y === secondPoint.y
 }
 
 function pointIsBetween(
-  firstPoint: IrregularPoint,
-  point: IrregularPoint,
-  secondPoint: IrregularPoint
+  firstPoint: InternalPoint,
+  point: InternalPoint,
+  secondPoint: InternalPoint
 ): boolean {
   return (
     point.x >= Math.min(firstPoint.x, secondPoint.x) &&
@@ -426,44 +464,55 @@ function pointIsBetween(
   )
 }
 
-function translateNfpBoundary(
+function translateNfpBoundaryInternal(
   input: ComputeNfpInput,
-  relativeBoundary: IrregularPolygon
-): Effect.Effect<IrregularNfp, IrregularGeometryInputError> {
-  const translatedPoints: IrregularPoint[] = []
+  relativeBoundary: InternalPolygon
+): Effect.Effect<InternalPolygon, IrregularGeometryInputError> {
+  const translatedPoints: InternalPoint[] = []
   for (const point of relativeBoundary.points) {
     const x = point.x + input.fixed.placement.transform.translateX
     const y = point.y + input.fixed.placement.transform.translateY
     if (!Number.isFinite(x) || !Number.isFinite(y)) {
       return failInvalidGeometry('computeNfp', 'fixed translation must produce finite coordinates.')
     }
-    translatedPoints.push(new IrregularPoint({ x, y }))
+    translatedPoints.push({ x, y })
   }
 
-  const translatedBoundary = canonicalizeTranslatedConvexRing(translatedPoints)
+  const translatedBoundary = canonicalizeTranslatedConvexRingInternal(translatedPoints)
   const canonicalBoundary =
     'message' in translatedBoundary
       ? canonicalizeTranslatedConvexRingWithHullFallback(translatedPoints)
       : translatedBoundary
   if ('message' in canonicalBoundary) return failInvalidGeometry('computeNfp', canonicalBoundary.message)
 
-  return Effect.succeed(
-    new IrregularNfp({
-      fixedPieceId: input.fixed.placement.sourcePieceId,
-      movingPieceId: input.moving.sourcePieceId,
-      boundary: canonicalBoundary
-    })
-  )
+  return Effect.succeed(canonicalBoundary)
 }
 
 /** Uses the exact hull only when the linear translated-ring pass cannot prove strict convexity. */
 function canonicalizeTranslatedConvexRingWithHullFallback(
-  points: ReadonlyArray<IrregularPoint>
-): NfpBoundaryConstructionResult {
+  points: ReadonlyArray<InternalPoint>
+): InternalNfpBoundaryConstructionResult {
   const boundary = ConvexHull.compute(points)
   const validation = ConvexPolygonValidation.validateStrictBoundary(boundary.points)
   if ('message' in validation) return validation
-  return new IrregularPolygon({ points: rotateToStableStart(boundary.points) })
+  return { points: rotateToStableStart(boundary.points) }
+}
+
+function toPublicBoundary(
+  result: InternalNfpBoundaryConstructionResult
+): NfpBoundaryConstructionResult {
+  if ('message' in result) return result
+  return toDomainPolygon(result)
+}
+
+function toDomainPolygon(polygon: InternalPolygon): IrregularPolygon {
+  return new IrregularPolygon({
+    points: polygon.points.map((point) => new IrregularPoint({ x: point.x, y: point.y }))
+  })
+}
+
+function toDomainBounds(bounds: InternalBounds): IrregularBounds {
+  return new IrregularBounds(bounds)
 }
 
 /**
@@ -479,28 +528,43 @@ function computeIfpBoundsCached(
   IrregularIfpBounds,
   IrregularGeometryInputError | IrregularGeometryInfeasibleError
 > {
+  return computeIfpBoundsValuesCached(input, geometryCache).pipe(
+    Effect.map(({ bounds }) =>
+      new IrregularIfpBounds({
+        sheet: input.sheet,
+        movingPieceId: input.moving.sourcePieceId,
+        bounds: toDomainBounds(bounds)
+      })
+    )
+  )
+}
+
+function computeIfpBoundsValuesCached(
+  input: ComputeIfpBoundsInput,
+  geometryCache: GeometryCache
+): Effect.Effect<
+  InternalIfpBounds,
+  IrregularGeometryInputError | IrregularGeometryInfeasibleError
+> {
   const validation = ConvexPolygonValidation.validateStrictBoundary(input.moving.polygon.points)
   if ('message' in validation) return failInvalidGeometry('computeIfpBounds', validation.message)
 
   const key = innerFitBoundsCacheKey(input)
-  return geometryCache.get<IrregularIfpBounds>(key).pipe(
+  return geometryCache.get<InternalIfpBounds>(key).pipe(
     Effect.flatMap((cached) => {
       if (isValidCachedIfp(cached, input)) return Effect.succeed(cached)
       const removeInvalid = cached === undefined ? Effect.void : geometryCache.remove(key)
       return removeInvalid.pipe(
-        Effect.flatMap(() => computeIfpBoundsUncached(input)),
+        Effect.flatMap(() => computeIfpBoundsValuesUncached(input)),
         Effect.tap((computed) => geometryCache.set(key, computed))
       )
     })
   )
 }
 
-function computeIfpBoundsUncached(
+function computeIfpBoundsValuesUncached(
   input: ComputeIfpBoundsInput
-): Effect.Effect<
-  IrregularIfpBounds,
-  IrregularGeometryInputError | IrregularGeometryInfeasibleError
-> {
+): Effect.Effect<InternalIfpBounds, IrregularGeometryInputError | IrregularGeometryInfeasibleError> {
   const validation = ConvexPolygonValidation.validateStrictBoundary(input.moving.polygon.points)
   if ('message' in validation) return failInvalidGeometry('computeIfpBounds', validation.message)
 
@@ -530,15 +594,13 @@ function computeIfpBoundsUncached(
     )
   }
 
-  const bounds = new IrregularBounds({ minX, minY, maxX, maxY })
+  const bounds: InternalBounds = { minX, minY, maxX, maxY }
 
-  return Effect.succeed(
-    new IrregularIfpBounds({
-      sheet: input.sheet,
-      movingPieceId: input.moving.sourcePieceId,
-      bounds
-    })
-  )
+  return Effect.succeed({
+    sheet: input.sheet,
+    movingPieceId: input.moving.sourcePieceId,
+    bounds
+  })
 }
 
 /** Builds deterministic IFP/NFP contact candidates and filters illegal results. */
@@ -552,7 +614,7 @@ function generatePlacementCandidates(
 > {
   return Effect.gen(function* () {
     yield* nfpCheckpoint(input.control, 'ifp')
-    const ifp = yield* computeIfpBoundsCached(
+    const ifp = yield* computeIfpBoundsValuesCached(
       { sheet: input.sheet, moving: input.moving },
       geometryCache
     ).pipe(Effect.catchTag('IrregularGeometryInfeasibleError', () => Effect.succeed(undefined)))
@@ -562,7 +624,7 @@ function generatePlacementCandidates(
 
     for (const placed of input.placed) {
       yield* nfpCheckpoint(input.control, 'placed-nfp')
-      const nfp = yield* computeNfpCached(
+      const boundary = yield* computeNfpBoundaryCached(
         {
           fixed: placed,
           moving: input.moving,
@@ -572,10 +634,10 @@ function generatePlacementCandidates(
         constructionAlgorithm
       )
       yield* nfpCheckpoint(input.control, 'placed-nfp')
-      const validation = ConvexPolygonValidation.validateStrictBoundary(nfp.boundary.points)
+      const validation = ConvexPolygonValidation.validateStrictBoundary(boundary.points)
       if ('message' in validation)
         return yield* failInvalidGeometry('generatePlacementCandidates', validation.message)
-      const bounds = boundsForPoints(nfp.boundary.points)
+      const bounds = boundsForPoints(boundary.points)
       if (bounds === undefined) {
         return yield* failInvalidGeometry(
           'generatePlacementCandidates',
@@ -583,19 +645,19 @@ function generatePlacementCandidates(
         )
       }
       nfpBoundaries.push({
-        nfp,
+        boundary,
         winding: validation.winding,
         bounds,
-        segments: polygonSegments(nfp.boundary)
+        segments: polygonSegments(boundary)
       })
     }
 
     yield* nfpCheckpoint(input.control, 'ifp')
     const ifpSegments = rectangleSegments(ifp.bounds)
-    const pointsByKey = new Map<string, IrregularPoint>()
+    const pointsByKey = new Map<string, InternalPoint>()
     for (const point of rectangleCorners(ifp.bounds)) addPoint(pointsByKey, point)
-    for (const { nfp } of nfpBoundaries) {
-      for (const point of nfp.boundary.points) addPoint(pointsByKey, point)
+    for (const boundary of nfpBoundaries) {
+      for (const point of boundary.boundary.points) addPoint(pointsByKey, point)
     }
 
     for (const boundary of nfpBoundaries) {
@@ -651,26 +713,26 @@ function generatePlacementCandidates(
       if (!isInsideBounds(point, ifp.bounds)) continue
       if (
         nfpBoundaries.some(
-          ({ nfp, winding, bounds }) =>
-            isInsideBounds(point, bounds) && isStrictlyInside(point, nfp.boundary, winding)
+          ({ boundary, winding, bounds }) =>
+            isInsideBounds(point, bounds) && isStrictlyInside(point, boundary, winding)
         )
       ) {
         continue
       }
 
-      const candidate = new IrregularPlacementCandidate({
+      const candidate: InternalPlacementCandidate = {
         pieceId: input.moving.sourcePieceId,
         transform: input.moving.transform,
         point,
         diagnostics: []
-      })
+      }
       const legal = yield* PlacementValidation.check({
         sheet: input.sheet,
         placed: input.placed,
         moving: input.moving,
         candidate
       })
-      if (legal) candidates.push(candidate)
+      if (legal) candidates.push(toDomainPlacementCandidate(candidate))
     }
 
     yield* nfpCheckpoint(input.control, 'candidate-points')
@@ -704,36 +766,49 @@ function makeGeneratePlacementCandidates(
 }
 
 interface Segment {
-  readonly start: IrregularPoint
-  readonly end: IrregularPoint
+  readonly start: InternalPoint
+  readonly end: InternalPoint
 }
 
 interface NfpBoundary {
-  readonly nfp: IrregularNfp
+  readonly boundary: InternalPolygon
   readonly winding: -1 | 1
-  readonly bounds: IrregularBounds
+  readonly bounds: InternalBounds
   readonly segments: ReadonlyArray<Segment>
 }
 
 interface SegmentIntersection {
-  readonly points: ReadonlyArray<IrregularPoint>
+  readonly points: ReadonlyArray<InternalPoint>
 }
 
-function rectangleCorners(bounds: IrregularBounds): ReadonlyArray<IrregularPoint> {
+interface InternalIfpBounds {
+  readonly sheet: ComputeIfpBoundsInput['sheet']
+  readonly movingPieceId: ComputeIfpBoundsInput['moving']['sourcePieceId']
+  readonly bounds: InternalBounds
+}
+
+interface InternalPlacementCandidate {
+  readonly pieceId: IrregularPlacementCandidate['pieceId']
+  readonly transform: IrregularPlacementCandidate['transform']
+  readonly point: InternalPoint
+  readonly diagnostics: IrregularPlacementCandidate['diagnostics']
+}
+
+function rectangleCorners(bounds: InternalBounds): ReadonlyArray<InternalPoint> {
   return [
-    new IrregularPoint({ x: bounds.minX, y: bounds.minY }),
-    new IrregularPoint({ x: bounds.maxX, y: bounds.minY }),
-    new IrregularPoint({ x: bounds.maxX, y: bounds.maxY }),
-    new IrregularPoint({ x: bounds.minX, y: bounds.maxY })
+    { x: bounds.minX, y: bounds.minY },
+    { x: bounds.maxX, y: bounds.minY },
+    { x: bounds.maxX, y: bounds.maxY },
+    { x: bounds.minX, y: bounds.maxY }
   ]
 }
 
-function rectangleSegments(bounds: IrregularBounds): ReadonlyArray<Segment> {
+function rectangleSegments(bounds: InternalBounds): ReadonlyArray<Segment> {
   const corners = rectangleCorners(bounds)
-  return polygonSegments(new IrregularPolygon({ points: corners }))
+  return polygonSegments({ points: corners })
 }
 
-function polygonSegments(polygon: IrregularPolygon): ReadonlyArray<Segment> {
+function polygonSegments(polygon: InternalPolygon): ReadonlyArray<Segment> {
   const segments: Segment[] = []
   for (let index = 0; index < polygon.points.length; index += 1) {
     const start = polygon.points[index]
@@ -744,7 +819,7 @@ function polygonSegments(polygon: IrregularPolygon): ReadonlyArray<Segment> {
 }
 
 function addBoundaryIntersections(
-  pointsByKey: Map<string, IrregularPoint>,
+  pointsByKey: Map<string, InternalPoint>,
   firstSegments: ReadonlyArray<Segment>,
   secondSegments: ReadonlyArray<Segment>,
   control: IrregularNfpIfpControl | undefined,
@@ -780,7 +855,7 @@ function intersectSegments(
   const firstEndTurn = GeometryPredicates.orientation(first.start, first.end, second.end)
   const secondStartTurn = GeometryPredicates.orientation(second.start, second.end, first.start)
   const secondEndTurn = GeometryPredicates.orientation(second.start, second.end, first.end)
-  const points: IrregularPoint[] = []
+  const points: InternalPoint[] = []
 
   if (
     firstStartTurn !== 0 &&
@@ -813,7 +888,7 @@ function intersectSegments(
     ) {
       return { message: 'segment intersection arithmetic must produce finite coordinates.' }
     }
-    return { points: [new IrregularPoint({ x, y })] }
+    return { points: [{ x, y }] }
   }
 
   if (firstStartTurn === 0 && pointIsOnSegment(second.start, first)) points.push(second.start)
@@ -824,7 +899,7 @@ function intersectSegments(
   return { points }
 }
 
-function pointIsOnSegment(point: IrregularPoint, segment: Segment): boolean {
+function pointIsOnSegment(point: InternalPoint, segment: Segment): boolean {
   return (
     point.x >= Math.min(segment.start.x, segment.end.x) &&
     point.x <= Math.max(segment.start.x, segment.end.x) &&
@@ -833,21 +908,21 @@ function pointIsOnSegment(point: IrregularPoint, segment: Segment): boolean {
   )
 }
 
-function addPoint(pointsByKey: Map<string, IrregularPoint>, point: IrregularPoint): void {
-  const canonicalPoint = new IrregularPoint({
+function addPoint(pointsByKey: Map<string, InternalPoint>, point: InternalPoint): void {
+  const canonicalPoint: InternalPoint = {
     x: normalizeNegativeZero(point.x),
     y: normalizeNegativeZero(point.y)
-  })
+  }
   const key = `${canonicalPoint.x}:${canonicalPoint.y}`
   if (!pointsByKey.has(key)) pointsByKey.set(key, canonicalPoint)
 }
 
-function comparePoints(first: IrregularPoint, second: IrregularPoint): number {
+function comparePoints(first: InternalPoint, second: InternalPoint): number {
   if (first.y !== second.y) return first.y - second.y
   return first.x - second.x
 }
 
-function isInsideBounds(point: IrregularPoint, bounds: IrregularBounds): boolean {
+function isInsideBounds(point: InternalPoint, bounds: InternalBounds): boolean {
   return (
     point.x >= bounds.minX &&
     point.x <= bounds.maxX &&
@@ -857,8 +932,8 @@ function isInsideBounds(point: IrregularPoint, bounds: IrregularBounds): boolean
 }
 
 function isStrictlyInside(
-  point: IrregularPoint,
-  polygon: IrregularPolygon,
+  point: InternalPoint,
+  polygon: InternalPolygon,
   winding: -1 | 1
 ): boolean {
   for (let index = 0; index < polygon.points.length; index += 1) {
@@ -871,7 +946,7 @@ function isStrictlyInside(
   return true
 }
 
-function rotateToStableStart(points: ReadonlyArray<IrregularPoint>): IrregularPoint[] {
+function rotateToStableStart(points: ReadonlyArray<InternalPoint>): InternalPoint[] {
   let startIndex = 0
   for (let index = 1; index < points.length; index += 1) {
     const candidate = points[index]
@@ -883,6 +958,17 @@ function rotateToStableStart(points: ReadonlyArray<IrregularPoint>): IrregularPo
   }
 
   return [...points.slice(startIndex), ...points.slice(0, startIndex)]
+}
+
+function toDomainPlacementCandidate(
+  candidate: InternalPlacementCandidate
+): IrregularPlacementCandidate {
+  return new IrregularPlacementCandidate({
+    pieceId: candidate.pieceId,
+    transform: candidate.transform,
+    point: new IrregularPoint({ x: candidate.point.x, y: candidate.point.y }),
+    diagnostics: [...candidate.diagnostics]
+  })
 }
 
 function normalizeNegativeZero(value: number): number {
