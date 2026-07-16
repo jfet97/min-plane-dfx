@@ -243,6 +243,28 @@ function cloneSheet(sheet: SheetSpec): SheetSpec {
   }
 }
 
+function cloneIrregularSettings(
+  settings: NonNullable<NestingOptions['irregularSettings']>
+): NonNullable<NestingOptions['irregularSettings']> {
+  const geometry = settings.geometry
+  const optimizer = settings.optimizer
+  return {
+    geometry: {
+      flatteningSagToleranceMm: geometry.flatteningSagToleranceMm,
+      clearanceSafetyMarginMm: geometry.clearanceSafetyMarginMm,
+      geometryBackendId: geometry.geometryBackendId,
+      geometryBackendVersion: geometry.geometryBackendVersion
+    },
+    optimizer: {
+      ...optimizer,
+      configuredRotationDeg: [...optimizer.configuredRotationDeg],
+      ...(optimizer.placementPolicyIds !== undefined
+        ? { placementPolicyIds: [...optimizer.placementPolicyIds] }
+        : {})
+    }
+  }
+}
+
 function cloneOptions(options: NestingOptions): NestingOptions {
   return {
     allowGlobalRotation: options.allowGlobalRotation,
@@ -260,7 +282,7 @@ function cloneOptions(options: NestingOptions): NestingOptions {
       ? { maxHistoryEvents: options.maxHistoryEvents }
       : {}),
     ...(options.irregularSettings !== undefined
-      ? { irregularSettings: options.irregularSettings }
+      ? { irregularSettings: cloneIrregularSettings(options.irregularSettings) }
       : {})
   }
 }
