@@ -317,6 +317,10 @@ The decoded-beam elapsed and candidate totals aggregate successful baseline and
 GA phase measurements, while final reconstruction and final-score timings
 measure materializing the selected portfolio result separately. These counters
 are benchmark-only and do not alter optimizer decisions, scores, or legality.
+Candidate totals are read from completed decoder results rather than step-time
+callbacks. During GA search, the portfolio reimburses only metrics collection
+and benchmark phase callbacks against the search deadline before scheduling the
+next evaluation, so opt-in reporting cannot change time-budget termination.
 
 ## Ownership
 

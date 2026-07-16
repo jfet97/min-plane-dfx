@@ -62,7 +62,7 @@ const DEFAULT_RUN_COUNT = 5
 const DEFAULT_FREE_MATERIAL_OPERATION: FreeMaterialOperation = 'union-then-difference'
 const DEFAULT_NFP_CONSTRUCTION: NfpConstructionAlgorithm = DEFAULT_NFP_CONSTRUCTION_ALGORITHM
 
-export const IRREGULAR_BENCHMARK_RUNNER_VERSION = '3'
+export const IRREGULAR_BENCHMARK_RUNNER_VERSION = '4'
 
 const flagAliases = new Map<string, string>([
   ['fixture', 'fixture'],

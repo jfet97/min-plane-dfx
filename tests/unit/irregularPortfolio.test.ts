@@ -1,7 +1,7 @@
 import { Effect, Layer, Schema } from 'effect'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { importDxfFile } from '@main/services/DxfImportService.js'
 import { JobId, PieceId } from '@shared/domain/ids.js'
 import { NestingOptions, NestingRequest, SheetSpec } from '@shared/domain/nesting.js'
@@ -300,6 +300,46 @@ describe('irregular GA portfolio', () => {
     )
     expect(finalization.reconstructionElapsedMs).toBeGreaterThanOrEqual(0)
     expect(finalization.finalScoreElapsedMs).toBeGreaterThanOrEqual(0)
+  })
+
+  it('keeps instrumented GA deadline termination identical to the uninstrumented run', async () => {
+    const sources = await sourcesPromise
+    const geometrySettings = settings({
+      gaEnabled: true,
+      baselineOnly: false,
+      gaPopulation: 2,
+      gaGenerationBudget: 2,
+      gaEvaluationBudget: 4,
+      gaTimeBudgetMs: 10,
+      gaSeed: 'deadline-instrumentation-parity-seed'
+    })
+    let nowMs = 0
+    const dateNow = vi.spyOn(Date, 'now').mockImplementation(() => nowMs)
+
+    try {
+      const uninstrumented = await Effect.runPromise(run(request(sources), geometrySettings))
+      const portfolioMetrics: IrregularPortfolioMetrics[] = []
+      const instrumented = await Effect.runPromise(
+        run(request(sources), geometrySettings, {
+          onPortfolioMetrics: (metrics) => {
+            portfolioMetrics.push(metrics)
+          },
+          onPortfolioPhase: (measurement) => {
+            if (measurement.phase === 'ga-decode') nowMs += 20
+          }
+        })
+      )
+
+      expect(portfolioMetrics).toHaveLength(1)
+      expect(instrumented.portfolio.terminationReason).toBe('generation_budget')
+      expect(instrumented.portfolio.terminationReason).toBe(
+        uninstrumented.portfolio.terminationReason
+      )
+      expect(publicPortfolio(instrumented)).toEqual(publicPortfolio(uninstrumented))
+      expect(instrumented.score).toEqual(uninstrumented.score)
+    } finally {
+      dateNow.mockRestore()
+    }
   })
 
   it('uses canonical placement and unplaced-id tie-breaks before incumbent fallback', async () => {

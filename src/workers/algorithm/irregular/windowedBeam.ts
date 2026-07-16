@@ -36,6 +36,8 @@ export interface IrregularWindowedBeamResult {
   readonly rankedStates: ReadonlyArray<IrregularBeamState>
   readonly bestState: IrregularBeamState
   readonly bestScore: IrregularLayoutScore
+  /** Candidate counts from every completed beam step, also used by snapshot replay. */
+  readonly candidateCounts: ReadonlyArray<number>
 }
 
 export interface IrregularWindowedBeamHooks {
@@ -252,7 +254,8 @@ export function runWindowedIrregularBeam(input: {
     return {
       rankedStates: ranked.map(({ state }) => state),
       bestState: best.state,
-      bestScore: best.score
+      bestScore: best.score,
+      candidateCounts
     }
   })
 }

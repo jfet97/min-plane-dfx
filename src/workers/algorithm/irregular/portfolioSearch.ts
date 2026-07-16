@@ -57,7 +57,7 @@ interface EvaluatedChromosome {
   readonly chromosome: Chromosome
   readonly beam: IrregularWindowedBeamResult
   readonly score: IrregularLayoutScore
-  readonly candidateCount: number
+  readonly candidateCounts: ReadonlyArray<number>
   readonly snapshots: ReadonlyArray<BeamSnapshot>
 }
 
@@ -110,6 +110,36 @@ interface PortfolioDependencies {
   readonly nfpIfpService: NfpIfpService
   readonly placementScorer: IrregularPlacementScorer.Service
   readonly layoutScorer: IrregularLayoutScorer.Service
+}
+
+/** Keeps benchmark-only work out of the GA wall-clock decision budget. */
+class PortfolioDeadline {
+  private deadlineMs: number
+
+  constructor(timeBudgetMs: number) {
+    this.deadlineMs = Date.now() + timeBudgetMs
+  }
+
+  hasExpired(): boolean {
+    return Date.now() >= this.deadlineMs
+  }
+
+  value(): number {
+    return this.deadlineMs
+  }
+
+  remainingMs(): number {
+    return Math.max(0, this.deadlineMs - Date.now())
+  }
+
+  excludeInstrumentation(operation: () => void): void {
+    const startedAtMs = Date.now()
+    try {
+      operation()
+    } finally {
+      this.deadlineMs += Math.max(0, Date.now() - startedAtMs)
+    }
+  }
 }
 
 export function makeDeterministicInitialPopulation(input: {
@@ -209,7 +239,6 @@ function runPortfolio(
         pieces: baselinePieces,
         chromosome,
         captureSnapshots: input.onStateSnapshot !== undefined,
-        collectMetrics: input.instrumentation !== undefined,
         ...(control !== undefined ? { control } : {}),
         dependencies
       })
@@ -237,7 +266,7 @@ function runPortfolio(
       return yield* Effect.fail(baselineOutcome.error)
     }
     const baseline = baselineOutcome.value
-    reportPhaseMeasurement(input, metrics, 'baseline-decode', baselineStartedAt, baseline)
+    reportPhaseMeasurement(input, metrics, undefined, 'baseline-decode', baselineStartedAt, baseline)
     let bestOverall: EvaluatedChromosome = baseline
 
     if (!gaEnabled) {
@@ -259,7 +288,7 @@ function runPortfolio(
       geneControls
     )
     const evaluationBudget = settings.optimizer.gaEvaluationBudget
-    const deadlineMs = Date.now() + settings.optimizer.gaTimeBudgetMs
+    const deadline = new PortfolioDeadline(settings.optimizer.gaTimeBudgetMs)
     let evaluationsCompleted = 0
     let generation = 0
     let population = initialPopulation
@@ -283,7 +312,7 @@ function runPortfolio(
           terminationReason = 'cancelled'
           break
         }
-        if (Date.now() >= deadlineMs) {
+        if (deadline.hasExpired()) {
           terminalStatus = 'budget-expired'
           terminationReason = 'time_budget'
           break
@@ -297,20 +326,30 @@ function runPortfolio(
         const key = chromosomeKey(chromosome)
         /** cached chromosomes still consume their scheduled GA slots. */
         evaluationsCompleted += 1
-        metrics?.recordScheduledEvaluationSlot(key)
+        recordPortfolioMetric(deadline, metrics, (collector) => {
+          collector.recordScheduledEvaluationSlot(key)
+        })
         const cachedEvaluation = evaluatedByChromosome.get(key)
         let evaluated: EvaluatedChromosome
         if (cachedEvaluation !== undefined) {
-          metrics?.recordCacheHit()
+          recordPortfolioMetric(deadline, metrics, (collector) => {
+            collector.recordCacheHit()
+          })
           evaluated = cachedEvaluation
         } else {
-          metrics?.recordCacheMiss()
-          metrics?.recordFullBeamDecode()
-          const gaDecodeStartedAt =
-            input.instrumentation === undefined ? 0 : performance.now()
+          recordPortfolioMetric(deadline, metrics, (collector) => {
+            collector.recordCacheMiss()
+            collector.recordFullBeamDecode()
+          })
+          let gaDecodeStartedAt = 0
+          if (input.instrumentation !== undefined) {
+            deadline.excludeInstrumentation(() => {
+              gaDecodeStartedAt = performance.now()
+            })
+          }
           const outcome = yield* decodeWithOutcome(
             runBeam(chromosome, {
-              deadlineMs,
+              deadlineMs: deadline.value(),
               ...(input.isCancelled !== undefined ? { isCancelled: input.isCancelled } : {})
             })
           )
@@ -326,7 +365,7 @@ function runPortfolio(
           }
           evaluated = outcome.value
           evaluatedByChromosome.set(key, evaluated)
-          reportPhaseMeasurement(input, metrics, 'ga-decode', gaDecodeStartedAt, evaluated)
+          reportPhaseMeasurement(input, metrics, deadline, 'ga-decode', gaDecodeStartedAt, evaluated)
         }
         generationResults.push(evaluated)
         if (key !== baselineKey) {
@@ -346,7 +385,7 @@ function runPortfolio(
           bestScore: scoreSummary(bestOverall.score),
           bestSource: sourceFor(bestOverall, baselineKey),
           elapsedMs: elapsedMs(startedAtMs),
-          remainingMs: Math.max(0, deadlineMs - Date.now())
+          remainingMs: deadline.remainingMs()
         })
       }
 
@@ -401,7 +440,7 @@ function runPortfolio(
       bestScore: scoreSummary(selected.score),
       bestSource: selectedSource,
       elapsedMs: elapsedMs(startedAtMs),
-      remainingMs: Math.max(0, deadlineMs - Date.now())
+      remainingMs: deadline.remainingMs()
     })
     emitSnapshots(input, selected, settings.optimizer.beamWidth)
     return finishPortfolio(
@@ -423,7 +462,6 @@ function decodeChromosome(input: {
   readonly pieces: ReadonlyArray<IrregularPreparedPiece>
   readonly chromosome: Chromosome
   readonly captureSnapshots: boolean
-  readonly collectMetrics: boolean
   readonly control?: IrregularWindowedBeamControl
   readonly dependencies: PortfolioDependencies
 }): Effect.Effect<
@@ -453,23 +491,12 @@ function decodeChromosome(input: {
         }
       }
     : undefined
-  let candidateCount = 0
-
   return runWindowedIrregularBeam({
     sheet: input.sheet,
     pieces: orderedPieces,
     options,
     ...(hooks !== undefined ? { hooks } : {}),
-    ...(input.control !== undefined ? { control: input.control } : {}),
-    ...(input.collectMetrics
-      ? {
-          instrumentation: {
-            onStepCompleted: ({ candidateCount: completedCandidateCount }) => {
-              candidateCount += completedCandidateCount
-            }
-          }
-        }
-      : {})
+    ...(input.control !== undefined ? { control: input.control } : {})
   }).pipe(
     Effect.provideService(GeometrySettings, input.dependencies.settings),
     Effect.provideService(GeometryKernel, input.dependencies.geometryKernel),
@@ -480,7 +507,7 @@ function decodeChromosome(input: {
       chromosome: input.chromosome,
       beam,
       score: beam.bestScore,
-      candidateCount,
+      candidateCounts: beam.candidateCounts,
       snapshots
     })),
     Effect.mapError((error) => {
@@ -1058,18 +1085,40 @@ function decodeWithOutcome(
 function reportPhaseMeasurement(
   input: PortfolioRunInput,
   metrics: IrregularPortfolioMetricsCollector | undefined,
+  deadline: PortfolioDeadline | undefined,
   phase: IrregularPortfolioPhaseMeasurement['phase'],
   startedAtMs: number,
   evaluated: EvaluatedChromosome
 ): void {
   if (input.instrumentation === undefined) return
-  const measurement: IrregularPortfolioPhaseMeasurement = {
-    phase,
-    elapsedMs: Math.max(0, performance.now() - startedAtMs),
-    candidateCount: evaluated.candidateCount
+  const report = () => {
+    const measurement: IrregularPortfolioPhaseMeasurement = {
+      phase,
+      elapsedMs: Math.max(0, performance.now() - startedAtMs),
+      candidateCount: evaluated.candidateCounts.reduce(
+        (candidateTotal, candidateCount) => candidateTotal + candidateCount,
+        0
+      )
+    }
+    metrics?.recordPhaseMeasurement(measurement)
+    input.instrumentation?.onPhase?.(measurement)
   }
-  metrics?.recordPhaseMeasurement(measurement)
-  input.instrumentation.onPhase?.(measurement)
+  if (deadline === undefined) {
+    report()
+    return
+  }
+  deadline.excludeInstrumentation(report)
+}
+
+function recordPortfolioMetric(
+  deadline: PortfolioDeadline,
+  metrics: IrregularPortfolioMetricsCollector | undefined,
+  record: (collector: IrregularPortfolioMetricsCollector) => void
+): void {
+  if (metrics === undefined) return
+  deadline.excludeInstrumentation(() => {
+    record(metrics)
+  })
 }
 
 function finishPortfolio(
