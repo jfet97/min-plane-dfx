@@ -32,6 +32,7 @@ import {
 } from './irregularPlacementScorer.js'
 import { IrregularBeamState } from './irregularBeamState.js'
 import { IrregularNestingPortfolioLive } from './portfolioSearch.js'
+import type { IrregularPortfolioPhaseMeasurement } from './portfolioSearch.js'
 import { PriorityOrderServiceLive } from './priorityOrderService.js'
 
 /** Reports that a prepared piece has no imported geometry available to the worker. */
@@ -54,6 +55,8 @@ export interface ComputeIrregularNestingOptions {
   readonly emitStateSnapshot?: (snapshot: IrregularStateSnapshot, beamWidth: number) => void
   readonly emitPortfolioProgress?: (progress: IrregularPortfolioProgress) => Effect.Effect<void>
   readonly isCancelled?: () => boolean
+  /** standalone benchmark hook; measurements never enter normal app output. */
+  readonly onPortfolioPhase?: (measurement: IrregularPortfolioPhaseMeasurement) => void
 }
 
 /** Plain algorithm output before any worker protocol or history DTO adaptation. */
@@ -156,19 +159,29 @@ export function computeIrregularNesting(
         IrregularNestingPortfolioLive.pipe(Layer.provideMerge(PriorityOrderServiceLive))
       )
     )
-    const portfolio = yield* portfolioService.run({
+    const portfolioInput = {
       sheet: request.sheet,
       pieces: preparedPieces,
-      onStateSnapshot: (snapshot) => {
-        captureStateSnapshot(snapshot)
-      },
-      ...(options?.emitPortfolioProgress !== undefined
+      ...(request.options.historyMode !== 'off'
         ? {
-            onProgress: options.emitPortfolioProgress
+            onStateSnapshot: (snapshot: IrregularStateSnapshot) => {
+              captureStateSnapshot(snapshot)
+            }
           }
         : {}),
-      ...(options?.isCancelled !== undefined ? { isCancelled: options.isCancelled } : {})
-    })
+      ...(options?.emitPortfolioProgress !== undefined
+        ? { onProgress: options.emitPortfolioProgress }
+        : {}),
+      ...(options?.isCancelled !== undefined ? { isCancelled: options.isCancelled } : {}),
+      ...(options?.onPortfolioPhase !== undefined
+        ? {
+            instrumentation: {
+              onPhase: options.onPortfolioPhase
+            }
+          }
+        : {})
+    }
+    const portfolio = yield* portfolioService.run(portfolioInput)
     const placedCollisionGeometries = yield* reconstructPlacedGeometry(
       portfolio,
       preparedPieces,

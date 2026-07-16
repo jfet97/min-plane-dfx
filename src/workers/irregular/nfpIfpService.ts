@@ -17,6 +17,9 @@ import {
   GeometryCache,
   GeometryCacheInMemory,
   IrregularGeometryInputError,
+  IrregularNfpIfpControl,
+  IrregularNfpIfpControlAbortError,
+  type IrregularNfpIfpCheckpointPhase,
   NfpIfpService
 } from './services.js'
 import { ConvexHull } from './convexHull.js'
@@ -48,8 +51,10 @@ export function makeNfpIfpServiceLayer(
       return NfpIfpService.of({
         computeNfp: (input) => computeNfpCached(input, geometryCache, constructionAlgorithm),
         computeIfpBounds: (input) => computeIfpBoundsCached(input, geometryCache),
-        generatePlacementCandidates: (input) =>
-          generatePlacementCandidates(input, geometryCache, constructionAlgorithm)
+        generatePlacementCandidates: makeGeneratePlacementCandidates(
+          geometryCache,
+          constructionAlgorithm
+        )
       })
     })
   )
@@ -541,16 +546,22 @@ function generatePlacementCandidates(
   input: GeneratePlacementCandidatesInput,
   geometryCache: GeometryCache,
   constructionAlgorithm: NfpConstructionAlgorithm
-): Effect.Effect<ReadonlyArray<IrregularPlacementCandidate>, IrregularGeometryInputError> {
+): Effect.Effect<
+  ReadonlyArray<IrregularPlacementCandidate>,
+  IrregularGeometryInputError | IrregularNfpIfpControlAbortError
+> {
   return Effect.gen(function* () {
+    yield* nfpCheckpoint(input.control, 'ifp')
     const ifp = yield* computeIfpBoundsCached(
       { sheet: input.sheet, moving: input.moving },
       geometryCache
     ).pipe(Effect.catchTag('IrregularGeometryInfeasibleError', () => Effect.succeed(undefined)))
     if (ifp === undefined) return []
+    yield* nfpCheckpoint(input.control, 'ifp')
     const nfpBoundaries: NfpBoundary[] = []
 
     for (const placed of input.placed) {
+      yield* nfpCheckpoint(input.control, 'placed-nfp')
       const nfp = yield* computeNfpCached(
         {
           fixed: placed,
@@ -560,6 +571,7 @@ function generatePlacementCandidates(
         geometryCache,
         constructionAlgorithm
       )
+      yield* nfpCheckpoint(input.control, 'placed-nfp')
       const validation = ConvexPolygonValidation.validateStrictBoundary(nfp.boundary.points)
       if ('message' in validation)
         return yield* failInvalidGeometry('generatePlacementCandidates', validation.message)
@@ -578,6 +590,7 @@ function generatePlacementCandidates(
       })
     }
 
+    yield* nfpCheckpoint(input.control, 'ifp')
     const ifpSegments = rectangleSegments(ifp.bounds)
     const pointsByKey = new Map<string, IrregularPoint>()
     for (const point of rectangleCorners(ifp.bounds)) addPoint(pointsByKey, point)
@@ -586,18 +599,27 @@ function generatePlacementCandidates(
     }
 
     for (const boundary of nfpBoundaries) {
-      const intersections = addBoundaryIntersections(pointsByKey, ifpSegments, boundary.segments)
+      yield* nfpCheckpoint(input.control, 'ifp-boundary-intersection')
+      const intersections = yield* addBoundaryIntersections(
+        pointsByKey,
+        ifpSegments,
+        boundary.segments,
+        input.control,
+        'ifp-boundary-intersection'
+      )
       if (intersections !== undefined) {
         return yield* failInvalidGeometry('generatePlacementCandidates', intersections)
       }
     }
 
     for (let firstIndex = 0; firstIndex < nfpBoundaries.length; firstIndex += 1) {
+      yield* nfpCheckpoint(input.control, 'pairwise-nfp-boundary-intersection')
       const first = nfpBoundaries[firstIndex]
       if (first === undefined)
         return yield* failInvalidGeometry('generatePlacementCandidates', 'NFP boundary is missing.')
 
       for (let secondIndex = firstIndex + 1; secondIndex < nfpBoundaries.length; secondIndex += 1) {
+        yield* nfpCheckpoint(input.control, 'pairwise-nfp-boundary-intersection')
         const second = nfpBoundaries[secondIndex]
         if (second === undefined)
           return yield* failInvalidGeometry(
@@ -607,7 +629,13 @@ function generatePlacementCandidates(
 
         if (areDisjoint(first.bounds, second.bounds)) continue
 
-        const intersections = addBoundaryIntersections(pointsByKey, first.segments, second.segments)
+        const intersections = yield* addBoundaryIntersections(
+          pointsByKey,
+          first.segments,
+          second.segments,
+          input.control,
+          'pairwise-nfp-boundary-intersection'
+        )
         if (intersections !== undefined) {
           return yield* failInvalidGeometry('generatePlacementCandidates', intersections)
         }
@@ -616,7 +644,11 @@ function generatePlacementCandidates(
 
     const candidates: IrregularPlacementCandidate[] = []
     const sortedPoints = [...pointsByKey.values()].sort(comparePoints)
-    for (const point of sortedPoints) {
+    for (let pointIndex = 0; pointIndex < sortedPoints.length; pointIndex += 1) {
+      if (pointIndex % 32 === 0)
+        yield* nfpCheckpoint(input.control, 'candidate-points')
+      const point = sortedPoints[pointIndex]
+      if (point === undefined) continue
       if (!isInsideBounds(point, ifp.bounds)) continue
       if (
         nfpBoundaries.some(
@@ -642,8 +674,34 @@ function generatePlacementCandidates(
       if (legal) candidates.push(candidate)
     }
 
+    yield* nfpCheckpoint(input.control, 'candidate-points')
     return candidates
   })
+}
+
+function makeGeneratePlacementCandidates(
+  geometryCache: GeometryCache,
+  constructionAlgorithm: NfpConstructionAlgorithm
+): NfpIfpService['generatePlacementCandidates'] {
+  function service(
+    input: GeneratePlacementCandidatesInput & { readonly control: IrregularNfpIfpControl }
+  ): Effect.Effect<
+    ReadonlyArray<IrregularPlacementCandidate>,
+    IrregularGeometryInputError | IrregularNfpIfpControlAbortError
+  >
+  function service(
+    input: GeneratePlacementCandidatesInput
+  ): Effect.Effect<ReadonlyArray<IrregularPlacementCandidate>, IrregularGeometryInputError>
+  function service(
+    input: GeneratePlacementCandidatesInput
+  ): Effect.Effect<
+    ReadonlyArray<IrregularPlacementCandidate>,
+    IrregularGeometryInputError | IrregularNfpIfpControlAbortError
+  > {
+    return generatePlacementCandidates(input, geometryCache, constructionAlgorithm)
+  }
+
+  return service
 }
 
 interface Segment {
@@ -689,16 +747,30 @@ function polygonSegments(polygon: IrregularPolygon): ReadonlyArray<Segment> {
 function addBoundaryIntersections(
   pointsByKey: Map<string, IrregularPoint>,
   firstSegments: ReadonlyArray<Segment>,
-  secondSegments: ReadonlyArray<Segment>
-): string | undefined {
-  for (const first of firstSegments) {
-    for (const second of secondSegments) {
-      const intersection = intersectSegments(first, second)
-      if ('message' in intersection) return intersection.message
-      for (const point of intersection.points) addPoint(pointsByKey, point)
+  secondSegments: ReadonlyArray<Segment>,
+  control: IrregularNfpIfpControl | undefined,
+  phase: IrregularNfpIfpCheckpointPhase
+): Effect.Effect<string | undefined, IrregularNfpIfpControlAbortError> {
+  return Effect.gen(function* () {
+    let pairIndex = 0
+    for (const first of firstSegments) {
+      for (const second of secondSegments) {
+        if (pairIndex % 32 === 0) yield* nfpCheckpoint(control, phase)
+        pairIndex += 1
+        const intersection = intersectSegments(first, second)
+        if ('message' in intersection) return intersection.message
+        for (const point of intersection.points) addPoint(pointsByKey, point)
+      }
     }
-  }
-  return undefined
+    return undefined
+  })
+}
+
+function nfpCheckpoint(
+  control: IrregularNfpIfpControl | undefined,
+  phase: IrregularNfpIfpCheckpointPhase
+): Effect.Effect<void, IrregularNfpIfpControlAbortError> {
+  return control === undefined ? Effect.void : control.checkpoint(phase)
 }
 
 function intersectSegments(

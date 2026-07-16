@@ -1,4 +1,5 @@
 import { Effect, Layer, Order } from 'effect'
+import { performance } from 'node:perf_hooks'
 import type { PieceId } from '@shared/domain/ids.js'
 import type { SheetSpec } from '@shared/domain/nesting.js'
 import {
@@ -23,6 +24,8 @@ import { IrregularPlacementScorer } from './irregularPlacementScorer.js'
 import { IrregularLayoutScore, IrregularLayoutScorer } from './irregularLayoutScorer.js'
 import {
   IrregularWindowedBeamOptions,
+  IrregularWindowedBeamAbortedError,
+  IrregularWindowedBeamControl,
   IrregularWindowedBeamResult,
   runWindowedIrregularBeam
 } from './windowedBeam.js'
@@ -43,6 +46,31 @@ interface EvaluatedChromosome {
   readonly chromosome: Chromosome
   readonly beam: IrregularWindowedBeamResult
   readonly score: IrregularLayoutScore
+  readonly candidateCount: number
+  readonly snapshots: ReadonlyArray<BeamSnapshot>
+}
+
+interface BeamSnapshot {
+  readonly stepIndex: number
+  readonly beamRank: number
+  readonly candidateCount: number
+  readonly state: import('./irregularBeamState.js').IrregularBeamState
+}
+
+/** measurements exposed only to standalone benchmark callers. */
+export interface IrregularPortfolioPhaseMeasurement {
+  readonly phase: 'baseline-decode' | 'ga-decode' | 'replay'
+  readonly elapsedMs: number
+  readonly candidateCount: number
+}
+
+/** optional measurement sink; normal worker results do not contain these values. */
+export interface IrregularPortfolioInstrumentation {
+  readonly onPhase?: (measurement: IrregularPortfolioPhaseMeasurement) => void
+}
+
+interface PortfolioRunInput extends RunPortfolioInput {
+  readonly instrumentation?: IrregularPortfolioInstrumentation
 }
 
 interface PortfolioDependencies {
@@ -74,7 +102,7 @@ export const IrregularNestingPortfolioLive = Layer.effect(
 )
 
 function runPortfolio(
-  input: RunPortfolioInput,
+  input: PortfolioRunInput,
   dependencies: PortfolioDependencies
 ): Effect.Effect<IrregularPortfolioResult, IrregularPortfolioError> {
   return Effect.gen(function* () {
@@ -120,20 +148,47 @@ function runPortfolio(
       remainingMs: remainingMs(startedAtMs, settings.optimizer.gaTimeBudgetMs)
     })
 
-    const runBeam = (chromosome: Chromosome, hooks = false) =>
+    const runBeam = (
+      chromosome: Chromosome,
+      control: IrregularWindowedBeamControl | undefined = undefined
+    ) =>
       decodeChromosome({
         sheet: input.sheet,
         pieces: baselinePieces,
         chromosome,
-        ...(hooks && input.onStateSnapshot !== undefined ? { hooks: input.onStateSnapshot } : {}),
+        captureSnapshots: input.onStateSnapshot !== undefined,
+        collectMetrics: input.instrumentation !== undefined,
+        ...(control !== undefined ? { control } : {}),
         dependencies
       })
 
     const gaEnabled = gaIsEnabled(settings)
-    const baseline = yield* runBeam(baselineChromosome, !gaEnabled && input.onStateSnapshot !== undefined)
+    const baselineStartedAt = input.instrumentation === undefined ? 0 : performance.now()
+    const baselineOutcome = yield* decodeWithOutcome(
+      runBeam(
+        baselineChromosome,
+        input.isCancelled === undefined ? undefined : { isCancelled: input.isCancelled }
+      )
+    )
+    if (baselineOutcome._tag === 'failure') {
+      if (isBeamAbortError(baselineOutcome.error)) {
+        if (baselineOutcome.error.reason === 'cancelled') {
+          return emptyPortfolioResult('cancelled', allPieceIds)
+        }
+        return yield* failPortfolio(
+          'decodeChromosome',
+          'search',
+          baselineOutcome.error.message
+        )
+      }
+      return yield* Effect.fail(baselineOutcome.error)
+    }
+    const baseline = baselineOutcome.value
+    reportPhaseMeasurement(input, 'baseline-decode', baselineStartedAt, baseline)
     let bestOverall: EvaluatedChromosome = baseline
 
     if (!gaEnabled) {
+      emitSnapshots(input, baseline, settings.optimizer.beamWidth)
       return portfolioResultFrom(baseline, 'beam', 'completed', baseline.score)
     }
 
@@ -153,6 +208,10 @@ function runPortfolio(
     let population = initialPopulation
     let terminalStatus: 'budget-expired' | 'cancelled' | undefined
     let bestGa: EvaluatedChromosome | undefined
+    const evaluatedByChromosome = new Map<string, EvaluatedChromosome>([
+      [chromosomeKey(baselineChromosome), baseline]
+    ])
+    const baselineKey = chromosomeKey(baselineChromosome)
 
     while (
       population.length > 0 &&
@@ -173,10 +232,38 @@ function runPortfolio(
           break
         }
 
-        const evaluated = yield* runBeam(chromosome, false)
+        const key = chromosomeKey(chromosome)
+        /** cached chromosomes still consume their scheduled GA slots. */
         evaluationsCompleted += 1
+        const cachedEvaluation = evaluatedByChromosome.get(key)
+        let evaluated: EvaluatedChromosome
+        if (cachedEvaluation !== undefined) {
+          evaluated = cachedEvaluation
+        } else {
+          const gaDecodeStartedAt =
+            input.instrumentation === undefined ? 0 : performance.now()
+          const outcome = yield* decodeWithOutcome(
+            runBeam(chromosome, {
+              deadlineMs,
+              ...(input.isCancelled !== undefined ? { isCancelled: input.isCancelled } : {})
+            })
+          )
+          if (outcome._tag === 'failure') {
+            if (isBeamAbortError(outcome.error)) {
+              terminalStatus =
+                outcome.error.reason === 'cancelled' ? 'cancelled' : 'budget-expired'
+              break
+            }
+            return yield* Effect.fail(outcome.error)
+          }
+          evaluated = outcome.value
+          evaluatedByChromosome.set(key, evaluated)
+          reportPhaseMeasurement(input, 'ga-decode', gaDecodeStartedAt, evaluated)
+        }
         generationResults.push(evaluated)
-        bestGa = chooseBetter(bestGa, evaluated, dependencies.layoutScorer)
+        if (key !== baselineKey) {
+          bestGa = chooseBetter(bestGa, evaluated, dependencies.layoutScorer)
+        }
         bestOverall = chooseBetter(bestOverall, evaluated, dependencies.layoutScorer)
         yield* reportProgress(input, {
           phase: 'ga_search',
@@ -184,7 +271,7 @@ function runPortfolio(
           evaluationsCompleted,
           populationSize: settings.optimizer.gaPopulation,
           bestScore: scoreSummary(bestOverall.score),
-          bestSource: bestOverall === bestGa ? 'ga' : 'beam',
+          bestSource: sourceFor(bestOverall, baselineKey),
           elapsedMs: elapsedMs(startedAtMs),
           remainingMs: Math.max(0, deadlineMs - Date.now())
         })
@@ -209,13 +296,13 @@ function runPortfolio(
     if (input.onStateSnapshot === undefined) {
       return portfolioResultFrom(
         selected,
-        selected === bestGa ? 'ga' : 'beam',
+        sourceFor(selected, baselineKey),
         terminalStatus,
         selected.score
       )
     }
 
-    const selectedSource = selected === bestGa ? 'ga' : 'beam'
+    const selectedSource = sourceFor(selected, baselineKey)
     yield* reportProgress(input, {
       phase: 'validating',
       generation,
@@ -226,8 +313,8 @@ function runPortfolio(
       elapsedMs: elapsedMs(startedAtMs),
       remainingMs: Math.max(0, deadlineMs - Date.now())
     })
-    const replayed = yield* runBeam(selected.chromosome, true)
-    return portfolioResultFrom(replayed, selectedSource, terminalStatus, replayed.score)
+    emitSnapshots(input, selected, settings.optimizer.beamWidth)
+    return portfolioResultFrom(selected, selectedSource, terminalStatus, selected.score)
   })
 }
 
@@ -235,17 +322,14 @@ function decodeChromosome(input: {
   readonly sheet: SheetSpec
   readonly pieces: ReadonlyArray<IrregularPreparedPiece>
   readonly chromosome: Chromosome
-  readonly hooks?: (
-    snapshot: {
-      readonly stepIndex: number
-      readonly beamRank: number
-      readonly candidateCount: number
-      readonly state: import('./irregularBeamState.js').IrregularBeamState
-    },
-    beamWidth: number
-  ) => void
+  readonly captureSnapshots: boolean
+  readonly collectMetrics: boolean
+  readonly control?: IrregularWindowedBeamControl
   readonly dependencies: PortfolioDependencies
-}): Effect.Effect<EvaluatedChromosome, IrregularPortfolioError> {
+}): Effect.Effect<
+  EvaluatedChromosome,
+  IrregularPortfolioError | IrregularWindowedBeamAbortedError
+> {
   const orderedPieces = orderPieces(input.pieces, input.chromosome.priorityOrder)
   if (orderedPieces === undefined) {
     return failPortfolio(
@@ -258,36 +342,57 @@ function decodeChromosome(input: {
     policyId: input.chromosome.policyId,
     transformPreferences: input.chromosome.transformPreferences
   }
-  const hooks =
-    input.hooks === undefined
-      ? undefined
-      : {
-          onInitialState: (state: import('./irregularBeamState.js').IrregularBeamState) =>
-            input.hooks?.(
-              { stepIndex: 0, beamRank: 0, candidateCount: 0, state },
-              input.dependencies.settings.optimizer.beamWidth
-            ),
-          onStateSelected: (snapshot: {
-            readonly stepIndex: number
-            readonly beamRank: number
-            readonly state: import('./irregularBeamState.js').IrregularBeamState
-            readonly candidateCount: number
-          }) => input.hooks?.(snapshot, input.dependencies.settings.optimizer.beamWidth)
+  const snapshots: BeamSnapshot[] = []
+  const hooks = input.captureSnapshots
+    ? {
+        onInitialState: (state: import('./irregularBeamState.js').IrregularBeamState) => {
+          snapshots.push({ stepIndex: 0, beamRank: 0, candidateCount: 0, state })
+        },
+        onStateSelected: (snapshot: BeamSnapshot) => {
+          snapshots.push(snapshot)
         }
+      }
+    : undefined
+  let candidateCount = 0
 
   return runWindowedIrregularBeam({
     sheet: input.sheet,
     pieces: orderedPieces,
     options,
-    ...(hooks !== undefined ? { hooks } : {})
+    ...(hooks !== undefined ? { hooks } : {}),
+    ...(input.control !== undefined ? { control: input.control } : {}),
+    ...(input.collectMetrics
+      ? {
+          instrumentation: {
+            onStepCompleted: ({ candidateCount: completedCandidateCount }) => {
+              candidateCount += completedCandidateCount
+            }
+          }
+        }
+      : {})
   }).pipe(
     Effect.provideService(GeometrySettings, input.dependencies.settings),
     Effect.provideService(GeometryKernel, input.dependencies.geometryKernel),
     Effect.provideService(NfpIfpService, input.dependencies.nfpIfpService),
     Effect.provideService(IrregularPlacementScorer, input.dependencies.placementScorer),
     Effect.provideService(IrregularLayoutScorer, input.dependencies.layoutScorer),
-    Effect.map((beam) => ({ chromosome: input.chromosome, beam, score: beam.bestScore })),
-    Effect.mapError((error) => toPortfolioError(error, 'decodeChromosome'))
+    Effect.map((beam) => ({
+      chromosome: input.chromosome,
+      beam,
+      score: beam.bestScore,
+      candidateCount,
+      snapshots
+    })),
+    Effect.mapError((error) => {
+      if (error._tag === 'IrregularWindowedBeamAbortedError') return error
+      if (error._tag === 'IrregularNfpIfpControlAbortError') {
+        return new IrregularWindowedBeamAbortedError({
+          reason: error.reason,
+          message: error.message
+        })
+      }
+      return toPortfolioError(error, 'decodeChromosome')
+    })
   )
 }
 
@@ -633,6 +738,63 @@ function reportProgress(
 ): Effect.Effect<void> {
   if (input.onProgress === undefined) return Effect.void
   return input.onProgress(new IrregularPortfolioProgress(progress))
+}
+
+type DecodeOutcome =
+  | { readonly _tag: 'success'; readonly value: EvaluatedChromosome }
+  | {
+      readonly _tag: 'failure'
+      readonly error: IrregularPortfolioError | IrregularWindowedBeamAbortedError
+    }
+
+function decodeWithOutcome(
+  effect: Effect.Effect<
+    EvaluatedChromosome,
+    IrregularPortfolioError | IrregularWindowedBeamAbortedError
+  >
+): Effect.Effect<DecodeOutcome> {
+  return Effect.matchEffect(effect, {
+    onFailure: (error) => Effect.succeed({ _tag: 'failure' as const, error }),
+    onSuccess: (value) => Effect.succeed({ _tag: 'success' as const, value })
+  })
+}
+
+function reportPhaseMeasurement(
+  input: PortfolioRunInput,
+  phase: IrregularPortfolioPhaseMeasurement['phase'],
+  startedAtMs: number,
+  evaluated: EvaluatedChromosome
+): void {
+  if (input.instrumentation?.onPhase === undefined) return
+  input.instrumentation.onPhase({
+    phase,
+    elapsedMs: Math.max(0, performance.now() - startedAtMs),
+    candidateCount: evaluated.candidateCount
+  })
+}
+
+function emitSnapshots(
+  input: PortfolioRunInput,
+  evaluated: EvaluatedChromosome,
+  beamWidth: number
+): void {
+  if (input.onStateSnapshot === undefined) return
+  for (const snapshot of evaluated.snapshots) {
+    input.onStateSnapshot(snapshot, beamWidth)
+  }
+}
+
+function sourceFor(
+  evaluated: EvaluatedChromosome,
+  baselineKey: string
+): 'beam' | 'ga' {
+  return chromosomeKey(evaluated.chromosome) === baselineKey ? 'beam' : 'ga'
+}
+
+function isBeamAbortError(
+  error: IrregularPortfolioError | IrregularWindowedBeamAbortedError
+): error is IrregularWindowedBeamAbortedError {
+  return error._tag === 'IrregularWindowedBeamAbortedError'
 }
 
 function elapsedMs(startedAtMs: number): number {

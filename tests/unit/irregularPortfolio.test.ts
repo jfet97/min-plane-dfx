@@ -67,7 +67,10 @@ function settings(
   })
 }
 
-function request(sources: Awaited<typeof sourcesPromise>): NestingRequest {
+function request(
+  sources: Awaited<typeof sourcesPromise>,
+  historyMode: NestingOptions['historyMode'] = 'off'
+): NestingRequest {
   const sheet = new SheetSpec({ width: 260, height: 100, label: 'portfolio test sheet' })
   const prepared = preparePieces(sources, sheet, 0, JobId.make('portfolio-test-job')).pieces
   return new NestingRequest({
@@ -81,7 +84,7 @@ function request(sources: Awaited<typeof sourcesPromise>): NestingRequest {
       allowGlobalRotation: true,
       timeoutMs: 60_000,
       workerMode: 'irregular-convex-v2',
-      historyMode: 'off',
+      historyMode,
       historyScope: 'winning_path',
       strategySelectionMode: 'single',
       strategyIds: [],
@@ -153,8 +156,7 @@ describe('irregular GA portfolio', () => {
     )
     expect(firstProgress.map(({ phase }) => phase)).toEqual([
       'deterministic_beam',
-      ...Array.from({ length: 8 }, () => 'ga_search'),
-      'validating'
+      ...Array.from({ length: 8 }, () => 'ga_search')
     ])
     expect(firstProgress.at(-1)?.evaluationsCompleted).toBe(8)
 
@@ -200,7 +202,7 @@ describe('irregular GA portfolio', () => {
     expect(
       budgetResult.portfolio.placements.length + budgetResult.portfolio.unplacedPieceIds.length
     ).toBe(sources.length)
-    expect(budgetProgress.at(-1)?.phase).toBe('validating')
+    expect(budgetProgress.at(-1)?.phase).toBe('ga_search')
     expect(budgetProgress.at(-1)?.evaluationsCompleted).toBe(1)
 
     const completedProgress: IrregularPortfolioProgress[] = []
@@ -216,5 +218,113 @@ describe('irregular GA portfolio', () => {
     expect(completedResult.portfolio.status).toBe('completed')
     expect(completedResult.portfolio.source).toBe('beam')
     expect(completedProgress.map(({ phase }) => phase)).toEqual(['deterministic_beam'])
+  })
+
+  it('reuses the baseline for equivalent GA chromosomes without extra decodes', async () => {
+    const sources = await sourcesPromise
+    const phaseMeasurements: string[] = []
+    const result = await Effect.runPromise(
+      run(request(sources), settings({
+        gaPopulation: 4,
+        gaGenerationBudget: 2,
+        gaEvaluationBudget: 8,
+        priorityOrderMutationEnabled: false,
+        transformPreferenceMutationEnabled: false,
+        placementPolicyMutationEnabled: false
+      }), {
+        onPortfolioPhase: (measurement) => {
+          phaseMeasurements.push(measurement.phase)
+        }
+      })
+    )
+
+    expect(phaseMeasurements).toEqual(['baseline-decode'])
+    expect(result.portfolio.source).toBe('beam')
+    expect(result.portfolio.placements.length + result.portfolio.unplacedPieceIds.length).toBe(
+      sources.length
+    )
+  })
+
+  it('discards a cancelled in-progress GA decode and keeps the completed baseline', async () => {
+    const sources = await sourcesPromise
+    let baselineComplete = false
+    let checksAfterBaseline = 0
+    const phaseMeasurements: string[] = []
+    const result = await Effect.runPromise(
+      run(request(sources), settings(), {
+        onPortfolioPhase: (measurement) => {
+          phaseMeasurements.push(measurement.phase)
+          if (measurement.phase === 'baseline-decode') baselineComplete = true
+        },
+        isCancelled: () => {
+          if (!baselineComplete) return false
+          checksAfterBaseline += 1
+          return checksAfterBaseline > 2
+        }
+      })
+    )
+
+    expect(result.portfolio.status).toBe('cancelled')
+    expect(result.portfolio.source).toBe('beam')
+    expect(phaseMeasurements).toEqual(['baseline-decode'])
+    expect(result.portfolio.placements.length + result.portfolio.unplacedPieceIds.length).toBe(
+      sources.length
+    )
+  })
+
+  it('charges a cached baseline slot without materializing history when history is off', async () => {
+    const sources = await sourcesPromise
+    const phaseMeasurements: string[] = []
+    const progress: IrregularPortfolioProgress[] = []
+    const result = await Effect.runPromise(
+      run(request(sources), settings({ gaEvaluationBudget: 1 }), {
+        emitStateSnapshot: () => {},
+        emitPortfolioProgress: (nextProgress) => {
+          progress.push(nextProgress)
+          return Effect.void
+        },
+        onPortfolioPhase: (measurement) => {
+          phaseMeasurements.push(measurement.phase)
+        }
+      })
+    )
+
+    expect(phaseMeasurements).toEqual(['baseline-decode'])
+    expect(progress.at(-1)?.evaluationsCompleted).toBe(1)
+    expect(result.stateSnapshots).toEqual([])
+  })
+
+  it('captures GA portfolio history only when history is enabled', async () => {
+    const sources = await sourcesPromise
+    const emittedOff: IrregularPortfolioProgress[] = []
+    const emittedOn: IrregularPortfolioProgress[] = []
+    const offSnapshots: number[] = []
+    const onSnapshots: number[] = []
+
+    const offResult = await Effect.runPromise(
+      run(request(sources, 'off'), settings({ gaEvaluationBudget: 1 }), {
+        emitStateSnapshot: (snapshot) => offSnapshots.push(snapshot.stepIndex),
+        emitPortfolioProgress: (progress) => {
+          emittedOff.push(progress)
+          return Effect.void
+        }
+      })
+    )
+    const onResult = await Effect.runPromise(
+      run(request(sources, 'final'), settings({ gaEvaluationBudget: 1 }), {
+        emitStateSnapshot: (snapshot) => onSnapshots.push(snapshot.stepIndex),
+        emitPortfolioProgress: (progress) => {
+          emittedOn.push(progress)
+          return Effect.void
+        }
+      })
+    )
+
+    expect(offResult.stateSnapshots).toEqual([])
+    expect(offSnapshots).toEqual([])
+    expect(emittedOff.at(-1)?.phase).toBe('ga_search')
+    expect(onResult.stateSnapshots.length).toBeGreaterThan(0)
+    expect(onSnapshots).toEqual(onResult.stateSnapshots.map((snapshot) => snapshot.stepIndex))
+    expect(emittedOn.at(-1)?.phase).toBe('validating')
   })
 })

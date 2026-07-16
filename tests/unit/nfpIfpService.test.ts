@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 import {
   IrregularBounds,
   IrregularPlacedPiece,
@@ -38,6 +38,7 @@ import {
   cacheKeyToString,
   IrregularGeometryInfeasibleError,
   IrregularGeometryInputError,
+  IrregularNfpIfpControlAbortError,
   NfpIfpService
 } from '../../src/workers/irregular/services.js'
 
@@ -634,6 +635,59 @@ describe('NfpIfpServiceLive', () => {
       point(8, 8)
     ])
     expect(candidates.every(({ diagnostics }) => diagnostics.length === 0)).toBe(true)
+  })
+
+  it('propagates cooperative aborts through placed-NFP and pairwise boundary work', async () => {
+    const moving = transformedGeometry('moving-controlled', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const firstFixed = placedPiece(
+      'fixed-controlled-first',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      4,
+      4
+    )
+    const secondFixed = placedPiece(
+      'fixed-controlled-second',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      4,
+      4
+    )
+    const phases: string[] = []
+    const controlledInput: GeneratePlacementCandidatesInput = {
+      sheet: sheet(10, 10),
+      placed: [firstFixed, secondFixed],
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      control: {
+        checkpoint: (phase) => {
+          phases.push(phase)
+          return phase === 'pairwise-nfp-boundary-intersection'
+            ? Effect.fail(
+                new IrregularNfpIfpControlAbortError({
+                  reason: 'deadline',
+                  message: 'test deadline'
+                })
+              )
+            : Effect.void
+        }
+      }
+    }
+    const controlledEffect = NfpIfpService.use((service) =>
+      service.generatePlacementCandidates(controlledInput)
+    )
+    expectTypeOf<IrregularNfpIfpControlAbortError>().toMatchTypeOf<
+      Effect.Error<typeof controlledEffect>
+    >()
+
+    const failure = await captureFailure(generateCandidates(controlledInput))
+
+    expect(failure).toBeInstanceOf(IrregularNfpIfpControlAbortError)
+    expect(phases).toContain('placed-nfp')
+    expect(phases).toContain('pairwise-nfp-boundary-intersection')
   })
 
   it('combines IFP corners and square NFP vertices without duplicates', async () => {

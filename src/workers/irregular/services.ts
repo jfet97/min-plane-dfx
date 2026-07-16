@@ -52,6 +52,28 @@ export class IrregularPortfolioError extends Data.TaggedError('IrregularPortfoli
   readonly message: string
 }> {}
 
+/** internal NFP-only abort signal; this is not the worker supervisor contract. */
+export class IrregularNfpIfpControlAbortError extends Data.TaggedError(
+  'IrregularNfpIfpControlAbortError'
+)<{
+  readonly reason: 'deadline' | 'cancelled'
+  readonly message: string
+}> {}
+
+/** typed cooperative checkpoint supplied only through the NFP service interface. */
+export type IrregularNfpIfpCheckpointPhase =
+  | 'ifp'
+  | 'placed-nfp'
+  | 'ifp-boundary-intersection'
+  | 'pairwise-nfp-boundary-intersection'
+  | 'candidate-points'
+
+export interface IrregularNfpIfpControl {
+  readonly checkpoint: (
+    phase: IrregularNfpIfpCheckpointPhase
+  ) => Effect.Effect<void, IrregularNfpIfpControlAbortError>
+}
+
 export interface FlattenSourceGeometryInput {
   readonly piece: ImportedPiece
 }
@@ -104,6 +126,15 @@ export interface GeneratePlacementCandidatesInput {
   readonly placed: ReadonlyArray<IrregularPlacedPiece>
   readonly moving: TransformedCollisionGeometry
   readonly settings: IrregularNestingSettings
+  readonly control?: IrregularNfpIfpControl
+}
+
+/** Candidate input whose caller has proved that no cooperative control exists. */
+export type GeneratePlacementCandidatesInputWithoutControl = Omit<
+  GeneratePlacementCandidatesInput,
+  'control'
+> & {
+  readonly control?: never
 }
 
 export interface ValidatePlacementInput {
@@ -183,12 +214,30 @@ export interface NfpIfpService {
    * Produces deterministic candidate placements from sheet bounds and placed
    * collision geometry; legality remains a later direct validation step.
    */
-  readonly generatePlacementCandidates: (
-    input: GeneratePlacementCandidatesInput
-  ) => Effect.Effect<
-    ReadonlyArray<IrregularPlacementCandidate>,
-    IrregularNestingNotImplementedError | IrregularGeometryInputError
-  >
+  readonly generatePlacementCandidates: {
+    (
+      input: GeneratePlacementCandidatesInput & { readonly control: IrregularNfpIfpControl }
+    ): Effect.Effect<
+      ReadonlyArray<IrregularPlacementCandidate>,
+      | IrregularNestingNotImplementedError
+      | IrregularGeometryInputError
+      | IrregularNfpIfpControlAbortError
+    >
+    (
+      input: GeneratePlacementCandidatesInputWithoutControl
+    ): Effect.Effect<
+      ReadonlyArray<IrregularPlacementCandidate>,
+      IrregularNestingNotImplementedError | IrregularGeometryInputError
+    >
+    (
+      input: GeneratePlacementCandidatesInput
+    ): Effect.Effect<
+      ReadonlyArray<IrregularPlacementCandidate>,
+      | IrregularNestingNotImplementedError
+      | IrregularGeometryInputError
+      | IrregularNfpIfpControlAbortError
+    >
+  }
 }
 
 export interface FreeMaterialService {

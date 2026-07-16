@@ -1,4 +1,4 @@
-import { Effect, Order } from 'effect'
+import { Data, Effect, Order } from 'effect'
 import type { PieceId } from '@shared/domain/ids.js'
 import type { SheetSpec } from '@shared/domain/nesting.js'
 import {
@@ -14,6 +14,8 @@ import {
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import {
   IrregularGeometryInputError,
+  IrregularNfpIfpControl,
+  IrregularNfpIfpControlAbortError,
   IrregularNestingNotImplementedError,
   NfpIfpService
 } from '../../irregular/services.js'
@@ -46,6 +48,32 @@ export interface IrregularWindowedBeamHooks {
   }) => void
 }
 
+/**
+ * Cooperative control shared by every operation in one chromosome decode.
+ *
+ * The deadline is checked around each transform, candidate batch, and layout
+ * score. An aborted decode never returns its in-progress beam; the portfolio
+ * may only retain a result returned after the complete terminal state was
+ * scored.
+ */
+export interface IrregularWindowedBeamControl {
+  readonly deadlineMs?: number
+  readonly isCancelled?: () => boolean
+}
+
+/** reports only candidate totals from beam steps that completed successfully. */
+export interface IrregularWindowedBeamInstrumentation {
+  readonly onStepCompleted?: (input: { readonly candidateCount: number }) => void
+}
+
+/** typed internal signal used to discard an incomplete chromosome decode. */
+export class IrregularWindowedBeamAbortedError extends Data.TaggedError(
+  'IrregularWindowedBeamAbortedError'
+)<{
+  readonly reason: 'deadline' | 'cancelled'
+  readonly message: string
+}> {}
+
 /** High-level chromosome choices applied by one deterministic beam decode. */
 export interface IrregularWindowedBeamOptions {
   readonly policyId?: IrregularPlacementPolicyId
@@ -57,6 +85,8 @@ export type IrregularWindowedBeamError =
   | IrregularGeometryInputError
   | IrregularPlacementScoringError
   | IrregularLayoutScoringError
+  | IrregularNfpIfpControlAbortError
+  | IrregularWindowedBeamAbortedError
 
 interface LocalCandidate {
   readonly candidate: IrregularPlacementCandidate
@@ -97,6 +127,8 @@ export function runWindowedIrregularBeam(input: {
   readonly pieces: ReadonlyArray<IrregularPreparedPiece>
   readonly hooks?: IrregularWindowedBeamHooks
   readonly options?: IrregularWindowedBeamOptions
+  readonly control?: IrregularWindowedBeamControl
+  readonly instrumentation?: IrregularWindowedBeamInstrumentation
 }): Effect.Effect<
   IrregularWindowedBeamResult,
   IrregularWindowedBeamError,
@@ -116,11 +148,14 @@ export function runWindowedIrregularBeam(input: {
     let beam: ReadonlyArray<IrregularBeamState> = [IrregularBeamState.empty(input.pieces)]
     let scoredBeam: ReadonlyArray<ScoredState> | undefined
     const candidateCounts: number[] = []
+    const controlState: ControlState = { checkpointsSinceYield: 0 }
     while (beam.some((state) => state.remainingPreparedPieces.length > 0)) {
+      yield* controlCheckpoint(input.control, controlState)
       const successors: IrregularBeamState[] = []
       let candidateCount = 0
 
       for (const state of beam) {
+        yield* controlCheckpoint(input.control, controlState)
         const eligibleCount = Math.min(
           settings.optimizer.orderWindow,
           state.remainingPreparedPieces.length
@@ -131,6 +166,7 @@ export function runWindowedIrregularBeam(input: {
         const localCandidateLimit =
           settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth
         for (const [pieceIndex, piece] of eligiblePieces.entries()) {
+          yield* controlCheckpoint(input.control, controlState)
           const localCandidates = yield* collectLocalCandidates({
             sheet: input.sheet,
             settings,
@@ -139,6 +175,8 @@ export function runWindowedIrregularBeam(input: {
             geometryKernel,
             nfpIfpService,
             placementScorer,
+            controlState,
+            ...(input.control !== undefined ? { control: input.control } : {}),
             ...(input.options !== undefined ? { options: input.options } : {})
           })
           candidateCount += localCandidates.length
@@ -149,6 +187,7 @@ export function runWindowedIrregularBeam(input: {
             input.options?.transformPreferences?.get(preparedPieceId(piece))
           )
           for (const candidate of selected) {
+            yield* controlCheckpoint(input.control, controlState)
             legalSuccessors.push(applyPlacement(state, pieceIndex, piece, candidate))
           }
         }
@@ -161,10 +200,17 @@ export function runWindowedIrregularBeam(input: {
       }
 
       const uniqueSuccessors = dedupeRawSuccessors(successors)
-      const scored = yield* scoreStates(uniqueSuccessors, input.sheet, layoutScorer)
+      const scored = yield* scoreStates(
+        uniqueSuccessors,
+        input.sheet,
+        layoutScorer,
+        input.control,
+        controlState
+      )
       scoredBeam = pruneScoredStates(scored, settings.optimizer.beamWidth, layoutScorer)
       beam = scoredBeam.map(({ state }) => state)
       candidateCounts.push(candidateCount)
+      input.instrumentation?.onStepCompleted?.({ candidateCount })
     }
 
     const ranked = rankScoredStates(
@@ -172,10 +218,13 @@ export function runWindowedIrregularBeam(input: {
         (yield* scoreStates(
           beam.map((state) => ({ state, key: beamStateKey(state) })),
           input.sheet,
-          layoutScorer
+          layoutScorer,
+          input.control,
+          controlState
         )),
       layoutScorer
     )
+    yield* controlCheckpoint(input.control, controlState)
     const best = ranked[0]
     if (best === undefined) {
       return yield* Effect.die('windowed irregular beam produced no terminal state')
@@ -194,7 +243,9 @@ export function decodeWindowedIrregularBeam(
   sheet: SheetSpec,
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   hooks?: IrregularWindowedBeamHooks,
-  options?: IrregularWindowedBeamOptions
+  options?: IrregularWindowedBeamOptions,
+  control?: IrregularWindowedBeamControl,
+  instrumentation?: IrregularWindowedBeamInstrumentation
 ): Effect.Effect<
   IrregularWindowedBeamResult,
   IrregularWindowedBeamError,
@@ -208,8 +259,66 @@ export function decodeWindowedIrregularBeam(
     sheet,
     pieces,
     ...(hooks !== undefined ? { hooks } : {}),
-    ...(options !== undefined ? { options } : {})
+    ...(options !== undefined ? { options } : {}),
+    ...(control !== undefined ? { control } : {}),
+    ...(instrumentation !== undefined ? { instrumentation } : {})
   })
+}
+
+interface ControlState {
+  checkpointsSinceYield: number
+}
+
+const CHECKPOINTS_PER_EVENT_LOOP_YIELD = 8
+
+function controlCheckpoint(
+  control: IrregularWindowedBeamControl | undefined,
+  state: ControlState
+): Effect.Effect<void, IrregularWindowedBeamAbortedError> {
+  if (control === undefined) return Effect.void
+  return Effect.gen(function* () {
+    const initialReason = controlAbortReason(control)
+    if (initialReason !== undefined) return yield* failAborted(initialReason)
+
+    state.checkpointsSinceYield += 1
+    if (state.checkpointsSinceYield < CHECKPOINTS_PER_EVENT_LOOP_YIELD) return
+    state.checkpointsSinceYield = 0
+    yield* yieldToEventLoop()
+
+    const reasonAfterYield = controlAbortReason(control)
+    if (reasonAfterYield !== undefined) return yield* failAborted(reasonAfterYield)
+  })
+}
+
+function controlAbortReason(
+  control: IrregularWindowedBeamControl
+): 'deadline' | 'cancelled' | undefined {
+  if (control.isCancelled?.() === true) return 'cancelled'
+  if (control.deadlineMs !== undefined && Date.now() >= control.deadlineMs) return 'deadline'
+  return undefined
+}
+
+function failAborted(
+  reason: 'deadline' | 'cancelled'
+): Effect.Effect<never, IrregularWindowedBeamAbortedError> {
+  return Effect.fail(
+    new IrregularWindowedBeamAbortedError({
+      reason,
+      message:
+        reason === 'deadline'
+          ? 'irregular chromosome decode exceeded its cooperative deadline.'
+          : 'irregular chromosome decode observed cancellation.'
+    })
+  )
+}
+
+function yieldToEventLoop(): Effect.Effect<void> {
+  return Effect.promise(
+    () =>
+      new Promise<void>((resolve) => {
+        setImmediate(resolve)
+      })
+  )
 }
 
 function collectLocalCandidates(input: {
@@ -220,25 +329,43 @@ function collectLocalCandidates(input: {
   readonly geometryKernel: GeometryKernel.Service
   readonly nfpIfpService: NfpIfpService
   readonly placementScorer: IrregularPlacementScorer.Service
+  readonly control?: IrregularWindowedBeamControl
+  readonly controlState: ControlState
   readonly options?: IrregularWindowedBeamOptions
 }): Effect.Effect<
   ReadonlyArray<LocalCandidate>,
-  IrregularNestingNotImplementedError | IrregularGeometryInputError | IrregularPlacementScoringError
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularPlacementScoringError
+  | IrregularNfpIfpControlAbortError
+  | IrregularWindowedBeamAbortedError
 > {
   return Effect.gen(function* () {
     const candidates: LocalCandidate[] = []
+    const nfpControl = makeNfpIfpControl(input.control, input.controlState)
     for (const transform of orderedTransforms(input.piece, input.options?.transformPreferences)) {
+      yield* controlCheckpoint(input.control, input.controlState)
       const moving = yield* input.geometryKernel.transformCollisionGeometry({
         geometry: input.piece.collisionGeometry,
         transform
       })
-      const legalCandidates = yield* input.nfpIfpService.generatePlacementCandidates({
+      yield* controlCheckpoint(input.control, input.controlState)
+      const candidateInput = {
         sheet: input.sheet,
         placed: input.state.placedCollisionGeometries,
         moving,
         settings: input.settings
-      })
+      }
+      const legalCandidates =
+        nfpControl === undefined
+          ? yield* input.nfpIfpService.generatePlacementCandidates(candidateInput)
+          : yield* input.nfpIfpService.generatePlacementCandidates({
+              ...candidateInput,
+              control: nfpControl
+            })
+      yield* controlCheckpoint(input.control, input.controlState)
       for (const candidate of legalCandidates) {
+        yield* controlCheckpoint(input.control, input.controlState)
         const score = yield* input.placementScorer.scoreCandidate({
           sheet: input.sheet,
           placed: input.state.placedCollisionGeometries,
@@ -247,10 +374,31 @@ function collectLocalCandidates(input: {
           ...(input.options?.policyId !== undefined ? { policyId: input.options.policyId } : {})
         })
         candidates.push({ candidate, moving, score })
+        yield* controlCheckpoint(input.control, input.controlState)
       }
     }
     return candidates
   })
+}
+
+/** adapts beam checkpoints to the internal NFP boundary without changing worker cancellation APIs. */
+function makeNfpIfpControl(
+  control: IrregularWindowedBeamControl | undefined,
+  controlState: ControlState
+): IrregularNfpIfpControl | undefined {
+  if (control === undefined) return undefined
+  return {
+    checkpoint: () =>
+      controlCheckpoint(control, controlState).pipe(
+        Effect.mapError(
+          (error) =>
+            new IrregularNfpIfpControlAbortError({
+              reason: error.reason,
+              message: error.message
+            })
+        )
+      )
+  }
 }
 
 function selectLocalCandidates(
@@ -380,14 +528,26 @@ function winningStatePath(bestState: IrregularBeamState): ReadonlyArray<Irregula
 function scoreStates(
   states: ReadonlyArray<KeyedState>,
   sheet: SheetSpec,
-  layoutScorer: IrregularLayoutScorer.Service
+  layoutScorer: IrregularLayoutScorer.Service,
+  control: IrregularWindowedBeamControl | undefined,
+  controlState: ControlState
 ): Effect.Effect<
   ReadonlyArray<ScoredState>,
-  IrregularLayoutScoringError | IrregularGeometryInputError | IrregularNestingNotImplementedError
+  | IrregularLayoutScoringError
+  | IrregularGeometryInputError
+  | IrregularNestingNotImplementedError
+  | IrregularWindowedBeamAbortedError
 > {
-  return Effect.forEach(states, ({ state, key }) =>
-    layoutScorer.scoreState({ sheet, state }).pipe(Effect.map((score) => ({ state, score, key })))
-  )
+  return Effect.gen(function* () {
+    const scored: ScoredState[] = []
+    for (const { state, key } of states) {
+      yield* controlCheckpoint(control, controlState)
+      const score = yield* layoutScorer.scoreState({ sheet, state })
+      scored.push({ state, score, key })
+      yield* controlCheckpoint(control, controlState)
+    }
+    return scored
+  })
 }
 
 function dedupeRawSuccessors(states: ReadonlyArray<IrregularBeamState>): ReadonlyArray<KeyedState> {

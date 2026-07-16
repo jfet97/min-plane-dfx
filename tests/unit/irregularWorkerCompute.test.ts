@@ -93,7 +93,11 @@ function prepared(id: string, sourcePieceId = id): PreparedPiece {
   })
 }
 
-function request(pieces: ReadonlyArray<PreparedPiece>, sourcePieces?: ReadonlyArray<ImportedPiece>) {
+function request(
+  pieces: ReadonlyArray<PreparedPiece>,
+  sourcePieces?: ReadonlyArray<ImportedPiece>,
+  historyMode: NestingOptions['historyMode'] = 'off'
+) {
   return new NestingRequest({
     version: 1,
     sheet: new SheetSpec({ width: 10, height: 10, label: 'test sheet' }),
@@ -104,7 +108,7 @@ function request(pieces: ReadonlyArray<PreparedPiece>, sourcePieces?: ReadonlyAr
       allowGlobalRotation: true,
       timeoutMs: 1000,
       workerMode: 'irregular-convex-v2',
-      historyMode: 'off',
+      historyMode,
       historyScope: 'winning_path',
       strategySelectionMode: 'single',
       strategyIds: [],
@@ -140,7 +144,13 @@ describe('computeIrregularNesting', () => {
 
   it('uses copy-id fallback and records actual beam state progression', async () => {
     const result = await Effect.runPromise(
-      run(request([prepared('piece-copy-1', 'piece-copy-1')], [source('piece')]))
+      run(
+        request(
+          [prepared('piece-copy-1', 'piece-copy-1')],
+          [source('piece')],
+          'final'
+        )
+      )
     )
 
     expect(result.placedCollisionGeometries[0]?.placement.pieceId).toBe(PieceId.make('piece-copy-1'))
@@ -150,7 +160,11 @@ describe('computeIrregularNesting', () => {
   })
 
   it('keeps real transform placements and tagged beam history at the worker boundary', async () => {
-    const nestingRequest = request([prepared('piece-copy-1', 'piece-copy-1')], [source('piece')])
+    const nestingRequest = request(
+      [prepared('piece-copy-1', 'piece-copy-1')],
+      [source('piece')],
+      'final'
+    )
     const emittedStepIndexes: number[] = []
     const computed = await Effect.runPromise(
       run(nestingRequest, {
@@ -187,5 +201,30 @@ describe('computeIrregularNesting', () => {
     expect(output.historyFrames[0]?.remainingPieceIds).toEqual([PieceId.make('piece-copy-1')])
     expect(output.historyFrames.at(-1)?.placements).toHaveLength(1)
     expect(emittedStepIndexes).toEqual(output.historyFrames.map((frame) => frame.stepIndex))
+  })
+
+  it('does not capture history when history mode is off', async () => {
+    const pieces = [prepared('piece-copy-1', 'piece-copy-1')]
+    const sourcePieces = [source('piece')]
+    const emittedOff: number[] = []
+    const emittedOn: number[] = []
+
+    const offRequest = request(pieces, sourcePieces, 'off')
+    const offResult = await Effect.runPromise(
+      run(offRequest, {
+        emitStateSnapshot: (snapshot) => emittedOff.push(snapshot.stepIndex)
+      })
+    )
+    const onRequest = request(pieces, sourcePieces, 'final')
+    const onResult = await Effect.runPromise(
+      run(onRequest, {
+        emitStateSnapshot: (snapshot) => emittedOn.push(snapshot.stepIndex)
+      })
+    )
+
+    expect(offResult.stateSnapshots).toEqual([])
+    expect(emittedOff).toEqual([])
+    expect(onResult.stateSnapshots.length).toBeGreaterThan(0)
+    expect(emittedOn).toEqual(onResult.stateSnapshots.map((snapshot) => snapshot.stepIndex))
   })
 })
