@@ -1,5 +1,6 @@
 import { Effect, Schema } from 'effect'
 import { ImportedPiece } from '../domain/dxf.js'
+import { RectWith } from '../domain/geometry.js'
 import { NestingRequest, NestingResult } from '../domain/nesting.js'
 import { WorkerRequest, WorkerResponse } from '../protocol/worker.js'
 import { IrregularNestingSettings } from '../irregular/domain.js'
@@ -46,12 +47,7 @@ const NestingRequestPieceStrict = Schema.Struct({
     width: PositiveWidth,
     height: PositiveHeight
   }),
-  paddedBounds: Schema.Struct({
-    x: NonNegativeCoordinate,
-    y: NonNegativeCoordinate,
-    width: PositiveWidth,
-    height: PositiveHeight
-  }),
+  paddedBounds: RectWith,
   padding: NonNegativePadding,
   allowRotation: Schema.Boolean,
   allowMirror: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(Effect.succeed(true))),

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Exit, Schema } from 'effect'
+import { NestingRequest } from '@shared/domain/nesting.js'
 import { IrregularGeometrySettings } from '@shared/irregular/domain.js'
 import { ProjectDocumentStrict } from '@shared/schemas/projectSchemas.js'
 import { NestingRequestStrict } from '@shared/schemas/nestingSchemas.js'
@@ -252,6 +253,17 @@ describe('NestingRequestStrict', () => {
   it('accepts a valid nesting request', () => {
     const result = validate(NestingRequestStrict, validRequest)
     expect(Exit.isSuccess(result)).toBe(true)
+  })
+
+  it('preserves padded-bound metadata for the domain request decode', () => {
+    const boundaryRequest = Schema.decodeUnknownSync(NestingRequestStrict)(validRequest)
+    const request = Schema.decodeUnknownSync(NestingRequest)(boundaryRequest)
+
+    expect(request.pieces[0]?.paddedBounds).toMatchObject({
+      longestEdge: 14,
+      area: 126,
+      imbalance: 5
+    })
   })
 
   it('accepts irregular worker requests with source geometry', () => {
