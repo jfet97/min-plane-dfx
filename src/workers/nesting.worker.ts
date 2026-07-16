@@ -15,6 +15,10 @@ import {
 import { IrregularLayoutScorer } from './algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from './algorithm/irregular/irregularPlacementScorer.js'
 import type { IrregularDecisionTraceEvent } from './algorithm/irregular/decisionTrace.js'
+import {
+  IrregularDecisionTraceBatcher,
+  serializeIrregularDecisionTraceBatch
+} from './decisionTraceNdjson.js'
 import { IRREGULAR_WORKER_MODE } from '@shared/irregular/defaults.js'
 import { CollisionGeometryBuilder } from './irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from './irregular/geometryKernel.js'
@@ -123,26 +127,29 @@ function prepareDecisionTraceFile(
   })
 }
 
-function appendDecisionTraceEvent(path: string, event: IrregularDecisionTraceEvent) {
+function appendDecisionTraceBatch(
+  path: string,
+  events: ReadonlyArray<IrregularDecisionTraceEvent>
+) {
   return Effect.gen(function* () {
     const filePath = yield* Path.Path
     const fs = yield* FileSystem.FileSystem
     yield* fs.makeDirectory(filePath.dirname(path), { recursive: true })
-    yield* fs.writeFileString(path, `${JSON.stringify(event)}\n`, { flag: 'a' })
+    yield* fs.writeFileString(path, serializeIrregularDecisionTraceBatch(events), { flag: 'a' })
   })
 }
 
 function makeDecisionTraceEmitter(
   decisionTracePath: string | null,
-  incrementEventCount: () => void
+  incrementEventCount: (count: number) => void
 ): (
-  event: IrregularDecisionTraceEvent
+  events: ReadonlyArray<IrregularDecisionTraceEvent>
 ) => Effect.Effect<void, PlatformError.PlatformError, FileSystem.FileSystem | Path.Path> {
-  if (decisionTracePath === null) return (_event) => Effect.void
-  return (event) =>
+  if (decisionTracePath === null) return (_events) => Effect.void
+  return (events) =>
     Effect.gen(function* () {
-      incrementEventCount()
-      yield* appendDecisionTraceEvent(decisionTracePath, event)
+      incrementEventCount(events.length)
+      yield* appendDecisionTraceBatch(decisionTracePath, events)
     })
 }
 
@@ -203,7 +210,10 @@ function handleRunNesting(
     let frameCount = 0
     let decisionTraceEventCount = 0
     const frameQueue = yield* Queue.unbounded<NestingHistoryFramePayload, Cause.Done>()
-    const decisionTraceQueue = yield* Queue.unbounded<IrregularDecisionTraceEvent, Cause.Done>()
+    const decisionTraceQueue = yield* Queue.unbounded<
+      ReadonlyArray<IrregularDecisionTraceEvent>,
+      Cause.Done
+    >()
     const emitFrame = makeFrameEmitter(send, requestId, jobId, historyMode, historyPath, () => {
       frameCount++
     })
@@ -211,13 +221,21 @@ function handleRunNesting(
       Stream.runForEach(emitFrame),
       Effect.forkDetach
     )
-    const emitDecisionTrace = makeDecisionTraceEmitter(decisionTracePath, () => {
-      decisionTraceEventCount += 1
+    const emitDecisionTrace = makeDecisionTraceEmitter(decisionTracePath, (count) => {
+      decisionTraceEventCount += count
     })
     const decisionTraceConsumer = yield* Stream.fromQueue(decisionTraceQueue).pipe(
       Stream.runForEach(emitDecisionTrace),
       Effect.forkDetach
     )
+    const decisionTraceBatcher =
+      decisionTracePath === null
+        ? undefined
+        : new IrregularDecisionTraceBatcher({
+            emitBatch: (events) => {
+              Queue.offerUnsafe(decisionTraceQueue, events)
+            }
+          })
     const computation: Effect.Effect<NestingResult, WorkerResponseFailureError> =
       payload.options.workerMode === IRREGULAR_WORKER_MODE
         ? computeIrregularWorkerResult(
@@ -238,7 +256,7 @@ function handleRunNesting(
             decisionTracePath === null
               ? undefined
               : (event) => {
-                  Queue.offerUnsafe(decisionTraceQueue, event)
+                  decisionTraceBatcher?.add(event)
                 }
           )
         : Effect.sync(() =>
@@ -254,7 +272,10 @@ function handleRunNesting(
         onSuccess: (result) => ({ type: 'success' as const, result })
       }),
       Effect.ensuring(
-        Queue.end(frameQueue).pipe(Effect.flatMap(() => Queue.end(decisionTraceQueue)))
+        Effect.sync(() => decisionTraceBatcher?.flush()).pipe(
+          Effect.flatMap(() => Queue.end(frameQueue)),
+          Effect.flatMap(() => Queue.end(decisionTraceQueue))
+        )
       )
     )
     yield* Fiber.join(frameConsumer)

@@ -336,13 +336,22 @@ describe('IrregularLayoutScorer', () => {
     expect(await compareScores(lowerWasteScore, tighterBoundsScore)).toBeLessThan(0)
   })
 
-  it('uses lower-left only after free-material fragmentation criteria', async () => {
-    const lower = state([placedRectangle('lower', 2, 2, 0, 0)])
-    const higher = state([placedRectangle('higher', 2, 2, 0, 1)])
-    const lowerScore = await scoreWith(
+  it('canonicalizes translated bounds and anchors symmetric layouts before free material', async () => {
+    const currentSheet = new SheetSpec({
+      width: 1_000_000,
+      height: 1_000_000,
+      label: 'large-coordinate score grid sheet'
+    })
+    const bottomLeft = state([
+      placedRectangle('bottom-left', 7.123, 3.456, 0.0004, 0.0004)
+    ])
+    const topRight = state([
+      placedRectangle('top-right', 7.123, 3.456, 900_000.0004, 800_000.0004)
+    ])
+    const bottomLeftScore = await scoreWith(
       materialSnapshot(
         new FreeMaterialSnapshot({
-          sheet: new SheetSpec({ width: 10, height: 10, label: 'lower-left order sheet' }),
+          sheet: currentSheet,
           regions: [
             new FreeMaterialRegion({ boundary: polygon(rectanglePoints(1, 1)), holes: [] }),
             new FreeMaterialRegion({ boundary: polygon(rectanglePoints(2, 2)), holes: [] })
@@ -350,24 +359,40 @@ describe('IrregularLayoutScorer', () => {
           diagnostics: []
         })
       ),
-      input(lower)
+      { sheet: currentSheet, state: bottomLeft }
     )
-    const higherScore = await scoreWith(
+    const topRightScore = await scoreWith(
       materialSnapshot(
         new FreeMaterialSnapshot({
-          sheet: new SheetSpec({ width: 10, height: 10, label: 'lower-left order sheet' }),
+          sheet: currentSheet,
           regions: [
             new FreeMaterialRegion({ boundary: polygon(rectanglePoints(10, 10)), holes: [] })
           ],
           diagnostics: []
         })
       ),
-      input(higher)
+      { sheet: currentSheet, state: topRight }
     )
 
-    expect(lowerScore.collisionBoundsBottomMm).toBeLessThan(higherScore.collisionBoundsBottomMm)
-    expect(lowerScore.freeMaterialRegionCount).toBeGreaterThan(higherScore.freeMaterialRegionCount)
-    expect(await compareScores(lowerScore, higherScore)).toBeGreaterThan(0)
+    expect({
+      worst: bottomLeftScore.collisionBoundsWorstNormalizedSheetConsumption,
+      normalizedSpan: bottomLeftScore.collisionBoundsNormalizedSpanSum,
+      area: bottomLeftScore.collisionBoundsAreaMm2,
+      span: bottomLeftScore.collisionBoundsSpanMm
+    }).toEqual({
+      worst: topRightScore.collisionBoundsWorstNormalizedSheetConsumption,
+      normalizedSpan: topRightScore.collisionBoundsNormalizedSpanSum,
+      area: topRightScore.collisionBoundsAreaMm2,
+      span: topRightScore.collisionBoundsSpanMm
+    })
+    expect(bottomLeftScore.occupiedHullWasteRatio).toBe(topRightScore.occupiedHullWasteRatio)
+    expect(bottomLeftScore.collisionBoundsBottomMm).toBeLessThan(
+      topRightScore.collisionBoundsBottomMm
+    )
+    expect(bottomLeftScore.freeMaterialRegionCount).toBeGreaterThan(
+      topRightScore.freeMaterialRegionCount
+    )
+    expect(await compareScores(bottomLeftScore, topRightScore)).toBeLessThan(0)
   })
 
   it('does not let tiny free-area variation beat a materially tighter cluster', async () => {

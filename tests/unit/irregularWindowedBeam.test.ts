@@ -29,6 +29,7 @@ import {
 } from '../../src/workers/algorithm/irregular/windowedBeam.js'
 import {
   IrregularDecisionTraceDecodeStarted,
+  IrregularDecisionTraceStateIdRegistry,
   type EmitIrregularDecisionTrace,
   type IrregularDecisionTraceEvent
 } from '../../src/workers/algorithm/irregular/decisionTrace.js'
@@ -215,6 +216,14 @@ async function branchBiasedLayoutScorer(): Promise<IrregularLayoutScorer.Service
 }
 
 describe('decodeWindowedIrregularBeam', () => {
+  it('assigns compact repeated state ids without hashing canonical keys', () => {
+    const registry = new IrregularDecisionTraceStateIdRegistry()
+
+    expect(registry.idFor('very-long-canonical-state-key')).toBe('s0')
+    expect(registry.idFor('very-long-canonical-state-key')).toBe('s0')
+    expect(registry.idFor('another-canonical-state-key')).toBe('s1')
+  })
+
   it('uses the injected orderWindow when selecting eligible pieces', async () => {
     const pieces = [preparedPiece('a', 1, 1), preparedPiece('b', 1, 1)]
     const calls: PieceId[] = []
@@ -573,6 +582,15 @@ describe('decodeWindowedIrregularBeam', () => {
     )
 
     expect(events[0]).toBeInstanceOf(IrregularDecisionTraceDecodeStarted)
+    const parent = events.find((event) => event.kind === 'parent_state')
+    const eligible = events.find((event) => event.kind === 'eligible_pieces')
+    const scored = events.find((event) => event.kind === 'successor_layout_scored')
+    const retained = events
+      .filter((event) => event.kind === 'beam_selection')
+      .find((event) => event.decision === 'retained')
+    expect(parent?.state.stateId).toMatch(/^s[0-9a-z]+$/)
+    expect(eligible?.parentStateId).toBe(parent?.state.stateId)
+    expect(retained?.stateId).toBe(scored?.state.stateId)
     expect(events).toContainEqual(
       expect.objectContaining({
         kind: 'local_candidate_selection',

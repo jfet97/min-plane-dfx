@@ -13,6 +13,7 @@ import { GeometrySettings } from '../../irregular/geometryKernel.js'
 import { GeometryPredicates } from '../../irregular/geometryPredicates.js'
 import type { InternalPoint } from '../../irregular/internalGeometry.js'
 import { IrregularBeamState } from './irregularBeamState.js'
+import { canonicalizeIrregularScoreMillimeters } from './irregularScoreGrid.js'
 
 /** A typed failure raised only when derived scoring arithmetic is non-finite. */
 export class IrregularLayoutScoringError extends Data.TaggedError('IrregularLayoutScoringError')<{
@@ -221,14 +222,33 @@ function scoreDerivedState(
     return failScoring('placed collision polygons must produce finite bounds.')
   }
 
-  const normalizedWidth = collisionBounds.width / input.sheet.width
-  const normalizedHeight = collisionBounds.height / input.sheet.height
+  const canonicalWidth = canonicalizeIrregularScoreMillimeters(collisionBounds.width)
+  const canonicalHeight = canonicalizeIrregularScoreMillimeters(collisionBounds.height)
+  const canonicalMinX = canonicalizeIrregularScoreMillimeters(collisionBounds.minX)
+  const canonicalMinY = canonicalizeIrregularScoreMillimeters(collisionBounds.minY)
+  if (
+    canonicalWidth === undefined ||
+    canonicalHeight === undefined ||
+    canonicalMinX === undefined ||
+    canonicalMinY === undefined
+  ) {
+    return failScoring('collision bounds must fit the deterministic score grid.')
+  }
+
+  /**
+   * Translation-equivalent layouts can acquire different low-order bits when
+   * large translated maxima and minima are subtracted. Canonicalizing the
+   * derived bounds to the existing 0.001 mm collision-geometry precision makes
+   * those layouts score identically without introducing epsilon comparisons.
+   */
+  const normalizedWidth = canonicalWidth / input.sheet.width
+  const normalizedHeight = canonicalHeight / input.sheet.height
   const collisionBoundsWorstNormalizedSheetConsumption = Math.max(normalizedWidth, normalizedHeight)
   const collisionBoundsNormalizedSpanSum = normalizedWidth + normalizedHeight
-  const collisionBoundsAreaMm2 = collisionBounds.width * collisionBounds.height
-  const collisionBoundsSpanMm = collisionBounds.width + collisionBounds.height
-  const collisionBoundsBottomMm = collisionBounds.minY
-  const collisionBoundsLeftMm = collisionBounds.minX
+  const collisionBoundsAreaMm2 = canonicalWidth * canonicalHeight
+  const collisionBoundsSpanMm = canonicalWidth + canonicalHeight
+  const collisionBoundsBottomMm = canonicalMinY
+  const collisionBoundsLeftMm = canonicalMinX
   const occupiedHullWasteRatio = deriveOccupiedHullWasteRatio(input.state)
 
   if (
@@ -447,15 +467,14 @@ const layoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
   scoreCriterion((score) => score.collisionBoundsNormalizedSpanSum),
   scoreCriterion((score) => score.collisionBoundsAreaMm2),
   scoreCriterion((score) => score.collisionBoundsSpanMm),
+  scoreCriterion((score) => score.collisionBoundsBottomMm),
+  scoreCriterion((score) => score.collisionBoundsLeftMm),
   // free area is almost constant when every placed polygon remains inside one sheet region
-  // so compact bounds must decide before minor Clipper-area quantization differences
+  // so compact bounds and symmetric lower-left anchoring decide before material diagnostics
   descendingScoreCriterion((score) => score.largestNetFreeMaterialRegionAreaMm2),
   scoreCriterion((score) => score.freeMaterialRegionCount),
   scoreCriterion((score) => score.freeMaterialHoleCount),
   scoreCriterion((score) => score.freeMaterialSliverMetric),
-  // lower-left is only a tie-break after all layout-quality criteria
-  scoreCriterion((score) => score.collisionBoundsBottomMm),
-  scoreCriterion((score) => score.collisionBoundsLeftMm),
   Order.mapInput(Order.Array(Order.String), (score) => score.placementOrder),
   Order.mapInput(Order.Array(Order.String), (score) => score.unplacedSourcePieceIds)
 ])

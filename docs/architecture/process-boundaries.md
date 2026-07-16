@@ -93,7 +93,10 @@ executed baseline or GA beam decode decision, including local fanout,
 deduplication, whole-layout scoring, and beam pruning. The worker drains both
 queues before completion and reports the decision-trace path and event count in
 `NestingHistorySummary`. Decision traces are diagnostic data, not replay frames,
-and are not streamed to the renderer.
+and are not streamed to the renderer. Per-decode registries replace repeated
+canonical chromosome, state, and candidate keys with compact deterministic ids,
+and the worker persists ordered bounded batches rather than appending each event
+separately.
 
 The main supervisor guards every streamed response by both request id and job
 id before forwarding it. The preload decodes each `progress`, `history_frame`,

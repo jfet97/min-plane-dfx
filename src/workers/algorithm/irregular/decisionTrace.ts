@@ -6,6 +6,44 @@ export interface IrregularDecisionTraceIdentity {
 
 type EventInput<Payload> = IrregularDecisionTraceIdentity & Payload
 
+class IrregularDecisionTraceIdRegistry {
+  private readonly idsByCanonicalKey = new Map<string, string>()
+  private nextId = 0
+
+  constructor(private readonly prefix: string) {}
+
+  idFor(canonicalKey: string): string {
+    const existing = this.idsByCanonicalKey.get(canonicalKey)
+    if (existing !== undefined) return existing
+
+    const id = `${this.prefix}${this.nextId.toString(36)}`
+    this.nextId += 1
+    this.idsByCanonicalKey.set(canonicalKey, id)
+    return id
+  }
+}
+
+/** Assigns collision-free short state ids in deterministic first-seen order. */
+export class IrregularDecisionTraceStateIdRegistry extends IrregularDecisionTraceIdRegistry {
+  constructor() {
+    super('s')
+  }
+}
+
+/** Assigns collision-free short candidate ids in deterministic first-seen order. */
+export class IrregularDecisionTraceCandidateIdRegistry extends IrregularDecisionTraceIdRegistry {
+  constructor() {
+    super('k')
+  }
+}
+
+/** Assigns collision-free short chromosome ids in deterministic first-seen order. */
+export class IrregularDecisionTraceChromosomeIdRegistry extends IrregularDecisionTraceIdRegistry {
+  constructor() {
+    super('c')
+  }
+}
+
 export abstract class IrregularDecisionTraceEventBase {
   readonly decodeId: string
   readonly chromosomeId: string
@@ -370,7 +408,6 @@ export class IrregularDecisionTraceSuccessorDeduplication
   readonly kind = 'successor_deduplication' as const
   readonly stepIndex: number
   readonly successorStateId: string
-  readonly deduplicationKey: string
   readonly decision: 'kept' | 'dropped'
   readonly reason: 'unique_successor' | 'preferred_dedup_representative' | 'duplicate_successor'
 
@@ -378,7 +415,6 @@ export class IrregularDecisionTraceSuccessorDeduplication
     input: EventInput<{
       readonly stepIndex: number
       readonly successorStateId: string
-      readonly deduplicationKey: string
       readonly decision: 'kept' | 'dropped'
       readonly reason:
         | 'unique_successor'
@@ -389,7 +425,6 @@ export class IrregularDecisionTraceSuccessorDeduplication
     super(input)
     this.stepIndex = input.stepIndex
     this.successorStateId = input.successorStateId
-    this.deduplicationKey = input.deduplicationKey
     this.decision = input.decision
     this.reason = input.reason
   }

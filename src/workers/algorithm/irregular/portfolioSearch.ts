@@ -23,6 +23,7 @@ import {
 } from '../../irregular/services.js'
 import { IrregularPlacementScorer } from './irregularPlacementScorer.js'
 import { IrregularLayoutScorer, type IrregularLayoutScore } from './irregularLayoutScorer.js'
+import { IrregularDecisionTraceChromosomeIdRegistry } from './decisionTrace.js'
 import type {
   EmitIrregularDecisionTrace,
   IrregularDecisionTraceIdentity
@@ -194,6 +195,10 @@ function runPortfolio(
         : new IrregularPortfolioMetricsCollector()
     const startedAtMs = Date.now()
     const settings = dependencies.settings
+    const decisionTraceChromosomeIds =
+      input.emitDecisionTrace === undefined
+        ? undefined
+        : new IrregularDecisionTraceChromosomeIdRegistry()
     const allPieceIds = input.pieces.map(preparedPieceId)
     const baselineOrder = yield* dependencies.priorityOrderService
       .buildPriorityOrder({ pieces: input.pieces, settings: settings.optimizer })
@@ -236,7 +241,8 @@ function runPortfolio(
 
     const runBeam = (
       chromosome: Chromosome,
-      decisionTraceIdentity: IrregularDecisionTraceIdentity,
+      decodeId: string,
+      decodeSource: IrregularDecisionTraceIdentity['decodeSource'],
       control: IrregularWindowedBeamControl | undefined = undefined
     ) =>
       decodeChromosome({
@@ -244,9 +250,15 @@ function runPortfolio(
         pieces: baselinePieces,
         chromosome,
         captureSnapshots: input.onStateSnapshot !== undefined,
-        decisionTraceIdentity,
-        ...(input.emitDecisionTrace !== undefined
-          ? { emitDecisionTrace: input.emitDecisionTrace }
+        ...(input.emitDecisionTrace !== undefined && decisionTraceChromosomeIds !== undefined
+          ? {
+              emitDecisionTrace: input.emitDecisionTrace,
+              decisionTraceIdentity: {
+                decodeId,
+                chromosomeId: decisionTraceChromosomeIds.idFor(chromosomeKey(chromosome)),
+                decodeSource
+              }
+            }
           : {}),
         ...(control !== undefined ? { control } : {}),
         dependencies
@@ -258,11 +270,8 @@ function runPortfolio(
     const baselineOutcome = yield* decodeWithOutcome(
       runBeam(
         baselineChromosome,
-        {
-          decodeId: 'baseline-0',
-          chromosomeId: chromosomeKey(baselineChromosome),
-          decodeSource: 'baseline'
-        },
+        'baseline-0',
+        'baseline',
         input.isCancelled === undefined ? undefined : { isCancelled: input.isCancelled }
       )
     )
@@ -364,11 +373,8 @@ function runPortfolio(
           const outcome = yield* decodeWithOutcome(
             runBeam(
               chromosome,
-              {
-                decodeId: `ga-${generation}-${evaluationsCompleted}`,
-                chromosomeId: key,
-                decodeSource: 'ga'
-              },
+              `ga-${generation}-${evaluationsCompleted}`,
+              'ga',
               {
                 deadlineMs: deadline.value(),
                 ...(input.isCancelled !== undefined ? { isCancelled: input.isCancelled } : {})
@@ -486,7 +492,7 @@ function decodeChromosome(input: {
   readonly captureSnapshots: boolean
   readonly control?: IrregularWindowedBeamControl
   readonly emitDecisionTrace?: EmitIrregularDecisionTrace
-  readonly decisionTraceIdentity: IrregularDecisionTraceIdentity
+  readonly decisionTraceIdentity?: IrregularDecisionTraceIdentity
   readonly dependencies: PortfolioDependencies
 }): Effect.Effect<
   EvaluatedChromosome,
@@ -521,7 +527,7 @@ function decodeChromosome(input: {
     options,
     ...(hooks !== undefined ? { hooks } : {}),
     ...(input.control !== undefined ? { control: input.control } : {}),
-    ...(input.emitDecisionTrace !== undefined
+    ...(input.emitDecisionTrace !== undefined && input.decisionTraceIdentity !== undefined
       ? {
           emitDecisionTrace: input.emitDecisionTrace,
           decisionTraceIdentity: input.decisionTraceIdentity

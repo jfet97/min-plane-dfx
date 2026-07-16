@@ -177,6 +177,7 @@ describe('computeIrregularNesting', () => {
     expect(events[0]).toMatchObject({
       kind: 'decode_started',
       decodeId: 'baseline-0',
+      chromosomeId: 'c0',
       decodeSource: 'baseline'
     })
     expect(events.at(-1)?.kind).toBe('decode_winner')

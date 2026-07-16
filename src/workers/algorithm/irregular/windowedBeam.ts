@@ -36,6 +36,7 @@ import {
   IrregularDecisionTraceBeamSelection,
   IrregularDecisionTraceBeamStepCompleted,
   IrregularDecisionTraceBeamStepStarted,
+  IrregularDecisionTraceCandidateIdRegistry,
   IrregularDecisionTraceDecodeStarted,
   IrregularDecisionTraceDecodeWinner,
   IrregularDecisionTraceEligiblePieces,
@@ -48,6 +49,7 @@ import {
   IrregularDecisionTraceSearchSettings,
   IrregularDecisionTraceSheet,
   IrregularDecisionTraceState,
+  IrregularDecisionTraceStateIdRegistry,
   IrregularDecisionTraceSuccessorDeduplication,
   IrregularDecisionTraceSuccessorLayoutScored,
   IrregularDecisionTraceTransform,
@@ -145,6 +147,8 @@ interface TaggedSuccessor {
 
 interface ActiveDecisionTrace extends IrregularDecisionTraceIdentity {
   readonly emit: EmitIrregularDecisionTrace
+  readonly stateIds: IrregularDecisionTraceStateIdRegistry
+  readonly candidateIds: IrregularDecisionTraceCandidateIdRegistry
 }
 
 const pieceIdArrayOrder: Order.Order<ReadonlyArray<PieceId>> = Order.Array(Order.String)
@@ -240,7 +244,7 @@ export function runWindowedIrregularBeam(input: {
       for (const [parentIndex, state] of beam.entries()) {
         yield* controlCheckpoint(input.control, controlState)
         const isIncumbent = state === incumbentState
-        const parentStateId = beamStateKey(state)
+        const parentStateId = decisionTrace?.stateIds.idFor(beamStateKey(state)) ?? ''
         decisionTrace?.emit(new IrregularDecisionTraceParentState({
           decodeId: decisionTrace.decodeId,
           chromosomeId: decisionTrace.chromosomeId,
@@ -248,7 +252,7 @@ export function runWindowedIrregularBeam(input: {
           stepIndex,
           parentRank: parentIndex + 1,
           incumbent: isIncumbent,
-          state: decisionTraceState(state)
+          state: decisionTraceState(state, decisionTrace)
         }))
         const eligibleCount = Math.min(
           settings.optimizer.orderWindow,
@@ -366,7 +370,7 @@ export function runWindowedIrregularBeam(input: {
       decodeId: decisionTrace.decodeId,
       chromosomeId: decisionTrace.chromosomeId,
       decodeSource: decisionTrace.decodeSource,
-      state: decisionTraceState(best.state),
+      state: decisionTraceState(best.state, decisionTrace),
       score: decisionTraceLayoutScore(best.score)
     }))
     return {
@@ -531,7 +535,10 @@ function collectLocalCandidates(input: {
           candidate,
           ...(input.options?.policyId !== undefined ? { policyId: input.options.policyId } : {})
         })
-        const traceCandidateId = `${localCandidateKey({ candidate, moving })}::${candidates.length}`
+        const traceCandidateId =
+          input.decisionTrace?.candidateIds.idFor(
+            `${localCandidateKey({ candidate, moving })}::${candidates.length}`
+          ) ?? ''
         candidates.push({ candidate, moving, score, traceCandidateId })
         input.decisionTrace?.emit(new IrregularDecisionTraceLocalCandidateScored({
           decodeId: input.decisionTrace.decodeId,
@@ -791,7 +798,7 @@ function scoreStates(
         chromosomeId: decisionTrace.chromosomeId,
         decodeSource: decisionTrace.decodeSource,
         stepIndex,
-        state: decisionTraceState(state),
+        state: decisionTraceState(state, decisionTrace),
         score: decisionTraceLayoutScore(score)
       }))
       yield* controlCheckpoint(control, controlState)
@@ -830,8 +837,7 @@ function dedupeRawSuccessors(
         chromosomeId: decisionTrace.chromosomeId,
         decodeSource: decisionTrace.decodeSource,
         stepIndex,
-        successorStateId: key,
-        deduplicationKey: key,
+        successorStateId: decisionTrace.stateIds.idFor(key),
         decision: kept ? 'kept' : 'dropped',
         reason:
           kept && countsByKey.get(key) === 1
@@ -892,7 +898,7 @@ function pruneScoredStates(
         chromosomeId: decisionTrace.chromosomeId,
         decodeSource: decisionTrace.decodeSource,
         stepIndex,
-        stateId: scoredState.key,
+        stateId: decisionTrace.stateIds.idFor(scoredState.key),
         rank: stateIndex + 1,
         decision: retainedState ? 'retained' : 'pruned',
         reason: protectedIncumbent
@@ -960,7 +966,9 @@ function makeActiveDecisionTrace(
     emit,
     decodeId: identity?.decodeId ?? 'direct-0',
     chromosomeId: identity?.chromosomeId ?? 'direct',
-    decodeSource: identity?.decodeSource ?? 'direct'
+    decodeSource: identity?.decodeSource ?? 'direct',
+    stateIds: new IrregularDecisionTraceStateIdRegistry(),
+    candidateIds: new IrregularDecisionTraceCandidateIdRegistry()
   }
 }
 
@@ -1007,9 +1015,12 @@ function decisionTraceLayoutScore(score: IrregularLayoutScore): IrregularDecisio
   })
 }
 
-function decisionTraceState(state: IrregularBeamState): IrregularDecisionTraceState {
+function decisionTraceState(
+  state: IrregularBeamState,
+  decisionTrace: ActiveDecisionTrace
+): IrregularDecisionTraceState {
   return new IrregularDecisionTraceState({
-    stateId: beamStateKey(state),
+    stateId: decisionTrace.stateIds.idFor(beamStateKey(state)),
     placementOrder: state.placementOrder,
     remainingPieceIds: state.remainingPreparedPieces.map(preparedPieceId),
     unplacedPieceIds: state.unplacedPieceIds

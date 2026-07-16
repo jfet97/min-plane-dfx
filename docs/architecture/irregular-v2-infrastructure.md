@@ -114,7 +114,10 @@ callback absent, so normal benchmark decodes do not construct trace events.
 The worker serializes these events as one JSON object per line in a separate
 `<jobId>.decision-trace.ndjson` file. Replay history remains the selected
 winning-state timeline used by the UI; the decision trace is a diagnostic audit
-of alternatives that disappeared before the winner was chosen.
+of alternatives that disappeared before the winner was chosen. Each decode uses
+compact deterministic chromosome, state, and candidate ids while retaining its
+decode id for correlation. The worker preserves event order while serializing
+bounded batches instead of issuing one filesystem append per event.
 
 The shipped interactive profile is intentionally narrow: `orderWindow = 1`,
 `beamWidth = 1`, local candidate fanout `= 4`, transform cap `= 16`, and GA
@@ -314,20 +317,27 @@ terminal legality-audit status, and the complete whole-layout score. The score
 is compared in this order:
 
 1. lower `unplacedCount`;
-2. lower `collisionBoundsWorstNormalizedSheetConsumption`;
-3. lower `collisionBoundsNormalizedSpanSum`;
-4. lower `collisionBoundsAreaMm2`;
-5. lower `collisionBoundsSpanMm`;
-6. lower collision-bound `minY`, then `minX`, to anchor equivalent layouts at lower-left;
-7. higher `largestNetFreeMaterialRegionAreaMm2`;
-8. lower `freeMaterialRegionCount`;
-9. lower `freeMaterialHoleCount`;
-10. lower `freeMaterialSliverMetric`.
+2. lower `occupiedHullWasteRatio`;
+3. lower `collisionBoundsWorstNormalizedSheetConsumption`;
+4. lower `collisionBoundsNormalizedSpanSum`;
+5. lower `collisionBoundsAreaMm2`;
+6. lower `collisionBoundsSpanMm`;
+7. lower collision-bound `minY`, then `minX`, to anchor equivalent layouts at lower-left;
+8. higher `largestNetFreeMaterialRegionAreaMm2`;
+9. lower `freeMaterialRegionCount`;
+10. lower `freeMaterialHoleCount`;
+11. lower `freeMaterialSliverMetric`.
 
 Collision-bound compactness intentionally comes before free-material diagnostics:
 when every piece stays within one connected sheet region, the total free area is
 nearly constant and small Clipper2 quantization differences must not steer the
-beam toward a looser cluster.
+beam toward a looser cluster. Collision-bound width, height, `minX`, and `minY`
+are first canonicalized to an explicit `0.001 mm` score grid. This removes
+floating subtraction noise that can otherwise make translated but identical
+layouts compare differently at large sheet coordinates; it is deterministic
+quantization at the existing collision-geometry precision, not an epsilon
+comparison. Lower-left anchoring then precedes free-material diagnostics so
+symmetric placement is not selected by fragmentation noise.
 
 Rows also include placement order and unplaced source ids for the scorer's
 final deterministic tie-breaks. A terminal audit failure makes the row invalid;
@@ -363,9 +373,10 @@ beam, and seeded GA/search portfolio:
 `src/workers/algorithm/irregular/irregularPlacementScorer.ts` owns the local
 candidate-policy score for candidates already accepted by NFP/IFP generation
 and direct validation. `irregularLayoutScorer.ts` owns a separate lexicographic
-whole-layout score for beam retention: unplaced count first, then free-material
-usability/fragmentation metrics and compact collision bounds. Free material is
-scoring-only and never accepts or rejects a placement. Before a beam step calls
+whole-layout score for beam retention: unplaced count first, then occupied-hull
+waste, compact collision bounds, lower-left anchoring, and free-material
+usability/fragmentation diagnostics. Free material is scoring-only and never
+accepts or rejects a placement. Before a beam step calls
 that expensive scorer, it deduplicates successor states by canonical occupied
 geometry and retains a deterministic representative. The run also retains its
 scored beam states. A bounded cache owned by the layout-scorer service reuses
