@@ -148,10 +148,14 @@ default to `vertex-pair-hull`; the linear edge-merge path is an explicit
 differential/experimental construction, not the current performance default,
 because safe translated-ring canonicalization can require an exact hull
 fallback. Every candidate still passes direct
-convex placement validation, which remains the legality authority. Reusable axis-aligned bounds
-skip only provably disjoint NFP-boundary pairs, point-in-NFP checks, and
-collision pairs; exact contacts and every non-disjoint case continue to robust
-predicate classification. `FreeMaterialServiceLive`
+convex placement validation, which remains the legality authority. Candidate
+generation indexes NFP boundaries and boundary segments using inclusive
+axis-aligned overlap, so it skips only pairs whose bounds prove that no contact
+can occur. Candidate points are canonicalized and deduplicated as they are
+collected, and points or boundary pairs outside the IFP bounds are discarded
+only when those bounds make them impossible candidates. Exact contacts and
+every non-disjoint case continue to robust predicate classification, followed
+by direct legality validation. `FreeMaterialServiceLive`
 computes the
 sheet-space difference between the sheet and the union of translated placed
 collision polygons through Clipper2's integer `Paths64` and `PolyTree64`

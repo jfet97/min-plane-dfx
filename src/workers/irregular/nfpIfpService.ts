@@ -41,11 +41,15 @@ import type { NfpConstructionAlgorithm } from './geometryCacheKeys.js'
 export { DEFAULT_NFP_CONSTRUCTION_ALGORITHM }
 export type { NfpConstructionAlgorithm }
 
+/** Selects the live indexed candidate path or the differential-test reference path. */
+export type NfpCandidatePruningMode = 'indexed' | 'reference'
+
 const ORIGIN: InternalPoint = { x: 0, y: 0 }
 
 /** Provides deterministic convex IFP bounds and outer NFP boundaries. */
 export function makeNfpIfpServiceLayer(
-  constructionAlgorithm: NfpConstructionAlgorithm = DEFAULT_NFP_CONSTRUCTION_ALGORITHM
+  constructionAlgorithm: NfpConstructionAlgorithm = DEFAULT_NFP_CONSTRUCTION_ALGORITHM,
+  candidatePruningMode: NfpCandidatePruningMode = 'indexed'
 ) {
   return Layer.effect(
     NfpIfpService,
@@ -56,7 +60,8 @@ export function makeNfpIfpServiceLayer(
         computeIfpBounds: (input) => computeIfpBoundsCached(input, geometryCache),
         generatePlacementCandidates: makeGeneratePlacementCandidates(
           geometryCache,
-          constructionAlgorithm
+          constructionAlgorithm,
+          candidatePruningMode
         )
       })
     })
@@ -67,9 +72,10 @@ export const NfpIfpServiceLayer = makeNfpIfpServiceLayer()
 
 /** Standalone service layer with a private deterministic cache for direct callers. */
 export function makeNfpIfpServiceLive(
-  constructionAlgorithm: NfpConstructionAlgorithm = DEFAULT_NFP_CONSTRUCTION_ALGORITHM
+  constructionAlgorithm: NfpConstructionAlgorithm = DEFAULT_NFP_CONSTRUCTION_ALGORITHM,
+  candidatePruningMode: NfpCandidatePruningMode = 'indexed'
 ) {
-  return makeNfpIfpServiceLayer(constructionAlgorithm).pipe(
+  return makeNfpIfpServiceLayer(constructionAlgorithm, candidatePruningMode).pipe(
     Layer.provideMerge(GeometryCacheInMemory)
   )
 }
@@ -607,7 +613,8 @@ function computeIfpBoundsValuesUncached(
 function generatePlacementCandidates(
   input: GeneratePlacementCandidatesInput,
   geometryCache: GeometryCache,
-  constructionAlgorithm: NfpConstructionAlgorithm
+  constructionAlgorithm: NfpConstructionAlgorithm,
+  candidatePruningMode: NfpCandidatePruningMode
 ): Effect.Effect<
   ReadonlyArray<IrregularPlacementCandidate>,
   IrregularGeometryInputError | IrregularNfpIfpControlAbortError
@@ -644,28 +651,45 @@ function generatePlacementCandidates(
           'NFP boundary bounds must be finite.'
         )
       }
+      const segments = polygonSegments(boundary)
       nfpBoundaries.push({
+        index: nfpBoundaries.length,
         boundary,
         winding: validation.winding,
         bounds,
-        segments: polygonSegments(boundary)
+        segments,
+        segmentIndex: new BoundsIndex(
+          segments.map((segment) => ({ value: segment, bounds: segment.bounds }))
+        )
       })
     }
 
     yield* nfpCheckpoint(input.control, 'ifp')
     const ifpSegments = rectangleSegments(ifp.bounds)
-    const pointsByKey = new Map<string, InternalPoint>()
-    for (const point of rectangleCorners(ifp.bounds)) addPoint(pointsByKey, point)
-    for (const boundary of nfpBoundaries) {
-      for (const point of boundary.boundary.points) addPoint(pointsByKey, point)
+    const points = makeCanonicalPointSet()
+    const allNfpIndex = new BoundsIndex(
+      nfpBoundaries.map((boundary) => ({ value: boundary, bounds: boundary.bounds }))
+    )
+    const candidateNfpBoundaries =
+      candidatePruningMode === 'indexed' ? allNfpIndex.query(ifp.bounds) : nfpBoundaries
+    const candidateNfpIndex = new BoundsIndex(
+      candidateNfpBoundaries.map((boundary) => ({ value: boundary, bounds: boundary.bounds }))
+    )
+    const candidateBounds = candidatePruningMode === 'indexed' ? ifp.bounds : undefined
+
+    for (const point of rectangleCorners(ifp.bounds)) addPoint(points, point, candidateBounds)
+    for (const boundary of candidateNfpBoundaries) {
+      for (const point of boundary.boundary.points) addPoint(points, point, candidateBounds)
     }
 
-    for (const boundary of nfpBoundaries) {
+    for (const boundary of candidateNfpBoundaries) {
       yield* nfpCheckpoint(input.control, 'ifp-boundary-intersection')
       const intersections = yield* addBoundaryIntersections(
-        pointsByKey,
+        points,
         ifpSegments,
         boundary.segments,
+        candidatePruningMode === 'indexed' ? boundary.segmentIndex : undefined,
+        candidateBounds,
         input.control,
         'ifp-boundary-intersection'
       )
@@ -674,45 +698,77 @@ function generatePlacementCandidates(
       }
     }
 
-    for (let firstIndex = 0; firstIndex < nfpBoundaries.length; firstIndex += 1) {
-      for (let secondIndex = firstIndex + 1; secondIndex < nfpBoundaries.length; secondIndex += 1) {
+    if (candidatePruningMode === 'indexed') {
+      for (const first of candidateNfpBoundaries) {
         yield* nfpCheckpoint(input.control, 'pairwise-nfp-boundary-intersection')
-        const first = nfpBoundaries[firstIndex]
-        if (first === undefined)
-          return yield* failInvalidGeometry('generatePlacementCandidates', 'NFP boundary is missing.')
-
-        const second = nfpBoundaries[secondIndex]
-        if (second === undefined)
-          return yield* failInvalidGeometry(
-            'generatePlacementCandidates',
-            'NFP boundary is missing.'
+        for (const second of candidateNfpIndex.query(first.bounds)) {
+          if (second.index <= first.index) continue
+          yield* nfpCheckpoint(input.control, 'pairwise-nfp-boundary-intersection')
+          const intersections = yield* addBoundaryIntersections(
+            points,
+            first.segments,
+            second.segments,
+            second.segmentIndex,
+            candidateBounds,
+            input.control,
+            'pairwise-nfp-boundary-intersection'
           )
+          if (intersections !== undefined) {
+            return yield* failInvalidGeometry('generatePlacementCandidates', intersections)
+          }
+        }
+      }
+    } else {
+      for (let firstIndex = 0; firstIndex < nfpBoundaries.length; firstIndex += 1) {
+        for (
+          let secondIndex = firstIndex + 1;
+          secondIndex < nfpBoundaries.length;
+          secondIndex += 1
+        ) {
+          yield* nfpCheckpoint(input.control, 'pairwise-nfp-boundary-intersection')
+          const first = nfpBoundaries[firstIndex]
+          if (first === undefined)
+            return yield* failInvalidGeometry('generatePlacementCandidates', 'NFP boundary is missing.')
 
-        if (areDisjoint(first.bounds, second.bounds)) continue
+          const second = nfpBoundaries[secondIndex]
+          if (second === undefined)
+            return yield* failInvalidGeometry(
+              'generatePlacementCandidates',
+              'NFP boundary is missing.'
+            )
 
-        const intersections = yield* addBoundaryIntersections(
-          pointsByKey,
-          first.segments,
-          second.segments,
-          input.control,
-          'pairwise-nfp-boundary-intersection'
-        )
-        if (intersections !== undefined) {
-          return yield* failInvalidGeometry('generatePlacementCandidates', intersections)
+          if (areDisjoint(first.bounds, second.bounds)) continue
+
+          const intersections = yield* addBoundaryIntersections(
+            points,
+            first.segments,
+            second.segments,
+            undefined,
+            undefined,
+            input.control,
+            'pairwise-nfp-boundary-intersection'
+          )
+          if (intersections !== undefined) {
+            return yield* failInvalidGeometry('generatePlacementCandidates', intersections)
+          }
         }
       }
     }
 
     const candidates: IrregularPlacementCandidate[] = []
-    const sortedPoints = [...pointsByKey.values()].sort(comparePoints)
+    const sortedPoints = [...points.points].sort(comparePoints)
     for (let pointIndex = 0; pointIndex < sortedPoints.length; pointIndex += 1) {
       if (pointIndex % 32 === 0)
         yield* nfpCheckpoint(input.control, 'candidate-points')
       const point = sortedPoints[pointIndex]
       if (point === undefined) continue
       if (!isInsideBounds(point, ifp.bounds)) continue
+      const boundariesForPoint =
+        candidatePruningMode === 'indexed'
+          ? candidateNfpIndex.query(pointBounds(point))
+          : nfpBoundaries
       if (
-        nfpBoundaries.some(
+        boundariesForPoint.some(
           ({ boundary, winding, bounds }) =>
             isInsideBounds(point, bounds) && isStrictlyInside(point, boundary, winding)
         )
@@ -742,7 +798,8 @@ function generatePlacementCandidates(
 
 function makeGeneratePlacementCandidates(
   geometryCache: GeometryCache,
-  constructionAlgorithm: NfpConstructionAlgorithm
+  constructionAlgorithm: NfpConstructionAlgorithm,
+  candidatePruningMode: NfpCandidatePruningMode
 ): NfpIfpService['generatePlacementCandidates'] {
   function service(
     input: GeneratePlacementCandidatesInput & { readonly control: IrregularNfpIfpControl }
@@ -759,22 +816,125 @@ function makeGeneratePlacementCandidates(
     ReadonlyArray<IrregularPlacementCandidate>,
     IrregularGeometryInputError | IrregularNfpIfpControlAbortError
   > {
-    return generatePlacementCandidates(input, geometryCache, constructionAlgorithm)
+    return generatePlacementCandidates(
+      input,
+      geometryCache,
+      constructionAlgorithm,
+      candidatePruningMode
+    )
   }
 
   return service
 }
 
+interface BoundsIndexEntry<T> {
+  readonly value: T
+  readonly bounds: InternalBounds
+}
+
+/** Indexes inclusive axis-aligned bounds without dropping boundary contacts. */
+class BoundsIndex<T> {
+  private readonly entries: ReadonlyArray<SortedBoundsIndexEntry<T>>
+  private readonly prefixMaxX: ReadonlyArray<number>
+
+  constructor(entries: ReadonlyArray<BoundsIndexEntry<T>>) {
+    this.entries = entries
+      .map((entry, sourceIndex) => ({ ...entry, sourceIndex }))
+      .toSorted(compareBoundsIndexEntries)
+
+    const prefixMaxX: number[] = []
+    let currentMaxX = Number.NEGATIVE_INFINITY
+    for (const entry of this.entries) {
+      currentMaxX = Math.max(currentMaxX, entry.bounds.maxX)
+      prefixMaxX.push(currentMaxX)
+    }
+    this.prefixMaxX = prefixMaxX
+  }
+
+  query(bounds: InternalBounds): ReadonlyArray<T> {
+    const firstIndex = lowerBoundAtLeast(this.prefixMaxX, bounds.minX)
+    const endIndex = upperBoundMinX(this.entries, bounds.maxX)
+    const matches: T[] = []
+
+    for (let index = firstIndex; index < endIndex; index += 1) {
+      const entry = this.entries[index]
+      if (entry !== undefined && !areDisjoint(entry.bounds, bounds)) {
+        matches.push(entry.value)
+      }
+    }
+
+    return matches
+  }
+}
+
+interface SortedBoundsIndexEntry<T> extends BoundsIndexEntry<T> {
+  readonly sourceIndex: number
+}
+
+function compareBoundsIndexEntries<T>(
+  first: SortedBoundsIndexEntry<T>,
+  second: SortedBoundsIndexEntry<T>
+): number {
+  if (first.bounds.minX !== second.bounds.minX) {
+    return first.bounds.minX - second.bounds.minX
+  }
+  if (first.bounds.maxX !== second.bounds.maxX) {
+    return first.bounds.maxX - second.bounds.maxX
+  }
+  if (first.bounds.minY !== second.bounds.minY) {
+    return first.bounds.minY - second.bounds.minY
+  }
+  if (first.bounds.maxY !== second.bounds.maxY) {
+    return first.bounds.maxY - second.bounds.maxY
+  }
+  return first.sourceIndex - second.sourceIndex
+}
+
+function lowerBoundAtLeast(values: ReadonlyArray<number>, target: number): number {
+  let start = 0
+  let end = values.length
+  while (start < end) {
+    const middle = Math.floor((start + end) / 2)
+    const value = values[middle]
+    if (value !== undefined && value < target) start = middle + 1
+    else end = middle
+  }
+  return start
+}
+
+function upperBoundMinX<T>(
+  entries: ReadonlyArray<SortedBoundsIndexEntry<T>>,
+  target: number
+): number {
+  let start = 0
+  let end = entries.length
+  while (start < end) {
+    const middle = Math.floor((start + end) / 2)
+    const entry = entries[middle]
+    if (entry !== undefined && entry.bounds.minX <= target) start = middle + 1
+    else end = middle
+  }
+  return start
+}
+
 interface Segment {
   readonly start: InternalPoint
   readonly end: InternalPoint
+  readonly bounds: InternalBounds
 }
 
 interface NfpBoundary {
+  readonly index: number
   readonly boundary: InternalPolygon
   readonly winding: -1 | 1
   readonly bounds: InternalBounds
   readonly segments: ReadonlyArray<Segment>
+  readonly segmentIndex: BoundsIndex<Segment>
+}
+
+interface CanonicalPointSet {
+  readonly keys: Set<string>
+  readonly points: InternalPoint[]
 }
 
 interface SegmentIntersection {
@@ -813,27 +973,53 @@ function polygonSegments(polygon: InternalPolygon): ReadonlyArray<Segment> {
   for (let index = 0; index < polygon.points.length; index += 1) {
     const start = polygon.points[index]
     const end = polygon.points[(index + 1) % polygon.points.length]
-    if (start !== undefined && end !== undefined) segments.push({ start, end })
+    if (start !== undefined && end !== undefined) {
+      segments.push({ start, end, bounds: segmentBounds(start, end) })
+    }
   }
   return segments
 }
 
+function segmentBounds(first: InternalPoint, second: InternalPoint): InternalBounds {
+  return {
+    minX: Math.min(first.x, second.x),
+    minY: Math.min(first.y, second.y),
+    maxX: Math.max(first.x, second.x),
+    maxY: Math.max(first.y, second.y)
+  }
+}
+
 function addBoundaryIntersections(
-  pointsByKey: Map<string, InternalPoint>,
+  points: CanonicalPointSet,
   firstSegments: ReadonlyArray<Segment>,
   secondSegments: ReadonlyArray<Segment>,
+  secondSegmentIndex: BoundsIndex<Segment> | undefined,
+  candidateBounds: InternalBounds | undefined,
   control: IrregularNfpIfpControl | undefined,
   phase: IrregularNfpIfpCheckpointPhase
 ): Effect.Effect<string | undefined, IrregularNfpIfpControlAbortError> {
   return Effect.gen(function* () {
-    let pairIndex = 0
     for (const first of firstSegments) {
-      for (const second of secondSegments) {
+      const firstQueryBounds =
+        candidateBounds === undefined
+          ? first.bounds
+          : intersectionBounds(first.bounds, candidateBounds)
+      if (firstQueryBounds === undefined) continue
+
+      const possibleSecondSegments =
+        secondSegmentIndex === undefined
+          ? secondSegments
+          : secondSegmentIndex.query(firstQueryBounds)
+      let pairIndex = 0
+      for (const second of possibleSecondSegments) {
         if (pairIndex % 32 === 0) yield* nfpCheckpoint(control, phase)
         pairIndex += 1
+        if (candidateBounds !== undefined && areDisjoint(second.bounds, candidateBounds)) {
+          continue
+        }
         const intersection = intersectSegments(first, second)
         if ('message' in intersection) return intersection.message
-        for (const point of intersection.points) addPoint(pointsByKey, point)
+        for (const point of intersection.points) addPoint(points, point, candidateBounds)
       }
     }
     return undefined
@@ -908,18 +1094,45 @@ function pointIsOnSegment(point: InternalPoint, segment: Segment): boolean {
   )
 }
 
-function addPoint(pointsByKey: Map<string, InternalPoint>, point: InternalPoint): void {
+function makeCanonicalPointSet(): CanonicalPointSet {
+  return { keys: new Set<string>(), points: [] }
+}
+
+function addPoint(
+  points: CanonicalPointSet,
+  point: InternalPoint,
+  candidateBounds: InternalBounds | undefined
+): void {
   const canonicalPoint: InternalPoint = {
     x: normalizeNegativeZero(point.x),
     y: normalizeNegativeZero(point.y)
   }
+  if (candidateBounds !== undefined && !isInsideBounds(canonicalPoint, candidateBounds)) return
   const key = `${canonicalPoint.x}:${canonicalPoint.y}`
-  if (!pointsByKey.has(key)) pointsByKey.set(key, canonicalPoint)
+  if (points.keys.has(key)) return
+  points.keys.add(key)
+  points.points.push(canonicalPoint)
 }
 
 function comparePoints(first: InternalPoint, second: InternalPoint): number {
   if (first.y !== second.y) return first.y - second.y
   return first.x - second.x
+}
+
+function pointBounds(point: InternalPoint): InternalBounds {
+  return { minX: point.x, minY: point.y, maxX: point.x, maxY: point.y }
+}
+
+function intersectionBounds(
+  first: InternalBounds,
+  second: InternalBounds
+): InternalBounds | undefined {
+  const minX = Math.max(first.minX, second.minX)
+  const minY = Math.max(first.minY, second.minY)
+  const maxX = Math.min(first.maxX, second.maxX)
+  const maxY = Math.min(first.maxY, second.maxY)
+  if (minX > maxX || minY > maxY) return undefined
+  return { minX, minY, maxX, maxY }
 }
 
 function isInsideBounds(point: InternalPoint, bounds: InternalBounds): boolean {

@@ -19,6 +19,7 @@ import {
 } from '@shared/irregular/defaults.js'
 import type {
   NfpBoundaryConstructionResult,
+  NfpCandidatePruningMode,
   NfpConstructionAlgorithm
 } from '../../src/workers/irregular/nfpIfpService.js'
 import {
@@ -42,6 +43,7 @@ import {
   IrregularNfpIfpControlAbortError,
   NfpIfpService
 } from '../../src/workers/irregular/services.js'
+import { PlacementValidation } from '../../src/workers/irregular/placementValidation.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -204,6 +206,17 @@ function generateCandidatesWithConstruction(
   return Effect.runPromise(
     NfpIfpService.use((service) => service.generatePlacementCandidates(input)).pipe(
       Effect.provide(makeNfpIfpServiceLive(constructionAlgorithm))
+    )
+  )
+}
+
+function generateCandidatesWithPruning(
+  input: GeneratePlacementCandidatesInput,
+  candidatePruningMode: NfpCandidatePruningMode
+) {
+  return Effect.runPromise(
+    NfpIfpService.use((service) => service.generatePlacementCandidates(input)).pipe(
+      Effect.provide(makeNfpIfpServiceLive('vertex-pair-hull', candidatePruningMode))
     )
   )
 }
@@ -556,6 +569,93 @@ describe('NfpIfpServiceLive', () => {
 
     expect(linearCandidates.length).toBeGreaterThan(0)
     expect(linearCandidates).toEqual(referenceCandidates)
+  })
+
+  it('preserves exact candidate sets and direct legality with indexed NFP pruning', async () => {
+    const squareMoving = transformedGeometry('moving-index-parity-square', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const firstFixed = placedPiece(
+      'fixed-index-parity-first',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      4,
+      4
+    )
+    const secondFixed = placedPiece(
+      'fixed-index-parity-second',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      7,
+      2
+    )
+    const asymmetricPoints = [
+      point(-3, -1),
+      point(0, -3),
+      point(4, -2),
+      point(5, 1),
+      point(2, 4),
+      point(-2, 3)
+    ]
+    const asymmetricMoving = transformedGeometry(
+      'moving-index-parity-asymmetric',
+      asymmetricPoints,
+      bounds(asymmetricPoints),
+      transform(3, 67, true)
+    )
+    const asymmetricFixed = placedPiece(
+      'fixed-index-parity-asymmetric',
+      asymmetricPoints,
+      12,
+      10,
+      transform(5, 29, false)
+    )
+    const cases: ReadonlyArray<GeneratePlacementCandidatesInput> = [
+      {
+        sheet: sheet(10, 10),
+        placed: [],
+        moving: squareMoving,
+        settings: DEFAULT_IRREGULAR_NESTING_SETTINGS
+      },
+      {
+        sheet: sheet(10, 10),
+        placed: [firstFixed, secondFixed],
+        moving: squareMoving,
+        settings: DEFAULT_IRREGULAR_NESTING_SETTINGS
+      },
+      {
+        sheet: sheet(40, 40),
+        placed: [asymmetricFixed],
+        moving: asymmetricMoving,
+        settings: DEFAULT_IRREGULAR_NESTING_SETTINGS
+      }
+    ]
+
+    for (const input of cases) {
+      const referenceCandidates = await generateCandidatesWithPruning(input, 'reference')
+      const indexedCandidates = await generateCandidatesWithPruning(input, 'indexed')
+
+      expect(indexedCandidates).toEqual(referenceCandidates)
+      const candidateKeys = indexedCandidates.map(
+        ({ point: candidatePoint }) => `${candidatePoint.x}:${candidatePoint.y}`
+      )
+      expect(new Set(candidateKeys).size).toBe(indexedCandidates.length)
+
+      const legality = await Promise.all(
+        indexedCandidates.map((candidate) =>
+          Effect.runPromise(
+            PlacementValidation.check({
+              sheet: input.sheet,
+              placed: input.placed,
+              moving: input.moving,
+              candidate
+            })
+          )
+        )
+      )
+      expect(legality.every((isLegal) => isLegal)).toBe(true)
+    }
   })
 
   it('rejects an IFP when the transformed polygon cannot fit', async () => {
