@@ -922,8 +922,12 @@ describe('NfpIfpServiceLive', () => {
     expect(candidatePoints(candidates)).toEqual([
       point(0, 0),
       point(5, 0),
+      point(7, 0),
       point(8, 0),
+      point(5, 2),
+      point(5, 4),
       point(5, 6),
+      point(7, 6),
       point(8, 6),
       point(0, 8),
       point(8, 8)
@@ -960,12 +964,17 @@ describe('NfpIfpServiceLive', () => {
     expect(candidatePoints(candidates)).toEqual([
       point(0, 0),
       point(5, 0),
+      point(7, 0),
       point(8, 0),
       point(2, 2),
+      point(4, 2),
       point(5, 2),
+      point(2, 4),
       point(6, 4),
+      point(7, 4),
       point(8, 4),
       point(2, 6),
+      point(4, 6),
       point(6, 6),
       point(0, 8),
       point(8, 8)
