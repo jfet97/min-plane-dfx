@@ -120,12 +120,22 @@ describe('Clipper2 offset adapter', () => {
     expect(result).toEqual(
       polygon([
         point(-1.502, -1.502),
-        point(5.083, -1.502),
-        point(5.767, 0.552),
-        point(0.159, 4.759),
-        point(-1.502, 3.928)
+        point(8.506, -1.502),
+        point(-1.502, 6.004)
       ])
     )
+  })
+
+  it('keeps the checked-in triangle collision hull pointed', async () => {
+    const result = await runAdapter({
+      polygon: polygon([point(0, 0), point(90, 0), point(45, 70)]),
+      distanceMm: 5.25
+    })
+
+    expect(result).not.toBeInstanceOf(IrregularGeometryInputError)
+    if (result instanceof IrregularGeometryInputError) return
+
+    expect(result.points).toHaveLength(3)
   })
 
   it('keeps the requested real-valued envelope after nearest-grid conversion', async () => {

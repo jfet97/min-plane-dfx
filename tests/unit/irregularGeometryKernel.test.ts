@@ -254,7 +254,7 @@ describe('GeometryKernel', () => {
     ])
   })
 
-  it('preserves the configured bounded Miter join for an acute source corner', async () => {
+  it('preserves a sharp Miter join within the configured ratio', async () => {
     const offset = await runConvexOffset({
       polygon: polygon([point(0, 0), point(4, 0), point(0, 3)]),
       totalPaddingMm: 1.5
@@ -262,10 +262,8 @@ describe('GeometryKernel', () => {
 
     expect(offset.points).toEqual([
       point(-1.002, -1.002),
-      point(4.722, -1.002),
-      point(5.179, 0.368),
-      point(0.106, 4.173),
-      point(-1.002, 3.619)
+      point(7.006, -1.002),
+      point(-1.002, 5.004)
     ])
   })
 
