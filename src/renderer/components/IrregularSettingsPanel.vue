@@ -118,9 +118,6 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
   updateOptimizer({ placementPolicyIds: nextPolicyIds, placementPolicyId: nextPlacementPolicyId })
 }
 
-function restoreSafeProfile(): void {
-  emit('update', makeDefaultIrregularNestingSettings())
-}
 </script>
 
 <template>
@@ -128,17 +125,9 @@ function restoreSafeProfile(): void {
     <div class="mode-summary">
       <strong>Convex polygon nesting</strong>
       <p>
-        DXF outlines are flattened, reduced to conservative convex collision polygons, then placed
-        with NFP/IFP geometry. The deterministic profile is intentionally narrow so it returns a
-        result before a portfolio search is enabled.
+        Uses source outlines to build conservative convex collision polygons. The geometry, beam,
+        and portfolio controls below apply only to this algorithm.
       </p>
-      <button
-        type="button"
-        title="Restores the measured deterministic first-result profile."
-        @click="restoreSafeProfile"
-      >
-        Restore safe profile
-      </button>
     </div>
 
     <h3>Geometry</h3>

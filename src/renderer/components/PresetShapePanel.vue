@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useAppStore } from '../composables/useAppStore.js'
 import { makePresetShapeDocument, type PresetShapeKind } from '@shared/presetShapes.js'
 
@@ -28,6 +28,7 @@ const form = reactive({
   topWidth: 60,
   label: ''
 })
+const errorMessage = ref<string | null>(null)
 
 const primaryDimensionLabel = computed(() => {
   if (form.kind === 'circle') return 'Diameter'
@@ -77,6 +78,7 @@ function setTopWidth(value: number): void {
 }
 
 async function addPreset(): Promise<void> {
+  errorMessage.value = null
   const document = makePresetShapeDocument({
     kind: form.kind,
     width: form.width,
@@ -88,14 +90,17 @@ async function addPreset(): Promise<void> {
     await store.appendPresetDocument(document)
   } catch (error) {
     console.error('[presets] failed to persist source shape:', error)
+    errorMessage.value = error instanceof Error ? error.message : String(error)
   }
 }
 </script>
 
 <template>
   <div class="preset-panel">
+    <strong>Built-in shape</strong>
+    <p class="preset-help">For any other outline, import a DXF above.</p>
     <label title="Parametric shape inserted as one source object in the cut list.">
-      Shape
+      Preset
       <select :value="form.kind" @change="setKind">
         <option v-for="option in options" :key="option.kind" :value="option.kind">
           {{ option.label }}
@@ -162,8 +167,9 @@ async function addPreset(): Promise<void> {
       title="Add this preset as a reusable source shape."
       @click="void addPreset()"
     >
-      Add preset
+      Add shape
     </button>
+    <p v-if="errorMessage" class="preset-error" role="alert">Could not add shape: {{ errorMessage }}</p>
   </div>
 </template>
 
@@ -195,6 +201,24 @@ async function addPreset(): Promise<void> {
   flex-direction: column;
   gap: 3px;
   font-size: 12px;
+}
+
+.preset-panel strong {
+  font-size: 12px;
+}
+
+.preset-help,
+.preset-error {
+  margin: 0;
+  font-size: 12px;
+}
+
+.preset-help {
+  color: var(--text-secondary);
+}
+
+.preset-error {
+  color: var(--error);
 }
 
 .preset-panel input,

@@ -1206,7 +1206,7 @@ async function loadCurrentHistoryReplay(): Promise<void> {
     </template>
 
     <template #settings>
-      <SheetSettingsPanel />
+      <SheetSettingsPanel :show-source-controls="true" />
       <CsvImportPanel
         ref="csvImportPanelRef"
         @run-csv="runCsvSession"

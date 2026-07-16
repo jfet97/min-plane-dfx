@@ -178,6 +178,7 @@ function setLayoutSelectionStrategyId(event: Event): void {
 
     <template v-if="showSourceControls">
       <h3>Source shapes</h3>
+      <p class="hint">Add a built-in shape below, or import any custom closed outline as a DXF.</p>
       <FileDropZone />
       <PresetShapePanel />
     </template>
