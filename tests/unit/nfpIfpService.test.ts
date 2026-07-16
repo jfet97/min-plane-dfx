@@ -138,6 +138,10 @@ function generateCandidates(input: GeneratePlacementCandidatesInput) {
   )
 }
 
+function generateCandidatesEffect(input: GeneratePlacementCandidatesInput) {
+  return NfpIfpService.use((service) => service.generatePlacementCandidates(input))
+}
+
 interface CacheCounters {
   gets: number
   sets: number
@@ -676,14 +680,18 @@ describe('NfpIfpServiceLive', () => {
         }
       }
     }
-    const controlledEffect = NfpIfpService.use((service) =>
-      service.generatePlacementCandidates(controlledInput)
-    )
+    type ControlledCandidateError = Effect.Error<
+      ReturnType<typeof generateCandidatesEffect>
+    >
     expectTypeOf<IrregularNfpIfpControlAbortError>().toMatchTypeOf<
-      Effect.Error<typeof controlledEffect>
+      ControlledCandidateError
     >()
 
-    const failure = await captureFailure(generateCandidates(controlledInput))
+    const failure = await captureFailure(
+      Effect.runPromise(
+        generateCandidatesEffect(controlledInput).pipe(Effect.provide(NfpIfpServiceLive))
+      )
+    )
 
     expect(failure).toBeInstanceOf(IrregularNfpIfpControlAbortError)
     expect(phases).toContain('placed-nfp')
