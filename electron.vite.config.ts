@@ -24,7 +24,8 @@ export default defineConfig({
     }
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
+    // bundle Effect because sandboxed preloads cannot resolve app dependencies at runtime
+    plugins: [externalizeDepsPlugin({ exclude: ['effect'] })],
     build: {
       rollupOptions: {
         input: {
