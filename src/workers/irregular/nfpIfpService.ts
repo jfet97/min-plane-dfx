@@ -613,13 +613,12 @@ function generatePlacementCandidates(
     }
 
     for (let firstIndex = 0; firstIndex < nfpBoundaries.length; firstIndex += 1) {
-      yield* nfpCheckpoint(input.control, 'pairwise-nfp-boundary-intersection')
-      const first = nfpBoundaries[firstIndex]
-      if (first === undefined)
-        return yield* failInvalidGeometry('generatePlacementCandidates', 'NFP boundary is missing.')
-
       for (let secondIndex = firstIndex + 1; secondIndex < nfpBoundaries.length; secondIndex += 1) {
         yield* nfpCheckpoint(input.control, 'pairwise-nfp-boundary-intersection')
+        const first = nfpBoundaries[firstIndex]
+        if (first === undefined)
+          return yield* failInvalidGeometry('generatePlacementCandidates', 'NFP boundary is missing.')
+
         const second = nfpBoundaries[secondIndex]
         if (second === undefined)
           return yield* failInvalidGeometry(
