@@ -21,8 +21,11 @@ import {
 } from '@shared/irregular/domain.js'
 import {
   FreeMaterialService,
-  type ComputeFreeMaterialInput
+  IrregularGeometryInputError,
+  type ComputeFreeMaterialInput,
+  type ExtendFreeMaterialInput
 } from '../../src/workers/irregular/services.js'
+import { createFreeMaterialService } from '../../src/workers/irregular/freeMaterialService.js'
 import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
 import {
   IrregularLayoutScorer,
@@ -182,7 +185,8 @@ function materialSnapshot(
   snapshot: FreeMaterialSnapshot
 ): Layer.Layer<IrregularLayoutScorer, never, GeometrySettings> {
   const service = Layer.succeed(FreeMaterialService, {
-    computeFreeMaterial: (_input: ComputeFreeMaterialInput) => Effect.succeed(snapshot)
+    computeFreeMaterial: (_input: ComputeFreeMaterialInput) => Effect.succeed(snapshot),
+    extendFreeMaterial: (_input) => Effect.succeed(snapshot)
   })
   return IrregularLayoutScorer.Layer.pipe(Layer.provide(service))
 }
@@ -191,7 +195,11 @@ async function makeScorer(
   computeFreeMaterial: (input: ComputeFreeMaterialInput) => Effect.Effect<FreeMaterialSnapshot>,
   settingsLayer: Layer.Layer<GeometrySettings, never, never> = GeometrySettings.Live
 ): Promise<IrregularLayoutScorer.Service> {
-  const service = Layer.succeed(FreeMaterialService, { computeFreeMaterial })
+  const defaultFreeMaterialService = createFreeMaterialService('union-then-difference')
+  const service = Layer.succeed(FreeMaterialService, {
+    computeFreeMaterial,
+    extendFreeMaterial: defaultFreeMaterialService.extendFreeMaterial
+  })
   return Effect.runPromise(
     IrregularLayoutScorer.use((scorer) => Effect.succeed(scorer)).pipe(
       Effect.provide(IrregularLayoutScorer.Layer.pipe(Layer.provide(service))),
@@ -384,6 +392,132 @@ describe('IrregularLayoutScorer', () => {
     expect(second.placementOrder).toEqual([PieceId.make('second')])
     expect(second.unplacedSourcePieceIds).toEqual([PieceId.make('unplaced')])
     expect(second.unplacedCount).toBe(1)
+  })
+
+  it('extends a cached parent snapshot and preserves independent full score metrics', async () => {
+    const fullService = createFreeMaterialService('union-then-difference')
+    let fullCalls = 0
+    let incrementalCalls = 0
+    const service = Layer.succeed(FreeMaterialService, {
+      computeFreeMaterial: (value: ComputeFreeMaterialInput) => {
+        fullCalls += 1
+        return fullService.computeFreeMaterial(value)
+      },
+      extendFreeMaterial: (value: ExtendFreeMaterialInput) => {
+        incrementalCalls += 1
+        return fullService.extendFreeMaterial(value)
+      }
+    })
+    const scorer = await Effect.runPromise(
+      IrregularLayoutScorer.use((instance) => Effect.succeed(instance)).pipe(
+        Effect.provide(IrregularLayoutScorer.Layer.pipe(Layer.provide(service))),
+        Effect.provide(GeometrySettings.Live)
+      )
+    )
+    const parent = state([placedRectangle('parent', 2, 2, 2, 2)])
+    const child = parent.withPlacement({
+      remainingPreparedPieces: [],
+      placedCollisionGeometry: placedRectangle('child', 2, 2, 6, 4),
+      placementOrderPieceId: PieceId.make('child')
+    })
+
+    await scoreWithService(scorer, input(parent))
+    const incrementalScore = await scoreWithService(scorer, input(child))
+    const independentFullScore = await score(input(state(child.placedCollisionGeometries)))
+
+    expect(fullCalls).toBe(1)
+    expect(incrementalCalls).toBe(1)
+    expect(incrementalScore.freeMaterialSnapshot).toEqual(independentFullScore.freeMaterialSnapshot)
+    expect({
+      unplacedCount: incrementalScore.unplacedCount,
+      largestNetFreeMaterialRegionAreaMm2: incrementalScore.largestNetFreeMaterialRegionAreaMm2,
+      freeMaterialRegionCount: incrementalScore.freeMaterialRegionCount,
+      freeMaterialHoleCount: incrementalScore.freeMaterialHoleCount,
+      freeMaterialSliverMetric: incrementalScore.freeMaterialSliverMetric,
+      collisionBoundsWorstNormalizedSheetConsumption:
+        incrementalScore.collisionBoundsWorstNormalizedSheetConsumption,
+      collisionBoundsNormalizedSpanSum: incrementalScore.collisionBoundsNormalizedSpanSum,
+      collisionBoundsAreaMm2: incrementalScore.collisionBoundsAreaMm2,
+      collisionBoundsSpanMm: incrementalScore.collisionBoundsSpanMm
+    }).toEqual({
+      unplacedCount: independentFullScore.unplacedCount,
+      largestNetFreeMaterialRegionAreaMm2: independentFullScore.largestNetFreeMaterialRegionAreaMm2,
+      freeMaterialRegionCount: independentFullScore.freeMaterialRegionCount,
+      freeMaterialHoleCount: independentFullScore.freeMaterialHoleCount,
+      freeMaterialSliverMetric: independentFullScore.freeMaterialSliverMetric,
+      collisionBoundsWorstNormalizedSheetConsumption:
+        independentFullScore.collisionBoundsWorstNormalizedSheetConsumption,
+      collisionBoundsNormalizedSpanSum: independentFullScore.collisionBoundsNormalizedSpanSum,
+      collisionBoundsAreaMm2: independentFullScore.collisionBoundsAreaMm2,
+      collisionBoundsSpanMm: independentFullScore.collisionBoundsSpanMm
+    })
+  })
+
+  it('falls back to full material computation when incremental extension fails', async () => {
+    const fullService = createFreeMaterialService('union-then-difference')
+    let fullCalls = 0
+    let incrementalCalls = 0
+    const service = Layer.succeed(FreeMaterialService, {
+      computeFreeMaterial: (value: ComputeFreeMaterialInput) => {
+        fullCalls += 1
+        return fullService.computeFreeMaterial(value)
+      },
+      extendFreeMaterial: (_value: ExtendFreeMaterialInput) => {
+        incrementalCalls += 1
+        return Effect.fail(
+          new IrregularGeometryInputError({
+            operation: 'extendFreeMaterial',
+            message: 'incremental geometry failed'
+          })
+        )
+      }
+    })
+    const scorer = await Effect.runPromise(
+      IrregularLayoutScorer.use((instance) => Effect.succeed(instance)).pipe(
+        Effect.provide(IrregularLayoutScorer.Layer.pipe(Layer.provide(service))),
+        Effect.provide(GeometrySettings.Live)
+      )
+    )
+    const parent = state([placedRectangle('parent-fallback', 2, 2, 2, 2)])
+    const child = parent.withPlacement({
+      remainingPreparedPieces: [],
+      placedCollisionGeometry: placedRectangle('child-fallback', 2, 2, 6, 4),
+      placementOrderPieceId: PieceId.make('child-fallback')
+    })
+
+    await scoreWithService(scorer, input(parent))
+    const fallbackScore = await scoreWithService(scorer, input(child))
+    const independentFullScore = await score(input(state(child.placedCollisionGeometries)))
+
+    expect(fullCalls).toBe(2)
+    expect(incrementalCalls).toBe(1)
+    expect(fallbackScore.freeMaterialSnapshot).toEqual(
+      independentFullScore.freeMaterialSnapshot
+    )
+    expect({
+      unplacedCount: fallbackScore.unplacedCount,
+      largestNetFreeMaterialRegionAreaMm2: fallbackScore.largestNetFreeMaterialRegionAreaMm2,
+      freeMaterialRegionCount: fallbackScore.freeMaterialRegionCount,
+      freeMaterialHoleCount: fallbackScore.freeMaterialHoleCount,
+      freeMaterialSliverMetric: fallbackScore.freeMaterialSliverMetric,
+      collisionBoundsWorstNormalizedSheetConsumption:
+        fallbackScore.collisionBoundsWorstNormalizedSheetConsumption,
+      collisionBoundsNormalizedSpanSum: fallbackScore.collisionBoundsNormalizedSpanSum,
+      collisionBoundsAreaMm2: fallbackScore.collisionBoundsAreaMm2,
+      collisionBoundsSpanMm: fallbackScore.collisionBoundsSpanMm
+    }).toEqual({
+      unplacedCount: independentFullScore.unplacedCount,
+      largestNetFreeMaterialRegionAreaMm2:
+        independentFullScore.largestNetFreeMaterialRegionAreaMm2,
+      freeMaterialRegionCount: independentFullScore.freeMaterialRegionCount,
+      freeMaterialHoleCount: independentFullScore.freeMaterialHoleCount,
+      freeMaterialSliverMetric: independentFullScore.freeMaterialSliverMetric,
+      collisionBoundsWorstNormalizedSheetConsumption:
+        independentFullScore.collisionBoundsWorstNormalizedSheetConsumption,
+      collisionBoundsNormalizedSpanSum: independentFullScore.collisionBoundsNormalizedSpanSum,
+      collisionBoundsAreaMm2: independentFullScore.collisionBoundsAreaMm2,
+      collisionBoundsSpanMm: independentFullScore.collisionBoundsSpanMm
+    })
   })
 
   it('keeps occupancy identity independent of placement order and extends bounds incrementally', () => {

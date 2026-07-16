@@ -17,9 +17,11 @@ import {
   IrregularPoint,
   IrregularPolygon
 } from '@shared/irregular/domain.js'
+import type { SheetSpec } from '@shared/domain/nesting.js'
 import type { IrregularPlacedPiece } from '@shared/irregular/domain.js'
 import {
   ComputeFreeMaterialInput,
+  ExtendFreeMaterialInput,
   FreeMaterialService,
   IrregularGeometryInputError
 } from './services.js'
@@ -38,7 +40,9 @@ export const FreeMaterialServiceLive = Layer.succeed(
 export function createFreeMaterialService(operation: FreeMaterialOperation): FreeMaterialService {
   return {
     computeFreeMaterial: (input) =>
-      decodeInput(input).pipe(Effect.flatMap((decoded) => deriveFreeMaterial(decoded, operation)))
+      decodeInput(input).pipe(Effect.flatMap((decoded) => deriveFreeMaterial(decoded, operation))),
+    extendFreeMaterial: (input) =>
+      decodeExtendInput(input).pipe(Effect.flatMap((decoded) => deriveExtendedFreeMaterial(decoded)))
   }
 }
 
@@ -56,11 +60,25 @@ function decodeInput(
   return Effect.succeed(decoded.value)
 }
 
+function decodeExtendInput(
+  input: ExtendFreeMaterialInput
+): Effect.Effect<ExtendFreeMaterialInput, IrregularGeometryInputError> {
+  const decoded = Schema.decodeUnknownExit(ExtendFreeMaterialInput)(input)
+  if (Exit.isFailure(decoded)) {
+    return failInvalidGeometry(
+      'extendFreeMaterial',
+      'incremental free-material input must satisfy its schema.'
+    )
+  }
+
+  return Effect.succeed(decoded.value)
+}
+
 function deriveFreeMaterial(
   input: ComputeFreeMaterialInput,
   operation: FreeMaterialOperation
 ): Effect.Effect<FreeMaterialSnapshot, IrregularGeometryInputError> {
-  const sheetPath = toSheetPath(input)
+  const sheetPath = toSheetPath(input.sheet)
   if ('message' in sheetPath) return failInvalidGeometry('computeFreeMaterial', sheetPath.message)
 
   const occupiedPaths: Path64[] = []
@@ -75,30 +93,65 @@ function deriveFreeMaterial(
     occupiedPaths.push(path.path)
   }
 
+  const occupiedClip = prepareOccupiedClip(operation, occupiedPaths)
+  if ('message' in occupiedClip)
+    return failInvalidGeometry('computeFreeMaterial', occupiedClip.message)
+
+  return deriveSnapshotFromDifference(
+    input.sheet,
+    [sheetPath.path],
+    occupiedClip.paths,
+    'computeFreeMaterial'
+  )
+}
+
+function deriveExtendedFreeMaterial(
+  input: ExtendFreeMaterialInput
+): Effect.Effect<FreeMaterialSnapshot, IrregularGeometryInputError> {
+  const sheetPath = toSheetPath(input.parent.sheet)
+  if ('message' in sheetPath) return failInvalidGeometry('extendFreeMaterial', sheetPath.message)
+
+  const materialPaths = toMaterialPaths(input.parent)
+  if ('message' in materialPaths)
+    return failInvalidGeometry('extendFreeMaterial', materialPaths.message)
+
+  const placedPath = toPlacedPath(input.placed, 0)
+  if ('message' in placedPath) return failInvalidGeometry('extendFreeMaterial', placedPath.message)
+
+  return deriveSnapshotFromDifference(
+    input.parent.sheet,
+    materialPaths.paths,
+    [placedPath.path],
+    'extendFreeMaterial'
+  )
+}
+
+function deriveSnapshotFromDifference(
+  sheet: SheetSpec,
+  subjectPaths: Paths64,
+  clipPaths: Paths64 | null,
+  operation: 'computeFreeMaterial' | 'extendFreeMaterial'
+): Effect.Effect<FreeMaterialSnapshot, IrregularGeometryInputError> {
   const tree = new PolyTree64()
   try {
-    const occupiedClip = prepareOccupiedClip(operation, occupiedPaths)
-    if ('message' in occupiedClip)
-      return failInvalidGeometry('computeFreeMaterial', occupiedClip.message)
-
     booleanOpWithPolyTree(
       ClipType.Difference,
-      [sheetPath.path],
-      occupiedClip.paths,
+      subjectPaths,
+      clipPaths,
       tree,
       FillRule.NonZero
     )
   } catch (error) {
-    return failInvalidGeometry('computeFreeMaterial', clipperFailureMessage(error))
+    return failInvalidGeometry(operation, clipperFailureMessage(error))
   }
 
   const regions = regionsFromTree(tree)
-  if ('message' in regions) return failInvalidGeometry('computeFreeMaterial', regions.message)
+  if ('message' in regions) return failInvalidGeometry(operation, regions.message)
 
   const orderedRegions = [...regions.regions].sort(compareRegions)
   return Effect.succeed(
     new FreeMaterialSnapshot({
-      sheet: input.sheet,
+      sheet,
       regions: orderedRegions.map(
         (region) =>
           new FreeMaterialRegion({
@@ -113,6 +166,10 @@ function deriveFreeMaterial(
 
 interface OccupiedClipResult {
   readonly paths: Paths64 | null
+}
+
+interface MaterialPathsResult {
+  readonly paths: Paths64
 }
 
 function prepareOccupiedClip(
@@ -149,9 +206,9 @@ interface GeometryFailure {
   readonly message: string
 }
 
-function toSheetPath(input: ComputeFreeMaterialInput): PathResult | GeometryFailure {
-  const width = toGridMm(input.sheet.width)
-  const height = toGridMm(input.sheet.height)
+function toSheetPath(sheet: SheetSpec): PathResult | GeometryFailure {
+  const width = toGridMm(sheet.width)
+  const height = toGridMm(sheet.height)
   if (width === undefined || height === undefined) {
     return { message: 'sheet dimensions cannot be represented by the Clipper2 integer grid.' }
   }
@@ -168,6 +225,60 @@ function toSheetPath(input: ComputeFreeMaterialInput): PathResult | GeometryFail
   const pathMessage = validatePath(path, 'sheet path')
   if (pathMessage !== undefined) return { message: pathMessage }
   return { path }
+}
+
+function toMaterialPaths(snapshot: FreeMaterialSnapshot): MaterialPathsResult | GeometryFailure {
+  const paths: Paths64 = []
+  for (let regionIndex = 0; regionIndex < snapshot.regions.length; regionIndex += 1) {
+    const region = snapshot.regions[regionIndex]
+    if (region === undefined) return { message: 'free-material region entry is missing.' }
+
+    const boundary = toMaterialPath(
+      region.boundary,
+      `free-material boundary ${regionIndex}`,
+      true
+    )
+    if ('message' in boundary) return boundary
+    paths.push(boundary.path)
+
+    for (let holeIndex = 0; holeIndex < region.holes.length; holeIndex += 1) {
+      const hole = region.holes[holeIndex]
+      if (hole === undefined) return { message: 'free-material hole entry is missing.' }
+      const holePath = toMaterialPath(
+        hole,
+        `free-material hole ${regionIndex}:${holeIndex}`,
+        false
+      )
+      if ('message' in holePath) return holePath
+      paths.push(holePath.path)
+    }
+  }
+
+  return { paths }
+}
+
+function toMaterialPath(
+  polygon: IrregularPolygon,
+  label: string,
+  counterClockwise: boolean
+): PathResult | GeometryFailure {
+  const path: Path64 = []
+  for (const point of polygon.points) {
+    const x = toGridMm(point.x)
+    const y = toGridMm(point.y)
+    if (x === undefined || y === undefined) {
+      return { message: `${label} cannot be represented by the Clipper2 grid.` }
+    }
+    path.push({ x: normalizeNegativeZero(x), y: normalizeNegativeZero(y) })
+  }
+
+  const normalizedPath = stripDuplicates(path, true)
+  const guardMessage = validateCoordinateGuard(normalizedPath)
+  if (guardMessage !== undefined) return { message: `${label}: ${guardMessage}` }
+  const pathMessage = validateClipperOutputPath(normalizedPath, label)
+  if (pathMessage !== undefined) return { message: pathMessage }
+
+  return { path: canonicalizeWinding(normalizedPath, counterClockwise) }
 }
 
 function toPlacedPath(placed: IrregularPlacedPiece, index: number): PathResult | GeometryFailure {
@@ -218,7 +329,12 @@ function toPlacedPath(placed: IrregularPlacedPiece, index: number): PathResult |
  * paths produced by mirrored transforms.
  */
 function canonicalizeCounterClockwise(path: Path64): Path64 {
-  return area(path) < 0 ? [...path].reverse() : path
+  return canonicalizeWinding(path, true)
+}
+
+function canonicalizeWinding(path: Path64, counterClockwise: boolean): Path64 {
+  const isCounterClockwise = area(path) > 0
+  return isCounterClockwise === counterClockwise ? path : [...path].reverse()
 }
 
 function validateCoordinateGuard(path: Path64): string | undefined {

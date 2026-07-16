@@ -109,23 +109,12 @@ export class IrregularLayoutScorer extends Context.Service<
         const cachedSnapshot = freeMaterialCache.get(cacheKey)
         const snapshot =
           cachedSnapshot === undefined
-            ? freeMaterialService
-                .computeFreeMaterial({
-                  sheet: input.sheet,
-                  placed: input.state.placedCollisionGeometries,
-                  settings: settings.geometry
-                })
-                .pipe(
-                  Effect.tap((computedSnapshot) =>
-                    Effect.sync(() => {
-                      if (freeMaterialCache.size >= MAX_FREE_MATERIAL_CACHE_ENTRIES) {
-                        const oldestKey = freeMaterialCache.keys().next().value
-                        if (typeof oldestKey === 'string') freeMaterialCache.delete(oldestKey)
-                      }
-                      freeMaterialCache.set(cacheKey, computedSnapshot)
-                    })
-                  )
-                )
+            ? computeSnapshotWithParentFallback(
+                input,
+                settings,
+                freeMaterialService,
+                freeMaterialCache
+              )
             : Effect.succeed(cachedSnapshot)
 
         return snapshot.pipe(
@@ -140,6 +129,74 @@ export class IrregularLayoutScorer extends Context.Service<
   static readonly Live = IrregularLayoutScorer.Layer.pipe(
     Layer.provideMerge(FreeMaterialServiceLive)
   )
+}
+
+function computeSnapshotWithParentFallback(
+  input: ScoreIrregularLayoutInput,
+  settings: IrregularNestingSettings,
+  freeMaterialService: FreeMaterialService,
+  freeMaterialCache: Map<string, FreeMaterialSnapshot>
+): Effect.Effect<
+  FreeMaterialSnapshot,
+  IrregularGeometryInputError | IrregularNestingNotImplementedError
+> {
+  const parent = input.state.parent
+  const newlyPlaced = getNewlyPlacedGeometry(input.state)
+  const parentSnapshot =
+    parent === undefined
+      ? undefined
+      : freeMaterialCache.get(makeFreeMaterialCacheKey({ sheet: input.sheet, state: parent }, settings))
+
+  const full = () =>
+    freeMaterialService.computeFreeMaterial({
+      sheet: input.sheet,
+      placed: input.state.placedCollisionGeometries,
+      settings: settings.geometry
+    })
+
+  const computed =
+    parentSnapshot === undefined || newlyPlaced === undefined
+      ? full()
+      : freeMaterialService
+          .extendFreeMaterial({
+            parent: parentSnapshot,
+            placed: newlyPlaced,
+            settings: settings.geometry
+          })
+          .pipe(Effect.catch(() => full()))
+
+  return computed.pipe(
+    Effect.tap((snapshot) =>
+      Effect.sync(() => {
+        if (freeMaterialCache.size >= MAX_FREE_MATERIAL_CACHE_ENTRIES) {
+          const oldestKey = freeMaterialCache.keys().next().value
+          if (typeof oldestKey === 'string') freeMaterialCache.delete(oldestKey)
+        }
+        freeMaterialCache.set(
+          makeFreeMaterialCacheKey(input, settings),
+          snapshot
+        )
+      })
+    )
+  )
+}
+
+function getNewlyPlacedGeometry(
+  state: IrregularBeamState
+): IrregularBeamState['placedCollisionGeometries'][number] | undefined {
+  const parent = state.parent
+  if (parent === undefined) return undefined
+  if (state.placedCollisionGeometries.length !== parent.placedCollisionGeometries.length + 1) {
+    return undefined
+  }
+
+  for (let index = 0; index < parent.placedCollisionGeometries.length; index += 1) {
+    if (state.placedCollisionGeometries[index] !== parent.placedCollisionGeometries[index]) {
+      return undefined
+    }
+  }
+
+  return state.placedCollisionGeometries[parent.placedCollisionGeometries.length]
 }
 
 function scoreDerivedState(

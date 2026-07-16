@@ -1,9 +1,10 @@
 import { Effect, Layer } from 'effect'
 import { performance } from 'node:perf_hooks'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { importDxfFile } from '../src/main/services/DxfImportService.js'
-import { JobId } from '../src/shared/domain/ids.js'
+import { ImportedPiece } from '../src/shared/domain/dxf.js'
+import { JobId, PieceId, SourceFileId } from '../src/shared/domain/ids.js'
 import { NestingOptions, NestingRequest, SheetSpec } from '../src/shared/domain/nesting.js'
 import { makeDefaultIrregularNestingSettings } from '../src/shared/irregular/defaults.js'
 import {
@@ -598,6 +599,30 @@ async function importSources(
   return imported
 }
 
+export function normalizeImportedPieceIdentities(
+  fixtureNames: ReadonlyArray<string>,
+  sources: ReadonlyArray<ImportedPiece>
+): ReadonlyArray<ImportedPiece> {
+  if (fixtureNames.length !== sources.length) {
+    throw new Error(
+      `Cannot normalize ${sources.length} imported pieces for ${fixtureNames.length} fixtures.`
+    )
+  }
+
+  return sources.map((source, index) => {
+    const fixtureName = fixtureNames[index]
+    if (fixtureName === undefined) {
+      throw new Error(`Missing fixture name at imported piece index ${index}.`)
+    }
+    const identity = `${index + 1}-${fixtureName}`
+    return new ImportedPiece({
+      ...source,
+      id: PieceId.make(`irregular-benchmark-piece-${identity}`),
+      sourceFileId: SourceFileId.make(`irregular-benchmark-source-${identity}`)
+    })
+  })
+}
+
 function median(values: ReadonlyArray<number>): number {
   const sorted = [...values].sort((first, second) => first - second)
   if (sorted.length === 0) {
@@ -649,7 +674,8 @@ async function main(): Promise<void> {
 
   const options = resolveOptions(rawArguments)
   const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)))
-  const baseSources = await importSources(options.fixtureNames, repoRoot)
+  const importedSources = await importSources(options.fixtureNames, repoRoot)
+  const baseSources = normalizeImportedPieceIdentities(options.fixtureNames, importedSources)
   const repeatedSources = repeatImportedPieces(baseSources, options.repeatCount)
   const pieceCount = options.pieceCount ?? repeatedSources.length
   if (pieceCount > repeatedSources.length) {
@@ -715,8 +741,10 @@ async function main(): Promise<void> {
   console.log(`summary audit=${auditStatus}`)
 }
 
-void main().catch((error: unknown) => {
-  console.error(`Error: ${errorMessage(error)}`)
-  console.error('Use --help for usage.')
-  process.exitCode = 1
-})
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  void main().catch((error: unknown) => {
+    console.error(`Error: ${errorMessage(error)}`)
+    console.error('Use --help for usage.')
+    process.exitCode = 1
+  })
+}

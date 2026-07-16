@@ -23,6 +23,7 @@ import { IrregularLayoutScorer } from '../../src/workers/algorithm/irregular/irr
 import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { IrregularGeometryInputError } from '../../src/workers/irregular/services.js'
 import { DEFAULT_STRATEGY_ID } from '@shared/domain/strategies.js'
+import { normalizeImportedPieceIdentities } from '../../scripts/irregular-benchmark.js'
 import {
   collisionOpportunityMetrics,
   repeatImportedPieces
@@ -64,6 +65,10 @@ function importFixture(name: string): Promise<ImportedPiece> {
     if (piece === undefined) throw new Error(`fixture ${name} imported without a piece`)
     return piece
   })
+}
+
+function identityKey(piece: ImportedPiece): { id: ImportedPiece['id']; sourceFileId: ImportedPiece['sourceFileId'] } {
+  return { id: piece.id, sourceFileId: piece.sourceFileId }
 }
 
 function requestFor(
@@ -177,6 +182,43 @@ function computeKey(result: IrregularComputeResult) {
 }
 
 describe('irregular benchmark and debug corpus', () => {
+  it('normalizes imported identities before deterministic repetition', async () => {
+    const fixtureNames = ['triangle.dxf', 'trapezoid.dxf', 'triangle.dxf']
+    const firstImported = await Promise.all(fixtureNames.map(importFixture))
+    const secondImported = await Promise.all(fixtureNames.map(importFixture))
+    const firstSources = normalizeImportedPieceIdentities(fixtureNames, firstImported)
+    const secondSources = normalizeImportedPieceIdentities(fixtureNames, secondImported)
+
+    expect(firstSources.map(identityKey)).toEqual(secondSources.map(identityKey))
+    expect(new Set(firstSources.map((source) => source.id)).size).toBe(fixtureNames.length)
+    expect(new Set(firstSources.map((source) => source.sourceFileId)).size).toBe(fixtureNames.length)
+    expect(firstSources[0]?.id).not.toBe(firstSources[1]?.id)
+    expect(firstSources[0]?.sourceFileId).not.toBe(firstSources[1]?.sourceFileId)
+
+    const firstCopies = repeatImportedPieces(firstSources, 2)
+    const secondCopies = repeatImportedPieces(secondSources, 2)
+    expect(firstCopies.map(identityKey)).toEqual(secondCopies.map(identityKey))
+
+    const original = firstImported[0]
+    const normalized = firstSources[0]
+    if (original === undefined || normalized === undefined) {
+      throw new Error('expected triangle fixture to import')
+    }
+    expect({
+      sourceLayer: normalized.sourceLayer,
+      label: normalized.label,
+      realBounds: normalized.realBounds,
+      geometry: normalized.geometry,
+      warnings: normalized.warnings
+    }).toEqual({
+      sourceLayer: original.sourceLayer,
+      label: original.label,
+      realBounds: original.realBounds,
+      geometry: original.geometry,
+      warnings: original.warnings
+    })
+  })
+
   it('reports a truthful convex opportunity against the rectangular footprint', async () => {
     const sources = await Promise.all([
       importFixture('triangle.dxf'),

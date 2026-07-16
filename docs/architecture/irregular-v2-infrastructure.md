@@ -211,10 +211,13 @@ that expensive scorer, it deduplicates successor states by canonical occupied
 geometry and retains a deterministic representative. The run also retains its
 scored beam states. A bounded cache owned by the layout-scorer service reuses
 only Clipper2 free-material snapshots for identical sheet and occupied
-geometry, including across portfolio decodes; it always rebuilds the
-state-specific score so placement order and unplaced ids remain correct. This
-removes duplicate Clipper2 work without changing legality, score criteria, or
-the winning-path history.
+geometry, including across portfolio decodes. When a cached parent state gains
+one placement, it subtracts that collision polygon from the cached material
+snapshot through the same integer-grid `PolyTree64` adapter; root, cache-miss,
+and failed-incremental paths retain the full sheet-minus-occupied computation.
+It always rebuilds the state-specific score so placement order and unplaced ids
+remain correct. This removes duplicate Clipper2 work without changing legality,
+score criteria, or the winning-path history.
 
 `portfolioSearch.ts` owns chromosome construction, deterministic PRNG mutation,
 crossover, evaluation/generation/time checkpoints, progress, cancellation, and

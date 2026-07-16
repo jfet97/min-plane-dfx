@@ -3,7 +3,6 @@ import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type { PieceId } from '@shared/domain/ids.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
 import type {
-  FreeMaterialSnapshot,
   IrregularGeometryCacheKey,
   IrregularIfpBounds,
   IrregularNestingSettings,
@@ -18,6 +17,7 @@ import type {
 import type { IrregularBeamState } from '../algorithm/irregular/irregularBeamState.js'
 import {
   CollisionGeometry,
+  FreeMaterialSnapshot,
   IrregularGeometrySettings,
   IrregularOptimizerSettings,
   IrregularPlacedPiece,
@@ -153,6 +153,14 @@ export const ComputeFreeMaterialInput = Schema.Struct({
 })
 export type ComputeFreeMaterialInput = Schema.Schema.Type<typeof ComputeFreeMaterialInput>
 
+/** Schema-backed input for subtracting one new placement from cached material. */
+export const ExtendFreeMaterialInput = Schema.Struct({
+  parent: FreeMaterialSnapshot,
+  placed: IrregularPlacedPiece,
+  settings: IrregularGeometrySettings
+})
+export type ExtendFreeMaterialInput = Schema.Schema.Type<typeof ExtendFreeMaterialInput>
+
 export interface BuildPriorityOrderInput {
   readonly pieces: ReadonlyArray<IrregularPreparedPiece>
   readonly settings: IrregularNestingSettings['optimizer']
@@ -251,6 +259,13 @@ export interface FreeMaterialService {
     FreeMaterialSnapshot,
     IrregularNestingNotImplementedError | IrregularGeometryInputError
   >
+  /** Subtracts one newly placed collision polygon from a cached material snapshot. */
+  readonly extendFreeMaterial: (
+    input: ExtendFreeMaterialInput
+  ) => Effect.Effect<
+    FreeMaterialSnapshot,
+    IrregularNestingNotImplementedError | IrregularGeometryInputError
+  >
 }
 
 export interface PriorityOrderService {
@@ -334,7 +349,8 @@ export const NfpIfpServiceUnimplemented = Layer.succeed(NfpIfpService, {
 })
 
 export const FreeMaterialServiceUnimplemented = Layer.succeed(FreeMaterialService, {
-  computeFreeMaterial: () => failNotImplemented('FreeMaterialService', 'computeFreeMaterial')
+  computeFreeMaterial: () => failNotImplemented('FreeMaterialService', 'computeFreeMaterial'),
+  extendFreeMaterial: () => failNotImplemented('FreeMaterialService', 'extendFreeMaterial')
 })
 
 /** Deterministic per-worker cache with no failure entries. */

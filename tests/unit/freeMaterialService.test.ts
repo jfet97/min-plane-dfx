@@ -171,6 +171,25 @@ const malformedCases = [
   ]
 ] satisfies ReadonlyArray<readonly [string, ComputeFreeMaterialInput]>
 
+const incrementalCases = [
+  [
+    'disjoint',
+    input([rectangle('disjoint-left', 2, 2, 1, 1), rectangle('disjoint-right', 2, 2, 6, 3)])
+  ],
+  [
+    'boundary-touching',
+    input([rectangle('boundary-left', 2, 2, 0, 0), rectangle('boundary-right', 2, 2, 2, 0)])
+  ],
+  [
+    'multiple-regions-and-holes',
+    input([
+      rectangle('sheet-wall', 2, 8, 4, 0),
+      rectangle('left-hole', 2, 2, 1, 1),
+      rectangle('right-hole', 2, 2, 7, 4)
+    ])
+  ]
+] satisfies ReadonlyArray<readonly [string, ComputeFreeMaterialInput]>
+
 type ComputationOutcome = { readonly snapshot: FreeMaterialSnapshot } | { readonly error: unknown }
 
 async function captureOperation(
@@ -327,5 +346,29 @@ describe('FreeMaterialService differential operations', () => {
     const defaultSnapshot = await computeWithOperation('union-then-difference', value)
 
     expect(canonicalRegions(liveSnapshot)).toEqual(canonicalRegions(defaultSnapshot))
+  })
+
+  it.each(incrementalCases)('matches full recomputation after each %s addition', async (_name, value) => {
+    const service = createFreeMaterialService('union-then-difference')
+    let incrementalSnapshot = await Effect.runPromise(
+      service.computeFreeMaterial({ ...value, placed: [] })
+    )
+    const placed: IrregularPlacedPiece[] = []
+
+    for (const nextPlaced of value.placed) {
+      placed.push(nextPlaced)
+      incrementalSnapshot = await Effect.runPromise(
+        service.extendFreeMaterial({
+          parent: incrementalSnapshot,
+          placed: nextPlaced,
+          settings: value.settings
+        })
+      )
+      const fullSnapshot = await Effect.runPromise(service.computeFreeMaterial({ ...value, placed }))
+
+      expect(canonicalRegions(incrementalSnapshot)).toEqual(canonicalRegions(fullSnapshot))
+      expect(incrementalSnapshot.sheet).toEqual(fullSnapshot.sheet)
+      expect(incrementalSnapshot.diagnostics).toEqual(fullSnapshot.diagnostics)
+    }
   })
 })
