@@ -1526,7 +1526,7 @@ Implement performance work in this order:
    NFP-boundary pairs, point-in-NFP checks, and collision pairs before robust
    predicates run;
 2. deduplicate equivalent beam successors before Clipper2 free-material scoring,
-   then cache score snapshots by canonical occupied geometry;
+   then cache free-material snapshots by canonical occupied geometry;
 3. retain collision bounds incrementally on beam states and cache canonical
    geometry digests instead of serializing full polygons for every lookup;
 4. compare a single Clipper2 sheet-difference operation against the current

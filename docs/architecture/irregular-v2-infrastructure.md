@@ -122,7 +122,10 @@ empty array and lets the optimizer add finite degree values explicitly.
 `NfpIfpServiceLive` computes
 convex no-fit boundaries, rectangular inner-fit bounds, and deterministic
 contact candidates; every candidate still passes direct convex placement
-validation, which remains the legality authority. `FreeMaterialServiceLive`
+validation, which remains the legality authority. Reusable axis-aligned bounds
+skip only provably disjoint NFP-boundary pairs, point-in-NFP checks, and
+collision pairs; exact contacts and every non-disjoint case continue to robust
+predicate classification. `FreeMaterialServiceLive`
 computes the
 sheet-space difference between the sheet and the union of translated placed
 collision polygons through Clipper2's integer `Paths64` and `PolyTree64`
@@ -195,7 +198,15 @@ candidate-policy score for candidates already accepted by NFP/IFP generation
 and direct validation. `irregularLayoutScorer.ts` owns a separate lexicographic
 whole-layout score for beam retention: unplaced count first, then free-material
 usability/fragmentation metrics and compact collision bounds. Free material is
-scoring-only and never accepts or rejects a placement.
+scoring-only and never accepts or rejects a placement. Before a beam step calls
+that expensive scorer, it deduplicates successor states by canonical occupied
+geometry and retains a deterministic representative. The run also retains its
+scored beam states. A bounded cache owned by the layout-scorer service reuses
+only Clipper2 free-material snapshots for identical sheet and occupied
+geometry, including across portfolio decodes; it always rebuilds the
+state-specific score so placement order and unplaced ids remain correct. This
+removes duplicate Clipper2 work without changing legality, score criteria, or
+the winning-path history.
 
 `portfolioSearch.ts` owns chromosome construction, deterministic PRNG mutation,
 crossover, evaluation/generation/time checkpoints, progress, cancellation, and

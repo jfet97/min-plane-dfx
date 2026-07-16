@@ -147,14 +147,19 @@ function runWindowed(
   settingsLayer: Layer.Layer<GeometrySettings, never, never> = GeometrySettings.Live,
   service: Layer.Layer<NfpIfpService, never, never> = NfpIfpServiceLive,
   options?: IrregularWindowedBeamOptions,
-  hooks?: IrregularWindowedBeamHooks
+  hooks?: IrregularWindowedBeamHooks,
+  layoutScorer?: IrregularLayoutScorer.Service
 ) {
+  const layoutScorerLayer =
+    layoutScorer === undefined
+      ? IrregularLayoutScorer.Live
+      : Layer.succeed(IrregularLayoutScorer, layoutScorer)
   return Effect.runPromise(
     decodeWindowedIrregularBeam(currentSheet, pieces, hooks, options).pipe(
       Effect.provide(GeometryKernel.Live),
       Effect.provide(service),
       Effect.provide(IrregularPlacementScorer.Live),
-      Effect.provide(IrregularLayoutScorer.Live),
+      Effect.provide(layoutScorerLayer),
       Effect.provide(settingsLayer)
     )
   )
@@ -317,11 +322,17 @@ describe('decodeWindowedIrregularBeam', () => {
       if (sourceId === PieceId.make('a') && hasB) return [oneCandidate(moving, 6)]
       return [oneCandidate(moving, 0)]
     })
+    const emittedHistory: PieceId[][] = []
     const result = await runWindowed(
       sheet(10, 4),
       [preparedPiece('a', 4, 4), preparedPiece('b', 6, 4, 'copy-b')],
       Layer.succeed(GeometrySettings, settings(2, 2)),
-      service
+      service,
+      undefined,
+      {
+        onInitialState: (state) => emittedHistory.push([...state.placementOrder]),
+        onStateSelected: ({ state }) => emittedHistory.push([...state.placementOrder])
+      }
     )
 
     expect(result.bestState.unplacedPieceIds).toEqual([])
@@ -329,6 +340,11 @@ describe('decodeWindowedIrregularBeam', () => {
     expect(result.bestState.placedCollisionGeometries[0]?.placement.pieceId).toBe(
       PieceId.make('copy-b')
     )
+    expect(emittedHistory).toEqual([
+      [],
+      [PieceId.make('copy-b')],
+      [PieceId.make('copy-b'), PieceId.make('a')]
+    ])
   })
 
   it('never expands beyond the first three remaining pieces for orderWindow three', async () => {
@@ -386,5 +402,43 @@ describe('decodeWindowedIrregularBeam', () => {
 
     expect(stateSnapshot(reversed)).toEqual(stateSnapshot(forward))
     expect(reversed.bestState.placementOrder).toEqual(forward.bestState.placementOrder)
+  })
+
+  it('deduplicates equivalent successors before whole-layout scoring without changing history', async () => {
+    const scoreCalls = { count: 0 }
+    const baseScorer = await Effect.runPromise(
+      IrregularLayoutScorer.use((scorer) => Effect.succeed(scorer)).pipe(
+        Effect.provide(IrregularLayoutScorer.Live),
+        Effect.provide(GeometrySettings.Live)
+      )
+    )
+    const countingScorer: IrregularLayoutScorer.Service = {
+      compare: baseScorer.compare,
+      scoreState: (input) =>
+        Effect.sync(() => {
+          scoreCalls.count += 1
+        }).pipe(Effect.flatMap(() => baseScorer.scoreState(input)))
+    }
+    const history: number[] = []
+    const result = await runWindowed(
+      sheet(4, 1),
+      [preparedPiece('a', 1, 1)],
+      Layer.succeed(GeometrySettings, settings(1, 2, 2)),
+      candidateService(({ moving }) => [oneCandidate(moving, 0), oneCandidate(moving, 0)]),
+      undefined,
+      {
+        onInitialState: (state) => history.push(state.placedCollisionGeometries.length),
+        onStateSelected: ({ state }) => history.push(state.placedCollisionGeometries.length)
+      },
+      countingScorer
+    )
+
+    expect(scoreCalls.count).toBe(1)
+    expect(result.rankedStates).toHaveLength(1)
+    expect(result.bestState.placementOrder).toEqual([PieceId.make('a')])
+    expect(result.bestState.placedCollisionGeometries.map(({ placement }) => placement.sourcePieceId)).toEqual([
+      PieceId.make('a')
+    ])
+    expect(history).toEqual([0, 1])
   })
 })

@@ -5,6 +5,7 @@ import {
   FreeMaterialSnapshot,
   IrregularPolygon
 } from '@shared/irregular/domain.js'
+import type { IrregularNestingSettings } from '@shared/irregular/domain.js'
 import {
   FreeMaterialService,
   IrregularGeometryInputError,
@@ -25,6 +26,42 @@ export class IrregularLayoutScoringError extends Data.TaggedError(
 export interface ScoreIrregularLayoutInput {
   readonly sheet: SheetSpec
   readonly state: IrregularBeamState
+}
+
+const MAX_FREE_MATERIAL_CACHE_ENTRIES = 256
+const FREE_MATERIAL_CACHE_VERSION = 'irregular-free-material-v1'
+
+/** Builds a cache key from every geometry input used by free-material calculation. */
+function makeFreeMaterialCacheKey(
+  input: ScoreIrregularLayoutInput,
+  settings: IrregularNestingSettings
+): string {
+  const placedGeometry = input.state.placedCollisionGeometries
+    .map(({ placement, collisionGeometry }) =>
+      JSON.stringify({
+        polygon: collisionGeometry.polygon.points.map(({ x, y }) => [
+          x + placement.transform.translateX,
+          y + placement.transform.translateY
+        ])
+      })
+    )
+    .toSorted(Order.String)
+
+  return JSON.stringify({
+    version: FREE_MATERIAL_CACHE_VERSION,
+    sheet: {
+      width: input.sheet.width,
+      height: input.sheet.height,
+      label: input.sheet.label
+    },
+    geometrySettings: {
+      flatteningSagToleranceMm: settings.geometry.flatteningSagToleranceMm,
+      clearanceSafetyMarginMm: settings.geometry.clearanceSafetyMarginMm,
+      geometryBackendId: settings.geometry.geometryBackendId,
+      geometryBackendVersion: settings.geometry.geometryBackendVersion
+    },
+    placedGeometry
+  })
 }
 
 /** One lexicographically comparable score for a complete irregular beam state. */
@@ -80,16 +117,35 @@ export class IrregularLayoutScorer extends Context.Service<
   static readonly Make = Effect.gen(function* () {
     const settings = yield* GeometrySettings
     const freeMaterialService = yield* FreeMaterialService
+    const freeMaterialCache = new Map<string, FreeMaterialSnapshot>()
 
     return IrregularLayoutScorer.of({
-      scoreState: (input) =>
-        freeMaterialService
-          .computeFreeMaterial({
-            sheet: input.sheet,
-            placed: input.state.placedCollisionGeometries,
-            settings: settings.geometry
-          })
-          .pipe(Effect.flatMap((snapshot) => scoreDerivedState(input, snapshot))),
+      scoreState: (input) => {
+        const cacheKey = makeFreeMaterialCacheKey(input, settings)
+        const cachedSnapshot = freeMaterialCache.get(cacheKey)
+        const snapshot =
+          cachedSnapshot === undefined
+            ? freeMaterialService
+                .computeFreeMaterial({
+                  sheet: input.sheet,
+                  placed: input.state.placedCollisionGeometries,
+                  settings: settings.geometry
+                })
+                .pipe(
+                  Effect.tap((computedSnapshot) =>
+                    Effect.sync(() => {
+                      if (freeMaterialCache.size >= MAX_FREE_MATERIAL_CACHE_ENTRIES) {
+                        const oldestKey = freeMaterialCache.keys().next().value
+                        if (typeof oldestKey === 'string') freeMaterialCache.delete(oldestKey)
+                      }
+                      freeMaterialCache.set(cacheKey, computedSnapshot)
+                    })
+                  )
+                )
+            : Effect.succeed(cachedSnapshot)
+
+        return snapshot.pipe(Effect.flatMap((freeMaterialSnapshot) => scoreDerivedState(input, freeMaterialSnapshot)))
+      },
       compare: compareScores
     })
   })

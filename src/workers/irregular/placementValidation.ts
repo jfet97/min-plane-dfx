@@ -2,7 +2,15 @@ import { Effect } from 'effect'
 import { IrregularPoint, IrregularPolygon } from '@shared/irregular/domain.js'
 import type { ValidatePlacementInput } from './services.js'
 import { IrregularGeometryInputError } from './services.js'
-import { ConvexPolygonValidation } from './convexPolygonValidation.js'
+import {
+  ConvexPolygonValidation,
+  type ConvexPolygonWinding
+} from './convexPolygonValidation.js'
+import {
+  areDisjoint,
+  translatePolygonWithBounds,
+  type PolygonWithBounds
+} from './convexBounds.js'
 import { GeometryPredicates } from './geometryPredicates.js'
 
 /** Checks translated convex placement geometry without using polygon booleans. */
@@ -42,49 +50,40 @@ function validate(input: ValidatePlacementInput): Effect.Effect<void, IrregularG
 function assess(
   input: ValidatePlacementInput
 ): Effect.Effect<PlacementAssessment, IrregularGeometryInputError> {
-  const movingValidation = ConvexPolygonValidation.validateStrictBoundary(
-    input.moving.polygon.points
+  const movingPolygon = translateAndValidatePolygon(
+    input.moving.polygon,
+    input.candidate.point,
+    'moving'
   )
-  if ('message' in movingValidation) {
-    return failInvalidGeometry('validatePlacement', movingValidation.message)
-  }
-
-  const movingPolygon = translatePolygon(input.moving.polygon, input.candidate.point)
-  if (movingPolygon === undefined) {
+  if ('message' in movingPolygon) {
     return failInvalidGeometry(
       'validatePlacement',
-      'moving translation must produce finite polygon coordinates.'
+      movingPolygon.message
     )
   }
 
-  const placedPolygons: IrregularPolygon[] = []
+  const placedPolygons: ValidatedPolygonWithBounds[] = []
 
   for (const placed of input.placed) {
-    const placedValidation = ConvexPolygonValidation.validateStrictBoundary(
-      placed.collisionGeometry.polygon.points
-    )
-    if ('message' in placedValidation) {
-      return failInvalidGeometry('validatePlacement', placedValidation.message)
-    }
-
-    const placedPolygon = translatePolygon(
+    const placedPolygon = translateAndValidatePolygon(
       placed.collisionGeometry.polygon,
       new IrregularPoint({
         x: placed.placement.transform.translateX,
         y: placed.placement.transform.translateY
-      })
+      }),
+      'placed'
     )
-    if (placedPolygon === undefined) {
+    if ('message' in placedPolygon) {
       return failInvalidGeometry(
         'validatePlacement',
-        'placed translation must produce finite polygon coordinates.'
+        placedPolygon.message
       )
     }
 
     placedPolygons.push(placedPolygon)
   }
 
-  if (!isInsideSheet(movingPolygon.points, input.sheet.width, input.sheet.height)) {
+  if (!isInsideSheet(movingPolygon.polygon.points, input.sheet.width, input.sheet.height)) {
     return Effect.succeed({
       legal: false,
       message: 'moving polygon must remain inside the sheet.'
@@ -103,21 +102,6 @@ function assess(
   }
 
   return Effect.succeed({ legal: true, message: '' })
-}
-
-function translatePolygon(
-  polygon: IrregularPolygon,
-  translation: IrregularPoint
-): IrregularPolygon | undefined {
-  const translatedPoints: IrregularPoint[] = []
-  for (const point of polygon.points) {
-    const x = point.x + translation.x
-    const y = point.y + translation.y
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return undefined
-    translatedPoints.push(new IrregularPoint({ x, y }))
-  }
-
-  return new IrregularPolygon({ points: translatedPoints })
 }
 
 function isInsideSheet(
@@ -139,46 +123,47 @@ interface PlacementAssessment {
   readonly message: string
 }
 
+interface ValidatedPolygonWithBounds extends PolygonWithBounds {
+  readonly winding: ConvexPolygonWinding
+}
+
 interface OverlapResult {
   readonly value: boolean
 }
 
 function polygonsHavePositiveAreaOverlap(
-  first: IrregularPolygon,
-  second: IrregularPolygon
+  first: ValidatedPolygonWithBounds,
+  second: ValidatedPolygonWithBounds
 ): OverlapResult | GeometryFailure {
-  const firstValidation = ConvexPolygonValidation.validateStrictBoundary(first.points)
-  const secondValidation = ConvexPolygonValidation.validateStrictBoundary(second.points)
-  if ('message' in firstValidation) return { message: firstValidation.message }
-  if ('message' in secondValidation) return { message: secondValidation.message }
+  if (areDisjoint(first.bounds, second.bounds)) return { value: false }
 
-  for (const point of first.points) {
-    if (isStrictlyInside(point, second, secondValidation.winding)) return { value: true }
+  for (const point of first.polygon.points) {
+    if (isStrictlyInside(point, second.polygon, second.winding)) return { value: true }
   }
-  for (const point of second.points) {
-    if (isStrictlyInside(point, first, firstValidation.winding)) return { value: true }
+  for (const point of second.polygon.points) {
+    if (isStrictlyInside(point, first.polygon, first.winding)) return { value: true }
   }
 
-  const crossing = boundariesHaveProperCrossing(first, second)
+  const crossing = boundariesHaveProperCrossing(first.polygon, second.polygon)
   if ('message' in crossing) return crossing
   if (crossing.value) return { value: true }
 
-  const firstInteriorPoint = strictConvexInteriorPoint(first)
+  const firstInteriorPoint = strictConvexInteriorPoint(first.polygon)
   if ('message' in firstInteriorPoint) return firstInteriorPoint
-  const secondInteriorPoint = strictConvexInteriorPoint(second)
+  const secondInteriorPoint = strictConvexInteriorPoint(second.polygon)
   if ('message' in secondInteriorPoint) return secondInteriorPoint
 
   if (
-    isStrictlyInside(firstInteriorPoint.value, second, secondValidation.winding) ||
-    isStrictlyInside(secondInteriorPoint.value, first, firstValidation.winding)
+    isStrictlyInside(firstInteriorPoint.value, second.polygon, second.winding) ||
+    isStrictlyInside(secondInteriorPoint.value, first.polygon, first.winding)
   ) {
     return { value: true }
   }
 
   const collinearOverlap = boundariesHavePositiveCollinearOverlap(
-    first,
-    second,
-    firstValidation.winding
+    first.polygon,
+    second.polygon,
+    first.winding
   )
   if ('message' in collinearOverlap) return collinearOverlap
   if (collinearOverlap.value) return { value: true }
@@ -186,9 +171,27 @@ function polygonsHavePositiveAreaOverlap(
   // with strict convex rings, positive overlap without a strict vertex or a
   // proper crossing can only be coincident boundaries. Shared boundary contact
   // alone remains legal because it does not satisfy this condition.
-  const firstOnSecond = first.points.every((point) => isOnBoundary(point, second))
-  const secondOnFirst = second.points.every((point) => isOnBoundary(point, first))
+  const firstOnSecond = first.polygon.points.every((point) => isOnBoundary(point, second.polygon))
+  const secondOnFirst = second.polygon.points.every((point) => isOnBoundary(point, first.polygon))
   return { value: firstOnSecond && secondOnFirst }
+}
+
+function translateAndValidatePolygon(
+  polygon: IrregularPolygon,
+  translation: IrregularPoint,
+  label: string
+): ValidatedPolygonWithBounds | GeometryFailure {
+  const translatedPolygon = translatePolygonWithBounds(polygon, translation)
+  if (translatedPolygon === undefined) {
+    return { message: `${label} translation must produce finite polygon coordinates.` }
+  }
+
+  const validation = ConvexPolygonValidation.validateStrictBoundary(
+    translatedPolygon.polygon.points
+  )
+  if ('message' in validation) return validation
+
+  return { ...translatedPolygon, winding: validation.winding }
 }
 
 /**

@@ -21,6 +21,7 @@ import {
 } from './services.js'
 import { ConvexHull } from './convexHull.js'
 import { ConvexPolygonValidation } from './convexPolygonValidation.js'
+import { areDisjoint, boundsForPoints } from './convexBounds.js'
 import { GeometryPredicates } from './geometryPredicates.js'
 import { PlacementValidation } from './placementValidation.js'
 import {
@@ -249,7 +250,19 @@ function generatePlacementCandidates(
       const validation = ConvexPolygonValidation.validateStrictBoundary(nfp.boundary.points)
       if ('message' in validation)
         return yield* failInvalidGeometry('generatePlacementCandidates', validation.message)
-      nfpBoundaries.push({ nfp, winding: validation.winding })
+      const bounds = boundsForPoints(nfp.boundary.points)
+      if (bounds === undefined) {
+        return yield* failInvalidGeometry(
+          'generatePlacementCandidates',
+          'NFP boundary bounds must be finite.'
+        )
+      }
+      nfpBoundaries.push({
+        nfp,
+        winding: validation.winding,
+        bounds,
+        segments: polygonSegments(nfp.boundary)
+      })
     }
 
     const ifpSegments = rectangleSegments(ifp.bounds)
@@ -259,11 +272,11 @@ function generatePlacementCandidates(
       for (const point of nfp.boundary.points) addPoint(pointsByKey, point)
     }
 
-    for (const { nfp } of nfpBoundaries) {
+    for (const boundary of nfpBoundaries) {
       const intersections = addBoundaryIntersections(
         pointsByKey,
         ifpSegments,
-        polygonSegments(nfp.boundary)
+        boundary.segments
       )
       if (intersections !== undefined) {
         return yield* failInvalidGeometry('generatePlacementCandidates', intersections)
@@ -283,10 +296,12 @@ function generatePlacementCandidates(
             'NFP boundary is missing.'
           )
 
+        if (areDisjoint(first.bounds, second.bounds)) continue
+
         const intersections = addBoundaryIntersections(
           pointsByKey,
-          polygonSegments(first.nfp.boundary),
-          polygonSegments(second.nfp.boundary)
+          first.segments,
+          second.segments
         )
         if (intersections !== undefined) {
           return yield* failInvalidGeometry('generatePlacementCandidates', intersections)
@@ -299,7 +314,10 @@ function generatePlacementCandidates(
     for (const point of sortedPoints) {
       if (!isInsideBounds(point, ifp.bounds)) continue
       if (
-        nfpBoundaries.some(({ nfp, winding }) => isStrictlyInside(point, nfp.boundary, winding))
+        nfpBoundaries.some(
+          ({ nfp, winding, bounds }) =>
+            isInsideBounds(point, bounds) && isStrictlyInside(point, nfp.boundary, winding)
+        )
       ) {
         continue
       }
@@ -323,36 +341,6 @@ function generatePlacementCandidates(
   })
 }
 
-function boundsForPoints(points: ReadonlyArray<IrregularPoint>): IrregularBounds | undefined {
-  const firstPoint = points[0]
-  if (firstPoint === undefined) return undefined
-  if (!Number.isFinite(firstPoint.x) || !Number.isFinite(firstPoint.y)) return undefined
-
-  let minX = firstPoint.x
-  let minY = firstPoint.y
-  let maxX = firstPoint.x
-  let maxY = firstPoint.y
-
-  for (const point of points.slice(1)) {
-    if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return undefined
-    minX = Math.min(minX, point.x)
-    minY = Math.min(minY, point.y)
-    maxX = Math.max(maxX, point.x)
-    maxY = Math.max(maxY, point.y)
-  }
-
-  if (
-    !Number.isFinite(minX) ||
-    !Number.isFinite(minY) ||
-    !Number.isFinite(maxX) ||
-    !Number.isFinite(maxY)
-  ) {
-    return undefined
-  }
-
-  return new IrregularBounds({ minX, minY, maxX, maxY })
-}
-
 interface Segment {
   readonly start: IrregularPoint
   readonly end: IrregularPoint
@@ -361,6 +349,8 @@ interface Segment {
 interface NfpBoundary {
   readonly nfp: IrregularNfp
   readonly winding: -1 | 1
+  readonly bounds: IrregularBounds
+  readonly segments: ReadonlyArray<Segment>
 }
 
 interface SegmentIntersection {

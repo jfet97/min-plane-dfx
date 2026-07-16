@@ -169,6 +169,30 @@ function materialSnapshot(
   return IrregularLayoutScorer.Layer.pipe(Layer.provide(service))
 }
 
+async function makeScorer(
+  computeFreeMaterial: (input: ComputeFreeMaterialInput) => Effect.Effect<FreeMaterialSnapshot>,
+  settingsLayer: Layer.Layer<GeometrySettings, never, never> = GeometrySettings.Live
+): Promise<IrregularLayoutScorer.Service> {
+  const service = Layer.succeed(FreeMaterialService, { computeFreeMaterial })
+  return Effect.runPromise(
+    IrregularLayoutScorer.use((scorer) => Effect.succeed(scorer)).pipe(
+      Effect.provide(IrregularLayoutScorer.Layer.pipe(Layer.provide(service))),
+      Effect.provide(settingsLayer)
+    )
+  )
+}
+
+function scoreWithService(
+  scorer: IrregularLayoutScorer.Service,
+  value: ScoreIrregularLayoutInput
+): Promise<IrregularLayoutScore> {
+  return Effect.runPromise(
+    scorer.scoreState(value).pipe(
+      Effect.provide(Layer.succeed(IrregularLayoutScorer, scorer))
+    )
+  )
+}
+
 describe('IrregularLayoutScorer', () => {
   it('lets unplaced count dominate every prettier layout', async () => {
     const complete = await score(state([placedRectangle('placed', 8, 8, 0, 0)]))
@@ -323,6 +347,58 @@ describe('IrregularLayoutScorer', () => {
     if (failure instanceof IrregularLayoutScoringError) {
       expect(failure.operation).toBe('scoreState')
     }
+  })
+
+  it('reuses free material for identical geometry while rebuilding path data', async () => {
+    const snapshot = new FreeMaterialSnapshot({
+      sheet: new SheetSpec({ width: 10, height: 10, label: 'snapshot sheet' }),
+      regions: [],
+      diagnostics: []
+    })
+    let calls = 0
+    const scorer = await makeScorer((_) => {
+      calls += 1
+      return Effect.succeed(snapshot)
+    })
+
+    const first = await scoreWithService(
+      scorer,
+      input(state([placedRectangle('first', 2, 2, 1, 1)]))
+    )
+    const second = await scoreWithService(
+      scorer,
+      input(state([placedRectangle('second', 2, 2, 1, 1)], ['unplaced'], ['second']))
+    )
+
+    expect(calls).toBe(1)
+    expect(first.placementOrder).toEqual([PieceId.make('first')])
+    expect(first.unplacedSourcePieceIds).toEqual([])
+    expect(second.placementOrder).toEqual([PieceId.make('second')])
+    expect(second.unplacedSourcePieceIds).toEqual([PieceId.make('unplaced')])
+    expect(second.unplacedCount).toBe(1)
+  })
+
+  it('does not reuse free material after geometry or sheet inputs change', async () => {
+    const snapshot = new FreeMaterialSnapshot({
+      sheet: new SheetSpec({ width: 10, height: 10, label: 'snapshot sheet' }),
+      regions: [],
+      diagnostics: []
+    })
+    let calls = 0
+    const scorer = await makeScorer((_) => {
+      calls += 1
+      return Effect.succeed(snapshot)
+    })
+    const placed = state([placedRectangle('piece', 2, 2, 1, 1)])
+
+    await scoreWithService(scorer, input(placed))
+    await scoreWithService(scorer, input(state([placedRectangle('piece', 3, 2, 1, 1)])))
+    await scoreWithService(scorer, {
+      sheet: new SheetSpec({ width: 11, height: 10, label: 'layout scorer test sheet' }),
+      state: placed
+    })
+
+    expect(calls).toBe(3)
   })
 })
 

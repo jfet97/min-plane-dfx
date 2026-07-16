@@ -70,6 +70,13 @@ interface ScoredState {
   readonly key: string
 }
 
+interface KeyedState {
+  readonly state: IrregularBeamState
+  readonly key: string
+}
+
+const pieceIdArrayOrder: Order.Order<ReadonlyArray<PieceId>> = Order.Array(Order.String)
+
 const transformOrder = Order.combineAll<IrregularTransformCandidate>([
   Order.mapInput(Order.Number, (transform) => transform.index),
   Order.mapInput(Order.Number, (transform) => transform.rotationDeg),
@@ -107,6 +114,7 @@ export function runWindowedIrregularBeam(input: {
     const layoutScorer = yield* IrregularLayoutScorer
 
     let beam: ReadonlyArray<IrregularBeamState> = [IrregularBeamState.empty(input.pieces)]
+    let scoredBeam: ReadonlyArray<ScoredState> | undefined
     const candidateCounts: number[] = []
     while (beam.some((state) => state.remainingPreparedPieces.length > 0)) {
       const successors: IrregularBeamState[] = []
@@ -152,13 +160,24 @@ export function runWindowedIrregularBeam(input: {
         }
       }
 
-      const scored = yield* scoreStates(successors, input.sheet, layoutScorer)
-      beam = dedupeAndPrune(scored, settings.optimizer.beamWidth, layoutScorer)
+      const uniqueSuccessors = dedupeRawSuccessors(successors)
+      const scored = yield* scoreStates(
+        uniqueSuccessors,
+        input.sheet,
+        layoutScorer
+      )
+      scoredBeam = pruneScoredStates(scored, settings.optimizer.beamWidth, layoutScorer)
+      beam = scoredBeam.map(({ state }) => state)
       candidateCounts.push(candidateCount)
     }
 
     const ranked = rankScoredStates(
-      yield* scoreStates(beam, input.sheet, layoutScorer),
+      scoredBeam ??
+        (yield* scoreStates(
+          beam.map((state) => ({ state, key: beamStateKey(state) })),
+          input.sheet,
+          layoutScorer
+        )),
       layoutScorer
     )
     const best = ranked[0]
@@ -368,36 +387,52 @@ function winningStatePath(bestState: IrregularBeamState): ReadonlyArray<Irregula
 }
 
 function scoreStates(
-  states: ReadonlyArray<IrregularBeamState>,
+  states: ReadonlyArray<KeyedState>,
   sheet: SheetSpec,
   layoutScorer: IrregularLayoutScorer.Service
 ): Effect.Effect<
   ReadonlyArray<ScoredState>,
   IrregularLayoutScoringError | IrregularGeometryInputError | IrregularNestingNotImplementedError
 > {
-  return Effect.forEach(states, (state) =>
-    layoutScorer
-      .scoreState({ sheet, state })
-      .pipe(Effect.map((score) => ({ state, score, key: beamStateKey(state) })))
+  return Effect.forEach(states, ({ state, key }) =>
+    layoutScorer.scoreState({ sheet, state }).pipe(Effect.map((score) => ({ state, score, key })))
   )
 }
 
-function dedupeAndPrune(
-  states: ReadonlyArray<ScoredState>,
-  beamWidth: number,
-  layoutScorer: IrregularLayoutScorer.Service
-): ReadonlyArray<IrregularBeamState> {
-  const stateOrder = makeStateOrder(layoutScorer)
-  const deduped = new Map<string, ScoredState>()
-  for (const current of states) {
+function dedupeRawSuccessors(states: ReadonlyArray<IrregularBeamState>): ReadonlyArray<KeyedState> {
+  const deduped = new Map<string, KeyedState>()
+  for (const state of states) {
+    const current = { state, key: beamStateKey(state) }
     const previous = deduped.get(current.key)
-    if (previous === undefined || stateOrder(current, previous) < 0) {
+    if (previous === undefined || compareRepresentativeStates(current, previous) < 0) {
       deduped.set(current.key, current)
     }
   }
-  return rankScoredStates([...deduped.values()], layoutScorer)
+  return [...deduped.values()]
+}
+
+function pruneScoredStates(
+  states: ReadonlyArray<ScoredState>,
+  beamWidth: number,
+  layoutScorer: IrregularLayoutScorer.Service
+): ReadonlyArray<ScoredState> {
+  return rankScoredStates(states, layoutScorer)
     .slice(0, beamWidth)
-    .map(({ state }) => state)
+}
+
+function compareRepresentativeStates(first: KeyedState, second: KeyedState): -1 | 0 | 1 {
+  const placementOrderComparison = pieceIdArrayOrder(
+    first.state.placementOrder,
+    second.state.placementOrder
+  )
+  if (placementOrderComparison !== 0) return placementOrderComparison
+
+  const unplacedOrderComparison = pieceIdArrayOrder(
+    first.state.unplacedSourcePieceIds,
+    second.state.unplacedSourcePieceIds
+  )
+  if (unplacedOrderComparison !== 0) return unplacedOrderComparison
+  return Order.String(first.key, second.key)
 }
 
 function rankScoredStates(

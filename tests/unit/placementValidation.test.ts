@@ -115,7 +115,7 @@ function checkPlacement(value: ValidatePlacementInput) {
   return Effect.runPromise(PlacementValidation.check(value))
 }
 
-async function captureFailure(value: Promise<void>) {
+async function captureFailure<T>(value: Promise<T>) {
   try {
     await value
     return undefined
@@ -139,6 +139,38 @@ describe('PlacementValidation', () => {
 
     await expect(
       checkPlacement(input(moving, candidate(moving, 1, 0), [squarePiece('overlap', 2, 0)]))
+    ).resolves.toBe(false)
+  })
+
+  it('keeps disjoint translated bounds legal', async () => {
+    const moving = movingSquare()
+
+    await expect(
+      checkPlacement(input(moving, candidate(moving, 0, 0), [squarePiece('disjoint', 5, 5)]))
+    ).resolves.toBe(true)
+  })
+
+  it('rejects a collapsed finite translation before the disjoint bounds shortcut', async () => {
+    const moving = movingSquare()
+    const failure = await captureFailure(
+      checkPlacement(
+        input(moving, candidate(moving, 0, 0), [
+          squarePiece('collapsed', Number.MAX_VALUE, 0)
+        ])
+      )
+    )
+
+    expect(failure).toBeInstanceOf(IrregularGeometryInputError)
+    if (!(failure instanceof IrregularGeometryInputError))
+      throw new Error('expected geometry input error')
+    expect(failure.message).toBe('polygon must not repeat adjacent vertices.')
+  })
+
+  it('keeps overlapping translated bounds in exact overlap validation', async () => {
+    const moving = movingSquare()
+
+    await expect(
+      checkPlacement(input(moving, candidate(moving, 0, 0), [squarePiece('overlapping', 1, 0)]))
     ).resolves.toBe(false)
   })
 

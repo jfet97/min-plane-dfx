@@ -379,6 +379,45 @@ describe('NfpIfpServiceLive', () => {
     ])
   })
 
+  it('preserves candidates when disjoint NFP bounds skip pair intersections', async () => {
+    const moving = transformedGeometry('moving-disjoint-nfps', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const firstFixed = placedPiece(
+      'first-disjoint-nfp',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      0,
+      0
+    )
+    const secondFixed = placedPiece(
+      'second-disjoint-nfp',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      8,
+      8
+    )
+
+    const candidates = await generateCandidates({
+      sheet: sheet(10, 10),
+      placed: [firstFixed, secondFixed],
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS
+    })
+
+    expect(candidatePoints(candidates)).toEqual([
+      point(2, 0),
+      point(8, 0),
+      point(0, 2),
+      point(2, 2),
+      point(6, 6),
+      point(8, 6),
+      point(0, 8),
+      point(6, 8)
+    ])
+  })
+
   it('keeps a rotated NFP boundary-touching candidate and filters positive overlap', async () => {
     const moving = transformedGeometry('moving-rotated-contact', [
       point(0, 0),
