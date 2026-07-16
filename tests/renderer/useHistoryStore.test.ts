@@ -119,4 +119,20 @@ describe('useHistoryStore', () => {
 
     expect(store.frameCount.value).toBe(1)
   })
+
+  it('returns to the final replay frame after a completed run', () => {
+    store.setResult(result())
+    store.pushFrame(frame())
+    store.pushFrame({
+      ...frame(),
+      frameId: 'frame-1-final',
+      stepIndex: 1,
+      title: 'Step 1'
+    })
+
+    store.selectStepPosition(0)
+    store.selectLatestFrame()
+
+    expect(store.selectedFrame.value?.stepIndex).toBe(1)
+  })
 })

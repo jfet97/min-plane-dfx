@@ -318,6 +318,12 @@ export function useHistoryStore() {
       state.selectedBeamRank = 0
     },
 
+    selectLatestFrame(): void {
+      stopPlayback()
+      state.selectedStepIndex = latestStepIndex(currentFrames())
+      state.selectedBeamRank = 0
+    },
+
     selectStepPosition(idx: number): void {
       stopPlayback()
       const steps = currentStepIndexes()

@@ -243,6 +243,14 @@ const irregularCanvasModel = computed<IrregularCanvasModel | null>(() => {
   })
 })
 
+const hasIrregularResultPlacements = computed(
+  () => irregularCanvasModel.value?.placements.some((item) => item.status === 'rendered') ?? false
+)
+
+const hasResultPlacements = computed(
+  () => placementsToRender.value.length > 0 || hasIrregularResultPlacements.value
+)
+
 const sourcePiecesById = computed(() => {
   const byId = new Map<string, ImportedPiece>()
   for (const piece of store.state.value.pieces) {
@@ -603,7 +611,7 @@ function sourcePaddingRect(piece: ImportedPiece): ViewBox {
     </div>
 
     <div
-      v-if="props.mode === 'result' && placementsToRender.length === 0 && history.selectedRun.value"
+      v-if="props.mode === 'result' && !hasResultPlacements && history.selectedRun.value"
       class="empty-state"
     >
       <p>

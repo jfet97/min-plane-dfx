@@ -556,6 +556,7 @@ async function loadCompletedHistoryReplay(
     for (const frame of frames) {
       history.pushFrame(frame)
     }
+    history.selectLatestFrame()
   } catch (error: unknown) {
     console.warn(`[history] failed to load replay for ${context}:`, error)
   }
