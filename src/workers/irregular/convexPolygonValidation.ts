@@ -3,7 +3,7 @@
  * Coordinates remain in the app's DXF y-up convention; successful validation
  * reports the ring winding without rewriting the supplied vertices.
  */
-import type { IrregularPoint } from '@shared/irregular/domain.js'
+import type { InternalPoint } from './internalGeometry.js'
 import { GeometryPredicates } from './geometryPredicates.js'
 
 /**
@@ -22,8 +22,8 @@ interface InvalidStrictConvexBoundary {
 
 /** One directed edge of the ordered, implicitly closed input ring. */
 interface BoundaryEdge {
-  readonly start: IrregularPoint
-  readonly end: IrregularPoint
+  readonly start: InternalPoint
+  readonly end: InternalPoint
 }
 
 /**
@@ -58,7 +58,7 @@ export const ConvexPolygonValidation = {
  * local turn at every vertex while still crossing itself.
  */
 function validateStrictBoundary(
-  points: ReadonlyArray<IrregularPoint>
+  points: ReadonlyArray<InternalPoint>
 ): StrictConvexBoundaryValidation {
   if (points.length < 3) {
     return { message: 'polygon must contain at least three vertices.' }
@@ -69,6 +69,10 @@ function validateStrictBoundary(
 
     if (point === undefined) {
       return { message: 'polygon points must form a closed boundary.' }
+    }
+
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+      return { message: 'polygon coordinates must be finite.' }
     }
 
   }
@@ -217,7 +221,7 @@ function segmentsIntersect(first: BoundaryEdge, second: BoundaryEdge): boolean {
  * Inclusive bounds preserve the simple-ring rule that endpoint touches count
  * as intersections.
  */
-function pointIsOnSegment(point: IrregularPoint, segment: BoundaryEdge): boolean {
+function pointIsOnSegment(point: InternalPoint, segment: BoundaryEdge): boolean {
   return (
     point.x >= Math.min(segment.start.x, segment.end.x) &&
     point.x <= Math.max(segment.start.x, segment.end.x) &&

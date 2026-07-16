@@ -16,6 +16,7 @@ import { SheetSpec } from '@shared/domain/nesting.js'
 import type { ValidatePlacementInput } from '../../src/workers/irregular/services.js'
 import { IrregularGeometryInputError } from '../../src/workers/irregular/services.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
+import { ConvexPolygonValidation } from '../../src/workers/irregular/convexPolygonValidation.js'
 import { PlacementValidation } from '../../src/workers/irregular/placementValidation.js'
 
 function point(x: number, y: number): IrregularPoint {
@@ -164,6 +165,33 @@ describe('PlacementValidation', () => {
     if (!(failure instanceof IrregularGeometryInputError))
       throw new Error('expected geometry input error')
     expect(failure.message).toBe('polygon must not repeat adjacent vertices.')
+  })
+
+  it('returns a typed geometry error when translation overflows', async () => {
+    const moving = transformedGeometry('overflow-moving', [
+      point(0, 0),
+      point(Number.MAX_VALUE, 0),
+      point(Number.MAX_VALUE, 1),
+      point(0, 1)
+    ])
+    const failure = await captureFailure(
+      checkPlacement(input(moving, candidate(moving, Number.MAX_VALUE, 0)))
+    )
+
+    expect(failure).toBeInstanceOf(IrregularGeometryInputError)
+    if (!(failure instanceof IrregularGeometryInputError))
+      throw new Error('expected geometry input error')
+    expect(failure.message).toBe('moving translation must produce finite polygon coordinates.')
+  })
+
+  it('rejects non-finite coordinates in structural polygon records', () => {
+    expect(
+      ConvexPolygonValidation.validateStrictBoundary([
+        { x: 0, y: 0 },
+        { x: 2, y: 0 },
+        { x: Number.NaN, y: 2 }
+      ])
+    ).toEqual({ message: 'polygon coordinates must be finite.' })
   })
 
   it('keeps overlapping translated bounds in exact overlap validation', async () => {

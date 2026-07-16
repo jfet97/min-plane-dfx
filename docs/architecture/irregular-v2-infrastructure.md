@@ -24,6 +24,11 @@ These DTOs are named app payloads and should stay aligned with the rest of
 contracts may still use interfaces for operation inputs because those are
 dependency boundaries, not persisted payloads.
 
+The verified derived-geometry hot path uses worker-private structural point,
+bounds, polygon, and polygon-with-bounds records. Schema-backed geometry is
+still accepted at service inputs and restored at output/cache boundaries; the
+private records avoid class construction while preserving those contracts.
+
 ## Worker Services
 
 `src/workers/irregular/` owns Effect service tags for the future engine:

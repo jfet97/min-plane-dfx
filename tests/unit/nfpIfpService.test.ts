@@ -4,6 +4,7 @@ import {
   IrregularBounds,
   IrregularPlacedPiece,
   IrregularPlacement,
+  IrregularPlacementCandidate,
   IrregularPoint,
   IrregularPolygon,
   IrregularTransform,
@@ -638,6 +639,9 @@ describe('NfpIfpServiceLive', () => {
       point(0, 8),
       point(8, 8)
     ])
+    expect(candidates.every((candidate) => candidate instanceof IrregularPlacementCandidate)).toBe(
+      true
+    )
     expect(candidates.every(({ diagnostics }) => diagnostics.length === 0)).toBe(true)
   })
 

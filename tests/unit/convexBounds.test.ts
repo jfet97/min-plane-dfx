@@ -34,4 +34,14 @@ describe('convex bounds', () => {
     })
     expect(boundsForPoints(translated?.polygon.points ?? [])).toEqual(translated?.bounds)
   })
+
+  it('rejects non-finite translated coordinates and invalid source coordinates', () => {
+    expect(
+      translatePolygonWithBounds(
+        { points: [{ x: Number.MAX_VALUE, y: 0 }] },
+        { x: Number.MAX_VALUE, y: 0 }
+      )
+    ).toBeUndefined()
+    expect(boundsForPoints([{ x: Number.NaN, y: 0 }])).toBeUndefined()
+  })
 })

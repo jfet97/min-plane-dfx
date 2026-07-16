@@ -1,17 +1,13 @@
-import {
-  IrregularBounds,
-  IrregularPoint,
-  IrregularPolygon
-} from '@shared/irregular/domain.js'
-
-export interface PolygonWithBounds {
-  readonly polygon: IrregularPolygon
-  readonly bounds: IrregularBounds
-}
+import type {
+  InternalBounds,
+  InternalPoint,
+  InternalPolygon,
+  InternalPolygonWithBounds
+} from './internalGeometry.js'
 
 export function boundsForPoints(
-  points: ReadonlyArray<IrregularPoint>
-): IrregularBounds | undefined {
+  points: ReadonlyArray<InternalPoint>
+): InternalBounds | undefined {
   const firstPoint = points[0]
   if (firstPoint === undefined) return undefined
   if (!Number.isFinite(firstPoint.x) || !Number.isFinite(firstPoint.y)) return undefined
@@ -32,13 +28,13 @@ export function boundsForPoints(
     maxY = Math.max(maxY, point.y)
   }
 
-  return new IrregularBounds({ minX, minY, maxX, maxY })
+  return makeBounds(minX, minY, maxX, maxY)
 }
 
 export function translatePolygonWithBounds(
-  polygon: IrregularPolygon,
-  translation: IrregularPoint
-): PolygonWithBounds | undefined {
+  polygon: InternalPolygon,
+  translation: InternalPoint
+): InternalPolygonWithBounds | undefined {
   const firstPoint = polygon.points[0]
   if (firstPoint === undefined) return undefined
 
@@ -46,7 +42,7 @@ export function translatePolygonWithBounds(
   const firstY = firstPoint.y + translation.y
   if (!Number.isFinite(firstX) || !Number.isFinite(firstY)) return undefined
 
-  const translatedPoints: IrregularPoint[] = [new IrregularPoint({ x: firstX, y: firstY })]
+  const translatedPoints: InternalPoint[] = [{ x: firstX, y: firstY }]
   let minX = firstX
   let minY = firstY
   let maxX = firstX
@@ -60,24 +56,47 @@ export function translatePolygonWithBounds(
     const y = point.y + translation.y
     if (!Number.isFinite(x) || !Number.isFinite(y)) return undefined
 
-    translatedPoints.push(new IrregularPoint({ x, y }))
+    translatedPoints.push({ x, y })
     minX = Math.min(minX, x)
     minY = Math.min(minY, y)
     maxX = Math.max(maxX, x)
     maxY = Math.max(maxY, y)
   }
 
+  const bounds = makeBounds(minX, minY, maxX, maxY)
+  if (bounds === undefined) return undefined
+
   return {
-    polygon: new IrregularPolygon({ points: translatedPoints }),
-    bounds: new IrregularBounds({ minX, minY, maxX, maxY })
+    polygon: { points: translatedPoints },
+    bounds
   }
 }
 
-export function areDisjoint(first: IrregularBounds, second: IrregularBounds): boolean {
+export function areDisjoint(first: InternalBounds, second: InternalBounds): boolean {
   return (
     first.maxX < second.minX ||
     second.maxX < first.minX ||
     first.maxY < second.minY ||
     second.maxY < first.minY
   )
+}
+
+function makeBounds(
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number
+): InternalBounds | undefined {
+  if (
+    !Number.isFinite(minX) ||
+    !Number.isFinite(minY) ||
+    !Number.isFinite(maxX) ||
+    !Number.isFinite(maxY) ||
+    minX > maxX ||
+    minY > maxY
+  ) {
+    return undefined
+  }
+
+  return { minX, minY, maxX, maxY }
 }

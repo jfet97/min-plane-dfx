@@ -1,15 +1,18 @@
 import { Effect } from 'effect'
-import { IrregularPoint, IrregularPolygon } from '@shared/irregular/domain.js'
 import type { ValidatePlacementInput } from './services.js'
 import { IrregularGeometryInputError } from './services.js'
+import type {
+  InternalPoint,
+  InternalPolygon,
+  InternalPolygonWithBounds
+} from './internalGeometry.js'
 import {
   ConvexPolygonValidation,
   type ConvexPolygonWinding
 } from './convexPolygonValidation.js'
 import {
   areDisjoint,
-  translatePolygonWithBounds,
-  type PolygonWithBounds
+  translatePolygonWithBounds
 } from './convexBounds.js'
 import { GeometryPredicates } from './geometryPredicates.js'
 
@@ -67,10 +70,10 @@ function assess(
   for (const placed of input.placed) {
     const placedPolygon = translateAndValidatePolygon(
       placed.collisionGeometry.polygon,
-      new IrregularPoint({
+      {
         x: placed.placement.transform.translateX,
         y: placed.placement.transform.translateY
-      }),
+      },
       'placed'
     )
     if ('message' in placedPolygon) {
@@ -105,7 +108,7 @@ function assess(
 }
 
 function isInsideSheet(
-  points: ReadonlyArray<IrregularPoint>,
+  points: ReadonlyArray<InternalPoint>,
   sheetWidth: number,
   sheetHeight: number
 ): boolean {
@@ -123,7 +126,7 @@ interface PlacementAssessment {
   readonly message: string
 }
 
-interface ValidatedPolygonWithBounds extends PolygonWithBounds {
+interface ValidatedPolygonWithBounds extends InternalPolygonWithBounds {
   readonly winding: ConvexPolygonWinding
 }
 
@@ -177,8 +180,8 @@ function polygonsHavePositiveAreaOverlap(
 }
 
 function translateAndValidatePolygon(
-  polygon: IrregularPolygon,
-  translation: IrregularPoint,
+  polygon: InternalPolygon,
+  translation: InternalPoint,
   label: string
 ): ValidatedPolygonWithBounds | GeometryFailure {
   const translatedPolygon = translatePolygonWithBounds(polygon, translation)
@@ -199,8 +202,8 @@ function translateAndValidatePolygon(
  * combination for a strict convex ring.
  */
 function strictConvexInteriorPoint(
-  polygon: IrregularPolygon
-): { readonly value: IrregularPoint } | GeometryFailure {
+  polygon: InternalPolygon
+): { readonly value: InternalPoint } | GeometryFailure {
   const weight = 1 / polygon.points.length
   if (!Number.isFinite(weight)) {
     return { message: 'polygon interior-point arithmetic must produce finite coordinates.' }
@@ -222,12 +225,12 @@ function strictConvexInteriorPoint(
     }
   }
 
-  return { value: new IrregularPoint({ x, y }) }
+  return { value: { x, y } }
 }
 
 function boundariesHavePositiveCollinearOverlap(
-  first: IrregularPolygon,
-  second: IrregularPolygon,
+  first: InternalPolygon,
+  second: InternalPolygon,
   firstWinding: -1 | 1
 ): { readonly value: boolean } | GeometryFailure {
   for (const firstEdge of polygonEdges(first)) {
@@ -273,8 +276,8 @@ function segmentsHavePositiveLengthOverlap(first: PolygonEdge, second: PolygonEd
 }
 
 function boundariesHaveProperCrossing(
-  first: IrregularPolygon,
-  second: IrregularPolygon
+  first: InternalPolygon,
+  second: InternalPolygon
 ): { readonly value: boolean } | GeometryFailure {
   for (const firstEdge of polygonEdges(first)) {
     for (const secondEdge of polygonEdges(second)) {
@@ -318,11 +321,11 @@ function boundariesHaveProperCrossing(
 }
 
 interface PolygonEdge {
-  readonly start: IrregularPoint
-  readonly end: IrregularPoint
+  readonly start: InternalPoint
+  readonly end: InternalPoint
 }
 
-function polygonEdges(polygon: IrregularPolygon): ReadonlyArray<PolygonEdge> {
+function polygonEdges(polygon: InternalPolygon): ReadonlyArray<PolygonEdge> {
   const edges: PolygonEdge[] = []
   for (let index = 0; index < polygon.points.length; index += 1) {
     const start = polygon.points[index]
@@ -333,8 +336,8 @@ function polygonEdges(polygon: IrregularPolygon): ReadonlyArray<PolygonEdge> {
 }
 
 function isStrictlyInside(
-  point: IrregularPoint,
-  polygon: IrregularPolygon,
+  point: InternalPoint,
+  polygon: InternalPolygon,
   winding: -1 | 1
 ): boolean {
   for (const edge of polygonEdges(polygon)) {
@@ -344,7 +347,7 @@ function isStrictlyInside(
   return true
 }
 
-function isOnBoundary(point: IrregularPoint, polygon: IrregularPolygon): boolean {
+function isOnBoundary(point: InternalPoint, polygon: InternalPolygon): boolean {
   for (const edge of polygonEdges(polygon)) {
     if (
       GeometryPredicates.orientation(edge.start, edge.end, point) === 0 &&
@@ -356,7 +359,7 @@ function isOnBoundary(point: IrregularPoint, polygon: IrregularPolygon): boolean
   return false
 }
 
-function pointIsOnSegment(point: IrregularPoint, edge: PolygonEdge): boolean {
+function pointIsOnSegment(point: InternalPoint, edge: PolygonEdge): boolean {
   return (
     point.x >= Math.min(edge.start.x, edge.end.x) &&
     point.x <= Math.max(edge.start.x, edge.end.x) &&
