@@ -129,7 +129,11 @@ function appendDocuments(documents: ReadonlyArray<ImportedDxfDocument>): void {
 }
 
 async function appendPresetDocument(document: ImportedDxfDocument): Promise<void> {
-  const persisted = window.appApi ? await window.appApi.persistSourceDocument(document) : document
+  const api = window.appApi
+  if (!api) {
+    throw new Error('Desktop bridge is unavailable. Restart the desktop app before adding shapes.')
+  }
+  const persisted = await api.persistSourceDocument(document)
   state.documents = [...state.documents, persisted]
   recomputeAggregates()
   const piece = documentObjectPiece(persisted)
