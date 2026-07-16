@@ -423,9 +423,28 @@ Useful anchors:
   GA order/rotation optimization.
   https://github.com/Jack000/SVGnest
   https://github.com/Jack000/Deepnest
+- libnest2d, for evaluating each retained rotation family before choosing the
+  best placement instead of letting one combined local pool erase orientations.
+  https://github.com/tamasmeszaros/libnest2d
+- Sparrow, for deduplicating equivalent transformations before applying an
+  N-best cap and refining several distinct starts.
+  https://github.com/JeroenGar/sparrow
+- PackingSolver, for explicit one- and two-item periodic-cell generation before
+  expanding a repeated pattern over a finite sheet.
+  https://github.com/fontanf/packingsolver
 
 The exact MIP direction is useful academic context, but it is not the v2
 implementation path.
+
+Source comparison confirms that Deepnest, SVGNest, and libnest2d do not solve
+the repeated-triangle case with a shared-contact objective. Deepnest and
+SVGNest use NFP placement inside GA order/rotation search; libnest2d evaluates
+rotation-specific placement choices before its global choice. Sparrow's useful
+transfer is pre-cap transform deduplication and multiple distinct samples, not
+its temporary-overlap compression phase. PackingSolver is the clearest reference
+for repeated identical pieces because it constructs periodic cells explicitly.
+The production engine should borrow these search structures only through real
+placement generation and validation; it must not hardcode a screenshot motif.
 
 ## End-To-End Pipeline
 
@@ -909,8 +928,9 @@ The deterministic convex baseline is implemented behind the worker boundary:
 - `orderWindow = 1`, `2`, and `3` are supported by deterministic windowed beam
   expansion with beam-width pruning, bounded local candidate alternatives, and
   state deduplication;
-- beam survivor scoring uses unplaced count, free-material usability and
-  fragmentation metrics, then compact collision bounds;
+- beam survivor scoring uses unplaced count, repeated and total structural
+  contacts, compact collision bounds, legacy contact diagnostics, anchoring,
+  then free-material usability and fragmentation metrics;
 - real transform placements, including their source-space placement reference,
   and tagged irregular NDJSON history frames cross the worker protocol without
   rectangle stand-ins;
@@ -1602,6 +1622,17 @@ in `3.99 s`, and 200 in `20.76 s`. A broader `orderWindow = 2`, `beamWidth = 8`,
 within two minutes, so wider beam and GA settings are explicit experiments, not
 defaults. Benchmarks should continue tuning them against real jobs and fixture
 corpora.
+
+The pointed 20-copy triangle regression has a separate measured quality
+profile: `orderWindow = 4`, `beamWidth = 13`, `localCandidateFanout = 4`,
+`transformCap = 8`, edge-contact policy, and GA disabled. Width `12` prunes the
+future winner; width `13` reaches the same terminal lattice as width `14` in
+about `3.3 s`. The first lost width-5 prefix is rank `7` after the fourth
+placement even though it is the most compact successor, because it is one
+structural contact behind the retained states. Pure compactness and one-contact
+slack reservations were measured and did not recover the terminal lattice.
+This profile remains explicit because the existing large-piece-count benchmark
+shows that making every job use a broad beam would be an unacceptable default.
 
 ## Assumptions To Revisit
 
