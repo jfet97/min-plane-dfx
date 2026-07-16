@@ -159,6 +159,7 @@ function scoreSummary(computed: IrregularComputeResult): IrregularLayoutScoreSum
   const score = computed.score
   return new IrregularLayoutScoreSummary({
     unplacedCount: score.unplacedCount,
+    sharedCollisionBoundaryLengthMm: score.sharedCollisionBoundaryLengthMm,
     largestNetFreeMaterialRegionAreaMm2: score.largestNetFreeMaterialRegionAreaMm2,
     freeMaterialRegionCount: score.freeMaterialRegionCount,
     freeMaterialHoleCount: score.freeMaterialHoleCount,

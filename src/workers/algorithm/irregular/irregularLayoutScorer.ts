@@ -55,6 +55,8 @@ function makeFreeMaterialCacheKey(
 export interface IrregularLayoutScore {
   /** Fewer unplaced prepared ids always dominate every later criterion. */
   readonly unplacedCount: number
+  /** Total exact boundary shared by translated padded collision polygons. */
+  readonly sharedCollisionBoundaryLengthMm: number
   /** Largest net boundary-minus-holes material region; larger is better. */
   readonly largestNetFreeMaterialRegionAreaMm2: number
   /** Number of disconnected material regions; smaller is better. */
@@ -249,6 +251,9 @@ function scoreDerivedState(
   const collisionBoundsSpanMm = canonicalWidth + canonicalHeight
   const collisionBoundsBottomMm = canonicalMinY
   const collisionBoundsLeftMm = canonicalMinX
+  const sharedCollisionBoundaryLengthMm = canonicalizeIrregularScoreMillimeters(
+    input.state.sharedCollisionBoundaryLengthMm ?? Number.NaN
+  )
   const occupiedHullWasteRatio = deriveOccupiedHullWasteRatio(input.state)
 
   if (
@@ -258,6 +263,7 @@ function scoreDerivedState(
     !Number.isFinite(collisionBoundsNormalizedSpanSum) ||
     !Number.isFinite(collisionBoundsAreaMm2) ||
     !Number.isFinite(collisionBoundsSpanMm) ||
+    sharedCollisionBoundaryLengthMm === undefined ||
     occupiedHullWasteRatio === undefined ||
     !Number.isFinite(collisionBoundsBottomMm) ||
     !Number.isFinite(collisionBoundsLeftMm)
@@ -267,6 +273,7 @@ function scoreDerivedState(
 
   return Effect.succeed({
     unplacedCount: input.state.unplacedSourcePieceIds.length,
+    sharedCollisionBoundaryLengthMm,
     ...materialMetrics,
     collisionBoundsWorstNormalizedSheetConsumption,
     collisionBoundsNormalizedSpanSum,
@@ -462,11 +469,12 @@ function compareScores(first: IrregularLayoutScore, second: IrregularLayoutScore
 
 const layoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
   scoreCriterion((score) => score.unplacedCount),
-  scoreCriterion((score) => score.occupiedHullWasteRatio),
+  descendingScoreCriterion((score) => score.sharedCollisionBoundaryLengthMm),
   scoreCriterion((score) => score.collisionBoundsWorstNormalizedSheetConsumption),
   scoreCriterion((score) => score.collisionBoundsNormalizedSpanSum),
   scoreCriterion((score) => score.collisionBoundsAreaMm2),
   scoreCriterion((score) => score.collisionBoundsSpanMm),
+  scoreCriterion((score) => score.occupiedHullWasteRatio),
   scoreCriterion((score) => score.collisionBoundsBottomMm),
   scoreCriterion((score) => score.collisionBoundsLeftMm),
   // free area is almost constant when every placed polygon remains inside one sheet region

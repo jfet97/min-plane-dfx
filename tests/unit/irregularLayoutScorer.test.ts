@@ -308,7 +308,7 @@ describe('IrregularLayoutScorer', () => {
     expect(await compareScores(compact, separated)).toBeLessThan(0)
   })
 
-  it('ranks lower hull waste before slightly better collision bounds', async () => {
+  it('ranks tighter collision bounds before lower hull waste', async () => {
     const lowerWaste = state([placedRectangle('lower-waste', 6.1, 2, 0, 0)])
     const tighterBounds = state([
       placedRectangle('wasteful-left', 2, 2, 0, 0),
@@ -333,7 +333,32 @@ describe('IrregularLayoutScorer', () => {
     expect(lowerWasteScore.occupiedHullWasteRatio).toBeLessThan(
       tighterBoundsScore.occupiedHullWasteRatio
     )
-    expect(await compareScores(lowerWasteScore, tighterBoundsScore)).toBeLessThan(0)
+    expect(await compareScores(tighterBoundsScore, lowerWasteScore)).toBeLessThan(0)
+  })
+
+  it('ranks repeated shared collision boundaries before disconnected compactness', async () => {
+    const currentSheet = new SheetSpec({
+      width: 10,
+      height: 100,
+      label: 'shared-boundary score sheet'
+    })
+    const touching = state([
+      placedRectangle('touching-left', 4, 2, 0, 0),
+      placedRectangle('touching-right', 4, 2, 4, 0)
+    ])
+    const disconnected = state([
+      placedRectangle('disconnected-bottom', 4, 2, 0, 0),
+      placedRectangle('disconnected-top', 4, 2, 0, 3)
+    ])
+    const touchingScore = await score({ sheet: currentSheet, state: touching })
+    const disconnectedScore = await score({ sheet: currentSheet, state: disconnected })
+
+    expect(touchingScore.sharedCollisionBoundaryLengthMm).toBe(2)
+    expect(disconnectedScore.sharedCollisionBoundaryLengthMm).toBe(0)
+    expect(touchingScore.collisionBoundsWorstNormalizedSheetConsumption).toBeGreaterThan(
+      disconnectedScore.collisionBoundsWorstNormalizedSheetConsumption
+    )
+    expect(await compareScores(touchingScore, disconnectedScore)).toBeLessThan(0)
   })
 
   it('canonicalizes translated bounds and anchors symmetric layouts before free material', async () => {
@@ -701,6 +726,7 @@ describe('IrregularLayoutScorer', () => {
       height: 4
     })
     expect(child.translatedCollisionBounds).toEqual(rebuilt.translatedCollisionBounds)
+    expect(child.sharedCollisionBoundaryLengthMm).toBe(rebuilt.sharedCollisionBoundaryLengthMm)
 
     const unplacedChild = child.withUnplacedPiece({
       remainingPreparedPieces: [],
@@ -708,6 +734,9 @@ describe('IrregularLayoutScorer', () => {
     })
     expect(unplacedChild.canonicalOccupiedGeometryKey).toBe(child.canonicalOccupiedGeometryKey)
     expect(unplacedChild.translatedCollisionBounds).toEqual(child.translatedCollisionBounds)
+    expect(unplacedChild.sharedCollisionBoundaryLengthMm).toBe(
+      child.sharedCollisionBoundaryLengthMm
+    )
   })
 
   it('canonicalizes translated polygon rings across cyclic starts and winding', () => {

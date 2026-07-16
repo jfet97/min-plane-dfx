@@ -331,6 +331,7 @@ describe('irregular schema contracts', () => {
   it('uses named whole-layout criteria instead of numeric score tuples', () => {
     const score = {
       unplacedCount: 1,
+      sharedCollisionBoundaryLengthMm: 42,
       largestNetFreeMaterialRegionAreaMm2: 200,
       freeMaterialRegionCount: 2,
       freeMaterialHoleCount: 1,

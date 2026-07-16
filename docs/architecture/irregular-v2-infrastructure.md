@@ -317,16 +317,17 @@ terminal legality-audit status, and the complete whole-layout score. The score
 is compared in this order:
 
 1. lower `unplacedCount`;
-2. lower `occupiedHullWasteRatio`;
+2. higher `sharedCollisionBoundaryLengthMm`;
 3. lower `collisionBoundsWorstNormalizedSheetConsumption`;
 4. lower `collisionBoundsNormalizedSpanSum`;
 5. lower `collisionBoundsAreaMm2`;
 6. lower `collisionBoundsSpanMm`;
-7. lower collision-bound `minY`, then `minX`, to anchor equivalent layouts at lower-left;
-8. higher `largestNetFreeMaterialRegionAreaMm2`;
-9. lower `freeMaterialRegionCount`;
-10. lower `freeMaterialHoleCount`;
-11. lower `freeMaterialSliverMetric`.
+7. lower `occupiedHullWasteRatio`;
+8. lower collision-bound `minY`, then `minX`, to anchor equivalent layouts at lower-left;
+9. higher `largestNetFreeMaterialRegionAreaMm2`;
+10. lower `freeMaterialRegionCount`;
+11. lower `freeMaterialHoleCount`;
+12. lower `freeMaterialSliverMetric`.
 
 Collision-bound compactness intentionally comes before free-material diagnostics:
 when every piece stays within one connected sheet region, the total free area is
@@ -373,8 +374,8 @@ beam, and seeded GA/search portfolio:
 `src/workers/algorithm/irregular/irregularPlacementScorer.ts` owns the local
 candidate-policy score for candidates already accepted by NFP/IFP generation
 and direct validation. `irregularLayoutScorer.ts` owns a separate lexicographic
-whole-layout score for beam retention: unplaced count first, then occupied-hull
-waste, compact collision bounds, lower-left anchoring, and free-material
+whole-layout score for beam retention: unplaced count first, then shared padded
+boundary, compact collision bounds, occupied-hull waste, lower-left anchoring, and free-material
 usability/fragmentation diagnostics. Free material is scoring-only and never
 accepts or rejects a placement. Before a beam step calls
 that expensive scorer, it deduplicates successor states by canonical occupied

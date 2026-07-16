@@ -126,6 +126,7 @@ describe('result canvas transforms', () => {
       unplacedPieceIds: [pieceId('leftover-1')],
       score: {
         unplacedCount: 1,
+        sharedCollisionBoundaryLengthMm: 12,
         largestNetFreeMaterialRegionAreaMm2: 125,
         freeMaterialRegionCount: 2,
         freeMaterialHoleCount: 1,

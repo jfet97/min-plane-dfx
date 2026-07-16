@@ -2,8 +2,10 @@ import type { PieceId } from '@shared/domain/ids.js'
 import type { IrregularPlacedPiece, IrregularPreparedPiece } from '@shared/irregular/domain.js'
 import {
   makePlacedCollisionSpatialIndex,
+  type PlacedCollisionSpatialEntry,
   type PlacedCollisionSpatialIndex
 } from '../../irregular/placedCollisionSpatialIndex.js'
+import { sharedConvexPolygonBoundaryLength } from '../../irregular/convexPolygonContact.js'
 
 export interface IrregularCollisionBounds {
   readonly minX: number
@@ -28,6 +30,7 @@ interface DerivedIrregularBeamStateMetadata {
   readonly canonicalEntryKeys: ReadonlyArray<string>
   readonly canonicalOccupiedGeometryKey: string
   readonly translatedCollisionBounds: IrregularCollisionBounds | undefined
+  readonly sharedCollisionBoundaryLengthMm: number | undefined
   readonly placedCollisionIndex: PlacedCollisionSpatialIndex
 }
 
@@ -55,6 +58,8 @@ export class IrregularBeamState {
   readonly canonicalOccupiedGeometryKey: string
   /** Bounds around translated collision polygons retained for derived scoring. */
   readonly translatedCollisionBounds: IrregularCollisionBounds | undefined
+  /** Exact cumulative boundary shared by translated collision polygons. */
+  readonly sharedCollisionBoundaryLengthMm: number | undefined
   /** Persistent conservative index for translated placed collision bounds. */
   readonly placedCollisionIndex: PlacedCollisionSpatialIndex
 
@@ -78,6 +83,7 @@ export class IrregularBeamState {
     this.canonicalEntryKeys = metadata.canonicalEntryKeys
     this.canonicalOccupiedGeometryKey = metadata.canonicalOccupiedGeometryKey
     this.translatedCollisionBounds = metadata.translatedCollisionBounds
+    this.sharedCollisionBoundaryLengthMm = metadata.sharedCollisionBoundaryLengthMm
   }
 
   /** Creates the empty layout state without inventing any geometry or result. */
@@ -103,6 +109,8 @@ export class IrregularBeamState {
       this.canonicalEntryKeys,
       canonicalPlacedGeometryKey(input.placedCollisionGeometry)
     )
+    const placedCollisionIndex = this.placedCollisionIndex.add(input.placedCollisionGeometry)
+    const addedEntry = placedCollisionIndex.entries[placedCollisionIndex.entries.length - 1]
     return IrregularBeamState.fromDerivedMetadata(
       {
         remainingPreparedPieces: input.remainingPreparedPieces,
@@ -118,7 +126,12 @@ export class IrregularBeamState {
           this.placedCollisionGeometries.length === 0
             ? derivePlacedCollisionBounds(input.placedCollisionGeometry)
             : extendCollisionBounds(this.translatedCollisionBounds, input.placedCollisionGeometry),
-        placedCollisionIndex: this.placedCollisionIndex.add(input.placedCollisionGeometry)
+        sharedCollisionBoundaryLengthMm: extendSharedCollisionBoundaryLength(
+          this.sharedCollisionBoundaryLengthMm,
+          this.placedCollisionIndex,
+          addedEntry
+        ),
+        placedCollisionIndex
       }
     )
   }
@@ -139,6 +152,7 @@ export class IrregularBeamState {
         canonicalEntryKeys: this.canonicalEntryKeys,
         canonicalOccupiedGeometryKey: this.canonicalOccupiedGeometryKey,
         translatedCollisionBounds: this.translatedCollisionBounds,
+        sharedCollisionBoundaryLengthMm: this.sharedCollisionBoundaryLengthMm,
         placedCollisionIndex: this.placedCollisionIndex
       }
     )
@@ -162,8 +176,58 @@ function deriveMetadata(
     canonicalEntryKeys,
     canonicalOccupiedGeometryKey: canonicalEntryListKey(canonicalEntryKeys),
     translatedCollisionBounds: deriveCollisionBounds(placedCollisionGeometries),
+    sharedCollisionBoundaryLengthMm: deriveSharedCollisionBoundaryLength(placedCollisionGeometries),
     placedCollisionIndex: makePlacedCollisionSpatialIndex(placedCollisionGeometries)
   }
+}
+
+function deriveSharedCollisionBoundaryLength(
+  placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+): number | undefined {
+  const index = makePlacedCollisionSpatialIndex(placedCollisionGeometries)
+  let totalLengthMm = 0
+  for (const entry of index.entries) {
+    const previousEntries = index.entries.slice(0, entry.ordinal)
+    const additionalLengthMm = sharedBoundaryWithEntries(entry, previousEntries)
+    if (additionalLengthMm === undefined) return undefined
+    totalLengthMm += additionalLengthMm
+    if (!Number.isFinite(totalLengthMm)) return undefined
+  }
+  return totalLengthMm
+}
+
+function extendSharedCollisionBoundaryLength(
+  currentLengthMm: number | undefined,
+  existingIndex: PlacedCollisionSpatialIndex,
+  addedEntry: PlacedCollisionSpatialEntry | undefined
+): number | undefined {
+  if (currentLengthMm === undefined || addedEntry?.translated === undefined) return undefined
+  const additionalLengthMm = sharedBoundaryWithEntries(
+    addedEntry,
+    existingIndex.query(addedEntry.indexedBounds)
+  )
+  if (additionalLengthMm === undefined) return undefined
+  const totalLengthMm = currentLengthMm + additionalLengthMm
+  return Number.isFinite(totalLengthMm) ? totalLengthMm : undefined
+}
+
+function sharedBoundaryWithEntries(
+  addedEntry: PlacedCollisionSpatialEntry,
+  existingEntries: ReadonlyArray<PlacedCollisionSpatialEntry>
+): number | undefined {
+  if (addedEntry.translated === undefined) return undefined
+  let totalLengthMm = 0
+  for (const existingEntry of existingEntries) {
+    if (existingEntry.translated === undefined) return undefined
+    const sharedLengthMm = sharedConvexPolygonBoundaryLength(
+      addedEntry.translated,
+      existingEntry.translated
+    )
+    if (sharedLengthMm === undefined) return undefined
+    totalLengthMm += sharedLengthMm
+    if (!Number.isFinite(totalLengthMm)) return undefined
+  }
+  return totalLengthMm
 }
 
 type CanonicalPoint = readonly [x: number, y: number]
