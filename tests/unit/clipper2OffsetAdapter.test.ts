@@ -62,13 +62,13 @@ describe('Clipper2 offset adapter', () => {
       rounding: 'nearest grid point, ties away from zero',
       conservativeOffsetAllowanceMm: 0.002,
       joinType: 'Miter',
-      miterLimit: 2,
+      miterLimit: 10,
       endType: 'Polygon',
       futureRoundJoinArcToleranceMm: 0.01,
       fillRule: 'NonZero',
       winding: 'counter-clockwise',
       maxScaledCoordinate: 1_000_000_000,
-      adapterPolicyVersion: 'clipper2-offset-v2'
+      adapterPolicyVersion: 'clipper2-offset-v3'
     })
   })
 
@@ -111,7 +111,7 @@ describe('Clipper2 offset adapter', () => {
     )
   })
 
-  it('uses the miter limit instead of emitting an unbounded acute corner spike', async () => {
+  it('preserves sharp convex corners within the declared miter ratio', async () => {
     const result = await runAdapter({
       polygon: polygon([point(0, 0), point(4, 0), point(0, 3)]),
       distanceMm: 1.5

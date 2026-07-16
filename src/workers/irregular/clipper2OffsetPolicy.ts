@@ -13,13 +13,13 @@ export const CLIPPER2_OFFSET_POLICY = {
   rounding: 'nearest grid point, ties away from zero',
   conservativeOffsetAllowanceMm: 0.002,
   joinType: 'Miter',
-  miterLimit: 2.0,
+  miterLimit: 10.0,
   endType: 'Polygon',
   futureRoundJoinArcToleranceMm: 0.01,
   fillRule: 'NonZero',
   winding: 'counter-clockwise',
   maxScaledCoordinate: 1_000_000_000,
-  adapterPolicyVersion: 'clipper2-offset-v2'
+  adapterPolicyVersion: 'clipper2-offset-v3'
 } as const
 
 /**

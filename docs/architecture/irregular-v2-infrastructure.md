@@ -175,7 +175,16 @@ can occur. Candidate points are canonicalized and deduplicated as they are
 collected, and points or boundary pairs outside the IFP bounds are discarded
 only when those bounds make them impossible candidates. Exact contacts and
 every non-disjoint case continue to robust predicate classification, followed
-by direct legality validation. `FreeMaterialServiceLive`
+by direct legality validation.
+
+Collision offsets use the versioned Clipper2 `clipper2-offset-v3` policy with
+integer `Paths64`, `0.001 mm` grid precision, Miter joins, and a miter limit of
+`10.0`. This keeps the triangle fixture's acute corners pointed instead of
+turning them into short chamfer edges. The limit remains finite, so inputs with
+an even larger required miter ratio still take Clipper2's bounded fallback; the
+adapter policy version participates in geometry cache identity.
+
+`FreeMaterialServiceLive`
 computes the
 sheet-space difference between the sheet and the union of translated placed
 collision polygons through Clipper2's integer `Paths64` and `PolyTree64`

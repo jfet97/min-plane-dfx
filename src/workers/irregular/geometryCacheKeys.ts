@@ -139,7 +139,7 @@ function geometrySettingsParts(settings: IrregularGeometrySettings): ReadonlyArr
     `clearance-margin=${numberKey(settings.clearanceSafetyMarginMm)}`,
     `backend=${settings.geometryBackendId}`,
     `backend-version=${settings.geometryBackendVersion}`,
-    'offset-policy=clipper2-offset-v2-miter-scale-1000'
+    'offset-policy=clipper2-offset-v3-sharp-miter-scale-1000'
   ]
 }
 

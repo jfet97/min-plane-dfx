@@ -782,13 +782,13 @@ grid step = 0.001 mm
 rounding = nearest grid point, ties away from zero
 conservative offset allowance = 0.002 mm
 join type = Miter
-miter limit = 2.0
+miter limit = 10.0
 end type = Polygon
 future round-join arc tolerance = 0.01 mm
 fill rule = NonZero
 winding = normalize one outer collision ring counter-clockwise in Cartesian coordinates
 max scaled coordinate, including 2 * offset = 1,000,000,000
-adapter policy version = clipper2-offset-v2
+adapter policy version = clipper2-offset-v3
 ```
 
 The adapter converts real-valued coordinates at this one boundary only:
@@ -809,10 +809,13 @@ safety-margin scale. Nearest rounding moves one source point by at most
 `sqrt(2) * 0.0005 mm`, while the requested offset can round down by at most
 `0.0005 mm`. The fixed `0.002 mm` allowance exceeds their combined error, so a
 quantized Clipper result cannot shrink the requested collision envelope. Miter
-joins preserve the straight edges of convex collision hulls; the `2.0` limit
-prevents unbounded acute-angle spikes. The round-join tolerance is inactive for
-the initial Miter policy, but `0.01 mm` is reserved for any future Round policy
-so its approximation stays well below the `0.25 mm` flattening tolerance.
+joins preserve the straight edges of convex collision hulls. The `10.0` limit
+preserves pointed corners whose required miter ratio is at most ten, including
+the triangle fixture whose acute base corners require slightly more than the
+previous `2.0` limit. More acute inputs still use Clipper2's bounded fallback
+instead of creating effectively unbounded spikes. The round-join tolerance is
+inactive for the Miter policy, but `0.01 mm` is reserved for any future Round
+policy so its approximation stays well below the `0.25 mm` flattening tolerance.
 
 Before calling Clipper, normalize the single convex collision ring to
 counter-clockwise Cartesian winding and use `NonZero` for any adapter-owned
