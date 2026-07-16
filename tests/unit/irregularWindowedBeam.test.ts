@@ -112,7 +112,8 @@ function settings(
   beamWidth = 4,
   localCandidateFanout =
     GeometrySettings.Make.optimizer.localCandidateFanout ?? GeometrySettings.Make.optimizer.beamWidth,
-  placementPolicyId: IrregularPlacementPolicyId = 'balanced-compactness'
+  placementPolicyId: IrregularPlacementPolicyId = 'balanced-compactness',
+  localRepairBudget = 0
 ): IrregularNestingSettings {
   return new IrregularNestingSettings({
     geometry: GeometrySettings.Make.geometry,
@@ -121,6 +122,7 @@ function settings(
       orderWindow,
       beamWidth,
       localCandidateFanout,
+      localRepairBudget,
       placementPolicyId,
       placementPolicyIds: [placementPolicyId]
     })
@@ -394,6 +396,54 @@ describe('decodeWindowedIrregularBeam', () => {
 
     expect(result.rankedStates).toHaveLength(1)
     expect(result.bestState.placedCollisionGeometries[0]?.placement.transform.translateX).toBe(0)
+  })
+
+  it('uses bounded terminal repair to reinsert one piece into a better legal contact', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const emittedPlacementCounts: number[] = []
+    const result = await runWindowed(
+      sheet(6, 1),
+      [preparedPiece('a', 1, 1), preparedPiece('b', 1, 1)],
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 1, 1, 'balanced-compactness', 1)
+      ),
+      candidateService(({ moving, placed }) => {
+        if (placed.length === 0) return [oneCandidate(moving, 0)]
+        return [
+          oneCandidate(
+            moving,
+            moving.sourcePieceId === PieceId.make('a') ? 2 : 3
+          )
+        ]
+      }),
+      undefined,
+      {
+        onInitialState: (state) => {
+          emittedPlacementCounts.push(state.placedCollisionGeometries.length)
+        },
+        onStateSelected: ({ state }) => {
+          emittedPlacementCounts.push(state.placedCollisionGeometries.length)
+        }
+      },
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(
+      result.bestState.placedCollisionGeometries.map(
+        ({ placement }) => placement.transform.translateX
+      )
+    ).toEqual([0, 1])
+    expect(result.bestScore.nearCompleteStructuralContactCount).toBe(1)
+    expect(emittedPlacementCounts).toEqual([0, 1, 2])
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_repair_accepted',
+        iterationIndex: 0,
+        pieceId: PieceId.make('a')
+      })
+    )
   })
 
   it('keeps a compactness alternative beside the edge-contact winner', async () => {

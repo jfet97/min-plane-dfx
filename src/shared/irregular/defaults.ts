@@ -30,6 +30,7 @@ export const DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS = new IrregularOptimizerSettin
   orderWindow: 1,
   beamWidth: 1,
   localCandidateFanout: DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT,
+  localRepairBudget: 0,
   transformCap: 16,
   transformMinimumEdgeLengthMm: 1,
   transformAngleDeduplicationToleranceDeg: 0.01,
@@ -82,6 +83,13 @@ const DERIVED_ORIENTATION_TRANSFORM_PROFILE = {
   edgeAlignmentEnabled: true
 } satisfies IrregularTransformProfileDefinition
 
+const COMPACT_QUALITY_TRANSFORM_PROFILE = {
+  transformCap: 8,
+  configuredRotationEnabled: true,
+  configuredRotationDeg: [],
+  edgeAlignmentEnabled: true
+} satisfies IrregularTransformProfileDefinition
+
 function makeIrregularOptimizerSettings(
   profile: IrregularTransformProfileDefinition,
   overrides: IrregularOptimizerSettingsOverrides
@@ -120,6 +128,22 @@ export function makeDerivedOrientationIrregularOptimizerSettings(
   overrides: IrregularOptimizerSettingsOverrides = {}
 ): IrregularOptimizerSettings {
   return makeIrregularOptimizerSettings(DERIVED_ORIENTATION_TRANSFORM_PROFILE, overrides)
+}
+
+/** Creates the measured compact-quality profile with bounded terminal repair. */
+export function makeCompactQualityIrregularOptimizerSettings(
+  overrides: IrregularOptimizerSettingsOverrides = {}
+): IrregularOptimizerSettings {
+  return makeIrregularOptimizerSettings(COMPACT_QUALITY_TRANSFORM_PROFILE, {
+    orderWindow: 4,
+    beamWidth: 8,
+    localCandidateFanout: 4,
+    localRepairBudget: 8,
+    baselineOnly: true,
+    gaEnabled: false,
+    placementPolicyId: 'edge-contact-then-balanced-compactness',
+    ...overrides
+  })
 }
 
 export const DEFAULT_IRREGULAR_NESTING_SETTINGS = new IrregularNestingSettings({

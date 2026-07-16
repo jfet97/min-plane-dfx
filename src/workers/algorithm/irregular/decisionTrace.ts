@@ -222,17 +222,20 @@ export class IrregularDecisionTraceSearchSettings {
   readonly orderWindow: number
   readonly beamWidth: number
   readonly localCandidateFanout: number
+  readonly localRepairBudget: number
   readonly policyId: string
 
   constructor(input: {
     readonly orderWindow: number
     readonly beamWidth: number
     readonly localCandidateFanout: number
+    readonly localRepairBudget: number
     readonly policyId: string
   }) {
     this.orderWindow = input.orderWindow
     this.beamWidth = input.beamWidth
     this.localCandidateFanout = input.localCandidateFanout
+    this.localRepairBudget = input.localRepairBudget
     this.policyId = input.policyId
   }
 }
@@ -526,6 +529,30 @@ export class IrregularDecisionTraceBeamStepCompleted extends IrregularDecisionTr
   }
 }
 
+export class IrregularDecisionTraceLocalRepairAccepted
+  extends IrregularDecisionTraceEventBase {
+  readonly kind = 'local_repair_accepted' as const
+  readonly iterationIndex: number
+  readonly pieceId: string
+  readonly state: IrregularDecisionTraceState
+  readonly score: IrregularDecisionTraceLayoutScore
+
+  constructor(
+    input: EventInput<{
+      readonly iterationIndex: number
+      readonly pieceId: string
+      readonly state: IrregularDecisionTraceState
+      readonly score: IrregularDecisionTraceLayoutScore
+    }>
+  ) {
+    super(input)
+    this.iterationIndex = input.iterationIndex
+    this.pieceId = input.pieceId
+    this.state = input.state
+    this.score = input.score
+  }
+}
+
 export class IrregularDecisionTraceDecodeWinner extends IrregularDecisionTraceEventBase {
   readonly kind = 'decode_winner' as const
   readonly state: IrregularDecisionTraceState
@@ -555,6 +582,7 @@ export type IrregularDecisionTraceEvent =
   | IrregularDecisionTraceSuccessorLayoutScored
   | IrregularDecisionTraceBeamSelection
   | IrregularDecisionTraceBeamStepCompleted
+  | IrregularDecisionTraceLocalRepairAccepted
   | IrregularDecisionTraceDecodeWinner
 
 export type EmitIrregularDecisionTrace = (event: IrregularDecisionTraceEvent) => void

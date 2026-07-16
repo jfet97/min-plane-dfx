@@ -223,6 +223,12 @@ const IrregularOptimizerSettingsFields = Schema.Struct({
     Schema.withConstructorDefault(Effect.succeed(DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT)),
     Schema.withDecodingDefaultKey(Effect.succeed(DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT))
   ),
+  /** Bounded terminal remove-and-reinsert iterations; zero disables local repair. */
+  localRepairBudget: NonNegativeFiniteInteger.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(0)),
+    Schema.withDecodingDefaultKey(Effect.succeed(0))
+  ),
   /** Maximum orientation candidates emitted for one prepared collision polygon. */
   transformCap: PositiveFiniteInteger,
   /** Edges shorter than this millimeter length are ignored as geometric noise. */

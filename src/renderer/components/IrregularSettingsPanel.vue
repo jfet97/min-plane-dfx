@@ -8,7 +8,10 @@ import {
   IrregularOptimizerSettings,
   type IrregularPlacementPolicyId
 } from '@shared/irregular/domain.js'
-import { makeDefaultIrregularNestingSettings } from '@shared/irregular/defaults.js'
+import {
+  makeCompactQualityIrregularOptimizerSettings,
+  makeDefaultIrregularNestingSettings
+} from '@shared/irregular/defaults.js'
 import type { NestingOptions } from '@shared/domain/nesting.js'
 
 const props = defineProps<{
@@ -54,6 +57,11 @@ const beamWidthHelp = computed(() => {
 const localCandidateFanoutHelp = computed(
   () => `Keeps up to ${optimizer.value.localCandidateFanout} legal contact positions per piece before beam pruning.`
 )
+const localRepairHelp = computed(() => {
+  const budget = optimizer.value.localRepairBudget ?? 0
+  if (budget === 0) return 'Disabled. The terminal beam result is returned unchanged.'
+  return `Runs up to ${budget} deterministic remove-and-reinsert improvements after the beam completes.`
+})
 
 const MIN_FLATTENING_SAG_TOLERANCE_MM = 0.001
 
@@ -104,13 +112,21 @@ function updateGeometryField(field: GeometryNumericField, event: Event): void {
 }
 
 function updateOptimizer(patch: Partial<IrregularOptimizerSettings>): void {
+  replaceOptimizer(new IrregularOptimizerSettings({ ...optimizer.value, ...patch }))
+}
+
+function replaceOptimizer(nextOptimizer: IrregularOptimizerSettings): void {
   emit(
     'update',
     new IrregularNestingSettings({
       geometry: geometry.value,
-      optimizer: new IrregularOptimizerSettings({ ...optimizer.value, ...patch })
+      optimizer: nextOptimizer
     })
   )
+}
+
+function useCompactQualityProfile(): void {
+  replaceOptimizer(makeCompactQualityIrregularOptimizerSettings())
 }
 
 function setPortfolioEnabled(enabled: boolean): void {
@@ -148,6 +164,14 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
         Uses source outlines to build conservative convex collision polygons. The geometry, beam,
         and portfolio controls below apply only to this algorithm.
       </p>
+      <button
+        type="button"
+        title="Use the measured compact-search profile for small repeated-shape jobs."
+        @click="useCompactQualityProfile"
+      >
+        Compact quality
+      </button>
+      <p class="field-help">Reorder 4, beam 8, fanout 4, repair 8, transform cap 8, edge contact.</p>
     </div>
 
     <h3 title="Controls how source curves and padding become conservative collision geometry.">Geometry</h3>
@@ -220,6 +244,19 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           @input="updateOptimizer({ localCandidateFanout: Number(inputValue($event)) })"
         />
         <span class="field-help">{{ localCandidateFanoutHelp }}</span>
+      </label>
+      <label
+        title="Maximum deterministic terminal repair iterations. Each iteration tries to remove and legally reinsert one placed piece."
+      >
+        Local repair budget
+        <input
+          type="number"
+          min="0"
+          step="1"
+          :value="optimizer.localRepairBudget ?? 0"
+          @input="updateOptimizer({ localRepairBudget: Number(inputValue($event)) })"
+        />
+        <span class="field-help">{{ localRepairHelp }}</span>
       </label>
       <label
         title="Maximum orientation candidates generated for one prepared polygon. Cap 4 covers the four quarter-turns; larger caps also admit explicit and edge-derived angles."

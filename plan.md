@@ -1624,15 +1624,18 @@ defaults. Benchmarks should continue tuning them against real jobs and fixture
 corpora.
 
 The pointed 20-copy triangle regression has a separate measured quality
-profile: `orderWindow = 4`, `beamWidth = 13`, `localCandidateFanout = 4`,
-`transformCap = 8`, edge-contact policy, and GA disabled. Width `12` prunes the
-future winner; width `13` reaches the same terminal lattice as width `14` in
-about `3.3 s`. The first lost width-5 prefix is rank `7` after the fourth
-placement even though it is the most compact successor, because it is one
-structural contact behind the retained states. Pure compactness and one-contact
-slack reservations were measured and did not recover the terminal lattice.
-This profile remains explicit because the existing large-piece-count benchmark
-shows that making every job use a broad beam would be an unacceptable default.
+profile: `orderWindow = 4`, `beamWidth = 8`, `localCandidateFanout = 4`,
+`localRepairBudget = 8`, `transformCap = 8`, edge-contact policy, and GA
+disabled. The unrepaired beam loses a delayed-reward branch: the first good
+prefix is displaced at rank `8`, and later becomes rank `10` while every cycle
+rank is still zero. Cycle-first ranking and generic topology/score/parent quotas
+were measured and regressed the layout. The bounded terminal remove-and-reinsert
+pass instead uses the existing legal candidate generator and whole-layout score
+to reach 24 structural contacts, cycle rank `5`, collision-bounds area
+`80174.3328 mm2`, and hull waste ratio `0.047619` in about `4.53 s`.
+`localRepairBudget = 0` remains the fast default. The settings panel exposes the
+measured combination as `Compact quality` because broad search and repair should
+not silently apply to every large-piece-count job.
 
 ## Assumptions To Revisit
 

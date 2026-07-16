@@ -45,6 +45,7 @@ import {
   IrregularDecisionTraceDecodeWinner,
   IrregularDecisionTraceEligiblePieces,
   IrregularDecisionTraceLayoutScore,
+  IrregularDecisionTraceLocalRepairAccepted,
   IrregularDecisionTraceLocalCandidateScored,
   IrregularDecisionTraceLocalCandidateSelection,
   IrregularDecisionTraceLocalScore,
@@ -202,6 +203,7 @@ export function runWindowedIrregularBeam(input: {
     )
     const localCandidateFanout =
       settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth
+    const localRepairBudget = settings.optimizer.localRepairBudget ?? 0
     const stateKey = (state: IrregularBeamState): string =>
       beamStateKey(state, input.options?.transformPreferences)
 
@@ -217,6 +219,7 @@ export function runWindowedIrregularBeam(input: {
         orderWindow: settings.optimizer.orderWindow,
         beamWidth: settings.optimizer.beamWidth,
         localCandidateFanout,
+        localRepairBudget,
         policyId: input.options?.policyId ?? placementScorer.policyId
       }),
       priorityOrder: input.pieces.map((piece) => preparedPieceId(piece)),
@@ -368,7 +371,65 @@ export function runWindowedIrregularBeam(input: {
       layoutScorer
     )
     yield* controlCheckpoint(input.control, controlState)
-    const best = ranked[0]
+    const initialBest = ranked[0]
+    let repairedBest: ScoredState | undefined = initialBest
+    if (
+      initialBest !== undefined &&
+      initialBest.score.unplacedCount === 0 &&
+      localRepairBudget > 0
+    ) {
+      let currentRepair = initialBest
+      for (
+        let repairIteration = 0;
+        repairIteration < localRepairBudget;
+        repairIteration += 1
+      ) {
+        const accepted: AcceptedLocalRepair | undefined = yield* repairTerminalState({
+          sheet: input.sheet,
+          pieces: input.pieces,
+          current: currentRepair,
+          candidateFanout: localRepairBudget,
+          settings,
+          geometryKernel,
+          nfpIfpService,
+          placementScorer,
+          layoutScorer,
+          controlState,
+          stepIndex,
+          ...(input.control !== undefined ? { control: input.control } : {}),
+          ...(input.options !== undefined ? { options: input.options } : {})
+        })
+        if (accepted === undefined) break
+        currentRepair = accepted.scoredState
+        decisionTrace?.emit(new IrregularDecisionTraceLocalRepairAccepted({
+          decodeId: decisionTrace.decodeId,
+          chromosomeId: decisionTrace.chromosomeId,
+          decodeSource: decisionTrace.decodeSource,
+          iterationIndex: repairIteration,
+          pieceId: accepted.pieceId,
+          state: decisionTraceState(
+            currentRepair.state,
+            decisionTrace,
+            stateKey(currentRepair.state)
+          ),
+          score: decisionTraceLayoutScore(currentRepair.score)
+        }))
+      }
+      repairedBest = yield* anchorRepairedState(
+        currentRepair,
+        input.sheet,
+        layoutScorer,
+        input.options?.transformPreferences
+      )
+    }
+    const finalRanked =
+      repairedBest === undefined || repairedBest === initialBest
+        ? ranked
+        : rankScoredStates(
+            [repairedBest, ...ranked.filter(({ state }) => state !== initialBest.state)],
+            layoutScorer
+          )
+    const best = finalRanked[0]
     if (best === undefined) {
       return yield* Effect.die('windowed irregular beam produced no terminal state')
     }
@@ -381,12 +442,168 @@ export function runWindowedIrregularBeam(input: {
       score: decisionTraceLayoutScore(best.score)
     }))
     return {
-      rankedStates: ranked.map(({ state }) => state),
+      rankedStates: finalRanked.map(({ state }) => state),
       bestState: best.state,
       bestScore: best.score,
       candidateCounts
     }
   })
+}
+
+interface AcceptedLocalRepair {
+  readonly scoredState: ScoredState
+  readonly pieceId: PieceId
+}
+
+function repairTerminalState(input: {
+  readonly sheet: SheetSpec
+  readonly pieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly current: ScoredState
+  readonly candidateFanout: number
+  readonly settings: IrregularNestingSettings
+  readonly geometryKernel: GeometryKernel.Service
+  readonly nfpIfpService: NfpIfpService
+  readonly placementScorer: IrregularPlacementScorer.Service
+  readonly layoutScorer: IrregularLayoutScorer.Service
+  readonly control?: IrregularWindowedBeamControl
+  readonly controlState: ControlState
+  readonly options?: IrregularWindowedBeamOptions
+  readonly stepIndex: number
+}): Effect.Effect<AcceptedLocalRepair | undefined, IrregularWindowedBeamError> {
+  return Effect.gen(function* () {
+    let best: AcceptedLocalRepair | undefined
+    const placed = input.current.state.placedCollisionGeometries
+    for (const [placedIndex, removed] of placed.entries()) {
+      yield* controlCheckpoint(input.control, input.controlState)
+      const removedPieceId = removed.placement.pieceId ?? removed.placement.sourcePieceId
+      const piece = input.pieces.find(
+        (candidate) => preparedPieceId(candidate) === removedPieceId
+      )
+      if (piece === undefined) continue
+      const baseState = new IrregularBeamState({
+        remainingPreparedPieces: [piece],
+        placedCollisionGeometries: [
+          ...placed.slice(0, placedIndex),
+          ...placed.slice(placedIndex + 1)
+        ],
+        unplacedPieceIds: input.current.state.unplacedPieceIds,
+        placementOrder: [
+          ...input.current.state.placementOrder.slice(0, placedIndex),
+          ...input.current.state.placementOrder.slice(placedIndex + 1)
+        ]
+      })
+      const localCandidates = yield* collectLocalCandidates({
+        sheet: input.sheet,
+        settings: input.settings,
+        state: baseState,
+        piece,
+        geometryKernel: input.geometryKernel,
+        nfpIfpService: input.nfpIfpService,
+        placementScorer: input.placementScorer,
+        controlState: input.controlState,
+        stepIndex: input.stepIndex,
+        parentStateId: '',
+        ...(input.control !== undefined ? { control: input.control } : {}),
+        ...(input.options !== undefined ? { options: input.options } : {})
+      })
+      const selected = selectLocalCandidates(
+        localCandidates,
+        input.placementScorer,
+        input.candidateFanout,
+        input.options?.transformPreferences?.get(preparedPieceId(piece)),
+        undefined,
+        input.stepIndex,
+        '',
+        preparedPieceId(piece)
+      )
+      for (const candidate of selected) {
+        yield* controlCheckpoint(input.control, input.controlState)
+        const candidateState = applyPlacement(baseState, 0, piece, candidate)
+        const replacement = candidateState.placedCollisionGeometries.at(-1)
+        if (replacement === undefined) continue
+        const repairedPlaced = [...placed]
+        repairedPlaced[placedIndex] = replacement
+        const repairedState = new IrregularBeamState({
+          remainingPreparedPieces: [],
+          placedCollisionGeometries: repairedPlaced,
+          unplacedPieceIds: input.current.state.unplacedPieceIds,
+          placementOrder: input.current.state.placementOrder,
+          parent: input.current.state.parent
+        })
+        if (
+          repairedState.canonicalOccupiedGeometryKey ===
+          input.current.state.canonicalOccupiedGeometryKey
+        ) {
+          continue
+        }
+        const score = yield* input.layoutScorer.scoreState({
+          sheet: input.sheet,
+          state: repairedState
+        })
+        if (input.layoutScorer.compare(score, input.current.score) >= 0) continue
+        const scoredState = {
+          state: repairedState,
+          score,
+          key: beamStateKey(repairedState, input.options?.transformPreferences),
+          isIncumbent: false
+        }
+        if (
+          best === undefined ||
+          input.layoutScorer.compare(score, best.scoredState.score) < 0
+        ) {
+          best = { scoredState, pieceId: removedPieceId }
+        }
+      }
+    }
+    return best
+  })
+}
+
+function anchorRepairedState(
+  current: ScoredState,
+  sheet: SheetSpec,
+  layoutScorer: IrregularLayoutScorer.Service,
+  transformPreferences: ReadonlyMap<PieceId, number> | undefined
+): Effect.Effect<ScoredState, IrregularWindowedBeamError> {
+  const bounds = current.state.translatedCollisionBounds
+  if (bounds === undefined || (bounds.minX === 0 && bounds.minY === 0)) {
+    return Effect.succeed(current)
+  }
+  const translateX = -bounds.minX
+  const translateY = -bounds.minY
+  const placedCollisionGeometries = current.state.placedCollisionGeometries.map(
+    ({ placement, collisionGeometry }) =>
+      new IrregularPlacedPiece({
+        placement: new IrregularPlacement({
+          sourcePieceId: placement.sourcePieceId,
+          ...(placement.pieceId !== undefined ? { pieceId: placement.pieceId } : {}),
+          ...(placement.placementReference !== undefined
+            ? { placementReference: placement.placementReference }
+            : {}),
+          transform: {
+            ...placement.transform,
+            translateX: placement.transform.translateX + translateX,
+            translateY: placement.transform.translateY + translateY
+          }
+        }),
+        collisionGeometry
+      })
+  )
+  const state = new IrregularBeamState({
+    remainingPreparedPieces: [],
+    placedCollisionGeometries,
+    unplacedPieceIds: current.state.unplacedPieceIds,
+    placementOrder: current.state.placementOrder,
+    parent: current.state.parent
+  })
+  return layoutScorer.scoreState({ sheet, state }).pipe(
+    Effect.map((score) => ({
+      state,
+      score,
+      key: beamStateKey(state, transformPreferences),
+      isIncumbent: false
+    }))
+  )
 }
 
 /** Positional decoder alias matching the strict decoder's public shape. */

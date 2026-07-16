@@ -103,11 +103,24 @@ generation/evaluation/time budgets, seed, and the three chromosome-gene toggles
 This makes benchmark rows schema-validated and replayable without hidden
 process-global knobs.
 
+`localRepairBudget` controls an optional deterministic terminal improvement
+pass. Zero disables it. Each iteration removes each placed piece in turn,
+regenerates legal NFP/IFP candidates against the remaining layout, scores at
+most the configured budget of local candidates per removal, and commits only
+the single best strict whole-layout improvement. The pass uses the same geometry
+legality and whole-layout comparator as the beam; it does not move pieces to
+invented coordinates. The repaired cluster is translated to the lower-left
+sheet anchor without changing its relative geometry. Because the budget also
+bounds accepted iterations and per-piece candidate fanout, enabling repair is
+an explicit quality/cost choice and applies to every baseline or GA decode.
+
 The concrete transform-profile factories are convenience bundles over those
 persisted explicit settings, not a separate configuration model. Fast identity
 (`cap1`) and orthogonal (`cap4`) disable configured and edge-derived angle
 sources; derived orientation (`cap16`) enables both. Mirror safety gates remain
-per job and per piece.
+per job and per piece. `Compact quality` is the measured small repeated-shape
+profile: order window `4`, beam width `8`, local fanout `4`, local repair budget
+`8`, transform cap `8`, edge-contact policy, and GA disabled.
 
 When `beamWidth > 1`, each step protects the exact width-one incumbent lineage
 and uses the remaining slots for ranked alternatives. With all other settings
@@ -139,15 +152,19 @@ several placements later. The missing information is therefore future topology,
 not another ordering of the existing immediate score fields.
 
 For this exact regression, width `12` still loses the delayed branch. Width
-`13` is the first measured beam that reaches the same terminal layout as width
-`14`: 23 structural contacts, dominant contact count 16, cycle rank 4,
-collision-bounds area `80174.3328 mm2`, and hull waste ratio `0.047619`, in
-about `3.3 s` on the benchmark machine. Transform cap `16` still produces the
-inferior contact tree at width `14`, confirming that transform-family retention
-is a separate local-diversity problem. These are explicit fixture-quality
-settings, not a hidden minimum beam width or a triangle-specific production
-override. A general narrower-beam improvement needs a topology-aware predictor,
-multiple persistent diversity lineages, or an explicit periodic-cell seed.
+`13` without repair was the first measured beam that reached the width-14
+terminal lattice: 23 structural contacts, dominant contact count 16, cycle rank
+4, collision-bounds area `80174.3328 mm2`, and hull waste ratio `0.047619`.
+Cycle-first ordering, incumbent removal, and topology/score/parent-lineage quotas
+all failed to recover that result at width `8`.
+
+Bounded terminal repair changes the practical result without pretending that
+beam pruning predicted the delayed reward. The measured width-8 compact-quality
+profile with repair budget `8` reaches 24 structural contacts, dominant contact
+count 17, cycle rank 5, collision-bounds area `80174.3328 mm2`, and hull waste
+ratio `0.047619` in about `4.53 s` on the benchmark machine. It is a general
+remove-and-reinsert improvement using real candidates, not a triangle-specific
+override. The unrepaired beam remains available with repair budget `0`.
 
 ### Decision Trace
 
@@ -165,6 +182,8 @@ of alternatives that disappeared before the winner was chosen. Each decode uses
 compact deterministic chromosome, state, and candidate ids while retaining its
 decode id for correlation. The worker preserves event order while serializing
 bounded batches instead of issuing one filesystem append per event.
+Accepted terminal moves emit `local_repair_accepted` with the iteration, moved
+piece, repaired state, and whole-layout score.
 
 The shipped interactive profile is intentionally narrow: `orderWindow = 1`,
 `beamWidth = 1`, local candidate fanout `= 4`, transform cap `= 16`, and GA

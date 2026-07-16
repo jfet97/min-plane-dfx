@@ -18,6 +18,7 @@ import {
 } from '@shared/irregular/domain.js'
 import {
   DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS,
+  makeCompactQualityIrregularOptimizerSettings,
   makeDefaultIrregularNestingSettings,
   makeDerivedOrientationIrregularOptimizerSettings,
   makeFastIdentityIrregularOptimizerSettings,
@@ -42,6 +43,7 @@ describe('irregular schema contracts', () => {
     expect(first.optimizer.orderWindow).toBe(1)
     expect(first.optimizer.beamWidth).toBe(1)
     expect(first.optimizer.localCandidateFanout).toBe(4)
+    expect(first.optimizer.localRepairBudget).toBe(0)
     expect(first.optimizer.transformCap).toBe(16)
     expect(first.optimizer.edgeAlignmentEnabled).toBe(true)
     expect(first.optimizer.gaEnabled).toBe(false)
@@ -84,6 +86,23 @@ describe('irregular schema contracts', () => {
     expect(fast.configuredRotationDeg).not.toBe(orthogonal.configuredRotationDeg)
   })
 
+  it('provides the measured beam-eight compact-quality profile', () => {
+    const quality = makeCompactQualityIrregularOptimizerSettings()
+
+    expect(quality).toMatchObject({
+      orderWindow: 4,
+      beamWidth: 8,
+      localCandidateFanout: 4,
+      localRepairBudget: 8,
+      transformCap: 8,
+      configuredRotationEnabled: true,
+      edgeAlignmentEnabled: true,
+      baselineOnly: true,
+      gaEnabled: false,
+      placementPolicyId: 'edge-contact-then-balanced-compactness'
+    })
+  })
+
   it('decodes older incomplete optimizer settings to the safe profile', () => {
     const decoded = decode(IrregularOptimizerSettings, {
       orderWindow: 1,
@@ -96,6 +115,7 @@ describe('irregular schema contracts', () => {
 
     if (Exit.isFailure(decoded)) throw new Error('expected legacy settings to decode')
     expect(decoded.value.localCandidateFanout).toBe(4)
+    expect(decoded.value.localRepairBudget).toBe(0)
     expect(decoded.value.edgeAlignmentEnabled).toBe(true)
     expect(decoded.value.gaEnabled).toBe(false)
     expect(decoded.value.baselineOnly).toBe(true)
@@ -232,6 +252,7 @@ describe('irregular schema contracts', () => {
       orderWindow: 3,
       beamWidth: 12,
       localCandidateFanout: 5,
+      localRepairBudget: 5,
       transformCap: 8,
       gaPopulation: 10,
       gaGenerationBudget: 2,
@@ -252,6 +273,7 @@ describe('irregular schema contracts', () => {
     const decoded = decode(IrregularOptimizerSettings, valid)
     if (Exit.isFailure(decoded)) throw new Error('expected valid experiment controls')
     expect(decoded.value.localCandidateFanout).toBe(5)
+    expect(decoded.value.localRepairBudget).toBe(5)
     expect(decoded.value.gaTimeBudgetMs).toBe(0)
     expect(decoded.value.placementPolicyId).toBe('short-side-fill')
 
@@ -260,6 +282,14 @@ describe('irregular schema contracts', () => {
         decode(IrregularOptimizerSettings, {
           ...valid,
           localCandidateFanout: 0
+        })
+      )
+    ).toBe(true)
+    expect(
+      Exit.isFailure(
+        decode(IrregularOptimizerSettings, {
+          ...valid,
+          localRepairBudget: -1
         })
       )
     ).toBe(true)
