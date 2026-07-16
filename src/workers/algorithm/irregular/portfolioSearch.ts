@@ -10,7 +10,8 @@ import {
   IrregularPlacementPolicyId,
   IrregularPortfolioProgress,
   IrregularPortfolioResult,
-  IrregularPreparedPiece
+  IrregularPreparedPiece,
+  type IrregularPortfolioTerminationReason
 } from '@shared/irregular/domain.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import {
@@ -189,7 +190,7 @@ function runPortfolio(
 
     if (!gaEnabled) {
       emitSnapshots(input, baseline, settings.optimizer.beamWidth)
-      return portfolioResultFrom(baseline, 'beam', 'completed', baseline.score)
+      return portfolioResultFrom(baseline, 'beam', 'completed', 'ga_disabled', baseline.score)
     }
 
     const random = new DeterministicPrng(settings.optimizer.gaSeed)
@@ -207,6 +208,7 @@ function runPortfolio(
     let generation = 0
     let population = initialPopulation
     let terminalStatus: 'budget-expired' | 'cancelled' | undefined
+    let terminationReason: IrregularPortfolioTerminationReason | undefined
     let bestGa: EvaluatedChromosome | undefined
     const evaluatedByChromosome = new Map<string, EvaluatedChromosome>([
       [chromosomeKey(baselineChromosome), baseline]
@@ -222,13 +224,17 @@ function runPortfolio(
       for (const chromosome of population) {
         if (input.isCancelled?.() === true) {
           terminalStatus = 'cancelled'
+          terminationReason = 'cancelled'
           break
         }
-        if (
-          Date.now() >= deadlineMs ||
-          (evaluationBudget !== undefined && evaluationsCompleted >= evaluationBudget)
-        ) {
+        if (Date.now() >= deadlineMs) {
           terminalStatus = 'budget-expired'
+          terminationReason = 'time_budget'
+          break
+        }
+        if (evaluationBudget !== undefined && evaluationsCompleted >= evaluationBudget) {
+          terminalStatus = 'budget-expired'
+          terminationReason = 'evaluation_budget'
           break
         }
 
@@ -252,6 +258,8 @@ function runPortfolio(
             if (isBeamAbortError(outcome.error)) {
               terminalStatus =
                 outcome.error.reason === 'cancelled' ? 'cancelled' : 'budget-expired'
+              terminationReason =
+                outcome.error.reason === 'cancelled' ? 'cancelled' : 'time_budget'
               break
             }
             return yield* Effect.fail(outcome.error)
@@ -289,15 +297,22 @@ function runPortfolio(
       )
     }
 
-    if (terminalStatus === undefined) terminalStatus = 'budget-expired'
+    if (terminalStatus === undefined) {
+      terminalStatus = 'budget-expired'
+      terminationReason = 'generation_budget'
+    }
     const selected = chooseBetter(bestOverall, bestGa, dependencies.layoutScorer)
-    if (input.isCancelled?.() === true) terminalStatus = 'cancelled'
+    if (input.isCancelled?.() === true) {
+      terminalStatus = 'cancelled'
+      terminationReason = 'cancelled'
+    }
 
     if (input.onStateSnapshot === undefined) {
       return portfolioResultFrom(
         selected,
         sourceFor(selected, baselineKey),
         terminalStatus,
+        terminationReason ?? 'generation_budget',
         selected.score
       )
     }
@@ -314,7 +329,13 @@ function runPortfolio(
       remainingMs: Math.max(0, deadlineMs - Date.now())
     })
     emitSnapshots(input, selected, settings.optimizer.beamWidth)
-    return portfolioResultFrom(selected, selectedSource, terminalStatus, selected.score)
+    return portfolioResultFrom(
+      selected,
+      selectedSource,
+      terminalStatus,
+      terminationReason ?? 'generation_budget',
+      selected.score
+    )
   })
 }
 
@@ -651,10 +672,12 @@ function portfolioResultFrom(
   evaluated: EvaluatedChromosome,
   source: 'beam' | 'ga',
   status: 'completed' | 'budget-expired' | 'cancelled',
+  terminationReason: IrregularPortfolioTerminationReason,
   score: IrregularLayoutScore
 ): IrregularPortfolioResult {
   return new IrregularPortfolioResult({
     status,
+    terminationReason,
     source,
     placements: evaluated.beam.bestState.placedCollisionGeometries.map(
       ({ placement }) => placement
@@ -671,6 +694,7 @@ function emptyPortfolioResult(
 ): IrregularPortfolioResult {
   return new IrregularPortfolioResult({
     status,
+    terminationReason: status === 'cancelled' ? 'cancelled' : 'no_valid_result',
     source: 'none',
     placements: [],
     unplacedPieceIds: [...unplacedPieceIds].toSorted(),

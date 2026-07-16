@@ -181,6 +181,7 @@ describe('irregular GA portfolio', () => {
     )
 
     expect(result.portfolio.status).toBe('cancelled')
+    expect(result.portfolio.terminationReason).toBe('cancelled')
     expect(result.portfolio.source).toBe('none')
     expect(result.portfolio.placements).toEqual([])
     expect(result.portfolio.unplacedPieceIds).toEqual(sources.map(({ id }) => id).sort())
@@ -199,6 +200,7 @@ describe('irregular GA portfolio', () => {
     )
 
     expect(budgetResult.portfolio.status).toBe('budget-expired')
+    expect(budgetResult.portfolio.terminationReason).toBe('evaluation_budget')
     expect(
       budgetResult.portfolio.placements.length + budgetResult.portfolio.unplacedPieceIds.length
     ).toBe(sources.length)
@@ -216,6 +218,7 @@ describe('irregular GA portfolio', () => {
     )
 
     expect(completedResult.portfolio.status).toBe('completed')
+    expect(completedResult.portfolio.terminationReason).toBe('ga_disabled')
     expect(completedResult.portfolio.source).toBe('beam')
     expect(completedProgress.map(({ phase }) => phase)).toEqual(['deterministic_beam'])
   })

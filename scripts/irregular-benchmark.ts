@@ -134,6 +134,7 @@ interface TimedRun {
   readonly auditStatus: 'passed'
   readonly portfolioSource: IrregularComputeResult['portfolio']['source']
   readonly portfolioStatus: IrregularComputeResult['portfolio']['status']
+  readonly portfolioTerminationReason: IrregularComputeResult['portfolio']['terminationReason']
 }
 
 function usage(): string {
@@ -577,7 +578,8 @@ async function measureRun(
     unplacedCount: result.unplacedPieceIds.length,
     auditStatus,
     portfolioSource: result.portfolio.source,
-    portfolioStatus: result.portfolio.status
+    portfolioStatus: result.portfolio.status,
+    portfolioTerminationReason: result.portfolio.terminationReason
   }
 }
 
@@ -656,7 +658,7 @@ function printRun(label: string, run: TimedRun): void {
   console.log(
     `${label}: ${formatElapsed(run.elapsedMs)} placed=${run.placedCount} ` +
       `unplaced=${run.unplacedCount} audit=${run.auditStatus} ` +
-      `portfolio=${run.portfolioSource}/${run.portfolioStatus}`
+      `portfolio=${run.portfolioSource}/${run.portfolioStatus}/${run.portfolioTerminationReason ?? 'unknown'}`
   )
 }
 

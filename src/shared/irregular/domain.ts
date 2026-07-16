@@ -102,6 +102,21 @@ export const IrregularPortfolioStatus = Schema.Literals([
 /** Type of an irregular portfolio terminal status. */
 export type IrregularPortfolioStatus = Schema.Schema.Type<typeof IrregularPortfolioStatus>
 
+/** Concrete condition that ended one irregular portfolio run. */
+export const IrregularPortfolioTerminationReason = Schema.Literals([
+  'ga_disabled',
+  'generation_budget',
+  'evaluation_budget',
+  'time_budget',
+  'cancelled',
+  'no_valid_result'
+])
+
+/** Type of the concrete condition that ended one irregular portfolio run. */
+export type IrregularPortfolioTerminationReason = Schema.Schema.Type<
+  typeof IrregularPortfolioTerminationReason
+>
+
 /** One finite source or collision-geometry coordinate in millimeters. */
 export class IrregularPoint extends Schema.Class<IrregularPoint>('IrregularPoint')({
   x: FiniteNumber,
@@ -593,6 +608,8 @@ export class IrregularPortfolioResult extends Schema.Class<IrregularPortfolioRes
   'IrregularPortfolioResult'
 )({
   status: IrregularPortfolioStatus,
+  /** Optional for older persisted results; emitted by every current portfolio run. */
+  terminationReason: Schema.optional(IrregularPortfolioTerminationReason),
   source: IrregularSearchSource,
   placements: Schema.Array(IrregularPlacement),
   unplacedPieceIds: Schema.Array(PieceId),
