@@ -48,12 +48,12 @@ export const TransformGeneratorLive = Layer.succeed(TransformGenerator, {
  * edges, so the complete edge-alignment set already contains every OBB
  * orientation; there is no separate redundant `oriented_bounds` source.
  *
- * Orthogonal choices are the baseline priority, followed by configured angles,
- * followed by geometry-derived edge angles. When mirroring is enabled and the
+ * Orthogonal choices are the baseline priority, followed by geometry-derived
+ * edge angles, followed by configured angles. When mirroring is enabled and the
  * cap is larger than the baseline, extra choices are taken as mirrored and
  * unmirrored pairs in that priority order, then mirrored baseline choices. This
- * reserves mirror capacity without allowing noisy edge angles to displace
- * configured choices. Candidate indexes are assigned only after capping.
+ * reserves mirror capacity while keeping exact source-edge alignments ahead of
+ * manually supplied approximations. Candidate indexes are assigned only after capping.
  */
 function generateTransforms(
   input: GenerateTransformsInput
@@ -114,16 +114,16 @@ function transformAngleCandidates(
     { rotationDeg: 90, reason: 'orthogonal' },
     { rotationDeg: 180, reason: 'orthogonal' },
     { rotationDeg: 270, reason: 'orthogonal' },
-    ...(settings.configuredRotationEnabled !== false
-      ? settings.configuredRotationDeg.map((rotationDeg) => ({
-          rotationDeg,
-          reason: 'configured' as const
-        }))
-      : []),
     ...(settings.edgeAlignmentEnabled !== false
       ? usableEdges.map(({ rotationDeg }) => ({
           rotationDeg,
           reason: 'edge_alignment' as const
+        }))
+      : []),
+    ...(settings.configuredRotationEnabled !== false
+      ? settings.configuredRotationDeg.map((rotationDeg) => ({
+          rotationDeg,
+          reason: 'configured' as const
         }))
       : [])
   ]
@@ -279,9 +279,9 @@ function reasonPriority(reason: AngleReason): number {
   switch (reason) {
     case 'orthogonal':
       return 0
-    case 'configured':
-      return 1
     case 'edge_alignment':
+      return 1
+    case 'configured':
       return 2
   }
 }

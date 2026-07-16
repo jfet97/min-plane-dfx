@@ -5,7 +5,9 @@ import {
   IrregularNfp,
   IrregularPlacementCandidate,
   IrregularPoint,
-  IrregularPolygon
+  IrregularPolygon,
+  type IrregularPlacedPiece,
+  type TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import type {
   ComputeIfpBoundsInput,
@@ -658,6 +660,7 @@ function generatePlacementCandidates(
       const segments = polygonSegments(boundary)
       nfpBoundaries.push({
         index: nfpBoundaries.length,
+        fixed: placed,
         boundary,
         winding: validation.winding,
         bounds,
@@ -684,6 +687,15 @@ function generatePlacementCandidates(
     for (const point of rectangleCorners(ifp.bounds)) addPoint(points, point, candidateBounds)
     for (const boundary of candidateNfpBoundaries) {
       for (const point of boundary.boundary.points) addPoint(points, point, candidateBounds)
+      const supportPointError = addAntiparallelEdgeSupportPoints(
+        points,
+        boundary.fixed,
+        input.moving,
+        candidateBounds
+      )
+      if (supportPointError !== undefined) {
+        return yield* failInvalidGeometry('generatePlacementCandidates', supportPointError)
+      }
     }
 
     for (const boundary of candidateNfpBoundaries) {
@@ -930,11 +942,88 @@ interface Segment {
 
 interface NfpBoundary {
   readonly index: number
+  /** Placed collision polygon whose NFP boundary produced this contact family. */
+  readonly fixed: IrregularPlacedPiece
   readonly boundary: InternalPolygon
   readonly winding: -1 | 1
   readonly bounds: InternalBounds
   readonly segments: ReadonlyArray<Segment>
   readonly segmentIndex: BoundsIndex<Segment>
+}
+
+/**
+ * Adds endpoint alignments for antiparallel fixed and moving edges.
+ *
+ * A full edge mate may lie in the middle of an NFP edge rather than at an NFP
+ * corner. Aligning either endpoint of the two antiparallel collision edges
+ * yields the two finite support translations at the ends of that contact
+ * interval. Existing NFP and direct-validation filters remain authoritative.
+ */
+function addAntiparallelEdgeSupportPoints(
+  points: CanonicalPointSet,
+  fixed: IrregularPlacedPiece,
+  moving: TransformedCollisionGeometry,
+  candidateBounds: InternalBounds | undefined
+): string | undefined {
+  const fixedTranslation = fixed.placement.transform
+  const fixedPoints = fixed.collisionGeometry.polygon.points.map((point) => ({
+    x: point.x + fixedTranslation.translateX,
+    y: point.y + fixedTranslation.translateY
+  }))
+  const movingPoints = moving.polygon.points
+
+  for (const fixedEdge of polygonEdgesFromPoints(fixedPoints)) {
+    const fixedDirection = {
+      x: fixedEdge.end.x - fixedEdge.start.x,
+      y: fixedEdge.end.y - fixedEdge.start.y
+    }
+    for (const movingEdge of polygonEdgesFromPoints(movingPoints)) {
+      const movingDirection = {
+        x: movingEdge.end.x - movingEdge.start.x,
+        y: movingEdge.end.y - movingEdge.start.y
+      }
+      if (GeometryPredicates.orientation(ORIGIN, fixedDirection, movingDirection) !== 0) continue
+
+      const directionDotProduct =
+        fixedDirection.x * movingDirection.x + fixedDirection.y * movingDirection.y
+      if (!Number.isFinite(directionDotProduct) || directionDotProduct >= 0) continue
+
+      const firstSupportPoint = {
+        x: fixedEdge.start.x - movingEdge.end.x,
+        y: fixedEdge.start.y - movingEdge.end.y
+      }
+      const secondSupportPoint = {
+        x: fixedEdge.end.x - movingEdge.start.x,
+        y: fixedEdge.end.y - movingEdge.start.y
+      }
+      if (!isFinitePoint(firstSupportPoint) || !isFinitePoint(secondSupportPoint)) {
+        return 'antiparallel edge support arithmetic must produce finite coordinates.'
+      }
+      addPoint(points, firstSupportPoint, candidateBounds)
+      addPoint(points, secondSupportPoint, candidateBounds)
+    }
+  }
+  return undefined
+}
+
+interface PolygonEdge {
+  readonly start: InternalPoint
+  readonly end: InternalPoint
+}
+
+function polygonEdgesFromPoints(points: ReadonlyArray<InternalPoint>): ReadonlyArray<PolygonEdge> {
+  const edges: PolygonEdge[] = []
+  for (let index = 0; index < points.length; index += 1) {
+    const start = points[index]
+    const end = points[(index + 1) % points.length]
+    if (start === undefined || end === undefined) return []
+    edges.push({ start, end })
+  }
+  return edges
+}
+
+function isFinitePoint(point: InternalPoint): boolean {
+  return Number.isFinite(point.x) && Number.isFinite(point.y)
 }
 
 interface CanonicalPointSet {

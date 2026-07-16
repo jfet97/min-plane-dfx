@@ -42,7 +42,7 @@ describe('irregular schema contracts', () => {
     expect(first.optimizer.orderWindow).toBe(1)
     expect(first.optimizer.beamWidth).toBe(1)
     expect(first.optimizer.localCandidateFanout).toBe(4)
-    expect(first.optimizer.transformCap).toBe(4)
+    expect(first.optimizer.transformCap).toBe(16)
     expect(first.optimizer.edgeAlignmentEnabled).toBe(true)
     expect(first.optimizer.gaEnabled).toBe(false)
     expect(first.optimizer.baselineOnly).toBe(true)

@@ -103,7 +103,7 @@ pieces than `beamWidth = 1`. This changes search retention only, not geometry
 legality.
 
 The shipped interactive profile is intentionally narrow: `orderWindow = 1`,
-`beamWidth = 1`, local candidate fanout `= 4`, transform cap `= 4`, and GA
+`beamWidth = 1`, local candidate fanout `= 4`, transform cap `= 16`, and GA
 disabled. It produces a deterministic first result while retaining enough real
 local alternatives for the whole-layout scorer to reject obvious fragmentation.
 Each invocation uses an independent settings instance, so renderer and CSV

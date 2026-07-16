@@ -136,7 +136,7 @@ describe('TransformGenerator.Live', () => {
     expect(candidates.some(({ mirrored }) => mirrored)).toBe(true)
   })
 
-  it('keeps configured angles ahead of derived edge noise under the cap', async () => {
+  it('keeps exact derived edge angles ahead of configured approximations under the cap', async () => {
     const candidates = await generate(
       [point(0, 0), point(4, 0), point(3, 2), point(1, 3)],
       {
@@ -145,7 +145,7 @@ describe('TransformGenerator.Live', () => {
       }
     )
 
-    expect(candidates.slice(4).every(({ reason }) => reason === 'configured')).toBe(true)
+    expect(candidates.slice(4).every(({ reason }) => reason === 'edge_alignment')).toBe(true)
   })
 
   it('can disable explicit configured angles without disabling the baseline rotations', async () => {

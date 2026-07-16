@@ -30,7 +30,7 @@ export const DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS = new IrregularOptimizerSettin
   orderWindow: 1,
   beamWidth: 1,
   localCandidateFanout: DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT,
-  transformCap: 4,
+  transformCap: 16,
   transformMinimumEdgeLengthMm: 1,
   transformAngleDeduplicationToleranceDeg: 0.01,
   configuredRotationEnabled: true,
