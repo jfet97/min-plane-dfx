@@ -10,6 +10,7 @@ import {
   IrregularNestingSettings,
   IrregularOptimizerSettings,
   IrregularPlacementCandidate,
+  IrregularPlacementPolicyId,
   IrregularPoint,
   IrregularPolygon,
   IrregularPreparedPiece,
@@ -102,7 +103,8 @@ function settings(
   orderWindow: number,
   beamWidth = 4,
   localCandidateFanout =
-    GeometrySettings.Make.optimizer.localCandidateFanout ?? GeometrySettings.Make.optimizer.beamWidth
+    GeometrySettings.Make.optimizer.localCandidateFanout ?? GeometrySettings.Make.optimizer.beamWidth,
+  placementPolicyId: IrregularPlacementPolicyId = 'balanced-compactness'
 ): IrregularNestingSettings {
   return new IrregularNestingSettings({
     geometry: GeometrySettings.Make.geometry,
@@ -110,7 +112,9 @@ function settings(
       ...GeometrySettings.Make.optimizer,
       orderWindow,
       beamWidth,
-      localCandidateFanout
+      localCandidateFanout,
+      placementPolicyId,
+      placementPolicyIds: [placementPolicyId]
     })
   })
 }
@@ -365,6 +369,34 @@ describe('decodeWindowedIrregularBeam', () => {
 
     expect(result.rankedStates).toHaveLength(1)
     expect(result.bestState.placedCollisionGeometries[0]?.placement.transform.translateX).toBe(0)
+  })
+
+  it('keeps a compactness alternative beside the edge-contact winner', async () => {
+    const result = await runWindowed(
+      sheet(10, 10),
+      [preparedPiece('a', 4, 2), preparedPiece('b', 4, 2)],
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 2, 2, 'edge-contact-then-balanced-compactness')
+      ),
+      candidateService(({ moving, placed }) =>
+        placed.length === 0
+          ? [oneCandidate(moving, 0, 0)]
+          : [oneCandidate(moving, 4, 0), oneCandidate(moving, 0, 2)]
+      )
+    )
+
+    expect(
+      result.rankedStates.map((state) => {
+        const placement = state.placedCollisionGeometries[1]?.placement.transform
+        return placement === undefined ? undefined : [placement.translateX, placement.translateY]
+      })
+    ).toEqual(
+      expect.arrayContaining([
+        [4, 0],
+        [0, 2]
+      ])
+    )
   })
 
   it('retains candidates for a chromosome-preferred transform before better local scores', async () => {

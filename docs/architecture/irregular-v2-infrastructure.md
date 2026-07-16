@@ -60,9 +60,11 @@ generate transforms, reorder pieces, score layouts, prune a beam, emit history,
 or invent placement data. Candidate
 generation and direct placement validation remain the legality authority. The
 decoder uses `IrregularPlacementScorer` only to compare those real legal
-candidates with the requested explicit local policy: balanced compactness or
-short-side fill of the combined collision-polygon bounds, then stable metadata
-ties. It does not use free-material metrics to accept candidates; whole-layout
+candidates with the requested explicit local policy: balanced compactness,
+short-side fill, or exact shared padded-edge contact followed by balanced
+compactness. The contact policy measures only the collision envelopes already
+accepted by direct validation, so its preferred edge mates preserve configured
+source clearance. It does not use free-material metrics to accept candidates; whole-layout
 metrics remain a separate beam-retention and portfolio concern. A valid transformed
 polygon that exceeds the sheet is an infeasible transform and produces zero
 candidates, allowing the decoder to try the next supplied transform; invalid
@@ -101,10 +103,11 @@ pieces than `beamWidth = 1`. This changes search retention only, not geometry
 legality.
 
 The shipped interactive profile is intentionally narrow: `orderWindow = 1`,
-`beamWidth = 1`, local candidate fanout `= 1`, transform cap `= 1`, and GA
-disabled. It produces a deterministic first result before broader beam or GA
-experiments are deliberately enabled. Each invocation uses an independent
-settings instance, so renderer and CSV editing cannot mutate a shared default.
+`beamWidth = 1`, local candidate fanout `= 4`, transform cap `= 4`, and GA
+disabled. It produces a deterministic first result while retaining enough real
+local alternatives for the whole-layout scorer to reject obvious fragmentation.
+Each invocation uses an independent settings instance, so renderer and CSV
+editing cannot mutate a shared default.
 
 The renderer separately persists one mirror-eligibility flag per imported source
 shape. Both normal and CSV preparation copy that flag into every generated

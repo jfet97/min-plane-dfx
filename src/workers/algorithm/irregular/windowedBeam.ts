@@ -20,6 +20,8 @@ import {
   NfpIfpService
 } from '../../irregular/services.js'
 import {
+  compareBalancedCompactnessPlacementScores,
+  EDGE_CONTACT_THEN_BALANCED_COMPACTNESS_POLICY_ID,
   IrregularPlacementScorer,
   IrregularPlacementScoringError,
   IrregularPlacementScore
@@ -445,7 +447,35 @@ function selectLocalCandidates(
           Order.mapInput(Order.String, (candidate) => localCandidateKey(candidate))
         ]
   )
-  return candidates.toSorted(candidateOrder).slice(0, maximumCount)
+  const rankedCandidates = candidates.toSorted(candidateOrder)
+  const first = rankedCandidates[0]
+  if (
+    maximumCount === 1 ||
+    first?.score.policyId !== EDGE_CONTACT_THEN_BALANCED_COMPACTNESS_POLICY_ID
+  ) {
+    return rankedCandidates.slice(0, maximumCount)
+  }
+
+  const compactnessWinner = candidates.toSorted(
+    Order.combineAll<LocalCandidate>([
+      Order.make((first, second) =>
+        compareBalancedCompactnessPlacementScores(first.score, second.score)
+      ),
+      Order.mapInput(Order.String, (candidate) => localCandidateKey(candidate))
+    ])
+  )[0]
+  if (compactnessWinner === undefined) return rankedCandidates.slice(0, maximumCount)
+
+  const selected = [compactnessWinner]
+  const selectedKeys = new Set([localCandidateKey(compactnessWinner)])
+  for (const candidate of rankedCandidates) {
+    if (selected.length >= maximumCount) break
+    const key = localCandidateKey(candidate)
+    if (selectedKeys.has(key)) continue
+    selected.push(candidate)
+    selectedKeys.add(key)
+  }
+  return selected
 }
 
 function applyPlacement(

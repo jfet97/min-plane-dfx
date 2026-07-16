@@ -248,6 +248,14 @@ function compareScores(
   ) {
     return edgeContactThenBalancedCompactnessOrder(first, second)
   }
+  return compareBalancedCompactnessPlacementScores(first, second)
+}
+
+/** Compares candidates with the baseline compactness policy regardless of their selected policy. */
+export function compareBalancedCompactnessPlacementScores(
+  first: IrregularPlacementScore,
+  second: IrregularPlacementScore
+): -1 | 0 | 1 {
   return balancedCompactnessOrder(first, second)
 }
 
