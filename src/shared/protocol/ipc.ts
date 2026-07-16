@@ -4,7 +4,6 @@ import {
   NestingResult,
   NestingRequest,
   NestingHistoryFramePayload,
-  NestingHistorySummary,
   ProjectHistoryRef
 } from '../domain/nesting.js'
 import {
@@ -15,6 +14,11 @@ import {
 } from '../domain/project.js'
 import type { JobId, PieceId, SourceFileId } from '../domain/ids.js'
 import type { SerializedAppError } from './errors.js'
+import {
+  WorkerHistoryCompleteResponse,
+  WorkerHistoryFrameResponse,
+  WorkerProgressResponse
+} from './worker.js'
 
 export type Unsubscribe = () => void
 
@@ -25,23 +29,16 @@ export class RunGifExportPayload extends Schema.Class<RunGifExportPayload>('RunG
 
 /**
  * A history event emitted by the worker over the wire. Shape-compatible
- * with the variant entries of WorkerResponse that carry `history_frame` or
- * `history_complete`. We expose it here so renderer/main code can name the
- * concept without reaching into worker protocol internals.
+ * with the variant entries of WorkerResponse sent while a nesting job runs.
+ * We expose it here so renderer/main code can name the bridge event without
+ * reaching into worker protocol internals.
  */
-export type NestingHistoryEvent =
-  | {
-      readonly type: 'history_frame'
-      readonly requestId: string
-      readonly jobId: JobId
-      readonly payload: NestingHistoryFramePayload
-    }
-  | {
-      readonly type: 'history_complete'
-      readonly requestId: string
-      readonly jobId: JobId
-      readonly payload: NestingHistorySummary
-    }
+export const NestingHistoryEvent = Schema.Union([
+  WorkerProgressResponse,
+  WorkerHistoryFrameResponse,
+  WorkerHistoryCompleteResponse
+])
+export type NestingHistoryEvent = Schema.Schema.Type<typeof NestingHistoryEvent>
 
 /**
  * The renderer-only API exposed via contextBridge. The signature is the

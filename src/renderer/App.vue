@@ -1128,7 +1128,7 @@ async function loadCurrentHistoryReplay(): Promise<void> {
         "
         @click="runNesting"
       >
-        {{ runner.status.value === 'running' ? 'Running...' : 'Run' }}
+        {{ runner.status.value === 'running' ? runner.statusLabel.value : 'Run' }}
       </button>
       <button
         type="button"
@@ -1262,6 +1262,9 @@ async function loadCurrentHistoryReplay(): Promise<void> {
       <IrregularDebugPanel />
       <div class="warnings-slot">
         <h3>Preparation warnings</h3>
+        <p v-if="runner.status.value === 'running'" class="project-warning worker-progress">
+          Worker phase: {{ runner.statusLabel.value }}
+        </p>
         <p v-if="projectWarning" class="project-warning">{{ projectWarning }}</p>
         <p v-if="runner.state.value.lastError" class="project-warning">
           {{ runner.state.value.lastError }}
@@ -1280,7 +1283,7 @@ async function loadCurrentHistoryReplay(): Promise<void> {
         {{ store.documentCount.value }} document(s) / {{ store.pieceCount.value }} piece(s) /
         {{ store.selectedPieceCount.value }} cut piece(s) /
         {{ store.csvLinkedPieceCount.value }} CSV-linked row(s) /
-        {{ store.warningCount.value }} warning(s) · worker: {{ runner.status.value }}
+        {{ store.warningCount.value }} warning(s) · worker: {{ runner.statusLabel.value }}
         <span v-if="history.hasResult.value" class="empty-msg">
           · {{ history.strategyResults.value.length }} strategy run(s) available
         </span>

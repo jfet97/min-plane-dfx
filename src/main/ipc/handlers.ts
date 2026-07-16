@@ -28,6 +28,7 @@ import {
   WorkspaceProjectError
 } from '../services/WorkspaceProjectService.js'
 import { NestingRequest } from '@shared/domain/nesting.js'
+import { NestingRequestStrict } from '@shared/schemas/nestingSchemas.js'
 import { RunGifExportPayload } from '@shared/protocol/ipc.js'
 import type { IpcResult } from '@shared/protocol/ipc.js'
 import type { Unsubscribe, NestingHistoryEvent } from '@shared/protocol/ipc.js'
@@ -569,7 +570,7 @@ export function registerIpcHandlers(): void {
       event: IpcMainInvokeEvent,
       raw: unknown
     ): Promise<IpcResult<{ readonly path: string }>> => {
-      const decoded = Schema.decodeUnknownExit(NestingRequest)(raw)
+      const decoded = Schema.decodeUnknownExit(NestingRequestStrict)(raw)
       if (Exit.isFailure(decoded)) {
         return {
           ok: false,
@@ -579,7 +580,7 @@ export function registerIpcHandlers(): void {
           }
         }
       }
-      const request = decoded.value
+      const request = Schema.decodeUnknownSync(NestingRequest)(decoded.value)
       const win = BrowserWindow.fromWebContents(event.sender) ?? BrowserWindow.getFocusedWindow()
       const defaultName = `nesting-request-${request.jobId}.json`
       const result = win
@@ -781,7 +782,7 @@ export function registerIpcHandlers(): void {
       _event: IpcMainInvokeEvent,
       raw: unknown
     ): Promise<IpcResult<{ readonly jobId: JobId }>> => {
-      const decoded = Schema.decodeUnknownExit(NestingRequest)(raw)
+      const decoded = Schema.decodeUnknownExit(NestingRequestStrict)(raw)
       if (Exit.isFailure(decoded)) {
         return {
           ok: false,
@@ -791,7 +792,7 @@ export function registerIpcHandlers(): void {
           }
         }
       }
-      const request = decoded.value
+      const request = Schema.decodeUnknownSync(NestingRequest)(decoded.value)
       try {
         await getSupervisor().runNesting(request, (event) => {
           for (const w of BrowserWindow.getAllWindows()) {

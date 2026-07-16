@@ -82,6 +82,12 @@ generation/evaluation/time budgets, seed, and the three chromosome-gene toggles
 This makes benchmark rows schema-validated and replayable without hidden
 process-global knobs.
 
+The shipped interactive profile is intentionally narrow: `orderWindow = 1`,
+`beamWidth = 1`, local candidate fanout `= 1`, transform cap `= 1`, and GA
+disabled. It produces a deterministic first result before broader beam or GA
+experiments are deliberately enabled. Each invocation uses an independent
+settings instance, so renderer and CSV editing cannot mutate a shared default.
+
 The renderer separately persists one mirror-eligibility flag per imported source
 shape. Both normal and CSV preparation copy that flag into every generated
 `PreparedPiece`, and the global mirror gate must also be enabled before a
@@ -144,9 +150,14 @@ copy ids and source ids, emits `IrregularLayout` transform placements with the
 source-space placement reference required to reproduce each transform rather
 than fabricated rectangle placements, and writes tagged `IrregularHistoryFrame`
 records to the normal NDJSON history path. It replays the selected portfolio
-chromosome and follows explicit beam-state parent links from its terminal state
-back to the empty state, so persisted and emitted history contains only the
-actual winning branch rather than losing beam alternatives. Missing source geometry becomes the typed
+chromosome when GA is enabled; a deterministic beam-only run records its
+winning path during the single baseline decode. In either case it follows
+explicit beam-state parent links from the terminal state back to the empty
+state, so persisted and emitted history contains only the actual winning branch
+rather than losing beam alternatives. Worker lifecycle and portfolio-progress
+events are forwarded through the main-process supervisor to the renderer, which
+shows the real current phase instead of a fake percentage. Missing source
+geometry becomes the typed
 `irregular_source_geometry_missing` worker failure; invalid derived geometry
 and scoring become distinct typed failures.
 

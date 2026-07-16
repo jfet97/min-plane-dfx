@@ -27,21 +27,21 @@ export const DEFAULT_IRREGULAR_GEOMETRY_SETTINGS = new IrregularGeometrySettings
 })
 
 export const DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS = new IrregularOptimizerSettings({
-  orderWindow: 2,
-  beamWidth: 24,
+  orderWindow: 1,
+  beamWidth: 1,
   localCandidateFanout: DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT,
-  transformCap: 16,
+  transformCap: 1,
   transformMinimumEdgeLengthMm: 1,
   transformAngleDeduplicationToleranceDeg: 0.01,
   configuredRotationEnabled: true,
   configuredRotationDeg: [],
-  baselineOnly: false,
-  gaPopulation: 32,
+  baselineOnly: true,
+  gaPopulation: 12,
   gaGenerationBudget: DEFAULT_IRREGULAR_GA_GENERATION_BUDGET,
   gaEvaluationBudget: DEFAULT_IRREGULAR_GA_EVALUATION_BUDGET,
-  gaTimeBudgetMs: 60_000,
+  gaTimeBudgetMs: 15_000,
   gaSeed: 'default',
-  gaEnabled: true,
+  gaEnabled: false,
   priorityOrderMutationEnabled: true,
   transformPreferenceMutationEnabled: true,
   placementPolicyMutationEnabled: true,
@@ -53,3 +53,22 @@ export const DEFAULT_IRREGULAR_NESTING_SETTINGS = new IrregularNestingSettings({
   geometry: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
   optimizer: DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS
 })
+
+/** Creates an independent default profile for one editable irregular run. */
+export function makeDefaultIrregularNestingSettings(): IrregularNestingSettings {
+  return new IrregularNestingSettings({
+    geometry: new IrregularGeometrySettings({
+      ...DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+    }),
+    optimizer: new IrregularOptimizerSettings({
+      ...DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS,
+      configuredRotationDeg: [
+        ...DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS.configuredRotationDeg
+      ],
+      placementPolicyIds: [
+        ...(DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS.placementPolicyIds ??
+          DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS)
+      ]
+    })
+  })
+}

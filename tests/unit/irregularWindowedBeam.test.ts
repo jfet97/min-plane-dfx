@@ -230,7 +230,7 @@ describe('decodeWindowedIrregularBeam', () => {
     const result = await runWindowed(
       sheet(4, 1),
       [preparedPiece('a', 1, 1)],
-      Layer.succeed(GeometrySettings, settings(2, 2)),
+      Layer.succeed(GeometrySettings, settings(2, 2, 2)),
       candidateService(({ moving }) => [oneCandidate(moving, 2), oneCandidate(moving, 0)])
     )
 

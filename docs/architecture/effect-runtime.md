@@ -51,6 +51,12 @@ RunNestingPayload -> Stream<WorkerResponse>
 
 `WorkerSupervisor` consumes the `RunNesting` response stream and forwards history events or resolves the final result. `nesting.worker.ts` exposes the RPC handler and streams `WorkerResponse` class instances through an endable queue.
 
+Renderer cancellation and the outer request timeout are supervisor safety
+boundaries: they emit a terminal cancellation progress event and dispose the
+worker runtime. They do not claim a partial result from a computation that was
+interrupted externally. Portfolio-owned GA budgets remain separate, cooperative
+algorithm checkpoints that only publish validated layouts.
+
 Do not bypass `NodeWorker` / `NodeWorkerRunner` with direct `parentPort` listeners in the same worker.
 
 When the parent worker thread is closed after a completed run, Effect may report

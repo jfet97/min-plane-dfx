@@ -144,10 +144,12 @@ export function computeIrregularNesting(
 
     const stateSnapshots: IrregularStateSnapshot[] = []
     const captureStateSnapshot = (snapshot: IrregularStateSnapshot): void => {
-      stateSnapshots.push({
+      const capturedSnapshot: IrregularStateSnapshot = {
         ...snapshot,
         stepIndex: preparedPieces.length - snapshot.state.remainingPreparedPieces.length
-      })
+      }
+      stateSnapshots.push(capturedSnapshot)
+      options?.emitStateSnapshot?.(capturedSnapshot, settings.optimizer.beamWidth)
     }
     const portfolioService = yield* Effect.service(IrregularNestingPortfolio).pipe(
       Effect.provide(
@@ -185,9 +187,6 @@ export function computeIrregularNesting(
       state: reconstructedState
     })
     diagnostics.push(...score.freeMaterialSnapshot.diagnostics)
-    for (const snapshot of stateSnapshots) {
-      options?.emitStateSnapshot?.(snapshot, settings.optimizer.beamWidth)
-    }
     return {
       placedCollisionGeometries,
       score,

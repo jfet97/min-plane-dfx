@@ -1,10 +1,11 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { Option, Schema } from 'effect'
 import type {
   AppApi,
   CsvImportResult,
-  HistoryEventEnvelope,
   IpcResult
 } from '@shared/protocol/ipc.js'
+import { NestingHistoryEvent } from '@shared/protocol/ipc.js'
 import type { RunGifExportPayload } from '@shared/protocol/ipc.js'
 import type { ImportedDxfDocument } from '@shared/domain/dxf.js'
 import type {
@@ -109,7 +110,8 @@ const api: AppApi = {
       // Subscribe BEFORE invoking `nesting:run` so we never miss the
       // `nesting:result-event` broadcast that the main handler emits during
       // its awaited supervisor run.
-      const listener = (_event: IpcRendererEvent, _jobId: JobId, payload: NestingResult): void => {
+      const listener = (_event: IpcRendererEvent, jobId: JobId, payload: NestingResult): void => {
+        if (jobId !== request.jobId) return
         resolve(payload)
         ipcRenderer.removeListener('nesting:result-event', listener)
       }
@@ -129,8 +131,14 @@ const api: AppApi = {
     ),
 
   onNestingHistory: (callback) => {
-    const listener = (_event: IpcRendererEvent, event: HistoryEventEnvelope): void =>
-      callback(event)
+    const listener = (_event: IpcRendererEvent, raw: unknown): void => {
+      const decoded = Schema.decodeUnknownOption(NestingHistoryEvent)(raw)
+      if (Option.isNone(decoded)) {
+        console.warn('[preload:nesting] ignored malformed history event')
+        return
+      }
+      callback(decoded.value)
+    }
     ipcRenderer.on('nesting:history-event', listener)
     return () => ipcRenderer.removeListener('nesting:history-event', listener)
   },

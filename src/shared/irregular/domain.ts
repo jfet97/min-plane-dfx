@@ -82,14 +82,14 @@ const NonNegativeFiniteInteger = Schema.Int.check(Schema.isGreaterThanOrEqualTo(
 /** Finite positive integer used for bounded irregular controls. */
 const PositiveFiniteInteger = Schema.Int.check(Schema.isGreaterThan(0))
 
-/** Default local candidate fanout retained by the irregular beam baseline. */
-export const DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT = 24
+/** Default local candidate fanout for the first deterministic irregular result. */
+export const DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT = 1
 
-/** Default number of GA generations retained for bounded experiments. */
-export const DEFAULT_IRREGULAR_GA_GENERATION_BUDGET = 4
+/** Default number of GA generations for an explicitly enabled experiment. */
+export const DEFAULT_IRREGULAR_GA_GENERATION_BUDGET = 2
 
-/** Default deterministic GA evaluation cap. */
-export const DEFAULT_IRREGULAR_GA_EVALUATION_BUDGET = 128
+/** Default deterministic GA evaluation cap for an explicitly enabled experiment. */
+export const DEFAULT_IRREGULAR_GA_EVALUATION_BUDGET = 24
 
 /** Terminal status of an irregular nesting portfolio. */
 export const IrregularPortfolioStatus = Schema.Literals([
@@ -218,14 +218,14 @@ const IrregularOptimizerSettingsFields = Schema.Struct({
   /** Enables seeded GA portfolio evaluations after the deterministic beam baseline. */
   gaEnabled: Schema.Boolean.pipe(
     Schema.optionalKey,
-    Schema.withConstructorDefault(Effect.succeed(true)),
-    Schema.withDecodingDefaultKey(Effect.succeed(true))
+    Schema.withConstructorDefault(Effect.succeed(false)),
+    Schema.withDecodingDefaultKey(Effect.succeed(false))
   ),
   /** Keeps only the deterministic beam baseline regardless of other GA limits. */
   baselineOnly: Schema.Boolean.pipe(
     Schema.optionalKey,
-    Schema.withConstructorDefault(Effect.succeed(false)),
-    Schema.withDecodingDefaultKey(Effect.succeed(false))
+    Schema.withConstructorDefault(Effect.succeed(true)),
+    Schema.withDecodingDefaultKey(Effect.succeed(true))
   ),
   /** Number of chromosomes evaluated in every GA generation. */
   gaPopulation: PositiveFiniteInteger,

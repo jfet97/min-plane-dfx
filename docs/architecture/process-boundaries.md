@@ -84,3 +84,8 @@ single-subrun result into the active regular run or CSV session.
 The worker transport is Effect-owned through `NodeWorker`, `NodeWorkerRunner`, and Effect RPC. The app-owned payload protocol is `RunNestingPayload -> Stream<WorkerResponse>`.
 
 History persistence is authoritative: frames are appended to NDJSON before optional live streaming. Live `history_frame` delivery is best-effort; persistence failures still fail the job.
+
+The main supervisor guards every streamed response by both request id and job
+id before forwarding it. The preload decodes each `progress`, `history_frame`,
+or `history_complete` event through its shared schema before exposing it to the
+renderer, so a stale or malformed IPC message cannot affect a later job.

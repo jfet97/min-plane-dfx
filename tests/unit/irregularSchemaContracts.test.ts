@@ -17,6 +17,10 @@ import {
   IrregularTransformCandidate
 } from '@shared/irregular/domain.js'
 import {
+  DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS,
+  makeDefaultIrregularNestingSettings
+} from '@shared/irregular/defaults.js'
+import {
   NestingHistoryFramePayload,
   NestingLayout,
   NestingResult
@@ -28,6 +32,39 @@ function decode<S extends Schema.ConstraintDecoder<unknown>>(schema: S, input: u
 }
 
 describe('irregular schema contracts', () => {
+  it('ships an independent, deterministic first-result profile', () => {
+    const first = makeDefaultIrregularNestingSettings()
+    const second = makeDefaultIrregularNestingSettings()
+
+    expect(first.optimizer.orderWindow).toBe(1)
+    expect(first.optimizer.beamWidth).toBe(1)
+    expect(first.optimizer.localCandidateFanout).toBe(1)
+    expect(first.optimizer.transformCap).toBe(1)
+    expect(first.optimizer.gaEnabled).toBe(false)
+    expect(first.optimizer.baselineOnly).toBe(true)
+    expect(first.geometry).not.toBe(second.geometry)
+    expect(first.optimizer).not.toBe(second.optimizer)
+    expect(first.optimizer.configuredRotationDeg).not.toBe(second.optimizer.configuredRotationDeg)
+    expect(second.optimizer.configuredRotationDeg).toEqual([])
+    expect(DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS.configuredRotationDeg).toEqual([])
+  })
+
+  it('decodes older incomplete optimizer settings to the safe profile', () => {
+    const decoded = decode(IrregularOptimizerSettings, {
+      orderWindow: 1,
+      beamWidth: 1,
+      transformCap: 1,
+      gaPopulation: 1,
+      gaTimeBudgetMs: 1,
+      gaSeed: 'legacy-settings'
+    })
+
+    if (Exit.isFailure(decoded)) throw new Error('expected legacy settings to decode')
+    expect(decoded.value.localCandidateFanout).toBe(1)
+    expect(decoded.value.gaEnabled).toBe(false)
+    expect(decoded.value.baselineOnly).toBe(true)
+  })
+
   it('requires finite coordinates and ordered bounds', () => {
     expect(Exit.isSuccess(decode(IrregularPoint, { x: -2.5, y: 4 }))).toBe(true)
     expect(Exit.isFailure(decode(IrregularPoint, { x: Number.NaN, y: 4 }))).toBe(true)

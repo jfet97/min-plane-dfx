@@ -6,8 +6,9 @@ import * as NodeWorker from '@effect/platform-node/NodeWorker'
 import * as RpcClient from 'effect/unstable/rpc/RpcClient'
 import {
   NestingWorkerRpcs,
-  type WorkerResponse,
-  type WorkerProgress
+  WorkerProgress,
+  WorkerProgressResponse,
+  type WorkerResponse
 } from '@shared/protocol/worker.js'
 import { NestingResult as NestingResultModel } from '@shared/domain/nesting.js'
 import type {
@@ -123,15 +124,28 @@ export class WorkerSupervisor {
       )
       const runtime = ManagedRuntime.make(WorkerProtocolLive)
       const timer = setTimeout(() => {
-        this.teardownWorker(runtime.dispose, 'timeout')
-        this.current = null
-        reject(
+        const current = this.current
+        if (
+          current === null ||
+          current.requestId !== requestId ||
+          current.request.jobId !== request.jobId
+        ) {
+          return
+        }
+        this.dispatchEvent(
+          current,
+          cancellationProgress(current)
+        )
+        clearTimeout(current.timer)
+        this.teardownWorker(current.dispose, 'timeout')
+        current.reject(
           new SupervisorError(
             'worker_timeout',
             `Worker exceeded the configured timeout of ${timeoutMs}ms.`,
             { requestId, jobId: request.jobId, timeoutMs }
           )
         )
+        this.current = null
       }, timeoutMs)
 
       this.current = {
@@ -156,17 +170,21 @@ export class WorkerSupervisor {
       })
 
       void runtime.runPromise(Effect.scoped(program)).catch((err: unknown) => {
-        this.handleWorkerError(err)
+        this.handleWorkerError(requestId, request.jobId, err)
       })
     })
   }
 
   cancelJob(jobId: JobId): void {
     if (!this.current || this.current.request.jobId !== jobId) return
-    const { dispose, timer } = this.current
-    clearTimeout(timer)
-    this.teardownWorker(dispose, 'cancel')
-    this.current.reject(
+    const current = this.current
+    this.dispatchEvent(
+      current,
+      cancellationProgress(current)
+    )
+    clearTimeout(current.timer)
+    this.teardownWorker(current.dispose, 'cancel')
+    current.reject(
       new SupervisorError('worker_cancelled', `Job ${jobId} cancelled by renderer request.`)
     )
     this.current = null
@@ -206,64 +224,42 @@ export class WorkerSupervisor {
   }
 
   private handleWorkerMessage(parsed: WorkerResponse): void {
-    if (!this.current) return
+    const current = this.current
+    if (
+      current === null ||
+      current.requestId !== parsed.requestId ||
+      (parsed.jobId !== undefined && current.request.jobId !== parsed.jobId)
+    ) {
+      return
+    }
 
     if (parsed.type === 'history_frame') {
-      const event: NestingHistoryEvent = {
-        type: parsed.type,
-        requestId: parsed.requestId,
-        jobId: parsed.jobId,
-        payload: parsed.payload
-      }
-      for (const listener of this.current.listeners) {
-        try {
-          listener(event)
-        } catch (err) {
-          // A misbehaving listener must not crash the worker pipeline.
-          console.error('[WorkerSupervisor] history listener threw:', err)
-        }
-      }
+      this.dispatchEvent(current, parsed)
       return
     }
 
     if (parsed.type === 'history_complete') {
-      this.current.historySummary = parsed.payload
-      const event: NestingHistoryEvent = {
-        type: parsed.type,
-        requestId: parsed.requestId,
-        jobId: parsed.jobId,
-        payload: parsed.payload
-      }
-      for (const listener of this.current.listeners) {
-        try {
-          listener(event)
-        } catch (err) {
-          // a misbehaving listener must not crash the worker pipeline
-          console.error('[WorkerSupervisor] history listener threw:', err)
-        }
-      }
+      current.historySummary = parsed.payload
+      this.dispatchEvent(current, parsed)
       return
     }
 
     if (parsed.type === 'progress') {
-      const progress: WorkerProgress = parsed.payload
-      // Cancellation check: if the current request was already cancelled,
-      // ignore the progress event.
-      void progress
+      this.dispatchEvent(current, parsed)
       return
     }
 
     if (parsed.type === 'success') {
-      const result: NestingResult = this.current.historySummary
+      const result: NestingResult = current.historySummary
         ? new NestingResultModel({
             ...parsed.payload,
-            historySummary: this.current.historySummary
+            historySummary: current.historySummary
           })
         : parsed.payload
-      const jobId = this.current.request.jobId
-      clearTimeout(this.current.timer)
-      this.teardownWorker(this.current.dispose, 'success')
-      this.current.resolve(result)
+      const jobId = current.request.jobId
+      clearTimeout(current.timer)
+      this.teardownWorker(current.dispose, 'success')
+      current.resolve(result)
       this.current = null
       for (const handler of this.resultListeners) {
         try {
@@ -279,7 +275,7 @@ export class WorkerSupervisor {
       const code: AppErrorCode = parsed.error.code
       const message = parsed.error.message
       console.error('[main:worker] failure', {
-        jobId: this.current.request.jobId,
+        jobId: current.request.jobId,
         code,
         message
       })
@@ -288,7 +284,29 @@ export class WorkerSupervisor {
     }
   }
 
-  private handleWorkerError(err: unknown): void {
+  private dispatchEvent(
+    current: PendingJob,
+    event: NestingHistoryEvent
+  ): void {
+    for (const listener of current.listeners) {
+      try {
+        listener(event)
+      } catch (err) {
+        // a misbehaving listener must not crash the worker pipeline
+        console.error('[WorkerSupervisor] history listener threw:', err)
+      }
+    }
+  }
+
+  private handleWorkerError(requestId: string, jobId: JobId, err: unknown): void {
+    const current = this.current
+    if (
+      current === null ||
+      current.requestId !== requestId ||
+      current.request.jobId !== jobId
+    ) {
+      return
+    }
     this.failCurrent('worker_crashed', err instanceof Error ? err.message : String(err))
   }
 
@@ -310,6 +328,14 @@ function cryptoRandomId(): string {
   const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto
   if (c && typeof c.randomUUID === 'function') return c.randomUUID()
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function cancellationProgress(current: PendingJob): WorkerProgressResponse {
+  return new WorkerProgressResponse({
+    requestId: current.requestId,
+    jobId: current.request.jobId,
+    payload: new WorkerProgress({ phase: 'cancelled', at: new Date().toISOString() })
+  })
 }
 
 /** Default supervisor instance used by the IPC layer. */

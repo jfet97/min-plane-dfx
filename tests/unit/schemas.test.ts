@@ -152,6 +152,18 @@ describe('ProjectDocumentStrict', () => {
     expect(Exit.isSuccess(result)).toBe(true)
   })
 
+  it('accepts an irregular project without MaxRects candidate strategies', () => {
+    const result = validate(ProjectDocumentStrict, {
+      ...validProject,
+      options: {
+        ...validProject.options,
+        workerMode: 'irregular-convex-v2',
+        strategyIds: []
+      }
+    })
+    expect(Exit.isSuccess(result)).toBe(true)
+  })
+
   it('decodes a version-1 project document', () => {
     const result = validate(ProjectDocumentStrict, { ...validProject, version: 1 as const })
     expect(Exit.isSuccess(result)).toBe(true)
@@ -252,6 +264,27 @@ describe('NestingRequestStrict', () => {
       }
     })
     expect(Exit.isSuccess(result)).toBe(true)
+  })
+
+  it('accepts an irregular request without MaxRects candidate strategies', () => {
+    const result = validate(NestingRequestStrict, {
+      ...validRequest,
+      sourcePieces: validProject.importedPieces,
+      options: {
+        ...validRequest.options,
+        workerMode: 'irregular-convex-v2',
+        strategyIds: []
+      }
+    })
+    expect(Exit.isSuccess(result)).toBe(true)
+  })
+
+  it('rejects a MaxRects request without a candidate strategy', () => {
+    const result = validate(NestingRequestStrict, {
+      ...validRequest,
+      options: { ...validRequest.options, strategyIds: [] }
+    })
+    expect(Exit.isFailure(result)).toBe(true)
   })
 
   it('rejects a request with zero sheet height', () => {

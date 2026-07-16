@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Cause, Exit, Schema } from 'effect'
 import { RunNestingPayload, WorkerRequest, WorkerResponse } from '@shared/protocol/worker.js'
+import { NestingHistoryEvent } from '@shared/protocol/ipc.js'
 
 const validate = (schema: Schema.Top, input: unknown) =>
   Schema.decodeUnknownExit(schema as never)(input)
@@ -118,6 +119,28 @@ describe('WorkerResponse', () => {
     }
     const result = validate(WorkerResponse, response)
     expect(Exit.isSuccess(result)).toBe(true)
+  })
+
+  it('decodes worker progress as a renderer-facing history event', () => {
+    const event = {
+      type: 'progress' as const,
+      requestId: 'r-1',
+      jobId: 'job-1',
+      payload: { phase: 'started' as const, at: '2025-01-01T00:00:00.000Z' }
+    }
+
+    expect(Exit.isSuccess(validate(NestingHistoryEvent, event))).toBe(true)
+  })
+
+  it('rejects success responses on the history event channel', () => {
+    const event = {
+      type: 'success',
+      requestId: 'r-1',
+      jobId: 'job-1',
+      payload: {}
+    }
+
+    expect(Exit.isFailure(validate(NestingHistoryEvent, event))).toBe(true)
   })
 
   it('accepts a valid history_frame response', () => {

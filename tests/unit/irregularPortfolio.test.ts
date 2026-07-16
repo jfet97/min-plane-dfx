@@ -54,6 +54,7 @@ function settings(
       transformMinimumEdgeLengthMm: 0,
       transformAngleDeduplicationToleranceDeg: 0.01,
       configuredRotationDeg: [],
+      baselineOnly: false,
       gaPopulation: 4,
       gaTimeBudgetMs: 60_000,
       gaSeed: 'portfolio-reproducibility-seed',

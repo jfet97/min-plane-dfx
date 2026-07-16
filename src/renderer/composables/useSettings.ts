@@ -6,6 +6,10 @@ import {
   DEFAULT_LAYOUT_SELECTION_STRATEGY_ID,
   findLayoutSelectionStrategy
 } from '@shared/domain/layoutSelectionStrategies.js'
+import {
+  IRREGULAR_WORKER_MODE,
+  makeDefaultIrregularNestingSettings
+} from '@shared/irregular/defaults.js'
 
 export interface SettingsState {
   sheet: SheetSpec
@@ -124,6 +128,9 @@ export function useSettings() {
     },
     setWorkerMode: (mode: NestingOptions['workerMode']): void => {
       state.options.workerMode = mode
+      if (mode === IRREGULAR_WORKER_MODE && state.options.irregularSettings === undefined) {
+        state.options.irregularSettings = makeDefaultIrregularNestingSettings()
+      }
       notifyWorkspaceSettingsChanged('immediate')
     },
     setHistoryMode: (mode: 'stream' | 'final' | 'off'): void => {

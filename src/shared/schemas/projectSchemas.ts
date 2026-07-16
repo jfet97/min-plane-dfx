@@ -1,4 +1,4 @@
-import { Effect, Schema } from 'effect'
+import { Schema } from 'effect'
 import {
   ProjectDocument,
   ProjectRunRecord,
@@ -8,7 +8,7 @@ import {
 import { DxfGeometrySummary, ImportWarning } from '../domain/dxf.js'
 import { NestingResult } from '../domain/nesting.js'
 import { JobId, PieceId, SourceFileId } from '../domain/ids.js'
-import { IrregularNestingSettings } from '../irregular/domain.js'
+import { NestingOptionsStrictSchema } from './nestingSchemas.js'
 import {
   NonNegativeCoordinate,
   PositiveWidth,
@@ -63,21 +63,7 @@ export const ProjectDocumentStrict = Schema.Struct({
     Schema.Record(Schema.String, Schema.Number.check(Schema.isGreaterThanOrEqualTo(0)))
   ),
   pieceMirrorEnabled: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
-  options: Schema.Struct({
-    allowGlobalRotation: Schema.Boolean,
-    allowGlobalMirror: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(Effect.succeed(true))),
-    timeoutMs: Schema.Number.check(Schema.isGreaterThan(0)),
-    workerMode: Schema.Literals(['maxrects-beam-search', 'irregular-convex-v2']),
-    historyMode: Schema.Literals(['stream', 'final', 'off']),
-    historyScope: Schema.Literal('winning_path'),
-    strategySelectionMode: Schema.Literals(['single', 'all_configured']),
-    strategyIds: Schema.Array(Schema.String).check(Schema.isNonEmpty()),
-    layoutSelectionStrategyId: Schema.String.check(Schema.isMinLength(1)),
-    finalSelectionMode: Schema.Literals(['manual', 'best', 'top_n']),
-    topN: Schema.optional(Schema.Number),
-    maxHistoryEvents: Schema.optional(Schema.Number),
-    irregularSettings: Schema.optional(IrregularNestingSettings)
-  }),
+  options: NestingOptionsStrictSchema,
   lastResult: Schema.optional(NestingResult),
   lastHistory: Schema.optional(
     Schema.Struct({

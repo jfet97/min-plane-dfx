@@ -129,13 +129,12 @@ function runPortfolio(
         dependencies
       })
 
-    const baseline = yield* runBeam(baselineChromosome, false)
+    const gaEnabled = gaIsEnabled(settings)
+    const baseline = yield* runBeam(baselineChromosome, !gaEnabled && input.onStateSnapshot !== undefined)
     let bestOverall: EvaluatedChromosome = baseline
 
-    if (!gaIsEnabled(settings)) {
-      const replayed =
-        input.onStateSnapshot === undefined ? baseline : yield* runBeam(baselineChromosome, true)
-      return portfolioResultFrom(replayed, 'beam', 'completed', replayed.score)
+    if (!gaEnabled) {
+      return portfolioResultFrom(baseline, 'beam', 'completed', baseline.score)
     }
 
     const random = new DeterministicPrng(settings.optimizer.gaSeed)

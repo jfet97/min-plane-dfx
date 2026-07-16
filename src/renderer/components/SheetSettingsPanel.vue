@@ -3,8 +3,13 @@ import { computed } from 'vue'
 import { useSettings } from '../composables/useSettings.js'
 import FileDropZone from './FileDropZone.vue'
 import PresetShapePanel from './PresetShapePanel.vue'
+import IrregularSettingsPanel from './IrregularSettingsPanel.vue'
 import { STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js'
 import { LAYOUT_SELECTION_STRATEGIES } from '@shared/domain/layoutSelectionStrategies.js'
+import {
+  IRREGULAR_WORKER_MODE,
+  makeDefaultIrregularNestingSettings
+} from '@shared/irregular/defaults.js'
 import type { NestingOptions, SheetSpec } from '@shared/domain/nesting.js'
 
 interface SettingsModel {
@@ -16,6 +21,8 @@ interface SettingsModel {
 const props = defineProps<{
   modelValue?: SettingsModel
   csvNote?: string | null
+  heading?: string
+  showSourceControls?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -26,6 +33,9 @@ const settings = useSettings()
 
 const isLocal = computed(() => props.modelValue !== undefined)
 const model = computed<SettingsModel>(() => props.modelValue ?? settings.state.value)
+const heading = computed(() => props.heading ?? 'Settings')
+const showSourceControls = computed(() => props.showSourceControls ?? true)
+const isIrregularMode = computed(() => model.value.options.workerMode === IRREGULAR_WORKER_MODE)
 
 const sheetInvalid = computed(() => model.value.sheet.width <= 0 || model.value.sheet.height <= 0)
 const allStrategyIds = computed(() => STRATEGY_DEFINITIONS.map((strategy) => strategy.id))
@@ -91,6 +101,7 @@ function updateOptions(patch: Partial<NestingOptions>): void {
     if (patch.allowGlobalMirror !== undefined) settings.setAllowGlobalMirror(patch.allowGlobalMirror)
     if (patch.timeoutMs !== undefined) settings.setTimeoutMs(patch.timeoutMs)
     if (patch.workerMode !== undefined) settings.setWorkerMode(patch.workerMode)
+    if (patch.irregularSettings !== undefined) settings.setIrregularSettings(patch.irregularSettings)
     if (patch.historyMode !== undefined) settings.setHistoryMode(patch.historyMode)
     if (patch.strategySelectionMode !== undefined)
       settings.setStrategySelectionMode(patch.strategySelectionMode)
@@ -129,8 +140,18 @@ function setHistoryMode(event: Event): void {
   updateOptions({ historyMode: selectValue(event) as NestingOptions['historyMode'] })
 }
 
-function setWorkerMode(event: Event): void {
-  updateOptions({ workerMode: selectValue(event) as NestingOptions['workerMode'] })
+function selectWorkerMode(workerMode: NestingOptions['workerMode']): void {
+  const needsIrregularSettings =
+    workerMode === IRREGULAR_WORKER_MODE && model.value.options.irregularSettings === undefined
+  updateOptions({
+    workerMode,
+    ...(needsIrregularSettings
+      ? { irregularSettings: makeDefaultIrregularNestingSettings() }
+      : {}),
+    ...(workerMode === IRREGULAR_WORKER_MODE && model.value.options.timeoutMs < 60_000
+      ? { timeoutMs: 60_000 }
+      : {})
+  })
 }
 
 function setStrategySelectionMode(event: Event): void {
@@ -153,11 +174,13 @@ function setLayoutSelectionStrategyId(event: Event): void {
 
 <template>
   <div class="panel-content">
-    <h2>Settings</h2>
+    <h2>{{ heading }}</h2>
 
-    <h3>Source shapes</h3>
-    <FileDropZone />
-    <PresetShapePanel />
+    <template v-if="showSourceControls">
+      <h3>Source shapes</h3>
+      <FileDropZone />
+      <PresetShapePanel />
+    </template>
 
     <h3>Sheet</h3>
     <p v-if="csvNote" class="csv-note">{{ csvNote }}</p>
@@ -195,6 +218,30 @@ function setLayoutSelectionStrategyId(event: Event): void {
       </p>
     </div>
 
+    <h3>Algorithm</h3>
+    <div class="algorithm-cards">
+      <button
+        type="button"
+        :class="{ active: !isIrregularMode }"
+        title="Fast rectangular MaxRects nesting. Uses rectangular bounds and its own candidate and layout strategies."
+        @click="selectWorkerMode('maxrects-beam-search')"
+      >
+        <strong>Rectangles</strong>
+        <span>MaxRects beam</span>
+        <small>Fast axis-aligned rectangle nesting.</small>
+      </button>
+      <button
+        type="button"
+        :class="{ active: isIrregularMode }"
+        title="Experimental convex-polygon nesting. Uses DXF geometry, convex collision polygons, NFP/IFP placement, and optional portfolio search."
+        @click="selectWorkerMode('irregular-convex-v2')"
+      >
+        <strong>Convex polygons</strong>
+        <span>DXF geometry beam</span>
+        <small>Conservative polygon collision nesting.</small>
+      </button>
+    </div>
+
     <h3>Cutting</h3>
     <div class="grid">
       <label
@@ -210,17 +257,32 @@ function setLayoutSelectionStrategyId(event: Event): void {
         />
       </label>
       <label
+        v-if="!isIrregularMode"
         title="Allows candidate generation to try rotated placements when the piece fits that way."
       >
-        Allow rotation
+        Allow 90° rotation
         <input
           type="checkbox"
           :checked="model.options.allowGlobalRotation"
           @change="updateOptions({ allowGlobalRotation: inputChecked($event) })"
         />
       </label>
-      <label title="Allows candidate generation to try mirrored placements for eligible source shapes.">
-        Allow mirror
+      <label
+        v-else
+        title="Allows convex polygon candidate generation to try orthogonal, edge-derived, and explicitly configured rotations."
+      >
+        Allow rotations
+        <input
+          type="checkbox"
+          :checked="model.options.allowGlobalRotation"
+          @change="updateOptions({ allowGlobalRotation: inputChecked($event) })"
+        />
+      </label>
+      <label
+        v-if="isIrregularMode"
+        title="Allows convex polygon candidate generation to try mirrored source geometry for eligible source shapes."
+      >
+        Allow mirroring
         <input
           type="checkbox"
           :checked="model.options.allowGlobalMirror ?? true"
@@ -243,20 +305,6 @@ function setLayoutSelectionStrategyId(event: Event): void {
           @input="updateOptions({ timeoutMs: Number(inputValue($event)) })"
         />
       </label>
-      <label title="Selects the worker engine for this nesting request.">
-        Engine
-        <select :value="model.options.workerMode" @change="setWorkerMode">
-          <option value="maxrects-beam-search" title="Current rectangular MaxRects beam worker.">
-            MaxRects beam
-          </option>
-          <option
-            value="irregular-convex-v2"
-            title="Convex irregular windowed beam. Closed source outlines are required."
-          >
-            Irregular convex
-          </option>
-        </select>
-      </label>
       <label title="Controls whether worker-emitted algorithm frames are retained or streamed.">
         History mode
         <select :value="model.options.historyMode" @change="setHistoryMode">
@@ -271,10 +319,18 @@ function setLayoutSelectionStrategyId(event: Event): void {
       </label>
     </div>
 
-    <h3 title="Candidate strategies order legal placements before they are applied to the beam.">
+    <IrregularSettingsPanel
+      v-if="isIrregularMode"
+      :settings="model.options.irregularSettings"
+      :timeout-ms="model.options.timeoutMs"
+      @update="updateOptions({ irregularSettings: $event })"
+    />
+
+    <template v-else>
+      <h3 title="Candidate strategies order legal placements before they are applied to the beam.">
       Candidate strategies
-    </h3>
-    <div class="section-actions">
+      </h3>
+      <div class="section-actions">
       <p class="hint">Selected ids feed one beam run; they are not separate worker runs.</p>
       <button
         type="button"
@@ -292,8 +348,8 @@ function setLayoutSelectionStrategyId(event: Event): void {
       >
         None
       </button>
-    </div>
-    <label
+      </div>
+      <label
       class="span-2 full"
       title="Single runs only the checked strategy IDs. All configured runs every listed strategy."
     >
@@ -309,8 +365,8 @@ function setLayoutSelectionStrategyId(event: Event): void {
           All candidate orders
         </option>
       </select>
-    </label>
-    <ul class="strategy-list">
+      </label>
+      <ul class="strategy-list">
       <li v-for="strategy in STRATEGY_DEFINITIONS" :key="strategy.id">
         <label class="strategy-row">
           <input
@@ -326,14 +382,14 @@ function setLayoutSelectionStrategyId(event: Event): void {
           </span>
         </label>
       </li>
-    </ul>
+      </ul>
 
-    <h3
+      <h3
       title="Beam survivor metric used after each candidate is applied to decide which retained states survive the next expansion."
-    >
+      >
       Layout selection
-    </h3>
-    <label class="span-2 full">
+      </h3>
+      <label class="span-2 full">
       Survivor metric
       <select
         :value="model.options.layoutSelectionStrategyId"
@@ -348,17 +404,19 @@ function setLayoutSelectionStrategyId(event: Event): void {
           {{ strategy.label }}
         </option>
       </select>
-    </label>
-    <p
+      </label>
+      <p
       v-if="selectedLayoutStrategy"
       class="strategy-description"
       :title="selectedLayoutStrategyTooltip"
-    >
+      >
       <small>{{ selectedLayoutStrategy.description }}</small>
-    </p>
+      </p>
+    </template>
 
-    <h3>Result selection</h3>
-    <div class="grid">
+    <template v-if="!isIrregularMode">
+      <h3>Result selection</h3>
+      <div class="grid">
       <label title="Manual mode uses the result row selected in the Strategy Runs panel.">
         Mode
         <select :value="model.options.finalSelectionMode" @change="setFinalSelectionMode">
@@ -394,7 +452,8 @@ function setLayoutSelectionStrategyId(event: Event): void {
           @input="updateOptions({ topN: Number(inputValue($event)) })"
         />
       </label>
-    </div>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -418,6 +477,34 @@ h3 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
+}
+
+.algorithm-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.algorithm-cards button {
+  display: grid;
+  min-height: 86px;
+  align-content: start;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.algorithm-cards button.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+}
+
+.algorithm-cards span,
+.algorithm-cards small {
+  color: var(--text-secondary);
 }
 
 .span-2 {

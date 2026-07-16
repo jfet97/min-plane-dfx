@@ -1396,12 +1396,17 @@ Acceptance:
 - seeded runs are reproducible for the same inputs/settings/version/evaluation
   cap;
 - no raw coordinate genes are used;
-- timeout/cancellation returns best validated result or `no-valid-result`;
+- portfolio-owned budget checkpoints return the best validated result or
+  `no-valid-result`;
+- a renderer cancellation or supervisor timeout is a hard worker-stop safety
+  boundary: it reports terminal cancellation and never fabricates a partial
+  result from interrupted geometry;
 - final portfolio result is the better validated beam or GA layout.
 
 Current implementation status: complete for the bounded convex v2 portfolio.
-The remaining future work is empirical tuning against real jobs, not a second
-legality or coordinate-generation path.
+The remaining future work includes cooperative external cancellation that can
+return a validated partial layout before the supervisor hard-stop deadline, as
+well as empirical tuning against real jobs.
 
 ### Free Material And Scoring
 
@@ -1507,6 +1512,36 @@ Mitigation:
 - beam width cap;
 - GA time/population budget.
 
+### Performance Hardening
+
+The shipped interactive baseline is already below one second for the repeated
+50-piece fixture. The unacceptable two-minute result comes from the broad
+experiment profile multiplying candidate generation, exact free-material
+scoring, and beam-state work. Do not address that by weakening direct legality
+or silently reducing a user-selected search budget.
+
+Implement performance work in this order:
+
+1. cache validated convex artifacts and use their AABBs to reject impossible
+   NFP-boundary pairs, point-in-NFP checks, and collision pairs before robust
+   predicates run;
+2. deduplicate equivalent beam successors before Clipper2 free-material scoring,
+   then cache score snapshots by canonical occupied geometry;
+3. retain collision bounds incrementally on beam states and cache canonical
+   geometry digests instead of serializing full polygons for every lookup;
+4. compare a single Clipper2 sheet-difference operation against the current
+   union-then-difference implementation with differential topology tests;
+5. replace vertex-pair convex Minkowski construction with a linear edge-merge
+   implementation only after candidate/output parity tests;
+6. make any candidate reduction or approximate pre-score an explicit,
+   benchmarked heuristic setting rather than an invisible correctness change.
+
+`robust-predicates` remains the narrow-phase authority for orientation,
+containment, contact, and overlap decisions. Clipper2 remains responsible for
+offsets and free-material topology, never placement legality. Every optimized
+path must retain a terminal all-pairs legality audit and deterministic
+before/after regression fixtures.
+
 ### Local Minima
 
 Risk: a locally compact placement can hurt the final layout.
@@ -1547,21 +1582,23 @@ Mitigation:
   precision option and `0.5 mm` as a coarse/fast option.
 - `clearanceSafetyMargin` should start at
   `max(0.25 mm, flatteningSagTolerance)`.
-- Starting optimizer defaults:
+- Measured first-result defaults:
 
 ```text
-orderWindow = 2
-beamWidth = 24
-localCandidateFanout = 24
-transformCap = 16 per piece, including mirrored variants
-GA population = 32
-GA generation budget = 4
-GA evaluation budget = 128
-GA time budget = 60 seconds
+orderWindow = 1
+beamWidth = 1
+localCandidateFanout = 1
+transformCap = 1
+GA = disabled
 ```
 
-These are starting defaults, not permanent laws. Benchmarks should tune them
-against real jobs and fixture corpora.
+This profile is the safe default for an interactive first result. On the current
+benchmark machine it placed 50 repeated convex fixture pieces in `0.80 s`, 100
+in `3.99 s`, and 200 in `20.76 s`. A broader `orderWindow = 2`, `beamWidth = 8`,
+`localCandidateFanout = 8`, `transformCap = 8` profile did not finish 50 pieces
+within two minutes, so wider beam and GA settings are explicit experiments, not
+defaults. Benchmarks should continue tuning them against real jobs and fixture
+corpora.
 
 ## Assumptions To Revisit
 

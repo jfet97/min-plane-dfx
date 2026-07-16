@@ -10,7 +10,7 @@ import {
   NonNegativePadding
 } from './geometrySchemas.js'
 
-export const NestingOptionsStrictSchema = Schema.Struct({
+const NestingOptionsStrictFields = Schema.Struct({
   allowGlobalRotation: Schema.Boolean,
   allowGlobalMirror: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(Effect.succeed(true))),
   timeoutMs: Schema.Number.check(Schema.isGreaterThan(0)),
@@ -18,13 +18,24 @@ export const NestingOptionsStrictSchema = Schema.Struct({
   historyMode: Schema.Literals(['stream', 'final', 'off']),
   historyScope: Schema.Literal('winning_path'),
   strategySelectionMode: Schema.Literals(['single', 'all_configured']),
-  strategyIds: Schema.Array(Schema.String).check(Schema.isNonEmpty()),
+  strategyIds: Schema.Array(Schema.String),
   layoutSelectionStrategyId: Schema.String.check(Schema.isMinLength(1)),
   finalSelectionMode: Schema.Literals(['manual', 'best', 'top_n']),
   topN: Schema.optional(Schema.Number.check(Schema.isGreaterThan(0))),
   maxHistoryEvents: Schema.optional(Schema.Number),
   irregularSettings: Schema.optional(IrregularNestingSettings)
 })
+
+export const NestingOptionsStrictSchema = NestingOptionsStrictFields.check(
+  Schema.makeFilter((options) =>
+    options.workerMode === 'maxrects-beam-search' && options.strategyIds.length === 0
+      ? {
+          path: ['strategyIds'],
+          issue: 'MaxRects requests require at least one candidate strategy id.'
+        }
+      : undefined
+  )
+)
 
 const NestingRequestPieceStrict = Schema.Struct({
   id: Schema.String.check(Schema.isMinLength(1)),

@@ -230,6 +230,20 @@ describe('ExportService', () => {
     expect(parsed.jobId).toBe('job-1')
   })
 
+  it('exports an irregular request without a MaxRects candidate strategy', async () => {
+    const file = join(dir, 'irregular-request.json')
+    const out = await exportNestingRequestToFile(file, {
+      ...sampleRequest,
+      options: {
+        ...sampleRequest.options,
+        workerMode: 'irregular-convex-v2',
+        strategyIds: []
+      }
+    })
+
+    expect(out).toBe(file)
+  })
+
   it('writes a NestingResult as pretty JSON', async () => {
     const file = join(dir, 'result.json')
     const out = await exportNestingResultToFile(file, sampleResult)

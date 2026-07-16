@@ -14,6 +14,12 @@ Always make the current implementation level clear:
 - nesting placements come from the worker algorithm;
 - history frames only exist when emitted by the worker.
 
+The algorithm selector must visually distinguish the rectangular MaxRects path
+from the convex-polygon path. The latter exposes geometry, bounded-beam, and
+explicit GA controls; it must not show MaxRects strategy controls as if they
+affected polygon placement. While a worker runs, surface its typed lifecycle or
+portfolio phase directly rather than a fabricated completion percentage.
+
 Do not invent result previews, scores, or history that were not emitted by the worker.
 
 ## Tooltips
