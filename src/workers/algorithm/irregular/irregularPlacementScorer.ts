@@ -99,9 +99,9 @@ export namespace IrregularPlacementScorer {
  * geometric score.
  */
 const balancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
-  Order.mapInput(Order.Number, (score) => score.usedClusterAreaMm2),
   Order.mapInput(Order.Number, (score) => score.worstNormalizedSheetConsumption),
   Order.mapInput(Order.Number, (score) => score.normalizedSheetSpanSum),
+  Order.mapInput(Order.Number, (score) => score.usedClusterAreaMm2),
   Order.mapInput(Order.Number, (score) => score.usedClusterSpanMm),
   Order.mapInput(Order.Number, (score) => score.candidateBottomMm),
   Order.mapInput(Order.Number, (score) => score.candidateLeftMm),

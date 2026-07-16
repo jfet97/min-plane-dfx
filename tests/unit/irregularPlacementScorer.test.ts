@@ -163,7 +163,7 @@ describe('IrregularPlacementScorer', () => {
       baseInput(sheet(10, 10), moving, candidate('piece', 4, 4), placed),
       baseInput(sheet(10, 10), moving, candidate('piece', 6, 0), placed)
     ])
-    expect(firstWins.candidate.point).toEqual(point(6, 0))
+    expect(firstWins.candidate.point).toEqual(point(4, 4))
 
     const normalizedSumWins = await rank([
       baseInput(sheet(10, 20), moving, candidate('piece', 3, 1), placed),

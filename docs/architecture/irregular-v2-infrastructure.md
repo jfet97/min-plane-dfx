@@ -72,10 +72,13 @@ geometry and invalid derived arithmetic remain typed failures. The supplied
 order must remain untouched so future beam and portfolio layers can make their
 priority decisions outside this baseline.
 
-Local compactness ranks the post-placement collision-bounds area before the
-normalized axis spans and absolute span. Bounds, anchor coordinates, and shared
-boundary length are canonicalized to the existing `0.001 mm` collision grid
-before comparison, so floating subtraction noise cannot change a fanout choice.
+Local compactness ranks the largest normalized sheet-axis consumption, the sum
+of both normalized spans, collision-bounds area, and then absolute span. Bounds,
+anchor coordinates, and shared boundary length are canonicalized to the existing
+`0.001 mm` collision grid before comparison, so floating subtraction noise cannot
+change a fanout choice. Keeping normalized spans before area prevents a negligible
+rotated bounding-box area reduction from evicting every orthogonal seed on a
+rectangular sheet.
 Before applying the configured local fanout, the windowed beam also merges exact
 translated collision-ring duplicates after the same canonicalization. Transform
 metadata remains the deterministic representative tie-break, but equivalent
