@@ -41,6 +41,19 @@ const transformCapHelp = computed(() => {
   if (cap === 4) return 'Uses the four quarter-turns: 0°, 90°, 180°, and 270°.'
   return `Uses the four quarter-turns, then up to ${cap - 4} explicit or edge-derived orientations.`
 })
+const reorderWindowHelp = computed(() => {
+  const window = optimizer.value.orderWindow
+  if (window === 1) return 'Uses the supplied priority order without reordering pieces.'
+  return `May choose among the next ${window} unplaced pieces at each step.`
+})
+const beamWidthHelp = computed(() => {
+  const width = optimizer.value.beamWidth
+  if (width === 1) return 'Greedy: keeps only one partial layout after each step.'
+  return `Keeps the best ${width} partial layouts after each expansion.`
+})
+const localCandidateFanoutHelp = computed(
+  () => `Keeps up to ${optimizer.value.localCandidateFanout} legal contact positions per piece before beam pruning.`
+)
 
 const MIN_FLATTENING_SAG_TOLERANCE_MM = 0.001
 
@@ -180,7 +193,7 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           :value="optimizer.orderWindow"
           @input="updateOptimizer({ orderWindow: Number(inputValue($event)) })"
         />
-        <span class="field-help">`3` may choose among the next three unplaced pieces at each step.</span>
+        <span class="field-help">{{ reorderWindowHelp }}</span>
       </label>
       <label
         title="How many partial layouts survive each beam expansion. Higher values improve search breadth but can become expensive quickly."
@@ -193,7 +206,7 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           :value="optimizer.beamWidth"
           @input="updateOptimizer({ beamWidth: Number(inputValue($event)) })"
         />
-        <span class="field-help">`1` is greedy; higher values retain alternatives for later pieces.</span>
+        <span class="field-help">{{ beamWidthHelp }}</span>
       </label>
       <label
         title="How many legal local placements are retained per selected piece before whole-layout beam scoring."
@@ -206,7 +219,7 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           :value="optimizer.localCandidateFanout"
           @input="updateOptimizer({ localCandidateFanout: Number(inputValue($event)) })"
         />
-        <span class="field-help">More contact positions per piece improve choices before beam pruning.</span>
+        <span class="field-help">{{ localCandidateFanoutHelp }}</span>
       </label>
       <label
         title="Maximum orientation candidates generated for one prepared polygon. Cap 4 covers the four quarter-turns; larger caps also admit explicit and edge-derived angles."
