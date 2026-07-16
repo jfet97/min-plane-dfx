@@ -111,6 +111,11 @@ const balancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
   Order.mapInput(Order.String, (score) => score.candidate.pieceId)
 ])
 
+const edgeContactThenBalancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
+  Order.mapInput(Order.Number, (score) => -score.sharedCollisionBoundaryLengthMm),
+  balancedCompactnessOrder
+])
+
 const shortSideFillOrder = Order.combineAll<IrregularPlacementScore>([
   Order.mapInput(Order.Number, (score) => -score.shortSideFill),
   Order.mapInput(Order.Number, (score) => score.longSideFill),
@@ -241,8 +246,7 @@ function compareScores(
     first.policyId === EDGE_CONTACT_THEN_BALANCED_COMPACTNESS_POLICY_ID &&
     first.policyId === second.policyId
   ) {
-    // retain the persisted experimental identifier without letting it replace compactness
-    return balancedCompactnessOrder(first, second)
+    return edgeContactThenBalancedCompactnessOrder(first, second)
   }
   return compareBalancedCompactnessPlacementScores(first, second)
 }

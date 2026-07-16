@@ -211,9 +211,12 @@ describe('IrregularPlacementScorer', () => {
   it('lets edge contact prefer a longer shared padded boundary before compactness', async () => {
     const moving = movingGeometry('moving', rectanglePoints(4, 2))
     const placed = [placedGeometry('placed', rectanglePoints(4, 2), 0, 0)]
-    const currentSheet = sheet(10, 10)
+    const currentSheet = sheet(100, 10)
     const compactCandidate = baseInput(currentSheet, moving, candidate('moving', 4, 0), placed)
     const contactCandidate = baseInput(currentSheet, moving, candidate('moving', 0, 2), placed)
+
+    const balancedCompact = await score(compactCandidate)
+    const balancedContact = await score(contactCandidate)
 
     const compact = await score({
       ...compactCandidate,
@@ -226,6 +229,7 @@ describe('IrregularPlacementScorer', () => {
 
     expect(compact.sharedCollisionBoundaryLengthMm).toBe(2)
     expect(contact.sharedCollisionBoundaryLengthMm).toBe(4)
+    expect(IrregularPlacementScorer.Make.compare(balancedCompact, balancedContact)).toBeLessThan(0)
     expect(IrregularPlacementScorer.Make.compare(contact, compact)).toBeLessThan(0)
   })
 

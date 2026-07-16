@@ -177,7 +177,7 @@ function runWindowed(
     ).pipe(
       Effect.provide(GeometryKernel.Live),
       Effect.provide(service),
-      Effect.provide(IrregularPlacementScorer.Live),
+      Effect.provide(IrregularPlacementScorer.Layer),
       Effect.provide(layoutScorerLayer),
       Effect.provide(settingsLayer)
     )
@@ -396,7 +396,7 @@ describe('decodeWindowedIrregularBeam', () => {
 
   it('keeps a compactness alternative beside the edge-contact winner', async () => {
     const result = await runWindowed(
-      sheet(10, 10),
+      sheet(100, 10),
       [preparedPiece('a', 4, 2), preparedPiece('b', 4, 2)],
       Layer.succeed(
         GeometrySettings,
@@ -405,21 +405,22 @@ describe('decodeWindowedIrregularBeam', () => {
       candidateService(({ moving, placed }) =>
         placed.length === 0
           ? [oneCandidate(moving, 0, 0)]
-          : [oneCandidate(moving, 4, 0), oneCandidate(moving, 0, 2)]
+          : [oneCandidate(moving, 5, 0), oneCandidate(moving, 4, 0), oneCandidate(moving, 0, 2)]
       )
     )
 
-    expect(
-      result.rankedStates.map((state) => {
+    const retainedPoints = result.rankedStates.map((state) => {
         const placement = state.placedCollisionGeometries[1]?.placement.transform
         return placement === undefined ? undefined : [placement.translateX, placement.translateY]
       })
-    ).toEqual(
+
+    expect(retainedPoints).toEqual(
       expect.arrayContaining([
         [4, 0],
         [0, 2]
       ])
     )
+    expect(retainedPoints).not.toContainEqual([5, 0])
   })
 
   it('retains candidates for a chromosome-preferred transform before better local scores', async () => {
