@@ -34,6 +34,7 @@ export const DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS = new IrregularOptimizerSettin
   transformMinimumEdgeLengthMm: 1,
   transformAngleDeduplicationToleranceDeg: 0.01,
   configuredRotationEnabled: true,
+  edgeAlignmentEnabled: true,
   configuredRotationDeg: [],
   baselineOnly: true,
   gaPopulation: 12,
@@ -48,6 +49,78 @@ export const DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS = new IrregularOptimizerSettin
   placementPolicyId: DEFAULT_IRREGULAR_PLACEMENT_POLICY_ID,
   placementPolicyIds: [...DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS]
 })
+
+/** Concrete transform-source controls shared by an irregular optimizer preset. */
+export interface IrregularTransformProfileDefinition {
+  readonly transformCap: IrregularOptimizerSettings['transformCap']
+  readonly configuredRotationEnabled: boolean
+  readonly configuredRotationDeg: ReadonlyArray<number>
+  readonly edgeAlignmentEnabled: boolean
+}
+
+/** Caller-owned overrides applied after a transform preset's concrete values. */
+export type IrregularOptimizerSettingsOverrides = Partial<IrregularOptimizerSettings>
+
+const FAST_IDENTITY_TRANSFORM_PROFILE = {
+  transformCap: 1,
+  configuredRotationEnabled: false,
+  configuredRotationDeg: [],
+  edgeAlignmentEnabled: false
+} satisfies IrregularTransformProfileDefinition
+
+const ORTHOGONAL_TRANSFORM_PROFILE = {
+  transformCap: 4,
+  configuredRotationEnabled: false,
+  configuredRotationDeg: [],
+  edgeAlignmentEnabled: false
+} satisfies IrregularTransformProfileDefinition
+
+const DERIVED_ORIENTATION_TRANSFORM_PROFILE = {
+  transformCap: 16,
+  configuredRotationEnabled: true,
+  configuredRotationDeg: [],
+  edgeAlignmentEnabled: true
+} satisfies IrregularTransformProfileDefinition
+
+function makeIrregularOptimizerSettings(
+  profile: IrregularTransformProfileDefinition,
+  overrides: IrregularOptimizerSettingsOverrides
+): IrregularOptimizerSettings {
+  return new IrregularOptimizerSettings({
+    ...DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS,
+    ...profile,
+    ...overrides,
+    configuredRotationDeg: [
+      ...(overrides.configuredRotationDeg ?? profile.configuredRotationDeg)
+    ],
+    placementPolicyIds: [
+      ...(overrides.placementPolicyIds ??
+        DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS.placementPolicyIds ??
+        DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS)
+    ]
+  })
+}
+
+/** Creates the fastest profile: identity only, with no extra angle sources. */
+export function makeFastIdentityIrregularOptimizerSettings(
+  overrides: IrregularOptimizerSettingsOverrides = {}
+): IrregularOptimizerSettings {
+  return makeIrregularOptimizerSettings(FAST_IDENTITY_TRANSFORM_PROFILE, overrides)
+}
+
+/** Creates the orthogonal profile: the four unmirrored quarter-turns only. */
+export function makeOrthogonalIrregularOptimizerSettings(
+  overrides: IrregularOptimizerSettingsOverrides = {}
+): IrregularOptimizerSettings {
+  return makeIrregularOptimizerSettings(ORTHOGONAL_TRANSFORM_PROFILE, overrides)
+}
+
+/** Creates the broader profile with configured and geometry-derived orientations enabled. */
+export function makeDerivedOrientationIrregularOptimizerSettings(
+  overrides: IrregularOptimizerSettingsOverrides = {}
+): IrregularOptimizerSettings {
+  return makeIrregularOptimizerSettings(DERIVED_ORIENTATION_TRANSFORM_PROFILE, overrides)
+}
 
 export const DEFAULT_IRREGULAR_NESTING_SETTINGS = new IrregularNestingSettings({
   geometry: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,

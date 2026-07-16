@@ -7,6 +7,11 @@ import {
   IrregularPoint,
   IrregularPolygon
 } from '@shared/irregular/domain.js'
+import {
+  makeDerivedOrientationIrregularOptimizerSettings,
+  makeFastIdentityIrregularOptimizerSettings,
+  makeOrthogonalIrregularOptimizerSettings
+} from '@shared/irregular/defaults.js'
 import { PieceId } from '@shared/domain/ids.js'
 import {
   IrregularGeometryInputError,
@@ -42,6 +47,7 @@ function settings(
     readonly transformAngleDeduplicationToleranceDeg?: number
     readonly configuredRotationEnabled?: boolean
     readonly configuredRotationDeg?: ReadonlyArray<number>
+    readonly edgeAlignmentEnabled?: boolean
   } = {}
 ): IrregularOptimizerSettings {
   return new IrregularOptimizerSettings({
@@ -53,6 +59,7 @@ function settings(
       overrides.transformAngleDeduplicationToleranceDeg ?? 0.01,
     configuredRotationEnabled: overrides.configuredRotationEnabled ?? true,
     configuredRotationDeg: overrides.configuredRotationDeg ?? [],
+    edgeAlignmentEnabled: overrides.edgeAlignmentEnabled ?? true,
     gaPopulation: 8,
     gaTimeBudgetMs: 1000,
     gaSeed: 'transform-test'
@@ -150,6 +157,59 @@ describe('TransformGenerator.Live', () => {
     })
 
     expect(candidates.map(({ rotationDeg }) => rotationDeg)).toEqual([0, 90, 180, 270])
+  })
+
+  it('can disable edge-derived angles without disabling configured angles', async () => {
+    const candidates = await generate([point(0, 0), point(3, 3), point(0, 1)], {
+      settings: settings({
+        configuredRotationDeg: [12.5],
+        edgeAlignmentEnabled: false
+      })
+    })
+
+    expect(candidates.some(({ reason, rotationDeg }) => reason === 'configured' && rotationDeg === 12.5)).toBe(
+      true
+    )
+    expect(candidates.some(({ reason }) => reason === 'edge_alignment')).toBe(false)
+  })
+
+  it('keeps the fast identity profile to one source-free identity choice', async () => {
+    const candidates = await generate([point(0, 0), point(3, 3), point(0, 1)], {
+      allowMirror: true,
+      settings: makeFastIdentityIrregularOptimizerSettings({ configuredRotationDeg: [12.5] })
+    })
+
+    expect(candidates).toHaveLength(1)
+    expect(candidates[0]).toMatchObject({
+      rotationDeg: 0,
+      mirrored: false,
+      reason: 'orthogonal'
+    })
+  })
+
+  it('keeps the orthogonal profile to four unmirrored orthogonal choices', async () => {
+    const candidates = await generate([point(0, 0), point(3, 3), point(0, 1)], {
+      allowMirror: true,
+      settings: makeOrthogonalIrregularOptimizerSettings({ configuredRotationDeg: [12.5] })
+    })
+
+    expect(candidates.map(({ rotationDeg }) => rotationDeg)).toEqual([0, 90, 180, 270])
+    expect(candidates.every(({ mirrored, reason }) => !mirrored && reason === 'orthogonal')).toBe(true)
+  })
+
+  it('includes configured and edge-derived angles in the derived orientation profile', async () => {
+    const candidates = await generate([point(0, 0), point(3, 3), point(0, 1)], {
+      allowMirror: false,
+      settings: makeDerivedOrientationIrregularOptimizerSettings({ configuredRotationDeg: [12.5] })
+    })
+
+    expect(candidates.some(({ reason, rotationDeg }) => reason === 'configured' && rotationDeg === 12.5)).toBe(
+      true
+    )
+    expect(candidates.some(({ reason, rotationDeg }) => reason === 'edge_alignment' && rotationDeg === 315)).toBe(
+      true
+    )
+    expect(candidates.every(({ mirrored }) => !mirrored)).toBe(true)
   })
 
   it('does not let mirror variants bypass the transform cap', async () => {

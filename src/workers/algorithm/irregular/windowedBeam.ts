@@ -98,11 +98,18 @@ interface ScoredState {
   readonly state: IrregularBeamState
   readonly score: IrregularLayoutScore
   readonly key: string
+  readonly isIncumbent: boolean
 }
 
 interface KeyedState {
   readonly state: IrregularBeamState
   readonly key: string
+  readonly isIncumbent: boolean
+}
+
+interface TaggedSuccessor {
+  readonly state: IrregularBeamState
+  readonly isIncumbent: boolean
 }
 
 const pieceIdArrayOrder: Order.Order<ReadonlyArray<PieceId>> = Order.Array(Order.String)
@@ -147,15 +154,18 @@ export function runWindowedIrregularBeam(input: {
 
     let beam: ReadonlyArray<IrregularBeamState> = [IrregularBeamState.empty(input.pieces)]
     let scoredBeam: ReadonlyArray<ScoredState> | undefined
+    const protectIncumbent = settings.optimizer.beamWidth > 1
+    let incumbentState: IrregularBeamState | undefined = protectIncumbent ? beam[0] : undefined
     const candidateCounts: number[] = []
     const controlState: ControlState = { checkpointsSinceYield: 0 }
     while (beam.some((state) => state.remainingPreparedPieces.length > 0)) {
       yield* controlCheckpoint(input.control, controlState)
-      const successors: IrregularBeamState[] = []
+      const successors: TaggedSuccessor[] = []
       let candidateCount = 0
 
       for (const state of beam) {
         yield* controlCheckpoint(input.control, controlState)
+        const isIncumbent = state === incumbentState
         const eligibleCount = Math.min(
           settings.optimizer.orderWindow,
           state.remainingPreparedPieces.length
@@ -193,9 +203,9 @@ export function runWindowedIrregularBeam(input: {
         }
 
         if (legalSuccessors.length === 0) {
-          successors.push(markFirstRemainingUnplaced(state))
+          successors.push({ state: markFirstRemainingUnplaced(state), isIncumbent })
         } else {
-          successors.push(...legalSuccessors)
+          successors.push(...legalSuccessors.map((state) => ({ state, isIncumbent })))
         }
       }
 
@@ -207,8 +217,17 @@ export function runWindowedIrregularBeam(input: {
         input.control,
         controlState
       )
-      scoredBeam = pruneScoredStates(scored, settings.optimizer.beamWidth, layoutScorer)
+      const nextIncumbent = protectIncumbent
+        ? selectIncumbentSuccessor(scored, layoutScorer)
+        : undefined
+      scoredBeam = pruneScoredStates(
+        scored,
+        settings.optimizer.beamWidth,
+        layoutScorer,
+        nextIncumbent
+      )
       beam = scoredBeam.map(({ state }) => state)
+      incumbentState = nextIncumbent?.state
       candidateCounts.push(candidateCount)
       input.instrumentation?.onStepCompleted?.({ candidateCount })
     }
@@ -216,7 +235,7 @@ export function runWindowedIrregularBeam(input: {
     const ranked = rankScoredStates(
       scoredBeam ??
         (yield* scoreStates(
-          beam.map((state) => ({ state, key: beamStateKey(state) })),
+          beam.map((state) => ({ state, key: beamStateKey(state), isIncumbent: false })),
           input.sheet,
           layoutScorer,
           input.control,
@@ -540,34 +559,56 @@ function scoreStates(
 > {
   return Effect.gen(function* () {
     const scored: ScoredState[] = []
-    for (const { state, key } of states) {
+    for (const { state, key, isIncumbent } of states) {
       yield* controlCheckpoint(control, controlState)
       const score = yield* layoutScorer.scoreState({ sheet, state })
-      scored.push({ state, score, key })
+      scored.push({ state, score, key, isIncumbent })
       yield* controlCheckpoint(control, controlState)
     }
     return scored
   })
 }
 
-function dedupeRawSuccessors(states: ReadonlyArray<IrregularBeamState>): ReadonlyArray<KeyedState> {
+function dedupeRawSuccessors(states: ReadonlyArray<TaggedSuccessor>): ReadonlyArray<KeyedState> {
   const deduped = new Map<string, KeyedState>()
-  for (const state of states) {
-    const current = { state, key: beamStateKey(state) }
+  for (const { state, isIncumbent } of states) {
+    const current = { state, key: beamStateKey(state), isIncumbent }
     const previous = deduped.get(current.key)
-    if (previous === undefined || compareRepresentativeStates(current, previous) < 0) {
+    if (
+      previous === undefined ||
+      (current.isIncumbent && !previous.isIncumbent) ||
+      (current.isIncumbent === previous.isIncumbent &&
+        compareRepresentativeStates(current, previous) < 0)
+    ) {
       deduped.set(current.key, current)
     }
   }
   return [...deduped.values()]
 }
 
+function selectIncumbentSuccessor(
+  states: ReadonlyArray<ScoredState>,
+  layoutScorer: IrregularLayoutScorer.Service
+): ScoredState | undefined {
+  return rankScoredStates(
+    states.filter(({ isIncumbent }) => isIncumbent),
+    layoutScorer
+  )[0]
+}
+
 function pruneScoredStates(
   states: ReadonlyArray<ScoredState>,
   beamWidth: number,
-  layoutScorer: IrregularLayoutScorer.Service
+  layoutScorer: IrregularLayoutScorer.Service,
+  incumbent: ScoredState | undefined = undefined
 ): ReadonlyArray<ScoredState> {
-  return rankScoredStates(states, layoutScorer).slice(0, beamWidth)
+  const ranked = rankScoredStates(states, layoutScorer)
+  if (beamWidth <= 1 || incumbent === undefined) return ranked.slice(0, beamWidth)
+
+  const alternatives = ranked
+    .filter(({ state }) => state !== incumbent.state)
+    .slice(0, beamWidth - 1)
+  return rankScoredStates([incumbent, ...alternatives], layoutScorer)
 }
 
 function compareRepresentativeStates(first: KeyedState, second: KeyedState): -1 | 0 | 1 {

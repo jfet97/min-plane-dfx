@@ -211,6 +211,12 @@ const IrregularOptimizerSettingsFields = Schema.Struct({
     Schema.withConstructorDefault(Effect.succeed(true)),
     Schema.withDecodingDefaultKey(Effect.succeed(true))
   ),
+  /** Enables geometry-derived edge-alignment angles. */
+  edgeAlignmentEnabled: Schema.Boolean.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(true)),
+    Schema.withDecodingDefaultKey(Effect.succeed(true))
+  ),
   /** Explicit finite rotation angles to add to the orthogonal and edge-derived choices. */
   configuredRotationDeg: Schema.Array(FiniteDegrees).pipe(
     Schema.withDecodingDefaultKey(Effect.succeed([]))

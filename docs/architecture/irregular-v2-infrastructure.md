@@ -82,6 +82,18 @@ generation/evaluation/time budgets, seed, and the three chromosome-gene toggles
 This makes benchmark rows schema-validated and replayable without hidden
 process-global knobs.
 
+The concrete transform-profile factories are convenience bundles over those
+persisted explicit settings, not a separate configuration model. Fast identity
+(`cap1`) and orthogonal (`cap4`) disable configured and edge-derived angle
+sources; derived orientation (`cap16`) enables both. Mirror safety gates remain
+per job and per piece.
+
+When `beamWidth > 1`, each step protects the exact width-one incumbent lineage
+and uses the remaining slots for ranked alternatives. With all other settings
+identical, this guarantees that the wider beam cannot finish with more unplaced
+pieces than `beamWidth = 1`. This changes search retention only, not geometry
+legality.
+
 The shipped interactive profile is intentionally narrow: `orderWindow = 1`,
 `beamWidth = 1`, local candidate fanout `= 1`, transform cap `= 1`, and GA
 disabled. It produces a deterministic first result before broader beam or GA

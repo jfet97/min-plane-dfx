@@ -18,7 +18,10 @@ import {
 } from '@shared/irregular/domain.js'
 import {
   DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS,
-  makeDefaultIrregularNestingSettings
+  makeDefaultIrregularNestingSettings,
+  makeDerivedOrientationIrregularOptimizerSettings,
+  makeFastIdentityIrregularOptimizerSettings,
+  makeOrthogonalIrregularOptimizerSettings
 } from '@shared/irregular/defaults.js'
 import {
   NestingHistoryFramePayload,
@@ -40,6 +43,7 @@ describe('irregular schema contracts', () => {
     expect(first.optimizer.beamWidth).toBe(1)
     expect(first.optimizer.localCandidateFanout).toBe(1)
     expect(first.optimizer.transformCap).toBe(1)
+    expect(first.optimizer.edgeAlignmentEnabled).toBe(true)
     expect(first.optimizer.gaEnabled).toBe(false)
     expect(first.optimizer.baselineOnly).toBe(true)
     expect(first.geometry).not.toBe(second.geometry)
@@ -47,6 +51,37 @@ describe('irregular schema contracts', () => {
     expect(first.optimizer.configuredRotationDeg).not.toBe(second.optimizer.configuredRotationDeg)
     expect(second.optimizer.configuredRotationDeg).toEqual([])
     expect(DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS.configuredRotationDeg).toEqual([])
+  })
+
+  it('provides concrete transform profiles with caller overrides', () => {
+    const fast = makeFastIdentityIrregularOptimizerSettings()
+    const orthogonal = makeOrthogonalIrregularOptimizerSettings()
+    const derived = makeDerivedOrientationIrregularOptimizerSettings({
+      configuredRotationDeg: [12.5],
+      transformCap: 8,
+      edgeAlignmentEnabled: false
+    })
+
+    expect(fast).toMatchObject({
+      transformCap: 1,
+      configuredRotationEnabled: false,
+      edgeAlignmentEnabled: false,
+      configuredRotationDeg: []
+    })
+    expect(orthogonal).toMatchObject({
+      transformCap: 4,
+      configuredRotationEnabled: false,
+      edgeAlignmentEnabled: false,
+      configuredRotationDeg: []
+    })
+    expect(derived).toMatchObject({
+      transformCap: 8,
+      configuredRotationEnabled: true,
+      edgeAlignmentEnabled: false,
+      configuredRotationDeg: [12.5]
+    })
+    expect(fast).not.toBe(orthogonal)
+    expect(fast.configuredRotationDeg).not.toBe(orthogonal.configuredRotationDeg)
   })
 
   it('decodes older incomplete optimizer settings to the safe profile', () => {
@@ -61,6 +96,7 @@ describe('irregular schema contracts', () => {
 
     if (Exit.isFailure(decoded)) throw new Error('expected legacy settings to decode')
     expect(decoded.value.localCandidateFanout).toBe(1)
+    expect(decoded.value.edgeAlignmentEnabled).toBe(true)
     expect(decoded.value.gaEnabled).toBe(false)
     expect(decoded.value.baselineOnly).toBe(true)
   })

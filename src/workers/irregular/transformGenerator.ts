@@ -120,10 +120,12 @@ function transformAngleCandidates(
           reason: 'configured' as const
         }))
       : []),
-    ...usableEdges.map(({ rotationDeg }) => ({
-      rotationDeg,
-      reason: 'edge_alignment' as const
-    }))
+    ...(settings.edgeAlignmentEnabled !== false
+      ? usableEdges.map(({ rotationDeg }) => ({
+          rotationDeg,
+          reason: 'edge_alignment' as const
+        }))
+      : [])
   ]
 }
 

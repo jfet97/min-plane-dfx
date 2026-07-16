@@ -174,6 +174,28 @@ function stateSnapshot(result: Awaited<ReturnType<typeof runWindowed>>) {
   }))
 }
 
+async function branchBiasedLayoutScorer(): Promise<IrregularLayoutScorer.Service> {
+  const baseScorer = await Effect.runPromise(
+    IrregularLayoutScorer.use((scorer) => Effect.succeed(scorer)).pipe(
+      Effect.provide(IrregularLayoutScorer.Live),
+      Effect.provide(GeometrySettings.Live)
+    )
+  )
+  return {
+    compare: baseScorer.compare,
+    scoreState: (input) =>
+      baseScorer.scoreState(input).pipe(
+        Effect.map((score) => {
+          const first = input.state.placementOrder[0]
+          const second = input.state.placementOrder[1]
+          const preference =
+            first === PieceId.make('a') ? (second === PieceId.make('b') ? 0 : 2) : 1
+          return { ...score, largestNetFreeMaterialRegionAreaMm2: preference }
+        })
+      )
+  }
+}
+
 describe('decodeWindowedIrregularBeam', () => {
   it('uses the injected orderWindow when selecting eligible pieces', async () => {
     const pieces = [preparedPiece('a', 1, 1), preparedPiece('b', 1, 1)]
@@ -229,6 +251,89 @@ describe('decodeWindowedIrregularBeam', () => {
       strict.placements
     )
     expect(windowed.bestState.unplacedPieceIds).toEqual(strict.unplacedPieceIds)
+  })
+
+  it('preserves the exact width-one lineage', async () => {
+    const pieces = [
+      preparedPiece('a', 3, 3),
+      preparedPiece('b', 3, 3),
+      preparedPiece('c', 2, 3)
+    ]
+    const currentSheet = sheet(10, 4)
+    const strict = await Effect.runPromise(
+      decodeStrictPriorityOrder(currentSheet, pieces).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive),
+        Effect.provide(IrregularPlacementScorer.Live)
+      )
+    )
+    const widthOne = await runWindowed(
+      currentSheet,
+      pieces,
+      Layer.succeed(GeometrySettings, settings(1, 1, 1))
+    )
+
+    expect({
+      placements: widthOne.bestState.placedCollisionGeometries.map(({ placement }) => placement),
+      unplacedPieceIds: widthOne.bestState.unplacedPieceIds
+    }).toEqual({ placements: strict.placements, unplacedPieceIds: strict.unplacedPieceIds })
+  })
+
+  it('retains the incumbent when globally better alternatives would prune it', async () => {
+    const service = candidateService(({ moving, placed }) => {
+      const hasA = placed.some(({ placement }) => placement.sourcePieceId === PieceId.make('a'))
+      const hasB = placed.some(({ placement }) => placement.sourcePieceId === PieceId.make('b'))
+      if (!hasA && !hasB) return [oneCandidate(moving, 0)]
+      if (hasA && moving.sourcePieceId === PieceId.make('b')) return [oneCandidate(moving, 3)]
+      if (hasB && moving.sourcePieceId === PieceId.make('a')) {
+        return [oneCandidate(moving, 1), oneCandidate(moving, 2)]
+      }
+      return []
+    })
+    const result = await runWindowed(
+      sheet(10, 2),
+      [preparedPiece('a', 1, 1), preparedPiece('b', 1, 1)],
+      Layer.succeed(GeometrySettings, settings(2, 2, 2)),
+      service,
+      undefined,
+      undefined,
+      await branchBiasedLayoutScorer()
+    )
+
+    expect(result.rankedStates).toHaveLength(2)
+    expect(result.rankedStates.map((state) => state.placementOrder)).toContainEqual([
+      PieceId.make('a'),
+      PieceId.make('b')
+    ])
+  })
+
+  it('does not regress final placed or unplaced counts on an awkward fixture', async () => {
+    const pieces = [
+      preparedPiece('long-thin', 7, 2),
+      preparedPiece('upright', 2, 5),
+      preparedPiece('wide-block', 5, 3),
+      preparedPiece('short-block', 4, 2),
+      preparedPiece('small-tall', 3, 4)
+    ]
+    const currentSheet = sheet(10, 5)
+    const widthOne = await runWindowed(
+      currentSheet,
+      pieces,
+      Layer.succeed(GeometrySettings, settings(2, 1, 2))
+    )
+    const wider = await runWindowed(
+      currentSheet,
+      pieces,
+      Layer.succeed(GeometrySettings, settings(2, 4, 2))
+    )
+
+    expect(wider.bestState.placedCollisionGeometries.length).toBeGreaterThanOrEqual(
+      widthOne.bestState.placedCollisionGeometries.length
+    )
+    expect(wider.bestState.unplacedPieceIds.length).toBeLessThanOrEqual(
+      widthOne.bestState.unplacedPieceIds.length
+    )
   })
 
   it('retains bounded local placement alternatives when the window can reorder', async () => {
