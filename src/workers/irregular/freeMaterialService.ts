@@ -180,7 +180,11 @@ function prepareOccupiedClip(
   if (operation === 'direct-difference') return { paths: occupiedPaths }
 
   const occupiedTree = new PolyTree64()
-  booleanOpWithPolyTree(ClipType.Union, occupiedPaths, null, occupiedTree, FillRule.NonZero)
+  try {
+    booleanOpWithPolyTree(ClipType.Union, occupiedPaths, null, occupiedTree, FillRule.NonZero)
+  } catch (error) {
+    return { message: clipperFailureMessage(error) }
+  }
   const occupiedUnion = polyTreeToPaths64(occupiedTree)
   if (occupiedUnion.length === 0) {
     return { message: 'Clipper2 union returned no occupied geometry for non-empty input.' }

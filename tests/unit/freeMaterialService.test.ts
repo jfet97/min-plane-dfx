@@ -1,5 +1,23 @@
 import { Effect } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+const clipperMock = vi.hoisted(() => ({
+  throwOnUnion: false,
+  unionError: null as Error | null
+}))
+
+vi.mock('clipper2-ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('clipper2-ts')>()
+  return {
+    ...actual,
+    booleanOpWithPolyTree: (...args: Parameters<typeof actual.booleanOpWithPolyTree>) => {
+      if (clipperMock.throwOnUnion && args[0] === actual.ClipType.Union) {
+        throw clipperMock.unionError ?? new Error('occupied union failed')
+      }
+      return actual.booleanOpWithPolyTree(...args)
+    }
+  }
+})
 import {
   IrregularBounds,
   IrregularPlacedPiece,
@@ -298,6 +316,29 @@ describe('FreeMaterialServiceLive', () => {
       throw new Error('expected geometry input error')
     }
     expect(failure.operation).toBe('computeFreeMaterial')
+  })
+
+  it('converts an occupied-union failure into a typed error', async () => {
+    const unionError = new Error('occupied union failed')
+    clipperMock.throwOnUnion = true
+    clipperMock.unionError = unionError
+
+    try {
+      const failure = await captureFailure(
+        computeWithOperation('union-then-difference', input([rectangle('occupied', 2, 2)]))
+      )
+
+      expect(failure).toBeInstanceOf(IrregularGeometryInputError)
+      expect(failure).not.toBe(unionError)
+      if (!(failure instanceof IrregularGeometryInputError)) {
+        throw new Error('expected geometry input error')
+      }
+      expect(failure.operation).toBe('computeFreeMaterial')
+      expect(failure.message).toContain('occupied union failed')
+    } finally {
+      clipperMock.throwOnUnion = false
+      clipperMock.unionError = null
+    }
   })
 })
 
