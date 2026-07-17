@@ -363,6 +363,18 @@ pruning. Record both successes and regressions. A later combined candidate may
 legitimately use L/L2 ingredients even though neither original commit is safe as
 the production default.
 
+The completed corpus audit validates that distinction. Candidate L reduces the
+mixed61 four-sheet envelope-area spread from `276,459.435 mm2` to
+`50,457.263 mm2` (`81.75%`), improves the three non-reference sheets by
+`18.57-24.86%`, and makes the homogeneous rectangle fixture exactly
+sheet-invariant. It still regresses the approved `2000 x 2700` mixed61 envelope
+by `19.84%`, so it cannot ship unchanged. Candidate L2 loses most of that
+stability and is the weaker lead. Preserve L's structural-contact bands plus
+intrinsic envelope ordering for recombination with a protected contact lane;
+do not promote its standalone scorer. Full metrics, hashes, and portable
+previews are in
+[`research/candidate-l-corpus-audit.md`](research/candidate-l-corpus-audit.md).
+
 The bounded order/rotation GA probe is also complete. It retained the
 deterministic baseline and improved homogeneous rectangles, but cost `4.3-6.4x`
 more, remained sheet-dependent, and selected a mixed-61 reference-sheet result
@@ -1791,6 +1803,13 @@ would falsify each one, and identify the smallest safe production experiment.
   remains eligible for recombination with contact-tier diversity or a different
   decoder instead of being discarded solely because its first standalone form
   misses the current long-side ceiling.
+- Completed the Candidate L/L2 corpus audit with portable artifacts. L is a
+  strong recombination input: mixed61 sheet-area spread falls `81.75%` and
+  rectangles become exactly invariant, but the approved reference mixed61
+  envelope regresses `19.84%`. L2 is weaker. Neither scorer is merged; their
+  exact branches, harnesses, hashes, metrics, and previews are retained under
+  [`help/research`](research/candidate-l-corpus-audit.md) and
+  [`help/artifacts`](artifacts/candidate-l-audit/).
 - Traced the small-square path: the eight squares first enter the reorder window
   at step 50 and already receive dozens of legal unique candidates. Rejected two
   isolated early-access heuristics because they moved squares to the perimeter
