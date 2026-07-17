@@ -1,7 +1,12 @@
 import type { PieceId } from '@shared/domain/ids.js'
 import {
+  IrregularBounds,
   IrregularPlacement,
+  IrregularPoint,
+  IrregularPolygon,
   IrregularPlacedPiece,
+  IrregularTransformCandidate,
+  TransformedCollisionGeometry,
   type IrregularPreparedPiece
 } from '@shared/irregular/domain.js'
 import {
@@ -51,6 +56,8 @@ interface SharedCollisionBoundaryMetrics {
 }
 
 const derivedMetadata = Symbol('derivedMetadata')
+
+export type IrregularQuarterTurnDegrees = 0 | 90 | 180 | 270
 
 type IrregularBeamStateConstructionInput = IrregularBeamStateInput & {
   readonly [derivedMetadata]?: DerivedIrregularBeamStateMetadata
@@ -279,12 +286,145 @@ export class IrregularBeamState {
     )
   }
 
+  /** Rigidly rotates the complete layout, then anchors its occupied bounds bottom-left. */
+  withQuarterTurnBottomLeft(
+    rotationDeg: IrregularQuarterTurnDegrees
+  ): IrregularBeamState | undefined {
+    if (rotationDeg === 0) return this.withBottomLeftAnchored()
+    if (this.placedCollisionGeometries.length === 0) return this
+
+    const placedCollisionGeometries: IrregularPlacedPiece[] = []
+    for (const { placement, collisionGeometry } of this.placedCollisionGeometries) {
+      const rotatedTranslation = rotateQuarterTurnPoint(
+        {
+          x: placement.transform.translateX,
+          y: placement.transform.translateY
+        },
+        rotationDeg
+      )
+      const rotatedPoints = collisionGeometry.polygon.points.map((point) =>
+        rotateQuarterTurnPoint(point, rotationDeg)
+      )
+      const rotatedBounds = boundsForPoints(rotatedPoints)
+      if (rotatedBounds === undefined) return undefined
+
+      const rotatedTransform = new IrregularTransformCandidate({
+        index: collisionGeometry.transform.index,
+        rotationDeg: normalizeRotationDegrees(
+          collisionGeometry.transform.rotationDeg + rotationDeg
+        ),
+        mirrored: collisionGeometry.transform.mirrored,
+        reason: collisionGeometry.transform.reason
+      })
+      placedCollisionGeometries.push(
+        new IrregularPlacedPiece({
+          placement: new IrregularPlacement({
+            sourcePieceId: placement.sourcePieceId,
+            ...(placement.pieceId !== undefined ? { pieceId: placement.pieceId } : {}),
+            ...(placement.placementReference !== undefined
+              ? { placementReference: placement.placementReference }
+              : {}),
+            transform: {
+              translateX: rotatedTranslation.x,
+              translateY: rotatedTranslation.y,
+              rotationDeg: normalizeRotationDegrees(
+                placement.transform.rotationDeg + rotationDeg
+              ),
+              mirrored: placement.transform.mirrored
+            }
+          }),
+          collisionGeometry: new TransformedCollisionGeometry({
+            sourcePieceId: collisionGeometry.sourcePieceId,
+            transform: rotatedTransform,
+            polygon: new IrregularPolygon({
+              points: rotatedPoints.map((point) => new IrregularPoint(point))
+            }),
+            bounds: new IrregularBounds(rotatedBounds)
+          })
+        })
+      )
+    }
+
+    const canonicalEntryKeys = Object.freeze(
+      placedCollisionGeometries.map(canonicalPlacedGeometryKey).toSorted(compareCanonicalKeys)
+    )
+    const placedCollisionIndex = makePlacedCollisionSpatialIndex(placedCollisionGeometries)
+    const rotatedState = IrregularBeamState.fromDerivedMetadata(
+      {
+        remainingPreparedPieces: this.remainingPreparedPieces,
+        placedCollisionGeometries,
+        unplacedPieceIds: this.unplacedPieceIds,
+        placementOrder: this.placementOrder,
+        ...(this.parent !== undefined ? { parent: this.parent } : {}),
+        placedCollisionIndex
+      },
+      {
+        canonicalEntryKeys,
+        canonicalOccupiedGeometryKey: canonicalEntryListKey(canonicalEntryKeys),
+        translatedCollisionBounds: deriveCollisionBounds(placedCollisionGeometries),
+        sharedCollisionBoundaryLengthMm: this.sharedCollisionBoundaryLengthMm,
+        sharedCollisionBoundaryContactUnits: this.sharedCollisionBoundaryContactUnits,
+        nearCompleteStructuralContactCount: this.nearCompleteStructuralContactCount,
+        dominantNearCompleteStructuralContactCount:
+          this.dominantNearCompleteStructuralContactCount,
+        nearCompleteStructuralContactSignatureCounts:
+          this.nearCompleteStructuralContactSignatureCounts,
+        placedCollisionIndex
+      }
+    )
+    return rotatedState.withBottomLeftAnchored()
+  }
+
   private static fromDerivedMetadata(
     input: IrregularBeamStateInput,
     metadata: DerivedIrregularBeamStateMetadata
   ): IrregularBeamState {
     return new IrregularBeamState({ ...input, [derivedMetadata]: metadata })
   }
+}
+
+function rotateQuarterTurnPoint(
+  point: { readonly x: number; readonly y: number },
+  rotationDeg: IrregularQuarterTurnDegrees
+): { readonly x: number; readonly y: number } {
+  switch (rotationDeg) {
+    case 0:
+      return { x: normalizeNegativeZero(point.x), y: normalizeNegativeZero(point.y) }
+    case 90:
+      return { x: normalizeNegativeZero(-point.y), y: normalizeNegativeZero(point.x) }
+    case 180:
+      return { x: normalizeNegativeZero(-point.x), y: normalizeNegativeZero(-point.y) }
+    case 270:
+      return { x: normalizeNegativeZero(point.y), y: normalizeNegativeZero(-point.x) }
+  }
+}
+
+function normalizeRotationDegrees(rotationDeg: number): number {
+  const remainder = rotationDeg % 360
+  return remainder < 0 ? remainder + 360 : remainder
+}
+
+function normalizeNegativeZero(value: number): number {
+  return Object.is(value, -0) ? 0 : value
+}
+
+function boundsForPoints(
+  points: ReadonlyArray<{ readonly x: number; readonly y: number }>
+): { readonly minX: number; readonly minY: number; readonly maxX: number; readonly maxY: number } | undefined {
+  const first = points[0]
+  if (first === undefined) return undefined
+
+  let minX = first.x
+  let minY = first.y
+  let maxX = first.x
+  let maxY = first.y
+  for (const point of points.slice(1)) {
+    minX = Math.min(minX, point.x)
+    minY = Math.min(minY, point.y)
+    maxX = Math.max(maxX, point.x)
+    maxY = Math.max(maxY, point.y)
+  }
+  return { minX, minY, maxX, maxY }
 }
 
 function deriveMetadata(

@@ -553,6 +553,33 @@ export class IrregularDecisionTraceLocalRepairAccepted
   }
 }
 
+export class IrregularDecisionTraceTerminalOrientationScored
+  extends IrregularDecisionTraceEventBase {
+  readonly kind = 'terminal_orientation_scored' as const
+  readonly rotationDeg: number
+  readonly cornerGapMm: number
+  readonly state: IrregularDecisionTraceState
+  readonly score: IrregularDecisionTraceLayoutScore
+  readonly decision: 'selected' | 'rejected'
+
+  constructor(
+    input: EventInput<{
+      readonly rotationDeg: number
+      readonly cornerGapMm: number
+      readonly state: IrregularDecisionTraceState
+      readonly score: IrregularDecisionTraceLayoutScore
+      readonly decision: 'selected' | 'rejected'
+    }>
+  ) {
+    super(input)
+    this.rotationDeg = input.rotationDeg
+    this.cornerGapMm = input.cornerGapMm
+    this.state = input.state
+    this.score = input.score
+    this.decision = input.decision
+  }
+}
+
 export class IrregularDecisionTraceDecodeWinner extends IrregularDecisionTraceEventBase {
   readonly kind = 'decode_winner' as const
   readonly state: IrregularDecisionTraceState
@@ -583,6 +610,7 @@ export type IrregularDecisionTraceEvent =
   | IrregularDecisionTraceBeamSelection
   | IrregularDecisionTraceBeamStepCompleted
   | IrregularDecisionTraceLocalRepairAccepted
+  | IrregularDecisionTraceTerminalOrientationScored
   | IrregularDecisionTraceDecodeWinner
 
 export type EmitIrregularDecisionTrace = (event: IrregularDecisionTraceEvent) => void

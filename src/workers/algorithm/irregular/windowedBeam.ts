@@ -33,7 +33,8 @@ import {
 } from './irregularLayoutScorer.js'
 import {
   canonicalCollisionPolygonKey,
-  IrregularBeamState
+  IrregularBeamState,
+  type IrregularQuarterTurnDegrees
 } from './irregularBeamState.js'
 import { canonicalizeIrregularScoreMillimeters } from './irregularScoreGrid.js'
 import {
@@ -57,6 +58,7 @@ import {
   IrregularDecisionTraceStateIdRegistry,
   IrregularDecisionTraceSuccessorDeduplication,
   IrregularDecisionTraceSuccessorLayoutScored,
+  IrregularDecisionTraceTerminalOrientationScored,
   IrregularDecisionTraceTransform,
   IrregularDecisionTraceTransformCandidatesGenerated,
   IrregularDecisionTraceTransformPreference
@@ -415,29 +417,27 @@ export function runWindowedIrregularBeam(input: {
           score: decisionTraceLayoutScore(currentRepair.score)
         }))
       }
-      const bottomAnchoredState = currentRepair.state.withBottomLeftAnchored()
-      repairedBest =
-        bottomAnchoredState === undefined || bottomAnchoredState === currentRepair.state
-          ? currentRepair
-          : {
-              state: bottomAnchoredState,
-              score: yield* layoutScorer.scoreState({
-                sheet: input.sheet,
-                state: bottomAnchoredState
-              }),
-              key: stateKey(bottomAnchoredState),
-              isIncumbent: false
-            }
+      repairedBest = currentRepair
     }
-    const finalRanked =
-      repairedBest === undefined || repairedBest === initialBest
-        ? ranked
-        : [repairedBest, ...ranked.slice(1)]
-    const best = finalRanked[0]
-    if (best === undefined) {
+    const terminalBase = repairedBest ?? initialBest
+    if (terminalBase === undefined) {
       return yield* Effect.die('windowed irregular beam produced no terminal state')
     }
-    emitWinningPath(input.hooks, best.state, candidateCounts)
+    const terminalOrientation = yield* selectTerminalOrientation({
+      sheet: input.sheet,
+      base: terminalBase,
+      layoutScorer,
+      makeStateKey: stateKey,
+      ...(decisionTrace !== undefined ? { decisionTrace } : {})
+    })
+    const best = terminalOrientation.scoredState
+    const finalRanked = [best, ...ranked.slice(1)]
+    emitWinningPath(
+      input.hooks,
+      terminalBase.state,
+      candidateCounts,
+      terminalOrientation.rotationDeg
+    )
     decisionTrace?.emit(new IrregularDecisionTraceDecodeWinner({
       decodeId: decisionTrace.decodeId,
       chromosomeId: decisionTrace.chromosomeId,
@@ -457,6 +457,118 @@ export function runWindowedIrregularBeam(input: {
 interface AcceptedLocalRepair {
   readonly scoredState: ScoredState
   readonly pieceId: PieceId
+}
+
+interface TerminalOrientationSelection {
+  readonly scoredState: ScoredState
+  readonly rotationDeg: IrregularQuarterTurnDegrees
+  readonly cornerGapMm: number
+}
+
+const TERMINAL_QUARTER_TURNS: ReadonlyArray<IrregularQuarterTurnDegrees> = [0, 90, 180, 270]
+
+function selectTerminalOrientation(input: {
+  readonly sheet: SheetSpec
+  readonly base: ScoredState
+  readonly layoutScorer: IrregularLayoutScorer.Service
+  readonly makeStateKey: (state: IrregularBeamState) => string
+  readonly decisionTrace?: ActiveDecisionTrace
+}): Effect.Effect<TerminalOrientationSelection, IrregularWindowedBeamError> {
+  return Effect.gen(function* () {
+    const legalVariants: TerminalOrientationSelection[] = []
+    for (const rotationDeg of TERMINAL_QUARTER_TURNS) {
+      const state = input.base.state.withQuarterTurnBottomLeft(rotationDeg)
+      const bounds = state?.translatedCollisionBounds
+      if (
+        state === undefined ||
+        bounds === undefined ||
+        bounds.width > input.sheet.width ||
+        bounds.height > input.sheet.height
+      ) {
+        continue
+      }
+      const cornerGapMm = terminalBottomLeftCornerGapMm(state)
+      if (cornerGapMm === undefined) continue
+      legalVariants.push({
+        scoredState: {
+          state,
+          score: yield* input.layoutScorer.scoreState({ sheet: input.sheet, state }),
+          key: input.makeStateKey(state),
+          isIncumbent: false
+        },
+        rotationDeg,
+        cornerGapMm
+      })
+    }
+
+    const rankedVariants = legalVariants.toSorted((first, second) => {
+      const cornerComparison = Order.Number(first.cornerGapMm, second.cornerGapMm)
+      if (cornerComparison !== 0) return cornerComparison
+      const scoreComparison = input.layoutScorer.compare(
+        first.scoredState.score,
+        second.scoredState.score
+      )
+      if (scoreComparison !== 0) return scoreComparison
+      return Order.Number(first.rotationDeg, second.rotationDeg)
+    })
+    const selected = rankedVariants[0]
+    if (selected === undefined) {
+      return yield* Effect.die('terminal irregular layout has no legal quarter-turn orientation')
+    }
+
+    if (input.decisionTrace !== undefined) {
+      for (const variant of rankedVariants) {
+        input.decisionTrace.emit(new IrregularDecisionTraceTerminalOrientationScored({
+          decodeId: input.decisionTrace.decodeId,
+          chromosomeId: input.decisionTrace.chromosomeId,
+          decodeSource: input.decisionTrace.decodeSource,
+          rotationDeg: variant.rotationDeg,
+          cornerGapMm: variant.cornerGapMm,
+          state: decisionTraceState(
+            variant.scoredState.state,
+            input.decisionTrace,
+            variant.scoredState.key
+          ),
+          score: decisionTraceLayoutScore(variant.scoredState.score),
+          decision: variant === selected ? 'selected' : 'rejected'
+        }))
+      }
+    }
+    return selected
+  })
+}
+
+function terminalBottomLeftCornerGapMm(state: IrregularBeamState): number | undefined {
+  let minimumSquaredDistance = Number.POSITIVE_INFINITY
+  for (const { placement, collisionGeometry } of state.placedCollisionGeometries) {
+    const points = collisionGeometry.polygon.points
+    for (let index = 0; index < points.length; index += 1) {
+      const first = points[index]
+      const second = points[(index + 1) % points.length]
+      if (first === undefined || second === undefined) return undefined
+      const firstX = first.x + placement.transform.translateX
+      const firstY = first.y + placement.transform.translateY
+      const secondX = second.x + placement.transform.translateX
+      const secondY = second.y + placement.transform.translateY
+      const segmentX = secondX - firstX
+      const segmentY = secondY - firstY
+      const segmentLengthSquared = segmentX * segmentX + segmentY * segmentY
+      const projection =
+        segmentLengthSquared === 0
+          ? 0
+          : Math.max(
+              0,
+              Math.min(1, -(firstX * segmentX + firstY * segmentY) / segmentLengthSquared)
+            )
+      const nearestX = firstX + projection * segmentX
+      const nearestY = firstY + projection * segmentY
+      const squaredDistance = nearestX * nearestX + nearestY * nearestY
+      if (!Number.isFinite(squaredDistance)) return undefined
+      minimumSquaredDistance = Math.min(minimumSquaredDistance, squaredDistance)
+    }
+  }
+  if (!Number.isFinite(minimumSquaredDistance)) return undefined
+  return canonicalizeIrregularScoreMillimeters(Math.sqrt(minimumSquaredDistance))
 }
 
 function repairTerminalState(input: {
@@ -941,22 +1053,25 @@ function fallbackTransforms(
 function emitWinningPath(
   hooks: IrregularWindowedBeamHooks | undefined,
   bestState: IrregularBeamState,
-  candidateCounts: ReadonlyArray<number>
+  candidateCounts: ReadonlyArray<number>,
+  rotationDeg: IrregularQuarterTurnDegrees
 ): void {
   if (hooks === undefined) return
   const path = winningStatePath(bestState)
   const initialState = path[0]
   if (initialState !== undefined) {
-    hooks.onInitialState?.(initialState.withBottomLeftAnchored() ?? initialState)
+    hooks.onInitialState?.(
+      initialState.withQuarterTurnBottomLeft(rotationDeg) ?? initialState
+    )
   }
   for (let index = 1; index < path.length; index += 1) {
     const state = path[index]
     if (state === undefined) continue
-    const bottomLeftState = state.withBottomLeftAnchored() ?? state
+    const displayState = state.withQuarterTurnBottomLeft(rotationDeg) ?? state
     hooks.onStateSelected?.({
       stepIndex: index - 1,
       beamRank: 0,
-      state: bottomLeftState,
+      state: displayState,
       candidateCount: candidateCounts[index - 1] ?? 0
     })
   }

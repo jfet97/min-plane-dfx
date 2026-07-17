@@ -112,16 +112,23 @@ legality and whole-layout comparator as the beam; it does not move pieces to
 invented coordinates. Repair exploration keeps its legal sheet-space freedom;
 anchoring intermediate states would make the sheet edges block later
 reinsertion paths. After the final improvement, the completed winner is rigidly
-translated to the sheet bottom-left. The state preserves the exact
-translation-invariant contact metrics derived before the shift, avoiding a
-second floating-point collinearity classification of unchanged contacts. The
-anchored improvement remains the terminal winner and is not re-ranked against
-states that were already worse than the original beam winner. Winning-path
-history hooks receive an equivalent bottom-left-normalized copy of every frame,
-so replay does not visually drift across the sheet even though search uses its
-original legal coordinates. Because the budget also bounds accepted iterations
-and per-piece candidate fanout, enabling repair is an explicit quality/cost
-choice and applies to every baseline or GA decode.
+tested at the four rigid quarter-turn orientations. Every variant is normalized
+to the sheet bottom-left, and variants whose occupied bounds exceed the sheet
+are discarded. Terminal selection first minimizes the real Euclidean gap from
+the sheet origin to the nearest occupied collision edge, preventing a concave
+cluster corner from stranding material at the bottom-left; the normal
+whole-layout score and the quarter-turn angle break ties. The state preserves
+the exact rotation- and translation-invariant contact metrics derived before
+this terminal transform, avoiding a second floating-point collinearity
+classification of unchanged contacts. The oriented improvement remains the
+terminal winner and is not re-ranked against states that were already worse
+than the original beam winner. Winning-path history hooks receive the same
+selected quarter-turn and bottom-left normalization for every frame, so replay
+does not visually drift or rotate only at the end even though search uses its
+original legal coordinates. Decision traces record every legal terminal variant
+as `terminal_orientation_scored`. Because the budget also bounds accepted
+iterations and per-piece candidate fanout, enabling repair is an explicit
+quality/cost choice and applies to every baseline or GA decode.
 
 The concrete transform-profile factories are convenience bundles over those
 persisted explicit settings, not a separate configuration model. Fast identity

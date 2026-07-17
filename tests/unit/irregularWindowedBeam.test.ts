@@ -623,13 +623,60 @@ describe('decodeWindowedIrregularBeam', () => {
       }
     )
 
-    expect(result.bestState.translatedCollisionBounds?.minX).toBe(2)
-    expect(result.bestState.translatedCollisionBounds?.minY).toBe(2)
+    expect(result.bestState.translatedCollisionBounds?.minX).toBe(0)
+    expect(result.bestState.translatedCollisionBounds?.minY).toBe(0)
     expect(emittedBounds).toEqual([
       [0, 0],
       [0, 0],
       [0, 0]
     ])
+  })
+
+  it('selects the legal terminal quarter-turn with the smallest bottom-left corner gap', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const emittedRotations: number[] = []
+    const result = await runWindowed(
+      sheet(4, 4),
+      [preparedPiece('a', 1, 1), preparedPiece('b', 1, 1)],
+      Layer.succeed(GeometrySettings, settings(1, 1, 1)),
+      candidateService(({ moving, placed }) => [
+        oneCandidate(moving, placed.length === 0 ? 0 : 1, placed.length === 0 ? 1 : 0)
+      ]),
+      undefined,
+      {
+        onStateSelected: ({ state }) => {
+          const rotationDeg = state.placedCollisionGeometries[0]?.placement.transform.rotationDeg
+          if (rotationDeg !== undefined) emittedRotations.push(rotationDeg)
+        }
+      },
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(result.bestState.translatedCollisionBounds?.minX).toBe(0)
+    expect(result.bestState.translatedCollisionBounds?.minY).toBe(0)
+    expect(
+      result.bestState.placedCollisionGeometries.map(
+        ({ placement }) => placement.transform.rotationDeg
+      )
+    ).toEqual([90, 90])
+    expect(emittedRotations).toEqual([90, 90])
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'terminal_orientation_scored',
+        rotationDeg: 90,
+        cornerGapMm: 0,
+        decision: 'selected'
+      })
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'terminal_orientation_scored',
+        rotationDeg: 0,
+        cornerGapMm: 1,
+        decision: 'rejected'
+      })
+    )
   })
 
   it('can select the second eligible piece when it produces the better branch', async () => {
@@ -780,7 +827,7 @@ describe('decodeWindowedIrregularBeam', () => {
     expect(events).toEqual([])
   })
 
-  it('deduplicates equivalent successors before whole-layout scoring without changing history', async () => {
+  it('deduplicates equivalent successors before scoring the four terminal orientations', async () => {
     const scoreCalls = { count: 0 }
     const baseScorer = await Effect.runPromise(
       IrregularLayoutScorer.use((scorer) => Effect.succeed(scorer)).pipe(
@@ -809,7 +856,7 @@ describe('decodeWindowedIrregularBeam', () => {
       countingScorer
     )
 
-    expect(scoreCalls.count).toBe(1)
+    expect(scoreCalls.count).toBe(5)
     expect(result.rankedStates).toHaveLength(1)
     expect(result.bestState.placementOrder).toEqual([PieceId.make('a')])
     expect(result.bestState.placedCollisionGeometries.map(({ placement }) => placement.sourcePieceId)).toEqual([
