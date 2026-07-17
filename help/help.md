@@ -294,6 +294,13 @@ already higher-contact winners, so the next diversity experiment must preserve
 alternatives inside contact tiers instead of merely reserving another global
 winner.
 
+The numerical part is fixed in production at `95de72c`: the dimensionless
+occupied-hull waste ratio is canonicalized on the existing `0.000001` scalar
+score grid before ranking. A translated-equivalence regression now compares
+identical layouts exactly, and the 20-triangle golden remains green. This moves
+the Candidate J divergence from the false step-2 tie to the real step-3 local
+ranking split; it deliberately does not claim sheet invariance.
+
 Candidate K on isolated commit `b14af3c` added four geometry-deduplicated local
 reservations within the existing fanout: original edge-contact, original
 balanced compactness, intrinsic edge-contact, and intrinsic compactness. This
@@ -1759,6 +1766,10 @@ would falsify each one, and identify the smallest safe production experiment.
   compactness is sheet-normalized. Global reservations do not help because they
   select candidates already retained by edge contact; diversity must operate
   inside contact tiers.
+- Shipped the isolated numerical part as `95de72c`. Canonicalizing occupied-hull
+  waste removes translation-dependent comparator noise, passes the exact
+  triangle golden and 65 focused tests, and leaves the genuine step-3
+  sheet-normalized local-ranking problem visible for a separate fix.
 - Confirmed that equal or lower envelope area is not a sufficient acceptance
   gate: the triangle fixture can retain the same area while becoming a long
   chain, and mixed-61 can reduce area while increasing free-material holes from
