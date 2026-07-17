@@ -1,0 +1,111 @@
+{
+  "experiment": "whole-beam-topology-diversity",
+  "status": "rejected-for-production-research-retained",
+  "branch": "beam-topology-diversity",
+  "baseCommit": "aa7a264",
+  "implementationCommit": "a2dac6accca6a5f73382db431c3e3042feb215a8",
+  "implementation": {
+    "summary": "After whole-layout scoring and geometric deduplication, reserve an exact contact-graph survivor and a distinct dense-envelope survivor inside the configured beam width.",
+    "shapeSpecificConditionals": false,
+    "sheetDimensionsUsedByNewOrders": false,
+    "minimumBeamWidth": 4
+  },
+  "environment": {
+    "node": "24.16.0",
+    "pnpm": "11.8.0",
+    "electron": "33.4.11"
+  },
+  "gates": {
+    "triangleGolden": {
+      "command": "pnpm test:focused tests/unit/irregularTriangleCompactGolden.test.ts tests/unit/irregularWindowedBeam.test.ts tests/unit/decisionTraceNdjson.test.ts",
+      "result": "passed",
+      "testFiles": 3,
+      "tests": 36,
+      "elapsedSeconds": 3.85
+    },
+    "mixed61": {
+      "commandPairA": "pnpm corpus:sheet-invariance --case mixed-61 --output <artifact-output-dir>/pair-a",
+      "commandPairB": "pnpm corpus:sheet-invariance --case mixed-61 --output <artifact-output-dir>/pair-b",
+      "pairBNote": "For pair B only, the corpus script sheet cases and artifact suffixes were temporarily changed from 1000x1700 and 2000x2700 to 1000x1300 and 2000x1700, then the patch was fully reverted before recording this manifest."
+    }
+  },
+  "results": [
+    {
+      "sheetMm": [1000, 1300],
+      "elapsedMs": 14966.480459,
+      "boundsMm": [495.78185528957465, 980.5618238198551],
+      "boundsAreaMm2": 486144.7602395368,
+      "boundsSpanMm": 1476.3436791094298,
+      "occupiedHullWasteRatio": 0.3005,
+      "nearStructuralContacts": 50,
+      "dominantStructuralContacts": 10,
+      "normalizedContactUnits": 53.560415,
+      "holeCount": 4,
+      "canonicalRotationDeg": 270,
+      "canonicalGeometrySha256": "43d96057f00d2457f9101abd41cacf2918985e87ba70a2d1a3465e4281c96f6e",
+      "svg": "pair-b/mixed-61-1000x1300.svg",
+      "svgSha256": "5ac8239f93cdeda8762cb3db440c2648bd44b77bcbd18f1f77d25865ff6ebee3",
+      "png": "pair-b/mixed-61-1000x1300.png",
+      "pngSha256": "8ffef89630157f55d2713eeec8df166ba9acfa52670be9986ce7470ef749aab5"
+    },
+    {
+      "sheetMm": [1000, 1700],
+      "elapsedMs": 15796.227458,
+      "boundsMm": [638.1067064253324, 856.807],
+      "boundsAreaMm2": 546734.2928121698,
+      "boundsSpanMm": 1494.9137064253323,
+      "occupiedHullWasteRatio": 0.316913,
+      "nearStructuralContacts": 64,
+      "dominantStructuralContacts": 14,
+      "normalizedContactUnits": 64.771407,
+      "holeCount": 2,
+      "canonicalRotationDeg": 0,
+      "canonicalGeometrySha256": "3b81f126b01204ad77b0bf3ee9bc78feb64f330e5a162d95e2707f6d8b9a52b3",
+      "svg": "pair-a/mixed-61-1000x1700.svg",
+      "svgSha256": "01be9f2a80e3e031b9841d58b1b4279a9121813bd8ee3b38b9ba23b2f1eda2c1",
+      "png": "pair-a/mixed-61-1000x1700.png",
+      "pngSha256": "9afa61194b407d37adafb9c7e119348fbb11ced28742e2e0267f712c638945df"
+    },
+    {
+      "sheetMm": [2000, 1700],
+      "elapsedMs": 15527.098666,
+      "boundsMm": [736.296254555192, 765.9250000000001],
+      "boundsAreaMm2": 563947.7087701855,
+      "boundsSpanMm": 1502.221254555192,
+      "occupiedHullWasteRatio": 0.32626,
+      "nearStructuralContacts": 62,
+      "dominantStructuralContacts": 15,
+      "normalizedContactUnits": 67.161308,
+      "holeCount": 0,
+      "canonicalRotationDeg": 0,
+      "canonicalGeometrySha256": "7ba71432ee321cef800cbec608e188198a1dd1f262c85b31a08c8a5b8abd3a5c",
+      "svg": "pair-b/mixed-61-2000x1700.svg",
+      "svgSha256": "7f82f7cb766ce078dc9bbfee7ba9563dd14365d93f3d4eafae65f37c93854b50",
+      "png": "pair-b/mixed-61-2000x1700.png",
+      "pngSha256": "fb9652e78686ca0959ef318aac3a537fc3aced9748e7c3fe0325b4650cbaffbd"
+    },
+    {
+      "sheetMm": [2000, 2700],
+      "elapsedMs": 18524.031458,
+      "boundsMm": [1291.3770000000002, 1299.0559999999996],
+      "boundsAreaMm2": 1677571.0401119997,
+      "boundsSpanMm": 2590.433,
+      "occupiedHullWasteRatio": 0.690241,
+      "nearStructuralContacts": 61,
+      "dominantStructuralContacts": 19,
+      "normalizedContactUnits": 65.230084,
+      "holeCount": 0,
+      "canonicalRotationDeg": 0,
+      "canonicalGeometrySha256": "9c86cb57a1af50cd0407567d3ad16ad010210fabcb3d2540adbb6084ef5d1f31",
+      "svg": "pair-a/mixed-61-2000x2700.svg",
+      "svgSha256": "3ca65d7c81cc2adfa329da4038757081d354f83d45a4b255c35a9eca7e505a81",
+      "png": "pair-a/mixed-61-2000x2700.png",
+      "pngSha256": "d9d390cabb360f64a4575c3aa94213384d8ae06a9cca26e29d64370a00ab40b9"
+    }
+  ],
+  "reportHashes": {
+    "pair-a/report.json": "1f5520d102a5662536d2788976062ddade5c21c31ea9e1242afdbed35c6f1318",
+    "pair-b/report.json": "6329460a7ffc1ce279504710f0c52d607c638b1b74ba0930810753a68ab82f4c"
+  },
+  "conclusion": "The exact topology-extreme reservation preserves the triangle golden but is not production-safe. The 2000x2700 result becomes a high-contact perimeter chain with 0.690241 hull waste and 1.68 million mm2 bounds area. A triangle-safe research idea can still be retained even when its current production gate fails; future work should combine topology diversity with Pareto or envelope guards rather than discard the diversity ingredient."
+}
