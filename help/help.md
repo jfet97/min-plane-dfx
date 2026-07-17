@@ -225,6 +225,8 @@ work is isolated into separate changes:
    structure;
 4. reduce trace volume and runtime only after search semantics are protected by
    those gates.
+5. investigate bounded access to small filler pieces so rectangles that legally
+   fit existing internal cavities are not stranded in a separate island.
 
 ## Product And Architecture
 
@@ -376,6 +378,27 @@ This is a user-owned algorithm boundary. Change it only as an explicit algorithm
 experiment with evidence. The current mixed result appears grouped by similar
 size/shape families, so ordering and deferral behavior must be investigated even
 if the whole-layout scorer is the primary suspect.
+
+The latest accepted mixed layout exposes a narrower follow-up: several small
+rectangles remain in an external island even though visible cavities between
+larger polygons appear large enough to contain them. This suggests that the
+fixed initial order plus `orderWindow = 4` may make useful small fillers
+unavailable when those cavities are created. Do not solve this by globally
+sorting small pieces first. After the approved comparator and sheet-invariance
+gates are integrated, test bounded filler access independently through one or
+more of:
+
+- a deterministic cavity-fit candidate within the existing reorder window;
+- bounded deferral or a reserved small-filler successor when a legal internal
+  cavity placement exists;
+- explicit cavity-utilization diagnostics that distinguish a reusable hole from
+  harmless hull waste;
+- a local remove-and-reinsert experiment that is cheaper and more targeted than
+  the existing terminal repair.
+
+The experiment must preserve the triangle golden, legality, deterministic
+copy-ID deduplication, and the exact approved mixed-61 checkpoint before any
+production change is accepted.
 
 ### Windowed Beam
 

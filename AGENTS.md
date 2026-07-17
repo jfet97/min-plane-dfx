@@ -59,6 +59,9 @@ pnpm lint:fix
 pnpm typecheck
 ```
 
+If the only modified file is `plan.md`, skip lint, typecheck, and tests. Review
+the Markdown diff directly instead.
+
 For UI work, also run:
 
 ```sh
@@ -66,6 +69,27 @@ pnpm dev
 ```
 
 Then verify the empty state, disabled controls, and that no fake algorithm output was introduced.
+
+## Algorithm Experiment Provenance
+
+- Run competing placement, search, or scoring experiments on dedicated branches
+  and isolated worktrees. Do not stack unrelated hypotheses in the main working
+  tree.
+- Before changing an experiment, commit the exact implementation that produced
+  any result worth comparing. Use a descriptive human branch and commit name.
+- For every reported layout, record the source commit, uncommitted diff or
+  injected comparator, exact fixture/request, sheet dimensions, optimizer
+  settings, runtime environment, metrics, and SVG/PNG paths.
+- Keep immutable experiment manifests and artifact hashes under
+  `/private/tmp/min-plane-provenance/` while iterating. Copy accepted reference
+  artifacts into `help/artifacts/` so they remain readable on other machines.
+- Update `help/help.md` with accepted results, rejected hypotheses, regressions,
+  and open questions before starting the next materially different experiment.
+- Never describe a layout as reproducible until its recorded checkout and
+  command regenerate the same canonical geometry hash.
+- Merge or cherry-pick only after comparing the isolated result against the
+  triangle golden and the relevant mixed/corpus gates. Keep rejected branches
+  or their manifests until their findings have been documented.
 
 ## Pull Requests
 
