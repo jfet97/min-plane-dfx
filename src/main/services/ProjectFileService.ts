@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { Exit, Schema } from 'effect'
 import { ProjectDocumentStrict } from '@shared/schemas/projectSchemas.js'
-import type { ProjectDocument } from '@shared/domain/project.js'
+import { ProjectDocument } from '@shared/domain/project.js'
 import type { AppErrorCode } from '@shared/protocol/errors.js'
 
 export class ProjectFileError extends Error {
@@ -56,5 +56,5 @@ export async function loadProjectFile(path: string): Promise<ProjectDocument> {
   if (Exit.isFailure(exit)) {
     throw new ProjectFileError('project_read_error', 'Project file failed schema validation.')
   }
-  return exit.value
+  return Schema.decodeUnknownSync(ProjectDocument)(exit.value)
 }

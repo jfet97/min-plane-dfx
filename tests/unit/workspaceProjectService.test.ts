@@ -7,7 +7,7 @@ import { WorkspaceProjectService } from '@main/services/WorkspaceProjectService.
 import { makePresetShapeDocument } from '@shared/presetShapes.js'
 import { DEFAULT_STRATEGY_ID } from '@shared/domain/strategies.js'
 import { DEFAULT_LAYOUT_SELECTION_STRATEGY_ID } from '@shared/domain/layoutSelectionStrategies.js'
-import { JobId, PieceId } from '@shared/domain/ids.js'
+import { JobId, PieceId, SourceFileId } from '@shared/domain/ids.js'
 import type { WorkspaceProjectSettings } from '@shared/domain/project.js'
 
 function section(name: string): string {
@@ -186,6 +186,43 @@ describe('WorkspaceProjectService', () => {
             path: '/tmp/history-job-1.ndjson',
             frameCount: 3,
             createdAt: '2026-06-29T14:00:01.000Z'
+          },
+          request: {
+            version: 1,
+            jobId,
+            sheet: { width: 2000, height: 1000, label: 'shop sheet' },
+            padding: 10,
+            pieces: [
+              {
+                id: pieceId,
+                sourcePieceId: pieceId,
+                interchangeabilityKey: pieceId,
+                realBounds: { x: 0, y: 0, width: 90, height: 90 },
+                paddedBounds: {
+                  x: 0,
+                  y: 0,
+                  width: 100,
+                  height: 100,
+                  longestEdge: 100,
+                  area: 10000,
+                  imbalance: 0
+                },
+                padding: 5,
+                allowRotation: true,
+                allowMirror: false
+              }
+            ],
+            sourcePieces: [
+              {
+                id: pieceId,
+                sourceFileId: SourceFileId.make('source-1'),
+                label: 'piece 1',
+                realBounds: { x: 0, y: 0, width: 90, height: 90 },
+                geometry: { entityType: 'LWPOLYLINE', closed: true, segments: [] },
+                warnings: []
+              }
+            ],
+            options: defaultOptions()
           }
         }
       ]

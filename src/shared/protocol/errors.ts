@@ -7,6 +7,7 @@ export const AppErrorCode = [
   'validation_error',
   'file_not_found',
   'file_read_error',
+  'file_write_error',
   'dxf_parse_error',
   'unsupported_dxf_entity',
   'project_read_error',

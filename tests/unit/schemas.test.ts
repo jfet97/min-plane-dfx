@@ -249,6 +249,57 @@ const validRequest = {
   }
 }
 
+function projectWithSavedRequest(request: typeof validRequest) {
+  return {
+    ...validProject,
+    runRecords: [
+      {
+        jobId: 'job-1',
+        createdAt: '2026-07-17T00:00:00.000Z',
+        label: 'saved run',
+        pieceCount: 1,
+        sheet: validProject.sheet,
+        result: {
+          version: 1,
+          jobId: 'job-1',
+          status: 'ok',
+          strategyResults: [],
+          sortedPieceIds: ['p-1'],
+          placements: [],
+          unplacedPieceIds: [],
+          warnings: [],
+          stats: {
+            elapsedMs: 1,
+            pieceCount: 1,
+            algorithm: {
+              startedAt: '2026-07-17T00:00:00.000Z',
+              endedAt: '2026-07-17T00:00:00.001Z',
+              elapsedMs: 1
+            }
+          }
+        },
+        history: null,
+        request
+      }
+    ]
+  }
+}
+
+describe('saved run request snapshots', () => {
+  it('accepts a strict request snapshot in a project run record', () => {
+    expect(Exit.isSuccess(validate(ProjectDocumentStrict, projectWithSavedRequest(validRequest)))).toBe(
+      true
+    )
+  })
+
+  it('rejects an invalid request snapshot at the project boundary', () => {
+    const invalidRequest = { ...validRequest, pieces: [] }
+    expect(
+      Exit.isFailure(validate(ProjectDocumentStrict, projectWithSavedRequest(invalidRequest)))
+    ).toBe(true)
+  })
+})
+
 describe('NestingRequestStrict', () => {
   it('accepts a valid nesting request', () => {
     const result = validate(NestingRequestStrict, validRequest)

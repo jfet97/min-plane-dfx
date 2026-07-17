@@ -304,6 +304,23 @@ function hydratePieceMirrorEnabled(enabled: Readonly<Record<string, boolean>> | 
   state.pieceMirrorEnabled = nextPieceMirrorEnabled
 }
 
+function restoreRunPieceConfiguration(
+  quantities: Readonly<Record<string, number>>,
+  mirrorEnabled: Readonly<Record<string, boolean>>
+): void {
+  const nextQuantities: Record<string, number> = {}
+  const nextMirrorEnabled: Record<string, boolean> = {}
+  for (const piece of state.pieces) {
+    nextQuantities[piece.id] = Math.max(0, Math.floor(quantities[piece.id] ?? 0))
+    nextMirrorEnabled[piece.id] =
+      mirrorEnabled[piece.id] ?? state.pieceMirrorEnabled[piece.id] ?? true
+  }
+  state.pieceQuantities = nextQuantities
+  state.pieceMirrorEnabled = nextMirrorEnabled
+  syncSelectedPiecesFromQuantities()
+  notifyWorkspaceSettingsChanged()
+}
+
 function isPieceSelected(pieceId: ImportedPiece['id']): boolean {
   return getPieceQuantity(pieceId) > 0
 }
@@ -425,6 +442,7 @@ export function useAppStore() {
     hydrateFromProject,
     hydratePieceQuantities,
     hydratePieceMirrorEnabled,
+    restoreRunPieceConfiguration,
     isPieceSelected,
     setPieceSelected,
     getPieceQuantity,

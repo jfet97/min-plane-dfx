@@ -2,7 +2,9 @@
 import { computed, ref } from 'vue'
 import { useHistoryStore } from '../composables/useHistoryStore.js'
 import { useAppStore } from '../composables/useAppStore.js'
+import { useSettings } from '../composables/useSettings.js'
 import { createRunHistoryGif } from '../utils/runHistoryGif.js'
+import { savedRunRestoreStatus } from '../utils/savedRunConfiguration.js'
 import type { ProjectRunRecord } from '@shared/domain/project.js'
 import type {
   ProjectHistoryRef,
@@ -15,7 +17,10 @@ import { isIrregularHistoryFrame } from '@shared/domain/nesting.js'
 
 const history = useHistoryStore()
 const store = useAppStore()
+const settings = useSettings()
 const showSubRuns = ref(true)
+const isDeleting = ref(false)
+const archiveMessage = ref<{ readonly kind: 'error' | 'success'; readonly text: string } | null>(null)
 
 const emit = defineEmits<{
   'start-next-subrun': []
@@ -88,9 +93,71 @@ function formatDate(value: string): string {
   return date.toLocaleString()
 }
 
-function deleteAllRuns(): void {
-  if (!window.confirm('Delete all saved runs for this project?')) return
+async function deleteRunHistoryFiles(records: ReadonlyArray<ProjectRunRecord>): Promise<boolean> {
+  const api = window.appApi
+  if (!api) {
+    archiveMessage.value = {
+      kind: 'error',
+      text: 'Desktop bridge unavailable. Saved runs were not deleted.'
+    }
+    return false
+  }
+  isDeleting.value = true
+  archiveMessage.value = null
+  try {
+    await api.deleteRunHistories(records.map((record) => record.jobId))
+    return true
+  } catch (error: unknown) {
+    archiveMessage.value = {
+      kind: 'error',
+      text: error instanceof Error ? error.message : 'Could not delete saved-run history files.'
+    }
+    return false
+  } finally {
+    isDeleting.value = false
+  }
+}
+
+async function deleteAllRuns(): Promise<void> {
+  if (!window.confirm('Delete all saved runs and their replay/decision-trace files?')) return
+  const records = [...history.runRecords.value]
+  if (!(await deleteRunHistoryFiles(records))) return
   history.clearRunRecords()
+  archiveMessage.value = { kind: 'success', text: 'Deleted all saved runs and history files.' }
+}
+
+async function deleteRunRecord(record: ProjectRunRecord): Promise<void> {
+  if (!(await deleteRunHistoryFiles([record]))) return
+  history.removeRunRecord(record.jobId)
+  archiveMessage.value = { kind: 'success', text: 'Deleted saved run and history files.' }
+}
+
+function restoreConfiguration(record: ProjectRunRecord): void {
+  const status = savedRunRestoreStatus(record, store.state.value.pieces)
+  if (!status.available || record.request === undefined) {
+    archiveMessage.value = {
+      kind: 'error',
+      text: status.available ? 'Saved-run request snapshot is unavailable.' : status.reason
+    }
+    return
+  }
+  store.restoreRunPieceConfiguration(status.quantities, status.mirrorEnabled)
+  settings.restoreRunConfiguration(record.request)
+  archiveMessage.value = {
+    kind: 'success',
+    text: `Restored ${record.pieceCount} pieces and all run settings.`
+  }
+}
+
+function restoreConfigurationTitle(record: ProjectRunRecord): string {
+  const status = savedRunRestoreStatus(record, store.state.value.pieces)
+  return status.available
+    ? 'Restore sheet, cutting, optimizer, and piece quantities from this saved run.'
+    : status.reason
+}
+
+function canRestoreConfiguration(record: ProjectRunRecord): boolean {
+  return savedRunRestoreStatus(record, store.state.value.pieces).available
 }
 
 function shouldClearReplayReference(error: unknown): boolean {
@@ -198,7 +265,8 @@ function subRunLabel(subRun: NestingSubRun): string {
           v-if="history.runRecords.value.length > 0"
           type="button"
           class="delete-all"
-          title="Delete every saved run record. Source shapes and settings are unchanged."
+          :disabled="isDeleting"
+          title="Delete every saved run record and its managed replay and decision-trace files."
           @click="deleteAllRuns"
         >
           Delete all
@@ -206,6 +274,14 @@ function subRunLabel(subRun: NestingSubRun): string {
       </div>
       <p class="muted">
         Each saved run stores one beam-search result and its NDJSON history reference.
+      </p>
+      <p
+        v-if="archiveMessage"
+        class="archive-message"
+        :class="archiveMessage.kind"
+        role="status"
+      >
+        {{ archiveMessage.text }}
       </p>
     </header>
 
@@ -223,7 +299,7 @@ function subRunLabel(subRun: NestingSubRun): string {
           <button
             type="button"
             class="archive-row"
-            :title="`Restore run ${record.jobId}`"
+            :title="`Open saved result ${record.jobId}`"
             @click="selectRunRecord(record)"
           >
             <strong>{{ record.label }}</strong>
@@ -232,16 +308,26 @@ function subRunLabel(subRun: NestingSubRun): string {
           </button>
           <button
             type="button"
+            class="restore-config"
+            :disabled="isDeleting || !canRestoreConfiguration(record)"
+            :title="restoreConfigurationTitle(record)"
+            @click="restoreConfiguration(record)"
+          >
+            Use config
+          </button>
+          <button
+            type="button"
             class="delete"
-            title="Delete this saved run record. The source project and imports are unchanged."
-            @click="history.removeRunRecord(record.jobId)"
+            :disabled="isDeleting"
+            title="Delete this saved run record and its managed replay and decision-trace files."
+            @click="deleteRunRecord(record)"
           >
             Delete
           </button>
           <button
             type="button"
             class="export-gif"
-            :disabled="!record.history || !supportsGifExport(record)"
+            :disabled="isDeleting || !record.history || !supportsGifExport(record)"
             :title="
               !record.history
                 ? 'GIF export needs a saved history replay for this run.'
@@ -448,7 +534,7 @@ h3 {
 
 .archive-list li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 4px;
 }
 
@@ -483,7 +569,8 @@ h3 {
   background: rgba(0, 122, 204, 0.08);
 }
 
-.delete {
+.delete,
+.restore-config {
   font-size: 10px;
   padding: 2px 6px;
 }
@@ -496,6 +583,19 @@ h3 {
 .delete-all {
   font-size: 10px;
   padding: 2px 6px;
+}
+
+.archive-message {
+  margin: 0;
+  font-size: 10px;
+}
+
+.archive-message.error {
+  color: var(--danger, #e57373);
+}
+
+.archive-message.success {
+  color: var(--text-muted);
 }
 
 .run-card {

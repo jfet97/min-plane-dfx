@@ -1,5 +1,5 @@
 import { reactive, computed, type UnwrapNestedRefs } from 'vue'
-import type { SheetSpec, NestingOptions } from '@shared/domain/nesting.js'
+import type { SheetSpec, NestingOptions, NestingRequest } from '@shared/domain/nesting.js'
 import type { ProjectDocument, WorkspaceProjectSettings } from '@shared/domain/project.js'
 import { DEFAULT_STRATEGY_ID } from '@shared/domain/strategies.js'
 import {
@@ -176,6 +176,14 @@ export function useSettings() {
       state.padding = defaults.padding
       replaceOptions(defaults.options)
       notifyWorkspaceSettingsChanged()
+    },
+    restoreRunConfiguration: (request: NestingRequest): void => {
+      state.sheet.width = request.sheet.width
+      state.sheet.height = request.sheet.height
+      state.sheet.label = request.sheet.label
+      state.padding = request.padding
+      replaceOptions(request.options)
+      notifyWorkspaceSettingsChanged('immediate')
     },
     hydrateFromProject: (project: ProjectDocument): void => {
       state.sheet.width = project.sheet.width

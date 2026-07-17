@@ -51,7 +51,9 @@ A project should include:
 - latest worker result when available;
 - latest NDJSON history reference when available.
 - saved run records with their result, run sheet, piece count, and NDJSON history
-  reference when available.
+  reference when available. New run records also keep the exact initial
+  `NestingRequest`, including expanded copy identities, source geometry,
+  cutting clearance, sheet, and optimizer/job options.
 - CSV imports with their embedded row links and per-CSV run configuration;
 - CSV run records with their subruns, prepared CSV pieces, and remaining
   unplaced piece ids.
@@ -77,11 +79,26 @@ Completed regular runs are saved as project run records in the same temporary
 settings payload. A run record keeps the result, the first sheet used for that
 run, and the NDJSON replay reference, so it can be restored after renderer
 reload even if the user later changes source shapes, quantities, or sheet
-settings. Regular run results may contain multiple manual subruns; each subrun
-keeps its own sheet snapshot in `runSummary.subRuns`. Result rendering uses the
-selected subrun sheet when one is selected, falling back to the run sheet.
-Deleting a run record only removes that archive entry; it does not delete
-imported source shapes or mutate the current project setup.
+settings. The initial worker request is retained separately from later manual
+subrun requests so restoring a multi-plate run never turns its last leftover
+request into the new starting configuration. Regular run results may contain
+multiple manual subruns; each subrun keeps its own sheet snapshot in
+`runSummary.subRuns`. Result rendering uses the selected subrun sheet when one
+is selected, falling back to the run sheet.
+
+The saved-runs `Use config` action checks the request's source-piece identities
+and geometry against the currently imported workspace before changing any
+renderer state. Missing, replaced, or changed source shapes disable the action
+with an explanation. A successful restore atomically replaces sheet, padding,
+all nesting options, selected source quantities, and mirror eligibility. Runs
+saved before request snapshots remain viewable but cannot restore configuration.
+
+Deleting one saved run removes both its archive entry and the main-owned
+`<jobId>.ndjson` / `<jobId>.decision-trace.ndjson` files when present. `Delete
+all` applies the same operation to every archived job. Main derives these paths
+from validated job ids inside the authoritative history directory; renderer
+paths are never trusted for deletion. Imported source shapes and current run
+settings are unchanged.
 
 Manual subruns that belong to the same regular run append their worker-emitted
 history frames to the same durable NDJSON replay file. The first run truncates

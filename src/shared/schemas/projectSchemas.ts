@@ -1,14 +1,14 @@
 import { Schema } from 'effect'
 import {
   ProjectDocument,
-  ProjectRunRecord,
+  WorkspaceProjectSettings,
   ProjectCsvImport,
   CsvRunRecord
 } from '../domain/project.js'
 import { DxfGeometrySummary, ImportWarning } from '../domain/dxf.js'
 import { NestingResult } from '../domain/nesting.js'
 import { JobId, PieceId, SourceFileId } from '../domain/ids.js'
-import { NestingOptionsStrictSchema } from './nestingSchemas.js'
+import { NestingOptionsStrictSchema, NestingRequestStrict } from './nestingSchemas.js'
 import {
   NonNegativeCoordinate,
   PositiveWidth,
@@ -40,6 +40,46 @@ const StrictImportedDxfDocument = Schema.Struct({
   warnings: Schema.Array(ImportWarning)
 })
 
+const StrictSheetSpec = Schema.Struct({
+  width: PositiveWidth,
+  height: PositiveHeight,
+  label: Schema.String
+})
+
+const StrictProjectHistoryRef = Schema.Struct({
+  kind: Schema.Literal('ndjson_replay'),
+  jobId: JobId,
+  path: Schema.String,
+  frameCount: Schema.Number,
+  createdAt: Schema.String
+})
+
+const StrictProjectRunRecord = Schema.Struct({
+  jobId: JobId,
+  createdAt: Schema.String,
+  label: Schema.String,
+  pieceCount: Schema.Number.check(Schema.isGreaterThanOrEqualTo(0)),
+  sheet: StrictSheetSpec,
+  result: NestingResult,
+  history: Schema.Union([StrictProjectHistoryRef, Schema.Null]),
+  request: Schema.optional(NestingRequestStrict)
+})
+
+export const WorkspaceProjectSettingsStrict = Schema.Struct({
+  revision: Schema.optional(Schema.Number),
+  sheet: StrictSheetSpec,
+  padding: NonNegativePadding,
+  pieceQuantities: Schema.Record(
+    Schema.String,
+    Schema.Number.check(Schema.isGreaterThanOrEqualTo(0))
+  ),
+  pieceMirrorEnabled: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
+  options: NestingOptionsStrictSchema,
+  runRecords: Schema.optional(Schema.Array(StrictProjectRunRecord)),
+  selectedCsvId: Schema.optional(Schema.String),
+  csvRunRecords: Schema.optional(Schema.Array(CsvRunRecord))
+})
+
 export const ProjectDocumentStrict = Schema.Struct({
   version: Schema.Union([Schema.Literal(1), Schema.Literal(2)]),
   savedAt: Schema.String,
@@ -53,11 +93,7 @@ export const ProjectDocumentStrict = Schema.Struct({
   ),
   importedPieces: Schema.Array(StrictImportedPiece),
   importedDocuments: Schema.optional(Schema.Array(StrictImportedDxfDocument)),
-  sheet: Schema.Struct({
-    width: PositiveWidth,
-    height: PositiveHeight,
-    label: Schema.String
-  }),
+  sheet: StrictSheetSpec,
   padding: NonNegativePadding,
   pieceQuantities: Schema.optional(
     Schema.Record(Schema.String, Schema.Number.check(Schema.isGreaterThanOrEqualTo(0)))
@@ -65,18 +101,10 @@ export const ProjectDocumentStrict = Schema.Struct({
   pieceMirrorEnabled: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
   options: NestingOptionsStrictSchema,
   lastResult: Schema.optional(NestingResult),
-  lastHistory: Schema.optional(
-    Schema.Struct({
-      kind: Schema.Literal('ndjson_replay'),
-      jobId: JobId,
-      path: Schema.String,
-      frameCount: Schema.Number,
-      createdAt: Schema.String
-    })
-  ),
-  runRecords: Schema.optional(Schema.Array(ProjectRunRecord)),
+  lastHistory: Schema.optional(StrictProjectHistoryRef),
+  runRecords: Schema.optional(Schema.Array(StrictProjectRunRecord)),
   csvImports: Schema.optional(Schema.Array(ProjectCsvImport)),
   csvRunRecords: Schema.optional(Schema.Array(CsvRunRecord))
 })
 
-export type { ProjectDocument }
+export type { ProjectDocument, WorkspaceProjectSettings }

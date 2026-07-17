@@ -42,6 +42,18 @@ Components may read composable state. Writes should go through named actions suc
 
 Avoid direct nested mutation from unrelated modules.
 
+## Saved Run Actions
+
+Opening a saved result and restoring its prior configuration are separate
+actions. `Use config` restores the exact saved request setup only when every
+referenced source shape still exists with the same identity and geometry. The
+button must be disabled with a concise native-title explanation for legacy
+records, missing imports, or changed geometry; it must never partially restore.
+
+Saved-run deletion reports filesystem failures and leaves the archive record in
+place when its managed replay files could not be removed. Single and bulk
+deletion include both replay and irregular decision-trace NDJSON files.
+
 ## Imported Shapes
 
 Supported DXF entities are collected into source shapes. Preset shapes are also

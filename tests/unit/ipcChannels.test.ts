@@ -6,7 +6,8 @@ const requiredRendererChannels = [
   'dxf:select-files',
   'dxf:import-files',
   'dxf:remove-import',
-  'dxf:clear-imports'
+  'dxf:clear-imports',
+  'nesting:delete-run-histories'
 ] satisfies ReadonlyArray<string>
 
 describe('IPC channel allowlist', () => {

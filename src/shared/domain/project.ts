@@ -3,6 +3,7 @@ import { JobId, PieceId, SourceFileId } from './ids.js'
 import { ImportedPiece, ImportedDxfDocument } from './dxf.js'
 import {
   NestingOptions,
+  NestingRequest,
   NestingResult,
   NestingSubRun,
   PreparedPiece,
@@ -33,7 +34,9 @@ export class ProjectRunRecord extends Schema.Class<ProjectRunRecord>('ProjectRun
     )
   ),
   result: NestingResult,
-  history: Schema.Union([ProjectHistoryRef, Schema.Null])
+  history: Schema.Union([ProjectHistoryRef, Schema.Null]),
+  /** Exact initial worker request retained so the run setup can be restored. */
+  request: Schema.optional(NestingRequest)
 }) {}
 
 /** One row from an ABAS/CAMQUIX CUT line. */

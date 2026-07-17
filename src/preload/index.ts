@@ -146,6 +146,12 @@ const api: AppApi = {
       cloneHistoryRefForIpc(ref)
     ).then((r) => r.frames),
 
+  deleteRunHistories: (jobIds) =>
+    invokeEnvelope<[{ readonly jobIds: ReadonlyArray<JobId> }], void>(
+      'nesting:delete-run-histories',
+      { jobIds: [...jobIds] }
+    ),
+
   loadWorkspaceSettings: () =>
     invokeEnvelope<[], { readonly settings: WorkspaceProjectSettings | null }>(
       'workspace:load-settings'

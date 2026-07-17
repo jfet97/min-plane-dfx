@@ -70,6 +70,7 @@ const projectWarning = ref<string | null>(null)
 interface NormalSubrunSession {
   readonly createdAt: string
   readonly sheet: SheetSpec
+  readonly initialRequest: NestingRequest
 }
 
 let normalSubrunSession: NormalSubrunSession | null = null
@@ -284,6 +285,21 @@ function cloneOptions(options: NestingOptions): NestingOptions {
     ...(options.irregularSettings !== undefined
       ? { irregularSettings: cloneIrregularSettings(options.irregularSettings) }
       : {})
+  }
+}
+
+function cloneNestingRequest(request: NestingRequest): NestingRequest {
+  return {
+    version: 1,
+    jobId: request.jobId,
+    sheet: cloneSheet(request.sheet),
+    padding: request.padding,
+    pieces: clonePreparedPieces(request.pieces),
+    ...(request.sourcePieces !== undefined
+      ? { sourcePieces: request.sourcePieces.map(cloneImportedPiece) }
+      : {}),
+    options: cloneOptions(request.options),
+    ...(request.strategyRunId !== undefined ? { strategyRunId: request.strategyRunId } : {})
   }
 }
 
@@ -548,7 +564,8 @@ function cloneRunRecord(record: ProjectRunRecordModel): ProjectRunRecordModel {
     pieceCount: record.pieceCount,
     sheet: cloneSheet(record.sheet),
     result: cloneResult(record.result),
-    history: cloneHistoryRef(record.history)
+    history: cloneHistoryRef(record.history),
+    ...(record.request !== undefined ? { request: cloneNestingRequest(record.request) } : {})
   }
 }
 
@@ -763,9 +780,12 @@ function aggregateNormalSubrunResult(
 }
 
 function saveNormalRunRecord(result: NestingResult, request: NestingRequest): void {
-  const createdAt = normalSubrunSession?.createdAt ?? new Date().toISOString()
-  const sheet = normalSubrunSession?.sheet ?? cloneSheet(request.sheet)
+  const archivedRecord = history.runRecords.value.find((record) => record.jobId === result.jobId)
+  const createdAt =
+    normalSubrunSession?.createdAt ?? archivedRecord?.createdAt ?? new Date().toISOString()
+  const sheet = normalSubrunSession?.sheet ?? archivedRecord?.sheet ?? cloneSheet(request.sheet)
   const pieceCount = result.preparedPieces?.length ?? request.pieces.length
+  const archivedInitialRequest = archivedRecord?.request
   history.addRunRecord({
     jobId: result.jobId,
     createdAt,
@@ -773,7 +793,10 @@ function saveNormalRunRecord(result: NestingResult, request: NestingRequest): vo
     pieceCount,
     sheet,
     result,
-    history: history.state.value.lastHistoryRef
+    history: history.state.value.lastHistoryRef,
+    request: cloneNestingRequest(
+      normalSubrunSession?.initialRequest ?? archivedInitialRequest ?? request
+    )
   } as ProjectRunRecordModel)
 }
 
@@ -792,7 +815,8 @@ async function runNesting(): Promise<void> {
   history.clear()
   normalSubrunSession = {
     createdAt: new Date().toISOString(),
-    sheet: cloneSheet(request.sheet)
+    sheet: cloneSheet(request.sheet),
+    initialRequest: cloneNestingRequest(request)
   }
   centerView.value = 'result'
   await runner.start(request, {

@@ -16,6 +16,7 @@ import {
   type ProjectCsvImport,
   type WorkspaceProjectSettings as WorkspaceProjectSettingsModel
 } from '@shared/domain/project.js'
+import { WorkspaceProjectSettingsStrict } from '@shared/schemas/projectSchemas.js'
 
 export class WorkspaceProjectError extends Error {
   readonly code: 'workspace_error'
@@ -308,12 +309,19 @@ export class WorkspaceProjectService {
   }
 
   saveWorkspaceSettings(settings: WorkspaceProjectSettingsModel): Promise<void> {
+    const strict = Schema.decodeUnknownExit(WorkspaceProjectSettingsStrict)(settings)
+    if (Exit.isFailure(strict)) {
+      return Promise.reject(
+        new WorkspaceProjectError('Workspace settings failed schema validation before save.')
+      )
+    }
+    const decoded = Schema.decodeUnknownSync(WorkspaceProjectSettings)(strict.value)
     const performWrite = () =>
       this.run(
         Effect.gen(function* () {
           const sql = yield* SqlClient.SqlClient
-          const revision = settings.revision ?? Date.now()
-          const json = JSON.stringify({ ...settings, revision })
+          const revision = decoded.revision ?? Date.now()
+          const json = JSON.stringify({ ...decoded, revision })
           const now = new Date().toISOString()
           yield* sql`
             UPDATE projects
@@ -611,16 +619,16 @@ export class WorkspaceProjectService {
 
   private decodeWorkspaceSettings(json: string): WorkspaceProjectSettingsModel {
     const parsed: unknown = JSON.parse(json)
-    const exit = Schema.decodeUnknownExit(WorkspaceProjectSettings)(parsed)
+    const exit = Schema.decodeUnknownExit(WorkspaceProjectSettingsStrict)(parsed)
     if (Exit.isFailure(exit)) {
       const withoutRunRecords = dropRunRecords(parsed)
-      const fallback = Schema.decodeUnknownExit(WorkspaceProjectSettings)(withoutRunRecords)
+      const fallback = Schema.decodeUnknownExit(WorkspaceProjectSettingsStrict)(withoutRunRecords)
       if (Exit.isSuccess(fallback)) {
-        return fallback.value
+        return Schema.decodeUnknownSync(WorkspaceProjectSettings)(fallback.value)
       }
       throw new WorkspaceProjectError('Stored workspace settings failed schema validation.')
     }
-    return exit.value
+    return Schema.decodeUnknownSync(WorkspaceProjectSettings)(exit.value)
   }
 
   private run<A, E>(

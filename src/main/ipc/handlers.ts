@@ -27,9 +27,14 @@ import {
   WorkspaceProjectService,
   WorkspaceProjectError
 } from '../services/WorkspaceProjectService.js'
+import {
+  deleteRunHistoryFiles,
+  RunHistoryArchiveError
+} from '../services/RunHistoryArchiveService.js'
 import { NestingRequest } from '@shared/domain/nesting.js'
 import { NestingRequestStrict } from '@shared/schemas/nestingSchemas.js'
-import { RunGifExportPayload } from '@shared/protocol/ipc.js'
+import { WorkspaceProjectSettingsStrict } from '@shared/schemas/projectSchemas.js'
+import { DeleteRunHistoriesPayload, RunGifExportPayload } from '@shared/protocol/ipc.js'
 import type { IpcResult } from '@shared/protocol/ipc.js'
 import type { Unsubscribe, NestingHistoryEvent } from '@shared/protocol/ipc.js'
 import type { JobId } from '@shared/domain/ids.js'
@@ -74,6 +79,7 @@ export const IPC_CHANNELS = [
   'nesting:export-history',
   'nesting:export-run-gif',
   'nesting:load-replay',
+  'nesting:delete-run-histories',
   'nesting:run',
   'nesting:cancel',
   'nesting:on-history',
@@ -134,9 +140,13 @@ function createSupervisor(): WorkerSupervisor {
   // that case rather than silently swallowing it.
   return new WorkerSupervisor({
     workerPath: getWorkerPath(),
-    historyDirectory: join(app.getPath('userData'), 'dfx-min-project', 'history'),
+    historyDirectory: getHistoryDirectory(),
     defaultTimeoutMs: 60_000
   })
+}
+
+function getHistoryDirectory(): string {
+  return join(app.getPath('userData'), 'dfx-min-project', 'history')
 }
 
 function getWorkerPath(): string {
@@ -526,7 +536,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     'workspace:save-settings',
     async (_event: IpcMainInvokeEvent, raw: unknown): Promise<IpcResult<void>> => {
-      const decoded = Schema.decodeUnknownExit(WorkspaceProjectSettings)(raw)
+      const decoded = Schema.decodeUnknownExit(WorkspaceProjectSettingsStrict)(raw)
       if (Exit.isFailure(decoded)) {
         return {
           ok: false,
@@ -537,7 +547,9 @@ export function registerIpcHandlers(): void {
         }
       }
       try {
-        await getWorkspace().saveWorkspaceSettings(decoded.value)
+        await getWorkspace().saveWorkspaceSettings(
+          Schema.decodeUnknownSync(WorkspaceProjectSettings)(decoded.value)
+        )
         return { ok: true, value: undefined }
       } catch (err) {
         return fromWorkspaceError(err)
@@ -546,7 +558,7 @@ export function registerIpcHandlers(): void {
   )
 
   ipcMain.on('workspace:save-settings-sync', (_event: IpcMainEvent, raw: unknown): void => {
-    const decoded = Schema.decodeUnknownExit(WorkspaceProjectSettings)(raw)
+    const decoded = Schema.decodeUnknownExit(WorkspaceProjectSettingsStrict)(raw)
     if (Exit.isFailure(decoded)) {
       _event.returnValue = {
         ok: false,
@@ -560,7 +572,9 @@ export function registerIpcHandlers(): void {
     // The renderer is about to tear down on reload. Fire the save and return
     // immediately; the main process outlives the renderer, so the Effect write
     // commits on its event loop even after teardown.
-    void getWorkspace().saveWorkspaceSettings(decoded.value)
+    void getWorkspace().saveWorkspaceSettings(
+      Schema.decodeUnknownSync(WorkspaceProjectSettings)(decoded.value)
+    )
     _event.returnValue = { ok: true, value: undefined }
   })
 
@@ -713,6 +727,39 @@ export function registerIpcHandlers(): void {
           error: {
             code: 'file_read_error',
             message: err instanceof Error ? err.message : 'unknown error'
+          }
+        }
+      }
+    }
+  )
+
+  ipcMain.handle(
+    'nesting:delete-run-histories',
+    async (_event: IpcMainInvokeEvent, raw: unknown): Promise<IpcResult<void>> => {
+      const decoded = Schema.decodeUnknownExit(DeleteRunHistoriesPayload)(raw)
+      if (Exit.isFailure(decoded)) {
+        return {
+          ok: false,
+          error: {
+            code: 'validation_error',
+            message: 'Invalid saved-run history deletion payload.'
+          }
+        }
+      }
+      try {
+        await deleteRunHistoryFiles(getHistoryDirectory(), decoded.value.jobIds)
+        return { ok: true, value: undefined }
+      } catch (error: unknown) {
+        return {
+          ok: false,
+          error: {
+            code: 'file_write_error',
+            message:
+              error instanceof RunHistoryArchiveError
+                ? error.message
+                : error instanceof Error
+                  ? error.message
+                  : 'Could not delete saved-run history files.'
           }
         }
       }

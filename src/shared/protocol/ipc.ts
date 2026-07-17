@@ -12,7 +12,7 @@ import {
   ProjectCsvImport,
   CsvRunRecord
 } from '../domain/project.js'
-import type { JobId, PieceId, SourceFileId } from '../domain/ids.js'
+import { JobId, type PieceId, type SourceFileId } from '../domain/ids.js'
 import type { SerializedAppError } from './errors.js'
 import {
   WorkerHistoryCompleteResponse,
@@ -25,6 +25,12 @@ export type Unsubscribe = () => void
 export class RunGifExportPayload extends Schema.Class<RunGifExportPayload>('RunGifExportPayload')({
   defaultName: Schema.String,
   bytes: Schema.Uint8Array
+}) {}
+
+export class DeleteRunHistoriesPayload extends Schema.Class<DeleteRunHistoriesPayload>(
+  'DeleteRunHistoriesPayload'
+)({
+  jobIds: Schema.Array(JobId).pipe(Schema.check(Schema.isNonEmpty()))
 }) {}
 
 /**
@@ -71,6 +77,7 @@ export interface AppApi {
   readonly loadHistoryReplay: (
     ref: ProjectHistoryRef
   ) => Promise<ReadonlyArray<NestingHistoryFramePayload>>
+  readonly deleteRunHistories: (jobIds: ReadonlyArray<JobId>) => Promise<void>
 
   // Phase 8
   readonly loadWorkspaceSettings: () => Promise<WorkspaceProjectSettings | null>

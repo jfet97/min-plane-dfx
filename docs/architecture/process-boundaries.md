@@ -38,6 +38,7 @@ Main owns:
 - temporary workspace settings persistence;
 - project save/open;
 - export requests/results/history;
+- validated deletion of saved-run replay and decision-trace files;
 - worker supervision;
 - IPC result translation.
 
@@ -97,6 +98,11 @@ and are not streamed to the renderer. Per-decode registries replace repeated
 canonical chromosome, state, and candidate keys with compact deterministic ids,
 and the worker persists ordered bounded batches rather than appending each event
 separately.
+
+Saved-run history deletion is a main-process filesystem operation. Renderer
+requests contain only schema-decoded job ids; main derives the two managed
+filenames under its configured history root and rejects unsafe path segments
+before removing any file.
 
 The main supervisor guards every streamed response by both request id and job
 id before forwarding it. The preload decodes each `progress`, `history_frame`,
