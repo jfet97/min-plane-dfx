@@ -1,0 +1,4 @@
+interface:
+  display_name: "Render SVG with Electron"
+  short_description: "Create complete readable PNG previews from SVG"
+  default_prompt: "Use $render-svg-with-electron to convert this SVG into a complete readable PNG preview."
