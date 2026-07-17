@@ -452,6 +452,9 @@ engine should borrow these search structures only through real placement
 generation and validation; it must not hardcode a screenshot motif.
 The source-backed comparison of libnest2d, PackingSolver, and Sparrow is recorded
 in [Open-Source Irregular Nesting Strategy Comparison](./docs/research/open-source-irregular-nesting-strategies.md).
+The broader literature and current-source review of scoring, beam diversity,
+terminal compaction, repeated motifs, and collision-engine performance is in
+[Irregular Nesting Literature and Web Research](./docs/research/irregular-nesting-literature-and-web-research.md).
 
 ## End-To-End Pipeline
 
