@@ -184,15 +184,19 @@ strongly than global consolidation.
 
 ## Current Repository State
 
-`main` and `origin/main` now point to `ef1fbe2`, the first production checkpoint
-that reproduces the explicitly approved mixed-61 layout exactly.
+`main` and `origin/main` now point to `ff5e266`. The production search behavior
+still comes from `ef1fbe2`, the first checkpoint that reproduces the explicitly
+approved mixed-61 layout exactly; `ff5e266` adds only the sheet-invariance
+diagnostic corpus and does not change placement, scoring, or search.
 
 The accepted checkpoint chain is:
 
 - `968f164`: record immutable nesting-experiment provenance;
 - `32c1951`: move this handoff into `help/` and add portable reference SVGs;
 - `ef1fbe2`: restore the approved `ac75222` beam-search semantics and port the
-  exact `depth21-total2` post-20 comparator into production.
+  exact `depth21-total2` post-20 comparator into production;
+- `ff5e266`: add the seven-fixture sheet-invariance corpus, exact layout
+  canonicalization, and the persisted mixed-61 request.
 
 `ef1fbe2` deliberately removes the later scale-diverse escape paths that changed
 the search trajectory: the extra positive-contact balanced local candidate and
@@ -1487,3 +1491,13 @@ would falsify each one, and identify the smallest safe production experiment.
   chain, and mixed-61 can reduce area while increasing free-material holes from
   one to nine. Future intrinsic-comparator changes therefore require independent
   golden, hole, contact/connectivity, and invariance gates.
+- Integrated the corpus as `ff5e266` and reran it on the restored production
+  behavior. The `2000 x 2700` mixed-61 case remains the exact approved
+  `564.660 x 773.545 mm` layout with two holes. The same request on
+  `1000 x 1700` becomes a `515.765 x 1382.896 mm` strip, proving that the open
+  sheet-dependence is large and reproducible. The report and SVGs are under
+  `/private/tmp/irregular-sheet-invariance-main-ff5e266/`.
+- Recorded a follow-up for small filler pieces: visible cavities can remain
+  empty while small rectangles form an external island. Investigate bounded
+  cavity access or deferral only after the intrinsic comparator is integrated
+  and gated; do not globally reverse the user-owned initial piece order.
