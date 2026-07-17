@@ -343,6 +343,7 @@ export function runWindowedIrregularBeam(input: {
           })
           candidateCount += localCandidates.length
           const selected = selectLocalCandidates(
+            state,
             localCandidates,
             placementScorer,
             localCandidateFanout,
@@ -846,6 +847,7 @@ function repairTerminalState(input: {
         ...(input.options !== undefined ? { options: input.options } : {})
       })
       const selected = selectLocalCandidates(
+        baseState,
         localCandidates,
         input.placementScorer,
         input.candidateFanout,
@@ -1126,6 +1128,7 @@ function makeNfpIfpControl(
 }
 
 function selectLocalCandidates(
+  state: IrregularBeamState,
   candidates: ReadonlyArray<LocalCandidate>,
   placementScorer: IrregularPlacementScorer.Service,
   maximumCount: number,
@@ -1203,7 +1206,7 @@ function selectLocalCandidates(
     enableProtectedIntrinsic &&
     maximumCount >= 3 &&
     first?.score.policyId === EDGE_CONTACT_THEN_BALANCED_COMPACTNESS_POLICY_ID
-      ? selectProtectedIntrinsicContactCandidate(selected, rankedCandidates)
+      ? selectProtectedIntrinsicContactCandidate(state, selected, rankedCandidates)
       : undefined
   const intrinsicReserved =
     protectedIntrinsic !== undefined && !selected.includes(protectedIntrinsic)
@@ -1336,6 +1339,7 @@ function selectLocalCandidates(
 }
 
 function selectProtectedIntrinsicContactCandidate(
+  state: IrregularBeamState,
   selected: ReadonlyArray<LocalCandidate>,
   rankedCandidates: ReadonlyArray<LocalCandidate>
 ): LocalCandidate | undefined {
@@ -1345,7 +1349,9 @@ function selectProtectedIntrinsicContactCandidate(
     Order.make((first, second) =>
       compareIntrinsicCompactnessPlacementScores(first.score, second.score)
     ),
-    Order.mapInput(Order.String, (candidate) => localCandidateKey(candidate))
+    Order.mapInput(Order.String, (candidate) =>
+      intrinsicLocalCandidateGeometryKey(state, candidate)
+    )
   ])
   const eligibleContactLengths = [...selectedByContactLength.entries()]
     .filter(
@@ -1361,6 +1367,41 @@ function selectProtectedIntrinsicContactCandidate(
     if (intrinsicWinner !== undefined) return intrinsicWinner
   }
   return undefined
+}
+
+function intrinsicLocalCandidateGeometryKey(
+  state: IrregularBeamState,
+  candidate: LocalCandidate
+): string {
+  const absoluteRings = [
+    ...state.placedCollisionGeometries.map(({ placement, collisionGeometry }) =>
+      collisionGeometry.polygon.points.map((point) => ({
+        x: point.x + placement.transform.translateX,
+        y: point.y + placement.transform.translateY
+      }))
+    ),
+    candidate.moving.polygon.points.map((point) => ({
+      x: point.x + candidate.candidate.point.x,
+      y: point.y + candidate.candidate.point.y
+    }))
+  ]
+  let minX = Number.POSITIVE_INFINITY
+  let minY = Number.POSITIVE_INFINITY
+  for (const ring of absoluteRings) {
+    for (const point of ring) {
+      minX = Math.min(minX, point.x)
+      minY = Math.min(minY, point.y)
+    }
+  }
+  return JSON.stringify(
+    absoluteRings
+      .map((ring) =>
+        canonicalCollisionPolygonKey(
+          ring.map(({ x, y }) => ({ x: x - minX, y: y - minY }))
+        )
+      )
+      .toSorted()
+  )
 }
 
 function groupLocalCandidatesByContactLength(
@@ -1777,10 +1818,6 @@ const protectedIntrinsicStrictScoreOrder: Order.Order<ScoredState> = Order.combi
   scoredStateCriterion((score) => score.collisionBoundsAreaMm2),
   scoredStateCriterion((score) => score.collisionBoundsSpanMm),
   rawHullWasteStateCriterion,
-  descendingScoredStateCriterion((score) => score.largestNetFreeMaterialRegionAreaMm2),
-  scoredStateCriterion((score) => score.freeMaterialRegionCount),
-  scoredStateCriterion((score) => score.freeMaterialHoleCount),
-  scoredStateCriterion((score) => score.freeMaterialSliverMetric),
   Order.mapInput(Order.Array(Order.String), ({ score }) => score.placementOrder),
   Order.mapInput(Order.Array(Order.String), ({ score }) => score.unplacedSourcePieceIds),
   intrinsicGeometryStateCriterion
@@ -1801,10 +1838,6 @@ const protectedIntrinsicScaleAwareScoreOrder: Order.Order<ScoredState> = Order.c
   scoredStateCriterion((score) => score.collisionBoundsSpanMm),
   rawHullWasteStateCriterion,
   descendingScoredStateCriterion((score) => score.nearCompleteStructuralContactCount),
-  descendingScoredStateCriterion((score) => score.largestNetFreeMaterialRegionAreaMm2),
-  scoredStateCriterion((score) => score.freeMaterialRegionCount),
-  scoredStateCriterion((score) => score.freeMaterialHoleCount),
-  scoredStateCriterion((score) => score.freeMaterialSliverMetric),
   Order.mapInput(Order.Array(Order.String), ({ score }) => score.placementOrder),
   Order.mapInput(Order.Array(Order.String), ({ score }) => score.unplacedSourcePieceIds),
   intrinsicGeometryStateCriterion
