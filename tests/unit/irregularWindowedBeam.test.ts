@@ -21,6 +21,7 @@ import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
 import { NfpIfpService } from '../../src/workers/irregular/services.js'
 import { IrregularLayoutScorer } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/irregularPlacementScorer.js'
+import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
 import { decodeStrictPriorityOrder } from '../../src/workers/algorithm/irregular/strictPriorityDecoder.js'
 import {
   decodeWindowedIrregularBeam,
@@ -402,18 +403,19 @@ describe('decodeWindowedIrregularBeam', () => {
     const events: IrregularDecisionTraceEvent[] = []
     const emittedPlacementCounts: number[] = []
     const result = await runWindowed(
-      sheet(6, 1),
+      sheet(6, 4),
       [preparedPiece('a', 1, 1), preparedPiece('b', 1, 1)],
       Layer.succeed(
         GeometrySettings,
         settings(1, 1, 1, 'balanced-compactness', 1)
       ),
       candidateService(({ moving, placed }) => {
-        if (placed.length === 0) return [oneCandidate(moving, 0)]
+        if (placed.length === 0) return [oneCandidate(moving, 0, 2)]
         return [
           oneCandidate(
             moving,
-            moving.sourcePieceId === PieceId.make('a') ? 2 : 3
+            moving.sourcePieceId === PieceId.make('a') ? 2 : 3,
+            2
           )
         ]
       }),
@@ -434,8 +436,14 @@ describe('decodeWindowedIrregularBeam', () => {
       result.bestState.placedCollisionGeometries.map(
         ({ placement }) => placement.transform.translateX
       )
-    ).toEqual([2, 3])
+    ).toEqual([0, 1])
     expect(result.bestScore.nearCompleteStructuralContactCount).toBe(1)
+    expect(result.bestScore.collisionBoundsBottomMm).toBe(0)
+    expect(
+      result.bestState.placedCollisionGeometries.map(
+        ({ placement }) => placement.transform.translateY
+      )
+    ).toEqual([0, 0])
     expect(emittedPlacementCounts).toEqual([0, 1, 2])
     expect(events).toContainEqual(
       expect.objectContaining({
@@ -446,8 +454,32 @@ describe('decodeWindowedIrregularBeam', () => {
     )
     const acceptedRepair = events.findLast((event) => event.kind === 'local_repair_accepted')
     const winner = events.findLast((event) => event.kind === 'decode_winner')
-    expect(winner?.state.stateId).toBe(acceptedRepair?.state.stateId)
-    expect(winner?.score).toEqual(acceptedRepair?.score)
+    expect(winner?.state.stateId).not.toBe(acceptedRepair?.state.stateId)
+    expect(winner?.score.nearCompleteStructuralContactCount).toBe(
+      acceptedRepair?.score.nearCompleteStructuralContactCount
+    )
+    expect(winner?.score.sharedCollisionBoundaryContactUnits).toBe(
+      acceptedRepair?.score.sharedCollisionBoundaryContactUnits
+    )
+    expect(acceptedRepair?.score.collisionBoundsBottomMm).toBe(2)
+    expect(winner?.score.collisionBoundsBottomMm).toBe(0)
+  })
+
+  it('bottom-anchors a repair-enabled terminal layout before returning it', async () => {
+    const result = await runWindowed(
+      sheet(6, 4),
+      [preparedPiece('a', 1, 1)],
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 1, 1, 'balanced-compactness', 1)
+      ),
+      candidateService(({ moving }) => [oneCandidate(moving, 0, 2)])
+    )
+
+    expect(
+      result.bestState.placedCollisionGeometries[0]?.placement.transform.translateY
+    ).toBe(0)
+    expect(result.bestScore.collisionBoundsBottomMm).toBe(0)
   })
 
   it('keeps a compactness alternative beside the edge-contact winner', async () => {
@@ -569,6 +601,35 @@ describe('decodeWindowedIrregularBeam', () => {
     )
 
     expect(emittedPlacementCounts).toEqual([0, 1, 2])
+  })
+
+  it('bottom-left normalizes every emitted winning-history state', async () => {
+    const emittedBounds: Array<readonly [number, number]> = []
+    const recordBounds = (state: IrregularBeamState): void => {
+      const bounds = state.translatedCollisionBounds
+      if (bounds !== undefined) emittedBounds.push([bounds.minX, bounds.minY])
+    }
+    const result = await runWindowed(
+      sheet(8, 6),
+      [preparedPiece('a', 1, 1), preparedPiece('b', 1, 1)],
+      Layer.succeed(GeometrySettings, settings(1, 1, 1)),
+      candidateService(({ moving, placed }) => [
+        oneCandidate(moving, placed.length === 0 ? 2 : 4, 2)
+      ]),
+      undefined,
+      {
+        onInitialState: recordBounds,
+        onStateSelected: ({ state }) => recordBounds(state)
+      }
+    )
+
+    expect(result.bestState.translatedCollisionBounds?.minX).toBe(2)
+    expect(result.bestState.translatedCollisionBounds?.minY).toBe(2)
+    expect(emittedBounds).toEqual([
+      [0, 0],
+      [0, 0],
+      [0, 0]
+    ])
   })
 
   it('can select the second eligible piece when it produces the better branch', async () => {

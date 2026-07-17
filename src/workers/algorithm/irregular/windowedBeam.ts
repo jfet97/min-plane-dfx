@@ -415,7 +415,19 @@ export function runWindowedIrregularBeam(input: {
           score: decisionTraceLayoutScore(currentRepair.score)
         }))
       }
-      repairedBest = currentRepair
+      const bottomAnchoredState = currentRepair.state.withBottomLeftAnchored()
+      repairedBest =
+        bottomAnchoredState === undefined || bottomAnchoredState === currentRepair.state
+          ? currentRepair
+          : {
+              state: bottomAnchoredState,
+              score: yield* layoutScorer.scoreState({
+                sheet: input.sheet,
+                state: bottomAnchoredState
+              }),
+              key: stateKey(bottomAnchoredState),
+              isIncumbent: false
+            }
     }
     const finalRanked =
       repairedBest === undefined || repairedBest === initialBest
@@ -934,14 +946,17 @@ function emitWinningPath(
   if (hooks === undefined) return
   const path = winningStatePath(bestState)
   const initialState = path[0]
-  if (initialState !== undefined) hooks.onInitialState?.(initialState)
+  if (initialState !== undefined) {
+    hooks.onInitialState?.(initialState.withBottomLeftAnchored() ?? initialState)
+  }
   for (let index = 1; index < path.length; index += 1) {
     const state = path[index]
     if (state === undefined) continue
+    const bottomLeftState = state.withBottomLeftAnchored() ?? state
     hooks.onStateSelected?.({
       stepIndex: index - 1,
       beamRank: 0,
-      state,
+      state: bottomLeftState,
       candidateCount: candidateCounts[index - 1] ?? 0
     })
   }

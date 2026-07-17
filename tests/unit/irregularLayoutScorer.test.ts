@@ -218,6 +218,34 @@ function scoreWithService(
 }
 
 describe('IrregularLayoutScorer', () => {
+  it('preserves translation-invariant layout quality while bottom-anchoring', async () => {
+    const raised = state([
+      placedRectangle('left', 1, 1, 1.125, 2.375),
+      placedRectangle('right', 1, 1, 2.125, 2.375)
+    ])
+    const anchored = raised.withBottomLeftAnchored()
+
+    expect(anchored).toBeDefined()
+    if (anchored === undefined) return
+
+    const raisedScore = await score(raised)
+    const anchoredScore = await score(anchored)
+    expect(anchored.sharedCollisionBoundaryLengthMm).toBe(
+      raised.sharedCollisionBoundaryLengthMm
+    )
+    expect(anchored.sharedCollisionBoundaryContactUnits).toBe(
+      raised.sharedCollisionBoundaryContactUnits
+    )
+    expect(anchored.nearCompleteStructuralContactCount).toBe(
+      raised.nearCompleteStructuralContactCount
+    )
+    expect(anchoredScore.collisionBoundsAreaMm2).toBe(raisedScore.collisionBoundsAreaMm2)
+    expect(anchoredScore.occupiedHullWasteRatio).toBe(raisedScore.occupiedHullWasteRatio)
+    expect(anchoredScore.collisionBoundsBottomMm).toBe(0)
+    expect(anchoredScore.collisionBoundsLeftMm).toBe(0)
+    expect(await compareScores(anchoredScore, raisedScore)).toBeLessThan(0)
+  })
+
   it('lets unplaced count dominate every prettier layout', async () => {
     const complete = await score(state([placedRectangle('placed', 8, 8, 0, 0)]))
     const incomplete = await score(state([placedRectangle('placed', 1, 1, 0, 0)], ['missing']))

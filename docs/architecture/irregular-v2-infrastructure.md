@@ -109,12 +109,19 @@ regenerates legal NFP/IFP candidates against the remaining layout, scores at
 most the configured budget of local candidates per removal, and commits only
 the single best strict whole-layout improvement. The pass uses the same geometry
 legality and whole-layout comparator as the beam; it does not move pieces to
-invented coordinates. A strict improvement remains the terminal winner at its
-accepted legal coordinates; final selection does not rewrite or re-rank it
-against states that were already worse than the original beam winner. Because
-the budget also bounds accepted iterations and per-piece candidate fanout,
-enabling repair is an explicit quality/cost choice and applies to every baseline
-or GA decode.
+invented coordinates. Repair exploration keeps its legal sheet-space freedom;
+anchoring intermediate states would make the sheet edges block later
+reinsertion paths. After the final improvement, the completed winner is rigidly
+translated to the sheet bottom-left. The state preserves the exact
+translation-invariant contact metrics derived before the shift, avoiding a
+second floating-point collinearity classification of unchanged contacts. The
+anchored improvement remains the terminal winner and is not re-ranked against
+states that were already worse than the original beam winner. Winning-path
+history hooks receive an equivalent bottom-left-normalized copy of every frame,
+so replay does not visually drift across the sheet even though search uses its
+original legal coordinates. Because the budget also bounds accepted iterations
+and per-piece candidate fanout, enabling repair is an explicit quality/cost
+choice and applies to every baseline or GA decode.
 
 The concrete transform-profile factories are convenience bundles over those
 persisted explicit settings, not a separate configuration model. Fast identity

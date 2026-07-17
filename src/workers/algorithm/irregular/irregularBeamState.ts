@@ -1,5 +1,9 @@
 import type { PieceId } from '@shared/domain/ids.js'
-import type { IrregularPlacedPiece, IrregularPreparedPiece } from '@shared/irregular/domain.js'
+import {
+  IrregularPlacement,
+  IrregularPlacedPiece,
+  type IrregularPreparedPiece
+} from '@shared/irregular/domain.js'
 import {
   makePlacedCollisionSpatialIndex,
   type PlacedCollisionSpatialEntry,
@@ -201,6 +205,76 @@ export class IrregularBeamState {
         nearCompleteStructuralContactSignatureCounts:
           this.nearCompleteStructuralContactSignatureCounts,
         placedCollisionIndex: this.placedCollisionIndex
+      }
+    )
+  }
+
+  /**
+   * Rigidly translates the layout to the sheet bottom-left while preserving
+   * translation-invariant contact metadata derived before the coordinate shift.
+   */
+  withBottomLeftAnchored(): IrregularBeamState | undefined {
+    const bounds = this.translatedCollisionBounds
+    if (bounds === undefined || (bounds.minX === 0 && bounds.minY === 0)) return this
+
+    const translateX = -bounds.minX
+    const translateY = -bounds.minY
+    const placedCollisionGeometries: IrregularPlacedPiece[] = []
+    for (const { placement, collisionGeometry } of this.placedCollisionGeometries) {
+      const nextTranslateX = placement.transform.translateX + translateX
+      const nextTranslateY = placement.transform.translateY + translateY
+      if (!Number.isFinite(nextTranslateX) || !Number.isFinite(nextTranslateY)) return undefined
+      placedCollisionGeometries.push(
+        new IrregularPlacedPiece({
+          placement: new IrregularPlacement({
+            sourcePieceId: placement.sourcePieceId,
+            ...(placement.pieceId !== undefined ? { pieceId: placement.pieceId } : {}),
+            ...(placement.placementReference !== undefined
+              ? { placementReference: placement.placementReference }
+              : {}),
+            transform: {
+              ...placement.transform,
+              translateX: nextTranslateX,
+              translateY: nextTranslateY
+            }
+          }),
+          collisionGeometry
+        })
+      )
+    }
+
+    const canonicalEntryKeys = Object.freeze(
+      placedCollisionGeometries.map(canonicalPlacedGeometryKey).toSorted(compareCanonicalKeys)
+    )
+    const placedCollisionIndex = makePlacedCollisionSpatialIndex(placedCollisionGeometries)
+    return IrregularBeamState.fromDerivedMetadata(
+      {
+        remainingPreparedPieces: this.remainingPreparedPieces,
+        placedCollisionGeometries,
+        unplacedPieceIds: this.unplacedPieceIds,
+        placementOrder: this.placementOrder,
+        ...(this.parent !== undefined ? { parent: this.parent } : {}),
+        placedCollisionIndex
+      },
+      {
+        canonicalEntryKeys,
+        canonicalOccupiedGeometryKey: canonicalEntryListKey(canonicalEntryKeys),
+        translatedCollisionBounds: {
+          minX: 0,
+          minY: 0,
+          maxX: bounds.width,
+          maxY: bounds.height,
+          width: bounds.width,
+          height: bounds.height
+        },
+        sharedCollisionBoundaryLengthMm: this.sharedCollisionBoundaryLengthMm,
+        sharedCollisionBoundaryContactUnits: this.sharedCollisionBoundaryContactUnits,
+        nearCompleteStructuralContactCount: this.nearCompleteStructuralContactCount,
+        dominantNearCompleteStructuralContactCount:
+          this.dominantNearCompleteStructuralContactCount,
+        nearCompleteStructuralContactSignatureCounts:
+          this.nearCompleteStructuralContactSignatureCounts,
+        placedCollisionIndex
       }
     )
   }

@@ -1633,6 +1633,13 @@ were measured and regressed the layout. The bounded terminal remove-and-reinsert
 pass instead uses the existing legal candidate generator and whole-layout score
 to reach 24 structural contacts, cycle rank `5`, collision-bounds area
 `80174.3328 mm2`, and hull waste ratio `0.047619` in about `4.53 s`.
+The completed repaired winner is rigidly bottom-left-anchored after exploration
+so removing the last boundary-touching piece cannot strand an otherwise
+translation-equivalent compact lattice inside the sheet. Intermediate search
+states remain unanchored because moving them to the sheet edges blocks later
+reinsertion paths. Winning-path replay receives bottom-left-normalized copies of
+every frame, while the final translation preserves the contact topology already
+derived for the unchanged rigid layout.
 `localRepairBudget = 0` remains the fast default. The settings panel exposes the
 measured combination as an explicit `Apply compact preset` action because broad
 search and repair should not silently apply to every large-piece-count job. A
