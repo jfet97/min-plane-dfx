@@ -333,7 +333,13 @@ protects or rebuilds the more compact triangle lattice.
 
 ### Interpreting Failed Golden Gates
 
-A failed triangle golden is a shipping gate, not a permanent research veto.
+A triangle-golden failure means **not safe to ship as-is**, not **the
+algorithmic idea is useless**. It is a shipping gate, not a permanent research
+veto. In particular, Candidate L/L2 remain valid research branches: their
+sheet-intrinsic ranking ingredients may still be useful when combined with
+whole-beam diversity, order/rotation search, or a decoder that protects or
+rebuilds the compact triangle lattice.
+
 Every experiment must be classified in two separate ways:
 
 1. **Production readiness:** a candidate that breaks legality, the accepted
