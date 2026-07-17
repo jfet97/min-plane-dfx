@@ -87,6 +87,24 @@ mixed-61 sheets. No GA change, intrinsic candidate-diversity experiment, cavity
 filler experiment, or trace compaction experiment is production behavior until
 it passes the gates above and is explicitly merged.
 
+### Active Isolated Experiments
+
+The following work is deliberately outside `main` until every mandatory gate
+passes:
+
+- `dual-policy-sheet-invariance`: retain balanced-compactness and edge-contact
+  local survivors together, then use intrinsic whole-layout ranking;
+- `bounded_ga_probe`: vary only piece order and rotation while always retaining
+  the deterministic baseline;
+- `deterministic_portfolio_probe`: test bounded large-first, small-fill, and
+  orientation-family diversity without increasing beam width;
+- `sheet_divergence_audit`: identify the first mixed-61 beam step where two
+  sheet sizes discard different geometry.
+
+Every completed experiment must be recorded below as accepted or rejected. An
+uncommitted temporary script or a visually attractive image is not production
+evidence.
+
 ### Open-Source Control Conclusion
 
 The source-level review is preserved in
@@ -247,12 +265,20 @@ that contact count cannot compensate for the sheet-normalized local ranking
 selecting a worse intrinsic motif. These four sheet sizes are mandatory gates
 for the isolated local-ranking fix; no further manual UI runs are required.
 
-The next candidate is the canonical occupied-envelope tuple `(longest side mm,
-shortest side mm)`, applied consistently to local balanced ranking,
-whole-layout ranking, the compactness survivor, and terminal selection. This
-tuple is invariant under sheet dimensions and rigid quarter-turns. It is not an
-accepted change until the exact triangle golden, mixed-61 reference, mixed-50,
-and focused scorer tests pass and their artifacts are recorded.
+Candidate J on isolated branch `dual-policy-sheet-invariance` combined two local
+survivors with an intrinsic global tuple. It passed all 64 focused triangle,
+windowed-beam, and layout-scorer tests, including the exact triangle golden, but
+failed the first mixed-61 sheet gate:
+
+| Sheet | Envelope | Area | Structural contacts | Holes |
+| --- | --- | ---: | ---: | ---: |
+| `2000 x 2700` | `662.870 x 670.565 mm` | `444,497.578 mm2` | `54` | `0` |
+| `1000 x 1700` | `825.162 x 859.396 mm` | `709,140.553 mm2` | `56` | `3` |
+
+The canonical geometry hashes differ. Candidate J is therefore rejected as a
+production change even though its reference-sheet result is close to the
+approved checkpoint. The current audit is locating the first divergent beam
+step; deterministic portfolio and bounded-GA probes are running independently.
 
 ## Required Research Behavior
 
