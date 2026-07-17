@@ -15,7 +15,8 @@ paths.
 Do not present a generated layout as reproducible unless this ledger records the
 source commit, uncommitted diff or injected comparator, exact request, settings,
 metrics, and artifact hashes. Future experiments must write an immutable manifest
-under `/private/tmp/min-plane-provenance/` before production code is changed.
+in their isolated worktree before production code is changed. Promote accepted
+artifacts into `help/artifacts/` and durable research reports into `help/research/`.
 
 ### Approved Mixed-61 Reference: `depth21-total2`
 
@@ -25,7 +26,7 @@ confused with later scale-diversity experiments or with current UI output.
 ```text
 experiment:          depth21-total2
 repository base:     ac75222
-experimental source: /private/tmp/run-saved-comparator-sweep.mts
+experimental source: historical comparator sweep captured by the manifest below
 production ancestor: 381cd2f
 saved request job:    780d4ec5-b64e-4f48-a8d8-0bfd30877549
 sheet:                2000 x 2700 mm
@@ -75,10 +76,10 @@ The key sheet/code comparisons are also tracked with this document:
 See [the artifact manifest](artifacts/README.md) for source commits, requests,
 expected bounds, and hashes.
 
-The immutable PNG matches the user-approved reference byte-for-byte. The old
-`/private/tmp/mixed-depth21-total2.svg` was overwritten by a later experiment
-while the similarly named PNG was not; that legacy pair has mixed provenance
-and must never be used as a reproducibility source.
+The repository PNG matches the user-approved reference byte-for-byte. A legacy
+SVG with the same experiment name was overwritten by a later experiment while
+its PNG was not; that legacy pair has mixed provenance and must never be used as
+a reproducibility source.
 
 Commit `b164d61` later added an extra positive-contact balanced candidate and a
 post-20 compactness survivor. Those mechanisms changed the search path. The
@@ -98,7 +99,7 @@ normalized contact units:  58.907038
 ```
 
 The verification artifact is
-`/private/tmp/min-plane-provenance/known-good-port/780d4ec5-b64e-4f48-a8d8-0bfd30877549/current.svg`.
+[`help/artifacts/approved-mixed61-ac75222-2000x2700.svg`](artifacts/approved-mixed61-ac75222-2000x2700.svg).
 Sheet-independent compactness is deliberately a separate follow-up; it must not
 be mixed into this known-good checkpoint.
 
@@ -133,11 +134,8 @@ intrinsic area/span/axis orders breaks the triangle golden. The next experiment
 must remove sheet dependence from local tie-breaks while preserving structural
 contact behavior; none of the six whole-layout-only variants was merged.
 
-Sweep manifests and SVGs are under:
-
-```text
-/private/tmp/min-plane-provenance/intrinsic-sweep/p-base__l-<order>/<job-id>/
-```
+The rejected sweep conclusions are preserved in this section. Its ephemeral
+working files are intentionally not part of the portable handoff.
 
 Four fresh production UI runs isolate the same failure with stronger evidence.
 They use the same 61 pieces, edge-contact local policy, reorder window 4, beam
@@ -460,11 +458,9 @@ windowed-beam tests passed:
 - additionally requiring shared contact of at least 1.5 times the filler longest
   edge still grouped fillers on the perimeter and produced 7-10 holes.
 
-The immutable report is
-`/private/tmp/min-plane-provenance/small-filler-cavities/manifest.json`. The next
-filler experiment must identify an actual bounded internal free-material cavity
-and prove containment of the filler collision polygon. AABB neutrality and raw
-shared-contact thresholds are not valid cavity proxies.
+The next filler experiment must identify an actual bounded internal
+free-material cavity and prove containment of the filler collision polygon.
+AABB neutrality and raw shared-contact thresholds are not valid cavity proxies.
 
 ### Windowed Beam
 
@@ -764,12 +760,8 @@ holes:                9
 history-off runtime:  about 16.5 s
 ```
 
-The corresponding review artifacts are:
-
-```text
-/tmp/mixed-61-edge-contact-then-balanced-compactness-window-4.svg
-/private/tmp/mixed61-contact-positive-post20-survivor.png
-```
+The corresponding portable review artifact is
+[`help/artifacts/b164d61-1000x1700-scale-diverse.svg`](artifacts/b164d61-1000x1700-scale-diverse.svg).
 
 Terminal quarter-turn selection exposed an independent bug during this test.
 It previously minimized origin corner gap before material consumption, so a
@@ -1049,8 +1041,8 @@ and one below-cutoff witness.
 ## Generating SVG Layouts
 
 Headless harnesses should write the actual collision polygons or source outlines
-with their real worker transforms to `/private/tmp/*.svg`. Do not invent a
-diagram from score values.
+with their real worker transforms into the current isolated experiment artifact
+directory. Do not invent a diagram from score values.
 
 An SVG should include:
 
@@ -1081,8 +1073,8 @@ background margin on all four sides and verify that no polygon is truncated.
 Always retain and report both paths:
 
 ```text
-/private/tmp/experiment-name.svg
-/private/tmp/experiment-name.png
+<experiment-artifacts>/experiment-name.svg
+<experiment-artifacts>/experiment-name.png
 ```
 
 ## Experiment Design
@@ -1540,8 +1532,7 @@ would falsify each one, and identify the smallest safe production experiment.
   with `564.660 x 773.545 mm` bounds, while the 20-triangle golden remains green.
 - Promoted that restoration to `main` and `origin/main` as `ef1fbe2` after
   `64/64` focused tests, lint, typecheck, worker build, and an exact saved-request
-  replay. The immutable experiment ledger is in `help/` and under
-  `/private/tmp/min-plane-provenance/`.
+  replay. The portable immutable experiment ledger is in `help/artifacts/`.
 - Kept sheet-dimension independence and the mixed-50 regression out of this
   checkpoint so each can be tested and committed independently.
 - Built an isolated seven-fixture sheet-invariance corpus covering the triangle
@@ -1557,8 +1548,8 @@ would falsify each one, and identify the smallest safe production experiment.
   behavior. The `2000 x 2700` mixed-61 case remains the exact approved
   `564.660 x 773.545 mm` layout with two holes. The same request on
   `1000 x 1700` becomes a `515.765 x 1382.896 mm` strip, proving that the open
-  sheet-dependence is large and reproducible. The report and SVGs are under
-  `/private/tmp/irregular-sheet-invariance-main-ff5e266/`.
+  sheet-dependence is large and reproducible. Portable representative SVGs are
+  listed in [`help/artifacts/README.md`](artifacts/README.md).
 - Recorded a follow-up for small filler pieces: visible cavities can remain
   empty while small rectangles form an external island. Investigate bounded
   cavity access or deferral only after the intrinsic comparator is integrated
