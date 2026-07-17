@@ -467,6 +467,52 @@ describe('decodeWindowedIrregularBeam', () => {
     expect(winner?.score.collisionBoundsBottomMm).toBe(0)
   })
 
+  it('rejects a contact-favored terminal repair that enlarges the occupied envelope', async () => {
+    const baseScorer = await Effect.runPromise(
+      IrregularLayoutScorer.use((scorer) => Effect.succeed(scorer)).pipe(
+        Effect.provide(IrregularLayoutScorer.Live),
+        Effect.provide(GeometrySettings.Live)
+      )
+    )
+    const contactBiasedScorer: IrregularLayoutScorer.Service = {
+      compare: baseScorer.compare,
+      scoreState: (input) =>
+        baseScorer.scoreState(input).pipe(
+          Effect.map((score) => {
+            const containsFarPlacement = input.state.placedCollisionGeometries.some(
+              ({ placement }) => placement.transform.translateX >= 4
+            )
+            return containsFarPlacement
+              ? {
+                  ...score,
+                  nearCompleteStructuralContactCount: 2,
+                  dominantNearCompleteStructuralContactCount: 2
+                }
+              : score
+          })
+        )
+    }
+    let candidateCallCount = 0
+    const events: IrregularDecisionTraceEvent[] = []
+    const result = await runWindowed(
+      sheet(6, 4),
+      [preparedPiece('a', 1, 1), preparedPiece('b', 1, 1)],
+      Layer.succeed(GeometrySettings, settings(1, 1, 1, 'balanced-compactness', 1)),
+      candidateService(({ moving }) => {
+        candidateCallCount += 1
+        return [oneCandidate(moving, candidateCallCount <= 2 ? candidateCallCount - 1 : 4)]
+      }),
+      undefined,
+      undefined,
+      contactBiasedScorer,
+      (event) => events.push(event)
+    )
+
+    expect(result.bestScore.collisionBoundsAreaMm2).toBe(2)
+    expect(result.bestScore.collisionBoundsSpanMm).toBe(3)
+    expect(events.some((event) => event.kind === 'local_repair_accepted')).toBe(false)
+  })
+
   it('returns the last fully accepted repair when the deadline expires during the next iteration', async () => {
     const currentSheet = sheet(6, 4)
     const pieces = [preparedPiece('a', 1, 1), preparedPiece('b', 1, 1)]

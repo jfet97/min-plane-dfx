@@ -502,7 +502,12 @@ function compareScores(first: IrregularLayoutScore, second: IrregularLayoutScore
   return layoutScoreOrder(first, second)
 }
 
-const layoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
+/** Small partial layouts keep exact contact ordering while repeated motifs form. */
+export const STRICT_STRUCTURAL_CONTACT_PLACEMENT_LIMIT = 20
+/** Larger layouts compare total structural contacts in adjacent-pair bands. */
+export const STRUCTURAL_CONTACT_COUNT_BAND_WIDTH = 2
+
+const strictLayoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
   scoreCriterion((score) => score.unplacedCount),
   descendingScoreCriterion((score) => score.dominantNearCompleteStructuralContactCount),
   descendingScoreCriterion((score) => score.nearCompleteStructuralContactCount),
@@ -525,6 +530,41 @@ const layoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
   Order.mapInput(Order.Array(Order.String), (score) => score.placementOrder),
   Order.mapInput(Order.Array(Order.String), (score) => score.unplacedSourcePieceIds)
 ])
+
+const scaleAwareLayoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
+  scoreCriterion((score) => score.unplacedCount),
+  descendingScoreCriterion((score) => score.dominantNearCompleteStructuralContactCount),
+  descendingScoreCriterion((score) =>
+    Math.floor(score.nearCompleteStructuralContactCount / STRUCTURAL_CONTACT_COUNT_BAND_WIDTH)
+  ),
+  scoreCriterion((score) => score.collisionBoundsWorstNormalizedSheetConsumption),
+  scoreCriterion((score) => score.collisionBoundsNormalizedSpanSum),
+  scoreCriterion((score) => score.collisionBoundsAreaMm2),
+  scoreCriterion((score) => score.collisionBoundsSpanMm),
+  scoreCriterion((score) => score.occupiedHullWasteRatio),
+  descendingScoreCriterion((score) => score.nearCompleteStructuralContactCount),
+  descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactBand),
+  descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactUnits),
+  descendingScoreCriterion((score) => score.sharedCollisionBoundaryLengthMm),
+  scoreCriterion((score) => score.collisionBoundsBottomMm),
+  scoreCriterion((score) => score.collisionBoundsLeftMm),
+  descendingScoreCriterion((score) => score.largestNetFreeMaterialRegionAreaMm2),
+  scoreCriterion((score) => score.freeMaterialRegionCount),
+  scoreCriterion((score) => score.freeMaterialHoleCount),
+  scoreCriterion((score) => score.freeMaterialSliverMetric),
+  Order.mapInput(Order.Array(Order.String), (score) => score.placementOrder),
+  Order.mapInput(Order.Array(Order.String), (score) => score.unplacedSourcePieceIds)
+])
+
+const layoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.make((first, second) => {
+  const samePlacementDepth = first.placementOrder.length === second.placementOrder.length
+  const useScaleAwareContactBands =
+    samePlacementDepth &&
+    first.placementOrder.length > STRICT_STRUCTURAL_CONTACT_PLACEMENT_LIMIT
+  return useScaleAwareContactBands
+    ? scaleAwareLayoutScoreOrder(first, second)
+    : strictLayoutScoreOrder(first, second)
+})
 
 function scoreCriterion(
   select: (score: IrregularLayoutScore) => number

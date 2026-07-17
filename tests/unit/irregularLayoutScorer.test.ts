@@ -392,6 +392,87 @@ describe('IrregularLayoutScorer', () => {
     expect(await compareScores(touchingScore, disconnectedScore)).toBeLessThan(0)
   })
 
+  it('keeps exact structural-contact priority while a small motif is forming', async () => {
+    const compact = await score(
+      state([
+        placedRectangle('compact-left', 2, 2, 0, 0),
+        placedRectangle('compact-right', 2, 2, 2, 0)
+      ])
+    )
+    const extended = await score(
+      state([
+        placedRectangle('extended-left', 2, 2, 0, 0),
+        placedRectangle('extended-middle', 2, 2, 2, 0),
+        placedRectangle('extended-right', 2, 2, 4, 0)
+      ])
+    )
+    const placementOrder = Array.from({ length: 20 }, (_, index) =>
+      PieceId.make(`small-${index}`)
+    )
+    const compactAtSmallDepth: IrregularLayoutScore = {
+      ...compact,
+      nearCompleteStructuralContactCount: 4,
+      placementOrder
+    }
+    const extendedAtSmallDepth: IrregularLayoutScore = {
+      ...extended,
+      nearCompleteStructuralContactCount: 5,
+      placementOrder
+    }
+
+    expect(compactAtSmallDepth.collisionBoundsAreaMm2).toBeLessThan(
+      extendedAtSmallDepth.collisionBoundsAreaMm2
+    )
+    expect(await compareScores(extendedAtSmallDepth, compactAtSmallDepth)).toBeLessThan(0)
+  })
+
+  it('lets compactness decide inside one structural-contact band at scale', async () => {
+    const compact = await score(state([placedRectangle('compact', 2, 2, 0, 0)]))
+    const extended = await score(state([placedRectangle('extended', 4, 4, 0, 0)]))
+    const placementOrder = Array.from({ length: 21 }, (_, index) =>
+      PieceId.make(`large-${index}`)
+    )
+    const compactAtScale: IrregularLayoutScore = {
+      ...compact,
+      dominantNearCompleteStructuralContactCount: 3,
+      nearCompleteStructuralContactCount: 22,
+      placementOrder
+    }
+    const extendedAtScale: IrregularLayoutScore = {
+      ...extended,
+      dominantNearCompleteStructuralContactCount: 3,
+      nearCompleteStructuralContactCount: 23,
+      placementOrder
+    }
+
+    expect(compactAtScale.collisionBoundsAreaMm2).toBeLessThan(
+      extendedAtScale.collisionBoundsAreaMm2
+    )
+    expect(await compareScores(compactAtScale, extendedAtScale)).toBeLessThan(0)
+  })
+
+  it('keeps structural-contact bands authoritative at scale', async () => {
+    const compact = await score(state([placedRectangle('compact', 2, 2, 0, 0)]))
+    const extended = await score(state([placedRectangle('extended', 4, 4, 0, 0)]))
+    const placementOrder = Array.from({ length: 21 }, (_, index) =>
+      PieceId.make(`band-${index}`)
+    )
+    const compactAtScale: IrregularLayoutScore = {
+      ...compact,
+      dominantNearCompleteStructuralContactCount: 3,
+      nearCompleteStructuralContactCount: 23,
+      placementOrder
+    }
+    const extendedAtScale: IrregularLayoutScore = {
+      ...extended,
+      dominantNearCompleteStructuralContactCount: 3,
+      nearCompleteStructuralContactCount: 24,
+      placementOrder
+    }
+
+    expect(await compareScores(extendedAtScale, compactAtScale)).toBeLessThan(0)
+  })
+
   it('lets compactness decide inside one normalized contact band', async () => {
     const compact = await score(
       state([

@@ -684,6 +684,7 @@ function repairTerminalState(input: {
           state: repairedState
         })
         if (input.layoutScorer.compare(score, input.current.score) >= 0) continue
+        if (!terminalRepairPreservesEnvelope(score, input.current.score)) continue
         const scoredState = {
           state: repairedState,
           score,
@@ -700,6 +701,20 @@ function repairTerminalState(input: {
     }
     return best
   })
+}
+
+/** Terminal repair may improve contacts only without enlarging the occupied envelope. */
+function terminalRepairPreservesEnvelope(
+  candidate: IrregularLayoutScore,
+  current: IrregularLayoutScore
+): boolean {
+  return (
+    candidate.collisionBoundsWorstNormalizedSheetConsumption <=
+      current.collisionBoundsWorstNormalizedSheetConsumption &&
+    candidate.collisionBoundsNormalizedSpanSum <= current.collisionBoundsNormalizedSpanSum &&
+    candidate.collisionBoundsAreaMm2 <= current.collisionBoundsAreaMm2 &&
+    candidate.collisionBoundsSpanMm <= current.collisionBoundsSpanMm
+  )
 }
 
 /** Positional decoder alias matching the strict decoder's public shape. */
