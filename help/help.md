@@ -445,6 +445,30 @@ The experiment must preserve the triangle golden, legality, deterministic
 copy-ID deduplication, and the exact approved mixed-61 checkpoint before any
 production change is accepted.
 
+Trace evidence now isolates the access problem more precisely. In the exact
+mixed-61 request, the eight padded `40 x 40 mm` squares occupy priority slots
+54-61 and first become eligible only at beam step 50. Candidate generation is
+healthy once they are eligible: the first square produced 326 raw candidates,
+47 unique legal geometries, four locally selected candidates, and multiple
+successors that survived whole-beam selection. The missing fillers are therefore
+not primarily an NFP, fanout, or copy-deduplication failure; they become
+available after earlier pieces have already determined the cavity topology.
+
+Two isolated early-access probes were rejected even though their triangle and
+windowed-beam tests passed:
+
+- reserving a deferred small filler only when its placement did not enlarge the
+  occupied AABB created external square blocks and increased the mixed layouts
+  to 6-10 free-material holes;
+- additionally requiring shared contact of at least 1.5 times the filler longest
+  edge still grouped fillers on the perimeter and produced 7-10 holes.
+
+The immutable report is
+`/private/tmp/min-plane-provenance/small-filler-cavities/manifest.json`. The next
+filler experiment must identify an actual bounded internal free-material cavity
+and prove containment of the filler collision polygon. AABB neutrality and raw
+shared-contact thresholds are not valid cavity proxies.
+
 ### Windowed Beam
 
 The deterministic decoder keeps a bounded set of partial layouts. At every step
@@ -1542,3 +1566,8 @@ would falsify each one, and identify the smallest safe production experiment.
   empty while small rectangles form an external island. Investigate bounded
   cavity access or deferral only after the intrinsic comparator is integrated
   and gated; do not globally reverse the user-owned initial piece order.
+- Traced the small-square path: the eight squares first enter the reorder window
+  at step 50 and already receive dozens of legal unique candidates. Rejected two
+  isolated early-access heuristics because they moved squares to the perimeter
+  and increased hole counts. The remaining route is topology-aware internal
+  cavity containment, not AABB or contact-length approximation.
