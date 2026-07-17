@@ -1235,7 +1235,29 @@ function intersectSegments(
       !Number.isFinite(x) ||
       !Number.isFinite(y)
     ) {
-      return { message: 'segment intersection arithmetic must produce finite coordinates.' }
+      // The exact predicates above prove a strict crossing, yet near-parallel
+      // directions can round the direction-product denominator to zero. The
+      // signed areas of the second segment's endpoints against the first line
+      // have opposite signs here, so their difference cannot cancel; recompute
+      // the crossing from them and only then drop the pair, because one
+      // degenerate candidate point must not abort the whole decode.
+      const startArea =
+        firstDirectionX * (second.start.y - first.start.y) -
+        firstDirectionY * (second.start.x - first.start.x)
+      const endArea =
+        firstDirectionX * (second.end.y - first.start.y) -
+        firstDirectionY * (second.end.x - first.start.x)
+      const fallbackParameter = startArea / (startArea - endArea)
+      const fallbackX = second.start.x + fallbackParameter * secondDirectionX
+      const fallbackY = second.start.y + fallbackParameter * secondDirectionY
+      if (
+        !Number.isFinite(fallbackParameter) ||
+        !Number.isFinite(fallbackX) ||
+        !Number.isFinite(fallbackY)
+      ) {
+        return { points: [] }
+      }
+      return { points: [{ x: fallbackX, y: fallbackY }] }
     }
     return { points: [{ x, y }] }
   }
