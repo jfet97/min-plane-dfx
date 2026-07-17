@@ -432,19 +432,24 @@ Useful anchors:
 - PackingSolver, for explicit one- and two-item periodic-cell generation before
   expanding a repeated pattern over a finite sheet.
   https://github.com/fontanf/packingsolver
+- [Pinned DeepNest and SVGnest source comparison](docs/research/deepnest-svgnest-source-comparison.md),
+  for the exact placement, scoring, search, and identical-copy behavior that is
+  transferable to this engine.
 
 The exact MIP direction is useful academic context, but it is not the v2
 implementation path.
 
-Source comparison confirms that Deepnest, SVGNest, and libnest2d do not solve
-the repeated-triangle case with a shared-contact objective. Deepnest and
-SVGNest use NFP placement inside GA order/rotation search; libnest2d evaluates
-rotation-specific placement choices before its global choice. Sparrow's useful
-transfer is pre-cap transform deduplication and multiple distinct samples, not
-its temporary-overlap compression phase. PackingSolver is the clearest reference
-for repeated identical pieces because it constructs periodic cells explicitly.
-The production engine should borrow these search structures only through real
-placement generation and validation; it must not hardcode a screenshot motif.
+Source comparison confirms that Deepnest, SVGNest, and libnest2d do not make
+shared contact a lexicographically dominant whole-layout objective for the
+repeated-triangle case. Deepnest does reward common-line length, but only as a
+bounded soft bonus after envelope cost; Deepnest and SVGNest otherwise use NFP
+placement inside GA order/rotation search. Libnest2d evaluates rotation-specific
+placement choices before its global choice. Sparrow's useful transfer is pre-cap
+transform deduplication and multiple distinct samples, not its temporary-overlap
+compression phase. PackingSolver is the clearest reference for repeated
+identical pieces because it constructs periodic cells explicitly. The production
+engine should borrow these search structures only through real placement
+generation and validation; it must not hardcode a screenshot motif.
 The source-backed comparison of libnest2d, PackingSolver, and Sparrow is recorded
 in [Open-Source Irregular Nesting Strategy Comparison](./docs/research/open-source-irregular-nesting-strategies.md).
 
