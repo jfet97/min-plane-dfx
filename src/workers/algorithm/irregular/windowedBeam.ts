@@ -6,6 +6,7 @@ import {
   IrregularPlacementCandidate,
   IrregularPlacedPiece,
   IrregularPlacementPolicyId,
+  IrregularPolygon,
   IrregularNestingSettings,
   IrregularPreparedPiece,
   IrregularTransformCandidate,
@@ -30,7 +31,8 @@ import {
 import {
   IrregularLayoutScore,
   IrregularLayoutScorer,
-  IrregularLayoutScoringError
+  IrregularLayoutScoringError,
+  STRICT_STRUCTURAL_CONTACT_PLACEMENT_LIMIT
 } from './irregularLayoutScorer.js'
 import {
   canonicalCollisionPolygonKey,
@@ -245,6 +247,7 @@ export function runWindowedIrregularBeam(input: {
       input.pieces.map((piece, index) => [preparedPieceId(piece), index] as const)
     )
     const protectIncumbent = settings.optimizer.beamWidth > 1
+    const protectScaleDiverseCompactness = hasScaleDiverseCollisionAreas(input.pieces)
     let incumbentState: IrregularBeamState | undefined = protectIncumbent ? beam[0] : undefined
     const candidateCounts: number[] = []
     const controlState: ControlState = { checkpointsSinceYield: 0 }
@@ -313,6 +316,7 @@ export function runWindowedIrregularBeam(input: {
             localCandidates,
             placementScorer,
             localCandidateFanout,
+            protectScaleDiverseCompactness,
             input.options?.transformPreferences?.get(preparedPieceId(piece)),
             decisionTrace,
             stepIndex,
@@ -345,11 +349,16 @@ export function runWindowedIrregularBeam(input: {
       const nextIncumbent = protectIncumbent
         ? selectIncumbentSuccessor(scored, layoutScorer)
         : undefined
+      const compactnessSurvivor =
+        settings.optimizer.beamWidth >= 4 && protectScaleDiverseCompactness
+          ? selectCompactnessSurvivor(scored, layoutScorer)
+          : undefined
       scoredBeam = pruneScoredStates(
         scored,
         settings.optimizer.beamWidth,
         layoutScorer,
         nextIncumbent,
+        compactnessSurvivor,
         decisionTrace,
         stepIndex
       )
@@ -491,6 +500,17 @@ interface TerminalOrientationSelection {
 }
 
 const TERMINAL_QUARTER_TURNS: ReadonlyArray<IrregularQuarterTurnDegrees> = [0, 90, 180, 270]
+const terminalEnvelopeOrder = Order.combineAll<IrregularLayoutScore>([
+  Order.mapInput(Order.Number, (score) => score.unplacedCount),
+  Order.mapInput(
+    Order.Number,
+    (score) => score.collisionBoundsWorstNormalizedSheetConsumption
+  ),
+  Order.mapInput(Order.Number, (score) => score.collisionBoundsNormalizedSpanSum),
+  Order.mapInput(Order.Number, (score) => score.collisionBoundsAreaMm2),
+  Order.mapInput(Order.Number, (score) => score.collisionBoundsSpanMm),
+  Order.mapInput(Order.Number, (score) => score.occupiedHullWasteRatio)
+])
 
 function selectTerminalOrientation(input: {
   readonly sheet: SheetSpec
@@ -527,6 +547,11 @@ function selectTerminalOrientation(input: {
     }
 
     const rankedVariants = legalVariants.toSorted((first, second) => {
+      const envelopeComparison = terminalEnvelopeOrder(
+        first.scoredState.score,
+        second.scoredState.score
+      )
+      if (envelopeComparison !== 0) return envelopeComparison
       const cornerComparison = Order.Number(first.cornerGapMm, second.cornerGapMm)
       if (cornerComparison !== 0) return cornerComparison
       const scoreComparison = input.layoutScorer.compare(
@@ -653,6 +678,7 @@ function repairTerminalState(input: {
         localCandidates,
         input.placementScorer,
         input.candidateFanout,
+        hasScaleDiverseCollisionAreas(input.pieces),
         input.options?.transformPreferences?.get(preparedPieceId(piece)),
         undefined,
         input.stepIndex,
@@ -924,6 +950,7 @@ function selectLocalCandidates(
   candidates: ReadonlyArray<LocalCandidate>,
   placementScorer: IrregularPlacementScorer.Service,
   maximumCount: number,
+  allowAdditionalCompactnessCandidate: boolean,
   preferredTransformIndex: number | undefined,
   decisionTrace: ActiveDecisionTrace | undefined,
   stepIndex: number,
@@ -959,7 +986,7 @@ function selectLocalCandidates(
   const rankedCandidates = [...representativesByGeometry.values()]
   const first = rankedCandidates[0]
   let selected: ReadonlyArray<LocalCandidate>
-  let compactnessReserved: LocalCandidate | undefined
+  const compactnessReserved = new Set<LocalCandidate>()
   if (
     maximumCount === 1 ||
     first?.score.policyId !== EDGE_CONTACT_THEN_BALANCED_COMPACTNESS_POLICY_ID
@@ -988,7 +1015,27 @@ function selectLocalCandidates(
       }
       selected = selectedCandidates
       if (!rankedCandidates.slice(0, maximumCount).includes(compactnessWinner)) {
-        compactnessReserved = compactnessWinner
+        compactnessReserved.add(compactnessWinner)
+      }
+      if (maximumCount >= 4 && allowAdditionalCompactnessCandidate) {
+        const additionalCompactnessCandidate = rankedCandidates
+          .toSorted(
+            Order.combineAll<LocalCandidate>([
+              Order.make((first, second) =>
+                compareBalancedCompactnessPlacementScores(first.score, second.score)
+              ),
+              Order.mapInput(Order.String, (candidate) => localCandidateKey(candidate))
+            ])
+          )
+          .find(
+            (candidate) =>
+              candidate.score.sharedCollisionBoundaryLengthMm > 0 &&
+              !selectedCandidates.includes(candidate)
+          )
+        if (additionalCompactnessCandidate !== undefined) {
+          selected = [...selectedCandidates, additionalCompactnessCandidate]
+          compactnessReserved.add(additionalCompactnessCandidate)
+        }
       }
     }
   }
@@ -1012,12 +1059,12 @@ function selectLocalCandidates(
       const displacedByReservation =
         !duplicateGeometry &&
         !isSelected &&
-        compactnessReserved !== undefined &&
+        compactnessReserved.size > 0 &&
         rankedCandidates.indexOf(candidate) < maximumCount
       const reason: IrregularDecisionTraceLocalCandidateSelectionReason =
         duplicateGeometry
           ? 'duplicate_local_geometry'
-          : candidate === compactnessReserved
+          : compactnessReserved.has(candidate)
             ? 'compactness_alternative_reserved'
             : displacedByReservation
               ? 'displaced_by_compactness_reservation'
@@ -1309,33 +1356,49 @@ function pruneScoredStates(
   beamWidth: number,
   layoutScorer: IrregularLayoutScorer.Service,
   incumbent: ScoredState | undefined = undefined,
+  compactnessSurvivor: ScoredState | undefined = undefined,
   decisionTrace: ActiveDecisionTrace | undefined = undefined,
   stepIndex = 0
 ): ReadonlyArray<ScoredState> {
   const ranked = rankScoredStates(states, layoutScorer)
-  const retained =
-    beamWidth <= 1 || incumbent === undefined
-      ? ranked.slice(0, beamWidth)
-      : rankScoredStates(
-          [
-            incumbent,
-            ...ranked
-              .filter(({ state }) => state !== incumbent.state)
-              .slice(0, beamWidth - 1)
-          ],
-          layoutScorer
+  const protectedStates = [incumbent, compactnessSurvivor].filter(
+    (state, index, protectedCandidates): state is ScoredState =>
+      state !== undefined &&
+      protectedCandidates.findIndex((candidate) => candidate?.state === state.state) === index
+  )
+  const retained = rankScoredStates(
+    [
+      ...protectedStates,
+      ...ranked
+        .filter(
+          ({ state }) =>
+            !protectedStates.some((protectedState) => protectedState.state === state)
         )
+        .slice(0, Math.max(0, beamWidth - protectedStates.length))
+    ],
+    layoutScorer
+  )
 
   if (decisionTrace !== undefined) {
     const retainedStates = new Set(retained.map(({ state }) => state))
     const incumbentRank = ranked.findIndex(({ state }) => state === incumbent?.state)
     const incumbentDisplacedAlternative = incumbentRank >= beamWidth
+    const compactnessSurvivorRank = ranked.findIndex(
+      ({ state }) => state === compactnessSurvivor?.state
+    )
+    const compactnessSurvivorDisplacedAlternative = compactnessSurvivorRank >= beamWidth
     for (const [stateIndex, scoredState] of ranked.entries()) {
       const retainedState = retainedStates.has(scoredState.state)
       const protectedIncumbent =
         retainedState && incumbentDisplacedAlternative && scoredState.state === incumbent?.state
+      const protectedCompactnessSurvivor =
+        retainedState &&
+        compactnessSurvivorDisplacedAlternative &&
+        scoredState.state === compactnessSurvivor?.state
       const displacedByIncumbent =
         !retainedState && incumbentDisplacedAlternative && stateIndex < beamWidth
+      const displacedByCompactnessSurvivor =
+        !retainedState && compactnessSurvivorDisplacedAlternative && stateIndex < beamWidth
       decisionTrace.emit(new IrregularDecisionTraceBeamSelection({
         decodeId: decisionTrace.decodeId,
         chromosomeId: decisionTrace.chromosomeId,
@@ -1346,8 +1409,12 @@ function pruneScoredStates(
         decision: retainedState ? 'retained' : 'pruned',
         reason: protectedIncumbent
           ? 'protected_incumbent'
+          : protectedCompactnessSurvivor
+            ? 'protected_compactness_survivor'
           : displacedByIncumbent
             ? 'displaced_by_protected_incumbent'
+            : displacedByCompactnessSurvivor
+              ? 'displaced_by_compactness_survivor'
             : retainedState
               ? 'within_beam_width'
               : 'outside_beam_width'
@@ -1355,6 +1422,72 @@ function pruneScoredStates(
     }
   }
   return retained
+}
+
+function selectCompactnessSurvivor(
+  states: ReadonlyArray<ScoredState>,
+  layoutScorer: IrregularLayoutScorer.Service
+): ScoredState | undefined {
+  const reference = rankScoredStates(states, layoutScorer)[0]
+  if (
+    reference === undefined ||
+    reference.state.placementOrder.length <= STRICT_STRUCTURAL_CONTACT_PLACEMENT_LIMIT
+  ) {
+    return undefined
+  }
+  return states
+    .filter(
+      ({ score }) =>
+        score.unplacedCount === reference.score.unplacedCount &&
+        score.dominantNearCompleteStructuralContactCount + 1 >=
+          reference.score.dominantNearCompleteStructuralContactCount &&
+        score.nearCompleteStructuralContactCount + 1 >=
+          reference.score.nearCompleteStructuralContactCount
+    )
+    .toSorted(compactnessStateOrder)[0]
+}
+
+const compactnessStateOrder = Order.combineAll<ScoredState>([
+  Order.mapInput(Order.Number, ({ score }) => score.collisionBoundsWorstNormalizedSheetConsumption),
+  Order.mapInput(Order.Number, ({ score }) => score.collisionBoundsNormalizedSpanSum),
+  Order.mapInput(Order.Number, ({ score }) => score.collisionBoundsAreaMm2),
+  Order.mapInput(Order.Number, ({ score }) => score.collisionBoundsSpanMm),
+  Order.mapInput(Order.Number, ({ score }) => score.occupiedHullWasteRatio),
+  Order.mapInput(Order.Number, ({ score }) => score.freeMaterialHoleCount),
+  Order.mapInput(Order.String, ({ key }) => key)
+])
+
+const MIN_SCALE_DIVERSE_COLLISION_AREA_RATIO = 4
+
+function hasScaleDiverseCollisionAreas(
+  pieces: ReadonlyArray<IrregularPreparedPiece>
+): boolean {
+  let minimumAreaMm2 = Number.POSITIVE_INFINITY
+  let maximumAreaMm2 = 0
+  for (const piece of pieces) {
+    const areaMm2 = collisionPolygonAreaMm2(piece.collisionGeometry.collisionPolygon)
+    if (areaMm2 === undefined) return false
+    minimumAreaMm2 = Math.min(minimumAreaMm2, areaMm2)
+    maximumAreaMm2 = Math.max(maximumAreaMm2, areaMm2)
+  }
+  return (
+    Number.isFinite(minimumAreaMm2) &&
+    minimumAreaMm2 > 0 &&
+    maximumAreaMm2 >= minimumAreaMm2 * MIN_SCALE_DIVERSE_COLLISION_AREA_RATIO
+  )
+}
+
+function collisionPolygonAreaMm2(polygon: IrregularPolygon): number | undefined {
+  let doubledArea = 0
+  for (let index = 0; index < polygon.points.length; index += 1) {
+    const first = polygon.points[index]
+    const second = polygon.points[(index + 1) % polygon.points.length]
+    if (first === undefined || second === undefined) return undefined
+    doubledArea += first.x * second.y - second.x * first.y
+    if (!Number.isFinite(doubledArea)) return undefined
+  }
+  const areaMm2 = Math.abs(doubledArea) / 2
+  return Number.isFinite(areaMm2) && areaMm2 > 0 ? areaMm2 : undefined
 }
 
 function compareRepresentativeStates(first: KeyedState, second: KeyedState): -1 | 0 | 1 {

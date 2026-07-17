@@ -117,10 +117,13 @@ returned; a deadline during beam search and cancellation at any phase still
 abort the decode. After the final improvement, the completed winner is rigidly
 tested at the four rigid quarter-turn orientations. Every variant is normalized
 to the sheet bottom-left, and variants whose occupied bounds exceed the sheet
-are discarded. Terminal selection first minimizes the real Euclidean gap from
-the sheet origin to the nearest occupied collision edge, preventing a concave
-cluster corner from stranding material at the bottom-left; the normal
-whole-layout score and the quarter-turn angle break ties. The state preserves
+are discarded. Terminal selection first minimizes the occupied-envelope tuple:
+worst normalized sheet consumption, normalized span sum, bounds area, bounds
+span, and occupied-hull waste. Only envelope-equivalent variants minimize the
+real Euclidean gap from the sheet origin to the nearest occupied collision edge,
+preventing a concave cluster corner from stranding material at the bottom-left
+without preferring a materially worse sheet orientation. The normal whole-layout
+score and the quarter-turn angle break the remaining ties. The state preserves
 the exact rotation- and translation-invariant contact metrics derived before
 this terminal transform, avoiding a second floating-point collinearity
 classification of unchanged contacts. The oriented improvement remains the
@@ -161,6 +164,20 @@ and uses the remaining slots for ranked alternatives. With all other settings
 identical, this guarantees that the wider beam cannot finish with more unplaced
 pieces than `beamWidth = 1`. This changes search retention only, not geometry
 legality.
+
+For scale-diverse jobs, the edge-contact beam also retains two bounded
+compactness escape paths. Scale diversity means that the largest prepared
+collision-polygon area is at least four times the smallest; the decision uses
+geometry, not piece ids, fixture names, or piece count. With local fanout at
+least four, candidate selection may add one distinct positive-contact candidate
+chosen by balanced compactness in addition to the configured edge-contact
+fanout. After more than 20 placements and with beam width at least four, beam
+pruning may protect one compactness survivor whose dominant and total structural
+contact counts are each at most one below the current leader. The protected
+state consumes an existing beam slot rather than widening the beam. Decision
+traces distinguish this retention and its displaced alternative with
+`protected_compactness_survivor` and
+`displaced_by_compactness_survivor`.
 
 The reorder window is also a bounded deferral budget. A branch may choose
 later-priority pieces from its configured prefix, but after the oldest remaining

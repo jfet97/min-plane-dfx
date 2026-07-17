@@ -536,8 +536,10 @@ export class IrregularDecisionTraceBeamSelection extends IrregularDecisionTraceE
   readonly reason:
     | 'within_beam_width'
     | 'protected_incumbent'
+    | 'protected_compactness_survivor'
     | 'outside_beam_width'
     | 'displaced_by_protected_incumbent'
+    | 'displaced_by_compactness_survivor'
 
   constructor(
     input: EventInput<{
@@ -548,8 +550,10 @@ export class IrregularDecisionTraceBeamSelection extends IrregularDecisionTraceE
       readonly reason:
         | 'within_beam_width'
         | 'protected_incumbent'
+        | 'protected_compactness_survivor'
         | 'outside_beam_width'
         | 'displaced_by_protected_incumbent'
+        | 'displaced_by_compactness_survivor'
     }>
   ) {
     super(input)

@@ -413,6 +413,16 @@ rank successor states with the chosen layout-selection metric
 keep the best beamWidth successor states
 ```
 
+The irregular convex beam has one measured scale-diverse exception to strict
+tuple pruning. When the largest prepared collision polygon is at least four
+times the area of the smallest, an edge-contact run may admit one additional
+distinct positive-contact compactness candidate. After more than 20 placements,
+it may also reserve one beam slot for the most compact state that is no more
+than one dominant and one total structural contact behind the current leader.
+This preserves a bounded path toward a smaller global envelope without changing
+the configured beam width. Homogeneous repeated-shape jobs stay on the ordinary
+ranking path.
+
 The eight placement strategies are therefore candidate ordering rules for the
 current state and next piece. They do not create independent copies of the same
 candidate placement. The layout-selection metric decides which successor states
