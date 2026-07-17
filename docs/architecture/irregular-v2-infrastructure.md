@@ -171,10 +171,22 @@ pieces than `beamWidth = 1`. This changes search retention only, not geometry
 legality.
 
 The production beam does not add scale-diversity-specific local candidates or
-protect a separate compactness survivor. Those escape paths changed the search
-lineage and prevented the saved approved mixed-61 request from reproducing. The
-configured local fanout and exact incumbent protection are therefore the only
-beam reservations in this checkpoint.
+replace production slots with a second global compactness policy. When repair
+is disabled, beam width is greater than one, and no chromosome transform
+preference is active, it may seed one position-independent score tie with an
+unrepresented sheet-boundary anchor class. That seed advances in an isolated
+eight-state protected lane under the legacy pre-canonical hull ordering. The
+canonical production beam remains separate and cross-lane deduplication keeps
+its representative.
+
+Production and protected terminal winners are oriented independently. The
+protected winner replaces production only when it is strictly better under the
+production layout comparator and has strictly smaller collision-envelope area.
+The lane is disabled under terminal repair, preserving repair-8 golden and
+deadline semantics. Decision traces identify protected boundary survivors and
+retain lane-correct ranks. This is a bounded quality recovery for a lineage that
+numerical canonicalization exposed as tied; it does not make compactness
+sheet-independent.
 
 The reorder window is also a bounded deferral budget. A branch may choose
 later-priority pieces from its configured prefix, but after the oldest remaining

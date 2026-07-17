@@ -134,7 +134,12 @@ function settings(
 function candidateService(
   makeCandidates: (input: {
     readonly moving: { readonly sourcePieceId: PieceId; readonly transform: IrregularTransformCandidate }
-    readonly placed: ReadonlyArray<{ readonly placement: { readonly sourcePieceId: PieceId } }>
+    readonly placed: ReadonlyArray<{
+      readonly placement: {
+        readonly sourcePieceId: PieceId
+        readonly transform: { readonly translateX: number; readonly translateY: number }
+      }
+    }>
   }) => ReadonlyArray<IrregularPlacementCandidate>
 ): Layer.Layer<NfpIfpService, never, never> {
   return Layer.succeed(NfpIfpService, {
@@ -383,6 +388,254 @@ describe('decodeWindowedIrregularBeam', () => {
         (state) => state.placedCollisionGeometries[0]?.placement.transform.translateX
       )
     ).toEqual([0, 2])
+  })
+
+  it('adds one translation-equivalent survivor on a distinct sheet boundary', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const result = await runWindowed(
+      sheet(100, 100),
+      [preparedPiece('a', 2, 2)],
+      Layer.succeed(GeometrySettings, settings(1, 2, 3)),
+      candidateService(({ moving }) => [
+        oneCandidate(moving, 0, 0),
+        oneCandidate(moving, 10, 0),
+        oneCandidate(moving, 0, 98)
+      ]),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(result.rankedStates).toHaveLength(3)
+    expect(
+      new Set(result.rankedStates.map((state) => state.canonicalOccupiedGeometryKey)).size
+    ).toBe(3)
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        decision: 'retained',
+        reason: 'protected_boundary_anchor_survivor'
+      })
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_step_completed',
+        retainedStateCount: 3
+      })
+    )
+    expect(events.filter(({ kind }) => kind === 'terminal_orientation_scored')).toHaveLength(4)
+  })
+
+  it('promotes a smaller protected descendant after a second expansion', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const service = candidateService(({ moving, placed }) => {
+      const anchor = placed[0]?.placement.transform
+      if (anchor === undefined) {
+        return [
+          oneCandidate(moving, 0, 0),
+          oneCandidate(moving, 10, 0),
+          oneCandidate(moving, 0, 98)
+        ]
+      }
+      return anchor.translateY === 98
+        ? [oneCandidate(moving, 2, 98)]
+        : [oneCandidate(moving, anchor.translateX + 20, anchor.translateY)]
+    })
+    const result = await runWindowed(
+      sheet(100, 100),
+      [preparedPiece('a', 2, 2), preparedPiece('b', 2, 2)],
+      Layer.succeed(GeometrySettings, settings(1, 2, 3)),
+      service,
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(result.bestState.translatedCollisionBounds).toMatchObject({ width: 4, height: 2 })
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        stepIndex: 1,
+        decision: 'retained',
+        reason: 'protected_boundary_anchor_survivor'
+      })
+    )
+    expect(events.filter(({ kind }) => kind === 'terminal_orientation_scored')).toHaveLength(4)
+  })
+
+  it('rejects a larger oriented protected descendant without duplicating ranks', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const service = candidateService(({ moving, placed }) => {
+      const anchor = placed[0]?.placement.transform
+      if (anchor === undefined) {
+        return [
+          oneCandidate(moving, 0, 0),
+          oneCandidate(moving, 10, 0),
+          oneCandidate(moving, 0, 98)
+        ]
+      }
+      return anchor.translateY === 98
+        ? [oneCandidate(moving, 50, 98)]
+        : [oneCandidate(moving, anchor.translateX + 2, anchor.translateY)]
+    })
+    const result = await runWindowed(
+      sheet(100, 100),
+      [preparedPiece('a', 2, 2), preparedPiece('b', 2, 2)],
+      Layer.succeed(GeometrySettings, settings(1, 2, 3)),
+      service,
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(result.bestState.translatedCollisionBounds).toMatchObject({ width: 4, height: 2 })
+    expect(
+      new Set(result.rankedStates.map((state) => state.canonicalOccupiedGeometryKey)).size
+    ).toBe(result.rankedStates.length)
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        stepIndex: 1,
+        decision: 'retained',
+        reason: 'protected_boundary_anchor_survivor'
+      })
+    )
+    expect(events.filter(({ kind }) => kind === 'terminal_orientation_scored')).toHaveLength(4)
+  })
+
+  it('observes cancellation while scoring protected terminal orientations', async () => {
+    const baseScorer = await Effect.runPromise(
+      IrregularLayoutScorer.use((scorer) => Effect.succeed(scorer)).pipe(
+        Effect.provide(IrregularLayoutScorer.Live),
+        Effect.provide(GeometrySettings.Live)
+      )
+    )
+    let cancelled = false
+    const cancellingScorer: IrregularLayoutScorer.Service = {
+      compare: baseScorer.compare,
+      scoreState: (input) =>
+        baseScorer.scoreState(input).pipe(
+          Effect.tap(() =>
+            Effect.sync(() => {
+              const bounds = input.state.translatedCollisionBounds
+              const rotated = input.state.placedCollisionGeometries.some(
+                ({ placement }) => placement.transform.rotationDeg === 90
+              )
+              if (bounds !== undefined && bounds.width * bounds.height > 100 && rotated) {
+                cancelled = true
+              }
+            })
+          )
+        )
+    }
+    const service = candidateService(({ moving, placed }) => {
+      const anchor = placed[0]?.placement.transform
+      if (anchor === undefined) {
+        return [
+          oneCandidate(moving, 0, 0),
+          oneCandidate(moving, 10, 0),
+          oneCandidate(moving, 0, 98)
+        ]
+      }
+      return anchor.translateY === 98
+        ? [oneCandidate(moving, 50, 98)]
+        : [oneCandidate(moving, anchor.translateX + 2, anchor.translateY)]
+    })
+
+    await expect(
+      runWindowed(
+        sheet(100, 100),
+        [preparedPiece('a', 2, 2), preparedPiece('b', 2, 2)],
+        Layer.succeed(GeometrySettings, settings(1, 2, 3)),
+        service,
+        undefined,
+        undefined,
+        cancellingScorer,
+        undefined,
+        { isCancelled: () => cancelled }
+      )
+    ).rejects.toMatchObject({
+      _tag: 'IrregularWindowedBeamAbortedError',
+      reason: 'cancelled'
+    })
+  })
+
+  it('keeps the production representative when both lanes converge', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const service = candidateService(({ moving, placed }) => {
+      const anchor = placed[0]?.placement.transform
+      if (anchor === undefined) {
+        return [
+          oneCandidate(moving, 0, 0),
+          oneCandidate(moving, 10, 0),
+          oneCandidate(moving, 0, 98)
+        ]
+      }
+      if (anchor.translateX === 0 && anchor.translateY === 0) {
+        return [oneCandidate(moving, 0, 98)]
+      }
+      if (anchor.translateX === 0 && anchor.translateY === 98) {
+        return [oneCandidate(moving, 0, 0)]
+      }
+      return [oneCandidate(moving, 12, 0)]
+    })
+    const pieces = [preparedPiece('a', 2, 2), preparedPiece('b', 2, 2)]
+    const settingsLayer = Layer.succeed(GeometrySettings, settings(1, 2, 3))
+    const protectedResult = await runWindowed(
+      sheet(100, 100),
+      pieces,
+      settingsLayer,
+      service,
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+    const productionOnlyResult = await runWindowed(
+      sheet(100, 100),
+      pieces,
+      settingsLayer,
+      service,
+      { transformPreferences: new Map([[PieceId.make('unused'), 0]]) }
+    )
+
+    expect(stateSnapshot(protectedResult)).toEqual(stateSnapshot(productionOnlyResult))
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        stepIndex: 1,
+        decision: 'retained',
+        reason: 'within_beam_width'
+      })
+    )
+  })
+
+  it('does not activate the protected lane when terminal repair is enabled', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      sheet(100, 100),
+      [preparedPiece('a', 2, 2)],
+      Layer.succeed(GeometrySettings, settings(1, 2, 3, 'balanced-compactness', 1)),
+      candidateService(({ moving }) => [
+        oneCandidate(moving, 0, 0),
+        oneCandidate(moving, 10, 0),
+        oneCandidate(moving, 0, 98)
+      ]),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        reason: 'protected_boundary_anchor_survivor'
+      })
+    )
   })
 
   it('uses localCandidateFanout independently from the retained beam width', async () => {

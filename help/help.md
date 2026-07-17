@@ -32,12 +32,15 @@ the following order.
 2. **Preserve the 20-triangle golden.** The pointed-triangle lattice is a hard
    regression gate, not a special-case production heuristic. A candidate fails
    if it turns the lattice into a chain, fragments structural contacts, creates
-   visible triangle-sized holes, or requires local repair to recover.
+   visible triangle-sized holes, or regresses the official repair-8 result. Keep
+   the repair-0 search diagnostic separate; it is not the approved golden.
 3. **Preserve or improve the approved mixed-61 layout.** The portable reference
-   is `help/artifacts/approved-mixed61-ac75222-2000x2700.svg`. Any general change
-   must remain compact on that request and must also pass the `2000 x 1700`,
-   `1000 x 1700`, and `1000 x 1300` sheet variants without collapsing into a
-   tall strip or disconnected islands.
+   `help/artifacts/approved-mixed61-ac75222-2000x2700.svg` remains the historical
+   human-approved comparator. Current production no longer reproduces it after
+   the necessary `95de72c` numerical canonicalization. Any general change must
+   improve the current baseline without losing the historical contact/hole
+   quality and must also gate the `2000 x 1700`, `1000 x 1700`, and
+   `1000 x 1300` variants.
 4. **Choose the right source of search diversity.** The current investigation
    compares deterministic candidate diversity with the existing GA. GA may be
    useful for global piece order and rotation, but it cannot repair a promising
@@ -71,8 +74,10 @@ the following order.
 
 ### Mandatory Gates For Every Ranking Change
 
-- exact 20-triangle golden, rotations and mirroring enabled, repair disabled;
-- exact approved mixed-61 request on all four sheet sizes above;
+- exact official 20-triangle repair-8 golden, rotations and mirroring enabled;
+- repair-0 triangle diagnostic no worse than the current baseline;
+- exact mixed-61 request on all four sheet sizes above, compared against both
+  the current baseline and the historical approved reference;
 - mixed-50, homogeneous rectangles, trapezoids, pentagons, and stars;
 - legality, deterministic geometry hashes, and replay/search equivalence;
 - rendered SVG/PNG inspection, not metrics alone;
@@ -81,11 +86,24 @@ the following order.
 
 ### Current Production Truth
 
-Production intentionally retains the known-good triangle and original
-`2000 x 2700` mixed-61 behavior. It is still sheet-dependent on the other three
-mixed-61 sheets. No GA change, intrinsic candidate-diversity experiment, cavity
-filler experiment, or trace compaction experiment is production behavior until
-it passes the gates above and is explicitly merged.
+The official repair-8 triangle golden remains exact. The old claim that current
+production also reproduces the original `2000 x 2700` mixed-61 layout is stale:
+`95de72c` removed a meaningless raw hull-waste difference and current baseline
+`f68be50` selects `436,770.039 mm2` with 10 holes instead of the historical
+two-hole motif.
+
+Production now retains an isolated boundary-anchor alternative only when repair
+is disabled and no chromosome transform preference is active. It cannot consume
+a production beam slot or win through its private ranking alone. On the
+reference mixed-61 sheet it improves the current baseline to `430,344.918 mm2`,
+53/14 structural contacts, and 2 holes. The other three measured sheet outputs
+remain byte-identical to the prior baseline, so sheet invariance is still open.
+See
+[the accepted experiment report](research/protected-boundary-anchor-diversity.md).
+
+The near-parallel NFP crossing crash is resolved in production by merged pull
+request #1. The guarded fallback recovers only strict internal crossings and the
+pre-merge differential corpus remained byte-identical.
 
 ### Production Rejection Is Not Research Rejection
 
@@ -106,19 +124,20 @@ must be allowed to challenge the current comparator and beam architecture; the
 triangle golden remains a shipping gate for the combined result, not a rule that
 automatically discards every intermediate branch that misses it.
 
-### Active Isolated Experiments
+### Current Research Status
 
-The following work is deliberately outside `main` until every mandatory gate
-passes:
-
-- `dual-policy-sheet-invariance`: retain balanced-compactness and edge-contact
-  local survivors together, then use intrinsic whole-layout ranking;
-- `bounded_ga_probe`: vary only piece order and rotation while always retaining
-  the deterministic baseline;
-- `deterministic_portfolio_probe`: test bounded large-first, small-fill, and
-  orientation-family diversity without increasing beam width;
-- `sheet_divergence_audit`: identify the first mixed-61 beam step where two
-  sheet sizes discard different geometry.
+- `contact-tier-intrinsic-reservation` M1b/M2: rejected unchanged, but retained
+  as evidence for max-side-first intrinsic growth, protected alternatives,
+  trace visibility, and independent runtime profiling;
+- `protected-contact-tier-reservation`: rejected because the narrow local port
+  regresses trapezoids and mixed-50 and does not improve mixed-61;
+- `protected-boundary-anchor-diversity`: accepted for repair-disabled production
+  after exact output gates and terminal Pareto protection;
+- Candidate L and M1b sheet invariance: still research-only; neither is a safe
+  global production comparator;
+- runtime: now the first follow-up for the protected lane, which costs about
+  `1.7-2.0x` on active corpus paths but avoids M1b's `8-15x` pathology;
+- sheet invariance: unresolved on mixed-61 and every current corpus family.
 
 Every completed experiment must be recorded below as accepted or rejected. An
 uncommitted temporary script or a visually attractive image is not production
@@ -1779,6 +1798,43 @@ Do not end with only a brainstorm. Rank recommendations, state what evidence
 would falsify each one, and identify the smallest safe production experiment.
 
 ## Investigation Log
+
+### 2026-07-18
+
+- Confirmed that the historical contact-tier intrinsic report should be mined,
+  not repeated wholesale. Area-first intrinsic growth is chain-forming;
+  max-side-first is the useful primitive, while M1b and M2 remain unsafe global
+  reservations because of reference-layout and runtime regressions.
+- Ported the max-side-first comparator into a narrow protected local reservation
+  on current main. It made the pentagon/star collision family invariant but
+  regressed trapezoids and mixed-50 and did not change mixed-61; preserved the
+  rejected branch and report instead of generalizing from one shape family.
+- Proved the current reference regression starts at the `95de72c`
+  canonicalization tie. The fix itself is numerically correct; the old raw
+  `4.3e-15` hull-waste difference had accidentally retained a distinct
+  sheet-boundary lineage that later formed the two-hole motif.
+- Accepted an isolated protected boundary-anchor lane. Production retention is
+  unchanged, cross-lane deduplication preserves the production representative,
+  and the protected terminal can win only when it is strictly better under the
+  production scorer and strictly smaller in envelope area.
+- Improved current mixed-61 `2000 x 2700` from `436,770.039 mm2`, 42/10
+  contacts, and 10 holes to `430,344.918 mm2`, 53/14 contacts, and 2 holes. The
+  other three sheets remain byte-identical, so this is a quality checkpoint,
+  not a sheet-invariance claim.
+- Preserved the exact repair-8 triangle golden and all unchanged corpus hashes;
+  also improved compact-sheet trapezoids by `8.35%` and reference mixed-50 by
+  `1.31%` with holes reduced `10 -> 7`.
+- Measured the protected lane at roughly `1.7-2.0x` on active corpus paths. The
+  next change should profile shared expansion/scoring work without weakening
+  lane isolation; width four already failed the mixed-61 target.
+- Completed a three-exchange independent review. Seven major isolation,
+  terminal-selection, trace, checkpoint, and coverage findings were fixed; the
+  final verdict was approved.
+- Promoted portable SVG/PNG evidence and the reports
+  [`contact-tier-intrinsic-reservation.md`](research/contact-tier-intrinsic-reservation.md),
+  [`protected-contact-tier-reservation.md`](research/protected-contact-tier-reservation.md),
+  and
+  [`protected-boundary-anchor-diversity.md`](research/protected-boundary-anchor-diversity.md).
 
 ### 2026-07-17
 

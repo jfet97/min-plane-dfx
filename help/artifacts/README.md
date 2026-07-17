@@ -12,7 +12,12 @@ exist so `help/help.md` remains useful on machines that do not have the original
 | `ac75222-1000x1700-sheet-dependent-failure.svg` | `ac75222` plus `depth21-total2` | `55f7d560-5068-4a28-bedf-86466a5bb77e`, `1000 x 1700` | `515.765 x 1382.896` | `48df7dae76016f496568e2280f45c80df7e76939cba834315caed4bc458b81f3` |
 | `b164d61-2000x2700-scale-diverse.svg` | `b164d61` | `780d4ec5-b64e-4f48-a8d8-0bfd30877549`, `2000 x 2700` | `657.041 x 816.710` | `801f0be2ffe00a6806a2d2e6732a363e7cf3280700294ca40e09d5be31675334` |
 | `b164d61-1000x1700-scale-diverse.svg` | `b164d61` | `55f7d560-5068-4a28-bedf-86466a5bb77e`, `1000 x 1700` | `492.567 x 905.797` | `d95d4e52058970a008b29b86473f2df738ff2b9541542b32cf8dccb6655c7492` |
+| `protected-boundary-anchor/mixed-61-2000x2700.svg` | `680e9a5` | persisted mixed-61 fixture, `2000 x 2700` | `545.515 x 788.878` | `2d8556fc00b7517a4b3c06a35dac1c3f755063f94f840de22b53a89b4a6f6c93` |
+| `protected-boundary-anchor/mixed-61-2000x2700.png` | Chromium render of `680e9a5` SVG | persisted mixed-61 fixture, `2000 x 2700` | `545.515 x 788.878` | `cfb4e876cafd676f835434e7f201bf3e9a7188cb69c774a261ce569bc3c66d1a` |
+| `protected-boundary-anchor/manifest.json` | immutable `680e9a5` experiment manifest | full corpus and four-sheet mixed-61 gate | n/a | `02b618a490db27b9dadee9e1cc3a875d65f2f30eb2fe2b6842036ae4ce5671b0` |
 
-The approved reference is the first row. The remaining files demonstrate the
-two independent sources of drift: sheet-normalized compactness and the later
+The first row remains the historical user-approved reference. The protected
+boundary-anchor rows are the current accepted repair-disabled result: smaller
+than the current post-canonicalization baseline, with the two-hole motif
+recovered. The remaining files demonstrate sheet-normalized drift and the later
 scale-diverse escape paths.
