@@ -84,10 +84,26 @@ while the similarly named PNG was not; that legacy pair has mixed provenance
 and must never be used as a reproducibility source.
 
 Commit `b164d61` later added an extra positive-contact balanced candidate and a
-post-20 compactness survivor. Those mechanisms changed the search path, so
-current `main` does not reproduce this reference exactly even though it retains
-the depth-aware contact comparator. The 25% and 50% raw-contact-floor variants
-were rejected: both elongated the triangle golden to a `529.728 mm` long side.
+post-20 compactness survivor. Those mechanisms changed the search path. The
+production restoration recorded below removes those two escape paths, restores
+the earlier terminal corner selection, and ports the exact `depth21-total2`
+post-20 comparator. The 25% and 50% raw-contact-floor variants were rejected:
+both elongated the triangle golden to a `529.728 mm` long side.
+
+The restored production code reproduces the approved request exactly:
+
+```text
+canonical geometry SHA-256: 9806dcd9119f6276df51ee92ca0389b18461fc586aa6ae2bcda88c313a727142
+bounds:                    564.660 x 773.545 mm
+bounds area:               436,789.920 mm2
+structural contacts:       56 total / 14 dominant
+normalized contact units:  58.907038
+```
+
+The verification artifact is
+`/private/tmp/min-plane-provenance/known-good-port/780d4ec5-b64e-4f48-a8d8-0bfd30877549/current.svg`.
+Sheet-independent compactness is deliberately a separate follow-up; it must not
+be mixed into this known-good checkpoint.
 
 ### Sheet-Independent Compactness Investigation
 
@@ -421,12 +437,11 @@ triangle lattice. Above 20 placements it uses this current order:
 7. lower collision-bounds absolute span;
 8. lower occupied convex-hull waste ratio;
 9. higher exact total near-complete structural-contact count;
-10. higher integer normalized contact band;
-11. higher continuous normalized contact units;
-12. higher raw shared padded-boundary length;
-13. lower collision-bounds bottom coordinate;
-14. lower collision-bounds left coordinate;
-15. free-material diagnostics and deterministic identities.
+10. higher continuous normalized contact units;
+11. higher raw shared padded-boundary length;
+12. lower collision-bounds bottom coordinate;
+13. lower collision-bounds left coordinate;
+14. free-material diagnostics and deterministic identities.
 
 Dominant repeated contact still remains strict, and crossing a two-contact band
 still dominates compactness. Those choices require further corpus evidence. The
@@ -1417,3 +1432,9 @@ would falsify each one, and identify the smallest safe production experiment.
   `492.567 x 905.797 mm`, `446,165.711 mm2`, 44 structural contacts, and 9 holes.
 - Re-ran the 20-triangle golden under Electron after the identity fix; the dense
   lattice gate remains green without local repair.
+- Restored the exact approved `ac75222` search semantics and ported the
+  `depth21-total2` comparator into production. The saved `780d4ec5` request now
+  reproduces canonical geometry hash `9806dcd9119f6276df51ee92ca0389b18461fc586aa6ae2bcda88c313a727142`
+  with `564.660 x 773.545 mm` bounds, while the 20-triangle golden remains green.
+- Kept sheet-dimension independence and the mixed-50 regression out of this
+  checkpoint so each can be tested and committed independently.

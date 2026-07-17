@@ -543,7 +543,6 @@ const scaleAwareLayoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.comb
   scoreCriterion((score) => score.collisionBoundsSpanMm),
   scoreCriterion((score) => score.occupiedHullWasteRatio),
   descendingScoreCriterion((score) => score.nearCompleteStructuralContactCount),
-  descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactBand),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactUnits),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryLengthMm),
   scoreCriterion((score) => score.collisionBoundsBottomMm),

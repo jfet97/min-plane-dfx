@@ -170,19 +170,11 @@ identical, this guarantees that the wider beam cannot finish with more unplaced
 pieces than `beamWidth = 1`. This changes search retention only, not geometry
 legality.
 
-For scale-diverse jobs, the edge-contact beam also retains two bounded
-compactness escape paths. Scale diversity means that the largest prepared
-collision-polygon area is at least four times the smallest; the decision uses
-geometry, not piece ids, fixture names, or piece count. With local fanout at
-least four, candidate selection may add one distinct positive-contact candidate
-chosen by balanced compactness in addition to the configured edge-contact
-fanout. After more than 20 placements and with beam width at least four, beam
-pruning may protect one compactness survivor whose dominant and total structural
-contact counts are each at most one below the current leader. The protected
-state consumes an existing beam slot rather than widening the beam. Decision
-traces distinguish this retention and its displaced alternative with
-`protected_compactness_survivor` and
-`displaced_by_compactness_survivor`.
+The production beam does not add scale-diversity-specific local candidates or
+protect a separate compactness survivor. Those escape paths changed the search
+lineage and prevented the saved approved mixed-61 request from reproducing. The
+configured local fanout and exact incumbent protection are therefore the only
+beam reservations in this checkpoint.
 
 The reorder window is also a bounded deferral budget. A branch may choose
 later-priority pieces from its configured prefix, but after the oldest remaining
@@ -495,20 +487,24 @@ is compared in this order:
 
 1. lower `unplacedCount`;
 2. higher `dominantNearCompleteStructuralContactCount`;
-3. higher `nearCompleteStructuralContactCount`;
+3. at 20 or fewer placements, higher exact
+   `nearCompleteStructuralContactCount`; above 20 placements, higher
+   `floor(nearCompleteStructuralContactCount / 2)`;
 4. lower `collisionBoundsWorstNormalizedSheetConsumption`;
 5. lower `collisionBoundsNormalizedSpanSum`;
 6. lower `collisionBoundsAreaMm2`;
 7. lower `collisionBoundsSpanMm`;
 8. lower `occupiedHullWasteRatio`;
-9. higher legacy normalized contact band, continuous normalized units, then
-   exact shared boundary length, only after compactness has decided between
-   layouts with the same repeated and total structural-contact counts;
-10. lower collision-bound `minY`, then `minX`, to anchor equivalent layouts at lower-left;
-11. higher `largestNetFreeMaterialRegionAreaMm2`;
-12. lower `freeMaterialRegionCount`;
-13. lower `freeMaterialHoleCount`;
-14. lower `freeMaterialSliverMetric`.
+9. above 20 placements, higher exact
+   `nearCompleteStructuralContactCount` after compactness;
+10. higher continuous normalized contact units, then exact shared boundary
+    length; at 20 or fewer placements the legacy integer contact band remains
+    ahead of those continuous contact tie-breaks;
+11. lower collision-bound `minY`, then `minX`, to anchor equivalent layouts at lower-left;
+12. higher `largestNetFreeMaterialRegionAreaMm2`;
+13. lower `freeMaterialRegionCount`;
+14. lower `freeMaterialHoleCount`;
+15. lower `freeMaterialSliverMetric`.
 
 A structural contact is an exact collinear overlap between two collision edges
 that are each at least half as long as their polygon's longest edge. It counts
