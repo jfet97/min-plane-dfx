@@ -596,3 +596,21 @@ piece ids and fixed sheet translation. The pairwise cache stores only the
 relative NFP boundary, while `NfpIfpService` returns a fresh id-bearing result
 after applying the current fixed translation. Free-material regions remain a
 sheet-space diagnostic artifact and do not replace direct placement validation.
+
+The live NFP service also owns a decoder-local memo for complete legal candidate
+sets. `windowedBeam.ts` creates one opaque scope for each decoder invocation and
+passes it through ordinary expansion and terminal repair. Within that scope,
+the memo key contains the sheet dimensions, local placed collision rings in
+placed-array order with their sheet translations, the ordered moving collision
+ring and bounds, geometry settings, candidate-pruning mode, and NFP construction
+algorithm. Ring order, winding, and the local/translation decomposition
+remain exact because they participate in floating-point candidate construction.
+Copy ids and the
+current moving transform metadata do not affect legal point geometry, so cached
+entries store only points and diagnostics and restore fresh piece and transform
+metadata for every caller. Cache hits still run the cooperative-control
+checkpoint; failed or aborted generation is never stored. Calls without a scope
+retain the uncached service behavior, and separate baseline, GA, repair, or
+replay decodes cannot share entries. This is exact geometry-infrastructure
+reuse: it does not change candidate generation semantics, local ranking, beam
+retention, scoring, or history selection.

@@ -10,6 +10,7 @@ import type {
 import type {
   ComputeIfpBoundsInput,
   ComputeNfpInput,
+  GeneratePlacementCandidatesInput,
   TransformCollisionGeometryInput
 } from './services.js'
 import { ConvexPolygonValidation } from './convexPolygonValidation.js'
@@ -19,10 +20,14 @@ export const NFP_CONSTRUCTION_ALGORITHMS = ['linear-edge-merge', 'vertex-pair-hu
 export type NfpConstructionAlgorithm = (typeof NFP_CONSTRUCTION_ALGORITHMS)[number]
 export const DEFAULT_NFP_CONSTRUCTION_ALGORITHM: NfpConstructionAlgorithm = 'vertex-pair-hull'
 
+/** Selects the live indexed candidate path or the differential-test reference path. */
+export type NfpCandidatePruningMode = 'indexed' | 'reference'
+
 /** Versioned cache namespaces keep derived artifacts isolated across algorithms. */
 export const TRANSFORM_GEOMETRY_CACHE_NAMESPACE = 'transform-collision-v1'
 export const NFP_GEOMETRY_CACHE_NAMESPACE = 'pairwise-nfp-relative-v3'
 export const IFP_GEOMETRY_CACHE_NAMESPACE = 'sheet-ifp-v1'
+export const LEGAL_CANDIDATE_MEMO_NAMESPACE = 'legal-placement-candidates-v1'
 
 /** Builds the complete identity for one transformed collision polygon. */
 export function transformCollisionGeometryCacheKey(
@@ -62,6 +67,33 @@ export function innerFitBoundsCacheKey(input: ComputeIfpBoundsInput): IrregularG
     `moving-transform=${transformDigest(input.moving.transform)}`,
     `moving-polygon=${polygonDigest(input.moving.polygon.points)}`,
     'ifp-operation=rectangular-sheet-vertex-bounds'
+  ])
+}
+
+/** Builds geometry-only identity for one decode-local legal candidate-point set. */
+export function legalPlacementCandidateMemoKey(
+  input: GeneratePlacementCandidatesInput,
+  constructionAlgorithm: NfpConstructionAlgorithm,
+  candidatePruningMode: NfpCandidatePruningMode
+): string {
+  const placedPolygons = input.placed
+    .map((placed) => {
+      const translation = placed.placement.transform
+      return [
+        polygonDigest(placed.collisionGeometry.polygon.points),
+        pointDigest({ x: translation.translateX, y: translation.translateY })
+      ].join('@')
+    })
+
+  return JSON.stringify([
+    LEGAL_CANDIDATE_MEMO_NAMESPACE,
+    `sheet=${numberKey(input.sheet.width)},${numberKey(input.sheet.height)}`,
+    `placed=${placedPolygons.join('|')}`,
+    `moving=${polygonDigest(input.moving.polygon.points)}`,
+    `moving-bounds=${boundsDigest(input.moving.bounds)}`,
+    ...geometrySettingsParts(input.settings.geometry),
+    `nfp-construction=${constructionAlgorithm}`,
+    `candidate-pruning=${candidatePruningMode}`
   ])
 }
 

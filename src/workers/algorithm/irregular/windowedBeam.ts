@@ -14,6 +14,7 @@ import {
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import {
   IrregularGeometryInputError,
+  IrregularNfpIfpCandidateMemoScope,
   IrregularNfpIfpControl,
   IrregularNfpIfpControlAbortError,
   IrregularNestingNotImplementedError,
@@ -210,6 +211,7 @@ export function runWindowedIrregularBeam(input: {
     const localCandidateFanout =
       settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth
     const localRepairBudget = settings.optimizer.localRepairBudget ?? 0
+    const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
     const stateKey = (state: IrregularBeamState): string =>
       beamStateKey(state, input.options?.transformPreferences)
 
@@ -298,6 +300,7 @@ export function runWindowedIrregularBeam(input: {
             geometryKernel,
             nfpIfpService,
             placementScorer,
+            candidateMemoScope,
             controlState,
             stepIndex,
             parentStateId,
@@ -403,6 +406,7 @@ export function runWindowedIrregularBeam(input: {
           nfpIfpService,
           placementScorer,
           layoutScorer,
+          candidateMemoScope,
           controlState,
           stepIndex,
           ...(input.control !== undefined ? { control: input.control } : {}),
@@ -602,6 +606,7 @@ function repairTerminalState(input: {
   readonly nfpIfpService: NfpIfpService
   readonly placementScorer: IrregularPlacementScorer.Service
   readonly layoutScorer: IrregularLayoutScorer.Service
+  readonly candidateMemoScope: IrregularNfpIfpCandidateMemoScope
   readonly control?: IrregularWindowedBeamControl
   readonly controlState: ControlState
   readonly options?: IrregularWindowedBeamOptions
@@ -637,6 +642,7 @@ function repairTerminalState(input: {
         geometryKernel: input.geometryKernel,
         nfpIfpService: input.nfpIfpService,
         placementScorer: input.placementScorer,
+        candidateMemoScope: input.candidateMemoScope,
         controlState: input.controlState,
         stepIndex: input.stepIndex,
         parentStateId: '',
@@ -791,6 +797,7 @@ function collectLocalCandidates(input: {
   readonly geometryKernel: GeometryKernel.Service
   readonly nfpIfpService: NfpIfpService
   readonly placementScorer: IrregularPlacementScorer.Service
+  readonly candidateMemoScope: IrregularNfpIfpCandidateMemoScope
   readonly control?: IrregularWindowedBeamControl
   readonly controlState: ControlState
   readonly options?: IrregularWindowedBeamOptions
@@ -820,7 +827,8 @@ function collectLocalCandidates(input: {
         placed: input.state.placedCollisionGeometries,
         placedCollisionIndex: input.state.placedCollisionIndex,
         moving,
-        settings: input.settings
+        settings: input.settings,
+        candidateMemoScope: input.candidateMemoScope
       }
       const legalCandidates =
         nfpControl === undefined

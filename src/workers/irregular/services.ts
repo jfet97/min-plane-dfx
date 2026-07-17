@@ -129,7 +129,15 @@ export interface GeneratePlacementCandidatesInput {
   readonly placedCollisionIndex?: PlacedCollisionSpatialIndex
   readonly moving: TransformedCollisionGeometry
   readonly settings: IrregularNestingSettings
+  readonly candidateMemoScope?: IrregularNfpIfpCandidateMemoScope
   readonly control?: IrregularNfpIfpControl
+}
+
+const IRREGULAR_NFP_IFP_CANDIDATE_MEMO_SCOPE_IDENTITY = Symbol()
+
+/** Opaque identity that bounds legal-candidate memo entries to one decoder invocation. */
+export class IrregularNfpIfpCandidateMemoScope {
+  readonly [IRREGULAR_NFP_IFP_CANDIDATE_MEMO_SCOPE_IDENTITY] = true
 }
 
 /** Candidate input whose caller has proved that no cooperative control exists. */

@@ -20,6 +20,7 @@ import {
   GeometryCache,
   GeometryCacheInMemory,
   IrregularGeometryInputError,
+  IrregularNfpIfpCandidateMemoScope,
   IrregularNfpIfpControl,
   IrregularNfpIfpControlAbortError,
   type IrregularNfpIfpCheckpointPhase,
@@ -36,15 +37,16 @@ import {
   innerFitBoundsCacheKey,
   isValidCachedIfp,
   isValidCachedNfpBoundary,
+  legalPlacementCandidateMemoKey,
   pairwiseNfpCacheKey
 } from './geometryCacheKeys.js'
-import type { NfpConstructionAlgorithm } from './geometryCacheKeys.js'
+import type {
+  NfpCandidatePruningMode,
+  NfpConstructionAlgorithm
+} from './geometryCacheKeys.js'
 
 export { DEFAULT_NFP_CONSTRUCTION_ALGORITHM }
-export type { NfpConstructionAlgorithm }
-
-/** Selects the live indexed candidate path or the differential-test reference path. */
-export type NfpCandidatePruningMode = 'indexed' | 'reference'
+export type { NfpCandidatePruningMode, NfpConstructionAlgorithm }
 
 const ORIGIN: InternalPoint = { x: 0, y: 0 }
 
@@ -612,7 +614,7 @@ function computeIfpBoundsValuesUncached(
 }
 
 /** Builds deterministic IFP/NFP contact candidates and filters illegal results. */
-function generatePlacementCandidates(
+function generatePlacementCandidatesUncached(
   input: GeneratePlacementCandidatesInput,
   geometryCache: GeometryCache,
   constructionAlgorithm: NfpConstructionAlgorithm,
@@ -818,6 +820,11 @@ function makeGeneratePlacementCandidates(
   constructionAlgorithm: NfpConstructionAlgorithm,
   candidatePruningMode: NfpCandidatePruningMode
 ): NfpIfpService['generatePlacementCandidates'] {
+  const candidatesByScope = new WeakMap<
+    IrregularNfpIfpCandidateMemoScope,
+    Map<string, ReadonlyArray<CachedLegalCandidate>>
+  >()
+
   function service(
     input: GeneratePlacementCandidatesInput & { readonly control: IrregularNfpIfpControl }
   ): Effect.Effect<
@@ -833,15 +840,77 @@ function makeGeneratePlacementCandidates(
     ReadonlyArray<IrregularPlacementCandidate>,
     IrregularGeometryInputError | IrregularNfpIfpControlAbortError
   > {
-    return generatePlacementCandidates(
+    const scope = input.candidateMemoScope
+    if (scope === undefined) {
+      return generatePlacementCandidatesUncached(
+        input,
+        geometryCache,
+        constructionAlgorithm,
+        candidatePruningMode
+      )
+    }
+
+    let candidatesByGeometry = candidatesByScope.get(scope)
+    if (candidatesByGeometry === undefined) {
+      candidatesByGeometry = new Map()
+      candidatesByScope.set(scope, candidatesByGeometry)
+    }
+    const key = legalPlacementCandidateMemoKey(
+      input,
+      constructionAlgorithm,
+      candidatePruningMode
+    )
+    const cached = candidatesByGeometry.get(key)
+    if (cached !== undefined) {
+      return nfpCheckpoint(input.control, 'candidate-points').pipe(
+        Effect.map(() => restoreCachedLegalCandidates(cached, input.moving))
+      )
+    }
+
+    return generatePlacementCandidatesUncached(
       input,
       geometryCache,
       constructionAlgorithm,
       candidatePruningMode
+    ).pipe(
+      Effect.tap((candidates) =>
+        Effect.sync(() => {
+          candidatesByGeometry?.set(key, cacheLegalCandidates(candidates))
+        })
+      )
     )
   }
 
   return service
+}
+
+interface CachedLegalCandidate {
+  readonly point: InternalPoint
+  readonly diagnostics: IrregularPlacementCandidate['diagnostics']
+}
+
+function cacheLegalCandidates(
+  candidates: ReadonlyArray<IrregularPlacementCandidate>
+): ReadonlyArray<CachedLegalCandidate> {
+  return candidates.map(({ point, diagnostics }) => ({
+    point: { x: point.x, y: point.y },
+    diagnostics: [...diagnostics]
+  }))
+}
+
+function restoreCachedLegalCandidates(
+  cached: ReadonlyArray<CachedLegalCandidate>,
+  moving: TransformedCollisionGeometry
+): ReadonlyArray<IrregularPlacementCandidate> {
+  return cached.map(
+    ({ point, diagnostics }) =>
+      new IrregularPlacementCandidate({
+        pieceId: moving.sourcePieceId,
+        transform: moving.transform,
+        point: new IrregularPoint(point),
+        diagnostics: [...diagnostics]
+      })
+  )
 }
 
 interface BoundsIndexEntry<T> {

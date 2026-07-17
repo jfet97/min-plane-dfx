@@ -29,7 +29,10 @@ import {
   NfpBoundaryAlgorithms,
   NfpIfpServiceLive
 } from '../../src/workers/irregular/nfpIfpService.js'
-import { pairwiseNfpCacheKey } from '../../src/workers/irregular/geometryCacheKeys.js'
+import {
+  legalPlacementCandidateMemoKey,
+  pairwiseNfpCacheKey
+} from '../../src/workers/irregular/geometryCacheKeys.js'
 import { makePlacedCollisionSpatialIndex } from '../../src/workers/irregular/placedCollisionSpatialIndex.js'
 import type {
   ComputeIfpBoundsInput,
@@ -41,6 +44,7 @@ import {
   cacheKeyToString,
   IrregularGeometryInfeasibleError,
   IrregularGeometryInputError,
+  IrregularNfpIfpCandidateMemoScope,
   IrregularNfpIfpControlAbortError,
   NfpIfpService
 } from '../../src/workers/irregular/services.js'
@@ -802,6 +806,258 @@ describe('NfpIfpServiceLive', () => {
       true
     )
     expect(candidates.every(({ diagnostics }) => diagnostics.length === 0)).toBe(true)
+  })
+
+  it('memoizes legal points by geometry and remaps current candidate metadata', async () => {
+    const values = new Map<string, unknown>()
+    const counters: CacheCounters = { gets: 0, sets: 0, removes: 0 }
+    const currentSheet = sheet(10, 10)
+    const fixed = placedPiece(
+      'fixed-memo',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      4,
+      4
+    )
+    const interchangeableFixedCopy = placedPiece(
+      'fixed-memo-copy',
+      fixed.collisionGeometry.polygon.points,
+      4,
+      4
+    )
+    const firstMoving = transformedGeometry(
+      'moving-memo-first',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      undefined,
+      transform(0, 0, false)
+    )
+    const secondTransform = transform(7, 0, false)
+    const secondMoving = transformedGeometry(
+      'moving-memo-second',
+      firstMoving.polygon.points,
+      firstMoving.bounds,
+      secondTransform
+    )
+    const firstScope = new IrregularNfpIfpCandidateMemoScope()
+    const secondScope = new IrregularNfpIfpCandidateMemoScope()
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* NfpIfpService
+        const first = yield* service.generatePlacementCandidates({
+          sheet: currentSheet,
+          placed: [fixed],
+          moving: firstMoving,
+          settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+          candidateMemoScope: firstScope
+        })
+        const getsAfterFirst = counters.gets
+        const second = yield* service.generatePlacementCandidates({
+          sheet: currentSheet,
+          placed: [interchangeableFixedCopy],
+          moving: secondMoving,
+          settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+          candidateMemoScope: firstScope
+        })
+        const getsAfterMemoHit = counters.gets
+        yield* service.generatePlacementCandidates({
+          sheet: currentSheet,
+          placed: [interchangeableFixedCopy],
+          moving: secondMoving,
+          settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+          candidateMemoScope: secondScope
+        })
+        return { first, second, getsAfterFirst, getsAfterMemoHit, getsAfterNewScope: counters.gets }
+      }).pipe(
+        Effect.provide(makeNfpIfpServiceLayer()),
+        Effect.provide(cacheLayer(values, counters))
+      )
+    )
+
+    expect(candidatePoints(result.second)).toEqual(candidatePoints(result.first))
+    expect(result.second.every(({ pieceId }) => pieceId === secondMoving.sourcePieceId)).toBe(true)
+    expect(result.second.every(({ transform }) => transform.index === secondTransform.index)).toBe(true)
+    expect(result.getsAfterMemoHit).toBe(result.getsAfterFirst)
+    expect(result.getsAfterNewScope).toBeGreaterThan(result.getsAfterMemoHit)
+  })
+
+  it('keeps floating-point construction identity exact in legal-candidate memo keys', () => {
+    const currentSheet = sheet(10, 10)
+    const fixedPoints = [point(0, 0), point(2, 0), point(2, 2), point(0, 2)]
+    const moving = transformedGeometry('moving-exact-memo-key', fixedPoints)
+    const baseInput = {
+      sheet: currentSheet,
+      placed: [placedPiece('fixed-exact-memo-key', fixedPoints, 4, 4)],
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS
+    }
+    const cyclicRingInput = {
+      ...baseInput,
+      placed: [
+        placedPiece(
+          'fixed-exact-memo-key-cyclic',
+          [point(2, 0), point(2, 2), point(0, 2), point(0, 0)],
+          4,
+          4
+        )
+      ]
+    }
+    const shiftedLocalOriginInput = {
+      ...baseInput,
+      placed: [
+        placedPiece(
+          'fixed-exact-memo-key-shifted',
+          [point(1, 0), point(3, 0), point(3, 2), point(1, 2)],
+          3,
+          4
+        )
+      ]
+    }
+    const additionalFixed = placedPiece(
+      'fixed-exact-memo-key-additional',
+      fixedPoints,
+      7,
+      4
+    )
+    const orderedPlacedInput = {
+      ...baseInput,
+      placed: [...baseInput.placed, additionalFixed]
+    }
+    const reversedPlacedInput = {
+      ...baseInput,
+      placed: [additionalFixed, ...baseInput.placed]
+    }
+    const key = (input: GeneratePlacementCandidatesInput) =>
+      legalPlacementCandidateMemoKey(input, 'vertex-pair-hull', 'indexed')
+
+    expect(key(cyclicRingInput)).not.toBe(key(baseInput))
+    expect(key(shiftedLocalOriginInput)).not.toBe(key(baseInput))
+    expect(key(reversedPlacedInput)).not.toBe(key(orderedPlacedInput))
+  })
+
+  it('preserves uncached service behavior when no decoder memo scope is supplied', async () => {
+    const values = new Map<string, unknown>()
+    const counters: CacheCounters = { gets: 0, sets: 0, removes: 0 }
+    const input = {
+      sheet: sheet(10, 10),
+      placed: [
+        placedPiece(
+          'fixed-without-memo-scope',
+          [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+          4,
+          4
+        )
+      ],
+      moving: transformedGeometry('moving-without-memo-scope', [
+        point(0, 0),
+        point(2, 0),
+        point(2, 2),
+        point(0, 2)
+      ]),
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS
+    }
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* NfpIfpService
+        const first = yield* service.generatePlacementCandidates(input)
+        const getsAfterFirst = counters.gets
+        const second = yield* service.generatePlacementCandidates(input)
+        return { first, second, getsAfterFirst, getsAfterSecond: counters.gets }
+      }).pipe(
+        Effect.provide(makeNfpIfpServiceLayer()),
+        Effect.provide(cacheLayer(values, counters))
+      )
+    )
+
+    expect(candidatePoints(result.second)).toEqual(candidatePoints(result.first))
+    expect(result.getsAfterSecond).toBeGreaterThan(result.getsAfterFirst)
+  })
+
+  it('checks cooperative control on memo hits and never memoizes an aborted generation', async () => {
+    const values = new Map<string, unknown>()
+    const counters: CacheCounters = { gets: 0, sets: 0, removes: 0 }
+    const currentMoving = transformedGeometry('moving-memo-control', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const input = {
+      sheet: sheet(10, 10),
+      placed: [],
+      moving: currentMoving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS
+    }
+    const cachedScope = new IrregularNfpIfpCandidateMemoScope()
+    const abortedScope = new IrregularNfpIfpCandidateMemoScope()
+    const cachedPhases: string[] = []
+    const abortedPhases: string[] = []
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* NfpIfpService
+        yield* service.generatePlacementCandidates({ ...input, candidateMemoScope: cachedScope })
+        const getsAfterFill = counters.gets
+        const cachedFailure = yield* service
+          .generatePlacementCandidates({
+            ...input,
+            candidateMemoScope: cachedScope,
+            control: {
+              checkpoint: (phase) => {
+                cachedPhases.push(phase)
+                return Effect.fail(
+                  new IrregularNfpIfpControlAbortError({
+                    reason: 'cancelled',
+                    message: 'test cancellation'
+                  })
+                )
+              }
+            }
+          })
+          .pipe(Effect.flip)
+        const getsAfterCachedAbort = counters.gets
+        const abortedFailure = yield* service
+          .generatePlacementCandidates({
+            ...input,
+            candidateMemoScope: abortedScope,
+            control: {
+              checkpoint: (phase) => {
+                abortedPhases.push(phase)
+                return Effect.fail(
+                  new IrregularNfpIfpControlAbortError({
+                    reason: 'deadline',
+                    message: 'test deadline'
+                  })
+                )
+              }
+            }
+          })
+          .pipe(Effect.flip)
+        const getsAfterUncachedAbort = counters.gets
+        const recovered = yield* service.generatePlacementCandidates({
+          ...input,
+          candidateMemoScope: abortedScope
+        })
+        return {
+          cachedFailure,
+          abortedFailure,
+          recovered,
+          getsAfterFill,
+          getsAfterCachedAbort,
+          getsAfterUncachedAbort,
+          getsAfterRecovery: counters.gets
+        }
+      }).pipe(
+        Effect.provide(makeNfpIfpServiceLayer()),
+        Effect.provide(cacheLayer(values, counters))
+      )
+    )
+
+    expect(result.cachedFailure).toBeInstanceOf(IrregularNfpIfpControlAbortError)
+    expect(cachedPhases).toEqual(['candidate-points'])
+    expect(result.getsAfterCachedAbort).toBe(result.getsAfterFill)
+    expect(result.abortedFailure).toBeInstanceOf(IrregularNfpIfpControlAbortError)
+    expect(abortedPhases).toEqual(['ifp'])
+    expect(result.getsAfterUncachedAbort).toBe(result.getsAfterCachedAbort)
+    expect(result.recovered).not.toHaveLength(0)
+    expect(result.getsAfterRecovery).toBeGreaterThan(result.getsAfterUncachedAbort)
   })
 
   it('propagates cooperative aborts through placed-NFP and pairwise boundary work', async () => {
