@@ -184,34 +184,47 @@ strongly than global consolidation.
 
 ## Current Repository State
 
-At the start of this investigation, `main` and `origin/main` point to commit
-`e883e3b`.
+`main` and `origin/main` now point to `ef1fbe2`, the first production checkpoint
+that reproduces the explicitly approved mixed-61 layout exactly.
 
-The latest accepted changes are:
+The accepted checkpoint chain is:
 
-- `ef9e255`: bound decision-trace detail;
-- `4d0fbb9`: preserve the last fully accepted repair result when a cooperative
-  deadline interrupts only the next repair iteration;
-- `e883e3b`: exact decoder-local NFP legal-candidate memoization for
-  interchangeable copies.
+- `968f164`: record immutable nesting-experiment provenance;
+- `32c1951`: move this handoff into `help/` and add portable reference SVGs;
+- `ef1fbe2`: restore the approved `ac75222` beam-search semantics and port the
+  exact `depth21-total2` post-20 comparator into production.
 
-These changes improve diagnostics and speed. They intentionally do not alter the
-layout objective, candidate legality, or winner selection.
+`ef1fbe2` deliberately removes the later scale-diverse escape paths that changed
+the search trajectory: the extra positive-contact balanced local candidate and
+the post-20 compactness beam survivor. It also restores terminal corner-gap
+selection and uses strict dominant contacts plus two-total-contact bands after
+placement depth 20 before intrinsic compactness.
 
-The current pushed checkpoint is `381cd2f`. It adds two measured quality
-changes after the original baseline:
+The checkpoint passed `64/64` focused scorer, beam, schema, renderer, and
+20-triangle golden tests. Lint, typecheck, the worker build, and diff validation
+also passed. The rebuilt worker reproduces the saved mixed-61 request with:
 
-- whole-layout structural-contact totals remain strict through 20 placements,
-  then use adjacent two-contact bands before compactness;
-- terminal one-piece repair can improve contacts only when worst normalized
-  consumption, normalized span, bounds area, and absolute span are all
-  non-increasing.
+```text
+canonical geometry SHA-256: 9806dcd9119f6276df51ee92ca0389b18461fc586aa6ae2bcda88c313a727142
+bounds:                    564.660 x 773.545 mm
+bounds area:               436,789.920 mm2
+structural contacts:       56 total / 14 dominant
+normalized contact units:  58.907038
+free-material holes:       2
+```
 
-The 20-triangle golden still passes at this checkpoint. Focused scorer, beam,
-and golden validation passed `63/63` tests before the worker was rebuilt. The
-change is a meaningful improvement, not the end of the investigation: mixed-job
-holes, local-policy selection, final score reconstruction, repair dependence,
-and runtime remain active work.
+This is a protected known-good checkpoint, not the end state. The remaining
+work is isolated into separate changes:
+
+1. make balanced and edge-contact compactness independent of sheet dimensions
+   while preserving the triangle lattice and the approved mixed-61 geometry;
+2. retain the restored terminal corner behavior with an explicit mixed-50
+   regression test;
+3. use a deterministic multi-shape corpus to reject layouts that improve a
+   scalar envelope metric while worsening holes, connectivity, or repeated-shape
+   structure;
+4. reduce trace volume and runtime only after search semantics are protected by
+   those gates.
 
 ## Product And Architecture
 
@@ -1436,5 +1449,18 @@ would falsify each one, and identify the smallest safe production experiment.
   `depth21-total2` comparator into production. The saved `780d4ec5` request now
   reproduces canonical geometry hash `9806dcd9119f6276df51ee92ca0389b18461fc586aa6ae2bcda88c313a727142`
   with `564.660 x 773.545 mm` bounds, while the 20-triangle golden remains green.
+- Promoted that restoration to `main` and `origin/main` as `ef1fbe2` after
+  `64/64` focused tests, lint, typecheck, worker build, and an exact saved-request
+  replay. The immutable experiment ledger is in `help/` and under
+  `/private/tmp/min-plane-provenance/`.
 - Kept sheet-dimension independence and the mixed-50 regression out of this
   checkpoint so each can be tested and committed independently.
+- Built an isolated seven-fixture sheet-invariance corpus covering the triangle
+  golden, homogeneous rectangles, trapezoids, pentagons, stars, mixed-50, and
+  the exact saved mixed-61 request. The current baseline changes geometry on all
+  seven fixtures when only the sheet changes.
+- Confirmed that equal or lower envelope area is not a sufficient acceptance
+  gate: the triangle fixture can retain the same area while becoming a long
+  chain, and mixed-61 can reduce area while increasing free-material holes from
+  one to nine. Future intrinsic-comparator changes therefore require independent
+  golden, hole, contact/connectivity, and invariance gates.
