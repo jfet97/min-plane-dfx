@@ -15,9 +15,15 @@ exist so `help/help.md` remains useful on machines that do not have the original
 | `protected-boundary-anchor/mixed-61-2000x2700.svg` | `680e9a5` | persisted mixed-61 fixture, `2000 x 2700` | `545.515 x 788.878` | `2d8556fc00b7517a4b3c06a35dac1c3f755063f94f840de22b53a89b4a6f6c93` |
 | `protected-boundary-anchor/mixed-61-2000x2700.png` | Chromium render of `680e9a5` SVG | persisted mixed-61 fixture, `2000 x 2700` | `545.515 x 788.878` | `cfb4e876cafd676f835434e7f201bf3e9a7188cb69c774a261ce569bc3c66d1a` |
 | `protected-boundary-anchor/manifest.json` | immutable `680e9a5` experiment manifest | full corpus and four-sheet mixed-61 gate | n/a | `02b618a490db27b9dadee9e1cc3a875d65f2f30eb2fe2b6842036ae4ce5671b0` |
+| `protected-intrinsic-contact-seed/mixed-61-2000x1700.svg` | `13a2351` | persisted mixed-61 fixture, `2000 x 1700` | `744.164 x 720.014` | `e3ed14b7ad13228b950ab9d4b09569f2c0ef8f5c6702dacdc5fe95bd0cd0a8c4` |
+| `protected-intrinsic-contact-seed/mixed-61-2000x1700.png` | Chromium render of `13a2351` SVG | persisted mixed-61 fixture, `2000 x 1700` | `744.164 x 720.014` | `0fe3b81c8a5e3af9898c999c0b88131a1ca4b17306ae4670263e7ca947ceed0d` |
+| `protected-intrinsic-contact-seed/manifest.json` | immutable `13a2351` experiment manifest | full corpus and reproducible four-sheet mixed-61 gate | n/a | `0cb539325d4db726bae9805f201cab446a1f2169da1ed4e9d0574bc50b3adc31` |
 
 The first row remains the historical user-approved reference. The protected
 boundary-anchor rows are the current accepted repair-disabled result: smaller
 than the current post-canonicalization baseline, with the two-hole motif
-recovered. The remaining files demonstrate sheet-normalized drift and the later
-scale-diverse escape paths.
+recovered. The intrinsic-contact rows are the next accepted checkpoint: they
+preserve that reference and reduce the `2000 x 1700` envelope by `18.99%` while
+reducing holes from 6 to 4. Four hashes remain, so these rows are not evidence
+of complete sheet invariance. The remaining files demonstrate sheet-normalized
+drift and the later scale-diverse escape paths.

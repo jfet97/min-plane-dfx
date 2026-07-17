@@ -1,0 +1,75 @@
+{
+  "experiment": "protected-intrinsic-contact-seed",
+  "decision": "accepted-partial-quality-improvement",
+  "sheetInvarianceClosed": false,
+  "productionBase": "20d74f6379c4865ec9654d351b3bcbae7b2aae81",
+  "algorithmCheckpoint": "13a23510df57365e1242323b30f5463b06b62e61",
+  "harnessCheckpoint": "221da872a085be66da0913ab6a16727b7d842f8e",
+  "baselineHarnessCheckpoint": "cac6c13",
+  "branch": "protected-intrinsic-contact-seed",
+  "netDiffSha256": "28c6bb8d20f001f8fa53eda98cb007e53d8eba8eec4d65e9736599f85fe4f967",
+  "fixtureSha256": "cf390e7a851eb1f267c5ff986032ce003372483863f3ed5e31d963bc24b95660",
+  "runtime": {
+    "node": "v24.16.0",
+    "pnpm": "11.8.0",
+    "platform": "Darwin arm64"
+  },
+  "commands": {
+    "candidateCorpus": "pnpm corpus:sheet-invariance --output /private/tmp/min-plane-provenance/protected-intrinsic-contact-seed/13a2351/candidate/corpus",
+    "baselineFourSheet": "pnpm corpus:sheet-invariance --case mixed-61 --sheets 1000x1300,1000x1700,2000x1700,2000x2700 --output /private/tmp/min-plane-provenance/protected-intrinsic-contact-seed/cac6c13/baseline/four-sheet",
+    "candidateFourSheet": "pnpm corpus:sheet-invariance --case mixed-61 --sheets 1000x1300,1000x1700,2000x1700,2000x2700 --output /private/tmp/min-plane-provenance/protected-intrinsic-contact-seed/13a2351/candidate/four-sheet",
+    "candidateRepeat": "pnpm corpus:sheet-invariance --case mixed-61 --sheets 2000x1700,2000x2700 --output /private/tmp/min-plane-provenance/protected-intrinsic-contact-seed/13a2351/candidate/repeat"
+  },
+  "reports": [
+    {
+      "path": "/private/tmp/min-plane-provenance/protected-intrinsic-contact-seed/cac6c13/baseline/four-sheet/report.json",
+      "sha256": "753be158a78832ea502eae2c11982ad673d62c6f1e454906248cbc5cf61f90a3"
+    },
+    {
+      "path": "/private/tmp/min-plane-provenance/protected-intrinsic-contact-seed/13a2351/candidate/four-sheet/report.json",
+      "sha256": "692e8b665a07ff44a52126ee456b5b3c762b9ea43bf7703345fef0d10ea94d91"
+    },
+    {
+      "path": "/private/tmp/min-plane-provenance/protected-intrinsic-contact-seed/13a2351/candidate/corpus/report.json",
+      "sha256": "f397c14a66b57da4b9eed5e69aa94b56d2e4260c759929d9caca1e90acd8e749"
+    },
+    {
+      "path": "/private/tmp/min-plane-provenance/protected-intrinsic-contact-seed/13a2351/candidate/repeat/report.json",
+      "sha256": "97b79a0698d59c84304753ae7220649bb33c8d31ac07a1172d1b0c90335c0fd9"
+    }
+  ],
+  "portableArtifacts": [
+    {
+      "path": "help/artifacts/protected-intrinsic-contact-seed/mixed-61-2000x1700.svg",
+      "sha256": "e3ed14b7ad13228b950ab9d4b09569f2c0ef8f5c6702dacdc5fe95bd0cd0a8c4"
+    },
+    {
+      "path": "help/artifacts/protected-intrinsic-contact-seed/mixed-61-2000x1700.png",
+      "sha256": "0fe3b81c8a5e3af9898c999c0b88131a1ca4b17306ae4670263e7ca947ceed0d"
+    }
+  ],
+  "mixed61": {
+    "baselineAreaSpreadMm2": 231096.72506173473,
+    "candidateAreaSpreadMm2": 105463.76821954706,
+    "spreadReductionPercent": 54.36379801947706,
+    "changedSheet": {
+      "sheet": "2000x1700",
+      "baselineAreaMm2": 661441.642589083,
+      "candidateAreaMm2": 535808.6857468954,
+      "areaChangePercent": -18.993808183957427,
+      "baselineHoles": 6,
+      "candidateHoles": 4,
+      "candidateCanonicalSha256": "236f5f40e722bce2ba2dacecdc18ec4c1ce01344f944a2fce1c49bfbe19f7159"
+    },
+    "unchangedSheetCount": 3,
+    "distinctCanonicalHashes": 4
+  },
+  "validation": {
+    "focusedTests": "60 passed",
+    "fullSuite": "524 passed; 2 baseline-identical irregularBenchmark failures",
+    "lint": "passed",
+    "typecheck": "passed",
+    "workerBuild": "passed",
+    "visualInspection": "passed with complete margins; existing central void remains but envelope narrows and measured holes decrease"
+  }
+}

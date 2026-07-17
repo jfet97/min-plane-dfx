@@ -96,10 +96,16 @@ Production now retains an isolated boundary-anchor alternative only when repair
 is disabled and no chromosome transform preference is active. It cannot consume
 a production beam slot or win through its private ranking alone. On the
 reference mixed-61 sheet it improves the current baseline to `430,344.918 mm2`,
-53/14 structural contacts, and 2 holes. The other three measured sheet outputs
-remain byte-identical to the prior baseline, so sheet invariance is still open.
-See
-[the accepted experiment report](research/protected-boundary-anchor-diversity.md).
+53/14 structural contacts, and 2 holes.
+
+Production also retains one width-one max-side-first intrinsic successor from a
+duplicated positive exact-contact tier. It is protected-only, consumes no
+production slot, and uses no sheet-derived pruning fields. On `2000 x 1700`, it
+improves mixed-61 from `661,441.643 mm2` and 6 holes to `535,808.686 mm2` and 4
+holes. The other three sheet outputs remain exact, including the two-hole
+reference. Four distinct hashes remain, so sheet invariance is still open. See
+[the boundary-lane report](research/protected-boundary-anchor-diversity.md) and
+[the intrinsic-seed report](research/protected-intrinsic-contact-seed.md).
 
 The near-parallel NFP crossing crash is resolved in production by merged pull
 request #1. The guarded fallback recovers only strict internal crossings and the
@@ -133,11 +139,16 @@ automatically discards every intermediate branch that misses it.
   regresses trapezoids and mixed-50 and does not improve mixed-61;
 - `protected-boundary-anchor-diversity`: accepted for repair-disabled production
   after exact output gates and terminal Pareto protection;
+- `protected-intrinsic-contact-seed`: accepted for repair-disabled production;
+  it preserves production fanout and the boundary lane while improving the
+  `2000 x 1700` mixed-61 envelope by `18.99%` and holes from 6 to 4;
 - Candidate L and M1b sheet invariance: still research-only; neither is a safe
   global production comparator;
-- runtime: now the first follow-up for the protected lane, which costs about
-  `1.7-2.0x` on active corpus paths but avoids M1b's `8-15x` pathology;
-- sheet invariance: unresolved on mixed-61 and every current corpus family.
+- runtime: the intrinsic sublane adds about `1.05x` on the constrained sheet and
+  `1.16x` on the changed path, below the `1.25x` incremental budget and far from
+  M1b's `8-15x` pathology;
+- sheet invariance: unresolved; mixed-61 still has four hashes, but its
+  four-sheet area spread is down `54.36%` from the current-main checkpoint.
 
 Every completed experiment must be recorded below as accepted or rejected. An
 uncommitted temporary script or a visually attractive image is not production
@@ -164,6 +175,37 @@ source commit, uncommitted diff or injected comparator, exact request, settings,
 metrics, and artifact hashes. Future experiments must write an immutable manifest
 in their isolated worktree before production code is changed. Promote accepted
 artifacts into `help/artifacts/` and durable research reports into `help/research/`.
+
+### Protected Intrinsic Contact Seed
+
+```text
+experiment:           protected-intrinsic-contact-seed
+production base:      20d74f6379c4865ec9654d351b3bcbae7b2aae81
+algorithm checkpoint: 13a23510df57365e1242323b30f5463b06b62e61
+harness checkpoint:   221da872a085be66da0913ab6a16727b7d842f8e
+local seed:            one positive exact-contact-tier max-side winner
+production fanout:     unchanged
+protected widths:      legacy boundary 8, intrinsic contact 1
+terminal acceptance:   strict production comparator plus smaller area
+changed sheet:         2000 x 1700
+baseline area / holes: 661,441.643 mm2 / 6
+candidate area / holes: 535,808.686 mm2 / 4
+candidate hash:        236f5f40e722bce2ba2dacecdc18ec4c1ce01344f944a2fce1c49bfbe19f7159
+four-sheet hashes:     4 (invariance not closed)
+```
+
+The other three mixed-61 sheets and every existing two-sheet corpus output are
+exact current-main hashes. The intrinsic lane uses contact strength, direct
+maximum side, area, span, raw hull waste, placement identity, and
+translation-normalized geometry only; sheet-normalized, boundary-coordinate,
+and free-material fields are excluded from protected pruning.
+
+Portable evidence:
+
+- [research report](research/protected-intrinsic-contact-seed.md);
+- [changed SVG](artifacts/protected-intrinsic-contact-seed/mixed-61-2000x1700.svg);
+- [Chromium PNG](artifacts/protected-intrinsic-contact-seed/mixed-61-2000x1700.png);
+- [manifest](artifacts/protected-intrinsic-contact-seed/manifest.json).
 
 ### Approved Mixed-61 Reference: `depth21-total2`
 
@@ -1800,6 +1842,24 @@ would falsify each one, and identify the smallest safe production experiment.
 ## Investigation Log
 
 ### 2026-07-18
+
+- Accepted a width-one protected intrinsic contact lane after the existing
+  boundary-anchor lane. It can seed only from a duplicated positive exact
+  shared-boundary tier and never replaces or reorders production fanout.
+- Improved mixed-61 `2000 x 1700` from `661,441.643 mm2` and 6 holes to
+  `535,808.686 mm2` and 4 holes. The other three four-sheet hashes and all 14
+  existing corpus outputs remain exact; four-sheet area spread falls `54.36%`.
+- Removed the final sheet-relative intrinsic tie-breaks. Protected pruning now
+  excludes normalized sheet fields, bottom/left coordinates, and free-material
+  metrics, and uses translation-normalized combined geometry for deterministic
+  ties.
+- Hardened terminal arbitration after the first checkpoint showed that an
+  intrinsic tag on a production state could shadow the boundary winner.
+  Production, boundary, and intrinsic terminals are now oriented and Pareto
+  gated independently; zero-contact tiers cannot seed the intrinsic lane.
+- Added committed `--sheets WIDTHxHEIGHT,...` corpus support, deterministic
+  four-sheet evidence, repeat hashes, and portable SVG/PNG artifacts. The new
+  lane measures about `1.05x-1.16x` current main on the sampled active paths.
 
 - Confirmed that the historical contact-tier intrinsic report should be mined,
   not repeated wholesale. Area-first intrinsic growth is chain-forming;

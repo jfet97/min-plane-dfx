@@ -179,14 +179,24 @@ eight-state protected lane under the legacy pre-canonical hull ordering. The
 canonical production beam remains separate and cross-lane deduplication keeps
 its representative.
 
-Production and protected terminal winners are oriented independently. The
-protected winner replaces production only when it is strictly better under the
+The same activation boundary may seed one additional protected-only local
+candidate when a positive canonical shared-boundary length already occupies at
+least two production fanout positions. The seed is the direct maximum-side,
+then area, then span winner of that exact tier. It never replaces or reorders a
+production candidate and advances in a separate width-one intrinsic lane.
+Protected intrinsic pruning ranks contact strength, maximum side, area, span,
+raw hull waste, placement identity, and translation-normalized geometry. It
+must not consume normalized sheet fields, sheet-boundary coordinates, or
+free-material fields.
+
+Production, boundary, and intrinsic terminal winners are oriented independently.
+Each protected winner may compete only when it is strictly better under the
 production layout comparator and has strictly smaller collision-envelope area.
-The lane is disabled under terminal repair, preserving repair-8 golden and
-deadline semantics. Decision traces identify protected boundary survivors and
-retain lane-correct ranks. This is a bounded quality recovery for a lineage that
-numerical canonicalization exposed as tied; it does not make compactness
-sheet-independent.
+Both lanes are disabled under terminal repair, preserving repair-8 golden and
+deadline semantics. Cross-lane convergence keeps the production representative
+and propagates eligibility only. Decision traces identify boundary and intrinsic
+survivors with lane-correct ranks. These are bounded quality recoveries; the
+decoder as a whole is not yet sheet-invariant.
 
 The reorder window is also a bounded deferral budget. A branch may choose
 later-priority pieces from its configured prefix, but after the oldest remaining
