@@ -445,6 +445,8 @@ its temporary-overlap compression phase. PackingSolver is the clearest reference
 for repeated identical pieces because it constructs periodic cells explicitly.
 The production engine should borrow these search structures only through real
 placement generation and validation; it must not hardcode a screenshot motif.
+The source-backed comparison of libnest2d, PackingSolver, and Sparrow is recorded
+in [Open-Source Irregular Nesting Strategy Comparison](./docs/research/open-source-irregular-nesting-strategies.md).
 
 ## End-To-End Pipeline
 
