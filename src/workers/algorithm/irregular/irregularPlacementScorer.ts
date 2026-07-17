@@ -118,9 +118,10 @@ const edgeContactThenBalancedCompactnessOrder = Order.combineAll<IrregularPlacem
 ])
 
 const shortSideFillOrder = Order.combineAll<IrregularPlacementScore>([
+  Order.mapInput(Order.Number, (score) => score.worstNormalizedSheetConsumption),
+  Order.mapInput(Order.Number, (score) => score.normalizedSheetSpanSum),
   Order.mapInput(Order.Number, (score) => -score.shortSideFill),
   Order.mapInput(Order.Number, (score) => score.longSideFill),
-  Order.mapInput(Order.Number, (score) => score.normalizedSheetSpanSum),
   Order.mapInput(Order.Number, (score) => score.usedClusterAreaMm2),
   Order.mapInput(Order.Number, (score) => score.usedClusterSpanMm),
   Order.mapInput(Order.Number, (score) => score.candidateBottomMm),

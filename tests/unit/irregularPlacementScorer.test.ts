@@ -191,7 +191,7 @@ describe('IrregularPlacementScorer', () => {
     expect(leftWins.candidate.point).toEqual(point(1, 1))
   })
 
-  it('lets short-side fill prefer the shorter sheet axis explicitly', async () => {
+  it('guards short-side fill with global envelope quality on landscape sheets', async () => {
     const moving = movingGeometry('piece', rectanglePoints(2, 2))
     const placed = [placedGeometry('placed', rectanglePoints(2, 2), 50, 0)]
     const currentSheet = sheet(100, 20)
@@ -205,7 +205,63 @@ describe('IrregularPlacementScorer', () => {
     ])
 
     expect(balancedWinner.candidate.point).toEqual(point(0, 0))
-    expect(shortSideWinner.candidate.point).toEqual(point(0, 4))
+    expect(shortSideWinner.candidate.point).toEqual(point(0, 0))
+  })
+
+  it('guards short-side fill with global envelope quality on portrait sheets', async () => {
+    const moving = movingGeometry('piece', rectanglePoints(2, 2))
+    const placed = [placedGeometry('placed', rectanglePoints(2, 2), 0, 50)]
+    const currentSheet = sheet(20, 100)
+    const balancedCandidate = baseInput(currentSheet, moving, candidate('piece', 0, 0), placed)
+    const shortSideCandidate = baseInput(currentSheet, moving, candidate('piece', 4, 0), placed)
+
+    const winner = await rank([
+      { ...balancedCandidate, policyId: 'short-side-fill' },
+      { ...shortSideCandidate, policyId: 'short-side-fill' }
+    ])
+
+    expect(winner.candidate.point).toEqual(point(0, 0))
+  })
+
+  it('retains short-axis progress after the envelope criteria tie', async () => {
+    const moving = movingGeometry('piece', rectanglePoints(2, 2))
+    const placed = [placedGeometry('placed', rectanglePoints(2, 2), 0, 0)]
+    const currentSheet = sheet(100, 20)
+    const longAxisCandidate = baseInput(
+      currentSheet,
+      moving,
+      candidate('piece', 48, 2),
+      placed
+    )
+    const shortAxisCandidate = baseInput(
+      currentSheet,
+      moving,
+      candidate('piece', 18, 8),
+      placed
+    )
+
+    const winner = await rank([
+      { ...longAxisCandidate, policyId: 'short-side-fill' },
+      { ...shortAxisCandidate, policyId: 'short-side-fill' }
+    ])
+
+    expect(winner.candidate.point).toEqual(point(18, 8))
+  })
+
+  it('falls back to balanced compactness on square sheets', async () => {
+    const moving = movingGeometry('piece', rectanglePoints(2, 2))
+    const placed = [placedGeometry('placed', rectanglePoints(2, 2), 5, 0)]
+    const compactCandidate = baseInput(sheet(20, 20), moving, candidate('piece', 0, 0), placed)
+    const tallerCandidate = baseInput(sheet(20, 20), moving, candidate('piece', 0, 4), placed)
+
+    const [compact, taller] = await Promise.all([
+      score({ ...compactCandidate, policyId: 'short-side-fill' }),
+      score({ ...tallerCandidate, policyId: 'short-side-fill' })
+    ])
+
+    expect(compact.policyId).toBe('balanced-compactness')
+    expect(taller.policyId).toBe('balanced-compactness')
+    expect(IrregularPlacementScorer.Make.compare(compact, taller)).toBeLessThan(0)
   })
 
   it('lets edge contact prefer a longer shared padded boundary before compactness', async () => {

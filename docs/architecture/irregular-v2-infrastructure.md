@@ -61,8 +61,8 @@ or invent placement data. Candidate
 generation and direct placement validation remain the legality authority. The
 decoder uses `IrregularPlacementScorer` only to compare those real legal
 candidates with the requested explicit local policy: balanced compactness,
-short-side fill, or exact shared padded-edge contact followed by balanced
-compactness. The contact policy measures only the collision envelopes already
+envelope-guarded short-side fill, or exact shared padded-edge contact followed
+by balanced compactness. The contact policy measures only the collision envelopes already
 accepted by direct validation, so its preferred edge mates preserve configured
 source clearance. It does not use free-material metrics to accept candidates; whole-layout
 metrics remain a separate beam-retention and portfolio concern. A valid transformed

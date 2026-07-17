@@ -125,13 +125,17 @@ Meaning:
   back to balanced compactness;
 - `longFill` is the normalized consumption of the other direction.
 
-Because the score tuple is smaller-is-better, prefer larger short-side fill by negating it:
+Short-axis progress is a secondary preference, not permission to grow a poor
+global envelope. Compare balanced normalized envelope consumption first, then
+prefer larger short-side fill by negating it because score tuples are
+smaller-is-better:
 
 ```text
 (
+  max(U' / W, V' / H),
+  U' / W + V' / H,
   -shortFill,
   longFill,
-  U' / W + V' / H,
   U' * V',
   U' + V'
 )
@@ -139,16 +143,17 @@ Because the score tuple is smaller-is-better, prefer larger short-side fill by n
 
 Interpretation:
 
-1. Prefer filling the sheet's short direction first.
-2. Then avoid expanding too much along the long direction.
-3. Then use normalized perimeter-like compactness.
-4. Then keep the used cluster area compact.
-5. Then use absolute perimeter-like compactness.
+1. Avoid catastrophic growth along either normalized sheet axis.
+2. Prefer the smaller normalized total span.
+3. When those envelope criteria tie, prefer filling the sheet's short direction.
+4. Then avoid expanding too much along the long direction.
+5. Then keep the used cluster area compact.
+6. Then use absolute perimeter-like compactness.
 
-Open question:
-
-- Should `-shortFill` be an exact first criterion, or should it use tolerance
-  bands to avoid overfilling the short side too aggressively?
+The previous exact-first `-shortFill` order was rejected because it could keep
+extending the short-axis objective while producing a substantially worse global
+envelope. The guarded order retains the directional preference only after the
+two normalized envelope criteria tie.
 
 ## Tail Criteria
 
