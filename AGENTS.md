@@ -59,8 +59,8 @@ pnpm lint:fix
 pnpm typecheck
 ```
 
-If the only modified file is `plan.md`, skip lint, typecheck, and tests. Review
-the Markdown diff directly instead.
+If every modified file is Markdown (`*.md`), skip lint, typecheck, and tests.
+Review the Markdown diff directly instead.
 
 For UI work, also run:
 
