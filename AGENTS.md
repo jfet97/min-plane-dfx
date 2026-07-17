@@ -82,3 +82,12 @@ Use exactly these sections, in order:
 ```
 
 Do not add validation sections, command lists, AI attribution, co-author lines, or tool/process notes.
+
+## Knowledge Base
+
+This project may have an LLM-maintained knowledge base in `knowledge/` (git-ignored). If it doesn't exist, ignore this section. If it does exist, follow these rules:
+
+- For facts about this codebase, consult `knowledge/INDEX.md` and its pages before reading the code.
+- To look something up yourself, search the KB directly (no skill): read `INDEX.md`, then use `qmd query "..." -n 5` (if `qmd` is on PATH, a fast first pass; bump to `-n 10` if the first pass under-recalls) and `grep`/`rg` over `knowledge/*.md` to dig deeper. They are complementary, not exclusive: `grep`/`rg` catches exact strings and cross-checks hits; having `qmd` never removes the need to grep.
+- After meaningful work (features, refactors, non-obvious fixes) or after pulling new commits, use `$knowledge update`.
+- `$knowledge query <question>` gives a synthesized cited answer (`--persist <slug>` files it back as a wiki page); `$knowledge lint` checks health; `$knowledge help` lists commands.
