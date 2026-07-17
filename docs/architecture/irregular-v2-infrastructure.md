@@ -189,6 +189,28 @@ ratio `0.047619` in about `4.53 s` on the benchmark machine. It is a general
 remove-and-reinsert improvement using real candidates, not a triangle-specific
 override. The unrepaired beam remains available with repair budget `0`.
 
+### Repeated-Triangle Golden Regression
+
+The hermetic repeated-triangle golden is derived only from replay job
+`e8ed1b5a-b18f-4f3d-ada1-79634bb10bb0`. The test does not read replay files,
+the workspace database, or renderer state at runtime. It creates 20 deterministic
+copies of the built-in `70 x 60 mm` triangle and runs them on the original
+`2000 x 2700 mm` sheet with `10 mm` total padding, rotations and mirroring
+enabled, and the Compact quality profile (`order 4`, `beam 8`, `fanout 4`,
+`repair 8`, `transform cap 8`, edge-contact policy, and GA disabled). The
+original sheet remains part of the fixture because measured smaller sheets
+changed candidate legality or ranking and did not preserve the approved result.
+
+The approved result is a bottom-left horizontal three-row lattice with all 20
+pieces placed. Its measured collision envelope is approximately
+`353.152 x 227.025 mm`, with area `80174.3328 mm2`, span `580.177 mm`, hull
+waste ratio `0.047619`, 24 structural contacts, dominant contact count 17, and
+no free-material holes. The regression enforces a narrow quality envelope around
+those measurements rather than raw piece ids or every floating-point transform.
+Interchangeable-copy permutations and equivalent compact arrangements therefore
+remain valid, while upward or rightward chains, missing pieces, weak contact
+graphs, and triangle-sized lattice gaps fail the contract.
+
 ### Decision Trace
 
 When worker history is enabled, every irregular beam decode can synchronously
