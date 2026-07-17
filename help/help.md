@@ -278,7 +278,21 @@ failed the first mixed-61 sheet gate:
 The canonical geometry hashes differ. Candidate J is therefore rejected as a
 production change even though its reference-sheet result is close to the
 approved checkpoint. The divergence audit found the first true split at step 2;
-the detailed causal result is recorded below when the audit reaches terminal.
+the terminal audit then separated a numerical tie defect from the actual search
+failure. At step 2, translated-equivalent states differed only by about
+`1e-16` in the raw `occupiedHullWasteRatio` because convex-hull shoelace
+arithmetic used absolute coordinates. Canonicalizing that diagnostic moves the
+first semantic divergence to step 3.
+
+At step 3, both sheets generate the same legal bottom candidate from the same
+parent: `114.504 mm` shared contact, transform `0`, and point `(164.504, 0)`.
+It ranks sixth and survives on `2000 x 2700`, but ranks tenth and is pruned on
+`1000 x 1700`. Only the sheet-normalized local compactness fields change its
+rank. Candidate generation and legality are therefore not the cause; local
+fanout ranking is. Candidate J's two global reservations also collapse onto
+already higher-contact winners, so the next diversity experiment must preserve
+alternatives inside contact tiers instead of merely reserving another global
+winner.
 
 Candidate K on isolated commit `b14af3c` added four geometry-deduplicated local
 reservations within the existing fanout: original edge-contact, original
@@ -1738,6 +1752,13 @@ would falsify each one, and identify the smallest safe production experiment.
   golden, homogeneous rectangles, trapezoids, pentagons, stars, mixed-50, and
   the exact saved mixed-61 request. The current baseline changes geometry on all
   seven fixtures when only the sheet changes.
+- Completed the Candidate J divergence audit. A raw step-2 split came from
+  sub-grid floating-point noise in occupied-hull waste; after canonicalization,
+  the real split is at step 3, where the same legal compact candidate ranks
+  sixth on `2000 x 2700` but tenth on `1000 x 1700` solely because local
+  compactness is sheet-normalized. Global reservations do not help because they
+  select candidates already retained by edge contact; diversity must operate
+  inside contact tiers.
 - Confirmed that equal or lower envelope area is not a sufficient acceptance
   gate: the triangle fixture can retain the same area while becoming a long
   chain, and mixed-61 can reduce area while increasing free-material holes from
