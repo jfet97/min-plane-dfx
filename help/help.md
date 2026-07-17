@@ -375,6 +375,16 @@ do not promote its standalone scorer. Full metrics, hashes, and portable
 previews are in
 [`research/candidate-l-corpus-audit.md`](research/candidate-l-corpus-audit.md).
 
+The contact-tier diversity follow-up also completed. M1 preserves the triangle
+golden and keeps three mixed61 sheets within `435,290-485,539 mm2`, but the
+`2000 x 1700` result remains a `642,864 mm2` perimeter-like layout. M2 reserves
+an intrinsic winner in every represented contact tier; it increases contact and
+reduces holes while worsening the reference envelope to `830,381 mm2`. Neither
+is production-safe. The useful M1 mechanism remains a research ingredient, but
+the next experiment must preserve different whole-beam topologies rather than
+add broader local contact-tier reservations. Full evidence is in
+[`research/contact-tier-diversity-experiment.md`](research/contact-tier-diversity-experiment.md).
+
 The bounded order/rotation GA probe is also complete. It retained the
 deterministic baseline and improved homogeneous rectangles, but cost `4.3-6.4x`
 more, remained sheet-dependent, and selected a mixed-61 reference-sheet result
@@ -1810,6 +1820,11 @@ would falsify each one, and identify the smallest safe production experiment.
   exact branches, harnesses, hashes, metrics, and previews are retained under
   [`help/research`](research/candidate-l-corpus-audit.md) and
   [`help/artifacts`](artifacts/candidate-l-audit/).
+- Completed two contact-tier diversity variants. M1 preserves the exact
+  triangle golden and rescues compact mixed61 branches on three sheets, but one
+  sheet remains strongly dependent. M2 over-reserves tiers and produces
+  high-contact perimeter layouts with much larger envelopes. Neither is merged;
+  the next research axis is whole-beam topology diversity.
 - Traced the small-square path: the eight squares first enter the reorder window
   at step 50 and already receive dozens of legal unique candidates. Rejected two
   isolated early-access heuristics because they moved squares to the perimeter
