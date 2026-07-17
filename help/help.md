@@ -295,10 +295,35 @@ maximum side, area, and span. Isolated follow-up `c66af81` simplified that tuple
 to raw shared-contact length followed by the same intrinsic compactness fields.
 Both variants passed all 15 focused placement-scorer tests but failed the
 20-triangle golden identically: the final long side grew to `397.296 mm`, above
-the accepted `354 mm` limit. Candidate L and L2 are rejected before running the
-mixed corpus. This rules out replacing the local edge-contact tuple with either
-of these simple intrinsic orders; the active portfolio and divergence probes
-must preserve the triangle branch while adding geometric diversity elsewhere.
+the accepted `354 mm` limit. Candidate L and L2 are rejected **for direct
+production use** before running the mixed corpus. This rules out replacing the
+local edge-contact tuple with either simple intrinsic order as a standalone
+change; it does not prove that their intrinsic-ranking ingredients are useless.
+The exact commits remain research inputs for combinations in which beam
+diversity, a different decoder, or a later global search protects or rebuilds
+the compact triangle lattice.
+
+### Interpreting Failed Golden Gates
+
+A failed triangle golden is a shipping gate, not a permanent research veto.
+Every experiment must be classified in two separate ways:
+
+1. **Production readiness:** a candidate that breaks legality, the accepted
+   triangle lattice, or a protected mixed-job checkpoint must not be merged as
+   the current default.
+2. **Research value:** preserve the exact branch/commit, metrics, and rendered
+   geometry when the candidate exposes a useful mechanism or improves other
+   fixtures. Later experiments may recombine that mechanism with diversity,
+   order/rotation search, repair-free decoding, or a different final selector.
+
+Do not discard an algorithm family solely because its first standalone version
+fails the triangle golden. Conversely, do not weaken the golden just to accept a
+promising mixed-job screenshot. Keep both facts visible, test combinations on a
+broader corpus, and require a production candidate to recover acceptable compact
+triangles before it becomes the default. External reviewers should explicitly
+challenge current thresholds, comparator assumptions, and beam architecture;
+the documented goldens are protected evidence, not proof that the present
+algorithm is optimal.
 
 ## Required Research Behavior
 
