@@ -10,6 +10,97 @@ literature research, reproduce the failing jobs, run experiments, render the
 results, and produce a large evidence-backed report with concrete implementation
 paths.
 
+Treat this document as read-only research input. Do not modify it during an
+external review; produce a separate report containing findings and proposals.
+
+## Current Work: Priority And Acceptance Gates
+
+The project has one accepted deterministic baseline and several open problems.
+Do not trade one open problem for a regression in the accepted baseline. Work in
+the following order.
+
+### Primary Problems
+
+1. **Make compactness independent of sheet dimensions.** If the same pieces and
+   settings are legal on several sheets, the search should retain the same
+   compact intrinsic motif regardless of unused sheet width, height, or aspect
+   ratio. Sheet-relative ranking remains intentional only for the explicit
+   `short_side_fill` policy. This requires consistent intrinsic semantics during
+   local candidate ranking, fanout reservations, whole-beam pruning, terminal
+   orientation, and any repair guard; changing final selection alone is
+   insufficient.
+2. **Preserve the 20-triangle golden.** The pointed-triangle lattice is a hard
+   regression gate, not a special-case production heuristic. A candidate fails
+   if it turns the lattice into a chain, fragments structural contacts, creates
+   visible triangle-sized holes, or requires local repair to recover.
+3. **Preserve or improve the approved mixed-61 layout.** The portable reference
+   is `help/artifacts/approved-mixed61-ac75222-2000x2700.svg`. Any general change
+   must remain compact on that request and must also pass the `2000 x 1700`,
+   `1000 x 1700`, and `1000 x 1300` sheet variants without collapsing into a
+   tall strip or disconnected islands.
+4. **Choose the right source of search diversity.** The current investigation
+   compares deterministic candidate diversity with the existing GA. GA may be
+   useful for global piece order and rotation, but it cannot repair a promising
+   placement branch already discarded by sheet-normalized local pruning. The
+   deterministic decoder must first expose and retain intrinsically compact
+   legal alternatives; bounded GA can then be evaluated as an optional second
+   stage.
+5. **Resolve the mixed-50 regression independently.** Terminal orientation and
+   scattered mixed-50 behavior must be reproduced headlessly and fixed without
+   changing the accepted triangle or mixed-61 checkpoints.
+
+### Secondary Problems
+
+1. **Fill real internal cavities with small pieces.** Small rectangles currently
+   enter the reorder window late and may form an external island. A valid fix
+   must identify actual bounded fillable space or preserve a suitable small-piece
+   candidate; AABB neutrality and raw-contact thresholds are not cavity tests.
+2. **Reduce trace size.** Decision traces must retain enough evidence to explain
+   pruning while avoiding repeated full state payloads. Replay and search output
+   must remain byte-for-byte equivalent in canonical geometry.
+3. **Improve runtime without changing semantics.** The main cost is candidate
+   generation and scoring, not trace serialization. Profile first, preserve the
+   differential oracle, and accept only low-risk measured improvements until the
+   ranking behavior is stable.
+4. **Avoid dependence on local repair.** Local repair is too expensive for large
+   jobs and should remain optional. The main deterministic search should produce
+   an acceptable layout without requiring terminal remove-and-reinsert recovery.
+5. **Simplify the UI only after one general policy is proven.** Do not remove the
+   policy selector or present a universal comparator until the golden and corpus
+   gates demonstrate that it is genuinely general.
+
+### Mandatory Gates For Every Ranking Change
+
+- exact 20-triangle golden, rotations and mirroring enabled, repair disabled;
+- exact approved mixed-61 request on all four sheet sizes above;
+- mixed-50, homogeneous rectangles, trapezoids, pentagons, and stars;
+- legality, deterministic geometry hashes, and replay/search equivalence;
+- rendered SVG/PNG inspection, not metrics alone;
+- isolated worktree, immutable manifest, exact commit/diff provenance, and a
+  commit before the next experimental variant changes the code.
+
+### Current Production Truth
+
+Production intentionally retains the known-good triangle and original
+`2000 x 2700` mixed-61 behavior. It is still sheet-dependent on the other three
+mixed-61 sheets. No GA change, intrinsic candidate-diversity experiment, cavity
+filler experiment, or trace compaction experiment is production behavior until
+it passes the gates above and is explicitly merged.
+
+### Open-Source Control Conclusion
+
+The source-level review is preserved in
+[`help/research/open-source-nesting-strategies.md`](research/open-source-nesting-strategies.md).
+Deepnest and SVGnest use GA to vary order and rotation around an absolute-envelope
+constructive decoder; GA does not make a sheet-normalized decoder independent of
+sheet dimensions. PackingSolver supplies the clearest precedent for a bounded
+large-first then small-fill phase. The recommended sequence is therefore:
+
+1. make all branch-pruning compactness decisions intrinsic;
+2. preserve bounded deterministic order and orientation diversity;
+3. evaluate the existing GA as an optional order/rotation portfolio while always
+   retaining the deterministic baseline.
+
 ## Experiment Provenance Ledger
 
 Do not present a generated layout as reproducible unless this ledger records the
@@ -220,10 +311,12 @@ strongly than global consolidation.
 
 ## Current Repository State
 
-`main` and `origin/main` now point to `ff5e266`. The production search behavior
-still comes from `ef1fbe2`, the first checkpoint that reproduces the explicitly
-approved mixed-61 layout exactly; `ff5e266` adds only the sheet-invariance
-diagnostic corpus and does not change placement, scoring, or search.
+`main` and `origin/main` contain documentation and diagnostic additions after
+`ef1fbe2`, but production search behavior still comes from `ef1fbe2`, the first
+checkpoint that reproduces the explicitly approved mixed-61 layout exactly.
+Later accepted commits add the sheet-invariance diagnostic corpus, experiment
+provenance rules, and portable help artifacts without changing placement,
+scoring, or search.
 
 The accepted checkpoint chain is:
 
