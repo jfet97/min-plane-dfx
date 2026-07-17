@@ -15,8 +15,7 @@ square thumbnails can crop wide SVG content.
    a GUI process:
 
    ```sh
-   pnpm exec electron \
-     .agents/skills/render-svg-with-electron/scripts/render-svg.cjs \
+   node .agents/skills/render-svg-with-electron/scripts/render-svg.cjs \
      /absolute/input.svg \
      /absolute/output.png \
      1000
@@ -24,6 +23,13 @@ square thumbnails can crop wide SVG content.
 
    The output path and target width are optional. Defaults are
    `<input>.png` and `1000` pixels.
+
+   Always invoke the Node launcher shown above. Do not pass the script directly
+   to `electron`: on macOS, Electron initializes AppKit before user JavaScript
+   runs and aborts while registering the application when launched inside the
+   seatbelt sandbox. The launcher rejects that environment before it starts a
+   GUI process, so rerun the same Node command with approved unsandboxed
+   execution.
 
 2. Inspect the generated PNG with the local image-viewing tool.
 
