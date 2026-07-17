@@ -10,10 +10,6 @@ literature research, reproduce the failing jobs, run experiments, render the
 results, and produce a large evidence-backed report with concrete implementation
 paths.
 
-This file is intentionally a living document. Update it when a trace, benchmark,
-upstream source comparison, accepted change, or rejected hypothesis produces new
-evidence.
-
 ## Experiment Provenance Ledger
 
 Do not present a generated layout as reproducible unless this ledger records the
