@@ -277,8 +277,8 @@ failed the first mixed-61 sheet gate:
 
 The canonical geometry hashes differ. Candidate J is therefore rejected as a
 production change even though its reference-sheet result is close to the
-approved checkpoint. The current audit is locating the first divergent beam
-step; deterministic portfolio and bounded-GA probes are running independently.
+approved checkpoint. The divergence audit found the first true split at step 2;
+the detailed causal result is recorded below when the audit reaches terminal.
 
 Candidate K on isolated commit `b14af3c` added four geometry-deduplicated local
 reservations within the existing fanout: original edge-contact, original
@@ -324,6 +324,24 @@ triangles before it becomes the default. External reviewers should explicitly
 challenge current thresholds, comparator assumptions, and beam architecture;
 the documented goldens are protected evidence, not proof that the present
 algorithm is optimal.
+
+The bounded order/rotation GA probe is also complete. It retained the
+deterministic baseline and improved homogeneous rectangles, but cost `4.3-6.4x`
+more, remained sheet-dependent, and selected a mixed-61 reference-sheet result
+with `513,154 mm2` envelope area instead of the retained `436,790 mm2` baseline
+while increasing holes from 2 to 5. Keep the harness for later combinations;
+do not merge the current GA as the default. Full evidence and portable visuals
+are in
+[`research/bounded-ga-order-rotation-probe.md`](research/bounded-ga-order-rotation-probe.md).
+
+The deterministic multi-order portfolio probe is likewise rejected only as a
+standalone production change. Small-filler interleaving, shape-family
+round-robin, and orientation-family distribution still produced four different
+triangle geometries across the sheet matrix; the 1000 x 1700 result was a
+`151.350 x 529.728 mm` strip. The current local pruning had already removed the
+needed branch before final portfolio selection. The exact experiment remains
+available for later combinations in
+[`research/deterministic-portfolio-probe.md`](research/deterministic-portfolio-probe.md).
 
 ## Required Research Behavior
 
