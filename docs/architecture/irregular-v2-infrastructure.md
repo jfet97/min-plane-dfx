@@ -536,8 +536,11 @@ are first canonicalized to an explicit `0.001 mm` score grid. This removes
 floating subtraction noise that can otherwise make translated but identical
 layouts compare differently at large sheet coordinates; it is deterministic
 quantization at the existing collision-geometry precision, not an epsilon
-comparison. Lower-left anchoring then precedes free-material diagnostics so
-symmetric placement is not selected by fragmentation noise.
+comparison. The dimensionless occupied-hull waste ratio is likewise
+canonicalized to the `0.000001` scalar score grid before ranking, so shoelace
+area cancellation at large translations cannot split otherwise equivalent beam
+states. Lower-left anchoring then precedes free-material diagnostics so symmetric
+placement is not selected by fragmentation noise.
 
 Rows also include placement order and unplaced source ids for the scorer's
 final deterministic tie-breaks. A terminal audit failure makes the row invalid;

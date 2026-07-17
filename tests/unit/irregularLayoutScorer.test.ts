@@ -651,6 +651,65 @@ describe('IrregularLayoutScorer', () => {
     expect(await compareScores(bottomLeftScore, topRightScore)).toBeLessThan(0)
   })
 
+  it('canonicalizes translated-equivalent hull waste before deterministic ranking', async () => {
+    const currentSheet = new SheetSpec({
+      width: 2_000_000,
+      height: 2_000_000,
+      label: 'translated hull-waste score sheet'
+    })
+    const layoutAt = (translateX: number, translateY: number) =>
+      state([
+        placedRectangle(
+          'wide-left',
+          81.5056,
+          76.08,
+          translateX + 0.123,
+          translateY + 0.456
+        ),
+        placedRectangle(
+          'wide-right',
+          81.5056,
+          76.08,
+          translateX + 93.749,
+          translateY + 17.213
+        ),
+        placedRectangle(
+          'small-top',
+          33.333,
+          21.111,
+          translateX + 45.222,
+          translateY + 88.765
+        )
+      ])
+    const snapshot = new FreeMaterialSnapshot({
+      sheet: currentSheet,
+      regions: [
+        new FreeMaterialRegion({
+          boundary: polygon(rectanglePoints(1, 1)),
+          holes: []
+        })
+      ],
+      diagnostics: []
+    })
+    const originScore = await scoreWith(materialSnapshot(snapshot), {
+      sheet: currentSheet,
+      state: layoutAt(0, 0)
+    })
+    const translatedScore = await scoreWith(materialSnapshot(snapshot), {
+      sheet: currentSheet,
+      state: layoutAt(900_000, 720_000)
+    })
+
+    expect(originScore.occupiedHullWasteRatio).toBe(translatedScore.occupiedHullWasteRatio)
+
+    const originAlignedTranslatedScore: IrregularLayoutScore = {
+      ...translatedScore,
+      collisionBoundsBottomMm: originScore.collisionBoundsBottomMm,
+      collisionBoundsLeftMm: originScore.collisionBoundsLeftMm
+    }
+    expect(await compareScores(originScore, originAlignedTranslatedScore)).toBe(0)
+  })
+
   it('does not let tiny free-area variation beat a materially tighter cluster', async () => {
     const compact = state([
       placedRectangle('compact-left', 2, 2, 0, 0),

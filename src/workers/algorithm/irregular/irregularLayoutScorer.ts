@@ -275,7 +275,9 @@ function scoreDerivedState(
   const nearCompleteStructuralContactCount = input.state.nearCompleteStructuralContactCount
   const dominantNearCompleteStructuralContactCount =
     input.state.dominantNearCompleteStructuralContactCount
-  const occupiedHullWasteRatio = deriveOccupiedHullWasteRatio(input.state)
+  const occupiedHullWasteRatio = canonicalizeIrregularScoreScalar(
+    deriveOccupiedHullWasteRatio(input.state) ?? Number.NaN
+  )
 
   if (
     !Number.isFinite(normalizedWidth) ||
