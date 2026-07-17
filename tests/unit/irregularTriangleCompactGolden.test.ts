@@ -179,6 +179,37 @@ describe('compact-quality repeated triangle golden', () => {
       expect(winnerScore.sharedCollisionBoundaryLengthMm).toBeGreaterThanOrEqual(2100)
       expect(winnerScore.freeMaterialRegionCount).toBe(1)
       expect(winnerScore.freeMaterialHoleCount).toBe(0)
+
+      expect(computed.score.sharedCollisionBoundaryLengthMm).toBe(
+        winnerScore.sharedCollisionBoundaryLengthMm
+      )
+      expect(computed.score.sharedCollisionBoundaryContactUnits).toBe(
+        winnerScore.sharedCollisionBoundaryContactUnits
+      )
+      expect(computed.score.sharedCollisionBoundaryContactBand).toBe(
+        winnerScore.sharedCollisionBoundaryContactBand
+      )
+      expect(computed.score.nearCompleteStructuralContactCount).toBe(
+        winnerScore.nearCompleteStructuralContactCount
+      )
+      expect(computed.score.dominantNearCompleteStructuralContactCount).toBe(
+        winnerScore.dominantNearCompleteStructuralContactCount
+      )
+      expect(layout.score.sharedCollisionBoundaryLengthMm).toBe(
+        winnerScore.sharedCollisionBoundaryLengthMm
+      )
+      expect(layout.score.sharedCollisionBoundaryContactUnits).toBe(
+        winnerScore.sharedCollisionBoundaryContactUnits
+      )
+      expect(layout.score.sharedCollisionBoundaryContactBand).toBe(
+        winnerScore.sharedCollisionBoundaryContactBand
+      )
+      expect(layout.score.nearCompleteStructuralContactCount).toBe(
+        winnerScore.nearCompleteStructuralContactCount
+      )
+      expect(layout.score.dominantNearCompleteStructuralContactCount).toBe(
+        winnerScore.dominantNearCompleteStructuralContactCount
+      )
     },
     30_000
   )

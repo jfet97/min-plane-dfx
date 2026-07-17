@@ -133,7 +133,15 @@ as `terminal_orientation_scored`. Final geometry reconstruction accepts an
 absolute placement angle outside the capped search transform list only when it
 is an exact rigid quarter-turn of a prepared transform with the same mirror
 state. The terminal orientation therefore does not need to consume search
-transform capacity, while arbitrary unprepared angles remain invalid. Because
+transform capacity, while arbitrary unprepared angles remain invalid. The
+protocol-facing worker rebuilds public collision polygons from source geometry
+and final placement transforms. It recomputes bounds and free-material
+diagnostics from those polygons but carries the selected portfolio state's five
+contact metrics unchanged. Reclassifying exact shared edges after the final
+rigid translation or quarter-turn can lose collinearity through floating-point
+rounding even though visible geometry and legality are unchanged; that
+reconstruction artifact must not replace the score that selected the winner.
+Because
 the budget also bounds accepted
 iterations and per-piece candidate fanout, enabling repair is an explicit
 quality/cost choice and applies to every baseline or GA decode.

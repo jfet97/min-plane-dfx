@@ -10,7 +10,8 @@ import {
   IrregularPortfolioProgress,
   IrregularPriorityOrderKey,
   IrregularPreparedPiece,
-  IrregularTransformCandidate
+  IrregularTransformCandidate,
+  type IrregularLayoutScoreSummary
 } from '@shared/irregular/domain.js'
 import { CollisionGeometryBuilder } from '../../irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
@@ -229,10 +230,11 @@ export function computeIrregularNesting(
     })
     const finalScoreStartedAt =
       options?.onFinalizationMetrics === undefined ? 0 : performance.now()
-    const score = yield* layoutScorer.scoreState({
+    const reconstructedScore = yield* layoutScorer.scoreState({
       sheet: request.sheet,
       state: reconstructedState
     })
+    const score = preservePortfolioContactMetrics(reconstructedScore, portfolio.score)
     if (options?.onFinalizationMetrics !== undefined) {
       options.onFinalizationMetrics({
         reconstructionElapsedMs,
@@ -251,6 +253,42 @@ export function computeIrregularNesting(
       portfolio
     }
   })
+}
+
+/**
+ * Preserves contact metrics measured on the selected search geometry.
+ *
+ * Final reconstruction intentionally rebuilds each source polygon at its
+ * absolute terminal transform. Reapplying a uniform bottom-left translation
+ * can change floating-point cancellation, while evaluating a derived angle
+ * after a rigid quarter-turn can produce a numerically different but
+ * geometrically equivalent polygon. Exact collinearity must therefore remain
+ * authoritative from the selected beam state, while bounds and free-material
+ * diagnostics still come from the public reconstructed geometry.
+ */
+export function preservePortfolioContactMetrics(
+  reconstructed: IrregularLayoutScore,
+  portfolio: IrregularLayoutScoreSummary | undefined
+): IrregularLayoutScore {
+  if (
+    portfolio?.sharedCollisionBoundaryLengthMm === undefined ||
+    portfolio.sharedCollisionBoundaryContactUnits === undefined ||
+    portfolio.sharedCollisionBoundaryContactBand === undefined ||
+    portfolio.nearCompleteStructuralContactCount === undefined ||
+    portfolio.dominantNearCompleteStructuralContactCount === undefined
+  ) {
+    return reconstructed
+  }
+
+  return {
+    ...reconstructed,
+    sharedCollisionBoundaryLengthMm: portfolio.sharedCollisionBoundaryLengthMm,
+    sharedCollisionBoundaryContactUnits: portfolio.sharedCollisionBoundaryContactUnits,
+    sharedCollisionBoundaryContactBand: portfolio.sharedCollisionBoundaryContactBand,
+    nearCompleteStructuralContactCount: portfolio.nearCompleteStructuralContactCount,
+    dominantNearCompleteStructuralContactCount:
+      portfolio.dominantNearCompleteStructuralContactCount
+  }
 }
 
 function reconstructPlacedGeometry(
