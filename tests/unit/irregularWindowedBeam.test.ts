@@ -511,6 +511,74 @@ describe('decodeWindowedIrregularBeam', () => {
     expect(retainedPoints).not.toContainEqual([5, 0])
   })
 
+  it('keeps full trace detail for compactness reservation and displacement', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const transforms = [
+      new IrregularTransformCandidate({
+        index: 0,
+        rotationDeg: 0,
+        mirrored: false,
+        reason: 'configured'
+      }),
+      new IrregularTransformCandidate({
+        index: 1,
+        rotationDeg: 90,
+        mirrored: false,
+        reason: 'configured'
+      })
+    ]
+    await runWindowed(
+      sheet(10, 100),
+      [preparedPiece('a', 4, 2), preparedPiece('b', 4, 2, undefined, transforms)],
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 2, 2, 'edge-contact-then-balanced-compactness')
+      ),
+      candidateService(({ moving, placed }) =>
+        placed.length === 0
+          ? [oneCandidate(moving, 0, 0)]
+          : moving.transform.index === 1
+            ? [oneCandidate(moving, 6, 0), oneCandidate(moving, 5, 0)]
+            : [oneCandidate(moving, 0, 2)]
+      ),
+      {
+        policyId: 'edge-contact-then-balanced-compactness',
+        transformPreferences: new Map([[PieceId.make('b'), 1]])
+      },
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_selection',
+        decision: 'selected',
+        reason: 'compactness_alternative_reserved'
+      })
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_selection',
+        decision: 'rejected',
+        reason: 'displaced_by_compactness_reservation'
+      })
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_summary',
+        generatedCandidateCount: 3,
+        uniqueGeometryCandidateCount: 3,
+        selectedCandidateCount: 2,
+        detailedCandidateCount: 3,
+        decisionCounts: expect.objectContaining({
+          compactnessAlternativeReserved: 1,
+          displacedByCompactnessReservation: 1
+        })
+      })
+    )
+  })
+
   it('retains candidates for a chromosome-preferred transform before better local scores', async () => {
     const transforms = [
       new IrregularTransformCandidate({
@@ -569,13 +637,100 @@ describe('decodeWindowedIrregularBeam', () => {
     )
 
     expect(result.rankedStates).toHaveLength(2)
-    expect(events).toContainEqual(
+    expect(events).not.toContainEqual(
       expect.objectContaining({
         kind: 'local_candidate_selection',
         decision: 'rejected',
         reason: 'duplicate_local_geometry'
       })
     )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_summary',
+        generatedCandidateCount: 3,
+        uniqueGeometryCandidateCount: 2,
+        selectedCandidateCount: 2,
+        detailedCandidateCount: 2,
+        decisionCounts: expect.objectContaining({
+          duplicateLocalGeometry: 1
+        })
+      })
+    )
+  })
+
+  it('bounds local candidate detail independently from the generated candidate count', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const generatedCandidateCount = 200
+    await runWindowed(
+      sheet(generatedCandidateCount + 1, 1),
+      [preparedPiece('a', 1, 1)],
+      Layer.succeed(GeometrySettings, settings(1, 1, 4)),
+      candidateService(({ moving }) =>
+        Array.from({ length: generatedCandidateCount }, (_, index) => oneCandidate(moving, index))
+      ),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    const scoredEvents = events.filter((event) => event.kind === 'local_candidate_scored')
+    const selectionEvents = events.filter((event) => event.kind === 'local_candidate_selection')
+    const summary = events.find((event) => event.kind === 'local_candidate_summary')
+    const localEvents = events.filter(
+      (event) =>
+        event.kind === 'local_candidate_scored' ||
+        event.kind === 'local_candidate_selection' ||
+        event.kind === 'local_candidate_summary'
+    )
+    expect(scoredEvents).toHaveLength(5)
+    expect(selectionEvents).toHaveLength(5)
+    expect(localEvents).toHaveLength(11)
+    expect(
+      new TextEncoder().encode(localEvents.map((event) => JSON.stringify(event)).join('\n'))
+        .byteLength
+    ).toBeLessThan(12_000)
+    expect(summary).toEqual(
+      expect.objectContaining({
+        generatedCandidateCount,
+        uniqueGeometryCandidateCount: generatedCandidateCount,
+        selectedCandidateCount: 4,
+        detailedCandidateCount: 5,
+        decisionCounts: expect.objectContaining({
+          withinLocalCandidateFanout: 4,
+          outsideLocalCandidateFanout: generatedCandidateCount - 4
+        })
+      })
+    )
+    if (summary?.kind !== 'local_candidate_summary') throw new Error('missing trace summary')
+    expect(
+      Object.values(summary.decisionCounts).reduce((total, count) => total + count, 0)
+    ).toBe(generatedCandidateCount)
+  })
+
+  it('returns the same winner and placements with bounded decision tracing enabled', async () => {
+    const run = (emitDecisionTrace?: EmitIrregularDecisionTrace) =>
+      runWindowed(
+        sheet(12, 3),
+        [preparedPiece('a', 2, 1), preparedPiece('b', 2, 1), preparedPiece('c', 2, 1)],
+        Layer.succeed(GeometrySettings, settings(2, 3, 2)),
+        candidateService(({ moving, placed }) =>
+          Array.from({ length: 12 }, (_, index) =>
+            oneCandidate(moving, index, placed.length % 2)
+          )
+        ),
+        undefined,
+        undefined,
+        undefined,
+        emitDecisionTrace
+      )
+    const traceEvents: IrregularDecisionTraceEvent[] = []
+    const withoutTrace = await run()
+    const withTrace = await run((event) => traceEvents.push(event))
+
+    expect(stateSnapshot(withTrace)).toEqual(stateSnapshot(withoutTrace))
+    expect(withTrace.bestScore).toEqual(withoutTrace.bestScore)
+    expect(traceEvents.at(-1)).toEqual(expect.objectContaining({ kind: 'decode_winner' }))
   })
 
   it('emits only the winning state ancestry to history hooks', async () => {

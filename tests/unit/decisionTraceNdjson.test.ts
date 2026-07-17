@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   IrregularDecisionTraceBeamStepStarted,
+  IrregularDecisionTraceLocalCandidateDecisionCounts,
+  IrregularDecisionTraceLocalCandidateSummary,
   type IrregularDecisionTraceEvent
 } from '../../src/workers/algorithm/irregular/decisionTrace.js'
 import {
@@ -45,5 +47,49 @@ describe('IrregularDecisionTraceBatcher', () => {
       expect.objectContaining({ kind: 'beam_step_started', stepIndex: 1 }),
       expect.objectContaining({ kind: 'beam_step_started', stepIndex: 2 })
     ])
+  })
+
+  it('serializes bounded local-candidate aggregate counts as one NDJSON record', () => {
+    const summary = new IrregularDecisionTraceLocalCandidateSummary({
+      decodeId: 'baseline-0',
+      chromosomeId: 'c0',
+      decodeSource: 'baseline',
+      stepIndex: 2,
+      parentStateId: 's1',
+      pieceId: 'piece-a',
+      generatedCandidateCount: 100,
+      uniqueGeometryCandidateCount: 90,
+      selectedCandidateCount: 4,
+      detailedCandidateCount: 5,
+      decisionCounts: new IrregularDecisionTraceLocalCandidateDecisionCounts({
+        withinLocalCandidateFanout: 4,
+        compactnessAlternativeReserved: 0,
+        displacedByCompactnessReservation: 0,
+        duplicateLocalGeometry: 10,
+        outsideLocalCandidateFanout: 86
+      })
+    })
+
+    const decoded = JSON.parse(serializeIrregularDecisionTraceBatch([summary]).trimEnd())
+    expect(decoded).toEqual({
+      decodeId: 'baseline-0',
+      chromosomeId: 'c0',
+      decodeSource: 'baseline',
+      kind: 'local_candidate_summary',
+      stepIndex: 2,
+      parentStateId: 's1',
+      pieceId: 'piece-a',
+      generatedCandidateCount: 100,
+      uniqueGeometryCandidateCount: 90,
+      selectedCandidateCount: 4,
+      detailedCandidateCount: 5,
+      decisionCounts: {
+        withinLocalCandidateFanout: 4,
+        compactnessAlternativeReserved: 0,
+        displacedByCompactnessReservation: 0,
+        duplicateLocalGeometry: 10,
+        outsideLocalCandidateFanout: 86
+      }
+    })
   })
 })

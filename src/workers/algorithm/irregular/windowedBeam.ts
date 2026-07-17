@@ -48,7 +48,9 @@ import {
   IrregularDecisionTraceLayoutScore,
   IrregularDecisionTraceLocalRepairAccepted,
   IrregularDecisionTraceLocalCandidateScored,
+  IrregularDecisionTraceLocalCandidateDecisionCounts,
   IrregularDecisionTraceLocalCandidateSelection,
+  IrregularDecisionTraceLocalCandidateSummary,
   IrregularDecisionTraceLocalScore,
   IrregularDecisionTraceParentState,
   IrregularDecisionTracePoint,
@@ -61,7 +63,8 @@ import {
   IrregularDecisionTraceTerminalOrientationScored,
   IrregularDecisionTraceTransform,
   IrregularDecisionTraceTransformCandidatesGenerated,
-  IrregularDecisionTraceTransformPreference
+  IrregularDecisionTraceTransformPreference,
+  type IrregularDecisionTraceLocalCandidateSelectionReason
 } from './decisionTrace.js'
 import type {
   EmitIrregularDecisionTrace,
@@ -131,7 +134,6 @@ interface LocalCandidate {
   readonly candidate: IrregularPlacementCandidate
   readonly moving: TransformedCollisionGeometry
   readonly score: IrregularPlacementScore
-  readonly traceCandidateId: string
 }
 
 interface ScoredState {
@@ -833,24 +835,7 @@ function collectLocalCandidates(input: {
           candidate,
           ...(input.options?.policyId !== undefined ? { policyId: input.options.policyId } : {})
         })
-        const traceCandidateId =
-          input.decisionTrace?.candidateIds.idFor(
-            `${localCandidateKey({ candidate, moving })}::${candidates.length}`
-          ) ?? ''
-        candidates.push({ candidate, moving, score, traceCandidateId })
-        input.decisionTrace?.emit(new IrregularDecisionTraceLocalCandidateScored({
-          decodeId: input.decisionTrace.decodeId,
-          chromosomeId: input.decisionTrace.chromosomeId,
-          decodeSource: input.decisionTrace.decodeSource,
-          stepIndex: input.stepIndex,
-          parentStateId: input.parentStateId,
-          pieceId: preparedPieceId(input.piece),
-          candidateId: traceCandidateId,
-          point: new IrregularDecisionTracePoint({ x: candidate.point.x, y: candidate.point.y }),
-          transform: decisionTraceTransform(candidate.transform),
-          policyId: score.policyId,
-          score: decisionTraceLocalScore(score)
-        }))
+        candidates.push({ candidate, moving, score })
         yield* controlCheckpoint(input.control, input.controlState)
       }
     }
@@ -973,6 +958,17 @@ function selectLocalCandidates(
 
   if (decisionTrace !== undefined) {
     const selectedCandidates = new Set(selected)
+    const detailedDecisions: Array<{
+      readonly candidate: LocalCandidate
+      readonly rank: number
+      readonly decision: 'selected' | 'rejected'
+      readonly reason: IrregularDecisionTraceLocalCandidateSelectionReason
+    }> = []
+    let withinLocalCandidateFanout = 0
+    let compactnessAlternativeReserved = 0
+    let displacedByCompactnessReservation = 0
+    let duplicateLocalGeometry = 0
+    let outsideLocalCandidateFanout = 0
     for (const [candidateIndex, candidate] of allRankedCandidates.entries()) {
       const isSelected = selectedCandidates.has(candidate)
       const duplicateGeometry = duplicateCandidates.has(candidate)
@@ -981,6 +977,64 @@ function selectLocalCandidates(
         !isSelected &&
         compactnessReserved !== undefined &&
         rankedCandidates.indexOf(candidate) < maximumCount
+      const reason: IrregularDecisionTraceLocalCandidateSelectionReason =
+        duplicateGeometry
+          ? 'duplicate_local_geometry'
+          : candidate === compactnessReserved
+            ? 'compactness_alternative_reserved'
+            : displacedByReservation
+              ? 'displaced_by_compactness_reservation'
+              : isSelected
+                ? 'within_local_candidate_fanout'
+                : 'outside_local_candidate_fanout'
+      const isFirstOutsideFanout =
+        reason === 'outside_local_candidate_fanout' && outsideLocalCandidateFanout === 0
+      switch (reason) {
+        case 'within_local_candidate_fanout':
+          withinLocalCandidateFanout += 1
+          break
+        case 'compactness_alternative_reserved':
+          compactnessAlternativeReserved += 1
+          break
+        case 'displaced_by_compactness_reservation':
+          displacedByCompactnessReservation += 1
+          break
+        case 'duplicate_local_geometry':
+          duplicateLocalGeometry += 1
+          break
+        case 'outside_local_candidate_fanout':
+          outsideLocalCandidateFanout += 1
+          break
+      }
+      if (isSelected || displacedByReservation || isFirstOutsideFanout) {
+        detailedDecisions.push({
+          candidate,
+          rank: candidateIndex + 1,
+          decision: isSelected ? 'selected' : 'rejected',
+          reason
+        })
+      }
+    }
+    for (const { candidate, rank, decision, reason } of detailedDecisions) {
+      const candidateId = decisionTrace.candidateIds.idFor(
+        `${localCandidateKey(candidate)}::${rank}`
+      )
+      decisionTrace.emit(new IrregularDecisionTraceLocalCandidateScored({
+        decodeId: decisionTrace.decodeId,
+        chromosomeId: decisionTrace.chromosomeId,
+        decodeSource: decisionTrace.decodeSource,
+        stepIndex,
+        parentStateId,
+        pieceId,
+        candidateId,
+        point: new IrregularDecisionTracePoint({
+          x: candidate.candidate.point.x,
+          y: candidate.candidate.point.y
+        }),
+        transform: decisionTraceTransform(candidate.candidate.transform),
+        policyId: candidate.score.policyId,
+        score: decisionTraceLocalScore(candidate.score)
+      }))
       decisionTrace.emit(new IrregularDecisionTraceLocalCandidateSelection({
         decodeId: decisionTrace.decodeId,
         chromosomeId: decisionTrace.chromosomeId,
@@ -988,21 +1042,31 @@ function selectLocalCandidates(
         stepIndex,
         parentStateId,
         pieceId,
-        candidateId: candidate.traceCandidateId,
-        rank: candidateIndex + 1,
-        decision: isSelected ? 'selected' : 'rejected',
-        reason:
-          duplicateGeometry
-            ? 'duplicate_local_geometry'
-            : candidate === compactnessReserved
-            ? 'compactness_alternative_reserved'
-            : displacedByReservation
-              ? 'displaced_by_compactness_reservation'
-              : isSelected
-                ? 'within_local_candidate_fanout'
-                : 'outside_local_candidate_fanout'
+        candidateId,
+        rank,
+        decision,
+        reason
       }))
     }
+    decisionTrace.emit(new IrregularDecisionTraceLocalCandidateSummary({
+      decodeId: decisionTrace.decodeId,
+      chromosomeId: decisionTrace.chromosomeId,
+      decodeSource: decisionTrace.decodeSource,
+      stepIndex,
+      parentStateId,
+      pieceId,
+      generatedCandidateCount: allRankedCandidates.length,
+      uniqueGeometryCandidateCount: rankedCandidates.length,
+      selectedCandidateCount: selected.length,
+      detailedCandidateCount: detailedDecisions.length,
+      decisionCounts: new IrregularDecisionTraceLocalCandidateDecisionCounts({
+        withinLocalCandidateFanout,
+        compactnessAlternativeReserved,
+        displacedByCompactnessReservation,
+        duplicateLocalGeometry,
+        outsideLocalCandidateFanout
+      })
+    }))
   }
   return selected
 }

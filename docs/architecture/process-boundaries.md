@@ -90,13 +90,14 @@ delivery is best-effort; persistence failures still fail the job.
 
 Irregular runs with history enabled also write a separate
 `<jobId>.decision-trace.ndjson` file beside replay history. It records every
-executed baseline or GA beam decode decision, including local fanout,
-deduplication, whole-layout scoring, and beam pruning. The worker drains both
-queues before completion and reports the decision-trace path and event count in
-`NestingHistorySummary`. Decision traces are diagnostic data, not replay frames,
-and are not streamed to the renderer. Per-decode registries replace repeated
-canonical chromosome, state, and candidate keys with compact deterministic ids,
-and the worker persists ordered bounded batches rather than appending each event
+executed baseline or GA beam decode decision, including bounded local-fanout
+detail, aggregate local-candidate counts, deduplication, whole-layout scoring,
+and beam pruning. The worker drains both queues before completion and reports
+the decision-trace path and event count in `NestingHistorySummary`. Decision
+traces are diagnostic data, not replay frames, and are not streamed to the
+renderer. Per-decode registries replace repeated canonical chromosome, state,
+and retained diagnostic candidate keys with compact deterministic ids, and the
+worker persists ordered bounded batches rather than appending each event
 separately.
 
 Saved-run history deletion is a main-process filesystem operation. Renderer

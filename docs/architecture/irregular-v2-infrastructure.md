@@ -223,10 +223,26 @@ triangle-sized lattice gaps fail the contract.
 
 When worker history is enabled, every irregular beam decode can synchronously
 emit plain internal decision-event classes. The trace identifies the executed
-baseline or GA chromosome and records generated legal candidates, named local
-and whole-layout scores, local fanout decisions, successor deduplication, beam
-retention or pruning, and the final winner. `historyMode: off` leaves the
-callback absent, so normal benchmark decodes do not construct trace events.
+baseline or GA chromosome and records generated legal-candidate counts, bounded
+local score detail, local fanout decisions, successor deduplication,
+whole-layout scores, beam retention or pruning, and the final winner.
+`historyMode: off` leaves the callback absent, so normal benchmark decodes do
+not construct trace events.
+
+Local candidate detail is deliberately diagnostic rather than exhaustive. For
+each parent state and eligible piece, the trace retains the complete score and
+selection decision for every selected candidate, any candidate displaced by a
+compactness reservation, and the first candidate rejected below the local
+fanout cutoff. One `local_candidate_summary` then reports generated, unique,
+selected, and detailed totals plus counts for every selection or rejection
+reason, including duplicate local geometry. With fanout `F`, this bounds full
+local detail to at most `F + 2` candidates per parent/piece even when NFP
+generation produces hundreds of candidates. Transform events still report the
+full legal-candidate counts. Successor scoring, successor deduplication, beam
+selection, terminal orientation, local repair acceptance, and the winner remain
+exhaustive. This reduction changes only diagnostic persistence; candidate
+generation, ranking, retained states, winner selection, and replay history are
+unchanged.
 
 The worker serializes these events as one JSON object per line in a separate
 `<jobId>.decision-trace.ndjson` file. Replay history remains the selected

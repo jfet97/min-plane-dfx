@@ -381,6 +381,13 @@ export class IrregularDecisionTraceLocalCandidateScored
   }
 }
 
+export type IrregularDecisionTraceLocalCandidateSelectionReason =
+  | 'within_local_candidate_fanout'
+  | 'compactness_alternative_reserved'
+  | 'displaced_by_compactness_reservation'
+  | 'duplicate_local_geometry'
+  | 'outside_local_candidate_fanout'
+
 export class IrregularDecisionTraceLocalCandidateSelection
   extends IrregularDecisionTraceEventBase {
   readonly kind = 'local_candidate_selection' as const
@@ -390,12 +397,7 @@ export class IrregularDecisionTraceLocalCandidateSelection
   readonly candidateId: string
   readonly rank: number
   readonly decision: 'selected' | 'rejected'
-  readonly reason:
-    | 'within_local_candidate_fanout'
-    | 'compactness_alternative_reserved'
-    | 'displaced_by_compactness_reservation'
-    | 'duplicate_local_geometry'
-    | 'outside_local_candidate_fanout'
+  readonly reason: IrregularDecisionTraceLocalCandidateSelectionReason
 
   constructor(
     input: EventInput<{
@@ -405,12 +407,7 @@ export class IrregularDecisionTraceLocalCandidateSelection
       readonly candidateId: string
       readonly rank: number
       readonly decision: 'selected' | 'rejected'
-      readonly reason:
-        | 'within_local_candidate_fanout'
-        | 'compactness_alternative_reserved'
-        | 'displaced_by_compactness_reservation'
-        | 'duplicate_local_geometry'
-        | 'outside_local_candidate_fanout'
+      readonly reason: IrregularDecisionTraceLocalCandidateSelectionReason
     }>
   ) {
     super(input)
@@ -421,6 +418,64 @@ export class IrregularDecisionTraceLocalCandidateSelection
     this.rank = input.rank
     this.decision = input.decision
     this.reason = input.reason
+  }
+}
+
+export class IrregularDecisionTraceLocalCandidateDecisionCounts {
+  readonly withinLocalCandidateFanout: number
+  readonly compactnessAlternativeReserved: number
+  readonly displacedByCompactnessReservation: number
+  readonly duplicateLocalGeometry: number
+  readonly outsideLocalCandidateFanout: number
+
+  constructor(input: {
+    readonly withinLocalCandidateFanout: number
+    readonly compactnessAlternativeReserved: number
+    readonly displacedByCompactnessReservation: number
+    readonly duplicateLocalGeometry: number
+    readonly outsideLocalCandidateFanout: number
+  }) {
+    this.withinLocalCandidateFanout = input.withinLocalCandidateFanout
+    this.compactnessAlternativeReserved = input.compactnessAlternativeReserved
+    this.displacedByCompactnessReservation = input.displacedByCompactnessReservation
+    this.duplicateLocalGeometry = input.duplicateLocalGeometry
+    this.outsideLocalCandidateFanout = input.outsideLocalCandidateFanout
+  }
+}
+
+export class IrregularDecisionTraceLocalCandidateSummary
+  extends IrregularDecisionTraceEventBase {
+  readonly kind = 'local_candidate_summary' as const
+  readonly stepIndex: number
+  readonly parentStateId: string
+  readonly pieceId: string
+  readonly generatedCandidateCount: number
+  readonly uniqueGeometryCandidateCount: number
+  readonly selectedCandidateCount: number
+  readonly detailedCandidateCount: number
+  readonly decisionCounts: IrregularDecisionTraceLocalCandidateDecisionCounts
+
+  constructor(
+    input: EventInput<{
+      readonly stepIndex: number
+      readonly parentStateId: string
+      readonly pieceId: string
+      readonly generatedCandidateCount: number
+      readonly uniqueGeometryCandidateCount: number
+      readonly selectedCandidateCount: number
+      readonly detailedCandidateCount: number
+      readonly decisionCounts: IrregularDecisionTraceLocalCandidateDecisionCounts
+    }>
+  ) {
+    super(input)
+    this.stepIndex = input.stepIndex
+    this.parentStateId = input.parentStateId
+    this.pieceId = input.pieceId
+    this.generatedCandidateCount = input.generatedCandidateCount
+    this.uniqueGeometryCandidateCount = input.uniqueGeometryCandidateCount
+    this.selectedCandidateCount = input.selectedCandidateCount
+    this.detailedCandidateCount = input.detailedCandidateCount
+    this.decisionCounts = input.decisionCounts
   }
 }
 
@@ -605,6 +660,7 @@ export type IrregularDecisionTraceEvent =
   | IrregularDecisionTraceTransformCandidatesGenerated
   | IrregularDecisionTraceLocalCandidateScored
   | IrregularDecisionTraceLocalCandidateSelection
+  | IrregularDecisionTraceLocalCandidateSummary
   | IrregularDecisionTraceSuccessorDeduplication
   | IrregularDecisionTraceSuccessorLayoutScored
   | IrregularDecisionTraceBeamSelection
