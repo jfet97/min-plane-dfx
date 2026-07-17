@@ -1,0 +1,88 @@
+{
+  "experiment": "small-piece-gap-diversity",
+  "status": "research-only",
+  "baseCommit": "aa7a264d4bc8ee99f6e5e9d890246e87e82b5db5",
+  "commits": {
+    "front8Standalone": "02c712ea813875c5751f245b171e56835efa5677",
+    "front16Standalone": "b3b56e5dbeee8b7d45ec32440b8461a4b7b630d9",
+    "front4Standalone": "abe664ecc730a6c4dd0d4bb68a9d72be46a079d8",
+    "protectedFront8": "94cb35cafc874a090dfbc81f1c45ea1e16a21318",
+    "tailCohortRejected": "69ca2052b5b2116c8d86b9baf1f1757542d54229",
+    "tailCohortRevert": "28751468a29873a52c792d9f0aa4f5de5a7e788c"
+  },
+  "fixture": "tests/fixtures/irregularSheetInvariance/mixed61-request.json",
+  "runtimeEnvironment": {
+    "node": "v24.16.0",
+    "pnpm": "11.8.0",
+    "electron": "33.4.11"
+  },
+  "settings": {
+    "reorderWindow": 4,
+    "beamWidth": 8,
+    "localCandidateFanout": 4,
+    "transformCap": 8,
+    "localRepairBudget": 0,
+    "localPolicy": "edge-contact-then-compactness",
+    "rotations": true,
+    "mirroring": true,
+    "ga": false
+  },
+  "protectedCandidate": {
+    "description": "Run the unchanged baseline and a front-8 small-piece-access alternative, then accept the alternative only when it places at least as many pieces, strictly reduces holes, and does not worsen intrinsic collision-bounds area or span.",
+    "triangleGolden": "exact-pass",
+    "sheets": [
+      {
+        "widthMm": 1000,
+        "heightMm": 1700,
+        "selectedDecode": "front8",
+        "elapsedMs": 31994.625291,
+        "placedCount": 61,
+        "unplacedCount": 0,
+        "boundsWidthMm": 727.2150997306695,
+        "boundsHeightMm": 622.7599952952746,
+        "boundsAreaMm2": 452880.4720869244,
+        "boundsSpanMm": 1349.975095025944,
+        "freeMaterialHoleCount": 7,
+        "canonicalGeometrySha256": "31a9801ffbb4e63da03d2a0f4500a8da9bb97a849e2141a010190ddb50cfa41d",
+        "svg": {
+          "file": "mixed-61-1000x1700.svg",
+          "sha256": "aa142f9e6814b5431ba7e3262ffafe8b72bef927e776f5b125ff9bc9e65c2e97"
+        },
+        "png": {
+          "file": "mixed-61-1000x1700.png",
+          "sha256": "e976807a796653e2e37e3e7cacb103c09c136df2abd615af5350008526033b27"
+        }
+      },
+      {
+        "widthMm": 2000,
+        "heightMm": 2700,
+        "selectedDecode": "baseline",
+        "elapsedMs": 33306.430209,
+        "placedCount": 61,
+        "unplacedCount": 0,
+        "boundsWidthMm": 658.9071043958036,
+        "boundsHeightMm": 662.8704345277212,
+        "boundsAreaMm2": 436770.03860424884,
+        "boundsSpanMm": 1321.7775389235248,
+        "freeMaterialHoleCount": 10,
+        "canonicalGeometrySha256": "2a1b33017a1226142e462230297e93574c1898215fc68267945ab96cfca1562f",
+        "svg": {
+          "file": "mixed-61-2000x2700.svg",
+          "sha256": "90ad313324592b5402a1618725bbbe9ddc6b2c97c27c7aac4fd58c6b549650ce"
+        },
+        "png": {
+          "file": "mixed-61-2000x2700.png",
+          "sha256": "b0aa0dd78cc8564568c343637203a5bfea98cd537c3f880de160cc86ea609490"
+        }
+      }
+    ]
+  },
+  "validation": {
+    "focusedTests": 46,
+    "lint": "pass",
+    "typecheck": "pass",
+    "workerBuild": "pass",
+    "diffCheck": "pass"
+  },
+  "recommendation": "Preserve as a bounded secondary-decode research lead. Do not ship unchanged because it approximately doubles runtime and only modestly improves the compact-sheet envelope."
+}

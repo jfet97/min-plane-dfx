@@ -87,6 +87,25 @@ mixed-61 sheets. No GA change, intrinsic candidate-diversity experiment, cavity
 filler experiment, or trace compaction experiment is production behavior until
 it passes the gates above and is explicitly merged.
 
+### Production Rejection Is Not Research Rejection
+
+Treat production readiness and research value as separate decisions. A triangle
+golden failure means that a candidate is **unsafe to ship unchanged**; it does
+not prove that the algorithmic mechanism is useless. Preserve an isolated
+branch, exact commit, metrics, and rendered artifacts whenever a rejected
+candidate exposes a coherent layout, improves sheet invariance, reduces real
+holes, or reveals a useful ranking or decoding mechanism.
+
+Candidate L and L2 are the concrete example. Neither standalone scorer may
+replace the production default because both widen the accepted triangle lattice.
+Their hole-free lattice and sheet-intrinsic ranking are still valid research
+inputs. Re-evaluate those ingredients together with whole-beam topology
+diversity, a different decoder, bounded order/rotation search, or a final search
+stage that protects or reconstructs the narrower triangle lattice. Future work
+must be allowed to challenge the current comparator and beam architecture; the
+triangle golden remains a shipping gate for the combined result, not a rule that
+automatically discards every intermediate branch that misses it.
+
 ### Active Isolated Experiments
 
 The following work is deliberately outside `main` until every mandatory gate
@@ -1766,7 +1785,7 @@ would falsify each one, and identify the smallest safe production experiment.
 - Reopened strategy selection after a new legal but visibly unacceptable
   61-piece mixed layout.
 - Began exact analysis of the two newest morning traces.
-- Began source-level comparison using local copies under `/private/tmp`.
+- Began source-level comparison using local read-only source checkouts.
 - Created this living handoff before selecting another production heuristic.
 - Added a separate semantic-preserving performance research track with exact
   differential gates and the linear Minkowski failure warning.
