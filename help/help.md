@@ -350,6 +350,26 @@ Every experiment must be classified in two separate ways:
    fixtures. Later experiments may recombine that mechanism with diversity,
    order/rotation search, repair-free decoding, or a different final selector.
 
+Use the following decision table instead of treating the golden as a binary
+judgment on an entire algorithm family:
+
+| Experimental result | Production decision | Research decision |
+| --- | --- | --- |
+| Illegal geometry, missing pieces, or nondeterministic replay | Reject unchanged | Retain only if it isolates a geometry or determinism defect |
+| Legal result that fails the triangle quality envelope | Do not ship unchanged | Retain the exact branch when it improves another protected fixture or exposes a useful mechanism |
+| Passes the triangle golden but regresses mixed or sheet-invariance gates | Do not ship unchanged | Keep as a bounded ingredient and identify the conflicting objective |
+| Passes the triangle golden and the relevant mixed, topology, legality, and invariance gates | Eligible for production review | Preserve the provenance and corpus evidence |
+
+The triangle golden is therefore not the optimizer and it is not proof that the
+current beam architecture is correct. It protects one known high-quality motif
+from silent regression. A research branch may temporarily lose that motif while
+demonstrating a better intrinsic ranker, decoder, topology survivor, or search
+schedule. The useful part should then be recombined with a mechanism that
+recovers the lattice before the combined candidate is proposed for production.
+Do not force every exploratory scorer to imitate the current triangle trace, and
+do not discard improvements that could become compatible after later beam or
+decoder changes.
+
 Do not discard an algorithm family solely because its first standalone version
 fails the triangle golden. Conversely, do not weaken the golden just to accept a
 promising mixed-job screenshot. Keep both facts visible, test combinations on a
@@ -368,6 +388,16 @@ recover the narrower triangle motif without reintroducing sheet-normalized
 pruning. Record both successes and regressions. A later combined candidate may
 legitimately use L/L2 ingredients even though neither original commit is safe as
 the production default.
+
+For Candidate L, the retained ingredient is the combination of structural
+contact bands and sheet-intrinsic envelope ordering: its large mixed61
+sheet-stability improvement is evidence that this direction addresses a real
+defect, even though its standalone triangle lattice is too wide. Candidate L2
+is weaker evidence, but its raw-contact-first result helps delimit which part of
+L matters. Future work should test those ingredients behind whole-beam topology
+diversity, a protected lattice/contact lane, or a different decoder. A failure of
+the original L/L2 commits must not be cited as evidence that every such
+combination will fail.
 
 The completed corpus audit validates that distinction. Candidate L reduces the
 mixed61 four-sheet envelope-area spread from `276,459.435 mm2` to
