@@ -280,6 +280,14 @@ production change even though its reference-sheet result is close to the
 approved checkpoint. The current audit is locating the first divergent beam
 step; deterministic portfolio and bounded-GA probes are running independently.
 
+Candidate K on isolated commit `b14af3c` added four geometry-deduplicated local
+reservations within the existing fanout: original edge-contact, original
+balanced compactness, intrinsic edge-contact, and intrinsic compactness. This
+failed before the mixed corpus ran: the triangle golden's short side grew to
+`302.700 mm`, above the accepted `228 mm` limit. The explicit four-slot local
+portfolio is rejected and the deterministic portfolio probe does not duplicate
+it.
+
 ## Required Research Behavior
 
 Treat the task as an algorithm and systems investigation, not as a small bug fix.

@@ -31,3 +31,5 @@ repos/
 # pnpm temp dirs we created for workaround
 .pnpm-store/
 .pnpm-cache/
+
+.claude
