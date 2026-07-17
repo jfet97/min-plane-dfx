@@ -1,0 +1,164 @@
+{
+  "generatedAt": "2026-07-17T12:53:31.792Z",
+  "sheets": [
+    {
+      "width": 1000,
+      "height": 1300,
+      "label": "compact short"
+    },
+    {
+      "width": 1000,
+      "height": 1700,
+      "label": "compact roomy"
+    },
+    {
+      "width": 2000,
+      "height": 1700,
+      "label": "wide short"
+    },
+    {
+      "width": 2000,
+      "height": 2700,
+      "label": "reference roomy"
+    }
+  ],
+  "comparison": {
+    "gridSizeMm": 0.001,
+    "ignores": [
+      "piece order",
+      "polygon winding",
+      "ring origin",
+      "translation",
+      "quarter-turn"
+    ],
+    "preserves": [
+      "collision geometry",
+      "relative placement",
+      "reflection"
+    ]
+  },
+  "cases": [
+    {
+      "caseId": "mixed-61",
+      "geometryEquivalent": false,
+      "runs": [
+        {
+          "sheet": {
+            "width": 1000,
+            "height": 1300
+          },
+          "elapsedMs": 65183.104458,
+          "placedCount": 61,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": -1.1368683772161603e-13,
+            "width": 667.1686195587205,
+            "height": 1050.7350000000001,
+            "shortSide": 667.1686195587205,
+            "longSide": 1050.7350000000001,
+            "area": 701017.4194720322,
+            "span": 1717.9036195587205
+          },
+          "canonicalSha256": "895eeea467a079af0cfc04ebda2df01cda8730362bef08c02138c87415a4145c",
+          "canonicalRotationDeg": 0,
+          "score": {
+            "occupiedHullWasteRatio": 0.35787232502834987,
+            "nearCompleteStructuralContactCount": 60,
+            "dominantNearCompleteStructuralContactCount": 15,
+            "sharedCollisionBoundaryContactUnits": 65.552941,
+            "freeMaterialHoleCount": 1
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-local-ranking/baseline-3604399/mixed-61-1000x1300.svg"
+        },
+        {
+          "sheet": {
+            "width": 1000,
+            "height": 1700
+          },
+          "elapsedMs": 65019.251874999994,
+          "placedCount": 61,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "width": 515.7650000000001,
+            "height": 1382.8960000000002,
+            "shortSide": 515.7650000000001,
+            "longSide": 1382.8960000000002,
+            "area": 713249.3554400002,
+            "span": 1898.6610000000003
+          },
+          "canonicalSha256": "010a9fc77a26b3b31ee6ff3c3396d2b864cf4cebbb73149e230660ac71e6e6da",
+          "canonicalRotationDeg": 180,
+          "score": {
+            "occupiedHullWasteRatio": 0.37498615543377867,
+            "nearCompleteStructuralContactCount": 57,
+            "dominantNearCompleteStructuralContactCount": 18,
+            "sharedCollisionBoundaryContactUnits": 57.739273,
+            "freeMaterialHoleCount": 0
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-local-ranking/baseline-3604399/mixed-61-1000x1700.svg"
+        },
+        {
+          "sheet": {
+            "width": 2000,
+            "height": 1700
+          },
+          "elapsedMs": 65412.411166,
+          "placedCount": 61,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": -4.263256414560601e-14,
+            "width": 892.8492438055272,
+            "height": 720.0140160011756,
+            "shortSide": 720.0140160011756,
+            "longSide": 892.8492438055272,
+            "area": 642863.9697160304,
+            "span": 1612.863259806703
+          },
+          "canonicalSha256": "92f6392d5229ecae74e0782287c7dcdf8abc46a479f6a4f04858a8fede7d1048",
+          "canonicalRotationDeg": 180,
+          "score": {
+            "occupiedHullWasteRatio": 0.4099364479339031,
+            "nearCompleteStructuralContactCount": 58,
+            "dominantNearCompleteStructuralContactCount": 16,
+            "sharedCollisionBoundaryContactUnits": 61.10099,
+            "freeMaterialHoleCount": 6
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-local-ranking/baseline-3604399/mixed-61-2000x1700.svg"
+        },
+        {
+          "sheet": {
+            "width": 2000,
+            "height": 2700
+          },
+          "elapsedMs": 66153.138417,
+          "placedCount": 61,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": -1.1368683772161603e-13,
+            "minY": -1.1368683772161603e-13,
+            "width": 564.6600000000001,
+            "height": 773.5449999999997,
+            "shortSide": 564.6600000000001,
+            "longSide": 773.5449999999997,
+            "area": 436789.9196999999,
+            "span": 1338.205
+          },
+          "canonicalSha256": "b00c96402d0687a6190c7f724a118363a38d99faed533515594e20da9ecf9c51",
+          "canonicalRotationDeg": 270,
+          "score": {
+            "occupiedHullWasteRatio": 0.24634606216110963,
+            "nearCompleteStructuralContactCount": 56,
+            "dominantNearCompleteStructuralContactCount": 14,
+            "sharedCollisionBoundaryContactUnits": 58.907038,
+            "freeMaterialHoleCount": 2
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-local-ranking/baseline-3604399/mixed-61-2000x2700.svg"
+        }
+      ]
+    }
+  ]
+}

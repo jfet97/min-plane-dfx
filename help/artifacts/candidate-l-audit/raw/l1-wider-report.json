@@ -1,0 +1,286 @@
+{
+  "generatedAt": "2026-07-17T15:19:22.627Z",
+  "sheets": [
+    {
+      "width": 1000,
+      "height": 1300,
+      "label": "compact short"
+    },
+    {
+      "width": 1000,
+      "height": 1700,
+      "label": "compact roomy"
+    },
+    {
+      "width": 2000,
+      "height": 1700,
+      "label": "wide short"
+    },
+    {
+      "width": 2000,
+      "height": 2700,
+      "label": "reference roomy"
+    }
+  ],
+  "comparison": {
+    "gridSizeMm": 0.001,
+    "ignores": [
+      "piece order",
+      "polygon winding",
+      "ring origin",
+      "translation",
+      "quarter-turn"
+    ],
+    "preserves": [
+      "collision geometry",
+      "relative placement",
+      "reflection"
+    ]
+  },
+  "cases": [
+    {
+      "caseId": "rectangles-20",
+      "geometryEquivalent": true,
+      "runs": [
+        {
+          "sheet": {
+            "width": 1000,
+            "height": 1300
+          },
+          "elapsedMs": 1379.368333,
+          "placedCount": 20,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "width": 558.0160000000001,
+            "height": 722.5200000000001,
+            "shortSide": 558.0160000000001,
+            "longSide": 722.5200000000001,
+            "area": 403177.7203200001,
+            "span": 1280.536
+          },
+          "canonicalSha256": "0f375fb8f847e5c26242670e9c63b0e7050c88aaf63b646008165b8f78ad5821",
+          "canonicalRotationDeg": 90,
+          "score": {
+            "occupiedHullWasteRatio": 0.05597532548594589,
+            "nearCompleteStructuralContactCount": 31,
+            "dominantNearCompleteStructuralContactCount": 31,
+            "sharedCollisionBoundaryContactUnits": 23.401401,
+            "freeMaterialHoleCount": 0
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/candidate-l-corpus-audit/l1-wider/rectangles-20-1000x1300.svg"
+        },
+        {
+          "sheet": {
+            "width": 1000,
+            "height": 1700
+          },
+          "elapsedMs": 1283.3117909999999,
+          "placedCount": 20,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "width": 558.0160000000001,
+            "height": 722.5200000000001,
+            "shortSide": 558.0160000000001,
+            "longSide": 722.5200000000001,
+            "area": 403177.7203200001,
+            "span": 1280.536
+          },
+          "canonicalSha256": "0f375fb8f847e5c26242670e9c63b0e7050c88aaf63b646008165b8f78ad5821",
+          "canonicalRotationDeg": 90,
+          "score": {
+            "occupiedHullWasteRatio": 0.05597532548594589,
+            "nearCompleteStructuralContactCount": 31,
+            "dominantNearCompleteStructuralContactCount": 31,
+            "sharedCollisionBoundaryContactUnits": 23.401401,
+            "freeMaterialHoleCount": 0
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/candidate-l-corpus-audit/l1-wider/rectangles-20-1000x1700.svg"
+        },
+        {
+          "sheet": {
+            "width": 2000,
+            "height": 1700
+          },
+          "elapsedMs": 1333.1720420000001,
+          "placedCount": 20,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": -1.1368683772161603e-13,
+            "width": 722.5200000000001,
+            "height": 558.0160000000001,
+            "shortSide": 558.0160000000001,
+            "longSide": 722.5200000000001,
+            "area": 403177.7203200001,
+            "span": 1280.536
+          },
+          "canonicalSha256": "0f375fb8f847e5c26242670e9c63b0e7050c88aaf63b646008165b8f78ad5821",
+          "canonicalRotationDeg": 0,
+          "score": {
+            "occupiedHullWasteRatio": 0.05597532548594531,
+            "nearCompleteStructuralContactCount": 31,
+            "dominantNearCompleteStructuralContactCount": 31,
+            "sharedCollisionBoundaryContactUnits": 23.401401,
+            "freeMaterialHoleCount": 0
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/candidate-l-corpus-audit/l1-wider/rectangles-20-2000x1700.svg"
+        },
+        {
+          "sheet": {
+            "width": 2000,
+            "height": 2700
+          },
+          "elapsedMs": 1359.454041,
+          "placedCount": 20,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": -1.1368683772161603e-13,
+            "width": 722.5200000000001,
+            "height": 558.0160000000001,
+            "shortSide": 558.0160000000001,
+            "longSide": 722.5200000000001,
+            "area": 403177.7203200001,
+            "span": 1280.536
+          },
+          "canonicalSha256": "0f375fb8f847e5c26242670e9c63b0e7050c88aaf63b646008165b8f78ad5821",
+          "canonicalRotationDeg": 0,
+          "score": {
+            "occupiedHullWasteRatio": 0.05597532548594531,
+            "nearCompleteStructuralContactCount": 31,
+            "dominantNearCompleteStructuralContactCount": 31,
+            "sharedCollisionBoundaryContactUnits": 23.401401,
+            "freeMaterialHoleCount": 0
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/candidate-l-corpus-audit/l1-wider/rectangles-20-2000x2700.svg"
+        }
+      ]
+    },
+    {
+      "caseId": "mixed-50",
+      "geometryEquivalent": false,
+      "runs": [
+        {
+          "sheet": {
+            "width": 1000,
+            "height": 1300
+          },
+          "elapsedMs": 8269.419541,
+          "placedCount": 50,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": -3.197442310920451e-14,
+            "minY": 0,
+            "width": 800.7171533172035,
+            "height": 801.885,
+            "shortSide": 800.7171533172035,
+            "longSide": 801.885,
+            "area": 642083.0744877657,
+            "span": 1602.6021533172034
+          },
+          "canonicalSha256": "aa5247db1c2e3884a258d6d2456778b964dd3a9d82520bfd496b7088b48dd96b",
+          "canonicalRotationDeg": 0,
+          "score": {
+            "occupiedHullWasteRatio": 0.22763984660886527,
+            "nearCompleteStructuralContactCount": 40,
+            "dominantNearCompleteStructuralContactCount": 10,
+            "sharedCollisionBoundaryContactUnits": 36.209472,
+            "freeMaterialHoleCount": 8
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/candidate-l-corpus-audit/l1-wider/mixed-50-1000x1300.svg"
+        },
+        {
+          "sheet": {
+            "width": 1000,
+            "height": 1700
+          },
+          "elapsedMs": 8292.038207999998,
+          "placedCount": 50,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": -3.730349362740526e-14,
+            "width": 790.8688160368583,
+            "height": 832.202,
+            "shortSide": 790.8688160368583,
+            "longSide": 832.202,
+            "area": 658162.6104435056,
+            "span": 1623.0708160368583
+          },
+          "canonicalSha256": "46f909a12ff6cf6aa518fa528ddd44e7addcf0c28da99ad758ea6f3be13b8d4b",
+          "canonicalRotationDeg": 0,
+          "score": {
+            "occupiedHullWasteRatio": 0.2805816756666404,
+            "nearCompleteStructuralContactCount": 38,
+            "dominantNearCompleteStructuralContactCount": 10,
+            "sharedCollisionBoundaryContactUnits": 37.284086,
+            "freeMaterialHoleCount": 7
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/candidate-l-corpus-audit/l1-wider/mixed-50-1000x1700.svg"
+        },
+        {
+          "sheet": {
+            "width": 2000,
+            "height": 1700
+          },
+          "elapsedMs": 8440.581542,
+          "placedCount": 50,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "width": 793.2871097620343,
+            "height": 803.9743236144093,
+            "shortSide": 793.2871097620343,
+            "longSide": 803.9743236144093,
+            "area": 637782.4675029612,
+            "span": 1597.2614333764436
+          },
+          "canonicalSha256": "29cd2a0adcc127b73007d1464405df0cb1cc71e4ddd8d595f08fefd0b4e0e20f",
+          "canonicalRotationDeg": 0,
+          "score": {
+            "occupiedHullWasteRatio": 0.24501821938015936,
+            "nearCompleteStructuralContactCount": 34,
+            "dominantNearCompleteStructuralContactCount": 10,
+            "sharedCollisionBoundaryContactUnits": 29.784239,
+            "freeMaterialHoleCount": 12
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/candidate-l-corpus-audit/l1-wider/mixed-50-2000x1700.svg"
+        },
+        {
+          "sheet": {
+            "width": 2000,
+            "height": 2700
+          },
+          "elapsedMs": 8112.549750000002,
+          "placedCount": 50,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": -1.1368683772161603e-13,
+            "width": 755.890825268245,
+            "height": 815.1840329972257,
+            "shortSide": 755.890825268245,
+            "longSide": 815.1840329972257,
+            "area": 616190.1314477691,
+            "span": 1571.0748582654705
+          },
+          "canonicalSha256": "d289a9b15c21baeff32dbcdce16ddcc0142b49e76d606e707d23763889cc04b2",
+          "canonicalRotationDeg": 0,
+          "score": {
+            "occupiedHullWasteRatio": 0.24611924424575624,
+            "nearCompleteStructuralContactCount": 42,
+            "dominantNearCompleteStructuralContactCount": 10,
+            "sharedCollisionBoundaryContactUnits": 36.721337,
+            "freeMaterialHoleCount": 9
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/candidate-l-corpus-audit/l1-wider/mixed-50-2000x2700.svg"
+        }
+      ]
+    }
+  ]
+}

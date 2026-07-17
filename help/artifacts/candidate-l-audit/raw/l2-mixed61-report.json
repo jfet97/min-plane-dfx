@@ -1,0 +1,164 @@
+{
+  "generatedAt": "2026-07-17T15:14:27.750Z",
+  "sheets": [
+    {
+      "width": 1000,
+      "height": 1300,
+      "label": "compact short"
+    },
+    {
+      "width": 1000,
+      "height": 1700,
+      "label": "compact roomy"
+    },
+    {
+      "width": 2000,
+      "height": 1700,
+      "label": "wide short"
+    },
+    {
+      "width": 2000,
+      "height": 2700,
+      "label": "reference roomy"
+    }
+  ],
+  "comparison": {
+    "gridSizeMm": 0.001,
+    "ignores": [
+      "piece order",
+      "polygon winding",
+      "ring origin",
+      "translation",
+      "quarter-turn"
+    ],
+    "preserves": [
+      "collision geometry",
+      "relative placement",
+      "reflection"
+    ]
+  },
+  "cases": [
+    {
+      "caseId": "mixed-61",
+      "geometryEquivalent": false,
+      "runs": [
+        {
+          "sheet": {
+            "width": 1000,
+            "height": 1300
+          },
+          "elapsedMs": 17360.243959000003,
+          "placedCount": 61,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "width": 668.0320000000002,
+            "height": 1078.364,
+            "shortSide": 668.0320000000002,
+            "longSide": 1078.364,
+            "area": 720381.6596480001,
+            "span": 1746.3960000000002
+          },
+          "canonicalSha256": "8aa3e5cf937b6288c9edab0afd8e556451fcc39f5a4d2d9425e1ba6f10e06865",
+          "canonicalRotationDeg": 270,
+          "score": {
+            "occupiedHullWasteRatio": 0.42501255142194294,
+            "nearCompleteStructuralContactCount": 55,
+            "dominantNearCompleteStructuralContactCount": 16,
+            "sharedCollisionBoundaryContactUnits": 59.780723,
+            "freeMaterialHoleCount": 4
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/candidate-l-corpus-audit/l2/mixed-61-1000x1300.svg"
+        },
+        {
+          "sheet": {
+            "width": 1000,
+            "height": 1700
+          },
+          "elapsedMs": 17162.524875000003,
+          "placedCount": 61,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "width": 673.5011655102112,
+            "height": 679.047509110384,
+            "shortSide": 673.5011655102112,
+            "longSide": 679.047509110384,
+            "area": 457339.2888226494,
+            "span": 1352.5486746205952
+          },
+          "canonicalSha256": "1dbd791aa5c84862ad98db9cc8c6634292e7cfb562a4112e19df784b06852ae8",
+          "canonicalRotationDeg": 0,
+          "score": {
+            "occupiedHullWasteRatio": 0.24736550670556953,
+            "nearCompleteStructuralContactCount": 48,
+            "dominantNearCompleteStructuralContactCount": 9,
+            "sharedCollisionBoundaryContactUnits": 48.653756,
+            "freeMaterialHoleCount": 6
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/candidate-l-corpus-audit/l2/mixed-61-1000x1700.svg"
+        },
+        {
+          "sheet": {
+            "width": 2000,
+            "height": 1700
+          },
+          "elapsedMs": 16592.175875,
+          "placedCount": 61,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "width": 680.6052011344788,
+            "height": 674.3805091103841,
+            "shortSide": 674.3805091103841,
+            "longSide": 680.6052011344788,
+            "area": 458986.88204424514,
+            "span": 1354.9857102448627
+          },
+          "canonicalSha256": "5da42ef728787e427ef0441a6746b8e1ada3745866f5c431eeec1e3c67c21feb",
+          "canonicalRotationDeg": 0,
+          "score": {
+            "occupiedHullWasteRatio": 0.2587586247987938,
+            "nearCompleteStructuralContactCount": 52,
+            "dominantNearCompleteStructuralContactCount": 12,
+            "sharedCollisionBoundaryContactUnits": 53.024566,
+            "freeMaterialHoleCount": 0
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/candidate-l-corpus-audit/l2/mixed-61-2000x1700.svg"
+        },
+        {
+          "sheet": {
+            "width": 2000,
+            "height": 2700
+          },
+          "elapsedMs": 16472.217084000004,
+          "placedCount": 61,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": -1.1368683772161603e-13,
+            "width": 784.1596275822,
+            "height": 750.8628096764558,
+            "shortSide": 750.8628096764558,
+            "longSide": 784.1596275822,
+            "area": 588796.3012012138,
+            "span": 1535.0224372586558
+          },
+          "canonicalSha256": "8fb8bff279e385ffc3ed1a46ce4ec6b08399b7de88192b707949698280af068b",
+          "canonicalRotationDeg": 0,
+          "score": {
+            "occupiedHullWasteRatio": 0.34972535915555136,
+            "nearCompleteStructuralContactCount": 50,
+            "dominantNearCompleteStructuralContactCount": 8,
+            "sharedCollisionBoundaryContactUnits": 51.41427,
+            "freeMaterialHoleCount": 9
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/candidate-l-corpus-audit/l2/mixed-61-2000x2700.svg"
+        }
+      ]
+    }
+  ]
+}

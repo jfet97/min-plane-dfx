@@ -1,0 +1,466 @@
+{
+  "generatedAt": "2026-07-17T12:32:26.401Z",
+  "sheets": [
+    {
+      "width": 1000,
+      "height": 1700,
+      "label": "compact roomy"
+    },
+    {
+      "width": 2000,
+      "height": 2700,
+      "label": "reference roomy"
+    }
+  ],
+  "comparison": {
+    "gridSizeMm": 0.001,
+    "ignores": [
+      "piece order",
+      "polygon winding",
+      "ring origin",
+      "translation",
+      "quarter-turn"
+    ],
+    "preserves": [
+      "collision geometry",
+      "relative placement",
+      "reflection"
+    ]
+  },
+  "cases": [
+    {
+      "caseId": "triangle-golden-20",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 1928.3320000000003,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 151.35,
+          "height": 529.7280000000001,
+          "shortSide": 151.35,
+          "longSide": 529.7280000000001,
+          "area": 80174.3328,
+          "span": 681.0780000000001
+        },
+        "canonicalSha256": "4f12f587fcba4696dfaa89f7854541764b7be72d67e27362f53fce2ad94f6728",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.0909090909090908,
+          "nearCompleteStructuralContactCount": 20,
+          "dominantNearCompleteStructuralContactCount": 16,
+          "sharedCollisionBoundaryContactUnits": 19.877012,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/triangle-golden-20-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 3572.1199589999997,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": -4.263256414560601e-14,
+          "width": 353.15200000000004,
+          "height": 227.02499999999998,
+          "shortSide": 227.02499999999998,
+          "longSide": 353.15200000000004,
+          "area": 80174.3328,
+          "span": 580.177
+        },
+        "canonicalSha256": "af7522ba79fcb8836b071c8de572a1ad534935e105a72b7c32bba32818a6ddef",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.047619047619047256,
+          "nearCompleteStructuralContactCount": 24,
+          "dominantNearCompleteStructuralContactCount": 17,
+          "sharedCollisionBoundaryContactUnits": 23.869325,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/triangle-golden-20-2000x2700.svg"
+      }
+    },
+    {
+      "caseId": "rectangles-20",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 1323.9719169999998,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": -1.1368683772161603e-13,
+          "minY": 0,
+          "width": 887.0239999999999,
+          "height": 608.0160000000001,
+          "shortSide": 608.0160000000001,
+          "longSide": 887.0239999999999,
+          "area": 539324.784384,
+          "span": 1495.04
+        },
+        "canonicalSha256": "19f1c5be7792c5efb267fed2b1773736ce1df63b7705762fabcc4243fffaa9f7",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.16938240030552806,
+          "nearCompleteStructuralContactCount": 30,
+          "dominantNearCompleteStructuralContactCount": 30,
+          "sharedCollisionBoundaryContactUnits": 23.009289,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/rectangles-20-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 1323.5056249999989,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": -1.1368683772161603e-13,
+          "width": 722.5200000000001,
+          "height": 608.016,
+          "shortSide": 608.016,
+          "longSide": 722.5200000000001,
+          "area": 439303.72032,
+          "span": 1330.536
+        },
+        "canonicalSha256": "feb1b266e7f6f5775a86ce742806b3d3a310ca56e9f97fed608f91baf9dc80e5",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.09140914024535769,
+          "nearCompleteStructuralContactCount": 31,
+          "dominantNearCompleteStructuralContactCount": 31,
+          "sharedCollisionBoundaryContactUnits": 23.401401,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/rectangles-20-2000x2700.svg"
+      }
+    },
+    {
+      "caseId": "trapezoids-20",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 1445.3410000000003,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 2.842170943040401e-14,
+          "minY": 0,
+          "width": 318.21500000000003,
+          "height": 940.5440000000001,
+          "shortSide": 318.21500000000003,
+          "longSide": 940.5440000000001,
+          "area": 299295.2089600001,
+          "span": 1258.759
+        },
+        "canonicalSha256": "08f0a1f2888a609e008d483069e057fe53056f5050851ae064509f35e6dcff38",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.25935978156774064,
+          "nearCompleteStructuralContactCount": 22,
+          "dominantNearCompleteStructuralContactCount": 17,
+          "sharedCollisionBoundaryContactUnits": 15.877776,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/trapezoids-20-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 1521.140707999999,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": -8.526512829121202e-14,
+          "width": 136.473,
+          "height": 1710.079999999999,
+          "shortSide": 136.473,
+          "longSide": 1710.079999999999,
+          "area": 233379.74783999988,
+          "span": 1846.552999999999
+        },
+        "canonicalSha256": "3884f980b271d9249b3b75e92a30fc061d2c8b7ec4714342506725979698e39e",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.30208065921815375,
+          "nearCompleteStructuralContactCount": 19,
+          "dominantNearCompleteStructuralContactCount": 19,
+          "sharedCollisionBoundaryContactUnits": 11.377736,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/trapezoids-20-2000x2700.svg"
+      }
+    },
+    {
+      "caseId": "pentagons-20",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 1711.3357080000005,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 407.44399999999996,
+          "height": 847.263,
+          "shortSide": 407.44399999999996,
+          "longSide": 847.263,
+          "area": 345212.225772,
+          "span": 1254.7069999999999
+        },
+        "canonicalSha256": "a753d43e9b4e0567dbc074064256605d2ebd32e900d9c154399e8eabb9cb0f22",
+        "canonicalRotationDeg": 180,
+        "score": {
+          "occupiedHullWasteRatio": 0.3397230287705593,
+          "nearCompleteStructuralContactCount": 19,
+          "dominantNearCompleteStructuralContactCount": 10,
+          "sharedCollisionBoundaryContactUnits": 18.702036,
+          "freeMaterialHoleCount": 2
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/pentagons-20-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 1667.400208000001,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 451.193,
+          "height": 533.0939999999999,
+          "shortSide": 451.193,
+          "longSide": 533.0939999999999,
+          "area": 240528.28114199996,
+          "span": 984.2869999999999
+        },
+        "canonicalSha256": "f9f5e060095ed6520eefa6ae7213a41e7a6944a20932d69260ccd31902381307",
+        "canonicalRotationDeg": 180,
+        "score": {
+          "occupiedHullWasteRatio": 0.3325572814416226,
+          "nearCompleteStructuralContactCount": 16,
+          "dominantNearCompleteStructuralContactCount": 9,
+          "sharedCollisionBoundaryContactUnits": 15.585344,
+          "freeMaterialHoleCount": 2
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/pentagons-20-2000x2700.svg"
+      }
+    },
+    {
+      "caseId": "star-hulls-20",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 1741.6343339999985,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 407.44399999999996,
+          "height": 847.263,
+          "shortSide": 407.44399999999996,
+          "longSide": 847.263,
+          "area": 345212.225772,
+          "span": 1254.7069999999999
+        },
+        "canonicalSha256": "a753d43e9b4e0567dbc074064256605d2ebd32e900d9c154399e8eabb9cb0f22",
+        "canonicalRotationDeg": 180,
+        "score": {
+          "occupiedHullWasteRatio": 0.3397230287705593,
+          "nearCompleteStructuralContactCount": 19,
+          "dominantNearCompleteStructuralContactCount": 10,
+          "sharedCollisionBoundaryContactUnits": 18.702036,
+          "freeMaterialHoleCount": 2
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/star-hulls-20-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 1668.475957999999,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 451.193,
+          "height": 533.0939999999999,
+          "shortSide": 451.193,
+          "longSide": 533.0939999999999,
+          "area": 240528.28114199996,
+          "span": 984.2869999999999
+        },
+        "canonicalSha256": "f9f5e060095ed6520eefa6ae7213a41e7a6944a20932d69260ccd31902381307",
+        "canonicalRotationDeg": 180,
+        "score": {
+          "occupiedHullWasteRatio": 0.3325572814416226,
+          "nearCompleteStructuralContactCount": 16,
+          "dominantNearCompleteStructuralContactCount": 9,
+          "sharedCollisionBoundaryContactUnits": 15.585344,
+          "freeMaterialHoleCount": 2
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/star-hulls-20-2000x2700.svg"
+      }
+    },
+    {
+      "caseId": "mixed-50",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 8247.098125,
+        "placedCount": 50,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": -1.1368683772161603e-13,
+          "width": 576.8770000000001,
+          "height": 1028.8358764691388,
+          "shortSide": 576.8770000000001,
+          "longSide": 1028.8358764691388,
+          "area": 593511.7539098875,
+          "span": 1605.7128764691388
+        },
+        "canonicalSha256": "6cb2396b39474772db2a2b4e804de1fea90eab7dc00936ff231a221060cf0e83",
+        "canonicalRotationDeg": 270,
+        "score": {
+          "occupiedHullWasteRatio": 0.2370235585226831,
+          "nearCompleteStructuralContactCount": 40,
+          "dominantNearCompleteStructuralContactCount": 10,
+          "sharedCollisionBoundaryContactUnits": 34.36211,
+          "freeMaterialHoleCount": 10
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/mixed-50-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 8315.308916999998,
+        "placedCount": 50,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": -1.1368683772161603e-13,
+          "minY": 0,
+          "width": 973.5305967988382,
+          "height": 640.195,
+          "shortSide": 640.195,
+          "longSide": 973.5305967988382,
+          "area": 623249.4204176323,
+          "span": 1613.7255967988383
+        },
+        "canonicalSha256": "def621d2cd0554af11ca11e03016ca4ed78177722d0046999fa39aef30357a00",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.23144666368638595,
+          "nearCompleteStructuralContactCount": 37,
+          "dominantNearCompleteStructuralContactCount": 10,
+          "sharedCollisionBoundaryContactUnits": 31.968623,
+          "freeMaterialHoleCount": 10
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/mixed-50-2000x2700.svg"
+      }
+    },
+    {
+      "caseId": "mixed-61",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 16533.040667,
+        "placedCount": 61,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 515.7650000000001,
+          "height": 1382.8960000000002,
+          "shortSide": 515.7650000000001,
+          "longSide": 1382.8960000000002,
+          "area": 713249.3554400002,
+          "span": 1898.6610000000003
+        },
+        "canonicalSha256": "010a9fc77a26b3b31ee6ff3c3396d2b864cf4cebbb73149e230660ac71e6e6da",
+        "canonicalRotationDeg": 180,
+        "score": {
+          "occupiedHullWasteRatio": 0.37498615543377867,
+          "nearCompleteStructuralContactCount": 57,
+          "dominantNearCompleteStructuralContactCount": 18,
+          "sharedCollisionBoundaryContactUnits": 57.739273,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/mixed-61-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 15158.754749999993,
+        "placedCount": 61,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": -1.1368683772161603e-13,
+          "minY": -1.1368683772161603e-13,
+          "width": 564.6600000000001,
+          "height": 773.5449999999997,
+          "shortSide": 564.6600000000001,
+          "longSide": 773.5449999999997,
+          "area": 436789.9196999999,
+          "span": 1338.205
+        },
+        "canonicalSha256": "b00c96402d0687a6190c7f724a118363a38d99faed533515594e20da9ecf9c51",
+        "canonicalRotationDeg": 270,
+        "score": {
+          "occupiedHullWasteRatio": 0.24634606216110963,
+          "nearCompleteStructuralContactCount": 56,
+          "dominantNearCompleteStructuralContactCount": 14,
+          "sharedCollisionBoundaryContactUnits": 58.907038,
+          "freeMaterialHoleCount": 2
+        },
+        "artifactPath": "/private/tmp/irregular-sheet-invariance-main-ff5e266/mixed-61-2000x2700.svg"
+      }
+    }
+  ]
+}

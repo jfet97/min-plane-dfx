@@ -1,0 +1,94 @@
+{
+  "generatedAt": "2026-07-17T14:55:29.806Z",
+  "sheets": [
+    {
+      "width": 1000,
+      "height": 1700,
+      "label": "compact roomy"
+    },
+    {
+      "width": 2000,
+      "height": 2700,
+      "label": "reference roomy"
+    }
+  ],
+  "comparison": {
+    "gridSizeMm": 0.001,
+    "ignores": [
+      "piece order",
+      "polygon winding",
+      "ring origin",
+      "translation",
+      "quarter-turn"
+    ],
+    "preserves": [
+      "collision geometry",
+      "relative placement",
+      "reflection"
+    ]
+  },
+  "cases": [
+    {
+      "caseId": "triangle-golden-20",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 2828.04025,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 227.025,
+          "height": 485.58400000000006,
+          "shortSide": 227.025,
+          "longSide": 485.58400000000006,
+          "area": 110239.70760000002,
+          "span": 712.609
+        },
+        "canonicalSha256": "57339aef759e5263286d24fa5cd564a9e86a99f6fe94834e0d9bcd85432ae14b",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.23076923076923034,
+          "nearCompleteStructuralContactCount": 21,
+          "dominantNearCompleteStructuralContactCount": 15,
+          "sharedCollisionBoundaryContactUnits": 20.884699,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/candidate-l1-triangle/triangle-golden-20-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 3970.394667,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 397.29600000000005,
+          "height": 227.025,
+          "shortSide": 227.025,
+          "longSide": 397.29600000000005,
+          "area": 90196.12440000002,
+          "span": 624.321
+        },
+        "canonicalSha256": "18fca2527ebc676d1dfd5f67403ed66892683c9a418b317c9f90ffba3e7fd1a0",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0,
+          "nearCompleteStructuralContactCount": 22,
+          "dominantNearCompleteStructuralContactCount": 15,
+          "sharedCollisionBoundaryContactUnits": 21.884699,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/candidate-l1-triangle/triangle-golden-20-2000x2700.svg"
+      }
+    }
+  ]
+}
