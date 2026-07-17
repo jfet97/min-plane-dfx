@@ -1265,7 +1265,11 @@ function intersectSegments(
       ) {
         return { points: [] }
       }
-      return { points: [{ x: fallbackX, y: fallbackY }] }
+      const fallbackPoint = { x: fallbackX, y: fallbackY }
+      if (!pointIsOnSegment(fallbackPoint, first) || !pointIsOnSegment(fallbackPoint, second)) {
+        return { points: [] }
+      }
+      return { points: [fallbackPoint] }
     }
     return { points: [{ x, y }] }
   }
