@@ -9,7 +9,8 @@ import {
   IrregularPortfolioResult,
   IrregularPortfolioProgress,
   IrregularPriorityOrderKey,
-  IrregularPreparedPiece
+  IrregularPreparedPiece,
+  IrregularTransformCandidate
 } from '@shared/irregular/domain.js'
 import { CollisionGeometryBuilder } from '../../irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
@@ -282,13 +283,11 @@ function reconstructPlacedGeometry(
           })
         )
       }
-      const transform = prepared.transforms
-        .toSorted((first, second) => first.index - second.index)
-        .find(
-          (candidate) =>
-            candidate.rotationDeg === placement.transform.rotationDeg &&
-            candidate.mirrored === placement.transform.mirrored
-        )
+      const transform = resolvePortfolioPlacementTransform({
+        transforms: prepared.transforms,
+        rotationDeg: placement.transform.rotationDeg,
+        mirrored: placement.transform.mirrored
+      })
       if (transform === undefined) {
         return Effect.fail(
           new IrregularGeometryInputError({
@@ -310,6 +309,53 @@ function reconstructPlacedGeometry(
     },
     { concurrency: 1 }
   )
+}
+
+/**
+ * Resolves a selected placement to geometry that can be reconstructed from the
+ * prepared finite transform set.
+ *
+ * Terminal orientation may rigidly quarter-turn a completed legal layout after
+ * search. Such an absolute angle does not need to consume one of the capped
+ * per-piece search transforms, but it must remain a quarter-turn of one that
+ * was actually prepared.
+ */
+export function resolvePortfolioPlacementTransform(input: {
+  readonly transforms: ReadonlyArray<IrregularTransformCandidate>
+  readonly rotationDeg: number
+  readonly mirrored: boolean
+}): IrregularTransformCandidate | undefined {
+  const sameMirrorTransforms = input.transforms
+    .filter((candidate) => candidate.mirrored === input.mirrored)
+    .toSorted((first, second) => first.index - second.index)
+  const exact = sameMirrorTransforms.find(
+    (candidate) => candidate.rotationDeg === input.rotationDeg
+  )
+  if (exact !== undefined) return exact
+
+  const quarterTurnBase = sameMirrorTransforms.find((candidate) =>
+    isQuarterTurnEquivalent(candidate.rotationDeg, input.rotationDeg)
+  )
+  if (quarterTurnBase === undefined) return undefined
+
+  return new IrregularTransformCandidate({
+    index: quarterTurnBase.index,
+    rotationDeg: input.rotationDeg,
+    mirrored: input.mirrored,
+    reason: quarterTurnBase.reason
+  })
+}
+
+function isQuarterTurnEquivalent(firstRotationDeg: number, secondRotationDeg: number): boolean {
+  const normalizedDifference = normalizeRotationDegrees(secondRotationDeg - firstRotationDeg)
+  return [0, 90, 180, 270].some(
+    (quarterTurnDeg) => Math.abs(normalizedDifference - quarterTurnDeg) <= 1e-9
+  )
+}
+
+function normalizeRotationDegrees(rotationDeg: number): number {
+  const remainder = rotationDeg % 360
+  return remainder < 0 ? remainder + 360 : remainder
 }
 
 function findSourcePiece(

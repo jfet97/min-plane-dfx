@@ -126,7 +126,12 @@ than the original beam winner. Winning-path history hooks receive the same
 selected quarter-turn and bottom-left normalization for every frame, so replay
 does not visually drift or rotate only at the end even though search uses its
 original legal coordinates. Decision traces record every legal terminal variant
-as `terminal_orientation_scored`. Because the budget also bounds accepted
+as `terminal_orientation_scored`. Final geometry reconstruction accepts an
+absolute placement angle outside the capped search transform list only when it
+is an exact rigid quarter-turn of a prepared transform with the same mirror
+state. The terminal orientation therefore does not need to consume search
+transform capacity, while arbitrary unprepared angles remain invalid. Because
+the budget also bounds accepted
 iterations and per-piece candidate fanout, enabling repair is an explicit
 quality/cost choice and applies to every baseline or GA decode.
 

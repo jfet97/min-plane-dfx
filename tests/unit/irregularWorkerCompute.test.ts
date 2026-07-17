@@ -9,7 +9,11 @@ import {
   SheetSpec,
   PreparedPiece
 } from '@shared/domain/nesting.js'
-import { IrregularNestingSettings, IrregularOptimizerSettings } from '@shared/irregular/domain.js'
+import {
+  IrregularNestingSettings,
+  IrregularOptimizerSettings,
+  IrregularTransformCandidate
+} from '@shared/irregular/domain.js'
 import { GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { CollisionGeometryBuilder } from '../../src/workers/irregular/collisionGeometryBuilder.js'
 import { TransformGeneratorLive } from '../../src/workers/irregular/transformGenerator.js'
@@ -18,7 +22,8 @@ import { FreeMaterialServiceLive } from '../../src/workers/irregular/freeMateria
 import {
   IrregularComputeError,
   type ComputeIrregularNestingOptions,
-  computeIrregularNesting
+  computeIrregularNesting,
+  resolvePortfolioPlacementTransform
 } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { makeIrregularWorkerOutput } from '../../src/workers/algorithm/irregular/irregularWorkerOutput.js'
 import { IrregularLayoutScorer } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
@@ -120,6 +125,44 @@ function request(
 }
 
 describe('computeIrregularNesting', () => {
+  it('reconstructs a terminal quarter-turn outside the capped transform list', () => {
+    const preparedTransform = new IrregularTransformCandidate({
+      index: 4,
+      rotationDeg: 19.654,
+      mirrored: false,
+      reason: 'edge_alignment'
+    })
+
+    const resolved = resolvePortfolioPlacementTransform({
+      transforms: [preparedTransform],
+      rotationDeg: 109.654,
+      mirrored: false
+    })
+
+    expect(resolved).toEqual(
+      new IrregularTransformCandidate({
+        index: 4,
+        rotationDeg: 109.654,
+        mirrored: false,
+        reason: 'edge_alignment'
+      })
+    )
+    expect(
+      resolvePortfolioPlacementTransform({
+        transforms: [preparedTransform],
+        rotationDeg: 29.654,
+        mirrored: false
+      })
+    ).toBeUndefined()
+    expect(
+      resolvePortfolioPlacementTransform({
+        transforms: [preparedTransform],
+        rotationDeg: 109.654,
+        mirrored: true
+      })
+    ).toBeUndefined()
+  })
+
   it('builds real collision geometry from a tiny closed DXF outline', async () => {
     const result = await Effect.runPromise(run(request([prepared('piece')], [source('piece')])))
 
