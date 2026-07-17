@@ -13,6 +13,12 @@ const IRREGULAR_SCORE_SCALAR_SCALE = 1 / IRREGULAR_SCORE_SCALAR_STEP
  * sub-grid arithmetic noise and does not use tolerance-based comparison.
  */
 export function canonicalizeIrregularScoreMillimeters(valueMm: number): number | undefined {
+  const gridUnits = canonicalizeIrregularScoreMillimeterUnits(valueMm)
+  return gridUnits === undefined ? undefined : gridUnits / IRREGULAR_SCORE_GRID_SCALE
+}
+
+/** Converts one finite millimeter value to an exact integer score-grid identity. */
+export function canonicalizeIrregularScoreMillimeterUnits(valueMm: number): number | undefined {
   if (!Number.isFinite(valueMm)) return undefined
 
   const scaledAbsoluteValue = Math.abs(valueMm) * IRREGULAR_SCORE_GRID_SCALE
@@ -20,7 +26,7 @@ export function canonicalizeIrregularScoreMillimeters(valueMm: number): number |
 
   const roundedAbsoluteValue = Math.floor(scaledAbsoluteValue + 0.5)
   const gridValue = Math.sign(valueMm) * roundedAbsoluteValue
-  return Number.isSafeInteger(gridValue) ? gridValue / IRREGULAR_SCORE_GRID_SCALE : undefined
+  return Number.isSafeInteger(gridValue) ? gridValue : undefined
 }
 
 /** Canonicalizes one finite dimensionless score before deterministic banding. */

@@ -84,6 +84,11 @@ translated collision-ring duplicates after the same canonicalization. Transform
 metadata remains the deterministic representative tie-break, but equivalent
 rotation or mirror descriptions cannot consume separate fanout slots. Decision
 traces report rejected equivalents as `duplicate_local_geometry`.
+Whole-state occupancy identity uses the same `0.001 mm` grid encoded as exact
+integer units. It must not serialize the rounded millimeter `number` directly:
+different V8 releases can print the same intended grid coordinate with opposite
+sub-ulp tails, which would split geometrically identical deduplication keys and
+change deterministic beam tie-breaks between the desktop and headless runtimes.
 
 `GeometrySettings` yields one `IrregularNestingSettings` value containing both
 geometry and optimizer settings. `GeometrySettings.Live` supplies the shared

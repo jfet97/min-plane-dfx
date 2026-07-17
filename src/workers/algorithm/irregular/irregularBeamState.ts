@@ -15,6 +15,7 @@ import {
   type PlacedCollisionSpatialIndex
 } from '../../irregular/placedCollisionSpatialIndex.js'
 import { measureSharedConvexPolygonBoundaryContact } from '../../irregular/convexPolygonContact.js'
+import { canonicalizeIrregularScoreMillimeterUnits } from './irregularScoreGrid.js'
 
 export interface IrregularCollisionBounds {
   readonly minX: number
@@ -744,12 +745,15 @@ function canonicalNumber(value: number): string {
 }
 
 function normalizeCanonicalCoordinate(value: number): number {
-  return Object.is(value, -0) ? 0 : value
+  return (
+    canonicalizeIrregularScoreMillimeterUnits(value) ??
+    (Object.is(value, -0) ? 0 : value)
+  )
 }
 
 function canonicalEntryListKey(entryKeys: ReadonlyArray<string>): string {
   return canonicalRecord([
-    ['version', 'irregular-occupied-geometry-v1'],
+    ['version', 'irregular-occupied-geometry-v2'],
     ['entry-count', canonicalNumber(entryKeys.length)],
     ...entryKeys.map((entryKey, index) => [`entry-${index}`, entryKey])
   ])

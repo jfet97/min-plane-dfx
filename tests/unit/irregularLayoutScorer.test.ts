@@ -26,7 +26,10 @@ import {
   type ExtendFreeMaterialInput
 } from '../../src/workers/irregular/services.js'
 import { createFreeMaterialService } from '../../src/workers/irregular/freeMaterialService.js'
-import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
+import {
+  canonicalCollisionPolygonKey,
+  IrregularBeamState
+} from '../../src/workers/algorithm/irregular/irregularBeamState.js'
 import {
   IrregularLayoutScorer,
   IrregularLayoutScoringError,
@@ -998,6 +1001,27 @@ describe('IrregularLayoutScorer', () => {
     expect(cyclic.canonicalOccupiedGeometryKey).toBe(first.canonicalOccupiedGeometryKey)
     expect(reversed.canonicalOccupiedGeometryKey).toBe(first.canonicalOccupiedGeometryKey)
     expect(negativeZero.canonicalOccupiedGeometryKey).toBe(zero.canonicalOccupiedGeometryKey)
+  })
+
+  it('uses integer grid identities for equivalent floating coordinate representations', () => {
+    const below = canonicalCollisionPolygonKey([
+      { x: 26.875999999999998, y: 75.25200000000002 },
+      { x: 84.27799999999999, y: 0 },
+      { x: 111.154, y: 75.25200000000002 }
+    ])
+    const above = canonicalCollisionPolygonKey([
+      { x: 26.876000000000005, y: 75.252 },
+      { x: 84.27799999999999, y: 0 },
+      { x: 111.154, y: 75.252 }
+    ])
+    const nextGridPoint = canonicalCollisionPolygonKey([
+      { x: 26.877, y: 75.252 },
+      { x: 84.27799999999999, y: 0 },
+      { x: 111.154, y: 75.252 }
+    ])
+
+    expect(below).toBe(above)
+    expect(nextGridPoint).not.toBe(above)
   })
 
   it('does not reuse free material after geometry or sheet inputs change', async () => {
