@@ -230,6 +230,18 @@ function generateCandidatesWithConstruction(
   )
 }
 
+function generateCandidatesWithCache(
+  input: GeneratePlacementCandidatesInput,
+  values: Map<string, unknown>
+) {
+  return Effect.runPromise(
+    NfpIfpService.use((service) => service.generatePlacementCandidates(input)).pipe(
+      Effect.provide(makeNfpIfpServiceLayer()),
+      Effect.provide(cacheLayer(values))
+    )
+  )
+}
+
 function generateCandidatesWithPruning(
   input: GeneratePlacementCandidatesInput,
   candidatePruningMode: NfpCandidatePruningMode
@@ -1235,6 +1247,101 @@ describe('NfpIfpServiceLive', () => {
       point(0, 8),
       point(8, 8)
     ])
+  })
+
+  it('recovers a finite candidate when a near-parallel crossing denominator rounds to zero', async () => {
+    const moving = transformedGeometry('moving-near-parallel-intersection', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const firstFixed = placedPiece(
+      'first-near-parallel-intersection',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      0,
+      0
+    )
+    const secondFixed = placedPiece(
+      'second-near-parallel-intersection',
+      [point(0, 0), point(3, 0), point(3, 2), point(0, 2)],
+      0,
+      0
+    )
+    const firstStart = point(0, 0)
+    const firstEnd = point(1684.3634304823354, 1393.2255685795099)
+    const secondStart = point(20.360831287689507, 16.841514268342394)
+    const secondEnd = point(1664.0025991946459, 1376.3840543111673)
+    const firstBoundary = polygon([
+      firstStart,
+      firstEnd,
+      point(firstEnd.x - 100, firstEnd.y + 100),
+      point(firstStart.x - 100, firstStart.y + 100)
+    ])
+    const secondBoundary = polygon([
+      secondStart,
+      secondEnd,
+      point(secondEnd.x - 100, secondEnd.y + 100),
+      point(secondStart.x - 100, secondStart.y + 100)
+    ])
+    const values = new Map<string, unknown>()
+    for (const [fixed, boundary] of [
+      [firstFixed, firstBoundary],
+      [secondFixed, secondBoundary]
+    ] as const) {
+      values.set(
+        cacheKeyToString(
+          pairwiseNfpCacheKey(
+            { fixed, moving, settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS },
+            'vertex-pair-hull'
+          )
+        ),
+        boundary
+      )
+    }
+
+    const candidates = await generateCandidatesWithCache(
+      {
+        sheet: sheet(2000, 1700),
+        placed: [firstFixed, secondFixed],
+        moving,
+        settings: DEFAULT_IRREGULAR_NESTING_SETTINGS
+      },
+      values
+    )
+    const firstDirectionX = firstEnd.x - firstStart.x
+    const firstDirectionY = firstEnd.y - firstStart.y
+    const secondDirectionX = secondEnd.x - secondStart.x
+    const secondDirectionY = secondEnd.y - secondStart.y
+    const denominator =
+      firstDirectionX * secondDirectionY - firstDirectionY * secondDirectionX
+    const startArea =
+      firstDirectionX * (secondStart.y - firstStart.y) -
+      firstDirectionY * (secondStart.x - firstStart.x)
+    const endArea =
+      firstDirectionX * (secondEnd.y - firstStart.y) -
+      firstDirectionY * (secondEnd.x - firstStart.x)
+    const fallbackParameter = startArea / (startArea - endArea)
+    const expectedIntersection = point(
+      secondStart.x + fallbackParameter * secondDirectionX,
+      secondStart.y + fallbackParameter * secondDirectionY
+    )
+
+    expect(denominator).toBe(0)
+    expect(candidatePoints(candidates)).toContainEqual(expectedIntersection)
+  })
+
+  it('preserves an error result when crossing arithmetic overflows', () => {
+    const result = NfpBoundaryAlgorithms.segmentIntersection(
+      point(-1e308, 0),
+      point(1e308, 0),
+      point(0, -1),
+      point(0, 1)
+    )
+
+    expect(result).toEqual({
+      message: 'segment intersection arithmetic must produce finite coordinates.'
+    })
   })
 
   it('preserves candidates when disjoint NFP bounds skip pair intersections', async () => {
