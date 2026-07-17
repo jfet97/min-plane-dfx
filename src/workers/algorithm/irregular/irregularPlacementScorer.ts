@@ -56,6 +56,8 @@ export interface ScoreIrregularPlacementCandidateInput {
 export interface IrregularPlacementScore {
   /** Explicit policy identity so later policies cannot be accidentally mixed. */
   readonly policyId: IrregularPlacementPolicyId
+  /** Longest side in millimeters of the post-placement collision bounds. */
+  readonly usedClusterMaxSideMm: number
   /** Largest post-placement sheet-axis consumption, normalized by that axis. */
   readonly worstNormalizedSheetConsumption: number
   /** Sum of both post-placement normalized sheet-axis consumptions. */
@@ -115,6 +117,24 @@ const balancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
 const edgeContactThenBalancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
   Order.mapInput(Order.Number, (score) => -score.sharedCollisionBoundaryLengthMm),
   balancedCompactnessOrder
+])
+
+/**
+ * Sheet-independent compactness order for protected candidate diversity.
+ *
+ * Maximum side leads because area-first greedy growth is chain-forming.
+ */
+const intrinsicCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
+  Order.mapInput(Order.Number, (score) => score.usedClusterMaxSideMm),
+  Order.mapInput(Order.Number, (score) => score.usedClusterAreaMm2),
+  Order.mapInput(Order.Number, (score) => score.usedClusterSpanMm),
+  Order.mapInput(Order.Number, (score) => score.candidateBottomMm),
+  Order.mapInput(Order.Number, (score) => score.candidateLeftMm),
+  Order.mapInput(Order.Number, (score) => score.candidate.transform.index),
+  Order.mapInput(Order.Number, (score) => score.candidate.transform.rotationDeg),
+  Order.mapInput(Order.Boolean, (score) => score.candidate.transform.mirrored),
+  Order.mapInput(Order.String, (score) => score.candidate.transform.reason),
+  Order.mapInput(Order.String, (score) => score.candidate.pieceId)
 ])
 
 const shortSideFillOrder = Order.combineAll<IrregularPlacementScore>([
@@ -210,6 +230,7 @@ function scoreCandidate(
   const normalizedHeight = clusterHeight / input.sheet.height
   const worstNormalizedSheetConsumption = Math.max(normalizedWidth, normalizedHeight)
   const normalizedSheetSpanSum = normalizedWidth + normalizedHeight
+  const usedClusterMaxSideMm = Math.max(clusterWidth, clusterHeight)
   const usedClusterAreaMm2 = clusterWidth * clusterHeight
   const usedClusterSpanMm = clusterWidth + clusterHeight
   const shortSideFill =
@@ -227,6 +248,7 @@ function scoreCandidate(
   if (
     !Number.isFinite(worstNormalizedSheetConsumption) ||
     !Number.isFinite(normalizedSheetSpanSum) ||
+    !Number.isFinite(usedClusterMaxSideMm) ||
     !Number.isFinite(usedClusterAreaMm2) ||
     !Number.isFinite(usedClusterSpanMm) ||
     !Number.isFinite(shortSideFill) ||
@@ -240,6 +262,7 @@ function scoreCandidate(
 
   return Effect.succeed({
     policyId,
+    usedClusterMaxSideMm,
     worstNormalizedSheetConsumption,
     normalizedSheetSpanSum,
     usedClusterAreaMm2,
@@ -275,6 +298,14 @@ export function compareBalancedCompactnessPlacementScores(
   second: IrregularPlacementScore
 ): -1 | 0 | 1 {
   return balancedCompactnessOrder(first, second)
+}
+
+/** Compares candidate envelopes without using the containing sheet dimensions. */
+export function compareIntrinsicCompactnessPlacementScores(
+  first: IrregularPlacementScore,
+  second: IrregularPlacementScore
+): -1 | 0 | 1 {
+  return intrinsicCompactnessOrder(first, second)
 }
 
 function makeSharedCollisionBoundaryLength(

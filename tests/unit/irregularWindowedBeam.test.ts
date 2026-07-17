@@ -919,6 +919,59 @@ describe('decodeWindowedIrregularBeam', () => {
     expect(retainedPoints).not.toContainEqual([5, 0])
   })
 
+  it('continues one max-side-first candidate from a duplicated exact contact tier', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const result = await runWindowed(
+      sheet(100, 10),
+      [preparedPiece('a', 20, 4), preparedPiece('b', 2, 2)],
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 3, 3, 'edge-contact-then-balanced-compactness')
+      ),
+      candidateService(({ moving, placed }) =>
+        placed.length === 0
+          ? [oneCandidate(moving, 0, 0)]
+          : [
+              oneCandidate(moving, 20, 0),
+              oneCandidate(moving, 20, 1),
+              oneCandidate(moving, 20, 2),
+              oneCandidate(moving, 0, 4)
+            ]
+      ),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    const terminalPoints = result.rankedStates.map((state) => {
+      const placement = state.placedCollisionGeometries[1]?.placement.transform
+      return placement === undefined ? undefined : [placement.translateX, placement.translateY]
+    })
+    expect(terminalPoints).toContainEqual([0, 4])
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_selection',
+        decision: 'selected',
+        reason: 'intrinsic_contact_tier_reserved'
+      })
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_summary',
+        selectedCandidateCount: 4,
+        decisionCounts: expect.objectContaining({ intrinsicContactTierReserved: 1 })
+      })
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        decision: 'retained',
+        reason: 'protected_intrinsic_contact_survivor'
+      })
+    )
+  })
+
   it('keeps full trace detail for compactness reservation and displacement', async () => {
     const events: IrregularDecisionTraceEvent[] = []
     const transforms = [

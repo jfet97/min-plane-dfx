@@ -17,6 +17,7 @@ import {
 } from '@shared/irregular/domain.js'
 import { GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import {
+  compareIntrinsicCompactnessPlacementScores,
   IrregularPlacementScorer,
   IrregularPlacementScoringError,
   type IrregularPlacementScore,
@@ -313,10 +314,35 @@ describe('IrregularPlacementScorer', () => {
 
     expect(result.worstNormalizedSheetConsumption).toBe(0.55)
     expect(result.normalizedSheetSpanSum).toBeCloseTo(0.85)
+    expect(result.usedClusterMaxSideMm).toBe(11)
     expect(result.usedClusterAreaMm2).toBe(33)
     expect(result.usedClusterSpanMm).toBe(14)
     expect(result.candidateBottomMm).toBe(1)
     expect(result.candidateLeftMm).toBe(1)
+  })
+
+  it('keeps max-side-first intrinsic ranking independent from sheet dimensions', async () => {
+    const moving = movingGeometry('moving', rectanglePoints(1, 1))
+    const placed = [placedGeometry('placed', rectanglePoints(1, 1), 0, 0)]
+    const scorePair = async (currentSheet: SheetSpec) =>
+      Promise.all([
+        score(baseInput(currentSheet, moving, candidate('moving', 9, 4), placed)),
+        score(baseInput(currentSheet, moving, candidate('moving', 7, 7), placed))
+      ])
+
+    const [landscapeWide, landscapeSquare] = await scorePair(sheet(100, 10))
+    const [portraitWide, portraitSquare] = await scorePair(sheet(10, 100))
+
+    expect(landscapeWide.usedClusterMaxSideMm).toBe(10)
+    expect(landscapeSquare.usedClusterMaxSideMm).toBe(8)
+    expect(IrregularPlacementScorer.Make.compare(landscapeWide, landscapeSquare)).toBeLessThan(0)
+    expect(IrregularPlacementScorer.Make.compare(portraitWide, portraitSquare)).toBeGreaterThan(0)
+    expect(
+      compareIntrinsicCompactnessPlacementScores(landscapeWide, landscapeSquare)
+    ).toBeGreaterThan(0)
+    expect(
+      compareIntrinsicCompactnessPlacementScores(portraitWide, portraitSquare)
+    ).toBeGreaterThan(0)
   })
 
   it('canonicalizes translated local scores to the collision geometry grid', async () => {
