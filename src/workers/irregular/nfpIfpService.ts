@@ -247,10 +247,20 @@ function canonicalizeTranslatedConvexRingInternal(
   return { points: rotateToStableStart(canonicalPoints) }
 }
 
-/** Exposes the linear path and its hull-based differential oracle to focused tests. */
+/** Exposes focused NFP construction and boundary-intersection algorithms to tests. */
 export const NfpBoundaryAlgorithms = {
   reference: computeRelativeNfpBoundaryReference,
-  linear: computeRelativeNfpBoundaryLinear
+  linear: computeRelativeNfpBoundaryLinear,
+  segmentIntersection: (
+    firstStart: InternalPoint,
+    firstEnd: InternalPoint,
+    secondStart: InternalPoint,
+    secondEnd: InternalPoint
+  ) =>
+    intersectSegments(
+      { start: firstStart, end: firstEnd, bounds: segmentBounds(firstStart, firstEnd) },
+      { start: secondStart, end: secondEnd, bounds: segmentBounds(secondStart, secondEnd) }
+    )
 } as const
 
 function computeRelativeNfpBoundaryReference(
@@ -1222,67 +1232,89 @@ function intersectSegments(
     const offsetX = second.start.x - first.start.x
     const offsetY = second.start.y - first.start.y
     const numerator = offsetX * secondDirectionY - offsetY * secondDirectionX
-    const parameter = numerator / denominator
-    const x = first.start.x + parameter * firstDirectionX
-    const y = first.start.y + parameter * firstDirectionY
     if (
       !Number.isFinite(firstDirectionX) ||
       !Number.isFinite(firstDirectionY) ||
       !Number.isFinite(secondDirectionX) ||
       !Number.isFinite(secondDirectionY) ||
       !Number.isFinite(denominator) ||
-      !Number.isFinite(parameter) ||
-      !Number.isFinite(x) ||
-      !Number.isFinite(y)
+      !Number.isFinite(offsetX) ||
+      !Number.isFinite(offsetY) ||
+      !Number.isFinite(numerator)
     ) {
-      // The exact predicates above prove a strict crossing, yet near-parallel
-      // directions can round the direction-product denominator to zero. The
-      // signed areas of the second segment's endpoints against the first line
-      // have opposite signs here, so their difference cannot cancel; recompute
-      // the crossing from them and only then drop the pair, because one
-      // degenerate candidate point must not abort the whole decode.
-      const startArea =
-        firstDirectionX * (second.start.y - first.start.y) -
-        firstDirectionY * (second.start.x - first.start.x)
-      const endArea =
-        firstDirectionX * (second.end.y - first.start.y) -
-        firstDirectionY * (second.end.x - first.start.x)
-      // the rounded areas may disagree with the exact predicate signs, so
-      // require strictly opposite signs and an interior parameter before
-      // trusting the fallback point; anything else drops the pair
-      const oppositeSigns =
-        (startArea > 0 && endArea < 0) || (startArea < 0 && endArea > 0)
-      const fallbackParameter = startArea / (startArea - endArea)
-      const fallbackX = second.start.x + fallbackParameter * secondDirectionX
-      const fallbackY = second.start.y + fallbackParameter * secondDirectionY
-      if (
-        !oppositeSigns ||
-        !Number.isFinite(fallbackParameter) ||
-        fallbackParameter <= 0 ||
-        fallbackParameter >= 1 ||
-        !Number.isFinite(fallbackX) ||
-        !Number.isFinite(fallbackY)
-      ) {
-        return { points: [] }
-      }
-      const fallbackPoint = { x: fallbackX, y: fallbackY }
-      if (!pointIsOnSegment(fallbackPoint, first) || !pointIsOnSegment(fallbackPoint, second)) {
-        return { points: [] }
-      }
-      return { points: [fallbackPoint] }
+      return { message: 'segment intersection arithmetic must produce finite coordinates.' }
     }
-    return { points: [{ x, y }] }
+
+    if (denominator !== 0) {
+      const parameter = numerator / denominator
+      const x = first.start.x + parameter * firstDirectionX
+      const y = first.start.y + parameter * firstDirectionY
+      if (
+        !Number.isFinite(parameter) ||
+        !Number.isFinite(x) ||
+        !Number.isFinite(y)
+      ) {
+        return { message: 'segment intersection arithmetic must produce finite coordinates.' }
+      }
+      return { points: [{ x, y }] }
+    }
+
+    // exact predicates prove a strict crossing, but near-parallel direction
+    // products can still round the floating denominator to zero
+    const secondEndOffsetX = second.end.x - first.start.x
+    const secondEndOffsetY = second.end.y - first.start.y
+    const startArea = firstDirectionX * offsetY - firstDirectionY * offsetX
+    const endArea =
+      firstDirectionX * secondEndOffsetY - firstDirectionY * secondEndOffsetX
+    if (
+      !Number.isFinite(secondEndOffsetX) ||
+      !Number.isFinite(secondEndOffsetY) ||
+      !Number.isFinite(startArea) ||
+      !Number.isFinite(endArea)
+    ) {
+      return { message: 'segment intersection arithmetic must produce finite coordinates.' }
+    }
+
+    // rounded areas can disagree with the exact predicate signs, so only use
+    // a bounded interior parameter derived from strictly opposite signs
+    const oppositeSigns =
+      (startArea > 0 && endArea < 0) || (startArea < 0 && endArea > 0)
+    const fallbackParameter = startArea / (startArea - endArea)
+    const fallbackX = second.start.x + fallbackParameter * secondDirectionX
+    const fallbackY = second.start.y + fallbackParameter * secondDirectionY
+    if (
+      !oppositeSigns ||
+      !Number.isFinite(fallbackParameter) ||
+      fallbackParameter <= 0 ||
+      fallbackParameter >= 1 ||
+      !Number.isFinite(fallbackX) ||
+      !Number.isFinite(fallbackY)
+    ) {
+      return { points: [] }
+    }
+    const fallbackPoint = { x: fallbackX, y: fallbackY }
+    if (
+      !pointIsWithinSegmentBounds(fallbackPoint, first) ||
+      !pointIsWithinSegmentBounds(fallbackPoint, second)
+    ) {
+      return { points: [] }
+    }
+    return { points: [fallbackPoint] }
   }
 
-  if (firstStartTurn === 0 && pointIsOnSegment(second.start, first)) points.push(second.start)
-  if (firstEndTurn === 0 && pointIsOnSegment(second.end, first)) points.push(second.end)
-  if (secondStartTurn === 0 && pointIsOnSegment(first.start, second)) points.push(first.start)
-  if (secondEndTurn === 0 && pointIsOnSegment(first.end, second)) points.push(first.end)
+  if (firstStartTurn === 0 && pointIsWithinSegmentBounds(second.start, first)) {
+    points.push(second.start)
+  }
+  if (firstEndTurn === 0 && pointIsWithinSegmentBounds(second.end, first)) points.push(second.end)
+  if (secondStartTurn === 0 && pointIsWithinSegmentBounds(first.start, second)) {
+    points.push(first.start)
+  }
+  if (secondEndTurn === 0 && pointIsWithinSegmentBounds(first.end, second)) points.push(first.end)
 
   return { points }
 }
 
-function pointIsOnSegment(point: InternalPoint, segment: Segment): boolean {
+function pointIsWithinSegmentBounds(point: InternalPoint, segment: Segment): boolean {
   return (
     point.x >= Math.min(segment.start.x, segment.end.x) &&
     point.x <= Math.max(segment.start.x, segment.end.x) &&
