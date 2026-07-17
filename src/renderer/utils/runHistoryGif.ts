@@ -1,5 +1,11 @@
 import type { ImportedPiece } from '@shared/domain/dxf.js'
-import type { NestingHistoryFrame, Placement, SheetSpec } from '@shared/domain/nesting.js'
+import {
+  isIrregularHistoryFrame,
+  type NestingHistoryFramePayload,
+  type Placement,
+  type SheetSpec
+} from '@shared/domain/nesting.js'
+import type { IrregularHistoryFrame, IrregularPolygon } from '@shared/irregular/domain.js'
 import {
   encodeIndexedGif,
   gifPaletteCssColor,
@@ -17,10 +23,10 @@ export interface RunHistoryGifOptions {
 }
 
 export function selectFirstBeamSequence(
-  frames: ReadonlyArray<NestingHistoryFrame>,
+  frames: ReadonlyArray<NestingHistoryFramePayload>,
   strategyRunId: string
-): ReadonlyArray<NestingHistoryFrame> {
-  const selectedByStep = new Map<number, NestingHistoryFrame>()
+): ReadonlyArray<NestingHistoryFramePayload> {
+  const selectedByStep = new Map<number, NestingHistoryFramePayload>()
   for (const frame of frames) {
     if (frame.strategyRunId === strategyRunId && frame.beamRank === 0) {
       selectedByStep.set(frame.stepIndex, frame)
@@ -37,11 +43,11 @@ export function selectFirstBeamSequence(
     }
   }
   const sorted = [...selectedByStep.values()].sort((a, b) => a.stepIndex - b.stepIndex)
-  const meaningful: NestingHistoryFrame[] = []
+  const meaningful: NestingHistoryFramePayload[] = []
   let previousSignature = ''
   for (const frame of sorted) {
     const signature = placementSignature(frame)
-    if (frame.plate.placements.length === 0 && sorted.some((f) => f.plate.placements.length > 0)) {
+    if (placedCount(frame) === 0 && sorted.some((candidate) => placedCount(candidate) > 0)) {
       continue
     }
     if (signature !== previousSignature) {
@@ -53,7 +59,7 @@ export function selectFirstBeamSequence(
 }
 
 export function createRunHistoryGif(
-  frames: ReadonlyArray<NestingHistoryFrame>,
+  frames: ReadonlyArray<NestingHistoryFramePayload>,
   options: RunHistoryGifOptions
 ): Uint8Array {
   const strategyRunIds =
@@ -104,7 +110,7 @@ function renderFrameIndexes(
   height: number,
   sheet: SheetSpec,
   sourcePieces: ReadonlyArray<ImportedPiece>,
-  frame: NestingHistoryFrame
+  frame: NestingHistoryFramePayload
 ): Uint8Array {
   ctx.imageSmoothingEnabled = false
   ctx.fillStyle = gifPaletteCssColor(0)
@@ -128,32 +134,86 @@ function renderFrameIndexes(
   ctx.lineWidth = 1
   ctx.strokeRect(ox + 0.5, oy + 0.5, Math.max(1, sheetWidth - 1), Math.max(1, sheetHeight - 1))
 
-  const insertedPieceId = frame.beam?.insertedPieceId ?? null
-  const sourcePiecesById = new Map(sourcePieces.map((piece) => [piece.id, piece]))
-  for (const placement of frame.plate.placements) {
-    drawPlacement(ctx, sheet, placement, scale, ox, oy, placement.pieceId === insertedPieceId)
-    const sourcePiece = sourcePieceForPlacement(sourcePiecesById, placement)
-    if (sourcePiece) {
-      drawSourceGeometry(ctx, sheet, placement, sourcePiece, scale, ox, oy)
+  if (isIrregularHistoryFrame(frame)) {
+    drawIrregularPlacements(ctx, sheet, frame, scale, ox, oy)
+  } else {
+    const insertedPieceId = frame.beam?.insertedPieceId ?? null
+    const sourcePiecesById = new Map(sourcePieces.map((piece) => [piece.id, piece]))
+    for (const placement of frame.plate.placements) {
+      drawPlacement(ctx, sheet, placement, scale, ox, oy, placement.pieceId === insertedPieceId)
+      const sourcePiece = sourcePieceForPlacement(sourcePiecesById, placement)
+      if (sourcePiece) {
+        drawSourceGeometry(ctx, sheet, placement, sourcePiece, scale, ox, oy)
+      }
     }
-  }
 
-  ctx.strokeStyle = gifPaletteCssColor(5)
-  ctx.lineWidth = 1
-  ctx.setLineDash([4, 3])
-  for (const rect of frame.plate.freeRectangles) {
-    const x = ox + rect.x * scale
-    const y = oy + (sheet.height - rect.y - rect.height) * scale
-    ctx.strokeRect(
-      x + 0.5,
-      y + 0.5,
-      Math.max(1, rect.width * scale),
-      Math.max(1, rect.height * scale)
-    )
+    ctx.strokeStyle = gifPaletteCssColor(5)
+    ctx.lineWidth = 1
+    ctx.setLineDash([4, 3])
+    for (const rect of frame.plate.freeRectangles) {
+      const x = ox + rect.x * scale
+      const y = oy + (sheet.height - rect.y - rect.height) * scale
+      ctx.strokeRect(
+        x + 0.5,
+        y + 0.5,
+        Math.max(1, rect.width * scale),
+        Math.max(1, rect.height * scale)
+      )
+    }
+    ctx.setLineDash([])
   }
-  ctx.setLineDash([])
 
   return quantize(ctx.getImageData(0, 0, width, height).data)
+}
+
+function drawIrregularPlacements(
+  ctx: CanvasRenderingContext2D,
+  sheet: SheetSpec,
+  frame: IrregularHistoryFrame,
+  scale: number,
+  ox: number,
+  oy: number
+): void {
+  const collisionPolygons = frame.collisionPolygons ?? []
+  const highlightedIndex = frame.selectedPieceId
+    ? findLastPlacementIndex(frame, frame.selectedPieceId)
+    : collisionPolygons.length - 1
+
+  collisionPolygons.forEach((polygon, index) => {
+    drawIrregularPolygon(ctx, sheet, polygon, scale, ox, oy, index === highlightedIndex)
+  })
+}
+
+function findLastPlacementIndex(frame: IrregularHistoryFrame, pieceId: string): number {
+  for (let index = frame.placements.length - 1; index >= 0; index -= 1) {
+    if (frame.placements[index]?.pieceId === pieceId) return index
+  }
+  return frame.placements.length - 1
+}
+
+function drawIrregularPolygon(
+  ctx: CanvasRenderingContext2D,
+  sheet: SheetSpec,
+  polygon: IrregularPolygon,
+  scale: number,
+  ox: number,
+  oy: number,
+  highlighted: boolean
+): void {
+  const first = polygon.points[0]
+  if (first === undefined) return
+
+  ctx.beginPath()
+  ctx.moveTo(ox + first.x * scale, oy + (sheet.height - first.y) * scale)
+  for (const point of polygon.points.slice(1)) {
+    ctx.lineTo(ox + point.x * scale, oy + (sheet.height - point.y) * scale)
+  }
+  ctx.closePath()
+  ctx.fillStyle = gifPaletteCssColor(highlighted ? 6 : 3)
+  ctx.strokeStyle = gifPaletteCssColor(highlighted ? 8 : 4)
+  ctx.lineWidth = highlighted ? 2 : 1
+  ctx.fill()
+  ctx.stroke()
 }
 
 function sourcePieceForPlacement(
@@ -167,7 +227,7 @@ function sourcePieceForPlacement(
 function drawHeader(
   ctx: CanvasRenderingContext2D,
   width: number,
-  frame: NestingHistoryFrame
+  frame: NestingHistoryFramePayload
 ): void {
   ctx.fillStyle = gifPaletteCssColor(9)
   ctx.fillRect(0, 0, width, 40)
@@ -176,7 +236,7 @@ function drawHeader(
   ctx.fillText(`Step ${frame.stepIndex + 1}`, 18, 25)
   ctx.font = '12px system-ui, -apple-system, BlinkMacSystemFont, sans-serif'
   ctx.fillStyle = gifPaletteCssColor(7)
-  ctx.fillText(`placed ${frame.plate.placements.length} · first beam`, 96, 25)
+  ctx.fillText(`placed ${placedCount(frame)} · first beam`, 96, 25)
 }
 
 function drawPlacement(
@@ -280,9 +340,24 @@ function drawSegment(
   ctx.stroke()
 }
 
-function placementSignature(frame: NestingHistoryFrame): string {
+function placedCount(frame: NestingHistoryFramePayload): number {
+  return isIrregularHistoryFrame(frame) ? frame.placements.length : frame.plate.placements.length
+}
+
+function placementSignature(frame: NestingHistoryFramePayload): string {
+  if (isIrregularHistoryFrame(frame)) {
+    return frame.placements
+      .map(
+        (placement) =>
+          `${placement.pieceId ?? placement.sourcePieceId}:${placement.transform.translateX}:${placement.transform.translateY}:${placement.transform.rotationDeg}:${placement.transform.mirrored}`
+      )
+      .join('|')
+  }
   return frame.plate.placements
-    .map((p) => `${p.pieceId}:${p.x}:${p.y}:${p.width}:${p.height}:${p.rotation}`)
+    .map(
+      (placement) =>
+        `${placement.pieceId}:${placement.x}:${placement.y}:${placement.width}:${placement.height}:${placement.rotation}`
+    )
     .join('|')
 }
 

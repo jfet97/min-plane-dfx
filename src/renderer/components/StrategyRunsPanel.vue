@@ -8,12 +8,10 @@ import { savedRunRestoreStatus } from '../utils/savedRunConfiguration.js'
 import type { ProjectRunRecord } from '@shared/domain/project.js'
 import type {
   ProjectHistoryRef,
-  NestingHistoryFrame,
   NestingHistoryFramePayload,
   NestingSubRun,
   SheetSpec
 } from '@shared/domain/nesting.js'
-import { isIrregularHistoryFrame } from '@shared/domain/nesting.js'
 
 const history = useHistoryStore()
 const store = useAppStore()
@@ -45,10 +43,6 @@ function placementCount(run: NonNullable<typeof history.selectedRun.value>): num
 
 function resultPlacementCount(result: NonNullable<typeof history.result.value>): number {
   return result.layout?.kind === 'irregular' ? result.layout.placements.length : result.placements.length
-}
-
-function supportsGifExport(record: ProjectRunRecord): boolean {
-  return record.result.layout?.kind !== 'irregular'
 }
 
 const currentSubRuns = computed<ReadonlyArray<NestingSubRun>>(
@@ -234,10 +228,11 @@ async function exportRunGif(record: ProjectRunRecord): Promise<void> {
   }
 }
 
-function uniqueFrames(frames: ReadonlyArray<NestingHistoryFramePayload>): NestingHistoryFrame[] {
-  const byId = new Map<string, NestingHistoryFrame>()
+function uniqueFrames(
+  frames: ReadonlyArray<NestingHistoryFramePayload>
+): NestingHistoryFramePayload[] {
+  const byId = new Map<string, NestingHistoryFramePayload>()
   for (const frame of frames) {
-    if (isIrregularHistoryFrame(frame)) continue
     byId.set(frame.frameId, frame)
   }
   return [...byId.values()]
@@ -327,13 +322,11 @@ function subRunLabel(subRun: NestingSubRun): string {
           <button
             type="button"
             class="export-gif"
-            :disabled="isDeleting || !record.history || !supportsGifExport(record)"
+            :disabled="isDeleting || !record.history"
             :title="
               !record.history
                 ? 'GIF export needs a saved history replay for this run.'
-                : !supportsGifExport(record)
-                  ? 'GIF export currently supports rectangular history only.'
-                  : 'Export an animated GIF from the first retained beam of this run.'
+                : 'Export an animated GIF from the first retained beam of this run.'
             "
             @click="exportRunGif(record)"
           >

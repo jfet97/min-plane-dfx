@@ -54,6 +54,10 @@ Saved-run deletion reports filesystem failures and leaves the archive record in
 place when its managed replay files could not be removed. Single and bulk
 deletion include both replay and irregular decision-trace NDJSON files.
 
+GIF export accepts both rectangular and irregular saved replays. Irregular GIF
+frames render the real collision polygons emitted by the worker; the renderer
+does not reconstruct or invent polygon placements for the animation.
+
 ## Imported Shapes
 
 Supported DXF entities are collected into source shapes. Preset shapes are also
