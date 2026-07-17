@@ -295,13 +295,20 @@ maximum side, area, and span. Isolated follow-up `c66af81` simplified that tuple
 to raw shared-contact length followed by the same intrinsic compactness fields.
 Both variants passed all 15 focused placement-scorer tests but failed the
 20-triangle golden identically: the final long side grew to `397.296 mm`, above
-the accepted `354 mm` limit. Candidate L and L2 are rejected **for direct
-production use** before running the mixed corpus. This rules out replacing the
-local edge-contact tuple with either simple intrinsic order as a standalone
-change; it does not prove that their intrinsic-ranking ingredients are useless.
-The exact commits remain research inputs for combinations in which beam
-diversity, a different decoder, or a later global search protects or rebuilds
-the compact triangle lattice.
+the accepted `354 mm` limit. Their rendered geometry is nevertheless coherent:
+both produce the same hole-free three-row triangular lattice, with
+`397.296 x 227.025 mm` collision bounds, zero occupied-hull waste, and no
+free-material holes. The result is wider than the accepted lattice, but it is
+not a chaotic chain or a failed packing mechanism.
+
+Candidate L and L2 are therefore rejected **for direct production use in their
+current standalone form**. This rules out replacing the local edge-contact
+tuple with either simple intrinsic order and shipping it unchanged. It does not
+justify stopping their corpus evaluation, deleting their branches, or treating
+their intrinsic-ranking ingredients as useless. The exact commits and rendered
+results remain research inputs for combinations in which contact-tier beam
+diversity, a different decoder, order/rotation search, or a later global search
+protects or rebuilds the more compact triangle lattice.
 
 ### Interpreting Failed Golden Gates
 
@@ -324,6 +331,16 @@ triangles before it becomes the default. External reviewers should explicitly
 challenge current thresholds, comparator assumptions, and beam architecture;
 the documented goldens are protected evidence, not proof that the present
 algorithm is optimal.
+
+In practical terms, a failed protected gate changes the decision from “ship” to
+“continue in an isolated research branch”; it does not change the decision to
+“discard”. For L/L2 specifically, the remaining questions are whether their
+sheet-intrinsic local ordering improves mixed-50, mixed-61, homogeneous, or
+sheet-invariance fixtures, and whether a small diversity or decoder change can
+recover the narrower triangle motif without reintroducing sheet-normalized
+pruning. Record both successes and regressions. A later combined candidate may
+legitimately use L/L2 ingredients even though neither original commit is safe as
+the production default.
 
 The bounded order/rotation GA probe is also complete. It retained the
 deterministic baseline and improved homogeneous rectangles, but cost `4.3-6.4x`
@@ -1736,6 +1753,12 @@ would falsify each one, and identify the smallest safe production experiment.
   empty while small rectangles form an external island. Investigate bounded
   cavity access or deferral only after the intrinsic comparator is integrated
   and gated; do not globally reverse the user-owned initial piece order.
+- Clarified the experiment acceptance model after Candidate L/L2: the triangle
+  golden remains a mandatory production gate, but a coherent gate failure is
+  preserved and evaluated as a research branch. L/L2's wider, hole-free lattice
+  remains eligible for recombination with contact-tier diversity or a different
+  decoder instead of being discarded solely because its first standalone form
+  misses the current long-side ceiling.
 - Traced the small-square path: the eight squares first enter the reorder window
   at step 50 and already receive dozens of legal unique candidates. Rejected two
   isolated early-access heuristics because they moved squares to the perimeter
