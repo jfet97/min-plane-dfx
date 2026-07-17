@@ -288,6 +288,18 @@ failed before the mixed corpus ran: the triangle golden's short side grew to
 portfolio is rejected and the deterministic portfolio probe does not duplicate
 it.
 
+Candidate L tested whether the edge-contact local scorer itself could become
+intrinsic without adding fanout reservations. Isolated commit `1fbf314` ranked
+near-complete structural contacts and whole contact-unit bands before intrinsic
+maximum side, area, and span. Isolated follow-up `c66af81` simplified that tuple
+to raw shared-contact length followed by the same intrinsic compactness fields.
+Both variants passed all 15 focused placement-scorer tests but failed the
+20-triangle golden identically: the final long side grew to `397.296 mm`, above
+the accepted `354 mm` limit. Candidate L and L2 are rejected before running the
+mixed corpus. This rules out replacing the local edge-contact tuple with either
+of these simple intrinsic orders; the active portfolio and divergence probes
+must preserve the triangle branch while adding geometric diversity elsewhere.
+
 ## Required Research Behavior
 
 Treat the task as an algorithm and systems investigation, not as a small bug fix.
