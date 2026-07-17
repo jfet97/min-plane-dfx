@@ -1247,11 +1247,19 @@ function intersectSegments(
       const endArea =
         firstDirectionX * (second.end.y - first.start.y) -
         firstDirectionY * (second.end.x - first.start.x)
+      // the rounded areas may disagree with the exact predicate signs, so
+      // require strictly opposite signs and an interior parameter before
+      // trusting the fallback point; anything else drops the pair
+      const oppositeSigns =
+        (startArea > 0 && endArea < 0) || (startArea < 0 && endArea > 0)
       const fallbackParameter = startArea / (startArea - endArea)
       const fallbackX = second.start.x + fallbackParameter * secondDirectionX
       const fallbackY = second.start.y + fallbackParameter * secondDirectionY
       if (
+        !oppositeSigns ||
         !Number.isFinite(fallbackParameter) ||
+        fallbackParameter <= 0 ||
+        fallbackParameter >= 1 ||
         !Number.isFinite(fallbackX) ||
         !Number.isFinite(fallbackY)
       ) {
