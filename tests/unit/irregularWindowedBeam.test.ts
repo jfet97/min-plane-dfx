@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { Rect } from '@shared/domain/geometry.js'
 import { DxfGeometrySummary, ImportedPiece } from '@shared/domain/dxf.js'
 import { PieceId, SourceFileId } from '@shared/domain/ids.js'
@@ -25,6 +25,7 @@ import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregu
 import { decodeStrictPriorityOrder } from '../../src/workers/algorithm/irregular/strictPriorityDecoder.js'
 import {
   decodeWindowedIrregularBeam,
+  type IrregularWindowedBeamControl,
   type IrregularWindowedBeamHooks,
   type IrregularWindowedBeamOptions
 } from '../../src/workers/algorithm/irregular/windowedBeam.js'
@@ -164,7 +165,8 @@ function runWindowed(
   options?: IrregularWindowedBeamOptions,
   hooks?: IrregularWindowedBeamHooks,
   layoutScorer?: IrregularLayoutScorer.Service,
-  emitDecisionTrace?: EmitIrregularDecisionTrace
+  emitDecisionTrace?: EmitIrregularDecisionTrace,
+  control?: IrregularWindowedBeamControl
 ) {
   const layoutScorerLayer =
     layoutScorer === undefined
@@ -176,7 +178,7 @@ function runWindowed(
       pieces,
       hooks,
       options,
-      undefined,
+      control,
       undefined,
       emitDecisionTrace
     ).pipe(
@@ -463,6 +465,113 @@ describe('decodeWindowedIrregularBeam', () => {
     )
     expect(acceptedRepair?.score.collisionBoundsBottomMm).toBe(2)
     expect(winner?.score.collisionBoundsBottomMm).toBe(0)
+  })
+
+  it('returns the last fully accepted repair when the deadline expires during the next iteration', async () => {
+    const currentSheet = sheet(6, 4)
+    const pieces = [preparedPiece('a', 1, 1), preparedPiece('b', 1, 1)]
+    const makeRepairService = (onCall?: (callCount: number) => void) => {
+      let callCount = 0
+      return candidateService(({ moving, placed }) => {
+        callCount += 1
+        onCall?.(callCount)
+        if (placed.length === 0) return [oneCandidate(moving, 0, 2)]
+        return [
+          oneCandidate(
+            moving,
+            moving.sourcePieceId === PieceId.make('a') ? 2 : 3,
+            2
+          )
+        ]
+      })
+    }
+    const oneAcceptedRepair = await runWindowed(
+      currentSheet,
+      pieces,
+      Layer.succeed(GeometrySettings, settings(1, 1, 1, 'balanced-compactness', 1)),
+      makeRepairService()
+    )
+
+    let deadlineReached = false
+    const now = vi.spyOn(Date, 'now').mockImplementation(() => (deadlineReached ? 2 : 0))
+    try {
+      const result = await runWindowed(
+        currentSheet,
+        pieces,
+        Layer.succeed(GeometrySettings, settings(1, 1, 1, 'balanced-compactness', 2)),
+        makeRepairService((callCount) => {
+          if (callCount === 5) deadlineReached = true
+        }),
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { deadlineMs: 1 }
+      )
+
+      expect(result.bestState.canonicalOccupiedGeometryKey).toBe(
+        oneAcceptedRepair.bestState.canonicalOccupiedGeometryKey
+      )
+      expect(result.bestScore).toEqual(oneAcceptedRepair.bestScore)
+    } finally {
+      now.mockRestore()
+    }
+  })
+
+  it('still aborts cancellation observed during terminal repair', async () => {
+    let callCount = 0
+    let cancelled = false
+    const service = candidateService(({ moving, placed }) => {
+      callCount += 1
+      if (callCount === 5) cancelled = true
+      if (placed.length === 0) return [oneCandidate(moving, 0, 2)]
+      return [oneCandidate(moving, moving.sourcePieceId === PieceId.make('a') ? 2 : 3, 2)]
+    })
+
+    await expect(
+      runWindowed(
+        sheet(6, 4),
+        [preparedPiece('a', 1, 1), preparedPiece('b', 1, 1)],
+        Layer.succeed(GeometrySettings, settings(1, 1, 1, 'balanced-compactness', 2)),
+        service,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { isCancelled: () => cancelled }
+      )
+    ).rejects.toMatchObject({
+      _tag: 'IrregularWindowedBeamAbortedError',
+      reason: 'cancelled'
+    })
+  })
+
+  it('still aborts a deadline observed during beam search', async () => {
+    let deadlineReached = false
+    const now = vi.spyOn(Date, 'now').mockImplementation(() => (deadlineReached ? 2 : 0))
+    try {
+      await expect(
+        runWindowed(
+          sheet(6, 4),
+          [preparedPiece('a', 1, 1), preparedPiece('b', 1, 1)],
+          Layer.succeed(GeometrySettings, settings(1, 1, 1, 'balanced-compactness', 2)),
+          candidateService(({ moving }) => {
+            deadlineReached = true
+            return [oneCandidate(moving, 0, 2)]
+          }),
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          { deadlineMs: 1 }
+        )
+      ).rejects.toMatchObject({
+        _tag: 'IrregularWindowedBeamAbortedError',
+        reason: 'deadline'
+      })
+    } finally {
+      now.mockRestore()
+    }
   })
 
   it('bottom-anchors a repair-enabled terminal layout before returning it', async () => {

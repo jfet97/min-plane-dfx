@@ -111,7 +111,10 @@ the single best strict whole-layout improvement. The pass uses the same geometry
 legality and whole-layout comparator as the beam; it does not move pieces to
 invented coordinates. Repair exploration keeps its legal sheet-space freedom;
 anchoring intermediate states would make the sheet edges block later
-reinsertion paths. After the final improvement, the completed winner is rigidly
+reinsertion paths. If the cooperative deadline expires during repair, the
+incomplete iteration is discarded and the last fully scored repair result is
+returned; a deadline during beam search and cancellation at any phase still
+abort the decode. After the final improvement, the completed winner is rigidly
 tested at the four rigid quarter-turn orientations. Every variant is normalized
 to the sheet bottom-left, and variants whose occupied bounds exceed the sheet
 are discarded. Terminal selection first minimizes the real Euclidean gap from

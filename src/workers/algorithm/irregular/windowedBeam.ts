@@ -94,9 +94,9 @@ export interface IrregularWindowedBeamHooks {
  * Cooperative control shared by every operation in one chromosome decode.
  *
  * The deadline is checked around each transform, candidate batch, and layout
- * score. An aborted decode never returns its in-progress beam; the portfolio
- * may only retain a result returned after the complete terminal state was
- * scored.
+ * score. Search deadlines and cancellation abort the decode. A deadline first
+ * observed during terminal repair discards that incomplete repair iteration
+ * and returns the last fully scored terminal state.
  */
 export interface IrregularWindowedBeamControl {
   readonly deadlineMs?: number
@@ -393,7 +393,7 @@ export function runWindowedIrregularBeam(input: {
         repairIteration < localRepairBudget;
         repairIteration += 1
       ) {
-        const accepted: AcceptedLocalRepair | undefined = yield* repairTerminalState({
+        const repairOutcome = yield* repairTerminalState({
           sheet: input.sheet,
           pieces: input.pieces,
           current: currentRepair,
@@ -407,7 +407,21 @@ export function runWindowedIrregularBeam(input: {
           stepIndex,
           ...(input.control !== undefined ? { control: input.control } : {}),
           ...(input.options !== undefined ? { options: input.options } : {})
-        })
+        }).pipe(
+          Effect.map((accepted) => ({ _tag: 'Completed' as const, accepted })),
+          Effect.catchTags({
+            IrregularWindowedBeamAbortedError: (error) =>
+              error.reason === 'deadline'
+                ? Effect.succeed({ _tag: 'DeadlineExpired' as const })
+                : Effect.fail(error),
+            IrregularNfpIfpControlAbortError: (error) =>
+              error.reason === 'deadline'
+                ? Effect.succeed({ _tag: 'DeadlineExpired' as const })
+                : Effect.fail(error)
+          })
+        )
+        if (repairOutcome._tag === 'DeadlineExpired') break
+        const accepted: AcceptedLocalRepair | undefined = repairOutcome.accepted
         if (accepted === undefined) break
         currentRepair = accepted.scoredState
         decisionTrace?.emit(new IrregularDecisionTraceLocalRepairAccepted({
