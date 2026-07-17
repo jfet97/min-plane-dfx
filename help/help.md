@@ -65,6 +65,19 @@ c7b2fa24a5fa721fa9ff87c7aafff3e25ff0d89474be7be7191117fe05c64a34
 /private/tmp/min-plane-provenance/ac75222/780d4ec5-b64e-4f48-a8d8-0bfd30877549/manifest.json
 ```
 
+Portable repository copy of the exact approved SVG:
+
+![Approved mixed-61 depth21-total2 layout](artifacts/approved-mixed61-ac75222-2000x2700.svg)
+
+The key sheet/code comparisons are also tracked with this document:
+
+- [same `ac75222` search on the `1000 x 1700` sheet](artifacts/ac75222-1000x1700-sheet-dependent-failure.svg);
+- [`b164d61` scale-diverse search on `2000 x 2700`](artifacts/b164d61-2000x2700-scale-diverse.svg);
+- [`b164d61` scale-diverse search on `1000 x 1700`](artifacts/b164d61-1000x1700-scale-diverse.svg).
+
+See [the artifact manifest](artifacts/README.md) for source commits, requests,
+expected bounds, and hashes.
+
 The immutable PNG matches the user-approved reference byte-for-byte. The old
 `/private/tmp/mixed-depth21-total2.svg` was overwritten by a later experiment
 while the similarly named PNG was not; that legacy pair has mixed provenance
@@ -772,10 +785,10 @@ linked from this file and `plan.md`.
 
 Current durable reports:
 
-- [`docs/research/deepnest-svgnest-source-comparison.md`](docs/research/deepnest-svgnest-source-comparison.md);
-- [`docs/research/open-source-irregular-nesting-strategies.md`](docs/research/open-source-irregular-nesting-strategies.md);
-- [`docs/research/irregular-nesting-literature-and-web-research.md`](docs/research/irregular-nesting-literature-and-web-research.md);
-- [`docs/research/morning-mixed-trace-analysis-2026-07-17.md`](docs/research/morning-mixed-trace-analysis-2026-07-17.md).
+- [`docs/research/deepnest-svgnest-source-comparison.md`](../docs/research/deepnest-svgnest-source-comparison.md);
+- [`docs/research/open-source-irregular-nesting-strategies.md`](../docs/research/open-source-irregular-nesting-strategies.md);
+- [`docs/research/irregular-nesting-literature-and-web-research.md`](../docs/research/irregular-nesting-literature-and-web-research.md);
+- [`docs/research/morning-mixed-trace-analysis-2026-07-17.md`](../docs/research/morning-mixed-trace-analysis-2026-07-17.md).
 
 ## Literature And Web Research Questions
 
