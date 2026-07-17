@@ -120,6 +120,47 @@ Rejected isolated variants from branch `aspect-independent-compactness`:
 | area, then span | long side `924.646 mm` | rejected |
 | longest axis, then total span, then area | short side `240.224 mm` | rejected |
 
+An isolated six-order sweep then changed only the whole-layout comparator while
+leaving local candidate ranking untouched. Every intrinsic whole-layout order
+preserved the triangle golden (`353.152 x 227.025 mm`, 24 structural contacts,
+17 dominant contacts, zero holes), but none made mixed-61 sheet-invariant. The
+best diagnostic order, longest side then area then span then hull waste, produced
+`536.614 x 870.644 mm` on `2000 x 2700` and `613.455 x 691.682 mm` on
+`1000 x 1700`, with different canonical geometry hashes.
+
+The failure is simple: local placement ranking still uses sheet-normalized
+compactness. The two sheets therefore choose different placements early, and a
+sheet-independent final comparator cannot recover a branch that local fanout or
+beam pruning already discarded. Naively replacing the local tuple with simple
+intrinsic area/span/axis orders breaks the triangle golden. The next experiment
+must remove sheet dependence from local tie-breaks while preserving structural
+contact behavior; none of the six whole-layout-only variants was merged.
+
+Sweep manifests and SVGs are under:
+
+```text
+/private/tmp/min-plane-provenance/intrinsic-sweep/p-base__l-<order>/<job-id>/
+```
+
+Four fresh production UI runs isolate the same failure with stronger evidence.
+They use the same 61 pieces, edge-contact local policy, reorder window 4, beam
+width 8, fanout 4, transform cap 8, and repair disabled. Only the sheet size
+changes:
+
+| Sheet | Decision-trace job | Envelope area | Envelope span | Structural contacts | Holes | Result |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| `2000 x 2700` | `1af21a70-18a0-4ea0-a46f-3c617dbf97f2` | `436,789.920 mm2` | `1,338.205 mm` | `56` | `2` | approved |
+| `2000 x 1700` | `e86dddae-825a-43aa-a813-a1baafca949a` | `642,863.780 mm2` | `1,612.863 mm` | `58` | `6` | rejected |
+| `1000 x 1700` | `7612edf3-541b-4ddd-82f8-d57e5d9c82a4` | `713,249.355 mm2` | `1,898.661 mm` | `57` | `0` | rejected strip |
+| `1000 x 1300` | `ff60c5be-2eab-42e9-86f8-8e9e13c5b1e2` | `701,017.819 mm2` | `1,717.904 mm` | `60` | `1` | rejected |
+
+Only `2000 x 2700` reproduces the approved compact result. The rejected runs
+can have more structural contacts while consuming 47-63% more envelope area.
+This does not by itself identify the first bad local decision, but it proves
+that contact count cannot compensate for the sheet-normalized local ranking
+selecting a worse intrinsic motif. These four sheet sizes are mandatory gates
+for the isolated local-ranking fix; no further manual UI runs are required.
+
 The next candidate is the canonical occupied-envelope tuple `(longest side mm,
 shortest side mm)`, applied consistently to local balanced ranking,
 whole-layout ranking, the compactness survivor, and terminal selection. This
