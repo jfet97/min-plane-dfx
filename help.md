@@ -14,6 +14,90 @@ This file is intentionally a living document. Update it when a trace, benchmark,
 upstream source comparison, accepted change, or rejected hypothesis produces new
 evidence.
 
+## Experiment Provenance Ledger
+
+Do not present a generated layout as reproducible unless this ledger records the
+source commit, uncommitted diff or injected comparator, exact request, settings,
+metrics, and artifact hashes. Future experiments must write an immutable manifest
+under `/private/tmp/min-plane-provenance/` before production code is changed.
+
+### Approved Mixed-61 Reference: `depth21-total2`
+
+This is the compact reference image the user explicitly approved. It must not be
+confused with later scale-diversity experiments or with current UI output.
+
+```text
+experiment:          depth21-total2
+repository base:     ac75222
+experimental source: /private/tmp/run-saved-comparator-sweep.mts
+production ancestor: 381cd2f
+saved request job:    780d4ec5-b64e-4f48-a8d8-0bfd30877549
+sheet:                2000 x 2700 mm
+reorder / beam:       4 / 8
+local fanout:         4
+local repair:         disabled, budget 0
+transform cap:        8
+minimum edge:         1.2 mm
+angle dedupe:         0.051 degrees
+local policy:         edge contact, then compactness
+GA:                   disabled
+rotations / mirroring: enabled / enabled
+padding:              10 mm
+bounds:               564.660 x 773.545 mm
+bounds area:          436,789.920 mm2
+bounds span:          1,338.205 mm
+occupied hull waste:  0.246346
+total / dominant structural contacts: 56 / 14
+normalized contact units: 58.907038
+free-material holes:  2
+history-off runtime:  20.16-20.98 s
+```
+
+Immutable artifacts and SHA-256 hashes:
+
+```text
+/private/tmp/min-plane-provenance/ac75222/780d4ec5-b64e-4f48-a8d8-0bfd30877549/depth21-total2.svg
+c7b2fa24a5fa721fa9ff87c7aafff3e25ff0d89474be7be7191117fe05c64a34
+
+/private/tmp/min-plane-provenance/ac75222/780d4ec5-b64e-4f48-a8d8-0bfd30877549/depth21-total2.png
+69599fb77b587aaf7f7930fa20ae04eeb8365ff02d2839501a715e0a5c5b6b93
+
+/private/tmp/min-plane-provenance/ac75222/780d4ec5-b64e-4f48-a8d8-0bfd30877549/manifest.json
+```
+
+The immutable PNG matches the user-approved reference byte-for-byte. The old
+`/private/tmp/mixed-depth21-total2.svg` was overwritten by a later experiment
+while the similarly named PNG was not; that legacy pair has mixed provenance
+and must never be used as a reproducibility source.
+
+Commit `b164d61` later added an extra positive-contact balanced candidate and a
+post-20 compactness survivor. Those mechanisms changed the search path, so
+current `main` does not reproduce this reference exactly even though it retains
+the depth-aware contact comparator. The 25% and 50% raw-contact-floor variants
+were rejected: both elongated the triangle golden to a `529.728 mm` long side.
+
+### Sheet-Independent Compactness Investigation
+
+The sheet controls legality, but balanced compactness and edge-contact fallback
+ranking must not change merely because the same legal pieces are placed on a
+larger sheet or on a sheet with a different aspect ratio. Normalized sheet
+consumption remains diagnostic and remains relevant only to the explicit
+short-side-fill policy.
+
+Rejected isolated variants from branch `aspect-independent-compactness`:
+
+| Intrinsic order | Triangle-golden outcome | Status |
+| --- | --- | --- |
+| area, then span | long side `924.646 mm` | rejected |
+| longest axis, then total span, then area | short side `240.224 mm` | rejected |
+
+The next candidate is the canonical occupied-envelope tuple `(longest side mm,
+shortest side mm)`, applied consistently to local balanced ranking,
+whole-layout ranking, the compactness survivor, and terminal selection. This
+tuple is invariant under sheet dimensions and rigid quarter-turns. It is not an
+accepted change until the exact triangle golden, mixed-61 reference, mixed-50,
+and focused scorer tests pass and their artifacts are recorded.
+
 ## Required Research Behavior
 
 Treat the task as an algorithm and systems investigation, not as a small bug fix.
