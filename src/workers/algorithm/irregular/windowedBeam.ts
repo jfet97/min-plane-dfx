@@ -480,6 +480,16 @@ export function runWindowedIrregularBeam(input: {
       terminalStates.filter(({ eligibleForProductionLane }) => eligibleForProductionLane),
       layoutScorer
     )
+    const boundaryProtectedRanked = rankScoredStates(
+      terminalStates.filter(({ eligibleForProtectedLane }) => eligibleForProtectedLane),
+      layoutScorer
+    )
+    const intrinsicProtectedRanked = rankScoredStates(
+      terminalStates.filter(
+        ({ eligibleForProtectedIntrinsicLane }) => eligibleForProtectedIntrinsicLane
+      ),
+      layoutScorer
+    )
     const protectedRanked = rankScoredStates(
       terminalStates.filter(
         ({ eligibleForProtectedLane, eligibleForProtectedIntrinsicLane }) =>
@@ -557,10 +567,13 @@ export function runWindowedIrregularBeam(input: {
     if (productionTerminalBase === undefined) {
       return yield* Effect.die('windowed irregular beam produced no terminal state')
     }
-    const protectedTerminalBase =
-      localRepairBudget === 0 && protectedRanked[0] !== initialBest
-        ? protectedRanked[0]
-        : undefined
+    const protectedTerminalBases =
+      localRepairBudget === 0
+        ? uniqueScoredStates([
+            boundaryProtectedRanked.find((state) => state !== initialBest),
+            intrinsicProtectedRanked.find((state) => state !== initialBest)
+          ])
+        : []
     const terminalOrientationControl = terminalRepairDeadlineExpired
       ? input.control?.isCancelled === undefined
         ? undefined
@@ -576,38 +589,45 @@ export function runWindowedIrregularBeam(input: {
         ? { control: terminalOrientationControl }
         : {})
     })
-    const protectedOrientation =
-      protectedTerminalBase === undefined
-        ? undefined
-        : yield* selectTerminalOrientation({
-            sheet: input.sheet,
-            base: protectedTerminalBase,
-            layoutScorer,
-            makeStateKey: stateKey,
-            controlState,
-            ...(terminalOrientationControl !== undefined
-              ? { control: terminalOrientationControl }
-              : {})
-          })
-    const selectedOrientedState = selectParetoSafeProtectedWinner(
-      productionOrientation.scoredState,
-      protectedOrientation?.scoredState,
+    const protectedOrientations: ProtectedTerminalOrientation[] = []
+    for (const base of protectedTerminalBases) {
+      const orientation = yield* selectTerminalOrientation({
+        sheet: input.sheet,
+        base,
+        layoutScorer,
+        makeStateKey: stateKey,
+        controlState,
+        ...(terminalOrientationControl !== undefined
+          ? { control: terminalOrientationControl }
+          : {})
+      })
+      if (
+        selectParetoSafeProtectedWinner(
+          productionOrientation.scoredState,
+          orientation.scoredState,
+          layoutScorer
+        ) === orientation.scoredState
+      ) {
+        protectedOrientations.push({ base, orientation })
+      }
+    }
+    const selectedOrientedState = rankScoredStates(
+      [
+        productionOrientation.scoredState,
+        ...protectedOrientations.map(({ orientation }) => orientation.scoredState)
+      ],
       layoutScorer
-    )
-    const protectedWasSelected = selectedOrientedState === protectedOrientation?.scoredState
-    const selectedTerminalBase = protectedWasSelected
-      ? protectedTerminalBase
-      : productionTerminalBase
-    const selectedInitialState = protectedWasSelected ? protectedTerminalBase : initialBest
-    if (selectedTerminalBase === undefined || selectedInitialState === undefined) {
+    )[0]
+    if (selectedOrientedState === undefined || initialBest === undefined) {
       return yield* Effect.die('windowed irregular beam selected no terminal state')
     }
-    const terminalOrientation = protectedWasSelected
-      ? protectedOrientation
-      : productionOrientation
-    if (terminalOrientation === undefined) {
-      return yield* Effect.die('windowed irregular beam selected no terminal orientation')
-    }
+    const selectedProtectedOrientation = protectedOrientations.find(
+      ({ orientation }) => orientation.scoredState === selectedOrientedState
+    )
+    const selectedTerminalBase = selectedProtectedOrientation?.base ?? productionTerminalBase
+    const selectedInitialState = selectedProtectedOrientation?.base ?? initialBest
+    const terminalOrientation =
+      selectedProtectedOrientation?.orientation ?? productionOrientation
     emitTerminalOrientationTrace(decisionTrace, terminalOrientation)
     const best = terminalOrientation.scoredState
     const finalRanked = [best, ...ranked.filter((state) => state !== selectedInitialState)]
@@ -646,6 +666,11 @@ interface TerminalOrientationCandidate {
 
 interface TerminalOrientationSelection extends TerminalOrientationCandidate {
   readonly evaluatedVariants: ReadonlyArray<TerminalOrientationCandidate>
+}
+
+interface ProtectedTerminalOrientation {
+  readonly base: ScoredState
+  readonly orientation: TerminalOrientationSelection
 }
 
 const TERMINAL_QUARTER_TURNS: ReadonlyArray<IrregularQuarterTurnDegrees> = [0, 90, 180, 270]
@@ -1323,7 +1348,9 @@ function selectProtectedIntrinsicContactCandidate(
     Order.mapInput(Order.String, (candidate) => localCandidateKey(candidate))
   ])
   const eligibleContactLengths = [...selectedByContactLength.entries()]
-    .filter(([, candidates]) => candidates.length >= 2)
+    .filter(
+      ([contactLength, candidates]) => contactLength > 0 && candidates.length >= 2
+    )
     .map(([contactLength]) => contactLength)
     .toSorted((first, second) => second - first)
 
@@ -1630,6 +1657,19 @@ function selectParetoSafeProtectedWinner(
   return protectedImprovesArea && protectedImprovesProductionOrder
     ? protectedWinner
     : productionWinner
+}
+
+function uniqueScoredStates(
+  states: ReadonlyArray<ScoredState | undefined>
+): ReadonlyArray<ScoredState> {
+  const uniqueStates: ScoredState[] = []
+  const seen = new Set<IrregularBeamState>()
+  for (const scoredState of states) {
+    if (scoredState === undefined || seen.has(scoredState.state)) continue
+    seen.add(scoredState.state)
+    uniqueStates.push(scoredState)
+  }
+  return uniqueStates
 }
 
 const PROTECTED_LEGACY_BOUNDARY_LANE_WIDTH = 8

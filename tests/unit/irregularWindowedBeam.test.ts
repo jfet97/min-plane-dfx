@@ -972,6 +972,41 @@ describe('decodeWindowedIrregularBeam', () => {
     )
   })
 
+  it('does not treat a duplicated zero-contact tier as an intrinsic seed', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      sheet(100, 10),
+      [preparedPiece('a', 2, 2)],
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 3, 3, 'edge-contact-then-balanced-compactness')
+      ),
+      candidateService(({ moving }) => [
+        oneCandidate(moving, 0, 0),
+        oneCandidate(moving, 20, 0),
+        oneCandidate(moving, 40, 0),
+        oneCandidate(moving, 60, 0)
+      ]),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_selection',
+        reason: 'intrinsic_contact_tier_reserved'
+      })
+    )
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        reason: 'protected_intrinsic_contact_survivor'
+      })
+    )
+  })
+
   it('keeps full trace detail for compactness reservation and displacement', async () => {
     const events: IrregularDecisionTraceEvent[] = []
     const transforms = [
