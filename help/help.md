@@ -49,19 +49,20 @@ free-material holes:  2
 history-off runtime:  20.16-20.98 s
 ```
 
-Immutable artifacts and SHA-256 hashes:
+Portable repository artifacts and SHA-256 hashes:
 
 ```text
-/private/tmp/min-plane-provenance/ac75222/780d4ec5-b64e-4f48-a8d8-0bfd30877549/depth21-total2.svg
+help/artifacts/approved-mixed61-ac75222-2000x2700.svg
 c7b2fa24a5fa721fa9ff87c7aafff3e25ff0d89474be7be7191117fe05c64a34
 
-/private/tmp/min-plane-provenance/ac75222/780d4ec5-b64e-4f48-a8d8-0bfd30877549/depth21-total2.png
+help/artifacts/approved-mixed61-ac75222-2000x2700.png
 69599fb77b587aaf7f7930fa20ae04eeb8365ff02d2839501a715e0a5c5b6b93
 
-/private/tmp/min-plane-provenance/ac75222/780d4ec5-b64e-4f48-a8d8-0bfd30877549/manifest.json
+help/artifacts/approved-mixed61-ac75222-2000x2700.manifest.json
+f618afe31f512d05753d925ff1dc2a6be3e9590fc66ea0ff7131b1f353fbcf76
 ```
 
-Portable repository copy of the exact approved SVG:
+Exact approved layout:
 
 ![Approved mixed-61 depth21-total2 layout](artifacts/approved-mixed61-ac75222-2000x2700.svg)
 

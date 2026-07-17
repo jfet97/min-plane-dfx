@@ -1,0 +1,131 @@
+{
+  "commit": "ac75222",
+  "worktreeRoot": "/private/tmp/min-plane-provenance/worktrees/ac75222",
+  "sourceScript": "/private/tmp/run-saved-comparator-sweep.mts",
+  "comparator": "depth21-total2",
+  "jobId": "780d4ec5-b64e-4f48-a8d8-0bfd30877549",
+  "requestSha256": "75ef2579f0eb28faa4eae229cfdcc39ff735fc6be709849f31d74ecaf509f405",
+  "sheet": {
+    "width": 2000,
+    "height": 2700,
+    "label": "default 1x1 m"
+  },
+  "pieceCount": 61,
+  "options": {
+    "allowGlobalRotation": true,
+    "allowGlobalMirror": true,
+    "timeoutMs": 180000,
+    "workerMode": "irregular-convex-v2",
+    "historyMode": "final",
+    "historyScope": "winning_path",
+    "strategySelectionMode": "all_configured",
+    "strategyIds": [
+      "short-fill-bottom-left-then-short-side-fit"
+    ],
+    "layoutSelectionStrategyId": "compact-first",
+    "finalSelectionMode": "manual",
+    "topN": 3,
+    "irregularSettings": {
+      "geometry": {
+        "flatteningSagToleranceMm": 0.25,
+        "clearanceSafetyMarginMm": 0.25,
+        "geometryBackendId": "irregular-convex-v2-default",
+        "geometryBackendVersion": "0"
+      },
+      "optimizer": {
+        "orderWindow": 4,
+        "beamWidth": 8,
+        "localCandidateFanout": 4,
+        "localRepairBudget": 0,
+        "transformCap": 8,
+        "transformMinimumEdgeLengthMm": 1.2,
+        "transformAngleDeduplicationToleranceDeg": 0.051,
+        "configuredRotationEnabled": true,
+        "edgeAlignmentEnabled": true,
+        "configuredRotationDeg": [],
+        "gaEnabled": false,
+        "baselineOnly": true,
+        "gaPopulation": 12,
+        "gaGenerationBudget": 2,
+        "gaEvaluationBudget": 24,
+        "gaTimeBudgetMs": 15000,
+        "gaSeed": "default",
+        "priorityOrderMutationEnabled": true,
+        "transformPreferenceMutationEnabled": true,
+        "placementPolicyMutationEnabled": true,
+        "placementPolicyId": "edge-contact-then-balanced-compactness",
+        "placementPolicyIds": [
+          "balanced-compactness",
+          "short-side-fill",
+          "edge-contact-then-balanced-compactness"
+        ]
+      }
+    }
+  },
+  "result": {
+    "fixture": "mixed",
+    "mode": "depth21-total2",
+    "elapsedMs": 14568.470959,
+    "historyMode": "off",
+    "pieceCount": 61,
+    "placedCount": 61,
+    "unplacedCount": 0,
+    "svgPath": "/private/tmp/min-plane-provenance/ac75222/780d4ec5-b64e-4f48-a8d8-0bfd30877549/depth21-total2.svg",
+    "bounds": {
+      "width": 564.6600000000001,
+      "height": 773.5449999999997,
+      "minX": -1.1368683772161603e-13,
+      "minY": -1.1368683772161603e-13
+    },
+    "goldenPass": true,
+    "goldenFailures": [],
+    "score": {
+      "dominantNearCompleteStructuralContactCount": 14,
+      "nearCompleteStructuralContactCount": 56,
+      "sharedCollisionBoundaryContactBand": 58,
+      "sharedCollisionBoundaryContactUnits": 58.907038,
+      "sharedCollisionBoundaryLengthMm": 4531.121,
+      "collisionBoundsWorstNormalizedSheetConsumption": 0.2864981481481481,
+      "collisionBoundsNormalizedSpanSum": 0.5688281481481481,
+      "collisionBoundsAreaMm2": 436789.91969999997,
+      "collisionBoundsSpanMm": 1338.205,
+      "occupiedHullWasteRatio": 0.24634606216110963,
+      "freeMaterialRegionCount": 2,
+      "freeMaterialHoleCount": 2
+    }
+  },
+  "artifacts": {
+    "svg": {
+      "path": "/private/tmp/min-plane-provenance/ac75222/780d4ec5-b64e-4f48-a8d8-0bfd30877549/depth21-total2.svg",
+      "sha256": "c7b2fa24a5fa721fa9ff87c7aafff3e25ff0d89474be7be7191117fe05c64a34",
+      "canonicalGeometrySha256": "9806dcd9119f6276df51ee92ca0389b18461fc586aa6ae2bcda88c313a727142"
+    },
+    "png": {
+      "path": "/private/tmp/min-plane-provenance/ac75222/780d4ec5-b64e-4f48-a8d8-0bfd30877549/depth21-total2.png",
+      "sha256": "69599fb77b587aaf7f7930fa20ae04eeb8365ff02d2839501a715e0a5c5b6b93",
+      "pixelMatchWithApprovedReference": true
+    },
+    "request": {
+      "path": "/private/tmp/min-plane-provenance/ac75222/780d4ec5-b64e-4f48-a8d8-0bfd30877549/request.json",
+      "sha256": "cf390e7a851eb1f267c5ff986032ce003372483863f3ed5e31d963bc24b95660"
+    }
+  },
+  "approvedReference": {
+    "svgPath": "/private/tmp/mixed-depth21-total2.svg",
+    "svgSha256": "801f0be2ffe00a6806a2d2e6732a363e7cf3280700294ca40e09d5be31675334",
+    "canonicalGeometrySha256": "7ac33b0918f83cb54c124cd5f96995defabd531ccf316ab104ce4462191694d8",
+    "exactSvgMatch": false,
+    "canonicalGeometryMatch": false
+  },
+  "approvedPngReference": {
+    "path": "/private/tmp/mixed-depth21-total2.png",
+    "sha256": "69599fb77b587aaf7f7930fa20ae04eeb8365ff02d2839501a715e0a5c5b6b93",
+    "archivedPath": "/private/tmp/mixed-depth21-total2-20260717.png",
+    "archivedSha256": "07529495e52945c3a3d8455e4dad0a8d05fe08d008d9fbcfc70ba2c26c67606b"
+  },
+  "commitFull": "ac7522293e305e62978e3f24e3a5d4ac9ae72f2d",
+  "sourceScriptSha256": "951e0a43c1a94cec0ee94d18d85c1d2b8d4725a851c8d89303c1a59b1359f989",
+  "piecesSha256": "e092e9adfb69d156de49e96e74e3cf98b78cdfef74b96d8471f22d97084bc2e2",
+  "sourcePiecesSha256": "3259c6c7a32d9bac98695e519ea201e3847723efc78cb3910b24bf85f8693ab2",
+  "optimizerSettingsSha256": "cdd875bf5ff2991dda8792849aa254347d26c1c9f75b8f398bcecc23aa909de2"
+}
