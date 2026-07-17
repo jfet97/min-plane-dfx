@@ -732,6 +732,39 @@ describe('decodeWindowedIrregularBeam', () => {
     expect(calls.slice(0, 3)).not.toContain(PieceId.make('d'))
   })
 
+  it('forces the oldest piece after the reorder window has bypassed it', async () => {
+    const ids = ['a', 'b', 'c', 'd', 'e']
+    const xById = new Map([
+      [PieceId.make('a'), 20],
+      [PieceId.make('b'), 10],
+      [PieceId.make('c'), 0],
+      [PieceId.make('d'), 0],
+      [PieceId.make('e'), 0]
+    ])
+    const events: IrregularDecisionTraceEvent[] = []
+    const result = await runWindowed(
+      sheet(30, 2),
+      ids.map((id) => preparedPiece(id, 1, 1)),
+      Layer.succeed(GeometrySettings, settings(3, 1)),
+      candidateService(({ moving }) => [oneCandidate(moving, xById.get(moving.sourcePieceId) ?? 0)]),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(result.bestState.placementOrder.slice(0, 4)).toEqual([
+      PieceId.make('c'),
+      PieceId.make('d'),
+      PieceId.make('a'),
+      PieceId.make('b')
+    ])
+    const stepTwoEligiblePieceIds = events.flatMap((event) =>
+      event.kind === 'eligible_pieces' && event.stepIndex === 2 ? [event.pieceIds] : []
+    )
+    expect(stepTwoEligiblePieceIds).toContainEqual([PieceId.make('a')])
+  })
+
   it('marks only the current first piece unplaced when later eligible pieces fit', async () => {
     const service = candidateService(({ moving }) =>
       moving.sourcePieceId === PieceId.make('first')

@@ -151,6 +151,13 @@ identical, this guarantees that the wider beam cannot finish with more unplaced
 pieces than `beamWidth = 1`. This changes search retention only, not geometry
 legality.
 
+The reorder window is also a bounded deferral budget. A branch may choose
+later-priority pieces from its configured prefix, but after the oldest remaining
+piece has been bypassed by `orderWindow - 1` later-ranked placements, that piece
+becomes the branch's only eligible next piece. This preserves useful local
+reordering without allowing a stream of newly entering small pieces to starve a
+large piece from the user-owned initial sort order indefinitely.
+
 ### Repeated-Triangle Pruning Finding
 
 The 20-copy pointed-triangle regression demonstrates a real delayed-reward
@@ -201,15 +208,16 @@ enabled, and the Compact quality profile (`order 4`, `beam 8`, `fanout 4`,
 original sheet remains part of the fixture because measured smaller sheets
 changed candidate legality or ranking and did not preserve the approved result.
 
-The approved result is a bottom-left horizontal three-row lattice with all 20
-pieces placed. Its measured collision envelope is approximately
-`353.152 x 227.025 mm`, with area `80174.3328 mm2`, span `580.177 mm`, hull
-waste ratio `0.047619`, 24 structural contacts, dominant contact count 17, and
-no free-material holes. The regression enforces a narrow quality envelope around
-those measurements rather than raw piece ids or every floating-point transform.
-Interchangeable-copy permutations and equivalent compact arrangements therefore
-remain valid, while upward or rightward chains, missing pieces, weak contact
-graphs, and triangle-sized lattice gaps fail the contract.
+The approved result is a bottom-left compact lattice with all 20 pieces placed.
+Its measured collision envelope is approximately `353.152 x 227.025 mm` in one
+terminal orientation, with area `80174.3328 mm2`, span `580.177 mm`, hull waste
+ratio `0.047619`, 24 structural contacts, dominant contact count 17, and no
+free-material holes. The regression enforces an orientation-invariant quality
+envelope around those measurements rather than raw piece ids or every
+floating-point transform. Interchangeable-copy permutations, terminal
+quarter-turns, and equivalent compact arrangements therefore remain valid,
+while upward or rightward chains, missing pieces, weak contact graphs, and
+triangle-sized lattice gaps fail the contract.
 
 ### Decision Trace
 

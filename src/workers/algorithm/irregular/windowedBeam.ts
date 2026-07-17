@@ -171,9 +171,11 @@ const transformOrder = Order.combineAll<IrregularTransformCandidate>([
  * Runs bounded reorderings over a supplied priority order.
  *
  * Each branch expands only the configured prefix of its remaining queue. A
- * branch considers the configured prefix of its queue, then retains a bounded
- * deterministic subset of each selected piece's real legal local candidates.
- * The layout scorer ranks the combined successor states for beam retention.
+ * piece can be bypassed by at most one window of later-priority placements;
+ * after that it becomes the branch's only eligible piece. The branch retains a
+ * bounded deterministic subset of each selected piece's real legal local
+ * candidates. The layout scorer ranks the combined successor states for beam
+ * retention.
  */
 export function runWindowedIrregularBeam(input: {
   readonly sheet: SheetSpec
@@ -235,6 +237,9 @@ export function runWindowedIrregularBeam(input: {
 
     let beam: ReadonlyArray<IrregularBeamState> = [IrregularBeamState.empty(input.pieces)]
     let scoredBeam: ReadonlyArray<ScoredState> | undefined
+    const initialPieceRankById = new Map(
+      input.pieces.map((piece, index) => [preparedPieceId(piece), index] as const)
+    )
     const protectIncumbent = settings.optimizer.beamWidth > 1
     let incumbentState: IrregularBeamState | undefined = protectIncumbent ? beam[0] : undefined
     const candidateCounts: number[] = []
@@ -266,11 +271,11 @@ export function runWindowedIrregularBeam(input: {
           incumbent: isIncumbent,
           state: decisionTraceState(state, decisionTrace, parentStateKey)
         }))
-        const eligibleCount = Math.min(
+        const eligiblePieces = selectEligiblePieces(
+          state,
           settings.optimizer.orderWindow,
-          state.remainingPreparedPieces.length
+          initialPieceRankById
         )
-        const eligiblePieces = state.remainingPreparedPieces.slice(0, eligibleCount)
         decisionTrace?.emit(new IrregularDecisionTraceEligiblePieces({
           decodeId: decisionTrace.decodeId,
           chromosomeId: decisionTrace.chromosomeId,
@@ -851,6 +856,26 @@ function collectLocalCandidates(input: {
     }
     return candidates
   })
+}
+
+function selectEligiblePieces(
+  state: IrregularBeamState,
+  orderWindow: number,
+  initialPieceRankById: ReadonlyMap<PieceId, number>
+): ReadonlyArray<IrregularPreparedPiece> {
+  const eligibleCount = Math.min(orderWindow, state.remainingPreparedPieces.length)
+  const window = state.remainingPreparedPieces.slice(0, eligibleCount)
+  const first = window[0]
+  if (first === undefined || eligibleCount <= 1) return window
+
+  const firstRank = initialPieceRankById.get(preparedPieceId(first))
+  if (firstRank === undefined) return window
+  const bypassCount = state.placementOrder.reduce((count, placedPieceId) => {
+    const placedRank = initialPieceRankById.get(placedPieceId)
+    return placedRank !== undefined && placedRank > firstRank ? count + 1 : count
+  }, 0)
+
+  return bypassCount >= orderWindow - 1 ? [first] : window
 }
 
 /** adapts beam checkpoints to the internal NFP boundary without changing worker cancellation APIs. */

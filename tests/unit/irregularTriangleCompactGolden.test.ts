@@ -21,8 +21,8 @@ import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
 import { TransformGeneratorLive } from '../../src/workers/irregular/transformGenerator.js'
 
 const TRIANGLE_COUNT = 20
-const MAX_COLLISION_WIDTH_MM = 354
-const MAX_COLLISION_HEIGHT_MM = 228
+const MAX_COLLISION_SHORT_SIDE_MM = 228
+const MAX_COLLISION_LONG_SIDE_MM = 354
 const MAX_COLLISION_BOUNDS_AREA_MM2 = 80_200
 const MAX_COLLISION_BOUNDS_SPAN_MM = 581
 const MAX_OCCUPIED_HULL_WASTE_RATIO = 0.05
@@ -101,7 +101,7 @@ function collisionBounds(
 
 describe('compact-quality repeated triangle golden', () => {
   it(
-    'keeps all 20 pointed triangles in a dense bottom-left three-row lattice',
+    'keeps all 20 pointed triangles in a dense bottom-left lattice',
     async () => {
       const request = makeTriangleRequest()
       const optimizer = settings.optimizer
@@ -154,8 +154,12 @@ describe('compact-quality repeated triangle golden', () => {
 
       expect(bounds.minX).toBeCloseTo(0, 6)
       expect(bounds.minY).toBeCloseTo(0, 6)
-      expect(bounds.width).toBeLessThanOrEqual(MAX_COLLISION_WIDTH_MM)
-      expect(bounds.height).toBeLessThanOrEqual(MAX_COLLISION_HEIGHT_MM)
+      expect(Math.min(bounds.width, bounds.height)).toBeLessThanOrEqual(
+        MAX_COLLISION_SHORT_SIDE_MM
+      )
+      expect(Math.max(bounds.width, bounds.height)).toBeLessThanOrEqual(
+        MAX_COLLISION_LONG_SIDE_MM
+      )
       expect(computed.score.collisionBoundsAreaMm2).toBeLessThanOrEqual(
         MAX_COLLISION_BOUNDS_AREA_MM2
       )
