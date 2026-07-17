@@ -28,9 +28,12 @@ import {
   IrregularPlacementScore
 } from './irregularPlacementScorer.js'
 import {
+  deriveRawOccupiedHullWasteRatio,
   IrregularLayoutScore,
   IrregularLayoutScorer,
-  IrregularLayoutScoringError
+  IrregularLayoutScoringError,
+  STRICT_STRUCTURAL_CONTACT_PLACEMENT_LIMIT,
+  STRUCTURAL_CONTACT_COUNT_BAND_WIDTH
 } from './irregularLayoutScorer.js'
 import {
   canonicalCollisionPolygonKey,
@@ -140,19 +143,26 @@ interface LocalCandidate {
 interface ScoredState {
   readonly state: IrregularBeamState
   readonly score: IrregularLayoutScore
+  readonly rawOccupiedHullWasteRatio: number
   readonly key: string
   readonly isIncumbent: boolean
+  readonly eligibleForProductionLane: boolean
+  readonly eligibleForProtectedLane: boolean
 }
 
 interface KeyedState {
   readonly state: IrregularBeamState
   readonly key: string
   readonly isIncumbent: boolean
+  readonly eligibleForProductionLane: boolean
+  readonly eligibleForProtectedLane: boolean
 }
 
 interface TaggedSuccessor {
   readonly state: IrregularBeamState
   readonly isIncumbent: boolean
+  readonly eligibleForProductionLane: boolean
+  readonly eligibleForProtectedLane: boolean
 }
 
 interface ActiveDecisionTrace extends IrregularDecisionTraceIdentity {
@@ -246,6 +256,8 @@ export function runWindowedIrregularBeam(input: {
     )
     const protectIncumbent = settings.optimizer.beamWidth > 1
     let incumbentState: IrregularBeamState | undefined = protectIncumbent ? beam[0] : undefined
+    let productionBeamStates = new Set(beam)
+    let boundaryAnchorStates: ReadonlyArray<IrregularBeamState> = []
     const candidateCounts: number[] = []
     const controlState: ControlState = { checkpointsSinceYield: 0 }
     let stepIndex = 0
@@ -259,11 +271,14 @@ export function runWindowedIrregularBeam(input: {
         parentCount: beam.length
       }))
       const successors: TaggedSuccessor[] = []
+      const protectedBoundaryParents = new Set(boundaryAnchorStates)
       let candidateCount = 0
 
       for (const [parentIndex, state] of beam.entries()) {
         yield* controlCheckpoint(input.control, controlState)
         const isIncumbent = state === incumbentState
+        const eligibleForProductionLane = productionBeamStates.has(state)
+        const eligibleForProtectedLane = protectedBoundaryParents.has(state)
         const parentStateKey = stateKey(state)
         const parentStateId = decisionTrace?.stateIds.idFor(parentStateKey) ?? ''
         decisionTrace?.emit(new IrregularDecisionTraceParentState({
@@ -326,9 +341,21 @@ export function runWindowedIrregularBeam(input: {
         }
 
         if (legalSuccessors.length === 0) {
-          successors.push({ state: markFirstRemainingUnplaced(state), isIncumbent })
+          successors.push({
+            state: markFirstRemainingUnplaced(state),
+            isIncumbent,
+            eligibleForProductionLane,
+            eligibleForProtectedLane
+          })
         } else {
-          successors.push(...legalSuccessors.map((state) => ({ state, isIncumbent })))
+          successors.push(
+            ...legalSuccessors.map((state) => ({
+              state,
+              isIncumbent,
+              eligibleForProductionLane,
+              eligibleForProtectedLane
+            }))
+          )
         }
       }
 
@@ -345,16 +372,33 @@ export function runWindowedIrregularBeam(input: {
       const nextIncumbent = protectIncumbent
         ? selectIncumbentSuccessor(scored, layoutScorer)
         : undefined
-      scoredBeam = pruneScoredStates(
+      const rankedBoundaryAnchorSuccessors = rankBoundaryAnchorSuccessors(
+        scored,
+        boundaryAnchorStates
+      )
+      const nextBoundaryAnchors = rankedBoundaryAnchorSuccessors.slice(
+        0,
+        PROTECTED_LEGACY_BOUNDARY_LANE_WIDTH
+      )
+      const pruned = pruneScoredStates(
         scored,
         settings.optimizer.beamWidth,
+        input.sheet,
         layoutScorer,
         nextIncumbent,
+        nextBoundaryAnchors,
+        rankedBoundaryAnchorSuccessors,
+        (input.options?.transformPreferences?.size === undefined ||
+          input.options.transformPreferences.size === 0) &&
+          localRepairBudget === 0,
         decisionTrace,
         stepIndex
       )
+      scoredBeam = pruned.retained
       beam = scoredBeam.map(({ state }) => state)
       incumbentState = nextIncumbent?.state
+      productionBeamStates = new Set(pruned.productionSurvivors.map(({ state }) => state))
+      boundaryAnchorStates = pruned.boundaryAnchorSurvivors.map(({ state }) => state)
       candidateCounts.push(candidateCount)
       input.instrumentation?.onStepCompleted?.({ candidateCount })
       decisionTrace?.emit(new IrregularDecisionTraceBeamStepCompleted({
@@ -369,22 +413,36 @@ export function runWindowedIrregularBeam(input: {
       stepIndex += 1
     }
 
-    const ranked = rankScoredStates(
+    const terminalStates =
       scoredBeam ??
         (yield* scoreStates(
-          beam.map((state) => ({ state, key: stateKey(state), isIncumbent: false })),
+          beam.map((state) => ({
+            state,
+            key: stateKey(state),
+            isIncumbent: false,
+            eligibleForProductionLane: productionBeamStates.has(state),
+            eligibleForProtectedLane: boundaryAnchorStates.includes(state)
+          })),
           input.sheet,
           layoutScorer,
           input.control,
           controlState,
           decisionTrace,
           stepIndex
-        )),
+        ))
+    const ranked = rankScoredStates(terminalStates, layoutScorer)
+    const productionRanked = rankScoredStates(
+      terminalStates.filter(({ eligibleForProductionLane }) => eligibleForProductionLane),
+      layoutScorer
+    )
+    const protectedRanked = rankScoredStates(
+      terminalStates.filter(({ eligibleForProtectedLane }) => eligibleForProtectedLane),
       layoutScorer
     )
     yield* controlCheckpoint(input.control, controlState)
-    const initialBest = ranked[0]
+    const initialBest = productionRanked[0] ?? protectedRanked[0]
     let repairedBest: ScoredState | undefined = initialBest
+    let terminalRepairDeadlineExpired = false
     if (
       initialBest !== undefined &&
       initialBest.score.unplacedCount === 0 &&
@@ -424,7 +482,10 @@ export function runWindowedIrregularBeam(input: {
                 : Effect.fail(error)
           })
         )
-        if (repairOutcome._tag === 'DeadlineExpired') break
+        if (repairOutcome._tag === 'DeadlineExpired') {
+          terminalRepairDeadlineExpired = true
+          break
+        }
         const accepted: AcceptedLocalRepair | undefined = repairOutcome.accepted
         if (accepted === undefined) break
         currentRepair = accepted.scoredState
@@ -444,22 +505,67 @@ export function runWindowedIrregularBeam(input: {
       }
       repairedBest = currentRepair
     }
-    const terminalBase = repairedBest ?? initialBest
-    if (terminalBase === undefined) {
+    const productionTerminalBase = repairedBest ?? initialBest
+    if (productionTerminalBase === undefined) {
       return yield* Effect.die('windowed irregular beam produced no terminal state')
     }
-    const terminalOrientation = yield* selectTerminalOrientation({
+    const protectedTerminalBase =
+      localRepairBudget === 0 && protectedRanked[0] !== initialBest
+        ? protectedRanked[0]
+        : undefined
+    const terminalOrientationControl = terminalRepairDeadlineExpired
+      ? input.control?.isCancelled === undefined
+        ? undefined
+        : { isCancelled: input.control.isCancelled }
+      : input.control
+    const productionOrientation = yield* selectTerminalOrientation({
       sheet: input.sheet,
-      base: terminalBase,
+      base: productionTerminalBase,
       layoutScorer,
       makeStateKey: stateKey,
-      ...(decisionTrace !== undefined ? { decisionTrace } : {})
+      controlState,
+      ...(terminalOrientationControl !== undefined
+        ? { control: terminalOrientationControl }
+        : {})
     })
+    const protectedOrientation =
+      protectedTerminalBase === undefined
+        ? undefined
+        : yield* selectTerminalOrientation({
+            sheet: input.sheet,
+            base: protectedTerminalBase,
+            layoutScorer,
+            makeStateKey: stateKey,
+            controlState,
+            ...(terminalOrientationControl !== undefined
+              ? { control: terminalOrientationControl }
+              : {})
+          })
+    const selectedOrientedState = selectParetoSafeProtectedWinner(
+      productionOrientation.scoredState,
+      protectedOrientation?.scoredState,
+      layoutScorer
+    )
+    const protectedWasSelected = selectedOrientedState === protectedOrientation?.scoredState
+    const selectedTerminalBase = protectedWasSelected
+      ? protectedTerminalBase
+      : productionTerminalBase
+    const selectedInitialState = protectedWasSelected ? protectedTerminalBase : initialBest
+    if (selectedTerminalBase === undefined || selectedInitialState === undefined) {
+      return yield* Effect.die('windowed irregular beam selected no terminal state')
+    }
+    const terminalOrientation = protectedWasSelected
+      ? protectedOrientation
+      : productionOrientation
+    if (terminalOrientation === undefined) {
+      return yield* Effect.die('windowed irregular beam selected no terminal orientation')
+    }
+    emitTerminalOrientationTrace(decisionTrace, terminalOrientation)
     const best = terminalOrientation.scoredState
-    const finalRanked = [best, ...ranked.slice(1)]
+    const finalRanked = [best, ...ranked.filter((state) => state !== selectedInitialState)]
     emitWinningPath(
       input.hooks,
-      terminalBase.state,
+      selectedTerminalBase.state,
       candidateCounts,
       terminalOrientation.rotationDeg
     )
@@ -484,10 +590,14 @@ interface AcceptedLocalRepair {
   readonly pieceId: PieceId
 }
 
-interface TerminalOrientationSelection {
+interface TerminalOrientationCandidate {
   readonly scoredState: ScoredState
   readonly rotationDeg: IrregularQuarterTurnDegrees
   readonly cornerGapMm: number
+}
+
+interface TerminalOrientationSelection extends TerminalOrientationCandidate {
+  readonly evaluatedVariants: ReadonlyArray<TerminalOrientationCandidate>
 }
 
 const TERMINAL_QUARTER_TURNS: ReadonlyArray<IrregularQuarterTurnDegrees> = [0, 90, 180, 270]
@@ -497,11 +607,13 @@ function selectTerminalOrientation(input: {
   readonly base: ScoredState
   readonly layoutScorer: IrregularLayoutScorer.Service
   readonly makeStateKey: (state: IrregularBeamState) => string
-  readonly decisionTrace?: ActiveDecisionTrace
+  readonly control?: IrregularWindowedBeamControl
+  readonly controlState: ControlState
 }): Effect.Effect<TerminalOrientationSelection, IrregularWindowedBeamError> {
   return Effect.gen(function* () {
-    const legalVariants: TerminalOrientationSelection[] = []
+    const legalVariants: TerminalOrientationCandidate[] = []
     for (const rotationDeg of TERMINAL_QUARTER_TURNS) {
+      yield* controlCheckpoint(input.control, input.controlState)
       const state = input.base.state.withQuarterTurnBottomLeft(rotationDeg)
       const bounds = state?.translatedCollisionBounds
       if (
@@ -514,12 +626,19 @@ function selectTerminalOrientation(input: {
       }
       const cornerGapMm = terminalBottomLeftCornerGapMm(state)
       if (cornerGapMm === undefined) continue
+      const score = yield* input.layoutScorer.scoreState({ sheet: input.sheet, state })
+      const rawOccupiedHullWasteRatio =
+        deriveRawOccupiedHullWasteRatio(state) ?? score.occupiedHullWasteRatio
+      yield* controlCheckpoint(input.control, input.controlState)
       legalVariants.push({
         scoredState: {
           state,
-          score: yield* input.layoutScorer.scoreState({ sheet: input.sheet, state }),
+          score,
+          rawOccupiedHullWasteRatio,
           key: input.makeStateKey(state),
-          isIncumbent: false
+          isIncumbent: false,
+          eligibleForProductionLane: input.base.eligibleForProductionLane,
+          eligibleForProtectedLane: input.base.eligibleForProtectedLane
         },
         rotationDeg,
         cornerGapMm
@@ -540,27 +659,27 @@ function selectTerminalOrientation(input: {
     if (selected === undefined) {
       return yield* Effect.die('terminal irregular layout has no legal quarter-turn orientation')
     }
-
-    if (input.decisionTrace !== undefined) {
-      for (const variant of rankedVariants) {
-        input.decisionTrace.emit(new IrregularDecisionTraceTerminalOrientationScored({
-          decodeId: input.decisionTrace.decodeId,
-          chromosomeId: input.decisionTrace.chromosomeId,
-          decodeSource: input.decisionTrace.decodeSource,
-          rotationDeg: variant.rotationDeg,
-          cornerGapMm: variant.cornerGapMm,
-          state: decisionTraceState(
-            variant.scoredState.state,
-            input.decisionTrace,
-            variant.scoredState.key
-          ),
-          score: decisionTraceLayoutScore(variant.scoredState.score),
-          decision: variant === selected ? 'selected' : 'rejected'
-        }))
-      }
-    }
-    return selected
+    return { ...selected, evaluatedVariants: rankedVariants }
   })
+}
+
+function emitTerminalOrientationTrace(
+  decisionTrace: ActiveDecisionTrace | undefined,
+  selection: TerminalOrientationSelection
+): void {
+  if (decisionTrace === undefined) return
+  for (const variant of selection.evaluatedVariants) {
+    decisionTrace.emit(new IrregularDecisionTraceTerminalOrientationScored({
+      decodeId: decisionTrace.decodeId,
+      chromosomeId: decisionTrace.chromosomeId,
+      decodeSource: decisionTrace.decodeSource,
+      rotationDeg: variant.rotationDeg,
+      cornerGapMm: variant.cornerGapMm,
+      state: decisionTraceState(variant.scoredState.state, decisionTrace, variant.scoredState.key),
+      score: decisionTraceLayoutScore(variant.scoredState.score),
+      decision: variant.scoredState === selection.scoredState ? 'selected' : 'rejected'
+    }))
+  }
 }
 
 function terminalBottomLeftCornerGapMm(state: IrregularBeamState): number | undefined {
@@ -688,8 +807,12 @@ function repairTerminalState(input: {
         const scoredState = {
           state: repairedState,
           score,
+          rawOccupiedHullWasteRatio:
+            deriveRawOccupiedHullWasteRatio(repairedState) ?? score.occupiedHullWasteRatio,
           key: beamStateKey(repairedState, input.options?.transformPreferences),
-          isIncumbent: false
+          isIncumbent: false,
+          eligibleForProductionLane: input.current.eligibleForProductionLane,
+          eligibleForProtectedLane: input.current.eligibleForProtectedLane
         }
         if (
           best === undefined ||
@@ -1231,10 +1354,26 @@ function scoreStates(
 > {
   return Effect.gen(function* () {
     const scored: ScoredState[] = []
-    for (const { state, key, isIncumbent } of states) {
+    for (const {
+      state,
+      key,
+      isIncumbent,
+      eligibleForProductionLane,
+      eligibleForProtectedLane
+    } of states) {
       yield* controlCheckpoint(control, controlState)
       const score = yield* layoutScorer.scoreState({ sheet, state })
-      scored.push({ state, score, key, isIncumbent })
+      const rawOccupiedHullWasteRatio =
+        deriveRawOccupiedHullWasteRatio(state) ?? score.occupiedHullWasteRatio
+      scored.push({
+        state,
+        score,
+        rawOccupiedHullWasteRatio,
+        key,
+        isIncumbent,
+        eligibleForProductionLane,
+        eligibleForProtectedLane
+      })
       decisionTrace?.emit(new IrregularDecisionTraceSuccessorLayoutScored({
         decodeId: decisionTrace.decodeId,
         chromosomeId: decisionTrace.chromosomeId,
@@ -1257,18 +1396,39 @@ function dedupeRawSuccessors(
 ): ReadonlyArray<KeyedState> {
   const deduped = new Map<string, KeyedState>()
   const countsByKey = new Map<string, number>()
-  for (const { state, isIncumbent } of states) {
-    const current = { state, key: stateKey(state), isIncumbent }
+  for (const {
+    state,
+    isIncumbent,
+    eligibleForProductionLane,
+    eligibleForProtectedLane
+  } of states) {
+    const current: KeyedState = {
+      state,
+      key: stateKey(state),
+      isIncumbent,
+      eligibleForProductionLane,
+      eligibleForProtectedLane
+    }
     countsByKey.set(current.key, (countsByKey.get(current.key) ?? 0) + 1)
     const previous = deduped.get(current.key)
-    if (
-      previous === undefined ||
-      (current.isIncumbent && !previous.isIncumbent) ||
-      (current.isIncumbent === previous.isIncumbent &&
-        compareRepresentativeStates(current, previous) < 0)
-    ) {
+    if (previous === undefined) {
       deduped.set(current.key, current)
+      continue
     }
+    const preferCurrent =
+      (current.eligibleForProductionLane && !previous.eligibleForProductionLane) ||
+      (current.eligibleForProductionLane === previous.eligibleForProductionLane &&
+        ((current.isIncumbent && !previous.isIncumbent) ||
+          (current.isIncumbent === previous.isIncumbent &&
+            compareRepresentativeStates(current, previous) < 0)))
+    const preferred = preferCurrent ? current : previous
+    deduped.set(current.key, {
+      ...preferred,
+      eligibleForProductionLane:
+        current.eligibleForProductionLane || previous.eligibleForProductionLane,
+      eligibleForProtectedLane:
+        current.eligibleForProtectedLane || previous.eligibleForProtectedLane
+    })
   }
   if (decisionTrace !== undefined) {
     for (const { state, isIncumbent } of states) {
@@ -1304,57 +1464,282 @@ function selectIncumbentSuccessor(
   )[0]
 }
 
+function selectParetoSafeProtectedWinner(
+  productionWinner: ScoredState | undefined,
+  protectedWinner: ScoredState | undefined,
+  layoutScorer: IrregularLayoutScorer.Service
+): ScoredState | undefined {
+  if (productionWinner === undefined) return protectedWinner
+  if (protectedWinner === undefined) return productionWinner
+  const protectedImprovesArea =
+    protectedWinner.score.collisionBoundsAreaMm2 <
+    productionWinner.score.collisionBoundsAreaMm2
+  const protectedImprovesProductionOrder =
+    layoutScorer.compare(protectedWinner.score, productionWinner.score) < 0
+  return protectedImprovesArea && protectedImprovesProductionOrder
+    ? protectedWinner
+    : productionWinner
+}
+
+const PROTECTED_LEGACY_BOUNDARY_LANE_WIDTH = 8
+
+function rankBoundaryAnchorSuccessors(
+  states: ReadonlyArray<ScoredState>,
+  boundaryAnchorStates: ReadonlyArray<IrregularBeamState>
+): ReadonlyArray<ScoredState> {
+  if (boundaryAnchorStates.length === 0) return []
+  return states
+    .filter(({ eligibleForProtectedLane }) => eligibleForProtectedLane)
+    .toSorted(protectedLegacyBoundaryLaneStateOrder)
+}
+
+const rawHullWasteStateCriterion: Order.Order<ScoredState> = Order.mapInput(
+  Order.Number,
+  ({ rawOccupiedHullWasteRatio }) => rawOccupiedHullWasteRatio
+)
+
+const protectedLegacyStrictScoreOrder: Order.Order<ScoredState> = Order.combineAll([
+  scoredStateCriterion((score) => score.unplacedCount),
+  descendingScoredStateCriterion((score) => score.dominantNearCompleteStructuralContactCount),
+  descendingScoredStateCriterion((score) => score.nearCompleteStructuralContactCount),
+  scoredStateCriterion((score) => score.collisionBoundsWorstNormalizedSheetConsumption),
+  scoredStateCriterion((score) => score.collisionBoundsNormalizedSpanSum),
+  scoredStateCriterion((score) => score.collisionBoundsAreaMm2),
+  scoredStateCriterion((score) => score.collisionBoundsSpanMm),
+  rawHullWasteStateCriterion,
+  descendingScoredStateCriterion((score) => score.sharedCollisionBoundaryContactBand),
+  descendingScoredStateCriterion((score) => score.sharedCollisionBoundaryContactUnits),
+  descendingScoredStateCriterion((score) => score.sharedCollisionBoundaryLengthMm),
+  scoredStateCriterion((score) => score.collisionBoundsBottomMm),
+  scoredStateCriterion((score) => score.collisionBoundsLeftMm),
+  descendingScoredStateCriterion((score) => score.largestNetFreeMaterialRegionAreaMm2),
+  scoredStateCriterion((score) => score.freeMaterialRegionCount),
+  scoredStateCriterion((score) => score.freeMaterialHoleCount),
+  scoredStateCriterion((score) => score.freeMaterialSliverMetric),
+  Order.mapInput(Order.Array(Order.String), ({ score }) => score.placementOrder),
+  Order.mapInput(Order.Array(Order.String), ({ score }) => score.unplacedSourcePieceIds),
+  Order.mapInput(Order.String, ({ key }) => key)
+])
+
+const protectedLegacyScaleAwareScoreOrder: Order.Order<ScoredState> = Order.combineAll([
+  scoredStateCriterion((score) => score.unplacedCount),
+  descendingScoredStateCriterion((score) => score.dominantNearCompleteStructuralContactCount),
+  Order.flip(
+    Order.mapInput(Order.Number, ({ score }: ScoredState) =>
+      Math.floor(score.nearCompleteStructuralContactCount / STRUCTURAL_CONTACT_COUNT_BAND_WIDTH)
+    )
+  ),
+  scoredStateCriterion((score) => score.collisionBoundsWorstNormalizedSheetConsumption),
+  scoredStateCriterion((score) => score.collisionBoundsNormalizedSpanSum),
+  scoredStateCriterion((score) => score.collisionBoundsAreaMm2),
+  scoredStateCriterion((score) => score.collisionBoundsSpanMm),
+  rawHullWasteStateCriterion,
+  descendingScoredStateCriterion((score) => score.nearCompleteStructuralContactCount),
+  descendingScoredStateCriterion((score) => score.sharedCollisionBoundaryContactUnits),
+  descendingScoredStateCriterion((score) => score.sharedCollisionBoundaryLengthMm),
+  scoredStateCriterion((score) => score.collisionBoundsBottomMm),
+  scoredStateCriterion((score) => score.collisionBoundsLeftMm),
+  descendingScoredStateCriterion((score) => score.largestNetFreeMaterialRegionAreaMm2),
+  scoredStateCriterion((score) => score.freeMaterialRegionCount),
+  scoredStateCriterion((score) => score.freeMaterialHoleCount),
+  scoredStateCriterion((score) => score.freeMaterialSliverMetric),
+  Order.mapInput(Order.Array(Order.String), ({ score }) => score.placementOrder),
+  Order.mapInput(Order.Array(Order.String), ({ score }) => score.unplacedSourcePieceIds),
+  Order.mapInput(Order.String, ({ key }) => key)
+])
+
+const protectedLegacyBoundaryLaneStateOrder: Order.Order<ScoredState> = Order.make(
+  (first, second) =>
+    first.score.placementOrder.length === second.score.placementOrder.length &&
+    first.score.placementOrder.length > STRICT_STRUCTURAL_CONTACT_PLACEMENT_LIMIT
+      ? protectedLegacyScaleAwareScoreOrder(first, second)
+      : protectedLegacyStrictScoreOrder(first, second)
+)
+
+function scoredStateCriterion(
+  select: (score: IrregularLayoutScore) => number
+): Order.Order<ScoredState> {
+  return Order.mapInput(Order.Number, ({ score }) => select(score))
+}
+
+function descendingScoredStateCriterion(
+  select: (score: IrregularLayoutScore) => number
+): Order.Order<ScoredState> {
+  return Order.flip(scoredStateCriterion(select))
+}
+
 function pruneScoredStates(
   states: ReadonlyArray<ScoredState>,
   beamWidth: number,
+  sheet: SheetSpec,
   layoutScorer: IrregularLayoutScorer.Service,
   incumbent: ScoredState | undefined = undefined,
+  protectedBoundaryAnchors: ReadonlyArray<ScoredState> = [],
+  rankedProtectedBoundarySuccessors: ReadonlyArray<ScoredState> = [],
+  preserveBoundaryAnchorDiversity = true,
   decisionTrace: ActiveDecisionTrace | undefined = undefined,
   stepIndex = 0
-): ReadonlyArray<ScoredState> {
+): {
+  readonly retained: ReadonlyArray<ScoredState>
+  readonly productionSurvivors: ReadonlyArray<ScoredState>
+  readonly boundaryAnchorSurvivors: ReadonlyArray<ScoredState>
+} {
   const ranked = rankScoredStates(states, layoutScorer)
-  const retained =
+  const productionRanked = rankScoredStates(
+    states.filter(({ eligibleForProductionLane }) => eligibleForProductionLane),
+    layoutScorer
+  )
+  const baselineRetained =
     beamWidth <= 1 || incumbent === undefined
-      ? ranked.slice(0, beamWidth)
+      ? productionRanked.slice(0, beamWidth)
       : rankScoredStates(
           [
             incumbent,
-            ...ranked
+            ...productionRanked
               .filter(({ state }) => state !== incumbent.state)
               .slice(0, beamWidth - 1)
           ],
           layoutScorer
         )
+  const boundaryAnchorSurvivors =
+    preserveBoundaryAnchorDiversity && beamWidth > 1
+      ? protectedBoundaryAnchors.length > 0
+        ? protectedBoundaryAnchors
+        : [selectBoundaryAnchorSurvivor(productionRanked, baselineRetained, sheet)].filter(
+            (state): state is ScoredState => state !== undefined
+          )
+      : []
+  const retained = rankScoredStates(
+    [
+      ...baselineRetained,
+      ...boundaryAnchorSurvivors.filter((state) => !baselineRetained.includes(state))
+    ],
+    layoutScorer
+  )
 
   if (decisionTrace !== undefined) {
     const retainedStates = new Set(retained.map(({ state }) => state))
-    const incumbentRank = ranked.findIndex(({ state }) => state === incumbent?.state)
+    const productionRetainedStates = new Set(baselineRetained.map(({ state }) => state))
+    const protectedBoundaryStates = new Set(boundaryAnchorSurvivors.map(({ state }) => state))
+    const productionRanks = new Map(
+      productionRanked.map(({ state }, index) => [state, index] as const)
+    )
+    const protectedRanks = new Map(
+      rankedProtectedBoundarySuccessors.map(({ state }, index) => [state, index] as const)
+    )
+    const incumbentRank =
+      incumbent === undefined ? -1 : (productionRanks.get(incumbent.state) ?? -1)
     const incumbentDisplacedAlternative = incumbentRank >= beamWidth
     for (const [stateIndex, scoredState] of ranked.entries()) {
       const retainedState = retainedStates.has(scoredState.state)
+      const retainedByProduction = productionRetainedStates.has(scoredState.state)
+      const retainedOnlyByProtection =
+        !retainedByProduction && protectedBoundaryStates.has(scoredState.state)
+      const productionRank = productionRanks.get(scoredState.state)
+      const protectedRank = protectedRanks.get(scoredState.state)
       const protectedIncumbent =
-        retainedState && incumbentDisplacedAlternative && scoredState.state === incumbent?.state
+        retainedByProduction &&
+        incumbentDisplacedAlternative &&
+        scoredState.state === incumbent?.state
       const displacedByIncumbent =
-        !retainedState && incumbentDisplacedAlternative && stateIndex < beamWidth
+        !retainedState &&
+        incumbentDisplacedAlternative &&
+        productionRank !== undefined &&
+        productionRank < beamWidth
       decisionTrace.emit(new IrregularDecisionTraceBeamSelection({
         decodeId: decisionTrace.decodeId,
         chromosomeId: decisionTrace.chromosomeId,
         decodeSource: decisionTrace.decodeSource,
         stepIndex,
         stateId: decisionTrace.stateIds.idFor(scoredState.key),
-        rank: stateIndex + 1,
+        rank: (productionRank ?? protectedRank ?? stateIndex) + 1,
         decision: retainedState ? 'retained' : 'pruned',
         reason: protectedIncumbent
           ? 'protected_incumbent'
+          : retainedByProduction
+            ? 'within_beam_width'
+          : retainedOnlyByProtection
+            ? 'protected_boundary_anchor_survivor'
           : displacedByIncumbent
             ? 'displaced_by_protected_incumbent'
-            : retainedState
-              ? 'within_beam_width'
-              : 'outside_beam_width'
+            : 'outside_beam_width'
       }))
     }
   }
-  return retained
+  return {
+    retained,
+    productionSurvivors: baselineRetained,
+    boundaryAnchorSurvivors
+  }
+}
+
+function selectBoundaryAnchorSurvivor(
+  ranked: ReadonlyArray<ScoredState>,
+  retained: ReadonlyArray<ScoredState>,
+  sheet: SheetSpec
+): ScoredState | undefined {
+  const retainedStates = new Set(retained.map(({ state }) => state))
+  const anchorClassesByScore = new Map<string, Set<string>>()
+  for (const { state, score } of retained) {
+    const scoreKey = positionIndependentLayoutScoreKey(score)
+    const anchorClass = sheetBoundaryAnchorClass(state, sheet)
+    if (anchorClass === undefined) continue
+    const classes = anchorClassesByScore.get(scoreKey)
+    if (classes === undefined) {
+      anchorClassesByScore.set(scoreKey, new Set([anchorClass]))
+    } else {
+      classes.add(anchorClass)
+    }
+  }
+
+  for (const candidate of ranked) {
+    if (retainedStates.has(candidate.state)) continue
+    const scoreKey = positionIndependentLayoutScoreKey(candidate.score)
+    const anchorClass = sheetBoundaryAnchorClass(candidate.state, sheet)
+    if (anchorClass === undefined) continue
+    const representedClasses = anchorClassesByScore.get(scoreKey)
+    if (representedClasses !== undefined && !representedClasses.has(anchorClass)) return candidate
+  }
+  return undefined
+}
+
+function positionIndependentLayoutScoreKey(score: IrregularLayoutScore): string {
+  const scaleAware = score.placementOrder.length > STRICT_STRUCTURAL_CONTACT_PLACEMENT_LIMIT
+  return JSON.stringify([
+    score.unplacedCount,
+    score.dominantNearCompleteStructuralContactCount,
+    scaleAware
+      ? Math.floor(
+          score.nearCompleteStructuralContactCount / STRUCTURAL_CONTACT_COUNT_BAND_WIDTH
+        )
+      : score.nearCompleteStructuralContactCount,
+    score.collisionBoundsWorstNormalizedSheetConsumption,
+    score.collisionBoundsNormalizedSpanSum,
+    score.collisionBoundsAreaMm2,
+    score.collisionBoundsSpanMm,
+    score.occupiedHullWasteRatio,
+    scaleAware ? score.nearCompleteStructuralContactCount : score.sharedCollisionBoundaryContactBand,
+    score.sharedCollisionBoundaryContactUnits,
+    score.sharedCollisionBoundaryLengthMm
+  ])
+}
+
+function sheetBoundaryAnchorClass(state: IrregularBeamState, sheet: SheetSpec): string | undefined {
+  const bounds = state.translatedCollisionBounds
+  if (bounds === undefined) return undefined
+  const minX = canonicalizeIrregularScoreMillimeters(bounds.minX)
+  const minY = canonicalizeIrregularScoreMillimeters(bounds.minY)
+  const maxX = canonicalizeIrregularScoreMillimeters(bounds.maxX)
+  const maxY = canonicalizeIrregularScoreMillimeters(bounds.maxY)
+  if (minX === undefined || minY === undefined || maxX === undefined || maxY === undefined) {
+    return undefined
+  }
+  const anchors: string[] = []
+  if (minY === 0) anchors.push('bottom')
+  if (minX === 0) anchors.push('left')
+  if (maxY === sheet.height) anchors.push('top')
+  if (maxX === sheet.width) anchors.push('right')
+  return anchors.length === 0 ? undefined : anchors.join('-')
 }
 
 function compareRepresentativeStates(first: KeyedState, second: KeyedState): -1 | 0 | 1 {

@@ -1,0 +1,84 @@
+{
+  "experiment": "protected-boundary-anchor-diversity",
+  "classification": "accepted repair-disabled quality lane; sheet invariance unresolved",
+  "productionBaseCommit": "f68be50e724ffa40e059342f33168de7937b4f7c",
+  "experimentalCommit": "680e9a55f38eca56684a46c20169279397edaffe",
+  "branch": "protected-boundary-anchor-diversity",
+  "netCodeDiffSha256": "9b02ded07ee4c94772dd49f69d7c71d0b2a0b12f08f93c2b2326790297a0ecd1",
+  "fixture": {
+    "path": "tests/fixtures/irregularSheetInvariance/mixed61-request.json",
+    "sha256": "cf390e7a851eb1f267c5ff986032ce003372483863f3ed5e31d963bc24b95660"
+  },
+  "runtime": {
+    "node": "v24.16.0",
+    "pnpm": "11.8.0",
+    "os": "Darwin 25.5.0 arm64"
+  },
+  "commands": {
+    "baselineCorpus": "pnpm corpus:sheet-invariance --output /private/tmp/min-plane-provenance/boundary-anchor-current-base/f68be50/corpus",
+    "candidateCorpus": "pnpm corpus:sheet-invariance --output /private/tmp/min-plane-provenance/boundary-anchor-current-base/680e9a5/corpus",
+    "focusedTests": "pnpm test:focused tests/unit/irregularWindowedBeam.test.ts tests/unit/irregularLayoutScorer.test.ts tests/unit/irregularTriangleCompactGolden.test.ts tests/unit/decisionTraceNdjson.test.ts",
+    "lint": "pnpm lint:fix",
+    "typecheck": "pnpm typecheck"
+  },
+  "artifacts": [
+    {
+      "path": "/private/tmp/min-plane-provenance/boundary-anchor-current-base/f68be50/corpus/report.json",
+      "sha256": "18eebe100865f6be29feec12082c35e2a5169eab8197441c2a4d06b83558b0da"
+    },
+    {
+      "path": "/private/tmp/min-plane-provenance/boundary-anchor-current-base/680e9a5/corpus/report.json",
+      "sha256": "9be4065757a3b35b9a465ff6515606ae9a427d10492f1325ae9498ad768af3e2"
+    },
+    {
+      "path": "/private/tmp/min-plane-provenance/boundary-anchor-current-base/f68be50/four-sheet-extra/report.json",
+      "sha256": "97ef276b5e209bb1e069a3cf7a8bac897ad6a044c4740757911df937ff794af9"
+    },
+    {
+      "path": "/private/tmp/min-plane-provenance/boundary-anchor-current-base/ad73bc3/four-sheet-extra/report.json",
+      "sha256": "bdb6cac9417162e3be5a7f16c7168f68ca479fa9f06379b694a6b9b174d55db9",
+      "note": "search-equivalent pre-review checkpoint used for the two additional sheet sizes"
+    },
+    {
+      "path": "/private/tmp/min-plane-provenance/boundary-anchor-current-base/680e9a5/mixed61-2000x2700.ndjson",
+      "sha256": "4c70bf51ca9cd313dffeac9a4b5f9356bbd076f457cd1cbc3a52f1ffb3c7686c",
+      "eventCount": 91932
+    },
+    {
+      "path": "/private/tmp/min-plane-provenance/boundary-anchor-current-base/680e9a5/mixed61-2000x2700-winning-path.json",
+      "sha256": "81ca148d1503a4e6851f31e824b2afaeb239a63ff387c3b92579dc6e941459d2"
+    },
+    {
+      "path": "/private/tmp/min-plane-provenance/boundary-anchor-current-base/680e9a5/corpus/mixed-61-2000x2700.svg",
+      "sha256": "2d8556fc00b7517a4b3c06a35dac1c3f755063f94f840de22b53a89b4a6f6c93"
+    },
+    {
+      "path": "/private/tmp/min-plane-provenance/boundary-anchor-current-base/680e9a5/corpus/mixed-61-2000x2700.png",
+      "sha256": "cfb4e876cafd676f835434e7f201bf3e9a7188cb69c774a261ce569bc3c66d1a"
+    }
+  ],
+  "mixed61Reference": {
+    "sheet": { "width": 2000, "height": 2700 },
+    "baseline": {
+      "canonicalSha256": "2a1b33017a1226142e462230297e93574c1898215fc68267945ab96cfca1562f",
+      "envelopeAreaMm2": 436770.03860424884,
+      "structuralContacts": 42,
+      "dominantStructuralContacts": 10,
+      "freeMaterialHoles": 10
+    },
+    "candidate": {
+      "canonicalSha256": "40f8ac9c0fb24073ac141b5fb667366af55df90c78c6cca21ff76703a4a7f300",
+      "envelopeAreaMm2": 430344.9175273483,
+      "structuralContacts": 53,
+      "dominantStructuralContacts": 14,
+      "freeMaterialHoles": 2
+    }
+  },
+  "validation": {
+    "lint": "passed",
+    "typecheck": "passed",
+    "focusedTests": "73 passed",
+    "review": "approved after 3 exchanges and 7 resolved major findings",
+    "visualInspection": "passed; complete margins, no clipping, coherent connected cluster"
+  }
+}

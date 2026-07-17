@@ -276,7 +276,7 @@ function scoreDerivedState(
   const dominantNearCompleteStructuralContactCount =
     input.state.dominantNearCompleteStructuralContactCount
   const occupiedHullWasteRatio = canonicalizeIrregularScoreScalar(
-    deriveOccupiedHullWasteRatio(input.state) ?? Number.NaN
+    deriveRawOccupiedHullWasteRatio(input.state) ?? Number.NaN
   )
 
   if (
@@ -409,7 +409,10 @@ function polygonPerimeter(polygon: IrregularPolygon): number {
   return perimeter
 }
 
-function deriveOccupiedHullWasteRatio(state: IrregularBeamState): number | undefined {
+/** Returns the pre-grid hull ratio for diagnostics and protected legacy comparisons. */
+export function deriveRawOccupiedHullWasteRatio(
+  state: IrregularBeamState
+): number | undefined {
   const occupiedPoints: InternalPoint[] = []
   let occupiedArea = 0
 
