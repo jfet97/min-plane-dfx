@@ -4,6 +4,9 @@
 `780d4ec5-b64e-4f48-a8d8-0bfd30877549`. Its original sheet is `2000 x 2700 mm`,
 with `10 mm` padding, reorder window `4`, beam width `8`, local fanout `4`,
 repair disabled, transform cap `8`, edge-contact policy, and GA disabled.
+The fixture explicitly enables the protected canonical-reference decode. This
+schema migration changes only that execution opt-in; its pieces, source geometry,
+sheet, padding, and all pre-existing optimizer evidence remain unchanged.
 
 The sheet-invariance corpus replays the same prepared pieces and optimizer
 settings on `1000 x 1700 mm` and `2000 x 2700 mm` sheets. Both sheets admit the

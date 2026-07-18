@@ -42,13 +42,6 @@ const mixedRequest = Schema.decodeUnknownSync(NestingRequest)(
 )
 const mixedSettings = mixedRequest.options.irregularSettings
 if (mixedSettings === undefined) throw new Error('mixed-61 fixture must carry irregular settings')
-const canonicalSettings = Schema.decodeUnknownSync(IrregularNestingSettings)({
-  ...mixedSettings,
-  optimizer: {
-    ...mixedSettings.optimizer,
-    canonicalReferenceDecodeEnabled: true
-  }
-})
 const compactQualityNoRepairSettings = Schema.decodeUnknownSync(IrregularNestingSettings)({
   ...mixedSettings,
   optimizer: makeCompactQualityIrregularOptimizerSettings({ localRepairBudget: 0 })
@@ -162,6 +155,16 @@ const canonicalScore = () =>
   })
 
 describe('canonical reference coordinator policy', () => {
+  it('keeps the flagship sheet-invariance fixture explicitly on the protected role', () => {
+    expect(mixedSettings.optimizer.canonicalReferenceDecodeEnabled).toBe(true)
+    expect(
+      isCanonicalReferenceRoleEligible(nonReferenceRequest, mixedSettings, mixedScalePrepared)
+    ).toBe(true)
+    expect(
+      canonicalReferenceDecodeSheets(nonReferenceRequest, mixedSettings, mixedScalePrepared)
+    ).toHaveLength(2)
+  })
+
   it('does not claim a canonical attempt when production cancellation skips the role', () => {
     const diagnostics = canonicalReferenceRoleLifecycleDiagnostics({
       shouldAttemptCanonical: true,
@@ -223,20 +226,20 @@ describe('canonical reference coordinator policy', () => {
 
   it('plans two decodes only for eligible non-reference jobs', () => {
     expect(
-      isCanonicalReferenceRoleEligible(nonReferenceRequest, canonicalSettings, mixedScalePrepared)
+      isCanonicalReferenceRoleEligible(nonReferenceRequest, mixedSettings, mixedScalePrepared)
     ).toBe(true)
     expect(
-      canonicalReferenceDecodeSheets(nonReferenceRequest, canonicalSettings, mixedScalePrepared)
+      canonicalReferenceDecodeSheets(nonReferenceRequest, mixedSettings, mixedScalePrepared)
     ).toHaveLength(2)
 
     const referenceRequest = new NestingRequest({
       ...mixedRequest,
       sheet:
-        canonicalReferenceDecodeSheets(nonReferenceRequest, canonicalSettings, mixedScalePrepared)[1] ??
+        canonicalReferenceDecodeSheets(nonReferenceRequest, mixedSettings, mixedScalePrepared)[1] ??
         mixedRequest.sheet
     })
     expect(
-      canonicalReferenceDecodeSheets(referenceRequest, canonicalSettings, mixedScalePrepared)
+      canonicalReferenceDecodeSheets(referenceRequest, mixedSettings, mixedScalePrepared)
     ).toHaveLength(1)
 
     const firstPiece = mixedRequest.pieces[0]
@@ -253,22 +256,22 @@ describe('canonical reference coordinator policy', () => {
       )
     })
     expect(
-      canonicalReferenceDecodeSheets(homogeneousRequest, canonicalSettings, homogeneousPrepared)
+      canonicalReferenceDecodeSheets(homogeneousRequest, mixedSettings, homogeneousPrepared)
     ).toHaveLength(1)
     expect(
-      canonicalReferenceDecodeSheets(homogeneousRequest, canonicalSettings, mixedScalePrepared)
+      canonicalReferenceDecodeSheets(homogeneousRequest, mixedSettings, mixedScalePrepared)
     ).toHaveLength(1)
     expect(
       canonicalReferenceDecodeSheets(
         nonReferenceRequest,
-        canonicalSettings,
+        mixedSettings,
         uniformMultiFamilyPrepared
       )
     ).toHaveLength(1)
     expect(
       canonicalReferenceDecodeSheets(
         new NestingRequest({ ...homogeneousRequest, pieces: homogeneousRequest.pieces.slice(0, 20) }),
-        canonicalSettings,
+        mixedSettings,
         mixedScalePrepared.slice(0, 20)
       )
     ).toHaveLength(1)
@@ -309,8 +312,8 @@ describe('canonical reference coordinator policy', () => {
   it('keeps repair, GA, and short-side-fill jobs on one decode', () => {
     const settings = (overrides: Record<string, unknown>) =>
       Schema.decodeUnknownSync(IrregularNestingSettings)({
-        ...canonicalSettings,
-        optimizer: { ...canonicalSettings.optimizer, ...overrides }
+        ...mixedSettings,
+        optimizer: { ...mixedSettings.optimizer, ...overrides }
       })
     for (const ineligible of [
       settings({ localRepairBudget: 1 }),

@@ -29,6 +29,10 @@ The collision-area ratio must be at least `4x` and at least two interchangeabili
 families must be present. The schema-owned `canonicalReferenceDecodeEnabled`
 capability defaults to false and is enabled by the compact-quality factory only,
 so homogeneous and ordinary deterministic jobs do not pay for the second decode.
+The flagship `mixed61-request.json` fixture carries the same explicit opt-in so
+the sheet-invariance corpus cannot silently fall back to one decode. That fixture
+migration does not change its pieces, source geometry, sheet, padding, or any
+pre-existing optimizer value.
 
 The protected finalist is the exact legal terminal beam state. Only bottom-left
 anchored q0 and q90 rigid orientations may be admitted, and their collision
