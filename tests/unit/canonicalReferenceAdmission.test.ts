@@ -385,6 +385,40 @@ describe('canonical reference coordinator policy', () => {
     ).toEqual({ admitted: true, reason: 'canonical role passed every exact admission guard' })
   })
 
+  it('treats equality as no worse for the max-side dominance waiver', () => {
+    const productionMaxSideMm = 700.365
+    const canonicalMaxSideMm = 788.878
+    const productionAreaMm2 = 461_476
+    const canonicalAreaMm2 = 430_344
+    const equalTopology: CanonicalLayoutTopology = {
+      largestOccupiedHullGapRatio: 0.228,
+      positiveContactComponentCount: 13,
+      isolatedPieceCount: 6,
+      largestPositiveContactComponentSize: 20
+    }
+
+    expect(
+      evaluateCanonicalReferenceAdmissionMetrics({
+        production: score({
+          collisionBoundsAreaMm2: productionAreaMm2,
+          collisionBoundsSpanMm: productionMaxSideMm + productionAreaMm2 / productionMaxSideMm,
+          freeMaterialHoleCount: 10,
+          nearCompleteStructuralContactCount: 44,
+          dominantNearCompleteStructuralContactCount: 9
+        }),
+        productionTopology: equalTopology,
+        canonical: score({
+          collisionBoundsAreaMm2: canonicalAreaMm2,
+          collisionBoundsSpanMm: canonicalMaxSideMm + canonicalAreaMm2 / canonicalMaxSideMm,
+          freeMaterialHoleCount: 10,
+          nearCompleteStructuralContactCount: 44,
+          dominantNearCompleteStructuralContactCount: 9
+        }),
+        canonicalTopology: equalTopology
+      })
+    ).toEqual({ admitted: true, reason: 'canonical role passed every exact admission guard' })
+  })
+
   it('keeps the max-side cap for a contact-non-dominant long-chain finalist', () => {
     const productionMaxSideMm = 700.365
     const canonicalMaxSideMm = 788.878
@@ -410,6 +444,46 @@ describe('canonical reference coordinator policy', () => {
         freeMaterialHoleCount: 2,
         nearCompleteStructuralContactCount: 43,
         dominantNearCompleteStructuralContactCount: 9
+      }),
+      canonicalTopology: {
+        largestOccupiedHullGapRatio: 0.119,
+        positiveContactComponentCount: 5,
+        isolatedPieceCount: 2,
+        largestPositiveContactComponentSize: 53
+      }
+    })
+
+    expect(decision).toEqual({
+      admitted: false,
+      reason: 'max side exceeded the protected-role admission slack'
+    })
+  })
+
+  it('keeps the max-side cap when only dominant-contact slack is consumed', () => {
+    const productionMaxSideMm = 700.365
+    const canonicalMaxSideMm = 788.878
+    const productionAreaMm2 = 461_476
+    const canonicalAreaMm2 = 430_344
+    const decision = evaluateCanonicalReferenceAdmissionMetrics({
+      production: score({
+        collisionBoundsAreaMm2: productionAreaMm2,
+        collisionBoundsSpanMm: productionMaxSideMm + productionAreaMm2 / productionMaxSideMm,
+        freeMaterialHoleCount: 10,
+        nearCompleteStructuralContactCount: 44,
+        dominantNearCompleteStructuralContactCount: 9
+      }),
+      productionTopology: {
+        largestOccupiedHullGapRatio: 0.228,
+        positiveContactComponentCount: 13,
+        isolatedPieceCount: 6,
+        largestPositiveContactComponentSize: 20
+      },
+      canonical: score({
+        collisionBoundsAreaMm2: canonicalAreaMm2,
+        collisionBoundsSpanMm: canonicalMaxSideMm + canonicalAreaMm2 / canonicalMaxSideMm,
+        freeMaterialHoleCount: 2,
+        nearCompleteStructuralContactCount: 44,
+        dominantNearCompleteStructuralContactCount: 8
       }),
       canonicalTopology: {
         largestOccupiedHullGapRatio: 0.119,
