@@ -3,12 +3,13 @@
 ## Status
 
 Production-candidate implementation on branch `canonical-reference-decode-handoff`.
-The mixed-61 two-sheet smoke and full corpus gates remain for the parent experiment.
+The two-sheet mixed-61 smoke is green; four-sheet, corpus, and ten-sheet gates remain.
 
 ## Measured Premise
 
 The real `2000 x 2700` mixed-61 decode produces the approved canonical collision
-arrangement (`40f8ac9c...`, `430344.918 mm2`, two holes, contacts `53/14`). Probe
+arrangement (`40f8ac9c0fb24073ac141b5fb667366af55df90c78c6cca21ff76703a4a7f300`,
+`430344.918 mm2`, two holes, contacts `53/14`). Probe
 `5b800b3` established that this exact integer-grid arrangement is legal on all
 four original sheets even though requested-sheet search does not retain the
 candidates needed to reproduce it. Comparator-only variants therefore cannot
@@ -16,12 +17,14 @@ close this gap.
 
 ## Candidate
 
-Eligible jobs run the unchanged requested-sheet portfolio and one protected
+Eligible scale-diverse, multi-family jobs run the unchanged requested-sheet portfolio and one protected
 portfolio on a fixed `2000 x 2700` reference sheet. The outer coordinator never
 recurses through `computeIrregularNesting` or through the portfolio. It prepares
 pieces once, buffers each role's winning-path snapshots privately, suppresses
 protected user progress, shares cancellation, and aggregates full-decode
 instrumentation. A request already on the reference sheet performs one decode.
+The collision-area ratio must be at least `4x` and at least two interchangeability
+families must be present, so homogeneous jobs do not pay for the second decode.
 
 The protected finalist is the exact legal terminal beam state. Only bottom-left
 anchored q0 and q90 rigid orientations may be admitted, and their collision
@@ -62,9 +65,23 @@ rigid quarter-turns. Selection policy remains in `src/workers/algorithm/`.
 - reference reuse, repair/GA/short-side-fill exclusion, existing portfolio tests,
   and the exact 20-triangle repair-8 golden remain green.
 
+The post-`cea022a` two-sheet smoke produced the same canonical hash on both sheets:
+
+```text
+canonical hash: 40f8ac9c0fb24073ac141b5fb667366af55df90c78c6cca21ff76703a4a7f300
+area:           430344.917527 mm2
+holes:          2
+contacts:       53 / 14
+2000 x 1700:    about 89.5 s
+2000 x 2700:    about 40.0 s
+```
+
+The renderer irregular timeout floor is therefore `120000 ms`, leaving headroom
+over the measured protected pass without changing rectangular-worker defaults.
+
 ## Remaining Gate
 
-Do not promote from this report alone. Run the mixed-61 requested/reference sheet
-smoke first and confirm selected-role history final-frame identity, canonical hash,
-the approved quality metrics, role diagnostics, runtime, and aggregated decode
-count. Then run the four-sheet and corpus gates before merging.
+Do not promote from this report alone. The two-sheet smoke confirmed the canonical
+hash and approved quality metrics. Run the four-sheet, corpus, and ten-sheet gates,
+including selected-role history, role diagnostics, runtime, and aggregated decode
+counts, before merging.

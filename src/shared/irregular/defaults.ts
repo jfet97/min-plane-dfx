@@ -9,8 +9,21 @@ import {
   IrregularOptimizerSettings
 } from './domain.js'
 import type { IrregularWorkerMode } from './domain.js'
+import type { NestingOptions } from '../domain/nesting.js'
 
 export const IRREGULAR_WORKER_MODE: IrregularWorkerMode = 'irregular-convex-v2'
+/** Covers the measured 89.5 s protected mixed-61 decode with worker-supervisor headroom. */
+export const DEFAULT_IRREGULAR_WORKER_TIMEOUT_MS = 120_000
+
+/** Raises only irregular jobs to their measured-safe worker timeout floor. */
+export function workerTimeoutForMode(
+  workerMode: NestingOptions['workerMode'],
+  currentTimeoutMs: number
+): number {
+  return workerMode === IRREGULAR_WORKER_MODE
+    ? Math.max(currentTimeoutMs, DEFAULT_IRREGULAR_WORKER_TIMEOUT_MS)
+    : currentTimeoutMs
+}
 
 export const DEFAULT_FLATTENING_SAG_TOLERANCE_MM = 0.25
 export const HIGH_PRECISION_FLATTENING_SAG_TOLERANCE_MM = 0.1

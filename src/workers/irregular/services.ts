@@ -192,6 +192,8 @@ export interface RunPortfolioInput {
     beamWidth: number
   ) => void
   readonly emitDecisionTrace?: EmitIrregularDecisionTrace
+  /** Optional outer-role namespace preventing trace decode-id collisions. */
+  readonly decisionTraceDecodeIdPrefix?: string
   /** Private algorithm seam retaining the exact selected legal terminal state. */
   readonly onSelectedState?: (state: IrregularBeamState) => void
   readonly isCancelled?: () => boolean

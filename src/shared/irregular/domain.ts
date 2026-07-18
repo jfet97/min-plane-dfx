@@ -641,6 +641,8 @@ export class IrregularHistoryFrame extends Schema.Class<IrregularHistoryFrame>(
 export class IrregularPortfolioProgress extends Schema.Class<IrregularPortfolioProgress>(
   'IrregularPortfolioProgress'
 )({
+  /** Optional outer-coordinator role for multi-decode progress streams. */
+  decodeRole: Schema.optional(Schema.Literals(['production', 'canonical-reference'])),
   phase: IrregularPortfolioPhase,
   generation: Schema.optional(Schema.Number),
   evaluationsCompleted: Schema.optional(Schema.Number),

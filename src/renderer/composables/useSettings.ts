@@ -8,7 +8,8 @@ import {
 } from '@shared/domain/layoutSelectionStrategies.js'
 import {
   IRREGULAR_WORKER_MODE,
-  makeDefaultIrregularNestingSettings
+  makeDefaultIrregularNestingSettings,
+  workerTimeoutForMode
 } from '@shared/irregular/defaults.js'
 
 export interface SettingsState {
@@ -128,6 +129,7 @@ export function useSettings() {
     },
     setWorkerMode: (mode: NestingOptions['workerMode']): void => {
       state.options.workerMode = mode
+      state.options.timeoutMs = workerTimeoutForMode(mode, state.options.timeoutMs)
       if (mode === IRREGULAR_WORKER_MODE && state.options.irregularSettings === undefined) {
         state.options.irregularSettings = makeDefaultIrregularNestingSettings()
       }

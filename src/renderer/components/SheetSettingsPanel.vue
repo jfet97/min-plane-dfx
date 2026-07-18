@@ -7,6 +7,7 @@ import IrregularSettingsPanel from './IrregularSettingsPanel.vue'
 import { STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js'
 import { LAYOUT_SELECTION_STRATEGIES } from '@shared/domain/layoutSelectionStrategies.js'
 import {
+  workerTimeoutForMode,
   IRREGULAR_WORKER_MODE,
   makeDefaultIrregularNestingSettings
 } from '@shared/irregular/defaults.js'
@@ -148,8 +149,8 @@ function selectWorkerMode(workerMode: NestingOptions['workerMode']): void {
     ...(needsIrregularSettings
       ? { irregularSettings: makeDefaultIrregularNestingSettings() }
       : {}),
-    ...(workerMode === IRREGULAR_WORKER_MODE && model.value.options.timeoutMs < 60_000
-      ? { timeoutMs: 60_000 }
+    ...(workerMode === IRREGULAR_WORKER_MODE
+      ? { timeoutMs: workerTimeoutForMode(workerMode, model.value.options.timeoutMs) }
       : {})
   })
 }

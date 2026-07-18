@@ -254,7 +254,10 @@ function runPortfolio(
           ? {
               emitDecisionTrace: input.emitDecisionTrace,
               decisionTraceIdentity: {
-                decodeId,
+                decodeId: prefixedDecisionTraceDecodeId(
+                  input.decisionTraceDecodeIdPrefix,
+                  decodeId
+                ),
                 chromosomeId: decisionTraceChromosomeIds.idFor(chromosomeKey(chromosome)),
                 decodeSource
               }
@@ -486,6 +489,13 @@ function runPortfolio(
       )
     )
   })
+}
+
+export function prefixedDecisionTraceDecodeId(
+  prefix: string | undefined,
+  decodeId: string
+): string {
+  return prefix === undefined ? decodeId : `${prefix}${decodeId}`
 }
 
 function decodeChromosome(input: {

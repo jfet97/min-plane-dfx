@@ -42,6 +42,7 @@ import {
 } from './portfolioSearch.js'
 import { PriorityOrderServiceLive } from './priorityOrderService.js'
 import type { EmitIrregularDecisionTrace } from './decisionTrace.js'
+import { hasScaleDiverseMultiFamilyWorkload } from './canonicalReferenceWorkload.js'
 import {
   assertCanonicalGridLegalLayout,
   canonicalCollisionLayoutIdentity,
@@ -236,12 +237,21 @@ function coordinateCanonicalReferenceDecode(
   IrregularComputeErrorType
 > {
   return Effect.gen(function* () {
-    const production = yield* runSingleSheetPortfolio(input, input.request.sheet, true)
-    const shouldAttemptCanonical = isCanonicalReferenceRoleEligible(input.request, input.settings)
+    const shouldAttemptCanonical = isCanonicalReferenceRoleEligible(
+      input.request,
+      input.settings,
+      input.preparedPieces
+    )
     const reusesProduction = isCanonicalReferenceSheet(input.request.sheet) && shouldAttemptCanonical
+    const hasProtectedPass = shouldAttemptCanonical && !reusesProduction
+    const production = yield* runSingleSheetPortfolio(
+      input,
+      input.request.sheet,
+      hasProtectedPass ? 'production' : undefined
+    )
     const canonical =
-      shouldAttemptCanonical && !reusesProduction && production.portfolio.status !== 'cancelled'
-        ? yield* runSingleSheetPortfolio(input, CANONICAL_REFERENCE_SHEET, false)
+      hasProtectedPass && production.portfolio.status !== 'cancelled'
+        ? yield* runSingleSheetPortfolio(input, CANONICAL_REFERENCE_SHEET, 'canonical-reference')
         : production
 
     if (input.options?.onPortfolioMetrics !== undefined) {
@@ -316,15 +326,20 @@ function coordinateCanonicalReferenceDecode(
     for (const snapshot of selected.stateSnapshots) {
       input.options?.emitStateSnapshot?.(snapshot, input.settings.optimizer.beamWidth)
     }
+    input.options?.onFinalizationMetrics?.(selected.finalizationMetrics)
     return {
-      ...selected,
+      placedCollisionGeometries: selected.placedCollisionGeometries,
+      score: selected.score,
+      unplacedPieceIds: selected.unplacedPieceIds,
       diagnostics: [
         ...input.diagnostics,
         ...selected.score.freeMaterialSnapshot.diagnostics,
         ...roleDiagnostics
       ],
       sortedPieceIds: input.sortedPieceIds,
-      beamWidth: input.settings.optimizer.beamWidth
+      stateSnapshots: selected.stateSnapshots,
+      beamWidth: input.settings.optimizer.beamWidth,
+      portfolio: selected.portfolio
     }
   })
 }
@@ -340,7 +355,7 @@ function withCancelledPortfolioStatus(portfolio: IrregularPortfolioResult): Irre
 function runSingleSheetPortfolio(
   input: CanonicalReferenceCoordinatorInput,
   sheet: SheetSpec,
-  publishProgress: boolean
+  decodeRole: 'production' | 'canonical-reference' | undefined
 ): Effect.Effect<SingleSheetDecode, IrregularComputeErrorType> {
   return Effect.gen(function* () {
     const stateSnapshots: IrregularStateSnapshot[] = []
@@ -379,13 +394,20 @@ function runSingleSheetPortfolio(
       onSelectedState: (state: IrregularBeamState) => {
         terminalState = state
       },
-      ...(publishProgress && input.options?.emitPortfolioProgress !== undefined
-        ? { onProgress: input.options.emitPortfolioProgress }
+      ...(input.options?.emitPortfolioProgress !== undefined
+        ? {
+            onProgress: (progress: IrregularPortfolioProgress) =>
+              input.options?.emitPortfolioProgress?.(
+                portfolioProgressForDecodeRole(progress, decodeRole)
+              ) ?? Effect.void
+          }
         : {}),
-      ...(publishProgress &&
-      input.request.options.historyMode !== 'off' &&
+      ...(input.request.options.historyMode !== 'off' &&
       input.options?.emitDecisionTrace !== undefined
         ? { emitDecisionTrace: input.options.emitDecisionTrace }
+        : {}),
+      ...(decodeRole !== undefined
+        ? { decisionTraceDecodeIdPrefix: `${decodeRole}:` }
         : {}),
       ...(input.options?.isCancelled !== undefined
         ? { isCancelled: input.options.isCancelled }
@@ -397,7 +419,18 @@ function runSingleSheetPortfolio(
   })
 }
 
-type MaterializedDecode = IrregularComputeResult
+export function portfolioProgressForDecodeRole(
+  progress: IrregularPortfolioProgress,
+  decodeRole: 'production' | 'canonical-reference' | undefined
+): IrregularPortfolioProgress {
+  return decodeRole === undefined
+    ? progress
+    : new IrregularPortfolioProgress({ ...progress, decodeRole })
+}
+
+interface MaterializedDecode extends IrregularComputeResult {
+  readonly finalizationMetrics: IrregularFinalizationMetrics
+}
 
 function materializeProductionResult(
   input: CanonicalReferenceCoordinatorInput,
@@ -430,10 +463,6 @@ function materializeProductionResult(
       state: reconstructedState
     })
     const score = preservePortfolioContactMetrics(reconstructedScore, decoded.portfolio.score)
-    input.options?.onFinalizationMetrics?.({
-      reconstructionElapsedMs,
-      finalScoreElapsedMs: Math.max(0, performance.now() - scoringStartedAt)
-    })
     return {
       placedCollisionGeometries,
       score,
@@ -442,7 +471,14 @@ function materializeProductionResult(
       sortedPieceIds: input.sortedPieceIds,
       stateSnapshots: decoded.stateSnapshots,
       beamWidth: input.settings.optimizer.beamWidth,
-      portfolio: decoded.portfolio
+      portfolio: decoded.portfolio,
+      finalizationMetrics: {
+        reconstructionElapsedMs,
+        finalScoreElapsedMs:
+          input.options?.onFinalizationMetrics === undefined
+            ? 0
+            : Math.max(0, performance.now() - scoringStartedAt)
+      }
     }
   })
 }
@@ -451,6 +487,7 @@ interface FittingCanonicalCandidate {
   readonly rotationDeg: 0 | 90
   readonly state: IrregularBeamState
   readonly score: IrregularLayoutScore
+  readonly finalScoreElapsedMs: number
 }
 
 function fittingCanonicalCandidates(
@@ -465,8 +502,18 @@ function fittingCanonicalCandidates(
       terminalState,
       input.request.sheet
     )) {
+      const scoringStartedAt =
+        input.options?.onFinalizationMetrics === undefined ? 0 : performance.now()
       const score = yield* input.layoutScorer.scoreState({ sheet: input.request.sheet, state })
-      candidates.push({ rotationDeg, state, score })
+      candidates.push({
+        rotationDeg,
+        state,
+        score,
+        finalScoreElapsedMs:
+          input.options?.onFinalizationMetrics === undefined
+            ? 0
+            : Math.max(0, performance.now() - scoringStartedAt)
+      })
     }
     return candidates
   })
@@ -514,7 +561,11 @@ function materializeCanonicalResult(
     sortedPieceIds: input.sortedPieceIds,
     stateSnapshots,
     beamWidth: input.settings.optimizer.beamWidth,
-    portfolio
+    portfolio,
+    finalizationMetrics: {
+      reconstructionElapsedMs: 0,
+      finalScoreElapsedMs: candidate.finalScoreElapsedMs
+    }
   }
 }
 
@@ -552,7 +603,8 @@ export function orientCanonicalStateSnapshots(
 
 export function isCanonicalReferenceRoleEligible(
   request: NestingRequest,
-  settings: IrregularNestingSettings
+  settings: IrregularNestingSettings,
+  preparedPieces: ReadonlyArray<IrregularPreparedPiece>
 ): boolean {
   const optimizer = settings.optimizer
   const gaDisabled =
@@ -563,6 +615,11 @@ export function isCanonicalReferenceRoleEligible(
     (optimizer.gaEvaluationBudget ?? 128) === 0
   return (
     request.pieces.length > 20 &&
+    preparedPieces.length > 20 &&
+    hasScaleDiverseMultiFamilyWorkload(
+      preparedPieces,
+      request.pieces.map((piece) => piece.interchangeabilityKey ?? piece.sourcePieceId)
+    ) &&
     (optimizer.localRepairBudget ?? 0) === 0 &&
     gaDisabled &&
     optimizer.placementPolicyId !== 'short-side-fill'
@@ -572,9 +629,13 @@ export function isCanonicalReferenceRoleEligible(
 /** Exact one/two-decode plan used by the outer coordinator. */
 export function canonicalReferenceDecodeSheets(
   request: NestingRequest,
-  settings: IrregularNestingSettings
+  settings: IrregularNestingSettings,
+  preparedPieces: ReadonlyArray<IrregularPreparedPiece>
 ): ReadonlyArray<SheetSpec> {
-  if (!isCanonicalReferenceRoleEligible(request, settings) || isCanonicalReferenceSheet(request.sheet)) {
+  if (
+    !isCanonicalReferenceRoleEligible(request, settings, preparedPieces) ||
+    isCanonicalReferenceSheet(request.sheet)
+  ) {
     return [request.sheet]
   }
   return [request.sheet, CANONICAL_REFERENCE_SHEET]

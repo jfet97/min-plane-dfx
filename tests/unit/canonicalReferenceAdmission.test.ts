@@ -5,21 +5,29 @@ import { describe, expect, it } from 'vitest'
 import { PieceId } from '@shared/domain/ids.js'
 import { NestingRequest, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
 import {
+  CollisionGeometry,
   FreeMaterialSnapshot,
+  IrregularBounds,
   IrregularLayoutScoreSummary,
   IrregularNestingSettings,
-  IrregularPortfolioResult
+  IrregularPoint,
+  IrregularPolygon,
+  IrregularPortfolioProgress,
+  IrregularPortfolioResult,
+  IrregularPreparedPiece
 } from '@shared/irregular/domain.js'
 import {
   CANONICAL_REFERENCE_ADMISSION_SLACKS,
   canonicalPortfolioResultFrom,
   canonicalReferenceDecodeSheets,
   evaluateCanonicalReferenceAdmissionMetrics,
-  isCanonicalReferenceRoleEligible
+  isCanonicalReferenceRoleEligible,
+  portfolioProgressForDecodeRole
 } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
 import type { IrregularLayoutScore } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import type { CanonicalLayoutTopology } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
+import { prefixedDecisionTraceDecodeId } from '../../src/workers/algorithm/irregular/portfolioSearch.js'
 
 const fixturePath = fileURLToPath(
   new URL('../fixtures/irregularSheetInvariance/mixed61-request.json', import.meta.url)
@@ -33,6 +41,64 @@ const nonReferenceRequest = new NestingRequest({
   ...mixedRequest,
   sheet: new SheetSpec({ width: 2000, height: 1700, label: 'non-reference' })
 })
+
+function preparedWorkloadPiece(input: {
+  readonly index: number
+  readonly family: string
+  readonly sideMm: number
+}): IrregularPreparedPiece {
+  const sourcePieces = mixedRequest.sourcePieces ?? []
+  const source = sourcePieces[input.index % Math.max(1, sourcePieces.length)]
+  if (source === undefined) throw new Error('mixed fixture must carry source pieces')
+  const points = [
+    new IrregularPoint({ x: 0, y: 0 }),
+    new IrregularPoint({ x: input.sideMm, y: 0 }),
+    new IrregularPoint({ x: input.sideMm, y: input.sideMm }),
+    new IrregularPoint({ x: 0, y: input.sideMm })
+  ]
+  const polygon = new IrregularPolygon({ points })
+  return new IrregularPreparedPiece({
+    pieceId: PieceId.make(`workload-${input.index}`),
+    interchangeabilityKey: input.family,
+    source,
+    allowMirror: false,
+    collisionGeometry: new CollisionGeometry({
+      sourcePieceId: source.id,
+      sourceBounds: new IrregularBounds({
+        minX: 0,
+        minY: 0,
+        maxX: input.sideMm,
+        maxY: input.sideMm
+      }),
+      sampledPoints: points,
+      convexHull: polygon,
+      collisionPolygon: polygon,
+      placementReference: new IrregularPoint({ x: 0, y: 0 }),
+      diagnostics: []
+    }),
+    transforms: []
+  })
+}
+
+const mixedScalePrepared = Array.from({ length: 21 }, (_, index) =>
+  preparedWorkloadPiece({
+    index,
+    family: index % 2 === 0 ? 'small-family' : 'large-family',
+    sideMm: index % 2 === 0 ? 10 : 25
+  })
+)
+
+const homogeneousPrepared = Array.from({ length: 21 }, (_, index) =>
+  preparedWorkloadPiece({ index, family: 'one-family', sideMm: 10 })
+)
+
+const uniformMultiFamilyPrepared = Array.from({ length: 21 }, (_, index) =>
+  preparedWorkloadPiece({
+    index,
+    family: index % 2 === 0 ? 'first-family' : 'second-family',
+    sideMm: 10
+  })
+)
 
 const topology: CanonicalLayoutTopology = {
   largestOccupiedHullGapRatio: 0.2,
@@ -80,6 +146,21 @@ const canonicalScore = () =>
   })
 
 describe('canonical reference coordinator policy', () => {
+  it('distinguishes both external progress roles and trace decode identities', () => {
+    const progress = new IrregularPortfolioProgress({
+      phase: 'deterministic_beam',
+      elapsedMs: 0
+    })
+    expect(portfolioProgressForDecodeRole(progress, 'production').decodeRole).toBe('production')
+    expect(portfolioProgressForDecodeRole(progress, 'canonical-reference').decodeRole).toBe(
+      'canonical-reference'
+    )
+    const productionId = prefixedDecisionTraceDecodeId('production:', 'baseline-0')
+    const canonicalId = prefixedDecisionTraceDecodeId('canonical-reference:', 'baseline-0')
+    expect(productionId).not.toBe(canonicalId)
+    expect(new Set([productionId, canonicalId]).size).toBe(2)
+  })
+
   it('materializes the selected canonical score through its schema-owned class', () => {
     const selectedScore = canonicalScore()
     const result = canonicalPortfolioResultFrom({
@@ -111,15 +192,22 @@ describe('canonical reference coordinator policy', () => {
   })
 
   it('plans two decodes only for eligible non-reference jobs', () => {
-    expect(isCanonicalReferenceRoleEligible(nonReferenceRequest, mixedSettings)).toBe(true)
-    expect(canonicalReferenceDecodeSheets(nonReferenceRequest, mixedSettings)).toHaveLength(2)
+    expect(
+      isCanonicalReferenceRoleEligible(nonReferenceRequest, mixedSettings, mixedScalePrepared)
+    ).toBe(true)
+    expect(
+      canonicalReferenceDecodeSheets(nonReferenceRequest, mixedSettings, mixedScalePrepared)
+    ).toHaveLength(2)
 
     const referenceRequest = new NestingRequest({
       ...mixedRequest,
       sheet:
-        canonicalReferenceDecodeSheets(nonReferenceRequest, mixedSettings)[1] ?? mixedRequest.sheet
+        canonicalReferenceDecodeSheets(nonReferenceRequest, mixedSettings, mixedScalePrepared)[1] ??
+        mixedRequest.sheet
     })
-    expect(canonicalReferenceDecodeSheets(referenceRequest, mixedSettings)).toHaveLength(1)
+    expect(
+      canonicalReferenceDecodeSheets(referenceRequest, mixedSettings, mixedScalePrepared)
+    ).toHaveLength(1)
 
     const firstPiece = mixedRequest.pieces[0]
     if (firstPiece === undefined) throw new Error('mixed fixture must contain a piece')
@@ -134,11 +222,24 @@ describe('canonical reference coordinator policy', () => {
           })
       )
     })
-    expect(canonicalReferenceDecodeSheets(homogeneousRequest, mixedSettings)).toHaveLength(2)
+    expect(
+      canonicalReferenceDecodeSheets(homogeneousRequest, mixedSettings, homogeneousPrepared)
+    ).toHaveLength(1)
+    expect(
+      canonicalReferenceDecodeSheets(homogeneousRequest, mixedSettings, mixedScalePrepared)
+    ).toHaveLength(1)
+    expect(
+      canonicalReferenceDecodeSheets(
+        nonReferenceRequest,
+        mixedSettings,
+        uniformMultiFamilyPrepared
+      )
+    ).toHaveLength(1)
     expect(
       canonicalReferenceDecodeSheets(
         new NestingRequest({ ...homogeneousRequest, pieces: homogeneousRequest.pieces.slice(0, 20) }),
-        mixedSettings
+        mixedSettings,
+        mixedScalePrepared.slice(0, 20)
       )
     ).toHaveLength(1)
   })
@@ -154,7 +255,9 @@ describe('canonical reference coordinator policy', () => {
       settings({ gaEnabled: true, baselineOnly: false }),
       settings({ placementPolicyId: 'short-side-fill' })
     ]) {
-      expect(canonicalReferenceDecodeSheets(nonReferenceRequest, ineligible)).toHaveLength(1)
+      expect(
+        canonicalReferenceDecodeSheets(nonReferenceRequest, ineligible, mixedScalePrepared)
+      ).toHaveLength(1)
     }
   })
 

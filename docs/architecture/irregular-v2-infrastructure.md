@@ -451,15 +451,19 @@ geometry becomes the typed
 `irregular_source_geometry_missing` worker failure; invalid derived geometry
 and scoring become distinct typed failures.
 
-For eligible deterministic jobs with more than twenty pieces, repair disabled,
-GA inactive, and no intentional short-side-fill policy, `computeIrregularNesting`
+For eligible deterministic, scale-diverse, multi-family jobs with more than twenty
+pieces, repair disabled, GA inactive, and no intentional short-side-fill policy,
+`computeIrregularNesting`
 coordinates two private uses of the existing single-sheet portfolio primitive:
 the requested sheet and a protected fixed `2000 x 2700` canonical-reference sheet.
 The reference sheet reuses the ordinary decode when it is itself requested. The
-protected pass does not publish a second progress or history stream, and both
-roles retain their own history until terminal selection. Cancellation is shared,
-benchmark decode counters are aggregated, and only the selected role is adapted
-into worker output.
+Both decodes forward progress through one stream with an explicit role and use
+role-prefixed decision-trace decode ids. Both roles retain their own history until
+terminal selection, then only the selected history is published. Cancellation is
+shared, benchmark decode counters are aggregated, and only the selected role is
+adapted into worker output. The renderer raises irregular jobs to a `120000 ms`
+timeout floor because the measured protected mixed-61 run takes about `89.5 s`;
+other worker modes retain their configured timeout.
 
 The protected role can supply only the exact terminal `IrregularBeamState` emitted
 by its real portfolio decode, rigidly anchored at q0 or q90. The integer-grid

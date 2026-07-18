@@ -18,22 +18,32 @@ import {
 } from '@shared/irregular/domain.js'
 import {
   DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS,
+  DEFAULT_IRREGULAR_WORKER_TIMEOUT_MS,
   makeCompactQualityIrregularOptimizerSettings,
   makeDefaultIrregularNestingSettings,
   makeDerivedOrientationIrregularOptimizerSettings,
   makeFastIdentityIrregularOptimizerSettings,
-  makeOrthogonalIrregularOptimizerSettings
+  makeOrthogonalIrregularOptimizerSettings,
+  workerTimeoutForMode
 } from '@shared/irregular/defaults.js'
 import {
   NestingHistoryFramePayload,
   NestingLayout,
   NestingResult
 } from '@shared/domain/nesting.js'
-
 /** Decodes an unknown value through one schema without constructing invalid classes directly. */
 function decode<S extends Schema.ConstraintDecoder<unknown>>(schema: S, input: unknown) {
   return Schema.decodeUnknownExit(schema)(input)
 }
+
+describe('irregular worker defaults', () => {
+  it('raises only irregular jobs to the measured-safe timeout floor', () => {
+    expect(DEFAULT_IRREGULAR_WORKER_TIMEOUT_MS).toBe(120_000)
+    expect(workerTimeoutForMode('irregular-convex-v2', 30_000)).toBe(120_000)
+    expect(workerTimeoutForMode('irregular-convex-v2', 180_000)).toBe(180_000)
+    expect(workerTimeoutForMode('maxrects-beam-search', 30_000)).toBe(30_000)
+  })
+})
 
 describe('irregular schema contracts', () => {
   it('ships an independent, deterministic first-result profile', () => {
