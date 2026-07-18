@@ -279,13 +279,14 @@ not construct trace events.
 Local candidate detail is deliberately diagnostic rather than exhaustive. For
 each parent state and eligible piece, the trace retains the complete score and
 selection decision for every selected candidate, any candidate displaced by a
-compactness reservation, and the first candidate rejected below the local
-fanout cutoff. One `local_candidate_summary` then reports generated, unique,
-selected, and detailed totals plus counts for every selection or rejection
-reason, including duplicate local geometry. With fanout `F`, this bounds full
-local detail to at most `F + 2` candidates per parent/piece even when NFP
-generation produces hundreds of candidates. Transform events still report the
-full legal-candidate counts. Successor scoring, successor deduplication, beam
+compactness reservation, one protected intrinsic candidate outside production
+fanout, and the first candidate rejected below the local fanout cutoff. One
+`local_candidate_summary` then reports generated, unique, selected, and detailed
+totals plus counts for every selection or rejection reason, including duplicate
+local geometry. With fanout `F`, this bounds full local detail to at most
+`F + 3` candidates per parent/piece even when NFP generation produces hundreds
+of candidates. Transform events still report the full legal-candidate counts.
+Successor scoring, successor deduplication, beam
 selection, terminal orientation, local repair acceptance, and the winner remain
 exhaustive. This reduction changes only diagnostic persistence; candidate
 generation, ranking, retained states, winner selection, and replay history are

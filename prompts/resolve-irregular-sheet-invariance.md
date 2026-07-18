@@ -229,8 +229,8 @@ weakening terminal Pareto acceptance.
 
 ## Next hypotheses, in order
 
-If the primary hypothesis is falsified, continue in this order. Record the
-counterexample before switching.
+Continue from the accepted primary result in this order. Record a counterexample
+before switching away from any specific follow-up.
 
 1. **Protected Pareto frontier within exact contact strength.** Retain bounded
    non-dominated states over maximum side, area, span, contact tier, and holes;

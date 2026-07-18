@@ -967,7 +967,8 @@ describe('decodeWindowedIrregularBeam', () => {
       expect.objectContaining({
         kind: 'beam_selection',
         decision: 'retained',
-        reason: 'protected_intrinsic_contact_survivor'
+        reason: 'protected_intrinsic_contact_survivor',
+        rank: 1
       })
     )
   })

@@ -1961,14 +1961,18 @@ function pruneScoredStates(
         incumbentDisplacedAlternative &&
         productionRank !== undefined &&
         productionRank < beamWidth
+      const traceRank = retainedOnlyByIntrinsicProtection
+        ? protectedIntrinsicRank
+        : retainedOnlyByBoundaryProtection
+          ? protectedBoundaryRank
+          : (productionRank ?? protectedBoundaryRank ?? protectedIntrinsicRank)
       decisionTrace.emit(new IrregularDecisionTraceBeamSelection({
         decodeId: decisionTrace.decodeId,
         chromosomeId: decisionTrace.chromosomeId,
         decodeSource: decisionTrace.decodeSource,
         stepIndex,
         stateId: decisionTrace.stateIds.idFor(scoredState.key),
-        rank:
-          (productionRank ?? protectedBoundaryRank ?? protectedIntrinsicRank ?? stateIndex) + 1,
+        rank: (traceRank ?? stateIndex) + 1,
         decision: retainedState ? 'retained' : 'pruned',
         reason: protectedIncumbent
           ? 'protected_incumbent'
