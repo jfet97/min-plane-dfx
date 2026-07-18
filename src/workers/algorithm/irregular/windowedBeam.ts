@@ -305,6 +305,17 @@ export function runWindowedIrregularBeam(input: {
         const eligibleForProtectedIntrinsicLane = protectedIntrinsicParents.has(state)
         const eligibleForProtectedParetoFrontierLane =
           protectedParetoFrontierParents.has(state)
+        /*
+         * Protected seeds fire only from the baseline parent lanes. A
+         * pareto-only parent must not seed: its intrinsic picks would flood
+         * the width-one intrinsic pool and evict the baseline intrinsic
+         * lineage, as measured on the mixed-61 2000 x 1700 sheet.
+         */
+        const allowProtectedSeeds =
+          protectedDiversityEnabled &&
+          (eligibleForProductionLane ||
+            eligibleForProtectedLane ||
+            eligibleForProtectedIntrinsicLane)
         const parentStateKey = stateKey(state)
         const parentStateId = decisionTrace?.stateIds.idFor(parentStateKey) ?? ''
         decisionTrace?.emit(new IrregularDecisionTraceParentState({
@@ -356,7 +367,7 @@ export function runWindowedIrregularBeam(input: {
             placementScorer,
             localCandidateFanout,
             input.options?.transformPreferences?.get(preparedPieceId(piece)),
-            protectedDiversityEnabled,
+            allowProtectedSeeds,
             decisionTrace,
             stepIndex,
             parentStateId,

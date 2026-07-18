@@ -1233,6 +1233,81 @@ describe('decodeWindowedIrregularBeam', () => {
     )
   })
 
+  it('does not seed protected reservations from a pareto-only parent', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const transforms = [
+      new IrregularTransformCandidate({
+        index: 0,
+        rotationDeg: 0,
+        mirrored: false,
+        reason: 'configured'
+      }),
+      new IrregularTransformCandidate({
+        index: 1,
+        rotationDeg: 90,
+        mirrored: false,
+        reason: 'configured'
+      })
+    ]
+    const pieces = [
+      preparedPiece('a', 4, 2, undefined, transforms),
+      preparedPiece('b', 4, 2, undefined, transforms)
+    ]
+    await runWindowed(
+      sheet(100, 10),
+      pieces,
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 4, 3, 'edge-contact-then-balanced-compactness')
+      ),
+      candidateService(({ moving, placed }) => {
+        if (placed.length === 0) {
+          return moving.transform.index === 0
+            ? [oneCandidate(moving, 0, 0), oneCandidate(moving, 2, 0), oneCandidate(moving, 4, 0)]
+            : [oneCandidate(moving, 0, 0)]
+        }
+        return moving.transform.index === 0
+          ? [oneCandidate(moving, 20, 0), oneCandidate(moving, 24, 0), oneCandidate(moving, 28, 0)]
+          : [oneCandidate(moving, 20, 0), oneCandidate(moving, 22, 0)]
+      }),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    const paretoSurvivor = events.find(
+      (event) =>
+        event.kind === 'beam_selection' &&
+        event.stepIndex === 0 &&
+        event.reason === 'protected_pareto_frontier_survivor'
+    )
+    expect(paretoSurvivor).toBeDefined()
+    const paretoParentId =
+      paretoSurvivor !== undefined && paretoSurvivor.kind === 'beam_selection'
+        ? paretoSurvivor.stateId
+        : ''
+    const reservedFromParetoParent = events
+      .filter((event) => event.kind === 'local_candidate_selection')
+      .filter(
+        (event) =>
+          event.stepIndex === 1 &&
+          event.parentStateId === paretoParentId &&
+          (event.reason === 'pareto_frontier_reserved' ||
+            event.reason === 'intrinsic_contact_tier_reserved')
+      )
+    expect(reservedFromParetoParent).toHaveLength(0)
+    const reservedFromProductionParents = events
+      .filter((event) => event.kind === 'local_candidate_selection')
+      .filter(
+        (event) =>
+          event.stepIndex === 1 &&
+          event.parentStateId !== paretoParentId &&
+          event.reason === 'pareto_frontier_reserved'
+      )
+    expect(reservedFromProductionParents.length).toBeGreaterThan(0)
+  })
+
   it('retains pareto frontier survivors with lane ranks outside the other lanes', async () => {
     const events: IrregularDecisionTraceEvent[] = []
     await runWindowed(
