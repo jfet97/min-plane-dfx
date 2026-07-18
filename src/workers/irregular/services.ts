@@ -192,6 +192,8 @@ export interface RunPortfolioInput {
     beamWidth: number
   ) => void
   readonly emitDecisionTrace?: EmitIrregularDecisionTrace
+  /** Private algorithm seam retaining the exact selected legal terminal state. */
+  readonly onSelectedState?: (state: IrregularBeamState) => void
   readonly isCancelled?: () => boolean
 }
 

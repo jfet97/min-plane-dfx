@@ -451,6 +451,27 @@ geometry becomes the typed
 `irregular_source_geometry_missing` worker failure; invalid derived geometry
 and scoring become distinct typed failures.
 
+For eligible deterministic jobs with more than twenty pieces, repair disabled,
+GA inactive, and no intentional short-side-fill policy, `computeIrregularNesting`
+coordinates two private uses of the existing single-sheet portfolio primitive:
+the requested sheet and a protected fixed `2000 x 2700` canonical-reference sheet.
+The reference sheet reuses the ordinary decode when it is itself requested. The
+protected pass does not publish a second progress or history stream, and both
+roles retain their own history until terminal selection. Cancellation is shared,
+benchmark decode counters are aggregated, and only the selected role is adapted
+into worker output.
+
+The protected role can supply only the exact terminal `IrregularBeamState` emitted
+by its real portfolio decode, rigidly anchored at q0 or q90. The integer-grid
+geometry layer verifies requested-sheet fit and zero positive polygon overlap;
+algorithm code does not reconstruct or revalidate placements through a different
+legality path. Admission is a strict guard, not a weighted comparator: unplaced,
+holes, cavity ratio, contact graph, span, bounded max-side regression, and bounded
+contact losses must all be no worse while collision-bounds area is strictly
+smaller. Undefined topology retains production, as does canonical layout-identity
+equality. Layout identity ignores translation, rigid quarter-turn, copy order,
+ring origin, and winding while preserving reflection and relative placement.
+
 Do not route `irregular-convex-v2` requests to MaxRects.
 
 The renderer accepts tagged irregular history alongside existing rectangular

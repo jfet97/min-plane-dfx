@@ -293,6 +293,7 @@ function runPortfolio(
     let bestOverall: EvaluatedChromosome = baseline
 
     if (!gaEnabled) {
+      input.onSelectedState?.(baseline.beam.bestState)
       emitSnapshots(input, baseline, settings.optimizer.beamWidth)
       return finishPortfolio(
         input,
@@ -444,6 +445,8 @@ function runPortfolio(
       terminalStatus = 'cancelled'
       terminationReason = 'cancelled'
     }
+
+    input.onSelectedState?.(selected.beam.bestState)
 
     if (input.onStateSnapshot === undefined) {
       return finishPortfolio(
