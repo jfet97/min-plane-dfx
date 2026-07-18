@@ -34,8 +34,9 @@ Start from the repository root:
 ```
 
 At the time this prompt was written, merged `main` was
-`c6d6dc91c52c0b4297556c70ac44506a166ee46a` after PR #2. Refresh `main` and
-record the actual starting commit. Do not assume this hash is still current.
+`20d74f6379c4865ec9654d351b3bcbae7b2aae81` before the protected intrinsic
+contact seed was integrated. Refresh `main` and record the actual starting
+commit. Do not assume this hash is still current.
 
 Read these files in order before editing:
 
@@ -104,7 +105,7 @@ The current measured outputs are:
 | --- | ---: | ---: | --- |
 | `1000 x 1300` | `506,644.934 mm2` | 12 | unchanged post-canonicalization geometry |
 | `1000 x 1700` | `461,475.664 mm2` | 10 | unchanged post-canonicalization geometry |
-| `2000 x 1700` | `661,441.643 mm2` | 6 | unchanged post-canonicalization geometry |
+| `2000 x 1700` | `535,808.686 mm2` | 4 | protected intrinsic contact winner |
 | `2000 x 2700` | `430,344.918 mm2` | 2 | protected boundary-anchor winner |
 
 The reference result has canonical hash:
@@ -122,7 +123,8 @@ other three sheets choose different motifs.
 `95de72c` correctly canonicalized occupied-hull waste and removed a meaningless
 raw floating difference. On `2000 x 2700`, that exposed a production-score tie
 and discarded a distinct sheet-boundary lineage. The merged protected lane
-recovers that one lineage.
+recovers that lineage. The later protected intrinsic contact lane recovers a
+smaller `2000 x 1700` lineage without changing the other three hashes.
 
 The general gap remains earlier in pruning:
 
@@ -130,8 +132,10 @@ The general gap remains earlier in pruning:
   height by sheet width and height;
 - the same legal candidate can therefore receive a different local rank on a
   different roomy sheet and disappear before whole-beam protection sees it;
-- the protected lane itself follows a legacy ordering containing sheet-relative
-  fields, so it is not an invariant decoder.
+- the legacy boundary lane intentionally follows a sheet-relative historical
+  order and cannot be the invariant decoder;
+- the width-one intrinsic lane is sheet-independent, but one survivor is not
+  enough to recover the common reference motif on the remaining sheets.
 
 Do not try to fix this only in final selection. A terminal comparator cannot
 recover a branch removed by local fanout or earlier protected-lane pruning.
@@ -151,8 +155,11 @@ The historical contact-tier intrinsic experiment is not discarded.
 - A narrow max-side-first exact-contact local port on current main remained
   shape-dependent: it improved the pentagon/star hull family but regressed
   trapezoids and mixed-50 and did not help mixed-61.
-- The mechanism is not disproven. Its unsafe placement in production fanout is
-  disproven.
+- Moving the same primitive behind production fanout succeeds: all existing
+  corpus hashes remain exact, while the `2000 x 1700` mixed-61 area improves
+  `18.99%` and holes fall from 6 to 4.
+- The unsafe placement in production fanout is disproven; the protected role is
+  now production evidence, not only a research lead.
 
 The next candidate should therefore put intrinsic local diversity behind the
 already isolated production lane, not replace a production local candidate.
@@ -194,42 +201,36 @@ Do not copy Deepnest/SVGnest's dimensionally mixed scalar literally. Do not
 replace the real NFP legality path with overlap relaxation. Do not enable GA to
 search a sheet-normalized decoder more thoroughly.
 
-## Primary hypothesis
+## Completed primary hypothesis
 
-Test this first because it directly combines the strongest current evidence:
+The first protected intrinsic experiment is accepted. It generates at most one
+max-side-first candidate from a duplicated positive canonical shared-boundary
+length, tags it protected-only, and advances one descendant under a
+sheet-independent order. It never replaces or reorders production fanout.
 
-> Generate at most one max-side-first intrinsic candidate inside an exact
-> production contact tier, but tag it as protected-only. Never use it to replace
-> or reorder production fanout. Advance protected descendants under a
-> sheet-independent max-side-first order while retaining the existing protected
-> legacy lineage needed for the reference motif. Let only the production
-> comparator plus strict envelope and topology guards promote a terminal result.
+The experiment answered the original questions:
 
-The implementation must answer these questions explicitly:
+1. the useful `2000 x 1700` branch was available in the real legal local set but
+   absent from production fanout;
+2. no geometry, NFP/IFP, transform, production-fanout, or production-beam change
+   was required;
+3. positive exact shared-boundary length was sufficient for the seed;
+4. keeping the legacy width-eight boundary role and a separate width-one
+   intrinsic role preserved both quality checkpoints safely;
+5. geometry deduplication keeps the production representative and ORs only lane
+   eligibility;
+6. the intrinsic branch-removing order now excludes normalized sheet fields,
+   sheet-boundary coordinates, and free-material metrics, using
+   translation-normalized combined geometry for final ties.
 
-1. At which exact boundary is the intrinsic candidate currently lost: local
-   candidate fanout, successor deduplication, production beam pruning, or
-   protected descendant pruning?
-2. Can the desired candidate be generated from the same real legal NFP/IFP
-   candidate set without changing production fanout?
-3. What exact contact tier must be preserved: shared padded-edge band, contact
-   units, contact length, or the production comparator's structural band?
-4. Can one protected width-eight budget retain both the legacy reference
-   lineage and the invariant max-side lineage without a second global lane?
-5. If role quotas are needed inside that budget, can unused quota spill back to
-   the best protected pool and can geometry-equivalent states be deduplicated
-   before allocation?
-6. Which score fields remain sheet-relative in every branch-removing protected
-   decision?
+The result is partial: four canonical hashes remain. The next experiment must
+expand protected intrinsic coverage without consuming production slots or
+weakening terminal Pareto acceptance.
 
-Start with a trace-only or injected-comparator proof when possible. Do not
-modify production code before proving the target candidate exists and recording
-where it is lost.
+## Next hypotheses, in order
 
-## Secondary hypotheses, in order
-
-If the primary hypothesis is falsified, continue in this order. Record the
-counterexample before switching.
+Continue from the accepted primary result in this order. Record a counterexample
+before switching away from any specific follow-up.
 
 1. **Protected Pareto frontier within exact contact strength.** Retain bounded
    non-dominated states over maximum side, area, span, contact tier, and holes;

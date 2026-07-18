@@ -65,6 +65,7 @@ describe('IrregularDecisionTraceBatcher', () => {
         withinLocalCandidateFanout: 4,
         compactnessAlternativeReserved: 0,
         displacedByCompactnessReservation: 0,
+        intrinsicContactTierReserved: 0,
         duplicateLocalGeometry: 10,
         outsideLocalCandidateFanout: 86
       })
@@ -87,6 +88,7 @@ describe('IrregularDecisionTraceBatcher', () => {
         withinLocalCandidateFanout: 4,
         compactnessAlternativeReserved: 0,
         displacedByCompactnessReservation: 0,
+        intrinsicContactTierReserved: 0,
         duplicateLocalGeometry: 10,
         outsideLocalCandidateFanout: 86
       }

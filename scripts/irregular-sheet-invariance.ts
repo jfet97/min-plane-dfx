@@ -46,6 +46,7 @@ interface GeneratedCorpusCase {
 interface CorpusArguments {
   readonly selectedCaseIds: ReadonlySet<string>
   readonly outputDirectory: string
+  readonly sheets: ReadonlyArray<SheetSpec>
   readonly strict: boolean
 }
 
@@ -95,6 +96,7 @@ const allCaseIds = [...generatedCases.map(({ id }) => id), 'mixed-61']
 function parseArguments(argumentsList: ReadonlyArray<string>): CorpusArguments {
   const selectedCaseIds = new Set<string>()
   let outputDirectory = '/private/tmp/irregular-sheet-invariance'
+  let sheets: ReadonlyArray<SheetSpec> = [COMPACT_SHEET, REFERENCE_SHEET]
   let strict = false
   for (let index = 0; index < argumentsList.length; index += 1) {
     const argument = argumentsList[index]
@@ -116,9 +118,16 @@ function parseArguments(argumentsList: ReadonlyArray<string>): CorpusArguments {
       index += 1
       continue
     }
+    if (argument === '--sheets') {
+      const value = argumentsList[index + 1]
+      if (value === undefined) throw new Error('--sheets requires comma-separated WIDTHxHEIGHT values')
+      sheets = parseSheets(value)
+      index += 1
+      continue
+    }
     if (argument === '--help') {
       console.log(
-        `Usage: pnpm corpus:sheet-invariance [--case ${allCaseIds.join(',')}] [--output <dir>] [--strict]`
+        `Usage: pnpm corpus:sheet-invariance [--case ${allCaseIds.join(',')}] [--output <dir>] [--sheets WIDTHxHEIGHT,...] [--strict]`
       )
       process.exit(0)
     }
@@ -130,7 +139,26 @@ function parseArguments(argumentsList: ReadonlyArray<string>): CorpusArguments {
   for (const caseId of selectedCaseIds) {
     if (!allCaseIds.includes(caseId)) throw new Error(`unknown corpus case ${caseId}`)
   }
-  return { selectedCaseIds, outputDirectory, strict }
+  return { selectedCaseIds, outputDirectory, sheets, strict }
+}
+
+function parseSheets(value: string): ReadonlyArray<SheetSpec> {
+  const dimensions = value.split(',')
+  if (dimensions.length < 2) throw new Error('--sheets requires at least two sheets')
+  const seen = new Set<string>()
+  return dimensions.map((dimension) => {
+    const match = /^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/.exec(dimension)
+    if (match === null) throw new Error(`invalid sheet dimensions ${dimension}`)
+    const width = Number(match[1])
+    const height = Number(match[2])
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      throw new Error(`invalid sheet dimensions ${dimension}`)
+    }
+    const key = `${width}x${height}`
+    if (seen.has(key)) throw new Error(`duplicate sheet dimensions ${dimension}`)
+    seen.add(key)
+    return new SheetSpec({ width, height, label: key })
+  })
 }
 
 function makeGeneratedRequest(corpusCase: GeneratedCorpusCase): NestingRequest {
@@ -319,25 +347,31 @@ for (const caseId of allCaseIds) {
   if (!argumentsData.selectedCaseIds.has(caseId)) continue
   const generated = generatedCases.find(({ id }) => id === caseId)
   const sourceRequest = generated === undefined ? await loadMixed61Request() : makeGeneratedRequest(generated)
-  const compactArtifactPath = `${argumentsData.outputDirectory}/${caseId}-1000x1700.svg`
-  const referenceArtifactPath = `${argumentsData.outputDirectory}/${caseId}-2000x2700.svg`
-  const compact = await runRequest(
-    withSheet(sourceRequest, COMPACT_SHEET, '1000x1700'),
-    compactArtifactPath
-  )
-  const reference = await runRequest(
-    withSheet(sourceRequest, REFERENCE_SHEET, '2000x2700'),
-    referenceArtifactPath
-  )
-  const geometryEquivalent = compact.canonicalSha256 === reference.canonicalSha256
-  const report = { caseId, geometryEquivalent, compact, reference }
+  const runs = []
+  for (const currentSheet of argumentsData.sheets) {
+    const sheetId = `${currentSheet.width}x${currentSheet.height}`
+    runs.push(
+      await runRequest(
+        withSheet(sourceRequest, currentSheet, sheetId),
+        `${argumentsData.outputDirectory}/${caseId}-${sheetId}.svg`
+      )
+    )
+  }
+  const firstRun = runs[0]
+  const geometryEquivalent =
+    firstRun !== undefined &&
+    runs.every(({ canonicalSha256 }) => canonicalSha256 === firstRun.canonicalSha256)
+  const report =
+    runs.length === 2
+      ? { caseId, geometryEquivalent, compact: runs[0], reference: runs[1] }
+      : { caseId, geometryEquivalent, runs }
   caseReports.push(report)
   console.log(JSON.stringify(report))
 }
 const reportPath = `${argumentsData.outputDirectory}/report.json`
 const report = {
   generatedAt: new Date().toISOString(),
-  sheets: [COMPACT_SHEET, REFERENCE_SHEET],
+  sheets: argumentsData.sheets,
   comparison: {
     gridSizeMm: 0.001,
     ignores: ['piece order', 'polygon winding', 'ring origin', 'translation', 'quarter-turn'],

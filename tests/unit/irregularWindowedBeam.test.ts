@@ -227,6 +227,39 @@ async function branchBiasedLayoutScorer(): Promise<IrregularLayoutScorer.Service
   }
 }
 
+async function protectedLaneRankBiasedLayoutScorer(): Promise<IrregularLayoutScorer.Service> {
+  const baseScorer = await Effect.runPromise(
+    IrregularLayoutScorer.use((scorer) => Effect.succeed(scorer)).pipe(
+      Effect.provide(IrregularLayoutScorer.Live),
+      Effect.provide(GeometrySettings.Live)
+    )
+  )
+  return {
+    compare: baseScorer.compare,
+    scoreState: (input) =>
+      baseScorer.scoreState(input).pipe(
+        Effect.map((score) => {
+          const anchor = input.state.placedCollisionGeometries.find(
+            ({ placement }) => placement.sourcePieceId === PieceId.make('a')
+          )
+          const moving = input.state.placedCollisionGeometries.find(
+            ({ placement }) => placement.sourcePieceId === PieceId.make('b')
+          )
+          const demoteFromBoundaryLane =
+            anchor?.placement.transform.translateY === 106 &&
+            moving?.placement.transform.translateX === 0
+          return demoteFromBoundaryLane
+            ? {
+                ...score,
+                collisionBoundsWorstNormalizedSheetConsumption:
+                  score.collisionBoundsWorstNormalizedSheetConsumption + 1
+              }
+            : score
+        })
+      )
+  }
+}
+
 describe('decodeWindowedIrregularBeam', () => {
   it('assigns compact repeated state ids without hashing canonical keys', () => {
     const registry = new IrregularDecisionTraceStateIdRegistry()
@@ -613,6 +646,49 @@ describe('decodeWindowedIrregularBeam', () => {
     )
   })
 
+  it('reports the intrinsic rank when both protected lanes converge', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const layoutScorer = await protectedLaneRankBiasedLayoutScorer()
+    await runWindowed(
+      sheet(100, 110),
+      [preparedPiece('a', 20, 4), preparedPiece('b', 2, 2)],
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 2, 10, 'edge-contact-then-balanced-compactness')
+      ),
+      candidateService(({ moving, placed }) => {
+        const anchor = placed[0]?.placement.transform
+        if (anchor === undefined) {
+          return [
+            oneCandidate(moving, 0, 0),
+            oneCandidate(moving, 10, 0),
+            oneCandidate(moving, 0, 106)
+          ]
+        }
+        if (anchor.translateY === 106) {
+          return Array.from({ length: 10 }, (_, index) =>
+            oneCandidate(moving, index * 2, 104)
+          )
+        }
+        return [oneCandidate(moving, anchor.translateX + 20, 0)]
+      }),
+      { policyId: 'edge-contact-then-balanced-compactness' },
+      undefined,
+      layoutScorer,
+      (event) => events.push(event)
+    )
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        stepIndex: 1,
+        decision: 'retained',
+        reason: 'protected_intrinsic_contact_survivor',
+        rank: 1
+      })
+    )
+  })
+
   it('does not activate the protected lane when terminal repair is enabled', async () => {
     const events: IrregularDecisionTraceEvent[] = []
     await runWindowed(
@@ -917,6 +993,95 @@ describe('decodeWindowedIrregularBeam', () => {
       ])
     )
     expect(retainedPoints).not.toContainEqual([5, 0])
+  })
+
+  it('continues one max-side-first candidate from a duplicated exact contact tier', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const result = await runWindowed(
+      sheet(100, 10),
+      [preparedPiece('a', 20, 4), preparedPiece('b', 2, 2)],
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 3, 3, 'edge-contact-then-balanced-compactness')
+      ),
+      candidateService(({ moving, placed }) =>
+        placed.length === 0
+          ? [oneCandidate(moving, 0, 0)]
+          : [
+              oneCandidate(moving, 20, 0),
+              oneCandidate(moving, 20, 1),
+              oneCandidate(moving, 20, 2),
+              oneCandidate(moving, 0, 4)
+            ]
+      ),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    const terminalPoints = result.rankedStates.map((state) => {
+      const placement = state.placedCollisionGeometries[1]?.placement.transform
+      return placement === undefined ? undefined : [placement.translateX, placement.translateY]
+    })
+    expect(terminalPoints).toContainEqual([0, 4])
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_selection',
+        decision: 'selected',
+        reason: 'intrinsic_contact_tier_reserved'
+      })
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_summary',
+        selectedCandidateCount: 4,
+        decisionCounts: expect.objectContaining({ intrinsicContactTierReserved: 1 })
+      })
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        decision: 'retained',
+        reason: 'protected_intrinsic_contact_survivor',
+        rank: 1
+      })
+    )
+  })
+
+  it('does not treat a duplicated zero-contact tier as an intrinsic seed', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      sheet(100, 10),
+      [preparedPiece('a', 2, 2)],
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 3, 3, 'edge-contact-then-balanced-compactness')
+      ),
+      candidateService(({ moving }) => [
+        oneCandidate(moving, 0, 0),
+        oneCandidate(moving, 20, 0),
+        oneCandidate(moving, 40, 0),
+        oneCandidate(moving, 60, 0)
+      ]),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_selection',
+        reason: 'intrinsic_contact_tier_reserved'
+      })
+    )
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        reason: 'protected_intrinsic_contact_survivor'
+      })
+    )
   })
 
   it('keeps full trace detail for compactness reservation and displacement', async () => {

@@ -115,6 +115,7 @@ export class IrregularDecisionTraceState {
 }
 
 export class IrregularDecisionTraceLocalScore {
+  readonly usedClusterMaxSideMm: number
   readonly worstNormalizedSheetConsumption: number
   readonly normalizedSheetSpanSum: number
   readonly usedClusterAreaMm2: number
@@ -126,6 +127,7 @@ export class IrregularDecisionTraceLocalScore {
   readonly candidateLeftMm: number
 
   constructor(input: {
+    readonly usedClusterMaxSideMm: number
     readonly worstNormalizedSheetConsumption: number
     readonly normalizedSheetSpanSum: number
     readonly usedClusterAreaMm2: number
@@ -136,6 +138,7 @@ export class IrregularDecisionTraceLocalScore {
     readonly candidateBottomMm: number
     readonly candidateLeftMm: number
   }) {
+    this.usedClusterMaxSideMm = input.usedClusterMaxSideMm
     this.worstNormalizedSheetConsumption = input.worstNormalizedSheetConsumption
     this.normalizedSheetSpanSum = input.normalizedSheetSpanSum
     this.usedClusterAreaMm2 = input.usedClusterAreaMm2
@@ -385,6 +388,7 @@ export type IrregularDecisionTraceLocalCandidateSelectionReason =
   | 'within_local_candidate_fanout'
   | 'compactness_alternative_reserved'
   | 'displaced_by_compactness_reservation'
+  | 'intrinsic_contact_tier_reserved'
   | 'duplicate_local_geometry'
   | 'outside_local_candidate_fanout'
 
@@ -425,6 +429,7 @@ export class IrregularDecisionTraceLocalCandidateDecisionCounts {
   readonly withinLocalCandidateFanout: number
   readonly compactnessAlternativeReserved: number
   readonly displacedByCompactnessReservation: number
+  readonly intrinsicContactTierReserved: number
   readonly duplicateLocalGeometry: number
   readonly outsideLocalCandidateFanout: number
 
@@ -432,12 +437,14 @@ export class IrregularDecisionTraceLocalCandidateDecisionCounts {
     readonly withinLocalCandidateFanout: number
     readonly compactnessAlternativeReserved: number
     readonly displacedByCompactnessReservation: number
+    readonly intrinsicContactTierReserved: number
     readonly duplicateLocalGeometry: number
     readonly outsideLocalCandidateFanout: number
   }) {
     this.withinLocalCandidateFanout = input.withinLocalCandidateFanout
     this.compactnessAlternativeReserved = input.compactnessAlternativeReserved
     this.displacedByCompactnessReservation = input.displacedByCompactnessReservation
+    this.intrinsicContactTierReserved = input.intrinsicContactTierReserved
     this.duplicateLocalGeometry = input.duplicateLocalGeometry
     this.outsideLocalCandidateFanout = input.outsideLocalCandidateFanout
   }
@@ -538,6 +545,7 @@ export class IrregularDecisionTraceBeamSelection extends IrregularDecisionTraceE
     | 'protected_incumbent'
     | 'protected_compactness_survivor'
     | 'protected_boundary_anchor_survivor'
+    | 'protected_intrinsic_contact_survivor'
     | 'outside_beam_width'
     | 'displaced_by_protected_incumbent'
     | 'displaced_by_compactness_survivor'
@@ -553,6 +561,7 @@ export class IrregularDecisionTraceBeamSelection extends IrregularDecisionTraceE
         | 'protected_incumbent'
         | 'protected_compactness_survivor'
         | 'protected_boundary_anchor_survivor'
+        | 'protected_intrinsic_contact_survivor'
         | 'outside_beam_width'
         | 'displaced_by_protected_incumbent'
         | 'displaced_by_compactness_survivor'
