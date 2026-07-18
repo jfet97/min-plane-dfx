@@ -19,7 +19,7 @@ import {
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
 import { NfpIfpService } from '../../src/workers/irregular/services.js'
-import { IrregularLayoutScorer } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
+import { IrregularLayoutScorer, type IrregularLayoutScore } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
 import { decodeStrictPriorityOrder } from '../../src/workers/algorithm/irregular/strictPriorityDecoder.js'
@@ -256,6 +256,31 @@ async function protectedLaneRankBiasedLayoutScorer(): Promise<IrregularLayoutSco
               }
             : score
         })
+      )
+  }
+}
+
+/** Biases every layout score of states holding a 90-degree placement, for pareto tier tests. */
+async function rotatedNinetyBiasedLayoutScorer(
+  bias: (score: IrregularLayoutScore) => IrregularLayoutScore
+): Promise<IrregularLayoutScorer.Service> {
+  const baseScorer = await Effect.runPromise(
+    IrregularLayoutScorer.use((scorer) => Effect.succeed(scorer)).pipe(
+      Effect.provide(IrregularLayoutScorer.Live),
+      Effect.provide(GeometrySettings.Live)
+    )
+  )
+  return {
+    compare: baseScorer.compare,
+    scoreState: (input) =>
+      baseScorer.scoreState(input).pipe(
+        Effect.map((score) =>
+          input.state.placedCollisionGeometries.some(
+            ({ placement }) => placement.transform.rotationDeg === 90
+          )
+            ? bias(score)
+            : score
+        )
       )
   }
 }
@@ -1080,6 +1105,705 @@ describe('decodeWindowedIrregularBeam', () => {
       expect.objectContaining({
         kind: 'beam_selection',
         reason: 'protected_intrinsic_contact_survivor'
+      })
+    )
+  })
+
+  it('seeds one evicted tied orientation family from a duplicated zero-contact tier', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const transforms = [
+      new IrregularTransformCandidate({
+        index: 0,
+        rotationDeg: 0,
+        mirrored: false,
+        reason: 'configured'
+      }),
+      new IrregularTransformCandidate({
+        index: 1,
+        rotationDeg: 90,
+        mirrored: false,
+        reason: 'configured'
+      })
+    ]
+    const pieces = [preparedPiece('a', 4, 2, undefined, transforms)]
+    const currentSheet = sheet(100, 10)
+    const settingsLayer = Layer.succeed(
+      GeometrySettings,
+      settings(1, 4, 3, 'edge-contact-then-balanced-compactness')
+    )
+    const service = candidateService(({ moving }) =>
+      moving.transform.index === 0
+        ? [oneCandidate(moving, 0, 0), oneCandidate(moving, 2, 0), oneCandidate(moving, 4, 0)]
+        : [oneCandidate(moving, 0, 0), oneCandidate(moving, 2, 0)]
+    )
+    const result = await runWindowed(
+      currentSheet,
+      pieces,
+      settingsLayer,
+      service,
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+    const productionOnly = await runWindowed(
+      currentSheet,
+      pieces,
+      settingsLayer,
+      service,
+      { transformPreferences: new Map([[PieceId.make('unused'), 0]]) }
+    )
+
+    const reserved = events
+      .filter((event) => event.kind === 'local_candidate_selection')
+      .filter((event) => event.reason === 'pareto_frontier_reserved')
+    expect(reserved).toHaveLength(1)
+    expect(reserved[0]?.decision).toBe('selected')
+    const reservedIds = new Set(reserved.map((event) => event.candidateId))
+    const reservedRotations = events
+      .filter((event) => event.kind === 'local_candidate_scored')
+      .filter((event) => reservedIds.has(event.candidateId))
+      .map((event) => event.transform.rotationDeg)
+    expect(reservedRotations).toEqual([90])
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_summary',
+        selectedCandidateCount: 4,
+        decisionCounts: expect.objectContaining({
+          withinLocalCandidateFanout: 3,
+          paretoFrontierReserved: 1
+        })
+      })
+    )
+    expect(
+      result.bestState.placedCollisionGeometries.map(({ placement }) => placement)
+    ).toEqual(
+      productionOnly.bestState.placedCollisionGeometries.map(({ placement }) => placement)
+    )
+    expect(result.bestScore).toEqual(productionOnly.bestScore)
+  })
+
+  it('caps pareto frontier seeds at two from a duplicated exact contact tier', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      sheet(100, 10),
+      [preparedPiece('a', 20, 4), preparedPiece('b', 2, 2)],
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 4, 3, 'edge-contact-then-balanced-compactness')
+      ),
+      candidateService(({ moving, placed }) =>
+        placed.length === 0
+          ? [oneCandidate(moving, 0, 0)]
+          : [
+              oneCandidate(moving, 20, 0),
+              oneCandidate(moving, 20, 2),
+              oneCandidate(moving, 0, 4),
+              oneCandidate(moving, 2, 4),
+              oneCandidate(moving, 10, 4),
+              oneCandidate(moving, 18, 4)
+            ]
+      ),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    const reserved = events
+      .filter((event) => event.kind === 'local_candidate_selection')
+      .filter((event) => event.reason === 'pareto_frontier_reserved')
+    expect(reserved).toHaveLength(2)
+    const reservedIds = new Set(reserved.map((event) => event.candidateId))
+    const reservedPoints = events
+      .filter((event) => event.kind === 'local_candidate_scored')
+      .filter((event) => reservedIds.has(event.candidateId))
+      .map((event) => event.point)
+    expect(reservedPoints).toHaveLength(2)
+    for (const reservedPoint of reservedPoints) {
+      expect(reservedPoint.y).toBe(4)
+    }
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_summary',
+        stepIndex: 1,
+        selectedCandidateCount: 5,
+        decisionCounts: expect.objectContaining({ paretoFrontierReserved: 2 })
+      })
+    )
+  })
+
+  it('does not seed protected reservations from a pareto-only parent', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const transforms = [
+      new IrregularTransformCandidate({
+        index: 0,
+        rotationDeg: 0,
+        mirrored: false,
+        reason: 'configured'
+      }),
+      new IrregularTransformCandidate({
+        index: 1,
+        rotationDeg: 90,
+        mirrored: false,
+        reason: 'configured'
+      })
+    ]
+    const pieces = [
+      preparedPiece('a', 4, 2, undefined, transforms),
+      preparedPiece('b', 4, 2, undefined, transforms)
+    ]
+    await runWindowed(
+      sheet(100, 10),
+      pieces,
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 4, 3, 'edge-contact-then-balanced-compactness')
+      ),
+      candidateService(({ moving, placed }) => {
+        if (placed.length === 0) {
+          return moving.transform.index === 0
+            ? [oneCandidate(moving, 0, 0), oneCandidate(moving, 2, 0), oneCandidate(moving, 4, 0)]
+            : [oneCandidate(moving, 0, 0)]
+        }
+        return moving.transform.index === 0
+          ? [oneCandidate(moving, 20, 0), oneCandidate(moving, 24, 0), oneCandidate(moving, 28, 0)]
+          : [oneCandidate(moving, 20, 0), oneCandidate(moving, 22, 0)]
+      }),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    const paretoSurvivor = events.find(
+      (event) =>
+        event.kind === 'beam_selection' &&
+        event.stepIndex === 0 &&
+        event.reason === 'protected_pareto_frontier_survivor'
+    )
+    expect(paretoSurvivor).toBeDefined()
+    const paretoParentId =
+      paretoSurvivor !== undefined && paretoSurvivor.kind === 'beam_selection'
+        ? paretoSurvivor.stateId
+        : ''
+    const reservedFromParetoParent = events
+      .filter((event) => event.kind === 'local_candidate_selection')
+      .filter(
+        (event) =>
+          event.stepIndex === 1 &&
+          event.parentStateId === paretoParentId &&
+          (event.reason === 'pareto_frontier_reserved' ||
+            event.reason === 'intrinsic_contact_tier_reserved')
+      )
+    expect(reservedFromParetoParent).toHaveLength(0)
+    const reservedFromProductionParents = events
+      .filter((event) => event.kind === 'local_candidate_selection')
+      .filter(
+        (event) =>
+          event.stepIndex === 1 &&
+          event.parentStateId !== paretoParentId &&
+          event.reason === 'pareto_frontier_reserved'
+      )
+    expect(reservedFromProductionParents.length).toBeGreaterThan(0)
+  })
+
+  it('retains pareto frontier survivors with lane ranks outside the other lanes', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      sheet(100, 10),
+      [preparedPiece('a', 20, 4), preparedPiece('b', 2, 2)],
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 4, 3, 'edge-contact-then-balanced-compactness')
+      ),
+      candidateService(({ moving, placed }) =>
+        placed.length === 0
+          ? [oneCandidate(moving, 0, 0)]
+          : [
+              oneCandidate(moving, 20, 0),
+              oneCandidate(moving, 20, 2),
+              oneCandidate(moving, 0, 4),
+              oneCandidate(moving, 2, 4),
+              oneCandidate(moving, 10, 4),
+              oneCandidate(moving, 18, 4)
+            ]
+      ),
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    const paretoRanks = events
+      .filter((event) => event.kind === 'beam_selection')
+      .filter(
+        (event) =>
+          event.decision === 'retained' && event.reason === 'protected_pareto_frontier_survivor'
+      )
+      .map((event) => event.rank)
+    expect(paretoRanks.toSorted((first, second) => first - second)).toEqual([1, 2])
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        stepIndex: 1,
+        decision: 'retained',
+        reason: 'within_beam_width',
+        rank: 3
+      })
+    )
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        reason: 'protected_intrinsic_contact_survivor'
+      })
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_step_completed',
+        stepIndex: 1,
+        retainedStateCount: 5
+      })
+    )
+  })
+
+  it('prunes a pareto successor dominated in all four objectives within its contact tier', async () => {
+    const transforms = [
+      new IrregularTransformCandidate({
+        index: 0,
+        rotationDeg: 0,
+        mirrored: false,
+        reason: 'configured'
+      }),
+      new IrregularTransformCandidate({
+        index: 1,
+        rotationDeg: 90,
+        mirrored: false,
+        reason: 'configured'
+      })
+    ]
+    const pieces = [preparedPiece('a', 4, 2, undefined, transforms)]
+    const currentSheet = sheet(100, 10)
+    const settingsLayer = Layer.succeed(
+      GeometrySettings,
+      settings(1, 4, 3, 'edge-contact-then-balanced-compactness')
+    )
+    const service = candidateService(({ moving }) =>
+      moving.transform.index === 0
+        ? [
+            oneCandidate(moving, 0, 0),
+            oneCandidate(moving, 2, 0),
+            oneCandidate(moving, 4, 0),
+            oneCandidate(moving, 10, 10)
+          ]
+        : [oneCandidate(moving, 0, 0)]
+    )
+    const dominatedEvents: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      currentSheet,
+      pieces,
+      settingsLayer,
+      service,
+      undefined,
+      undefined,
+      await rotatedNinetyBiasedLayoutScorer((score) => ({
+        ...score,
+        collisionBoundsAreaMm2: score.collisionBoundsAreaMm2 + 1,
+        collisionBoundsSpanMm: score.collisionBoundsSpanMm + 1,
+        freeMaterialHoleCount: score.freeMaterialHoleCount + 1
+      })),
+      (event) => dominatedEvents.push(event)
+    )
+    const tiedEvents: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      currentSheet,
+      pieces,
+      settingsLayer,
+      service,
+      undefined,
+      undefined,
+      undefined,
+      (event) => tiedEvents.push(event)
+    )
+
+    const dominatedSurvivors = dominatedEvents
+      .filter((event) => event.kind === 'beam_selection')
+      .filter(
+        (event) =>
+          event.decision === 'retained' && event.reason === 'protected_pareto_frontier_survivor'
+      )
+    expect(dominatedSurvivors).toHaveLength(1)
+    expect(dominatedSurvivors[0]?.rank).toBe(1)
+    expect(dominatedEvents).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        decision: 'pruned',
+        reason: 'outside_beam_width'
+      })
+    )
+    expect(dominatedEvents).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_summary',
+        decisionCounts: expect.objectContaining({ paretoFrontierReserved: 2 })
+      })
+    )
+    const tiedSurvivors = tiedEvents
+      .filter((event) => event.kind === 'beam_selection')
+      .filter(
+        (event) =>
+          event.decision === 'retained' && event.reason === 'protected_pareto_frontier_survivor'
+      )
+    expect(tiedSurvivors).toHaveLength(2)
+  })
+
+  it('does not dominate pareto successors across contact tiers', async () => {
+    const transforms = [
+      new IrregularTransformCandidate({
+        index: 0,
+        rotationDeg: 0,
+        mirrored: false,
+        reason: 'configured'
+      }),
+      new IrregularTransformCandidate({
+        index: 1,
+        rotationDeg: 90,
+        mirrored: false,
+        reason: 'configured'
+      })
+    ]
+    const events: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      sheet(100, 10),
+      [preparedPiece('a', 4, 2, undefined, transforms)],
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 4, 3, 'edge-contact-then-balanced-compactness')
+      ),
+      candidateService(({ moving }) =>
+        moving.transform.index === 0
+          ? [
+              oneCandidate(moving, 0, 0),
+              oneCandidate(moving, 2, 0),
+              oneCandidate(moving, 4, 0),
+              oneCandidate(moving, 10, 10)
+            ]
+          : [oneCandidate(moving, 0, 0)]
+      ),
+      undefined,
+      undefined,
+      await rotatedNinetyBiasedLayoutScorer((score) => ({
+        ...score,
+        nearCompleteStructuralContactCount: 5,
+        dominantNearCompleteStructuralContactCount: 5,
+        collisionBoundsAreaMm2: score.collisionBoundsAreaMm2 + 100,
+        collisionBoundsSpanMm: score.collisionBoundsSpanMm + 100,
+        freeMaterialHoleCount: score.freeMaterialHoleCount + 1
+      })),
+      (event) => events.push(event)
+    )
+
+    const survivorRanks = events
+      .filter((event) => event.kind === 'beam_selection')
+      .filter(
+        (event) =>
+          event.decision === 'retained' && event.reason === 'protected_pareto_frontier_survivor'
+      )
+      .map((event) => event.rank)
+    expect(survivorRanks.toSorted((first, second) => first - second)).toEqual([1, 2])
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_step_completed',
+        stepIndex: 0,
+        retainedStateCount: 5
+      })
+    )
+  })
+
+  it('keeps the pareto frontier lane disabled by repair, transform preferences, and small fanout', async () => {
+    const transforms = [
+      new IrregularTransformCandidate({
+        index: 0,
+        rotationDeg: 0,
+        mirrored: false,
+        reason: 'configured'
+      }),
+      new IrregularTransformCandidate({
+        index: 1,
+        rotationDeg: 90,
+        mirrored: false,
+        reason: 'configured'
+      })
+    ]
+    const pieces = [preparedPiece('a', 4, 2, undefined, transforms)]
+    const currentSheet = sheet(100, 10)
+    const service = candidateService(({ moving }) =>
+      moving.transform.index === 0
+        ? [oneCandidate(moving, 0, 0), oneCandidate(moving, 2, 0), oneCandidate(moving, 4, 0)]
+        : [oneCandidate(moving, 0, 0), oneCandidate(moving, 2, 0)]
+    )
+    const expectLaneSilent = (events: IrregularDecisionTraceEvent[]): void => {
+      expect(events).not.toContainEqual(
+        expect.objectContaining({
+          kind: 'local_candidate_selection',
+          reason: 'pareto_frontier_reserved'
+        })
+      )
+      expect(events).not.toContainEqual(
+        expect.objectContaining({
+          kind: 'beam_selection',
+          reason: 'protected_pareto_frontier_survivor'
+        })
+      )
+    }
+
+    const repairEvents: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      currentSheet,
+      pieces,
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 4, 3, 'edge-contact-then-balanced-compactness', 1)
+      ),
+      service,
+      undefined,
+      undefined,
+      undefined,
+      (event) => repairEvents.push(event)
+    )
+    expectLaneSilent(repairEvents)
+
+    const preferenceEvents: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      currentSheet,
+      pieces,
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 4, 3, 'edge-contact-then-balanced-compactness')
+      ),
+      service,
+      { transformPreferences: new Map([[PieceId.make('a'), 0]]) },
+      undefined,
+      undefined,
+      (event) => preferenceEvents.push(event)
+    )
+    expectLaneSilent(preferenceEvents)
+
+    const smallFanoutEvents: IrregularDecisionTraceEvent[] = []
+    await runWindowed(
+      currentSheet,
+      pieces,
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 4, 2, 'edge-contact-then-balanced-compactness')
+      ),
+      service,
+      undefined,
+      undefined,
+      undefined,
+      (event) => smallFanoutEvents.push(event)
+    )
+    expectLaneSilent(smallFanoutEvents)
+  })
+
+  it('keeps the production representative when a pareto lineage converges', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const service = candidateService(({ moving, placed }) => {
+      const anchor = placed[0]?.placement.transform
+      if (anchor === undefined) {
+        return [
+          oneCandidate(moving, 0, 0),
+          oneCandidate(moving, 10, 0),
+          oneCandidate(moving, 50, 0),
+          oneCandidate(moving, 0, 98)
+        ]
+      }
+      if (anchor.translateX === 0 && anchor.translateY === 0) {
+        return [oneCandidate(moving, 0, 98)]
+      }
+      if (anchor.translateX === 0 && anchor.translateY === 98) {
+        return [oneCandidate(moving, 0, 0)]
+      }
+      return [oneCandidate(moving, anchor.translateX + 2, anchor.translateY)]
+    })
+    const pieces = [preparedPiece('a', 2, 2), preparedPiece('b', 2, 2)]
+    const settingsLayer = Layer.succeed(
+      GeometrySettings,
+      settings(1, 4, 3, 'edge-contact-then-balanced-compactness')
+    )
+    const protectedResult = await runWindowed(
+      sheet(100, 110),
+      pieces,
+      settingsLayer,
+      service,
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+    const productionOnlyResult = await runWindowed(
+      sheet(100, 110),
+      pieces,
+      settingsLayer,
+      service,
+      { transformPreferences: new Map([[PieceId.make('unused'), 0]]) }
+    )
+
+    expect(stateSnapshot(protectedResult)).toEqual(stateSnapshot(productionOnlyResult))
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        stepIndex: 0,
+        decision: 'retained',
+        reason: 'protected_pareto_frontier_survivor'
+      })
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        stepIndex: 1,
+        decision: 'retained',
+        reason: 'within_beam_width'
+      })
+    )
+    expect(events).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        stepIndex: 1,
+        reason: 'protected_pareto_frontier_survivor'
+      })
+    )
+  })
+
+  it('promotes a strictly smaller and better pareto terminal descendant', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const service = candidateService(({ moving, placed }) => {
+      const anchor = placed[0]?.placement.transform
+      if (anchor === undefined) {
+        return [
+          oneCandidate(moving, 0, 0),
+          oneCandidate(moving, 10, 0),
+          oneCandidate(moving, 50, 0),
+          oneCandidate(moving, 0, 98)
+        ]
+      }
+      return anchor.translateY === 98
+        ? [oneCandidate(moving, 2, 98)]
+        : [oneCandidate(moving, anchor.translateX + 20, anchor.translateY)]
+    })
+    const pieces = [preparedPiece('a', 2, 2), preparedPiece('b', 2, 2)]
+    const settingsLayer = Layer.succeed(
+      GeometrySettings,
+      settings(1, 2, 3, 'edge-contact-then-balanced-compactness')
+    )
+    const protectedResult = await runWindowed(
+      sheet(100, 110),
+      pieces,
+      settingsLayer,
+      service,
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+    const productionOnlyResult = await runWindowed(
+      sheet(100, 110),
+      pieces,
+      settingsLayer,
+      service,
+      { transformPreferences: new Map([[PieceId.make('unused'), 0]]) }
+    )
+
+    expect(protectedResult.bestScore.collisionBoundsAreaMm2).toBe(8)
+    expect(protectedResult.bestScore.nearCompleteStructuralContactCount).toBe(1)
+    expect(productionOnlyResult.bestScore.collisionBoundsAreaMm2).toBe(44)
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        stepIndex: 1,
+        decision: 'retained',
+        reason: 'protected_pareto_frontier_survivor'
+      })
+    )
+  })
+
+  it('rejects a pareto terminal descendant that is not strictly smaller and better', async () => {
+    const events: IrregularDecisionTraceEvent[] = []
+    const service = candidateService(({ moving, placed }) => {
+      const anchor = placed[0]?.placement.transform
+      if (anchor === undefined) {
+        return [
+          oneCandidate(moving, 0, 0),
+          oneCandidate(moving, 10, 0),
+          oneCandidate(moving, 50, 0),
+          oneCandidate(moving, 0, 98)
+        ]
+      }
+      return anchor.translateY === 98
+        ? [oneCandidate(moving, 50, 98)]
+        : [oneCandidate(moving, anchor.translateX + 2, anchor.translateY)]
+    })
+    const result = await runWindowed(
+      sheet(100, 110),
+      [preparedPiece('a', 2, 2), preparedPiece('b', 2, 2)],
+      Layer.succeed(
+        GeometrySettings,
+        settings(1, 2, 3, 'edge-contact-then-balanced-compactness')
+      ),
+      service,
+      undefined,
+      undefined,
+      undefined,
+      (event) => events.push(event)
+    )
+
+    expect(result.bestScore.collisionBoundsAreaMm2).toBe(8)
+    expect(result.bestScore.nearCompleteStructuralContactCount).toBe(1)
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        kind: 'beam_selection',
+        stepIndex: 1,
+        decision: 'retained',
+        reason: 'protected_pareto_frontier_survivor'
+      })
+    )
+  })
+
+  it('returns the same winner and placements with pareto frontier tracing enabled', async () => {
+    const run = (emitDecisionTrace?: EmitIrregularDecisionTrace) =>
+      runWindowed(
+        sheet(100, 10),
+        [preparedPiece('a', 20, 4), preparedPiece('b', 2, 2)],
+        Layer.succeed(
+          GeometrySettings,
+          settings(1, 4, 3, 'edge-contact-then-balanced-compactness')
+        ),
+        candidateService(({ moving, placed }) =>
+          placed.length === 0
+            ? [oneCandidate(moving, 0, 0)]
+            : [
+                oneCandidate(moving, 20, 0),
+                oneCandidate(moving, 20, 2),
+                oneCandidate(moving, 0, 4),
+                oneCandidate(moving, 2, 4),
+                oneCandidate(moving, 10, 4),
+                oneCandidate(moving, 18, 4)
+              ]
+        ),
+        undefined,
+        undefined,
+        undefined,
+        emitDecisionTrace
+      )
+    const traceEvents: IrregularDecisionTraceEvent[] = []
+    const withoutTrace = await run()
+    const withTrace = await run((event) => traceEvents.push(event))
+
+    expect(stateSnapshot(withTrace)).toEqual(stateSnapshot(withoutTrace))
+    expect(withTrace.bestScore).toEqual(withoutTrace.bestScore)
+    expect(traceEvents).toContainEqual(
+      expect.objectContaining({
+        kind: 'local_candidate_selection',
+        reason: 'pareto_frontier_reserved'
       })
     )
   })

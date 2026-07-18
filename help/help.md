@@ -107,6 +107,23 @@ reference. Four distinct hashes remain, so sheet invariance is still open. See
 [the boundary-lane report](research/protected-boundary-anchor-diversity.md) and
 [the intrinsic-seed report](research/protected-intrinsic-contact-seed.md).
 
+The `protected-contact-pareto-frontier` arc is complete and documented in
+[the mechanism-arc report](research/sheet-invariance-mechanism-arc-and-blocker.md).
+A protected Pareto frontier lane (bounded non-dominated seeds from exact
+contact tiers behind production fanout, intrinsic-pool isolation, truthful
+traces, full test coverage) is established as safe through variant `4e144ac`,
+which also improves rectangles by `8.22%` and the `2000 x 1700` intrinsic
+result to `535,808.686 mm2` at 57/17 contacts. A later family-coverage seed
+variant and the canonical-legacy/invariant-terminal variants are research
+only. The later canonical-legacy-lane plus invariant-terminal
+variants (v5/v5b) are rejected for production: they lose the approved
+`2000 x 2700` reference. The verified conclusion is that the reference motif
+is reachable only through the exact historical sheet-relative search
+dynamics, so reference reproduction and sheet-independence are mutually
+exclusive for this motif; the remaining paths are a guided canonical replay
+with cross-decode coordination or a yet-unfound invariantly reachable common
+motif at reference quality.
+
 The near-parallel NFP crossing crash is resolved in production by merged pull
 request #1. The guarded fallback recovers only strict internal crossings and the
 pre-merge differential corpus remained byte-identical.
@@ -1840,6 +1857,31 @@ Do not end with only a brainstorm. Rank recommendations, state what evidence
 would falsify each one, and identify the smallest safe production experiment.
 
 ## Investigation Log
+
+### 2026-07-18 (sheet-invariance arc)
+
+- Completed the `protected-contact-pareto-frontier` investigation. First
+  causal divergence verified at beam step 0: the two largest rectangles'
+  rotation-0 and rotation-90 candidates are identical on every
+  sheet-independent measure (max side, area, span, zero contact); only
+  sheet-normalized compactness separates them, so 2000 x 1700 keeps the
+  landscape family and the other three sheets keep portrait, evicting the
+  loser at rank 17 before any protected lane can see it.
+- Verified the terminal-gate arithmetic: on 2000 x 1700 the 58/16 production
+  winner outranks the 53/14 reference under the production comparator, so the
+  reference hash can never be the common hash there.
+- Built and measured six protected variants. The useful shippable result is
+  variant `4e144ac`: a protected Pareto frontier lane behind production
+  fanout (family-coverage seeds, intrinsic-pool isolation, truthful traces),
+  all checkpoints exact, rectangles -8.22%, 2000 x 1700 -> 535,808.686/57-17.
+- Rejected the v5/v5b canonical-legacy-lane plus invariant-terminal variants:
+  they lose the approved 2000 x 2700 reference (436,770.039/42-10 instead of
+  430,344.918/53-14), because any change that makes the legacy lane
+  deterministic breaks the trajectory that produces the reference, even on
+  the reference sheet. Reference reproduction and sheet independence are
+  mutually exclusive for this motif; invariance remains open with a precise
+  falsifiable blocker. Full evidence in
+  [the mechanism-arc report](research/sheet-invariance-mechanism-arc-and-blocker.md).
 
 ### 2026-07-18
 

@@ -1,0 +1,466 @@
+{
+  "generatedAt": "2026-07-18T18:20:01.861Z",
+  "sheets": [
+    {
+      "width": 1000,
+      "height": 1700,
+      "label": "compact roomy"
+    },
+    {
+      "width": 2000,
+      "height": 2700,
+      "label": "reference roomy"
+    }
+  ],
+  "comparison": {
+    "gridSizeMm": 0.001,
+    "ignores": [
+      "piece order",
+      "polygon winding",
+      "ring origin",
+      "translation",
+      "quarter-turn"
+    ],
+    "preserves": [
+      "collision geometry",
+      "relative placement",
+      "reflection"
+    ]
+  },
+  "cases": [
+    {
+      "caseId": "triangle-golden-20",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 1870.003292,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 151.35,
+          "height": 529.7280000000001,
+          "shortSide": 151.35,
+          "longSide": 529.7280000000001,
+          "area": 80174.3328,
+          "span": 681.0780000000001
+        },
+        "canonicalSha256": "4f12f587fcba4696dfaa89f7854541764b7be72d67e27362f53fce2ad94f6728",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.090909,
+          "nearCompleteStructuralContactCount": 20,
+          "dominantNearCompleteStructuralContactCount": 16,
+          "sharedCollisionBoundaryContactUnits": 19.877012,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/triangle-golden-20-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 3272.320416,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": -4.263256414560601e-14,
+          "width": 353.15200000000004,
+          "height": 227.02499999999998,
+          "shortSide": 227.02499999999998,
+          "longSide": 353.15200000000004,
+          "area": 80174.3328,
+          "span": 580.177
+        },
+        "canonicalSha256": "af7522ba79fcb8836b071c8de572a1ad534935e105a72b7c32bba32818a6ddef",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.047619,
+          "nearCompleteStructuralContactCount": 24,
+          "dominantNearCompleteStructuralContactCount": 17,
+          "sharedCollisionBoundaryContactUnits": 23.869325,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/triangle-golden-20-2000x2700.svg"
+      }
+    },
+    {
+      "caseId": "rectangles-20",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 2567.5315,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": -1.1368683772161603e-13,
+          "minY": 0,
+          "width": 887.0239999999999,
+          "height": 608.0160000000001,
+          "shortSide": 608.0160000000001,
+          "longSide": 887.0239999999999,
+          "area": 539324.784384,
+          "span": 1495.04
+        },
+        "canonicalSha256": "19f1c5be7792c5efb267fed2b1773736ce1df63b7705762fabcc4243fffaa9f7",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.169382,
+          "nearCompleteStructuralContactCount": 30,
+          "dominantNearCompleteStructuralContactCount": 30,
+          "sharedCollisionBoundaryContactUnits": 23.009289,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/rectangles-20-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 2770.002625000001,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": -8.526512829121202e-14,
+          "minY": 0,
+          "width": 558.0160000000001,
+          "height": 722.5200000000001,
+          "shortSide": 558.0160000000001,
+          "longSide": 722.5200000000001,
+          "area": 403177.7203200001,
+          "span": 1280.536
+        },
+        "canonicalSha256": "520a6c90038b6824f1aaca383a2fb9c862dd3b865a7b6ad72e1737e314045f4f",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.055975,
+          "nearCompleteStructuralContactCount": 31,
+          "dominantNearCompleteStructuralContactCount": 31,
+          "sharedCollisionBoundaryContactUnits": 23.401401,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/rectangles-20-2000x2700.svg"
+      }
+    },
+    {
+      "caseId": "trapezoids-20",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 3012.4699999999993,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 2.842170943040401e-14,
+          "width": 250.145,
+          "height": 940.5440000000002,
+          "shortSide": 250.145,
+          "longSide": 940.5440000000002,
+          "area": 235272.37888000006,
+          "span": 1190.6890000000003
+        },
+        "canonicalSha256": "b0f9fcd7fc071c718d1ac7360f1e0065f5cd207b045161ccab1e417c101039e7",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.25641,
+          "nearCompleteStructuralContactCount": 23,
+          "dominantNearCompleteStructuralContactCount": 18,
+          "sharedCollisionBoundaryContactUnits": 15.674261,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/trapezoids-20-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 3360.1874579999985,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": -8.526512829121202e-14,
+          "width": 136.473,
+          "height": 1710.079999999999,
+          "shortSide": 136.473,
+          "longSide": 1710.079999999999,
+          "area": 233379.74783999988,
+          "span": 1846.552999999999
+        },
+        "canonicalSha256": "3884f980b271d9249b3b75e92a30fc061d2c8b7ec4714342506725979698e39e",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.302081,
+          "nearCompleteStructuralContactCount": 19,
+          "dominantNearCompleteStructuralContactCount": 19,
+          "sharedCollisionBoundaryContactUnits": 11.377736,
+          "freeMaterialHoleCount": 0
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/trapezoids-20-2000x2700.svg"
+      }
+    },
+    {
+      "caseId": "pentagons-20",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 6141.442499999997,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 407.44399999999996,
+          "height": 847.263,
+          "shortSide": 407.44399999999996,
+          "longSide": 847.263,
+          "area": 345212.225772,
+          "span": 1254.7069999999999
+        },
+        "canonicalSha256": "a753d43e9b4e0567dbc074064256605d2ebd32e900d9c154399e8eabb9cb0f22",
+        "canonicalRotationDeg": 180,
+        "score": {
+          "occupiedHullWasteRatio": 0.339723,
+          "nearCompleteStructuralContactCount": 19,
+          "dominantNearCompleteStructuralContactCount": 10,
+          "sharedCollisionBoundaryContactUnits": 18.702036,
+          "freeMaterialHoleCount": 2
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/pentagons-20-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 4192.333791000001,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 451.193,
+          "height": 533.0939999999999,
+          "shortSide": 451.193,
+          "longSide": 533.0939999999999,
+          "area": 240528.28114199996,
+          "span": 984.2869999999999
+        },
+        "canonicalSha256": "f9f5e060095ed6520eefa6ae7213a41e7a6944a20932d69260ccd31902381307",
+        "canonicalRotationDeg": 180,
+        "score": {
+          "occupiedHullWasteRatio": 0.332557,
+          "nearCompleteStructuralContactCount": 16,
+          "dominantNearCompleteStructuralContactCount": 9,
+          "sharedCollisionBoundaryContactUnits": 15.585344,
+          "freeMaterialHoleCount": 2
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/pentagons-20-2000x2700.svg"
+      }
+    },
+    {
+      "caseId": "star-hulls-20",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 6072.036375,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 407.44399999999996,
+          "height": 847.263,
+          "shortSide": 407.44399999999996,
+          "longSide": 847.263,
+          "area": 345212.225772,
+          "span": 1254.7069999999999
+        },
+        "canonicalSha256": "a753d43e9b4e0567dbc074064256605d2ebd32e900d9c154399e8eabb9cb0f22",
+        "canonicalRotationDeg": 180,
+        "score": {
+          "occupiedHullWasteRatio": 0.339723,
+          "nearCompleteStructuralContactCount": 19,
+          "dominantNearCompleteStructuralContactCount": 10,
+          "sharedCollisionBoundaryContactUnits": 18.702036,
+          "freeMaterialHoleCount": 2
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/star-hulls-20-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 4152.272624999998,
+        "placedCount": 20,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 451.193,
+          "height": 533.0939999999999,
+          "shortSide": 451.193,
+          "longSide": 533.0939999999999,
+          "area": 240528.28114199996,
+          "span": 984.2869999999999
+        },
+        "canonicalSha256": "f9f5e060095ed6520eefa6ae7213a41e7a6944a20932d69260ccd31902381307",
+        "canonicalRotationDeg": 180,
+        "score": {
+          "occupiedHullWasteRatio": 0.332557,
+          "nearCompleteStructuralContactCount": 16,
+          "dominantNearCompleteStructuralContactCount": 9,
+          "sharedCollisionBoundaryContactUnits": 15.585344,
+          "freeMaterialHoleCount": 2
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/star-hulls-20-2000x2700.svg"
+      }
+    },
+    {
+      "caseId": "mixed-50",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 23679.036500000002,
+        "placedCount": 50,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 824.3832733708302,
+          "height": 924.1881861079474,
+          "shortSide": 824.3832733708302,
+          "longSide": 924.1881861079474,
+          "area": 761885.2820743198,
+          "span": 1748.5714594787778
+        },
+        "canonicalSha256": "c60aa72cbbf76b63398e3c3db9bf55dcd6af37afc0b3d5087d00570f8860b52c",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.357851,
+          "nearCompleteStructuralContactCount": 44,
+          "dominantNearCompleteStructuralContactCount": 10,
+          "sharedCollisionBoundaryContactUnits": 38.343123,
+          "freeMaterialHoleCount": 4
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/mixed-50-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 21001.515124999998,
+        "placedCount": 50,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": -1.1368683772161603e-13,
+          "minY": -1.4210854715202004e-13,
+          "width": 666.3809999999997,
+          "height": 923.0499155790309,
+          "shortSide": 666.3809999999997,
+          "longSide": 923.0499155790309,
+          "area": 615102.9257934699,
+          "span": 1589.4309155790306
+        },
+        "canonicalSha256": "e71a0ab002c160a382ce61bdeb97206aadffc69656a3839044aef9b78f698efa",
+        "canonicalRotationDeg": 0,
+        "score": {
+          "occupiedHullWasteRatio": 0.2417,
+          "nearCompleteStructuralContactCount": 44,
+          "dominantNearCompleteStructuralContactCount": 10,
+          "sharedCollisionBoundaryContactUnits": 37.735368,
+          "freeMaterialHoleCount": 7
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/mixed-50-2000x2700.svg"
+      }
+    },
+    {
+      "caseId": "mixed-61",
+      "geometryEquivalent": false,
+      "compact": {
+        "sheet": {
+          "width": 1000,
+          "height": 1700
+        },
+        "elapsedMs": 38218.31891700001,
+        "placedCount": 61,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "width": 658.9071043958036,
+          "height": 700.365287702215,
+          "shortSide": 658.9071043958036,
+          "longSide": 700.365287702215,
+          "area": 461475.6637392004,
+          "span": 1359.2723920980186
+        },
+        "canonicalSha256": "03c10b1bfa36f5489d53a5145495aaec24f732b86149d7f78decdb878c7b2294",
+        "canonicalRotationDeg": 270,
+        "score": {
+          "occupiedHullWasteRatio": 0.242902,
+          "nearCompleteStructuralContactCount": 44,
+          "dominantNearCompleteStructuralContactCount": 9,
+          "sharedCollisionBoundaryContactUnits": 46.343714,
+          "freeMaterialHoleCount": 10
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/mixed-61-1000x1700.svg"
+      },
+      "reference": {
+        "sheet": {
+          "width": 2000,
+          "height": 2700
+        },
+        "elapsedMs": 42692.95774999999,
+        "placedCount": 61,
+        "unplacedCount": 0,
+        "bounds": {
+          "minX": 0,
+          "minY": -4.263256414560601e-14,
+          "width": 545.5151715821061,
+          "height": 788.8779999999994,
+          "shortSide": 545.5151715821061,
+          "longSide": 788.8779999999994,
+          "area": 430344.9175273483,
+          "span": 1334.3931715821054
+        },
+        "canonicalSha256": "40f8ac9c0fb24073ac141b5fb667366af55df90c78c6cca21ff76703a4a7f300",
+        "canonicalRotationDeg": 270,
+        "score": {
+          "occupiedHullWasteRatio": 0.244082,
+          "nearCompleteStructuralContactCount": 53,
+          "dominantNearCompleteStructuralContactCount": 14,
+          "sharedCollisionBoundaryContactUnits": 54.809985,
+          "freeMaterialHoleCount": 2
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/corpus-two-sheet/mixed-61-2000x2700.svg"
+      }
+    }
+  ]
+}

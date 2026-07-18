@@ -1,0 +1,164 @@
+{
+  "generatedAt": "2026-07-18T18:16:26.237Z",
+  "sheets": [
+    {
+      "width": 1000,
+      "height": 1300,
+      "label": "1000x1300"
+    },
+    {
+      "width": 1000,
+      "height": 1700,
+      "label": "1000x1700"
+    },
+    {
+      "width": 2000,
+      "height": 1700,
+      "label": "2000x1700"
+    },
+    {
+      "width": 2000,
+      "height": 2700,
+      "label": "2000x2700"
+    }
+  ],
+  "comparison": {
+    "gridSizeMm": 0.001,
+    "ignores": [
+      "piece order",
+      "polygon winding",
+      "ring origin",
+      "translation",
+      "quarter-turn"
+    ],
+    "preserves": [
+      "collision geometry",
+      "relative placement",
+      "reflection"
+    ]
+  },
+  "cases": [
+    {
+      "caseId": "mixed-61",
+      "geometryEquivalent": false,
+      "runs": [
+        {
+          "sheet": {
+            "width": 1000,
+            "height": 1300
+          },
+          "elapsedMs": 41734.150250000006,
+          "placedCount": 61,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "width": 790.5438846363186,
+            "height": 640.8814788487456,
+            "shortSide": 640.8814788487456,
+            "longSide": 790.5438846363186,
+            "area": 506644.93388055597,
+            "span": 1431.4253634850643
+          },
+          "canonicalSha256": "25143934ab61d92d9a9e43e909968fad4ec6c736751b89bf18d8d57ea4121417",
+          "canonicalRotationDeg": 270,
+          "score": {
+            "occupiedHullWasteRatio": 0.296584,
+            "nearCompleteStructuralContactCount": 38,
+            "dominantNearCompleteStructuralContactCount": 6,
+            "sharedCollisionBoundaryContactUnits": 39.372077,
+            "freeMaterialHoleCount": 12
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/mixed61-four-sheet/mixed-61-1000x1300.svg"
+        },
+        {
+          "sheet": {
+            "width": 1000,
+            "height": 1700
+          },
+          "elapsedMs": 36523.312,
+          "placedCount": 61,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "width": 658.9071043958036,
+            "height": 700.365287702215,
+            "shortSide": 658.9071043958036,
+            "longSide": 700.365287702215,
+            "area": 461475.6637392004,
+            "span": 1359.2723920980186
+          },
+          "canonicalSha256": "03c10b1bfa36f5489d53a5145495aaec24f732b86149d7f78decdb878c7b2294",
+          "canonicalRotationDeg": 270,
+          "score": {
+            "occupiedHullWasteRatio": 0.242902,
+            "nearCompleteStructuralContactCount": 44,
+            "dominantNearCompleteStructuralContactCount": 9,
+            "sharedCollisionBoundaryContactUnits": 46.343714,
+            "freeMaterialHoleCount": 10
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/mixed61-four-sheet/mixed-61-1000x1700.svg"
+        },
+        {
+          "sheet": {
+            "width": 2000,
+            "height": 1700
+          },
+          "elapsedMs": 47767.97404100001,
+          "placedCount": 61,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": -8.526512829121202e-14,
+            "minY": -3.552713678800501e-15,
+            "width": 744.164243805527,
+            "height": 720.0140160011755,
+            "shortSide": 720.0140160011755,
+            "longSide": 744.164243805527,
+            "area": 535808.6857468954,
+            "span": 1464.1782598067025
+          },
+          "canonicalSha256": "5a884a06a25532d96e4aab8e3a0a3efcfc3880976e220cc18ff5240141b9a243",
+          "canonicalRotationDeg": 0,
+          "score": {
+            "occupiedHullWasteRatio": 0.358311,
+            "nearCompleteStructuralContactCount": 57,
+            "dominantNearCompleteStructuralContactCount": 17,
+            "sharedCollisionBoundaryContactUnits": 61.610925,
+            "freeMaterialHoleCount": 4
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/mixed61-four-sheet/mixed-61-2000x1700.svg"
+        },
+        {
+          "sheet": {
+            "width": 2000,
+            "height": 2700
+          },
+          "elapsedMs": 39104.170165999996,
+          "placedCount": 61,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": -4.263256414560601e-14,
+            "width": 545.5151715821061,
+            "height": 788.8779999999994,
+            "shortSide": 545.5151715821061,
+            "longSide": 788.8779999999994,
+            "area": 430344.9175273483,
+            "span": 1334.3931715821054
+          },
+          "canonicalSha256": "40f8ac9c0fb24073ac141b5fb667366af55df90c78c6cca21ff76703a4a7f300",
+          "canonicalRotationDeg": 270,
+          "score": {
+            "occupiedHullWasteRatio": 0.244082,
+            "nearCompleteStructuralContactCount": 53,
+            "dominantNearCompleteStructuralContactCount": 14,
+            "sharedCollisionBoundaryContactUnits": 54.809985,
+            "freeMaterialHoleCount": 2
+          },
+          "artifactPath": "/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/integration/mixed61-four-sheet/mixed-61-2000x2700.svg"
+        }
+      ]
+    }
+  ]
+}

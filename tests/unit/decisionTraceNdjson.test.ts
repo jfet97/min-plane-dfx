@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  IrregularDecisionTraceBeamSelection,
   IrregularDecisionTraceBeamStepStarted,
   IrregularDecisionTraceLocalCandidateDecisionCounts,
+  IrregularDecisionTraceLocalCandidateSelection,
   IrregularDecisionTraceLocalCandidateSummary,
   type IrregularDecisionTraceEvent
 } from '../../src/workers/algorithm/irregular/decisionTrace.js'
@@ -49,6 +51,41 @@ describe('IrregularDecisionTraceBatcher', () => {
     ])
   })
 
+  it('round-trips pareto frontier reservation reasons through NDJSON', () => {
+    const selection = new IrregularDecisionTraceLocalCandidateSelection({
+      decodeId: 'baseline-0',
+      chromosomeId: 'c0',
+      decodeSource: 'baseline',
+      stepIndex: 0,
+      parentStateId: 's0',
+      pieceId: 'piece-a',
+      candidateId: 'k0',
+      rank: 18,
+      decision: 'selected',
+      reason: 'pareto_frontier_reserved'
+    })
+    const beamSelection = new IrregularDecisionTraceBeamSelection({
+      decodeId: 'baseline-0',
+      chromosomeId: 'c0',
+      decodeSource: 'baseline',
+      stepIndex: 0,
+      stateId: 's1',
+      rank: 1,
+      decision: 'retained',
+      reason: 'protected_pareto_frontier_survivor'
+    })
+
+    const decoded = serializeIrregularDecisionTraceBatch([selection, beamSelection])
+      .trimEnd()
+      .split('\n')
+      .map((line) => JSON.parse(line) as IrregularDecisionTraceEvent)
+
+    expect(decoded).toEqual([
+      expect.objectContaining({ kind: 'local_candidate_selection', reason: 'pareto_frontier_reserved' }),
+      expect.objectContaining({ kind: 'beam_selection', reason: 'protected_pareto_frontier_survivor' })
+    ])
+  })
+
   it('serializes bounded local-candidate aggregate counts as one NDJSON record', () => {
     const summary = new IrregularDecisionTraceLocalCandidateSummary({
       decodeId: 'baseline-0',
@@ -66,6 +103,7 @@ describe('IrregularDecisionTraceBatcher', () => {
         compactnessAlternativeReserved: 0,
         displacedByCompactnessReservation: 0,
         intrinsicContactTierReserved: 0,
+        paretoFrontierReserved: 0,
         duplicateLocalGeometry: 10,
         outsideLocalCandidateFanout: 86
       })
@@ -89,6 +127,7 @@ describe('IrregularDecisionTraceBatcher', () => {
         compactnessAlternativeReserved: 0,
         displacedByCompactnessReservation: 0,
         intrinsicContactTierReserved: 0,
+        paretoFrontierReserved: 0,
         duplicateLocalGeometry: 10,
         outsideLocalCandidateFanout: 86
       }

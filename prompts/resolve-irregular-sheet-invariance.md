@@ -38,10 +38,14 @@ Start from the repository root:
 /Users/andreasimonecosta/Documents/Work/min-plane-dfx
 ```
 
-At this prompt revision, the protected intrinsic contact seed was merged through
-pull request #3 and `main` was `abf947c98145c5e0cb881a051db32499abcc4542`.
-Refresh `main` and record the actual starting commit. This hash is a handoff
-checkpoint, not permission to skip live verification.
+At this prompt revision, the protected Pareto frontier lane is proposed
+through pull request #4 (`protected-pareto-frontier-lane`) and the
+sheet-invariance mechanism arc is complete with a verified blocker. Refresh
+`main` and record the actual starting commit. This hash is a handoff
+checkpoint, not permission to skip live verification. The arc's outcome, the
+step-0 divergence, and the remaining blocker are recorded in
+[`help/research/sheet-invariance-mechanism-arc-and-blocker.md`](../help/research/sheet-invariance-mechanism-arc-and-blocker.md);
+read it before designing any new invariance experiment.
 
 Read these files in order before editing:
 
@@ -241,26 +245,52 @@ weakening terminal Pareto acceptance.
 
 ## Next hypotheses, in order
 
+The protected Pareto frontier arc (hypotheses 1-3 below) is complete and its
+outcome is recorded in
+[`help/research/sheet-invariance-mechanism-arc-and-blocker.md`](../help/research/sheet-invariance-mechanism-arc-and-blocker.md):
+the lane is safe and promoted (PR #4), but sheet invariance is not closed
+because the reference motif is sheet-relative-bound. Any new invariance
+experiment must start from that report, not from the hypotheses below, which
+are retained as the already-evaluated record.
+
 Continue from the accepted primary result in this order. Record a counterexample
 before switching away from any specific follow-up.
 
-1. **Protected Pareto frontier within exact contact strength.** Retain bounded
-   non-dominated states over maximum side, area, span, contact tier, and holes;
-   preserve production and legacy representatives separately.
-2. **Orientation-family coverage before local truncation.** Transfer
+1. **Guided canonical replay of a found motif (legacy-reference role).** The
+   verified blocker is that per-sheet decodes cannot reproduce the reference
+   lineage (locally-dominated branches at depths 1/2/4; terminal gate
+   arithmetic; trajectory divergence). Test a bounded replay of a motif found
+   on one sheet as a protected prefix on the others, with an invariant
+   terminal selection and the holes floor, and prove the dual gate on every
+   sheet. This requires a cross-decode coordination step the single-request
+   production flow does not have; evaluate it as an explicit corpus-mode
+   stage, never as hidden per-request behavior.
+2. **Invariantly reachable common motif search.** Instead of forcing the
+   reference, search for a compact motif at reference quality (area <=
+   430,344.918 mm2, <= 2 holes, >= 53/14 contacts, and beating the 2000 x 1700
+   58/16 terminal gate) that the protected lanes can produce on all four
+   sheets. The measured leads are the 426,881.608 mm2 / 56-15 / 3-hole and the
+   557,698.950 mm2 / 65-17 / 2-hole states; neither satisfies the full bar.
+3. **Orientation-family coverage before local truncation.** Transfer
    libnest2d's useful pattern: compare the best real candidate from each
    meaningful rotation/mirror family before the protected cap, without changing
-   the production transform cap.
-3. **Bounded deterministic guide roles.** Within one protected budget, test
-   legacy-reference, intrinsic-max-side, and cavity-visible roles with
-   geometry deduplication and quota spillover. Do not allocate multiple global
-   beam-width reservations as M2 did.
+   the production transform cap. Already shown by the probe to be necessary
+   (depth-2) but not sufficient (depths 1/4) alone.
 4. **Shared-prefix deterministic portfolio.** Only after the invariant decoder
    is sound, test one additional order/rotation seed while reusing prefix and
    geometry work. Do not run two full decodes if equivalent work can be shared.
 5. **Optional GA.** Evaluate small priority/rotation-only budgets last, always
    retaining the deterministic baseline. Placement-policy mutation remains off
    until scoring semantics are invariant.
+
+Completed and retained as the evaluated record, not as open work:
+
+- ~~Protected Pareto frontier within exact contact strength~~: implemented and
+  promoted (PR #4); measured safe, did not close invariance.
+- ~~Canonical legacy lane + invariant terminal (v5/v5b)~~: rejected; loses the
+  approved reference (`436,770.039 mm2` / 42-10 instead of
+  `430,344.918 mm2` / 53-14) because determinism destroys the
+  reference-producing trajectory.
 
 ## Experiment protocol
 

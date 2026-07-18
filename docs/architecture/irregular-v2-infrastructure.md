@@ -189,7 +189,24 @@ raw hull waste, placement identity, and translation-normalized geometry. It
 must not consume normalized sheet fields, sheet-boundary coordinates, or
 free-material fields.
 
-Production, boundary, and intrinsic terminal winners are oriented independently.
+A second protected-only reservation keeps a bounded non-dominated set of local
+candidates per exact shared-boundary-length tier (zero tier included): maximum
+side, area, and span, capped at two, deduplicated by translation-normalized
+geometry. These Pareto frontier seeds never replace or reorder production
+candidates and advance in a separate width-two lane whose per-tier frontier
+ranks intrinsic max side, area, span, holes, raw hull waste, placement
+identity, and translation-normalized geometry. Both protected seeds fire only
+from production, boundary, or intrinsic parents, so the width-one intrinsic
+pool is byte-identical. Cross-lane geometry deduplication keeps the production
+representative and ORs only lane eligibility; decision traces emit
+`pareto_frontier_reserved` and `protected_pareto_frontier_survivor` with a
+`paretoFrontierReserved` count and lane-correct ranks. The frontier retains
+`freeMaterialHoleCount` as one domination objective because removing it
+measurably flips the approved two-hole reference to a three-hole motif;
+enclosed holes are arrangement-intrinsic and edge cases are bounded by the
+terminal gate.
+
+Production, boundary, intrinsic, and Pareto terminal winners are oriented independently.
 Each protected winner may compete only when it is strictly better under the
 production layout comparator and has strictly smaller collision-envelope area.
 Both lanes are disabled under terminal repair, preserving repair-8 golden and
