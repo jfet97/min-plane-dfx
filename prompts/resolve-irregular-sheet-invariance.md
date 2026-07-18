@@ -8,6 +8,11 @@ implement the strongest safe candidate in an isolated worktree, test it against
 all quality gates, inspect rendered layouts, and leave the repository with a
 reproducible result and a clear production decision.
 
+The living project ledger is [`help/help.md`](../help/help.md). Read it before
+acting, treat it as authoritative for accepted and rejected checkpoints, and
+update it before leaving any new experiment or production decision. If this
+prompt and the live ledger disagree, verify current `main` and follow the ledger.
+
 ## Mission
 
 Close the remaining sheet-invariance gap for the deterministic convex irregular
@@ -33,10 +38,10 @@ Start from the repository root:
 /Users/andreasimonecosta/Documents/Work/min-plane-dfx
 ```
 
-At the time this prompt was written, merged `main` was
-`20d74f6379c4865ec9654d351b3bcbae7b2aae81` before the protected intrinsic
-contact seed was integrated. Refresh `main` and record the actual starting
-commit. Do not assume this hash is still current.
+At this prompt revision, the protected intrinsic contact seed was merged through
+pull request #3 and `main` was `abf947c98145c5e0cb881a051db32499abcc4542`.
+Refresh `main` and record the actual starting commit. This hash is a handoff
+checkpoint, not permission to skip live verification.
 
 Read these files in order before editing:
 
@@ -45,15 +50,17 @@ Read these files in order before editing:
 3. `SCORING_CRITERIA_NOTES.md`;
 4. `docs/architecture.md`;
 5. `docs/architecture/irregular-v2-infrastructure.md`;
-6. `help/help.md`, especially Current Production Truth, Current Research
-   Status, the provenance ledger, and the newest investigation-log entry;
-7. `help/research/contact-tier-intrinsic-reservation.md`;
-8. `help/research/protected-contact-tier-reservation.md`;
-9. `help/research/protected-boundary-anchor-diversity.md`;
-10. `help/research/open-source-nesting-strategies.md`;
-11. `help/research/bounded-ga-order-rotation-probe.md`;
-12. `docs/research/deepnest-svgnest-source-comparison.md`;
-13. `docs/research/irregular-nesting-literature-and-web-research.md`.
+6. [`help/help.md`](../help/help.md), especially Current Production Truth,
+   Current Research Status, the provenance ledger, and the newest
+   investigation-log entry;
+7. [`help/research/protected-intrinsic-contact-seed.md`](../help/research/protected-intrinsic-contact-seed.md);
+8. [`help/research/contact-tier-intrinsic-reservation.md`](../help/research/contact-tier-intrinsic-reservation.md);
+9. [`help/research/protected-contact-tier-reservation.md`](../help/research/protected-contact-tier-reservation.md);
+10. [`help/research/protected-boundary-anchor-diversity.md`](../help/research/protected-boundary-anchor-diversity.md);
+11. [`help/research/open-source-nesting-strategies.md`](../help/research/open-source-nesting-strategies.md);
+12. [`help/research/bounded-ga-order-rotation-probe.md`](../help/research/bounded-ga-order-rotation-probe.md);
+13. [`docs/research/deepnest-svgnest-source-comparison.md`](../docs/research/deepnest-svgnest-source-comparison.md);
+14. [`docs/research/irregular-nesting-literature-and-web-research.md`](../docs/research/irregular-nesting-literature-and-web-research.md).
 
 Then inspect the current implementation, especially:
 
@@ -86,14 +93,19 @@ to skip the baseline run.
   edge-contact policy, and no GA. It produces the dense lattice and must remain
   green.
 - The persisted mixed-61 request uses repair budget `0`. The merged protected
-  boundary-anchor lane is active only when repair is disabled, beam width is
-  greater than one, and no chromosome transform preference is active.
-- Production beam slots and the width-one incumbent are isolated from the
-  protected lane. Cross-lane geometry deduplication preserves the production
-  representative.
-- Production and protected terminal candidates are oriented independently. A
-  protected result may win only if it is strictly better under the production
-  layout comparator and strictly smaller in collision-envelope area.
+  boundary-anchor and intrinsic-contact lanes are active only when repair is
+  disabled, beam width is greater than one, and no chromosome transform
+  preference is active.
+- Production beam slots and the width-one incumbent are isolated from both
+  protected lanes. The legacy boundary lane retains width eight; the intrinsic
+  contact lane retains width one. Cross-lane geometry deduplication preserves
+  the production representative and propagates only eligibility.
+- Production, boundary, and intrinsic terminal candidates are oriented
+  independently. Each protected result may win only if it is strictly better
+  under the production layout comparator and strictly smaller in
+  collision-envelope area.
+- A converged state can carry both protected eligibilities. Decision traces must
+  report the rank of the lane that actually caused retention.
 - The NFP near-parallel crossing recovery is already merged. Do not conflate
   this search investigation with that resolved kernel crash.
 
@@ -122,8 +134,8 @@ other three sheets choose different motifs.
 
 `95de72c` correctly canonicalized occupied-hull waste and removed a meaningless
 raw floating difference. On `2000 x 2700`, that exposed a production-score tie
-and discarded a distinct sheet-boundary lineage. The merged protected lane
-recovers that lineage. The later protected intrinsic contact lane recovers a
+and discarded a distinct sheet-boundary lineage. The merged boundary-anchor
+lane recovers that lineage. The later protected intrinsic contact lane recovers a
 smaller `2000 x 1700` lineage without changing the other three hashes.
 
 The general gap remains earlier in pruning:
@@ -152,7 +164,7 @@ The historical contact-tier intrinsic experiment is not discarded.
   sheet by up to `15x`.
 - M2 spent two global reservations on balanced and intrinsic policies and
   regressed the reference result. Do not repeat it.
-- A narrow max-side-first exact-contact local port on current main remained
+- The rejected `protected-contact-tier-reservation` narrow local port remained
   shape-dependent: it improved the pentagon/star hull family but regressed
   trapezoids and mixed-50 and did not help mixed-61.
 - Moving the same primitive behind production fanout succeeds: all existing
@@ -328,10 +340,13 @@ Measure time and counts for:
 - terminal orientation;
 - trace serialization separately.
 
-The current protected lane costs approximately `1.7-2.0x` on active corpus
-paths. Compare against the merged starting commit, not the pre-lane baseline.
-Target no more than `1.25x` additional runtime. If the solution needs more,
-explain the measured quality/time frontier and do not hide the cost.
+The boundary-anchor lane costs approximately `1.7-2.0x` on active corpus paths
+relative to the pre-boundary checkpoint. The later intrinsic sublane adds
+about `1.05x` on `1000 x 1300` and `1.16x` on the changed `2000 x 1700` path
+relative to its merged base. Compare every new candidate against the live merged
+starting commit, not either historical baseline. Target no more than `1.25x`
+additional runtime. If the solution needs more, explain the measured
+quality/time frontier and do not hide the cost.
 
 Prefer shared immutable geometry and score caches. Do not merge production and
 protected retention semantics merely to reduce work.
@@ -345,7 +360,7 @@ protected retention semantics merely to reduce work.
 - replay/search equivalence where applicable;
 - no fabricated placements, scores, free rectangles, history, or preview data;
 - official repair-8 triangle golden green with its current dense lattice;
-- protected lane remains disabled under terminal repair;
+- both protected lanes remain disabled under terminal repair;
 - cancellation and repair-deadline tests green;
 - production representative preserved when lanes converge;
 - terminal rotation scored once per legal variant and trace emitted once.
@@ -426,11 +441,15 @@ Run the corpus through the committed harness:
 
 ```sh
 pnpm corpus:sheet-invariance --output <immutable-output-directory>
+pnpm corpus:sheet-invariance \
+  --case mixed-61 \
+  --sheets 1000x1300,1000x1700,2000x1700,2000x2700 \
+  --output <immutable-four-sheet-output-directory>
 ```
 
-Do not use a temporary constant edit as the final four-sheet proof. Extend or
-reuse a committed reproducible four-sheet harness so another checkout can
-regenerate the same hashes.
+Do not use a temporary constant edit as the final four-sheet proof. The committed
+`--sheets` interface is the provenance boundary; another checkout must be able
+to regenerate the same matrix and hashes.
 
 Render accepted SVGs with the repository Electron/Chromium renderer and inspect
 the PNGs. Confirm visible background margin on all four sides and no clipping
@@ -449,8 +468,9 @@ Reject a specific implementation, not the underlying research direction, when:
 - the result depends on an uncommitted injection or cannot reproduce its hash.
 
 Keep the branch, commit, manifest, metrics, traces, and renders for every
-coherent rejected candidate. Update `help/help.md` before switching to a
-materially different hypothesis.
+coherent rejected candidate. Update the living
+[`help/help.md`](../help/help.md) ledger before switching to a materially
+different hypothesis.
 
 ## Required deliverables
 
@@ -467,8 +487,9 @@ Do not finish with only recommendations. Produce:
    PackingSolver, and Sparrow principles were transferred or rejected;
 7. a production decision: promote, reject, or blocked by a precise falsifiable
    condition;
-8. updated `help/help.md`, the relevant architecture page, artifact index, and
-   durable research report;
+8. updated [`help/help.md`](../help/help.md), the relevant architecture page,
+   artifact index, durable research report, and this prompt when its verified
+   starting truth or next hypothesis changes;
 9. a final project knowledge update with fresh qmd index and embeddings;
 10. if the candidate passes every gate, a clean single-purpose integration
     branch and PR description using exactly `Why`, `What`, `How`, `Remarks`.
