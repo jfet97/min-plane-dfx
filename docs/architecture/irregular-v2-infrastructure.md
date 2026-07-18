@@ -473,9 +473,13 @@ algorithm code does not reconstruct or revalidate placements through a different
 legality path. Admission is a strict guard, not a weighted comparator: unplaced,
 holes, cavity ratio, contact graph, span, bounded max-side regression, and bounded
 contact losses must all be no worse while collision-bounds area is strictly
-smaller. Undefined topology retains production, as does canonical layout-identity
-equality. Layout identity ignores translation, rigid quarter-turn, copy order,
-ring origin, and winding while preserving reflection and relative placement.
+smaller. Max side acts as an anti-chain fallback: its bound is waived only when
+the protected finalist is Pareto-dominant across unplaced count, area, span,
+holes, every contact-topology measure, and both contact counts. Any structural
+or contact slack consumed keeps the max-side bound active. Undefined topology
+retains production, as does canonical layout-identity equality. Layout identity
+ignores translation, rigid quarter-turn, copy order, ring origin, and winding
+while preserving reflection and relative placement.
 
 Do not route `irregular-convex-v2` requests to MaxRects.
 

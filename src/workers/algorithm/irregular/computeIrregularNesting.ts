@@ -736,6 +736,16 @@ function firstAdmissionViolation(
 ): string | undefined {
   const productionMaxSide = maxCollisionBoundsSide(production)
   const canonicalMaxSide = maxCollisionBoundsSide(canonical)
+  const maxSideWithinSlack =
+    canonicalMaxSide <=
+    productionMaxSide *
+      (1 + CANONICAL_REFERENCE_ADMISSION_SLACKS.maximumMaxSideRegressionRatio)
+  const maxSideWaivedForStructuralDominance = canonicalIsStructuralParetoDominant(
+    production,
+    productionTopology,
+    canonical,
+    canonicalTopology
+  )
   const checks: ReadonlyArray<readonly [boolean, string]> = [
     [canonical.unplacedCount <= production.unplacedCount, 'unplaced count regressed'],
     [canonical.collisionBoundsAreaMm2 < production.collisionBoundsAreaMm2, 'area was not strictly smaller'],
@@ -758,9 +768,7 @@ function firstAdmissionViolation(
     ],
     [canonical.collisionBoundsSpanMm <= production.collisionBoundsSpanMm, 'span regressed'],
     [
-      canonicalMaxSide <=
-        productionMaxSide *
-          (1 + CANONICAL_REFERENCE_ADMISSION_SLACKS.maximumMaxSideRegressionRatio),
+      maxSideWithinSlack || maxSideWaivedForStructuralDominance,
       'max side exceeded the protected-role admission slack'
     ],
     [
@@ -777,6 +785,31 @@ function firstAdmissionViolation(
     ]
   ]
   return checks.find(([passes]) => !passes)?.[1]
+}
+
+function canonicalIsStructuralParetoDominant(
+  production: IrregularLayoutScore,
+  productionTopology: CanonicalLayoutTopology,
+  canonical: IrregularLayoutScore,
+  canonicalTopology: CanonicalLayoutTopology
+): boolean {
+  return (
+    canonical.unplacedCount <= production.unplacedCount &&
+    canonical.collisionBoundsAreaMm2 <= production.collisionBoundsAreaMm2 &&
+    canonical.collisionBoundsSpanMm <= production.collisionBoundsSpanMm &&
+    canonical.freeMaterialHoleCount <= production.freeMaterialHoleCount &&
+    canonicalTopology.largestOccupiedHullGapRatio <=
+      productionTopology.largestOccupiedHullGapRatio &&
+    canonicalTopology.positiveContactComponentCount <=
+      productionTopology.positiveContactComponentCount &&
+    canonicalTopology.isolatedPieceCount <= productionTopology.isolatedPieceCount &&
+    canonicalTopology.largestPositiveContactComponentSize >=
+      productionTopology.largestPositiveContactComponentSize &&
+    canonical.nearCompleteStructuralContactCount >=
+      production.nearCompleteStructuralContactCount &&
+    canonical.dominantNearCompleteStructuralContactCount >=
+      production.dominantNearCompleteStructuralContactCount
+  )
 }
 
 function maxCollisionBoundsSide(score: IrregularLayoutScore): number {

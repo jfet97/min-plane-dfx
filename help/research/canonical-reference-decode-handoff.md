@@ -54,6 +54,12 @@ ratio, contact-component count, isolated count, or span, and no smaller largest
 contact component. Non-finite topology and canonical identity ties retain
 production.
 
+Max side is an anti-chain guard rather than an unconditional veto. The `7.5%`
+cap is waived only when the canonical finalist is Pareto-dominant across
+unplaced count, area, span, holes, every measured contact-topology field, and
+both total and dominant contacts. If it consumes any structural or contact
+slack, the unchanged `7.5%` cap still applies.
+
 ## Geometry Boundary
 
 `src/workers/irregular/canonicalLayoutGeometry.ts` owns integer-grid layout
