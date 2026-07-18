@@ -144,6 +144,7 @@ interface LocalCandidate {
 interface LocalCandidateSelection {
   readonly production: ReadonlyArray<LocalCandidate>
   readonly protectedIntrinsic: LocalCandidate | undefined
+  readonly protectedPareto: ReadonlyArray<LocalCandidate>
 }
 
 interface ScoredState {
@@ -157,6 +158,7 @@ interface ScoredState {
   readonly eligibleForProductionLane: boolean
   readonly eligibleForProtectedLane: boolean
   readonly eligibleForProtectedIntrinsicLane: boolean
+  readonly eligibleForProtectedParetoFrontierLane: boolean
 }
 
 interface KeyedState {
@@ -166,6 +168,7 @@ interface KeyedState {
   readonly eligibleForProductionLane: boolean
   readonly eligibleForProtectedLane: boolean
   readonly eligibleForProtectedIntrinsicLane: boolean
+  readonly eligibleForProtectedParetoFrontierLane: boolean
 }
 
 interface TaggedSuccessor {
@@ -174,6 +177,7 @@ interface TaggedSuccessor {
   readonly eligibleForProductionLane: boolean
   readonly eligibleForProtectedLane: boolean
   readonly eligibleForProtectedIntrinsicLane: boolean
+  readonly eligibleForProtectedParetoFrontierLane: boolean
 }
 
 interface ActiveDecisionTrace extends IrregularDecisionTraceIdentity {
@@ -274,6 +278,7 @@ export function runWindowedIrregularBeam(input: {
     let productionBeamStates = new Set(beam)
     let boundaryAnchorStates: ReadonlyArray<IrregularBeamState> = []
     let intrinsicContactStates: ReadonlyArray<IrregularBeamState> = []
+    let paretoFrontierStates: ReadonlyArray<IrregularBeamState> = []
     const candidateCounts: number[] = []
     const controlState: ControlState = { checkpointsSinceYield: 0 }
     let stepIndex = 0
@@ -289,6 +294,7 @@ export function runWindowedIrregularBeam(input: {
       const successors: TaggedSuccessor[] = []
       const protectedBoundaryParents = new Set(boundaryAnchorStates)
       const protectedIntrinsicParents = new Set(intrinsicContactStates)
+      const protectedParetoFrontierParents = new Set(paretoFrontierStates)
       let candidateCount = 0
 
       for (const [parentIndex, state] of beam.entries()) {
@@ -297,6 +303,8 @@ export function runWindowedIrregularBeam(input: {
         const eligibleForProductionLane = productionBeamStates.has(state)
         const eligibleForProtectedLane = protectedBoundaryParents.has(state)
         const eligibleForProtectedIntrinsicLane = protectedIntrinsicParents.has(state)
+        const eligibleForProtectedParetoFrontierLane =
+          protectedParetoFrontierParents.has(state)
         const parentStateKey = stateKey(state)
         const parentStateId = decisionTrace?.stateIds.idFor(parentStateKey) ?? ''
         decisionTrace?.emit(new IrregularDecisionTraceParentState({
@@ -362,7 +370,10 @@ export function runWindowedIrregularBeam(input: {
               eligibleForProductionLane,
               eligibleForProtectedLane,
               eligibleForProtectedIntrinsicLane:
-                eligibleForProtectedIntrinsicLane || candidate === selected.protectedIntrinsic
+                eligibleForProtectedIntrinsicLane || candidate === selected.protectedIntrinsic,
+              eligibleForProtectedParetoFrontierLane:
+                eligibleForProtectedParetoFrontierLane ||
+                selected.protectedPareto.includes(candidate)
             })
           }
           if (
@@ -380,7 +391,20 @@ export function runWindowedIrregularBeam(input: {
               isIncumbent: false,
               eligibleForProductionLane: false,
               eligibleForProtectedLane: false,
-              eligibleForProtectedIntrinsicLane: true
+              eligibleForProtectedIntrinsicLane: true,
+              eligibleForProtectedParetoFrontierLane: false
+            })
+          }
+          for (const candidate of selected.protectedPareto) {
+            if (selected.production.includes(candidate)) continue
+            yield* controlCheckpoint(input.control, controlState)
+            legalSuccessors.push({
+              state: applyPlacement(state, pieceIndex, piece, candidate),
+              isIncumbent: false,
+              eligibleForProductionLane: false,
+              eligibleForProtectedLane: false,
+              eligibleForProtectedIntrinsicLane: false,
+              eligibleForProtectedParetoFrontierLane: true
             })
           }
         }
@@ -391,7 +415,8 @@ export function runWindowedIrregularBeam(input: {
             isIncumbent,
             eligibleForProductionLane,
             eligibleForProtectedLane,
-            eligibleForProtectedIntrinsicLane
+            eligibleForProtectedIntrinsicLane,
+            eligibleForProtectedParetoFrontierLane
           })
         } else {
           successors.push(...legalSuccessors)
@@ -424,6 +449,11 @@ export function runWindowedIrregularBeam(input: {
         0,
         PROTECTED_INTRINSIC_CONTACT_LANE_WIDTH
       )
+      const rankedParetoFrontierSuccessors = rankParetoFrontierSuccessors(scored)
+      const nextParetoFrontier = rankedParetoFrontierSuccessors.slice(
+        0,
+        PROTECTED_PARETO_FRONTIER_LANE_WIDTH
+      )
       const pruned = pruneScoredStates(
         scored,
         settings.optimizer.beamWidth,
@@ -434,6 +464,8 @@ export function runWindowedIrregularBeam(input: {
         rankedBoundaryAnchorSuccessors,
         nextIntrinsicContacts,
         rankedIntrinsicContactSuccessors,
+        nextParetoFrontier,
+        rankedParetoFrontierSuccessors,
         protectedDiversityEnabled,
         decisionTrace,
         stepIndex
@@ -444,6 +476,7 @@ export function runWindowedIrregularBeam(input: {
       productionBeamStates = new Set(pruned.productionSurvivors.map(({ state }) => state))
       boundaryAnchorStates = pruned.boundaryAnchorSurvivors.map(({ state }) => state)
       intrinsicContactStates = pruned.intrinsicContactSurvivors.map(({ state }) => state)
+      paretoFrontierStates = pruned.paretoFrontierSurvivors.map(({ state }) => state)
       candidateCounts.push(candidateCount)
       input.instrumentation?.onStepCompleted?.({ candidateCount })
       decisionTrace?.emit(new IrregularDecisionTraceBeamStepCompleted({
@@ -467,7 +500,8 @@ export function runWindowedIrregularBeam(input: {
             isIncumbent: false,
             eligibleForProductionLane: productionBeamStates.has(state),
             eligibleForProtectedLane: boundaryAnchorStates.includes(state),
-            eligibleForProtectedIntrinsicLane: intrinsicContactStates.includes(state)
+            eligibleForProtectedIntrinsicLane: intrinsicContactStates.includes(state),
+            eligibleForProtectedParetoFrontierLane: paretoFrontierStates.includes(state)
           })),
           input.sheet,
           layoutScorer,
@@ -491,10 +525,22 @@ export function runWindowedIrregularBeam(input: {
       ),
       layoutScorer
     )
+    const paretoFrontierProtectedRanked = rankScoredStates(
+      terminalStates.filter(
+        ({ eligibleForProtectedParetoFrontierLane }) => eligibleForProtectedParetoFrontierLane
+      ),
+      layoutScorer
+    )
     const protectedRanked = rankScoredStates(
       terminalStates.filter(
-        ({ eligibleForProtectedLane, eligibleForProtectedIntrinsicLane }) =>
-          eligibleForProtectedLane || eligibleForProtectedIntrinsicLane
+        ({
+          eligibleForProtectedLane,
+          eligibleForProtectedIntrinsicLane,
+          eligibleForProtectedParetoFrontierLane
+        }) =>
+          eligibleForProtectedLane ||
+          eligibleForProtectedIntrinsicLane ||
+          eligibleForProtectedParetoFrontierLane
       ),
       layoutScorer
     )
@@ -572,7 +618,8 @@ export function runWindowedIrregularBeam(input: {
       localRepairBudget === 0
         ? uniqueScoredStates([
             boundaryProtectedRanked.find((state) => state !== initialBest),
-            intrinsicProtectedRanked.find((state) => state !== initialBest)
+            intrinsicProtectedRanked.find((state) => state !== initialBest),
+            paretoFrontierProtectedRanked.find((state) => state !== initialBest)
           ])
         : []
     const terminalOrientationControl = terminalRepairDeadlineExpired
@@ -716,7 +763,9 @@ function selectTerminalOrientation(input: {
           eligibleForProductionLane: input.base.eligibleForProductionLane,
           eligibleForProtectedLane: input.base.eligibleForProtectedLane,
           eligibleForProtectedIntrinsicLane:
-            input.base.eligibleForProtectedIntrinsicLane
+            input.base.eligibleForProtectedIntrinsicLane,
+          eligibleForProtectedParetoFrontierLane:
+            input.base.eligibleForProtectedParetoFrontierLane
         },
         rotationDeg,
         cornerGapMm
@@ -896,7 +945,9 @@ function repairTerminalState(input: {
           eligibleForProductionLane: input.current.eligibleForProductionLane,
           eligibleForProtectedLane: input.current.eligibleForProtectedLane,
           eligibleForProtectedIntrinsicLane:
-            input.current.eligibleForProtectedIntrinsicLane
+            input.current.eligibleForProtectedIntrinsicLane,
+          eligibleForProtectedParetoFrontierLane:
+            input.current.eligibleForProtectedParetoFrontierLane
         }
         if (
           best === undefined ||
@@ -1212,11 +1263,19 @@ function selectLocalCandidates(
     protectedIntrinsic !== undefined && !selected.includes(protectedIntrinsic)
       ? protectedIntrinsic
       : undefined
+  const protectedPareto =
+    enableProtectedIntrinsic &&
+    maximumCount >= 3 &&
+    first?.score.policyId === EDGE_CONTACT_THEN_BALANCED_COMPACTNESS_POLICY_ID
+      ? selectProtectedParetoFrontierCandidates(state, selected, rankedCandidates)
+      : []
+  const paretoReserved = protectedPareto.filter((candidate) => !selected.includes(candidate))
 
   if (decisionTrace !== undefined) {
     const selectedCandidates = new Set([
       ...selected,
-      ...(intrinsicReserved === undefined ? [] : [intrinsicReserved])
+      ...(intrinsicReserved === undefined ? [] : [intrinsicReserved]),
+      ...paretoReserved
     ])
     const detailedDecisions: Array<{
       readonly candidate: LocalCandidate
@@ -1228,6 +1287,7 @@ function selectLocalCandidates(
     let compactnessAlternativeReserved = 0
     let displacedByCompactnessReservation = 0
     let intrinsicContactTierReserved = 0
+    let paretoFrontierReserved = 0
     let duplicateLocalGeometry = 0
     let outsideLocalCandidateFanout = 0
     for (const [candidateIndex, candidate] of allRankedCandidates.entries()) {
@@ -1243,13 +1303,15 @@ function selectLocalCandidates(
           ? 'duplicate_local_geometry'
           : candidate === intrinsicReserved
             ? 'intrinsic_contact_tier_reserved'
-            : candidate === compactnessReserved
-              ? 'compactness_alternative_reserved'
-              : displacedByReservation
-                ? 'displaced_by_compactness_reservation'
-                : isSelected
-                  ? 'within_local_candidate_fanout'
-                  : 'outside_local_candidate_fanout'
+            : paretoReserved.includes(candidate)
+              ? 'pareto_frontier_reserved'
+              : candidate === compactnessReserved
+                ? 'compactness_alternative_reserved'
+                : displacedByReservation
+                  ? 'displaced_by_compactness_reservation'
+                  : isSelected
+                    ? 'within_local_candidate_fanout'
+                    : 'outside_local_candidate_fanout'
       const isFirstOutsideFanout =
         reason === 'outside_local_candidate_fanout' && outsideLocalCandidateFanout === 0
       switch (reason) {
@@ -1264,6 +1326,9 @@ function selectLocalCandidates(
           break
         case 'intrinsic_contact_tier_reserved':
           intrinsicContactTierReserved += 1
+          break
+        case 'pareto_frontier_reserved':
+          paretoFrontierReserved += 1
           break
         case 'duplicate_local_geometry':
           duplicateLocalGeometry += 1
@@ -1330,12 +1395,13 @@ function selectLocalCandidates(
         compactnessAlternativeReserved,
         displacedByCompactnessReservation,
         intrinsicContactTierReserved,
+        paretoFrontierReserved,
         duplicateLocalGeometry,
         outsideLocalCandidateFanout
       })
     }))
   }
-  return { production: selected, protectedIntrinsic }
+  return { production: selected, protectedIntrinsic, protectedPareto }
 }
 
 function selectProtectedIntrinsicContactCandidate(
@@ -1367,6 +1433,69 @@ function selectProtectedIntrinsicContactCandidate(
     if (intrinsicWinner !== undefined) return intrinsicWinner
   }
   return undefined
+}
+
+/**
+ * Keeps the bounded non-dominated orientation families production evicted.
+ *
+ * Exact contact ties never dominate each other, so a rotated twin with
+ * identical intrinsic compactness survives next to the production winner.
+ */
+function selectProtectedParetoFrontierCandidates(
+  state: IrregularBeamState,
+  selected: ReadonlyArray<LocalCandidate>,
+  rankedCandidates: ReadonlyArray<LocalCandidate>
+): ReadonlyArray<LocalCandidate> {
+  const selectedByContactLength = groupLocalCandidatesByContactLength(selected)
+  const candidatesByContactLength = groupLocalCandidatesByContactLength(rankedCandidates)
+  const intrinsicOrder = Order.combineAll<LocalCandidate>([
+    Order.make((first, second) =>
+      compareIntrinsicCompactnessPlacementScores(first.score, second.score)
+    ),
+    Order.mapInput(Order.String, (candidate) =>
+      intrinsicLocalCandidateGeometryKey(state, candidate)
+    )
+  ])
+  const eligibleContactLengths = [...selectedByContactLength.entries()]
+    .filter(([, candidates]) => candidates.length >= 2)
+    .map(([contactLength]) => contactLength)
+    .toSorted((first, second) => second - first)
+
+  const picks: LocalCandidate[] = []
+  const pickedGeometryKeys = new Set<string>()
+  for (const contactLength of eligibleContactLengths) {
+    const candidateTier = candidatesByContactLength.get(contactLength)
+    if (candidateTier === undefined) continue
+    const nonDominated = candidateTier.filter(
+      (candidate) => !isLocallyParetoDominated(candidate, candidateTier)
+    )
+    for (const candidate of nonDominated.toSorted(intrinsicOrder)) {
+      if (picks.length >= PROTECTED_PARETO_FRONTIER_LOCAL_SEED_LIMIT) return picks
+      if (selected.includes(candidate)) continue
+      const geometryKey = intrinsicLocalCandidateGeometryKey(state, candidate)
+      if (pickedGeometryKeys.has(geometryKey)) continue
+      pickedGeometryKeys.add(geometryKey)
+      picks.push(candidate)
+    }
+  }
+  return picks
+}
+
+/** Exact ties never dominate: domination needs one strictly smaller objective. */
+function isLocallyParetoDominated(
+  candidate: LocalCandidate,
+  tier: ReadonlyArray<LocalCandidate>
+): boolean {
+  return tier.some(
+    (other) =>
+      other !== candidate &&
+      other.score.usedClusterMaxSideMm <= candidate.score.usedClusterMaxSideMm &&
+      other.score.usedClusterAreaMm2 <= candidate.score.usedClusterAreaMm2 &&
+      other.score.usedClusterSpanMm <= candidate.score.usedClusterSpanMm &&
+      (other.score.usedClusterMaxSideMm < candidate.score.usedClusterMaxSideMm ||
+        other.score.usedClusterAreaMm2 < candidate.score.usedClusterAreaMm2 ||
+        other.score.usedClusterSpanMm < candidate.score.usedClusterSpanMm)
+  )
 }
 
 function intrinsicLocalCandidateGeometryKey(
@@ -1570,7 +1699,8 @@ function scoreStates(
       isIncumbent,
       eligibleForProductionLane,
       eligibleForProtectedLane,
-      eligibleForProtectedIntrinsicLane
+      eligibleForProtectedIntrinsicLane,
+      eligibleForProtectedParetoFrontierLane
     } of states) {
       yield* controlCheckpoint(control, controlState)
       const score = yield* layoutScorer.scoreState({ sheet, state })
@@ -1586,7 +1716,8 @@ function scoreStates(
         isIncumbent,
         eligibleForProductionLane,
         eligibleForProtectedLane,
-        eligibleForProtectedIntrinsicLane
+        eligibleForProtectedIntrinsicLane,
+        eligibleForProtectedParetoFrontierLane
       })
       decisionTrace?.emit(new IrregularDecisionTraceSuccessorLayoutScored({
         decodeId: decisionTrace.decodeId,
@@ -1615,7 +1746,8 @@ function dedupeRawSuccessors(
     isIncumbent,
     eligibleForProductionLane,
     eligibleForProtectedLane,
-    eligibleForProtectedIntrinsicLane
+    eligibleForProtectedIntrinsicLane,
+    eligibleForProtectedParetoFrontierLane
   } of states) {
     const current: KeyedState = {
       state,
@@ -1623,7 +1755,8 @@ function dedupeRawSuccessors(
       isIncumbent,
       eligibleForProductionLane,
       eligibleForProtectedLane,
-      eligibleForProtectedIntrinsicLane
+      eligibleForProtectedIntrinsicLane,
+      eligibleForProtectedParetoFrontierLane
     }
     countsByKey.set(current.key, (countsByKey.get(current.key) ?? 0) + 1)
     const previous = deduped.get(current.key)
@@ -1646,7 +1779,10 @@ function dedupeRawSuccessors(
         current.eligibleForProtectedLane || previous.eligibleForProtectedLane,
       eligibleForProtectedIntrinsicLane:
         current.eligibleForProtectedIntrinsicLane ||
-        previous.eligibleForProtectedIntrinsicLane
+        previous.eligibleForProtectedIntrinsicLane,
+      eligibleForProtectedParetoFrontierLane:
+        current.eligibleForProtectedParetoFrontierLane ||
+        previous.eligibleForProtectedParetoFrontierLane
     })
   }
   if (decisionTrace !== undefined) {
@@ -1715,6 +1851,8 @@ function uniqueScoredStates(
 
 const PROTECTED_LEGACY_BOUNDARY_LANE_WIDTH = 8
 const PROTECTED_INTRINSIC_CONTACT_LANE_WIDTH = 1
+const PROTECTED_PARETO_FRONTIER_LANE_WIDTH = 2
+const PROTECTED_PARETO_FRONTIER_LOCAL_SEED_LIMIT = 2
 
 function rankBoundaryAnchorSuccessors(
   states: ReadonlyArray<ScoredState>,
@@ -1732,6 +1870,102 @@ function rankIntrinsicContactSuccessors(
   return states
     .filter(({ eligibleForProtectedIntrinsicLane }) => eligibleForProtectedIntrinsicLane)
     .toSorted(protectedIntrinsicContactLaneStateOrder)
+}
+
+/**
+ * Ranks pareto-eligible successors as non-dominated sets per contact tier.
+ *
+ * Domination never crosses exact contact-strength tiers, so a stronger-contact
+ * lineage can never evict a weaker-contact one. Tiers are concatenated by
+ * contact strength, then sliced to the lane width by the caller.
+ */
+function rankParetoFrontierSuccessors(
+  states: ReadonlyArray<ScoredState>
+): ReadonlyArray<ScoredState> {
+  const eligible = states.filter(
+    ({ eligibleForProtectedParetoFrontierLane }) => eligibleForProtectedParetoFrontierLane
+  )
+  const statesByTier = new Map<string, ScoredState[]>()
+  for (const state of eligible) {
+    const tierKey = paretoFrontierContactTierKey(state)
+    const tier = statesByTier.get(tierKey)
+    if (tier === undefined) statesByTier.set(tierKey, [state])
+    else tier.push(state)
+  }
+  return [...statesByTier.values()]
+    .map((tier) =>
+      tier
+        .filter((state) => !isParetoFrontierDominated(state, tier))
+        .toSorted(protectedParetoFrontierLaneStateOrder)
+    )
+    .toSorted((first, second) => paretoFrontierTierOrder(first[0], second[0]))
+    .flat()
+}
+
+interface ParetoFrontierContactTier {
+  readonly unplacedCount: number
+  readonly dominantNearCompleteStructuralContactCount: number
+  readonly tierCount: number
+}
+
+function paretoFrontierContactTier(state: ScoredState): ParetoFrontierContactTier {
+  const { score } = state
+  return {
+    unplacedCount: score.unplacedCount,
+    dominantNearCompleteStructuralContactCount:
+      score.dominantNearCompleteStructuralContactCount,
+    tierCount:
+      score.placementOrder.length <= STRICT_STRUCTURAL_CONTACT_PLACEMENT_LIMIT
+        ? score.nearCompleteStructuralContactCount
+        : Math.floor(score.nearCompleteStructuralContactCount / STRUCTURAL_CONTACT_COUNT_BAND_WIDTH)
+  }
+}
+
+function paretoFrontierContactTierKey(state: ScoredState): string {
+  const tier = paretoFrontierContactTier(state)
+  return `${tier.unplacedCount}:${tier.dominantNearCompleteStructuralContactCount}:${tier.tierCount}`
+}
+
+const paretoFrontierTierStateOrder = Order.combineAll<ParetoFrontierContactTier>([
+  Order.mapInput(Order.Number, ({ unplacedCount }) => unplacedCount),
+  Order.flip(
+    Order.mapInput(
+      Order.Number,
+      ({ dominantNearCompleteStructuralContactCount }) =>
+        dominantNearCompleteStructuralContactCount
+    )
+  ),
+  Order.flip(Order.mapInput(Order.Number, ({ tierCount }) => tierCount))
+])
+
+/* Both states of one tier share the same key by construction, so comparing the
+   tier of either representative orders the tiers themselves. */
+function paretoFrontierTierOrder(
+  first: ScoredState | undefined,
+  second: ScoredState | undefined
+): -1 | 0 | 1 {
+  if (first === undefined) return second === undefined ? 0 : 1
+  if (second === undefined) return -1
+  return paretoFrontierTierStateOrder(paretoFrontierContactTier(first), paretoFrontierContactTier(second))
+}
+
+/** Exact ties never dominate: domination needs one strictly smaller objective. */
+function isParetoFrontierDominated(
+  state: ScoredState,
+  tier: ReadonlyArray<ScoredState>
+): boolean {
+  return tier.some(
+    (other) =>
+      other !== state &&
+      other.intrinsicMaxSideMm <= state.intrinsicMaxSideMm &&
+      other.score.collisionBoundsAreaMm2 <= state.score.collisionBoundsAreaMm2 &&
+      other.score.collisionBoundsSpanMm <= state.score.collisionBoundsSpanMm &&
+      other.score.freeMaterialHoleCount <= state.score.freeMaterialHoleCount &&
+      (other.intrinsicMaxSideMm < state.intrinsicMaxSideMm ||
+        other.score.collisionBoundsAreaMm2 < state.score.collisionBoundsAreaMm2 ||
+        other.score.collisionBoundsSpanMm < state.score.collisionBoundsSpanMm ||
+        other.score.freeMaterialHoleCount < state.score.freeMaterialHoleCount)
+  )
 }
 
 const rawHullWasteStateCriterion: Order.Order<ScoredState> = Order.mapInput(
@@ -1851,6 +2085,20 @@ const protectedIntrinsicContactLaneStateOrder: Order.Order<ScoredState> = Order.
       : protectedIntrinsicStrictScoreOrder(first, second)
 )
 
+/* Sheet-independent within-tier order for the pareto frontier lane: cached
+   intrinsic objectives first, then raw hull waste, then deterministic keys. No
+   sheet-normalized fields and no sheet-space coordinates participate. */
+const protectedParetoFrontierLaneStateOrder: Order.Order<ScoredState> = Order.combineAll([
+  intrinsicMaxSideStateCriterion,
+  scoredStateCriterion((score) => score.collisionBoundsAreaMm2),
+  scoredStateCriterion((score) => score.collisionBoundsSpanMm),
+  scoredStateCriterion((score) => score.freeMaterialHoleCount),
+  rawHullWasteStateCriterion,
+  Order.mapInput(Order.Array(Order.String), ({ score }) => score.placementOrder),
+  Order.mapInput(Order.Array(Order.String), ({ score }) => score.unplacedSourcePieceIds),
+  intrinsicGeometryStateCriterion
+])
+
 function scoredStateCriterion(
   select: (score: IrregularLayoutScore) => number
 ): Order.Order<ScoredState> {
@@ -1873,6 +2121,8 @@ function pruneScoredStates(
   rankedProtectedBoundarySuccessors: ReadonlyArray<ScoredState> = [],
   protectedIntrinsicContacts: ReadonlyArray<ScoredState> = [],
   rankedProtectedIntrinsicSuccessors: ReadonlyArray<ScoredState> = [],
+  protectedParetoFrontier: ReadonlyArray<ScoredState> = [],
+  rankedParetoFrontierSuccessors: ReadonlyArray<ScoredState> = [],
   preserveBoundaryAnchorDiversity = true,
   decisionTrace: ActiveDecisionTrace | undefined = undefined,
   stepIndex = 0
@@ -1881,6 +2131,7 @@ function pruneScoredStates(
   readonly productionSurvivors: ReadonlyArray<ScoredState>
   readonly boundaryAnchorSurvivors: ReadonlyArray<ScoredState>
   readonly intrinsicContactSurvivors: ReadonlyArray<ScoredState>
+  readonly paretoFrontierSurvivors: ReadonlyArray<ScoredState>
 } {
   const ranked = rankScoredStates(states, layoutScorer)
   const productionRanked = rankScoredStates(
@@ -1909,6 +2160,8 @@ function pruneScoredStates(
       : []
   const intrinsicContactSurvivors =
     preserveBoundaryAnchorDiversity && beamWidth > 1 ? protectedIntrinsicContacts : []
+  const paretoFrontierSurvivors =
+    preserveBoundaryAnchorDiversity && beamWidth > 1 ? protectedParetoFrontier : []
   const retained = rankScoredStates(
     [
       ...baselineRetained,
@@ -1916,6 +2169,12 @@ function pruneScoredStates(
       ...intrinsicContactSurvivors.filter(
         (state) =>
           !baselineRetained.includes(state) && !boundaryAnchorSurvivors.includes(state)
+      ),
+      ...paretoFrontierSurvivors.filter(
+        (state) =>
+          !baselineRetained.includes(state) &&
+          !boundaryAnchorSurvivors.includes(state) &&
+          !intrinsicContactSurvivors.includes(state)
       )
     ],
     layoutScorer
@@ -1928,6 +2187,9 @@ function pruneScoredStates(
     const protectedIntrinsicStates = new Set(
       intrinsicContactSurvivors.map(({ state }) => state)
     )
+    const protectedParetoFrontierStates = new Set(
+      paretoFrontierSurvivors.map(({ state }) => state)
+    )
     const productionRanks = new Map(
       productionRanked.map(({ state }, index) => [state, index] as const)
     )
@@ -1936,6 +2198,9 @@ function pruneScoredStates(
     )
     const protectedIntrinsicRanks = new Map(
       rankedProtectedIntrinsicSuccessors.map(({ state }, index) => [state, index] as const)
+    )
+    const protectedParetoFrontierRanks = new Map(
+      rankedParetoFrontierSuccessors.map(({ state }, index) => [state, index] as const)
     )
     const incumbentRank =
       incumbent === undefined ? -1 : (productionRanks.get(incumbent.state) ?? -1)
@@ -1949,9 +2214,15 @@ function pruneScoredStates(
         !retainedByProduction &&
         !retainedOnlyByBoundaryProtection &&
         protectedIntrinsicStates.has(scoredState.state)
+      const retainedOnlyByParetoFrontierProtection =
+        !retainedByProduction &&
+        !retainedOnlyByBoundaryProtection &&
+        !retainedOnlyByIntrinsicProtection &&
+        protectedParetoFrontierStates.has(scoredState.state)
       const productionRank = productionRanks.get(scoredState.state)
       const protectedBoundaryRank = protectedBoundaryRanks.get(scoredState.state)
       const protectedIntrinsicRank = protectedIntrinsicRanks.get(scoredState.state)
+      const protectedParetoFrontierRank = protectedParetoFrontierRanks.get(scoredState.state)
       const protectedIncumbent =
         retainedByProduction &&
         incumbentDisplacedAlternative &&
@@ -1961,11 +2232,16 @@ function pruneScoredStates(
         incumbentDisplacedAlternative &&
         productionRank !== undefined &&
         productionRank < beamWidth
-      const traceRank = retainedOnlyByIntrinsicProtection
-        ? protectedIntrinsicRank
-        : retainedOnlyByBoundaryProtection
-          ? protectedBoundaryRank
-          : (productionRank ?? protectedBoundaryRank ?? protectedIntrinsicRank)
+      const traceRank = retainedOnlyByParetoFrontierProtection
+        ? protectedParetoFrontierRank
+        : retainedOnlyByIntrinsicProtection
+          ? protectedIntrinsicRank
+          : retainedOnlyByBoundaryProtection
+            ? protectedBoundaryRank
+            : (productionRank ??
+              protectedBoundaryRank ??
+              protectedIntrinsicRank ??
+              protectedParetoFrontierRank)
       decisionTrace.emit(new IrregularDecisionTraceBeamSelection({
         decodeId: decisionTrace.decodeId,
         chromosomeId: decisionTrace.chromosomeId,
@@ -1982,6 +2258,8 @@ function pruneScoredStates(
             ? 'protected_boundary_anchor_survivor'
           : retainedOnlyByIntrinsicProtection
             ? 'protected_intrinsic_contact_survivor'
+          : retainedOnlyByParetoFrontierProtection
+            ? 'protected_pareto_frontier_survivor'
           : displacedByIncumbent
             ? 'displaced_by_protected_incumbent'
             : 'outside_beam_width'
@@ -1992,7 +2270,8 @@ function pruneScoredStates(
     retained,
     productionSurvivors: baselineRetained,
     boundaryAnchorSurvivors,
-    intrinsicContactSurvivors
+    intrinsicContactSurvivors,
+    paretoFrontierSurvivors
   }
 }
 

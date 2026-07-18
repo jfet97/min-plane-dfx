@@ -389,6 +389,7 @@ export type IrregularDecisionTraceLocalCandidateSelectionReason =
   | 'compactness_alternative_reserved'
   | 'displaced_by_compactness_reservation'
   | 'intrinsic_contact_tier_reserved'
+  | 'pareto_frontier_reserved'
   | 'duplicate_local_geometry'
   | 'outside_local_candidate_fanout'
 
@@ -430,6 +431,7 @@ export class IrregularDecisionTraceLocalCandidateDecisionCounts {
   readonly compactnessAlternativeReserved: number
   readonly displacedByCompactnessReservation: number
   readonly intrinsicContactTierReserved: number
+  readonly paretoFrontierReserved: number
   readonly duplicateLocalGeometry: number
   readonly outsideLocalCandidateFanout: number
 
@@ -438,6 +440,7 @@ export class IrregularDecisionTraceLocalCandidateDecisionCounts {
     readonly compactnessAlternativeReserved: number
     readonly displacedByCompactnessReservation: number
     readonly intrinsicContactTierReserved: number
+    readonly paretoFrontierReserved: number
     readonly duplicateLocalGeometry: number
     readonly outsideLocalCandidateFanout: number
   }) {
@@ -445,6 +448,7 @@ export class IrregularDecisionTraceLocalCandidateDecisionCounts {
     this.compactnessAlternativeReserved = input.compactnessAlternativeReserved
     this.displacedByCompactnessReservation = input.displacedByCompactnessReservation
     this.intrinsicContactTierReserved = input.intrinsicContactTierReserved
+    this.paretoFrontierReserved = input.paretoFrontierReserved
     this.duplicateLocalGeometry = input.duplicateLocalGeometry
     this.outsideLocalCandidateFanout = input.outsideLocalCandidateFanout
   }
@@ -546,6 +550,7 @@ export class IrregularDecisionTraceBeamSelection extends IrregularDecisionTraceE
     | 'protected_compactness_survivor'
     | 'protected_boundary_anchor_survivor'
     | 'protected_intrinsic_contact_survivor'
+    | 'protected_pareto_frontier_survivor'
     | 'outside_beam_width'
     | 'displaced_by_protected_incumbent'
     | 'displaced_by_compactness_survivor'
@@ -562,6 +567,7 @@ export class IrregularDecisionTraceBeamSelection extends IrregularDecisionTraceE
         | 'protected_compactness_survivor'
         | 'protected_boundary_anchor_survivor'
         | 'protected_intrinsic_contact_survivor'
+        | 'protected_pareto_frontier_survivor'
         | 'outside_beam_width'
         | 'displaced_by_protected_incumbent'
         | 'displaced_by_compactness_survivor'
