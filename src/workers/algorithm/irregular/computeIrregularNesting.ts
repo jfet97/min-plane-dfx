@@ -6,13 +6,13 @@ import { SheetSpec, type NestingRequest } from '@shared/domain/nesting.js'
 import {
   CollisionGeometryDiagnostic,
   IrregularPlacedPiece,
+  IrregularLayoutScoreSummary,
   IrregularPortfolioResult,
   IrregularPortfolioProgress,
   IrregularPriorityOrderKey,
   IrregularPreparedPiece,
   IrregularTransformCandidate,
-  type IrregularNestingSettings,
-  type IrregularLayoutScoreSummary
+  type IrregularNestingSettings
 } from '@shared/irregular/domain.js'
 import { CollisionGeometryBuilder } from '../../irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
@@ -501,16 +501,10 @@ function materializeCanonicalResult(
     candidate.rotationDeg
   )
   if (stateSnapshots === undefined) return undefined
-  const portfolio = new IrregularPortfolioResult({
-    status: canonical.portfolio.status,
-    ...(canonical.portfolio.terminationReason !== undefined
-      ? { terminationReason: canonical.portfolio.terminationReason }
-      : {}),
-    source: canonical.portfolio.source,
-    placements: candidate.state.placedCollisionGeometries.map(({ placement }) => placement),
-    unplacedPieceIds: candidate.state.unplacedPieceIds,
-    score: layoutScoreSummary(candidate.score),
-    diagnostics: canonical.portfolio.diagnostics
+  const portfolio = canonicalPortfolioResultFrom({
+    source: canonical.portfolio,
+    state: candidate.state,
+    score: candidate.score
   })
   return {
     placedCollisionGeometries: candidate.state.placedCollisionGeometries,
@@ -522,6 +516,25 @@ function materializeCanonicalResult(
     beamWidth: input.settings.optimizer.beamWidth,
     portfolio
   }
+}
+
+/** Schema-owned materialization for a selected canonical terminal state. */
+export function canonicalPortfolioResultFrom(input: {
+  readonly source: IrregularPortfolioResult
+  readonly state: IrregularBeamState
+  readonly score: IrregularLayoutScore
+}): IrregularPortfolioResult {
+  return new IrregularPortfolioResult({
+    status: input.source.status,
+    ...(input.source.terminationReason !== undefined
+      ? { terminationReason: input.source.terminationReason }
+      : {}),
+    source: input.source.source,
+    placements: input.state.placedCollisionGeometries.map(({ placement }) => placement),
+    unplacedPieceIds: input.state.unplacedPieceIds,
+    score: layoutScoreSummary(input.score),
+    diagnostics: input.source.diagnostics
+  })
 }
 
 export function orientCanonicalStateSnapshots(
@@ -696,7 +709,7 @@ function finiteAdmissionScores(score: IrregularLayoutScore): boolean {
 }
 
 function layoutScoreSummary(score: IrregularLayoutScore): IrregularLayoutScoreSummary {
-  return {
+  return new IrregularLayoutScoreSummary({
     unplacedCount: score.unplacedCount,
     sharedCollisionBoundaryLengthMm: score.sharedCollisionBoundaryLengthMm,
     sharedCollisionBoundaryContactUnits: score.sharedCollisionBoundaryContactUnits,
@@ -712,7 +725,7 @@ function layoutScoreSummary(score: IrregularLayoutScore): IrregularLayoutScoreSu
     collisionBoundsNormalizedSpanSum: score.collisionBoundsNormalizedSpanSum,
     collisionBoundsAreaMm2: score.collisionBoundsAreaMm2,
     collisionBoundsSpanMm: score.collisionBoundsSpanMm
-  }
+  })
 }
 
 function combinePortfolioMetrics(

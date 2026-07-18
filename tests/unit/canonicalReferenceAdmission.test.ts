@@ -6,14 +6,18 @@ import { PieceId } from '@shared/domain/ids.js'
 import { NestingRequest, PreparedPiece, SheetSpec } from '@shared/domain/nesting.js'
 import {
   FreeMaterialSnapshot,
-  IrregularNestingSettings
+  IrregularLayoutScoreSummary,
+  IrregularNestingSettings,
+  IrregularPortfolioResult
 } from '@shared/irregular/domain.js'
 import {
   CANONICAL_REFERENCE_ADMISSION_SLACKS,
+  canonicalPortfolioResultFrom,
   canonicalReferenceDecodeSheets,
   evaluateCanonicalReferenceAdmissionMetrics,
   isCanonicalReferenceRoleEligible
 } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
+import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
 import type { IrregularLayoutScore } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import type { CanonicalLayoutTopology } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 
@@ -76,6 +80,36 @@ const canonicalScore = () =>
   })
 
 describe('canonical reference coordinator policy', () => {
+  it('materializes the selected canonical score through its schema-owned class', () => {
+    const selectedScore = canonicalScore()
+    const result = canonicalPortfolioResultFrom({
+      source: new IrregularPortfolioResult({
+        status: 'completed',
+        terminationReason: 'ga_disabled',
+        source: 'beam',
+        placements: [],
+        unplacedPieceIds: [],
+        diagnostics: []
+      }),
+      state: new IrregularBeamState({
+        remainingPreparedPieces: [],
+        placedCollisionGeometries: [],
+        placementOrder: []
+      }),
+      score: selectedScore
+    })
+
+    expect(result.score).toBeInstanceOf(IrregularLayoutScoreSummary)
+    expect(Schema.decodeUnknownSync(IrregularPortfolioResult)(result).score).toMatchObject({
+      sharedCollisionBoundaryLengthMm: selectedScore.sharedCollisionBoundaryLengthMm,
+      sharedCollisionBoundaryContactUnits: selectedScore.sharedCollisionBoundaryContactUnits,
+      sharedCollisionBoundaryContactBand: selectedScore.sharedCollisionBoundaryContactBand,
+      nearCompleteStructuralContactCount: selectedScore.nearCompleteStructuralContactCount,
+      dominantNearCompleteStructuralContactCount:
+        selectedScore.dominantNearCompleteStructuralContactCount
+    })
+  })
+
   it('plans two decodes only for eligible non-reference jobs', () => {
     expect(isCanonicalReferenceRoleEligible(nonReferenceRequest, mixedSettings)).toBe(true)
     expect(canonicalReferenceDecodeSheets(nonReferenceRequest, mixedSettings)).toHaveLength(2)
