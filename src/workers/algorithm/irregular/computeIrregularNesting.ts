@@ -264,22 +264,19 @@ function coordinateCanonicalReferenceDecode(
 
     const productionFinal = yield* materializeProductionResult(input, production)
     let selected = productionFinal
-    const roleDiagnostics: CollisionGeometryDiagnostic[] = shouldAttemptCanonical
-      ? [
-          reusesProduction
-            ? canonicalRoleDiagnostic('admitted', 'reference sheet reused the ordinary decode')
-            : canonicalRoleDiagnostic('attempted', 'protected canonical-reference decode completed')
-        ]
-      : []
+    const roleDiagnostics = canonicalReferenceRoleLifecycleDiagnostics({
+      shouldAttemptCanonical,
+      reusesProduction,
+      productionStatus: production.portfolio.status,
+      canonicalAttempted: canonical !== production,
+      canonicalStatus: canonical.portfolio.status
+    })
 
     if (canonical !== production && canonical.portfolio.status === 'cancelled') {
       selected = {
         ...productionFinal,
         portfolio: withCancelledPortfolioStatus(productionFinal.portfolio)
       }
-      roleDiagnostics.push(
-        canonicalRoleDiagnostic('rejected', 'protected canonical-reference decode was cancelled')
-      )
     } else if (shouldAttemptCanonical && !reusesProduction && canonical.terminalState !== undefined) {
       const candidates = yield* fittingCanonicalCandidates(input, canonical)
       if (candidates.length > 0) {
@@ -350,6 +347,35 @@ function withCancelledPortfolioStatus(portfolio: IrregularPortfolioResult): Irre
     status: 'cancelled',
     terminationReason: 'cancelled'
   })
+}
+
+/** Truthful protected-role lifecycle diagnostics for attempted, reused, and skipped decodes. */
+export function canonicalReferenceRoleLifecycleDiagnostics(input: {
+  readonly shouldAttemptCanonical: boolean
+  readonly reusesProduction: boolean
+  readonly productionStatus: IrregularPortfolioResult['status']
+  readonly canonicalAttempted: boolean
+  readonly canonicalStatus: IrregularPortfolioResult['status']
+}): CollisionGeometryDiagnostic[] {
+  if (!input.shouldAttemptCanonical) return []
+  if (!input.canonicalAttempted) {
+    if (input.productionStatus === 'cancelled') {
+      return [
+        canonicalRoleDiagnostic(
+          'rejected',
+          input.reusesProduction
+            ? 'reference-sheet decode was cancelled before canonical reuse completed'
+            : 'protected canonical-reference decode was not attempted because production was cancelled'
+        )
+      ]
+    }
+    return input.reusesProduction
+      ? [canonicalRoleDiagnostic('admitted', 'reference sheet reused the ordinary decode')]
+      : []
+  }
+  return input.canonicalStatus === 'cancelled'
+    ? [canonicalRoleDiagnostic('rejected', 'protected canonical-reference decode was cancelled')]
+    : [canonicalRoleDiagnostic('attempted', 'protected canonical-reference decode completed')]
 }
 
 function runSingleSheetPortfolio(
@@ -616,6 +642,7 @@ export function isCanonicalReferenceRoleEligible(
   return (
     request.pieces.length > 20 &&
     preparedPieces.length > 20 &&
+    optimizer.canonicalReferenceDecodeEnabled === true &&
     hasScaleDiverseMultiFamilyWorkload(
       preparedPieces,
       request.pieces.map((piece) => piece.interchangeabilityKey ?? piece.sourcePieceId)

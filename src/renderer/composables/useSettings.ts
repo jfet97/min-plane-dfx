@@ -72,7 +72,7 @@ const state: UnwrapNestedRefs<MutableSettingsState> =
 function replaceOptions(options: NestingOptions): void {
   state.options.allowGlobalRotation = options.allowGlobalRotation
   state.options.allowGlobalMirror = options.allowGlobalMirror ?? true
-  state.options.timeoutMs = options.timeoutMs
+  state.options.timeoutMs = workerTimeoutForMode(options.workerMode, options.timeoutMs)
   state.options.workerMode = options.workerMode
   state.options.historyMode = options.historyMode
   state.options.historyScope = options.historyScope

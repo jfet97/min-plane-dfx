@@ -20,6 +20,7 @@ import {
   CANONICAL_REFERENCE_ADMISSION_SLACKS,
   canonicalPortfolioResultFrom,
   canonicalReferenceDecodeSheets,
+  canonicalReferenceRoleLifecycleDiagnostics,
   evaluateCanonicalReferenceAdmissionMetrics,
   isCanonicalReferenceRoleEligible,
   portfolioProgressForDecodeRole
@@ -28,6 +29,10 @@ import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregu
 import type { IrregularLayoutScore } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import type { CanonicalLayoutTopology } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 import { prefixedDecisionTraceDecodeId } from '../../src/workers/algorithm/irregular/portfolioSearch.js'
+import {
+  makeCompactQualityIrregularOptimizerSettings,
+  makeDefaultIrregularNestingSettings
+} from '@shared/irregular/defaults.js'
 
 const fixturePath = fileURLToPath(
   new URL('../fixtures/irregularSheetInvariance/mixed61-request.json', import.meta.url)
@@ -37,6 +42,17 @@ const mixedRequest = Schema.decodeUnknownSync(NestingRequest)(
 )
 const mixedSettings = mixedRequest.options.irregularSettings
 if (mixedSettings === undefined) throw new Error('mixed-61 fixture must carry irregular settings')
+const canonicalSettings = Schema.decodeUnknownSync(IrregularNestingSettings)({
+  ...mixedSettings,
+  optimizer: {
+    ...mixedSettings.optimizer,
+    canonicalReferenceDecodeEnabled: true
+  }
+})
+const compactQualityNoRepairSettings = Schema.decodeUnknownSync(IrregularNestingSettings)({
+  ...mixedSettings,
+  optimizer: makeCompactQualityIrregularOptimizerSettings({ localRepairBudget: 0 })
+})
 const nonReferenceRequest = new NestingRequest({
   ...mixedRequest,
   sheet: new SheetSpec({ width: 2000, height: 1700, label: 'non-reference' })
@@ -146,6 +162,20 @@ const canonicalScore = () =>
   })
 
 describe('canonical reference coordinator policy', () => {
+  it('does not claim a canonical attempt when production cancellation skips the role', () => {
+    const diagnostics = canonicalReferenceRoleLifecycleDiagnostics({
+      shouldAttemptCanonical: true,
+      reusesProduction: false,
+      productionStatus: 'cancelled',
+      canonicalAttempted: false,
+      canonicalStatus: 'cancelled'
+    })
+
+    expect(diagnostics.map(({ code }) => code)).toEqual(['canonical_reference_role_rejected'])
+    expect(diagnostics[0]?.message).toContain('was not attempted')
+    expect(diagnostics.some(({ code }) => code === 'canonical_reference_role_attempted')).toBe(false)
+  })
+
   it('distinguishes both external progress roles and trace decode identities', () => {
     const progress = new IrregularPortfolioProgress({
       phase: 'deterministic_beam',
@@ -193,20 +223,20 @@ describe('canonical reference coordinator policy', () => {
 
   it('plans two decodes only for eligible non-reference jobs', () => {
     expect(
-      isCanonicalReferenceRoleEligible(nonReferenceRequest, mixedSettings, mixedScalePrepared)
+      isCanonicalReferenceRoleEligible(nonReferenceRequest, canonicalSettings, mixedScalePrepared)
     ).toBe(true)
     expect(
-      canonicalReferenceDecodeSheets(nonReferenceRequest, mixedSettings, mixedScalePrepared)
+      canonicalReferenceDecodeSheets(nonReferenceRequest, canonicalSettings, mixedScalePrepared)
     ).toHaveLength(2)
 
     const referenceRequest = new NestingRequest({
       ...mixedRequest,
       sheet:
-        canonicalReferenceDecodeSheets(nonReferenceRequest, mixedSettings, mixedScalePrepared)[1] ??
+        canonicalReferenceDecodeSheets(nonReferenceRequest, canonicalSettings, mixedScalePrepared)[1] ??
         mixedRequest.sheet
     })
     expect(
-      canonicalReferenceDecodeSheets(referenceRequest, mixedSettings, mixedScalePrepared)
+      canonicalReferenceDecodeSheets(referenceRequest, canonicalSettings, mixedScalePrepared)
     ).toHaveLength(1)
 
     const firstPiece = mixedRequest.pieces[0]
@@ -223,23 +253,55 @@ describe('canonical reference coordinator policy', () => {
       )
     })
     expect(
-      canonicalReferenceDecodeSheets(homogeneousRequest, mixedSettings, homogeneousPrepared)
+      canonicalReferenceDecodeSheets(homogeneousRequest, canonicalSettings, homogeneousPrepared)
     ).toHaveLength(1)
     expect(
-      canonicalReferenceDecodeSheets(homogeneousRequest, mixedSettings, mixedScalePrepared)
+      canonicalReferenceDecodeSheets(homogeneousRequest, canonicalSettings, mixedScalePrepared)
     ).toHaveLength(1)
     expect(
       canonicalReferenceDecodeSheets(
         nonReferenceRequest,
-        mixedSettings,
+        canonicalSettings,
         uniformMultiFamilyPrepared
       )
     ).toHaveLength(1)
     expect(
       canonicalReferenceDecodeSheets(
         new NestingRequest({ ...homogeneousRequest, pieces: homogeneousRequest.pieces.slice(0, 20) }),
-        mixedSettings,
+        canonicalSettings,
         mixedScalePrepared.slice(0, 20)
+      )
+    ).toHaveLength(1)
+  })
+
+  it('requires an explicit compact-quality canonical decode capability', () => {
+    const defaults = makeDefaultIrregularNestingSettings()
+    expect(defaults.optimizer.beamWidth).toBe(1)
+    expect(defaults.optimizer.canonicalReferenceDecodeEnabled).toBe(false)
+    expect(
+      canonicalReferenceDecodeSheets(nonReferenceRequest, defaults, mixedScalePrepared)
+    ).toHaveLength(1)
+    expect(compactQualityNoRepairSettings.optimizer.canonicalReferenceDecodeEnabled).toBe(true)
+    expect(
+      canonicalReferenceDecodeSheets(
+        nonReferenceRequest,
+        compactQualityNoRepairSettings,
+        mixedScalePrepared
+      )
+    ).toHaveLength(2)
+
+    const explicitlyDisabled = Schema.decodeUnknownSync(IrregularNestingSettings)({
+      ...compactQualityNoRepairSettings,
+      optimizer: {
+        ...compactQualityNoRepairSettings.optimizer,
+        canonicalReferenceDecodeEnabled: false
+      }
+    })
+    expect(
+      canonicalReferenceDecodeSheets(
+        nonReferenceRequest,
+        explicitlyDisabled,
+        mixedScalePrepared
       )
     ).toHaveLength(1)
   })
@@ -247,8 +309,8 @@ describe('canonical reference coordinator policy', () => {
   it('keeps repair, GA, and short-side-fill jobs on one decode', () => {
     const settings = (overrides: Record<string, unknown>) =>
       Schema.decodeUnknownSync(IrregularNestingSettings)({
-        ...mixedSettings,
-        optimizer: { ...mixedSettings.optimizer, ...overrides }
+        ...canonicalSettings,
+        optimizer: { ...canonicalSettings.optimizer, ...overrides }
       })
     for (const ineligible of [
       settings({ localRepairBudget: 1 }),

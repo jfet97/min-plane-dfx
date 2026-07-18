@@ -54,6 +54,7 @@ describe('irregular schema contracts', () => {
     expect(first.optimizer.beamWidth).toBe(1)
     expect(first.optimizer.localCandidateFanout).toBe(4)
     expect(first.optimizer.localRepairBudget).toBe(0)
+    expect(first.optimizer.canonicalReferenceDecodeEnabled).toBe(false)
     expect(first.optimizer.transformCap).toBe(16)
     expect(first.optimizer.edgeAlignmentEnabled).toBe(true)
     expect(first.optimizer.gaEnabled).toBe(false)
@@ -104,6 +105,7 @@ describe('irregular schema contracts', () => {
       beamWidth: 8,
       localCandidateFanout: 4,
       localRepairBudget: 8,
+      canonicalReferenceDecodeEnabled: true,
       transformCap: 8,
       configuredRotationEnabled: true,
       edgeAlignmentEnabled: true,
@@ -126,6 +128,7 @@ describe('irregular schema contracts', () => {
     if (Exit.isFailure(decoded)) throw new Error('expected legacy settings to decode')
     expect(decoded.value.localCandidateFanout).toBe(4)
     expect(decoded.value.localRepairBudget).toBe(0)
+    expect(decoded.value.canonicalReferenceDecodeEnabled).toBe(false)
     expect(decoded.value.edgeAlignmentEnabled).toBe(true)
     expect(decoded.value.gaEnabled).toBe(false)
     expect(decoded.value.baselineOnly).toBe(true)

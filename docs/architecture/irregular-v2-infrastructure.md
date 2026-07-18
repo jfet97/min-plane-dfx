@@ -451,12 +451,13 @@ geometry becomes the typed
 `irregular_source_geometry_missing` worker failure; invalid derived geometry
 and scoring become distinct typed failures.
 
-For eligible deterministic, scale-diverse, multi-family jobs with more than twenty
-pieces, repair disabled, GA inactive, and no intentional short-side-fill policy,
+For explicitly enabled compact-quality, deterministic, scale-diverse, multi-family
+jobs with more than twenty pieces, repair disabled, GA inactive, and no intentional
+short-side-fill policy,
 `computeIrregularNesting`
 coordinates two private uses of the existing single-sheet portfolio primitive:
 the requested sheet and a protected fixed `2000 x 2700` canonical-reference sheet.
-The reference sheet reuses the ordinary decode when it is itself requested. The
+The reference sheet reuses the ordinary decode when it is itself requested.
 Both decodes forward progress through one stream with an explicit role and use
 role-prefixed decision-trace decode ids. Both roles retain their own history until
 terminal selection, then only the selected history is published. Cancellation is

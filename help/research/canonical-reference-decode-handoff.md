@@ -17,14 +17,18 @@ close this gap.
 
 ## Candidate
 
-Eligible scale-diverse, multi-family jobs run the unchanged requested-sheet portfolio and one protected
-portfolio on a fixed `2000 x 2700` reference sheet. The outer coordinator never
+Eligible scale-diverse, multi-family compact-quality jobs run the unchanged
+requested-sheet portfolio and one protected portfolio on a fixed `2000 x 2700`
+reference sheet. The outer coordinator never
 recurses through `computeIrregularNesting` or through the portfolio. It prepares
-pieces once, buffers each role's winning-path snapshots privately, suppresses
-protected user progress, shares cancellation, and aggregates full-decode
-instrumentation. A request already on the reference sheet performs one decode.
+pieces once, buffers each role's winning-path snapshots privately, publishes both
+roles through one role-tagged progress stream, shares cancellation, and aggregates
+full-decode instrumentation. A request already on the reference sheet performs
+one decode.
 The collision-area ratio must be at least `4x` and at least two interchangeability
-families must be present, so homogeneous jobs do not pay for the second decode.
+families must be present. The schema-owned `canonicalReferenceDecodeEnabled`
+capability defaults to false and is enabled by the compact-quality factory only,
+so homogeneous and ordinary deterministic jobs do not pay for the second decode.
 
 The protected finalist is the exact legal terminal beam state. Only bottom-left
 anchored q0 and q90 rigid orientations may be admitted, and their collision

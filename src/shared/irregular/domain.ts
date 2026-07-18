@@ -229,6 +229,12 @@ const IrregularOptimizerSettingsFields = Schema.Struct({
     Schema.withConstructorDefault(Effect.succeed(0)),
     Schema.withDecodingDefaultKey(Effect.succeed(0))
   ),
+  /** Explicitly enables the expensive protected canonical-reference decode role. */
+  canonicalReferenceDecodeEnabled: Schema.Boolean.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed(false)),
+    Schema.withDecodingDefaultKey(Effect.succeed(false))
+  ),
   /** Maximum orientation candidates emitted for one prepared collision polygon. */
   transformCap: PositiveFiniteInteger,
   /** Edges shorter than this millimeter length are ignored as geometric noise. */
