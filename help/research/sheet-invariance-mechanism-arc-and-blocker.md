@@ -98,3 +98,17 @@ Promote **v2 (`4e144ac`)**: all checkpoints exact, rectangles-20 2000x2700
 triangle golden exact, 151 focused tests green, all other corpus hashes exact.
 Do not promote the v5/v5b tip (2000x2700 reference regression). The v4/v5 arc
 is preserved as research evidence for the replay/coordination follow-up.
+
+### Caveat: holes in the frontier objective
+
+`freeMaterialHoleCount` is computed from a sheet-space snapshot, so in
+principle it must not drive branch-removing decisions. The promoted frontier
+keeps it as one of four domination objectives, for a measured reason: dropping
+it flipped the approved `2000 x 2700` reference from `430,344.918 mm2` / 2
+holes to `426,881.608 mm2` / 3 holes, because the frontier's holes objective
+is what keeps the two-hole lineage ahead of the three-hole one. Enclosed
+holes are arrangement-intrinsic (identical on any sheet where the arrangement
+is legal); only sheet-edge-adjacent cavities can diverge, and those are
+bounded by the terminal dual gate. An arrangement-intrinsic cavity count
+(bounded components of the plane-complement of the occupied union) is the
+recorded follow-up to remove the sheet-space dependence cleanly.
