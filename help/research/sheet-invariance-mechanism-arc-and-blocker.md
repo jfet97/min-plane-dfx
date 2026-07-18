@@ -13,10 +13,13 @@ reference quality (area <= 430,344.918 mm2, <= 2 holes, >= 53/14 contacts).
 verified by three independent measurements.** The reference motif is reachable
 only through the exact historical sheet-relative search dynamics; any change
 that makes the legacy lane deterministic breaks the trajectory that produces
-it, even on the reference sheet itself. The branch preserves or improves every
-other checkpoint and ships a working protected Pareto frontier lane, a
-canonicalized legacy lane, and an invariant terminal selection with a holes
-floor; the golden, 151 focused tests, and the wider corpus are green.
+it, even on the reference sheet itself. The promoted tree is the protected
+Pareto frontier lane at variant `4e144ac` (family-coverage seeds behind
+production fanout came one variant later and are not promoted here); the
+canonicalized legacy lane and the invariant terminal selection (v5/v5b) are
+rejected for production and preserved as research. The golden, 151 focused
+tests, and the wider corpus are green, with only the intended rectangles and
+`2000 x 1700` improvements differing from baseline.
 
 ## 1. First causal divergence (verified)
 
@@ -70,7 +73,7 @@ trajectory still diverge per sheet. The reference lineage's key branches are
 locally suboptimal by every intrinsic measure, so they survive only through
 the historical sheet-relative dynamics of one specific sheet (2000x2700).
 Making the lane deterministic necessarily alters those dynamics and loses the
-reference even there (v5: 436,770.039/42-10 on 2000x2700). Sheet-independence
+reference even there (v5b: 436,770.039/42-10 on 2000x2700). Sheet-independence
 and reference reproduction are mutually exclusive for this motif. The
 remaining paths are a guided canonical replay of a found motif (requires
 cross-decode coordination that single-request production does not have), or a

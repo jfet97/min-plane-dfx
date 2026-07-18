@@ -1408,9 +1408,7 @@ describe('decodeWindowedIrregularBeam', () => {
       undefined,
       await rotatedNinetyBiasedLayoutScorer((score) => ({
         ...score,
-        collisionBoundsAreaMm2: score.collisionBoundsAreaMm2 + 1,
-        collisionBoundsSpanMm: score.collisionBoundsSpanMm + 1,
-        freeMaterialHoleCount: score.freeMaterialHoleCount + 1
+        collisionBoundsAreaMm2: score.collisionBoundsAreaMm2 + 20
       })),
       (event) => dominatedEvents.push(event)
     )

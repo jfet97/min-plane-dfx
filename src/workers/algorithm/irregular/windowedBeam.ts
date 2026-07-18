@@ -1971,11 +1971,9 @@ function isParetoFrontierDominated(
       other.intrinsicMaxSideMm <= state.intrinsicMaxSideMm &&
       other.score.collisionBoundsAreaMm2 <= state.score.collisionBoundsAreaMm2 &&
       other.score.collisionBoundsSpanMm <= state.score.collisionBoundsSpanMm &&
-      other.score.freeMaterialHoleCount <= state.score.freeMaterialHoleCount &&
       (other.intrinsicMaxSideMm < state.intrinsicMaxSideMm ||
         other.score.collisionBoundsAreaMm2 < state.score.collisionBoundsAreaMm2 ||
-        other.score.collisionBoundsSpanMm < state.score.collisionBoundsSpanMm ||
-        other.score.freeMaterialHoleCount < state.score.freeMaterialHoleCount)
+        other.score.collisionBoundsSpanMm < state.score.collisionBoundsSpanMm)
   )
 }
 
@@ -2103,7 +2101,6 @@ const protectedParetoFrontierLaneStateOrder: Order.Order<ScoredState> = Order.co
   intrinsicMaxSideStateCriterion,
   scoredStateCriterion((score) => score.collisionBoundsAreaMm2),
   scoredStateCriterion((score) => score.collisionBoundsSpanMm),
-  scoredStateCriterion((score) => score.freeMaterialHoleCount),
   rawHullWasteStateCriterion,
   Order.mapInput(Order.Array(Order.String), ({ score }) => score.placementOrder),
   Order.mapInput(Order.Array(Order.String), ({ score }) => score.unplacedSourcePieceIds),

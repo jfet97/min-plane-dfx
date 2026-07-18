@@ -109,11 +109,13 @@ reference. Four distinct hashes remain, so sheet invariance is still open. See
 
 The `protected-contact-pareto-frontier` arc is complete and documented in
 [the mechanism-arc report](research/sheet-invariance-mechanism-arc-and-blocker.md).
-A protected Pareto frontier lane (family-coverage seeds behind production
-fanout, intrinsic-pool isolation, truthful traces, full test coverage) is
-established as safe through variant `4e144ac`, which also improves rectangles
-by `8.22%` and the `2000 x 1700` intrinsic result to `535,808.686 mm2` at
-57/17 contacts. The later canonical-legacy-lane plus invariant-terminal
+A protected Pareto frontier lane (bounded non-dominated seeds from exact
+contact tiers behind production fanout, intrinsic-pool isolation, truthful
+traces, full test coverage) is established as safe through variant `4e144ac`,
+which also improves rectangles by `8.22%` and the `2000 x 1700` intrinsic
+result to `535,808.686 mm2` at 57/17 contacts. A later family-coverage seed
+variant and the canonical-legacy/invariant-terminal variants are research
+only. The later canonical-legacy-lane plus invariant-terminal
 variants (v5/v5b) are rejected for production: they lose the approved
 `2000 x 2700` reference. The verified conclusion is that the reference motif
 is reachable only through the exact historical sheet-relative search
