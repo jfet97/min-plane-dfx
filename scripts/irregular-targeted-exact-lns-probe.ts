@@ -16,7 +16,12 @@ import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregu
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { measureRelaxationMetrics } from '../src/workers/algorithm/irregular/overlapRelaxation.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
-import { runTargetedExactLns } from '../src/workers/algorithm/irregular/targetedExactLns.js'
+import {
+  orderDestroyedQueue,
+  replayFrozenExactLineage,
+  runTargetedExactLns,
+  selectTargetedDestroySet
+} from '../src/workers/algorithm/irregular/targetedExactLns.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
 import { FreeMaterialServiceLive } from '../src/workers/irregular/freeMaterialService.js'
 import { GeometryKernel, GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
@@ -37,6 +42,7 @@ const outputDirectory =
   '/private/tmp/min-plane-provenance/targeted-exact-lns/quality-run'
 const sourceCommit = process.argv[process.argv.indexOf('--source-commit') + 1] || 'unknown'
 const baselineOnly = process.argv.includes('--baseline-only')
+const replayOnly = process.argv.includes('--replay-only')
 
 await mkdir(outputDirectory, { recursive: true })
 const fixture = Schema.decodeUnknownSync(NestingRequest)(JSON.parse(await readFile(FIXTURE, 'utf8')))
@@ -112,6 +118,68 @@ await writeFile(
     2
   )}\n`
 )
+if (replayOnly) {
+  const baselineMetrics = measureRelaxationMetrics(incumbent.placedCollisionGeometries)
+  if (baselineMetrics === undefined || preflightStructure === undefined) {
+    throw new Error('baseline replay requires finite exact structural metrics')
+  }
+  const constraintSheet: SheetSpec = {
+    width: baselineMetrics.width,
+    height: baselineMetrics.height,
+    label: 'targeted exact LNS replay constraint'
+  }
+  const originalRankById = new Map(
+    preparedPieces.map((piece, index) => [piece.pieceId ?? piece.source.id, index] as const)
+  )
+  const preparedById = new Map(
+    preparedPieces.map((piece) => [piece.pieceId ?? piece.source.id, piece] as const)
+  )
+  const replayReports = []
+  for (const target of ['interface', 'hull_void'] as const) {
+    const selection = selectTargetedDestroySet({
+      target,
+      requestedK: 2,
+      analysis: preflightStructure,
+      originalRankById
+    })
+    const queue = orderDestroyedQueue({
+      destroyIds: selection.destroyIds,
+      queueOrder: 'priority',
+      preparedById,
+      originalRankById
+    })
+    if (queue === undefined) throw new Error(`replay queue failed for ${target}`)
+    const destroySet = new Set(selection.destroyIds)
+    const frozen = incumbent.placedCollisionGeometries.filter(
+      ({ placement }) => !destroySet.has(placement.pieceId ?? placement.sourcePieceId)
+    )
+    const replay = await Effect.runPromise(
+      replayFrozenExactLineage({
+        constraintSheet,
+        sourceLayout: incumbent.placedCollisionGeometries,
+        frozenPlaced: frozen,
+        destroyedQueue: queue
+      })
+    )
+    replayReports.push({ target, selection, queue: queue.map((piece) => piece.pieceId), replay })
+  }
+  const replayReport = {
+    sourceCommit,
+    runtime: { node: process.version, v8: process.versions.v8 },
+    constraint: { width: constraintSheet.width, height: constraintSheet.height },
+    baselineCanonicalLegal: assertCanonicalGridLegalLayout(
+      constraintSheet,
+      incumbent.placedCollisionGeometries
+    ),
+    replays: replayReports
+  }
+  await writeFile(
+    `${outputDirectory}/incumbent-replay-report.json`,
+    `${JSON.stringify(replayReport, null, 2)}\n`
+  )
+  console.log(JSON.stringify(replayReport))
+  process.exit(replayReports.every(({ replay }) => replay.legal) ? 0 : 3)
+}
 if (baselineOnly) {
   const baselineMetrics = measureRelaxationMetrics(incumbent.placedCollisionGeometries)
   const baselineHash = canonicalCollisionLayoutIdentity(incumbent.placedCollisionGeometries)

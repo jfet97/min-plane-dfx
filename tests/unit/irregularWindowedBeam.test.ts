@@ -36,6 +36,7 @@ import {
   type EmitIrregularDecisionTrace,
   type IrregularDecisionTraceEvent
 } from '../../src/workers/algorithm/irregular/decisionTrace.js'
+import { replayFrozenExactLineage } from '../../src/workers/algorithm/irregular/targetedExactLns.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -400,6 +401,40 @@ describe('decodeWindowedIrregularBeam', () => {
 
     expect(result.bestState.unplacedPieceIds).toEqual([])
     expect(result.bestState.placedCollisionGeometries).toHaveLength(2)
+  })
+
+  it('replays an incumbent destroyed queue exactly against its frozen context', async () => {
+    const first = preparedPiece('first', 10, 10, 'first-copy')
+    const second = preparedPiece('second', 5, 5, 'second-copy')
+    const currentSheet = sheet(100, 100)
+    const complete = await runWindowed(
+      currentSheet,
+      [first, second],
+      Layer.succeed(GeometrySettings, settings(1, 1, 1)),
+      candidateService(({ moving, placed }) => [
+        oneCandidate(moving, placed.length === 0 ? 0 : 10)
+      ])
+    )
+    const sourceLayout = complete.bestState.placedCollisionGeometries
+    const frozen = sourceLayout.filter(
+      ({ placement }) => placement.pieceId === PieceId.make('first-copy')
+    )
+
+    const replay = await Effect.runPromise(
+      replayFrozenExactLineage({
+        constraintSheet: currentSheet,
+        sourceLayout,
+        frozenPlaced: frozen,
+        destroyedQueue: [second]
+      })
+    )
+
+    expect(replay).toEqual({
+      legal: true,
+      firstFailingPieceId: undefined,
+      replayedPieceIds: [PieceId.make('second-copy')],
+      finalCanonicalLegal: true
+    })
   })
   it('assigns compact repeated state ids without hashing canonical keys', () => {
     const registry = new IrregularDecisionTraceStateIdRegistry()

@@ -1,9 +1,10 @@
 import { Effect } from 'effect'
 import type { PieceId } from '@shared/domain/ids.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
-import type {
-  IrregularPlacedPiece,
-  IrregularPreparedPiece
+import {
+  IrregularPlacementCandidate,
+  type IrregularPlacedPiece,
+  type IrregularPreparedPiece
 } from '@shared/irregular/domain.js'
 import {
   analyzeCanonicalLayoutStructure,
@@ -30,6 +31,7 @@ import type { GeometryKernel, GeometrySettings } from '../../irregular/geometryK
 import type { NfpIfpService } from '../../irregular/services.js'
 import type { IrregularPlacementScorer } from './irregularPlacementScorer.js'
 import type { IrregularLayoutScorer } from './irregularLayoutScorer.js'
+import { PlacementValidation } from '../../irregular/placementValidation.js'
 
 const REQUESTED_DESTROY_SIZES = [2, 3, 5, 8] as const
 const ROUND_DEADLINE_MS = 5_000
@@ -83,6 +85,71 @@ export interface TargetedDestroySelection {
   readonly mandatoryIds: ReadonlyArray<PieceId>
   readonly dilationGrid: number
   readonly coverage: string
+}
+
+export interface ExactLineageReplayResult {
+  readonly legal: boolean
+  readonly firstFailingPieceId: PieceId | undefined
+  readonly replayedPieceIds: ReadonlyArray<PieceId>
+  readonly finalCanonicalLegal: boolean
+}
+
+/** Replays real incumbent placements against a frozen context without searching. */
+export function replayFrozenExactLineage(input: {
+  readonly constraintSheet: SheetSpec
+  readonly sourceLayout: ReadonlyArray<IrregularPlacedPiece>
+  readonly frozenPlaced: ReadonlyArray<IrregularPlacedPiece>
+  readonly destroyedQueue: ReadonlyArray<IrregularPreparedPiece>
+}): Effect.Effect<ExactLineageReplayResult, IrregularGeometryInputError> {
+  return Effect.gen(function* () {
+    const sourceById = new Map(
+      input.sourceLayout.map((entry) => [
+        entry.placement.pieceId ?? entry.placement.sourcePieceId,
+        entry
+      ] as const)
+    )
+    const placed = [...input.frozenPlaced]
+    const replayedPieceIds: PieceId[] = []
+    for (const piece of input.destroyedQueue) {
+      const pieceId = preparedPieceId(piece)
+      const source = sourceById.get(pieceId)
+      if (source === undefined) {
+        return yield* invalidInput(`incumbent replay has no source placement for ${pieceId}.`)
+      }
+      const candidate = new IrregularPlacementCandidate({
+        pieceId,
+        transform: source.collisionGeometry.transform,
+        point: {
+          x: source.placement.transform.translateX,
+          y: source.placement.transform.translateY
+        },
+        diagnostics: []
+      })
+      const legal = yield* PlacementValidation.check({
+        sheet: input.constraintSheet,
+        placed,
+        moving: source.collisionGeometry,
+        candidate
+      })
+      if (!legal) {
+        return {
+          legal: false,
+          firstFailingPieceId: pieceId,
+          replayedPieceIds,
+          finalCanonicalLegal: false
+        }
+      }
+      placed.push(source)
+      replayedPieceIds.push(pieceId)
+    }
+    const finalCanonicalLegal = assertCanonicalGridLegalLayout(input.constraintSheet, placed)
+    return {
+      legal: finalCanonicalLegal,
+      firstFailingPieceId: finalCanonicalLegal ? undefined : replayedPieceIds.at(-1),
+      replayedPieceIds,
+      finalCanonicalLegal
+    }
+  })
 }
 
 /** Runs the preregistered 24-round exact targeted reconstruction schedule. */
@@ -239,6 +306,11 @@ export function runTargetedExactLns(
           }).pipe(
             Effect.map((result) => ({ _tag: 'Completed' as const, result })),
             Effect.catchTag('IrregularWindowedBeamAbortedError', (error) =>
+              error.reason === 'deadline'
+                ? Effect.succeed({ _tag: 'TimedOut' as const })
+                : Effect.fail(error)
+            ),
+            Effect.catchTag('IrregularNfpIfpControlAbortError', (error) =>
               error.reason === 'deadline'
                 ? Effect.succeed({ _tag: 'TimedOut' as const })
                 : Effect.fail(error)
