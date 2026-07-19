@@ -1,0 +1,903 @@
+import { Data, Effect } from 'effect'
+import type { PieceId } from '@shared/domain/ids.js'
+import { SheetSpec } from '@shared/domain/nesting.js'
+import {
+  IrregularPlacedPiece,
+  IrregularPlacement,
+  IrregularPlacementCandidate,
+  IrregularPreparedPiece,
+  IrregularTransform,
+  type IrregularNestingSettings,
+  type IrregularTransformCandidate,
+  type TransformedCollisionGeometry
+} from '@shared/irregular/domain.js'
+import {
+  analyzeCanonicalLayoutStructure,
+  assertCanonicalGridLegalLayout,
+  canonicalCollisionLayoutIdentity,
+  type CanonicalLayoutStructuralAnalysis
+} from '../../irregular/canonicalLayoutGeometry.js'
+import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
+import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
+import {
+  IrregularGeometryInputError,
+  IrregularNestingNotImplementedError,
+  NfpIfpService
+} from '../../irregular/services.js'
+import { canonicalCollisionPolygonKey } from './irregularBeamState.js'
+
+export interface IntrinsicTargetBox {
+  readonly widthMm: number
+  readonly heightMm: number
+}
+
+export interface IntrinsicFiniteTransform {
+  readonly transform: IrregularTransformCandidate
+  readonly geometry: TransformedCollisionGeometry
+  readonly orientationFamily: string
+  readonly canonicalLocalGeometryKey: string
+  readonly canonicalTransformKey: string
+}
+
+export interface IntrinsicTransformCatalogEntry {
+  readonly pieceId: PieceId
+  readonly preparedPiece: IrregularPreparedPiece
+  readonly transforms: ReadonlyArray<IntrinsicFiniteTransform>
+}
+
+export interface IntrinsicTransformCatalog {
+  readonly entries: ReadonlyArray<IntrinsicTransformCatalogEntry>
+  readonly canonicalKey: string
+}
+
+export interface IntrinsicProjectionConflictAnalysis {
+  readonly targetBox: IntrinsicTargetBox
+  readonly structure: CanonicalLayoutStructuralAnalysis
+  readonly removedPieceIds: ReadonlyArray<PieceId>
+  readonly frozenPlaced: ReadonlyArray<IrregularPlacedPiece>
+  readonly frozenRemainderExactLegal: true
+}
+
+export interface IntrinsicExactProjectionResult {
+  readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+  readonly canonicalGeometryIdentity: string
+  readonly initialRemovedPieceIds: ReadonlyArray<PieceId>
+  readonly finalRemovedPieceIds: ReadonlyArray<PieceId>
+  readonly transformedPieceIds: ReadonlyArray<PieceId>
+  readonly directPosePieceIds: ReadonlyArray<PieceId>
+  readonly orientationFallbackPieceIds: ReadonlyArray<PieceId>
+  readonly dilationSteps: number
+}
+
+export class IntrinsicExactProjectionError extends Data.TaggedError(
+  'IntrinsicExactProjectionError'
+)<{
+  readonly operation:
+    | 'buildTransformCatalog'
+    | 'analyzeConflictClosure'
+    | 'canonicalizeProvisional'
+    | 'projectConflictClosure'
+  readonly category: 'invalid-input' | 'exact-analysis' | 'projection-exhausted'
+  readonly message: string
+  readonly failedPieceId?: PieceId
+  readonly attempts?: number
+}> {}
+
+interface CanonicalTargetBox {
+  readonly descriptor: IntrinsicTargetBox
+  readonly sheet: SheetSpec
+}
+
+interface ProjectionCandidate {
+  readonly placed: IrregularPlacedPiece
+  readonly directProvisionalPose: boolean
+  readonly preservesPinnedTransform: boolean
+  readonly squaredGridDistance: bigint
+  readonly maximumSideGrid: number
+  readonly envelopeAreaGrid2: bigint
+  readonly envelopeSpanGrid: number
+  readonly canonicalGeometryIdentity: string
+}
+
+interface ProjectionAttemptSuccess {
+  readonly placed: ReadonlyArray<IrregularPlacedPiece>
+  readonly directPosePieceIds: ReadonlyArray<PieceId>
+  readonly orientationFallbackPieceIds: ReadonlyArray<PieceId>
+}
+
+interface ProjectionAttemptFailure {
+  readonly failedPieceId: PieceId
+}
+
+/** Builds the finite transformed-geometry domain without reading a target or requested sheet. */
+export function buildIntrinsicTransformCatalog(
+  pieces: ReadonlyArray<IrregularPreparedPiece>
+): Effect.Effect<
+  IntrinsicTransformCatalog,
+  IntrinsicExactProjectionError | IrregularNestingNotImplementedError | IrregularGeometryInputError,
+  GeometryKernel
+> {
+  return Effect.gen(function* () {
+    const geometryKernel = yield* GeometryKernel
+    const pieceIds = pieces.map(preparedPieceId)
+    if (new Set(pieceIds).size !== pieceIds.length) {
+      return yield* failProjection(
+        'buildTransformCatalog',
+        'invalid-input',
+        'prepared piece ids must be unique.'
+      )
+    }
+
+    const entries: IntrinsicTransformCatalogEntry[] = []
+    for (const preparedPiece of pieces) {
+      const transforms: IntrinsicFiniteTransform[] = []
+      for (const transform of [...preparedPiece.transforms].toSorted(compareTransforms)) {
+        const geometry = yield* geometryKernel.transformCollisionGeometry({
+          geometry: preparedPiece.collisionGeometry,
+          transform
+        })
+        const localGeometryKey = canonicalLocalGeometryKey(geometry)
+        if (localGeometryKey === undefined) {
+          return yield* failProjection(
+            'buildTransformCatalog',
+            'invalid-input',
+            `piece ${preparedPieceId(preparedPiece)} has a transform outside the canonical grid.`
+          )
+        }
+        transforms.push({
+          transform,
+          geometry,
+          orientationFamily: orientationFamilyKey(transform),
+          canonicalLocalGeometryKey: localGeometryKey,
+          canonicalTransformKey: transformKey(transform)
+        })
+      }
+      if (transforms.length === 0) {
+        return yield* failProjection(
+          'buildTransformCatalog',
+          'invalid-input',
+          `piece ${preparedPieceId(preparedPiece)} has no finite transform.`
+        )
+      }
+      entries.push({
+        pieceId: preparedPieceId(preparedPiece),
+        preparedPiece,
+        transforms
+      })
+    }
+
+    return {
+      entries,
+      canonicalKey: JSON.stringify(
+        entries.map((entry) => [
+          entry.pieceId,
+          entry.transforms.map((transform) => [
+            transform.canonicalTransformKey,
+            transform.canonicalLocalGeometryKey
+          ])
+        ])
+      )
+    }
+  })
+}
+
+/** Removes every exact conflict endpoint and target-wall offender, then proves the remainder. */
+export function analyzeIntrinsicProjectionConflicts(
+  targetBox: IntrinsicTargetBox,
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): Effect.Effect<IntrinsicProjectionConflictAnalysis, IntrinsicExactProjectionError> {
+  const target = canonicalTargetBox(targetBox)
+  if (target === undefined) {
+    return failProjection(
+      'analyzeConflictClosure',
+      'invalid-input',
+      'the intrinsic target box must have positive finite canonical-grid dimensions.'
+    )
+  }
+  const structure = analyzeCanonicalLayoutStructure(target.sheet, placed)
+  if (structure === undefined) {
+    return failProjection(
+      'analyzeConflictClosure',
+      'exact-analysis',
+      'canonical conflict and wall analysis could not be completed.'
+    )
+  }
+  const removed = new Set<PieceId>(structure.wallOffenders)
+  for (const [first, second] of structure.positiveAreaConflicts) {
+    removed.add(first)
+    removed.add(second)
+  }
+  const removedPieceIds = [...removed].toSorted()
+  const frozenPlaced = placed.filter((entry) => !removed.has(placedPieceId(entry)))
+  if (!assertCanonicalGridLegalLayout(target.sheet, frozenPlaced)) {
+    return failProjection(
+      'analyzeConflictClosure',
+      'exact-analysis',
+      'removing every conflict endpoint and wall offender did not leave an exact-legal remainder.'
+    )
+  }
+  return Effect.succeed({
+    targetBox: target.descriptor,
+    structure,
+    removedPieceIds,
+    frozenPlaced,
+    frozenRemainderExactLegal: true
+  })
+}
+
+/**
+ * Projects one provisional finite-transform layout into an intrinsic target box.
+ * Only a complete canonical-exact-legal layout can be returned.
+ */
+export function projectIntrinsicLayoutExactly(input: {
+  readonly targetBox: IntrinsicTargetBox
+  readonly catalog: IntrinsicTransformCatalog
+  readonly referencePlaced: ReadonlyArray<IrregularPlacedPiece>
+  readonly provisionalPlaced: ReadonlyArray<IrregularPlacedPiece>
+  readonly maximumDilationSteps?: number
+}): Effect.Effect<
+  IntrinsicExactProjectionResult,
+  IntrinsicExactProjectionError | IrregularNestingNotImplementedError | IrregularGeometryInputError,
+  GeometrySettings | NfpIfpService
+> {
+  return Effect.gen(function* () {
+    const settings = yield* GeometrySettings
+    const nfpIfp = yield* NfpIfpService
+    const target = canonicalTargetBox(input.targetBox)
+    if (target === undefined) {
+      return yield* failProjection(
+        'canonicalizeProvisional',
+        'invalid-input',
+        'the intrinsic target box must have positive finite canonical-grid dimensions.'
+      )
+    }
+    const catalogById = new Map(input.catalog.entries.map((entry) => [entry.pieceId, entry]))
+    if (catalogById.size !== input.catalog.entries.length) {
+      return yield* failProjection(
+        'canonicalizeProvisional',
+        'invalid-input',
+        'the transform catalog must contain unique piece ids.'
+      )
+    }
+    const provisional = yield* canonicalizePlacedAgainstCatalog(
+      input.catalog,
+      input.provisionalPlaced
+    )
+    const referenceTransforms = yield* referenceTransformKeys(input.catalog, input.referencePlaced)
+    const provisionalById = new Map(provisional.map((entry) => [placedPieceId(entry), entry]))
+    const transformedPieceIds = input.catalog.entries
+      .filter((entry) => {
+        const provisionalEntry = provisionalById.get(entry.pieceId)
+        const referenceTransform = referenceTransforms.get(entry.pieceId)
+        return (
+          provisionalEntry !== undefined &&
+          referenceTransform !== transformKey(provisionalEntry.collisionGeometry.transform)
+        )
+      })
+      .map(({ pieceId }) => pieceId)
+
+    const conflictAnalysis = yield* analyzeIntrinsicProjectionConflicts(
+      target.descriptor,
+      provisional
+    )
+    const removed = new Set<PieceId>([
+      ...conflictAnalysis.removedPieceIds,
+      ...transformedPieceIds
+    ])
+    const initialRemovedPieceIds = orderedCatalogIds(input.catalog, removed)
+    const maximumDilationSteps = Math.max(
+      0,
+      Math.min(
+        input.catalog.entries.length,
+        Math.floor(input.maximumDilationSteps ?? input.catalog.entries.length)
+      )
+    )
+
+    for (let dilationSteps = 0; dilationSteps <= maximumDilationSteps; dilationSteps += 1) {
+      const frozen = provisional.filter((entry) => !removed.has(placedPieceId(entry)))
+      if (!assertCanonicalGridLegalLayout(target.sheet, frozen)) {
+        return yield* failProjection(
+          'projectConflictClosure',
+          'exact-analysis',
+          'the current closure dilation did not retain an exact-legal frozen remainder.'
+        )
+      }
+      const attempt = yield* projectRemovedPieces({
+        target,
+        catalog: input.catalog,
+        provisionalById,
+        removed,
+        frozen,
+        settings,
+        nfpIfp
+      })
+      if ('placed' in attempt) {
+        const canonicalGeometryIdentity = canonicalCollisionLayoutIdentity(attempt.placed)
+        if (
+          attempt.placed.length !== input.catalog.entries.length ||
+          canonicalGeometryIdentity === undefined ||
+          !assertCanonicalGridLegalLayout(target.sheet, attempt.placed)
+        ) {
+          return yield* failProjection(
+            'projectConflictClosure',
+            'exact-analysis',
+            'a projection attempt completed without a publishable canonical exact layout.'
+          )
+        }
+        return {
+          placedCollisionGeometries: attempt.placed,
+          canonicalGeometryIdentity,
+          initialRemovedPieceIds,
+          finalRemovedPieceIds: orderedCatalogIds(input.catalog, removed),
+          transformedPieceIds,
+          directPosePieceIds: attempt.directPosePieceIds,
+          orientationFallbackPieceIds: attempt.orientationFallbackPieceIds,
+          dilationSteps
+        }
+      }
+
+      const dilationPieceId = selectClosureDilationPiece(
+        input.catalog,
+        provisionalById,
+        removed,
+        attempt.failedPieceId
+      )
+      if (dilationSteps >= maximumDilationSteps || dilationPieceId === undefined) {
+        return yield* failProjection(
+          'projectConflictClosure',
+          'projection-exhausted',
+          `exact projection exhausted its closure dilation path at piece ${attempt.failedPieceId}.`,
+          attempt.failedPieceId,
+          dilationSteps + 1
+        )
+      }
+      removed.add(dilationPieceId)
+    }
+
+    return yield* failProjection(
+      'projectConflictClosure',
+      'projection-exhausted',
+      'exact projection exhausted its bounded closure dilation path.',
+      undefined,
+      maximumDilationSteps + 1
+    )
+  })
+}
+
+function canonicalizePlacedAgainstCatalog(
+  catalog: IntrinsicTransformCatalog,
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): Effect.Effect<ReadonlyArray<IrregularPlacedPiece>, IntrinsicExactProjectionError> {
+  const placedById = new Map<PieceId, IrregularPlacedPiece>()
+  for (const entry of placed) {
+    const pieceId = placedPieceId(entry)
+    if (placedById.has(pieceId)) {
+      return failProjection(
+        'canonicalizeProvisional',
+        'invalid-input',
+        `provisional piece id ${pieceId} is duplicated.`
+      )
+    }
+    placedById.set(pieceId, entry)
+  }
+  if (placedById.size !== catalog.entries.length) {
+    return failProjection(
+      'canonicalizeProvisional',
+      'invalid-input',
+      'provisional placements must exactly cover the transform catalog.'
+    )
+  }
+  const result: IrregularPlacedPiece[] = []
+  for (const catalogEntry of catalog.entries) {
+    const provisional = placedById.get(catalogEntry.pieceId)
+    if (provisional === undefined) {
+      return failProjection(
+        'canonicalizeProvisional',
+        'invalid-input',
+        `provisional placement is missing piece ${catalogEntry.pieceId}.`
+      )
+    }
+    const transform = catalogEntry.transforms.find(
+      (candidate) => candidate.canonicalTransformKey === transformKey(provisional.collisionGeometry.transform)
+    )
+    const gridX = toGridMm(provisional.placement.transform.translateX)
+    const gridY = toGridMm(provisional.placement.transform.translateY)
+    if (
+      transform === undefined ||
+      gridX === undefined ||
+      gridY === undefined ||
+      normalizedRotationDeg(provisional.placement.transform.rotationDeg) !==
+        normalizedRotationDeg(transform.transform.rotationDeg) ||
+      provisional.placement.transform.mirrored !== transform.transform.mirrored
+    ) {
+      return failProjection(
+        'canonicalizeProvisional',
+        'invalid-input',
+        `provisional piece ${catalogEntry.pieceId} must use one catalog transform and a canonicalizable translation.`
+      )
+    }
+    result.push(makePlaced(catalogEntry, transform, { x: fromGrid(gridX), y: fromGrid(gridY) }))
+  }
+  return Effect.succeed(result)
+}
+
+function referenceTransformKeys(
+  catalog: IntrinsicTransformCatalog,
+  referencePlaced: ReadonlyArray<IrregularPlacedPiece>
+): Effect.Effect<ReadonlyMap<PieceId, string>, IntrinsicExactProjectionError> {
+  const referenceById = new Map<PieceId, IrregularPlacedPiece>()
+  for (const entry of referencePlaced) referenceById.set(placedPieceId(entry), entry)
+  if (referenceById.size !== catalog.entries.length || referencePlaced.length !== catalog.entries.length) {
+    return failProjection(
+      'canonicalizeProvisional',
+      'invalid-input',
+      'reference placements must exactly cover the transform catalog with unique piece ids.'
+    )
+  }
+  const result = new Map<PieceId, string>()
+  for (const entry of catalog.entries) {
+    const reference = referenceById.get(entry.pieceId)
+    if (reference === undefined) {
+      return failProjection(
+        'canonicalizeProvisional',
+        'invalid-input',
+        `reference placement is missing piece ${entry.pieceId}.`
+      )
+    }
+    const key = transformKey(reference.collisionGeometry.transform)
+    if (!entry.transforms.some((transform) => transform.canonicalTransformKey === key)) {
+      return failProjection(
+        'canonicalizeProvisional',
+        'invalid-input',
+        `reference piece ${entry.pieceId} does not use a catalog transform.`
+      )
+    }
+    result.set(entry.pieceId, key)
+  }
+  return Effect.succeed(result)
+}
+
+function projectRemovedPieces(input: {
+  readonly target: CanonicalTargetBox
+  readonly catalog: IntrinsicTransformCatalog
+  readonly provisionalById: ReadonlyMap<PieceId, IrregularPlacedPiece>
+  readonly removed: ReadonlySet<PieceId>
+  readonly frozen: ReadonlyArray<IrregularPlacedPiece>
+  readonly settings: IrregularNestingSettings
+  readonly nfpIfp: NfpIfpService
+}): Effect.Effect<
+  ProjectionAttemptSuccess | ProjectionAttemptFailure,
+  IrregularNestingNotImplementedError | IrregularGeometryInputError
+> {
+  return Effect.gen(function* () {
+    let placed = [...input.frozen]
+    const directPosePieceIds: PieceId[] = []
+    const orientationFallbackPieceIds: PieceId[] = []
+    for (const entry of input.catalog.entries) {
+      if (!input.removed.has(entry.pieceId)) continue
+      const provisional = input.provisionalById.get(entry.pieceId)
+      if (provisional === undefined) return { failedPieceId: entry.pieceId }
+      const pinnedKey = transformKey(provisional.collisionGeometry.transform)
+      const pinned = entry.transforms.find(
+        (transform) => transform.canonicalTransformKey === pinnedKey
+      )
+      if (pinned === undefined) return { failedPieceId: entry.pieceId }
+
+      const pinnedCandidates = yield* exactCandidatesForTransform({
+        target: input.target,
+        entry,
+        transform: pinned,
+        provisional,
+        placed,
+        settings: input.settings,
+        nfpIfp: input.nfpIfp,
+        preservesPinnedTransform: true
+      })
+      let selected = pinnedCandidates.toSorted(compareProjectionCandidates)[0]
+      if (selected === undefined) {
+        const familyWinners: ProjectionCandidate[] = []
+        const transformsByFamily = new Map<string, IntrinsicFiniteTransform[]>()
+        for (const transform of entry.transforms) {
+          if (transform.canonicalTransformKey === pinned.canonicalTransformKey) continue
+          const family = transformsByFamily.get(transform.orientationFamily) ?? []
+          family.push(transform)
+          transformsByFamily.set(transform.orientationFamily, family)
+        }
+        for (const transforms of [...transformsByFamily.values()]) {
+          const familyCandidates: ProjectionCandidate[] = []
+          for (const transform of transforms) {
+            familyCandidates.push(
+              ...(yield* exactCandidatesForTransform({
+                target: input.target,
+                entry,
+                transform,
+                provisional,
+                placed,
+                settings: input.settings,
+                nfpIfp: input.nfpIfp,
+                preservesPinnedTransform: false
+              }))
+            )
+          }
+          const familyWinner = familyCandidates.toSorted(compareProjectionCandidates)[0]
+          if (familyWinner !== undefined) familyWinners.push(familyWinner)
+        }
+        selected = familyWinners.toSorted(compareProjectionCandidates)[0]
+        if (selected !== undefined) orientationFallbackPieceIds.push(entry.pieceId)
+      }
+      if (selected === undefined) return { failedPieceId: entry.pieceId }
+      if (selected.directProvisionalPose) directPosePieceIds.push(entry.pieceId)
+      placed.push(selected.placed)
+    }
+    return { placed, directPosePieceIds, orientationFallbackPieceIds }
+  })
+}
+
+function exactCandidatesForTransform(input: {
+  readonly target: CanonicalTargetBox
+  readonly entry: IntrinsicTransformCatalogEntry
+  readonly transform: IntrinsicFiniteTransform
+  readonly provisional: IrregularPlacedPiece
+  readonly placed: ReadonlyArray<IrregularPlacedPiece>
+  readonly settings: IrregularNestingSettings
+  readonly nfpIfp: NfpIfpService
+  readonly preservesPinnedTransform: boolean
+}): Effect.Effect<
+  ReadonlyArray<ProjectionCandidate>,
+  IrregularNestingNotImplementedError | IrregularGeometryInputError
+> {
+  return Effect.gen(function* () {
+    const provisionalPoint = canonicalPlacementPoint(input.provisional)
+    if (provisionalPoint === undefined) return []
+    const candidates: ProjectionCandidate[] = []
+    const directCandidate = new IrregularPlacementCandidate({
+      pieceId: input.entry.pieceId,
+      transform: input.transform.transform,
+      point: provisionalPoint,
+      diagnostics: []
+    })
+    const direct = scoreExactProjectionCandidate({
+      target: input.target,
+      entry: input.entry,
+      transform: input.transform,
+      candidate: directCandidate,
+      provisionalPoint,
+      placed: input.placed,
+      directProvisionalPose: true,
+      preservesPinnedTransform: input.preservesPinnedTransform
+    })
+    if (direct !== undefined) candidates.push(direct)
+
+    const serviceCandidates = yield* input.nfpIfp.generatePlacementCandidates({
+      sheet: input.target.sheet,
+      placed: input.placed,
+      moving: input.transform.geometry,
+      settings: input.settings,
+      candidateDomain: 'sheet'
+    })
+    const seen = new Set(
+      candidates.map((candidate) => candidateTranslationKey(candidate.placed))
+    )
+    for (const candidate of serviceCandidates) {
+      const scored = scoreExactProjectionCandidate({
+        target: input.target,
+        entry: input.entry,
+        transform: input.transform,
+        candidate,
+        provisionalPoint,
+        placed: input.placed,
+        directProvisionalPose: false,
+        preservesPinnedTransform: input.preservesPinnedTransform
+      })
+      if (scored === undefined) continue
+      const key = candidateTranslationKey(scored.placed)
+      if (seen.has(key)) continue
+      seen.add(key)
+      candidates.push(scored)
+    }
+    return candidates
+  })
+}
+
+function scoreExactProjectionCandidate(input: {
+  readonly target: CanonicalTargetBox
+  readonly entry: IntrinsicTransformCatalogEntry
+  readonly transform: IntrinsicFiniteTransform
+  readonly candidate: IrregularPlacementCandidate
+  readonly provisionalPoint: { readonly x: number; readonly y: number }
+  readonly placed: ReadonlyArray<IrregularPlacedPiece>
+  readonly directProvisionalPose: boolean
+  readonly preservesPinnedTransform: boolean
+}): ProjectionCandidate | undefined {
+  const pointX = toGridMm(input.candidate.point.x)
+  const pointY = toGridMm(input.candidate.point.y)
+  const provisionalX = toGridMm(input.provisionalPoint.x)
+  const provisionalY = toGridMm(input.provisionalPoint.y)
+  if (
+    pointX === undefined ||
+    pointY === undefined ||
+    provisionalX === undefined ||
+    provisionalY === undefined
+  ) {
+    return undefined
+  }
+  const placed = makePlaced(input.entry, input.transform, {
+    x: fromGrid(pointX),
+    y: fromGrid(pointY)
+  })
+  const complete = [...input.placed, placed]
+  if (!assertCanonicalGridLegalLayout(input.target.sheet, complete)) return undefined
+  const envelope = canonicalEnvelopeTuple(complete)
+  const canonicalGeometryIdentity = canonicalCollisionLayoutIdentity(complete)
+  if (envelope === undefined || canonicalGeometryIdentity === undefined) return undefined
+  const deltaX = BigInt(pointX - provisionalX)
+  const deltaY = BigInt(pointY - provisionalY)
+  return {
+    placed,
+    directProvisionalPose: input.directProvisionalPose,
+    preservesPinnedTransform: input.preservesPinnedTransform,
+    squaredGridDistance: deltaX * deltaX + deltaY * deltaY,
+    ...envelope,
+    canonicalGeometryIdentity
+  }
+}
+
+function compareProjectionCandidates(
+  first: ProjectionCandidate,
+  second: ProjectionCandidate
+): number {
+  return (
+    Number(second.directProvisionalPose) - Number(first.directProvisionalPose) ||
+    compareBigInt(first.squaredGridDistance, second.squaredGridDistance) ||
+    Number(second.preservesPinnedTransform) - Number(first.preservesPinnedTransform) ||
+    first.maximumSideGrid - second.maximumSideGrid ||
+    compareBigInt(first.envelopeAreaGrid2, second.envelopeAreaGrid2) ||
+    first.envelopeSpanGrid - second.envelopeSpanGrid ||
+    first.canonicalGeometryIdentity.localeCompare(second.canonicalGeometryIdentity)
+  )
+}
+
+function selectClosureDilationPiece(
+  catalog: IntrinsicTransformCatalog,
+  provisionalById: ReadonlyMap<PieceId, IrregularPlacedPiece>,
+  removed: ReadonlySet<PieceId>,
+  failedPieceId: PieceId
+): PieceId | undefined {
+  const failed = provisionalById.get(failedPieceId)
+  const failedCenter = failed === undefined ? undefined : canonicalPlacedCenter(failed)
+  return catalog.entries
+    .filter((entry) => !removed.has(entry.pieceId))
+    .map((entry, rank) => {
+      const placed = provisionalById.get(entry.pieceId)
+      const center = placed === undefined ? undefined : canonicalPlacedCenter(placed)
+      const distance =
+        failedCenter === undefined || center === undefined
+          ? undefined
+          : squaredGridDistance(failedCenter, center)
+      return { pieceId: entry.pieceId, rank, distance }
+    })
+    .toSorted(
+      (first, second) =>
+        compareOptionalBigInt(first.distance, second.distance) ||
+        first.rank - second.rank ||
+        first.pieceId.localeCompare(second.pieceId)
+    )[0]?.pieceId
+}
+
+function canonicalEnvelopeTuple(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+):
+  | {
+      readonly maximumSideGrid: number
+      readonly envelopeAreaGrid2: bigint
+      readonly envelopeSpanGrid: number
+    }
+  | undefined {
+  const points: Array<{ readonly x: number; readonly y: number }> = []
+  for (const entry of placed) {
+    const translation = canonicalPlacementPoint(entry)
+    if (translation === undefined) return undefined
+    for (const point of entry.collisionGeometry.polygon.points) {
+      const x = toGridMm(point.x + translation.x)
+      const y = toGridMm(point.y + translation.y)
+      if (x === undefined || y === undefined) return undefined
+      points.push({ x, y })
+    }
+  }
+  const first = points[0]
+  if (first === undefined) return undefined
+  let minX = first.x
+  let minY = first.y
+  let maxX = first.x
+  let maxY = first.y
+  for (const point of points.slice(1)) {
+    minX = Math.min(minX, point.x)
+    minY = Math.min(minY, point.y)
+    maxX = Math.max(maxX, point.x)
+    maxY = Math.max(maxY, point.y)
+  }
+  const width = maxX - minX
+  const height = maxY - minY
+  if (![width, height, width + height].every(Number.isSafeInteger)) return undefined
+  return {
+    maximumSideGrid: Math.max(width, height),
+    envelopeAreaGrid2: BigInt(width) * BigInt(height),
+    envelopeSpanGrid: width + height
+  }
+}
+
+function canonicalTargetBox(targetBox: IntrinsicTargetBox): CanonicalTargetBox | undefined {
+  const widthGrid = toGridMm(targetBox.widthMm)
+  const heightGrid = toGridMm(targetBox.heightMm)
+  if (widthGrid === undefined || heightGrid === undefined || widthGrid <= 0 || heightGrid <= 0) {
+    return undefined
+  }
+  const descriptor = { widthMm: fromGrid(widthGrid), heightMm: fromGrid(heightGrid) }
+  return {
+    descriptor,
+    sheet: new SheetSpec({
+      width: descriptor.widthMm,
+      height: descriptor.heightMm,
+      label: 'intrinsic-exact-projection-target'
+    })
+  }
+}
+
+function canonicalLocalGeometryKey(
+  geometry: TransformedCollisionGeometry
+): string | undefined {
+  const gridPoints = geometry.polygon.points.map((point) => ({
+    x: toGridMm(point.x),
+    y: toGridMm(point.y)
+  }))
+  if (
+    gridPoints.length < 3 ||
+    gridPoints.some(({ x, y }) => x === undefined || y === undefined)
+  ) {
+    return undefined
+  }
+  const points = gridPoints.filter(
+    (point): point is { readonly x: number; readonly y: number } =>
+      point.x !== undefined && point.y !== undefined
+  )
+  const minX = Math.min(...points.map(({ x }) => x))
+  const minY = Math.min(...points.map(({ y }) => y))
+  return canonicalCollisionPolygonKey(
+    points.map(({ x, y }) => ({ x: fromGrid(x - minX), y: fromGrid(y - minY) }))
+  )
+}
+
+function makePlaced(
+  entry: IntrinsicTransformCatalogEntry,
+  transform: IntrinsicFiniteTransform,
+  point: { readonly x: number; readonly y: number }
+): IrregularPlacedPiece {
+  const placementInput = {
+    pieceId: entry.pieceId,
+    sourcePieceId: entry.preparedPiece.source.id,
+    placementReference: entry.preparedPiece.collisionGeometry.placementReference,
+    transform: new IrregularTransform({
+      translateX: point.x,
+      translateY: point.y,
+      rotationDeg: transform.transform.rotationDeg,
+      mirrored: transform.transform.mirrored
+    })
+  }
+  return new IrregularPlacedPiece({
+    placement: new IrregularPlacement(placementInput),
+    collisionGeometry: transform.geometry
+  })
+}
+
+function canonicalPlacementPoint(
+  entry: IrregularPlacedPiece
+): { readonly x: number; readonly y: number } | undefined {
+  const gridX = toGridMm(entry.placement.transform.translateX)
+  const gridY = toGridMm(entry.placement.transform.translateY)
+  return gridX === undefined || gridY === undefined
+    ? undefined
+    : { x: fromGrid(gridX), y: fromGrid(gridY) }
+}
+
+function canonicalPlacedCenter(
+  entry: IrregularPlacedPiece
+): { readonly x: number; readonly y: number } | undefined {
+  const translation = canonicalPlacementPoint(entry)
+  if (translation === undefined) return undefined
+  const minX = toGridMm(entry.collisionGeometry.bounds.minX + translation.x)
+  const minY = toGridMm(entry.collisionGeometry.bounds.minY + translation.y)
+  const maxX = toGridMm(entry.collisionGeometry.bounds.maxX + translation.x)
+  const maxY = toGridMm(entry.collisionGeometry.bounds.maxY + translation.y)
+  return minX === undefined || minY === undefined || maxX === undefined || maxY === undefined
+    ? undefined
+    : { x: minX + maxX, y: minY + maxY }
+}
+
+function squaredGridDistance(
+  first: { readonly x: number; readonly y: number },
+  second: { readonly x: number; readonly y: number }
+): bigint {
+  const deltaX = BigInt(first.x - second.x)
+  const deltaY = BigInt(first.y - second.y)
+  return deltaX * deltaX + deltaY * deltaY
+}
+
+function orderedCatalogIds(
+  catalog: IntrinsicTransformCatalog,
+  selected: ReadonlySet<PieceId>
+): ReadonlyArray<PieceId> {
+  return catalog.entries.filter(({ pieceId }) => selected.has(pieceId)).map(({ pieceId }) => pieceId)
+}
+
+function candidateTranslationKey(entry: IrregularPlacedPiece): string {
+  const transform = entry.placement.transform
+  return `${transformKey(entry.collisionGeometry.transform)}:${transform.translateX}:${transform.translateY}`
+}
+
+function compareTransforms(
+  first: IrregularTransformCandidate,
+  second: IrregularTransformCandidate
+): number {
+  return (
+    first.index - second.index ||
+    first.rotationDeg - second.rotationDeg ||
+    Number(first.mirrored) - Number(second.mirrored) ||
+    first.reason.localeCompare(second.reason)
+  )
+}
+
+function transformKey(transform: IrregularTransformCandidate): string {
+  return JSON.stringify([
+    transform.index,
+    normalizedRotationDeg(transform.rotationDeg),
+    transform.mirrored,
+    transform.reason
+  ])
+}
+
+function orientationFamilyKey(transform: IrregularTransformCandidate): string {
+  return `${normalizedRotationDeg(transform.rotationDeg)}:${Number(transform.mirrored)}`
+}
+
+function normalizedRotationDeg(rotationDeg: number): number {
+  const remainder = rotationDeg % 360
+  const normalized = remainder < 0 ? remainder + 360 : remainder
+  return Object.is(normalized, -0) ? 0 : normalized
+}
+
+function preparedPieceId(piece: IrregularPreparedPiece): PieceId {
+  return piece.pieceId ?? piece.source.id
+}
+
+function placedPieceId(piece: IrregularPlacedPiece): PieceId {
+  return piece.placement.pieceId ?? piece.placement.sourcePieceId
+}
+
+function compareBigInt(first: bigint, second: bigint): number {
+  return first < second ? -1 : first > second ? 1 : 0
+}
+
+function compareOptionalBigInt(first: bigint | undefined, second: bigint | undefined): number {
+  if (first === undefined || second === undefined) {
+    return first === second ? 0 : first === undefined ? 1 : -1
+  }
+  return compareBigInt(first, second)
+}
+
+function failProjection(
+  operation: IntrinsicExactProjectionError['operation'],
+  category: IntrinsicExactProjectionError['category'],
+  message: string,
+  failedPieceId?: PieceId,
+  attempts?: number
+): Effect.Effect<never, IntrinsicExactProjectionError> {
+  return Effect.fail(
+    new IntrinsicExactProjectionError({
+      operation,
+      category,
+      message,
+      ...(failedPieceId === undefined ? {} : { failedPieceId }),
+      ...(attempts === undefined ? {} : { attempts })
+    })
+  )
+}
