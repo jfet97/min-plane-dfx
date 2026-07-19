@@ -2,10 +2,10 @@
 
 ## Status
 
-Production-candidate implementation on branch `canonical-reference-decode-handoff`.
-The isolated certified-priority experiment is green across all six mixed-61 target
-sheets and all twelve non-mixed corpus lanes. Promotion gates must still be rerun
-on the consolidated candidate before merge.
+Accepted production implementation on branch `canonical-reference-decode-handoff`.
+The consolidated, review-hardened candidate is green across ten mixed-61 sheets
+and all twelve non-mixed corpus lanes. It closes the flagship sheet-invariance
+gap with the exact approved collision geometry and is ready to merge.
 
 ## Measured Premise
 
@@ -86,27 +86,42 @@ rigid quarter-turns. Selection policy remains in `src/workers/algorithm/`.
 - reference reuse, repair/GA/short-side-fill exclusion, existing portfolio tests,
   and the exact 20-triangle repair-8 golden remain green.
 
-The isolated `c9a2d64` experiment produced the same approved result on all six
-mixed-61 target sheets:
+The final `5186255` candidate produced the same approved result on ten
+mixed-61 sheets:
 
 ```text
 canonical hash: 40f8ac9c0fb24073ac141b5fb667366af55df90c78c6cca21ff76703a4a7f300
 area:           430344.917527 mm2
 holes:          2
 contacts:       53 / 14
-all six:         exact hash and metrics above
+all ten:         exact hash and metrics above
 ```
+
+The sheets were `900 x 1800`, `1000 x 1300`, `1000 x 1700`, `1100 x 1100`,
+`1200 x 1600`, `1400 x 1100`, `1500 x 2200`, `1700 x 1000`, `2000 x 1700`,
+and `2000 x 2700`. Every run placed all 61 pieces. The intrinsic topology was
+also identical: two enclosed cavities, hull-gap ratio `0.119130`, envelope
+aspect `1.446116`, two isolated pieces, and a largest positive-contact component
+of 53 pieces (`0.868852`). Measured runtimes were `70.4-89.3 s` off the
+reference sheet and `40.1 s` on `2000 x 2700`.
 
 All twelve non-mixed corpus lanes retained their exact baseline hashes and
 metrics. The full suite was `564/566`; the two failures were the pre-existing
 irregular benchmark failures reproduced on the base branch.
 
+The final implementation review found and resolved complete score-summary schema
+validation and all renderer timeout edit paths. Earlier review rounds also
+hardened role lifecycle diagnostics, cancellation, q0/q90 legality, mixed-winding
+cavity topology, identity ties, trace ownership, and certificate boundaries.
+
 The renderer irregular timeout floor is therefore `120000 ms`, leaving headroom
 over the measured protected pass without changing rectangular-worker defaults.
 
-## Remaining Gate
+## Promotion Evidence
 
-Rerun the four-sheet, corpus, and ten-sheet gates on the consolidated candidate,
-including selected-role history, role diagnostics, runtime, and aggregated decode
-counts, before merging. The evidence above belongs to the preserved isolated
-experiment and is not silently relabeled as a run of this checkout.
+The immutable final report is
+`/private/tmp/min-plane-provenance/canonical-reference-decode-handoff/5186255-ten-sheets/report.json`.
+Portable copies of the report and all ten SVG/PNG renders live under
+[`help/artifacts/canonical-reference-decode-handoff/`](../artifacts/canonical-reference-decode-handoff/).
+The report hash is
+`b1e1059231312200ec9879a25697bcadd8fdd622b8d28a32eacb4750af1e0d84`.

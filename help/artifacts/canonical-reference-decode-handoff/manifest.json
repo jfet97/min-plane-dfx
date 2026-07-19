@@ -1,0 +1,20 @@
+{
+  "experiment": "canonical-reference-decode-handoff",
+  "sourceCommit": "5186255",
+  "sourceBranch": "canonical-reference-decode-handoff",
+  "workingTreeAtRun": "clean",
+  "generatedAt": "2026-07-19T01:16:14.630Z",
+  "fixture": "tests/fixtures/irregularSheetInvariance/mixed61-request.json",
+  "fixtureSha256": "dd57d7dacf21b062e2e92b78b2bec91d56d2a10071ffeae2b239f75742347cff",
+  "command": "pnpm corpus:sheet-invariance --case mixed-61 --sheets 900x1800,1000x1300,1000x1700,1100x1100,1200x1600,1400x1100,1500x2200,1700x1000,2000x1700,2000x2700 --strict --output /private/tmp/min-plane-provenance/canonical-reference-decode-handoff/5186255-ten-sheets",
+  "environment": {
+    "node": "v24.16.0",
+    "pnpm": "11.8.0",
+    "platform": "macOS 26.5.2 (25F84)"
+  },
+  "reportSha256": "b1e1059231312200ec9879a25697bcadd8fdd622b8d28a32eacb4750af1e0d84",
+  "svgSha256": "2d8556fc00b7517a4b3c06a35dac1c3f755063f94f840de22b53a89b4a6f6c93",
+  "pngSha256": "cfb4e876cafd676f835434e7f201bf3e9a7188cb69c774a261ce569bc3c66d1a",
+  "canonicalGeometryHash": "40f8ac9c0fb24073ac141b5fb667366af55df90c78c6cca21ff76703a4a7f300",
+  "strictPassed": true
+}

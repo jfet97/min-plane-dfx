@@ -13,10 +13,10 @@ acting, treat it as authoritative for accepted and rejected checkpoints, and
 update it before leaving any new experiment or production decision. If this
 prompt and the live ledger disagree, verify current `main` and follow the ledger.
 
-## Mission
+## Mission status and continuation
 
-Close the remaining sheet-invariance gap for the deterministic convex irregular
-nester.
+The flagship mixed-61 sheet-invariance gap is closed. Preserve and independently
+reproduce that result before attempting to generalize or optimize it.
 
 For the same pieces and settings, every sheet on which the target compact motif
 is legal should select the same collision geometry after canonicalization under
@@ -25,10 +25,12 @@ ratio may constrain legality. They must not change balanced or edge-contact
 compactness preferences. `short_side_fill` is the deliberate sheet-relative
 exception.
 
-The solution must preserve or improve layout quality, not merely make four bad
-layouts identical. It must retain the official triangle lattice, the recovered
-mixed-61 two-hole reference quality, legality, determinism, trace truthfulness,
-and acceptable runtime.
+The accepted implementation returns the exact approved two-hole motif on ten
+legal sheets. The next mission is to reduce the protected second-decode cost,
+generalize its intrinsic certificate only with counterexamples and corpus
+evidence, and investigate mixed-50 separately. It must retain the official
+triangle lattice, legality, determinism, trace truthfulness, and the exact
+mixed-61 hash.
 
 ## Checkout and source of truth
 
@@ -38,14 +40,14 @@ Start from the repository root:
 /Users/andreasimonecosta/Documents/Work/min-plane-dfx
 ```
 
-At this prompt revision, the protected Pareto frontier lane is proposed
-through pull request #4 (`protected-pareto-frontier-lane`) and the
-sheet-invariance mechanism arc is complete with a verified blocker. Refresh
-`main` and record the actual starting commit. This hash is a handoff
-checkpoint, not permission to skip live verification. The arc's outcome, the
-step-0 divergence, and the remaining blocker are recorded in
+At this prompt revision, the canonical-reference decode handoff is the accepted
+production result. Refresh `main` and record the actual starting commit. This
+hash is a handoff checkpoint, not permission to skip live verification. Read
+[`help/research/canonical-reference-decode-handoff.md`](../help/research/canonical-reference-decode-handoff.md)
+first. The preceding step-0 divergence and per-sheet-decode blocker remain
+recorded in
 [`help/research/sheet-invariance-mechanism-arc-and-blocker.md`](../help/research/sheet-invariance-mechanism-arc-and-blocker.md);
-read it before designing any new invariance experiment.
+read it to understand why comparator-only changes failed.
 
 Read these files in order before editing:
 
@@ -64,7 +66,8 @@ Read these files in order before editing:
 11. [`help/research/open-source-nesting-strategies.md`](../help/research/open-source-nesting-strategies.md);
 12. [`help/research/bounded-ga-order-rotation-probe.md`](../help/research/bounded-ga-order-rotation-probe.md);
 13. [`docs/research/deepnest-svgnest-source-comparison.md`](../docs/research/deepnest-svgnest-source-comparison.md);
-14. [`docs/research/irregular-nesting-literature-and-web-research.md`](../docs/research/irregular-nesting-literature-and-web-research.md).
+14. [`docs/research/irregular-nesting-literature-and-web-research.md`](../docs/research/irregular-nesting-literature-and-web-research.md);
+15. [`help/research/canonical-reference-decode-handoff.md`](../help/research/canonical-reference-decode-handoff.md).
 
 Then inspect the current implementation, especially:
 
@@ -110,19 +113,26 @@ to skip the baseline run.
   collision-envelope area.
 - A converged state can carry both protected eligibilities. Decision traces must
   report the rank of the lane that actually caused retention.
+- Explicit compact-quality jobs may additionally run one protected fixed
+  `2000 x 2700` decode. This outer coordinator is nonrecursive, shares
+  cancellation and progress with the requested decode, and keeps histories
+  private until one real winner is selected.
+- A distinct canonical finalist must fit the requested sheet at q0 or q90 with
+  zero positive overlap and pass the intrinsic certificate documented in
+  [`help/research/canonical-reference-decode-handoff.md`](../help/research/canonical-reference-decode-handoff.md).
+  Incomplete, non-finite, schema-invalid, uncertified, or identity-equivalent
+  candidates retain production. The capability defaults off.
 - The NFP near-parallel crossing recovery is already merged. Do not conflate
   this search investigation with that resolved kernel crash.
 
-### Mixed-61 four-sheet checkpoint
+### Mixed-61 ten-sheet checkpoint
 
-The current measured outputs are:
+The review-hardened candidate returns the same result on every measured sheet:
 
-| Sheet | Envelope area | Holes | Current status |
-| --- | ---: | ---: | --- |
-| `1000 x 1300` | `506,644.934 mm2` | 12 | unchanged post-canonicalization geometry |
-| `1000 x 1700` | `461,475.664 mm2` | 10 | unchanged post-canonicalization geometry |
-| `2000 x 1700` | `535,808.686 mm2` | 4 | protected intrinsic contact winner |
-| `2000 x 2700` | `430,344.918 mm2` | 2 | protected boundary-anchor winner |
+| Sheets | Envelope area | Holes | Contacts | Canonical result |
+| --- | ---: | ---: | ---: | --- |
+| `900x1800`, `1000x1300`, `1000x1700`, `1100x1100`, `1200x1600` | `430,344.918 mm2` | 2 | `53/14` | exact |
+| `1400x1100`, `1500x2200`, `1700x1000`, `2000x1700`, `2000x2700` | `430,344.918 mm2` | 2 | `53/14` | exact |
 
 The reference result has canonical hash:
 
@@ -131,8 +141,8 @@ The reference result has canonical hash:
 ```
 
 It has 53 total and 14 dominant structural contacts. Its `545.515 x 788.878
-mm` envelope fits all four sheets, so legality alone does not explain why the
-other three sheets choose different motifs.
+mm` envelope fits all ten sheets. Exact q0/q90 legality is rechecked on the real
+requested sheet before the protected result can be selected.
 
 ### Causal boundary already established
 
@@ -153,8 +163,12 @@ The general gap remains earlier in pruning:
 - the width-one intrinsic lane is sheet-independent, but one survivor is not
   enough to recover the common reference motif on the remaining sheets.
 
-Do not try to fix this only in final selection. A terminal comparator cannot
-recover a branch removed by local fanout or earlier protected-lane pruning.
+This boundary is resolved for mixed-61 by cross-decode coordination, not by a
+new comparator. A terminal comparator still cannot recover a branch removed by
+local fanout or earlier protected-lane pruning inside one requested-sheet tree.
+The accepted coordinator obtains the exact terminal from a fixed protected
+decode, then admits it only through sheet-free intrinsic topology and real-sheet
+legality.
 
 ## Research findings that must be preserved
 
@@ -239,49 +253,33 @@ The experiment answered the original questions:
    sheet-boundary coordinates, and free-material metrics, using
    translation-normalized combined geometry for final ties.
 
-The result is partial: four canonical hashes remain. The next experiment must
-expand protected intrinsic coverage without consuming production slots or
-weakening terminal Pareto acceptance.
+This was a historical partial result. The later canonical-reference handoff
+closed the mixed-61 gap without weakening production fanout or the protected
+lanes.
 
 ## Next hypotheses, in order
 
-The protected Pareto frontier arc (hypotheses 1-3 below) is complete and its
-outcome is recorded in
-[`help/research/sheet-invariance-mechanism-arc-and-blocker.md`](../help/research/sheet-invariance-mechanism-arc-and-blocker.md):
-the lane is safe and promoted (PR #4), but sheet invariance is not closed
-because the reference motif is sheet-relative-bound. Any new invariance
-experiment must start from that report, not from the hypotheses below, which
-are retained as the already-evaluated record.
+Continue from the accepted handoff in this order. Record a counterexample before
+changing certificate bounds or enabling the role for another workload.
 
-Continue from the accepted primary result in this order. Record a counterexample
-before switching away from any specific follow-up.
-
-1. **Guided canonical replay of a found motif (legacy-reference role).** The
-   verified blocker is that per-sheet decodes cannot reproduce the reference
-   lineage (locally-dominated branches at depths 1/2/4; terminal gate
-   arithmetic; trajectory divergence). Test a bounded replay of a motif found
-   on one sheet as a protected prefix on the others, with an invariant
-   terminal selection and the holes floor, and prove the dual gate on every
-   sheet. This requires a cross-decode coordination step the single-request
-   production flow does not have; evaluate it as an explicit corpus-mode
-   stage, never as hidden per-request behavior.
-2. **Invariantly reachable common motif search.** Instead of forcing the
-   reference, search for a compact motif at reference quality (area <=
-   430,344.918 mm2, <= 2 holes, >= 53/14 contacts, and beating the 2000 x 1700
-   58/16 terminal gate) that the protected lanes can produce on all four
-   sheets. The measured leads are the 426,881.608 mm2 / 56-15 / 3-hole and the
-   557,698.950 mm2 / 65-17 / 2-hole states; neither satisfies the full bar.
-3. **Orientation-family coverage before local truncation.** Transfer
-   libnest2d's useful pattern: compare the best real candidate from each
-   meaningful rotation/mirror family before the protected cap, without changing
-   the production transform cap. Already shown by the probe to be necessary
-   (depth-2) but not sufficient (depths 1/4) alone.
-4. **Shared-prefix deterministic portfolio.** Only after the invariant decoder
-   is sound, test one additional order/rotation seed while reusing prefix and
-   geometry work. Do not run two full decodes if equivalent work can be shared.
-5. **Optional GA.** Evaluate small priority/rotation-only budgets last, always
-   retaining the deterministic baseline. Placement-policy mutation remains off
-   until scoring semantics are invariant.
+1. **Share deterministic decode work.** Profile repeated preparation, NFP/IFP,
+   candidate generation, state scoring, and prefix expansion across the requested
+   and reference roles. Reuse only immutable geometry or exact prefix results;
+   role retention and traces must remain isolated. The target is to reduce the
+   measured `70.4-89.3 s` non-reference runtime without changing any hash.
+2. **Build a certificate-negative corpus.** Add layouts that are complete and
+   legal but ring-forming, chain-forming, fragmented, reflected, or topology-
+   ambiguous. Prove that each intrinsic bound rejects its intended failure mode
+   before broadening the explicit opt-in beyond the flagship workload family.
+3. **Investigate mixed-50 independently.** The rejected unconditional priority
+   changed its compact topology from four to six holes. The accepted certificate
+   rejects its protected reference candidate (hull-gap `0.2373`, five isolated
+   pieces). Find a better source motif or decoder without relaxing the mixed-61
+   safety boundary to admit that regression.
+4. **General intrinsic decoder research.** Orientation-family coverage,
+   max-side-first contact growth, bounded global squeeze, and optional GA remain
+   useful research inputs. They are not required to preserve the now-closed
+   mixed-61 result and must remain isolated experiments.
 
 Completed and retained as the evaluated record, not as open work:
 
@@ -291,6 +289,9 @@ Completed and retained as the evaluated record, not as open work:
   approved reference (`436,770.039 mm2` / 42-10 instead of
   `430,344.918 mm2` / 53-14) because determinism destroys the
   reference-producing trajectory.
+- ~~Guided canonical replay / cross-decode coordination~~: completed as the
+  fixed reference decode handoff. Ten sheets return the approved hash under
+  exact real-sheet legality and a sheet-free topology certificate.
 
 ## Experiment protocol
 
@@ -300,19 +301,21 @@ Completed and retained as the evaluated record, not as open work:
   `origin/main`.
 - Record the base commit, working diff hash, Node/pnpm/Electron versions,
   operating system, fixture hashes, exact settings, and commands.
-- Run the current two-sheet corpus and all four mixed-61 sheets.
+- Run the current corpus and all ten mixed-61 sheets recorded in the accepted
+  artifact report.
 - Produce bounded decision traces for the first divergence; do not emit
   avoidable full-state payloads merely to make the trace large.
-- Render the current four mixed-61 outputs to PNG using
+- Render all ten mixed-61 outputs to PNG using
   `.agents/skills/render-svg-with-electron/` and inspect all margins and cluster
   connectivity.
 - Store immutable evidence under a new directory in
   `/private/tmp/min-plane-provenance/`.
 
-### 2. Find the first divergence on current main
+### 2. Preserve the established causal boundary
 
-Compare the same parent geometry and same legal moving candidate across all
-four sheets. For the first differing branch-removing decision, report:
+Do not repeat the step-0 divergence or forced-lineage work unless a proposed
+decoder change invalidates it. For a new workload, compare the same parent
+geometry and same legal moving candidate across the relevant sheets. Report:
 
 - step and parent canonical geometry key;
 - piece and transform family;
@@ -429,7 +432,7 @@ Run:
 - pentagons-20;
 - star-hulls-20;
 - mixed-50;
-- mixed-61 on all four sheets.
+- mixed-61 on all ten accepted sheets.
 
 Remember that the current pentagon and star-hull collision fixtures reduce to
 the same convex family; do not count them as independent shape evidence.
@@ -473,11 +476,11 @@ Run the corpus through the committed harness:
 pnpm corpus:sheet-invariance --output <immutable-output-directory>
 pnpm corpus:sheet-invariance \
   --case mixed-61 \
-  --sheets 1000x1300,1000x1700,2000x1700,2000x2700 \
-  --output <immutable-four-sheet-output-directory>
+  --sheets 900x1800,1000x1300,1000x1700,1100x1100,1200x1600,1400x1100,1500x2200,1700x1000,2000x1700,2000x2700 \
+  --output <immutable-ten-sheet-output-directory>
 ```
 
-Do not use a temporary constant edit as the final four-sheet proof. The committed
+Do not use a temporary constant edit as the final ten-sheet proof. The committed
 `--sheets` interface is the provenance boundary; another checkout must be able
 to regenerate the same matrix and hashes.
 
@@ -506,7 +509,7 @@ different hypothesis.
 
 Do not finish with only recommendations. Produce:
 
-1. a concise causal diagnosis of the first current-main four-sheet divergence;
+1. a concise causal diagnosis of any regression from the accepted ten-sheet result;
 2. a table of every tested variant, exact commit, mechanism, hashes, quality
    metrics, runtime, and decision;
 3. the strongest implemented candidate in an isolated branch;
@@ -531,8 +534,8 @@ tool attribution to branches, commits, PRs, comments, or project content.
 
 Lead with the outcome:
 
-- whether sheet invariance is actually closed;
-- the common canonical hash and four-sheet quality table if closed;
+- whether the accepted sheet invariance remains closed;
+- the common canonical hash and ten-sheet quality table;
 - what was merged or left branch-local;
 - the exact remaining blocker if not closed.
 

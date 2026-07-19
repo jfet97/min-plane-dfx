@@ -10,8 +10,9 @@ literature research, reproduce the failing jobs, run experiments, render the
 results, and produce a large evidence-backed report with concrete implementation
 paths.
 
-Treat this document as read-only research input. Do not modify it during an
-external review; produce a separate report containing findings and proposals.
+This is the living project ledger. External reviewers should treat it as
+read-only while reviewing and produce a separate report; implementation owners
+must update it when an experiment or production decision changes verified truth.
 
 ## Current Work: Priority And Acceptance Gates
 
@@ -21,26 +22,23 @@ the following order.
 
 ### Primary Problems
 
-1. **Make compactness independent of sheet dimensions.** If the same pieces and
-   settings are legal on several sheets, the search should retain the same
-   compact intrinsic motif regardless of unused sheet width, height, or aspect
-   ratio. Sheet-relative ranking remains intentional only for the explicit
-   `short_side_fill` policy. This requires consistent intrinsic semantics during
-   local candidate ranking, fanout reservations, whole-beam pruning, terminal
-   orientation, and any repair guard; changing final selection alone is
-   insufficient.
+1. **Preserve and generalize sheet-independent compactness.** The flagship
+   mixed-61 gap is closed across ten legal sheets by an explicit protected
+   canonical-reference decode and a sheet-free topology certificate. Ordinary
+   requested-sheet pruning is still sheet-relative, so future work should
+   generalize the mechanism only from measured workloads and should profile or
+   share the second decode. Sheet-relative ranking remains intentional for
+   `short_side_fill`.
 2. **Preserve the 20-triangle golden.** The pointed-triangle lattice is a hard
    regression gate, not a special-case production heuristic. A candidate fails
    if it turns the lattice into a chain, fragments structural contacts, creates
    visible triangle-sized holes, or regresses the official repair-8 result. Keep
    the repair-0 search diagnostic separate; it is not the approved golden.
-3. **Preserve or improve the approved mixed-61 layout.** The portable reference
-   `help/artifacts/approved-mixed61-ac75222-2000x2700.svg` remains the historical
-   human-approved comparator. Current production no longer reproduces it after
-   the necessary `95de72c` numerical canonicalization. Any general change must
-   improve the current baseline without losing the historical contact/hole
-   quality and must also gate the `2000 x 1700`, `1000 x 1700`, and
-   `1000 x 1300` variants.
+3. **Preserve the approved mixed-61 layout.** The portable reference
+   `help/artifacts/approved-mixed61-ac75222-2000x2700.svg` is now reproduced
+   exactly across ten legal sheets by the protected canonical-reference handoff.
+   Any generalization must preserve its canonical hash, contact/hole quality,
+   legality, and the wider corpus gates.
 4. **Choose the right source of search diversity.** The current investigation
    compares deterministic candidate diversity with the existing GA. GA may be
    useful for global piece order and rotation, but it cannot repair a promising
@@ -76,8 +74,8 @@ the following order.
 
 - exact official 20-triangle repair-8 golden, rotations and mirroring enabled;
 - repair-0 triangle diagnostic no worse than the current baseline;
-- exact mixed-61 request on all four sheet sizes above, compared against both
-  the current baseline and the historical approved reference;
+- exact mixed-61 request on the accepted ten-sheet matrix, compared against the
+  canonical approved reference;
 - mixed-50, homogeneous rectangles, trapezoids, pentagons, and stars;
 - legality, deterministic geometry hashes, and replay/search equivalence;
 - rendered SVG/PNG inspection, not metrics alone;
@@ -86,43 +84,36 @@ the following order.
 
 ### Current Production Truth
 
-The official repair-8 triangle golden remains exact. The old claim that current
-production also reproduces the original `2000 x 2700` mixed-61 layout is stale:
-`95de72c` removed a meaningless raw hull-waste difference and current baseline
-`f68be50` selects `436,770.039 mm2` with 10 holes instead of the historical
-two-hole motif.
+The official repair-8 triangle golden remains exact. The boundary-anchor,
+max-side-first intrinsic, and protected Pareto lanes remain isolated from
+production retention and preserve their previously accepted corpus gains.
 
-Production now retains an isolated boundary-anchor alternative only when repair
-is disabled and no chromosome transform preference is active. It cannot consume
-a production beam slot or win through its private ranking alone. On the
-reference mixed-61 sheet it improves the current baseline to `430,344.918 mm2`,
-53/14 structural contacts, and 2 holes.
+The mixed-61 hollow-ring failure is now closed through cross-decode coordination.
+Eligible explicit compact-quality jobs run the unchanged requested-sheet decode
+plus one protected decode on the fixed `2000 x 2700` reference sheet. The
+protected terminal is admitted on the real requested sheet only after exact
+q0/q90 fit, zero positive overlap, complete finite score decoding, and a
+sheet-free topology certificate. The certificate limits exact occupied-union
+cavities to two, hull-gap ratio to `0.15`, envelope aspect to `1.5`, isolated
+pieces to two, and requires at least half the pieces in the largest positive-
+contact component. It deliberately does not let requested-sheet remnant or
+normalized-consumption scores veto the same legal collision geometry.
 
-Production also retains one width-one max-side-first intrinsic successor from a
-duplicated positive exact-contact tier. It is protected-only, consumes no
-production slot, and uses no sheet-derived pruning fields. On `2000 x 1700`, it
-improves mixed-61 from `661,441.643 mm2` and 6 holes to `535,808.686 mm2` and 4
-holes. The other three sheet outputs remain exact, including the two-hole
-reference. Four distinct hashes remain, so sheet invariance is still open. See
-[the boundary-lane report](research/protected-boundary-anchor-diversity.md) and
-[the intrinsic-seed report](research/protected-intrinsic-contact-seed.md).
+At candidate `5186255`, ten legal sheets from `900 x 1800` through
+`2000 x 2700` all select the exact approved motif: canonical hash
+`40f8ac9c0fb24073ac141b5fb667366af55df90c78c6cca21ff76703a4a7f300`,
+area `430,344.918 mm2`, two holes, and structural contacts `53/14`. The
+previous claim that reference reproduction and sheet independence were
+mutually exclusive was correct only for independent per-sheet decodes. Guided
+legality probes identified the missing architectural stage; the bounded
+cross-decode handoff supplies it without changing production beam ranking.
 
-The `protected-contact-pareto-frontier` arc is complete and documented in
-[the mechanism-arc report](research/sheet-invariance-mechanism-arc-and-blocker.md).
-A protected Pareto frontier lane (bounded non-dominated seeds from exact
-contact tiers behind production fanout, intrinsic-pool isolation, truthful
-traces, full test coverage) is established as safe through variant `4e144ac`,
-which also improves rectangles by `8.22%` and the `2000 x 1700` intrinsic
-result to `535,808.686 mm2` at 57/17 contacts. A later family-coverage seed
-variant and the canonical-legacy/invariant-terminal variants are research
-only. The later canonical-legacy-lane plus invariant-terminal
-variants (v5/v5b) are rejected for production: they lose the approved
-`2000 x 2700` reference. The verified conclusion is that the reference motif
-is reachable only through the exact historical sheet-relative search
-dynamics, so reference reproduction and sheet-independence are mutually
-exclusive for this motif; the remaining paths are a guided canonical replay
-with cross-decode coordination or a yet-unfound invariantly reachable common
-motif at reference quality.
+The capability is schema-owned, defaults off, and is enabled by the explicit
+compact-quality settings factory and flagship fixture. Repair, GA transform
+preferences, homogeneous jobs, small jobs, and `short_side_fill` remain outside
+this expensive path. See
+[the final handoff report](research/canonical-reference-decode-handoff.md) and
+[portable ten-sheet artifacts](artifacts/canonical-reference-decode-handoff/).
 
 The near-parallel NFP crossing crash is resolved in production by merged pull
 request #1. The guarded fallback recovers only strict internal crossings and the
@@ -159,13 +150,18 @@ automatically discards every intermediate branch that misses it.
 - `protected-intrinsic-contact-seed`: accepted for repair-disabled production;
   it preserves production fanout and the boundary lane while improving the
   `2000 x 1700` mixed-61 envelope by `18.99%` and holes from 6 to 4;
+- `canonical-reference-decode-handoff`: accepted for explicit compact-quality
+  jobs; all ten mixed-61 sheets return the approved `430,344.918 mm2`, two-hole,
+  `53/14` motif with one canonical hash;
 - Candidate L and M1b sheet invariance: still research-only; neither is a safe
   global production comparator;
-- runtime: the intrinsic sublane adds about `1.05x` on the constrained sheet and
-  `1.16x` on the changed path, below the `1.25x` incremental budget and far from
-  M1b's `8-15x` pathology;
-- sheet invariance: unresolved; mixed-61 still has four hashes, but its
-  four-sheet area spread is down `54.36%` from the current-main checkpoint.
+- runtime: the protected reference handoff takes `70.4-89.3 s` on the nine
+  non-reference sheets in the final ten-sheet gate and `40.1 s` on the reused
+  reference decode. The renderer timeout floor is `120 s`; shared-prefix or
+  cached decode work is now the main optimization target;
+- sheet invariance: closed for the flagship mixed-61 request across ten legal
+  sheet dimensions. A universal single-sheet intrinsic decoder remains a
+  separate research objective, not a blocker for this accepted result.
 
 Every completed experiment must be recorded below as accepted or rejected. An
 uncommitted temporary script or a visually attractive image is not production
@@ -1857,6 +1853,48 @@ Do not end with only a brainstorm. Rank recommendations, state what evidence
 would falsify each one, and identify the smallest safe production experiment.
 
 ## Investigation Log
+
+### 2026-07-19 (canonical reference decode handoff)
+
+- Reproduced the unacceptable mixed-61 hollow ring across the ten-sheet status-
+  quo matrix. Comparator, frontier, and local-repair variants could not remove
+  it because the approved branch was already absent from the requested-sheet
+  terminal pool.
+- Proved by exact guided replay that the approved `545.515 x 788.878 mm` motif
+  is legal on every target sheet. The earlier “mutually exclusive” conclusion
+  is therefore scoped to independent per-sheet decodes: the exact historical
+  sheet-relative source trajectory is needed to discover the motif, but its
+  collision geometry can be handed off safely after discovery.
+- Added a nonrecursive coordinator for explicitly enabled compact-quality jobs.
+  It preserves the real requested-sheet decode, performs one fixed
+  `2000 x 2700` protected decode, shares cancellation and progress truthfully,
+  aggregates instrumentation, and publishes only the selected role's real
+  winning history.
+- Added exact q0/q90 grid legality and a sheet-free intrinsic admission
+  certificate: at most two enclosed cavities, hull-gap ratio at most `0.15`,
+  envelope aspect at most `1.5`, at most two isolated pieces, and at least half
+  the pieces in the largest positive-contact component. Identity ties,
+  incomplete or non-finite results, schema-invalid summaries, failed topology,
+  and failed legality retain production.
+- Final candidate `5186255` returns one canonical hash on all ten sheets
+  (`900 x 1800`, `1000 x 1300`, `1000 x 1700`, `1100 x 1100`, `1200 x 1600`,
+  `1400 x 1100`, `1500 x 2200`, `1700 x 1000`, `2000 x 1700`, and
+  `2000 x 2700`):
+  `40f8ac9c0fb24073ac141b5fb667366af55df90c78c6cca21ff76703a4a7f300`,
+  `430,344.918 mm2`, two holes, contacts `53/14`. All ten inspected PNGs show
+  the compact motif and no perimeter ring.
+- All twelve non-mixed corpus lanes retain exact baseline hashes and metrics.
+  The full suite is `564/566`; the two irregular benchmark failures reproduce
+  on the base branch and are not regressions. Focused tests, lint, and typecheck
+  are green. Runtime is `70.4-89.3 s` off the reference sheet and `40.1 s` on
+  the reused reference decode, motivating shared-prefix/caching work rather
+  than weakening the certificate.
+- Independent implementation reviews hardened score-summary schema ownership,
+  timeout edit paths, role lifecycle diagnostics, cancellation, trace ownership,
+  q0/q90 legality, mixed-winding cavity topology, and every certificate bound.
+- Full evidence is in
+  [the handoff report](research/canonical-reference-decode-handoff.md) and
+  [the portable artifact set](artifacts/canonical-reference-decode-handoff/).
 
 ### 2026-07-18 (sheet-invariance arc)
 
