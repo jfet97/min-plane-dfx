@@ -38,6 +38,7 @@ import {
   evaluateIntrinsicSeparation,
   intrinsicDisruptionProposals,
   intrinsicFocusedProposals,
+  intrinsicFocusedProposalsForPiece,
   intrinsicProjectionPriority,
   intrinsicRelaxedStateKey,
   provisionalLayoutFromRelaxedState,
@@ -155,7 +156,7 @@ export interface IntrinsicPressureLossSnapshot {
   readonly affectedPieceCount: number
   readonly lineageAffectedPieceIds: ReadonlyArray<PieceId>
   readonly lineageAffectedPieceCount: number
-  readonly proposalKind: IntrinsicSeparatorProposal['kind'] | undefined
+  readonly proposalKind: IntrinsicPressureProposalKind | undefined
   readonly rawLoss: number
   readonly weightedLoss: number
   readonly wallConflictCount: number
@@ -175,6 +176,7 @@ export interface IntrinsicContractedPressureSweepTrace {
   readonly terminationReason:
     | 'continue'
     | 'deadline-before-work'
+    | 'deadline-during-composite'
     | 'no-proposals'
     | 'empty-candidate-set'
     | 'raw-winner-unavailable'
@@ -205,6 +207,7 @@ export interface IntrinsicContractedPressureSweepTrace {
   readonly retainedWeightedWinnerStateKey: string | undefined
   readonly glsDriverStateKey: string | undefined
   readonly weightUpdates: ReadonlyArray<IntrinsicPressureWeightUpdateTrace>
+  readonly compositeParents: ReadonlyArray<IntrinsicPressureCompositeParentTrace>
 }
 
 export interface IntrinsicPressureGenerationProvenance {
@@ -214,7 +217,100 @@ export interface IntrinsicPressureGenerationProvenance {
   readonly selectedPieceIds: ReadonlyArray<PieceId>
   readonly affectedPieceIds: ReadonlyArray<PieceId>
   readonly lineageAffectedPieceIds: ReadonlyArray<PieceId>
-  readonly proposalKind: IntrinsicSeparatorProposal['kind'] | undefined
+  readonly proposalKind: IntrinsicPressureProposalKind | undefined
+}
+
+export type IntrinsicPressureProposalKind =
+  | IntrinsicSeparatorProposal['kind']
+  | 'sequential-collider-composite'
+
+export interface IntrinsicPressureCompositeVisitTrace {
+  readonly pieceId: PieceId
+  readonly outcome:
+    | 'already-clear'
+    | 'committed'
+    | 'no-op'
+    | 'exact-zero'
+    | 'evaluation-cap'
+    | 'deadline'
+  readonly proposalCount: number
+  readonly evaluationCount: number
+  readonly selectedStateKey: string | undefined
+  readonly beforeRawLoss: number
+  readonly beforeWeightedLoss: number
+  readonly afterRawLoss: number
+  readonly afterWeightedLoss: number
+  readonly beforePairConflictCount: number
+  readonly afterPairConflictCount: number
+  readonly beforeConflictedPieceCount: number
+  readonly afterConflictedPieceCount: number
+}
+
+export interface IntrinsicPressureCompositeParentTrace {
+  readonly parentStateKey: string
+  readonly compositeStateKey: string
+  readonly frozenColliderIds: ReadonlyArray<PieceId>
+  readonly visitedPieceIds: ReadonlyArray<PieceId>
+  readonly alreadyClearPieceIds: ReadonlyArray<PieceId>
+  readonly committedPieceIds: ReadonlyArray<PieceId>
+  readonly skippedPieceIds: ReadonlyArray<PieceId>
+  readonly frozenColliderCount: number
+  readonly visitedPieceCount: number
+  readonly alreadyClearPieceCount: number
+  readonly committedPieceCount: number
+  readonly skippedPieceCount: number
+  readonly distinctAffectedPieceCount: number
+  readonly visits: ReadonlyArray<IntrinsicPressureCompositeVisitTrace>
+  readonly startRawLoss: number
+  readonly startWeightedLoss: number
+  readonly endRawLoss: number
+  readonly endWeightedLoss: number
+  readonly startPairConflictCount: number
+  readonly endPairConflictCount: number
+  readonly startConflictedPieceCount: number
+  readonly endConflictedPieceCount: number
+  readonly exactZeroIntermediateVisitIndex: number | undefined
+  readonly evaluationCount: number
+  readonly evaluationCapReached: boolean
+  readonly deadlineReached: boolean
+  readonly emittedComposite: boolean
+  readonly outerRetentionOutcome:
+    | 'retained'
+    | 'capacity-pruned'
+    | 'not-emitted'
+    | 'interrupted'
+}
+
+export interface IntrinsicSequentialColliderCompositeResult {
+  readonly state: IntrinsicRelaxedState
+  readonly evaluation: IntrinsicSeparationEvaluation
+  readonly key: string
+  readonly affectedPieceIds: ReadonlyArray<PieceId>
+  readonly evaluationCount: number
+  readonly exactZeroIntermediate: boolean
+  readonly evaluationCapReached: boolean
+  readonly deadlineReached: boolean
+  readonly trace: IntrinsicPressureCompositeParentTrace
+}
+
+export interface IntrinsicPressureCompositeChoiceScore {
+  readonly stateKey: string
+  readonly weightedLoss: number
+  readonly rawLoss: number
+}
+
+export interface IntrinsicPressureInterruptedSweepDiagnostics {
+  readonly generatedBestPreGls: IntrinsicPressureLossSnapshot | undefined
+  readonly retainedRawBest: IntrinsicPressureLossSnapshot | undefined
+  readonly retainedWeightedBest: IntrinsicPressureLossSnapshot | undefined
+  readonly preGlsImprovementDeltaRawLoss: number
+  readonly preGlsImprovementDeltaWeightedLoss: number
+  readonly firstBestSweepIndex: number | undefined
+  readonly rawWinnerStateKey: string | undefined
+  readonly rawWinnerRetained: boolean
+  readonly retainedRawWinnerStateKey: string | undefined
+  readonly retainedWeightedWinnerStateKey: string | undefined
+  readonly compositeParents: ReadonlyArray<IntrinsicPressureCompositeParentTrace>
 }
 
 export interface IntrinsicPressureAdaptiveDepthDecision {
@@ -1512,19 +1608,13 @@ function runIntrinsicContractedPressureLane(input: {
       let attemptEvaluationCount = 1
       let bestRepairedLoss = initialEvaluation.rawLoss
       let firstBestSweepIndex: number | undefined
-      let consecutiveExtraNonImprovementCount = 0
       let budgetExhausted = false
       const repairSweeps: IntrinsicContractedPressureSweepTrace[] = []
       const mandatoryRepairSweepCount = pressureRepairSweepAllowance(
         input.schedule.sweepsPerBasin,
         attemptIndex
       )
-      const maximumRepairSweepCount = pressureRepairMaximumSweepAllowance(
-        input.schedule.sweepsPerBasin,
-        attemptIndex
-      )
-      const adaptivePressureDepthEnabled =
-        input.schedule.sweepsPerBasin === 12 && mandatoryRepairSweepCount === 4
+      const maximumRepairSweepCount = mandatoryRepairSweepCount
 
       for (
         let repairSweep = 0;
@@ -1548,7 +1638,7 @@ function runIntrinsicContractedPressureLane(input: {
             preGlsImprovementDeltaRawLoss: 0,
             preGlsImprovementDeltaWeightedLoss: 0,
             firstBestSweepIndex,
-            consecutiveExtraNonImprovementCount,
+            consecutiveExtraNonImprovementCount: 0,
             emittedProposalCount: 0,
             evaluatedProposalCount: 0,
             generatedUniqueCandidateCount: 0,
@@ -1560,7 +1650,8 @@ function runIntrinsicContractedPressureLane(input: {
             retainedRawWinnerStateKey: undefined,
             retainedWeightedWinnerStateKey: undefined,
             glsDriverStateKey: undefined,
-            weightUpdates: []
+            weightUpdates: [],
+            compositeParents: []
           })
           const bestEndpoint = exactEndpoints.toSorted(comparePressureEndpoints)[0]
           trace.push(
@@ -1598,63 +1689,152 @@ function runIntrinsicContractedPressureLane(input: {
         const bestRawLossBeforeSweep = bestRepairedLoss
         const candidates: IntrinsicInfeasiblePoolEntry[] = [...pool]
         const generatedCandidates: IntrinsicInfeasiblePoolEntry[] = []
+        let compositeParents: IntrinsicPressureCompositeParentTrace[] = []
         let emittedProposalCount = 0
         let evaluatedProposalCount = 0
+        let deadlineInterrupted = false
         for (const entry of pool) {
-          const proposals = intrinsicFocusedProposals({
+          const composite = yield* runIntrinsicSequentialColliderComposite({
+            targetBox: proposal.contractedBox,
             catalog: input.catalog,
-            state: entry.state,
-            evaluation: entry.evaluation,
-            weights
+            parentState: entry.state,
+            parentEvaluation: entry.evaluation,
+            parentStateKey: entry.key,
+            weights,
+            maximumEvaluations: Math.max(
+              0,
+              input.maximumAdditionalEvaluations - separationEvaluationCount
+            ),
+            control: input.control
           })
-          emittedProposalCount += proposals.length
-          for (const repairProposal of proposals) {
-            if (separationEvaluationCount >= input.maximumAdditionalEvaluations) {
-              budgetExhausted = true
-              break
-            }
-            const evaluation = evaluateIntrinsicSeparation(
-              proposal.contractedBox,
-              input.catalog,
-              repairProposal.state,
-              weights
+          compositeParents.push(composite.trace)
+          separationEvaluationCount += composite.evaluationCount
+          attemptEvaluationCount += composite.evaluationCount
+          evaluatedProposalCount += composite.evaluationCount
+          emittedProposalCount += composite.trace.visits.reduce(
+            (count, visit) => count + Math.max(0, visit.proposalCount - 1),
+            0
+          )
+          if (composite.evaluationCapReached) budgetExhausted = true
+          if (composite.deadlineReached) deadlineInterrupted = true
+          if (composite.trace.emittedComposite) {
+            const entryCandidate = pressurePoolEntry(
+              composite.state,
+              composite.evaluation,
+              composite.key,
+              {
+                parentStateKey: entry.key,
+                generationDepth:
+                  (entry.pressureGeneration?.generationDepth ?? 0) + 1,
+                selectedPieceIds: composite.affectedPieceIds,
+                affectedPieceIds: composite.affectedPieceIds,
+                lineageAffectedPieceIds: mergePressurePieceIds(
+                  entry.pressureGeneration?.lineageAffectedPieceIds ?? [],
+                  composite.affectedPieceIds
+                ),
+                proposalKind: 'sequential-collider-composite'
+              }
             )
-            separationEvaluationCount += 1
-            attemptEvaluationCount += 1
-            evaluatedProposalCount += 1
-            const key = intrinsicRelaxedStateKey(input.catalog, repairProposal.state)
-            const entryCandidate =
-              evaluation === undefined
-                ? undefined
-                : pressurePoolEntry(repairProposal.state, evaluation, key, {
-                    parentStateKey: entry.key,
-                    generationDepth:
-                      (entry.pressureGeneration?.generationDepth ?? 0) + 1,
-                    selectedPieceIds: repairProposal.affectedPieceIds,
-                    affectedPieceIds: repairProposal.affectedPieceIds,
-                    lineageAffectedPieceIds: mergePressurePieceIds(
-                      entry.pressureGeneration?.lineageAffectedPieceIds ?? [],
-                      repairProposal.affectedPieceIds
-                    ),
-                    proposalKind: repairProposal.kind
-                  })
-            if (entryCandidate !== undefined && evaluation !== undefined) {
+            if (entryCandidate !== undefined) {
               candidates.push(entryCandidate)
               generatedCandidates.push(entryCandidate)
-              bestRepairedLoss = Math.min(bestRepairedLoss, evaluation.rawLoss)
+              bestRepairedLoss = Math.min(
+                bestRepairedLoss,
+                composite.evaluation.rawLoss
+              )
               addExactPressureEndpoint(
                 exactEndpoints,
                 pressureEndpointFromState({
                   catalog: input.catalog,
                   targetBox: proposal.contractedBox,
-                  state: repairProposal.state,
-                  evaluation,
+                  state: composite.state,
+                  evaluation: composite.evaluation,
                   weights
                 })
               )
             }
           }
-          if (budgetExhausted) break
+          if (budgetExhausted || deadlineInterrupted || composite.exactZeroIntermediate) break
+        }
+        if (deadlineInterrupted) {
+          const interruptedDiagnostics = diagnoseIntrinsicPressureInterruptedSweep({
+            pool,
+            candidates,
+            generatedCandidates,
+            weights,
+            startPreGls,
+            bestRawLossBeforeSweep,
+            bestRepairedLoss,
+            repairSweep,
+            firstBestSweepIndex,
+            compositeParents
+          })
+          firstBestSweepIndex = interruptedDiagnostics.firstBestSweepIndex
+          compositeParents = [...interruptedDiagnostics.compositeParents]
+          repairSweeps.push({
+            sweepIndex: repairSweep,
+            terminationReason: 'deadline-during-composite',
+            startPreGls,
+            generatedBestPreGls: interruptedDiagnostics.generatedBestPreGls,
+            retainedRawBestPreGls: interruptedDiagnostics.retainedRawBest,
+            retainedRawBestPostGls: interruptedDiagnostics.retainedRawBest,
+            retainedWeightedBestPostGls:
+              interruptedDiagnostics.retainedWeightedBest,
+            bestSoFarRawLoss: bestRepairedLoss,
+            preGlsImprovementDeltaRawLoss:
+              interruptedDiagnostics.preGlsImprovementDeltaRawLoss,
+            preGlsImprovementDeltaWeightedLoss:
+              interruptedDiagnostics.preGlsImprovementDeltaWeightedLoss,
+            firstBestSweepIndex,
+            consecutiveExtraNonImprovementCount: 0,
+            emittedProposalCount,
+            evaluatedProposalCount,
+            generatedUniqueCandidateCount: new Set(
+              generatedCandidates.map(({ key }) => key)
+            ).size,
+            wholeCandidateSetUniqueCount: new Set(
+              candidates.map(({ key }) => key)
+            ).size,
+            prePoolSize,
+            postPoolSize: pool.length,
+            rawWinnerStateKey: interruptedDiagnostics.rawWinnerStateKey,
+            rawWinnerRetained: interruptedDiagnostics.rawWinnerRetained,
+            retainedRawWinnerStateKey:
+              interruptedDiagnostics.retainedRawWinnerStateKey,
+            retainedWeightedWinnerStateKey:
+              interruptedDiagnostics.retainedWeightedWinnerStateKey,
+            glsDriverStateKey: undefined,
+            weightUpdates: [],
+            compositeParents
+          })
+          const bestEndpoint = exactEndpoints.toSorted(comparePressureEndpoints)[0]
+          trace.push(
+            contractedPressureAttemptTrace({
+              attemptIndex,
+              ratioScheduleIndex,
+              proposal,
+              parent: parentMeasured,
+              proposalIdentity,
+              proposalEvaluation: initialEvaluation,
+              proposalDispersion,
+              evaluationCount: attemptEvaluationCount,
+              bestRepairedLoss,
+              bestEndpoint,
+              outcome: 'rejected',
+              reason: 'the cooperative runtime deadline interrupted composite pressure repair',
+              retainedPressureIdentity:
+                acceptedEndpoint?.measured.compactness.canonicalIdentity,
+              preProjectionCompactness: undefined,
+              repairSweeps
+            })
+          )
+          return {
+            acceptedEndpoint,
+            trace,
+            separationEvaluationCount,
+            repairSweepCount,
+            deadlineReached: true
+          }
         }
         if (bestRepairedLoss < bestRawLossBeforeSweep) {
           firstBestSweepIndex = repairSweep
@@ -1691,7 +1871,7 @@ function runIntrinsicContractedPressureLane(input: {
             preGlsImprovementDeltaRawLoss: preGlsImprovement.rawLoss,
             preGlsImprovementDeltaWeightedLoss: preGlsImprovement.weightedLoss,
             firstBestSweepIndex,
-            consecutiveExtraNonImprovementCount,
+            consecutiveExtraNonImprovementCount: 0,
             emittedProposalCount,
             evaluatedProposalCount,
             generatedUniqueCandidateCount,
@@ -1703,7 +1883,8 @@ function runIntrinsicContractedPressureLane(input: {
             retainedRawWinnerStateKey: startEntry?.key,
             retainedWeightedWinnerStateKey: retainedWeightedBest?.key,
             glsDriverStateKey: undefined,
-            weightUpdates: []
+            weightUpdates: [],
+            compositeParents
           })
           break
         }
@@ -1735,7 +1916,7 @@ function runIntrinsicContractedPressureLane(input: {
             preGlsImprovementDeltaRawLoss: preGlsImprovement.rawLoss,
             preGlsImprovementDeltaWeightedLoss: preGlsImprovement.weightedLoss,
             firstBestSweepIndex,
-            consecutiveExtraNonImprovementCount,
+            consecutiveExtraNonImprovementCount: 0,
             emittedProposalCount,
             evaluatedProposalCount,
             generatedUniqueCandidateCount,
@@ -1747,7 +1928,8 @@ function runIntrinsicContractedPressureLane(input: {
             retainedRawWinnerStateKey: startEntry?.key,
             retainedWeightedWinnerStateKey: retainedWeightedBest?.key,
             glsDriverStateKey: undefined,
-            weightUpdates: []
+            weightUpdates: [],
+            compositeParents
           })
           break
         }
@@ -1759,6 +1941,15 @@ function runIntrinsicContractedPressureLane(input: {
           weights,
           repairSweep
         )
+        compositeParents = compositeParents.map((parentTrace) => ({
+          ...parentTrace,
+          outerRetentionOutcome:
+            !parentTrace.emittedComposite
+              ? parentTrace.outerRetentionOutcome
+              : pool.some(({ key }) => key === parentTrace.compositeStateKey)
+                ? 'retained'
+                : 'capacity-pruned'
+        }))
         const weightUpdates = pressureWeightUpdates(previousWeights, weights)
         const retainedRawBestPreGlsEntry = reweightIntrinsicPool(
           pool,
@@ -1786,40 +1977,18 @@ function runIntrinsicContractedPressureLane(input: {
           startPreGls,
           generatedBestPreGls
         )
-        const adaptiveDepthDecision = advanceIntrinsicPressureAdaptiveDepth({
-          completedSweepCount: repairSweep + 1,
-          mandatorySweepCount: mandatoryRepairSweepCount,
-          priorBestRawLoss: bestRawLossBeforeSweep,
-          completedBestRawLoss: bestRepairedLoss,
-          consecutiveExtraNonImprovementCount
-        })
-        consecutiveExtraNonImprovementCount =
-          adaptiveDepthDecision.consecutiveExtraNonImprovementCount
         const acceptedEndpointReached = exactEndpoints.some(
           (endpoint) =>
             pressureEndpointRejectionReason(parentMeasured, endpoint) === undefined
         )
-        const reachedMaximumRepairSweepCount =
-          repairSweep + 1 >= maximumRepairSweepCount
-        const activeAtCap = isIntrinsicPressureActiveAtCap({
-          adaptiveEnabled: adaptivePressureDepthEnabled,
-          completedSweepCount: repairSweep + 1,
-          maximumSweepCount: maximumRepairSweepCount,
-          priorBestRawLoss: bestRawLossBeforeSweep,
-          completedBestRawLoss: bestRepairedLoss
-        })
         const terminationReason: IntrinsicContractedPressureSweepTrace['terminationReason'] =
           budgetExhausted
             ? 'evaluation-budget-exhausted'
             : acceptedEndpointReached
               ? 'accepted-exact-endpoint'
-              : adaptiveDepthDecision.shouldStop
-                ? 'adaptive-non-improvement'
-                : activeAtCap
-                  ? 'active-at-cap'
-                  : reachedMaximumRepairSweepCount
-                    ? 'repair-sweep-allocation-exhausted'
-                    : 'continue'
+              : repairSweep + 1 >= maximumRepairSweepCount
+                ? 'repair-sweep-allocation-exhausted'
+                : 'continue'
         repairSweeps.push({
           sweepIndex: repairSweep,
           terminationReason,
@@ -1832,7 +2001,7 @@ function runIntrinsicContractedPressureLane(input: {
           preGlsImprovementDeltaRawLoss: preGlsImprovement.rawLoss,
           preGlsImprovementDeltaWeightedLoss: preGlsImprovement.weightedLoss,
           firstBestSweepIndex,
-          consecutiveExtraNonImprovementCount,
+          consecutiveExtraNonImprovementCount: 0,
           emittedProposalCount,
           evaluatedProposalCount,
           generatedUniqueCandidateCount,
@@ -1844,9 +2013,10 @@ function runIntrinsicContractedPressureLane(input: {
           retainedRawWinnerStateKey: retainedRawBestPostGlsEntry?.key,
           retainedWeightedWinnerStateKey: retainedWeightedBest?.key,
           glsDriverStateKey: rawBest.key,
-          weightUpdates
+          weightUpdates,
+          compositeParents
         })
-        if (budgetExhausted || adaptiveDepthDecision.shouldStop) break
+        if (budgetExhausted) break
       }
 
       const rankedEndpoints = exactEndpoints.toSorted(comparePressureEndpoints)
@@ -2086,6 +2256,356 @@ export function isIntrinsicPressureActiveAtCap(input: {
     input.completedSweepCount >= input.maximumSweepCount &&
     input.completedBestRawLoss > 0 &&
     input.completedBestRawLoss < input.priorBestRawLoss
+  )
+}
+
+export function runIntrinsicSequentialColliderComposite(input: {
+  readonly targetBox: IntrinsicTargetBox
+  readonly catalog: IntrinsicTransformCatalog
+  readonly parentState: IntrinsicRelaxedState
+  readonly parentEvaluation: IntrinsicSeparationEvaluation
+  readonly parentStateKey: string
+  readonly weights: IntrinsicSeparatorWeights
+  readonly maximumEvaluations: number
+  readonly control: IrregularNfpIfpControl
+}): Effect.Effect<
+  IntrinsicSequentialColliderCompositeResult,
+  IrregularNfpIfpControlAbortError
+> {
+  return Effect.gen(function* () {
+    const colliderIds = pressureConflictedPieceIds(input.parentEvaluation)
+    const frozenColliderIds =
+      intrinsicProjectionPriority(
+        input.catalog,
+        input.parentState,
+        input.parentEvaluation,
+        input.weights
+      )?.filter((pieceId) => colliderIds.has(pieceId)) ?? []
+    const visitedPieceIds: PieceId[] = []
+    const alreadyClearPieceIds: PieceId[] = []
+    const committedPieceIds: PieceId[] = []
+    const skippedPieceIds: PieceId[] = []
+    const distinctAffectedPieceIds = new Set<PieceId>()
+    const visits: IntrinsicPressureCompositeVisitTrace[] = []
+    let currentState = input.parentState
+    let currentEvaluation = input.parentEvaluation
+    let currentStateKey = input.parentStateKey
+    let evaluationCount = 0
+    let exactZeroIntermediateVisitIndex: number | undefined
+    let evaluationCapReached = false
+    let deadlineReached = false
+
+    const finish = (): IntrinsicSequentialColliderCompositeResult => {
+      const interrupted = evaluationCapReached || deadlineReached
+      const emittedComposite =
+        !interrupted &&
+        distinctAffectedPieceIds.size > 0 &&
+        currentStateKey !== input.parentStateKey
+      return {
+        state: currentState,
+        evaluation: currentEvaluation,
+        key: currentStateKey,
+        affectedPieceIds: [...distinctAffectedPieceIds].toSorted((first, second) =>
+          first.localeCompare(second)
+        ),
+        evaluationCount,
+        exactZeroIntermediate: exactZeroIntermediateVisitIndex !== undefined,
+        evaluationCapReached,
+        deadlineReached,
+        trace: {
+          parentStateKey: input.parentStateKey,
+          compositeStateKey: currentStateKey,
+          frozenColliderIds,
+          visitedPieceIds,
+          alreadyClearPieceIds,
+          committedPieceIds,
+          skippedPieceIds,
+          frozenColliderCount: frozenColliderIds.length,
+          visitedPieceCount: visitedPieceIds.length,
+          alreadyClearPieceCount: alreadyClearPieceIds.length,
+          committedPieceCount: committedPieceIds.length,
+          skippedPieceCount: skippedPieceIds.length,
+          distinctAffectedPieceCount: distinctAffectedPieceIds.size,
+          visits,
+          startRawLoss: input.parentEvaluation.rawLoss,
+          startWeightedLoss: intrinsicWeightedLoss(
+            input.parentEvaluation,
+            input.weights
+          ),
+          endRawLoss: currentEvaluation.rawLoss,
+          endWeightedLoss: intrinsicWeightedLoss(currentEvaluation, input.weights),
+          startPairConflictCount: pressurePairConflictCount(
+            input.parentEvaluation
+          ),
+          endPairConflictCount: pressurePairConflictCount(currentEvaluation),
+          startConflictedPieceCount: pressureConflictedPieceIds(
+            input.parentEvaluation
+          ).size,
+          endConflictedPieceCount: pressureConflictedPieceIds(currentEvaluation).size,
+          exactZeroIntermediateVisitIndex,
+          evaluationCount,
+          evaluationCapReached,
+          deadlineReached,
+          emittedComposite,
+          outerRetentionOutcome: interrupted ? 'interrupted' : 'not-emitted'
+        }
+      }
+    }
+
+    for (const [visitIndex, pieceId] of frozenColliderIds.entries()) {
+      if ((yield* globalSearchCheckpoint(input.control)) === 'deadline') {
+        deadlineReached = true
+        return finish()
+      }
+      visitedPieceIds.push(pieceId)
+      const beforeEvaluation = currentEvaluation
+      const beforeWeightedLoss = intrinsicWeightedLoss(
+        beforeEvaluation,
+        input.weights
+      )
+      if (!pressurePieceHasConflict(beforeEvaluation, pieceId)) {
+        alreadyClearPieceIds.push(pieceId)
+        visits.push(
+          pressureCompositeVisitTrace({
+            pieceId,
+            outcome: 'already-clear',
+            proposalCount: 1,
+            evaluationCount: 0,
+            selectedStateKey: currentStateKey,
+            before: beforeEvaluation,
+            after: beforeEvaluation,
+            weights: input.weights
+          })
+        )
+        continue
+      }
+      const proposals = intrinsicFocusedProposalsForPiece({
+        catalog: input.catalog,
+        state: currentState,
+        evaluation: currentEvaluation,
+        weights: input.weights,
+        selectedPieceId: pieceId
+      })
+      const choices: Array<{
+        readonly state: IntrinsicRelaxedState
+        readonly evaluation: IntrinsicSeparationEvaluation
+        readonly stateKey: string
+      }> = []
+      let visitEvaluationCount = 0
+      for (const candidate of proposals) {
+        if (evaluationCount >= input.maximumEvaluations) {
+          evaluationCapReached = true
+          break
+        }
+        if ((yield* globalSearchCheckpoint(input.control)) === 'deadline') {
+          deadlineReached = true
+          break
+        }
+        const evaluation = evaluateIntrinsicSeparation(
+          input.targetBox,
+          input.catalog,
+          candidate.state,
+          input.weights
+        )
+        evaluationCount += 1
+        visitEvaluationCount += 1
+        const stateKey = intrinsicRelaxedStateKey(input.catalog, candidate.state)
+        if (
+          evaluation !== undefined &&
+          stateKey !== undefined &&
+          stateKey !== currentStateKey
+        ) {
+          choices.push({ state: candidate.state, evaluation, stateKey })
+        }
+      }
+      if (evaluationCapReached || deadlineReached) {
+        visits.push(
+          pressureCompositeVisitTrace({
+            pieceId,
+            outcome: evaluationCapReached ? 'evaluation-cap' : 'deadline',
+            proposalCount: proposals.length + 1,
+            evaluationCount: visitEvaluationCount,
+            selectedStateKey: currentStateKey,
+            before: beforeEvaluation,
+            after: beforeEvaluation,
+            weights: input.weights
+          })
+        )
+        return finish()
+      }
+      const selectedStateKey = selectIntrinsicPressureCompositeChoice(
+        beforeWeightedLoss,
+        choices.map(({ evaluation, stateKey }) => ({
+          stateKey,
+          weightedLoss: intrinsicWeightedLoss(evaluation, input.weights),
+          rawLoss: evaluation.rawLoss
+        }))
+      )
+      const selected = choices.find(({ stateKey }) => stateKey === selectedStateKey)
+      if (selected === undefined) {
+        skippedPieceIds.push(pieceId)
+        visits.push(
+          pressureCompositeVisitTrace({
+            pieceId,
+            outcome: 'no-op',
+            proposalCount: proposals.length + 1,
+            evaluationCount: visitEvaluationCount,
+            selectedStateKey: currentStateKey,
+            before: beforeEvaluation,
+            after: beforeEvaluation,
+            weights: input.weights
+          })
+        )
+        continue
+      }
+      if (evaluationCount >= input.maximumEvaluations) {
+        evaluationCapReached = true
+        visits.push(
+          pressureCompositeVisitTrace({
+            pieceId,
+            outcome: 'evaluation-cap',
+            proposalCount: proposals.length + 1,
+            evaluationCount: visitEvaluationCount,
+            selectedStateKey: currentStateKey,
+            before: beforeEvaluation,
+            after: beforeEvaluation,
+            weights: input.weights
+          })
+        )
+        return finish()
+      }
+      if ((yield* globalSearchCheckpoint(input.control)) === 'deadline') {
+        deadlineReached = true
+        visits.push(
+          pressureCompositeVisitTrace({
+            pieceId,
+            outcome: 'deadline',
+            proposalCount: proposals.length + 1,
+            evaluationCount: visitEvaluationCount,
+            selectedStateKey: currentStateKey,
+            before: beforeEvaluation,
+            after: beforeEvaluation,
+            weights: input.weights
+          })
+        )
+        return finish()
+      }
+      const recomputedEvaluation = evaluateIntrinsicSeparation(
+        input.targetBox,
+        input.catalog,
+        selected.state,
+        input.weights
+      )
+      evaluationCount += 1
+      visitEvaluationCount += 1
+      if (recomputedEvaluation === undefined) {
+        skippedPieceIds.push(pieceId)
+        visits.push(
+          pressureCompositeVisitTrace({
+            pieceId,
+            outcome: 'no-op',
+            proposalCount: proposals.length + 1,
+            evaluationCount: visitEvaluationCount,
+            selectedStateKey: currentStateKey,
+            before: beforeEvaluation,
+            after: beforeEvaluation,
+            weights: input.weights
+          })
+        )
+        continue
+      }
+      currentState = selected.state
+      currentEvaluation = recomputedEvaluation
+      currentStateKey = selected.stateKey
+      committedPieceIds.push(pieceId)
+      distinctAffectedPieceIds.add(pieceId)
+      const exactZero = recomputedEvaluation.exactZeroLoss
+      if (exactZero) exactZeroIntermediateVisitIndex = visitIndex
+      visits.push(
+        pressureCompositeVisitTrace({
+          pieceId,
+          outcome: exactZero ? 'exact-zero' : 'committed',
+          proposalCount: proposals.length + 1,
+          evaluationCount: visitEvaluationCount,
+          selectedStateKey: currentStateKey,
+          before: beforeEvaluation,
+          after: recomputedEvaluation,
+          weights: input.weights
+        })
+      )
+      if (exactZero) return finish()
+    }
+    return finish()
+  })
+}
+
+export function selectIntrinsicPressureCompositeChoice(
+  currentWeightedLoss: number,
+  choices: ReadonlyArray<IntrinsicPressureCompositeChoiceScore>
+): string | undefined {
+  const selected = choices.toSorted(
+    (first, second) =>
+      first.weightedLoss - second.weightedLoss ||
+      first.rawLoss - second.rawLoss ||
+      first.stateKey.localeCompare(second.stateKey)
+  )[0]
+  return selected !== undefined &&
+    selected.weightedLoss <= currentWeightedLoss * 1.001
+    ? selected.stateKey
+    : undefined
+}
+
+function pressureCompositeVisitTrace(input: {
+  readonly pieceId: PieceId
+  readonly outcome: IntrinsicPressureCompositeVisitTrace['outcome']
+  readonly proposalCount: number
+  readonly evaluationCount: number
+  readonly selectedStateKey: string | undefined
+  readonly before: IntrinsicSeparationEvaluation
+  readonly after: IntrinsicSeparationEvaluation
+  readonly weights: IntrinsicSeparatorWeights
+}): IntrinsicPressureCompositeVisitTrace {
+  return {
+    pieceId: input.pieceId,
+    outcome: input.outcome,
+    proposalCount: input.proposalCount,
+    evaluationCount: input.evaluationCount,
+    selectedStateKey: input.selectedStateKey,
+    beforeRawLoss: input.before.rawLoss,
+    beforeWeightedLoss: intrinsicWeightedLoss(input.before, input.weights),
+    afterRawLoss: input.after.rawLoss,
+    afterWeightedLoss: intrinsicWeightedLoss(input.after, input.weights),
+    beforePairConflictCount: pressurePairConflictCount(input.before),
+    afterPairConflictCount: pressurePairConflictCount(input.after),
+    beforeConflictedPieceCount: pressureConflictedPieceIds(input.before).size,
+    afterConflictedPieceCount: pressureConflictedPieceIds(input.after).size
+  }
+}
+
+function pressurePairConflictCount(
+  evaluation: IntrinsicSeparationEvaluation
+): number {
+  return evaluation.conflicts.filter(({ kind }) => kind === 'pair').length
+}
+
+function pressureConflictedPieceIds(
+  evaluation: IntrinsicSeparationEvaluation
+): ReadonlySet<PieceId> {
+  const pieceIds = new Set<PieceId>()
+  for (const conflict of evaluation.conflicts) {
+    pieceIds.add(conflict.firstPieceId)
+    if (conflict.secondPieceId !== undefined) pieceIds.add(conflict.secondPieceId)
+  }
+  return pieceIds
+}
+
+function pressurePieceHasConflict(
+  evaluation: IntrinsicSeparationEvaluation,
+  pieceId: PieceId
+): boolean {
+  return evaluation.conflicts.some(
+    ({ firstPieceId, secondPieceId }) =>
+      firstPieceId === pieceId || secondPieceId === pieceId
   )
 }
 
@@ -2376,6 +2896,62 @@ function pressureSweepLocalImprovement(
         rawLoss: startPreGls.rawLoss - generatedBestPreGls.rawLoss,
         weightedLoss: startPreGls.weightedLoss - generatedBestPreGls.weightedLoss
       }
+}
+
+export function diagnoseIntrinsicPressureInterruptedSweep(input: {
+  readonly pool: ReadonlyArray<IntrinsicInfeasiblePoolEntry>
+  readonly candidates: ReadonlyArray<IntrinsicInfeasiblePoolEntry>
+  readonly generatedCandidates: ReadonlyArray<IntrinsicInfeasiblePoolEntry>
+  readonly weights: IntrinsicSeparatorWeights
+  readonly startPreGls: IntrinsicPressureLossSnapshot | undefined
+  readonly bestRawLossBeforeSweep: number
+  readonly bestRepairedLoss: number
+  readonly repairSweep: number
+  readonly firstBestSweepIndex: number | undefined
+  readonly compositeParents: ReadonlyArray<IntrinsicPressureCompositeParentTrace>
+}): IntrinsicPressureInterruptedSweepDiagnostics {
+  const generatedBestPreGls = pressureLossSnapshot(
+    reweightIntrinsicPool(input.generatedCandidates, input.weights).toSorted(
+      comparePoolEntriesByRaw
+    )[0],
+    input.weights
+  )
+  const candidateRawWinner = reweightIntrinsicPool(
+    input.candidates,
+    input.weights
+  ).toSorted(comparePoolEntriesByRaw)[0]
+  const retainedRawWinner = input.pool.toSorted(comparePoolEntriesByRaw)[0]
+  const retainedWeightedWinner = input.pool.toSorted(comparePoolEntriesByWeight)[0]
+  const preGlsImprovement = pressureSweepLocalImprovement(
+    input.startPreGls,
+    generatedBestPreGls
+  )
+  return {
+    generatedBestPreGls,
+    retainedRawBest: pressureLossSnapshot(retainedRawWinner, input.weights),
+    retainedWeightedBest: pressureLossSnapshot(
+      retainedWeightedWinner,
+      input.weights
+    ),
+    preGlsImprovementDeltaRawLoss: preGlsImprovement.rawLoss,
+    preGlsImprovementDeltaWeightedLoss: preGlsImprovement.weightedLoss,
+    firstBestSweepIndex:
+      input.bestRepairedLoss < input.bestRawLossBeforeSweep
+        ? input.repairSweep
+        : input.firstBestSweepIndex,
+    rawWinnerStateKey: candidateRawWinner?.key,
+    rawWinnerRetained:
+      candidateRawWinner !== undefined &&
+      input.pool.some(({ key }) => key === candidateRawWinner.key),
+    retainedRawWinnerStateKey: retainedRawWinner?.key,
+    retainedWeightedWinnerStateKey: retainedWeightedWinner?.key,
+    compositeParents: input.compositeParents.map((parentTrace) => ({
+      ...parentTrace,
+      outerRetentionOutcome: parentTrace.emittedComposite
+        ? 'interrupted'
+        : parentTrace.outerRetentionOutcome
+    }))
+  }
 }
 
 function mergePressurePieceIds(

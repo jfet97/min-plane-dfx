@@ -384,6 +384,26 @@ export function intrinsicFocusedProposals(input: {
   )
   const selectedPieceId = priority?.[0]
   if (selectedPieceId === undefined) return []
+  return intrinsicFocusedProposalsForPiece({ ...input, selectedPieceId })
+}
+
+/** Existing focused proposal vocabulary applied to one explicit collider. */
+export function intrinsicFocusedProposalsForPiece(input: {
+  readonly catalog: IntrinsicTransformCatalog
+  readonly state: IntrinsicRelaxedState
+  readonly evaluation: IntrinsicSeparationEvaluation
+  readonly weights: IntrinsicSeparatorWeights
+  readonly selectedPieceId: PieceId
+}): ReadonlyArray<IntrinsicSeparatorProposal> {
+  const { selectedPieceId } = input
+  if (
+    !input.evaluation.conflicts.some(
+      ({ firstPieceId, secondPieceId }) =>
+        firstPieceId === selectedPieceId || secondPieceId === selectedPieceId
+    )
+  ) {
+    return []
+  }
   const selectedPose = input.state.poses.find(({ pieceId }) => pieceId === selectedPieceId)
   const selectedEntry = input.catalog.entries.find(({ pieceId }) => pieceId === selectedPieceId)
   if (selectedPose === undefined || selectedEntry === undefined) return []

@@ -335,7 +335,8 @@ describe('intrinsic global squeeze portfolio', () => {
           retainedRawWinnerStateKey: 'raw-winner',
           retainedWeightedWinnerStateKey: 'weighted-winner',
           glsDriverStateKey: 'raw-winner',
-          weightUpdates: [{ conflictKey: 'wall:a:left', before: 1, after: 2 }]
+          weightUpdates: [{ conflictKey: 'wall:a:left', before: 1, after: 2 }],
+          compositeParents: []
         }
       ]
     }

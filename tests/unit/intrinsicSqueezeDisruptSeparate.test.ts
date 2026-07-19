@@ -26,6 +26,7 @@ import {
   deriveIntrinsicGlobalOrdinalSeed,
   deriveIntrinsicGlobalTargetRoles,
   deriveIntrinsicContractedPressureProposal,
+  diagnoseIntrinsicPressureInterruptedSweep,
   floorIntrinsicTargetGrid,
   inheritIntrinsicDisruptionLineage,
   INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
@@ -40,6 +41,8 @@ import {
   retainIntrinsicStructuralHandoffs,
   retainIntrinsicStructuralHandoffsWithDiagnostics,
   runIntrinsicSqueezeDisruptSeparateWithSchedule,
+  runIntrinsicSequentialColliderComposite,
+  selectIntrinsicPressureCompositeChoice,
   selectIntrinsicProjectionWorkItems,
   type IntrinsicGlobalSearchSchedule,
   type IntrinsicGlobalTargetRole,
@@ -53,6 +56,7 @@ import {
   evaluateIntrinsicSeparation,
   intrinsicDisruptionProposals,
   intrinsicFocusedProposals,
+  intrinsicFocusedProposalsForPiece,
   intrinsicRelaxedStateKey,
   provisionalLayoutFromRelaxedState,
   relaxedStateFromExactLayout,
@@ -273,6 +277,15 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(proposals.some(({ kind }) => kind === 'transform')).toBe(true)
     expect(new Set(proposals.map(({ state: next }) => intrinsicRelaxedStateKey(catalog, next))).size)
       .toBe(proposals.length)
+    expect(
+      intrinsicFocusedProposalsForPiece({
+        catalog,
+        state,
+        evaluation,
+        weights: { byConflictKey: new Map() },
+        selectedPieceId: PieceId.make('wide')
+      })
+    ).toEqual(proposals)
   })
 
   it('builds q90 as one rigid world-layout turn and rejects unavailable asymmetric geometry', async () => {
@@ -436,6 +449,237 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     })
 
     expect(proposals[0]?.affectedPieceIds).toEqual([aggregateId])
+  })
+
+  it('composes frozen colliders sequentially and recomputes after each commit', async () => {
+    const pieces = [
+      preparedRectangle('a', 2, 2),
+      preparedRectangle('b', 2, 2),
+      preparedRectangle('c', 2, 2),
+      preparedRectangle('d', 2, 2)
+    ]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'c'), 0, 5, 0),
+      placed(catalogEntry(catalog, 'd'), 0, 5, 0)
+    ])
+    if (state === undefined) throw new Error('composite state expected')
+    const targetBox = { widthMm: 20, heightMm: 10 }
+    const evaluation = evaluateIntrinsicSeparation(targetBox, catalog, state)
+    const stateKey = intrinsicRelaxedStateKey(catalog, state)
+    if (evaluation === undefined || stateKey === undefined) {
+      throw new Error('composite evaluation expected')
+    }
+    const result = await Effect.runPromise(
+      runIntrinsicSequentialColliderComposite({
+        targetBox,
+        catalog,
+        parentState: state,
+        parentEvaluation: evaluation,
+        parentStateKey: stateKey,
+        weights: { byConflictKey: new Map() },
+        maximumEvaluations: 100,
+        control: { checkpoint: () => Effect.void }
+      })
+    )
+
+    expect(result.trace.frozenColliderIds).toEqual([
+      PieceId.make('a'),
+      PieceId.make('b'),
+      PieceId.make('c'),
+      PieceId.make('d')
+    ])
+    expect(result.trace.committedPieceCount).toBeGreaterThanOrEqual(1)
+    expect(result.trace.alreadyClearPieceCount).toBeGreaterThanOrEqual(1)
+    expect(result.trace.exactZeroIntermediateVisitIndex).toBeDefined()
+    expect(result.exactZeroIntermediate).toBe(true)
+    expect(result.evaluation.exactZeroLoss).toBe(true)
+    expect(result.trace.visitedPieceIds).toEqual(
+      result.trace.frozenColliderIds.slice(0, result.trace.visitedPieceCount)
+    )
+    expect(
+      result.trace.visits
+        .filter(({ outcome }) => outcome === 'committed' || outcome === 'exact-zero')
+        .every(
+          ({
+            proposalCount,
+            evaluationCount,
+            beforeWeightedLoss,
+            afterWeightedLoss
+          }) =>
+            evaluationCount === proposalCount &&
+            afterWeightedLoss <= beforeWeightedLoss * 1.001
+        )
+    ).toBe(true)
+    expect(result.trace.distinctAffectedPieceCount).toBe(
+      new Set(result.trace.committedPieceIds).size
+    )
+  })
+
+  it('ranks composite choices deterministically and falls back to no-op', () => {
+    expect(
+      selectIntrinsicPressureCompositeChoice(1, [
+        { stateKey: 'b', weightedLoss: 0.9, rawLoss: 0.5 },
+        { stateKey: 'a', weightedLoss: 0.9, rawLoss: 0.5 },
+        { stateKey: 'c', weightedLoss: 0.9, rawLoss: 0.6 }
+      ])
+    ).toBe('a')
+    expect(
+      selectIntrinsicPressureCompositeChoice(1, [
+        { stateKey: 'within-tolerance', weightedLoss: 1.001, rawLoss: 0.5 }
+      ])
+    ).toBe('within-tolerance')
+    expect(
+      selectIntrinsicPressureCompositeChoice(1, [
+        { stateKey: 'too-expensive', weightedLoss: 1.001_001, rawLoss: 0.1 }
+      ])
+    ).toBeUndefined()
+  })
+
+  it('records composite evaluation-cap and deadline interruptions truthfully', async () => {
+    const pieces = [preparedRectangle('a', 2, 2), preparedRectangle('b', 2, 2)]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 0, 0)
+    ])
+    if (state === undefined) throw new Error('interrupted composite state expected')
+    const targetBox = { widthMm: 10, heightMm: 10 }
+    const evaluation = evaluateIntrinsicSeparation(targetBox, catalog, state)
+    const stateKey = intrinsicRelaxedStateKey(catalog, state)
+    if (evaluation === undefined || stateKey === undefined) {
+      throw new Error('interrupted composite evaluation expected')
+    }
+    const base = {
+      targetBox,
+      catalog,
+      parentState: state,
+      parentEvaluation: evaluation,
+      parentStateKey: stateKey,
+      weights: { byConflictKey: new Map() }
+    }
+    const capped = await Effect.runPromise(
+      runIntrinsicSequentialColliderComposite({
+        ...base,
+        maximumEvaluations: 0,
+        control: { checkpoint: () => Effect.void }
+      })
+    )
+    const deadline = await Effect.runPromise(
+      runIntrinsicSequentialColliderComposite({
+        ...base,
+        maximumEvaluations: 100,
+        control: {
+          checkpoint: () =>
+            Effect.fail(
+              new IrregularNfpIfpControlAbortError({
+                reason: 'deadline',
+                message: 'composite deadline fixture'
+              })
+            )
+        }
+      })
+    )
+
+    expect(capped.trace).toMatchObject({
+      evaluationCapReached: true,
+      deadlineReached: false,
+      emittedComposite: false,
+      outerRetentionOutcome: 'interrupted'
+    })
+    expect(capped.trace.visits[0]?.outcome).toBe('evaluation-cap')
+    expect(capped.trace.compositeStateKey).toBe(stateKey)
+    expect(deadline.trace).toMatchObject({
+      evaluationCapReached: false,
+      deadlineReached: true,
+      visitedPieceCount: 0,
+      emittedComposite: false,
+      outerRetentionOutcome: 'interrupted'
+    })
+    expect(deadline.trace.compositeStateKey).toBe(stateKey)
+  })
+
+  it('records a composite no-op with the unchanged end-state key', async () => {
+    const pieces = [preparedRectangle('a', 2, 2)]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0)
+    ])
+    const stateKey =
+      state === undefined ? undefined : intrinsicRelaxedStateKey(catalog, state)
+    if (state === undefined || stateKey === undefined) {
+      throw new Error('no-op composite state expected')
+    }
+    const pieceId = PieceId.make('a')
+    const syntheticEvaluation: IntrinsicSeparationEvaluation = {
+      rawLoss: 1,
+      weightedLoss: 1,
+      exactZeroLoss: false,
+      conflicts: [syntheticWallConflict('synthetic', pieceId, 1, 0, 0)]
+    }
+    const result = await Effect.runPromise(
+      runIntrinsicSequentialColliderComposite({
+        targetBox: { widthMm: 10, heightMm: 10 },
+        catalog,
+        parentState: state,
+        parentEvaluation: syntheticEvaluation,
+        parentStateKey: stateKey,
+        weights: { byConflictKey: new Map() },
+        maximumEvaluations: 10,
+        control: { checkpoint: () => Effect.void }
+      })
+    )
+
+    expect(result.trace).toMatchObject({
+      compositeStateKey: stateKey,
+      emittedComposite: false,
+      skippedPieceIds: [pieceId],
+      outerRetentionOutcome: 'not-emitted'
+    })
+    expect(result.trace.visits[0]?.outcome).toBe('no-op')
+  })
+
+  it('diagnoses an interrupted sweep from its whole candidate set', async () => {
+    const pieces = [preparedRectangle('a', 2, 2)]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0)
+    ])
+    if (state === undefined) throw new Error('interrupted diagnostic state expected')
+    const weights = { byConflictKey: new Map<string, number>() }
+    const start = poolEntry(state, 'start', 1, 'start-conflict', 1, undefined)
+    const generated = poolEntry(
+      state,
+      'generated',
+      0.25,
+      'generated-conflict',
+      0.25,
+      undefined
+    )
+    const startSnapshot = describeIntrinsicPressureLossSnapshot(start, weights)
+    const diagnostics = diagnoseIntrinsicPressureInterruptedSweep({
+      pool: [start],
+      candidates: [start, generated],
+      generatedCandidates: [generated],
+      weights,
+      startPreGls: startSnapshot,
+      bestRawLossBeforeSweep: 1,
+      bestRepairedLoss: 0.25,
+      repairSweep: 2,
+      firstBestSweepIndex: undefined,
+      compositeParents: []
+    })
+
+    expect(diagnostics.generatedBestPreGls?.stateKey).toBe('generated')
+    expect(diagnostics.preGlsImprovementDeltaRawLoss).toBe(0.75)
+    expect(diagnostics.preGlsImprovementDeltaWeightedLoss).toBe(0.75)
+    expect(diagnostics.firstBestSweepIndex).toBe(2)
+    expect(diagnostics.rawWinnerStateKey).toBe('generated')
+    expect(diagnostics.rawWinnerRetained).toBe(false)
+    expect(diagnostics.retainedRawWinnerStateKey).toBe('start')
+    expect(diagnostics.retainedWeightedWinnerStateKey).toBe('start')
   })
 
   it('transports negative-extent transforms by world-center delta and deduplicates the pool', async () => {
@@ -908,8 +1152,23 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       )
     ).toBe(true)
     for (const sweep of sweeps) {
-      expect(sweep.emittedProposalCount).toBeGreaterThanOrEqual(
-        sweep.evaluatedProposalCount
+      expect(sweep.evaluatedProposalCount).toBe(
+        sweep.compositeParents.reduce(
+          (count, parent) => count + parent.evaluationCount,
+          0
+        )
+      )
+      expect(sweep.emittedProposalCount).toBe(
+        sweep.compositeParents.reduce(
+          (count, parent) =>
+            count +
+            parent.visits.reduce(
+              (visitCount, visit) =>
+                visitCount + Math.max(0, visit.proposalCount - 1),
+              0
+            ),
+          0
+        )
       )
       expect(sweep.evaluatedProposalCount).toBeGreaterThanOrEqual(
         sweep.generatedUniqueCandidateCount
@@ -995,7 +1254,7 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     })
   })
 
-  it('runs adaptive pressure depth without changing deterministic evaluation order', async () => {
+  it('runs four deterministic composite passes without changing outer order', async () => {
     const pieces = [preparedRectangle('near', 4, 2), preparedRectangle('far', 4, 2)]
     const catalog = await catalogFor(pieces)
     const touching = [
@@ -1025,40 +1284,111 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     ).toEqual(
       second.structuralHandoffs.map(({ metrics }) => metrics.canonicalGeometryIdentity)
     )
-    expect(attempts.every((repairSweeps) => repairSweeps.length <= 8)).toBe(true)
-    expect(attempts.some((repairSweeps) => repairSweeps.length > 4)).toBe(true)
+    expect(attempts.every((repairSweeps) => repairSweeps.length <= 4)).toBe(true)
+    expect(attempts.some((repairSweeps) => repairSweeps.length === 4)).toBe(true)
     expect(
       completedSweeps
         .filter(({ sweepIndex }) => sweepIndex < 4)
         .every(
           ({ terminationReason, consecutiveExtraNonImprovementCount }) =>
             terminationReason !== 'adaptive-non-improvement' &&
+            terminationReason !== 'active-at-cap' &&
             consecutiveExtraNonImprovementCount === 0
         )
     ).toBe(true)
     expect(
-      completedSweeps.some(
-        ({ terminationReason, consecutiveExtraNonImprovementCount }) =>
-          terminationReason === 'adaptive-non-improvement' &&
-          consecutiveExtraNonImprovementCount === 2
-      ) ||
-        completedSweeps.some(
-          ({ sweepIndex, terminationReason }) =>
-            sweepIndex === 7 &&
-            (terminationReason === 'active-at-cap' ||
-              terminationReason === 'repair-sweep-allocation-exhausted')
+      completedSweeps.every(({ compositeParents }) =>
+        compositeParents.every(
+          ({
+            frozenColliderIds,
+            visitedPieceIds,
+            exactZeroIntermediateVisitIndex,
+            evaluationCapReached,
+            deadlineReached
+          }) =>
+            exactZeroIntermediateVisitIndex !== undefined ||
+            evaluationCapReached ||
+            deadlineReached ||
+            frozenColliderIds.length === visitedPieceIds.length
         )
+      )
     ).toBe(true)
+  })
+
+  it('marks earlier emitted composites interrupted when a later parent hits the deadline', async () => {
+    const pieces = [
+      preparedRectangle('a', 2, 2),
+      preparedRectangle('b', 2, 2),
+      preparedRectangle('c', 2, 2),
+      preparedRectangle('d', 2, 2)
+    ]
+    const catalog = await catalogFor(pieces)
+    const touching = [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 2, 0),
+      placed(catalogEntry(catalog, 'c'), 0, 4, 0),
+      placed(catalogEntry(catalog, 'd'), 0, 6, 0)
+    ]
+    let checkpointCount = 0
+    const result = await runController(
+      pieces,
+      touching,
+      schedule({
+        expectedStructuralPieceCount: 4,
+        sweepsPerBasin: 12,
+        maximumSeparationEvaluations: 2_000,
+        explorationAreaCapMm2: 20
+      }),
+      ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced)),
+      {
+        checkpoint: () => {
+          checkpointCount += 1
+          return checkpointCount === 16
+            ? Effect.fail(
+                new IrregularNfpIfpControlAbortError({
+                  reason: 'deadline',
+                  message: 'composite parent deadline fixture'
+                })
+              )
+            : Effect.void
+        }
+      }
+    )
+    const interrupted = result.contractedPressureTrace
+      .flatMap(({ repairSweeps }) => repairSweeps)
+      .find(({ terminationReason }) => terminationReason === 'deadline-during-composite')
+    if (interrupted === undefined) throw new Error('interrupted sweep trace expected')
+    const emittedParent = interrupted.compositeParents.find(
+      ({ emittedComposite }) => emittedComposite
+    )
+    const deadlineParent = interrupted.compositeParents.find(
+      ({ deadlineReached }) => deadlineReached
+    )
+
+    expect(interrupted.compositeParents).toHaveLength(2)
+    expect(emittedParent?.outerRetentionOutcome).toBe('interrupted')
+    expect(deadlineParent?.outerRetentionOutcome).toBe('interrupted')
     expect(
-      completedSweeps
-        .filter(({ terminationReason }) => terminationReason === 'active-at-cap')
-        .every(
-          ({ sweepIndex, bestSoFarRawLoss, preGlsImprovementDeltaRawLoss }) =>
-            sweepIndex === 7 &&
-            bestSoFarRawLoss > 0 &&
-            preGlsImprovementDeltaRawLoss > 0
-        )
+      interrupted.compositeParents.every(
+        ({ compositeStateKey }) => compositeStateKey.length > 0
+      )
     ).toBe(true)
+    expect(interrupted.generatedBestPreGls).toBeDefined()
+    expect(interrupted.startPreGls).toBeDefined()
+    expect(interrupted.preGlsImprovementDeltaRawLoss).toBe(
+      (interrupted.startPreGls?.rawLoss ?? 0) -
+        (interrupted.generatedBestPreGls?.rawLoss ?? 0)
+    )
+    expect(interrupted.preGlsImprovementDeltaWeightedLoss).toBe(
+      (interrupted.startPreGls?.weightedLoss ?? 0) -
+        (interrupted.generatedBestPreGls?.weightedLoss ?? 0)
+    )
+    expect(interrupted.retainedRawWinnerStateKey).toBe(
+      interrupted.retainedRawBestPreGls?.stateKey
+    )
+    expect(interrupted.retainedWeightedWinnerStateKey).toBe(
+      interrupted.retainedWeightedBestPostGls?.stateKey
+    )
   })
 
   it('reserves one accepted exact pressure endpoint without raising the projection cap', async () => {
