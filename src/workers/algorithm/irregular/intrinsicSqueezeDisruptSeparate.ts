@@ -115,6 +115,26 @@ export interface IntrinsicStructuralHandoff {
   readonly metrics: IntrinsicStructuralHandoffMetrics
 }
 
+export interface IntrinsicStructuralHandoffDiagnostic {
+  readonly canonicalGeometryIdentity: string
+  readonly targetRoleId: IntrinsicGlobalTargetRole['id']
+  readonly basinIndex: 0 | 1
+  readonly projectionAttempt: number
+  readonly metrics: IntrinsicStructuralHandoffMetrics
+}
+
+export interface IntrinsicStructuralHandoffRetentionTrace {
+  readonly outcome:
+    | 'retained'
+    | 'duplicate-replaced'
+    | 'duplicate-discarded'
+    | 'capacity-pruned'
+  readonly candidate: IntrinsicStructuralHandoffDiagnostic
+  readonly representative: IntrinsicStructuralHandoffDiagnostic | undefined
+  readonly pruned: IntrinsicStructuralHandoffDiagnostic | undefined
+  readonly retainedCanonicalGeometryIdentities: ReadonlyArray<string>
+}
+
 export interface IntrinsicProjectionAttemptTrace {
   readonly targetRoleId: IntrinsicGlobalTargetRole['id']
   readonly basinIndex: 0 | 1
@@ -132,6 +152,7 @@ export interface IntrinsicProjectionAttemptTrace {
     | 'structural-analysis-invalid'
   readonly failedPieceId: PieceId | undefined
   readonly dilationSteps: number | undefined
+  readonly handoffRetention?: IntrinsicStructuralHandoffRetentionTrace
 }
 
 export interface IntrinsicGlobalSearchResult {
@@ -644,9 +665,14 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
             scheduleStatus = 'deadline-fallback'
             break
           }
-          if (handoff !== undefined) {
-            addStructuralHandoff(handoffs, handoff, schedule.structuralHandoffCapacity)
-          }
+          const handoffRetention =
+            handoff === undefined
+              ? undefined
+              : addStructuralHandoff(
+                  handoffs,
+                  handoff,
+                  schedule.structuralHandoffCapacity
+                )
           projectionTrace.push({
             targetRoleId: role.id,
             basinIndex,
@@ -658,7 +684,8 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
               outcome:
                 handoff === undefined ? 'structural-analysis-invalid' : 'exact-success',
             failedPieceId: undefined,
-            dilationSteps: attempted.value.dilationSteps
+            dilationSteps: attempted.value.dilationSteps,
+            ...(handoffRetention === undefined ? {} : { handoffRetention })
           })
         }
       }
@@ -805,7 +832,9 @@ function addStructuralHandoff(
   handoffs: IntrinsicStructuralHandoff[],
   candidate: IntrinsicStructuralHandoff,
   capacity: number
-): void {
+): IntrinsicStructuralHandoffRetentionTrace {
+  const boundedCapacity = Math.max(0, capacity)
+  const candidateDiagnostic = structuralHandoffDiagnostic(candidate)
   const existingIndex = handoffs.findIndex(
     ({ metrics }) =>
       metrics.canonicalGeometryIdentity === candidate.metrics.canonicalGeometryIdentity
@@ -814,54 +843,89 @@ function addStructuralHandoff(
     const existing = handoffs[existingIndex]
     if (existing !== undefined && compareStructuralHandoffs(candidate, existing) < 0) {
       handoffs.splice(existingIndex, 1, candidate)
+      handoffs.sort(compareStructuralHandoffs)
+      handoffs.splice(boundedCapacity)
+      return structuralRetentionTrace(
+        'duplicate-replaced',
+        candidateDiagnostic,
+        structuralHandoffDiagnostic(candidate),
+        structuralHandoffDiagnostic(existing),
+        handoffs
+      )
     }
-  } else {
-    if (handoffs.some((existing) => dominatesStructuralHandoff(existing, candidate))) return
-    for (let index = handoffs.length - 1; index >= 0; index -= 1) {
-      const existing = handoffs[index]
-      if (existing !== undefined && dominatesStructuralHandoff(candidate, existing)) {
-        handoffs.splice(index, 1)
-      }
-    }
-    handoffs.push(candidate)
+    return structuralRetentionTrace(
+      'duplicate-discarded',
+      candidateDiagnostic,
+      existing === undefined ? undefined : structuralHandoffDiagnostic(existing),
+      candidateDiagnostic,
+      handoffs
+    )
   }
+
+  handoffs.push(candidate)
   handoffs.sort(compareStructuralHandoffs)
-  handoffs.splice(Math.max(0, capacity))
+  const pruned = handoffs.splice(boundedCapacity)[0]
+  const retained = handoffs.includes(candidate)
+  return structuralRetentionTrace(
+    retained ? 'retained' : 'capacity-pruned',
+    candidateDiagnostic,
+    retained ? candidateDiagnostic : undefined,
+    pruned === undefined ? undefined : structuralHandoffDiagnostic(pruned),
+    handoffs
+  )
 }
 
-/** Bounded non-dominated exact structural archive seam. */
+/** Bounded canonical-identity structural archive with truthful retention diagnostics. */
+export function retainIntrinsicStructuralHandoffsWithDiagnostics(
+  candidates: ReadonlyArray<IntrinsicStructuralHandoff>,
+  capacity: number
+): {
+  readonly handoffs: ReadonlyArray<IntrinsicStructuralHandoff>
+  readonly trace: ReadonlyArray<IntrinsicStructuralHandoffRetentionTrace>
+} {
+  const handoffs: IntrinsicStructuralHandoff[] = []
+  const trace = candidates.map((candidate) =>
+    addStructuralHandoff(handoffs, candidate, capacity)
+  )
+  return { handoffs: [...handoffs], trace }
+}
+
+/** Bounded canonical-identity structural archive seam. */
 export function retainIntrinsicStructuralHandoffs(
   candidates: ReadonlyArray<IntrinsicStructuralHandoff>,
   capacity: number
 ): ReadonlyArray<IntrinsicStructuralHandoff> {
-  const retained: IntrinsicStructuralHandoff[] = []
-  for (const candidate of candidates) addStructuralHandoff(retained, candidate, capacity)
-  return retained
+  return retainIntrinsicStructuralHandoffsWithDiagnostics(candidates, capacity).handoffs
 }
 
-function dominatesStructuralHandoff(
-  first: IntrinsicStructuralHandoff,
-  second: IntrinsicStructuralHandoff
-): boolean {
-  const firstMetrics = first.metrics
-  const secondMetrics = second.metrics
-  const noWorse =
-    firstMetrics.enclosedCavityCount <= secondMetrics.enclosedCavityCount &&
-    firstMetrics.totalEnclosedCavityAreaMm2 <= secondMetrics.totalEnclosedCavityAreaMm2 &&
-    firstMetrics.largestOccupiedHullGapRatio <= secondMetrics.largestOccupiedHullGapRatio &&
-    firstMetrics.envelopeAreaMm2 <= secondMetrics.envelopeAreaMm2 &&
-    firstMetrics.envelopeMaximumSideMm <= secondMetrics.envelopeMaximumSideMm &&
-    firstMetrics.envelopeSpanMm <= secondMetrics.envelopeSpanMm &&
-    firstMetrics.occupiedHullWasteRatio <= secondMetrics.occupiedHullWasteRatio
-  const strictlyBetter =
-    firstMetrics.enclosedCavityCount < secondMetrics.enclosedCavityCount ||
-    firstMetrics.totalEnclosedCavityAreaMm2 < secondMetrics.totalEnclosedCavityAreaMm2 ||
-    firstMetrics.largestOccupiedHullGapRatio < secondMetrics.largestOccupiedHullGapRatio ||
-    firstMetrics.envelopeAreaMm2 < secondMetrics.envelopeAreaMm2 ||
-    firstMetrics.envelopeMaximumSideMm < secondMetrics.envelopeMaximumSideMm ||
-    firstMetrics.envelopeSpanMm < secondMetrics.envelopeSpanMm ||
-    firstMetrics.occupiedHullWasteRatio < secondMetrics.occupiedHullWasteRatio
-  return noWorse && strictlyBetter
+function structuralHandoffDiagnostic(
+  handoff: IntrinsicStructuralHandoff
+): IntrinsicStructuralHandoffDiagnostic {
+  return {
+    canonicalGeometryIdentity: handoff.metrics.canonicalGeometryIdentity,
+    targetRoleId: handoff.targetRoleId,
+    basinIndex: handoff.basinIndex,
+    projectionAttempt: handoff.projectionAttempt,
+    metrics: { ...handoff.metrics }
+  }
+}
+
+function structuralRetentionTrace(
+  outcome: IntrinsicStructuralHandoffRetentionTrace['outcome'],
+  candidate: IntrinsicStructuralHandoffDiagnostic,
+  representative: IntrinsicStructuralHandoffDiagnostic | undefined,
+  pruned: IntrinsicStructuralHandoffDiagnostic | undefined,
+  handoffs: ReadonlyArray<IntrinsicStructuralHandoff>
+): IntrinsicStructuralHandoffRetentionTrace {
+  return {
+    outcome,
+    candidate,
+    representative,
+    pruned,
+    retainedCanonicalGeometryIdentities: handoffs.map(
+      ({ metrics }) => metrics.canonicalGeometryIdentity
+    )
+  }
 }
 
 function compareStructuralHandoffs(

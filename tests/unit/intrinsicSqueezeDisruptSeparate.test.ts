@@ -27,6 +27,7 @@ import {
   partitionIntrinsicStructuralPieces,
   retainIntrinsicInfeasiblePool,
   retainIntrinsicStructuralHandoffs,
+  retainIntrinsicStructuralHandoffsWithDiagnostics,
   runIntrinsicSqueezeDisruptSeparateWithSchedule,
   type IntrinsicGlobalSearchSchedule,
   type IntrinsicInfeasiblePoolEntry,
@@ -579,7 +580,7 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(roles?.[0]).toMatchObject({ widthMm: 82.77, heightMm: 10.111 })
   })
 
-  it('keeps a non-dominated exact archive while removing dominated geometry', () => {
+  it('keeps canonically novel structural handoffs even when structurally dominated', () => {
     const first = structuralHandoff('first', { envelopeAreaMm2: 8, totalStructuralContacts: 2 })
     const dominated = structuralHandoff('dominated', {
       envelopeAreaMm2: 9,
@@ -594,7 +595,59 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       retainIntrinsicStructuralHandoffs([dominated, first, tradeoff], 5).map(
         ({ metrics }) => metrics.canonicalGeometryIdentity
       )
-    ).toEqual(['tradeoff'])
+    ).toEqual(['tradeoff', 'first', 'dominated'])
+  })
+
+  it('reports deterministic structural identity retention and capacity outcomes', () => {
+    const original = structuralHandoff('same', { envelopeAreaMm2: 10 })
+    const replacement = structuralHandoff('same', { envelopeAreaMm2: 8 })
+    const discarded = structuralHandoff('same', { envelopeAreaMm2: 12 })
+    const novel = structuralHandoff('novel', { envelopeAreaMm2: 7 })
+    const pruned = structuralHandoff('pruned', { envelopeAreaMm2: 20 })
+    const first = retainIntrinsicStructuralHandoffsWithDiagnostics(
+      [original, replacement, discarded, novel, pruned],
+      2
+    )
+    const second = retainIntrinsicStructuralHandoffsWithDiagnostics(
+      [original, replacement, discarded, novel, pruned],
+      2
+    )
+
+    expect(first).toEqual(second)
+    expect(first.handoffs.map(({ metrics }) => metrics.canonicalGeometryIdentity)).toEqual([
+      'novel',
+      'same'
+    ])
+    expect(first.trace.map(({ outcome }) => outcome)).toEqual([
+      'retained',
+      'duplicate-replaced',
+      'duplicate-discarded',
+      'retained',
+      'capacity-pruned'
+    ])
+    expect(first.trace[1]).toMatchObject({
+      candidate: { canonicalGeometryIdentity: 'same', metrics: { envelopeAreaMm2: 8 } },
+      representative: {
+        canonicalGeometryIdentity: 'same',
+        metrics: { envelopeAreaMm2: 8 }
+      },
+      pruned: { canonicalGeometryIdentity: 'same', metrics: { envelopeAreaMm2: 10 } }
+    })
+    expect(first.trace[2]).toMatchObject({
+      candidate: { canonicalGeometryIdentity: 'same', metrics: { envelopeAreaMm2: 12 } },
+      representative: {
+        canonicalGeometryIdentity: 'same',
+        metrics: { envelopeAreaMm2: 8 }
+      },
+      pruned: { canonicalGeometryIdentity: 'same', metrics: { envelopeAreaMm2: 12 } }
+    })
+    expect(first.trace[4]).toMatchObject({
+      outcome: 'capacity-pruned',
+      candidate: { canonicalGeometryIdentity: 'pruned' },
+      representative: undefined,
+      pruned: { canonicalGeometryIdentity: 'pruned' },
+      retainedCanonicalGeometryIdentities: ['novel', 'same']
+    })
   })
 
   it('keeps a topology-poor structural tradeoff when it improves compactness', () => {
@@ -868,6 +921,11 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(first.completedSweepCount).toBe(6)
     expect(first.projectionAttemptCount).toBe(5)
     expect(first.projectionTrace).toHaveLength(5)
+    expect(
+      first.projectionTrace
+        .filter(({ outcome }) => outcome === 'exact-success')
+        .every(({ handoffRetention }) => handoffRetention !== undefined)
+    ).toBe(true)
     expect(first.separationEvaluationCount).toBeLessThanOrEqual(
       controllerSchedule.maximumSeparationEvaluations
     )
