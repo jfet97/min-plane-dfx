@@ -30,6 +30,11 @@ import {
 } from '../../irregular/services.js'
 import { IrregularBeamState } from './irregularBeamState.js'
 import { deriveRawOccupiedHullWasteRatio } from './irregularLayoutScorer.js'
+import {
+  candidateContainedInIntrinsicGap,
+  deriveCanonicalIntrinsicGapRegions,
+  type CanonicalIntrinsicGapRegion
+} from './intrinsicGapRegions.js'
 
 const INTRINSIC_COORDINATE_DOMAIN = new SheetSpec({
   width: 1,
@@ -74,7 +79,9 @@ export interface IntrinsicStrictLocalScore {
 
 export type IntrinsicStrictComparatorMode = 'pure-growth' | 'contact-band'
 
-export type IntrinsicStrictCandidateMode = IntrinsicStrictComparatorMode
+export type IntrinsicStrictCandidateMode =
+  | IntrinsicStrictComparatorMode
+  | { readonly kind: 'gap-contained' }
 
 export interface IntrinsicStrictFamilyWinner {
   readonly score: IntrinsicStrictLocalScore
@@ -124,7 +131,19 @@ export interface IntrinsicStrictDecodeResult {
 export interface IntrinsicStrictConstructResult {
   readonly state: IrregularBeamState
   readonly stepTrace: ReadonlyArray<IntrinsicStrictStepTrace>
+  readonly gapFillEvidence: ReadonlyArray<IntrinsicStrictGapFillEvidence>
   readonly runtimeMs: number
+}
+
+export interface IntrinsicStrictGapFillEvidence {
+  readonly pieceId: PieceId
+  readonly regionKey: string
+  readonly regionAreaBeforeMm2: number
+  readonly regionAreaAfterMm2: number
+  readonly envelopeMaximumSideDeltaMm: number
+  readonly envelopeAreaDeltaMm2: number
+  readonly sharedBoundaryLengthMm: number
+  readonly nonInert: boolean
 }
 
 export interface ConstructIntrinsicStrictStateInput {
@@ -140,6 +159,7 @@ interface ScoredCandidate {
   readonly score: IntrinsicStrictLocalScore
   readonly transformFamily: string
   readonly movingCollisionAreaMm2: number
+  readonly containingGap: CanonicalIntrinsicGapRegion | undefined
 }
 
 /** One strict, sheet-independent constructive decode followed by real-sheet legality. */
@@ -272,12 +292,17 @@ export function constructIntrinsicStrictState(
       )
     }
     const stepTrace: IntrinsicStrictStepTrace[] = []
+    const gapFillEvidence: IntrinsicStrictGapFillEvidence[] = []
 
     for (let pieceIndex = 0; pieceIndex < input.remainingPreparedPieces.length; pieceIndex += 1) {
       const piece = input.remainingPreparedPieces[pieceIndex]
       if (piece === undefined) continue
       const remainingPreparedPieces = input.remainingPreparedPieces.slice(pieceIndex + 1)
       const candidatesByFamily = new Map<string, ScoredCandidate>()
+      const gapRegions =
+        typeof input.candidateMode === 'object'
+          ? deriveCanonicalIntrinsicGapRegions(state.placedCollisionGeometries)
+          : undefined
       let candidateCount = 0
 
       for (const transform of [...piece.transforms].sort(transformCandidateOrder)) {
@@ -311,7 +336,8 @@ export function constructIntrinsicStrictState(
             candidate,
             remainingPreparedPieces,
             transformFamily: family,
-            movingCollisionAreaMm2
+            movingCollisionAreaMm2,
+            gapRegions
           })
           if (scored === undefined) continue
           const incumbent = candidatesByFamily.get(family)
@@ -321,10 +347,11 @@ export function constructIntrinsicStrictState(
         }
       }
 
-      const selected = selectIntrinsicStrictFamilyWinner(
-        [...candidatesByFamily.values()],
-        input.candidateMode
-      )
+      const familyWinners = [...candidatesByFamily.values()]
+      const selected =
+        typeof input.candidateMode === 'object'
+          ? selectGapContainedWinner(familyWinners)
+          : selectIntrinsicStrictFamilyWinner(familyWinners, input.candidateMode)
       const pieceId = piece.pieceId ?? piece.source.id
       stepTrace.push({
         pieceId,
@@ -333,6 +360,37 @@ export function constructIntrinsicStrictState(
         selectedTransformFamily: selected?.transformFamily,
         selectedScore: selected?.score
       })
+      if (selected?.containingGap !== undefined) {
+        const beforeBounds = state.translatedCollisionBounds
+        const afterBounds = selected.state.translatedCollisionBounds
+        const regionAreaAfterMm2 = Math.max(
+          0,
+          selected.containingGap.areaMm2 - selected.movingCollisionAreaMm2
+        )
+        const envelopeMaximumSideDeltaMm =
+          beforeBounds === undefined || afterBounds === undefined
+            ? Number.POSITIVE_INFINITY
+            : Math.max(afterBounds.width, afterBounds.height) -
+              Math.max(beforeBounds.width, beforeBounds.height)
+        const envelopeAreaDeltaMm2 =
+          beforeBounds === undefined || afterBounds === undefined
+            ? Number.POSITIVE_INFINITY
+            : afterBounds.width * afterBounds.height - beforeBounds.width * beforeBounds.height
+        gapFillEvidence.push({
+          pieceId,
+          regionKey: selected.containingGap.canonicalKey,
+          regionAreaBeforeMm2: selected.containingGap.areaMm2,
+          regionAreaAfterMm2,
+          envelopeMaximumSideDeltaMm,
+          envelopeAreaDeltaMm2,
+          sharedBoundaryLengthMm: selected.score.sharedBoundaryLengthMm,
+          nonInert:
+            selected.score.sharedBoundaryLengthMm > 0 &&
+            envelopeMaximumSideDeltaMm === 0 &&
+            envelopeAreaDeltaMm2 === 0 &&
+            regionAreaAfterMm2 < selected.containingGap.areaMm2
+        })
+      }
       state =
         selected?.state ??
         state.withUnplacedPiece({
@@ -344,6 +402,7 @@ export function constructIntrinsicStrictState(
     return {
       state,
       stepTrace,
+      gapFillEvidence,
       runtimeMs: Math.max(0, performance.now() - startedAt)
     }
   })
@@ -386,6 +445,7 @@ function scoreCandidate(input: {
   readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly transformFamily: string
   readonly movingCollisionAreaMm2: number
+  readonly gapRegions: ReadonlyArray<CanonicalIntrinsicGapRegion> | undefined
 }): ScoredCandidate | undefined {
   const placement = makePlacement(input.piece, input.candidate)
   const placed = new IrregularPlacedPiece({
@@ -415,6 +475,14 @@ function scoreCandidate(input: {
     state: anchored,
     transformFamily: input.transformFamily,
     movingCollisionAreaMm2: input.movingCollisionAreaMm2,
+    containingGap: input.gapRegions
+      ?.filter((region) =>
+        candidateContainedInIntrinsicGap(input.moving, input.candidate.point, region)
+      )
+      .toSorted(
+        (first, second) =>
+          first.areaMm2 - second.areaMm2 || first.canonicalKey.localeCompare(second.canonicalKey)
+      )[0],
     score: {
       maximumSideMm,
       envelopeAreaMm2,
@@ -423,6 +491,23 @@ function scoreCandidate(input: {
       canonicalCombinedGeometryKey: anchored.canonicalOccupiedGeometryKey
     }
   }
+}
+
+function selectGapContainedWinner(
+  candidates: ReadonlyArray<ScoredCandidate>
+): ScoredCandidate | undefined {
+  const contained = candidates
+    .filter(
+      (candidate): candidate is ScoredCandidate & { containingGap: CanonicalIntrinsicGapRegion } =>
+        candidate.containingGap !== undefined
+    )
+    .toSorted(
+      (first, second) =>
+        first.containingGap.areaMm2 - second.containingGap.areaMm2 ||
+        second.score.sharedBoundaryLengthMm - first.score.sharedBoundaryLengthMm ||
+        compareLocalScores(first.score, second.score)
+    )[0]
+  return contained ?? selectIntrinsicStrictFamilyWinner(candidates, 'pure-growth')
 }
 
 /** Selects among pure-growth transform-family winners under the requested E1 mode. */
