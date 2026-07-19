@@ -21,6 +21,8 @@ import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import {
   IrregularGeometryInputError,
+  type IrregularNfpIfpControl,
+  IrregularNfpIfpControlAbortError,
   IrregularNestingNotImplementedError,
   NfpIfpService
 } from '../../irregular/services.js'
@@ -29,6 +31,11 @@ import { canonicalCollisionPolygonKey } from './irregularBeamState.js'
 export interface IntrinsicTargetBox {
   readonly widthMm: number
   readonly heightMm: number
+}
+
+export interface IntrinsicProjectionGridPoint {
+  readonly x: number
+  readonly y: number
 }
 
 export interface IntrinsicFiniteTransform {
@@ -93,9 +100,9 @@ interface ProjectionCandidate {
   readonly directProvisionalPose: boolean
   readonly preservesPinnedTransform: boolean
   readonly squaredGridDistance: bigint
-  readonly maximumSideGrid: number
+  readonly maximumSideGrid: bigint
   readonly envelopeAreaGrid2: bigint
-  readonly envelopeSpanGrid: number
+  readonly envelopeSpanGrid: bigint
   readonly canonicalGeometryIdentity: string
 }
 
@@ -235,9 +242,13 @@ export function projectIntrinsicLayoutExactly(input: {
   readonly referencePlaced: ReadonlyArray<IrregularPlacedPiece>
   readonly provisionalPlaced: ReadonlyArray<IrregularPlacedPiece>
   readonly maximumDilationSteps?: number
+  readonly control?: IrregularNfpIfpControl
 }): Effect.Effect<
   IntrinsicExactProjectionResult,
-  IntrinsicExactProjectionError | IrregularNestingNotImplementedError | IrregularGeometryInputError,
+  | IntrinsicExactProjectionError
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError,
   GeometrySettings | NfpIfpService
 > {
   return Effect.gen(function* () {
@@ -285,15 +296,25 @@ export function projectIntrinsicLayoutExactly(input: {
       ...transformedPieceIds
     ])
     const initialRemovedPieceIds = orderedCatalogIds(input.catalog, removed)
+    const requestedMaximumDilationSteps =
+      input.maximumDilationSteps ?? input.catalog.entries.length
+    if (!Number.isFinite(requestedMaximumDilationSteps)) {
+      return yield* failProjection(
+        'canonicalizeProvisional',
+        'invalid-input',
+        'maximumDilationSteps must be finite.'
+      )
+    }
     const maximumDilationSteps = Math.max(
       0,
       Math.min(
         input.catalog.entries.length,
-        Math.floor(input.maximumDilationSteps ?? input.catalog.entries.length)
+        Math.floor(requestedMaximumDilationSteps)
       )
     )
 
     for (let dilationSteps = 0; dilationSteps <= maximumDilationSteps; dilationSteps += 1) {
+      yield* projectionCheckpoint(input.control)
       const frozen = provisional.filter((entry) => !removed.has(placedPieceId(entry)))
       if (!assertCanonicalGridLegalLayout(target.sheet, frozen)) {
         return yield* failProjection(
@@ -309,7 +330,8 @@ export function projectIntrinsicLayoutExactly(input: {
         removed,
         frozen,
         settings,
-        nfpIfp
+        nfpIfp,
+        control: input.control
       })
       if ('placed' in attempt) {
         const canonicalGeometryIdentity = canonicalCollisionLayoutIdentity(attempt.placed)
@@ -465,9 +487,12 @@ function projectRemovedPieces(input: {
   readonly frozen: ReadonlyArray<IrregularPlacedPiece>
   readonly settings: IrregularNestingSettings
   readonly nfpIfp: NfpIfpService
+  readonly control: IrregularNfpIfpControl | undefined
 }): Effect.Effect<
   ProjectionAttemptSuccess | ProjectionAttemptFailure,
-  IrregularNestingNotImplementedError | IrregularGeometryInputError
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError
 > {
   return Effect.gen(function* () {
     let placed = [...input.frozen]
@@ -475,6 +500,7 @@ function projectRemovedPieces(input: {
     const orientationFallbackPieceIds: PieceId[] = []
     for (const entry of input.catalog.entries) {
       if (!input.removed.has(entry.pieceId)) continue
+      yield* projectionCheckpoint(input.control)
       const provisional = input.provisionalById.get(entry.pieceId)
       if (provisional === undefined) return { failedPieceId: entry.pieceId }
       const pinnedKey = transformKey(provisional.collisionGeometry.transform)
@@ -491,6 +517,7 @@ function projectRemovedPieces(input: {
         placed,
         settings: input.settings,
         nfpIfp: input.nfpIfp,
+        control: input.control,
         preservesPinnedTransform: true
       })
       let selected = pinnedCandidates.toSorted(compareProjectionCandidates)[0]
@@ -504,8 +531,10 @@ function projectRemovedPieces(input: {
           transformsByFamily.set(transform.orientationFamily, family)
         }
         for (const transforms of [...transformsByFamily.values()]) {
+          yield* projectionCheckpoint(input.control)
           const familyCandidates: ProjectionCandidate[] = []
           for (const transform of transforms) {
+            yield* projectionCheckpoint(input.control)
             familyCandidates.push(
               ...(yield* exactCandidatesForTransform({
                 target: input.target,
@@ -515,6 +544,7 @@ function projectRemovedPieces(input: {
                 placed,
                 settings: input.settings,
                 nfpIfp: input.nfpIfp,
+                control: input.control,
                 preservesPinnedTransform: false
               }))
             )
@@ -541,10 +571,13 @@ function exactCandidatesForTransform(input: {
   readonly placed: ReadonlyArray<IrregularPlacedPiece>
   readonly settings: IrregularNestingSettings
   readonly nfpIfp: NfpIfpService
+  readonly control: IrregularNfpIfpControl | undefined
   readonly preservesPinnedTransform: boolean
 }): Effect.Effect<
   ReadonlyArray<ProjectionCandidate>,
-  IrregularNestingNotImplementedError | IrregularGeometryInputError
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError
 > {
   return Effect.gen(function* () {
     const provisionalPoint = canonicalPlacementPoint(input.provisional)
@@ -568,13 +601,21 @@ function exactCandidatesForTransform(input: {
     })
     if (direct !== undefined) candidates.push(direct)
 
-    const serviceCandidates = yield* input.nfpIfp.generatePlacementCandidates({
+    yield* projectionCheckpoint(input.control)
+    const candidateInput = {
       sheet: input.target.sheet,
       placed: input.placed,
       moving: input.transform.geometry,
       settings: input.settings,
-      candidateDomain: 'sheet'
-    })
+      candidateDomain: 'sheet' as const
+    }
+    const serviceCandidates =
+      input.control === undefined
+        ? yield* input.nfpIfp.generatePlacementCandidates(candidateInput)
+        : yield* input.nfpIfp.generatePlacementCandidates({
+            ...candidateInput,
+            control: input.control
+          })
     const seen = new Set(
       candidates.map((candidate) => candidateTranslationKey(candidate.placed))
     )
@@ -630,8 +671,8 @@ function scoreExactProjectionCandidate(input: {
   const envelope = canonicalEnvelopeTuple(complete)
   const canonicalGeometryIdentity = canonicalCollisionLayoutIdentity(complete)
   if (envelope === undefined || canonicalGeometryIdentity === undefined) return undefined
-  const deltaX = BigInt(pointX - provisionalX)
-  const deltaY = BigInt(pointY - provisionalY)
+  const deltaX = BigInt(pointX) - BigInt(provisionalX)
+  const deltaY = BigInt(pointY) - BigInt(provisionalY)
   return {
     placed,
     directProvisionalPose: input.directProvisionalPose,
@@ -650,9 +691,9 @@ function compareProjectionCandidates(
     Number(second.directProvisionalPose) - Number(first.directProvisionalPose) ||
     compareBigInt(first.squaredGridDistance, second.squaredGridDistance) ||
     Number(second.preservesPinnedTransform) - Number(first.preservesPinnedTransform) ||
-    first.maximumSideGrid - second.maximumSideGrid ||
+    compareBigInt(first.maximumSideGrid, second.maximumSideGrid) ||
     compareBigInt(first.envelopeAreaGrid2, second.envelopeAreaGrid2) ||
-    first.envelopeSpanGrid - second.envelopeSpanGrid ||
+    compareBigInt(first.envelopeSpanGrid, second.envelopeSpanGrid) ||
     first.canonicalGeometryIdentity.localeCompare(second.canonicalGeometryIdentity)
   )
 }
@@ -688,12 +729,12 @@ function canonicalEnvelopeTuple(
   placed: ReadonlyArray<IrregularPlacedPiece>
 ):
   | {
-      readonly maximumSideGrid: number
+      readonly maximumSideGrid: bigint
       readonly envelopeAreaGrid2: bigint
-      readonly envelopeSpanGrid: number
+      readonly envelopeSpanGrid: bigint
     }
   | undefined {
-  const points: Array<{ readonly x: number; readonly y: number }> = []
+  const points: Array<{ readonly x: bigint; readonly y: bigint }> = []
   for (const entry of placed) {
     const translation = canonicalPlacementPoint(entry)
     if (translation === undefined) return undefined
@@ -701,7 +742,7 @@ function canonicalEnvelopeTuple(
       const x = toGridMm(point.x + translation.x)
       const y = toGridMm(point.y + translation.y)
       if (x === undefined || y === undefined) return undefined
-      points.push({ x, y })
+      points.push({ x: BigInt(x), y: BigInt(y) })
     }
   }
   const first = points[0]
@@ -711,17 +752,16 @@ function canonicalEnvelopeTuple(
   let maxX = first.x
   let maxY = first.y
   for (const point of points.slice(1)) {
-    minX = Math.min(minX, point.x)
-    minY = Math.min(minY, point.y)
-    maxX = Math.max(maxX, point.x)
-    maxY = Math.max(maxY, point.y)
+    if (point.x < minX) minX = point.x
+    if (point.y < minY) minY = point.y
+    if (point.x > maxX) maxX = point.x
+    if (point.y > maxY) maxY = point.y
   }
   const width = maxX - minX
   const height = maxY - minY
-  if (![width, height, width + height].every(Number.isSafeInteger)) return undefined
   return {
-    maximumSideGrid: Math.max(width, height),
-    envelopeAreaGrid2: BigInt(width) * BigInt(height),
+    maximumSideGrid: width > height ? width : height,
+    envelopeAreaGrid2: width * height,
     envelopeSpanGrid: width + height
   }
 }
@@ -801,25 +841,67 @@ function canonicalPlacementPoint(
 
 function canonicalPlacedCenter(
   entry: IrregularPlacedPiece
-): { readonly x: number; readonly y: number } | undefined {
+): { readonly x: bigint; readonly y: bigint } | undefined {
   const translation = canonicalPlacementPoint(entry)
   if (translation === undefined) return undefined
-  const minX = toGridMm(entry.collisionGeometry.bounds.minX + translation.x)
-  const minY = toGridMm(entry.collisionGeometry.bounds.minY + translation.y)
-  const maxX = toGridMm(entry.collisionGeometry.bounds.maxX + translation.x)
-  const maxY = toGridMm(entry.collisionGeometry.bounds.maxY + translation.y)
-  return minX === undefined || minY === undefined || maxX === undefined || maxY === undefined
-    ? undefined
-    : { x: minX + maxX, y: minY + maxY }
+  const worldPoints = entry.collisionGeometry.polygon.points.map((point) => ({
+    x: toGridMm(point.x + translation.x),
+    y: toGridMm(point.y + translation.y)
+  }))
+  if (
+    worldPoints.length === 0 ||
+    worldPoints.some(({ x, y }) => x === undefined || y === undefined)
+  ) {
+    return undefined
+  }
+  const points = worldPoints.filter(
+    (point): point is { readonly x: number; readonly y: number } =>
+      point.x !== undefined && point.y !== undefined
+  )
+  const first = points[0]
+  if (first === undefined) return undefined
+  let minX = BigInt(first.x)
+  let minY = BigInt(first.y)
+  let maxX = minX
+  let maxY = minY
+  for (const point of points.slice(1)) {
+    const x = BigInt(point.x)
+    const y = BigInt(point.y)
+    if (x < minX) minX = x
+    if (y < minY) minY = y
+    if (x > maxX) maxX = x
+    if (y > maxY) maxY = y
+  }
+  return { x: minX + maxX, y: minY + maxY }
 }
 
 function squaredGridDistance(
-  first: { readonly x: number; readonly y: number },
-  second: { readonly x: number; readonly y: number }
+  first: { readonly x: bigint; readonly y: bigint },
+  second: { readonly x: bigint; readonly y: bigint }
 ): bigint {
-  const deltaX = BigInt(first.x - second.x)
-  const deltaY = BigInt(first.y - second.y)
+  const deltaX = first.x - second.x
+  const deltaY = first.y - second.y
   return deltaX * deltaX + deltaY * deltaY
+}
+
+/** Exact distance order for already canonical safe-integer grid points. */
+export function compareIntrinsicProjectionGridDistance(
+  reference: IntrinsicProjectionGridPoint,
+  first: IntrinsicProjectionGridPoint,
+  second: IntrinsicProjectionGridPoint
+): number | undefined {
+  if (
+    ![reference.x, reference.y, first.x, first.y, second.x, second.y].every(
+      Number.isSafeInteger
+    )
+  ) {
+    return undefined
+  }
+  const referenceGrid = { x: BigInt(reference.x), y: BigInt(reference.y) }
+  return compareBigInt(
+    squaredGridDistance(referenceGrid, { x: BigInt(first.x), y: BigInt(first.y) }),
+    squaredGridDistance(referenceGrid, { x: BigInt(second.x), y: BigInt(second.y) })
+  )
 }
 
 function orderedCatalogIds(
@@ -882,6 +964,12 @@ function compareOptionalBigInt(first: bigint | undefined, second: bigint | undef
     return first === second ? 0 : first === undefined ? 1 : -1
   }
   return compareBigInt(first, second)
+}
+
+function projectionCheckpoint(
+  control: IrregularNfpIfpControl | undefined
+): Effect.Effect<void, IrregularNfpIfpControlAbortError> {
+  return control?.checkpoint('candidate-points') ?? Effect.void
 }
 
 function failProjection(

@@ -18,6 +18,7 @@ import {
 import {
   analyzeIntrinsicProjectionConflicts,
   buildIntrinsicTransformCatalog,
+  compareIntrinsicProjectionGridDistance,
   projectIntrinsicLayoutExactly,
   type IntrinsicFiniteTransform,
   type IntrinsicTransformCatalog,
@@ -26,7 +27,10 @@ import {
 import { assertCanonicalGridLegalLayout } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
-import { NfpIfpService } from '../../src/workers/irregular/services.js'
+import {
+  IrregularNfpIfpControlAbortError,
+  NfpIfpService
+} from '../../src/workers/irregular/services.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
 
 function point(x: number, y: number): IrregularPoint {
@@ -172,6 +176,20 @@ describe('intrinsic exact projection', () => {
       .toHaveLength(2)
   })
 
+  it('orders extreme safe grid distances exactly before any subtraction', () => {
+    const maximum = Number.MAX_SAFE_INTEGER
+    const reference = { x: -maximum, y: maximum }
+    const nearer = { x: maximum - 1, y: -maximum + 1 }
+    const farther = { x: maximum, y: -maximum }
+
+    expect(compareIntrinsicProjectionGridDistance(reference, nearer, farther)).toBe(-1)
+    expect(compareIntrinsicProjectionGridDistance(reference, farther, nearer)).toBe(1)
+    expect(compareIntrinsicProjectionGridDistance(reference, nearer, farther)).toBe(-1)
+    expect(
+      compareIntrinsicProjectionGridDistance(reference, { x: maximum + 1, y: 0 }, farther)
+    ).toBeUndefined()
+  })
+
   it('removes both endpoints of every exact conflict plus wall offenders and proves the remainder', async () => {
     const catalog = await buildCatalog([
       preparedRectangle('safe', 2, 2),
@@ -245,6 +263,66 @@ describe('intrinsic exact projection', () => {
     })
     expect(first.canonicalGeometryIdentity).toBe(sameCanonicalTarget.canonicalGeometryIdentity)
   })
+
+  it('propagates a typed cooperative abort between projection stages', async () => {
+    const catalog = await buildCatalog([
+      preparedRectangle('wide', 3, 1, [transform(0, 0), transform(1, 90)])
+    ])
+    const entry = catalogEntry(catalog, 'wide')
+    const reference = [placed(entry, finiteTransform(entry, 0), 0, 0)]
+    const provisional = [placed(entry, finiteTransform(entry, 90), 1, 1)]
+    let checkpoints = 0
+
+    await expect(
+      project({
+        targetBox: { widthMm: 10, heightMm: 10 },
+        catalog,
+        referencePlaced: reference,
+        provisionalPlaced: provisional,
+        control: {
+          checkpoint: () => {
+            checkpoints += 1
+            return checkpoints === 2
+              ? Effect.fail(
+                  new IrregularNfpIfpControlAbortError({
+                    reason: 'cancelled',
+                    message: 'test projection cancellation'
+                  })
+                )
+              : Effect.void
+          }
+        }
+      })
+    ).rejects.toMatchObject({
+      _tag: 'IrregularNfpIfpControlAbortError',
+      reason: 'cancelled'
+    })
+    expect(checkpoints).toBe(2)
+  })
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    'rejects non-finite maximumDilationSteps %s before floor and clamp',
+    async (maximumDilationSteps) => {
+      const catalog = await buildCatalog([preparedRectangle('only', 2, 2)])
+      const entry = catalogEntry(catalog, 'only')
+      const reference = [placed(entry, finiteTransform(entry, 0), 0, 0)]
+
+      await expect(
+        project({
+          targetBox: { widthMm: 4, heightMm: 4 },
+          catalog,
+          referencePlaced: reference,
+          provisionalPlaced: reference,
+          maximumDilationSteps
+        })
+      ).rejects.toMatchObject({
+        _tag: 'IntrinsicExactProjectionError',
+        operation: 'canonicalizeProvisional',
+        category: 'invalid-input',
+        message: 'maximumDilationSteps must be finite.'
+      })
+    }
+  )
 
   it('falls back by orientation family only when the pinned transform has no legal candidate', async () => {
     const catalog = await buildCatalog([
