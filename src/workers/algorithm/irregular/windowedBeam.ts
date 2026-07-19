@@ -236,10 +236,7 @@ export function runWindowedIrregularBeam(input: {
     const localCandidateFanout =
       settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth
     const localRepairBudget = settings.optimizer.localRepairBudget ?? 0
-    const protectedDiversityEnabled =
-      (input.options?.transformPreferences?.size === undefined ||
-        input.options.transformPreferences.size === 0) &&
-      localRepairBudget === 0
+    const protectedDiversityEnabled = false
     const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
     const stateKey = (state: IrregularBeamState): string =>
       beamStateKey(state, input.options?.transformPreferences)
@@ -784,13 +781,13 @@ function selectTerminalOrientation(input: {
     }
 
     const rankedVariants = legalVariants.toSorted((first, second) => {
-      const cornerComparison = Order.Number(first.cornerGapMm, second.cornerGapMm)
-      if (cornerComparison !== 0) return cornerComparison
       const scoreComparison = input.layoutScorer.compare(
         first.scoredState.score,
         second.scoredState.score
       )
       if (scoreComparison !== 0) return scoreComparison
+      const cornerComparison = Order.Number(first.cornerGapMm, second.cornerGapMm)
+      if (cornerComparison !== 0) return cornerComparison
       return Order.Number(first.rotationDeg, second.rotationDeg)
     })
     const selected = rankedVariants[0]
@@ -978,12 +975,19 @@ function terminalRepairPreservesEnvelope(
   current: IrregularLayoutScore
 ): boolean {
   return (
-    candidate.collisionBoundsWorstNormalizedSheetConsumption <=
-      current.collisionBoundsWorstNormalizedSheetConsumption &&
-    candidate.collisionBoundsNormalizedSpanSum <= current.collisionBoundsNormalizedSpanSum &&
+    intrinsicLayoutMaxSideMm(candidate) <= intrinsicLayoutMaxSideMm(current) &&
     candidate.collisionBoundsAreaMm2 <= current.collisionBoundsAreaMm2 &&
     candidate.collisionBoundsSpanMm <= current.collisionBoundsSpanMm
   )
+}
+
+function intrinsicLayoutMaxSideMm(score: IrregularLayoutScore): number {
+  const discriminant = Math.max(
+    0,
+    score.collisionBoundsSpanMm * score.collisionBoundsSpanMm -
+      4 * score.collisionBoundsAreaMm2
+  )
+  return (score.collisionBoundsSpanMm + Math.sqrt(discriminant)) / 2
 }
 
 /** Positional decoder alias matching the strict decoder's public shape. */
@@ -2380,6 +2384,7 @@ function rankScoredStates(
 function makeStateOrder(layoutScorer: IrregularLayoutScorer.Service): Order.Order<ScoredState> {
   return Order.combineAll<ScoredState>([
     Order.make((first, second) => layoutScorer.compare(first.score, second.score)),
+    intrinsicGeometryStateCriterion,
     Order.mapInput(Order.String, (state) => state.key)
   ])
 }
