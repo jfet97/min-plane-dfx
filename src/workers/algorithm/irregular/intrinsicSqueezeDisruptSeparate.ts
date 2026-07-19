@@ -267,7 +267,7 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
     readonly fullE1Placed: ReadonlyArray<IrregularPlacedPiece>
     readonly control?: IrregularNfpIfpControl
   },
-  schedule: IntrinsicGlobalSearchSchedule,
+  scheduleInput: IntrinsicGlobalSearchSchedule,
   dependency: ProjectionDependency
 ): Effect.Effect<
   IntrinsicGlobalSearchResult,
@@ -279,6 +279,8 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
   GeometryKernel | GeometrySettings | NfpIfpService
 > {
   return Effect.gen(function* () {
+    const fullE1Fallback = [...input.fullE1Placed]
+    const schedule = snapshotIntrinsicGlobalSchedule(scheduleInput)
     const startedAt = performance.now()
     const partition = partitionIntrinsicStructuralPieces(input.allPreparedPieces)
     if (
@@ -291,12 +293,12 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
       )
     }
     const allE1ById = new Map(
-      input.fullE1Placed.map((entry) => [placedPieceId(entry), entry] as const)
+      fullE1Fallback.map((entry) => [placedPieceId(entry), entry] as const)
     )
     if (
       allE1ById.size !== input.allPreparedPieces.length ||
-      input.fullE1Placed.length !== input.allPreparedPieces.length ||
-      !assertSheetlessExactFallback(input.fullE1Placed)
+      fullE1Fallback.length !== input.allPreparedPieces.length ||
+      !assertSheetlessExactFallback(fullE1Fallback)
     ) {
       return yield* globalFailure(
         'initialize',
@@ -318,7 +320,7 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
     const catalog = yield* buildIntrinsicTransformCatalog(partition.structuralPieces)
     const initialState = relaxedStateFromExactLayout(catalog, exactStructuralReference)
     const targetRoles = deriveIntrinsicGlobalTargetRoles(
-      input.fullE1Placed,
+      fullE1Fallback,
       schedule.explorationAreaCapMm2
     )
     if (initialState === undefined || targetRoles === undefined || targetRoles.length !== 3) {
@@ -605,7 +607,7 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
     if (scheduleStatus !== 'completed') handoffs.splice(0, handoffs.length)
     return {
       status: scheduleStatus,
-      fullE1Fallback: input.fullE1Placed,
+      fullE1Fallback,
       partition,
       targetRoles,
       structuralHandoffs: handoffs,
@@ -618,6 +620,26 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
       runtimeMs: Math.max(0, performance.now() - startedAt)
     }
   })
+}
+
+function snapshotIntrinsicGlobalSchedule(
+  schedule: IntrinsicGlobalSearchSchedule
+): IntrinsicGlobalSearchSchedule {
+  return {
+    expectedStructuralPieceCount: schedule.expectedStructuralPieceCount,
+    sweepsPerBasin: schedule.sweepsPerBasin,
+    forcedDisruptionSweeps: [...schedule.forcedDisruptionSweeps],
+    poolCapacity: schedule.poolCapacity,
+    maximumSeparationEvaluations: schedule.maximumSeparationEvaluations,
+    maximumProjectionAttempts: schedule.maximumProjectionAttempts,
+    maximumRuntimeMs: schedule.maximumRuntimeMs,
+    structuralHandoffCapacity: schedule.structuralHandoffCapacity,
+    explorationAreaCapMm2: schedule.explorationAreaCapMm2,
+    productionAreaTargetMm2: schedule.productionAreaTargetMm2,
+    maximumCavityCount: schedule.maximumCavityCount,
+    maximumLargestHullGapRatio: schedule.maximumLargestHullGapRatio,
+    seed: schedule.seed
+  }
 }
 
 function exactStructuralHandoff(input: {

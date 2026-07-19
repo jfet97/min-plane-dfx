@@ -576,6 +576,48 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     ).rejects.toMatchObject({ _tag: 'IrregularNfpIfpControlAbortError', reason: 'cancelled' })
   })
 
+  it('owns the E1 fallback and schedule before hostile cooperative checkpoints', async () => {
+    const pieces = [
+      preparedRectangle('a', 2, 1, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('b', 2, 1, [transform(0, 0), transform(1, 90)])
+    ]
+    const catalog = await catalogFor(pieces)
+    const mutableE1 = [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 2, 0)
+    ]
+    const forcedDisruptionSweeps = [0]
+    const mutableSchedule = {
+      ...schedule(),
+      forcedDisruptionSweeps
+    }
+    let mutated = false
+    const result = await runController(
+      pieces,
+      mutableE1,
+      mutableSchedule,
+      ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced)),
+      {
+        checkpoint: () => {
+          if (!mutated) {
+            mutated = true
+            mutableE1.splice(0, mutableE1.length)
+            forcedDisruptionSweeps.splice(0, forcedDisruptionSweeps.length)
+            mutableSchedule.sweepsPerBasin = 0
+            mutableSchedule.maximumProjectionAttempts = 0
+          }
+          return Effect.void
+        }
+      }
+    )
+
+    expect(result.status).toBe('completed')
+    expect(result.fullE1Fallback).toHaveLength(2)
+    expect(result.completedSweepCount).toBe(6)
+    expect(result.projectionAttemptCount).toBe(5)
+    expect(result.trace.filter(({ forcedDisruption }) => forcedDisruption)).toHaveLength(6)
+  })
+
   it('is same-seed deterministic and reports exact projection/quality outcomes separately', async () => {
     const pieces = [
       preparedRectangle('a', 2, 1, [transform(0, 0), transform(1, 90)]),
