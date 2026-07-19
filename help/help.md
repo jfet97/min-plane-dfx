@@ -2118,6 +2118,34 @@ would falsify each one, and identify the smallest safe production experiment.
   preregistration is
   `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration-v6.2-sequential-all-collider-composite.md`
   (`9304fc38e9e71831a9050547366a937973c3b64940f2fef2e92bd3866a8f530b`).
+- V6.2 at `08f5f89` passed implementation review and fixed the measured coverage
+  defect, but failed its mechanism gate. Every frozen collider was visited;
+  winning passes affected 6-16 Triangle pieces and 7-26 Mixed pieces, raw
+  winners were retained, no attempt hit a cap or deadline, and all six ratios
+  materially beat V6.1 raw loss. None reached exact zero, however, so pressure
+  projection and acceptance remained unexercised and E1 correctly won as the
+  legal fallback. Triangle final pair counts were `16/19/13` from `8/7/7`;
+  Mixed final pair counts were `41/36/32` from `11/10/10`.
+- The V6.2 trace proves conflict fragmentation. The squared normalized-depth
+  objective prefers replacing a deep overlap with several shallow overlaps:
+  175 of 429 committed Triangle moves and 243 of 644 Mixed moves increased pair
+  count. Mixed `1/20` fell from raw loss `1.266460558` to `0.188600336` while
+  pair conflicts grew from 11 to 41 and conflicted pieces from 15 to 36. The
+  Triangle report SHA-256 is
+  `a372827afd4307512dccc1eb24019c2b4e575b696ee91f89c57536d513f5ca17`;
+  Mixed-61 is
+  `b46fb0545d85ecfa43f487877729fb5f97cf65d14ed5218bba49f3a46f4ec371`.
+- Kimi and Sol independently chose deterministic coordinate relocation as the
+  next boundary. Exact zero remains the unique minimum of the current loss;
+  the MTV-only neighborhood is what repeatedly pushes a piece from one crowded
+  seam into another. Both rejected a hard conflict-count guard because every
+  first V6.2 composite crosses a higher-cardinality barrier. The next work is a
+  parallel committed tournament rather than another serial micro-variant:
+  coordinate probes, coordinate/order and coordinate/retention stacks, a dense
+  refinement, transform-family coverage, and V6K updated with sequential
+  coordinate repair. The immutable matrix is
+  `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration-v6-coordinate-tournament.md`
+  (`9b3e44c49f4fdf849dddc6a73ee8e1a4528167431a8f1d498960588171ba09ce`).
 - Preserve Kimi's alternative static-shrink design as V6K, but do not implement
   it concurrently with V6. If adaptive pressure fails before projection, V6K
   replaces the current roles with aspect-preserving `1.000`, `0.925`, and
