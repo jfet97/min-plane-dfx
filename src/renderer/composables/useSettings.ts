@@ -8,9 +8,9 @@ import {
 } from '@shared/domain/layoutSelectionStrategies.js'
 import {
   IRREGULAR_WORKER_MODE,
-  makeDefaultIrregularNestingSettings,
-  workerTimeoutForMode
+  makeDefaultIrregularNestingSettings
 } from '@shared/irregular/defaults.js'
+import { workerTimeoutForEdit } from '../utils/workerTimeoutEdit.js'
 
 export interface SettingsState {
   sheet: SheetSpec
@@ -72,7 +72,7 @@ const state: UnwrapNestedRefs<MutableSettingsState> =
 function replaceOptions(options: NestingOptions): void {
   state.options.allowGlobalRotation = options.allowGlobalRotation
   state.options.allowGlobalMirror = options.allowGlobalMirror ?? true
-  state.options.timeoutMs = workerTimeoutForMode(options.workerMode, options.timeoutMs)
+  state.options.timeoutMs = workerTimeoutForEdit(options.workerMode, options.timeoutMs)
   state.options.workerMode = options.workerMode
   state.options.historyMode = options.historyMode
   state.options.historyScope = options.historyScope
@@ -124,12 +124,12 @@ export function useSettings() {
       notifyWorkspaceSettingsChanged()
     },
     setTimeoutMs: (timeoutMs: number): void => {
-      state.options.timeoutMs = Math.max(1000, timeoutMs)
+      state.options.timeoutMs = workerTimeoutForEdit(state.options.workerMode, timeoutMs)
       notifyWorkspaceSettingsChanged()
     },
     setWorkerMode: (mode: NestingOptions['workerMode']): void => {
       state.options.workerMode = mode
-      state.options.timeoutMs = workerTimeoutForMode(mode, state.options.timeoutMs)
+      state.options.timeoutMs = workerTimeoutForEdit(mode, state.options.timeoutMs)
       if (mode === IRREGULAR_WORKER_MODE && state.options.irregularSettings === undefined) {
         state.options.irregularSettings = makeDefaultIrregularNestingSettings()
       }

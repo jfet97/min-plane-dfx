@@ -414,6 +414,24 @@ describe('canonical reference coordinator policy', () => {
     ).toEqual({ admitted: false, reason: 'canonical role is incomplete' })
   })
 
+  it('schema-rejects invalid fields from the complete materialized score summary', () => {
+    for (const overrides of [
+      { freeMaterialSliverMetric: Number.NaN },
+      { sharedCollisionBoundaryContactBand: Number.NaN },
+      { collisionBoundsWorstNormalizedSheetConsumption: -1 }
+    ]) {
+      expect(
+        evaluateCanonicalReferencePriorityMetrics({
+          canonical: score(overrides),
+          canonicalTopology: topologyMetrics()
+        })
+      ).toEqual({
+        admitted: false,
+        reason: 'protected score summary or topology is invalid or non-finite'
+      })
+    }
+  })
+
   it('rejects a finite canonical candidate outside every intrinsic compactness bound', () => {
     const failures: ReadonlyArray<readonly [Partial<CanonicalLayoutTopology>, string]> = [
       [

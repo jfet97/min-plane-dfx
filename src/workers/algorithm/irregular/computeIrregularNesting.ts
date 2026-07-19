@@ -1,4 +1,4 @@
-import { Data, Effect, Layer } from 'effect'
+import { Data, Effect, Exit, Layer, Schema } from 'effect'
 import { performance } from 'node:perf_hooks'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type { PieceId } from '@shared/domain/ids.js'
@@ -708,8 +708,9 @@ export function evaluateCanonicalReferencePriorityMetrics(input: {
   readonly canonical: IrregularLayoutScore
   readonly canonicalTopology: CanonicalLayoutTopology
 }): CanonicalAdmissionDecision {
+  const summary = decodeMaterializedLayoutScoreSummary(input.canonical)
   if (
-    !finiteCanonicalPriorityScores(input.canonical) ||
+    summary === undefined ||
     ![
       input.canonicalTopology.enclosedCavityCount,
       input.canonicalTopology.largestOccupiedHullGapRatio,
@@ -720,9 +721,12 @@ export function evaluateCanonicalReferencePriorityMetrics(input: {
       input.canonicalTopology.largestPositiveContactComponentRatio
     ].every(Number.isFinite)
   ) {
-    return { admitted: false, reason: 'protected score or topology is undefined or non-finite' }
+    return {
+      admitted: false,
+      reason: 'protected score summary or topology is invalid or non-finite'
+    }
   }
-  if (input.canonical.unplacedCount !== 0) {
+  if (summary.unplacedCount !== 0) {
     return { admitted: false, reason: 'canonical role is incomplete' }
   }
   const checks: ReadonlyArray<readonly [boolean, string]> = [
@@ -760,20 +764,21 @@ export function evaluateCanonicalReferencePriorityMetrics(input: {
   }
 }
 
-function finiteCanonicalPriorityScores(score: IrregularLayoutScore): boolean {
-  return [
-    score.unplacedCount,
-    score.collisionBoundsAreaMm2,
-    score.collisionBoundsSpanMm,
-    score.nearCompleteStructuralContactCount,
-    score.dominantNearCompleteStructuralContactCount,
-    score.sharedCollisionBoundaryLengthMm,
-    score.sharedCollisionBoundaryContactUnits
-  ].every(Number.isFinite)
+function decodeMaterializedLayoutScoreSummary(
+  score: IrregularLayoutScore
+): IrregularLayoutScoreSummary | undefined {
+  const decoded = Schema.decodeUnknownExit(IrregularLayoutScoreSummary)(
+    layoutScoreSummaryFields(score)
+  )
+  return Exit.isSuccess(decoded) ? decoded.value : undefined
 }
 
 function layoutScoreSummary(score: IrregularLayoutScore): IrregularLayoutScoreSummary {
-  return new IrregularLayoutScoreSummary({
+  return new IrregularLayoutScoreSummary(layoutScoreSummaryFields(score))
+}
+
+function layoutScoreSummaryFields(score: IrregularLayoutScore) {
+  return {
     unplacedCount: score.unplacedCount,
     sharedCollisionBoundaryLengthMm: score.sharedCollisionBoundaryLengthMm,
     sharedCollisionBoundaryContactUnits: score.sharedCollisionBoundaryContactUnits,
@@ -789,7 +794,7 @@ function layoutScoreSummary(score: IrregularLayoutScore): IrregularLayoutScoreSu
     collisionBoundsNormalizedSpanSum: score.collisionBoundsNormalizedSpanSum,
     collisionBoundsAreaMm2: score.collisionBoundsAreaMm2,
     collisionBoundsSpanMm: score.collisionBoundsSpanMm
-  })
+  }
 }
 
 function combinePortfolioMetrics(

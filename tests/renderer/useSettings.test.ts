@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { NestingOptions, SheetSpec } from '@shared/domain/nesting.js'
 import { ProjectDocument, WorkspaceProjectSettings } from '@shared/domain/project.js'
 import { useSettings } from '../../src/renderer/composables/useSettings.js'
+import {
+  normalizeWorkerTimeoutPatch,
+  workerTimeoutForEdit
+} from '../../src/renderer/utils/workerTimeoutEdit.js'
 
 function options(
   workerMode: NestingOptions['workerMode'],
@@ -81,5 +85,31 @@ describe('settings timeout hydration', () => {
     )
 
     expect(settings.state.value.options.timeoutMs).toBe(60_000)
+  })
+
+  it('normalizes every direct composable timeout edit for the active worker', () => {
+    const settings = useSettings()
+    settings.setWorkerMode('irregular-convex-v2')
+    settings.setTimeoutMs(1_000)
+    expect(settings.state.value.options.timeoutMs).toBe(120_000)
+
+    settings.setTimeoutMs(180_000)
+    expect(settings.state.value.options.timeoutMs).toBe(180_000)
+
+    settings.setWorkerMode('maxrects-beam-search')
+    settings.setTimeoutMs(1_000)
+    expect(settings.state.value.options.timeoutMs).toBe(1_000)
+  })
+
+  it('normalizes the timeout values emitted by local settings models', () => {
+    const irregular = options('irregular-convex-v2', 180_000)
+    const rectangular = options('maxrects-beam-search', 1_000)
+    expect(normalizeWorkerTimeoutPatch(irregular, { timeoutMs: 1_000 }).timeoutMs).toBe(120_000)
+    expect(normalizeWorkerTimeoutPatch(irregular, { timeoutMs: 180_000 }).timeoutMs).toBe(180_000)
+    expect(normalizeWorkerTimeoutPatch(rectangular, { timeoutMs: 1_000 }).timeoutMs).toBe(1_000)
+    expect(
+      normalizeWorkerTimeoutPatch(rectangular, { workerMode: 'irregular-convex-v2' }).timeoutMs
+    ).toBe(120_000)
+    expect(workerTimeoutForEdit('irregular-convex-v2', 1_000)).toBe(120_000)
   })
 })

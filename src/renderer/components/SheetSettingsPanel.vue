@@ -7,11 +7,14 @@ import IrregularSettingsPanel from './IrregularSettingsPanel.vue'
 import { STRATEGY_DEFINITIONS } from '@shared/domain/strategies.js'
 import { LAYOUT_SELECTION_STRATEGIES } from '@shared/domain/layoutSelectionStrategies.js'
 import {
-  workerTimeoutForMode,
   IRREGULAR_WORKER_MODE,
   makeDefaultIrregularNestingSettings
 } from '@shared/irregular/defaults.js'
 import type { NestingOptions, SheetSpec } from '@shared/domain/nesting.js'
+import {
+  normalizeWorkerTimeoutPatch,
+  workerTimeoutForEdit
+} from '../utils/workerTimeoutEdit.js'
 
 interface SettingsModel {
   sheet: SheetSpec
@@ -37,6 +40,9 @@ const model = computed<SettingsModel>(() => props.modelValue ?? settings.state.v
 const heading = computed(() => props.heading ?? 'Settings')
 const showSourceControls = computed(() => props.showSourceControls ?? true)
 const isIrregularMode = computed(() => model.value.options.workerMode === IRREGULAR_WORKER_MODE)
+const timeoutMinimumMs = computed(() =>
+  workerTimeoutForEdit(model.value.options.workerMode, 1_000)
+)
 
 const sheetInvalid = computed(() => model.value.sheet.width <= 0 || model.value.sheet.height <= 0)
 const allStrategyIds = computed(() => STRATEGY_DEFINITIONS.map((strategy) => strategy.id))
@@ -94,23 +100,28 @@ function updatePadding(padding: number): void {
 }
 
 function updateOptions(patch: Partial<NestingOptions>): void {
+  const normalizedPatch = normalizeWorkerTimeoutPatch(model.value.options, patch)
   if (isLocal.value) {
-    updateModel({ options: { ...model.value.options, ...patch } })
+    updateModel({ options: { ...model.value.options, ...normalizedPatch } })
   } else {
-    if (patch.allowGlobalRotation !== undefined)
-      settings.setAllowGlobalRotation(patch.allowGlobalRotation)
-    if (patch.allowGlobalMirror !== undefined) settings.setAllowGlobalMirror(patch.allowGlobalMirror)
-    if (patch.timeoutMs !== undefined) settings.setTimeoutMs(patch.timeoutMs)
-    if (patch.workerMode !== undefined) settings.setWorkerMode(patch.workerMode)
-    if (patch.irregularSettings !== undefined) settings.setIrregularSettings(patch.irregularSettings)
-    if (patch.historyMode !== undefined) settings.setHistoryMode(patch.historyMode)
-    if (patch.strategySelectionMode !== undefined)
-      settings.setStrategySelectionMode(patch.strategySelectionMode)
-    if (patch.layoutSelectionStrategyId !== undefined)
-      settings.setLayoutSelectionStrategyId(patch.layoutSelectionStrategyId)
-    if (patch.finalSelectionMode !== undefined)
-      settings.setFinalSelectionMode(patch.finalSelectionMode)
-    if (patch.topN !== undefined) settings.setTopN(patch.topN)
+    if (normalizedPatch.allowGlobalRotation !== undefined)
+      settings.setAllowGlobalRotation(normalizedPatch.allowGlobalRotation)
+    if (normalizedPatch.allowGlobalMirror !== undefined)
+      settings.setAllowGlobalMirror(normalizedPatch.allowGlobalMirror)
+    if (normalizedPatch.workerMode !== undefined)
+      settings.setWorkerMode(normalizedPatch.workerMode)
+    if (normalizedPatch.timeoutMs !== undefined) settings.setTimeoutMs(normalizedPatch.timeoutMs)
+    if (normalizedPatch.irregularSettings !== undefined)
+      settings.setIrregularSettings(normalizedPatch.irregularSettings)
+    if (normalizedPatch.historyMode !== undefined)
+      settings.setHistoryMode(normalizedPatch.historyMode)
+    if (normalizedPatch.strategySelectionMode !== undefined)
+      settings.setStrategySelectionMode(normalizedPatch.strategySelectionMode)
+    if (normalizedPatch.layoutSelectionStrategyId !== undefined)
+      settings.setLayoutSelectionStrategyId(normalizedPatch.layoutSelectionStrategyId)
+    if (normalizedPatch.finalSelectionMode !== undefined)
+      settings.setFinalSelectionMode(normalizedPatch.finalSelectionMode)
+    if (normalizedPatch.topN !== undefined) settings.setTopN(normalizedPatch.topN)
   }
 }
 
@@ -148,9 +159,6 @@ function selectWorkerMode(workerMode: NestingOptions['workerMode']): void {
     workerMode,
     ...(needsIrregularSettings
       ? { irregularSettings: makeDefaultIrregularNestingSettings() }
-      : {}),
-    ...(workerMode === IRREGULAR_WORKER_MODE
-      ? { timeoutMs: workerTimeoutForMode(workerMode, model.value.options.timeoutMs) }
       : {})
   })
 }
@@ -301,7 +309,7 @@ function setLayoutSelectionStrategyId(event: Event): void {
         Timeout (ms)
         <input
           type="number"
-          min="1000"
+          :min="timeoutMinimumMs"
           step="1000"
           :value="model.options.timeoutMs"
           @input="updateOptions({ timeoutMs: Number(inputValue($event)) })"
