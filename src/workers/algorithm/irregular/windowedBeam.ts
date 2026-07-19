@@ -1631,9 +1631,10 @@ function makeIntrinsicCandidateSheet(
     const ys = points.map(({ y }) => y)
     return total + Math.max(...xs) - Math.min(...xs) + Math.max(...ys) - Math.min(...ys)
   }, 0)
+  const integerSide = Math.max(1, Math.ceil(side))
   return new SheetSpec({
-    width: Math.max(1, side),
-    height: Math.max(1, side),
+    width: integerSide,
+    height: integerSide,
     label: 'intrinsic candidate plane'
   })
 }
