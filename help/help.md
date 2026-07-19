@@ -1929,6 +1929,18 @@ would falsify each one, and identify the smallest safe production experiment.
   the pure-growth leader. This bounded band targets protruding chains without
   letting contact buy a large envelope regression. Order diversity, GA,
   periodic cells, small-fill, and LNS remain deferred until E1b is classified.
+- Rejected E1b at `ebe6396` as exactly inert. All four sheets retain the same E1
+  hash and every metric remains unchanged: area `418,956.352 mm2`, maximum side
+  `649.972 mm`, hull-gap `0.224149`, contacts `21/4`, and certificate deficit
+  `2.207443`. The useful cohesive alternatives are therefore not reachable
+  inside an exact maximum-side tie plus the piece-scaled `2%` area band. Do not
+  widen that band as a tuning response.
+- The next independent variable is E2: a small explicit family-level order and
+  orientation portfolio over the unchanged sheetless strict decoder. This is
+  the transferable Deepnest/SVGnest split—outer order/rotation diversity around
+  a deterministic absolute-geometry decoder—without enabling the legacy GA or
+  its sheet-relative terminal comparator. Periodic cells and large-first exact
+  cavity fill remain later roles unless E2 proves order diversity insufficient.
 
 ### 2026-07-19 (canonical reference decode handoff)
 
