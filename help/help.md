@@ -2082,24 +2082,42 @@ would falsify each one, and identify the smallest safe production experiment.
   `8ae3d9644aa302347fdcf1be47988617f1f64f7082d5e9961c6aec436848ff64`;
   Mixed-61 report SHA-256 is
   `c29a09b5061f3549b662cc0e6c67c2b41691193469383482a5eb2a449ef5d121`.
-- The trace identifies an under-iterated sequential separator rather than a
-  budget, deadline, wall-conflict, GLS, retention, or acceptance failure. Five
-  of six final sweeps strictly lower raw loss; one Mixed ratio is effectively
-  flat and one correctly retains its prior raw winner after generating a worse
-  child. All attempts stop only at the four-sweep allocation, with 12-17 pair
-  conflicts and zero wall conflicts still spread across 12-16 pieces. A
-  depth-four winning lineage has moved only 2-4 distinct pieces because each
-  focused child changes one piece.
-- The next isolated experiment is V6.1 adaptive pressure depth: keep the same
-  contraction ratios, focused proposals, GLS, pool width/retention, acceptance,
-  evaluation cap, and deadline; permit at most eight sweeps per attempt and,
-  after the mandatory first four, stop after two consecutive sweeps that do not
-  lower best-so-far raw loss. This is the smallest test of whether the current
-  movement vocabulary can reach exact zero. If every ratio plateaus above zero,
-  the next registered direction is broader conflicted-piece coverage: first
-  all-collider fanout, then a Sparrow-style sequential all-collider pass if
-  unchanged retention re-narrows that fanout. V6K remains parked until this
-  pressure-depth/coverage sequence is falsified.
+- Run 02 initially localized the failure to insufficient one-piece lineage
+  depth rather than budget, deadline, wall conflicts, GLS, retention, or the
+  acceptance gate. V6.1 then tested that diagnosis directly by extending each
+  attempt from four to at most eight sweeps with a preregistered adaptive stop.
+  No Triangle-20 or Mixed-61 ratio reached an exact endpoint. The generated-best
+  lineages still touched only 3 Triangle pieces and 3-5 Mixed pieces while
+  12-17 pieces remained conflicted. Mixed `1/20` reduced raw loss from
+  `0.547864693` to `0.515495389` while pair conflicts increased from 17 to 18;
+  Mixed `1/40` regenerated the same worse child for sweeps 4-6. The separator is
+  therefore not merely under-iterated: the one-leader, one-piece vocabulary
+  redistributes penetration depth without coordinating conflict removal.
+- Rejected V6.1 adaptive depth as a sufficient mechanism, while retaining its
+  trace and stopping logic as valid diagnostics. Its Triangle report SHA-256 is
+  `95029fb607380de45ab7e0b7eb89c870f569d1e9f0aa9b6f256d3fa435949a9f`;
+  Mixed-61 report SHA-256 is
+  `7e957dc21e22604d2dcff51d8ea53e585e75a4526371daa6cade8cbdf2a9077b`.
+  Both selected results remain exact E1 fallbacks, so neither projection nor
+  pressure acceptance has yet been exercised.
+- Terra, Sol, and Kimi independently selected the same next boundary after
+  reviewing the V6.1 traces and Sparrow's separator: a deterministic sequential
+  all-collider composite pass. All-collider sibling fanout is skipped because it
+  still emits isolated one-piece children and immediately compresses at most
+  15-17 leader families into a width-eight pool; it cannot prove cooperative
+  composition and a failure would remain confounded by retention.
+- Preregistered V6.2 to freeze every start-of-pass collider in intrinsic
+  priority order, visit each once, recompute conflicts after every committed
+  weighted-nonworsening move, and emit one completed composite child per pool
+  parent before unchanged retention. It changes only the contracted-pressure
+  child generator, uses four composite passes, and keeps ratios, proposals, GLS
+  boundaries, pool width, caps, projection, acceptance, terminal comparison,
+  E1 fallback, and production paths unchanged. The mechanism must produce a
+  distinct exact pressure endpoint with negative dispersion delta on both
+  fixtures; positive-loss descent is diagnostic only. The immutable
+  preregistration is
+  `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration-v6.2-sequential-all-collider-composite.md`
+  (`9304fc38e9e71831a9050547366a937973c3b64940f2fef2e92bd3866a8f530b`).
 - Preserve Kimi's alternative static-shrink design as V6K, but do not implement
   it concurrently with V6. If adaptive pressure fails before projection, V6K
   replaces the current roles with aspect-preserving `1.000`, `0.925`, and
