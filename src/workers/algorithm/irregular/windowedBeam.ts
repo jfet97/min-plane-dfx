@@ -1,6 +1,6 @@
 import { Data, Effect, Order } from 'effect'
 import type { PieceId } from '@shared/domain/ids.js'
-import type { SheetSpec } from '@shared/domain/nesting.js'
+import { SheetSpec } from '@shared/domain/nesting.js'
 import {
   IrregularPlacement,
   IrregularPlacementCandidate,
@@ -26,7 +26,8 @@ import {
   EDGE_CONTACT_THEN_BALANCED_COMPACTNESS_POLICY_ID,
   IrregularPlacementScorer,
   IrregularPlacementScoringError,
-  IrregularPlacementScore
+  IrregularPlacementScore,
+  SHORT_SIDE_FILL_POLICY_ID
 } from './irregularPlacementScorer.js'
 import {
   deriveRawOccupiedHullWasteRatio,
@@ -237,6 +238,11 @@ export function runWindowedIrregularBeam(input: {
       settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth
     const localRepairBudget = settings.optimizer.localRepairBudget ?? 0
     const protectedDiversityEnabled = false
+    const selectedPolicyId = input.options?.policyId ?? placementScorer.policyId
+    const candidateSheet =
+      selectedPolicyId === SHORT_SIDE_FILL_POLICY_ID
+        ? input.sheet
+        : makeIntrinsicCandidateSheet(input.pieces)
     const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
     const stateKey = (state: IrregularBeamState): string =>
       beamStateKey(state, input.options?.transformPreferences)
@@ -342,7 +348,7 @@ export function runWindowedIrregularBeam(input: {
         for (const [pieceIndex, piece] of eligiblePieces.entries()) {
           yield* controlCheckpoint(input.control, controlState)
           const localCandidates = yield* collectLocalCandidates({
-            sheet: input.sheet,
+            sheet: candidateSheet,
             settings,
             state,
             piece,
@@ -372,8 +378,13 @@ export function runWindowedIrregularBeam(input: {
           )
           for (const candidate of selected.production) {
             yield* controlCheckpoint(input.control, controlState)
+            const successor = applyPlacement(state, pieceIndex, piece, candidate)
+              .withBottomLeftAnchored()
+            if (successor === undefined || !stateFitsSheetInQuarterTurn(successor, input.sheet)) {
+              continue
+            }
             legalSuccessors.push({
-              state: applyPlacement(state, pieceIndex, piece, candidate),
+              state: successor,
               isIncumbent,
               eligibleForProductionLane,
               eligibleForProtectedLane,
@@ -1608,6 +1619,32 @@ function removeAt<A>(values: ReadonlyArray<A>, index: number): ReadonlyArray<A> 
 
 function preparedPieceId(piece: IrregularPreparedPiece): PieceId {
   return piece.pieceId ?? piece.source.id
+}
+
+function makeIntrinsicCandidateSheet(
+  pieces: ReadonlyArray<IrregularPreparedPiece>
+): SheetSpec {
+  const side = pieces.reduce((total, piece) => {
+    const points = piece.collisionGeometry.collisionPolygon.points
+    if (points.length === 0) return total
+    const xs = points.map(({ x }) => x)
+    const ys = points.map(({ y }) => y)
+    return total + Math.max(...xs) - Math.min(...xs) + Math.max(...ys) - Math.min(...ys)
+  }, 0)
+  return new SheetSpec({
+    width: Math.max(1, side),
+    height: Math.max(1, side),
+    label: 'intrinsic candidate plane'
+  })
+}
+
+function stateFitsSheetInQuarterTurn(state: IrregularBeamState, sheet: SheetSpec): boolean {
+  const bounds = state.translatedCollisionBounds
+  if (bounds === undefined) return true
+  return (
+    (bounds.width <= sheet.width && bounds.height <= sheet.height) ||
+    (bounds.height <= sheet.width && bounds.width <= sheet.height)
+  )
 }
 
 function orderedTransforms(

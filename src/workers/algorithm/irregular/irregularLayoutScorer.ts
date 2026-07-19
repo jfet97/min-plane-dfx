@@ -523,14 +523,6 @@ const strictLayoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineA
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactBand),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactUnits),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryLengthMm),
-  scoreCriterion((score) => score.collisionBoundsBottomMm),
-  scoreCriterion((score) => score.collisionBoundsLeftMm),
-  // free area is almost constant when every placed polygon remains inside one sheet region
-  // so compact bounds and symmetric lower-left anchoring decide before material diagnostics
-  descendingScoreCriterion((score) => score.largestNetFreeMaterialRegionAreaMm2),
-  scoreCriterion((score) => score.freeMaterialRegionCount),
-  scoreCriterion((score) => score.freeMaterialHoleCount),
-  scoreCriterion((score) => score.freeMaterialSliverMetric),
   Order.mapInput(Order.Array(Order.String), (score) => score.placementOrder),
   Order.mapInput(Order.Array(Order.String), (score) => score.unplacedSourcePieceIds)
 ])
@@ -548,12 +540,6 @@ const scaleAwareLayoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.comb
   descendingScoreCriterion((score) => score.nearCompleteStructuralContactCount),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactUnits),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryLengthMm),
-  scoreCriterion((score) => score.collisionBoundsBottomMm),
-  scoreCriterion((score) => score.collisionBoundsLeftMm),
-  descendingScoreCriterion((score) => score.largestNetFreeMaterialRegionAreaMm2),
-  scoreCriterion((score) => score.freeMaterialRegionCount),
-  scoreCriterion((score) => score.freeMaterialHoleCount),
-  scoreCriterion((score) => score.freeMaterialSliverMetric),
   Order.mapInput(Order.Array(Order.String), (score) => score.placementOrder),
   Order.mapInput(Order.Array(Order.String), (score) => score.unplacedSourcePieceIds)
 ])

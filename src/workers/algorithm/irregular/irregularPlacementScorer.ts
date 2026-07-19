@@ -107,8 +107,6 @@ const intrinsicEnvelopeOrder = Order.combineAll<IrregularPlacementScore>([
 ])
 
 const deterministicLocalTieBreakOrder = Order.combineAll<IrregularPlacementScore>([
-  Order.mapInput(Order.Number, (score) => score.candidateBottomMm),
-  Order.mapInput(Order.Number, (score) => score.candidateLeftMm),
   Order.mapInput(Order.Number, (score) => score.candidate.transform.index),
   Order.mapInput(Order.Number, (score) => score.candidate.transform.rotationDeg),
   Order.mapInput(Order.Boolean, (score) => score.candidate.transform.mirrored),
