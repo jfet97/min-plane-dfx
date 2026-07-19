@@ -6,7 +6,11 @@ import {
   IrregularTransform
 } from '@shared/irregular/domain.js'
 import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
-import { analyzeCanonicalLayoutStructure } from '../../irregular/canonicalLayoutGeometry.js'
+import {
+  analyzeCanonicalLayoutStructure,
+  measureCanonicalEnclosedCavities,
+  measureCanonicalLayoutTopology
+} from '../../irregular/canonicalLayoutGeometry.js'
 import type {
   IntrinsicFiniteTransform,
   IntrinsicTargetBox,
@@ -70,6 +74,8 @@ interface GridPolygon {
   readonly points: ReadonlyArray<GridPoint>
   readonly center: GridPoint
   readonly characteristicLength: number
+  readonly maximumSide: number
+  readonly areaGrid2: number
 }
 
 interface ResolvedPose {
@@ -294,39 +300,72 @@ export function intrinsicProjectionPriority(
     .map(({ pose }) => pose.pieceId)
 }
 
-/** Selects catalog-supported q90 transform families while preserving world centers. */
+/** Applies one rigid q90 turn to the complete world layout using equivalent catalog geometry. */
 export function remapIntrinsicTransformsQuarterTurn(
   catalog: IntrinsicTransformCatalog,
   state: IntrinsicRelaxedState
 ): IntrinsicRelaxedState | undefined {
-  const replacements: IntrinsicRelaxedPose[] = []
-  for (const pose of state.poses) {
-    const entry = catalog.entries.find(({ pieceId }) => pieceId === pose.pieceId)
-    const current = entry?.transforms.find(
-      ({ canonicalTransformKey }) => canonicalTransformKey === pose.transformKey
-    )
-    const center = poseWorldCenter(catalog, pose)
-    if (entry === undefined || current === undefined || center === undefined) return undefined
-    const desiredRotation = normalizedRotationDeg(current.transform.rotationDeg + 90)
-    const alternate = entry.transforms.find(
-      ({ transform }) =>
-        normalizedRotationDeg(transform.rotationDeg) === desiredRotation &&
-        transform.mirrored === current.transform.mirrored
-    )
-    if (alternate === undefined) {
-      replacements.push(pose)
-      continue
+  const resolved = resolveState(catalog, state)
+  if (resolved === undefined) return undefined
+  const rotatedById = new Map<PieceId, ReadonlyArray<GridPoint>>()
+  let globalMinimumX = Number.POSITIVE_INFINITY
+  let globalMinimumY = Number.POSITIVE_INFINITY
+  for (const entry of resolved) {
+    const rotated = entry.polygon.points.map(({ x, y }) => ({ x: -y, y: x }))
+    rotatedById.set(entry.pose.pieceId, rotated)
+    for (const point of rotated) {
+      globalMinimumX = Math.min(globalMinimumX, point.x)
+      globalMinimumY = Math.min(globalMinimumY, point.y)
     }
-    const localCenter = finiteTransformLocalCenter(alternate)
-    if (localCenter === undefined) return undefined
+  }
+  if (!Number.isSafeInteger(globalMinimumX) || !Number.isSafeInteger(globalMinimumY)) {
+    return undefined
+  }
+  const replacements: IntrinsicRelaxedPose[] = []
+  for (const entry of catalog.entries) {
+    const rotated = rotatedById.get(entry.pieceId)?.map(({ x, y }) => ({
+      x: x - globalMinimumX,
+      y: y - globalMinimumY
+    }))
+    if (rotated === undefined) return undefined
+    const desiredLocalKey = translationNormalizedPointSetKey(rotated)
+    if (desiredLocalKey === undefined) return undefined
+    const alternate = entry.transforms.find((finiteTransform) => {
+      const points = finiteTransformGridLocalPoints(finiteTransform)
+      return points !== undefined && translationNormalizedPointSetKey(points) === desiredLocalKey
+    })
+    const alternatePoints =
+      alternate === undefined ? undefined : finiteTransformGridLocalPoints(alternate)
+    const rotatedBounds = polygonBounds(rotated)
+    const alternateBounds = alternatePoints === undefined ? undefined : polygonBounds(alternatePoints)
+    if (alternate === undefined || rotatedBounds === undefined || alternateBounds === undefined) {
+      return undefined
+    }
+    const translateXGrid = rotatedBounds.minimumX - alternateBounds.minimumX
+    const translateYGrid = rotatedBounds.minimumY - alternateBounds.minimumY
+    if (!Number.isSafeInteger(translateXGrid) || !Number.isSafeInteger(translateYGrid)) {
+      return undefined
+    }
     replacements.push({
-      pieceId: pose.pieceId,
+      pieceId: entry.pieceId,
       transformKey: alternate.canonicalTransformKey,
-      translateXGrid: Math.round(center.x - localCenter.x),
-      translateYGrid: Math.round(center.y - localCenter.y)
+      translateXGrid,
+      translateYGrid
     })
   }
-  return canonicalizeRelaxedState(catalog, { poses: replacements })
+  const remapped = canonicalizeRelaxedState(catalog, { poses: replacements })
+  const remappedResolved = remapped === undefined ? undefined : resolveState(catalog, remapped)
+  if (remappedResolved === undefined) return undefined
+  for (const entry of remappedResolved) {
+    const expected = rotatedById.get(entry.pose.pieceId)?.map(({ x, y }) => ({
+      x: x - globalMinimumX,
+      y: y - globalMinimumY
+    }))
+    if (expected === undefined || pointSetKey(entry.polygon.points) !== pointSetKey(expected)) {
+      return undefined
+    }
+  }
+  return remapped
 }
 
 /** Finite deterministic separation and transform proposals for one selected conflict. */
@@ -489,36 +528,40 @@ export function intrinsicDisruptionProposals(input: {
   readonly catalog: IntrinsicTransformCatalog
   readonly state: IntrinsicRelaxedState
   readonly ordinal: number
+  readonly interfaceDisruptionStagnated?: boolean
 }): ReadonlyArray<IntrinsicSeparatorProposal> {
   const resolved = resolveState(input.catalog, input.state)
   if (resolved === undefined || resolved.length < 2) return []
   const ranked = resolved.toSorted(
     (first, second) =>
-      second.polygon.characteristicLength - first.polygon.characteristicLength ||
+      second.polygon.areaGrid2 - first.polygon.areaGrid2 ||
+      second.polygon.maximumSide - first.polygon.maximumSide ||
       first.pose.pieceId.localeCompare(second.pose.pieceId)
   )
   const first = ranked[0]
-  const second = ranked.find(
+  const distinctMate = ranked.find(
     (candidate) =>
       candidate.pose.pieceId !== first?.pose.pieceId &&
-      candidate.finiteTransform.canonicalLocalGeometryKey !==
-        first?.finiteTransform.canonicalLocalGeometryKey
-  ) ?? ranked[1]
-  if (first === undefined || second === undefined) return []
-  const proposals: IntrinsicSeparatorProposal[] = []
-  const swapped = swapIntrinsicWorldCenters(
-    input.catalog,
-    input.state,
-    first.pose.pieceId,
-    second.pose.pieceId
+      baseCollisionFamilyKey(candidate.catalogEntry) !==
+        (first === undefined ? undefined : baseCollisionFamilyKey(first.catalogEntry))
   )
-  if (swapped !== undefined) {
-    proposals.push({
-      kind: 'swap',
-      state: swapped,
-      affectedPieceIds: [first.pose.pieceId, second.pose.pieceId],
-      key: `swap:${first.pose.pieceId}:${second.pose.pieceId}`
-    })
+  if (first === undefined) return []
+  const proposals: IntrinsicSeparatorProposal[] = []
+  if (distinctMate !== undefined) {
+    const swapped = swapIntrinsicWorldCenters(
+      input.catalog,
+      input.state,
+      first.pose.pieceId,
+      distinctMate.pose.pieceId
+    )
+    if (swapped !== undefined) {
+      proposals.push({
+        kind: 'swap',
+        state: swapped,
+        affectedPieceIds: [first.pose.pieceId, distinctMate.pose.pieceId],
+        key: `swap:${first.pose.pieceId}:${distinctMate.pose.pieceId}`
+      })
+    }
   }
   const satellites = ranked
     .filter(({ pose }) => pose.pieceId !== first.pose.pieceId)
@@ -595,6 +638,7 @@ function gapInterfaceProposal(input: {
   readonly targetBox: IntrinsicTargetBox
   readonly catalog: IntrinsicTransformCatalog
   readonly state: IntrinsicRelaxedState
+  readonly interfaceDisruptionStagnated?: boolean
 }): IntrinsicSeparatorProposal | undefined {
   const provisional = provisionalLayoutFromRelaxedState(input.catalog, input.state)
   if (provisional === undefined) return undefined
@@ -604,9 +648,13 @@ function gapInterfaceProposal(input: {
     label: 'intrinsic-private-gap-interface'
   })
   const structure = analyzeCanonicalLayoutStructure(sheet, provisional)
+  const topology = measureCanonicalLayoutTopology(provisional)
+  const cavities = measureCanonicalEnclosedCavities(provisional)
   const gap = structure?.largestHullGap
   if (
     structure === undefined ||
+    topology === undefined ||
+    cavities === undefined ||
     gap === undefined ||
     !assertIntrinsicTargetExactLegal(input.targetBox, provisional) ||
     structure.positiveAreaConflicts.length > 0 ||
@@ -614,25 +662,26 @@ function gapInterfaceProposal(input: {
   ) {
     return undefined
   }
+  const structurallyPoor =
+    topology.largestOccupiedHullGapRatio > 0.15 || cavities.count > 2
+  if (!structurallyPoor && input.interfaceDisruptionStagnated !== true) return undefined
   const gapCenter = {
     x: (gap.aabb.minX + gap.aabb.maxX) / 2,
     y: (gap.aabb.minY + gap.aabb.maxY) / 2
   }
-  const adjacent = structure.pieces.toSorted((first, second) => {
-    const firstCenter = {
-      x: (first.aabb.minX + first.aabb.maxX) / 2,
-      y: (first.aabb.minY + first.aabb.maxY) / 2
-    }
-    const secondCenter = {
-      x: (second.aabb.minX + second.aabb.maxX) / 2,
-      y: (second.aabb.minY + second.aabb.maxY) / 2
-    }
-    return (
-      squaredDistance(firstCenter, gapCenter) - squaredDistance(secondCenter, gapCenter) ||
-      first.pieceId.localeCompare(second.pieceId)
-    )
-  })[0]
-  const pose = input.state.poses.find(({ pieceId }) => pieceId === adjacent?.pieceId)
+  const gapPath = gap.path.map(({ x, y }) => ({ x: toGridMm(x), y: toGridMm(y) }))
+  if (gapPath.some(({ x, y }) => x === undefined || y === undefined)) return undefined
+  const exactGapPath = gapPath.filter(
+    (point): point is GridPoint => point.x !== undefined && point.y !== undefined
+  )
+  const resolved = resolveState(input.catalog, input.state)
+  const adjacent = resolved?.toSorted(
+    (first, second) =>
+      polygonBoundaryDistanceSquared(first.polygon.points, exactGapPath) -
+        polygonBoundaryDistanceSquared(second.polygon.points, exactGapPath) ||
+      first.pose.pieceId.localeCompare(second.pose.pieceId)
+  )[0]
+  const pose = input.state.poses.find(({ pieceId }) => pieceId === adjacent?.pose.pieceId)
   const center = pose === undefined ? undefined : poseWorldCenter(input.catalog, pose)
   if (pose === undefined || center === undefined) return undefined
   const delta = {
@@ -744,9 +793,23 @@ function gridPolygon(
   const complete = points.filter((point): point is GridPoint => point !== undefined)
   const center = polygonCenter(complete)
   const characteristicLength = polygonCharacteristicLength(complete)
-  return center === undefined || characteristicLength === undefined
+  const bounds = polygonBounds(complete)
+  const areaGrid2 = polygonAreaGrid2(complete)
+  return center === undefined ||
+    characteristicLength === undefined ||
+    bounds === undefined ||
+    areaGrid2 === undefined
     ? undefined
-    : { points: complete, center, characteristicLength }
+    : {
+        points: complete,
+        center,
+        characteristicLength,
+        maximumSide: Math.max(
+          bounds.maximumX - bounds.minimumX,
+          bounds.maximumY - bounds.minimumY
+        ),
+        areaGrid2
+      }
 }
 
 function satPenetration(first: GridPolygon, second: GridPolygon): SatPenetration | undefined {
@@ -912,6 +975,52 @@ function finiteTransformLocalCenter(
   return polygonCenter(complete)
 }
 
+function finiteTransformGridLocalPoints(
+  finiteTransform: IntrinsicFiniteTransform
+): ReadonlyArray<GridPoint> | undefined {
+  const points = finiteTransform.geometry.polygon.points.map(({ x, y }) => ({
+    x: toGridMm(x),
+    y: toGridMm(y)
+  }))
+  if (points.some(({ x, y }) => x === undefined || y === undefined)) return undefined
+  return points.filter(
+    (point): point is GridPoint => point.x !== undefined && point.y !== undefined
+  )
+}
+
+function baseCollisionFamilyKey(
+  entry: IntrinsicTransformCatalogEntry
+): string | undefined {
+  const points = entry.preparedPiece.collisionGeometry.collisionPolygon.points.map(({ x, y }) => ({
+    x: toGridMm(x),
+    y: toGridMm(y)
+  }))
+  if (points.some(({ x, y }) => x === undefined || y === undefined)) return undefined
+  const complete = points.filter(
+    (point): point is GridPoint => point.x !== undefined && point.y !== undefined
+  )
+  return translationNormalizedPointSetKey(complete)
+}
+
+function translationNormalizedPointSetKey(points: ReadonlyArray<GridPoint>): string | undefined {
+  const bounds = polygonBounds(points)
+  return bounds === undefined
+    ? undefined
+    : pointSetKey(
+        points.map(({ x, y }) => ({
+          x: x - bounds.minimumX,
+          y: y - bounds.minimumY
+        }))
+      )
+}
+
+function pointSetKey(points: ReadonlyArray<GridPoint>): string {
+  return points
+    .map(({ x, y }) => `${x}:${y}`)
+    .toSorted()
+    .join('|')
+}
+
 function polygonCenter(points: ReadonlyArray<GridPoint>): GridPoint | undefined {
   if (points.length === 0) return undefined
   const bounds = polygonBounds(points)
@@ -927,6 +1036,119 @@ function polygonCharacteristicLength(points: ReadonlyArray<GridPoint>): number |
   const height = bounds.maximumY - bounds.minimumY
   const value = Math.max(1, Math.min(width, height) || Math.max(width, height))
   return Number.isFinite(value) ? value : undefined
+}
+
+function polygonAreaGrid2(points: ReadonlyArray<GridPoint>): number | undefined {
+  if (points.length < 3) return undefined
+  let doubleArea = 0
+  for (let index = 0; index < points.length; index += 1) {
+    const current = points[index]
+    const next = points[(index + 1) % points.length]
+    if (current === undefined || next === undefined) return undefined
+    doubleArea += current.x * next.y - next.x * current.y
+  }
+  const area = Math.abs(doubleArea) / 2
+  return Number.isFinite(area) ? area : undefined
+}
+
+function polygonBoundaryDistanceSquared(
+  first: ReadonlyArray<GridPoint>,
+  second: ReadonlyArray<GridPoint>
+): number {
+  let minimum = Number.POSITIVE_INFINITY
+  for (let firstIndex = 0; firstIndex < first.length; firstIndex += 1) {
+    const firstStart = first[firstIndex]
+    const firstEnd = first[(firstIndex + 1) % first.length]
+    if (firstStart === undefined || firstEnd === undefined) continue
+    for (let secondIndex = 0; secondIndex < second.length; secondIndex += 1) {
+      const secondStart = second[secondIndex]
+      const secondEnd = second[(secondIndex + 1) % second.length]
+      if (secondStart === undefined || secondEnd === undefined) continue
+      minimum = Math.min(
+        minimum,
+        segmentDistanceSquared(firstStart, firstEnd, secondStart, secondEnd)
+      )
+    }
+  }
+  return minimum
+}
+
+function segmentDistanceSquared(
+  firstStart: GridPoint,
+  firstEnd: GridPoint,
+  secondStart: GridPoint,
+  secondEnd: GridPoint
+): number {
+  if (gridSegmentsIntersect(firstStart, firstEnd, secondStart, secondEnd)) return 0
+  return Math.min(
+    pointSegmentDistanceSquared(firstStart, secondStart, secondEnd),
+    pointSegmentDistanceSquared(firstEnd, secondStart, secondEnd),
+    pointSegmentDistanceSquared(secondStart, firstStart, firstEnd),
+    pointSegmentDistanceSquared(secondEnd, firstStart, firstEnd)
+  )
+}
+
+function pointSegmentDistanceSquared(
+  point: GridPoint,
+  start: GridPoint,
+  end: GridPoint
+): number {
+  const deltaX = end.x - start.x
+  const deltaY = end.y - start.y
+  const denominator = deltaX * deltaX + deltaY * deltaY
+  if (denominator === 0) return squaredDistance(point, start)
+  const parameter = Math.max(
+    0,
+    Math.min(1, ((point.x - start.x) * deltaX + (point.y - start.y) * deltaY) / denominator)
+  )
+  return squaredDistance(point, {
+    x: start.x + parameter * deltaX,
+    y: start.y + parameter * deltaY
+  })
+}
+
+function gridSegmentsIntersect(
+  firstStart: GridPoint,
+  firstEnd: GridPoint,
+  secondStart: GridPoint,
+  secondEnd: GridPoint
+): boolean {
+  const firstSecondStart = gridOrientation(firstStart, firstEnd, secondStart)
+  const firstSecondEnd = gridOrientation(firstStart, firstEnd, secondEnd)
+  const secondFirstStart = gridOrientation(secondStart, secondEnd, firstStart)
+  const secondFirstEnd = gridOrientation(secondStart, secondEnd, firstEnd)
+  if (
+    oppositeBigIntSigns(firstSecondStart, firstSecondEnd) &&
+    oppositeBigIntSigns(secondFirstStart, secondFirstEnd)
+  ) {
+    return true
+  }
+  return (
+    (firstSecondStart === 0n && gridPointOnSegment(secondStart, firstStart, firstEnd)) ||
+    (firstSecondEnd === 0n && gridPointOnSegment(secondEnd, firstStart, firstEnd)) ||
+    (secondFirstStart === 0n && gridPointOnSegment(firstStart, secondStart, secondEnd)) ||
+    (secondFirstEnd === 0n && gridPointOnSegment(firstEnd, secondStart, secondEnd))
+  )
+}
+
+function gridOrientation(first: GridPoint, second: GridPoint, third: GridPoint): bigint {
+  return (
+    (BigInt(second.x) - BigInt(first.x)) * (BigInt(third.y) - BigInt(first.y)) -
+    (BigInt(second.y) - BigInt(first.y)) * (BigInt(third.x) - BigInt(first.x))
+  )
+}
+
+function oppositeBigIntSigns(first: bigint, second: bigint): boolean {
+  return (first < 0n && second > 0n) || (first > 0n && second < 0n)
+}
+
+function gridPointOnSegment(point: GridPoint, start: GridPoint, end: GridPoint): boolean {
+  return (
+    point.x >= Math.min(start.x, end.x) &&
+    point.x <= Math.max(start.x, end.x) &&
+    point.y >= Math.min(start.y, end.y) &&
+    point.y <= Math.max(start.y, end.y)
+  )
 }
 
 function polygonBounds(points: ReadonlyArray<GridPoint>):

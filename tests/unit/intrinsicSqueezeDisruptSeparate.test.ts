@@ -23,9 +23,11 @@ import {
   deriveIntrinsicGlobalTargetRoles,
   INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
   partitionIntrinsicStructuralPieces,
+  retainIntrinsicInfeasiblePool,
   retainIntrinsicStructuralHandoffs,
   runIntrinsicSqueezeDisruptSeparateWithSchedule,
   type IntrinsicGlobalSearchSchedule,
+  type IntrinsicInfeasiblePoolEntry,
   type IntrinsicStructuralHandoff
 } from '../../src/workers/algorithm/irregular/intrinsicSqueezeDisruptSeparate.js'
 import {
@@ -36,6 +38,7 @@ import {
   intrinsicRelaxedStateKey,
   provisionalLayoutFromRelaxedState,
   relaxedStateFromExactLayout,
+  remapIntrinsicTransformsQuarterTurn,
   transportIntrinsicGroup
 } from '../../src/workers/algorithm/irregular/intrinsicTransformSeparator.js'
 import {
@@ -253,6 +256,40 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       .toBe(proposals.length)
   })
 
+  it('builds q90 as one rigid world-layout turn and rejects unavailable asymmetric geometry', async () => {
+    const pieces = [
+      preparedRectangle('asymmetric', 4, 1, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('symmetric', 2, 2, [transform(0, 0)])
+    ]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'asymmetric'), 0, 3, 5),
+      placed(catalogEntry(catalog, 'symmetric'), 0, 10, 1)
+    ])
+    if (state === undefined) throw new Error('state expected')
+    const rotated = remapIntrinsicTransformsQuarterTurn(catalog, state)
+    if (rotated === undefined) throw new Error('rigid q90 expected')
+    const before = provisionalLayoutFromRelaxedState(catalog, state) ?? []
+    const after = provisionalLayoutFromRelaxedState(catalog, rotated) ?? []
+
+    expect(worldLayoutPointSet(after)).toEqual(rigidQ90WorldPointSet(before))
+    expect(
+      after.find(({ placement }) => placement.pieceId === PieceId.make('symmetric'))?.placement
+        .transform.rotationDeg
+    ).toBe(0)
+
+    const unavailablePieces = [preparedRectangle('only-zero', 4, 1, [transform(0, 0)])]
+    const unavailableCatalog = await catalogFor(unavailablePieces)
+    const unavailableState = relaxedStateFromExactLayout(unavailableCatalog, [
+      placed(catalogEntry(unavailableCatalog, 'only-zero'), 0, 0, 0)
+    ])
+    expect(
+      unavailableState === undefined
+        ? undefined
+        : remapIntrinsicTransformsQuarterTurn(unavailableCatalog, unavailableState)
+    ).toBeUndefined()
+  })
+
   it('uses GLS weights to change the conflict selected for focused proposals', async () => {
     const pieces = [preparedRectangle('left', 2, 2), preparedRectangle('right', 2, 2)]
     const catalog = await catalogFor(pieces)
@@ -324,14 +361,14 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
 
   it('prefers a structurally distinct large swap and adds a split squeeze', async () => {
     const pieces = [
-      preparedRectangle('large-a', 10, 10),
-      preparedRectangle('large-copy', 10, 10),
-      preparedRectangle('distinct', 9, 5)
+      preparedRectangle('large-a', 10, 5, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('large-copy', 10, 5, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('distinct', 9, 4)
     ]
     const catalog = await catalogFor(pieces)
     const state = relaxedStateFromExactLayout(catalog, [
       placed(catalogEntry(catalog, 'large-a'), 0, 0, 0),
-      placed(catalogEntry(catalog, 'large-copy'), 0, 20, 0),
+      placed(catalogEntry(catalog, 'large-copy'), 90, 20, 0),
       placed(catalogEntry(catalog, 'distinct'), 0, 45, 0)
     ])
     if (state === undefined) throw new Error('state expected')
@@ -352,6 +389,25 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       provisionalLayoutFromRelaxedState(catalog, squeeze.state) ?? []
     )
     expect(squeezedSpan.width).toBeLessThan(originalSpan.width)
+
+    const identicalPieces = [
+      preparedRectangle('copy-a', 10, 5, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('copy-b', 10, 5, [transform(0, 0), transform(1, 90)])
+    ]
+    const identicalCatalog = await catalogFor(identicalPieces)
+    const identicalState = relaxedStateFromExactLayout(identicalCatalog, [
+      placed(catalogEntry(identicalCatalog, 'copy-a'), 0, 0, 0),
+      placed(catalogEntry(identicalCatalog, 'copy-b'), 90, 20, 0)
+    ])
+    if (identicalState === undefined) throw new Error('identical state expected')
+    expect(
+      intrinsicDisruptionProposals({
+        targetBox: { widthMm: 50, heightMm: 20 },
+        catalog: identicalCatalog,
+        state: identicalState,
+        ordinal: 4
+      }).some(({ kind }) => kind === 'swap')
+    ).toBe(false)
   })
 
   it('targets a gap-adjacent piece for exact-state interface disruption', async () => {
@@ -378,7 +434,7 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     }).find(({ kind }) => kind === 'interface-disrupt')
 
     expect(proposal).toBeDefined()
-    expect(proposal?.affectedPieceIds).not.toEqual([PieceId.make('far')])
+    expect(proposal?.affectedPieceIds).toEqual([PieceId.make('left')])
     expect(intrinsicRelaxedStateKey(catalog, proposal?.state ?? state)).not.toBe(
       intrinsicRelaxedStateKey(catalog, state)
     )
@@ -427,6 +483,40 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     ).toEqual(['tradeoff', 'first'])
   })
 
+  it('protects forced disruption and newly weighted GLS lanes inside width eight', async () => {
+    const pieces = [preparedRectangle('a', 1, 1), preparedRectangle('b', 1, 1)]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 2, 0)
+    ])
+    if (state === undefined) throw new Error('state expected')
+    const hot = poolEntry(state, 'raw-hot', 1, 'hot', 1, undefined)
+    const weightedAlternative = poolEntry(state, 'weighted-alternative', 1.2, 'cold', 1.2, undefined)
+    const disruption = poolEntry(state, 'forced-disruption', 10, 'other', 10, 1)
+    const retained = retainIntrinsicInfeasiblePool(
+      [hot, weightedAlternative, disruption],
+      8,
+      { byConflictKey: new Map([['hot', 100]]) },
+      0
+    )
+
+    expect(retained[0]?.key).toBe('raw-hot')
+    expect(retained.some(({ key }) => key === 'weighted-alternative')).toBe(true)
+    expect(retained.some(({ key }) => key === 'forced-disruption')).toBe(true)
+    expect(
+      retained.find(({ key }) => key === 'raw-hot')?.evaluation.weightedLoss
+    ).toBe(100)
+    expect(
+      retainIntrinsicInfeasiblePool(
+        [hot, weightedAlternative, disruption],
+        2,
+        { byConflictKey: new Map() },
+        2
+      ).some(({ key }) => key === 'forced-disruption')
+    ).toBe(false)
+  })
+
   it('returns exact E1 on an incomplete budget and propagates cancellation before projection', async () => {
     const pieces = [
       preparedRectangle('a', 2, 1, [transform(0, 0), transform(1, 90)]),
@@ -440,13 +530,14 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     const fallback = await runController(
       pieces,
       e1,
-      schedule({ maximumSeparationEvaluations: 1 }),
+      schedule({ maximumSeparationEvaluations: 0 }),
       ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced))
     )
 
     expect(fallback.status).toBe('budget-fallback')
     expect(fallback.fullE1Fallback).toEqual(e1)
     expect(fallback.structuralHandoffs).toEqual([])
+    expect(fallback.separationEvaluationCount).toBe(0)
 
     await expect(
       runController(
@@ -460,6 +551,24 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
               new IrregularNfpIfpControlAbortError({
                 reason: 'cancelled',
                 message: 'cancelled by test'
+              })
+            )
+        }
+      )
+    ).rejects.toMatchObject({ _tag: 'IrregularNfpIfpControlAbortError', reason: 'cancelled' })
+
+    await expect(
+      runController(
+        pieces,
+        e1,
+        schedule({ maximumRuntimeMs: 0 }),
+        ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced)),
+        {
+          checkpoint: () =>
+            Effect.fail(
+              new IrregularNfpIfpControlAbortError({
+                reason: 'cancelled',
+                message: 'simultaneous cancellation wins'
               })
             )
         }
@@ -573,6 +682,71 @@ function occupiedSpan(placedEntries: ReadonlyArray<IrregularPlacedPiece>) {
   return {
     width: Math.max(...points.map(({ x }) => x)) - Math.min(...points.map(({ x }) => x)),
     height: Math.max(...points.map(({ y }) => y)) - Math.min(...points.map(({ y }) => y))
+  }
+}
+
+function worldLayoutPointSet(
+  placedEntries: ReadonlyArray<IrregularPlacedPiece>
+): ReadonlyArray<string> {
+  return placedEntries
+    .flatMap((entry) =>
+      entry.collisionGeometry.polygon.points.map((point) => ({
+        pieceId: entry.placement.pieceId ?? entry.placement.sourcePieceId,
+        x: Math.round((point.x + entry.placement.transform.translateX) * 1_000),
+        y: Math.round((point.y + entry.placement.transform.translateY) * 1_000)
+      }))
+    )
+    .map(({ pieceId, x, y }) => `${pieceId}:${x}:${y}`)
+    .toSorted()
+}
+
+function rigidQ90WorldPointSet(
+  placedEntries: ReadonlyArray<IrregularPlacedPiece>
+): ReadonlyArray<string> {
+  const rotated = placedEntries.flatMap((entry) =>
+    entry.collisionGeometry.polygon.points.map((point) => ({
+      pieceId: entry.placement.pieceId ?? entry.placement.sourcePieceId,
+      x: -Math.round((point.y + entry.placement.transform.translateY) * 1_000),
+      y: Math.round((point.x + entry.placement.transform.translateX) * 1_000)
+    }))
+  )
+  const minimumX = Math.min(...rotated.map(({ x }) => x))
+  const minimumY = Math.min(...rotated.map(({ y }) => y))
+  return rotated
+    .map(({ pieceId, x, y }) => `${pieceId}:${x - minimumX}:${y - minimumY}`)
+    .toSorted()
+}
+
+function poolEntry(
+  state: IntrinsicInfeasiblePoolEntry['state'],
+  key: string,
+  rawLoss: number,
+  conflictKey: string,
+  normalizedDepthSquared: number,
+  disruptionProtectedUntilSweep: number | undefined
+): IntrinsicInfeasiblePoolEntry {
+  const normalizedDepth = Math.sqrt(normalizedDepthSquared)
+  return {
+    state,
+    key,
+    disruptionProtectedUntilSweep,
+    evaluation: {
+      rawLoss,
+      weightedLoss: rawLoss,
+      exactZeroLoss: false,
+      conflicts: [
+        {
+          key: conflictKey,
+          kind: 'wall',
+          firstPieceId: PieceId.make('a'),
+          secondPieceId: undefined,
+          rawDepth: normalizedDepth,
+          normalizedDepth,
+          moveXGrid: 1,
+          moveYGrid: 0
+        }
+      ]
+    }
   }
 }
 

@@ -168,10 +168,11 @@ export interface IntrinsicGlobalSearchSchedule {
   readonly seed: number
 }
 
-interface PoolEntry {
+export interface IntrinsicInfeasiblePoolEntry {
   readonly state: IntrinsicRelaxedState
   readonly evaluation: IntrinsicSeparationEvaluation
   readonly key: string
+  readonly disruptionProtectedUntilSweep: number | undefined
 }
 
 interface ProjectionDependency {
@@ -358,6 +359,10 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
             'the q90 basin could not be expressed with catalog-supported transforms.'
           )
         }
+        if (separationEvaluationCount >= schedule.maximumSeparationEvaluations) {
+          scheduleStatus = 'budget-fallback'
+          break
+        }
         const initialEvaluation = evaluateIntrinsicSeparation(
           targetBox,
           catalog,
@@ -367,11 +372,12 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
           return yield* globalFailure('search', 'the initial separation loss was not finite.')
         }
         separationEvaluationCount += 1
-        let pool: ReadonlyArray<PoolEntry> = [
+        let pool: ReadonlyArray<IntrinsicInfeasiblePoolEntry> = [
           {
             state: basinState,
             evaluation: initialEvaluation,
-            key: intrinsicRelaxedStateKey(catalog, basinState) ?? ''
+            key: intrinsicRelaxedStateKey(catalog, basinState) ?? '',
+            disruptionProtectedUntilSweep: undefined
           }
         ]
         let weights: IntrinsicSeparatorWeights = { byConflictKey: new Map() }
@@ -381,7 +387,7 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
             scheduleStatus = 'deadline-fallback'
             break
           }
-          const candidates: PoolEntry[] = [...pool]
+          const candidates: IntrinsicInfeasiblePoolEntry[] = [...pool]
           let proposalCount = 0
           const forcedDisruption = schedule.forcedDisruptionSweeps.includes(sweepIndex)
           for (const [poolIndex, entry] of pool.entries()) {
@@ -422,18 +428,39 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
               separationEvaluationCount += 1
               const key = intrinsicRelaxedStateKey(catalog, proposal.state)
               if (evaluation !== undefined && key !== undefined) {
-                candidates.push({ state: proposal.state, evaluation, key })
+                const isDisruption =
+                  proposal.kind === 'swap' ||
+                  proposal.kind === 'group-transport' ||
+                  proposal.kind === 'split-squeeze' ||
+                  proposal.kind === 'interface-disrupt'
+                candidates.push({
+                  state: proposal.state,
+                  evaluation,
+                  key,
+                  disruptionProtectedUntilSweep: isDisruption ? sweepIndex + 1 : undefined
+                })
               }
             }
             if (scheduleStatus !== 'completed') break
           }
           if (scheduleStatus !== 'completed') break
-          pool = retainIntrinsicPool(candidates, schedule.poolCapacity)
-          const best = pool[0]
-          if (best === undefined) {
+          const rawBest = reweightIntrinsicPool(candidates, weights).toSorted(
+            comparePoolEntriesByRaw
+          )[0]
+          if (rawBest === undefined) {
             return yield* globalFailure('search', 'the infeasible basin pool became empty.')
           }
-          weights = updateIntrinsicSeparatorWeights(weights, best.evaluation)
+          weights = updateIntrinsicSeparatorWeights(weights, rawBest.evaluation)
+          pool = retainIntrinsicInfeasiblePool(
+            candidates,
+            schedule.poolCapacity,
+            weights,
+            sweepIndex
+          )
+          const best = pool[0]
+          if (best === undefined) {
+            return yield* globalFailure('search', 'the reweighted basin pool became empty.')
+          }
           completedSweepCount += 1
           trace.push({
             roleId: role.id,
@@ -539,6 +566,10 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
               projection: attempted.value,
               schedule
             })
+            if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
+              scheduleStatus = 'deadline-fallback'
+              break
+            }
             if (handoff !== undefined) {
               addStructuralHandoff(handoffs, handoff, schedule.structuralHandoffCapacity)
             }
@@ -564,6 +595,12 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
       targetRoles.length * 2 * schedule.sweepsPerBasin
     if (scheduleStatus === 'completed' && completedSweepCount !== expectedSweepCount) {
       scheduleStatus = 'budget-fallback'
+    }
+    if (
+      scheduleStatus === 'completed' &&
+      (yield* globalSearchCheckpoint(searchControl)) === 'deadline'
+    ) {
+      scheduleStatus = 'deadline-fallback'
     }
     if (scheduleStatus !== 'completed') handoffs.splice(0, handoffs.length)
     return {
@@ -739,26 +776,146 @@ function compareStructuralHandoffs(
   )
 }
 
-function retainIntrinsicPool(
-  candidates: ReadonlyArray<PoolEntry>,
-  capacity: number
-): ReadonlyArray<PoolEntry> {
-  const unique = new Map<string, PoolEntry>()
-  for (const candidate of candidates) {
+/** Width-bounded raw, GLS-weighted, and forced-disruption pool retention. */
+export function retainIntrinsicInfeasiblePool(
+  candidates: ReadonlyArray<IntrinsicInfeasiblePoolEntry>,
+  capacity: number,
+  weights: IntrinsicSeparatorWeights,
+  sweepIndex: number
+): ReadonlyArray<IntrinsicInfeasiblePoolEntry> {
+  const boundedCapacity = Math.max(1, capacity)
+  const reweighted = reweightIntrinsicPool(candidates, weights)
+  const unique = new Map<string, IntrinsicInfeasiblePoolEntry>()
+  for (const candidate of reweighted) {
     const existing = unique.get(candidate.key)
-    if (existing === undefined || comparePoolEntries(candidate, existing) < 0) {
+    if (
+      existing === undefined ||
+      compareDuplicatePoolEntries(candidate, existing, sweepIndex) < 0
+    ) {
       unique.set(candidate.key, candidate)
     }
   }
-  return [...unique.values()].toSorted(comparePoolEntries).slice(0, Math.max(1, capacity))
+  const values = [...unique.values()]
+  const rawRanked = values.toSorted(comparePoolEntriesByRaw)
+  const weightedRanked = values.toSorted(comparePoolEntriesByWeight)
+  const protectedRanked = values
+    .filter(
+      ({ disruptionProtectedUntilSweep }) =>
+        disruptionProtectedUntilSweep !== undefined &&
+        disruptionProtectedUntilSweep >= sweepIndex
+    )
+    .toSorted(comparePoolEntriesByWeight)
+  const pareto = values
+    .filter(
+      (candidate) =>
+        !values.some(
+          (other) =>
+            other.key !== candidate.key && dominatesPoolEntry(other, candidate)
+        )
+    )
+    .toSorted(comparePoolEntriesByRaw)
+  const selected: IntrinsicInfeasiblePoolEntry[] = []
+  addUniquePoolEntry(selected, rawRanked[0], boundedCapacity)
+  addUniquePoolEntry(selected, protectedRanked[0], boundedCapacity)
+  addUniquePoolEntry(selected, weightedRanked[0], boundedCapacity)
+  for (const candidate of pareto) addUniquePoolEntry(selected, candidate, boundedCapacity)
+  for (const candidate of rawRanked) addUniquePoolEntry(selected, candidate, boundedCapacity)
+  const rawWinner = rawRanked[0]
+  return rawWinner === undefined
+    ? []
+    : [rawWinner, ...selected.filter(({ key }) => key !== rawWinner.key)]
 }
 
-function comparePoolEntries(first: PoolEntry, second: PoolEntry): number {
+function reweightIntrinsicPool(
+  candidates: ReadonlyArray<IntrinsicInfeasiblePoolEntry>,
+  weights: IntrinsicSeparatorWeights
+): ReadonlyArray<IntrinsicInfeasiblePoolEntry> {
+  return candidates.map((candidate) => ({
+    ...candidate,
+    evaluation: {
+      ...candidate.evaluation,
+      weightedLoss: intrinsicWeightedLoss(candidate.evaluation, weights)
+    }
+  }))
+}
+
+function intrinsicWeightedLoss(
+  evaluation: IntrinsicSeparationEvaluation,
+  weights: IntrinsicSeparatorWeights
+): number {
+  return evaluation.conflicts.reduce(
+    (sum, conflict) =>
+      sum +
+      conflict.normalizedDepth *
+        conflict.normalizedDepth *
+        (weights.byConflictKey.get(conflict.key) ?? 1),
+    0
+  )
+}
+
+function compareDuplicatePoolEntries(
+  first: IntrinsicInfeasiblePoolEntry,
+  second: IntrinsicInfeasiblePoolEntry,
+  sweepIndex: number
+): number {
+  const firstProtected =
+    first.disruptionProtectedUntilSweep !== undefined &&
+    first.disruptionProtectedUntilSweep >= sweepIndex
+  const secondProtected =
+    second.disruptionProtectedUntilSweep !== undefined &&
+    second.disruptionProtectedUntilSweep >= sweepIndex
+  return (
+    Number(secondProtected) - Number(firstProtected) ||
+    comparePoolEntriesByRaw(first, second)
+  )
+}
+
+function comparePoolEntriesByRaw(
+  first: IntrinsicInfeasiblePoolEntry,
+  second: IntrinsicInfeasiblePoolEntry
+): number {
   return (
     first.evaluation.rawLoss - second.evaluation.rawLoss ||
     first.evaluation.weightedLoss - second.evaluation.weightedLoss ||
     first.key.localeCompare(second.key)
   )
+}
+
+function comparePoolEntriesByWeight(
+  first: IntrinsicInfeasiblePoolEntry,
+  second: IntrinsicInfeasiblePoolEntry
+): number {
+  return (
+    first.evaluation.weightedLoss - second.evaluation.weightedLoss ||
+    first.evaluation.rawLoss - second.evaluation.rawLoss ||
+    first.key.localeCompare(second.key)
+  )
+}
+
+function dominatesPoolEntry(
+  first: IntrinsicInfeasiblePoolEntry,
+  second: IntrinsicInfeasiblePoolEntry
+): boolean {
+  return (
+    first.evaluation.rawLoss <= second.evaluation.rawLoss &&
+    first.evaluation.weightedLoss <= second.evaluation.weightedLoss &&
+    (first.evaluation.rawLoss < second.evaluation.rawLoss ||
+      first.evaluation.weightedLoss < second.evaluation.weightedLoss)
+  )
+}
+
+function addUniquePoolEntry(
+  selected: IntrinsicInfeasiblePoolEntry[],
+  candidate: IntrinsicInfeasiblePoolEntry | undefined,
+  capacity: number
+): void {
+  if (
+    candidate !== undefined &&
+    selected.length < capacity &&
+    !selected.some(({ key }) => key === candidate.key)
+  ) {
+    selected.push(candidate)
+  }
 }
 
 function targetRole(
@@ -858,6 +1015,7 @@ function deadlineControl(
   return {
     checkpoint: (phase) =>
       Effect.gen(function* () {
+        if (control !== undefined) yield* control.checkpoint(phase)
         if (performance.now() - startedAt >= maximumRuntimeMs) {
           return yield* Effect.fail(
             new IrregularNfpIfpControlAbortError({
@@ -866,7 +1024,6 @@ function deadlineControl(
             })
           )
         }
-        if (control !== undefined) yield* control.checkpoint(phase)
       })
   }
 }
