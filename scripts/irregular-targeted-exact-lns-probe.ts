@@ -14,6 +14,7 @@ import {
 import { computeIrregularNesting } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
+import { measureRelaxationMetrics } from '../src/workers/algorithm/irregular/overlapRelaxation.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
 import { runTargetedExactLns } from '../src/workers/algorithm/irregular/targetedExactLns.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
@@ -24,7 +25,8 @@ import { TransformGeneratorLive } from '../src/workers/irregular/transformGenera
 import { TransformGenerator } from '../src/workers/irregular/services.js'
 import {
   analyzeCanonicalLayoutStructure,
-  assertCanonicalGridLegalLayout
+  assertCanonicalGridLegalLayout,
+  canonicalCollisionLayoutIdentity
 } from '../src/workers/irregular/canonicalLayoutGeometry.js'
 
 const FIXTURE = fileURLToPath(
@@ -34,6 +36,7 @@ const outputDirectory =
   process.argv[process.argv.indexOf('--output') + 1] ||
   '/private/tmp/min-plane-provenance/targeted-exact-lns/quality-run'
 const sourceCommit = process.argv[process.argv.indexOf('--source-commit') + 1] || 'unknown'
+const baselineOnly = process.argv.includes('--baseline-only')
 
 await mkdir(outputDirectory, { recursive: true })
 const fixture = Schema.decodeUnknownSync(NestingRequest)(JSON.parse(await readFile(FIXTURE, 'utf8')))
@@ -109,6 +112,36 @@ await writeFile(
     2
   )}\n`
 )
+if (baselineOnly) {
+  const baselineMetrics = measureRelaxationMetrics(incumbent.placedCollisionGeometries)
+  const baselineHash = canonicalCollisionLayoutIdentity(incumbent.placedCollisionGeometries)
+  const canonicalGridLegal = assertCanonicalGridLegalLayout(
+    sheet,
+    incumbent.placedCollisionGeometries
+  )
+  await writeFile(`${outputDirectory}/baseline.svg`, renderSvg(incumbent.placedCollisionGeometries))
+  const baselineReport = {
+    sourceCommit,
+    fixture: FIXTURE,
+    sheet: { width: sheet.width, height: sheet.height },
+    runtime: { node: process.version, v8: process.versions.v8 },
+    computeElapsedMs,
+    placed: incumbent.placedCollisionGeometries.length,
+    unplaced: incumbent.unplacedPieceIds.length,
+    canonicalGridLegal,
+    canonicalHash: baselineHash,
+    exactConflicts: preflightStructure?.positiveAreaConflictMeasurements,
+    wallOffenders: preflightStructure?.wallOffenders,
+    metrics: baselineMetrics,
+    decision: canonicalGridLegal ? 'baseline_preflight_pass' : 'baseline_preflight_stop'
+  }
+  await writeFile(
+    `${outputDirectory}/baseline-report.json`,
+    `${JSON.stringify(baselineReport, null, 2)}\n`
+  )
+  console.log(JSON.stringify(baselineReport))
+  process.exit(canonicalGridLegal ? 0 : 2)
+}
 const lnsStartedAt = performance.now()
 const result = await Effect.runPromise(
   layers(
