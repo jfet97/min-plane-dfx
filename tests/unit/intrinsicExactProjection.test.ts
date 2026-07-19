@@ -326,6 +326,74 @@ describe('intrinsic exact projection', () => {
     )
   })
 
+  it('keeps an owned priority snapshot when the caller mutates its array at a checkpoint', async () => {
+    const catalog = await buildCatalog([
+      preparedRectangle('a', 2, 2),
+      preparedRectangle('b', 2, 2),
+      preparedRectangle('c', 2, 2)
+    ])
+    const provisional = catalog.entries.map((entry) =>
+      placed(entry, finiteTransform(entry, 0), 0, 0)
+    )
+    const priority = [PieceId.make('c'), PieceId.make('b'), PieceId.make('a')]
+    const expectedPriority = [...priority]
+    let mutated = false
+    const service = Layer.succeed(NfpIfpService, {
+      computeNfp: () => Effect.die('unused'),
+      computeIfpBounds: () => Effect.die('unused'),
+      generatePlacementCandidates: ({ moving }) => {
+        const x =
+          moving.sourcePieceId === PieceId.make('c')
+            ? 0
+            : moving.sourcePieceId === PieceId.make('b')
+              ? 2
+              : 4
+        return Effect.succeed([
+          new IrregularPlacementCandidate({
+            pieceId: moving.sourcePieceId,
+            transform: moving.transform,
+            point: point(x, 0),
+            diagnostics: []
+          })
+        ])
+      }
+    })
+
+    const result = await project(
+      {
+        targetBox: { widthMm: 6, heightMm: 2 },
+        catalog,
+        referencePlaced: provisional,
+        provisionalPlaced: provisional,
+        reinsertionPriorityPieceIds: priority,
+        control: {
+          checkpoint: () => {
+            if (!mutated) {
+              priority.splice(
+                0,
+                priority.length,
+                PieceId.make('a'),
+                PieceId.make('a'),
+                PieceId.make('a')
+              )
+              mutated = true
+            }
+            return Effect.void
+          }
+        }
+      },
+      service
+    )
+
+    expect(priority).toEqual([PieceId.make('a'), PieceId.make('a'), PieceId.make('a')])
+    expect(result.initialRemovedPieceIds).toEqual(expectedPriority)
+    expect(result.placedCollisionGeometries.map(({ placement }) => placement.pieceId)).toEqual(
+      expectedPriority
+    )
+    expect(new Set(result.placedCollisionGeometries.map(({ placement }) => placement.pieceId)).size)
+      .toBe(catalog.entries.length)
+  })
+
   it.each([
     ['duplicate', [PieceId.make('a'), PieceId.make('a')]],
     ['missing', [PieceId.make('a')]],
@@ -570,6 +638,71 @@ describe('intrinsic exact projection', () => {
       PieceId.make('frozen')
     ])
     expect(result.placedCollisionGeometries).toHaveLength(2)
+  })
+
+  it('uses reinsertion priority to break an equidistant closure-dilation tie', async () => {
+    const catalog = await buildCatalog([
+      preparedRectangle('failed', 2, 2),
+      preparedRectangle('left', 2, 2),
+      preparedRectangle('right', 2, 2)
+    ])
+    const failedEntry = catalogEntry(catalog, 'failed')
+    const leftEntry = catalogEntry(catalog, 'left')
+    const rightEntry = catalogEntry(catalog, 'right')
+    const provisional = [
+      placed(failedEntry, finiteTransform(failedEntry, 0), 2, 2),
+      placed(leftEntry, finiteTransform(leftEntry, 0), 0, 0),
+      placed(rightEntry, finiteTransform(rightEntry, 0), 4, 0)
+    ]
+    const service = Layer.succeed(NfpIfpService, {
+      computeNfp: () => Effect.die('unused'),
+      computeIfpBounds: () => Effect.die('unused'),
+      generatePlacementCandidates: ({ moving, placed: fixed }) => {
+        const x =
+          moving.sourcePieceId === PieceId.make('failed')
+            ? fixed.length === 2
+              ? undefined
+              : 2
+            : moving.sourcePieceId === PieceId.make('right')
+              ? 4
+              : 0
+        return Effect.succeed(
+          x === undefined
+            ? []
+            : [
+                new IrregularPlacementCandidate({
+                  pieceId: moving.sourcePieceId,
+                  transform: moving.transform,
+                  point: point(x, 0),
+                  diagnostics: []
+                })
+              ]
+        )
+      }
+    })
+
+    const result = await project(
+      {
+        targetBox: { widthMm: 6, heightMm: 2 },
+        catalog,
+        referencePlaced: provisional,
+        provisionalPlaced: provisional,
+        reinsertionPriorityPieceIds: [
+          PieceId.make('failed'),
+          PieceId.make('right'),
+          PieceId.make('left')
+        ],
+        maximumDilationSteps: 1
+      },
+      service
+    )
+
+    expect(result.dilationSteps).toBe(1)
+    expect(result.finalRemovedPieceIds).toEqual([
+      PieceId.make('failed'),
+      PieceId.make('right')
+    ])
+    expect(result.placedCollisionGeometries).toHaveLength(3)
   })
 
   it('rejects a rounded positive overlap and returns a typed exhausted failure', async () => {

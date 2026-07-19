@@ -945,7 +945,7 @@ function validateReinsertionPriority(
     return undefined
   }
   const catalogIds = new Set(catalog.entries.map(({ pieceId }) => pieceId))
-  return priority.every((pieceId) => catalogIds.has(pieceId)) ? priority : undefined
+  return priority.every((pieceId) => catalogIds.has(pieceId)) ? [...priority] : undefined
 }
 
 function candidateTranslationKey(entry: IrregularPlacedPiece): string {
