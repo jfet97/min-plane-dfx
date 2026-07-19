@@ -85,6 +85,25 @@ completed layout is tested against the real sheet, at q0 and q90. This path has
 its own provenance harness and cohesion certificate; it does not alter the
 legacy beam, protected lanes, reference-sheet coordinator, GA, or repair.
 
+The preregistered E4 experiment is a separate complete-layout optimizer around
+that exact E1 seed. It has no requested-sheet input. Synthetic target boxes are
+derived only from the seed's canonical occupied geometry and stable
+per-instance area caps. Private transient states may overlap while a
+transform-aware SAT/GLS separator changes finite transform families, swaps
+large pieces, transports bounded nearby groups, and crosses worse basins. These
+states are diagnostics only and never become worker results or history.
+
+At no more than five registered points, E4 projects a relaxed state back to the
+exact geometry domain: canonicalize to the collision grid, remove both
+endpoints of exact conflicts plus target-wall offenders, pin each removed piece
+to its relaxed finite transform, and reinsert the conflict closure with exact
+NFP/IFP candidates nearest the relaxed pose. Orientation-family fallback is
+allowed only when the pinned transform has no legal candidate. Only complete
+layouts passing canonical exact legality enter the bounded archive; E1 remains
+the immutable fallback. Requested-sheet q0/q90 fit occurs after one archive
+winner is selected. E4 remains experiment-only until hull-gap, cavity, area,
+runtime, determinism, triangle, corpus, and visual gates all pass.
+
 Local compactness ranks the largest normalized sheet-axis consumption, the sum
 of both normalized spans, collision-bounds area, and then absolute span. Bounds,
 anchor coordinates, and shared boundary length are canonicalized to the existing

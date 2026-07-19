@@ -1984,6 +1984,41 @@ would falsify each one, and identify the smallest safe production experiment.
   now agree on the next boundary: improving mixed-61 cohesion requires a search
   class that changes the large-piece global topology, not another bounded local
   comparator, order template, certified repeated-family seed, or late filler.
+- Preregistered E4 as the first complete-layout topology search. It is a
+  deterministic sheetless squeeze-disrupt-separate controller over finite
+  transform families, with a bounded infeasible pool, forced large-piece/group
+  disruptions, and at most five exact NFP conflict-closure projections. This is
+  materially different from the rejected fixed-rotation overlap probe, which
+  had no transform changes, disruption pool, alternative zero-loss basins, or
+  exact NFP reinsertion and aborted its narrow reconstruction path on conflict.
+- Two Kimi review exchanges initially proposed non-monotone exact-feasible LNS,
+  then withdrew it after its 900-move schedule was shown to require roughly
+  `1710 s` at the measured k<=8 cost and to retain the timed-out frozen-context
+  reconstruction bottleneck. An independent implementation audit selected the
+  same global separator direction and confirmed that the existing finite
+  transforms, SAT penetration, canonical legality, NFP candidates, structural
+  analysis, and exact gap filler are reusable.
+- Connectivity is no longer an E4 eligibility floor. The exact/proximity audit
+  proved component counts and isolates non-discriminative; E4 is gated by exact
+  legality, enclosed cavities, largest hull-gap region, and a hard area cap.
+  Contacts remain a post-floor promotion target rather than an unbounded search
+  prefix. The early class gate is hull-gap `<= 0.15`, cavities `<= 2`, area
+  `<= 439,904.170 mm2`, and completion inside the registered schedule; automatic
+  production promotion additionally requires area `<= 430,344.918 mm2`.
+- E4 search never receives the requested sheet. Its three target-box roles are
+  derived only from E1 geometry and stable per-instance caps; one selected exact
+  archive winner is terminal-fitted at q0/q90 across the sheet matrix. The
+  integer-counted controller budget is capped at 200,000 separation evaluations,
+  six deterministic basins, 400 sweeps per basin, pool width 8, and five exact
+  projections. If the full schedule misses the 110-second safety guard, E1 is
+  returned unchanged rather than publishing a machine-speed-dependent partial
+  winner.
+- The immutable E4 preregistration is
+  `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration.md`
+  (`e5da2d0c188f6067d7caa148421922f694ed89a508ddb6b48e4cf3bf2347cc32`).
+  If its projection/class gate fails, the registered fallback is a separately
+  reviewed finite-position global-assignment experiment, not another comparator
+  or reconstruction-budget tuning pass.
 
 ### 2026-07-19 (canonical reference decode handoff)
 
