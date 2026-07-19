@@ -2069,6 +2069,37 @@ would falsify each one, and identify the smallest safe production experiment.
   hidden work, and missing post-projection evidence. The immutable addendum is
   `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration-v6-review-hardening-addendum.md`
   (`b2f1f78fefdc8523dd953997a6b52b78b0090d1ba893794747470aade53e2316`).
+- V6 run 01 is censored, not rejected. All six pressure attempts materially
+  reduced aggregate separation loss, but every endpoint remained infeasible
+  and the selected layouts therefore stayed exact E1 fallbacks. The first
+  reports stored only proposal and all-time-best loss, so they could not prove
+  whether sweep four was active, flat, or cycling.
+- Added observer-only per-sweep pressure traces at `f0ca85b` and replayed
+  Triangle-20 and Mixed-61 from a clean committed worktree. Run 02 is exactly
+  equivalent to run 01 in geometry, metrics, proposal losses, evaluation
+  counts, candidate records, and outcomes; only runtime and artifact paths
+  differ. Triangle report SHA-256 is
+  `8ae3d9644aa302347fdcf1be47988617f1f64f7082d5e9961c6aec436848ff64`;
+  Mixed-61 report SHA-256 is
+  `c29a09b5061f3549b662cc0e6c67c2b41691193469383482a5eb2a449ef5d121`.
+- The trace identifies an under-iterated sequential separator rather than a
+  budget, deadline, wall-conflict, GLS, retention, or acceptance failure. Five
+  of six final sweeps strictly lower raw loss; one Mixed ratio is effectively
+  flat and one correctly retains its prior raw winner after generating a worse
+  child. All attempts stop only at the four-sweep allocation, with 12-17 pair
+  conflicts and zero wall conflicts still spread across 12-16 pieces. A
+  depth-four winning lineage has moved only 2-4 distinct pieces because each
+  focused child changes one piece.
+- The next isolated experiment is V6.1 adaptive pressure depth: keep the same
+  contraction ratios, focused proposals, GLS, pool width/retention, acceptance,
+  evaluation cap, and deadline; permit at most eight sweeps per attempt and,
+  after the mandatory first four, stop after two consecutive sweeps that do not
+  lower best-so-far raw loss. This is the smallest test of whether the current
+  movement vocabulary can reach exact zero. If every ratio plateaus above zero,
+  the next registered direction is broader conflicted-piece coverage: first
+  all-collider fanout, then a Sparrow-style sequential all-collider pass if
+  unchanged retention re-narrows that fanout. V6K remains parked until this
+  pressure-depth/coverage sequence is falsified.
 - Preserve Kimi's alternative static-shrink design as V6K, but do not implement
   it concurrently with V6. If adaptive pressure fails before projection, V6K
   replaces the current roles with aspect-preserving `1.000`, `0.925`, and
