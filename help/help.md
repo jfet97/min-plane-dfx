@@ -22,23 +22,26 @@ the following order.
 
 ### Primary Problems
 
-1. **Preserve and generalize sheet-independent compactness.** The flagship
-   mixed-61 gap is closed across ten legal sheets by an explicit protected
-   canonical-reference decode and a sheet-free topology certificate. Ordinary
-   requested-sheet pruning is still sheet-relative, so future work should
-   generalize the mechanism only from measured workloads and should profile or
-   share the second decode. Sheet-relative ranking remains intentional for
-   `short_side_fill`.
+1. **Replace the compatibility handoff with genuinely sheet-invariant search.**
+   The flagship mixed-61 output is currently unified across ten legal sheets by
+   an explicit protected canonical-reference decode and a sheet-free topology
+   certificate. That mechanism caches one historical sheet-relative trajectory;
+   it does not make ordinary requested-sheet search invariant. The active
+   replacement work removes sheet-derived preferences from every branch-removing
+   layer and uses real sheet dimensions only for legality. Sheet-relative
+   ranking remains intentional only for explicit `short_side_fill`.
 2. **Preserve the 20-triangle golden.** The pointed-triangle lattice is a hard
    regression gate, not a special-case production heuristic. A candidate fails
    if it turns the lattice into a chain, fragments structural contacts, creates
    visible triangle-sized holes, or regresses the official repair-8 result. Keep
    the repair-0 search diagnostic separate; it is not the approved golden.
-3. **Preserve the approved mixed-61 layout.** The portable reference
-   `help/artifacts/approved-mixed61-ac75222-2000x2700.svg` is now reproduced
-   exactly across ten legal sheets by the protected canonical-reference handoff.
-   Any generalization must preserve its canonical hash, contact/hole quality,
-   legality, and the wider corpus gates.
+3. **Use the approved mixed-61 layout as a quality witness, not an equality
+   gate.** The portable reference
+   `help/artifacts/approved-mixed61-ac75222-2000x2700.svg` proves that the job can
+   reach `430,344.918 mm2`, two holes, and contacts `53/14`. A general replacement
+   may select a different canonical hash if it is exactly legal, invariant across
+   every roomy sheet, at least as compact and cohesive, and clears the wider
+   corpus gates.
 4. **Choose the right source of search diversity.** The current investigation
    compares deterministic candidate diversity with the existing GA. GA may be
    useful for global piece order and rotation, but it cannot repair a promising
@@ -74,8 +77,9 @@ the following order.
 
 - exact official 20-triangle repair-8 golden, rotations and mirroring enabled;
 - repair-0 triangle diagnostic no worse than the current baseline;
-- exact mixed-61 request on the accepted ten-sheet matrix, compared against the
-  canonical approved reference;
+- exact mixed-61 request on the accepted ten-sheet matrix, requiring one
+  canonical hash wherever the common motif is legal and comparison against the
+  approved reference's independent quality floors;
 - mixed-50, homogeneous rectangles, trapezoids, pentagons, and stars;
 - legality, deterministic geometry hashes, and replay/search equivalence;
 - rendered SVG/PNG inspection, not metrics alone;
@@ -88,7 +92,8 @@ The official repair-8 triangle golden remains exact. The boundary-anchor,
 max-side-first intrinsic, and protected Pareto lanes remain isolated from
 production retention and preserve their previously accepted corpus gains.
 
-The mixed-61 hollow-ring failure is now closed through cross-decode coordination.
+The mixed-61 hollow-ring output is currently hidden through cross-decode
+coordination, not solved in the default decoder.
 Eligible explicit compact-quality jobs run the unchanged requested-sheet decode
 plus one protected decode on the fixed `2000 x 2700` reference sheet. The
 protected terminal is admitted on the real requested sheet only after exact
@@ -107,6 +112,11 @@ previous claim that reference reproduction and sheet independence were
 mutually exclusive was correct only for independent per-sheet decodes. Guided
 legality probes identified the missing architectural stage; the bounded
 cross-decode handoff supplies it without changing production beam ranking.
+
+Treat this as a compatibility fallback while the intrinsic replacement is
+measured. Its exact historic hash is no longer a mandatory equality gate for a
+general replacement; its area, hole, contact, legality, and topology are the
+quality witness the replacement must meet or improve.
 
 The capability is schema-owned, defaults off, and is enabled by the explicit
 compact-quality settings factory and flagship fixture. Repair, GA transform
@@ -1853,6 +1863,47 @@ Do not end with only a brainstorm. Rank recommendations, state what evidence
 would falsify each one, and identify the smallest safe production experiment.
 
 ## Investigation Log
+
+### 2026-07-19 (intrinsic constructor redesign)
+
+- Proved cross-runtime divergence in the first sheetless constructor at trace
+  event 6744: adjacent floating `Math.cos` results moved one arbitrary-angle
+  tangency by `7.105e-15 mm`. Snapping transformed collision vertices to the
+  `0.001 mm` grid made Node and Electron traces byte-identical, while the
+  unchanged triangle layout exposed that fixed contact-count assertions are
+  classifier-fragile at exact boundaries.
+- Found a second geometry-authority split: local transformed vertices were
+  snapped but fractional placement translations were admitted before the final
+  world-grid canonicalization. One worker-legal trapezoid/hexagon tangency then
+  became a `0.000005 mm2` canonical overlap. Candidate translations must be
+  canonicalized and revalidated before placement storage; post-hoc output
+  snapping is not a legality authority.
+- Measured the corrected sheetless constructor at `435,949.517 mm2`, zero
+  enclosed cavities, but 31 positive-contact components and 23 isolates. This
+  proves sheet blindness alone is insufficient: area-first and contact-first
+  partial growth can both produce incoherent layouts.
+- Rejected fixed-rotation overlap relaxation after source-faithful schedules at
+  `0.05%` and `0.001%` step sizes restored no exactly legal layout. Near-zero
+  SAT residuals were not exact legality.
+- Rejected the preregistered exact targeted-LNS class on the fragmented seed.
+  After a warm-lineage correction proved that every destroyed piece could
+  replay its incumbent placement, 24 deterministic interface/hull/hazard rounds
+  produced nine exact legal incumbent-equivalent finalists, four unplaced
+  outcomes, three timeouts, eight duplicate skips, and zero admissible strict
+  improvements in `45.686 s`. Do not widen the same k=2/3/5/8 neighborhoods as a
+  tuning response.
+- Independent source-backed reviews converged on a replacement boundary: keep
+  exact NFP/collision/canonical-topology services, but treat the protected lanes,
+  fixed-reference handoff, sheet-normalized pruning, and historic hash as legacy
+  compatibility until a sheetless strict constructor wins. The next isolated
+  experiment is one strict user-order decode with origin anchoring,
+  orientation-family coverage, intrinsic marginal max-side/area/span ranking,
+  completed-layout topology floors plus a Pareto archive, and real-sheet q0/q90
+  legality only after construction.
+- The first replacement experiment is intentionally one decode, not a GA or
+  order portfolio: it must attribute success or failure to the intrinsic local
+  rule. Order diversity, large-first/small-fill, periodic-cell seeds, and a new
+  complete-state search remain separate falsifiable E2/E3 roles.
 
 ### 2026-07-19 (canonical reference decode handoff)
 
