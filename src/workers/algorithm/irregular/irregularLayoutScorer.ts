@@ -514,12 +514,12 @@ export const STRUCTURAL_CONTACT_COUNT_BAND_WIDTH = 2
 
 const strictLayoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
   scoreCriterion((score) => score.unplacedCount),
+  descendingScoreCriterion((score) => score.dominantNearCompleteStructuralContactCount),
+  descendingScoreCriterion((score) => score.nearCompleteStructuralContactCount),
   scoreCriterion(collisionBoundsMaxSideMm),
   scoreCriterion((score) => score.collisionBoundsAreaMm2),
   scoreCriterion((score) => score.collisionBoundsSpanMm),
   scoreCriterion((score) => score.occupiedHullWasteRatio),
-  descendingScoreCriterion((score) => score.dominantNearCompleteStructuralContactCount),
-  descendingScoreCriterion((score) => score.nearCompleteStructuralContactCount),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactBand),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactUnits),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryLengthMm),
