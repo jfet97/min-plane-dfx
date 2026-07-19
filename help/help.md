@@ -2019,6 +2019,65 @@ would falsify each one, and identify the smallest safe production experiment.
   If its projection/class gate fails, the registered fallback is a separately
   reviewed finite-position global-assignment experiment, not another comparator
   or reconstruction-budget tuning pass.
+- E4.1 and E5 proved that complete exact handoffs, bounded semantic projection
+  lanes, and incumbent-inclusive certificate selection are mechanically viable,
+  but the first E5 trace never retained a disruption descendant to projection.
+  E5.1 at `a10f36a` repaired that precise post-birth eviction: all three role
+  lanes survive, all five exact projections succeed, and only attempts 2 and 4
+  are removed as canonical duplicates of attempts 1 and 3.
+- Rejected E5.1 as a quality solution, not as an implementation failure. Its E1
+  and expanded-E1 disruption descendants reach approximately zero relaxed loss
+  yet exact-project to E1-equivalent structure. The materially different
+  four-three lineage completes at `428,415.534 mm2` but worsens cohesion to 31
+  isolates, 41 components, and a largest component of 9. Triangle-20 is the
+  decisive control: several exact-zero-loss relaxed states remain around
+  `116,964-117,643 mm2`, 18 isolates, and 19 components.
+- The causal defect is now verified at sweep zero. Relaxed loss contains only
+  pair and target-wall penetration, and focused proposal generation becomes
+  inert when conflicts reach zero. Legal fragmented layouts are therefore
+  optimal. E5.1 improved lineage memory and exposure but supplied no compactness
+  pressure. Filler is downstream of the frozen structural skeleton, while the
+  fidelity-first projector is a separately measurable boundary rather than the
+  first cause.
+- Direct source review of Sparrow, Deepnest, SVGnest, PackingSolver, and
+  libnest2d rejected a terminal compactness tuple as V6's mechanism. The shared
+  transferable principle is to apply intrinsic geometric pressure before
+  irreversible selection. Sparrow supplies the closest controller: contract a
+  container, repair feasibility, archive only an exact feasible improvement,
+  and restart pressure from that incumbent.
+- Preregistered V6 as one private sheet-independent contracted-target
+  pressure-and-repair lane. It contracts the accepted structural incumbent's
+  longer side by a failure-decayed `1/20`, `1/40`, `1/80` schedule, translates
+  the far area-weighted-median partition across the removed width, and uses the
+  existing SAT/GLS separator only to restore legality. Acceptance requires an
+  exact distinct endpoint with smaller envelope/max side and area-weighted
+  centroid dispersion and no worse cavity or largest hull-gap metrics. Contacts
+  and components remain diagnostics rather than search rewards, preventing
+  chains and rings from buying acceptance.
+- V6 intentionally leaves ordinary target roles, the five-attempt cap,
+  projector, filler, complete certificate, requested-sheet fitting, and every
+  production path unchanged. The first kill gate occurs before projection: both
+  Mixed-61 and Triangle-20 must produce a distinct exact pressure endpoint with
+  negative dispersion delta. The immutable preregistration is
+  `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration-v6-contracted-pressure-repair.md`
+  (`d91795a097acaace3cb3c61f109da6c6b873357994b1b253c1c148b8359e8b9c`).
+- Pre-run review hardened orchestration without changing the V6 hypothesis:
+  pressure runs before ordinary basins with at most one quarter of the unchanged
+  global evaluation cap; exactly three attempts share twelve repair sweeps;
+  repair sweeps are reported separately; and pressure owns its projection slot
+  before cross-lane dedupe. This prevents starvation, unbounded success resets,
+  hidden work, and missing post-projection evidence. The immutable addendum is
+  `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration-v6-review-hardening-addendum.md`
+  (`b2f1f78fefdc8523dd953997a6b52b78b0090d1ba893794747470aade53e2316`).
+- Preserve Kimi's alternative static-shrink design as V6K, but do not implement
+  it concurrently with V6. If adaptive pressure fails before projection, V6K
+  replaces the current roles with aspect-preserving `1.000`, `0.925`, and
+  `0.850` boxes derived from the exact structural E1 envelope; the control must
+  reproduce E1, and shrink roles use exact hull waste only as a zero-loss
+  plateau order. Run it on a fresh branch/worktree so its result remains
+  causally separate. The registered fallback is
+  `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/fallback-v6k-static-shrunken-roles.md`
+  (`bdd6bec7fb715bb11df3f1b4c099135c1e061fb38330523d36ae0a255730e98d`).
 
 ### 2026-07-19 (canonical reference decode handoff)
 

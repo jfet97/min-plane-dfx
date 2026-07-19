@@ -23,10 +23,14 @@ import {
   advanceIntrinsicDisruptionLineage,
   deriveIntrinsicGlobalOrdinalSeed,
   deriveIntrinsicGlobalTargetRoles,
+  deriveIntrinsicContractedPressureProposal,
   floorIntrinsicTargetGrid,
   inheritIntrinsicDisruptionLineage,
   INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
+  intrinsicPressureEndpointRejectionReason,
+  measureIntrinsicPressureCompactness,
   partitionIntrinsicStructuralPieces,
+  pressureRepairSweepAllowance,
   retainIntrinsicInfeasiblePool,
   retainIntrinsicInfeasiblePoolWithDiagnostics,
   retainIntrinsicStructuralHandoffs,
@@ -590,6 +594,341 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(roles?.[0]).toMatchObject({ widthMm: 82.77, heightMm: 10.111 })
   })
 
+  it('contracts the longer side from an area-weighted polygon-centroid median split', async () => {
+    const pieces = [
+      preparedRectangle('large', 4, 2),
+      preparedRectangle('small-b', 1, 2),
+      preparedRectangle('small-c', 1, 2)
+    ]
+    const catalog = await catalogFor(pieces)
+    const exact = [
+      placed(catalogEntry(catalog, 'large'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'small-b'), 0, 10, 0),
+      placed(catalogEntry(catalog, 'small-c'), 0, 20, 0)
+    ]
+    const proposal = deriveIntrinsicContractedPressureProposal(catalog, exact, 0.1)
+    if (proposal === undefined) throw new Error('contracted pressure proposal expected')
+    const translated = provisionalLayoutFromRelaxedState(catalog, proposal.state)
+    if (translated === undefined) throw new Error('translated pressure layout expected')
+    const before = measureIntrinsicPressureCompactness(exact)
+    const after = measureIntrinsicPressureCompactness(translated)
+
+    expect(proposal).toMatchObject({
+      contractionAxis: 'x',
+      removedWidthMm: 2.1,
+      areaWeightedMedianGrid: 2_000,
+      nearPartitionPieceIds: [PieceId.make('large')],
+      farPartitionPieceIds: [PieceId.make('small-b'), PieceId.make('small-c')]
+    })
+    expect(
+      translated.find(({ placement }) => placement.pieceId === PieceId.make('small-b'))
+        ?.placement.transform.translateX
+    ).toBe(7.9)
+    expect(after?.compactness.areaWeightedCentroidDispersion).toBeLessThan(
+      before?.compactness.areaWeightedCentroidDispersion ?? 0
+    )
+  })
+
+  it('enforces every exact pressure acceptance guard independently', () => {
+    const parent = {
+      canonicalIdentity: 'parent',
+      envelopeAreaMm2: 100,
+      envelopeMaximumSideMm: 20,
+      areaWeightedCentroidDispersion: 0.5,
+      enclosedCavityCount: 1,
+      largestOccupiedHullGapRatio: 0.2
+    }
+    const accepted = {
+      canonicalIdentity: 'accepted',
+      envelopeAreaMm2: 90,
+      envelopeMaximumSideMm: 19,
+      areaWeightedCentroidDispersion: 0.4,
+      enclosedCavityCount: 1,
+      largestOccupiedHullGapRatio: 0.2
+    }
+
+    expect(intrinsicPressureEndpointRejectionReason(parent, accepted)).toBeUndefined()
+    expect(
+      intrinsicPressureEndpointRejectionReason(parent, {
+        ...accepted,
+        canonicalIdentity: parent.canonicalIdentity
+      })
+    ).toContain('identical')
+    expect(
+      intrinsicPressureEndpointRejectionReason(parent, {
+        ...accepted,
+        envelopeMaximumSideMm: parent.envelopeMaximumSideMm
+      })
+    ).toContain('maximum side')
+    expect(
+      intrinsicPressureEndpointRejectionReason(parent, {
+        ...accepted,
+        envelopeAreaMm2: parent.envelopeAreaMm2
+      })
+    ).toContain('envelope area')
+    expect(
+      intrinsicPressureEndpointRejectionReason(parent, {
+        ...accepted,
+        areaWeightedCentroidDispersion: parent.areaWeightedCentroidDispersion
+      })
+    ).toContain('dispersion')
+    expect(
+      intrinsicPressureEndpointRejectionReason(parent, {
+        ...accepted,
+        enclosedCavityCount: parent.enclosedCavityCount + 1
+      })
+    ).toContain('cavities')
+    expect(
+      intrinsicPressureEndpointRejectionReason(parent, {
+        ...accepted,
+        largestOccupiedHullGapRatio: parent.largestOccupiedHullGapRatio + 0.01
+      })
+    ).toContain('hull-gap')
+  })
+
+  it('splits the registered repair budget evenly without adding sweeps', () => {
+    expect([0, 1, 2].map((index) => pressureRepairSweepAllowance(12, index))).toEqual([
+      4, 4, 4
+    ])
+    expect([0, 1, 2].map((index) => pressureRepairSweepAllowance(5, index))).toEqual([
+      2, 2, 1
+    ])
+    expect(pressureRepairSweepAllowance(12, 3)).toBe(0)
+  })
+
+  it('reserves one accepted exact pressure endpoint without raising the projection cap', async () => {
+    const pieces = [preparedRectangle('near', 4, 2), preparedRectangle('far', 4, 2)]
+    const catalog = await catalogFor(pieces)
+    const e1 = [
+      placed(catalogEntry(catalog, 'near'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'far'), 0, 6, 0)
+    ]
+    const result = await runController(
+      pieces,
+      e1,
+      schedule({ sweepsPerBasin: 2, explorationAreaCapMm2: 30 }),
+      ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced))
+    )
+    const accepted = result.contractedPressureTrace.filter(
+      ({ outcome }) => outcome === 'accepted'
+    )
+    const projected = result.projectionLaneTrace.find(
+      ({ lane }) => lane === 'contracted-pressure'
+    )
+    const retainedTrace = [...result.contractedPressureTrace]
+      .reverse()
+      .find(({ preProjectionCompactness }) => preProjectionCompactness !== undefined)
+
+    expect(accepted.length).toBeGreaterThan(0)
+    expect(result.contractedPressureTrace).toHaveLength(3)
+    expect(result.contractedPressureTrace.map(({ ratioScheduleIndex }) => ratioScheduleIndex)).toEqual([
+      0, 0, 0
+    ])
+    expect(projected).toMatchObject({ outcome: 'selected' })
+    expect(result.projectionAttemptCount).toBeLessThanOrEqual(5)
+    expect(retainedTrace?.preProjectionCompactness).toEqual(
+      retainedTrace?.postProjectionCompactness
+    )
+    expect(retainedTrace?.retainedPressureIdentity).toBe(
+      retainedTrace?.preProjectionCompactness?.canonicalIdentity
+    )
+    expect(result.completedSweepCount).toBe(6)
+    expect(result.trace).toHaveLength(6)
+    expect(new Set(result.trace.map(({ roleId }) => roleId))).toEqual(
+      new Set(['e1-envelope', 'expanded-e1-envelope', 'four-three-cap'])
+    )
+    expect(
+      result.trace.every(
+        ({ retainedSearchScopes }) =>
+          retainedSearchScopes.length === 1 &&
+          retainedSearchScopes[0] === 'ordinary-e5.1'
+      )
+    ).toBe(true)
+    expect(result.pressureRepairSweepCount).toBeLessThanOrEqual(2)
+  })
+
+  it('projects an accepted pressure endpoint before ordinary budget fallback', async () => {
+    const transforms = [transform(0, 0), transform(1, 90)]
+    const pieces = [
+      preparedRectangle('near', 4, 2, transforms),
+      preparedRectangle('far', 4, 2, transforms)
+    ]
+    const catalog = await catalogFor(pieces)
+    const e1 = [
+      placed(catalogEntry(catalog, 'near'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'far'), 0, 6, 0)
+    ]
+    const result = await runController(
+      pieces,
+      e1,
+      schedule({
+        sweepsPerBasin: 0,
+        maximumSeparationEvaluations: 6,
+        explorationAreaCapMm2: 30
+      }),
+      ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced))
+    )
+    const projectedAttempt = result.contractedPressureTrace.find(
+      ({ postProjectionCompactness }) => postProjectionCompactness !== undefined
+    )
+
+    expect(result.status).toBe('budget-fallback')
+    expect(result.projectionAttemptCount).toBe(1)
+    expect(result.projectionAttemptCount).toBeLessThanOrEqual(5)
+    expect(projectedAttempt?.preProjectionCompactness).toEqual(
+      projectedAttempt?.postProjectionCompactness
+    )
+    expect(result.structuralHandoffs).toHaveLength(1)
+  })
+
+  it('projects an accepted pressure endpoint before ordinary deadline fallback', async () => {
+    const pieces = [preparedRectangle('near', 4, 2), preparedRectangle('far', 4, 2)]
+    const catalog = await catalogFor(pieces)
+    const e1 = [
+      placed(catalogEntry(catalog, 'near'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'far'), 0, 6, 0)
+    ]
+    let checkpointCount = 0
+    const result = await runController(
+      pieces,
+      e1,
+      schedule({ sweepsPerBasin: 1, explorationAreaCapMm2: 30 }),
+      ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced)),
+      {
+        checkpoint: () => {
+          checkpointCount += 1
+          return checkpointCount === 4
+            ? Effect.fail(
+                new IrregularNfpIfpControlAbortError({
+                  reason: 'deadline',
+                  message: 'ordinary search deadline'
+                })
+              )
+            : Effect.void
+        }
+      }
+    )
+    const projectedAttempt = result.contractedPressureTrace.find(
+      ({ postProjectionCompactness }) => postProjectionCompactness !== undefined
+    )
+
+    expect(result.status).toBe('deadline-fallback')
+    expect(result.projectionAttemptCount).toBe(1)
+    expect(result.projectionAttemptCount).toBeLessThanOrEqual(5)
+    expect(projectedAttempt?.preProjectionCompactness).toEqual(
+      projectedAttempt?.postProjectionCompactness
+    )
+    expect(result.structuralHandoffs).toHaveLength(1)
+  })
+
+  it('runs all three pressure attempts before ordinary search and decays after failure', async () => {
+    const transforms = [transform(0, 0), transform(1, 90)]
+    const pieces = [
+      preparedRectangle('near', 4, 2, transforms),
+      preparedRectangle('far', 4, 2, transforms)
+    ]
+    const catalog = await catalogFor(pieces)
+    const touching = [
+      placed(catalogEntry(catalog, 'near'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'far'), 0, 4, 0)
+    ]
+    const result = await runController(
+      pieces,
+      touching,
+      schedule({
+        sweepsPerBasin: 0,
+        maximumSeparationEvaluations: 6,
+        explorationAreaCapMm2: 20
+      }),
+      ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced))
+    )
+
+    expect(result.contractedPressureTrace).toHaveLength(3)
+    expect(result.contractedPressureTrace.map(({ ratioScheduleIndex }) => ratioScheduleIndex)).toEqual([
+      0, 1, 2
+    ])
+    expect(result.contractedPressureTrace[0]?.separationEvaluationCount).toBe(1)
+    expect(result.separationEvaluationCount).toBeLessThanOrEqual(6)
+    expect(result.status).toBe('budget-fallback')
+  })
+
+  it('does not count a repair sweep when the deadline fires before repair work', async () => {
+    const pieces = [preparedRectangle('near', 4, 2), preparedRectangle('far', 4, 2)]
+    const catalog = await catalogFor(pieces)
+    const touching = [
+      placed(catalogEntry(catalog, 'near'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'far'), 0, 4, 0)
+    ]
+    let checkpointCount = 0
+    const result = await runController(
+      pieces,
+      touching,
+      schedule({ sweepsPerBasin: 3, explorationAreaCapMm2: 20 }),
+      ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced)),
+      {
+        checkpoint: () => {
+          checkpointCount += 1
+          return checkpointCount === 2
+            ? Effect.fail(
+                new IrregularNfpIfpControlAbortError({
+                  reason: 'deadline',
+                  message: 'deadline before pressure repair work'
+                })
+              )
+            : Effect.void
+        }
+      }
+    )
+
+    expect(result.status).toBe('deadline-fallback')
+    expect(result.pressureRepairSweepCount).toBe(0)
+    expect(result.contractedPressureTrace[0]?.reason).toContain('deadline')
+  })
+
+  it('rejects a projector mismatch while preserving truthful pre/post pressure tuples', async () => {
+    const pieces = [preparedRectangle('near', 4, 2), preparedRectangle('far', 4, 2)]
+    const catalog = await catalogFor(pieces)
+    const e1 = [
+      placed(catalogEntry(catalog, 'near'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'far'), 0, 6, 0)
+    ]
+    let projectionCall = 0
+    const result = await runController(
+      pieces,
+      e1,
+      schedule({ sweepsPerBasin: 1, explorationAreaCapMm2: 30 }),
+      ({ provisionalPlaced }) => {
+        projectionCall += 1
+        if (projectionCall !== 1) {
+          return Effect.succeed(exactProjection(provisionalPlaced))
+        }
+        const changed = provisionalPlaced.map((entry) =>
+          entry.placement.pieceId === PieceId.make('near')
+            ? movePlaced(
+                entry,
+                entry.placement.transform.translateX + 0.1,
+                entry.placement.transform.translateY
+              )
+            : entry
+        )
+        return Effect.succeed(exactProjection(changed))
+      }
+    )
+    const retainedTrace = [...result.contractedPressureTrace]
+      .reverse()
+      .find(({ preProjectionCompactness }) => preProjectionCompactness !== undefined)
+    const pressureProjection = result.projectionTrace.find(
+      ({ lane }) => lane === 'contracted-pressure'
+    )
+
+    expect(pressureProjection?.outcome).toBe('structural-analysis-invalid')
+    expect(retainedTrace?.preProjectionCompactness).toBeDefined()
+    expect(retainedTrace?.postProjectionCompactness).toBeDefined()
+    expect(retainedTrace?.postProjectionCompactness).not.toEqual(
+      retainedTrace?.preProjectionCompactness
+    )
+  })
+
   it('inherits disruption lineage and ORs it during same-state deduplication', async () => {
     expect(inheritIntrinsicDisruptionLineage(false, 'swap')).toBe(true)
     expect(inheritIntrinsicDisruptionLineage(true, 'separate')).toBe(true)
@@ -734,6 +1073,31 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       eligibleCandidateCount: 2,
       skippedDuplicateCount: 1,
       stateKey: 'e1-disruption'
+    })
+  })
+
+  it('gives a duplicate accepted pressure endpoint ownership of the shared projection slot', async () => {
+    const pieces = [preparedRectangle('a', 1, 1), preparedRectangle('b', 1, 1)]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 2, 0)
+    ])
+    if (state === undefined) throw new Error('state expected')
+    const roles = projectionTargetRoles()
+    const raw = projectionLaneCandidate(roles[0], 0, state, 'same', 0, 0, false)
+    const selection = selectIntrinsicProjectionWorkItems([raw], roles, raw)
+
+    expect(selection.workItems).toHaveLength(1)
+    expect(selection.workItems[0]?.lane).toBe('contracted-pressure')
+    expect(selection.trace[0]).toMatchObject({
+      lane: 'contracted-pressure',
+      outcome: 'selected'
+    })
+    expect(selection.trace[1]).toMatchObject({
+      lane: 'global-raw',
+      outcome: 'lane-collapsed',
+      collapsedIntoWorkIdentity: selection.workItems[0]?.workIdentity
     })
   })
 
@@ -1329,6 +1693,7 @@ function poolEntry(
           depth: 0
         }
   return {
+    searchScope: 'ordinary-e5.1',
     state,
     key,
     disruptionLineage: disruptionLineageProvenance !== undefined,

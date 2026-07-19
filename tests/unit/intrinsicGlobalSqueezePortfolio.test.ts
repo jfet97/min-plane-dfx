@@ -25,6 +25,7 @@ import {
 import {
   INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
   partitionIntrinsicStructuralPieces,
+  type IntrinsicContractedPressureAttemptTrace,
   type IntrinsicGlobalSearchResult,
   type IntrinsicStructuralHandoff
 } from '../../src/workers/algorithm/irregular/intrinsicSqueezeDisruptSeparate.js'
@@ -128,6 +129,8 @@ function structuralResult(input: {
   readonly fallback: ReadonlyArray<IrregularPlacedPiece>
   readonly handoffs?: ReadonlyArray<IntrinsicStructuralHandoff>
   readonly status?: IntrinsicGlobalSearchResult['status']
+  readonly contractedPressureTrace?: ReadonlyArray<IntrinsicContractedPressureAttemptTrace>
+  readonly pressureRepairSweepCount?: number
 }): IntrinsicGlobalSearchResult {
   const partition = partitionIntrinsicStructuralPieces(input.pieces)
   if (partition === undefined) throw new Error('partition expected')
@@ -142,6 +145,8 @@ function structuralResult(input: {
     trace: [],
     projectionLaneTrace: [],
     projectionTrace: [],
+    contractedPressureTrace: input.contractedPressureTrace ?? [],
+    pressureRepairSweepCount: input.pressureRepairSweepCount ?? 0,
     completedSweepCount: input.status === undefined ? 72 : 0,
     separationEvaluationCount: 10,
     projectionAttemptCount: input.handoffs?.length ?? 0,
@@ -251,6 +256,75 @@ describe('intrinsic global squeeze portfolio', () => {
     expect(result.selected.source).toBe('e1-fallback')
     expect(result.completeArchive).toHaveLength(1)
     expect(result.fillTrace).toEqual([])
+  })
+
+  it('propagates the complete contracted-pressure evidence through structural outcome', async () => {
+    const pieces = [preparedRectangle('a', 2, 2), preparedRectangle('b', 2, 2)]
+    const fallback = [placed(pieceAt(pieces, 0), 0, 0), placed(pieceAt(pieces, 1), 3, 0)]
+    const parentCompactness = {
+      canonicalIdentity: 'parent',
+      envelopeAreaMm2: 10,
+      envelopeMaximumSideMm: 5,
+      areaWeightedCentroidDispersion: 0.5,
+      enclosedCavityCount: 0,
+      largestOccupiedHullGapRatio: 0.2
+    }
+    const endpointCompactness = {
+      canonicalIdentity: 'endpoint',
+      envelopeAreaMm2: 8,
+      envelopeMaximumSideMm: 4,
+      areaWeightedCentroidDispersion: 0.3,
+      enclosedCavityCount: 0,
+      largestOccupiedHullGapRatio: 0.1
+    }
+    const pressureTrace: IntrinsicContractedPressureAttemptTrace = {
+      attemptIndex: 0,
+      ratioScheduleIndex: 0,
+      parentCompactness,
+      occupiedBox: {
+        minimumXGrid: 0,
+        minimumYGrid: 0,
+        maximumXGrid: 5_000,
+        maximumYGrid: 2_000,
+        widthMm: 5,
+        heightMm: 2
+      },
+      contractedBox: { widthMm: 4.75, heightMm: 2 },
+      contractionAxis: 'x',
+      contractionRatio: 1 / 20,
+      removedWidthMm: 0.25,
+      areaWeightedMedianGrid: 1_000,
+      nearPartitionPieceIds: [PieceId.make('a')],
+      farPartitionPieceIds: [PieceId.make('b')],
+      translatedPartitionPieceIds: [PieceId.make('b')],
+      proposalIdentity: 'proposal',
+      proposalRawLoss: 0.1,
+      proposalWeightedLoss: 0.2,
+      proposalDispersion: 0.4,
+      separationEvaluationCount: 7,
+      bestRepairedLoss: 0,
+      bestEndpointExact: true,
+      bestEndpointCompactness: endpointCompactness,
+      outcome: 'accepted',
+      reason: 'accepted fixture endpoint',
+      retainedPressureIdentity: 'endpoint',
+      preProjectionCompactness: endpointCompactness,
+      postProjectionCompactness: endpointCompactness
+    }
+    const result = await runPortfolio({
+      pieces,
+      fallback,
+      structural: structuralResult({
+        pieces,
+        fallback,
+        contractedPressureTrace: [pressureTrace],
+        pressureRepairSweepCount: 7
+      }),
+      fill: () => Effect.die('fill must not run')
+    })
+
+    expect(result.structuralOutcome.contractedPressureTrace).toEqual([pressureTrace])
+    expect(result.structuralOutcome.pressureRepairSweepCount).toBe(7)
   })
 
   it('fills a topology-poor structural handoff before applying complete-layout admission', async () => {

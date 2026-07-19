@@ -43,6 +43,7 @@ import {
   provisionalLayoutFromRelaxedState,
   relaxedStateFromExactLayout,
   remapIntrinsicTransformsQuarterTurn,
+  transportIntrinsicGroup,
   updateIntrinsicSeparatorWeights,
   type IntrinsicRelaxedState,
   type IntrinsicSeparationEvaluation,
@@ -110,6 +111,67 @@ export interface IntrinsicDirectDisruptionProposalCounts {
   readonly interfaceDisrupt: number
 }
 
+export type IntrinsicPressureAxis = 'x' | 'y'
+export type IntrinsicInfeasibleSearchScope = 'ordinary-e5.1' | 'contracted-pressure'
+
+export interface IntrinsicPressureBox {
+  readonly minimumXGrid: number
+  readonly minimumYGrid: number
+  readonly maximumXGrid: number
+  readonly maximumYGrid: number
+  readonly widthMm: number
+  readonly heightMm: number
+}
+
+export interface IntrinsicPressureCompactnessTuple {
+  readonly canonicalIdentity: string
+  readonly envelopeAreaMm2: number
+  readonly envelopeMaximumSideMm: number
+  readonly areaWeightedCentroidDispersion: number
+  readonly enclosedCavityCount: number
+  readonly largestOccupiedHullGapRatio: number
+}
+
+export interface IntrinsicContractedPressureAttemptTrace {
+  readonly attemptIndex: number
+  readonly ratioScheduleIndex: 0 | 1 | 2
+  readonly parentCompactness: IntrinsicPressureCompactnessTuple
+  readonly occupiedBox: IntrinsicPressureBox
+  readonly contractedBox: IntrinsicTargetBox
+  readonly contractionAxis: IntrinsicPressureAxis
+  readonly contractionRatio: number
+  readonly removedWidthMm: number
+  readonly areaWeightedMedianGrid: number | undefined
+  readonly nearPartitionPieceIds: ReadonlyArray<PieceId>
+  readonly farPartitionPieceIds: ReadonlyArray<PieceId>
+  readonly translatedPartitionPieceIds: ReadonlyArray<PieceId>
+  readonly proposalIdentity: string | undefined
+  readonly proposalRawLoss: number | undefined
+  readonly proposalWeightedLoss: number | undefined
+  readonly proposalDispersion: number | undefined
+  readonly separationEvaluationCount: number
+  readonly bestRepairedLoss: number | undefined
+  readonly bestEndpointExact: boolean
+  readonly bestEndpointCompactness: IntrinsicPressureCompactnessTuple | undefined
+  readonly outcome: 'accepted' | 'rejected'
+  readonly reason: string
+  readonly retainedPressureIdentity: string | undefined
+  readonly preProjectionCompactness: IntrinsicPressureCompactnessTuple | undefined
+  readonly postProjectionCompactness: IntrinsicPressureCompactnessTuple | undefined
+}
+
+export interface IntrinsicContractedPressureProposal {
+  readonly state: IntrinsicRelaxedState
+  readonly occupiedBox: IntrinsicPressureBox
+  readonly contractedBox: IntrinsicTargetBox
+  readonly contractionAxis: IntrinsicPressureAxis
+  readonly contractionRatio: number
+  readonly removedWidthMm: number
+  readonly areaWeightedMedianGrid: number
+  readonly nearPartitionPieceIds: ReadonlyArray<PieceId>
+  readonly farPartitionPieceIds: ReadonlyArray<PieceId>
+}
+
 export interface IntrinsicGlobalSweepTrace {
   readonly roleId: IntrinsicGlobalTargetRole['id']
   readonly basinIndex: 0 | 1
@@ -141,6 +203,7 @@ export interface IntrinsicGlobalSweepTrace {
     | 'retained-earlier-or-better'
     | 'retained-no-current-lineage'
   readonly shadowLineageSnapshotReason: string
+  readonly retainedSearchScopes: ReadonlyArray<IntrinsicInfeasibleSearchScope>
 }
 
 export interface IntrinsicStructuralHandoffMetrics {
@@ -187,6 +250,7 @@ export interface IntrinsicStructuralHandoffRetentionTrace {
 export type IntrinsicProjectionLane =
   | 'global-raw'
   | 'global-final-gls'
+  | 'contracted-pressure'
   | 'role-disruption'
 
 export interface IntrinsicProjectionWorkItem {
@@ -259,6 +323,8 @@ export interface IntrinsicGlobalSearchResult {
   readonly trace: ReadonlyArray<IntrinsicGlobalSweepTrace>
   readonly projectionLaneTrace: ReadonlyArray<IntrinsicProjectionLaneTrace>
   readonly projectionTrace: ReadonlyArray<IntrinsicProjectionAttemptTrace>
+  readonly contractedPressureTrace: ReadonlyArray<IntrinsicContractedPressureAttemptTrace>
+  readonly pressureRepairSweepCount: number
   readonly completedSweepCount: number
   readonly separationEvaluationCount: number
   readonly projectionAttemptCount: number
@@ -288,6 +354,7 @@ export interface IntrinsicGlobalSearchSchedule {
 }
 
 export interface IntrinsicInfeasiblePoolEntry {
+  readonly searchScope: IntrinsicInfeasibleSearchScope
   readonly state: IntrinsicRelaxedState
   readonly evaluation: IntrinsicSeparationEvaluation
   readonly key: string
@@ -323,6 +390,29 @@ export interface IntrinsicProjectionWorkSelection {
   readonly trace: ReadonlyArray<IntrinsicProjectionLaneTrace>
 }
 
+interface IntrinsicPressureMeasuredLayout {
+  readonly compactness: IntrinsicPressureCompactnessTuple
+  readonly occupiedBox: IntrinsicPressureBox
+}
+
+interface IntrinsicPressureExactEndpoint {
+  readonly placed: ReadonlyArray<IrregularPlacedPiece>
+  readonly state: IntrinsicRelaxedState
+  readonly stateKey: string
+  readonly targetBox: IntrinsicTargetBox
+  readonly evaluation: IntrinsicSeparationEvaluation
+  readonly weights: IntrinsicSeparatorWeights
+  readonly measured: IntrinsicPressureMeasuredLayout
+}
+
+interface IntrinsicPressureLaneResult {
+  readonly acceptedEndpoint: IntrinsicPressureExactEndpoint | undefined
+  readonly trace: ReadonlyArray<IntrinsicContractedPressureAttemptTrace>
+  readonly separationEvaluationCount: number
+  readonly repairSweepCount: number
+  readonly deadlineReached: boolean
+}
+
 interface ProjectionDependency {
   readonly project: typeof projectIntrinsicLayoutExactly
 }
@@ -331,6 +421,8 @@ const productionSchedule: IntrinsicGlobalSearchSchedule = {
   ...INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
   forcedDisruptionSweeps: INTRINSIC_GLOBAL_SEARCH_DEFAULTS.forcedDisruptionSweeps
 }
+
+const INTRINSIC_PRESSURE_CONTRACTION_RATIOS = [1 / 20, 1 / 40, 1 / 80] as const
 
 /** E3's registered area partition; no positional slicing is allowed. */
 export function partitionIntrinsicStructuralPieces(
@@ -515,7 +607,10 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
     const trace: IntrinsicGlobalSweepTrace[] = []
     let projectionLaneTrace: ReadonlyArray<IntrinsicProjectionLaneTrace> = []
     const projectionTrace: IntrinsicProjectionAttemptTrace[] = []
+    let contractedPressureTrace: ReadonlyArray<IntrinsicContractedPressureAttemptTrace> = []
+    let pressureRepairSweepCount = 0
     const projectionCandidates: IntrinsicProjectionLaneCandidate[] = []
+    let contractedPressureEndpoint: IntrinsicPressureExactEndpoint | undefined
     const handoffs: IntrinsicStructuralHandoff[] = []
     let completedBasinCount = 0
     const searchControl = deadlineControl(
@@ -552,7 +647,152 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
       )
     }
 
+    const pressure = yield* runIntrinsicContractedPressureLane({
+      catalog,
+      initialPlaced: exactStructuralReference,
+      schedule,
+      control: searchControl,
+      maximumAdditionalEvaluations: Math.floor(
+        schedule.maximumSeparationEvaluations / 4
+      )
+    })
+    separationEvaluationCount += pressure.separationEvaluationCount
+    pressureRepairSweepCount = pressure.repairSweepCount
+    contractedPressureTrace = pressure.trace
+    contractedPressureEndpoint = pressure.acceptedEndpoint
+    if (pressure.deadlineReached) scheduleStatus = 'deadline-fallback'
+    const contractedPressureCandidate =
+      contractedPressureEndpoint === undefined
+        ? undefined
+        : pressureProjectionCandidate(contractedPressureEndpoint, targetRoles[0])
+    let contractedPressureWorkIdentity: string | undefined
+    let retainedPressureHandoff: IntrinsicStructuralHandoff | undefined
+
+    if (scheduleStatus === 'completed' && contractedPressureCandidate !== undefined) {
+      const pressureWorkItem = projectionWorkItem(
+        'contracted-pressure',
+        undefined,
+        contractedPressureCandidate
+      )
+      contractedPressureWorkIdentity = pressureWorkItem.workIdentity
+      projectionLaneTrace = [
+        {
+          ...projectionLaneTraceFromWork(pressureWorkItem),
+          outcome: 'selected',
+          collapsedIntoWorkIdentity: undefined,
+          eligibleCandidateCount: 1,
+          skippedDuplicateCount: 0
+        }
+      ]
+      const provisional = provisionalLayoutFromRelaxedState(catalog, pressureWorkItem.state)
+      const reinsertionPriorityPieceIds = intrinsicProjectionPriority(
+        catalog,
+        pressureWorkItem.state,
+        pressureWorkItem.evaluation,
+        pressureWorkItem.weights
+      )
+      if (provisional === undefined || reinsertionPriorityPieceIds === undefined) {
+        return yield* globalFailure(
+          'search',
+          'the accepted pressure endpoint could not be converted for exact projection.'
+        )
+      }
+      projectionAttemptCount += 1
+      const attempted = yield* Effect.matchEffect(
+        dependency.project({
+          targetBox: pressureWorkItem.targetBox,
+          catalog,
+          referencePlaced: provisional,
+          provisionalPlaced: provisional,
+          reinsertionPriorityPieceIds,
+          control: searchControl
+        }),
+        {
+          onFailure: (error) => Effect.succeed({ kind: 'failure' as const, error }),
+          onSuccess: (value) => Effect.succeed({ kind: 'success' as const, value })
+        }
+      )
+      const traceBase = projectionAttemptTraceBase(
+        pressureWorkItem,
+        completedBasinCount,
+        completedSweepCount,
+        projectionAttemptCount
+      )
+      if (attempted.kind === 'failure') {
+        switch (attempted.error._tag) {
+          case 'IntrinsicExactProjectionError':
+            projectionTrace.push({
+              ...traceBase,
+              outcome: attempted.error.category,
+              failedPieceId: attempted.error.failedPieceId,
+              dilationSteps: attempted.error.attempts,
+              structuralCanonicalGeometryIdentity: undefined
+            })
+            break
+          case 'IrregularNfpIfpControlAbortError':
+            if (attempted.error.reason === 'cancelled') {
+              return yield* Effect.fail(attempted.error)
+            }
+            projectionTrace.push({
+              ...traceBase,
+              outcome: 'deadline',
+              failedPieceId: undefined,
+              dilationSteps: undefined,
+              structuralCanonicalGeometryIdentity: undefined
+            })
+            scheduleStatus = 'deadline-fallback'
+            break
+          case 'IrregularGeometryInputError':
+          case 'IrregularNestingNotImplementedError':
+            return yield* Effect.fail(attempted.error)
+        }
+      } else {
+        projectionSuccessCount += 1
+        const postProjection = measureIntrinsicPressureCompactness(
+          attempted.value.placedCollisionGeometries
+        )
+        contractedPressureTrace = recordContractedPressureProjection(
+          contractedPressureTrace,
+          postProjection
+        )
+        const handoff = pressureProjectionPreserved(
+          contractedPressureEndpoint?.measured.compactness,
+          postProjection?.compactness
+        )
+          ? exactStructuralHandoff({
+              role: pressureWorkItem.targetRole,
+              basinIndex: pressureWorkItem.basinIndex,
+              projectionAttempt: projectionAttemptCount,
+              targetBox: pressureWorkItem.targetBox,
+              projection: attempted.value,
+              expectedStructuralPieceIds: catalog.entries.map(({ pieceId }) => pieceId)
+            })
+          : undefined
+        const handoffRetention =
+          handoff === undefined
+            ? undefined
+            : addStructuralHandoff(handoffs, handoff, schedule.structuralHandoffCapacity)
+        if (
+          handoff !== undefined &&
+          handoffRetention?.retainedCanonicalGeometryIdentities.includes(
+            handoff.metrics.canonicalGeometryIdentity
+          )
+        ) {
+          retainedPressureHandoff = handoff
+        }
+        projectionTrace.push({
+          ...traceBase,
+          outcome: handoff === undefined ? 'structural-analysis-invalid' : 'exact-success',
+          failedPieceId: undefined,
+          dilationSteps: attempted.value.dilationSteps,
+          structuralCanonicalGeometryIdentity: handoff?.metrics.canonicalGeometryIdentity,
+          ...(handoffRetention === undefined ? {} : { handoffRetention })
+        })
+      }
+    }
+
     for (const { role, basinIndex, targetBox, basinState } of basinPlans) {
+      if (scheduleStatus !== 'completed') break
       if (separationEvaluationCount >= schedule.maximumSeparationEvaluations) {
         scheduleStatus = 'budget-fallback'
         break
@@ -569,6 +809,7 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
       searchedBasinCount += 1
       let pool: ReadonlyArray<IntrinsicInfeasiblePoolEntry> = [
         {
+          searchScope: 'ordinary-e5.1',
           state: basinState,
           evaluation: initialEvaluation,
           key: intrinsicRelaxedStateKey(catalog, basinState) ?? '',
@@ -656,6 +897,7 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
                 key
               )
               candidates.push({
+                searchScope: 'ordinary-e5.1',
                 state: proposal.state,
                 evaluation,
                 key,
@@ -719,7 +961,8 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
           activeLineageRetentionReason: retention.activeLineageRetentionReason,
           shadowLineageSnapshot,
           shadowLineageSnapshotOutcome: shadowUpdate.outcome,
-          shadowLineageSnapshotReason: shadowUpdate.reason
+          shadowLineageSnapshotReason: shadowUpdate.reason,
+          retainedSearchScopes: [...new Set(pool.map(({ searchScope }) => searchScope))]
         })
       }
       if (scheduleStatus !== 'completed') break
@@ -733,12 +976,16 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
     if (scheduleStatus === 'completed') {
       const workSelection = selectIntrinsicProjectionWorkItems(
         projectionCandidates,
-        targetRoles
+        targetRoles,
+        contractedPressureCandidate,
+        contractedPressureWorkIdentity === undefined
+          ? new Set()
+          : new Set([contractedPressureWorkIdentity])
       )
-      projectionLaneTrace = workSelection.trace
+      projectionLaneTrace = [...projectionLaneTrace, ...workSelection.trace]
       for (const workItem of workSelection.workItems.slice(
         0,
-        schedule.maximumProjectionAttempts
+        Math.max(0, schedule.maximumProjectionAttempts - projectionAttemptCount)
       )) {
         if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
           scheduleStatus = 'deadline-fallback'
@@ -762,7 +1009,10 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
           dependency.project({
             targetBox: workItem.targetBox,
             catalog,
-            referencePlaced: exactStructuralReference,
+            referencePlaced:
+              workItem.lane === 'contracted-pressure'
+                ? provisional
+                : exactStructuralReference,
             provisionalPlaced: provisional,
             reinsertionPriorityPieceIds,
             control: searchControl
@@ -809,14 +1059,30 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
           }
         } else {
           projectionSuccessCount += 1
-          const handoff = exactStructuralHandoff({
+          const pressurePostProjection =
+            workItem.lane === 'contracted-pressure'
+              ? measureIntrinsicPressureCompactness(attempted.value.placedCollisionGeometries)
+              : undefined
+          if (workItem.lane === 'contracted-pressure') {
+            contractedPressureTrace = recordContractedPressureProjection(
+              contractedPressureTrace,
+              pressurePostProjection
+            )
+          }
+          const pressureProjectionMatches =
+            workItem.lane !== 'contracted-pressure' ||
+            pressureProjectionPreserved(
+              contractedPressureEndpoint?.measured.compactness,
+              pressurePostProjection?.compactness
+            )
+          const handoff = pressureProjectionMatches ? exactStructuralHandoff({
             role: workItem.targetRole,
             basinIndex: workItem.basinIndex,
             projectionAttempt: projectionAttemptCount,
             targetBox: workItem.targetBox,
             projection: attempted.value,
             expectedStructuralPieceIds: catalog.entries.map(({ pieceId }) => pieceId)
-          })
+          }) : undefined
           if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
             scheduleStatus = 'deadline-fallback'
             break
@@ -854,7 +1120,10 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
     ) {
       scheduleStatus = 'deadline-fallback'
     }
-    if (scheduleStatus !== 'completed') handoffs.splice(0, handoffs.length)
+    if (scheduleStatus !== 'completed') {
+      handoffs.splice(0, handoffs.length)
+      if (retainedPressureHandoff !== undefined) handoffs.push(retainedPressureHandoff)
+    }
     return {
       status: scheduleStatus,
       fullE1Fallback,
@@ -866,6 +1135,8 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
       trace,
       projectionLaneTrace,
       projectionTrace,
+      contractedPressureTrace,
+      pressureRepairSweepCount,
       completedSweepCount,
       separationEvaluationCount,
       projectionAttemptCount,
@@ -982,10 +1253,893 @@ function exactStructuralHandoff(input: {
   }
 }
 
+function runIntrinsicContractedPressureLane(input: {
+  readonly catalog: IntrinsicTransformCatalog
+  readonly initialPlaced: ReadonlyArray<IrregularPlacedPiece>
+  readonly schedule: IntrinsicGlobalSearchSchedule
+  readonly control: IrregularNfpIfpControl
+  readonly maximumAdditionalEvaluations: number
+}): Effect.Effect<
+  IntrinsicPressureLaneResult,
+  IrregularNfpIfpControlAbortError
+> {
+  return Effect.gen(function* () {
+    const anchoredInitial = bottomLeftAnchoredPressureLayout(input.initialPlaced)
+    const initialMeasured =
+      anchoredInitial === undefined
+        ? undefined
+        : measureIntrinsicPressureCompactness(anchoredInitial)
+    if (anchoredInitial === undefined || initialMeasured === undefined) {
+      return {
+        acceptedEndpoint: undefined,
+        trace: [],
+        separationEvaluationCount: 0,
+        repairSweepCount: 0,
+        deadlineReached: false
+      }
+    }
+
+    let incumbentPlaced = anchoredInitial
+    let incumbentMeasured = initialMeasured
+    let acceptedEndpoint: IntrinsicPressureExactEndpoint | undefined
+    let ratioCursor = 0
+    let attemptIndex = 0
+    let separationEvaluationCount = 0
+    let repairSweepCount = 0
+    const trace: IntrinsicContractedPressureAttemptTrace[] = []
+
+    while (attemptIndex < INTRINSIC_PRESSURE_CONTRACTION_RATIOS.length) {
+      if ((yield* globalSearchCheckpoint(input.control)) === 'deadline') {
+        return {
+          acceptedEndpoint,
+          trace,
+          separationEvaluationCount,
+          repairSweepCount,
+          deadlineReached: true
+        }
+      }
+      const pressureStep = intrinsicPressureContractionStep(ratioCursor)
+      if (pressureStep === undefined) break
+      const { ratioScheduleIndex, contractionRatio } = pressureStep
+      const parentMeasured = incumbentMeasured
+      const proposal = deriveIntrinsicContractedPressureProposal(
+        input.catalog,
+        incumbentPlaced,
+        contractionRatio
+      )
+      if (proposal === undefined) {
+        trace.push(
+          unavailableContractedPressureAttemptTrace({
+            attemptIndex,
+            ratioScheduleIndex,
+            contractionRatio,
+            parent: parentMeasured,
+            retainedPressureIdentity:
+              acceptedEndpoint?.measured.compactness.canonicalIdentity,
+            reason: 'the contracted target or area-weighted median split was unavailable'
+          })
+        )
+        ratioCursor += 1
+        attemptIndex += 1
+        continue
+      }
+
+      const proposalPlaced = provisionalLayoutFromRelaxedState(
+        input.catalog,
+        proposal.state
+      )
+      const proposalIdentity =
+        proposalPlaced === undefined
+          ? undefined
+          : canonicalCollisionLayoutIdentity(proposalPlaced)
+      const proposalDispersion =
+        proposalPlaced === undefined
+          ? undefined
+          : measureIntrinsicAreaWeightedCentroidDispersion(proposalPlaced)
+      if (
+        separationEvaluationCount >= input.maximumAdditionalEvaluations ||
+        proposalPlaced === undefined
+      ) {
+        trace.push(
+          contractedPressureAttemptTrace({
+            attemptIndex,
+            ratioScheduleIndex,
+            proposal,
+            parent: parentMeasured,
+            proposalIdentity,
+            proposalEvaluation: undefined,
+            proposalDispersion,
+            evaluationCount: 0,
+            bestRepairedLoss: undefined,
+            bestEndpoint: undefined,
+            outcome: 'rejected',
+            reason:
+              proposalPlaced === undefined
+                ? 'the translated pressure state could not be materialized'
+                : 'the shared separation-evaluation budget was exhausted',
+            retainedPressureIdentity:
+              acceptedEndpoint?.measured.compactness.canonicalIdentity,
+            preProjectionCompactness: undefined
+          })
+        )
+        ratioCursor += 1
+        attemptIndex += 1
+        continue
+      }
+
+      const initialEvaluation = evaluateIntrinsicSeparation(
+        proposal.contractedBox,
+        input.catalog,
+        proposal.state
+      )
+      separationEvaluationCount += 1
+      if (initialEvaluation === undefined) {
+        trace.push(
+          contractedPressureAttemptTrace({
+            attemptIndex,
+            ratioScheduleIndex,
+            proposal,
+            parent: parentMeasured,
+            proposalIdentity,
+            proposalEvaluation: undefined,
+            proposalDispersion,
+            evaluationCount: 1,
+            bestRepairedLoss: undefined,
+            bestEndpoint: undefined,
+            outcome: 'rejected',
+            reason: 'the translated pressure state produced a non-finite separation loss',
+            retainedPressureIdentity:
+              acceptedEndpoint?.measured.compactness.canonicalIdentity,
+            preProjectionCompactness: undefined
+          })
+        )
+        ratioCursor += 1
+        attemptIndex += 1
+        continue
+      }
+
+      let weights: IntrinsicSeparatorWeights = { byConflictKey: new Map() }
+      let pool: ReadonlyArray<IntrinsicInfeasiblePoolEntry> = [
+        pressurePoolEntry(
+          proposal.state,
+          initialEvaluation,
+          intrinsicRelaxedStateKey(input.catalog, proposal.state)
+        )
+      ].filter((entry): entry is IntrinsicInfeasiblePoolEntry => entry !== undefined)
+      const exactEndpoints: IntrinsicPressureExactEndpoint[] = []
+      addExactPressureEndpoint(
+        exactEndpoints,
+        pressureEndpointFromState({
+          catalog: input.catalog,
+          targetBox: proposal.contractedBox,
+          state: proposal.state,
+          evaluation: initialEvaluation,
+          weights
+        })
+      )
+      let attemptEvaluationCount = 1
+      let bestRepairedLoss = initialEvaluation.rawLoss
+      let budgetExhausted = false
+
+      for (
+        let repairSweep = 0;
+        repairSweep < pressureRepairSweepAllowance(input.schedule.sweepsPerBasin, attemptIndex) &&
+        !exactEndpoints.some(
+          (endpoint) =>
+            pressureEndpointRejectionReason(parentMeasured, endpoint) === undefined
+        );
+        repairSweep += 1
+      ) {
+        if ((yield* globalSearchCheckpoint(input.control)) === 'deadline') {
+          const bestEndpoint = exactEndpoints.toSorted(comparePressureEndpoints)[0]
+          trace.push(
+            contractedPressureAttemptTrace({
+              attemptIndex,
+              ratioScheduleIndex,
+              proposal,
+              parent: parentMeasured,
+              proposalIdentity,
+              proposalEvaluation: initialEvaluation,
+              proposalDispersion,
+              evaluationCount: attemptEvaluationCount,
+              bestRepairedLoss,
+              bestEndpoint,
+              outcome: 'rejected',
+              reason: 'the cooperative runtime deadline interrupted pressure repair',
+              retainedPressureIdentity:
+                acceptedEndpoint?.measured.compactness.canonicalIdentity,
+              preProjectionCompactness: undefined
+            })
+          )
+          return {
+            acceptedEndpoint,
+            trace,
+            separationEvaluationCount,
+            repairSweepCount,
+            deadlineReached: true
+          }
+        }
+        repairSweepCount += 1
+        const candidates: IntrinsicInfeasiblePoolEntry[] = [...pool]
+        let generatedProposalCount = 0
+        for (const entry of pool) {
+          const proposals = intrinsicFocusedProposals({
+            catalog: input.catalog,
+            state: entry.state,
+            evaluation: entry.evaluation,
+            weights
+          })
+          generatedProposalCount += proposals.length
+          for (const repairProposal of proposals) {
+            if (separationEvaluationCount >= input.maximumAdditionalEvaluations) {
+              budgetExhausted = true
+              break
+            }
+            const evaluation = evaluateIntrinsicSeparation(
+              proposal.contractedBox,
+              input.catalog,
+              repairProposal.state,
+              weights
+            )
+            separationEvaluationCount += 1
+            attemptEvaluationCount += 1
+            const key = intrinsicRelaxedStateKey(input.catalog, repairProposal.state)
+            const entryCandidate =
+              evaluation === undefined
+                ? undefined
+                : pressurePoolEntry(repairProposal.state, evaluation, key)
+            if (entryCandidate !== undefined && evaluation !== undefined) {
+              candidates.push(entryCandidate)
+              bestRepairedLoss = Math.min(bestRepairedLoss, evaluation.rawLoss)
+              addExactPressureEndpoint(
+                exactEndpoints,
+                pressureEndpointFromState({
+                  catalog: input.catalog,
+                  targetBox: proposal.contractedBox,
+                  state: repairProposal.state,
+                  evaluation,
+                  weights
+                })
+              )
+            }
+          }
+          if (budgetExhausted) break
+        }
+        if (generatedProposalCount === 0 || candidates.length === 0) break
+        const rawBest = reweightIntrinsicPool(candidates, weights).toSorted(
+          comparePoolEntriesByRaw
+        )[0]
+        if (rawBest === undefined) break
+        weights = updateIntrinsicSeparatorWeights(weights, rawBest.evaluation)
+        pool = retainIntrinsicInfeasiblePool(
+          candidates,
+          input.schedule.poolCapacity,
+          weights,
+          repairSweep
+        )
+        if (budgetExhausted) break
+      }
+
+      const rankedEndpoints = exactEndpoints.toSorted(comparePressureEndpoints)
+      const accepted = rankedEndpoints.find(
+        (endpoint) => pressureEndpointRejectionReason(parentMeasured, endpoint) === undefined
+      )
+      const bestEndpoint = accepted ?? rankedEndpoints[0]
+      const reason =
+        accepted === undefined
+          ? pressureEndpointRejectionReason(parentMeasured, bestEndpoint) ??
+            (budgetExhausted
+              ? 'the shared separation-evaluation budget was exhausted before an exact endpoint'
+              : 'the separator produced no canonical-exact endpoint')
+          : 'the canonical-exact endpoint strictly improved every registered pressure metric'
+      if (accepted !== undefined) {
+        for (let index = 0; index < trace.length; index += 1) {
+          const existing = trace[index]
+          if (existing?.preProjectionCompactness !== undefined) {
+            trace[index] = { ...existing, preProjectionCompactness: undefined }
+          }
+        }
+        incumbentPlaced = accepted.placed
+        incumbentMeasured = accepted.measured
+        acceptedEndpoint = accepted
+      }
+      trace.push(
+        contractedPressureAttemptTrace({
+          attemptIndex,
+          ratioScheduleIndex,
+          proposal,
+          parent: parentMeasured,
+          proposalIdentity,
+          proposalEvaluation: initialEvaluation,
+          proposalDispersion,
+          evaluationCount: attemptEvaluationCount,
+          bestRepairedLoss,
+          bestEndpoint,
+          outcome: accepted === undefined ? 'rejected' : 'accepted',
+          reason,
+          retainedPressureIdentity:
+            acceptedEndpoint?.measured.compactness.canonicalIdentity,
+          preProjectionCompactness: accepted?.measured.compactness
+        })
+      )
+      ratioCursor = accepted === undefined ? ratioCursor + 1 : 0
+      attemptIndex += 1
+    }
+
+    return {
+      acceptedEndpoint,
+      trace,
+      separationEvaluationCount,
+      repairSweepCount,
+      deadlineReached: false
+    }
+  })
+}
+
+export function deriveIntrinsicContractedPressureProposal(
+  catalog: IntrinsicTransformCatalog,
+  placed: ReadonlyArray<IrregularPlacedPiece>,
+  contractionRatio: number
+): IntrinsicContractedPressureProposal | undefined {
+  if (!Number.isFinite(contractionRatio) || contractionRatio <= 0 || contractionRatio >= 1) {
+    return undefined
+  }
+  const anchored = bottomLeftAnchoredPressureLayout(placed)
+  if (anchored === undefined) return undefined
+  const state = relaxedStateFromExactLayout(catalog, anchored)
+  const occupiedBox = canonicalPressureBox(anchored)
+  const moments = canonicalPlacedPolygonMoments(anchored)
+  if (state === undefined || occupiedBox === undefined || moments === undefined) {
+    return undefined
+  }
+  const contractionAxis: IntrinsicPressureAxis =
+    occupiedBox.widthMm >= occupiedBox.heightMm ? 'x' : 'y'
+  const occupiedSpanGrid =
+    contractionAxis === 'x'
+      ? occupiedBox.maximumXGrid - occupiedBox.minimumXGrid
+      : occupiedBox.maximumYGrid - occupiedBox.minimumYGrid
+  const removedWidthGrid = Math.max(1, Math.floor(occupiedSpanGrid * contractionRatio))
+  const contractedSpanGrid = occupiedSpanGrid - removedWidthGrid
+  if (contractedSpanGrid <= 0) return undefined
+  const ranked = moments.toSorted((first, second) => {
+    const firstCoordinate = contractionAxis === 'x' ? first.centroidXGrid : first.centroidYGrid
+    const secondCoordinate = contractionAxis === 'x' ? second.centroidXGrid : second.centroidYGrid
+    return firstCoordinate - secondCoordinate || first.pieceId.localeCompare(second.pieceId)
+  })
+  const totalArea = ranked.reduce((sum, entry) => sum + entry.areaGrid2, 0)
+  let cumulativeArea = 0
+  let medianIndex = -1
+  for (const [index, entry] of ranked.entries()) {
+    cumulativeArea += entry.areaGrid2
+    if (cumulativeArea >= totalArea / 2) {
+      medianIndex = index
+      break
+    }
+  }
+  const median = ranked[medianIndex]
+  const nearPartition = ranked.slice(0, medianIndex + 1)
+  const farPartition = ranked.slice(medianIndex + 1)
+  if (median === undefined || nearPartition.length === 0 || farPartition.length === 0) {
+    return undefined
+  }
+  const translated = transportIntrinsicGroup(
+    catalog,
+    state,
+    farPartition.map(({ pieceId }) => pieceId),
+    contractionAxis === 'x'
+      ? { x: -removedWidthGrid, y: 0 }
+      : { x: 0, y: -removedWidthGrid }
+  )
+  if (translated === undefined) return undefined
+  return {
+    state: translated,
+    occupiedBox,
+    contractedBox:
+      contractionAxis === 'x'
+        ? { widthMm: fromGrid(contractedSpanGrid), heightMm: occupiedBox.heightMm }
+        : { widthMm: occupiedBox.widthMm, heightMm: fromGrid(contractedSpanGrid) },
+    contractionAxis,
+    contractionRatio,
+    removedWidthMm: fromGrid(removedWidthGrid),
+    areaWeightedMedianGrid:
+      contractionAxis === 'x' ? median.centroidXGrid : median.centroidYGrid,
+    nearPartitionPieceIds: nearPartition.map(({ pieceId }) => pieceId),
+    farPartitionPieceIds: farPartition.map(({ pieceId }) => pieceId)
+  }
+}
+
+export function measureIntrinsicPressureCompactness(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): IntrinsicPressureMeasuredLayout | undefined {
+  const canonicalIdentity = canonicalCollisionLayoutIdentity(placed)
+  const occupiedBox = canonicalPressureBox(placed)
+  const dispersion = measureIntrinsicAreaWeightedCentroidDispersion(placed)
+  const cavities = measureCanonicalEnclosedCavities(placed)
+  const topology = measureCanonicalLayoutTopology(placed)
+  if (
+    canonicalIdentity === undefined ||
+    occupiedBox === undefined ||
+    dispersion === undefined ||
+    cavities === undefined ||
+    topology === undefined
+  ) {
+    return undefined
+  }
+  const envelopeAreaMm2 = occupiedBox.widthMm * occupiedBox.heightMm
+  return {
+    occupiedBox,
+    compactness: {
+      canonicalIdentity,
+      envelopeAreaMm2,
+      envelopeMaximumSideMm: Math.max(occupiedBox.widthMm, occupiedBox.heightMm),
+      areaWeightedCentroidDispersion: dispersion,
+      enclosedCavityCount: cavities.count,
+      largestOccupiedHullGapRatio: topology.largestOccupiedHullGapRatio
+    }
+  }
+}
+
+function intrinsicPressureContractionStep(index: number):
+  | {
+      readonly ratioScheduleIndex: 0 | 1 | 2
+      readonly contractionRatio: number
+    }
+  | undefined {
+  switch (index) {
+    case 0:
+      return { ratioScheduleIndex: 0, contractionRatio: INTRINSIC_PRESSURE_CONTRACTION_RATIOS[0] }
+    case 1:
+      return { ratioScheduleIndex: 1, contractionRatio: INTRINSIC_PRESSURE_CONTRACTION_RATIOS[1] }
+    case 2:
+      return { ratioScheduleIndex: 2, contractionRatio: INTRINSIC_PRESSURE_CONTRACTION_RATIOS[2] }
+    default:
+      return undefined
+  }
+}
+
+export function pressureRepairSweepAllowance(
+  totalSweepBudget: number,
+  attemptIndex: number
+): number {
+  const boundedBudget = Math.max(0, Math.floor(totalSweepBudget))
+  if (!Number.isInteger(attemptIndex) || attemptIndex < 0 || attemptIndex >= 3) return 0
+  const quotient = Math.floor(boundedBudget / 3)
+  const remainder = boundedBudget % 3
+  return quotient + (attemptIndex < remainder ? 1 : 0)
+}
+
+function unavailableContractedPressureAttemptTrace(input: {
+  readonly attemptIndex: number
+  readonly ratioScheduleIndex: 0 | 1 | 2
+  readonly contractionRatio: number
+  readonly parent: IntrinsicPressureMeasuredLayout
+  readonly retainedPressureIdentity: string | undefined
+  readonly reason: string
+}): IntrinsicContractedPressureAttemptTrace {
+  const contraction = pressureContractionBox(
+    input.parent.occupiedBox,
+    input.contractionRatio
+  )
+  return {
+    attemptIndex: input.attemptIndex,
+    ratioScheduleIndex: input.ratioScheduleIndex,
+    parentCompactness: input.parent.compactness,
+    occupiedBox: input.parent.occupiedBox,
+    contractedBox: contraction?.targetBox ?? {
+      widthMm: input.parent.occupiedBox.widthMm,
+      heightMm: input.parent.occupiedBox.heightMm
+    },
+    contractionAxis: contraction?.axis ?? 'x',
+    contractionRatio: input.contractionRatio,
+    removedWidthMm: contraction?.removedWidthMm ?? 0,
+    areaWeightedMedianGrid: undefined,
+    nearPartitionPieceIds: [],
+    farPartitionPieceIds: [],
+    translatedPartitionPieceIds: [],
+    proposalIdentity: undefined,
+    proposalRawLoss: undefined,
+    proposalWeightedLoss: undefined,
+    proposalDispersion: undefined,
+    separationEvaluationCount: 0,
+    bestRepairedLoss: undefined,
+    bestEndpointExact: false,
+    bestEndpointCompactness: undefined,
+    outcome: 'rejected',
+    reason: input.reason,
+    retainedPressureIdentity: input.retainedPressureIdentity,
+    preProjectionCompactness: undefined,
+    postProjectionCompactness: undefined
+  }
+}
+
+function contractedPressureAttemptTrace(input: {
+  readonly attemptIndex: number
+  readonly ratioScheduleIndex: 0 | 1 | 2
+  readonly proposal: IntrinsicContractedPressureProposal
+  readonly parent: IntrinsicPressureMeasuredLayout
+  readonly proposalIdentity: string | undefined
+  readonly proposalEvaluation: IntrinsicSeparationEvaluation | undefined
+  readonly proposalDispersion: number | undefined
+  readonly evaluationCount: number
+  readonly bestRepairedLoss: number | undefined
+  readonly bestEndpoint: IntrinsicPressureExactEndpoint | undefined
+  readonly outcome: 'accepted' | 'rejected'
+  readonly reason: string
+  readonly retainedPressureIdentity: string | undefined
+  readonly preProjectionCompactness: IntrinsicPressureCompactnessTuple | undefined
+}): IntrinsicContractedPressureAttemptTrace {
+  return {
+    attemptIndex: input.attemptIndex,
+    ratioScheduleIndex: input.ratioScheduleIndex,
+    parentCompactness: input.parent.compactness,
+    occupiedBox: input.proposal.occupiedBox,
+    contractedBox: input.proposal.contractedBox,
+    contractionAxis: input.proposal.contractionAxis,
+    contractionRatio: input.proposal.contractionRatio,
+    removedWidthMm: input.proposal.removedWidthMm,
+    areaWeightedMedianGrid: input.proposal.areaWeightedMedianGrid,
+    nearPartitionPieceIds: input.proposal.nearPartitionPieceIds,
+    farPartitionPieceIds: input.proposal.farPartitionPieceIds,
+    translatedPartitionPieceIds: input.proposal.farPartitionPieceIds,
+    proposalIdentity: input.proposalIdentity,
+    proposalRawLoss: input.proposalEvaluation?.rawLoss,
+    proposalWeightedLoss: input.proposalEvaluation?.weightedLoss,
+    proposalDispersion: input.proposalDispersion,
+    separationEvaluationCount: input.evaluationCount,
+    bestRepairedLoss: input.bestRepairedLoss,
+    bestEndpointExact: input.bestEndpoint !== undefined,
+    bestEndpointCompactness: input.bestEndpoint?.measured.compactness,
+    outcome: input.outcome,
+    reason: input.reason,
+    retainedPressureIdentity: input.retainedPressureIdentity,
+    preProjectionCompactness: input.preProjectionCompactness,
+    postProjectionCompactness: undefined
+  }
+}
+
+function pressureContractionBox(
+  occupiedBox: IntrinsicPressureBox,
+  contractionRatio: number
+):
+  | {
+      readonly axis: IntrinsicPressureAxis
+      readonly targetBox: IntrinsicTargetBox
+      readonly removedWidthMm: number
+    }
+  | undefined {
+  const axis: IntrinsicPressureAxis =
+    occupiedBox.widthMm >= occupiedBox.heightMm ? 'x' : 'y'
+  const spanGrid =
+    axis === 'x'
+      ? occupiedBox.maximumXGrid - occupiedBox.minimumXGrid
+      : occupiedBox.maximumYGrid - occupiedBox.minimumYGrid
+  const removedGrid = Math.max(1, Math.floor(spanGrid * contractionRatio))
+  const contractedGrid = spanGrid - removedGrid
+  if (contractedGrid <= 0) return undefined
+  return {
+    axis,
+    targetBox:
+      axis === 'x'
+        ? { widthMm: fromGrid(contractedGrid), heightMm: occupiedBox.heightMm }
+        : { widthMm: occupiedBox.widthMm, heightMm: fromGrid(contractedGrid) },
+    removedWidthMm: fromGrid(removedGrid)
+  }
+}
+
+function pressurePoolEntry(
+  state: IntrinsicRelaxedState,
+  evaluation: IntrinsicSeparationEvaluation,
+  key: string | undefined
+): IntrinsicInfeasiblePoolEntry | undefined {
+  return key === undefined
+    ? undefined
+    : {
+        searchScope: 'contracted-pressure',
+        state,
+        evaluation,
+        key,
+        disruptionLineage: false,
+        disruptionLineageProvenance: undefined,
+        disruptionProtectedUntilSweep: undefined
+      }
+}
+
+function pressureEndpointFromState(input: {
+  readonly catalog: IntrinsicTransformCatalog
+  readonly targetBox: IntrinsicTargetBox
+  readonly state: IntrinsicRelaxedState
+  readonly evaluation: IntrinsicSeparationEvaluation
+  readonly weights: IntrinsicSeparatorWeights
+}): IntrinsicPressureExactEndpoint | undefined {
+  if (!input.evaluation.exactZeroLoss) return undefined
+  const placed = provisionalLayoutFromRelaxedState(input.catalog, input.state)
+  const stateKey = intrinsicRelaxedStateKey(input.catalog, input.state)
+  if (
+    placed === undefined ||
+    stateKey === undefined ||
+    !assertIntrinsicTargetExactLegal(input.targetBox, placed)
+  ) {
+    return undefined
+  }
+  const measured = measureIntrinsicPressureCompactness(placed)
+  return measured === undefined
+    ? undefined
+    : {
+        placed,
+        state: input.state,
+        stateKey,
+        targetBox: input.targetBox,
+        evaluation: input.evaluation,
+        weights: input.weights,
+        measured
+      }
+}
+
+function addExactPressureEndpoint(
+  endpoints: IntrinsicPressureExactEndpoint[],
+  candidate: IntrinsicPressureExactEndpoint | undefined
+): void {
+  if (candidate === undefined) return
+  const existingIndex = endpoints.findIndex(
+    ({ measured }) =>
+      measured.compactness.canonicalIdentity ===
+      candidate.measured.compactness.canonicalIdentity
+  )
+  if (existingIndex < 0) {
+    endpoints.push(candidate)
+    return
+  }
+  const existing = endpoints[existingIndex]
+  if (existing !== undefined && comparePressureEndpoints(candidate, existing) < 0) {
+    endpoints.splice(existingIndex, 1, candidate)
+  }
+}
+
+function comparePressureEndpoints(
+  first: IntrinsicPressureExactEndpoint,
+  second: IntrinsicPressureExactEndpoint
+): number {
+  const a = first.measured.compactness
+  const b = second.measured.compactness
+  return (
+    a.envelopeMaximumSideMm - b.envelopeMaximumSideMm ||
+    a.envelopeAreaMm2 - b.envelopeAreaMm2 ||
+    a.areaWeightedCentroidDispersion - b.areaWeightedCentroidDispersion ||
+    a.enclosedCavityCount - b.enclosedCavityCount ||
+    a.largestOccupiedHullGapRatio - b.largestOccupiedHullGapRatio ||
+    a.canonicalIdentity.localeCompare(b.canonicalIdentity)
+  )
+}
+
+function pressureEndpointRejectionReason(
+  parent: IntrinsicPressureMeasuredLayout,
+  endpoint: IntrinsicPressureExactEndpoint | undefined
+): string | undefined {
+  if (endpoint === undefined) return undefined
+  return intrinsicPressureEndpointRejectionReason(
+    parent.compactness,
+    endpoint.measured.compactness
+  )
+}
+
+export function intrinsicPressureEndpointRejectionReason(
+  before: IntrinsicPressureCompactnessTuple,
+  after: IntrinsicPressureCompactnessTuple
+): string | undefined {
+  if (after.canonicalIdentity === before.canonicalIdentity) {
+    return 'the exact endpoint was canonically identical to its parent'
+  }
+  if (!(after.envelopeMaximumSideMm < before.envelopeMaximumSideMm)) {
+    return 'the exact endpoint did not strictly reduce occupied maximum side'
+  }
+  if (!(after.envelopeAreaMm2 < before.envelopeAreaMm2)) {
+    return 'the exact endpoint did not strictly reduce envelope area'
+  }
+  if (!(after.areaWeightedCentroidDispersion < before.areaWeightedCentroidDispersion)) {
+    return 'the exact endpoint did not strictly reduce centroid dispersion'
+  }
+  if (after.enclosedCavityCount > before.enclosedCavityCount) {
+    return 'the exact endpoint increased enclosed cavities'
+  }
+  if (after.largestOccupiedHullGapRatio > before.largestOccupiedHullGapRatio) {
+    return 'the exact endpoint increased largest occupied hull-gap ratio'
+  }
+  return undefined
+}
+
+function bottomLeftAnchoredPressureLayout(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): ReadonlyArray<IrregularPlacedPiece> | undefined {
+  return new IrregularBeamState({
+    remainingPreparedPieces: [],
+    placedCollisionGeometries: placed,
+    placementOrder: placed.map(placedPieceId)
+  }).withBottomLeftAnchored()?.placedCollisionGeometries
+}
+
+interface CanonicalPlacedPolygonMoment {
+  readonly pieceId: PieceId
+  readonly areaGrid2: number
+  readonly centroidXGrid: number
+  readonly centroidYGrid: number
+}
+
+function canonicalPlacedPolygonMoments(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): ReadonlyArray<CanonicalPlacedPolygonMoment> | undefined {
+  const moments: CanonicalPlacedPolygonMoment[] = []
+  for (const entry of placed) {
+    const translateXGrid = toGridMm(entry.placement.transform.translateX)
+    const translateYGrid = toGridMm(entry.placement.transform.translateY)
+    const localPoints = entry.collisionGeometry.polygon.points.map(({ x, y }) => ({
+      x: toGridMm(x),
+      y: toGridMm(y)
+    }))
+    if (
+      translateXGrid === undefined ||
+      translateYGrid === undefined ||
+      localPoints.length < 3 ||
+      localPoints.some(({ x, y }) => x === undefined || y === undefined)
+    ) {
+      return undefined
+    }
+    const completeLocalPoints = localPoints.filter(
+      (entry): entry is { readonly x: number; readonly y: number } =>
+        entry.x !== undefined && entry.y !== undefined
+    )
+    if (completeLocalPoints.length !== localPoints.length) return undefined
+    const points = completeLocalPoints.map(({ x, y }) => ({
+      x: x + translateXGrid,
+      y: y + translateYGrid
+    }))
+    let doubleSignedArea = 0
+    let centroidNumeratorX = 0
+    let centroidNumeratorY = 0
+    for (let index = 0; index < points.length; index += 1) {
+      const current = points[index]
+      const next = points[(index + 1) % points.length]
+      if (current === undefined || next === undefined) return undefined
+      const cross = current.x * next.y - next.x * current.y
+      doubleSignedArea += cross
+      centroidNumeratorX += (current.x + next.x) * cross
+      centroidNumeratorY += (current.y + next.y) * cross
+    }
+    if (!Number.isFinite(doubleSignedArea) || doubleSignedArea === 0) return undefined
+    const areaGrid2 = Math.abs(doubleSignedArea) / 2
+    const centroidXGrid = centroidNumeratorX / (3 * doubleSignedArea)
+    const centroidYGrid = centroidNumeratorY / (3 * doubleSignedArea)
+    if (![areaGrid2, centroidXGrid, centroidYGrid].every(Number.isFinite)) {
+      return undefined
+    }
+    moments.push({
+      pieceId: placedPieceId(entry),
+      areaGrid2,
+      centroidXGrid,
+      centroidYGrid
+    })
+  }
+  return moments.length === placed.length ? moments : undefined
+}
+
+function measureIntrinsicAreaWeightedCentroidDispersion(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): number | undefined {
+  const moments = canonicalPlacedPolygonMoments(placed)
+  if (moments === undefined || moments.length === 0) return undefined
+  const totalArea = moments.reduce((sum, entry) => sum + entry.areaGrid2, 0)
+  if (!Number.isFinite(totalArea) || totalArea <= 0) return undefined
+  const centerX =
+    moments.reduce(
+      (sum, entry) => sum + entry.areaGrid2 * entry.centroidXGrid,
+      0
+    ) / totalArea
+  const centerY =
+    moments.reduce(
+      (sum, entry) => sum + entry.areaGrid2 * entry.centroidYGrid,
+      0
+    ) / totalArea
+  const weightedSquaredDistance = moments.reduce((sum, entry) => {
+    const deltaX = entry.centroidXGrid - centerX
+    const deltaY = entry.centroidYGrid - centerY
+    return sum + entry.areaGrid2 * (deltaX * deltaX + deltaY * deltaY)
+  }, 0)
+  const dispersion = weightedSquaredDistance / (totalArea * totalArea)
+  return Number.isFinite(dispersion) && dispersion >= 0 ? dispersion : undefined
+}
+
+function canonicalPressureBox(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): IntrinsicPressureBox | undefined {
+  const points = placed.flatMap((entry) =>
+    entry.collisionGeometry.polygon.points.map(({ x, y }) => ({
+      x: toGridMm(x + entry.placement.transform.translateX),
+      y: toGridMm(y + entry.placement.transform.translateY)
+    }))
+  )
+  if (
+    points.length === 0 ||
+    points.some(({ x, y }) => x === undefined || y === undefined)
+  ) {
+    return undefined
+  }
+  const finite = points.filter(
+    (point): point is { readonly x: number; readonly y: number } =>
+      point.x !== undefined && point.y !== undefined
+  )
+  const minimumXGrid = Math.min(...finite.map(({ x }) => x))
+  const minimumYGrid = Math.min(...finite.map(({ y }) => y))
+  const maximumXGrid = Math.max(...finite.map(({ x }) => x))
+  const maximumYGrid = Math.max(...finite.map(({ y }) => y))
+  return {
+    minimumXGrid,
+    minimumYGrid,
+    maximumXGrid,
+    maximumYGrid,
+    widthMm: fromGrid(maximumXGrid - minimumXGrid),
+    heightMm: fromGrid(maximumYGrid - minimumYGrid)
+  }
+}
+
+function pressureProjectionCandidate(
+  endpoint: IntrinsicPressureExactEndpoint,
+  targetRole: IntrinsicGlobalTargetRole | undefined
+): IntrinsicProjectionLaneCandidate | undefined {
+  return targetRole === undefined
+    ? undefined
+    : {
+        targetRole,
+        basinIndex: 0,
+        targetBox: endpoint.targetBox,
+        entry: {
+          searchScope: 'contracted-pressure',
+          state: endpoint.state,
+          evaluation: endpoint.evaluation,
+          key: endpoint.stateKey,
+          disruptionLineage: false,
+          disruptionLineageProvenance: undefined,
+          disruptionProtectedUntilSweep: undefined
+        },
+        weights: endpoint.weights
+      }
+}
+
+function recordContractedPressureProjection(
+  trace: ReadonlyArray<IntrinsicContractedPressureAttemptTrace>,
+  postProjection: IntrinsicPressureMeasuredLayout | undefined
+): ReadonlyArray<IntrinsicContractedPressureAttemptTrace> {
+  let updated = false
+  return [...trace].reverse().map((entry) => {
+    if (updated || entry.preProjectionCompactness === undefined) return entry
+    updated = true
+    return {
+      ...entry,
+      postProjectionCompactness: postProjection?.compactness
+    }
+  }).reverse()
+}
+
+function pressureProjectionPreserved(
+  before: IntrinsicPressureCompactnessTuple | undefined,
+  after: IntrinsicPressureCompactnessTuple | undefined
+): boolean {
+  return (
+    before !== undefined &&
+    after !== undefined &&
+    before.canonicalIdentity === after.canonicalIdentity &&
+    before.envelopeAreaMm2 === after.envelopeAreaMm2 &&
+    before.envelopeMaximumSideMm === after.envelopeMaximumSideMm &&
+    before.areaWeightedCentroidDispersion === after.areaWeightedCentroidDispersion &&
+    before.enclosedCavityCount === after.enclosedCavityCount &&
+    before.largestOccupiedHullGapRatio === after.largestOccupiedHullGapRatio
+  )
+}
+
 /** Preregistered E5 lane selection over completed basin pools, without generic backfill. */
 export function selectIntrinsicProjectionWorkItems(
   candidates: ReadonlyArray<IntrinsicProjectionLaneCandidate>,
-  targetRoles: ReadonlyArray<IntrinsicGlobalTargetRole>
+  targetRoles: ReadonlyArray<IntrinsicGlobalTargetRole>,
+  contractedPressureCandidate?: IntrinsicProjectionLaneCandidate,
+  preselectedWorkIdentities: ReadonlySet<string> = new Set()
 ): IntrinsicProjectionWorkSelection {
   const distinctCandidates = new Map<string, IntrinsicProjectionLaneCandidate>()
   for (const candidate of candidates) {
@@ -998,7 +2152,7 @@ export function selectIntrinsicProjectionWorkItems(
   const available = [...distinctCandidates.values()]
   const selected: IntrinsicProjectionWorkItem[] = []
   const trace: IntrinsicProjectionLaneTrace[] = []
-  const selectedIdentities = new Set<string>()
+  const selectedIdentities = new Set(preselectedWorkIdentities)
 
   const registerLane = (
     lane: IntrinsicProjectionLane,
@@ -1044,12 +2198,21 @@ export function selectIntrinsicProjectionWorkItems(
     })
   }
 
-  registerLane('global-raw', undefined, available.toSorted(compareProjectionCandidateRaw))
-  registerLane(
-    'global-final-gls',
-    undefined,
-    available.toSorted(compareProjectionCandidateWeighted)
-  )
+  if (contractedPressureCandidate !== undefined) {
+    const pressureIdentity = projectionWorkIdentity(contractedPressureCandidate)
+    if (!preselectedWorkIdentities.has(pressureIdentity)) {
+      registerLane('contracted-pressure', undefined, [contractedPressureCandidate])
+    }
+  }
+  const raw = available.toSorted(compareProjectionCandidateRaw)[0]
+  registerLane('global-raw', undefined, raw === undefined ? [] : [raw])
+  if (contractedPressureCandidate === undefined) {
+    registerLane(
+      'global-final-gls',
+      undefined,
+      available.toSorted(compareProjectionCandidateWeighted)
+    )
+  }
   for (const role of targetRoles) {
     const disruption = available
       .filter(

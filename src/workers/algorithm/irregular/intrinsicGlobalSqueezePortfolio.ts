@@ -110,6 +110,8 @@ export interface IntrinsicGlobalStructuralOutcome {
   readonly sweepTrace: IntrinsicGlobalSearchResult['trace']
   readonly projectionLaneTrace: IntrinsicGlobalSearchResult['projectionLaneTrace']
   readonly projectionTrace: ReadonlyArray<IntrinsicProjectionAttemptTrace>
+  readonly contractedPressureTrace: IntrinsicGlobalSearchResult['contractedPressureTrace']
+  readonly pressureRepairSweepCount: number
 }
 
 export interface IntrinsicGlobalPromotionSummary {
@@ -647,7 +649,9 @@ function structuralOutcomeFrom(
     projectionSuccessCount: structural.projectionSuccessCount,
     sweepTrace: structural.trace,
     projectionLaneTrace: structural.projectionLaneTrace,
-    projectionTrace: structural.projectionTrace
+    projectionTrace: structural.projectionTrace,
+    contractedPressureTrace: structural.contractedPressureTrace,
+    pressureRepairSweepCount: structural.pressureRepairSweepCount
   }
 }
 
@@ -666,6 +670,8 @@ function emptyStructuralResult(
     trace: [],
     projectionLaneTrace: [],
     projectionTrace: [],
+    contractedPressureTrace: [],
+    pressureRepairSweepCount: 0,
     completedSweepCount: 0,
     separationEvaluationCount: 0,
     projectionAttemptCount: 0,
