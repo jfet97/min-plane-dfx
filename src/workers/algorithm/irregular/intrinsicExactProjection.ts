@@ -94,6 +94,8 @@ export class IntrinsicExactProjectionError extends Data.TaggedError(
 interface CanonicalTargetBox {
   readonly descriptor: IntrinsicTargetBox
   readonly sheet: SheetSpec
+  readonly widthGrid: number
+  readonly heightGrid: number
 }
 
 interface ProjectionCandidate {
@@ -210,14 +212,25 @@ export function analyzeIntrinsicProjectionConflicts(
       'canonical conflict and wall analysis could not be completed.'
     )
   }
-  const removed = new Set<PieceId>(structure.wallOffenders)
+  const exactWallOffenders = structure.pieces
+    .filter(
+      ({ aabb }) =>
+        aabb.minX < 0 ||
+        aabb.minY < 0 ||
+        aabb.maxX > target.widthGrid ||
+        aabb.maxY > target.heightGrid
+    )
+    .map(({ pieceId }) => pieceId)
+    .toSorted()
+  const exactStructure = { ...structure, wallOffenders: exactWallOffenders }
+  const removed = new Set<PieceId>(exactWallOffenders)
   for (const [first, second] of structure.positiveAreaConflicts) {
     removed.add(first)
     removed.add(second)
   }
   const removedPieceIds = [...removed].toSorted()
   const frozenPlaced = placed.filter((entry) => !removed.has(placedPieceId(entry)))
-  if (!assertCanonicalGridLegalLayout(target.sheet, frozenPlaced)) {
+  if (!assertExactTargetLegal(target, frozenPlaced)) {
     return failProjection(
       'analyzeConflictClosure',
       'exact-analysis',
@@ -226,7 +239,7 @@ export function analyzeIntrinsicProjectionConflicts(
   }
   return Effect.succeed({
     targetBox: target.descriptor,
-    structure,
+    structure: exactStructure,
     removedPieceIds,
     frozenPlaced,
     frozenRemainderExactLegal: true
@@ -330,7 +343,7 @@ export function projectIntrinsicLayoutExactly(input: {
     for (let dilationSteps = 0; dilationSteps <= maximumDilationSteps; dilationSteps += 1) {
       yield* projectionCheckpoint(input.control)
       const frozen = provisional.filter((entry) => !removed.has(placedPieceId(entry)))
-      if (!assertCanonicalGridLegalLayout(target.sheet, frozen)) {
+      if (!assertExactTargetLegal(target, frozen)) {
         return yield* failProjection(
           'projectConflictClosure',
           'exact-analysis',
@@ -355,7 +368,7 @@ export function projectIntrinsicLayoutExactly(input: {
         if (
           attempt.placed.length !== input.catalog.entries.length ||
           canonicalGeometryIdentity === undefined ||
-          !assertCanonicalGridLegalLayout(target.sheet, attempt.placed)
+          !assertExactTargetLegal(target, attempt.placed)
         ) {
           return yield* failProjection(
             'projectConflictClosure',
@@ -693,7 +706,7 @@ function scoreExactProjectionCandidate(input: {
     y: fromGrid(pointY)
   })
   const complete = [...input.placed, placed]
-  if (!assertCanonicalGridLegalLayout(input.target.sheet, complete)) return undefined
+  if (!assertExactTargetLegal(input.target, complete)) return undefined
   const envelope = canonicalEnvelopeTuple(complete)
   const canonicalGeometryIdentity = canonicalCollisionLayoutIdentity(complete)
   if (envelope === undefined || canonicalGeometryIdentity === undefined) return undefined
@@ -802,11 +815,43 @@ function canonicalTargetBox(targetBox: IntrinsicTargetBox): CanonicalTargetBox |
   return {
     descriptor,
     sheet: new SheetSpec({
-      width: descriptor.widthMm,
-      height: descriptor.heightMm,
+      width: Math.ceil(descriptor.widthMm),
+      height: Math.ceil(descriptor.heightMm),
       label: 'intrinsic-exact-projection-target'
-    })
+    }),
+    widthGrid,
+    heightGrid
   }
+}
+
+function assertExactTargetLegal(
+  target: CanonicalTargetBox,
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): boolean {
+  if (!assertCanonicalGridLegalLayout(target.sheet, placed)) return false
+  for (const entry of placed) {
+    const translateX = toGridMm(entry.placement.transform.translateX)
+    const translateY = toGridMm(entry.placement.transform.translateY)
+    if (translateX === undefined || translateY === undefined) return false
+    for (const point of entry.collisionGeometry.polygon.points) {
+      const localX = toGridMm(point.x)
+      const localY = toGridMm(point.y)
+      if (localX === undefined || localY === undefined) return false
+      const x = localX + translateX
+      const y = localY + translateY
+      if (x < 0 || y < 0 || x > target.widthGrid || y > target.heightGrid) return false
+    }
+  }
+  return true
+}
+
+/** Exact fractional-grid target legality; integer sheets are only NFP supersets. */
+export function assertIntrinsicTargetExactLegal(
+  targetBox: IntrinsicTargetBox,
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): boolean {
+  const target = canonicalTargetBox(targetBox)
+  return target !== undefined && assertExactTargetLegal(target, placed)
 }
 
 function canonicalLocalGeometryKey(

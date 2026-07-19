@@ -749,4 +749,39 @@ describe('intrinsic exact projection', () => {
       failedPieceId: PieceId.make('wall')
     })
   })
+
+  it('accepts the registered fractional target domain without SheetSpec rounding failure', async () => {
+    const catalog = await buildCatalog([preparedRectangle('only', 2, 2)])
+    const entry = catalogEntry(catalog, 'only')
+    const reference = [placed(entry, finiteTransform(entry, 0), 0, 0)]
+
+    const result = await project({
+      targetBox: { widthMm: 666.023, heightMm: 660.493 },
+      catalog,
+      referencePlaced: reference,
+      provisionalPlaced: reference,
+      reinsertionPriorityPieceIds: catalogPriority(catalog)
+    })
+
+    expect(result.directPosePieceIds).toEqual([])
+    expect(result.placedCollisionGeometries).toEqual(reference)
+  })
+
+  it('rejects a direct pose that fits only inside the integer-ceil NFP sliver', async () => {
+    const catalog = await buildCatalog([preparedRectangle('only', 2, 2)])
+    const entry = catalogEntry(catalog, 'only')
+    const reference = [placed(entry, finiteTransform(entry, 0), 0, 0)]
+    const provisional = [placed(entry, finiteTransform(entry, 0), 0.501, 0)]
+
+    const result = await project({
+      targetBox: { widthMm: 2.5, heightMm: 2.5 },
+      catalog,
+      referencePlaced: reference,
+      provisionalPlaced: provisional,
+      reinsertionPriorityPieceIds: catalogPriority(catalog)
+    })
+
+    expect(result.directPosePieceIds).toEqual([])
+    expect(result.placedCollisionGeometries[0]?.placement.transform.translateX).toBe(0)
+  })
 })
