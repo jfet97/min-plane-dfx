@@ -293,6 +293,16 @@ describe('intrinsic global squeeze portfolio', () => {
         unplacedFillerCount: 0
       })
     ])
+    const rerun = await runPortfolio({
+      pieces,
+      fallback,
+      structural: structuralResult({ pieces, fallback, handoffs: [handoff] }),
+      fill: () => Effect.succeed(constructed([pieceAt(pieces, 2)], filled, [], 1)),
+      schedule: schedule({ maximumLargestHullGapRatio: 1 })
+    })
+    expect(result.fillTrace).toEqual(rerun.fillTrace)
+    expect(result.fillTrace[0]).not.toHaveProperty('runtimeMs')
+    expect(result.fillTrace[0]).not.toHaveProperty('remainingBudgetMsAfter')
   })
 
   it('runs a real exact gap-contained continuation on a non-61 workload', async () => {
@@ -361,7 +371,7 @@ describe('intrinsic global squeeze portfolio', () => {
     expect(rejected.fillTrace[0]?.outcome).toBe('completed-quality-rejected')
   })
 
-  it('deduplicates and keeps complete Pareto tradeoffs in deterministic order', () => {
+  it('deduplicates and ignores diagnostic contacts in complete candidate retention', () => {
     const first = candidateForMetrics('first', { envelopeAreaMm2: 10, totalStructuralContacts: 4 })
     const duplicate = candidateForMetrics('first', { envelopeAreaMm2: 12, totalStructuralContacts: 3 })
     const dominated = candidateForMetrics('dominated', { envelopeAreaMm2: 12, totalStructuralContacts: 3 })
@@ -371,7 +381,7 @@ describe('intrinsic global squeeze portfolio', () => {
       retainIntrinsicGlobalFullCandidates([dominated, duplicate, tradeoff, first], 5).map(
         ({ measured }) => measured.canonicalGeometryIdentity
       )
-    ).toEqual(['tradeoff', 'first'])
+    ).toEqual(['tradeoff'])
   })
 
   it('ranks viable finalists by production target and then deterministic area minimization', () => {
@@ -444,8 +454,7 @@ describe('intrinsic global squeeze portfolio', () => {
     expect(deadline.fillTrace.at(-1)).toMatchObject({
       insertedFillerCount: undefined,
       nonInertFillCount: undefined,
-      unplacedFillerCount: undefined,
-      runtimeMs: undefined
+      unplacedFillerCount: undefined
     })
 
     await expect(
@@ -505,8 +514,7 @@ describe('intrinsic global squeeze portfolio', () => {
         outcome: 'deadline',
         insertedFillerCount: 1,
         nonInertFillCount: 1,
-        unplacedFillerCount: 0,
-        runtimeMs: 2
+        unplacedFillerCount: 0
       })
     ])
   })

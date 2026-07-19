@@ -368,43 +368,51 @@ export function remapIntrinsicTransformsQuarterTurn(
   return remapped
 }
 
-/** Finite deterministic separation and transform proposals for one selected conflict. */
+/** Finite deterministic separation and transform proposals for the registered conflict leader. */
 export function intrinsicFocusedProposals(input: {
-  readonly targetBox: IntrinsicTargetBox
   readonly catalog: IntrinsicTransformCatalog
   readonly state: IntrinsicRelaxedState
   readonly evaluation: IntrinsicSeparationEvaluation
   readonly weights: IntrinsicSeparatorWeights
-  readonly ordinal: number
 }): ReadonlyArray<IntrinsicSeparatorProposal> {
-  const conflict = input.evaluation.conflicts.toSorted((first, second) => {
-    const firstContribution =
-      first.normalizedDepth * first.normalizedDepth *
-      (input.weights.byConflictKey.get(first.key) ?? 1)
-    const secondContribution =
-      second.normalizedDepth * second.normalizedDepth *
-      (input.weights.byConflictKey.get(second.key) ?? 1)
-    return (
-      secondContribution - firstContribution ||
-      second.normalizedDepth - first.normalizedDepth ||
-      first.key.localeCompare(second.key)
-    )
-  })[0]
-  if (conflict === undefined) return []
-  const selectedPieceId = selectConflictEndpoint(input.catalog, input.state, conflict)
+  if (input.evaluation.conflicts.length === 0) return []
+  const priority = intrinsicProjectionPriority(
+    input.catalog,
+    input.state,
+    input.evaluation,
+    input.weights
+  )
+  const selectedPieceId = priority?.[0]
+  if (selectedPieceId === undefined) return []
   const selectedPose = input.state.poses.find(({ pieceId }) => pieceId === selectedPieceId)
   const selectedEntry = input.catalog.entries.find(({ pieceId }) => pieceId === selectedPieceId)
   if (selectedPose === undefined || selectedEntry === undefined) return []
-  const sign = conflict.firstPieceId === selectedPieceId ? 1 : -1
-  const separationX = Math.round(conflict.moveXGrid * sign)
-  const separationY = Math.round(conflict.moveYGrid * sign)
   const proposals: IntrinsicSeparatorProposal[] = []
-  const translations = [
-    { x: separationX, y: separationY },
-    { x: separationX * 2, y: separationY * 2 },
-    haltonOffset(input.targetBox, input.ordinal),
-    haltonOffset(input.targetBox, input.ordinal + 1)
-  ]
+  const translations = input.evaluation.conflicts
+    .filter(
+      ({ firstPieceId, secondPieceId }) =>
+        firstPieceId === selectedPieceId || secondPieceId === selectedPieceId
+    )
+    .toSorted((first, second) => {
+      const firstContribution =
+        first.normalizedDepth * first.normalizedDepth *
+        (input.weights.byConflictKey.get(first.key) ?? 1)
+      const secondContribution =
+        second.normalizedDepth * second.normalizedDepth *
+        (input.weights.byConflictKey.get(second.key) ?? 1)
+      return secondContribution - firstContribution || first.key.localeCompare(second.key)
+    })
+    .flatMap((conflict) => {
+      const sign = conflict.firstPieceId === selectedPieceId ? 1 : -1
+      const separation = {
+        x: Math.round(conflict.moveXGrid * sign),
+        y: Math.round(conflict.moveYGrid * sign)
+      }
+      return [
+        separation,
+        { x: separation.x * 2, y: separation.y * 2 }
+      ]
+    })
   for (const [index, delta] of translations.entries()) {
     if (delta.x === 0 && delta.y === 0) continue
     const next = replacePose(input.state, selectedPieceId, {
@@ -529,6 +537,8 @@ export function intrinsicDisruptionProposals(input: {
   readonly state: IntrinsicRelaxedState
   readonly ordinal: number
   readonly interfaceDisruptionStagnated?: boolean
+  readonly maximumInterfaceCavityCount: number
+  readonly maximumInterfaceHullGapRatio: number
 }): ReadonlyArray<IntrinsicSeparatorProposal> {
   const resolved = resolveState(input.catalog, input.state)
   if (resolved === undefined || resolved.length < 2) return []
@@ -639,6 +649,8 @@ function gapInterfaceProposal(input: {
   readonly catalog: IntrinsicTransformCatalog
   readonly state: IntrinsicRelaxedState
   readonly interfaceDisruptionStagnated?: boolean
+  readonly maximumInterfaceCavityCount: number
+  readonly maximumInterfaceHullGapRatio: number
 }): IntrinsicSeparatorProposal | undefined {
   const provisional = provisionalLayoutFromRelaxedState(input.catalog, input.state)
   if (provisional === undefined) return undefined
@@ -663,7 +675,8 @@ function gapInterfaceProposal(input: {
     return undefined
   }
   const structurallyPoor =
-    topology.largestOccupiedHullGapRatio > 0.15 || cavities.count > 2
+    topology.largestOccupiedHullGapRatio > input.maximumInterfaceHullGapRatio ||
+    cavities.count > input.maximumInterfaceCavityCount
   if (!structurallyPoor && input.interfaceDisruptionStagnated !== true) return undefined
   const gapCenter = {
     x: (gap.aabb.minX + gap.aabb.maxX) / 2,
@@ -900,23 +913,6 @@ function compareConflicts(
     second.rawDepth - first.rawDepth ||
     first.key.localeCompare(second.key)
   )
-}
-
-function selectConflictEndpoint(
-  catalog: IntrinsicTransformCatalog,
-  state: IntrinsicRelaxedState,
-  conflict: IntrinsicSeparationConflict
-): PieceId {
-  if (conflict.secondPieceId === undefined) return conflict.firstPieceId
-  const first = state.poses.find(({ pieceId }) => pieceId === conflict.firstPieceId)
-  const second = state.poses.find(({ pieceId }) => pieceId === conflict.secondPieceId)
-  const firstCenter = first === undefined ? undefined : poseWorldCenter(catalog, first)
-  const secondCenter = second === undefined ? undefined : poseWorldCenter(catalog, second)
-  if (firstCenter === undefined || secondCenter === undefined) return conflict.firstPieceId
-  return squaredDistance(firstCenter, { x: 0, y: 0 }) >=
-    squaredDistance(secondCenter, { x: 0, y: 0 })
-    ? conflict.firstPieceId
-    : conflict.secondPieceId
 }
 
 function haltonOffset(targetBox: IntrinsicTargetBox, ordinal: number): GridPoint {

@@ -72,8 +72,6 @@ export interface IntrinsicGlobalFillTrace {
   readonly insertedFillerCount: number | undefined
   readonly nonInertFillCount: number | undefined
   readonly unplacedFillerCount: number | undefined
-  readonly runtimeMs: number | undefined
-  readonly remainingBudgetMsAfter: number
 }
 
 export interface IntrinsicGlobalStructuralOutcome {
@@ -266,9 +264,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
             handoff,
             insertedFillerCount: 0,
             nonInertFillCount: 0,
-            unplacedFillerCount: partition.fillerPieces.length,
-            runtimeMs: 0,
-            remainingBudgetMsAfter: 0
+            unplacedFillerCount: partition.fillerPieces.length
           })
         )
         return fallbackResult({
@@ -303,12 +299,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
               handoff,
               insertedFillerCount: undefined,
               nonInertFillCount: undefined,
-              unplacedFillerCount: undefined,
-              runtimeMs: undefined,
-              remainingBudgetMsAfter: remainingRuntimeMs(
-                startedAt,
-                schedule.maximumRuntimeMs
-              )
+              unplacedFillerCount: undefined
             })
           )
           return fallbackResult({
@@ -361,9 +352,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
               : 'completed-admitted',
         insertedFillerCount: Math.max(0, insertedFillerCount),
         nonInertFillCount,
-        unplacedFillerCount,
-        runtimeMs: constructed.runtimeMs,
-        remainingBudgetMsAfter: remainingRuntimeMs(startedAt, schedule.maximumRuntimeMs)
+        unplacedFillerCount
       }
       const checkpoint = yield* portfolioCheckpoint(absoluteControl)
       if (checkpoint === 'deadline') {
@@ -372,12 +361,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
             handoff,
             insertedFillerCount: Math.max(0, insertedFillerCount),
             nonInertFillCount,
-            unplacedFillerCount,
-            runtimeMs: constructed.runtimeMs,
-            remainingBudgetMsAfter: remainingRuntimeMs(
-              startedAt,
-              schedule.maximumRuntimeMs
-            )
+            unplacedFillerCount
           })
         )
         return fallbackResult({
@@ -510,9 +494,7 @@ function dominatesFullCandidate(
     a.envelopeAreaMm2 <= b.envelopeAreaMm2 &&
     a.envelopeMaximumSideMm <= b.envelopeMaximumSideMm &&
     a.envelopeSpanMm <= b.envelopeSpanMm &&
-    a.occupiedHullWasteRatio <= b.occupiedHullWasteRatio &&
-    a.totalStructuralContacts >= b.totalStructuralContacts &&
-    a.dominantStructuralContacts >= b.dominantStructuralContacts
+    a.occupiedHullWasteRatio <= b.occupiedHullWasteRatio
   const better =
     a.enclosedCavityCount < b.enclosedCavityCount ||
     a.totalEnclosedCavityAreaMm2 < b.totalEnclosedCavityAreaMm2 ||
@@ -520,9 +502,7 @@ function dominatesFullCandidate(
     a.envelopeAreaMm2 < b.envelopeAreaMm2 ||
     a.envelopeMaximumSideMm < b.envelopeMaximumSideMm ||
     a.envelopeSpanMm < b.envelopeSpanMm ||
-    a.occupiedHullWasteRatio < b.occupiedHullWasteRatio ||
-    a.totalStructuralContacts > b.totalStructuralContacts ||
-    a.dominantStructuralContacts > b.dominantStructuralContacts
+    a.occupiedHullWasteRatio < b.occupiedHullWasteRatio
   return noWorse && better
 }
 
@@ -541,8 +521,6 @@ function compareFullCandidates(
     a.envelopeSpanMm - b.envelopeSpanMm ||
     a.totalEnclosedCavityAreaMm2 - b.totalEnclosedCavityAreaMm2 ||
     a.occupiedHullWasteRatio - b.occupiedHullWasteRatio ||
-    b.dominantStructuralContacts - a.dominantStructuralContacts ||
-    b.totalStructuralContacts - a.totalStructuralContacts ||
     first.measured.canonicalGeometryIdentity.localeCompare(
       second.measured.canonicalGeometryIdentity
     )
@@ -657,8 +635,6 @@ function deadlineFillTrace(input: {
   readonly insertedFillerCount: number | undefined
   readonly nonInertFillCount: number | undefined
   readonly unplacedFillerCount: number | undefined
-  readonly runtimeMs: number | undefined
-  readonly remainingBudgetMsAfter: number
 }): IntrinsicGlobalFillTrace {
   return {
     structuralProjectionAttempt: input.handoff.projectionAttempt,
@@ -667,9 +643,7 @@ function deadlineFillTrace(input: {
     outcome: 'deadline',
     insertedFillerCount: input.insertedFillerCount,
     nonInertFillCount: input.nonInertFillCount,
-    unplacedFillerCount: input.unplacedFillerCount,
-    runtimeMs: input.runtimeMs,
-    remainingBudgetMsAfter: input.remainingBudgetMsAfter
+    unplacedFillerCount: input.unplacedFillerCount
   }
 }
 

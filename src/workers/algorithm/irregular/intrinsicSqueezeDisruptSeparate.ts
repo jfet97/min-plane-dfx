@@ -60,6 +60,9 @@ export const INTRINSIC_GLOBAL_SEARCH_DEFAULTS = {
   maximumRuntimeMs: 110_000,
   structuralHandoffCapacity: 5,
   explorationAreaCapMm2: 439_904.17,
+  interfaceDisruptionMaximumCavityCount: 2,
+  interfaceDisruptionMaximumHullGapRatio: 0.15,
+  interfaceDisruptionStagnationSweeps: 2,
   seed: 0x4e_34_53_44
 } as const
 
@@ -83,6 +86,8 @@ export interface IntrinsicGlobalSweepTrace {
   readonly sweepIndex: number
   readonly completedSweepCount: number
   readonly forcedDisruption: boolean
+  readonly interfaceDisruptionStagnated: boolean
+  readonly interfaceDisruptionProposalCount: number
   readonly poolSize: number
   readonly proposalCount: number
   readonly separationEvaluationCount: number
@@ -161,6 +166,9 @@ export interface IntrinsicGlobalSearchSchedule {
   readonly maximumRuntimeMs: number
   readonly structuralHandoffCapacity: number
   readonly explorationAreaCapMm2: number
+  readonly interfaceDisruptionMaximumCavityCount: number
+  readonly interfaceDisruptionMaximumHullGapRatio: number
+  readonly interfaceDisruptionStagnationSweeps: number
   readonly seed: number
 }
 
@@ -422,6 +430,8 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
         }
       ]
       let weights: IntrinsicSeparatorWeights = { byConflictKey: new Map() }
+      let lowestObservedRawLoss = initialEvaluation.rawLoss
+      let consecutiveNonImprovingSweeps = 0
 
       for (let sweepIndex = 0; sweepIndex < schedule.sweepsPerBasin; sweepIndex += 1) {
         if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
@@ -430,25 +440,40 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
         }
         const candidates: IntrinsicInfeasiblePoolEntry[] = [...pool]
         let proposalCount = 0
+        let interfaceDisruptionProposalCount = 0
         const forcedDisruption = schedule.forcedDisruptionSweeps.includes(sweepIndex)
+        const interfaceDisruptionStagnated =
+          consecutiveNonImprovingSweeps >= schedule.interfaceDisruptionStagnationSweeps
         for (const [poolIndex, entry] of pool.entries()) {
-          const proposals = [
-            ...intrinsicFocusedProposals({
-              targetBox,
-              catalog,
-              state: entry.state,
-              evaluation: entry.evaluation,
-              weights,
-              ordinal: deterministicOrdinal(ordinalSeed, completedSweepCount, poolIndex)
-            }),
-            ...(forcedDisruption
+          const disruptionProposals =
+            forcedDisruption
               ? intrinsicDisruptionProposals({
                   targetBox,
                   catalog,
                   state: entry.state,
-                  ordinal: deterministicOrdinal(ordinalSeed, completedSweepCount, poolIndex + 31)
+                  ordinal: deterministicOrdinal(
+                    ordinalSeed,
+                    completedSweepCount,
+                    poolIndex + 31
+                  ),
+                  maximumInterfaceCavityCount:
+                    schedule.interfaceDisruptionMaximumCavityCount,
+                  maximumInterfaceHullGapRatio:
+                    schedule.interfaceDisruptionMaximumHullGapRatio,
+                  interfaceDisruptionStagnated
                 })
-              : [])
+              : []
+          interfaceDisruptionProposalCount += disruptionProposals.filter(
+            ({ kind }) => kind === 'interface-disrupt'
+          ).length
+          const proposals = [
+            ...intrinsicFocusedProposals({
+              catalog,
+              state: entry.state,
+              evaluation: entry.evaluation,
+              weights
+            }),
+            ...disruptionProposals
           ]
           proposalCount += proposals.length
           for (const proposal of proposals) {
@@ -478,7 +503,7 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
                 state: proposal.state,
                 evaluation,
                 key,
-                disruptionProtectedUntilSweep: isDisruption ? sweepIndex + 1 : undefined
+                disruptionProtectedUntilSweep: isDisruption ? sweepIndex : undefined
               })
             }
           }
@@ -502,6 +527,12 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
         if (best === undefined) {
           return yield* globalFailure('search', 'the reweighted basin pool became empty.')
         }
+        if (best.evaluation.rawLoss < lowestObservedRawLoss) {
+          lowestObservedRawLoss = best.evaluation.rawLoss
+          consecutiveNonImprovingSweeps = 0
+        } else {
+          consecutiveNonImprovingSweeps += 1
+        }
         completedSweepCount += 1
         trace.push({
           roleId: role.id,
@@ -509,6 +540,8 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
           sweepIndex,
           completedSweepCount,
           forcedDisruption,
+          interfaceDisruptionStagnated,
+          interfaceDisruptionProposalCount,
           poolSize: pool.length,
           proposalCount,
           separationEvaluationCount,
@@ -676,6 +709,11 @@ function snapshotIntrinsicGlobalSchedule(
     maximumRuntimeMs: schedule.maximumRuntimeMs,
     structuralHandoffCapacity: schedule.structuralHandoffCapacity,
     explorationAreaCapMm2: schedule.explorationAreaCapMm2,
+    interfaceDisruptionMaximumCavityCount:
+      schedule.interfaceDisruptionMaximumCavityCount,
+    interfaceDisruptionMaximumHullGapRatio:
+      schedule.interfaceDisruptionMaximumHullGapRatio,
+    interfaceDisruptionStagnationSweeps: schedule.interfaceDisruptionStagnationSweeps,
     seed: schedule.seed
   }
 }
@@ -814,9 +852,7 @@ function dominatesStructuralHandoff(
     firstMetrics.envelopeAreaMm2 <= secondMetrics.envelopeAreaMm2 &&
     firstMetrics.envelopeMaximumSideMm <= secondMetrics.envelopeMaximumSideMm &&
     firstMetrics.envelopeSpanMm <= secondMetrics.envelopeSpanMm &&
-    firstMetrics.occupiedHullWasteRatio <= secondMetrics.occupiedHullWasteRatio &&
-    firstMetrics.totalStructuralContacts >= secondMetrics.totalStructuralContacts &&
-    firstMetrics.dominantStructuralContacts >= secondMetrics.dominantStructuralContacts
+    firstMetrics.occupiedHullWasteRatio <= secondMetrics.occupiedHullWasteRatio
   const strictlyBetter =
     firstMetrics.enclosedCavityCount < secondMetrics.enclosedCavityCount ||
     firstMetrics.totalEnclosedCavityAreaMm2 < secondMetrics.totalEnclosedCavityAreaMm2 ||
@@ -824,9 +860,7 @@ function dominatesStructuralHandoff(
     firstMetrics.envelopeAreaMm2 < secondMetrics.envelopeAreaMm2 ||
     firstMetrics.envelopeMaximumSideMm < secondMetrics.envelopeMaximumSideMm ||
     firstMetrics.envelopeSpanMm < secondMetrics.envelopeSpanMm ||
-    firstMetrics.occupiedHullWasteRatio < secondMetrics.occupiedHullWasteRatio ||
-    firstMetrics.totalStructuralContacts > secondMetrics.totalStructuralContacts ||
-    firstMetrics.dominantStructuralContacts > secondMetrics.dominantStructuralContacts
+    firstMetrics.occupiedHullWasteRatio < secondMetrics.occupiedHullWasteRatio
   return noWorse && strictlyBetter
 }
 
@@ -842,8 +876,6 @@ function compareStructuralHandoffs(
     first.metrics.envelopeSpanMm - second.metrics.envelopeSpanMm ||
     first.metrics.totalEnclosedCavityAreaMm2 - second.metrics.totalEnclosedCavityAreaMm2 ||
     first.metrics.occupiedHullWasteRatio - second.metrics.occupiedHullWasteRatio ||
-    second.metrics.dominantStructuralContacts - first.metrics.dominantStructuralContacts ||
-    second.metrics.totalStructuralContacts - first.metrics.totalStructuralContacts ||
     first.metrics.canonicalGeometryIdentity.localeCompare(
       second.metrics.canonicalGeometryIdentity
     )
@@ -997,8 +1029,8 @@ function targetRole(
   widthMm: number,
   heightMm: number
 ): IntrinsicGlobalTargetRole | undefined {
-  const widthGrid = floorPositiveGrid(widthMm)
-  const heightGrid = floorPositiveGrid(heightMm)
+  const widthGrid = floorIntrinsicTargetGrid(widthMm)
+  const heightGrid = floorIntrinsicTargetGrid(heightMm)
   if (widthGrid === undefined || heightGrid === undefined) return undefined
   const canonicalWidthMm = fromGrid(widthGrid)
   const canonicalHeightMm = fromGrid(heightGrid)
@@ -1010,9 +1042,11 @@ function targetRole(
   }
 }
 
-function floorPositiveGrid(valueMm: number): number | undefined {
+export function floorIntrinsicTargetGrid(valueMm: number): number | undefined {
   if (!Number.isFinite(valueMm) || valueMm <= 0) return undefined
-  const grid = Math.floor(valueMm * 1_000 + Number.EPSILON)
+  const nearestGrid = toGridMm(valueMm)
+  if (nearestGrid === undefined) return undefined
+  const grid = fromGrid(nearestGrid) <= valueMm ? nearestGrid : nearestGrid - 1
   return Number.isSafeInteger(grid) && grid > 0 ? grid : undefined
 }
 

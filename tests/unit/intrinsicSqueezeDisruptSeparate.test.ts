@@ -22,6 +22,7 @@ import {
 import {
   deriveIntrinsicGlobalOrdinalSeed,
   deriveIntrinsicGlobalTargetRoles,
+  floorIntrinsicTargetGrid,
   INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
   partitionIntrinsicStructuralPieces,
   retainIntrinsicInfeasiblePool,
@@ -40,7 +41,8 @@ import {
   provisionalLayoutFromRelaxedState,
   relaxedStateFromExactLayout,
   remapIntrinsicTransformsQuarterTurn,
-  transportIntrinsicGroup
+  transportIntrinsicGroup,
+  type IntrinsicSeparationEvaluation
 } from '../../src/workers/algorithm/irregular/intrinsicTransformSeparator.js'
 import {
   buildIntrinsicTransformCatalog,
@@ -179,6 +181,9 @@ function schedule(overrides: Partial<IntrinsicGlobalSearchSchedule> = {}): Intri
     maximumRuntimeMs: 20_000,
     structuralHandoffCapacity: 5,
     explorationAreaCapMm2: 10,
+    interfaceDisruptionMaximumCavityCount: 2,
+    interfaceDisruptionMaximumHullGapRatio: 0.15,
+    interfaceDisruptionStagnationSweeps: 2,
     seed: 1234,
     ...overrides
   }
@@ -230,29 +235,25 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(INTRINSIC_GLOBAL_SEARCH_DEFAULTS.maximumProjectionAttempts).toBe(5)
   })
 
-  it('lets a finite transform proposal change an overlapping topology', async () => {
+  it('lets a finite transform proposal change a wall-conflicted topology', async () => {
     const pieces = [
-      preparedRectangle('wide', 4, 1, [transform(0, 0), transform(1, 90)]),
-      preparedRectangle('block', 2, 2)
+      preparedRectangle('wide', 4, 1, [transform(0, 0), transform(1, 90)])
     ]
     const catalog = await catalogFor(pieces)
     const state = relaxedStateFromExactLayout(catalog, [
-      placed(catalogEntry(catalog, 'wide'), 0, 0, 0),
-      placed(catalogEntry(catalog, 'block'), 0, 0, 0)
+      placed(catalogEntry(catalog, 'wide'), 0, 6, 0)
     ])
     if (state === undefined) throw new Error('state expected')
-    const evaluation = evaluateIntrinsicSeparation({ widthMm: 8, heightMm: 8 }, catalog, state)
+    const evaluation = evaluateIntrinsicSeparation({ widthMm: 3, heightMm: 8 }, catalog, state)
     if (evaluation === undefined) throw new Error('evaluation expected')
     const proposals = intrinsicFocusedProposals({
-      targetBox: { widthMm: 8, heightMm: 8 },
       catalog,
       state,
       evaluation,
-      weights: { byConflictKey: new Map() },
-      ordinal: 0
+      weights: { byConflictKey: new Map() }
     })
 
-    expect(evaluation.conflicts.some(({ kind }) => kind === 'pair')).toBe(true)
+    expect(evaluation.conflicts.some(({ kind }) => kind === 'wall')).toBe(true)
     expect(proposals.some(({ kind }) => kind === 'transform')).toBe(true)
     expect(new Set(proposals.map(({ state: next }) => intrinsicRelaxedStateKey(catalog, next))).size)
       .toBe(proposals.length)
@@ -362,29 +363,60 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     const target = { widthMm: 8, heightMm: 8 }
     const evaluation = evaluateIntrinsicSeparation(target, catalog, state)
     if (evaluation === undefined) throw new Error('evaluation expected')
-    const topConflict = evaluation.conflicts[0]
-    const alternate = evaluation.conflicts.find(({ key }) => key !== topConflict?.key)
-    if (topConflict === undefined || alternate === undefined) throw new Error('two conflicts expected')
     const defaultProposals = intrinsicFocusedProposals({
-      targetBox: target,
       catalog,
       state,
       evaluation,
-      weights: { byConflictKey: new Map() },
-      ordinal: 1
+      weights: { byConflictKey: new Map() }
     })
+    const defaultPieceId = defaultProposals[0]?.affectedPieceIds[0]
+    const alternate = evaluation.conflicts.find(
+      ({ firstPieceId, secondPieceId }) =>
+        firstPieceId !== defaultPieceId && secondPieceId !== defaultPieceId
+    )
+    if (defaultPieceId === undefined || alternate === undefined) {
+      throw new Error('independent weighted conflict expected')
+    }
     const reweightedProposals = intrinsicFocusedProposals({
-      targetBox: target,
       catalog,
       state,
       evaluation,
-      weights: { byConflictKey: new Map([[alternate.key, 1_000]]) },
-      ordinal: 1
+      weights: { byConflictKey: new Map([[alternate.key, 1_000]]) }
     })
 
     expect(defaultProposals[0]?.affectedPieceIds).not.toEqual(
       reweightedProposals[0]?.affectedPieceIds
     )
+  })
+
+  it('selects the greatest summed weighted piece contribution, not one deepest conflict', async () => {
+    const pieces = [preparedRectangle('aggregate', 1, 1), preparedRectangle('deepest', 1, 1)]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'aggregate'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'deepest'), 0, 2, 0)
+    ])
+    if (state === undefined) throw new Error('state expected')
+    const aggregateId = PieceId.make('aggregate')
+    const deepestId = PieceId.make('deepest')
+    const evaluation: IntrinsicSeparationEvaluation = {
+      rawLoss: 1.36,
+      weightedLoss: 1.36,
+      exactZeroLoss: false,
+      conflicts: [
+        syntheticWallConflict('aggregate-x', aggregateId, 0.6, 1, 0),
+        syntheticWallConflict('aggregate-y', aggregateId, 0.6, 0, 1),
+        syntheticWallConflict('deepest', deepestId, 0.8, -1, 0)
+      ]
+    }
+    const proposals = intrinsicFocusedProposals({
+      catalog,
+      state,
+      evaluation,
+      weights: { byConflictKey: new Map() }
+    })
+
+    expect(proposals[0]?.affectedPieceIds).toEqual([aggregateId])
   })
 
   it('transports negative-extent transforms by world-center delta and deduplicates the pool', async () => {
@@ -437,7 +469,9 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       targetBox: { widthMm: 80, heightMm: 30 },
       catalog,
       state,
-      ordinal: 2
+      ordinal: 2,
+      maximumInterfaceCavityCount: 2,
+      maximumInterfaceHullGapRatio: 0.15
     })
     const swap = proposals.find(({ kind }) => kind === 'swap')
     const squeeze = proposals.find(({ kind }) => kind === 'split-squeeze')
@@ -466,7 +500,9 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
         targetBox: { widthMm: 50, heightMm: 20 },
         catalog: identicalCatalog,
         state: identicalState,
-        ordinal: 4
+        ordinal: 4,
+        maximumInterfaceCavityCount: 2,
+        maximumInterfaceHullGapRatio: 0.15
       }).some(({ kind }) => kind === 'swap')
     ).toBe(false)
   })
@@ -491,7 +527,9 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       targetBox,
       catalog,
       state,
-      ordinal: 3
+      ordinal: 3,
+      maximumInterfaceCavityCount: 2,
+      maximumInterfaceHullGapRatio: 0.15
     }).find(({ kind }) => kind === 'interface-disrupt')
 
     expect(proposal).toBeDefined()
@@ -526,6 +564,21 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(roles?.every(({ areaMm2 }) => areaMm2 <= 439_904.17)).toBe(true)
   })
 
+  it('preserves exact grid roles and floors arbitrary millimeters conservatively', async () => {
+    expect(floorIntrinsicTargetGrid(82.77)).toBe(82_770)
+    expect(floorIntrinsicTargetGrid(82.7709)).toBe(82_770)
+    expect(floorIntrinsicTargetGrid(82.7699)).toBe(82_769)
+    for (const grid of [1, 17, 82_770, 649_972, 1_000_000]) {
+      expect(floorIntrinsicTargetGrid(grid / 1_000)).toBe(grid)
+    }
+    const pieces = [preparedRectangle('grid-role', 82.77, 10.111)]
+    const catalog = await catalogFor(pieces)
+    const roles = deriveIntrinsicGlobalTargetRoles([
+      placed(catalogEntry(catalog, 'grid-role'), 0, 0, 0)
+    ])
+    expect(roles?.[0]).toMatchObject({ widthMm: 82.77, heightMm: 10.111 })
+  })
+
   it('keeps a non-dominated exact archive while removing dominated geometry', () => {
     const first = structuralHandoff('first', { envelopeAreaMm2: 8, totalStructuralContacts: 2 })
     const dominated = structuralHandoff('dominated', {
@@ -541,10 +594,10 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       retainIntrinsicStructuralHandoffs([dominated, first, tradeoff], 5).map(
         ({ metrics }) => metrics.canonicalGeometryIdentity
       )
-    ).toEqual(['tradeoff', 'first'])
+    ).toEqual(['tradeoff'])
   })
 
-  it('keeps a topology-poor structural tradeoff when it improves compactness and contacts', () => {
+  it('keeps a topology-poor structural tradeoff when it improves compactness', () => {
     const clean = structuralHandoff('clean', {
       envelopeAreaMm2: 10,
       enclosedCavityCount: 0,
@@ -575,7 +628,7 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     if (state === undefined) throw new Error('state expected')
     const hot = poolEntry(state, 'raw-hot', 1, 'hot', 1, undefined)
     const weightedAlternative = poolEntry(state, 'weighted-alternative', 1.2, 'cold', 1.2, undefined)
-    const disruption = poolEntry(state, 'forced-disruption', 10, 'other', 10, 1)
+    const disruption = poolEntry(state, 'forced-disruption', 10, 'other', 10, 0)
     const retained = retainIntrinsicInfeasiblePool(
       [hot, weightedAlternative, disruption],
       8,
@@ -594,9 +647,50 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
         [hot, weightedAlternative, disruption],
         2,
         { byConflictKey: new Map() },
-        2
+        1
       ).some(({ key }) => key === 'forced-disruption')
     ).toBe(false)
+  })
+
+  it('waits for a forced checkpoint before using measured interface stagnation', async () => {
+    const transforms = [transform(0, 0), transform(1, 90)]
+    const pieces = [
+      preparedRectangle('bottom', 6, 1, transforms),
+      preparedRectangle('top', 6, 1, transforms),
+      preparedRectangle('left', 1, 4, transforms),
+      preparedRectangle('right', 1, 4, transforms)
+    ]
+    const catalog = await catalogFor(pieces)
+    const ring = [
+      placed(catalogEntry(catalog, 'bottom'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'top'), 0, 0, 5),
+      placed(catalogEntry(catalog, 'left'), 0, 0, 1),
+      placed(catalogEntry(catalog, 'right'), 0, 5, 1)
+    ]
+    const result = await runController(
+      pieces,
+      ring,
+      schedule({
+        expectedStructuralPieceCount: 4,
+        sweepsPerBasin: 4,
+        forcedDisruptionSweeps: [3],
+        explorationAreaCapMm2: 100
+      }),
+      ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced))
+    )
+    const firstBasin = result.trace.filter(
+      ({ roleId, basinIndex }) => roleId === 'e1-envelope' && basinIndex === 0
+    )
+
+    expect(
+      firstBasin.map(({ interfaceDisruptionStagnated }) => interfaceDisruptionStagnated)
+    ).toEqual([false, false, true, true])
+    expect(firstBasin[2]).toMatchObject({
+      forcedDisruption: false,
+      interfaceDisruptionProposalCount: 0
+    })
+    expect(firstBasin[3]?.forcedDisruption).toBe(true)
+    expect(firstBasin[3]?.interfaceDisruptionProposalCount).toBeGreaterThan(0)
   })
 
   it('returns exact E1 on an incomplete budget and propagates cancellation before projection', async () => {
@@ -927,6 +1021,25 @@ function poolEntry(
         }
       ]
     }
+  }
+}
+
+function syntheticWallConflict(
+  key: string,
+  pieceId: PieceId,
+  normalizedDepth: number,
+  moveXGrid: number,
+  moveYGrid: number
+): IntrinsicSeparationEvaluation['conflicts'][number] {
+  return {
+    key,
+    kind: 'wall',
+    firstPieceId: pieceId,
+    secondPieceId: undefined,
+    rawDepth: normalizedDepth,
+    normalizedDepth,
+    moveXGrid,
+    moveYGrid
   }
 }
 
