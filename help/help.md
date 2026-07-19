@@ -1941,6 +1941,21 @@ would falsify each one, and identify the smallest safe production experiment.
   a deterministic absolute-geometry decoder—without enabling the legacy GA or
   its sheet-relative terminal comparator. Periodic cells and large-first exact
   cavity fill remain later roles unless E2 proves order diversity insufficient.
+- Rejected E2 at `60fb82e` after six unique decodes in `130.742 s`. The
+  `maxArea/8` large-first order duplicated baseline and was recorded rather than
+  replaced. No other family-order/orientation chromosome met the early signal.
+  The best-area alternative (`423,572.835 mm2`) still had hull-gap `0.235042`,
+  32 components, 20 isolates, largest component 10, and contacts `18/3`; the
+  best-contact alternative reached only `20/3` at `453,270.499 mm2`. Bounded
+  generic order/rotation diversity is real but insufficient, so do not enable
+  or enlarge the legacy GA around this decoder.
+- Move next to the remaining open-source constructor roles, kept independently
+  measurable under the same sheet-free certificate: generic repeated-family
+  periodic seeds and exact large-first/small-fill cavity placement. PackingSolver
+  demonstrates both as separate construction phases; its periodic code is a
+  reusable building block rather than proof that cells alone solve a mixed job.
+  Do not tile every family into disconnected islands, create fake macro pieces,
+  or treat ordinary late small-piece order as a small-fill experiment.
 
 ### 2026-07-19 (canonical reference decode handoff)
 
