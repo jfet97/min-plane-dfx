@@ -69,10 +69,10 @@ export interface IntrinsicGlobalFillTrace {
     | 'completed-quality-rejected'
     | 'incomplete'
     | 'deadline'
-  readonly insertedFillerCount: number
-  readonly nonInertFillCount: number
-  readonly unplacedFillerCount: number
-  readonly runtimeMs: number
+  readonly insertedFillerCount: number | undefined
+  readonly nonInertFillCount: number | undefined
+  readonly unplacedFillerCount: number | undefined
+  readonly runtimeMs: number | undefined
   readonly remainingBudgetMsAfter: number
 }
 
@@ -250,7 +250,16 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
     for (const handoff of structural.structuralHandoffs) {
       const remainingBefore = remainingRuntimeMs(startedAt, schedule.maximumRuntimeMs)
       if (remainingBefore <= 0) {
-        fillTrace.push(deadlineFillTrace(handoff, 0, 0))
+        fillTrace.push(
+          deadlineFillTrace({
+            handoff,
+            insertedFillerCount: 0,
+            nonInertFillCount: 0,
+            unplacedFillerCount: partition.fillerPieces.length,
+            runtimeMs: 0,
+            remainingBudgetMsAfter: 0
+          })
+        )
         return fallbackResult({
           status: 'deadline-fallback',
           fallback,
@@ -278,7 +287,19 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
       if (fillAttempt.kind === 'failure') {
         if (fillAttempt.error._tag === 'IrregularNfpIfpControlAbortError') {
           if (fillAttempt.error.reason === 'cancelled') return yield* Effect.fail(fillAttempt.error)
-          fillTrace.push(deadlineFillTrace(handoff, 0, 0))
+          fillTrace.push(
+            deadlineFillTrace({
+              handoff,
+              insertedFillerCount: undefined,
+              nonInertFillCount: undefined,
+              unplacedFillerCount: undefined,
+              runtimeMs: undefined,
+              remainingBudgetMsAfter: remainingRuntimeMs(
+                startedAt,
+                schedule.maximumRuntimeMs
+              )
+            })
+          )
           return fallbackResult({
             status: 'deadline-fallback',
             fallback,
@@ -335,7 +356,19 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
       }
       const checkpoint = yield* portfolioCheckpoint(absoluteControl)
       if (checkpoint === 'deadline') {
-        fillTrace.push(deadlineFillTrace(handoff, insertedFillerCount, nonInertFillCount))
+        fillTrace.push(
+          deadlineFillTrace({
+            handoff,
+            insertedFillerCount: Math.max(0, insertedFillerCount),
+            nonInertFillCount,
+            unplacedFillerCount,
+            runtimeMs: constructed.runtimeMs,
+            remainingBudgetMsAfter: remainingRuntimeMs(
+              startedAt,
+              schedule.maximumRuntimeMs
+            )
+          })
+        )
         return fallbackResult({
           status: 'deadline-fallback',
           fallback,
@@ -582,21 +615,24 @@ function emptyStructuralResult(
   }
 }
 
-function deadlineFillTrace(
-  handoff: IntrinsicStructuralHandoff,
-  insertedFillerCount: number,
-  nonInertFillCount: number
-): IntrinsicGlobalFillTrace {
+function deadlineFillTrace(input: {
+  readonly handoff: IntrinsicStructuralHandoff
+  readonly insertedFillerCount: number | undefined
+  readonly nonInertFillCount: number | undefined
+  readonly unplacedFillerCount: number | undefined
+  readonly runtimeMs: number | undefined
+  readonly remainingBudgetMsAfter: number
+}): IntrinsicGlobalFillTrace {
   return {
-    structuralProjectionAttempt: handoff.projectionAttempt,
-    targetRoleId: handoff.targetRoleId,
-    basinIndex: handoff.basinIndex,
+    structuralProjectionAttempt: input.handoff.projectionAttempt,
+    targetRoleId: input.handoff.targetRoleId,
+    basinIndex: input.handoff.basinIndex,
     outcome: 'deadline',
-    insertedFillerCount: Math.max(0, insertedFillerCount),
-    nonInertFillCount,
-    unplacedFillerCount: 0,
-    runtimeMs: 0,
-    remainingBudgetMsAfter: 0
+    insertedFillerCount: input.insertedFillerCount,
+    nonInertFillCount: input.nonInertFillCount,
+    unplacedFillerCount: input.unplacedFillerCount,
+    runtimeMs: input.runtimeMs,
+    remainingBudgetMsAfter: input.remainingBudgetMsAfter
   }
 }
 

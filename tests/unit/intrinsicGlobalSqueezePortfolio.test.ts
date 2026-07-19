@@ -384,6 +384,12 @@ describe('intrinsic global squeeze portfolio', () => {
     expect(deadline.admittedCandidates).toEqual([])
     expect(deadline.selected.source).toBe('e1-fallback')
     expect(deadline.fillTrace.at(-1)?.outcome).toBe('deadline')
+    expect(deadline.fillTrace.at(-1)).toMatchObject({
+      insertedFillerCount: undefined,
+      nonInertFillCount: undefined,
+      unplacedFillerCount: undefined,
+      runtimeMs: undefined
+    })
 
     await expect(
       runPortfolio({
@@ -399,6 +405,53 @@ describe('intrinsic global squeeze portfolio', () => {
         }
       })
     ).rejects.toMatchObject({ _tag: 'IrregularNfpIfpControlAbortError', reason: 'cancelled' })
+  })
+
+  it('preserves known fill evidence when the absolute checkpoint reaches its deadline', async () => {
+    const pieces = [
+      preparedRectangle('large-a', 4, 4),
+      preparedRectangle('large-b', 4, 4),
+      preparedRectangle('small', 1, 1)
+    ]
+    const fallback = [
+      placed(pieceAt(pieces, 0), 0, 0),
+      placed(pieceAt(pieces, 1), 4, 0),
+      placed(pieceAt(pieces, 2), 8, 0)
+    ]
+    const frozen = [placed(pieceAt(pieces, 0), 0, 0), placed(pieceAt(pieces, 1), 5, 0)]
+    const filled = [...frozen, placed(pieceAt(pieces, 2), 4, 0)]
+    let checkpointCount = 0
+    const result = await runPortfolio({
+      pieces,
+      fallback,
+      structural: structuralResult({
+        pieces,
+        fallback,
+        handoffs: [structuralHandoff(1, frozen)]
+      }),
+      fill: () => Effect.succeed(constructed([pieceAt(pieces, 2)], filled, [], 1)),
+      control: {
+        checkpoint: () => {
+          checkpointCount += 1
+          return checkpointCount === 2
+            ? Effect.fail(
+                new IrregularNfpIfpControlAbortError({ reason: 'deadline', message: 'deadline' })
+              )
+            : Effect.void
+        }
+      }
+    })
+
+    expect(result.status).toBe('deadline-fallback')
+    expect(result.fillTrace).toEqual([
+      expect.objectContaining({
+        outcome: 'deadline',
+        insertedFillerCount: 1,
+        nonInertFillCount: 1,
+        unplacedFillerCount: 0,
+        runtimeMs: 2
+      })
+    ])
   })
 
   it('owns inputs before checkpoints and emits deterministic scalar traces', async () => {
