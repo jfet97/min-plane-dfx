@@ -114,10 +114,9 @@ export function runTargetedExactLns(
     const incumbentMetrics = measureRelaxationMetrics(input.incumbent)
     if (
       incumbentMetrics === undefined ||
-      input.incumbent.length !== input.allPreparedPieces.length ||
-      !assertCanonicalGridLegalLayout(input.sheet, input.incumbent)
+      input.incumbent.length !== input.allPreparedPieces.length
     ) {
-      return yield* invalidInput('targeted exact LNS requires one complete exact-legal incumbent.')
+      return yield* invalidInput('targeted exact LNS requires one complete incumbent.')
     }
     const v1 = yield* relaxOverlappingLayoutV1(
       input.sheet,
@@ -369,6 +368,18 @@ export function selectTargetedDestroySet(input: {
     ].toSorted()
     targetAabb = unionAabbs(mandatoryIds.flatMap((pieceId) => optionalAabb(aabbById.get(pieceId))))
     coverage = `hazards:${input.analysis.positiveAreaConflicts.length}:${input.analysis.wallOffenders.length}`
+  }
+  const exactLegalizationIds = [
+    ...new Set([
+      ...input.analysis.positiveAreaConflicts.flatMap((pair) => pair),
+      ...input.analysis.wallOffenders
+    ])
+  ].toSorted()
+  mandatoryIds = [...new Set([...mandatoryIds, ...exactLegalizationIds])]
+  if (mandatoryIds.length > 0) {
+    targetAabb = unionAabbs(
+      mandatoryIds.flatMap((pieceId) => optionalAabb(aabbById.get(pieceId)))
+    )
   }
   const desiredSize = Math.max(input.requestedK, mandatoryIds.length)
   const ranked = input.analysis.pieces

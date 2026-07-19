@@ -109,6 +109,30 @@ describe('targeted exact LNS policy', () => {
     expect(selected.destroyIds).toHaveLength(5)
   })
 
+  it('adds exact legalization endpoints to non-hazard targets before freezing', () => {
+    const current = analysis({
+      components: [
+        ['p0', 'p1'],
+        ['d0', 'd1'],
+        ['x0'],
+        ['x1']
+      ],
+      conflicts: [['x0', 'x1']]
+    })
+    const ranks = new Map(current.pieces.map(({ pieceId }, index) => [pieceId, index]))
+
+    const selected = selectTargetedDestroySet({
+      target: 'interface',
+      requestedK: 2,
+      analysis: current,
+      originalRankById: ranks
+    })
+
+    expect(selected.mandatoryIds).toContain('x0')
+    expect(selected.mandatoryIds).toContain('x1')
+    expect(selected.destroyIds.length).toBeGreaterThanOrEqual(4)
+  })
+
   it('accepts a strict topology improvement and rolls back any guarded regression', () => {
     const incumbent = metrics()
     const better = metrics({

@@ -22,6 +22,10 @@ import { GeometryKernel, GeometrySettings } from '../src/workers/irregular/geome
 import { NfpIfpServiceLive } from '../src/workers/irregular/nfpIfpService.js'
 import { TransformGeneratorLive } from '../src/workers/irregular/transformGenerator.js'
 import { TransformGenerator } from '../src/workers/irregular/services.js'
+import {
+  analyzeCanonicalLayoutStructure,
+  assertCanonicalGridLegalLayout
+} from '../src/workers/irregular/canonicalLayoutGeometry.js'
 
 const FIXTURE = fileURLToPath(
   new URL('../tests/fixtures/irregularSheetInvariance/mixed61-request.json', import.meta.url)
@@ -66,6 +70,25 @@ const computeStartedAt = performance.now()
 const incumbent = await Effect.runPromise(layers(computeIrregularNesting(request)))
 const computeElapsedMs = performance.now() - computeStartedAt
 const preparedPieces = await Effect.runPromise(layers(preparePieces(request, settings)))
+const preflightStructure = analyzeCanonicalLayoutStructure(
+  sheet,
+  incumbent.placedCollisionGeometries
+)
+console.log(
+  JSON.stringify({
+    preflightPlaced: incumbent.placedCollisionGeometries.length,
+    preflightUnplaced: incumbent.unplacedPieceIds.length,
+    preparedPieces: preparedPieces.length,
+    canonicalGridLegal: assertCanonicalGridLegalLayout(
+      sheet,
+      incumbent.placedCollisionGeometries
+    ),
+    exactConflictCount: preflightStructure?.positiveAreaConflicts.length,
+    wallOffenderCount: preflightStructure?.wallOffenders.length,
+    exactConflicts: preflightStructure?.positiveAreaConflicts,
+    wallOffenders: preflightStructure?.wallOffenders
+  })
+)
 const lnsStartedAt = performance.now()
 const result = await Effect.runPromise(
   layers(
