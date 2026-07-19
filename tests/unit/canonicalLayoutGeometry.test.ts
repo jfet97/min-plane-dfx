@@ -12,6 +12,7 @@ import {
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import {
+  analyzeCanonicalLayoutStructure,
   assertCanonicalGridLegalLayout,
   canonicalCollisionLayoutIdentity,
   measureCanonicalLayoutTopology
@@ -155,6 +156,38 @@ describe('canonical collision layout geometry', () => {
     const sheet = new SheetSpec({ width: 4, height: 3, label: 'boundary' })
     expect(assertCanonicalGridLegalLayout(sheet, [rectangle('exact', 4, 3, 0, 0)])).toBe(true)
     expect(assertCanonicalGridLegalLayout(sheet, [rectangle('over', 4.001, 3, 0, 0)])).toBe(false)
+  })
+
+  it('reports exact components, hull gaps, conflicts, and wall offenders', () => {
+    const sheet = new SheetSpec({ width: 8, height: 6, label: 'structure' })
+    const layout = [
+      rectangle('primary-a', 2, 2, 0, 0),
+      rectangle('primary-b', 2, 2, 2, 0),
+      rectangle('detached', 1, 1, 6, 4),
+      rectangle('overlap', 1, 1, 6.5, 4),
+      rectangle('wall', 1, 1, 7.5, 0)
+    ]
+
+    const analysis = analyzeCanonicalLayoutStructure(sheet, layout)
+
+    expect(analysis?.positiveContactComponents.map((component) => component.length)).toEqual([
+      2,
+      2,
+      1
+    ])
+    expect(analysis?.positiveContactPairs).toContainEqual([
+      PieceId.make('primary-a'),
+      PieceId.make('primary-b')
+    ])
+    expect(analysis?.positiveAreaConflicts).toContainEqual([
+      PieceId.make('detached'),
+      PieceId.make('overlap')
+    ])
+    expect(analysis?.wallOffenders).toEqual([PieceId.make('wall')])
+    expect(analysis?.largestHullGap?.areaMm2).toBeGreaterThan(0)
+    expect(analysis?.largestHullGap?.aabb.maxX).toBeGreaterThan(
+      analysis?.largestHullGap?.aabb.minX ?? Number.POSITIVE_INFINITY
+    )
   })
 
   it('admits q0, q90-only, and unfit rigid states exactly', () => {

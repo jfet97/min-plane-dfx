@@ -9,6 +9,7 @@ import {
   PolyTree64
 } from 'clipper2-ts'
 import type { SheetSpec } from '@shared/domain/nesting.js'
+import type { PieceId } from '@shared/domain/ids.js'
 import type { IrregularPlacedPiece } from '@shared/irregular/domain.js'
 import { measureSharedConvexPolygonBoundaryContact } from './convexPolygonContact.js'
 import { fromGrid, toGridMm } from './clipper2OffsetPolicy.js'
@@ -26,8 +27,34 @@ export interface CanonicalLayoutTopology {
 }
 
 interface CanonicalPlacedPolygon {
+  readonly pieceId: PieceId
   readonly path: Path64
   readonly contactPolygon: InternalPolygonWithBounds
+}
+
+export interface CanonicalGridAabb {
+  readonly minX: number
+  readonly minY: number
+  readonly maxX: number
+  readonly maxY: number
+}
+
+export interface CanonicalLayoutStructuralAnalysis {
+  readonly pieces: ReadonlyArray<{
+    readonly pieceId: PieceId
+    readonly aabb: CanonicalGridAabb
+  }>
+  readonly positiveContactComponents: ReadonlyArray<ReadonlyArray<PieceId>>
+  readonly positiveContactPairs: ReadonlyArray<readonly [PieceId, PieceId]>
+  readonly largestHullGap:
+    | {
+        readonly path: ReadonlyArray<InternalPoint>
+        readonly areaMm2: number
+        readonly aabb: CanonicalGridAabb
+      }
+    | undefined
+  readonly positiveAreaConflicts: ReadonlyArray<readonly [PieceId, PieceId]>
+  readonly wallOffenders: ReadonlyArray<PieceId>
 }
 
 type QuarterTurn = 0 | 90 | 180 | 270
@@ -119,6 +146,84 @@ export function assertCanonicalGridLegalLayout(
   return true
 }
 
+/** Exact canonical-grid structural facts without target or acceptance policy. */
+export function analyzeCanonicalLayoutStructure(
+  sheet: SheetSpec,
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): CanonicalLayoutStructuralAnalysis | undefined {
+  const polygons = canonicalPlacedPolygons(placed)
+  const sheetWidth = toGridMm(sheet.width)
+  const sheetHeight = toGridMm(sheet.height)
+  if (polygons === undefined || sheetWidth === undefined || sheetHeight === undefined) {
+    return undefined
+  }
+  const uniqueIds = new Set(polygons.map(({ pieceId }) => pieceId))
+  if (uniqueIds.size !== polygons.length) return undefined
+  const neighbors = polygons.map(() => new Set<number>())
+  const positiveContactPairs: Array<readonly [PieceId, PieceId]> = []
+  const positiveAreaConflicts: Array<readonly [PieceId, PieceId]> = []
+  for (let firstIndex = 0; firstIndex < polygons.length; firstIndex += 1) {
+    const first = polygons[firstIndex]
+    if (first === undefined) return undefined
+    for (let secondIndex = 0; secondIndex < firstIndex; secondIndex += 1) {
+      const second = polygons[secondIndex]
+      if (second === undefined) return undefined
+      const contact = measureSharedConvexPolygonBoundaryContact(
+        first.contactPolygon,
+        second.contactPolygon
+      )
+      if (contact === undefined) return undefined
+      if (contact.lengthMm > 0) {
+        neighbors[firstIndex]?.add(secondIndex)
+        neighbors[secondIndex]?.add(firstIndex)
+        positiveContactPairs.push(orderedPiecePair(first.pieceId, second.pieceId))
+      }
+      const intersection = new PolyTree64()
+      try {
+        booleanOpWithPolyTree(
+          ClipType.Intersection,
+          [first.path],
+          [second.path],
+          intersection,
+          FillRule.NonZero
+        )
+      } catch {
+        return undefined
+      }
+      if (polyTreeToPaths64(intersection).some((path) => Math.abs(area(path)) > 0)) {
+        positiveAreaConflicts.push(orderedPiecePair(first.pieceId, second.pieceId))
+      }
+    }
+  }
+  const positiveContactComponents = contactComponents(polygons, neighbors)
+  if (positiveContactComponents === undefined) return undefined
+  const hull = convexHull(polygons.flatMap(({ path }) => path))
+  const largestHullGap = largestHullGapRegion(hull, polygons.map(({ path }) => path))
+  if (largestHullGap === null) return undefined
+  const pieces = polygons.map(({ pieceId, path }) => {
+    const aabb = gridPathAabb(path)
+    return aabb === undefined ? undefined : { pieceId, aabb }
+  })
+  if (pieces.some((piece) => piece === undefined)) return undefined
+  const wallOffenders = polygons
+    .filter(({ path }) =>
+      path.some(({ x, y }) => x < 0 || y < 0 || x > sheetWidth || y > sheetHeight)
+    )
+    .map(({ pieceId }) => pieceId)
+    .toSorted()
+  return {
+    pieces: pieces.filter(
+      (piece): piece is { readonly pieceId: PieceId; readonly aabb: CanonicalGridAabb } =>
+        piece !== undefined
+    ),
+    positiveContactComponents,
+    positiveContactPairs: positiveContactPairs.toSorted(comparePiecePairs),
+    largestHullGap: largestHullGap ?? undefined,
+    positiveAreaConflicts: positiveAreaConflicts.toSorted(comparePiecePairs),
+    wallOffenders
+  }
+}
+
 function canonicalPlacedPolygons(
   placed: ReadonlyArray<IrregularPlacedPiece>
 ): ReadonlyArray<CanonicalPlacedPolygon> | undefined {
@@ -137,9 +242,70 @@ function canonicalPlacedPolygons(
     if (path.length < 3 || signedArea(path) === 0) return undefined
     const bounds = boundsForPoints(points)
     if (bounds === undefined) return undefined
-    result.push({ path, contactPolygon: { polygon: { points }, bounds } })
+    result.push({
+      pieceId: entry.placement.pieceId ?? entry.placement.sourcePieceId,
+      path,
+      contactPolygon: { polygon: { points }, bounds }
+    })
   }
   return result
+}
+
+function orderedPiecePair(first: PieceId, second: PieceId): readonly [PieceId, PieceId] {
+  return first < second ? [first, second] : [second, first]
+}
+
+function comparePiecePairs(
+  first: readonly [PieceId, PieceId],
+  second: readonly [PieceId, PieceId]
+): number {
+  return first[0].localeCompare(second[0]) || first[1].localeCompare(second[1])
+}
+
+function contactComponents(
+  polygons: ReadonlyArray<CanonicalPlacedPolygon>,
+  neighbors: ReadonlyArray<ReadonlySet<number>>
+): ReadonlyArray<ReadonlyArray<PieceId>> | undefined {
+  const visited = new Set<number>()
+  const components: PieceId[][] = []
+  for (let start = 0; start < polygons.length; start += 1) {
+    if (visited.has(start)) continue
+    const pending = [start]
+    const component: PieceId[] = []
+    visited.add(start)
+    while (pending.length > 0) {
+      const current = pending.pop()
+      if (current === undefined) continue
+      const polygon = polygons[current]
+      if (polygon === undefined) return undefined
+      component.push(polygon.pieceId)
+      for (const neighbor of neighbors[current] ?? []) {
+        if (visited.has(neighbor)) continue
+        visited.add(neighbor)
+        pending.push(neighbor)
+      }
+    }
+    components.push(component.toSorted())
+  }
+  return components.toSorted(
+    (first, second) => second.length - first.length || first.join('|').localeCompare(second.join('|'))
+  )
+}
+
+function gridPathAabb(path: Path64): CanonicalGridAabb | undefined {
+  const first = path[0]
+  if (first === undefined) return undefined
+  let minX = first.x
+  let minY = first.y
+  let maxX = first.x
+  let maxY = first.y
+  for (const point of path.slice(1)) {
+    minX = Math.min(minX, point.x)
+    minY = Math.min(minY, point.y)
+    maxX = Math.max(maxX, point.x)
+    maxY = Math.max(maxY, point.y)
+  }
+  return { minX, minY, maxX, maxY }
 }
 
 function identityAtQuarterTurn(
@@ -212,6 +378,76 @@ function largestHullGapArea(hull: Path64, occupied: ReadonlyArray<Path64>): numb
     return undefined
   }
   return largestNetRegionArea(gapTree)
+}
+
+function largestHullGapRegion(
+  hull: Path64,
+  occupied: ReadonlyArray<Path64>
+):
+  | {
+      readonly path: ReadonlyArray<InternalPoint>
+      readonly areaMm2: number
+      readonly aabb: CanonicalGridAabb
+    }
+  | undefined
+  | null {
+  if (hull.length < 3) return undefined
+  const occupiedTree = new PolyTree64()
+  const gapTree = new PolyTree64()
+  try {
+    booleanOpWithPolyTree(ClipType.Union, [...occupied], null, occupiedTree, FillRule.EvenOdd)
+    booleanOpWithPolyTree(
+      ClipType.Difference,
+      [counterClockwise(hull)],
+      polyTreeToPaths64(occupiedTree),
+      gapTree,
+      FillRule.NonZero
+    )
+  } catch {
+    return null
+  }
+  let selectedPath: Path64 | undefined
+  let selectedArea = 0
+  const visit = (parent: PolyPath64): boolean => {
+    for (let index = 0; index < parent.count; index += 1) {
+      let child: PolyPath64
+      try {
+        child = parent.child(index)
+      } catch {
+        return false
+      }
+      if (!child.isHole && child.polygon !== null) {
+        let netArea = Math.abs(area(child.polygon))
+        for (let holeIndex = 0; holeIndex < child.count; holeIndex += 1) {
+          let hole: PolyPath64
+          try {
+            hole = child.child(holeIndex)
+          } catch {
+            return false
+          }
+          if (hole.isHole && hole.polygon !== null) netArea -= Math.abs(area(hole.polygon))
+        }
+        if (!Number.isFinite(netArea) || netArea < 0) return false
+        const key = canonicalRing(child.polygon)
+        const selectedKey = selectedPath === undefined ? undefined : canonicalRing(selectedPath)
+        if (netArea > selectedArea || (netArea === selectedArea && key < (selectedKey ?? key))) {
+          selectedPath = child.polygon
+          selectedArea = netArea
+        }
+      }
+      if (!visit(child)) return false
+    }
+    return true
+  }
+  if (!visit(gapTree)) return null
+  if (selectedPath === undefined) return undefined
+  const aabb = gridPathAabb(selectedPath)
+  if (aabb === undefined) return null
+  return {
+    path: selectedPath.map(({ x, y }) => ({ x: fromGrid(x), y: fromGrid(y) })),
+    areaMm2: selectedArea / 1_000_000,
+    aabb
+  }
 }
 
 function countEnclosedOccupiedCavities(occupied: ReadonlyArray<Path64>): number | undefined {
