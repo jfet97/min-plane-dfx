@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { readFile, mkdir, writeFile } from 'node:fs/promises'
+import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
 import { Effect, Layer, Schema } from 'effect'
 import { JobId } from '../src/shared/domain/ids.js'
@@ -85,6 +86,7 @@ const request = new NestingRequest({
     })
   })
 })
+const computeStartedAt = performance.now()
 const result = await Effect.runPromise(
   computeIrregularNesting(request).pipe(
     Effect.provide(CollisionGeometryBuilder.Live),
@@ -96,9 +98,12 @@ const result = await Effect.runPromise(
     Effect.provide(Layer.succeed(GeometrySettings, settings))
   )
 )
+const computeElapsedMs = performance.now() - computeStartedAt
+const relaxationStartedAt = performance.now()
 const relaxation = await Effect.runPromise(
   relaxOverlappingLayout(sheet, result.placedCollisionGeometries)
 )
+const relaxationElapsedMs = performance.now() - relaxationStartedAt
 await writeFile(`${outputDirectory}/incumbent.svg`, renderSvg(result.placedCollisionGeometries))
 await writeFile(
   `${outputDirectory}/selected.svg`,
@@ -108,6 +113,8 @@ const report = {
   sourceCommit: sourceCommit ?? 'unknown',
   placedCount: result.placedCollisionGeometries.length,
   unplacedCount: result.unplacedPieceIds.length,
+  computeElapsedMs,
+  relaxationElapsedMs,
   accepted: relaxation.accepted,
   evaluations: relaxation.evaluations,
   completedAttempts: relaxation.completedAttempts,
