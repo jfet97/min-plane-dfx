@@ -189,50 +189,46 @@ export function decodeIntrinsicStrictPriorityOrder(
       candidateMode: comparatorMode,
       maximumRuntimeMs
     })
-    const state = constructed.state
-    const stepTrace = constructed.stepTrace
-    const intrinsicRuntimeMs = Math.max(0, performance.now() - startedAt)
+    return yield* finalizeIntrinsicStrictState(
+      finalSheet,
+      constructed,
+      Math.max(0, performance.now() - startedAt)
+    )
+  })
+}
 
-    if (state.unplacedPieceIds.length > 0) {
-      return makeResult({
-        status: 'incomplete',
-        state,
-        stepTrace,
-        runtimeMs: intrinsicRuntimeMs
+/** Applies only terminal q0/q90 real-sheet legality to one sheetless constructed state. */
+export function finalizeIntrinsicStrictState(
+  finalSheet: SheetSpec,
+  constructed: IntrinsicStrictConstructResult,
+  runtimeMs = constructed.runtimeMs
+): Effect.Effect<IntrinsicStrictDecodeResult, IntrinsicStrictDecoderError> {
+  const state = constructed.state
+  const stepTrace = constructed.stepTrace
+  if (state.unplacedPieceIds.length > 0) {
+    return Effect.succeed(makeResult({ status: 'incomplete', state, stepTrace, runtimeMs }))
+  }
+  const terminal = selectTerminalOrientation(state, finalSheet)
+  if (terminal === undefined) {
+    return Effect.succeed(
+      makeResult({ status: 'infeasible-final-sheet', state, stepTrace, runtimeMs })
+    )
+  }
+  const metrics = completedMetrics(terminal.state, terminal.canonicalHash, runtimeMs)
+  if (metrics === undefined) {
+    return Effect.fail(
+      new IntrinsicStrictDecoderError({
+        operation: 'completedMetrics',
+        message: 'completed canonical layout metrics must remain finite and exact.'
       })
-    }
-
-    const terminal = selectTerminalOrientation(state, finalSheet)
-    if (terminal === undefined) {
-      return makeResult({
-        status: 'infeasible-final-sheet',
-        state,
-        stepTrace,
-        runtimeMs: intrinsicRuntimeMs
-      })
-    }
-    const runtimeMs = Math.max(0, performance.now() - startedAt)
-    const metrics = completedMetrics(terminal.state, terminal.canonicalHash, runtimeMs)
-    if (metrics === undefined) {
-      return yield* Effect.fail(
-        new IntrinsicStrictDecoderError({
-          operation: 'completedMetrics',
-          message: 'completed canonical layout metrics must remain finite and exact.'
-        })
-      )
-    }
-    return {
-      ...makeResult({
-        status: 'completed',
-        state: terminal.state,
-        stepTrace,
-        runtimeMs
-      }),
-      terminalRotationDeg: terminal.rotationDeg,
-      canonicalGeometryHash: terminal.canonicalHash,
-      metrics,
-      certificate: evaluateIntrinsicStrictCertificate(metrics)
-    }
+    )
+  }
+  return Effect.succeed({
+    ...makeResult({ status: 'completed', state: terminal.state, stepTrace, runtimeMs }),
+    terminalRotationDeg: terminal.rotationDeg,
+    canonicalGeometryHash: terminal.canonicalHash,
+    metrics,
+    certificate: evaluateIntrinsicStrictCertificate(metrics)
   })
 }
 
