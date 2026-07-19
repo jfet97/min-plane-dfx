@@ -129,8 +129,8 @@ export interface GeneratePlacementCandidatesInput {
   readonly placedCollisionIndex?: PlacedCollisionSpatialIndex
   readonly moving: TransformedCollisionGeometry
   readonly settings: IrregularNestingSettings
-  /** Selects the sheet-boundary pool or the intrinsic NFP-contact pool. */
-  readonly candidateDomain?: 'sheet' | 'contact-only'
+  /** Selects the sheet-boundary pool or one of the intrinsic NFP-contact pools. */
+  readonly candidateDomain?: 'sheet' | 'contact-only' | 'sheetless-contact-only'
   readonly candidateMemoScope?: IrregularNfpIfpCandidateMemoScope
   readonly control?: IrregularNfpIfpControl
 }
@@ -157,6 +157,8 @@ export interface ValidatePlacementInput {
   /** Moving polygon expressed around the same placement origin as `candidate.point`. */
   readonly moving: TransformedCollisionGeometry
   readonly candidate: IrregularPlacementCandidate
+  /** Experimental intrinsic decoders may defer rectangular-sheet legality until completion. */
+  readonly ignoreSheetBounds?: boolean
 }
 
 /** Schema-backed boundary for deriving sheet-space free-material diagnostics. */

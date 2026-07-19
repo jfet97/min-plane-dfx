@@ -106,7 +106,10 @@ function assess(
     }
   }
 
-  if (!isInsideSheet(movingPolygon.polygon.points, input.sheet.width, input.sheet.height)) {
+  if (
+    input.ignoreSheetBounds !== true &&
+    !isInsideSheet(movingPolygon.polygon.points, input.sheet.width, input.sheet.height)
+  ) {
     return Effect.succeed({
       legal: false,
       message: 'moving polygon must remain inside the sheet.'

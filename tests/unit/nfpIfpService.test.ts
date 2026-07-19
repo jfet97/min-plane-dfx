@@ -1560,6 +1560,82 @@ describe('NfpIfpServiceLive', () => {
     ])
   })
 
+  it('generates the same exact contact candidates without consulting sheet bounds', async () => {
+    const fixed = placedPiece(
+      'sheetless-fixed',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      0,
+      0
+    )
+    const moving = transformedGeometry('sheetless-moving', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const baseInput = {
+      placed: [fixed],
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      candidateDomain: 'sheetless-contact-only' as const
+    }
+
+    const tinySheetCandidates = await generateCandidates({
+      ...baseInput,
+      sheet: sheet(1, 1)
+    })
+    const roomySheetCandidates = await generateCandidates({
+      ...baseInput,
+      sheet: sheet(10_000, 10_000)
+    })
+
+    expect(tinySheetCandidates).toEqual(roomySheetCandidates)
+    expect(candidatePoints(tinySheetCandidates)).toEqual([
+      point(-2, -2),
+      point(0, -2),
+      point(2, -2),
+      point(-2, 0),
+      point(2, 0),
+      point(-2, 2),
+      point(0, 2),
+      point(2, 2)
+    ])
+    expect(candidatePoints(tinySheetCandidates)).not.toContainEqual(point(0, 0))
+
+    for (const candidate of tinySheetCandidates) {
+      await expect(
+        Effect.runPromise(
+          PlacementValidation.check({
+            sheet: sheet(1, 1),
+            placed: [fixed],
+            moving,
+            candidate,
+            ignoreSheetBounds: true
+          })
+        )
+      ).resolves.toBe(true)
+    }
+  })
+
+  it('does not invent an origin candidate for an empty sheetless contact domain', async () => {
+    const moving = transformedGeometry('sheetless-first', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+
+    const candidates = await generateCandidates({
+      sheet: sheet(1, 1),
+      placed: [],
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      candidateDomain: 'sheetless-contact-only'
+    })
+
+    expect(candidates).toEqual([])
+  })
+
   it('keeps candidate generation identical with a persistent placed-collision index', async () => {
     const moving = transformedGeometry('moving-index-parity', [
       point(0, 0),

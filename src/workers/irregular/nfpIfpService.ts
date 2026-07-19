@@ -635,12 +635,15 @@ function generatePlacementCandidatesUncached(
   IrregularGeometryInputError | IrregularNfpIfpControlAbortError
 > {
   return Effect.gen(function* () {
+    const sheetlessContactOnly = input.candidateDomain === 'sheetless-contact-only'
     yield* nfpCheckpoint(input.control, 'ifp')
-    const ifp = yield* computeIfpBoundsValuesCached(
-      { sheet: input.sheet, moving: input.moving },
-      geometryCache
-    ).pipe(Effect.catchTag('IrregularGeometryInfeasibleError', () => Effect.succeed(undefined)))
-    if (ifp === undefined) return []
+    const ifp = sheetlessContactOnly
+      ? undefined
+      : yield* computeIfpBoundsValuesCached(
+          { sheet: input.sheet, moving: input.moving },
+          geometryCache
+        ).pipe(Effect.catchTag('IrregularGeometryInfeasibleError', () => Effect.succeed(undefined)))
+    if (!sheetlessContactOnly && ifp === undefined) return []
     yield* nfpCheckpoint(input.control, 'ifp')
     const placedCollisionIndex =
       input.placedCollisionIndex !== undefined && input.placedCollisionIndex.matches(input.placed)
@@ -685,23 +688,29 @@ function generatePlacementCandidatesUncached(
     }
 
     yield* nfpCheckpoint(input.control, 'ifp')
-    const ifpSegments = rectangleSegments(ifp.bounds)
-    const contactOnly = input.candidateDomain === 'contact-only'
+    const ifpBounds = ifp?.bounds
+    const ifpSegments = ifpBounds === undefined ? [] : rectangleSegments(ifpBounds)
+    const contactOnly = input.candidateDomain !== undefined && input.candidateDomain !== 'sheet'
     const points = makeCanonicalPointSet()
     const allNfpIndex = new BoundsIndex(
       nfpBoundaries.map((boundary) => ({ value: boundary, bounds: boundary.bounds }))
     )
     const candidateNfpBoundaries =
-      candidatePruningMode === 'indexed' ? allNfpIndex.query(ifp.bounds) : nfpBoundaries
+      sheetlessContactOnly || candidatePruningMode !== 'indexed'
+        ? nfpBoundaries
+        : ifpBounds === undefined
+          ? []
+          : allNfpIndex.query(ifpBounds)
     const candidateNfpIndex = new BoundsIndex(
       candidateNfpBoundaries.map((boundary) => ({ value: boundary, bounds: boundary.bounds }))
     )
-    const candidateBounds = candidatePruningMode === 'indexed' ? ifp.bounds : undefined
+    const candidateBounds =
+      !sheetlessContactOnly && candidatePruningMode === 'indexed' ? ifpBounds : undefined
 
-    if (input.placed.length === 0) {
-      addPoint(points, { x: ifp.bounds.minX, y: ifp.bounds.minY }, candidateBounds)
-    } else if (!contactOnly) {
-      for (const point of rectangleCorners(ifp.bounds)) addPoint(points, point, candidateBounds)
+    if (input.placed.length === 0 && ifpBounds !== undefined) {
+      addPoint(points, { x: ifpBounds.minX, y: ifpBounds.minY }, candidateBounds)
+    } else if (!contactOnly && ifpBounds !== undefined) {
+      for (const point of rectangleCorners(ifpBounds)) addPoint(points, point, candidateBounds)
     }
     for (const boundary of candidateNfpBoundaries) {
       for (const point of boundary.boundary.points) addPoint(points, point, candidateBounds)
@@ -800,7 +809,9 @@ function generatePlacementCandidatesUncached(
       const rawPoint = sortedPoints[pointIndex]
       if (rawPoint === undefined) continue
       for (const point of canonicalPlacementPointAlternatives(rawPoint)) {
-        if (!isInsideBounds(point, ifp.bounds)) continue
+        if (!sheetlessContactOnly && (ifpBounds === undefined || !isInsideBounds(point, ifpBounds))) {
+          continue
+        }
         const boundariesForPoint =
           candidatePruningMode === 'indexed'
             ? candidateNfpIndex.query(pointBounds(point))
@@ -825,7 +836,8 @@ function generatePlacementCandidatesUncached(
           placed: input.placed,
           ...(placedCollisionIndex !== undefined ? { placedCollisionIndex } : {}),
           moving: input.moving,
-          candidate
+          candidate,
+          ...(sheetlessContactOnly ? { ignoreSheetBounds: true } : {})
         })
         if (!legal) continue
         const gridKey = `${point.gridX},${point.gridY}`

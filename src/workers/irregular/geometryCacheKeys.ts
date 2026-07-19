@@ -76,6 +76,10 @@ export function legalPlacementCandidateMemoKey(
   constructionAlgorithm: NfpConstructionAlgorithm,
   candidatePruningMode: NfpCandidatePruningMode
 ): string {
+  const sheetIdentity =
+    input.candidateDomain === 'sheetless-contact-only'
+      ? 'sheet=deferred'
+      : `sheet=${numberKey(input.sheet.width)},${numberKey(input.sheet.height)}`
   const placedPolygons = input.placed
     .map((placed) => {
       const translation = placed.placement.transform
@@ -87,7 +91,7 @@ export function legalPlacementCandidateMemoKey(
 
   return JSON.stringify([
     LEGAL_CANDIDATE_MEMO_NAMESPACE,
-    `sheet=${numberKey(input.sheet.width)},${numberKey(input.sheet.height)}`,
+    sheetIdentity,
     `placed=${placedPolygons.join('|')}`,
     `moving=${polygonDigest(input.moving.polygon.points)}`,
     `moving-bounds=${boundsDigest(input.moving.bounds)}`,
