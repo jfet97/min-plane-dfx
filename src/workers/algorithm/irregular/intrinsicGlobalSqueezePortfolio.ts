@@ -89,12 +89,21 @@ export interface IntrinsicGlobalStructuralOutcome {
   readonly projectionTrace: ReadonlyArray<IntrinsicProjectionAttemptTrace>
 }
 
+export interface IntrinsicGlobalPromotionSummary {
+  readonly viableCandidateCount: number
+  readonly productionAreaCandidateCount: number
+  readonly fallbackAreaMm2: number
+  readonly selectedAreaMm2: number
+  readonly selectedAtOrBelowFallbackArea: boolean
+}
+
 export interface IntrinsicGlobalPortfolioResult {
   readonly status: 'completed-candidate' | 'completed-fallback' | 'deadline-fallback' | 'budget-fallback'
   readonly selected: IntrinsicGlobalFullCandidate
   readonly completeArchive: ReadonlyArray<IntrinsicGlobalFullCandidate>
   readonly admittedCandidates: ReadonlyArray<IntrinsicGlobalFullCandidate>
   readonly structuralOutcome: IntrinsicGlobalStructuralOutcome
+  readonly promotion: IntrinsicGlobalPromotionSummary
   readonly fillTrace: ReadonlyArray<IntrinsicGlobalFillTrace>
   readonly runtimeMs: number
   readonly maximumRuntimeMs: number
@@ -393,11 +402,12 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
         schedule
       })
     }
+    const viable = admitted.filter(
+      ({ measured }) =>
+        measured.canonicalGeometryIdentity !== fallback.measured.canonicalGeometryIdentity
+    )
     const retained = retainIntrinsicGlobalFullCandidates(
-      admitted.filter(
-        ({ measured }) =>
-          measured.canonicalGeometryIdentity !== fallback.measured.canonicalGeometryIdentity
-      ),
+      viable,
       Math.max(0, schedule.completeArchiveCapacity - 1)
     )
     const selected = retained[0] ?? fallback
@@ -407,6 +417,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
       completeArchive: dedupeCompleteArchive(fallback, retained, schedule.completeArchiveCapacity),
       admittedCandidates: retained,
       structuralOutcome,
+      promotion: promotionSummary(fallback, viable, selected),
       fillTrace,
       runtimeMs: Math.max(0, performance.now() - startedAt),
       maximumRuntimeMs: schedule.maximumRuntimeMs,
@@ -415,7 +426,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
   })
 }
 
-/** Non-dominated admitted complete layouts under sheetless exact metrics. */
+/** Retains viable exact layouts, then ranks topology before the area milestone and area. */
 export function retainIntrinsicGlobalFullCandidates(
   candidates: ReadonlyArray<IntrinsicGlobalFullCandidate>,
   capacity: number
@@ -522,6 +533,7 @@ function compareFullCandidates(
   return (
     a.enclosedCavityCount - b.enclosedCavityCount ||
     a.largestOccupiedHullGapRatio - b.largestOccupiedHullGapRatio ||
+    Number(second.productionAreaTargetMet) - Number(first.productionAreaTargetMet) ||
     a.envelopeAreaMm2 - b.envelopeAreaMm2 ||
     a.envelopeMaximumSideMm - b.envelopeMaximumSideMm ||
     a.envelopeSpanMm - b.envelopeSpanMm ||
@@ -571,10 +583,29 @@ function fallbackResult(input: {
     completeArchive: [input.fallback],
     admittedCandidates: [],
     structuralOutcome: structuralOutcomeFrom(input.structural),
+    promotion: promotionSummary(input.fallback, [], input.fallback),
     fillTrace: input.fillTrace,
     runtimeMs: Math.max(0, performance.now() - input.startedAt),
     maximumRuntimeMs: input.schedule.maximumRuntimeMs,
     remainingBudgetMs: remainingRuntimeMs(input.startedAt, input.schedule.maximumRuntimeMs)
+  }
+}
+
+function promotionSummary(
+  fallback: IntrinsicGlobalFullCandidate,
+  viable: ReadonlyArray<IntrinsicGlobalFullCandidate>,
+  selected: IntrinsicGlobalFullCandidate
+): IntrinsicGlobalPromotionSummary {
+  const fallbackAreaMm2 = fallback.measured.metrics.envelopeAreaMm2
+  const selectedAreaMm2 = selected.measured.metrics.envelopeAreaMm2
+  return {
+    viableCandidateCount: viable.length,
+    productionAreaCandidateCount: viable.filter(({ productionAreaTargetMet }) =>
+      productionAreaTargetMet
+    ).length,
+    fallbackAreaMm2,
+    selectedAreaMm2,
+    selectedAtOrBelowFallbackArea: selectedAreaMm2 <= fallbackAreaMm2
   }
 }
 

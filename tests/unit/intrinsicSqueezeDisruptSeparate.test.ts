@@ -20,6 +20,7 @@ import {
   type IrregularNestingSettings
 } from '@shared/irregular/domain.js'
 import {
+  deriveIntrinsicGlobalOrdinalSeed,
   deriveIntrinsicGlobalTargetRoles,
   INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
   partitionIntrinsicStructuralPieces,
@@ -178,7 +179,6 @@ function schedule(overrides: Partial<IntrinsicGlobalSearchSchedule> = {}): Intri
     maximumRuntimeMs: 20_000,
     structuralHandoffCapacity: 5,
     explorationAreaCapMm2: 10,
-    productionAreaTargetMm2: 8,
     maximumCavityCount: 2,
     maximumLargestHullGapRatio: 0.15,
     seed: 1234,
@@ -228,6 +228,10 @@ function runController(
 }
 
 describe('intrinsic global squeeze, disrupt, separate controller', () => {
+  it('pins the registered five-projection schedule', () => {
+    expect(INTRINSIC_GLOBAL_SEARCH_DEFAULTS.maximumProjectionAttempts).toBe(5)
+  })
+
   it('lets a finite transform proposal change an overlapping topology', async () => {
     const pieces = [
       preparedRectangle('wide', 4, 1, [transform(0, 0), transform(1, 90)]),
@@ -576,6 +580,53 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     ).rejects.toMatchObject({ _tag: 'IrregularNfpIfpControlAbortError', reason: 'cancelled' })
   })
 
+  it('rejects an exact fallback that replaces a prepared filler with a foreign piece', async () => {
+    const pieces = [
+      preparedRectangle('large-a', 4, 4, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('large-b', 4, 4, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('filler', 1, 1)
+    ]
+    const foreign = preparedRectangle('foreign', 1, 1)
+    const catalog = await catalogFor([...pieces, foreign])
+    const invalidFallback = [
+      placed(catalogEntry(catalog, 'large-a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'large-b'), 0, 4, 0),
+      placed(catalogEntry(catalog, 'foreign'), 0, 8, 0)
+    ]
+
+    await expect(
+      runController(
+        pieces,
+        invalidFallback,
+        schedule(),
+        ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced))
+      )
+    ).rejects.toMatchObject({
+      _tag: 'IntrinsicGlobalSearchError',
+      operation: 'initialize'
+    })
+  })
+
+  it('derives ordinals from canonical sheetless job identity and the fixed schedule seed', async () => {
+    const firstJob = [
+      preparedRectangle('a', 2, 1, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('b', 3, 2, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('filler', 0.5, 0.5)
+    ]
+    const reorderedCatalog = await catalogFor([...firstJob].reverse())
+    const firstCatalog = await catalogFor(firstJob)
+    const differentCatalog = await catalogFor([
+      preparedRectangle('a', 2, 1, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('b', 3, 2, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('filler', 0.75, 0.5)
+    ])
+
+    const firstSeed = deriveIntrinsicGlobalOrdinalSeed(firstCatalog, schedule().seed)
+    expect(deriveIntrinsicGlobalOrdinalSeed(reorderedCatalog, schedule().seed)).toBe(firstSeed)
+    expect(deriveIntrinsicGlobalOrdinalSeed(firstCatalog, schedule().seed)).toBe(firstSeed)
+    expect(deriveIntrinsicGlobalOrdinalSeed(differentCatalog, schedule().seed)).not.toBe(firstSeed)
+  })
+
   it('owns the E1 fallback and schedule before hostile cooperative checkpoints', async () => {
     const pieces = [
       preparedRectangle('a', 2, 1, [transform(0, 0), transform(1, 90)]),
@@ -637,6 +688,8 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(first.status).toBe('completed')
     expect(first.trace).toEqual(second.trace)
     expect(first.projectionTrace).toEqual(second.projectionTrace)
+    expect(first.structuralHandoffs.length).toBeGreaterThan(0)
+    expect(first.structuralHandoffs).toEqual(second.structuralHandoffs)
     expect(first.completedSweepCount).toBe(6)
     expect(first.projectionAttemptCount).toBe(5)
     expect(first.projectionTrace).toHaveLength(5)
@@ -899,5 +952,3 @@ function prepareMixedPieces(
     return result
   })
 }
-
-expect(INTRINSIC_GLOBAL_SEARCH_DEFAULTS.maximumProjectionAttempts).toBe(5)

@@ -31,7 +31,8 @@ import {
   IntrinsicExactProjectionError,
   projectIntrinsicLayoutExactly,
   type IntrinsicExactProjectionResult,
-  type IntrinsicTargetBox
+  type IntrinsicTargetBox,
+  type IntrinsicTransformCatalog
 } from './intrinsicExactProjection.js'
 import {
   evaluateIntrinsicSeparation,
@@ -59,7 +60,6 @@ export const INTRINSIC_GLOBAL_SEARCH_DEFAULTS = {
   maximumRuntimeMs: 110_000,
   structuralHandoffCapacity: 5,
   explorationAreaCapMm2: 439_904.17,
-  productionAreaTargetMm2: 430_344.918,
   maximumCavityCount: 2,
   maximumLargestHullGapRatio: 0.15,
   seed: 0x4e_34_53_44
@@ -161,7 +161,6 @@ export interface IntrinsicGlobalSearchSchedule {
   readonly maximumRuntimeMs: number
   readonly structuralHandoffCapacity: number
   readonly explorationAreaCapMm2: number
-  readonly productionAreaTargetMm2: number
   readonly maximumCavityCount: number
   readonly maximumLargestHullGapRatio: number
   readonly seed: number
@@ -208,6 +207,25 @@ export function partitionIntrinsicStructuralPieces(
     maximumCollisionAreaMm2,
     structuralAreaThresholdMm2
   }
+}
+
+/** Mixes the fixed schedule seed with an order-independent sheetless job identity. */
+export function deriveIntrinsicGlobalOrdinalSeed(
+  catalog: IntrinsicTransformCatalog,
+  scheduleSeed: number
+): number {
+  const canonicalJobIdentity = JSON.stringify(
+    catalog.entries
+      .map((entry) => [
+        entry.pieceId,
+        entry.transforms.map((transform) => [
+          transform.canonicalTransformKey,
+          transform.canonicalLocalGeometryKey
+        ])
+      ])
+      .toSorted(([firstId], [secondId]) => String(firstId).localeCompare(String(secondId)))
+  )
+  return hashIntrinsicSeed(`${scheduleSeed >>> 0}:${canonicalJobIdentity}`)
 }
 
 /** Three sheet-free target roles, with both dimensions floored to the collision grid. */
@@ -297,9 +315,13 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
     const allE1ById = new Map(
       fullE1Fallback.map((entry) => [placedPieceId(entry), entry] as const)
     )
+    const preparedIds = input.allPreparedPieces.map(preparedPieceId).toSorted()
+    const fallbackIds = fullE1Fallback.map(placedPieceId).toSorted()
     if (
+      new Set(preparedIds).size !== preparedIds.length ||
       allE1ById.size !== input.allPreparedPieces.length ||
       fullE1Fallback.length !== input.allPreparedPieces.length ||
+      !sameSortedPieceIds(preparedIds, fallbackIds) ||
       !assertSheetlessExactFallback(fullE1Fallback)
     ) {
       return yield* globalFailure(
@@ -319,7 +341,9 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
     const exactStructuralReference = structuralReference.filter(
       (entry): entry is IrregularPlacedPiece => entry !== undefined
     )
+    const jobCatalog = yield* buildIntrinsicTransformCatalog(input.allPreparedPieces)
     const catalog = yield* buildIntrinsicTransformCatalog(partition.structuralPieces)
+    const ordinalSeed = deriveIntrinsicGlobalOrdinalSeed(jobCatalog, schedule.seed)
     const initialState = relaxedStateFromExactLayout(catalog, exactStructuralReference)
     const targetRoles = deriveIntrinsicGlobalTargetRoles(
       fullE1Fallback,
@@ -402,14 +426,14 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
                 state: entry.state,
                 evaluation: entry.evaluation,
                 weights,
-                ordinal: deterministicOrdinal(schedule.seed, completedSweepCount, poolIndex)
+                ordinal: deterministicOrdinal(ordinalSeed, completedSweepCount, poolIndex)
               }),
               ...(forcedDisruption
                 ? intrinsicDisruptionProposals({
                     targetBox,
                     catalog,
                     state: entry.state,
-                    ordinal: deterministicOrdinal(schedule.seed, completedSweepCount, poolIndex + 31)
+                    ordinal: deterministicOrdinal(ordinalSeed, completedSweepCount, poolIndex + 31)
                   })
                 : [])
             ]
@@ -639,7 +663,6 @@ function snapshotIntrinsicGlobalSchedule(
     maximumRuntimeMs: schedule.maximumRuntimeMs,
     structuralHandoffCapacity: schedule.structuralHandoffCapacity,
     explorationAreaCapMm2: schedule.explorationAreaCapMm2,
-    productionAreaTargetMm2: schedule.productionAreaTargetMm2,
     maximumCavityCount: schedule.maximumCavityCount,
     maximumLargestHullGapRatio: schedule.maximumLargestHullGapRatio,
     seed: schedule.seed
@@ -1031,6 +1054,25 @@ function collisionAreaMm2(piece: IrregularPreparedPiece): number | undefined {
 
 function deterministicOrdinal(seed: number, sweep: number, poolIndex: number): number {
   return Math.abs((seed ^ Math.imul(sweep + 1, 0x45d9f3b) ^ Math.imul(poolIndex + 1, 0x27d4eb2d)) | 0)
+}
+
+function hashIntrinsicSeed(value: string): number {
+  let hash = 2_166_136_261
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16_777_619)
+  }
+  return hash >>> 0
+}
+
+function sameSortedPieceIds(
+  first: ReadonlyArray<PieceId>,
+  second: ReadonlyArray<PieceId>
+): boolean {
+  return (
+    first.length === second.length &&
+    first.every((pieceId, index) => pieceId === second[index])
+  )
 }
 
 function deadlineControl(

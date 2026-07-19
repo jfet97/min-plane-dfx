@@ -634,7 +634,7 @@ function exactCandidatesForTransform(input: {
       candidate: directCandidate,
       provisionalPoint,
       placed: input.placed,
-      directProvisionalPose: true,
+      directProvisionalPose: input.preservesPinnedTransform,
       preservesPinnedTransform: input.preservesPinnedTransform
     })
     if (direct !== undefined) candidates.push(direct)

@@ -543,6 +543,7 @@ describe('intrinsic exact projection', () => {
     })
 
     expect(result.orientationFallbackPieceIds).toEqual([PieceId.make('wide')])
+    expect(result.directPosePieceIds).toEqual([])
     expect(result.placedCollisionGeometries[0]?.placement.transform.rotationDeg).toBe(90)
     expect(
       assertCanonicalGridLegalLayout(

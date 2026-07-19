@@ -272,6 +272,11 @@ describe('intrinsic global squeeze portfolio', () => {
     expect(result.structuralOutcome).toMatchObject({ structuralPieceCount: 2, fillerPieceCount: 1 })
     expect(result.status).toBe('completed-candidate')
     expect(result.selected.source).toBe('projected-gap-fill')
+    expect(result.promotion).toMatchObject({
+      viableCandidateCount: 1,
+      productionAreaCandidateCount: 1,
+      selectedAtOrBelowFallbackArea: true
+    })
     expect(result.fillTrace).toEqual([
       expect.objectContaining({
         outcome: 'completed-admitted',
@@ -359,6 +364,50 @@ describe('intrinsic global squeeze portfolio', () => {
         ({ measured }) => measured.canonicalGeometryIdentity
       )
     ).toEqual(['tradeoff', 'first'])
+  })
+
+  it('ranks viable finalists by production target and then deterministic area minimization', () => {
+    const missesTarget = candidateForMetrics(
+      'misses-target',
+      { envelopeAreaMm2: 430_345 },
+      { productionAreaTargetMet: false }
+    )
+    const reachesTarget = candidateForMetrics(
+      'reaches-target',
+      { envelopeAreaMm2: 430_344 },
+      { productionAreaTargetMet: true }
+    )
+    const smallestTarget = candidateForMetrics(
+      'smallest-target',
+      { envelopeAreaMm2: 420_000 },
+      { productionAreaTargetMet: true }
+    )
+
+    expect(
+      retainIntrinsicGlobalFullCandidates(
+        [missesTarget, reachesTarget, smallestTarget],
+        5
+      ).map(({ measured }) => measured.canonicalGeometryIdentity)
+    ).toEqual(['smallest-target'])
+  })
+
+  it('keeps admitted topology ahead of a smaller production-target layout', () => {
+    const clean = candidateForMetrics(
+      'clean',
+      { envelopeAreaMm2: 435_000, enclosedCavityCount: 0 },
+      { productionAreaTargetMet: false }
+    )
+    const smallerButRingier = candidateForMetrics(
+      'smaller-ringier',
+      { envelopeAreaMm2: 420_000, enclosedCavityCount: 1 },
+      { productionAreaTargetMet: true }
+    )
+
+    expect(
+      retainIntrinsicGlobalFullCandidates([smallerButRingier, clean], 5).map(
+        ({ measured }) => measured.canonicalGeometryIdentity
+      )
+    ).toEqual(['clean', 'smaller-ringier'])
   })
 
   it('discards prior candidates on deadline and propagates cancellation', async () => {
@@ -532,7 +581,13 @@ describe('intrinsic global squeeze portfolio', () => {
 
 function candidateForMetrics(
   identity: string,
-  overrides: Partial<IntrinsicGlobalFullCandidate['measured']['metrics']>
+  overrides: Partial<IntrinsicGlobalFullCandidate['measured']['metrics']>,
+  candidateOverrides: Partial<
+    Pick<
+      IntrinsicGlobalFullCandidate,
+      'productionAreaTargetMet' | 'historicContactTargetMet'
+    >
+  > = {}
 ): IntrinsicGlobalFullCandidate {
   const metrics = {
     envelopeMaximumSideMm: 4,
@@ -565,8 +620,8 @@ function candidateForMetrics(
       canonicalGeometryHash: identity,
       metrics
     },
-    productionAreaTargetMet: false,
-    historicContactTargetMet: false
+    productionAreaTargetMet: candidateOverrides.productionAreaTargetMet ?? false,
+    historicContactTargetMet: candidateOverrides.historicContactTargetMet ?? false
   }
 }
 
