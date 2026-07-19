@@ -1,4 +1,5 @@
 import { Data, Effect, Order } from 'effect'
+import { createHash } from 'node:crypto'
 import { performance } from 'node:perf_hooks'
 import type { PieceId } from '@shared/domain/ids.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
@@ -388,8 +389,14 @@ function selectTerminalOrientation(
     if (oriented === undefined || !assertCanonicalGridLegalLayout(sheet, oriented.placedCollisionGeometries)) {
       continue
     }
-    const canonicalHash = canonicalCollisionLayoutIdentity(oriented.placedCollisionGeometries)
-    if (canonicalHash !== undefined) legal.push({ state: oriented, rotationDeg, canonicalHash })
+    const canonicalIdentity = canonicalCollisionLayoutIdentity(oriented.placedCollisionGeometries)
+    if (canonicalIdentity !== undefined) {
+      legal.push({
+        state: oriented,
+        rotationDeg,
+        canonicalHash: createHash('sha256').update(canonicalIdentity).digest('hex')
+      })
+    }
   }
   return legal.toSorted(
     (first, second) =>
