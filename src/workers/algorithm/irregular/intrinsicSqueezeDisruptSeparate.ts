@@ -60,8 +60,6 @@ export const INTRINSIC_GLOBAL_SEARCH_DEFAULTS = {
   maximumRuntimeMs: 110_000,
   structuralHandoffCapacity: 5,
   explorationAreaCapMm2: 439_904.17,
-  maximumCavityCount: 2,
-  maximumLargestHullGapRatio: 0.15,
   seed: 0x4e_34_53_44
 } as const
 
@@ -126,7 +124,7 @@ export interface IntrinsicProjectionAttemptTrace {
     | 'exact-analysis'
     | 'invalid-input'
     | 'deadline'
-    | 'quality-rejected'
+    | 'structural-analysis-invalid'
   readonly failedPieceId: PieceId | undefined
   readonly dilationSteps: number | undefined
 }
@@ -163,8 +161,6 @@ export interface IntrinsicGlobalSearchSchedule {
   readonly maximumRuntimeMs: number
   readonly structuralHandoffCapacity: number
   readonly explorationAreaCapMm2: number
-  readonly maximumCavityCount: number
-  readonly maximumLargestHullGapRatio: number
   readonly seed: number
 }
 
@@ -609,7 +605,7 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
             projectionAttempt: projectionAttemptCount,
             targetBox,
             projection: attempted.value,
-            schedule
+            expectedStructuralPieceIds: catalog.entries.map(({ pieceId }) => pieceId)
           })
           if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
             scheduleStatus = 'deadline-fallback'
@@ -626,7 +622,8 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
             projectionAttempt: projectionAttemptCount,
             rawLoss: best.evaluation.rawLoss,
             conflictCount: best.evaluation.conflicts.length,
-            outcome: handoff === undefined ? 'quality-rejected' : 'exact-success',
+              outcome:
+                handoff === undefined ? 'structural-analysis-invalid' : 'exact-success',
             failedPieceId: undefined,
             dilationSteps: attempted.value.dilationSteps
           })
@@ -679,8 +676,6 @@ function snapshotIntrinsicGlobalSchedule(
     maximumRuntimeMs: schedule.maximumRuntimeMs,
     structuralHandoffCapacity: schedule.structuralHandoffCapacity,
     explorationAreaCapMm2: schedule.explorationAreaCapMm2,
-    maximumCavityCount: schedule.maximumCavityCount,
-    maximumLargestHullGapRatio: schedule.maximumLargestHullGapRatio,
     seed: schedule.seed
   }
 }
@@ -691,7 +686,7 @@ function exactStructuralHandoff(input: {
   readonly projectionAttempt: number
   readonly targetBox: IntrinsicTargetBox
   readonly projection: IntrinsicExactProjectionResult
-  readonly schedule: IntrinsicGlobalSearchSchedule
+  readonly expectedStructuralPieceIds: ReadonlyArray<PieceId>
 }): IntrinsicStructuralHandoff | undefined {
   const sheet = new SheetSpec({
     width: Math.ceil(input.targetBox.widthMm),
@@ -699,7 +694,11 @@ function exactStructuralHandoff(input: {
     label: 'intrinsic-global-structural-projection'
   })
   const placed = input.projection.placedCollisionGeometries
+  const actualPieceIds = placed.map(placedPieceId).toSorted()
+  const expectedPieceIds = [...input.expectedStructuralPieceIds].toSorted()
   if (
+    new Set(actualPieceIds).size !== actualPieceIds.length ||
+    !sameSortedPieceIds(expectedPieceIds, actualPieceIds) ||
     !assertCanonicalGridLegalLayout(sheet, placed) ||
     !assertIntrinsicTargetExactLegal(input.targetBox, placed)
   ) {
@@ -727,10 +726,20 @@ function exactStructuralHandoff(input: {
     return undefined
   }
   const envelopeAreaMm2 = bounds.width * bounds.height
+  const envelopeMaximumSideMm = Math.max(bounds.width, bounds.height)
+  const envelopeSpanMm = bounds.width + bounds.height
   if (
-    cavities.count > input.schedule.maximumCavityCount ||
-    topology.largestOccupiedHullGapRatio > input.schedule.maximumLargestHullGapRatio ||
-    envelopeAreaMm2 > input.schedule.explorationAreaCapMm2
+    ![
+      cavities.count,
+      cavities.totalAreaMm2,
+      topology.largestOccupiedHullGapRatio,
+      envelopeAreaMm2,
+      envelopeMaximumSideMm,
+      envelopeSpanMm,
+      occupiedHullWasteRatio,
+      beamState.nearCompleteStructuralContactCount,
+      beamState.dominantNearCompleteStructuralContactCount
+    ].every(Number.isFinite)
   ) {
     return undefined
   }
@@ -745,8 +754,8 @@ function exactStructuralHandoff(input: {
       totalEnclosedCavityAreaMm2: cavities.totalAreaMm2,
       largestOccupiedHullGapRatio: topology.largestOccupiedHullGapRatio,
       envelopeAreaMm2,
-      envelopeMaximumSideMm: Math.max(bounds.width, bounds.height),
-      envelopeSpanMm: bounds.width + bounds.height,
+      envelopeMaximumSideMm,
+      envelopeSpanMm,
       occupiedHullWasteRatio,
       totalStructuralContacts: beamState.nearCompleteStructuralContactCount,
       dominantStructuralContacts: beamState.dominantNearCompleteStructuralContactCount

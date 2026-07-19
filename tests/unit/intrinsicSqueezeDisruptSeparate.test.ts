@@ -179,8 +179,6 @@ function schedule(overrides: Partial<IntrinsicGlobalSearchSchedule> = {}): Intri
     maximumRuntimeMs: 20_000,
     structuralHandoffCapacity: 5,
     explorationAreaCapMm2: 10,
-    maximumCavityCount: 2,
-    maximumLargestHullGapRatio: 0.15,
     seed: 1234,
     ...overrides
   }
@@ -319,6 +317,38 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(result.projectionTrace).toHaveLength(2)
     expect(result.trace).toHaveLength(3)
     expect(result.trace.every(({ basinIndex }) => basinIndex === 0)).toBe(true)
+  })
+
+  it('publishes an exact ringy structural projection for downstream filler evaluation', async () => {
+    const transforms = [transform(0, 0), transform(1, 90)]
+    const pieces = [
+      preparedRectangle('bottom', 6, 1, transforms),
+      preparedRectangle('top', 6, 1, transforms),
+      preparedRectangle('left', 1, 4, transforms),
+      preparedRectangle('right', 1, 4, transforms)
+    ]
+    const catalog = await catalogFor(pieces)
+    const ring = [
+      placed(catalogEntry(catalog, 'bottom'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'top'), 0, 0, 5),
+      placed(catalogEntry(catalog, 'left'), 0, 0, 1),
+      placed(catalogEntry(catalog, 'right'), 0, 5, 1)
+    ]
+    const result = await runController(
+      pieces,
+      ring,
+      schedule({ expectedStructuralPieceCount: 4, explorationAreaCapMm2: 100 }),
+      () => Effect.succeed(exactProjection(ring))
+    )
+
+    expect(result.status).toBe('completed')
+    expect(result.structuralHandoffs.length).toBeGreaterThan(0)
+    expect(
+      result.structuralHandoffs.some(
+        ({ metrics }) => metrics.largestOccupiedHullGapRatio > 0.15
+      )
+    ).toBe(true)
+    expect(result.projectionTrace.every(({ outcome }) => outcome === 'exact-success')).toBe(true)
   })
 
   it('uses GLS weights to change the conflict selected for focused proposals', async () => {
@@ -512,6 +542,27 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
         ({ metrics }) => metrics.canonicalGeometryIdentity
       )
     ).toEqual(['tradeoff', 'first'])
+  })
+
+  it('keeps a topology-poor structural tradeoff when it improves compactness and contacts', () => {
+    const clean = structuralHandoff('clean', {
+      envelopeAreaMm2: 10,
+      enclosedCavityCount: 0,
+      largestOccupiedHullGapRatio: 0.05,
+      totalStructuralContacts: 1
+    })
+    const ringyTradeoff = structuralHandoff('ringy-tradeoff', {
+      envelopeAreaMm2: 8,
+      enclosedCavityCount: 1,
+      largestOccupiedHullGapRatio: 0.4,
+      totalStructuralContacts: 3
+    })
+
+    expect(
+      retainIntrinsicStructuralHandoffs([ringyTradeoff, clean], 5).map(
+        ({ metrics }) => metrics.canonicalGeometryIdentity
+      )
+    ).toEqual(['clean', 'ringy-tradeoff'])
   })
 
   it('protects forced disruption and newly weighted GLS lanes inside width eight', async () => {
@@ -740,7 +791,11 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     }
     const rejected = await runController(pieces, e1, controllerSchedule, overlapProject)
     expect(rejected.structuralHandoffs).toEqual([])
-    expect(rejected.projectionTrace.every(({ outcome }) => outcome === 'quality-rejected')).toBe(true)
+    expect(
+      rejected.projectionTrace.every(
+        ({ outcome }) => outcome === 'structural-analysis-invalid'
+      )
+    ).toBe(true)
 
     const exhausted = await runController(
       pieces,

@@ -150,7 +150,8 @@ function structuralResult(input: {
 
 function structuralHandoff(
   projectionAttempt: number,
-  frozen: ReadonlyArray<IrregularPlacedPiece>
+  frozen: ReadonlyArray<IrregularPlacedPiece>,
+  metricOverrides: Partial<IntrinsicStructuralHandoff['metrics']> = {}
 ): IntrinsicStructuralHandoff {
   return {
     targetRoleId: 'e1-envelope',
@@ -167,7 +168,8 @@ function structuralHandoff(
       envelopeSpanMm: 2,
       occupiedHullWasteRatio: 0,
       totalStructuralContacts: 0,
-      dominantStructuralContacts: 0
+      dominantStructuralContacts: 0,
+      ...metricOverrides
     }
   }
 }
@@ -249,7 +251,7 @@ describe('intrinsic global squeeze portfolio', () => {
     expect(result.fillTrace).toEqual([])
   })
 
-  it('completes an arbitrary structural-to-full partition with injected exact fill', async () => {
+  it('fills a topology-poor structural handoff before applying complete-layout admission', async () => {
     const pieces = [
       preparedRectangle('large-a', 4, 4),
       preparedRectangle('large-b', 4, 4),
@@ -262,7 +264,11 @@ describe('intrinsic global squeeze portfolio', () => {
     ]
     const frozen = [placed(pieceAt(pieces, 0), 0, 0), placed(pieceAt(pieces, 1), 5, 0)]
     const filled = [...frozen, placed(pieceAt(pieces, 2), 4, 0)]
-    const handoff = structuralHandoff(1, frozen)
+    const handoff = structuralHandoff(1, frozen, {
+      enclosedCavityCount: 5,
+      largestOccupiedHullGapRatio: 0.9,
+      envelopeAreaMm2: 999_999
+    })
     const result = await runPortfolio({
       pieces,
       fallback,
