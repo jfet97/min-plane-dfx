@@ -153,7 +153,7 @@ export function makeCompactQualityIrregularOptimizerSettings(
     beamWidth: 8,
     localCandidateFanout: 4,
     localRepairBudget: 8,
-    canonicalReferenceDecodeEnabled: true,
+    canonicalReferenceDecodeEnabled: false,
     baselineOnly: true,
     gaEnabled: false,
     placementPolicyId: 'edge-contact-then-balanced-compactness',
