@@ -635,15 +635,15 @@ function generatePlacementCandidatesUncached(
   IrregularGeometryInputError | IrregularNfpIfpControlAbortError
 > {
   return Effect.gen(function* () {
-    const sheetlessContactOnly = input.candidateDomain === 'sheetless-contact-only'
+    const sheetlessNfp = input.candidateDomain === 'sheetless-nfp'
     yield* nfpCheckpoint(input.control, 'ifp')
-    const ifp = sheetlessContactOnly
+    const ifp = sheetlessNfp
       ? undefined
       : yield* computeIfpBoundsValuesCached(
           { sheet: input.sheet, moving: input.moving },
           geometryCache
         ).pipe(Effect.catchTag('IrregularGeometryInfeasibleError', () => Effect.succeed(undefined)))
-    if (!sheetlessContactOnly && ifp === undefined) return []
+    if (!sheetlessNfp && ifp === undefined) return []
     yield* nfpCheckpoint(input.control, 'ifp')
     const placedCollisionIndex =
       input.placedCollisionIndex !== undefined && input.placedCollisionIndex.matches(input.placed)
@@ -696,7 +696,7 @@ function generatePlacementCandidatesUncached(
       nfpBoundaries.map((boundary) => ({ value: boundary, bounds: boundary.bounds }))
     )
     const candidateNfpBoundaries =
-      sheetlessContactOnly || candidatePruningMode !== 'indexed'
+      sheetlessNfp || candidatePruningMode !== 'indexed'
         ? nfpBoundaries
         : ifpBounds === undefined
           ? []
@@ -705,7 +705,7 @@ function generatePlacementCandidatesUncached(
       candidateNfpBoundaries.map((boundary) => ({ value: boundary, bounds: boundary.bounds }))
     )
     const candidateBounds =
-      !sheetlessContactOnly && candidatePruningMode === 'indexed' ? ifpBounds : undefined
+      !sheetlessNfp && candidatePruningMode === 'indexed' ? ifpBounds : undefined
 
     if (input.placed.length === 0 && ifpBounds !== undefined) {
       addPoint(points, { x: ifpBounds.minX, y: ifpBounds.minY }, candidateBounds)
@@ -809,7 +809,7 @@ function generatePlacementCandidatesUncached(
       const rawPoint = sortedPoints[pointIndex]
       if (rawPoint === undefined) continue
       for (const point of canonicalPlacementPointAlternatives(rawPoint)) {
-        if (!sheetlessContactOnly && (ifpBounds === undefined || !isInsideBounds(point, ifpBounds))) {
+        if (!sheetlessNfp && (ifpBounds === undefined || !isInsideBounds(point, ifpBounds))) {
           continue
         }
         const boundariesForPoint =
@@ -831,14 +831,15 @@ function generatePlacementCandidatesUncached(
           point,
           diagnostics: []
         }
-        const legal = yield* PlacementValidation.check({
-          sheet: input.sheet,
+        const validationInput = {
           placed: input.placed,
           ...(placedCollisionIndex !== undefined ? { placedCollisionIndex } : {}),
           moving: input.moving,
-          candidate,
-          ...(sheetlessContactOnly ? { ignoreSheetBounds: true } : {})
-        })
+          candidate
+        }
+        const legal = sheetlessNfp
+          ? yield* PlacementValidation.checkSheetless(validationInput)
+          : yield* PlacementValidation.check({ ...validationInput, sheet: input.sheet })
         if (!legal) continue
         const gridKey = `${point.gridX},${point.gridY}`
         if (!acceptedGridKeys.has(gridKey)) {

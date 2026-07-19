@@ -1577,7 +1577,7 @@ describe('NfpIfpServiceLive', () => {
       placed: [fixed],
       moving,
       settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
-      candidateDomain: 'sheetless-contact-only' as const
+      candidateDomain: 'sheetless-nfp' as const
     }
 
     const tinySheetCandidates = await generateCandidates({
@@ -1605,12 +1605,10 @@ describe('NfpIfpServiceLive', () => {
     for (const candidate of tinySheetCandidates) {
       await expect(
         Effect.runPromise(
-          PlacementValidation.check({
-            sheet: sheet(1, 1),
+          PlacementValidation.checkSheetless({
             placed: [fixed],
             moving,
-            candidate,
-            ignoreSheetBounds: true
+            candidate
           })
         )
       ).resolves.toBe(true)
@@ -1630,10 +1628,90 @@ describe('NfpIfpServiceLive', () => {
       placed: [],
       moving,
       settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
-      candidateDomain: 'sheetless-contact-only'
+      candidateDomain: 'sheetless-nfp'
     })
 
     expect(candidates).toEqual([])
+  })
+
+  it('reuses one sheetless decoder memo entry across different real sheets', async () => {
+    const values = new Map<string, unknown>()
+    const counters: CacheCounters = { gets: 0, sets: 0, removes: 0 }
+    const scope = new IrregularNfpIfpCandidateMemoScope()
+    const fixed = placedPiece(
+      'sheetless-memo-fixed',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      -1,
+      -1
+    )
+    const moving = transformedGeometry('sheetless-memo-moving', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const baseInput = {
+      placed: [fixed],
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      candidateDomain: 'sheetless-nfp' as const,
+      candidateMemoScope: scope
+    }
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* NfpIfpService
+        const tiny = yield* service.generatePlacementCandidates({
+          ...baseInput,
+          sheet: sheet(1, 1)
+        })
+        const getsAfterFill = counters.gets
+        const roomy = yield* service.generatePlacementCandidates({
+          ...baseInput,
+          sheet: sheet(10_000, 10_000)
+        })
+        return { tiny, roomy, getsAfterFill, getsAfterHit: counters.gets }
+      }).pipe(
+        Effect.provide(makeNfpIfpServiceLayer()),
+        Effect.provide(cacheLayer(values, counters))
+      )
+    )
+
+    expect(result.roomy).toEqual(result.tiny)
+    expect(result.getsAfterHit).toBe(result.getsAfterFill)
+  })
+
+  it('keeps sheetless negative-coordinate candidates identical across pruning and index paths', async () => {
+    const fixed = placedPiece(
+      'sheetless-parity-fixed',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      -1,
+      -1
+    )
+    const moving = transformedGeometry('sheetless-parity-moving', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const placed = [fixed]
+    const input = {
+      sheet: sheet(1, 1),
+      placed,
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      candidateDomain: 'sheetless-nfp' as const
+    }
+
+    const indexed = await generateCandidatesWithPruning(input, 'indexed')
+    const reference = await generateCandidatesWithPruning(input, 'reference')
+    const indexedWithSpatialIndex = await generateCandidatesWithPruning(
+      { ...input, placedCollisionIndex: makePlacedCollisionSpatialIndex(placed) },
+      'indexed'
+    )
+
+    expect(reference).toEqual(indexed)
+    expect(indexedWithSpatialIndex).toEqual(indexed)
+    expect(candidatePoints(indexed).some(({ x, y }) => x < 0 || y < 0)).toBe(true)
   })
 
   it('keeps candidate generation identical with a persistent placed-collision index', async () => {

@@ -77,7 +77,7 @@ export function legalPlacementCandidateMemoKey(
   candidatePruningMode: NfpCandidatePruningMode
 ): string {
   const sheetIdentity =
-    input.candidateDomain === 'sheetless-contact-only'
+    input.candidateDomain === 'sheetless-nfp'
       ? 'sheet=deferred'
       : `sheet=${numberKey(input.sheet.width)},${numberKey(input.sheet.height)}`
   const placedPolygons = input.placed

@@ -156,7 +156,7 @@ export function decodeIntrinsicStrictPriorityOrder(
                 placedCollisionIndex: state.placedCollisionIndex,
                 moving,
                 settings,
-                candidateDomain: 'sheetless-contact-only'
+                candidateDomain: 'sheetless-nfp'
               })
         candidateCount += legalCandidates.length
         const family = transformFamilyKey(transform)

@@ -180,8 +180,8 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     })
     expect(result.placements[1]?.transform.rotationDeg).toBe(90)
     expect(candidateDomains).toEqual([
-      'sheetless-contact-only',
-      'sheetless-contact-only'
+      'sheetless-nfp',
+      'sheetless-nfp'
     ])
   })
 
