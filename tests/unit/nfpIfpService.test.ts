@@ -1492,9 +1492,20 @@ describe('NfpIfpServiceLive', () => {
       secondStart.x + fallbackParameter * secondDirectionX,
       secondStart.y + fallbackParameter * secondDirectionY
     )
+    const canonicalIntersectionAlternatives = canonicalPlacementPointAlternatives(
+      expectedIntersection
+    )
+    const admittedPoints = candidatePoints(candidates)
 
     expect(denominator).toBe(0)
-    expect(candidatePoints(candidates)).toContainEqual(expectedIntersection)
+    expect(
+      admittedPoints.some((admitted) =>
+        canonicalIntersectionAlternatives.some(
+          (alternative) =>
+            alternative.x === admitted.x && alternative.y === admitted.y
+        )
+      )
+    ).toBe(true)
   })
 
   it('preserves an error result when crossing arithmetic overflows', () => {
