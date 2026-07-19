@@ -349,6 +349,9 @@ export function runWindowedIrregularBeam(input: {
           yield* controlCheckpoint(input.control, controlState)
           const localCandidates = yield* collectLocalCandidates({
             sheet: candidateSheet,
+            ...(selectedPolicyId === SHORT_SIDE_FILL_POLICY_ID
+              ? {}
+              : { candidateDomain: 'contact-only' as const }),
             settings,
             state,
             piece,
@@ -1090,6 +1093,7 @@ function yieldToEventLoop(): Effect.Effect<void> {
 
 function collectLocalCandidates(input: {
   readonly sheet: SheetSpec
+  readonly candidateDomain?: 'contact-only'
   readonly settings: IrregularNestingSettings
   readonly state: IrregularBeamState
   readonly piece: IrregularPreparedPiece
@@ -1127,7 +1131,10 @@ function collectLocalCandidates(input: {
         placedCollisionIndex: input.state.placedCollisionIndex,
         moving,
         settings: input.settings,
-        candidateMemoScope: input.candidateMemoScope
+        candidateMemoScope: input.candidateMemoScope,
+        ...(input.candidateDomain !== undefined
+          ? { candidateDomain: input.candidateDomain }
+          : {})
       }
       const legalCandidates =
         nfpControl === undefined

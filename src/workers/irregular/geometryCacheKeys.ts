@@ -93,7 +93,8 @@ export function legalPlacementCandidateMemoKey(
     `moving-bounds=${boundsDigest(input.moving.bounds)}`,
     ...geometrySettingsParts(input.settings.geometry),
     `nfp-construction=${constructionAlgorithm}`,
-    `candidate-pruning=${candidatePruningMode}`
+    `candidate-pruning=${candidatePruningMode}`,
+    `candidate-domain=${input.candidateDomain ?? 'sheet'}`
   ])
 }
 

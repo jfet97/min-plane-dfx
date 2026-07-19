@@ -129,6 +129,8 @@ export interface GeneratePlacementCandidatesInput {
   readonly placedCollisionIndex?: PlacedCollisionSpatialIndex
   readonly moving: TransformedCollisionGeometry
   readonly settings: IrregularNestingSettings
+  /** Selects the sheet-boundary pool or the intrinsic NFP-contact pool. */
+  readonly candidateDomain?: 'sheet' | 'contact-only'
   readonly candidateMemoScope?: IrregularNfpIfpCandidateMemoScope
   readonly control?: IrregularNfpIfpControl
 }

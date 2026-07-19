@@ -3,10 +3,11 @@ import {
   IrregularBounds,
   IrregularIfpBounds,
   IrregularNfp,
+  IrregularPlacement,
   IrregularPlacementCandidate,
+  IrregularPlacedPiece,
   IrregularPoint,
   IrregularPolygon,
-  type IrregularPlacedPiece,
   type TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import type {
@@ -685,18 +686,26 @@ function generatePlacementCandidatesUncached(
 
     yield* nfpCheckpoint(input.control, 'ifp')
     const ifpSegments = rectangleSegments(ifp.bounds)
+    const contactOnly = input.candidateDomain === 'contact-only'
     const points = makeCanonicalPointSet()
     const allNfpIndex = new BoundsIndex(
       nfpBoundaries.map((boundary) => ({ value: boundary, bounds: boundary.bounds }))
     )
     const candidateNfpBoundaries =
-      candidatePruningMode === 'indexed' ? allNfpIndex.query(ifp.bounds) : nfpBoundaries
+      contactOnly || candidatePruningMode !== 'indexed'
+        ? nfpBoundaries
+        : allNfpIndex.query(ifp.bounds)
     const candidateNfpIndex = new BoundsIndex(
       candidateNfpBoundaries.map((boundary) => ({ value: boundary, bounds: boundary.bounds }))
     )
-    const candidateBounds = candidatePruningMode === 'indexed' ? ifp.bounds : undefined
+    const candidateBounds =
+      !contactOnly && candidatePruningMode === 'indexed' ? ifp.bounds : undefined
 
-    for (const point of rectangleCorners(ifp.bounds)) addPoint(points, point, candidateBounds)
+    if (input.placed.length === 0) {
+      addPoint(points, { x: ifp.bounds.minX, y: ifp.bounds.minY }, candidateBounds)
+    } else if (!contactOnly) {
+      for (const point of rectangleCorners(ifp.bounds)) addPoint(points, point, candidateBounds)
+    }
     for (const boundary of candidateNfpBoundaries) {
       for (const point of boundary.boundary.points) addPoint(points, point, candidateBounds)
       const supportPointError = addAntiparallelEdgeSupportPoints(
@@ -710,19 +719,21 @@ function generatePlacementCandidatesUncached(
       }
     }
 
-    for (const boundary of candidateNfpBoundaries) {
-      yield* nfpCheckpoint(input.control, 'ifp-boundary-intersection')
-      const intersections = yield* addBoundaryIntersections(
-        points,
-        ifpSegments,
-        boundary.segments,
-        candidatePruningMode === 'indexed' ? boundary.segmentIndex : undefined,
-        candidateBounds,
-        input.control,
-        'ifp-boundary-intersection'
-      )
-      if (intersections !== undefined) {
-        return yield* failInvalidGeometry('generatePlacementCandidates', intersections)
+    if (!contactOnly) {
+      for (const boundary of candidateNfpBoundaries) {
+        yield* nfpCheckpoint(input.control, 'ifp-boundary-intersection')
+        const intersections = yield* addBoundaryIntersections(
+          points,
+          ifpSegments,
+          boundary.segments,
+          candidatePruningMode === 'indexed' ? boundary.segmentIndex : undefined,
+          candidateBounds,
+          input.control,
+          'ifp-boundary-intersection'
+        )
+        if (intersections !== undefined) {
+          return yield* failInvalidGeometry('generatePlacementCandidates', intersections)
+        }
       }
     }
 
@@ -790,7 +801,7 @@ function generatePlacementCandidatesUncached(
         yield* nfpCheckpoint(input.control, 'candidate-points')
       const point = sortedPoints[pointIndex]
       if (point === undefined) continue
-      if (!isInsideBounds(point, ifp.bounds)) continue
+      if (!contactOnly && !isInsideBounds(point, ifp.bounds)) continue
       const boundariesForPoint =
         candidatePruningMode === 'indexed'
           ? candidateNfpIndex.query(pointBounds(point))
@@ -810,19 +821,69 @@ function generatePlacementCandidatesUncached(
         point,
         diagnostics: []
       }
-      const legal = yield* PlacementValidation.check({
-        sheet: input.sheet,
-        placed: input.placed,
-        ...(placedCollisionIndex !== undefined ? { placedCollisionIndex } : {}),
-        moving: input.moving,
-        candidate
-      })
+      const validationInput = contactOnly
+        ? normalizeCandidateForValidation(input, candidate)
+        : {
+            sheet: input.sheet,
+            placed: input.placed,
+            ...(placedCollisionIndex !== undefined ? { placedCollisionIndex } : {}),
+            moving: input.moving,
+            candidate
+          }
+      const legal = yield* PlacementValidation.check(validationInput)
       if (legal) candidates.push(toDomainPlacementCandidate(candidate))
     }
 
     yield* nfpCheckpoint(input.control, 'candidate-points')
     return candidates
   })
+}
+
+function normalizeCandidateForValidation(
+  input: GeneratePlacementCandidatesInput,
+  candidate: IrregularPlacementCandidate
+) {
+  let minX = Number.POSITIVE_INFINITY
+  let minY = Number.POSITIVE_INFINITY
+  for (const placed of input.placed) {
+    const { translateX, translateY } = placed.placement.transform
+    for (const point of placed.collisionGeometry.polygon.points) {
+      minX = Math.min(minX, point.x + translateX)
+      minY = Math.min(minY, point.y + translateY)
+    }
+  }
+  for (const point of input.moving.polygon.points) {
+    minX = Math.min(minX, point.x + candidate.point.x)
+    minY = Math.min(minY, point.y + candidate.point.y)
+  }
+  const shiftX = Number.isFinite(minX) ? -minX : 0
+  const shiftY = Number.isFinite(minY) ? -minY : 0
+  const placed = input.placed.map(
+    (fixed) =>
+      new IrregularPlacedPiece({
+        placement: new IrregularPlacement({
+          ...fixed.placement,
+          transform: {
+            ...fixed.placement.transform,
+            translateX: fixed.placement.transform.translateX + shiftX,
+            translateY: fixed.placement.transform.translateY + shiftY
+          }
+        }),
+        collisionGeometry: fixed.collisionGeometry
+      })
+  )
+  return {
+    sheet: input.sheet,
+    placed,
+    moving: input.moving,
+    candidate: new IrregularPlacementCandidate({
+      ...candidate,
+      point: {
+        x: candidate.point.x + shiftX,
+        y: candidate.point.y + shiftY
+      }
+    })
+  }
 }
 
 function makeGeneratePlacementCandidates(
