@@ -20,7 +20,6 @@ const FIXTURE = fileURLToPath(
   new URL('../tests/fixtures/irregularSheetInvariance/mixed61-request.json', import.meta.url)
 )
 const DEFAULT_OUTPUT = '/private/tmp/min-plane-provenance/intrinsic-overlap-relaxation-v1'
-const TARGET_WIDTH = 648.6175170335897
 const REGISTERED_BUDGET = {
   maximumEvaluations: 250_000,
   maximumSweeps: 100,
@@ -41,6 +40,8 @@ const manifestOnly = process.argv.includes('--manifest-only')
 if (manifestOnly) {
   if (sourceCommit === undefined) throw new Error('--source-commit is required')
   const files = ['report.json', 'incumbent.svg', 'selected.svg', 'selected.png']
+  const report: unknown = JSON.parse(await readFile(`${outputDirectory}/report.json`, 'utf8'))
+  if (!isTargetReport(report)) throw new Error('report does not contain registered target fields')
   const hashes = Object.fromEntries(
     await Promise.all(
       files.map(async (name) => [
@@ -60,10 +61,12 @@ if (manifestOnly) {
         fixture: FIXTURE,
         sheet: { width: 2000, height: 2700 },
         requestedTarget: {
-          width: TARGET_WIDTH,
+          width: report.requestedTargetWidth,
+          height: report.requestedTargetHeight,
           longerAxisOnly: true,
           squeezeRatio: 0.0005
         },
+        effectiveTarget: { width: report.targetWidth, height: report.targetHeight },
         effectiveTargetPolicy: {
           gridMm: 0.001,
           width: 'floor requested shrink target',
@@ -116,7 +119,6 @@ const computeElapsedMs = performance.now() - computeStartedAt
 const relaxationStartedAt = performance.now()
 const relaxation = await Effect.runPromise(
   relaxOverlappingLayoutV1(sheet, result.placedCollisionGeometries, {
-    targetWidth: TARGET_WIDTH,
     ...REGISTERED_BUDGET
   })
 )
@@ -138,6 +140,22 @@ const report = {
 }
 await writeFile(`${outputDirectory}/report.json`, `${JSON.stringify(report, null, 2)}\n`)
 console.log(JSON.stringify(report))
+
+function isTargetReport(value: unknown): value is {
+  readonly requestedTargetWidth: number
+  readonly requestedTargetHeight: number
+  readonly targetWidth: number
+  readonly targetHeight: number
+} {
+  if (typeof value !== 'object' || value === null) return false
+  const candidate = value as Record<string, unknown>
+  return (
+    typeof candidate.requestedTargetWidth === 'number' &&
+    typeof candidate.requestedTargetHeight === 'number' &&
+    typeof candidate.targetWidth === 'number' &&
+    typeof candidate.targetHeight === 'number'
+  )
+}
 
 function renderSvg(
   placed: ReadonlyArray<{
