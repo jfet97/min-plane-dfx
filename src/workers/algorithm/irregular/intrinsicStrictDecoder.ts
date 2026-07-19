@@ -87,6 +87,7 @@ export interface IntrinsicStrictCompletedMetrics {
   readonly totalEnclosedCavityAreaMm2: number
   readonly largestOccupiedHullGapRatio: number
   readonly isolatedPieceCount: number
+  readonly positiveContactComponentCount: number
   readonly largestPositiveContactComponentSize: number
   readonly largestPositiveContactComponentRatio: number
   readonly occupiedAreaOutsideLargestContactComponentMm2: number
@@ -515,6 +516,7 @@ function completedMetrics(
     totalEnclosedCavityAreaMm2: cavities.totalAreaMm2,
     largestOccupiedHullGapRatio: topology.largestOccupiedHullGapRatio,
     isolatedPieceCount: topology.isolatedPieceCount,
+    positiveContactComponentCount: topology.positiveContactComponentCount,
     largestPositiveContactComponentSize: topology.largestPositiveContactComponentSize,
     largestPositiveContactComponentRatio: topology.largestPositiveContactComponentRatio,
     occupiedAreaOutsideLargestContactComponentMm2,

@@ -261,6 +261,7 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       totalEnclosedCavityAreaMm2: 0,
       largestOccupiedHullGapRatio: 0.05,
       isolatedPieceCount: 0,
+      positiveContactComponentCount: 1,
       largestPositiveContactComponentSize: 10,
       largestPositiveContactComponentRatio: 1,
       occupiedAreaOutsideLargestContactComponentMm2: 0,
