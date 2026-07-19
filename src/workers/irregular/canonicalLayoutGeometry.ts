@@ -26,6 +26,11 @@ export interface CanonicalLayoutTopology {
   readonly largestPositiveContactComponentRatio: number
 }
 
+export interface CanonicalEnclosedCavityMetrics {
+  readonly count: number
+  readonly totalAreaMm2: number
+}
+
 interface CanonicalPlacedPolygon {
   readonly pieceId: PieceId
   readonly path: Path64
@@ -110,6 +115,16 @@ export function measureCanonicalLayoutTopology(
           polygons.length === 0 ? 0 : graph.largestPositiveContactComponentSize / polygons.length
       }
     : undefined
+}
+
+/** Sheet-free enclosed-cavity count and area on the canonical collision grid. */
+export function measureCanonicalEnclosedCavities(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): CanonicalEnclosedCavityMetrics | undefined {
+  const polygons = canonicalPlacedPolygons(placed)
+  return polygons === undefined
+    ? undefined
+    : measureEnclosedOccupiedCavities(polygons.map(({ path }) => path))
 }
 
 /** True only when every canonical-grid polygon fits and no pair has positive overlap. */
@@ -485,7 +500,13 @@ function largestHullGapRegion(
 }
 
 function countEnclosedOccupiedCavities(occupied: ReadonlyArray<Path64>): number | undefined {
-  if (occupied.length === 0) return 0
+  return measureEnclosedOccupiedCavities(occupied)?.count
+}
+
+function measureEnclosedOccupiedCavities(
+  occupied: ReadonlyArray<Path64>
+): CanonicalEnclosedCavityMetrics | undefined {
+  if (occupied.length === 0) return { count: 0, totalAreaMm2: 0 }
   const tree = new PolyTree64()
   try {
     // occupied pieces are solids regardless of source-ring winding
@@ -494,6 +515,7 @@ function countEnclosedOccupiedCavities(occupied: ReadonlyArray<Path64>): number 
     return undefined
   }
   let count = 0
+  let totalAreaGrid2 = 0
   const visit = (parent: PolyPath64): boolean => {
     for (let index = 0; index < parent.count; index += 1) {
       let child: PolyPath64
@@ -502,12 +524,20 @@ function countEnclosedOccupiedCavities(occupied: ReadonlyArray<Path64>): number 
       } catch {
         return false
       }
-      if (child.isHole) count += 1
+      if (child.isHole) {
+        if (child.polygon === null) return false
+        const cavityArea = Math.abs(area(child.polygon))
+        if (!Number.isFinite(cavityArea)) return false
+        count += 1
+        totalAreaGrid2 += cavityArea
+      }
       if (!visit(child)) return false
     }
     return true
   }
-  return visit(tree) ? count : undefined
+  return visit(tree) && Number.isFinite(totalAreaGrid2)
+    ? { count, totalAreaMm2: totalAreaGrid2 / 1_000_000 }
+    : undefined
 }
 
 function envelopeAspectRatio(paths: ReadonlyArray<Path64>): number | undefined {
