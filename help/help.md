@@ -1904,6 +1904,31 @@ would falsify each one, and identify the smallest safe production experiment.
   order portfolio: it must attribute success or failure to the intrinsic local
   rule. Order diversity, large-first/small-fill, periodic-cell seeds, and a new
   complete-state search remain separate falsifiable E2/E3 roles.
+- Completed E1 at `7ea2f1e`. The strict intrinsic constructor is the first
+  positive proof of the replacement's invariance thesis: all four primary
+  sheets return the same exact-legal 61-piece hash, area `418,956.352 mm2`, zero
+  union cavities, and a `649.972 mm` maximum side in about `22 s` per decode.
+  This is `2.64%` smaller than the historic witness and materially faster than
+  the production two-decode handoff.
+- Rejected E1 as the default local tuple because its cohesive structure misses
+  the preregistered floors: hull-gap ratio `0.224149`, 26 exact shared-edge
+  isolates, largest exact-contact component `14/61`, and contacts `21/4`.
+  Visual inspection confirms that the hollow ring is gone and the result is a
+  dense roughly square block, but several triangle and rectangle chains still
+  protrude. Do not describe area or invariance alone as success.
+- Audited canonical-grid proximity at 0, 1, sqrt(2), and 2 grid units. A one-
+  unit tolerance makes E1 one component with zero isolates, proving the exact
+  contact classifier is snap-fragile. It also makes the old fragmented f306
+  negative one component, while the ring and giant chain are already connected
+  at exact zero distance. Proximity is therefore diagnostic only, not a quality
+  gate. The independent hull-gap and envelope evidence still rejects the bad
+  layouts and leaves E1's `0.224149 > 0.15` deficit real.
+- Preregister the next variant as E1b with exactly one new variable: within an
+  exact maximum-side tie, a candidate may use shared-boundary priority only when
+  its envelope area is within `2%` of the moving piece's collision area above
+  the pure-growth leader. This bounded band targets protruding chains without
+  letting contact buy a large envelope regression. Order diversity, GA,
+  periodic cells, small-fill, and LNS remain deferred until E1b is classified.
 
 ### 2026-07-19 (canonical reference decode handoff)
 
