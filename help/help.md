@@ -1956,6 +1956,34 @@ would falsify each one, and identify the smallest safe production experiment.
   reusable building block rather than proof that cells alone solve a mixed job.
   Do not tile every family into disconnected islands, create fake macro pieces,
   or treat ordinary late small-piece order as a small-fill experiment.
+- Rejected the bounded E3 constructor portfolio at `f8b8bf3` after its exact
+  implementation passed two independent read-only audits. The selected repeated
+  family exposed eight unique transforms and all 28 bounded transform pairs,
+  but no P1/P2 cell survived the canonical forbidden-union, adjacent-grid basis,
+  BigInt far-neighbor, 3x3 exact-legality, and inter-cell contact certificate.
+  Do not weaken those proofs or replace the source-linked cells with fake macros
+  merely to force a periodic role to exist.
+- L1 was genuinely non-inert: the large-only phase froze 53 real placements and
+  five of the eight deferred small pieces entered exact hull-gap regions with
+  positive incremental shared-edge contact, zero envelope growth, and strictly
+  smaller recomputed gap area. The completed layout nevertheless converged to
+  the exact E1 hash and metrics (`418,956.352 mm2`, hull gap `0.224149`, 26
+  isolates, largest component 14, contacts `21/4`). Exact cavity access is now a
+  proven reusable primitive, but small-fill alone cannot repair the large-piece
+  contact topology inherited from the constructor.
+- The E3 run completed in `41.757 s` inside the unchanged 120-second hard gate;
+  the optional E1 control hit its 20-second lane deadline and was not replaced.
+  No non-control role met the early signal, so triangle and broad corpus gates
+  were correctly skipped. The immutable report and manifest are
+  `/private/tmp/min-plane-provenance/intrinsic-periodic-small-fill-e3/f8b8bf3-mixed61/report.json`
+  (`1faf35d50f447c02dcfdff72b2c957c48ddfc5b1f22c21839462a7f03ed5fc3e`)
+  and `manifest.json`
+  (`7f42ab9327496f18b342447d96e5f55c712ff3e57e11dfe4db5bbfb39de96e1f`).
+- Preserve the exact periodic catalog and gap-containment primitives as research
+  infrastructure, but leave them out of production. E1, E1b, E2, P1/P2, and L1
+  now agree on the next boundary: improving mixed-61 cohesion requires a search
+  class that changes the large-piece global topology, not another bounded local
+  comparator, order template, certified repeated-family seed, or late filler.
 
 ### 2026-07-19 (canonical reference decode handoff)
 
