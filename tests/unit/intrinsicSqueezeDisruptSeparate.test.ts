@@ -20,6 +20,7 @@ import {
   type IrregularNestingSettings
 } from '@shared/irregular/domain.js'
 import {
+  advanceIntrinsicPressureAdaptiveDepth,
   advanceIntrinsicDisruptionLineage,
   describeIntrinsicPressureLossSnapshot,
   deriveIntrinsicGlobalOrdinalSeed,
@@ -29,9 +30,11 @@ import {
   inheritIntrinsicDisruptionLineage,
   INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
   intrinsicPressureEndpointRejectionReason,
+  isIntrinsicPressureActiveAtCap,
   measureIntrinsicPressureCompactness,
   partitionIntrinsicStructuralPieces,
   pressureRepairSweepAllowance,
+  pressureRepairMaximumSweepAllowance,
   retainIntrinsicInfeasiblePool,
   retainIntrinsicInfeasiblePoolWithDiagnostics,
   retainIntrinsicStructuralHandoffs,
@@ -697,6 +700,147 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(pressureRepairSweepAllowance(12, 3)).toBe(0)
   })
 
+  it('extends only the registered four-sweep pressure attempts to eight', () => {
+    expect(
+      [0, 1, 2].map((index) => pressureRepairMaximumSweepAllowance(12, index))
+    ).toEqual([8, 8, 8])
+    expect(
+      [0, 1, 2].map((index) => pressureRepairMaximumSweepAllowance(5, index))
+    ).toEqual([2, 2, 1])
+    for (const totalSweepBudget of [10, 11, 13]) {
+      expect(
+        [0, 1, 2].map((index) =>
+          pressureRepairMaximumSweepAllowance(totalSweepBudget, index)
+        )
+      ).toEqual(
+        [0, 1, 2].map((index) =>
+          pressureRepairSweepAllowance(totalSweepBudget, index)
+        )
+      )
+    }
+    expect(pressureRepairMaximumSweepAllowance(12, 3)).toBe(0)
+  })
+
+  it('keeps four sweeps mandatory before applying adaptive raw-loss stopping', () => {
+    let consecutiveExtraNonImprovementCount = 0
+    for (let completedSweepCount = 1; completedSweepCount <= 4; completedSweepCount += 1) {
+      const decision = advanceIntrinsicPressureAdaptiveDepth({
+        completedSweepCount,
+        mandatorySweepCount: 4,
+        priorBestRawLoss: 1,
+        completedBestRawLoss: 1,
+        consecutiveExtraNonImprovementCount
+      })
+      consecutiveExtraNonImprovementCount =
+        decision.consecutiveExtraNonImprovementCount
+      expect(decision).toEqual({
+        consecutiveExtraNonImprovementCount: 0,
+        shouldStop: false
+      })
+    }
+  })
+
+  it('continues improving extra sweeps and resets the non-improvement streak', () => {
+    const firstFlat = advanceIntrinsicPressureAdaptiveDepth({
+      completedSweepCount: 5,
+      mandatorySweepCount: 4,
+      priorBestRawLoss: 1,
+      completedBestRawLoss: 1,
+      consecutiveExtraNonImprovementCount: 0
+    })
+    const improved = advanceIntrinsicPressureAdaptiveDepth({
+      completedSweepCount: 6,
+      mandatorySweepCount: 4,
+      priorBestRawLoss: 1,
+      completedBestRawLoss: 0.9,
+      consecutiveExtraNonImprovementCount:
+        firstFlat.consecutiveExtraNonImprovementCount
+    })
+    const secondFlat = advanceIntrinsicPressureAdaptiveDepth({
+      completedSweepCount: 7,
+      mandatorySweepCount: 4,
+      priorBestRawLoss: 0.9,
+      completedBestRawLoss: 0.9,
+      consecutiveExtraNonImprovementCount:
+        improved.consecutiveExtraNonImprovementCount
+    })
+
+    expect(firstFlat).toEqual({
+      consecutiveExtraNonImprovementCount: 1,
+      shouldStop: false
+    })
+    expect(improved).toEqual({
+      consecutiveExtraNonImprovementCount: 0,
+      shouldStop: false
+    })
+    expect(secondFlat).toEqual({
+      consecutiveExtraNonImprovementCount: 1,
+      shouldStop: false
+    })
+  })
+
+  it('stops after two consecutive non-improving extra sweeps', () => {
+    const first = advanceIntrinsicPressureAdaptiveDepth({
+      completedSweepCount: 5,
+      mandatorySweepCount: 4,
+      priorBestRawLoss: 1,
+      completedBestRawLoss: 1,
+      consecutiveExtraNonImprovementCount: 0
+    })
+    const second = advanceIntrinsicPressureAdaptiveDepth({
+      completedSweepCount: 6,
+      mandatorySweepCount: 4,
+      priorBestRawLoss: 1,
+      completedBestRawLoss: 1,
+      consecutiveExtraNonImprovementCount:
+        first.consecutiveExtraNonImprovementCount
+    })
+
+    expect(second).toEqual({
+      consecutiveExtraNonImprovementCount: 2,
+      shouldStop: true
+    })
+  })
+
+  it('classifies only a positive improving eighth sweep as active at cap', () => {
+    expect(
+      isIntrinsicPressureActiveAtCap({
+        adaptiveEnabled: true,
+        completedSweepCount: 8,
+        maximumSweepCount: 8,
+        priorBestRawLoss: 0.2,
+        completedBestRawLoss: 0.1
+      })
+    ).toBe(true)
+    expect(
+      isIntrinsicPressureActiveAtCap({
+        adaptiveEnabled: true,
+        completedSweepCount: 8,
+        maximumSweepCount: 8,
+        priorBestRawLoss: 0.1,
+        completedBestRawLoss: 0.1
+      })
+    ).toBe(false)
+    expect(
+      isIntrinsicPressureActiveAtCap({
+        adaptiveEnabled: true,
+        completedSweepCount: 8,
+        maximumSweepCount: 8,
+        priorBestRawLoss: 0.1,
+        completedBestRawLoss: 0
+      })
+    ).toBe(false)
+    expect(
+      isIntrinsicPressureActiveAtCap({
+        adaptiveEnabled: false,
+        completedSweepCount: 2,
+        maximumSweepCount: 2,
+        priorBestRawLoss: 0.2,
+        completedBestRawLoss: 0.1
+      })
+    ).toBe(false)
+  })
+
   it('records pressure diagnostics without changing retention or evaluation counts', async () => {
     const pieces = [preparedRectangle('near', 4, 2), preparedRectangle('far', 4, 2)]
     const catalog = await catalogFor(pieces)
@@ -705,7 +849,7 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       placed(catalogEntry(catalog, 'far'), 0, 4, 0)
     ]
     const controllerSchedule = schedule({
-      sweepsPerBasin: 3,
+      sweepsPerBasin: 5,
       maximumSeparationEvaluations: 200,
       explorationAreaCapMm2: 20
     })
@@ -719,6 +863,15 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     const sweeps = first.contractedPressureTrace.flatMap(({ repairSweeps }) => repairSweeps)
 
     expect(sweeps.length).toBeGreaterThan(0)
+    expect(
+      first.contractedPressureTrace.every(
+        ({ repairSweeps }, attemptIndex) =>
+          repairSweeps.length <= pressureRepairSweepAllowance(5, attemptIndex) &&
+          repairSweeps.every(
+            ({ terminationReason }) => terminationReason !== 'active-at-cap'
+          )
+      )
+    ).toBe(true)
     expect(first.separationEvaluationCount).toBe(second.separationEvaluationCount)
     expect(first.pressureRepairSweepCount).toBe(second.pressureRepairSweepCount)
     expect(first.contractedPressureTrace).toEqual(second.contractedPressureTrace)
@@ -840,6 +993,72 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
         }
       ]
     })
+  })
+
+  it('runs adaptive pressure depth without changing deterministic evaluation order', async () => {
+    const pieces = [preparedRectangle('near', 4, 2), preparedRectangle('far', 4, 2)]
+    const catalog = await catalogFor(pieces)
+    const touching = [
+      placed(catalogEntry(catalog, 'near'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'far'), 0, 4, 0)
+    ]
+    const controllerSchedule = schedule({
+      sweepsPerBasin: 12,
+      maximumSeparationEvaluations: 2_000,
+      explorationAreaCapMm2: 20
+    })
+    const project = ({
+      provisionalPlaced
+    }: {
+      readonly provisionalPlaced: ReadonlyArray<IrregularPlacedPiece>
+    }) => Effect.succeed(exactProjection(provisionalPlaced))
+    const first = await runController(pieces, touching, controllerSchedule, project)
+    const second = await runController(pieces, touching, controllerSchedule, project)
+    const attempts = first.contractedPressureTrace.map(({ repairSweeps }) => repairSweeps)
+    const completedSweeps = attempts.flat()
+
+    expect(first.separationEvaluationCount).toBe(second.separationEvaluationCount)
+    expect(first.pressureRepairSweepCount).toBe(second.pressureRepairSweepCount)
+    expect(first.contractedPressureTrace).toEqual(second.contractedPressureTrace)
+    expect(
+      first.structuralHandoffs.map(({ metrics }) => metrics.canonicalGeometryIdentity)
+    ).toEqual(
+      second.structuralHandoffs.map(({ metrics }) => metrics.canonicalGeometryIdentity)
+    )
+    expect(attempts.every((repairSweeps) => repairSweeps.length <= 8)).toBe(true)
+    expect(attempts.some((repairSweeps) => repairSweeps.length > 4)).toBe(true)
+    expect(
+      completedSweeps
+        .filter(({ sweepIndex }) => sweepIndex < 4)
+        .every(
+          ({ terminationReason, consecutiveExtraNonImprovementCount }) =>
+            terminationReason !== 'adaptive-non-improvement' &&
+            consecutiveExtraNonImprovementCount === 0
+        )
+    ).toBe(true)
+    expect(
+      completedSweeps.some(
+        ({ terminationReason, consecutiveExtraNonImprovementCount }) =>
+          terminationReason === 'adaptive-non-improvement' &&
+          consecutiveExtraNonImprovementCount === 2
+      ) ||
+        completedSweeps.some(
+          ({ sweepIndex, terminationReason }) =>
+            sweepIndex === 7 &&
+            (terminationReason === 'active-at-cap' ||
+              terminationReason === 'repair-sweep-allocation-exhausted')
+        )
+    ).toBe(true)
+    expect(
+      completedSweeps
+        .filter(({ terminationReason }) => terminationReason === 'active-at-cap')
+        .every(
+          ({ sweepIndex, bestSoFarRawLoss, preGlsImprovementDeltaRawLoss }) =>
+            sweepIndex === 7 &&
+            bestSoFarRawLoss > 0 &&
+            preGlsImprovementDeltaRawLoss > 0
+        )
+    ).toBe(true)
   })
 
   it('reserves one accepted exact pressure endpoint without raising the projection cap', async () => {

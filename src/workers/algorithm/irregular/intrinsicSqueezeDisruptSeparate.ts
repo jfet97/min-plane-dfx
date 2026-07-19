@@ -180,6 +180,8 @@ export interface IntrinsicContractedPressureSweepTrace {
     | 'raw-winner-unavailable'
     | 'evaluation-budget-exhausted'
     | 'accepted-exact-endpoint'
+    | 'adaptive-non-improvement'
+    | 'active-at-cap'
     | 'repair-sweep-allocation-exhausted'
   readonly startPreGls: IntrinsicPressureLossSnapshot | undefined
   readonly generatedBestPreGls: IntrinsicPressureLossSnapshot | undefined
@@ -190,6 +192,7 @@ export interface IntrinsicContractedPressureSweepTrace {
   readonly preGlsImprovementDeltaRawLoss: number
   readonly preGlsImprovementDeltaWeightedLoss: number
   readonly firstBestSweepIndex: number | undefined
+  readonly consecutiveExtraNonImprovementCount: number
   readonly emittedProposalCount: number
   readonly evaluatedProposalCount: number
   readonly generatedUniqueCandidateCount: number
@@ -212,6 +215,11 @@ export interface IntrinsicPressureGenerationProvenance {
   readonly affectedPieceIds: ReadonlyArray<PieceId>
   readonly lineageAffectedPieceIds: ReadonlyArray<PieceId>
   readonly proposalKind: IntrinsicSeparatorProposal['kind'] | undefined
+}
+
+export interface IntrinsicPressureAdaptiveDepthDecision {
+  readonly consecutiveExtraNonImprovementCount: number
+  readonly shouldStop: boolean
 }
 
 export interface IntrinsicContractedPressureAttemptTrace {
@@ -1504,12 +1512,23 @@ function runIntrinsicContractedPressureLane(input: {
       let attemptEvaluationCount = 1
       let bestRepairedLoss = initialEvaluation.rawLoss
       let firstBestSweepIndex: number | undefined
+      let consecutiveExtraNonImprovementCount = 0
       let budgetExhausted = false
       const repairSweeps: IntrinsicContractedPressureSweepTrace[] = []
+      const mandatoryRepairSweepCount = pressureRepairSweepAllowance(
+        input.schedule.sweepsPerBasin,
+        attemptIndex
+      )
+      const maximumRepairSweepCount = pressureRepairMaximumSweepAllowance(
+        input.schedule.sweepsPerBasin,
+        attemptIndex
+      )
+      const adaptivePressureDepthEnabled =
+        input.schedule.sweepsPerBasin === 12 && mandatoryRepairSweepCount === 4
 
       for (
         let repairSweep = 0;
-        repairSweep < pressureRepairSweepAllowance(input.schedule.sweepsPerBasin, attemptIndex) &&
+        repairSweep < maximumRepairSweepCount &&
         !exactEndpoints.some(
           (endpoint) =>
             pressureEndpointRejectionReason(parentMeasured, endpoint) === undefined
@@ -1529,6 +1548,7 @@ function runIntrinsicContractedPressureLane(input: {
             preGlsImprovementDeltaRawLoss: 0,
             preGlsImprovementDeltaWeightedLoss: 0,
             firstBestSweepIndex,
+            consecutiveExtraNonImprovementCount,
             emittedProposalCount: 0,
             evaluatedProposalCount: 0,
             generatedUniqueCandidateCount: 0,
@@ -1671,6 +1691,7 @@ function runIntrinsicContractedPressureLane(input: {
             preGlsImprovementDeltaRawLoss: preGlsImprovement.rawLoss,
             preGlsImprovementDeltaWeightedLoss: preGlsImprovement.weightedLoss,
             firstBestSweepIndex,
+            consecutiveExtraNonImprovementCount,
             emittedProposalCount,
             evaluatedProposalCount,
             generatedUniqueCandidateCount,
@@ -1714,6 +1735,7 @@ function runIntrinsicContractedPressureLane(input: {
             preGlsImprovementDeltaRawLoss: preGlsImprovement.rawLoss,
             preGlsImprovementDeltaWeightedLoss: preGlsImprovement.weightedLoss,
             firstBestSweepIndex,
+            consecutiveExtraNonImprovementCount,
             emittedProposalCount,
             evaluatedProposalCount,
             generatedUniqueCandidateCount,
@@ -1764,22 +1786,40 @@ function runIntrinsicContractedPressureLane(input: {
           startPreGls,
           generatedBestPreGls
         )
+        const adaptiveDepthDecision = advanceIntrinsicPressureAdaptiveDepth({
+          completedSweepCount: repairSweep + 1,
+          mandatorySweepCount: mandatoryRepairSweepCount,
+          priorBestRawLoss: bestRawLossBeforeSweep,
+          completedBestRawLoss: bestRepairedLoss,
+          consecutiveExtraNonImprovementCount
+        })
+        consecutiveExtraNonImprovementCount =
+          adaptiveDepthDecision.consecutiveExtraNonImprovementCount
         const acceptedEndpointReached = exactEndpoints.some(
           (endpoint) =>
             pressureEndpointRejectionReason(parentMeasured, endpoint) === undefined
         )
+        const reachedMaximumRepairSweepCount =
+          repairSweep + 1 >= maximumRepairSweepCount
+        const activeAtCap = isIntrinsicPressureActiveAtCap({
+          adaptiveEnabled: adaptivePressureDepthEnabled,
+          completedSweepCount: repairSweep + 1,
+          maximumSweepCount: maximumRepairSweepCount,
+          priorBestRawLoss: bestRawLossBeforeSweep,
+          completedBestRawLoss: bestRepairedLoss
+        })
         const terminationReason: IntrinsicContractedPressureSweepTrace['terminationReason'] =
           budgetExhausted
             ? 'evaluation-budget-exhausted'
             : acceptedEndpointReached
               ? 'accepted-exact-endpoint'
-              : repairSweep + 1 >=
-                  pressureRepairSweepAllowance(
-                    input.schedule.sweepsPerBasin,
-                    attemptIndex
-                  )
-                ? 'repair-sweep-allocation-exhausted'
-                : 'continue'
+              : adaptiveDepthDecision.shouldStop
+                ? 'adaptive-non-improvement'
+                : activeAtCap
+                  ? 'active-at-cap'
+                  : reachedMaximumRepairSweepCount
+                    ? 'repair-sweep-allocation-exhausted'
+                    : 'continue'
         repairSweeps.push({
           sweepIndex: repairSweep,
           terminationReason,
@@ -1792,6 +1832,7 @@ function runIntrinsicContractedPressureLane(input: {
           preGlsImprovementDeltaRawLoss: preGlsImprovement.rawLoss,
           preGlsImprovementDeltaWeightedLoss: preGlsImprovement.weightedLoss,
           firstBestSweepIndex,
+          consecutiveExtraNonImprovementCount,
           emittedProposalCount,
           evaluatedProposalCount,
           generatedUniqueCandidateCount,
@@ -1805,7 +1846,7 @@ function runIntrinsicContractedPressureLane(input: {
           glsDriverStateKey: rawBest.key,
           weightUpdates
         })
-        if (budgetExhausted) break
+        if (budgetExhausted || adaptiveDepthDecision.shouldStop) break
       }
 
       const rankedEndpoints = exactEndpoints.toSorted(comparePressureEndpoints)
@@ -1995,6 +2036,57 @@ export function pressureRepairSweepAllowance(
   const quotient = Math.floor(boundedBudget / 3)
   const remainder = boundedBudget % 3
   return quotient + (attemptIndex < remainder ? 1 : 0)
+}
+
+export function pressureRepairMaximumSweepAllowance(
+  totalSweepBudget: number,
+  attemptIndex: number
+): number {
+  const mandatoryAdaptiveSweepCount = 4
+  const maximumAdaptiveSweepCount = 8
+  const mandatorySweepCount = pressureRepairSweepAllowance(
+    totalSweepBudget,
+    attemptIndex
+  )
+  return totalSweepBudget === 12 &&
+    mandatorySweepCount === mandatoryAdaptiveSweepCount
+    ? maximumAdaptiveSweepCount
+    : mandatorySweepCount
+}
+
+export function advanceIntrinsicPressureAdaptiveDepth(input: {
+  readonly completedSweepCount: number
+  readonly mandatorySweepCount: number
+  readonly priorBestRawLoss: number
+  readonly completedBestRawLoss: number
+  readonly consecutiveExtraNonImprovementCount: number
+}): IntrinsicPressureAdaptiveDepthDecision {
+  if (input.completedSweepCount <= input.mandatorySweepCount) {
+    return { consecutiveExtraNonImprovementCount: 0, shouldStop: false }
+  }
+  const strictlyImproved = input.completedBestRawLoss < input.priorBestRawLoss
+  const consecutiveExtraNonImprovementCount = strictlyImproved
+    ? 0
+    : input.consecutiveExtraNonImprovementCount + 1
+  return {
+    consecutiveExtraNonImprovementCount,
+    shouldStop: consecutiveExtraNonImprovementCount >= 2
+  }
+}
+
+export function isIntrinsicPressureActiveAtCap(input: {
+  readonly adaptiveEnabled: boolean
+  readonly completedSweepCount: number
+  readonly maximumSweepCount: number
+  readonly priorBestRawLoss: number
+  readonly completedBestRawLoss: number
+}): boolean {
+  return (
+    input.adaptiveEnabled &&
+    input.completedSweepCount >= input.maximumSweepCount &&
+    input.completedBestRawLoss > 0 &&
+    input.completedBestRawLoss < input.priorBestRawLoss
+  )
 }
 
 function unavailableContractedPressureAttemptTrace(input: {

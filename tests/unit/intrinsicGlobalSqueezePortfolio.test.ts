@@ -323,6 +323,7 @@ describe('intrinsic global squeeze portfolio', () => {
           preGlsImprovementDeltaRawLoss: 0.1,
           preGlsImprovementDeltaWeightedLoss: 0.2,
           firstBestSweepIndex: 0,
+          consecutiveExtraNonImprovementCount: 0,
           emittedProposalCount: 4,
           evaluatedProposalCount: 3,
           generatedUniqueCandidateCount: 3,
