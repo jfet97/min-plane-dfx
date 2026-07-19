@@ -821,9 +821,11 @@ function generatePlacementCandidatesUncached(
         point,
         diagnostics: []
       }
-      const validationInput = contactOnly
-        ? normalizeCandidateForValidation(input, candidate)
-        : {
+      const candidateInsidePlane = isInsideBounds(point, ifp.bounds)
+      const validationInput =
+        contactOnly && !candidateInsidePlane
+          ? normalizeCandidateForValidation(input, candidate)
+          : {
             sheet: input.sheet,
             placed: input.placed,
             ...(placedCollisionIndex !== undefined ? { placedCollisionIndex } : {}),
