@@ -22,6 +22,7 @@ import {
   canonicalReferenceDecodeSheets,
   canonicalReferenceRoleLifecycleDiagnostics,
   evaluateCanonicalReferenceAdmissionMetrics,
+  evaluateCanonicalReferencePriorityMetrics,
   isCanonicalReferenceRoleEligible,
   portfolioProgressForDecodeRole
 } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
@@ -340,6 +341,33 @@ describe('canonical reference coordinator policy', () => {
         canonicalTopology: topology
       }).admitted
     ).toBe(true)
+  })
+
+  it('prioritizes a complete finite canonical candidate without production-relative tradeoffs', () => {
+    expect(
+      evaluateCanonicalReferencePriorityMetrics({
+        canonical: canonicalScore(),
+        canonicalTopology: topology
+      })
+    ).toEqual({
+      admitted: true,
+      reason: 'canonical role passed the candidate-intrinsic completeness certificate'
+    })
+  })
+
+  it('rejects incomplete or non-finite canonical candidates intrinsically', () => {
+    expect(
+      evaluateCanonicalReferencePriorityMetrics({
+        canonical: canonicalScore(),
+        canonicalTopology: { ...topology, isolatedPieceCount: Number.NaN }
+      }).admitted
+    ).toBe(false)
+    expect(
+      evaluateCanonicalReferencePriorityMetrics({
+        canonical: score({ unplacedCount: 1 }),
+        canonicalTopology: topology
+      })
+    ).toEqual({ admitted: false, reason: 'canonical role is incomplete' })
   })
 
   it('waives max-side slack for the structurally dominant 1000x1700 finalist', () => {

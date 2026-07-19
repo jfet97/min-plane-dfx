@@ -284,7 +284,6 @@ function coordinateCanonicalReferenceDecode(
         let admittedCandidate: FittingCanonicalCandidate | undefined
         for (const candidate of candidates) {
           const decision = evaluateCanonicalReferenceAdmission({
-            productionScore: productionFinal.score,
             productionPlaced: productionFinal.placedCollisionGeometries,
             canonicalScore: candidate.score,
             canonicalPlaced: candidate.state.placedCollisionGeometries
@@ -678,34 +677,52 @@ export interface CanonicalAdmissionDecision {
 }
 
 export function evaluateCanonicalReferenceAdmission(input: {
-  readonly productionScore: IrregularLayoutScore
   readonly productionPlaced: ReadonlyArray<IrregularPlacedPiece>
   readonly canonicalScore: IrregularLayoutScore
   readonly canonicalPlaced: ReadonlyArray<IrregularPlacedPiece>
 }): CanonicalAdmissionDecision {
-  const productionTopology = measureCanonicalLayoutTopology(input.productionPlaced)
   const canonicalTopology = measureCanonicalLayoutTopology(input.canonicalPlaced)
   const productionIdentity = canonicalCollisionLayoutIdentity(input.productionPlaced)
   const canonicalIdentity = canonicalCollisionLayoutIdentity(input.canonicalPlaced)
   if (
-    productionTopology === undefined ||
     canonicalTopology === undefined ||
     productionIdentity === undefined ||
-    canonicalIdentity === undefined ||
-    !finiteAdmissionScores(input.productionScore) ||
-    !finiteAdmissionScores(input.canonicalScore)
+    canonicalIdentity === undefined
   ) {
     return { admitted: false, reason: 'protected topology or canonical identity is undefined' }
   }
   if (productionIdentity === canonicalIdentity) {
     return { admitted: false, reason: 'canonical identity tie retains production' }
   }
-  return evaluateCanonicalReferenceAdmissionMetrics({
-    production: input.productionScore,
-    productionTopology,
+  return evaluateCanonicalReferencePriorityMetrics({
     canonical: input.canonicalScore,
     canonicalTopology
   })
+}
+
+/** Candidate-intrinsic certificate for the protected canonical-reference role. */
+export function evaluateCanonicalReferencePriorityMetrics(input: {
+  readonly canonical: IrregularLayoutScore
+  readonly canonicalTopology: CanonicalLayoutTopology
+}): CanonicalAdmissionDecision {
+  if (
+    !finiteAdmissionScores(input.canonical) ||
+    ![
+      input.canonicalTopology.largestOccupiedHullGapRatio,
+      input.canonicalTopology.positiveContactComponentCount,
+      input.canonicalTopology.isolatedPieceCount,
+      input.canonicalTopology.largestPositiveContactComponentSize
+    ].every(Number.isFinite)
+  ) {
+    return { admitted: false, reason: 'protected score or topology is undefined or non-finite' }
+  }
+  if (input.canonical.unplacedCount !== 0) {
+    return { admitted: false, reason: 'canonical role is incomplete' }
+  }
+  return {
+    admitted: true,
+    reason: 'canonical role passed the candidate-intrinsic completeness certificate'
+  }
 }
 
 export function evaluateCanonicalReferenceAdmissionMetrics(input: {
