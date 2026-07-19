@@ -80,6 +80,8 @@ export interface IntrinsicGlobalStructuralOutcome {
   readonly status: IntrinsicGlobalSearchResult['status']
   readonly structuralPieceCount: number
   readonly fillerPieceCount: number
+  readonly searchedBasinCount: number
+  readonly unavailableQuarterTurnBasinCount: number
   readonly handoffCount: number
   readonly completedSweepCount: number
   readonly separationEvaluationCount: number
@@ -616,6 +618,8 @@ function structuralOutcomeFrom(
     status: structural.status,
     structuralPieceCount: structural.partition.structuralPieces.length,
     fillerPieceCount: structural.partition.fillerPieces.length,
+    searchedBasinCount: structural.searchedBasinCount,
+    unavailableQuarterTurnBasinCount: structural.unavailableQuarterTurnBasinCount,
     handoffCount: structural.structuralHandoffs.length,
     completedSweepCount: structural.completedSweepCount,
     separationEvaluationCount: structural.separationEvaluationCount,
@@ -635,6 +639,8 @@ function emptyStructuralResult(
     fullE1Fallback: fullE1Placed,
     partition,
     targetRoles: [],
+    searchedBasinCount: 0,
+    unavailableQuarterTurnBasinCount: 0,
     structuralHandoffs: [],
     trace: [],
     projectionTrace: [],

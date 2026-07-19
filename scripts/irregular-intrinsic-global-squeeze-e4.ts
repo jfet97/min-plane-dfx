@@ -13,7 +13,10 @@ import {
   type IrregularNestingSettings,
   type IrregularPlacedPiece
 } from '../src/shared/irregular/domain.js'
-import { runIntrinsicGlobalSqueezePortfolio } from '../src/workers/algorithm/irregular/intrinsicGlobalSqueezePortfolio.js'
+import {
+  runIntrinsicGlobalSqueezePortfolio,
+  type IntrinsicGlobalFullCandidate
+} from '../src/workers/algorithm/irregular/intrinsicGlobalSqueezePortfolio.js'
 import { IrregularBeamState } from '../src/workers/algorithm/irregular/irregularBeamState.js'
 import {
   constructIntrinsicStrictState,
@@ -60,7 +63,7 @@ const request = Schema.decodeUnknownSync(NestingRequest)(JSON.parse(fixtureBytes
 const settings = request.options.irregularSettings
 if (settings === undefined) throw new Error('mixed-61 fixture has no irregular settings')
 
-const experiment = await Effect.runPromise(
+const experimentAttempt = await Effect.runPromise(
   withLayers(
     Effect.gen(function* () {
       const preparedPieces = yield* preparePieces(request, settings)
@@ -94,137 +97,202 @@ const experiment = await Effect.runPromise(
     }),
     settings
   )
+).then(
+  (value) => ({ kind: 'success' as const, value }),
+  (error: unknown) => ({ kind: 'failure' as const, error })
 )
 
-const svgPath = `${outputDirectory}/mixed-61-e4-selected-2000x2700.svg`
-await writeFile(svgPath, renderCollisionSvg(experiment.realSheet.placedCollisionGeometries))
+if (experimentAttempt.kind === 'failure') {
+  await publishFailureEvidence(experimentAttempt.error)
+  process.exitCode = strict ? 2 : 1
+} else {
+  const experiment = experimentAttempt.value
+  const svgPath = `${outputDirectory}/mixed-61-e4-selected-2000x2700.svg`
+  await writeFile(svgPath, renderCollisionSvg(experiment.realSheet.placedCollisionGeometries))
 
-const selected = experiment.portfolio.selected
-const selectedMetrics = selected.measured.metrics
-const earlyGateChecks = {
-  runtime: {
-    passes: experiment.portfolio.runtimeMs <= MAXIMUM_RUNTIME_MS,
-    actualMs: experiment.portfolio.runtimeMs,
-    maximumMs: MAXIMUM_RUNTIME_MS
-  },
-  projectedCandidate: {
-    passes:
-      selected.source === 'projected-gap-fill' &&
-      experiment.portfolio.admittedCandidates.length > 0,
-    selectedSource: selected.source,
-    admittedCandidateCount: experiment.portfolio.admittedCandidates.length
-  },
-  envelopeArea: {
-    passes: selectedMetrics.envelopeAreaMm2 <= MAXIMUM_AREA_MM2,
-    actualMm2: selectedMetrics.envelopeAreaMm2,
-    maximumMm2: MAXIMUM_AREA_MM2
-  },
-  enclosedCavities: {
-    passes: selectedMetrics.enclosedCavityCount <= MAXIMUM_CAVITY_COUNT,
-    actual: selectedMetrics.enclosedCavityCount,
-    maximum: MAXIMUM_CAVITY_COUNT
-  },
-  occupiedHullGap: {
-    passes: selectedMetrics.largestOccupiedHullGapRatio <= MAXIMUM_HULL_GAP_RATIO,
-    actual: selectedMetrics.largestOccupiedHullGapRatio,
-    maximum: MAXIMUM_HULL_GAP_RATIO
-  },
-  roomySheetExactFit: {
-    passes:
-      experiment.realSheet.status === 'completed' &&
-      experiment.realSheet.canonicalGeometryHash === selected.measured.canonicalGeometryHash,
-    status: experiment.realSheet.status,
-    canonicalGeometryHash: experiment.realSheet.canonicalGeometryHash
+  const selected = experiment.portfolio.selected
+  const selectedMetrics = selected.measured.metrics
+  const earlyGateChecks = {
+    runtime: {
+      passes: experiment.portfolio.runtimeMs <= MAXIMUM_RUNTIME_MS,
+      actualMs: experiment.portfolio.runtimeMs,
+      maximumMs: MAXIMUM_RUNTIME_MS
+    },
+    projectedCandidate: {
+      passes:
+        selected.source === 'projected-gap-fill' &&
+        experiment.portfolio.admittedCandidates.length > 0,
+      selectedSource: selected.source,
+      admittedCandidateCount: experiment.portfolio.admittedCandidates.length
+    },
+    envelopeArea: {
+      passes: selectedMetrics.envelopeAreaMm2 <= MAXIMUM_AREA_MM2,
+      actualMm2: selectedMetrics.envelopeAreaMm2,
+      maximumMm2: MAXIMUM_AREA_MM2
+    },
+    enclosedCavities: {
+      passes: selectedMetrics.enclosedCavityCount <= MAXIMUM_CAVITY_COUNT,
+      actual: selectedMetrics.enclosedCavityCount,
+      maximum: MAXIMUM_CAVITY_COUNT
+    },
+    occupiedHullGap: {
+      passes: selectedMetrics.largestOccupiedHullGapRatio <= MAXIMUM_HULL_GAP_RATIO,
+      actual: selectedMetrics.largestOccupiedHullGapRatio,
+      maximum: MAXIMUM_HULL_GAP_RATIO
+    },
+    roomySheetExactFit: {
+      passes:
+        experiment.realSheet.status === 'completed' &&
+        experiment.realSheet.canonicalGeometryHash === selected.measured.canonicalGeometryHash,
+      status: experiment.realSheet.status,
+      canonicalGeometryHash: experiment.realSheet.canonicalGeometryHash
+    }
   }
-}
-const earlyGatePasses = Object.values(earlyGateChecks).every(({ passes }) => passes)
-const decision = earlyGatePasses
-  ? 'run_triangle_and_corpus'
-  : 'reject_e4_before_other_gates'
+  const earlyGatePasses = Object.values(earlyGateChecks).every(({ passes }) => passes)
+  const decision = earlyGatePasses ? 'run_triangle_and_corpus' : 'reject_e4_before_other_gates'
 
-const reportPath = `${outputDirectory}/report.json`
-const report = {
-  experiment: 'intrinsic-global-squeeze-disrupt-e4-early-gate',
-  sourceCommit,
-  fixture: { path: FIXTURE, sha256: sha256(fixtureBytes) },
-  preregistration: { path: PREREGISTRATION, sha256: sha256(preregistrationBytes) },
-  runtime: {
+  const reportPath = `${outputDirectory}/report.json`
+  const report = {
+    experiment: 'intrinsic-global-squeeze-disrupt-e4-early-gate',
+    sourceCommit,
+    fixture: { path: FIXTURE, sha256: sha256(fixtureBytes) },
+    preregistration: { path: PREREGISTRATION, sha256: sha256(preregistrationBytes) },
+    runtime: runtimeVersions(),
+    preparedPieceCount: experiment.preparedPieces.length,
+    e1: {
+      status: 'complete-exact',
+      placementCount: experiment.measuredE1.placedCollisionGeometries.length,
+      runtimeMs: experiment.e1.runtimeMs,
+      canonicalGeometryHash: experiment.measuredE1.canonicalGeometryHash,
+      metrics: experiment.measuredE1.metrics
+    },
+    portfolio: {
+      status: experiment.portfolio.status,
+      runtimeMs: experiment.portfolio.runtimeMs,
+      maximumRuntimeMs: experiment.portfolio.maximumRuntimeMs,
+      remainingBudgetMs: experiment.portfolio.remainingBudgetMs,
+      structuralOutcome: experiment.portfolio.structuralOutcome,
+      fillTrace: experiment.portfolio.fillTrace,
+      promotion: experiment.portfolio.promotion,
+      selected: archiveRecord(selected),
+      archive: experiment.portfolio.completeArchive.map(archiveRecord)
+    },
+    realSheet: {
+      sheet: { width: ROOMY_SHEET.width, height: ROOMY_SHEET.height },
+      status: experiment.realSheet.status,
+      placementCount: experiment.realSheet.placedCollisionGeometries.length,
+      unplacedPieceCount: experiment.realSheet.unplacedPieceIds.length,
+      terminalRotationDeg: experiment.realSheet.terminalRotationDeg,
+      canonicalGeometryHash: experiment.realSheet.canonicalGeometryHash,
+      metrics: experiment.realSheet.metrics,
+      certificate: experiment.realSheet.certificate,
+      svgPath
+    },
+    earlyGate: {
+      passes: earlyGatePasses,
+      checks: earlyGateChecks
+    },
+    decision
+  }
+  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
+
+  const artifactPaths = [reportPath, svgPath]
+  const manifestPath = `${outputDirectory}/manifest.json`
+  await writeManifest(manifestPath, report.experiment, artifactPaths)
+
+  console.log(
+    JSON.stringify({
+      reportPath,
+      reportSha256: sha256(await readFile(reportPath)),
+      svgPath,
+      svgSha256: sha256(await readFile(svgPath)),
+      manifestPath,
+      manifestSha256: sha256(await readFile(manifestPath)),
+      earlyGate: report.earlyGate,
+      decision
+    })
+  )
+  if (strict && !earlyGatePasses) process.exitCode = 2
+}
+
+async function publishFailureEvidence(error: unknown): Promise<void> {
+  const reportPath = `${outputDirectory}/report.json`
+  const decision = 'reject_e4_before_other_gates'
+  const report = {
+    experiment: 'intrinsic-global-squeeze-disrupt-e4-early-gate',
+    sourceCommit,
+    fixture: { path: FIXTURE, sha256: sha256(fixtureBytes) },
+    preregistration: { path: PREREGISTRATION, sha256: sha256(preregistrationBytes) },
+    runtime: runtimeVersions(),
+    failure: serializeExperimentError(error),
+    earlyGate: {
+      passes: false,
+      checks: {
+        experimentExecution: {
+          passes: false
+        }
+      }
+    },
+    decision
+  }
+  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
+  const manifestPath = `${outputDirectory}/manifest.json`
+  await writeManifest(manifestPath, report.experiment, [reportPath])
+  console.error(
+    JSON.stringify({
+      reportPath,
+      reportSha256: sha256(await readFile(reportPath)),
+      manifestPath,
+      manifestSha256: sha256(await readFile(manifestPath)),
+      failure: report.failure,
+      decision
+    })
+  )
+}
+
+async function writeManifest(
+  manifestPath: string,
+  experimentName: string,
+  artifactPaths: ReadonlyArray<string>
+): Promise<void> {
+  await writeFile(
+    manifestPath,
+    `${JSON.stringify(
+      {
+        experiment: experimentName,
+        sourceCommit,
+        fixture: { path: FIXTURE, sha256: sha256(fixtureBytes) },
+        preregistration: { path: PREREGISTRATION, sha256: sha256(preregistrationBytes) },
+        files: Object.fromEntries(
+          await Promise.all(artifactPaths.map(async (path) => [path, sha256(await readFile(path))]))
+        )
+      },
+      null,
+      2
+    )}\n`
+  )
+}
+
+function runtimeVersions() {
+  return {
     node: process.version,
     v8: process.versions.v8,
     electron: process.versions.electron,
     platform: process.platform,
     architecture: process.arch
-  },
-  preparedPieceCount: experiment.preparedPieces.length,
-  e1: {
-    status: 'complete-exact',
-    placementCount: experiment.measuredE1.placedCollisionGeometries.length,
-    runtimeMs: experiment.e1.runtimeMs,
-    canonicalGeometryHash: experiment.measuredE1.canonicalGeometryHash,
-    metrics: experiment.measuredE1.metrics
-  },
-  portfolio: {
-    status: experiment.portfolio.status,
-    runtimeMs: experiment.portfolio.runtimeMs,
-    maximumRuntimeMs: experiment.portfolio.maximumRuntimeMs,
-    remainingBudgetMs: experiment.portfolio.remainingBudgetMs,
-    structuralOutcome: experiment.portfolio.structuralOutcome,
-    fillTrace: experiment.portfolio.fillTrace,
-    promotion: experiment.portfolio.promotion,
-    selected: archiveRecord(selected),
-    archive: experiment.portfolio.completeArchive.map(archiveRecord)
-  },
-  realSheet: {
-    sheet: { width: ROOMY_SHEET.width, height: ROOMY_SHEET.height },
-    status: experiment.realSheet.status,
-    placementCount: experiment.realSheet.placedCollisionGeometries.length,
-    unplacedPieceCount: experiment.realSheet.unplacedPieceIds.length,
-    terminalRotationDeg: experiment.realSheet.terminalRotationDeg,
-    canonicalGeometryHash: experiment.realSheet.canonicalGeometryHash,
-    metrics: experiment.realSheet.metrics,
-    certificate: experiment.realSheet.certificate,
-    svgPath
-  },
-  earlyGate: {
-    passes: earlyGatePasses,
-    checks: earlyGateChecks
-  },
-  decision
+  }
 }
-await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
 
-const artifactPaths = [reportPath, svgPath]
-const manifestPath = `${outputDirectory}/manifest.json`
-await writeFile(
-  manifestPath,
-  `${JSON.stringify(
-    {
-      experiment: report.experiment,
-      sourceCommit,
-      fixture: report.fixture,
-      preregistration: report.preregistration,
-      files: Object.fromEntries(
-        await Promise.all(artifactPaths.map(async (path) => [path, sha256(await readFile(path))]))
-      )
-    },
-    null,
-    2
-  )}\n`
-)
-
-console.log(
-  JSON.stringify({
-    reportPath,
-    reportSha256: sha256(await readFile(reportPath)),
-    svgPath,
-    svgSha256: sha256(await readFile(svgPath)),
-    manifestPath,
-    manifestSha256: sha256(await readFile(manifestPath)),
-    earlyGate: report.earlyGate,
-    decision
-  })
-)
-if (strict && !earlyGatePasses) process.exitCode = 2
+function serializeExperimentError(error: unknown) {
+  const tag =
+    typeof error === 'object' && error !== null && '_tag' in error ? error._tag : undefined
+  return {
+    tag: typeof tag === 'string' ? tag : undefined,
+    name: error instanceof Error ? error.name : undefined,
+    message: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined
+  }
+}
 
 function withLayers<A, E, R>(effect: Effect.Effect<A, E, R>, settings: IrregularNestingSettings) {
   return effect.pipe(
@@ -315,7 +383,7 @@ function completeConstructedState(
   }
 }
 
-function archiveRecord(candidate: (typeof experiment.portfolio.completeArchive)[number]) {
+function archiveRecord(candidate: IntrinsicGlobalFullCandidate) {
   return {
     source: candidate.source,
     structuralProjectionAttempt: candidate.structuralProjectionAttempt,
@@ -344,10 +412,7 @@ function renderCollisionSvg(placed: ReadonlyArray<IrregularPlacedPiece>): string
   const maxY = Math.max(...points.map(({ y }) => y))
   const margin = Math.max(maxX - minX, maxY - minY) * 0.03
   const paths = polygons
-    .map(
-      (polygon) =>
-        `<polygon points="${polygon.map(({ x, y }) => `${x},${-y}`).join(' ')}"/>`
-    )
+    .map((polygon) => `<polygon points="${polygon.map(({ x, y }) => `${x},${-y}`).join(' ')}"/>`)
     .join('')
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX - margin} ${-maxY - margin} ${maxX - minX + margin * 2} ${maxY - minY + margin * 2}" width="1600" height="1600"><rect x="${minX - margin}" y="${-maxY - margin}" width="${maxX - minX + margin * 2}" height="${maxY - minY + margin * 2}" fill="#151d22"/><g fill="#26343d" stroke="#39a9ff" stroke-width="1" vector-effect="non-scaling-stroke">${paths}</g></svg>`
 }

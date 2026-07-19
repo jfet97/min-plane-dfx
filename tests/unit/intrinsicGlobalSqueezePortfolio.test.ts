@@ -135,6 +135,8 @@ function structuralResult(input: {
     fullE1Fallback: input.fallback,
     partition,
     targetRoles: [],
+    searchedBasinCount: 0,
+    unavailableQuarterTurnBasinCount: 0,
     structuralHandoffs: input.handoffs ?? [],
     trace: [],
     projectionTrace: [],

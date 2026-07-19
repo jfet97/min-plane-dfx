@@ -136,6 +136,8 @@ export interface IntrinsicGlobalSearchResult {
   readonly fullE1Fallback: ReadonlyArray<IrregularPlacedPiece>
   readonly partition: IntrinsicPiecePartition
   readonly targetRoles: ReadonlyArray<IntrinsicGlobalTargetRole>
+  readonly searchedBasinCount: number
+  readonly unavailableQuarterTurnBasinCount: number
   readonly structuralHandoffs: ReadonlyArray<IntrinsicStructuralHandoff>
   readonly trace: ReadonlyArray<IntrinsicGlobalSweepTrace>
   readonly projectionTrace: ReadonlyArray<IntrinsicProjectionAttemptTrace>
@@ -360,6 +362,7 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
     let completedSweepCount = 0
     let projectionAttemptCount = 0
     let projectionSuccessCount = 0
+    let searchedBasinCount = 0
     let scheduleStatus: IntrinsicGlobalSearchResult['status'] = 'completed'
     const trace: IntrinsicGlobalSweepTrace[] = []
     const projectionTrace: IntrinsicProjectionAttemptTrace[] = []
@@ -370,257 +373,268 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
       startedAt,
       schedule.maximumRuntimeMs
     )
+    const quarterTurnState = remapIntrinsicTransformsQuarterTurn(catalog, initialState)
+    const basinPlans = targetRoles.flatMap((role) => {
+      const q0 = {
+        role,
+        basinIndex: 0 as const,
+        targetBox: { widthMm: role.widthMm, heightMm: role.heightMm },
+        basinState: initialState
+      }
+      return quarterTurnState === undefined
+        ? [q0]
+        : [
+            q0,
+            {
+              role,
+              basinIndex: 1 as const,
+              targetBox: { widthMm: role.heightMm, heightMm: role.widthMm },
+              basinState: quarterTurnState
+            }
+          ]
+    })
+    const unavailableQuarterTurnBasinCount =
+      quarterTurnState === undefined ? targetRoles.length : 0
+    if (basinPlans.length === 0) {
+      return yield* globalFailure(
+        'initialize',
+        'the canonical q0 state did not produce any searchable basin.'
+      )
+    }
 
-    for (const role of targetRoles) {
-      for (const basinIndex of [0, 1] as const) {
-        const targetBox =
-          basinIndex === 0
-            ? { widthMm: role.widthMm, heightMm: role.heightMm }
-            : { widthMm: role.heightMm, heightMm: role.widthMm }
-        const basinState =
-          basinIndex === 0
-            ? initialState
-            : remapIntrinsicTransformsQuarterTurn(catalog, initialState)
-        if (basinState === undefined) {
-          return yield* globalFailure(
-            'initialize',
-            'the q90 basin could not be expressed with catalog-supported transforms.'
-          )
+    for (const { role, basinIndex, targetBox, basinState } of basinPlans) {
+      if (separationEvaluationCount >= schedule.maximumSeparationEvaluations) {
+        scheduleStatus = 'budget-fallback'
+        break
+      }
+      const initialEvaluation = evaluateIntrinsicSeparation(
+        targetBox,
+        catalog,
+        basinState
+      )
+      if (initialEvaluation === undefined) {
+        return yield* globalFailure('search', 'the initial separation loss was not finite.')
+      }
+      separationEvaluationCount += 1
+      searchedBasinCount += 1
+      let pool: ReadonlyArray<IntrinsicInfeasiblePoolEntry> = [
+        {
+          state: basinState,
+          evaluation: initialEvaluation,
+          key: intrinsicRelaxedStateKey(catalog, basinState) ?? '',
+          disruptionProtectedUntilSweep: undefined
         }
-        if (separationEvaluationCount >= schedule.maximumSeparationEvaluations) {
-          scheduleStatus = 'budget-fallback'
+      ]
+      let weights: IntrinsicSeparatorWeights = { byConflictKey: new Map() }
+
+      for (let sweepIndex = 0; sweepIndex < schedule.sweepsPerBasin; sweepIndex += 1) {
+        if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
+          scheduleStatus = 'deadline-fallback'
           break
         }
-        const initialEvaluation = evaluateIntrinsicSeparation(
-          targetBox,
-          catalog,
-          basinState
-        )
-        if (initialEvaluation === undefined) {
-          return yield* globalFailure('search', 'the initial separation loss was not finite.')
-        }
-        separationEvaluationCount += 1
-        let pool: ReadonlyArray<IntrinsicInfeasiblePoolEntry> = [
-          {
-            state: basinState,
-            evaluation: initialEvaluation,
-            key: intrinsicRelaxedStateKey(catalog, basinState) ?? '',
-            disruptionProtectedUntilSweep: undefined
-          }
-        ]
-        let weights: IntrinsicSeparatorWeights = { byConflictKey: new Map() }
-
-        for (let sweepIndex = 0; sweepIndex < schedule.sweepsPerBasin; sweepIndex += 1) {
-          if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
-            scheduleStatus = 'deadline-fallback'
-            break
-          }
-          const candidates: IntrinsicInfeasiblePoolEntry[] = [...pool]
-          let proposalCount = 0
-          const forcedDisruption = schedule.forcedDisruptionSweeps.includes(sweepIndex)
-          for (const [poolIndex, entry] of pool.entries()) {
-            const proposals = [
-              ...intrinsicFocusedProposals({
-                targetBox,
-                catalog,
-                state: entry.state,
-                evaluation: entry.evaluation,
-                weights,
-                ordinal: deterministicOrdinal(ordinalSeed, completedSweepCount, poolIndex)
-              }),
-              ...(forcedDisruption
-                ? intrinsicDisruptionProposals({
-                    targetBox,
-                    catalog,
-                    state: entry.state,
-                    ordinal: deterministicOrdinal(ordinalSeed, completedSweepCount, poolIndex + 31)
-                  })
-                : [])
-            ]
-            proposalCount += proposals.length
-            for (const proposal of proposals) {
-              if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
-                scheduleStatus = 'deadline-fallback'
-                break
-              }
-              if (separationEvaluationCount >= schedule.maximumSeparationEvaluations) {
-                scheduleStatus = 'budget-fallback'
-                break
-              }
-              const evaluation = evaluateIntrinsicSeparation(
-                targetBox,
-                catalog,
-                proposal.state,
-                weights
-              )
-              separationEvaluationCount += 1
-              const key = intrinsicRelaxedStateKey(catalog, proposal.state)
-              if (evaluation !== undefined && key !== undefined) {
-                const isDisruption =
-                  proposal.kind === 'swap' ||
-                  proposal.kind === 'group-transport' ||
-                  proposal.kind === 'split-squeeze' ||
-                  proposal.kind === 'interface-disrupt'
-                candidates.push({
-                  state: proposal.state,
-                  evaluation,
-                  key,
-                  disruptionProtectedUntilSweep: isDisruption ? sweepIndex + 1 : undefined
-                })
-              }
-            }
-            if (scheduleStatus !== 'completed') break
-          }
-          if (scheduleStatus !== 'completed') break
-          const rawBest = reweightIntrinsicPool(candidates, weights).toSorted(
-            comparePoolEntriesByRaw
-          )[0]
-          if (rawBest === undefined) {
-            return yield* globalFailure('search', 'the infeasible basin pool became empty.')
-          }
-          weights = updateIntrinsicSeparatorWeights(weights, rawBest.evaluation)
-          pool = retainIntrinsicInfeasiblePool(
-            candidates,
-            schedule.poolCapacity,
-            weights,
-            sweepIndex
-          )
-          const best = pool[0]
-          if (best === undefined) {
-            return yield* globalFailure('search', 'the reweighted basin pool became empty.')
-          }
-          completedSweepCount += 1
-          trace.push({
-            roleId: role.id,
-            basinIndex,
-            sweepIndex,
-            completedSweepCount,
-            forcedDisruption,
-            poolSize: pool.length,
-            proposalCount,
-            separationEvaluationCount,
-            lowestRawLoss: best.evaluation.rawLoss
-          })
-        }
-        if (scheduleStatus !== 'completed') break
-
-        completedBasinCount += 1
-        if (
-          completedBasinCount >= 2 &&
-          projectionAttemptCount < schedule.maximumProjectionAttempts
-        ) {
-          if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
-            scheduleStatus = 'deadline-fallback'
-            break
-          }
-          const best = pool[0]
-          if (best === undefined) {
-            return yield* globalFailure('search', 'the completed basin had no projection state.')
-          }
-          const provisional = provisionalLayoutFromRelaxedState(catalog, best.state)
-          const reinsertionPriorityPieceIds = intrinsicProjectionPriority(
-            catalog,
-            best.state,
-            best.evaluation,
-            weights
-          )
-          if (provisional === undefined || reinsertionPriorityPieceIds === undefined) {
-            return yield* globalFailure(
-              'search',
-              'the lowest-loss basin state could not be converted for exact projection.'
-            )
-          }
-          projectionAttemptCount += 1
-          const attempted = yield* Effect.matchEffect(
-            dependency.project({
+        const candidates: IntrinsicInfeasiblePoolEntry[] = [...pool]
+        let proposalCount = 0
+        const forcedDisruption = schedule.forcedDisruptionSweeps.includes(sweepIndex)
+        for (const [poolIndex, entry] of pool.entries()) {
+          const proposals = [
+            ...intrinsicFocusedProposals({
               targetBox,
               catalog,
-              referencePlaced: exactStructuralReference,
-              provisionalPlaced: provisional,
-              reinsertionPriorityPieceIds,
-              control: searchControl
+              state: entry.state,
+              evaluation: entry.evaluation,
+              weights,
+              ordinal: deterministicOrdinal(ordinalSeed, completedSweepCount, poolIndex)
             }),
-            {
-              onFailure: (error) => Effect.succeed({ kind: 'failure' as const, error }),
-              onSuccess: (value) => Effect.succeed({ kind: 'success' as const, value })
-            }
-          )
-          if (attempted.kind === 'failure') {
-            switch (attempted.error._tag) {
-              case 'IntrinsicExactProjectionError': {
-                projectionTrace.push({
-                  targetRoleId: role.id,
-                  basinIndex,
-                  completedBasinCount,
-                  completedSweepCount,
-                  projectionAttempt: projectionAttemptCount,
-                  rawLoss: best.evaluation.rawLoss,
-                  conflictCount: best.evaluation.conflicts.length,
-                  outcome: attempted.error.category,
-                  failedPieceId: attempted.error.failedPieceId,
-                  dilationSteps: attempted.error.attempts
+            ...(forcedDisruption
+              ? intrinsicDisruptionProposals({
+                  targetBox,
+                  catalog,
+                  state: entry.state,
+                  ordinal: deterministicOrdinal(ordinalSeed, completedSweepCount, poolIndex + 31)
                 })
-                break
-              }
-              case 'IrregularNfpIfpControlAbortError':
-                if (attempted.error.reason === 'cancelled') {
-                  return yield* Effect.fail(attempted.error)
-                }
-                projectionTrace.push({
-                  targetRoleId: role.id,
-                  basinIndex,
-                  completedBasinCount,
-                  completedSweepCount,
-                  projectionAttempt: projectionAttemptCount,
-                  rawLoss: best.evaluation.rawLoss,
-                  conflictCount: best.evaluation.conflicts.length,
-                  outcome: 'deadline',
-                  failedPieceId: undefined,
-                  dilationSteps: undefined
-                })
-                scheduleStatus = 'deadline-fallback'
-                break
-              case 'IrregularGeometryInputError':
-              case 'IrregularNestingNotImplementedError':
-                return yield* Effect.fail(attempted.error)
-            }
-          } else {
-            projectionSuccessCount += 1
-            const handoff = exactStructuralHandoff({
-              role,
-              basinIndex,
-              projectionAttempt: projectionAttemptCount,
-              targetBox,
-              projection: attempted.value,
-              schedule
-            })
+              : [])
+          ]
+          proposalCount += proposals.length
+          for (const proposal of proposals) {
             if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
               scheduleStatus = 'deadline-fallback'
               break
             }
-            if (handoff !== undefined) {
-              addStructuralHandoff(handoffs, handoff, schedule.structuralHandoffCapacity)
+            if (separationEvaluationCount >= schedule.maximumSeparationEvaluations) {
+              scheduleStatus = 'budget-fallback'
+              break
             }
-            projectionTrace.push({
-              targetRoleId: role.id,
-              basinIndex,
-              completedBasinCount,
-              completedSweepCount,
-              projectionAttempt: projectionAttemptCount,
-              rawLoss: best.evaluation.rawLoss,
-              conflictCount: best.evaluation.conflicts.length,
-              outcome: handoff === undefined ? 'quality-rejected' : 'exact-success',
-              failedPieceId: undefined,
-              dilationSteps: attempted.value.dilationSteps
-            })
+            const evaluation = evaluateIntrinsicSeparation(
+              targetBox,
+              catalog,
+              proposal.state,
+              weights
+            )
+            separationEvaluationCount += 1
+            const key = intrinsicRelaxedStateKey(catalog, proposal.state)
+            if (evaluation !== undefined && key !== undefined) {
+              const isDisruption =
+                proposal.kind === 'swap' ||
+                proposal.kind === 'group-transport' ||
+                proposal.kind === 'split-squeeze' ||
+                proposal.kind === 'interface-disrupt'
+              candidates.push({
+                state: proposal.state,
+                evaluation,
+                key,
+                disruptionProtectedUntilSweep: isDisruption ? sweepIndex + 1 : undefined
+              })
+            }
           }
+          if (scheduleStatus !== 'completed') break
         }
+        if (scheduleStatus !== 'completed') break
+        const rawBest = reweightIntrinsicPool(candidates, weights).toSorted(
+          comparePoolEntriesByRaw
+        )[0]
+        if (rawBest === undefined) {
+          return yield* globalFailure('search', 'the infeasible basin pool became empty.')
+        }
+        weights = updateIntrinsicSeparatorWeights(weights, rawBest.evaluation)
+        pool = retainIntrinsicInfeasiblePool(
+          candidates,
+          schedule.poolCapacity,
+          weights,
+          sweepIndex
+        )
+        const best = pool[0]
+        if (best === undefined) {
+          return yield* globalFailure('search', 'the reweighted basin pool became empty.')
+        }
+        completedSweepCount += 1
+        trace.push({
+          roleId: role.id,
+          basinIndex,
+          sweepIndex,
+          completedSweepCount,
+          forcedDisruption,
+          poolSize: pool.length,
+          proposalCount,
+          separationEvaluationCount,
+          lowestRawLoss: best.evaluation.rawLoss
+        })
       }
       if (scheduleStatus !== 'completed') break
+
+      completedBasinCount += 1
+      if (
+        completedBasinCount >= 2 &&
+        projectionAttemptCount < schedule.maximumProjectionAttempts
+      ) {
+        if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
+          scheduleStatus = 'deadline-fallback'
+          break
+        }
+        const best = pool[0]
+        if (best === undefined) {
+          return yield* globalFailure('search', 'the completed basin had no projection state.')
+        }
+        const provisional = provisionalLayoutFromRelaxedState(catalog, best.state)
+        const reinsertionPriorityPieceIds = intrinsicProjectionPriority(
+          catalog,
+          best.state,
+          best.evaluation,
+          weights
+        )
+        if (provisional === undefined || reinsertionPriorityPieceIds === undefined) {
+          return yield* globalFailure(
+            'search',
+            'the lowest-loss basin state could not be converted for exact projection.'
+          )
+        }
+        projectionAttemptCount += 1
+        const attempted = yield* Effect.matchEffect(
+          dependency.project({
+            targetBox,
+            catalog,
+            referencePlaced: exactStructuralReference,
+            provisionalPlaced: provisional,
+            reinsertionPriorityPieceIds,
+            control: searchControl
+          }),
+          {
+            onFailure: (error) => Effect.succeed({ kind: 'failure' as const, error }),
+            onSuccess: (value) => Effect.succeed({ kind: 'success' as const, value })
+          }
+        )
+        if (attempted.kind === 'failure') {
+          switch (attempted.error._tag) {
+            case 'IntrinsicExactProjectionError': {
+              projectionTrace.push({
+                targetRoleId: role.id,
+                basinIndex,
+                completedBasinCount,
+                completedSweepCount,
+                projectionAttempt: projectionAttemptCount,
+                rawLoss: best.evaluation.rawLoss,
+                conflictCount: best.evaluation.conflicts.length,
+                outcome: attempted.error.category,
+                failedPieceId: attempted.error.failedPieceId,
+                dilationSteps: attempted.error.attempts
+              })
+              break
+            }
+            case 'IrregularNfpIfpControlAbortError':
+              if (attempted.error.reason === 'cancelled') {
+                return yield* Effect.fail(attempted.error)
+              }
+              projectionTrace.push({
+                targetRoleId: role.id,
+                basinIndex,
+                completedBasinCount,
+                completedSweepCount,
+                projectionAttempt: projectionAttemptCount,
+                rawLoss: best.evaluation.rawLoss,
+                conflictCount: best.evaluation.conflicts.length,
+                outcome: 'deadline',
+                failedPieceId: undefined,
+                dilationSteps: undefined
+              })
+              scheduleStatus = 'deadline-fallback'
+              break
+            case 'IrregularGeometryInputError':
+            case 'IrregularNestingNotImplementedError':
+              return yield* Effect.fail(attempted.error)
+          }
+        } else {
+          projectionSuccessCount += 1
+          const handoff = exactStructuralHandoff({
+            role,
+            basinIndex,
+            projectionAttempt: projectionAttemptCount,
+            targetBox,
+            projection: attempted.value,
+            schedule
+          })
+          if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
+            scheduleStatus = 'deadline-fallback'
+            break
+          }
+          if (handoff !== undefined) {
+            addStructuralHandoff(handoffs, handoff, schedule.structuralHandoffCapacity)
+          }
+          projectionTrace.push({
+            targetRoleId: role.id,
+            basinIndex,
+            completedBasinCount,
+            completedSweepCount,
+            projectionAttempt: projectionAttemptCount,
+            rawLoss: best.evaluation.rawLoss,
+            conflictCount: best.evaluation.conflicts.length,
+            outcome: handoff === undefined ? 'quality-rejected' : 'exact-success',
+            failedPieceId: undefined,
+            dilationSteps: attempted.value.dilationSteps
+          })
+        }
+      }
     }
 
-    const expectedSweepCount =
-      targetRoles.length * 2 * schedule.sweepsPerBasin
+    const expectedSweepCount = basinPlans.length * schedule.sweepsPerBasin
     if (scheduleStatus === 'completed' && completedSweepCount !== expectedSweepCount) {
       scheduleStatus = 'budget-fallback'
     }
@@ -636,6 +650,8 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
       fullE1Fallback,
       partition,
       targetRoles,
+      searchedBasinCount,
+      unavailableQuarterTurnBasinCount,
       structuralHandoffs: handoffs,
       trace,
       projectionTrace,

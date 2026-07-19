@@ -294,6 +294,33 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     ).toBeUndefined()
   })
 
+  it('skips unavailable q90 basins while completing every canonical q0 role', async () => {
+    const pieces = [
+      preparedRectangle('a', 2, 1, [transform(0, 0)]),
+      preparedRectangle('b', 2, 1, [transform(0, 0)])
+    ]
+    const catalog = await catalogFor(pieces)
+    const e1 = [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 2, 0)
+    ]
+    const result = await runController(
+      pieces,
+      e1,
+      schedule(),
+      ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced))
+    )
+
+    expect(result.status).toBe('completed')
+    expect(result.searchedBasinCount).toBe(3)
+    expect(result.unavailableQuarterTurnBasinCount).toBe(3)
+    expect(result.completedSweepCount).toBe(3)
+    expect(result.projectionAttemptCount).toBe(2)
+    expect(result.projectionTrace).toHaveLength(2)
+    expect(result.trace).toHaveLength(3)
+    expect(result.trace.every(({ basinIndex }) => basinIndex === 0)).toBe(true)
+  })
+
   it('uses GLS weights to change the conflict selected for focused proposals', async () => {
     const pieces = [preparedRectangle('left', 2, 2), preparedRectangle('right', 2, 2)]
     const catalog = await catalogFor(pieces)
@@ -541,6 +568,7 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(fallback.status).toBe('budget-fallback')
     expect(fallback.fullE1Fallback).toEqual(e1)
     expect(fallback.structuralHandoffs).toEqual([])
+    expect(fallback.searchedBasinCount).toBe(0)
     expect(fallback.separationEvaluationCount).toBe(0)
 
     await expect(
@@ -690,6 +718,8 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(first.projectionTrace).toEqual(second.projectionTrace)
     expect(first.structuralHandoffs.length).toBeGreaterThan(0)
     expect(first.structuralHandoffs).toEqual(second.structuralHandoffs)
+    expect(first.searchedBasinCount).toBe(6)
+    expect(first.unavailableQuarterTurnBasinCount).toBe(0)
     expect(first.completedSweepCount).toBe(6)
     expect(first.projectionAttemptCount).toBe(5)
     expect(first.projectionTrace).toHaveLength(5)
