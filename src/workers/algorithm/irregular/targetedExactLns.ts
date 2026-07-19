@@ -124,11 +124,11 @@ export function runTargetedExactLns(
       input.v1Options ?? { maximumEvaluations: 25_000, maximumDiagnosticExactChecks: 0 }
     )
     const fixedHazardSnapshot = v1.bestRelaxedSnapshot
-    const v1ConstraintSheet = new SheetSpec({
+    const v1ConstraintSheet: SheetSpec = {
       width: v1.targetWidth,
       height: v1.targetHeight,
       label: 'targeted exact LNS V1 intrinsic constraint'
-    })
+    }
     const fixedHazardAnalysis = analyzeCanonicalLayoutStructure(
       v1ConstraintSheet,
       fixedHazardSnapshot
@@ -156,11 +156,11 @@ export function runTargetedExactLns(
           const constraintSheet =
             target === 'v1_hazard'
               ? v1ConstraintSheet
-              : new SheetSpec({
+              : {
                   width: selectedMetrics.width,
                   height: selectedMetrics.height,
                   label: 'targeted exact LNS incumbent intrinsic constraint'
-                })
+                }
           const sourceAnalysis =
             target === 'v1_hazard'
               ? fixedHazardAnalysis
