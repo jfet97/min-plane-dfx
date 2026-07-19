@@ -13,6 +13,7 @@ import {
 import { IrregularBeamState } from './irregularBeamState.js'
 import {
   constructIntrinsicStrictState,
+  evaluateIntrinsicStrictCertificate,
   IntrinsicStrictDecoderError,
   measureIntrinsicSheetlessCompletedLayout,
   type ConstructIntrinsicStrictStateInput,
@@ -90,6 +91,7 @@ export interface IntrinsicGlobalFillTrace {
   readonly insertedFillerCount: number | undefined
   readonly nonInertFillCount: number | undefined
   readonly unplacedFillerCount: number | undefined
+  readonly evaluatedCandidateCanonicalGeometryIdentity: string | undefined
   readonly evaluatedCandidateCanonicalGeometryHash: string | undefined
   readonly evaluatedCandidateMetrics: IntrinsicGlobalDeterministicCandidateMetrics | undefined
 }
@@ -106,6 +108,7 @@ export interface IntrinsicGlobalStructuralOutcome {
   readonly projectionAttemptCount: number
   readonly projectionSuccessCount: number
   readonly sweepTrace: IntrinsicGlobalSearchResult['trace']
+  readonly projectionLaneTrace: IntrinsicGlobalSearchResult['projectionLaneTrace']
   readonly projectionTrace: ReadonlyArray<IntrinsicProjectionAttemptTrace>
 }
 
@@ -156,7 +159,7 @@ const productionSchedule: IntrinsicGlobalPortfolioSchedule = {
   ...INTRINSIC_GLOBAL_PORTFOLIO_DEFAULTS
 }
 
-/** Complete sheetless structural-to-full E4 portfolio. */
+/** Complete sheetless structural-to-full E5 portfolio. */
 export function runIntrinsicGlobalSqueezePortfolio(input: {
   readonly allPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly fullE1Placed: ReadonlyArray<IrregularPlacedPiece>
@@ -388,6 +391,8 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
         insertedFillerCount: Math.max(0, insertedFillerCount),
         nonInertFillCount,
         unplacedFillerCount,
+        evaluatedCandidateCanonicalGeometryIdentity:
+          evaluatedCandidate?.canonicalGeometryIdentity,
         evaluatedCandidateCanonicalGeometryHash:
           evaluatedCandidate?.canonicalGeometryHash,
         evaluatedCandidateMetrics: evaluatedCandidate?.metrics
@@ -433,16 +438,22 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
       ({ measured }) =>
         measured.canonicalGeometryIdentity !== fallback.measured.canonicalGeometryIdentity
     )
-    const retained = retainIntrinsicGlobalFullCandidates(
-      viable,
-      Math.max(0, schedule.completeArchiveCapacity - 1)
+    const finalists = retainIntrinsicGlobalFullCandidates(
+      [fallback, ...viable],
+      schedule.completeArchiveCapacity
     )
-    const selected = retained[0] ?? fallback
+    const selected = finalists[0] ?? fallback
+    const retainedChallengers = finalists.filter(
+      ({ source }) => source === 'projected-gap-fill'
+    )
     return {
-      status: retained.length > 0 ? 'completed-candidate' : 'completed-fallback',
+      status:
+        selected.source === 'projected-gap-fill'
+          ? 'completed-candidate'
+          : 'completed-fallback',
       selected,
-      completeArchive: dedupeCompleteArchive(fallback, retained, schedule.completeArchiveCapacity),
-      admittedCandidates: retained,
+      completeArchive: finalists,
+      admittedCandidates: retainedChallengers,
       evaluatedCompleteCandidates: [...evaluatedCompleteCandidates],
       structuralOutcome,
       promotion: promotionSummary(fallback, viable, selected),
@@ -454,7 +465,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
   })
 }
 
-/** Retains viable exact layouts, then ranks topology before the area milestone and area. */
+/** Ranks the fallback and complete challengers by the preregistered E5 certificate tuple. */
 export function retainIntrinsicGlobalFullCandidates(
   candidates: ReadonlyArray<IntrinsicGlobalFullCandidate>,
   capacity: number
@@ -467,17 +478,7 @@ export function retainIntrinsicGlobalFullCandidates(
       unique.set(key, candidate)
     }
   }
-  const values = [...unique.values()]
-  return values
-    .filter(
-      (candidate) =>
-        !values.some(
-          (other) =>
-            other.measured.canonicalGeometryIdentity !==
-              candidate.measured.canonicalGeometryIdentity &&
-            dominatesFullCandidate(other, candidate)
-        )
-    )
+  return [...unique.values()]
     .toSorted(compareFullCandidates)
     .slice(0, Math.max(0, capacity))
 }
@@ -558,36 +559,7 @@ function candidatePassesAdmission(
   schedule: IntrinsicGlobalPortfolioSchedule
 ): boolean {
   const metrics = candidate.measured.metrics
-  return (
-    metrics.enclosedCavityCount <= schedule.maximumCavityCount &&
-    metrics.largestOccupiedHullGapRatio <= schedule.maximumLargestHullGapRatio &&
-    metrics.envelopeAreaMm2 <= schedule.explorationAreaCapMm2
-  )
-}
-
-function dominatesFullCandidate(
-  first: IntrinsicGlobalFullCandidate,
-  second: IntrinsicGlobalFullCandidate
-): boolean {
-  const a = first.measured.metrics
-  const b = second.measured.metrics
-  const noWorse =
-    a.enclosedCavityCount <= b.enclosedCavityCount &&
-    a.totalEnclosedCavityAreaMm2 <= b.totalEnclosedCavityAreaMm2 &&
-    a.largestOccupiedHullGapRatio <= b.largestOccupiedHullGapRatio &&
-    a.envelopeAreaMm2 <= b.envelopeAreaMm2 &&
-    a.envelopeMaximumSideMm <= b.envelopeMaximumSideMm &&
-    a.envelopeSpanMm <= b.envelopeSpanMm &&
-    a.occupiedHullWasteRatio <= b.occupiedHullWasteRatio
-  const better =
-    a.enclosedCavityCount < b.enclosedCavityCount ||
-    a.totalEnclosedCavityAreaMm2 < b.totalEnclosedCavityAreaMm2 ||
-    a.largestOccupiedHullGapRatio < b.largestOccupiedHullGapRatio ||
-    a.envelopeAreaMm2 < b.envelopeAreaMm2 ||
-    a.envelopeMaximumSideMm < b.envelopeMaximumSideMm ||
-    a.envelopeSpanMm < b.envelopeSpanMm ||
-    a.occupiedHullWasteRatio < b.occupiedHullWasteRatio
-  return noWorse && better
+  return metrics.envelopeAreaMm2 <= schedule.explorationAreaCapMm2
 }
 
 function compareFullCandidates(
@@ -596,40 +568,24 @@ function compareFullCandidates(
 ): number {
   const a = first.measured.metrics
   const b = second.measured.metrics
+  const firstCertificate = evaluateIntrinsicStrictCertificate(a)
+  const secondCertificate = evaluateIntrinsicStrictCertificate(b)
   return (
+    firstCertificate.violatedFloors.length - secondCertificate.violatedFloors.length ||
+    firstCertificate.relativeDeficitSum - secondCertificate.relativeDeficitSum ||
     a.enclosedCavityCount - b.enclosedCavityCount ||
+    a.isolatedPieceCount - b.isolatedPieceCount ||
+    a.positiveContactComponentCount - b.positiveContactComponentCount ||
+    b.largestPositiveContactComponentRatio - a.largestPositiveContactComponentRatio ||
     a.largestOccupiedHullGapRatio - b.largestOccupiedHullGapRatio ||
     Number(second.productionAreaTargetMet) - Number(first.productionAreaTargetMet) ||
     a.envelopeAreaMm2 - b.envelopeAreaMm2 ||
     a.envelopeMaximumSideMm - b.envelopeMaximumSideMm ||
     a.envelopeSpanMm - b.envelopeSpanMm ||
-    a.totalEnclosedCavityAreaMm2 - b.totalEnclosedCavityAreaMm2 ||
-    a.occupiedHullWasteRatio - b.occupiedHullWasteRatio ||
     first.measured.canonicalGeometryIdentity.localeCompare(
       second.measured.canonicalGeometryIdentity
     )
   )
-}
-
-function dedupeCompleteArchive(
-  fallback: IntrinsicGlobalFullCandidate,
-  admitted: ReadonlyArray<IntrinsicGlobalFullCandidate>,
-  capacity: number
-): ReadonlyArray<IntrinsicGlobalFullCandidate> {
-  const result = [fallback]
-  for (const candidate of admitted) {
-    if (
-      result.length >= Math.max(1, capacity) ||
-      result.some(
-        ({ measured }) =>
-          measured.canonicalGeometryIdentity === candidate.measured.canonicalGeometryIdentity
-      )
-    ) {
-      continue
-    }
-    result.push(candidate)
-  }
-  return result
 }
 
 function fallbackResult(input: {
@@ -690,6 +646,7 @@ function structuralOutcomeFrom(
     projectionAttemptCount: structural.projectionAttemptCount,
     projectionSuccessCount: structural.projectionSuccessCount,
     sweepTrace: structural.trace,
+    projectionLaneTrace: structural.projectionLaneTrace,
     projectionTrace: structural.projectionTrace
   }
 }
@@ -707,6 +664,7 @@ function emptyStructuralResult(
     unavailableQuarterTurnBasinCount: 0,
     structuralHandoffs: [],
     trace: [],
+    projectionLaneTrace: [],
     projectionTrace: [],
     completedSweepCount: 0,
     separationEvaluationCount: 0,
@@ -731,6 +689,8 @@ function deadlineFillTrace(input: {
     insertedFillerCount: input.insertedFillerCount,
     nonInertFillCount: input.nonInertFillCount,
     unplacedFillerCount: input.unplacedFillerCount,
+    evaluatedCandidateCanonicalGeometryIdentity:
+      input.evaluatedCandidate?.canonicalGeometryIdentity,
     evaluatedCandidateCanonicalGeometryHash:
       input.evaluatedCandidate?.canonicalGeometryHash,
     evaluatedCandidateMetrics: input.evaluatedCandidate?.metrics

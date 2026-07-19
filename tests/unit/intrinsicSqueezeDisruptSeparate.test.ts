@@ -23,14 +23,18 @@ import {
   deriveIntrinsicGlobalOrdinalSeed,
   deriveIntrinsicGlobalTargetRoles,
   floorIntrinsicTargetGrid,
+  inheritIntrinsicDisruptionLineage,
   INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
   partitionIntrinsicStructuralPieces,
   retainIntrinsicInfeasiblePool,
   retainIntrinsicStructuralHandoffs,
   retainIntrinsicStructuralHandoffsWithDiagnostics,
   runIntrinsicSqueezeDisruptSeparateWithSchedule,
+  selectIntrinsicProjectionWorkItems,
   type IntrinsicGlobalSearchSchedule,
+  type IntrinsicGlobalTargetRole,
   type IntrinsicInfeasiblePoolEntry,
+  type IntrinsicProjectionLaneCandidate,
   type IntrinsicStructuralHandoff
 } from '../../src/workers/algorithm/irregular/intrinsicSqueezeDisruptSeparate.js'
 import {
@@ -315,8 +319,11 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(result.searchedBasinCount).toBe(3)
     expect(result.unavailableQuarterTurnBasinCount).toBe(3)
     expect(result.completedSweepCount).toBe(3)
-    expect(result.projectionAttemptCount).toBe(2)
-    expect(result.projectionTrace).toHaveLength(2)
+    expect(result.projectionAttemptCount).toBe(
+      result.projectionLaneTrace.filter(({ outcome }) => outcome === 'selected').length
+    )
+    expect(result.projectionTrace).toHaveLength(result.projectionAttemptCount)
+    expect(result.projectionLaneTrace).toHaveLength(5)
     expect(result.trace).toHaveLength(3)
     expect(result.trace.every(({ basinIndex }) => basinIndex === 0)).toBe(true)
   })
@@ -578,6 +585,97 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       placed(catalogEntry(catalog, 'grid-role'), 0, 0, 0)
     ])
     expect(roles?.[0]).toMatchObject({ widthMm: 82.77, heightMm: 10.111 })
+  })
+
+  it('inherits disruption lineage and ORs it during same-state deduplication', async () => {
+    expect(inheritIntrinsicDisruptionLineage(false, 'swap')).toBe(true)
+    expect(inheritIntrinsicDisruptionLineage(true, 'separate')).toBe(true)
+    expect(inheritIntrinsicDisruptionLineage(false, 'separate')).toBe(false)
+
+    const pieces = [preparedRectangle('a', 1, 1), preparedRectangle('b', 1, 1)]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 2, 0)
+    ])
+    if (state === undefined) throw new Error('state expected')
+    const ordinary = poolEntry(state, 'same-state', 1, 'ordinary', 1, undefined)
+    const disrupted = {
+      ...poolEntry(state, 'same-state', 2, 'disrupted', 2, undefined),
+      disruptionLineage: true
+    }
+    const retained = retainIntrinsicInfeasiblePool(
+      [ordinary, disrupted],
+      1,
+      { byConflictKey: new Map() },
+      1
+    )
+
+    expect(retained).toHaveLength(1)
+    expect(retained[0]?.evaluation.rawLoss).toBe(1)
+    expect(retained[0]?.disruptionLineage).toBe(true)
+  })
+
+  it('selects the deterministic five-lane projection portfolio without backfill', async () => {
+    const pieces = [preparedRectangle('a', 1, 1), preparedRectangle('b', 1, 1)]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 2, 0)
+    ])
+    if (state === undefined) throw new Error('state expected')
+    const roles = projectionTargetRoles()
+    const candidates = [
+      projectionLaneCandidate(roles[0], 0, state, 'raw', 1, 8, false),
+      projectionLaneCandidate(roles[1], 0, state, 'gls', 2, 0.5, false),
+      projectionLaneCandidate(roles[0], 1, state, 'e1-disruption', 3, 1, true),
+      projectionLaneCandidate(roles[1], 1, state, 'expanded-disruption', 4, 1, true),
+      projectionLaneCandidate(roles[2], 0, state, 'four-three-disruption', 5, 1, true)
+    ]
+    const first = selectIntrinsicProjectionWorkItems(candidates, roles)
+    const second = selectIntrinsicProjectionWorkItems([...candidates].reverse(), roles)
+
+    expect(first).toEqual(second)
+    expect(first.workItems).toHaveLength(5)
+    expect(first.workItems.map(({ lane }) => lane)).toEqual([
+      'global-raw',
+      'global-final-gls',
+      'role-disruption',
+      'role-disruption',
+      'role-disruption'
+    ])
+    expect(first.trace.every(({ outcome }) => outcome === 'selected')).toBe(true)
+  })
+
+  it('reports unavailable and collapsed projection lanes without generic backfill', async () => {
+    const pieces = [preparedRectangle('a', 1, 1), preparedRectangle('b', 1, 1)]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 2, 0)
+    ])
+    if (state === undefined) throw new Error('state expected')
+    const roles = projectionTargetRoles()
+    const candidates = [
+      projectionLaneCandidate(roles[0], 0, state, 'raw', 1, 0.5, false),
+      projectionLaneCandidate(roles[0], 1, state, 'e1-disruption', 2, 1, true),
+      projectionLaneCandidate(roles[1], 0, state, 'collapsed', 3, 0.1, true)
+    ]
+    const selection = selectIntrinsicProjectionWorkItems(candidates, roles)
+
+    expect(selection.workItems).toHaveLength(3)
+    expect(selection.trace.map(({ outcome }) => outcome)).toEqual([
+      'selected',
+      'selected',
+      'selected',
+      'lane-collapsed',
+      'lane-unavailable'
+    ])
+    expect(selection.trace[3]).toMatchObject({
+      lane: 'role-disruption',
+      requestedTargetRoleId: 'expanded-e1-envelope',
+      collapsedIntoWorkIdentity: selection.workItems[1]?.workIdentity
+    })
   })
 
   it('keeps canonically novel structural handoffs even when structurally dominated', () => {
@@ -891,7 +989,9 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(result.status).toBe('completed')
     expect(result.fullE1Fallback).toHaveLength(2)
     expect(result.completedSweepCount).toBe(6)
-    expect(result.projectionAttemptCount).toBe(5)
+    expect(result.projectionAttemptCount).toBe(
+      result.projectionLaneTrace.filter(({ outcome }) => outcome === 'selected').length
+    )
     expect(result.trace.filter(({ forcedDisruption }) => forcedDisruption)).toHaveLength(6)
   })
 
@@ -919,12 +1019,32 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(first.searchedBasinCount).toBe(6)
     expect(first.unavailableQuarterTurnBasinCount).toBe(0)
     expect(first.completedSweepCount).toBe(6)
-    expect(first.projectionAttemptCount).toBe(5)
-    expect(first.projectionTrace).toHaveLength(5)
+    expect(first.projectionAttemptCount).toBe(
+      first.projectionLaneTrace.filter(({ outcome }) => outcome === 'selected').length
+    )
+    expect(first.projectionTrace).toHaveLength(first.projectionAttemptCount)
+    expect(first.projectionLaneTrace).toEqual(second.projectionLaneTrace)
     expect(
       first.projectionTrace
         .filter(({ outcome }) => outcome === 'exact-success')
         .every(({ handoffRetention }) => handoffRetention !== undefined)
+    ).toBe(true)
+    expect(
+      first.projectionTrace.every(
+        ({ lane, stateKey, rawLoss, weightedLoss }) =>
+          lane.length > 0 &&
+          stateKey.length > 0 &&
+          Number.isFinite(rawLoss) &&
+          Number.isFinite(weightedLoss)
+      )
+    ).toBe(true)
+    expect(
+      first.projectionTrace
+        .filter(({ outcome }) => outcome === 'exact-success')
+        .every(
+          ({ structuralCanonicalGeometryIdentity }) =>
+            structuralCanonicalGeometryIdentity !== undefined
+        )
     ).toBe(true)
     expect(first.separationEvaluationCount).toBeLessThanOrEqual(
       controllerSchedule.maximumSeparationEvaluations
@@ -1061,6 +1181,7 @@ function poolEntry(
   return {
     state,
     key,
+    disruptionLineage: disruptionProtectedUntilSweep !== undefined,
     disruptionProtectedUntilSweep,
     evaluation: {
       rawLoss,
@@ -1098,6 +1219,38 @@ function syntheticWallConflict(
     normalizedDepth,
     moveXGrid,
     moveYGrid
+  }
+}
+
+function projectionTargetRoles(): ReadonlyArray<IntrinsicGlobalTargetRole> {
+  return [
+    { id: 'e1-envelope', widthMm: 10, heightMm: 10, areaMm2: 100 },
+    { id: 'expanded-e1-envelope', widthMm: 11, heightMm: 11, areaMm2: 121 },
+    { id: 'four-three-cap', widthMm: 12, heightMm: 9, areaMm2: 108 }
+  ]
+}
+
+function projectionLaneCandidate(
+  targetRole: IntrinsicGlobalTargetRole | undefined,
+  basinIndex: 0 | 1,
+  state: IntrinsicInfeasiblePoolEntry['state'],
+  key: string,
+  rawLoss: number,
+  weightedLoss: number,
+  disruptionLineage: boolean
+): IntrinsicProjectionLaneCandidate {
+  if (targetRole === undefined) throw new Error('projection target role expected')
+  const entry = poolEntry(state, key, rawLoss, key, rawLoss, undefined)
+  return {
+    targetRole,
+    basinIndex,
+    targetBox: { widthMm: targetRole.widthMm, heightMm: targetRole.heightMm },
+    entry: {
+      ...entry,
+      evaluation: { ...entry.evaluation, weightedLoss },
+      disruptionLineage
+    },
+    weights: { byConflictKey: new Map() }
   }
 }
 

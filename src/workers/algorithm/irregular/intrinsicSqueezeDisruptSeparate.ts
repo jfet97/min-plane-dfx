@@ -46,6 +46,7 @@ import {
   updateIntrinsicSeparatorWeights,
   type IntrinsicRelaxedState,
   type IntrinsicSeparationEvaluation,
+  type IntrinsicSeparatorProposal,
   type IntrinsicSeparatorWeights
 } from './intrinsicTransformSeparator.js'
 
@@ -135,13 +136,51 @@ export interface IntrinsicStructuralHandoffRetentionTrace {
   readonly retainedCanonicalGeometryIdentities: ReadonlyArray<string>
 }
 
+export type IntrinsicProjectionLane =
+  | 'global-raw'
+  | 'global-final-gls'
+  | 'role-disruption'
+
+export interface IntrinsicProjectionWorkItem {
+  readonly lane: IntrinsicProjectionLane
+  readonly requestedTargetRoleId: IntrinsicGlobalTargetRole['id'] | undefined
+  readonly targetRole: IntrinsicGlobalTargetRole
+  readonly basinIndex: 0 | 1
+  readonly targetBox: IntrinsicTargetBox
+  readonly state: IntrinsicRelaxedState
+  readonly stateKey: string
+  readonly evaluation: IntrinsicSeparationEvaluation
+  readonly weights: IntrinsicSeparatorWeights
+  readonly disruptionLineage: boolean
+  readonly workIdentity: string
+}
+
+export interface IntrinsicProjectionLaneTrace {
+  readonly lane: IntrinsicProjectionLane
+  readonly requestedTargetRoleId: IntrinsicGlobalTargetRole['id'] | undefined
+  readonly outcome: 'selected' | 'lane-unavailable' | 'lane-collapsed'
+  readonly workIdentity: string | undefined
+  readonly collapsedIntoWorkIdentity: string | undefined
+  readonly targetRoleId: IntrinsicGlobalTargetRole['id'] | undefined
+  readonly basinIndex: 0 | 1 | undefined
+  readonly stateKey: string | undefined
+  readonly disruptionLineage: boolean | undefined
+  readonly rawLoss: number | undefined
+  readonly weightedLoss: number | undefined
+}
+
 export interface IntrinsicProjectionAttemptTrace {
+  readonly lane: IntrinsicProjectionLane
+  readonly requestedTargetRoleId: IntrinsicGlobalTargetRole['id'] | undefined
   readonly targetRoleId: IntrinsicGlobalTargetRole['id']
   readonly basinIndex: 0 | 1
+  readonly stateKey: string
+  readonly disruptionLineage: boolean
   readonly completedBasinCount: number
   readonly completedSweepCount: number
   readonly projectionAttempt: number
   readonly rawLoss: number
+  readonly weightedLoss: number
   readonly conflictCount: number
   readonly outcome:
     | 'exact-success'
@@ -152,6 +191,7 @@ export interface IntrinsicProjectionAttemptTrace {
     | 'structural-analysis-invalid'
   readonly failedPieceId: PieceId | undefined
   readonly dilationSteps: number | undefined
+  readonly structuralCanonicalGeometryIdentity: string | undefined
   readonly handoffRetention?: IntrinsicStructuralHandoffRetentionTrace
 }
 
@@ -164,6 +204,7 @@ export interface IntrinsicGlobalSearchResult {
   readonly unavailableQuarterTurnBasinCount: number
   readonly structuralHandoffs: ReadonlyArray<IntrinsicStructuralHandoff>
   readonly trace: ReadonlyArray<IntrinsicGlobalSweepTrace>
+  readonly projectionLaneTrace: ReadonlyArray<IntrinsicProjectionLaneTrace>
   readonly projectionTrace: ReadonlyArray<IntrinsicProjectionAttemptTrace>
   readonly completedSweepCount: number
   readonly separationEvaluationCount: number
@@ -197,7 +238,21 @@ export interface IntrinsicInfeasiblePoolEntry {
   readonly state: IntrinsicRelaxedState
   readonly evaluation: IntrinsicSeparationEvaluation
   readonly key: string
+  readonly disruptionLineage: boolean
   readonly disruptionProtectedUntilSweep: number | undefined
+}
+
+export interface IntrinsicProjectionLaneCandidate {
+  readonly targetRole: IntrinsicGlobalTargetRole
+  readonly basinIndex: 0 | 1
+  readonly targetBox: IntrinsicTargetBox
+  readonly entry: IntrinsicInfeasiblePoolEntry
+  readonly weights: IntrinsicSeparatorWeights
+}
+
+export interface IntrinsicProjectionWorkSelection {
+  readonly workItems: ReadonlyArray<IntrinsicProjectionWorkItem>
+  readonly trace: ReadonlyArray<IntrinsicProjectionLaneTrace>
 }
 
 interface ProjectionDependency {
@@ -285,7 +340,7 @@ export function deriveIntrinsicGlobalTargetRoles(
   return [exact, expanded, fourThree]
 }
 
-/** Fixed production E4 structural search. It never publishes transient overlap geometry. */
+/** Fixed production E5 structural search. It never publishes transient overlap geometry. */
 export function runIntrinsicSqueezeDisruptSeparate(input: {
   readonly allPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly fullE1Placed: ReadonlyArray<IrregularPlacedPiece>
@@ -390,7 +445,9 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
     let searchedBasinCount = 0
     let scheduleStatus: IntrinsicGlobalSearchResult['status'] = 'completed'
     const trace: IntrinsicGlobalSweepTrace[] = []
+    let projectionLaneTrace: ReadonlyArray<IntrinsicProjectionLaneTrace> = []
     const projectionTrace: IntrinsicProjectionAttemptTrace[] = []
+    const projectionCandidates: IntrinsicProjectionLaneCandidate[] = []
     const handoffs: IntrinsicStructuralHandoff[] = []
     let completedBasinCount = 0
     const searchControl = deadlineControl(
@@ -447,6 +504,7 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
           state: basinState,
           evaluation: initialEvaluation,
           key: intrinsicRelaxedStateKey(catalog, basinState) ?? '',
+          disruptionLineage: false,
           disruptionProtectedUntilSweep: undefined
         }
       ]
@@ -515,15 +573,15 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
             separationEvaluationCount += 1
             const key = intrinsicRelaxedStateKey(catalog, proposal.state)
             if (evaluation !== undefined && key !== undefined) {
-              const isDisruption =
-                proposal.kind === 'swap' ||
-                proposal.kind === 'group-transport' ||
-                proposal.kind === 'split-squeeze' ||
-                proposal.kind === 'interface-disrupt'
+              const isDisruption = isIntrinsicDisruptionProposalKind(proposal.kind)
               candidates.push({
                 state: proposal.state,
                 evaluation,
                 key,
+                disruptionLineage: inheritIntrinsicDisruptionLineage(
+                  entry.disruptionLineage,
+                  proposal.kind
+                ),
                 disruptionProtectedUntilSweep: isDisruption ? sweepIndex : undefined
               })
             }
@@ -572,35 +630,42 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
       if (scheduleStatus !== 'completed') break
 
       completedBasinCount += 1
-      if (
-        completedBasinCount >= 2 &&
-        projectionAttemptCount < schedule.maximumProjectionAttempts
-      ) {
+      projectionCandidates.push(
+        ...pool.map((entry) => ({ targetRole: role, basinIndex, targetBox, entry, weights }))
+      )
+    }
+
+    if (scheduleStatus === 'completed') {
+      const workSelection = selectIntrinsicProjectionWorkItems(
+        projectionCandidates,
+        targetRoles
+      )
+      projectionLaneTrace = workSelection.trace
+      for (const workItem of workSelection.workItems.slice(
+        0,
+        schedule.maximumProjectionAttempts
+      )) {
         if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
           scheduleStatus = 'deadline-fallback'
           break
         }
-        const best = pool[0]
-        if (best === undefined) {
-          return yield* globalFailure('search', 'the completed basin had no projection state.')
-        }
-        const provisional = provisionalLayoutFromRelaxedState(catalog, best.state)
+        const provisional = provisionalLayoutFromRelaxedState(catalog, workItem.state)
         const reinsertionPriorityPieceIds = intrinsicProjectionPriority(
           catalog,
-          best.state,
-          best.evaluation,
-          weights
+          workItem.state,
+          workItem.evaluation,
+          workItem.weights
         )
         if (provisional === undefined || reinsertionPriorityPieceIds === undefined) {
           return yield* globalFailure(
             'search',
-            'the lowest-loss basin state could not be converted for exact projection.'
+            'a selected projection lane state could not be converted for exact projection.'
           )
         }
         projectionAttemptCount += 1
         const attempted = yield* Effect.matchEffect(
           dependency.project({
-            targetBox,
+            targetBox: workItem.targetBox,
             catalog,
             referencePlaced: exactStructuralReference,
             provisionalPlaced: provisional,
@@ -612,20 +677,21 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
             onSuccess: (value) => Effect.succeed({ kind: 'success' as const, value })
           }
         )
+        const traceBase = projectionAttemptTraceBase(
+          workItem,
+          completedBasinCount,
+          completedSweepCount,
+          projectionAttemptCount
+        )
         if (attempted.kind === 'failure') {
           switch (attempted.error._tag) {
             case 'IntrinsicExactProjectionError': {
               projectionTrace.push({
-                targetRoleId: role.id,
-                basinIndex,
-                completedBasinCount,
-                completedSweepCount,
-                projectionAttempt: projectionAttemptCount,
-                rawLoss: best.evaluation.rawLoss,
-                conflictCount: best.evaluation.conflicts.length,
+                ...traceBase,
                 outcome: attempted.error.category,
                 failedPieceId: attempted.error.failedPieceId,
-                dilationSteps: attempted.error.attempts
+                dilationSteps: attempted.error.attempts,
+                structuralCanonicalGeometryIdentity: undefined
               })
               break
             }
@@ -634,16 +700,11 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
                 return yield* Effect.fail(attempted.error)
               }
               projectionTrace.push({
-                targetRoleId: role.id,
-                basinIndex,
-                completedBasinCount,
-                completedSweepCount,
-                projectionAttempt: projectionAttemptCount,
-                rawLoss: best.evaluation.rawLoss,
-                conflictCount: best.evaluation.conflicts.length,
+                ...traceBase,
                 outcome: 'deadline',
                 failedPieceId: undefined,
-                dilationSteps: undefined
+                dilationSteps: undefined,
+                structuralCanonicalGeometryIdentity: undefined
               })
               scheduleStatus = 'deadline-fallback'
               break
@@ -654,10 +715,10 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
         } else {
           projectionSuccessCount += 1
           const handoff = exactStructuralHandoff({
-            role,
-            basinIndex,
+            role: workItem.targetRole,
+            basinIndex: workItem.basinIndex,
             projectionAttempt: projectionAttemptCount,
-            targetBox,
+            targetBox: workItem.targetBox,
             projection: attempted.value,
             expectedStructuralPieceIds: catalog.entries.map(({ pieceId }) => pieceId)
           })
@@ -674,20 +735,17 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
                   schedule.structuralHandoffCapacity
                 )
           projectionTrace.push({
-            targetRoleId: role.id,
-            basinIndex,
-            completedBasinCount,
-            completedSweepCount,
-            projectionAttempt: projectionAttemptCount,
-            rawLoss: best.evaluation.rawLoss,
-            conflictCount: best.evaluation.conflicts.length,
-              outcome:
-                handoff === undefined ? 'structural-analysis-invalid' : 'exact-success',
+            ...traceBase,
+            outcome:
+              handoff === undefined ? 'structural-analysis-invalid' : 'exact-success',
             failedPieceId: undefined,
             dilationSteps: attempted.value.dilationSteps,
+            structuralCanonicalGeometryIdentity:
+              handoff?.metrics.canonicalGeometryIdentity,
             ...(handoffRetention === undefined ? {} : { handoffRetention })
           })
         }
+        if (scheduleStatus !== 'completed') break
       }
     }
 
@@ -711,6 +769,7 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
       unavailableQuarterTurnBasinCount,
       structuralHandoffs: handoffs,
       trace,
+      projectionLaneTrace,
       projectionTrace,
       completedSweepCount,
       separationEvaluationCount,
@@ -825,6 +884,198 @@ function exactStructuralHandoff(input: {
       totalStructuralContacts: beamState.nearCompleteStructuralContactCount,
       dominantStructuralContacts: beamState.dominantNearCompleteStructuralContactCount
     }
+  }
+}
+
+/** Preregistered E5 lane selection over completed basin pools, without generic backfill. */
+export function selectIntrinsicProjectionWorkItems(
+  candidates: ReadonlyArray<IntrinsicProjectionLaneCandidate>,
+  targetRoles: ReadonlyArray<IntrinsicGlobalTargetRole>
+): IntrinsicProjectionWorkSelection {
+  const distinctCandidates = new Map<string, IntrinsicProjectionLaneCandidate>()
+  for (const candidate of candidates) {
+    const identity = projectionWorkIdentity(candidate)
+    const existing = distinctCandidates.get(identity)
+    if (existing === undefined || compareProjectionCandidateRaw(candidate, existing) < 0) {
+      distinctCandidates.set(identity, candidate)
+    }
+  }
+  const available = [...distinctCandidates.values()]
+  const selected: IntrinsicProjectionWorkItem[] = []
+  const trace: IntrinsicProjectionLaneTrace[] = []
+  const selectedIdentities = new Set<string>()
+
+  const registerLane = (
+    lane: IntrinsicProjectionLane,
+    requestedTargetRoleId: IntrinsicGlobalTargetRole['id'] | undefined,
+    candidate: IntrinsicProjectionLaneCandidate | undefined
+  ): void => {
+    if (candidate === undefined) {
+      trace.push(unavailableProjectionLaneTrace(lane, requestedTargetRoleId))
+      return
+    }
+    const workItem = projectionWorkItem(lane, requestedTargetRoleId, candidate)
+    if (selectedIdentities.has(workItem.workIdentity)) {
+      trace.push({
+        ...projectionLaneTraceFromWork(workItem),
+        outcome: 'lane-collapsed',
+        collapsedIntoWorkIdentity: workItem.workIdentity
+      })
+      return
+    }
+    selectedIdentities.add(workItem.workIdentity)
+    selected.push(workItem)
+    trace.push({
+      ...projectionLaneTraceFromWork(workItem),
+      outcome: 'selected',
+      collapsedIntoWorkIdentity: undefined
+    })
+  }
+
+  const raw = available.toSorted(compareProjectionCandidateRaw)[0]
+  registerLane('global-raw', undefined, raw)
+  const finalWeighted = available.toSorted(compareProjectionCandidateWeighted)[0]
+  registerLane('global-final-gls', undefined, finalWeighted)
+  for (const role of targetRoles) {
+    const disruption = available
+      .filter(
+        ({ targetRole, entry }) =>
+          targetRole.id === role.id && entry.disruptionLineage
+      )
+      .toSorted(compareProjectionCandidateWeighted)[0]
+    registerLane('role-disruption', role.id, disruption)
+  }
+
+  return { workItems: selected.slice(0, 5), trace }
+}
+
+function projectionWorkIdentity(candidate: IntrinsicProjectionLaneCandidate): string {
+  return `${candidate.targetRole.id}:${candidate.basinIndex}:${candidate.entry.key}`
+}
+
+function compareProjectionCandidateRaw(
+  first: IntrinsicProjectionLaneCandidate,
+  second: IntrinsicProjectionLaneCandidate
+): number {
+  return (
+    comparePoolEntriesByRaw(first.entry, second.entry) ||
+    first.targetRole.id.localeCompare(second.targetRole.id) ||
+    first.basinIndex - second.basinIndex ||
+    first.entry.key.localeCompare(second.entry.key)
+  )
+}
+
+function compareProjectionCandidateWeighted(
+  first: IntrinsicProjectionLaneCandidate,
+  second: IntrinsicProjectionLaneCandidate
+): number {
+  return (
+    comparePoolEntriesByWeight(first.entry, second.entry) ||
+    first.targetRole.id.localeCompare(second.targetRole.id) ||
+    first.basinIndex - second.basinIndex ||
+    first.entry.key.localeCompare(second.entry.key)
+  )
+}
+
+function projectionWorkItem(
+  lane: IntrinsicProjectionLane,
+  requestedTargetRoleId: IntrinsicGlobalTargetRole['id'] | undefined,
+  candidate: IntrinsicProjectionLaneCandidate
+): IntrinsicProjectionWorkItem {
+  return {
+    lane,
+    requestedTargetRoleId,
+    targetRole: candidate.targetRole,
+    basinIndex: candidate.basinIndex,
+    targetBox: candidate.targetBox,
+    state: candidate.entry.state,
+    stateKey: candidate.entry.key,
+    evaluation: candidate.entry.evaluation,
+    weights: candidate.weights,
+    disruptionLineage: candidate.entry.disruptionLineage,
+    workIdentity: projectionWorkIdentity(candidate)
+  }
+}
+
+function projectionLaneTraceFromWork(
+  workItem: IntrinsicProjectionWorkItem
+): Omit<IntrinsicProjectionLaneTrace, 'outcome' | 'collapsedIntoWorkIdentity'> {
+  return {
+    lane: workItem.lane,
+    requestedTargetRoleId: workItem.requestedTargetRoleId,
+    workIdentity: workItem.workIdentity,
+    targetRoleId: workItem.targetRole.id,
+    basinIndex: workItem.basinIndex,
+    stateKey: workItem.stateKey,
+    disruptionLineage: workItem.disruptionLineage,
+    rawLoss: workItem.evaluation.rawLoss,
+    weightedLoss: workItem.evaluation.weightedLoss
+  }
+}
+
+function unavailableProjectionLaneTrace(
+  lane: IntrinsicProjectionLane,
+  requestedTargetRoleId: IntrinsicGlobalTargetRole['id'] | undefined
+): IntrinsicProjectionLaneTrace {
+  return {
+    lane,
+    requestedTargetRoleId,
+    outcome: 'lane-unavailable',
+    workIdentity: undefined,
+    collapsedIntoWorkIdentity: undefined,
+    targetRoleId: undefined,
+    basinIndex: undefined,
+    stateKey: undefined,
+    disruptionLineage: undefined,
+    rawLoss: undefined,
+    weightedLoss: undefined
+  }
+}
+
+export function inheritIntrinsicDisruptionLineage(
+  parentLineage: boolean,
+  proposalKind: IntrinsicSeparatorProposal['kind']
+): boolean {
+  return parentLineage || isIntrinsicDisruptionProposalKind(proposalKind)
+}
+
+function isIntrinsicDisruptionProposalKind(
+  proposalKind: IntrinsicSeparatorProposal['kind']
+): boolean {
+  return (
+    proposalKind === 'swap' ||
+    proposalKind === 'group-transport' ||
+    proposalKind === 'split-squeeze' ||
+    proposalKind === 'interface-disrupt'
+  )
+}
+
+function projectionAttemptTraceBase(
+  workItem: IntrinsicProjectionWorkItem,
+  completedBasinCount: number,
+  completedSweepCount: number,
+  projectionAttempt: number
+): Omit<
+  IntrinsicProjectionAttemptTrace,
+  | 'outcome'
+  | 'failedPieceId'
+  | 'dilationSteps'
+  | 'structuralCanonicalGeometryIdentity'
+  | 'handoffRetention'
+> {
+  return {
+    lane: workItem.lane,
+    requestedTargetRoleId: workItem.requestedTargetRoleId,
+    targetRoleId: workItem.targetRole.id,
+    basinIndex: workItem.basinIndex,
+    stateKey: workItem.stateKey,
+    disruptionLineage: workItem.disruptionLineage,
+    completedBasinCount,
+    completedSweepCount,
+    projectionAttempt,
+    rawLoss: workItem.evaluation.rawLoss,
+    weightedLoss: workItem.evaluation.weightedLoss,
+    conflictCount: workItem.evaluation.conflicts.length
   }
 }
 
@@ -958,12 +1209,18 @@ export function retainIntrinsicInfeasiblePool(
   const unique = new Map<string, IntrinsicInfeasiblePoolEntry>()
   for (const candidate of reweighted) {
     const existing = unique.get(candidate.key)
-    if (
-      existing === undefined ||
-      compareDuplicatePoolEntries(candidate, existing, sweepIndex) < 0
-    ) {
+    if (existing === undefined) {
       unique.set(candidate.key, candidate)
+      continue
     }
+    const preferred =
+      compareDuplicatePoolEntries(candidate, existing, sweepIndex) < 0
+        ? candidate
+        : existing
+    unique.set(candidate.key, {
+      ...preferred,
+      disruptionLineage: candidate.disruptionLineage || existing.disruptionLineage
+    })
   }
   const values = [...unique.values()]
   const rawRanked = values.toSorted(comparePoolEntriesByRaw)

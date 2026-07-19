@@ -140,6 +140,7 @@ function structuralResult(input: {
     unavailableQuarterTurnBasinCount: 0,
     structuralHandoffs: input.handoffs ?? [],
     trace: [],
+    projectionLaneTrace: [],
     projectionTrace: [],
     completedSweepCount: input.status === undefined ? 72 : 0,
     separationEvaluationCount: 10,
@@ -279,8 +280,8 @@ describe('intrinsic global squeeze portfolio', () => {
     })
 
     expect(result.structuralOutcome).toMatchObject({ structuralPieceCount: 2, fillerPieceCount: 1 })
-    expect(result.status).toBe('completed-candidate')
-    expect(result.selected.source).toBe('projected-gap-fill')
+    expect(result.status).toBe('completed-fallback')
+    expect(result.selected.source).toBe('e1-fallback')
     expect(result.promotion).toMatchObject({
       viableCandidateCount: 1,
       productionAreaCandidateCount: 1,
@@ -335,7 +336,7 @@ describe('intrinsic global squeeze portfolio', () => {
     expect(result.fillTrace[0]?.unplacedFillerCount).toBe(0)
   })
 
-  it('rejects complete area/topology failures and chooses admitted work over a bad E1', async () => {
+  it('rejects complete area failures and chooses admitted work over a bad E1', async () => {
     const pieces = [
       preparedRectangle('a', 2, 2),
       preparedRectangle('b', 2, 2),
@@ -384,10 +385,55 @@ describe('intrinsic global squeeze portfolio', () => {
     })
     expect(rejected.evaluatedCompleteCandidates[0]?.metrics).not.toHaveProperty('runtimeMs')
     expect(rejected.fillTrace[0]).toMatchObject({
+      evaluatedCandidateCanonicalGeometryIdentity:
+        rejected.evaluatedCompleteCandidates[0]?.canonicalGeometryIdentity,
       evaluatedCandidateCanonicalGeometryHash:
         rejected.evaluatedCompleteCandidates[0]?.canonicalGeometryHash,
       evaluatedCandidateMetrics: rejected.evaluatedCompleteCandidates[0]?.metrics
     })
+  })
+
+  it('keeps topology-poor complete challengers comparable under the area-only gate', async () => {
+    const pieces = [
+      preparedRectangle('bottom', 6, 1),
+      preparedRectangle('top', 6, 1),
+      preparedRectangle('left', 1, 4),
+      preparedRectangle('right', 1, 4)
+    ]
+    const fallback = [
+      placed(pieceAt(pieces, 0), 0, 0),
+      placed(pieceAt(pieces, 1), 6, 0),
+      placed(pieceAt(pieces, 2), 12, 0),
+      placed(pieceAt(pieces, 3), 13, 0)
+    ]
+    const ring = [
+      placed(pieceAt(pieces, 0), 0, 0),
+      placed(pieceAt(pieces, 1), 0, 5),
+      placed(pieceAt(pieces, 2), 0, 1),
+      placed(pieceAt(pieces, 3), 5, 1)
+    ]
+    const result = await runPortfolio({
+      pieces,
+      fallback,
+      structural: structuralResult({
+        pieces,
+        fallback,
+        handoffs: [structuralHandoff(1, ring)]
+      }),
+      fill: () => Effect.succeed(constructed([], ring)),
+      schedule: schedule({
+        maximumCavityCount: 0,
+        maximumLargestHullGapRatio: 0.01,
+        explorationAreaCapMm2: 1_000
+      })
+    })
+
+    expect(result.evaluatedCompleteCandidates[0]?.metrics.enclosedCavityCount).toBeGreaterThan(0)
+    expect(
+      result.evaluatedCompleteCandidates[0]?.metrics.largestOccupiedHullGapRatio
+    ).toBeGreaterThan(0.01)
+    expect(result.admittedCandidates).toHaveLength(1)
+    expect(result.fillTrace[0]?.outcome).toBe('completed-admitted')
   })
 
   it('owns and deterministically bounds evaluated complete diagnostics', async () => {
@@ -436,7 +482,7 @@ describe('intrinsic global squeeze portfolio', () => {
       retainIntrinsicGlobalFullCandidates([dominated, duplicate, tradeoff, first], 5).map(
         ({ measured }) => measured.canonicalGeometryIdentity
       )
-    ).toEqual(['tradeoff'])
+    ).toEqual(['tradeoff', 'first', 'dominated'])
   })
 
   it('ranks viable finalists by production target and then deterministic area minimization', () => {
@@ -461,7 +507,7 @@ describe('intrinsic global squeeze portfolio', () => {
         [missesTarget, reachesTarget, smallestTarget],
         5
       ).map(({ measured }) => measured.canonicalGeometryIdentity)
-    ).toEqual(['smallest-target'])
+    ).toEqual(['smallest-target', 'reaches-target', 'misses-target'])
   })
 
   it('keeps admitted topology ahead of a smaller production-target layout', () => {
@@ -481,6 +527,52 @@ describe('intrinsic global squeeze portfolio', () => {
         ({ measured }) => measured.canonicalGeometryIdentity
       )
     ).toEqual(['clean', 'smaller-ringier'])
+  })
+
+  it('ranks the incumbent with challengers by certificate before compactness', () => {
+    const incumbentBase = candidateForMetrics('incumbent', {
+      envelopeAreaMm2: 500,
+      envelopeMaximumSideMm: 25,
+      envelopeSpanMm: 45
+    })
+    const incumbent: IntrinsicGlobalFullCandidate = {
+      ...incumbentBase,
+      source: 'e1-fallback',
+      structuralProjectionAttempt: undefined
+    }
+    const smallerFailingChallenger = candidateForMetrics('challenger', {
+      envelopeAreaMm2: 100,
+      envelopeMaximumSideMm: 10,
+      envelopeSpanMm: 20,
+      isolatedPieceCount: 3
+    })
+
+    expect(
+      retainIntrinsicGlobalFullCandidates([smallerFailingChallenger, incumbent], 6).map(
+        ({ measured }) => measured.canonicalGeometryIdentity
+      )
+    ).toEqual(['incumbent', 'challenger'])
+  })
+
+  it('excludes raw contact totals from complete certificate ranking', () => {
+    const lowContact = candidateForMetrics('a-low-contact', {
+      totalStructuralContacts: 0,
+      dominantStructuralContacts: 0,
+      contactUnits: 0,
+      sharedBoundaryLengthMm: 0
+    })
+    const highContact = candidateForMetrics('z-high-contact', {
+      totalStructuralContacts: 1_000,
+      dominantStructuralContacts: 1_000,
+      contactUnits: 1_000,
+      sharedBoundaryLengthMm: 1_000
+    })
+
+    expect(
+      retainIntrinsicGlobalFullCandidates([highContact, lowContact], 6).map(
+        ({ measured }) => measured.canonicalGeometryIdentity
+      )
+    ).toEqual(['a-low-contact', 'z-high-contact'])
   })
 
   it('discards prior candidates on deadline and propagates cancellation', async () => {
