@@ -8,6 +8,7 @@ import { NestingOptions, NestingRequest, SheetSpec } from '../src/shared/domain/
 import { IrregularNestingSettings } from '../src/shared/irregular/domain.js'
 import { computeIrregularNesting } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
+import { measureRelaxationMetrics } from '../src/workers/algorithm/irregular/overlapRelaxation.js'
 import { relaxOverlappingLayoutV1 } from '../src/workers/algorithm/irregular/overlapRelaxationV1.js'
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
@@ -36,6 +37,7 @@ const sourceCommit = argument('--source-commit')
 const incumbentCommit = argument('--incumbent-commit') ?? 'f306a81'
 const transformGridCommit = argument('--transform-grid-commit')
 const maximumDiagnosticExactChecks = Number(argument('--diagnostic-exact-checks') ?? '0')
+const requestedSqueezeRatio = Number(argument('--squeeze-ratio') ?? '0.0005')
 const manifestOnly = process.argv.includes('--manifest-only')
 
 if (manifestOnly) {
@@ -65,7 +67,7 @@ if (manifestOnly) {
           width: report.requestedTargetWidth,
           height: report.requestedTargetHeight,
           longerAxisOnly: true,
-          squeezeRatio: 0.0005
+          squeezeRatio: report.requestedSqueezeRatio
         },
         effectiveTarget: { width: report.targetWidth, height: report.targetHeight },
         effectiveTargetPolicy: {
@@ -117,10 +119,20 @@ const result = await Effect.runPromise(
   )
 )
 const computeElapsedMs = performance.now() - computeStartedAt
+const incumbentMetrics = measureRelaxationMetrics(result.placedCollisionGeometries)
+if (incumbentMetrics === undefined) throw new Error('mixed-61 incumbent metrics are unavailable')
+if (
+  !Number.isFinite(requestedSqueezeRatio) ||
+  requestedSqueezeRatio <= 0 ||
+  requestedSqueezeRatio >= 1
+) {
+  throw new Error('--squeeze-ratio must be a finite number between zero and one')
+}
 const relaxationStartedAt = performance.now()
 const relaxation = await Effect.runPromise(
   relaxOverlappingLayoutV1(sheet, result.placedCollisionGeometries, {
     ...REGISTERED_BUDGET,
+    targetWidth: incumbentMetrics.width * (1 - requestedSqueezeRatio),
     maximumDiagnosticExactChecks
   })
 )
@@ -137,6 +149,7 @@ const report = {
   unplacedCount: result.unplacedPieceIds.length,
   computeElapsedMs,
   relaxationElapsedMs,
+  requestedSqueezeRatio,
   ...measurement,
   decision: relaxation.promotable ? 'promote' : 'reject'
 }
@@ -149,6 +162,7 @@ function isTargetReport(value: unknown): value is {
   readonly targetWidth: number
   readonly targetHeight: number
   readonly registeredBudget: unknown
+  readonly requestedSqueezeRatio: number
 } {
   if (typeof value !== 'object' || value === null) return false
   const candidate = value as Record<string, unknown>
@@ -157,6 +171,7 @@ function isTargetReport(value: unknown): value is {
     typeof candidate.requestedTargetHeight === 'number' &&
     typeof candidate.targetWidth === 'number' &&
     typeof candidate.targetHeight === 'number' &&
+    typeof candidate.requestedSqueezeRatio === 'number' &&
     typeof candidate.registeredBudget === 'object' &&
     candidate.registeredBudget !== null
   )
