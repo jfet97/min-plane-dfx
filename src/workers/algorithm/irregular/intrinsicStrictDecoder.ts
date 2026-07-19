@@ -51,9 +51,7 @@ export const INTRINSIC_STRICT_COHESION_FLOORS = {
   maximumLargestOccupiedHullGapRatio: 0.15
 } as const
 
-export class IntrinsicStrictDecoderError extends Data.TaggedError(
-  'IntrinsicStrictDecoderError'
-)<{
+export class IntrinsicStrictDecoderError extends Data.TaggedError('IntrinsicStrictDecoderError')<{
   readonly operation: string
   readonly message: string
 }> {}
@@ -72,6 +70,13 @@ export interface IntrinsicStrictLocalScore {
   readonly envelopeSpanMm: number
   readonly sharedBoundaryLengthMm: number
   readonly canonicalCombinedGeometryKey: string
+}
+
+export type IntrinsicStrictComparatorMode = 'pure-growth' | 'contact-band'
+
+export interface IntrinsicStrictFamilyWinner {
+  readonly score: IntrinsicStrictLocalScore
+  readonly movingCollisionAreaMm2: number
 }
 
 export interface IntrinsicStrictCompletedMetrics {
@@ -117,13 +122,17 @@ interface ScoredCandidate {
   readonly state: IrregularBeamState
   readonly score: IntrinsicStrictLocalScore
   readonly transformFamily: string
+  readonly movingCollisionAreaMm2: number
 }
 
 /** One strict, sheet-independent constructive decode followed by real-sheet legality. */
 export function decodeIntrinsicStrictPriorityOrder(
   finalSheet: SheetSpec,
   pieces: ReadonlyArray<IrregularPreparedPiece>,
-  options: { readonly maximumRuntimeMs?: number } = {}
+  options: {
+    readonly maximumRuntimeMs?: number
+    readonly comparatorMode?: IntrinsicStrictComparatorMode
+  } = {}
 ): Effect.Effect<
   IntrinsicStrictDecodeResult,
   | IntrinsicStrictDecoderError
@@ -138,6 +147,7 @@ export function decodeIntrinsicStrictPriorityOrder(
     const geometryKernel = yield* GeometryKernel
     const nfpIfpService = yield* NfpIfpService
     const maximumRuntimeMs = options.maximumRuntimeMs ?? 120_000
+    const comparatorMode = options.comparatorMode ?? 'pure-growth'
     const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
     const control = {
       checkpoint: () =>
@@ -166,6 +176,8 @@ export function decodeIntrinsicStrictPriorityOrder(
           geometry: piece.collisionGeometry,
           transform
         })
+        const movingCollisionAreaMm2 = canonicalCollisionAreaMm2(moving)
+        if (movingCollisionAreaMm2 === undefined) continue
         const legalCandidates =
           state.placedCollisionGeometries.length === 0
             ? originAnchorCandidates(moving)
@@ -188,7 +200,8 @@ export function decodeIntrinsicStrictPriorityOrder(
             moving,
             candidate,
             remainingPreparedPieces,
-            transformFamily: family
+            transformFamily: family,
+            movingCollisionAreaMm2
           })
           if (scored === undefined) continue
           const incumbent = candidatesByFamily.get(family)
@@ -198,12 +211,9 @@ export function decodeIntrinsicStrictPriorityOrder(
         }
       }
 
-      const selected = [...candidatesByFamily.values()].reduce<ScoredCandidate | undefined>(
-        (best, candidate) =>
-          best === undefined || compareLocalScores(candidate.score, best.score) < 0
-            ? candidate
-            : best,
-        undefined
+      const selected = selectIntrinsicStrictFamilyWinner(
+        [...candidatesByFamily.values()],
+        comparatorMode
       )
       const pieceId = piece.pieceId ?? piece.source.id
       stepTrace.push({
@@ -272,6 +282,7 @@ function scoreCandidate(input: {
   readonly candidate: IrregularPlacementCandidate
   readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly transformFamily: string
+  readonly movingCollisionAreaMm2: number
 }): ScoredCandidate | undefined {
   const placement = makePlacement(input.piece, input.candidate)
   const placed = new IrregularPlacedPiece({
@@ -293,18 +304,14 @@ function scoreCandidate(input: {
   const sharedBoundaryLengthMm = anchored.sharedCollisionBoundaryLengthMm
   if (
     sharedBoundaryLengthMm === undefined ||
-    ![
-      maximumSideMm,
-      envelopeAreaMm2,
-      envelopeSpanMm,
-      sharedBoundaryLengthMm
-    ].every(Number.isFinite)
+    ![maximumSideMm, envelopeAreaMm2, envelopeSpanMm, sharedBoundaryLengthMm].every(Number.isFinite)
   ) {
     return undefined
   }
   return {
     state: anchored,
     transformFamily: input.transformFamily,
+    movingCollisionAreaMm2: input.movingCollisionAreaMm2,
     score: {
       maximumSideMm,
       envelopeAreaMm2,
@@ -313,6 +320,42 @@ function scoreCandidate(input: {
       canonicalCombinedGeometryKey: anchored.canonicalOccupiedGeometryKey
     }
   }
+}
+
+/** Selects among pure-growth transform-family winners under the requested E1 mode. */
+export function selectIntrinsicStrictFamilyWinner<T extends IntrinsicStrictFamilyWinner>(
+  candidates: ReadonlyArray<T>,
+  comparatorMode: IntrinsicStrictComparatorMode
+): T | undefined {
+  const pureLeader = candidates.reduce<T | undefined>(
+    (best, candidate) =>
+      best === undefined || compareLocalScores(candidate.score, best.score) < 0 ? candidate : best,
+    undefined
+  )
+  if (pureLeader === undefined || comparatorMode === 'pure-growth') return pureLeader
+
+  return candidates
+    .filter(
+      (candidate) =>
+        candidate.score.maximumSideMm === pureLeader.score.maximumSideMm &&
+        candidate.score.envelopeAreaMm2 <=
+          pureLeader.score.envelopeAreaMm2 + 0.02 * candidate.movingCollisionAreaMm2
+    )
+    .toSorted(compareContactBandCandidates)[0]
+}
+
+function compareContactBandCandidates(
+  first: IntrinsicStrictFamilyWinner,
+  second: IntrinsicStrictFamilyWinner
+): number {
+  return (
+    second.score.sharedBoundaryLengthMm - first.score.sharedBoundaryLengthMm ||
+    first.score.envelopeAreaMm2 - second.score.envelopeAreaMm2 ||
+    first.score.envelopeSpanMm - second.score.envelopeSpanMm ||
+    first.score.canonicalCombinedGeometryKey.localeCompare(
+      second.score.canonicalCombinedGeometryKey
+    )
+  )
 }
 
 function compareLocalScores(
@@ -326,6 +369,30 @@ function compareLocalScores(
     second.sharedBoundaryLengthMm - first.sharedBoundaryLengthMm ||
     first.canonicalCombinedGeometryKey.localeCompare(second.canonicalCombinedGeometryKey)
   )
+}
+
+function canonicalCollisionAreaMm2(moving: TransformedCollisionGeometry): number | undefined {
+  let doubledAreaGrid2 = 0
+  for (let index = 0; index < moving.polygon.points.length; index += 1) {
+    const first = moving.polygon.points[index]
+    const second = moving.polygon.points[(index + 1) % moving.polygon.points.length]
+    if (first === undefined || second === undefined) return undefined
+    const firstX = toGridMm(first.x)
+    const firstY = toGridMm(first.y)
+    const secondX = toGridMm(second.x)
+    const secondY = toGridMm(second.y)
+    if (
+      firstX === undefined ||
+      firstY === undefined ||
+      secondX === undefined ||
+      secondY === undefined
+    ) {
+      return undefined
+    }
+    doubledAreaGrid2 += firstX * secondY - secondX * firstY
+  }
+  const areaMm2 = Math.abs(doubledAreaGrid2) / 2_000_000
+  return Number.isFinite(areaMm2) && areaMm2 > 0 ? areaMm2 : undefined
 }
 
 function originAnchorCandidates(
@@ -386,7 +453,10 @@ function selectTerminalOrientation(
   }> = []
   for (const rotationDeg of [0, 90] as const) {
     const oriented = state.withQuarterTurnBottomLeft(rotationDeg)
-    if (oriented === undefined || !assertCanonicalGridLegalLayout(sheet, oriented.placedCollisionGeometries)) {
+    if (
+      oriented === undefined ||
+      !assertCanonicalGridLegalLayout(sheet, oriented.placedCollisionGeometries)
+    ) {
       continue
     }
     const canonicalIdentity = canonicalCollisionLayoutIdentity(oriented.placedCollisionGeometries)

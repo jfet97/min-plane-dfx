@@ -16,6 +16,8 @@ import {
 import {
   decodeIntrinsicStrictPriorityOrder,
   rankIntrinsicStrictCompletedLayouts,
+  selectIntrinsicStrictFamilyWinner,
+  type IntrinsicStrictComparatorMode,
   type IntrinsicStrictCompletedMetrics
 } from '../../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
 import { assertCanonicalGridLegalLayout } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
@@ -87,9 +89,14 @@ function sheet(width: number, height: number): SheetSpec {
   return new SheetSpec({ width, height, label: `${width}x${height}` })
 }
 
-function decode(finalSheet: SheetSpec, pieces: ReadonlyArray<IrregularPreparedPiece>) {
+function decode(
+  finalSheet: SheetSpec,
+  pieces: ReadonlyArray<IrregularPreparedPiece>,
+  comparatorMode?: IntrinsicStrictComparatorMode
+) {
+  const options = comparatorMode === undefined ? {} : { comparatorMode }
   return Effect.runPromise(
-    decodeIntrinsicStrictPriorityOrder(finalSheet, pieces).pipe(
+    decodeIntrinsicStrictPriorityOrder(finalSheet, pieces, options).pipe(
       Effect.provide(GeometryKernel.Live),
       Effect.provide(GeometrySettings.Live),
       Effect.provide(NfpIfpServiceLive)
@@ -100,10 +107,12 @@ function decode(finalSheet: SheetSpec, pieces: ReadonlyArray<IrregularPreparedPi
 function decodeWithCandidateService(
   finalSheet: SheetSpec,
   pieces: ReadonlyArray<IrregularPreparedPiece>,
-  nfpLayer: Layer.Layer<NfpIfpService>
+  nfpLayer: Layer.Layer<NfpIfpService>,
+  comparatorMode?: IntrinsicStrictComparatorMode
 ) {
+  const options = comparatorMode === undefined ? {} : { comparatorMode }
   return Effect.runPromise(
-    decodeIntrinsicStrictPriorityOrder(finalSheet, pieces).pipe(
+    decodeIntrinsicStrictPriorityOrder(finalSheet, pieces, options).pipe(
       Effect.provide(GeometryKernel.Live),
       Effect.provide(GeometrySettings.Live),
       Effect.provide(nfpLayer)
@@ -112,26 +121,29 @@ function decodeWithCandidateService(
 }
 
 describe('decodeIntrinsicStrictPriorityOrder', () => {
-  it('keeps one canonical layout across differently sized legal sheets', async () => {
-    const pieces = [
-      preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
-      preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0), transform(1, 90)]),
-      preparedPiece('third', rectanglePoints(1, 2), [transform(0, 0), transform(1, 90)])
-    ]
+  it.each(['pure-growth', 'contact-band'] as const)(
+    'keeps %s sheet-blind across differently sized legal sheets',
+    async (comparatorMode) => {
+      const pieces = [
+        preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
+        preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0), transform(1, 90)]),
+        preparedPiece('third', rectanglePoints(1, 2), [transform(0, 0), transform(1, 90)])
+      ]
 
-    const landscape = await decode(sheet(20, 10), pieces)
-    const portrait = await decode(sheet(10, 20), pieces)
+      const landscape = await decode(sheet(20, 10), pieces, comparatorMode)
+      const portrait = await decode(sheet(10, 20), pieces, comparatorMode)
 
-    expect(landscape.status).toBe('completed')
-    expect(portrait.status).toBe('completed')
-    expect(landscape.canonicalGeometryHash).toBe(portrait.canonicalGeometryHash)
-    expect(landscape.placements).toEqual(portrait.placements)
-    expect(landscape.unplacedPieceIds).toEqual([])
-    expect(landscape.certificate?.passes).toBe(true)
-    expect(assertCanonicalGridLegalLayout(sheet(20, 10), landscape.placedCollisionGeometries)).toBe(
-      true
-    )
-  })
+      expect(landscape.status).toBe('completed')
+      expect(portrait.status).toBe('completed')
+      expect(landscape.canonicalGeometryHash).toBe(portrait.canonicalGeometryHash)
+      expect(landscape.placements).toEqual(portrait.placements)
+      expect(landscape.unplacedPieceIds).toEqual([])
+      expect(landscape.certificate?.passes).toBe(true)
+      expect(
+        assertCanonicalGridLegalLayout(sheet(20, 10), landscape.placedCollisionGeometries)
+      ).toBe(true)
+    }
+  )
 
   it('anchors the first transformed collision polygon at the normalized origin', async () => {
     const centered = [point(-2, -1), point(2, -1), point(2, 1), point(-2, 1)]
@@ -169,7 +181,8 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
         preparedPiece('anchor', rectanglePoints(2, 2), [transform(0, 0)]),
         preparedPiece('family', rectanglePoints(4, 1), [transform(0, 0), transform(1, 90)])
       ],
-      candidateService
+      candidateService,
+      'contact-band'
     )
 
     expect(result.status).toBe('completed')
@@ -179,10 +192,64 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       selectedTransformFamily: '90:0'
     })
     expect(result.placements[1]?.transform.rotationDeg).toBe(90)
-    expect(candidateDomains).toEqual([
-      'sheetless-nfp',
-      'sheetless-nfp'
-    ])
+    expect(candidateDomains).toEqual(['sheetless-nfp', 'sheetless-nfp'])
+  })
+
+  it('admits the exact two-percent area boundary and rejects the next value', () => {
+    const pureLeader = familyWinner('pure', {
+      maximumSideMm: 100,
+      envelopeAreaMm2: 10_000,
+      envelopeSpanMm: 200,
+      sharedBoundaryLengthMm: 1
+    })
+    const atBoundary = familyWinner('boundary', {
+      maximumSideMm: 100,
+      envelopeAreaMm2: 10_020,
+      envelopeSpanMm: 201,
+      sharedBoundaryLengthMm: 10
+    })
+    const outsideBoundary = familyWinner('outside', {
+      maximumSideMm: 100,
+      envelopeAreaMm2: 10_020.001,
+      envelopeSpanMm: 201,
+      sharedBoundaryLengthMm: 100
+    })
+
+    expect(selectIntrinsicStrictFamilyWinner([pureLeader, atBoundary], 'contact-band')?.id).toBe(
+      'boundary'
+    )
+    expect(
+      selectIntrinsicStrictFamilyWinner([pureLeader, atBoundary, outsideBoundary], 'contact-band')
+        ?.id
+    ).toBe('boundary')
+    expect(selectIntrinsicStrictFamilyWinner([pureLeader, atBoundary], 'pure-growth')?.id).toBe(
+      'pure'
+    )
+  })
+
+  it('does not let a contact-rich chain buy maximum-side or area growth', () => {
+    const pureLeader = familyWinner('pure', {
+      maximumSideMm: 100,
+      envelopeAreaMm2: 10_000,
+      envelopeSpanMm: 200,
+      sharedBoundaryLengthMm: 1
+    })
+    const longerChain = familyWinner('longer', {
+      maximumSideMm: 100.001,
+      envelopeAreaMm2: 9_000,
+      envelopeSpanMm: 190,
+      sharedBoundaryLengthMm: 1_000
+    })
+    const widerChain = familyWinner('wider', {
+      maximumSideMm: 100,
+      envelopeAreaMm2: 10_021,
+      envelopeSpanMm: 201,
+      sharedBoundaryLengthMm: 1_000
+    })
+
+    expect(
+      selectIntrinsicStrictFamilyWinner([pureLeader, longerChain, widerChain], 'contact-band')?.id
+    ).toBe('pure')
   })
 
   it('orders floor passers before chain and fragment failures without buying topology by area', () => {
@@ -230,3 +297,20 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     ).toEqual(['cohesive', 'chain', 'fragment'])
   })
 })
+
+function familyWinner(
+  id: string,
+  score: Omit<
+    Parameters<typeof selectIntrinsicStrictFamilyWinner>[0][number]['score'],
+    'canonicalCombinedGeometryKey'
+  >
+) {
+  return {
+    id,
+    movingCollisionAreaMm2: 1_000,
+    score: {
+      ...score,
+      canonicalCombinedGeometryKey: id
+    }
+  }
+}

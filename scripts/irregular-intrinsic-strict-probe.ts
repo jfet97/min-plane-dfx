@@ -10,7 +10,10 @@ import {
   IrregularPriorityOrderKey,
   type IrregularNestingSettings
 } from '../src/shared/irregular/domain.js'
-import { decodeIntrinsicStrictPriorityOrder } from '../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
+import {
+  decodeIntrinsicStrictPriorityOrder,
+  type IntrinsicStrictComparatorMode
+} from '../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
@@ -30,8 +33,14 @@ const FOUR_SHEETS = [
   new SheetSpec({ width: 2000, height: 1700, label: '2000x1700' }),
   new SheetSpec({ width: 2000, height: 2700, label: '2000x2700' })
 ] as const
-const TARGET_AREA_MM2 = 430_344.918
-const KILL_AREA_MM2 = 451_862.164
+const E1_AREA_MM2 = 418_956.351872
+const E1_MAXIMUM_SIDE_MM = 649.972
+const E1_HULL_GAP_RATIO = 0.22414927709210425
+const E1_TOTAL_STRUCTURAL_CONTACTS = 21
+const E1_DOMINANT_STRUCTURAL_CONTACTS = 4
+const E1_CERTIFICATE_DEFICIT = 2.2074432680457226
+const E1B_KILL_AREA_MM2 = 439_904.169466
+const E1B_KILL_MAXIMUM_SIDE_MM = E1_MAXIMUM_SIDE_MM * 1.05
 const MAXIMUM_RUNTIME_MS = 120_000
 
 function argument(name: string): string | undefined {
@@ -43,12 +52,15 @@ const outputDirectory =
   argument('--output') ?? '/private/tmp/min-plane-provenance/intrinsic-strict-decoder/e1-four-sheet'
 const sourceCommit = argument('--source-commit') ?? 'unknown'
 const strict = process.argv.includes('--strict')
+const comparatorMode = parseComparatorMode(argument('--comparator-mode') ?? 'pure-growth')
 await mkdir(outputDirectory, { recursive: true })
 const fixtureBytes = await readFile(FIXTURE)
 const request = Schema.decodeUnknownSync(NestingRequest)(JSON.parse(fixtureBytes.toString('utf8')))
 const settings = request.options.irregularSettings
 if (settings === undefined) throw new Error('mixed-61 fixture has no irregular settings')
-const preparedPieces = await Effect.runPromise(withLayers(preparePieces(request, settings), settings))
+const preparedPieces = await Effect.runPromise(
+  withLayers(preparePieces(request, settings), settings)
+)
 
 const runs = []
 for (const sheet of FOUR_SHEETS) {
@@ -57,7 +69,8 @@ for (const sheet of FOUR_SHEETS) {
     const result = await Effect.runPromise(
       withLayers(
         decodeIntrinsicStrictPriorityOrder(sheet, preparedPieces, {
-          maximumRuntimeMs: MAXIMUM_RUNTIME_MS
+          maximumRuntimeMs: MAXIMUM_RUNTIME_MS,
+          comparatorMode
         }),
         settings
       )
@@ -107,68 +120,108 @@ for (const sheet of FOUR_SHEETS) {
 
 const completedRuns = runs.filter((run) => run.status === 'completed')
 const canonicalHashes = new Set(completedRuns.map((run) => run.canonicalGeometryHash))
-const k1 = {
+const invarianceGate = {
   passes: completedRuns.length === FOUR_SHEETS.length && canonicalHashes.size === 1,
   completedSheetCount: completedRuns.length,
   canonicalHashes: [...canonicalHashes]
 }
-const k2 = {
-  passes:
-    completedRuns.length === FOUR_SHEETS.length &&
-    completedRuns.every((run) => run.certificate?.passes === true),
-  stopBeforeE2:
-    completedRuns.length === 0 ||
-    completedRuns.every(
-      (run) =>
-        run.metrics !== undefined &&
-        (run.metrics.isolatedPieceCount > 4 ||
-          run.metrics.largestPositiveContactComponentRatio < 0.7)
-    )
-}
-const k3 = {
+const envelopeGate = {
   passes:
     completedRuns.length === FOUR_SHEETS.length &&
     completedRuns.every(
       (run) =>
         run.metrics !== undefined &&
-        run.metrics.envelopeAreaMm2 <= TARGET_AREA_MM2 &&
-        run.metrics.enclosedCavityCount <= 2 &&
-        run.metrics.totalStructuralContacts >= 53 &&
-        run.metrics.dominantStructuralContacts >= 14
+        run.metrics.envelopeAreaMm2 <= E1B_KILL_AREA_MM2 &&
+        run.metrics.envelopeMaximumSideMm <= E1B_KILL_MAXIMUM_SIDE_MM
     ),
-  pureGrowthKilled:
-    completedRuns.length === 0 ||
-    completedRuns.some(
-      (run) => run.metrics === undefined || run.metrics.envelopeAreaMm2 > KILL_AREA_MM2
-    )
+  maximumAreaMm2: E1B_KILL_AREA_MM2,
+  maximumSideMm: E1B_KILL_MAXIMUM_SIDE_MM
 }
-const survivesK1ToK3 = k1.passes && k2.passes && k3.passes
+const cohesionGate = {
+  passes:
+    completedRuns.length === FOUR_SHEETS.length &&
+    completedRuns.every(
+      (run) =>
+        run.metrics !== undefined &&
+        run.certificate !== undefined &&
+        run.metrics.largestOccupiedHullGapRatio < E1_HULL_GAP_RATIO &&
+        run.certificate.relativeDeficitSum < E1_CERTIFICATE_DEFICIT
+    ),
+  maximumHullGapRatioExclusive: E1_HULL_GAP_RATIO,
+  maximumCertificateDeficitExclusive: E1_CERTIFICATE_DEFICIT
+}
+const contactGate = {
+  passes:
+    completedRuns.length === FOUR_SHEETS.length &&
+    completedRuns.every(
+      (run) =>
+        run.metrics !== undefined &&
+        run.metrics.totalStructuralContacts > E1_TOTAL_STRUCTURAL_CONTACTS &&
+        run.metrics.dominantStructuralContacts > E1_DOMINANT_STRUCTURAL_CONTACTS
+    ),
+  minimumTotalStructuralContactsExclusive: E1_TOTAL_STRUCTURAL_CONTACTS,
+  minimumDominantStructuralContactsExclusive: E1_DOMINANT_STRUCTURAL_CONTACTS
+}
+const survivesMixed61KillGates =
+  invarianceGate.passes && envelopeGate.passes && cohesionGate.passes && contactGate.passes
 const reportPath = `${outputDirectory}/report.json`
 const report = {
-  experiment: 'intrinsic-strict-decoder-e1',
+  experiment:
+    comparatorMode === 'contact-band'
+      ? 'intrinsic-strict-contact-band-e1b'
+      : 'intrinsic-strict-decoder-e1',
   sourceCommit,
   fixture: FIXTURE,
   fixtureSha256: sha256(fixtureBytes),
   runtime: { node: process.version, v8: process.versions.v8 },
   maximumRuntimeMsPerSheet: MAXIMUM_RUNTIME_MS,
   contract: {
+    comparatorMode,
     order: 'one user-owned prepared-piece order',
     candidateDomain: 'sheetless NFP vertices, supports, and intersections',
-    localTuple: [
-      'maximum side',
-      'bounding-box area',
-      'width plus height',
-      'exact shared boundary descending',
-      'canonical combined geometry key'
-    ],
+    localTuple:
+      comparatorMode === 'contact-band'
+        ? [
+            'pure E1 transform-family winners',
+            'exact maximum-side equality with pure leader',
+            'envelope area no more than pure leader plus 2% moving collision area',
+            'exact shared boundary descending',
+            'envelope area',
+            'width plus height',
+            'canonical combined geometry key'
+          ]
+        : [
+            'maximum side',
+            'bounding-box area',
+            'width plus height',
+            'exact shared boundary descending',
+            'canonical combined geometry key'
+          ],
     realSheetUse: 'final q0/q90 exact legality only'
   },
-  gates: { k1, k2, k3, survivesK1ToK3 },
-  decision: survivesK1ToK3 ? 'survives_to_e2' : 'stop_before_e2',
+  baseline: {
+    envelopeAreaMm2: E1_AREA_MM2,
+    envelopeMaximumSideMm: E1_MAXIMUM_SIDE_MM,
+    largestOccupiedHullGapRatio: E1_HULL_GAP_RATIO,
+    totalStructuralContacts: E1_TOTAL_STRUCTURAL_CONTACTS,
+    dominantStructuralContacts: E1_DOMINANT_STRUCTURAL_CONTACTS,
+    certificateRelativeDeficitSum: E1_CERTIFICATE_DEFICIT
+  },
+  gates: {
+    invariance: invarianceGate,
+    envelope: envelopeGate,
+    cohesion: cohesionGate,
+    contact: contactGate,
+    survivesMixed61KillGates
+  },
+  decision: survivesMixed61KillGates ? 'run_triangle_diagnostic' : 'stop_before_triangle',
   runs
 }
 await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
-const artifactFiles = [reportPath, ...runs.flatMap((run) => ('svgPath' in run ? [run.svgPath] : []))]
+const artifactFiles = [
+  reportPath,
+  ...runs.flatMap((run) => ('svgPath' in run ? [run.svgPath] : []))
+]
 const manifestPath = `${outputDirectory}/manifest.json`
 await writeFile(
   manifestPath,
@@ -185,8 +238,15 @@ await writeFile(
     2
   )}\n`
 )
-console.log(JSON.stringify({ reportPath, manifestPath, gates: report.gates, decision: report.decision }))
-if (strict && !survivesK1ToK3) process.exitCode = 2
+console.log(
+  JSON.stringify({ reportPath, manifestPath, gates: report.gates, decision: report.decision })
+)
+if (strict && !survivesMixed61KillGates) process.exitCode = 2
+
+function parseComparatorMode(value: string): IntrinsicStrictComparatorMode {
+  if (value === 'pure-growth' || value === 'contact-band') return value
+  throw new Error(`unknown intrinsic strict comparator mode: ${value}`)
+}
 
 function withLayers<A, E, R>(effect: Effect.Effect<A, E, R>, settings: IrregularNestingSettings) {
   return effect.pipe(
@@ -252,9 +312,7 @@ function findSourcePiece(
   sourcePieces: ReadonlyArray<ImportedPiece>
 ): ImportedPiece | undefined {
   return (
-    sourcePieces.find(
-      (source) => source.id === sourcePieceId || source.id === preparedPieceId
-    ) ??
+    sourcePieces.find((source) => source.id === sourcePieceId || source.id === preparedPieceId) ??
     sourcePieces.find((source) => {
       const base = sourcePieceId.replace(/-copy-\d+$/, '')
       const preparedBase = preparedPieceId.replace(/-copy-\d+$/, '')
@@ -288,10 +346,7 @@ function renderSvg(
   const maxY = Math.max(...points.map(({ y }) => y))
   const margin = 20
   const paths = polygons
-    .map(
-      (polygon) =>
-        `<polygon points="${polygon.map(({ x, y }) => `${x},${-y}`).join(' ')}"/>`
-    )
+    .map((polygon) => `<polygon points="${polygon.map(({ x, y }) => `${x},${-y}`).join(' ')}"/>`)
     .join('')
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX - margin} ${-maxY - margin} ${maxX - minX + margin * 2} ${maxY - minY + margin * 2}" width="1200" height="1200"><rect x="${minX - margin}" y="${-maxY - margin}" width="${maxX - minX + margin * 2}" height="${maxY - minY + margin * 2}" fill="#1b2328"/><g fill="#22313b" stroke="#39a9ff" stroke-width="1">${paths}</g></svg>`
 }
