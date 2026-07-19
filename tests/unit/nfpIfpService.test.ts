@@ -1,6 +1,7 @@
 import { Effect, Layer } from 'effect'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import {
+  CollisionGeometry,
   IrregularBounds,
   IrregularPlacedPiece,
   IrregularPlacement,
@@ -49,6 +50,7 @@ import {
   NfpIfpService
 } from '../../src/workers/irregular/services.js'
 import { PlacementValidation } from '../../src/workers/irregular/placementValidation.js'
+import { TransformCollisionGeometry } from '../../src/workers/irregular/transformCollisionGeometry.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -81,6 +83,22 @@ function transformedGeometry(
     transform: transformCandidate,
     polygon: polygon(points),
     bounds: geometryBounds
+  })
+}
+
+function collisionGeometry(
+  pieceId: string,
+  points: ReadonlyArray<IrregularPoint>
+): CollisionGeometry {
+  const geometryBounds = bounds(points)
+  return new CollisionGeometry({
+    sourcePieceId: PieceId.make(pieceId),
+    sourceBounds: geometryBounds,
+    sampledPoints: points,
+    convexHull: polygon(points),
+    collisionPolygon: polygon(points),
+    placementReference: point(0, 0),
+    diagnostics: []
   })
 }
 
@@ -382,6 +400,71 @@ describe('NfpIfpServiceLive', () => {
     const nfp = await computeNfp({ fixed, moving, settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS })
 
     expect(nfp.boundary.points).toEqual([point(8, 18), point(14, 18), point(14, 24), point(8, 24)])
+  })
+
+  it('keeps the disputed arbitrary-angle NFP tangent legal in direct validation', async () => {
+    const moving = Effect.runSync(
+      TransformCollisionGeometry.compute({
+        geometry: collisionGeometry('disputed-trapezoid', [
+          point(20, 0),
+          point(80, 0),
+          point(100, 60),
+          point(0, 60)
+        ]),
+        transform: transform(5, 71.56456358247075, false)
+      })
+    )
+    const fixedGeometry = Effect.runSync(
+      TransformCollisionGeometry.compute({
+        geometry: collisionGeometry('disputed-hexagon', [
+          point(35, 0),
+          point(70, 25),
+          point(70, 75),
+          point(35, 100),
+          point(0, 75),
+          point(0, 25)
+        ]),
+        transform: transform(4, 35.53727384446901, true)
+      })
+    )
+    const fixed = new IrregularPlacedPiece({
+      placement: new IrregularPlacement({
+        sourcePieceId: fixedGeometry.sourcePieceId,
+        transform: new IrregularTransform({
+          translateX: 406.0464207658377,
+          translateY: 242.57802340266528,
+          rotationDeg: fixedGeometry.transform.rotationDeg,
+          mirrored: fixedGeometry.transform.mirrored
+        })
+      }),
+      collisionGeometry: fixedGeometry
+    })
+    const nfp = await computeNfp({
+      fixed,
+      moving,
+      settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+    })
+    const tangentPoint = nfp.boundary.points[4]
+    if (tangentPoint === undefined) {
+      throw new Error('expected the disputed NFP support vertex')
+    }
+    const tangentCandidate = new IrregularPlacementCandidate({
+      pieceId: moving.sourcePieceId,
+      transform: moving.transform,
+      point: tangentPoint,
+      diagnostics: []
+    })
+
+    await expect(
+      Effect.runPromise(
+        PlacementValidation.check({
+          sheet: sheet(2000, 2700),
+          placed: [fixed],
+          moving,
+          candidate: tangentCandidate
+        })
+      )
+    ).resolves.toBe(true)
   })
 
   it('rejects a translated NFP whose strict boundary collapses numerically', async () => {

@@ -387,14 +387,62 @@ describe('GeometryKernel', () => {
     })
 
     expect(transformed.polygon.points[0]).toEqual(point(0, 0))
-    expect(transformed.polygon.points[1]?.x).toBeCloseTo(Math.SQRT2, 12)
-    expect(transformed.polygon.points[1]?.y).toBeCloseTo(Math.SQRT2, 12)
-    expect(transformed.polygon.points[2]?.x).toBeCloseTo(-Math.SQRT2, 12)
-    expect(transformed.polygon.points[2]?.y).toBeCloseTo(Math.SQRT2, 12)
-    expect(transformed.bounds.minX).toBeCloseTo(-Math.SQRT2, 12)
+    expect(transformed.polygon.points[1]).toEqual(point(1.414, 1.414))
+    expect(transformed.polygon.points[2]).toEqual(point(-1.414, 1.414))
+    expect(transformed.bounds.minX).toBe(-1.414)
     expect(transformed.bounds.minY).toBe(0)
-    expect(transformed.bounds.maxX).toBeCloseTo(Math.SQRT2, 12)
-    expect(transformed.bounds.maxY).toBeCloseTo(Math.SQRT2, 12)
+    expect(transformed.bounds.maxX).toBe(1.414)
+    expect(transformed.bounds.maxY).toBe(1.414)
+  })
+
+  it('canonicalizes adjacent-ULP arbitrary-angle inputs to identical polygons and bounds', async () => {
+    const sourcePoints = [point(0, 0), point(100, 0), point(100, 60), point(0, 60)]
+    const perturbedPoints = [
+      point(0, 0),
+      point(100 + Number.EPSILON * 64, 0),
+      point(100 + Number.EPSILON * 64, 60),
+      point(0, 60)
+    ]
+    const transform = transformCandidate({ rotationDeg: 71.56456358247075 })
+
+    const [first, perturbed] = await Promise.all([
+      runCollisionTransform({ geometry: collisionGeometry(sourcePoints), transform }),
+      runCollisionTransform({ geometry: collisionGeometry(perturbedPoints), transform })
+    ])
+
+    expect(perturbed.polygon).toEqual(first.polygon)
+    expect(perturbed.bounds).toEqual(first.bounds)
+    expect(first.polygon.points.every(({ x, y }) => !Object.is(x, -0) && !Object.is(y, -0))).toBe(
+      true
+    )
+  })
+
+  it('rejects strict source geometry that becomes degenerate on the collision grid', async () => {
+    const repeatedVertexFailure = await runCollisionTransform({
+      geometry: collisionGeometry([point(0, 0), point(0.0004, 0), point(0, 1)]),
+      transform: transformCandidate({ rotationDeg: 0 })
+    }).catch((error: unknown) => error)
+    const collinearVertexFailure = await runCollisionTransform({
+      geometry: collisionGeometry([
+        point(0, 0),
+        point(1, -0.0004),
+        point(2, 0),
+        point(2, 2),
+        point(0, 2)
+      ]),
+      transform: transformCandidate({ rotationDeg: 0 })
+    }).catch((error: unknown) => error)
+
+    expect(repeatedVertexFailure).toBeInstanceOf(IrregularGeometryInputError)
+    expect(repeatedVertexFailure).toMatchObject({
+      operation: 'transformCollisionGeometry',
+      message: 'transformed collision polygon must not repeat adjacent vertices.'
+    })
+    expect(collinearVertexFailure).toBeInstanceOf(IrregularGeometryInputError)
+    expect(collinearVertexFailure).toMatchObject({
+      operation: 'transformCollisionGeometry',
+      message: 'transformed collision polygon must not contain collinear vertices.'
+    })
   })
 
   it('rejects a collision polygon that is not strictly convex', async () => {
