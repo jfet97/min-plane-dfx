@@ -22,6 +22,7 @@ import {
   orientCanonicalStateSnapshots
 } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
+import { selectTargetedDestroySet } from '../../src/workers/algorithm/irregular/targetedExactLns.js'
 
 function placed(
   id: string,
@@ -194,6 +195,38 @@ describe('canonical collision layout geometry', () => {
     expect(analysis?.largestHullGap?.aabb.maxX).toBeGreaterThan(
       analysis?.largestHullGap?.aabb.minX ?? Number.POSITIVE_INFINITY
     )
+  })
+
+  it('forces exact conflict endpoints out of an otherwise retained frozen context', () => {
+    const sheet = new SheetSpec({ width: 10, height: 10, label: 'conflicting incumbent' })
+    const incumbent = [
+      rectangle('safe', 2, 2, 0, 0),
+      rectangle('conflict-a', 2, 2, 4, 4),
+      rectangle('conflict-b', 2, 2, 5.999, 4)
+    ]
+    const structure = analyzeCanonicalLayoutStructure(sheet, incumbent)
+    expect(structure?.positiveAreaConflictMeasurements).toEqual([
+      {
+        pair: [PieceId.make('conflict-a'), PieceId.make('conflict-b')],
+        areaMm2: 0.002
+      }
+    ])
+    if (structure === undefined) throw new Error('expected exact structural analysis')
+    const ranks = new Map(structure.pieces.map(({ pieceId }, index) => [pieceId, index]))
+    const selection = selectTargetedDestroySet({
+      target: 'hull_void',
+      requestedK: 2,
+      analysis: structure,
+      originalRankById: ranks
+    })
+    const destroyIds = new Set(selection.destroyIds)
+    const frozen = incumbent.filter(
+      ({ placement }) => !destroyIds.has(placement.pieceId ?? placement.sourcePieceId)
+    )
+
+    expect(selection.mandatoryIds).toContain(PieceId.make('conflict-a'))
+    expect(selection.mandatoryIds).toContain(PieceId.make('conflict-b'))
+    expect(assertCanonicalGridLegalLayout(sheet, frozen)).toBe(true)
   })
 
   it('admits q0, q90-only, and unfit rigid states exactly', () => {

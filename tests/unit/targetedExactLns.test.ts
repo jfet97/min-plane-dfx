@@ -37,6 +37,10 @@ function analysis(input: {
       id(first),
       id(second)
     ]),
+    positiveAreaConflictMeasurements: (input.conflicts ?? []).map(([first, second]) => ({
+      pair: [id(first), id(second)],
+      areaMm2: 0.001
+    })),
     wallOffenders: (input.wall ?? []).map(id)
   }
 }

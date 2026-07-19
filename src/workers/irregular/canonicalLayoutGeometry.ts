@@ -55,6 +55,10 @@ export interface CanonicalLayoutStructuralAnalysis {
       }
     | undefined
   readonly positiveAreaConflicts: ReadonlyArray<readonly [PieceId, PieceId]>
+  readonly positiveAreaConflictMeasurements: ReadonlyArray<{
+    readonly pair: readonly [PieceId, PieceId]
+    readonly areaMm2: number
+  }>
   readonly wallOffenders: ReadonlyArray<PieceId>
 }
 
@@ -163,6 +167,10 @@ export function analyzeCanonicalLayoutStructure(
   const neighbors = polygons.map(() => new Set<number>())
   const positiveContactPairs: Array<readonly [PieceId, PieceId]> = []
   const positiveAreaConflicts: Array<readonly [PieceId, PieceId]> = []
+  const positiveAreaConflictMeasurements: Array<{
+    readonly pair: readonly [PieceId, PieceId]
+    readonly areaMm2: number
+  }> = []
   for (let firstIndex = 0; firstIndex < polygons.length; firstIndex += 1) {
     const first = polygons[firstIndex]
     if (first === undefined) return undefined
@@ -191,8 +199,17 @@ export function analyzeCanonicalLayoutStructure(
       } catch {
         return undefined
       }
-      if (polyTreeToPaths64(intersection).some((path) => Math.abs(area(path)) > 0)) {
-        positiveAreaConflicts.push(orderedPiecePair(first.pieceId, second.pieceId))
+      const intersectionAreaGrid2 = polyTreeToPaths64(intersection).reduce(
+        (sum, path) => sum + Math.abs(area(path)),
+        0
+      )
+      if (intersectionAreaGrid2 > 0) {
+        const pair = orderedPiecePair(first.pieceId, second.pieceId)
+        positiveAreaConflicts.push(pair)
+        positiveAreaConflictMeasurements.push({
+          pair,
+          areaMm2: intersectionAreaGrid2 / 1_000_000
+        })
       }
     }
   }
@@ -225,6 +242,9 @@ export function analyzeCanonicalLayoutStructure(
     positiveContactPairs: positiveContactPairs.toSorted(comparePiecePairs),
     largestHullGap: largestHullGap ?? undefined,
     positiveAreaConflicts: positiveAreaConflicts.toSorted(comparePiecePairs),
+    positiveAreaConflictMeasurements: positiveAreaConflictMeasurements.toSorted((first, second) =>
+      comparePiecePairs(first.pair, second.pair)
+    ),
     wallOffenders
   }
 }

@@ -86,8 +86,28 @@ console.log(
     exactConflictCount: preflightStructure?.positiveAreaConflicts.length,
     wallOffenderCount: preflightStructure?.wallOffenders.length,
     exactConflicts: preflightStructure?.positiveAreaConflicts,
+    exactConflictMeasurements: preflightStructure?.positiveAreaConflictMeasurements,
     wallOffenders: preflightStructure?.wallOffenders
   })
+)
+await writeFile(
+  `${outputDirectory}/preflight.json`,
+  `${JSON.stringify(
+    {
+      sourceCommit,
+      runtime: { node: process.version, v8: process.versions.v8 },
+      placed: incumbent.placedCollisionGeometries.length,
+      unplaced: incumbent.unplacedPieceIds.length,
+      canonicalGridLegal: assertCanonicalGridLegalLayout(
+        sheet,
+        incumbent.placedCollisionGeometries
+      ),
+      exactConflicts: preflightStructure?.positiveAreaConflictMeasurements,
+      wallOffenders: preflightStructure?.wallOffenders
+    },
+    null,
+    2
+  )}\n`
 )
 const lnsStartedAt = performance.now()
 const result = await Effect.runPromise(
