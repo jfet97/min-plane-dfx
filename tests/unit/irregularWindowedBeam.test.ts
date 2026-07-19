@@ -37,6 +37,7 @@ import {
   type IrregularDecisionTraceEvent
 } from '../../src/workers/algorithm/irregular/decisionTrace.js'
 import { replayFrozenExactLineage } from '../../src/workers/algorithm/irregular/targetedExactLns.js'
+import { canonicalCollisionLayoutIdentity } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -205,6 +206,7 @@ function runReconstruction(input: {
   readonly destroyedQueue: ReadonlyArray<IrregularPreparedPiece>
   readonly frozenPlaced: Parameters<typeof runWindowedIrregularReconstruction>[0]['frozenPlaced']
   readonly service: Layer.Layer<NfpIfpService, never, never>
+  readonly options?: IrregularWindowedBeamOptions
 }) {
   return Effect.runPromise(
     runWindowedIrregularReconstruction({
@@ -212,7 +214,8 @@ function runReconstruction(input: {
       finalSheet: input.currentSheet,
       allPreparedPieces: input.allPreparedPieces,
       destroyedQueue: input.destroyedQueue,
-      frozenPlaced: input.frozenPlaced
+      frozenPlaced: input.frozenPlaced,
+      ...(input.options === undefined ? {} : { options: input.options })
     }).pipe(
       Effect.provide(GeometryKernel.Live),
       Effect.provide(input.service),
@@ -435,6 +438,56 @@ describe('decodeWindowedIrregularBeam', () => {
       replayedPieceIds: [PieceId.make('second-copy')],
       finalCanonicalLegal: true
     })
+  })
+
+  it('retains the exact warm incumbent hash for both reconstruction queue orders', async () => {
+    const first = preparedPiece('first', 10, 10, 'first-copy')
+    const second = preparedPiece('second', 5, 5, 'second-copy')
+    const third = preparedPiece('third', 4, 4, 'third-copy')
+    const allPreparedPieces = [first, second, third]
+    const currentSheet = sheet(100, 100)
+    const seeded = await runWindowed(
+      currentSheet,
+      allPreparedPieces,
+      Layer.succeed(GeometrySettings, settings(1, 1, 1)),
+      candidateService(({ moving }) => {
+        const x =
+          moving.sourcePieceId === PieceId.make('first')
+            ? 0
+            : moving.sourcePieceId === PieceId.make('second')
+              ? 10
+              : 15
+        return [oneCandidate(moving, x)]
+      })
+    )
+    const sourceLayout = seeded.bestState.placedCollisionGeometries
+    const incumbentPlacementCandidates = new Map(
+      sourceLayout.map((entry) => [
+        entry.placement.pieceId ?? entry.placement.sourcePieceId,
+        entry
+      ] as const)
+    )
+    const frozenPlaced = sourceLayout.filter(
+      ({ placement }) => placement.pieceId === PieceId.make('first-copy')
+    )
+    const expectedHash = canonicalCollisionLayoutIdentity(sourceLayout)
+    const badAlternatives = candidateService(({ moving }) => [oneCandidate(moving, 50)])
+
+    for (const destroyedQueue of [[second, third], [third, second]]) {
+      const result = await runReconstruction({
+        currentSheet,
+        allPreparedPieces,
+        destroyedQueue,
+        frozenPlaced,
+        service: badAlternatives,
+        options: { incumbentPlacementCandidates }
+      })
+
+      expect(result.bestState.unplacedPieceIds).toEqual([])
+      expect(canonicalCollisionLayoutIdentity(result.bestState.placedCollisionGeometries)).toBe(
+        expectedHash
+      )
+    }
   })
   it('assigns compact repeated state ids without hashing canonical keys', () => {
     const registry = new IrregularDecisionTraceStateIdRegistry()

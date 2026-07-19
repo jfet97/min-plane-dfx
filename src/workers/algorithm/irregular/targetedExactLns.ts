@@ -55,6 +55,8 @@ export interface TargetedExactLnsRoundReport {
   readonly frozenHash: string | undefined
   readonly runtimeMs: number
   readonly candidateCount: number
+  readonly candidateCounts: ReadonlyArray<number>
+  readonly terminalUnplacedIds: ReadonlyArray<PieceId>
   readonly candidateMetrics: IntrinsicRelaxationMetrics | undefined
   readonly legal: boolean
   readonly decision: 'accepted' | 'rejected' | 'skipped_duplicate' | 'timed_out' | 'unplaced'
@@ -267,6 +269,8 @@ export function runTargetedExactLns(
               frozenHash: undefined,
               runtimeMs: now() - roundStartedAt,
               candidateCount: 0,
+              candidateCounts: [],
+              terminalUnplacedIds: [],
               candidateMetrics: undefined,
               legal: false,
               decision: 'skipped_duplicate'
@@ -293,7 +297,14 @@ export function runTargetedExactLns(
                 collisionGeometry.transform.index
               ] as const)
           )
+          const incumbentPlacementCandidates = new Map(
+            sourceLayout.map((entry) => [
+              entry.placement.pieceId ?? entry.placement.sourcePieceId,
+              entry
+            ] as const)
+          )
           let candidateCount = 0
+          const candidateCounts: number[] = []
           const deadlineMs = Math.min(globalDeadline, roundStartedAt + roundDeadlineMs)
           const outcome = yield* runWindowedIrregularReconstruction({
             constraintSheet,
@@ -301,8 +312,13 @@ export function runTargetedExactLns(
             allPreparedPieces: input.allPreparedPieces,
             destroyedQueue,
             frozenPlaced: frozen,
-            options: { transformPreferences: preferredTransforms },
-            control: { deadlineMs }
+            options: { transformPreferences: preferredTransforms, incumbentPlacementCandidates },
+            control: { deadlineMs },
+            instrumentation: {
+              onStepCompleted: ({ candidateCount: stepCandidateCount }) => {
+                candidateCounts.push(stepCandidateCount)
+              }
+            }
           }).pipe(
             Effect.map((result) => ({ _tag: 'Completed' as const, result })),
             Effect.catchTag('IrregularWindowedBeamAbortedError', (error) =>
@@ -331,6 +347,8 @@ export function runTargetedExactLns(
               frozenHash,
               runtimeMs: now() - roundStartedAt,
               candidateCount,
+              candidateCounts,
+              terminalUnplacedIds: [],
               candidateMetrics: undefined,
               legal: false,
               decision: 'timed_out'
@@ -339,6 +357,7 @@ export function runTargetedExactLns(
             continue
           }
           candidateCount = outcome.result.candidateCounts.reduce((sum, count) => sum + count, 0)
+          const terminalUnplacedIds = outcome.result.bestState.unplacedPieceIds
           const finalists = enumerateExactQuarterTurnFinalists(
             input.sheet,
             outcome.result.rankedStates.slice(0, 4).flatMap((state) =>
@@ -389,6 +408,8 @@ export function runTargetedExactLns(
             frozenHash,
             runtimeMs: now() - roundStartedAt,
             candidateCount,
+            candidateCounts: outcome.result.candidateCounts,
+            terminalUnplacedIds,
             candidateMetrics: candidate?.metrics,
             legal,
             decision:
@@ -693,6 +714,8 @@ function timeoutReport(
     frozenHash: undefined,
     runtimeMs: 0,
     candidateCount: 0,
+    candidateCounts: [],
+    terminalUnplacedIds: [],
     candidateMetrics: undefined,
     legal: false,
     decision: 'timed_out'

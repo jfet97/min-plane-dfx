@@ -2,6 +2,7 @@ import { Data, Effect, Order } from 'effect'
 import type { PieceId } from '@shared/domain/ids.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
 import {
+  CollisionGeometryDiagnostic,
   IrregularPlacement,
   IrregularPlacementCandidate,
   IrregularPlacedPiece,
@@ -76,6 +77,8 @@ import type {
   EmitIrregularDecisionTrace,
   IrregularDecisionTraceIdentity
 } from './decisionTrace.js'
+import { PlacementValidation } from '../../irregular/placementValidation.js'
+import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 
 /** The terminal states retained by one deterministic irregular beam run. */
 export interface IrregularWindowedBeamResult {
@@ -126,6 +129,7 @@ export class IrregularWindowedBeamAbortedError extends Data.TaggedError(
 export interface IrregularWindowedBeamOptions {
   readonly policyId?: IrregularPlacementPolicyId
   readonly transformPreferences?: ReadonlyMap<PieceId, number>
+  readonly incumbentPlacementCandidates?: ReadonlyMap<PieceId, IrregularPlacedPiece>
 }
 
 export interface IrregularWindowedReconstructionInput {
@@ -136,6 +140,7 @@ export interface IrregularWindowedReconstructionInput {
   readonly frozenPlaced: ReadonlyArray<IrregularPlacedPiece>
   readonly control?: IrregularWindowedBeamControl
   readonly options?: IrregularWindowedBeamOptions
+  readonly instrumentation?: IrregularWindowedBeamInstrumentation
 }
 
 interface IrregularWindowedBeamCoreInput {
@@ -148,6 +153,7 @@ interface IrregularWindowedBeamCoreInput {
   readonly beamWidth: number
   readonly localCandidateFanout: number
   readonly localRepairBudget: number
+  readonly reconstructionMode: boolean
   readonly hooks?: IrregularWindowedBeamHooks
   readonly options?: IrregularWindowedBeamOptions
   readonly control?: IrregularWindowedBeamControl
@@ -168,6 +174,7 @@ interface LocalCandidate {
   readonly candidate: IrregularPlacementCandidate
   readonly moving: TransformedCollisionGeometry
   readonly score: IrregularPlacementScore
+  readonly isReconstructionIncumbent: boolean
 }
 
 interface LocalCandidateSelection {
@@ -262,7 +269,8 @@ export function runWindowedIrregularBeam(input: {
       beamWidth: settings.optimizer.beamWidth,
       localCandidateFanout:
         settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth,
-      localRepairBudget: settings.optimizer.localRepairBudget ?? 0
+      localRepairBudget: settings.optimizer.localRepairBudget ?? 0,
+      reconstructionMode: false
     })
   )
 }
@@ -319,7 +327,11 @@ export function runWindowedIrregularReconstruction(
       beamWidth: 4,
       localCandidateFanout: 4,
       localRepairBudget: 0,
+      reconstructionMode: true,
       ...(input.options !== undefined ? { options: input.options } : {}),
+      ...(input.instrumentation !== undefined
+        ? { instrumentation: input.instrumentation }
+        : {}),
       ...(input.control !== undefined ? { control: input.control } : {})
     })
   })
@@ -497,7 +509,9 @@ function runWindowedIrregularBeamCore(input: IrregularWindowedBeamCoreInput): Ef
             }
             legalSuccessors.push({
               state: successor,
-              isIncumbent,
+              isIncumbent:
+                isIncumbent &&
+                (!input.reconstructionMode || candidate.isReconstructionIncumbent),
               eligibleForProductionLane,
               eligibleForProtectedLane,
               eligibleForProtectedIntrinsicLane:
@@ -543,7 +557,7 @@ function runWindowedIrregularBeamCore(input: IrregularWindowedBeamCoreInput): Ef
         if (legalSuccessors.length === 0) {
           successors.push({
             state: markFirstRemainingUnplaced(state),
-            isIncumbent,
+            isIncumbent: input.reconstructionMode ? false : isIncumbent,
             eligibleForProductionLane,
             eligibleForProtectedLane,
             eligibleForProtectedIntrinsicLane,
@@ -1252,6 +1266,44 @@ function collectLocalCandidates(input: {
               ...candidateInput,
               control: nfpControl
             })
+      const incumbentPlacement = input.options?.incumbentPlacementCandidates?.get(
+        preparedPieceId(input.piece)
+      )
+      let reconstructionIncumbentCandidate: IrregularPlacementCandidate | undefined
+      if (
+        incumbentPlacement !== undefined &&
+        incumbentPlacement.collisionGeometry.transform.index === transform.index
+      ) {
+        const rigidShift = reconstructionRigidShift(
+          input.state,
+          input.options?.incumbentPlacementCandidates
+        )
+        const point = canonicalReconstructionPoint({
+          x: incumbentPlacement.placement.transform.translateX + rigidShift.x,
+          y: incumbentPlacement.placement.transform.translateY + rigidShift.y
+        })
+        if (point === undefined) continue
+        const candidate = new IrregularPlacementCandidate({
+          pieceId: moving.sourcePieceId,
+          transform,
+          point,
+          diagnostics: [
+            new CollisionGeometryDiagnostic({
+              code: 'reconstruction_incumbent_candidate',
+              message: 'Exact incumbent placement reserved for reconstruction lineage.',
+              pieceId: preparedPieceId(input.piece)
+            })
+          ]
+        })
+        const legal = yield* PlacementValidation.check({
+          sheet: input.sheet,
+          placed: input.state.placedCollisionGeometries,
+          placedCollisionIndex: input.state.placedCollisionIndex,
+          moving,
+          candidate
+        })
+        if (legal) reconstructionIncumbentCandidate = candidate
+      }
       yield* controlCheckpoint(input.control, input.controlState)
       input.decisionTrace?.emit(new IrregularDecisionTraceTransformCandidatesGenerated({
         decodeId: input.decisionTrace.decodeId,
@@ -1261,9 +1313,15 @@ function collectLocalCandidates(input: {
         parentStateId: input.parentStateId,
         pieceId: preparedPieceId(input.piece),
         transform: decisionTraceTransform(transform),
-        legalCandidateCount: legalCandidates.length
+        legalCandidateCount:
+          legalCandidates.length + (reconstructionIncumbentCandidate === undefined ? 0 : 1)
       }))
-      for (const candidate of legalCandidates) {
+      for (const candidate of [
+        ...(reconstructionIncumbentCandidate === undefined
+          ? []
+          : [reconstructionIncumbentCandidate]),
+        ...legalCandidates
+      ]) {
         yield* controlCheckpoint(input.control, input.controlState)
         const score = yield* input.placementScorer.scoreCandidate({
           sheet: input.sheet,
@@ -1272,12 +1330,46 @@ function collectLocalCandidates(input: {
           candidate,
           ...(input.options?.policyId !== undefined ? { policyId: input.options.policyId } : {})
         })
-        candidates.push({ candidate, moving, score })
+        candidates.push({
+          candidate,
+          moving,
+          score,
+          isReconstructionIncumbent: candidate === reconstructionIncumbentCandidate
+        })
         yield* controlCheckpoint(input.control, input.controlState)
       }
     }
     return candidates
   })
+}
+
+function canonicalReconstructionPoint(
+  point: { readonly x: number; readonly y: number }
+): { readonly x: number; readonly y: number } | undefined {
+  const x = toGridMm(point.x)
+  const y = toGridMm(point.y)
+  return x === undefined || y === undefined ? undefined : { x: fromGrid(x), y: fromGrid(y) }
+}
+
+function reconstructionRigidShift(
+  state: IrregularBeamState,
+  incumbentPlacements: ReadonlyMap<PieceId, IrregularPlacedPiece> | undefined
+): { readonly x: number; readonly y: number } {
+  if (incumbentPlacements === undefined) return { x: 0, y: 0 }
+  for (const current of state.placedCollisionGeometries) {
+    const pieceId = current.placement.pieceId ?? current.placement.sourcePieceId
+    const incumbent = incumbentPlacements.get(pieceId)
+    if (incumbent === undefined) continue
+    return {
+      x:
+        current.placement.transform.translateX -
+        incumbent.placement.transform.translateX,
+      y:
+        current.placement.transform.translateY -
+        incumbent.placement.transform.translateY
+    }
+  }
+  return { x: 0, y: 0 }
 }
 
 function selectEligiblePieces(
@@ -1335,10 +1427,16 @@ function selectLocalCandidates(
   const candidateOrder = Order.combineAll<LocalCandidate>(
     preferredTransformIndex === undefined
       ? [
+          Order.mapInput(Order.Number, (candidate) =>
+            candidate.isReconstructionIncumbent ? 0 : 1
+          ),
           Order.make((first, second) => placementScorer.compare(first.score, second.score)),
           Order.mapInput(Order.String, (candidate) => localCandidateKey(candidate))
         ]
       : [
+          Order.mapInput(Order.Number, (candidate) =>
+            candidate.isReconstructionIncumbent ? 0 : 1
+          ),
           // preserve the chromosome's transform choice before ranking its local placements
           Order.mapInput(Order.Number, (candidate) =>
             candidate.candidate.transform.index === preferredTransformIndex ? 0 : 1
@@ -1393,6 +1491,16 @@ function selectLocalCandidates(
         compactnessReserved = compactnessWinner
       }
     }
+  }
+
+  const reconstructionIncumbent = rankedCandidates.find(
+    ({ isReconstructionIncumbent }) => isReconstructionIncumbent
+  )
+  if (reconstructionIncumbent !== undefined && !selected.includes(reconstructionIncumbent)) {
+    selected = [
+      reconstructionIncumbent,
+      ...selected.filter((candidate) => candidate !== reconstructionIncumbent)
+    ].slice(0, maximumCount)
   }
 
   const protectedIntrinsic =
