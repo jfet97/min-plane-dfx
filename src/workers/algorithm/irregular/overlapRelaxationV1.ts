@@ -35,6 +35,7 @@ export interface OverlapRelaxationV1Options {
   readonly maximumEvaluations?: number
   readonly maximumSweeps?: number
   readonly strikeLimit?: number
+  readonly maximumDiagnosticExactChecks?: number
 }
 
 export interface OverlapRelaxationSweepMeasurement {
@@ -67,6 +68,27 @@ export interface RawZeroRestorationMeasurement {
   readonly intrinsicTupleComparison: -1 | 0 | 1 | undefined
 }
 
+export interface DiagnosticExactCheckMeasurement {
+  readonly reason: 'new_best' | 'final'
+  readonly sweep: number
+  readonly pieceIndex: number | undefined
+  readonly satRawLoss: number
+  readonly satCollisionCount: number
+  readonly exactGridLegal: boolean
+  readonly relaxedEnvelope: RawZeroRestorationMeasurement['relaxedEnvelope']
+  readonly exactMetrics: IntrinsicRelaxationMetrics | undefined
+  readonly intrinsicTupleComparison: -1 | 0 | 1 | undefined
+}
+
+export interface FinalSatHazardMeasurement {
+  readonly key: string
+  readonly firstIndex: number
+  readonly secondIndex: number | undefined
+  readonly depthMm: number
+  readonly normalizedSquaredLoss: number
+  readonly weight: number
+}
+
 export interface OverlapRelaxationV1Result {
   readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
   readonly separated: boolean
@@ -79,6 +101,7 @@ export interface OverlapRelaxationV1Result {
     readonly maximumEvaluations: number
     readonly maximumSweeps: number
     readonly strikeLimit: number
+    readonly maximumDiagnosticExactChecks: number
   }
   readonly evaluations: number
   readonly sweeps: number
@@ -92,8 +115,11 @@ export interface OverlapRelaxationV1Result {
   readonly finalCollisionCount: number
   readonly trajectory: ReadonlyArray<OverlapRelaxationSweepMeasurement>
   readonly rawZeroRestorations: ReadonlyArray<RawZeroRestorationMeasurement>
+  readonly diagnosticExactChecks: ReadonlyArray<DiagnosticExactCheckMeasurement>
+  readonly finalSatHazards: ReadonlyArray<FinalSatHazardMeasurement>
   readonly incumbentMetrics: IntrinsicRelaxationMetrics
   readonly selectedMetrics: IntrinsicRelaxationMetrics
+  readonly bestFeasibleMetrics: IntrinsicRelaxationMetrics | undefined
 }
 
 interface RelaxedPieceV1 {
@@ -118,6 +144,7 @@ interface HazardEntry {
   readonly secondIndex: number | undefined
   readonly loss: number
   readonly weight: number
+  readonly depthMm: number
   readonly firstMtv: InternalPoint
 }
 
@@ -172,6 +199,10 @@ export function relaxOverlappingLayoutV1(
     )
     const maximumSweeps = Math.max(1, Math.floor(options.maximumSweeps ?? DEFAULT_MAXIMUM_SWEEPS))
     const strikeLimit = Math.max(1, Math.floor(options.strikeLimit ?? DEFAULT_STRIKE_LIMIT))
+    const maximumDiagnosticExactChecks = Math.max(
+      0,
+      Math.min(100, Math.floor(options.maximumDiagnosticExactChecks ?? 0))
+    )
     const initialLayout = centerSplitLayout(pieces, incumbentMetrics.width, targetWidth)
     if (initialLayout === undefined) {
       return unchangedResult(
@@ -181,7 +212,12 @@ export function relaxOverlappingLayoutV1(
         requestedTargetHeight,
         targetWidth,
         targetHeight,
-        { maximumEvaluations, maximumSweeps, strikeLimit }
+        {
+          maximumEvaluations,
+          maximumSweeps,
+          strikeLimit,
+          maximumDiagnosticExactChecks
+        }
       )
     }
 
@@ -197,7 +233,29 @@ export function relaxOverlappingLayoutV1(
     const budget: EvaluationBudget = { count: 0, exactCandidatesChecked: 0 }
     const trajectory: OverlapRelaxationSweepMeasurement[] = []
     const rawZeroRestorations: RawZeroRestorationMeasurement[] = []
-    let exactPlaced: ReadonlyArray<IrregularPlacedPiece> | undefined
+    const diagnosticExactChecks: DiagnosticExactCheckMeasurement[] = []
+    let bestFeasiblePlaced: ReadonlyArray<IrregularPlacedPiece> | undefined
+    let bestFeasibleMetrics: IntrinsicRelaxationMetrics | undefined
+    let promotablePlaced: ReadonlyArray<IrregularPlacedPiece> | undefined
+    let promotableMetrics: IntrinsicRelaxationMetrics | undefined
+    const considerExactCandidate = (
+      placed: ReadonlyArray<IrregularPlacedPiece> | undefined
+    ): void => {
+      if (placed === undefined) return
+      const metrics = measureRelaxationMetrics(placed)
+      if (metrics === undefined) return
+      if (
+        bestFeasibleMetrics === undefined ||
+        compareIntrinsicTuple(metrics, bestFeasibleMetrics) < 0
+      ) {
+        bestFeasiblePlaced = placed
+        bestFeasibleMetrics = metrics
+      }
+      if (isAdmissibleRelaxationImprovement(incumbentMetrics, metrics)) {
+        promotablePlaced = placed
+        promotableMetrics = metrics
+      }
+    }
 
     if (totals.rawLoss === 0) {
       budget.exactCandidatesChecked += 1
@@ -211,7 +269,7 @@ export function relaxOverlappingLayoutV1(
         pieceIndex: undefined
       })
       rawZeroRestorations.push(restoration.measurement)
-      exactPlaced = restoration.placed
+      considerExactCandidate(restoration.placed)
     }
 
     for (
@@ -219,7 +277,7 @@ export function relaxOverlappingLayoutV1(
       sweep < maximumSweeps &&
       strikes < strikeLimit &&
       budget.count < maximumEvaluations &&
-      exactPlaced === undefined;
+      promotablePlaced === undefined;
       sweep += 1
     ) {
       const rawLossBefore = totals.rawLoss
@@ -249,7 +307,23 @@ export function relaxOverlappingLayoutV1(
           bestLayout = current
           bestTracker = tracker
           bestTotals = totals
+          if (diagnosticExactChecks.length < maximumDiagnosticExactChecks) {
+            budget.exactCandidatesChecked += 1
+            const diagnostic = yield* performDiagnosticExactCheck({
+              sheet,
+              pieces,
+              layout: bestLayout,
+              incumbentMetrics,
+              reason: 'new_best',
+              sweep,
+              pieceIndex,
+              satTotals: bestTotals
+            })
+            diagnosticExactChecks.push(diagnostic.measurement)
+            considerExactCandidate(diagnostic.placed)
+          }
         }
+        if (promotablePlaced !== undefined) break
         if (totals.rawLoss === 0) {
           zeroAtPieceIndex = pieceIndex
           break
@@ -257,6 +331,20 @@ export function relaxOverlappingLayoutV1(
       }
 
       totals = trackerTotals(tracker)
+      if (promotablePlaced !== undefined) {
+        trajectory.push({
+          sweep,
+          strikeCount: strikes,
+          collidingPieceCount: collidingPieces.length,
+          rawLossBefore,
+          rawLossAfter: totals.rawLoss,
+          weightedLossAfter: totals.weightedLoss,
+          collisionCountAfter: totals.collisionCount,
+          bestRawLoss: bestTotals.rawLoss,
+          evaluations: budget.count
+        })
+        break
+      }
       if (totals.rawLoss === 0) {
         budget.exactCandidatesChecked += 1
         const restoration = yield* restoreRawZeroSnapshot({
@@ -269,8 +357,8 @@ export function relaxOverlappingLayoutV1(
           pieceIndex: zeroAtPieceIndex
         })
         rawZeroRestorations.push(restoration.measurement)
-        exactPlaced = restoration.placed
-        if (exactPlaced !== undefined) {
+        considerExactCandidate(restoration.placed)
+        if (promotablePlaced !== undefined) {
           trajectory.push({
             sweep,
             strikeCount: strikes,
@@ -305,21 +393,41 @@ export function relaxOverlappingLayoutV1(
       })
     }
 
-    const selectedMetrics =
-      exactPlaced === undefined ? incumbentMetrics : measureRelaxationMetrics(exactPlaced)
-    const validSelectedMetrics = selectedMetrics ?? incumbentMetrics
-    const promotable =
-      exactPlaced !== undefined &&
-      isAdmissibleRelaxationImprovement(incumbentMetrics, validSelectedMetrics)
+    if (
+      promotablePlaced === undefined &&
+      diagnosticExactChecks.length < maximumDiagnosticExactChecks
+    ) {
+      budget.exactCandidatesChecked += 1
+      const diagnostic = yield* performDiagnosticExactCheck({
+        sheet,
+        pieces,
+        layout: bestLayout,
+        incumbentMetrics,
+        reason: 'final',
+        sweep: trajectory.length,
+        pieceIndex: undefined,
+        satTotals: bestTotals
+      })
+      diagnosticExactChecks.push(diagnostic.measurement)
+      considerExactCandidate(diagnostic.placed)
+    }
+
+    const validSelectedMetrics = promotableMetrics ?? incumbentMetrics
+    const promotable = promotablePlaced !== undefined
     return {
-      placedCollisionGeometries: exactPlaced ?? incumbent,
-      separated: exactPlaced !== undefined,
+      placedCollisionGeometries: promotablePlaced ?? incumbent,
+      separated: bestFeasiblePlaced !== undefined,
       promotable,
       requestedTargetWidth,
       requestedTargetHeight,
       targetWidth,
       targetHeight,
-      registeredBudget: { maximumEvaluations, maximumSweeps, strikeLimit },
+      registeredBudget: {
+        maximumEvaluations,
+        maximumSweeps,
+        strikeLimit,
+        maximumDiagnosticExactChecks
+      },
       evaluations: budget.count,
       sweeps: trajectory.length,
       strikes,
@@ -332,8 +440,11 @@ export function relaxOverlappingLayoutV1(
       finalCollisionCount: totals.collisionCount,
       trajectory,
       rawZeroRestorations,
+      diagnosticExactChecks,
+      finalSatHazards: positiveHazardMeasurements(tracker),
       incumbentMetrics,
-      selectedMetrics: validSelectedMetrics
+      selectedMetrics: validSelectedMetrics,
+      bestFeasibleMetrics
     }
   })
 }
@@ -549,6 +660,7 @@ function evaluateMovedPiece(
       secondIndex,
       loss: normalized * normalized,
       weight: existingWeight,
+      depthMm: penetration?.depth ?? 0,
       firstMtv:
         pieceIndex === firstIndex
           ? movingMtv
@@ -635,6 +747,7 @@ function wallEntries(
       secondIndex: undefined,
       loss: normalized * normalized,
       weight: tracker.entries.get(key)?.weight ?? 1,
+      depthMm: depth,
       firstMtv: { x: direction.x * depth, y: direction.y * depth }
     }
   })
@@ -839,6 +952,71 @@ function restoreRawZeroSnapshot(input: {
   })
 }
 
+function performDiagnosticExactCheck(input: {
+  readonly sheet: SheetSpec
+  readonly pieces: ReadonlyArray<RelaxedPieceV1>
+  readonly layout: RelaxedLayoutV1
+  readonly incumbentMetrics: IntrinsicRelaxationMetrics
+  readonly reason: DiagnosticExactCheckMeasurement['reason']
+  readonly sweep: number
+  readonly pieceIndex: number | undefined
+  readonly satTotals: TrackerTotals
+}): Effect.Effect<
+  {
+    readonly placed: ReadonlyArray<IrregularPlacedPiece> | undefined
+    readonly measurement: DiagnosticExactCheckMeasurement
+  },
+  IrregularGeometryInputError
+> {
+  return Effect.gen(function* () {
+    const relaxedEnvelope = layoutEnvelope(input.pieces, input.layout)
+    const placed = yield* rebuildAndValidateV1(input.sheet, input.pieces, input.layout)
+    const exactMetrics = placed === undefined ? undefined : measureRelaxationMetrics(placed)
+    return {
+      placed,
+      measurement: {
+        reason: input.reason,
+        sweep: input.sweep,
+        pieceIndex: input.pieceIndex,
+        satRawLoss: input.satTotals.rawLoss,
+        satCollisionCount: input.satTotals.collisionCount,
+        exactGridLegal: placed !== undefined,
+        relaxedEnvelope: {
+          width: relaxedEnvelope.width,
+          height: relaxedEnvelope.height,
+          area: relaxedEnvelope.area,
+          widthDeltaFromIncumbent: relaxedEnvelope.width - input.incumbentMetrics.width,
+          heightDeltaFromIncumbent: relaxedEnvelope.height - input.incumbentMetrics.height,
+          areaDeltaFromIncumbent: relaxedEnvelope.area - input.incumbentMetrics.area
+        },
+        exactMetrics,
+        intrinsicTupleComparison:
+          exactMetrics === undefined
+            ? undefined
+            : compareIntrinsicTuple(exactMetrics, input.incumbentMetrics)
+      }
+    }
+  })
+}
+
+function positiveHazardMeasurements(
+  tracker: CollisionTrackerV1
+): ReadonlyArray<FinalSatHazardMeasurement> {
+  return [...tracker.entries.values()]
+    .filter(({ loss }) => loss > 0)
+    .toSorted((first, second) =>
+      first.key < second.key ? -1 : first.key > second.key ? 1 : 0
+    )
+    .map(({ key, firstIndex, secondIndex, depthMm, loss, weight }) => ({
+      key,
+      firstIndex,
+      secondIndex,
+      depthMm,
+      normalizedSquaredLoss: loss,
+      weight
+    }))
+}
+
 function layoutEnvelope(
   pieces: ReadonlyArray<RelaxedPieceV1>,
   layout: RelaxedLayoutV1
@@ -967,8 +1145,11 @@ function unchangedResult(
     finalCollisionCount: 0,
     trajectory: [],
     rawZeroRestorations: [],
+    diagnosticExactChecks: [],
+    finalSatHazards: [],
     incumbentMetrics: metrics,
-    selectedMetrics: metrics
+    selectedMetrics: metrics,
+    bestFeasibleMetrics: undefined
   }
 }
 

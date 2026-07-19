@@ -93,4 +93,27 @@ describe('relaxOverlappingLayout', () => {
       )
     ).toBe(true)
   })
+
+  it('bounds read-only exact checks without publishing an inadmissible snapshot', async () => {
+    const incumbent = [placedSquare('a', 0, 0), placedSquare('b', 2, 1.5)]
+    const result = await Effect.runPromise(
+      relaxOverlappingLayoutV1(
+        new SheetSpec({ width: 10, height: 10, label: 'test' }),
+        incumbent,
+        {
+          targetWidth: 3.998,
+          maximumEvaluations: 500,
+          maximumSweeps: 1,
+          strikeLimit: 1,
+          maximumDiagnosticExactChecks: 1_000
+        }
+      )
+    )
+
+    expect(result.registeredBudget.maximumDiagnosticExactChecks).toBe(100)
+    expect(result.diagnosticExactChecks.length).toBeGreaterThan(0)
+    expect(result.diagnosticExactChecks.length).toBeLessThanOrEqual(100)
+    expect(result.promotable).toBe(false)
+    expect(result.placedCollisionGeometries).toBe(incumbent)
+  })
 })

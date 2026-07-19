@@ -35,6 +35,7 @@ const outputDirectory = argument('--output') ?? DEFAULT_OUTPUT
 const sourceCommit = argument('--source-commit')
 const incumbentCommit = argument('--incumbent-commit') ?? 'f306a81'
 const transformGridCommit = argument('--transform-grid-commit')
+const maximumDiagnosticExactChecks = Number(argument('--diagnostic-exact-checks') ?? '0')
 const manifestOnly = process.argv.includes('--manifest-only')
 
 if (manifestOnly) {
@@ -72,7 +73,7 @@ if (manifestOnly) {
           width: 'floor requested shrink target',
           height: 'ceil unchanged incumbent height'
         },
-        registeredBudget: REGISTERED_BUDGET,
+        registeredBudget: report.registeredBudget,
         files: hashes
       },
       null,
@@ -119,7 +120,8 @@ const computeElapsedMs = performance.now() - computeStartedAt
 const relaxationStartedAt = performance.now()
 const relaxation = await Effect.runPromise(
   relaxOverlappingLayoutV1(sheet, result.placedCollisionGeometries, {
-    ...REGISTERED_BUDGET
+    ...REGISTERED_BUDGET,
+    maximumDiagnosticExactChecks
   })
 )
 const relaxationElapsedMs = performance.now() - relaxationStartedAt
@@ -146,6 +148,7 @@ function isTargetReport(value: unknown): value is {
   readonly requestedTargetHeight: number
   readonly targetWidth: number
   readonly targetHeight: number
+  readonly registeredBudget: unknown
 } {
   if (typeof value !== 'object' || value === null) return false
   const candidate = value as Record<string, unknown>
@@ -153,7 +156,9 @@ function isTargetReport(value: unknown): value is {
     typeof candidate.requestedTargetWidth === 'number' &&
     typeof candidate.requestedTargetHeight === 'number' &&
     typeof candidate.targetWidth === 'number' &&
-    typeof candidate.targetHeight === 'number'
+    typeof candidate.targetHeight === 'number' &&
+    typeof candidate.registeredBudget === 'object' &&
+    candidate.registeredBudget !== null
   )
 }
 
