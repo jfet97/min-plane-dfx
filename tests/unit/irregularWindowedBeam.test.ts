@@ -199,6 +199,7 @@ function runWindowed(
 
 function runReconstruction(input: {
   readonly currentSheet: SheetSpec
+  readonly constraintSheet?: SheetSpec
   readonly allPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly destroyedQueue: ReadonlyArray<IrregularPreparedPiece>
   readonly frozenPlaced: Parameters<typeof runWindowedIrregularReconstruction>[0]['frozenPlaced']
@@ -206,7 +207,7 @@ function runReconstruction(input: {
 }) {
   return Effect.runPromise(
     runWindowedIrregularReconstruction({
-      constraintSheet: input.currentSheet,
+      constraintSheet: input.constraintSheet ?? input.currentSheet,
       finalSheet: input.currentSheet,
       allPreparedPieces: input.allPreparedPieces,
       destroyedQueue: input.destroyedQueue,
@@ -369,6 +370,36 @@ describe('decodeWindowedIrregularBeam', () => {
         service: NfpIfpServiceLive
       })
     ).rejects.toMatchObject({ _tag: 'IrregularGeometryInputError' })
+  })
+
+  it('scores against a piece-derived ceil sheet while keeping fractional legality bounds', async () => {
+    const first = preparedPiece('first', 10, 10, 'first-copy')
+    const second = preparedPiece('second', 5, 5, 'second-copy')
+    const currentSheet = sheet(100, 100)
+    const service = candidateService(({ moving }) => [oneCandidate(moving, 10)])
+    const seeded = await runWindowed(
+      currentSheet,
+      [first],
+      Layer.succeed(GeometrySettings, settings(1, 1, 1)),
+      candidateService(({ moving }) => [oneCandidate(moving, 0)])
+    )
+    const fractionalConstraint: SheetSpec = {
+      width: 15.001,
+      height: 10.001,
+      label: 'fractional intrinsic constraint'
+    }
+
+    const result = await runReconstruction({
+      currentSheet,
+      constraintSheet: fractionalConstraint,
+      allPreparedPieces: [first, second],
+      destroyedQueue: [second],
+      frozenPlaced: seeded.bestState.placedCollisionGeometries,
+      service
+    })
+
+    expect(result.bestState.unplacedPieceIds).toEqual([])
+    expect(result.bestState.placedCollisionGeometries).toHaveLength(2)
   })
   it('assigns compact repeated state ids without hashing canonical keys', () => {
     const registry = new IrregularDecisionTraceStateIdRegistry()

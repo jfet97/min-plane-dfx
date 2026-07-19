@@ -140,6 +140,7 @@ export interface IrregularWindowedReconstructionInput {
 
 interface IrregularWindowedBeamCoreInput {
   readonly sheet: SheetSpec
+  readonly scoringSheet: SheetSpec
   readonly finalSheet: SheetSpec
   readonly pieces: ReadonlyArray<IrregularPreparedPiece>
   readonly candidatePlanePieces: ReadonlyArray<IrregularPreparedPiece>
@@ -255,6 +256,7 @@ export function runWindowedIrregularBeam(input: {
     runWindowedIrregularBeamCore({
       ...input,
       finalSheet: input.sheet,
+      scoringSheet: input.sheet,
       candidatePlanePieces: input.pieces,
       initialState: IrregularBeamState.empty(input.pieces),
       beamWidth: settings.optimizer.beamWidth,
@@ -305,6 +307,11 @@ export function runWindowedIrregularReconstruction(
     })
     return yield* runWindowedIrregularBeamCore({
       sheet: input.constraintSheet,
+      scoringSheet: new SheetSpec({
+        width: Math.max(1, Math.ceil(input.constraintSheet.width)),
+        height: Math.max(1, Math.ceil(input.constraintSheet.height)),
+        label: 'windowed reconstruction intrinsic scoring sheet'
+      }),
       finalSheet: input.finalSheet,
       pieces: input.destroyedQueue,
       candidatePlanePieces: input.allPreparedPieces,
@@ -550,7 +557,7 @@ function runWindowedIrregularBeamCore(input: IrregularWindowedBeamCoreInput): Ef
       const uniqueSuccessors = dedupeRawSuccessors(successors, stateKey, decisionTrace, stepIndex)
       const scored = yield* scoreStates(
         uniqueSuccessors,
-        input.sheet,
+        input.scoringSheet,
         layoutScorer,
         input.control,
         controlState,
@@ -581,7 +588,7 @@ function runWindowedIrregularBeamCore(input: IrregularWindowedBeamCoreInput): Ef
       const pruned = pruneScoredStates(
         scored,
         input.beamWidth,
-        input.sheet,
+        input.scoringSheet,
         layoutScorer,
         nextIncumbent,
         nextBoundaryAnchors,

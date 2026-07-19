@@ -290,7 +290,10 @@ export function runTargetedExactLns(
             )
             .toSorted(compareFinalists)
           const candidate = rankedFinalists[0]
-          const legal = candidate !== undefined && assertCanonicalGridLegalLayout(input.sheet, candidate.placed)
+          const legal =
+            candidate !== undefined &&
+            assertCanonicalGridLegalLayout(constraintSheet, candidate.placed) &&
+            assertCanonicalGridLegalLayout(input.sheet, candidate.placed)
           const admissible =
             candidate !== undefined &&
             legal &&
