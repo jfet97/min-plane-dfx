@@ -49,7 +49,6 @@ import {
 } from './intrinsicTransformSeparator.js'
 
 export const INTRINSIC_GLOBAL_SEARCH_DEFAULTS = {
-  expectedStructuralPieceCount: 53,
   targetRoleCount: 3,
   basinCountPerRole: 2,
   sweepsPerBasin: 12,
@@ -153,7 +152,7 @@ export class IntrinsicGlobalSearchError extends Data.TaggedError('IntrinsicGloba
 }> {}
 
 export interface IntrinsicGlobalSearchSchedule {
-  readonly expectedStructuralPieceCount: number
+  readonly expectedStructuralPieceCount?: number
   readonly sweepsPerBasin: number
   readonly forcedDisruptionSweeps: ReadonlyArray<number>
   readonly poolCapacity: number
@@ -285,11 +284,14 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
     const partition = partitionIntrinsicStructuralPieces(input.allPreparedPieces)
     if (
       partition === undefined ||
-      partition.structuralPieces.length !== schedule.expectedStructuralPieceCount
+      (schedule.expectedStructuralPieceCount !== undefined &&
+        partition.structuralPieces.length !== schedule.expectedStructuralPieceCount)
     ) {
       return yield* globalFailure(
         'partition',
-        `the E3 area partition must yield exactly ${schedule.expectedStructuralPieceCount} structural pieces.`
+        schedule.expectedStructuralPieceCount === undefined
+          ? 'the E3 area partition must yield a valid structural subset.'
+          : `the E3 area partition must yield exactly ${schedule.expectedStructuralPieceCount} structural pieces for this experiment assertion.`
       )
     }
     const allE1ById = new Map(
@@ -626,7 +628,9 @@ function snapshotIntrinsicGlobalSchedule(
   schedule: IntrinsicGlobalSearchSchedule
 ): IntrinsicGlobalSearchSchedule {
   return {
-    expectedStructuralPieceCount: schedule.expectedStructuralPieceCount,
+    ...(schedule.expectedStructuralPieceCount === undefined
+      ? {}
+      : { expectedStructuralPieceCount: schedule.expectedStructuralPieceCount }),
     sweepsPerBasin: schedule.sweepsPerBasin,
     forcedDisruptionSweeps: [...schedule.forcedDisruptionSweeps],
     poolCapacity: schedule.poolCapacity,

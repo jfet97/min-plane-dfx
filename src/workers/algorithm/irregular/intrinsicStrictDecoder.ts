@@ -24,6 +24,7 @@ import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel
 import {
   IrregularGeometryInputError,
   IrregularNfpIfpCandidateMemoScope,
+  type IrregularNfpIfpControl,
   IrregularNfpIfpControlAbortError,
   IrregularNestingNotImplementedError,
   NfpIfpService
@@ -109,6 +110,13 @@ export interface IntrinsicStrictCompletedMetrics {
   readonly runtimeMs: number
 }
 
+export interface IntrinsicSheetlessCompletedLayout {
+  readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+  readonly canonicalGeometryIdentity: string
+  readonly canonicalGeometryHash: string
+  readonly metrics: IntrinsicStrictCompletedMetrics
+}
+
 export interface IntrinsicStrictCertificate {
   readonly passes: boolean
   readonly violatedFloors: ReadonlyArray<keyof typeof INTRINSIC_STRICT_COHESION_FLOORS>
@@ -152,6 +160,7 @@ export interface ConstructIntrinsicStrictStateInput {
   readonly frozenPlaced: ReadonlyArray<IrregularPlacedPiece>
   readonly candidateMode: IntrinsicStrictCandidateMode
   readonly maximumRuntimeMs?: number
+  readonly control?: IrregularNfpIfpControl
 }
 
 interface ScoredCandidate {
@@ -214,8 +223,8 @@ export function finalizeIntrinsicStrictState(
       makeResult({ status: 'infeasible-final-sheet', state, stepTrace, runtimeMs })
     )
   }
-  const metrics = completedMetrics(terminal.state, terminal.canonicalHash, runtimeMs)
-  if (metrics === undefined) {
+  const measured = measureIntrinsicSheetlessCompletedLayout(terminal.state, runtimeMs)
+  if (measured === undefined) {
     return Effect.fail(
       new IntrinsicStrictDecoderError({
         operation: 'completedMetrics',
@@ -227,8 +236,8 @@ export function finalizeIntrinsicStrictState(
     ...makeResult({ status: 'completed', state: terminal.state, stepTrace, runtimeMs }),
     terminalRotationDeg: terminal.rotationDeg,
     canonicalGeometryHash: terminal.canonicalHash,
-    metrics,
-    certificate: evaluateIntrinsicStrictCertificate(metrics)
+    metrics: measured.metrics,
+    certificate: evaluateIntrinsicStrictCertificate(measured.metrics)
   })
 }
 
@@ -256,16 +265,19 @@ export function constructIntrinsicStrictState(
       )
     }
     const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
-    const control = {
-      checkpoint: () =>
-        performance.now() - startedAt >= maximumRuntimeMs
-          ? Effect.fail(
+    const control: IrregularNfpIfpControl = {
+      checkpoint: (phase) =>
+        Effect.gen(function* () {
+          if (input.control !== undefined) yield* input.control.checkpoint(phase)
+          if (performance.now() - startedAt >= maximumRuntimeMs) {
+            return yield* Effect.fail(
               new IrregularNfpIfpControlAbortError({
                 reason: 'deadline',
                 message: `intrinsic strict decode exceeded ${maximumRuntimeMs} ms.`
               })
             )
-          : Effect.void
+          }
+        })
     }
     let state = new IrregularBeamState({
       remainingPreparedPieces: input.remainingPreparedPieces,
@@ -306,7 +318,7 @@ export function constructIntrinsicStrictState(
       let candidateCount = 0
 
       for (const transform of [...piece.transforms].sort(transformCandidateOrder)) {
-        yield* control.checkpoint()
+        yield* control.checkpoint('candidate-points')
         const moving = yield* geometryKernel.transformCollisionGeometry({
           geometry: piece.collisionGeometry,
           transform
@@ -690,6 +702,40 @@ function selectTerminalOrientation(
       first.canonicalHash.localeCompare(second.canonicalHash) ||
       first.rotationDeg - second.rotationDeg
   )[0]
+}
+
+/** Measures one complete exact layout without consulting a requested sheet. */
+export function measureIntrinsicSheetlessCompletedLayout(
+  state: IrregularBeamState,
+  runtimeMs = 0
+): IntrinsicSheetlessCompletedLayout | undefined {
+  const anchored = state.withBottomLeftAnchored()
+  if (
+    anchored === undefined ||
+    anchored.unplacedPieceIds.length > 0 ||
+    !assertCanonicalGridLegalLayout(
+      intrinsicBoundsSheet(anchored),
+      anchored.placedCollisionGeometries
+    )
+  ) {
+    return undefined
+  }
+  const canonicalGeometryIdentity = canonicalCollisionLayoutIdentity(
+    anchored.placedCollisionGeometries
+  )
+  if (canonicalGeometryIdentity === undefined) return undefined
+  const canonicalGeometryHash = createHash('sha256')
+    .update(canonicalGeometryIdentity)
+    .digest('hex')
+  const metrics = completedMetrics(anchored, canonicalGeometryHash, runtimeMs)
+  return metrics === undefined
+    ? undefined
+    : {
+        placedCollisionGeometries: anchored.placedCollisionGeometries,
+        canonicalGeometryIdentity,
+        canonicalGeometryHash,
+        metrics
+      }
 }
 
 function completedMetrics(
