@@ -359,9 +359,16 @@ export function constructIntrinsicStrictState(
       if (selected?.containingGap !== undefined) {
         const beforeBounds = state.translatedCollisionBounds
         const afterBounds = selected.state.translatedCollisionBounds
+        const recomputedGapRegions = deriveCanonicalIntrinsicGapRegions(
+          selected.state.placedCollisionGeometries
+        )
+        const totalGapAreaBeforeMm2 =
+          gapRegions?.reduce((sum, region) => sum + region.areaMm2, 0) ?? Number.NaN
+        const totalGapAreaAfterMm2 =
+          recomputedGapRegions?.reduce((sum, region) => sum + region.areaMm2, 0) ?? Number.NaN
         const regionAreaAfterMm2 = Math.max(
           0,
-          selected.containingGap.areaMm2 - selected.movingCollisionAreaMm2
+          selected.containingGap.areaMm2 - (totalGapAreaBeforeMm2 - totalGapAreaAfterMm2)
         )
         const envelopeMaximumSideDeltaMm =
           beforeBounds === undefined || afterBounds === undefined
