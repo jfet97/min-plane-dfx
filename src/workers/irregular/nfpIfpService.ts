@@ -32,6 +32,7 @@ import type { ConvexPolygonWinding } from './convexPolygonValidation.js'
 import { areDisjoint, boundsForPoints } from './convexBounds.js'
 import { GeometryPredicates } from './geometryPredicates.js'
 import { PlacementValidation } from './placementValidation.js'
+import { fromGrid, toGridMm } from './clipper2OffsetPolicy.js'
 import {
   DEFAULT_NFP_CONSTRUCTION_ALGORITHM,
   innerFitBoundsCacheKey,
@@ -792,44 +793,97 @@ function generatePlacementCandidatesUncached(
 
     const candidates: IrregularPlacementCandidate[] = []
     const sortedPoints = [...points.points].sort(comparePoints)
+    const acceptedGridKeys = new Set<string>()
     for (let pointIndex = 0; pointIndex < sortedPoints.length; pointIndex += 1) {
       if (pointIndex % 32 === 0)
         yield* nfpCheckpoint(input.control, 'candidate-points')
-      const point = sortedPoints[pointIndex]
-      if (point === undefined) continue
-      if (!isInsideBounds(point, ifp.bounds)) continue
-      const boundariesForPoint =
-        candidatePruningMode === 'indexed'
-          ? candidateNfpIndex.query(pointBounds(point))
-          : nfpBoundaries
-      if (
-        boundariesForPoint.some(
-          ({ boundary, winding, bounds }) =>
-            isInsideBounds(point, bounds) && isStrictlyInside(point, boundary, winding)
-        )
-      ) {
-        continue
-      }
+      const rawPoint = sortedPoints[pointIndex]
+      if (rawPoint === undefined) continue
+      for (const point of canonicalPlacementPointAlternatives(rawPoint)) {
+        if (!isInsideBounds(point, ifp.bounds)) continue
+        const boundariesForPoint =
+          candidatePruningMode === 'indexed'
+            ? candidateNfpIndex.query(pointBounds(point))
+            : nfpBoundaries
+        if (
+          boundariesForPoint.some(
+            ({ boundary, winding, bounds }) =>
+              isInsideBounds(point, bounds) && isStrictlyInside(point, boundary, winding)
+          )
+        ) {
+          continue
+        }
 
-      const candidate: InternalPlacementCandidate = {
-        pieceId: input.moving.sourcePieceId,
-        transform: input.moving.transform,
-        point,
-        diagnostics: []
+        const candidate: InternalPlacementCandidate = {
+          pieceId: input.moving.sourcePieceId,
+          transform: input.moving.transform,
+          point,
+          diagnostics: []
+        }
+        const legal = yield* PlacementValidation.check({
+          sheet: input.sheet,
+          placed: input.placed,
+          ...(placedCollisionIndex !== undefined ? { placedCollisionIndex } : {}),
+          moving: input.moving,
+          candidate
+        })
+        if (!legal) continue
+        const gridKey = `${point.gridX},${point.gridY}`
+        if (!acceptedGridKeys.has(gridKey)) {
+          acceptedGridKeys.add(gridKey)
+          candidates.push(toDomainPlacementCandidate(candidate))
+        }
+        break
       }
-      const legal = yield* PlacementValidation.check({
-        sheet: input.sheet,
-        placed: input.placed,
-        ...(placedCollisionIndex !== undefined ? { placedCollisionIndex } : {}),
-        moving: input.moving,
-        candidate
-      })
-      if (legal) candidates.push(toDomainPlacementCandidate(candidate))
     }
 
     yield* nfpCheckpoint(input.control, 'candidate-points')
     return candidates
   })
+}
+
+interface CanonicalCandidatePoint extends InternalPoint {
+  readonly squaredDistance: number
+  readonly gridX: number
+  readonly gridY: number
+}
+
+/** Canonicalizes candidate translations before any admission or cache write. */
+export function canonicalPlacementPointAlternatives(
+  rawPoint: InternalPoint
+): ReadonlyArray<CanonicalCandidatePoint> {
+  const centerX = toGridMm(rawPoint.x)
+  const centerY = toGridMm(rawPoint.y)
+  if (centerX === undefined || centerY === undefined) return []
+  const alternatives: CanonicalCandidatePoint[] = []
+  for (let deltaX = -1; deltaX <= 1; deltaX += 1) {
+    for (let deltaY = -1; deltaY <= 1; deltaY += 1) {
+      const gridX = centerX + deltaX
+      const gridY = centerY + deltaY
+      if (!Number.isSafeInteger(gridX) || !Number.isSafeInteger(gridY)) continue
+      const point = { x: fromGrid(gridX), y: fromGrid(gridY) }
+      alternatives.push({
+        ...point,
+        squaredDistance:
+          (point.x - rawPoint.x) * (point.x - rawPoint.x) +
+          (point.y - rawPoint.y) * (point.y - rawPoint.y),
+        gridX,
+        gridY
+      })
+    }
+  }
+  return alternatives.toSorted(compareCanonicalCandidatePoints)
+}
+
+function compareCanonicalCandidatePoints(
+  first: CanonicalCandidatePoint,
+  second: CanonicalCandidatePoint
+): number {
+  return (
+    first.squaredDistance - second.squaredDistance ||
+    first.gridX - second.gridX ||
+    first.gridY - second.gridY
+  )
 }
 
 function makeGeneratePlacementCandidates(

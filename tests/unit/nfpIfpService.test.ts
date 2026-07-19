@@ -25,6 +25,7 @@ import type {
 } from '../../src/workers/irregular/nfpIfpService.js'
 import {
   canonicalizeTranslatedConvexRing,
+  canonicalPlacementPointAlternatives,
   makeNfpIfpServiceLive,
   makeNfpIfpServiceLayer,
   NfpBoundaryAlgorithms,
@@ -51,6 +52,7 @@ import {
 } from '../../src/workers/irregular/services.js'
 import { PlacementValidation } from '../../src/workers/irregular/placementValidation.js'
 import { TransformCollisionGeometry } from '../../src/workers/irregular/transformCollisionGeometry.js'
+import { assertCanonicalGridLegalLayout } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -330,6 +332,87 @@ async function captureFailure(promise: Promise<unknown>) {
 }
 
 describe('NfpIfpServiceLive', () => {
+  it('orders the step-31 raw translation by canonical-grid distance and identity', () => {
+    const alternatives = canonicalPlacementPointAlternatives({
+      x: 509.4153570036576,
+      y: 527.8944897285338
+    })
+
+    expect(alternatives).toHaveLength(9)
+    expect(alternatives[0]).toMatchObject({ x: 509.415, y: 527.894 })
+    expect(
+      alternatives.every(
+        ({ x, y }) => Number.isInteger(x * 1_000) && Number.isInteger(y * 1_000)
+      )
+    ).toBe(true)
+    expect(new Set(alternatives.map(({ gridX, gridY }) => `${gridX},${gridY}`)).size).toBe(9)
+  })
+
+  it('keeps direct and final canonical legality aligned for the step-31 pair', async () => {
+    const fixedPoints = [
+      point(0, 23.502),
+      point(0, 91.072),
+      point(-70.504, 114.574),
+      point(-70.504, 0)
+    ]
+    const movingPoints = [point(0, -44.144), point(75.675, -88.288), point(75.675, 0)]
+    const fixedTranslation = canonicalPlacementPointAlternatives({
+      x: 527.902,
+      y: 381.8945535748431
+    })[0]
+    if (fixedTranslation === undefined) throw new Error('expected fixed canonical translation')
+    const fixed = placedPiece(
+      '604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4',
+      fixedPoints,
+      fixedTranslation.x,
+      fixedTranslation.y,
+      transform(1, 90, false)
+    )
+    const moving = transformedGeometry(
+      'd06db288-d2d6-4f40-874e-98287f516d93-copy-2',
+      movingPoints,
+      bounds(movingPoints),
+      transform(3, 270, false)
+    )
+    const canonicalAlternatives = canonicalPlacementPointAlternatives({
+      x: 509.4153570036576,
+      y: 527.8944897285338
+    })
+    let accepted: (typeof canonicalAlternatives)[number] | undefined
+    for (const candidatePoint of canonicalAlternatives) {
+      const candidate = new IrregularPlacementCandidate({
+        pieceId: moving.sourcePieceId,
+        transform: moving.transform,
+        point: candidatePoint,
+        diagnostics: []
+      })
+      if (
+        await Effect.runPromise(
+          PlacementValidation.check({
+            sheet: sheet(2000, 2700),
+            placed: [fixed],
+            moving,
+            candidate
+          })
+        )
+      ) {
+        accepted = candidatePoint
+        break
+      }
+    }
+    expect(accepted).toBeDefined()
+    if (accepted === undefined) throw new Error('expected a legal canonical alternative')
+    const acceptedMoving = placedPiece(
+      'd06db288-d2d6-4f40-874e-98287f516d93-copy-2',
+      movingPoints,
+      accepted.x,
+      accepted.y,
+      transform(3, 270, false)
+    )
+
+    expect(accepted).toMatchObject({ x: 509.416, y: 527.895 })
+    expect(assertCanonicalGridLegalLayout(sheet(2000, 2700), [fixed, acceptedMoving])).toBe(true)
+  })
   it('canonicalizes wrap-around collinear and repeated vertices without changing the ring', () => {
     const wrapAround = canonicalizeTranslatedConvexRing([
       point(0, 0),
