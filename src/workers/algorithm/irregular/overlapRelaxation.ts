@@ -90,7 +90,7 @@ export function relaxOverlappingLayout(
   options: OverlapRelaxationOptions = {}
 ): Effect.Effect<OverlapRelaxationResult, IrregularGeometryInputError> {
   return Effect.gen(function* () {
-    const incumbentMetrics = measureIntrinsicMetrics(incumbent)
+    const incumbentMetrics = measureRelaxationMetrics(incumbent)
     if (incumbentMetrics === undefined) {
       return makeUnchangedResult(incumbent, emptyMetrics(), {
         evaluations: 0,
@@ -153,7 +153,7 @@ export function relaxOverlappingLayout(
       completedRatios.push(squeezeRatio)
       if (
         attempt !== undefined &&
-        isAdmissibleImprovement(incumbentMetrics, attempt.metrics) &&
+        isAdmissibleRelaxationImprovement(incumbentMetrics, attempt.metrics) &&
         compareMetrics(attempt.metrics, selectedMetrics) < 0
       ) {
         selected = attempt.placed
@@ -213,7 +213,7 @@ function runSqueezeAttempt(input: {
         input.budget.exactCandidatesChecked += 1
         const exact = yield* rebuildAndValidate(input.sheet, input.pieces, current)
         if (exact !== undefined) {
-          const metrics = measureIntrinsicMetrics(exact)
+          const metrics = measureRelaxationMetrics(exact)
           if (metrics !== undefined) return { placed: exact, metrics }
         }
         return undefined
@@ -565,7 +565,7 @@ function bottomLeftGridTranslations(
   }))
 }
 
-function measureIntrinsicMetrics(
+export function measureRelaxationMetrics(
   placed: ReadonlyArray<IrregularPlacedPiece>
 ): IntrinsicRelaxationMetrics | undefined {
   const points = placed.flatMap(({ placement, collisionGeometry }) =>
@@ -598,7 +598,7 @@ function measureIntrinsicMetrics(
   }
 }
 
-function isAdmissibleImprovement(
+export function isAdmissibleRelaxationImprovement(
   incumbent: IntrinsicRelaxationMetrics,
   candidate: IntrinsicRelaxationMetrics
 ): boolean {

@@ -12,8 +12,9 @@ import {
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import { relaxOverlappingLayout } from '../../src/workers/algorithm/irregular/overlapRelaxation.js'
+import { relaxOverlappingLayoutV1 } from '../../src/workers/algorithm/irregular/overlapRelaxationV1.js'
 
-function placedSquare(pieceId: string, x: number, y: number): IrregularPlacedPiece {
+function placedSquare(pieceId: string, x: number, y: number, size = 2): IrregularPlacedPiece {
   const id = PieceId.make(pieceId)
   return new IrregularPlacedPiece({
     placement: new IrregularPlacement({
@@ -32,12 +33,12 @@ function placedSquare(pieceId: string, x: number, y: number): IrregularPlacedPie
       polygon: new IrregularPolygon({
         points: [
           new IrregularPoint({ x: 0, y: 0 }),
-          new IrregularPoint({ x: 2, y: 0 }),
-          new IrregularPoint({ x: 2, y: 2 }),
-          new IrregularPoint({ x: 0, y: 2 })
+          new IrregularPoint({ x: size, y: 0 }),
+          new IrregularPoint({ x: size, y: size }),
+          new IrregularPoint({ x: 0, y: size })
         ]
       }),
-      bounds: new IrregularBounds({ minX: 0, minY: 0, maxX: 2, maxY: 2 })
+      bounds: new IrregularBounds({ minX: 0, minY: 0, maxX: size, maxY: size })
     })
   })
 }
@@ -59,5 +60,37 @@ describe('relaxOverlappingLayout', () => {
     expect(incumbent.map(({ placement }) => placement.transform)).toEqual(translations)
     expect(result.evaluations).toBeLessThanOrEqual(200)
     expect(result.completedAttempts).toBeLessThanOrEqual(20)
+  })
+
+  it('restores and validates a collision-free longer-axis center split', async () => {
+    const incumbent = [placedSquare('left', 0, 0, 1), placedSquare('right', 3, 0, 1)]
+    const result = await Effect.runPromise(
+      relaxOverlappingLayoutV1(
+        new SheetSpec({ width: 10, height: 10, label: 'test' }),
+        incumbent,
+        {
+          targetWidth: 3.9987,
+          maximumEvaluations: 100,
+          maximumSweeps: 2,
+          strikeLimit: 1
+        }
+      )
+    )
+
+    expect(result.separated).toBe(true)
+    expect(result.promotable).toBe(true)
+    expect(result.initialRawLoss).toBe(0)
+    expect(result.exactCandidatesChecked).toBe(1)
+    expect(result.rawZeroRestorations).toHaveLength(1)
+    expect(result.rawZeroRestorations[0]?.exactGridLegal).toBe(true)
+    expect(result.requestedTargetWidth).toBe(3.9987)
+    expect(result.targetWidth).toBe(3.998)
+    expect(result.selectedMetrics.width).toBeCloseTo(3.998)
+    expect(result.selectedMetrics.area).toBeLessThan(result.incumbentMetrics.area)
+    expect(
+      result.placedCollisionGeometries.every(({ placement }) =>
+        Number.isInteger(placement.transform.translateX * 1000)
+      )
+    ).toBe(true)
   })
 })
