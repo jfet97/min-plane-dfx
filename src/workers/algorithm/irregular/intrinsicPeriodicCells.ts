@@ -1,14 +1,23 @@
 import { Effect, Order } from 'effect'
 import {
+  area,
+  booleanOpWithPolyTree,
+  ClipType,
+  FillRule,
+  type Path64,
+  polyTreeToPaths64,
+  PolyTree64
+} from 'clipper2-ts'
+import {
   IrregularPlacedPiece,
   IrregularPlacement,
   IrregularPlacementCandidate,
   IrregularPreparedPiece,
   type IrregularNestingSettings,
   IrregularTransform,
+  TransformedCollisionGeometry,
   type IrregularPoint,
-  type IrregularTransformCandidate,
-  type TransformedCollisionGeometry
+  type IrregularTransformCandidate
 } from '@shared/irregular/domain.js'
 import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { boundsForPoints, translatePolygonWithBounds } from '../../irregular/convexBounds.js'
@@ -49,8 +58,10 @@ export interface IntrinsicPeriodicCell {
   readonly members: ReadonlyArray<IntrinsicPeriodicBaseMember>
   readonly v1: IntrinsicPeriodicVector
   readonly v2: IntrinsicPeriodicVector
-  readonly determinantGrid2: number
+  readonly determinantGrid2: string
   readonly density: number
+  readonly envelopeMaximumSideMm: number
+  readonly hullWasteRatio: number
   readonly sharedBoundaryLengthMm: number
   readonly canonicalKey: string
 }
@@ -78,8 +89,18 @@ export interface IntrinsicPeriodicSeed {
 }
 
 interface GridPoint {
-  readonly x: number
-  readonly y: number
+  readonly x: bigint
+  readonly y: bigint
+}
+
+interface Rational {
+  readonly numerator: bigint
+  readonly denominator: bigint
+}
+
+interface RationalPoint {
+  readonly x: Rational
+  readonly y: Rational
 }
 
 interface ForbiddenBoundary {
@@ -247,18 +268,19 @@ export function expandIntrinsicPeriodicCell(
                 x: base.point.x + coordinate.row * cell.v1.x + coordinate.column * cell.v2.x,
                 y: base.point.y + coordinate.row * cell.v1.y + coordinate.column * cell.v2.y
               }
-              const candidate = makeCandidate(base.geometry, point)
+              const actualGeometry = geometryForPiece(base.geometry, piece)
+              const candidate = makeCandidate(actualGeometry, point)
               if (
                 !(yield* PlacementValidation.checkSheetless({
                   placed,
-                  moving: base.geometry,
+                  moving: actualGeometry,
                   candidate
                 }))
               ) {
                 legal = false
                 break
               }
-              placed.push(makePlaced(piece, base.geometry, point))
+              placed.push(makePlaced(piece, actualGeometry, point))
               sourceIndex += 1
             }
             if (!legal || sourceIndex >= q * memberCount) break
@@ -398,9 +420,9 @@ function deriveCells(input: {
         const points = boundary.boundary.points
           .map(gridPoint)
           .filter((point): point is GridPoint => point !== undefined)
-          .map((point) => ({ x: point.x - movingGrid.x, y: point.y - movingGrid.y }))
+        const shiftedPoints = shiftOrderedPairForbiddenBoundary(points, movingGrid)
         if (points.length !== boundary.boundary.points.length) return []
-        forbidden.push({ points })
+        forbidden.push({ points: shiftedPoints })
       }
     }
     const bases = [deriveAxisBasis(forbidden, false), deriveAxisBasis(forbidden, true)].filter(
@@ -412,11 +434,13 @@ function deriveCells(input: {
       if (canonical === undefined || !farNeighborCertificate(input.members, canonical)) continue
       const certificate = yield* validateLattice(input.members, canonical)
       if (certificate === undefined) continue
-      const determinantGrid2 = Math.abs(crossGrid(canonical[0], canonical[1]))
+      const determinantGrid2 = absBigInt(crossGrid(canonical[0], canonical[1]))
       const memberAreaGrid2 = input.members.reduce(
         (sum, member) => sum + polygonAreaGrid2(member.geometry, member.point),
-        0
+        0n
       )
+      const shape = measureBaseCellShape(input.members)
+      if (shape === undefined) continue
       const canonicalKey = canonicalCellKey(input.role, input.members, canonical)
       result.push({
         role: input.role,
@@ -424,8 +448,10 @@ function deriveCells(input: {
         members: input.members,
         v1: fromGridPoint(canonical[0]),
         v2: fromGridPoint(canonical[1]),
-        determinantGrid2,
-        density: memberAreaGrid2 / determinantGrid2,
+        determinantGrid2: determinantGrid2.toString(),
+        density: Number(memberAreaGrid2) / Number(determinantGrid2),
+        envelopeMaximumSideMm: shape.maximumSideMm,
+        hullWasteRatio: shape.hullWasteRatio,
         sharedBoundaryLengthMm: certificate.sharedBoundaryLengthMm,
         canonicalKey
       })
@@ -438,38 +464,86 @@ function deriveAxisBasis(
   boundaries: ReadonlyArray<ForbiddenBoundary>,
   swapAxes: boolean
 ): readonly [GridPoint, GridPoint] | undefined {
-  const oriented = boundaries.map(({ points }) => ({
+  const orientedRaw = boundaries.map(({ points }) => ({
     points: points.map((point) => (swapAxes ? { x: point.y, y: point.x } : point))
   }))
-  const axis = boundaryLineIntersections(oriented, 'y', 0)
-    .filter(({ x }) => x > 0)
-    .toSorted(compareGridPoints)[0]
-  if (axis === undefined) return undefined
-  const shifted = [
+  const oriented = unionForbiddenBoundaries(orientedRaw)
+  if (oriented === undefined) return undefined
+  const axisIntersection = boundaryLineIntersections(oriented, 'y', 0n)
+    .filter(({ x }) => compareRational(x, rational(0n)) > 0)
+    .toSorted((first, second) => compareRational(first.x, second.x))[0]
+  if (axisIntersection === undefined) return undefined
+  const axis = { x: roundRational(axisIntersection.x), y: 0n }
+  if (axis.x <= 0n) return undefined
+  const shifted = unionForbiddenBoundaries([
     ...oriented,
     ...oriented.map(({ points }) => ({
       points: points.map((point) => ({ x: point.x + axis.x, y: point.y }))
     }))
-  ]
+  ])
+  if (shifted === undefined) return undefined
   const constrained = [
-    ...shifted.flatMap(({ points }) => points),
-    ...boundaryLineIntersections(shifted, 'x', 0),
-    ...boundaryLineIntersections(shifted, 'x', axis.x - 1)
+    ...shifted.flatMap(({ points }) =>
+      points.map((point): RationalPoint => ({ x: rational(point.x), y: rational(point.y) }))
+    ),
+    ...boundaryLineIntersections(shifted, 'x', 0n),
+    ...boundaryLineIntersections(shifted, 'x', axis.x)
   ]
-    .filter(({ x, y }) => y > 0 && x >= 0 && x < axis.x)
-    .toSorted((first, second) => first.y - second.y || first.x - second.x)
-  const second = constrained[0]
-  if (second === undefined) return undefined
+    .filter(
+      ({ x, y }) =>
+        compareRational(y, rational(0n)) > 0 &&
+        compareRational(x, rational(0n)) >= 0 &&
+        compareRational(x, rational(axis.x)) < 0
+    )
+    .toSorted(
+      (first, second) => compareRational(first.y, second.y) || compareRational(first.x, second.x)
+    )
+  const secondRational = constrained[0]
+  if (secondRational === undefined) return undefined
+  const second = { x: roundRational(secondRational.x), y: roundRational(secondRational.y) }
   const unswap = (point: GridPoint): GridPoint => (swapAxes ? { x: point.y, y: point.x } : point)
   return [unswap(axis), unswap(second)]
+}
+
+/** Source-control seam for exact union plus axis-dual basis derivation. */
+export function derivePeriodicAxisBasisControl(
+  boundaries: ReadonlyArray<ReadonlyArray<{ readonly x: number; readonly y: number }>>,
+  swapAxes = false
+): readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector] | undefined {
+  const converted: ForbiddenBoundary[] = boundaries.map((points) => ({
+    points: points.map(({ x, y }) => ({ x: BigInt(x), y: BigInt(y) }))
+  }))
+  const basis = deriveAxisBasis(converted, swapAxes)
+  return basis === undefined ? undefined : [fromGridPoint(basis[0]), fromGridPoint(basis[1])]
+}
+
+/** Source-control seam proving the ordered moving-base offset sign. */
+export function shiftOrderedPairForbiddenBoundaryControl(
+  boundary: ReadonlyArray<{ readonly x: number; readonly y: number }>,
+  movingBasePoint: { readonly x: number; readonly y: number }
+): ReadonlyArray<{ readonly x: number; readonly y: number }> {
+  return boundary.map(({ x, y }) => ({
+    x: x - movingBasePoint.x,
+    y: y - movingBasePoint.y
+  }))
+}
+
+function shiftOrderedPairForbiddenBoundary(
+  boundary: ReadonlyArray<GridPoint>,
+  movingBasePoint: GridPoint
+): ReadonlyArray<GridPoint> {
+  return boundary.map(({ x, y }) => ({
+    x: x - movingBasePoint.x,
+    y: y - movingBasePoint.y
+  }))
 }
 
 function boundaryLineIntersections(
   boundaries: ReadonlyArray<ForbiddenBoundary>,
   axis: 'x' | 'y',
-  value: number
-): ReadonlyArray<GridPoint> {
-  const result = new Map<string, GridPoint>()
+  value: bigint
+): ReadonlyArray<RationalPoint> {
+  const result = new Map<string, RationalPoint>()
   for (const { points } of boundaries) {
     for (let index = 0; index < points.length; index += 1) {
       const first = points[index]
@@ -485,22 +559,117 @@ function boundaryLineIntersections(
       }
       if (firstValue === secondValue) {
         if (firstValue === value) {
-          result.set(`${first.x},${first.y}`, first)
-          result.set(`${second.x},${second.y}`, second)
+          const firstPoint = { x: rational(first.x), y: rational(first.y) }
+          const secondPoint = { x: rational(second.x), y: rational(second.y) }
+          result.set(rationalPointKey(firstPoint), firstPoint)
+          result.set(rationalPointKey(secondPoint), secondPoint)
         }
         continue
       }
       const numerator = value - firstValue
       const denominator = secondValue - firstValue
       const otherAxis = axis === 'x' ? 'y' : 'x'
-      const other =
-        first[otherAxis] + ((second[otherAxis] - first[otherAxis]) * numerator) / denominator
-      if (!Number.isInteger(other)) continue
-      const point = axis === 'x' ? { x: value, y: other } : { x: other, y: value }
-      result.set(`${point.x},${point.y}`, point)
+      const other = addRational(
+        rational(first[otherAxis]),
+        makeRational((second[otherAxis] - first[otherAxis]) * numerator, denominator)
+      )
+      const point: RationalPoint =
+        axis === 'x' ? { x: rational(value), y: other } : { x: other, y: rational(value) }
+      result.set(rationalPointKey(point), point)
     }
   }
   return [...result.values()]
+}
+
+/** Source-control seam retaining non-integral exact axis intersections. */
+export function exactAxisIntersectionsControl(
+  boundary: ReadonlyArray<{ readonly x: number; readonly y: number }>,
+  axis: 'x' | 'y',
+  value: number
+): ReadonlyArray<{ readonly x: string; readonly y: string }> {
+  return boundaryLineIntersections(
+    [{ points: boundary.map(({ x, y }) => ({ x: BigInt(x), y: BigInt(y) })) }],
+    axis,
+    BigInt(value)
+  ).map(({ x, y }) => ({
+    x: `${x.numerator}/${x.denominator}`,
+    y: `${y.numerator}/${y.denominator}`
+  }))
+}
+
+function unionForbiddenBoundaries(
+  boundaries: ReadonlyArray<ForbiddenBoundary>
+): ReadonlyArray<ForbiddenBoundary> | undefined {
+  const paths: Path64[] = []
+  for (const { points } of boundaries) {
+    const path: Path64 = []
+    for (const point of points) {
+      const x = Number(point.x)
+      const y = Number(point.y)
+      if (!Number.isSafeInteger(x) || !Number.isSafeInteger(y)) return undefined
+      path.push({ x, y })
+    }
+    if (path.length >= 3) paths.push(area(path) >= 0 ? path : [...path].reverse())
+  }
+  const tree = new PolyTree64()
+  try {
+    booleanOpWithPolyTree(ClipType.Union, paths, null, tree, FillRule.NonZero)
+  } catch {
+    return undefined
+  }
+  return polyTreeToPaths64(tree).map((path) => ({
+    points: path.map(({ x, y }) => ({ x: BigInt(x), y: BigInt(y) }))
+  }))
+}
+
+function rational(value: bigint): Rational {
+  return { numerator: value, denominator: 1n }
+}
+
+function makeRational(numerator: bigint, denominator: bigint): Rational {
+  if (denominator === 0n) return rational(0n)
+  const sign = denominator < 0n ? -1n : 1n
+  const normalizedNumerator = numerator * sign
+  const normalizedDenominator = denominator * sign
+  const divisor = greatestCommonDivisor(absBigInt(normalizedNumerator), normalizedDenominator)
+  return {
+    numerator: normalizedNumerator / divisor,
+    denominator: normalizedDenominator / divisor
+  }
+}
+
+function addRational(first: Rational, second: Rational): Rational {
+  return makeRational(
+    first.numerator * second.denominator + second.numerator * first.denominator,
+    first.denominator * second.denominator
+  )
+}
+
+function compareRational(first: Rational, second: Rational): number {
+  return compareBigInt(first.numerator * second.denominator, second.numerator * first.denominator)
+}
+
+function roundRational(value: Rational): bigint {
+  const quotient = value.numerator / value.denominator
+  const remainder = value.numerator % value.denominator
+  if (remainder === 0n) return quotient
+  const direction = value.numerator < 0n ? -1n : 1n
+  return absBigInt(remainder) * 2n >= value.denominator ? quotient + direction : quotient
+}
+
+function rationalPointKey(point: RationalPoint): string {
+  return `${point.x.numerator}/${point.x.denominator},${point.y.numerator}/${point.y.denominator}`
+}
+
+function greatestCommonDivisor(first: bigint, second: bigint): bigint {
+  let a = first
+  let b = second
+  while (b !== 0n) {
+    const remainder = a % b
+    a = b
+    b = remainder
+  }
+  return a === 0n ? 1n : a
 }
 
 function canonicalizeBasis(
@@ -508,8 +677,9 @@ function canonicalizeBasis(
   second: GridPoint
 ): readonly [GridPoint, GridPoint] | undefined {
   const determinant = crossGrid(first, second)
-  if (determinant === 0) return undefined
-  const basis: readonly [GridPoint, GridPoint] = determinant > 0 ? [first, second] : [second, first]
+  if (determinant === 0n) return undefined
+  const basis: readonly [GridPoint, GridPoint] =
+    determinant > 0n ? [first, second] : [second, first]
   return basis
 }
 
@@ -530,14 +700,14 @@ export function farNeighborCertificate(
   let maximumDistanceSquared = 0n
   for (const first of vertices) {
     for (const second of vertices) {
-      const dx = BigInt(first.x - second.x)
-      const dy = BigInt(first.y - second.y)
+      const dx = first.x - second.x
+      const dy = first.y - second.y
       const distance = dx * dx + dy * dy
       if (distance > maximumDistanceSquared) maximumDistanceSquared = distance
     }
   }
-  const determinant = BigInt(Math.abs(crossGrid(basis[0], basis[1])))
-  const f2 = BigInt(basis[0].x ** 2 + basis[0].y ** 2 + basis[1].x ** 2 + basis[1].y ** 2)
+  const determinant = absBigInt(crossGrid(basis[0], basis[1]))
+  const f2 = basis[0].x ** 2n + basis[0].y ** 2n + basis[1].x ** 2n + basis[1].y ** 2n
   return 4n * determinant * determinant > maximumDistanceSquared * f2
 }
 
@@ -557,8 +727,8 @@ function validateLattice(
           const member = members[memberIndex]
           if (member === undefined) return undefined
           const point = {
-            x: member.point.x + fromGrid(n * basis[0].x + m * basis[1].x),
-            y: member.point.y + fromGrid(n * basis[0].y + m * basis[1].y)
+            x: member.point.x + fromGrid(Number(BigInt(n) * basis[0].x + BigInt(m) * basis[1].x)),
+            y: member.point.y + fromGrid(Number(BigInt(n) * basis[0].y + BigInt(m) * basis[1].y))
           }
           const candidate = makeCandidate(member.geometry, point)
           const legal = yield* PlacementValidation.checkSheetless({
@@ -603,6 +773,20 @@ function validateLattice(
   })
 }
 
+/** Source-control seam for exact 3x3 legality/contact independently of the far proof. */
+export function validatePeriodicContactLatticeControl(
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>,
+  v1: IntrinsicPeriodicVector,
+  v2: IntrinsicPeriodicVector
+): Effect.Effect<boolean, IrregularGeometryInputError> {
+  const first = gridPoint(v1)
+  const second = gridPoint(v2)
+  if (first === undefined || second === undefined) return Effect.succeed(false)
+  return validateLattice(members, [first, second]).pipe(
+    Effect.map((certificate) => certificate !== undefined)
+  )
+}
+
 function boundaryCandidatePoints(
   points: ReadonlyArray<IrregularPoint>,
   moving: TransformedCollisionGeometry
@@ -610,18 +794,22 @@ function boundaryCandidatePoints(
   const boundaries: ForbiddenBoundary[] = [
     { points: points.map(gridPoint).filter((point): point is GridPoint => point !== undefined) }
   ]
-  const x = toGridMm(-moving.bounds.minX)
-  const y = toGridMm(-moving.bounds.minY)
+  const xValue = toGridMm(-moving.bounds.minX)
+  const yValue = toGridMm(-moving.bounds.minY)
+  const x = xValue === undefined ? undefined : BigInt(xValue)
+  const y = yValue === undefined ? undefined : BigInt(yValue)
   const candidates = new Map<string, GridPoint>()
   for (const point of boundaries[0]?.points ?? []) candidates.set(`${point.x},${point.y}`, point)
   if (x !== undefined) {
     for (const point of boundaryLineIntersections(boundaries, 'x', x)) {
-      candidates.set(`${point.x},${point.y}`, point)
+      const grid = { x: roundRational(point.x), y: roundRational(point.y) }
+      candidates.set(`${grid.x},${grid.y}`, grid)
     }
   }
   if (y !== undefined) {
     for (const point of boundaryLineIntersections(boundaries, 'y', y)) {
-      candidates.set(`${point.x},${point.y}`, point)
+      const grid = { x: roundRational(point.x), y: roundRational(point.y) }
+      candidates.set(`${grid.x},${grid.y}`, grid)
     }
   }
   return [...candidates.values()].toSorted(compareGridPoints).map(fromGridPoint)
@@ -662,6 +850,18 @@ function makePlaced(
   })
 }
 
+function geometryForPiece(
+  geometry: TransformedCollisionGeometry,
+  piece: IrregularPreparedPiece
+): TransformedCollisionGeometry {
+  return new TransformedCollisionGeometry({
+    sourcePieceId: piece.source.id,
+    transform: geometry.transform,
+    polygon: geometry.polygon,
+    bounds: geometry.bounds
+  })
+}
+
 function makeCandidate(
   geometry: TransformedCollisionGeometry,
   point: IrregularPoint
@@ -684,8 +884,8 @@ function canonicalTransformedPolygonKey(geometry: TransformedCollisionGeometry):
   const points = geometry.polygon.points.map((point) => gridPoint(point))
   if (points.some((point) => point === undefined)) return 'invalid'
   const valid = points.filter((point): point is GridPoint => point !== undefined)
-  const minX = Math.min(...valid.map(({ x }) => x))
-  const minY = Math.min(...valid.map(({ y }) => y))
+  const minX = valid.reduce((minimum, { x }) => (x < minimum ? x : minimum), valid[0]?.x ?? 0n)
+  const minY = valid.reduce((minimum, { y }) => (y < minimum ? y : minimum), valid[0]?.y ?? 0n)
   return canonicalCycle(valid.map(({ x, y }) => ({ x: x - minX, y: y - minY })))
 }
 
@@ -694,13 +894,15 @@ function canonicalCellKey(
   members: ReadonlyArray<IntrinsicPeriodicBaseMember>,
   basis: readonly [GridPoint, GridPoint]
 ): string {
-  const memberKey = members
-    .map(
-      ({ geometry, point }) => `${canonicalTransformedPolygonKey(geometry)}@${point.x},${point.y}`
-    )
-    .toSorted()
-    .join('|')
-  const basisVariants: string[] = []
+  const worldPolygons = members.map(({ geometry, point }) => {
+    const translation = gridPoint(point)
+    if (translation === undefined) return []
+    return geometry.polygon.points.flatMap((vertex) => {
+      const local = gridPoint(vertex)
+      return local === undefined ? [] : [{ x: local.x + translation.x, y: local.y + translation.y }]
+    })
+  })
+  const variants: string[] = []
   for (let turn = 0; turn < 4; turn += 1) {
     const rotate = (point: GridPoint): GridPoint => {
       switch (turn) {
@@ -716,10 +918,38 @@ function canonicalCellKey(
     }
     const first = rotate(basis[0])
     const second = rotate(basis[1])
-    basisVariants.push(`${first.x},${first.y};${second.x},${second.y}`)
-    basisVariants.push(`${second.x},${second.y};${first.x},${first.y}`)
+    const rotatedPolygons = worldPolygons.map((polygon) => polygon.map(rotate))
+    const all = rotatedPolygons.flat()
+    const minX = all.reduce(
+      (minimum, point) => (point.x < minimum ? point.x : minimum),
+      all[0]?.x ?? 0n
+    )
+    const minY = all.reduce(
+      (minimum, point) => (point.y < minimum ? point.y : minimum),
+      all[0]?.y ?? 0n
+    )
+    const memberKey = rotatedPolygons
+      .map((polygon) => canonicalCycle(polygon.map(({ x, y }) => ({ x: x - minX, y: y - minY }))))
+      .toSorted()
+      .join('|')
+    variants.push(`${memberKey}:${first.x},${first.y};${second.x},${second.y}`)
+    variants.push(`${memberKey}:${second.x},${second.y};${first.x},${first.y}`)
   }
-  return `${role}:${memberKey}:${basisVariants.toSorted()[0]}`
+  return `${role}:${variants.toSorted()[0]}`
+}
+
+/** Source-control seam for whole-cell quarter-turn and basis-swap identity. */
+export function canonicalPeriodicCellIdentityControl(
+  role: 'P1' | 'P2',
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>,
+  v1: IntrinsicPeriodicVector,
+  v2: IntrinsicPeriodicVector
+): string | undefined {
+  const first = gridPoint(v1)
+  const second = gridPoint(v2)
+  return first === undefined || second === undefined
+    ? undefined
+    : canonicalCellKey(role, members, [first, second])
 }
 
 function canonicalCycle(points: ReadonlyArray<GridPoint>): string {
@@ -733,46 +963,117 @@ function canonicalCycle(points: ReadonlyArray<GridPoint>): string {
   return variants.toSorted()[0] ?? ''
 }
 
-function polygonAreaGrid2(geometry: TransformedCollisionGeometry, point: IrregularPoint): number {
+function polygonAreaGrid2(geometry: TransformedCollisionGeometry, point: IrregularPoint): bigint {
   const translated = geometry.polygon.points.map(({ x, y }) => ({ x: x + point.x, y: y + point.y }))
-  let doubled = 0
+  let doubled = 0n
   for (let index = 0; index < translated.length; index += 1) {
     const first = gridPoint(translated[index] ?? { x: 0, y: 0 })
     const second = gridPoint(translated[(index + 1) % translated.length] ?? { x: 0, y: 0 })
-    if (first === undefined || second === undefined) return 0
+    if (first === undefined || second === undefined) return 0n
     doubled += first.x * second.y - second.x * first.y
   }
-  return Math.abs(doubled) / 2
+  return absBigInt(doubled) / 2n
+}
+
+function measureBaseCellShape(
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>
+): { readonly maximumSideMm: number; readonly hullWasteRatio: number } | undefined {
+  const points = members.flatMap(({ geometry, point }) =>
+    geometry.polygon.points.map(({ x, y }) => ({ x: x + point.x, y: y + point.y }))
+  )
+  const bounds = boundsForPoints(points)
+  if (bounds === undefined) return undefined
+  const hull = convexHullGrid(
+    points.flatMap((point) => {
+      const grid = gridPoint(point)
+      return grid === undefined ? [] : [grid]
+    })
+  )
+  if (hull.length < 3) return undefined
+  const hullAreaGrid2 = polygonGridArea(hull)
+  const memberAreaGrid2 = members.reduce(
+    (sum, member) => sum + polygonAreaGrid2(member.geometry, member.point),
+    0n
+  )
+  if (hullAreaGrid2 <= 0n || memberAreaGrid2 > hullAreaGrid2) return undefined
+  return {
+    maximumSideMm: Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY),
+    hullWasteRatio: Number(hullAreaGrid2 - memberAreaGrid2) / Number(hullAreaGrid2)
+  }
+}
+
+function convexHullGrid(points: ReadonlyArray<GridPoint>): ReadonlyArray<GridPoint> {
+  const unique = [
+    ...new Map(points.map((point) => [`${point.x},${point.y}`, point])).values()
+  ].toSorted(compareGridPoints)
+  if (unique.length <= 1) return unique
+  const lower: GridPoint[] = []
+  for (const point of unique) {
+    while (lower.length >= 2 && orientationCross(lower.at(-2), lower.at(-1), point) <= 0n)
+      lower.pop()
+    lower.push(point)
+  }
+  const upper: GridPoint[] = []
+  for (const point of [...unique].reverse()) {
+    while (upper.length >= 2 && orientationCross(upper.at(-2), upper.at(-1), point) <= 0n)
+      upper.pop()
+    upper.push(point)
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)]
+}
+
+function orientationCross(
+  origin: GridPoint | undefined,
+  first: GridPoint | undefined,
+  second: GridPoint
+): bigint {
+  if (origin === undefined || first === undefined) return 0n
+  return (first.x - origin.x) * (second.y - origin.y) - (first.y - origin.y) * (second.x - origin.x)
+}
+
+function polygonGridArea(points: ReadonlyArray<GridPoint>): bigint {
+  let doubled = 0n
+  for (let index = 0; index < points.length; index += 1) {
+    const first = points[index]
+    const second = points[(index + 1) % points.length]
+    if (first === undefined || second === undefined) return 0n
+    doubled += first.x * second.y - second.x * first.y
+  }
+  return absBigInt(doubled) / 2n
 }
 
 function compareCells(first: IntrinsicPeriodicCell, second: IntrinsicPeriodicCell): number {
   return (
     second.density - first.density ||
-    Math.max(vectorLength(first.v1), vectorLength(first.v2)) -
-      Math.max(vectorLength(second.v1), vectorLength(second.v2)) ||
+    first.envelopeMaximumSideMm - second.envelopeMaximumSideMm ||
+    first.hullWasteRatio - second.hullWasteRatio ||
     second.sharedBoundaryLengthMm - first.sharedBoundaryLengthMm ||
     first.canonicalKey.localeCompare(second.canonicalKey)
   )
 }
 
-function vectorLength(vector: IntrinsicPeriodicVector): number {
-  return Math.hypot(vector.x, vector.y)
-}
-
 function gridPoint(point: IrregularPoint): GridPoint | undefined {
   const x = toGridMm(point.x)
   const y = toGridMm(point.y)
-  return x === undefined || y === undefined ? undefined : { x, y }
+  return x === undefined || y === undefined ? undefined : { x: BigInt(x), y: BigInt(y) }
 }
 
 function fromGridPoint(point: GridPoint): IrregularPoint {
-  return { x: fromGrid(point.x), y: fromGrid(point.y) }
+  return { x: fromGrid(Number(point.x)), y: fromGrid(Number(point.y)) }
 }
 
 function compareGridPoints(first: GridPoint, second: GridPoint): number {
-  return first.x - second.x || first.y - second.y
+  return compareBigInt(first.x, second.x) || compareBigInt(first.y, second.y)
 }
 
-function crossGrid(first: GridPoint, second: GridPoint): number {
+function crossGrid(first: GridPoint, second: GridPoint): bigint {
   return first.x * second.y - first.y * second.x
+}
+
+function absBigInt(value: bigint): bigint {
+  return value < 0n ? -value : value
+}
+
+function compareBigInt(first: bigint, second: bigint): number {
+  return first < second ? -1 : first > second ? 1 : 0
 }

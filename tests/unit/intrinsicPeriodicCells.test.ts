@@ -9,11 +9,20 @@ import {
   IrregularPoint,
   IrregularPolygon,
   IrregularPreparedPiece,
-  IrregularTransformCandidate
+  IrregularTransformCandidate,
+  TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import {
+  canonicalPeriodicCellIdentityControl,
+  derivePeriodicAxisBasisControl,
+  exactAxisIntersectionsControl,
   enumerateIntrinsicPeriodicCells,
-  expandIntrinsicPeriodicCell
+  expandIntrinsicPeriodicCell,
+  farNeighborCertificate,
+  shiftOrderedPairForbiddenBoundaryControl,
+  validatePeriodicContactLatticeControl,
+  type IntrinsicPeriodicBaseMember,
+  type IntrinsicPeriodicCell
 } from '../../src/workers/algorithm/irregular/intrinsicPeriodicCells.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
@@ -77,6 +86,17 @@ function runCatalog(pieces: ReadonlyArray<IrregularPreparedPiece>) {
   )
 }
 
+function transformed(piece: IrregularPreparedPiece): TransformedCollisionGeometry {
+  const transform = piece.transforms[0]
+  if (transform === undefined) throw new Error('test transform missing')
+  return new TransformedCollisionGeometry({
+    sourcePieceId: piece.source.id,
+    transform,
+    polygon: piece.collisionGeometry.collisionPolygon,
+    bounds: piece.collisionGeometry.sourceBounds
+  })
+}
+
 describe('intrinsic periodic cells', () => {
   it('rejects the dense rectangle lattice when the strict far-neighbor certificate is equal', async () => {
     const pieces = Array.from({ length: 6 }, (_, index) =>
@@ -100,12 +120,165 @@ describe('intrinsic periodic cells', () => {
     )
     const catalog = await runCatalog(pieces)
     expect(catalog.selectedFamilyKey).toContain('triangle-like')
-    expect(catalog.cells.every(({ determinantGrid2 }) => determinantGrid2 > 0)).toBe(true)
+    expect(catalog.cells.every(({ determinantGrid2 }) => BigInt(determinantGrid2) > 0n)).toBe(true)
     for (const seed of catalog.cells) {
       const expanded = await Effect.runPromise(expandIntrinsicPeriodicCell(seed, pieces))
       expect(
         expanded[0]?.placements.every(({ placement }) => placement.pieceId !== undefined)
       ).toBe(true)
     }
+  })
+
+  it('uses exact union, axis duality, and the negative moving-base offset', () => {
+    const forbidden = [
+      [
+        { x: -1000, y: -1000 },
+        { x: 1000, y: -1000 },
+        { x: 1000, y: 1000 },
+        { x: -1000, y: 1000 }
+      ]
+    ]
+    expect(derivePeriodicAxisBasisControl(forbidden)).toEqual([
+      { x: 1, y: 0 },
+      { x: 0, y: 1 }
+    ])
+    expect(derivePeriodicAxisBasisControl(forbidden, true)).toEqual([
+      { x: 0, y: 1 },
+      { x: 1, y: 0 }
+    ])
+    expect(shiftOrderedPairForbiddenBoundaryControl([{ x: 7, y: 11 }], { x: 2, y: 3 })).toEqual([
+      { x: 5, y: 8 }
+    ])
+    expect(
+      exactAxisIntersectionsControl(
+        [
+          { x: 0, y: -1 },
+          { x: 1001, y: 1 },
+          { x: 0, y: 2 }
+        ],
+        'y',
+        0
+      )
+    ).toContainEqual({ x: '1001/2', y: '0/1' })
+  })
+
+  it('keeps BigInt far-neighbor arithmetic and independently checks contact lattices', async () => {
+    const square = preparedPiece('square', 'square', [
+      point(0, 0),
+      point(1, 0),
+      point(1, 1),
+      point(0, 1)
+    ])
+    const member: IntrinsicPeriodicBaseMember = {
+      piece: square,
+      geometry: transformed(square),
+      point: point(0, 0)
+    }
+    expect(
+      farNeighborCertificate(
+        [member],
+        [
+          { x: 2_000n, y: 0n },
+          { x: 0n, y: 2_000n }
+        ]
+      )
+    ).toBe(true)
+    expect(
+      farNeighborCertificate(
+        [member],
+        [
+          { x: 1_000n, y: 0n },
+          { x: 0n, y: 1_000n }
+        ]
+      )
+    ).toBe(false)
+    const nearSafeLimit = 9_007_199_254_740_991n
+    expect(
+      farNeighborCertificate(
+        [member],
+        [
+          { x: nearSafeLimit, y: 0n },
+          { x: 0n, y: nearSafeLimit }
+        ]
+      )
+    ).toBe(true)
+    await expect(
+      Effect.runPromise(
+        validatePeriodicContactLatticeControl([member], { x: 1, y: 0 }, { x: 0, y: 1 })
+      )
+    ).resolves.toBe(true)
+    await expect(
+      Effect.runPromise(
+        validatePeriodicContactLatticeControl([member], { x: 0.5, y: 0 }, { x: 0, y: 1 })
+      )
+    ).resolves.toBe(false)
+  })
+
+  it('deduplicates the whole cell under quarter-turn and basis swap', () => {
+    const first = preparedPiece('first', 'square', [
+      point(0, 0),
+      point(1, 0),
+      point(1, 1),
+      point(0, 1)
+    ])
+    const second = preparedPiece('second', 'square', [
+      point(0, 0),
+      point(1, 0),
+      point(1, 1),
+      point(0, 1)
+    ])
+    const horizontal = [
+      { piece: first, geometry: transformed(first), point: point(0, 0) },
+      { piece: second, geometry: transformed(second), point: point(1, 0) }
+    ]
+    const vertical = [
+      { piece: first, geometry: transformed(first), point: point(0, 0) },
+      { piece: second, geometry: transformed(second), point: point(0, 1) }
+    ]
+    expect(
+      canonicalPeriodicCellIdentityControl('P2', horizontal, { x: 2, y: 0 }, { x: 0, y: 1 })
+    ).toBe(canonicalPeriodicCellIdentityControl('P2', vertical, { x: 0, y: 2 }, { x: -1, y: 0 }))
+  })
+
+  it('expands P2 with an odd real remainder and rebuilds actual source metadata', async () => {
+    const pieces = Array.from({ length: 5 }, (_, index) =>
+      preparedPiece(`copy-${index}`, 'square', [point(0, 0), point(1, 0), point(1, 1), point(0, 1)])
+    )
+    const first = pieces[0]
+    const second = pieces[1]
+    if (first === undefined || second === undefined) return
+    const members = [
+      { piece: first, geometry: transformed(first), point: point(0, 0) },
+      { piece: second, geometry: transformed(second), point: point(1, 0) }
+    ]
+    const cell: IntrinsicPeriodicCell = {
+      role: 'P2',
+      familyKey: 'square',
+      members,
+      v1: { x: 2, y: 0 },
+      v2: { x: 0, y: 1 },
+      determinantGrid2: '2000000',
+      density: 1,
+      envelopeMaximumSideMm: 2,
+      hullWasteRatio: 0,
+      sharedBoundaryLengthMm: 1,
+      canonicalKey: 'control'
+    }
+    const seed = (await Effect.runPromise(expandIntrinsicPeriodicCell(cell, pieces)))[0]
+    expect(seed?.placements).toHaveLength(4)
+    expect(seed?.remainingFamilyMembers.map(({ pieceId }) => pieceId)).toEqual([pieces[4]?.pieceId])
+    expect(
+      seed?.placements.map(({ placement, collisionGeometry }) => ({
+        pieceId: placement.pieceId,
+        sourcePieceId: placement.sourcePieceId,
+        geometrySourcePieceId: collisionGeometry.sourcePieceId
+      }))
+    ).toEqual(
+      pieces.slice(0, 4).map((piece) => ({
+        pieceId: piece.pieceId,
+        sourcePieceId: piece.source.id,
+        geometrySourcePieceId: piece.source.id
+      }))
+    )
   })
 })
