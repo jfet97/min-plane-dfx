@@ -200,7 +200,7 @@ function largestHullGapArea(hull: Path64, occupied: ReadonlyArray<Path64>): numb
   const occupiedTree = new PolyTree64()
   const gapTree = new PolyTree64()
   try {
-    booleanOpWithPolyTree(ClipType.Union, [...occupied], null, occupiedTree, FillRule.NonZero)
+    booleanOpWithPolyTree(ClipType.Union, [...occupied], null, occupiedTree, FillRule.EvenOdd)
     booleanOpWithPolyTree(
       ClipType.Difference,
       [counterClockwise(hull)],
@@ -218,7 +218,8 @@ function countEnclosedOccupiedCavities(occupied: ReadonlyArray<Path64>): number 
   if (occupied.length === 0) return 0
   const tree = new PolyTree64()
   try {
-    booleanOpWithPolyTree(ClipType.Union, [...occupied], null, tree, FillRule.NonZero)
+    // occupied pieces are solids regardless of source-ring winding
+    booleanOpWithPolyTree(ClipType.Union, [...occupied], null, tree, FillRule.EvenOdd)
   } catch {
     return undefined
   }

@@ -115,8 +115,22 @@ describe('canonical collision layout geometry', () => {
       rectangle('left', 1, 2, 0, 1),
       rectangle('right', 1, 2, 3, 1)
     ]
+    const mixedWindingRing = ring.map((entry, index) => {
+      const points = entry.collisionGeometry.polygon.points.map(
+        ({ x, y }) => [x, y] as const
+      )
+      return placed(
+        entry.placement.sourcePieceId,
+        index % 2 === 0 ? points : points.toReversed(),
+        entry.placement.transform.translateX,
+        entry.placement.transform.translateY
+      )
+    })
     const sheet = new SheetSpec({ width: 10, height: 10, label: 'test' })
     expect(measureCanonicalLayoutTopology(quarterTurnLayout(ring))).toEqual(
+      measureCanonicalLayoutTopology(ring)
+    )
+    expect(measureCanonicalLayoutTopology(mixedWindingRing)).toEqual(
       measureCanonicalLayoutTopology(ring)
     )
     expect(measureCanonicalLayoutTopology(ring)).toMatchObject({

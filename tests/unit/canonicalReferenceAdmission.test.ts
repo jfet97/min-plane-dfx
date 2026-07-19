@@ -10,19 +10,23 @@ import {
   IrregularBounds,
   IrregularLayoutScoreSummary,
   IrregularNestingSettings,
+  IrregularPlacedPiece,
+  IrregularPlacement,
   IrregularPoint,
   IrregularPolygon,
   IrregularPortfolioProgress,
   IrregularPortfolioResult,
-  IrregularPreparedPiece
+  IrregularPreparedPiece,
+  IrregularTransform,
+  IrregularTransformCandidate,
+  TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import {
-  CANONICAL_REFERENCE_ADMISSION_SLACKS,
   CANONICAL_REFERENCE_PRIORITY_CERTIFICATE,
   canonicalPortfolioResultFrom,
   canonicalReferenceDecodeSheets,
   canonicalReferenceRoleLifecycleDiagnostics,
-  evaluateCanonicalReferenceAdmissionMetrics,
+  evaluateCanonicalReferenceAdmission,
   evaluateCanonicalReferencePriorityMetrics,
   isCanonicalReferenceRoleEligible,
   portfolioProgressForDecodeRole
@@ -91,6 +95,36 @@ function preparedWorkloadPiece(input: {
   })
 }
 
+function placedSquare(id: string, x: number, y: number): IrregularPlacedPiece {
+  const sourcePieceId = PieceId.make(id)
+  const points = [
+    new IrregularPoint({ x: 0, y: 0 }),
+    new IrregularPoint({ x: 1, y: 0 }),
+    new IrregularPoint({ x: 1, y: 1 }),
+    new IrregularPoint({ x: 0, y: 1 })
+  ]
+  const transform = new IrregularTransform({
+    translateX: x,
+    translateY: y,
+    rotationDeg: 0,
+    mirrored: false
+  })
+  return new IrregularPlacedPiece({
+    placement: new IrregularPlacement({ sourcePieceId, transform }),
+    collisionGeometry: new TransformedCollisionGeometry({
+      sourcePieceId,
+      transform: new IrregularTransformCandidate({
+        index: 0,
+        rotationDeg: 0,
+        mirrored: false,
+        reason: 'configured'
+      }),
+      polygon: new IrregularPolygon({ points }),
+      bounds: new IrregularBounds({ minX: 0, minY: 0, maxX: 1, maxY: 1 })
+    })
+  })
+}
+
 const mixedScalePrepared = Array.from({ length: 21 }, (_, index) =>
   preparedWorkloadPiece({
     index,
@@ -125,8 +159,6 @@ function topologyMetrics(
     ...overrides
   }
 }
-
-const topology = topologyMetrics({ largestOccupiedHullGapRatio: 0.2 })
 
 function score(overrides: Partial<IrregularLayoutScore> = {}): IrregularLayoutScore {
   return {
@@ -338,22 +370,6 @@ describe('canonical reference coordinator policy', () => {
     }
   })
 
-  it('accepts the measured 57/17 to 53/14 contact trade within named slacks', () => {
-    expect(CANONICAL_REFERENCE_ADMISSION_SLACKS).toEqual({
-      maximumMaxSideRegressionRatio: 0.075,
-      maximumTotalContactLoss: 4,
-      maximumDominantContactLoss: 3
-    })
-    expect(
-      evaluateCanonicalReferenceAdmissionMetrics({
-        production: score(),
-        productionTopology: topology,
-        canonical: canonicalScore(),
-        canonicalTopology: topology
-      }).admitted
-    ).toBe(true)
-  })
-
   it('prioritizes a complete finite canonical candidate without production-relative tradeoffs', () => {
     expect(CANONICAL_REFERENCE_PRIORITY_CERTIFICATE).toEqual({
       maximumEnclosedCavityCount: 2,
@@ -365,7 +381,11 @@ describe('canonical reference coordinator policy', () => {
     expect(
       evaluateCanonicalReferencePriorityMetrics({
         canonical: canonicalScore(),
-        canonicalTopology: topologyMetrics()
+        canonicalTopology: topologyMetrics({
+          largestOccupiedHullGapRatio: 0.15,
+          occupiedEnvelopeAspectRatio: 1.5,
+          largestPositiveContactComponentRatio: 0.5
+        })
       })
     ).toEqual({
       admitted: true,
@@ -378,6 +398,12 @@ describe('canonical reference coordinator policy', () => {
       evaluateCanonicalReferencePriorityMetrics({
         canonical: canonicalScore(),
         canonicalTopology: topologyMetrics({ isolatedPieceCount: Number.NaN })
+      }).admitted
+    ).toBe(false)
+    expect(
+      evaluateCanonicalReferencePriorityMetrics({
+        canonical: score({ collisionBoundsAreaMm2: Number.NaN }),
+        canonicalTopology: topologyMetrics()
       }).admitted
     ).toBe(false)
     expect(
@@ -421,218 +447,60 @@ describe('canonical reference coordinator policy', () => {
     }
   })
 
-  it('waives max-side slack for the structurally dominant 1000x1700 finalist', () => {
-    const productionMaxSideMm = 700.365
-    const canonicalMaxSideMm = 788.878
-    const productionAreaMm2 = 461_476
-    const canonicalAreaMm2 = 430_344
-    const productionScore = score({
-      collisionBoundsAreaMm2: productionAreaMm2,
-      collisionBoundsSpanMm: productionMaxSideMm + productionAreaMm2 / productionMaxSideMm,
-      freeMaterialHoleCount: 10,
-      nearCompleteStructuralContactCount: 44,
-      dominantNearCompleteStructuralContactCount: 9
-    })
-    const measuredCanonicalScore = score({
-      collisionBoundsAreaMm2: canonicalAreaMm2,
-      collisionBoundsSpanMm: canonicalMaxSideMm + canonicalAreaMm2 / canonicalMaxSideMm,
-      freeMaterialHoleCount: 2,
-      nearCompleteStructuralContactCount: 53,
-      dominantNearCompleteStructuralContactCount: 14
-    })
-    const productionTopology = topologyMetrics({
-      largestOccupiedHullGapRatio: 0.228,
-      positiveContactComponentCount: 13,
-      isolatedPieceCount: 6,
-      largestPositiveContactComponentSize: 20,
-      largestPositiveContactComponentRatio: 20 / 61
-    })
-    const canonicalTopology = topologyMetrics({
-      largestOccupiedHullGapRatio: 0.119,
-      positiveContactComponentCount: 5,
-      isolatedPieceCount: 2,
-      largestPositiveContactComponentSize: 53
-    })
-
-    expect(canonicalMaxSideMm / productionMaxSideMm - 1).toBeGreaterThan(0.075)
-    expect(
-      evaluateCanonicalReferenceAdmissionMetrics({
-        production: productionScore,
-        productionTopology,
-        canonical: measuredCanonicalScore,
-        canonicalTopology
-      })
-    ).toEqual({ admitted: true, reason: 'canonical role passed every exact admission guard' })
-  })
-
-  it('treats equality as no worse for the max-side dominance waiver', () => {
-    const productionMaxSideMm = 700.365
-    const canonicalMaxSideMm = 788.878
-    const productionAreaMm2 = 461_476
-    const canonicalAreaMm2 = 430_344
-    const equalTopology = topologyMetrics({
-      largestOccupiedHullGapRatio: 0.228,
-      positiveContactComponentCount: 13,
-      isolatedPieceCount: 6,
-      largestPositiveContactComponentSize: 20,
-      largestPositiveContactComponentRatio: 20 / 61
-    })
+  it('retains production on identity ties and prioritizes a different certified layout', () => {
+    const production = [
+      placedSquare('a', 0, 0),
+      placedSquare('b', 1, 0),
+      placedSquare('c', 2, 0),
+      placedSquare('d', 3, 0)
+    ]
+    const canonical = [
+      placedSquare('a', 0, 0),
+      placedSquare('b', 1, 0),
+      placedSquare('c', 0, 1),
+      placedSquare('d', 1, 1)
+    ]
 
     expect(
-      evaluateCanonicalReferenceAdmissionMetrics({
-        production: score({
-          collisionBoundsAreaMm2: productionAreaMm2,
-          collisionBoundsSpanMm: productionMaxSideMm + productionAreaMm2 / productionMaxSideMm,
-          freeMaterialHoleCount: 10,
-          nearCompleteStructuralContactCount: 44,
-          dominantNearCompleteStructuralContactCount: 9
-        }),
-        productionTopology: equalTopology,
-        canonical: score({
-          collisionBoundsAreaMm2: canonicalAreaMm2,
-          collisionBoundsSpanMm: canonicalMaxSideMm + canonicalAreaMm2 / canonicalMaxSideMm,
-          freeMaterialHoleCount: 10,
-          nearCompleteStructuralContactCount: 44,
-          dominantNearCompleteStructuralContactCount: 9
-        }),
-        canonicalTopology: equalTopology
+      evaluateCanonicalReferenceAdmission({
+        productionPlaced: production,
+        canonicalScore: canonicalScore(),
+        canonicalPlaced: production
       })
-    ).toEqual({ admitted: true, reason: 'canonical role passed every exact admission guard' })
-  })
-
-  it('keeps the max-side cap for a contact-non-dominant long-chain finalist', () => {
-    const productionMaxSideMm = 700.365
-    const canonicalMaxSideMm = 788.878
-    const productionAreaMm2 = 461_476
-    const canonicalAreaMm2 = 430_344
-    const decision = evaluateCanonicalReferenceAdmissionMetrics({
-      production: score({
-        collisionBoundsAreaMm2: productionAreaMm2,
-        collisionBoundsSpanMm: productionMaxSideMm + productionAreaMm2 / productionMaxSideMm,
-        freeMaterialHoleCount: 10,
-        nearCompleteStructuralContactCount: 44,
-        dominantNearCompleteStructuralContactCount: 9
-      }),
-      productionTopology: topologyMetrics({
-        largestOccupiedHullGapRatio: 0.228,
-        positiveContactComponentCount: 13,
-        isolatedPieceCount: 6,
-        largestPositiveContactComponentSize: 20,
-        largestPositiveContactComponentRatio: 20 / 61
-      }),
-      canonical: score({
-        collisionBoundsAreaMm2: canonicalAreaMm2,
-        collisionBoundsSpanMm: canonicalMaxSideMm + canonicalAreaMm2 / canonicalMaxSideMm,
-        freeMaterialHoleCount: 2,
-        nearCompleteStructuralContactCount: 43,
-        dominantNearCompleteStructuralContactCount: 9
-      }),
-      canonicalTopology: topologyMetrics({
-        largestOccupiedHullGapRatio: 0.119,
-        positiveContactComponentCount: 5,
-        isolatedPieceCount: 2,
-        largestPositiveContactComponentSize: 53
+    ).toEqual({ admitted: false, reason: 'canonical identity tie retains production' })
+    expect(
+      evaluateCanonicalReferenceAdmission({
+        productionPlaced: production,
+        canonicalScore: canonicalScore(),
+        canonicalPlaced: canonical
       })
-    })
-
-    expect(decision).toEqual({
-      admitted: false,
-      reason: 'max side exceeded the protected-role admission slack'
+    ).toEqual({
+      admitted: true,
+      reason: 'canonical role passed the sheet-free intrinsic compactness certificate'
     })
   })
 
-  it('keeps the max-side cap when only dominant-contact slack is consumed', () => {
-    const productionMaxSideMm = 700.365
-    const canonicalMaxSideMm = 788.878
-    const productionAreaMm2 = 461_476
-    const canonicalAreaMm2 = 430_344
-    const decision = evaluateCanonicalReferenceAdmissionMetrics({
-      production: score({
-        collisionBoundsAreaMm2: productionAreaMm2,
-        collisionBoundsSpanMm: productionMaxSideMm + productionAreaMm2 / productionMaxSideMm,
-        freeMaterialHoleCount: 10,
-        nearCompleteStructuralContactCount: 44,
-        dominantNearCompleteStructuralContactCount: 9
-      }),
-      productionTopology: topologyMetrics({
-        largestOccupiedHullGapRatio: 0.228,
-        positiveContactComponentCount: 13,
-        isolatedPieceCount: 6,
-        largestPositiveContactComponentSize: 20,
-        largestPositiveContactComponentRatio: 20 / 61
-      }),
-      canonical: score({
-        collisionBoundsAreaMm2: canonicalAreaMm2,
-        collisionBoundsSpanMm: canonicalMaxSideMm + canonicalAreaMm2 / canonicalMaxSideMm,
-        freeMaterialHoleCount: 2,
-        nearCompleteStructuralContactCount: 44,
-        dominantNearCompleteStructuralContactCount: 8
-      }),
-      canonicalTopology: topologyMetrics({
-        largestOccupiedHullGapRatio: 0.119,
-        positiveContactComponentCount: 5,
-        isolatedPieceCount: 2,
-        largestPositiveContactComponentSize: 53
-      })
-    })
+  it('falls back to production when a different canonical layout is uncertified', () => {
+    const production = [
+      placedSquare('a', 0, 0),
+      placedSquare('b', 1, 0),
+      placedSquare('c', 0, 1),
+      placedSquare('d', 1, 1)
+    ]
+    const fragmentedCanonical = [
+      placedSquare('a', 0, 0),
+      placedSquare('b', 3, 0),
+      placedSquare('c', 0, 3),
+      placedSquare('d', 3, 3)
+    ]
 
-    expect(decision).toEqual({
-      admitted: false,
-      reason: 'max side exceeded the protected-role admission slack'
-    })
-  })
-
-  it('rejects one unit beyond either contact loss slack', () => {
     expect(
-      evaluateCanonicalReferenceAdmissionMetrics({
-        production: score(),
-        productionTopology: topology,
-        canonical: score({
-          collisionBoundsAreaMm2: 430_000,
-          collisionBoundsSpanMm: 1_420,
-          nearCompleteStructuralContactCount: 52,
-          dominantNearCompleteStructuralContactCount: 14
-        }),
-        canonicalTopology: topology
-      }).admitted
-    ).toBe(false)
-    expect(
-      evaluateCanonicalReferenceAdmissionMetrics({
-        production: score(),
-        productionTopology: topology,
-        canonical: score({
-          collisionBoundsAreaMm2: 430_000,
-          collisionBoundsSpanMm: 1_420,
-          nearCompleteStructuralContactCount: 53,
-          dominantNearCompleteStructuralContactCount: 13
-        }),
-        canonicalTopology: topology
+      evaluateCanonicalReferenceAdmission({
+        productionPlaced: production,
+        canonicalScore: canonicalScore(),
+        canonicalPlaced: fragmentedCanonical
       }).admitted
     ).toBe(false)
   })
 
-  it('rejects fragmented low-gap candidates and score ties', () => {
-    expect(
-      evaluateCanonicalReferenceAdmissionMetrics({
-        production: score(),
-        productionTopology: topology,
-        canonical: canonicalScore(),
-        canonicalTopology: topologyMetrics({
-          largestOccupiedHullGapRatio: 0.1,
-          positiveContactComponentCount: 12,
-          isolatedPieceCount: 8,
-          largestPositiveContactComponentSize: 20,
-          largestPositiveContactComponentRatio: 20 / 61
-        })
-      }).admitted
-    ).toBe(false)
-    expect(
-      evaluateCanonicalReferenceAdmissionMetrics({
-        production: score(),
-        productionTopology: topology,
-        canonical: score(),
-        canonicalTopology: topology
-      }).admitted
-    ).toBe(false)
-  })
 })

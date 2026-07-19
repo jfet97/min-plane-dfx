@@ -457,7 +457,8 @@ short-side-fill policy,
 `computeIrregularNesting`
 coordinates two private uses of the existing single-sheet portfolio primitive:
 the requested sheet and a protected fixed `2000 x 2700` canonical-reference sheet.
-The reference sheet reuses the ordinary decode when it is itself requested.
+The reference sheet reuses the ordinary decode unconditionally when it is itself
+requested; certification arbitrates only a distinct protected decode.
 Both decodes forward progress through one stream with an explicit role and use
 role-prefixed decision-trace decode ids. Both roles retain their own history until
 terminal selection, then only the selected history is published. Cancellation is
@@ -470,16 +471,22 @@ The protected role can supply only the exact terminal `IrregularBeamState` emitt
 by its real portfolio decode, rigidly anchored at q0 or q90. The integer-grid
 geometry layer verifies requested-sheet fit and zero positive polygon overlap;
 algorithm code does not reconstruct or revalidate placements through a different
-legality path. Admission is a strict guard, not a weighted comparator: unplaced,
-holes, cavity ratio, contact graph, span, bounded max-side regression, and bounded
-contact losses must all be no worse while collision-bounds area is strictly
-smaller. Max side acts as an anti-chain fallback: its bound is waived only when
-the protected finalist is Pareto-dominant across unplaced count, area, span,
-holes, every contact-topology measure, and both contact counts. Any structural
-or contact slack consumed keeps the max-side bound active. Undefined topology
-retains production, as does canonical layout-identity equality. Layout identity
-ignores translation, rigid quarter-turn, copy order, ring origin, and winding
-while preserving reflection and relative placement.
+legality path. Selection does not compare the finalist with requested-production
+scores. A complete finite finalist receives priority only when its sheet-free
+certificate has at most two exact occupied-union cavities, hull-gap ratio at most
+`0.15`, envelope aspect ratio at most `1.5`, at most two isolated pieces, and a
+largest positive-contact component containing at least half the pieces. q0 is
+preferred when both q0 and q90 pass. Identity ties, incomplete or non-finite
+results, undefined topology, and failed certificates retain production.
+
+These deliberately conservative constants are anchored on the approved mixed-61
+motif. Envelope aspect replaces the retired relative max-side guard; hull gap and
+exact union cavities bound chain/remnant openings; isolation and component ratio
+protect contact cohesion. A certified layout may intentionally trade free-material
+remnants or raw contact totals on the requested sheet because those sheet-relative
+production comparisons are no longer allowed to veto invariant collision geometry.
+Layout identity ignores translation, rigid quarter-turn, copy order,
+ring origin, and winding while preserving reflection and relative placement.
 
 Do not route `irregular-convex-v2` requests to MaxRects.
 
