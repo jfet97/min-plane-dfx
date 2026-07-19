@@ -5,7 +5,7 @@ import {
   ClipType,
   FillRule,
   type Path64,
-  polyTreeToPaths64,
+  type PolyPath64,
   PolyTree64
 } from 'clipper2-ts'
 import {
@@ -105,6 +105,7 @@ interface RationalPoint {
 
 interface ForbiddenBoundary {
   readonly points: ReadonlyArray<GridPoint>
+  readonly isHole?: boolean
 }
 
 /** Enumerates the bounded exact one- and two-transform periodic cell catalog. */
@@ -464,8 +465,9 @@ function deriveAxisBasis(
   boundaries: ReadonlyArray<ForbiddenBoundary>,
   swapAxes: boolean
 ): readonly [GridPoint, GridPoint] | undefined {
-  const orientedRaw = boundaries.map(({ points }) => ({
-    points: points.map((point) => (swapAxes ? { x: point.y, y: point.x } : point))
+  const orientedRaw = boundaries.map(({ points, isHole }) => ({
+    points: points.map((point) => (swapAxes ? { x: point.y, y: point.x } : point)),
+    ...(isHole !== undefined ? { isHole } : {})
   }))
   const oriented = unionForbiddenBoundaries(orientedRaw)
   if (oriented === undefined) return undefined
@@ -477,8 +479,9 @@ function deriveAxisBasis(
   if (axis.x <= 0n) return undefined
   const shifted = unionForbiddenBoundaries([
     ...oriented,
-    ...oriented.map(({ points }) => ({
-      points: points.map((point) => ({ x: point.x + axis.x, y: point.y }))
+    ...oriented.map(({ points, isHole }) => ({
+      points: points.map((point) => ({ x: point.x + axis.x, y: point.y })),
+      ...(isHole !== undefined ? { isHole } : {})
     }))
   ])
   if (shifted === undefined) return undefined
@@ -601,7 +604,7 @@ function unionForbiddenBoundaries(
   boundaries: ReadonlyArray<ForbiddenBoundary>
 ): ReadonlyArray<ForbiddenBoundary> | undefined {
   const paths: Path64[] = []
-  for (const { points } of boundaries) {
+  for (const { points, isHole } of boundaries) {
     const path: Path64 = []
     for (const point of points) {
       const x = Number(point.x)
@@ -609,7 +612,10 @@ function unionForbiddenBoundaries(
       if (!Number.isSafeInteger(x) || !Number.isSafeInteger(y)) return undefined
       path.push({ x, y })
     }
-    if (path.length >= 3) paths.push(area(path) >= 0 ? path : [...path].reverse())
+    if (path.length >= 3) {
+      const positive = area(path) >= 0 ? path : [...path].reverse()
+      paths.push(isHole === true ? [...positive].reverse() : positive)
+    }
   }
   const tree = new PolyTree64()
   try {
@@ -617,9 +623,27 @@ function unionForbiddenBoundaries(
   } catch {
     return undefined
   }
-  return polyTreeToPaths64(tree).map((path) => ({
-    points: path.map(({ x, y }) => ({ x: BigInt(x), y: BigInt(y) }))
-  }))
+  const result: ForbiddenBoundary[] = []
+  return collectForbiddenTree(tree, result) ? result : undefined
+}
+
+function collectForbiddenTree(parent: PolyPath64, result: ForbiddenBoundary[]): boolean {
+  for (let index = 0; index < parent.count; index += 1) {
+    let child: PolyPath64
+    try {
+      child = parent.child(index)
+    } catch {
+      return false
+    }
+    if (child.polygon !== null) {
+      result.push({
+        points: child.polygon.map(({ x, y }) => ({ x: BigInt(x), y: BigInt(y) })),
+        isHole: child.isHole
+      })
+    }
+    if (!collectForbiddenTree(child, result)) return false
+  }
+  return true
 }
 
 function rational(value: bigint): Rational {
