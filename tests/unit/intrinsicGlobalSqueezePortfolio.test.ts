@@ -309,7 +309,34 @@ describe('intrinsic global squeeze portfolio', () => {
       reason: 'accepted fixture endpoint',
       retainedPressureIdentity: 'endpoint',
       preProjectionCompactness: endpointCompactness,
-      postProjectionCompactness: endpointCompactness
+      postProjectionCompactness: endpointCompactness,
+      repairSweeps: [
+        {
+          sweepIndex: 0,
+          terminationReason: 'accepted-exact-endpoint',
+          startPreGls: undefined,
+          generatedBestPreGls: undefined,
+          retainedRawBestPreGls: undefined,
+          retainedRawBestPostGls: undefined,
+          retainedWeightedBestPostGls: undefined,
+          bestSoFarRawLoss: 0,
+          preGlsImprovementDeltaRawLoss: 0.1,
+          preGlsImprovementDeltaWeightedLoss: 0.2,
+          firstBestSweepIndex: 0,
+          emittedProposalCount: 4,
+          evaluatedProposalCount: 3,
+          generatedUniqueCandidateCount: 3,
+          wholeCandidateSetUniqueCount: 4,
+          prePoolSize: 1,
+          postPoolSize: 2,
+          rawWinnerStateKey: 'raw-winner',
+          rawWinnerRetained: true,
+          retainedRawWinnerStateKey: 'raw-winner',
+          retainedWeightedWinnerStateKey: 'weighted-winner',
+          glsDriverStateKey: 'raw-winner',
+          weightUpdates: [{ conflictKey: 'wall:a:left', before: 1, after: 2 }]
+        }
+      ]
     }
     const result = await runPortfolio({
       pieces,

@@ -132,6 +132,88 @@ export interface IntrinsicPressureCompactnessTuple {
   readonly largestOccupiedHullGapRatio: number
 }
 
+export interface IntrinsicPressureConflictTrace {
+  readonly key: string
+  readonly kind: 'pair' | 'wall'
+  readonly firstPieceId: PieceId
+  readonly secondPieceId: PieceId | undefined
+  readonly normalizedDepth: number
+  readonly rawDepth: number
+  readonly weightedContribution: number
+  readonly moveXGrid: number
+  readonly moveYGrid: number
+  readonly wallSide: 'left' | 'right' | 'bottom' | 'top' | undefined
+}
+
+export interface IntrinsicPressureLossSnapshot {
+  readonly stateKey: string
+  readonly parentStateKey: string | undefined
+  readonly childStateKey: string
+  readonly generationDepth: number
+  readonly selectedPieceIds: ReadonlyArray<PieceId>
+  readonly affectedPieceIds: ReadonlyArray<PieceId>
+  readonly affectedPieceCount: number
+  readonly lineageAffectedPieceIds: ReadonlyArray<PieceId>
+  readonly lineageAffectedPieceCount: number
+  readonly proposalKind: IntrinsicSeparatorProposal['kind'] | undefined
+  readonly rawLoss: number
+  readonly weightedLoss: number
+  readonly wallConflictCount: number
+  readonly pairConflictCount: number
+  readonly conflictedPieceCount: number
+  readonly topConflicts: ReadonlyArray<IntrinsicPressureConflictTrace>
+}
+
+export interface IntrinsicPressureWeightUpdateTrace {
+  readonly conflictKey: string
+  readonly before: number
+  readonly after: number
+}
+
+export interface IntrinsicContractedPressureSweepTrace {
+  readonly sweepIndex: number
+  readonly terminationReason:
+    | 'continue'
+    | 'deadline-before-work'
+    | 'no-proposals'
+    | 'empty-candidate-set'
+    | 'raw-winner-unavailable'
+    | 'evaluation-budget-exhausted'
+    | 'accepted-exact-endpoint'
+    | 'repair-sweep-allocation-exhausted'
+  readonly startPreGls: IntrinsicPressureLossSnapshot | undefined
+  readonly generatedBestPreGls: IntrinsicPressureLossSnapshot | undefined
+  readonly retainedRawBestPreGls: IntrinsicPressureLossSnapshot | undefined
+  readonly retainedRawBestPostGls: IntrinsicPressureLossSnapshot | undefined
+  readonly retainedWeightedBestPostGls: IntrinsicPressureLossSnapshot | undefined
+  readonly bestSoFarRawLoss: number
+  readonly preGlsImprovementDeltaRawLoss: number
+  readonly preGlsImprovementDeltaWeightedLoss: number
+  readonly firstBestSweepIndex: number | undefined
+  readonly emittedProposalCount: number
+  readonly evaluatedProposalCount: number
+  readonly generatedUniqueCandidateCount: number
+  readonly wholeCandidateSetUniqueCount: number | undefined
+  readonly prePoolSize: number
+  readonly postPoolSize: number
+  readonly rawWinnerStateKey: string | undefined
+  readonly rawWinnerRetained: boolean
+  readonly retainedRawWinnerStateKey: string | undefined
+  readonly retainedWeightedWinnerStateKey: string | undefined
+  readonly glsDriverStateKey: string | undefined
+  readonly weightUpdates: ReadonlyArray<IntrinsicPressureWeightUpdateTrace>
+}
+
+export interface IntrinsicPressureGenerationProvenance {
+  readonly parentStateKey: string | undefined
+  readonly childStateKey: string
+  readonly generationDepth: number
+  readonly selectedPieceIds: ReadonlyArray<PieceId>
+  readonly affectedPieceIds: ReadonlyArray<PieceId>
+  readonly lineageAffectedPieceIds: ReadonlyArray<PieceId>
+  readonly proposalKind: IntrinsicSeparatorProposal['kind'] | undefined
+}
+
 export interface IntrinsicContractedPressureAttemptTrace {
   readonly attemptIndex: number
   readonly ratioScheduleIndex: 0 | 1 | 2
@@ -158,6 +240,7 @@ export interface IntrinsicContractedPressureAttemptTrace {
   readonly retainedPressureIdentity: string | undefined
   readonly preProjectionCompactness: IntrinsicPressureCompactnessTuple | undefined
   readonly postProjectionCompactness: IntrinsicPressureCompactnessTuple | undefined
+  readonly repairSweeps: ReadonlyArray<IntrinsicContractedPressureSweepTrace>
 }
 
 export interface IntrinsicContractedPressureProposal {
@@ -361,6 +444,7 @@ export interface IntrinsicInfeasiblePoolEntry {
   readonly disruptionLineage: boolean
   readonly disruptionLineageProvenance: IntrinsicDisruptionLineageProvenance | undefined
   readonly disruptionProtectedUntilSweep: number | undefined
+  readonly pressureGeneration?: IntrinsicPressureGenerationProvenance
 }
 
 export interface IntrinsicInfeasiblePoolRetention {
@@ -1419,7 +1503,9 @@ function runIntrinsicContractedPressureLane(input: {
       )
       let attemptEvaluationCount = 1
       let bestRepairedLoss = initialEvaluation.rawLoss
+      let firstBestSweepIndex: number | undefined
       let budgetExhausted = false
+      const repairSweeps: IntrinsicContractedPressureSweepTrace[] = []
 
       for (
         let repairSweep = 0;
@@ -1431,6 +1517,31 @@ function runIntrinsicContractedPressureLane(input: {
         repairSweep += 1
       ) {
         if ((yield* globalSearchCheckpoint(input.control)) === 'deadline') {
+          repairSweeps.push({
+            sweepIndex: repairSweep,
+            terminationReason: 'deadline-before-work',
+            startPreGls: undefined,
+            generatedBestPreGls: undefined,
+            retainedRawBestPreGls: undefined,
+            retainedRawBestPostGls: undefined,
+            retainedWeightedBestPostGls: undefined,
+            bestSoFarRawLoss: bestRepairedLoss,
+            preGlsImprovementDeltaRawLoss: 0,
+            preGlsImprovementDeltaWeightedLoss: 0,
+            firstBestSweepIndex,
+            emittedProposalCount: 0,
+            evaluatedProposalCount: 0,
+            generatedUniqueCandidateCount: 0,
+            wholeCandidateSetUniqueCount: undefined,
+            prePoolSize: pool.length,
+            postPoolSize: pool.length,
+            rawWinnerStateKey: undefined,
+            rawWinnerRetained: false,
+            retainedRawWinnerStateKey: undefined,
+            retainedWeightedWinnerStateKey: undefined,
+            glsDriverStateKey: undefined,
+            weightUpdates: []
+          })
           const bestEndpoint = exactEndpoints.toSorted(comparePressureEndpoints)[0]
           trace.push(
             contractedPressureAttemptTrace({
@@ -1448,7 +1559,8 @@ function runIntrinsicContractedPressureLane(input: {
               reason: 'the cooperative runtime deadline interrupted pressure repair',
               retainedPressureIdentity:
                 acceptedEndpoint?.measured.compactness.canonicalIdentity,
-              preProjectionCompactness: undefined
+              preProjectionCompactness: undefined,
+              repairSweeps
             })
           )
           return {
@@ -1460,8 +1572,14 @@ function runIntrinsicContractedPressureLane(input: {
           }
         }
         repairSweepCount += 1
+        const prePoolSize = pool.length
+        const startEntry = pool.toSorted(comparePoolEntriesByRaw)[0]
+        const startPreGls = pressureLossSnapshot(startEntry, weights)
+        const bestRawLossBeforeSweep = bestRepairedLoss
         const candidates: IntrinsicInfeasiblePoolEntry[] = [...pool]
-        let generatedProposalCount = 0
+        const generatedCandidates: IntrinsicInfeasiblePoolEntry[] = []
+        let emittedProposalCount = 0
+        let evaluatedProposalCount = 0
         for (const entry of pool) {
           const proposals = intrinsicFocusedProposals({
             catalog: input.catalog,
@@ -1469,7 +1587,7 @@ function runIntrinsicContractedPressureLane(input: {
             evaluation: entry.evaluation,
             weights
           })
-          generatedProposalCount += proposals.length
+          emittedProposalCount += proposals.length
           for (const repairProposal of proposals) {
             if (separationEvaluationCount >= input.maximumAdditionalEvaluations) {
               budgetExhausted = true
@@ -1483,13 +1601,26 @@ function runIntrinsicContractedPressureLane(input: {
             )
             separationEvaluationCount += 1
             attemptEvaluationCount += 1
+            evaluatedProposalCount += 1
             const key = intrinsicRelaxedStateKey(input.catalog, repairProposal.state)
             const entryCandidate =
               evaluation === undefined
                 ? undefined
-                : pressurePoolEntry(repairProposal.state, evaluation, key)
+                : pressurePoolEntry(repairProposal.state, evaluation, key, {
+                    parentStateKey: entry.key,
+                    generationDepth:
+                      (entry.pressureGeneration?.generationDepth ?? 0) + 1,
+                    selectedPieceIds: repairProposal.affectedPieceIds,
+                    affectedPieceIds: repairProposal.affectedPieceIds,
+                    lineageAffectedPieceIds: mergePressurePieceIds(
+                      entry.pressureGeneration?.lineageAffectedPieceIds ?? [],
+                      repairProposal.affectedPieceIds
+                    ),
+                    proposalKind: repairProposal.kind
+                  })
             if (entryCandidate !== undefined && evaluation !== undefined) {
               candidates.push(entryCandidate)
+              generatedCandidates.push(entryCandidate)
               bestRepairedLoss = Math.min(bestRepairedLoss, evaluation.rawLoss)
               addExactPressureEndpoint(
                 exactEndpoints,
@@ -1505,11 +1636,100 @@ function runIntrinsicContractedPressureLane(input: {
           }
           if (budgetExhausted) break
         }
-        if (generatedProposalCount === 0 || candidates.length === 0) break
+        if (bestRepairedLoss < bestRawLossBeforeSweep) {
+          firstBestSweepIndex = repairSweep
+        }
+        const generatedUniqueCandidateCount = new Set(
+          generatedCandidates.map(({ key }) => key)
+        ).size
+        const wholeCandidateSetUniqueCount = new Set(
+          candidates.map(({ key }) => key)
+        ).size
+        if (emittedProposalCount === 0 || candidates.length === 0) {
+          const generatedBestPreGls = pressureLossSnapshot(
+            generatedCandidates.toSorted(comparePoolEntriesByRaw)[0],
+            weights
+          )
+          const retainedWeightedBest = pool.toSorted(comparePoolEntriesByWeight)[0]
+          const preGlsImprovement = pressureSweepLocalImprovement(
+            startPreGls,
+            generatedBestPreGls
+          )
+          repairSweeps.push({
+            sweepIndex: repairSweep,
+            terminationReason:
+              emittedProposalCount === 0 ? 'no-proposals' : 'empty-candidate-set',
+            startPreGls,
+            generatedBestPreGls,
+            retainedRawBestPreGls: startPreGls,
+            retainedRawBestPostGls: startPreGls,
+            retainedWeightedBestPostGls: pressureLossSnapshot(
+              retainedWeightedBest,
+              weights
+            ),
+            bestSoFarRawLoss: bestRepairedLoss,
+            preGlsImprovementDeltaRawLoss: preGlsImprovement.rawLoss,
+            preGlsImprovementDeltaWeightedLoss: preGlsImprovement.weightedLoss,
+            firstBestSweepIndex,
+            emittedProposalCount,
+            evaluatedProposalCount,
+            generatedUniqueCandidateCount,
+            wholeCandidateSetUniqueCount,
+            prePoolSize,
+            postPoolSize: prePoolSize,
+            rawWinnerStateKey: startEntry?.key,
+            rawWinnerRetained: startEntry !== undefined,
+            retainedRawWinnerStateKey: startEntry?.key,
+            retainedWeightedWinnerStateKey: retainedWeightedBest?.key,
+            glsDriverStateKey: undefined,
+            weightUpdates: []
+          })
+          break
+        }
         const rawBest = reweightIntrinsicPool(candidates, weights).toSorted(
           comparePoolEntriesByRaw
         )[0]
-        if (rawBest === undefined) break
+        if (rawBest === undefined) {
+          const generatedBestPreGls = pressureLossSnapshot(
+            generatedCandidates.toSorted(comparePoolEntriesByRaw)[0],
+            weights
+          )
+          const retainedWeightedBest = pool.toSorted(comparePoolEntriesByWeight)[0]
+          const preGlsImprovement = pressureSweepLocalImprovement(
+            startPreGls,
+            generatedBestPreGls
+          )
+          repairSweeps.push({
+            sweepIndex: repairSweep,
+            terminationReason: 'raw-winner-unavailable',
+            startPreGls,
+            generatedBestPreGls,
+            retainedRawBestPreGls: startPreGls,
+            retainedRawBestPostGls: startPreGls,
+            retainedWeightedBestPostGls: pressureLossSnapshot(
+              retainedWeightedBest,
+              weights
+            ),
+            bestSoFarRawLoss: bestRepairedLoss,
+            preGlsImprovementDeltaRawLoss: preGlsImprovement.rawLoss,
+            preGlsImprovementDeltaWeightedLoss: preGlsImprovement.weightedLoss,
+            firstBestSweepIndex,
+            emittedProposalCount,
+            evaluatedProposalCount,
+            generatedUniqueCandidateCount,
+            wholeCandidateSetUniqueCount,
+            prePoolSize,
+            postPoolSize: prePoolSize,
+            rawWinnerStateKey: undefined,
+            rawWinnerRetained: false,
+            retainedRawWinnerStateKey: startEntry?.key,
+            retainedWeightedWinnerStateKey: retainedWeightedBest?.key,
+            glsDriverStateKey: undefined,
+            weightUpdates: []
+          })
+          break
+        }
+        const previousWeights = weights
         weights = updateIntrinsicSeparatorWeights(weights, rawBest.evaluation)
         pool = retainIntrinsicInfeasiblePool(
           candidates,
@@ -1517,6 +1737,74 @@ function runIntrinsicContractedPressureLane(input: {
           weights,
           repairSweep
         )
+        const weightUpdates = pressureWeightUpdates(previousWeights, weights)
+        const retainedRawBestPreGlsEntry = reweightIntrinsicPool(
+          pool,
+          previousWeights
+        ).toSorted(comparePoolEntriesByRaw)[0]
+        const retainedRawBestPostGlsEntry = pool.toSorted(comparePoolEntriesByRaw)[0]
+        const retainedWeightedBest = pool.toSorted(comparePoolEntriesByWeight)[0]
+        const generatedBestPreGls = pressureLossSnapshot(
+          generatedCandidates.toSorted(comparePoolEntriesByRaw)[0],
+          previousWeights
+        )
+        const retainedRawBestPreGls = pressureLossSnapshot(
+          retainedRawBestPreGlsEntry,
+          previousWeights
+        )
+        const retainedRawBestPostGls = pressureLossSnapshot(
+          retainedRawBestPostGlsEntry,
+          weights
+        )
+        const retainedWeightedBestPostGls = pressureLossSnapshot(
+          retainedWeightedBest,
+          weights
+        )
+        const preGlsImprovement = pressureSweepLocalImprovement(
+          startPreGls,
+          generatedBestPreGls
+        )
+        const acceptedEndpointReached = exactEndpoints.some(
+          (endpoint) =>
+            pressureEndpointRejectionReason(parentMeasured, endpoint) === undefined
+        )
+        const terminationReason: IntrinsicContractedPressureSweepTrace['terminationReason'] =
+          budgetExhausted
+            ? 'evaluation-budget-exhausted'
+            : acceptedEndpointReached
+              ? 'accepted-exact-endpoint'
+              : repairSweep + 1 >=
+                  pressureRepairSweepAllowance(
+                    input.schedule.sweepsPerBasin,
+                    attemptIndex
+                  )
+                ? 'repair-sweep-allocation-exhausted'
+                : 'continue'
+        repairSweeps.push({
+          sweepIndex: repairSweep,
+          terminationReason,
+          startPreGls,
+          generatedBestPreGls,
+          retainedRawBestPreGls,
+          retainedRawBestPostGls,
+          retainedWeightedBestPostGls,
+          bestSoFarRawLoss: bestRepairedLoss,
+          preGlsImprovementDeltaRawLoss: preGlsImprovement.rawLoss,
+          preGlsImprovementDeltaWeightedLoss: preGlsImprovement.weightedLoss,
+          firstBestSweepIndex,
+          emittedProposalCount,
+          evaluatedProposalCount,
+          generatedUniqueCandidateCount,
+          wholeCandidateSetUniqueCount,
+          prePoolSize,
+          postPoolSize: pool.length,
+          rawWinnerStateKey: rawBest.key,
+          rawWinnerRetained: pool.some(({ key }) => key === rawBest.key),
+          retainedRawWinnerStateKey: retainedRawBestPostGlsEntry?.key,
+          retainedWeightedWinnerStateKey: retainedWeightedBest?.key,
+          glsDriverStateKey: rawBest.key,
+          weightUpdates
+        })
         if (budgetExhausted) break
       }
 
@@ -1559,7 +1847,8 @@ function runIntrinsicContractedPressureLane(input: {
           reason,
           retainedPressureIdentity:
             acceptedEndpoint?.measured.compactness.canonicalIdentity,
-          preProjectionCompactness: accepted?.measured.compactness
+          preProjectionCompactness: accepted?.measured.compactness,
+          repairSweeps
         })
       )
       ratioCursor = accepted === undefined ? ratioCursor + 1 : 0
@@ -1748,7 +2037,8 @@ function unavailableContractedPressureAttemptTrace(input: {
     reason: input.reason,
     retainedPressureIdentity: input.retainedPressureIdentity,
     preProjectionCompactness: undefined,
-    postProjectionCompactness: undefined
+    postProjectionCompactness: undefined,
+    repairSweeps: []
   }
 }
 
@@ -1767,6 +2057,7 @@ function contractedPressureAttemptTrace(input: {
   readonly reason: string
   readonly retainedPressureIdentity: string | undefined
   readonly preProjectionCompactness: IntrinsicPressureCompactnessTuple | undefined
+  readonly repairSweeps?: ReadonlyArray<IntrinsicContractedPressureSweepTrace>
 }): IntrinsicContractedPressureAttemptTrace {
   return {
     attemptIndex: input.attemptIndex,
@@ -1793,7 +2084,8 @@ function contractedPressureAttemptTrace(input: {
     reason: input.reason,
     retainedPressureIdentity: input.retainedPressureIdentity,
     preProjectionCompactness: input.preProjectionCompactness,
-    postProjectionCompactness: undefined
+    postProjectionCompactness: undefined,
+    repairSweeps: input.repairSweeps ?? []
   }
 }
 
@@ -1829,7 +2121,11 @@ function pressureContractionBox(
 function pressurePoolEntry(
   state: IntrinsicRelaxedState,
   evaluation: IntrinsicSeparationEvaluation,
-  key: string | undefined
+  key: string | undefined,
+  pressureGeneration?: Omit<
+    IntrinsicPressureGenerationProvenance,
+    'childStateKey'
+  >
 ): IntrinsicInfeasiblePoolEntry | undefined {
   return key === undefined
     ? undefined
@@ -1840,8 +2136,161 @@ function pressurePoolEntry(
         key,
         disruptionLineage: false,
         disruptionLineageProvenance: undefined,
-        disruptionProtectedUntilSweep: undefined
+        disruptionProtectedUntilSweep: undefined,
+        pressureGeneration: {
+          parentStateKey: pressureGeneration?.parentStateKey,
+          childStateKey: key,
+          generationDepth: pressureGeneration?.generationDepth ?? 0,
+          selectedPieceIds: pressureGeneration?.selectedPieceIds ?? [],
+          affectedPieceIds: pressureGeneration?.affectedPieceIds ?? [],
+          lineageAffectedPieceIds: pressureGeneration?.lineageAffectedPieceIds ?? [],
+          proposalKind: pressureGeneration?.proposalKind
+        }
       }
+}
+
+const INTRINSIC_PRESSURE_TRACE_CONFLICT_LIMIT = 5
+
+export function describeIntrinsicPressureLossSnapshot(
+  entry: IntrinsicInfeasiblePoolEntry | undefined,
+  weights: IntrinsicSeparatorWeights
+): IntrinsicPressureLossSnapshot | undefined {
+  if (entry === undefined) return undefined
+  const provenance = entry.pressureGeneration ?? {
+    parentStateKey: undefined,
+    childStateKey: entry.key,
+    generationDepth: 0,
+    selectedPieceIds: [],
+    affectedPieceIds: [],
+    lineageAffectedPieceIds: [],
+    proposalKind: undefined
+  }
+  const conflictedPieceIds = new Set<PieceId>()
+  let wallConflictCount = 0
+  let pairConflictCount = 0
+  for (const conflict of entry.evaluation.conflicts) {
+    conflictedPieceIds.add(conflict.firstPieceId)
+    if (conflict.secondPieceId !== undefined) {
+      conflictedPieceIds.add(conflict.secondPieceId)
+    }
+    if (conflict.kind === 'wall') wallConflictCount += 1
+    else pairConflictCount += 1
+  }
+  const topConflicts = entry.evaluation.conflicts
+    .map((conflict): IntrinsicPressureConflictTrace => ({
+      key: conflict.key,
+      kind: conflict.kind,
+      firstPieceId: conflict.firstPieceId,
+      secondPieceId: conflict.secondPieceId,
+      normalizedDepth: conflict.normalizedDepth,
+      rawDepth: conflict.rawDepth,
+      weightedContribution:
+        conflict.normalizedDepth *
+        conflict.normalizedDepth *
+        (weights.byConflictKey.get(conflict.key) ?? 1),
+      moveXGrid: conflict.moveXGrid,
+      moveYGrid: conflict.moveYGrid,
+      wallSide: pressureWallSide(conflict)
+    }))
+    .toSorted(
+      (first, second) =>
+        second.weightedContribution - first.weightedContribution ||
+        second.normalizedDepth - first.normalizedDepth ||
+        first.key.localeCompare(second.key)
+    )
+    .slice(0, INTRINSIC_PRESSURE_TRACE_CONFLICT_LIMIT)
+  return {
+    stateKey: entry.key,
+    parentStateKey: provenance.parentStateKey,
+    childStateKey: provenance.childStateKey,
+    generationDepth: provenance.generationDepth,
+    selectedPieceIds: provenance.selectedPieceIds,
+    affectedPieceIds: provenance.affectedPieceIds,
+    affectedPieceCount: provenance.affectedPieceIds.length,
+    lineageAffectedPieceIds: provenance.lineageAffectedPieceIds,
+    lineageAffectedPieceCount: provenance.lineageAffectedPieceIds.length,
+    proposalKind: provenance.proposalKind,
+    rawLoss: entry.evaluation.rawLoss,
+    weightedLoss: entry.evaluation.conflicts.reduce(
+      (loss, conflict) =>
+        loss +
+        conflict.normalizedDepth *
+          conflict.normalizedDepth *
+          (weights.byConflictKey.get(conflict.key) ?? 1),
+      0
+    ),
+    wallConflictCount,
+    pairConflictCount,
+    conflictedPieceCount: conflictedPieceIds.size,
+    topConflicts
+  }
+}
+
+function pressureLossSnapshot(
+  entry: IntrinsicInfeasiblePoolEntry | undefined,
+  weights: IntrinsicSeparatorWeights
+): IntrinsicPressureLossSnapshot | undefined {
+  return describeIntrinsicPressureLossSnapshot(entry, weights)
+}
+
+function pressureWallSide(
+  conflict: IntrinsicSeparationEvaluation['conflicts'][number]
+): 'left' | 'right' | 'bottom' | 'top' | undefined {
+  if (conflict.kind !== 'wall') return undefined
+  const keySide = conflict.key.slice(conflict.key.lastIndexOf(':') + 1)
+  if (
+    keySide === 'left' ||
+    keySide === 'right' ||
+    keySide === 'bottom' ||
+    keySide === 'top'
+  ) {
+    return keySide
+  }
+  if (Math.abs(conflict.moveXGrid) >= Math.abs(conflict.moveYGrid)) {
+    if (conflict.moveXGrid > 0) return 'left'
+    if (conflict.moveXGrid < 0) return 'right'
+  }
+  if (conflict.moveYGrid > 0) return 'bottom'
+  if (conflict.moveYGrid < 0) return 'top'
+  return undefined
+}
+
+function pressureWeightUpdates(
+  before: IntrinsicSeparatorWeights,
+  after: IntrinsicSeparatorWeights
+): ReadonlyArray<IntrinsicPressureWeightUpdateTrace> {
+  const conflictKeys = new Set([
+    ...before.byConflictKey.keys(),
+    ...after.byConflictKey.keys()
+  ])
+  return [...conflictKeys]
+    .toSorted((first, second) => first.localeCompare(second))
+    .flatMap((conflictKey) => {
+      const beforeWeight = before.byConflictKey.get(conflictKey) ?? 1
+      const afterWeight = after.byConflictKey.get(conflictKey) ?? 1
+      return beforeWeight === afterWeight
+        ? []
+        : [{ conflictKey, before: beforeWeight, after: afterWeight }]
+    })
+}
+
+function pressureSweepLocalImprovement(
+  startPreGls: IntrinsicPressureLossSnapshot | undefined,
+  generatedBestPreGls: IntrinsicPressureLossSnapshot | undefined
+): { readonly rawLoss: number; readonly weightedLoss: number } {
+  return startPreGls === undefined || generatedBestPreGls === undefined
+    ? { rawLoss: 0, weightedLoss: 0 }
+    : {
+        rawLoss: startPreGls.rawLoss - generatedBestPreGls.rawLoss,
+        weightedLoss: startPreGls.weightedLoss - generatedBestPreGls.weightedLoss
+      }
+}
+
+function mergePressurePieceIds(
+  first: ReadonlyArray<PieceId>,
+  second: ReadonlyArray<PieceId>
+): ReadonlyArray<PieceId> {
+  return [...new Set([...first, ...second])].toSorted((a, b) => a.localeCompare(b))
 }
 
 function pressureEndpointFromState(input: {

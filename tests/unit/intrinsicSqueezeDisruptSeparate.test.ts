@@ -21,6 +21,7 @@ import {
 } from '@shared/irregular/domain.js'
 import {
   advanceIntrinsicDisruptionLineage,
+  describeIntrinsicPressureLossSnapshot,
   deriveIntrinsicGlobalOrdinalSeed,
   deriveIntrinsicGlobalTargetRoles,
   deriveIntrinsicContractedPressureProposal,
@@ -696,6 +697,151 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(pressureRepairSweepAllowance(12, 3)).toBe(0)
   })
 
+  it('records pressure diagnostics without changing retention or evaluation counts', async () => {
+    const pieces = [preparedRectangle('near', 4, 2), preparedRectangle('far', 4, 2)]
+    const catalog = await catalogFor(pieces)
+    const touching = [
+      placed(catalogEntry(catalog, 'near'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'far'), 0, 4, 0)
+    ]
+    const controllerSchedule = schedule({
+      sweepsPerBasin: 3,
+      maximumSeparationEvaluations: 200,
+      explorationAreaCapMm2: 20
+    })
+    const project = ({
+      provisionalPlaced
+    }: {
+      readonly provisionalPlaced: ReadonlyArray<IrregularPlacedPiece>
+    }) => Effect.succeed(exactProjection(provisionalPlaced))
+    const first = await runController(pieces, touching, controllerSchedule, project)
+    const second = await runController(pieces, touching, controllerSchedule, project)
+    const sweeps = first.contractedPressureTrace.flatMap(({ repairSweeps }) => repairSweeps)
+
+    expect(sweeps.length).toBeGreaterThan(0)
+    expect(first.separationEvaluationCount).toBe(second.separationEvaluationCount)
+    expect(first.pressureRepairSweepCount).toBe(second.pressureRepairSweepCount)
+    expect(first.contractedPressureTrace).toEqual(second.contractedPressureTrace)
+    expect(
+      first.structuralHandoffs.map(({ metrics }) => metrics.canonicalGeometryIdentity)
+    ).toEqual(
+      second.structuralHandoffs.map(({ metrics }) => metrics.canonicalGeometryIdentity)
+    )
+    expect(
+      sweeps.every(
+        ({
+          startPreGls,
+          retainedRawBestPreGls,
+          retainedRawBestPostGls,
+          retainedWeightedBestPostGls,
+          retainedRawWinnerStateKey,
+          retainedWeightedWinnerStateKey
+        }) =>
+          startPreGls !== undefined &&
+          retainedRawBestPreGls !== undefined &&
+          retainedRawBestPostGls !== undefined &&
+          retainedWeightedBestPostGls !== undefined &&
+          retainedRawWinnerStateKey !== undefined &&
+          retainedWeightedWinnerStateKey !== undefined
+      )
+    ).toBe(true)
+    expect(
+      sweeps.some(
+        ({ generatedBestPreGls, glsDriverStateKey, weightUpdates }) =>
+          generatedBestPreGls !== undefined &&
+          generatedBestPreGls.conflictedPieceCount > 0 &&
+          glsDriverStateKey !== undefined &&
+          weightUpdates.length > 0
+      )
+    ).toBe(true)
+    for (const sweep of sweeps) {
+      expect(sweep.emittedProposalCount).toBeGreaterThanOrEqual(
+        sweep.evaluatedProposalCount
+      )
+      expect(sweep.evaluatedProposalCount).toBeGreaterThanOrEqual(
+        sweep.generatedUniqueCandidateCount
+      )
+      expect(sweep.wholeCandidateSetUniqueCount).toBeGreaterThanOrEqual(
+        sweep.generatedUniqueCandidateCount
+      )
+      if (sweep.startPreGls !== undefined && sweep.generatedBestPreGls !== undefined) {
+        expect(sweep.preGlsImprovementDeltaRawLoss).toBe(
+          sweep.startPreGls.rawLoss - sweep.generatedBestPreGls.rawLoss
+        )
+        expect(sweep.preGlsImprovementDeltaWeightedLoss).toBe(
+          sweep.startPreGls.weightedLoss - sweep.generatedBestPreGls.weightedLoss
+        )
+      }
+      if (
+        sweep.retainedRawBestPreGls !== undefined &&
+        sweep.retainedRawBestPostGls !== undefined
+      ) {
+        expect(sweep.retainedRawBestPostGls.rawLoss).toBe(
+          sweep.retainedRawBestPreGls.rawLoss
+        )
+        expect(sweep.retainedRawWinnerStateKey).toBe(
+          sweep.retainedRawBestPostGls.stateKey
+        )
+      }
+    }
+
+    const state = relaxedStateFromExactLayout(catalog, touching)
+    if (state === undefined) throw new Error('pressure diagnostic state expected')
+    const diagnosticEntry: IntrinsicInfeasiblePoolEntry = {
+      ...poolEntry(state, 'diagnostic', 0.25, 'wall:near:left', 0.25, undefined),
+      searchScope: 'contracted-pressure',
+      pressureGeneration: {
+        parentStateKey: 'parent',
+        childStateKey: 'diagnostic',
+        generationDepth: 2,
+        selectedPieceIds: [PieceId.make('near')],
+        affectedPieceIds: [PieceId.make('near')],
+        lineageAffectedPieceIds: [PieceId.make('far'), PieceId.make('near')],
+        proposalKind: 'separate'
+      }
+    }
+    const weights = { byConflictKey: new Map([['wall:near:left', 3]]) }
+    const retainedBefore = retainIntrinsicInfeasiblePool(
+      [diagnosticEntry],
+      1,
+      weights,
+      0
+    )
+    const snapshot = describeIntrinsicPressureLossSnapshot(diagnosticEntry, weights)
+    const retainedAfter = retainIntrinsicInfeasiblePool(
+      [diagnosticEntry],
+      1,
+      weights,
+      0
+    )
+
+    expect(retainedAfter).toEqual(retainedBefore)
+    expect(snapshot?.weightedLoss).toBe(0.75)
+    expect(
+      describeIntrinsicPressureLossSnapshot(diagnosticEntry, {
+        byConflictKey: new Map([['wall:near:left', 5]])
+      })?.weightedLoss
+    ).toBe(1.25)
+    expect(snapshot).toMatchObject({
+      stateKey: 'diagnostic',
+      parentStateKey: 'parent',
+      childStateKey: 'diagnostic',
+      generationDepth: 2,
+      affectedPieceCount: 1,
+      lineageAffectedPieceCount: 2,
+      conflictedPieceCount: 1,
+      wallConflictCount: 1,
+      pairConflictCount: 0,
+      topConflicts: [
+        {
+          key: 'wall:near:left',
+          wallSide: 'left',
+          weightedContribution: 0.75
+        }
+      ]
+    })
+  })
+
   it('reserves one accepted exact pressure endpoint without raising the projection cap', async () => {
     const pieces = [preparedRectangle('near', 4, 2), preparedRectangle('far', 4, 2)]
     const catalog = await catalogFor(pieces)
@@ -883,6 +1029,19 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(result.status).toBe('deadline-fallback')
     expect(result.pressureRepairSweepCount).toBe(0)
     expect(result.contractedPressureTrace[0]?.reason).toContain('deadline')
+    expect(result.contractedPressureTrace[0]?.repairSweeps).toEqual([
+      expect.objectContaining({
+        terminationReason: 'deadline-before-work',
+        startPreGls: undefined,
+        generatedBestPreGls: undefined,
+        retainedRawBestPreGls: undefined,
+        retainedRawBestPostGls: undefined,
+        retainedWeightedBestPostGls: undefined,
+        wholeCandidateSetUniqueCount: undefined,
+        emittedProposalCount: 0,
+        evaluatedProposalCount: 0
+      })
+    ])
   })
 
   it('rejects a projector mismatch while preserving truthful pre/post pressure tuples', async () => {
