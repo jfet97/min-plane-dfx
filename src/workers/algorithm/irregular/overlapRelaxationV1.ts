@@ -91,6 +91,8 @@ export interface FinalSatHazardMeasurement {
 
 export interface OverlapRelaxationV1Result {
   readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+  /** Algorithm-private relaxed start material; never a publishable placement result. */
+  readonly bestRelaxedSnapshot: ReadonlyArray<IrregularPlacedPiece>
   readonly separated: boolean
   readonly promotable: boolean
   readonly requestedTargetWidth: number
@@ -416,6 +418,7 @@ export function relaxOverlappingLayoutV1(
     const promotable = promotablePlaced !== undefined
     return {
       placedCollisionGeometries: promotablePlaced ?? incumbent,
+      bestRelaxedSnapshot: rebuildSnapshotV1(pieces, bestLayout) ?? incumbent,
       separated: bestFeasiblePlaced !== undefined,
       promotable,
       requestedTargetWidth,
@@ -1099,6 +1102,34 @@ function rebuildAndValidateV1(
   })
 }
 
+function rebuildSnapshotV1(
+  pieces: ReadonlyArray<RelaxedPieceV1>,
+  layout: RelaxedLayoutV1
+): ReadonlyArray<IrregularPlacedPiece> | undefined {
+  const normalized = bottomLeftGridTranslations(pieces, layout)
+  if (normalized === undefined) return undefined
+  const placed: IrregularPlacedPiece[] = []
+  for (let index = 0; index < pieces.length; index += 1) {
+    const piece = pieces[index]
+    const translation = normalized[index]
+    if (piece === undefined || translation === undefined) return undefined
+    placed.push(
+      new IrregularPlacedPiece({
+        placement: new IrregularPlacement({
+          ...piece.entry.placement,
+          transform: {
+            ...piece.entry.placement.transform,
+            translateX: translation.x,
+            translateY: translation.y
+          }
+        }),
+        collisionGeometry: piece.entry.collisionGeometry
+      })
+    )
+  }
+  return placed
+}
+
 function bottomLeftGridTranslations(
   pieces: ReadonlyArray<RelaxedPieceV1>,
   layout: RelaxedLayoutV1
@@ -1126,6 +1157,7 @@ function unchangedResult(
 ): OverlapRelaxationV1Result {
   return {
     placedCollisionGeometries: incumbent,
+    bestRelaxedSnapshot: incumbent,
     separated: false,
     promotable: false,
     requestedTargetWidth,

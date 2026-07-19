@@ -43,6 +43,7 @@ export interface CanonicalLayoutStructuralAnalysis {
   readonly pieces: ReadonlyArray<{
     readonly pieceId: PieceId
     readonly aabb: CanonicalGridAabb
+    readonly areaGrid2: number
   }>
   readonly positiveContactComponents: ReadonlyArray<ReadonlyArray<PieceId>>
   readonly positiveContactPairs: ReadonlyArray<readonly [PieceId, PieceId]>
@@ -202,7 +203,7 @@ export function analyzeCanonicalLayoutStructure(
   if (largestHullGap === null) return undefined
   const pieces = polygons.map(({ pieceId, path }) => {
     const aabb = gridPathAabb(path)
-    return aabb === undefined ? undefined : { pieceId, aabb }
+    return aabb === undefined ? undefined : { pieceId, aabb, areaGrid2: Math.abs(area(path)) }
   })
   if (pieces.some((piece) => piece === undefined)) return undefined
   const wallOffenders = polygons
@@ -213,7 +214,11 @@ export function analyzeCanonicalLayoutStructure(
     .toSorted()
   return {
     pieces: pieces.filter(
-      (piece): piece is { readonly pieceId: PieceId; readonly aabb: CanonicalGridAabb } =>
+      (piece): piece is {
+        readonly pieceId: PieceId
+        readonly aabb: CanonicalGridAabb
+        readonly areaGrid2: number
+      } =>
         piece !== undefined
     ),
     positiveContactComponents,
@@ -287,9 +292,18 @@ function contactComponents(
     }
     components.push(component.toSorted())
   }
-  return components.toSorted(
-    (first, second) => second.length - first.length || first.join('|').localeCompare(second.join('|'))
+  const areaById = new Map(
+    polygons.map(({ pieceId, path }) => [pieceId, Math.abs(area(path))] as const)
   )
+  return components.toSorted((first, second) => {
+    const firstArea = first.reduce((sum, pieceId) => sum + (areaById.get(pieceId) ?? 0), 0)
+    const secondArea = second.reduce((sum, pieceId) => sum + (areaById.get(pieceId) ?? 0), 0)
+    return (
+      second.length - first.length ||
+      secondArea - firstArea ||
+      first.join('|').localeCompare(second.join('|'))
+    )
+  })
 }
 
 function gridPathAabb(path: Path64): CanonicalGridAabb | undefined {

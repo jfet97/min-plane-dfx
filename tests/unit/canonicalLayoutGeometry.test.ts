@@ -175,6 +175,12 @@ describe('canonical collision layout geometry', () => {
       2,
       1
     ])
+    expect(analysis?.positiveContactComponents[0]).toEqual([
+      PieceId.make('primary-a'),
+      PieceId.make('primary-b')
+    ])
+    expect(analysis?.pieces.find(({ pieceId }) => pieceId === PieceId.make('primary-a'))?.areaGrid2)
+      .toBe(4_000_000)
     expect(analysis?.positiveContactPairs).toContainEqual([
       PieceId.make('primary-a'),
       PieceId.make('primary-b')
