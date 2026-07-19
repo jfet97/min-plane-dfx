@@ -20,6 +20,7 @@ import {
   type IrregularNestingSettings
 } from '@shared/irregular/domain.js'
 import {
+  advanceIntrinsicDisruptionLineage,
   deriveIntrinsicGlobalOrdinalSeed,
   deriveIntrinsicGlobalTargetRoles,
   floorIntrinsicTargetGrid,
@@ -27,12 +28,14 @@ import {
   INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
   partitionIntrinsicStructuralPieces,
   retainIntrinsicInfeasiblePool,
+  retainIntrinsicInfeasiblePoolWithDiagnostics,
   retainIntrinsicStructuralHandoffs,
   retainIntrinsicStructuralHandoffsWithDiagnostics,
   runIntrinsicSqueezeDisruptSeparateWithSchedule,
   selectIntrinsicProjectionWorkItems,
   type IntrinsicGlobalSearchSchedule,
   type IntrinsicGlobalTargetRole,
+  type IntrinsicDisruptionLineageProvenance,
   type IntrinsicInfeasiblePoolEntry,
   type IntrinsicProjectionLaneCandidate,
   type IntrinsicStructuralHandoff
@@ -602,7 +605,13 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     const ordinary = poolEntry(state, 'same-state', 1, 'ordinary', 1, undefined)
     const disrupted = {
       ...poolEntry(state, 'same-state', 2, 'disrupted', 2, undefined),
-      disruptionLineage: true
+      disruptionLineage: true,
+      disruptionLineageProvenance: {
+        originSweep: 4,
+        originProposalKind: 'split-squeeze' as const,
+        originStateKey: 'disrupted-origin',
+        depth: 2
+      }
     }
     const retained = retainIntrinsicInfeasiblePool(
       [ordinary, disrupted],
@@ -614,6 +623,74 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(retained).toHaveLength(1)
     expect(retained[0]?.evaluation.rawLoss).toBe(1)
     expect(retained[0]?.disruptionLineage).toBe(true)
+    expect(retained[0]?.disruptionLineageProvenance).toEqual(
+      disrupted.disruptionLineageProvenance
+    )
+  })
+
+  it('keeps deterministic disruption provenance and depth across descendants and dedupe', async () => {
+    const pieces = [preparedRectangle('a', 1, 1), preparedRectangle('b', 1, 1)]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 2, 0)
+    ])
+    if (state === undefined) throw new Error('state expected')
+    const ordinary = poolEntry(state, 'same-state', 1, 'ordinary', 1, undefined)
+    const laterOrigin = advanceIntrinsicDisruptionLineage(
+      ordinary,
+      'split-squeeze',
+      4,
+      'later-origin'
+    )
+    if (laterOrigin === undefined) throw new Error('lineage origin expected')
+    const descendant = advanceIntrinsicDisruptionLineage(
+      {
+        disruptionLineage: true,
+        disruptionLineageProvenance: laterOrigin
+      },
+      'separate',
+      5,
+      'descendant'
+    )
+    expect(descendant).toEqual({ ...laterOrigin, depth: 1 })
+    const earlierOrigin = advanceIntrinsicDisruptionLineage(
+      ordinary,
+      'group-transport',
+      2,
+      'earlier-origin'
+    )
+    if (earlierOrigin === undefined || descendant === undefined) {
+      throw new Error('deterministic provenance expected')
+    }
+    const candidates = [
+      {
+        ...poolEntry(state, 'same-state', 1, 'later', 1, undefined),
+        disruptionLineage: true,
+        disruptionLineageProvenance: descendant
+      },
+      {
+        ...poolEntry(state, 'same-state', 2, 'earlier', 2, undefined),
+        disruptionLineage: true,
+        disruptionLineageProvenance: earlierOrigin
+      }
+    ]
+    const forward = retainIntrinsicInfeasiblePool(
+      candidates,
+      1,
+      { byConflictKey: new Map() },
+      6
+    )
+    const reversed = retainIntrinsicInfeasiblePool(
+      [...candidates].reverse(),
+      1,
+      { byConflictKey: new Map() },
+      6
+    )
+
+    expect(forward).toEqual(reversed)
+    expect(forward[0]?.evaluation.rawLoss).toBe(1)
+    expect(forward[0]?.disruptionLineageProvenance).toEqual(earlierOrigin)
   })
 
   it('selects the deterministic five-lane projection portfolio without backfill', async () => {
@@ -626,11 +703,11 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     if (state === undefined) throw new Error('state expected')
     const roles = projectionTargetRoles()
     const candidates = [
-      projectionLaneCandidate(roles[0], 0, state, 'raw', 1, 8, false),
-      projectionLaneCandidate(roles[1], 0, state, 'gls', 2, 0.5, false),
-      projectionLaneCandidate(roles[0], 1, state, 'e1-disruption', 3, 1, true),
-      projectionLaneCandidate(roles[1], 1, state, 'expanded-disruption', 4, 1, true),
-      projectionLaneCandidate(roles[2], 0, state, 'four-three-disruption', 5, 1, true)
+      projectionLaneCandidate(roles[0], 0, state, 'raw', 1, 0.1, false),
+      projectionLaneCandidate(roles[0], 0, state, 'gls', 2, 0.2, true),
+      projectionLaneCandidate(roles[0], 1, state, 'e1-disruption', 3, 0.3, true),
+      projectionLaneCandidate(roles[1], 1, state, 'expanded-disruption', 4, 0.4, true),
+      projectionLaneCandidate(roles[2], 0, state, 'four-three-disruption', 5, 0.5, true)
     ]
     const first = selectIntrinsicProjectionWorkItems(candidates, roles)
     const second = selectIntrinsicProjectionWorkItems([...candidates].reverse(), roles)
@@ -645,6 +722,19 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       'role-disruption'
     ])
     expect(first.trace.every(({ outcome }) => outcome === 'selected')).toBe(true)
+    expect(first.trace[1]).toMatchObject({
+      lane: 'global-final-gls',
+      eligibleCandidateCount: 5,
+      skippedDuplicateCount: 1,
+      stateKey: 'gls'
+    })
+    expect(first.trace[2]).toMatchObject({
+      lane: 'role-disruption',
+      requestedTargetRoleId: 'e1-envelope',
+      eligibleCandidateCount: 2,
+      skippedDuplicateCount: 1,
+      stateKey: 'e1-disruption'
+    })
   })
 
   it('reports unavailable and collapsed projection lanes without generic backfill', async () => {
@@ -674,7 +764,9 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(selection.trace[3]).toMatchObject({
       lane: 'role-disruption',
       requestedTargetRoleId: 'expanded-e1-envelope',
-      collapsedIntoWorkIdentity: selection.workItems[1]?.workIdentity
+      collapsedIntoWorkIdentity: selection.workItems[1]?.workIdentity,
+      eligibleCandidateCount: 1,
+      skippedDuplicateCount: 1
     })
   })
 
@@ -769,7 +861,7 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     ).toEqual(['clean', 'ringy-tradeoff'])
   })
 
-  it('protects forced disruption and newly weighted GLS lanes inside width eight', async () => {
+  it('protects forced disruption, GLS, and post-birth active lineage inside width eight', async () => {
     const pieces = [preparedRectangle('a', 1, 1), preparedRectangle('b', 1, 1)]
     const catalog = await catalogFor(pieces)
     const state = relaxedStateFromExactLayout(catalog, [
@@ -800,7 +892,50 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
         { byConflictKey: new Map() },
         1
       ).some(({ key }) => key === 'forced-disruption')
-    ).toBe(false)
+    ).toBe(true)
+
+    const crowdedCandidates = [
+      hot,
+      ...Array.from({ length: 8 }, (_, index) =>
+        poolEntry(
+          state,
+          `ordinary-${index}`,
+          1.1 + index / 10,
+          `ordinary-${index}`,
+          1.1 + index / 10,
+          undefined
+        )
+      ),
+      {
+        ...poolEntry(state, 'active-lineage', 100, 'lineage', 100, undefined),
+        disruptionLineage: true,
+        disruptionLineageProvenance: {
+          originSweep: 0,
+          originProposalKind: 'swap' as const,
+          originStateKey: 'active-lineage',
+          depth: 1
+        }
+      }
+    ]
+    const postBirthRetention = retainIntrinsicInfeasiblePoolWithDiagnostics(
+      crowdedCandidates,
+      8,
+      { byConflictKey: new Map() },
+      1
+    )
+
+    expect(postBirthRetention.pool).toHaveLength(8)
+    expect(postBirthRetention.pool.some(({ key }) => key === 'active-lineage')).toBe(true)
+    expect(postBirthRetention).toMatchObject({
+      retainedLineageCount: 1,
+      activeLineageRetentionOutcome: 'reserved-active-lineage',
+      reservedLineage: {
+        stateKey: 'active-lineage',
+        originSweep: 0,
+        originProposalKind: 'swap',
+        depth: 1
+      }
+    })
   })
 
   it('waits for a forced checkpoint before using measured interface stagnation', async () => {
@@ -842,6 +977,12 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     })
     expect(firstBasin[3]?.forcedDisruption).toBe(true)
     expect(firstBasin[3]?.interfaceDisruptionProposalCount).toBeGreaterThan(0)
+    expect(firstBasin[3]?.directDisruptionProposalCounts.interfaceDisrupt).toBeGreaterThan(0)
+    expect(firstBasin[3]?.preDeduplicationLineageCount).toBeGreaterThan(0)
+    expect(firstBasin[3]?.postDeduplicationLineageCount).toBeGreaterThan(0)
+    expect(firstBasin[3]?.retainedLineageCount).toBeGreaterThan(0)
+    expect(firstBasin[3]?.reservedLineage).toBeDefined()
+    expect(firstBasin[3]?.shadowLineageSnapshot).toBeDefined()
   })
 
   it('returns exact E1 on an incomplete budget and propagates cancellation before projection', async () => {
@@ -1178,10 +1319,20 @@ function poolEntry(
   disruptionProtectedUntilSweep: number | undefined
 ): IntrinsicInfeasiblePoolEntry {
   const normalizedDepth = Math.sqrt(normalizedDepthSquared)
+  const disruptionLineageProvenance: IntrinsicDisruptionLineageProvenance | undefined =
+    disruptionProtectedUntilSweep === undefined
+      ? undefined
+      : {
+          originSweep: disruptionProtectedUntilSweep,
+          originProposalKind: 'swap',
+          originStateKey: key,
+          depth: 0
+        }
   return {
     state,
     key,
-    disruptionLineage: disruptionProtectedUntilSweep !== undefined,
+    disruptionLineage: disruptionLineageProvenance !== undefined,
+    disruptionLineageProvenance,
     disruptionProtectedUntilSweep,
     evaluation: {
       rawLoss,
@@ -1248,7 +1399,15 @@ function projectionLaneCandidate(
     entry: {
       ...entry,
       evaluation: { ...entry.evaluation, weightedLoss },
-      disruptionLineage
+      disruptionLineage,
+      disruptionLineageProvenance: disruptionLineage
+        ? {
+            originSweep: 0,
+            originProposalKind: 'swap',
+            originStateKey: key,
+            depth: 0
+          }
+        : undefined
     },
     weights: { byConflictKey: new Map() }
   }

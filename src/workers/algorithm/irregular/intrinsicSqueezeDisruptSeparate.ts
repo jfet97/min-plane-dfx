@@ -81,6 +81,35 @@ export interface IntrinsicGlobalTargetRole {
   readonly areaMm2: number
 }
 
+export type IntrinsicDisruptionProposalKind = Extract<
+  IntrinsicSeparatorProposal['kind'],
+  'swap' | 'group-transport' | 'split-squeeze' | 'interface-disrupt'
+>
+
+export interface IntrinsicDisruptionLineageProvenance {
+  readonly originSweep: number
+  readonly originProposalKind: IntrinsicDisruptionProposalKind
+  readonly originStateKey: string
+  readonly depth: number
+}
+
+export interface IntrinsicLineageWitnessTrace {
+  readonly stateKey: string
+  readonly rawLoss: number
+  readonly weightedLoss: number
+  readonly originSweep: number
+  readonly originProposalKind: IntrinsicDisruptionProposalKind
+  readonly originStateKey: string
+  readonly depth: number
+}
+
+export interface IntrinsicDirectDisruptionProposalCounts {
+  readonly swap: number
+  readonly groupTransport: number
+  readonly splitSqueeze: number
+  readonly interfaceDisrupt: number
+}
+
 export interface IntrinsicGlobalSweepTrace {
   readonly roleId: IntrinsicGlobalTargetRole['id']
   readonly basinIndex: 0 | 1
@@ -93,6 +122,25 @@ export interface IntrinsicGlobalSweepTrace {
   readonly proposalCount: number
   readonly separationEvaluationCount: number
   readonly lowestRawLoss: number
+  readonly directDisruptionProposalCounts: IntrinsicDirectDisruptionProposalCounts
+  readonly preDeduplicationLineageCount: number
+  readonly postDeduplicationLineageCount: number
+  readonly retainedLineageCount: number
+  readonly reservedLineage: IntrinsicLineageWitnessTrace | undefined
+  readonly activeLineageRetentionOutcome:
+    | 'lane-unavailable'
+    | 'retained-by-prior-lane'
+    | 'reserved-active-lineage'
+    | 'capacity-evicted'
+  readonly activeLineageRetentionReason: string
+  readonly shadowLineageSnapshot: IntrinsicLineageWitnessTrace | undefined
+  readonly shadowLineageSnapshotOutcome:
+    | 'lane-unavailable'
+    | 'initialized'
+    | 'replaced'
+    | 'retained-earlier-or-better'
+    | 'retained-no-current-lineage'
+  readonly shadowLineageSnapshotReason: string
 }
 
 export interface IntrinsicStructuralHandoffMetrics {
@@ -152,6 +200,7 @@ export interface IntrinsicProjectionWorkItem {
   readonly evaluation: IntrinsicSeparationEvaluation
   readonly weights: IntrinsicSeparatorWeights
   readonly disruptionLineage: boolean
+  readonly disruptionLineageProvenance: IntrinsicDisruptionLineageProvenance | undefined
   readonly workIdentity: string
 }
 
@@ -165,8 +214,11 @@ export interface IntrinsicProjectionLaneTrace {
   readonly basinIndex: 0 | 1 | undefined
   readonly stateKey: string | undefined
   readonly disruptionLineage: boolean | undefined
+  readonly disruptionLineageProvenance: IntrinsicDisruptionLineageProvenance | undefined
   readonly rawLoss: number | undefined
   readonly weightedLoss: number | undefined
+  readonly eligibleCandidateCount: number
+  readonly skippedDuplicateCount: number
 }
 
 export interface IntrinsicProjectionAttemptTrace {
@@ -176,6 +228,7 @@ export interface IntrinsicProjectionAttemptTrace {
   readonly basinIndex: 0 | 1
   readonly stateKey: string
   readonly disruptionLineage: boolean
+  readonly disruptionLineageProvenance: IntrinsicDisruptionLineageProvenance | undefined
   readonly completedBasinCount: number
   readonly completedSweepCount: number
   readonly projectionAttempt: number
@@ -239,7 +292,22 @@ export interface IntrinsicInfeasiblePoolEntry {
   readonly evaluation: IntrinsicSeparationEvaluation
   readonly key: string
   readonly disruptionLineage: boolean
+  readonly disruptionLineageProvenance: IntrinsicDisruptionLineageProvenance | undefined
   readonly disruptionProtectedUntilSweep: number | undefined
+}
+
+export interface IntrinsicInfeasiblePoolRetention {
+  readonly pool: ReadonlyArray<IntrinsicInfeasiblePoolEntry>
+  readonly preDeduplicationLineageCount: number
+  readonly postDeduplicationLineageCount: number
+  readonly retainedLineageCount: number
+  readonly reservedLineage: IntrinsicLineageWitnessTrace | undefined
+  readonly activeLineageRetentionOutcome:
+    | 'lane-unavailable'
+    | 'retained-by-prior-lane'
+    | 'reserved-active-lineage'
+    | 'capacity-evicted'
+  readonly activeLineageRetentionReason: string
 }
 
 export interface IntrinsicProjectionLaneCandidate {
@@ -505,12 +573,14 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
           evaluation: initialEvaluation,
           key: intrinsicRelaxedStateKey(catalog, basinState) ?? '',
           disruptionLineage: false,
+          disruptionLineageProvenance: undefined,
           disruptionProtectedUntilSweep: undefined
         }
       ]
       let weights: IntrinsicSeparatorWeights = { byConflictKey: new Map() }
       let lowestObservedRawLoss = initialEvaluation.rawLoss
       let consecutiveNonImprovingSweeps = 0
+      let shadowLineageSnapshot: IntrinsicLineageWitnessTrace | undefined
 
       for (let sweepIndex = 0; sweepIndex < schedule.sweepsPerBasin; sweepIndex += 1) {
         if ((yield* globalSearchCheckpoint(searchControl)) === 'deadline') {
@@ -520,6 +590,7 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
         const candidates: IntrinsicInfeasiblePoolEntry[] = [...pool]
         let proposalCount = 0
         let interfaceDisruptionProposalCount = 0
+        let directDisruptionProposalCounts = emptyDirectDisruptionProposalCounts()
         const forcedDisruption = schedule.forcedDisruptionSweeps.includes(sweepIndex)
         const interfaceDisruptionStagnated =
           consecutiveNonImprovingSweeps >= schedule.interfaceDisruptionStagnationSweeps
@@ -545,6 +616,10 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
           interfaceDisruptionProposalCount += disruptionProposals.filter(
             ({ kind }) => kind === 'interface-disrupt'
           ).length
+          directDisruptionProposalCounts = addDirectDisruptionProposalCounts(
+            directDisruptionProposalCounts,
+            disruptionProposals
+          )
           const proposals = [
             ...intrinsicFocusedProposals({
               catalog,
@@ -574,14 +649,18 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
             const key = intrinsicRelaxedStateKey(catalog, proposal.state)
             if (evaluation !== undefined && key !== undefined) {
               const isDisruption = isIntrinsicDisruptionProposalKind(proposal.kind)
+              const disruptionLineageProvenance = advanceIntrinsicDisruptionLineage(
+                entry,
+                proposal.kind,
+                sweepIndex,
+                key
+              )
               candidates.push({
                 state: proposal.state,
                 evaluation,
                 key,
-                disruptionLineage: inheritIntrinsicDisruptionLineage(
-                  entry.disruptionLineage,
-                  proposal.kind
-                ),
+                disruptionLineage: disruptionLineageProvenance !== undefined,
+                disruptionLineageProvenance,
                 disruptionProtectedUntilSweep: isDisruption ? sweepIndex : undefined
               })
             }
@@ -596,12 +675,18 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
           return yield* globalFailure('search', 'the infeasible basin pool became empty.')
         }
         weights = updateIntrinsicSeparatorWeights(weights, rawBest.evaluation)
-        pool = retainIntrinsicInfeasiblePool(
+        const shadowUpdate = updateIntrinsicLineageShadowSnapshot(
+          shadowLineageSnapshot,
+          reweightIntrinsicPool(candidates, weights)
+        )
+        shadowLineageSnapshot = shadowUpdate.snapshot
+        const retention = retainIntrinsicInfeasiblePoolWithDiagnostics(
           candidates,
           schedule.poolCapacity,
           weights,
           sweepIndex
         )
+        pool = retention.pool
         const best = pool[0]
         if (best === undefined) {
           return yield* globalFailure('search', 'the reweighted basin pool became empty.')
@@ -624,7 +709,17 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
           poolSize: pool.length,
           proposalCount,
           separationEvaluationCount,
-          lowestRawLoss: best.evaluation.rawLoss
+          lowestRawLoss: best.evaluation.rawLoss,
+          directDisruptionProposalCounts,
+          preDeduplicationLineageCount: retention.preDeduplicationLineageCount,
+          postDeduplicationLineageCount: retention.postDeduplicationLineageCount,
+          retainedLineageCount: retention.retainedLineageCount,
+          reservedLineage: retention.reservedLineage,
+          activeLineageRetentionOutcome: retention.activeLineageRetentionOutcome,
+          activeLineageRetentionReason: retention.activeLineageRetentionReason,
+          shadowLineageSnapshot,
+          shadowLineageSnapshotOutcome: shadowUpdate.outcome,
+          shadowLineageSnapshotReason: shadowUpdate.reason
         })
       }
       if (scheduleStatus !== 'completed') break
@@ -908,41 +1003,60 @@ export function selectIntrinsicProjectionWorkItems(
   const registerLane = (
     lane: IntrinsicProjectionLane,
     requestedTargetRoleId: IntrinsicGlobalTargetRole['id'] | undefined,
-    candidate: IntrinsicProjectionLaneCandidate | undefined
+    eligibleCandidates: ReadonlyArray<IntrinsicProjectionLaneCandidate>
   ): void => {
-    if (candidate === undefined) {
+    if (eligibleCandidates.length === 0) {
       trace.push(unavailableProjectionLaneTrace(lane, requestedTargetRoleId))
       return
     }
-    const workItem = projectionWorkItem(lane, requestedTargetRoleId, candidate)
-    if (selectedIdentities.has(workItem.workIdentity)) {
+    let skippedDuplicateCount = 0
+    const candidate = eligibleCandidates.find((eligible) => {
+      if (selectedIdentities.has(projectionWorkIdentity(eligible))) {
+        skippedDuplicateCount += 1
+        return false
+      }
+      return true
+    })
+    if (candidate === undefined) {
+      const collapsed = projectionWorkItem(
+        lane,
+        requestedTargetRoleId,
+        eligibleCandidates[0] as IntrinsicProjectionLaneCandidate
+      )
       trace.push({
-        ...projectionLaneTraceFromWork(workItem),
+        ...projectionLaneTraceFromWork(collapsed),
         outcome: 'lane-collapsed',
-        collapsedIntoWorkIdentity: workItem.workIdentity
+        collapsedIntoWorkIdentity: collapsed.workIdentity,
+        eligibleCandidateCount: eligibleCandidates.length,
+        skippedDuplicateCount
       })
       return
     }
+    const workItem = projectionWorkItem(lane, requestedTargetRoleId, candidate)
     selectedIdentities.add(workItem.workIdentity)
     selected.push(workItem)
     trace.push({
       ...projectionLaneTraceFromWork(workItem),
       outcome: 'selected',
-      collapsedIntoWorkIdentity: undefined
+      collapsedIntoWorkIdentity: undefined,
+      eligibleCandidateCount: eligibleCandidates.length,
+      skippedDuplicateCount
     })
   }
 
-  const raw = available.toSorted(compareProjectionCandidateRaw)[0]
-  registerLane('global-raw', undefined, raw)
-  const finalWeighted = available.toSorted(compareProjectionCandidateWeighted)[0]
-  registerLane('global-final-gls', undefined, finalWeighted)
+  registerLane('global-raw', undefined, available.toSorted(compareProjectionCandidateRaw))
+  registerLane(
+    'global-final-gls',
+    undefined,
+    available.toSorted(compareProjectionCandidateWeighted)
+  )
   for (const role of targetRoles) {
     const disruption = available
       .filter(
         ({ targetRole, entry }) =>
           targetRole.id === role.id && entry.disruptionLineage
       )
-      .toSorted(compareProjectionCandidateWeighted)[0]
+      .toSorted(compareProjectionRoleLineageCandidate)
     registerLane('role-disruption', role.id, disruption)
   }
 
@@ -977,6 +1091,22 @@ function compareProjectionCandidateWeighted(
   )
 }
 
+function compareProjectionRoleLineageCandidate(
+  first: IntrinsicProjectionLaneCandidate,
+  second: IntrinsicProjectionLaneCandidate
+): number {
+  return (
+    first.entry.evaluation.weightedLoss - second.entry.evaluation.weightedLoss ||
+    first.entry.evaluation.rawLoss - second.entry.evaluation.rawLoss ||
+    first.entry.key.localeCompare(second.entry.key) ||
+    first.basinIndex - second.basinIndex ||
+    compareDisruptionLineageProvenance(
+      first.entry.disruptionLineageProvenance,
+      second.entry.disruptionLineageProvenance
+    )
+  )
+}
+
 function projectionWorkItem(
   lane: IntrinsicProjectionLane,
   requestedTargetRoleId: IntrinsicGlobalTargetRole['id'] | undefined,
@@ -993,13 +1123,17 @@ function projectionWorkItem(
     evaluation: candidate.entry.evaluation,
     weights: candidate.weights,
     disruptionLineage: candidate.entry.disruptionLineage,
+    disruptionLineageProvenance: candidate.entry.disruptionLineageProvenance,
     workIdentity: projectionWorkIdentity(candidate)
   }
 }
 
 function projectionLaneTraceFromWork(
   workItem: IntrinsicProjectionWorkItem
-): Omit<IntrinsicProjectionLaneTrace, 'outcome' | 'collapsedIntoWorkIdentity'> {
+): Omit<
+  IntrinsicProjectionLaneTrace,
+  'outcome' | 'collapsedIntoWorkIdentity' | 'eligibleCandidateCount' | 'skippedDuplicateCount'
+> {
   return {
     lane: workItem.lane,
     requestedTargetRoleId: workItem.requestedTargetRoleId,
@@ -1008,6 +1142,7 @@ function projectionLaneTraceFromWork(
     basinIndex: workItem.basinIndex,
     stateKey: workItem.stateKey,
     disruptionLineage: workItem.disruptionLineage,
+    disruptionLineageProvenance: workItem.disruptionLineageProvenance,
     rawLoss: workItem.evaluation.rawLoss,
     weightedLoss: workItem.evaluation.weightedLoss
   }
@@ -1027,8 +1162,11 @@ function unavailableProjectionLaneTrace(
     basinIndex: undefined,
     stateKey: undefined,
     disruptionLineage: undefined,
+    disruptionLineageProvenance: undefined,
     rawLoss: undefined,
-    weightedLoss: undefined
+    weightedLoss: undefined,
+    eligibleCandidateCount: 0,
+    skippedDuplicateCount: 0
   }
 }
 
@@ -1039,15 +1177,73 @@ export function inheritIntrinsicDisruptionLineage(
   return parentLineage || isIntrinsicDisruptionProposalKind(proposalKind)
 }
 
+export function advanceIntrinsicDisruptionLineage(
+  parent: Pick<
+    IntrinsicInfeasiblePoolEntry,
+    'disruptionLineage' | 'disruptionLineageProvenance'
+  >,
+  proposalKind: IntrinsicSeparatorProposal['kind'],
+  sweepIndex: number,
+  stateKey: string
+): IntrinsicDisruptionLineageProvenance | undefined {
+  if (parent.disruptionLineage && parent.disruptionLineageProvenance !== undefined) {
+    return {
+      ...parent.disruptionLineageProvenance,
+      depth: parent.disruptionLineageProvenance.depth + 1
+    }
+  }
+  return isIntrinsicDisruptionProposalKind(proposalKind)
+    ? {
+        originSweep: sweepIndex,
+        originProposalKind: proposalKind,
+        originStateKey: stateKey,
+        depth: 0
+      }
+    : undefined
+}
+
 function isIntrinsicDisruptionProposalKind(
   proposalKind: IntrinsicSeparatorProposal['kind']
-): boolean {
+): proposalKind is IntrinsicDisruptionProposalKind {
   return (
     proposalKind === 'swap' ||
     proposalKind === 'group-transport' ||
     proposalKind === 'split-squeeze' ||
     proposalKind === 'interface-disrupt'
   )
+}
+
+function emptyDirectDisruptionProposalCounts(): IntrinsicDirectDisruptionProposalCounts {
+  return { swap: 0, groupTransport: 0, splitSqueeze: 0, interfaceDisrupt: 0 }
+}
+
+function addDirectDisruptionProposalCounts(
+  counts: IntrinsicDirectDisruptionProposalCounts,
+  proposals: ReadonlyArray<IntrinsicSeparatorProposal>
+): IntrinsicDirectDisruptionProposalCounts {
+  let swap = counts.swap
+  let groupTransport = counts.groupTransport
+  let splitSqueeze = counts.splitSqueeze
+  let interfaceDisrupt = counts.interfaceDisrupt
+  for (const { kind } of proposals) {
+    switch (kind) {
+      case 'swap':
+        swap += 1
+        break
+      case 'group-transport':
+        groupTransport += 1
+        break
+      case 'split-squeeze':
+        splitSqueeze += 1
+        break
+      case 'interface-disrupt':
+        interfaceDisrupt += 1
+        break
+      default:
+        break
+    }
+  }
+  return { swap, groupTransport, splitSqueeze, interfaceDisrupt }
 }
 
 function projectionAttemptTraceBase(
@@ -1070,6 +1266,7 @@ function projectionAttemptTraceBase(
     basinIndex: workItem.basinIndex,
     stateKey: workItem.stateKey,
     disruptionLineage: workItem.disruptionLineage,
+    disruptionLineageProvenance: workItem.disruptionLineageProvenance,
     completedBasinCount,
     completedSweepCount,
     projectionAttempt,
@@ -1197,13 +1394,27 @@ function compareStructuralHandoffs(
   )
 }
 
-/** Width-bounded raw, GLS-weighted, and forced-disruption pool retention. */
+/** Width-bounded raw, direct-disruption, GLS, active-lineage, and Pareto retention. */
 export function retainIntrinsicInfeasiblePool(
   candidates: ReadonlyArray<IntrinsicInfeasiblePoolEntry>,
   capacity: number,
   weights: IntrinsicSeparatorWeights,
   sweepIndex: number
 ): ReadonlyArray<IntrinsicInfeasiblePoolEntry> {
+  return retainIntrinsicInfeasiblePoolWithDiagnostics(
+    candidates,
+    capacity,
+    weights,
+    sweepIndex
+  ).pool
+}
+
+export function retainIntrinsicInfeasiblePoolWithDiagnostics(
+  candidates: ReadonlyArray<IntrinsicInfeasiblePoolEntry>,
+  capacity: number,
+  weights: IntrinsicSeparatorWeights,
+  sweepIndex: number
+): IntrinsicInfeasiblePoolRetention {
   const boundedCapacity = Math.max(1, capacity)
   const reweighted = reweightIntrinsicPool(candidates, weights)
   const unique = new Map<string, IntrinsicInfeasiblePoolEntry>()
@@ -1219,7 +1430,11 @@ export function retainIntrinsicInfeasiblePool(
         : existing
     unique.set(candidate.key, {
       ...preferred,
-      disruptionLineage: candidate.disruptionLineage || existing.disruptionLineage
+      disruptionLineage: candidate.disruptionLineage || existing.disruptionLineage,
+      disruptionLineageProvenance: preferredDisruptionLineageProvenance(
+        candidate,
+        existing
+      )
     })
   }
   const values = [...unique.values()]
@@ -1232,6 +1447,9 @@ export function retainIntrinsicInfeasiblePool(
         disruptionProtectedUntilSweep >= sweepIndex
     )
     .toSorted(comparePoolEntriesByWeight)
+  const lineageRanked = values
+    .filter(({ disruptionLineage }) => disruptionLineage)
+    .toSorted(compareActiveLineageEntries)
   const pareto = values
     .filter(
       (candidate) =>
@@ -1245,12 +1463,53 @@ export function retainIntrinsicInfeasiblePool(
   addUniquePoolEntry(selected, rawRanked[0], boundedCapacity)
   addUniquePoolEntry(selected, protectedRanked[0], boundedCapacity)
   addUniquePoolEntry(selected, weightedRanked[0], boundedCapacity)
+  const distinctActiveLineage = lineageRanked.find(
+    (candidate) => !selected.some(({ key }) => key === candidate.key)
+  )
+  let activeLineageRetentionOutcome: IntrinsicInfeasiblePoolRetention['activeLineageRetentionOutcome']
+  let activeLineageRetentionReason: string
+  let reservedLineageEntry: IntrinsicInfeasiblePoolEntry | undefined
+  if (lineageRanked.length === 0) {
+    activeLineageRetentionOutcome = 'lane-unavailable'
+    activeLineageRetentionReason = 'no lineage-bearing state survived same-key deduplication'
+  } else if (distinctActiveLineage === undefined) {
+    activeLineageRetentionOutcome = 'retained-by-prior-lane'
+    activeLineageRetentionReason =
+      'the best lineage-bearing identity was already retained by an earlier semantic lane'
+    reservedLineageEntry = lineageRanked.find((candidate) =>
+      selected.some(({ key }) => key === candidate.key)
+    )
+  } else if (selected.length >= boundedCapacity) {
+    activeLineageRetentionOutcome = 'capacity-evicted'
+    activeLineageRetentionReason =
+      'pool capacity was exhausted by the raw, direct-disruption, and weighted reservations'
+    reservedLineageEntry = distinctActiveLineage
+  } else {
+    addUniquePoolEntry(selected, distinctActiveLineage, boundedCapacity)
+    activeLineageRetentionOutcome = 'reserved-active-lineage'
+    activeLineageRetentionReason =
+      'the best distinct lineage-bearing state received the persistent active reservation'
+    reservedLineageEntry = distinctActiveLineage
+  }
   for (const candidate of pareto) addUniquePoolEntry(selected, candidate, boundedCapacity)
   for (const candidate of rawRanked) addUniquePoolEntry(selected, candidate, boundedCapacity)
   const rawWinner = rawRanked[0]
-  return rawWinner === undefined
+  const pool = rawWinner === undefined
     ? []
     : [rawWinner, ...selected.filter(({ key }) => key !== rawWinner.key)]
+  return {
+    pool,
+    preDeduplicationLineageCount: reweighted.filter(({ disruptionLineage }) => disruptionLineage)
+      .length,
+    postDeduplicationLineageCount: lineageRanked.length,
+    retainedLineageCount: pool.filter(({ disruptionLineage }) => disruptionLineage).length,
+    reservedLineage:
+      reservedLineageEntry === undefined
+        ? undefined
+        : intrinsicLineageWitnessTrace(reservedLineageEntry),
+    activeLineageRetentionOutcome,
+    activeLineageRetentionReason
+  }
 }
 
 function reweightIntrinsicPool(
@@ -1264,6 +1523,139 @@ function reweightIntrinsicPool(
       weightedLoss: intrinsicWeightedLoss(candidate.evaluation, weights)
     }
   }))
+}
+
+function compareActiveLineageEntries(
+  first: IntrinsicInfeasiblePoolEntry,
+  second: IntrinsicInfeasiblePoolEntry
+): number {
+  return (
+    first.evaluation.weightedLoss - second.evaluation.weightedLoss ||
+    first.evaluation.rawLoss - second.evaluation.rawLoss ||
+    first.key.localeCompare(second.key) ||
+    compareDisruptionLineageProvenance(
+      first.disruptionLineageProvenance,
+      second.disruptionLineageProvenance
+    )
+  )
+}
+
+function preferredDisruptionLineageProvenance(
+  first: IntrinsicInfeasiblePoolEntry,
+  second: IntrinsicInfeasiblePoolEntry
+): IntrinsicDisruptionLineageProvenance | undefined {
+  const candidates = [
+    ...(first.disruptionLineageProvenance === undefined
+      ? []
+      : [first.disruptionLineageProvenance]),
+    ...(second.disruptionLineageProvenance === undefined
+      ? []
+      : [second.disruptionLineageProvenance])
+  ]
+  return candidates.toSorted(compareDisruptionLineageProvenance)[0]
+}
+
+function compareDisruptionLineageProvenance(
+  first: IntrinsicDisruptionLineageProvenance | undefined,
+  second: IntrinsicDisruptionLineageProvenance | undefined
+): number {
+  if (first === undefined) return second === undefined ? 0 : 1
+  if (second === undefined) return -1
+  return (
+    first.originSweep - second.originSweep ||
+    disruptionProposalKindOrdinal(first.originProposalKind) -
+      disruptionProposalKindOrdinal(second.originProposalKind) ||
+    first.originStateKey.localeCompare(second.originStateKey) ||
+    first.depth - second.depth
+  )
+}
+
+function disruptionProposalKindOrdinal(kind: IntrinsicDisruptionProposalKind): number {
+  switch (kind) {
+    case 'swap':
+      return 0
+    case 'group-transport':
+      return 1
+    case 'split-squeeze':
+      return 2
+    case 'interface-disrupt':
+      return 3
+  }
+}
+
+function intrinsicLineageWitnessTrace(
+  entry: IntrinsicInfeasiblePoolEntry
+): IntrinsicLineageWitnessTrace | undefined {
+  const provenance = entry.disruptionLineageProvenance
+  return provenance === undefined
+    ? undefined
+    : {
+        stateKey: entry.key,
+        rawLoss: entry.evaluation.rawLoss,
+        weightedLoss: entry.evaluation.weightedLoss,
+        originSweep: provenance.originSweep,
+        originProposalKind: provenance.originProposalKind,
+        originStateKey: provenance.originStateKey,
+        depth: provenance.depth
+      }
+}
+
+function updateIntrinsicLineageShadowSnapshot(
+  current: IntrinsicLineageWitnessTrace | undefined,
+  candidates: ReadonlyArray<IntrinsicInfeasiblePoolEntry>
+): {
+  readonly snapshot: IntrinsicLineageWitnessTrace | undefined
+  readonly outcome: IntrinsicGlobalSweepTrace['shadowLineageSnapshotOutcome']
+  readonly reason: string
+} {
+  const candidate = candidates
+    .filter(({ disruptionLineage }) => disruptionLineage)
+    .map(intrinsicLineageWitnessTrace)
+    .filter((entry): entry is IntrinsicLineageWitnessTrace => entry !== undefined)
+    .toSorted(compareLineageWitnessForShadow)[0]
+  if (candidate === undefined) {
+    return current === undefined
+      ? {
+          snapshot: undefined,
+          outcome: 'lane-unavailable',
+          reason: 'the pre-truncation candidate set contained no lineage witness'
+        }
+      : {
+          snapshot: current,
+          outcome: 'retained-no-current-lineage',
+          reason: 'the earlier shadow witness was retained because this sweep generated none'
+        }
+  }
+  if (current === undefined) {
+    return {
+      snapshot: candidate,
+      outcome: 'initialized',
+      reason: 'the first pre-truncation lineage witness initialized the basin shadow'
+    }
+  }
+  if (compareLineageWitnessForShadow(candidate, current) < 0) {
+    return {
+      snapshot: candidate,
+      outcome: 'replaced',
+      reason: 'a better raw-loss, weighted-loss, or state-key witness replaced the shadow'
+    }
+  }
+  return {
+    snapshot: current,
+    outcome: 'retained-earlier-or-better',
+    reason: 'the earlier shadow witness won or tied the deterministic witness order'
+  }
+}
+
+function compareLineageWitnessForShadow(
+  first: IntrinsicLineageWitnessTrace,
+  second: IntrinsicLineageWitnessTrace
+): number {
+  return (
+    first.rawLoss - second.rawLoss ||
+    first.weightedLoss - second.weightedLoss ||
+    first.stateKey.localeCompare(second.stateKey)
+  )
 }
 
 function intrinsicWeightedLoss(
