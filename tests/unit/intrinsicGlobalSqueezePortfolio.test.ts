@@ -23,6 +23,7 @@ import {
   type IntrinsicGlobalPortfolioSchedule
 } from '../../src/workers/algorithm/irregular/intrinsicGlobalSqueezePortfolio.js'
 import {
+  INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
   partitionIntrinsicStructuralPieces,
   type IntrinsicGlobalSearchResult,
   type IntrinsicStructuralHandoff
@@ -369,6 +370,60 @@ describe('intrinsic global squeeze portfolio', () => {
     })
     expect(rejected.status).toBe('completed-fallback')
     expect(rejected.fillTrace[0]?.outcome).toBe('completed-quality-rejected')
+    expect(rejected.selected.source).toBe('e1-fallback')
+    expect(rejected.completeArchive).toHaveLength(1)
+    expect(rejected.admittedCandidates).toEqual([])
+    expect(rejected.evaluatedCompleteCandidates).toHaveLength(1)
+    expect(rejected.evaluatedCompleteCandidates[0]).toMatchObject({
+      source: 'projected-gap-fill',
+      structuralProjectionAttempt: 1,
+      metrics: {
+        envelopeAreaMm2: 12,
+        enclosedCavityCount: 0
+      }
+    })
+    expect(rejected.evaluatedCompleteCandidates[0]?.metrics).not.toHaveProperty('runtimeMs')
+    expect(rejected.fillTrace[0]).toMatchObject({
+      evaluatedCandidateCanonicalGeometryHash:
+        rejected.evaluatedCompleteCandidates[0]?.canonicalGeometryHash,
+      evaluatedCandidateMetrics: rejected.evaluatedCompleteCandidates[0]?.metrics
+    })
+  })
+
+  it('owns and deterministically bounds evaluated complete diagnostics', async () => {
+    const pieces = [preparedRectangle('a', 2, 2), preparedRectangle('b', 2, 2)]
+    const fallback = [placed(pieceAt(pieces, 0), 0, 0), placed(pieceAt(pieces, 1), 4, 0)]
+    const compact = [placed(pieceAt(pieces, 0), 0, 0), placed(pieceAt(pieces, 1), 2, 0)]
+    const handoffs = Array.from({ length: 7 }, (_, index) =>
+      structuralHandoff(index + 1, compact)
+    )
+    const run = () =>
+      runPortfolio({
+        pieces,
+        fallback,
+        structural: structuralResult({ pieces, fallback, handoffs }),
+        fill: () => Effect.succeed(constructed([], compact))
+      })
+    const first = await run()
+    const second = await run()
+
+    expect(first.evaluatedCompleteCandidates).toHaveLength(
+      INTRINSIC_GLOBAL_SEARCH_DEFAULTS.structuralHandoffCapacity
+    )
+    expect(first.evaluatedCompleteCandidates).toEqual(second.evaluatedCompleteCandidates)
+    expect(first.fillTrace).toEqual(second.fillTrace)
+    expect(first.status).toBe(second.status)
+    expect(first.selected.measured.canonicalGeometryHash).toBe(
+      second.selected.measured.canonicalGeometryHash
+    )
+    expect(first.completeArchive).toEqual(second.completeArchive)
+
+    handoffs.splice(0, handoffs.length)
+    compact.splice(0, compact.length)
+    expect(first.evaluatedCompleteCandidates).toHaveLength(
+      INTRINSIC_GLOBAL_SEARCH_DEFAULTS.structuralHandoffCapacity
+    )
+    expect(first.evaluatedCompleteCandidates[0]?.placedCollisionGeometries).toHaveLength(2)
   })
 
   it('deduplicates and ignores diagnostic contacts in complete candidate retention', () => {

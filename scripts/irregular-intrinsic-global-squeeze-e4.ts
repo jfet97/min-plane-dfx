@@ -15,6 +15,7 @@ import {
 } from '../src/shared/irregular/domain.js'
 import {
   runIntrinsicGlobalSqueezePortfolio,
+  type IntrinsicGlobalEvaluatedCompleteCandidate,
   type IntrinsicGlobalFullCandidate
 } from '../src/workers/algorithm/irregular/intrinsicGlobalSqueezePortfolio.js'
 import { IrregularBeamState } from '../src/workers/algorithm/irregular/irregularBeamState.js'
@@ -109,6 +110,16 @@ if (experimentAttempt.kind === 'failure') {
   const experiment = experimentAttempt.value
   const svgPath = `${outputDirectory}/mixed-61-e4-selected-2000x2700.svg`
   await writeFile(svgPath, renderCollisionSvg(experiment.realSheet.placedCollisionGeometries))
+  const evaluatedDiagnosticArtifacts = await Promise.all(
+    experiment.portfolio.evaluatedCompleteCandidates.map(async (candidate, index) => {
+      const diagnosticSvgPath = `${outputDirectory}/mixed-61-e4-evaluated-${String(index + 1).padStart(2, '0')}-projection-${candidate.structuralProjectionAttempt}-${candidate.canonicalGeometryHash.slice(0, 12)}.svg`
+      await writeFile(
+        diagnosticSvgPath,
+        renderCollisionSvg(candidate.placedCollisionGeometries)
+      )
+      return { candidate, svgPath: diagnosticSvgPath }
+    })
+  )
 
   const selected = experiment.portfolio.selected
   const selectedMetrics = selected.measured.metrics
@@ -175,7 +186,11 @@ if (experimentAttempt.kind === 'failure') {
       fillTrace: experiment.portfolio.fillTrace,
       promotion: experiment.portfolio.promotion,
       selected: archiveRecord(selected),
-      archive: experiment.portfolio.completeArchive.map(archiveRecord)
+      archive: experiment.portfolio.completeArchive.map(archiveRecord),
+      evaluatedCompleteCandidates: evaluatedDiagnosticArtifacts.map(
+        ({ candidate, svgPath: diagnosticSvgPath }) =>
+          evaluatedCandidateRecord(candidate, diagnosticSvgPath)
+      )
     },
     realSheet: {
       sheet: { width: ROOMY_SHEET.width, height: ROOMY_SHEET.height },
@@ -196,9 +211,20 @@ if (experimentAttempt.kind === 'failure') {
   }
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
 
-  const artifactPaths = [reportPath, svgPath]
+  const artifactPaths = [
+    reportPath,
+    svgPath,
+    ...evaluatedDiagnosticArtifacts.map(({ svgPath: diagnosticSvgPath }) =>
+      diagnosticSvgPath
+    )
+  ]
   const manifestPath = `${outputDirectory}/manifest.json`
-  await writeManifest(manifestPath, report.experiment, artifactPaths)
+  await writeManifest(
+    manifestPath,
+    report.experiment,
+    artifactPaths,
+    report.portfolio.evaluatedCompleteCandidates
+  )
 
   console.log(
     JSON.stringify({
@@ -206,6 +232,7 @@ if (experimentAttempt.kind === 'failure') {
       reportSha256: sha256(await readFile(reportPath)),
       svgPath,
       svgSha256: sha256(await readFile(svgPath)),
+      evaluatedCompleteCandidates: report.portfolio.evaluatedCompleteCandidates,
       manifestPath,
       manifestSha256: sha256(await readFile(manifestPath)),
       earlyGate: report.earlyGate,
@@ -253,7 +280,8 @@ async function publishFailureEvidence(error: unknown): Promise<void> {
 async function writeManifest(
   manifestPath: string,
   experimentName: string,
-  artifactPaths: ReadonlyArray<string>
+  artifactPaths: ReadonlyArray<string>,
+  evaluatedCompleteCandidates: ReadonlyArray<ReturnType<typeof evaluatedCandidateRecord>> = []
 ): Promise<void> {
   await writeFile(
     manifestPath,
@@ -263,6 +291,7 @@ async function writeManifest(
         sourceCommit,
         fixture: { path: FIXTURE, sha256: sha256(fixtureBytes) },
         preregistration: { path: PREREGISTRATION, sha256: sha256(preregistrationBytes) },
+        evaluatedCompleteCandidates,
         files: Object.fromEntries(
           await Promise.all(artifactPaths.map(async (path) => [path, sha256(await readFile(path))]))
         )
@@ -392,6 +421,22 @@ function archiveRecord(candidate: IntrinsicGlobalFullCandidate) {
     metrics: candidate.measured.metrics,
     productionAreaTargetMet: candidate.productionAreaTargetMet,
     historicContactTargetMet: candidate.historicContactTargetMet
+  }
+}
+
+function evaluatedCandidateRecord(
+  candidate: IntrinsicGlobalEvaluatedCompleteCandidate,
+  svgPath: string
+) {
+  return {
+    source: candidate.source,
+    structuralProjectionAttempt: candidate.structuralProjectionAttempt,
+    canonicalGeometryHash: candidate.canonicalGeometryHash,
+    placementCount: candidate.placedCollisionGeometries.length,
+    metrics: candidate.metrics,
+    productionAreaTargetMet: candidate.productionAreaTargetMet,
+    historicContactTargetMet: candidate.historicContactTargetMet,
+    svgPath
   }
 }
 

@@ -17,9 +17,11 @@ import {
   measureIntrinsicSheetlessCompletedLayout,
   type ConstructIntrinsicStrictStateInput,
   type IntrinsicSheetlessCompletedLayout,
+  type IntrinsicStrictCompletedMetrics,
   type IntrinsicStrictConstructResult
 } from './intrinsicStrictDecoder.js'
 import {
+  INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
   partitionIntrinsicStructuralPieces,
   runIntrinsicSqueezeDisruptSeparate,
   IntrinsicGlobalSearchError,
@@ -60,6 +62,22 @@ export interface IntrinsicGlobalFullCandidate {
   readonly historicContactTargetMet: boolean
 }
 
+export type IntrinsicGlobalDeterministicCandidateMetrics = Omit<
+  IntrinsicStrictCompletedMetrics,
+  'runtimeMs'
+>
+
+export interface IntrinsicGlobalEvaluatedCompleteCandidate {
+  readonly source: 'projected-gap-fill'
+  readonly structuralProjectionAttempt: number
+  readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+  readonly canonicalGeometryIdentity: string
+  readonly canonicalGeometryHash: string
+  readonly metrics: IntrinsicGlobalDeterministicCandidateMetrics
+  readonly productionAreaTargetMet: boolean
+  readonly historicContactTargetMet: boolean
+}
+
 export interface IntrinsicGlobalFillTrace {
   readonly structuralProjectionAttempt: number
   readonly targetRoleId: IntrinsicStructuralHandoff['targetRoleId']
@@ -72,6 +90,8 @@ export interface IntrinsicGlobalFillTrace {
   readonly insertedFillerCount: number | undefined
   readonly nonInertFillCount: number | undefined
   readonly unplacedFillerCount: number | undefined
+  readonly evaluatedCandidateCanonicalGeometryHash: string | undefined
+  readonly evaluatedCandidateMetrics: IntrinsicGlobalDeterministicCandidateMetrics | undefined
 }
 
 export interface IntrinsicGlobalStructuralOutcome {
@@ -102,6 +122,7 @@ export interface IntrinsicGlobalPortfolioResult {
   readonly selected: IntrinsicGlobalFullCandidate
   readonly completeArchive: ReadonlyArray<IntrinsicGlobalFullCandidate>
   readonly admittedCandidates: ReadonlyArray<IntrinsicGlobalFullCandidate>
+  readonly evaluatedCompleteCandidates: ReadonlyArray<IntrinsicGlobalEvaluatedCompleteCandidate>
   readonly structuralOutcome: IntrinsicGlobalStructuralOutcome
   readonly promotion: IntrinsicGlobalPromotionSummary
   readonly fillTrace: ReadonlyArray<IntrinsicGlobalFillTrace>
@@ -225,6 +246,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
           partition,
           structural: emptyStructuralResult(fullE1Placed, partition),
           fillTrace: [],
+          evaluatedCompleteCandidates: [],
           startedAt,
           schedule
         })
@@ -249,6 +271,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
         partition,
         structural,
         fillTrace: [],
+        evaluatedCompleteCandidates: [],
         startedAt,
         schedule
       })
@@ -256,6 +279,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
 
     const admitted: IntrinsicGlobalFullCandidate[] = []
     const fillTrace: IntrinsicGlobalFillTrace[] = []
+    const evaluatedCompleteCandidates: IntrinsicGlobalEvaluatedCompleteCandidate[] = []
     for (const handoff of structural.structuralHandoffs) {
       const remainingBefore = remainingRuntimeMs(startedAt, schedule.maximumRuntimeMs)
       if (remainingBefore <= 0) {
@@ -273,6 +297,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
           partition,
           structural,
           fillTrace,
+          evaluatedCompleteCandidates,
           startedAt,
           schedule
         })
@@ -308,6 +333,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
             partition,
             structural,
             fillTrace,
+            evaluatedCompleteCandidates,
             startedAt,
             schedule
           })
@@ -340,6 +366,15 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
       if (admittedCandidate !== undefined) {
         admitted.push(admittedCandidate)
       }
+      const evaluatedCandidate =
+        measured === undefined ? undefined : evaluatedCompleteCandidate(measured)
+      if (
+        evaluatedCandidate !== undefined &&
+        evaluatedCompleteCandidates.length <
+          INTRINSIC_GLOBAL_SEARCH_DEFAULTS.structuralHandoffCapacity
+      ) {
+        evaluatedCompleteCandidates.push(evaluatedCandidate)
+      }
       const completedTrace: IntrinsicGlobalFillTrace = {
         structuralProjectionAttempt: handoff.projectionAttempt,
         targetRoleId: handoff.targetRoleId,
@@ -352,7 +387,10 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
               : 'completed-admitted',
         insertedFillerCount: Math.max(0, insertedFillerCount),
         nonInertFillCount,
-        unplacedFillerCount
+        unplacedFillerCount,
+        evaluatedCandidateCanonicalGeometryHash:
+          evaluatedCandidate?.canonicalGeometryHash,
+        evaluatedCandidateMetrics: evaluatedCandidate?.metrics
       }
       const checkpoint = yield* portfolioCheckpoint(absoluteControl)
       if (checkpoint === 'deadline') {
@@ -361,7 +399,8 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
             handoff,
             insertedFillerCount: Math.max(0, insertedFillerCount),
             nonInertFillCount,
-            unplacedFillerCount
+            unplacedFillerCount,
+            ...(evaluatedCandidate === undefined ? {} : { evaluatedCandidate })
           })
         )
         return fallbackResult({
@@ -370,6 +409,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
           partition,
           structural,
           fillTrace,
+          evaluatedCompleteCandidates,
           startedAt,
           schedule
         })
@@ -384,6 +424,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
         partition,
         structural,
         fillTrace,
+        evaluatedCompleteCandidates,
         startedAt,
         schedule
       })
@@ -402,6 +443,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
       selected,
       completeArchive: dedupeCompleteArchive(fallback, retained, schedule.completeArchiveCapacity),
       admittedCandidates: retained,
+      evaluatedCompleteCandidates: [...evaluatedCompleteCandidates],
       structuralOutcome,
       promotion: promotionSummary(fallback, viable, selected),
       fillTrace,
@@ -466,6 +508,48 @@ function exactFullCandidate(input: {
     historicContactTargetMet:
       measured.metrics.totalStructuralContacts >= input.schedule.historicTotalContactTarget &&
       measured.metrics.dominantStructuralContacts >= input.schedule.historicDominantContactTarget
+  }
+}
+
+function evaluatedCompleteCandidate(
+  candidate: IntrinsicGlobalFullCandidate
+): IntrinsicGlobalEvaluatedCompleteCandidate | undefined {
+  if (
+    candidate.source !== 'projected-gap-fill' ||
+    candidate.structuralProjectionAttempt === undefined
+  ) {
+    return undefined
+  }
+  const measured = candidate.measured.metrics
+  const metrics: IntrinsicGlobalDeterministicCandidateMetrics = {
+    envelopeMaximumSideMm: measured.envelopeMaximumSideMm,
+    envelopeAreaMm2: measured.envelopeAreaMm2,
+    envelopeSpanMm: measured.envelopeSpanMm,
+    enclosedCavityCount: measured.enclosedCavityCount,
+    totalEnclosedCavityAreaMm2: measured.totalEnclosedCavityAreaMm2,
+    largestOccupiedHullGapRatio: measured.largestOccupiedHullGapRatio,
+    isolatedPieceCount: measured.isolatedPieceCount,
+    positiveContactComponentCount: measured.positiveContactComponentCount,
+    largestPositiveContactComponentSize: measured.largestPositiveContactComponentSize,
+    largestPositiveContactComponentRatio: measured.largestPositiveContactComponentRatio,
+    occupiedAreaOutsideLargestContactComponentMm2:
+      measured.occupiedAreaOutsideLargestContactComponentMm2,
+    occupiedHullWasteRatio: measured.occupiedHullWasteRatio,
+    totalStructuralContacts: measured.totalStructuralContacts,
+    dominantStructuralContacts: measured.dominantStructuralContacts,
+    contactUnits: measured.contactUnits,
+    sharedBoundaryLengthMm: measured.sharedBoundaryLengthMm,
+    canonicalGeometryHash: measured.canonicalGeometryHash
+  }
+  return {
+    source: candidate.source,
+    structuralProjectionAttempt: candidate.structuralProjectionAttempt,
+    placedCollisionGeometries: [...candidate.placedCollisionGeometries],
+    canonicalGeometryIdentity: candidate.measured.canonicalGeometryIdentity,
+    canonicalGeometryHash: candidate.measured.canonicalGeometryHash,
+    metrics,
+    productionAreaTargetMet: candidate.productionAreaTargetMet,
+    historicContactTargetMet: candidate.historicContactTargetMet
   }
 }
 
@@ -554,6 +638,7 @@ function fallbackResult(input: {
   readonly partition: NonNullable<ReturnType<typeof partitionIntrinsicStructuralPieces>>
   readonly structural: IntrinsicGlobalSearchResult
   readonly fillTrace: ReadonlyArray<IntrinsicGlobalFillTrace>
+  readonly evaluatedCompleteCandidates: ReadonlyArray<IntrinsicGlobalEvaluatedCompleteCandidate>
   readonly startedAt: number
   readonly schedule: IntrinsicGlobalPortfolioSchedule
 }): IntrinsicGlobalPortfolioResult {
@@ -562,6 +647,7 @@ function fallbackResult(input: {
     selected: input.fallback,
     completeArchive: [input.fallback],
     admittedCandidates: [],
+    evaluatedCompleteCandidates: [...input.evaluatedCompleteCandidates],
     structuralOutcome: structuralOutcomeFrom(input.structural),
     promotion: promotionSummary(input.fallback, [], input.fallback),
     fillTrace: input.fillTrace,
@@ -635,6 +721,7 @@ function deadlineFillTrace(input: {
   readonly insertedFillerCount: number | undefined
   readonly nonInertFillCount: number | undefined
   readonly unplacedFillerCount: number | undefined
+  readonly evaluatedCandidate?: IntrinsicGlobalEvaluatedCompleteCandidate
 }): IntrinsicGlobalFillTrace {
   return {
     structuralProjectionAttempt: input.handoff.projectionAttempt,
@@ -643,7 +730,10 @@ function deadlineFillTrace(input: {
     outcome: 'deadline',
     insertedFillerCount: input.insertedFillerCount,
     nonInertFillCount: input.nonInertFillCount,
-    unplacedFillerCount: input.unplacedFillerCount
+    unplacedFillerCount: input.unplacedFillerCount,
+    evaluatedCandidateCanonicalGeometryHash:
+      input.evaluatedCandidate?.canonicalGeometryHash,
+    evaluatedCandidateMetrics: input.evaluatedCandidate?.metrics
   }
 }
 
