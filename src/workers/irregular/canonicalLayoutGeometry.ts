@@ -16,10 +16,13 @@ import { boundsForPoints } from './convexBounds.js'
 import type { InternalPoint, InternalPolygonWithBounds } from './internalGeometry.js'
 
 export interface CanonicalLayoutTopology {
+  readonly enclosedCavityCount: number
   readonly largestOccupiedHullGapRatio: number
+  readonly occupiedEnvelopeAspectRatio: number
   readonly positiveContactComponentCount: number
   readonly isolatedPieceCount: number
   readonly largestPositiveContactComponentSize: number
+  readonly largestPositiveContactComponentRatio: number
 }
 
 interface CanonicalPlacedPolygon {
@@ -53,11 +56,27 @@ export function measureCanonicalLayoutTopology(
   const hullArea = Math.abs(signedArea(hull))
   if (!Number.isFinite(hullArea)) return undefined
   const largestGapArea = largestHullGapArea(hull, polygons.map(({ path }) => path))
+  const enclosedCavityCount = countEnclosedOccupiedCavities(polygons.map(({ path }) => path))
+  const occupiedEnvelopeAspectRatio = envelopeAspectRatio(polygons.map(({ path }) => path))
   const graph = measureContactGraph(polygons.map(({ contactPolygon }) => contactPolygon))
-  if (largestGapArea === undefined || graph === undefined) return undefined
+  if (
+    largestGapArea === undefined ||
+    enclosedCavityCount === undefined ||
+    occupiedEnvelopeAspectRatio === undefined ||
+    graph === undefined
+  ) {
+    return undefined
+  }
   const largestOccupiedHullGapRatio = hullArea === 0 ? 0 : largestGapArea / hullArea
   return Number.isFinite(largestOccupiedHullGapRatio)
-    ? { largestOccupiedHullGapRatio, ...graph }
+    ? {
+        enclosedCavityCount,
+        largestOccupiedHullGapRatio,
+        occupiedEnvelopeAspectRatio,
+        ...graph,
+        largestPositiveContactComponentRatio:
+          polygons.length === 0 ? 0 : graph.largestPositiveContactComponentSize / polygons.length
+      }
     : undefined
 }
 
@@ -193,6 +212,53 @@ function largestHullGapArea(hull: Path64, occupied: ReadonlyArray<Path64>): numb
     return undefined
   }
   return largestNetRegionArea(gapTree)
+}
+
+function countEnclosedOccupiedCavities(occupied: ReadonlyArray<Path64>): number | undefined {
+  if (occupied.length === 0) return 0
+  const tree = new PolyTree64()
+  try {
+    booleanOpWithPolyTree(ClipType.Union, [...occupied], null, tree, FillRule.NonZero)
+  } catch {
+    return undefined
+  }
+  let count = 0
+  const visit = (parent: PolyPath64): boolean => {
+    for (let index = 0; index < parent.count; index += 1) {
+      let child: PolyPath64
+      try {
+        child = parent.child(index)
+      } catch {
+        return false
+      }
+      if (child.isHole) count += 1
+      if (!visit(child)) return false
+    }
+    return true
+  }
+  return visit(tree) ? count : undefined
+}
+
+function envelopeAspectRatio(paths: ReadonlyArray<Path64>): number | undefined {
+  const points = paths.flat()
+  const first = points[0]
+  if (first === undefined) return undefined
+  let minX = first.x
+  let maxX = first.x
+  let minY = first.y
+  let maxY = first.y
+  for (const point of points.slice(1)) {
+    minX = Math.min(minX, point.x)
+    maxX = Math.max(maxX, point.x)
+    minY = Math.min(minY, point.y)
+    maxY = Math.max(maxY, point.y)
+  }
+  const width = maxX - minX
+  const height = maxY - minY
+  const shortSide = Math.min(width, height)
+  const longSide = Math.max(width, height)
+  if (shortSide <= 0 || !Number.isFinite(shortSide) || !Number.isFinite(longSide)) return undefined
+  return longSide / shortSide
 }
 
 function largestNetRegionArea(tree: PolyPath64): number | undefined {

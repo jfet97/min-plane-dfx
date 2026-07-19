@@ -23,6 +23,7 @@ import { FreeMaterialServiceLive } from '../src/workers/irregular/freeMaterialSe
 import { GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../src/workers/irregular/nfpIfpService.js'
 import { TransformGeneratorLive } from '../src/workers/irregular/transformGenerator.js'
+import { measureCanonicalLayoutTopology } from '../src/workers/irregular/canonicalLayoutGeometry.js'
 import {
   canonicalizeIrregularLayout,
   type LayoutPoint
@@ -313,6 +314,7 @@ async function runRequest(request: NestingRequest, artifactPath: string) {
   const polygons = absoluteCollisionPolygons(result.placedCollisionGeometries)
   const bounds = polygonBounds(polygons)
   const canonical = canonicalizeIrregularLayout(polygons)
+  const canonicalTopology = measureCanonicalLayoutTopology(result.placedCollisionGeometries)
   await writeFile(artifactPath, renderSvg(polygons))
   return {
     sheet: { width: request.sheet.width, height: request.sheet.height },
@@ -328,6 +330,7 @@ async function runRequest(request: NestingRequest, artifactPath: string) {
     },
     canonicalSha256: canonical.sha256,
     canonicalRotationDeg: canonical.rotationDeg,
+    canonicalTopology,
     score: {
       occupiedHullWasteRatio: result.score.occupiedHullWasteRatio,
       nearCompleteStructuralContactCount: result.score.nearCompleteStructuralContactCount,

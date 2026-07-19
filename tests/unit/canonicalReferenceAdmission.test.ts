@@ -18,6 +18,7 @@ import {
 } from '@shared/irregular/domain.js'
 import {
   CANONICAL_REFERENCE_ADMISSION_SLACKS,
+  CANONICAL_REFERENCE_PRIORITY_CERTIFICATE,
   canonicalPortfolioResultFrom,
   canonicalReferenceDecodeSheets,
   canonicalReferenceRoleLifecycleDiagnostics,
@@ -110,12 +111,22 @@ const uniformMultiFamilyPrepared = Array.from({ length: 21 }, (_, index) =>
   })
 )
 
-const topology: CanonicalLayoutTopology = {
-  largestOccupiedHullGapRatio: 0.2,
-  positiveContactComponentCount: 5,
-  isolatedPieceCount: 2,
-  largestPositiveContactComponentSize: 53
+function topologyMetrics(
+  overrides: Partial<CanonicalLayoutTopology> = {}
+): CanonicalLayoutTopology {
+  return {
+    enclosedCavityCount: 2,
+    largestOccupiedHullGapRatio: 0.1,
+    occupiedEnvelopeAspectRatio: 1.4,
+    positiveContactComponentCount: 5,
+    isolatedPieceCount: 2,
+    largestPositiveContactComponentSize: 53,
+    largestPositiveContactComponentRatio: 53 / 61,
+    ...overrides
+  }
 }
+
+const topology = topologyMetrics({ largestOccupiedHullGapRatio: 0.2 })
 
 function score(overrides: Partial<IrregularLayoutScore> = {}): IrregularLayoutScore {
   return {
@@ -344,14 +355,21 @@ describe('canonical reference coordinator policy', () => {
   })
 
   it('prioritizes a complete finite canonical candidate without production-relative tradeoffs', () => {
+    expect(CANONICAL_REFERENCE_PRIORITY_CERTIFICATE).toEqual({
+      maximumEnclosedCavityCount: 2,
+      maximumLargestOccupiedHullGapRatio: 0.15,
+      maximumOccupiedEnvelopeAspectRatio: 1.5,
+      maximumIsolatedPieceCount: 2,
+      minimumLargestPositiveContactComponentRatio: 0.5
+    })
     expect(
       evaluateCanonicalReferencePriorityMetrics({
         canonical: canonicalScore(),
-        canonicalTopology: topology
+        canonicalTopology: topologyMetrics()
       })
     ).toEqual({
       admitted: true,
-      reason: 'canonical role passed the candidate-intrinsic completeness certificate'
+      reason: 'canonical role passed the sheet-free intrinsic compactness certificate'
     })
   })
 
@@ -359,15 +377,48 @@ describe('canonical reference coordinator policy', () => {
     expect(
       evaluateCanonicalReferencePriorityMetrics({
         canonical: canonicalScore(),
-        canonicalTopology: { ...topology, isolatedPieceCount: Number.NaN }
+        canonicalTopology: topologyMetrics({ isolatedPieceCount: Number.NaN })
       }).admitted
     ).toBe(false)
     expect(
       evaluateCanonicalReferencePriorityMetrics({
         canonical: score({ unplacedCount: 1 }),
-        canonicalTopology: topology
+        canonicalTopology: topologyMetrics()
       })
     ).toEqual({ admitted: false, reason: 'canonical role is incomplete' })
+  })
+
+  it('rejects a finite canonical candidate outside every intrinsic compactness bound', () => {
+    const failures: ReadonlyArray<readonly [Partial<CanonicalLayoutTopology>, string]> = [
+      [
+        { enclosedCavityCount: 3 },
+        'canonical enclosed-cavity count exceeded the intrinsic certificate'
+      ],
+      [
+        { largestOccupiedHullGapRatio: 0.151 },
+        'canonical occupied-hull gap exceeded the intrinsic certificate'
+      ],
+      [
+        { occupiedEnvelopeAspectRatio: 1.501 },
+        'canonical envelope aspect ratio exceeded the intrinsic certificate'
+      ],
+      [
+        { isolatedPieceCount: 3 },
+        'canonical isolated-piece count exceeded the intrinsic certificate'
+      ],
+      [
+        { largestPositiveContactComponentRatio: 0.499 },
+        'canonical largest contact-component ratio missed the intrinsic certificate'
+      ]
+    ]
+    for (const [overrides, reason] of failures) {
+      expect(
+        evaluateCanonicalReferencePriorityMetrics({
+          canonical: canonicalScore(),
+          canonicalTopology: topologyMetrics(overrides)
+        })
+      ).toEqual({ admitted: false, reason })
+    }
   })
 
   it('waives max-side slack for the structurally dominant 1000x1700 finalist', () => {
@@ -389,18 +440,19 @@ describe('canonical reference coordinator policy', () => {
       nearCompleteStructuralContactCount: 53,
       dominantNearCompleteStructuralContactCount: 14
     })
-    const productionTopology: CanonicalLayoutTopology = {
+    const productionTopology = topologyMetrics({
       largestOccupiedHullGapRatio: 0.228,
       positiveContactComponentCount: 13,
       isolatedPieceCount: 6,
-      largestPositiveContactComponentSize: 20
-    }
-    const canonicalTopology: CanonicalLayoutTopology = {
+      largestPositiveContactComponentSize: 20,
+      largestPositiveContactComponentRatio: 20 / 61
+    })
+    const canonicalTopology = topologyMetrics({
       largestOccupiedHullGapRatio: 0.119,
       positiveContactComponentCount: 5,
       isolatedPieceCount: 2,
       largestPositiveContactComponentSize: 53
-    }
+    })
 
     expect(canonicalMaxSideMm / productionMaxSideMm - 1).toBeGreaterThan(0.075)
     expect(
@@ -418,12 +470,13 @@ describe('canonical reference coordinator policy', () => {
     const canonicalMaxSideMm = 788.878
     const productionAreaMm2 = 461_476
     const canonicalAreaMm2 = 430_344
-    const equalTopology: CanonicalLayoutTopology = {
+    const equalTopology = topologyMetrics({
       largestOccupiedHullGapRatio: 0.228,
       positiveContactComponentCount: 13,
       isolatedPieceCount: 6,
-      largestPositiveContactComponentSize: 20
-    }
+      largestPositiveContactComponentSize: 20,
+      largestPositiveContactComponentRatio: 20 / 61
+    })
 
     expect(
       evaluateCanonicalReferenceAdmissionMetrics({
@@ -460,12 +513,13 @@ describe('canonical reference coordinator policy', () => {
         nearCompleteStructuralContactCount: 44,
         dominantNearCompleteStructuralContactCount: 9
       }),
-      productionTopology: {
+      productionTopology: topologyMetrics({
         largestOccupiedHullGapRatio: 0.228,
         positiveContactComponentCount: 13,
         isolatedPieceCount: 6,
-        largestPositiveContactComponentSize: 20
-      },
+        largestPositiveContactComponentSize: 20,
+        largestPositiveContactComponentRatio: 20 / 61
+      }),
       canonical: score({
         collisionBoundsAreaMm2: canonicalAreaMm2,
         collisionBoundsSpanMm: canonicalMaxSideMm + canonicalAreaMm2 / canonicalMaxSideMm,
@@ -473,12 +527,12 @@ describe('canonical reference coordinator policy', () => {
         nearCompleteStructuralContactCount: 43,
         dominantNearCompleteStructuralContactCount: 9
       }),
-      canonicalTopology: {
+      canonicalTopology: topologyMetrics({
         largestOccupiedHullGapRatio: 0.119,
         positiveContactComponentCount: 5,
         isolatedPieceCount: 2,
         largestPositiveContactComponentSize: 53
-      }
+      })
     })
 
     expect(decision).toEqual({
@@ -500,12 +554,13 @@ describe('canonical reference coordinator policy', () => {
         nearCompleteStructuralContactCount: 44,
         dominantNearCompleteStructuralContactCount: 9
       }),
-      productionTopology: {
+      productionTopology: topologyMetrics({
         largestOccupiedHullGapRatio: 0.228,
         positiveContactComponentCount: 13,
         isolatedPieceCount: 6,
-        largestPositiveContactComponentSize: 20
-      },
+        largestPositiveContactComponentSize: 20,
+        largestPositiveContactComponentRatio: 20 / 61
+      }),
       canonical: score({
         collisionBoundsAreaMm2: canonicalAreaMm2,
         collisionBoundsSpanMm: canonicalMaxSideMm + canonicalAreaMm2 / canonicalMaxSideMm,
@@ -513,12 +568,12 @@ describe('canonical reference coordinator policy', () => {
         nearCompleteStructuralContactCount: 44,
         dominantNearCompleteStructuralContactCount: 8
       }),
-      canonicalTopology: {
+      canonicalTopology: topologyMetrics({
         largestOccupiedHullGapRatio: 0.119,
         positiveContactComponentCount: 5,
         isolatedPieceCount: 2,
         largestPositiveContactComponentSize: 53
-      }
+      })
     })
 
     expect(decision).toEqual({
@@ -562,12 +617,13 @@ describe('canonical reference coordinator policy', () => {
         production: score(),
         productionTopology: topology,
         canonical: canonicalScore(),
-        canonicalTopology: {
+        canonicalTopology: topologyMetrics({
           largestOccupiedHullGapRatio: 0.1,
           positiveContactComponentCount: 12,
           isolatedPieceCount: 8,
-          largestPositiveContactComponentSize: 20
-        }
+          largestPositiveContactComponentSize: 20,
+          largestPositiveContactComponentRatio: 20 / 61
+        })
       }).admitted
     ).toBe(false)
     expect(

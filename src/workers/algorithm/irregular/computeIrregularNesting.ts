@@ -63,6 +63,15 @@ export const CANONICAL_REFERENCE_ADMISSION_SLACKS = {
   maximumDominantContactLoss: 3
 } as const
 
+/** Sheet-free compactness certificate for canonical-reference priority. */
+export const CANONICAL_REFERENCE_PRIORITY_CERTIFICATE = {
+  maximumEnclosedCavityCount: 2,
+  maximumLargestOccupiedHullGapRatio: 0.15,
+  maximumOccupiedEnvelopeAspectRatio: 1.5,
+  maximumIsolatedPieceCount: 2,
+  minimumLargestPositiveContactComponentRatio: 0.5
+} as const
+
 /** Reports that a prepared piece has no imported geometry available to the worker. */
 export class IrregularComputeError extends Data.TaggedError('IrregularComputeError')<{
   readonly preparedPieceId: PieceId
@@ -549,6 +558,7 @@ export function canonicalStateOrientationsFittingSheet(
   sheet: SheetSpec
 ): ReadonlyArray<{ readonly rotationDeg: 0 | 90; readonly state: IrregularBeamState }> {
   const fitting: Array<{ readonly rotationDeg: 0 | 90; readonly state: IrregularBeamState }> = []
+  // q0 is the deterministic canonical preference whenever both rigid orientations fit
   for (const rotationDeg of [0, 90] as const) {
     const state = terminalState.withQuarterTurnBottomLeft(rotationDeg)
     const bounds = state?.translatedCollisionBounds
@@ -706,12 +716,15 @@ export function evaluateCanonicalReferencePriorityMetrics(input: {
   readonly canonicalTopology: CanonicalLayoutTopology
 }): CanonicalAdmissionDecision {
   if (
-    !finiteAdmissionScores(input.canonical) ||
+    !finiteCanonicalPriorityScores(input.canonical) ||
     ![
+      input.canonicalTopology.enclosedCavityCount,
       input.canonicalTopology.largestOccupiedHullGapRatio,
+      input.canonicalTopology.occupiedEnvelopeAspectRatio,
       input.canonicalTopology.positiveContactComponentCount,
       input.canonicalTopology.isolatedPieceCount,
-      input.canonicalTopology.largestPositiveContactComponentSize
+      input.canonicalTopology.largestPositiveContactComponentSize,
+      input.canonicalTopology.largestPositiveContactComponentRatio
     ].every(Number.isFinite)
   ) {
     return { admitted: false, reason: 'protected score or topology is undefined or non-finite' }
@@ -719,9 +732,38 @@ export function evaluateCanonicalReferencePriorityMetrics(input: {
   if (input.canonical.unplacedCount !== 0) {
     return { admitted: false, reason: 'canonical role is incomplete' }
   }
+  const checks: ReadonlyArray<readonly [boolean, string]> = [
+    [
+      input.canonicalTopology.enclosedCavityCount <=
+        CANONICAL_REFERENCE_PRIORITY_CERTIFICATE.maximumEnclosedCavityCount,
+      'canonical enclosed-cavity count exceeded the intrinsic certificate'
+    ],
+    [
+      input.canonicalTopology.largestOccupiedHullGapRatio <=
+        CANONICAL_REFERENCE_PRIORITY_CERTIFICATE.maximumLargestOccupiedHullGapRatio,
+      'canonical occupied-hull gap exceeded the intrinsic certificate'
+    ],
+    [
+      input.canonicalTopology.occupiedEnvelopeAspectRatio <=
+        CANONICAL_REFERENCE_PRIORITY_CERTIFICATE.maximumOccupiedEnvelopeAspectRatio,
+      'canonical envelope aspect ratio exceeded the intrinsic certificate'
+    ],
+    [
+      input.canonicalTopology.isolatedPieceCount <=
+        CANONICAL_REFERENCE_PRIORITY_CERTIFICATE.maximumIsolatedPieceCount,
+      'canonical isolated-piece count exceeded the intrinsic certificate'
+    ],
+    [
+      input.canonicalTopology.largestPositiveContactComponentRatio >=
+        CANONICAL_REFERENCE_PRIORITY_CERTIFICATE.minimumLargestPositiveContactComponentRatio,
+      'canonical largest contact-component ratio missed the intrinsic certificate'
+    ]
+  ]
+  const violation = checks.find(([passes]) => !passes)?.[1]
+  if (violation !== undefined) return { admitted: false, reason: violation }
   return {
     admitted: true,
-    reason: 'canonical role passed the candidate-intrinsic completeness certificate'
+    reason: 'canonical role passed the sheet-free intrinsic compactness certificate'
   }
 }
 
@@ -843,6 +885,18 @@ function finiteAdmissionScores(score: IrregularLayoutScore): boolean {
     score.freeMaterialHoleCount,
     score.nearCompleteStructuralContactCount,
     score.dominantNearCompleteStructuralContactCount
+  ].every(Number.isFinite)
+}
+
+function finiteCanonicalPriorityScores(score: IrregularLayoutScore): boolean {
+  return [
+    score.unplacedCount,
+    score.collisionBoundsAreaMm2,
+    score.collisionBoundsSpanMm,
+    score.nearCompleteStructuralContactCount,
+    score.dominantNearCompleteStructuralContactCount,
+    score.sharedCollisionBoundaryLengthMm,
+    score.sharedCollisionBoundaryContactUnits
   ].every(Number.isFinite)
 }
 

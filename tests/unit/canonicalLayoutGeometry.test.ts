@@ -120,10 +120,13 @@ describe('canonical collision layout geometry', () => {
       measureCanonicalLayoutTopology(ring)
     )
     expect(measureCanonicalLayoutTopology(ring)).toMatchObject({
+      enclosedCavityCount: 1,
       largestOccupiedHullGapRatio: 0.25,
+      occupiedEnvelopeAspectRatio: 1,
       positiveContactComponentCount: 1,
       isolatedPieceCount: 0,
-      largestPositiveContactComponentSize: 4
+      largestPositiveContactComponentSize: 4,
+      largestPositiveContactComponentRatio: 1
     })
     expect(assertCanonicalGridLegalLayout(sheet, ring)).toBe(true)
     expect(
@@ -159,6 +162,12 @@ describe('canonical collision layout geometry', () => {
         new SheetSpec({ width: 3, height: 6, label: 'q90' })
       ).map(({ rotationDeg }) => rotationDeg)
     ).toEqual([90])
+    expect(
+      canonicalStateOrientationsFittingSheet(
+        state,
+        new SheetSpec({ width: 6, height: 6, label: 'q0-first' })
+      ).map(({ rotationDeg }) => rotationDeg)
+    ).toEqual([0, 90])
     expect(
       canonicalStateOrientationsFittingSheet(
         state,
