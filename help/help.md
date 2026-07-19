@@ -2009,13 +2009,13 @@ would falsify each one, and identify the smallest safe production experiment.
   derived only from E1 geometry and stable per-instance caps; one selected exact
   archive winner is terminal-fitted at q0/q90 across the sheet matrix. The
   integer-counted controller budget is capped at 200,000 separation evaluations,
-  six deterministic basins, 400 sweeps per basin, pool width 8, and five exact
+  six deterministic basins, 12 sweeps per basin, pool width 8, and five exact
   projections. If the full schedule misses the 110-second safety guard, E1 is
   returned unchanged rather than publishing a machine-speed-dependent partial
   winner.
 - The immutable E4 preregistration is
   `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration.md`
-  (`e5da2d0c188f6067d7caa148421922f694ed89a508ddb6b48e4cf3bf2347cc32`).
+  (`823d3ecd4d2825f40dd4026dbeff8328814dd35980498086272b2b22ac6531bd`).
   If its projection/class gate fails, the registered fallback is a separately
   reviewed finite-position global-assignment experiment, not another comparator
   or reconstruction-budget tuning pass.
