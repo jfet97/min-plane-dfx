@@ -120,8 +120,8 @@ const balancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
 ])
 
 const edgeContactThenBalancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
-  intrinsicEnvelopeOrder,
   Order.mapInput(Order.Number, (score) => -score.sharedCollisionBoundaryLengthMm),
+  intrinsicEnvelopeOrder,
   deterministicLocalTieBreakOrder
 ])
 
