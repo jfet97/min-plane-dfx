@@ -142,6 +142,10 @@ function finiteTransform(entry: IntrinsicTransformCatalogEntry, rotationDeg: num
   return selected
 }
 
+function catalogPriority(catalog: IntrinsicTransformCatalog): ReadonlyArray<PieceId> {
+  return catalog.entries.map(({ pieceId }) => pieceId)
+}
+
 function project(
   input: Parameters<typeof projectIntrinsicLayoutExactly>[0],
   nfpLayer: Layer.Layer<NfpIfpService> = NfpIfpServiceLive
@@ -245,13 +249,15 @@ describe('intrinsic exact projection', () => {
       targetBox: { widthMm: 10, heightMm: 10 },
       catalog,
       referencePlaced: reference,
-      provisionalPlaced: provisional
+      provisionalPlaced: provisional,
+      reinsertionPriorityPieceIds: catalogPriority(catalog)
     })
     const sameCanonicalTarget = await project({
       targetBox: { widthMm: 10.0001, heightMm: 10.0001 },
       catalog,
       referencePlaced: reference,
-      provisionalPlaced: provisional
+      provisionalPlaced: provisional,
+      reinsertionPriorityPieceIds: catalogPriority(catalog)
     })
 
     expect(first.directPosePieceIds).toEqual([PieceId.make('wide')])
@@ -262,6 +268,133 @@ describe('intrinsic exact projection', () => {
       rotationDeg: 90
     })
     expect(first.canonicalGeometryIdentity).toBe(sameCanonicalTarget.canonicalGeometryIdentity)
+  })
+
+  it('uses the required reinsertion priority for a multi-piece conflict closure', async () => {
+    const catalog = await buildCatalog([
+      preparedRectangle('a', 2, 2),
+      preparedRectangle('b', 2, 2),
+      preparedRectangle('c', 2, 2)
+    ])
+    const provisional = catalog.entries.map((entry) =>
+      placed(entry, finiteTransform(entry, 0), 0, 0)
+    )
+    const attemptedPieceIds: PieceId[] = []
+    const candidateXByPieceId = new Map<PieceId, number>([
+      [PieceId.make('a'), 4],
+      [PieceId.make('b'), 2],
+      [PieceId.make('c'), 0]
+    ])
+    const service = Layer.succeed(NfpIfpService, {
+      computeNfp: () => Effect.die('unused'),
+      computeIfpBounds: () => Effect.die('unused'),
+      generatePlacementCandidates: ({ moving }) => {
+        attemptedPieceIds.push(moving.sourcePieceId)
+        const x = candidateXByPieceId.get(moving.sourcePieceId)
+        return Effect.succeed(
+          x === undefined
+            ? []
+            : [
+                new IrregularPlacementCandidate({
+                  pieceId: moving.sourcePieceId,
+                  transform: moving.transform,
+                  point: point(x, 0),
+                  diagnostics: []
+                })
+              ]
+        )
+      }
+    })
+    const priority = [PieceId.make('c'), PieceId.make('b'), PieceId.make('a')]
+
+    const result = await project(
+      {
+        targetBox: { widthMm: 6, heightMm: 2 },
+        catalog,
+        referencePlaced: provisional,
+        provisionalPlaced: provisional,
+        reinsertionPriorityPieceIds: priority
+      },
+      service
+    )
+
+    expect(attemptedPieceIds).toEqual(priority)
+    expect(result.initialRemovedPieceIds).toEqual(priority)
+    expect(result.directPosePieceIds).toEqual([PieceId.make('c')])
+    expect(result.placedCollisionGeometries.map(({ placement }) => placement.pieceId)).toEqual(
+      priority
+    )
+  })
+
+  it.each([
+    ['duplicate', [PieceId.make('a'), PieceId.make('a')]],
+    ['missing', [PieceId.make('a')]],
+    ['unknown', [PieceId.make('a'), PieceId.make('unknown')]]
+  ])('rejects a %s reinsertion priority before projection', async (_name, priority) => {
+    const catalog = await buildCatalog([
+      preparedRectangle('a', 1, 1),
+      preparedRectangle('b', 1, 1)
+    ])
+    const reference = catalog.entries.map((entry, index) =>
+      placed(entry, finiteTransform(entry, 0), index, 0)
+    )
+
+    await expect(
+      project({
+        targetBox: { widthMm: 2, heightMm: 1 },
+        catalog,
+        referencePlaced: reference,
+        provisionalPlaced: reference,
+        reinsertionPriorityPieceIds: priority
+      })
+    ).rejects.toMatchObject({
+      _tag: 'IntrinsicExactProjectionError',
+      operation: 'canonicalizeProvisional',
+      category: 'invalid-input',
+      message:
+        'reinsertionPriorityPieceIds must be an exact permutation of the transform catalog piece ids.'
+    })
+  })
+
+  it('shares one candidate memo scope within a projection and isolates separate calls', async () => {
+    const catalog = await buildCatalog([
+      preparedRectangle('a', 2, 2),
+      preparedRectangle('b', 2, 2)
+    ])
+    const provisional = catalog.entries.map((entry) =>
+      placed(entry, finiteTransform(entry, 0), 0, 0)
+    )
+    const scopes: object[] = []
+    const service = Layer.succeed(NfpIfpService, {
+      computeNfp: () => Effect.die('unused'),
+      computeIfpBounds: () => Effect.die('unused'),
+      generatePlacementCandidates: ({ moving, candidateMemoScope }) => {
+        if (candidateMemoScope !== undefined) scopes.push(candidateMemoScope)
+        return Effect.succeed([
+          new IrregularPlacementCandidate({
+            pieceId: moving.sourcePieceId,
+            transform: moving.transform,
+            point: point(moving.sourcePieceId === PieceId.make('a') ? 0 : 2, 0),
+            diagnostics: []
+          })
+        ])
+      }
+    })
+    const input = {
+      targetBox: { widthMm: 4, heightMm: 2 },
+      catalog,
+      referencePlaced: provisional,
+      provisionalPlaced: provisional,
+      reinsertionPriorityPieceIds: catalogPriority(catalog)
+    }
+
+    await project(input, service)
+    await project(input, service)
+
+    expect(scopes).toHaveLength(4)
+    expect(scopes[0]).toBe(scopes[1])
+    expect(scopes[2]).toBe(scopes[3])
+    expect(scopes[0]).not.toBe(scopes[2])
   })
 
   it('propagates a typed cooperative abort between projection stages', async () => {
@@ -279,6 +412,7 @@ describe('intrinsic exact projection', () => {
         catalog,
         referencePlaced: reference,
         provisionalPlaced: provisional,
+        reinsertionPriorityPieceIds: catalogPriority(catalog),
         control: {
           checkpoint: () => {
             checkpoints += 1
@@ -313,6 +447,7 @@ describe('intrinsic exact projection', () => {
           catalog,
           referencePlaced: reference,
           provisionalPlaced: reference,
+          reinsertionPriorityPieceIds: catalogPriority(catalog),
           maximumDilationSteps
         })
       ).rejects.toMatchObject({
@@ -335,7 +470,8 @@ describe('intrinsic exact projection', () => {
       targetBox: { widthMm: 2, heightMm: 4 },
       catalog,
       referencePlaced: [pinned],
-      provisionalPlaced: [pinned]
+      provisionalPlaced: [pinned],
+      reinsertionPriorityPieceIds: catalogPriority(catalog)
     })
 
     expect(result.orientationFallbackPieceIds).toEqual([PieceId.make('wide')])
@@ -366,7 +502,8 @@ describe('intrinsic exact projection', () => {
       targetBox: { widthMm: 8, heightMm: 4 },
       catalog,
       referencePlaced: provisional,
-      provisionalPlaced: provisional
+      provisionalPlaced: provisional,
+      reinsertionPriorityPieceIds: catalogPriority(catalog)
     })
 
     expect(result.initialRemovedPieceIds).toEqual([
@@ -421,6 +558,7 @@ describe('intrinsic exact projection', () => {
         catalog,
         referencePlaced: provisional,
         provisionalPlaced: provisional,
+        reinsertionPriorityPieceIds: catalogPriority(catalog),
         maximumDilationSteps: 1
       },
       service
@@ -466,6 +604,7 @@ describe('intrinsic exact projection', () => {
           catalog,
           referencePlaced: provisional,
           provisionalPlaced: provisional,
+          reinsertionPriorityPieceIds: catalogPriority(catalog),
           maximumDilationSteps: 0
         },
         overlappingService

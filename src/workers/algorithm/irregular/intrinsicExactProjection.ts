@@ -21,6 +21,7 @@ import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import {
   IrregularGeometryInputError,
+  IrregularNfpIfpCandidateMemoScope,
   type IrregularNfpIfpControl,
   IrregularNfpIfpControlAbortError,
   IrregularNestingNotImplementedError,
@@ -241,6 +242,7 @@ export function projectIntrinsicLayoutExactly(input: {
   readonly catalog: IntrinsicTransformCatalog
   readonly referencePlaced: ReadonlyArray<IrregularPlacedPiece>
   readonly provisionalPlaced: ReadonlyArray<IrregularPlacedPiece>
+  readonly reinsertionPriorityPieceIds: ReadonlyArray<PieceId>
   readonly maximumDilationSteps?: number
   readonly control?: IrregularNfpIfpControl
 }): Effect.Effect<
@@ -270,6 +272,18 @@ export function projectIntrinsicLayoutExactly(input: {
         'the transform catalog must contain unique piece ids.'
       )
     }
+    const reinsertionPriority = validateReinsertionPriority(
+      input.catalog,
+      input.reinsertionPriorityPieceIds
+    )
+    if (reinsertionPriority === undefined) {
+      return yield* failProjection(
+        'canonicalizeProvisional',
+        'invalid-input',
+        'reinsertionPriorityPieceIds must be an exact permutation of the transform catalog piece ids.'
+      )
+    }
+    const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
     const provisional = yield* canonicalizePlacedAgainstCatalog(
       input.catalog,
       input.provisionalPlaced
@@ -295,7 +309,7 @@ export function projectIntrinsicLayoutExactly(input: {
       ...conflictAnalysis.removedPieceIds,
       ...transformedPieceIds
     ])
-    const initialRemovedPieceIds = orderedCatalogIds(input.catalog, removed)
+    const initialRemovedPieceIds = orderedPriorityIds(reinsertionPriority, removed)
     const requestedMaximumDilationSteps =
       input.maximumDilationSteps ?? input.catalog.entries.length
     if (!Number.isFinite(requestedMaximumDilationSteps)) {
@@ -331,6 +345,9 @@ export function projectIntrinsicLayoutExactly(input: {
         frozen,
         settings,
         nfpIfp,
+        reinsertionPriority,
+        catalogById,
+        candidateMemoScope,
         control: input.control
       })
       if ('placed' in attempt) {
@@ -350,7 +367,7 @@ export function projectIntrinsicLayoutExactly(input: {
           placedCollisionGeometries: attempt.placed,
           canonicalGeometryIdentity,
           initialRemovedPieceIds,
-          finalRemovedPieceIds: orderedCatalogIds(input.catalog, removed),
+          finalRemovedPieceIds: orderedPriorityIds(reinsertionPriority, removed),
           transformedPieceIds,
           directPosePieceIds: attempt.directPosePieceIds,
           orientationFallbackPieceIds: attempt.orientationFallbackPieceIds,
@@ -359,7 +376,7 @@ export function projectIntrinsicLayoutExactly(input: {
       }
 
       const dilationPieceId = selectClosureDilationPiece(
-        input.catalog,
+        reinsertionPriority,
         provisionalById,
         removed,
         attempt.failedPieceId
@@ -487,6 +504,9 @@ function projectRemovedPieces(input: {
   readonly frozen: ReadonlyArray<IrregularPlacedPiece>
   readonly settings: IrregularNestingSettings
   readonly nfpIfp: NfpIfpService
+  readonly reinsertionPriority: ReadonlyArray<PieceId>
+  readonly catalogById: ReadonlyMap<PieceId, IntrinsicTransformCatalogEntry>
+  readonly candidateMemoScope: IrregularNfpIfpCandidateMemoScope
   readonly control: IrregularNfpIfpControl | undefined
 }): Effect.Effect<
   ProjectionAttemptSuccess | ProjectionAttemptFailure,
@@ -498,8 +518,10 @@ function projectRemovedPieces(input: {
     let placed = [...input.frozen]
     const directPosePieceIds: PieceId[] = []
     const orientationFallbackPieceIds: PieceId[] = []
-    for (const entry of input.catalog.entries) {
-      if (!input.removed.has(entry.pieceId)) continue
+    for (const pieceId of input.reinsertionPriority) {
+      if (!input.removed.has(pieceId)) continue
+      const entry = input.catalogById.get(pieceId)
+      if (entry === undefined) return { failedPieceId: pieceId }
       yield* projectionCheckpoint(input.control)
       const provisional = input.provisionalById.get(entry.pieceId)
       if (provisional === undefined) return { failedPieceId: entry.pieceId }
@@ -517,6 +539,7 @@ function projectRemovedPieces(input: {
         placed,
         settings: input.settings,
         nfpIfp: input.nfpIfp,
+        candidateMemoScope: input.candidateMemoScope,
         control: input.control,
         preservesPinnedTransform: true
       })
@@ -544,6 +567,7 @@ function projectRemovedPieces(input: {
                 placed,
                 settings: input.settings,
                 nfpIfp: input.nfpIfp,
+                candidateMemoScope: input.candidateMemoScope,
                 control: input.control,
                 preservesPinnedTransform: false
               }))
@@ -571,6 +595,7 @@ function exactCandidatesForTransform(input: {
   readonly placed: ReadonlyArray<IrregularPlacedPiece>
   readonly settings: IrregularNestingSettings
   readonly nfpIfp: NfpIfpService
+  readonly candidateMemoScope: IrregularNfpIfpCandidateMemoScope
   readonly control: IrregularNfpIfpControl | undefined
   readonly preservesPinnedTransform: boolean
 }): Effect.Effect<
@@ -607,7 +632,8 @@ function exactCandidatesForTransform(input: {
       placed: input.placed,
       moving: input.transform.geometry,
       settings: input.settings,
-      candidateDomain: 'sheet' as const
+      candidateDomain: 'sheet' as const,
+      candidateMemoScope: input.candidateMemoScope
     }
     const serviceCandidates =
       input.control === undefined
@@ -699,23 +725,23 @@ function compareProjectionCandidates(
 }
 
 function selectClosureDilationPiece(
-  catalog: IntrinsicTransformCatalog,
+  reinsertionPriority: ReadonlyArray<PieceId>,
   provisionalById: ReadonlyMap<PieceId, IrregularPlacedPiece>,
   removed: ReadonlySet<PieceId>,
   failedPieceId: PieceId
 ): PieceId | undefined {
   const failed = provisionalById.get(failedPieceId)
   const failedCenter = failed === undefined ? undefined : canonicalPlacedCenter(failed)
-  return catalog.entries
-    .filter((entry) => !removed.has(entry.pieceId))
-    .map((entry, rank) => {
-      const placed = provisionalById.get(entry.pieceId)
+  return reinsertionPriority
+    .filter((pieceId) => !removed.has(pieceId))
+    .map((pieceId, rank) => {
+      const placed = provisionalById.get(pieceId)
       const center = placed === undefined ? undefined : canonicalPlacedCenter(placed)
       const distance =
         failedCenter === undefined || center === undefined
           ? undefined
           : squaredGridDistance(failedCenter, center)
-      return { pieceId: entry.pieceId, rank, distance }
+      return { pieceId, rank, distance }
     })
     .toSorted(
       (first, second) =>
@@ -904,11 +930,22 @@ export function compareIntrinsicProjectionGridDistance(
   )
 }
 
-function orderedCatalogIds(
-  catalog: IntrinsicTransformCatalog,
+function orderedPriorityIds(
+  reinsertionPriority: ReadonlyArray<PieceId>,
   selected: ReadonlySet<PieceId>
 ): ReadonlyArray<PieceId> {
-  return catalog.entries.filter(({ pieceId }) => selected.has(pieceId)).map(({ pieceId }) => pieceId)
+  return reinsertionPriority.filter((pieceId) => selected.has(pieceId))
+}
+
+function validateReinsertionPriority(
+  catalog: IntrinsicTransformCatalog,
+  priority: ReadonlyArray<PieceId>
+): ReadonlyArray<PieceId> | undefined {
+  if (priority.length !== catalog.entries.length || new Set(priority).size !== priority.length) {
+    return undefined
+  }
+  const catalogIds = new Set(catalog.entries.map(({ pieceId }) => pieceId))
+  return priority.every((pieceId) => catalogIds.has(pieceId)) ? priority : undefined
 }
 
 function candidateTranslationKey(entry: IrregularPlacedPiece): string {
