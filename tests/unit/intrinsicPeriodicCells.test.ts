@@ -19,6 +19,7 @@ import {
   enumerateIntrinsicPeriodicCells,
   expandIntrinsicPeriodicCell,
   farNeighborCertificate,
+  rankIntrinsicPeriodicCells,
   shiftOrderedPairForbiddenBoundaryControl,
   validatePeriodicContactLatticeControl,
   type IntrinsicPeriodicBaseMember,
@@ -258,6 +259,7 @@ describe('intrinsic periodic cells', () => {
       v1: { x: 2, y: 0 },
       v2: { x: 0, y: 1 },
       determinantGrid2: '2000000',
+      memberAreaGrid2: '2000000',
       density: 1,
       envelopeMaximumSideMm: 2,
       hullWasteRatio: 0,
@@ -280,5 +282,21 @@ describe('intrinsic periodic cells', () => {
         geometrySourcePieceId: piece.source.id
       }))
     )
+    const denominator = '9007199254740991000000'
+    const lower = {
+      ...cell,
+      determinantGrid2: denominator,
+      memberAreaGrid2: '9007199254740991000000',
+      canonicalKey: 'lower'
+    }
+    const higher = {
+      ...cell,
+      determinantGrid2: denominator,
+      memberAreaGrid2: '9007199254740991000001',
+      canonicalKey: 'higher'
+    }
+    expect(
+      rankIntrinsicPeriodicCells([lower, higher]).map(({ canonicalKey }) => canonicalKey)
+    ).toEqual(['higher', 'lower'])
   })
 })

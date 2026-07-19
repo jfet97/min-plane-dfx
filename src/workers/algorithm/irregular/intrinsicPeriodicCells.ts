@@ -59,6 +59,7 @@ export interface IntrinsicPeriodicCell {
   readonly v1: IntrinsicPeriodicVector
   readonly v2: IntrinsicPeriodicVector
   readonly determinantGrid2: string
+  readonly memberAreaGrid2: string
   readonly density: number
   readonly envelopeMaximumSideMm: number
   readonly hullWasteRatio: number
@@ -236,7 +237,7 @@ export function enumerateIntrinsicPeriodicCells(
       selectedFamilyKey: family.key,
       uniqueTransformCount: transformed.length,
       enumeratedPairCount,
-      cells: cells.toSorted(compareCells),
+      cells: rankIntrinsicPeriodicCells(cells),
       rejected: Object.fromEntries([...rejected.entries()].toSorted())
     }
   })
@@ -450,6 +451,7 @@ function deriveCells(input: {
         v1: fromGridPoint(canonical[0]),
         v2: fromGridPoint(canonical[1]),
         determinantGrid2: determinantGrid2.toString(),
+        memberAreaGrid2: memberAreaGrid2.toString(),
         density: Number(memberAreaGrid2) / Number(determinantGrid2),
         envelopeMaximumSideMm: shape.maximumSideMm,
         hullWasteRatio: shape.hullWasteRatio,
@@ -1067,13 +1069,24 @@ function polygonGridArea(points: ReadonlyArray<GridPoint>): bigint {
 }
 
 function compareCells(first: IntrinsicPeriodicCell, second: IntrinsicPeriodicCell): number {
+  const densityOrder = compareBigInt(
+    BigInt(second.memberAreaGrid2) * BigInt(first.determinantGrid2),
+    BigInt(first.memberAreaGrid2) * BigInt(second.determinantGrid2)
+  )
   return (
-    second.density - first.density ||
+    densityOrder ||
     first.envelopeMaximumSideMm - second.envelopeMaximumSideMm ||
     first.hullWasteRatio - second.hullWasteRatio ||
     second.sharedBoundaryLengthMm - first.sharedBoundaryLengthMm ||
     first.canonicalKey.localeCompare(second.canonicalKey)
   )
+}
+
+/** Exact-density periodic-cell archive order. */
+export function rankIntrinsicPeriodicCells(
+  cells: ReadonlyArray<IntrinsicPeriodicCell>
+): ReadonlyArray<IntrinsicPeriodicCell> {
+  return cells.toSorted(compareCells)
 }
 
 function gridPoint(point: IrregularPoint): GridPoint | undefined {
