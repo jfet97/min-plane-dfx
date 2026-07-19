@@ -72,6 +72,19 @@ geometry and invalid derived arithmetic remain typed failures. The supplied
 order must remain untouched so future beam and portfolio layers can make their
 priority decisions outside this baseline.
 
+The experimental E1 intrinsic strict decoder is a separate constructor and is
+not wired into the production portfolio. It preserves the user-owned prepared
+piece order, anchors the first transformed polygon at the normalized origin,
+and asks the NFP service only for sheetless boundary, support, and intersection
+candidates. The geometry service still performs exact overlap validation and
+canonical translation admission, but rectangular sheet bounds are deferred.
+The constructor retains the best candidate from each rotation/mirror family,
+then selects one winner by absolute maximum side, envelope area, envelope span,
+shared boundary as a bounded tie-break, and canonical combined geometry. Only a
+completed layout is tested against the real sheet, at q0 and q90. This path has
+its own provenance harness and cohesion certificate; it does not alter the
+legacy beam, protected lanes, reference-sheet coordinator, GA, or repair.
+
 Local compactness ranks the largest normalized sheet-axis consumption, the sum
 of both normalized spans, collision-bounds area, and then absolute span. Bounds,
 anchor coordinates, and shared boundary length are canonicalized to the existing

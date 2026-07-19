@@ -22,6 +22,8 @@ import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import {
   IrregularGeometryInputError,
+  IrregularNfpIfpCandidateMemoScope,
+  IrregularNfpIfpControlAbortError,
   IrregularNestingNotImplementedError,
   NfpIfpService
 } from '../../irregular/services.js'
@@ -119,12 +121,14 @@ interface ScoredCandidate {
 /** One strict, sheet-independent constructive decode followed by real-sheet legality. */
 export function decodeIntrinsicStrictPriorityOrder(
   finalSheet: SheetSpec,
-  pieces: ReadonlyArray<IrregularPreparedPiece>
+  pieces: ReadonlyArray<IrregularPreparedPiece>,
+  options: { readonly maximumRuntimeMs?: number } = {}
 ): Effect.Effect<
   IntrinsicStrictDecodeResult,
   | IntrinsicStrictDecoderError
   | IrregularNestingNotImplementedError
-  | IrregularGeometryInputError,
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError,
   GeometryKernel | GeometrySettings | NfpIfpService
 > {
   return Effect.gen(function* () {
@@ -132,6 +136,19 @@ export function decodeIntrinsicStrictPriorityOrder(
     const settings = yield* GeometrySettings
     const geometryKernel = yield* GeometryKernel
     const nfpIfpService = yield* NfpIfpService
+    const maximumRuntimeMs = options.maximumRuntimeMs ?? 120_000
+    const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
+    const control = {
+      checkpoint: () =>
+        performance.now() - startedAt >= maximumRuntimeMs
+          ? Effect.fail(
+              new IrregularNfpIfpControlAbortError({
+                reason: 'deadline',
+                message: `intrinsic strict decode exceeded ${maximumRuntimeMs} ms.`
+              })
+            )
+          : Effect.void
+    }
     let state = IrregularBeamState.empty(pieces)
     const stepTrace: IntrinsicStrictStepTrace[] = []
 
@@ -143,6 +160,7 @@ export function decodeIntrinsicStrictPriorityOrder(
       let candidateCount = 0
 
       for (const transform of [...piece.transforms].sort(transformCandidateOrder)) {
+        yield* control.checkpoint()
         const moving = yield* geometryKernel.transformCollisionGeometry({
           geometry: piece.collisionGeometry,
           transform
@@ -156,7 +174,9 @@ export function decodeIntrinsicStrictPriorityOrder(
                 placedCollisionIndex: state.placedCollisionIndex,
                 moving,
                 settings,
-                candidateDomain: 'sheetless-nfp'
+                candidateDomain: 'sheetless-nfp',
+                candidateMemoScope,
+                control
               })
         candidateCount += legalCandidates.length
         const family = transformFamilyKey(transform)
