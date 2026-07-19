@@ -128,6 +128,33 @@ export interface IrregularWindowedBeamOptions {
   readonly transformPreferences?: ReadonlyMap<PieceId, number>
 }
 
+export interface IrregularWindowedReconstructionInput {
+  readonly constraintSheet: SheetSpec
+  readonly finalSheet: SheetSpec
+  readonly allPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly destroyedQueue: ReadonlyArray<IrregularPreparedPiece>
+  readonly frozenPlaced: ReadonlyArray<IrregularPlacedPiece>
+  readonly control?: IrregularWindowedBeamControl
+  readonly options?: IrregularWindowedBeamOptions
+}
+
+interface IrregularWindowedBeamCoreInput {
+  readonly sheet: SheetSpec
+  readonly finalSheet: SheetSpec
+  readonly pieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly candidatePlanePieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly initialState: IrregularBeamState
+  readonly beamWidth: number
+  readonly localCandidateFanout: number
+  readonly localRepairBudget: number
+  readonly hooks?: IrregularWindowedBeamHooks
+  readonly options?: IrregularWindowedBeamOptions
+  readonly control?: IrregularWindowedBeamControl
+  readonly instrumentation?: IrregularWindowedBeamInstrumentation
+  readonly emitDecisionTrace?: EmitIrregularDecisionTrace
+  readonly decisionTraceIdentity?: IrregularDecisionTraceIdentity
+}
+
 export type IrregularWindowedBeamError =
   | IrregularNestingNotImplementedError
   | IrregularGeometryInputError
@@ -224,6 +251,82 @@ export function runWindowedIrregularBeam(input: {
   | IrregularPlacementScorer
   | IrregularLayoutScorer
 > {
+  return Effect.flatMap(GeometrySettings, (settings) =>
+    runWindowedIrregularBeamCore({
+      ...input,
+      finalSheet: input.sheet,
+      candidatePlanePieces: input.pieces,
+      initialState: IrregularBeamState.empty(input.pieces),
+      beamWidth: settings.optimizer.beamWidth,
+      localCandidateFanout:
+        settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth,
+      localRepairBudget: settings.optimizer.localRepairBudget ?? 0
+    })
+  )
+}
+
+/** Reconstructs only a destroyed queue against a complete frozen exact layout. */
+export function runWindowedIrregularReconstruction(
+  input: IrregularWindowedReconstructionInput
+): Effect.Effect<
+  IrregularWindowedBeamResult,
+  IrregularWindowedBeamError,
+  | GeometryKernel
+  | GeometrySettings
+  | NfpIfpService
+  | IrregularPlacementScorer
+  | IrregularLayoutScorer
+> {
+  return Effect.gen(function* () {
+    const allById = new Map(input.allPreparedPieces.map((piece) => [preparedPieceId(piece), piece]))
+    const destroyedIds = input.destroyedQueue.map(preparedPieceId)
+    const frozenIds = input.frozenPlaced.map(
+      ({ placement }) => placement.pieceId ?? placement.sourcePieceId
+    )
+    const partitionIds = [...destroyedIds, ...frozenIds]
+    if (
+      allById.size !== input.allPreparedPieces.length ||
+      new Set(partitionIds).size !== partitionIds.length ||
+      partitionIds.length !== input.allPreparedPieces.length ||
+      partitionIds.some((pieceId) => !allById.has(pieceId))
+    ) {
+      return yield* Effect.fail(
+        new IrregularGeometryInputError({
+          operation: 'runWindowedIrregularReconstruction',
+          message: 'frozen placements and destroyed queue must partition all prepared pieces.'
+        })
+      )
+    }
+    const initialState = new IrregularBeamState({
+      remainingPreparedPieces: input.destroyedQueue,
+      placedCollisionGeometries: input.frozenPlaced,
+      unplacedPieceIds: [],
+      placementOrder: frozenIds
+    })
+    return yield* runWindowedIrregularBeamCore({
+      sheet: input.constraintSheet,
+      finalSheet: input.finalSheet,
+      pieces: input.destroyedQueue,
+      candidatePlanePieces: input.allPreparedPieces,
+      initialState,
+      beamWidth: 4,
+      localCandidateFanout: 4,
+      localRepairBudget: 0,
+      ...(input.options !== undefined ? { options: input.options } : {}),
+      ...(input.control !== undefined ? { control: input.control } : {})
+    })
+  })
+}
+
+function runWindowedIrregularBeamCore(input: IrregularWindowedBeamCoreInput): Effect.Effect<
+  IrregularWindowedBeamResult,
+  IrregularWindowedBeamError,
+  | GeometryKernel
+  | GeometrySettings
+  | NfpIfpService
+  | IrregularPlacementScorer
+  | IrregularLayoutScorer
+> {
   return Effect.gen(function* () {
     const settings = yield* GeometrySettings
     const geometryKernel = yield* GeometryKernel
@@ -234,15 +337,14 @@ export function runWindowedIrregularBeam(input: {
       input.emitDecisionTrace,
       input.decisionTraceIdentity
     )
-    const localCandidateFanout =
-      settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth
-    const localRepairBudget = settings.optimizer.localRepairBudget ?? 0
+    const localCandidateFanout = input.localCandidateFanout
+    const localRepairBudget = input.localRepairBudget
     const protectedDiversityEnabled = false
     const selectedPolicyId = input.options?.policyId ?? placementScorer.policyId
     const candidateSheet =
       selectedPolicyId === SHORT_SIDE_FILL_POLICY_ID
         ? input.sheet
-        : makeIntrinsicCandidateSheet(input.pieces)
+        : makeIntrinsicCandidateSheet(input.candidatePlanePieces)
     const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
     const stateKey = (state: IrregularBeamState): string =>
       beamStateKey(state, input.options?.transformPreferences)
@@ -257,7 +359,7 @@ export function runWindowedIrregularBeam(input: {
       }),
       settings: new IrregularDecisionTraceSearchSettings({
         orderWindow: settings.optimizer.orderWindow,
-        beamWidth: settings.optimizer.beamWidth,
+        beamWidth: input.beamWidth,
         localCandidateFanout,
         localRepairBudget,
         policyId: input.options?.policyId ?? placementScorer.policyId
@@ -271,12 +373,12 @@ export function runWindowedIrregularBeam(input: {
         )
     }))
 
-    let beam: ReadonlyArray<IrregularBeamState> = [IrregularBeamState.empty(input.pieces)]
+    let beam: ReadonlyArray<IrregularBeamState> = [input.initialState]
     let scoredBeam: ReadonlyArray<ScoredState> | undefined
     const initialPieceRankById = new Map(
       input.pieces.map((piece, index) => [preparedPieceId(piece), index] as const)
     )
-    const protectIncumbent = settings.optimizer.beamWidth > 1
+    const protectIncumbent = input.beamWidth > 1
     let incumbentState: IrregularBeamState | undefined = protectIncumbent ? beam[0] : undefined
     let productionBeamStates = new Set(beam)
     let boundaryAnchorStates: ReadonlyArray<IrregularBeamState> = []
@@ -478,7 +580,7 @@ export function runWindowedIrregularBeam(input: {
       )
       const pruned = pruneScoredStates(
         scored,
-        settings.optimizer.beamWidth,
+        input.beamWidth,
         input.sheet,
         layoutScorer,
         nextIncumbent,
@@ -525,7 +627,7 @@ export function runWindowedIrregularBeam(input: {
             eligibleForProtectedIntrinsicLane: intrinsicContactStates.includes(state),
             eligibleForProtectedParetoFrontierLane: paretoFrontierStates.includes(state)
           })),
-          input.sheet,
+          input.finalSheet,
           layoutScorer,
           input.control,
           controlState,
@@ -582,7 +684,7 @@ export function runWindowedIrregularBeam(input: {
         repairIteration += 1
       ) {
         const repairOutcome = yield* repairTerminalState({
-          sheet: input.sheet,
+          sheet: input.finalSheet,
           pieces: input.pieces,
           current: currentRepair,
           candidateFanout: localRepairBudget,
@@ -650,7 +752,7 @@ export function runWindowedIrregularBeam(input: {
         : { isCancelled: input.control.isCancelled }
       : input.control
     const productionOrientation = yield* selectTerminalOrientation({
-      sheet: input.sheet,
+      sheet: input.finalSheet,
       base: productionTerminalBase,
       layoutScorer,
       makeStateKey: stateKey,
@@ -662,7 +764,7 @@ export function runWindowedIrregularBeam(input: {
     const protectedOrientations: ProtectedTerminalOrientation[] = []
     for (const base of protectedTerminalBases) {
       const orientation = yield* selectTerminalOrientation({
-        sheet: input.sheet,
+        sheet: input.finalSheet,
         base,
         layoutScorer,
         makeStateKey: stateKey,

@@ -25,6 +25,7 @@ import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregu
 import { decodeStrictPriorityOrder } from '../../src/workers/algorithm/irregular/strictPriorityDecoder.js'
 import {
   decodeWindowedIrregularBeam,
+  runWindowedIrregularReconstruction,
   type IrregularWindowedBeamControl,
   type IrregularWindowedBeamHooks,
   type IrregularWindowedBeamOptions
@@ -196,6 +197,30 @@ function runWindowed(
   )
 }
 
+function runReconstruction(input: {
+  readonly currentSheet: SheetSpec
+  readonly allPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly destroyedQueue: ReadonlyArray<IrregularPreparedPiece>
+  readonly frozenPlaced: Parameters<typeof runWindowedIrregularReconstruction>[0]['frozenPlaced']
+  readonly service: Layer.Layer<NfpIfpService, never, never>
+}) {
+  return Effect.runPromise(
+    runWindowedIrregularReconstruction({
+      constraintSheet: input.currentSheet,
+      finalSheet: input.currentSheet,
+      allPreparedPieces: input.allPreparedPieces,
+      destroyedQueue: input.destroyedQueue,
+      frozenPlaced: input.frozenPlaced
+    }).pipe(
+      Effect.provide(GeometryKernel.Live),
+      Effect.provide(input.service),
+      Effect.provide(IrregularPlacementScorer.Layer),
+      Effect.provide(IrregularLayoutScorer.Live),
+      Effect.provide(Layer.succeed(GeometrySettings, settings(1, 4, 4)))
+    )
+  )
+}
+
 function stateSnapshot(result: Awaited<ReturnType<typeof runWindowed>>) {
   return result.rankedStates.map((state) => ({
     placements: state.placedCollisionGeometries.map(({ placement }) => placement),
@@ -286,6 +311,65 @@ async function rotatedNinetyBiasedLayoutScorer(
 }
 
 describe('decodeWindowedIrregularBeam', () => {
+  it('reconstructs a destroyed piece against frozen placements and the complete candidate plane', async () => {
+    const first = preparedPiece('first', 10, 10, 'first-copy')
+    const second = preparedPiece('second', 5, 5, 'second-copy')
+    const currentSheet = sheet(100, 100)
+    let observedCandidateWidth = 0
+    const service = candidateService(({ moving, placed }) => {
+      if (moving.sourcePieceId === PieceId.make('second')) {
+        return [oneCandidate(moving, placed.length === 1 ? 10 : 0)]
+      }
+      return [oneCandidate(moving, 0)]
+    })
+    const seeded = await runWindowed(
+      currentSheet,
+      [first],
+      Layer.succeed(GeometrySettings, settings(1, 1, 1)),
+      service
+    )
+    const frozen = seeded.bestState.placedCollisionGeometries
+    const observingService = Layer.succeed(NfpIfpService, {
+      computeNfp: () => Effect.die('unused in reconstruction test'),
+      computeIfpBounds: () => Effect.die('unused in reconstruction test'),
+      generatePlacementCandidates: (input) => {
+        observedCandidateWidth = input.sheet.width
+        return Effect.succeed([oneCandidate(input.moving, 10)])
+      }
+    })
+    const result = await runReconstruction({
+      currentSheet,
+      allPreparedPieces: [first, second],
+      destroyedQueue: [second],
+      frozenPlaced: frozen,
+      service: observingService
+    })
+
+    expect(result.bestState.unplacedPieceIds).toEqual([])
+    expect(result.bestState.placedCollisionGeometries).toHaveLength(2)
+    expect(result.bestState.placementOrder).toEqual([
+      PieceId.make('first-copy'),
+      PieceId.make('second-copy')
+    ])
+    expect(observedCandidateWidth).toBeGreaterThanOrEqual(15)
+  })
+
+  it('rejects a frozen and destroyed input that is not a one-to-one partition', async () => {
+    const first = preparedPiece('first', 10, 10, 'first-copy')
+    const second = preparedPiece('second', 5, 5, 'second-copy')
+    const currentSheet = sheet(100, 100)
+    const seeded = await runWindowed(currentSheet, [first])
+
+    await expect(
+      runReconstruction({
+        currentSheet,
+        allPreparedPieces: [first, second],
+        destroyedQueue: [first],
+        frozenPlaced: seeded.bestState.placedCollisionGeometries,
+        service: NfpIfpServiceLive
+      })
+    ).rejects.toMatchObject({ _tag: 'IrregularGeometryInputError' })
+  })
   it('assigns compact repeated state ids without hashing canonical keys', () => {
     const registry = new IrregularDecisionTraceStateIdRegistry()
 
