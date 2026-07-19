@@ -15,6 +15,7 @@ import {
 } from '@shared/irregular/domain.js'
 import {
   decodeIntrinsicStrictPriorityOrder,
+  constructIntrinsicStrictState,
   rankIntrinsicStrictCompletedLayouts,
   selectIntrinsicStrictFamilyWinner,
   type IntrinsicStrictComparatorMode,
@@ -121,6 +122,62 @@ function decodeWithCandidateService(
 }
 
 describe('decodeIntrinsicStrictPriorityOrder', () => {
+  it('preserves E1 output through the empty seeded-construction wrapper', async () => {
+    const pieces = [
+      preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('third', rectanglePoints(1, 2), [transform(0, 0), transform(1, 90)])
+    ]
+    const decoded = await decode(sheet(20, 10), pieces)
+    const constructed = await Effect.runPromise(
+      constructIntrinsicStrictState({
+        allPreparedPieces: pieces,
+        remainingPreparedPieces: pieces,
+        frozenPlaced: [],
+        candidateMode: 'pure-growth'
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+
+    expect(constructed.state.placedCollisionGeometries).toEqual(decoded.placedCollisionGeometries)
+    expect(constructed.stepTrace).toEqual(decoded.stepTrace)
+  })
+
+  it('continues an exact frozen seed and rejects non-partitions', async () => {
+    const pieces = [
+      preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0)]),
+      preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0)]),
+      preparedPiece('third', rectanglePoints(1, 2), [transform(0, 0)])
+    ]
+    const decoded = await decode(sheet(20, 10), pieces)
+    const first = decoded.placedCollisionGeometries[0]
+    expect(first).toBeDefined()
+    if (first === undefined) return
+    const run = (remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>) =>
+      Effect.runPromise(
+        constructIntrinsicStrictState({
+          allPreparedPieces: pieces,
+          remainingPreparedPieces,
+          frozenPlaced: [first],
+          candidateMode: 'pure-growth'
+        }).pipe(
+          Effect.provide(GeometryKernel.Live),
+          Effect.provide(GeometrySettings.Live),
+          Effect.provide(NfpIfpServiceLive)
+        )
+      )
+
+    const continued = await run(pieces.slice(1))
+    expect(continued.state.placedCollisionGeometries).toEqual(decoded.placedCollisionGeometries)
+    await expect(run(pieces)).rejects.toMatchObject({
+      _tag: 'IntrinsicStrictDecoderError',
+      operation: 'seedPartition'
+    })
+  })
+
   it.each(['pure-growth', 'contact-band'] as const)(
     'keeps %s sheet-blind across differently sized legal sheets',
     async (comparatorMode) => {

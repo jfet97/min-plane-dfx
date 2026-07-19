@@ -74,6 +74,8 @@ export interface IntrinsicStrictLocalScore {
 
 export type IntrinsicStrictComparatorMode = 'pure-growth' | 'contact-band'
 
+export type IntrinsicStrictCandidateMode = IntrinsicStrictComparatorMode
+
 export interface IntrinsicStrictFamilyWinner {
   readonly score: IntrinsicStrictLocalScore
   readonly movingCollisionAreaMm2: number
@@ -119,6 +121,20 @@ export interface IntrinsicStrictDecodeResult {
   readonly runtimeMs: number
 }
 
+export interface IntrinsicStrictConstructResult {
+  readonly state: IrregularBeamState
+  readonly stepTrace: ReadonlyArray<IntrinsicStrictStepTrace>
+  readonly runtimeMs: number
+}
+
+export interface ConstructIntrinsicStrictStateInput {
+  readonly allPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly frozenPlaced: ReadonlyArray<IrregularPlacedPiece>
+  readonly candidateMode: IntrinsicStrictCandidateMode
+  readonly maximumRuntimeMs?: number
+}
+
 interface ScoredCandidate {
   readonly state: IrregularBeamState
   readonly score: IntrinsicStrictLocalScore
@@ -144,11 +160,85 @@ export function decodeIntrinsicStrictPriorityOrder(
 > {
   return Effect.gen(function* () {
     const startedAt = performance.now()
+    const maximumRuntimeMs = options.maximumRuntimeMs ?? 120_000
+    const comparatorMode = options.comparatorMode ?? 'pure-growth'
+    const constructed = yield* constructIntrinsicStrictState({
+      allPreparedPieces: pieces,
+      remainingPreparedPieces: pieces,
+      frozenPlaced: [],
+      candidateMode: comparatorMode,
+      maximumRuntimeMs
+    })
+    const state = constructed.state
+    const stepTrace = constructed.stepTrace
+    const intrinsicRuntimeMs = Math.max(0, performance.now() - startedAt)
+
+    if (state.unplacedPieceIds.length > 0) {
+      return makeResult({
+        status: 'incomplete',
+        state,
+        stepTrace,
+        runtimeMs: intrinsicRuntimeMs
+      })
+    }
+
+    const terminal = selectTerminalOrientation(state, finalSheet)
+    if (terminal === undefined) {
+      return makeResult({
+        status: 'infeasible-final-sheet',
+        state,
+        stepTrace,
+        runtimeMs: intrinsicRuntimeMs
+      })
+    }
+    const runtimeMs = Math.max(0, performance.now() - startedAt)
+    const metrics = completedMetrics(terminal.state, terminal.canonicalHash, runtimeMs)
+    if (metrics === undefined) {
+      return yield* Effect.fail(
+        new IntrinsicStrictDecoderError({
+          operation: 'completedMetrics',
+          message: 'completed canonical layout metrics must remain finite and exact.'
+        })
+      )
+    }
+    return {
+      ...makeResult({
+        status: 'completed',
+        state: terminal.state,
+        stepTrace,
+        runtimeMs
+      }),
+      terminalRotationDeg: terminal.rotationDeg,
+      canonicalGeometryHash: terminal.canonicalHash,
+      metrics,
+      certificate: evaluateIntrinsicStrictCertificate(metrics)
+    }
+  })
+}
+
+/** Builds one exact sheetless E1 state from an optional real frozen seed. */
+export function constructIntrinsicStrictState(
+  input: ConstructIntrinsicStrictStateInput
+): Effect.Effect<
+  IntrinsicStrictConstructResult,
+  | IntrinsicStrictDecoderError
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError,
+  GeometryKernel | GeometrySettings | NfpIfpService
+> {
+  return Effect.gen(function* () {
+    const startedAt = performance.now()
     const settings = yield* GeometrySettings
     const geometryKernel = yield* GeometryKernel
     const nfpIfpService = yield* NfpIfpService
-    const maximumRuntimeMs = options.maximumRuntimeMs ?? 120_000
-    const comparatorMode = options.comparatorMode ?? 'pure-growth'
+    const maximumRuntimeMs = input.maximumRuntimeMs ?? 120_000
+    const partition = validateSeedPartition(input)
+    if (partition !== undefined) {
+      return yield* Effect.fail(
+        new IntrinsicStrictDecoderError({ operation: 'seedPartition', message: partition })
+      )
+    }
     const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
     const control = {
       checkpoint: () =>
@@ -161,13 +251,32 @@ export function decodeIntrinsicStrictPriorityOrder(
             )
           : Effect.void
     }
-    let state = IrregularBeamState.empty(pieces)
+    let state = new IrregularBeamState({
+      remainingPreparedPieces: input.remainingPreparedPieces,
+      placedCollisionGeometries: input.frozenPlaced,
+      placementOrder: input.frozenPlaced.map(placedPieceId)
+    }).withBottomLeftAnchored()
+    if (
+      state === undefined ||
+      (state.placedCollisionGeometries.length > 0 &&
+        !assertCanonicalGridLegalLayout(
+          intrinsicBoundsSheet(state),
+          state.placedCollisionGeometries
+        ))
+    ) {
+      return yield* Effect.fail(
+        new IntrinsicStrictDecoderError({
+          operation: 'frozenPlaced',
+          message: 'frozen seed placements must form one exact canonical sheetless layout.'
+        })
+      )
+    }
     const stepTrace: IntrinsicStrictStepTrace[] = []
 
-    for (let pieceIndex = 0; pieceIndex < pieces.length; pieceIndex += 1) {
-      const piece = pieces[pieceIndex]
+    for (let pieceIndex = 0; pieceIndex < input.remainingPreparedPieces.length; pieceIndex += 1) {
+      const piece = input.remainingPreparedPieces[pieceIndex]
       if (piece === undefined) continue
-      const remainingPreparedPieces = pieces.slice(pieceIndex + 1)
+      const remainingPreparedPieces = input.remainingPreparedPieces.slice(pieceIndex + 1)
       const candidatesByFamily = new Map<string, ScoredCandidate>()
       let candidateCount = 0
 
@@ -214,7 +323,7 @@ export function decodeIntrinsicStrictPriorityOrder(
 
       const selected = selectIntrinsicStrictFamilyWinner(
         [...candidatesByFamily.values()],
-        comparatorMode
+        input.candidateMode
       )
       const pieceId = piece.pieceId ?? piece.source.id
       stepTrace.push({
@@ -232,48 +341,41 @@ export function decodeIntrinsicStrictPriorityOrder(
         })
     }
 
-    const intrinsicRuntimeMs = Math.max(0, performance.now() - startedAt)
-    if (state.unplacedPieceIds.length > 0) {
-      return makeResult({
-        status: 'incomplete',
-        state,
-        stepTrace,
-        runtimeMs: intrinsicRuntimeMs
-      })
-    }
-
-    const terminal = selectTerminalOrientation(state, finalSheet)
-    if (terminal === undefined) {
-      return makeResult({
-        status: 'infeasible-final-sheet',
-        state,
-        stepTrace,
-        runtimeMs: intrinsicRuntimeMs
-      })
-    }
-    const runtimeMs = Math.max(0, performance.now() - startedAt)
-    const metrics = completedMetrics(terminal.state, terminal.canonicalHash, runtimeMs)
-    if (metrics === undefined) {
-      return yield* Effect.fail(
-        new IntrinsicStrictDecoderError({
-          operation: 'completedMetrics',
-          message: 'completed canonical layout metrics must remain finite and exact.'
-        })
-      )
-    }
     return {
-      ...makeResult({
-        status: 'completed',
-        state: terminal.state,
-        stepTrace,
-        runtimeMs
-      }),
-      terminalRotationDeg: terminal.rotationDeg,
-      canonicalGeometryHash: terminal.canonicalHash,
-      metrics,
-      certificate: evaluateIntrinsicStrictCertificate(metrics)
+      state,
+      stepTrace,
+      runtimeMs: Math.max(0, performance.now() - startedAt)
     }
   })
+}
+
+function validateSeedPartition(input: ConstructIntrinsicStrictStateInput): string | undefined {
+  const allIds = input.allPreparedPieces.map(preparedPieceId)
+  const remainingIds = input.remainingPreparedPieces.map(preparedPieceId)
+  const frozenIds = input.frozenPlaced.map(placedPieceId)
+  if (new Set(allIds).size !== allIds.length) return 'all prepared piece ids must be unique.'
+  if (new Set(remainingIds).size !== remainingIds.length)
+    return 'remaining piece ids must be unique.'
+  if (new Set(frozenIds).size !== frozenIds.length) return 'frozen placement ids must be unique.'
+  const partitionIds = [...remainingIds, ...frozenIds]
+  if (new Set(partitionIds).size !== partitionIds.length) {
+    return 'frozen and remaining piece ids must be disjoint.'
+  }
+  if (
+    partitionIds.length !== allIds.length ||
+    partitionIds.toSorted().some((id, index) => id !== allIds.toSorted()[index])
+  ) {
+    return 'frozen and remaining piece ids must exactly partition all prepared pieces.'
+  }
+  return undefined
+}
+
+function preparedPieceId(piece: IrregularPreparedPiece): PieceId {
+  return piece.pieceId ?? piece.source.id
+}
+
+function placedPieceId(piece: IrregularPlacedPiece): PieceId {
+  return piece.placement.pieceId ?? piece.placement.sourcePieceId
 }
 
 function scoreCandidate(input: {
