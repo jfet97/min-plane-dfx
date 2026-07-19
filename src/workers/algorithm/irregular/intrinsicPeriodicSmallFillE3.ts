@@ -4,6 +4,7 @@ import type { IrregularPreparedPiece } from '@shared/irregular/domain.js'
 import {
   enumerateIntrinsicPeriodicCells,
   expandIntrinsicPeriodicCell,
+  rankIntrinsicPeriodicSeeds,
   type IntrinsicPeriodicCatalog
 } from './intrinsicPeriodicCells.js'
 import {
@@ -77,12 +78,17 @@ export function runIntrinsicPeriodicSmallFillE3(
       ({ key }) => key === catalog.selectedFamilyKey
     )
     for (const role of ['P1', 'P2'] as const) {
-      const cell = catalog.cells.find((candidate) => candidate.role === role)
-      if (cell === undefined || selectedFamily === undefined) {
+      const cells = catalog.cells.filter((candidate) => candidate.role === role)
+      if (cells.length === 0 || selectedFamily === undefined) {
         roles.push(invalidRole(role, 'no certified retained periodic cell'))
         continue
       }
-      const seed = (yield* expandIntrinsicPeriodicCell(cell, selectedFamily.members))[0]
+      const expansions = []
+      for (const cell of cells) {
+        const expansion = (yield* expandIntrinsicPeriodicCell(cell, selectedFamily.members))[0]
+        if (expansion !== undefined) expansions.push(expansion)
+      }
+      const seed = rankIntrinsicPeriodicSeeds(expansions)[0]
       if (seed === undefined) {
         roles.push(invalidRole(role, 'certified cell produced no exact finite expansion'))
         continue

@@ -15,11 +15,14 @@ import {
 import {
   canonicalPeriodicCellIdentityControl,
   derivePeriodicAxisBasisControl,
+  derivePeriodicAxisBasisCandidatesControl,
   exactAxisIntersectionsControl,
   enumerateIntrinsicPeriodicCells,
   expandIntrinsicPeriodicCell,
   farNeighborCertificate,
+  periodicMemberDoubledAreaControl,
   rankIntrinsicPeriodicCells,
+  rankIntrinsicPeriodicSeeds,
   shiftOrderedPairForbiddenBoundaryControl,
   validatePeriodicContactLatticeControl,
   type IntrinsicPeriodicBaseMember,
@@ -35,7 +38,8 @@ function point(x: number, y: number): IrregularPoint {
 function preparedPiece(
   id: string,
   family: string,
-  points: ReadonlyArray<IrregularPoint>
+  points: ReadonlyArray<IrregularPoint>,
+  rotations: ReadonlyArray<number> = [0, 90]
 ): IrregularPreparedPiece {
   const polygon = new IrregularPolygon({ points })
   const source = new ImportedPiece({
@@ -65,7 +69,7 @@ function preparedPiece(
       placementReference: point(0, 0),
       diagnostics: []
     }),
-    transforms: [0, 90].map(
+    transforms: rotations.map(
       (rotationDeg, index) =>
         new IrregularTransformCandidate({
           index,
@@ -161,6 +165,50 @@ describe('intrinsic periodic cells', () => {
         0
       )
     ).toContainEqual({ x: '1001/2', y: '0/1' })
+    const adjacent = derivePeriodicAxisBasisCandidatesControl([
+      [
+        { x: -1000, y: -1000 },
+        { x: 1000, y: -1000 },
+        { x: 1001, y: 1000 },
+        { x: -1000, y: 1000 }
+      ]
+    ])
+    expect(adjacent.map(([v1]) => v1.x)).toEqual(expect.arrayContaining([1, 1.001]))
+    const ringWithDetachedComponent = [
+      [
+        { x: -3000, y: -3000 },
+        { x: 3000, y: -3000 },
+        { x: 3000, y: -2000 },
+        { x: -3000, y: -2000 }
+      ],
+      [
+        { x: -3000, y: 2000 },
+        { x: 3000, y: 2000 },
+        { x: 3000, y: 3000 },
+        { x: -3000, y: 3000 }
+      ],
+      [
+        { x: -3000, y: -2000 },
+        { x: -2000, y: -2000 },
+        { x: -2000, y: 2000 },
+        { x: -3000, y: 2000 }
+      ],
+      [
+        { x: 2000, y: -2000 },
+        { x: 3000, y: -2000 },
+        { x: 3000, y: 2000 },
+        { x: 2000, y: 2000 }
+      ],
+      [
+        { x: 5000, y: -500 },
+        { x: 6000, y: -500 },
+        { x: 6000, y: 500 },
+        { x: 5000, y: 500 }
+      ]
+    ]
+    expect(
+      derivePeriodicAxisBasisCandidatesControl(ringWithDetachedComponent).length
+    ).toBeGreaterThan(0)
   })
 
   it('keeps BigInt far-neighbor arithmetic and independently checks contact lattices', async () => {
@@ -175,6 +223,18 @@ describe('intrinsic periodic cells', () => {
       geometry: transformed(square),
       point: point(0, 0)
     }
+    const halfGridTriangle = preparedPiece('half-grid', 'half-grid', [
+      point(0, 0),
+      point(0.001, 0),
+      point(0, 0.001)
+    ])
+    expect(
+      periodicMemberDoubledAreaControl({
+        piece: halfGridTriangle,
+        geometry: transformed(halfGridTriangle),
+        point: point(0, 0)
+      })
+    ).toBe('1')
     expect(
       farNeighborCertificate(
         [member],
@@ -259,7 +319,7 @@ describe('intrinsic periodic cells', () => {
       v1: { x: 2, y: 0 },
       v2: { x: 0, y: 1 },
       determinantGrid2: '2000000',
-      memberAreaGrid2: '2000000',
+      memberDoubledAreaGrid2: '4000000',
       density: 1,
       envelopeMaximumSideMm: 2,
       hullWasteRatio: 0,
@@ -286,17 +346,36 @@ describe('intrinsic periodic cells', () => {
     const lower = {
       ...cell,
       determinantGrid2: denominator,
-      memberAreaGrid2: '9007199254740991000000',
+      memberDoubledAreaGrid2: '9007199254740991000000',
       canonicalKey: 'lower'
     }
     const higher = {
       ...cell,
       determinantGrid2: denominator,
-      memberAreaGrid2: '9007199254740991000001',
+      memberDoubledAreaGrid2: '9007199254740991000001',
       canonicalKey: 'higher'
     }
     expect(
       rankIntrinsicPeriodicCells([lower, higher]).map(({ canonicalKey }) => canonicalKey)
     ).toEqual(['higher', 'lower'])
+    if (seed !== undefined) {
+      const topologicallyWeak = {
+        ...seed,
+        cellKey: 'denser-cell',
+        componentCount: 2,
+        isolatedPieceCount: 1,
+        largestComponentSize: 3
+      }
+      const topologicallyStrong = {
+        ...seed,
+        cellKey: 'less-dense-cell',
+        componentCount: 1,
+        isolatedPieceCount: 0,
+        largestComponentSize: 4
+      }
+      expect(rankIntrinsicPeriodicSeeds([topologicallyWeak, topologicallyStrong])[0]?.cellKey).toBe(
+        'less-dense-cell'
+      )
+    }
   })
 })

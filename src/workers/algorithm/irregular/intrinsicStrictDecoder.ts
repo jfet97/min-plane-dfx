@@ -295,6 +295,10 @@ export function constructIntrinsicStrictState(
       if (piece === undefined) continue
       const remainingPreparedPieces = input.remainingPreparedPieces.slice(pieceIndex + 1)
       const candidatesByFamily = new Map<string, ScoredCandidate>()
+      const containedCandidatesByFamily = new Map<
+        string,
+        ScoredCandidate & { containingGap: CanonicalIntrinsicGapRegion }
+      >()
       const gapRegions =
         typeof input.candidateMode === 'object'
           ? deriveCanonicalIntrinsicGapRegions(state.placedCollisionGeometries)
@@ -340,13 +344,23 @@ export function constructIntrinsicStrictState(
           if (incumbent === undefined || compareLocalScores(scored.score, incumbent.score) < 0) {
             candidatesByFamily.set(family, scored)
           }
+          if (scored.containingGap !== undefined) {
+            const containedScored = { ...scored, containingGap: scored.containingGap }
+            const containedIncumbent = containedCandidatesByFamily.get(family)
+            if (
+              containedIncumbent === undefined ||
+              compareGapContainedCandidates(containedScored, containedIncumbent) < 0
+            ) {
+              containedCandidatesByFamily.set(family, containedScored)
+            }
+          }
         }
       }
 
       const familyWinners = [...candidatesByFamily.values()]
       const selected =
         typeof input.candidateMode === 'object'
-          ? selectGapContainedWinner(familyWinners)
+          ? selectGapContainedWinner([...containedCandidatesByFamily.values(), ...familyWinners])
           : selectIntrinsicStrictFamilyWinner(familyWinners, input.candidateMode)
       const pieceId = piece.pieceId ?? piece.source.id
       stepTrace.push({
@@ -379,6 +393,12 @@ export function constructIntrinsicStrictState(
           beforeBounds === undefined || afterBounds === undefined
             ? Number.POSITIVE_INFINITY
             : afterBounds.width * afterBounds.height - beforeBounds.width * beforeBounds.height
+        const beforeSharedBoundaryLengthMm = state.sharedCollisionBoundaryLengthMm ?? 0
+        const afterSharedBoundaryLengthMm = selected.state.sharedCollisionBoundaryLengthMm ?? 0
+        const insertedSharedBoundaryLengthMm =
+          afterSharedBoundaryLengthMm >= beforeSharedBoundaryLengthMm
+            ? afterSharedBoundaryLengthMm - beforeSharedBoundaryLengthMm
+            : Number.NaN
         gapFillEvidence.push({
           pieceId,
           regionKey: selected.containingGap.canonicalKey,
@@ -386,9 +406,9 @@ export function constructIntrinsicStrictState(
           regionAreaAfterMm2,
           envelopeMaximumSideDeltaMm,
           envelopeAreaDeltaMm2,
-          sharedBoundaryLengthMm: selected.score.sharedBoundaryLengthMm,
+          sharedBoundaryLengthMm: insertedSharedBoundaryLengthMm,
           nonInert:
-            selected.score.sharedBoundaryLengthMm > 0 &&
+            insertedSharedBoundaryLengthMm > 0 &&
             envelopeMaximumSideDeltaMm === 0 &&
             envelopeAreaDeltaMm2 === 0 &&
             regionAreaAfterMm2 < selected.containingGap.areaMm2
@@ -504,13 +524,19 @@ function selectGapContainedWinner(
       (candidate): candidate is ScoredCandidate & { containingGap: CanonicalIntrinsicGapRegion } =>
         candidate.containingGap !== undefined
     )
-    .toSorted(
-      (first, second) =>
-        first.containingGap.areaMm2 - second.containingGap.areaMm2 ||
-        second.score.sharedBoundaryLengthMm - first.score.sharedBoundaryLengthMm ||
-        compareLocalScores(first.score, second.score)
-    )[0]
+    .toSorted(compareGapContainedCandidates)[0]
   return contained ?? selectIntrinsicStrictFamilyWinner(candidates, 'pure-growth')
+}
+
+function compareGapContainedCandidates(
+  first: ScoredCandidate & { containingGap: CanonicalIntrinsicGapRegion },
+  second: ScoredCandidate & { containingGap: CanonicalIntrinsicGapRegion }
+): number {
+  return (
+    first.containingGap.areaMm2 - second.containingGap.areaMm2 ||
+    second.score.sharedBoundaryLengthMm - first.score.sharedBoundaryLengthMm ||
+    compareLocalScores(first.score, second.score)
+  )
 }
 
 /** Selects among pure-growth transform-family winners under the requested E1 mode. */

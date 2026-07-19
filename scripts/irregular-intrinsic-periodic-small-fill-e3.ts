@@ -132,7 +132,7 @@ const report = {
       v1: cell.v1,
       v2: cell.v2,
       determinantGrid2: cell.determinantGrid2,
-      memberAreaGrid2: cell.memberAreaGrid2,
+      memberDoubledAreaGrid2: cell.memberDoubledAreaGrid2,
       density: cell.density,
       sharedBoundaryLengthMm: cell.sharedBoundaryLengthMm,
       canonicalKeySha256: sha256(cell.canonicalKey)

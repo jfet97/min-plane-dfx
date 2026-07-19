@@ -59,7 +59,7 @@ export interface IntrinsicPeriodicCell {
   readonly v1: IntrinsicPeriodicVector
   readonly v2: IntrinsicPeriodicVector
   readonly determinantGrid2: string
-  readonly memberAreaGrid2: string
+  readonly memberDoubledAreaGrid2: string
   readonly density: number
   readonly envelopeMaximumSideMm: number
   readonly hullWasteRatio: number
@@ -317,7 +317,7 @@ export function expandIntrinsicPeriodicCell(
         }
       }
     }
-    return candidates.toSorted(compareSeeds).slice(0, 1)
+    return rankIntrinsicPeriodicSeeds(candidates).slice(0, 1)
   })
 }
 
@@ -353,6 +353,13 @@ function compareSeeds(first: IntrinsicPeriodicSeed, second: IntrinsicPeriodicSee
     first.envelopeSpanMm - second.envelopeSpanMm ||
     first.canonicalKey.localeCompare(second.canonicalKey)
   )
+}
+
+/** Topology-first finite periodic expansion order across certified cells. */
+export function rankIntrinsicPeriodicSeeds(
+  seeds: ReadonlyArray<IntrinsicPeriodicSeed>
+): ReadonlyArray<IntrinsicPeriodicSeed> {
+  return seeds.toSorted(compareSeeds)
 }
 
 function normalizePlacedBottomLeft(
@@ -427,9 +434,10 @@ function deriveCells(input: {
         forbidden.push({ points: shiftedPoints })
       }
     }
-    const bases = [deriveAxisBasis(forbidden, false), deriveAxisBasis(forbidden, true)].filter(
-      (basis): basis is readonly [GridPoint, GridPoint] => basis !== undefined
-    )
+    const bases = [
+      ...deriveAxisBasisCandidates(forbidden, false),
+      ...deriveAxisBasisCandidates(forbidden, true)
+    ]
     const result: IntrinsicPeriodicCell[] = []
     for (const [rawV1, rawV2] of bases) {
       const canonical = canonicalizeBasis(rawV1, rawV2)
@@ -437,7 +445,7 @@ function deriveCells(input: {
       const certificate = yield* validateLattice(input.members, canonical)
       if (certificate === undefined) continue
       const determinantGrid2 = absBigInt(crossGrid(canonical[0], canonical[1]))
-      const memberAreaGrid2 = input.members.reduce(
+      const memberDoubledAreaGrid2 = input.members.reduce(
         (sum, member) => sum + polygonAreaGrid2(member.geometry, member.point),
         0n
       )
@@ -451,8 +459,8 @@ function deriveCells(input: {
         v1: fromGridPoint(canonical[0]),
         v2: fromGridPoint(canonical[1]),
         determinantGrid2: determinantGrid2.toString(),
-        memberAreaGrid2: memberAreaGrid2.toString(),
-        density: Number(memberAreaGrid2) / Number(determinantGrid2),
+        memberDoubledAreaGrid2: memberDoubledAreaGrid2.toString(),
+        density: Number(memberDoubledAreaGrid2) / (2 * Number(determinantGrid2)),
         envelopeMaximumSideMm: shape.maximumSideMm,
         hullWasteRatio: shape.hullWasteRatio,
         sharedBoundaryLengthMm: certificate.sharedBoundaryLengthMm,
@@ -467,47 +475,62 @@ function deriveAxisBasis(
   boundaries: ReadonlyArray<ForbiddenBoundary>,
   swapAxes: boolean
 ): readonly [GridPoint, GridPoint] | undefined {
+  return deriveAxisBasisCandidates(boundaries, swapAxes)[0]
+}
+
+function deriveAxisBasisCandidates(
+  boundaries: ReadonlyArray<ForbiddenBoundary>,
+  swapAxes: boolean
+): ReadonlyArray<readonly [GridPoint, GridPoint]> {
   const orientedRaw = boundaries.map(({ points, isHole }) => ({
     points: points.map((point) => (swapAxes ? { x: point.y, y: point.x } : point)),
     ...(isHole !== undefined ? { isHole } : {})
   }))
   const oriented = unionForbiddenBoundaries(orientedRaw)
-  if (oriented === undefined) return undefined
+  if (oriented === undefined) return []
   const axisIntersection = boundaryLineIntersections(oriented, 'y', 0n)
     .filter(({ x }) => compareRational(x, rational(0n)) > 0)
     .toSorted((first, second) => compareRational(first.x, second.x))[0]
-  if (axisIntersection === undefined) return undefined
-  const axis = { x: roundRational(axisIntersection.x), y: 0n }
-  if (axis.x <= 0n) return undefined
-  const shifted = unionForbiddenBoundaries([
-    ...oriented,
-    ...oriented.map(({ points, isHole }) => ({
-      points: points.map((point) => ({ x: point.x + axis.x, y: point.y })),
-      ...(isHole !== undefined ? { isHole } : {})
-    }))
-  ])
-  if (shifted === undefined) return undefined
-  const constrained = [
-    ...shifted.flatMap(({ points }) =>
-      points.map((point): RationalPoint => ({ x: rational(point.x), y: rational(point.y) }))
-    ),
-    ...boundaryLineIntersections(shifted, 'x', 0n),
-    ...boundaryLineIntersections(shifted, 'x', axis.x)
-  ]
-    .filter(
-      ({ x, y }) =>
-        compareRational(y, rational(0n)) > 0 &&
-        compareRational(x, rational(0n)) >= 0 &&
-        compareRational(x, rational(axis.x)) < 0
-    )
-    .toSorted(
-      (first, second) => compareRational(first.y, second.y) || compareRational(first.x, second.x)
-    )
-  const secondRational = constrained[0]
-  if (secondRational === undefined) return undefined
-  const second = { x: roundRational(secondRational.x), y: roundRational(secondRational.y) }
+  if (axisIntersection === undefined) return []
   const unswap = (point: GridPoint): GridPoint => (swapAxes ? { x: point.y, y: point.x } : point)
-  return [unswap(axis), unswap(second)]
+  const result = new Map<string, readonly [GridPoint, GridPoint]>()
+  for (const axisX of canonicalGridAlternatives(axisIntersection.x).filter((value) => value > 0n)) {
+    const axis = { x: axisX, y: 0n }
+    const shifted = unionForbiddenBoundaries([
+      ...oriented,
+      ...oriented.map(({ points, isHole }) => ({
+        points: points.map((point) => ({ x: point.x + axis.x, y: point.y })),
+        ...(isHole !== undefined ? { isHole } : {})
+      }))
+    ])
+    if (shifted === undefined) continue
+    const constrained = [
+      ...shifted.flatMap(({ points }) =>
+        points.map((point): RationalPoint => ({ x: rational(point.x), y: rational(point.y) }))
+      ),
+      ...boundaryLineIntersections(shifted, 'x', 0n),
+      ...boundaryLineIntersections(shifted, 'x', axis.x)
+    ]
+      .filter(
+        ({ x, y }) =>
+          compareRational(y, rational(0n)) > 0 &&
+          compareRational(x, rational(0n)) >= 0 &&
+          compareRational(x, rational(axis.x)) < 0
+      )
+      .toSorted(
+        (first, second) => compareRational(first.y, second.y) || compareRational(first.x, second.x)
+      )
+    const secondRational = constrained[0]
+    if (secondRational === undefined) continue
+    for (const secondX of canonicalGridAlternatives(secondRational.x)) {
+      for (const secondY of canonicalGridAlternatives(secondRational.y)) {
+        if (secondY <= 0n || secondX < 0n || secondX >= axis.x) continue
+        const basis = [unswap(axis), unswap({ x: secondX, y: secondY })] as const
+        result.set(`${basis[0].x},${basis[0].y};${basis[1].x},${basis[1].y}`, basis)
+      }
+    }
+  }
+  return [...result.values()]
 }
 
 /** Source-control seam for exact union plus axis-dual basis derivation. */
@@ -520,6 +543,20 @@ export function derivePeriodicAxisBasisControl(
   }))
   const basis = deriveAxisBasis(converted, swapAxes)
   return basis === undefined ? undefined : [fromGridPoint(basis[0]), fromGridPoint(basis[1])]
+}
+
+/** Source-control seam exposing every adjacent-grid basis candidate. */
+export function derivePeriodicAxisBasisCandidatesControl(
+  boundaries: ReadonlyArray<ReadonlyArray<{ readonly x: number; readonly y: number }>>,
+  swapAxes = false
+): ReadonlyArray<readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]> {
+  const converted: ForbiddenBoundary[] = boundaries.map((points) => ({
+    points: points.map(({ x, y }) => ({ x: BigInt(x), y: BigInt(y) }))
+  }))
+  return deriveAxisBasisCandidates(converted, swapAxes).map(([first, second]) => [
+    fromGridPoint(first),
+    fromGridPoint(second)
+  ])
 }
 
 /** Source-control seam proving the ordered moving-base offset sign. */
@@ -681,6 +718,14 @@ function roundRational(value: Rational): bigint {
   if (remainder === 0n) return quotient
   const direction = value.numerator < 0n ? -1n : 1n
   return absBigInt(remainder) * 2n >= value.denominator ? quotient + direction : quotient
+}
+
+function canonicalGridAlternatives(value: Rational): ReadonlyArray<bigint> {
+  const quotient = value.numerator / value.denominator
+  const remainder = value.numerator % value.denominator
+  const floor = remainder < 0n ? quotient - 1n : quotient
+  const ceil = remainder > 0n ? quotient + 1n : quotient
+  return [...new Set([roundRational(value), floor, ceil])].toSorted(compareBigInt)
 }
 
 function rationalPointKey(point: RationalPoint): string {
@@ -998,7 +1043,12 @@ function polygonAreaGrid2(geometry: TransformedCollisionGeometry, point: Irregul
     if (first === undefined || second === undefined) return 0n
     doubled += first.x * second.y - second.x * first.y
   }
-  return absBigInt(doubled) / 2n
+  return absBigInt(doubled)
+}
+
+/** Source-control seam preserving odd doubled grid areas without truncation. */
+export function periodicMemberDoubledAreaControl(member: IntrinsicPeriodicBaseMember): string {
+  return polygonAreaGrid2(member.geometry, member.point).toString()
 }
 
 function measureBaseCellShape(
@@ -1016,15 +1066,16 @@ function measureBaseCellShape(
     })
   )
   if (hull.length < 3) return undefined
-  const hullAreaGrid2 = polygonGridArea(hull)
-  const memberAreaGrid2 = members.reduce(
+  const hullDoubledAreaGrid2 = polygonGridArea(hull)
+  const memberDoubledAreaGrid2 = members.reduce(
     (sum, member) => sum + polygonAreaGrid2(member.geometry, member.point),
     0n
   )
-  if (hullAreaGrid2 <= 0n || memberAreaGrid2 > hullAreaGrid2) return undefined
+  if (hullDoubledAreaGrid2 <= 0n || memberDoubledAreaGrid2 > hullDoubledAreaGrid2) return undefined
   return {
     maximumSideMm: Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY),
-    hullWasteRatio: Number(hullAreaGrid2 - memberAreaGrid2) / Number(hullAreaGrid2)
+    hullWasteRatio:
+      Number(hullDoubledAreaGrid2 - memberDoubledAreaGrid2) / Number(hullDoubledAreaGrid2)
   }
 }
 
@@ -1065,13 +1116,13 @@ function polygonGridArea(points: ReadonlyArray<GridPoint>): bigint {
     if (first === undefined || second === undefined) return 0n
     doubled += first.x * second.y - second.x * first.y
   }
-  return absBigInt(doubled) / 2n
+  return absBigInt(doubled)
 }
 
 function compareCells(first: IntrinsicPeriodicCell, second: IntrinsicPeriodicCell): number {
   const densityOrder = compareBigInt(
-    BigInt(second.memberAreaGrid2) * BigInt(first.determinantGrid2),
-    BigInt(first.memberAreaGrid2) * BigInt(second.determinantGrid2)
+    BigInt(second.memberDoubledAreaGrid2) * BigInt(first.determinantGrid2),
+    BigInt(first.memberDoubledAreaGrid2) * BigInt(second.determinantGrid2)
   )
   return (
     densityOrder ||

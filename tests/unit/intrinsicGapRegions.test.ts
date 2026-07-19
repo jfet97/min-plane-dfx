@@ -1,4 +1,4 @@
-import { Effect } from 'effect'
+import { Effect, Layer } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { DxfGeometrySummary, ImportedPiece } from '@shared/domain/dxf.js'
 import { Rect } from '@shared/domain/geometry.js'
@@ -8,6 +8,7 @@ import {
   IrregularBounds,
   IrregularPlacedPiece,
   IrregularPlacement,
+  IrregularPlacementCandidate,
   IrregularPoint,
   IrregularPolygon,
   IrregularPreparedPiece,
@@ -22,6 +23,7 @@ import {
 } from '../../src/workers/algorithm/irregular/intrinsicGapRegions.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
+import { NfpIfpService } from '../../src/workers/irregular/services.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -136,6 +138,65 @@ describe('intrinsic gap regions', () => {
       envelopeMaximumSideDeltaMm: 0,
       envelopeAreaDeltaMm2: 0,
       nonInert: true
+    })
+  })
+
+  it('retains contained candidates before same-family growth collapse and measures incremental contact', async () => {
+    const bottomLeft = piece('bottom-left', 1, 1)
+    const bottomRight = piece('bottom-right', 1, 1)
+    const topLeft = piece('top-left', 1, 1)
+    const small = piece('small', 1, 1)
+    const all = [bottomLeft, bottomRight, topLeft, small]
+    const frozen = [place(bottomLeft, 0, 0), place(bottomRight, 1, 0), place(topLeft, 0, 4)]
+    const candidateService = Layer.succeed(NfpIfpService, {
+      computeNfp: () => Effect.die('unused'),
+      computeIfpBounds: () => Effect.die('unused'),
+      generatePlacementCandidates: ({ moving }) =>
+        Effect.succeed([
+          new IrregularPlacementCandidate({
+            pieceId: moving.sourcePieceId,
+            transform: moving.transform,
+            point: point(1, 4),
+            diagnostics: []
+          }),
+          new IrregularPlacementCandidate({
+            pieceId: moving.sourcePieceId,
+            transform: moving.transform,
+            point: point(0.5, 2),
+            diagnostics: []
+          })
+        ])
+    })
+    const regions = deriveCanonicalIntrinsicGapRegions(frozen)
+    expect(
+      regions?.some((region) =>
+        candidateContainedInIntrinsicGap(
+          place(small, 0, 0).collisionGeometry,
+          point(0.5, 2),
+          region
+        )
+      )
+    ).toBe(true)
+    const result = await Effect.runPromise(
+      constructIntrinsicStrictState({
+        allPreparedPieces: all,
+        remainingPreparedPieces: [small],
+        frozenPlaced: frozen,
+        candidateMode: { kind: 'gap-contained' }
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(candidateService)
+      )
+    )
+
+    expect(result.state.placedCollisionGeometries.at(-1)?.placement.transform).toMatchObject({
+      translateX: 0.5,
+      translateY: 2
+    })
+    expect(result.gapFillEvidence[0]).toMatchObject({
+      sharedBoundaryLengthMm: 0,
+      nonInert: false
     })
   })
 })
