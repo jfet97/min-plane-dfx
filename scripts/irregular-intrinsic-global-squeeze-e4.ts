@@ -37,6 +37,7 @@ const FIXTURE = fileURLToPath(
   new URL('../tests/fixtures/irregularSheetInvariance/mixed61-request.json', import.meta.url)
 )
 const PREREGISTRATION =
+  argument('--preregistration') ??
   '/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration.md'
 const ROOMY_SHEET = new SheetSpec({ width: 2000, height: 2700, label: '2000x2700' })
 const MAXIMUM_RUNTIME_MS = 110_000
