@@ -29,8 +29,8 @@ export interface CanonicalLayoutTopology {
 /** Exact grid-area representation of the topology hull-gap ratio. */
 export interface CanonicalLayoutTopologyExact {
   readonly topology: CanonicalLayoutTopology
-  readonly hullGapNumeratorGrid2: number
-  readonly hullAreaGrid2: number
+  readonly hullGapDoubledAreaGrid2: number
+  readonly hullDoubledAreaGrid2: number
 }
 
 export interface CanonicalEnclosedCavityMetrics {
@@ -159,7 +159,11 @@ export function measureCanonicalLayoutTopologyExact(
     return undefined
   }
   const largestOccupiedHullGapRatio = hullArea === 0 ? 0 : largestGapArea / hullArea
+  const hullGapDoubledAreaGrid2 = Math.round(largestGapArea * 2)
+  const hullDoubledAreaGrid2 = Math.round(hullArea * 2)
   return Number.isFinite(largestOccupiedHullGapRatio)
+    && Number.isSafeInteger(hullGapDoubledAreaGrid2)
+    && Number.isSafeInteger(hullDoubledAreaGrid2)
     ? {
         topology: {
           enclosedCavityCount,
@@ -169,8 +173,8 @@ export function measureCanonicalLayoutTopologyExact(
           largestPositiveContactComponentRatio:
             polygons.length === 0 ? 0 : graph.largestPositiveContactComponentSize / polygons.length
         },
-        hullGapNumeratorGrid2: largestGapArea,
-        hullAreaGrid2: hullArea
+        hullGapDoubledAreaGrid2,
+        hullDoubledAreaGrid2
       }
     : undefined
 }

@@ -25,8 +25,8 @@ function endpoint(input: {
       envelopeMaximumSideGrid: 10,
       enclosedCavityCount: 0,
       hullGapRatio: (input.hullNumerator ?? 1) / (input.hullDenominator ?? 10),
-      hullGapNumeratorGrid2: input.hullNumerator ?? 1,
-      hullAreaGrid2: input.hullDenominator ?? 10,
+      hullGapDoubledAreaGrid2: input.hullNumerator ?? 1,
+      hullDoubledAreaGrid2: input.hullDenominator ?? 10,
       isolatedPieceCount: 0,
       positiveContactComponentCount: 1,
       largestPositiveContactComponentRatio: 1,
@@ -64,6 +64,25 @@ describe('intrinsic V7 seed archive', () => {
     ])
 
     expect(retained.map(({ stateKey }) => stateKey)).toContain('ten-percent')
+  })
+
+  it('accepts half-grid hull areas through a doubled integer representation', () => {
+    expect(() =>
+      retainV7LegalEndpointArchive([
+        endpoint({
+          seedRole: 'canonical-grid',
+          stateKey: 'half-grid-gap',
+          hullNumerator: 66_189_013_267,
+          hullDenominator: 200_000_000_001
+        }),
+        endpoint({
+          seedRole: 'legacy-absolute-envelope',
+          stateKey: 'integer-grid-gap',
+          hullNumerator: 66_189_013_268,
+          hullDenominator: 200_000_000_002
+        })
+      ])
+    ).not.toThrow()
   })
 
   it('enumerates every balanced integer allocation for an odd atomic move', () => {

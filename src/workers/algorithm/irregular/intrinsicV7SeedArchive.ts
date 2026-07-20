@@ -99,8 +99,8 @@ export interface IntrinsicV7LegalEndpointMetric {
   readonly envelopeMaximumSideGrid: number
   readonly enclosedCavityCount: number
   readonly hullGapRatio: number
-  readonly hullGapNumeratorGrid2: number
-  readonly hullAreaGrid2: number
+  readonly hullGapDoubledAreaGrid2: number
+  readonly hullDoubledAreaGrid2: number
   readonly isolatedPieceCount: number
   readonly positiveContactComponentCount: number
   readonly largestPositiveContactComponentRatio: number
@@ -794,8 +794,8 @@ function makeV7LegalEndpoint(
       envelopeMaximumSideGrid: Math.round(envelope.maximumSideMm * 1_000),
       enclosedCavityCount: cavities.count,
       hullGapRatio: topologyExact.topology.largestOccupiedHullGapRatio,
-      hullGapNumeratorGrid2: topologyExact.hullGapNumeratorGrid2,
-      hullAreaGrid2: topologyExact.hullAreaGrid2,
+      hullGapDoubledAreaGrid2: topologyExact.hullGapDoubledAreaGrid2,
+      hullDoubledAreaGrid2: topologyExact.hullDoubledAreaGrid2,
       isolatedPieceCount: topologyExact.topology.isolatedPieceCount,
       positiveContactComponentCount: topologyExact.topology.positiveContactComponentCount,
       largestPositiveContactComponentRatio:
@@ -958,13 +958,19 @@ function dominatesV7P(first: IntrinsicV7Endpoint, second: IntrinsicV7Endpoint): 
 }
 
 function compareHullGapRatio(
-  first: Pick<IntrinsicV7LegalEndpointMetric, 'hullGapNumeratorGrid2' | 'hullAreaGrid2'>,
-  second: Pick<IntrinsicV7LegalEndpointMetric, 'hullGapNumeratorGrid2' | 'hullAreaGrid2'>
+  first: Pick<
+    IntrinsicV7LegalEndpointMetric,
+    'hullGapDoubledAreaGrid2' | 'hullDoubledAreaGrid2'
+  >,
+  second: Pick<
+    IntrinsicV7LegalEndpointMetric,
+    'hullGapDoubledAreaGrid2' | 'hullDoubledAreaGrid2'
+  >
 ): number {
-  const firstNumerator = BigInt(first.hullGapNumeratorGrid2)
-  const secondNumerator = BigInt(second.hullGapNumeratorGrid2)
-  const firstDenominator = BigInt(Math.max(1, first.hullAreaGrid2))
-  const secondDenominator = BigInt(Math.max(1, second.hullAreaGrid2))
+  const firstNumerator = BigInt(first.hullGapDoubledAreaGrid2)
+  const secondNumerator = BigInt(second.hullGapDoubledAreaGrid2)
+  const firstDenominator = BigInt(Math.max(1, first.hullDoubledAreaGrid2))
+  const secondDenominator = BigInt(Math.max(1, second.hullDoubledAreaGrid2))
   const left = firstNumerator * secondDenominator
   const right = secondNumerator * firstDenominator
   return left < right ? -1 : left > right ? 1 : 0
