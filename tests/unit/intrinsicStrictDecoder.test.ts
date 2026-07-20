@@ -726,6 +726,7 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     })
 
     expect(selection.slots.filter(({ role }) => role === 'contact')).toHaveLength(1)
+    expect(selection.slots.filter(({ role }) => role === 'cohesion')).toHaveLength(1)
     expect(selection.slots.filter(({ role }) => role === 'dispersion').length).toBeGreaterThan(0)
     expect(selection.slots).toHaveLength(7)
   })

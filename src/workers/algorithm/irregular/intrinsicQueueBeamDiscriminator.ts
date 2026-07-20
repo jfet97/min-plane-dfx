@@ -355,7 +355,7 @@ export interface IntrinsicReferenceSuccessorReachabilityAudit {
 }
 
 interface IntrinsicPartialGeometricBeamTraceSlot {
-  readonly role: 'breadth' | 'contact' | 'dispersion'
+  readonly role: 'breadth' | 'contact' | 'cohesion' | 'dispersion'
   readonly layer: number
   readonly visit: number
   readonly futureEquivalenceDigest: string
@@ -2358,7 +2358,7 @@ export interface IntrinsicPartialGeometricBeamSelection<T> {
     readonly unlayeredCandidateCount: number
   }
   readonly slots: ReadonlyArray<{
-    readonly role: 'breadth' | 'contact' | 'dispersion'
+    readonly role: 'breadth' | 'contact' | 'cohesion' | 'dispersion'
     readonly layer: number
     readonly visit: number
     readonly futureEquivalenceKey: string
@@ -2418,7 +2418,7 @@ export function selectIntrinsicPartialGeometricBeam<
   const visits = new Map<number, number>()
   const append = (
     candidate: T | undefined,
-    role: 'breadth' | 'contact' | 'dispersion',
+    role: 'breadth' | 'contact' | 'cohesion' | 'dispersion',
     dispersion?: OccupiedDispersionWitness
   ) => {
     if (candidate === undefined || selectedKeys.has(candidate.futureEquivalenceKey)) return false
@@ -2458,6 +2458,12 @@ export function selectIntrinsicPartialGeometricBeam<
       .filter(({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey))
       .toSorted(comparePartialContactCandidate)[0]
     if (append(contact, 'contact')) remaining -= 1
+  }
+  if (remaining >= 2) {
+    const cohesion = selectable
+      .filter(({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey))
+      .toSorted(comparePartialCohesionCandidate)[0]
+    if (append(cohesion, 'cohesion')) remaining -= 1
   }
 
   const retainedForDistance = (): ReadonlyArray<T> =>
@@ -2547,6 +2553,18 @@ function comparePartialContactCandidate(
 ): number {
   return (
     compareBoundedContact(first.axes, second.axes) ||
+    compareCompactness(first.axes, second.axes) ||
+    compareVoids(first.axes, second.axes) ||
+    first.futureEquivalenceKey.localeCompare(second.futureEquivalenceKey)
+  )
+}
+
+function comparePartialCohesionCandidate(
+  first: IntrinsicPartialGeometricBeamCandidate,
+  second: IntrinsicPartialGeometricBeamCandidate
+): number {
+  return (
+    compareFragmentation(first.axes, second.axes) ||
     compareCompactness(first.axes, second.axes) ||
     compareVoids(first.axes, second.axes) ||
     first.futureEquivalenceKey.localeCompare(second.futureEquivalenceKey)
