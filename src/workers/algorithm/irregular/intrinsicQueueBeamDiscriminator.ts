@@ -188,6 +188,12 @@ export interface IntrinsicDelayedLineageStepReport {
   readonly survivesAtExperimentalWidths: Readonly<
     Record<'0' | '1' | '3' | '7' | '12', boolean>
   >
+  readonly experimentalWidthRoles: Readonly<
+    Record<
+      '0' | '1' | '3' | '7' | '12',
+      'protected' | IntrinsicPartialGeometricBeamRole | 'not-retained'
+    >
+  >
 }
 
 export interface IntrinsicCommensurateQueueOrderReport {
@@ -354,8 +360,10 @@ export interface IntrinsicReferenceSuccessorReachabilityAudit {
     | 'generated-with-canonical-pose-delta'
 }
 
+type IntrinsicPartialGeometricBeamRole = 'breadth' | 'contact' | 'cohesion' | 'dispersion'
+
 interface IntrinsicPartialGeometricBeamTraceSlot {
-  readonly role: 'breadth' | 'contact' | 'cohesion' | 'dispersion'
+  readonly role: IntrinsicPartialGeometricBeamRole
   readonly layer: number
   readonly visit: number
   readonly futureEquivalenceDigest: string
@@ -542,6 +550,27 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
                 ({ canonicalGeometryKey }) =>
                   canonicalGeometryKey === referenceOutcome.selected?.canonicalGeometryKey
               )
+        const experimentalWidthRoles = Object.fromEntries(
+          experimentalWidths.map((width) => {
+            if (referenceProtected?.canonicalGeometryKey === expectedReferenceKey) {
+              return [String(width), 'protected']
+            }
+            const selection = selectIntrinsicPartialGeometricBeam({
+              candidates: referenceEntries,
+              experimentalWidth: width,
+              ...(referenceProtected === undefined
+                ? {}
+                : { protectedControl: referenceProtected })
+            })
+            const role = selection.slots.find(
+              ({ canonicalGeometryKey }) => canonicalGeometryKey === expectedReferenceKey
+            )?.role
+            return [String(width), role ?? 'not-retained']
+          })
+        ) as Record<
+          '0' | '1' | '3' | '7' | '12',
+          'protected' | IntrinsicPartialGeometricBeamRole | 'not-retained'
+        >
         delayedLineage = {
           expectedCanonicalGeometryKey: expectedReferenceKey,
           generated: referenceCandidate !== undefined,
@@ -564,19 +593,11 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
             experimentalWidths.map((width) => [
               String(width),
               referenceCandidate !== undefined &&
-                (referenceProtected?.canonicalGeometryKey === expectedReferenceKey ||
-                  selectIntrinsicPartialGeometricBeam({
-                    candidates: referenceEntries,
-                    experimentalWidth: width,
-                    ...(referenceProtected === undefined
-                      ? {}
-                      : { protectedControl: referenceProtected })
-                  }).retained.some(
-                    ({ canonicalGeometryKey }) =>
-                      canonicalGeometryKey === expectedReferenceKey
-                  ))
+                experimentalWidthRoles[String(width) as keyof typeof experimentalWidthRoles] !==
+                  'not-retained'
             ])
-          ) as Record<'0' | '1' | '3' | '7' | '12', boolean>
+          ) as Record<'0' | '1' | '3' | '7' | '12', boolean>,
+          experimentalWidthRoles
         }
         if (referenceCandidate === undefined) {
           firstMissingReferenceDepth = depth
@@ -2358,7 +2379,7 @@ export interface IntrinsicPartialGeometricBeamSelection<T> {
     readonly unlayeredCandidateCount: number
   }
   readonly slots: ReadonlyArray<{
-    readonly role: 'breadth' | 'contact' | 'cohesion' | 'dispersion'
+    readonly role: IntrinsicPartialGeometricBeamRole
     readonly layer: number
     readonly visit: number
     readonly futureEquivalenceKey: string
@@ -2418,7 +2439,7 @@ export function selectIntrinsicPartialGeometricBeam<
   const visits = new Map<number, number>()
   const append = (
     candidate: T | undefined,
-    role: 'breadth' | 'contact' | 'cohesion' | 'dispersion',
+    role: IntrinsicPartialGeometricBeamRole,
     dispersion?: OccupiedDispersionWitness
   ) => {
     if (candidate === undefined || selectedKeys.has(candidate.futureEquivalenceKey)) return false
