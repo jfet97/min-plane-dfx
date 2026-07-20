@@ -59,7 +59,9 @@ import {
 } from '../../src/workers/algorithm/irregular/intrinsicSqueezeDisruptSeparate.js'
 import {
   dedupeIntrinsicRelaxedStates,
+  createIntrinsicPhaseSignatureMemo,
   evaluateIntrinsicSeparation,
+  intrinsicPhaseSignatureCacheStats,
   intrinsicDisruptionProposals,
   intrinsicFocusedProposals,
   intrinsicFocusedProposalsForPiece,
@@ -323,6 +325,12 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(stateKey).toMatch(/^sha256:[0-9a-f]{64}$/)
     expect(alternateStateKey).toMatch(/^sha256:[0-9a-f]{64}$/)
     expect(stateKey).not.toBe(alternateStateKey)
+    const phaseMemo = createIntrinsicPhaseSignatureMemo()
+    expect(intrinsicRelaxedStateKey(catalog, state, phaseMemo)).toBe(stateKey)
+    expect(intrinsicRelaxedStateKey(catalog, alternateState, phaseMemo)).toBe(
+      alternateStateKey
+    )
+    expect(intrinsicPhaseSignatureCacheStats(phaseMemo).cacheHitCount).toBeGreaterThan(0)
     const transformProposals = intrinsicFocusedProposalsForPiece({
       catalog,
       state,

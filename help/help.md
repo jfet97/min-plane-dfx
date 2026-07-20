@@ -173,6 +173,20 @@ automatically discards every intermediate branch that misses it.
   sheet dimensions. A universal single-sheet intrinsic decoder remains a
   separate research objective, not a blocker for this accepted result.
 
+### V7 Seed Archive And Independent Pressure Arms (Experiment Only)
+
+The V7 branch starts from the retained exactness foundation rather than changing
+production. It has two independently constructed, sheet-free canonical-exact
+seeds (max-side-first and legacy absolute-envelope), a phase-aware state-key
+cache, a capacity-eight legal endpoint archive keyed by future state identity,
+and independent control/split/atomic/refine pressure arms. Every protection and
+archive admission uses canonical grid structure; SAT is proposal guidance and a
+tie-break only. The 12,000-evaluation / 60-second budget is per arm, not per
+seed or ratio. Its new code has focused unit coverage, but it has **no accepted
+layout claim yet**: immutable Triangle-20 and Mixed-61 diagnostics, rendered
+artifacts, and combined review are required before promotion or selective replay.
+See [the V7 Stage 0/1 report](research/v7-seed-archive-stage0-stage1.md).
+
 Every completed experiment must be recorded below as accepted or rejected. An
 uncommitted temporary script or a visually attractive image is not production
 evidence.

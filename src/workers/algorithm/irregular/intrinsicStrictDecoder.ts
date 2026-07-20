@@ -79,7 +79,10 @@ export interface IntrinsicStrictLocalScore {
   readonly canonicalCombinedGeometryKey: string
 }
 
-export type IntrinsicStrictComparatorMode = 'pure-growth' | 'contact-band'
+export type IntrinsicStrictComparatorMode =
+  | 'pure-growth'
+  | 'legacy-absolute-envelope'
+  | 'contact-band'
 
 export type IntrinsicStrictCandidateMode =
   | IntrinsicStrictComparatorMode
@@ -574,6 +577,9 @@ export function selectIntrinsicStrictFamilyWinner<T extends IntrinsicStrictFamil
   candidates: ReadonlyArray<T>,
   comparatorMode: IntrinsicStrictComparatorMode
 ): T | undefined {
+  if (comparatorMode === 'legacy-absolute-envelope') {
+    return candidates.toSorted(compareLegacyAbsoluteEnvelopeCandidates)[0]
+  }
   const pureLeader = candidates.reduce<T | undefined>(
     (best, candidate) =>
       best === undefined || compareLocalScores(candidate.score, best.score) < 0 ? candidate : best,
@@ -593,6 +599,25 @@ export function selectIntrinsicStrictFamilyWinner<T extends IntrinsicStrictFamil
           )
     )
     .toSorted(compareContactBandCandidates)[0]
+}
+
+/** Historical absolute-envelope role retained as an exact, sheet-free seed. */
+function compareLegacyAbsoluteEnvelopeCandidates(
+  first: IntrinsicStrictFamilyWinner,
+  second: IntrinsicStrictFamilyWinner
+): number {
+  return (
+    canonicalAreaMetric(first.score.envelopeAreaMm2) -
+      canonicalAreaMetric(second.score.envelopeAreaMm2) ||
+    canonicalLinearMetric(first.score.maximumSideMm) -
+      canonicalLinearMetric(second.score.maximumSideMm) ||
+    canonicalLinearMetric(first.score.envelopeSpanMm) -
+      canonicalLinearMetric(second.score.envelopeSpanMm) ||
+    second.score.sharedBoundaryLengthMm - first.score.sharedBoundaryLengthMm ||
+    first.score.canonicalCombinedGeometryKey.localeCompare(
+      second.score.canonicalCombinedGeometryKey
+    )
+  )
 }
 
 function compareContactBandCandidates(

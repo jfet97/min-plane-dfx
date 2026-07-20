@@ -132,6 +132,35 @@ coordinate generator, or reserved conflict slot is part of this foundation.
 The older adaptive-depth helpers and adaptive-only termination labels are also
 dormant compatibility seams; the current schedule uses only mandatory sweeps.
 
+The isolated V7 seed/archive experiment keeps that E4 path intact while
+testing a replacement controller with stricter observability boundaries. Each
+independent arm constructs two complete canonical-exact, sheet-free seeds:
+`canonical-grid` uses max-side-first growth and `legacy-absolute-envelope`
+uses area-first absolute-envelope growth. Neither seed reads a requested sheet.
+The controller caches immutable transform/basis phase signatures per run and
+reports hits/misses. It ranks all infeasible survivors by an exact canonical
+pressure tuple—wall offender count, overlap pair count, conflicted-piece count,
+wall overrun, doubled Clipper overlap area, envelope area, maximum side, and
+span—before using SAT only as a deterministic tie-break and proposal direction.
+Canonical legal states are archive-only: they do not terminate the scan or take
+an infeasible-pool slot. The capacity-eight endpoint archive deduplicates future
+states by phase-aware relaxed state key, while terminal rendering may later
+deduplicate rigid quarter turns. Its seed representatives and Pareto selections
+compare hull-gap fractions by cross multiplication, not floating ratios.
+
+V7 Stage 1 runs `control`, `split`, `atomic`, and `refine` as independent
+arms. Each arm receives one 12,000-evaluation / 60-second budget shared across
+both seeds and all three contraction ratios. `split` evaluates q=1/3, 1/2, and
+2/3 partitions on the existing contraction axis; `atomic` moves the strongest
+canonical positive-overlap pair with every exact balanced integer allocation;
+`refine` exposes the existing two-radius vocabulary without requiring atomic
+success. No combinations, graph cut, rigid component transport, or broad
+coordinate descent are enabled at this stage. Full candidate records are
+bounded to final pool/archive survivors and four deterministic sample kinds per
+`(arm, seed, ratio)`, so a Stage 1 arm has at most 24 samples. V7 remains
+experiment-only until its provenance runs, triangle gates, and review establish
+that it improves an exact completed layout rather than merely a relaxed state.
+
 At no more than five registered points, E4 projects a relaxed state back to the
 exact geometry domain: canonicalize to the collision grid, remove both
 endpoints of exact conflicts plus target-wall offenders, pin each removed piece

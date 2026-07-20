@@ -26,6 +26,13 @@ export interface CanonicalLayoutTopology {
   readonly largestPositiveContactComponentRatio: number
 }
 
+/** Exact grid-area representation of the topology hull-gap ratio. */
+export interface CanonicalLayoutTopologyExact {
+  readonly topology: CanonicalLayoutTopology
+  readonly hullGapNumeratorGrid2: number
+  readonly hullAreaGrid2: number
+}
+
 export interface CanonicalEnclosedCavityMetrics {
   readonly count: number
   readonly totalAreaMm2: number
@@ -127,6 +134,13 @@ export function canonicalCollisionLayoutIdentity(
 export function measureCanonicalLayoutTopology(
   placed: ReadonlyArray<IrregularPlacedPiece>
 ): CanonicalLayoutTopology | undefined {
+  return measureCanonicalLayoutTopologyExact(placed)?.topology
+}
+
+/** Sheet-free topology with a hull-gap ratio preserved as exact grid-area terms. */
+export function measureCanonicalLayoutTopologyExact(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): CanonicalLayoutTopologyExact | undefined {
   const polygons = canonicalPlacedPolygons(placed)
   if (polygons === undefined) return undefined
   const hull = convexHull(polygons.flatMap(({ path }) => path.map(({ x, y }) => ({ x, y }))))
@@ -147,12 +161,16 @@ export function measureCanonicalLayoutTopology(
   const largestOccupiedHullGapRatio = hullArea === 0 ? 0 : largestGapArea / hullArea
   return Number.isFinite(largestOccupiedHullGapRatio)
     ? {
-        enclosedCavityCount,
-        largestOccupiedHullGapRatio,
-        occupiedEnvelopeAspectRatio,
-        ...graph,
-        largestPositiveContactComponentRatio:
-          polygons.length === 0 ? 0 : graph.largestPositiveContactComponentSize / polygons.length
+        topology: {
+          enclosedCavityCount,
+          largestOccupiedHullGapRatio,
+          occupiedEnvelopeAspectRatio,
+          ...graph,
+          largestPositiveContactComponentRatio:
+            polygons.length === 0 ? 0 : graph.largestPositiveContactComponentSize / polygons.length
+        },
+        hullGapNumeratorGrid2: largestGapArea,
+        hullAreaGrid2: hullArea
       }
     : undefined
 }

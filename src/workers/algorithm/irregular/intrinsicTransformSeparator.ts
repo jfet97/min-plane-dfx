@@ -69,6 +69,20 @@ export interface IntrinsicSeparatorWeights {
   readonly byConflictKey: ReadonlyMap<string, number>
 }
 
+/** Per-run cache for immutable transform/basis phase signatures. */
+export interface IntrinsicPhaseSignatureMemo {
+  readonly byCatalogEntryAndBasis: Map<string, string | undefined>
+  requestCount: number
+  cacheHitCount: number
+  cacheMissCount: number
+}
+
+export interface IntrinsicPhaseSignatureCacheStats {
+  readonly requestCount: number
+  readonly cacheHitCount: number
+  readonly cacheMissCount: number
+}
+
 interface GridPoint {
   readonly x: number
   readonly y: number
@@ -161,12 +175,13 @@ export function provisionalLayoutFromRelaxedState(
 /** Complete-state identity, translation-invariant on the canonical collision grid. */
 export function intrinsicRelaxedStateKey(
   catalog: IntrinsicTransformCatalog,
-  state: IntrinsicRelaxedState
+  state: IntrinsicRelaxedState,
+  phaseSignatureMemo?: IntrinsicPhaseSignatureMemo
 ): string | undefined {
   const canonical = canonicalizeRelaxedState(catalog, state)
   if (canonical === undefined) return undefined
   const keyed = canonical.poses.map((pose) => {
-    const phaseSignature = translationPhaseSignature(catalog, pose)
+    const phaseSignature = translationPhaseSignature(catalog, pose, phaseSignatureMemo)
     const finiteTransform = catalog.entries
       .find(({ pieceId }) => pieceId === pose.pieceId)
       ?.transforms.find(
@@ -186,6 +201,25 @@ export function intrinsicRelaxedStateKey(
   })
   if (keyed.some((entry) => entry === undefined)) return undefined
   return `sha256:${createHash('sha256').update(JSON.stringify(keyed)).digest('hex')}`
+}
+
+export function createIntrinsicPhaseSignatureMemo(): IntrinsicPhaseSignatureMemo {
+  return {
+    byCatalogEntryAndBasis: new Map(),
+    requestCount: 0,
+    cacheHitCount: 0,
+    cacheMissCount: 0
+  }
+}
+
+export function intrinsicPhaseSignatureCacheStats(
+  memo: IntrinsicPhaseSignatureMemo
+): IntrinsicPhaseSignatureCacheStats {
+  return {
+    requestCount: memo.requestCount,
+    cacheHitCount: memo.cacheHitCount,
+    cacheMissCount: memo.cacheMissCount
+  }
 }
 
 /** Deterministic complete-state deduplication seam for the bounded infeasible pool. */
@@ -1052,10 +1086,20 @@ function finiteTransformPhasePoints(
 
 function translationPhaseSignature(
   catalog: IntrinsicTransformCatalog,
-  pose: IntrinsicRelaxedPose
+  pose: IntrinsicRelaxedPose,
+  memo?: IntrinsicPhaseSignatureMemo
 ): string | undefined {
   const entry = catalog.entries.find(({ pieceId }) => pieceId === pose.pieceId)
   if (entry === undefined) return undefined
+  const memoKey = `${entry.pieceId}:${pose.translationBasisXmm}:${pose.translationBasisYmm}`
+  if (memo !== undefined) {
+    memo.requestCount += 1
+    if (memo.byCatalogEntryAndBasis.has(memoKey)) {
+      memo.cacheHitCount += 1
+      return memo.byCatalogEntryAndBasis.get(memoKey)
+    }
+    memo.cacheMissCount += 1
+  }
   const signatures = entry.transforms.map((finiteTransform) => {
     const points = finiteTransformPhasePoints(
       finiteTransform,
@@ -1069,9 +1113,11 @@ function translationPhaseSignature(
       ? undefined
       : [finiteTransform.canonicalTransformKey, pathKey]
   })
-  return signatures.some((entry) => entry === undefined)
+  const result = signatures.some((entry) => entry === undefined)
     ? undefined
     : JSON.stringify(signatures)
+  memo?.byCatalogEntryAndBasis.set(memoKey, result)
+  return result
 }
 
 function baseCollisionFamilyKey(
