@@ -27,14 +27,18 @@ import {
   type IntrinsicV7Stage1Arm
 } from '../src/workers/algorithm/irregular/intrinsicV7SeedArchive.js'
 import { IrregularBeamState } from '../src/workers/algorithm/irregular/irregularBeamState.js'
+import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
+import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import {
   runIntrinsicReconstructionPortfolio,
   type IntrinsicReconstructionPortfolioResult
 } from '../src/workers/algorithm/irregular/intrinsicReconstructionPortfolio.js'
 import { runIntrinsicQueueBeamDiscriminator } from '../src/workers/algorithm/irregular/intrinsicQueueBeamDiscriminator.js'
+import { runWindowedIrregularBeam } from '../src/workers/algorithm/irregular/windowedBeam.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
+import { FreeMaterialServiceLive } from '../src/workers/irregular/freeMaterialService.js'
 import { NfpIfpServiceLive } from '../src/workers/irregular/nfpIfpService.js'
 import {
   NFP_IFP_CANDIDATE_SOURCE_MASK,
@@ -57,6 +61,7 @@ async function main(): Promise<void> {
   const compact = process.argv.includes('--compact')
   const featureContactCoverage = process.argv.includes('--feature-contact-coverage')
   const queueBeamDiscriminatorEnabled = process.argv.includes('--queue-beam-discriminator')
+  const delayedLineageCalibrationEnabled = process.argv.includes('--delayed-lineage-calibration')
   const reconstructionPortfolioEnabled =
     process.argv.includes('--reconstruction-portfolio') || queueBeamDiscriminatorEnabled
   const schedule = compact
@@ -109,6 +114,10 @@ async function main(): Promise<void> {
     queueBeamDiscriminatorEnabled && reconstructionPortfolio !== undefined
       ? selectQueueBeamAuditTarget(reconstructionPortfolio)
       : undefined
+  const delayedLineageCanonicalGeometryKeys =
+    delayedLineageCalibrationEnabled && fixtureName === 'triangle-20'
+      ? await captureTriangleDelayedLineage(preparedPieces, fixture.settings)
+      : undefined
   const queueBeamDiscriminator =
     queueBeamTarget === undefined
       ? undefined
@@ -123,7 +132,10 @@ async function main(): Promise<void> {
               maximumEvaluations: positiveIntegerArgument(
                 '--queue-beam-evaluations',
                 compact ? 5_000 : 25_000
-              )
+              ),
+              ...(delayedLineageCanonicalGeometryKeys === undefined
+                ? {}
+                : { referenceLineageCanonicalGeometryKeys: delayedLineageCanonicalGeometryKeys })
             }),
             fixture.settings
           )
@@ -255,6 +267,10 @@ async function main(): Promise<void> {
       : {
           queueBeamDiscriminator: {
             mode: 'trace-only-independent-replay',
+            delayedLineageSource:
+              delayedLineageCanonicalGeometryKeys === undefined
+                ? 'not-provided'
+                : 'triangle-windowed-beam-width-13-repair-0-winning-path',
             selectedRole: queueBeamTarget.role,
             selectedCandidateMode: queueBeamTarget.candidateMode,
             liveDecodeCandidateBehaviorChanged: false,
@@ -797,11 +813,59 @@ function makeTriangleRequest(): NestingRequest {
   })
 }
 
+async function captureTriangleDelayedLineage(
+  preparedPieces: ReadonlyArray<IrregularPreparedPiece>,
+  settings: IrregularNestingSettings
+): Promise<ReadonlyArray<string>> {
+  const referenceSettings = new IrregularNestingSettings({
+    geometry: settings.geometry,
+    optimizer: makeCompactQualityIrregularOptimizerSettings({
+      beamWidth: 13,
+      localRepairBudget: 0
+    })
+  })
+  const keys: string[] = []
+  await Effect.runPromise(
+    withWindowedBeamLayers(
+      runWindowedIrregularBeam({
+        sheet: TRIANGLE_SHEET,
+        pieces: preparedPieces,
+        hooks: {
+          onStateSelected: ({ state }) => {
+            keys.push(state.canonicalOccupiedGeometryKey)
+          }
+        }
+      }),
+      referenceSettings
+    )
+  )
+  if (keys.length !== preparedPieces.length) {
+    throw new Error(
+      `triangle delayed-lineage source produced ${keys.length} of ${preparedPieces.length} prefixes`
+    )
+  }
+  return keys
+}
+
 function withLayers<A, E, R>(effect: Effect.Effect<A, E, R>, settings: IrregularNestingSettings) {
   return effect.pipe(
     Effect.provide(GeometryKernel.Live),
     Effect.provide(CollisionGeometryBuilder.Live),
     Effect.provide(TransformGeneratorLive),
+    Effect.provide(NfpIfpServiceLive),
+    Effect.provide(Layer.succeed(GeometrySettings, settings))
+  )
+}
+
+function withWindowedBeamLayers<A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+  settings: IrregularNestingSettings
+) {
+  return effect.pipe(
+    Effect.provide(IrregularLayoutScorer.Live),
+    Effect.provide(IrregularPlacementScorer.Layer),
+    Effect.provide(FreeMaterialServiceLive),
+    Effect.provide(GeometryKernel.Live),
     Effect.provide(NfpIfpServiceLive),
     Effect.provide(Layer.succeed(GeometrySettings, settings))
   )

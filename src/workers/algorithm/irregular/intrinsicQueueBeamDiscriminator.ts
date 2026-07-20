@@ -52,6 +52,8 @@ const INTRINSIC_COORDINATE_DOMAIN = new SheetSpec({
 
 const SAME_PIECE_FRONTIER_CONTINUATION_LIMIT = 4
 const DEFAULT_WITNESS_LIMIT = 4
+const COMMENSURATE_FIRST_STEP_LIMIT = 2
+const COMMENSURATE_SECOND_STEP_LIMIT = 2
 
 const transformCandidateOrder = Order.combineAll<IrregularTransformCandidate>([
   Order.mapInput(Order.Number, (transform) => transform.index),
@@ -114,10 +116,12 @@ export interface IntrinsicQueueBeamStepReport {
     readonly nondominatedFrontierSize: number
     readonly selectedCanonicalGeometryKey: string | undefined
     readonly selectedOnCanonicalFrontier: boolean
-    readonly selectedRanks: Omit<
-      IntrinsicQueueBeamRankedWitness,
-      'pieceId' | 'transformFamily' | 'gridPoint' | 'canonicalGeometryKey' | 'axes'
-    > | undefined
+    readonly selectedRanks:
+      | Omit<
+          IntrinsicQueueBeamRankedWitness,
+          'pieceId' | 'transformFamily' | 'gridPoint' | 'canonicalGeometryKey' | 'axes'
+        >
+      | undefined
     readonly boundedFrontierWitnesses: ReadonlyArray<IntrinsicQueueBeamRankedWitness>
   }
   readonly queue: {
@@ -133,6 +137,8 @@ export interface IntrinsicQueueBeamStepReport {
     readonly bestStrictImprovement: IntrinsicQueueBeamCandidateWitness | undefined
     readonly bestParetoOpportunityRegressesContactStructure: boolean | undefined
   }
+  readonly commensurateQueue: IntrinsicCommensurateQueueReport
+  readonly delayedLineage: IntrinsicDelayedLineageStepReport | undefined
   readonly beam: {
     readonly continuationLimit: 4
     readonly rejectedFrontierAlternativeCount: number
@@ -149,6 +155,35 @@ export interface IntrinsicQueueBeamStepReport {
     }>
   }
   readonly classification: IntrinsicQueueBeamClassification
+}
+
+export interface IntrinsicDelayedLineageStepReport {
+  readonly expectedCanonicalGeometryKey: string
+  readonly generated: boolean
+  readonly paretoLayer: number | undefined
+  readonly compactnessRank: number | undefined
+  readonly fragmentationRank: number | undefined
+  readonly voidRank: number | undefined
+  readonly survivesAtTotalCapacities: Readonly<Record<'1' | '2' | '4' | '8' | '13', boolean>>
+}
+
+export interface IntrinsicCommensurateQueueOrderReport {
+  readonly firstStepCanonicalSuccessorCount: number
+  readonly retainedFirstStepCount: number
+  readonly completedSuccessorCount: number
+  readonly boundedCompletedWitnesses: ReadonlyArray<IntrinsicQueueBeamCandidateWitness>
+}
+
+export interface IntrinsicCommensurateQueueReport {
+  readonly status: 'no-alternate-class' | 'no-non-inert-alternate' | 'incomplete' | 'completed'
+  readonly alternatePieceId: PieceId | undefined
+  readonly alternateGeometryClass: string | undefined
+  readonly scheduledThenAlternate: IntrinsicCommensurateQueueOrderReport
+  readonly alternateThenScheduled: IntrinsicCommensurateQueueOrderReport
+  readonly convergedCanonicalSuccessorCount: number
+  readonly alternateOrderParetoHeadroomCount: number
+  readonly alternateOrderStrictImprovementCount: number
+  readonly bestAlternateOrderWitness: IntrinsicQueueBeamCandidateWitness | undefined
 }
 
 export interface IntrinsicQueueBeamDiscriminatorResult {
@@ -168,6 +203,12 @@ export interface IntrinsicQueueBeamDiscriminatorResult {
   readonly selectedLineageFinalCanonicalGeometryKey: string
   readonly completedDepthCount: number
   readonly classificationCounts: Readonly<Record<IntrinsicQueueBeamClassification, number>>
+  readonly delayedLineage: {
+    readonly provided: boolean
+    readonly matchedDepthCount: number
+    readonly firstMissingDepth: number | undefined
+    readonly minimumObservedSurvivalCapacity: 1 | 2 | 4 | 8 | 13 | undefined
+  }
   readonly steps: ReadonlyArray<IntrinsicQueueBeamStepReport>
 }
 
@@ -217,6 +258,7 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
   readonly maximumRuntimeMs: number
   readonly maximumEvaluations: number
   readonly maximumWitnesses?: number
+  readonly referenceLineageCanonicalGeometryKeys?: ReadonlyArray<string>
 }): Effect.Effect<
   IntrinsicQueueBeamDiscriminatorResult,
   AuditError,
@@ -264,8 +306,10 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
           : Effect.void
     }
     let state = IrregularBeamState.empty(input.orderedPreparedPieces)
+    let referenceState = IrregularBeamState.empty(input.orderedPreparedPieces)
     const steps: IntrinsicQueueBeamStepReport[] = []
     let truncationDepth = 0
+    let firstMissingReferenceDepth: number | undefined
 
     for (let depth = 0; depth < input.orderedPreparedPieces.length; depth += 1) {
       truncationDepth = depth
@@ -292,6 +336,58 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
       const selectedRanked = ranked.find(
         ({ canonicalGeometryKey }) => canonicalGeometryKey === selectedKey
       )
+      const expectedReferenceKey = input.referenceLineageCanonicalGeometryKeys?.[depth]
+      let delayedLineage: IntrinsicDelayedLineageStepReport | undefined
+      if (expectedReferenceKey !== undefined && firstMissingReferenceDepth === undefined) {
+        const referenceOutcome = yield* enumerateWithDeadlineRecovery({
+          state: referenceState,
+          piece: scheduledPiece,
+          remainingPreparedPieces: futurePieces,
+          budget,
+          settings,
+          geometryKernel,
+          nfpIfpService,
+          candidateMemoScope,
+          control
+        })
+        if (referenceOutcome === undefined || !referenceOutcome.fullyEnumerated) break
+        const referenceSuccessors = referenceOutcome.uniqueCanonicalSuccessors
+        const referenceCandidate = referenceSuccessors.find(
+          ({ canonicalGeometryKey }) => canonicalGeometryKey === expectedReferenceKey
+        )
+        const referenceLayers = nondominatedLayers(referenceSuccessors)
+        const referenceRanked =
+          referenceCandidate === undefined
+            ? undefined
+            : rankWitnesses(referenceSuccessors, referenceLayers[0] ?? []).find(
+                ({ canonicalGeometryKey }) => canonicalGeometryKey === expectedReferenceKey
+              )
+        const capacities = [1, 2, 4, 8, 13] as const
+        delayedLineage = {
+          expectedCanonicalGeometryKey: expectedReferenceKey,
+          generated: referenceCandidate !== undefined,
+          paretoLayer: findCandidateLayer(referenceLayers, expectedReferenceKey),
+          compactnessRank: referenceRanked?.compactnessRank,
+          fragmentationRank: referenceRanked?.fragmentationRank,
+          voidRank: referenceRanked?.voidRank,
+          survivesAtTotalCapacities: Object.fromEntries(
+            capacities.map((capacity) => [
+              String(capacity),
+              referenceCandidate !== undefined &&
+                selectCalibrationCapacity(
+                  referenceSuccessors,
+                  referenceOutcome.selected,
+                  capacity
+                ).some(({ canonicalGeometryKey }) => canonicalGeometryKey === expectedReferenceKey)
+            ])
+          ) as Record<'1' | '2' | '4' | '8' | '13', boolean>
+        }
+        if (referenceCandidate === undefined) {
+          firstMissingReferenceDepth = depth
+        } else {
+          referenceState = referenceCandidate.state
+        }
+      }
 
       const queueCounters = {
         distinctRemainingGeometryClassCount: 0,
@@ -340,8 +436,7 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
       if (budget.truncationReason !== undefined) break
 
       const paretoQueueCandidates = nonInertQueueCandidates.filter(
-        (candidate) =>
-          assessIntrinsicQueueCandidate(candidate, scheduledSuccessors).paretoHeadroom
+        (candidate) => assessIntrinsicQueueCandidate(candidate, scheduledSuccessors).paretoHeadroom
       )
       const dominatingQueueCandidates = paretoQueueCandidates.filter(
         (candidate) =>
@@ -381,7 +476,10 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
           candidateMemoScope,
           control
         })
-        if (selectedContinuationOutcome === undefined || !selectedContinuationOutcome.fullyEnumerated) {
+        if (
+          selectedContinuationOutcome === undefined ||
+          !selectedContinuationOutcome.fullyEnumerated
+        ) {
           break
         }
         selectedContinuation = selectedContinuationOutcome.selected
@@ -411,8 +509,22 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
       }
       if (budget.truncationReason !== undefined) break
 
+      const commensurateQueue = yield* calibrateCommensurateQueue({
+        state,
+        scheduledPiece,
+        scheduledOutcome,
+        futurePieces,
+        nonInertQueueCandidates,
+        budget,
+        settings,
+        geometryKernel,
+        nfpIfpService,
+        candidateMemoScope,
+        control,
+        maximumWitnesses
+      })
       const classification = classifyIntrinsicQueueBeamHeadroom(
-        bestQueueOpportunity !== undefined,
+        commensurateQueue.alternateOrderParetoHeadroomCount > 0,
         paretoHeadroomContinuations.length > 0
       )
       steps.push({
@@ -455,11 +567,10 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
           bestParetoOpportunityRegressesContactStructure:
             bestQueueOpportunity === undefined || scheduledOutcome.selected === undefined
               ? undefined
-              : compareFragmentation(
-                    bestQueueOpportunity.axes,
-                    scheduledOutcome.selected.axes
-                  ) > 0
+              : compareFragmentation(bestQueueOpportunity.axes, scheduledOutcome.selected.axes) > 0
         },
+        commensurateQueue,
+        delayedLineage,
         beam: {
           continuationLimit: SAME_PIECE_FRONTIER_CONTINUATION_LIMIT,
           rejectedFrontierAlternativeCount: rejectedFrontierAlternatives.length,
@@ -483,6 +594,7 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
         classification
       })
       state = selectedState
+      if (budget.truncationReason !== undefined) break
     }
 
     const runtimeMs = Math.max(0, performance.now() - startedAt)
@@ -502,12 +614,259 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
       selectedLineageFinalCanonicalGeometryKey: state.canonicalOccupiedGeometryKey,
       completedDepthCount: steps.length,
       classificationCounts: countClassifications(steps),
+      delayedLineage: summarizeDelayedLineage(
+        steps,
+        input.referenceLineageCanonicalGeometryKeys !== undefined,
+        firstMissingReferenceDepth
+      ),
       steps
     }
   })
 }
 
-function enumerateWithDeadlineRecovery(input: EnumerationInput): Effect.Effect<
+interface CommensurateQueueCalibrationInput {
+  readonly state: IrregularBeamState
+  readonly scheduledPiece: IrregularPreparedPiece
+  readonly scheduledOutcome: EnumeratedSuccessors
+  readonly futurePieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly nonInertQueueCandidates: ReadonlyArray<AuditCandidate>
+  readonly budget: AuditBudget
+  readonly settings: IrregularNestingSettings
+  readonly geometryKernel: GeometryKernel.Service
+  readonly nfpIfpService: NfpIfpServiceShape
+  readonly candidateMemoScope: IrregularNfpIfpCandidateMemoScope
+  readonly control: IrregularNfpIfpControl
+  readonly maximumWitnesses: number
+}
+
+function calibrateCommensurateQueue(
+  input: CommensurateQueueCalibrationInput
+): Effect.Effect<
+  IntrinsicCommensurateQueueReport,
+  Exclude<AuditError, IntrinsicQueueBeamDiscriminatorError>,
+  never
+> {
+  return Effect.gen(function* () {
+    const scheduledGeometryClass = intrinsicPreparedPieceClassKey(input.scheduledPiece)
+    const classRepresentatives = distinctGeometryClassRepresentatives(input.futurePieces).filter(
+      (piece) => intrinsicPreparedPieceClassKey(piece) !== scheduledGeometryClass
+    )
+    if (classRepresentatives.length === 0) {
+      return emptyCommensurateQueueReport('no-alternate-class')
+    }
+    const alternatePieceIds = new Set(classRepresentatives.map(preparedPieceId))
+    const proposedCandidate = orderCandidates(
+      input.nonInertQueueCandidates.filter(({ pieceId }) => alternatePieceIds.has(pieceId))
+    )[0]
+    if (proposedCandidate === undefined) {
+      return emptyCommensurateQueueReport('no-non-inert-alternate')
+    }
+    const alternatePiece = input.futurePieces.find(
+      (piece) => preparedPieceId(piece) === proposedCandidate.pieceId
+    )
+    if (alternatePiece === undefined) {
+      return emptyCommensurateQueueReport('no-non-inert-alternate')
+    }
+    const alternatePieceId = preparedPieceId(alternatePiece)
+    const alternateGeometryClass = intrinsicPreparedPieceClassKey(alternatePiece)
+    const alternateIndex = input.futurePieces.findIndex(
+      (piece) => preparedPieceId(piece) === alternatePieceId
+    )
+    const tailWithoutAlternate = input.futurePieces.filter((_, index) => index !== alternateIndex)
+
+    const scheduledFirst = input.scheduledOutcome
+    const alternateFirst = yield* enumerateWithDeadlineRecovery({
+      state: input.state,
+      piece: alternatePiece,
+      remainingPreparedPieces: [input.scheduledPiece, ...tailWithoutAlternate],
+      budget: input.budget,
+      settings: input.settings,
+      geometryKernel: input.geometryKernel,
+      nfpIfpService: input.nfpIfpService,
+      candidateMemoScope: input.candidateMemoScope,
+      control: input.control
+    })
+    if (
+      alternateFirst === undefined ||
+      !alternateFirst.fullyEnumerated
+    ) {
+      return {
+        ...emptyCommensurateQueueReport('incomplete'),
+        alternatePieceId,
+        alternateGeometryClass,
+        scheduledThenAlternate: emptyCommensurateOrderReport(
+          scheduledFirst.uniqueCanonicalSuccessors.length
+        ),
+        alternateThenScheduled: emptyCommensurateOrderReport(
+          alternateFirst?.uniqueCanonicalSuccessors.length ?? 0
+        )
+      }
+    }
+
+    const scheduledThenAlternate = yield* completeCommensurateOrder({
+      firstStepCandidates: orderCandidates(scheduledFirst.uniqueCanonicalSuccessors).slice(
+        0,
+        COMMENSURATE_FIRST_STEP_LIMIT
+      ),
+      firstStepCanonicalSuccessorCount: scheduledFirst.uniqueCanonicalSuccessors.length,
+      secondPiece: alternatePiece,
+      remainingPreparedPieces: tailWithoutAlternate,
+      ...sharedCommensurateEnumerationInput(input)
+    })
+    const alternateThenScheduled = yield* completeCommensurateOrder({
+      firstStepCandidates: orderCandidates(alternateFirst.uniqueCanonicalSuccessors).slice(
+        0,
+        COMMENSURATE_FIRST_STEP_LIMIT
+      ),
+      firstStepCanonicalSuccessorCount: alternateFirst.uniqueCanonicalSuccessors.length,
+      secondPiece: input.scheduledPiece,
+      remainingPreparedPieces: tailWithoutAlternate,
+      ...sharedCommensurateEnumerationInput(input)
+    })
+    if (scheduledThenAlternate === undefined || alternateThenScheduled === undefined) {
+      return {
+        ...emptyCommensurateQueueReport('incomplete'),
+        alternatePieceId,
+        alternateGeometryClass,
+        scheduledThenAlternate:
+          scheduledThenAlternate?.report ??
+          emptyCommensurateOrderReport(scheduledFirst.uniqueCanonicalSuccessors.length),
+        alternateThenScheduled:
+          alternateThenScheduled?.report ??
+          emptyCommensurateOrderReport(alternateFirst.uniqueCanonicalSuccessors.length)
+      }
+    }
+
+    const scheduledKeys = new Set(
+      scheduledThenAlternate.completed.map(({ canonicalGeometryKey }) => canonicalGeometryKey)
+    )
+    const alternateAssessments = alternateThenScheduled.completed.map((candidate) => ({
+      candidate,
+      assessment: assessIntrinsicQueueCandidate(candidate, scheduledThenAlternate.completed)
+    }))
+    const pareto = alternateAssessments.filter(({ assessment }) => assessment.paretoHeadroom)
+    const strict = alternateAssessments.filter(({ assessment }) => assessment.strictImprovement)
+    const bestAlternate = orderCandidates(pareto.map(({ candidate }) => candidate))[0]
+    return {
+      status: 'completed',
+      alternatePieceId,
+      alternateGeometryClass,
+      scheduledThenAlternate: scheduledThenAlternate.report,
+      alternateThenScheduled: alternateThenScheduled.report,
+      convergedCanonicalSuccessorCount: alternateThenScheduled.completed.filter(
+        ({ canonicalGeometryKey }) => scheduledKeys.has(canonicalGeometryKey)
+      ).length,
+      alternateOrderParetoHeadroomCount: pareto.length,
+      alternateOrderStrictImprovementCount: strict.length,
+      bestAlternateOrderWitness:
+        bestAlternate === undefined ? undefined : candidateWitness(bestAlternate)
+    }
+  })
+}
+
+interface CommensurateOrderInput {
+  readonly firstStepCandidates: ReadonlyArray<AuditCandidate>
+  readonly firstStepCanonicalSuccessorCount: number
+  readonly secondPiece: IrregularPreparedPiece
+  readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly budget: AuditBudget
+  readonly settings: IrregularNestingSettings
+  readonly geometryKernel: GeometryKernel.Service
+  readonly nfpIfpService: NfpIfpServiceShape
+  readonly candidateMemoScope: IrregularNfpIfpCandidateMemoScope
+  readonly control: IrregularNfpIfpControl
+  readonly maximumWitnesses: number
+}
+
+function completeCommensurateOrder(input: CommensurateOrderInput): Effect.Effect<
+  | {
+      readonly completed: ReadonlyArray<AuditCandidate>
+      readonly report: IntrinsicCommensurateQueueOrderReport
+    }
+  | undefined,
+  Exclude<AuditError, IntrinsicQueueBeamDiscriminatorError>,
+  never
+> {
+  return Effect.gen(function* () {
+    const completedByKey = new Map<string, AuditCandidate>()
+    for (const firstStep of input.firstStepCandidates) {
+      const outcome = yield* enumerateWithDeadlineRecovery({
+        state: firstStep.state,
+        piece: input.secondPiece,
+        remainingPreparedPieces: input.remainingPreparedPieces,
+        budget: input.budget,
+        settings: input.settings,
+        geometryKernel: input.geometryKernel,
+        nfpIfpService: input.nfpIfpService,
+        candidateMemoScope: input.candidateMemoScope,
+        control: input.control
+      })
+      if (outcome === undefined || !outcome.fullyEnumerated) return undefined
+      for (const candidate of orderCandidates(outcome.uniqueCanonicalSuccessors).slice(
+        0,
+        COMMENSURATE_SECOND_STEP_LIMIT
+      )) {
+        const incumbent = completedByKey.get(candidate.canonicalGeometryKey)
+        if (incumbent === undefined || compareCandidateIdentity(candidate, incumbent) < 0) {
+          completedByKey.set(candidate.canonicalGeometryKey, candidate)
+        }
+      }
+    }
+    const completed = orderCandidates([...completedByKey.values()])
+    return {
+      completed,
+      report: {
+        firstStepCanonicalSuccessorCount: input.firstStepCanonicalSuccessorCount,
+        retainedFirstStepCount: input.firstStepCandidates.length,
+        completedSuccessorCount: completed.length,
+        boundedCompletedWitnesses: completed.slice(0, input.maximumWitnesses).map(candidateWitness)
+      }
+    }
+  })
+}
+
+function sharedCommensurateEnumerationInput(input: CommensurateQueueCalibrationInput) {
+  return {
+    budget: input.budget,
+    settings: input.settings,
+    geometryKernel: input.geometryKernel,
+    nfpIfpService: input.nfpIfpService,
+    candidateMemoScope: input.candidateMemoScope,
+    control: input.control,
+    maximumWitnesses: input.maximumWitnesses
+  }
+}
+
+function emptyCommensurateOrderReport(
+  firstStepCanonicalSuccessorCount = 0
+): IntrinsicCommensurateQueueOrderReport {
+  return {
+    firstStepCanonicalSuccessorCount,
+    retainedFirstStepCount: 0,
+    completedSuccessorCount: 0,
+    boundedCompletedWitnesses: []
+  }
+}
+
+function emptyCommensurateQueueReport(
+  status: IntrinsicCommensurateQueueReport['status']
+): IntrinsicCommensurateQueueReport {
+  return {
+    status,
+    alternatePieceId: undefined,
+    alternateGeometryClass: undefined,
+    scheduledThenAlternate: emptyCommensurateOrderReport(),
+    alternateThenScheduled: emptyCommensurateOrderReport(),
+    convergedCanonicalSuccessorCount: 0,
+    alternateOrderParetoHeadroomCount: 0,
+    alternateOrderStrictImprovementCount: 0,
+    bestAlternateOrderWitness: undefined
+  }
+}
+
+function enumerateWithDeadlineRecovery(
+  input: EnumerationInput
+): Effect.Effect<
   EnumeratedSuccessors | undefined,
   Exclude<AuditError, IntrinsicQueueBeamDiscriminatorError>,
   never
@@ -532,9 +891,13 @@ interface EnumerationInput {
   readonly control: IrregularNfpIfpControl
 }
 
-function enumerateSuccessors(input: EnumerationInput): Effect.Effect<
+function enumerateSuccessors(
+  input: EnumerationInput
+): Effect.Effect<
   EnumeratedSuccessors,
-  IrregularNestingNotImplementedError | IrregularGeometryInputError | IrregularNfpIfpControlAbortError
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError
 > {
   return Effect.gen(function* () {
     let generatedCandidateCount = 0
@@ -634,7 +997,9 @@ function scoreAuditCandidate(
     return undefined
   }
   const containingGap = input.gapRegions
-    ?.filter((region) => candidateContainedInIntrinsicGap(input.moving, input.candidate.point, region))
+    ?.filter((region) =>
+      candidateContainedInIntrinsicGap(input.moving, input.candidate.point, region)
+    )
     .toSorted(
       (first, second) =>
         first.areaMm2 - second.areaMm2 || first.canonicalKey.localeCompare(second.canonicalKey)
@@ -669,7 +1034,12 @@ export function measureIntrinsicQueueBeamAxes(
   const envelope = measureCanonicalLayoutEnvelope(anchored.placedCollisionGeometries)
   const topology = measureCanonicalLayoutTopologyExact(anchored.placedCollisionGeometries)
   const cavities = measureCanonicalEnclosedCavities(anchored.placedCollisionGeometries)
-  if (structure === undefined || envelope === undefined || topology === undefined || cavities === undefined) {
+  if (
+    structure === undefined ||
+    envelope === undefined ||
+    topology === undefined ||
+    cavities === undefined
+  ) {
     return undefined
   }
   const largestComponent = new Set(structure.positiveContactComponents[0] ?? [])
@@ -680,8 +1050,7 @@ export function measureIntrinsicQueueBeamAxes(
   const occupiedDoubledAreaGrid2 = Math.round(
     structure.pieces.reduce((sum, piece) => sum + piece.areaGrid2, 0) * 2
   )
-  const occupiedHullWasteDoubledAreaGrid2 =
-    topology.hullDoubledAreaGrid2 - occupiedDoubledAreaGrid2
+  const occupiedHullWasteDoubledAreaGrid2 = topology.hullDoubledAreaGrid2 - occupiedDoubledAreaGrid2
   const axes: IntrinsicQueueBeamAxes = {
     compactness: {
       maximumSideGrid: Math.round(envelope.maximumSideMm * 1_000),
@@ -689,9 +1058,7 @@ export function measureIntrinsicQueueBeamAxes(
       spanGrid: Math.round(envelope.spanMm * 1_000)
     },
     fragmentation: {
-      occupiedDoubledAreaOutsideLargestComponentGrid2: Math.round(
-        occupiedAreaOutsideLargest * 2
-      ),
+      occupiedDoubledAreaOutsideLargestComponentGrid2: Math.round(occupiedAreaOutsideLargest * 2),
       isolatedPieceCount: topology.topology.isolatedPieceCount,
       positiveContactComponentCount: topology.topology.positiveContactComponentCount,
       negativeLargestPositiveContactComponentSize:
@@ -714,12 +1081,11 @@ export function intrinsicQueueBeamAxesDominate(
   first: IntrinsicQueueBeamAxes,
   second: IntrinsicQueueBeamAxes
 ): boolean {
-  const comparisons = [
-    compareCompactness(first, second),
-    compareVoids(first, second)
-  ]
-  return comparisons.every((comparison) => comparison <= 0) &&
+  const comparisons = [compareCompactness(first, second), compareVoids(first, second)]
+  return (
+    comparisons.every((comparison) => comparison <= 0) &&
     comparisons.some((comparison) => comparison < 0)
+  )
 }
 
 export function assessIntrinsicQueueCandidate(
@@ -746,9 +1112,7 @@ export function assessIntrinsicQueueCandidate(
 
 export function assessIntrinsicBeamContinuation(
   candidate: Pick<IntrinsicQueueBeamCandidateWitness, 'canonicalGeometryKey' | 'axes'>,
-  selected:
-    | Pick<IntrinsicQueueBeamCandidateWitness, 'canonicalGeometryKey' | 'axes'>
-    | undefined
+  selected: Pick<IntrinsicQueueBeamCandidateWitness, 'canonicalGeometryKey' | 'axes'> | undefined
 ): { readonly paretoHeadroom: boolean; readonly strictImprovement: boolean } {
   if (selected === undefined) return { paretoHeadroom: true, strictImprovement: true }
   if (selected.canonicalGeometryKey === candidate.canonicalGeometryKey) {
@@ -777,7 +1141,9 @@ export function boundIntrinsicDiscriminatorWitnesses<T>(
   return witnesses.slice(0, Math.max(0, Math.floor(maximumWitnesses)))
 }
 
-function nondominatedFrontier(candidates: ReadonlyArray<AuditCandidate>): ReadonlyArray<AuditCandidate> {
+function nondominatedFrontier(
+  candidates: ReadonlyArray<AuditCandidate>
+): ReadonlyArray<AuditCandidate> {
   return orderCandidates(
     candidates.filter(
       (candidate) =>
@@ -787,6 +1153,87 @@ function nondominatedFrontier(candidates: ReadonlyArray<AuditCandidate>): Readon
         )
     )
   )
+}
+
+function nondominatedLayers(
+  candidates: ReadonlyArray<AuditCandidate>
+): ReadonlyArray<ReadonlyArray<AuditCandidate>> {
+  const remaining = new Map(
+    candidates.map((candidate) => [candidate.canonicalGeometryKey, candidate] as const)
+  )
+  const layers: Array<ReadonlyArray<AuditCandidate>> = []
+  while (remaining.size > 0) {
+    const layer = nondominatedFrontier([...remaining.values()])
+    if (layer.length === 0) break
+    layers.push(layer)
+    for (const candidate of layer) remaining.delete(candidate.canonicalGeometryKey)
+  }
+  return layers
+}
+
+function findCandidateLayer(
+  layers: ReadonlyArray<ReadonlyArray<AuditCandidate>>,
+  canonicalGeometryKey: string
+): number | undefined {
+  const index = layers.findIndex((layer) =>
+    layer.some((candidate) => candidate.canonicalGeometryKey === canonicalGeometryKey)
+  )
+  return index < 0 ? undefined : index
+}
+
+function selectCalibrationCapacity(
+  candidates: ReadonlyArray<AuditCandidate>,
+  protectedControl: AuditCandidate | undefined,
+  totalCapacity: 1 | 2 | 4 | 8 | 13
+): ReadonlyArray<AuditCandidate> {
+  const selected = new Map<string, AuditCandidate>()
+  if (protectedControl !== undefined) {
+    selected.set(protectedControl.canonicalGeometryKey, protectedControl)
+  }
+  const experimentalWidth = totalCapacity - 1
+  if (experimentalWidth <= 0) return [...selected.values()]
+  const layers = nondominatedLayers(candidates)
+  const laterLayerSlots = Math.ceil(experimentalWidth / 2)
+  for (const layer of layers.slice(1, 1 + laterLayerSlots)) {
+    const representative = orderCandidates(layer)[0]
+    if (representative !== undefined) {
+      selected.set(representative.canonicalGeometryKey, representative)
+    }
+  }
+  const fillOrder = [...(layers[0] ?? []), ...layers.slice(1 + laterLayerSlots).flat()]
+  for (const candidate of orderCandidates(fillOrder)) {
+    if (selected.size >= totalCapacity) break
+    selected.set(candidate.canonicalGeometryKey, candidate)
+  }
+  return [...selected.values()]
+}
+
+function summarizeDelayedLineage(
+  steps: ReadonlyArray<IntrinsicQueueBeamStepReport>,
+  provided: boolean,
+  firstMissingDepth: number | undefined
+): IntrinsicQueueBeamDiscriminatorResult['delayedLineage'] {
+  const reports = steps.flatMap(({ delayedLineage }) =>
+    delayedLineage === undefined ? [] : [delayedLineage]
+  )
+  const capacities = [1, 2, 4, 8, 13] as const
+  const minimumObservedSurvivalCapacity = capacities.find(
+    (capacity) =>
+      reports.length > 0 &&
+      reports.every(
+        ({ survivesAtTotalCapacities }) => survivesAtTotalCapacities[capacityKey(capacity)]
+      )
+  )
+  return {
+    provided,
+    matchedDepthCount: reports.filter(({ generated }) => generated).length,
+    firstMissingDepth,
+    minimumObservedSurvivalCapacity
+  }
+}
+
+function capacityKey(capacity: 1 | 2 | 4 | 8 | 13): '1' | '2' | '4' | '8' | '13' {
+  return String(capacity) as '1' | '2' | '4' | '8' | '13'
 }
 
 function rankWitnesses(
@@ -832,7 +1279,10 @@ function compareCompactness(first: IntrinsicQueueBeamAxes, second: IntrinsicQueu
   )
 }
 
-function compareFragmentation(first: IntrinsicQueueBeamAxes, second: IntrinsicQueueBeamAxes): number {
+function compareFragmentation(
+  first: IntrinsicQueueBeamAxes,
+  second: IntrinsicQueueBeamAxes
+): number {
   return (
     first.fragmentation.occupiedDoubledAreaOutsideLargestComponentGrid2 -
       second.fragmentation.occupiedDoubledAreaOutsideLargestComponentGrid2 ||
@@ -861,8 +1311,7 @@ function compareVoids(first: IntrinsicQueueBeamAxes, second: IntrinsicQueueBeamA
       second.voids.occupiedHullWasteDoubledAreaGrid2,
       second.voids.occupiedHullDoubledAreaGrid2
     ) ||
-    first.voids.occupiedHullWasteDoubledAreaGrid2 -
-      second.voids.occupiedHullWasteDoubledAreaGrid2
+    first.voids.occupiedHullWasteDoubledAreaGrid2 - second.voids.occupiedHullWasteDoubledAreaGrid2
   )
 }
 
@@ -910,7 +1359,10 @@ function distinctGeometryClassRepresentatives(
   for (const piece of pieces) {
     const key = intrinsicPreparedPieceClassKey(piece)
     const incumbent = representatives.get(key)
-    if (incumbent === undefined || preparedPieceId(piece).localeCompare(preparedPieceId(incumbent)) < 0) {
+    if (
+      incumbent === undefined ||
+      preparedPieceId(piece).localeCompare(preparedPieceId(incumbent)) < 0
+    ) {
       representatives.set(key, piece)
     }
   }
@@ -975,7 +1427,10 @@ function compareCandidateIdentity(first: AuditCandidate, second: AuditCandidate)
   )
 }
 
-function compareLocalScore(first: IntrinsicStrictLocalScore, second: IntrinsicStrictLocalScore): number {
+function compareLocalScore(
+  first: IntrinsicStrictLocalScore,
+  second: IntrinsicStrictLocalScore
+): number {
   return (
     Math.round(first.maximumSideMm * 1_000) - Math.round(second.maximumSideMm * 1_000) ||
     Math.round(first.envelopeAreaMm2 * 1_000_000) -
@@ -1061,7 +1516,12 @@ function canonicalCollisionAreaMm2(moving: TransformedCollisionGeometry): number
     const firstY = toGridMm(first.y)
     const secondX = toGridMm(second.x)
     const secondY = toGridMm(second.y)
-    if (firstX === undefined || firstY === undefined || secondX === undefined || secondY === undefined) {
+    if (
+      firstX === undefined ||
+      firstY === undefined ||
+      secondX === undefined ||
+      secondY === undefined
+    ) {
       return undefined
     }
     doubledAreaGrid2 += firstX * secondY - secondX * firstY
@@ -1069,4 +1529,3 @@ function canonicalCollisionAreaMm2(moving: TransformedCollisionGeometry): number
   const areaMm2 = Math.abs(doubledAreaGrid2) / 2_000_000
   return Number.isFinite(areaMm2) && areaMm2 > 0 ? areaMm2 : undefined
 }
-

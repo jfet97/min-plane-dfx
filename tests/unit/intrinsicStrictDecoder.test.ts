@@ -217,21 +217,45 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       preparedPiece('third', rectanglePoints(1, 2), [transform(0, 0), transform(1, 90)])
     ]
     const before = await decode(sheet(20, 10), pieces)
-    const audit = await Effect.runPromise(
-      runIntrinsicQueueBeamDiscriminator({
-        orderedPreparedPieces: pieces,
-        maximumRuntimeMs: 10_000,
-        maximumEvaluations: 20_000
-      }).pipe(
-        Effect.provide(GeometryKernel.Live),
-        Effect.provide(GeometrySettings.Live),
-        Effect.provide(NfpIfpServiceLive)
+    const runAudit = (referenceLineageCanonicalGeometryKeys?: ReadonlyArray<string>) =>
+      Effect.runPromise(
+        runIntrinsicQueueBeamDiscriminator({
+          orderedPreparedPieces: pieces,
+          maximumRuntimeMs: 10_000,
+          maximumEvaluations: 20_000,
+          ...(referenceLineageCanonicalGeometryKeys === undefined
+            ? {}
+            : { referenceLineageCanonicalGeometryKeys })
+        }).pipe(
+          Effect.provide(GeometryKernel.Live),
+          Effect.provide(GeometrySettings.Live),
+          Effect.provide(NfpIfpServiceLive)
+        )
       )
+    const baselineAudit = await runAudit()
+    const referenceLineageCanonicalGeometryKeys = baselineAudit.steps.flatMap(({ scheduled }) =>
+      scheduled.selectedCanonicalGeometryKey === undefined
+        ? []
+        : [scheduled.selectedCanonicalGeometryKey]
     )
+    const audit = await runAudit(referenceLineageCanonicalGeometryKeys)
     const after = await decode(sheet(20, 10), pieces)
 
     expect(audit.status).toBe('completed')
     expect(audit.selectedLineageFinalCanonicalGeometryKey.length).toBeGreaterThan(0)
+    expect(audit.delayedLineage).toEqual({
+      provided: true,
+      matchedDepthCount: pieces.length,
+      firstMissingDepth: undefined,
+      minimumObservedSurvivalCapacity: 1
+    })
+    expect(
+      audit.steps.every(({ commensurateQueue }) =>
+        ['no-alternate-class', 'no-non-inert-alternate', 'completed'].includes(
+          commensurateQueue.status
+        )
+      )
+    ).toBe(true)
     expect(after.placedCollisionGeometries).toEqual(before.placedCollisionGeometries)
     expect(after.stepTrace).toEqual(before.stepTrace)
   })
@@ -478,7 +502,9 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       canonicalGeometryHash: 'twenty-six-isolates'
     }
 
-    expect(compareIntrinsicStrictCompletedLayoutDominance(fifteenIsolates, twentySixIsolates)).toBe(0)
+    expect(compareIntrinsicStrictCompletedLayoutDominance(fifteenIsolates, twentySixIsolates)).toBe(
+      0
+    )
     expect(intrinsicStrictCompletedLayoutDominates(fifteenIsolates, twentySixIsolates)).toBe(false)
     expect(
       rankIntrinsicStrictCompletedLayouts([twentySixIsolates, fifteenIsolates]).map(
