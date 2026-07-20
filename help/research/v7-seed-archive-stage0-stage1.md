@@ -68,12 +68,12 @@ and an exact `--source-commit` match when supplied, then writes an immutable
 `report.json`, `manifest.json`, seed SVGs, and every legal endpoint-archive SVG.
 
 ```sh
-pnpm exec tsx scripts/irregular-intrinsic-v7-seed-archive.ts \
+pnpm exec tsx --tsconfig tsconfig.node.json scripts/irregular-intrinsic-v7-seed-archive.ts \
   --fixture triangle-20 \
   --output /private/tmp/min-plane-provenance/v7-triangle \
   --source-commit "$(git rev-parse HEAD)"
 
-pnpm exec tsx scripts/irregular-intrinsic-v7-seed-archive.ts \
+pnpm exec tsx --tsconfig tsconfig.node.json scripts/irregular-intrinsic-v7-seed-archive.ts \
   --fixture mixed-61 \
   --output /private/tmp/min-plane-provenance/v7-mixed61 \
   --source-commit "$(git rev-parse HEAD)"
