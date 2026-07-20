@@ -28,10 +28,14 @@ Therefore:
    reachability diagnostics but is not an admissible capacity witness;
 3. **completed:** make one cold beam-only Mixed pilot complete by staging exact
    scoring/topology work after canonical deduplication;
-4. **next:** profile and run the bounded commensurate-only cost pilot. A live
-   fixed-width cap-0/cap-1 pair is eligible only if both cells are projected to
-   complete under one frozen budget;
-5. widen the beam only after runtime is comfortably below the research ceiling
+4. **next, co-primary:** run the bounded Triangle peel/reinsert replay observer
+   and classify whether the remaining compact motif is absent, pruned, delayed,
+   or terminally rejected;
+5. **next, co-primary:** profile and run the bounded Mixed commensurate-only cost
+   pilot. A live fixed-width cap-0/cap-1 pair is eligible only if both cells are
+   projected to complete under one frozen budget and the Triangle observer has
+   either closed or explicitly falsified its bounded hypothesis;
+6. widen the beam only after runtime is comfortably below the research ceiling
    and a sourced delayed-value neighborhood—not one historical pose—justifies
    the extra capacity.
 
@@ -240,6 +244,49 @@ This closes the five-minute width-3 runtime gate but cannot change the quality
 decision. It also leaves too little headroom for a live reorder pair: cap 0 alone
 uses more than 95% of the 300-second abort. The next executable reorder step is
 therefore the commensurate-only profiling/cost pilot specified below.
+
+### Triangle closure observer checkpoint (2026-07-20)
+
+The reviewed width-3 Triangle result at commit `af032b2` is a legal, zero-cavity
+endpoint with area `88,124.330 mm2`, hull-waste ratio `0.221631`, 11 isolates,
+and `5/3` total/dominant structural contacts. Its PNG is:
+
+`/private/tmp/min-plane-provenance/v7-reviewed-af032b2-triangle-w3/triangle-20-partial-geometric-beam-width-3.png`
+
+The visible side wings suggest a denser repeated-geometry construction may be
+nearby, but the image is not proof that a particular rearrangement is legal or
+constructively reachable. Rotation coverage is unlikely to be the primary
+blocker: eight transforms, configured rotations, and edge alignment were active,
+and the final depth admitted all 1,037 generated candidates canonically before
+capacity evicted 1,032 of them.
+
+Before live Mixed cap-1 work, run one trace-only generic bounded peel/reinsert
+and constructive-replay observer:
+
+1. rank pieces by marginal maximum-side, envelope-area, and hull-waste
+   contribution, using isolation and canonical identity only as deterministic
+   ties;
+2. among the top four pieces, examine every two- and three-piece subset;
+3. remove the subset and enumerate every reinsertion order through the existing
+   transform catalog and finite NFP/envelope-event candidates, retaining at most
+   four exact partial states per step and admitting only canonical-legal complete
+   endpoints;
+4. if a strictly better endpoint has no topology regression, derive a geometry-
+   based peel order from it and replay from empty without injecting saved
+   placements into production;
+5. at every replay depth trace expected transform/child identity, raw source
+   occurrence, point/direct/canonical/future-equivalence deduplication, Pareto
+   layer/rank, width-3/7/12 selection or eviction, forced-continuation horizon,
+   and terminal q0/q90 comparator rank.
+
+Classify the first failure boundary: absent raw child means candidate coverage;
+exact-legal eviction means retention/capacity; survival only at a larger width or
+after several depths means width/horizon; finalist loss despite common-archive
+improvement means terminal comparison. A failed bounded observer falsifies only
+this small legal reconstruction. It does not justify Sparrow. Repeated-geometry
+pair/triplet reconstruction is the cheaper next mechanism; coordinated transport
+becomes eligible only if the trace shows the connected core must move through
+temporary infeasibility.
 
 ## What The Completed Proofs Rule Out
 
@@ -848,10 +895,12 @@ Run the optimized commensurate-only cost pilot on Mixed at width 3. If it finds
 no equal-work alternate-first survivor, stop Stage 2B. If survivors exist but
 either projected cell exceeds 80% of the same frozen wall-time ceiling, optimize
 the measured dominant cost and repeat the pilot. Only when both cells fit, run
-the paired width-3 cap-0/cap-1 Triangle and Mixed cells. Carry cap 1 to the four-
-sheet and corpus gates only when it produces a distinct better complete endpoint
-without regressing Triangle. Do not widen from this matrix; widening requires
-the separate admissible delayed-value witness and a measured capacity eviction.
+the paired width-3 cap-0/cap-1 Triangle and Mixed cells after the bounded Triangle
+observer has either produced a classified better endpoint or explicitly
+falsified its subset/fanout hypothesis. Carry cap 1 to the four-sheet and corpus
+gates only when it produces a distinct better complete endpoint without
+regressing Triangle. Do not widen from this matrix; widening requires the
+separate admissible delayed-value witness and a measured capacity eviction.
 Every run uses identical repair settings.
 
 For every forced witness, record whether the required candidate was generated,
@@ -1239,9 +1288,9 @@ and admits only Clipper2-legal endpoints to the common archive.
 ## Current Artifact Paths
 
 - Triangle selected PNG:
-  `/private/tmp/min-plane-provenance/v7-geometric-cohesion-a3a7b95/triangle/triangle-20-geometric-cohesion-selected.png`
+  `/private/tmp/min-plane-provenance/v7-reviewed-af032b2-triangle-w3/triangle-20-partial-geometric-beam-width-3.png`
 - Mixed selected PNG:
-  `/private/tmp/min-plane-provenance/v7-geometric-cohesion-a3a7b95/mixed/mixed-61-geometric-cohesion-selected.png`
+  `/private/tmp/min-plane-provenance/v7-reviewed-af032b2-mixed-w3-360s/mixed-61-partial-geometric-beam-width-3.png`
 - Queue/beam evidence:
   `/private/tmp/min-plane-provenance/v7-queue-beam-14868c2/`
 - Reviewed calibration reports (diagnostic; Triangle lineage source rejected,
@@ -1251,17 +1300,19 @@ and admits only Clipper2-legal endpoints to the common archive.
 
 ## Immediate Next Action
 
-Profile the existing commensurate discovery and symmetric two-order completion
-path, then run the bounded commensurate-only cold cost pilot. Reuse the selected
-alternate discovery enumeration, skip unrelated continuations, and record the
-separate discovery, canonical-admission, topology, and completion costs. Do not
-run a live cap-1 cell merely because width 3 completed: the cap-0 Mixed run used
-`287.698 s` of a `300 s` abort and leaves no fair paired budget.
+Run two independent bounded workstreams:
 
-In parallel with that cost work, export or wrap one reachable delayed-value
-lineage with its origin commit, local-geometry digest, expected finalized
-hash/rotation, and exact metrics. Only after the cost pilot shows that cap 0 and
-cap 1 can both complete under the same frozen budget should the fixed-width
-paired ablation run. Do not enable the stagnation kick or Sparrow-style
-coordinated movement before those gates have complete endpoints and reviewed
-traces.
+1. implement and run the generic Triangle peel/reinsert and constructive-replay
+   observer defined above. Pass means a strictly better exact endpoint without a
+   topology regression plus a classified replay lineage; failure means no
+   improvement within the declared top-four/subset/fanout bound;
+2. profile the existing Mixed commensurate discovery and symmetric two-order
+   completion path, then run the bounded cold cost pilot. Reuse the selected
+   alternate discovery enumeration, skip unrelated continuations, and record
+   discovery, canonical-admission, topology, and completion costs separately.
+
+The delayed-value provenance recovery may proceed concurrently and blocks only
+beam widening. A live fixed-width cap-0/cap-1 pair requires both projected cells
+under one frozen budget and a reviewed Triangle observer classification. Do not
+enable the stagnation kick or Sparrow-style coordinated movement before these
+bounded legal-search gates have complete endpoints and reviewed traces.
