@@ -143,6 +143,17 @@ export interface IntrinsicV7DiagnosticSample {
   readonly satRawLoss: number
   readonly satWeightedLoss: number
   readonly canonicalLegal: boolean
+  readonly protectedSweepsSurvived: number
+  readonly archive:
+    | {
+        readonly decision:
+          | 'admitted'
+          | 'admitted-evicted-other'
+          | 'already-retained'
+          | 'rejected-by-archive'
+        readonly evictedCount: number
+      }
+    | undefined
 }
 
 export interface IntrinsicV7ArmTrace {
@@ -159,6 +170,12 @@ export interface IntrinsicV7ArmTrace {
     readonly finalPoolSize: number
   }
   readonly phaseCache: IntrinsicPhaseSignatureCacheStats
+  readonly budget: {
+    readonly armEvaluations: number
+    readonly maximumEvaluations: number
+    readonly elapsedMs: number
+    readonly maximumRuntimeMs: number
+  }
   readonly elapsedMs: number
 }
 
@@ -437,7 +454,9 @@ function runIndependentStage1Arm(input: {
             numericAfter: protectedSurvivor.numeric,
             satRawLoss: protectedSurvivor.evaluation.rawLoss,
             satWeightedLoss: protectedSurvivor.evaluation.weightedLoss,
-            canonicalLegal: false
+            canonicalLegal: false,
+            protectedSweepsSurvived: sweep + 1,
+            archive: undefined
           })
         }
       }
@@ -455,6 +474,12 @@ function runIndependentStage1Arm(input: {
           finalPoolSize: pool.length
         },
         phaseCache: intrinsicPhaseSignatureCacheStats(phaseMemo),
+        budget: {
+          armEvaluations: armBudget.evaluated,
+          maximumEvaluations: input.schedule.maximumEvaluations,
+          elapsedMs: Math.max(0, performance.now() - armStartedAt),
+          maximumRuntimeMs: input.schedule.maximumRuntimeMs
+        },
         elapsedMs: Math.max(0, performance.now() - armStartedAt)
       })
     }
@@ -541,7 +566,9 @@ function evaluateAndRecord(input: {
       numericAfter: numeric,
       satRawLoss: evaluation.rawLoss,
       satWeightedLoss: evaluation.weightedLoss,
-      canonicalLegal
+      canonicalLegal,
+      protectedSweepsSurvived: 0,
+      archive: undefined
     })
   }
   if (input.numericBefore !== undefined && compareNumericPressure(numeric, input.numericBefore) < 0) {
@@ -555,7 +582,9 @@ function evaluateAndRecord(input: {
       numericAfter: numeric,
       satRawLoss: evaluation.rawLoss,
       satWeightedLoss: evaluation.weightedLoss,
-      canonicalLegal
+      canonicalLegal,
+      protectedSweepsSurvived: 0,
+      archive: undefined
     })
   }
   if (canonicalLegal) {
@@ -579,7 +608,12 @@ function evaluateAndRecord(input: {
       numericAfter: numeric,
       satRawLoss: evaluation.rawLoss,
       satWeightedLoss: evaluation.weightedLoss,
-      canonicalLegal: true
+      canonicalLegal: true,
+      protectedSweepsSurvived: 0,
+      archive: {
+        decision: admission.decision,
+        evictedCount: admission.evictedCount
+      }
     })
     // Legal endpoints are archive-only. They must not consume the infeasible pool.
     return undefined
@@ -798,14 +832,31 @@ class V7EndpointArchive {
 
   constructor(private readonly capacity: number) {}
 
-  add(candidate: IntrinsicV7Endpoint): { readonly admitted: boolean; readonly evictedCount: number } {
+  add(candidate: IntrinsicV7Endpoint): {
+    readonly admitted: boolean
+    readonly evictedCount: number
+    readonly decision:
+      | 'admitted'
+      | 'admitted-evicted-other'
+      | 'already-retained'
+      | 'rejected-by-archive'
+  } {
     const before = new Set(this.entries.map(({ stateKey }) => stateKey))
     const ranked = retainV7LegalEndpointArchive([...this.entries, candidate], this.capacity)
     const after = new Set(ranked.map(({ stateKey }) => stateKey))
     this.entries = ranked
+    const evictedCount = [...before].filter((stateKey) => !after.has(stateKey)).length
+    const admitted = after.has(candidate.stateKey)
     return {
-      admitted: after.has(candidate.stateKey),
-      evictedCount: [...before].filter((stateKey) => !after.has(stateKey)).length
+      admitted,
+      evictedCount,
+      decision: before.has(candidate.stateKey)
+        ? 'already-retained'
+        : !admitted
+          ? 'rejected-by-archive'
+          : evictedCount > 0
+            ? 'admitted-evicted-other'
+            : 'admitted'
     }
   }
 
@@ -1109,6 +1160,13 @@ function compareV7Samples(
   second: IntrinsicV7DiagnosticSample
 ): number {
   if (first.kind === 'sat-clipper-disagreement') return 1
+  if (first.kind === 'protected-survivor') {
+    return (
+      second.protectedSweepsSurvived - first.protectedSweepsSurvived ||
+      compareNumericPressure(first.numericAfter, second.numericAfter) ||
+      first.stateKey.localeCompare(second.stateKey)
+    )
+  }
   return (
     compareNumericPressure(first.numericAfter, second.numericAfter) ||
     first.satRawLoss - second.satRawLoss ||

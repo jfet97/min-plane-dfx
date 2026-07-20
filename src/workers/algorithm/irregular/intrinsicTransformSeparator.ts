@@ -1091,7 +1091,11 @@ function translationPhaseSignature(
 ): string | undefined {
   const entry = catalog.entries.find(({ pieceId }) => pieceId === pose.pieceId)
   if (entry === undefined) return undefined
-  const memoKey = `${entry.pieceId}:${pose.translationBasisXmm}:${pose.translationBasisYmm}`
+  const memoKey = JSON.stringify([
+    entry.pieceId,
+    pose.translationBasisXmm,
+    pose.translationBasisYmm
+  ])
   if (memo !== undefined) {
     memo.requestCount += 1
     if (memo.byCatalogEntryAndBasis.has(memoKey)) {
