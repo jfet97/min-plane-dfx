@@ -11,6 +11,21 @@ The plan is intentionally staged. Complete and measure each stage before
 activating its conditional successor. Do not replace this sequence with another
 single comparator experiment.
 
+The current critical path is narrower than the original Stage 2 width sweep.
+The authoritative Mixed lineage is already missing at its second placement
+under current candidate semantics. Until that placement is reachable, larger
+beams can only preserve different states more expensively. Therefore:
+
+1. localize the first missing structured successor to generation, deduplication,
+   direct legality, or canonical admission;
+2. restore that generic contact/reconstruction reachability without embedding
+   the fixture or its saved coordinates in production;
+3. rerun the structured lineage and only then calibrate beam width and horizon;
+4. test commensurate gap reordering after one positive beam/reconstruction cell.
+
+Runtime micro-optimization, richer diagnostic fields, and wider sweeps are
+secondary until this reachability boundary is resolved.
+
 ## Objective
 
 Build a deterministic, sheet-independent constructive search that:
@@ -106,6 +121,42 @@ scheduled branch and therefore appear intrinsically smaller for the wrong
 reason. Queue value must be re-measured after both orderings have placed the
 same geometry-class multiset. Beam capacity and survival horizon must likewise
 be calibrated against a known delayed-value lineage before widths are chosen.
+
+### Authoritative structured-lineage result
+
+Commit `d9ecd0a` replays the immutable 61-step winner lineage from:
+
+`/private/tmp/min-plane-provenance/protected-contact-pareto-frontier/candidate-v2/traces/mixed-61-2000x2700.winner-lineage.json`
+
+The source SHA-256 is
+`c88cd5ec7780d45215f33487e59fb14faf280b74d0fbc7317608f1e4b5eb1b14`.
+Unlike the rejected SVG reconstruction, every prefix is decoded from structured
+piece ids, transforms, and translations, rebuilt with the current collision
+geometry, bottom-left anchored, and required to pass canonical final-sheet
+legality before it becomes a witness.
+
+The report is:
+
+`/private/tmp/min-plane-provenance/v7-structured-lineage-d9ecd0a/report.json`
+
+It reached 34 audit depths and 164,535 evaluations before the 300-second cap,
+but the causal result occurs immediately:
+
+- depth 0 is generated, Pareto layer 0, rank 1 on compactness, fragmentation,
+  and void topology, and survives every tested width;
+- depth 1 enumerates 80 raw candidates and 33 distinct canonical successors,
+  but none equals the known compact prefix;
+- therefore the witness fails widths 0, 1, 3, 7, and 12 for a reason no
+  retention rule can repair.
+
+This supersedes the earlier hypothesis that the first useful intervention is a
+wider partial beam. The beam remains necessary for later locally losing
+prefixes, but it is downstream of candidate/reconstruction reachability for the
+known Mixed motif. Before declaring a missing geometric feature, one bounded
+first-miss audit must distinguish raw-source absence from point deduplication,
+direct-legality rejection, canonical-admission rejection, or a small canonical
+pose delta. That is the only additional provenance required on the immediate
+path.
 
 ## What The Completed Proofs Rule Out
 
@@ -208,14 +259,14 @@ admission, accounting, and refinement machinery but rule out simply increasing
 single-piece pressure vocabulary. The next search must retain different
 futures or coordinate several pieces.
 
-## Evidence Hardening Before Live Stage 2
+## Evidence Required Before Live Stage 2
 
 The current discriminator is intentionally cheap and one-step. It selected the
 mechanisms worth measuring, but it did not establish their production retention
-rules. Two trace-only calibrations are mandatory before live Stage 2 selection:
+rules. Two trace-only calibrations govern live Stage 2 selection:
 
-1. **Delayed-lineage calibration.** Export the known compact Triangle lineage
-   from its pinned decoder run as structured immutable data: polygon-local
+1. **Delayed-lineage calibration.** Export a known compact lineage from its
+   pinned decoder run as structured immutable data: polygon-local
    geometry, placement translation, transform, placement order, source commit,
    endpoint canonical hash, and exact metrics. Verify every reconstructed
    prefix, the complete canonical hash, and exact legality before replay. At
@@ -228,9 +279,11 @@ rules. Two trace-only calibrations are mandatory before live Stage 2 selection:
    retention. Continue the exact witness and selected neighborhood members for
    the measured horizon or to a complete endpoint. Test total retained
    capacities 1, 2, 4, 8, and 13 (`experimentalWidth` 0, 1, 3, 7, and 12), then
-   only the next capacity needed to bracket survival. This is a calibration
-   witness, not a production Triangle special case; an SVG render is not an
-   admissible lineage source.
+   only the next capacity needed to bracket survival. The Mixed structured
+   lineage now satisfies the source requirement and exposes a depth-1
+   reachability failure; capacity calibration resumes only after that failure
+   is repaired. This is a calibration witness, not a production fixture special
+   case; an SVG render is not an admissible lineage source.
 2. **Commensurate queue calibration.** When an alternate geometry class has a
    gap-contained placement, compare `scheduled -> alternate` with `alternate ->
    scheduled`. Admit the comparison only after both branches have placed the
@@ -285,7 +338,39 @@ reservation. Exact-witness replay calibrates a generic selector; production
 retention uses only sheet-free geometry, topology/contact signatures, remaining
 work, and deterministic identity.
 
-## Frozen Implementation Sequence
+### Decision checkpoint after `d9ecd0a`
+
+The implementation sequence is amended by evidence, not replaced by a new
+mechanism:
+
+1. keep the corrected Stage 2A beam implementation and its protected width-one
+   control;
+2. do not run wider beam cells yet—the known compact Mixed prefix is absent
+   before beam selection at depth 1;
+3. instrument only that first miss through raw source, point deduplication,
+   direct legality, canonical legality, and nearest canonical pose;
+4. if the pose exists before a filter, repair that generic filter/admission
+   boundary; if it is genuinely absent, add one bounded Abey-style contact
+   reconstruction seed using geometry-derived edge/vertex relations;
+5. require the depth-1 structured prefix to become generated before resuming
+   the width/horizon calibration;
+6. preserve Stage 2B commensurate gap reordering as the next independent
+   mechanism after one reachable positive-width cell.
+
+The timing evidence also prevents optimizing the wrong subsystem. In the clean
+90-second Mixed width-3 run at `d9ecd0a`, scoring and exact topology measurement
+consume `66,334.988 ms`, canonical admission `10,117.159 ms`, candidate
+generation `1,678.612 ms`, and beam selection `2,652.593 ms`. The run reaches
+depth 33 after 42,635 evaluations. Candidate generation is not the runtime
+bottleneck; any new reconstruction feature must remain bounded, while later
+performance work should cache or stage scoring/topology measurements.
+
+Reports:
+
+- `/private/tmp/min-plane-provenance/v7-stage2a-d9ecd0a-mixed-w3-timed/report.json`;
+- `/private/tmp/min-plane-provenance/v7-stage2a-d9ecd0a-triangle-w3-timed/report.json`.
+
+## Evidence-Driven Implementation Sequence
 
 ## Stage 2A: Bounded Partial Geometric Beam
 
@@ -460,6 +545,18 @@ partial beam remains the selected search direction; its first evidence run was
 not yet a valid quality verdict because the selector underfilled capacity, the
 harness had a runtime-dependent reconstruction prelude, and terminal
 finalization differed from the strict decoder.
+
+The subsequent `d9ecd0a` corrections close those local evidence defects:
+capacity is filled from deeper layers when needed, the width-zero control is
+exact, every finalist uses canonical q0/q90 finalization, identity traces are
+bounded digests, the harness is beam-only, unused gap measurement is removed,
+and Pareto extraction is bounded. Triangle still completes with the same
+`110,660.943411 mm2` diagnostic layout. Mixed reaches depth 33/61 at 90 seconds
+and depth 56/61 at 300 seconds, without a complete finalist. Those runs prove
+the implementation progresses but do not justify more runtime: the independent
+structured replay already proves the target compact lineage is unreachable at
+depth 1. The next action is the first-miss reachability audit above, not another
+beam-width or time-budget sweep.
 
 ### Pass, failure, and interpretation
 
