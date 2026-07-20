@@ -985,7 +985,7 @@ function splitContractedState(
 ): { readonly state: IntrinsicRelaxedState; readonly targetBox: IntrinsicTargetBox; readonly axis: 'x' | 'y' } | undefined {
   const placed = provisionalLayoutFromRelaxedState(catalog, state)
   const bounds = placed === undefined ? undefined : intrinsicTargetFromPlaced(placed)
-  if (bounds === undefined) return undefined
+  if (placed === undefined || bounds === undefined) return undefined
   const widthGrid = toGridMm(bounds.widthMm)
   const heightGrid = toGridMm(bounds.heightMm)
   if (widthGrid === undefined || heightGrid === undefined) return undefined
@@ -994,13 +994,30 @@ function splitContractedState(
   const removed = Math.max(1, Math.floor(span * contractionRatio))
   const nextSpan = span - removed
   if (nextSpan <= 0) return undefined
-  const coordinates = state.poses
-    .map((pose) => ({ pose, coordinate: axis === 'x' ? pose.translateXGrid : pose.translateYGrid }))
-    .toSorted((first, second) => first.coordinate - second.coordinate || first.pose.pieceId.localeCompare(second.pose.pieceId))
+  const coordinates = placed
+    .map((entry) => {
+      const path = placedCollisionWorldGridPath(entry)
+      if (path === undefined || path.length === 0) return undefined
+      const coordinate =
+        axis === 'x'
+          ? Math.min(...path.map(({ x }) => x))
+          : Math.min(...path.map(({ y }) => y))
+      const pieceId = entry.placement.pieceId ?? entry.placement.sourcePieceId
+      return { pieceId, coordinate }
+    })
+    .filter(
+      (entry): entry is { readonly pieceId: PieceId; readonly coordinate: number } =>
+        entry !== undefined
+    )
+    .toSorted(
+      (first, second) =>
+        first.coordinate - second.coordinate || first.pieceId.localeCompare(second.pieceId)
+    )
+  if (coordinates.length !== state.poses.length) return undefined
   const minimum = coordinates[0]?.coordinate
   if (minimum === undefined) return undefined
   const cutoff = minimum + Math.round(span * quantile)
-  const far = coordinates.filter(({ coordinate }) => coordinate >= cutoff).map(({ pose }) => pose.pieceId)
+  const far = coordinates.filter(({ coordinate }) => coordinate >= cutoff).map(({ pieceId }) => pieceId)
   if (far.length === 0 || far.length === state.poses.length) return undefined
   const translated = transportIntrinsicGroup(
     catalog,
