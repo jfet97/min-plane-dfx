@@ -22,6 +22,8 @@ import {
 import {
   advanceIntrinsicPressureAdaptiveDepth,
   advanceIntrinsicDisruptionLineage,
+  classifyIntrinsicPressureCanonicalLegality,
+  createIntrinsicPressureCanonicalLegalityMemo,
   describeIntrinsicPressureLossSnapshot,
   deriveIntrinsicGlobalOrdinalSeed,
   deriveIntrinsicGlobalTargetRoles,
@@ -36,6 +38,7 @@ import {
   partitionIntrinsicStructuralPieces,
   pressureRepairSweepAllowance,
   pressureRepairMaximumSweepAllowance,
+  pressureProjectionPreserved,
   retainIntrinsicInfeasiblePool,
   retainIntrinsicInfeasiblePoolWithDiagnostics,
   retainIntrinsicStructuralHandoffs,
@@ -494,14 +497,22 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(result.trace.committedPieceCount).toBeGreaterThanOrEqual(1)
     expect(result.trace.alreadyClearPieceCount).toBeGreaterThanOrEqual(1)
     expect(result.trace.exactZeroIntermediateVisitIndex).toBeDefined()
+    expect(result.trace.canonicalLegalIntermediateVisitIndex).toBeDefined()
+    expect(result.trace.canonicalLegalityEvaluationCount).toBeGreaterThan(0)
+    expect(result.trace.canonicalLegalityRequestCount).toBeGreaterThanOrEqual(
+      result.trace.canonicalLegalityEvaluationCount
+    )
     expect(result.exactZeroIntermediate).toBe(true)
+    expect(result.canonicalLegalIntermediate).toBe(true)
     expect(result.evaluation.exactZeroLoss).toBe(true)
     expect(result.trace.visitedPieceIds).toEqual(
       result.trace.frozenColliderIds.slice(0, result.trace.visitedPieceCount)
     )
     expect(
       result.trace.visits
-        .filter(({ outcome }) => outcome === 'committed' || outcome === 'exact-zero')
+        .filter(
+          ({ outcome }) => outcome === 'committed' || outcome === 'canonical-legal'
+        )
         .every(
           ({
             proposalCount,
@@ -536,6 +547,129 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
         { stateKey: 'too-expensive', weightedLoss: 1.001_001, rawLoss: 0.1 }
       ])
     ).toBeUndefined()
+  })
+
+  it('uses canonical target legality as endpoint authority and caches the cross-check', async () => {
+    const pieces = [preparedRectangle('a', 2, 2), preparedRectangle('b', 2, 2)]
+    const catalog = await catalogFor(pieces)
+    const legalState = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 2, 0)
+    ])
+    const overlappingState = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 1.999, 0)
+    ])
+    if (legalState === undefined || overlappingState === undefined) {
+      throw new Error('canonical classification states expected')
+    }
+    const targetBox = { widthMm: 10, heightMm: 10 }
+    const falseRejectEvaluation: IntrinsicSeparationEvaluation = {
+      rawLoss: Number.MIN_VALUE,
+      weightedLoss: Number.MIN_VALUE,
+      exactZeroLoss: false,
+      conflicts: [
+        syntheticWallConflict('floating-residue', PieceId.make('a'), Number.MIN_VALUE, 0, 0)
+      ]
+    }
+    const falseAcceptEvaluation: IntrinsicSeparationEvaluation = {
+      rawLoss: 0,
+      weightedLoss: 0,
+      exactZeroLoss: true,
+      conflicts: []
+    }
+    const memo = createIntrinsicPressureCanonicalLegalityMemo()
+    const falseReject = classifyIntrinsicPressureCanonicalLegality({
+      targetBox,
+      catalog,
+      state: legalState,
+      evaluation: falseRejectEvaluation,
+      memo
+    })
+    const cachedFalseReject = classifyIntrinsicPressureCanonicalLegality({
+      targetBox,
+      catalog,
+      state: legalState,
+      evaluation: falseRejectEvaluation,
+      memo
+    })
+    const falseAccept = classifyIntrinsicPressureCanonicalLegality({
+      targetBox,
+      catalog,
+      state: overlappingState,
+      evaluation: falseAcceptEvaluation,
+      memo
+    })
+
+    expect(falseReject).toMatchObject({
+      classification: 'sat-conflict-canonical-legal',
+      canonicalLegal: true,
+      satExactZeroLoss: false
+    })
+    expect(cachedFalseReject).toEqual(falseReject)
+    expect(falseAccept).toMatchObject({
+      classification: 'sat-clear-canonical-illegal',
+      canonicalLegal: false,
+      satExactZeroLoss: true
+    })
+    expect(memo).toMatchObject({
+      requestCount: 3,
+      evaluationCount: 2,
+      cacheHitCount: 1,
+      disagreementCount: 2
+    })
+  })
+
+  it('preserves projection identity across reordering and rigid reanchoring', async () => {
+    const pieces = [
+      preparedRectangle('a', 3, 2),
+      preparedRectangle('b', 2, 1),
+      preparedRectangle('c', 1, 4)
+    ]
+    const catalog = await catalogFor(pieces)
+    const original = [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 3, 0),
+      placed(catalogEntry(catalog, 'c'), 0, 5, 0)
+    ]
+    const reanchored = original
+      .toReversed()
+      .map((entry) => translatePlaced(entry, 123.456, 987.654))
+    const before = measureIntrinsicPressureCompactness(original)?.compactness
+    const after = measureIntrinsicPressureCompactness(reanchored)?.compactness
+
+    expect(after?.canonicalIdentity).toBe(before?.canonicalIdentity)
+    expect(after?.areaWeightedCentroidDispersion).toBe(
+      before?.areaWeightedCentroidDispersion
+    )
+    expect(pressureProjectionPreserved(before, after)).toBe(true)
+    expect(
+      pressureProjectionPreserved(before, {
+        ...(after ?? {
+          canonicalIdentity: '',
+          envelopeAreaMm2: 0,
+          envelopeMaximumSideMm: 0,
+          areaWeightedCentroidDispersion: 0,
+          enclosedCavityCount: 0,
+          largestOccupiedHullGapRatio: 0
+        }),
+        areaWeightedCentroidDispersion:
+          (after?.areaWeightedCentroidDispersion ?? 0) + Number.EPSILON
+      })
+    ).toBe(true)
+    expect(
+      pressureProjectionPreserved(before, {
+        ...(after ?? {
+          canonicalIdentity: '',
+          envelopeAreaMm2: 0,
+          envelopeMaximumSideMm: 0,
+          areaWeightedCentroidDispersion: 0,
+          enclosedCavityCount: 0,
+          largestOccupiedHullGapRatio: 0
+        }),
+        canonicalIdentity: `${after?.canonicalIdentity ?? ''}:different`
+      })
+    ).toBe(false)
   })
 
   it('records composite evaluation-cap and deadline interruptions truthfully', async () => {
@@ -1629,7 +1763,7 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       ({ lane }) => lane === 'contracted-pressure'
     )
 
-    expect(pressureProjection?.outcome).toBe('structural-analysis-invalid')
+    expect(pressureProjection?.outcome).toBe('projection-identity-mismatch')
     expect(retainedTrace?.preProjectionCompactness).toBeDefined()
     expect(retainedTrace?.postProjectionCompactness).toBeDefined()
     expect(retainedTrace?.postProjectionCompactness).not.toEqual(
@@ -2335,6 +2469,30 @@ function worldCenter(entry: IrregularPlacedPiece): { readonly x: number; readonl
     x: (Math.min(...points.map(({ x }) => x)) + Math.max(...points.map(({ x }) => x))) / 2,
     y: (Math.min(...points.map(({ y }) => y)) + Math.max(...points.map(({ y }) => y))) / 2
   }
+}
+
+function translatePlaced(
+  entry: IrregularPlacedPiece,
+  deltaX: number,
+  deltaY: number
+): IrregularPlacedPiece {
+  return new IrregularPlacedPiece({
+    placement: new IrregularPlacement({
+      sourcePieceId: entry.placement.sourcePieceId,
+      ...(entry.placement.pieceId === undefined
+        ? {}
+        : { pieceId: entry.placement.pieceId }),
+      ...(entry.placement.placementReference === undefined
+        ? {}
+        : { placementReference: entry.placement.placementReference }),
+      transform: new IrregularTransform({
+        ...entry.placement.transform,
+        translateX: entry.placement.transform.translateX + deltaX,
+        translateY: entry.placement.transform.translateY + deltaY
+      })
+    }),
+    collisionGeometry: entry.collisionGeometry
+  })
 }
 
 function occupiedSpan(placedEntries: ReadonlyArray<IrregularPlacedPiece>) {

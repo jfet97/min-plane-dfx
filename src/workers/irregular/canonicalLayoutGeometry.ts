@@ -31,6 +31,20 @@ export interface CanonicalEnclosedCavityMetrics {
   readonly totalAreaMm2: number
 }
 
+export interface CanonicalLayoutContactMetrics {
+  readonly sharedBoundaryLengthMm: number
+  readonly contactUnits: number
+  readonly totalStructuralContacts: number
+  readonly dominantStructuralContacts: number
+}
+
+export interface CanonicalLayoutEnvelopeMetrics {
+  readonly areaMm2: number
+  readonly maximumSideMm: number
+  readonly spanMm: number
+  readonly occupiedHullWasteRatio: number
+}
+
 interface CanonicalPlacedPolygon {
   readonly pieceId: PieceId
   readonly path: Path64
@@ -125,6 +139,109 @@ export function measureCanonicalEnclosedCavities(
   return polygons === undefined
     ? undefined
     : measureEnclosedOccupiedCavities(polygons.map(({ path }) => path))
+}
+
+/** Complete-layout contact metrics measured only after snapping world geometry to the grid. */
+export function measureCanonicalLayoutContacts(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): CanonicalLayoutContactMetrics | undefined {
+  const polygons = canonicalPlacedPolygons(placed)?.toSorted((first, second) =>
+    first.pieceId.localeCompare(second.pieceId)
+  )
+  if (polygons === undefined) return undefined
+  let sharedBoundaryLengthMm = 0
+  let contactUnits = 0
+  let totalStructuralContacts = 0
+  const signatureCounts = new Map<string, number>()
+  for (let firstIndex = 0; firstIndex < polygons.length; firstIndex += 1) {
+    const first = polygons[firstIndex]
+    if (first === undefined) return undefined
+    for (let secondIndex = 0; secondIndex < firstIndex; secondIndex += 1) {
+      const second = polygons[secondIndex]
+      if (second === undefined) return undefined
+      const contact = measureSharedConvexPolygonBoundaryContact(
+        first.contactPolygon,
+        second.contactPolygon
+      )
+      if (contact === undefined) return undefined
+      sharedBoundaryLengthMm += contact.lengthMm
+      contactUnits += contact.normalizedUnits
+      totalStructuralContacts += contact.nearCompleteStructuralContactCount
+      for (const signature of contact.nearCompleteStructuralContactSignatures) {
+        const count = (signatureCounts.get(signature) ?? 0) + 1
+        if (!Number.isSafeInteger(count)) return undefined
+        signatureCounts.set(signature, count)
+      }
+    }
+  }
+  let dominantStructuralContacts = 0
+  for (const count of signatureCounts.values()) {
+    dominantStructuralContacts = Math.max(dominantStructuralContacts, count)
+  }
+  return [
+    sharedBoundaryLengthMm,
+    contactUnits,
+    totalStructuralContacts,
+    dominantStructuralContacts
+  ].every(Number.isFinite)
+    ? {
+        sharedBoundaryLengthMm,
+        contactUnits,
+        totalStructuralContacts,
+        dominantStructuralContacts
+      }
+    : undefined
+}
+
+/** Complete-layout envelope and hull metrics measured on canonical grid paths. */
+export function measureCanonicalLayoutEnvelope(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): CanonicalLayoutEnvelopeMetrics | undefined {
+  const polygons = canonicalPlacedPolygons(placed)
+  if (polygons === undefined || polygons.length === 0) return undefined
+  const paths = polygons.map(({ path }) => path)
+  const points = paths.flat()
+  const minimumX = Math.min(...points.map(({ x }) => x))
+  const minimumY = Math.min(...points.map(({ y }) => y))
+  const maximumX = Math.max(...points.map(({ x }) => x))
+  const maximumY = Math.max(...points.map(({ y }) => y))
+  const widthGrid = maximumX - minimumX
+  const heightGrid = maximumY - minimumY
+  const occupiedAreaGrid2 = paths.reduce((sum, path) => sum + Math.abs(area(path)), 0)
+  const hullAreaGrid2 = Math.abs(area(convexHull(points)))
+  if (
+    ![
+      minimumX,
+      minimumY,
+      maximumX,
+      maximumY,
+      widthGrid,
+      heightGrid,
+      occupiedAreaGrid2,
+      hullAreaGrid2
+    ].every(Number.isFinite) ||
+    widthGrid < 0 ||
+    heightGrid < 0 ||
+    occupiedAreaGrid2 < 0 ||
+    hullAreaGrid2 < occupiedAreaGrid2
+  ) {
+    return undefined
+  }
+  const widthMm = fromGrid(widthGrid)
+  const heightMm = fromGrid(heightGrid)
+  const occupiedHullWasteRatio =
+    hullAreaGrid2 === 0 ? 0 : (hullAreaGrid2 - occupiedAreaGrid2) / hullAreaGrid2
+  const metrics = {
+    areaMm2: widthMm * heightMm,
+    maximumSideMm: Math.max(widthMm, heightMm),
+    spanMm: widthMm + heightMm,
+    occupiedHullWasteRatio
+  }
+  return Object.values(metrics).every(Number.isFinite) &&
+    occupiedHullWasteRatio >= 0 &&
+    occupiedHullWasteRatio <= 1
+    ? metrics
+    : undefined
 }
 
 /** True only when every canonical-grid polygon fits and no pair has positive overlap. */

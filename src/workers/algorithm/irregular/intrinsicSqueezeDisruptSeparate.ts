@@ -10,6 +10,8 @@ import {
   assertCanonicalGridLegalLayout,
   canonicalCollisionLayoutIdentity,
   measureCanonicalEnclosedCavities,
+  measureCanonicalLayoutContacts,
+  measureCanonicalLayoutEnvelope,
   measureCanonicalLayoutTopology
 } from '../../irregular/canonicalLayoutGeometry.js'
 import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
@@ -24,7 +26,6 @@ import {
   IrregularNfpIfpControlAbortError
 } from '../../irregular/services.js'
 import { IrregularBeamState } from './irregularBeamState.js'
-import { deriveRawOccupiedHullWasteRatio } from './irregularLayoutScorer.js'
 import {
   buildIntrinsicTransformCatalog,
   assertIntrinsicTargetExactLegal,
@@ -133,6 +134,29 @@ export interface IntrinsicPressureCompactnessTuple {
   readonly largestOccupiedHullGapRatio: number
 }
 
+export type IntrinsicPressureCanonicalClassification =
+  | 'sat-clear-canonical-legal'
+  | 'sat-clear-canonical-illegal'
+  | 'sat-conflict-canonical-legal'
+  | 'sat-conflict-canonical-illegal'
+  | 'unmaterializable'
+
+export interface IntrinsicPressureCanonicalLegality {
+  readonly stateKey: string | undefined
+  readonly satConflictCount: number
+  readonly satExactZeroLoss: boolean
+  readonly canonicalLegal: boolean
+  readonly classification: IntrinsicPressureCanonicalClassification
+}
+
+export interface IntrinsicPressureCanonicalLegalityMemo {
+  readonly byStateKey: Map<string, IntrinsicPressureCanonicalLegality>
+  requestCount: number
+  evaluationCount: number
+  cacheHitCount: number
+  disagreementCount: number
+}
+
 export interface IntrinsicPressureConflictTrace {
   readonly key: string
   readonly kind: 'pair' | 'wall'
@@ -230,7 +254,7 @@ export interface IntrinsicPressureCompositeVisitTrace {
     | 'already-clear'
     | 'committed'
     | 'no-op'
-    | 'exact-zero'
+    | 'canonical-legal'
     | 'evaluation-cap'
     | 'deadline'
   readonly proposalCount: number
@@ -244,6 +268,7 @@ export interface IntrinsicPressureCompositeVisitTrace {
   readonly afterPairConflictCount: number
   readonly beforeConflictedPieceCount: number
   readonly afterConflictedPieceCount: number
+  readonly canonicalLegality: IntrinsicPressureCanonicalLegality | undefined
 }
 
 export interface IntrinsicPressureCompositeParentTrace {
@@ -270,6 +295,11 @@ export interface IntrinsicPressureCompositeParentTrace {
   readonly startConflictedPieceCount: number
   readonly endConflictedPieceCount: number
   readonly exactZeroIntermediateVisitIndex: number | undefined
+  readonly canonicalLegalIntermediateVisitIndex: number | undefined
+  readonly canonicalLegalityRequestCount: number
+  readonly canonicalLegalityEvaluationCount: number
+  readonly canonicalLegalityCacheHitCount: number
+  readonly canonicalLegalityDisagreementCount: number
   readonly evaluationCount: number
   readonly evaluationCapReached: boolean
   readonly deadlineReached: boolean
@@ -288,6 +318,7 @@ export interface IntrinsicSequentialColliderCompositeResult {
   readonly affectedPieceIds: ReadonlyArray<PieceId>
   readonly evaluationCount: number
   readonly exactZeroIntermediate: boolean
+  readonly canonicalLegalIntermediate: boolean
   readonly evaluationCapReached: boolean
   readonly deadlineReached: boolean
   readonly trace: IntrinsicPressureCompositeParentTrace
@@ -338,6 +369,14 @@ export interface IntrinsicContractedPressureAttemptTrace {
   readonly separationEvaluationCount: number
   readonly bestRepairedLoss: number | undefined
   readonly bestEndpointExact: boolean
+  readonly bestEndpointSatExactZero: boolean
+  readonly bestEndpointCanonicalClassification:
+    | IntrinsicPressureCanonicalClassification
+    | undefined
+  readonly canonicalLegalityRequestCount: number
+  readonly canonicalLegalityEvaluationCount: number
+  readonly canonicalLegalityCacheHitCount: number
+  readonly canonicalLegalityDisagreementCount: number
   readonly bestEndpointCompactness: IntrinsicPressureCompactnessTuple | undefined
   readonly outcome: 'accepted' | 'rejected'
   readonly reason: string
@@ -492,6 +531,7 @@ export interface IntrinsicProjectionAttemptTrace {
     | 'exact-analysis'
     | 'invalid-input'
     | 'deadline'
+    | 'projection-identity-mismatch'
     | 'structural-analysis-invalid'
   readonly failedPieceId: PieceId | undefined
   readonly dilationSteps: number | undefined
@@ -591,6 +631,7 @@ interface IntrinsicPressureExactEndpoint {
   readonly evaluation: IntrinsicSeparationEvaluation
   readonly weights: IntrinsicSeparatorWeights
   readonly measured: IntrinsicPressureMeasuredLayout
+  readonly canonicalLegality: IntrinsicPressureCanonicalLegality
 }
 
 interface IntrinsicPressureLaneResult {
@@ -943,10 +984,11 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
           contractedPressureTrace,
           postProjection
         )
-        const handoff = pressureProjectionPreserved(
+        const projectionPreserved = pressureProjectionPreserved(
           contractedPressureEndpoint?.measured.compactness,
           postProjection?.compactness
         )
+        const handoff = projectionPreserved
           ? exactStructuralHandoff({
               role: pressureWorkItem.targetRole,
               basinIndex: pressureWorkItem.basinIndex,
@@ -970,7 +1012,11 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
         }
         projectionTrace.push({
           ...traceBase,
-          outcome: handoff === undefined ? 'structural-analysis-invalid' : 'exact-success',
+          outcome: !projectionPreserved
+            ? 'projection-identity-mismatch'
+            : handoff === undefined
+              ? 'structural-analysis-invalid'
+              : 'exact-success',
           failedPieceId: undefined,
           dilationSteps: attempted.value.dilationSteps,
           structuralCanonicalGeometryIdentity: handoff?.metrics.canonicalGeometryIdentity,
@@ -1286,7 +1332,11 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
           projectionTrace.push({
             ...traceBase,
             outcome:
-              handoff === undefined ? 'structural-analysis-invalid' : 'exact-success',
+              !pressureProjectionMatches
+                ? 'projection-identity-mismatch'
+                : handoff === undefined
+                  ? 'structural-analysis-invalid'
+                  : 'exact-success',
             failedPieceId: undefined,
             dilationSteps: attempted.value.dilationSteps,
             structuralCanonicalGeometryIdentity:
@@ -1385,38 +1435,28 @@ function exactStructuralHandoff(input: {
   const identity = canonicalCollisionLayoutIdentity(placed)
   const topology = measureCanonicalLayoutTopology(placed)
   const cavities = measureCanonicalEnclosedCavities(placed)
-  const beamState = new IrregularBeamState({
-    remainingPreparedPieces: [],
-    placedCollisionGeometries: placed,
-    placementOrder: placed.map(placedPieceId)
-  })
-  const bounds = beamState.translatedCollisionBounds
-  const occupiedHullWasteRatio = deriveRawOccupiedHullWasteRatio(beamState)
+  const contacts = measureCanonicalLayoutContacts(placed)
+  const envelope = measureCanonicalLayoutEnvelope(placed)
   if (
     identity === undefined ||
     topology === undefined ||
     cavities === undefined ||
-    bounds === undefined ||
-    occupiedHullWasteRatio === undefined ||
-    beamState.nearCompleteStructuralContactCount === undefined ||
-    beamState.dominantNearCompleteStructuralContactCount === undefined
+    contacts === undefined ||
+    envelope === undefined
   ) {
     return undefined
   }
-  const envelopeAreaMm2 = bounds.width * bounds.height
-  const envelopeMaximumSideMm = Math.max(bounds.width, bounds.height)
-  const envelopeSpanMm = bounds.width + bounds.height
   if (
     ![
       cavities.count,
       cavities.totalAreaMm2,
       topology.largestOccupiedHullGapRatio,
-      envelopeAreaMm2,
-      envelopeMaximumSideMm,
-      envelopeSpanMm,
-      occupiedHullWasteRatio,
-      beamState.nearCompleteStructuralContactCount,
-      beamState.dominantNearCompleteStructuralContactCount
+      envelope.areaMm2,
+      envelope.maximumSideMm,
+      envelope.spanMm,
+      envelope.occupiedHullWasteRatio,
+      contacts.totalStructuralContacts,
+      contacts.dominantStructuralContacts
     ].every(Number.isFinite)
   ) {
     return undefined
@@ -1431,12 +1471,12 @@ function exactStructuralHandoff(input: {
       enclosedCavityCount: cavities.count,
       totalEnclosedCavityAreaMm2: cavities.totalAreaMm2,
       largestOccupiedHullGapRatio: topology.largestOccupiedHullGapRatio,
-      envelopeAreaMm2,
-      envelopeMaximumSideMm,
-      envelopeSpanMm,
-      occupiedHullWasteRatio,
-      totalStructuralContacts: beamState.nearCompleteStructuralContactCount,
-      dominantStructuralContacts: beamState.dominantNearCompleteStructuralContactCount
+      envelopeAreaMm2: envelope.areaMm2,
+      envelopeMaximumSideMm: envelope.maximumSideMm,
+      envelopeSpanMm: envelope.spanMm,
+      occupiedHullWasteRatio: envelope.occupiedHullWasteRatio,
+      totalStructuralContacts: contacts.totalStructuralContacts,
+      dominantStructuralContacts: contacts.dominantStructuralContacts
     }
   }
 }
@@ -1586,6 +1626,7 @@ function runIntrinsicContractedPressureLane(input: {
         continue
       }
 
+      const canonicalLegalityMemo = createIntrinsicPressureCanonicalLegalityMemo()
       let weights: IntrinsicSeparatorWeights = { byConflictKey: new Map() }
       let pool: ReadonlyArray<IntrinsicInfeasiblePoolEntry> = [
         pressurePoolEntry(
@@ -1602,7 +1643,8 @@ function runIntrinsicContractedPressureLane(input: {
           targetBox: proposal.contractedBox,
           state: proposal.state,
           evaluation: initialEvaluation,
-          weights
+          weights,
+          canonicalLegalityMemo
         })
       )
       let attemptEvaluationCount = 1
@@ -1671,6 +1713,7 @@ function runIntrinsicContractedPressureLane(input: {
               retainedPressureIdentity:
                 acceptedEndpoint?.measured.compactness.canonicalIdentity,
               preProjectionCompactness: undefined,
+              canonicalLegalityMemo,
               repairSweeps
             })
           )
@@ -1705,7 +1748,8 @@ function runIntrinsicContractedPressureLane(input: {
               0,
               input.maximumAdditionalEvaluations - separationEvaluationCount
             ),
-            control: input.control
+            control: input.control,
+            canonicalLegalityMemo
           })
           compositeParents.push(composite.trace)
           separationEvaluationCount += composite.evaluationCount
@@ -1749,12 +1793,19 @@ function runIntrinsicContractedPressureLane(input: {
                   targetBox: proposal.contractedBox,
                   state: composite.state,
                   evaluation: composite.evaluation,
-                  weights
+                  weights,
+                  canonicalLegalityMemo
                 })
               )
             }
           }
-          if (budgetExhausted || deadlineInterrupted || composite.exactZeroIntermediate) break
+          if (
+            budgetExhausted ||
+            deadlineInterrupted ||
+            composite.canonicalLegalIntermediate
+          ) {
+            break
+          }
         }
         if (deadlineInterrupted) {
           const interruptedDiagnostics = diagnoseIntrinsicPressureInterruptedSweep({
@@ -1825,6 +1876,7 @@ function runIntrinsicContractedPressureLane(input: {
               retainedPressureIdentity:
                 acceptedEndpoint?.measured.compactness.canonicalIdentity,
               preProjectionCompactness: undefined,
+              canonicalLegalityMemo,
               repairSweeps
             })
           )
@@ -2059,6 +2111,7 @@ function runIntrinsicContractedPressureLane(input: {
           retainedPressureIdentity:
             acceptedEndpoint?.measured.compactness.canonicalIdentity,
           preProjectionCompactness: accepted?.measured.compactness,
+          canonicalLegalityMemo,
           repairSweeps
         })
       )
@@ -2259,6 +2312,91 @@ export function isIntrinsicPressureActiveAtCap(input: {
   )
 }
 
+export function createIntrinsicPressureCanonicalLegalityMemo(): IntrinsicPressureCanonicalLegalityMemo {
+  return {
+    byStateKey: new Map(),
+    requestCount: 0,
+    evaluationCount: 0,
+    cacheHitCount: 0,
+    disagreementCount: 0
+  }
+}
+
+/** Cross-classifies floating SAT diagnostics against authoritative grid legality. */
+export function classifyIntrinsicPressureCanonicalLegality(input: {
+  readonly targetBox: IntrinsicTargetBox
+  readonly catalog: IntrinsicTransformCatalog
+  readonly state: IntrinsicRelaxedState
+  readonly evaluation: IntrinsicSeparationEvaluation
+  readonly memo?: IntrinsicPressureCanonicalLegalityMemo
+}): IntrinsicPressureCanonicalLegality {
+  const memo = input.memo
+  if (memo !== undefined) memo.requestCount += 1
+  const stateKey = intrinsicRelaxedStateKey(input.catalog, input.state)
+  const cached = stateKey === undefined ? undefined : memo?.byStateKey.get(stateKey)
+  if (cached !== undefined) {
+    if (memo !== undefined) memo.cacheHitCount += 1
+    return cached
+  }
+  const placed = provisionalLayoutFromRelaxedState(input.catalog, input.state)
+  const canonicalLegal =
+    placed !== undefined && assertIntrinsicTargetExactLegal(input.targetBox, placed)
+  const satExactZeroLoss = input.evaluation.exactZeroLoss
+  const classification: IntrinsicPressureCanonicalClassification =
+    placed === undefined || stateKey === undefined
+      ? 'unmaterializable'
+      : satExactZeroLoss
+        ? canonicalLegal
+          ? 'sat-clear-canonical-legal'
+          : 'sat-clear-canonical-illegal'
+        : canonicalLegal
+          ? 'sat-conflict-canonical-legal'
+          : 'sat-conflict-canonical-illegal'
+  const result = {
+    stateKey,
+    satConflictCount: input.evaluation.conflicts.length,
+    satExactZeroLoss,
+    canonicalLegal,
+    classification
+  }
+  if (memo !== undefined) {
+    memo.evaluationCount += 1
+    if (satExactZeroLoss !== canonicalLegal) memo.disagreementCount += 1
+    if (stateKey !== undefined) memo.byStateKey.set(stateKey, result)
+  }
+  return result
+}
+
+function canonicalLegalityCounters(
+  memo: IntrinsicPressureCanonicalLegalityMemo
+): Omit<IntrinsicPressureCanonicalLegalityMemo, 'byStateKey'> {
+  return {
+    requestCount: memo.requestCount,
+    evaluationCount: memo.evaluationCount,
+    cacheHitCount: memo.cacheHitCount,
+    disagreementCount: memo.disagreementCount
+  }
+}
+
+function canonicalLegalityCounterDelta(
+  before: Omit<IntrinsicPressureCanonicalLegalityMemo, 'byStateKey'>,
+  after: IntrinsicPressureCanonicalLegalityMemo
+): Pick<
+  IntrinsicPressureCompositeParentTrace,
+  | 'canonicalLegalityRequestCount'
+  | 'canonicalLegalityEvaluationCount'
+  | 'canonicalLegalityCacheHitCount'
+  | 'canonicalLegalityDisagreementCount'
+> {
+  return {
+    canonicalLegalityRequestCount: after.requestCount - before.requestCount,
+    canonicalLegalityEvaluationCount: after.evaluationCount - before.evaluationCount,
+    canonicalLegalityCacheHitCount: after.cacheHitCount - before.cacheHitCount,
+    canonicalLegalityDisagreementCount:
+      after.disagreementCount - before.disagreementCount
+  }
+}
+
 export function runIntrinsicSequentialColliderComposite(input: {
   readonly targetBox: IntrinsicTargetBox
   readonly catalog: IntrinsicTransformCatalog
@@ -2268,11 +2406,15 @@ export function runIntrinsicSequentialColliderComposite(input: {
   readonly weights: IntrinsicSeparatorWeights
   readonly maximumEvaluations: number
   readonly control: IrregularNfpIfpControl
+  readonly canonicalLegalityMemo?: IntrinsicPressureCanonicalLegalityMemo
 }): Effect.Effect<
   IntrinsicSequentialColliderCompositeResult,
   IrregularNfpIfpControlAbortError
 > {
   return Effect.gen(function* () {
+    const canonicalLegalityMemo =
+      input.canonicalLegalityMemo ?? createIntrinsicPressureCanonicalLegalityMemo()
+    const initialCanonicalCounters = canonicalLegalityCounters(canonicalLegalityMemo)
     const colliderIds = pressureConflictedPieceIds(input.parentEvaluation)
     const frozenColliderIds =
       intrinsicProjectionPriority(
@@ -2292,6 +2434,7 @@ export function runIntrinsicSequentialColliderComposite(input: {
     let currentStateKey = input.parentStateKey
     let evaluationCount = 0
     let exactZeroIntermediateVisitIndex: number | undefined
+    let canonicalLegalIntermediateVisitIndex: number | undefined
     let evaluationCapReached = false
     let deadlineReached = false
 
@@ -2310,6 +2453,8 @@ export function runIntrinsicSequentialColliderComposite(input: {
         ),
         evaluationCount,
         exactZeroIntermediate: exactZeroIntermediateVisitIndex !== undefined,
+        canonicalLegalIntermediate:
+          canonicalLegalIntermediateVisitIndex !== undefined,
         evaluationCapReached,
         deadlineReached,
         trace: {
@@ -2343,6 +2488,11 @@ export function runIntrinsicSequentialColliderComposite(input: {
           ).size,
           endConflictedPieceCount: pressureConflictedPieceIds(currentEvaluation).size,
           exactZeroIntermediateVisitIndex,
+          canonicalLegalIntermediateVisitIndex,
+          ...canonicalLegalityCounterDelta(
+            initialCanonicalCounters,
+            canonicalLegalityMemo
+          ),
           evaluationCount,
           evaluationCapReached,
           deadlineReached,
@@ -2374,7 +2524,8 @@ export function runIntrinsicSequentialColliderComposite(input: {
             selectedStateKey: currentStateKey,
             before: beforeEvaluation,
             after: beforeEvaluation,
-            weights: input.weights
+            weights: input.weights,
+            canonicalLegality: undefined
           })
         )
         continue
@@ -2428,7 +2579,8 @@ export function runIntrinsicSequentialColliderComposite(input: {
             selectedStateKey: currentStateKey,
             before: beforeEvaluation,
             after: beforeEvaluation,
-            weights: input.weights
+            weights: input.weights,
+            canonicalLegality: undefined
           })
         )
         return finish()
@@ -2453,7 +2605,8 @@ export function runIntrinsicSequentialColliderComposite(input: {
             selectedStateKey: currentStateKey,
             before: beforeEvaluation,
             after: beforeEvaluation,
-            weights: input.weights
+            weights: input.weights,
+            canonicalLegality: undefined
           })
         )
         continue
@@ -2469,7 +2622,8 @@ export function runIntrinsicSequentialColliderComposite(input: {
             selectedStateKey: currentStateKey,
             before: beforeEvaluation,
             after: beforeEvaluation,
-            weights: input.weights
+            weights: input.weights,
+            canonicalLegality: undefined
           })
         )
         return finish()
@@ -2485,7 +2639,8 @@ export function runIntrinsicSequentialColliderComposite(input: {
             selectedStateKey: currentStateKey,
             before: beforeEvaluation,
             after: beforeEvaluation,
-            weights: input.weights
+            weights: input.weights,
+            canonicalLegality: undefined
           })
         )
         return finish()
@@ -2509,7 +2664,8 @@ export function runIntrinsicSequentialColliderComposite(input: {
             selectedStateKey: currentStateKey,
             before: beforeEvaluation,
             after: beforeEvaluation,
-            weights: input.weights
+            weights: input.weights,
+            canonicalLegality: undefined
           })
         )
         continue
@@ -2521,19 +2677,32 @@ export function runIntrinsicSequentialColliderComposite(input: {
       distinctAffectedPieceIds.add(pieceId)
       const exactZero = recomputedEvaluation.exactZeroLoss
       if (exactZero) exactZeroIntermediateVisitIndex = visitIndex
+      const canonicalLegality = classifyIntrinsicPressureCanonicalLegality({
+        targetBox: input.targetBox,
+        catalog: input.catalog,
+        state: selected.state,
+        evaluation: recomputedEvaluation,
+        memo: canonicalLegalityMemo
+      })
+      if (canonicalLegality.canonicalLegal) {
+        canonicalLegalIntermediateVisitIndex = visitIndex
+      }
       visits.push(
         pressureCompositeVisitTrace({
           pieceId,
-          outcome: exactZero ? 'exact-zero' : 'committed',
+          outcome: canonicalLegality.canonicalLegal
+            ? 'canonical-legal'
+            : 'committed',
           proposalCount: proposals.length + 1,
           evaluationCount: visitEvaluationCount,
           selectedStateKey: currentStateKey,
           before: beforeEvaluation,
           after: recomputedEvaluation,
-          weights: input.weights
+          weights: input.weights,
+          canonicalLegality
         })
       )
-      if (exactZero) return finish()
+      if (canonicalLegality.canonicalLegal) return finish()
     }
     return finish()
   })
@@ -2564,6 +2733,7 @@ function pressureCompositeVisitTrace(input: {
   readonly before: IntrinsicSeparationEvaluation
   readonly after: IntrinsicSeparationEvaluation
   readonly weights: IntrinsicSeparatorWeights
+  readonly canonicalLegality: IntrinsicPressureCanonicalLegality | undefined
 }): IntrinsicPressureCompositeVisitTrace {
   return {
     pieceId: input.pieceId,
@@ -2578,7 +2748,8 @@ function pressureCompositeVisitTrace(input: {
     beforePairConflictCount: pressurePairConflictCount(input.before),
     afterPairConflictCount: pressurePairConflictCount(input.after),
     beforeConflictedPieceCount: pressureConflictedPieceIds(input.before).size,
-    afterConflictedPieceCount: pressureConflictedPieceIds(input.after).size
+    afterConflictedPieceCount: pressureConflictedPieceIds(input.after).size,
+    canonicalLegality: input.canonicalLegality
   }
 }
 
@@ -2644,6 +2815,12 @@ function unavailableContractedPressureAttemptTrace(input: {
     separationEvaluationCount: 0,
     bestRepairedLoss: undefined,
     bestEndpointExact: false,
+    bestEndpointSatExactZero: false,
+    bestEndpointCanonicalClassification: undefined,
+    canonicalLegalityRequestCount: 0,
+    canonicalLegalityEvaluationCount: 0,
+    canonicalLegalityCacheHitCount: 0,
+    canonicalLegalityDisagreementCount: 0,
     bestEndpointCompactness: undefined,
     outcome: 'rejected',
     reason: input.reason,
@@ -2669,6 +2846,7 @@ function contractedPressureAttemptTrace(input: {
   readonly reason: string
   readonly retainedPressureIdentity: string | undefined
   readonly preProjectionCompactness: IntrinsicPressureCompactnessTuple | undefined
+  readonly canonicalLegalityMemo?: IntrinsicPressureCanonicalLegalityMemo
   readonly repairSweeps?: ReadonlyArray<IntrinsicContractedPressureSweepTrace>
 }): IntrinsicContractedPressureAttemptTrace {
   return {
@@ -2691,6 +2869,17 @@ function contractedPressureAttemptTrace(input: {
     separationEvaluationCount: input.evaluationCount,
     bestRepairedLoss: input.bestRepairedLoss,
     bestEndpointExact: input.bestEndpoint !== undefined,
+    bestEndpointSatExactZero:
+      input.bestEndpoint?.canonicalLegality.satExactZeroLoss ?? false,
+    bestEndpointCanonicalClassification:
+      input.bestEndpoint?.canonicalLegality.classification,
+    canonicalLegalityRequestCount: input.canonicalLegalityMemo?.requestCount ?? 0,
+    canonicalLegalityEvaluationCount:
+      input.canonicalLegalityMemo?.evaluationCount ?? 0,
+    canonicalLegalityCacheHitCount:
+      input.canonicalLegalityMemo?.cacheHitCount ?? 0,
+    canonicalLegalityDisagreementCount:
+      input.canonicalLegalityMemo?.disagreementCount ?? 0,
     bestEndpointCompactness: input.bestEndpoint?.measured.compactness,
     outcome: input.outcome,
     reason: input.reason,
@@ -2967,15 +3156,18 @@ function pressureEndpointFromState(input: {
   readonly state: IntrinsicRelaxedState
   readonly evaluation: IntrinsicSeparationEvaluation
   readonly weights: IntrinsicSeparatorWeights
+  readonly canonicalLegalityMemo: IntrinsicPressureCanonicalLegalityMemo
 }): IntrinsicPressureExactEndpoint | undefined {
-  if (!input.evaluation.exactZeroLoss) return undefined
   const placed = provisionalLayoutFromRelaxedState(input.catalog, input.state)
   const stateKey = intrinsicRelaxedStateKey(input.catalog, input.state)
-  if (
-    placed === undefined ||
-    stateKey === undefined ||
-    !assertIntrinsicTargetExactLegal(input.targetBox, placed)
-  ) {
+  const canonicalLegality = classifyIntrinsicPressureCanonicalLegality({
+    targetBox: input.targetBox,
+    catalog: input.catalog,
+    state: input.state,
+    evaluation: input.evaluation,
+    memo: input.canonicalLegalityMemo
+  })
+  if (placed === undefined || stateKey === undefined || !canonicalLegality.canonicalLegal) {
     return undefined
   }
   const measured = measureIntrinsicPressureCompactness(placed)
@@ -2988,7 +3180,8 @@ function pressureEndpointFromState(input: {
         targetBox: input.targetBox,
         evaluation: input.evaluation,
         weights: input.weights,
-        measured
+        measured,
+        canonicalLegality
       }
 }
 
@@ -3084,30 +3277,45 @@ interface CanonicalPlacedPolygonMoment {
 function canonicalPlacedPolygonMoments(
   placed: ReadonlyArray<IrregularPlacedPiece>
 ): ReadonlyArray<CanonicalPlacedPolygonMoment> | undefined {
-  const moments: CanonicalPlacedPolygonMoment[] = []
+  const canonicalPolygons: Array<{
+    readonly pieceId: PieceId
+    readonly points: ReadonlyArray<{ readonly x: number; readonly y: number }>
+  }> = []
+  let globalMinimumX = Number.POSITIVE_INFINITY
+  let globalMinimumY = Number.POSITIVE_INFINITY
   for (const entry of placed) {
     const translateXGrid = toGridMm(entry.placement.transform.translateX)
     const translateYGrid = toGridMm(entry.placement.transform.translateY)
-    const localPoints = entry.collisionGeometry.polygon.points.map(({ x, y }) => ({
-      x: toGridMm(x),
-      y: toGridMm(y)
-    }))
-    if (
-      translateXGrid === undefined ||
-      translateYGrid === undefined ||
-      localPoints.length < 3 ||
-      localPoints.some(({ x, y }) => x === undefined || y === undefined)
-    ) {
-      return undefined
+    if (translateXGrid === undefined || translateYGrid === undefined) return undefined
+    const points: Array<{ readonly x: number; readonly y: number }> = []
+    for (const point of entry.collisionGeometry.polygon.points) {
+      const localX = toGridMm(point.x)
+      const localY = toGridMm(point.y)
+      if (localX === undefined || localY === undefined) return undefined
+      const x = localX + translateXGrid
+      const y = localY + translateYGrid
+      globalMinimumX = Math.min(globalMinimumX, x)
+      globalMinimumY = Math.min(globalMinimumY, y)
+      points.push({ x, y })
     }
-    const completeLocalPoints = localPoints.filter(
-      (entry): entry is { readonly x: number; readonly y: number } =>
-        entry.x !== undefined && entry.y !== undefined
-    )
-    if (completeLocalPoints.length !== localPoints.length) return undefined
-    const points = completeLocalPoints.map(({ x, y }) => ({
-      x: x + translateXGrid,
-      y: y + translateYGrid
+    if (points.length < 3) return undefined
+    canonicalPolygons.push({ pieceId: placedPieceId(entry), points })
+  }
+  if (
+    !Number.isFinite(globalMinimumX) ||
+    !Number.isFinite(globalMinimumY) ||
+    new Set(canonicalPolygons.map(({ pieceId }) => pieceId)).size !==
+      canonicalPolygons.length
+  ) {
+    return undefined
+  }
+  const moments: CanonicalPlacedPolygonMoment[] = []
+  for (const entry of canonicalPolygons.toSorted((first, second) =>
+    first.pieceId.localeCompare(second.pieceId)
+  )) {
+    const points = entry.points.map(({ x, y }) => ({
+      x: x - globalMinimumX,
+      y: y - globalMinimumY
     }))
     let doubleSignedArea = 0
     let centroidNumeratorX = 0
@@ -3129,7 +3337,7 @@ function canonicalPlacedPolygonMoments(
       return undefined
     }
     moments.push({
-      pieceId: placedPieceId(entry),
+      pieceId: entry.pieceId,
       areaGrid2,
       centroidXGrid,
       centroidYGrid
@@ -3235,19 +3443,14 @@ function recordContractedPressureProjection(
   }).reverse()
 }
 
-function pressureProjectionPreserved(
+export function pressureProjectionPreserved(
   before: IntrinsicPressureCompactnessTuple | undefined,
   after: IntrinsicPressureCompactnessTuple | undefined
 ): boolean {
   return (
     before !== undefined &&
     after !== undefined &&
-    before.canonicalIdentity === after.canonicalIdentity &&
-    before.envelopeAreaMm2 === after.envelopeAreaMm2 &&
-    before.envelopeMaximumSideMm === after.envelopeMaximumSideMm &&
-    before.areaWeightedCentroidDispersion === after.areaWeightedCentroidDispersion &&
-    before.enclosedCavityCount === after.enclosedCavityCount &&
-    before.largestOccupiedHullGapRatio === after.largestOccupiedHullGapRatio
+    before.canonicalIdentity === after.canonicalIdentity
   )
 }
 

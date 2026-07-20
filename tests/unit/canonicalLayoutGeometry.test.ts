@@ -15,6 +15,8 @@ import {
   analyzeCanonicalLayoutStructure,
   assertCanonicalGridLegalLayout,
   canonicalCollisionLayoutIdentity,
+  measureCanonicalLayoutContacts,
+  measureCanonicalLayoutEnvelope,
   measureCanonicalLayoutTopology
 } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 import {
@@ -151,6 +153,32 @@ describe('canonical collision layout geometry', () => {
         rectangle('second', 2, 2, 1.999, 0)
       ])
     ).toBe(false)
+  })
+
+  it('measures complete contact metrics from canonical geometry invariantly', () => {
+    const layout = [
+      rectangle('a', 3, 2, 0, 0),
+      rectangle('b', 2, 2, 3, 0),
+      rectangle('c', 1, 2, 5, 0)
+    ]
+    const representedDifferently = quarterTurnLayout(layout).toReversed()
+
+    expect(measureCanonicalLayoutContacts(representedDifferently)).toEqual(
+      measureCanonicalLayoutContacts(layout)
+    )
+    expect(measureCanonicalLayoutContacts(layout)).toMatchObject({
+      sharedBoundaryLengthMm: 4,
+      totalStructuralContacts: 2
+    })
+    expect(measureCanonicalLayoutEnvelope(representedDifferently)).toEqual(
+      measureCanonicalLayoutEnvelope(layout)
+    )
+    expect(measureCanonicalLayoutEnvelope(layout)).toMatchObject({
+      areaMm2: 12,
+      maximumSideMm: 6,
+      spanMm: 8,
+      occupiedHullWasteRatio: 0
+    })
   })
 
   it('accepts exact sheet boundaries and rejects an overrun', () => {

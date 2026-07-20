@@ -17,6 +17,8 @@ import {
   assertCanonicalGridLegalLayout,
   canonicalCollisionLayoutIdentity,
   measureCanonicalEnclosedCavities,
+  measureCanonicalLayoutContacts,
+  measureCanonicalLayoutEnvelope,
   measureCanonicalLayoutTopology
 } from '../../irregular/canonicalLayoutGeometry.js'
 import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
@@ -30,7 +32,6 @@ import {
   NfpIfpService
 } from '../../irregular/services.js'
 import { IrregularBeamState } from './irregularBeamState.js'
-import { deriveRawOccupiedHullWasteRatio } from './irregularLayoutScorer.js'
 import {
   candidateContainedInIntrinsicGap,
   deriveCanonicalIntrinsicGapRegions,
@@ -743,24 +744,20 @@ function completedMetrics(
   canonicalGeometryHash: string,
   runtimeMs: number
 ): IntrinsicStrictCompletedMetrics | undefined {
-  const bounds = state.translatedCollisionBounds
   const topology = measureCanonicalLayoutTopology(state.placedCollisionGeometries)
   const cavities = measureCanonicalEnclosedCavities(state.placedCollisionGeometries)
   const structure = analyzeCanonicalLayoutStructure(
     intrinsicBoundsSheet(state),
     state.placedCollisionGeometries
   )
-  const occupiedHullWasteRatio = deriveRawOccupiedHullWasteRatio(state)
+  const contacts = measureCanonicalLayoutContacts(state.placedCollisionGeometries)
+  const envelope = measureCanonicalLayoutEnvelope(state.placedCollisionGeometries)
   if (
-    bounds === undefined ||
     topology === undefined ||
     cavities === undefined ||
     structure === undefined ||
-    occupiedHullWasteRatio === undefined ||
-    state.nearCompleteStructuralContactCount === undefined ||
-    state.dominantNearCompleteStructuralContactCount === undefined ||
-    state.sharedCollisionBoundaryContactUnits === undefined ||
-    state.sharedCollisionBoundaryLengthMm === undefined
+    contacts === undefined ||
+    envelope === undefined
   ) {
     return undefined
   }
@@ -771,9 +768,9 @@ function completedMetrics(
       0
     ) / 1_000_000
   const metrics = {
-    envelopeMaximumSideMm: Math.max(bounds.width, bounds.height),
-    envelopeAreaMm2: bounds.width * bounds.height,
-    envelopeSpanMm: bounds.width + bounds.height,
+    envelopeMaximumSideMm: envelope.maximumSideMm,
+    envelopeAreaMm2: envelope.areaMm2,
+    envelopeSpanMm: envelope.spanMm,
     enclosedCavityCount: cavities.count,
     totalEnclosedCavityAreaMm2: cavities.totalAreaMm2,
     largestOccupiedHullGapRatio: topology.largestOccupiedHullGapRatio,
@@ -782,11 +779,11 @@ function completedMetrics(
     largestPositiveContactComponentSize: topology.largestPositiveContactComponentSize,
     largestPositiveContactComponentRatio: topology.largestPositiveContactComponentRatio,
     occupiedAreaOutsideLargestContactComponentMm2,
-    occupiedHullWasteRatio,
-    totalStructuralContacts: state.nearCompleteStructuralContactCount,
-    dominantStructuralContacts: state.dominantNearCompleteStructuralContactCount,
-    contactUnits: state.sharedCollisionBoundaryContactUnits,
-    sharedBoundaryLengthMm: state.sharedCollisionBoundaryLengthMm,
+    occupiedHullWasteRatio: envelope.occupiedHullWasteRatio,
+    totalStructuralContacts: contacts.totalStructuralContacts,
+    dominantStructuralContacts: contacts.dominantStructuralContacts,
+    contactUnits: contacts.contactUnits,
+    sharedBoundaryLengthMm: contacts.sharedBoundaryLengthMm,
     canonicalGeometryHash,
     runtimeMs
   }

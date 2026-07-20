@@ -92,6 +92,11 @@ per-instance area caps. Private transient states may overlap while a
 transform-aware SAT/GLS separator changes finite transform families, swaps
 large pieces, transports bounded nearby groups, and crosses worse basins. These
 states are diagnostics only and never become worker results or history.
+SAT conflict depth remains a search heuristic: selected pressure intermediates
+and endpoints are cross-classified against canonical-grid Clipper2 legality,
+cached by canonical relaxed-state key, and only the canonical result decides
+whether an endpoint is exact. The trace retains SAT/canonical disagreements so
+floating separator residue cannot silently reject or admit a layout.
 
 At no more than five registered points, E4 projects a relaxed state back to the
 exact geometry domain: canonicalize to the collision grid, remove both
@@ -100,9 +105,14 @@ to its relaxed finite transform, and reinsert the conflict closure with exact
 NFP/IFP candidates nearest the relaxed pose. Orientation-family fallback is
 allowed only when the pinned transform has no legal candidate. Only complete
 layouts passing canonical exact legality enter the bounded archive; E1 remains
-the immutable fallback. Requested-sheet q0/q90 fit occurs after one archive
-winner is selected. E4 remains experiment-only until hull-gap, cavity, area,
-runtime, determinism, triangle, corpus, and visual gates all pass.
+the immutable fallback. Projection preservation uses canonical layout identity,
+followed by the existing exact legality and complete piece-coverage checks,
+rather than equality between independently accumulated floating diagnostics.
+Complete intrinsic contact, occupied-envelope, and hull-waste certificates are
+likewise remeasured from snapped canonical polygons. Requested-sheet q0/q90 fit
+occurs after one archive winner is selected. E4 remains experiment-only until
+hull-gap, cavity, area, runtime, determinism, triangle, corpus, and visual gates
+all pass.
 
 Local compactness ranks the largest normalized sheet-axis consumption, the sum
 of both normalized spans, collision-bounds area, and then absolute span. Bounds,
