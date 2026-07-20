@@ -160,6 +160,7 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     const run = (observed: boolean) => {
       let candidateObservations = 0
       let selectionObservations = 0
+      const canonicalChecks: number[] = []
       return Effect.runPromise(
         constructIntrinsicStrictState({
           allPreparedPieces: pieces,
@@ -169,8 +170,12 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
           ...(observed
             ? {
                 featureContactObserver: {
-                  onCandidateProvenance: () => {
+                  onCandidateProvenance: ({ provenance }) => {
                     candidateObservations += 1
+                    if (typeof provenance.canonicalChecked === 'number') {
+                      canonicalChecks.push(provenance.canonicalChecked)
+                    }
+                    expect(provenance.phaseIncompatible).toBe('not-evaluated')
                   },
                   onStepSelection: () => {
                     selectionObservations += 1
@@ -187,6 +192,7 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
               if (observed) {
                 expect(candidateObservations).toBeGreaterThan(0)
                 expect(selectionObservations).toBe(pieces.length)
+                expect(canonicalChecks.some((count) => count > 0)).toBe(true)
               }
               return result
             })
@@ -353,19 +359,12 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       sharedBoundaryLengthMm: 2
     })
 
-    expect(
-      selectIntrinsicStrictFamilyWinner([quiet, contact], 'contact-band')?.id
-    ).toBe('contact')
+    expect(selectIntrinsicStrictFamilyWinner([quiet, contact], 'contact-band')?.id).toBe('contact')
   })
 
   it('measures the authoritative rounded world envelope after fractional translation', () => {
     const pieceId = PieceId.make('fractional-envelope')
-    const localPoints = [
-      point(0.00049, 0),
-      point(1.001, 0),
-      point(1.001, 1),
-      point(0.00049, 1)
-    ]
+    const localPoints = [point(0.00049, 0), point(1.001, 0), point(1.001, 1), point(0.00049, 1)]
     const transformCandidate = transform(0, 0)
     const placed = new IrregularPlacedPiece({
       placement: new IrregularPlacement({

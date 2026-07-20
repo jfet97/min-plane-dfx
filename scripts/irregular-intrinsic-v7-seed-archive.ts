@@ -31,7 +31,10 @@ import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNest
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../src/workers/irregular/nfpIfpService.js'
-import { TransformGenerator } from '../src/workers/irregular/services.js'
+import {
+  NFP_IFP_CANDIDATE_SOURCE_MASK,
+  TransformGenerator
+} from '../src/workers/irregular/services.js'
 import { TransformGeneratorLive } from '../src/workers/irregular/transformGenerator.js'
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url))
@@ -42,165 +45,166 @@ const MIXED_FIXTURE_PATH = fileURLToPath(
 const TRIANGLE_SHEET = new SheetSpec({ width: 2000, height: 2700, label: 'triangle golden' })
 
 async function main(): Promise<void> {
-const fixtureName = requiredFixture(argument('--fixture'))
-const outputDirectory = resolve(requiredArgument('--output'))
-const sourceCommit = verifiedSourceCommit(argument('--source-commit'))
-const requestedArms = parseArms(argument('--arms'))
-const compact = process.argv.includes('--compact')
-const featureContactCoverage = process.argv.includes('--feature-contact-coverage')
-const schedule = compact
-  ? {
-      maximumRuntimeMs: 2_000,
-      maximumEvaluations: 128,
-      completedSweeps: 1
-    }
-  : undefined
+  const fixtureName = requiredFixture(argument('--fixture'))
+  const outputDirectory = resolve(requiredArgument('--output'))
+  const sourceCommit = verifiedSourceCommit(argument('--source-commit'))
+  const requestedArms = parseArms(argument('--arms'))
+  const compact = process.argv.includes('--compact')
+  const featureContactCoverage = process.argv.includes('--feature-contact-coverage')
+  const schedule = compact
+    ? {
+        maximumRuntimeMs: 2_000,
+        maximumEvaluations: 128,
+        completedSweeps: 1
+      }
+    : undefined
 
-await mkdir(dirname(outputDirectory), { recursive: true })
-await mkdir(outputDirectory)
+  await mkdir(dirname(outputDirectory), { recursive: true })
+  await mkdir(outputDirectory)
 
-const fixture = await loadFixture(fixtureName)
-const fixtureBytes = fixture.bytes
-const harnessBytes = await readFile(HARNESS_PATH)
-const featureContactCollector = featureContactCoverage ? new FeatureContactCoverageCollector() : undefined
-const preparedPieces = await Effect.runPromise(
-  withLayers(prepareIrregularPieces(fixture.request), fixture.settings)
-)
-const outcome = await Effect.runPromise(
-  withLayers(
-    runIntrinsicV7SeedArchive({
-      allPreparedPieces: preparedPieces,
-      ...(requestedArms === undefined ? {} : { arms: requestedArms }),
-      ...(schedule === undefined ? {} : { schedule }),
-      ...(featureContactCollector === undefined
-        ? {}
-        : { featureContactObserver: featureContactCollector })
-    }),
-    fixture.settings
+  const fixture = await loadFixture(fixtureName)
+  const fixtureBytes = fixture.bytes
+  const harnessBytes = await readFile(HARNESS_PATH)
+  const featureContactCollector = featureContactCoverage
+    ? new FeatureContactCoverageCollector()
+    : undefined
+  const preparedPieces = await Effect.runPromise(
+    withLayers(prepareIrregularPieces(fixture.request), fixture.settings)
   )
-)
-
-const seedArtifacts = await Promise.all(
-  outcome.seedArchive.map(async (seed) => {
-    const svgPath = `${outputDirectory}/${fixtureName}-${seed.role}-seed.svg`
-    await writeFile(svgPath, renderCollisionSvg(seed.placedCollisionGeometries))
-    return {
-      role: seed.role,
-      comparatorMode: seed.comparatorMode,
-      canonicalGeometryIdentity: seed.canonicalGeometryIdentity,
-      canonicalGeometryHash: seed.canonicalGeometryHash,
-      placementCount: seed.placedCollisionGeometries.length,
-      metrics: seed.metrics,
-      stepTrace: seed.stepTrace,
-      realSheetFit: qTurnFit(fixture.sheet, seed.placedCollisionGeometries),
-      svgPath
-    }
-  })
-)
-
-const armArtifacts = await Promise.all(
-  outcome.armResults.map(async (armResult) => {
-    const endpoints = await Promise.all(
-      armResult.endpointArchive.map(async (endpoint, index) => {
-        const svgPath = `${outputDirectory}/${fixtureName}-${armResult.arm}-endpoint-${String(index + 1).padStart(2, '0')}-${endpoint.stateKey.slice(-12)}.svg`
-        await writeFile(svgPath, renderCollisionSvg(endpoint.placedCollisionGeometries))
-        return endpointRecord(endpoint, fixture.sheet, svgPath)
-      })
-    )
-    return {
-      arm: armResult.arm,
-      trace: armResult.traces,
-      cacheAggregate: aggregateCache(armResult.traces),
-      endpointArchive: endpoints,
-      boundedDiagnosticSamples: armResult.diagnosticSamples
-    }
-  })
-)
-
-const reportPath = `${outputDirectory}/report.json`
-const report = {
-  experiment: 'intrinsic-v7-seed-archive-stage0-stage1',
-  status: 'diagnostic-only-no-production-winner',
-  sourceCommit,
-  harness: { path: HARNESS_PATH, sha256: sha256(harnessBytes) },
-  fixture: {
-    name: fixtureName,
-    path: fixture.path,
-    sha256: sha256(fixtureBytes),
-    sheet: { width: fixture.sheet.width, height: fixture.sheet.height },
-    pieceCount: fixture.request.pieces.length,
-    paddingMm: fixture.request.padding,
-    settings: fixture.settings
-  },
-  runtime: runtimeVersions(),
-  requestedArms: requestedArms ?? 'all-independent-arms',
-  schedule: schedule ?? {
-    maximumRuntimeMsPerArm: 60_000,
-    maximumEvaluationsPerArm: 12_000,
-    completedSweeps: 2,
-    contractionRatios: [1 / 20, 1 / 40, 1 / 80]
-  },
-  triangleGolden: {
-    currentMainGoldenChanged: false,
-    note:
-      'This experiment ancestry is not current main. Triangle output is diagnostic only and cannot claim the current-main repair-8 golden.'
-  },
-  seedArchive: seedArtifacts,
-  arms: armArtifacts,
-  ...(featureContactCollector === undefined
-    ? {}
-    : {
-        featureContactCoverage: featureContactCollector.complete(outcome.seedArchive)
+  const outcome = await Effect.runPromise(
+    withLayers(
+      runIntrinsicV7SeedArchive({
+        allPreparedPieces: preparedPieces,
+        ...(requestedArms === undefined ? {} : { arms: requestedArms }),
+        ...(schedule === undefined ? {} : { schedule }),
+        ...(featureContactCollector === undefined
+          ? {}
+          : { featureContactObserver: featureContactCollector })
       }),
-  immutableFallback: {
-    role: outcome.immutableFallback.role,
-    canonicalGeometryHash: outcome.immutableFallback.canonicalGeometryHash
-  },
-  runtimeMs: outcome.runtimeMs,
-  promotion: {
-    eligible: false,
-    reason:
-      'V7 Stage 0/1 reports exact seeds and independent probe evidence only; no production terminal comparator is invoked.'
-  }
-}
-await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
+      fixture.settings
+    )
+  )
 
-const artifactPaths = [
-  reportPath,
-  ...seedArtifacts.map(({ svgPath }) => svgPath),
-  ...armArtifacts.flatMap(({ endpointArchive }) => endpointArchive.map(({ svgPath }) => svgPath))
-]
-const manifestPath = `${outputDirectory}/manifest.json`
-await writeFile(
-  manifestPath,
-  `${JSON.stringify(
-    {
-      experiment: report.experiment,
-      sourceCommit,
-      fixture: report.fixture,
-      harness: report.harness,
-      files: Object.fromEntries(
-        await Promise.all(artifactPaths.map(async (path) => [path, sha256(await readFile(path))]))
+  const seedArtifacts = await Promise.all(
+    outcome.seedArchive.map(async (seed) => {
+      const svgPath = `${outputDirectory}/${fixtureName}-${seed.role}-seed.svg`
+      await writeFile(svgPath, renderCollisionSvg(seed.placedCollisionGeometries))
+      return {
+        role: seed.role,
+        comparatorMode: seed.comparatorMode,
+        canonicalGeometryIdentity: seed.canonicalGeometryIdentity,
+        canonicalGeometryHash: seed.canonicalGeometryHash,
+        placementCount: seed.placedCollisionGeometries.length,
+        metrics: seed.metrics,
+        stepTrace: seed.stepTrace,
+        realSheetFit: qTurnFit(fixture.sheet, seed.placedCollisionGeometries),
+        svgPath
+      }
+    })
+  )
+
+  const armArtifacts = await Promise.all(
+    outcome.armResults.map(async (armResult) => {
+      const endpoints = await Promise.all(
+        armResult.endpointArchive.map(async (endpoint, index) => {
+          const svgPath = `${outputDirectory}/${fixtureName}-${armResult.arm}-endpoint-${String(index + 1).padStart(2, '0')}-${endpoint.stateKey.slice(-12)}.svg`
+          await writeFile(svgPath, renderCollisionSvg(endpoint.placedCollisionGeometries))
+          return endpointRecord(endpoint, fixture.sheet, svgPath)
+        })
       )
-    },
-    null,
-    2
-  )}\n`
-)
+      return {
+        arm: armResult.arm,
+        trace: armResult.traces,
+        cacheAggregate: aggregateCache(armResult.traces),
+        endpointArchive: endpoints,
+        boundedDiagnosticSamples: armResult.diagnosticSamples
+      }
+    })
+  )
 
-console.log(
-  JSON.stringify({
+  const reportPath = `${outputDirectory}/report.json`
+  const report = {
+    experiment: 'intrinsic-v7-seed-archive-stage0-stage1',
+    status: 'diagnostic-only-no-production-winner',
+    sourceCommit,
+    harness: { path: HARNESS_PATH, sha256: sha256(harnessBytes) },
+    fixture: {
+      name: fixtureName,
+      path: fixture.path,
+      sha256: sha256(fixtureBytes),
+      sheet: { width: fixture.sheet.width, height: fixture.sheet.height },
+      pieceCount: fixture.request.pieces.length,
+      paddingMm: fixture.request.padding,
+      settings: fixture.settings
+    },
+    runtime: runtimeVersions(),
+    requestedArms: requestedArms ?? 'all-independent-arms',
+    schedule: schedule ?? {
+      maximumRuntimeMsPerArm: 60_000,
+      maximumEvaluationsPerArm: 12_000,
+      completedSweeps: 2,
+      contractionRatios: [1 / 20, 1 / 40, 1 / 80]
+    },
+    triangleGolden: {
+      currentMainGoldenChanged: false,
+      note: 'This experiment ancestry is not current main. Triangle output is diagnostic only and cannot claim the current-main repair-8 golden.'
+    },
+    seedArchive: seedArtifacts,
+    arms: armArtifacts,
+    ...(featureContactCollector === undefined
+      ? {}
+      : {
+          featureContactCoverage: featureContactCollector.complete(outcome.seedArchive)
+        }),
+    immutableFallback: {
+      role: outcome.immutableFallback.role,
+      canonicalGeometryHash: outcome.immutableFallback.canonicalGeometryHash
+    },
+    runtimeMs: outcome.runtimeMs,
+    promotion: {
+      eligible: false,
+      reason:
+        'V7 Stage 0/1 reports exact seeds and independent probe evidence only; no production terminal comparator is invoked.'
+    }
+  }
+  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
+
+  const artifactPaths = [
     reportPath,
-    reportSha256: sha256(await readFile(reportPath)),
+    ...seedArtifacts.map(({ svgPath }) => svgPath),
+    ...armArtifacts.flatMap(({ endpointArchive }) => endpointArchive.map(({ svgPath }) => svgPath))
+  ]
+  const manifestPath = `${outputDirectory}/manifest.json`
+  await writeFile(
     manifestPath,
-    manifestSha256: sha256(await readFile(manifestPath)),
-    seedSvgPaths: seedArtifacts.map(({ svgPath }) => svgPath),
-    endpointSvgPaths: armArtifacts.flatMap(({ endpointArchive }) =>
-      endpointArchive.map(({ svgPath }) => svgPath)
-    ),
-    runtimeMs: outcome.runtimeMs
-  })
-)
+    `${JSON.stringify(
+      {
+        experiment: report.experiment,
+        sourceCommit,
+        fixture: report.fixture,
+        harness: report.harness,
+        files: Object.fromEntries(
+          await Promise.all(artifactPaths.map(async (path) => [path, sha256(await readFile(path))]))
+        )
+      },
+      null,
+      2
+    )}\n`
+  )
+
+  console.log(
+    JSON.stringify({
+      reportPath,
+      reportSha256: sha256(await readFile(reportPath)),
+      manifestPath,
+      manifestSha256: sha256(await readFile(manifestPath)),
+      seedSvgPaths: seedArtifacts.map(({ svgPath }) => svgPath),
+      endpointSvgPaths: armArtifacts.flatMap(({ endpointArchive }) =>
+        endpointArchive.map(({ svgPath }) => svgPath)
+      ),
+      runtimeMs: outcome.runtimeMs
+    })
+  )
 }
 
 type FeatureCandidateObservation = Parameters<
@@ -210,6 +214,14 @@ type FeatureSelectionObservation = Parameters<
   IntrinsicV7FeatureContactObserver['onSeedStepSelection']
 >[0]
 
+const FEATURE_SOURCE_NAMES = [
+  'ifpCorner',
+  'nfpVertex',
+  'antiparallelEdgeSupport',
+  'ifpNfpIntersection',
+  'nfpNfpIntersection'
+] as const
+
 /**
  * Keeps F0 source evidence aggregate-only. Stage 1 does not request a fresh
  * NFP decode, so its global transport moves intentionally have no F0 rows.
@@ -217,49 +229,93 @@ type FeatureSelectionObservation = Parameters<
 class FeatureContactCoverageCollector implements IntrinsicV7FeatureContactObserver {
   readonly pending = new Map<string, FeatureCandidateObservation[]>()
   readonly rows: FeatureCoverageRow[] = []
+  readonly stepZeroSelections: FeatureSelectionObservation[] = []
+  readonly firstLiveLegalWitnesses = new Map<
+    (typeof FEATURE_SOURCE_NAMES)[number],
+    {
+      readonly seedRole: string
+      readonly step: number
+      readonly parentStateId: string
+      readonly pieceId: string
+      readonly transform: string
+      readonly gridX: number
+      readonly gridY: number
+      readonly sourceMask: number
+    }
+  >()
 
   onSeedCandidateProvenance(observation: FeatureCandidateObservation): void {
     const key = featureSelectionKey(observation.seedRole, observation.observation)
     const pending = this.pending.get(key) ?? []
     pending.push(observation)
     this.pending.set(key, pending)
+    for (const source of FEATURE_SOURCE_NAMES) {
+      if (this.firstLiveLegalWitnesses.has(source)) continue
+      const sourceMask = NFP_IFP_CANDIDATE_SOURCE_MASK[source]
+      const point = observation.observation.provenance.legalCandidateSources.find(
+        (candidate) => (candidate.sourceMask & sourceMask) !== 0
+      )
+      if (point === undefined) continue
+      this.firstLiveLegalWitnesses.set(source, {
+        seedRole: observation.seedRole,
+        step: observation.observation.step,
+        parentStateId: observation.observation.parentStateId,
+        pieceId: observation.observation.pieceId,
+        transform: transformIdentity(observation.observation.transform),
+        gridX: point.gridX,
+        gridY: point.gridY,
+        sourceMask: point.sourceMask
+      })
+    }
   }
 
   onSeedStepSelection(observation: FeatureSelectionObservation): void {
     const key = featureSelectionKey(observation.seedRole, observation.observation)
     const candidates = this.pending.get(key) ?? []
+    if (candidates.length === 0) this.stepZeroSelections.push(observation)
     for (const candidate of candidates) {
       this.rows.push(featureCoverageRow(candidate, observation))
     }
     this.pending.delete(key)
   }
 
-  complete(seedArchive: ReadonlyArray<{ readonly role: string; readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece> }>) {
+  complete(
+    seedArchive: ReadonlyArray<{
+      readonly role: string
+      readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+    }>
+  ) {
     if (this.pending.size > 0) {
       throw new Error('F0 feature-contact observer did not receive every strict seed selection.')
     }
     const rows = this.rows
-    const sourceNames = [
-      'ifpCorner',
-      'nfpVertex',
-      'antiparallelEdgeSupport',
-      'ifpNfpIntersection',
-      'nfpNfpIntersection'
-    ] as const
-    const witnesses = sourceNames.flatMap((source) => {
+    const witnesses = FEATURE_SOURCE_NAMES.map((source) => {
       const row = rows.find((candidate) => candidate.rawBySource[source] > 0)
-      return row === undefined
-        ? []
-        : [
-            {
-              source,
-              seedRole: row.seedRole,
-              step: row.step,
-              parentStateId: row.parentStateId,
-              pieceId: row.pieceId,
-              transform: row.transform
-            }
-          ]
+      const legalPoint = this.firstLiveLegalWitnesses.get(source)
+      return {
+        source,
+        status:
+          row === undefined
+            ? source === 'ifpCorner' || source === 'ifpNfpIntersection'
+              ? 'structurally-unavailable-in-sheetless-seed-scope'
+              : 'not-observed'
+            : legalPoint === undefined
+              ? 'raw-only-no-live-legal-point'
+              : 'live-legal-point-observed',
+        seedRole: legalPoint?.seedRole ?? row?.seedRole,
+        step: legalPoint?.step ?? row?.step,
+        parentStateId: legalPoint?.parentStateId ?? row?.parentStateId,
+        pieceId: legalPoint?.pieceId ?? row?.pieceId,
+        transform: legalPoint?.transform ?? row?.transform,
+        gridPoint:
+          legalPoint === undefined
+            ? undefined
+            : {
+                gridX: legalPoint.gridX,
+                gridY: legalPoint.gridY,
+                sourceMask: legalPoint.sourceMask
+              }
+      }
     })
     return {
       mode: 'F0-observer-only',
@@ -269,10 +325,25 @@ class FeatureContactCoverageCollector implements IntrinsicV7FeatureContactObserv
           'no rows: Stage 1 transport/refinement does not request a fresh NFP/IFP decode or reconstruction',
         candidateBehaviorChanged: false,
         scoringBehaviorChanged: false,
-        transformPolicyChanged: false
+        transformPolicyChanged: false,
+        instrumentationTimeIncludedInDecodeBudget: true,
+        memoizedProvenanceReplayEnabled: true,
+        candidateDomain: 'sheetless-nfp',
+        structurallyUnavailableSourceFamilies: ['ifpCorner', 'ifpNfpIntersection']
       },
       rows,
       boundedWitnesses: witnesses,
+      stepZeroSelections: this.stepZeroSelections.map(({ seedRole, observation }) => ({
+        seedRole,
+        step: observation.step,
+        parentStateId: observation.parentStateId,
+        pieceId: observation.pieceId,
+        selectedTransform:
+          observation.selectedTransform === undefined
+            ? undefined
+            : transformIdentity(observation.selectedTransform),
+        selectedGridPoint: observation.selectedGridPoint
+      })),
       canonicalSeedEndpoints: seedArchive.map((seed) => ({
         seedRole: seed.role,
         canonicalChecked: true,
@@ -292,11 +363,19 @@ interface FeatureCoverageRow {
   readonly rawBySource: FeatureCandidateObservation['observation']['provenance']['rawBySource']
   readonly uniqueBySourceMask: FeatureCandidateObservation['observation']['provenance']['uniqueBySourceMask']
   readonly outsideIfp: number
+  readonly nfpInteriorRejected: number
   readonly liveConvexRejected: number
   readonly liveConvexLegal: number
-  readonly phaseIncompatible: number
-  readonly canonicalChecked: number
-  readonly canonicalLegal: number
+  readonly phaseIncompatible: number | 'not-evaluated'
+  readonly canonicalChecked: number | 'not-evaluated'
+  readonly canonicalLegal: number | 'not-evaluated'
+  readonly selectedCandidate:
+    | { readonly gridX: number; readonly gridY: number; readonly sourceMask: number }
+    | undefined
+  readonly selectionAttribution:
+    | 'transform-not-selected'
+    | 'selected-source-observed'
+    | 'selected-source-missing'
   readonly localFanoutRetained: number
   readonly localFanoutEvictedByReason: { readonly strictSeedNotSelected: number }
 }
@@ -329,11 +408,26 @@ function featureCoverageRow(
     rawBySource: observation.provenance.rawBySource,
     uniqueBySourceMask: observation.provenance.uniqueBySourceMask,
     outsideIfp: observation.provenance.outsideIfp,
+    nfpInteriorRejected: observation.provenance.nfpInteriorRejected,
     liveConvexRejected: observation.provenance.liveConvexRejected,
     liveConvexLegal: observation.provenance.liveConvexLegal,
     phaseIncompatible: observation.provenance.phaseIncompatible,
     canonicalChecked: observation.provenance.canonicalChecked,
     canonicalLegal: observation.provenance.canonicalLegal,
+    selectedCandidate:
+      selectedSource === undefined
+        ? undefined
+        : {
+            gridX: selectedSource.gridX,
+            gridY: selectedSource.gridY,
+            sourceMask: selectedSource.sourceMask
+          },
+    selectionAttribution:
+      selected === undefined
+        ? 'transform-not-selected'
+        : selectedSource === undefined
+          ? 'selected-source-missing'
+          : 'selected-source-observed',
     // Strict seeds retain a single winner, not a production fanout. The
     // counts below are therefore selection facts, never fabricated fanout history.
     localFanoutRetained: selectedSource === undefined ? 0 : 1,
@@ -351,13 +445,28 @@ function featureSelectionKey(
   return `${seedRole}:${observation.step}:${observation.parentStateId}:${observation.pieceId}`
 }
 
-function transformIdentity(transform: { readonly index: number; readonly rotationDeg: number; readonly mirrored: boolean; readonly reason: string }): string {
+function transformIdentity(transform: {
+  readonly index: number
+  readonly rotationDeg: number
+  readonly mirrored: boolean
+  readonly reason: string
+}): string {
   return `${transform.index}:${transform.rotationDeg}:${transform.mirrored ? 'mirror' : 'plain'}:${transform.reason}`
 }
 
 function sameTransform(
-  first: { readonly index: number; readonly rotationDeg: number; readonly mirrored: boolean; readonly reason: string },
-  second: { readonly index: number; readonly rotationDeg: number; readonly mirrored: boolean; readonly reason: string }
+  first: {
+    readonly index: number
+    readonly rotationDeg: number
+    readonly mirrored: boolean
+    readonly reason: string
+  },
+  second: {
+    readonly index: number
+    readonly rotationDeg: number
+    readonly mirrored: boolean
+    readonly reason: string
+  }
 ): boolean {
   return transformIdentity(first) === transformIdentity(second)
 }
@@ -399,18 +508,19 @@ function argument(name: string): string | undefined {
 
 function parseArms(value: string | undefined): ReadonlyArray<IntrinsicV7Stage1Arm> | undefined {
   if (value === undefined) return undefined
-  const arms = value.split(',').filter((arm): arm is IntrinsicV7Stage1Arm =>
-    arm === 'control' || arm === 'split' || arm === 'atomic' || arm === 'refine'
-  )
+  const arms = value
+    .split(',')
+    .filter(
+      (arm): arm is IntrinsicV7Stage1Arm =>
+        arm === 'control' || arm === 'split' || arm === 'atomic' || arm === 'refine'
+    )
   if (arms.length === 0 || arms.join(',') !== value) {
     throw new Error('--arms must be a comma-separated subset of control,split,atomic,refine')
   }
   return [...new Set(arms)]
 }
 
-async function loadFixture(
-  name: 'triangle-20' | 'mixed-61'
-): Promise<{
+async function loadFixture(name: 'triangle-20' | 'mixed-61'): Promise<{
   readonly path: string
   readonly bytes: Uint8Array
   readonly request: NestingRequest
@@ -499,10 +609,7 @@ function makeTriangleRequest(): NestingRequest {
   })
 }
 
-function withLayers<A, E, R>(
-  effect: Effect.Effect<A, E, R>,
-  settings: IrregularNestingSettings
-) {
+function withLayers<A, E, R>(effect: Effect.Effect<A, E, R>, settings: IrregularNestingSettings) {
   return effect.pipe(
     Effect.provide(GeometryKernel.Live),
     Effect.provide(CollisionGeometryBuilder.Live),
@@ -537,7 +644,8 @@ function prepareIrregularPieces(
         geometry: collisionGeometry,
         allowRotation: request.options.allowGlobalRotation && prepared.allowRotation,
         allowMirror,
-        settings: request.options.irregularSettings?.optimizer ??
+        settings:
+          request.options.irregularSettings?.optimizer ??
           makeCompactQualityIrregularOptimizerSettings()
       })
       result.push(
@@ -591,9 +699,7 @@ function qTurnFit(sheet: SheetSpec, placed: ReadonlyArray<IrregularPlacedPiece>)
   const state = new IrregularBeamState({
     remainingPreparedPieces: [],
     placedCollisionGeometries: placed,
-    placementOrder: placed.map(
-      ({ placement }) => placement.pieceId ?? placement.sourcePieceId
-    )
+    placementOrder: placed.map(({ placement }) => placement.pieceId ?? placement.sourcePieceId)
   })
   const q0 = state.withQuarterTurnBottomLeft(0)
   const q90 = state.withQuarterTurnBottomLeft(90)
@@ -639,10 +745,7 @@ function renderCollisionSvg(placed: ReadonlyArray<IrregularPlacedPiece>): string
   const maxY = Math.max(...points.map(({ y }) => y))
   const margin = Math.max(maxX - minX, maxY - minY) * 0.04
   const paths = polygons
-    .map(
-      (polygon) =>
-        `<polygon points="${polygon.map(({ x, y }) => `${x},${-y}`).join(' ')}"/>`
-    )
+    .map((polygon) => `<polygon points="${polygon.map(({ x, y }) => `${x},${-y}`).join(' ')}"/>`)
     .join('')
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX - margin} ${-maxY - margin} ${maxX - minX + margin * 2} ${maxY - minY + margin * 2}" width="1600" height="1200"><rect x="${minX - margin}" y="${-maxY - margin}" width="${maxX - minX + margin * 2}" height="${maxY - minY + margin * 2}" fill="#151d22"/><g fill="#26343d" stroke="#39a9ff" stroke-width="1" vector-effect="non-scaling-stroke">${paths}</g></svg>`
 }

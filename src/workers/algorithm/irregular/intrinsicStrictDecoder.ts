@@ -198,10 +198,9 @@ interface ScoredCandidate {
 
 export function measureIntrinsicStrictCanonicalEnvelope(
   placed: ReadonlyArray<IrregularPlacedPiece>
-): Pick<
-  IntrinsicStrictLocalScore,
-  'maximumSideMm' | 'envelopeAreaMm2' | 'envelopeSpanMm'
-> | undefined {
+):
+  | Pick<IntrinsicStrictLocalScore, 'maximumSideMm' | 'envelopeAreaMm2' | 'envelopeSpanMm'>
+  | undefined {
   const envelope = measureCanonicalLayoutEnvelope(placed)
   return envelope === undefined
     ? undefined
@@ -368,6 +367,7 @@ export function constructIntrinsicStrictState(
         })
         const movingCollisionAreaMm2 = canonicalCollisionAreaMm2(moving)
         if (movingCollisionAreaMm2 === undefined) continue
+        let candidateProvenance: NfpIfpCandidateProvenance | undefined
         const legalCandidates =
           state.placedCollisionGeometries.length === 0
             ? originAnchorCandidates(moving)
@@ -383,19 +383,14 @@ export function constructIntrinsicStrictState(
                   ? {}
                   : {
                       onCandidateProvenance: (provenance: NfpIfpCandidateProvenance) => {
-                        input.featureContactObserver?.onCandidateProvenance({
-                          step: pieceIndex,
-                          parentStateId,
-                          pieceId,
-                          transform,
-                          provenance
-                        })
+                        candidateProvenance = provenance
                       }
                     }),
                 control
               })
         candidateCount += legalCandidates.length
         const family = transformFamilyKey(transform)
+        const scoredCandidates: ScoredCandidate[] = []
         for (const candidate of legalCandidates) {
           const scored = scoreCandidate({
             state,
@@ -408,6 +403,7 @@ export function constructIntrinsicStrictState(
             gapRegions
           })
           if (scored === undefined) continue
+          scoredCandidates.push(scored)
           const incumbent = candidatesByFamily.get(family)
           if (incumbent === undefined || compareLocalScores(scored.score, incumbent.score) < 0) {
             candidatesByFamily.set(family, scored)
@@ -423,6 +419,21 @@ export function constructIntrinsicStrictState(
             }
           }
         }
+        if (candidateProvenance !== undefined) {
+          input.featureContactObserver?.onCandidateProvenance({
+            step: pieceIndex,
+            parentStateId,
+            pieceId,
+            transform,
+            provenance: {
+              ...candidateProvenance,
+              canonicalChecked: scoredCandidates.length,
+              canonicalLegal: scoredCandidates.filter(({ state: candidateState }) =>
+                isCanonicalSheetlessStateLegal(candidateState)
+              ).length
+            }
+          })
+        }
       }
 
       const familyWinners = [...candidatesByFamily.values()]
@@ -437,8 +448,10 @@ export function constructIntrinsicStrictState(
         selectedTransformFamily: selected?.transformFamily,
         selectedScore: selected?.score
       })
-      const selectedGridX = selected === undefined ? undefined : toGridMm(selected.candidate.point.x)
-      const selectedGridY = selected === undefined ? undefined : toGridMm(selected.candidate.point.y)
+      const selectedGridX =
+        selected === undefined ? undefined : toGridMm(selected.candidate.point.x)
+      const selectedGridY =
+        selected === undefined ? undefined : toGridMm(selected.candidate.point.y)
       input.featureContactObserver?.onStepSelection({
         step: pieceIndex,
         parentStateId,
@@ -562,9 +575,7 @@ function scoreCandidate(input: {
     })
     .withBottomLeftAnchored()
   if (anchored === undefined) return undefined
-  const envelope = measureIntrinsicStrictCanonicalEnvelope(
-    anchored.placedCollisionGeometries
-  )
+  const envelope = measureIntrinsicStrictCanonicalEnvelope(anchored.placedCollisionGeometries)
   if (envelope === undefined) return undefined
   const { maximumSideMm, envelopeAreaMm2, envelopeSpanMm } = envelope
   const sharedBoundaryLengthMm = anchored.sharedCollisionBoundaryLengthMm
@@ -642,8 +653,7 @@ export function selectIntrinsicStrictFamilyWinner<T extends IntrinsicStrictFamil
           canonicalLinearMetric(pureLeader.score.maximumSideMm) &&
         canonicalAreaMetric(candidate.score.envelopeAreaMm2) <=
           canonicalAreaMetric(
-            pureLeader.score.envelopeAreaMm2 +
-              0.02 * candidate.movingCollisionAreaMm2
+            pureLeader.score.envelopeAreaMm2 + 0.02 * candidate.movingCollisionAreaMm2
           )
     )
     .toSorted(compareContactBandCandidates)[0]
@@ -689,12 +699,9 @@ function compareLocalScores(
   second: IntrinsicStrictLocalScore
 ): number {
   return (
-    canonicalLinearMetric(first.maximumSideMm) -
-      canonicalLinearMetric(second.maximumSideMm) ||
-    canonicalAreaMetric(first.envelopeAreaMm2) -
-      canonicalAreaMetric(second.envelopeAreaMm2) ||
-    canonicalLinearMetric(first.envelopeSpanMm) -
-      canonicalLinearMetric(second.envelopeSpanMm) ||
+    canonicalLinearMetric(first.maximumSideMm) - canonicalLinearMetric(second.maximumSideMm) ||
+    canonicalAreaMetric(first.envelopeAreaMm2) - canonicalAreaMetric(second.envelopeAreaMm2) ||
+    canonicalLinearMetric(first.envelopeSpanMm) - canonicalLinearMetric(second.envelopeSpanMm) ||
     second.sharedBoundaryLengthMm - first.sharedBoundaryLengthMm ||
     first.canonicalCombinedGeometryKey.localeCompare(second.canonicalCombinedGeometryKey)
   )
@@ -832,9 +839,7 @@ export function measureIntrinsicSheetlessCompletedLayout(
     anchored.placedCollisionGeometries
   )
   if (canonicalGeometryIdentity === undefined) return undefined
-  const canonicalGeometryHash = createHash('sha256')
-    .update(canonicalGeometryIdentity)
-    .digest('hex')
+  const canonicalGeometryHash = createHash('sha256').update(canonicalGeometryIdentity).digest('hex')
   const metrics = completedMetrics(anchored, canonicalGeometryHash, runtimeMs)
   return metrics === undefined
     ? undefined
@@ -908,6 +913,17 @@ function intrinsicBoundsSheet(state: IrregularBeamState): SheetSpec {
     height: Math.max(1, Math.ceil(bounds?.maxY ?? 0)),
     label: 'intrinsic-completed-layout-bounds'
   })
+}
+
+function isCanonicalSheetlessStateLegal(state: IrregularBeamState): boolean {
+  const anchored = state.withBottomLeftAnchored()
+  return (
+    anchored !== undefined &&
+    assertCanonicalGridLegalLayout(
+      intrinsicBoundsSheet(anchored),
+      anchored.placedCollisionGeometries
+    )
+  )
 }
 
 export function evaluateIntrinsicStrictCertificate(

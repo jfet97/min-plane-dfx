@@ -155,9 +155,9 @@ export interface NfpIfpCandidateProvenance {
   readonly nfpInteriorRejected: number
   readonly liveConvexRejected: number
   readonly liveConvexLegal: number
-  readonly phaseIncompatible: number
-  readonly canonicalChecked: number
-  readonly canonicalLegal: number
+  readonly phaseIncompatible: number | 'not-evaluated'
+  readonly canonicalChecked: number | 'not-evaluated'
+  readonly canonicalLegal: number | 'not-evaluated'
   readonly legalCandidateSources: ReadonlyArray<NfpIfpLegalCandidateSource>
 }
 

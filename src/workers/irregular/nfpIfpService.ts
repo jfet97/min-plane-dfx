@@ -44,10 +44,7 @@ import {
   legalPlacementCandidateMemoKey,
   pairwiseNfpCacheKey
 } from './geometryCacheKeys.js'
-import type {
-  NfpCandidatePruningMode,
-  NfpConstructionAlgorithm
-} from './geometryCacheKeys.js'
+import type { NfpCandidatePruningMode, NfpConstructionAlgorithm } from './geometryCacheKeys.js'
 
 export { DEFAULT_NFP_CONSTRUCTION_ALGORITHM }
 export type { NfpCandidatePruningMode, NfpConstructionAlgorithm }
@@ -113,12 +110,13 @@ function computeNfpCached(
   constructionAlgorithm: NfpConstructionAlgorithm
 ): Effect.Effect<IrregularNfp, IrregularGeometryInputError> {
   return computeNfpBoundaryCached(input, geometryCache, constructionAlgorithm).pipe(
-    Effect.map((boundary) =>
-      new IrregularNfp({
-        fixedPieceId: input.fixed.placement.sourcePieceId,
-        movingPieceId: input.moving.sourcePieceId,
-        boundary: toDomainPolygon(boundary)
-      })
+    Effect.map(
+      (boundary) =>
+        new IrregularNfp({
+          fixedPieceId: input.fixed.placement.sourcePieceId,
+          movingPieceId: input.moving.sourcePieceId,
+          boundary: toDomainPolygon(boundary)
+        })
     )
   )
 }
@@ -171,9 +169,7 @@ function computeNfpBoundaryUncached(
 }
 
 export type NfpBoundaryConstructionResult = IrregularPolygon | { readonly message: string }
-type InternalNfpBoundaryConstructionResult =
-  | InternalPolygon
-  | { readonly message: string }
+type InternalNfpBoundaryConstructionResult = InternalPolygon | { readonly message: string }
 
 /** Removes exact cyclic repeats and redundant collinear vertices in linear time. */
 export function canonicalizeTranslatedConvexRing(
@@ -187,9 +183,7 @@ function canonicalizeTranslatedConvexRingInternal(
 ): InternalNfpBoundaryConstructionResult {
   if (points.length < 3) return { message: 'polygon must contain at least three vertices.' }
 
-  const previousIndexes = points.map(
-    (_, index) => (index - 1 + points.length) % points.length
-  )
+  const previousIndexes = points.map((_, index) => (index - 1 + points.length) % points.length)
   const nextIndexes = points.map((_, index) => (index + 1) % points.length)
   const active = points.map(() => true)
   const pendingIndexes = points.map((_, index) => index)
@@ -212,7 +206,8 @@ function canonicalizeTranslatedConvexRingInternal(
       return { message: 'polygon points must form a closed boundary.' }
     }
 
-    const repeated = pointsEqual(previousPoint, currentPoint) || pointsEqual(currentPoint, nextPoint)
+    const repeated =
+      pointsEqual(previousPoint, currentPoint) || pointsEqual(currentPoint, nextPoint)
     const collinear =
       GeometryPredicates.orientation(previousPoint, currentPoint, nextPoint) === 0 &&
       pointIsBetween(previousPoint, currentPoint, nextPoint)
@@ -235,7 +230,8 @@ function canonicalizeTranslatedConvexRingInternal(
   let currentIndex = firstActiveIndex
   do {
     const currentPoint = points[currentIndex]
-    if (currentPoint === undefined) return { message: 'polygon points must form a closed boundary.' }
+    if (currentPoint === undefined)
+      return { message: 'polygon points must form a closed boundary.' }
     canonicalPoints.push(currentPoint)
     const nextIndex = nextIndexes[currentIndex]
     if (nextIndex === undefined) return { message: 'polygon points must form a closed boundary.' }
@@ -281,9 +277,7 @@ function computeRelativeNfpBoundaryReferenceInternal(
   const inputValidation = validateRelativeNfpInputs(fixedPoints, movingPoints)
   if ('message' in inputValidation) return inputValidation
 
-  const negatedMovingPoints = movingPoints.map(
-    (point) => ({ x: -point.x, y: -point.y })
-  )
+  const negatedMovingPoints = movingPoints.map((point) => ({ x: -point.x, y: -point.y }))
   const minkowskiPoints: InternalPoint[] = []
   for (const fixedPoint of fixedPoints) {
     for (const movingPoint of negatedMovingPoints) {
@@ -315,9 +309,7 @@ function computeRelativeNfpBoundaryLinearInternal(
   if ('message' in inputValidation) return inputValidation
 
   const fixedBoundary = counterClockwiseStablePoints(fixedPoints, inputValidation.fixedWinding)
-  const negatedMovingPoints = movingPoints.map(
-    (point) => ({ x: -point.x, y: -point.y })
-  )
+  const negatedMovingPoints = movingPoints.map((point) => ({ x: -point.x, y: -point.y }))
   const movingBoundary = counterClockwiseStablePoints(
     negatedMovingPoints,
     inputValidation.movingWinding
@@ -507,7 +499,8 @@ function translateNfpBoundaryInternal(
     'message' in translatedBoundary
       ? canonicalizeTranslatedConvexRingWithHullFallback(translatedPoints)
       : translatedBoundary
-  if ('message' in canonicalBoundary) return failInvalidGeometry('computeNfp', canonicalBoundary.message)
+  if ('message' in canonicalBoundary)
+    return failInvalidGeometry('computeNfp', canonicalBoundary.message)
 
   return Effect.succeed(canonicalBoundary)
 }
@@ -553,12 +546,13 @@ function computeIfpBoundsCached(
   IrregularGeometryInputError | IrregularGeometryInfeasibleError
 > {
   return computeIfpBoundsValuesCached(input, geometryCache).pipe(
-    Effect.map(({ bounds }) =>
-      new IrregularIfpBounds({
-        sheet: input.sheet,
-        movingPieceId: input.moving.sourcePieceId,
-        bounds: toDomainBounds(bounds)
-      })
+    Effect.map(
+      ({ bounds }) =>
+        new IrregularIfpBounds({
+          sheet: input.sheet,
+          movingPieceId: input.moving.sourcePieceId,
+          bounds: toDomainBounds(bounds)
+        })
     )
   )
 }
@@ -588,7 +582,10 @@ function computeIfpBoundsValuesCached(
 
 function computeIfpBoundsValuesUncached(
   input: ComputeIfpBoundsInput
-): Effect.Effect<InternalIfpBounds, IrregularGeometryInputError | IrregularGeometryInfeasibleError> {
+): Effect.Effect<
+  InternalIfpBounds,
+  IrregularGeometryInputError | IrregularGeometryInfeasibleError
+> {
   const validation = ConvexPolygonValidation.validateStrictBoundary(input.moving.polygon.points)
   if ('message' in validation) return failInvalidGeometry('computeIfpBounds', validation.message)
 
@@ -638,7 +635,8 @@ function generatePlacementCandidatesUncached(
   IrregularGeometryInputError | IrregularNfpIfpControlAbortError
 > {
   return Effect.gen(function* () {
-    const provenance = input.onCandidateProvenance === undefined ? undefined : makeCandidateProvenance()
+    const provenance =
+      input.onCandidateProvenance === undefined ? undefined : makeCandidateProvenance()
     const sheetlessNfp = input.candidateDomain === 'sheetless-nfp'
     yield* nfpCheckpoint(input.control, 'ifp')
     const ifp = sheetlessNfp
@@ -714,15 +712,7 @@ function generatePlacementCandidatesUncached(
     const candidateBounds =
       !sheetlessNfp && candidatePruningMode === 'indexed' ? ifpBounds : undefined
 
-    if (input.placed.length === 0 && ifpBounds !== undefined) {
-      addPoint(
-        points,
-        { x: ifpBounds.minX, y: ifpBounds.minY },
-        candidateBounds,
-        'ifpCorner',
-        provenance
-      )
-    } else if (!contactOnly && ifpBounds !== undefined) {
+    if (!contactOnly && ifpBounds !== undefined) {
       for (const point of rectangleCorners(ifpBounds)) {
         addPoint(points, point, candidateBounds, 'ifpCorner', provenance)
       }
@@ -795,7 +785,10 @@ function generatePlacementCandidatesUncached(
           yield* nfpCheckpoint(input.control, 'pairwise-nfp-boundary-intersection')
           const first = nfpBoundaries[firstIndex]
           if (first === undefined)
-            return yield* failInvalidGeometry('generatePlacementCandidates', 'NFP boundary is missing.')
+            return yield* failInvalidGeometry(
+              'generatePlacementCandidates',
+              'NFP boundary is missing.'
+            )
 
           const second = nfpBoundaries[secondIndex]
           if (second === undefined)
@@ -829,8 +822,7 @@ function generatePlacementCandidatesUncached(
     const acceptedGridKeys = new Set<string>()
     const legalCandidateSourceMasks = new Map<string, number>()
     for (let pointIndex = 0; pointIndex < sortedPoints.length; pointIndex += 1) {
-      if (pointIndex % 32 === 0)
-        yield* nfpCheckpoint(input.control, 'candidate-points')
+      if (pointIndex % 32 === 0) yield* nfpCheckpoint(input.control, 'candidate-points')
       const rawPoint = sortedPoints[pointIndex]
       if (rawPoint === undefined) continue
       const sourceMask = points.sourceMasks.get(pointKey(rawPoint)) ?? 0
@@ -942,7 +934,7 @@ function makeGeneratePlacementCandidates(
 ): NfpIfpService['generatePlacementCandidates'] {
   const candidatesByScope = new WeakMap<
     IrregularNfpIfpCandidateMemoScope,
-    Map<string, ReadonlyArray<CachedLegalCandidate>>
+    Map<string, CachedLegalCandidateEntry>
   >()
 
   function service(
@@ -975,27 +967,45 @@ function makeGeneratePlacementCandidates(
       candidatesByGeometry = new Map()
       candidatesByScope.set(scope, candidatesByGeometry)
     }
-    const key = legalPlacementCandidateMemoKey(
-      input,
-      constructionAlgorithm,
-      candidatePruningMode
-    )
+    const key = legalPlacementCandidateMemoKey(input, constructionAlgorithm, candidatePruningMode)
     const cached = candidatesByGeometry.get(key)
-    if (cached !== undefined && input.onCandidateProvenance === undefined) {
+    if (
+      cached !== undefined &&
+      (input.onCandidateProvenance === undefined || cached.provenance !== undefined)
+    ) {
       return nfpCheckpoint(input.control, 'candidate-points').pipe(
-        Effect.map(() => restoreCachedLegalCandidates(cached, input.moving))
+        Effect.map(() => {
+          if (cached.provenance !== undefined) {
+            input.onCandidateProvenance?.(cached.provenance)
+          }
+          return restoreCachedLegalCandidates(cached.candidates, input.moving)
+        })
       )
     }
 
+    let observedProvenance: NfpIfpCandidateProvenance | undefined
+    const uncachedInput: GeneratePlacementCandidatesInput =
+      input.onCandidateProvenance === undefined
+        ? input
+        : {
+            ...input,
+            onCandidateProvenance: (provenance) => {
+              observedProvenance = provenance
+              input.onCandidateProvenance?.(provenance)
+            }
+          }
     return generatePlacementCandidatesUncached(
-      input,
+      uncachedInput,
       geometryCache,
       constructionAlgorithm,
       candidatePruningMode
     ).pipe(
       Effect.tap((candidates) =>
         Effect.sync(() => {
-          candidatesByGeometry?.set(key, cacheLegalCandidates(candidates))
+          candidatesByGeometry?.set(key, {
+            candidates: cacheLegalCandidates(candidates),
+            ...(observedProvenance === undefined ? {} : { provenance: observedProvenance })
+          })
         })
       )
     )
@@ -1007,6 +1017,11 @@ function makeGeneratePlacementCandidates(
 interface CachedLegalCandidate {
   readonly point: InternalPoint
   readonly diagnostics: IrregularPlacementCandidate['diagnostics']
+}
+
+interface CachedLegalCandidateEntry {
+  readonly candidates: ReadonlyArray<CachedLegalCandidate>
+  readonly provenance?: NfpIfpCandidateProvenance
 }
 
 function cacheLegalCandidates(
@@ -1189,20 +1204,8 @@ function addAntiparallelEdgeSupportPoints(
       if (!isFinitePoint(firstSupportPoint) || !isFinitePoint(secondSupportPoint)) {
         return 'antiparallel edge support arithmetic must produce finite coordinates.'
       }
-      addPoint(
-        points,
-        firstSupportPoint,
-        candidateBounds,
-        'antiparallelEdgeSupport',
-        provenance
-      )
-      addPoint(
-        points,
-        secondSupportPoint,
-        candidateBounds,
-        'antiparallelEdgeSupport',
-        provenance
-      )
+      addPoint(points, firstSupportPoint, candidateBounds, 'antiparallelEdgeSupport', provenance)
+      addPoint(points, secondSupportPoint, candidateBounds, 'antiparallelEdgeSupport', provenance)
     }
   }
   return undefined
@@ -1288,10 +1291,10 @@ function emitCandidateProvenance(
     liveConvexLegal: provenance.liveConvexLegal,
     // candidate phases are materialized by canonicalPlacementPointAlternatives;
     // phase incompatibility is an F0 expectation result, not a generator rejection.
-    phaseIncompatible: 0,
+    phaseIncompatible: 'not-evaluated',
     // canonical Clipper2 classification belongs to the exact archive boundary.
-    canonicalChecked: 0,
-    canonicalLegal: 0,
+    canonicalChecked: 'not-evaluated',
+    canonicalLegal: 'not-evaluated',
     legalCandidateSources
   }
   input.onCandidateProvenance(snapshot)
@@ -1440,11 +1443,7 @@ function intersectSegments(
       const parameter = numerator / denominator
       const x = first.start.x + parameter * firstDirectionX
       const y = first.start.y + parameter * firstDirectionY
-      if (
-        !Number.isFinite(parameter) ||
-        !Number.isFinite(x) ||
-        !Number.isFinite(y)
-      ) {
+      if (!Number.isFinite(parameter) || !Number.isFinite(x) || !Number.isFinite(y)) {
         return { message: 'segment intersection arithmetic must produce finite coordinates.' }
       }
       return { points: [{ x, y }] }
@@ -1455,8 +1454,7 @@ function intersectSegments(
     const secondEndOffsetX = second.end.x - first.start.x
     const secondEndOffsetY = second.end.y - first.start.y
     const startArea = firstDirectionX * offsetY - firstDirectionY * offsetX
-    const endArea =
-      firstDirectionX * secondEndOffsetY - firstDirectionY * secondEndOffsetX
+    const endArea = firstDirectionX * secondEndOffsetY - firstDirectionY * secondEndOffsetX
     if (
       !Number.isFinite(secondEndOffsetX) ||
       !Number.isFinite(secondEndOffsetY) ||
@@ -1468,8 +1466,7 @@ function intersectSegments(
 
     // rounded areas can disagree with the exact predicate signs, so only use
     // a bounded interior parameter derived from strictly opposite signs
-    const oppositeSigns =
-      (startArea > 0 && endArea < 0) || (startArea < 0 && endArea > 0)
+    const oppositeSigns = (startArea > 0 && endArea < 0) || (startArea < 0 && endArea > 0)
     const fallbackParameter = startArea / (startArea - endArea)
     const fallbackX = second.start.x + fallbackParameter * secondDirectionX
     const fallbackY = second.start.y + fallbackParameter * secondDirectionY

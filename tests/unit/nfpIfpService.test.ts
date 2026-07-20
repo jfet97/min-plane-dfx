@@ -39,7 +39,8 @@ import { makePlacedCollisionSpatialIndex } from '../../src/workers/irregular/pla
 import type {
   ComputeIfpBoundsInput,
   ComputeNfpInput,
-  GeneratePlacementCandidatesInput
+  GeneratePlacementCandidatesInput,
+  NfpIfpCandidateProvenance
 } from '../../src/workers/irregular/services.js'
 import {
   GeometryCache,
@@ -362,7 +363,9 @@ describe('NfpIfpServiceLive', () => {
     ]
 
     for (const moving of movingFamilies) {
-      let provenance: Parameters<NonNullable<GeneratePlacementCandidatesInput['onCandidateProvenance']>>[0] | undefined
+      let provenance:
+        | Parameters<NonNullable<GeneratePlacementCandidatesInput['onCandidateProvenance']>>[0]
+        | undefined
       const input = {
         sheet: sheet(100, 100),
         placed: [fixed],
@@ -383,18 +386,26 @@ describe('NfpIfpServiceLive', () => {
       if (provenance === undefined) throw new Error('expected feature provenance')
       expect(provenance.rawBySource.nfpVertex).toBeGreaterThan(0)
       expect(provenance.rawBySource.antiparallelEdgeSupport).toBeGreaterThan(0)
-      expect(provenance.uniqueBySourceMask.some(({ sourceMask }) =>
-        (sourceMask & NFP_IFP_CANDIDATE_SOURCE_MASK.nfpVertex) !== 0
-      )).toBe(true)
-      expect(provenance.legalCandidateSources.some(({ sourceMask }) =>
-        (sourceMask & NFP_IFP_CANDIDATE_SOURCE_MASK.nfpVertex) !== 0
-      )).toBe(true)
+      expect(
+        provenance.uniqueBySourceMask.some(
+          ({ sourceMask }) => (sourceMask & NFP_IFP_CANDIDATE_SOURCE_MASK.nfpVertex) !== 0
+        )
+      ).toBe(true)
+      expect(
+        provenance.legalCandidateSources.some(
+          ({ sourceMask }) => (sourceMask & NFP_IFP_CANDIDATE_SOURCE_MASK.nfpVertex) !== 0
+        )
+      ).toBe(true)
+      expect(provenance.phaseIncompatible).toBe('not-evaluated')
+      expect(provenance.canonicalChecked).toBe('not-evaluated')
+      expect(provenance.canonicalLegal).toBe('not-evaluated')
 
       // The raw vertex contact retains its fractional basis. We project it
       // through the live canonical alternatives once, then check direct legality.
       const fixedVertex = fixed.collisionGeometry.polygon.points[2]
       const movingVertex = moving.polygon.points[0]
-      if (fixedVertex === undefined || movingVertex === undefined) throw new Error('expected vertices')
+      if (fixedVertex === undefined || movingVertex === undefined)
+        throw new Error('expected vertices')
       const rawVertexContact = {
         x: fixedVertex.x + fixed.placement.transform.translateX - movingVertex.x,
         y: fixedVertex.y + fixed.placement.transform.translateY - movingVertex.y
@@ -454,7 +465,9 @@ describe('NfpIfpServiceLive', () => {
         45
       )
     ]
-    let provenance: Parameters<NonNullable<GeneratePlacementCandidatesInput['onCandidateProvenance']>>[0] | undefined
+    let provenance:
+      | Parameters<NonNullable<GeneratePlacementCandidatesInput['onCandidateProvenance']>>[0]
+      | undefined
     await generateCandidates({
       sheet: sheet(100, 100),
       placed,
@@ -480,9 +493,7 @@ describe('NfpIfpServiceLive', () => {
     expect(alternatives).toHaveLength(9)
     expect(alternatives[0]).toMatchObject({ x: 509.415, y: 527.894 })
     expect(
-      alternatives.every(
-        ({ x, y }) => Number.isInteger(x * 1_000) && Number.isInteger(y * 1_000)
-      )
+      alternatives.every(({ x, y }) => Number.isInteger(x * 1_000) && Number.isInteger(y * 1_000))
     ).toBe(true)
     expect(new Set(alternatives.map(({ gridX, gridY }) => `${gridX},${gridY}`)).size).toBe(9)
   })
@@ -1156,6 +1167,7 @@ describe('NfpIfpServiceLive', () => {
     )
     const firstScope = new IrregularNfpIfpCandidateMemoScope()
     const secondScope = new IrregularNfpIfpCandidateMemoScope()
+    const provenanceSnapshots: NfpIfpCandidateProvenance[] = []
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* NfpIfpService
@@ -1164,7 +1176,10 @@ describe('NfpIfpServiceLive', () => {
           placed: [fixed],
           moving: firstMoving,
           settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
-          candidateMemoScope: firstScope
+          candidateMemoScope: firstScope,
+          onCandidateProvenance: (provenance) => {
+            provenanceSnapshots.push(provenance)
+          }
         })
         const getsAfterFirst = counters.gets
         const second = yield* service.generatePlacementCandidates({
@@ -1172,7 +1187,10 @@ describe('NfpIfpServiceLive', () => {
           placed: [interchangeableFixedCopy],
           moving: secondMoving,
           settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
-          candidateMemoScope: firstScope
+          candidateMemoScope: firstScope,
+          onCandidateProvenance: (provenance) => {
+            provenanceSnapshots.push(provenance)
+          }
         })
         const getsAfterMemoHit = counters.gets
         yield* service.generatePlacementCandidates({
@@ -1191,7 +1209,11 @@ describe('NfpIfpServiceLive', () => {
 
     expect(candidatePoints(result.second)).toEqual(candidatePoints(result.first))
     expect(result.second.every(({ pieceId }) => pieceId === secondMoving.sourcePieceId)).toBe(true)
-    expect(result.second.every(({ transform }) => transform.index === secondTransform.index)).toBe(true)
+    expect(result.second.every(({ transform }) => transform.index === secondTransform.index)).toBe(
+      true
+    )
+    expect(provenanceSnapshots).toHaveLength(2)
+    expect(provenanceSnapshots[1]).toEqual(provenanceSnapshots[0])
     expect(result.getsAfterMemoHit).toBe(result.getsAfterFirst)
     expect(result.getsAfterNewScope).toBeGreaterThan(result.getsAfterMemoHit)
   })
@@ -1228,12 +1250,7 @@ describe('NfpIfpServiceLive', () => {
         )
       ]
     }
-    const additionalFixed = placedPiece(
-      'fixed-exact-memo-key-additional',
-      fixedPoints,
-      7,
-      4
-    )
+    const additionalFixed = placedPiece('fixed-exact-memo-key-additional', fixedPoints, 7, 4)
     const orderedPlacedInput = {
       ...baseInput,
       placed: [...baseInput.placed, additionalFixed]
@@ -1416,12 +1433,8 @@ describe('NfpIfpServiceLive', () => {
         }
       }
     }
-    type ControlledCandidateError = Effect.Error<
-      ReturnType<typeof generateCandidatesEffect>
-    >
-    expectTypeOf<IrregularNfpIfpControlAbortError>().toMatchTypeOf<
-      ControlledCandidateError
-    >()
+    type ControlledCandidateError = Effect.Error<ReturnType<typeof generateCandidatesEffect>>
+    expectTypeOf<IrregularNfpIfpControlAbortError>().toMatchTypeOf<ControlledCandidateError>()
 
     const failure = await captureFailure(
       Effect.runPromise(
@@ -1618,8 +1631,7 @@ describe('NfpIfpServiceLive', () => {
     const firstDirectionY = firstEnd.y - firstStart.y
     const secondDirectionX = secondEnd.x - secondStart.x
     const secondDirectionY = secondEnd.y - secondStart.y
-    const denominator =
-      firstDirectionX * secondDirectionY - firstDirectionY * secondDirectionX
+    const denominator = firstDirectionX * secondDirectionY - firstDirectionY * secondDirectionX
     const startArea =
       firstDirectionX * (secondStart.y - firstStart.y) -
       firstDirectionY * (secondStart.x - firstStart.x)
@@ -1631,17 +1643,15 @@ describe('NfpIfpServiceLive', () => {
       secondStart.x + fallbackParameter * secondDirectionX,
       secondStart.y + fallbackParameter * secondDirectionY
     )
-    const canonicalIntersectionAlternatives = canonicalPlacementPointAlternatives(
-      expectedIntersection
-    )
+    const canonicalIntersectionAlternatives =
+      canonicalPlacementPointAlternatives(expectedIntersection)
     const admittedPoints = candidatePoints(candidates)
 
     expect(denominator).toBe(0)
     expect(
       admittedPoints.some((admitted) =>
         canonicalIntersectionAlternatives.some(
-          (alternative) =>
-            alternative.x === admitted.x && alternative.y === admitted.y
+          (alternative) => alternative.x === admitted.x && alternative.y === admitted.y
         )
       )
     ).toBe(true)
