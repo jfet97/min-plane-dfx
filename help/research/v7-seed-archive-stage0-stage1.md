@@ -1,7 +1,7 @@
 # V7 Seed Archive: Stage 0 And Independent Stage 1 Arms
 
-Status: implementation complete; diagnostic evidence pending the immutable
-Triangle-20 and Mixed-61 runs from the committed checkout.
+Status: Stage 0/1 and the first bounded reconstruction checkpoint are complete.
+The branch remains experiment-only; no V7 result is approved for production.
 
 ## Purpose
 
@@ -88,3 +88,45 @@ independent arms, exact legality classifications, counter deltas, and rendered
 SVG/PNG layouts. The experimental ancestry is known not to be the current-main
 triangle golden, so no wholesale merge is permitted even if a Mixed-61 relaxed
 trace improves.
+
+## Compactness-Cohesion Reconstruction Checkpoint
+
+Commit `e8748e1` replaces saturated failed-certificate ordering with exact
+Pareto dominance over raw compactness and cohesion measurements. Certified
+layouts remain strictly ahead of failures, both baseline seed geometries are
+protected, and capacity truncation interleaves objective representatives rather
+than collapsing tradeoffs into one contact- or area-first scalar. The same
+checkpoint pairs `gap-contained` placement with the reversed and four
+endpoint-derived deterministic orders. Effective orders are keyed by canonical
+geometry-class sequence so interchangeable copies do not consume duplicate
+decode budgets.
+
+Immutable evidence:
+
+- Triangle:
+  `/private/tmp/min-plane-provenance/v7-cohesion-front-e8748e1/triangle/`
+- Mixed:
+  `/private/tmp/min-plane-provenance/v7-cohesion-front-e8748e1/mixed/`
+
+The Triangle run collapses thirteen nominal roles to three effective decodes,
+as required for interchangeable copies. Its two exact endpoints remain the
+diagnostic V7 ancestry and do not satisfy or replace the current-main repair-8
+golden.
+
+The Mixed run completes all thirteen layouts. The smallest envelope remains
+`open-pocket-first` at `405,773.434 mm2`, but it remains fragmented with 26
+isolates and a largest contact component of 11. The new combined frontier is
+`endpoint-q0-left-to-right`: `418,220.374 mm2`, 13 isolates, 24 contact
+components, largest component 27/61, and 28/3 total/dominant contacts. This is a
+real cohesion improvement over the previous 15-isolate / largest-16 endpoint,
+but it still misses the compactness/contact gate. Stacking pocket placement
+onto that order is worse (`423,297.842 mm2`, 15 isolates, largest component
+14), so additional order/pocket combinations are not justified.
+
+The next isolated experiment is a bounded sheetless partial-state Pareto beam.
+It must preserve the exact pure-growth lineage, compare only synchronized
+construction depths, and retain states over three compound axes: intrinsic
+envelope compactness, contact-component fragmentation, and exact void topology.
+Contact length is diagnostic only and must not reward chains. This is a new
+search/retention hypothesis and must not be conflated with the completed
+reconstruction checkpoint.

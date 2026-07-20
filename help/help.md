@@ -182,9 +182,14 @@ cache, a capacity-eight legal endpoint archive keyed by future state identity,
 and independent control/split/atomic/refine pressure arms. Every protection and
 archive admission uses canonical grid structure; SAT is proposal guidance and a
 tie-break only. The 12,000-evaluation / 60-second budget is per arm, not per
-seed or ratio. Its new code has focused unit coverage, but it has **no accepted
-layout claim yet**: immutable Triangle-20 and Mixed-61 diagnostics, rendered
-artifacts, and combined review are required before promotion or selective replay.
+seed or ratio. The first reconstruction checkpoint at `e8748e1` combines raw,
+unsaturated compactness/cohesion Pareto retention with geometry-order plus
+pocket-placement roles. It improves the best measured Mixed cohesion to 13
+isolates and a largest 27/61 contact component at `418,220.374 mm2`, but remains
+below the production-quality contact gate. Further order variants are rejected;
+the next isolated hypothesis is bounded partial-state Pareto retention across
+intrinsic compactness, fragmentation, and void topology. V7 remains diagnostic
+and cannot replace the current-main Triangle golden.
 See [the V7 Stage 0/1 report](research/v7-seed-archive-stage0-stage1.md).
 
 Every completed experiment must be recorded below as accepted or rejected. An
@@ -214,6 +219,17 @@ in their isolated worktree before production code is changed. Promote accepted
 artifacts into `help/artifacts/` and durable research reports into `help/research/`.
 
 ### 2026-07-20 (Dalsoo source-control addition)
+
+- Committed the generic compactness-cohesion reconstruction checkpoint as
+  `e8748e1`. Immutable Triangle and Mixed reports are under
+  `/private/tmp/min-plane-provenance/v7-cohesion-front-e8748e1/`.
+- Mixed `endpoint-q0-left-to-right` improves the prior cohesion frontier from
+  15 isolates / largest component 16 to 13 isolates / largest component 27,
+  while retaining a `418,220.374 mm2` envelope. It still has only 28/3
+  total/dominant contacts and is not promotable.
+- Rejected additional stacked order/pocket enumeration: the measured stacked
+  endpoint is worse than its pure-order parent. The next experiment changes
+  partial-state retention rather than adding another decode order.
 
 - Added a pinned source review of
   [`Dalsoo-Bin-Packing`](research/open-source-nesting-strategies.md#dalsoo-bin-packing)
