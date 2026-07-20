@@ -161,6 +161,21 @@ bounded to final pool/archive survivors and four deterministic sample kinds per
 experiment-only until its provenance runs, triangle gates, and review establish
 that it improves an exact completed layout rather than merely a relaxed state.
 
+The V7 reconstruction archive treats intrinsic envelope compactness and exact
+void topology as its two dominance axes. Exact-contact connectivity remains a
+real but bounded selection axis: each geometric frontier round chooses a
+compactness representative, a void representative, then one contact
+representative. Contact therefore preserves one structurally useful alternative
+without blocking strict improvement on both geometric axes. Diagnostic
+certificate floors do not partition the archive.
+
+The optional queue-vs-beam discriminator is an independent replay. At each
+synchronized depth it measures whether a distinct remaining geometry class can
+produce non-dominated gap-contained growth, and whether one of four rejected
+same-piece geometric-front alternatives produces a better one-step
+continuation. Its budgets, candidates, and output are trace-only and cannot
+alter the live reconstruction result.
+
 At no more than five registered points, E4 projects a relaxed state back to the
 exact geometry domain: canonicalize to the collision grid, remove both
 endpoints of exact conflicts plus target-wall offenders, pin each removed piece

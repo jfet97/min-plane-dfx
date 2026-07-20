@@ -130,3 +130,25 @@ envelope compactness, contact-component fragmentation, and exact void topology.
 Contact length is diagnostic only and must not reward chains. This is a new
 search/retention hypothesis and must not be conflated with the completed
 reconstruction checkpoint.
+
+## Geometric-Cohesion Correction And Queue/Beam Discriminator
+
+Commit `a3a7b95` removes the false all-or-nothing treatment of contact. Completed
+layouts are dominated only when they lose on the compound intrinsic compactness
+and exact void-topology axes. Front truncation still gives exact-contact
+structure one bounded turn after the compactness and void representatives, so
+contact remains actionable without preserving a worse ring by veto. Diagnostic
+contact floors no longer split the archive into hard pass/fail partitions.
+
+The fresh Mixed archive selects `open-pocket-first` at `405,773.434 mm2`, zero
+enclosed cavities, and `0.200227` largest hull-gap ratio. Triangle remains the
+same legacy reconstruction because interchangeable pieces collapse the nominal
+orders to three distinct decodes; the correction creates no missing geometry.
+
+Commit `7be8d04` adds an independent trace-only discriminator. Per synchronized
+depth it compares every distinct remaining geometry class with the scheduled
+piece, then continues up to four rejected same-piece geometric-front states by
+one unchanged placement. Compactness and void topology determine headroom;
+contact fragmentation is reported and used only as the bounded deterministic
+tie-break. This measurement decides whether the next search change should be a
+dynamic queue, a partial beam, or both.

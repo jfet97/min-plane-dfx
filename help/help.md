@@ -187,8 +187,13 @@ unsaturated compactness/cohesion Pareto retention with geometry-order plus
 pocket-placement roles. It improves the best measured Mixed cohesion to 13
 isolates and a largest 27/61 contact component at `418,220.374 mm2`, but remains
 below the production-quality contact gate. Further order variants are rejected;
-the next isolated hypothesis is bounded partial-state Pareto retention across
-intrinsic compactness, fragmentation, and void topology. V7 remains diagnostic
+commit `a3a7b95` corrects the archive semantics: compactness and exact void
+topology decide geometric dominance, while exact-contact structure receives one
+bounded selection turn after those two axes and cannot veto a layout that is
+better on both. The selected Mixed layout is therefore the visually stronger
+`405,773.434 mm2` zero-cavity reconstruction. The next isolated measurement at
+`7be8d04` distinguishes dynamic remaining-piece choice from bounded partial-state
+retention without changing the live decode. V7 remains diagnostic
 and cannot replace the current-main Triangle golden.
 See [the V7 Stage 0/1 report](research/v7-seed-archive-stage0-stage1.md).
 
@@ -219,6 +224,18 @@ in their isolated worktree before production code is changed. Promote accepted
 artifacts into `help/artifacts/` and durable research reports into `help/research/`.
 
 ### 2026-07-20 (Dalsoo source-control addition)
+
+- Corrected the V7 completed-layout archive at `a3a7b95`: certificate contact
+  floors no longer form a hard pass/fail partition. Compactness and void
+  topology determine dominance; contact receives one bounded frontier-selection
+  turn. Fresh immutable evidence is under
+  `/private/tmp/min-plane-provenance/v7-geometric-cohesion-a3a7b95/`.
+- Added the trace-only queue-vs-beam discriminator at `7be8d04`. It replays one
+  pure-growth order under independent runtime/evaluation limits, compares
+  distinct remaining geometry classes against the scheduled piece, and tests
+  up to four rejected same-piece frontier alternatives through one unchanged
+  continuation. It cannot change live candidates, ranking, selection, archive,
+  or deadlines.
 
 - Committed the generic compactness-cohesion reconstruction checkpoint as
   `e8748e1`. Immutable Triangle and Mixed reports are under
