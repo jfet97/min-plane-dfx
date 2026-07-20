@@ -344,6 +344,24 @@ export interface IntrinsicPeelReinsertObserverResult {
     readonly retainedSuccessorCount: number
     readonly capacityEvictionCount: number
     readonly completeEndpointCount: number
+    readonly steps: ReadonlyArray<{
+      readonly stepIndex: number
+      readonly pieceId: PieceId
+      readonly parentStateCount: number
+      readonly generatedCandidateCount: number
+      readonly envelopeEventCandidateCount: number
+      readonly scoredCandidateCount: number
+      readonly canonicalLegalCandidateCount: number
+      readonly uniqueFittingSuccessorCount: number
+      readonly retainedWitnesses: ReadonlyArray<{
+        readonly canonicalGeometryDigest: string
+        readonly axes: IntrinsicQueueBeamAxes
+      }>
+      readonly firstEvictedWitnesses: ReadonlyArray<{
+        readonly canonicalGeometryDigest: string
+        readonly axes: IntrinsicQueueBeamAxes
+      }>
+    }>
   }>
   readonly boundedEndpointWitnesses: ReadonlyArray<{
     readonly removedPieceIds: ReadonlyArray<PieceId>
@@ -1390,11 +1408,18 @@ export function runIntrinsicPeelReinsertObserver(input: {
         let retainedSuccessorCount = 0
         let capacityEvictionCount = 0
         let orderTruncated = false
+        const stepTraces: IntrinsicPeelReinsertObserverResult['orderTraces'][number]['steps'][number][] =
+          []
         for (let step = 0; step < order.length; step += 1) {
           const piece = order[step]
           if (piece === undefined) continue
           const remainingPreparedPieces = order.slice(step + 1)
           const successors: AuditCandidate[] = []
+          const parentStateCount = states.length
+          let stepGeneratedCandidateCount = 0
+          let stepEnvelopeEventCandidateCount = 0
+          let stepScoredCandidateCount = 0
+          let stepCanonicalLegalCandidateCount = 0
           for (const state of states) {
             const outcome = yield* enumerateWithDeadlineRecovery({
               state,
@@ -1409,16 +1434,24 @@ export function runIntrinsicPeelReinsertObserver(input: {
               measureGapContainment: false,
               includeEnvelopeEventCandidates: true
             })
-            if (outcome === undefined || !outcome.fullyEnumerated) {
+            if (outcome === undefined) {
               orderTruncated = true
               break
             }
+            stepGeneratedCandidateCount += outcome.generatedCandidateCount
+            stepEnvelopeEventCandidateCount += outcome.envelopeEventCandidateCount
+            stepScoredCandidateCount += outcome.scoredCandidateCount
+            stepCanonicalLegalCandidateCount += outcome.canonicalLegalCandidateCount
             generatedCandidateCount += outcome.generatedCandidateCount
             envelopeEventCandidateCount += outcome.envelopeEventCandidateCount
             scoredCandidateCount += outcome.scoredCandidateCount
             canonicalLegalCandidateCount += outcome.canonicalLegalCandidateCount
             uniqueCanonicalSuccessorCount += outcome.uniqueCanonicalSuccessors.length
             successors.push(...outcome.uniqueCanonicalSuccessors)
+            if (!outcome.fullyEnumerated) {
+              orderTruncated = true
+              break
+            }
           }
           if (orderTruncated) break
           const uniqueSuccessors = deduplicatePartialEntries(
@@ -1426,9 +1459,26 @@ export function runIntrinsicPeelReinsertObserver(input: {
               .filter(({ state }) => partialStateCanFit(state, input.finalSheet))
               .map(partialBeamEntry)
           )
-          const retained = uniqueSuccessors.toSorted(comparePartialCandidate).slice(0, 4)
+          const orderedSuccessors = uniqueSuccessors.toSorted(comparePartialCandidate)
+          const retained = orderedSuccessors.slice(0, 4)
           retainedSuccessorCount += retained.length
           capacityEvictionCount += Math.max(0, uniqueSuccessors.length - retained.length)
+          const traceWitness = (entry: IntrinsicPartialBeamEntry) => ({
+            canonicalGeometryDigest: digestSemanticIdentity(entry.canonicalGeometryKey),
+            axes: entry.axes
+          })
+          stepTraces.push({
+            stepIndex: step,
+            pieceId: preparedPieceId(piece),
+            parentStateCount,
+            generatedCandidateCount: stepGeneratedCandidateCount,
+            envelopeEventCandidateCount: stepEnvelopeEventCandidateCount,
+            scoredCandidateCount: stepScoredCandidateCount,
+            canonicalLegalCandidateCount: stepCanonicalLegalCandidateCount,
+            uniqueFittingSuccessorCount: uniqueSuccessors.length,
+            retainedWitnesses: retained.map(traceWitness),
+            firstEvictedWitnesses: orderedSuccessors.slice(4, 8).map(traceWitness)
+          })
           states = retained
             .map(({ state }) => state)
           completedStepCount += 1
@@ -1447,7 +1497,8 @@ export function runIntrinsicPeelReinsertObserver(input: {
             uniqueCanonicalSuccessorCount,
             retainedSuccessorCount,
             capacityEvictionCount,
-            completeEndpointCount: 0
+            completeEndpointCount: 0,
+            steps: stepTraces
           })
           break subsetLoop
         }
@@ -1497,7 +1548,8 @@ export function runIntrinsicPeelReinsertObserver(input: {
           uniqueCanonicalSuccessorCount,
           retainedSuccessorCount,
           capacityEvictionCount,
-          completeEndpointCount: orderCompleteEndpointCount
+          completeEndpointCount: orderCompleteEndpointCount,
+          steps: stepTraces
         })
       }
     }
