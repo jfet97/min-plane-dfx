@@ -176,6 +176,19 @@ same-piece geometric-front alternatives produces a better one-step
 continuation. Its budgets, candidates, and output are trace-only and cannot
 alter the live reconstruction result.
 
+The experimental Stage 2A partial geometric beam reuses that exact sheetless
+successor enumeration but changes retention. One protected width-one control
+remains outside experimental capacity. The global canonical successor union is
+deduplicated by occupied geometry plus remaining geometry-class order and
+unplaced ids, partitioned into compactness/void Pareto layers, and retained by
+bounded layer breadth followed by guaranteed repeated within-layer geometric
+dispersion. Exact contact gets at most one post-breadth selection turn and is
+never a dominance axis. Dispersion compares exact occupied unions under rigid
+quarter turns using void/contact signature Hamming distance and a Clipper2 XOR
+area ratio. Requested sheet dimensions appear only in the monotone q0/q90 fit
+gate. Alternate-piece scheduling remains disabled until a later paired
+commensurate ablation at a successful fixed beam width.
+
 At no more than five registered points, E4 projects a relaxed state back to the
 exact geometry domain: canonicalize to the collision grid, remove both
 endpoints of exact conflicts plus target-wall offenders, pin each removed piece

@@ -165,10 +165,40 @@ Immutable runs at commit `14868c2` answer that question:
   every scheduled-piece successor, plus `16` non-dominated beam continuations
   and `2` strict beam improvements.
 
-The selected Stage 2 design is therefore a bounded geometric partial beam for
-all jobs plus a dynamic queue only when distinct remaining geometry classes
-produce real gap-contained opportunities. The Mixed audit followed the
-`canonical-grid` pure-growth reconstruction: under concurrent cold execution,
-the non-baseline compact roles exceeded the compact harness's 15-second
-per-decode limit. These counts prove generic reachability headroom but do not
-claim complete-lineage coverage for the `405,773.434 mm2` pocket-first result.
+The initial audit selected the bounded geometric partial beam as the first live
+mechanism, but did not yet justify a dynamic queue. Its queue branches had equal
+placement counts with different placed material, so smaller pieces could appear
+better for the wrong reason. The Mixed audit followed the `canonical-grid`
+pure-growth reconstruction: under concurrent cold execution, the non-baseline
+compact roles exceeded the compact harness's 15-second per-decode limit. These
+counts prove generic reachability headroom but do not claim complete-lineage
+coverage for the `405,773.434 mm2` pocket-first result.
+
+## Same-Material Calibration And Stage 2A Contract
+
+The `40c26dc` follow-up compares `scheduled -> alternate` with `alternate ->
+scheduled` only after both branches contain the same geometry-class multiset.
+Its immutable reports are:
+
+- `/private/tmp/min-plane-provenance/v7-calibration-40c26dc-triangle/report.json`;
+- `/private/tmp/min-plane-provenance/v7-calibration-40c26dc-mixed/report.json`.
+
+The attempted Triangle lineage reconstruction from an endpoint SVG is rejected
+as evidence. The render does not preserve authoritative local geometry,
+placement transforms, or historical polygon order. Any future forced-lineage
+claim requires structured source data and per-prefix exact legality.
+
+Mixed used 100,000 evaluations and 115.38 seconds, completed 13 commensurate
+two-order macros, and found Pareto headroom only at depths 3 and 7. It therefore
+does not justify paying for live alternate-piece scheduling before the beam is
+measured. Stage 2A begins with cap-zero reordering and widths 0/1/3/7/12.
+
+The live experimental selector keeps the exact width-one control outside those
+slots. For width `W`, it covers at most `ceil(W / 2)` compactness/void Pareto
+layers, permits one contact representative only when a later dispersion slot
+remains, then repeatedly revisits eligible layers deepest-first. The
+`occupied-dispersion-v1` distance is exact and sheet-free: void and bounded
+contact signatures precede the minimum Clipper2 occupied-XOR ratio across rigid
+q0/q90/q180/q270 alignment. Slot traces record the selected role, layer, and
+visit. The queue remains a later paired cap-zero/cap-one ablation at one or two
+beam widths that first demonstrate completed-endpoint value.

@@ -28,7 +28,13 @@ import {
   type IntrinsicStrictComparatorMode,
   type IntrinsicStrictCompletedMetrics
 } from '../../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
-import { runIntrinsicQueueBeamDiscriminator } from '../../src/workers/algorithm/irregular/intrinsicQueueBeamDiscriminator.js'
+import {
+  runIntrinsicPartialGeometricBeam,
+  runIntrinsicQueueBeamDiscriminator,
+  selectIntrinsicPartialGeometricBeam,
+  type IntrinsicPartialGeometricBeamCandidate,
+  type IntrinsicQueueBeamAxes
+} from '../../src/workers/algorithm/irregular/intrinsicQueueBeamDiscriminator.js'
 import { assertCanonicalGridLegalLayout } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
@@ -258,6 +264,33 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     ).toBe(true)
     expect(after.placedCollisionGeometries).toEqual(before.placedCollisionGeometries)
     expect(after.stepTrace).toEqual(before.stepTrace)
+  })
+
+  it('runs the bounded partial beam without enabling alternate-piece scheduling', async () => {
+    const pieces = [
+      preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('third', rectanglePoints(1, 2), [transform(0, 0), transform(1, 90)])
+    ]
+
+    const result = await Effect.runPromise(
+      runIntrinsicPartialGeometricBeam({
+        orderedPreparedPieces: pieces,
+        finalSheet: sheet(20, 10),
+        experimentalWidth: 3,
+        maximumRuntimeMs: 10_000,
+        maximumEvaluations: 20_000
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+
+    expect(result.status).toBe('completed')
+    expect(result.completedDepthCount).toBe(pieces.length)
+    expect(result.winner?.placedCollisionGeometries).toHaveLength(pieces.length)
+    expect(result.steps.every(({ selectedSlots }) => selectedSlots.length <= 3)).toBe(true)
   })
 
   it('continues an exact frozen seed and rejects non-partitions', async () => {
@@ -568,7 +601,89 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       'chain'
     ])
   })
+
+  it('reserves experimental width for a repeated within-layer dispersion visit', () => {
+    const candidates = [
+      partialBeamCandidate('a', 0, 0, 0),
+      partialBeamCandidate('b', 1, 2, 1),
+      partialBeamCandidate('c', 2, 1, 2),
+      partialBeamCandidate('d', 3, 3, 3)
+    ]
+
+    const selection = selectIntrinsicPartialGeometricBeam({
+      candidates,
+      experimentalWidth: 3
+    })
+
+    expect(selection.slots).toEqual([
+      expect.objectContaining({ role: 'breadth', layer: 0, visit: 1 }),
+      expect.objectContaining({ role: 'breadth', layer: 1, visit: 1 }),
+      expect.objectContaining({ role: 'dispersion', layer: 1, visit: 2 })
+    ])
+    expect(selection.retained.map(({ futureEquivalenceKey }) => futureEquivalenceKey)).toEqual([
+      'a',
+      'b',
+      'c'
+    ])
+  })
+
+  it('allows only one contact turn and preserves a later dispersion slot', () => {
+    const candidates = Array.from({ length: 8 }, (_, index) =>
+      partialBeamCandidate(
+        `candidate-${index}`,
+        index,
+        8 - index,
+        index === 7 ? -10 : index
+      )
+    )
+
+    const selection = selectIntrinsicPartialGeometricBeam({
+      candidates,
+      experimentalWidth: 7
+    })
+
+    expect(selection.slots.filter(({ role }) => role === 'contact')).toHaveLength(1)
+    expect(selection.slots.filter(({ role }) => role === 'dispersion').length).toBeGreaterThan(0)
+    expect(selection.slots).toHaveLength(7)
+  })
 })
+
+function partialBeamCandidate(
+  key: string,
+  compactness: number,
+  voids: number,
+  fragmentation: number
+): IntrinsicPartialGeometricBeamCandidate {
+  const axes: IntrinsicQueueBeamAxes = {
+    compactness: {
+      maximumSideGrid: compactness,
+      envelopeAreaGrid2: compactness,
+      spanGrid: compactness
+    },
+    fragmentation: {
+      occupiedDoubledAreaOutsideLargestComponentGrid2: fragmentation,
+      isolatedPieceCount: fragmentation,
+      positiveContactComponentCount: fragmentation,
+      negativeLargestPositiveContactComponentSize: fragmentation,
+      totalStructuralContacts: -fragmentation,
+      dominantStructuralContacts: -fragmentation
+    },
+    voids: {
+      enclosedCavityCount: voids,
+      totalEnclosedCavityDoubledAreaGrid2: voids,
+      largestHullGapDoubledAreaGrid2: voids,
+      occupiedHullDoubledAreaGrid2: 1,
+      occupiedHullWasteDoubledAreaGrid2: voids,
+      occupiedDoubledAreaGrid2: 1
+    }
+  }
+  return {
+    futureEquivalenceKey: key,
+    canonicalGeometryKey: key,
+    axes,
+    placedCollisionGeometries: []
+  }
+}
 
 function completedMetrics(hash: string): IntrinsicStrictCompletedMetrics {
   return {

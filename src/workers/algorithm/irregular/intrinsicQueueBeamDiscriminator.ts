@@ -1,5 +1,14 @@
 import { Data, Effect, Order } from 'effect'
 import { performance } from 'node:perf_hooks'
+import {
+  area,
+  booleanOpWithPolyTree,
+  ClipType,
+  FillRule,
+  type Path64,
+  polyTreeToPaths64,
+  PolyTree64
+} from 'clipper2-ts'
 import type { PieceId } from '@shared/domain/ids.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
 import {
@@ -16,8 +25,10 @@ import {
   analyzeCanonicalLayoutStructure,
   assertCanonicalGridLegalLayout,
   measureCanonicalEnclosedCavities,
+  measureCanonicalLayoutContacts,
   measureCanonicalLayoutEnvelope,
-  measureCanonicalLayoutTopologyExact
+  measureCanonicalLayoutTopologyExact,
+  placedCollisionWorldGridPath
 } from '../../irregular/canonicalLayoutGeometry.js'
 import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
@@ -39,8 +50,11 @@ import { intrinsicPreparedPieceClassKey } from './intrinsicReconstructionPortfol
 import { IrregularBeamState } from './irregularBeamState.js'
 import {
   IntrinsicStrictDecoderError,
+  measureIntrinsicSheetlessCompletedLayout,
   measureIntrinsicStrictCanonicalEnvelope,
+  rankIntrinsicStrictCompletedLayouts,
   selectIntrinsicStrictFamilyWinner,
+  type IntrinsicStrictCompletedMetrics,
   type IntrinsicStrictLocalScore
 } from './intrinsicStrictDecoder.js'
 
@@ -79,6 +93,8 @@ export interface IntrinsicQueueBeamAxes {
     readonly isolatedPieceCount: number
     readonly positiveContactComponentCount: number
     readonly negativeLargestPositiveContactComponentSize: number
+    readonly totalStructuralContacts: number
+    readonly dominantStructuralContacts: number
   }
   readonly voids: {
     readonly enclosedCavityCount: number
@@ -210,6 +226,36 @@ export interface IntrinsicQueueBeamDiscriminatorResult {
     readonly minimumObservedSurvivalCapacity: 1 | 2 | 4 | 8 | 13 | undefined
   }
   readonly steps: ReadonlyArray<IntrinsicQueueBeamStepReport>
+}
+
+export interface IntrinsicPartialGeometricBeamResult {
+  readonly status: 'completed' | 'incomplete' | 'truncated'
+  readonly experimentalWidth: number
+  readonly truncationReason: 'maximum-runtime' | 'maximum-evaluations' | undefined
+  readonly evaluations: number
+  readonly runtimeMs: number
+  readonly completedDepthCount: number
+  readonly steps: ReadonlyArray<{
+    readonly depth: number
+    readonly parentCount: number
+    readonly uniqueSuccessorCount: number
+    readonly protectedControlKey: string | undefined
+    readonly selectedSlots: IntrinsicPartialGeometricBeamSelection<IntrinsicPartialBeamEntry>['slots']
+  }>
+  readonly finalists: ReadonlyArray<{
+    readonly futureEquivalenceKey: string
+    readonly canonicalGeometryKey: string
+    readonly metrics: IntrinsicStrictCompletedMetrics
+    readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+  }>
+  readonly winner:
+    | {
+        readonly futureEquivalenceKey: string
+        readonly canonicalGeometryKey: string
+        readonly metrics: IntrinsicStrictCompletedMetrics
+        readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+      }
+    | undefined
 }
 
 export class IntrinsicQueueBeamDiscriminatorError extends Data.TaggedError(
@@ -624,6 +670,230 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
   })
 }
 
+interface IntrinsicPartialBeamEntry extends IntrinsicPartialGeometricBeamCandidate {
+  readonly state: IrregularBeamState
+}
+
+/** Runs the first live Stage 2A beam cell while keeping reordering disabled. */
+export function runIntrinsicPartialGeometricBeam(input: {
+  readonly orderedPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly finalSheet: SheetSpec
+  readonly experimentalWidth: number
+  readonly maximumRuntimeMs: number
+  readonly maximumEvaluations: number
+}): Effect.Effect<
+  IntrinsicPartialGeometricBeamResult,
+  AuditError,
+  GeometryKernel | GeometrySettings | NfpIfpService
+> {
+  return Effect.gen(function* () {
+    const startedAt = performance.now()
+    const experimentalWidth = Math.max(0, Math.floor(input.experimentalWidth))
+    const budget: AuditBudget = {
+      startedAt,
+      maximumRuntimeMs: input.maximumRuntimeMs,
+      maximumEvaluations: Math.max(1, Math.floor(input.maximumEvaluations)),
+      evaluations: 0,
+      truncationReason: undefined
+    }
+    const settings = yield* GeometrySettings
+    const geometryKernel = yield* GeometryKernel
+    const nfpIfpService = yield* NfpIfpService
+    const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
+    const control: IrregularNfpIfpControl = {
+      checkpoint: () =>
+        performance.now() - budget.startedAt >= budget.maximumRuntimeMs
+          ? Effect.fail(
+              new IrregularNfpIfpControlAbortError({
+                reason: 'deadline',
+                message: `partial geometric beam exceeded ${budget.maximumRuntimeMs} ms.`
+              })
+            )
+          : Effect.void
+    }
+    const initialState = IrregularBeamState.empty(input.orderedPreparedPieces)
+    let protectedControlState = initialState
+    let experimentalStates: ReadonlyArray<IntrinsicPartialBeamEntry> = []
+    const steps: IntrinsicPartialGeometricBeamResult['steps'][number][] = []
+
+    for (let depth = 0; depth < input.orderedPreparedPieces.length; depth += 1) {
+      if (auditRuntimeExpired(budget)) break
+      const piece = input.orderedPreparedPieces[depth]
+      if (piece === undefined) continue
+      const remainingPreparedPieces = input.orderedPreparedPieces.slice(depth + 1)
+      const parentStates = deduplicatePartialParents([
+        protectedControlState,
+        ...experimentalStates.map(({ state }) => state)
+      ])
+      const successors: AuditCandidate[] = []
+      let protectedSuccessor: AuditCandidate | undefined
+      for (const parentState of parentStates) {
+        const outcome = yield* enumerateWithDeadlineRecovery({
+          state: parentState,
+          piece,
+          remainingPreparedPieces,
+          budget,
+          settings,
+          geometryKernel,
+          nfpIfpService,
+          candidateMemoScope,
+          control
+        })
+        if (outcome === undefined || !outcome.fullyEnumerated) break
+        successors.push(...outcome.uniqueCanonicalSuccessors)
+        if (parentState === protectedControlState) {
+          protectedSuccessor =
+            outcome.uniqueCanonicalSuccessors.find(
+              ({ canonicalGeometryKey }) =>
+                canonicalGeometryKey === outcome.selected?.canonicalGeometryKey
+            ) ?? orderCandidates(outcome.uniqueCanonicalSuccessors)[0]
+        }
+      }
+      if (budget.truncationReason !== undefined) break
+      if (protectedSuccessor === undefined) {
+        protectedControlState = protectedControlState.withUnplacedPiece({
+          remainingPreparedPieces,
+          unplacedPieceId: preparedPieceId(piece)
+        })
+      } else {
+        protectedControlState = protectedSuccessor.state
+      }
+      const entries = successors
+        .filter(({ state }) => partialStateCanFit(state, input.finalSheet))
+        .map(partialBeamEntry)
+      const protectedEntry =
+        protectedSuccessor === undefined || !partialStateCanFit(protectedSuccessor.state, input.finalSheet)
+          ? undefined
+          : partialBeamEntry(protectedSuccessor)
+      const selection = selectIntrinsicPartialGeometricBeam({
+        candidates: entries,
+        experimentalWidth,
+        ...(protectedEntry === undefined ? {} : { protectedControl: protectedEntry })
+      })
+      experimentalStates = selection.retained
+      steps.push({
+        depth,
+        parentCount: parentStates.length,
+        uniqueSuccessorCount: new Set(entries.map(({ futureEquivalenceKey }) => futureEquivalenceKey))
+          .size,
+        protectedControlKey: protectedEntry?.futureEquivalenceKey,
+        selectedSlots: selection.slots
+      })
+    }
+
+    const completeEntries = deduplicatePartialEntries([
+      ...(partialStateCanFit(protectedControlState, input.finalSheet)
+        ? [partialEntryFromState(protectedControlState)]
+        : []),
+      ...experimentalStates
+    ]).filter(
+      ({ state }) =>
+        state.remainingPreparedPieces.length === 0 && state.unplacedPieceIds.length === 0
+    )
+    const finalists = completeEntries.flatMap((entry) => {
+      const measured = measureIntrinsicSheetlessCompletedLayout(
+        entry.state,
+        Math.max(0, performance.now() - startedAt)
+      )
+      return measured === undefined
+        ? []
+        : [
+            {
+              futureEquivalenceKey: entry.futureEquivalenceKey,
+              canonicalGeometryKey: entry.canonicalGeometryKey,
+              metrics: measured.metrics,
+              placedCollisionGeometries: measured.placedCollisionGeometries
+            }
+          ]
+    })
+    const rankedMetrics = rankIntrinsicStrictCompletedLayouts(finalists.map(({ metrics }) => metrics))
+    const winningHash = rankedMetrics[0]?.canonicalGeometryHash
+    const winner = finalists.find(({ metrics }) => metrics.canonicalGeometryHash === winningHash)
+    return {
+      status:
+        budget.truncationReason !== undefined
+          ? 'truncated'
+          : winner === undefined
+            ? 'incomplete'
+            : 'completed',
+      experimentalWidth,
+      truncationReason: budget.truncationReason,
+      evaluations: budget.evaluations,
+      runtimeMs: Math.max(0, performance.now() - startedAt),
+      completedDepthCount: steps.length,
+      steps,
+      finalists,
+      winner
+    }
+  })
+}
+
+function deduplicatePartialParents(
+  states: ReadonlyArray<IrregularBeamState>
+): ReadonlyArray<IrregularBeamState> {
+  const unique = new Map<string, IrregularBeamState>()
+  for (const state of states) {
+    const key = partialFutureEquivalenceKey(state)
+    if (!unique.has(key)) unique.set(key, state)
+  }
+  return [...unique.values()].toSorted((first, second) =>
+    partialFutureEquivalenceKey(first).localeCompare(partialFutureEquivalenceKey(second))
+  )
+}
+
+function deduplicatePartialEntries(
+  entries: ReadonlyArray<IntrinsicPartialBeamEntry>
+): ReadonlyArray<IntrinsicPartialBeamEntry> {
+  const unique = new Map<string, IntrinsicPartialBeamEntry>()
+  for (const entry of entries) {
+    if (!unique.has(entry.futureEquivalenceKey)) unique.set(entry.futureEquivalenceKey, entry)
+  }
+  return [...unique.values()]
+}
+
+function partialBeamEntry(candidate: AuditCandidate): IntrinsicPartialBeamEntry {
+  return {
+    state: candidate.state,
+    futureEquivalenceKey: partialFutureEquivalenceKey(candidate.state),
+    canonicalGeometryKey: candidate.canonicalGeometryKey,
+    axes: candidate.axes,
+    placedCollisionGeometries: candidate.state.placedCollisionGeometries
+  }
+}
+
+function partialEntryFromState(state: IrregularBeamState): IntrinsicPartialBeamEntry {
+  const axes = measureIntrinsicQueueBeamAxes(state)
+  if (axes === undefined) {
+    throw new Error('a non-empty exact partial state must have finite geometric beam axes')
+  }
+  return {
+    state,
+    futureEquivalenceKey: partialFutureEquivalenceKey(state),
+    canonicalGeometryKey: state.canonicalOccupiedGeometryKey,
+    axes,
+    placedCollisionGeometries: state.placedCollisionGeometries
+  }
+}
+
+function partialFutureEquivalenceKey(state: IrregularBeamState): string {
+  return JSON.stringify({
+    occupied: state.canonicalOccupiedGeometryKey,
+    remaining: state.remainingPreparedPieces.map(intrinsicPreparedPieceClassKey),
+    unplaced: [...state.unplacedPieceIds].toSorted()
+  })
+}
+
+function partialStateCanFit(state: IrregularBeamState, sheet: SheetSpec): boolean {
+  const bounds = state.translatedCollisionBounds
+  if (bounds === undefined) return true
+  const width = bounds.width
+  const height = bounds.height
+  return (
+    (width <= sheet.width && height <= sheet.height) ||
+    (height <= sheet.width && width <= sheet.height)
+  )
+}
+
 interface CommensurateQueueCalibrationInput {
   readonly state: IrregularBeamState
   readonly scheduledPiece: IrregularPreparedPiece
@@ -1034,11 +1304,13 @@ export function measureIntrinsicQueueBeamAxes(
   const envelope = measureCanonicalLayoutEnvelope(anchored.placedCollisionGeometries)
   const topology = measureCanonicalLayoutTopologyExact(anchored.placedCollisionGeometries)
   const cavities = measureCanonicalEnclosedCavities(anchored.placedCollisionGeometries)
+  const contacts = measureCanonicalLayoutContacts(anchored.placedCollisionGeometries)
   if (
     structure === undefined ||
     envelope === undefined ||
     topology === undefined ||
-    cavities === undefined
+    cavities === undefined ||
+    contacts === undefined
   ) {
     return undefined
   }
@@ -1062,7 +1334,9 @@ export function measureIntrinsicQueueBeamAxes(
       isolatedPieceCount: topology.topology.isolatedPieceCount,
       positiveContactComponentCount: topology.topology.positiveContactComponentCount,
       negativeLargestPositiveContactComponentSize:
-        -topology.topology.largestPositiveContactComponentSize
+        -topology.topology.largestPositiveContactComponentSize,
+      totalStructuralContacts: contacts.totalStructuralContacts,
+      dominantStructuralContacts: contacts.dominantStructuralContacts
     },
     voids: {
       enclosedCavityCount: cavities.count,
@@ -1206,6 +1480,371 @@ function selectCalibrationCapacity(
     selected.set(candidate.canonicalGeometryKey, candidate)
   }
   return [...selected.values()]
+}
+
+export interface IntrinsicPartialGeometricBeamCandidate {
+  readonly futureEquivalenceKey: string
+  readonly canonicalGeometryKey: string
+  readonly axes: IntrinsicQueueBeamAxes
+  readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+}
+
+export interface IntrinsicPartialGeometricBeamSelection<T> {
+  readonly retained: ReadonlyArray<T>
+  readonly slots: ReadonlyArray<{
+    readonly role: 'breadth' | 'contact' | 'dispersion'
+    readonly layer: number
+    readonly visit: number
+    readonly futureEquivalenceKey: string
+  }>
+}
+
+interface IntrinsicOccupiedDistance {
+  readonly voidHamming: number
+  readonly contactHamming: number
+  readonly symmetricDifferenceNumerator: bigint
+  readonly pairUnionDenominator: bigint
+}
+
+/** Deterministic Stage 2A retention over one synchronized global successor union. */
+export function selectIntrinsicPartialGeometricBeam<
+  T extends IntrinsicPartialGeometricBeamCandidate
+>(input: {
+  readonly candidates: ReadonlyArray<T>
+  readonly experimentalWidth: number
+  readonly protectedControl?: T
+}): IntrinsicPartialGeometricBeamSelection<T> {
+  const experimentalWidth = Math.max(0, Math.floor(input.experimentalWidth))
+  const unique = new Map<string, T>()
+  for (const candidate of input.candidates) {
+    const incumbent = unique.get(candidate.futureEquivalenceKey)
+    if (incumbent === undefined || comparePartialCandidate(candidate, incumbent) < 0) {
+      unique.set(candidate.futureEquivalenceKey, candidate)
+    }
+  }
+  const protectedKey = input.protectedControl?.futureEquivalenceKey
+  const selectable = [...unique.values()].filter(
+    ({ futureEquivalenceKey }) => futureEquivalenceKey !== protectedKey
+  )
+  const layers = partialNondominatedLayers(selectable)
+  const breadth = Math.min(layers.length, Math.ceil(experimentalWidth / 2))
+  const retained: T[] = []
+  const slots: Array<IntrinsicPartialGeometricBeamSelection<T>['slots'][number]> = []
+  const selectedKeys = new Set<string>()
+  const visits = new Map<number, number>()
+  const append = (candidate: T | undefined, role: 'breadth' | 'contact' | 'dispersion') => {
+    if (candidate === undefined || selectedKeys.has(candidate.futureEquivalenceKey)) return false
+    const layer = Math.max(
+      0,
+      layers.findIndex((members) => members.includes(candidate))
+    )
+    const visit = (visits.get(layer) ?? 0) + 1
+    visits.set(layer, visit)
+    selectedKeys.add(candidate.futureEquivalenceKey)
+    retained.push(candidate)
+    slots.push({ role, layer, visit, futureEquivalenceKey: candidate.futureEquivalenceKey })
+    return true
+  }
+
+  for (let layerIndex = 0; layerIndex < breadth; layerIndex += 1) {
+    append(
+      layers[layerIndex]
+        ?.filter(({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey))
+        .toSorted(comparePartialCandidate)[0],
+      'breadth'
+    )
+  }
+
+  let remaining = experimentalWidth - retained.length
+  if (remaining >= 2) {
+    const contact = selectable
+      .filter(({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey))
+      .toSorted(comparePartialContactCandidate)[0]
+    if (append(contact, 'contact')) remaining -= 1
+  }
+
+  const retainedForDistance = (): ReadonlyArray<T> =>
+    input.protectedControl === undefined ? retained : [input.protectedControl, ...retained]
+  while (remaining > 0 && breadth > 0) {
+    let addedInCycle = false
+    for (let layerIndex = breadth - 1; layerIndex >= 0 && remaining > 0; layerIndex -= 1) {
+      const available = layers[layerIndex]?.filter(
+        ({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey)
+      )
+      const next = selectMostDispersedCandidate(available ?? [], retainedForDistance())
+      if (!append(next, 'dispersion')) continue
+      remaining -= 1
+      addedInCycle = true
+    }
+    if (!addedInCycle) break
+  }
+
+  return { retained, slots }
+}
+
+function partialNondominatedLayers<T extends IntrinsicPartialGeometricBeamCandidate>(
+  candidates: ReadonlyArray<T>
+): ReadonlyArray<ReadonlyArray<T>> {
+  const remaining = new Map(
+    candidates.map((candidate) => [candidate.futureEquivalenceKey, candidate] as const)
+  )
+  const layers: Array<ReadonlyArray<T>> = []
+  while (remaining.size > 0) {
+    const values = [...remaining.values()]
+    const layer = values
+      .filter(
+        (candidate) =>
+          !values.some(
+            (other) =>
+              other !== candidate && intrinsicQueueBeamAxesDominate(other.axes, candidate.axes)
+          )
+      )
+      .toSorted(comparePartialCandidate)
+    if (layer.length === 0) break
+    layers.push(layer)
+    for (const candidate of layer) remaining.delete(candidate.futureEquivalenceKey)
+  }
+  return layers
+}
+
+function comparePartialCandidate(
+  first: IntrinsicPartialGeometricBeamCandidate,
+  second: IntrinsicPartialGeometricBeamCandidate
+): number {
+  return (
+    compareCompactness(first.axes, second.axes) ||
+    compareVoids(first.axes, second.axes) ||
+    first.futureEquivalenceKey.localeCompare(second.futureEquivalenceKey)
+  )
+}
+
+function comparePartialContactCandidate(
+  first: IntrinsicPartialGeometricBeamCandidate,
+  second: IntrinsicPartialGeometricBeamCandidate
+): number {
+  return (
+    compareBoundedContact(first.axes, second.axes) ||
+    compareCompactness(first.axes, second.axes) ||
+    compareVoids(first.axes, second.axes) ||
+    first.futureEquivalenceKey.localeCompare(second.futureEquivalenceKey)
+  )
+}
+
+function compareBoundedContact(
+  first: IntrinsicQueueBeamAxes,
+  second: IntrinsicQueueBeamAxes
+): number {
+  return (
+    first.fragmentation.isolatedPieceCount - second.fragmentation.isolatedPieceCount ||
+    first.fragmentation.positiveContactComponentCount -
+      second.fragmentation.positiveContactComponentCount ||
+    first.fragmentation.negativeLargestPositiveContactComponentSize -
+      second.fragmentation.negativeLargestPositiveContactComponentSize ||
+    second.fragmentation.totalStructuralContacts -
+      first.fragmentation.totalStructuralContacts ||
+    second.fragmentation.dominantStructuralContacts -
+      first.fragmentation.dominantStructuralContacts
+  )
+}
+
+function selectMostDispersedCandidate<T extends IntrinsicPartialGeometricBeamCandidate>(
+  candidates: ReadonlyArray<T>,
+  retained: ReadonlyArray<T>
+): T | undefined {
+  return candidates.toSorted((first, second) => {
+    const firstDistance = minimumOccupiedDistance(first, retained)
+    const secondDistance = minimumOccupiedDistance(second, retained)
+    return (
+      compareOccupiedDistance(secondDistance, firstDistance) ||
+      first.futureEquivalenceKey.localeCompare(second.futureEquivalenceKey)
+    )
+  })[0]
+}
+
+function minimumOccupiedDistance(
+  candidate: IntrinsicPartialGeometricBeamCandidate,
+  retained: ReadonlyArray<IntrinsicPartialGeometricBeamCandidate>
+): IntrinsicOccupiedDistance {
+  const distances = retained.map((member) => occupiedDistance(candidate, member))
+  return distances.toSorted(compareOccupiedDistance)[0] ?? maximumOccupiedDistance()
+}
+
+function occupiedDistance(
+  first: IntrinsicPartialGeometricBeamCandidate,
+  second: IntrinsicPartialGeometricBeamCandidate
+): IntrinsicOccupiedDistance {
+  const firstVoid = voidSignature(first.axes)
+  const secondVoid = voidSignature(second.axes)
+  const firstContact = contactSignature(first.axes)
+  const secondContact = contactSignature(second.axes)
+  const ratios = ([0, 90, 180, 270] as const).flatMap((rotationDeg) => {
+    const ratio = occupiedSymmetricDifferenceRatio(
+      first.placedCollisionGeometries,
+      second.placedCollisionGeometries,
+      rotationDeg
+    )
+    return ratio === undefined ? [] : [ratio]
+  })
+  const ratio = ratios.toSorted(compareExactFraction)[0] ?? {
+    numerator: 1n,
+    denominator: 1n
+  }
+  return {
+    voidHamming: hammingDistance(firstVoid, secondVoid),
+    contactHamming: hammingDistance(firstContact, secondContact),
+    symmetricDifferenceNumerator: ratio.numerator,
+    pairUnionDenominator: ratio.denominator
+  }
+}
+
+function voidSignature(axes: IntrinsicQueueBeamAxes): ReadonlyArray<number> {
+  return [
+    axes.voids.enclosedCavityCount,
+    axes.voids.totalEnclosedCavityDoubledAreaGrid2,
+    axes.voids.largestHullGapDoubledAreaGrid2,
+    axes.voids.occupiedHullWasteDoubledAreaGrid2
+  ]
+}
+
+function contactSignature(axes: IntrinsicQueueBeamAxes): ReadonlyArray<number> {
+  return [
+    axes.fragmentation.isolatedPieceCount,
+    axes.fragmentation.positiveContactComponentCount,
+    axes.fragmentation.negativeLargestPositiveContactComponentSize,
+    axes.fragmentation.totalStructuralContacts,
+    axes.fragmentation.dominantStructuralContacts
+  ]
+}
+
+function hammingDistance(first: ReadonlyArray<number>, second: ReadonlyArray<number>): number {
+  return first.reduce(
+    (distance, value, index) => distance + Number(value !== second[index]),
+    0
+  )
+}
+
+function maximumOccupiedDistance(): IntrinsicOccupiedDistance {
+  return {
+    voidHamming: Number.MAX_SAFE_INTEGER,
+    contactHamming: Number.MAX_SAFE_INTEGER,
+    symmetricDifferenceNumerator: 1n,
+    pairUnionDenominator: 1n
+  }
+}
+
+function compareOccupiedDistance(
+  first: IntrinsicOccupiedDistance,
+  second: IntrinsicOccupiedDistance
+): number {
+  return (
+    first.voidHamming - second.voidHamming ||
+    first.contactHamming - second.contactHamming ||
+    compareExactFraction(
+      {
+        numerator: first.symmetricDifferenceNumerator,
+        denominator: first.pairUnionDenominator
+      },
+      {
+        numerator: second.symmetricDifferenceNumerator,
+        denominator: second.pairUnionDenominator
+      }
+    )
+  )
+}
+
+function compareExactFraction(
+  first: { readonly numerator: bigint; readonly denominator: bigint },
+  second: { readonly numerator: bigint; readonly denominator: bigint }
+): number {
+  const firstScaled = first.numerator * second.denominator
+  const secondScaled = second.numerator * first.denominator
+  return firstScaled < secondScaled ? -1 : firstScaled > secondScaled ? 1 : 0
+}
+
+function occupiedSymmetricDifferenceRatio(
+  first: ReadonlyArray<IrregularPlacedPiece>,
+  second: ReadonlyArray<IrregularPlacedPiece>,
+  secondRotationDeg: 0 | 90 | 180 | 270
+): { readonly numerator: bigint; readonly denominator: bigint } | undefined {
+  const firstLayoutPaths = layoutGridPaths(first)
+  const secondLayoutPaths = layoutGridPaths(second)
+  if (firstLayoutPaths === undefined || secondLayoutPaths === undefined) return undefined
+  const firstPaths = bottomLeftAnchorPaths(firstLayoutPaths)
+  const secondPaths = bottomLeftAnchorPaths(
+    secondLayoutPaths.map((path) =>
+      path.map((point) => rotateQuarterTurnPoint(point, secondRotationDeg))
+    )
+  )
+  if (firstPaths === undefined || secondPaths === undefined) return undefined
+  const firstUnion = booleanPaths(ClipType.Union, firstPaths, null)
+  const secondUnion = booleanPaths(ClipType.Union, secondPaths, null)
+  if (firstUnion === undefined || secondUnion === undefined) return undefined
+  const symmetricDifference = booleanPaths(ClipType.Xor, firstUnion, secondUnion)
+  const pairUnion = booleanPaths(ClipType.Union, firstUnion, secondUnion)
+  if (symmetricDifference === undefined || pairUnion === undefined) return undefined
+  const numerator = pathsDoubledArea(symmetricDifference)
+  const denominator = pathsDoubledArea(pairUnion)
+  if (denominator <= 0n) return undefined
+  return { numerator, denominator }
+}
+
+function layoutGridPaths(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): ReadonlyArray<Path64> | undefined {
+  const paths: Path64[] = []
+  for (const entry of placed) {
+    const path = placedCollisionWorldGridPath(entry)
+    if (path === undefined) return undefined
+    paths.push(path.map(({ x, y }) => ({ x, y })))
+  }
+  return paths
+}
+
+function bottomLeftAnchorPaths(paths: ReadonlyArray<Path64>): ReadonlyArray<Path64> | undefined {
+  const first = paths[0]?.[0]
+  if (first === undefined) return paths.length === 0 ? [] : undefined
+  let minX = first.x
+  let minY = first.y
+  for (const point of paths.flat()) {
+    minX = Math.min(minX, point.x)
+    minY = Math.min(minY, point.y)
+  }
+  return paths.map((path) => path.map(({ x, y }) => ({ x: x - minX, y: y - minY })))
+}
+
+function rotateQuarterTurnPoint(
+  point: { readonly x: number; readonly y: number },
+  rotationDeg: 0 | 90 | 180 | 270
+): { readonly x: number; readonly y: number } {
+  switch (rotationDeg) {
+    case 0:
+      return point
+    case 90:
+      return { x: -point.y, y: point.x }
+    case 180:
+      return { x: -point.x, y: -point.y }
+    case 270:
+      return { x: point.y, y: -point.x }
+  }
+}
+
+function booleanPaths(
+  clipType: ClipType,
+  subject: ReadonlyArray<Path64>,
+  clip: ReadonlyArray<Path64> | null
+): ReadonlyArray<Path64> | undefined {
+  const tree = new PolyTree64()
+  try {
+    booleanOpWithPolyTree(clipType, [...subject], clip === null ? null : [...clip], tree, FillRule.NonZero)
+  } catch {
+    return undefined
+  }
+  return polyTreeToPaths64(tree)
+}
+
+function pathsDoubledArea(paths: ReadonlyArray<Path64>): bigint {
+  const doubled = paths.reduce((sum, path) => sum + Math.round(area(path) * 2), 0)
+  return BigInt(Math.abs(doubled))
 }
 
 function summarizeDelayedLineage(

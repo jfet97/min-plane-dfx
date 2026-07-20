@@ -12,16 +12,10 @@ import {
   makeCompactQualityIrregularOptimizerSettings
 } from '../src/shared/irregular/defaults.js'
 import {
-  IrregularBounds,
   IrregularNestingSettings,
-  IrregularPlacedPiece,
-  IrregularPlacement,
-  IrregularPoint,
-  IrregularPolygon,
   IrregularPreparedPiece,
   IrregularPriorityOrderKey,
-  IrregularTransform,
-  TransformedCollisionGeometry
+  type IrregularPlacedPiece
 } from '../src/shared/irregular/domain.js'
 import { makePresetShapeDocument } from '../src/shared/presetShapes.js'
 import { preparePieces as prepareNestingPieces } from '../src/shared/preparePieces.js'
@@ -37,7 +31,10 @@ import {
   runIntrinsicReconstructionPortfolio,
   type IntrinsicReconstructionPortfolioResult
 } from '../src/workers/algorithm/irregular/intrinsicReconstructionPortfolio.js'
-import { runIntrinsicQueueBeamDiscriminator } from '../src/workers/algorithm/irregular/intrinsicQueueBeamDiscriminator.js'
+import {
+  runIntrinsicPartialGeometricBeam,
+  runIntrinsicQueueBeamDiscriminator
+} from '../src/workers/algorithm/irregular/intrinsicQueueBeamDiscriminator.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
@@ -54,12 +51,6 @@ const MIXED_FIXTURE_PATH = fileURLToPath(
   new URL('../tests/fixtures/irregularSheetInvariance/mixed61-request.json', import.meta.url)
 )
 const TRIANGLE_SHEET = new SheetSpec({ width: 2000, height: 2700, label: 'triangle golden' })
-const TRIANGLE_DELAYED_LINEAGE_SVG_PATH = fileURLToPath(
-  new URL(
-    '../help/artifacts/bounded-ga-order-rotation/triangle-no-repair-baseline.svg',
-    import.meta.url
-  )
-)
 
 async function main(): Promise<void> {
   const fixtureName = requiredFixture(argument('--fixture'))
@@ -69,9 +60,12 @@ async function main(): Promise<void> {
   const compact = process.argv.includes('--compact')
   const featureContactCoverage = process.argv.includes('--feature-contact-coverage')
   const queueBeamDiscriminatorEnabled = process.argv.includes('--queue-beam-discriminator')
-  const delayedLineageCalibrationEnabled = process.argv.includes('--delayed-lineage-calibration')
+  const partialBeamWidthArgument = argument('--partial-beam-width')
+  const partialBeamEnabled = partialBeamWidthArgument !== undefined
   const reconstructionPortfolioEnabled =
-    process.argv.includes('--reconstruction-portfolio') || queueBeamDiscriminatorEnabled
+    process.argv.includes('--reconstruction-portfolio') ||
+    queueBeamDiscriminatorEnabled ||
+    partialBeamEnabled
   const schedule = compact
     ? {
         maximumRuntimeMs: 2_000,
@@ -119,19 +113,13 @@ async function main(): Promise<void> {
       )
     : undefined
   const queueBeamTarget =
-    queueBeamDiscriminatorEnabled && reconstructionPortfolio !== undefined
+    (queueBeamDiscriminatorEnabled || partialBeamEnabled) && reconstructionPortfolio !== undefined
       ? selectQueueBeamAuditTarget(reconstructionPortfolio)
       : undefined
   const queueBeamOrderedPieces =
     queueBeamTarget === undefined
       ? undefined
       : orderedPiecesForRun(preparedPieces, queueBeamTarget.pieceIds)
-  const delayedLineageCalibration =
-    delayedLineageCalibrationEnabled &&
-    fixtureName === 'triangle-20' &&
-    queueBeamOrderedPieces !== undefined
-      ? await loadTriangleDelayedLineage(queueBeamOrderedPieces)
-      : undefined
   const queueBeamDiscriminator =
     queueBeamTarget === undefined || queueBeamOrderedPieces === undefined
       ? undefined
@@ -146,17 +134,42 @@ async function main(): Promise<void> {
               maximumEvaluations: positiveIntegerArgument(
                 '--queue-beam-evaluations',
                 compact ? 5_000 : 25_000
-              ),
-              ...(delayedLineageCalibration === undefined
-                ? {}
-                : {
-                    referenceLineageCanonicalGeometryKeys:
-                      delayedLineageCalibration.canonicalGeometryKeys
-                  })
+              )
             }),
             fixture.settings
           )
         )
+  const partialGeometricBeam =
+    !partialBeamEnabled || queueBeamOrderedPieces === undefined
+      ? undefined
+      : await Effect.runPromise(
+          withLayers(
+            runIntrinsicPartialGeometricBeam({
+              orderedPreparedPieces: queueBeamOrderedPieces,
+              finalSheet: fixture.sheet,
+              experimentalWidth: nonNegativeIntegerArgument('--partial-beam-width', 0),
+              maximumRuntimeMs: positiveIntegerArgument(
+                '--partial-beam-runtime-ms',
+                compact ? 30_000 : 90_000
+              ),
+              maximumEvaluations: positiveIntegerArgument(
+                '--partial-beam-evaluations',
+                compact ? 25_000 : 100_000
+              )
+            }),
+            fixture.settings
+          )
+        )
+  const partialBeamWinnerSvgPath =
+    partialGeometricBeam?.winner === undefined
+      ? undefined
+      : `${outputDirectory}/${fixtureName}-partial-geometric-beam-width-${partialGeometricBeam.experimentalWidth}.svg`
+  if (partialBeamWinnerSvgPath !== undefined && partialGeometricBeam?.winner !== undefined) {
+    await writeFile(
+      partialBeamWinnerSvgPath,
+      renderCollisionSvg(partialGeometricBeam.winner.placedCollisionGeometries)
+    )
+  }
 
   const seedArtifacts = await Promise.all(
     outcome.seedArchive.map(async (seed) => {
@@ -284,10 +297,7 @@ async function main(): Promise<void> {
       : {
           queueBeamDiscriminator: {
             mode: 'trace-only-independent-replay',
-            delayedLineageSource:
-              delayedLineageCalibration === undefined
-                ? 'not-provided'
-                : delayedLineageCalibration.source,
+            delayedLineageSource: 'not-provided-structured-lineage-required',
             selectedRole: queueBeamTarget.role,
             selectedCandidateMode: queueBeamTarget.candidateMode,
             liveDecodeCandidateBehaviorChanged: false,
@@ -296,6 +306,28 @@ async function main(): Promise<void> {
             liveDecodeArchiveChanged: false,
             liveDecodeDeadlineChanged: false,
             result: queueBeamDiscriminator
+          }
+        }),
+    ...(partialGeometricBeam === undefined
+      ? {}
+      : {
+          partialGeometricBeam: {
+            mode: 'stage2a-beam-only-cap-zero-reordering',
+            result: {
+              ...partialGeometricBeam,
+              finalists: partialGeometricBeam.finalists.map(
+                ({ placedCollisionGeometries: _placedCollisionGeometries, ...finalist }) => finalist
+              ),
+              winner:
+                partialGeometricBeam.winner === undefined
+                  ? undefined
+                  : {
+                      futureEquivalenceKey: partialGeometricBeam.winner.futureEquivalenceKey,
+                      canonicalGeometryKey: partialGeometricBeam.winner.canonicalGeometryKey,
+                      metrics: partialGeometricBeam.winner.metrics,
+                      svgPath: partialBeamWinnerSvgPath
+                    }
+            }
           }
         }),
     immutableFallback: {
@@ -315,7 +347,8 @@ async function main(): Promise<void> {
     reportPath,
     ...seedArtifacts.map(({ svgPath }) => svgPath),
     ...armArtifacts.flatMap(({ endpointArchive }) => endpointArchive.map(({ svgPath }) => svgPath)),
-    ...reconstructionArtifacts.flatMap(({ svgPath }) => (svgPath === undefined ? [] : [svgPath]))
+    ...reconstructionArtifacts.flatMap(({ svgPath }) => (svgPath === undefined ? [] : [svgPath])),
+    ...(partialBeamWinnerSvgPath === undefined ? [] : [partialBeamWinnerSvgPath])
   ]
   const manifestPath = `${outputDirectory}/manifest.json`
   await writeFile(
@@ -348,6 +381,7 @@ async function main(): Promise<void> {
       reconstructionSvgPaths: reconstructionArtifacts.flatMap(({ svgPath }) =>
         svgPath === undefined ? [] : [svgPath]
       ),
+      partialBeamWinnerSvgPath,
       runtimeMs: outcome.runtimeMs
     })
   )
@@ -386,6 +420,16 @@ function positiveIntegerArgument(name: string, fallback: number): number {
   const value = Number(raw)
   if (!Number.isSafeInteger(value) || value <= 0) {
     throw new Error(`${name} must be a positive safe integer`)
+  }
+  return value
+}
+
+function nonNegativeIntegerArgument(name: string, fallback: number): number {
+  const raw = argument(name)
+  if (raw === undefined) return fallback
+  const value = Number(raw)
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`${name} must be a non-negative safe integer`)
   }
   return value
 }
@@ -827,93 +871,6 @@ function makeTriangleRequest(): NestingRequest {
       finalSelectionMode: 'best',
       irregularSettings: settings
     })
-  })
-}
-
-async function loadTriangleDelayedLineage(
-  preparedPieces: ReadonlyArray<IrregularPreparedPiece>
-): Promise<{
-  readonly canonicalGeometryKeys: ReadonlyArray<string>
-  readonly source: { readonly path: string; readonly sha256: string; readonly role: string }
-}> {
-  const bytes = await readFile(TRIANGLE_DELAYED_LINEAGE_SVG_PATH)
-  const polygonMatches = [...bytes.toString('utf8').matchAll(/<polygon points="([^"]+)"/g)]
-  if (polygonMatches.length !== preparedPieces.length) {
-    throw new Error(
-      `triangle delayed-lineage artifact contains ${polygonMatches.length} polygons for ${preparedPieces.length} pieces`
-    )
-  }
-  const placed: IrregularPlacedPiece[] = []
-  const canonicalGeometryKeys: string[] = []
-  for (const [index, match] of polygonMatches.entries()) {
-    const piece = preparedPieces[index]
-    const pointsText = match[1]
-    const transform = piece?.transforms[0]
-    if (piece === undefined || pointsText === undefined || transform === undefined) {
-      throw new Error(`triangle delayed-lineage artifact cannot reconstruct prefix ${index}`)
-    }
-    const points = pointsText.split(' ').map((pair) => {
-      const [rawX, rawY] = pair.split(',')
-      const x = Number(rawX)
-      const y = Number(rawY)
-      if (!Number.isFinite(x) || !Number.isFinite(y)) {
-        throw new Error(`triangle delayed-lineage artifact has a non-finite point at ${index}`)
-      }
-      return new IrregularPoint({ x, y })
-    })
-    const bounds = boundsForArtifactPoints(points)
-    const polygon = new IrregularPolygon({ points })
-    const pieceId = piece.pieceId ?? piece.source.id
-    placed.push(
-      new IrregularPlacedPiece({
-        placement: new IrregularPlacement({
-          pieceId,
-          sourcePieceId: piece.source.id,
-          placementReference: piece.collisionGeometry.placementReference,
-          transform: new IrregularTransform({
-            translateX: 0,
-            translateY: 0,
-            rotationDeg: transform.rotationDeg,
-            mirrored: transform.mirrored
-          })
-        }),
-        collisionGeometry: new TransformedCollisionGeometry({
-          sourcePieceId: piece.source.id,
-          transform,
-          polygon,
-          bounds
-        })
-      })
-    )
-    const state = new IrregularBeamState({
-      remainingPreparedPieces: preparedPieces.slice(index + 1),
-      placedCollisionGeometries: placed,
-      unplacedPieceIds: [],
-      placementOrder: preparedPieces.slice(0, index + 1).map((item) => item.pieceId ?? item.source.id)
-    }).withBottomLeftAnchored()
-    if (state === undefined) {
-      throw new Error(`triangle delayed-lineage prefix ${index} cannot be bottom-left anchored`)
-    }
-    canonicalGeometryKeys.push(state.canonicalOccupiedGeometryKey)
-  }
-  return {
-    canonicalGeometryKeys,
-    source: {
-      path: TRIANGLE_DELAYED_LINEAGE_SVG_PATH,
-      sha256: sha256(bytes),
-      role: 'accepted-no-repair-compact-layout-polygon-order'
-    }
-  }
-}
-
-function boundsForArtifactPoints(points: ReadonlyArray<IrregularPoint>): IrregularBounds {
-  const xs = points.map(({ x }) => x)
-  const ys = points.map(({ y }) => y)
-  return new IrregularBounds({
-    minX: Math.min(...xs),
-    minY: Math.min(...ys),
-    maxX: Math.max(...xs),
-    maxY: Math.max(...ys)
   })
 }
 

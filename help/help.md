@@ -193,13 +193,17 @@ bounded selection turn after those two axes and cannot veto a layout that is
 better on both. The selected Mixed layout is therefore the visually stronger
 `405,773.434 mm2` zero-cavity reconstruction. The next isolated measurement at
 `7be8d04` distinguishes dynamic remaining-piece choice from bounded partial-state
-retention without changing the live decode. The immutable `14868c2` audit makes
-the Stage 2 decision: Triangle has beam headroom at 15/20 depths and no queue
-headroom; Mixed has beam headroom at 8/11 measured depths and queue headroom at
-4/11 before the 25,000-evaluation cap. Stage 2 therefore combines a bounded
-partial beam with a dynamic queue restricted to distinct geometry classes and
-real gap-contained opportunities. V7 remains diagnostic
-and cannot replace the current-main Triangle golden.
+retention without changing the live decode. Triangle has beam headroom at 15/20
+depths and no queue headroom; the original Mixed result showed apparent queue
+headroom but compared states with different placed material. The commensurate
+`40c26dc` follow-up places the same two geometry classes in both orders and is
+too sparse and too expensive to justify live reordering. Stage 2 therefore runs
+the bounded partial geometric beam first and keeps the dynamic queue disabled
+until a paired fixed-width ablation proves value. The first live experimental
+controller retains the exact width-one control outside capacity, allocates
+bounded Pareto-layer breadth, one optional contact turn, and guaranteed
+within-layer exact geometric-dispersion revisits. V7 remains diagnostic and
+cannot replace the current-main Triangle golden.
 See [the V7 Stage 0/1 report](research/v7-seed-archive-stage0-stage1.md).
 
 Every completed experiment must be recorded below as accepted or rejected. An
@@ -250,6 +254,19 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   because compact reconstruction roles exceeded their 15-second per-decode
   limit in that run; the result is reachability evidence, not a claim about the
   complete `405k` pocket-first lineage.
+- The same-order calibration at commit `40c26dc` is under
+  `/private/tmp/min-plane-provenance/v7-calibration-40c26dc-triangle/` and
+  `/private/tmp/min-plane-provenance/v7-calibration-40c26dc-mixed/`. The
+  Triangle SVG reconstruction is explicitly inadmissible as lineage evidence:
+  a render does not preserve source order, local geometry, or transforms. Mixed
+  consumed 100,000 evaluations and 115.38 seconds, with useful commensurate
+  headroom only at isolated depths. This selects beam-only width calibration
+  before any live queue experiment.
+- The reviewed Stage 2A contract uses total capacities 1/2/4/8/13. Experimental
+  capacity is split between bounded frontier-layer breadth and repeated
+  deepest-first `occupied-dispersion-v1` visits; contact receives at most one
+  selection turn and never participates in Pareto dominance. Every selected
+  slot records its layer, visit number, and role.
 
 - Committed the generic compactness-cohesion reconstruction checkpoint as
   `e8748e1`. Immutable Triangle and Mixed reports are under

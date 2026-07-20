@@ -214,15 +214,23 @@ The current discriminator is intentionally cheap and one-step. It selected the
 mechanisms worth measuring, but it did not establish their production retention
 rules. Two trace-only calibrations are mandatory before live Stage 2 selection:
 
-1. **Delayed-lineage calibration.** Replay the known compact Triangle lineage
-   through the proposed partial-state identity and ranking. At each depth record
-   its rank, objective basin, first eviction width, and the number of later
-   placements required before it becomes better than the locally preferred
-   branch. Continue rejected alternatives for that measured horizon or to a
-   complete endpoint. Test total retained capacities 1, 2, 4, 8, and 13
-   (`experimentalWidth` 0, 1, 3, 7, and 12), then only the next capacity needed
-   to bracket survival. This is a calibration witness, not a production triangle
-   special case.
+1. **Delayed-lineage calibration.** Export the known compact Triangle lineage
+   from its pinned decoder run as structured immutable data: polygon-local
+   geometry, placement translation, transform, placement order, source commit,
+   endpoint canonical hash, and exact metrics. Verify every reconstructed
+   prefix, the complete canonical hash, and exact legality before replay. At
+   each depth record its rank, Pareto layer, geometric-neighborhood membership,
+   first eviction width, and the number of later placements required before it
+   becomes better than the locally preferred branch. When a prefix is missing,
+   record expected transform/translation, raw candidate-source occurrence,
+   point deduplication, direct legality, canonical legality, nearest canonical
+   geometry delta, and a fresh-memo replay before assigning the failure to
+   retention. Continue the exact witness and selected neighborhood members for
+   the measured horizon or to a complete endpoint. Test total retained
+   capacities 1, 2, 4, 8, and 13 (`experimentalWidth` 0, 1, 3, 7, and 12), then
+   only the next capacity needed to bracket survival. This is a calibration
+   witness, not a production Triangle special case; an SVG render is not an
+   admissible lineage source.
 2. **Commensurate queue calibration.** When an alternate geometry class has a
    gap-contained placement, compare `scheduled -> alternate` with `alternate ->
    scheduled`. Admit the comparison only after both branches have placed the
@@ -235,6 +243,47 @@ beam-capacity range, a useful continuation horizon, and whether alternate-class
 scheduling has any fair headroom. If the commensurate queue probe finds none,
 Stage 2B remains an ablation only and cannot be promoted by the old one-step
 counts.
+
+### Calibration outcome at `40c26dc` and reviewed decision
+
+The first calibrated reports are retained as diagnostic evidence, but they do
+not authorize the original live selector:
+
+- Triangle report:
+  `/private/tmp/min-plane-provenance/v7-calibration-40c26dc-triangle/report.json`
+  (manifest beside it). The endpoint SVG is hash-verified, but it is a render,
+  not a structured historical lineage. Its polygon order, projected Y axis,
+  transforms, and translations do not prove the exact decoder states. The
+  apparent depth-0/depth-1 matches and depth-2 miss therefore remain
+  hypothesis-generating only. They cannot establish a capacity threshold.
+- Mixed report:
+  `/private/tmp/min-plane-provenance/v7-calibration-40c26dc-mixed/report.json`
+  (manifest beside it). Thirteen equal-work two-piece macros completed; only
+  depths 3 and 7 produced alternate-first Pareto headroom, none produced strict
+  dominance, and the run exhausted 100,000 evaluations at depth 24 after
+  `115,382.852292` ms. This preserves bounded reordering as a later paired
+  ablation, not as the first live mechanism.
+
+Independent review of the reports and implementation found that the old
+one-representative-per-dominated-layer rule confounds capacity with
+representative choice. A witness can remain absent at width 13 simply because
+the selector never chooses a second member of its layer. The recorded decision
+is therefore:
+
+1. remove the SVG-derived lineage from admissible calibration and export a
+   structured immutable lineage from the pinned source run;
+2. add depth-specific candidate provenance before interpreting a missing
+   prefix;
+3. replace one-per-layer retention with repeated within-layer geometric
+   diversity;
+4. implement and complete the beam-only width sweep first;
+5. profile and optimize commensurate reordering, then compare cap 0 versus cap
+   1 only at one or two successful fixed beam widths.
+
+No fixture hash or Triangle-specific geometry may become a production
+reservation. Exact-witness replay calibrates a generic selector; production
+retention uses only sheet-free geometry, topology/contact signatures, remaining
+work, and deterministic identity.
 
 ## Frozen Implementation Sequence
 
@@ -259,22 +308,55 @@ jobs.
 - Rank through the same two geometric axes as the completed-layout archive:
   compactness and exact void topology. Do not treat current partial-state
   dominance as a proof that a future is useless.
-- Give exact contact one bounded representative after compactness and void
-  representatives; do not make it a Pareto veto.
+- Give exact contact at most one bounded selection turn after layer breadth
+  coverage and only when at least two post-coverage slots remain. This leaves
+  at least one guaranteed dispersion revisit. Contact never participates in
+  Pareto dominance.
 - Keep the protected pure-growth control outside experimental capacity. Define
   `experimentalWidth` as the number of additional retained states; total live
   states are therefore at most `1 + experimentalWidth`.
-- Replace undefined “novelty” with deterministic frontier-layer retention. After
-  non-dominated sorting, reserve `ceil(experimentalWidth / 2)` slots for one
-  representative from each successive dominated layer `L1`, `L2`, ... . Within
-  a layer choose lexicographically by maximum side, envelope area, span, cavity
-  count/area, hull gap/waste, the bounded contact tuple, then the future-
-  equivalence key. Fill the remaining slots from `L0` through compactness, void,
-  and contact round-robin. If fewer dominated layers exist, return their unused
-  slots to `L0`.
-- Expose `experimentalWidth` as an experiment setting. Begin with 0, 1, 2, and
-  4, then escalate through 8 and the calibrated survival boundary instead of
-  assuming that four experimental states are sufficient.
+- Use deterministic bounded-breadth frontier-layer retention. For experimental
+  width `W > 0`, let breadth `B = min(nonEmptyLayerCount, ceil(W / 2))`. First
+  take one representative from `L0..L(B-1)` in ascending layer order. The first
+  member of a layer is selected by the sheet-free compactness/void tuple, then
+  the future-equivalence key. Additional members use the
+  versioned `occupied-dispersion-v1` order. Define one candidate/retained pair
+  tuple as follows. Bottom-left anchor the retained occupied union. For the
+  candidate, try rigid whole-layout `q0/q90/q180/q270`; after each rotation,
+  bottom-left anchor it again. Reflection is not allowed. For each orientation,
+  compute exact symmetric-difference area divided by the exact area of the
+  pairwise union of both occupied unions, and keep the minimum ratio by exact
+  cross multiplication. The exact void signature is `(cavity count, cavity
+  area, hull-gap area, hull-waste area)`; its distance is the integer Hamming
+  count of unequal fields. The bounded contact signature is `(isolates,
+  positive components, largest component, total structural contacts, dominant
+  structural contacts)`; its distance is likewise the integer Hamming count.
+  The complete pair tuple is `(void Hamming distance, contact Hamming distance,
+  minimum symmetric-difference ratio)`, compared lexicographically with larger
+  values meaning more diverse. A candidate's retained-set distance is the
+  lexicographic minimum complete pair tuple across every already retained
+  state. Select the candidate with the lexicographically maximum retained-set
+  distance, then use the future-equivalence key ascending as the final tie.
+  Let `R = W - B`. If `R >= 2`, spend exactly one slot on the globally best
+  still-unretained bounded-contact representative under contact descending,
+  compactness, void, and future-key ties; decrement `R`. This is the only
+  selection turn that directly rewards stronger contact; contact remains absent
+  from Pareto dominance and cannot consume a second turn. Spend every remaining
+  slot on dispersion revisits cycling deepest-first through
+  `L(B-1), L(B-2), ..., L0`, repeating that order as needed. A layer remains
+  eligible after its first representative. Thus width 3 necessarily revisits
+  `L1`, width 7 revisits `L3` then `L2` after the optional contact turn, and
+  width 12 revisits `L5..L1`; trace the exact visit order and selected role per
+  slot. No floating-point distance or sheet dimension participates.
+  Calibrate both exact-witness survival and survival of the witness's selected
+  geometric neighborhood. The selector must run over the global successor
+  union from all retained parents, while the width-one control remains outside
+  experimental capacity.
+- Expose `experimentalWidth` as an experiment setting. Test experimental widths
+  `0`, `1`, `3`, `7`, and `12`, corresponding exactly to total capacities `1`,
+  `2`, `4`, `8`, and `13`; then escalate only after structured-lineage replay can
+  distinguish capacity from representative choice. The `40c26dc` SVG-derived
+  run does not establish a survival boundary.
 - Keep transform-family coverage before truncation.
 - Keep states only at the same construction depth. Never compare a state with
   fewer placed pieces against a deeper state.
@@ -296,9 +378,11 @@ For each synchronized depth:
 4. compute the compactness and void-topology compound comparisons;
 5. assign every unique state a deterministic geometric frontier layer rather
    than deleting currently dominated layers;
-6. retain the protected control outside capacity, allocate the explicit later-
-   layer slots, then fill remaining experimental slots from `L0` through the
-   compactness/void/contact round-robin;
+6. retain the protected control outside capacity; allocate breadth `B`, the
+   optional single contact turn only when `R >= 2`, then all remaining slots by
+   deepest-first repeated `occupied-dispersion-v1` revisits, removing each
+   retained state from its layer and tracing layer/visit/role until capacity is
+   full;
 7. carry parent identity and the actual selected placement into the next depth;
 8. archive complete legal states under the existing completed-layout policy.
 
@@ -309,7 +393,7 @@ without allowing an impossible partial state to evict every fit-capable future.
 
 ### Origin
 
-- Original Kimi/Sol V7 review: bounded partial-state Pareto retention.
+- Prior V7 design review: bounded partial-state Pareto retention.
 - Selected for deeper testing by the queue-versus-beam discriminator; the
   delayed-lineage calibration determines its actual horizon and capacity.
 - Related precedent: libnest2d transform-family coverage and the existing
@@ -406,6 +490,16 @@ bound the initial 2,331-candidate Mixed opportunity before it becomes a
 quadratic two-step expansion. Raising a cap requires trace evidence that a
 useful commensurate witness was evicted specifically by that cap.
 
+Before any live cap-1 cell, add a commensurate-only calibration mode. Reuse the
+selected alternate's discovery enumeration with the correct pending workload;
+do not enumerate it again. Apply exact gap-containment and envelope proposal
+tiers before expensive topology scoring, and account discovery separately from
+the symmetric two-order completion barrier. Skip unrelated same-piece
+continuations in this mode. Repeat the cold throughput pilot after profiling:
+the `40c26dc` Mixed run consumed 100,000 evaluations and `115,382.852292` ms,
+so the older 25,000-evaluations-in-13.3-seconds estimate is obsolete for this
+path and cannot freeze the live matrix budget.
+
 Identical-piece jobs naturally disable the mechanism because there is no
 different remaining geometry class.
 
@@ -459,21 +553,26 @@ its first run; it must never become free permutation.
 - Runtime dominated by scanning equivalent copies: geometry-class deduplication
   is incorrect or occurs too late.
 
-## Stage 2C: One Controller, Factorial Ablations
+## Stage 2C: One Controller, Staged Paired Ablations
 
-Implement Stage 2A and Stage 2B in one controller. Express the experiment as
-two independent settings rather than three ambiguous named modes:
+Keep Stage 2A and Stage 2B expressible through one controller, but do not begin
+with the full factorial. Expose two independent settings rather than three
+ambiguous named modes:
 
-1. experimental width outside the protected control: `0`, `1`, `2`, `4`, `8`,
-   and the delayed-lineage calibrated boundary;
+1. experimental width outside the protected control: `0`, `1`, `3`, `7`, `12`,
+   giving total capacities `1`, `2`, `4`, `8`, `13`, and only a later
+   structured-lineage calibrated boundary;
 2. commensurate gap-reordering cap: `0` or `1` alternate class per parent.
 
-`experimentalWidth = 0`, cap `0` is the exact protected-control cell. A cap of
-`1` is meaningful only when experimental width is positive. At any fixed
-positive width, cap `0` versus cap `1` measures the reordering main effect;
-increasing width at cap `0` measures the partial-retention main effect. The
-protected control remains available outside both cells and does not consume an
-experimental slot.
+`experimentalWidth = 0`, cap `0` is the exact protected-control cell. First run
+the complete cap-0 width sweep and identify one or two positive widths that
+complete within budget, retain genuinely distinct futures, and improve or
+preserve the geometric archive. Only then run paired cap-0/cap-1 cells at those
+fixed widths. Cap `1` is meaningful only when experimental width is positive.
+At a fixed width, cap `0` versus cap `1` measures the reordering effect without
+confounding it with capacity. The protected control remains available outside
+both cells and does not consume an experimental slot. Queue-only is not an
+initial cell.
 
 All modes must use identical:
 
@@ -486,13 +585,14 @@ All modes must use identical:
 
 This is one controlled experiment, not three unrelated branches.
 
-The factorial ablations are necessary because a better combined result does not
-identify which mechanism earned it. Width measures delayed placement value;
-the cap measures commensurate order-swap value; their combination measures the
-interaction. The old discriminator observed both forms of apparent headroom,
-but only the commensurate probe and complete endpoints may attribute a gain.
+The staged paired ablations are necessary because a better combined result does
+not identify which mechanism earned it. Width first measures delayed placement
+value. At a fixed successful width, the cap then measures commensurate
+order-swap value and its interaction with retention. The old discriminator
+observed both forms of apparent headroom, but only the commensurate probe and
+complete endpoints may attribute a gain.
 
-### Initial run matrix
+### Staged run matrix
 
 - Triangle-20 on its golden sheet;
 - Mixed-61 on the current reference sheet;
@@ -500,12 +600,14 @@ but only the commensurate probe and complete endpoints may attribute a gain.
 - the existing heterogeneous and homogeneous corpus after the two primary
   fixtures are understood.
 
-Run the full width-by-cap factorial on Triangle and Mixed, stopping width
-escalation only after the forced delayed-lineage witness survives or the
-calibrated failure boundary is bracketed. Then carry only non-duplicate useful
-settings to the four-sheet and corpus gates. Every run uses identical repair
-settings. Compare against both the V7 width-1 controller and the actual Triangle
-production golden, which uses its protected production settings.
+Run cap `0` across the width sweep on Triangle and Mixed, stopping width
+escalation only after the validated forced lineage or its geometric neighborhood
+survives, or after representative choice and capacity have been separately
+bracketed. Then run paired cap `0`/cap `1` only at one or two successful positive
+widths. Carry only non-duplicate useful settings to the four-sheet and corpus
+gates. Every run uses identical repair settings. Compare against both the V7
+width-1 controller and the actual Triangle production golden, which uses its
+protected production settings.
 
 For every forced witness, record whether the required candidate was generated,
 future-equivalent deduplicated, fit-rejected, selected, capacity-evicted, or
@@ -527,15 +629,19 @@ candidate, scoring, capacity, horizon, budget, or rearrangement failure.
 
 ### Deterministic budget and stopping contract
 
-- One successor evaluation is one direct-legal successor submitted to canonical
-  identity plus compactness/topology scoring. Count it even when metric caches
-  hit, so cache warmth cannot change the stopping point. Record raw generated,
-  direct-legal, canonical-check, unique-successor, and metric-cache-miss counts
-  separately.
+- One search evaluation is every direct-legal candidate that reaches ordinary
+  successor selection or commensurate discovery, counted before any
+  gap/envelope prefilter and whether or not topology scoring is later skipped.
+  The same search-wide evaluation cap therefore covers cheap rejected discovery
+  candidates, intermediate macro states, and completed successors. Count an
+  evaluation even when identity or metric caches hit, so cache warmth cannot
+  change stopping depth. Separately record raw generated, direct-legal,
+  prefilter-rejected, canonical-check, topology-submitted, unique-successor,
+  and metric-cache-miss counts.
 - Use a stable traversal order: parent future-equivalence key, ordinary before
   reordered role, geometry-class signature, transform index, then canonical
   candidate key.
-- Caches are run-local. Start each factorial cell cold and use the same cache
+- Caches are run-local. Start each staged cell cold and use the same cache
   ownership and candidate memoization rules.
 - Before freezing matrix budgets, run a cold 25,000-evaluation pilot on the
   slowest primary fixture for the control, one positive-width beam cell, and one
@@ -544,13 +650,14 @@ candidate, scoring, capacity, horizon, budget, or rearrangement failure.
   and wall time to completion. This pilot is diagnostic and cannot select a
   layout.
 - Freeze the resulting caps in the immutable experiment manifest before the
-  factorial run. Do not adapt them from live elapsed time. Use the same frozen
+  staged run. Do not adapt them from live elapsed time. Use the same frozen
   cap for every compared cell in a budget tier.
-- The ordinary tier may use at most 100,000 successor evaluations with a
-  90-second safety abort. The quality tier may use at most 400,000 evaluations
+- The ordinary tier may use at most 100,000 search evaluations with a
+  90-second safety abort. The quality tier may use at most 400,000 search evaluations
   with a 300-second safety abort. Both are search-wide caps, include intermediate
-  and completed steps of reordering macros, and deliberately leave margin from
-  the measured baseline rate of 25,000 evaluations in 13.3 seconds.
+  and completed steps of reordering macros. Do not reuse the obsolete
+  25,000-evaluations-in-13.3-seconds rate for commensurate work; freeze budgets
+  only after the optimized commensurate-only cold pilot.
 - If the cold pilot projects that a frozen cap will exceed 80% of its wall-time
   ceiling, lower the cap before the matrix. If the lowered cap cannot complete
   the fixture at the tested width, stop and profile/cache the dominant work;
@@ -605,7 +712,8 @@ Implement only if Stage 2 reaches a stable archive without acceptable quality.
 
 - Abeysooriya/Jostle reconstruction and bounded kick.
 - Deepnest/SVGnest order mutation as an outer-search dimension.
-- Kimi/Sol sequencing: only after the retained constructive search is measured.
+- Prior review sequencing: only after the retained constructive search is
+  measured.
 
 ### Evidence required before implementation
 
@@ -664,7 +772,7 @@ This is the first stage allowed to rearrange an already-formed ring globally.
 
 - Sparrow: legal construction followed by strip contraction, separation,
   disruption, exploration, and coordinate descent.
-- Original Kimi/Sol disruptive V7 direction.
+- Prior disruptive V7 design review.
 - Existing V7 split/atomic/refine infrastructure supplies accounting and exact
   admission pieces, but not the complete coordinated search.
 
@@ -877,13 +985,19 @@ and admits only Clipper2-legal endpoints to the common archive.
   `/private/tmp/min-plane-provenance/v7-geometric-cohesion-a3a7b95/mixed/mixed-61-geometric-cohesion-selected.png`
 - Queue/beam evidence:
   `/private/tmp/min-plane-provenance/v7-queue-beam-14868c2/`
+- Reviewed calibration reports (diagnostic; Triangle lineage source rejected,
+  Mixed truncated):
+  `/private/tmp/min-plane-provenance/v7-calibration-40c26dc-triangle/` and
+  `/private/tmp/min-plane-provenance/v7-calibration-40c26dc-mixed/`
 
 ## Immediate Next Action
 
-Run the delayed-lineage and commensurate-order trace calibrations first. Then
-implement Stage 2A and the evidence-supported portion of Stage 2B in the same
-controller, expose the width-by-reordering-cap factorial settings, and run the
-Triangle/Mixed matrix under the deterministic budget contract. Do not start the
-stagnation kick or Sparrow-style coordinated movement until witness survival,
-complete endpoints, traces, budgets, and renders from that matrix have been
-analyzed.
+Export and validate the structured compact Triangle lineage, then add the
+depth-specific candidate-provenance trace and re-run the global repeated-layer
+selector calibration. Implement Stage 2A beam-only and complete its width sweep.
+In parallel only at the tooling level, profile the commensurate-only audit and
+remove its duplicate work; do not enable live reordering yet. After one or two
+positive beam widths complete within budget, run paired cap-0/cap-1 Mixed cells
+at those fixed widths. Do not start the stagnation kick or Sparrow-style
+coordinated movement until witness/neighborhood survival, complete endpoints,
+traces, budgets, and renders from the staged matrix have been analyzed.
