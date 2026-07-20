@@ -189,6 +189,14 @@ metrics, and artifact hashes. Future experiments must write an immutable manifes
 in their isolated worktree before production code is changed. Promote accepted
 artifacts into `help/artifacts/` and durable research reports into `help/research/`.
 
+### 2026-07-20 (Dalsoo source-control addition)
+
+- Added a pinned source review of
+  [`Dalsoo-Bin-Packing`](research/open-source-nesting-strategies.md#dalsoo-bin-packing)
+  at `bde2a3ef09f48980e59328eae7b042e6d9fdd4bc`. It does not alter the V7
+  direction: any later feature-contact probe remains conditional on trace
+  evidence and uses the existing exact legality and archive policy.
+
 ### Protected Intrinsic Contact Seed
 
 ```text

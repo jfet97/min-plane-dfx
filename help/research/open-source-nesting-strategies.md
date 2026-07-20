@@ -1,6 +1,6 @@
 # Open-Source Irregular Nesting Strategy Review
 
-Date: 2026-07-17
+Date: 2026-07-17 (updated 2026-07-20)
 
 This is a final source-level control pass over the main open-source references
 that are relevant to the current `min-plane-dfx` irregular convex nesting
@@ -26,6 +26,7 @@ commit.
 | libnest2d | `663daa69e1d7478669f714218e27681edbc96640` | [tamasmeszaros/libnest2d at the inspected commit](https://github.com/tamasmeszaros/libnest2d/tree/663daa69e1d7478669f714218e27681edbc96640) |
 | PackingSolver | `3d8d97dd8ae5ac46f08328636f5e168283282ebc` | [fontanf/packingsolver at the inspected commit](https://github.com/fontanf/packingsolver/tree/3d8d97dd8ae5ac46f08328636f5e168283282ebc) |
 | Sparrow | `961ec31f576c5817ece779ff73982b4553760a4e` | [JeroenGar/sparrow at the inspected commit](https://github.com/JeroenGar/sparrow/tree/961ec31f576c5817ece779ff73982b4553760a4e) |
+| Dalsoo-Bin-Packing | `bde2a3ef09f48980e59328eae7b042e6d9fdd4bc` | [whitegreen/Dalsoo-Bin-Packing at the inspected commit](https://github.com/whitegreen/Dalsoo-Bin-Packing/tree/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc) |
 
 ## Executive Conclusion
 
@@ -42,6 +43,10 @@ PackingSolver uses a portfolio of tree search, local search, MILP, sequential
 value correction, and large-item-first phases. Sparrow uses a left-bottom
 constructor followed by strip shrinking, separation, disruption, and coordinate
 descent. libnest2d exposes a configurable NFP placer and simple selectors.
+Dalsoo-Bin-Packing is a useful contrast: it enumerates feature-aligned poses and
+maintains an incremental convex hull, but commits every successful greedy
+placement, then opens another bin. It has neither an endpoint archive nor a
+feasibility-restoration or topology-repair stage.
 
 Therefore:
 
@@ -72,6 +77,7 @@ Therefore:
 | libnest2d | best contour point across rotations | caller-selected order; no core GA | configurable objective; default center distance and overfit | contour optimization can inspect hole contours; selectors remain area-first |
 | PackingSolver | trapezoid/tree and local-search variants | algorithm portfolio | guide area or box area relative to occupied hull/profit | explicit large-item-first phase fixes large pieces, then solves small pieces |
 | Sparrow | left-bottom constructive seed | sampled starts, coordinate descent, exploration/disruption | strip width, feasibility, density | global squeeze and disruption can reopen gaps; no NFP cavity enumerator |
+| Dalsoo-Bin-Packing | vertex-to-vertex poses; its Abey mode also aligns adjacent edges | none; sequentially opens further bins | incremental convex-hull area times an origin/axis pressure | none; simple polygons only and no free-space or topology model |
 
 ## Deepnest
 
@@ -221,6 +227,120 @@ exact overlap-based kernel. It can improve global arrangement after a legal
 constructor, but it is materially more expensive and is not a substitute for a
 correct fast decoder.
 
+## Dalsoo-Bin-Packing
+
+### What it actually solves
+
+Dalsoo-Bin-Packing is a Java library for two-dimensional irregular packing into
+one or more rectangular bins. Its public constructor receives a collection of
+polygons, spacing, a rotation setting, bin width/height, and `hSkew`, an
+intentional horizontal-versus-vertical placement bias
+([`DalsooPack.java:23-51`](https://github.com/whitegreen/Dalsoo-Bin-Packing/blob/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc/src/main/java/whitegreen/dalsoo/DalsooPack.java#L23-L51)).
+The stated input contract is a simple polygon with neither holes nor
+self-intersections; the source accepts its outer vertex loop only
+([`README.md:14-38`](https://github.com/whitegreen/Dalsoo-Bin-Packing/blob/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc/README.md#L14-L38)).
+
+`packAll` is not a fixed-sheet optimiser: it repeatedly takes the remaining
+polygons and opens another bin until none are left
+([`DalsooPack.java:62-84`](https://github.com/whitegreen/Dalsoo-Bin-Packing/blob/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc/src/main/java/whitegreen/dalsoo/DalsooPack.java#L62-L84)).
+Within a bin, optional area sorting is followed by a largest-first sequential
+decode. A placement is final as soon as it is found; there is no retained
+alternative state, restart, order mutation, local search, or backtracking
+([`Bin.java:91-107`](https://github.com/whitegreen/Dalsoo-Bin-Packing/blob/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc/src/main/java/whitegreen/dalsoo/Bin.java#L91-L107)).
+
+### Constructive candidates and objective
+
+The two code paths use the same greedy commitment but genuinely different pose
+generators:
+
+- the `Dalalah` path enumerates every configured rotation and every new-piece
+  vertex / fixed-piece vertex translation
+  ([`Bin.java:211-256`](https://github.com/whitegreen/Dalsoo-Bin-Packing/blob/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc/src/main/java/whitegreen/dalsoo/Bin.java#L211-L256));
+- the `Abey` path derives two rotations per pair of adjacent new and fixed
+  edges, aligns a vertex, and tests the resulting pose
+  ([`Bin.java:137-208`](https://github.com/whitegreen/Dalsoo-Bin-Packing/blob/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc/src/main/java/whitegreen/dalsoo/Bin.java#L137-L208)).
+
+Its only cost-quality controls are structural: `rotSteps` bounds the Dalalah
+rotation scan and `segmentMaxLength` can subdivide long offset edges before
+those vertex loops run ([`PackedPoly.java:42-63`](https://github.com/whitegreen/Dalsoo-Bin-Packing/blob/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc/src/main/java/whitegreen/dalsoo/PackedPoly.java#L42-L63)).
+It has no wall-time budget, evaluation budget, retained infeasible pool, or
+archive. Its move vocabulary is insertion of one new polygon only: it never
+translates, separates, removes, or jointly repairs already placed polygons.
+
+For a feasible pose, each path incrementally adds the candidate vertices to a
+copy of the occupied convex hull. It chooses the smallest hull-area expression
+multiplied by an origin-relative `hSkew` pressure, then commits the pose
+([`Convex.java:48-97`](https://github.com/whitegreen/Dalsoo-Bin-Packing/blob/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc/src/main/java/whitegreen/dalsoo/Convex.java#L48-L97),
+[`Bin.java:181-195`](https://github.com/whitegreen/Dalsoo-Bin-Packing/blob/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc/src/main/java/whitegreen/dalsoo/Bin.java#L181-L195),
+[`Bin.java:227-241`](https://github.com/whitegreen/Dalsoo-Bin-Packing/blob/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc/src/main/java/whitegreen/dalsoo/Bin.java#L227-L241)).
+This is absolute geometry, rather than a width/sheet-width ratio, but it is not
+axis-invariant: `hSkew` deliberately rewards progress toward one sheet origin.
+
+### Feasibility and topology limits
+
+`isFeasible` checks the candidate against rectangular bounds, then uses a
+bounding-box filter, one placed-polygon centroid-in-candidate test, and strict
+edge-crossing tests ([`Bin.java:258-275`](https://github.com/whitegreen/Dalsoo-Bin-Packing/blob/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc/src/main/java/whitegreen/dalsoo/Bin.java#L258-L275),
+[`Bin.java:317-345`](https://github.com/whitegreen/Dalsoo-Bin-Packing/blob/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc/src/main/java/whitegreen/dalsoo/Bin.java#L317-L345)).
+The source explicitly says the centroid shortcut is not completely robust.
+Its arithmetic is floating point; the only JTS operation is a fallback used to
+buffer a problematic offset polygon, not a canonical legality oracle
+([`MathUtil.java:459-489`](https://github.com/whitegreen/Dalsoo-Bin-Packing/blob/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc/src/main/java/whitegreen/dalsoo/MathUtil.java#L459-L489)).
+
+There is no occupied-union cavity count, contact graph, component score,
+free-space decomposition, or repair mechanism. The convex hull makes the
+algorithm sensitive to broad external spread, but it cannot distinguish a
+compact filled cluster from a hollow ring with the same hull. Consequently it
+cannot diagnose, let alone correct, the mixed-61 failure on its own.
+
+### What transfers to `min-plane-dfx`
+
+1. **Feature-contact pose coverage is worth measuring, not assuming.** Dalsoo's
+   edge/vertex alignment is a concrete reminder that a constructive search may
+   miss a good compact placement before its comparator has a chance to rank it.
+   Add a Dalsoo-style candidate only if Stage-0/V7 traces prove that the current
+   NFP candidate generator failed to materialize a deterministic feature-contact
+   pose. It must be grid-projected once, canonical-Clipper2 admitted, deduped by
+   the phase-aware state key, and compete under the existing intrinsic archive.
+2. **Incremental external-envelope estimates belong in proposal steering.** The
+   bounded hull-growth signal is compatible with the present intrinsic
+   compactness direction, but the exact occupied union, cavity, and contact
+   analysis must remain the authority at protection and terminal selection.
+3. **The rotation lesson is family coverage, not free rotation.** The Abey path
+   derives contact-compatible orientations while Dalalah enumerates a bounded
+   rotation set. Preserve distinct permitted transform families before local
+   truncation; do not introduce arbitrary-angle rotations into the current
+   quarter-turn/canonical collision model.
+4. **Use explicit search budgets, not geometry degradation, for runtime.**
+   Dalsoo controls cost by reducing rotations or changing edge subdivision. V7
+   should instead expose candidate/materialized/deduped/admitted counters and
+   a per-arm evaluation/time cap, so a speed control cannot silently change the
+   authoritative collision geometry.
+
+### What must not transfer
+
+- Do not replace canonical Clipper2 admission with Dalsoo's floating-point
+  centroid/edge test, or use its one-sided offset collision convention.
+- Do not copy the greedy first-feasible commitment, `packAll` multi-bin
+  objective, or origin-biased `hSkew` scalarization. All three can hide a
+  compact future or create an arbitrary axis preference.
+- Do not infer hole filling from hull area. Dalsoo has no hole input and no
+  cavity/topology representation.
+- Do not use its continuous edge-derived rotations as a shortcut around the
+  allowed transform policy or the sheet-invariance contract.
+
+### Relation to the current V7 direction
+
+Dalsoo does not change the Stage-0 endpoint archive or the independent
+Stage-1 S/A/E probes: those address the missing retained futures and exact
+feasibility boundary that its source lacks. It adds one falsifiable
+post-V7 question: if traces show that a good *legal* compact endpoint is absent
+because no current candidate reaches a relevant piece-feature contact, run a
+bounded feature-contact coverage probe. If those poses are already present and
+pruned, improve survivor policy instead; if they are absent but do not survive
+the common intrinsic archive, reject the generator rather than increasing raw
+contact reward.
+
 ## Current `min-plane-dfx` Comparison
 
 The current repository already has the beginnings of the Deepnest/SVGnest
@@ -367,6 +487,10 @@ the long-chain failure.
    the general constructor but must not become a special-case final scorer.
 6. **Defer Sparrow-style squeeze/large-neighborhood search until the fast path is
    correct and profiled.** It is promising but materially more expensive.
+7. **Measure candidate-pose coverage before adding another generator.** If a
+   trace proves that an NFP decoder never materializes a useful compact feature
+   contact, test a bounded Dalsoo-style vertex/edge-alignment generator behind
+   the same exact admission and archive. Do not use it as a new greedy decoder.
 
 ## Rejected Shortcuts
 
@@ -427,6 +551,25 @@ Pass conditions:
 
 Failure meaning: order diversity is not the dominant limitation, so work should
 return to candidate generation, local ranking, or a stronger compaction phase.
+
+### Experiment D: feature-contact coverage audit
+
+For each rejected compact continuation, record whether an equivalent legal pose
+at the relevant candidate/fixed feature contact was materialized before
+deduplication, after deduplication, and after local fanout. Only if it was never
+materialized, add a bounded deterministic vertex/edge-alignment candidate
+generator for the allowed transform family, with canonical Clipper2 admission.
+
+Pass conditions:
+
+- it adds phase-distinct legal candidates rather than duplicate NFP endpoints;
+- at least one added candidate survives the ordinary intrinsic archive without
+  worsening the triangle golden;
+- runtime stays within a declared candidate-generation budget.
+
+Failure meaning: the weakness lies in retention, order, or global topology—not
+in missing feature-contact pose generation. Remove the probe rather than giving
+feature contact more comparator weight.
 
 ## Bottom Line
 
