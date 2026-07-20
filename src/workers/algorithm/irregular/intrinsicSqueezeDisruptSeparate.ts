@@ -36,6 +36,7 @@ import {
   type IntrinsicTransformCatalog
 } from './intrinsicExactProjection.js'
 import {
+  canonicalizeRelaxedState,
   evaluateIntrinsicSeparation,
   intrinsicDisruptionProposals,
   intrinsicFocusedProposals,
@@ -48,6 +49,7 @@ import {
   transportIntrinsicGroup,
   updateIntrinsicSeparatorWeights,
   type IntrinsicRelaxedState,
+  type IntrinsicRelaxedPose,
   type IntrinsicSeparationEvaluation,
   type IntrinsicSeparatorProposal,
   type IntrinsicSeparatorWeights
@@ -269,6 +271,145 @@ export interface IntrinsicPressureCompositeVisitTrace {
   readonly beforeConflictedPieceCount: number
   readonly afterConflictedPieceCount: number
   readonly canonicalLegality: IntrinsicPressureCanonicalLegality | undefined
+  readonly conflictBefore: IntrinsicPressureConflictTuple
+  readonly conflictAfter: IntrinsicPressureConflictTuple
+  readonly candidateAccounting: ReadonlyArray<IntrinsicPressureCandidateAccounting>
+  readonly candidates: ReadonlyArray<IntrinsicPressureCandidateTrace>
+  readonly selectedCandidateSource: IntrinsicPressureCompositeCandidateSource
+  readonly selectedCandidateOrdinal: number | undefined
+  readonly selectedOrientationFamily: string | undefined
+  readonly selectedTransformKey: string | undefined
+  readonly selectedTranslateXGrid: number | undefined
+  readonly selectedTranslateYGrid: number | undefined
+}
+
+export type IntrinsicPressureCompositeOrderIdentity =
+  | 'priority-forward'
+  | 'priority-reverse'
+
+export type IntrinsicPressureCompositeCandidateSource =
+  | 'no-op'
+  | 'existing-separate'
+  | 'existing-transform'
+  | 'adaptive-transform-family'
+
+export type IntrinsicPressureCandidatePass =
+  | 'existing'
+  | 'adaptive-axis-x'
+  | 'adaptive-axis-y'
+
+export interface IntrinsicPressureConflictTuple {
+  readonly wallConflictCount: number
+  readonly pairConflictCount: number
+  readonly conflictedPieceCount: number
+}
+
+export interface IntrinsicPressureCandidateAccounting {
+  readonly source: IntrinsicPressureCompositeCandidateSource
+  readonly pass: IntrinsicPressureCandidatePass
+  readonly generatedCount: number
+  readonly materializedCount: number
+  readonly legalCount: number
+  readonly uniqueCount: number
+  readonly evaluatedCount: number
+  readonly incidentClearCount: number
+  readonly globallyClearCount: number
+  readonly selectedCount: number
+  readonly capSkippedCount: number
+}
+
+export interface IntrinsicPressureCandidateTrace {
+  readonly source: IntrinsicPressureCompositeCandidateSource
+  readonly pass: IntrinsicPressureCandidatePass
+  readonly ordinal: number
+  readonly orientationFamily: string | undefined
+  readonly stateKey: string | undefined
+  readonly transformKey: string | undefined
+  readonly translateXGrid: number | undefined
+  readonly translateYGrid: number | undefined
+  readonly conflict: IntrinsicPressureConflictTuple | undefined
+  readonly incidentClear: boolean | undefined
+  readonly globallyClear: boolean | undefined
+  readonly rawLoss: number | undefined
+  readonly weightedLoss: number | undefined
+  readonly outcome:
+    | 'deduplicated'
+    | 'invalid'
+    | 'evaluated'
+    | 'selected'
+    | 'cap-skipped'
+}
+
+export interface IntrinsicAdaptiveTransformFamilyCandidate {
+  readonly state: IntrinsicRelaxedState
+  readonly stateKey: string
+  readonly source: 'adaptive-transform-family'
+  readonly pass: 'adaptive-axis-x' | 'adaptive-axis-y'
+  readonly ordinal: number
+  readonly orientationFamily: string
+  readonly transformKey: string
+  readonly translateXGrid: number
+  readonly translateYGrid: number
+}
+
+export interface IntrinsicAdaptiveTransformFamilyCandidateSet {
+  readonly selectedAxes: ReadonlyArray<IntrinsicPressureAxis>
+  readonly generatedCount: number
+  readonly materializedCount: number
+  readonly uniqueCount: number
+  readonly candidates: ReadonlyArray<IntrinsicAdaptiveTransformFamilyCandidate>
+}
+
+export interface IntrinsicTwoRadiusRefinementCandidate {
+  readonly state: IntrinsicRelaxedState
+  readonly stateKey: string
+  readonly source: 'refine-small' | 'refine-large'
+  readonly ordinal: number
+  readonly transformKey: string
+  readonly translateXGrid: number
+  readonly translateYGrid: number
+}
+
+export interface IntrinsicTwoRadiusRefinementCandidateSet {
+  readonly invoked: true
+  readonly generatedCount: 16
+  readonly targetLegalCount: number
+  readonly uniqueCount: number
+  readonly smallRadiusGrid: number
+  readonly largeRadiusGrid: number
+  readonly candidates: ReadonlyArray<IntrinsicTwoRadiusRefinementCandidate>
+}
+
+export interface IntrinsicCanonicalControlResult {
+  readonly referenceCanonicalIdentity: string | undefined
+  readonly candidateCanonicalIdentity: string | undefined
+  readonly identityMatches: boolean
+  readonly pieceCoverageMatches: boolean
+  readonly candidateCanonicalLegal: boolean
+  readonly accepted: boolean
+  readonly reason:
+    | 'accepted'
+    | 'reference-identity-unavailable'
+    | 'candidate-identity-unavailable'
+    | 'identity-mismatch'
+    | 'piece-coverage-mismatch'
+      | 'candidate-canonical-illegal'
+}
+
+export interface IntrinsicStructuralE1CanonicalControlTrace {
+  readonly targetBox: IntrinsicTargetBox
+  readonly structuralPieceCount: number
+  readonly stateKey: string
+  readonly satRawLoss: number
+  readonly satWeightedLoss: number
+  readonly satConflictCount: number
+  readonly satExactZeroLoss: boolean
+  readonly satConflict: IntrinsicPressureConflictTuple
+  readonly canonicalControl: IntrinsicCanonicalControlResult
+  readonly canonicalLegality: IntrinsicPressureCanonicalLegality
+  readonly canonicalAcceptanceIndependentOfSat: boolean
+  readonly separationEvaluationBudgetCost: 0
+  readonly selectionEligible: false
 }
 
 export interface IntrinsicPressureCompositeParentTrace {
@@ -300,6 +441,11 @@ export interface IntrinsicPressureCompositeParentTrace {
   readonly canonicalLegalityEvaluationCount: number
   readonly canonicalLegalityCacheHitCount: number
   readonly canonicalLegalityDisagreementCount: number
+  readonly orderIdentity: IntrinsicPressureCompositeOrderIdentity
+  readonly candidateAccounting: ReadonlyArray<IntrinsicPressureCandidateAccounting>
+  readonly winnerSource: IntrinsicPressureCompositeCandidateSource
+  readonly winnerStateKey: string
+  readonly winnerSurvivedComposite: boolean
   readonly evaluationCount: number
   readonly evaluationCapReached: boolean
   readonly deadlineReached: boolean
@@ -544,6 +690,7 @@ export interface IntrinsicGlobalSearchResult {
   readonly fullE1Fallback: ReadonlyArray<IrregularPlacedPiece>
   readonly partition: IntrinsicPiecePartition
   readonly targetRoles: ReadonlyArray<IntrinsicGlobalTargetRole>
+  readonly structuralE1CanonicalControl?: IntrinsicStructuralE1CanonicalControlTrace
   readonly searchedBasinCount: number
   readonly unavailableQuarterTurnBasinCount: number
   readonly structuralHandoffs: ReadonlyArray<IntrinsicStructuralHandoff>
@@ -816,14 +963,32 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
     const catalog = yield* buildIntrinsicTransformCatalog(partition.structuralPieces)
     const ordinalSeed = deriveIntrinsicGlobalOrdinalSeed(jobCatalog, schedule.seed)
     const initialState = relaxedStateFromExactLayout(catalog, exactStructuralReference)
+    const structuralE1Bounds = canonicalPlacedBounds(exactStructuralReference)
     const targetRoles = deriveIntrinsicGlobalTargetRoles(
       fullE1Fallback,
       schedule.explorationAreaCapMm2
     )
-    if (initialState === undefined || targetRoles === undefined || targetRoles.length !== 3) {
+    if (
+      initialState === undefined ||
+      structuralE1Bounds === undefined ||
+      targetRoles === undefined ||
+      targetRoles.length !== 3
+    ) {
       return yield* globalFailure(
         'initialize',
         'the structural E1 state or registered target roles could not be canonicalized.'
+      )
+    }
+    const structuralE1CanonicalControl = observeStructuralE1CanonicalControl({
+      targetBox: structuralE1Bounds,
+      catalog,
+      state: initialState,
+      referencePlaced: exactStructuralReference
+    })
+    if (structuralE1CanonicalControl === undefined) {
+      return yield* globalFailure(
+        'initialize',
+        'the structural E1 canonical control witness could not be evaluated.'
       )
     }
 
@@ -1367,6 +1532,7 @@ export function runIntrinsicSqueezeDisruptSeparateWithSchedule(
       fullE1Fallback,
       partition,
       targetRoles,
+      structuralE1CanonicalControl,
       searchedBasinCount,
       unavailableQuarterTurnBasinCount,
       structuralHandoffs: handoffs,
@@ -1736,76 +1902,85 @@ function runIntrinsicContractedPressureLane(input: {
         let emittedProposalCount = 0
         let evaluatedProposalCount = 0
         let deadlineInterrupted = false
+        let canonicalLegalIntermediate = false
         for (const entry of pool) {
-          const composite = yield* runIntrinsicSequentialColliderComposite({
-            targetBox: proposal.contractedBox,
-            catalog: input.catalog,
-            parentState: entry.state,
-            parentEvaluation: entry.evaluation,
-            parentStateKey: entry.key,
-            weights,
-            maximumEvaluations: Math.max(
-              0,
-              input.maximumAdditionalEvaluations - separationEvaluationCount
-            ),
-            control: input.control,
-            canonicalLegalityMemo
-          })
-          compositeParents.push(composite.trace)
-          separationEvaluationCount += composite.evaluationCount
-          attemptEvaluationCount += composite.evaluationCount
-          evaluatedProposalCount += composite.evaluationCount
-          emittedProposalCount += composite.trace.visits.reduce(
-            (count, visit) => count + Math.max(0, visit.proposalCount - 1),
-            0
-          )
-          if (composite.evaluationCapReached) budgetExhausted = true
-          if (composite.deadlineReached) deadlineInterrupted = true
-          if (composite.trace.emittedComposite) {
-            const entryCandidate = pressurePoolEntry(
-              composite.state,
-              composite.evaluation,
-              composite.key,
-              {
-                parentStateKey: entry.key,
-                generationDepth:
-                  (entry.pressureGeneration?.generationDepth ?? 0) + 1,
-                selectedPieceIds: composite.affectedPieceIds,
-                affectedPieceIds: composite.affectedPieceIds,
-                lineageAffectedPieceIds: mergePressurePieceIds(
-                  entry.pressureGeneration?.lineageAffectedPieceIds ?? [],
-                  composite.affectedPieceIds
-                ),
-                proposalKind: 'sequential-collider-composite'
-              }
+          for (const orderIdentity of [
+            'priority-forward',
+            'priority-reverse'
+          ] as const) {
+            const composite = yield* runIntrinsicSequentialColliderComposite({
+              targetBox: proposal.contractedBox,
+              catalog: input.catalog,
+              parentState: entry.state,
+              parentEvaluation: entry.evaluation,
+              parentStateKey: entry.key,
+              weights,
+              maximumEvaluations: Math.max(
+                0,
+                input.maximumAdditionalEvaluations - separationEvaluationCount
+              ),
+              control: input.control,
+              canonicalLegalityMemo,
+              orderIdentity
+            })
+            compositeParents.push(composite.trace)
+            separationEvaluationCount += composite.evaluationCount
+            attemptEvaluationCount += composite.evaluationCount
+            evaluatedProposalCount += composite.evaluationCount
+            emittedProposalCount += composite.trace.visits.reduce(
+              (count, visit) => count + Math.max(0, visit.proposalCount - 1),
+              0
             )
-            if (entryCandidate !== undefined) {
-              candidates.push(entryCandidate)
-              generatedCandidates.push(entryCandidate)
-              bestRepairedLoss = Math.min(
-                bestRepairedLoss,
-                composite.evaluation.rawLoss
+            if (composite.evaluationCapReached) budgetExhausted = true
+            if (composite.deadlineReached) deadlineInterrupted = true
+            if (composite.trace.emittedComposite) {
+              const entryCandidate = pressurePoolEntry(
+                composite.state,
+                composite.evaluation,
+                composite.key,
+                {
+                  parentStateKey: entry.key,
+                  generationDepth:
+                    (entry.pressureGeneration?.generationDepth ?? 0) + 1,
+                  selectedPieceIds: composite.affectedPieceIds,
+                  affectedPieceIds: composite.affectedPieceIds,
+                  lineageAffectedPieceIds: mergePressurePieceIds(
+                    entry.pressureGeneration?.lineageAffectedPieceIds ?? [],
+                    composite.affectedPieceIds
+                  ),
+                  proposalKind: 'sequential-collider-composite'
+                }
               )
-              addExactPressureEndpoint(
-                exactEndpoints,
-                pressureEndpointFromState({
-                  catalog: input.catalog,
-                  targetBox: proposal.contractedBox,
-                  state: composite.state,
-                  evaluation: composite.evaluation,
-                  weights,
-                  canonicalLegalityMemo
-                })
-              )
+              if (entryCandidate !== undefined) {
+                candidates.push(entryCandidate)
+                generatedCandidates.push(entryCandidate)
+                bestRepairedLoss = Math.min(
+                  bestRepairedLoss,
+                  composite.evaluation.rawLoss
+                )
+                addExactPressureEndpoint(
+                  exactEndpoints,
+                  pressureEndpointFromState({
+                    catalog: input.catalog,
+                    targetBox: proposal.contractedBox,
+                    state: composite.state,
+                    evaluation: composite.evaluation,
+                    weights,
+                    canonicalLegalityMemo
+                  })
+                )
+              }
+            }
+            canonicalLegalIntermediate = composite.canonicalLegalIntermediate
+            if (
+              budgetExhausted ||
+              deadlineInterrupted ||
+              canonicalLegalIntermediate
+            ) {
+              break
             }
           }
-          if (
-            budgetExhausted ||
-            deadlineInterrupted ||
-            composite.canonicalLegalIntermediate
-          ) {
-            break
-          }
+          if (budgetExhausted || deadlineInterrupted || canonicalLegalIntermediate) break
         }
         if (deadlineInterrupted) {
           const interruptedDiagnostics = diagnoseIntrinsicPressureInterruptedSweep({
@@ -1995,6 +2170,9 @@ function runIntrinsicContractedPressureLane(input: {
         )
         compositeParents = compositeParents.map((parentTrace) => ({
           ...parentTrace,
+          winnerSurvivedComposite:
+            parentTrace.emittedComposite &&
+            pool.some(({ key }) => key === parentTrace.compositeStateKey),
           outerRetentionOutcome:
             !parentTrace.emittedComposite
               ? parentTrace.outerRetentionOutcome
@@ -2397,6 +2575,406 @@ function canonicalLegalityCounterDelta(
   }
 }
 
+/** General identity control independent of any fixed squeeze-role schedule. */
+export function evaluateIntrinsicCanonicalControl(input: {
+  readonly targetBox: IntrinsicTargetBox
+  readonly referencePlaced: ReadonlyArray<IrregularPlacedPiece>
+  readonly candidatePlaced: ReadonlyArray<IrregularPlacedPiece>
+}): IntrinsicCanonicalControlResult {
+  const referenceCanonicalIdentity = canonicalCollisionLayoutIdentity(
+    input.referencePlaced
+  )
+  const candidateCanonicalIdentity = canonicalCollisionLayoutIdentity(
+    input.candidatePlaced
+  )
+  const referenceIds = input.referencePlaced.map(placedPieceId).toSorted()
+  const candidateIds = input.candidatePlaced.map(placedPieceId).toSorted()
+  const pieceCoverageMatches = sameSortedPieceIds(referenceIds, candidateIds)
+  const identityMatches =
+    referenceCanonicalIdentity !== undefined &&
+    candidateCanonicalIdentity !== undefined &&
+    referenceCanonicalIdentity === candidateCanonicalIdentity
+  const candidateCanonicalLegal = assertIntrinsicTargetExactLegal(
+    input.targetBox,
+    input.candidatePlaced
+  )
+  const reason: IntrinsicCanonicalControlResult['reason'] =
+    referenceCanonicalIdentity === undefined
+      ? 'reference-identity-unavailable'
+      : candidateCanonicalIdentity === undefined
+        ? 'candidate-identity-unavailable'
+        : !identityMatches
+          ? 'identity-mismatch'
+          : !pieceCoverageMatches
+            ? 'piece-coverage-mismatch'
+            : !candidateCanonicalLegal
+              ? 'candidate-canonical-illegal'
+              : 'accepted'
+  return {
+    referenceCanonicalIdentity,
+    candidateCanonicalIdentity,
+    identityMatches,
+    pieceCoverageMatches,
+    candidateCanonicalLegal,
+    accepted: reason === 'accepted',
+    reason
+  }
+}
+
+function observeStructuralE1CanonicalControl(input: {
+  readonly targetBox: IntrinsicTargetBox
+  readonly catalog: IntrinsicTransformCatalog
+  readonly state: IntrinsicRelaxedState
+  readonly referencePlaced: ReadonlyArray<IrregularPlacedPiece>
+}): IntrinsicStructuralE1CanonicalControlTrace | undefined {
+  const stateKey = intrinsicRelaxedStateKey(input.catalog, input.state)
+  const candidatePlaced = provisionalLayoutFromRelaxedState(input.catalog, input.state)
+  const evaluation = evaluateIntrinsicSeparation(
+    input.targetBox,
+    input.catalog,
+    input.state
+  )
+  if (stateKey === undefined || candidatePlaced === undefined || evaluation === undefined) {
+    return undefined
+  }
+  const canonicalControl = evaluateIntrinsicCanonicalControl({
+    targetBox: input.targetBox,
+    referencePlaced: input.referencePlaced,
+    candidatePlaced
+  })
+  const canonicalLegality = classifyIntrinsicPressureCanonicalLegality({
+    targetBox: input.targetBox,
+    catalog: input.catalog,
+    state: input.state,
+    evaluation
+  })
+  return {
+    targetBox: input.targetBox,
+    structuralPieceCount: input.referencePlaced.length,
+    stateKey,
+    satRawLoss: evaluation.rawLoss,
+    satWeightedLoss: evaluation.weightedLoss,
+    satConflictCount: evaluation.conflicts.length,
+    satExactZeroLoss: evaluation.exactZeroLoss,
+    satConflict: pressureConflictTuple(evaluation),
+    canonicalControl,
+    canonicalLegality,
+    canonicalAcceptanceIndependentOfSat: canonicalControl.accepted,
+    separationEvaluationBudgetCost: 0,
+    selectionEligible: false
+  }
+}
+
+/** Bounded family representatives selected only for axes implicated by current conflicts. */
+export function generateIntrinsicAdaptiveTransformFamilyCandidates(input: {
+  readonly catalog: IntrinsicTransformCatalog
+  readonly state: IntrinsicRelaxedState
+  readonly evaluation: IntrinsicSeparationEvaluation
+  readonly selectedPieceId: PieceId
+}): IntrinsicAdaptiveTransformFamilyCandidateSet {
+  const pose = input.state.poses.find(
+    ({ pieceId }) => pieceId === input.selectedPieceId
+  )
+  const catalogEntry = input.catalog.entries.find(
+    ({ pieceId }) => pieceId === input.selectedPieceId
+  )
+  const currentTransform = catalogEntry?.transforms.find(
+    ({ canonicalTransformKey }) => canonicalTransformKey === pose?.transformKey
+  )
+  if (pose === undefined || catalogEntry === undefined || currentTransform === undefined) {
+    return {
+      selectedAxes: [],
+      generatedCount: 0,
+      materializedCount: 0,
+      uniqueCount: 0,
+      candidates: []
+    }
+  }
+  const selectedAxes = pressureSelectedConflictAxes(
+    input.evaluation,
+    input.selectedPieceId
+  )
+  const currentBounds = intrinsicFiniteTransformGridBounds(currentTransform)
+  if (currentBounds === undefined || selectedAxes.length === 0) {
+    return {
+      selectedAxes,
+      generatedCount: 0,
+      materializedCount: 0,
+      uniqueCount: 0,
+      candidates: []
+    }
+  }
+  const currentCenterX =
+    pose.translateXGrid + (currentBounds.minimumX + currentBounds.maximumX) / 2
+  const currentCenterY =
+    pose.translateYGrid + (currentBounds.minimumY + currentBounds.maximumY) / 2
+  const unique = new Map<string, IntrinsicAdaptiveTransformFamilyCandidate>()
+  let generatedCount = 0
+  let materializedCount = 0
+  for (const axis of selectedAxes) {
+    const byFamily = new Map<
+      string,
+      (typeof catalogEntry.transforms)[number]
+    >()
+    for (const finiteTransform of catalogEntry.transforms) {
+      const existing = byFamily.get(finiteTransform.orientationFamily)
+      if (
+        existing === undefined ||
+        compareFiniteTransformForPressureAxis(finiteTransform, existing, axis) < 0
+      ) {
+        byFamily.set(finiteTransform.orientationFamily, finiteTransform)
+      }
+    }
+    const representatives = [...byFamily.values()].toSorted((first, second) =>
+      first.orientationFamily.localeCompare(second.orientationFamily)
+    )
+    for (const [ordinal, finiteTransform] of representatives.entries()) {
+      generatedCount += 1
+      const bounds = intrinsicFiniteTransformGridBounds(finiteTransform)
+      if (bounds === undefined) continue
+      const translateXGrid = Math.round(
+        currentCenterX - (bounds.minimumX + bounds.maximumX) / 2
+      )
+      const translateYGrid = Math.round(
+        currentCenterY - (bounds.minimumY + bounds.maximumY) / 2
+      )
+      const state = canonicalizeRelaxedState(input.catalog, {
+        poses: input.state.poses.map((candidatePose) =>
+          candidatePose.pieceId === input.selectedPieceId
+            ? {
+                ...candidatePose,
+                transformKey: finiteTransform.canonicalTransformKey,
+                translateXGrid,
+                translateYGrid
+              }
+            : candidatePose
+        )
+      })
+      const stateKey =
+        state === undefined
+          ? undefined
+          : intrinsicRelaxedStateKey(input.catalog, state)
+      const selectedPose = state?.poses.find(
+        ({ pieceId }) => pieceId === input.selectedPieceId
+      )
+      if (state === undefined || stateKey === undefined || selectedPose === undefined) {
+        continue
+      }
+      materializedCount += 1
+      if (unique.has(stateKey)) continue
+      unique.set(stateKey, {
+        state,
+        stateKey,
+        source: 'adaptive-transform-family',
+        pass: axis === 'x' ? 'adaptive-axis-x' : 'adaptive-axis-y',
+        ordinal,
+        orientationFamily: finiteTransform.orientationFamily,
+        transformKey: selectedPose.transformKey,
+        translateXGrid: selectedPose.translateXGrid,
+        translateYGrid: selectedPose.translateYGrid
+      })
+    }
+  }
+  return {
+    selectedAxes,
+    generatedCount,
+    materializedCount,
+    uniqueCount: unique.size,
+    candidates: [...unique.values()]
+  }
+}
+
+/** Dormant two-radius intensifier for a future explicitly selected V7 atom or endpoint. */
+export function generateIntrinsicTwoRadiusRefinementCandidates(input: {
+  readonly targetBox: IntrinsicTargetBox
+  readonly catalog: IntrinsicTransformCatalog
+  readonly seedState: IntrinsicRelaxedState
+  readonly selectedPieceId: PieceId
+}): IntrinsicTwoRadiusRefinementCandidateSet | undefined {
+  const pose = input.seedState.poses.find(
+    ({ pieceId }) => pieceId === input.selectedPieceId
+  )
+  const finiteTransform = input.catalog.entries
+    .find(({ pieceId }) => pieceId === input.selectedPieceId)
+    ?.transforms.find(
+      ({ canonicalTransformKey }) => canonicalTransformKey === pose?.transformKey
+    )
+  const bounds =
+    finiteTransform === undefined
+      ? undefined
+      : intrinsicFiniteTransformGridBounds(finiteTransform)
+  const targetWidthGrid = toGridMm(input.targetBox.widthMm)
+  const targetHeightGrid = toGridMm(input.targetBox.heightMm)
+  if (
+    pose === undefined ||
+    finiteTransform === undefined ||
+    bounds === undefined ||
+    targetWidthGrid === undefined ||
+    targetHeightGrid === undefined
+  ) {
+    return undefined
+  }
+  const minimumTranslateXGrid = -bounds.minimumX
+  const maximumTranslateXGrid = targetWidthGrid - bounds.maximumX
+  const minimumTranslateYGrid = -bounds.minimumY
+  const maximumTranslateYGrid = targetHeightGrid - bounds.maximumY
+  const widthGrid = bounds.maximumX - bounds.minimumX
+  const heightGrid = bounds.maximumY - bounds.minimumY
+  const characteristicGrid = Math.max(
+    1,
+    Math.min(widthGrid, heightGrid) || Math.max(widthGrid, heightGrid)
+  )
+  const smallRadiusGrid = Math.max(1, Math.round(characteristicGrid / 32))
+  const largeRadiusGrid = Math.max(
+    smallRadiusGrid + 1,
+    Math.round(characteristicGrid / 8)
+  )
+  const directions = [
+    { x: 1, y: 0 },
+    { x: 1, y: 1 },
+    { x: 0, y: 1 },
+    { x: -1, y: 1 },
+    { x: -1, y: 0 },
+    { x: -1, y: -1 },
+    { x: 0, y: -1 },
+    { x: 1, y: -1 }
+  ] as const
+  const unique = new Map<string, IntrinsicTwoRadiusRefinementCandidate>()
+  let targetLegalCount = 0
+  for (const [radiusIndex, radiusGrid] of [
+    smallRadiusGrid,
+    largeRadiusGrid
+  ].entries()) {
+    for (const [directionIndex, direction] of directions.entries()) {
+      const translateXGrid = pose.translateXGrid + direction.x * radiusGrid
+      const translateYGrid = pose.translateYGrid + direction.y * radiusGrid
+      if (
+        translateXGrid < minimumTranslateXGrid ||
+        translateXGrid > maximumTranslateXGrid ||
+        translateYGrid < minimumTranslateYGrid ||
+        translateYGrid > maximumTranslateYGrid
+      ) {
+        continue
+      }
+      targetLegalCount += 1
+      const state = transportIntrinsicGroup(
+        input.catalog,
+        input.seedState,
+        [input.selectedPieceId],
+        {
+          x: translateXGrid - pose.translateXGrid,
+          y: translateYGrid - pose.translateYGrid
+        }
+      )
+      const stateKey =
+        state === undefined
+          ? undefined
+          : intrinsicRelaxedStateKey(input.catalog, state)
+      const selectedPose = state?.poses.find(
+        ({ pieceId }) => pieceId === input.selectedPieceId
+      )
+      if (state === undefined || stateKey === undefined || selectedPose === undefined) {
+        continue
+      }
+      if (unique.has(stateKey)) continue
+      unique.set(stateKey, {
+        state,
+        stateKey,
+        source: radiusIndex === 0 ? 'refine-small' : 'refine-large',
+        ordinal: radiusIndex * directions.length + directionIndex,
+        transformKey: selectedPose.transformKey,
+        translateXGrid: selectedPose.translateXGrid,
+        translateYGrid: selectedPose.translateYGrid
+      })
+    }
+  }
+  return {
+    invoked: true,
+    generatedCount: 16,
+    targetLegalCount,
+    uniqueCount: unique.size,
+    smallRadiusGrid,
+    largeRadiusGrid,
+    candidates: [...unique.values()]
+  }
+}
+
+interface IntrinsicFiniteTransformGridBounds {
+  readonly minimumX: number
+  readonly minimumY: number
+  readonly maximumX: number
+  readonly maximumY: number
+}
+
+function intrinsicFiniteTransformGridBounds(
+  finiteTransform: IntrinsicTransformCatalog['entries'][number]['transforms'][number]
+): IntrinsicFiniteTransformGridBounds | undefined {
+  const points = finiteTransform.geometry.polygon.points.map(({ x, y }) => ({
+    x: toGridMm(x),
+    y: toGridMm(y)
+  }))
+  if (
+    points.length < 3 ||
+    points.some(({ x, y }) => x === undefined || y === undefined)
+  ) {
+    return undefined
+  }
+  const complete = points.filter(
+    (point): point is { readonly x: number; readonly y: number } =>
+      point.x !== undefined && point.y !== undefined
+  )
+  return {
+    minimumX: Math.min(...complete.map(({ x }) => x)),
+    minimumY: Math.min(...complete.map(({ y }) => y)),
+    maximumX: Math.max(...complete.map(({ x }) => x)),
+    maximumY: Math.max(...complete.map(({ y }) => y))
+  }
+}
+
+function compareFiniteTransformForPressureAxis(
+  first: IntrinsicTransformCatalog['entries'][number]['transforms'][number],
+  second: IntrinsicTransformCatalog['entries'][number]['transforms'][number],
+  axis: IntrinsicPressureAxis
+): number {
+  const firstBounds = intrinsicFiniteTransformGridBounds(first)
+  const secondBounds = intrinsicFiniteTransformGridBounds(second)
+  if (firstBounds === undefined) return secondBounds === undefined ? 0 : 1
+  if (secondBounds === undefined) return -1
+  const firstSpan =
+    axis === 'x'
+      ? firstBounds.maximumX - firstBounds.minimumX
+      : firstBounds.maximumY - firstBounds.minimumY
+  const secondSpan =
+    axis === 'x'
+      ? secondBounds.maximumX - secondBounds.minimumX
+      : secondBounds.maximumY - secondBounds.minimumY
+  return (
+    firstSpan - secondSpan ||
+    first.canonicalTransformKey.localeCompare(second.canonicalTransformKey)
+  )
+}
+
+function pressureSelectedConflictAxes(
+  evaluation: IntrinsicSeparationEvaluation,
+  pieceId: PieceId
+): ReadonlyArray<IntrinsicPressureAxis> {
+  let xContribution = 0
+  let yContribution = 0
+  for (const conflict of evaluation.conflicts) {
+    if (
+      conflict.firstPieceId !== pieceId &&
+      conflict.secondPieceId !== pieceId
+    ) {
+      continue
+    }
+    xContribution += Math.abs(conflict.moveXGrid) * conflict.normalizedDepth
+    yContribution += Math.abs(conflict.moveYGrid) * conflict.normalizedDepth
+  }
+  if (xContribution === 0 && yContribution === 0) return []
+  if (xContribution === yContribution) return ['x', 'y']
+  return xContribution > yContribution ? ['x'] : ['y']
+}
+
 export function runIntrinsicSequentialColliderComposite(input: {
   readonly targetBox: IntrinsicTargetBox
   readonly catalog: IntrinsicTransformCatalog
@@ -2407,22 +2985,28 @@ export function runIntrinsicSequentialColliderComposite(input: {
   readonly maximumEvaluations: number
   readonly control: IrregularNfpIfpControl
   readonly canonicalLegalityMemo?: IntrinsicPressureCanonicalLegalityMemo
+  readonly orderIdentity?: IntrinsicPressureCompositeOrderIdentity
 }): Effect.Effect<
   IntrinsicSequentialColliderCompositeResult,
   IrregularNfpIfpControlAbortError
 > {
   return Effect.gen(function* () {
+    const orderIdentity = input.orderIdentity ?? 'priority-forward'
     const canonicalLegalityMemo =
       input.canonicalLegalityMemo ?? createIntrinsicPressureCanonicalLegalityMemo()
     const initialCanonicalCounters = canonicalLegalityCounters(canonicalLegalityMemo)
     const colliderIds = pressureConflictedPieceIds(input.parentEvaluation)
-    const frozenColliderIds =
+    const priorityColliderIds =
       intrinsicProjectionPriority(
         input.catalog,
         input.parentState,
         input.parentEvaluation,
         input.weights
       )?.filter((pieceId) => colliderIds.has(pieceId)) ?? []
+    const frozenColliderIds =
+      orderIdentity === 'priority-reverse'
+        ? priorityColliderIds.toReversed()
+        : priorityColliderIds
     const visitedPieceIds: PieceId[] = []
     const alreadyClearPieceIds: PieceId[] = []
     const committedPieceIds: PieceId[] = []
@@ -2497,7 +3081,18 @@ export function runIntrinsicSequentialColliderComposite(input: {
           evaluationCapReached,
           deadlineReached,
           emittedComposite,
-          outerRetentionOutcome: interrupted ? 'interrupted' : 'not-emitted'
+          outerRetentionOutcome: interrupted ? 'interrupted' : 'not-emitted',
+          orderIdentity,
+          candidateAccounting: mergePressureCandidateAccounting(
+            visits.flatMap(({ candidateAccounting }) => candidateAccounting)
+          ),
+          winnerSource:
+            visits.findLast(
+              ({ selectedCandidateSource }) =>
+                selectedCandidateSource !== 'no-op'
+            )?.selectedCandidateSource ?? 'no-op',
+          winnerStateKey: currentStateKey,
+          winnerSurvivedComposite: emittedComposite
         }
       }
     }
@@ -2530,17 +3125,79 @@ export function runIntrinsicSequentialColliderComposite(input: {
         )
         continue
       }
-      const proposals = intrinsicFocusedProposalsForPiece({
+      const existingProposals = intrinsicFocusedProposalsForPiece({
         catalog: input.catalog,
         state: currentState,
         evaluation: currentEvaluation,
         weights: input.weights,
         selectedPieceId: pieceId
       })
+      const adaptiveFamilySet = generateIntrinsicAdaptiveTransformFamilyCandidates({
+        catalog: input.catalog,
+        state: currentState,
+        evaluation: currentEvaluation,
+        selectedPieceId: pieceId
+      })
+      const rawCandidates: Array<{
+        readonly state: IntrinsicRelaxedState
+        readonly source: IntrinsicPressureCompositeCandidateSource
+        readonly pass: IntrinsicPressureCandidatePass
+        readonly ordinal: number
+        readonly knownStateKey?: string
+        readonly orientationFamily?: string
+      }> = [
+        ...existingProposals.map((proposal, ordinal) => ({
+          state: proposal.state,
+          source: (proposal.kind === 'transform'
+            ? 'existing-transform'
+            : 'existing-separate') as IntrinsicPressureCompositeCandidateSource,
+          pass: 'existing' as const,
+          ordinal
+        })),
+        ...adaptiveFamilySet.candidates.map((candidate) => ({
+          state: candidate.state,
+          source: candidate.source as IntrinsicPressureCompositeCandidateSource,
+          pass: candidate.pass as IntrinsicPressureCandidatePass,
+          ordinal: candidate.ordinal,
+          knownStateKey: candidate.stateKey,
+          orientationFamily: candidate.orientationFamily
+        }))
+      ]
+      const seenStateKeys = new Set([currentStateKey])
+      const candidateTraces: IntrinsicPressureCandidateTrace[] = []
+      const proposals = rawCandidates.flatMap((candidate) => {
+        const stateKey =
+          candidate.knownStateKey ??
+          intrinsicRelaxedStateKey(input.catalog, candidate.state)
+        const pose = pressurePoseTrace(candidate.state, pieceId)
+        if (stateKey === undefined) {
+          candidateTraces.push(
+            pressureCandidateTrace(candidate, pose, undefined, 'invalid')
+          )
+          return []
+        }
+        if (seenStateKeys.has(stateKey)) {
+          candidateTraces.push(
+            pressureCandidateTrace(candidate, pose, stateKey, 'deduplicated')
+          )
+          return []
+        }
+        seenStateKeys.add(stateKey)
+        candidateTraces.push(
+          pressureCandidateTrace(candidate, pose, stateKey, 'cap-skipped')
+        )
+        return [{ ...candidate, stateKey, pose, traceIndex: candidateTraces.length - 1 }]
+      })
       const choices: Array<{
         readonly state: IntrinsicRelaxedState
         readonly evaluation: IntrinsicSeparationEvaluation
         readonly stateKey: string
+        readonly source: IntrinsicPressureCompositeCandidateSource
+        readonly pass: IntrinsicPressureCandidatePass
+        readonly ordinal: number
+        readonly orientationFamily: string | undefined
+        readonly pose: IntrinsicRelaxedPose | undefined
+        readonly traceIndex: number
       }> = []
       let visitEvaluationCount = 0
       for (const candidate of proposals) {
@@ -2560,27 +3217,54 @@ export function runIntrinsicSequentialColliderComposite(input: {
         )
         evaluationCount += 1
         visitEvaluationCount += 1
-        const stateKey = intrinsicRelaxedStateKey(input.catalog, candidate.state)
-        if (
-          evaluation !== undefined &&
-          stateKey !== undefined &&
-          stateKey !== currentStateKey
-        ) {
-          choices.push({ state: candidate.state, evaluation, stateKey })
+        if (evaluation === undefined) {
+          candidateTraces[candidate.traceIndex] = pressureCandidateTrace(
+            candidate,
+            candidate.pose,
+            candidate.stateKey,
+            'invalid'
+          )
+          continue
         }
+        const conflict = pressureConflictTuple(evaluation)
+        candidateTraces[candidate.traceIndex] = {
+          ...pressureCandidateTrace(
+            candidate,
+            candidate.pose,
+            candidate.stateKey,
+            'evaluated'
+          ),
+          conflict,
+          incidentClear: pressurePieceConflictCount(evaluation, pieceId) === 0,
+          globallyClear: conflict.wallConflictCount + conflict.pairConflictCount === 0,
+          rawLoss: evaluation.rawLoss,
+          weightedLoss: intrinsicWeightedLoss(evaluation, input.weights)
+        }
+        choices.push({
+          state: candidate.state,
+          evaluation,
+          stateKey: candidate.stateKey,
+          source: candidate.source,
+          pass: candidate.pass,
+          ordinal: candidate.ordinal,
+          orientationFamily: candidate.orientationFamily,
+          pose: candidate.pose,
+          traceIndex: candidate.traceIndex
+        })
       }
       if (evaluationCapReached || deadlineReached) {
         visits.push(
           pressureCompositeVisitTrace({
             pieceId,
             outcome: evaluationCapReached ? 'evaluation-cap' : 'deadline',
-            proposalCount: proposals.length + 1,
+            proposalCount: rawCandidates.length + 1,
             evaluationCount: visitEvaluationCount,
             selectedStateKey: currentStateKey,
             before: beforeEvaluation,
             after: beforeEvaluation,
             weights: input.weights,
-            canonicalLegality: undefined
+            canonicalLegality: undefined,
+            candidates: candidateTraces
           })
         )
         return finish()
@@ -2600,13 +3284,14 @@ export function runIntrinsicSequentialColliderComposite(input: {
           pressureCompositeVisitTrace({
             pieceId,
             outcome: 'no-op',
-            proposalCount: proposals.length + 1,
+            proposalCount: rawCandidates.length + 1,
             evaluationCount: visitEvaluationCount,
             selectedStateKey: currentStateKey,
             before: beforeEvaluation,
             after: beforeEvaluation,
             weights: input.weights,
-            canonicalLegality: undefined
+            canonicalLegality: undefined,
+            candidates: candidateTraces
           })
         )
         continue
@@ -2617,13 +3302,14 @@ export function runIntrinsicSequentialColliderComposite(input: {
           pressureCompositeVisitTrace({
             pieceId,
             outcome: 'evaluation-cap',
-            proposalCount: proposals.length + 1,
+            proposalCount: rawCandidates.length + 1,
             evaluationCount: visitEvaluationCount,
             selectedStateKey: currentStateKey,
             before: beforeEvaluation,
             after: beforeEvaluation,
             weights: input.weights,
-            canonicalLegality: undefined
+            canonicalLegality: undefined,
+            candidates: candidateTraces
           })
         )
         return finish()
@@ -2634,13 +3320,14 @@ export function runIntrinsicSequentialColliderComposite(input: {
           pressureCompositeVisitTrace({
             pieceId,
             outcome: 'deadline',
-            proposalCount: proposals.length + 1,
+            proposalCount: rawCandidates.length + 1,
             evaluationCount: visitEvaluationCount,
             selectedStateKey: currentStateKey,
             before: beforeEvaluation,
             after: beforeEvaluation,
             weights: input.weights,
-            canonicalLegality: undefined
+            canonicalLegality: undefined,
+            candidates: candidateTraces
           })
         )
         return finish()
@@ -2659,13 +3346,14 @@ export function runIntrinsicSequentialColliderComposite(input: {
           pressureCompositeVisitTrace({
             pieceId,
             outcome: 'no-op',
-            proposalCount: proposals.length + 1,
+            proposalCount: rawCandidates.length + 1,
             evaluationCount: visitEvaluationCount,
             selectedStateKey: currentStateKey,
             before: beforeEvaluation,
             after: beforeEvaluation,
             weights: input.weights,
-            canonicalLegality: undefined
+            canonicalLegality: undefined,
+            candidates: candidateTraces
           })
         )
         continue
@@ -2676,6 +3364,13 @@ export function runIntrinsicSequentialColliderComposite(input: {
       committedPieceIds.push(pieceId)
       distinctAffectedPieceIds.add(pieceId)
       const exactZero = recomputedEvaluation.exactZeroLoss
+      const selectedCandidateTrace = candidateTraces[selected.traceIndex]
+      if (selectedCandidateTrace !== undefined) {
+        candidateTraces[selected.traceIndex] = {
+          ...selectedCandidateTrace,
+          outcome: 'selected'
+        }
+      }
       if (exactZero) exactZeroIntermediateVisitIndex = visitIndex
       const canonicalLegality = classifyIntrinsicPressureCanonicalLegality({
         targetBox: input.targetBox,
@@ -2693,13 +3388,15 @@ export function runIntrinsicSequentialColliderComposite(input: {
           outcome: canonicalLegality.canonicalLegal
             ? 'canonical-legal'
             : 'committed',
-          proposalCount: proposals.length + 1,
+          proposalCount: rawCandidates.length + 1,
           evaluationCount: visitEvaluationCount,
           selectedStateKey: currentStateKey,
           before: beforeEvaluation,
           after: recomputedEvaluation,
           weights: input.weights,
-          canonicalLegality
+          canonicalLegality,
+          candidates: candidateTraces,
+          selected
         })
       )
       if (canonicalLegality.canonicalLegal) return finish()
@@ -2734,7 +3431,15 @@ function pressureCompositeVisitTrace(input: {
   readonly after: IntrinsicSeparationEvaluation
   readonly weights: IntrinsicSeparatorWeights
   readonly canonicalLegality: IntrinsicPressureCanonicalLegality | undefined
+  readonly candidates?: ReadonlyArray<IntrinsicPressureCandidateTrace>
+  readonly selected?: {
+    readonly source: IntrinsicPressureCompositeCandidateSource
+    readonly ordinal: number
+    readonly orientationFamily: string | undefined
+    readonly pose: IntrinsicRelaxedPose | undefined
+  }
 }): IntrinsicPressureCompositeVisitTrace {
+  const candidates = input.candidates ?? []
   return {
     pieceId: input.pieceId,
     outcome: input.outcome,
@@ -2749,8 +3454,165 @@ function pressureCompositeVisitTrace(input: {
     afterPairConflictCount: pressurePairConflictCount(input.after),
     beforeConflictedPieceCount: pressureConflictedPieceIds(input.before).size,
     afterConflictedPieceCount: pressureConflictedPieceIds(input.after).size,
-    canonicalLegality: input.canonicalLegality
+    canonicalLegality: input.canonicalLegality,
+    conflictBefore: pressureConflictTuple(input.before),
+    conflictAfter: pressureConflictTuple(input.after),
+    candidateAccounting: pressureCandidateAccounting(candidates),
+    candidates,
+    selectedCandidateSource: input.selected?.source ?? 'no-op',
+    selectedCandidateOrdinal: input.selected?.ordinal,
+    selectedOrientationFamily: input.selected?.orientationFamily,
+    selectedTransformKey: input.selected?.pose?.transformKey,
+    selectedTranslateXGrid: input.selected?.pose?.translateXGrid,
+    selectedTranslateYGrid: input.selected?.pose?.translateYGrid
   }
+}
+
+function pressureCandidateTrace(
+  candidate: {
+    readonly source: IntrinsicPressureCompositeCandidateSource
+    readonly pass: IntrinsicPressureCandidatePass
+    readonly ordinal: number
+    readonly orientationFamily?: string
+  },
+  pose: IntrinsicRelaxedPose | undefined,
+  stateKey: string | undefined,
+  outcome: IntrinsicPressureCandidateTrace['outcome']
+): IntrinsicPressureCandidateTrace {
+  return {
+    source: candidate.source,
+    pass: candidate.pass,
+    ordinal: candidate.ordinal,
+    orientationFamily: candidate.orientationFamily,
+    stateKey,
+    transformKey: pose?.transformKey,
+    translateXGrid: pose?.translateXGrid,
+    translateYGrid: pose?.translateYGrid,
+    conflict: undefined,
+    incidentClear: undefined,
+    globallyClear: undefined,
+    rawLoss: undefined,
+    weightedLoss: undefined,
+    outcome
+  }
+}
+
+function pressurePoseTrace(
+  state: IntrinsicRelaxedState,
+  pieceId: PieceId
+): IntrinsicRelaxedPose | undefined {
+  return state.poses.find(({ pieceId: candidatePieceId }) => candidatePieceId === pieceId)
+}
+
+function pressureConflictTuple(
+  evaluation: IntrinsicSeparationEvaluation
+): IntrinsicPressureConflictTuple {
+  return {
+    wallConflictCount: evaluation.conflicts.filter(({ kind }) => kind === 'wall')
+      .length,
+    pairConflictCount: pressurePairConflictCount(evaluation),
+    conflictedPieceCount: pressureConflictedPieceIds(evaluation).size
+  }
+}
+
+function pressurePieceConflictCount(
+  evaluation: IntrinsicSeparationEvaluation,
+  pieceId: PieceId
+): number {
+  return evaluation.conflicts.filter(
+    ({ firstPieceId, secondPieceId }) =>
+      firstPieceId === pieceId || secondPieceId === pieceId
+  ).length
+}
+
+function pressureCandidateAccounting(
+  candidates: ReadonlyArray<IntrinsicPressureCandidateTrace>
+): ReadonlyArray<IntrinsicPressureCandidateAccounting> {
+  const groups = new Map<
+    string,
+    {
+      readonly source: IntrinsicPressureCompositeCandidateSource
+      readonly pass: IntrinsicPressureCandidatePass
+      readonly candidates: IntrinsicPressureCandidateTrace[]
+    }
+  >()
+  for (const candidate of candidates) {
+    const key = `${candidate.source}:${candidate.pass}`
+    const existing = groups.get(key)
+    if (existing === undefined) {
+      groups.set(key, {
+        source: candidate.source,
+        pass: candidate.pass,
+        candidates: [candidate]
+      })
+    } else {
+      existing.candidates.push(candidate)
+    }
+  }
+  return [...groups.values()]
+    .map(({ source, pass, candidates: entries }) => ({
+      source,
+      pass,
+      generatedCount: entries.length,
+      materializedCount: entries.filter(({ stateKey }) => stateKey !== undefined)
+        .length,
+      legalCount: entries.filter(
+        ({ conflict }) => conflict !== undefined && conflict.wallConflictCount === 0
+      ).length,
+      uniqueCount: entries.filter(
+        ({ outcome }) => outcome !== 'deduplicated' && outcome !== 'invalid'
+      ).length,
+      evaluatedCount: entries.filter(
+        ({ outcome }) => outcome === 'evaluated' || outcome === 'selected'
+      ).length,
+      incidentClearCount: entries.filter(({ incidentClear }) => incidentClear === true)
+        .length,
+      globallyClearCount: entries.filter(({ globallyClear }) => globallyClear === true)
+        .length,
+      selectedCount: entries.filter(({ outcome }) => outcome === 'selected').length,
+      capSkippedCount: entries.filter(({ outcome }) => outcome === 'cap-skipped')
+        .length
+    }))
+    .toSorted(
+      (first, second) =>
+        first.pass.localeCompare(second.pass) ||
+        first.source.localeCompare(second.source)
+    )
+}
+
+function mergePressureCandidateAccounting(
+  accounting: ReadonlyArray<IntrinsicPressureCandidateAccounting>
+): ReadonlyArray<IntrinsicPressureCandidateAccounting> {
+  const grouped = new Map<string, IntrinsicPressureCandidateAccounting>()
+  for (const entry of accounting) {
+    const key = `${entry.source}:${entry.pass}`
+    const existing = grouped.get(key)
+    grouped.set(
+      key,
+      existing === undefined
+        ? entry
+        : {
+            source: entry.source,
+            pass: entry.pass,
+            generatedCount: existing.generatedCount + entry.generatedCount,
+            materializedCount: existing.materializedCount + entry.materializedCount,
+            legalCount: existing.legalCount + entry.legalCount,
+            uniqueCount: existing.uniqueCount + entry.uniqueCount,
+            evaluatedCount: existing.evaluatedCount + entry.evaluatedCount,
+            incidentClearCount:
+              existing.incidentClearCount + entry.incidentClearCount,
+            globallyClearCount:
+              existing.globallyClearCount + entry.globallyClearCount,
+            selectedCount: existing.selectedCount + entry.selectedCount,
+            capSkippedCount: existing.capSkippedCount + entry.capSkippedCount
+          }
+    )
+  }
+  return [...grouped.values()].toSorted(
+    (first, second) =>
+      first.pass.localeCompare(second.pass) ||
+      first.source.localeCompare(second.source)
+  )
 }
 
 function pressurePairConflictCount(

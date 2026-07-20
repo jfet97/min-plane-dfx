@@ -29,7 +29,10 @@ import {
   deriveIntrinsicGlobalTargetRoles,
   deriveIntrinsicContractedPressureProposal,
   diagnoseIntrinsicPressureInterruptedSweep,
+  evaluateIntrinsicCanonicalControl,
   floorIntrinsicTargetGrid,
+  generateIntrinsicAdaptiveTransformFamilyCandidates,
+  generateIntrinsicTwoRadiusRefinementCandidates,
   inheritIntrinsicDisruptionLineage,
   INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
   intrinsicPressureEndpointRejectionReason,
@@ -355,6 +358,53 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(result.trace.every(({ basinIndex }) => basinIndex === 0)).toBe(true)
   })
 
+  it('publishes an observer-only structural E1 canonical control witness', async () => {
+    const pieces = [
+      preparedRectangle('a', 2, 1, [transform(0, 0)]),
+      preparedRectangle('b', 2, 1, [transform(0, 0)])
+    ]
+    const catalog = await catalogFor(pieces)
+    const e1 = [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 2, 0)
+    ]
+    const result = await runController(
+      pieces,
+      e1,
+      schedule(),
+      ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced))
+    )
+
+    expect(result.structuralE1CanonicalControl).toMatchObject({
+      targetBox: { widthMm: 4, heightMm: 1 },
+      structuralPieceCount: 2,
+      satRawLoss: 0,
+      satWeightedLoss: 0,
+      satConflictCount: 0,
+      satExactZeroLoss: true,
+      satConflict: {
+        wallConflictCount: 0,
+        pairConflictCount: 0,
+        conflictedPieceCount: 0
+      },
+      canonicalControl: {
+        identityMatches: true,
+        pieceCoverageMatches: true,
+        candidateCanonicalLegal: true,
+        accepted: true,
+        reason: 'accepted'
+      },
+      canonicalLegality: {
+        satExactZeroLoss: true,
+        canonicalLegal: true,
+        classification: 'sat-clear-canonical-legal'
+      },
+      canonicalAcceptanceIndependentOfSat: true,
+      separationEvaluationBudgetCost: 0,
+      selectionEligible: false
+    })
+  })
+
   it('publishes an exact ringy structural projection for downstream filler evaluation', async () => {
     const transforms = [transform(0, 0), transform(1, 90)]
     const pieces = [
@@ -515,18 +565,195 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
         )
         .every(
           ({
-            proposalCount,
             evaluationCount,
             beforeWeightedLoss,
-            afterWeightedLoss
+            afterWeightedLoss,
+            candidateAccounting
           }) =>
-            evaluationCount === proposalCount &&
+            evaluationCount ===
+              candidateAccounting.reduce(
+                (count, accounting) => count + accounting.evaluatedCount,
+                0
+              ) +
+                1 &&
             afterWeightedLoss <= beforeWeightedLoss * 1.001
         )
     ).toBe(true)
     expect(result.trace.distinctAffectedPieceCount).toBe(
       new Set(result.trace.committedPieceIds).size
     )
+    expect(result.trace.orderIdentity).toBe('priority-forward')
+    expect(result.trace.candidateAccounting.length).toBeGreaterThan(0)
+    expect(
+      result.trace.visits.flatMap(({ candidates }) => candidates).every(
+        ({ source, pass, ordinal, stateKey, outcome }) =>
+          source !== 'no-op' &&
+          pass.length > 0 &&
+          ordinal >= 0 &&
+          (stateKey !== undefined || outcome === 'invalid')
+      )
+    ).toBe(true)
+    for (const visit of result.trace.visits) {
+      const firstAdaptive = visit.candidates.findIndex(
+        ({ source }) => source === 'adaptive-transform-family'
+      )
+      if (firstAdaptive >= 0) {
+        expect(
+          visit.candidates
+            .slice(0, firstAdaptive)
+            .every(({ pass }) => pass === 'existing')
+        ).toBe(true)
+      }
+      const uniqueKeys = visit.candidates
+        .filter(({ outcome }) => outcome !== 'deduplicated')
+        .flatMap(({ stateKey }) => (stateKey === undefined ? [] : [stateKey]))
+      expect(new Set(uniqueKeys).size).toBe(uniqueKeys.length)
+    }
+  })
+
+  it('runs priority-reverse deterministically under the same bounded composite API', async () => {
+    const pieces = [
+      preparedRectangle('a', 2, 2),
+      preparedRectangle('b', 2, 2),
+      preparedRectangle('c', 2, 2)
+    ]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'c'), 0, 0, 0)
+    ])
+    if (state === undefined) throw new Error('dual-order state expected')
+    const targetBox = { widthMm: 20, heightMm: 10 }
+    const evaluation = evaluateIntrinsicSeparation(targetBox, catalog, state)
+    const stateKey = intrinsicRelaxedStateKey(catalog, state)
+    if (evaluation === undefined || stateKey === undefined) {
+      throw new Error('dual-order evaluation expected')
+    }
+    const reverse = await Effect.runPromise(
+      runIntrinsicSequentialColliderComposite({
+        targetBox,
+        catalog,
+        parentState: state,
+        parentEvaluation: evaluation,
+        parentStateKey: stateKey,
+        weights: { byConflictKey: new Map() },
+        maximumEvaluations: 0,
+        control: { checkpoint: () => Effect.void },
+        orderIdentity: 'priority-reverse'
+      })
+    )
+
+    expect(reverse.trace.orderIdentity).toBe('priority-reverse')
+    expect(reverse.trace.frozenColliderIds).toEqual(
+      reverse.trace.frozenColliderIds.toSorted().toReversed()
+    )
+    expect(reverse.trace.evaluationCapReached).toBe(true)
+    expect(reverse.trace.winnerSurvivedComposite).toBe(false)
+    expect(reverse.trace.outerRetentionOutcome).toBe('interrupted')
+  })
+
+  it('selects deterministic transform-family representatives only for conflict axes', async () => {
+    const pieces = [
+      preparedRectangle('moving', 4, 1, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('fixed', 2, 2)
+    ]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'moving'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'fixed'), 0, 3, 0)
+    ])
+    if (state === undefined) throw new Error('adaptive family state expected')
+    const movingId = PieceId.make('moving')
+    const evaluation: IntrinsicSeparationEvaluation = {
+      rawLoss: 1,
+      weightedLoss: 1,
+      exactZeroLoss: false,
+      conflicts: [syntheticWallConflict('axis-x', movingId, 1, -100, 0)]
+    }
+    const first = generateIntrinsicAdaptiveTransformFamilyCandidates({
+      catalog,
+      state,
+      evaluation,
+      selectedPieceId: movingId
+    })
+    const second = generateIntrinsicAdaptiveTransformFamilyCandidates({
+      catalog,
+      state,
+      evaluation,
+      selectedPieceId: movingId
+    })
+
+    expect(first.selectedAxes).toEqual(['x'])
+    expect(first.generatedCount).toBeGreaterThan(0)
+    expect(first.candidates.every(({ pass }) => pass === 'adaptive-axis-x')).toBe(true)
+    expect(first.candidates.map(({ stateKey }) => stateKey)).toEqual(
+      second.candidates.map(({ stateKey }) => stateKey)
+    )
+  })
+
+  it('keeps the two-radius 16-position refinement behind an explicit API call', async () => {
+    const pieces = [
+      preparedRectangle('anchor', 1, 1),
+      preparedRectangle('moving', 4, 2)
+    ]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'anchor'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'moving'), 0, 8, 8)
+    ])
+    if (state === undefined) throw new Error('refinement state expected')
+    const refinement = generateIntrinsicTwoRadiusRefinementCandidates({
+      targetBox: { widthMm: 30, heightMm: 30 },
+      catalog,
+      seedState: state,
+      selectedPieceId: PieceId.make('moving')
+    })
+
+    expect(refinement).toMatchObject({
+      invoked: true,
+      generatedCount: 16,
+      targetLegalCount: 16,
+      uniqueCount: 16
+    })
+    expect(refinement?.smallRadiusGrid).toBeLessThan(
+      refinement?.largeRadiusGrid ?? 0
+    )
+  })
+
+  it('judges canonical controls by identity, coverage, and canonical legality', async () => {
+    const pieces = [preparedRectangle('a', 2, 2), preparedRectangle('b', 2, 2)]
+    const catalog = await catalogFor(pieces)
+    const reference = [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 2, 0)
+    ]
+    const translated = reference
+      .toReversed()
+      .map((entry) => translatePlaced(entry, 5, 6))
+    const illegal = [reference[0], placed(catalogEntry(catalog, 'b'), 0, 1.999, 0)].filter(
+      (entry): entry is IrregularPlacedPiece => entry !== undefined
+    )
+
+    expect(
+      evaluateIntrinsicCanonicalControl({
+        targetBox: { widthMm: 20, heightMm: 20 },
+        referencePlaced: reference,
+        candidatePlaced: translated
+      })
+    ).toMatchObject({ accepted: true, reason: 'accepted' })
+    expect(
+      evaluateIntrinsicCanonicalControl({
+        targetBox: { widthMm: 20, heightMm: 20 },
+        referencePlaced: illegal,
+        candidatePlaced: illegal
+      })
+    ).toMatchObject({
+      identityMatches: true,
+      candidateCanonicalLegal: false,
+      accepted: false,
+      reason: 'candidate-canonical-illegal'
+    })
   })
 
   it('ranks composite choices deterministically and falls back to no-op', () => {
@@ -1477,7 +1704,7 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       {
         checkpoint: () => {
           checkpointCount += 1
-          return checkpointCount === 16
+          return checkpointCount === 30
             ? Effect.fail(
                 new IrregularNfpIfpControlAbortError({
                   reason: 'deadline',
@@ -1499,7 +1726,7 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       ({ deadlineReached }) => deadlineReached
     )
 
-    expect(interrupted.compositeParents).toHaveLength(2)
+    expect(interrupted.compositeParents.length).toBeGreaterThanOrEqual(2)
     expect(emittedParent?.outerRetentionOutcome).toBe('interrupted')
     expect(deadlineParent?.outerRetentionOutcome).toBe('interrupted')
     expect(

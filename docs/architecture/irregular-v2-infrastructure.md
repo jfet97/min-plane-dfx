@@ -97,6 +97,25 @@ and endpoints are cross-classified against canonical-grid Clipper2 legality,
 cached by canonical relaxed-state key, and only the canonical result decides
 whether an endpoint is exact. The trace retains SAT/canonical disagreements so
 floating separator residue cannot silently reject or admit a layout.
+Initialization also publishes an observer-only identity-control witness for the
+exact structural E1 state inside its own canonical occupied box. It records the
+SAT raw and weighted loss, conflict tuple, exact-zero flag, canonical identity
+and coverage control, and canonical legality classification. This observation
+costs zero registered separation evaluations, is never selection-eligible, and
+therefore exposes SAT residue without allowing it to reject the canonical E1
+control.
+The retained pre-V7 pressure foundation evaluates the existing focused
+separator candidates first, deduplicates later sources by canonical state key,
+and records source, pass, ordinal, pose, conflict tuple, clearance, cap, winner,
+and outer-survival accounting. Each retained parent may run bounded
+priority-forward and priority-reverse collider orders against one shared
+evaluation budget. Transform-family diversity is adaptive: it selects one
+deterministic representative per family only for the dominant axes of the
+selected piece's current conflicts, instead of applying uniform whole-box
+fanout. A two-radius, sixteen-position refinement generator is exposed only as
+a dormant intensifier API for a future explicitly promising coordinated atom;
+the current pressure loop never invokes it. No static shrink role, whole-box
+coordinate generator, or reserved conflict slot is part of this foundation.
 
 At no more than five registered points, E4 projects a relaxed state back to the
 exact geometry domain: canonicalize to the collision grid, remove both
