@@ -808,15 +808,14 @@ ambiguous named modes:
    structured-lineage calibrated boundary;
 2. commensurate gap-reordering cap: `0` or `1` alternate class per parent.
 
-`experimentalWidth = 0`, cap `0` is the exact protected-control cell. First run
-the complete cap-0 width sweep and identify one or two positive widths that
-complete within budget, retain genuinely distinct futures, and improve or
-preserve the geometric archive. Only then run paired cap-0/cap-1 cells at those
-fixed widths. Cap `1` is meaningful only when experimental width is positive.
-At a fixed width, cap `0` versus cap `1` measures the reordering effect without
-confounding it with capacity. The protected control remains available outside
-both cells and does not consume an experimental slot. Queue-only is not an
-initial cell.
+`experimentalWidth = 0`, cap `0` is the exact protected-control cell. The first
+paired hypothesis uses the already completed width-3 cap-0 baseline; it does not
+require an obsolete full width sweep. Profile and optimize commensurate-only
+work first. If a cold pilot projects that both width-3 cap-0 and cap-1 cells fit
+the same frozen budget, compare them at that fixed width. Cap `1` is meaningful
+only when experimental width is positive. The protected control remains
+available outside both cells and does not consume an experimental slot.
+Queue-only is not an initial cell.
 
 All modes must use identical:
 
@@ -829,12 +828,13 @@ All modes must use identical:
 
 This is one controlled experiment, not three unrelated branches.
 
-The staged paired ablations are necessary because a better combined result does
-not identify which mechanism earned it. Width first measures delayed placement
-value. At a fixed successful width, the cap then measures commensurate
-order-swap value and its interaction with retention. The old discriminator
-observed both forms of apparent headroom, but only the commensurate probe and
-complete endpoints may attribute a gain.
+The staged paired ablation is necessary because a better combined result does
+not identify which mechanism earned it. Width 3 is frozen here as an already
+completed retention baseline, not claimed as the best capacity. At that fixed
+width, cap 0 versus cap 1 measures commensurate order-swap value without a width
+confound. The old discriminator observed apparent queue headroom, but only the
+commensurate probe and complete endpoints may attribute a gain. Width selection
+remains a later, separately witnessed question.
 
 ### Staged run matrix
 
@@ -844,14 +844,15 @@ complete endpoints may attribute a gain.
 - the existing heterogeneous and homogeneous corpus after the two primary
   fixtures are understood.
 
-Run cap `0` across the width sweep on Triangle and Mixed, stopping width
-escalation only after the validated forced lineage or its geometric neighborhood
-survives, or after representative choice and capacity have been separately
-bracketed. Then run paired cap `0`/cap `1` only at one or two successful positive
-widths. Carry only non-duplicate useful settings to the four-sheet and corpus
-gates. Every run uses identical repair settings. Compare against both the V7
-width-1 controller and the actual Triangle production golden, which uses its
-protected production settings.
+Run the optimized commensurate-only cost pilot on Mixed at width 3. If it finds
+no equal-work alternate-first survivor, stop Stage 2B. If survivors exist but
+either projected cell exceeds 80% of the same frozen wall-time ceiling, optimize
+the measured dominant cost and repeat the pilot. Only when both cells fit, run
+the paired width-3 cap-0/cap-1 Triangle and Mixed cells. Carry cap 1 to the four-
+sheet and corpus gates only when it produces a distinct better complete endpoint
+without regressing Triangle. Do not widen from this matrix; widening requires
+the separate admissible delayed-value witness and a measured capacity eviction.
+Every run uses identical repair settings.
 
 For every forced witness, record whether the required candidate was generated,
 future-equivalent deduplicated, fit-rejected, selected, capacity-evicted, or
@@ -887,17 +888,13 @@ candidate, scoring, capacity, horizon, budget, or rearrangement failure.
   candidate key.
 - Caches are run-local. Start each staged cell cold and use the same cache
   ownership and candidate memoization rules.
-- Freeze budgets in two stages. Before the cap-0 width sweep, run a cold
-  25,000-evaluation pilot on the slowest primary fixture for the control and one
-  positive-width beam-only cell. Record depth reached, evaluations per depth,
-  median/p95 time per evaluation, topology/cache time, and projected evaluations
-  and wall time to completion. This first pilot freezes only the beam-only
-  budget tier and cannot select a layout.
-- After one or two successful widths have been selected and the
-  commensurate-only calibration has been optimized, run a separate cold paired
-  cap-0/cap-1 pilot at those fixed widths. Freeze the reordering budget only
-  from that equal-width comparison. Do not require or execute a live reordering
-  cell before the beam-only gate passes.
+- Profile and optimize the commensurate-only calibration before any live cap-1
+  cell. Record discovery, equal-work completion, canonical admission, topology,
+  cache, and selection costs separately; reuse the selected alternate's
+  discovery enumeration.
+- Run a cold width-3 cap-0/cap-1 cost pilot after that optimization. Freeze the
+  paired budget only if both projected cells complete below 80% of the same
+  wall-time ceiling. The pilot cannot select a layout.
 - Freeze the resulting caps in the immutable experiment manifest before the
   staged run. Do not adapt them from live elapsed time. Use the same frozen
   cap for every compared cell in a budget tier.
@@ -930,6 +927,14 @@ candidate, scoring, capacity, horizon, budget, or rearrangement failure.
   budget.
 - Set the reordering cap to zero if commensurate reordering adds no selected
   endpoint or only duplicates.
+- If the commensurate-only profiler finds no equal-work alternate-first
+  survivor, stop Stage 2B without a live pair.
+- Continue from a completed paired run to corpus gates only when cap 1 produces
+  a distinct better canonical endpoint without a Triangle regression.
+- Widen only after an admissible delayed-value witness is specifically capacity-
+  evicted at the current width and survives at a bracketed larger width within
+  budget. Provenance recovery proceeds concurrently with the cost pilot and
+  fixed-width pair; it does not block either.
 - Treat experimental-width-1/cap-1 only as the smallest scheduling ablation;
   current Triangle evidence excludes reordering without broader partial-state
   retention as the general solution.
@@ -946,7 +951,9 @@ envelope, or an attractive PNG whose canonical replay differs is not a win.
 
 ## Conditional Stage 3: Deterministic Stagnation Kick
 
-Implement only if Stage 2 reaches a stable archive without acceptable quality.
+This is a sibling of Conditional Stage 5, not its mandatory predecessor.
+Implement it only if Stage 2 reaches a stable archive without acceptable quality
+and the evidence localizes the remaining opportunity to order diversity.
 
 ### Design
 
@@ -999,8 +1006,11 @@ budget. Reject it if it changes terminal authority or recreates axis/sheet bias.
 
 ## Conditional Stage 5: Coordinated Multi-Piece Transport
 
-Implement when Stage 2 plus one bounded kick still cannot rebuild bad topology.
-This is the first stage allowed to rearrange an already-formed ring globally.
+This is a sibling of Conditional Stage 3. Proceed directly here when diverse
+constructive/reordered branches reach complete endpoints but preserve the same
+bad ring or component topology, showing that already-placed pieces must move.
+A bounded kick is not required in that case. This is the first stage allowed to
+rearrange an already-formed ring globally.
 
 ### Design boundary
 
