@@ -62,9 +62,29 @@ transport, and broad coordinate descent remain later hypotheses.
 
 ## Required Measurements
 
-The committed harness must next produce immutable manifests for Triangle-20 and
-Mixed-61. The reviewer must inspect cache savings, endpoint archive handoffs,
-all three independent arms, exact legality classifications, counter deltas, and
-the rendered SVG/PNG layouts. The experimental ancestry is known not to be the
-current-main triangle golden, so no wholesale merge is permitted even if a
-Mixed-61 relaxed trace improves.
+The committed harness is
+`scripts/irregular-intrinsic-v7-seed-archive.ts`. It requires a clean checkout
+and an exact `--source-commit` match when supplied, then writes an immutable
+`report.json`, `manifest.json`, seed SVGs, and every legal endpoint-archive SVG.
+
+```sh
+pnpm exec tsx scripts/irregular-intrinsic-v7-seed-archive.ts \
+  --fixture triangle-20 \
+  --output /private/tmp/min-plane-provenance/v7-triangle \
+  --source-commit "$(git rev-parse HEAD)"
+
+pnpm exec tsx scripts/irregular-intrinsic-v7-seed-archive.ts \
+  --fixture mixed-61 \
+  --output /private/tmp/min-plane-provenance/v7-mixed61 \
+  --source-commit "$(git rev-parse HEAD)"
+```
+
+Use `--arms control,split` to isolate arms and `--compact` only for a harness
+smoke run (128 evaluations, one sweep, two seconds per arm). It is not evidence
+for the 12,000-evaluation / 60-second Stage 1 contract.
+
+The reviewer must inspect cache savings, endpoint archive handoffs, all
+independent arms, exact legality classifications, counter deltas, and rendered
+SVG/PNG layouts. The experimental ancestry is known not to be the current-main
+triangle golden, so no wholesale merge is permitted even if a Mixed-61 relaxed
+trace improves.
