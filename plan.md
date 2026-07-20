@@ -804,12 +804,17 @@ candidate, scoring, capacity, horizon, budget, or rearrangement failure.
   candidate key.
 - Caches are run-local. Start each staged cell cold and use the same cache
   ownership and candidate memoization rules.
-- Before freezing matrix budgets, run a cold 25,000-evaluation pilot on the
-  slowest primary fixture for the control, one positive-width beam cell, and one
-  positive-width reordering cell. Record depth reached, evaluations per depth,
+- Freeze budgets in two stages. Before the cap-0 width sweep, run a cold
+  25,000-evaluation pilot on the slowest primary fixture for the control and one
+  positive-width beam-only cell. Record depth reached, evaluations per depth,
   median/p95 time per evaluation, topology/cache time, and projected evaluations
-  and wall time to completion. This pilot is diagnostic and cannot select a
-  layout.
+  and wall time to completion. This first pilot freezes only the beam-only
+  budget tier and cannot select a layout.
+- After one or two successful widths have been selected and the
+  commensurate-only calibration has been optimized, run a separate cold paired
+  cap-0/cap-1 pilot at those fixed widths. Freeze the reordering budget only
+  from that equal-width comparison. Do not require or execute a live reordering
+  cell before the beam-only gate passes.
 - Freeze the resulting caps in the immutable experiment manifest before the
   staged run. Do not adapt them from live elapsed time. Use the same frozen
   cap for every compared cell in a budget tier.
