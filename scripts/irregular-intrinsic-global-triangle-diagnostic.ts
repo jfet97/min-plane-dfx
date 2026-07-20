@@ -110,7 +110,7 @@ const report = {
     promotion: result.portfolio.promotion,
     selectedCanonicalGeometryHash: result.portfolio.selected.measured.canonicalGeometryHash,
     selectedMetrics: result.portfolio.selected.measured.metrics,
-    admittedCandidateCount: result.portfolio.admittedCandidates.length,
+    admittedCandidateCount: result.portfolio.retainedAdmittedCandidates.length,
     evaluatedCompleteCandidates: result.portfolio.evaluatedCompleteCandidates.map(
       (candidate) => ({
         source: candidate.source,

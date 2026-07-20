@@ -12,7 +12,8 @@ import {
   measureCanonicalEnclosedCavities,
   measureCanonicalLayoutContacts,
   measureCanonicalLayoutEnvelope,
-  measureCanonicalLayoutTopology
+  measureCanonicalLayoutTopology,
+  placedCollisionWorldGridPath
 } from '../../irregular/canonicalLayoutGeometry.js'
 import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import type { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
@@ -151,6 +152,11 @@ export interface IntrinsicPressureCanonicalLegality {
   readonly classification: IntrinsicPressureCanonicalClassification
 }
 
+export type IntrinsicPressureCanonicalLegalityTrace = Omit<
+  IntrinsicPressureCanonicalLegality,
+  'stateKey'
+>
+
 export interface IntrinsicPressureCanonicalLegalityMemo {
   readonly byStateKey: Map<string, IntrinsicPressureCanonicalLegality>
   requestCount: number
@@ -208,6 +214,7 @@ export interface IntrinsicContractedPressureSweepTrace {
     | 'raw-winner-unavailable'
     | 'evaluation-budget-exhausted'
     | 'accepted-exact-endpoint'
+    // dormant compatibility labels; adaptive repair depth is not active
     | 'adaptive-non-improvement'
     | 'active-at-cap'
     | 'repair-sweep-allocation-exhausted'
@@ -281,6 +288,10 @@ export interface IntrinsicPressureCompositeVisitTrace {
   readonly selectedTransformKey: string | undefined
   readonly selectedTranslateXGrid: number | undefined
   readonly selectedTranslateYGrid: number | undefined
+  readonly adaptiveTransformFamilyGeneratorInvoked: false
+  readonly adaptiveTransformFamilyGeneratedCount: 0
+  readonly adaptiveTransformFamilyMaterializedCount: 0
+  readonly adaptiveTransformFamilyUniqueCount: 0
 }
 
 export type IntrinsicPressureCompositeOrderIdentity =
@@ -332,6 +343,7 @@ export interface IntrinsicPressureCandidateTrace {
   readonly globallyClear: boolean | undefined
   readonly rawLoss: number | undefined
   readonly weightedLoss: number | undefined
+  readonly canonicalLegality: IntrinsicPressureCanonicalLegalityTrace | undefined
   readonly outcome:
     | 'deduplicated'
     | 'invalid'
@@ -474,6 +486,7 @@ export interface IntrinsicPressureCompositeChoiceScore {
   readonly stateKey: string
   readonly weightedLoss: number
   readonly rawLoss: number
+  readonly canonicalLegal?: boolean
 }
 
 export interface IntrinsicPressureInterruptedSweepDiagnostics {
@@ -1904,10 +1917,21 @@ function runIntrinsicContractedPressureLane(input: {
         let deadlineInterrupted = false
         let canonicalLegalIntermediate = false
         for (const entry of pool) {
-          for (const orderIdentity of [
-            'priority-forward',
-            'priority-reverse'
-          ] as const) {
+          const parentRemainingBudget = Math.max(
+            0,
+            input.maximumAdditionalEvaluations - separationEvaluationCount
+          )
+          const forwardReservedBudget = Math.floor(parentRemainingBudget / 2)
+          for (const [orderIndex, orderIdentity] of (
+            ['priority-forward', 'priority-reverse'] as const
+          ).entries()) {
+            const orderBudget =
+              orderIndex === 0
+                ? forwardReservedBudget
+                : Math.max(
+                    0,
+                    input.maximumAdditionalEvaluations - separationEvaluationCount
+                  )
             const composite = yield* runIntrinsicSequentialColliderComposite({
               targetBox: proposal.contractedBox,
               catalog: input.catalog,
@@ -1915,10 +1939,7 @@ function runIntrinsicContractedPressureLane(input: {
               parentEvaluation: entry.evaluation,
               parentStateKey: entry.key,
               weights,
-              maximumEvaluations: Math.max(
-                0,
-                input.maximumAdditionalEvaluations - separationEvaluationCount
-              ),
+              maximumEvaluations: orderBudget,
               control: input.control,
               canonicalLegalityMemo,
               orderIdentity
@@ -1931,7 +1952,8 @@ function runIntrinsicContractedPressureLane(input: {
               (count, visit) => count + Math.max(0, visit.proposalCount - 1),
               0
             )
-            if (composite.evaluationCapReached) budgetExhausted = true
+            budgetExhausted =
+              separationEvaluationCount >= input.maximumAdditionalEvaluations
             if (composite.deadlineReached) deadlineInterrupted = true
             if (composite.trace.emittedComposite) {
               const entryCandidate = pressurePoolEntry(
@@ -2439,6 +2461,7 @@ export function pressureRepairSweepAllowance(
   return quotient + (attemptIndex < remainder ? 1 : 0)
 }
 
+/** Dormant adaptive allowance seam; current repair uses mandatory allocation only. */
 export function pressureRepairMaximumSweepAllowance(
   totalSweepBudget: number,
   attemptIndex: number
@@ -2455,6 +2478,7 @@ export function pressureRepairMaximumSweepAllowance(
     : mandatorySweepCount
 }
 
+/** Dormant adaptive-depth decision seam; current repair does not call it. */
 export function advanceIntrinsicPressureAdaptiveDepth(input: {
   readonly completedSweepCount: number
   readonly mandatorySweepCount: number
@@ -2475,6 +2499,7 @@ export function advanceIntrinsicPressureAdaptiveDepth(input: {
   }
 }
 
+/** Dormant adaptive cap diagnostic; current repair does not call it. */
 export function isIntrinsicPressureActiveAtCap(input: {
   readonly adaptiveEnabled: boolean
   readonly completedSweepCount: number
@@ -2694,7 +2719,11 @@ export function generateIntrinsicAdaptiveTransformFamilyCandidates(input: {
     input.evaluation,
     input.selectedPieceId
   )
-  const currentBounds = intrinsicFiniteTransformGridBounds(currentTransform)
+  const currentBounds = intrinsicFiniteTransformGridBounds(
+    currentTransform,
+    pose.translationBasisXmm,
+    pose.translationBasisYmm
+  )
   if (currentBounds === undefined || selectedAxes.length === 0) {
     return {
       selectedAxes,
@@ -2720,7 +2749,13 @@ export function generateIntrinsicAdaptiveTransformFamilyCandidates(input: {
       const existing = byFamily.get(finiteTransform.orientationFamily)
       if (
         existing === undefined ||
-        compareFiniteTransformForPressureAxis(finiteTransform, existing, axis) < 0
+        compareFiniteTransformForPressureAxis(
+          finiteTransform,
+          existing,
+          axis,
+          pose.translationBasisXmm,
+          pose.translationBasisYmm
+        ) < 0
       ) {
         byFamily.set(finiteTransform.orientationFamily, finiteTransform)
       }
@@ -2730,7 +2765,11 @@ export function generateIntrinsicAdaptiveTransformFamilyCandidates(input: {
     )
     for (const [ordinal, finiteTransform] of representatives.entries()) {
       generatedCount += 1
-      const bounds = intrinsicFiniteTransformGridBounds(finiteTransform)
+      const bounds = intrinsicFiniteTransformGridBounds(
+        finiteTransform,
+        pose.translationBasisXmm,
+        pose.translationBasisYmm
+      )
       if (bounds === undefined) continue
       const translateXGrid = Math.round(
         currentCenterX - (bounds.minimumX + bounds.maximumX) / 2
@@ -2800,9 +2839,13 @@ export function generateIntrinsicTwoRadiusRefinementCandidates(input: {
       ({ canonicalTransformKey }) => canonicalTransformKey === pose?.transformKey
     )
   const bounds =
-    finiteTransform === undefined
+    pose === undefined || finiteTransform === undefined
       ? undefined
-      : intrinsicFiniteTransformGridBounds(finiteTransform)
+      : intrinsicFiniteTransformGridBounds(
+          finiteTransform,
+          pose.translationBasisXmm,
+          pose.translationBasisYmm
+        )
   const targetWidthGrid = toGridMm(input.targetBox.widthMm)
   const targetHeightGrid = toGridMm(input.targetBox.heightMm)
   if (
@@ -2907,11 +2950,13 @@ interface IntrinsicFiniteTransformGridBounds {
 }
 
 function intrinsicFiniteTransformGridBounds(
-  finiteTransform: IntrinsicTransformCatalog['entries'][number]['transforms'][number]
+  finiteTransform: IntrinsicTransformCatalog['entries'][number]['transforms'][number],
+  basisXmm = 0,
+  basisYmm = 0
 ): IntrinsicFiniteTransformGridBounds | undefined {
   const points = finiteTransform.geometry.polygon.points.map(({ x, y }) => ({
-    x: toGridMm(x),
-    y: toGridMm(y)
+    x: toGridMm(x + basisXmm),
+    y: toGridMm(y + basisYmm)
   }))
   if (
     points.length < 3 ||
@@ -2934,10 +2979,12 @@ function intrinsicFiniteTransformGridBounds(
 function compareFiniteTransformForPressureAxis(
   first: IntrinsicTransformCatalog['entries'][number]['transforms'][number],
   second: IntrinsicTransformCatalog['entries'][number]['transforms'][number],
-  axis: IntrinsicPressureAxis
+  axis: IntrinsicPressureAxis,
+  basisXmm: number,
+  basisYmm: number
 ): number {
-  const firstBounds = intrinsicFiniteTransformGridBounds(first)
-  const secondBounds = intrinsicFiniteTransformGridBounds(second)
+  const firstBounds = intrinsicFiniteTransformGridBounds(first, basisXmm, basisYmm)
+  const secondBounds = intrinsicFiniteTransformGridBounds(second, basisXmm, basisYmm)
   if (firstBounds === undefined) return secondBounds === undefined ? 0 : 1
   if (secondBounds === undefined) return -1
   const firstSpan =
@@ -3132,12 +3179,6 @@ export function runIntrinsicSequentialColliderComposite(input: {
         weights: input.weights,
         selectedPieceId: pieceId
       })
-      const adaptiveFamilySet = generateIntrinsicAdaptiveTransformFamilyCandidates({
-        catalog: input.catalog,
-        state: currentState,
-        evaluation: currentEvaluation,
-        selectedPieceId: pieceId
-      })
       const rawCandidates: Array<{
         readonly state: IntrinsicRelaxedState
         readonly source: IntrinsicPressureCompositeCandidateSource
@@ -3153,14 +3194,6 @@ export function runIntrinsicSequentialColliderComposite(input: {
             : 'existing-separate') as IntrinsicPressureCompositeCandidateSource,
           pass: 'existing' as const,
           ordinal
-        })),
-        ...adaptiveFamilySet.candidates.map((candidate) => ({
-          state: candidate.state,
-          source: candidate.source as IntrinsicPressureCompositeCandidateSource,
-          pass: candidate.pass as IntrinsicPressureCandidatePass,
-          ordinal: candidate.ordinal,
-          knownStateKey: candidate.stateKey,
-          orientationFamily: candidate.orientationFamily
         }))
       ]
       const seenStateKeys = new Set([currentStateKey])
@@ -3191,6 +3224,7 @@ export function runIntrinsicSequentialColliderComposite(input: {
       const choices: Array<{
         readonly state: IntrinsicRelaxedState
         readonly evaluation: IntrinsicSeparationEvaluation
+        readonly canonicalLegality: IntrinsicPressureCanonicalLegality
         readonly stateKey: string
         readonly source: IntrinsicPressureCompositeCandidateSource
         readonly pass: IntrinsicPressureCandidatePass
@@ -3227,6 +3261,13 @@ export function runIntrinsicSequentialColliderComposite(input: {
           continue
         }
         const conflict = pressureConflictTuple(evaluation)
+        const canonicalLegality = classifyIntrinsicPressureCanonicalLegality({
+          targetBox: input.targetBox,
+          catalog: input.catalog,
+          state: candidate.state,
+          evaluation,
+          memo: canonicalLegalityMemo
+        })
         candidateTraces[candidate.traceIndex] = {
           ...pressureCandidateTrace(
             candidate,
@@ -3238,11 +3279,13 @@ export function runIntrinsicSequentialColliderComposite(input: {
           incidentClear: pressurePieceConflictCount(evaluation, pieceId) === 0,
           globallyClear: conflict.wallConflictCount + conflict.pairConflictCount === 0,
           rawLoss: evaluation.rawLoss,
-          weightedLoss: intrinsicWeightedLoss(evaluation, input.weights)
+          weightedLoss: intrinsicWeightedLoss(evaluation, input.weights),
+          canonicalLegality: canonicalLegalityTrace(canonicalLegality)
         }
         choices.push({
           state: candidate.state,
           evaluation,
+          canonicalLegality,
           stateKey: candidate.stateKey,
           source: candidate.source,
           pass: candidate.pass,
@@ -3252,7 +3295,10 @@ export function runIntrinsicSequentialColliderComposite(input: {
           traceIndex: candidate.traceIndex
         })
       }
-      if (evaluationCapReached || deadlineReached) {
+      const canonicalSelected = choices.find(
+        ({ canonicalLegality }) => canonicalLegality.canonicalLegal
+      )
+      if ((evaluationCapReached || deadlineReached) && canonicalSelected === undefined) {
         visits.push(
           pressureCompositeVisitTrace({
             pieceId,
@@ -3271,14 +3317,16 @@ export function runIntrinsicSequentialColliderComposite(input: {
       }
       const selectedStateKey = selectIntrinsicPressureCompositeChoice(
         beforeWeightedLoss,
-        choices.map(({ evaluation, stateKey }) => ({
+        choices.map(({ evaluation, stateKey, canonicalLegality }) => ({
           stateKey,
           weightedLoss: intrinsicWeightedLoss(evaluation, input.weights),
-          rawLoss: evaluation.rawLoss
+          rawLoss: evaluation.rawLoss,
+          canonicalLegal: canonicalLegality.canonicalLegal
         }))
       )
       const selected = choices.find(({ stateKey }) => stateKey === selectedStateKey)
-      if (selected === undefined) {
+      const effectiveSelected = selected
+      if (effectiveSelected === undefined) {
         skippedPieceIds.push(pieceId)
         visits.push(
           pressureCompositeVisitTrace({
@@ -3296,89 +3344,21 @@ export function runIntrinsicSequentialColliderComposite(input: {
         )
         continue
       }
-      if (evaluationCount >= input.maximumEvaluations) {
-        evaluationCapReached = true
-        visits.push(
-          pressureCompositeVisitTrace({
-            pieceId,
-            outcome: 'evaluation-cap',
-            proposalCount: rawCandidates.length + 1,
-            evaluationCount: visitEvaluationCount,
-            selectedStateKey: currentStateKey,
-            before: beforeEvaluation,
-            after: beforeEvaluation,
-            weights: input.weights,
-            canonicalLegality: undefined,
-            candidates: candidateTraces
-          })
-        )
-        return finish()
-      }
-      if ((yield* globalSearchCheckpoint(input.control)) === 'deadline') {
-        deadlineReached = true
-        visits.push(
-          pressureCompositeVisitTrace({
-            pieceId,
-            outcome: 'deadline',
-            proposalCount: rawCandidates.length + 1,
-            evaluationCount: visitEvaluationCount,
-            selectedStateKey: currentStateKey,
-            before: beforeEvaluation,
-            after: beforeEvaluation,
-            weights: input.weights,
-            canonicalLegality: undefined,
-            candidates: candidateTraces
-          })
-        )
-        return finish()
-      }
-      const recomputedEvaluation = evaluateIntrinsicSeparation(
-        input.targetBox,
-        input.catalog,
-        selected.state,
-        input.weights
-      )
-      evaluationCount += 1
-      visitEvaluationCount += 1
-      if (recomputedEvaluation === undefined) {
-        skippedPieceIds.push(pieceId)
-        visits.push(
-          pressureCompositeVisitTrace({
-            pieceId,
-            outcome: 'no-op',
-            proposalCount: rawCandidates.length + 1,
-            evaluationCount: visitEvaluationCount,
-            selectedStateKey: currentStateKey,
-            before: beforeEvaluation,
-            after: beforeEvaluation,
-            weights: input.weights,
-            canonicalLegality: undefined,
-            candidates: candidateTraces
-          })
-        )
-        continue
-      }
-      currentState = selected.state
-      currentEvaluation = recomputedEvaluation
-      currentStateKey = selected.stateKey
+      currentState = effectiveSelected.state
+      currentEvaluation = effectiveSelected.evaluation
+      currentStateKey = effectiveSelected.stateKey
       committedPieceIds.push(pieceId)
       distinctAffectedPieceIds.add(pieceId)
-      const exactZero = recomputedEvaluation.exactZeroLoss
-      const selectedCandidateTrace = candidateTraces[selected.traceIndex]
+      const exactZero = currentEvaluation.exactZeroLoss
+      const selectedCandidateTrace = candidateTraces[effectiveSelected.traceIndex]
       if (selectedCandidateTrace !== undefined) {
-        candidateTraces[selected.traceIndex] = {
+        candidateTraces[effectiveSelected.traceIndex] = {
           ...selectedCandidateTrace,
           outcome: 'selected'
         }
       }
       if (exactZero) exactZeroIntermediateVisitIndex = visitIndex
-      const canonicalLegality = classifyIntrinsicPressureCanonicalLegality({
-        targetBox: input.targetBox,
-        catalog: input.catalog,
-        state: selected.state,
-        evaluation: recomputedEvaluation,
-        memo: canonicalLegalityMemo
-      })
+      const canonicalLegality = effectiveSelected.canonicalLegality
       if (canonicalLegality.canonicalLegal) {
         canonicalLegalIntermediateVisitIndex = visitIndex
       }
@@ -3392,11 +3372,11 @@ export function runIntrinsicSequentialColliderComposite(input: {
           evaluationCount: visitEvaluationCount,
           selectedStateKey: currentStateKey,
           before: beforeEvaluation,
-          after: recomputedEvaluation,
+          after: currentEvaluation,
           weights: input.weights,
           canonicalLegality,
           candidates: candidateTraces,
-          selected
+          selected: effectiveSelected
         })
       )
       if (canonicalLegality.canonicalLegal) return finish()
@@ -3409,6 +3389,8 @@ export function selectIntrinsicPressureCompositeChoice(
   currentWeightedLoss: number,
   choices: ReadonlyArray<IntrinsicPressureCompositeChoiceScore>
 ): string | undefined {
+  const canonicalLegal = choices.find((choice) => choice.canonicalLegal === true)
+  if (canonicalLegal !== undefined) return canonicalLegal.stateKey
   const selected = choices.toSorted(
     (first, second) =>
       first.weightedLoss - second.weightedLoss ||
@@ -3464,7 +3446,11 @@ function pressureCompositeVisitTrace(input: {
     selectedOrientationFamily: input.selected?.orientationFamily,
     selectedTransformKey: input.selected?.pose?.transformKey,
     selectedTranslateXGrid: input.selected?.pose?.translateXGrid,
-    selectedTranslateYGrid: input.selected?.pose?.translateYGrid
+    selectedTranslateYGrid: input.selected?.pose?.translateYGrid,
+    adaptiveTransformFamilyGeneratorInvoked: false,
+    adaptiveTransformFamilyGeneratedCount: 0,
+    adaptiveTransformFamilyMaterializedCount: 0,
+    adaptiveTransformFamilyUniqueCount: 0
   }
 }
 
@@ -3493,7 +3479,19 @@ function pressureCandidateTrace(
     globallyClear: undefined,
     rawLoss: undefined,
     weightedLoss: undefined,
+    canonicalLegality: undefined,
     outcome
+  }
+}
+
+function canonicalLegalityTrace(
+  legality: IntrinsicPressureCanonicalLegality
+): IntrinsicPressureCanonicalLegalityTrace {
+  return {
+    satConflictCount: legality.satConflictCount,
+    satExactZeroLoss: legality.satExactZeroLoss,
+    canonicalLegal: legality.canonicalLegal,
+    classification: legality.classification
   }
 }
 
@@ -4146,16 +4144,10 @@ function canonicalPlacedPolygonMoments(
   let globalMinimumX = Number.POSITIVE_INFINITY
   let globalMinimumY = Number.POSITIVE_INFINITY
   for (const entry of placed) {
-    const translateXGrid = toGridMm(entry.placement.transform.translateX)
-    const translateYGrid = toGridMm(entry.placement.transform.translateY)
-    if (translateXGrid === undefined || translateYGrid === undefined) return undefined
+    const path = placedCollisionWorldGridPath(entry)
+    if (path === undefined) return undefined
     const points: Array<{ readonly x: number; readonly y: number }> = []
-    for (const point of entry.collisionGeometry.polygon.points) {
-      const localX = toGridMm(point.x)
-      const localY = toGridMm(point.y)
-      if (localX === undefined || localY === undefined) return undefined
-      const x = localX + translateXGrid
-      const y = localY + translateYGrid
+    for (const { x, y } of path) {
       globalMinimumX = Math.min(globalMinimumX, x)
       globalMinimumY = Math.min(globalMinimumY, y)
       points.push({ x, y })
@@ -4237,22 +4229,10 @@ function measureIntrinsicAreaWeightedCentroidDispersion(
 function canonicalPressureBox(
   placed: ReadonlyArray<IrregularPlacedPiece>
 ): IntrinsicPressureBox | undefined {
-  const points = placed.flatMap((entry) =>
-    entry.collisionGeometry.polygon.points.map(({ x, y }) => ({
-      x: toGridMm(x + entry.placement.transform.translateX),
-      y: toGridMm(y + entry.placement.transform.translateY)
-    }))
-  )
-  if (
-    points.length === 0 ||
-    points.some(({ x, y }) => x === undefined || y === undefined)
-  ) {
-    return undefined
-  }
-  const finite = points.filter(
-    (point): point is { readonly x: number; readonly y: number } =>
-      point.x !== undefined && point.y !== undefined
-  )
+  const paths = placed.map(placedCollisionWorldGridPath)
+  if (paths.some((path) => path === undefined)) return undefined
+  const finite = paths.flatMap((path) => path ?? [])
+  if (finite.length === 0) return undefined
   const minimumXGrid = Math.min(...finite.map(({ x }) => x))
   const minimumYGrid = Math.min(...finite.map(({ y }) => y))
   const maximumXGrid = Math.max(...finite.map(({ x }) => x))
@@ -5111,22 +5091,10 @@ export function floorIntrinsicTargetGrid(valueMm: number): number | undefined {
 function canonicalPlacedBounds(
   placed: ReadonlyArray<IrregularPlacedPiece>
 ): { readonly widthMm: number; readonly heightMm: number } | undefined {
-  const points = placed.flatMap((entry) =>
-    entry.collisionGeometry.polygon.points.map((point) => ({
-      x: toGridMm(point.x + entry.placement.transform.translateX),
-      y: toGridMm(point.y + entry.placement.transform.translateY)
-    }))
-  )
-  if (
-    points.length === 0 ||
-    points.some(({ x, y }) => x === undefined || y === undefined)
-  ) {
-    return undefined
-  }
-  const complete = points.filter(
-    (point): point is { readonly x: number; readonly y: number } =>
-      point.x !== undefined && point.y !== undefined
-  )
+  const paths = placed.map(placedCollisionWorldGridPath)
+  if (paths.some((path) => path === undefined)) return undefined
+  const complete = paths.flatMap((path) => path ?? [])
+  if (complete.length === 0) return undefined
   const minimumX = Math.min(...complete.map(({ x }) => x))
   const minimumY = Math.min(...complete.map(({ y }) => y))
   const maximumX = Math.max(...complete.map(({ x }) => x))

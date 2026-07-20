@@ -133,9 +133,9 @@ if (experimentAttempt.kind === 'failure') {
     projectedCandidate: {
       passes:
         selected.source === 'projected-gap-fill' &&
-        experiment.portfolio.admittedCandidates.length > 0,
+        experiment.portfolio.retainedAdmittedCandidates.length > 0,
       selectedSource: selected.source,
-      admittedCandidateCount: experiment.portfolio.admittedCandidates.length
+      admittedCandidateCount: experiment.portfolio.retainedAdmittedCandidates.length
     },
     envelopeArea: {
       passes: selectedMetrics.envelopeAreaMm2 <= MAXIMUM_AREA_MM2,

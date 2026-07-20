@@ -7,15 +7,20 @@ import { SheetSpec } from '@shared/domain/nesting.js'
 import {
   CollisionGeometry,
   IrregularBounds,
+  IrregularPlacedPiece,
+  IrregularPlacement,
   IrregularPlacementCandidate,
   IrregularPoint,
   IrregularPolygon,
   IrregularPreparedPiece,
+  IrregularTransform,
+  TransformedCollisionGeometry,
   IrregularTransformCandidate
 } from '@shared/irregular/domain.js'
 import {
   decodeIntrinsicStrictPriorityOrder,
   constructIntrinsicStrictState,
+  measureIntrinsicStrictCanonicalEnvelope,
   rankIntrinsicStrictCompletedLayouts,
   selectIntrinsicStrictFamilyWinner,
   type IntrinsicStrictComparatorMode,
@@ -282,6 +287,61 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(selectIntrinsicStrictFamilyWinner([pureLeader, atBoundary], 'pure-growth')?.id).toBe(
       'pure'
     )
+  })
+
+  it('ignores sub-grid ulp noise in family and contact-band compactness', () => {
+    const quiet = familyWinner('quiet', {
+      maximumSideMm: 100,
+      envelopeAreaMm2: 10_000,
+      envelopeSpanMm: 200,
+      sharedBoundaryLengthMm: 1
+    })
+    const contact = familyWinner('contact', {
+      maximumSideMm: 100 + 1e-10,
+      envelopeAreaMm2: 10_000 + 1e-10,
+      envelopeSpanMm: 200 + 1e-10,
+      sharedBoundaryLengthMm: 2
+    })
+
+    expect(
+      selectIntrinsicStrictFamilyWinner([quiet, contact], 'contact-band')?.id
+    ).toBe('contact')
+  })
+
+  it('measures the authoritative rounded world envelope after fractional translation', () => {
+    const pieceId = PieceId.make('fractional-envelope')
+    const localPoints = [
+      point(0.00049, 0),
+      point(1.001, 0),
+      point(1.001, 1),
+      point(0.00049, 1)
+    ]
+    const transformCandidate = transform(0, 0)
+    const placed = new IrregularPlacedPiece({
+      placement: new IrregularPlacement({
+        pieceId,
+        sourcePieceId: pieceId,
+        placementReference: point(0, 0),
+        transform: new IrregularTransform({
+          translateX: 0.00002,
+          translateY: 0,
+          rotationDeg: 0,
+          mirrored: false
+        })
+      }),
+      collisionGeometry: new TransformedCollisionGeometry({
+        sourcePieceId: pieceId,
+        transform: transformCandidate,
+        polygon: new IrregularPolygon({ points: localPoints }),
+        bounds: bounds(localPoints)
+      })
+    })
+
+    expect(measureIntrinsicStrictCanonicalEnvelope([placed])).toEqual({
+      maximumSideMm: 1,
+      envelopeAreaMm2: 1,
+      envelopeSpanMm: 2
+    })
   })
 
   it('does not let a contact-rich chain buy maximum-side or area growth', () => {

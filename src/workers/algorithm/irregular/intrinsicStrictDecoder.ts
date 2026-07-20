@@ -172,6 +172,22 @@ interface ScoredCandidate {
   readonly containingGap: CanonicalIntrinsicGapRegion | undefined
 }
 
+export function measureIntrinsicStrictCanonicalEnvelope(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): Pick<
+  IntrinsicStrictLocalScore,
+  'maximumSideMm' | 'envelopeAreaMm2' | 'envelopeSpanMm'
+> | undefined {
+  const envelope = measureCanonicalLayoutEnvelope(placed)
+  return envelope === undefined
+    ? undefined
+    : {
+        maximumSideMm: envelope.maximumSideMm,
+        envelopeAreaMm2: envelope.areaMm2,
+        envelopeSpanMm: envelope.spanMm
+      }
+}
+
 /** One strict, sheet-independent constructive decode followed by real-sheet legality. */
 export function decodeIntrinsicStrictPriorityOrder(
   finalSheet: SheetSpec,
@@ -495,11 +511,12 @@ function scoreCandidate(input: {
       placementOrderPieceId: input.piece.pieceId ?? input.piece.source.id
     })
     .withBottomLeftAnchored()
-  const bounds = anchored?.translatedCollisionBounds
-  if (anchored === undefined || bounds === undefined) return undefined
-  const maximumSideMm = Math.max(bounds.width, bounds.height)
-  const envelopeAreaMm2 = bounds.width * bounds.height
-  const envelopeSpanMm = bounds.width + bounds.height
+  if (anchored === undefined) return undefined
+  const envelope = measureIntrinsicStrictCanonicalEnvelope(
+    anchored.placedCollisionGeometries
+  )
+  if (envelope === undefined) return undefined
+  const { maximumSideMm, envelopeAreaMm2, envelopeSpanMm } = envelope
   const sharedBoundaryLengthMm = anchored.sharedCollisionBoundaryLengthMm
   if (
     sharedBoundaryLengthMm === undefined ||
@@ -567,9 +584,13 @@ export function selectIntrinsicStrictFamilyWinner<T extends IntrinsicStrictFamil
   return candidates
     .filter(
       (candidate) =>
-        candidate.score.maximumSideMm === pureLeader.score.maximumSideMm &&
-        candidate.score.envelopeAreaMm2 <=
-          pureLeader.score.envelopeAreaMm2 + 0.02 * candidate.movingCollisionAreaMm2
+        canonicalLinearMetric(candidate.score.maximumSideMm) ===
+          canonicalLinearMetric(pureLeader.score.maximumSideMm) &&
+        canonicalAreaMetric(candidate.score.envelopeAreaMm2) <=
+          canonicalAreaMetric(
+            pureLeader.score.envelopeAreaMm2 +
+              0.02 * candidate.movingCollisionAreaMm2
+          )
     )
     .toSorted(compareContactBandCandidates)[0]
 }
@@ -580,8 +601,10 @@ function compareContactBandCandidates(
 ): number {
   return (
     second.score.sharedBoundaryLengthMm - first.score.sharedBoundaryLengthMm ||
-    first.score.envelopeAreaMm2 - second.score.envelopeAreaMm2 ||
-    first.score.envelopeSpanMm - second.score.envelopeSpanMm ||
+    canonicalAreaMetric(first.score.envelopeAreaMm2) -
+      canonicalAreaMetric(second.score.envelopeAreaMm2) ||
+    canonicalLinearMetric(first.score.envelopeSpanMm) -
+      canonicalLinearMetric(second.score.envelopeSpanMm) ||
     first.score.canonicalCombinedGeometryKey.localeCompare(
       second.score.canonicalCombinedGeometryKey
     )
@@ -593,12 +616,23 @@ function compareLocalScores(
   second: IntrinsicStrictLocalScore
 ): number {
   return (
-    first.maximumSideMm - second.maximumSideMm ||
-    first.envelopeAreaMm2 - second.envelopeAreaMm2 ||
-    first.envelopeSpanMm - second.envelopeSpanMm ||
+    canonicalLinearMetric(first.maximumSideMm) -
+      canonicalLinearMetric(second.maximumSideMm) ||
+    canonicalAreaMetric(first.envelopeAreaMm2) -
+      canonicalAreaMetric(second.envelopeAreaMm2) ||
+    canonicalLinearMetric(first.envelopeSpanMm) -
+      canonicalLinearMetric(second.envelopeSpanMm) ||
     second.sharedBoundaryLengthMm - first.sharedBoundaryLengthMm ||
     first.canonicalCombinedGeometryKey.localeCompare(second.canonicalCombinedGeometryKey)
   )
+}
+
+function canonicalLinearMetric(valueMm: number): number {
+  return Math.round(valueMm * 1_000)
+}
+
+function canonicalAreaMetric(valueMm2: number): number {
+  return Math.round(valueMm2 * 1_000_000)
 }
 
 function canonicalCollisionAreaMm2(moving: TransformedCollisionGeometry): number | undefined {

@@ -15,6 +15,7 @@ import {
   analyzeCanonicalLayoutStructure,
   assertCanonicalGridLegalLayout,
   canonicalCollisionLayoutIdentity,
+  placedCollisionWorldGridPath,
   type CanonicalLayoutStructuralAnalysis
 } from '../../irregular/canonicalLayoutGeometry.js'
 import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
@@ -452,12 +453,12 @@ function canonicalizePlacedAgainstCatalog(
     const transform = catalogEntry.transforms.find(
       (candidate) => candidate.canonicalTransformKey === transformKey(provisional.collisionGeometry.transform)
     )
-    const gridX = toGridMm(provisional.placement.transform.translateX)
-    const gridY = toGridMm(provisional.placement.transform.translateY)
+    const translateX = provisional.placement.transform.translateX
+    const translateY = provisional.placement.transform.translateY
     if (
       transform === undefined ||
-      gridX === undefined ||
-      gridY === undefined ||
+      !Number.isFinite(translateX) ||
+      !Number.isFinite(translateY) ||
       normalizedRotationDeg(provisional.placement.transform.rotationDeg) !==
         normalizedRotationDeg(transform.transform.rotationDeg) ||
       provisional.placement.transform.mirrored !== transform.transform.mirrored
@@ -468,7 +469,21 @@ function canonicalizePlacedAgainstCatalog(
         `provisional piece ${catalogEntry.pieceId} must use one catalog transform and a canonicalizable translation.`
       )
     }
-    result.push(makePlaced(catalogEntry, transform, { x: fromGrid(gridX), y: fromGrid(gridY) }))
+    const canonical = makePlaced(catalogEntry, transform, { x: translateX, y: translateY })
+    const provisionalPath = placedCollisionWorldGridPath(provisional)
+    const canonicalPath = placedCollisionWorldGridPath(canonical)
+    if (
+      provisionalPath === undefined ||
+      canonicalPath === undefined ||
+      gridPathKey(provisionalPath) !== gridPathKey(canonicalPath)
+    ) {
+      return failProjection(
+        'canonicalizeProvisional',
+        'invalid-input',
+        `provisional piece ${catalogEntry.pieceId} could not preserve its canonical world path.`
+      )
+    }
+    result.push(canonical)
   }
   return Effect.succeed(result)
 }
@@ -632,6 +647,7 @@ function exactCandidatesForTransform(input: {
       entry: input.entry,
       transform: input.transform,
       candidate: directCandidate,
+      provisional: input.provisional,
       provisionalPoint,
       placed: input.placed,
       directProvisionalPose: input.preservesPinnedTransform,
@@ -664,6 +680,7 @@ function exactCandidatesForTransform(input: {
         entry: input.entry,
         transform: input.transform,
         candidate,
+        provisional: input.provisional,
         provisionalPoint,
         placed: input.placed,
         directProvisionalPose: false,
@@ -684,39 +701,35 @@ function scoreExactProjectionCandidate(input: {
   readonly entry: IntrinsicTransformCatalogEntry
   readonly transform: IntrinsicFiniteTransform
   readonly candidate: IrregularPlacementCandidate
+  readonly provisional: IrregularPlacedPiece
   readonly provisionalPoint: { readonly x: number; readonly y: number }
   readonly placed: ReadonlyArray<IrregularPlacedPiece>
   readonly directProvisionalPose: boolean
   readonly preservesPinnedTransform: boolean
 }): ProjectionCandidate | undefined {
-  const pointX = toGridMm(input.candidate.point.x)
-  const pointY = toGridMm(input.candidate.point.y)
-  const provisionalX = toGridMm(input.provisionalPoint.x)
-  const provisionalY = toGridMm(input.provisionalPoint.y)
   if (
-    pointX === undefined ||
-    pointY === undefined ||
-    provisionalX === undefined ||
-    provisionalY === undefined
+    !Number.isFinite(input.candidate.point.x) ||
+    !Number.isFinite(input.candidate.point.y)
   ) {
     return undefined
   }
   const placed = makePlaced(input.entry, input.transform, {
-    x: fromGrid(pointX),
-    y: fromGrid(pointY)
+    x: input.candidate.point.x,
+    y: input.candidate.point.y
   })
   const complete = [...input.placed, placed]
   if (!assertExactTargetLegal(input.target, complete)) return undefined
   const envelope = canonicalEnvelopeTuple(complete)
   const canonicalGeometryIdentity = canonicalCollisionLayoutIdentity(complete)
   if (envelope === undefined || canonicalGeometryIdentity === undefined) return undefined
-  const deltaX = BigInt(pointX) - BigInt(provisionalX)
-  const deltaY = BigInt(pointY) - BigInt(provisionalY)
+  const candidateCenter = canonicalPlacedCenter(placed)
+  const provisionalCenter = canonicalPlacedCenter(input.provisional)
+  if (candidateCenter === undefined || provisionalCenter === undefined) return undefined
   return {
     placed,
     directProvisionalPose: input.directProvisionalPose,
     preservesPinnedTransform: input.preservesPinnedTransform,
-    squaredGridDistance: deltaX * deltaX + deltaY * deltaY,
+    squaredGridDistance: squaredGridDistance(candidateCenter, provisionalCenter),
     ...envelope,
     canonicalGeometryIdentity
   }
@@ -775,12 +788,9 @@ function canonicalEnvelopeTuple(
   | undefined {
   const points: Array<{ readonly x: bigint; readonly y: bigint }> = []
   for (const entry of placed) {
-    const translation = canonicalPlacementPoint(entry)
-    if (translation === undefined) return undefined
-    for (const point of entry.collisionGeometry.polygon.points) {
-      const x = toGridMm(point.x + translation.x)
-      const y = toGridMm(point.y + translation.y)
-      if (x === undefined || y === undefined) return undefined
+    const path = placedCollisionWorldGridPath(entry)
+    if (path === undefined) return undefined
+    for (const { x, y } of path) {
       points.push({ x: BigInt(x), y: BigInt(y) })
     }
   }
@@ -803,6 +813,12 @@ function canonicalEnvelopeTuple(
     envelopeAreaGrid2: width * height,
     envelopeSpanGrid: width + height
   }
+}
+
+function gridPathKey(
+  path: ReadonlyArray<{ readonly x: number; readonly y: number }>
+): string {
+  return path.map(({ x, y }) => `${x}:${y}`).join('|')
 }
 
 function canonicalTargetBox(targetBox: IntrinsicTargetBox): CanonicalTargetBox | undefined {
@@ -830,15 +846,9 @@ function assertExactTargetLegal(
 ): boolean {
   if (!assertCanonicalGridLegalLayout(target.sheet, placed)) return false
   for (const entry of placed) {
-    const translateX = toGridMm(entry.placement.transform.translateX)
-    const translateY = toGridMm(entry.placement.transform.translateY)
-    if (translateX === undefined || translateY === undefined) return false
-    for (const point of entry.collisionGeometry.polygon.points) {
-      const localX = toGridMm(point.x)
-      const localY = toGridMm(point.y)
-      if (localX === undefined || localY === undefined) return false
-      const x = localX + translateX
-      const y = localY + translateY
+    const path = placedCollisionWorldGridPath(entry)
+    if (path === undefined) return false
+    for (const { x, y } of path) {
       if (x < 0 || y < 0 || x > target.widthGrid || y > target.heightGrid) return false
     }
   }
@@ -903,32 +913,17 @@ function makePlaced(
 function canonicalPlacementPoint(
   entry: IrregularPlacedPiece
 ): { readonly x: number; readonly y: number } | undefined {
-  const gridX = toGridMm(entry.placement.transform.translateX)
-  const gridY = toGridMm(entry.placement.transform.translateY)
-  return gridX === undefined || gridY === undefined
+  const { translateX, translateY } = entry.placement.transform
+  return !Number.isFinite(translateX) || !Number.isFinite(translateY)
     ? undefined
-    : { x: fromGrid(gridX), y: fromGrid(gridY) }
+    : { x: translateX, y: translateY }
 }
 
 function canonicalPlacedCenter(
   entry: IrregularPlacedPiece
 ): { readonly x: bigint; readonly y: bigint } | undefined {
-  const translation = canonicalPlacementPoint(entry)
-  if (translation === undefined) return undefined
-  const worldPoints = entry.collisionGeometry.polygon.points.map((point) => ({
-    x: toGridMm(point.x + translation.x),
-    y: toGridMm(point.y + translation.y)
-  }))
-  if (
-    worldPoints.length === 0 ||
-    worldPoints.some(({ x, y }) => x === undefined || y === undefined)
-  ) {
-    return undefined
-  }
-  const points = worldPoints.filter(
-    (point): point is { readonly x: number; readonly y: number } =>
-      point.x !== undefined && point.y !== undefined
-  )
+  const points = placedCollisionWorldGridPath(entry)
+  if (points === undefined) return undefined
   const first = points[0]
   if (first === undefined) return undefined
   let minX = BigInt(first.x)
@@ -994,8 +989,8 @@ function validateReinsertionPriority(
 }
 
 function candidateTranslationKey(entry: IrregularPlacedPiece): string {
-  const transform = entry.placement.transform
-  return `${transformKey(entry.collisionGeometry.transform)}:${transform.translateX}:${transform.translateY}`
+  const path = placedCollisionWorldGridPath(entry)
+  return `${transformKey(entry.collisionGeometry.transform)}:${path === undefined ? 'invalid' : gridPathKey(path)}`
 }
 
 function compareTransforms(

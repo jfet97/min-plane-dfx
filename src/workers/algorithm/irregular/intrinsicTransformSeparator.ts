@@ -9,7 +9,8 @@ import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import {
   analyzeCanonicalLayoutStructure,
   measureCanonicalEnclosedCavities,
-  measureCanonicalLayoutTopology
+  measureCanonicalLayoutTopology,
+  placedCollisionWorldGridPath
 } from '../../irregular/canonicalLayoutGeometry.js'
 import type {
   IntrinsicFiniteTransform,
@@ -22,6 +23,8 @@ import { assertIntrinsicTargetExactLegal } from './intrinsicExactProjection.js'
 export interface IntrinsicRelaxedPose {
   readonly pieceId: PieceId
   readonly transformKey: string
+  readonly translationBasisXmm: number
+  readonly translationBasisYmm: number
   readonly translateXGrid: number
   readonly translateYGrid: number
 }
@@ -112,20 +115,22 @@ export function relaxedStateFromExactLayout(
       ({ canonicalTransformKey }) =>
         canonicalTransformKey === transformKey(exact.collisionGeometry.transform)
     )
-    const translateXGrid = toGridMm(exact.placement.transform.translateX)
-    const translateYGrid = toGridMm(exact.placement.transform.translateY)
+    const translationBasisXmm = exact.placement.transform.translateX
+    const translationBasisYmm = exact.placement.transform.translateY
     if (
       finiteTransform === undefined ||
-      translateXGrid === undefined ||
-      translateYGrid === undefined
+      !Number.isFinite(translationBasisXmm) ||
+      !Number.isFinite(translationBasisYmm)
     ) {
       return undefined
     }
     poses.push({
       pieceId: entry.pieceId,
       transformKey: finiteTransform.canonicalTransformKey,
-      translateXGrid,
-      translateYGrid
+      translationBasisXmm,
+      translationBasisYmm,
+      translateXGrid: 0,
+      translateYGrid: 0
     })
   }
   return canonicalizeRelaxedState(catalog, { poses })
@@ -138,9 +143,18 @@ export function provisionalLayoutFromRelaxedState(
 ): ReadonlyArray<IrregularPlacedPiece> | undefined {
   const resolved = resolveState(catalog, state)
   if (resolved === undefined) return undefined
-  return resolved.map(({ pose, catalogEntry, finiteTransform }) =>
-    makePlaced(catalogEntry, finiteTransform, pose.translateXGrid, pose.translateYGrid)
-  )
+  const placed = resolved.map(({ pose, catalogEntry, finiteTransform, polygon }) => {
+    const materialized = makePlaced(catalogEntry, finiteTransform, pose)
+    const path = materialized === undefined
+      ? undefined
+      : placedCollisionWorldGridPath(materialized)
+    return path !== undefined && pointSequenceKey(path) === pointSequenceKey(polygon.points)
+      ? materialized
+      : undefined
+  })
+  return placed.some((entry) => entry === undefined)
+    ? undefined
+    : placed.filter((entry): entry is IrregularPlacedPiece => entry !== undefined)
 }
 
 /** Complete-state identity, translation-invariant on the canonical collision grid. */
@@ -149,16 +163,29 @@ export function intrinsicRelaxedStateKey(
   state: IntrinsicRelaxedState
 ): string | undefined {
   const canonical = canonicalizeRelaxedState(catalog, state)
-  return canonical === undefined
-    ? undefined
-    : JSON.stringify(
-        canonical.poses.map((pose) => [
+  if (canonical === undefined) return undefined
+  const keyed = canonical.poses.map((pose) => {
+    const phaseSignature = translationPhaseSignature(catalog, pose)
+    const finiteTransform = catalog.entries
+      .find(({ pieceId }) => pieceId === pose.pieceId)
+      ?.transforms.find(
+        ({ canonicalTransformKey }) => canonicalTransformKey === pose.transformKey
+      )
+    const polygon = finiteTransform === undefined
+      ? undefined
+      : gridPolygon(finiteTransform, pose)
+    return phaseSignature === undefined || polygon === undefined
+      ? undefined
+      : [
           pose.pieceId,
           pose.transformKey,
-          pose.translateXGrid,
-          pose.translateYGrid
-        ])
-      )
+          phaseSignature,
+          pointSequenceKey(polygon.points)
+        ]
+  })
+  return keyed.some((entry) => entry === undefined)
+    ? undefined
+    : JSON.stringify(keyed)
 }
 
 /** Deterministic complete-state deduplication seam for the bounded infeasible pool. */
@@ -323,19 +350,30 @@ export function remapIntrinsicTransformsQuarterTurn(
   }
   const replacements: IntrinsicRelaxedPose[] = []
   for (const entry of catalog.entries) {
+    const priorPose = state.poses.find(({ pieceId }) => pieceId === entry.pieceId)
     const rotated = rotatedById.get(entry.pieceId)?.map(({ x, y }) => ({
       x: x - globalMinimumX,
       y: y - globalMinimumY
     }))
-    if (rotated === undefined) return undefined
+    if (rotated === undefined || priorPose === undefined) return undefined
     const desiredLocalKey = translationNormalizedPointSetKey(rotated)
     if (desiredLocalKey === undefined) return undefined
     const alternate = entry.transforms.find((finiteTransform) => {
-      const points = finiteTransformGridLocalPoints(finiteTransform)
+      const points = finiteTransformPhasePoints(
+        finiteTransform,
+        priorPose.translationBasisXmm,
+        priorPose.translationBasisYmm
+      )
       return points !== undefined && translationNormalizedPointSetKey(points) === desiredLocalKey
     })
     const alternatePoints =
-      alternate === undefined ? undefined : finiteTransformGridLocalPoints(alternate)
+      alternate === undefined
+        ? undefined
+        : finiteTransformPhasePoints(
+            alternate,
+            priorPose.translationBasisXmm,
+            priorPose.translationBasisYmm
+          )
     const rotatedBounds = polygonBounds(rotated)
     const alternateBounds = alternatePoints === undefined ? undefined : polygonBounds(alternatePoints)
     if (alternate === undefined || rotatedBounds === undefined || alternateBounds === undefined) {
@@ -349,6 +387,8 @@ export function remapIntrinsicTransformsQuarterTurn(
     replacements.push({
       pieceId: entry.pieceId,
       transformKey: alternate.canonicalTransformKey,
+      translationBasisXmm: priorPose.translationBasisXmm,
+      translationBasisYmm: priorPose.translationBasisYmm,
       translateXGrid,
       translateYGrid
     })
@@ -453,10 +493,10 @@ export function intrinsicFocusedProposalsForPiece(input: {
   if (currentCenter !== undefined) {
     for (const finiteTransform of selectedEntry.transforms) {
       if (finiteTransform.canonicalTransformKey === selectedPose.transformKey) continue
-      const localCenter = finiteTransformLocalCenter(finiteTransform)
+      const localCenter = finiteTransformPhaseCenter(finiteTransform, selectedPose)
       if (localCenter === undefined) continue
       const transformedPose: IntrinsicRelaxedPose = {
-        pieceId: selectedPieceId,
+        ...selectedPose,
         transformKey: finiteTransform.canonicalTransformKey,
         translateXGrid: Math.round(currentCenter.x - localCenter.x),
         translateYGrid: Math.round(currentCenter.y - localCenter.y)
@@ -798,6 +838,8 @@ function resolveStateUncanonicalized(
     if (
       pose === undefined ||
       finiteTransform === undefined ||
+      !Number.isFinite(pose.translationBasisXmm) ||
+      !Number.isFinite(pose.translationBasisYmm) ||
       !Number.isSafeInteger(pose.translateXGrid) ||
       !Number.isSafeInteger(pose.translateYGrid)
     ) {
@@ -815,11 +857,13 @@ function gridPolygon(
   pose: IntrinsicRelaxedPose
 ): GridPolygon | undefined {
   const points = finiteTransform.geometry.polygon.points.map((point) => {
-    const localX = toGridMm(point.x)
-    const localY = toGridMm(point.y)
-    if (localX === undefined || localY === undefined) return undefined
-    const x = localX + pose.translateXGrid
-    const y = localY + pose.translateYGrid
+    const basisX = toGridMm(point.x + pose.translationBasisXmm)
+    const basisY = toGridMm(point.y + pose.translationBasisYmm)
+    if (basisX === undefined || basisY === undefined) return undefined
+    const rawX = basisX + pose.translateXGrid
+    const rawY = basisY + pose.translateYGrid
+    const x = rawX === 0 ? 0 : rawX
+    const y = rawY === 0 ? 0 : rawY
     return Number.isSafeInteger(x) && Number.isSafeInteger(y) ? { x, y } : undefined
   })
   if (points.length < 3 || points.some((point) => point === undefined)) return undefined
@@ -974,34 +1018,60 @@ function poseLocalCenter(
   const finiteTransform = catalog.entries
     .find(({ pieceId }) => pieceId === pose.pieceId)
     ?.transforms.find(({ canonicalTransformKey }) => canonicalTransformKey === pose.transformKey)
-  return finiteTransform === undefined ? undefined : finiteTransformLocalCenter(finiteTransform)
+  return finiteTransform === undefined
+    ? undefined
+    : finiteTransformPhaseCenter(finiteTransform, pose)
 }
 
-function finiteTransformLocalCenter(
-  finiteTransform: IntrinsicFiniteTransform
+function finiteTransformPhaseCenter(
+  finiteTransform: IntrinsicFiniteTransform,
+  pose: IntrinsicRelaxedPose
 ): GridPoint | undefined {
-  const points = finiteTransform.geometry.polygon.points.map((point) => ({
-    x: toGridMm(point.x),
-    y: toGridMm(point.y)
-  }))
-  if (points.some(({ x, y }) => x === undefined || y === undefined)) return undefined
-  const complete = points.filter(
-    (point): point is GridPoint => point.x !== undefined && point.y !== undefined
+  const points = finiteTransformPhasePoints(
+    finiteTransform,
+    pose.translationBasisXmm,
+    pose.translationBasisYmm
   )
-  return polygonCenter(complete)
+  return points === undefined ? undefined : polygonCenter(points)
 }
 
-function finiteTransformGridLocalPoints(
-  finiteTransform: IntrinsicFiniteTransform
+function finiteTransformPhasePoints(
+  finiteTransform: IntrinsicFiniteTransform,
+  basisXmm: number,
+  basisYmm: number
 ): ReadonlyArray<GridPoint> | undefined {
   const points = finiteTransform.geometry.polygon.points.map(({ x, y }) => ({
-    x: toGridMm(x),
-    y: toGridMm(y)
+    x: toGridMm(x + basisXmm),
+    y: toGridMm(y + basisYmm)
   }))
   if (points.some(({ x, y }) => x === undefined || y === undefined)) return undefined
   return points.filter(
     (point): point is GridPoint => point.x !== undefined && point.y !== undefined
   )
+}
+
+function translationPhaseSignature(
+  catalog: IntrinsicTransformCatalog,
+  pose: IntrinsicRelaxedPose
+): string | undefined {
+  const entry = catalog.entries.find(({ pieceId }) => pieceId === pose.pieceId)
+  if (entry === undefined) return undefined
+  const signatures = entry.transforms.map((finiteTransform) => {
+    const points = finiteTransformPhasePoints(
+      finiteTransform,
+      pose.translationBasisXmm,
+      pose.translationBasisYmm
+    )
+    const pathKey = points === undefined
+      ? undefined
+      : translationNormalizedPointSetKey(points)
+    return pathKey === undefined
+      ? undefined
+      : [finiteTransform.canonicalTransformKey, pathKey]
+  })
+  return signatures.some((entry) => entry === undefined)
+    ? undefined
+    : JSON.stringify(signatures)
 }
 
 function baseCollisionFamilyKey(
@@ -1035,6 +1105,10 @@ function pointSetKey(points: ReadonlyArray<GridPoint>): string {
     .map(({ x, y }) => `${x}:${y}`)
     .toSorted()
     .join('|')
+}
+
+function pointSequenceKey(points: ReadonlyArray<GridPoint>): string {
+  return points.map(({ x, y }) => `${x}:${y}`).join('|')
 }
 
 function polygonCenter(points: ReadonlyArray<GridPoint>): GridPoint | undefined {
@@ -1234,17 +1308,19 @@ function dedupeProposals(
 function makePlaced(
   entry: IntrinsicTransformCatalogEntry,
   finiteTransform: IntrinsicFiniteTransform,
-  translateXGrid: number,
-  translateYGrid: number
-): IrregularPlacedPiece {
+  pose: IntrinsicRelaxedPose
+): IrregularPlacedPiece | undefined {
+  const translateX = pose.translationBasisXmm + fromGrid(pose.translateXGrid)
+  const translateY = pose.translationBasisYmm + fromGrid(pose.translateYGrid)
+  if (!Number.isFinite(translateX) || !Number.isFinite(translateY)) return undefined
   return new IrregularPlacedPiece({
     placement: new IrregularPlacement({
       pieceId: entry.pieceId,
       sourcePieceId: entry.preparedPiece.source.id,
       placementReference: entry.preparedPiece.collisionGeometry.placementReference,
       transform: new IrregularTransform({
-        translateX: fromGrid(translateXGrid),
-        translateY: fromGrid(translateYGrid),
+        translateX,
+        translateY,
         rotationDeg: finiteTransform.transform.rotationDeg,
         mirrored: finiteTransform.transform.mirrored
       })

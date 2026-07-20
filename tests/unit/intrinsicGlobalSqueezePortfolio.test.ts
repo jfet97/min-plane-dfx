@@ -445,7 +445,7 @@ describe('intrinsic global squeeze portfolio', () => {
       fallback,
       structural: structuralResult({ pieces, fallback, handoffs: [handoff] }),
       fill: () => Effect.succeed(constructed([pieceAt(pieces, 2)], filled, [], 1)),
-      schedule: schedule({ maximumLargestHullGapRatio: 1 })
+      schedule: schedule()
     })
 
     expect(result.structuralOutcome).toMatchObject({ structuralPieceCount: 2, fillerPieceCount: 1 })
@@ -469,7 +469,7 @@ describe('intrinsic global squeeze portfolio', () => {
       fallback,
       structural: structuralResult({ pieces, fallback, handoffs: [handoff] }),
       fill: () => Effect.succeed(constructed([pieceAt(pieces, 2)], filled, [], 1)),
-      schedule: schedule({ maximumLargestHullGapRatio: 1 })
+      schedule: schedule()
     })
     expect(result.fillTrace).toEqual(rerun.fillTrace)
     expect(result.fillTrace[0]).not.toHaveProperty('runtimeMs')
@@ -497,7 +497,7 @@ describe('intrinsic global squeeze portfolio', () => {
         handoffs: [structuralHandoff(1, frozen)]
       }),
       fill: constructIntrinsicStrictState,
-      schedule: schedule({ maximumLargestHullGapRatio: 1, explorationAreaCapMm2: 1_000 })
+      schedule: schedule({ explorationAreaCapMm2: 1_000 })
     })
 
     expect(result.fillTrace).toHaveLength(1)
@@ -542,7 +542,7 @@ describe('intrinsic global squeeze portfolio', () => {
     expect(rejected.fillTrace[0]?.outcome).toBe('completed-quality-rejected')
     expect(rejected.selected.source).toBe('e1-fallback')
     expect(rejected.completeArchive).toHaveLength(1)
-    expect(rejected.admittedCandidates).toEqual([])
+    expect(rejected.retainedAdmittedCandidates).toEqual([])
     expect(rejected.evaluatedCompleteCandidates).toHaveLength(1)
     expect(rejected.evaluatedCompleteCandidates[0]).toMatchObject({
       source: 'projected-gap-fill',
@@ -591,8 +591,6 @@ describe('intrinsic global squeeze portfolio', () => {
       }),
       fill: () => Effect.succeed(constructed([], ring)),
       schedule: schedule({
-        maximumCavityCount: 0,
-        maximumLargestHullGapRatio: 0.01,
         explorationAreaCapMm2: 1_000
       })
     })
@@ -601,7 +599,7 @@ describe('intrinsic global squeeze portfolio', () => {
     expect(
       result.evaluatedCompleteCandidates[0]?.metrics.largestOccupiedHullGapRatio
     ).toBeGreaterThan(0.01)
-    expect(result.admittedCandidates).toHaveLength(1)
+    expect(result.retainedAdmittedCandidates).toHaveLength(1)
     expect(result.fillTrace[0]?.outcome).toBe('completed-admitted')
   })
 
@@ -764,7 +762,7 @@ describe('intrinsic global squeeze portfolio', () => {
       }
     })
     expect(deadline.status).toBe('deadline-fallback')
-    expect(deadline.admittedCandidates).toEqual([])
+    expect(deadline.retainedAdmittedCandidates).toEqual([])
     expect(deadline.selected.source).toBe('e1-fallback')
     expect(deadline.fillTrace.at(-1)?.outcome).toBe('deadline')
     expect(deadline.fillTrace.at(-1)).toMatchObject({

@@ -35,8 +35,6 @@ import type { IntrinsicExactProjectionError } from './intrinsicExactProjection.j
 export const INTRINSIC_GLOBAL_PORTFOLIO_DEFAULTS = {
   maximumRuntimeMs: 110_000,
   completeArchiveCapacity: 6,
-  maximumCavityCount: 2,
-  maximumLargestHullGapRatio: 0.15,
   explorationAreaCapMm2: 439_904.17,
   productionAreaTargetMm2: 430_344.918,
   historicTotalContactTarget: 53,
@@ -46,8 +44,6 @@ export const INTRINSIC_GLOBAL_PORTFOLIO_DEFAULTS = {
 export interface IntrinsicGlobalPortfolioSchedule {
   readonly maximumRuntimeMs: number
   readonly completeArchiveCapacity: number
-  readonly maximumCavityCount: number
-  readonly maximumLargestHullGapRatio: number
   readonly explorationAreaCapMm2: number
   readonly productionAreaTargetMm2: number
   readonly historicTotalContactTarget: number
@@ -127,7 +123,7 @@ export interface IntrinsicGlobalPortfolioResult {
   readonly status: 'completed-candidate' | 'completed-fallback' | 'deadline-fallback' | 'budget-fallback'
   readonly selected: IntrinsicGlobalFullCandidate
   readonly completeArchive: ReadonlyArray<IntrinsicGlobalFullCandidate>
-  readonly admittedCandidates: ReadonlyArray<IntrinsicGlobalFullCandidate>
+  readonly retainedAdmittedCandidates: ReadonlyArray<IntrinsicGlobalFullCandidate>
   readonly evaluatedCompleteCandidates: ReadonlyArray<IntrinsicGlobalEvaluatedCompleteCandidate>
   readonly structuralOutcome: IntrinsicGlobalStructuralOutcome
   readonly promotion: IntrinsicGlobalPromotionSummary
@@ -456,7 +452,7 @@ export function runIntrinsicGlobalSqueezePortfolioWithDependencies(
           : 'completed-fallback',
       selected,
       completeArchive: finalists,
-      admittedCandidates: retainedChallengers,
+      retainedAdmittedCandidates: retainedChallengers,
       evaluatedCompleteCandidates: [...evaluatedCompleteCandidates],
       structuralOutcome,
       promotion: promotionSummary(fallback, viable, selected),
@@ -605,7 +601,7 @@ function fallbackResult(input: {
     status: input.status,
     selected: input.fallback,
     completeArchive: [input.fallback],
-    admittedCandidates: [],
+    retainedAdmittedCandidates: [],
     evaluatedCompleteCandidates: [...input.evaluatedCompleteCandidates],
     structuralOutcome: structuralOutcomeFrom(input.structural),
     promotion: promotionSummary(input.fallback, [], input.fallback),
@@ -747,8 +743,6 @@ function snapshotSchedule(
   return {
     maximumRuntimeMs: schedule.maximumRuntimeMs,
     completeArchiveCapacity: schedule.completeArchiveCapacity,
-    maximumCavityCount: schedule.maximumCavityCount,
-    maximumLargestHullGapRatio: schedule.maximumLargestHullGapRatio,
     explorationAreaCapMm2: schedule.explorationAreaCapMm2,
     productionAreaTargetMm2: schedule.productionAreaTargetMm2,
     historicTotalContactTarget: schedule.historicTotalContactTarget,

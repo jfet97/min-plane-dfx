@@ -17,7 +17,8 @@ import {
   canonicalCollisionLayoutIdentity,
   measureCanonicalLayoutContacts,
   measureCanonicalLayoutEnvelope,
-  measureCanonicalLayoutTopology
+  measureCanonicalLayoutTopology,
+  placedCollisionWorldGridPath
 } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 import {
   canonicalStateOrientationsFittingSheet,
@@ -73,6 +74,24 @@ function quarterTurnLayout(layout: ReadonlyArray<IrregularPlacedPiece>) {
 }
 
 describe('canonical collision layout geometry', () => {
+  it('rounds local plus translation once for fractional and signed grid phases', () => {
+    const positive = placed(
+      'positive',
+      [[0.0004, 0.0005], [1.0004, 0.0005], [1.0004, 1.0005], [0.0004, 1.0005]],
+      0.0004,
+      0
+    )
+    const negative = placed(
+      'negative',
+      [[-0.0004, -0.0005], [0.9996, -0.0005], [0.9996, 0.9995], [-0.0004, 0.9995]],
+      -0.0004,
+      0
+    )
+
+    expect(placedCollisionWorldGridPath(positive)?.[0]).toEqual({ x: 1, y: 1 })
+    expect(placedCollisionWorldGridPath(negative)?.[0]).toEqual({ x: -1, y: -1 })
+  })
+
   it('ignores translation, quarter-turn, copy order, ring origin, and winding', () => {
     const first = [rectangle('a', 3, 1, 1, 2), rectangle('b', 1, 2, 5, 4)]
     const representedDifferently = [...quarterTurnLayout(first)]

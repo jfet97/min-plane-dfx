@@ -263,8 +263,8 @@ describe('intrinsic exact projection', () => {
     expect(first.directPosePieceIds).toEqual([PieceId.make('wide')])
     expect(first.orientationFallbackPieceIds).toEqual([])
     expect(first.placedCollisionGeometries[0]?.placement.transform).toMatchObject({
-      translateX: 1,
-      translateY: 1,
+      translateX: 1.0001,
+      translateY: 1.0001,
       rotationDeg: 90
     })
     expect(first.canonicalGeometryIdentity).toBe(sameCanonicalTarget.canonicalGeometryIdentity)

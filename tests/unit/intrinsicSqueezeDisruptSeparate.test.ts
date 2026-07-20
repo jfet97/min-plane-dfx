@@ -86,7 +86,10 @@ import {
   TransformGenerator
 } from '../../src/workers/irregular/services.js'
 import { TransformGeneratorLive } from '../../src/workers/irregular/transformGenerator.js'
-import { analyzeCanonicalLayoutStructure } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
+import {
+  analyzeCanonicalLayoutStructure,
+  placedCollisionWorldGridPath
+} from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -259,6 +262,97 @@ function runController(
 describe('intrinsic global squeeze, disrupt, separate controller', () => {
   it('pins the registered five-projection schedule', () => {
     expect(INTRINSIC_GLOBAL_SEARCH_DEFAULTS.maximumProjectionAttempts).toBe(5)
+  })
+
+  it('preserves fractional translation phase through import, identity, and integer transport', async () => {
+    const pieces = [
+      preparedRectangle('anchor', 1, 1),
+      preparedRectangle('phase', 2.0003, 1.0005, [transform(0, 0), transform(1, 45)], {
+        x: 0.0004,
+        y: 0.0001
+      })
+    ]
+    const catalog = await catalogFor(pieces)
+    const exact = [
+      placed(catalogEntry(catalog, 'anchor'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'phase'), 0, 5.0004, 5.0004)
+    ]
+    const alternate = [
+      placed(catalogEntry(catalog, 'anchor'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'phase'), 0, 5.0006, 5.0004)
+    ]
+    const state = relaxedStateFromExactLayout(catalog, exact)
+    const alternateState = relaxedStateFromExactLayout(catalog, alternate)
+    if (state === undefined || alternateState === undefined) {
+      throw new Error('fractional relaxed states expected')
+    }
+    const exactPlaced = exact.find(
+      ({ placement }) => placement.pieceId === PieceId.make('phase')
+    )
+    if (exactPlaced === undefined) throw new Error('fractional exact placement expected')
+    const materialized = provisionalLayoutFromRelaxedState(catalog, state)
+    const transported = transportIntrinsicGroup(
+      catalog,
+      state,
+      [PieceId.make('phase')],
+      { x: 3, y: -2 }
+    )
+    const transportedPlaced = transported === undefined
+      ? undefined
+      : provisionalLayoutFromRelaxedState(catalog, transported)
+    const exactPath = placedCollisionWorldGridPath(exactPlaced)
+    const materializedPhase = materialized?.find(
+      ({ placement }) => placement.pieceId === PieceId.make('phase')
+    )
+    const transportedPhase = transportedPlaced?.find(
+      ({ placement }) => placement.pieceId === PieceId.make('phase')
+    )
+    const materializedPath = materializedPhase === undefined
+      ? undefined
+      : placedCollisionWorldGridPath(materializedPhase)
+    const transportedPath = transportedPhase === undefined
+      ? undefined
+      : placedCollisionWorldGridPath(transportedPhase)
+
+    expect(materializedPath).toEqual(exactPath)
+    expect(transportedPath).toEqual(
+      exactPath?.map(({ x, y }) => ({ x: x + 3, y: y - 2 }))
+    )
+    expect(intrinsicRelaxedStateKey(catalog, state)).not.toBe(
+      intrinsicRelaxedStateKey(catalog, alternateState)
+    )
+    const transformProposals = intrinsicFocusedProposalsForPiece({
+      catalog,
+      state,
+      evaluation: {
+        rawLoss: 1,
+        weightedLoss: 1,
+        exactZeroLoss: false,
+        conflicts: [
+          syntheticWallConflict(
+            'phase-transform',
+            PieceId.make('phase'),
+            1,
+            1,
+            0
+          )
+        ]
+      },
+      weights: { byConflictKey: new Map() },
+      selectedPieceId: PieceId.make('phase')
+    }).filter(({ kind }) => kind === 'transform')
+    expect(transformProposals.length).toBeGreaterThan(0)
+    expect(
+      transformProposals.every(
+        ({ state: candidateState }) =>
+          provisionalLayoutFromRelaxedState(catalog, candidateState) !== undefined
+      )
+    ).toBe(true)
+    expect(
+      measureIntrinsicPressureCompactness(
+        exact.toReversed().map((entry) => translatePlaced(entry, 10, 20))
+      )?.compactness
+    ).toEqual(measureIntrinsicPressureCompactness(exact)?.compactness)
   })
 
   it('lets a finite transform proposal change a wall-conflicted topology', async () => {
@@ -565,6 +659,7 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
         )
         .every(
           ({
+            outcome,
             evaluationCount,
             beforeWeightedLoss,
             afterWeightedLoss,
@@ -574,9 +669,9 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
               candidateAccounting.reduce(
                 (count, accounting) => count + accounting.evaluatedCount,
                 0
-              ) +
-                1 &&
-            afterWeightedLoss <= beforeWeightedLoss * 1.001
+              ) &&
+            (outcome === 'canonical-legal' ||
+              afterWeightedLoss <= beforeWeightedLoss * 1.001)
         )
     ).toBe(true)
     expect(result.trace.distinctAffectedPieceCount).toBe(
@@ -608,6 +703,12 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
         .filter(({ outcome }) => outcome !== 'deduplicated')
         .flatMap(({ stateKey }) => (stateKey === undefined ? [] : [stateKey]))
       expect(new Set(uniqueKeys).size).toBe(uniqueKeys.length)
+      expect(visit).toMatchObject({
+        adaptiveTransformFamilyGeneratorInvoked: false,
+        adaptiveTransformFamilyGeneratedCount: 0,
+        adaptiveTransformFamilyMaterializedCount: 0,
+        adaptiveTransformFamilyUniqueCount: 0
+      })
     }
   })
 
@@ -653,6 +754,40 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(reverse.trace.outerRetentionOutcome).toBe('interrupted')
   })
 
+  it('reserves tight shared pressure budget for reverse before forward can consume it', async () => {
+    const transforms = [transform(0, 0), transform(1, 90)]
+    const pieces = [
+      preparedRectangle('near', 4, 2, transforms),
+      preparedRectangle('far', 4, 2, transforms)
+    ]
+    const catalog = await catalogFor(pieces)
+    const e1 = [
+      placed(catalogEntry(catalog, 'near'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'far'), 0, 4, 0)
+    ]
+    const result = await runController(
+      pieces,
+      e1,
+      schedule({
+        sweepsPerBasin: 1,
+        maximumSeparationEvaluations: 20,
+        explorationAreaCapMm2: 20
+      }),
+      ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced))
+    )
+    const firstCompositePair = result.contractedPressureTrace
+      .flatMap(({ repairSweeps }) => repairSweeps)
+      .flatMap(({ compositeParents }) => compositeParents)
+      .slice(0, 2)
+
+    expect(firstCompositePair.map(({ orderIdentity }) => orderIdentity)).toEqual([
+      'priority-forward',
+      'priority-reverse'
+    ])
+    expect(firstCompositePair[0]?.evaluationCount).toBeLessThanOrEqual(2)
+    expect(firstCompositePair[1]?.evaluationCount).toBeGreaterThan(0)
+  })
+
   it('selects deterministic transform-family representatives only for conflict axes', async () => {
     const pieces = [
       preparedRectangle('moving', 4, 1, [transform(0, 0), transform(1, 90)]),
@@ -686,6 +821,9 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
 
     expect(first.selectedAxes).toEqual(['x'])
     expect(first.generatedCount).toBeGreaterThan(0)
+    expect(first.generatedCount).toBeGreaterThanOrEqual(first.materializedCount)
+    expect(first.materializedCount).toBeGreaterThanOrEqual(first.uniqueCount)
+    expect(first.uniqueCount).toBe(first.candidates.length)
     expect(first.candidates.every(({ pass }) => pass === 'adaptive-axis-x')).toBe(true)
     expect(first.candidates.map(({ stateKey }) => stateKey)).toEqual(
       second.candidates.map(({ stateKey }) => stateKey)
@@ -757,6 +895,22 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
   })
 
   it('ranks composite choices deterministically and falls back to no-op', () => {
+    expect(
+      selectIntrinsicPressureCompositeChoice(1, [
+        {
+          stateKey: 'canonical-residue',
+          weightedLoss: 10,
+          rawLoss: 10,
+          canonicalLegal: true
+        },
+        {
+          stateKey: 'sat-preferred-illegal',
+          weightedLoss: 0,
+          rawLoss: 0,
+          canonicalLegal: false
+        }
+      ])
+    ).toBe('canonical-residue')
     expect(
       selectIntrinsicPressureCompositeChoice(1, [
         { stateKey: 'b', weightedLoss: 0.9, rawLoss: 0.5 },

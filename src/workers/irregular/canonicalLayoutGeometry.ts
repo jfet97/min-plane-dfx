@@ -58,6 +58,32 @@ export interface CanonicalGridAabb {
   readonly maxY: number
 }
 
+export interface CanonicalWorldGridPoint {
+  readonly x: number
+  readonly y: number
+}
+
+/** Authoritative collision path: add in millimetres, then round once to the grid. */
+export function placedCollisionWorldGridPath(
+  entry: IrregularPlacedPiece
+): ReadonlyArray<CanonicalWorldGridPoint> | undefined {
+  const { translateX, translateY } = entry.placement.transform
+  const path = entry.collisionGeometry.polygon.points.map((point) => {
+    const x = toGridMm(point.x + translateX)
+    const y = toGridMm(point.y + translateY)
+    return {
+      x: x === 0 ? 0 : x,
+      y: y === 0 ? 0 : y
+    }
+  })
+  return path.length < 3 || path.some(({ x, y }) => x === undefined || y === undefined)
+    ? undefined
+    : path.filter(
+        (point): point is CanonicalWorldGridPoint =>
+          point.x !== undefined && point.y !== undefined
+      )
+}
+
 export interface CanonicalLayoutStructuralAnalysis {
   readonly pieces: ReadonlyArray<{
     readonly pieceId: PieceId
@@ -386,16 +412,13 @@ function canonicalPlacedPolygons(
 ): ReadonlyArray<CanonicalPlacedPolygon> | undefined {
   const result: CanonicalPlacedPolygon[] = []
   for (const entry of placed) {
-    const path: Path64 = []
-    const points: InternalPoint[] = []
-    const { translateX, translateY } = entry.placement.transform
-    for (const point of entry.collisionGeometry.polygon.points) {
-      const x = toGridMm(point.x + translateX)
-      const y = toGridMm(point.y + translateY)
-      if (x === undefined || y === undefined) return undefined
-      path.push({ x, y })
-      points.push({ x: fromGrid(x), y: fromGrid(y) })
-    }
+    const worldPath = placedCollisionWorldGridPath(entry)
+    if (worldPath === undefined) return undefined
+    const path: Path64 = worldPath.map(({ x, y }) => ({ x, y }))
+    const points: InternalPoint[] = worldPath.map(({ x, y }) => ({
+      x: fromGrid(x),
+      y: fromGrid(y)
+    }))
     if (path.length < 3 || signedArea(path) === 0) return undefined
     const bounds = boundsForPoints(points)
     if (bounds === undefined) return undefined

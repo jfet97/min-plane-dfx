@@ -91,6 +91,11 @@ orientation family, transform, and canonical pose. It also records generated,
 materialized, unique, evaluated, incident-clear, globally-clear, selected, and
 cap-skipped counts. This made the G result below directly falsifiable.
 
+The review fix preserves generator-native generated/materialized/unique
+conservation instead of reconstructing those stages from returned candidates.
+At the current pressure call site G is dormant, so its explicit call-site
+counters are truthfully zero.
+
 ### C: bounded forward/reverse collider order
 
 Both orders ran 60 composite parents per fixture under one shared cap. No run
@@ -114,6 +119,10 @@ Triangle and from 12,260 to 31,420 on Mixed. Runtime increased from about
 The quality/time trade remains acceptable for an experiment but should become
 adaptive before production.
 
+The retained implementation now reserves half of each parent's remaining cap
+for reverse before forward runs. Reverse receives its reservation plus any
+unused forward budget, removing the earlier forward-first starvation case.
+
 ### D/H: conflict and survival diagnostics
 
 All 120 composite children per fixture were emitted. Outer retention kept 66
@@ -129,24 +138,39 @@ overlaps instead of coordinating their removal.
 
 ### G: adaptive transform-family coverage
 
-The adaptive generator emitted 13,944 Triangle and 20,776 Mixed candidates,
-but existing-first canonical deduplication found **zero unique candidates**.
+The historical report observed 13,944 Triangle and 20,776 Mixed returned
+generator entries, but those were reconstructed trace-entry counts rather than
+the generator's pre-materialization totals. Existing-first canonical
+deduplication nevertheless found **zero unique candidates**.
 None was evaluated or selected. In the current single-piece neighborhood, G
 adds no reachability; existing focused transform proposals already contain the
-same canonical states. Retain its typed generator and attribution for V7, but
-do not pay its generation cost unconditionally before a coordinated move
-creates a new context.
+same canonical states. The call site is now dormant with explicit zero-cost
+trace fields. Retain its typed generator and direct conservation tests for V7,
+but do not invoke it before a coordinated move creates a new context.
 
 ### F: canonical control
 
 F now runs in the real controller and survives the portfolio/report boundary.
 It is observer-only and proved the Mixed SAT false rejection described above.
+The relaxed state now preserves arbitrary fractional translation phase plus
+integer search offsets, and its identity fingerprints canonical paths across
+all finite transforms. Local proposal admission checks canonical legality
+before SAT ranking, so a canonically legal state with SAT residue cannot be
+discarded by the floating tuple. Selected pure evaluations are reused rather
+than recomputed, keeping budget and accounting exact.
 
 ### E: two-radius refinement
 
 The 16-position two-radius generator is present only as a typed, tested dormant
 API. The real pressure loop has no call site, so E cannot affect current runtime
 or selection. It remains reserved for a promising V7 coordinated endpoint.
+
+The portfolio's admission rule remains intentionally area-only. The unused
+`maximumCavityCount` and `maximumLargestHullGapRatio` schedule fields were
+removed rather than silently activating a new quality policy. The result field
+is now `retainedAdmittedCandidates`, explicitly naming the admitted challengers
+that survived archive capacity. Adaptive-depth helpers and adaptive-only trace
+reasons remain dormant; this pass does not activate adaptive repair depth.
 
 ## Production Golden Differential
 
