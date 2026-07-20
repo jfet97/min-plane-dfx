@@ -831,14 +831,22 @@ async function captureTriangleDelayedLineage(
         sheet: TRIANGLE_SHEET,
         pieces: preparedPieces,
         hooks: {
-          onStateSelected: ({ state }) => {
-            keys.push(state.canonicalOccupiedGeometryKey)
+          onPreTerminalState: (state) => {
+            const reversePath: string[] = []
+            let current: IrregularBeamState | undefined = state
+            while (current?.parent !== undefined) {
+              reversePath.push(current.canonicalOccupiedGeometryKey)
+              current = current.parent
+            }
+            keys.splice(0, keys.length, ...reversePath.reverse())
           }
         }
       }),
       referenceSettings
     )
-  )
+  ).catch((error: unknown) => {
+    if (keys.length !== preparedPieces.length) throw error
+  })
   if (keys.length !== preparedPieces.length) {
     throw new Error(
       `triangle delayed-lineage source produced ${keys.length} of ${preparedPieces.length} prefixes`
