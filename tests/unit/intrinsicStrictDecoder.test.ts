@@ -18,8 +18,10 @@ import {
   IrregularTransformCandidate
 } from '@shared/irregular/domain.js'
 import {
+  compareIntrinsicStrictCompletedLayoutDominance,
   decodeIntrinsicStrictPriorityOrder,
   constructIntrinsicStrictState,
+  intrinsicStrictCompletedLayoutDominates,
   measureIntrinsicStrictCanonicalEnvelope,
   rankIntrinsicStrictCompletedLayouts,
   selectIntrinsicStrictFamilyWinner,
@@ -418,7 +420,7 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     ).toBe('pure')
   })
 
-  it('orders floor passers before chain and fragment failures without buying topology by area', () => {
+  it('uses raw isolate counts after both layouts exceed the old saturated floor', () => {
     const base: IntrinsicStrictCompletedMetrics = {
       envelopeMaximumSideMm: 100,
       envelopeAreaMm2: 8_000,
@@ -436,11 +438,59 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       dominantStructuralContacts: 9,
       contactUnits: 9,
       sharedBoundaryLengthMm: 90,
-      canonicalGeometryHash: 'cohesive',
+      canonicalGeometryHash: 'fifteen-isolates',
       runtimeMs: 1
     }
-    const chain = {
+    const fifteenIsolates = {
       ...base,
+      isolatedPieceCount: 15
+    }
+    const twentySixIsolates = {
+      ...base,
+      isolatedPieceCount: 26,
+      canonicalGeometryHash: 'twenty-six-isolates'
+    }
+
+    expect(compareIntrinsicStrictCompletedLayoutDominance(fifteenIsolates, twentySixIsolates)).toBe(
+      -1
+    )
+    expect(intrinsicStrictCompletedLayoutDominates(fifteenIsolates, twentySixIsolates)).toBe(true)
+    expect(
+      rankIntrinsicStrictCompletedLayouts([twentySixIsolates, fifteenIsolates]).map(
+        ({ canonicalGeometryHash }) => canonicalGeometryHash
+      )
+    ).toEqual(['fifteen-isolates', 'twenty-six-isolates'])
+  })
+
+  it('keeps compactness and cohesion tradeoffs non-dominated', () => {
+    const cohesive = completedMetrics('cohesive')
+    const compactFragment = {
+      ...cohesive,
+      envelopeMaximumSideMm: 80,
+      envelopeAreaMm2: 6_000,
+      envelopeSpanMm: 160,
+      isolatedPieceCount: 5,
+      positiveContactComponentCount: 4,
+      largestPositiveContactComponentSize: 4,
+      largestPositiveContactComponentRatio: 0.4,
+      occupiedAreaOutsideLargestContactComponentMm2: 5_000,
+      totalStructuralContacts: 4,
+      dominantStructuralContacts: 3,
+      contactUnits: 4,
+      sharedBoundaryLengthMm: 30,
+      canonicalGeometryHash: 'compact-fragment'
+    }
+
+    expect(compareIntrinsicStrictCompletedLayoutDominance(cohesive, compactFragment)).toBe(0)
+    expect(compareIntrinsicStrictCompletedLayoutDominance(compactFragment, cohesive)).toBe(0)
+    expect(intrinsicStrictCompletedLayoutDominates(cohesive, compactFragment)).toBe(false)
+    expect(intrinsicStrictCompletedLayoutDominates(compactFragment, cohesive)).toBe(false)
+  })
+
+  it('keeps a cohesion-floor passer ahead of smaller failing tradeoffs', () => {
+    const cohesive = completedMetrics('cohesive')
+    const chain = {
+      ...cohesive,
       envelopeMaximumSideMm: 500,
       envelopeAreaMm2: 5_000,
       envelopeSpanMm: 510,
@@ -448,7 +498,7 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       canonicalGeometryHash: 'chain'
     }
     const fragment = {
-      ...base,
+      ...cohesive,
       envelopeMaximumSideMm: 50,
       envelopeAreaMm2: 2_500,
       envelopeSpanMm: 100,
@@ -457,13 +507,36 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       canonicalGeometryHash: 'fragment'
     }
 
-    expect(
-      rankIntrinsicStrictCompletedLayouts([fragment, chain, base]).map(
-        ({ canonicalGeometryHash }) => canonicalGeometryHash
-      )
-    ).toEqual(['cohesive', 'chain', 'fragment'])
+    const ranked = rankIntrinsicStrictCompletedLayouts([fragment, chain, cohesive])
+    expect(ranked[0]?.canonicalGeometryHash).toBe('cohesive')
+    expect(new Set(ranked.slice(1).map(({ canonicalGeometryHash }) => canonicalGeometryHash))).toEqual(
+      new Set(['chain', 'fragment'])
+    )
   })
 })
+
+function completedMetrics(hash: string): IntrinsicStrictCompletedMetrics {
+  return {
+    envelopeMaximumSideMm: 100,
+    envelopeAreaMm2: 8_000,
+    envelopeSpanMm: 180,
+    enclosedCavityCount: 0,
+    totalEnclosedCavityAreaMm2: 0,
+    largestOccupiedHullGapRatio: 0.05,
+    isolatedPieceCount: 0,
+    positiveContactComponentCount: 1,
+    largestPositiveContactComponentSize: 10,
+    largestPositiveContactComponentRatio: 1,
+    occupiedAreaOutsideLargestContactComponentMm2: 0,
+    occupiedHullWasteRatio: 0.05,
+    totalStructuralContacts: 9,
+    dominantStructuralContacts: 9,
+    contactUnits: 9,
+    sharedBoundaryLengthMm: 90,
+    canonicalGeometryHash: hash,
+    runtimeMs: 1
+  }
+}
 
 function familyWinner(
   id: string,

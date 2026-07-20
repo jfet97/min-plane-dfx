@@ -15,8 +15,12 @@ import {
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import {
+  buildIntrinsicReconstructionSpecs,
   buildCanonicalEndpointOrders,
+  intrinsicReconstructionEffectiveOrderKey,
+  INTRINSIC_RECONSTRUCTION_ROLES,
   retainIntrinsicReconstructionArchive,
+  type IntrinsicReconstructionRole,
   type IntrinsicReconstructionRun
 } from '../../src/workers/algorithm/irregular/intrinsicReconstructionPortfolio.js'
 import type { IntrinsicStrictCompletedMetrics } from '../../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
@@ -25,14 +29,14 @@ function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
 }
 
-function piece(id: string): IrregularPreparedPiece {
-  const points = [point(0, 0), point(2, 0), point(2, 2), point(0, 2)]
+function piece(id: string, width = 2, height = 2): IrregularPreparedPiece {
+  const points = [point(0, 0), point(width, 0), point(width, height), point(0, height)]
   const polygon = new IrregularPolygon({ points })
   const source = new ImportedPiece({
     id: PieceId.make(id),
     sourceFileId: SourceFileId.make(`source-${id}`),
     label: id,
-    realBounds: new Rect({ x: 0, y: 0, width: 2, height: 2 }),
+    realBounds: new Rect({ x: 0, y: 0, width, height }),
     geometry: new DxfGeometrySummary({ entityType: 'PRESET_SHAPE', closed: true, segments: [] }),
     warnings: []
   })
@@ -42,7 +46,7 @@ function piece(id: string): IrregularPreparedPiece {
     allowMirror: false,
     collisionGeometry: new CollisionGeometry({
       sourcePieceId: source.id,
-      sourceBounds: new IrregularBounds({ minX: 0, minY: 0, maxX: 2, maxY: 2 }),
+      sourceBounds: new IrregularBounds({ minX: 0, minY: 0, maxX: width, maxY: height }),
       sampledPoints: points,
       convexHull: polygon,
       collisionPolygon: polygon,
@@ -107,9 +111,13 @@ function metrics(hash: string, maximumSide: number): IntrinsicStrictCompletedMet
   }
 }
 
-function run(hash: string, maximumSide: number): IntrinsicReconstructionRun {
+function run(
+  hash: string,
+  maximumSide: number,
+  role: IntrinsicReconstructionRole = 'reversed-priority'
+): IntrinsicReconstructionRun {
   return {
-    role: 'reversed-priority',
+    role,
     sourceEndpointHash: undefined,
     candidateMode: 'pure-growth',
     pieceIds: [],
@@ -158,16 +166,77 @@ describe('intrinsic reconstruction portfolio', () => {
     ])
   })
 
-  it('deduplicates canonical identities and applies the shared exact order', () => {
+  it('stacks every geometry-derived order with gap-contained placement', () => {
+    const first = piece('first')
+    const second = piece('second', 3, 2)
+    const endpoint = {
+      role: 'canonical-grid' as const,
+      canonicalGeometryHash: 'endpoint',
+      placedCollisionGeometries: [place(first, 0, 0), place(second, 2, 0)],
+      stepTrace: [],
+      metrics: metrics('endpoint', 5)
+    }
+    const specs = buildIntrinsicReconstructionSpecs([first, second], endpoint)
+    const roles = specs.map(({ role }) => role)
+
+    expect(roles).toEqual([
+      'reversed-priority',
+      'endpoint-q0-left-to-right',
+      'endpoint-q0-right-to-left',
+      'endpoint-q90-left-to-right',
+      'endpoint-q90-right-to-left',
+      'open-pocket-first',
+      'reversed-priority-open-pocket-first',
+      'endpoint-q0-left-to-right-open-pocket-first',
+      'endpoint-q0-right-to-left-open-pocket-first',
+      'endpoint-q90-left-to-right-open-pocket-first',
+      'endpoint-q90-right-to-left-open-pocket-first'
+    ])
+    expect(INTRINSIC_RECONSTRUCTION_ROLES).toHaveLength(13)
+    expect(
+      specs
+        .filter(({ candidateMode }) => typeof candidateMode === 'object')
+        .map(({ candidateMode }) => candidateMode)
+    ).toHaveLength(6)
+  })
+
+  it('deduplicates effective orders of interchangeable geometry without collapsing distinct shapes', () => {
+    const first = piece('first')
+    const second = piece('second')
+    const rectangle = piece('rectangle', 3, 2)
+
+    expect(intrinsicReconstructionEffectiveOrderKey([first, second])).toBe(
+      intrinsicReconstructionEffectiveOrderKey([second, first])
+    )
+    expect(intrinsicReconstructionEffectiveOrderKey([first, rectangle])).not.toBe(
+      intrinsicReconstructionEffectiveOrderKey([rectangle, first])
+    )
+  })
+
+  it('deduplicates canonical identities and removes dominated non-baselines', () => {
     const retained = retainIntrinsicReconstructionArchive([
       run('larger', 20),
       run('smaller', 10),
       run('smaller', 10)
     ])
 
+    expect(retained.map(({ metrics: value }) => value.canonicalGeometryHash)).toEqual(['smaller'])
+  })
+
+  it('reserves both distinct baseline geometries before archive truncation', () => {
+    const retained = retainIntrinsicReconstructionArchive(
+      [
+        run('canonical-seed', 20, 'canonical-grid'),
+        run('legacy-seed', 18, 'legacy-absolute-envelope'),
+        run('frontier-leader', 10)
+      ],
+      3
+    )
+
     expect(retained.map(({ metrics: value }) => value.canonicalGeometryHash)).toEqual([
-      'smaller',
-      'larger'
+      'frontier-leader',
+      'canonical-seed',
+      'legacy-seed'
     ])
   })
 })

@@ -1019,51 +1019,171 @@ export function evaluateIntrinsicStrictCertificate(
   }
 }
 
-/** Preregistered completed-layout archive order, including negative topology ordering. */
+type IntrinsicStrictParetoComparison = -1 | 0 | 1
+
+interface IntrinsicStrictParetoObjective {
+  readonly compare: (
+    first: IntrinsicStrictCompletedMetrics,
+    second: IntrinsicStrictCompletedMetrics
+  ) => number
+}
+
+const intrinsicStrictParetoObjectives: ReadonlyArray<IntrinsicStrictParetoObjective> = [
+  minimizeMetric((metrics) => metrics.envelopeMaximumSideMm, canonicalLinearMetric),
+  minimizeMetric((metrics) => metrics.isolatedPieceCount),
+  minimizeMetric((metrics) => metrics.envelopeAreaMm2, canonicalAreaMetric),
+  minimizeMetric((metrics) => metrics.positiveContactComponentCount),
+  minimizeMetric((metrics) => metrics.envelopeSpanMm, canonicalLinearMetric),
+  maximizeMetric((metrics) => metrics.largestPositiveContactComponentSize),
+  maximizeMetric((metrics) => metrics.largestPositiveContactComponentRatio, canonicalRatioMetric),
+  minimizeMetric((metrics) => metrics.largestOccupiedHullGapRatio, canonicalRatioMetric),
+  maximizeMetric((metrics) => metrics.totalStructuralContacts),
+  maximizeMetric((metrics) => metrics.dominantStructuralContacts),
+  minimizeMetric((metrics) => metrics.enclosedCavityCount),
+  minimizeMetric((metrics) => metrics.totalEnclosedCavityAreaMm2, canonicalAreaMetric),
+  minimizeMetric(
+    (metrics) => metrics.occupiedAreaOutsideLargestContactComponentMm2,
+    canonicalAreaMetric
+  ),
+  minimizeMetric((metrics) => metrics.occupiedHullWasteRatio, canonicalRatioMetric),
+  maximizeMetric((metrics) => metrics.contactUnits),
+  maximizeMetric((metrics) => metrics.sharedBoundaryLengthMm, canonicalLinearMetric)
+]
+
+/**
+ * Compares exact completed layouts by unsaturated compactness and cohesion.
+ * A negative result means the first layout dominates the second; zero means
+ * equality or a genuine tradeoff and is deliberately not a scalar tie.
+ */
+export function compareIntrinsicStrictCompletedLayoutDominance(
+  first: IntrinsicStrictCompletedMetrics,
+  second: IntrinsicStrictCompletedMetrics
+): IntrinsicStrictParetoComparison {
+  let firstBetter = false
+  let secondBetter = false
+  for (const objective of intrinsicStrictParetoObjectives) {
+    const comparison = objective.compare(first, second)
+    firstBetter ||= comparison < 0
+    secondBetter ||= comparison > 0
+    if (firstBetter && secondBetter) return 0
+  }
+  return firstBetter ? -1 : secondBetter ? 1 : 0
+}
+
+export function intrinsicStrictCompletedLayoutDominates(
+  first: IntrinsicStrictCompletedMetrics,
+  second: IntrinsicStrictCompletedMetrics
+): boolean {
+  return compareIntrinsicStrictCompletedLayoutDominance(first, second) < 0
+}
+
+/** Selects the best available certificate partition and removes every dominated layout. */
+export function selectIntrinsicStrictCompletedParetoFront(
+  layouts: ReadonlyArray<IntrinsicStrictCompletedMetrics>
+): ReadonlyArray<IntrinsicStrictCompletedMetrics> {
+  const passing = layouts.filter((metrics) => evaluateIntrinsicStrictCertificate(metrics).passes)
+  const partition = passing.length > 0 ? passing : layouts
+  const frontier = partition.filter(
+    (candidate) =>
+      !partition.some(
+        (other) => other !== candidate && intrinsicStrictCompletedLayoutDominates(other, candidate)
+      )
+  )
+  return orderIntrinsicStrictParetoFront(frontier)
+}
+
+/** Keeps certified layouts ahead of failures, then orders each partition by Pareto fronts. */
 export function rankIntrinsicStrictCompletedLayouts(
   layouts: ReadonlyArray<IntrinsicStrictCompletedMetrics>
 ): ReadonlyArray<IntrinsicStrictCompletedMetrics> {
-  const assessed = layouts.map((metrics) => ({
-    metrics,
-    certificate: evaluateIntrinsicStrictCertificate(metrics)
-  }))
-  const minimumPassingArea = Math.min(
-    ...assessed
-      .filter(({ certificate }) => certificate.passes)
-      .map(({ metrics }) => metrics.envelopeAreaMm2)
-  )
-  return assessed
-    .toSorted((first, second) => {
-      if (first.certificate.passes !== second.certificate.passes) {
-        return first.certificate.passes ? -1 : 1
-      }
-      if (first.certificate.passes) {
-        const firstWithinOnePercent = first.metrics.envelopeAreaMm2 <= minimumPassingArea * 1.01
-        const secondWithinOnePercent = second.metrics.envelopeAreaMm2 <= minimumPassingArea * 1.01
-        if (firstWithinOnePercent !== secondWithinOnePercent) return firstWithinOnePercent ? -1 : 1
-        if (firstWithinOnePercent) {
-          return (
-            first.metrics.envelopeMaximumSideMm - second.metrics.envelopeMaximumSideMm ||
-            first.metrics.envelopeAreaMm2 - second.metrics.envelopeAreaMm2 ||
-            first.metrics.canonicalGeometryHash.localeCompare(second.metrics.canonicalGeometryHash)
-          )
-        }
-        return (
-          first.metrics.envelopeAreaMm2 - second.metrics.envelopeAreaMm2 ||
-          first.metrics.envelopeMaximumSideMm - second.metrics.envelopeMaximumSideMm ||
-          first.metrics.canonicalGeometryHash.localeCompare(second.metrics.canonicalGeometryHash)
+  const passing: IntrinsicStrictCompletedMetrics[] = []
+  const failing: IntrinsicStrictCompletedMetrics[] = []
+  for (const metrics of layouts) {
+    if (evaluateIntrinsicStrictCertificate(metrics).passes) passing.push(metrics)
+    else failing.push(metrics)
+  }
+  return [...rankIntrinsicStrictParetoPartition(passing), ...rankIntrinsicStrictParetoPartition(failing)]
+}
+
+function rankIntrinsicStrictParetoPartition(
+  layouts: ReadonlyArray<IntrinsicStrictCompletedMetrics>
+): ReadonlyArray<IntrinsicStrictCompletedMetrics> {
+  const remaining = [...layouts]
+  const ranked: IntrinsicStrictCompletedMetrics[] = []
+  while (remaining.length > 0) {
+    const frontier = remaining.filter(
+      (candidate) =>
+        !remaining.some(
+          (other) =>
+            other !== candidate && intrinsicStrictCompletedLayoutDominates(other, candidate)
         )
-      }
-      return (
-        first.certificate.violatedFloors.length - second.certificate.violatedFloors.length ||
-        first.certificate.relativeDeficitSum - second.certificate.relativeDeficitSum ||
-        first.metrics.envelopeMaximumSideMm - second.metrics.envelopeMaximumSideMm ||
-        first.metrics.envelopeAreaMm2 - second.metrics.envelopeAreaMm2 ||
-        first.metrics.envelopeSpanMm - second.metrics.envelopeSpanMm ||
-        first.metrics.canonicalGeometryHash.localeCompare(second.metrics.canonicalGeometryHash)
-      )
-    })
-    .map(({ metrics }) => metrics)
+    )
+    if (frontier.length === 0) {
+      return [
+        ...ranked,
+        ...remaining.toSorted((first, second) =>
+          first.canonicalGeometryHash.localeCompare(second.canonicalGeometryHash)
+        )
+      ]
+    }
+    ranked.push(...orderIntrinsicStrictParetoFront(frontier))
+    const frontierMembers = new Set(frontier)
+    for (let index = remaining.length - 1; index >= 0; index -= 1) {
+      const candidate = remaining[index]
+      if (candidate !== undefined && frontierMembers.has(candidate)) remaining.splice(index, 1)
+    }
+  }
+  return ranked
+}
+
+function orderIntrinsicStrictParetoFront(
+  frontier: ReadonlyArray<IntrinsicStrictCompletedMetrics>
+): ReadonlyArray<IntrinsicStrictCompletedMetrics> {
+  const remaining = [...frontier]
+  const ordered: IntrinsicStrictCompletedMetrics[] = []
+  while (remaining.length > 0) {
+    let selectedAny = false
+    for (const objective of intrinsicStrictParetoObjectives) {
+      const selected = remaining.toSorted(
+        (first, second) =>
+          objective.compare(first, second) ||
+          first.canonicalGeometryHash.localeCompare(second.canonicalGeometryHash)
+      )[0]
+      if (selected === undefined) continue
+      ordered.push(selected)
+      remaining.splice(remaining.indexOf(selected), 1)
+      selectedAny = true
+      if (remaining.length === 0) break
+    }
+    if (!selectedAny) break
+  }
+  return ordered
+}
+
+function minimizeMetric(
+  value: (metrics: IntrinsicStrictCompletedMetrics) => number,
+  canonicalize: (metric: number) => number = identityMetric
+): IntrinsicStrictParetoObjective {
+  return {
+    compare: (first, second) => canonicalize(value(first)) - canonicalize(value(second))
+  }
+}
+
+function maximizeMetric(
+  value: (metrics: IntrinsicStrictCompletedMetrics) => number,
+  canonicalize: (metric: number) => number = identityMetric
+): IntrinsicStrictParetoObjective {
+  return {
+    compare: (first, second) => canonicalize(value(second)) - canonicalize(value(first))
+  }
+}
+
+function identityMetric(metric: number): number {
+  return metric
+}
+
+function canonicalRatioMetric(metric: number): number {
+  return Math.round(metric * 1_000_000_000)
 }
 
 function makeResult(input: {

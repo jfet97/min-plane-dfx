@@ -3,6 +3,7 @@ import { performance } from 'node:perf_hooks'
 import type { PieceId } from '@shared/domain/ids.js'
 import type { IrregularPlacedPiece, IrregularPreparedPiece } from '@shared/irregular/domain.js'
 import { placedCollisionWorldGridPath } from '../../irregular/canonicalLayoutGeometry.js'
+import { toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import type { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import type {
   IrregularGeometryInputError,
@@ -14,6 +15,7 @@ import {
   IntrinsicStrictDecoderError,
   measureIntrinsicSheetlessCompletedLayout,
   rankIntrinsicStrictCompletedLayouts,
+  selectIntrinsicStrictCompletedParetoFront,
   type IntrinsicStrictCandidateMode,
   type IntrinsicStrictCompletedMetrics,
   type IntrinsicStrictConstructResult
@@ -29,7 +31,12 @@ export const INTRINSIC_RECONSTRUCTION_ROLES = [
   'endpoint-q0-right-to-left',
   'endpoint-q90-left-to-right',
   'endpoint-q90-right-to-left',
-  'open-pocket-first'
+  'open-pocket-first',
+  'reversed-priority-open-pocket-first',
+  'endpoint-q0-left-to-right-open-pocket-first',
+  'endpoint-q0-right-to-left-open-pocket-first',
+  'endpoint-q90-left-to-right-open-pocket-first',
+  'endpoint-q90-right-to-left-open-pocket-first'
 ] as const
 
 export type IntrinsicReconstructionRole = (typeof INTRINSIC_RECONSTRUCTION_ROLES)[number]
@@ -120,13 +127,13 @@ export function runIntrinsicReconstructionPortfolio(input: {
     const orderOwners = new Map<string, IntrinsicReconstructionRole>()
     for (const run of seedRuns) {
       orderOwners.set(
-        `${candidateModeKey(run.candidateMode)}:${pieceOrderKey(run.pieceIds)}`,
+        `${candidateModeKey(run.candidateMode)}:${intrinsicReconstructionEffectiveOrderKey(input.allPreparedPieces)}`,
         run.role
       )
     }
 
     for (const spec of specs) {
-      const orderKey = pieceOrderKey(spec.pieces.map(preparedPieceId))
+      const orderKey = intrinsicReconstructionEffectiveOrderKey(spec.pieces)
       const duplicateOf = orderOwners.get(`${candidateModeKey(spec.candidateMode)}:${orderKey}`)
       if (duplicateOf !== undefined) {
         runs.push({
@@ -196,12 +203,18 @@ export function runIntrinsicReconstructionPortfolio(input: {
   })
 }
 
-/** Builds the six bounded reconstructions justified by corrected F0. */
+/** Builds bounded pure-growth and gap-contained reconstructions from generic geometry orders. */
 export function buildIntrinsicReconstructionSpecs(
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   endpoint: IntrinsicReconstructionSeed
 ): ReadonlyArray<DecodeSpec> {
   const endpointOrders = buildCanonicalEndpointOrders(pieces, endpoint.placedCollisionGeometries)
+  const gapContainedEndpointOrders = endpointOrders.map(({ role, pieces: ordered }) => ({
+    role: `${role}-open-pocket-first` as const,
+    sourceEndpointHash: endpoint.canonicalGeometryHash,
+    candidateMode: { kind: 'gap-contained' } as const,
+    pieces: ordered
+  }))
   return [
     {
       role: 'reversed-priority',
@@ -220,7 +233,14 @@ export function buildIntrinsicReconstructionSpecs(
       sourceEndpointHash: undefined,
       candidateMode: { kind: 'gap-contained' } as const,
       pieces
-    }
+    },
+    {
+      role: 'reversed-priority-open-pocket-first',
+      sourceEndpointHash: undefined,
+      candidateMode: { kind: 'gap-contained' } as const,
+      pieces: [...pieces].reverse()
+    },
+    ...gapContainedEndpointOrders
   ]
 }
 
@@ -296,7 +316,7 @@ export function buildCanonicalEndpointOrders(
   ]
 }
 
-/** Keeps at most eight exact canonical identities under the shared topology order. */
+/** Keeps the baseline seeds plus exact Pareto representatives within the shared capacity. */
 export function retainIntrinsicReconstructionArchive(
   runs: ReadonlyArray<IntrinsicReconstructionRun>,
   capacity = INTRINSIC_RECONSTRUCTION_ARCHIVE_CAPACITY
@@ -314,15 +334,35 @@ export function retainIntrinsicReconstructionArchive(
       unique.set(run.metrics.canonicalGeometryHash, run)
     }
   }
-  const rankedMetrics = rankIntrinsicStrictCompletedLayouts(
-    [...unique.values()].map(({ metrics }) => metrics)
+  const uniqueRuns = [...unique.values()]
+  const rankedMetrics = selectIntrinsicStrictCompletedParetoFront(
+    uniqueRuns.map(({ metrics }) => metrics)
   )
-  return rankedMetrics
+  const rankedRuns = rankedMetrics
     .flatMap((metrics) => {
       const run = unique.get(metrics.canonicalGeometryHash)
       return run === undefined ? [] : [run]
     })
-    .slice(0, Math.max(0, capacity))
+  const boundedCapacity = Math.max(0, capacity)
+  const protectedSeeds = uniqueRuns.filter(
+    ({ role }) => role === 'canonical-grid' || role === 'legacy-absolute-envelope'
+  )
+  const selected: Array<
+    IntrinsicReconstructionRun & { metrics: IntrinsicStrictCompletedMetrics }
+  > = []
+  const append = (run: IntrinsicReconstructionRun & { metrics: IntrinsicStrictCompletedMetrics }) => {
+    if (
+      selected.length < boundedCapacity &&
+      !selected.some(({ metrics }) => metrics.canonicalGeometryHash === run.metrics.canonicalGeometryHash)
+    ) {
+      selected.push(run)
+    }
+  }
+  const frontierLeader = rankedRuns[0]
+  if (frontierLeader !== undefined) append(frontierLeader)
+  for (const seed of protectedSeeds) append(seed)
+  for (const run of rankedRuns) append(run)
+  return selected
 }
 
 function baselineSeedRuns(
@@ -376,8 +416,57 @@ function candidateModeKey(mode: IntrinsicStrictCandidateMode): string {
   return typeof mode === 'string' ? mode : mode.kind
 }
 
-function pieceOrderKey(pieceIds: ReadonlyArray<PieceId>): string {
-  return pieceIds.join('|')
+/** Identifies orders by canonical geometry classes so interchangeable ids cannot duplicate work. */
+export function intrinsicReconstructionEffectiveOrderKey(
+  pieces: ReadonlyArray<IrregularPreparedPiece>
+): string {
+  return pieces.map(intrinsicPreparedPieceClassKey).join('|')
+}
+
+function intrinsicPreparedPieceClassKey(piece: IrregularPreparedPiece): string {
+  const points = piece.collisionGeometry.collisionPolygon.points.map(({ x, y }) => ({
+    x: toGridMm(x),
+    y: toGridMm(y)
+  }))
+  if (points.some(({ x, y }) => x === undefined || y === undefined)) {
+    return `piece:${preparedPieceId(piece)}`
+  }
+  const gridPoints = points.map(({ x, y }) => ({ x: x ?? 0, y: y ?? 0 }))
+  const minimumX = Math.min(...gridPoints.map(({ x }) => x))
+  const minimumY = Math.min(...gridPoints.map(({ y }) => y))
+  const normalized = gridPoints.map(({ x, y }) => ({ x: x - minimumX, y: y - minimumY }))
+  const referenceX = toGridMm(piece.collisionGeometry.placementReference.x)
+  const referenceY = toGridMm(piece.collisionGeometry.placementReference.y)
+  if (referenceX === undefined || referenceY === undefined) {
+    return `piece:${preparedPieceId(piece)}`
+  }
+  const transforms = [...piece.transforms]
+    .sort(
+      (first, second) =>
+        first.index - second.index ||
+        first.rotationDeg - second.rotationDeg ||
+        Number(first.mirrored) - Number(second.mirrored) ||
+        first.reason.localeCompare(second.reason)
+    )
+    .map(
+      ({ index, rotationDeg, mirrored, reason }) =>
+        `${index}:${rotationDeg}:${Number(mirrored)}:${reason}`
+    )
+    .join(',')
+  return `${canonicalPointRing(normalized)}@${referenceX - minimumX},${referenceY - minimumY}:${Number(piece.allowMirror)}:${transforms}`
+}
+
+function canonicalPointRing(
+  points: ReadonlyArray<{ readonly x: number; readonly y: number }>
+): string {
+  const variants = [points, [...points].reverse()].flatMap((sequence) =>
+    sequence.map((_, offset) =>
+      [...sequence.slice(offset), ...sequence.slice(0, offset)]
+        .map(({ x, y }) => `${x},${y}`)
+        .join(';')
+    )
+  )
+  return variants.toSorted()[0] ?? ''
 }
 
 function preparedPieceId(piece: IrregularPreparedPiece): PieceId {
