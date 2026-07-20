@@ -215,60 +215,30 @@ type FeatureSelectionObservation = Parameters<
  * NFP decode, so its global transport moves intentionally have no F0 rows.
  */
 class FeatureContactCoverageCollector implements IntrinsicV7FeatureContactObserver {
-  readonly candidates: FeatureCandidateObservation[] = []
-  readonly selections: FeatureSelectionObservation[] = []
+  readonly pending = new Map<string, FeatureCandidateObservation[]>()
+  readonly rows: FeatureCoverageRow[] = []
 
   onSeedCandidateProvenance(observation: FeatureCandidateObservation): void {
-    this.candidates.push(observation)
+    const key = featureSelectionKey(observation.seedRole, observation.observation)
+    const pending = this.pending.get(key) ?? []
+    pending.push(observation)
+    this.pending.set(key, pending)
   }
 
   onSeedStepSelection(observation: FeatureSelectionObservation): void {
-    this.selections.push(observation)
+    const key = featureSelectionKey(observation.seedRole, observation.observation)
+    const candidates = this.pending.get(key) ?? []
+    for (const candidate of candidates) {
+      this.rows.push(featureCoverageRow(candidate, observation))
+    }
+    this.pending.delete(key)
   }
 
   complete(seedArchive: ReadonlyArray<{ readonly role: string; readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece> }>) {
-    const selections = new Map(
-      this.selections.map((entry) => [featureSelectionKey(entry.seedRole, entry.observation), entry])
-    )
-    const rows = this.candidates.map(({ seedRole, observation }) => {
-      const selection = selections.get(featureSelectionKey(seedRole, observation))
-      const selected =
-        selection?.observation.selectedTransform !== undefined &&
-        sameTransform(selection.observation.selectedTransform, observation.transform) &&
-        selection.observation.selectedGridPoint !== undefined
-          ? selection.observation.selectedGridPoint
-          : undefined
-      const selectedSource =
-        selected === undefined
-          ? undefined
-          : observation.provenance.legalCandidateSources.find(
-              ({ gridX, gridY }) => gridX === selected.gridX && gridY === selected.gridY
-            )
-      const uniqueLegalCandidateCount = observation.provenance.legalCandidateSources.length
-      return {
-        seedRole,
-        arm: 'stage0-seed-construction',
-        step: observation.step,
-        parentStateId: observation.parentStateId,
-        pieceId: observation.pieceId,
-        transform: transformIdentity(observation.transform),
-        rawBySource: observation.provenance.rawBySource,
-        uniqueBySourceMask: observation.provenance.uniqueBySourceMask,
-        outsideIfp: observation.provenance.outsideIfp,
-        liveConvexRejected: observation.provenance.liveConvexRejected,
-        liveConvexLegal: observation.provenance.liveConvexLegal,
-        phaseIncompatible: observation.provenance.phaseIncompatible,
-        canonicalChecked: observation.provenance.canonicalChecked,
-        canonicalLegal: observation.provenance.canonicalLegal,
-        // Strict seeds retain a single winner, not a production fanout. The
-        // counts below are therefore selection facts, never fabricated fanout history.
-        localFanoutRetained: selectedSource === undefined ? 0 : 1,
-        localFanoutEvictedByReason:
-          selectedSource === undefined
-            ? { strictSeedNotSelected: uniqueLegalCandidateCount }
-            : { strictSeedNotSelected: Math.max(0, uniqueLegalCandidateCount - 1) }
-      }
-    })
+    if (this.pending.size > 0) {
+      throw new Error('F0 feature-contact observer did not receive every strict seed selection.')
+    }
+    const rows = this.rows
     const sourceNames = [
       'ifpCorner',
       'nfpVertex',
@@ -309,6 +279,68 @@ class FeatureContactCoverageCollector implements IntrinsicV7FeatureContactObserv
         canonicalLegal: isIntrinsicCanonicalLayoutLegal(seed.placedCollisionGeometries)
       }))
     }
+  }
+}
+
+interface FeatureCoverageRow {
+  readonly seedRole: string
+  readonly arm: 'stage0-seed-construction'
+  readonly step: number
+  readonly parentStateId: string
+  readonly pieceId: string
+  readonly transform: string
+  readonly rawBySource: FeatureCandidateObservation['observation']['provenance']['rawBySource']
+  readonly uniqueBySourceMask: FeatureCandidateObservation['observation']['provenance']['uniqueBySourceMask']
+  readonly outsideIfp: number
+  readonly liveConvexRejected: number
+  readonly liveConvexLegal: number
+  readonly phaseIncompatible: number
+  readonly canonicalChecked: number
+  readonly canonicalLegal: number
+  readonly localFanoutRetained: number
+  readonly localFanoutEvictedByReason: { readonly strictSeedNotSelected: number }
+}
+
+function featureCoverageRow(
+  candidate: FeatureCandidateObservation,
+  selection: FeatureSelectionObservation
+): FeatureCoverageRow {
+  const { seedRole, observation } = candidate
+  const selected =
+    selection.observation.selectedTransform !== undefined &&
+    sameTransform(selection.observation.selectedTransform, observation.transform) &&
+    selection.observation.selectedGridPoint !== undefined
+      ? selection.observation.selectedGridPoint
+      : undefined
+  const selectedSource =
+    selected === undefined
+      ? undefined
+      : observation.provenance.legalCandidateSources.find(
+          ({ gridX, gridY }) => gridX === selected.gridX && gridY === selected.gridY
+        )
+  const uniqueLegalCandidateCount = observation.provenance.legalCandidateSources.length
+  return {
+    seedRole,
+    arm: 'stage0-seed-construction',
+    step: observation.step,
+    parentStateId: observation.parentStateId,
+    pieceId: observation.pieceId,
+    transform: transformIdentity(observation.transform),
+    rawBySource: observation.provenance.rawBySource,
+    uniqueBySourceMask: observation.provenance.uniqueBySourceMask,
+    outsideIfp: observation.provenance.outsideIfp,
+    liveConvexRejected: observation.provenance.liveConvexRejected,
+    liveConvexLegal: observation.provenance.liveConvexLegal,
+    phaseIncompatible: observation.provenance.phaseIncompatible,
+    canonicalChecked: observation.provenance.canonicalChecked,
+    canonicalLegal: observation.provenance.canonicalLegal,
+    // Strict seeds retain a single winner, not a production fanout. The
+    // counts below are therefore selection facts, never fabricated fanout history.
+    localFanoutRetained: selectedSource === undefined ? 0 : 1,
+    localFanoutEvictedByReason:
+      selectedSource === undefined
+        ? { strictSeedNotSelected: uniqueLegalCandidateCount }
+        : { strictSeedNotSelected: Math.max(0, uniqueLegalCandidateCount - 1) }
   }
 }
 
