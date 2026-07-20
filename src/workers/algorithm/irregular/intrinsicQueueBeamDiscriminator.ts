@@ -181,6 +181,7 @@ export interface IntrinsicDelayedLineageStepReport {
   readonly expectedCanonicalGeometryKey: string
   readonly generated: boolean
   readonly paretoLayer: number | undefined
+  readonly paretoLayerRank: number | undefined
   readonly compactnessRank: number | undefined
   readonly fragmentationRank: number | undefined
   readonly voidRank: number | undefined
@@ -540,6 +541,15 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
             : rankWitnesses(referenceSuccessors, referenceLayers[0] ?? []).find(
                 ({ canonicalGeometryKey }) => canonicalGeometryKey === expectedReferenceKey
               )
+        const referenceLayer = referenceLayers.find((layer) =>
+          layer.some(({ canonicalGeometryKey }) => canonicalGeometryKey === expectedReferenceKey)
+        )
+        const paretoLayerRank =
+          referenceLayer === undefined
+            ? undefined
+            : orderCandidates(referenceLayer).findIndex(
+                  ({ canonicalGeometryKey }) => canonicalGeometryKey === expectedReferenceKey
+                ) + 1 || undefined
         const capacities = [1, 2, 4, 8, 13] as const
         const experimentalWidths = [0, 1, 3, 7, 12] as const
         const referenceEntries = referenceSuccessors.map(partialBeamEntry)
@@ -575,6 +585,7 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
           expectedCanonicalGeometryKey: expectedReferenceKey,
           generated: referenceCandidate !== undefined,
           paretoLayer: findCandidateLayer(referenceLayers, expectedReferenceKey),
+          paretoLayerRank,
           compactnessRank: referenceRanked?.compactnessRank,
           fragmentationRank: referenceRanked?.fragmentationRank,
           voidRank: referenceRanked?.voidRank,
