@@ -114,17 +114,23 @@ async function main(): Promise<void> {
     queueBeamDiscriminatorEnabled && reconstructionPortfolio !== undefined
       ? selectQueueBeamAuditTarget(reconstructionPortfolio)
       : undefined
+  const queueBeamOrderedPieces =
+    queueBeamTarget === undefined
+      ? undefined
+      : orderedPiecesForRun(preparedPieces, queueBeamTarget.pieceIds)
   const delayedLineageCanonicalGeometryKeys =
-    delayedLineageCalibrationEnabled && fixtureName === 'triangle-20'
-      ? await captureTriangleDelayedLineage(preparedPieces, fixture.settings)
+    delayedLineageCalibrationEnabled &&
+    fixtureName === 'triangle-20' &&
+    queueBeamOrderedPieces !== undefined
+      ? await captureTriangleDelayedLineage(queueBeamOrderedPieces, fixture.settings)
       : undefined
   const queueBeamDiscriminator =
-    queueBeamTarget === undefined
+    queueBeamTarget === undefined || queueBeamOrderedPieces === undefined
       ? undefined
       : await Effect.runPromise(
           withLayers(
             runIntrinsicQueueBeamDiscriminator({
-              orderedPreparedPieces: orderedPiecesForRun(preparedPieces, queueBeamTarget.pieceIds),
+              orderedPreparedPieces: queueBeamOrderedPieces,
               maximumRuntimeMs: positiveIntegerArgument(
                 '--queue-beam-runtime-ms',
                 compact ? 15_000 : 60_000
