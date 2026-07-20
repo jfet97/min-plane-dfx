@@ -100,6 +100,7 @@ describe('intrinsic gap regions', () => {
 
     expect(regions).toHaveLength(1)
     expect(regions?.[0]?.areaMm2).toBe(6)
+    expect(regions?.[0]?.kind).toBe('hull-open-gap')
     const region = regions?.[0]
     if (region === undefined) return
     expect(
@@ -108,6 +109,21 @@ describe('intrinsic gap regions', () => {
     expect(
       candidateContainedInIntrinsicGap(place(small, 0, 0).collisionGeometry, point(1, 4), region)
     ).toBe(false)
+  })
+
+  it('distinguishes a fully enclosed cavity from a hull-open gap', () => {
+    const left = piece('left', 1, 4)
+    const right = piece('right', 1, 4)
+    const bottom = piece('bottom', 2, 1)
+    const top = piece('top', 2, 1)
+    const frozen = [place(left, 0, 0), place(bottom, 1, 0), place(right, 3, 0), place(top, 1, 3)]
+    const regions = deriveCanonicalIntrinsicGapRegions(frozen)
+
+    expect(regions).toHaveLength(1)
+    expect(regions?.[0]).toMatchObject({
+      kind: 'enclosed-cavity',
+      areaMm2: 4
+    })
   })
 
   it('selects a real contained L1 candidate and records non-inert evidence', async () => {

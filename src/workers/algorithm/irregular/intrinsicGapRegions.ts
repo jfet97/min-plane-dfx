@@ -15,6 +15,7 @@ import type {
 import { toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 
 export interface CanonicalIntrinsicGapRegion {
+  readonly kind: 'enclosed-cavity' | 'hull-open-gap'
   readonly boundary: Path64
   readonly holes: ReadonlyArray<Path64>
   readonly areaMm2: number
@@ -51,7 +52,7 @@ export function deriveCanonicalIntrinsicGapRegions(
     return undefined
   }
   const regions: CanonicalIntrinsicGapRegion[] = []
-  if (!collectRegions(gapTree, regions)) return undefined
+  if (!collectRegions(gapTree, hull, regions)) return undefined
   return regions.toSorted(
     (first, second) =>
       first.areaMm2 - second.areaMm2 || first.canonicalKey.localeCompare(second.canonicalKey)
@@ -86,7 +87,11 @@ export function candidateContainedInIntrinsicGap(
   return totalPositiveArea(difference) === 0
 }
 
-function collectRegions(parent: PolyPath64, result: CanonicalIntrinsicGapRegion[]): boolean {
+function collectRegions(
+  parent: PolyPath64,
+  hull: Path64,
+  result: CanonicalIntrinsicGapRegion[]
+): boolean {
   for (let index = 0; index < parent.count; index += 1) {
     let child: PolyPath64
     try {
@@ -116,6 +121,7 @@ function collectRegions(parent: PolyPath64, result: CanonicalIntrinsicGapRegion[
         .map(clockwise)
         .toSorted((first, second) => canonicalRing(first).localeCompare(canonicalRing(second)))
       result.push({
+        kind: pathTouchesBoundary(boundary, hull) ? 'hull-open-gap' : 'enclosed-cavity',
         boundary,
         holes: orderedHoles,
         areaMm2: netArea / 1_000_000,
@@ -123,9 +129,25 @@ function collectRegions(parent: PolyPath64, result: CanonicalIntrinsicGapRegion[
         canonicalKey: `${canonicalRing(boundary)}|${orderedHoles.map(canonicalRing).join('|')}`
       })
     }
-    if (!collectRegions(child, result)) return false
+    if (!collectRegions(child, hull, result)) return false
   }
   return true
+}
+
+function pathTouchesBoundary(path: Path64, boundary: Path64): boolean {
+  return path.some((point) =>
+    boundary.some((start, index) => {
+      const end = boundary[(index + 1) % boundary.length]
+      if (end === undefined) return false
+      return (
+        cross(start, end, point) === 0 &&
+        point.x >= Math.min(start.x, end.x) &&
+        point.x <= Math.max(start.x, end.x) &&
+        point.y >= Math.min(start.y, end.y) &&
+        point.y <= Math.max(start.y, end.y)
+      )
+    })
+  )
 }
 
 function placedPath(placed: IrregularPlacedPiece): Path64 | undefined {

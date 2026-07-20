@@ -167,6 +167,14 @@ export interface IntrinsicStrictFeatureContactObserver {
     readonly pieceId: PieceId
     readonly transform: IrregularTransformCandidate
     readonly provenance: NfpIfpCandidateProvenance
+    readonly gapCoverage: {
+      readonly enclosedRegionCount: number
+      readonly hullOpenRegionCount: number
+      readonly directLegalInEnclosedCavity: number
+      readonly directLegalInHullOpenGap: number
+      readonly canonicalLegalInEnclosedCavity: number
+      readonly canonicalLegalInHullOpenGap: number
+    }
   }) => void
   readonly onStepSelection: (observation: {
     readonly step: number
@@ -174,6 +182,13 @@ export interface IntrinsicStrictFeatureContactObserver {
     readonly pieceId: PieceId
     readonly selectedTransform: IrregularTransformCandidate | undefined
     readonly selectedGridPoint: { readonly gridX: number; readonly gridY: number } | undefined
+    readonly selectedGap:
+      | {
+          readonly kind: CanonicalIntrinsicGapRegion['kind']
+          readonly canonicalKey: string
+          readonly areaMm2: number
+        }
+      | undefined
   }) => void
 }
 
@@ -354,7 +369,7 @@ export function constructIntrinsicStrictState(
         ScoredCandidate & { containingGap: CanonicalIntrinsicGapRegion }
       >()
       const gapRegions =
-        typeof input.candidateMode === 'object'
+        typeof input.candidateMode === 'object' || input.featureContactObserver !== undefined
           ? deriveCanonicalIntrinsicGapRegions(state.placedCollisionGeometries)
           : undefined
       let candidateCount = 0
@@ -420,6 +435,10 @@ export function constructIntrinsicStrictState(
           }
         }
         if (candidateProvenance !== undefined) {
+          const canonicalLegality = scoredCandidates.map((candidate) => ({
+            candidate,
+            legal: isCanonicalSheetlessStateLegal(candidate.state)
+          }))
           input.featureContactObserver?.onCandidateProvenance({
             step: pieceIndex,
             parentStateId,
@@ -428,8 +447,25 @@ export function constructIntrinsicStrictState(
             provenance: {
               ...candidateProvenance,
               canonicalChecked: scoredCandidates.length,
-              canonicalLegal: scoredCandidates.filter(({ state: candidateState }) =>
-                isCanonicalSheetlessStateLegal(candidateState)
+              canonicalLegal: canonicalLegality.filter(({ legal }) => legal).length
+            },
+            gapCoverage: {
+              enclosedRegionCount:
+                gapRegions?.filter(({ kind }) => kind === 'enclosed-cavity').length ?? 0,
+              hullOpenRegionCount:
+                gapRegions?.filter(({ kind }) => kind === 'hull-open-gap').length ?? 0,
+              directLegalInEnclosedCavity: scoredCandidates.filter(
+                ({ containingGap }) => containingGap?.kind === 'enclosed-cavity'
+              ).length,
+              directLegalInHullOpenGap: scoredCandidates.filter(
+                ({ containingGap }) => containingGap?.kind === 'hull-open-gap'
+              ).length,
+              canonicalLegalInEnclosedCavity: canonicalLegality.filter(
+                ({ candidate, legal }) =>
+                  legal && candidate.containingGap?.kind === 'enclosed-cavity'
+              ).length,
+              canonicalLegalInHullOpenGap: canonicalLegality.filter(
+                ({ candidate, legal }) => legal && candidate.containingGap?.kind === 'hull-open-gap'
               ).length
             }
           })
@@ -460,7 +496,15 @@ export function constructIntrinsicStrictState(
         selectedGridPoint:
           selectedGridX === undefined || selectedGridY === undefined
             ? undefined
-            : { gridX: selectedGridX, gridY: selectedGridY }
+            : { gridX: selectedGridX, gridY: selectedGridY },
+        selectedGap:
+          selected?.containingGap === undefined
+            ? undefined
+            : {
+                kind: selected.containingGap.kind,
+                canonicalKey: selected.containingGap.canonicalKey,
+                areaMm2: selected.containingGap.areaMm2
+              }
       })
       if (selected?.containingGap !== undefined) {
         const beforeBounds = state.translatedCollisionBounds

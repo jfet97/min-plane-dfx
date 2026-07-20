@@ -332,6 +332,36 @@ class FeatureContactCoverageCollector implements IntrinsicV7FeatureContactObserv
         structurallyUnavailableSourceFamilies: ['ifpCorner', 'ifpNfpIntersection']
       },
       rows,
+      gapClassification: {
+        candidateTransformsWithEnclosedCavities: rows.filter(
+          ({ gapCoverage }) => gapCoverage.enclosedRegionCount > 0
+        ).length,
+        candidateTransformsWithHullOpenGaps: rows.filter(
+          ({ gapCoverage }) => gapCoverage.hullOpenRegionCount > 0
+        ).length,
+        directLegalInEnclosedCavities: rows.reduce(
+          (sum, { gapCoverage }) => sum + gapCoverage.directLegalInEnclosedCavity,
+          0
+        ),
+        directLegalInHullOpenGaps: rows.reduce(
+          (sum, { gapCoverage }) => sum + gapCoverage.directLegalInHullOpenGap,
+          0
+        ),
+        canonicalLegalInEnclosedCavities: rows.reduce(
+          (sum, { gapCoverage }) => sum + gapCoverage.canonicalLegalInEnclosedCavity,
+          0
+        ),
+        canonicalLegalInHullOpenGaps: rows.reduce(
+          (sum, { gapCoverage }) => sum + gapCoverage.canonicalLegalInHullOpenGap,
+          0
+        ),
+        selectedEnclosedCavityPlacements: rows.filter(
+          ({ selectedGap }) => selectedGap?.kind === 'enclosed-cavity'
+        ).length,
+        selectedHullOpenGapPlacements: rows.filter(
+          ({ selectedGap }) => selectedGap?.kind === 'hull-open-gap'
+        ).length
+      },
       boundedWitnesses: witnesses,
       stepZeroSelections: this.stepZeroSelections.map(({ seedRole, observation }) => ({
         seedRole,
@@ -342,7 +372,8 @@ class FeatureContactCoverageCollector implements IntrinsicV7FeatureContactObserv
           observation.selectedTransform === undefined
             ? undefined
             : transformIdentity(observation.selectedTransform),
-        selectedGridPoint: observation.selectedGridPoint
+        selectedGridPoint: observation.selectedGridPoint,
+        selectedGap: observation.selectedGap
       })),
       canonicalSeedEndpoints: seedArchive.map((seed) => ({
         seedRole: seed.role,
@@ -369,9 +400,11 @@ interface FeatureCoverageRow {
   readonly phaseIncompatible: number | 'not-evaluated'
   readonly canonicalChecked: number | 'not-evaluated'
   readonly canonicalLegal: number | 'not-evaluated'
+  readonly gapCoverage: FeatureCandidateObservation['observation']['gapCoverage']
   readonly selectedCandidate:
     | { readonly gridX: number; readonly gridY: number; readonly sourceMask: number }
     | undefined
+  readonly selectedGap: FeatureSelectionObservation['observation']['selectedGap']
   readonly selectionAttribution:
     | 'transform-not-selected'
     | 'selected-source-observed'
@@ -414,6 +447,7 @@ function featureCoverageRow(
     phaseIncompatible: observation.provenance.phaseIncompatible,
     canonicalChecked: observation.provenance.canonicalChecked,
     canonicalLegal: observation.provenance.canonicalLegal,
+    gapCoverage: observation.gapCoverage,
     selectedCandidate:
       selectedSource === undefined
         ? undefined
@@ -428,6 +462,10 @@ function featureCoverageRow(
         : selectedSource === undefined
           ? 'selected-source-missing'
           : 'selected-source-observed',
+    selectedGap:
+      selected === undefined || selection.observation.selectedGap === undefined
+        ? undefined
+        : selection.observation.selectedGap,
     // Strict seeds retain a single winner, not a production fanout. The
     // counts below are therefore selection facts, never fabricated fanout history.
     localFanoutRetained: selectedSource === undefined ? 0 : 1,
