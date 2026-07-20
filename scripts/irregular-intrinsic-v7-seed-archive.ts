@@ -20,7 +20,12 @@ import {
 import { makePresetShapeDocument } from '../src/shared/presetShapes.js'
 import { preparePieces as prepareNestingPieces } from '../src/shared/preparePieces.js'
 import { assertCanonicalGridLegalLayout } from '../src/workers/irregular/canonicalLayoutGeometry.js'
-import { runIntrinsicV7SeedArchive, type IntrinsicV7Endpoint, type IntrinsicV7Stage1Arm } from '../src/workers/algorithm/irregular/intrinsicV7SeedArchive.js'
+import {
+  runIntrinsicV7SeedArchive,
+  type IntrinsicV7Endpoint,
+  type IntrinsicV7FeatureContactObserver,
+  type IntrinsicV7Stage1Arm
+} from '../src/workers/algorithm/irregular/intrinsicV7SeedArchive.js'
 import { IrregularBeamState } from '../src/workers/algorithm/irregular/irregularBeamState.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
@@ -36,11 +41,13 @@ const MIXED_FIXTURE_PATH = fileURLToPath(
 )
 const TRIANGLE_SHEET = new SheetSpec({ width: 2000, height: 2700, label: 'triangle golden' })
 
+async function main(): Promise<void> {
 const fixtureName = requiredFixture(argument('--fixture'))
 const outputDirectory = resolve(requiredArgument('--output'))
 const sourceCommit = verifiedSourceCommit(argument('--source-commit'))
 const requestedArms = parseArms(argument('--arms'))
 const compact = process.argv.includes('--compact')
+const featureContactCoverage = process.argv.includes('--feature-contact-coverage')
 const schedule = compact
   ? {
       maximumRuntimeMs: 2_000,
@@ -55,6 +62,7 @@ await mkdir(outputDirectory)
 const fixture = await loadFixture(fixtureName)
 const fixtureBytes = fixture.bytes
 const harnessBytes = await readFile(HARNESS_PATH)
+const featureContactCollector = featureContactCoverage ? new FeatureContactCoverageCollector() : undefined
 const preparedPieces = await Effect.runPromise(
   withLayers(prepareIrregularPieces(fixture.request), fixture.settings)
 )
@@ -63,7 +71,10 @@ const outcome = await Effect.runPromise(
     runIntrinsicV7SeedArchive({
       allPreparedPieces: preparedPieces,
       ...(requestedArms === undefined ? {} : { arms: requestedArms }),
-      ...(schedule === undefined ? {} : { schedule })
+      ...(schedule === undefined ? {} : { schedule }),
+      ...(featureContactCollector === undefined
+        ? {}
+        : { featureContactObserver: featureContactCollector })
     }),
     fixture.settings
   )
@@ -136,6 +147,11 @@ const report = {
   },
   seedArchive: seedArtifacts,
   arms: armArtifacts,
+  ...(featureContactCollector === undefined
+    ? {}
+    : {
+        featureContactCoverage: featureContactCollector.complete(outcome.seedArchive)
+      }),
   immutableFallback: {
     role: outcome.immutableFallback.role,
     canonicalGeometryHash: outcome.immutableFallback.canonicalGeometryHash
@@ -185,6 +201,153 @@ console.log(
     runtimeMs: outcome.runtimeMs
   })
 )
+}
+
+type FeatureCandidateObservation = Parameters<
+  IntrinsicV7FeatureContactObserver['onSeedCandidateProvenance']
+>[0]
+type FeatureSelectionObservation = Parameters<
+  IntrinsicV7FeatureContactObserver['onSeedStepSelection']
+>[0]
+
+/**
+ * Keeps F0 source evidence aggregate-only. Stage 1 does not request a fresh
+ * NFP decode, so its global transport moves intentionally have no F0 rows.
+ */
+class FeatureContactCoverageCollector implements IntrinsicV7FeatureContactObserver {
+  readonly candidates: FeatureCandidateObservation[] = []
+  readonly selections: FeatureSelectionObservation[] = []
+
+  onSeedCandidateProvenance(observation: FeatureCandidateObservation): void {
+    this.candidates.push(observation)
+  }
+
+  onSeedStepSelection(observation: FeatureSelectionObservation): void {
+    this.selections.push(observation)
+  }
+
+  complete(seedArchive: ReadonlyArray<{ readonly role: string; readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece> }>) {
+    const selections = new Map(
+      this.selections.map((entry) => [featureSelectionKey(entry.seedRole, entry.observation), entry])
+    )
+    const rows = this.candidates.map(({ seedRole, observation }) => {
+      const selection = selections.get(featureSelectionKey(seedRole, observation))
+      const selected =
+        selection?.observation.selectedTransform !== undefined &&
+        sameTransform(selection.observation.selectedTransform, observation.transform) &&
+        selection.observation.selectedGridPoint !== undefined
+          ? selection.observation.selectedGridPoint
+          : undefined
+      const selectedSource =
+        selected === undefined
+          ? undefined
+          : observation.provenance.legalCandidateSources.find(
+              ({ gridX, gridY }) => gridX === selected.gridX && gridY === selected.gridY
+            )
+      const uniqueLegalCandidateCount = observation.provenance.legalCandidateSources.length
+      return {
+        seedRole,
+        arm: 'stage0-seed-construction',
+        step: observation.step,
+        parentStateId: observation.parentStateId,
+        pieceId: observation.pieceId,
+        transform: transformIdentity(observation.transform),
+        rawBySource: observation.provenance.rawBySource,
+        uniqueBySourceMask: observation.provenance.uniqueBySourceMask,
+        outsideIfp: observation.provenance.outsideIfp,
+        liveConvexRejected: observation.provenance.liveConvexRejected,
+        liveConvexLegal: observation.provenance.liveConvexLegal,
+        phaseIncompatible: observation.provenance.phaseIncompatible,
+        canonicalChecked: observation.provenance.canonicalChecked,
+        canonicalLegal: observation.provenance.canonicalLegal,
+        // Strict seeds retain a single winner, not a production fanout. The
+        // counts below are therefore selection facts, never fabricated fanout history.
+        localFanoutRetained: selectedSource === undefined ? 0 : 1,
+        localFanoutEvictedByReason:
+          selectedSource === undefined
+            ? { strictSeedNotSelected: uniqueLegalCandidateCount }
+            : { strictSeedNotSelected: Math.max(0, uniqueLegalCandidateCount - 1) }
+      }
+    })
+    const sourceNames = [
+      'ifpCorner',
+      'nfpVertex',
+      'antiparallelEdgeSupport',
+      'ifpNfpIntersection',
+      'nfpNfpIntersection'
+    ] as const
+    const witnesses = sourceNames.flatMap((source) => {
+      const row = rows.find((candidate) => candidate.rawBySource[source] > 0)
+      return row === undefined
+        ? []
+        : [
+            {
+              source,
+              seedRole: row.seedRole,
+              step: row.step,
+              parentStateId: row.parentStateId,
+              pieceId: row.pieceId,
+              transform: row.transform
+            }
+          ]
+    })
+    return {
+      mode: 'F0-observer-only',
+      scope: {
+        seedDecodes: 'two strict Stage 0 seeds',
+        stage1Arms:
+          'no rows: Stage 1 transport/refinement does not request a fresh NFP/IFP decode or reconstruction',
+        candidateBehaviorChanged: false,
+        scoringBehaviorChanged: false,
+        transformPolicyChanged: false
+      },
+      rows,
+      boundedWitnesses: witnesses,
+      canonicalSeedEndpoints: seedArchive.map((seed) => ({
+        seedRole: seed.role,
+        canonicalChecked: true,
+        canonicalLegal: isIntrinsicCanonicalLayoutLegal(seed.placedCollisionGeometries)
+      }))
+    }
+  }
+}
+
+function featureSelectionKey(
+  seedRole: string,
+  observation: { readonly step: number; readonly parentStateId: string; readonly pieceId: string }
+): string {
+  return `${seedRole}:${observation.step}:${observation.parentStateId}:${observation.pieceId}`
+}
+
+function transformIdentity(transform: { readonly index: number; readonly rotationDeg: number; readonly mirrored: boolean; readonly reason: string }): string {
+  return `${transform.index}:${transform.rotationDeg}:${transform.mirrored ? 'mirror' : 'plain'}:${transform.reason}`
+}
+
+function sameTransform(
+  first: { readonly index: number; readonly rotationDeg: number; readonly mirrored: boolean; readonly reason: string },
+  second: { readonly index: number; readonly rotationDeg: number; readonly mirrored: boolean; readonly reason: string }
+): boolean {
+  return transformIdentity(first) === transformIdentity(second)
+}
+
+function isIntrinsicCanonicalLayoutLegal(placed: ReadonlyArray<IrregularPlacedPiece>): boolean {
+  const points = placed.flatMap(({ placement, collisionGeometry }) =>
+    collisionGeometry.polygon.points.map((point) => ({
+      x: point.x + placement.transform.translateX,
+      y: point.y + placement.transform.translateY
+    }))
+  )
+  const maximumX = Math.max(1, ...points.map(({ x }) => x))
+  const maximumY = Math.max(1, ...points.map(({ y }) => y))
+  return assertCanonicalGridLegalLayout(
+    new SheetSpec({
+      width: Math.ceil(maximumX),
+      height: Math.ceil(maximumY),
+      label: 'intrinsic-f0-canonical-boundary'
+    }),
+    placed
+  )
+}
 
 function requiredFixture(value: string | undefined): 'triangle-20' | 'mixed-61' {
   if (value === 'triangle-20' || value === 'mixed-61') return value
@@ -479,3 +642,5 @@ function runtimeVersions() {
 function sha256(value: string | Uint8Array): string {
   return createHash('sha256').update(value).digest('hex')
 }
+
+await main()

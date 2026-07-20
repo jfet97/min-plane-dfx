@@ -151,6 +151,56 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(constructed.stepTrace).toEqual(decoded.stepTrace)
   })
 
+  it('keeps the strict seed output byte-identical while F0 observes source admission', async () => {
+    const pieces = [
+      preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('third', rectanglePoints(1, 2), [transform(0, 0), transform(1, 90)])
+    ]
+    const run = (observed: boolean) => {
+      let candidateObservations = 0
+      let selectionObservations = 0
+      return Effect.runPromise(
+        constructIntrinsicStrictState({
+          allPreparedPieces: pieces,
+          remainingPreparedPieces: pieces,
+          frozenPlaced: [],
+          candidateMode: 'pure-growth',
+          ...(observed
+            ? {
+                featureContactObserver: {
+                  onCandidateProvenance: () => {
+                    candidateObservations += 1
+                  },
+                  onStepSelection: () => {
+                    selectionObservations += 1
+                  }
+                }
+              }
+            : {})
+        }).pipe(
+          Effect.provide(GeometryKernel.Live),
+          Effect.provide(GeometrySettings.Live),
+          Effect.provide(NfpIfpServiceLive),
+          Effect.tap((result) =>
+            Effect.sync(() => {
+              if (observed) {
+                expect(candidateObservations).toBeGreaterThan(0)
+                expect(selectionObservations).toBe(pieces.length)
+              }
+              return result
+            })
+          )
+        )
+      )
+    }
+
+    const [ordinary, observed] = await Promise.all([run(false), run(true)])
+    expect(observed.state).toEqual(ordinary.state)
+    expect(observed.stepTrace).toEqual(ordinary.stepTrace)
+    expect(observed.gapFillEvidence).toEqual(ordinary.gapFillEvidence)
+  })
+
   it('continues an exact frozen seed and rejects non-partitions', async () => {
     const pieces = [
       preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0)]),

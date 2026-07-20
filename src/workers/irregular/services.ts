@@ -123,6 +123,44 @@ export interface ComputeIfpBoundsInput {
   readonly moving: TransformedCollisionGeometry
 }
 
+/** Finite geometry families that can contribute one raw NFP/IFP contact point. */
+export const NFP_IFP_CANDIDATE_SOURCE_MASK = {
+  ifpCorner: 1,
+  nfpVertex: 2,
+  antiparallelEdgeSupport: 4,
+  ifpNfpIntersection: 8,
+  nfpNfpIntersection: 16
+} as const
+
+export type NfpIfpCandidateSource = keyof typeof NFP_IFP_CANDIDATE_SOURCE_MASK
+
+/** Compact source observation for a legal candidate after canonical grid admission. */
+export interface NfpIfpLegalCandidateSource {
+  readonly gridX: number
+  readonly gridY: number
+  readonly sourceMask: number
+}
+
+/**
+ * Observer-only candidate provenance. It deliberately describes generator
+ * admission, not a scorer, fanout, or terminal selection decision.
+ */
+export interface NfpIfpCandidateProvenance {
+  readonly rawBySource: Readonly<Record<NfpIfpCandidateSource, number>>
+  readonly uniqueBySourceMask: ReadonlyArray<{
+    readonly sourceMask: number
+    readonly count: number
+  }>
+  readonly outsideIfp: number
+  readonly nfpInteriorRejected: number
+  readonly liveConvexRejected: number
+  readonly liveConvexLegal: number
+  readonly phaseIncompatible: number
+  readonly canonicalChecked: number
+  readonly canonicalLegal: number
+  readonly legalCandidateSources: ReadonlyArray<NfpIfpLegalCandidateSource>
+}
+
 export interface GeneratePlacementCandidatesInput {
   readonly sheet: SheetSpec
   readonly placed: ReadonlyArray<IrregularPlacedPiece>
@@ -132,6 +170,8 @@ export interface GeneratePlacementCandidatesInput {
   /** Selects the sheet-boundary pool or one of the intrinsic NFP candidate pools. */
   readonly candidateDomain?: 'sheet' | 'contact-only' | 'sheetless-nfp'
   readonly candidateMemoScope?: IrregularNfpIfpCandidateMemoScope
+  /** Optional observer for experiment traces; it cannot alter candidate admission. */
+  readonly onCandidateProvenance?: (provenance: NfpIfpCandidateProvenance) => void
   readonly control?: IrregularNfpIfpControl
 }
 

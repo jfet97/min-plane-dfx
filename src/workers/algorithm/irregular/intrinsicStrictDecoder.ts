@@ -29,6 +29,7 @@ import {
   type IrregularNfpIfpControl,
   IrregularNfpIfpControlAbortError,
   IrregularNestingNotImplementedError,
+  type NfpIfpCandidateProvenance,
   NfpIfpService
 } from '../../irregular/services.js'
 import { IrregularBeamState } from './irregularBeamState.js'
@@ -158,12 +159,31 @@ export interface IntrinsicStrictGapFillEvidence {
   readonly nonInert: boolean
 }
 
+/** Observer-only F0 trace records. They are emitted before scoring changes no behavior. */
+export interface IntrinsicStrictFeatureContactObserver {
+  readonly onCandidateProvenance: (observation: {
+    readonly step: number
+    readonly parentStateId: string
+    readonly pieceId: PieceId
+    readonly transform: IrregularTransformCandidate
+    readonly provenance: NfpIfpCandidateProvenance
+  }) => void
+  readonly onStepSelection: (observation: {
+    readonly step: number
+    readonly parentStateId: string
+    readonly pieceId: PieceId
+    readonly selectedTransform: IrregularTransformCandidate | undefined
+    readonly selectedGridPoint: { readonly gridX: number; readonly gridY: number } | undefined
+  }) => void
+}
+
 export interface ConstructIntrinsicStrictStateInput {
   readonly allPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly frozenPlaced: ReadonlyArray<IrregularPlacedPiece>
   readonly candidateMode: IntrinsicStrictCandidateMode
   readonly maximumRuntimeMs?: number
+  readonly featureContactObserver?: IntrinsicStrictFeatureContactObserver
   readonly control?: IrregularNfpIfpControl
 }
 
@@ -171,6 +191,7 @@ interface ScoredCandidate {
   readonly state: IrregularBeamState
   readonly score: IntrinsicStrictLocalScore
   readonly transformFamily: string
+  readonly candidate: IrregularPlacementCandidate
   readonly movingCollisionAreaMm2: number
   readonly containingGap: CanonicalIntrinsicGapRegion | undefined
 }
@@ -325,6 +346,8 @@ export function constructIntrinsicStrictState(
     for (let pieceIndex = 0; pieceIndex < input.remainingPreparedPieces.length; pieceIndex += 1) {
       const piece = input.remainingPreparedPieces[pieceIndex]
       if (piece === undefined) continue
+      const pieceId = piece.pieceId ?? piece.source.id
+      const parentStateId = state.canonicalOccupiedGeometryKey
       const remainingPreparedPieces = input.remainingPreparedPieces.slice(pieceIndex + 1)
       const candidatesByFamily = new Map<string, ScoredCandidate>()
       const containedCandidatesByFamily = new Map<
@@ -356,6 +379,19 @@ export function constructIntrinsicStrictState(
                 settings,
                 candidateDomain: 'sheetless-nfp',
                 candidateMemoScope,
+                ...(input.featureContactObserver === undefined
+                  ? {}
+                  : {
+                      onCandidateProvenance: (provenance: NfpIfpCandidateProvenance) => {
+                        input.featureContactObserver?.onCandidateProvenance({
+                          step: pieceIndex,
+                          parentStateId,
+                          pieceId,
+                          transform,
+                          provenance
+                        })
+                      }
+                    }),
                 control
               })
         candidateCount += legalCandidates.length
@@ -394,13 +430,24 @@ export function constructIntrinsicStrictState(
         typeof input.candidateMode === 'object'
           ? selectGapContainedWinner([...containedCandidatesByFamily.values(), ...familyWinners])
           : selectIntrinsicStrictFamilyWinner(familyWinners, input.candidateMode)
-      const pieceId = piece.pieceId ?? piece.source.id
       stepTrace.push({
         pieceId,
         candidateCount,
         transformFamilyCount: candidatesByFamily.size,
         selectedTransformFamily: selected?.transformFamily,
         selectedScore: selected?.score
+      })
+      const selectedGridX = selected === undefined ? undefined : toGridMm(selected.candidate.point.x)
+      const selectedGridY = selected === undefined ? undefined : toGridMm(selected.candidate.point.y)
+      input.featureContactObserver?.onStepSelection({
+        step: pieceIndex,
+        parentStateId,
+        pieceId,
+        selectedTransform: selected?.candidate.transform,
+        selectedGridPoint:
+          selectedGridX === undefined || selectedGridY === undefined
+            ? undefined
+            : { gridX: selectedGridX, gridY: selectedGridY }
       })
       if (selected?.containingGap !== undefined) {
         const beforeBounds = state.translatedCollisionBounds
@@ -530,6 +577,7 @@ function scoreCandidate(input: {
   return {
     state: anchored,
     transformFamily: input.transformFamily,
+    candidate: input.candidate,
     movingCollisionAreaMm2: input.movingCollisionAreaMm2,
     containingGap: input.gapRegions
       ?.filter((region) =>

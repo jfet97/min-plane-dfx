@@ -12,7 +12,9 @@ import {
 import type {
   ComputeIfpBoundsInput,
   ComputeNfpInput,
-  GeneratePlacementCandidatesInput
+  GeneratePlacementCandidatesInput,
+  NfpIfpCandidateProvenance,
+  NfpIfpCandidateSource
 } from './services.js'
 import type { InternalBounds, InternalPoint, InternalPolygon } from './internalGeometry.js'
 import {
@@ -23,6 +25,7 @@ import {
   IrregularNfpIfpCandidateMemoScope,
   IrregularNfpIfpControl,
   IrregularNfpIfpControlAbortError,
+  NFP_IFP_CANDIDATE_SOURCE_MASK,
   type IrregularNfpIfpCheckpointPhase,
   NfpIfpService
 } from './services.js'
@@ -635,6 +638,7 @@ function generatePlacementCandidatesUncached(
   IrregularGeometryInputError | IrregularNfpIfpControlAbortError
 > {
   return Effect.gen(function* () {
+    const provenance = input.onCandidateProvenance === undefined ? undefined : makeCandidateProvenance()
     const sheetlessNfp = input.candidateDomain === 'sheetless-nfp'
     yield* nfpCheckpoint(input.control, 'ifp')
     const ifp = sheetlessNfp
@@ -643,7 +647,10 @@ function generatePlacementCandidatesUncached(
           { sheet: input.sheet, moving: input.moving },
           geometryCache
         ).pipe(Effect.catchTag('IrregularGeometryInfeasibleError', () => Effect.succeed(undefined)))
-    if (!sheetlessNfp && ifp === undefined) return []
+    if (!sheetlessNfp && ifp === undefined) {
+      emitCandidateProvenance(input, provenance)
+      return []
+    }
     yield* nfpCheckpoint(input.control, 'ifp')
     const placedCollisionIndex =
       input.placedCollisionIndex !== undefined && input.placedCollisionIndex.matches(input.placed)
@@ -708,17 +715,28 @@ function generatePlacementCandidatesUncached(
       !sheetlessNfp && candidatePruningMode === 'indexed' ? ifpBounds : undefined
 
     if (input.placed.length === 0 && ifpBounds !== undefined) {
-      addPoint(points, { x: ifpBounds.minX, y: ifpBounds.minY }, candidateBounds)
+      addPoint(
+        points,
+        { x: ifpBounds.minX, y: ifpBounds.minY },
+        candidateBounds,
+        'ifpCorner',
+        provenance
+      )
     } else if (!contactOnly && ifpBounds !== undefined) {
-      for (const point of rectangleCorners(ifpBounds)) addPoint(points, point, candidateBounds)
+      for (const point of rectangleCorners(ifpBounds)) {
+        addPoint(points, point, candidateBounds, 'ifpCorner', provenance)
+      }
     }
     for (const boundary of candidateNfpBoundaries) {
-      for (const point of boundary.boundary.points) addPoint(points, point, candidateBounds)
+      for (const point of boundary.boundary.points) {
+        addPoint(points, point, candidateBounds, 'nfpVertex', provenance)
+      }
       const supportPointError = addAntiparallelEdgeSupportPoints(
         points,
         boundary.fixed,
         input.moving,
-        candidateBounds
+        candidateBounds,
+        provenance
       )
       if (supportPointError !== undefined) {
         return yield* failInvalidGeometry('generatePlacementCandidates', supportPointError)
@@ -735,7 +753,9 @@ function generatePlacementCandidatesUncached(
           candidatePruningMode === 'indexed' ? boundary.segmentIndex : undefined,
           candidateBounds,
           input.control,
-          'ifp-boundary-intersection'
+          'ifp-boundary-intersection',
+          'ifpNfpIntersection',
+          provenance
         )
         if (intersections !== undefined) {
           return yield* failInvalidGeometry('generatePlacementCandidates', intersections)
@@ -756,7 +776,9 @@ function generatePlacementCandidatesUncached(
             second.segmentIndex,
             candidateBounds,
             input.control,
-            'pairwise-nfp-boundary-intersection'
+            'pairwise-nfp-boundary-intersection',
+            'nfpNfpIntersection',
+            provenance
           )
           if (intersections !== undefined) {
             return yield* failInvalidGeometry('generatePlacementCandidates', intersections)
@@ -791,7 +813,9 @@ function generatePlacementCandidatesUncached(
             undefined,
             undefined,
             input.control,
-            'pairwise-nfp-boundary-intersection'
+            'pairwise-nfp-boundary-intersection',
+            'nfpNfpIntersection',
+            provenance
           )
           if (intersections !== undefined) {
             return yield* failInvalidGeometry('generatePlacementCandidates', intersections)
@@ -803,11 +827,13 @@ function generatePlacementCandidatesUncached(
     const candidates: IrregularPlacementCandidate[] = []
     const sortedPoints = [...points.points].sort(comparePoints)
     const acceptedGridKeys = new Set<string>()
+    const legalCandidateSourceMasks = new Map<string, number>()
     for (let pointIndex = 0; pointIndex < sortedPoints.length; pointIndex += 1) {
       if (pointIndex % 32 === 0)
         yield* nfpCheckpoint(input.control, 'candidate-points')
       const rawPoint = sortedPoints[pointIndex]
       if (rawPoint === undefined) continue
+      const sourceMask = points.sourceMasks.get(pointKey(rawPoint)) ?? 0
       for (const point of canonicalPlacementPointAlternatives(rawPoint)) {
         if (!sheetlessNfp && (ifpBounds === undefined || !isInsideBounds(point, ifpBounds))) {
           continue
@@ -822,6 +848,7 @@ function generatePlacementCandidatesUncached(
               isInsideBounds(point, bounds) && isStrictlyInside(point, boundary, winding)
           )
         ) {
+          if (provenance !== undefined) provenance.nfpInteriorRejected += 1
           continue
         }
 
@@ -840,8 +867,16 @@ function generatePlacementCandidatesUncached(
         const legal = sheetlessNfp
           ? yield* PlacementValidation.checkSheetless(validationInput)
           : yield* PlacementValidation.check({ ...validationInput, sheet: input.sheet })
-        if (!legal) continue
+        if (!legal) {
+          if (provenance !== undefined) provenance.liveConvexRejected += 1
+          continue
+        }
+        if (provenance !== undefined) provenance.liveConvexLegal += 1
         const gridKey = `${point.gridX},${point.gridY}`
+        legalCandidateSourceMasks.set(
+          gridKey,
+          (legalCandidateSourceMasks.get(gridKey) ?? 0) | sourceMask
+        )
         if (!acceptedGridKeys.has(gridKey)) {
           acceptedGridKeys.add(gridKey)
           candidates.push(toDomainPlacementCandidate(candidate))
@@ -851,6 +886,7 @@ function generatePlacementCandidatesUncached(
     }
 
     yield* nfpCheckpoint(input.control, 'candidate-points')
+    emitCandidateProvenance(input, provenance, points, legalCandidateSourceMasks)
     return candidates
   })
 }
@@ -945,7 +981,7 @@ function makeGeneratePlacementCandidates(
       candidatePruningMode
     )
     const cached = candidatesByGeometry.get(key)
-    if (cached !== undefined) {
+    if (cached !== undefined && input.onCandidateProvenance === undefined) {
       return nfpCheckpoint(input.control, 'candidate-points').pipe(
         Effect.map(() => restoreCachedLegalCandidates(cached, input.moving))
       )
@@ -1116,7 +1152,8 @@ function addAntiparallelEdgeSupportPoints(
   points: CanonicalPointSet,
   fixed: IrregularPlacedPiece,
   moving: TransformedCollisionGeometry,
-  candidateBounds: InternalBounds | undefined
+  candidateBounds: InternalBounds | undefined,
+  provenance: MutableCandidateProvenance | undefined
 ): string | undefined {
   const fixedTranslation = fixed.placement.transform
   const fixedPoints = fixed.collisionGeometry.polygon.points.map((point) => ({
@@ -1152,8 +1189,20 @@ function addAntiparallelEdgeSupportPoints(
       if (!isFinitePoint(firstSupportPoint) || !isFinitePoint(secondSupportPoint)) {
         return 'antiparallel edge support arithmetic must produce finite coordinates.'
       }
-      addPoint(points, firstSupportPoint, candidateBounds)
-      addPoint(points, secondSupportPoint, candidateBounds)
+      addPoint(
+        points,
+        firstSupportPoint,
+        candidateBounds,
+        'antiparallelEdgeSupport',
+        provenance
+      )
+      addPoint(
+        points,
+        secondSupportPoint,
+        candidateBounds,
+        'antiparallelEdgeSupport',
+        provenance
+      )
     }
   }
   return undefined
@@ -1182,6 +1231,70 @@ function isFinitePoint(point: InternalPoint): boolean {
 interface CanonicalPointSet {
   readonly keys: Set<string>
   readonly points: InternalPoint[]
+  readonly sourceMasks: Map<string, number>
+}
+
+interface MutableCandidateProvenance {
+  readonly rawBySource: Record<NfpIfpCandidateSource, number>
+  outsideIfp: number
+  nfpInteriorRejected: number
+  liveConvexRejected: number
+  liveConvexLegal: number
+}
+
+function makeCandidateProvenance(): MutableCandidateProvenance {
+  return {
+    rawBySource: {
+      ifpCorner: 0,
+      nfpVertex: 0,
+      antiparallelEdgeSupport: 0,
+      ifpNfpIntersection: 0,
+      nfpNfpIntersection: 0
+    },
+    outsideIfp: 0,
+    nfpInteriorRejected: 0,
+    liveConvexRejected: 0,
+    liveConvexLegal: 0
+  }
+}
+
+function emitCandidateProvenance(
+  input: GeneratePlacementCandidatesInput,
+  provenance: MutableCandidateProvenance | undefined,
+  points: CanonicalPointSet | undefined = undefined,
+  legalCandidateSourceMasks: ReadonlyMap<string, number> = new Map()
+): void {
+  if (provenance === undefined || input.onCandidateProvenance === undefined) return
+  const uniqueBySourceMask = new Map<number, number>()
+  for (const sourceMask of points?.sourceMasks.values() ?? []) {
+    uniqueBySourceMask.set(sourceMask, (uniqueBySourceMask.get(sourceMask) ?? 0) + 1)
+  }
+  const legalCandidateSources = [...legalCandidateSourceMasks]
+    .map(([gridKey, sourceMask]) => {
+      const [gridXValue, gridYValue] = gridKey.split(',')
+      const gridX = Number(gridXValue)
+      const gridY = Number(gridYValue)
+      return { gridX, gridY, sourceMask }
+    })
+    .toSorted((first, second) => first.gridY - second.gridY || first.gridX - second.gridX)
+  const snapshot: NfpIfpCandidateProvenance = {
+    rawBySource: provenance.rawBySource,
+    uniqueBySourceMask: [...uniqueBySourceMask]
+      .map(([sourceMask, count]) => ({ sourceMask, count }))
+      .toSorted((first, second) => first.sourceMask - second.sourceMask),
+    outsideIfp: provenance.outsideIfp,
+    nfpInteriorRejected: provenance.nfpInteriorRejected,
+    liveConvexRejected: provenance.liveConvexRejected,
+    liveConvexLegal: provenance.liveConvexLegal,
+    // candidate phases are materialized by canonicalPlacementPointAlternatives;
+    // phase incompatibility is an F0 expectation result, not a generator rejection.
+    phaseIncompatible: 0,
+    // canonical Clipper2 classification belongs to the exact archive boundary.
+    canonicalChecked: 0,
+    canonicalLegal: 0,
+    legalCandidateSources
+  }
+  input.onCandidateProvenance(snapshot)
 }
 
 interface SegmentIntersection {
@@ -1243,7 +1356,9 @@ function addBoundaryIntersections(
   secondSegmentIndex: BoundsIndex<Segment> | undefined,
   candidateBounds: InternalBounds | undefined,
   control: IrregularNfpIfpControl | undefined,
-  phase: IrregularNfpIfpCheckpointPhase
+  phase: IrregularNfpIfpCheckpointPhase,
+  source: NfpIfpCandidateSource,
+  provenance: MutableCandidateProvenance | undefined
 ): Effect.Effect<string | undefined, IrregularNfpIfpControlAbortError> {
   return Effect.gen(function* () {
     for (const first of firstSegments) {
@@ -1266,7 +1381,9 @@ function addBoundaryIntersections(
         }
         const intersection = intersectSegments(first, second)
         if ('message' in intersection) return intersection.message
-        for (const point of intersection.points) addPoint(points, point, candidateBounds)
+        for (const point of intersection.points) {
+          addPoint(points, point, candidateBounds, source, provenance)
+        }
       }
     }
     return undefined
@@ -1398,23 +1515,40 @@ function pointIsWithinSegmentBounds(point: InternalPoint, segment: Segment): boo
 }
 
 function makeCanonicalPointSet(): CanonicalPointSet {
-  return { keys: new Set<string>(), points: [] }
+  return { keys: new Set<string>(), points: [], sourceMasks: new Map<string, number>() }
 }
 
 function addPoint(
   points: CanonicalPointSet,
   point: InternalPoint,
-  candidateBounds: InternalBounds | undefined
+  candidateBounds: InternalBounds | undefined,
+  source: NfpIfpCandidateSource,
+  provenance: MutableCandidateProvenance | undefined
 ): void {
+  if (provenance !== undefined) {
+    provenance.rawBySource[source] += 1
+  }
   const canonicalPoint: InternalPoint = {
     x: normalizeNegativeZero(point.x),
     y: normalizeNegativeZero(point.y)
   }
-  if (candidateBounds !== undefined && !isInsideBounds(canonicalPoint, candidateBounds)) return
-  const key = `${canonicalPoint.x}:${canonicalPoint.y}`
-  if (points.keys.has(key)) return
+  if (candidateBounds !== undefined && !isInsideBounds(canonicalPoint, candidateBounds)) {
+    if (provenance !== undefined) provenance.outsideIfp += 1
+    return
+  }
+  const key = pointKey(canonicalPoint)
+  const sourceMask = NFP_IFP_CANDIDATE_SOURCE_MASK[source]
+  if (points.keys.has(key)) {
+    points.sourceMasks.set(key, (points.sourceMasks.get(key) ?? 0) | sourceMask)
+    return
+  }
   points.keys.add(key)
+  points.sourceMasks.set(key, sourceMask)
   points.points.push(canonicalPoint)
+}
+
+function pointKey(point: InternalPoint): string {
+  return `${point.x}:${point.y}`
 }
 
 function comparePoints(first: InternalPoint, second: InternalPoint): number {

@@ -26,7 +26,8 @@ import {
   IntrinsicStrictDecoderError,
   measureIntrinsicSheetlessCompletedLayout,
   type IntrinsicStrictComparatorMode,
-  type IntrinsicStrictConstructResult
+  type IntrinsicStrictConstructResult,
+  type IntrinsicStrictFeatureContactObserver
 } from './intrinsicStrictDecoder.js'
 import {
   buildIntrinsicTransformCatalog,
@@ -193,6 +194,18 @@ export interface IntrinsicV7SeedArchiveResult {
   readonly runtimeMs: number
 }
 
+/** Optional F0 hook. It observes the two strict seed decodes without entering Stage 1. */
+export interface IntrinsicV7FeatureContactObserver {
+  readonly onSeedCandidateProvenance: (observation: {
+    readonly seedRole: IntrinsicV7SeedRole
+    readonly observation: Parameters<IntrinsicStrictFeatureContactObserver['onCandidateProvenance']>[0]
+  }) => void
+  readonly onSeedStepSelection: (observation: {
+    readonly seedRole: IntrinsicV7SeedRole
+    readonly observation: Parameters<IntrinsicStrictFeatureContactObserver['onStepSelection']>[0]
+  }) => void
+}
+
 export class IntrinsicV7SeedArchiveError extends Data.TaggedError(
   'IntrinsicV7SeedArchiveError'
 )<{
@@ -209,6 +222,7 @@ export function runIntrinsicV7SeedArchive(input: {
   readonly allPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly arms?: ReadonlyArray<IntrinsicV7Stage1Arm>
   readonly schedule?: Partial<IntrinsicV7SeedArchiveSchedule>
+  readonly featureContactObserver?: IntrinsicV7FeatureContactObserver
   readonly control?: IrregularNfpIfpControl
 }): Effect.Effect<
   IntrinsicV7SeedArchiveResult,
@@ -232,7 +246,11 @@ export function runIntrinsicV7SeedArchive(input: {
         })
       )
     }
-    const seedArchive = yield* constructDualExactSeeds(input.allPreparedPieces, input.control)
+    const seedArchive = yield* constructDualExactSeeds(
+      input.allPreparedPieces,
+      input.control,
+      input.featureContactObserver
+    )
     const catalog = yield* buildIntrinsicTransformCatalog(input.allPreparedPieces)
     const immutableFallback = seedArchive.toSorted(compareSeedRecords)[0]
     if (immutableFallback === undefined) {
@@ -282,7 +300,8 @@ function validatedArms(
 
 function constructDualExactSeeds(
   pieces: ReadonlyArray<IrregularPreparedPiece>,
-  control: IrregularNfpIfpControl | undefined
+  control: IrregularNfpIfpControl | undefined,
+  featureContactObserver: IntrinsicV7FeatureContactObserver | undefined
 ): Effect.Effect<
   ReadonlyArray<IntrinsicV7SeedRecord>,
   | IntrinsicV7SeedArchiveError
@@ -306,6 +325,22 @@ function constructDualExactSeeds(
         remainingPreparedPieces: pieces,
         frozenPlaced: [],
         candidateMode: seed.comparatorMode,
+        ...(featureContactObserver === undefined
+          ? {}
+          : {
+              featureContactObserver: {
+                onCandidateProvenance: (observation) =>
+                  featureContactObserver.onSeedCandidateProvenance({
+                    seedRole: seed.role,
+                    observation
+                  }),
+                onStepSelection: (observation) =>
+                  featureContactObserver.onSeedStepSelection({
+                    seedRole: seed.role,
+                    observation
+                  })
+              }
+            }),
         ...(control === undefined ? {} : { control })
       })
       const measured = measureIntrinsicSheetlessCompletedLayout(constructed.state, constructed.runtimeMs)

@@ -48,6 +48,7 @@ import {
   IrregularGeometryInputError,
   IrregularNfpIfpCandidateMemoScope,
   IrregularNfpIfpControlAbortError,
+  NFP_IFP_CANDIDATE_SOURCE_MASK,
   NfpIfpService
 } from '../../src/workers/irregular/services.js'
 import { PlacementValidation } from '../../src/workers/irregular/placementValidation.js'
@@ -332,6 +333,144 @@ async function captureFailure(promise: Promise<unknown>) {
 }
 
 describe('NfpIfpServiceLive', () => {
+  it('reports phase-aware finite feature provenance without changing legal candidates', async () => {
+    const fixed = placedPiece(
+      'feature-fixed',
+      [point(0, 0), point(12, 0), point(12, 8), point(0, 8)],
+      20.123,
+      30.456
+    )
+    const movingFamilies = [
+      transformedGeometry(
+        'feature-q0',
+        [point(0, 0), point(8, 0), point(8, 4), point(0, 4)],
+        undefined,
+        transform(0, 0, false)
+      ),
+      transformedGeometry(
+        'feature-q90',
+        [point(0, -8), point(4, -8), point(4, 0), point(0, 0)],
+        undefined,
+        transform(1, 90, false)
+      ),
+      transformedGeometry(
+        'feature-mirror',
+        [point(-8, 0), point(0, 0), point(0, 4), point(-8, 4)],
+        undefined,
+        transform(2, 0, true)
+      )
+    ]
+
+    for (const moving of movingFamilies) {
+      let provenance: Parameters<NonNullable<GeneratePlacementCandidatesInput['onCandidateProvenance']>>[0] | undefined
+      const input = {
+        sheet: sheet(100, 100),
+        placed: [fixed],
+        moving,
+        settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+        candidateDomain: 'sheetless-nfp' as const
+      }
+      const ordinary = await generateCandidates(input)
+      const observed = await generateCandidates({
+        ...input,
+        onCandidateProvenance: (snapshot) => {
+          provenance = snapshot
+        }
+      })
+
+      expect(observed).toEqual(ordinary)
+      expect(provenance).toBeDefined()
+      if (provenance === undefined) throw new Error('expected feature provenance')
+      expect(provenance.rawBySource.nfpVertex).toBeGreaterThan(0)
+      expect(provenance.rawBySource.antiparallelEdgeSupport).toBeGreaterThan(0)
+      expect(provenance.uniqueBySourceMask.some(({ sourceMask }) =>
+        (sourceMask & NFP_IFP_CANDIDATE_SOURCE_MASK.nfpVertex) !== 0
+      )).toBe(true)
+      expect(provenance.legalCandidateSources.some(({ sourceMask }) =>
+        (sourceMask & NFP_IFP_CANDIDATE_SOURCE_MASK.nfpVertex) !== 0
+      )).toBe(true)
+
+      // The raw vertex contact retains its fractional basis. We project it
+      // through the live canonical alternatives once, then check direct legality.
+      const fixedVertex = fixed.collisionGeometry.polygon.points[2]
+      const movingVertex = moving.polygon.points[0]
+      if (fixedVertex === undefined || movingVertex === undefined) throw new Error('expected vertices')
+      const rawVertexContact = {
+        x: fixedVertex.x + fixed.placement.transform.translateX - movingVertex.x,
+        y: fixedVertex.y + fixed.placement.transform.translateY - movingVertex.y
+      }
+      const expectedLegalGridKeys = new Set<string>()
+      for (const candidatePoint of canonicalPlacementPointAlternatives(rawVertexContact)) {
+        const candidate = new IrregularPlacementCandidate({
+          pieceId: moving.sourcePieceId,
+          transform: moving.transform,
+          point: candidatePoint,
+          diagnostics: []
+        })
+        if (
+          await Effect.runPromise(
+            PlacementValidation.checkSheetless({ placed: [fixed], moving, candidate })
+          )
+        ) {
+          expectedLegalGridKeys.add(`${candidatePoint.gridX},${candidatePoint.gridY}`)
+          break
+        }
+      }
+      expect(expectedLegalGridKeys.size).toBeGreaterThan(0)
+      for (const expectedKey of expectedLegalGridKeys) {
+        const source = provenance.legalCandidateSources.find(
+          ({ gridX, gridY }) => `${gridX},${gridY}` === expectedKey
+        )
+        expect(source).toBeDefined()
+        expect(source?.sourceMask ?? 0).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('reports IFP/NFP and pairwise-NFP intersection source families', async () => {
+    const moving = transformedGeometry('intersection-moving', [
+      point(0, 0),
+      point(10, 0),
+      point(10, 10),
+      point(0, 10)
+    ])
+    const placed = [
+      placedPiece(
+        'intersection-fixed-a',
+        [point(0, 0), point(20, 0), point(20, 20), point(0, 20)],
+        20,
+        20
+      ),
+      placedPiece(
+        'intersection-fixed-b',
+        [point(0, 0), point(20, 0), point(20, 20), point(0, 20)],
+        45,
+        45
+      ),
+      placedPiece(
+        'intersection-fixed-edge',
+        [point(0, 0), point(20, 0), point(20, 20), point(0, 20)],
+        85,
+        45
+      )
+    ]
+    let provenance: Parameters<NonNullable<GeneratePlacementCandidatesInput['onCandidateProvenance']>>[0] | undefined
+    await generateCandidates({
+      sheet: sheet(100, 100),
+      placed,
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      onCandidateProvenance: (snapshot) => {
+        provenance = snapshot
+      }
+    })
+
+    expect(provenance).toBeDefined()
+    if (provenance === undefined) throw new Error('expected intersection provenance')
+    expect(provenance.rawBySource.ifpNfpIntersection).toBeGreaterThan(0)
+    expect(provenance.rawBySource.nfpNfpIntersection).toBeGreaterThan(0)
+  })
+
   it('orders the step-31 raw translation by canonical-grid distance and identity', () => {
     const alternatives = canonicalPlacementPointAlternatives({
       x: 509.4153570036576,
