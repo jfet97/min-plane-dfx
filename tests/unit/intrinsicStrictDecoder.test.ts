@@ -420,7 +420,7 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     ).toBe('pure')
   })
 
-  it('uses raw isolate counts after both layouts exceed the old saturated floor', () => {
+  it('uses contact as a bounded frontier selector without making it a dominance veto', () => {
     const base: IntrinsicStrictCompletedMetrics = {
       envelopeMaximumSideMm: 100,
       envelopeAreaMm2: 8_000,
@@ -451,10 +451,8 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       canonicalGeometryHash: 'twenty-six-isolates'
     }
 
-    expect(compareIntrinsicStrictCompletedLayoutDominance(fifteenIsolates, twentySixIsolates)).toBe(
-      -1
-    )
-    expect(intrinsicStrictCompletedLayoutDominates(fifteenIsolates, twentySixIsolates)).toBe(true)
+    expect(compareIntrinsicStrictCompletedLayoutDominance(fifteenIsolates, twentySixIsolates)).toBe(0)
+    expect(intrinsicStrictCompletedLayoutDominates(fifteenIsolates, twentySixIsolates)).toBe(false)
     expect(
       rankIntrinsicStrictCompletedLayouts([twentySixIsolates, fifteenIsolates]).map(
         ({ canonicalGeometryHash }) => canonicalGeometryHash
@@ -462,7 +460,7 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     ).toEqual(['fifteen-isolates', 'twenty-six-isolates'])
   })
 
-  it('keeps compactness and cohesion tradeoffs non-dominated', () => {
+  it('lets geometric compactness and void quality dominate weaker contact topology', () => {
     const cohesive = completedMetrics('cohesive')
     const compactFragment = {
       ...cohesive,
@@ -474,6 +472,8 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       largestPositiveContactComponentSize: 4,
       largestPositiveContactComponentRatio: 0.4,
       occupiedAreaOutsideLargestContactComponentMm2: 5_000,
+      largestOccupiedHullGapRatio: 0.04,
+      occupiedHullWasteRatio: 0.04,
       totalStructuralContacts: 4,
       dominantStructuralContacts: 3,
       contactUnits: 4,
@@ -481,13 +481,13 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       canonicalGeometryHash: 'compact-fragment'
     }
 
-    expect(compareIntrinsicStrictCompletedLayoutDominance(cohesive, compactFragment)).toBe(0)
-    expect(compareIntrinsicStrictCompletedLayoutDominance(compactFragment, cohesive)).toBe(0)
+    expect(compareIntrinsicStrictCompletedLayoutDominance(cohesive, compactFragment)).toBe(1)
+    expect(compareIntrinsicStrictCompletedLayoutDominance(compactFragment, cohesive)).toBe(-1)
     expect(intrinsicStrictCompletedLayoutDominates(cohesive, compactFragment)).toBe(false)
-    expect(intrinsicStrictCompletedLayoutDominates(compactFragment, cohesive)).toBe(false)
+    expect(intrinsicStrictCompletedLayoutDominates(compactFragment, cohesive)).toBe(true)
   })
 
-  it('keeps a cohesion-floor passer ahead of smaller failing tradeoffs', () => {
+  it('does not let a contact-floor certificate partition override geometry', () => {
     const cohesive = completedMetrics('cohesive')
     const chain = {
       ...cohesive,
@@ -508,10 +508,12 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     }
 
     const ranked = rankIntrinsicStrictCompletedLayouts([fragment, chain, cohesive])
-    expect(ranked[0]?.canonicalGeometryHash).toBe('cohesive')
-    expect(new Set(ranked.slice(1).map(({ canonicalGeometryHash }) => canonicalGeometryHash))).toEqual(
-      new Set(['chain', 'fragment'])
-    )
+    expect(ranked[0]?.canonicalGeometryHash).toBe('fragment')
+    expect(ranked.map(({ canonicalGeometryHash }) => canonicalGeometryHash)).toEqual([
+      'fragment',
+      'cohesive',
+      'chain'
+    ])
   })
 })
 

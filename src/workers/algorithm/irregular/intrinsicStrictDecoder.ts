@@ -1028,32 +1028,51 @@ interface IntrinsicStrictParetoObjective {
   ) => number
 }
 
-const intrinsicStrictParetoObjectives: ReadonlyArray<IntrinsicStrictParetoObjective> = [
+const intrinsicStrictCompactnessObjective = combineMetricObjectives([
   minimizeMetric((metrics) => metrics.envelopeMaximumSideMm, canonicalLinearMetric),
-  minimizeMetric((metrics) => metrics.isolatedPieceCount),
   minimizeMetric((metrics) => metrics.envelopeAreaMm2, canonicalAreaMetric),
-  minimizeMetric((metrics) => metrics.positiveContactComponentCount),
-  minimizeMetric((metrics) => metrics.envelopeSpanMm, canonicalLinearMetric),
-  maximizeMetric((metrics) => metrics.largestPositiveContactComponentSize),
-  maximizeMetric((metrics) => metrics.largestPositiveContactComponentRatio, canonicalRatioMetric),
-  minimizeMetric((metrics) => metrics.largestOccupiedHullGapRatio, canonicalRatioMetric),
-  maximizeMetric((metrics) => metrics.totalStructuralContacts),
-  maximizeMetric((metrics) => metrics.dominantStructuralContacts),
+  minimizeMetric((metrics) => metrics.envelopeSpanMm, canonicalLinearMetric)
+])
+
+const intrinsicStrictVoidTopologyObjective = combineMetricObjectives([
   minimizeMetric((metrics) => metrics.enclosedCavityCount),
   minimizeMetric((metrics) => metrics.totalEnclosedCavityAreaMm2, canonicalAreaMetric),
+  minimizeMetric((metrics) => metrics.largestOccupiedHullGapRatio, canonicalRatioMetric),
+  minimizeMetric((metrics) => metrics.occupiedHullWasteRatio, canonicalRatioMetric)
+])
+
+const intrinsicStrictContactObjective = combineMetricObjectives([
+  minimizeMetric((metrics) => metrics.isolatedPieceCount),
+  minimizeMetric((metrics) => metrics.positiveContactComponentCount),
+  maximizeMetric((metrics) => metrics.largestPositiveContactComponentSize),
+  maximizeMetric((metrics) => metrics.largestPositiveContactComponentRatio, canonicalRatioMetric),
   minimizeMetric(
     (metrics) => metrics.occupiedAreaOutsideLargestContactComponentMm2,
     canonicalAreaMetric
   ),
-  minimizeMetric((metrics) => metrics.occupiedHullWasteRatio, canonicalRatioMetric),
+  maximizeMetric((metrics) => metrics.totalStructuralContacts),
+  maximizeMetric((metrics) => metrics.dominantStructuralContacts),
   maximizeMetric((metrics) => metrics.contactUnits),
   maximizeMetric((metrics) => metrics.sharedBoundaryLengthMm, canonicalLinearMetric)
+])
+
+const intrinsicStrictGeometricObjectives: ReadonlyArray<IntrinsicStrictParetoObjective> = [
+  intrinsicStrictCompactnessObjective,
+  intrinsicStrictVoidTopologyObjective
+]
+
+const intrinsicStrictFrontSelectionObjectives: ReadonlyArray<IntrinsicStrictParetoObjective> = [
+  intrinsicStrictCompactnessObjective,
+  intrinsicStrictVoidTopologyObjective,
+  intrinsicStrictContactObjective
 ]
 
 /**
- * Compares exact completed layouts by unsaturated compactness and cohesion.
+ * Compares exact completed layouts by compactness and void topology.
  * A negative result means the first layout dominates the second; zero means
- * equality or a genuine tradeoff and is deliberately not a scalar tie.
+ * equality or a genuine tradeoff and is deliberately not a scalar tie. Exact
+ * contact receives one bounded archive-selection turn, but cannot veto strict
+ * improvement on both geometric axes.
  */
 export function compareIntrinsicStrictCompletedLayoutDominance(
   first: IntrinsicStrictCompletedMetrics,
@@ -1061,7 +1080,7 @@ export function compareIntrinsicStrictCompletedLayoutDominance(
 ): IntrinsicStrictParetoComparison {
   let firstBetter = false
   let secondBetter = false
-  for (const objective of intrinsicStrictParetoObjectives) {
+  for (const objective of intrinsicStrictGeometricObjectives) {
     const comparison = objective.compare(first, second)
     firstBetter ||= comparison < 0
     secondBetter ||= comparison > 0
@@ -1077,32 +1096,24 @@ export function intrinsicStrictCompletedLayoutDominates(
   return compareIntrinsicStrictCompletedLayoutDominance(first, second) < 0
 }
 
-/** Selects the best available certificate partition and removes every dominated layout. */
+/** Removes every geometrically dominated layout and orders the surviving front. */
 export function selectIntrinsicStrictCompletedParetoFront(
   layouts: ReadonlyArray<IntrinsicStrictCompletedMetrics>
 ): ReadonlyArray<IntrinsicStrictCompletedMetrics> {
-  const passing = layouts.filter((metrics) => evaluateIntrinsicStrictCertificate(metrics).passes)
-  const partition = passing.length > 0 ? passing : layouts
-  const frontier = partition.filter(
+  const frontier = layouts.filter(
     (candidate) =>
-      !partition.some(
+      !layouts.some(
         (other) => other !== candidate && intrinsicStrictCompletedLayoutDominates(other, candidate)
       )
   )
   return orderIntrinsicStrictParetoFront(frontier)
 }
 
-/** Keeps certified layouts ahead of failures, then orders each partition by Pareto fronts. */
+/** Orders geometric Pareto fronts without turning diagnostic floors into hard partitions. */
 export function rankIntrinsicStrictCompletedLayouts(
   layouts: ReadonlyArray<IntrinsicStrictCompletedMetrics>
 ): ReadonlyArray<IntrinsicStrictCompletedMetrics> {
-  const passing: IntrinsicStrictCompletedMetrics[] = []
-  const failing: IntrinsicStrictCompletedMetrics[] = []
-  for (const metrics of layouts) {
-    if (evaluateIntrinsicStrictCertificate(metrics).passes) passing.push(metrics)
-    else failing.push(metrics)
-  }
-  return [...rankIntrinsicStrictParetoPartition(passing), ...rankIntrinsicStrictParetoPartition(failing)]
+  return rankIntrinsicStrictParetoPartition(layouts)
 }
 
 function rankIntrinsicStrictParetoPartition(
@@ -1143,7 +1154,7 @@ function orderIntrinsicStrictParetoFront(
   const ordered: IntrinsicStrictCompletedMetrics[] = []
   while (remaining.length > 0) {
     let selectedAny = false
-    for (const objective of intrinsicStrictParetoObjectives) {
+    for (const objective of intrinsicStrictFrontSelectionObjectives) {
       const selected = remaining.toSorted(
         (first, second) =>
           objective.compare(first, second) ||
@@ -1175,6 +1186,20 @@ function maximizeMetric(
 ): IntrinsicStrictParetoObjective {
   return {
     compare: (first, second) => canonicalize(value(second)) - canonicalize(value(first))
+  }
+}
+
+function combineMetricObjectives(
+  objectives: ReadonlyArray<IntrinsicStrictParetoObjective>
+): IntrinsicStrictParetoObjective {
+  return {
+    compare: (first, second) => {
+      for (const objective of objectives) {
+        const comparison = objective.compare(first, second)
+        if (comparison !== 0) return comparison
+      }
+      return 0
+    }
   }
 }
 
