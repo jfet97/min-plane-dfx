@@ -183,6 +183,9 @@ export interface IntrinsicDelayedLineageStepReport {
   readonly fragmentationRank: number | undefined
   readonly voidRank: number | undefined
   readonly survivesAtTotalCapacities: Readonly<Record<'1' | '2' | '4' | '8' | '13', boolean>>
+  readonly survivesAtExperimentalWidths: Readonly<
+    Record<'0' | '1' | '3' | '7' | '12', boolean>
+  >
 }
 
 export interface IntrinsicCommensurateQueueOrderReport {
@@ -226,6 +229,7 @@ export interface IntrinsicQueueBeamDiscriminatorResult {
     readonly matchedDepthCount: number
     readonly firstMissingDepth: number | undefined
     readonly minimumObservedSurvivalCapacity: 1 | 2 | 4 | 8 | 13 | undefined
+    readonly minimumObservedExperimentalWidth: 0 | 1 | 3 | 7 | 12 | undefined
   }
   readonly steps: ReadonlyArray<IntrinsicQueueBeamStepReport>
 }
@@ -248,6 +252,9 @@ export interface IntrinsicPartialGeometricBeamResult {
       readonly scoredCandidateCount: number
       readonly canonicalLegalCandidateCount: number
       readonly uniqueCanonicalSuccessorCount: number
+      readonly candidateGenerationRuntimeMs: number
+      readonly candidateScoringRuntimeMs: number
+      readonly canonicalAdmissionRuntimeMs: number
       readonly runtimeMs: number
     }>
     readonly generatedCandidateCount: number
@@ -269,6 +276,9 @@ export interface IntrinsicPartialGeometricBeamResult {
     readonly cumulativeEvaluations: number
     readonly cumulativeRuntimeMs: number
     readonly enumerationRuntimeMs: number
+    readonly candidateGenerationRuntimeMs: number
+    readonly candidateScoringRuntimeMs: number
+    readonly canonicalAdmissionRuntimeMs: number
     readonly selectionRuntimeMs: number
     readonly selectedSlots: ReadonlyArray<IntrinsicPartialGeometricBeamTraceSlot>
   }>
@@ -345,6 +355,9 @@ interface EnumeratedSuccessors {
   readonly generatedCandidateCount: number
   readonly scoredCandidateCount: number
   readonly canonicalLegalCandidateCount: number
+  readonly candidateGenerationRuntimeMs: number
+  readonly candidateScoringRuntimeMs: number
+  readonly canonicalAdmissionRuntimeMs: number
   readonly uniqueCanonicalSuccessors: ReadonlyArray<AuditCandidate>
   readonly selected: AuditCandidate | undefined
   readonly fullyEnumerated: boolean
@@ -465,6 +478,15 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
                 ({ canonicalGeometryKey }) => canonicalGeometryKey === expectedReferenceKey
               )
         const capacities = [1, 2, 4, 8, 13] as const
+        const experimentalWidths = [0, 1, 3, 7, 12] as const
+        const referenceEntries = referenceSuccessors.map(partialBeamEntry)
+        const referenceProtected =
+          referenceOutcome.selected === undefined
+            ? undefined
+            : referenceEntries.find(
+                ({ canonicalGeometryKey }) =>
+                  canonicalGeometryKey === referenceOutcome.selected?.canonicalGeometryKey
+              )
         delayedLineage = {
           expectedCanonicalGeometryKey: expectedReferenceKey,
           generated: referenceCandidate !== undefined,
@@ -482,7 +504,24 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
                   capacity
                 ).some(({ canonicalGeometryKey }) => canonicalGeometryKey === expectedReferenceKey)
             ])
-          ) as Record<'1' | '2' | '4' | '8' | '13', boolean>
+          ) as Record<'1' | '2' | '4' | '8' | '13', boolean>,
+          survivesAtExperimentalWidths: Object.fromEntries(
+            experimentalWidths.map((width) => [
+              String(width),
+              referenceCandidate !== undefined &&
+                (referenceProtected?.canonicalGeometryKey === expectedReferenceKey ||
+                  selectIntrinsicPartialGeometricBeam({
+                    candidates: referenceEntries,
+                    experimentalWidth: width,
+                    ...(referenceProtected === undefined
+                      ? {}
+                      : { protectedControl: referenceProtected })
+                  }).retained.some(
+                    ({ canonicalGeometryKey }) =>
+                      canonicalGeometryKey === expectedReferenceKey
+                  ))
+            ])
+          ) as Record<'0' | '1' | '3' | '7' | '12', boolean>
         }
         if (referenceCandidate === undefined) {
           firstMissingReferenceDepth = depth
@@ -809,6 +848,9 @@ export function runIntrinsicPartialGeometricBeam(input: {
           scoredCandidateCount: outcome.scoredCandidateCount,
           canonicalLegalCandidateCount: outcome.canonicalLegalCandidateCount,
           uniqueCanonicalSuccessorCount: outcome.uniqueCanonicalSuccessors.length,
+          candidateGenerationRuntimeMs: outcome.candidateGenerationRuntimeMs,
+          candidateScoringRuntimeMs: outcome.candidateScoringRuntimeMs,
+          canonicalAdmissionRuntimeMs: outcome.canonicalAdmissionRuntimeMs,
           runtimeMs: Math.max(0, performance.now() - parentStartedAt)
         })
         successors.push(...outcome.uniqueCanonicalSuccessors)
@@ -897,6 +939,18 @@ export function runIntrinsicPartialGeometricBeam(input: {
         cumulativeEvaluations: budget.evaluations,
         cumulativeRuntimeMs: Math.max(0, performance.now() - startedAt),
         enumerationRuntimeMs: Math.max(0, selectionStartedAt - enumerationStartedAt),
+        candidateGenerationRuntimeMs: sumParentEnumerationField(
+          parentEnumerations,
+          'candidateGenerationRuntimeMs'
+        ),
+        candidateScoringRuntimeMs: sumParentEnumerationField(
+          parentEnumerations,
+          'candidateScoringRuntimeMs'
+        ),
+        canonicalAdmissionRuntimeMs: sumParentEnumerationField(
+          parentEnumerations,
+          'canonicalAdmissionRuntimeMs'
+        ),
         selectionRuntimeMs,
         selectedSlots: selection.slots.map(traceSelectionSlot)
       })
@@ -1067,6 +1121,9 @@ function sumParentEnumerationField(
     | 'generatedCandidateCount'
     | 'scoredCandidateCount'
     | 'canonicalLegalCandidateCount'
+    | 'candidateGenerationRuntimeMs'
+    | 'candidateScoringRuntimeMs'
+    | 'canonicalAdmissionRuntimeMs'
 ): number {
   return entries.reduce((sum, entry) => sum + entry[field], 0)
 }
@@ -1362,6 +1419,9 @@ function enumerateSuccessors(
     let generatedCandidateCount = 0
     let scoredCandidateCount = 0
     let canonicalLegalCandidateCount = 0
+    let candidateGenerationRuntimeMs = 0
+    let candidateScoringRuntimeMs = 0
+    let canonicalAdmissionRuntimeMs = 0
     const familyWinners = new Map<string, AuditCandidate>()
     const uniqueCanonicalSuccessors = new Map<string, AuditCandidate>()
     const gapRegions =
@@ -1369,6 +1429,7 @@ function enumerateSuccessors(
         ? undefined
         : deriveCanonicalIntrinsicGapRegions(input.state.placedCollisionGeometries)
     for (const transform of [...input.piece.transforms].sort(transformCandidateOrder)) {
+      const candidateGenerationStartedAt = performance.now()
       yield* input.control.checkpoint('candidate-points')
       const moving = yield* input.geometryKernel.transformCollisionGeometry({
         geometry: input.piece.collisionGeometry,
@@ -1389,6 +1450,10 @@ function enumerateSuccessors(
               candidateMemoScope: input.candidateMemoScope,
               control: input.control
             })
+      candidateGenerationRuntimeMs += Math.max(
+        0,
+        performance.now() - candidateGenerationStartedAt
+      )
       generatedCandidateCount += candidates.length
       for (const candidate of candidates) {
         if (!takeAuditEvaluation(input.budget)) {
@@ -1396,19 +1461,30 @@ function enumerateSuccessors(
             generatedCandidateCount,
             scoredCandidateCount,
             canonicalLegalCandidateCount,
+            candidateGenerationRuntimeMs,
+            candidateScoringRuntimeMs,
+            canonicalAdmissionRuntimeMs,
             uniqueCanonicalSuccessors: [...uniqueCanonicalSuccessors.values()],
             selected: selectIntrinsicStrictFamilyWinner([...familyWinners.values()], 'pure-growth'),
             fullyEnumerated: false
           }
         }
+        const candidateScoringStartedAt = performance.now()
         const scored = scoreAuditCandidate({ ...input, moving, candidate, gapRegions })
+        candidateScoringRuntimeMs += Math.max(0, performance.now() - candidateScoringStartedAt)
         if (scored === undefined) continue
         scoredCandidateCount += 1
         const familyWinner = familyWinners.get(scored.transformFamily)
         if (familyWinner === undefined || compareLocalScore(scored.score, familyWinner.score) < 0) {
           familyWinners.set(scored.transformFamily, scored)
         }
-        if (!isCanonicalSheetlessStateLegal(scored.state)) continue
+        const canonicalAdmissionStartedAt = performance.now()
+        const canonicalLegal = isCanonicalSheetlessStateLegal(scored.state)
+        canonicalAdmissionRuntimeMs += Math.max(
+          0,
+          performance.now() - canonicalAdmissionStartedAt
+        )
+        if (!canonicalLegal) continue
         canonicalLegalCandidateCount += 1
         const incumbent = uniqueCanonicalSuccessors.get(scored.canonicalGeometryKey)
         if (incumbent === undefined || compareCandidateIdentity(scored, incumbent) < 0) {
@@ -1420,6 +1496,9 @@ function enumerateSuccessors(
       generatedCandidateCount,
       scoredCandidateCount,
       canonicalLegalCandidateCount,
+      candidateGenerationRuntimeMs,
+      candidateScoringRuntimeMs,
+      canonicalAdmissionRuntimeMs,
       uniqueCanonicalSuccessors: [...uniqueCanonicalSuccessors.values()],
       selected: selectIntrinsicStrictFamilyWinner([...familyWinners.values()], 'pure-growth'),
       fullyEnumerated: true
@@ -2170,11 +2249,21 @@ function summarizeDelayedLineage(
         ({ survivesAtTotalCapacities }) => survivesAtTotalCapacities[capacityKey(capacity)]
       )
   )
+  const experimentalWidths = [0, 1, 3, 7, 12] as const
+  const minimumObservedExperimentalWidth = experimentalWidths.find(
+    (width) =>
+      reports.length > 0 &&
+      reports.every(
+        ({ survivesAtExperimentalWidths }) =>
+          survivesAtExperimentalWidths[String(width) as keyof typeof survivesAtExperimentalWidths]
+      )
+  )
   return {
     provided,
     matchedDepthCount: reports.filter(({ generated }) => generated).length,
     firstMissingDepth,
-    minimumObservedSurvivalCapacity
+    minimumObservedSurvivalCapacity,
+    minimumObservedExperimentalWidth
   }
 }
 

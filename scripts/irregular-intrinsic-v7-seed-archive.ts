@@ -13,9 +13,11 @@ import {
 } from '../src/shared/irregular/defaults.js'
 import {
   IrregularNestingSettings,
+  IrregularPlacedPiece,
+  IrregularPlacement,
   IrregularPreparedPiece,
   IrregularPriorityOrderKey,
-  type IrregularPlacedPiece
+  IrregularTransform
 } from '../src/shared/irregular/domain.js'
 import { makePresetShapeDocument } from '../src/shared/presetShapes.js'
 import { preparePieces as prepareNestingPieces } from '../src/shared/preparePieces.js'
@@ -55,6 +57,21 @@ const MIXED_FIXTURE_PATH = fileURLToPath(
 )
 const TRIANGLE_SHEET = new SheetSpec({ width: 2000, height: 2700, label: 'triangle golden' })
 
+const StructuredLineagePlacement = Schema.Struct({
+  pieceId: PieceId,
+  rotationDeg: Schema.Finite,
+  mirrored: Schema.Boolean,
+  translateX: Schema.Finite,
+  translateY: Schema.Finite
+})
+
+const StructuredLineageStep = Schema.Struct({
+  stepIndex: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  placements: Schema.Array(StructuredLineagePlacement)
+})
+
+const StructuredLineage = Schema.Array(StructuredLineageStep)
+
 async function main(): Promise<void> {
   const fixtureName = requiredFixture(argument('--fixture'))
   const outputDirectory = resolve(requiredArgument('--output'))
@@ -66,8 +83,13 @@ async function main(): Promise<void> {
   const partialBeamWidthArgument = argument('--partial-beam-width')
   const partialBeamEnabled = partialBeamWidthArgument !== undefined
   const partialBeamOnly = process.argv.includes('--partial-beam-only')
+  const structuredLineagePath = argument('--structured-lineage')
+  const lineageCalibrationOnly = process.argv.includes('--lineage-calibration-only')
   if (partialBeamOnly && !partialBeamEnabled) {
     throw new Error('--partial-beam-only requires --partial-beam-width')
+  }
+  if (lineageCalibrationOnly && structuredLineagePath === undefined) {
+    throw new Error('--lineage-calibration-only requires --structured-lineage')
   }
   const reconstructionPortfolioEnabled =
     process.argv.includes('--reconstruction-portfolio') ||
@@ -93,6 +115,21 @@ async function main(): Promise<void> {
   const preparedPieces = await Effect.runPromise(
     withLayers(prepareIrregularPieces(fixture.request), fixture.settings)
   )
+  if (lineageCalibrationOnly && structuredLineagePath !== undefined) {
+    await runStructuredLineageCalibration({
+      fixtureName,
+      outputDirectory,
+      sourceCommit,
+      fixture,
+      fixtureBytes,
+      harnessBytes,
+      preparedPieces,
+      structuredLineagePath: resolve(structuredLineagePath),
+      maximumRuntimeMs: positiveIntegerArgument('--queue-beam-runtime-ms', 300_000),
+      maximumEvaluations: positiveIntegerArgument('--queue-beam-evaluations', 250_000)
+    })
+    return
+  }
   if (partialBeamOnly) {
     await runPartialBeamOnly({
       fixtureName,
@@ -559,6 +596,264 @@ async function runPartialBeamOnly(input: {
       runtimeMs: report.runtimeMs
     })}\n`
   )
+}
+
+async function runStructuredLineageCalibration(input: {
+  readonly fixtureName: 'triangle-20' | 'mixed-61'
+  readonly outputDirectory: string
+  readonly sourceCommit: string
+  readonly fixture: Awaited<ReturnType<typeof loadFixture>>
+  readonly fixtureBytes: Uint8Array
+  readonly harnessBytes: Uint8Array
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly structuredLineagePath: string
+  readonly maximumRuntimeMs: number
+  readonly maximumEvaluations: number
+}): Promise<void> {
+  const lineageBytes = await readFile(input.structuredLineagePath)
+  const lineage = Schema.decodeUnknownSync(StructuredLineage)(
+    JSON.parse(new TextDecoder().decode(lineageBytes))
+  )
+  const materialized = await Effect.runPromise(
+    withLayers(
+      materializeStructuredLineage(input.preparedPieces, lineage, input.fixture.sheet),
+      input.fixture.settings
+    )
+  )
+  const startedAt = performance.now()
+  const result = await Effect.runPromise(
+    withLayers(
+      runIntrinsicQueueBeamDiscriminator({
+        orderedPreparedPieces: materialized.orderedPreparedPieces,
+        referenceLineageCanonicalGeometryKeys: materialized.canonicalGeometryKeys,
+        maximumRuntimeMs: input.maximumRuntimeMs,
+        maximumEvaluations: input.maximumEvaluations
+      }),
+      input.fixture.settings
+    )
+  )
+  const finalState = materialized.states[materialized.states.length - 1]
+  const svgPath =
+    finalState === undefined
+      ? undefined
+      : `${input.outputDirectory}/${input.fixtureName}-structured-lineage-final.svg`
+  const pngPath = svgPath === undefined ? undefined : svgPath.replace(/\.svg$/, '.png')
+  if (finalState !== undefined && svgPath !== undefined && pngPath !== undefined) {
+    await writeFile(svgPath, renderCollisionSvg(finalState.placedCollisionGeometries))
+    execFileSync('node', [SVG_RENDERER_PATH, svgPath, pngPath, '1400'], {
+      cwd: PROJECT_ROOT,
+      stdio: 'inherit'
+    })
+  }
+  const reportPath = `${input.outputDirectory}/report.json`
+  const report = {
+    schemaVersion: 1,
+    experiment: 'intrinsic-v7-structured-lineage-calibration',
+    status: 'diagnostic-only-no-production-promotion',
+    sourceCommit: input.sourceCommit,
+    harness: { path: HARNESS_PATH, sha256: sha256(input.harnessBytes) },
+    fixture: {
+      name: input.fixtureName,
+      path: input.fixture.path,
+      sha256: sha256(input.fixtureBytes),
+      sheet: { width: input.fixture.sheet.width, height: input.fixture.sheet.height },
+      pieceCount: input.fixture.request.pieces.length,
+      paddingMm: input.fixture.request.padding,
+      settings: input.fixture.settings
+    },
+    structuredLineage: {
+      path: input.structuredLineagePath,
+      sha256: sha256(lineageBytes),
+      stepCount: lineage.length,
+      placementCount: materialized.orderedPreparedPieces.length,
+      orderedPieceIds: materialized.orderedPieceIds,
+      orderedPieceIdsSha256: sha256(
+        new TextEncoder().encode(JSON.stringify(materialized.orderedPieceIds))
+      ),
+      canonicalGeometryKeyHashes: materialized.canonicalGeometryKeys.map((key) =>
+        sha256(new TextEncoder().encode(key))
+      ),
+      finalSvgPath: svgPath,
+      finalPngPath: pngPath
+    },
+    budget: {
+      maximumRuntimeMs: input.maximumRuntimeMs,
+      maximumEvaluations: input.maximumEvaluations
+    },
+    result,
+    runtimeMs: Math.max(0, performance.now() - startedAt),
+    promotion: {
+      eligible: false,
+      reason:
+        'The structured-lineage calibration measures reachability and retention only; it does not select a production result.'
+    }
+  }
+  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
+  const artifactPaths = [
+    reportPath,
+    ...(svgPath === undefined ? [] : [svgPath]),
+    ...(pngPath === undefined ? [] : [pngPath])
+  ]
+  const manifestPath = `${input.outputDirectory}/manifest.json`
+  await writeFile(
+    manifestPath,
+    `${JSON.stringify(
+      {
+        experiment: report.experiment,
+        sourceCommit: input.sourceCommit,
+        fixture: report.fixture,
+        structuredLineage: report.structuredLineage,
+        harness: report.harness,
+        files: Object.fromEntries(
+          await Promise.all(
+            artifactPaths.map(async (path) => [path, sha256(await readFile(path))])
+          )
+        )
+      },
+      null,
+      2
+    )}\n`
+  )
+  process.stdout.write(
+    `${JSON.stringify({
+      reportPath,
+      reportSha256: sha256(await readFile(reportPath)),
+      manifestPath,
+      manifestSha256: sha256(await readFile(manifestPath)),
+      svgPath,
+      pngPath,
+      runtimeMs: report.runtimeMs
+    })}\n`
+  )
+}
+
+function materializeStructuredLineage(
+  preparedPieces: ReadonlyArray<IrregularPreparedPiece>,
+  lineage: Schema.Schema.Type<typeof StructuredLineage>,
+  sheet: SheetSpec
+): Effect.Effect<
+  {
+    readonly orderedPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+    readonly orderedPieceIds: ReadonlyArray<PieceId>
+    readonly canonicalGeometryKeys: ReadonlyArray<string>
+    readonly states: ReadonlyArray<IrregularBeamState>
+  },
+  unknown,
+  GeometryKernel
+> {
+  return Effect.gen(function* () {
+    const geometryKernel = yield* GeometryKernel
+    const piecesById = new Map(
+      preparedPieces.map((piece) => [piece.pieceId ?? piece.source.id, piece] as const)
+    )
+    const orderedPieceIds: PieceId[] = []
+    const canonicalGeometryKeys: string[] = []
+    const states: IrregularBeamState[] = []
+    let previousIds = new Set<PieceId>()
+
+    for (let index = 0; index < lineage.length; index += 1) {
+      const step = lineage[index]
+      if (step === undefined || step.stepIndex !== index) {
+        throw new Error(`structured lineage step ${index} is missing or misnumbered`)
+      }
+      const currentIds = new Set(step.placements.map(({ pieceId }) => pieceId))
+      if (currentIds.size !== step.placements.length) {
+        throw new Error(`structured lineage step ${index} contains duplicate piece ids`)
+      }
+      if (index === 0) {
+        if (currentIds.size !== 0) {
+          throw new Error('structured lineage step 0 must be empty')
+        }
+        previousIds = currentIds
+        continue
+      }
+      const removedIds = [...previousIds].filter((pieceId) => !currentIds.has(pieceId))
+      const addedIds = [...currentIds].filter((pieceId) => !previousIds.has(pieceId))
+      if (removedIds.length !== 0 || addedIds.length !== 1) {
+        throw new Error(
+          `structured lineage step ${index} must add exactly one piece without removing any`
+        )
+      }
+      const addedPieceId = addedIds[0]
+      if (addedPieceId === undefined) {
+        throw new Error(`structured lineage step ${index} did not add a piece`)
+      }
+      orderedPieceIds.push(addedPieceId)
+      const placedCollisionGeometries: IrregularPlacedPiece[] = []
+      for (const placement of step.placements) {
+        const piece = piecesById.get(placement.pieceId)
+        if (piece === undefined) {
+          throw new Error(`structured lineage piece ${placement.pieceId} is unavailable`)
+        }
+        const transform = piece.transforms.find(
+          (candidate) =>
+            candidate.mirrored === placement.mirrored &&
+            circularDegreeDistance(candidate.rotationDeg, placement.rotationDeg) <= 0.01
+        )
+        if (transform === undefined) {
+          throw new Error(
+            `structured lineage transform ${placement.rotationDeg}/${placement.mirrored} is unavailable for ${placement.pieceId}`
+          )
+        }
+        const collisionGeometry = yield* geometryKernel.transformCollisionGeometry({
+          geometry: piece.collisionGeometry,
+          transform
+        })
+        placedCollisionGeometries.push(
+          new IrregularPlacedPiece({
+            placement: new IrregularPlacement({
+              pieceId: placement.pieceId,
+              sourcePieceId: piece.source.id,
+              placementReference: piece.collisionGeometry.placementReference,
+              transform: new IrregularTransform({
+                translateX: placement.translateX,
+                translateY: placement.translateY,
+                rotationDeg: transform.rotationDeg,
+                mirrored: transform.mirrored
+              })
+            }),
+            collisionGeometry
+          })
+        )
+      }
+      const state = new IrregularBeamState({
+        remainingPreparedPieces: preparedPieces.filter(
+          (piece) => !currentIds.has(piece.pieceId ?? piece.source.id)
+        ),
+        placedCollisionGeometries,
+        placementOrder: orderedPieceIds
+      }).withBottomLeftAnchored()
+      if (state === undefined) {
+        throw new Error(`structured lineage step ${index} could not be anchored`)
+      }
+      if (!assertCanonicalGridLegalLayout(sheet, state.placedCollisionGeometries)) {
+        throw new Error(`structured lineage step ${index} is not canonically legal`)
+      }
+      states.push(state)
+      canonicalGeometryKeys.push(state.canonicalOccupiedGeometryKey)
+      previousIds = currentIds
+    }
+    if (orderedPieceIds.length !== preparedPieces.length) {
+      throw new Error(
+        `structured lineage placed ${orderedPieceIds.length} of ${preparedPieces.length} prepared pieces`
+      )
+    }
+    return {
+      orderedPreparedPieces: orderedPieceIds.map((pieceId) => {
+        const piece = piecesById.get(pieceId)
+        if (piece === undefined) throw new Error(`ordered piece ${pieceId} is unavailable`)
+        return piece
+      }),
+      orderedPieceIds,
+      canonicalGeometryKeys,
+      states
+    }
+  })
+}
+
+function circularDegreeDistance(first: number, second: number): number {
+  const distance = Math.abs(((first - second) % 360 + 360) % 360)
+  return Math.min(distance, 360 - distance)
 }
 
 function selectQueueBeamAuditTarget(portfolio: IntrinsicReconstructionPortfolioResult) {

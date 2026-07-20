@@ -254,7 +254,8 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       provided: true,
       matchedDepthCount: pieces.length,
       firstMissingDepth: undefined,
-      minimumObservedSurvivalCapacity: 1
+      minimumObservedSurvivalCapacity: 1,
+      minimumObservedExperimentalWidth: 0
     })
     expect(
       audit.steps.every(({ commensurateQueue }) =>
