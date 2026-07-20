@@ -47,6 +47,9 @@ import { TransformGeneratorLive } from '../src/workers/irregular/transformGenera
 
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url))
 const HARNESS_PATH = fileURLToPath(import.meta.url)
+const SVG_RENDERER_PATH = fileURLToPath(
+  new URL('../.agents/skills/render-svg-with-electron/scripts/render-svg.cjs', import.meta.url)
+)
 const MIXED_FIXTURE_PATH = fileURLToPath(
   new URL('../tests/fixtures/irregularSheetInvariance/mixed61-request.json', import.meta.url)
 )
@@ -62,6 +65,10 @@ async function main(): Promise<void> {
   const queueBeamDiscriminatorEnabled = process.argv.includes('--queue-beam-discriminator')
   const partialBeamWidthArgument = argument('--partial-beam-width')
   const partialBeamEnabled = partialBeamWidthArgument !== undefined
+  const partialBeamOnly = process.argv.includes('--partial-beam-only')
+  if (partialBeamOnly && !partialBeamEnabled) {
+    throw new Error('--partial-beam-only requires --partial-beam-width')
+  }
   const reconstructionPortfolioEnabled =
     process.argv.includes('--reconstruction-portfolio') ||
     queueBeamDiscriminatorEnabled ||
@@ -86,6 +93,27 @@ async function main(): Promise<void> {
   const preparedPieces = await Effect.runPromise(
     withLayers(prepareIrregularPieces(fixture.request), fixture.settings)
   )
+  if (partialBeamOnly) {
+    await runPartialBeamOnly({
+      fixtureName,
+      outputDirectory,
+      sourceCommit,
+      fixture,
+      fixtureBytes,
+      harnessBytes,
+      preparedPieces,
+      experimentalWidth: nonNegativeIntegerArgument('--partial-beam-width', 0),
+      maximumRuntimeMs: positiveIntegerArgument(
+        '--partial-beam-runtime-ms',
+        compact ? 30_000 : 90_000
+      ),
+      maximumEvaluations: positiveIntegerArgument(
+        '--partial-beam-evaluations',
+        compact ? 25_000 : 100_000
+      )
+    })
+    return
+  }
   const outcome = await Effect.runPromise(
     withLayers(
       runIntrinsicV7SeedArchive({
@@ -384,6 +412,152 @@ async function main(): Promise<void> {
       partialBeamWinnerSvgPath,
       runtimeMs: outcome.runtimeMs
     })
+  )
+}
+
+async function runPartialBeamOnly(input: {
+  readonly fixtureName: 'triangle-20' | 'mixed-61'
+  readonly outputDirectory: string
+  readonly sourceCommit: string
+  readonly fixture: Awaited<ReturnType<typeof loadFixture>>
+  readonly fixtureBytes: Uint8Array
+  readonly harnessBytes: Uint8Array
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly experimentalWidth: number
+  readonly maximumRuntimeMs: number
+  readonly maximumEvaluations: number
+}): Promise<void> {
+  const startedAt = performance.now()
+  const orderedPieceIds = input.preparedPieces.map(
+    (piece) => piece.pieceId ?? piece.source.id
+  )
+  const orderBytes = new TextEncoder().encode(JSON.stringify(orderedPieceIds))
+  const result = await Effect.runPromise(
+    withLayers(
+      runIntrinsicPartialGeometricBeam({
+        orderedPreparedPieces: input.preparedPieces,
+        finalSheet: input.fixture.sheet,
+        experimentalWidth: input.experimentalWidth,
+        maximumRuntimeMs: input.maximumRuntimeMs,
+        maximumEvaluations: input.maximumEvaluations
+      }),
+      input.fixture.settings
+    )
+  )
+  const svgPath =
+    result.winner === undefined
+      ? undefined
+      : `${input.outputDirectory}/${input.fixtureName}-partial-geometric-beam-width-${input.experimentalWidth}.svg`
+  const pngPath = svgPath === undefined ? undefined : svgPath.replace(/\.svg$/, '.png')
+  if (svgPath !== undefined && pngPath !== undefined && result.winner !== undefined) {
+    await writeFile(svgPath, renderCollisionSvg(result.winner.placedCollisionGeometries))
+    execFileSync('node', [SVG_RENDERER_PATH, svgPath, pngPath, '1400'], {
+      cwd: PROJECT_ROOT,
+      stdio: 'inherit'
+    })
+  }
+  const reportPath = `${input.outputDirectory}/report.json`
+  const report = {
+    schemaVersion: 1,
+    experiment: 'intrinsic-v7-stage2a-partial-geometric-beam',
+    status: 'diagnostic-only-no-production-promotion',
+    sourceCommit: input.sourceCommit,
+    harness: { path: HARNESS_PATH, sha256: sha256(input.harnessBytes) },
+    fixture: {
+      name: input.fixtureName,
+      path: input.fixture.path,
+      sha256: sha256(input.fixtureBytes),
+      sheet: { width: input.fixture.sheet.width, height: input.fixture.sheet.height },
+      pieceCount: input.fixture.request.pieces.length,
+      paddingMm: input.fixture.request.padding,
+      settings: input.fixture.settings
+    },
+    inputOrder: {
+      source: 'prepared-priority-order',
+      pieceIds: orderedPieceIds,
+      sha256: sha256(orderBytes)
+    },
+    budget: {
+      maximumRuntimeMs: input.maximumRuntimeMs,
+      maximumEvaluations: input.maximumEvaluations,
+      experimentalWidth: input.experimentalWidth
+    },
+    serviceOwnership: 'cold-per-beam-run',
+    terminalSelection: 'canonical-q0-q90-final-sheet',
+    result: {
+      ...result,
+      finalists: result.finalists.map(
+        ({
+          futureEquivalenceKey,
+          canonicalGeometryKey,
+          placedCollisionGeometries: _placedCollisionGeometries,
+          ...finalist
+        }) => ({
+          ...finalist,
+          futureEquivalenceDigest: sha256(new TextEncoder().encode(futureEquivalenceKey)),
+          canonicalGeometryKeyHash: sha256(new TextEncoder().encode(canonicalGeometryKey))
+        })
+      ),
+      winner:
+        result.winner === undefined
+          ? undefined
+          : {
+              canonicalGeometryHash: result.winner.canonicalGeometryHash,
+              canonicalGeometryKeyHash: sha256(
+                new TextEncoder().encode(result.winner.canonicalGeometryKey)
+              ),
+              futureEquivalenceDigest: sha256(
+                new TextEncoder().encode(result.winner.futureEquivalenceKey)
+              ),
+              terminalRotationDeg: result.winner.terminalRotationDeg,
+              metrics: result.winner.metrics,
+              svgPath,
+              pngPath
+            }
+    },
+    runtimeMs: Math.max(0, performance.now() - startedAt),
+    promotion: {
+      eligible: false,
+      reason:
+        'Stage 2A remains diagnostic until structured-lineage calibration and primary quality gates pass.'
+    }
+  }
+  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
+  const artifactPaths = [
+    reportPath,
+    ...(svgPath === undefined ? [] : [svgPath]),
+    ...(pngPath === undefined ? [] : [pngPath])
+  ]
+  const manifestPath = `${input.outputDirectory}/manifest.json`
+  await writeFile(
+    manifestPath,
+    `${JSON.stringify(
+      {
+        experiment: report.experiment,
+        sourceCommit: input.sourceCommit,
+        fixture: report.fixture,
+        inputOrder: report.inputOrder,
+        harness: report.harness,
+        files: Object.fromEntries(
+          await Promise.all(
+            artifactPaths.map(async (path) => [path, sha256(await readFile(path))])
+          )
+        )
+      },
+      null,
+      2
+    )}\n`
+  )
+  process.stdout.write(
+    `${JSON.stringify({
+      reportPath,
+      reportSha256: sha256(await readFile(reportPath)),
+      manifestPath,
+      manifestSha256: sha256(await readFile(manifestPath)),
+      svgPath,
+      pngPath,
+      runtimeMs: report.runtimeMs
+    })}\n`
   )
 }
 

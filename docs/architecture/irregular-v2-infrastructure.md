@@ -185,9 +185,18 @@ bounded layer breadth followed by guaranteed repeated within-layer geometric
 dispersion. Exact contact gets at most one post-breadth selection turn and is
 never a dominance axis. Dispersion compares exact occupied unions under rigid
 quarter turns using void/contact signature Hamming distance and a Clipper2 XOR
-area ratio. Requested sheet dimensions appear only in the monotone q0/q90 fit
-gate. Alternate-piece scheduling remains disabled until a later paired
-commensurate ablation at a successful fixed beam width.
+area ratio computed with integer shoelace arithmetic. A failed Boolean distance
+measurement is unavailable, never a maximum-diversity reward. If the initially
+represented Pareto layers cannot fill capacity, retention opens the next layer
+deterministically; layer extraction stops once the bounded width cannot consult
+another layer. Requested sheet dimensions appear only in the monotone q0/q90
+fit gate and the shared canonical q0/q90 terminal finalizer. Trace identities
+are versioned SHA-256 digests; full future-equivalence keys remain internal.
+The evidence harness has a cold, isolated Stage 2A path that freezes and hashes
+the prepared-piece order, skips Stage 0/1 reconstruction and queue work, and
+hashes finalized SVG and PNG output. Alternate-piece scheduling remains
+disabled until a later paired commensurate ablation at a successful fixed beam
+width.
 
 At no more than five registered points, E4 projects a relaxed state back to the
 exact geometry domain: canonicalize to the collision grid, remove both

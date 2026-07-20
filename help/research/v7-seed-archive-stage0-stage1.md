@@ -83,6 +83,28 @@ Use `--arms control,split` to isolate arms and `--compact` only for a harness
 smoke run (128 evaluations, one sweep, two seconds per arm). It is not evidence
 for the 12,000-evaluation / 60-second Stage 1 contract.
 
+Stage 2A partial-beam evidence must use the isolated path. This bypasses every
+Stage 0/1 arm, reconstruction decode, and queue audit; it freezes the prepared
+priority order in the report and starts fresh geometry/NFP services for the
+beam:
+
+```sh
+pnpm exec tsx --tsconfig tsconfig.node.json scripts/irregular-intrinsic-v7-seed-archive.ts \
+  --fixture triangle-20 \
+  --output /private/tmp/min-plane-provenance/v7-stage2a-triangle \
+  --source-commit "$(git rev-parse HEAD)" \
+  --partial-beam-only \
+  --partial-beam-width 3 \
+  --partial-beam-runtime-ms 90000 \
+  --partial-beam-evaluations 100000
+```
+
+The isolated report identifies the Stage 2A schema explicitly, records the
+ordered piece IDs and their SHA-256 digest, applies canonical q0/q90 terminal
+sheet finalization, hashes SVG and PNG outputs, and keeps full semantic state
+keys internal. A width or diversity-order decision still requires the
+structured delayed-lineage calibration described in `plan.md`.
+
 The reviewer must inspect cache savings, endpoint archive handoffs, all
 independent arms, exact legality classifications, counter deltas, and rendered
 SVG/PNG layouts. The experimental ancestry is known not to be the current-main

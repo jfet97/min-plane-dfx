@@ -31,6 +31,7 @@ import {
 import {
   runIntrinsicPartialGeometricBeam,
   runIntrinsicQueueBeamDiscriminator,
+  measureExactDoubledPathsArea,
   selectIntrinsicPartialGeometricBeam,
   type IntrinsicPartialGeometricBeamCandidate,
   type IntrinsicQueueBeamAxes
@@ -291,6 +292,35 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(result.completedDepthCount).toBe(pieces.length)
     expect(result.winner?.placedCollisionGeometries).toHaveLength(pieces.length)
     expect(result.steps.every(({ selectedSlots }) => selectedSlots.length <= 3)).toBe(true)
+  })
+
+  it('keeps the width-zero control identical to the strict decoder at every depth', async () => {
+    const pieces = [
+      preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('third', rectanglePoints(1, 2), [transform(0, 0), transform(1, 90)])
+    ]
+    const finalSheet = sheet(20, 10)
+    const strict = await decode(finalSheet, pieces)
+    const control = await Effect.runPromise(
+      runIntrinsicPartialGeometricBeam({
+        orderedPreparedPieces: pieces,
+        finalSheet,
+        experimentalWidth: 0,
+        maximumRuntimeMs: 10_000,
+        maximumEvaluations: 20_000
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+
+    expect(control.status).toBe('completed')
+    expect(control.steps.every(({ selectedSlots }) => selectedSlots.length === 0)).toBe(true)
+    expect(control.winner?.canonicalGeometryHash).toBe(strict.canonicalGeometryHash)
+    expect(control.winner?.terminalRotationDeg).toBe(strict.terminalRotationDeg)
+    expect(control.winner?.placedCollisionGeometries).toEqual(strict.placedCollisionGeometries)
   })
 
   it('continues an exact frozen seed and rejects non-partitions', async () => {
@@ -630,15 +660,11 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       futureDeduplicatedCandidateCount: 4,
       protectedCandidateExcludedCount: 0,
       selectableCandidateCount: 4,
-      paretoLayerSizes: [1, 2, 1]
+      paretoLayerSizes: [1, 2, 1],
+      paretoLayerExtractionComplete: true,
+      unlayeredCandidateCount: 0
     })
-    expect(selection.slots[2]?.dispersion).toEqual(
-      expect.objectContaining({
-        nearestRetainedFutureEquivalenceKey: expect.any(String),
-        symmetricDifferenceNumerator: expect.any(String),
-        pairUnionDenominator: expect.any(String)
-      })
-    )
+    expect(selection.slots[2]?.dispersion).toBeUndefined()
   })
 
   it('allows only one contact turn and preserves a later dispersion slot', () => {
@@ -659,6 +685,65 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(selection.slots.filter(({ role }) => role === 'contact')).toHaveLength(1)
     expect(selection.slots.filter(({ role }) => role === 'dispersion').length).toBeGreaterThan(0)
     expect(selection.slots).toHaveLength(7)
+  })
+
+  it('opens the next Pareto layer when shallow singleton layers cannot fill capacity', () => {
+    const candidates = [
+      partialBeamCandidate('layer-0', 0, 0, 0),
+      partialBeamCandidate('layer-1', 1, 1, 1),
+      partialBeamCandidate('layer-2', 2, 2, 2)
+    ]
+
+    const selection = selectIntrinsicPartialGeometricBeam({
+      candidates,
+      experimentalWidth: 3
+    })
+
+    expect(selection.retained.map(({ futureEquivalenceKey }) => futureEquivalenceKey)).toEqual([
+      'layer-0',
+      'layer-1',
+      'layer-2'
+    ])
+    expect(selection.slots.map(({ role, layer }) => ({ role, layer }))).toEqual([
+      { role: 'breadth', layer: 0 },
+      { role: 'breadth', layer: 1 },
+      { role: 'breadth', layer: 2 }
+    ])
+  })
+
+  it('measures Clipper path area exactly across holes, components, and quarter turns', () => {
+    const outer = [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 10, y: 10 },
+      { x: 0, y: 10 }
+    ]
+    const hole = [
+      { x: 2, y: 2 },
+      { x: 2, y: 4 },
+      { x: 4, y: 4 },
+      { x: 4, y: 2 }
+    ]
+    const component = [
+      { x: 20, y: 0 },
+      { x: 23, y: 0 },
+      { x: 23, y: 2 },
+      { x: 20, y: 2 }
+    ]
+    const quarterTurned = outer.map(({ x, y }) => ({ x: -y, y: x }))
+
+    expect(measureExactDoubledPathsArea([outer, hole])).toBe(192n)
+    expect(measureExactDoubledPathsArea([outer, component])).toBe(212n)
+    expect(measureExactDoubledPathsArea([quarterTurned])).toBe(200n)
+    expect(
+      measureExactDoubledPathsArea([
+        [
+          { x: Number.MAX_SAFE_INTEGER + 1, y: 0 },
+          { x: 1, y: 0 },
+          { x: 0, y: 1 }
+        ]
+      ])
+    ).toBeUndefined()
   })
 })
 

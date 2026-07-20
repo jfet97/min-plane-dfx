@@ -2,7 +2,6 @@ import { Data, Effect, Order } from 'effect'
 import { createHash } from 'node:crypto'
 import { performance } from 'node:perf_hooks'
 import {
-  area,
   booleanOpWithPolyTree,
   ClipType,
   FillRule,
@@ -51,7 +50,7 @@ import { intrinsicPreparedPieceClassKey } from './intrinsicReconstructionPortfol
 import { IrregularBeamState } from './irregularBeamState.js'
 import {
   IntrinsicStrictDecoderError,
-  measureIntrinsicSheetlessCompletedLayout,
+  finalizeIntrinsicStrictState,
   measureIntrinsicStrictCanonicalEnvelope,
   rankIntrinsicStrictCompletedLayouts,
   selectIntrinsicStrictFamilyWinner,
@@ -243,7 +242,7 @@ export interface IntrinsicPartialGeometricBeamResult {
     readonly scheduledPieceId: PieceId
     readonly parentCount: number
     readonly parentEnumerations: ReadonlyArray<{
-      readonly parentFutureEquivalenceKey: string
+      readonly parentFutureEquivalenceDigest: string
       readonly protectedControl: boolean
       readonly generatedCandidateCount: number
       readonly scoredCandidateCount: number
@@ -259,8 +258,10 @@ export interface IntrinsicPartialGeometricBeamResult {
     readonly uniqueSuccessorCount: number
     readonly futureEquivalenceDeduplicationCount: number
     readonly paretoLayerSizes: ReadonlyArray<number>
+    readonly paretoLayerExtractionComplete: boolean
+    readonly unlayeredCandidateCount: number
     readonly capacityEvictionCount: number
-    readonly protectedControlKey: string | undefined
+    readonly protectedControlDigest: string | undefined
     readonly protectedControlSurvived: boolean
     readonly futureEquivalenceKeyVersion: typeof PARTIAL_FUTURE_EQUIVALENCE_KEY_VERSION
     readonly occupiedDispersionVersion: typeof OCCUPIED_DISPERSION_VERSION
@@ -269,11 +270,13 @@ export interface IntrinsicPartialGeometricBeamResult {
     readonly cumulativeRuntimeMs: number
     readonly enumerationRuntimeMs: number
     readonly selectionRuntimeMs: number
-    readonly selectedSlots: IntrinsicPartialGeometricBeamSelection<IntrinsicPartialBeamEntry>['slots']
+    readonly selectedSlots: ReadonlyArray<IntrinsicPartialGeometricBeamTraceSlot>
   }>
   readonly finalists: ReadonlyArray<{
     readonly futureEquivalenceKey: string
     readonly canonicalGeometryKey: string
+    readonly canonicalGeometryHash: string
+    readonly terminalRotationDeg: 0 | 90
     readonly metrics: IntrinsicStrictCompletedMetrics
     readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
   }>
@@ -281,8 +284,30 @@ export interface IntrinsicPartialGeometricBeamResult {
     | {
         readonly futureEquivalenceKey: string
         readonly canonicalGeometryKey: string
+        readonly canonicalGeometryHash: string
+        readonly terminalRotationDeg: 0 | 90
         readonly metrics: IntrinsicStrictCompletedMetrics
         readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+      }
+    | undefined
+}
+
+interface IntrinsicPartialGeometricBeamTraceSlot {
+  readonly role: 'breadth' | 'contact' | 'dispersion'
+  readonly layer: number
+  readonly visit: number
+  readonly futureEquivalenceDigest: string
+  readonly parentFutureEquivalenceDigest: string | undefined
+  readonly canonicalGeometryHash: string
+  readonly axes: IntrinsicQueueBeamAxes
+  readonly dispersion:
+    | {
+        readonly nearestRetainedFutureEquivalenceDigest: string
+        readonly voidHamming: number
+        readonly contactHamming: number
+        readonly symmetricDifferenceNumerator: string
+        readonly pairUnionDenominator: string
+        readonly symmetricDifferenceRatio: number
       }
     | undefined
 }
@@ -424,7 +449,8 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
           geometryKernel,
           nfpIfpService,
           candidateMemoScope,
-          control
+          control,
+          measureGapContainment: false
         })
         if (referenceOutcome === undefined || !referenceOutcome.fullyEnumerated) break
         const referenceSuccessors = referenceOutcome.uniqueCanonicalSuccessors
@@ -770,11 +796,14 @@ export function runIntrinsicPartialGeometricBeam(input: {
           geometryKernel,
           nfpIfpService,
           candidateMemoScope,
-          control
+          control,
+          measureGapContainment: false
         })
         if (outcome === undefined || !outcome.fullyEnumerated) break
         parentEnumerations.push({
-          parentFutureEquivalenceKey: partialFutureEquivalenceKey(parentState),
+          parentFutureEquivalenceDigest: digestSemanticIdentity(
+            partialFutureEquivalenceKey(parentState)
+          ),
           protectedControl: parentState === protectedControlState,
           generatedCandidateCount: outcome.generatedCandidateCount,
           scoredCandidateCount: outcome.scoredCandidateCount,
@@ -784,11 +813,23 @@ export function runIntrinsicPartialGeometricBeam(input: {
         })
         successors.push(...outcome.uniqueCanonicalSuccessors)
         if (parentState === protectedControlState) {
+          const selectedCanonicalGeometryKey = outcome.selected?.canonicalGeometryKey
           protectedSuccessor =
-            outcome.uniqueCanonicalSuccessors.find(
-              ({ canonicalGeometryKey }) =>
-                canonicalGeometryKey === outcome.selected?.canonicalGeometryKey
-            ) ?? orderCandidates(outcome.uniqueCanonicalSuccessors)[0]
+            selectedCanonicalGeometryKey === undefined
+              ? undefined
+              : outcome.uniqueCanonicalSuccessors.find(
+                  ({ canonicalGeometryKey }) =>
+                    canonicalGeometryKey === selectedCanonicalGeometryKey
+                )
+          if (selectedCanonicalGeometryKey !== undefined && protectedSuccessor === undefined) {
+            return yield* Effect.fail(
+              new IntrinsicQueueBeamDiscriminatorError({
+                operation: 'measurement',
+                message:
+                  'the protected width-one successor was rejected by canonical admission; refusing to substitute a different comparator winner.'
+              })
+            )
+          }
         }
       }
       if (budget.truncationReason !== undefined) break
@@ -839,11 +880,16 @@ export function runIntrinsicPartialGeometricBeam(input: {
         futureEquivalenceDeduplicationCount:
           entries.length - selection.diagnostics.futureDeduplicatedCandidateCount,
         paretoLayerSizes: selection.diagnostics.paretoLayerSizes,
+        paretoLayerExtractionComplete: selection.diagnostics.paretoLayerExtractionComplete,
+        unlayeredCandidateCount: selection.diagnostics.unlayeredCandidateCount,
         capacityEvictionCount: Math.max(
           0,
           selection.diagnostics.selectableCandidateCount - selection.retained.length
         ),
-        protectedControlKey: protectedEntry?.futureEquivalenceKey,
+        protectedControlDigest:
+          protectedEntry === undefined
+            ? undefined
+            : digestSemanticIdentity(protectedEntry.futureEquivalenceKey),
         protectedControlSurvived: protectedEntry !== undefined,
         futureEquivalenceKeyVersion: PARTIAL_FUTURE_EQUIVALENCE_KEY_VERSION,
         occupiedDispersionVersion: OCCUPIED_DISPERSION_VERSION,
@@ -852,7 +898,7 @@ export function runIntrinsicPartialGeometricBeam(input: {
         cumulativeRuntimeMs: Math.max(0, performance.now() - startedAt),
         enumerationRuntimeMs: Math.max(0, selectionStartedAt - enumerationStartedAt),
         selectionRuntimeMs,
-        selectedSlots: selection.slots
+        selectedSlots: selection.slots.map(traceSelectionSlot)
       })
     }
 
@@ -865,22 +911,35 @@ export function runIntrinsicPartialGeometricBeam(input: {
       ({ state }) =>
         state.remainingPreparedPieces.length === 0 && state.unplacedPieceIds.length === 0
     )
-    const finalists = completeEntries.flatMap((entry) => {
-      const measured = measureIntrinsicSheetlessCompletedLayout(
-        entry.state,
+    const finalized = yield* Effect.forEach(completeEntries, (entry) =>
+      finalizeIntrinsicStrictState(
+        input.finalSheet,
+        {
+          state: entry.state,
+          stepTrace: [],
+          gapFillEvidence: [],
+          runtimeMs: Math.max(0, performance.now() - startedAt)
+        },
         Math.max(0, performance.now() - startedAt)
-      )
-      return measured === undefined
+      ).pipe(Effect.map((result) => ({ entry, result })))
+    )
+    const finalists = finalized.flatMap(({ entry, result }) =>
+      result.status !== 'completed' ||
+      result.metrics === undefined ||
+      result.canonicalGeometryHash === undefined ||
+      result.terminalRotationDeg === undefined
         ? []
         : [
             {
               futureEquivalenceKey: entry.futureEquivalenceKey,
               canonicalGeometryKey: entry.canonicalGeometryKey,
-              metrics: measured.metrics,
-              placedCollisionGeometries: measured.placedCollisionGeometries
+              canonicalGeometryHash: result.canonicalGeometryHash,
+              terminalRotationDeg: result.terminalRotationDeg,
+              metrics: result.metrics,
+              placedCollisionGeometries: result.placedCollisionGeometries
             }
           ]
-    })
+    )
     const rankedMetrics = rankIntrinsicStrictCompletedLayouts(finalists.map(({ metrics }) => metrics))
     const winningHash = rankedMetrics[0]?.canonicalGeometryHash
     const winner = finalists.find(({ metrics }) => metrics.canonicalGeometryHash === winningHash)
@@ -965,6 +1024,41 @@ function preparedOrderDigest(pieces: ReadonlyArray<IrregularPreparedPiece>): str
   return createHash('sha256')
     .update(pieces.map(intrinsicPreparedPieceClassKey).join('\u0000'))
     .digest('hex')
+}
+
+function digestSemanticIdentity(identity: string): string {
+  return createHash('sha256').update(identity).digest('hex')
+}
+
+function traceSelectionSlot(
+  slot: IntrinsicPartialGeometricBeamSelection<IntrinsicPartialBeamEntry>['slots'][number]
+): IntrinsicPartialGeometricBeamTraceSlot {
+  const dispersion = slot.dispersion
+  return {
+    role: slot.role,
+    layer: slot.layer,
+    visit: slot.visit,
+    futureEquivalenceDigest: digestSemanticIdentity(slot.futureEquivalenceKey),
+    parentFutureEquivalenceDigest:
+      slot.parentFutureEquivalenceKey === undefined
+        ? undefined
+        : digestSemanticIdentity(slot.parentFutureEquivalenceKey),
+    canonicalGeometryHash: digestSemanticIdentity(slot.canonicalGeometryKey),
+    axes: slot.axes,
+    dispersion:
+      dispersion === undefined
+        ? undefined
+        : {
+            voidHamming: dispersion.voidHamming,
+            contactHamming: dispersion.contactHamming,
+            symmetricDifferenceNumerator: dispersion.symmetricDifferenceNumerator,
+            pairUnionDenominator: dispersion.pairUnionDenominator,
+            symmetricDifferenceRatio: dispersion.symmetricDifferenceRatio,
+            nearestRetainedFutureEquivalenceDigest: digestSemanticIdentity(
+              dispersion.nearestRetainedFutureEquivalenceKey
+            )
+          }
+  }
 }
 
 function sumParentEnumerationField(
@@ -1253,6 +1347,7 @@ interface EnumerationInput {
   readonly nfpIfpService: NfpIfpServiceShape
   readonly candidateMemoScope: IrregularNfpIfpCandidateMemoScope
   readonly control: IrregularNfpIfpControl
+  readonly measureGapContainment?: boolean
 }
 
 function enumerateSuccessors(
@@ -1269,7 +1364,10 @@ function enumerateSuccessors(
     let canonicalLegalCandidateCount = 0
     const familyWinners = new Map<string, AuditCandidate>()
     const uniqueCanonicalSuccessors = new Map<string, AuditCandidate>()
-    const gapRegions = deriveCanonicalIntrinsicGapRegions(input.state.placedCollisionGeometries)
+    const gapRegions =
+      input.measureGapContainment === false
+        ? undefined
+        : deriveCanonicalIntrinsicGapRegions(input.state.placedCollisionGeometries)
     for (const transform of [...input.piece.transforms].sort(transformCandidateOrder)) {
       yield* input.control.checkpoint('candidate-points')
       const moving = yield* input.geometryKernel.transformCollisionGeometry({
@@ -1593,6 +1691,8 @@ export interface IntrinsicPartialGeometricBeamSelection<T> {
     readonly protectedCandidateExcludedCount: number
     readonly selectableCandidateCount: number
     readonly paretoLayerSizes: ReadonlyArray<number>
+    readonly paretoLayerExtractionComplete: boolean
+    readonly unlayeredCandidateCount: number
   }
   readonly slots: ReadonlyArray<{
     readonly role: 'breadth' | 'contact' | 'dispersion'
@@ -1642,8 +1742,13 @@ export function selectIntrinsicPartialGeometricBeam<
   const selectable = [...unique.values()].filter(
     ({ futureEquivalenceKey }) => futureEquivalenceKey !== protectedKey
   )
-  const layers = partialNondominatedLayers(selectable)
-  const breadth = Math.min(layers.length, Math.ceil(experimentalWidth / 2))
+  const layers = partialNondominatedLayers(
+    selectable,
+    Math.min(experimentalWidth, selectable.length)
+  )
+  const layeredCandidateCount = layers.reduce((sum, layer) => sum + layer.length, 0)
+  const initialBreadth = Math.min(layers.length, Math.ceil(experimentalWidth / 2))
+  let representedLayerCount = initialBreadth
   const retained: T[] = []
   const slots: Array<IntrinsicPartialGeometricBeamSelection<T>['slots'][number]> = []
   const selectedKeys = new Set<string>()
@@ -1675,7 +1780,7 @@ export function selectIntrinsicPartialGeometricBeam<
     return true
   }
 
-  for (let layerIndex = 0; layerIndex < breadth; layerIndex += 1) {
+  for (let layerIndex = 0; layerIndex < initialBreadth; layerIndex += 1) {
     append(
       layers[layerIndex]
         ?.filter(({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey))
@@ -1694,9 +1799,13 @@ export function selectIntrinsicPartialGeometricBeam<
 
   const retainedForDistance = (): ReadonlyArray<T> =>
     input.protectedControl === undefined ? retained : [input.protectedControl, ...retained]
-  while (remaining > 0 && breadth > 0) {
+  while (remaining > 0 && representedLayerCount > 0) {
     let addedInCycle = false
-    for (let layerIndex = breadth - 1; layerIndex >= 0 && remaining > 0; layerIndex -= 1) {
+    for (
+      let layerIndex = representedLayerCount - 1;
+      layerIndex >= 0 && remaining > 0;
+      layerIndex -= 1
+    ) {
       const available = layers[layerIndex]?.filter(
         ({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey)
       )
@@ -1705,7 +1814,14 @@ export function selectIntrinsicPartialGeometricBeam<
       remaining -= 1
       addedInCycle = true
     }
-    if (!addedInCycle) break
+    if (addedInCycle) continue
+    const nextLayer = layers[representedLayerCount]
+    representedLayerCount += 1
+    const nextBreadthCandidate = nextLayer
+      ?.filter(({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey))
+      .toSorted(comparePartialCandidate)[0]
+    if (!append(nextBreadthCandidate, 'breadth')) break
+    remaining -= 1
   }
 
   return {
@@ -1717,20 +1833,23 @@ export function selectIntrinsicPartialGeometricBeam<
         protectedKey !== undefined && unique.has(protectedKey)
       ),
       selectableCandidateCount: selectable.length,
-      paretoLayerSizes: layers.map((layer) => layer.length)
+      paretoLayerSizes: layers.map((layer) => layer.length),
+      paretoLayerExtractionComplete: layeredCandidateCount === selectable.length,
+      unlayeredCandidateCount: selectable.length - layeredCandidateCount
     },
     slots
   }
 }
 
 function partialNondominatedLayers<T extends IntrinsicPartialGeometricBeamCandidate>(
-  candidates: ReadonlyArray<T>
+  candidates: ReadonlyArray<T>,
+  maximumLayerCount = Number.POSITIVE_INFINITY
 ): ReadonlyArray<ReadonlyArray<T>> {
   const remaining = new Map(
     candidates.map((candidate) => [candidate.futureEquivalenceKey, candidate] as const)
   )
   const layers: Array<ReadonlyArray<T>> = []
-  while (remaining.size > 0) {
+  while (remaining.size > 0 && layers.length < maximumLayerCount) {
     const values = [...remaining.values()]
     const layer = values
       .filter(
@@ -1791,12 +1910,23 @@ function compareBoundedContact(
 function selectMostDispersedCandidate<T extends IntrinsicPartialGeometricBeamCandidate>(
   candidates: ReadonlyArray<T>,
   retained: ReadonlyArray<T>
-): { readonly candidate: T; readonly witness: OccupiedDispersionWitness } | undefined {
+):
+  | { readonly candidate: T; readonly witness: OccupiedDispersionWitness | undefined }
+  | undefined {
   const ranked = candidates.map((candidate) => ({
     candidate,
     witness: minimumOccupiedDistance(candidate, retained)
   }))
   return ranked.toSorted((first, second) => {
+    if (first.witness === undefined || second.witness === undefined) {
+      return first.witness === undefined
+        ? second.witness === undefined
+          ? first.candidate.futureEquivalenceKey.localeCompare(
+              second.candidate.futureEquivalenceKey
+            )
+          : 1
+        : -1
+    }
     return (
       compareOccupiedDistance(second.witness.distance, first.witness.distance) ||
       first.candidate.futureEquivalenceKey.localeCompare(second.candidate.futureEquivalenceKey)
@@ -1812,17 +1942,16 @@ interface OccupiedDispersionWitness {
 function minimumOccupiedDistance(
   candidate: IntrinsicPartialGeometricBeamCandidate,
   retained: ReadonlyArray<IntrinsicPartialGeometricBeamCandidate>
-): OccupiedDispersionWitness {
-  const distances = retained.map((member) => ({
-    nearestRetainedFutureEquivalenceKey: member.futureEquivalenceKey,
-    distance: occupiedDistance(candidate, member)
-  }))
-  return (
-    distances.toSorted((first, second) => compareOccupiedDistance(first.distance, second.distance))[0] ?? {
-      nearestRetainedFutureEquivalenceKey: '',
-      distance: maximumOccupiedDistance()
-    }
-  )
+): OccupiedDispersionWitness | undefined {
+  const distances = retained.flatMap((member) => {
+    const distance = occupiedDistance(candidate, member)
+    return distance === undefined
+      ? []
+      : [{ nearestRetainedFutureEquivalenceKey: member.futureEquivalenceKey, distance }]
+  })
+  return distances.toSorted((first, second) =>
+    compareOccupiedDistance(first.distance, second.distance)
+  )[0]
 }
 
 function serializeOccupiedDispersion(witness: OccupiedDispersionWitness) {
@@ -1841,7 +1970,7 @@ function serializeOccupiedDispersion(witness: OccupiedDispersionWitness) {
 function occupiedDistance(
   first: IntrinsicPartialGeometricBeamCandidate,
   second: IntrinsicPartialGeometricBeamCandidate
-): IntrinsicOccupiedDistance {
+): IntrinsicOccupiedDistance | undefined {
   const firstVoid = voidSignature(first.axes)
   const secondVoid = voidSignature(second.axes)
   const firstContact = contactSignature(first.axes)
@@ -1854,10 +1983,8 @@ function occupiedDistance(
     )
     return ratio === undefined ? [] : [ratio]
   })
-  const ratio = ratios.toSorted(compareExactFraction)[0] ?? {
-    numerator: 1n,
-    denominator: 1n
-  }
+  const ratio = ratios.toSorted(compareExactFraction)[0]
+  if (ratio === undefined) return undefined
   return {
     voidHamming: hammingDistance(firstVoid, secondVoid),
     contactHamming: hammingDistance(firstContact, secondContact),
@@ -1890,15 +2017,6 @@ function hammingDistance(first: ReadonlyArray<number>, second: ReadonlyArray<num
     (distance, value, index) => distance + Number(value !== second[index]),
     0
   )
-}
-
-function maximumOccupiedDistance(): IntrinsicOccupiedDistance {
-  return {
-    voidHamming: Number.MAX_SAFE_INTEGER,
-    contactHamming: Number.MAX_SAFE_INTEGER,
-    symmetricDifferenceNumerator: 1n,
-    pairUnionDenominator: 1n
-  }
 }
 
 function compareOccupiedDistance(
@@ -1951,9 +2069,9 @@ function occupiedSymmetricDifferenceRatio(
   const symmetricDifference = booleanPaths(ClipType.Xor, firstUnion, secondUnion)
   const pairUnion = booleanPaths(ClipType.Union, firstUnion, secondUnion)
   if (symmetricDifference === undefined || pairUnion === undefined) return undefined
-  const numerator = pathsDoubledArea(symmetricDifference)
-  const denominator = pathsDoubledArea(pairUnion)
-  if (denominator <= 0n) return undefined
+  const numerator = measureExactDoubledPathsArea(symmetricDifference)
+  const denominator = measureExactDoubledPathsArea(pairUnion)
+  if (numerator === undefined || denominator === undefined || denominator <= 0n) return undefined
   return { numerator, denominator }
 }
 
@@ -2011,9 +2129,29 @@ function booleanPaths(
   return polyTreeToPaths64(tree)
 }
 
-function pathsDoubledArea(paths: ReadonlyArray<Path64>): bigint {
-  const doubled = paths.reduce((sum, path) => sum + Math.round(area(path) * 2), 0)
-  return BigInt(Math.abs(doubled))
+/** Exact signed-contour area for integer Clipper paths. */
+export function measureExactDoubledPathsArea(
+  paths: ReadonlyArray<ReadonlyArray<{ readonly x: number; readonly y: number }>>
+): bigint | undefined {
+  let total = 0n
+  for (const path of paths) {
+    if (path.length < 3) continue
+    let previous = path[path.length - 1]
+    if (previous === undefined) continue
+    for (const point of path) {
+      if (
+        !Number.isSafeInteger(previous.x) ||
+        !Number.isSafeInteger(previous.y) ||
+        !Number.isSafeInteger(point.x) ||
+        !Number.isSafeInteger(point.y)
+      ) {
+        return undefined
+      }
+      total += BigInt(previous.x) * BigInt(point.y) - BigInt(point.x) * BigInt(previous.y)
+      previous = point
+    }
+  }
+  return total < 0n ? -total : total
 }
 
 function summarizeDelayedLineage(

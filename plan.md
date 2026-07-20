@@ -416,6 +416,51 @@ Per depth and parent state, record bounded aggregate data:
 
 Do not serialize every candidate geometry.
 
+### Stage 2A review checkpoint (2026-07-20)
+
+Commit `1d71082` added the missing causal trace and reran width 3 without
+changing selected geometry. The immutable reports are:
+
+- `/private/tmp/min-plane-provenance/v7-stage2a-1d71082-triangle-w3-trace2/report.json`;
+- `/private/tmp/min-plane-provenance/v7-stage2a-1d71082-mixed-w3-trace2/report.json`.
+
+The trace localizes the current failure. Triangle completed 20/20 after 12,833
+evaluations, but retained the same weak 110,660.943 mm2 result. Mixed reached
+only depth 30/61 in 90 seconds. Across its completed depths, all 35,286 scored
+candidates were canonically legal, fit rejection was zero, future-equivalence
+deduplication removed only 23 entries, and capacity evicted 31,564 entries.
+Enumeration consumed 65,232 ms and selection 23,664 ms. The full selector
+decomposed as many as 231 Pareto layers even though width 3 can consult at most
+three layers before capacity is full.
+
+The trace also found a correctness defect: at Mixed depth 4, singleton `L0`
+and `L1` left no within-layer dispersion revisit, so the selector retained two
+states despite a configured width of three and non-empty deeper layers. The
+correct rule is to open the next unrepresented layer deterministically whenever
+represented layers cannot fill the remaining capacity.
+
+The retained reviewer concluded that these measurements support local
+correctness and performance repairs, not a new diversity tuple. In particular,
+the observed Hamming saturation is insufficient to reorder dispersion axes
+until the mandatory structured delayed-lineage observer can compare
+counterfactual rankings against a known useful lineage. Therefore the next
+implementation order is:
+
+1. fill every available beam slot and keep the width-zero control exact;
+2. apply canonical q0/q90 terminal finalization to every finalist;
+3. make occupied-area arithmetic exact and measurement failure non-rewarding;
+4. emit bounded identity digests and use an isolated beam-only harness;
+5. remove unused gap measurement and stop Pareto extraction after the bounded
+   number of layers that can affect selection;
+6. rerun the structured-lineage calibration before changing dispersion order,
+   enabling reordering, or selecting a production width.
+
+This is an amendment to Stage 2A, not a replacement of the plan. The protected
+partial beam remains the selected search direction; its first evidence run was
+not yet a valid quality verdict because the selector underfilled capacity, the
+harness had a runtime-dependent reconstruction prelude, and terminal
+finalization differed from the strict decoder.
+
 ### Pass, failure, and interpretation
 
 Pass evidence requires at least one new deterministic complete canonical layout
