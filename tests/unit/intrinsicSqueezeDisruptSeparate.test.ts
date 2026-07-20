@@ -318,9 +318,11 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(transportedPath).toEqual(
       exactPath?.map(({ x, y }) => ({ x: x + 3, y: y - 2 }))
     )
-    expect(intrinsicRelaxedStateKey(catalog, state)).not.toBe(
-      intrinsicRelaxedStateKey(catalog, alternateState)
-    )
+    const stateKey = intrinsicRelaxedStateKey(catalog, state)
+    const alternateStateKey = intrinsicRelaxedStateKey(catalog, alternateState)
+    expect(stateKey).toMatch(/^sha256:[0-9a-f]{64}$/)
+    expect(alternateStateKey).toMatch(/^sha256:[0-9a-f]{64}$/)
+    expect(stateKey).not.toBe(alternateStateKey)
     const transformProposals = intrinsicFocusedProposalsForPiece({
       catalog,
       state,

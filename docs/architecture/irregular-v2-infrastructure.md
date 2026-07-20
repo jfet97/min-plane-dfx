@@ -103,6 +103,8 @@ coordinate and phase basis in millimetres, rounding once, and then applying the
 integer offset. Canonical state identity includes the current anchored world
 path and a deterministic phase signature over every finite transform; exact
 materialization fails if it cannot reproduce the requested canonical paths.
+The complete identity payload is stored as a SHA-256 key so traces and legality
+memos retain the phase distinction without duplicating full polygon catalogs.
 Initialization also publishes an observer-only identity-control witness for the
 exact structural E1 state inside its own canonical occupied box. It records the
 SAT raw and weighted loss, conflict tuple, exact-zero flag, canonical identity

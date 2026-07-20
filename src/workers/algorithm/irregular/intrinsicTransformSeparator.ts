@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import type { PieceId } from '@shared/domain/ids.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
 import {
@@ -183,9 +184,8 @@ export function intrinsicRelaxedStateKey(
           pointSequenceKey(polygon.points)
         ]
   })
-  return keyed.some((entry) => entry === undefined)
-    ? undefined
-    : JSON.stringify(keyed)
+  if (keyed.some((entry) => entry === undefined)) return undefined
+  return `sha256:${createHash('sha256').update(JSON.stringify(keyed)).digest('hex')}`
 }
 
 /** Deterministic complete-state deduplication seam for the bounded infeasible pool. */
