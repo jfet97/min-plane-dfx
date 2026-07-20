@@ -25,9 +25,14 @@ Therefore:
    omission without changing the protected control;
 2. **completed:** establish a reachable delayed-value witness with complete
    source and endpoint provenance;
-3. **in progress:** make one cold beam-only Mixed pilot complete within budget
-   by staging exact scoring/topology work after canonical deduplication;
-4. only then calibrate beam width/horizon and test commensurate gap reordering.
+3. **completed:** make one cold beam-only Mixed pilot complete by staging exact
+   scoring/topology work after canonical deduplication;
+4. **next:** run the planned paired commensurate two-piece reorder ablation at
+   fixed width 3, because Triangle improved while Mixed remained below the
+   existing reconstruction frontier;
+5. widen the beam only after runtime is comfortably below the research ceiling
+   and a sourced delayed-value neighborhood—not one historical pose—justifies
+   the extra capacity.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -213,8 +218,22 @@ Mixed width 3 still reached only depth 55/61 in 300 seconds at `d1130fc`.
 Late depths generated about 3,000 raw candidates but only about 480 distinct
 canonical successors. Commit `2411acc` therefore stages exact topology,
 cavity, and contact measurement after canonical deduplication. Triangle remains
-byte-identical under that refactor; the cold Mixed completion pilot decides
-whether the runtime gate is now closed.
+byte-identical under that refactor. A 360-second cold run completed all 61
+depths in `320.989 s`; its report is
+`/private/tmp/min-plane-provenance/v7-staged-topology-8740420-mixed-w3-360s/report.json`.
+The winner is legal and ring-free with area `431,558.250585 mm2`, maximum side
+`658.581 mm`, and zero enclosed cavities, but only `17/2` total/dominant
+structural contacts and 31 isolated pieces. It is worse than the existing
+`405,773.434 mm2` zero-cavity reconstruction and is not promotable. The cold
+completion gate is closed for width 3, but runtime remains too close to the
+five-minute research ceiling and the selector still lacks cohesion on Mixed.
+Commit `28e8db7` additionally stages canonical admission after deduplication.
+Triangle again remains byte-identical, and the complete Mixed run preserves the
+same canonical hash and metrics while finishing in `287.698 s`. Canonical-
+admission time falls from `85.375 s` to `52.078 s`; the immutable report is
+`/private/tmp/min-plane-provenance/v7-staged-admission-28e8db7-mixed-w3-300s/report.json`.
+This closes the five-minute width-3 runtime gate but cannot change the quality
+decision.
 
 ## What The Completed Proofs Rule Out
 

@@ -205,9 +205,9 @@ envelope. These sheet-free interior segment events enter only the experimental
 successor pool; ordinary candidates remain the sole source of the protected
 width-one winner. Exact sheetless validation filters the added points before
 scoring. A bounded cohesion representative may consume one experimental slot
-only when capacity remains after breadth and contact allocation. Exact topology,
-cavity, and contact axes are measured once per canonical successor after raw
-candidate admission and deduplication, not once per duplicate raw placement.
+only when capacity remains after breadth and contact allocation. Canonical exact
+legality and the topology/cavity/contact axes are evaluated once per canonical
+successor after raw candidate deduplication, not once per duplicate placement.
 
 At no more than five registered points, E4 projects a relaxed state back to the
 exact geometry domain: canonicalize to the collision grid, remove both

@@ -283,8 +283,15 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   the historical lineage: the generated depth-2 prefix remains only rank 3 in
   Pareto layer 7. Commit `2411acc` stages expensive exact topology measurement
   after canonical deduplication because Mixed still reached only 55/61 depths
-  in 300 seconds. Width calibration remains blocked until one cold Mixed beam
-  run completes.
+  in 300 seconds. The staged 360-second run completes all 61 depths in
+  `320.989 s` at `431,558.250585 mm2`, zero holes, but only `17/2` contacts and
+  31 isolated pieces. It removes the giant ring but loses to the existing
+  `405,773.434 mm2` zero-hole reconstruction, so width 3 is diagnostic rather
+  than promotable. Commit `28e8db7` also stages canonical admission after
+  deduplication. It preserves the Triangle and Mixed hashes while reducing the
+  complete Mixed runtime from `320.989 s` to `287.698 s`; canonical admission
+  falls from `85.375 s` to `52.078 s`. Evidence is under
+  `/private/tmp/min-plane-provenance/v7-staged-admission-28e8db7-mixed-w3-300s/`.
 
 - Committed the generic compactness-cohesion reconstruction checkpoint as
   `e8748e1`. Immutable Triangle and Mixed reports are under
