@@ -341,6 +341,10 @@ pruned, improve survivor policy instead; if they are absent but do not survive
 the common intrinsic archive, reject the generator rather than increasing raw
 contact reward.
 
+The source/paper boundary, the exact feasibility caveats, and the conditional
+V7 Stage-1.5/F coverage-audit contract are recorded in the
+[Dalsoo, Abeysooriya, and Dalalah transfer study](dalsoo-abey-dalalah-transfer-study.md).
+
 ## Current `min-plane-dfx` Comparison
 
 The current repository already has the beginnings of the Deepnest/SVGnest
