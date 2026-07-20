@@ -412,6 +412,8 @@ interface AuditCandidate extends IntrinsicQueueBeamCandidateWitness {
   readonly containingGap: CanonicalIntrinsicGapRegion | undefined
 }
 
+type UnmeasuredAuditCandidate = Omit<AuditCandidate, 'axes'>
+
 interface EnumeratedSuccessors {
   readonly generatedCandidateCount: number
   readonly envelopeEventCandidateCount: number
@@ -1518,8 +1520,8 @@ function enumerateSuccessors(
     let candidateGenerationRuntimeMs = 0
     let candidateScoringRuntimeMs = 0
     let canonicalAdmissionRuntimeMs = 0
-    const familyWinners = new Map<string, AuditCandidate>()
-    const uniqueCanonicalSuccessors = new Map<string, AuditCandidate>()
+    const familyWinners = new Map<string, UnmeasuredAuditCandidate>()
+    const uniqueCanonicalSuccessors = new Map<string, UnmeasuredAuditCandidate>()
     const gapRegions =
       input.measureGapContainment === false
         ? undefined
@@ -1574,6 +1576,11 @@ function enumerateSuccessors(
       envelopeEventCandidateCount += addedEnvelopeCandidates.length
       for (const { candidate, protectedEligible } of candidates) {
         if (!takeAuditEvaluation(input.budget)) {
+          const finalized = measureEnumeratedAuditCandidates({
+            familyWinners,
+            uniqueCanonicalSuccessors
+          })
+          candidateScoringRuntimeMs += finalized.runtimeMs
           return {
             generatedCandidateCount,
             envelopeEventCandidateCount,
@@ -1582,13 +1589,18 @@ function enumerateSuccessors(
             candidateGenerationRuntimeMs,
             candidateScoringRuntimeMs,
             canonicalAdmissionRuntimeMs,
-            uniqueCanonicalSuccessors: [...uniqueCanonicalSuccessors.values()],
-            selected: selectIntrinsicStrictFamilyWinner([...familyWinners.values()], 'pure-growth'),
+            uniqueCanonicalSuccessors: finalized.uniqueCanonicalSuccessors,
+            selected: finalized.selected,
             fullyEnumerated: false
           }
         }
         const candidateScoringStartedAt = performance.now()
-        const scored = scoreAuditCandidate({ ...input, moving, candidate, gapRegions })
+        const scored = constructUnmeasuredAuditCandidate({
+          ...input,
+          moving,
+          candidate,
+          gapRegions
+        })
         candidateScoringRuntimeMs += Math.max(0, performance.now() - candidateScoringStartedAt)
         if (scored === undefined) continue
         scoredCandidateCount += 1
@@ -1613,6 +1625,11 @@ function enumerateSuccessors(
         }
       }
     }
+    const finalized = measureEnumeratedAuditCandidates({
+      familyWinners,
+      uniqueCanonicalSuccessors
+    })
+    candidateScoringRuntimeMs += finalized.runtimeMs
     return {
       generatedCandidateCount,
       envelopeEventCandidateCount,
@@ -1621,8 +1638,8 @@ function enumerateSuccessors(
       candidateGenerationRuntimeMs,
       candidateScoringRuntimeMs,
       canonicalAdmissionRuntimeMs,
-      uniqueCanonicalSuccessors: [...uniqueCanonicalSuccessors.values()],
-      selected: selectIntrinsicStrictFamilyWinner([...familyWinners.values()], 'pure-growth'),
+      uniqueCanonicalSuccessors: finalized.uniqueCanonicalSuccessors,
+      selected: finalized.selected,
       fullyEnumerated: true
     }
   })
@@ -1751,6 +1768,17 @@ function scoreAuditCandidate(
     readonly gapRegions: ReadonlyArray<CanonicalIntrinsicGapRegion> | undefined
   }
 ): AuditCandidate | undefined {
+  const candidate = constructUnmeasuredAuditCandidate(input)
+  return candidate === undefined ? undefined : measureAuditCandidate(candidate)
+}
+
+function constructUnmeasuredAuditCandidate(
+  input: EnumerationInput & {
+    readonly moving: TransformedCollisionGeometry
+    readonly candidate: IrregularPlacementCandidate
+    readonly gapRegions: ReadonlyArray<CanonicalIntrinsicGapRegion> | undefined
+  }
+): UnmeasuredAuditCandidate | undefined {
   const placement = makePlacement(input.piece, input.candidate)
   const placed = new IrregularPlacedPiece({ placement, collisionGeometry: input.moving })
   const state = input.state
@@ -1762,13 +1790,11 @@ function scoreAuditCandidate(
     .withBottomLeftAnchored()
   if (state === undefined) return undefined
   const envelope = measureIntrinsicStrictCanonicalEnvelope(state.placedCollisionGeometries)
-  const axes = measureIntrinsicQueueBeamAxes(state)
   const sharedBoundaryLengthMm = state.sharedCollisionBoundaryLengthMm
   const gridX = toGridMm(input.candidate.point.x)
   const gridY = toGridMm(input.candidate.point.y)
   if (
     envelope === undefined ||
-    axes === undefined ||
     sharedBoundaryLengthMm === undefined ||
     gridX === undefined ||
     gridY === undefined
@@ -1790,7 +1816,6 @@ function scoreAuditCandidate(
     transformFamily: transformFamilyKey(input.candidate.transform),
     gridPoint: { x: gridX, y: gridY },
     canonicalGeometryKey: state.canonicalOccupiedGeometryKey,
-    axes,
     containingGap,
     movingCollisionAreaMm2: canonicalCollisionAreaMm2(input.moving) ?? 0,
     score: {
@@ -1800,6 +1825,41 @@ function scoreAuditCandidate(
       sharedBoundaryLengthMm,
       canonicalCombinedGeometryKey: state.canonicalOccupiedGeometryKey
     }
+  }
+}
+
+function measureAuditCandidate(
+  candidate: UnmeasuredAuditCandidate
+): AuditCandidate | undefined {
+  const axes = measureIntrinsicQueueBeamAxes(candidate.state)
+  return axes === undefined ? undefined : { ...candidate, axes }
+}
+
+function measureEnumeratedAuditCandidates(input: {
+  readonly familyWinners: ReadonlyMap<string, UnmeasuredAuditCandidate>
+  readonly uniqueCanonicalSuccessors: ReadonlyMap<string, UnmeasuredAuditCandidate>
+}): {
+  readonly uniqueCanonicalSuccessors: ReadonlyArray<AuditCandidate>
+  readonly selected: AuditCandidate | undefined
+  readonly runtimeMs: number
+} {
+  const startedAt = performance.now()
+  const uniqueCanonicalSuccessors = [...input.uniqueCanonicalSuccessors.values()].flatMap(
+    (candidate) => {
+      const measured = measureAuditCandidate(candidate)
+      return measured === undefined ? [] : [measured]
+    }
+  )
+  const selectedUnmeasured = selectIntrinsicStrictFamilyWinner(
+    [...input.familyWinners.values()],
+    'pure-growth'
+  )
+  const selected =
+    selectedUnmeasured === undefined ? undefined : measureAuditCandidate(selectedUnmeasured)
+  return {
+    uniqueCanonicalSuccessors,
+    selected,
+    runtimeMs: Math.max(0, performance.now() - startedAt)
   }
 }
 
@@ -3086,7 +3146,10 @@ function candidateWitness(candidate: AuditCandidate): IntrinsicQueueBeamCandidat
   }
 }
 
-function compareCandidateIdentity(first: AuditCandidate, second: AuditCandidate): number {
+function compareCandidateIdentity(
+  first: UnmeasuredAuditCandidate,
+  second: UnmeasuredAuditCandidate
+): number {
   return (
     first.canonicalGeometryKey.localeCompare(second.canonicalGeometryKey) ||
     first.transformFamily.localeCompare(second.transformFamily) ||
