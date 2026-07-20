@@ -405,12 +405,20 @@ function runIndependentStage1Arm(input: {
         return entry === undefined ? [] : [entry]
       })
       if (pool.length === 0) continue
+      let completedSweepCount = 0
       for (let sweep = 0; sweep < input.schedule.completedSweeps; sweep += 1) {
         if (performance.now() - armStartedAt >= input.schedule.maximumRuntimeMs) break
         const children: InfeasibleEntry[] = [...pool]
+        let sweepInterrupted = false
         for (const parent of pool) {
-          if (performance.now() - armStartedAt >= input.schedule.maximumRuntimeMs) break
-          if (armBudget.evaluated >= input.schedule.maximumEvaluations) break
+          if (performance.now() - armStartedAt >= input.schedule.maximumRuntimeMs) {
+            sweepInterrupted = true
+            break
+          }
+          if (armBudget.evaluated >= input.schedule.maximumEvaluations) {
+            sweepInterrupted = true
+            break
+          }
           const states = generateArmStates({
             arm: input.arm,
             catalog: input.catalog,
@@ -420,8 +428,14 @@ function runIndependentStage1Arm(input: {
           })
           counters.generated += states.length
           for (const state of states) {
-            if (performance.now() - armStartedAt >= input.schedule.maximumRuntimeMs) break
-            if (armBudget.evaluated >= input.schedule.maximumEvaluations) break
+            if (performance.now() - armStartedAt >= input.schedule.maximumRuntimeMs) {
+              sweepInterrupted = true
+              break
+            }
+            if (armBudget.evaluated >= input.schedule.maximumEvaluations) {
+              sweepInterrupted = true
+              break
+            }
             const child = evaluateAndRecord({
               catalog: input.catalog,
               seedRole: seed.role,
@@ -440,8 +454,11 @@ function runIndependentStage1Arm(input: {
             })
             if (child !== undefined) children.push(child)
           }
+          if (sweepInterrupted) break
         }
+        if (sweepInterrupted) break
         pool = retainV7InfeasiblePool(children, input.schedule.infeasiblePoolCapacity)
+        completedSweepCount += 1
         const protectedSurvivor = pool.find(({ lineageUntilSweep }) => lineageUntilSweep > 0)
         if (protectedSurvivor !== undefined) {
           samples.add({
@@ -455,7 +472,7 @@ function runIndependentStage1Arm(input: {
             satRawLoss: protectedSurvivor.evaluation.rawLoss,
             satWeightedLoss: protectedSurvivor.evaluation.weightedLoss,
             canonicalLegal: false,
-            protectedSweepsSurvived: sweep + 1,
+            protectedSweepsSurvived: completedSweepCount,
             archive: undefined
           })
         }
@@ -467,7 +484,7 @@ function runIndependentStage1Arm(input: {
         contractionRatio,
         contractionAxis: contracted.axis,
         splitQuantiles: input.arm === 'split' ? INTRINSIC_V7_SPLIT_QUANTILES : [],
-        completedSweeps: input.schedule.completedSweeps,
+        completedSweeps: completedSweepCount,
         counters: freezeCounters(counters),
         protection: {
           perFamilyTwoSweepAllowance: true,
