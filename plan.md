@@ -492,8 +492,9 @@ jobs.
 - Keep the protected pure-growth control outside experimental capacity. Define
   `experimentalWidth` as the number of additional retained states; total live
   states are therefore at most `1 + experimentalWidth`. Complete the strict
-  ordinary-candidate control under an independent evaluation/deadline budget
-  before experimental expansion so added candidates or parents cannot starve it.
+  ordinary-candidate control first, then give experimental expansion only the
+  deterministic remainder of the declared search-wide evaluation/deadline cap,
+  so added candidates or parents cannot starve the control or double the budget.
 - Use deterministic bounded-breadth frontier-layer retention. For experimental
   width `W > 0`, let breadth `B = min(nonEmptyLayerCount, ceil(W / 2))`. First
   take one representative from `L0..L(B-1)` in ascending layer order. The first
@@ -565,10 +566,11 @@ For each synchronized depth:
 7. carry parent identity and the actual selected placement into the next depth;
 8. archive complete legal states under the existing completed-layout policy.
 
-The strict protected lineage is completed first under its own budget and uses
-ordinary candidates only. The experimental arm has a separate equal-sized
-budget. Report both evaluation counts and their sum; an experimental truncation
-cannot erase or alter the protected control.
+The strict protected lineage is completed first and uses ordinary candidates
+only. The experimental arm receives only the remaining evaluations and wall
+time from the single declared search-wide cap. Report both evaluation counts
+and their sum; an experimental truncation cannot erase or alter the protected
+control, and width zero bypasses experimental expansion entirely.
 
 Sheet dimensions participate only in candidate legality and the monotone
 q0/q90 fit-feasibility gate. They never enter compactness ranking. This preserves

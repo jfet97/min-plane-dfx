@@ -203,9 +203,11 @@ transformed moving polygon, it intersects axis-aligned NFP segments with the
 translations that align the moving min/max bounds to the occupied min/max
 envelope. These sheet-free interior segment events enter only the experimental
 successor pool; ordinary candidates remain the sole source of the protected
-width-one winner. The protected lineage is completed first under an independent
-evaluation/deadline budget, so experimental parents and feature candidates
-cannot starve it. Exact sheetless validation filters the added points before
+width-one winner. The protected lineage is completed first, then experimental
+expansion receives only the deterministic remainder of the declared search-wide
+evaluation/deadline cap; experimental parents and feature candidates therefore
+cannot starve it or double the cell budget. Width zero bypasses experimental
+expansion. Exact sheetless validation filters the added points before
 scoring. Experimental retention uses layer breadth, at most one bounded contact
 turn, and dispersion for every remaining slot. Canonical exact legality and the
 topology/cavity/contact axes are evaluated once per canonical successor after

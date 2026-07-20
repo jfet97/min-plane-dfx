@@ -949,13 +949,29 @@ export function runIntrinsicPartialGeometricBeam(input: {
       protectedControlStates.push(protectedControlState)
     }
     const protectedControlFinalState = protectedControlState
+    const protectedControlRuntimeMs = Math.max(
+      0,
+      performance.now() - protectedControlBudget.startedAt
+    )
+    const remainingRuntimeMs = Math.max(0, input.maximumRuntimeMs - protectedControlRuntimeMs)
+    const remainingEvaluations = Math.max(
+      0,
+      Math.floor(input.maximumEvaluations) - protectedControlBudget.evaluations
+    )
 
     const experimentalBudget: AuditBudget = {
       startedAt: performance.now(),
-      maximumRuntimeMs: input.maximumRuntimeMs,
-      maximumEvaluations: Math.max(1, Math.floor(input.maximumEvaluations)),
+      maximumRuntimeMs: remainingRuntimeMs,
+      maximumEvaluations: remainingEvaluations,
       evaluations: 0,
-      truncationReason: undefined
+      truncationReason:
+        experimentalWidth === 0
+          ? undefined
+          : remainingRuntimeMs <= 0
+            ? 'maximum-runtime'
+            : remainingEvaluations <= 0
+              ? 'maximum-evaluations'
+              : undefined
     }
     const experimentalControl: IrregularNfpIfpControl = {
       checkpoint: () =>
@@ -970,6 +986,7 @@ export function runIntrinsicPartialGeometricBeam(input: {
     }
 
     for (let depth = 0; depth < input.orderedPreparedPieces.length; depth += 1) {
+      if (experimentalWidth === 0) break
       if (
         protectedControlBudget.truncationReason !== undefined ||
         auditRuntimeExpired(experimentalBudget)
@@ -1180,7 +1197,8 @@ export function runIntrinsicPartialGeometricBeam(input: {
       protectedControlEvaluations: protectedControlBudget.evaluations,
       experimentalEvaluations: experimentalBudget.evaluations,
       runtimeMs: Math.max(0, performance.now() - startedAt),
-      completedDepthCount: steps.length,
+      completedDepthCount:
+        experimentalWidth === 0 ? protectedControlStates.length - 1 : steps.length,
       steps,
       finalists,
       winner
