@@ -267,6 +267,24 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   deepest-first `occupied-dispersion-v1` visits; contact receives at most one
   selection turn and never participates in Pareto dominance. Every selected
   slot records its layer, visit number, and role.
+- The structured first-miss audit at `cfba923` proves one narrow exception to
+  the earlier candidate-coverage conclusion: the historical depth-1 Mixed pose
+  is legal and lies inside a horizontal NFP segment at intrinsic occupied-
+  envelope alignment events, but is not an ordinary NFP vertex. Commit
+  `1d527bc` adds that bounded sheet-free feature to the experimental pool while
+  keeping the protected control ordinary-only. The exact historical successor
+  is generated, and Triangle width 3 improves from `110,660.943411 mm2` to
+  `88,124.330 mm2`, with zero holes and contacts improving from `4/2` to `5/3`.
+  Evidence is under
+  `/private/tmp/min-plane-provenance/v7-envelope-events-1d527bc-first-miss/`
+  and `/private/tmp/min-plane-provenance/v7-envelope-events-1d527bc-triangle-w3/`.
+- Commit `d1130fc` adds one bounded cohesion slot when capacity permits. It
+  recovers the delayed-value depth-1 witness at widths 7/12, but does not force
+  the historical lineage: the generated depth-2 prefix remains only rank 3 in
+  Pareto layer 7. Commit `2411acc` stages expensive exact topology measurement
+  after canonical deduplication because Mixed still reached only 55/61 depths
+  in 300 seconds. Width calibration remains blocked until one cold Mixed beam
+  run completes.
 
 - Committed the generic compactness-cohesion reconstruction checkpoint as
   `e8748e1`. Immutable Triangle and Mixed reports are under

@@ -12,20 +12,22 @@ activating its conditional successor. Do not replace this sequence with another
 single comparator experiment.
 
 The current critical path is narrower than the original Stage 2 width sweep.
-A preserved historical Mixed pose is absent from the post-admission successor
-set at its second placement under current candidate semantics. This blocks that
-pose from calibrating beam capacity, but does not prove the other retained
-states lack delayed value. Therefore:
+The bounded first-miss audit proved that the second historical Mixed placement
+was direct-legal and canonical-legal but absent from ordinary NFP candidate
+generation: it lies inside one horizontal NFP segment at two intrinsic occupied-
+envelope alignment events. Commit `1d527bc` adds that exact sheet-free finite
+feature to the experimental successor pool while keeping the protected control
+ordinary-only. The recovered lineage is now generated through depth 3, which
+exposes retention and runtime rather than hiding them behind candidate absence.
+Therefore:
 
-1. localize the first missing structured successor to generation, deduplication,
-   direct legality, or canonical admission;
-2. repair only a demonstrated generic generation or admission defect, or reject
-   this historical pose as a capacity witness;
-3. establish one reachable delayed-value witness with complete source and
-   endpoint provenance;
-4. make one cold beam-only Mixed pilot complete within budget by staging or
-   caching scoring/topology work;
-5. only then calibrate beam width/horizon and test commensurate gap reordering.
+1. **completed:** localize and repair the demonstrated generic finite-feature
+   omission without changing the protected control;
+2. **completed:** establish a reachable delayed-value witness with complete
+   source and endpoint provenance;
+3. **in progress:** make one cold beam-only Mixed pilot complete within budget
+   by staging exact scoring/topology work after canonical deduplication;
+4. only then calibrate beam width/horizon and test commensurate gap reordering.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -169,6 +171,51 @@ direct-legality rejection, canonical-admission rejection, or a small canonical
 pose delta. That is the only additional provenance required on the immediate
 path.
 
+### Envelope-event and delayed-value checkpoint (2026-07-20)
+
+The immutable first-miss reports are:
+
+- `/private/tmp/min-plane-provenance/v7-first-miss-cfba923-depth1/report.json`;
+- `/private/tmp/min-plane-provenance/v7-envelope-events-1d527bc-first-miss/report.json`.
+
+Before the repair, the target at grid `(-53350, -114504)` was absent from all
+12 ordinary candidates. It was direct-legal, canonical-legal, matched the
+historical canonical successor, lay on the interior of the horizontal NFP
+segment `(-137628, -114504)..(84278, -114504)`, and aligned the moving maximum
+X/Y with the occupied maximum X/minimum Y. The implemented family intersects
+axis-aligned NFP segments with the four min/max translations induced by each
+occupied-envelope side. It generated eight legal candidates and included the
+exact target. Sheet dimensions, fixture ids, and saved coordinates do not
+participate.
+
+The deeper calibration at
+`/private/tmp/min-plane-provenance/v7-envelope-events-1d527bc-lineage/report.json`
+then generated the historical prefixes through depth 3. At depth 1 the useful
+state is Pareto layer 1, compactness rank 11, fragmentation rank 1, and void rank
+13; the previous selector evicted it even at total capacity 13. Commit
+`d1130fc` adds one bounded cohesion representative only when at least two slots
+remain after breadth/contact allocation. The role trace at
+`/private/tmp/min-plane-provenance/v7-cohesion-slot-c05a0a2-layer-rank/report.json`
+shows the state survives as `cohesion` at widths 7 and 12. Depth 2 is generated
+but remains unretained: it is Pareto layer 7 and rank 3 within that layer. That
+is not evidence for forcing the historical motif; it is evidence that any later
+deep-layer policy must be justified by completed quality, not lineage nostalgia.
+
+Triangle width 3 completed at commit `1d527bc` with canonical hash
+`ba8270925c308fc2d2359f643a25fd39c004cbb9444c9d9f972644e9038471d5`,
+area `88,124.330 mm2`, zero enclosed cavities, and `5/3` total/dominant
+structural contacts. The preceding Stage 2A result was `110,660.943411 mm2`
+with `4/2` contacts, so the finite feature produces a real generic quality gain.
+Its evidence is under
+`/private/tmp/min-plane-provenance/v7-envelope-events-1d527bc-triangle-w3/`.
+
+Mixed width 3 still reached only depth 55/61 in 300 seconds at `d1130fc`.
+Late depths generated about 3,000 raw candidates but only about 480 distinct
+canonical successors. Commit `2411acc` therefore stages exact topology,
+cavity, and contact measurement after canonical deduplication. Triangle remains
+byte-identical under that refactor; the cold Mixed completion pilot decides
+whether the runtime gate is now closed.
+
 ## What The Completed Proofs Rule Out
 
 ### Why exactness had to be fixed before search
@@ -190,7 +237,7 @@ This rules out using relaxed loss as the terminal objective or interpreting
 "zero collision-free relaxed states" as proof that no exact legal arrangement
 exists.
 
-### Why another contact generator is not the next step
+### Why another broad contact generator is not the next step
 
 The Dalsoo/Abey investigation compared its finite constructions with the actual
 NFP/IFP service. Existing generation already includes NFP vertices,
@@ -198,12 +245,14 @@ antiparallel edge-support endpoints, sheet/IFP intersections, and intersections
 between pairwise NFP boundaries. F0 then traced candidates from raw source,
 through point deduplication, live legality, canonical legality, and selection.
 
-The useful placements are not generally absent at the geometric source. They
+The useful placements are not generally absent at the geometric source. Most
 are lost because the wrong piece is scheduled or because a locally losing
-partial state is discarded. Adding the same points again would raise candidate
-volume without changing reachability. A new feature family remains conditional
-on one concrete F0 witness proving a direct-legal and canonical-legal point is
-actually absent.
+partial state is discarded. The required F0 counterexample is now known,
+however: an occupied-envelope alignment inside an axis-aligned NFP segment was
+direct-legal and canonical-legal but not an ordinary boundary vertex. The
+bounded envelope-event family repairs exactly that omission. It does not justify
+another Dalsoo-style all-pairs point generator, arbitrary segment sampling, or
+additional contact reward.
 
 ### Why contact cannot remain a hard certificate partition
 

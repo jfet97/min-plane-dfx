@@ -198,6 +198,17 @@ hashes finalized SVG and PNG output. Alternate-piece scheduling remains
 disabled until a later paired commensurate ablation at a successful fixed beam
 width.
 
+Stage 2A also has one evidence-bounded intrinsic feature family. For every
+transformed moving polygon, it intersects axis-aligned NFP segments with the
+translations that align the moving min/max bounds to the occupied min/max
+envelope. These sheet-free interior segment events enter only the experimental
+successor pool; ordinary candidates remain the sole source of the protected
+width-one winner. Exact sheetless validation filters the added points before
+scoring. A bounded cohesion representative may consume one experimental slot
+only when capacity remains after breadth and contact allocation. Exact topology,
+cavity, and contact axes are measured once per canonical successor after raw
+candidate admission and deduplication, not once per duplicate raw placement.
+
 At no more than five registered points, E4 projects a relaxed state back to the
 exact geometry domain: canonicalize to the collision grid, remove both
 endpoints of exact conflicts plus target-wall offenders, pin each removed piece
