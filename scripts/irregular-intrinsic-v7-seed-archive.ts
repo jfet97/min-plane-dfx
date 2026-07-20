@@ -36,6 +36,7 @@ import {
 import {
   auditIntrinsicReferenceSuccessorReachability,
   runIntrinsicPartialGeometricBeam,
+  runIntrinsicPeelReinsertObserver,
   runIntrinsicQueueBeamDiscriminator
 } from '../src/workers/algorithm/irregular/intrinsicQueueBeamDiscriminator.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
@@ -84,11 +85,15 @@ async function main(): Promise<void> {
   const partialBeamWidthArgument = argument('--partial-beam-width')
   const partialBeamEnabled = partialBeamWidthArgument !== undefined
   const partialBeamOnly = process.argv.includes('--partial-beam-only')
+  const peelReinsertObserver = process.argv.includes('--peel-reinsert-observer')
   const structuredLineagePath = argument('--structured-lineage')
   const lineageCalibrationOnly = process.argv.includes('--lineage-calibration-only')
   const firstMissAuditOnly = process.argv.includes('--first-miss-audit-only')
   if (partialBeamOnly && !partialBeamEnabled) {
     throw new Error('--partial-beam-only requires --partial-beam-width')
+  }
+  if (peelReinsertObserver && !partialBeamOnly) {
+    throw new Error('--peel-reinsert-observer requires --partial-beam-only')
   }
   if ((lineageCalibrationOnly || firstMissAuditOnly) && structuredLineagePath === undefined) {
     throw new Error('lineage calibration/audit requires --structured-lineage')
@@ -163,7 +168,10 @@ async function main(): Promise<void> {
       maximumEvaluations: positiveIntegerArgument(
         '--partial-beam-evaluations',
         compact ? 25_000 : 100_000
-      )
+      ),
+      peelReinsertObserver,
+      peelMaximumRuntimeMs: positiveIntegerArgument('--peel-runtime-ms', 120_000),
+      peelMaximumEvaluations: positiveIntegerArgument('--peel-evaluations', 100_000)
     })
     return
   }
@@ -479,6 +487,9 @@ async function runPartialBeamOnly(input: {
   readonly experimentalWidth: number
   readonly maximumRuntimeMs: number
   readonly maximumEvaluations: number
+  readonly peelReinsertObserver: boolean
+  readonly peelMaximumRuntimeMs: number
+  readonly peelMaximumEvaluations: number
 }): Promise<void> {
   const startedAt = performance.now()
   const orderedPieceIds = input.preparedPieces.map(
@@ -509,6 +520,42 @@ async function runPartialBeamOnly(input: {
       stdio: 'inherit'
     })
   }
+  const peelResult =
+    !input.peelReinsertObserver || result.winner === undefined
+      ? undefined
+      : await Effect.runPromise(
+          withLayers(
+            runIntrinsicPeelReinsertObserver({
+              orderedPreparedPieces: input.preparedPieces,
+              finalSheet: input.fixture.sheet,
+              seedPlacedCollisionGeometries: result.winner.placedCollisionGeometries,
+              seedMetrics: result.winner.metrics,
+              maximumRuntimeMs: input.peelMaximumRuntimeMs,
+              maximumEvaluations: input.peelMaximumEvaluations
+            }),
+            input.fixture.settings
+          )
+        )
+  const peelSvgPath =
+    peelResult?.bestEndpoint === undefined
+      ? undefined
+      : `${input.outputDirectory}/${input.fixtureName}-peel-reinsert-best.svg`
+  const peelPngPath =
+    peelSvgPath === undefined ? undefined : peelSvgPath.replace(/\.svg$/, '.png')
+  if (
+    peelSvgPath !== undefined &&
+    peelPngPath !== undefined &&
+    peelResult?.bestEndpoint !== undefined
+  ) {
+    await writeFile(
+      peelSvgPath,
+      renderCollisionSvg(peelResult.bestEndpoint.placedCollisionGeometries)
+    )
+    execFileSync('node', [SVG_RENDERER_PATH, peelSvgPath, peelPngPath, '1400'], {
+      cwd: PROJECT_ROOT,
+      stdio: 'inherit'
+    })
+  }
   const reportPath = `${input.outputDirectory}/report.json`
   const report = {
     schemaVersion: 1,
@@ -535,6 +582,15 @@ async function runPartialBeamOnly(input: {
       maximumEvaluations: input.maximumEvaluations,
       experimentalWidth: input.experimentalWidth
     },
+    peelReinsertBudget: input.peelReinsertObserver
+      ? {
+          maximumRuntimeMs: input.peelMaximumRuntimeMs,
+          maximumEvaluations: input.peelMaximumEvaluations,
+          retainedWidth: 4,
+          maximumContributorCount: 4,
+          subsetSizes: [2, 3]
+        }
+      : undefined,
     serviceOwnership: 'cold-per-beam-run',
     terminalSelection: 'canonical-q0-q90-final-sheet',
     result: {
@@ -568,6 +624,27 @@ async function runPartialBeamOnly(input: {
               pngPath
             }
     },
+    peelReinsertObserver:
+      peelResult === undefined
+        ? undefined
+        : {
+            ...peelResult,
+            bestEndpoint:
+              peelResult.bestEndpoint === undefined
+                ? undefined
+                : {
+                    removedPieceIds: peelResult.bestEndpoint.removedPieceIds,
+                    reinsertionOrderPieceIds:
+                      peelResult.bestEndpoint.reinsertionOrderPieceIds,
+                    canonicalGeometryHash:
+                      peelResult.bestEndpoint.canonicalGeometryHash,
+                    metrics: peelResult.bestEndpoint.metrics,
+                    strictImprovementWithoutTopologyRegression:
+                      peelResult.bestEndpoint.strictImprovementWithoutTopologyRegression,
+                    svgPath: peelSvgPath,
+                    pngPath: peelPngPath
+                  }
+          },
     runtimeMs: Math.max(0, performance.now() - startedAt),
     promotion: {
       eligible: false,
@@ -579,7 +656,9 @@ async function runPartialBeamOnly(input: {
   const artifactPaths = [
     reportPath,
     ...(svgPath === undefined ? [] : [svgPath]),
-    ...(pngPath === undefined ? [] : [pngPath])
+    ...(pngPath === undefined ? [] : [pngPath]),
+    ...(peelSvgPath === undefined ? [] : [peelSvgPath]),
+    ...(peelPngPath === undefined ? [] : [peelPngPath])
   ]
   const manifestPath = `${input.outputDirectory}/manifest.json`
   await writeFile(
@@ -609,6 +688,9 @@ async function runPartialBeamOnly(input: {
       manifestSha256: sha256(await readFile(manifestPath)),
       svgPath,
       pngPath,
+      peelSvgPath,
+      peelPngPath,
+      peelClassification: peelResult?.classification,
       runtimeMs: report.runtimeMs
     })}\n`
   )

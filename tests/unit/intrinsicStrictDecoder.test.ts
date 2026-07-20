@@ -31,6 +31,7 @@ import {
 import {
   auditIntrinsicReferenceSuccessorReachability,
   runIntrinsicPartialGeometricBeam,
+  runIntrinsicPeelReinsertObserver,
   runIntrinsicQueueBeamDiscriminator,
   measureExactDoubledPathsArea,
   selectIntrinsicPartialGeometricBeam,
@@ -299,6 +300,56 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       result.protectedControlEvaluations + result.experimentalEvaluations
     )
     expect(result.steps.every(({ selectedSlots }) => selectedSlots.length <= 3)).toBe(true)
+  })
+
+  it('audits bounded generic peel/reinsert orders without changing the seed', async () => {
+    const pieces = [
+      preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('third', rectanglePoints(1, 2), [transform(0, 0), transform(1, 90)])
+    ]
+    const finalSheet = sheet(20, 10)
+    const seed = await Effect.runPromise(
+      runIntrinsicPartialGeometricBeam({
+        orderedPreparedPieces: pieces,
+        finalSheet,
+        experimentalWidth: 3,
+        maximumRuntimeMs: 10_000,
+        maximumEvaluations: 20_000
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+    expect(seed.winner).toBeDefined()
+    if (seed.winner === undefined) throw new Error('expected a completed peel/reinsert seed')
+    const seedPlacements = seed.winner.placedCollisionGeometries
+
+    const observer = await Effect.runPromise(
+      runIntrinsicPeelReinsertObserver({
+        orderedPreparedPieces: pieces,
+        finalSheet,
+        seedPlacedCollisionGeometries: seedPlacements,
+        seedMetrics: seed.winner.metrics,
+        maximumRuntimeMs: 10_000,
+        maximumEvaluations: 20_000
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+
+    expect(observer.status).toBe('completed')
+    expect(observer.topContributorPieceIds).toHaveLength(3)
+    expect(observer.subsetCount).toBe(4)
+    expect(observer.reinsertionOrderCount).toBe(12)
+    expect(observer.orderTraces).toHaveLength(observer.reinsertionOrderCount)
+    expect(observer.orderTraces.every(({ status }) => status === 'completed')).toBe(true)
+    expect(observer.completeEndpointCount).toBeGreaterThan(0)
+    expect(observer.evaluations).toBeGreaterThan(0)
+    expect(seed.winner.placedCollisionGeometries).toEqual(seedPlacements)
   })
 
   it('keeps the width-zero control identical to the strict decoder at every depth', async () => {

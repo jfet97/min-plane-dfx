@@ -315,6 +315,56 @@ export interface IntrinsicPartialGeometricBeamResult {
     | undefined
 }
 
+export interface IntrinsicPeelReinsertObserverResult {
+  readonly status: 'completed' | 'truncated'
+  readonly truncationReason: 'maximum-runtime' | 'maximum-evaluations' | undefined
+  readonly evaluations: number
+  readonly runtimeMs: number
+  readonly topContributorPieceIds: ReadonlyArray<PieceId>
+  readonly topContributors: ReadonlyArray<{
+    readonly pieceId: PieceId
+    readonly maximumSideReductionGrid: number
+    readonly envelopeAreaReductionGrid2: number
+    readonly hullWasteReductionGrid2: number
+  }>
+  readonly subsetCount: number
+  readonly reinsertionOrderCount: number
+  readonly completeEndpointCount: number
+  readonly improvingEndpointCount: number
+  readonly orderTraces: ReadonlyArray<{
+    readonly removedPieceIds: ReadonlyArray<PieceId>
+    readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
+    readonly status: 'completed' | 'no-successor' | 'truncated'
+    readonly completedStepCount: number
+    readonly generatedCandidateCount: number
+    readonly envelopeEventCandidateCount: number
+    readonly scoredCandidateCount: number
+    readonly canonicalLegalCandidateCount: number
+    readonly uniqueCanonicalSuccessorCount: number
+    readonly retainedSuccessorCount: number
+    readonly capacityEvictionCount: number
+    readonly completeEndpointCount: number
+  }>
+  readonly boundedEndpointWitnesses: ReadonlyArray<{
+    readonly removedPieceIds: ReadonlyArray<PieceId>
+    readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
+    readonly canonicalGeometryHash: string
+    readonly metrics: IntrinsicStrictCompletedMetrics
+    readonly strictImprovementWithoutTopologyRegression: boolean
+  }>
+  readonly classification: 'better-exact-endpoint' | 'no-better-bounded-endpoint' | 'truncated'
+  readonly bestEndpoint:
+    | {
+        readonly removedPieceIds: ReadonlyArray<PieceId>
+        readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
+        readonly canonicalGeometryHash: string
+        readonly metrics: IntrinsicStrictCompletedMetrics
+        readonly strictImprovementWithoutTopologyRegression: boolean
+        readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+      }
+    | undefined
+}
+
 export interface IntrinsicReferenceSuccessorReachabilityAudit {
   readonly pieceId: PieceId
   readonly expectedCanonicalGeometryHash: string
@@ -1206,6 +1256,323 @@ export function runIntrinsicPartialGeometricBeam(input: {
   })
 }
 
+/** Audits whether a bounded exact peel/reinsert can improve a completed layout. */
+export function runIntrinsicPeelReinsertObserver(input: {
+  readonly orderedPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly finalSheet: SheetSpec
+  readonly seedPlacedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+  readonly seedMetrics: IntrinsicStrictCompletedMetrics
+  readonly maximumRuntimeMs: number
+  readonly maximumEvaluations: number
+}): Effect.Effect<
+  IntrinsicPeelReinsertObserverResult,
+  AuditError,
+  GeometryKernel | GeometrySettings | NfpIfpService
+> {
+  return Effect.gen(function* () {
+    const startedAt = performance.now()
+    const budget: AuditBudget = {
+      startedAt,
+      maximumRuntimeMs: input.maximumRuntimeMs,
+      maximumEvaluations: Math.max(1, Math.floor(input.maximumEvaluations)),
+      evaluations: 0,
+      truncationReason: undefined
+    }
+    const settings = yield* GeometrySettings
+    const geometryKernel = yield* GeometryKernel
+    const nfpIfpService = yield* NfpIfpService
+    const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
+    const control: IrregularNfpIfpControl = {
+      checkpoint: () =>
+        performance.now() - budget.startedAt >= budget.maximumRuntimeMs
+          ? Effect.fail(
+              new IrregularNfpIfpControlAbortError({
+                reason: 'deadline',
+                message: `peel/reinsert observer exceeded ${budget.maximumRuntimeMs} ms.`
+              })
+            )
+          : Effect.void
+    }
+    const preparedById = new Map(
+      input.orderedPreparedPieces.map((piece) => [preparedPieceId(piece), piece] as const)
+    )
+    const seedState = stateFromPlacedCollisionGeometries({
+      placedCollisionGeometries: input.seedPlacedCollisionGeometries,
+      remainingPreparedPieces: []
+    })
+    const seedAxes = measureIntrinsicQueueBeamAxes(seedState)
+    if (seedAxes === undefined) {
+      return yield* Effect.fail(
+        new IntrinsicQueueBeamDiscriminatorError({
+          operation: 'measurement',
+          message: 'the peel/reinsert seed must have finite exact geometric axes.'
+        })
+      )
+    }
+    const rankedContributors = input.seedPlacedCollisionGeometries
+      .flatMap((placed) => {
+        const pieceId = placedPieceId(placed)
+        if (pieceId === undefined || !preparedById.has(pieceId)) return []
+        const kept = input.seedPlacedCollisionGeometries.filter(
+          (candidate) => placedPieceId(candidate) !== pieceId
+        )
+        const keptAxes = measureIntrinsicQueueBeamAxes(
+          stateFromPlacedCollisionGeometries({
+            placedCollisionGeometries: kept,
+            remainingPreparedPieces: []
+          })
+        )
+        if (keptAxes === undefined) return []
+        return [
+          {
+            pieceId,
+            maximumSideReductionGrid:
+              seedAxes.compactness.maximumSideGrid - keptAxes.compactness.maximumSideGrid,
+            envelopeAreaReductionGrid2:
+              seedAxes.compactness.envelopeAreaGrid2 - keptAxes.compactness.envelopeAreaGrid2,
+            hullWasteReductionGrid2:
+              seedAxes.voids.occupiedHullWasteDoubledAreaGrid2 -
+              keptAxes.voids.occupiedHullWasteDoubledAreaGrid2
+          }
+        ]
+      })
+      .toSorted(
+        (first, second) =>
+          second.maximumSideReductionGrid - first.maximumSideReductionGrid ||
+          second.envelopeAreaReductionGrid2 - first.envelopeAreaReductionGrid2 ||
+          second.hullWasteReductionGrid2 - first.hullWasteReductionGrid2 ||
+          String(first.pieceId).localeCompare(String(second.pieceId))
+      )
+    const topContributors = rankedContributors.slice(0, 4)
+    const topContributorPieceIds = topContributors.map(({ pieceId }) => pieceId)
+    const subsets = [
+      ...fixedSizeSubsets(topContributorPieceIds, 2),
+      ...fixedSizeSubsets(topContributorPieceIds, 3)
+    ]
+    const endpoints = new Map<
+      string,
+      {
+        readonly removedPieceIds: ReadonlyArray<PieceId>
+        readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
+        readonly canonicalGeometryHash: string
+        readonly metrics: IntrinsicStrictCompletedMetrics
+        readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+      }
+    >()
+    const orderTraces: IntrinsicPeelReinsertObserverResult['orderTraces'][number][] = []
+    let reinsertionOrderCount = 0
+
+    subsetLoop: for (const subset of subsets) {
+      const removedIds = new Set(subset)
+      const kept = input.seedPlacedCollisionGeometries.filter((placed) => {
+        const pieceId = placedPieceId(placed)
+        return pieceId === undefined || !removedIds.has(pieceId)
+      })
+      for (const orderIds of permutations(subset)) {
+        reinsertionOrderCount += 1
+        const order = orderIds.flatMap((pieceId) => {
+          const piece = preparedById.get(pieceId)
+          return piece === undefined ? [] : [piece]
+        })
+        if (order.length !== orderIds.length) continue
+        let states: ReadonlyArray<IrregularBeamState> = [
+          stateFromPlacedCollisionGeometries({
+            placedCollisionGeometries: kept,
+            remainingPreparedPieces: order
+          })
+        ]
+        let completedStepCount = 0
+        let generatedCandidateCount = 0
+        let envelopeEventCandidateCount = 0
+        let scoredCandidateCount = 0
+        let canonicalLegalCandidateCount = 0
+        let uniqueCanonicalSuccessorCount = 0
+        let retainedSuccessorCount = 0
+        let capacityEvictionCount = 0
+        let orderTruncated = false
+        for (let step = 0; step < order.length; step += 1) {
+          const piece = order[step]
+          if (piece === undefined) continue
+          const remainingPreparedPieces = order.slice(step + 1)
+          const successors: AuditCandidate[] = []
+          for (const state of states) {
+            const outcome = yield* enumerateWithDeadlineRecovery({
+              state,
+              piece,
+              remainingPreparedPieces,
+              budget,
+              settings,
+              geometryKernel,
+              nfpIfpService,
+              candidateMemoScope,
+              control,
+              measureGapContainment: false,
+              includeEnvelopeEventCandidates: true
+            })
+            if (outcome === undefined || !outcome.fullyEnumerated) {
+              orderTruncated = true
+              break
+            }
+            generatedCandidateCount += outcome.generatedCandidateCount
+            envelopeEventCandidateCount += outcome.envelopeEventCandidateCount
+            scoredCandidateCount += outcome.scoredCandidateCount
+            canonicalLegalCandidateCount += outcome.canonicalLegalCandidateCount
+            uniqueCanonicalSuccessorCount += outcome.uniqueCanonicalSuccessors.length
+            successors.push(...outcome.uniqueCanonicalSuccessors)
+          }
+          if (orderTruncated) break
+          const uniqueSuccessors = deduplicatePartialEntries(
+            successors
+              .filter(({ state }) => partialStateCanFit(state, input.finalSheet))
+              .map(partialBeamEntry)
+          )
+          const retained = uniqueSuccessors.toSorted(comparePartialCandidate).slice(0, 4)
+          retainedSuccessorCount += retained.length
+          capacityEvictionCount += Math.max(0, uniqueSuccessors.length - retained.length)
+          states = retained
+            .map(({ state }) => state)
+          completedStepCount += 1
+          if (states.length === 0) break
+        }
+        if (orderTruncated) {
+          orderTraces.push({
+            removedPieceIds: subset,
+            reinsertionOrderPieceIds: orderIds,
+            status: 'truncated',
+            completedStepCount,
+            generatedCandidateCount,
+            envelopeEventCandidateCount,
+            scoredCandidateCount,
+            canonicalLegalCandidateCount,
+            uniqueCanonicalSuccessorCount,
+            retainedSuccessorCount,
+            capacityEvictionCount,
+            completeEndpointCount: 0
+          })
+          break subsetLoop
+        }
+        let orderCompleteEndpointCount = 0
+        for (const state of states) {
+          if (state.remainingPreparedPieces.length > 0 || state.unplacedPieceIds.length > 0) continue
+          const finalized = yield* finalizeIntrinsicStrictState(
+            input.finalSheet,
+            {
+              state,
+              stepTrace: [],
+              gapFillEvidence: [],
+              runtimeMs: Math.max(0, performance.now() - startedAt)
+            },
+            Math.max(0, performance.now() - startedAt)
+          )
+          if (
+            finalized.status !== 'completed' ||
+            finalized.metrics === undefined ||
+            finalized.canonicalGeometryHash === undefined
+          ) {
+            continue
+          }
+          orderCompleteEndpointCount += 1
+          const incumbent = endpoints.get(finalized.canonicalGeometryHash)
+          if (incumbent !== undefined) continue
+          endpoints.set(finalized.canonicalGeometryHash, {
+            removedPieceIds: subset,
+            reinsertionOrderPieceIds: orderIds,
+            canonicalGeometryHash: finalized.canonicalGeometryHash,
+            metrics: finalized.metrics,
+            placedCollisionGeometries: finalized.placedCollisionGeometries
+          })
+        }
+        orderTraces.push({
+          removedPieceIds: subset,
+          reinsertionOrderPieceIds: orderIds,
+          status:
+            completedStepCount === order.length && states.length > 0
+              ? 'completed'
+              : 'no-successor',
+          completedStepCount,
+          generatedCandidateCount,
+          envelopeEventCandidateCount,
+          scoredCandidateCount,
+          canonicalLegalCandidateCount,
+          uniqueCanonicalSuccessorCount,
+          retainedSuccessorCount,
+          capacityEvictionCount,
+          completeEndpointCount: orderCompleteEndpointCount
+        })
+      }
+    }
+
+    const completeEndpoints = [...endpoints.values()]
+    const improvesWithoutTopologyRegression = (metrics: IntrinsicStrictCompletedMetrics) =>
+      metrics.envelopeAreaMm2 < input.seedMetrics.envelopeAreaMm2 &&
+      metrics.enclosedCavityCount <= input.seedMetrics.enclosedCavityCount &&
+      metrics.totalEnclosedCavityAreaMm2 <= input.seedMetrics.totalEnclosedCavityAreaMm2 &&
+      metrics.largestOccupiedHullGapRatio <= input.seedMetrics.largestOccupiedHullGapRatio &&
+      metrics.occupiedHullWasteRatio <= input.seedMetrics.occupiedHullWasteRatio
+    const improvingEndpoints = completeEndpoints.filter(({ metrics }) =>
+      improvesWithoutTopologyRegression(metrics)
+    )
+    const improvingEndpointCount = improvingEndpoints.length
+    const rankedEndpointMetrics = rankIntrinsicStrictCompletedLayouts(
+      completeEndpoints.map(({ metrics }) => metrics)
+    )
+    const preferredEndpointMetrics = rankIntrinsicStrictCompletedLayouts(
+      (improvingEndpoints.length > 0 ? improvingEndpoints : completeEndpoints).map(
+        ({ metrics }) => metrics
+      )
+    )
+    const bestHash = preferredEndpointMetrics[0]?.canonicalGeometryHash
+    const best = completeEndpoints.find(
+      ({ canonicalGeometryHash }) => canonicalGeometryHash === bestHash
+    )
+    const boundedEndpointWitnesses = rankedEndpointMetrics.slice(0, 8).flatMap((metrics) => {
+      const endpoint = completeEndpoints.find(
+        ({ canonicalGeometryHash }) => canonicalGeometryHash === metrics.canonicalGeometryHash
+      )
+      return endpoint === undefined
+        ? []
+        : [
+            {
+              removedPieceIds: endpoint.removedPieceIds,
+              reinsertionOrderPieceIds: endpoint.reinsertionOrderPieceIds,
+              canonicalGeometryHash: endpoint.canonicalGeometryHash,
+              metrics: endpoint.metrics,
+              strictImprovementWithoutTopologyRegression:
+                improvesWithoutTopologyRegression(endpoint.metrics)
+            }
+          ]
+    })
+    const truncated = budget.truncationReason !== undefined
+    return {
+      status: truncated ? 'truncated' : 'completed',
+      truncationReason: budget.truncationReason,
+      evaluations: budget.evaluations,
+      runtimeMs: Math.max(0, performance.now() - startedAt),
+      topContributorPieceIds,
+      topContributors,
+      subsetCount: subsets.length,
+      reinsertionOrderCount,
+      completeEndpointCount: completeEndpoints.length,
+      improvingEndpointCount,
+      orderTraces,
+      boundedEndpointWitnesses,
+      classification: truncated
+        ? 'truncated'
+        : improvingEndpointCount > 0
+          ? 'better-exact-endpoint'
+          : 'no-better-bounded-endpoint',
+      bestEndpoint:
+        best === undefined
+          ? undefined
+          : {
+              ...best,
+              strictImprovementWithoutTopologyRegression:
+                improvesWithoutTopologyRegression(best.metrics)
+            }
+    }
+  })
+}
+
 function deduplicatePartialParents(
   states: ReadonlyArray<IrregularBeamState>
 ): ReadonlyArray<IrregularBeamState> {
@@ -1217,6 +1584,46 @@ function deduplicatePartialParents(
   return [...unique.values()].toSorted((first, second) =>
     partialFutureEquivalenceKey(first).localeCompare(partialFutureEquivalenceKey(second))
   )
+}
+
+function stateFromPlacedCollisionGeometries(input: {
+  readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+  readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+}): IrregularBeamState {
+  return new IrregularBeamState({
+    remainingPreparedPieces: input.remainingPreparedPieces,
+    placedCollisionGeometries: input.placedCollisionGeometries,
+    placementOrder: input.placedCollisionGeometries.flatMap((placed) => {
+      const pieceId = placedPieceId(placed)
+      return pieceId === undefined ? [] : [pieceId]
+    })
+  })
+}
+
+function fixedSizeSubsets<T>(values: ReadonlyArray<T>, size: number): ReadonlyArray<ReadonlyArray<T>> {
+  if (size === 0) return [[]]
+  if (values.length < size) return []
+  const result: T[][] = []
+  for (let index = 0; index <= values.length - size; index += 1) {
+    const head = values[index]
+    if (head === undefined) continue
+    for (const tail of fixedSizeSubsets(values.slice(index + 1), size - 1)) {
+      result.push([head, ...tail])
+    }
+  }
+  return result
+}
+
+function permutations<T>(values: ReadonlyArray<T>): ReadonlyArray<ReadonlyArray<T>> {
+  if (values.length <= 1) return [[...values]]
+  const result: T[][] = []
+  for (let index = 0; index < values.length; index += 1) {
+    const head = values[index]
+    if (head === undefined) continue
+    const tail = [...values.slice(0, index), ...values.slice(index + 1)]
+    for (const suffix of permutations(tail)) result.push([head, ...suffix])
+  }
+  return result
 }
 
 function deduplicatePartialEntries(
