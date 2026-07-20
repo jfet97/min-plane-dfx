@@ -12,19 +12,24 @@ activating its conditional successor. Do not replace this sequence with another
 single comparator experiment.
 
 The current critical path is narrower than the original Stage 2 width sweep.
-The authoritative Mixed lineage is already missing at its second placement
-under current candidate semantics. Until that placement is reachable, larger
-beams can only preserve different states more expensively. Therefore:
+A preserved historical Mixed pose is absent from the post-admission successor
+set at its second placement under current candidate semantics. This blocks that
+pose from calibrating beam capacity, but does not prove the other retained
+states lack delayed value. Therefore:
 
 1. localize the first missing structured successor to generation, deduplication,
    direct legality, or canonical admission;
-2. restore that generic contact/reconstruction reachability without embedding
-   the fixture or its saved coordinates in production;
-3. rerun the structured lineage and only then calibrate beam width and horizon;
-4. test commensurate gap reordering after one positive beam/reconstruction cell.
+2. repair only a demonstrated generic generation or admission defect, or reject
+   this historical pose as a capacity witness;
+3. establish one reachable delayed-value witness with complete source and
+   endpoint provenance;
+4. make one cold beam-only Mixed pilot complete within budget by staging or
+   caching scoring/topology work;
+5. only then calibrate beam width/horizon and test commensurate gap reordering.
 
-Runtime micro-optimization, richer diagnostic fields, and wider sweeps are
-secondary until this reachability boundary is resolved.
+Richer non-causal diagnostics and wider sweeps remain secondary. The measured
+scoring/topology bottleneck becomes a gate immediately after the first-miss
+audit because incomplete cells cannot provide a quality verdict.
 
 ## Objective
 
@@ -122,7 +127,7 @@ reason. Queue value must be re-measured after both orderings have placed the
 same geometry-class multiset. Beam capacity and survival horizon must likewise
 be calibrated against a known delayed-value lineage before widths are chosen.
 
-### Authoritative structured-lineage result
+### Historical structured-pose reachability result
 
 Commit `d9ecd0a` replays the immutable 61-step winner lineage from:
 
@@ -135,6 +140,13 @@ piece ids, transforms, and translations, rebuilt with the current collision
 geometry, bottom-left anchored, and required to pass canonical final-sheet
 legality before it becomes a witness.
 
+This file does not contain the originating commit, polygon-local geometry
+digest, expected finalized hash/rotation, or expected exact metrics. It is the
+historical approved `430,344.918 mm2` two-hole fallback, not the newer
+`405,773.434 mm2` geometric reference. It is therefore admissible as a
+pose-reachability diagnostic only, not yet as the authoritative delayed-value
+capacity witness.
+
 The report is:
 
 `/private/tmp/min-plane-provenance/v7-structured-lineage-d9ecd0a/report.json`
@@ -146,13 +158,12 @@ but the causal result occurs immediately:
   and void topology, and survives every tested width;
 - depth 1 enumerates 80 raw candidates and 33 distinct canonical successors,
   but none equals the known compact prefix;
-- therefore the witness fails widths 0, 1, 3, 7, and 12 for a reason no
-  retention rule can repair.
+- therefore this pose fails widths 0, 1, 3, 7, and 12 before retention can act.
 
-This supersedes the earlier hypothesis that the first useful intervention is a
-wider partial beam. The beam remains necessary for later locally losing
-prefixes, but it is downstream of candidate/reconstruction reachability for the
-known Mixed motif. Before declaring a missing geometric feature, one bounded
+This blocks using this pose to choose a wider partial beam, but does not
+falsify the beam generally: other successors may still have delayed value and
+the live Mixed run did not complete. Before declaring a missing geometric
+feature, one bounded
 first-miss audit must distinguish raw-source absence from point deduplication,
 direct-legality rejection, canonical-admission rejection, or a small canonical
 pose delta. That is the only additional provenance required on the immediate
@@ -279,11 +290,12 @@ rules. Two trace-only calibrations govern live Stage 2 selection:
    retention. Continue the exact witness and selected neighborhood members for
    the measured horizon or to a complete endpoint. Test total retained
    capacities 1, 2, 4, 8, and 13 (`experimentalWidth` 0, 1, 3, 7, and 12), then
-   only the next capacity needed to bracket survival. The Mixed structured
-   lineage now satisfies the source requirement and exposes a depth-1
-   reachability failure; capacity calibration resumes only after that failure
-   is repaired. This is a calibration witness, not a production fixture special
-   case; an SVG render is not an admissible lineage source.
+   only the next capacity needed to bracket survival. The Mixed structured pose
+   exposes a depth-1 reachability question but lacks the source commit, local
+   geometry digest, and expected finalized endpoint assertions required for
+   capacity calibration. This must be supplied by an admissible witness after
+   the bounded first-miss audit. A calibration witness is not a production
+   fixture special case; an SVG render is not an admissible lineage source.
 2. **Commensurate queue calibration.** When an alternate geometry class has a
    gap-contained placement, compare `scheduled -> alternate` with `alternate ->
    scheduled`. Admit the comparison only after both branches have placed the
@@ -345,17 +357,23 @@ mechanism:
 
 1. keep the corrected Stage 2A beam implementation and its protected width-one
    control;
-2. do not run wider beam cells yet—the known compact Mixed prefix is absent
-   before beam selection at depth 1;
+2. do not run wider beam cells yet—the historical Mixed pose is absent before
+   beam selection at depth 1 and cannot calibrate retention;
 3. instrument only that first miss through raw source, point deduplication,
    direct legality, canonical legality, and nearest canonical pose;
 4. if the pose exists before a filter, repair that generic filter/admission
-   boundary; if it is genuinely absent, add one bounded Abey-style contact
-   reconstruction seed using geometry-derived edge/vertex relations;
-5. require the depth-1 structured prefix to become generated before resuming
-   the width/horizon calibration;
-6. preserve Stage 2B commensurate gap reordering as the next independent
-   mechanism after one reachable positive-width cell.
+   boundary; if it is genuinely absent, add only the bounded finite
+   geometry-derived feature-contact family demonstrated missing by the audit;
+5. if feature coverage passes instead, test Abey-style order reconstruction as
+   a separate completed-decode portfolio arm using the existing generator. It
+   succeeds by producing a better complete endpoint, not by reproducing this
+   historical depth-1 pose;
+6. establish one reachable, fully sourced delayed-value witness and make one
+   cold beam-only Mixed pilot complete within budget by staging or caching the
+   measured scoring/topology work;
+7. only then resume width/horizon calibration, keeping Stage 2B commensurate
+   gap reordering as the next independent mechanism after one positive-width
+   cell.
 
 The timing evidence also prevents optimizing the wrong subsystem. In the clean
 90-second Mixed width-3 run at `d9ecd0a`, scoring and exact topology measurement
@@ -553,10 +571,11 @@ bounded digests, the harness is beam-only, unused gap measurement is removed,
 and Pareto extraction is bounded. Triangle still completes with the same
 `110,660.943411 mm2` diagnostic layout. Mixed reaches depth 33/61 at 90 seconds
 and depth 56/61 at 300 seconds, without a complete finalist. Those runs prove
-the implementation progresses but do not justify more runtime: the independent
-structured replay already proves the target compact lineage is unreachable at
-depth 1. The next action is the first-miss reachability audit above, not another
-beam-width or time-budget sweep.
+the implementation progresses but do not justify more runtime. The separate
+historical-pose replay blocks that pose from calibrating retention at depth 1;
+it does not prove other beam states lack delayed value. The next action is the
+bounded first-miss audit above, followed by one cold completion pilot, not
+another beam-width sweep.
 
 ### Pass, failure, and interpretation
 
@@ -1134,12 +1153,21 @@ and admits only Clipper2-legal endpoints to the common archive.
 
 ## Immediate Next Action
 
-Export and validate the structured compact Triangle lineage, then add the
-depth-specific candidate-provenance trace and re-run the global repeated-layer
-selector calibration. Implement Stage 2A beam-only and complete its width sweep.
-In parallel only at the tooling level, profile the commensurate-only audit and
-remove its duplicate work; do not enable live reordering yet. After one or two
-positive beam widths complete within budget, run paired cap-0/cap-1 Mixed cells
-at those fixed widths. Do not start the stagnation kick or Sparrow-style
-coordinated movement until witness/neighborhood survival, complete endpoints,
-traces, budgets, and renders from the staged matrix have been analyzed.
+Run one bounded provenance audit for the historical Mixed depth-1 pose. Record
+raw source occurrence, point deduplication, direct legality, canonical legality,
+nearest canonical pose delta, and a fresh-memo replay. Then follow exactly one
+branch:
+
+- if a generic filter loses an otherwise valid pose, repair that boundary;
+- if the raw finite feature is absent, add only that demonstrated bounded
+  geometry-derived feature family;
+- if feature coverage passes, reject this pose as the capacity witness and test
+  Abey-style order reconstruction separately by complete endpoint quality.
+
+Next, export or wrap one reachable delayed-value lineage with its origin commit,
+local-geometry digest, expected finalized hash/rotation, and exact metrics.
+Before any width sweep, stage or cache scoring/topology work until one cold
+Mixed beam-only pilot completes within its declared budget. Only then calibrate
+width/horizon and run paired cap-0/cap-1 cells at successful fixed widths. Do
+not enable live reordering, the stagnation kick, or Sparrow-style coordinated
+movement before those gates have complete endpoints and reviewed traces.
