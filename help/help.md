@@ -193,7 +193,12 @@ bounded selection turn after those two axes and cannot veto a layout that is
 better on both. The selected Mixed layout is therefore the visually stronger
 `405,773.434 mm2` zero-cavity reconstruction. The next isolated measurement at
 `7be8d04` distinguishes dynamic remaining-piece choice from bounded partial-state
-retention without changing the live decode. V7 remains diagnostic
+retention without changing the live decode. The immutable `14868c2` audit makes
+the Stage 2 decision: Triangle has beam headroom at 15/20 depths and no queue
+headroom; Mixed has beam headroom at 8/11 measured depths and queue headroom at
+4/11 before the 25,000-evaluation cap. Stage 2 therefore combines a bounded
+partial beam with a dynamic queue restricted to distinct geometry classes and
+real gap-contained opportunities. V7 remains diagnostic
 and cannot replace the current-main Triangle golden.
 See [the V7 Stage 0/1 report](research/v7-seed-archive-stage0-stage1.md).
 
@@ -236,6 +241,15 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   up to four rejected same-piece frontier alternatives through one unchanged
   continuation. It cannot change live candidates, ranking, selection, archive,
   or deadlines.
+- Immutable discriminator evidence at commit `14868c2` is under
+  `/private/tmp/min-plane-provenance/v7-queue-beam-14868c2/`. Triangle completes
+  all 20 depths with 15 beam-headroom and zero queue-headroom depths. Mixed
+  reaches the 25,000-evaluation cap after 11 depths: 5 beam-only, 1 queue-only,
+  3 both, and 2 neither. This selects partial beam plus a heterogeneous-only
+  bounded dynamic queue for Stage 2. The Mixed trace followed `canonical-grid`
+  because compact reconstruction roles exceeded their 15-second per-decode
+  limit in that run; the result is reachability evidence, not a claim about the
+  complete `405k` pocket-first lineage.
 
 - Committed the generic compactness-cohesion reconstruction checkpoint as
   `e8748e1`. Immutable Triangle and Mixed reports are under

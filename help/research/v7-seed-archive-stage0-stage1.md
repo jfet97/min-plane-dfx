@@ -152,3 +152,23 @@ one unchanged placement. Compactness and void topology determine headroom;
 contact fragmentation is reported and used only as the bounded deterministic
 tie-break. This measurement decides whether the next search change should be a
 dynamic queue, a partial beam, or both.
+
+Immutable runs at commit `14868c2` answer that question:
+
+- Triangle completes all 20 depths with `15` beam-headroom, `0` queue-headroom,
+  and `5` neither classifications (`16,627` evaluations, `11.2 s`). Identical
+  pieces make queue changes inert, while discarded placement states remain
+  non-dominated after one further triangle at most depths.
+- Mixed reaches its `25,000`-evaluation cap after 11 completed depths (`13.3 s`):
+  `5` beam-only, `1` queue-only, `3` both, and `2` neither. The trace contains
+  `14` non-inert gap-contained queue candidates, including `5` that dominate
+  every scheduled-piece successor, plus `16` non-dominated beam continuations
+  and `2` strict beam improvements.
+
+The selected Stage 2 design is therefore a bounded geometric partial beam for
+all jobs plus a dynamic queue only when distinct remaining geometry classes
+produce real gap-contained opportunities. The Mixed audit followed the
+`canonical-grid` pure-growth reconstruction: under concurrent cold execution,
+the non-baseline compact roles exceeded the compact harness's 15-second
+per-decode limit. These counts prove generic reachability headroom but do not
+claim complete-lineage coverage for the `405,773.434 mm2` pocket-first result.
