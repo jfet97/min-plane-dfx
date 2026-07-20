@@ -91,7 +91,6 @@ export interface IrregularWindowedBeamResult {
 
 export interface IrregularWindowedBeamHooks {
   readonly onInitialState?: (state: IrregularBeamState) => void
-  readonly onPreTerminalState?: (state: IrregularBeamState) => void
   readonly onStateSelected?: (input: {
     readonly stepIndex: number
     readonly beamRank: number
@@ -692,7 +691,6 @@ function runWindowedIrregularBeamCore(input: IrregularWindowedBeamCoreInput): Ef
     )
     yield* controlCheckpoint(input.control, controlState)
     const initialBest = productionRanked[0] ?? protectedRanked[0]
-    if (initialBest !== undefined) input.hooks?.onPreTerminalState?.(initialBest.state)
     let repairedBest: ScoredState | undefined = initialBest
     let terminalRepairDeadlineExpired = false
     if (

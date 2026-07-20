@@ -12,10 +12,16 @@ import {
   makeCompactQualityIrregularOptimizerSettings
 } from '../src/shared/irregular/defaults.js'
 import {
+  IrregularBounds,
   IrregularNestingSettings,
+  IrregularPlacedPiece,
+  IrregularPlacement,
+  IrregularPoint,
+  IrregularPolygon,
   IrregularPreparedPiece,
   IrregularPriorityOrderKey,
-  type IrregularPlacedPiece
+  IrregularTransform,
+  TransformedCollisionGeometry
 } from '../src/shared/irregular/domain.js'
 import { makePresetShapeDocument } from '../src/shared/presetShapes.js'
 import { preparePieces as prepareNestingPieces } from '../src/shared/preparePieces.js'
@@ -27,18 +33,14 @@ import {
   type IntrinsicV7Stage1Arm
 } from '../src/workers/algorithm/irregular/intrinsicV7SeedArchive.js'
 import { IrregularBeamState } from '../src/workers/algorithm/irregular/irregularBeamState.js'
-import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
-import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import {
   runIntrinsicReconstructionPortfolio,
   type IntrinsicReconstructionPortfolioResult
 } from '../src/workers/algorithm/irregular/intrinsicReconstructionPortfolio.js'
 import { runIntrinsicQueueBeamDiscriminator } from '../src/workers/algorithm/irregular/intrinsicQueueBeamDiscriminator.js'
-import { runWindowedIrregularBeam } from '../src/workers/algorithm/irregular/windowedBeam.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
-import { FreeMaterialServiceLive } from '../src/workers/irregular/freeMaterialService.js'
 import { NfpIfpServiceLive } from '../src/workers/irregular/nfpIfpService.js'
 import {
   NFP_IFP_CANDIDATE_SOURCE_MASK,
@@ -52,6 +54,12 @@ const MIXED_FIXTURE_PATH = fileURLToPath(
   new URL('../tests/fixtures/irregularSheetInvariance/mixed61-request.json', import.meta.url)
 )
 const TRIANGLE_SHEET = new SheetSpec({ width: 2000, height: 2700, label: 'triangle golden' })
+const TRIANGLE_DELAYED_LINEAGE_SVG_PATH = fileURLToPath(
+  new URL(
+    '../help/artifacts/bounded-ga-order-rotation/triangle-no-repair-baseline.svg',
+    import.meta.url
+  )
+)
 
 async function main(): Promise<void> {
   const fixtureName = requiredFixture(argument('--fixture'))
@@ -118,11 +126,11 @@ async function main(): Promise<void> {
     queueBeamTarget === undefined
       ? undefined
       : orderedPiecesForRun(preparedPieces, queueBeamTarget.pieceIds)
-  const delayedLineageCanonicalGeometryKeys =
+  const delayedLineageCalibration =
     delayedLineageCalibrationEnabled &&
     fixtureName === 'triangle-20' &&
     queueBeamOrderedPieces !== undefined
-      ? await captureTriangleDelayedLineage(queueBeamOrderedPieces, fixture.settings)
+      ? await loadTriangleDelayedLineage(queueBeamOrderedPieces)
       : undefined
   const queueBeamDiscriminator =
     queueBeamTarget === undefined || queueBeamOrderedPieces === undefined
@@ -139,9 +147,12 @@ async function main(): Promise<void> {
                 '--queue-beam-evaluations',
                 compact ? 5_000 : 25_000
               ),
-              ...(delayedLineageCanonicalGeometryKeys === undefined
+              ...(delayedLineageCalibration === undefined
                 ? {}
-                : { referenceLineageCanonicalGeometryKeys: delayedLineageCanonicalGeometryKeys })
+                : {
+                    referenceLineageCanonicalGeometryKeys:
+                      delayedLineageCalibration.canonicalGeometryKeys
+                  })
             }),
             fixture.settings
           )
@@ -274,9 +285,9 @@ async function main(): Promise<void> {
           queueBeamDiscriminator: {
             mode: 'trace-only-independent-replay',
             delayedLineageSource:
-              delayedLineageCanonicalGeometryKeys === undefined
+              delayedLineageCalibration === undefined
                 ? 'not-provided'
-                : 'triangle-windowed-beam-width-13-repair-0-winning-path',
+                : delayedLineageCalibration.source,
             selectedRole: queueBeamTarget.role,
             selectedCandidateMode: queueBeamTarget.candidateMode,
             liveDecodeCandidateBehaviorChanged: false,
@@ -819,46 +830,91 @@ function makeTriangleRequest(): NestingRequest {
   })
 }
 
-async function captureTriangleDelayedLineage(
-  preparedPieces: ReadonlyArray<IrregularPreparedPiece>,
-  settings: IrregularNestingSettings
-): Promise<ReadonlyArray<string>> {
-  const referenceSettings = new IrregularNestingSettings({
-    geometry: settings.geometry,
-    optimizer: makeCompactQualityIrregularOptimizerSettings({
-      beamWidth: 13,
-      localRepairBudget: 0
-    })
-  })
-  const keys: string[] = []
-  await Effect.runPromise(
-    withWindowedBeamLayers(
-      runWindowedIrregularBeam({
-        sheet: TRIANGLE_SHEET,
-        pieces: preparedPieces,
-        hooks: {
-          onPreTerminalState: (state) => {
-            const reversePath: string[] = []
-            let current: IrregularBeamState | undefined = state
-            while (current?.parent !== undefined) {
-              reversePath.push(current.canonicalOccupiedGeometryKey)
-              current = current.parent
-            }
-            keys.splice(0, keys.length, ...reversePath.reverse())
-          }
-        }
-      }),
-      referenceSettings
-    )
-  ).catch((error: unknown) => {
-    if (keys.length !== preparedPieces.length) throw error
-  })
-  if (keys.length !== preparedPieces.length) {
+async function loadTriangleDelayedLineage(
+  preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+): Promise<{
+  readonly canonicalGeometryKeys: ReadonlyArray<string>
+  readonly source: { readonly path: string; readonly sha256: string; readonly role: string }
+}> {
+  const bytes = await readFile(TRIANGLE_DELAYED_LINEAGE_SVG_PATH)
+  const polygonMatches = [...bytes.toString('utf8').matchAll(/<polygon points="([^"]+)"/g)]
+  if (polygonMatches.length !== preparedPieces.length) {
     throw new Error(
-      `triangle delayed-lineage source produced ${keys.length} of ${preparedPieces.length} prefixes`
+      `triangle delayed-lineage artifact contains ${polygonMatches.length} polygons for ${preparedPieces.length} pieces`
     )
   }
-  return keys
+  const placed: IrregularPlacedPiece[] = []
+  const canonicalGeometryKeys: string[] = []
+  for (const [index, match] of polygonMatches.entries()) {
+    const piece = preparedPieces[index]
+    const pointsText = match[1]
+    const transform = piece?.transforms[0]
+    if (piece === undefined || pointsText === undefined || transform === undefined) {
+      throw new Error(`triangle delayed-lineage artifact cannot reconstruct prefix ${index}`)
+    }
+    const points = pointsText.split(' ').map((pair) => {
+      const [rawX, rawY] = pair.split(',')
+      const x = Number(rawX)
+      const y = Number(rawY)
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        throw new Error(`triangle delayed-lineage artifact has a non-finite point at ${index}`)
+      }
+      return new IrregularPoint({ x, y })
+    })
+    const bounds = boundsForArtifactPoints(points)
+    const polygon = new IrregularPolygon({ points })
+    const pieceId = piece.pieceId ?? piece.source.id
+    placed.push(
+      new IrregularPlacedPiece({
+        placement: new IrregularPlacement({
+          pieceId,
+          sourcePieceId: piece.source.id,
+          placementReference: piece.collisionGeometry.placementReference,
+          transform: new IrregularTransform({
+            translateX: 0,
+            translateY: 0,
+            rotationDeg: transform.rotationDeg,
+            mirrored: transform.mirrored
+          })
+        }),
+        collisionGeometry: new TransformedCollisionGeometry({
+          sourcePieceId: piece.source.id,
+          transform,
+          polygon,
+          bounds
+        })
+      })
+    )
+    const state = new IrregularBeamState({
+      remainingPreparedPieces: preparedPieces.slice(index + 1),
+      placedCollisionGeometries: placed,
+      unplacedPieceIds: [],
+      placementOrder: preparedPieces.slice(0, index + 1).map((item) => item.pieceId ?? item.source.id)
+    }).withBottomLeftAnchored()
+    if (state === undefined) {
+      throw new Error(`triangle delayed-lineage prefix ${index} cannot be bottom-left anchored`)
+    }
+    canonicalGeometryKeys.push(state.canonicalOccupiedGeometryKey)
+  }
+  return {
+    canonicalGeometryKeys,
+    source: {
+      path: TRIANGLE_DELAYED_LINEAGE_SVG_PATH,
+      sha256: sha256(bytes),
+      role: 'accepted-no-repair-compact-layout-polygon-order'
+    }
+  }
+}
+
+function boundsForArtifactPoints(points: ReadonlyArray<IrregularPoint>): IrregularBounds {
+  const xs = points.map(({ x }) => x)
+  const ys = points.map(({ y }) => y)
+  return new IrregularBounds({
+    minX: Math.min(...xs),
+    minY: Math.min(...ys),
+    maxX: Math.max(...xs),
+    maxY: Math.max(...ys)
+  })
 }
 
 function withLayers<A, E, R>(effect: Effect.Effect<A, E, R>, settings: IrregularNestingSettings) {
@@ -866,20 +922,6 @@ function withLayers<A, E, R>(effect: Effect.Effect<A, E, R>, settings: Irregular
     Effect.provide(GeometryKernel.Live),
     Effect.provide(CollisionGeometryBuilder.Live),
     Effect.provide(TransformGeneratorLive),
-    Effect.provide(NfpIfpServiceLive),
-    Effect.provide(Layer.succeed(GeometrySettings, settings))
-  )
-}
-
-function withWindowedBeamLayers<A, E, R>(
-  effect: Effect.Effect<A, E, R>,
-  settings: IrregularNestingSettings
-) {
-  return effect.pipe(
-    Effect.provide(IrregularLayoutScorer.Live),
-    Effect.provide(IrregularPlacementScorer.Layer),
-    Effect.provide(FreeMaterialServiceLive),
-    Effect.provide(GeometryKernel.Live),
     Effect.provide(NfpIfpServiceLive),
     Effect.provide(Layer.succeed(GeometrySettings, settings))
   )
