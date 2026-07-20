@@ -29,6 +29,7 @@ import {
   type IntrinsicStrictCompletedMetrics
 } from '../../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
 import {
+  auditIntrinsicReferenceSuccessorReachability,
   runIntrinsicPartialGeometricBeam,
   runIntrinsicQueueBeamDiscriminator,
   measureExactDoubledPathsArea,
@@ -322,6 +323,45 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(control.winner?.canonicalGeometryHash).toBe(strict.canonicalGeometryHash)
     expect(control.winner?.terminalRotationDeg).toBe(strict.terminalRotationDeg)
     expect(control.winner?.placedCollisionGeometries).toEqual(strict.placedCollisionGeometries)
+  })
+
+  it('classifies a generated canonical successor as exactly reachable', async () => {
+    const first = preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0)])
+    const second = preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0)])
+    const construct = (pieces: ReadonlyArray<IrregularPreparedPiece>) =>
+      Effect.runPromise(
+        constructIntrinsicStrictState({
+          allPreparedPieces: pieces,
+          remainingPreparedPieces: pieces,
+          frozenPlaced: [],
+          candidateMode: 'pure-growth'
+        }).pipe(
+          Effect.provide(GeometryKernel.Live),
+          Effect.provide(GeometrySettings.Live),
+          Effect.provide(NfpIfpServiceLive)
+        )
+      )
+    const parent = await construct([first])
+    const expected = await construct([first, second])
+    const audit = await Effect.runPromise(
+      auditIntrinsicReferenceSuccessorReachability({
+        parentState: parent.state,
+        expectedState: expected.state,
+        piece: second,
+        remainingPreparedPieces: []
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+
+    expect(audit.classification).toBe('reachable-exact-successor')
+    expect(audit.directLegal).toBe(true)
+    expect(audit.exactTargetGenerated).toBe(true)
+    expect(audit.targetCanonicalLegal).toBe(true)
+    expect(audit.targetMatchesExpectedCanonicalGeometry).toBe(true)
+    expect(audit.freshRunsConsistent).toBe(true)
   })
 
   it('continues an exact frozen seed and rejects non-partitions', async () => {

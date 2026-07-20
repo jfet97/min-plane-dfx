@@ -38,9 +38,11 @@ import {
   type IrregularGeometryInputError,
   type IrregularNestingNotImplementedError,
   type IrregularNfpIfpControl,
+  type NfpIfpCandidateProvenance,
   type NfpIfpService as NfpIfpServiceShape,
   NfpIfpService
 } from '../../irregular/services.js'
+import { PlacementValidation } from '../../irregular/placementValidation.js'
 import {
   candidateContainedInIntrinsicGap,
   deriveCanonicalIntrinsicGapRegions,
@@ -300,6 +302,47 @@ export interface IntrinsicPartialGeometricBeamResult {
         readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
       }
     | undefined
+}
+
+export interface IntrinsicReferenceSuccessorReachabilityAudit {
+  readonly pieceId: PieceId
+  readonly expectedCanonicalGeometryHash: string
+  readonly target: {
+    readonly transformFamily: string
+    readonly gridX: number
+    readonly gridY: number
+    readonly parentAlignmentGridX: number
+    readonly parentAlignmentGridY: number
+  }
+  readonly directLegal: boolean
+  readonly nfpBoundary: {
+    readonly fixedPieceCount: number
+    readonly matchingVertexCount: number
+    readonly matchingSegmentCount: number
+  }
+  readonly freshRunsConsistent: boolean
+  readonly generatedCandidateCount: number
+  readonly exactTargetGenerated: boolean
+  readonly exactTargetSourceMask: number | undefined
+  readonly nearestGeneratedCandidate:
+    | {
+        readonly gridX: number
+        readonly gridY: number
+        readonly squaredGridDistance: number
+      }
+    | undefined
+  readonly targetScored: boolean
+  readonly targetCanonicalLegal: boolean
+  readonly targetMatchesExpectedCanonicalGeometry: boolean
+  readonly classification:
+    | 'reachable-exact-successor'
+    | 'direct-illegal-historical-pose'
+    | 'raw-nfp-vertex-not-emitted'
+    | 'missing-finite-boundary-feature'
+    | 'not-on-current-nfp-boundary'
+    | 'generated-but-scoring-rejected'
+    | 'generated-but-canonical-rejected'
+    | 'generated-with-canonical-pose-delta'
 }
 
 interface IntrinsicPartialGeometricBeamTraceSlot {
@@ -1565,6 +1608,309 @@ function scoreAuditCandidate(
   }
 }
 
+/** Audits one exact historical successor without changing search selection. */
+export function auditIntrinsicReferenceSuccessorReachability(input: {
+  readonly parentState: IrregularBeamState
+  readonly expectedState: IrregularBeamState
+  readonly piece: IrregularPreparedPiece
+  readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+}): Effect.Effect<
+  IntrinsicReferenceSuccessorReachabilityAudit,
+  AuditError,
+  GeometryKernel | GeometrySettings | NfpIfpService
+> {
+  return Effect.gen(function* () {
+    const settings = yield* GeometrySettings
+    const geometryKernel = yield* GeometryKernel
+    const nfpIfpService = yield* NfpIfpService
+    const pieceId = preparedPieceId(input.piece)
+    const expectedPlaced = input.expectedState.placedCollisionGeometries.find(
+      (placed) => placedPieceId(placed) === pieceId
+    )
+    if (expectedPlaced === undefined) {
+      return yield* Effect.fail(
+        new IntrinsicQueueBeamDiscriminatorError({
+          operation: 'input',
+          message: `expected successor does not contain scheduled piece ${pieceId}.`
+        })
+      )
+    }
+    const transform = input.piece.transforms.find(
+      (candidate) =>
+        candidate.mirrored === expectedPlaced.placement.transform.mirrored &&
+        circularDegreeDistance(
+          candidate.rotationDeg,
+          expectedPlaced.placement.transform.rotationDeg
+        ) <= 0.01
+    )
+    if (transform === undefined) {
+      return yield* Effect.fail(
+        new IntrinsicQueueBeamDiscriminatorError({
+          operation: 'input',
+          message: `expected successor transform is unavailable for ${pieceId}.`
+        })
+      )
+    }
+    const parentAlignment = referenceParentAlignment(input.parentState, input.expectedState)
+    if (parentAlignment === undefined) {
+      return yield* Effect.fail(
+        new IntrinsicQueueBeamDiscriminatorError({
+          operation: 'input',
+          message: 'expected successor does not preserve the parent as one rigid translation.'
+        })
+      )
+    }
+    const targetGridX = toGridMm(
+      expectedPlaced.placement.transform.translateX - parentAlignment.x
+    )
+    const targetGridY = toGridMm(
+      expectedPlaced.placement.transform.translateY - parentAlignment.y
+    )
+    const alignmentGridX = toGridMm(parentAlignment.x)
+    const alignmentGridY = toGridMm(parentAlignment.y)
+    if (
+      targetGridX === undefined ||
+      targetGridY === undefined ||
+      alignmentGridX === undefined ||
+      alignmentGridY === undefined
+    ) {
+      return yield* Effect.fail(
+        new IntrinsicQueueBeamDiscriminatorError({
+          operation: 'input',
+          message: 'expected successor translation is outside the canonical collision grid.'
+        })
+      )
+    }
+    const moving = yield* geometryKernel.transformCollisionGeometry({
+      geometry: input.piece.collisionGeometry,
+      transform
+    })
+    const targetCandidate = new IrregularPlacementCandidate({
+      pieceId: moving.sourcePieceId,
+      transform,
+      point: { x: fromGrid(targetGridX), y: fromGrid(targetGridY) },
+      diagnostics: []
+    })
+    const directLegal = yield* PlacementValidation.checkSheetless({
+      placed: input.parentState.placedCollisionGeometries,
+      placedCollisionIndex: input.parentState.placedCollisionIndex,
+      moving,
+      candidate: targetCandidate
+    })
+    let matchingVertexCount = 0
+    let matchingSegmentCount = 0
+    for (const fixed of input.parentState.placedCollisionGeometries) {
+      const nfp = yield* nfpIfpService.computeNfp({
+        fixed,
+        moving,
+        settings: settings.geometry
+      })
+      const path = nfp.boundary.points.flatMap((point) => {
+        const x = toGridMm(point.x)
+        const y = toGridMm(point.y)
+        return x === undefined || y === undefined ? [] : [{ x, y }]
+      })
+      matchingVertexCount += path.filter(
+        (point) => point.x === targetGridX && point.y === targetGridY
+      ).length
+      for (let index = 0; index < path.length; index += 1) {
+        const start = path[index]
+        const end = path[(index + 1) % path.length]
+        if (
+          start !== undefined &&
+          end !== undefined &&
+          gridPointOnSegment({ x: targetGridX, y: targetGridY }, start, end)
+        ) {
+          matchingSegmentCount += 1
+        }
+      }
+    }
+
+    const runFreshGeneration = () =>
+      Effect.gen(function* () {
+        let provenance: NfpIfpCandidateProvenance | undefined
+        const candidates = yield* nfpIfpService.generatePlacementCandidates({
+          sheet: INTRINSIC_COORDINATE_DOMAIN,
+          placed: input.parentState.placedCollisionGeometries,
+          placedCollisionIndex: input.parentState.placedCollisionIndex,
+          moving,
+          settings,
+          candidateDomain: 'sheetless-nfp',
+          candidateMemoScope: new IrregularNfpIfpCandidateMemoScope(),
+          onCandidateProvenance: (snapshot) => {
+            provenance = snapshot
+          }
+        })
+        return { candidates, provenance }
+      })
+    const firstRun = yield* runFreshGeneration()
+    const secondRun = yield* runFreshGeneration()
+    const generatedKeys = (candidates: ReadonlyArray<IrregularPlacementCandidate>) =>
+      candidates.map(candidateGridIdentity).toSorted()
+    const firstKeys = generatedKeys(firstRun.candidates)
+    const secondKeys = generatedKeys(secondRun.candidates)
+    const freshRunsConsistent =
+      firstKeys.length === secondKeys.length &&
+      firstKeys.every((key, index) => key === secondKeys[index])
+    const exactTarget = firstRun.candidates.find((candidate) => {
+      const x = toGridMm(candidate.point.x)
+      const y = toGridMm(candidate.point.y)
+      return x === targetGridX && y === targetGridY
+    })
+    const exactTargetSourceMask = firstRun.provenance?.legalCandidateSources.find(
+      ({ gridX, gridY }) => gridX === targetGridX && gridY === targetGridY
+    )?.sourceMask
+    const nearestGeneratedCandidate = firstRun.candidates
+      .flatMap((candidate) => {
+        const gridX = toGridMm(candidate.point.x)
+        const gridY = toGridMm(candidate.point.y)
+        if (gridX === undefined || gridY === undefined) return []
+        const deltaX = gridX - targetGridX
+        const deltaY = gridY - targetGridY
+        return [{ gridX, gridY, squaredGridDistance: deltaX * deltaX + deltaY * deltaY }]
+      })
+      .toSorted(
+        (first, second) =>
+          first.squaredGridDistance - second.squaredGridDistance ||
+          first.gridY - second.gridY ||
+          first.gridX - second.gridX
+      )[0]
+    const auditBudget: AuditBudget = {
+      startedAt: performance.now(),
+      maximumRuntimeMs: Number.MAX_SAFE_INTEGER,
+      maximumEvaluations: Number.MAX_SAFE_INTEGER,
+      evaluations: 0,
+      truncationReason: undefined
+    }
+    const targetScored = directLegal
+      ? scoreAuditCandidate({
+          state: input.parentState,
+          piece: input.piece,
+          remainingPreparedPieces: input.remainingPreparedPieces,
+          budget: auditBudget,
+          settings,
+          geometryKernel,
+          nfpIfpService,
+          candidateMemoScope: new IrregularNfpIfpCandidateMemoScope(),
+          control: { checkpoint: () => Effect.void },
+          measureGapContainment: false,
+          moving,
+          candidate: targetCandidate,
+          gapRegions: undefined
+        })
+      : undefined
+    const targetCanonicalLegal =
+      targetScored !== undefined && isCanonicalSheetlessStateLegal(targetScored.state)
+    const targetMatchesExpectedCanonicalGeometry =
+      targetCanonicalLegal &&
+      targetScored.canonicalGeometryKey === input.expectedState.canonicalOccupiedGeometryKey
+    const classification: IntrinsicReferenceSuccessorReachabilityAudit['classification'] =
+      !directLegal
+        ? 'direct-illegal-historical-pose'
+        : exactTarget === undefined
+          ? matchingVertexCount > 0
+            ? 'raw-nfp-vertex-not-emitted'
+            : matchingSegmentCount > 0
+              ? 'missing-finite-boundary-feature'
+              : 'not-on-current-nfp-boundary'
+          : targetScored === undefined
+            ? 'generated-but-scoring-rejected'
+            : !targetCanonicalLegal
+              ? 'generated-but-canonical-rejected'
+              : !targetMatchesExpectedCanonicalGeometry
+                ? 'generated-with-canonical-pose-delta'
+                : 'reachable-exact-successor'
+    return {
+      pieceId,
+      expectedCanonicalGeometryHash: digestSemanticIdentity(
+        input.expectedState.canonicalOccupiedGeometryKey
+      ),
+      target: {
+        transformFamily: transformFamilyKey(transform),
+        gridX: targetGridX,
+        gridY: targetGridY,
+        parentAlignmentGridX: alignmentGridX,
+        parentAlignmentGridY: alignmentGridY
+      },
+      directLegal,
+      nfpBoundary: {
+        fixedPieceCount: input.parentState.placedCollisionGeometries.length,
+        matchingVertexCount,
+        matchingSegmentCount
+      },
+      freshRunsConsistent,
+      generatedCandidateCount: firstRun.candidates.length,
+      exactTargetGenerated: exactTarget !== undefined,
+      exactTargetSourceMask,
+      nearestGeneratedCandidate,
+      targetScored: targetScored !== undefined,
+      targetCanonicalLegal,
+      targetMatchesExpectedCanonicalGeometry,
+      classification
+    }
+  })
+}
+
+function referenceParentAlignment(
+  parentState: IrregularBeamState,
+  expectedState: IrregularBeamState
+): { readonly x: number; readonly y: number } | undefined {
+  const firstParent = parentState.placedCollisionGeometries[0]
+  if (firstParent === undefined) return { x: 0, y: 0 }
+  const firstId = placedPieceId(firstParent)
+  const firstExpected = expectedState.placedCollisionGeometries.find(
+    (placed) => placedPieceId(placed) === firstId
+  )
+  if (firstExpected === undefined) return undefined
+  const x =
+    firstExpected.placement.transform.translateX - firstParent.placement.transform.translateX
+  const y =
+    firstExpected.placement.transform.translateY - firstParent.placement.transform.translateY
+  for (const parent of parentState.placedCollisionGeometries) {
+    const expected = expectedState.placedCollisionGeometries.find(
+      (placed) => placedPieceId(placed) === placedPieceId(parent)
+    )
+    if (
+      expected === undefined ||
+      toGridMm(
+        expected.placement.transform.translateX - parent.placement.transform.translateX - x
+      ) !== 0 ||
+      toGridMm(
+        expected.placement.transform.translateY - parent.placement.transform.translateY - y
+      ) !== 0
+    ) {
+      return undefined
+    }
+  }
+  return { x, y }
+}
+
+function gridPointOnSegment(
+  point: { readonly x: number; readonly y: number },
+  start: { readonly x: number; readonly y: number },
+  end: { readonly x: number; readonly y: number }
+): boolean {
+  const cross =
+    BigInt(point.x - start.x) * BigInt(end.y - start.y) -
+    BigInt(point.y - start.y) * BigInt(end.x - start.x)
+  return (
+    cross === 0n &&
+    point.x >= Math.min(start.x, end.x) &&
+    point.x <= Math.max(start.x, end.x) &&
+    point.y >= Math.min(start.y, end.y) &&
+    point.y <= Math.max(start.y, end.y)
+  )
+}
+
+function candidateGridIdentity(candidate: IrregularPlacementCandidate): string {
+  return `${toGridMm(candidate.point.x) ?? 'invalid'},${toGridMm(candidate.point.y) ?? 'invalid'}`
+}
+
+function circularDegreeDistance(first: number, second: number): number {
+  const distance = Math.abs(((first - second) % 360 + 360) % 360)
+  return Math.min(distance, 360 - distance)
+}
+
 /** Exact three-axis partial-layout measurement used only by the discriminator. */
 export function measureIntrinsicQueueBeamAxes(
   state: IrregularBeamState
@@ -2498,6 +2844,10 @@ function isCanonicalSheetlessStateLegal(state: IrregularBeamState): boolean {
 
 function preparedPieceId(piece: IrregularPreparedPiece): PieceId {
   return piece.pieceId ?? piece.source.id
+}
+
+function placedPieceId(piece: IrregularPlacedPiece): PieceId {
+  return piece.placement.pieceId ?? piece.placement.sourcePieceId
 }
 
 function makePlacement(

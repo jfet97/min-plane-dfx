@@ -34,6 +34,7 @@ import {
   type IntrinsicReconstructionPortfolioResult
 } from '../src/workers/algorithm/irregular/intrinsicReconstructionPortfolio.js'
 import {
+  auditIntrinsicReferenceSuccessorReachability,
   runIntrinsicPartialGeometricBeam,
   runIntrinsicQueueBeamDiscriminator
 } from '../src/workers/algorithm/irregular/intrinsicQueueBeamDiscriminator.js'
@@ -85,11 +86,12 @@ async function main(): Promise<void> {
   const partialBeamOnly = process.argv.includes('--partial-beam-only')
   const structuredLineagePath = argument('--structured-lineage')
   const lineageCalibrationOnly = process.argv.includes('--lineage-calibration-only')
+  const firstMissAuditOnly = process.argv.includes('--first-miss-audit-only')
   if (partialBeamOnly && !partialBeamEnabled) {
     throw new Error('--partial-beam-only requires --partial-beam-width')
   }
-  if (lineageCalibrationOnly && structuredLineagePath === undefined) {
-    throw new Error('--lineage-calibration-only requires --structured-lineage')
+  if ((lineageCalibrationOnly || firstMissAuditOnly) && structuredLineagePath === undefined) {
+    throw new Error('lineage calibration/audit requires --structured-lineage')
   }
   const reconstructionPortfolioEnabled =
     process.argv.includes('--reconstruction-portfolio') ||
@@ -115,6 +117,20 @@ async function main(): Promise<void> {
   const preparedPieces = await Effect.runPromise(
     withLayers(prepareIrregularPieces(fixture.request), fixture.settings)
   )
+  if (firstMissAuditOnly && structuredLineagePath !== undefined) {
+    await runStructuredFirstMissAudit({
+      fixtureName,
+      outputDirectory,
+      sourceCommit,
+      fixture,
+      fixtureBytes,
+      harnessBytes,
+      preparedPieces,
+      structuredLineagePath: resolve(structuredLineagePath),
+      depth: nonNegativeIntegerArgument('--first-miss-depth', 1)
+    })
+    return
+  }
   if (lineageCalibrationOnly && structuredLineagePath !== undefined) {
     await runStructuredLineageCalibration({
       fixtureName,
@@ -723,6 +739,106 @@ async function runStructuredLineageCalibration(input: {
       svgPath,
       pngPath,
       runtimeMs: report.runtimeMs
+    })}\n`
+  )
+}
+
+async function runStructuredFirstMissAudit(input: {
+  readonly fixtureName: 'triangle-20' | 'mixed-61'
+  readonly outputDirectory: string
+  readonly sourceCommit: string
+  readonly fixture: Awaited<ReturnType<typeof loadFixture>>
+  readonly fixtureBytes: Uint8Array
+  readonly harnessBytes: Uint8Array
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly structuredLineagePath: string
+  readonly depth: number
+}): Promise<void> {
+  const lineageBytes = await readFile(input.structuredLineagePath)
+  const lineage = Schema.decodeUnknownSync(StructuredLineage)(
+    JSON.parse(new TextDecoder().decode(lineageBytes))
+  )
+  const materialized = await Effect.runPromise(
+    withLayers(
+      materializeStructuredLineage(input.preparedPieces, lineage, input.fixture.sheet),
+      input.fixture.settings
+    )
+  )
+  const expectedState = materialized.states[input.depth]
+  const piece = materialized.orderedPreparedPieces[input.depth]
+  const parentState =
+    input.depth === 0
+      ? IrregularBeamState.empty(materialized.orderedPreparedPieces)
+      : materialized.states[input.depth - 1]
+  if (expectedState === undefined || piece === undefined || parentState === undefined) {
+    throw new Error(`structured first-miss depth ${input.depth} is unavailable`)
+  }
+  const result = await Effect.runPromise(
+    withLayers(
+      auditIntrinsicReferenceSuccessorReachability({
+        parentState,
+        expectedState,
+        piece,
+        remainingPreparedPieces: materialized.orderedPreparedPieces.slice(input.depth + 1)
+      }),
+      input.fixture.settings
+    )
+  )
+  const reportPath = `${input.outputDirectory}/report.json`
+  const report = {
+    schemaVersion: 1,
+    experiment: 'intrinsic-v7-structured-first-miss-audit',
+    status: 'diagnostic-only-no-production-promotion',
+    sourceCommit: input.sourceCommit,
+    harness: { path: HARNESS_PATH, sha256: sha256(input.harnessBytes) },
+    fixture: {
+      name: input.fixtureName,
+      path: input.fixture.path,
+      sha256: sha256(input.fixtureBytes),
+      sheet: { width: input.fixture.sheet.width, height: input.fixture.sheet.height },
+      pieceCount: input.fixture.request.pieces.length,
+      paddingMm: input.fixture.request.padding,
+      settings: input.fixture.settings
+    },
+    historicalPose: {
+      path: input.structuredLineagePath,
+      sha256: sha256(lineageBytes),
+      depth: input.depth,
+      parentCanonicalGeometryHash: sha256(
+        new TextEncoder().encode(parentState.canonicalOccupiedGeometryKey)
+      ),
+      expectedCanonicalGeometryHash: sha256(
+        new TextEncoder().encode(expectedState.canonicalOccupiedGeometryKey)
+      )
+    },
+    result,
+    interpretation:
+      'The audit classifies one historical transition only. It does not establish delayed value, beam capacity, or production quality.'
+  }
+  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
+  const manifestPath = `${input.outputDirectory}/manifest.json`
+  await writeFile(
+    manifestPath,
+    `${JSON.stringify(
+      {
+        experiment: report.experiment,
+        sourceCommit: input.sourceCommit,
+        fixture: report.fixture,
+        historicalPose: report.historicalPose,
+        harness: report.harness,
+        files: { [reportPath]: sha256(await readFile(reportPath)) }
+      },
+      null,
+      2
+    )}\n`
+  )
+  process.stdout.write(
+    `${JSON.stringify({
+      reportPath,
+      reportSha256: sha256(await readFile(reportPath)),
+      manifestPath,
+      manifestSha256: sha256(await readFile(manifestPath)),
+      classification: result.classification
     })}\n`
   )
 }
