@@ -1,4 +1,5 @@
 import { Data, Effect, Order } from 'effect'
+import { createHash } from 'node:crypto'
 import { performance } from 'node:perf_hooks'
 import {
   area,
@@ -68,6 +69,8 @@ const SAME_PIECE_FRONTIER_CONTINUATION_LIMIT = 4
 const DEFAULT_WITNESS_LIMIT = 4
 const COMMENSURATE_FIRST_STEP_LIMIT = 2
 const COMMENSURATE_SECOND_STEP_LIMIT = 2
+const PARTIAL_FUTURE_EQUIVALENCE_KEY_VERSION = 'partial-future-equivalence-v1'
+const OCCUPIED_DISPERSION_VERSION = 'occupied-dispersion-v1'
 
 const transformCandidateOrder = Order.combineAll<IrregularTransformCandidate>([
   Order.mapInput(Order.Number, (transform) => transform.index),
@@ -237,9 +240,35 @@ export interface IntrinsicPartialGeometricBeamResult {
   readonly completedDepthCount: number
   readonly steps: ReadonlyArray<{
     readonly depth: number
+    readonly scheduledPieceId: PieceId
     readonly parentCount: number
+    readonly parentEnumerations: ReadonlyArray<{
+      readonly parentFutureEquivalenceKey: string
+      readonly protectedControl: boolean
+      readonly generatedCandidateCount: number
+      readonly scoredCandidateCount: number
+      readonly canonicalLegalCandidateCount: number
+      readonly uniqueCanonicalSuccessorCount: number
+      readonly runtimeMs: number
+    }>
+    readonly generatedCandidateCount: number
+    readonly scoredCandidateCount: number
+    readonly canonicalLegalCandidateCount: number
+    readonly canonicalUniqueSuccessorCount: number
+    readonly monotoneFitRejectionCount: number
     readonly uniqueSuccessorCount: number
+    readonly futureEquivalenceDeduplicationCount: number
+    readonly paretoLayerSizes: ReadonlyArray<number>
+    readonly capacityEvictionCount: number
     readonly protectedControlKey: string | undefined
+    readonly protectedControlSurvived: boolean
+    readonly futureEquivalenceKeyVersion: typeof PARTIAL_FUTURE_EQUIVALENCE_KEY_VERSION
+    readonly occupiedDispersionVersion: typeof OCCUPIED_DISPERSION_VERSION
+    readonly remainingOrderDigest: string
+    readonly cumulativeEvaluations: number
+    readonly cumulativeRuntimeMs: number
+    readonly enumerationRuntimeMs: number
+    readonly selectionRuntimeMs: number
     readonly selectedSlots: IntrinsicPartialGeometricBeamSelection<IntrinsicPartialBeamEntry>['slots']
   }>
   readonly finalists: ReadonlyArray<{
@@ -281,6 +310,7 @@ interface AuditBudget {
 
 interface AuditCandidate extends IntrinsicQueueBeamCandidateWitness {
   readonly state: IrregularBeamState
+  readonly parentFutureEquivalenceKey: string
   readonly score: IntrinsicStrictLocalScore
   readonly movingCollisionAreaMm2: number
   readonly containingGap: CanonicalIntrinsicGapRegion | undefined
@@ -726,8 +756,11 @@ export function runIntrinsicPartialGeometricBeam(input: {
         ...experimentalStates.map(({ state }) => state)
       ])
       const successors: AuditCandidate[] = []
+      const parentEnumerations: IntrinsicPartialGeometricBeamResult['steps'][number]['parentEnumerations'][number][] = []
       let protectedSuccessor: AuditCandidate | undefined
+      const enumerationStartedAt = performance.now()
       for (const parentState of parentStates) {
+        const parentStartedAt = performance.now()
         const outcome = yield* enumerateWithDeadlineRecovery({
           state: parentState,
           piece,
@@ -740,6 +773,15 @@ export function runIntrinsicPartialGeometricBeam(input: {
           control
         })
         if (outcome === undefined || !outcome.fullyEnumerated) break
+        parentEnumerations.push({
+          parentFutureEquivalenceKey: partialFutureEquivalenceKey(parentState),
+          protectedControl: parentState === protectedControlState,
+          generatedCandidateCount: outcome.generatedCandidateCount,
+          scoredCandidateCount: outcome.scoredCandidateCount,
+          canonicalLegalCandidateCount: outcome.canonicalLegalCandidateCount,
+          uniqueCanonicalSuccessorCount: outcome.uniqueCanonicalSuccessors.length,
+          runtimeMs: Math.max(0, performance.now() - parentStartedAt)
+        })
         successors.push(...outcome.uniqueCanonicalSuccessors)
         if (parentState === protectedControlState) {
           protectedSuccessor =
@@ -765,18 +807,51 @@ export function runIntrinsicPartialGeometricBeam(input: {
         protectedSuccessor === undefined || !partialStateCanFit(protectedSuccessor.state, input.finalSheet)
           ? undefined
           : partialBeamEntry(protectedSuccessor)
+      const selectionStartedAt = performance.now()
       const selection = selectIntrinsicPartialGeometricBeam({
         candidates: entries,
         experimentalWidth,
         ...(protectedEntry === undefined ? {} : { protectedControl: protectedEntry })
       })
+      const selectionRuntimeMs = Math.max(0, performance.now() - selectionStartedAt)
       experimentalStates = selection.retained
+      const canonicalUniqueSuccessorCount = new Set(
+        successors.map(({ canonicalGeometryKey }) => canonicalGeometryKey)
+      ).size
+      const uniqueSuccessorCount = selection.diagnostics.futureDeduplicatedCandidateCount
       steps.push({
         depth,
+        scheduledPieceId: preparedPieceId(piece),
         parentCount: parentStates.length,
-        uniqueSuccessorCount: new Set(entries.map(({ futureEquivalenceKey }) => futureEquivalenceKey))
-          .size,
+        parentEnumerations,
+        generatedCandidateCount: sumParentEnumerationField(
+          parentEnumerations,
+          'generatedCandidateCount'
+        ),
+        scoredCandidateCount: sumParentEnumerationField(parentEnumerations, 'scoredCandidateCount'),
+        canonicalLegalCandidateCount: sumParentEnumerationField(
+          parentEnumerations,
+          'canonicalLegalCandidateCount'
+        ),
+        canonicalUniqueSuccessorCount,
+        monotoneFitRejectionCount: successors.length - entries.length,
+        uniqueSuccessorCount,
+        futureEquivalenceDeduplicationCount:
+          entries.length - selection.diagnostics.futureDeduplicatedCandidateCount,
+        paretoLayerSizes: selection.diagnostics.paretoLayerSizes,
+        capacityEvictionCount: Math.max(
+          0,
+          selection.diagnostics.selectableCandidateCount - selection.retained.length
+        ),
         protectedControlKey: protectedEntry?.futureEquivalenceKey,
+        protectedControlSurvived: protectedEntry !== undefined,
+        futureEquivalenceKeyVersion: PARTIAL_FUTURE_EQUIVALENCE_KEY_VERSION,
+        occupiedDispersionVersion: OCCUPIED_DISPERSION_VERSION,
+        remainingOrderDigest: preparedOrderDigest(remainingPreparedPieces),
+        cumulativeEvaluations: budget.evaluations,
+        cumulativeRuntimeMs: Math.max(0, performance.now() - startedAt),
+        enumerationRuntimeMs: Math.max(0, selectionStartedAt - enumerationStartedAt),
+        selectionRuntimeMs,
         selectedSlots: selection.slots
       })
     }
@@ -854,6 +929,7 @@ function deduplicatePartialEntries(
 function partialBeamEntry(candidate: AuditCandidate): IntrinsicPartialBeamEntry {
   return {
     state: candidate.state,
+    parentFutureEquivalenceKey: candidate.parentFutureEquivalenceKey,
     futureEquivalenceKey: partialFutureEquivalenceKey(candidate.state),
     canonicalGeometryKey: candidate.canonicalGeometryKey,
     axes: candidate.axes,
@@ -868,6 +944,7 @@ function partialEntryFromState(state: IrregularBeamState): IntrinsicPartialBeamE
   }
   return {
     state,
+    parentFutureEquivalenceKey: partialFutureEquivalenceKey(state),
     futureEquivalenceKey: partialFutureEquivalenceKey(state),
     canonicalGeometryKey: state.canonicalOccupiedGeometryKey,
     axes,
@@ -877,10 +954,27 @@ function partialEntryFromState(state: IrregularBeamState): IntrinsicPartialBeamE
 
 function partialFutureEquivalenceKey(state: IrregularBeamState): string {
   return JSON.stringify({
+    version: PARTIAL_FUTURE_EQUIVALENCE_KEY_VERSION,
     occupied: state.canonicalOccupiedGeometryKey,
     remaining: state.remainingPreparedPieces.map(intrinsicPreparedPieceClassKey),
     unplaced: [...state.unplacedPieceIds].toSorted()
   })
+}
+
+function preparedOrderDigest(pieces: ReadonlyArray<IrregularPreparedPiece>): string {
+  return createHash('sha256')
+    .update(pieces.map(intrinsicPreparedPieceClassKey).join('\u0000'))
+    .digest('hex')
+}
+
+function sumParentEnumerationField(
+  entries: IntrinsicPartialGeometricBeamResult['steps'][number]['parentEnumerations'],
+  field:
+    | 'generatedCandidateCount'
+    | 'scoredCandidateCount'
+    | 'canonicalLegalCandidateCount'
+): number {
+  return entries.reduce((sum, entry) => sum + entry[field], 0)
 }
 
 function partialStateCanFit(state: IrregularBeamState, sheet: SheetSpec): boolean {
@@ -1276,6 +1370,7 @@ function scoreAuditCandidate(
     )[0]
   return {
     state,
+    parentFutureEquivalenceKey: partialFutureEquivalenceKey(input.state),
     pieceId: preparedPieceId(input.piece),
     transformFamily: transformFamilyKey(input.candidate.transform),
     gridPoint: { x: gridX, y: gridY },
@@ -1484,6 +1579,7 @@ function selectCalibrationCapacity(
 
 export interface IntrinsicPartialGeometricBeamCandidate {
   readonly futureEquivalenceKey: string
+  readonly parentFutureEquivalenceKey?: string
   readonly canonicalGeometryKey: string
   readonly axes: IntrinsicQueueBeamAxes
   readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
@@ -1491,11 +1587,31 @@ export interface IntrinsicPartialGeometricBeamCandidate {
 
 export interface IntrinsicPartialGeometricBeamSelection<T> {
   readonly retained: ReadonlyArray<T>
+  readonly diagnostics: {
+    readonly inputCandidateCount: number
+    readonly futureDeduplicatedCandidateCount: number
+    readonly protectedCandidateExcludedCount: number
+    readonly selectableCandidateCount: number
+    readonly paretoLayerSizes: ReadonlyArray<number>
+  }
   readonly slots: ReadonlyArray<{
     readonly role: 'breadth' | 'contact' | 'dispersion'
     readonly layer: number
     readonly visit: number
     readonly futureEquivalenceKey: string
+    readonly parentFutureEquivalenceKey: string | undefined
+    readonly canonicalGeometryKey: string
+    readonly axes: IntrinsicQueueBeamAxes
+    readonly dispersion:
+      | {
+          readonly nearestRetainedFutureEquivalenceKey: string
+          readonly voidHamming: number
+          readonly contactHamming: number
+          readonly symmetricDifferenceNumerator: string
+          readonly pairUnionDenominator: string
+          readonly symmetricDifferenceRatio: number
+        }
+      | undefined
   }>
 }
 
@@ -1532,7 +1648,11 @@ export function selectIntrinsicPartialGeometricBeam<
   const slots: Array<IntrinsicPartialGeometricBeamSelection<T>['slots'][number]> = []
   const selectedKeys = new Set<string>()
   const visits = new Map<number, number>()
-  const append = (candidate: T | undefined, role: 'breadth' | 'contact' | 'dispersion') => {
+  const append = (
+    candidate: T | undefined,
+    role: 'breadth' | 'contact' | 'dispersion',
+    dispersion?: OccupiedDispersionWitness
+  ) => {
     if (candidate === undefined || selectedKeys.has(candidate.futureEquivalenceKey)) return false
     const layer = Math.max(
       0,
@@ -1542,7 +1662,16 @@ export function selectIntrinsicPartialGeometricBeam<
     visits.set(layer, visit)
     selectedKeys.add(candidate.futureEquivalenceKey)
     retained.push(candidate)
-    slots.push({ role, layer, visit, futureEquivalenceKey: candidate.futureEquivalenceKey })
+    slots.push({
+      role,
+      layer,
+      visit,
+      futureEquivalenceKey: candidate.futureEquivalenceKey,
+      parentFutureEquivalenceKey: candidate.parentFutureEquivalenceKey,
+      canonicalGeometryKey: candidate.canonicalGeometryKey,
+      axes: candidate.axes,
+      dispersion: dispersion === undefined ? undefined : serializeOccupiedDispersion(dispersion)
+    })
     return true
   }
 
@@ -1572,14 +1701,26 @@ export function selectIntrinsicPartialGeometricBeam<
         ({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey)
       )
       const next = selectMostDispersedCandidate(available ?? [], retainedForDistance())
-      if (!append(next, 'dispersion')) continue
+      if (!append(next?.candidate, 'dispersion', next?.witness)) continue
       remaining -= 1
       addedInCycle = true
     }
     if (!addedInCycle) break
   }
 
-  return { retained, slots }
+  return {
+    retained,
+    diagnostics: {
+      inputCandidateCount: input.candidates.length,
+      futureDeduplicatedCandidateCount: unique.size,
+      protectedCandidateExcludedCount: Number(
+        protectedKey !== undefined && unique.has(protectedKey)
+      ),
+      selectableCandidateCount: selectable.length,
+      paretoLayerSizes: layers.map((layer) => layer.length)
+    },
+    slots
+  }
 }
 
 function partialNondominatedLayers<T extends IntrinsicPartialGeometricBeamCandidate>(
@@ -1650,23 +1791,51 @@ function compareBoundedContact(
 function selectMostDispersedCandidate<T extends IntrinsicPartialGeometricBeamCandidate>(
   candidates: ReadonlyArray<T>,
   retained: ReadonlyArray<T>
-): T | undefined {
-  return candidates.toSorted((first, second) => {
-    const firstDistance = minimumOccupiedDistance(first, retained)
-    const secondDistance = minimumOccupiedDistance(second, retained)
+): { readonly candidate: T; readonly witness: OccupiedDispersionWitness } | undefined {
+  const ranked = candidates.map((candidate) => ({
+    candidate,
+    witness: minimumOccupiedDistance(candidate, retained)
+  }))
+  return ranked.toSorted((first, second) => {
     return (
-      compareOccupiedDistance(secondDistance, firstDistance) ||
-      first.futureEquivalenceKey.localeCompare(second.futureEquivalenceKey)
+      compareOccupiedDistance(second.witness.distance, first.witness.distance) ||
+      first.candidate.futureEquivalenceKey.localeCompare(second.candidate.futureEquivalenceKey)
     )
   })[0]
+}
+
+interface OccupiedDispersionWitness {
+  readonly nearestRetainedFutureEquivalenceKey: string
+  readonly distance: IntrinsicOccupiedDistance
 }
 
 function minimumOccupiedDistance(
   candidate: IntrinsicPartialGeometricBeamCandidate,
   retained: ReadonlyArray<IntrinsicPartialGeometricBeamCandidate>
-): IntrinsicOccupiedDistance {
-  const distances = retained.map((member) => occupiedDistance(candidate, member))
-  return distances.toSorted(compareOccupiedDistance)[0] ?? maximumOccupiedDistance()
+): OccupiedDispersionWitness {
+  const distances = retained.map((member) => ({
+    nearestRetainedFutureEquivalenceKey: member.futureEquivalenceKey,
+    distance: occupiedDistance(candidate, member)
+  }))
+  return (
+    distances.toSorted((first, second) => compareOccupiedDistance(first.distance, second.distance))[0] ?? {
+      nearestRetainedFutureEquivalenceKey: '',
+      distance: maximumOccupiedDistance()
+    }
+  )
+}
+
+function serializeOccupiedDispersion(witness: OccupiedDispersionWitness) {
+  const { distance } = witness
+  return {
+    nearestRetainedFutureEquivalenceKey: witness.nearestRetainedFutureEquivalenceKey,
+    voidHamming: distance.voidHamming,
+    contactHamming: distance.contactHamming,
+    symmetricDifferenceNumerator: distance.symmetricDifferenceNumerator.toString(),
+    pairUnionDenominator: distance.pairUnionDenominator.toString(),
+    symmetricDifferenceRatio:
+      Number(distance.symmetricDifferenceNumerator) / Number(distance.pairUnionDenominator)
+  }
 }
 
 function occupiedDistance(

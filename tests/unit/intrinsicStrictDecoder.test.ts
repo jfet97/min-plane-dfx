@@ -625,6 +625,20 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       'b',
       'c'
     ])
+    expect(selection.diagnostics).toEqual({
+      inputCandidateCount: 4,
+      futureDeduplicatedCandidateCount: 4,
+      protectedCandidateExcludedCount: 0,
+      selectableCandidateCount: 4,
+      paretoLayerSizes: [1, 2, 1]
+    })
+    expect(selection.slots[2]?.dispersion).toEqual(
+      expect.objectContaining({
+        nearestRetainedFutureEquivalenceKey: expect.any(String),
+        symmetricDifferenceNumerator: expect.any(String),
+        pairUnionDenominator: expect.any(String)
+      })
+    )
   })
 
   it('allows only one contact turn and preserves a later dispersion slot', () => {
