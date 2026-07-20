@@ -203,11 +203,14 @@ transformed moving polygon, it intersects axis-aligned NFP segments with the
 translations that align the moving min/max bounds to the occupied min/max
 envelope. These sheet-free interior segment events enter only the experimental
 successor pool; ordinary candidates remain the sole source of the protected
-width-one winner. Exact sheetless validation filters the added points before
-scoring. A bounded cohesion representative may consume one experimental slot
-only when capacity remains after breadth and contact allocation. Canonical exact
-legality and the topology/cavity/contact axes are evaluated once per canonical
-successor after raw candidate deduplication, not once per duplicate placement.
+width-one winner. The protected lineage is completed first under an independent
+evaluation/deadline budget, so experimental parents and feature candidates
+cannot starve it. Exact sheetless validation filters the added points before
+scoring. Experimental retention uses layer breadth, at most one bounded contact
+turn, and dispersion for every remaining slot. Canonical exact legality and the
+topology/cavity/contact axes are evaluated once per canonical successor after
+raw candidate deduplication, not once per duplicate placement; failure to
+measure an exact-legal representative aborts the run explicitly.
 
 At no more than five registered points, E4 projects a relaxed state back to the
 exact geometry domain: canonicalize to the collision grid, remove both

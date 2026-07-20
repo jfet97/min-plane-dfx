@@ -248,6 +248,8 @@ export interface IntrinsicPartialGeometricBeamResult {
   readonly experimentalWidth: number
   readonly truncationReason: 'maximum-runtime' | 'maximum-evaluations' | undefined
   readonly evaluations: number
+  readonly protectedControlEvaluations: number
+  readonly experimentalEvaluations: number
   readonly runtimeMs: number
   readonly completedDepthCount: number
   readonly steps: ReadonlyArray<{
@@ -361,7 +363,7 @@ export interface IntrinsicReferenceSuccessorReachabilityAudit {
     | 'generated-with-canonical-pose-delta'
 }
 
-type IntrinsicPartialGeometricBeamRole = 'breadth' | 'contact' | 'cohesion' | 'dispersion'
+type IntrinsicPartialGeometricBeamRole = 'breadth' | 'contact' | 'dispersion'
 
 interface IntrinsicPartialGeometricBeamTraceSlot {
   readonly role: IntrinsicPartialGeometricBeamRole
@@ -873,8 +875,8 @@ export function runIntrinsicPartialGeometricBeam(input: {
   return Effect.gen(function* () {
     const startedAt = performance.now()
     const experimentalWidth = Math.max(0, Math.floor(input.experimentalWidth))
-    const budget: AuditBudget = {
-      startedAt,
+    const protectedControlBudget: AuditBudget = {
+      startedAt: performance.now(),
       maximumRuntimeMs: input.maximumRuntimeMs,
       maximumEvaluations: Math.max(1, Math.floor(input.maximumEvaluations)),
       evaluations: 0,
@@ -884,29 +886,104 @@ export function runIntrinsicPartialGeometricBeam(input: {
     const geometryKernel = yield* GeometryKernel
     const nfpIfpService = yield* NfpIfpService
     const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
-    const control: IrregularNfpIfpControl = {
+    const protectedControl: IrregularNfpIfpControl = {
       checkpoint: () =>
-        performance.now() - budget.startedAt >= budget.maximumRuntimeMs
+        performance.now() - protectedControlBudget.startedAt >=
+        protectedControlBudget.maximumRuntimeMs
           ? Effect.fail(
               new IrregularNfpIfpControlAbortError({
                 reason: 'deadline',
-                message: `partial geometric beam exceeded ${budget.maximumRuntimeMs} ms.`
+                message: `protected strict control exceeded ${protectedControlBudget.maximumRuntimeMs} ms.`
               })
             )
           : Effect.void
     }
     const initialState = IrregularBeamState.empty(input.orderedPreparedPieces)
     let protectedControlState = initialState
+    const protectedControlStates: IrregularBeamState[] = [initialState]
     let experimentalStates: ReadonlyArray<IntrinsicPartialBeamEntry> = []
     const steps: IntrinsicPartialGeometricBeamResult['steps'][number][] = []
 
     for (let depth = 0; depth < input.orderedPreparedPieces.length; depth += 1) {
-      if (auditRuntimeExpired(budget)) break
+      if (auditRuntimeExpired(protectedControlBudget)) break
       const piece = input.orderedPreparedPieces[depth]
       if (piece === undefined) continue
       const remainingPreparedPieces = input.orderedPreparedPieces.slice(depth + 1)
+      const outcome = yield* enumerateWithDeadlineRecovery({
+        state: protectedControlState,
+        piece,
+        remainingPreparedPieces,
+        budget: protectedControlBudget,
+        settings,
+        geometryKernel,
+        nfpIfpService,
+        candidateMemoScope,
+        control: protectedControl,
+        measureGapContainment: false,
+        includeEnvelopeEventCandidates: false
+      })
+      if (outcome === undefined || !outcome.fullyEnumerated) break
+      const selectedCanonicalGeometryKey = outcome.selected?.canonicalGeometryKey
+      const protectedSuccessor =
+        selectedCanonicalGeometryKey === undefined
+          ? undefined
+          : outcome.uniqueCanonicalSuccessors.find(
+              ({ canonicalGeometryKey }) => canonicalGeometryKey === selectedCanonicalGeometryKey
+            )
+      if (selectedCanonicalGeometryKey !== undefined && protectedSuccessor === undefined) {
+        return yield* Effect.fail(
+          new IntrinsicQueueBeamDiscriminatorError({
+            operation: 'measurement',
+            message:
+              'the independently budgeted protected successor was rejected by canonical admission.'
+          })
+        )
+      }
+      protectedControlState =
+        protectedSuccessor === undefined
+          ? protectedControlState.withUnplacedPiece({
+              remainingPreparedPieces,
+              unplacedPieceId: preparedPieceId(piece)
+            })
+          : protectedSuccessor.state
+      protectedControlStates.push(protectedControlState)
+    }
+    const protectedControlFinalState = protectedControlState
+
+    const experimentalBudget: AuditBudget = {
+      startedAt: performance.now(),
+      maximumRuntimeMs: input.maximumRuntimeMs,
+      maximumEvaluations: Math.max(1, Math.floor(input.maximumEvaluations)),
+      evaluations: 0,
+      truncationReason: undefined
+    }
+    const experimentalControl: IrregularNfpIfpControl = {
+      checkpoint: () =>
+        performance.now() - experimentalBudget.startedAt >= experimentalBudget.maximumRuntimeMs
+          ? Effect.fail(
+              new IrregularNfpIfpControlAbortError({
+                reason: 'deadline',
+                message: `partial geometric beam exceeded ${experimentalBudget.maximumRuntimeMs} ms.`
+              })
+            )
+          : Effect.void
+    }
+
+    for (let depth = 0; depth < input.orderedPreparedPieces.length; depth += 1) {
+      if (
+        protectedControlBudget.truncationReason !== undefined ||
+        auditRuntimeExpired(experimentalBudget)
+      ) {
+        break
+      }
+      const piece = input.orderedPreparedPieces[depth]
+      if (piece === undefined) continue
+      const remainingPreparedPieces = input.orderedPreparedPieces.slice(depth + 1)
+      const protectedParentState = protectedControlStates[depth]
+      const nextProtectedControlState = protectedControlStates[depth + 1]
+      if (protectedParentState === undefined || nextProtectedControlState === undefined) break
       const parentStates = deduplicatePartialParents([
-        protectedControlState,
+        protectedParentState,
         ...experimentalStates.map(({ state }) => state)
       ])
       const successors: AuditCandidate[] = []
@@ -919,12 +996,12 @@ export function runIntrinsicPartialGeometricBeam(input: {
           state: parentState,
           piece,
           remainingPreparedPieces,
-          budget,
+          budget: experimentalBudget,
           settings,
           geometryKernel,
           nfpIfpService,
           candidateMemoScope,
-          control,
+          control: experimentalControl,
           measureGapContainment: false,
           includeEnvelopeEventCandidates: true
         })
@@ -933,7 +1010,7 @@ export function runIntrinsicPartialGeometricBeam(input: {
           parentFutureEquivalenceDigest: digestSemanticIdentity(
             partialFutureEquivalenceKey(parentState)
           ),
-          protectedControl: parentState === protectedControlState,
+          protectedControl: parentState === protectedParentState,
           generatedCandidateCount: outcome.generatedCandidateCount,
           envelopeEventCandidateCount: outcome.envelopeEventCandidateCount,
           scoredCandidateCount: outcome.scoredCandidateCount,
@@ -945,35 +1022,30 @@ export function runIntrinsicPartialGeometricBeam(input: {
           runtimeMs: Math.max(0, performance.now() - parentStartedAt)
         })
         successors.push(...outcome.uniqueCanonicalSuccessors)
-        if (parentState === protectedControlState) {
-          const selectedCanonicalGeometryKey = outcome.selected?.canonicalGeometryKey
-          protectedSuccessor =
-            selectedCanonicalGeometryKey === undefined
-              ? undefined
-              : outcome.uniqueCanonicalSuccessors.find(
-                  ({ canonicalGeometryKey }) =>
-                    canonicalGeometryKey === selectedCanonicalGeometryKey
-                )
-          if (selectedCanonicalGeometryKey !== undefined && protectedSuccessor === undefined) {
+        if (parentState === protectedParentState) {
+          const protectedControlPlacedPiece =
+            nextProtectedControlState.placedCollisionGeometries.length >
+            protectedParentState.placedCollisionGeometries.length
+          protectedSuccessor = protectedControlPlacedPiece
+            ? outcome.uniqueCanonicalSuccessors.find(
+                ({ state }) =>
+                  partialFutureEquivalenceKey(state) ===
+                  partialFutureEquivalenceKey(nextProtectedControlState)
+              )
+            : undefined
+          if (protectedControlPlacedPiece && protectedSuccessor === undefined) {
             return yield* Effect.fail(
               new IntrinsicQueueBeamDiscriminatorError({
                 operation: 'measurement',
                 message:
-                  'the protected width-one successor was rejected by canonical admission; refusing to substitute a different comparator winner.'
+                  'the experimental expansion did not preserve the independently computed protected successor.'
               })
             )
           }
         }
       }
-      if (budget.truncationReason !== undefined) break
-      if (protectedSuccessor === undefined) {
-        protectedControlState = protectedControlState.withUnplacedPiece({
-          remainingPreparedPieces,
-          unplacedPieceId: preparedPieceId(piece)
-        })
-      } else {
-        protectedControlState = protectedSuccessor.state
-      }
+      if (experimentalBudget.truncationReason !== undefined) break
+      protectedControlState = nextProtectedControlState
       const entries = successors
         .filter(({ state }) => partialStateCanFit(state, input.finalSheet))
         .map(partialBeamEntry)
@@ -1031,7 +1103,8 @@ export function runIntrinsicPartialGeometricBeam(input: {
         futureEquivalenceKeyVersion: PARTIAL_FUTURE_EQUIVALENCE_KEY_VERSION,
         occupiedDispersionVersion: OCCUPIED_DISPERSION_VERSION,
         remainingOrderDigest: preparedOrderDigest(remainingPreparedPieces),
-        cumulativeEvaluations: budget.evaluations,
+        cumulativeEvaluations:
+          protectedControlBudget.evaluations + experimentalBudget.evaluations,
         cumulativeRuntimeMs: Math.max(0, performance.now() - startedAt),
         enumerationRuntimeMs: Math.max(0, selectionStartedAt - enumerationStartedAt),
         candidateGenerationRuntimeMs: sumParentEnumerationField(
@@ -1052,8 +1125,8 @@ export function runIntrinsicPartialGeometricBeam(input: {
     }
 
     const completeEntries = deduplicatePartialEntries([
-      ...(partialStateCanFit(protectedControlState, input.finalSheet)
-        ? [partialEntryFromState(protectedControlState)]
+      ...(partialStateCanFit(protectedControlFinalState, input.finalSheet)
+        ? [partialEntryFromState(protectedControlFinalState)]
         : []),
       ...experimentalStates
     ]).filter(
@@ -1094,14 +1167,18 @@ export function runIntrinsicPartialGeometricBeam(input: {
     const winner = finalists.find(({ metrics }) => metrics.canonicalGeometryHash === winningHash)
     return {
       status:
-        budget.truncationReason !== undefined
+        protectedControlBudget.truncationReason !== undefined ||
+        experimentalBudget.truncationReason !== undefined
           ? 'truncated'
           : winner === undefined
             ? 'incomplete'
             : 'completed',
       experimentalWidth,
-      truncationReason: budget.truncationReason,
-      evaluations: budget.evaluations,
+      truncationReason:
+        protectedControlBudget.truncationReason ?? experimentalBudget.truncationReason,
+      evaluations: protectedControlBudget.evaluations + experimentalBudget.evaluations,
+      protectedControlEvaluations: protectedControlBudget.evaluations,
+      experimentalEvaluations: experimentalBudget.evaluations,
       runtimeMs: Math.max(0, performance.now() - startedAt),
       completedDepthCount: steps.length,
       steps,
@@ -1254,7 +1331,7 @@ function calibrateCommensurateQueue(
   input: CommensurateQueueCalibrationInput
 ): Effect.Effect<
   IntrinsicCommensurateQueueReport,
-  Exclude<AuditError, IntrinsicQueueBeamDiscriminatorError>,
+  AuditError,
   never
 > {
   return Effect.gen(function* () {
@@ -1395,7 +1472,7 @@ function completeCommensurateOrder(input: CommensurateOrderInput): Effect.Effect
       readonly report: IntrinsicCommensurateQueueOrderReport
     }
   | undefined,
-  Exclude<AuditError, IntrinsicQueueBeamDiscriminatorError>,
+  AuditError,
   never
 > {
   return Effect.gen(function* () {
@@ -1479,7 +1556,7 @@ function enumerateWithDeadlineRecovery(
   input: EnumerationInput
 ): Effect.Effect<
   EnumeratedSuccessors | undefined,
-  Exclude<AuditError, IntrinsicQueueBeamDiscriminatorError>,
+  AuditError,
   never
 > {
   return enumerateSuccessors(input).pipe(
@@ -1508,6 +1585,7 @@ function enumerateSuccessors(
   input: EnumerationInput
 ): Effect.Effect<
   EnumeratedSuccessors,
+  | IntrinsicQueueBeamDiscriminatorError
   | IrregularNestingNotImplementedError
   | IrregularGeometryInputError
   | IrregularNfpIfpControlAbortError
@@ -1580,6 +1658,14 @@ function enumerateSuccessors(
             familyWinners,
             uniqueCanonicalSuccessors
           })
+          if (finalized.measurementFailureCanonicalGeometryKeys.length > 0) {
+            return yield* Effect.fail(
+              new IntrinsicQueueBeamDiscriminatorError({
+                operation: 'measurement',
+                message: `exact-legal canonical successors failed topology measurement: ${finalized.measurementFailureCanonicalGeometryKeys.join(', ')}`
+              })
+            )
+          }
           candidateScoringRuntimeMs += finalized.runtimeMs
           canonicalAdmissionRuntimeMs += finalized.canonicalAdmissionRuntimeMs
           return {
@@ -1622,6 +1708,14 @@ function enumerateSuccessors(
       familyWinners,
       uniqueCanonicalSuccessors
     })
+    if (finalized.measurementFailureCanonicalGeometryKeys.length > 0) {
+      return yield* Effect.fail(
+        new IntrinsicQueueBeamDiscriminatorError({
+          operation: 'measurement',
+          message: `exact-legal canonical successors failed topology measurement: ${finalized.measurementFailureCanonicalGeometryKeys.join(', ')}`
+        })
+      )
+    }
     candidateScoringRuntimeMs += finalized.runtimeMs
     canonicalAdmissionRuntimeMs += finalized.canonicalAdmissionRuntimeMs
     canonicalLegalCandidateCount = finalized.canonicalLegalCandidateCount
@@ -1839,10 +1933,12 @@ function measureEnumeratedAuditCandidates(input: {
   readonly runtimeMs: number
   readonly canonicalAdmissionRuntimeMs: number
   readonly canonicalLegalCandidateCount: number
+  readonly measurementFailureCanonicalGeometryKeys: ReadonlyArray<string>
 } {
   const startedAt = performance.now()
   let canonicalAdmissionRuntimeMs = 0
   let canonicalLegalCandidateCount = 0
+  const measurementFailureCanonicalGeometryKeys: string[] = []
   const uniqueCanonicalSuccessors = [...input.uniqueCanonicalSuccessors.values()].flatMap(
     (candidate) => {
       const admissionStartedAt = performance.now()
@@ -1851,6 +1947,9 @@ function measureEnumeratedAuditCandidates(input: {
       if (!canonicalLegal) return []
       canonicalLegalCandidateCount += 1
       const measured = measureAuditCandidate(candidate)
+      if (measured === undefined) {
+        measurementFailureCanonicalGeometryKeys.push(candidate.canonicalGeometryKey)
+      }
       return measured === undefined ? [] : [measured]
     }
   )
@@ -1868,7 +1967,8 @@ function measureEnumeratedAuditCandidates(input: {
       performance.now() - startedAt - canonicalAdmissionRuntimeMs
     ),
     canonicalAdmissionRuntimeMs,
-    canonicalLegalCandidateCount
+    canonicalLegalCandidateCount,
+    measurementFailureCanonicalGeometryKeys
   }
 }
 
@@ -2560,12 +2660,6 @@ export function selectIntrinsicPartialGeometricBeam<
       .toSorted(comparePartialContactCandidate)[0]
     if (append(contact, 'contact')) remaining -= 1
   }
-  if (remaining >= 2) {
-    const cohesion = selectable
-      .filter(({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey))
-      .toSorted(comparePartialCohesionCandidate)[0]
-    if (append(cohesion, 'cohesion')) remaining -= 1
-  }
 
   const retainedForDistance = (): ReadonlyArray<T> =>
     input.protectedControl === undefined ? retained : [input.protectedControl, ...retained]
@@ -2654,18 +2748,6 @@ function comparePartialContactCandidate(
 ): number {
   return (
     compareBoundedContact(first.axes, second.axes) ||
-    compareCompactness(first.axes, second.axes) ||
-    compareVoids(first.axes, second.axes) ||
-    first.futureEquivalenceKey.localeCompare(second.futureEquivalenceKey)
-  )
-}
-
-function comparePartialCohesionCandidate(
-  first: IntrinsicPartialGeometricBeamCandidate,
-  second: IntrinsicPartialGeometricBeamCandidate
-): number {
-  return (
-    compareFragmentation(first.axes, second.axes) ||
     compareCompactness(first.axes, second.axes) ||
     compareVoids(first.axes, second.axes) ||
     first.futureEquivalenceKey.localeCompare(second.futureEquivalenceKey)

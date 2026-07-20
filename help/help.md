@@ -278,10 +278,13 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   Evidence is under
   `/private/tmp/min-plane-provenance/v7-envelope-events-1d527bc-first-miss/`
   and `/private/tmp/min-plane-provenance/v7-envelope-events-1d527bc-triangle-w3/`.
-- Commit `d1130fc` adds one bounded cohesion slot when capacity permits. It
-  recovers the delayed-value depth-1 witness at widths 7/12, but does not force
+- Commit `d1130fc` tested one bounded cohesion slot when capacity permits. It
+  recovers the delayed-value depth-1 pose at widths 7/12, but does not force
   the historical lineage: the generated depth-2 prefix remains only rank 3 in
-  Pareto layer 7. Commit `2411acc` stages expensive exact topology measurement
+  Pareto layer 7. The slot was removed after review because it spent a second
+  contact-derived selection turn outside the approved breadth/contact/dispersion
+  contract, and no completed width-3 result exercised it. Commit `2411acc`
+  stages expensive exact topology measurement
   after canonical deduplication because Mixed still reached only 55/61 depths
   in 300 seconds. The staged 360-second run completes all 61 depths in
   `320.989 s` at `431,558.250585 mm2`, zero holes, but only `17/2` contacts and

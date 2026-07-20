@@ -23,13 +23,14 @@ Therefore:
 
 1. **completed:** localize and repair the demonstrated generic finite-feature
    omission without changing the protected control;
-2. **completed:** establish a reachable delayed-value witness with complete
-   source and endpoint provenance;
+2. **pending:** establish a reachable delayed-value witness with complete
+   source and endpoint provenance; the historical pose is useful for candidate-
+   reachability diagnostics but is not an admissible capacity witness;
 3. **completed:** make one cold beam-only Mixed pilot complete by staging exact
    scoring/topology work after canonical deduplication;
-4. **next:** run the planned paired commensurate two-piece reorder ablation at
-   fixed width 3, because Triangle improved while Mixed remained below the
-   existing reconstruction frontier;
+4. **next:** profile and run the bounded commensurate-only cost pilot. A live
+   fixed-width cap-0/cap-1 pair is eligible only if both cells are projected to
+   complete under one frozen budget;
 5. widen the beam only after runtime is comfortably below the research ceiling
    and a sourced delayed-value neighborhood—not one historical pose—justifies
    the extra capacity.
@@ -198,10 +199,13 @@ The deeper calibration at
 then generated the historical prefixes through depth 3. At depth 1 the useful
 state is Pareto layer 1, compactness rank 11, fragmentation rank 1, and void rank
 13; the previous selector evicted it even at total capacity 13. Commit
-`d1130fc` adds one bounded cohesion representative only when at least two slots
-remain after breadth/contact allocation. The role trace at
+`d1130fc` tested one bounded cohesion representative only when at least two slots
+remained after breadth/contact allocation. The role trace at
 `/private/tmp/min-plane-provenance/v7-cohesion-slot-c05a0a2-layer-rank/report.json`
-shows the state survives as `cohesion` at widths 7 and 12. Depth 2 is generated
+shows the state survives as `cohesion` at widths 7 and 12. This role was removed
+after review because it consumed a second contact-derived turn outside the
+approved selector contract and neither completed width-3 gate exercised it.
+Depth 2 is generated
 but remains unretained: it is Pareto layer 7 and rank 3 within that layer. That
 is not evidence for forcing the historical motif; it is evidence that any later
 deep-layer policy must be justified by completed quality, not lineage nostalgia.
@@ -233,7 +237,9 @@ same canonical hash and metrics while finishing in `287.698 s`. Canonical-
 admission time falls from `85.375 s` to `52.078 s`; the immutable report is
 `/private/tmp/min-plane-provenance/v7-staged-admission-28e8db7-mixed-w3-300s/report.json`.
 This closes the five-minute width-3 runtime gate but cannot change the quality
-decision.
+decision. It also leaves too little headroom for a live reorder pair: cap 0 alone
+uses more than 95% of the 300-second abort. The next executable reorder step is
+therefore the commensurate-only profiling/cost pilot specified below.
 
 ## What The Completed Proofs Rule Out
 
@@ -485,7 +491,9 @@ jobs.
   Pareto dominance.
 - Keep the protected pure-growth control outside experimental capacity. Define
   `experimentalWidth` as the number of additional retained states; total live
-  states are therefore at most `1 + experimentalWidth`.
+  states are therefore at most `1 + experimentalWidth`. Complete the strict
+  ordinary-candidate control under an independent evaluation/deadline budget
+  before experimental expansion so added candidates or parents cannot starve it.
 - Use deterministic bounded-breadth frontier-layer retention. For experimental
   width `W > 0`, let breadth `B = min(nonEmptyLayerCount, ceil(W / 2))`. First
   take one representative from `L0..L(B-1)` in ascending layer order. The first
@@ -556,6 +564,11 @@ For each synchronized depth:
    full;
 7. carry parent identity and the actual selected placement into the next depth;
 8. archive complete legal states under the existing completed-layout policy.
+
+The strict protected lineage is completed first under its own budget and uses
+ordinary candidates only. The experimental arm has a separate equal-sized
+budget. Report both evaluation counts and their sum; an experimental truncation
+cannot erase or alter the protected control.
 
 Sheet dimensions participate only in candidate legality and the monotone
 q0/q90 fit-feasibility gate. They never enter compactness ranking. This preserves
@@ -1226,21 +1239,17 @@ and admits only Clipper2-legal endpoints to the common archive.
 
 ## Immediate Next Action
 
-Run one bounded provenance audit for the historical Mixed depth-1 pose. Record
-raw source occurrence, point deduplication, direct legality, canonical legality,
-nearest canonical pose delta, and a fresh-memo replay. Then follow exactly one
-branch:
+Profile the existing commensurate discovery and symmetric two-order completion
+path, then run the bounded commensurate-only cold cost pilot. Reuse the selected
+alternate discovery enumeration, skip unrelated continuations, and record the
+separate discovery, canonical-admission, topology, and completion costs. Do not
+run a live cap-1 cell merely because width 3 completed: the cap-0 Mixed run used
+`287.698 s` of a `300 s` abort and leaves no fair paired budget.
 
-- if a generic filter loses an otherwise valid pose, repair that boundary;
-- if the raw finite feature is absent, add only that demonstrated bounded
-  geometry-derived feature family;
-- if feature coverage passes, reject this pose as the capacity witness and test
-  Abey-style order reconstruction separately by complete endpoint quality.
-
-Next, export or wrap one reachable delayed-value lineage with its origin commit,
-local-geometry digest, expected finalized hash/rotation, and exact metrics.
-Before any width sweep, stage or cache scoring/topology work until one cold
-Mixed beam-only pilot completes within its declared budget. Only then calibrate
-width/horizon and run paired cap-0/cap-1 cells at successful fixed widths. Do
-not enable live reordering, the stagnation kick, or Sparrow-style coordinated
-movement before those gates have complete endpoints and reviewed traces.
+In parallel with that cost work, export or wrap one reachable delayed-value
+lineage with its origin commit, local-geometry digest, expected finalized
+hash/rotation, and exact metrics. Only after the cost pilot shows that cap 0 and
+cap 1 can both complete under the same frozen budget should the fixed-width
+paired ablation run. Do not enable the stagnation kick or Sparrow-style
+coordinated movement before those gates have complete endpoints and reviewed
+traces.

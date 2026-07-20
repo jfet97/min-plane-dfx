@@ -293,6 +293,11 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(result.status).toBe('completed')
     expect(result.completedDepthCount).toBe(pieces.length)
     expect(result.winner?.placedCollisionGeometries).toHaveLength(pieces.length)
+    expect(result.protectedControlEvaluations).toBeGreaterThan(0)
+    expect(result.experimentalEvaluations).toBeGreaterThan(0)
+    expect(result.evaluations).toBe(
+      result.protectedControlEvaluations + result.experimentalEvaluations
+    )
     expect(result.steps.every(({ selectedSlots }) => selectedSlots.length <= 3)).toBe(true)
   })
 
@@ -319,10 +324,53 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     )
 
     expect(control.status).toBe('completed')
+    expect(control.protectedControlEvaluations).toBeGreaterThan(0)
     expect(control.steps.every(({ selectedSlots }) => selectedSlots.length === 0)).toBe(true)
     expect(control.winner?.canonicalGeometryHash).toBe(strict.canonicalGeometryHash)
     expect(control.winner?.terminalRotationDeg).toBe(strict.terminalRotationDeg)
     expect(control.winner?.placedCollisionGeometries).toEqual(strict.placedCollisionGeometries)
+  })
+
+  it('keeps the completed protected control when experimental expansion exhausts its budget', async () => {
+    const pieces = [
+      preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('third', rectanglePoints(1, 2), [transform(0, 0), transform(1, 90)])
+    ]
+    const finalSheet = sheet(20, 10)
+    const strict = await decode(finalSheet, pieces)
+    const calibrated = await Effect.runPromise(
+      runIntrinsicPartialGeometricBeam({
+        orderedPreparedPieces: pieces,
+        finalSheet,
+        experimentalWidth: 0,
+        maximumRuntimeMs: 10_000,
+        maximumEvaluations: 20_000
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+    const truncated = await Effect.runPromise(
+      runIntrinsicPartialGeometricBeam({
+        orderedPreparedPieces: pieces,
+        finalSheet,
+        experimentalWidth: 3,
+        maximumRuntimeMs: 10_000,
+        maximumEvaluations: calibrated.protectedControlEvaluations
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+
+    expect(truncated.status).toBe('truncated')
+    expect(truncated.protectedControlEvaluations).toBe(calibrated.protectedControlEvaluations)
+    expect(truncated.finalists.map(({ canonicalGeometryHash }) => canonicalGeometryHash)).toContain(
+      strict.canonicalGeometryHash
+    )
   })
 
   it('classifies a generated canonical successor as exactly reachable', async () => {
@@ -726,7 +774,6 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     })
 
     expect(selection.slots.filter(({ role }) => role === 'contact')).toHaveLength(1)
-    expect(selection.slots.filter(({ role }) => role === 'cohesion')).toHaveLength(1)
     expect(selection.slots.filter(({ role }) => role === 'dispersion').length).toBeGreaterThan(0)
     expect(selection.slots).toHaveLength(7)
   })
