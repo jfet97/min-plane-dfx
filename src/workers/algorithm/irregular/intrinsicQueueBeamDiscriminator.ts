@@ -1581,11 +1581,12 @@ function enumerateSuccessors(
             uniqueCanonicalSuccessors
           })
           candidateScoringRuntimeMs += finalized.runtimeMs
+          canonicalAdmissionRuntimeMs += finalized.canonicalAdmissionRuntimeMs
           return {
             generatedCandidateCount,
             envelopeEventCandidateCount,
             scoredCandidateCount,
-            canonicalLegalCandidateCount,
+            canonicalLegalCandidateCount: finalized.canonicalLegalCandidateCount,
             candidateGenerationRuntimeMs,
             candidateScoringRuntimeMs,
             canonicalAdmissionRuntimeMs,
@@ -1611,14 +1612,6 @@ function enumerateSuccessors(
         ) {
           familyWinners.set(scored.transformFamily, scored)
         }
-        const canonicalAdmissionStartedAt = performance.now()
-        const canonicalLegal = isCanonicalSheetlessStateLegal(scored.state)
-        canonicalAdmissionRuntimeMs += Math.max(
-          0,
-          performance.now() - canonicalAdmissionStartedAt
-        )
-        if (!canonicalLegal) continue
-        canonicalLegalCandidateCount += 1
         const incumbent = uniqueCanonicalSuccessors.get(scored.canonicalGeometryKey)
         if (incumbent === undefined || compareCandidateIdentity(scored, incumbent) < 0) {
           uniqueCanonicalSuccessors.set(scored.canonicalGeometryKey, scored)
@@ -1630,6 +1623,8 @@ function enumerateSuccessors(
       uniqueCanonicalSuccessors
     })
     candidateScoringRuntimeMs += finalized.runtimeMs
+    canonicalAdmissionRuntimeMs += finalized.canonicalAdmissionRuntimeMs
+    canonicalLegalCandidateCount = finalized.canonicalLegalCandidateCount
     return {
       generatedCandidateCount,
       envelopeEventCandidateCount,
@@ -1842,10 +1837,19 @@ function measureEnumeratedAuditCandidates(input: {
   readonly uniqueCanonicalSuccessors: ReadonlyArray<AuditCandidate>
   readonly selected: AuditCandidate | undefined
   readonly runtimeMs: number
+  readonly canonicalAdmissionRuntimeMs: number
+  readonly canonicalLegalCandidateCount: number
 } {
   const startedAt = performance.now()
+  let canonicalAdmissionRuntimeMs = 0
+  let canonicalLegalCandidateCount = 0
   const uniqueCanonicalSuccessors = [...input.uniqueCanonicalSuccessors.values()].flatMap(
     (candidate) => {
+      const admissionStartedAt = performance.now()
+      const canonicalLegal = isCanonicalSheetlessStateLegal(candidate.state)
+      canonicalAdmissionRuntimeMs += Math.max(0, performance.now() - admissionStartedAt)
+      if (!canonicalLegal) return []
+      canonicalLegalCandidateCount += 1
       const measured = measureAuditCandidate(candidate)
       return measured === undefined ? [] : [measured]
     }
@@ -1859,7 +1863,12 @@ function measureEnumeratedAuditCandidates(input: {
   return {
     uniqueCanonicalSuccessors,
     selected,
-    runtimeMs: Math.max(0, performance.now() - startedAt)
+    runtimeMs: Math.max(
+      0,
+      performance.now() - startedAt - canonicalAdmissionRuntimeMs
+    ),
+    canonicalAdmissionRuntimeMs,
+    canonicalLegalCandidateCount
   }
 }
 
