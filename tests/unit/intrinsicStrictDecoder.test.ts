@@ -359,6 +359,8 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(audit.classification).toBe('reachable-exact-successor')
     expect(audit.directLegal).toBe(true)
     expect(audit.exactTargetGenerated).toBe(true)
+    expect(audit.envelopeEventCandidateCount).toBeGreaterThan(0)
+    expect(audit.exactTargetEnvelopeEventGenerated).toBe(true)
     expect(audit.targetCanonicalLegal).toBe(true)
     expect(audit.targetMatchesExpectedCanonicalGeometry).toBe(true)
     expect(audit.freshRunsConsistent).toBe(true)

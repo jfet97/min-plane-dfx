@@ -251,6 +251,7 @@ export interface IntrinsicPartialGeometricBeamResult {
       readonly parentFutureEquivalenceDigest: string
       readonly protectedControl: boolean
       readonly generatedCandidateCount: number
+      readonly envelopeEventCandidateCount: number
       readonly scoredCandidateCount: number
       readonly canonicalLegalCandidateCount: number
       readonly uniqueCanonicalSuccessorCount: number
@@ -260,6 +261,7 @@ export interface IntrinsicPartialGeometricBeamResult {
       readonly runtimeMs: number
     }>
     readonly generatedCandidateCount: number
+    readonly envelopeEventCandidateCount: number
     readonly scoredCandidateCount: number
     readonly canonicalLegalCandidateCount: number
     readonly canonicalUniqueSuccessorCount: number
@@ -329,6 +331,8 @@ export interface IntrinsicReferenceSuccessorReachabilityAudit {
   readonly generatedCandidateCount: number
   readonly exactTargetGenerated: boolean
   readonly exactTargetSourceMask: number | undefined
+  readonly envelopeEventCandidateCount: number
+  readonly exactTargetEnvelopeEventGenerated: boolean
   readonly nearestGeneratedCandidate:
     | {
         readonly gridX: number
@@ -401,6 +405,7 @@ interface AuditCandidate extends IntrinsicQueueBeamCandidateWitness {
 
 interface EnumeratedSuccessors {
   readonly generatedCandidateCount: number
+  readonly envelopeEventCandidateCount: number
   readonly scoredCandidateCount: number
   readonly canonicalLegalCandidateCount: number
   readonly candidateGenerationRuntimeMs: number
@@ -488,7 +493,8 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
         geometryKernel,
         nfpIfpService,
         candidateMemoScope,
-        control
+        control,
+        includeEnvelopeEventCandidates: true
       })
       if (scheduledOutcome === undefined || !scheduledOutcome.fullyEnumerated) break
       const scheduledSuccessors = scheduledOutcome.uniqueCanonicalSuccessors
@@ -511,7 +517,8 @@ export function runIntrinsicQueueBeamDiscriminator(input: {
           nfpIfpService,
           candidateMemoScope,
           control,
-          measureGapContainment: false
+          measureGapContainment: false,
+          includeEnvelopeEventCandidates: true
         })
         if (referenceOutcome === undefined || !referenceOutcome.fullyEnumerated) break
         const referenceSuccessors = referenceOutcome.uniqueCanonicalSuccessors
@@ -884,7 +891,8 @@ export function runIntrinsicPartialGeometricBeam(input: {
           nfpIfpService,
           candidateMemoScope,
           control,
-          measureGapContainment: false
+          measureGapContainment: false,
+          includeEnvelopeEventCandidates: true
         })
         if (outcome === undefined || !outcome.fullyEnumerated) break
         parentEnumerations.push({
@@ -893,6 +901,7 @@ export function runIntrinsicPartialGeometricBeam(input: {
           ),
           protectedControl: parentState === protectedControlState,
           generatedCandidateCount: outcome.generatedCandidateCount,
+          envelopeEventCandidateCount: outcome.envelopeEventCandidateCount,
           scoredCandidateCount: outcome.scoredCandidateCount,
           canonicalLegalCandidateCount: outcome.canonicalLegalCandidateCount,
           uniqueCanonicalSuccessorCount: outcome.uniqueCanonicalSuccessors.length,
@@ -958,6 +967,10 @@ export function runIntrinsicPartialGeometricBeam(input: {
         generatedCandidateCount: sumParentEnumerationField(
           parentEnumerations,
           'generatedCandidateCount'
+        ),
+        envelopeEventCandidateCount: sumParentEnumerationField(
+          parentEnumerations,
+          'envelopeEventCandidateCount'
         ),
         scoredCandidateCount: sumParentEnumerationField(parentEnumerations, 'scoredCandidateCount'),
         canonicalLegalCandidateCount: sumParentEnumerationField(
@@ -1167,6 +1180,7 @@ function sumParentEnumerationField(
   entries: IntrinsicPartialGeometricBeamResult['steps'][number]['parentEnumerations'],
   field:
     | 'generatedCandidateCount'
+    | 'envelopeEventCandidateCount'
     | 'scoredCandidateCount'
     | 'canonicalLegalCandidateCount'
     | 'candidateGenerationRuntimeMs'
@@ -1453,6 +1467,7 @@ interface EnumerationInput {
   readonly candidateMemoScope: IrregularNfpIfpCandidateMemoScope
   readonly control: IrregularNfpIfpControl
   readonly measureGapContainment?: boolean
+  readonly includeEnvelopeEventCandidates?: boolean
 }
 
 function enumerateSuccessors(
@@ -1465,6 +1480,7 @@ function enumerateSuccessors(
 > {
   return Effect.gen(function* () {
     let generatedCandidateCount = 0
+    let envelopeEventCandidateCount = 0
     let scoredCandidateCount = 0
     let canonicalLegalCandidateCount = 0
     let candidateGenerationRuntimeMs = 0
@@ -1485,7 +1501,7 @@ function enumerateSuccessors(
       })
       const movingCollisionAreaMm2 = canonicalCollisionAreaMm2(moving)
       if (movingCollisionAreaMm2 === undefined) continue
-      const candidates =
+      const ordinaryCandidates =
         input.state.placedCollisionGeometries.length === 0
           ? originAnchorCandidates(moving)
           : yield* input.nfpIfpService.generatePlacementCandidates({
@@ -1498,15 +1514,37 @@ function enumerateSuccessors(
               candidateMemoScope: input.candidateMemoScope,
               control: input.control
             })
+      const envelopeEventCandidates = input.includeEnvelopeEventCandidates
+        ? yield* generateIntrinsicEnvelopeEventCandidates({
+            state: input.state,
+            moving,
+            settings: input.settings,
+            nfpIfpService: input.nfpIfpService,
+            control: input.control
+          })
+        : []
+      const ordinaryKeys = new Set(ordinaryCandidates.map(candidateGridIdentity))
+      const addedEnvelopeCandidates = envelopeEventCandidates.filter(
+        (candidate) => !ordinaryKeys.has(candidateGridIdentity(candidate))
+      )
+      const candidates = [
+        ...ordinaryCandidates.map((candidate) => ({ candidate, protectedEligible: true })),
+        ...addedEnvelopeCandidates.map((candidate) => ({
+          candidate,
+          protectedEligible: false
+        }))
+      ]
       candidateGenerationRuntimeMs += Math.max(
         0,
         performance.now() - candidateGenerationStartedAt
       )
       generatedCandidateCount += candidates.length
-      for (const candidate of candidates) {
+      envelopeEventCandidateCount += addedEnvelopeCandidates.length
+      for (const { candidate, protectedEligible } of candidates) {
         if (!takeAuditEvaluation(input.budget)) {
           return {
             generatedCandidateCount,
+            envelopeEventCandidateCount,
             scoredCandidateCount,
             canonicalLegalCandidateCount,
             candidateGenerationRuntimeMs,
@@ -1523,7 +1561,10 @@ function enumerateSuccessors(
         if (scored === undefined) continue
         scoredCandidateCount += 1
         const familyWinner = familyWinners.get(scored.transformFamily)
-        if (familyWinner === undefined || compareLocalScore(scored.score, familyWinner.score) < 0) {
+        if (
+          protectedEligible &&
+          (familyWinner === undefined || compareLocalScore(scored.score, familyWinner.score) < 0)
+        ) {
           familyWinners.set(scored.transformFamily, scored)
         }
         const canonicalAdmissionStartedAt = performance.now()
@@ -1542,6 +1583,7 @@ function enumerateSuccessors(
     }
     return {
       generatedCandidateCount,
+      envelopeEventCandidateCount,
       scoredCandidateCount,
       canonicalLegalCandidateCount,
       candidateGenerationRuntimeMs,
@@ -1551,6 +1593,122 @@ function enumerateSuccessors(
       selected: selectIntrinsicStrictFamilyWinner([...familyWinners.values()], 'pure-growth'),
       fullyEnumerated: true
     }
+  })
+}
+
+/**
+ * Adds sheet-independent contact points where an axis-aligned NFP segment
+ * crosses an occupied-envelope alignment event. Ordinary NFP vertices remain
+ * the protected control; these bounded interior points are experimental
+ * successors only.
+ */
+export function generateIntrinsicEnvelopeEventCandidates(input: {
+  readonly state: IrregularBeamState
+  readonly moving: TransformedCollisionGeometry
+  readonly settings: IrregularNestingSettings
+  readonly nfpIfpService: NfpIfpServiceShape
+  readonly control?: IrregularNfpIfpControl
+}): Effect.Effect<
+  ReadonlyArray<IrregularPlacementCandidate>,
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError
+> {
+  return Effect.gen(function* () {
+    const occupied = input.state.translatedCollisionBounds
+    if (occupied === undefined || input.state.placedCollisionGeometries.length === 0) return []
+
+    const occupiedMinX = toGridMm(occupied.minX)
+    const occupiedMaxX = toGridMm(occupied.maxX)
+    const occupiedMinY = toGridMm(occupied.minY)
+    const occupiedMaxY = toGridMm(occupied.maxY)
+    const movingMinX = toGridMm(input.moving.bounds.minX)
+    const movingMaxX = toGridMm(input.moving.bounds.maxX)
+    const movingMinY = toGridMm(input.moving.bounds.minY)
+    const movingMaxY = toGridMm(input.moving.bounds.maxY)
+    if (
+      occupiedMinX === undefined ||
+      occupiedMaxX === undefined ||
+      occupiedMinY === undefined ||
+      occupiedMaxY === undefined ||
+      movingMinX === undefined ||
+      movingMaxX === undefined ||
+      movingMinY === undefined ||
+      movingMaxY === undefined
+    ) {
+      return []
+    }
+
+    const xEvents = new Set([
+      occupiedMinX - movingMinX,
+      occupiedMinX - movingMaxX,
+      occupiedMaxX - movingMinX,
+      occupiedMaxX - movingMaxX
+    ])
+    const yEvents = new Set([
+      occupiedMinY - movingMinY,
+      occupiedMinY - movingMaxY,
+      occupiedMaxY - movingMinY,
+      occupiedMaxY - movingMaxY
+    ])
+    const candidatePoints = new Map<string, { readonly x: number; readonly y: number }>()
+    const addPoint = (x: number, y: number) => {
+      candidatePoints.set(`${x},${y}`, { x, y })
+    }
+
+    for (const fixed of input.state.placedCollisionGeometries) {
+      yield* input.control?.checkpoint('candidate-points') ?? Effect.void
+      const nfp = yield* input.nfpIfpService.computeNfp({
+        fixed,
+        moving: input.moving,
+        settings: input.settings.geometry
+      })
+      const boundary = nfp.boundary.points.flatMap((point) => {
+        const x = toGridMm(point.x)
+        const y = toGridMm(point.y)
+        return x === undefined || y === undefined ? [] : [{ x, y }]
+      })
+      for (let index = 0; index < boundary.length; index += 1) {
+        const start = boundary[index]
+        const end = boundary[(index + 1) % boundary.length]
+        if (start === undefined || end === undefined) continue
+        if (start.y === end.y) {
+          const minimumX = Math.min(start.x, end.x)
+          const maximumX = Math.max(start.x, end.x)
+          for (const x of xEvents) {
+            if (x >= minimumX && x <= maximumX) addPoint(x, start.y)
+          }
+        }
+        if (start.x === end.x) {
+          const minimumY = Math.min(start.y, end.y)
+          const maximumY = Math.max(start.y, end.y)
+          for (const y of yEvents) {
+            if (y >= minimumY && y <= maximumY) addPoint(start.x, y)
+          }
+        }
+      }
+    }
+
+    const candidates: IrregularPlacementCandidate[] = []
+    for (const point of [...candidatePoints.values()].toSorted(
+      (first, second) => first.y - second.y || first.x - second.x
+    )) {
+      yield* input.control?.checkpoint('candidate-points') ?? Effect.void
+      const candidate = new IrregularPlacementCandidate({
+        pieceId: input.moving.sourcePieceId,
+        transform: input.moving.transform,
+        point: { x: fromGrid(point.x), y: fromGrid(point.y) },
+        diagnostics: []
+      })
+      const legal = yield* PlacementValidation.checkSheetless({
+        placed: input.state.placedCollisionGeometries,
+        placedCollisionIndex: input.state.placedCollisionIndex,
+        moving: input.moving,
+        candidate
+      })
+      if (legal) candidates.push(candidate)
+    }
+    return candidates
   })
 }
 
@@ -1776,6 +1934,26 @@ export function auditIntrinsicReferenceSuccessorReachability(input: {
     const exactTargetSourceMask = firstRun.provenance?.legalCandidateSources.find(
       ({ gridX, gridY }) => gridX === targetGridX && gridY === targetGridY
     )?.sourceMask
+    const envelopeEventCandidates = yield* generateIntrinsicEnvelopeEventCandidates({
+      state: input.parentState,
+      moving,
+      settings,
+      nfpIfpService
+    }).pipe(
+      Effect.catchTag('IrregularNfpIfpControlAbortError', (error) =>
+        Effect.fail(
+          new IntrinsicQueueBeamDiscriminatorError({
+            operation: 'measurement',
+            message: error.message
+          })
+        )
+      )
+    )
+    const exactTargetEnvelopeEventGenerated = envelopeEventCandidates.some((candidate) => {
+      const x = toGridMm(candidate.point.x)
+      const y = toGridMm(candidate.point.y)
+      return x === targetGridX && y === targetGridY
+    })
     const nearestGeneratedCandidate = firstRun.candidates
       .flatMap((candidate) => {
         const gridX = toGridMm(candidate.point.x)
@@ -1860,6 +2038,8 @@ export function auditIntrinsicReferenceSuccessorReachability(input: {
       generatedCandidateCount: firstRun.candidates.length,
       exactTargetGenerated: exactTarget !== undefined,
       exactTargetSourceMask,
+      envelopeEventCandidateCount: envelopeEventCandidates.length,
+      exactTargetEnvelopeEventGenerated,
       nearestGeneratedCandidate,
       targetScored: targetScored !== undefined,
       targetCanonicalLegal,
