@@ -28,6 +28,7 @@ import {
   type IntrinsicStrictComparatorMode,
   type IntrinsicStrictCompletedMetrics
 } from '../../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
+import { runIntrinsicQueueBeamDiscriminator } from '../../src/workers/algorithm/irregular/intrinsicQueueBeamDiscriminator.js'
 import { assertCanonicalGridLegalLayout } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
@@ -207,6 +208,32 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(observed.state).toEqual(ordinary.state)
     expect(observed.stepTrace).toEqual(ordinary.stepTrace)
     expect(observed.gapFillEvidence).toEqual(ordinary.gapFillEvidence)
+  })
+
+  it('keeps selected geometry unchanged when the separate queue-beam audit runs', async () => {
+    const pieces = [
+      preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('third', rectanglePoints(1, 2), [transform(0, 0), transform(1, 90)])
+    ]
+    const before = await decode(sheet(20, 10), pieces)
+    const audit = await Effect.runPromise(
+      runIntrinsicQueueBeamDiscriminator({
+        orderedPreparedPieces: pieces,
+        maximumRuntimeMs: 10_000,
+        maximumEvaluations: 20_000
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+    const after = await decode(sheet(20, 10), pieces)
+
+    expect(audit.status).toBe('completed')
+    expect(audit.selectedLineageFinalCanonicalGeometryKey.length).toBeGreaterThan(0)
+    expect(after.placedCollisionGeometries).toEqual(before.placedCollisionGeometries)
+    expect(after.stepTrace).toEqual(before.stepTrace)
   })
 
   it('continues an exact frozen seed and rejects non-partitions', async () => {

@@ -27,7 +27,11 @@ import {
   type IntrinsicV7Stage1Arm
 } from '../src/workers/algorithm/irregular/intrinsicV7SeedArchive.js'
 import { IrregularBeamState } from '../src/workers/algorithm/irregular/irregularBeamState.js'
-import { runIntrinsicReconstructionPortfolio } from '../src/workers/algorithm/irregular/intrinsicReconstructionPortfolio.js'
+import {
+  runIntrinsicReconstructionPortfolio,
+  type IntrinsicReconstructionPortfolioResult
+} from '../src/workers/algorithm/irregular/intrinsicReconstructionPortfolio.js'
+import { runIntrinsicQueueBeamDiscriminator } from '../src/workers/algorithm/irregular/intrinsicQueueBeamDiscriminator.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
@@ -52,7 +56,9 @@ async function main(): Promise<void> {
   const requestedArms = parseArms(argument('--arms'))
   const compact = process.argv.includes('--compact')
   const featureContactCoverage = process.argv.includes('--feature-contact-coverage')
-  const reconstructionPortfolioEnabled = process.argv.includes('--reconstruction-portfolio')
+  const queueBeamDiscriminatorEnabled = process.argv.includes('--queue-beam-discriminator')
+  const reconstructionPortfolioEnabled =
+    process.argv.includes('--reconstruction-portfolio') || queueBeamDiscriminatorEnabled
   const schedule = compact
     ? {
         maximumRuntimeMs: 2_000,
@@ -99,6 +105,29 @@ async function main(): Promise<void> {
         )
       )
     : undefined
+  const queueBeamTarget =
+    queueBeamDiscriminatorEnabled && reconstructionPortfolio !== undefined
+      ? selectQueueBeamAuditTarget(reconstructionPortfolio)
+      : undefined
+  const queueBeamDiscriminator =
+    queueBeamTarget === undefined
+      ? undefined
+      : await Effect.runPromise(
+          withLayers(
+            runIntrinsicQueueBeamDiscriminator({
+              orderedPreparedPieces: orderedPiecesForRun(preparedPieces, queueBeamTarget.pieceIds),
+              maximumRuntimeMs: positiveIntegerArgument(
+                '--queue-beam-runtime-ms',
+                compact ? 15_000 : 60_000
+              ),
+              maximumEvaluations: positiveIntegerArgument(
+                '--queue-beam-evaluations',
+                compact ? 5_000 : 25_000
+              )
+            }),
+            fixture.settings
+          )
+        )
 
   const seedArtifacts = await Promise.all(
     outcome.seedArchive.map(async (seed) => {
@@ -221,6 +250,21 @@ async function main(): Promise<void> {
       : {
           featureContactCoverage: featureContactCollector.complete(outcome.seedArchive)
         }),
+    ...(queueBeamDiscriminator === undefined || queueBeamTarget === undefined
+      ? {}
+      : {
+          queueBeamDiscriminator: {
+            mode: 'trace-only-independent-replay',
+            selectedRole: queueBeamTarget.role,
+            selectedCandidateMode: queueBeamTarget.candidateMode,
+            liveDecodeCandidateBehaviorChanged: false,
+            liveDecodeRankingChanged: false,
+            liveDecodeStateSelectionChanged: false,
+            liveDecodeArchiveChanged: false,
+            liveDecodeDeadlineChanged: false,
+            result: queueBeamDiscriminator
+          }
+        }),
     immutableFallback: {
       role: outcome.immutableFallback.role,
       canonicalGeometryHash: outcome.immutableFallback.canonicalGeometryHash
@@ -274,6 +318,43 @@ async function main(): Promise<void> {
       runtimeMs: outcome.runtimeMs
     })
   )
+}
+
+function selectQueueBeamAuditTarget(portfolio: IntrinsicReconstructionPortfolioResult) {
+  const nonBaseline = portfolio.archive.find(
+    ({ role, candidateMode }) =>
+      role !== 'canonical-grid' &&
+      role !== 'legacy-absolute-envelope' &&
+      candidateMode === 'pure-growth'
+  )
+  const fallback = portfolio.archive.find(({ candidateMode }) => candidateMode === 'pure-growth')
+  const selected = nonBaseline ?? fallback
+  if (selected === undefined) {
+    throw new Error('queue-beam audit requires one completed pure-growth reconstruction run')
+  }
+  return selected
+}
+
+function orderedPiecesForRun(
+  pieces: ReadonlyArray<IrregularPreparedPiece>,
+  pieceIds: ReadonlyArray<PieceId>
+): ReadonlyArray<IrregularPreparedPiece> {
+  const byId = new Map(pieces.map((piece) => [piece.pieceId ?? piece.source.id, piece] as const))
+  return pieceIds.map((pieceId) => {
+    const piece = byId.get(pieceId)
+    if (piece === undefined) throw new Error(`queue-beam audit piece ${pieceId} is unavailable`)
+    return piece
+  })
+}
+
+function positiveIntegerArgument(name: string, fallback: number): number {
+  const raw = argument(name)
+  if (raw === undefined) return fallback
+  const value = Number(raw)
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`${name} must be a positive safe integer`)
+  }
+  return value
 }
 
 type FeatureCandidateObservation = Parameters<

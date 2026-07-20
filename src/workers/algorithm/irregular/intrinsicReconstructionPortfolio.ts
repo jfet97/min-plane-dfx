@@ -423,7 +423,7 @@ export function intrinsicReconstructionEffectiveOrderKey(
   return pieces.map(intrinsicPreparedPieceClassKey).join('|')
 }
 
-function intrinsicPreparedPieceClassKey(piece: IrregularPreparedPiece): string {
+export function intrinsicPreparedPieceClassKey(piece: IrregularPreparedPiece): string {
   const points = piece.collisionGeometry.collisionPolygon.points.map(({ x, y }) => ({
     x: toGridMm(x),
     y: toGridMm(y)
