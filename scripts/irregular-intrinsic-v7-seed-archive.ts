@@ -27,6 +27,7 @@ import {
   type IntrinsicV7Stage1Arm
 } from '../src/workers/algorithm/irregular/intrinsicV7SeedArchive.js'
 import { IrregularBeamState } from '../src/workers/algorithm/irregular/irregularBeamState.js'
+import { runIntrinsicReconstructionPortfolio } from '../src/workers/algorithm/irregular/intrinsicReconstructionPortfolio.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
@@ -51,6 +52,7 @@ async function main(): Promise<void> {
   const requestedArms = parseArms(argument('--arms'))
   const compact = process.argv.includes('--compact')
   const featureContactCoverage = process.argv.includes('--feature-contact-coverage')
+  const reconstructionPortfolioEnabled = process.argv.includes('--reconstruction-portfolio')
   const schedule = compact
     ? {
         maximumRuntimeMs: 2_000,
@@ -84,6 +86,19 @@ async function main(): Promise<void> {
       fixture.settings
     )
   )
+  const reconstructionPortfolio = reconstructionPortfolioEnabled
+    ? await Effect.runPromise(
+        withLayers(
+          runIntrinsicReconstructionPortfolio({
+            allPreparedPieces: preparedPieces,
+            baselineSeeds: outcome.seedArchive,
+            maximumRuntimeMsPerDecode: compact ? 15_000 : 120_000,
+            maximumTotalRuntimeMs: compact ? 90_000 : 300_000
+          }),
+          fixture.settings
+        )
+      )
+    : undefined
 
   const seedArtifacts = await Promise.all(
     outcome.seedArchive.map(async (seed) => {
@@ -122,6 +137,34 @@ async function main(): Promise<void> {
     })
   )
 
+  const reconstructionArtifacts =
+    reconstructionPortfolio === undefined
+      ? []
+      : await Promise.all(
+          reconstructionPortfolio.runs.map(async (run) => {
+            const svgPath =
+              run.placedCollisionGeometries.length === 0
+                ? undefined
+                : `${outputDirectory}/${fixtureName}-reconstruction-${run.role}.svg`
+            if (svgPath !== undefined) {
+              await writeFile(svgPath, renderCollisionSvg(run.placedCollisionGeometries))
+            }
+            return {
+              role: run.role,
+              status: run.status,
+              duplicateOf: run.duplicateOf,
+              sourceEndpointHash: run.sourceEndpointHash,
+              candidateMode: run.candidateMode,
+              pieceIds: run.pieceIds,
+              metrics: run.metrics,
+              stepTrace: run.stepTrace,
+              gapFillEvidence: run.gapFillEvidence,
+              runtimeMs: run.runtimeMs,
+              svgPath
+            }
+          })
+        )
+
   const reportPath = `${outputDirectory}/report.json`
   const report = {
     experiment: 'intrinsic-v7-seed-archive-stage0-stage1',
@@ -151,6 +194,28 @@ async function main(): Promise<void> {
     },
     seedArchive: seedArtifacts,
     arms: armArtifacts,
+    ...(reconstructionPortfolio === undefined
+      ? {}
+      : {
+          reconstructionPortfolio: {
+            capacity: 8,
+            runtimeMs: reconstructionPortfolio.runtimeMs,
+            runs: reconstructionArtifacts,
+            archive: reconstructionPortfolio.archive.map(({ role, metrics }) => ({
+              role,
+              canonicalGeometryHash: metrics.canonicalGeometryHash,
+              metrics
+            })),
+            winner:
+              reconstructionPortfolio.winner === undefined
+                ? undefined
+                : {
+                    role: reconstructionPortfolio.winner.role,
+                    canonicalGeometryHash:
+                      reconstructionPortfolio.winner.metrics.canonicalGeometryHash
+                  }
+          }
+        }),
     ...(featureContactCollector === undefined
       ? {}
       : {
@@ -172,7 +237,8 @@ async function main(): Promise<void> {
   const artifactPaths = [
     reportPath,
     ...seedArtifacts.map(({ svgPath }) => svgPath),
-    ...armArtifacts.flatMap(({ endpointArchive }) => endpointArchive.map(({ svgPath }) => svgPath))
+    ...armArtifacts.flatMap(({ endpointArchive }) => endpointArchive.map(({ svgPath }) => svgPath)),
+    ...reconstructionArtifacts.flatMap(({ svgPath }) => (svgPath === undefined ? [] : [svgPath]))
   ]
   const manifestPath = `${outputDirectory}/manifest.json`
   await writeFile(
@@ -201,6 +267,9 @@ async function main(): Promise<void> {
       seedSvgPaths: seedArtifacts.map(({ svgPath }) => svgPath),
       endpointSvgPaths: armArtifacts.flatMap(({ endpointArchive }) =>
         endpointArchive.map(({ svgPath }) => svgPath)
+      ),
+      reconstructionSvgPaths: reconstructionArtifacts.flatMap(({ svgPath }) =>
+        svgPath === undefined ? [] : [svgPath]
       ),
       runtimeMs: outcome.runtimeMs
     })
