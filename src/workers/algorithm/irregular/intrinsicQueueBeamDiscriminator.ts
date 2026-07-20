@@ -319,7 +319,12 @@ export interface IntrinsicReferenceSuccessorReachabilityAudit {
     readonly fixedPieceCount: number
     readonly matchingVertexCount: number
     readonly matchingSegmentCount: number
+    readonly matchingSegments: ReadonlyArray<{
+      readonly start: { readonly x: number; readonly y: number }
+      readonly end: { readonly x: number; readonly y: number }
+    }>
   }
+  readonly envelopeAlignmentEvents: ReadonlyArray<string>
   readonly freshRunsConsistent: boolean
   readonly generatedCandidateCount: number
   readonly exactTargetGenerated: boolean
@@ -1699,6 +1704,10 @@ export function auditIntrinsicReferenceSuccessorReachability(input: {
     })
     let matchingVertexCount = 0
     let matchingSegmentCount = 0
+    const matchingSegments: Array<{
+      readonly start: { readonly x: number; readonly y: number }
+      readonly end: { readonly x: number; readonly y: number }
+    }> = []
     for (const fixed of input.parentState.placedCollisionGeometries) {
       const nfp = yield* nfpIfpService.computeNfp({
         fixed,
@@ -1722,9 +1731,16 @@ export function auditIntrinsicReferenceSuccessorReachability(input: {
           gridPointOnSegment({ x: targetGridX, y: targetGridY }, start, end)
         ) {
           matchingSegmentCount += 1
+          matchingSegments.push({ start, end })
         }
       }
     }
+    const envelopeAlignmentEvents = referenceEnvelopeAlignmentEvents({
+      parentState: input.parentState,
+      moving,
+      targetGridX,
+      targetGridY
+    })
 
     const runFreshGeneration = () =>
       Effect.gen(function* () {
@@ -1836,8 +1852,10 @@ export function auditIntrinsicReferenceSuccessorReachability(input: {
       nfpBoundary: {
         fixedPieceCount: input.parentState.placedCollisionGeometries.length,
         matchingVertexCount,
-        matchingSegmentCount
+        matchingSegmentCount,
+        matchingSegments
       },
+      envelopeAlignmentEvents,
       freshRunsConsistent,
       generatedCandidateCount: firstRun.candidates.length,
       exactTargetGenerated: exactTarget !== undefined,
@@ -1900,6 +1918,46 @@ function gridPointOnSegment(
     point.y >= Math.min(start.y, end.y) &&
     point.y <= Math.max(start.y, end.y)
   )
+}
+
+function referenceEnvelopeAlignmentEvents(input: {
+  readonly parentState: IrregularBeamState
+  readonly moving: TransformedCollisionGeometry
+  readonly targetGridX: number
+  readonly targetGridY: number
+}): ReadonlyArray<string> {
+  const occupied = input.parentState.translatedCollisionBounds
+  if (occupied === undefined) return []
+  const values = {
+    'moving-min-x': addGrid(input.moving.bounds.minX, input.targetGridX),
+    'moving-max-x': addGrid(input.moving.bounds.maxX, input.targetGridX),
+    'moving-min-y': addGrid(input.moving.bounds.minY, input.targetGridY),
+    'moving-max-y': addGrid(input.moving.bounds.maxY, input.targetGridY),
+    'occupied-min-x': toGridMm(occupied.minX),
+    'occupied-max-x': toGridMm(occupied.maxX),
+    'occupied-min-y': toGridMm(occupied.minY),
+    'occupied-max-y': toGridMm(occupied.maxY)
+  } as const
+  const pairs = [
+    ['moving-min-x', 'occupied-min-x'],
+    ['moving-min-x', 'occupied-max-x'],
+    ['moving-max-x', 'occupied-min-x'],
+    ['moving-max-x', 'occupied-max-x'],
+    ['moving-min-y', 'occupied-min-y'],
+    ['moving-min-y', 'occupied-max-y'],
+    ['moving-max-y', 'occupied-min-y'],
+    ['moving-max-y', 'occupied-max-y']
+  ] as const
+  return pairs.flatMap(([movingKey, occupiedKey]) =>
+    values[movingKey] !== undefined && values[movingKey] === values[occupiedKey]
+      ? [`${movingKey}=${occupiedKey}`]
+      : []
+  )
+}
+
+function addGrid(value: number, offset: number): number | undefined {
+  const grid = toGridMm(value)
+  return grid === undefined ? undefined : grid + offset
 }
 
 function candidateGridIdentity(candidate: IrregularPlacementCandidate): string {
