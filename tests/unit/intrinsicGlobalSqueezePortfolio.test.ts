@@ -131,6 +131,9 @@ function structuralResult(input: {
   readonly status?: IntrinsicGlobalSearchResult['status']
   readonly contractedPressureTrace?: ReadonlyArray<IntrinsicContractedPressureAttemptTrace>
   readonly pressureRepairSweepCount?: number
+  readonly structuralE1CanonicalControl?: NonNullable<
+    IntrinsicGlobalSearchResult['structuralE1CanonicalControl']
+  >
 }): IntrinsicGlobalSearchResult {
   const partition = partitionIntrinsicStructuralPieces(input.pieces)
   if (partition === undefined) throw new Error('partition expected')
@@ -139,6 +142,9 @@ function structuralResult(input: {
     fullE1Fallback: input.fallback,
     partition,
     targetRoles: [],
+    ...(input.structuralE1CanonicalControl === undefined
+      ? {}
+      : { structuralE1CanonicalControl: input.structuralE1CanonicalControl }),
     searchedBasinCount: 0,
     unavailableQuarterTurnBasinCount: 0,
     structuralHandoffs: input.handoffs ?? [],
@@ -256,6 +262,60 @@ describe('intrinsic global squeeze portfolio', () => {
     expect(result.selected.source).toBe('e1-fallback')
     expect(result.completeArchive).toHaveLength(1)
     expect(result.fillTrace).toEqual([])
+  })
+
+  it('propagates the structural E1 exactness control into report-facing evidence', async () => {
+    const pieces = [preparedRectangle('a', 2, 2), preparedRectangle('b', 2, 2)]
+    const fallback = [placed(pieceAt(pieces, 0), 0, 0), placed(pieceAt(pieces, 1), 2, 0)]
+    const structuralE1CanonicalControl: NonNullable<
+      IntrinsicGlobalSearchResult['structuralE1CanonicalControl']
+    > = {
+      targetBox: { widthMm: 4, heightMm: 2 },
+      structuralPieceCount: 2,
+      stateKey: 'canonical-control-state',
+      satRawLoss: 0.001,
+      satWeightedLoss: 0.001,
+      satConflictCount: 1,
+      satExactZeroLoss: false,
+      satConflict: {
+        wallConflictCount: 0,
+        pairConflictCount: 1,
+        conflictedPieceCount: 2
+      },
+      canonicalControl: {
+        referenceCanonicalIdentity: 'canonical-control',
+        candidateCanonicalIdentity: 'canonical-control',
+        identityMatches: true,
+        pieceCoverageMatches: true,
+        candidateCanonicalLegal: true,
+        accepted: true,
+        reason: 'accepted'
+      },
+      canonicalLegality: {
+        stateKey: 'canonical-control-state',
+        satConflictCount: 1,
+        satExactZeroLoss: false,
+        canonicalLegal: true,
+        classification: 'sat-conflict-canonical-legal'
+      },
+      canonicalAcceptanceIndependentOfSat: true,
+      separationEvaluationBudgetCost: 0,
+      selectionEligible: false
+    }
+    const result = await runPortfolio({
+      pieces,
+      fallback,
+      structural: structuralResult({
+        pieces,
+        fallback,
+        structuralE1CanonicalControl
+      }),
+      fill: () => Effect.die('fill must not run')
+    })
+
+    expect(result.structuralOutcome.structuralE1CanonicalControl).toEqual(
+      structuralE1CanonicalControl
+    )
   })
 
   it('propagates the complete contracted-pressure evidence through structural outcome', async () => {

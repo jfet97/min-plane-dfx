@@ -103,7 +103,8 @@ SAT raw and weighted loss, conflict tuple, exact-zero flag, canonical identity
 and coverage control, and canonical legality classification. This observation
 costs zero registered separation evaluations, is never selection-eligible, and
 therefore exposes SAT residue without allowing it to reject the canonical E1
-control.
+control. The portfolio carries this witness into its report-facing structural
+outcome instead of dropping it at the controller boundary.
 The retained pre-V7 pressure foundation evaluates the existing focused
 separator candidates first, deduplicates later sources by canonical state key,
 and records source, pass, ordinal, pose, conflict tuple, clearance, cap, winner,
