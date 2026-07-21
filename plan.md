@@ -1737,6 +1737,57 @@ Immutable reports are under
 `/private/tmp/min-plane-provenance/v7-edge-contact-53e7904/triangle-20/`, and
 `/private/tmp/min-plane-provenance/v7-edge-contact-coverage-37fd64f/triangle-20/`.
 
+#### Adaptive incumbent-pressure checkpoint (2026-07-21)
+
+Commits `8e1e123` through `9bf429f` replace the old isolated static pressure
+attempts with a bounded restart chain. Each failed target retains at most three
+low-loss states; the next target re-evaluates them and adds deterministic
+group/split/interface disruptions before the unchanged sequential collider
+search. Mandatory four-sweep work may extend to eight while improving and
+stops after two flat extra sweeps. Three consecutive failures share exactly
+50,000 pressure evaluations through cumulative one-third reservations. Only a
+canonical-exact endpoint that strictly improves all registered pressure metrics
+can become an incumbent; the exact seed remains an immutable fallback.
+
+The corrected Triangle run starts from canonical hash `371db2696b65e212` at
+`74,428.143126 mm2`. It completed the full pressure budget in `55.399 s` and
+reduced best relaxed loss across the three targets from `0.042353646` to
+`0.013267824` to `0.003116739`. It did not reach legality: the final retained
+state still had eight wall conflicts, 24 pair conflicts, and 18 conflicted
+pieces. The selected exact layout is byte-identical to the seed.
+
+Mixed starts from canonical hash `310adc648970ae24` at `426,530.392211 mm2`.
+It reduced best relaxed loss from `0.126383755` to `0.037917172` to
+`0.012752034`, but the 110-second wall deadline interrupted the second sweep of
+the third target after `37,942` pressure evaluations. That best generated state
+still had 15 pair conflicts across 19 pieces. There was no exact handoff and
+the zero-cavity fallback remained selected. Evidence is under
+`/private/tmp/min-plane-provenance/v7-adaptive-pressure-9bf429f/`.
+
+This evidence validates the bounded machinery and falsifies neither adaptive
+repair nor the current move vocabulary. It does **not** prove that restart
+retention caused the cross-target improvement: the target sequence relaxes
+from 5% to 2.5% to 1.25%, and even the untouched proposal loss falls sharply.
+Sol review `1784646378-4996` therefore requires one causal ablation before any
+new mechanism: freeze geometry, projection, contraction ratios, and the 50,000
+evaluation cap; raise only the wall deadline enough to finish Mixed; compare
+restart capacity three with zero. Commit `9baaa95` adds that harness and makes
+trace accounting explicit through cumulative start/end, cumulative limit, and
+local quota fields. A larger budget, new finalizer, smaller contraction, or
+move change is premature until the paired result is classified.
+
+The paired ablation at `9baaa95` is now complete. Triangle capacity zero and
+three both consumed the same 50,000 pressure evaluations and found no exact
+endpoint, but zero restart capacity reduced the 2.5% loss from `0.013267824` to
+`0.008297379` and the 1.25% loss from `0.003116739` to `0.000525129`. Mixed-61
+also found no endpoint; both capacities reached exactly `0.126383755`,
+`0.037917172`, and `0.009810656`, while capacity three took `169.928 s` versus
+`143.398 s` for capacity zero. Cross-target restart transport is therefore
+rejected: it is harmful on Triangle and pure overhead on Mixed. The adaptive
+depth loop, exact fallback, cumulative reservations, and new local/cumulative
+trace fields remain useful. Evidence is under
+`/private/tmp/min-plane-provenance/v7-restart-ablation-9baaa95/`.
+
 ### Local research documents
 
 - [`help/research/open-source-nesting-strategies.md`](help/research/open-source-nesting-strategies.md): pinned Deepnest, SVGnest, libnest2d, PackingSolver, and Sparrow control pass, plus the Dalsoo addition.
@@ -1776,13 +1827,14 @@ Immutable reports are under
 
 ## Immediate Next Action
 
-Proceed to the already-reviewed adaptive incumbent-driven contraction stage.
-Replace the experimental controller's three static target boxes with a bounded
-sequence of small contractions derived from the current best exact incumbent.
-After each failed target, retain a deterministic low-conflict restart pool and
-apply the existing multi-piece disruption/separation machinery; after each
-successful exact projection, promote through the common archive and derive the
-next target from that improved incumbent. Terminate after a fixed consecutive
-failure count. Preserve exact Clipper2 admission, conflict accounting, existing
-production results, and the periodic 74k research seed; do not add a private
-winner lane or fixture-specific movement.
+Disable cross-target restart injection in the experimental adaptive-pressure
+role while retaining the trace/accounting and adaptive-depth machinery. Then
+run one bounded, paired smaller-step experiment from the same exact Triangle
+and Mixed seeds: compare the current smallest 1.25% contraction with a smaller
+intrinsic contraction under equal evaluation and wall budgets. Do not add a new
+move family or finalizer in the same experiment. The sole positive gate is a
+canonical-exact endpoint that passes the existing strict improvement and
+admission checks. Lower relaxed loss or fewer relaxed conflicts cannot justify
+continuation because both become easier as contraction approaches zero. If
+neither equal-budget arm produces an admissible endpoint, stop this pressure
+branch. Preserve exact Clipper2 admission and both existing exact fallbacks.

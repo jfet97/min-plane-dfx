@@ -130,7 +130,24 @@ a dormant intensifier API for a future explicitly promising coordinated atom;
 the current pressure loop never invokes it. No static shrink role, whole-box
 coordinate generator, or reserved conflict slot is part of this foundation.
 The older adaptive-depth helpers and adaptive-only termination labels are also
-dormant compatibility seams; the current schedule uses only mandatory sweeps.
+dormant in the retained pre-V7 lanes.
+
+The V7 adaptive-pressure experiment is a separate use of that machinery. It
+derives 5%, 2.5%, and 1.25% contractions from the current exact incumbent,
+reserves a cumulative third of a 50,000-evaluation pressure budget for each
+failure, and can retain low-loss restart states for a paired research arm. Four
+mandatory sweeps may extend to eight while the raw loss keeps improving; two
+flat extra sweeps stop the attempt. An accepted exact endpoint resets the
+failure chain and becomes the next pressure incumbent; three consecutive
+failures terminate it. Attempt traces distinguish local evaluations from
+cumulative start/end, cumulative
+limit, and local quota. Relaxed states remain private and only canonical-legal,
+strictly improving endpoints can reach exact projection or the common archive.
+The paired Triangle/Mixed ablation at `9baaa95` found restart capacity three
+harmful on Triangle and quality-neutral but slower on Mixed. Cross-target
+restart injection is therefore rejected as a default; the production-facing
+contract remains capacity zero unless later paired corpus evidence reverses
+that result. Adaptive target depth and the exact-only handoff remain retained.
 
 The isolated V7 seed/archive experiment keeps that E4 path intact while
 testing a replacement controller with stricter observability boundaries. Each

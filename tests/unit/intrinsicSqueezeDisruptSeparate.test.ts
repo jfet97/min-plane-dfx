@@ -270,7 +270,7 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(INTRINSIC_GLOBAL_SEARCH_DEFAULTS.maximumProjectionAttempts).toBe(5)
     expect(INTRINSIC_GLOBAL_SEARCH_DEFAULTS.pressureMaximumAttempts).toBe(9)
     expect(INTRINSIC_GLOBAL_SEARCH_DEFAULTS.pressureMaximumConsecutiveFailures).toBe(3)
-    expect(INTRINSIC_GLOBAL_SEARCH_DEFAULTS.pressureRestartPoolCapacity).toBe(3)
+    expect(INTRINSIC_GLOBAL_SEARCH_DEFAULTS.pressureRestartPoolCapacity).toBe(0)
   })
 
   it('preserves fractional translation phase through import, identity, and integer transport', async () => {

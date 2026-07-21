@@ -350,6 +350,59 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   incumbent contraction, using the existing separation/disruption machinery
   and exact archive. Immutable coverage evidence is
   `/private/tmp/min-plane-provenance/v7-edge-contact-coverage-37fd64f/triangle-20/`.
+- Commits `8e1e123` through `9bf429f` implement the authorized adaptive
+  incumbent-pressure checkpoint. A failed contraction retains at most three
+  deterministic low-loss states, adds bounded group/split/interface
+  disruptions at the next target, and stops after three consecutive failures.
+  The three failures share a fixed 50,000-evaluation pressure budget through
+  cumulative reservations; the exact input layout remains the immutable
+  fallback and no relaxed state can be published.
+- The first harness pass at `cc12bec` accidentally selected a `70,205.806 mm2`
+  one-row Triangle strip because its default seed rank was area-first. That is
+  a harness failure and a fresh demonstration that area-first greedy selection
+  is chain-forming, not a quality result. Commit `e5ceddf` added an explicit
+  canonical seed-hash pin so the adaptive experiment starts from the intended
+  `74,428.143126 mm2` zero-cavity periodic witness.
+- The fair-budget Triangle run at `9bf429f` completed all 50,000 pressure
+  evaluations in `55.399 s`. Best relaxed loss fell from `0.042353646` at the
+  5% target to `0.013267824` at 2.5% and `0.003116739` at 1.25%, but no
+  canonical-exact endpoint was found. The last state still had eight wall
+  conflicts, 24 pair conflicts, and 18 conflicted pieces. The exact 74k layout
+  remained selected.
+- The matching Mixed-61 run reached `37,942` pressure evaluations before the
+  110-second wall deadline. Best loss fell from `0.126383755` to `0.037917172`
+  and then `0.012752034`; the third target was still improving when censored,
+  but its best generated state still had 15 pair conflicts across 19 pieces.
+  No handoff or projection occurred, and the exact `426,530.392211 mm2`
+  zero-cavity fallback remained selected. Immutable reports and complete SVGs
+  are under `/private/tmp/min-plane-provenance/v7-adaptive-pressure-9bf429f/`.
+- Do not attribute the cross-target loss reduction to restart retention yet.
+  The target schedule becomes less aggressive (`5% -> 2.5% -> 1.25%`), so the
+  proposal itself becomes easier at every failure. Sol review round
+  `1784646378-4996` requires one paired causal measurement at the same 50,000
+  evaluations: restart-pool capacity three versus zero, with a larger wall
+  deadline only to remove Mixed censoring. Commit `9baaa95` also makes attempt
+  accounting explicit by reporting cumulative start/end, cumulative limit,
+  and local quota alongside the local evaluation count. No finalizer, movement
+  change, or larger evaluation budget is authorized before this ablation.
+- The paired ablation at `9baaa95` rejects cross-target restart transport as a
+  default. On Triangle, capacity zero improved the 2.5% target loss from
+  `0.013267824` to `0.008297379` and the 1.25% target from `0.003116739` to
+  `0.000525129` under the same 50,000 pressure evaluations; neither arm found
+  an exact endpoint. On Mixed-61, capacity zero and three reached identical
+  best loss at all three targets (`0.126383755`, `0.037917172`, and
+  `0.009810656`), but the restart arm took `169.928 s` versus `143.398 s` and
+  still found no exact endpoint. Keep the adaptive target-depth loop, exact
+  fallback, and truthful cumulative/local accounting; disable restart-state
+  injection unless a later paired corpus experiment supplies contrary evidence.
+  Immutable reports are under
+  `/private/tmp/min-plane-provenance/v7-restart-ablation-9baaa95/`.
+- For any smaller-step follow-up, lower relaxed loss and fewer relaxed conflicts
+  are not evidence of progress: both become easier as contraction tends to
+  zero. The only positive gate is a new canonical-exact endpoint that passes
+  the existing strict improvement/admission checks. If equal-budget 1.25% and
+  smaller-step arms both fail that gate, stop the adaptive-pressure branch. Sol
+  review `1784646378-4996` approved this classification and stop rule.
 
 ### 2026-07-20 (Dalsoo source-control addition)
 

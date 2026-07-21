@@ -72,7 +72,7 @@ export const INTRINSIC_GLOBAL_SEARCH_DEFAULTS = {
   interfaceDisruptionStagnationSweeps: 2,
   pressureMaximumAttempts: 9,
   pressureMaximumConsecutiveFailures: 3,
-  pressureRestartPoolCapacity: 3,
+  pressureRestartPoolCapacity: 0,
   seed: 0x4e_34_53_44
 } as const
 
