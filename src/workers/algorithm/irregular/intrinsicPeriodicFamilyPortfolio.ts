@@ -31,6 +31,7 @@ export interface IntrinsicPeriodicContinuation {
   readonly role: 'P1' | 'P2'
   readonly familyKey: string
   readonly cellKey: string
+  readonly basisSourceKey: string | undefined
   readonly seed: IntrinsicPeriodicSeed
 }
 
@@ -66,6 +67,8 @@ export interface IntrinsicPeriodicFamilyPortfolioOptions {
   readonly maximumContinuationRuntimeMs?: number
   readonly maximumContinuationCount?: number
   readonly maximumTotalRuntimeMs?: number
+  /** Restricts an experiment to one rational NFP-derived shared-basis source. */
+  readonly basisSourceKey?: string
 }
 
 type PortfolioError =
@@ -103,7 +106,8 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       catalog,
       pieces,
       maximumContinuationCount,
-      maximumCropsPerCell
+      maximumCropsPerCell,
+      options.basisSourceKey
     )
     const runs: IntrinsicPeriodicContinuationResult[] = []
     for (const continuation of selected.continuations) {
@@ -180,7 +184,8 @@ function selectIntrinsicPeriodicContinuations(
   catalog: IntrinsicPeriodicCatalog,
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   maximumContinuationCount: number,
-  maximumCropsPerCell: number
+  maximumCropsPerCell: number,
+  basisSourceKey: string | undefined
 ): Effect.Effect<
   {
     readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
@@ -201,6 +206,7 @@ function selectIntrinsicPeriodicContinuations(
       if (members === undefined) continue
       const continuations: IntrinsicPeriodicContinuation[] = []
       for (const cell of family.cells) {
+        if (basisSourceKey !== undefined && cell.basisProvenance?.sourceKey !== basisSourceKey) continue
         const crops = yield* expandIntrinsicPeriodicCell(cell, members, maximumCropsPerCell)
         for (const [cropIndex, seed] of crops.entries()) {
           const sourceId = `${family.familyKey}:${cell.role}:${cell.canonicalKey}:${cropIndex}`
@@ -218,6 +224,7 @@ function selectIntrinsicPeriodicContinuations(
             role: cell.role,
             familyKey: family.familyKey,
             cellKey: cell.canonicalKey,
+            basisSourceKey: cell.basisProvenance?.sourceKey,
             seed
           })
         }

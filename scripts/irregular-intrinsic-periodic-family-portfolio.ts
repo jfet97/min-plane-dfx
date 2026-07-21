@@ -78,6 +78,7 @@ const sourceCommit = argument('--source-commit') ?? 'unknown'
 const maximumCellsPerFamilyRole = positiveIntegerArgument('--cells-per-role', 16)
 const maximumCropsPerCell = positiveIntegerArgument('--crops-per-cell', 4)
 const maximumContinuationCount = positiveIntegerArgument('--continuations', 8)
+const basisSourceKey = argument('--basis-source-key')
 await mkdir(outputDirectory, { recursive: true })
 
 const fixture = await loadFixture(fixtureName)
@@ -89,7 +90,8 @@ const result = await Effect.runPromise(
     runIntrinsicPeriodicFamilyPortfolio(fixture.request.sheet, preparedPieces, {
       maximumCellsPerFamilyRole,
       maximumCropsPerCell,
-      maximumContinuationCount
+      maximumContinuationCount,
+      ...(basisSourceKey === undefined ? {} : { basisSourceKey })
     }),
     settings
   )
@@ -112,6 +114,11 @@ for (const run of result.runs) {
     role: run.continuation.role,
     familyKeySha256: sha256(run.continuation.familyKey),
     cellKeySha256: sha256(run.continuation.cellKey),
+    basisSourceKey: run.continuation.basisSourceKey,
+    basisSourceKeySha256:
+      run.continuation.basisSourceKey === undefined
+        ? undefined
+        : sha256(run.continuation.basisSourceKey),
     seed: {
       canonicalKeySha256: sha256(run.continuation.seed.canonicalKey),
       placementCount: run.continuation.seed.placements.length,
@@ -160,6 +167,7 @@ const report = {
     cellsPerFamilyRole: maximumCellsPerFamilyRole,
     cropsPerCell: maximumCropsPerCell,
     continuations: maximumContinuationCount,
+    basisSourceKey,
     continuationMs: 25_000,
     fixtureMs: 240_000
   },
