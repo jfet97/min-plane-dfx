@@ -529,6 +529,7 @@ export interface IntrinsicContractedPressureAttemptTrace {
   readonly proposalWeightedLoss: number | undefined
   readonly proposalDispersion: number | undefined
   readonly separationEvaluationCount: number
+  readonly separationEvaluationLimit: number
   readonly bestRepairedLoss: number | undefined
   readonly bestEndpointExact: boolean
   readonly bestEndpointSatExactZero: boolean
@@ -1706,6 +1707,7 @@ function runIntrinsicContractedPressureLane(input: {
     let ratioCursor = 0
     let attemptIndex = 0
     let consecutiveFailureCount = 0
+    let failureChainEvaluationStart = 0
     let separationEvaluationCount = 0
     let repairSweepCount = 0
     let retainedRestartStates: ReadonlyArray<IntrinsicRelaxedState> = []
@@ -1743,6 +1745,12 @@ function runIntrinsicContractedPressureLane(input: {
       const pressureStep = intrinsicPressureContractionStep(ratioCursor)
       if (pressureStep === undefined) break
       const { ratioScheduleIndex, contractionRatio } = pressureStep
+      const attemptEvaluationLimit = pressureAttemptEvaluationLimit({
+        maximumEvaluationCount: input.maximumAdditionalEvaluations,
+        failureChainEvaluationStart,
+        failureIndex: consecutiveFailureCount,
+        maximumConsecutiveFailureCount
+      })
       const parentMeasured = incumbentMeasured
       const proposal = deriveIntrinsicContractedPressureProposal(
         input.catalog,
@@ -1760,6 +1768,7 @@ function runIntrinsicContractedPressureLane(input: {
             retainedPressureIdentity:
               acceptedEndpoint?.measured.compactness.canonicalIdentity,
             reason: 'the contracted target or area-weighted median split was unavailable',
+            separationEvaluationLimit: attemptEvaluationLimit,
             consecutiveFailureCount,
             terminatedByFailureLimit:
               consecutiveFailureCount >= maximumConsecutiveFailureCount
@@ -1783,7 +1792,7 @@ function runIntrinsicContractedPressureLane(input: {
           ? undefined
           : measureIntrinsicAreaWeightedCentroidDispersion(proposalPlaced)
       if (
-        separationEvaluationCount >= input.maximumAdditionalEvaluations ||
+        separationEvaluationCount >= attemptEvaluationLimit ||
         proposalPlaced === undefined
       ) {
         consecutiveFailureCount += 1
@@ -1803,10 +1812,11 @@ function runIntrinsicContractedPressureLane(input: {
             reason:
               proposalPlaced === undefined
                 ? 'the translated pressure state could not be materialized'
-                : 'the shared separation-evaluation budget was exhausted',
+                : 'the reserved target evaluation limit was already exhausted',
             retainedPressureIdentity:
               acceptedEndpoint?.measured.compactness.canonicalIdentity,
             preProjectionCompactness: undefined,
+            separationEvaluationLimit: attemptEvaluationLimit,
             consecutiveFailureCount,
             terminatedByFailureLimit:
               consecutiveFailureCount >= maximumConsecutiveFailureCount
@@ -1842,6 +1852,7 @@ function runIntrinsicContractedPressureLane(input: {
             retainedPressureIdentity:
               acceptedEndpoint?.measured.compactness.canonicalIdentity,
             preProjectionCompactness: undefined,
+            separationEvaluationLimit: attemptEvaluationLimit,
             consecutiveFailureCount,
             terminatedByFailureLimit:
               consecutiveFailureCount >= maximumConsecutiveFailureCount
@@ -1878,7 +1889,7 @@ function runIntrinsicContractedPressureLane(input: {
       let restartSeedCount = 0
       let restartDisruptionProposalCount = 0
       for (const [restartIndex, restartState] of retainedRestartStates.entries()) {
-        if (separationEvaluationCount >= input.maximumAdditionalEvaluations) break
+        if (separationEvaluationCount >= attemptEvaluationLimit) break
         const restartEvaluation = evaluateIntrinsicSeparation(
           proposal.contractedBox,
           input.catalog,
@@ -1928,7 +1939,7 @@ function runIntrinsicContractedPressureLane(input: {
         restartDisruptionProposalCount += disruptionProposals.length
         for (const disruptionProposal of disruptionProposals) {
           if (!isIntrinsicDisruptionProposalKind(disruptionProposal.kind)) continue
-          if (separationEvaluationCount >= input.maximumAdditionalEvaluations) break
+          if (separationEvaluationCount >= attemptEvaluationLimit) break
           const disruptionEvaluation = evaluateIntrinsicSeparation(
             proposal.contractedBox,
             input.catalog,
@@ -2057,6 +2068,10 @@ function runIntrinsicContractedPressureLane(input: {
               retainedPressureIdentity:
                 acceptedEndpoint?.measured.compactness.canonicalIdentity,
               preProjectionCompactness: undefined,
+              separationEvaluationLimit: attemptEvaluationLimit,
+              restartSeedCount,
+              restartDisruptionProposalCount,
+              consecutiveFailureCount,
               canonicalLegalityMemo,
               repairSweeps
             })
@@ -2084,7 +2099,7 @@ function runIntrinsicContractedPressureLane(input: {
         for (const entry of pool) {
           const parentRemainingBudget = Math.max(
             0,
-            input.maximumAdditionalEvaluations - separationEvaluationCount
+            attemptEvaluationLimit - separationEvaluationCount
           )
           const forwardReservedBudget = Math.floor(parentRemainingBudget / 2)
           for (const [orderIndex, orderIdentity] of (
@@ -2095,7 +2110,7 @@ function runIntrinsicContractedPressureLane(input: {
                 ? forwardReservedBudget
                 : Math.max(
                     0,
-                    input.maximumAdditionalEvaluations - separationEvaluationCount
+                    attemptEvaluationLimit - separationEvaluationCount
                   )
             const composite = yield* runIntrinsicSequentialColliderComposite({
               targetBox: proposal.contractedBox,
@@ -2118,7 +2133,7 @@ function runIntrinsicContractedPressureLane(input: {
               0
             )
             budgetExhausted =
-              separationEvaluationCount >= input.maximumAdditionalEvaluations
+              separationEvaluationCount >= attemptEvaluationLimit
             if (composite.deadlineReached) deadlineInterrupted = true
             if (composite.trace.emittedComposite) {
               const entryCandidate = pressurePoolEntry(
@@ -2238,6 +2253,10 @@ function runIntrinsicContractedPressureLane(input: {
               retainedPressureIdentity:
                 acceptedEndpoint?.measured.compactness.canonicalIdentity,
               preProjectionCompactness: undefined,
+              separationEvaluationLimit: attemptEvaluationLimit,
+              restartSeedCount,
+              restartDisruptionProposalCount,
+              consecutiveFailureCount,
               canonicalLegalityMemo,
               repairSweeps
             })
@@ -2465,7 +2484,7 @@ function runIntrinsicContractedPressureLane(input: {
         accepted === undefined
           ? pressureEndpointRejectionReason(parentMeasured, bestEndpoint) ??
             (budgetExhausted
-              ? 'the shared separation-evaluation budget was exhausted before an exact endpoint'
+              ? 'the reserved target evaluation limit was exhausted before an exact endpoint'
               : 'the separator produced no canonical-exact endpoint')
           : 'the canonical-exact endpoint strictly improved every registered pressure metric'
       if (accepted !== undefined) {
@@ -2479,6 +2498,7 @@ function runIntrinsicContractedPressureLane(input: {
         incumbentMeasured = accepted.measured
         acceptedEndpoint = accepted
         consecutiveFailureCount = 0
+        failureChainEvaluationStart = separationEvaluationCount
         retainedRestartStates = []
       } else {
         consecutiveFailureCount += 1
@@ -2504,6 +2524,7 @@ function runIntrinsicContractedPressureLane(input: {
           retainedPressureIdentity:
             acceptedEndpoint?.measured.compactness.canonicalIdentity,
           preProjectionCompactness: accepted?.measured.compactness,
+          separationEvaluationLimit: attemptEvaluationLimit,
           restartSeedCount,
           restartDisruptionProposalCount,
           consecutiveFailureCount,
@@ -2659,7 +2680,37 @@ export function pressureRepairSweepAllowance(
   return quotient + (attemptIndex < remainder ? 1 : 0)
 }
 
-/** Dormant adaptive allowance seam; current repair uses mandatory allocation only. */
+/** Reserves cumulative work for every target while rolling unused work forward. */
+export function pressureAttemptEvaluationLimit(input: {
+  readonly maximumEvaluationCount: number
+  readonly failureChainEvaluationStart: number
+  readonly failureIndex: number
+  readonly maximumConsecutiveFailureCount: number
+}): number {
+  const maximumEvaluationCount = Math.max(
+    0,
+    Math.floor(input.maximumEvaluationCount)
+  )
+  const failureChainEvaluationStart = Math.min(
+    maximumEvaluationCount,
+    Math.max(0, Math.floor(input.failureChainEvaluationStart))
+  )
+  const maximumConsecutiveFailureCount = Math.max(
+    1,
+    Math.floor(input.maximumConsecutiveFailureCount)
+  )
+  const failureIndex = Math.min(
+    maximumConsecutiveFailureCount - 1,
+    Math.max(0, Math.floor(input.failureIndex))
+  )
+  const remaining = maximumEvaluationCount - failureChainEvaluationStart
+  return (
+    failureChainEvaluationStart +
+    Math.ceil((remaining * (failureIndex + 1)) / maximumConsecutiveFailureCount)
+  )
+}
+
+/** Extends the registered four-sweep pressure attempts to a bounded adaptive cap. */
 export function pressureRepairMaximumSweepAllowance(
   totalSweepBudget: number,
   attemptIndex: number
@@ -2676,7 +2727,7 @@ export function pressureRepairMaximumSweepAllowance(
     : mandatorySweepCount
 }
 
-/** Dormant adaptive-depth decision seam; current repair does not call it. */
+/** Stops adaptive depth after two consecutive non-improving extra sweeps. */
 export function advanceIntrinsicPressureAdaptiveDepth(input: {
   readonly completedSweepCount: number
   readonly mandatorySweepCount: number
@@ -2697,7 +2748,7 @@ export function advanceIntrinsicPressureAdaptiveDepth(input: {
   }
 }
 
-/** Dormant adaptive cap diagnostic; current repair does not call it. */
+/** Reports a still-improving positive-loss search that reached its adaptive cap. */
 export function isIntrinsicPressureActiveAtCap(input: {
   readonly adaptiveEnabled: boolean
   readonly completedSweepCount: number
@@ -3845,6 +3896,7 @@ function unavailableContractedPressureAttemptTrace(input: {
   readonly parent: IntrinsicPressureMeasuredLayout
   readonly retainedPressureIdentity: string | undefined
   readonly reason: string
+  readonly separationEvaluationLimit?: number
   readonly consecutiveFailureCount?: number
   readonly terminatedByFailureLimit?: boolean
 }): IntrinsicContractedPressureAttemptTrace {
@@ -3873,6 +3925,7 @@ function unavailableContractedPressureAttemptTrace(input: {
     proposalWeightedLoss: undefined,
     proposalDispersion: undefined,
     separationEvaluationCount: 0,
+    separationEvaluationLimit: input.separationEvaluationLimit ?? 0,
     bestRepairedLoss: undefined,
     bestEndpointExact: false,
     bestEndpointSatExactZero: false,
@@ -3910,6 +3963,7 @@ function contractedPressureAttemptTrace(input: {
   readonly reason: string
   readonly retainedPressureIdentity: string | undefined
   readonly preProjectionCompactness: IntrinsicPressureCompactnessTuple | undefined
+  readonly separationEvaluationLimit?: number
   readonly restartSeedCount?: number
   readonly restartDisruptionProposalCount?: number
   readonly consecutiveFailureCount?: number
@@ -3935,6 +3989,7 @@ function contractedPressureAttemptTrace(input: {
     proposalWeightedLoss: input.proposalEvaluation?.weightedLoss,
     proposalDispersion: input.proposalDispersion,
     separationEvaluationCount: input.evaluationCount,
+    separationEvaluationLimit: input.separationEvaluationLimit ?? 0,
     bestRepairedLoss: input.bestRepairedLoss,
     bestEndpointExact: input.bestEndpoint !== undefined,
     bestEndpointSatExactZero:

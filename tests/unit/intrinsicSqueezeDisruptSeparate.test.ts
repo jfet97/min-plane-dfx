@@ -39,6 +39,7 @@ import {
   isIntrinsicPressureActiveAtCap,
   measureIntrinsicPressureCompactness,
   partitionIntrinsicStructuralPieces,
+  pressureAttemptEvaluationLimit,
   pressureRepairSweepAllowance,
   pressureRepairMaximumSweepAllowance,
   pressureProjectionPreserved,
@@ -787,7 +788,9 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       schedule({
         sweepsPerBasin: 1,
         maximumSeparationEvaluations: 20,
-        explorationAreaCapMm2: 20
+        explorationAreaCapMm2: 20,
+        pressureMaximumAttempts: 1,
+        pressureMaximumConsecutiveFailures: 1
       }),
       ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced))
     )
@@ -1473,6 +1476,27 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
       2, 2, 1
     ])
     expect(pressureRepairSweepAllowance(12, 3)).toBe(0)
+  })
+
+  it('reserves cumulative evaluation work for every pressure target', () => {
+    expect(
+      [0, 1, 2].map((failureIndex) =>
+        pressureAttemptEvaluationLimit({
+          maximumEvaluationCount: 50_000,
+          failureChainEvaluationStart: 0,
+          failureIndex,
+          maximumConsecutiveFailureCount: 3
+        })
+      )
+    ).toEqual([16_667, 33_334, 50_000])
+    expect(
+      pressureAttemptEvaluationLimit({
+        maximumEvaluationCount: 50_000,
+        failureChainEvaluationStart: 12_000,
+        failureIndex: 0,
+        maximumConsecutiveFailureCount: 3
+      })
+    ).toBe(24_667)
   })
 
   it('extends only the registered four-sweep pressure attempts to eight', () => {

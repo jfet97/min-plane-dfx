@@ -362,6 +362,7 @@ describe('intrinsic global squeeze portfolio', () => {
       proposalWeightedLoss: 0.2,
       proposalDispersion: 0.4,
       separationEvaluationCount: 7,
+      separationEvaluationLimit: 10,
       bestRepairedLoss: 0,
       bestEndpointExact: true,
       bestEndpointSatExactZero: true,
