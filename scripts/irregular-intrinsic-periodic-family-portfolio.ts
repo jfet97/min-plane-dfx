@@ -160,6 +160,7 @@ const report = {
       enumeratedPairCount: family.enumeratedPairCount,
       pairCoverageComplete: family.pairCoverageComplete,
       cellCoverageComplete: family.cellCoverageComplete,
+      rejectedSamples: family.rejectedSamples,
       certifiedCells: family.cells.map((cell) => ({
         role: cell.role,
         canonicalKeySha256: sha256(cell.canonicalKey),

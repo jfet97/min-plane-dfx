@@ -95,6 +95,19 @@ export interface IntrinsicPeriodicTransformReservation {
   readonly retainedCount: number
 }
 
+export interface IntrinsicPeriodicCellRejection {
+  readonly role: 'P1' | 'P2'
+  readonly stage:
+    | 'axisBasisUnavailable'
+    | 'degenerateBasis'
+    | 'farNeighborRejected'
+    | 'threeByThreeLatticeRejected'
+    | 'baseShapeRejected'
+  readonly v1: IntrinsicPeriodicVector | undefined
+  readonly v2: IntrinsicPeriodicVector | undefined
+  readonly determinantGrid2: string | undefined
+}
+
 export interface IntrinsicPeriodicFamilyCatalog {
   readonly familyKey: string
   readonly memberCount: number
@@ -108,6 +121,7 @@ export interface IntrinsicPeriodicFamilyCatalog {
   readonly cellCoverageComplete: boolean
   readonly cells: ReadonlyArray<IntrinsicPeriodicCell>
   readonly rejected: Readonly<Record<string, number>>
+  readonly rejectedSamples: ReadonlyArray<IntrinsicPeriodicCellRejection>
 }
 
 export interface IntrinsicPeriodicSeed {
@@ -272,6 +286,7 @@ function enumerateIntrinsicPeriodicFamily(input: {
     const transformCoverageComplete =
       runtimeCoverageComplete && transformed.length === transformedByCanonicalKey.size
     const rejected = new Map<string, number>()
+    const rejectedSamples: IntrinsicPeriodicCellRejection[] = []
     const p1: IntrinsicPeriodicCell[] = []
     const p2: IntrinsicPeriodicCell[] = []
     const addDerived = (
@@ -298,6 +313,7 @@ function enumerateIntrinsicPeriodicFamily(input: {
       })
       addDerived(p1, derived.cells, 'noP1Basis')
       mergeRejectedCounts(rejected, derived.rejected)
+      appendRejectedSamples(rejectedSamples, derived.rejectedSamples)
     }
 
     let enumeratedPairCount = 0
@@ -349,6 +365,7 @@ function enumerateIntrinsicPeriodicFamily(input: {
           })
           addDerived(p2, derived.cells, 'noP2Basis')
           mergeRejectedCounts(rejected, derived.rejected)
+          appendRejectedSamples(rejectedSamples, derived.rejectedSamples)
         }
       }
       if (!pairCoverageComplete) break
@@ -375,7 +392,8 @@ function enumerateIntrinsicPeriodicFamily(input: {
       cellCoverageComplete:
         runtimeCoverageComplete && pairCoverageComplete && p1Front.coverageComplete && p2Front.coverageComplete,
       cells: rankIntrinsicPeriodicCells(cells),
-      rejected: Object.fromEntries([...rejected.entries()].toSorted())
+      rejected: Object.fromEntries([...rejected.entries()].toSorted()),
+      rejectedSamples
     }
   })
 }
@@ -396,7 +414,8 @@ function emptyIntrinsicPeriodicFamilyCatalog(
     pairCoverageComplete: true,
     cellCoverageComplete: true,
     cells: [],
-    rejected
+    rejected,
+    rejectedSamples: []
   }
 }
 
@@ -684,6 +703,7 @@ function placedBounds(placed: ReadonlyArray<IrregularPlacedPiece>):
 interface IntrinsicPeriodicCellDerivation {
   readonly cells: ReadonlyArray<IntrinsicPeriodicCell>
   readonly rejected: Readonly<Record<string, number>>
+  readonly rejectedSamples: ReadonlyArray<IntrinsicPeriodicCellRejection>
 }
 
 function deriveCells(input: {
@@ -706,13 +726,15 @@ function deriveCells(input: {
           settings: input.settings.geometry
         })
         const movingGrid = gridPoint(movingMember.point)
-        if (movingGrid === undefined) return { cells: [], rejected: { invalidMovingGrid: 1 } }
+        if (movingGrid === undefined) {
+          return { cells: [], rejected: { invalidMovingGrid: 1 }, rejectedSamples: [] }
+        }
         const points = boundary.boundary.points
           .map(gridPoint)
           .filter((point): point is GridPoint => point !== undefined)
         const shiftedPoints = shiftOrderedPairForbiddenBoundary(points, movingGrid)
         if (points.length !== boundary.boundary.points.length) {
-          return { cells: [], rejected: { invalidForbiddenGrid: 1 } }
+          return { cells: [], rejected: { invalidForbiddenGrid: 1 }, rejectedSamples: [] }
         }
         forbidden.push({ points: shiftedPoints })
       }
@@ -723,20 +745,36 @@ function deriveCells(input: {
     ]
     const result: IntrinsicPeriodicCell[] = []
     const rejected = new Map<string, number>()
-    if (bases.length === 0) rejected.set('axisBasisUnavailable', 1)
+    const rejectedSamples: IntrinsicPeriodicCellRejection[] = []
+    const reject = (
+      stage: IntrinsicPeriodicCellRejection['stage'],
+      basis: readonly [GridPoint, GridPoint] | undefined
+    ) => {
+      rejected.set(stage, (rejected.get(stage) ?? 0) + 1)
+      if (rejectedSamples.length >= 8) return
+      rejectedSamples.push({
+        role: input.role,
+        stage,
+        v1: basis === undefined ? undefined : fromGridPoint(basis[0]),
+        v2: basis === undefined ? undefined : fromGridPoint(basis[1]),
+        determinantGrid2:
+          basis === undefined ? undefined : absBigInt(crossGrid(basis[0], basis[1])).toString()
+      })
+    }
+    if (bases.length === 0) reject('axisBasisUnavailable', undefined)
     for (const [rawV1, rawV2] of bases) {
       const canonical = canonicalizeBasis(rawV1, rawV2)
       if (canonical === undefined) {
-        rejected.set('degenerateBasis', (rejected.get('degenerateBasis') ?? 0) + 1)
+        reject('degenerateBasis', [rawV1, rawV2])
         continue
       }
       if (!farNeighborCertificate(input.members, canonical)) {
-        rejected.set('farNeighborRejected', (rejected.get('farNeighborRejected') ?? 0) + 1)
+        reject('farNeighborRejected', canonical)
         continue
       }
       const certificate = yield* validateLattice(input.members, canonical)
       if (certificate === undefined) {
-        rejected.set('threeByThreeLatticeRejected', (rejected.get('threeByThreeLatticeRejected') ?? 0) + 1)
+        reject('threeByThreeLatticeRejected', canonical)
         continue
       }
       const determinantGrid2 = absBigInt(crossGrid(canonical[0], canonical[1]))
@@ -746,7 +784,7 @@ function deriveCells(input: {
       )
       const shape = measureBaseCellShape(input.members)
       if (shape === undefined) {
-        rejected.set('baseShapeRejected', (rejected.get('baseShapeRejected') ?? 0) + 1)
+        reject('baseShapeRejected', canonical)
         continue
       }
       const canonicalKey = canonicalCellKey(input.role, input.members, canonical)
@@ -765,7 +803,11 @@ function deriveCells(input: {
         canonicalKey
       })
     }
-    return { cells: result, rejected: Object.fromEntries([...rejected.entries()].toSorted()) }
+    return {
+      cells: result,
+      rejected: Object.fromEntries([...rejected.entries()].toSorted()),
+      rejectedSamples
+    }
   })
 }
 
@@ -775,6 +817,28 @@ function mergeRejectedCounts(
 ): void {
   for (const [reason, count] of Object.entries(incoming)) {
     target.set(reason, (target.get(reason) ?? 0) + count)
+  }
+}
+
+function appendRejectedSamples(
+  target: IntrinsicPeriodicCellRejection[],
+  incoming: ReadonlyArray<IntrinsicPeriodicCellRejection>
+): void {
+  for (const sample of incoming) {
+    if (target.length >= 32) return
+    if (
+      !target.some(
+        (existing) =>
+          existing.role === sample.role &&
+          existing.stage === sample.stage &&
+          existing.v1?.x === sample.v1?.x &&
+          existing.v1?.y === sample.v1?.y &&
+          existing.v2?.x === sample.v2?.x &&
+          existing.v2?.y === sample.v2?.y
+      )
+    ) {
+      target.push(sample)
+    }
   }
 }
 
