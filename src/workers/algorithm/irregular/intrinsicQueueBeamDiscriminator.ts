@@ -86,6 +86,18 @@ export type IntrinsicPartialAllocationCellId =
   | 'w4-no-contact'
   | 'w4-current'
 
+type IntrinsicCompactClosureShadowKind =
+  | 'compactness-eviction'
+  | 'contact-counterfactual'
+  | 'compact-closure-candidate'
+  | 'compact-closure-sibling'
+
+export interface IntrinsicCompactClosureMarginalGrowth {
+  readonly maximumSideGrid: number
+  readonly envelopeAreaGrid2: number
+  readonly hullWasteDoubledAreaGrid2: number
+}
+
 const transformCandidateOrder = Order.combineAll<IrregularTransformCandidate>([
   Order.mapInput(Order.Number, (transform) => transform.index),
   Order.mapInput(Order.Number, (transform) => transform.rotationDeg),
@@ -393,6 +405,16 @@ export interface IntrinsicPeelReinsertObserverResult {
             }
           | undefined
       }>
+      readonly compactClosureSelections: ReadonlyArray<{
+        readonly pairDigest: string
+        readonly parentFutureEquivalenceDigest: string
+        readonly siblingFutureEquivalenceDigest: string
+        readonly candidateFutureEquivalenceDigest: string
+        readonly candidateRank: number
+        readonly marginalGrowth: IntrinsicCompactClosureMarginalGrowth
+        readonly siblingAxes: IntrinsicQueueBeamAxes
+        readonly candidateAxes: IntrinsicQueueBeamAxes
+      }>
     }>
   }>
   readonly boundedEndpointWitnesses: ReadonlyArray<{
@@ -424,7 +446,7 @@ export interface IntrinsicPeelReinsertObserverResult {
       readonly generatedCompleteSuccessorCount: number
       readonly uniqueEndpointCount: number
       readonly improvingEndpointCount: number
-      readonly seedKind: 'compactness-eviction' | 'contact-counterfactual' | 'both'
+      readonly seedKinds: ReadonlyArray<IntrinsicCompactClosureShadowKind>
       readonly selectedByAllocationCells: ReadonlyArray<IntrinsicPartialAllocationCellId>
       readonly bestTerminalWitness:
         | {
@@ -433,8 +455,44 @@ export interface IntrinsicPeelReinsertObserverResult {
           }
         | undefined
       readonly bestFinalizedEndpointMetrics: IntrinsicStrictCompletedMetrics | undefined
+      readonly horizonSteps: ReadonlyArray<{
+        readonly stepIndex: number
+        readonly pieceId: PieceId
+        readonly uniqueFittingSuccessorCount: number
+        readonly boundedRetainedWitnesses: ReadonlyArray<{
+          readonly canonicalGeometryDigest: string
+          readonly axes: IntrinsicQueueBeamAxes
+        }>
+      }>
     }>
   }
+  readonly compactClosureComparisons: ReadonlyArray<{
+    readonly pairDigest: string
+    readonly parentFutureEquivalenceDigest: string
+    readonly siblingWitnessDigest: string
+    readonly candidateWitnessDigest: string
+    readonly marginalGrowth: IntrinsicCompactClosureMarginalGrowth
+    readonly siblingBestTerminalWitness:
+      | {
+          readonly canonicalGeometryDigest: string
+          readonly axes: IntrinsicQueueBeamAxes
+        }
+      | undefined
+    readonly candidateBestTerminalWitness:
+      | {
+          readonly canonicalGeometryDigest: string
+          readonly axes: IntrinsicQueueBeamAxes
+        }
+      | undefined
+    readonly siblingFinalizedEndpointMetrics: IntrinsicStrictCompletedMetrics | undefined
+    readonly candidateFinalizedEndpointMetrics: IntrinsicStrictCompletedMetrics | undefined
+    readonly siblingHorizonSteps: IntrinsicPeelReinsertObserverResult['shadowCompletion']['traces'][number]['horizonSteps']
+    readonly candidateHorizonSteps: IntrinsicPeelReinsertObserverResult['shadowCompletion']['traces'][number]['horizonSteps']
+    readonly candidateCommonArchiveNonDominated: boolean
+    readonly candidateImprovesCohesion: boolean
+    readonly candidatePassesTopologyGuard: boolean
+    readonly passes: boolean
+  }>
   readonly classification: 'better-exact-endpoint' | 'no-better-bounded-endpoint' | 'truncated'
   readonly bestEndpoint:
     | {
@@ -1445,6 +1503,16 @@ export function runIntrinsicPeelReinsertObserver(input: {
     }
     const primaryTerminalRecords = new Map<string, TerminalRecord>()
     const shadowTerminalRecords = new Map<string, TerminalRecord>()
+    const compactClosurePairs = new Map<
+      string,
+      {
+        readonly pairDigest: string
+        readonly parentFutureEquivalenceDigest: string
+        readonly siblingWitnessDigest: string
+        readonly candidateWitnessDigest: string
+        readonly marginalGrowth: IntrinsicCompactClosureMarginalGrowth
+      }
+    >()
     const shadowSeeds = new Map<
       string,
       {
@@ -1453,7 +1521,7 @@ export function runIntrinsicPeelReinsertObserver(input: {
         readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
         readonly evictionStepIndex: number
         readonly witnessDigest: string
-        readonly kinds: Set<'compactness-eviction' | 'contact-counterfactual'>
+        readonly kinds: Set<IntrinsicCompactClosureShadowKind>
         readonly selectedByAllocationCells: Set<IntrinsicPartialAllocationCellId>
       }
     >()
@@ -1462,7 +1530,7 @@ export function runIntrinsicPeelReinsertObserver(input: {
       readonly removedPieceIds: ReadonlyArray<PieceId>
       readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
       readonly evictionStepIndex: number
-      readonly kind: 'compactness-eviction' | 'contact-counterfactual'
+      readonly kind: IntrinsicCompactClosureShadowKind
       readonly selectedByAllocationCell?: IntrinsicPartialAllocationCellId
     }) => {
       const incumbent = shadowSeeds.get(input.entry.futureEquivalenceKey)
@@ -1552,6 +1620,8 @@ export function runIntrinsicPeelReinsertObserver(input: {
           let stepEnvelopeEventCandidateCount = 0
           let stepScoredCandidateCount = 0
           let stepCanonicalLegalCandidateCount = 0
+          const stepCompactClosureSelections: IntrinsicPeelReinsertObserverResult['orderTraces'][number]['steps'][number]['compactClosureSelections'][number][] =
+            []
           for (const state of states) {
             const outcome = yield* enumerateWithDeadlineRecovery({
               state,
@@ -1583,6 +1653,65 @@ export function runIntrinsicPeelReinsertObserver(input: {
             if (!outcome.fullyEnumerated) {
               orderTruncated = true
               break
+            }
+            if (remainingPreparedPieces.length !== 2) continue
+            const closureSelection = selectIntrinsicCompactClosureCandidates(
+              outcome.uniqueCanonicalSuccessors
+                .filter(({ state: candidateState }) =>
+                  partialStateCanFit(candidateState, input.finalSheet)
+                )
+                .map(partialBeamEntry)
+            )
+            if (closureSelection === undefined) continue
+            const parentFutureEquivalenceDigest = digestSemanticIdentity(
+              partialFutureEquivalenceKey(state)
+            )
+            const siblingWitnessDigest = digestSemanticIdentity(
+              closureSelection.sibling.futureEquivalenceKey
+            )
+            for (const [candidateIndex, candidate] of closureSelection.candidates.entries()) {
+              const candidateWitnessDigest = digestSemanticIdentity(
+                candidate.entry.futureEquivalenceKey
+              )
+              const pairDigest = digestSemanticIdentity(
+                [
+                  parentFutureEquivalenceDigest,
+                  siblingWitnessDigest,
+                  candidateWitnessDigest,
+                  ...orderIds.map(String)
+                ].join('|')
+              )
+              appendShadowSeed({
+                entry: closureSelection.sibling,
+                removedPieceIds: subset,
+                reinsertionOrderPieceIds: orderIds,
+                evictionStepIndex: step,
+                kind: 'compact-closure-sibling'
+              })
+              appendShadowSeed({
+                entry: candidate.entry,
+                removedPieceIds: subset,
+                reinsertionOrderPieceIds: orderIds,
+                evictionStepIndex: step,
+                kind: 'compact-closure-candidate'
+              })
+              compactClosurePairs.set(pairDigest, {
+                pairDigest,
+                parentFutureEquivalenceDigest,
+                siblingWitnessDigest,
+                candidateWitnessDigest,
+                marginalGrowth: candidate.marginalGrowth
+              })
+              stepCompactClosureSelections.push({
+                pairDigest,
+                parentFutureEquivalenceDigest,
+                siblingFutureEquivalenceDigest: siblingWitnessDigest,
+                candidateFutureEquivalenceDigest: candidateWitnessDigest,
+                candidateRank: candidateIndex + 1,
+                marginalGrowth: candidate.marginalGrowth,
+                siblingAxes: closureSelection.sibling.axes,
+                candidateAxes: candidate.entry.axes
+              })
             }
           }
           if (orderTruncated) break
@@ -1694,7 +1823,8 @@ export function runIntrinsicPeelReinsertObserver(input: {
                       retainedByCompactnessWidthFour:
                         selection.contactSelection.retainedByCompactnessWidthFour
                     }
-            }))
+            })),
+            compactClosureSelections: stepCompactClosureSelections
           })
           states = retained
             .map(({ state }) => state)
@@ -1754,8 +1884,17 @@ export function runIntrinsicPeelReinsertObserver(input: {
       readonly canonicalLegalCandidateCount: number
       readonly generatedCompleteSuccessorCount: number
       readonly terminalKeys: ReadonlyArray<string>
-      readonly seedKind: 'compactness-eviction' | 'contact-counterfactual' | 'both'
+      readonly seedKinds: ReadonlyArray<IntrinsicCompactClosureShadowKind>
       readonly selectedByAllocationCells: ReadonlyArray<IntrinsicPartialAllocationCellId>
+      readonly horizonSteps: ReadonlyArray<{
+        readonly stepIndex: number
+        readonly pieceId: PieceId
+        readonly uniqueFittingSuccessorCount: number
+        readonly boundedRetainedWitnesses: ReadonlyArray<{
+          readonly canonicalGeometryDigest: string
+          readonly axes: IntrinsicQueueBeamAxes
+        }>
+      }>
     }> = []
     let shadowGeneratedCandidateCount = 0
     let shadowCanonicalLegalCandidateCount = 0
@@ -1768,6 +1907,8 @@ export function runIntrinsicPeelReinsertObserver(input: {
         let generatedCompleteSuccessorCount = 0
         let shadowTruncated = false
         const remainingOrder = shadow.entry.state.remainingPreparedPieces
+        const horizonSteps: IntrinsicPeelReinsertObserverResult['shadowCompletion']['traces'][number]['horizonSteps'][number][] =
+          []
         for (let step = 0; step < remainingOrder.length; step += 1) {
           const piece = remainingOrder[step]
           if (piece === undefined) continue
@@ -1808,9 +1949,16 @@ export function runIntrinsicPeelReinsertObserver(input: {
               .map(partialBeamEntry)
           ).toSorted(comparePartialCandidate)
           const terminalStep = step === remainingOrder.length - 1
-          states = (terminalStep ? orderedSuccessors : orderedSuccessors.slice(0, 4)).map(
-            ({ state }) => state
-          )
+          const retainedSuccessors = terminalStep
+            ? orderedSuccessors
+            : orderedSuccessors.slice(0, 4)
+          horizonSteps.push({
+            stepIndex: step,
+            pieceId: preparedPieceId(piece),
+            uniqueFittingSuccessorCount: orderedSuccessors.length,
+            boundedRetainedWitnesses: retainedSuccessors.slice(0, 4).map(traceWitness)
+          })
+          states = retainedSuccessors.map(({ state }) => state)
           if (terminalStep) {
             generatedCompleteSuccessorCount = orderedSuccessors.length
             for (const entry of orderedSuccessors) {
@@ -1846,13 +1994,9 @@ export function runIntrinsicPeelReinsertObserver(input: {
           canonicalLegalCandidateCount,
           generatedCompleteSuccessorCount,
           terminalKeys,
-          seedKind:
-            shadow.kinds.size > 1
-              ? 'both'
-              : shadow.kinds.has('contact-counterfactual')
-                ? 'contact-counterfactual'
-                : 'compactness-eviction',
-          selectedByAllocationCells: [...shadow.selectedByAllocationCells]
+          seedKinds: [...shadow.kinds],
+          selectedByAllocationCells: [...shadow.selectedByAllocationCells],
+          horizonSteps
         })
         if (shadowTruncated) break shadowLoop
       }
@@ -2021,7 +2165,7 @@ export function runIntrinsicPeelReinsertObserver(input: {
         improvingEndpointCount: traceEndpoints.filter(({ metrics }) =>
           improvesCommonArchive(metrics)
         ).length,
-        seedKind: trace.seedKind,
+        seedKinds: trace.seedKinds,
         selectedByAllocationCells: trace.selectedByAllocationCells,
         bestTerminalWitness:
           bestTerminalEntry === undefined
@@ -2032,7 +2176,50 @@ export function runIntrinsicPeelReinsertObserver(input: {
                 ),
                 axes: bestTerminalEntry.axes
               },
-        bestFinalizedEndpointMetrics
+        bestFinalizedEndpointMetrics,
+        horizonSteps: trace.horizonSteps
+      }
+    })
+    const shadowTraceByWitness = new Map(
+      shadowTraces.map((trace) => [trace.witnessDigest, trace] as const)
+    )
+    const compactClosureComparisons = [...compactClosurePairs.values()].map((pair) => {
+      const sibling = shadowTraceByWitness.get(pair.siblingWitnessDigest)
+      const candidate = shadowTraceByWitness.get(pair.candidateWitnessDigest)
+      const candidateMetrics = candidate?.bestFinalizedEndpointMetrics
+      const candidateCommonArchiveNonDominated =
+        candidateMetrics !== undefined &&
+        !intrinsicStrictCompletedLayoutDominates(input.seedMetrics, candidateMetrics)
+      const candidateImprovesCohesion =
+        candidateMetrics !== undefined &&
+        (candidateMetrics.isolatedPieceCount < input.seedMetrics.isolatedPieceCount ||
+          candidateMetrics.largestPositiveContactComponentSize >
+            input.seedMetrics.largestPositiveContactComponentSize ||
+          candidateMetrics.dominantStructuralContacts >
+            input.seedMetrics.dominantStructuralContacts)
+      const candidatePassesTopologyGuard =
+        candidateMetrics !== undefined &&
+        candidateMetrics.enclosedCavityCount <= input.seedMetrics.enclosedCavityCount &&
+        candidateMetrics.totalEnclosedCavityAreaMm2 <=
+          input.seedMetrics.totalEnclosedCavityAreaMm2 &&
+        candidateMetrics.largestOccupiedHullGapRatio <=
+          input.seedMetrics.largestOccupiedHullGapRatio &&
+        candidateMetrics.occupiedHullWasteRatio <= input.seedMetrics.occupiedHullWasteRatio
+      return {
+        ...pair,
+        siblingBestTerminalWitness: sibling?.bestTerminalWitness,
+        candidateBestTerminalWitness: candidate?.bestTerminalWitness,
+        siblingFinalizedEndpointMetrics: sibling?.bestFinalizedEndpointMetrics,
+        candidateFinalizedEndpointMetrics: candidateMetrics,
+        siblingHorizonSteps: sibling?.horizonSteps ?? [],
+        candidateHorizonSteps: candidate?.horizonSteps ?? [],
+        candidateCommonArchiveNonDominated,
+        candidateImprovesCohesion,
+        candidatePassesTopologyGuard,
+        passes:
+          candidateCommonArchiveNonDominated &&
+          candidateImprovesCohesion &&
+          candidatePassesTopologyGuard
       }
     })
     const truncated = budget.truncationReason !== undefined
@@ -2077,6 +2264,7 @@ export function runIntrinsicPeelReinsertObserver(input: {
           .length,
         traces: shadowTraces
       },
+      compactClosureComparisons,
       classification: truncated
         ? 'truncated'
         : improvingEndpointCount > 0
@@ -3543,6 +3731,85 @@ const PARTIAL_ALLOCATION_CELL_ROLES: Readonly<
   'w3-contact': ['breadth', 'contact', 'dispersion'],
   'w4-no-contact': ['breadth', 'breadth', 'dispersion', 'dispersion'],
   'w4-current': ['breadth', 'breadth', 'contact', 'dispersion']
+}
+
+export function selectIntrinsicCompactClosureCandidates<
+  T extends IntrinsicPartialGeometricBeamCandidate
+>(candidates: ReadonlyArray<T>):
+  | {
+      readonly sibling: T
+      readonly candidates: ReadonlyArray<{
+        readonly entry: T
+        readonly marginalGrowth: IntrinsicCompactClosureMarginalGrowth
+      }>
+    }
+  | undefined {
+  const uniqueByFuture = new Map<string, T>()
+  for (const candidate of candidates) {
+    const incumbent = uniqueByFuture.get(candidate.futureEquivalenceKey)
+    if (incumbent === undefined || comparePartialCandidate(candidate, incumbent) < 0) {
+      uniqueByFuture.set(candidate.futureEquivalenceKey, candidate)
+    }
+  }
+  const unique = [...uniqueByFuture.values()]
+  const sibling = unique.toSorted(comparePartialCandidate)[0]
+  if (sibling === undefined) return undefined
+  const conditioned = unique
+    .filter(
+      (candidate) =>
+        candidate.futureEquivalenceKey !== sibling.futureEquivalenceKey &&
+        compareBoundedContact(candidate.axes, sibling.axes) < 0
+    )
+    .map((entry) => ({
+      entry,
+      marginalGrowth: {
+        maximumSideGrid:
+          entry.axes.compactness.maximumSideGrid - sibling.axes.compactness.maximumSideGrid,
+        envelopeAreaGrid2:
+          entry.axes.compactness.envelopeAreaGrid2 - sibling.axes.compactness.envelopeAreaGrid2,
+        hullWasteDoubledAreaGrid2:
+          entry.axes.voids.occupiedHullWasteDoubledAreaGrid2 -
+          sibling.axes.voids.occupiedHullWasteDoubledAreaGrid2
+      }
+    }))
+  const nondominated = conditioned.filter(
+    (candidate) =>
+      !conditioned.some(
+        (other) =>
+          other !== candidate &&
+          compactClosureGrowthDominates(other.marginalGrowth, candidate.marginalGrowth)
+      )
+  )
+  return {
+    sibling,
+    candidates: nondominated
+      .toSorted(
+        (first, second) =>
+          first.marginalGrowth.maximumSideGrid - second.marginalGrowth.maximumSideGrid ||
+          first.marginalGrowth.envelopeAreaGrid2 -
+            second.marginalGrowth.envelopeAreaGrid2 ||
+          first.marginalGrowth.hullWasteDoubledAreaGrid2 -
+            second.marginalGrowth.hullWasteDoubledAreaGrid2 ||
+          compareBoundedContact(first.entry.axes, second.entry.axes) ||
+          first.entry.futureEquivalenceKey.localeCompare(second.entry.futureEquivalenceKey)
+      )
+      .slice(0, 2)
+  }
+}
+
+function compactClosureGrowthDominates(
+  first: IntrinsicCompactClosureMarginalGrowth,
+  second: IntrinsicCompactClosureMarginalGrowth
+): boolean {
+  const noWorse =
+    first.maximumSideGrid <= second.maximumSideGrid &&
+    first.envelopeAreaGrid2 <= second.envelopeAreaGrid2 &&
+    first.hullWasteDoubledAreaGrid2 <= second.hullWasteDoubledAreaGrid2
+  const strictlyBetter =
+    first.maximumSideGrid < second.maximumSideGrid ||
+    first.envelopeAreaGrid2 < second.envelopeAreaGrid2 ||
+    first.hullWasteDoubledAreaGrid2 < second.hullWasteDoubledAreaGrid2
+  return noWorse && strictlyBetter
 }
 
 function prepareIntrinsicPartialAllocationContext<

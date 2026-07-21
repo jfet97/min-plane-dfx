@@ -34,6 +34,7 @@ import {
   runIntrinsicPeelReinsertObserver,
   runIntrinsicQueueBeamDiscriminator,
   measureExactDoubledPathsArea,
+  selectIntrinsicCompactClosureCandidates,
   selectIntrinsicPartialGeometricBeam,
   type IntrinsicPartialGeometricBeamCandidate,
   type IntrinsicQueueBeamAxes
@@ -373,9 +374,10 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(observer.uniqueEndpointCount).toBeGreaterThan(0)
     expect(
       observer.shadowCompletion.traces.some(
-        ({ seedKind }) => seedKind === 'contact-counterfactual' || seedKind === 'both'
+        ({ seedKinds }) => seedKinds.includes('contact-counterfactual')
       )
     ).toBe(true)
+    expect(Array.isArray(observer.compactClosureComparisons)).toBe(true)
     expect(observer.evaluations).toBeGreaterThan(0)
     expect(seed.winner.placedCollisionGeometries).toEqual(seedPlacements)
   })
@@ -855,6 +857,30 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(selection.slots.filter(({ role }) => role === 'contact')).toHaveLength(1)
     expect(selection.slots.filter(({ role }) => role === 'dispersion').length).toBeGreaterThan(0)
     expect(selection.slots).toHaveLength(7)
+  })
+
+  it('conditions compact closure candidates against the compactness-first sibling', () => {
+    const sibling = partialBeamCandidate('sibling', 0, 0, 2)
+    const contactA = partialBeamCandidate('contact-a', 1, 2, 1)
+    const contactB = partialBeamCandidate('contact-b', 2, 1, 0)
+    const dominatedContact = partialBeamCandidate('dominated-contact', 3, 3, 1)
+
+    const selection = selectIntrinsicCompactClosureCandidates([
+      dominatedContact,
+      contactB,
+      sibling,
+      contactA
+    ])
+
+    expect(selection?.sibling.futureEquivalenceKey).toBe('sibling')
+    expect(selection?.candidates.map(({ entry }) => entry.futureEquivalenceKey)).toEqual([
+      'contact-a',
+      'contact-b'
+    ])
+    expect(selection?.candidates.map(({ marginalGrowth }) => marginalGrowth)).toEqual([
+      { maximumSideGrid: 1, envelopeAreaGrid2: 1, hullWasteDoubledAreaGrid2: 2 },
+      { maximumSideGrid: 2, envelopeAreaGrid2: 2, hullWasteDoubledAreaGrid2: 1 }
+    ])
   })
 
   it('opens the next Pareto layer when shallow singleton layers cannot fill capacity', () => {
