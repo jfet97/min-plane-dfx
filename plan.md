@@ -33,15 +33,15 @@ Therefore:
    assessed terminal successors and shadow-completed all retained eviction
    witnesses. Its only strict improvement is geometrically negligible and
    leaves cohesion unchanged;
-5. **next, co-primary:** run the trace-only Stage 2A allocation diagnostic that
-   separates width from contact-role allocation, and profile/run the bounded
-   Mixed commensurate-only cost
-   pilot. A live fixed-width cap-0/cap-1 pair is eligible only if both cells are
-   projected to complete under one frozen budget and the Triangle observer has
-   either closed or explicitly falsified its bounded hypothesis;
-6. widen or reallocate the live beam only after the known delayed witness and
-   contact-selected counterfactuals have been replayed through the actual
-   Stage 2A selector under the same successor union and terminal archive.
+5. **completed:** the trace-only Stage 2A allocation audit separated width from
+   contact-role allocation over one shared successor union. Neither width-four
+   policy retained the known delayed-value witness, while raw contact survivors
+   improved cohesion only by accepting a large envelope regression;
+6. **next, co-primary:** run a bounded two-placement compact-closure horizon on
+   Triangle and profile/run the bounded Mixed commensurate-only cost pilot. A
+   live fixed-width cap-0/cap-1 pair is eligible only if both cells are projected
+   to complete under one frozen budget and the Triangle observer has either
+   closed or explicitly falsified its bounded legal-closure hypothesis.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -328,22 +328,40 @@ so the calibration premise that dispersion is more valuable than one bounded
 contact survivor at width three remains untested. This is intentional selector
 policy, not an implementation defect.
 
-The next diagnostic must separate capacity from role allocation over the same
-successor union:
+Commit `d389195` completed the diagnostic that separates capacity from role
+allocation over the same successor union:
 
 1. width three: current `breadth + breadth + dispersion` versus
    `breadth + contact + dispersion`;
 2. width four: `breadth + breadth + dispersion + dispersion` versus current
    `breadth + breadth + contact + dispersion`.
 
-For every distinct contact-selected counterfactual and the known delayed-value
-witness, record Pareto layer, compactness/void rank, contact rank, dispersion
-distance, selection role, and forced unchanged-horizon endpoint metrics. A
-contact role is eligible for live testing only if it produces better cohesion
-without a geometric or cavity regression. If neither width-four cell retains
-the known delayed witness, bracket its minimum width/horizon without changing
-contact policy. This is a Stage 2A calibration cell, not a new stage or a
-fixture-specific triangle rule.
+Across 60 nonterminal decisions, both contact-enabled cells selected the same
+contact candidate and every contact pick sat outside the plain compactness top
+four. Global future-equivalence deduplication produced 13 distinct contact
+counterfactuals plus 45 compactness-eviction witnesses; all 58 completed. None
+of the four cells retained `f9c9...`, so adding one slot or reallocating one slot
+to contact does not rescue that delayed-value lineage.
+
+The raw contact counterfactual is also the wrong live policy. Its best exactly
+finalized descendant has area `97,686.123682 mm2`, nine isolates, 14 contact
+components, largest component three, and `6/3` total/dominant contacts. Compared
+with the `88,124.330 mm2`, 11-isolate, `5/3` live seed, it buys modest cohesion
+with an approximately `10.85%` area regression. Other contact descendants reach
+eight isolates, a largest component of six, and seven contacts, but require at
+least `109,552.750624 mm2`. This rejects raw maximum-contact retention, not the
+idea that structurally useful contact needs bounded protection.
+
+The next Triangle gate is therefore a trace-only **compact-closure horizon**.
+For each parent, form the non-dominated contact-improving set and retain at most
+two candidates that minimize marginal maximum-side, envelope-area, and hull-
+waste growth. Force each candidate through exactly two further scheduled
+placements using the existing exact width-four micro-beam, then compare equal-
+work descendants after each horizon and at exact finalization. Pass requires a
+common-archive non-dominated descendant with improved cohesion and no cavity
+regression. If all conditioned candidates remain dominated, reject this bounded
+legal local-closure mechanism before considering coordinated movement. This is
+generic geometry search, not a triangle-specific side-placement rule.
 
 ## What The Completed Proofs Rule Out
 
@@ -1361,23 +1379,26 @@ and admits only Clipper2-legal endpoints to the common archive.
   Mixed truncated):
   `/private/tmp/min-plane-provenance/v7-calibration-40c26dc-triangle/` and
   `/private/tmp/min-plane-provenance/v7-calibration-40c26dc-mixed/`
+- Completed four-cell allocation audit and exact counterfactual endpoints:
+  `/private/tmp/min-plane-provenance/v7-allocation-d389195-triangle/`
 
 ## Immediate Next Action
 
 Run two independent bounded workstreams:
 
-1. implement the trace-only four-cell Stage 2A allocation diagnostic defined
-   above. Use one shared successor union per depth, do not change live
-   selection, force the known delayed witness and each distinct contact pick
-   through its unchanged horizon, and finalize under the common exact archive;
+1. implement the trace-only two-placement compact-closure horizon defined
+   above. Keep live selection unchanged, condition contact improvement on low
+   marginal envelope and hull growth, compare equal-work descendants, and
+   finalize only under the common exact archive;
 2. profile the existing Mixed commensurate discovery and symmetric two-order
    completion path, then run the bounded cold cost pilot. Reuse the selected
    alternate discovery enumeration, skip unrelated continuations, and record
    discovery, canonical-admission, topology, and completion costs separately.
 
-The corrected Triangle observer is a positive delayed-value mechanism witness,
-not a production-width calibration and not a cohesion improvement. No live
-fixed-width cap, contact-role change, stagnation kick, or Sparrow-style
-coordinated movement is eligible until the four-cell diagnostic has complete
-endpoints and reviewed traces. The Mixed cost pilot remains independent and may
-proceed concurrently.
+The corrected Triangle observer is positive delayed-value mechanism evidence,
+not a production-width calibration or a cohesion improvement. The completed
+four-cell audit makes width-three role allocation secondary and rejects raw
+maximum-contact retention. No live fixed-width cap, contact-role change,
+stagnation kick, or Sparrow-style coordinated movement is eligible until the
+compact-closure horizon has complete reviewed endpoints. The Mixed cost pilot
+remains independent and may proceed concurrently.
