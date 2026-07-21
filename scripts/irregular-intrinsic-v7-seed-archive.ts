@@ -34,6 +34,14 @@ import {
   type IntrinsicReconstructionPortfolioResult
 } from '../src/workers/algorithm/irregular/intrinsicReconstructionPortfolio.js'
 import {
+  INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
+  runIntrinsicSqueezeDisruptSeparate
+} from '../src/workers/algorithm/irregular/intrinsicSqueezeDisruptSeparate.js'
+import {
+  intrinsicStrictCompletedLayoutDominates,
+  measureIntrinsicSheetlessCompletedLayout
+} from '../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
+import {
   auditIntrinsicReferenceSuccessorReachability,
   runIntrinsicPartialGeometricBeam,
   runIntrinsicPeelReinsertObserver,
@@ -89,6 +97,7 @@ async function main(): Promise<void> {
   const fourContributorReconstruction = process.argv.includes(
     '--four-contributor-reconstruction'
   )
+  const coordinatedPilot = process.argv.includes('--coordinated-pilot')
   const structuredLineagePath = argument('--structured-lineage')
   const lineageCalibrationOnly = process.argv.includes('--lineage-calibration-only')
   const firstMissAuditOnly = process.argv.includes('--first-miss-audit-only')
@@ -100,6 +109,9 @@ async function main(): Promise<void> {
   }
   if (fourContributorReconstruction && !peelReinsertObserver) {
     throw new Error('--four-contributor-reconstruction requires --peel-reinsert-observer')
+  }
+  if (coordinatedPilot && !partialBeamOnly) {
+    throw new Error('--coordinated-pilot requires --partial-beam-only')
   }
   if ((lineageCalibrationOnly || firstMissAuditOnly) && structuredLineagePath === undefined) {
     throw new Error('lineage calibration/audit requires --structured-lineage')
@@ -177,6 +189,7 @@ async function main(): Promise<void> {
       ),
       peelReinsertObserver,
       fourContributorReconstruction,
+      coordinatedPilot,
       peelMaximumRuntimeMs: positiveIntegerArgument('--peel-runtime-ms', 120_000),
       peelMaximumEvaluations: positiveIntegerArgument('--peel-evaluations', 100_000)
     })
@@ -496,6 +509,7 @@ async function runPartialBeamOnly(input: {
   readonly maximumEvaluations: number
   readonly peelReinsertObserver: boolean
   readonly fourContributorReconstruction: boolean
+  readonly coordinatedPilot: boolean
   readonly peelMaximumRuntimeMs: number
   readonly peelMaximumEvaluations: number
 }): Promise<void> {
@@ -570,6 +584,177 @@ async function runPartialBeamOnly(input: {
       stdio: 'inherit'
     })
   }
+  const coordinatedSeed =
+    peelResult?.bestEndpoint?.strictGeometricArchiveImprovement === true
+      ? {
+          canonicalGeometryHash: peelResult.bestEndpoint.canonicalGeometryHash,
+          metrics: peelResult.bestEndpoint.metrics,
+          placedCollisionGeometries: peelResult.bestEndpoint.placedCollisionGeometries,
+          source: 'peel-best' as const
+        }
+      : result.winner === undefined
+        ? undefined
+        : {
+            canonicalGeometryHash: result.winner.canonicalGeometryHash,
+            metrics: result.winner.metrics,
+            placedCollisionGeometries: result.winner.placedCollisionGeometries,
+            source: 'partial-beam-winner' as const
+          }
+  const coordinatedResult =
+    !input.coordinatedPilot || coordinatedSeed === undefined
+      ? undefined
+      : await Effect.runPromise(
+          withLayers(
+            runIntrinsicSqueezeDisruptSeparate({
+              allPreparedPieces: input.preparedPieces,
+              fullE1Placed: coordinatedSeed.placedCollisionGeometries
+            }),
+            input.fixture.settings
+          )
+        )
+  const previouslyObservedHashes = new Set([
+    ...(coordinatedSeed === undefined ? [] : [coordinatedSeed.canonicalGeometryHash]),
+    ...(peelResult?.boundedEndpointWitnesses.map(
+      ({ canonicalGeometryHash }) => canonicalGeometryHash
+    ) ?? [])
+  ])
+  const coordinatedEndpoints =
+    coordinatedResult === undefined || coordinatedSeed === undefined
+      ? []
+      : coordinatedResult.structuralHandoffs.flatMap((handoff, handoffIndex) => {
+          const state = new IrregularBeamState({
+            remainingPreparedPieces: [],
+            placedCollisionGeometries: handoff.placedCollisionGeometries,
+            placementOrder: handoff.placedCollisionGeometries.map(
+              (placed) => placed.placement.pieceId ?? placed.placement.sourcePieceId
+            )
+          })
+          const measured = measureIntrinsicSheetlessCompletedLayout(
+            state,
+            coordinatedResult.runtimeMs
+          )
+          if (measured === undefined) return []
+          const strictGeometricArchiveImprovement = intrinsicStrictCompletedLayoutDominates(
+            measured.metrics,
+            coordinatedSeed.metrics
+          )
+          const improvesCohesion =
+            measured.metrics.isolatedPieceCount < coordinatedSeed.metrics.isolatedPieceCount ||
+            measured.metrics.largestPositiveContactComponentSize >
+              coordinatedSeed.metrics.largestPositiveContactComponentSize ||
+            measured.metrics.dominantStructuralContacts >
+              coordinatedSeed.metrics.dominantStructuralContacts
+          const passesTopologyGuard =
+            measured.metrics.enclosedCavityCount <=
+              coordinatedSeed.metrics.enclosedCavityCount &&
+            measured.metrics.totalEnclosedCavityAreaMm2 <=
+              coordinatedSeed.metrics.totalEnclosedCavityAreaMm2 &&
+            measured.metrics.largestOccupiedHullGapRatio <=
+              coordinatedSeed.metrics.largestOccupiedHullGapRatio &&
+            measured.metrics.occupiedHullWasteRatio <=
+              coordinatedSeed.metrics.occupiedHullWasteRatio
+          const novel = !previouslyObservedHashes.has(measured.canonicalGeometryHash)
+          return [
+            {
+              handoffIndex,
+              handoff,
+              measured,
+              novel,
+              strictGeometricArchiveImprovement,
+              improvesCohesion,
+              passesTopologyGuard,
+              qualifies:
+                novel &&
+                strictGeometricArchiveImprovement &&
+                improvesCohesion &&
+                passesTopologyGuard
+            }
+          ]
+        })
+  const coordinatedArtifactPaths: string[] = []
+  for (const endpoint of coordinatedEndpoints) {
+    const basename = `${input.outputDirectory}/${input.fixtureName}-coordinated-handoff-${endpoint.handoffIndex + 1}`
+    const coordinatedSvgPath = `${basename}.svg`
+    const coordinatedPngPath = `${basename}.png`
+    await writeFile(
+      coordinatedSvgPath,
+      renderCollisionSvg(endpoint.measured.placedCollisionGeometries)
+    )
+    execFileSync('node', [SVG_RENDERER_PATH, coordinatedSvgPath, coordinatedPngPath, '1400'], {
+      cwd: PROJECT_ROOT,
+      stdio: 'inherit'
+    })
+    coordinatedArtifactPaths.push(coordinatedSvgPath, coordinatedPngPath)
+  }
+  const coordinatedReport =
+    coordinatedResult === undefined || coordinatedSeed === undefined
+      ? undefined
+      : {
+          seed: {
+            source: coordinatedSeed.source,
+            canonicalGeometryHash: coordinatedSeed.canonicalGeometryHash,
+            metrics: coordinatedSeed.metrics
+          },
+          schedule: INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
+          status: coordinatedResult.status,
+          partition: {
+            structuralPieceCount: coordinatedResult.partition.structuralPieces.length,
+            fillerPieceCount: coordinatedResult.partition.fillerPieces.length,
+            maximumCollisionAreaMm2: coordinatedResult.partition.maximumCollisionAreaMm2,
+            structuralAreaThresholdMm2:
+              coordinatedResult.partition.structuralAreaThresholdMm2
+          },
+          targetRoles: coordinatedResult.targetRoles,
+          searchedBasinCount: coordinatedResult.searchedBasinCount,
+          unavailableQuarterTurnBasinCount:
+            coordinatedResult.unavailableQuarterTurnBasinCount,
+          completedSweepCount: coordinatedResult.completedSweepCount,
+          separationEvaluationCount: coordinatedResult.separationEvaluationCount,
+          projectionAttemptCount: coordinatedResult.projectionAttemptCount,
+          projectionSuccessCount: coordinatedResult.projectionSuccessCount,
+          pressureRepairSweepCount: coordinatedResult.pressureRepairSweepCount,
+          runtimeMs: coordinatedResult.runtimeMs,
+          coordinatedProposalCounts: coordinatedResult.trace.reduce(
+            (counts, trace) => ({
+              groupTransport:
+                counts.groupTransport + trace.directDisruptionProposalCounts.groupTransport,
+              splitSqueeze:
+                counts.splitSqueeze + trace.directDisruptionProposalCounts.splitSqueeze,
+              interfaceDisrupt:
+                counts.interfaceDisrupt +
+                trace.directDisruptionProposalCounts.interfaceDisrupt,
+              swap: counts.swap + trace.directDisruptionProposalCounts.swap
+            }),
+            { groupTransport: 0, splitSqueeze: 0, interfaceDisrupt: 0, swap: 0 }
+          ),
+          retainedCoordinatedLineageCount: coordinatedResult.trace.filter(
+            ({ reservedLineage, shadowLineageSnapshot }) =>
+              reservedLineage?.originProposalKind === 'group-transport' ||
+              reservedLineage?.originProposalKind === 'split-squeeze' ||
+              shadowLineageSnapshot?.originProposalKind === 'group-transport' ||
+              shadowLineageSnapshot?.originProposalKind === 'split-squeeze'
+          ).length,
+          qualifyingEndpointCount: coordinatedEndpoints.filter(({ qualifies }) => qualifies)
+            .length,
+          endpoints: coordinatedEndpoints.map(
+            ({ handoffIndex, handoff, measured, ...classification }) => ({
+              handoffIndex,
+              targetRoleId: handoff.targetRoleId,
+              basinIndex: handoff.basinIndex,
+              projectionAttempt: handoff.projectionAttempt,
+              canonicalGeometryHash: measured.canonicalGeometryHash,
+              metrics: measured.metrics,
+              ...classification,
+              svgPath: `${input.outputDirectory}/${input.fixtureName}-coordinated-handoff-${handoffIndex + 1}.svg`,
+              pngPath: `${input.outputDirectory}/${input.fixtureName}-coordinated-handoff-${handoffIndex + 1}.png`
+            })
+          ),
+          structuralE1CanonicalControl: coordinatedResult.structuralE1CanonicalControl,
+          sweepTrace: coordinatedResult.trace,
+          projectionLaneTrace: coordinatedResult.projectionLaneTrace,
+          projectionTrace: coordinatedResult.projectionTrace,
+          contractedPressureTrace: coordinatedResult.contractedPressureTrace
+        }
   const reportPath = `${input.outputDirectory}/report.json`
   const report = {
     schemaVersion: 1,
@@ -661,6 +846,7 @@ async function runPartialBeamOnly(input: {
                     pngPath: peelPngPath
                   }
           },
+    coordinatedPilot: coordinatedReport,
     runtimeMs: Math.max(0, performance.now() - startedAt),
     promotion: {
       eligible: false,
@@ -674,7 +860,8 @@ async function runPartialBeamOnly(input: {
     ...(svgPath === undefined ? [] : [svgPath]),
     ...(pngPath === undefined ? [] : [pngPath]),
     ...(peelSvgPath === undefined ? [] : [peelSvgPath]),
-    ...(peelPngPath === undefined ? [] : [peelPngPath])
+    ...(peelPngPath === undefined ? [] : [peelPngPath]),
+    ...coordinatedArtifactPaths
   ]
   const manifestPath = `${input.outputDirectory}/manifest.json`
   await writeFile(
@@ -707,6 +894,8 @@ async function runPartialBeamOnly(input: {
       peelSvgPath,
       peelPngPath,
       peelClassification: peelResult?.classification,
+      coordinatedStatus: coordinatedResult?.status,
+      coordinatedQualifyingEndpointCount: coordinatedReport?.qualifyingEndpointCount,
       runtimeMs: report.runtimeMs
     })}\n`
   )
