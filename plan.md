@@ -23,21 +23,25 @@ Therefore:
 
 1. **completed:** localize and repair the demonstrated generic finite-feature
    omission without changing the protected control;
-2. **pending:** establish a reachable delayed-value witness with complete
-   source and endpoint provenance; the historical pose is useful for candidate-
-   reachability diagnostics but is not an admissible capacity witness;
+2. **completed locally, production boundary pending:** the corrected Triangle
+   peel observer found one exact delayed-value witness with complete eviction,
+   continuation, and endpoint provenance. It proves the mechanism inside the
+   width-four peel micro-beam, but not a Stage 2A production width;
 3. **completed:** make one cold beam-only Mixed pilot complete by staging exact
    scoring/topology work after canonical deduplication;
-4. **next, co-primary:** run the bounded Triangle peel/reinsert replay observer
-   and classify whether the remaining compact motif is absent, pruned, delayed,
-   or terminally rejected;
-5. **next, co-primary:** profile and run the bounded Mixed commensurate-only cost
+4. **completed:** the corrected Triangle peel/reinsert observer exhaustively
+   assessed terminal successors and shadow-completed all retained eviction
+   witnesses. Its only strict improvement is geometrically negligible and
+   leaves cohesion unchanged;
+5. **next, co-primary:** run the trace-only Stage 2A allocation diagnostic that
+   separates width from contact-role allocation, and profile/run the bounded
+   Mixed commensurate-only cost
    pilot. A live fixed-width cap-0/cap-1 pair is eligible only if both cells are
    projected to complete under one frozen budget and the Triangle observer has
    either closed or explicitly falsified its bounded hypothesis;
-6. widen the beam only after runtime is comfortably below the research ceiling
-   and a sourced delayed-value neighborhood—not one historical pose—justifies
-   the extra capacity.
+6. widen or reallocate the live beam only after the known delayed witness and
+   contact-selected counterfactuals have been replayed through the actual
+   Stage 2A selector under the same successor union and terminal archive.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -287,6 +291,59 @@ this small legal reconstruction. It does not justify Sparrow. Repeated-geometry
 pair/triplet reconstruction is the cheaper next mechanism; coordinated transport
 becomes eligible only if the trace shows the connected core must move through
 temporary infeasibility.
+
+### Corrected terminal scan and delayed-value witness (2026-07-21)
+
+The first observer report at commit `4deb92b` was too narrow: it applied the
+width-four partial comparator to the final reinsertion step, so its ten unique
+endpoints represented only selected terminal states. Commit `e41897b` removes
+terminal fanout, globally deduplicates complete successors, assesses the exact
+geometric front against the seed under the common archive semantics, and
+shadow-completes globally deduplicated first-evicted nonterminal witnesses.
+
+The corrected Triangle run completed with:
+
+- `57,391` generated complete-successor occurrences;
+- `16,672` globally unique terminal successors assessed;
+- five geometric-front finalization candidates, all finalized;
+- 45/45 evicted nonterminal witnesses shadow-completed;
+- one strict common-archive improvement, produced by witness
+  `f9c9d52b60853e48fad60d7d8b8a186b5453eef77a9d10df3bf95418a02c295a`
+  after eviction at reinsertion step 1 of the three-piece order
+  `triangle-copy-20 -> triangle-copy-13 -> triangle-copy-15`.
+
+The improvement is real but negligible: area changes from `88,124.330` to
+`88,124.026123 mm2`, span from `593.877` to `593.876 mm`, and hull-gap ratio
+from `0.221630943` to `0.221629565`. Cohesion is unchanged at 11 isolates,
+15 positive-contact components, largest component 3, and `5/3`
+total/dominant contacts. This is positive evidence for delayed value and a
+negative result for this witness as a motif-closure mechanism.
+
+The current Stage 2A width-three allocation is also now explicit. At
+multi-layer depths it assigns two breadth states and one dispersion state; the
+contact turn requires two slots remaining and therefore does not run. A
+single-layer depth can still admit contact because breadth collapses to one.
+The completed Triangle and Mixed width-three cells selected zero contact roles,
+so the calibration premise that dispersion is more valuable than one bounded
+contact survivor at width three remains untested. This is intentional selector
+policy, not an implementation defect.
+
+The next diagnostic must separate capacity from role allocation over the same
+successor union:
+
+1. width three: current `breadth + breadth + dispersion` versus
+   `breadth + contact + dispersion`;
+2. width four: `breadth + breadth + dispersion + dispersion` versus current
+   `breadth + breadth + contact + dispersion`.
+
+For every distinct contact-selected counterfactual and the known delayed-value
+witness, record Pareto layer, compactness/void rank, contact rank, dispersion
+distance, selection role, and forced unchanged-horizon endpoint metrics. A
+contact role is eligible for live testing only if it produces better cohesion
+without a geometric or cavity regression. If neither width-four cell retains
+the known delayed witness, bracket its minimum width/horizon without changing
+contact policy. This is a Stage 2A calibration cell, not a new stage or a
+fixture-specific triangle rule.
 
 ## What The Completed Proofs Rule Out
 
@@ -1288,9 +1345,16 @@ and admits only Clipper2-legal endpoints to the common archive.
 ## Current Artifact Paths
 
 - Triangle selected PNG:
-  `/private/tmp/min-plane-provenance/v7-reviewed-af032b2-triangle-w3/triangle-20-partial-geometric-beam-width-3.png`
+  `/private/tmp/min-plane-provenance/v7-peel-shadow-e41897b-triangle/triangle-20-partial-geometric-beam-width-3.png`
+- Triangle corrected observer report and best shadow PNG:
+  `/private/tmp/min-plane-provenance/v7-peel-shadow-e41897b-triangle/report.json`
+  and
+  `/private/tmp/min-plane-provenance/v7-peel-shadow-e41897b-triangle/triangle-20-peel-reinsert-best.png`
 - Mixed selected PNG:
   `/private/tmp/min-plane-provenance/v7-reviewed-af032b2-mixed-w3-360s/mixed-61-partial-geometric-beam-width-3.png`
+- Mixed pre-correction observer report (explicitly incomplete and superseded
+  for terminal classification):
+  `/private/tmp/min-plane-provenance/v7-peel-observer-4deb92b-mixed/report.json`
 - Queue/beam evidence:
   `/private/tmp/min-plane-provenance/v7-queue-beam-14868c2/`
 - Reviewed calibration reports (diagnostic; Triangle lineage source rejected,
@@ -1302,17 +1366,18 @@ and admits only Clipper2-legal endpoints to the common archive.
 
 Run two independent bounded workstreams:
 
-1. implement and run the generic Triangle peel/reinsert and constructive-replay
-   observer defined above. Pass means a strictly better exact endpoint without a
-   topology regression plus a classified replay lineage; failure means no
-   improvement within the declared top-four/subset/fanout bound;
+1. implement the trace-only four-cell Stage 2A allocation diagnostic defined
+   above. Use one shared successor union per depth, do not change live
+   selection, force the known delayed witness and each distinct contact pick
+   through its unchanged horizon, and finalize under the common exact archive;
 2. profile the existing Mixed commensurate discovery and symmetric two-order
    completion path, then run the bounded cold cost pilot. Reuse the selected
    alternate discovery enumeration, skip unrelated continuations, and record
    discovery, canonical-admission, topology, and completion costs separately.
 
-The delayed-value provenance recovery may proceed concurrently and blocks only
-beam widening. A live fixed-width cap-0/cap-1 pair requires both projected cells
-under one frozen budget and a reviewed Triangle observer classification. Do not
-enable the stagnation kick or Sparrow-style coordinated movement before these
-bounded legal-search gates have complete endpoints and reviewed traces.
+The corrected Triangle observer is a positive delayed-value mechanism witness,
+not a production-width calibration and not a cohesion improvement. No live
+fixed-width cap, contact-role change, stagnation kick, or Sparrow-style
+coordinated movement is eligible until the four-cell diagnostic has complete
+endpoints and reviewed traces. The Mixed cost pilot remains independent and may
+proceed concurrently.
