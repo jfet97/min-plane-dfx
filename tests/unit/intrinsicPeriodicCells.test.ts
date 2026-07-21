@@ -103,7 +103,7 @@ function transformed(piece: IrregularPreparedPiece): TransformedCollisionGeometr
 }
 
 describe('intrinsic periodic cells', () => {
-  it('rejects the dense rectangle lattice when the strict far-neighbor certificate is equal', async () => {
+  it('keeps a finite rectangle crop source when the infinite far proof is equal', async () => {
     const pieces = Array.from({ length: 6 }, (_, index) =>
       preparedPiece(`rectangle-${index}`, 'rectangle', [
         point(0, 0),
@@ -115,8 +115,9 @@ describe('intrinsic periodic cells', () => {
     const catalog = await runCatalog(pieces)
     expect(catalog.selectedFamilyKey).toContain('rectangle')
     expect(catalog.uniqueTransformCount).toBe(2)
-    expect(catalog.cells).toEqual([])
-    expect(catalog.rejected.noP1Basis).toBe(2)
+    expect(catalog.cells.length).toBeGreaterThan(0)
+    expect(catalog.cells.every(({ infiniteFarProof }) => infiniteFarProof)).toBe(false)
+    expect(catalog.cells.some(({ threeByThreeLatticeLegal }) => !threeByThreeLatticeLegal)).toBe(true)
   })
 
   it('keeps a triangle-like repeated family source-linked and exact', async () => {
@@ -362,6 +363,9 @@ describe('intrinsic periodic cells', () => {
       envelopeMaximumSideMm: 2,
       hullWasteRatio: 0,
       sharedBoundaryLengthMm: 1,
+      infiniteFarProof: false,
+      threeByThreeLatticeLegal: true,
+      threeByThreeCentreContactComplete: true,
       canonicalKey: 'control'
     }
     const seed = (await Effect.runPromise(expandIntrinsicPeriodicCell(cell, pieces)))[0]

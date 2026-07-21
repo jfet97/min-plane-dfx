@@ -161,7 +161,7 @@ const report = {
       pairCoverageComplete: family.pairCoverageComplete,
       cellCoverageComplete: family.cellCoverageComplete,
       rejectedSamples: family.rejectedSamples,
-      certifiedCells: family.cells.map((cell) => ({
+      finiteCropSources: family.cells.map((cell) => ({
         role: cell.role,
         canonicalKeySha256: sha256(cell.canonicalKey),
         v1: cell.v1,
@@ -171,12 +171,16 @@ const report = {
         density: cell.density,
         envelopeMaximumSideMm: cell.envelopeMaximumSideMm,
         hullWasteRatio: cell.hullWasteRatio,
-        sharedBoundaryLengthMm: cell.sharedBoundaryLengthMm
+        sharedBoundaryLengthMm: cell.sharedBoundaryLengthMm,
+        infiniteFarProof: cell.infiniteFarProof,
+        threeByThreeLatticeLegal: cell.threeByThreeLatticeLegal,
+        threeByThreeCentreContactComplete: cell.threeByThreeCentreContactComplete
       })),
       rejected: family.rejected
     }))
   },
   continuationCoverageComplete: result.continuationCoverageComplete,
+  continuationOmissions: result.continuationOmissions,
   archive: result.archive,
   winnerSourceId: result.winner?.continuation.sourceId,
   runtimeMs: result.runtimeMs,

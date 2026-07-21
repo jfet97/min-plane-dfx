@@ -67,6 +67,12 @@ export interface IntrinsicPeriodicCell {
   readonly envelopeMaximumSideMm: number
   readonly hullWasteRatio: number
   readonly sharedBoundaryLengthMm: number
+  /** Records an infinite-lattice sufficiency proof; it is never finite-crop admission. */
+  readonly infiniteFarProof: boolean
+  /** Records whether the local 3x3 neighbourhood is collision free. */
+  readonly threeByThreeLatticeLegal: boolean
+  /** Records whether every central member contacts an exterior 3x3 member. */
+  readonly threeByThreeCentreContactComplete: boolean
   readonly canonicalKey: string
 }
 
@@ -509,13 +515,16 @@ function mergeRejections(
   return Object.fromEntries([...result.entries()].toSorted())
 }
 
-/** Expands one certified cell into every bounded finite crop and keeps its best topology. */
+/** Expands one finite lattice source into bounded crops and keeps its best topology. */
 export function expandIntrinsicPeriodicCell(
   cell: IntrinsicPeriodicCell,
   familyMembers: ReadonlyArray<IrregularPreparedPiece>,
   maximumCrops = 2
 ): Effect.Effect<ReadonlyArray<IntrinsicPeriodicSeed>, IrregularGeometryInputError> {
   return Effect.gen(function* () {
+    const v1 = gridPoint(cell.v1)
+    const v2 = gridPoint(cell.v2)
+    if (v1 === undefined || v2 === undefined) return []
     const memberCount = cell.members.length
     const q = Math.floor(familyMembers.length / memberCount)
     if (q < 1) return []
@@ -533,10 +542,16 @@ export function expandIntrinsicPeriodicCell(
             for (const base of cell.members) {
               const piece = familyMembers[sourceIndex]
               if (piece === undefined) break
-              const point = {
-                x: base.point.x + coordinate.row * cell.v1.x + coordinate.column * cell.v2.x,
-                y: base.point.y + coordinate.row * cell.v1.y + coordinate.column * cell.v2.y
+              const basePoint = gridPoint(base.point)
+              if (basePoint === undefined) {
+                legal = false
+                break
               }
+              // apply one exact lattice offset to the whole base cell; never snap members independently
+              const point = fromGridPoint({
+                x: basePoint.x + BigInt(coordinate.row) * v1.x + BigInt(coordinate.column) * v2.x,
+                y: basePoint.y + BigInt(coordinate.row) * v1.y + BigInt(coordinate.column) * v2.y
+              })
               const actualGeometry = geometryForPiece(base.geometry, piece)
               const candidate = makeCandidate(actualGeometry, point)
               if (
@@ -768,15 +783,9 @@ function deriveCells(input: {
         reject('degenerateBasis', [rawV1, rawV2])
         continue
       }
-      if (!farNeighborCertificate(input.members, canonical)) {
-        reject('farNeighborRejected', canonical)
-        continue
-      }
-      const certificate = yield* validateLattice(input.members, canonical)
-      if (certificate === undefined) {
-        reject('threeByThreeLatticeRejected', canonical)
-        continue
-      }
+      // infinite and 3x3 checks are provenance diagnostics; actual finite crops are checked later
+      const infiniteFarProof = farNeighborCertificate(input.members, canonical)
+      const lattice = yield* diagnoseLattice(input.members, canonical)
       const determinantGrid2 = absBigInt(crossGrid(canonical[0], canonical[1]))
       const memberDoubledAreaGrid2 = input.members.reduce(
         (sum, member) => sum + polygonAreaGrid2(member.geometry, member.point),
@@ -799,7 +808,10 @@ function deriveCells(input: {
         density: Number(memberDoubledAreaGrid2) / (2 * Number(determinantGrid2)),
         envelopeMaximumSideMm: shape.maximumSideMm,
         hullWasteRatio: shape.hullWasteRatio,
-        sharedBoundaryLengthMm: certificate.sharedBoundaryLengthMm,
+        sharedBoundaryLengthMm: lattice.sharedBoundaryLengthMm,
+        infiniteFarProof,
+        threeByThreeLatticeLegal: lattice.legal,
+        threeByThreeCentreContactComplete: lattice.centreContactComplete,
         canonicalKey
       })
     }
@@ -1153,11 +1165,17 @@ export function farNeighborCertificate(
   return 4n * determinant * determinant > maximumDistanceSquared * f2
 }
 
-function validateLattice(
+interface PeriodicLatticeDiagnostic {
+  readonly legal: boolean
+  readonly centreContactComplete: boolean
+  readonly sharedBoundaryLengthMm: number
+}
+
+function diagnoseLattice(
   members: ReadonlyArray<IntrinsicPeriodicBaseMember>,
   basis: readonly [GridPoint, GridPoint]
 ): Effect.Effect<
-  { readonly sharedBoundaryLengthMm: number } | undefined,
+  PeriodicLatticeDiagnostic,
   IrregularGeometryInputError
 > {
   return Effect.gen(function* () {
@@ -1167,18 +1185,22 @@ function validateLattice(
       for (let m = -1; m <= 1; m += 1) {
         for (let memberIndex = 0; memberIndex < members.length; memberIndex += 1) {
           const member = members[memberIndex]
-          if (member === undefined) return undefined
-          const point = {
-            x: member.point.x + fromGrid(Number(BigInt(n) * basis[0].x + BigInt(m) * basis[1].x)),
-            y: member.point.y + fromGrid(Number(BigInt(n) * basis[0].y + BigInt(m) * basis[1].y))
+          if (member === undefined) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
+          const basePoint = gridPoint(member.point)
+          if (basePoint === undefined) {
+            return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
           }
+          const point = fromGridPoint({
+            x: basePoint.x + BigInt(n) * basis[0].x + BigInt(m) * basis[1].x,
+            y: basePoint.y + BigInt(n) * basis[0].y + BigInt(m) * basis[1].y
+          })
           const candidate = makeCandidate(member.geometry, point)
           const legal = yield* PlacementValidation.checkSheetless({
             placed,
             moving: member.geometry,
             candidate
           })
-          if (!legal) return undefined
+          if (!legal) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
           if (n === 0 && m === 0) center.add(placed.length)
           placed.push(makePlaced(member.piece, member.geometry, point))
         }
@@ -1188,31 +1210,48 @@ function validateLattice(
     const contactedCenter = new Set<number>()
     for (const centerIndex of center) {
       const first = placed[centerIndex]
-      if (first === undefined) return undefined
+      if (first === undefined) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
       const firstPolygon = translatePolygonWithBounds(first.collisionGeometry.polygon, {
         x: first.placement.transform.translateX,
         y: first.placement.transform.translateY
       })
-      if (firstPolygon === undefined) return undefined
+      if (firstPolygon === undefined) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
       for (let otherIndex = 0; otherIndex < placed.length; otherIndex += 1) {
         if (center.has(otherIndex)) continue
         const other = placed[otherIndex]
-        if (other === undefined) return undefined
+        if (other === undefined) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
         const otherPolygon = translatePolygonWithBounds(other.collisionGeometry.polygon, {
           x: other.placement.transform.translateX,
           y: other.placement.transform.translateY
         })
-        if (otherPolygon === undefined) return undefined
+        if (otherPolygon === undefined) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
         const contact = sharedConvexPolygonBoundaryLength(firstPolygon, otherPolygon)
-        if (contact === undefined) return undefined
+        if (contact === undefined) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
         if (contact > 0) {
           contactedCenter.add(centerIndex)
           sharedBoundaryLengthMm += contact
         }
       }
     }
-    return contactedCenter.size === center.size ? { sharedBoundaryLengthMm } : undefined
+    return {
+      legal: true,
+      centreContactComplete: contactedCenter.size === center.size,
+      sharedBoundaryLengthMm
+    }
   })
+}
+
+function validateLattice(
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>,
+  basis: readonly [GridPoint, GridPoint]
+): Effect.Effect<{ readonly sharedBoundaryLengthMm: number } | undefined, IrregularGeometryInputError> {
+  return diagnoseLattice(members, basis).pipe(
+    Effect.map((diagnostic) =>
+      diagnostic.legal && diagnostic.centreContactComplete
+        ? { sharedBoundaryLengthMm: diagnostic.sharedBoundaryLengthMm }
+        : undefined
+    )
+  )
 }
 
 /** Source-control seam for exact 3x3 legality/contact independently of the far proof. */

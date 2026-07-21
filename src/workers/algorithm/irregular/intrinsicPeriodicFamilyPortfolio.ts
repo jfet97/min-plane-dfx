@@ -43,9 +43,15 @@ export interface IntrinsicPeriodicContinuationResult {
   readonly runtimeMs: number
 }
 
+export interface IntrinsicPeriodicContinuationOmission {
+  readonly sourceId: string
+  readonly reason: 'insufficient-seed' | 'duplicate-canonical-seed' | 'continuation-cap'
+}
+
 export interface IntrinsicPeriodicFamilyPortfolioResult {
   readonly catalog: IntrinsicPeriodicCatalog
   readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
+  readonly continuationOmissions: ReadonlyArray<IntrinsicPeriodicContinuationOmission>
   readonly continuationCoverageComplete: boolean
   readonly runs: ReadonlyArray<IntrinsicPeriodicContinuationResult>
   readonly archive: ReadonlyArray<IntrinsicStrictCompletedMetrics>
@@ -152,6 +158,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
     return {
       catalog,
       continuations: selected.continuations,
+      continuationOmissions: selected.omissions,
       continuationCoverageComplete: selected.coverageComplete,
       runs,
       archive,
@@ -169,7 +176,11 @@ function selectIntrinsicPeriodicContinuations(
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   maximumContinuationCount: number
 ): Effect.Effect<
-  { readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>; readonly coverageComplete: boolean },
+  {
+    readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
+    readonly omissions: ReadonlyArray<IntrinsicPeriodicContinuationOmission>
+    readonly coverageComplete: boolean
+  },
   IrregularGeometryInputError
 > {
   return Effect.gen(function* () {
@@ -178,6 +189,7 @@ function selectIntrinsicPeriodicContinuations(
     )
     const perFamily: ReadonlyArray<IntrinsicPeriodicContinuation>[] = []
     const seenSeeds = new Set<string>()
+    const omissions: IntrinsicPeriodicContinuationOmission[] = []
     for (const family of catalog.families) {
       const members = familyMembers.get(family.familyKey)
       if (members === undefined) continue
@@ -185,10 +197,18 @@ function selectIntrinsicPeriodicContinuations(
       for (const cell of family.cells) {
         const crops = yield* expandIntrinsicPeriodicCell(cell, members, 2)
         for (const [cropIndex, seed] of crops.entries()) {
-          if (seed.placements.length < 4 || seenSeeds.has(seed.canonicalKey)) continue
+          const sourceId = `${family.familyKey}:${cell.role}:${cell.canonicalKey}:${cropIndex}`
+          if (seed.placements.length < 4) {
+            omissions.push({ sourceId, reason: 'insufficient-seed' })
+            continue
+          }
+          if (seenSeeds.has(seed.canonicalKey)) {
+            omissions.push({ sourceId, reason: 'duplicate-canonical-seed' })
+            continue
+          }
           seenSeeds.add(seed.canonicalKey)
           continuations.push({
-            sourceId: `${family.familyKey}:${cell.role}:${cell.canonicalKey}:${cropIndex}`,
+            sourceId,
             role: cell.role,
             familyKey: family.familyKey,
             cellKey: cell.canonicalKey,
@@ -201,8 +221,13 @@ function selectIntrinsicPeriodicContinuations(
     const reserved = perFamily.flatMap((continuations) => continuations.slice(0, 1))
     const fill = rankContinuations(perFamily.flatMap((continuations) => continuations.slice(1)))
     const all = [...reserved, ...fill]
+    const selected = all.slice(0, maximumContinuationCount)
+    for (const continuation of all.slice(maximumContinuationCount)) {
+      omissions.push({ sourceId: continuation.sourceId, reason: 'continuation-cap' })
+    }
     return {
-      continuations: all.slice(0, maximumContinuationCount),
+      continuations: selected,
+      omissions,
       coverageComplete: all.length <= maximumContinuationCount
     }
   })
