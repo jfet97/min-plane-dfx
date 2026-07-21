@@ -461,10 +461,46 @@ is part of the task, not an optional handoff.
    git push -u origin v7-geometric-cohesion-fable
    ```
 
-At the end of your response, report the committed SHA, pushed branch, and the
-absolute path of the review file. If pushing is impossible due to missing
-credentials or remote access, do not pretend it succeeded: leave the review
-committed locally if possible and report the exact failure.
+6. Open a pull request from `v7-geometric-cohesion-fable` **into
+   `v7-geometric-cohesion`**. This matters because this review is being run on
+   another person's machine: a pushed branch alone is not a reliable handoff.
+   Use the GitHub CLI after confirming the current repository/remote. If the
+   branch is pushed from a fork, use the fork-owner-qualified head branch
+   required by GitHub.
+
+   Use this exact PR title:
+
+   ```text
+   Add Fable V7 search-quality review
+   ```
+
+   Use a concise PR description with exactly these headings, in this order:
+
+   ```md
+   ## Why
+
+   Preserve an independent evidence-led review of the V7 search-quality plan.
+
+   ## What
+
+   Adds the standalone review, ranked alternatives, and the recommended next
+   falsifiable experiment.
+
+   ## How
+
+   Reviews the committed V7 code, immutable provenance, current plan, and
+   pinned open-source references without changing implementation behavior.
+
+   ## Remarks
+
+   The PR targets the V7 research branch, not `main`.
+   ```
+
+At the end of your response, report the committed SHA, pushed branch, PR URL,
+and absolute path of the review file. If pushing or PR creation is impossible
+due to missing credentials, remote access, or fork permissions, do not pretend
+it succeeded: leave the review committed locally if possible and report the
+exact failure.
 
 Under **Verdict**, choose exactly one:
 
