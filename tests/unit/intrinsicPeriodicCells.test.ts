@@ -123,6 +123,16 @@ describe('intrinsic periodic cells', () => {
         ({ basisProvenance }) => basisProvenance?.sourceKind === 'nfp-boundary-vertex-pair'
       )
     ).toBe(true)
+    const edgeContactCell = catalog.cells.find(
+      ({ basisProvenance }) => basisProvenance?.sourceKind === 'edge-contact-pair'
+    )
+    expect(edgeContactCell?.basisProvenance?.contactRelations).toHaveLength(2)
+    expect(
+      edgeContactCell?.basisProvenance?.contactRelations?.every(
+        ({ lengthMm, fixedPieceId, movingPieceId }) =>
+          lengthMm > 0 && fixedPieceId.length > 0 && movingPieceId.length > 0
+      )
+    ).toBe(true)
     expect(catalog.cells.every(({ infiniteFarProof }) => infiniteFarProof)).toBe(false)
   })
 

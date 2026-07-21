@@ -21,7 +21,10 @@ import {
 } from '@shared/irregular/domain.js'
 import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { boundsForPoints, translatePolygonWithBounds } from '../../irregular/convexBounds.js'
-import { sharedConvexPolygonBoundaryLength } from '../../irregular/convexPolygonContact.js'
+import {
+  sharedConvexPolygonBoundaryLength,
+  sharedConvexPolygonBoundarySegments
+} from '../../irregular/convexPolygonContact.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import { PlacementValidation } from '../../irregular/placementValidation.js'
 import {
@@ -46,6 +49,8 @@ const transformOrder = Order.combineAll<IrregularTransformCandidate>([
 
 /** Caps the current boundary-vertex source domain; audit conclusions are scoped to this cap. */
 export const MAXIMUM_NFP_BOUNDARY_VERTEX_BASIS_CANDIDATES = 64
+export const MAXIMUM_EDGE_CONTACT_RELATIONS_PER_DERIVATION = 64
+export const MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION = 64
 
 export interface IntrinsicPeriodicVector {
   readonly x: number
@@ -55,13 +60,31 @@ export interface IntrinsicPeriodicVector {
 /** Records one rational NFP-union basis source and its single shared grid realization. */
 export interface IntrinsicPeriodicBasisProvenance {
   readonly sourceKey: string
-  readonly sourceKind: 'axis-union' | 'nfp-boundary-vertex-pair'
+  readonly sourceKind: 'axis-union' | 'nfp-boundary-vertex-pair' | 'edge-contact-pair'
   readonly sourcePoints: readonly [IntrinsicPeriodicRationalPoint, IntrinsicPeriodicRationalPoint]
   readonly axis?: 'x' | 'y'
   readonly selectedBasis: readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]
   readonly selectedResidualGrid: readonly [IntrinsicPeriodicRationalPoint, IntrinsicPeriodicRationalPoint]
   readonly canonicalBasis: readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]
   readonly memberTransforms: ReadonlyArray<IntrinsicPeriodicMemberTransform>
+  readonly contactRelations?: readonly [
+    IntrinsicPeriodicEdgeContactProvenance,
+    IntrinsicPeriodicEdgeContactProvenance
+  ]
+}
+
+/** Records the two physical edges whose exact overlap supplies one lattice translation. */
+export interface IntrinsicPeriodicEdgeContactProvenance {
+  readonly vector: IntrinsicPeriodicVector
+  readonly fixedMemberIndex: number
+  readonly fixedPieceId: string
+  readonly fixedEdgeIndex: number
+  readonly movingMemberIndex: number
+  readonly movingPieceId: string
+  readonly movingEdgeIndex: number
+  readonly segmentStart: IntrinsicPeriodicVector
+  readonly segmentEnd: IntrinsicPeriodicVector
+  readonly lengthMm: number
 }
 
 /** Keeps exact rational provenance serializable without turning it into a floating score. */
@@ -878,10 +901,12 @@ function deriveCells(input: {
         forbidden.push({ points: shiftedPoints })
       }
     }
+    const contactBases = yield* deriveEdgeContactBasisCandidates(input.members)
     const bases = [
       ...deriveAxisBasisCandidates(forbidden, false),
       ...deriveAxisBasisCandidates(forbidden, true),
-      ...deriveNfpBoundaryVertexBasisCandidates(forbidden)
+      ...deriveNfpBoundaryVertexBasisCandidates(forbidden),
+      ...contactBases
     ]
     const result: IntrinsicPeriodicCell[] = []
     const rejected = new Map<string, number>()
@@ -1007,7 +1032,10 @@ function makeBasisProvenance(
       transformIndex: geometry.transform.index,
       rotationDeg: geometry.transform.rotationDeg,
       mirrored: geometry.transform.mirrored
-    }))
+    })),
+    ...(candidate.contactRelations === undefined
+      ? {}
+      : { contactRelations: candidate.contactRelations })
   }
 }
 
@@ -1021,10 +1049,258 @@ function deriveAxisBasis(
 interface IntrinsicPeriodicBasisCandidate {
   readonly basis: readonly [GridPoint, GridPoint]
   readonly sourceKey: string
-  readonly sourceKind: 'axis-union' | 'nfp-boundary-vertex-pair'
+  readonly sourceKind: IntrinsicPeriodicBasisProvenance['sourceKind']
   readonly sourcePoints: readonly [RationalPoint, RationalPoint]
   readonly axis?: 'x' | 'y'
   readonly selectedResidualGrid: readonly [RationalPoint, RationalPoint]
+  readonly contactRelations?: readonly [
+    IntrinsicPeriodicEdgeContactProvenance,
+    IntrinsicPeriodicEdgeContactProvenance
+  ]
+}
+
+interface EdgeContactRelation {
+  readonly vector: GridPoint
+  readonly provenance: IntrinsicPeriodicEdgeContactProvenance
+}
+
+interface GridEdge {
+  readonly start: GridPoint
+  readonly end: GridPoint
+  readonly index: number
+}
+
+/** Builds a bounded lattice basis from two exact, non-collinear side-to-side contacts. */
+function deriveEdgeContactBasisCandidates(
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>
+): Effect.Effect<ReadonlyArray<IntrinsicPeriodicBasisCandidate>, IrregularGeometryInputError> {
+  return Effect.gen(function* () {
+    const relations = new Map<string, EdgeContactRelation>()
+    for (let fixedMemberIndex = 0; fixedMemberIndex < members.length; fixedMemberIndex += 1) {
+      const fixedMember = members[fixedMemberIndex]
+      if (fixedMember === undefined) continue
+      const fixedPoint = gridPoint(fixedMember.point)
+      const fixedEdges =
+        fixedPoint === undefined
+          ? []
+          : translatedGridEdges(fixedMember.geometry.polygon.points, fixedPoint)
+      for (let movingMemberIndex = 0; movingMemberIndex < members.length; movingMemberIndex += 1) {
+        const movingMember = members[movingMemberIndex]
+        if (movingMember === undefined) continue
+        const movingPoint = gridPoint(movingMember.point)
+        const movingEdges = gridEdges(movingMember.geometry.polygon.points)
+        if (movingPoint === undefined) continue
+        for (const fixedEdge of fixedEdges) {
+          const fixedDirection = subtractGridPoints(fixedEdge.end, fixedEdge.start)
+          for (const movingEdge of movingEdges) {
+            const movingDirection = subtractGridPoints(movingEdge.end, movingEdge.start)
+            if (
+              crossGrid(fixedDirection, movingDirection) !== 0n ||
+              dotGrid(fixedDirection, movingDirection) >= 0n
+            ) {
+              continue
+            }
+            const candidatePoints = [
+              subtractGridPoints(fixedEdge.start, movingEdge.end),
+              subtractGridPoints(fixedEdge.end, movingEdge.start)
+            ]
+            for (const candidatePoint of candidatePoints) {
+              const vector = subtractGridPoints(candidatePoint, movingPoint)
+              if (!isCanonicalPositiveVector(vector)) continue
+              const relation = yield* validateEdgeContactRelation(
+                members,
+                vector,
+                fixedMemberIndex,
+                fixedEdge.index,
+                movingMemberIndex,
+                movingEdge.index
+              )
+              if (relation === undefined) continue
+              const key = `${vector.x},${vector.y}`
+              const current = relations.get(key)
+              if (
+                current === undefined ||
+                relation.provenance.lengthMm > current.provenance.lengthMm ||
+                (relation.provenance.lengthMm === current.provenance.lengthMm &&
+                  edgeContactProvenanceKey(relation.provenance) <
+                    edgeContactProvenanceKey(current.provenance))
+              ) {
+                relations.set(key, relation)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const retainedRelations = [...relations.values()]
+      .toSorted(compareEdgeContactRelations)
+      .slice(0, MAXIMUM_EDGE_CONTACT_RELATIONS_PER_DERIVATION)
+    const candidates: Array<{
+      readonly determinant: bigint
+      readonly squaredSpan: bigint
+      readonly contactLengthMm: number
+      readonly candidate: IntrinsicPeriodicBasisCandidate
+    }> = []
+    for (let firstIndex = 0; firstIndex < retainedRelations.length; firstIndex += 1) {
+      const first = retainedRelations[firstIndex]
+      if (first === undefined) continue
+      for (let secondIndex = firstIndex + 1; secondIndex < retainedRelations.length; secondIndex += 1) {
+        const second = retainedRelations[secondIndex]
+        if (second === undefined) continue
+        const determinant = absBigInt(crossGrid(first.vector, second.vector))
+        if (determinant === 0n) continue
+        const sourcePoints: readonly [RationalPoint, RationalPoint] = [
+          { x: rational(first.vector.x), y: rational(first.vector.y) },
+          { x: rational(second.vector.x), y: rational(second.vector.y) }
+        ]
+        const sourceKey = `edge-contact:${edgeContactProvenanceKey(first.provenance)};${edgeContactProvenanceKey(second.provenance)}`
+        candidates.push({
+          determinant,
+          squaredSpan: squaredGridLength(first.vector) + squaredGridLength(second.vector),
+          contactLengthMm: first.provenance.lengthMm + second.provenance.lengthMm,
+          candidate: {
+            basis: [first.vector, second.vector],
+            sourceKey,
+            sourceKind: 'edge-contact-pair',
+            sourcePoints,
+            selectedResidualGrid: [
+              { x: rational(0n), y: rational(0n) },
+              { x: rational(0n), y: rational(0n) }
+            ],
+            contactRelations: [first.provenance, second.provenance]
+          }
+        })
+      }
+    }
+    return candidates
+      .toSorted(
+        (first, second) =>
+          compareBigInt(first.determinant, second.determinant) ||
+          compareBigInt(first.squaredSpan, second.squaredSpan) ||
+          second.contactLengthMm - first.contactLengthMm ||
+          first.candidate.sourceKey.localeCompare(second.candidate.sourceKey)
+      )
+      .slice(0, MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION)
+      .map(({ candidate }) => candidate)
+  })
+}
+
+function validateEdgeContactRelation(
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>,
+  vector: GridPoint,
+  fixedMemberIndex: number,
+  fixedEdgeIndex: number,
+  movingMemberIndex: number,
+  movingEdgeIndex: number
+): Effect.Effect<EdgeContactRelation | undefined, IrregularGeometryInputError> {
+  return Effect.gen(function* () {
+    const placed = members.map((member) => makePlaced(member.piece, member.geometry, member.point))
+    for (const member of members) {
+      const basePoint = gridPoint(member.point)
+      if (basePoint === undefined) return undefined
+      const point = fromGridPoint({ x: basePoint.x + vector.x, y: basePoint.y + vector.y })
+      const legal = yield* PlacementValidation.checkSheetless({
+        placed,
+        moving: member.geometry,
+        candidate: makeCandidate(member.geometry, point)
+      })
+      if (!legal) return undefined
+      placed.push(makePlaced(member.piece, member.geometry, point))
+    }
+
+    const fixedMember = members[fixedMemberIndex]
+    const movingMember = members[movingMemberIndex]
+    if (fixedMember === undefined || movingMember === undefined) return undefined
+    const movingBasePoint = gridPoint(movingMember.point)
+    if (movingBasePoint === undefined) return undefined
+    const fixedPolygon = translatePolygonWithBounds(fixedMember.geometry.polygon, fixedMember.point)
+    const movingPoint = fromGridPoint({
+      x: movingBasePoint.x + vector.x,
+      y: movingBasePoint.y + vector.y
+    })
+    const movingPolygon = translatePolygonWithBounds(movingMember.geometry.polygon, movingPoint)
+    if (fixedPolygon === undefined || movingPolygon === undefined) return undefined
+    const segments = sharedConvexPolygonBoundarySegments(fixedPolygon, movingPolygon)
+    if (segments === undefined) return undefined
+    const segment = segments
+      .filter(
+        (candidate) =>
+          candidate.firstEdgeIndex === fixedEdgeIndex &&
+          candidate.secondEdgeIndex === movingEdgeIndex
+      )
+      .toSorted((first, second) => second.lengthMm - first.lengthMm)[0]
+    if (segment === undefined || segment.lengthMm <= 0) return undefined
+    return {
+      vector,
+      provenance: {
+        vector: fromGridPoint(vector),
+        fixedMemberIndex,
+        fixedPieceId: `${fixedMember.piece.pieceId ?? fixedMember.piece.source.id}`,
+        fixedEdgeIndex,
+        movingMemberIndex,
+        movingPieceId: `${movingMember.piece.pieceId ?? movingMember.piece.source.id}`,
+        movingEdgeIndex,
+        segmentStart: segment.start,
+        segmentEnd: segment.end,
+        lengthMm: segment.lengthMm
+      }
+    }
+  })
+}
+
+function gridEdges(points: ReadonlyArray<IrregularPoint>): ReadonlyArray<GridEdge> {
+  const converted = points.map(gridPoint)
+  if (converted.some((point) => point === undefined)) return []
+  const edges: GridEdge[] = []
+  for (let index = 0; index < converted.length; index += 1) {
+    const start = converted[index]
+    const end = converted[(index + 1) % converted.length]
+    if (start === undefined || end === undefined) return []
+    edges.push({ start, end, index })
+  }
+  return edges
+}
+
+function translatedGridEdges(
+  points: ReadonlyArray<IrregularPoint>,
+  translation: GridPoint
+): ReadonlyArray<GridEdge> {
+  return gridEdges(points).map((edge) => ({
+    ...edge,
+    start: { x: edge.start.x + translation.x, y: edge.start.y + translation.y },
+    end: { x: edge.end.x + translation.x, y: edge.end.y + translation.y }
+  }))
+}
+
+function subtractGridPoints(first: GridPoint, second: GridPoint): GridPoint {
+  return { x: first.x - second.x, y: first.y - second.y }
+}
+
+function dotGrid(first: GridPoint, second: GridPoint): bigint {
+  return first.x * second.x + first.y * second.y
+}
+
+function squaredGridLength(vector: GridPoint): bigint {
+  return vector.x * vector.x + vector.y * vector.y
+}
+
+function isCanonicalPositiveVector(vector: GridPoint): boolean {
+  return vector.y > 0n || (vector.y === 0n && vector.x > 0n)
+}
+
+function edgeContactProvenanceKey(provenance: IntrinsicPeriodicEdgeContactProvenance): string {
+  return `${provenance.vector.x},${provenance.vector.y}:${provenance.fixedMemberIndex}/${provenance.fixedEdgeIndex}>${provenance.movingMemberIndex}/${provenance.movingEdgeIndex}`
+}
+
+function compareEdgeContactRelations(first: EdgeContactRelation, second: EdgeContactRelation): number {
+  return (
+    second.provenance.lengthMm - first.provenance.lengthMm ||
+    compareBigInt(squaredGridLength(first.vector), squaredGridLength(second.vector)) ||
+    edgeContactProvenanceKey(first.provenance).localeCompare(
+      edgeContactProvenanceKey(second.provenance)
+    )
+  )
 }
 
 function deriveAxisBasisCandidates(

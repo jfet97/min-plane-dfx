@@ -10,6 +10,15 @@ export interface SharedConvexPolygonBoundaryContact {
   readonly nearCompleteStructuralContactSignatures: ReadonlyArray<string>
 }
 
+/** Identifies one exact positive-length overlap between two polygon edges. */
+export interface SharedConvexPolygonBoundarySegment {
+  readonly firstEdgeIndex: number
+  readonly secondEdgeIndex: number
+  readonly start: InternalPoint
+  readonly end: InternalPoint
+  readonly lengthMm: number
+}
+
 const MIN_STRUCTURAL_EDGE_LENGTH_RATIO = 0.5
 const MIN_NEAR_COMPLETE_EDGE_OVERLAP_RATIO = 0.95
 const STRUCTURAL_CONTACT_RATIO_SIGNATURE_SCALE = 1_000
@@ -20,18 +29,34 @@ export function sharedConvexPolygonBoundaryLength(
   first: InternalPolygonWithBounds,
   second: InternalPolygonWithBounds
 ): number | undefined {
-  if (areDisjoint(first.bounds, second.bounds)) return 0
+  const segments = sharedConvexPolygonBoundarySegments(first, second)
+  if (segments === undefined) return undefined
+  const totalLength = segments.reduce((sum, segment) => sum + segment.lengthMm, 0)
+  return Number.isFinite(totalLength) ? totalLength : undefined
+}
 
-  let totalLength = 0
+/** Returns replayable edge provenance for every exact positive-length shared segment. */
+export function sharedConvexPolygonBoundarySegments(
+  first: InternalPolygonWithBounds,
+  second: InternalPolygonWithBounds
+): ReadonlyArray<SharedConvexPolygonBoundarySegment> | undefined {
+  if (areDisjoint(first.bounds, second.bounds)) return []
+
+  const segments: SharedConvexPolygonBoundarySegment[] = []
   for (const firstEdge of polygonEdges(first.polygon.points)) {
     for (const secondEdge of polygonEdges(second.polygon.points)) {
-      const overlapLength = collinearOverlapLength(firstEdge, secondEdge)
-      if (overlapLength === undefined) return undefined
-      totalLength += overlapLength
-      if (!Number.isFinite(totalLength)) return undefined
+      const overlap = collinearOverlapSegment(firstEdge, secondEdge)
+      if (overlap === undefined) return undefined
+      if (overlap.lengthMm > 0) {
+        segments.push({
+          firstEdgeIndex: firstEdge.startIndex,
+          secondEdgeIndex: secondEdge.startIndex,
+          ...overlap
+        })
+      }
     }
   }
-  return totalLength
+  return segments
 }
 
 /**
@@ -247,11 +272,18 @@ function polygonEdgeLength(edge: PolygonEdge): number | undefined {
 }
 
 function collinearOverlapLength(first: PolygonEdge, second: PolygonEdge): number | undefined {
+  return collinearOverlapSegment(first, second)?.lengthMm
+}
+
+function collinearOverlapSegment(
+  first: PolygonEdge,
+  second: PolygonEdge
+): { readonly start: InternalPoint; readonly end: InternalPoint; readonly lengthMm: number } | undefined {
   if (
     GeometryPredicates.orientation(first.start, first.end, second.start) !== 0 ||
     GeometryPredicates.orientation(first.start, first.end, second.end) !== 0
   ) {
-    return 0
+    return { start: first.start, end: first.start, lengthMm: 0 }
   }
 
   const dx = first.end.x - first.start.x
@@ -267,10 +299,21 @@ function collinearOverlapLength(first: PolygonEdge, second: PolygonEdge): number
   const overlappingAxisLength =
     Math.min(Math.max(firstStart, firstEnd), Math.max(secondStart, secondEnd)) -
     Math.max(Math.min(firstStart, firstEnd), Math.min(secondStart, secondEnd))
-  if (!Number.isFinite(overlappingAxisLength) || overlappingAxisLength <= 0) return 0
+  if (!Number.isFinite(overlappingAxisLength) || overlappingAxisLength <= 0) {
+    return { start: first.start, end: first.start, lengthMm: 0 }
+  }
 
   const firstAxisLength = Math.abs(firstEnd - firstStart)
   if (!Number.isFinite(firstAxisLength) || firstAxisLength <= 0) return undefined
   const overlapLength = (overlappingAxisLength * edgeLength) / firstAxisLength
-  return Number.isFinite(overlapLength) ? overlapLength : undefined
+  if (!Number.isFinite(overlapLength)) return undefined
+
+  const axisValue = (point: InternalPoint): number => (useX ? point.x : point.y)
+  const lower = Math.max(Math.min(firstStart, firstEnd), Math.min(secondStart, secondEnd))
+  const upper = Math.min(Math.max(firstStart, firstEnd), Math.max(secondStart, secondEnd))
+  const endpoints = [first.start, first.end, second.start, second.end]
+  const start = endpoints.find((point) => axisValue(point) === lower)
+  const end = endpoints.find((point) => axisValue(point) === upper)
+  if (start === undefined || end === undefined) return undefined
+  return { start, end, lengthMm: overlapLength }
 }
