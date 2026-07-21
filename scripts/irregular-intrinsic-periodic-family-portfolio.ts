@@ -226,6 +226,7 @@ const report = {
   },
   continuationCoverageComplete: result.continuationCoverageComplete,
   sourceCropSurvival: result.sourceCropSurvival,
+  sourceAuditWitnesses: result.sourceAuditWitnesses,
   continuationOmissions: result.continuationOmissions,
   archive: result.archive,
   winnerSourceId: result.winner?.continuation.sourceId,

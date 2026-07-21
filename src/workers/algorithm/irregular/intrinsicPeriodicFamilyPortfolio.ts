@@ -64,12 +64,32 @@ export interface IntrinsicPeriodicSourceCropSurvival {
   readonly selectedContinuationCount: number
 }
 
+/** Records one best raw crop that existed before periodic cell/crop retention. */
+export interface IntrinsicPeriodicSourceAuditWitness {
+  readonly role: 'P1' | 'P2'
+  readonly sourceKey: string
+  readonly sourceKind: IntrinsicPeriodicBasisProvenance['sourceKind']
+  readonly cellKey: string
+  readonly seed: Pick<
+    IntrinsicPeriodicSeed,
+    | 'canonicalKey'
+    | 'componentCount'
+    | 'isolatedPieceCount'
+    | 'largestComponentSize'
+    | 'maximumSideMm'
+    | 'envelopeAreaMm2'
+    | 'envelopeSpanMm'
+    | 'crop'
+  >
+}
+
 export interface IntrinsicPeriodicFamilyPortfolioResult {
   readonly catalog: IntrinsicPeriodicCatalog
   readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
   readonly continuationOmissions: ReadonlyArray<IntrinsicPeriodicContinuationOmission>
   readonly continuationCoverageComplete: boolean
   readonly sourceCropSurvival: ReadonlyArray<IntrinsicPeriodicSourceCropSurvival>
+  readonly sourceAuditWitnesses: ReadonlyArray<IntrinsicPeriodicSourceAuditWitness>
   readonly runs: ReadonlyArray<IntrinsicPeriodicContinuationResult>
   readonly archive: ReadonlyArray<IntrinsicStrictCompletedMetrics>
   readonly winner: IntrinsicPeriodicContinuationResult | undefined
@@ -190,6 +210,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       continuationOmissions: selected.omissions,
       continuationCoverageComplete: selected.coverageComplete,
       sourceCropSurvival: selected.sourceCropSurvival,
+      sourceAuditWitnesses: selected.sourceAuditWitnesses,
       runs,
       archive,
       winner:
@@ -214,6 +235,7 @@ function selectIntrinsicPeriodicContinuations(
     readonly omissions: ReadonlyArray<IntrinsicPeriodicContinuationOmission>
     readonly coverageComplete: boolean
     readonly sourceCropSurvival: ReadonlyArray<IntrinsicPeriodicSourceCropSurvival>
+    readonly sourceAuditWitnesses: ReadonlyArray<IntrinsicPeriodicSourceAuditWitness>
   },
   IrregularGeometryInputError
 > {
@@ -242,6 +264,10 @@ function selectIntrinsicPeriodicContinuations(
         uniqueSeedCount: number
         selectedContinuationCount: number
       }
+    >()
+    const sourceAuditWitnesses = new Map<
+      string,
+      { readonly sourceKey: string; readonly sourceKind: IntrinsicPeriodicBasisProvenance['sourceKind']; readonly seed: IntrinsicPeriodicSeed }
     >()
     const sourceAudit = (cell: IntrinsicPeriodicCatalog['cells'][number]) => {
       const provenance = cell.basisProvenance
@@ -272,6 +298,19 @@ function selectIntrinsicPeriodicContinuations(
           const audit = sourceAudit(cell)
           const directValidCrops = yield* enumerateIntrinsicPeriodicCellCrops(cell, members)
           if (audit !== undefined) audit.directValidCropCountBeforeFront += directValidCrops.length
+          const provenance = cell.basisProvenance
+          if (provenance !== undefined) {
+            for (const seed of directValidCrops) {
+              const current = sourceAuditWitnesses.get(seed.canonicalKey)
+              if (current === undefined || provenance.sourceKey < current.sourceKey) {
+                sourceAuditWitnesses.set(seed.canonicalKey, {
+                  sourceKey: provenance.sourceKey,
+                  sourceKind: provenance.sourceKind,
+                  seed
+                })
+              }
+            }
+          }
           directValidCropsByCell.set(periodicSourceCellKey(cell), directValidCrops)
         }
       }
@@ -331,7 +370,34 @@ function selectIntrinsicPeriodicContinuations(
       sourceCropSurvival: [...sourceCropSurvival.values()].toSorted(
         (first, second) =>
           first.role.localeCompare(second.role) || first.sourceKey.localeCompare(second.sourceKey)
+      ),
+      sourceAuditWitnesses: rankIntrinsicPeriodicSeeds(
+        [...sourceAuditWitnesses.values()].map(({ seed }) => seed)
       )
+        .slice(0, 16)
+        .flatMap((seed) => {
+          const source = sourceAuditWitnesses.get(seed.canonicalKey)
+          return source === undefined
+            ? []
+            : [
+                {
+                  role: seed.role,
+                  sourceKey: source.sourceKey,
+                  sourceKind: source.sourceKind,
+                  cellKey: seed.cellKey,
+                  seed: {
+                    canonicalKey: seed.canonicalKey,
+                    componentCount: seed.componentCount,
+                    isolatedPieceCount: seed.isolatedPieceCount,
+                    largestComponentSize: seed.largestComponentSize,
+                    maximumSideMm: seed.maximumSideMm,
+                    envelopeAreaMm2: seed.envelopeAreaMm2,
+                    envelopeSpanMm: seed.envelopeSpanMm,
+                    crop: seed.crop
+                  }
+                }
+              ]
+        })
     }
   })
 }
