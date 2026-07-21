@@ -53,10 +53,10 @@ Therefore:
    tested every compatible long-edge pair under non-expanding exact legality.
    It found only microscopic canonical-grid contact repairs, not a macroscopic
    reassembly; this ends the rigid-legal Triangle Stage 5 direction;
-10. **next:** choose between the still-independent constructive/periodic-seed
-    line and a separately bounded Sparrow-style shrink-and-separate research
-    controller. No live selector or coordinated-search promotion is authorized
-    by the Triangle evidence.
+10. **in progress:** the bounded constructive/periodic-seed line is now the
+    active falsifier. The first finite-crop correction produces a compact
+    Triangle lattice, but not one with exact structural contacts; no live
+    selector or coordinated-search promotion is authorized by this evidence.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -1634,6 +1634,37 @@ subdivision, free-angle generator, and multi-bin logic are rejected. Sparrow's
 sampled coordinate descent and Abey join/release remain conditional on a
 measured finite-source omission or a traced compact component, respectively.
 
+#### Finite-crop shared-basis checkpoint (2026-07-21)
+
+Commits `8ec00b4`, `a7fbc24`, `909d099`, and `9da94e2` correct the finite-crop
+boundary without weakening exactness. The far-neighbour condition is recorded
+as an infinite-lattice diagnostic, while every finite crop is materialized by
+one BigInt grid translation applied uniformly to its entire base cell and then
+direct-validated. The catalog now records the rational NFP-union source, its
+canonical-grid residuals, the participating transformed members, and crop
+shape. This is provenance only: no placement is snapped independently and no
+one-grid gap is relabelled as a structural contact.
+
+The complete Triangle diagnostic at `9da94e2` is a useful but non-promotable
+result. It finds a canonical-legal, zero-cavity two-band crop at
+`74,428.143126 mm2` (max side `487.983 mm`, span `640.505 mm`), but it has 11
+positive-contact components and 10 isolates, so it misses the Triangle contact
+and span gates. Its shared basis is
+`v1=(88.972, 0)`, `v2=(0, 76.261)` mm; the rational source is exactly grid
+representable and has no retained sibling basis. A separate source with four
+uniformly-applied floor/ceil alternatives was measured as a control: all three
+completed layouts were contactless strips (`123,358.655055 mm2` or worse).
+Thus the evidence does not justify inventing a per-member snap or changing the
+contact definition.
+
+The same committed Mixed-61 run completes one zero-cavity endpoint at
+`426,530.392211 mm2`, 30/10 structural/dominant contacts, but 21 isolates and
+a 0.2392 hull-gap ratio. Seven of eight continuations hit their existing
+deadline, so family and continuation coverage are incomplete; it is neither a
+quality promotion nor a negative result about periodic construction. Immutable
+reports, manifests, SVGs, and PNGs are under
+`/private/tmp/min-plane-provenance/v7-shared-basis-9da94e2/`.
+
 ### Local research documents
 
 - [`help/research/open-source-nesting-strategies.md`](help/research/open-source-nesting-strategies.md): pinned Deepnest, SVGnest, libnest2d, PackingSolver, and Sparrow control pass, plus the Dalsoo addition.
@@ -1673,17 +1704,11 @@ measured finite-source omission or a traced compact component, respectively.
 
 ## Immediate Next Action
 
-Implement and preregister the bounded generic P1/P2 repeated-family portfolio
-specified above. It must expose the eight-family / sixteen-transform /
-120-pair coverage contract, use only the existing exact periodic-cell
-certification and strict NFP/IFP continuation, and add the observer-only
-source-to-terminal prefix audit. Run the frozen Triangle, two additional
-homogeneous repeated-family, and Mixed controls under the stated budgets and
-three-replay requirement.
-
-Do not change the live beam, contact comparator, static squeeze controller, or
-NFP legality machinery during this pass. The experiment decides only whether
-generic repeated-geometry construction can make a compact motif available
-before ordinary greedy retention discards its future. Move to Sparrow-shaped
-adaptive contraction only after a coverage-complete negative result; a
-cap-truncated catalog is explicitly inconclusive.
+Review the shared-basis checkpoint before changing the periodic source. The
+decision must distinguish a true NFP-derived, common-basis representability
+limit from a retained-source/crop ranking loss. Any follow-up may propose only
+uniform bases backed by actual NFP provenance; it may not independently move
+members, weaken canonical contact, or change the live beam, contact comparator,
+static squeeze controller, or NFP legality machinery. Re-run Triangle and the
+two homogeneous controls before spending another Mixed-61 fixture budget; a
+cap-truncated catalog remains explicitly inconclusive.

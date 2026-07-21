@@ -294,6 +294,28 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   promising starting geometry. The current static squeeze controller remains
   dormant; only a coverage-complete periodic negative authorizes a later,
   incumbent-driven Sparrow-style contraction/restart experiment.
+- Corrected the periodic finite-crop boundary without weakening exactness.
+  `8ec00b4` records the far-neighbour proof as an infinite-lattice diagnostic;
+  all finite crops now use one shared BigInt lattice translation for the entire
+  base cell, direct validation, and canonical identity. It does not use Fable's
+  rejected per-member snap.
+- Added shared-basis provenance at `a7fbc24` and an exact source-group harness
+  at `909d099`: each retained cell records its rational NFP-union source,
+  canonical-grid residuals, transformed members, and crop traversal. A source
+  group can now be measured without mixing unrelated bases.
+- The complete Triangle run at `9da94e2` found a canonical-legal zero-cavity
+  two-band lattice at `74,428.143126 mm2`, but it has 11 exact-contact
+  components and 10 isolates, so it is research evidence rather than the
+  Triangle golden. Its basis `v1=(88.972, 0)`, `v2=(0, 76.261)` is already
+  exactly grid-representable and has no retained sibling alternative. A
+  separate four-variant shared-basis control yields only contactless strips;
+  do not invent a per-piece correction or redefine a grid gap as contact.
+- The matching Mixed-61 run produces one canonical-legal, zero-cavity
+  `426,530.392211 mm2` endpoint with 30/10 structural/dominant contacts, but
+  21 isolates and a 0.2392 hull-gap ratio. Seven continuations hit deadline,
+  leaving family and continuation coverage incomplete. It is neither a
+  promotion nor a periodic negative. Immutable source-commit `9da94e2`
+  evidence is in `/private/tmp/min-plane-provenance/v7-shared-basis-9da94e2/`.
 
 ### 2026-07-20 (Dalsoo source-control addition)
 
