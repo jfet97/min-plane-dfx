@@ -17,7 +17,10 @@ import {
 } from '../src/shared/irregular/domain.js'
 import { makePresetShapeDocument, type PresetShapeKind } from '../src/shared/presetShapes.js'
 import { preparePieces as prepareNestingPieces } from '../src/shared/preparePieces.js'
+import { IrregularBeamState } from '../src/workers/algorithm/irregular/irregularBeamState.js'
+import { runIntrinsicGlobalSqueezePortfolio } from '../src/workers/algorithm/irregular/intrinsicGlobalSqueezePortfolio.js'
 import { runIntrinsicPeriodicFamilyPortfolio } from '../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
+import { measureIntrinsicSheetlessCompletedLayout } from '../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
 import {
   MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION,
   MAXIMUM_EDGE_CONTACT_PAIR_VALIDATION_ATTEMPTS_PER_DERIVATION,
@@ -86,6 +89,7 @@ const maximumCropsPerCell = positiveIntegerArgument('--crops-per-cell', 4)
 const maximumContinuationCount = positiveIntegerArgument('--continuations', 8)
 const basisSourceKey = argument('--basis-source-key')
 const captureSourceSurvivalAudit = process.argv.includes('--source-survival-audit')
+const adaptivePressurePilot = process.argv.includes('--adaptive-pressure-pilot')
 await mkdir(outputDirectory, { recursive: true })
 
 const fixture = await loadFixture(fixtureName)
@@ -195,6 +199,71 @@ const auditWitnesses = await Promise.all(
     }
   })
 )
+const adaptiveSeedCandidates = [
+  ...result.sourceAuditWitnesses.map((witness) => ({
+    source: `raw-crop:${witness.seed.canonicalKey}`,
+    placed: witness.placements
+  })),
+  ...result.runs.flatMap((run) =>
+    run.result === undefined
+      ? []
+      : [
+          {
+            source: `continuation:${run.continuation.sourceId}`,
+            placed: run.result.placedCollisionGeometries
+          }
+        ]
+  )
+]
+  .flatMap((candidate) => {
+    if (candidate.placed.length !== preparedPieces.length) return []
+    const measured = measureIntrinsicSheetlessCompletedLayout(
+      new IrregularBeamState({
+        remainingPreparedPieces: [],
+        placedCollisionGeometries: candidate.placed,
+        placementOrder: candidate.placed.map(
+          ({ placement }) => placement.pieceId ?? placement.sourcePieceId
+        )
+      })
+    )
+    return measured === undefined ? [] : [{ ...candidate, measured }]
+  })
+  .toSorted(
+    (first, second) =>
+      first.measured.metrics.enclosedCavityCount -
+        second.measured.metrics.enclosedCavityCount ||
+      first.measured.metrics.envelopeAreaMm2 - second.measured.metrics.envelopeAreaMm2 ||
+      first.measured.metrics.envelopeMaximumSideMm -
+        second.measured.metrics.envelopeMaximumSideMm ||
+      first.measured.metrics.envelopeSpanMm - second.measured.metrics.envelopeSpanMm ||
+      first.measured.canonicalGeometryHash.localeCompare(
+        second.measured.canonicalGeometryHash
+      )
+  )
+const adaptiveSeed = adaptiveSeedCandidates[0]
+const adaptiveResult =
+  !adaptivePressurePilot || adaptiveSeed === undefined
+    ? undefined
+    : await Effect.runPromise(
+        withLayers(
+          runIntrinsicGlobalSqueezePortfolio({
+            allPreparedPieces: preparedPieces,
+            fullE1Placed: adaptiveSeed.measured.placedCollisionGeometries
+          }),
+          settings
+        )
+      )
+const adaptiveSelectedSvgPath =
+  adaptiveResult === undefined
+    ? undefined
+    : `${outputDirectory}/${fixtureName}-adaptive-pressure-selected.svg`
+if (adaptiveSelectedSvgPath !== undefined && adaptiveResult !== undefined) {
+  await writeFile(
+    adaptiveSelectedSvgPath,
+    renderSvg(adaptiveResult.selected.placedCollisionGeometries)
+  )
+  artifactPaths.push(adaptiveSelectedSvgPath)
+}
 const report = {
   experiment: 'intrinsic-periodic-family-portfolio',
   sourceCommit,
@@ -227,6 +296,7 @@ const report = {
     continuations: maximumContinuationCount,
     basisSourceKey,
     sourceSurvivalAudit: captureSourceSurvivalAudit,
+    adaptivePressurePilot,
     continuationMs: 25_000,
     fixtureMs: 240_000
   },
@@ -275,6 +345,28 @@ const report = {
   continuationCoverageComplete: result.continuationCoverageComplete,
   sourceCropSurvival: result.sourceCropSurvival,
   sourceAuditWitnesses: auditWitnesses,
+  adaptivePressurePilot:
+    adaptiveResult === undefined || adaptiveSeed === undefined
+      ? undefined
+      : {
+          seed: {
+            source: adaptiveSeed.source,
+            canonicalGeometryHash: adaptiveSeed.measured.canonicalGeometryHash,
+            metrics: adaptiveSeed.measured.metrics
+          },
+          status: adaptiveResult.status,
+          selected: {
+            source: adaptiveResult.selected.source,
+            canonicalGeometryHash:
+              adaptiveResult.selected.measured.canonicalGeometryHash,
+            metrics: adaptiveResult.selected.measured.metrics,
+            svgPath: adaptiveSelectedSvgPath
+          },
+          promotion: adaptiveResult.promotion,
+          fillTrace: adaptiveResult.fillTrace,
+          structuralOutcome: adaptiveResult.structuralOutcome,
+          runtimeMs: adaptiveResult.runtimeMs
+        },
   sourceAuditNonDominatedCropCount: result.sourceAuditNonDominatedCropCount,
   continuationOmissions: result.continuationOmissions,
   archive: result.archive,
