@@ -37,6 +37,7 @@ import {
   INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
   runIntrinsicSqueezeDisruptSeparate
 } from '../src/workers/algorithm/irregular/intrinsicSqueezeDisruptSeparate.js'
+import { runIntrinsicComponentInterfaceClosure } from '../src/workers/algorithm/irregular/intrinsicComponentInterfaceClosure.js'
 import {
   intrinsicStrictCompletedLayoutDominates,
   measureIntrinsicSheetlessCompletedLayout
@@ -98,6 +99,7 @@ async function main(): Promise<void> {
     '--four-contributor-reconstruction'
   )
   const coordinatedPilot = process.argv.includes('--coordinated-pilot')
+  const componentInterfacePilot = process.argv.includes('--component-interface-pilot')
   const structuredLineagePath = argument('--structured-lineage')
   const lineageCalibrationOnly = process.argv.includes('--lineage-calibration-only')
   const firstMissAuditOnly = process.argv.includes('--first-miss-audit-only')
@@ -112,6 +114,9 @@ async function main(): Promise<void> {
   }
   if (coordinatedPilot && !partialBeamOnly) {
     throw new Error('--coordinated-pilot requires --partial-beam-only')
+  }
+  if (componentInterfacePilot && (!partialBeamOnly || !peelReinsertObserver)) {
+    throw new Error('--component-interface-pilot requires --partial-beam-only and --peel-reinsert-observer')
   }
   if ((lineageCalibrationOnly || firstMissAuditOnly) && structuredLineagePath === undefined) {
     throw new Error('lineage calibration/audit requires --structured-lineage')
@@ -190,6 +195,7 @@ async function main(): Promise<void> {
       peelReinsertObserver,
       fourContributorReconstruction,
       coordinatedPilot,
+      componentInterfacePilot,
       peelMaximumRuntimeMs: positiveIntegerArgument('--peel-runtime-ms', 120_000),
       peelMaximumEvaluations: positiveIntegerArgument('--peel-evaluations', 100_000)
     })
@@ -510,6 +516,7 @@ async function runPartialBeamOnly(input: {
   readonly peelReinsertObserver: boolean
   readonly fourContributorReconstruction: boolean
   readonly coordinatedPilot: boolean
+  readonly componentInterfacePilot: boolean
   readonly peelMaximumRuntimeMs: number
   readonly peelMaximumEvaluations: number
 }): Promise<void> {
@@ -612,6 +619,14 @@ async function runPartialBeamOnly(input: {
             input.fixture.settings
           )
         )
+  const componentInterfaceResult =
+    !input.componentInterfacePilot || coordinatedSeed === undefined
+      ? undefined
+      : runIntrinsicComponentInterfaceClosure({
+          seedPlaced: coordinatedSeed.placedCollisionGeometries,
+          maximumMaterializations: 2_000,
+          maximumRuntimeMs: 30_000
+        })
   const previouslyObservedHashes = new Set([
     ...(coordinatedSeed === undefined ? [] : [coordinatedSeed.canonicalGeometryHash]),
     ...(peelResult?.boundedEndpointWitnesses.map(
@@ -686,6 +701,20 @@ async function runPartialBeamOnly(input: {
     })
     coordinatedArtifactPaths.push(coordinatedSvgPath, coordinatedPngPath)
   }
+  const componentInterfaceArtifactPaths: string[] = []
+  const componentInterfaceRenderedEndpoints =
+    componentInterfaceResult?.exactEndpoints.slice(0, 12) ?? []
+  for (const [index, endpoint] of componentInterfaceRenderedEndpoints.entries()) {
+    const basename = `${input.outputDirectory}/${input.fixtureName}-component-interface-${String(index + 1).padStart(2, '0')}`
+    const endpointSvgPath = `${basename}.svg`
+    const endpointPngPath = `${basename}.png`
+    await writeFile(endpointSvgPath, renderCollisionSvg(endpoint.placedCollisionGeometries))
+    execFileSync('node', [SVG_RENDERER_PATH, endpointSvgPath, endpointPngPath, '1400'], {
+      cwd: PROJECT_ROOT,
+      stdio: 'inherit'
+    })
+    componentInterfaceArtifactPaths.push(endpointSvgPath, endpointPngPath)
+  }
   const coordinatedReport =
     coordinatedResult === undefined || coordinatedSeed === undefined
       ? undefined
@@ -754,6 +783,35 @@ async function runPartialBeamOnly(input: {
           projectionLaneTrace: coordinatedResult.projectionLaneTrace,
           projectionTrace: coordinatedResult.projectionTrace,
           contractedPressureTrace: coordinatedResult.contractedPressureTrace
+        }
+  const componentInterfaceReport =
+    componentInterfaceResult === undefined || coordinatedSeed === undefined
+      ? undefined
+      : {
+          seed: {
+            source: coordinatedSeed.source,
+            canonicalGeometryHash: coordinatedSeed.canonicalGeometryHash,
+            metrics: coordinatedSeed.metrics
+          },
+          status: componentInterfaceResult.status,
+          runtimeMs: componentInterfaceResult.runtimeMs,
+          maximumMaterializations: componentInterfaceResult.maximumMaterializations,
+          materializationCount: componentInterfaceResult.materializationCount,
+          compatibleEdgePairCount: componentInterfaceResult.compatibleEdgePairCount,
+          seedMetrics: componentInterfaceResult.seedMetrics,
+          qualifyingEndpointCount: componentInterfaceResult.qualifyingEndpoints.length,
+          attempts: componentInterfaceResult.attempts,
+          exactEndpoints: componentInterfaceResult.exactEndpoints.map(
+            ({ placedCollisionGeometries: _placedCollisionGeometries, attempt }, index) => ({
+              ...attempt,
+              ...(index < componentInterfaceRenderedEndpoints.length
+                ? {
+                    svgPath: `${input.outputDirectory}/${input.fixtureName}-component-interface-${String(index + 1).padStart(2, '0')}.svg`,
+                    pngPath: `${input.outputDirectory}/${input.fixtureName}-component-interface-${String(index + 1).padStart(2, '0')}.png`
+                  }
+                : {})
+            })
+          )
         }
   const reportPath = `${input.outputDirectory}/report.json`
   const report = {
@@ -847,6 +905,7 @@ async function runPartialBeamOnly(input: {
                   }
           },
     coordinatedPilot: coordinatedReport,
+    componentInterfacePilot: componentInterfaceReport,
     runtimeMs: Math.max(0, performance.now() - startedAt),
     promotion: {
       eligible: false,
@@ -861,7 +920,8 @@ async function runPartialBeamOnly(input: {
     ...(pngPath === undefined ? [] : [pngPath]),
     ...(peelSvgPath === undefined ? [] : [peelSvgPath]),
     ...(peelPngPath === undefined ? [] : [peelPngPath]),
-    ...coordinatedArtifactPaths
+    ...coordinatedArtifactPaths,
+    ...componentInterfaceArtifactPaths
   ]
   const manifestPath = `${input.outputDirectory}/manifest.json`
   await writeFile(
@@ -896,6 +956,9 @@ async function runPartialBeamOnly(input: {
       peelClassification: peelResult?.classification,
       coordinatedStatus: coordinatedResult?.status,
       coordinatedQualifyingEndpointCount: coordinatedReport?.qualifyingEndpointCount,
+      componentInterfaceStatus: componentInterfaceReport?.status,
+      componentInterfaceQualifyingEndpointCount:
+        componentInterfaceReport?.qualifyingEndpointCount,
       runtimeMs: report.runtimeMs
     })}\n`
   )

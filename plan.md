@@ -1273,6 +1273,42 @@ are intentionally poor Triangle targets; they explain the expansive handoffs
 but do not invalidate the useful q0 exact-envelope cell. No production change
 is authorized.
 
+### Corrective exact component-interface pilot
+
+The review consensus after the first coordinated run is that its current moves
+are mechanically real but not cohesion-causal. `group-transport` chooses the
+largest piece plus nearby centers and applies a deterministic offset; it does
+not seek an edge-to-edge relation. The later exact projection proves legality,
+but it removes transformed pieces and reinserts them individually, so the trace
+cannot establish that it preserved a useful contact relation.
+
+The next cell is exact from start to finish. From an exact seed's canonical
+positive-contact graph, enumerate compatible antiparallel long-edge pairs from
+distinct components. Translate one complete source component by the
+phase-aware canonical-grid delta that aligns its edge to the target edge. Keep
+the candidate only when it is directly canonical legal, every pre-existing
+internal contact in the moved component remains present, and the newly aligned
+pair has a structural side-contact signature. It never enters an overlapping
+pool and never uses a fixture name, a saved coordinate, raw contact count as a
+winner, or sheet-relative pressure.
+
+The bounded Triangle cell has at most 2,000 exact materializations or 30
+seconds. A pass is a novel complete exact endpoint with a new structural
+interface between formerly distinct components, all moved-component internal
+contacts preserved, total/dominant contacts at least `6/3`, component count at
+most 14 or largest component at least four, and at most ten isolates when an
+isolate moves. It must not regress the seed envelope area, maximum side, span,
+hull gap, cavity count, or coverage. Trace component memberships, edge ids,
+grid delta, legality outcome, preserved contacts, interface signatures, and
+full endpoint metrics; replay the run three times. Zero passing endpoint ends
+this exact-interface direction for Triangle rather than buying more sweeps.
+
+Only a pass permits a later coordinated integration: seed-derived
+non-expanding target roles, per-piece quarter-turn fallback, a separate exact
+interface witness lane, and projection that freezes the rigid component plus
+the desired interface while rebuilding only external conflicts. The Mixed
+commensurate cost pilot is conditional on that Triangle mechanics pass.
+
 ## Deferred Mechanisms
 
 ### Join and release
@@ -1479,10 +1515,15 @@ and admits only Clipper2-legal endpoints to the common archive.
 
 ## Immediate Next Action
 
-Profile the existing Mixed commensurate discovery and symmetric two-order
-completion path, then run the bounded cold cost pilot. Reuse the selected
-alternate discovery enumeration, skip unrelated continuations, and record
-discovery, canonical-admission, topology, and completion costs separately.
+Run the bounded exact component-interface closure pilot on Triangle-20 before
+any further Mixed coordinated cost measurement. It directly tests whether the
+current disconnected triangle groups can be joined side-to-side while retaining
+their exact internal contacts and without enlarging the occupied envelope.
+Record the complete 2,000-materialization / 30-second trace and three replays.
+Only a passing exact interface authorizes seed-derived component-aware global
+transport and the later Mixed commensurate cost pilot; otherwise end this
+Triangle Stage 5 direction and return to the constructive motif/periodic-seed
+line.
 
 The corrected Triangle observer is positive delayed-value mechanism evidence,
 not a production-width calibration or a cohesion improvement. The completed
@@ -1493,4 +1534,5 @@ also found zero strict cohesive improvements, so coordinated movement is now
 measured rather than hypothetical. The first bounded schedule produced exact
 group-transport descendants but zero cohesive improvements, so it remains
 research-only. No live fixed-width cap, contact-role change, coordinated-search
-promotion, or stagnation kick is authorized. The Mixed cost pilot is next.
+promotion, or stagnation kick is authorized. The exact component-interface
+pilot is next; the Mixed cost pilot is conditional.
