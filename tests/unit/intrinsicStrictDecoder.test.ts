@@ -354,6 +354,15 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
         terminalStep?.uniqueFittingSuccessorCount
       )
       expect(terminalStep?.firstEvictedWitnesses).toHaveLength(0)
+      for (const step of trace.steps.slice(0, -1)) {
+        expect(step.allocationCells).toHaveLength(4)
+        expect(
+          step.allocationCells.find(({ cell }) => cell === 'w3-current')?.roles
+        ).toEqual(['breadth', 'breadth', 'dispersion'])
+        expect(
+          step.allocationCells.find(({ cell }) => cell === 'w3-contact')?.roles
+        ).toEqual(['breadth', 'contact', 'dispersion'])
+      }
     }
     expect(observer.generatedCompleteSuccessorCount).toBeGreaterThan(0)
     expect(observer.terminallyAssessedSuccessorCount).toBeGreaterThan(0)
@@ -362,6 +371,11 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     )
     expect(observer.finalizedEndpointCount).toBeGreaterThan(0)
     expect(observer.uniqueEndpointCount).toBeGreaterThan(0)
+    expect(
+      observer.shadowCompletion.traces.some(
+        ({ seedKind }) => seedKind === 'contact-counterfactual' || seedKind === 'both'
+      )
+    ).toBe(true)
     expect(observer.evaluations).toBeGreaterThan(0)
     expect(seed.winner.placedCollisionGeometries).toEqual(seedPlacements)
   })

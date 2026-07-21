@@ -73,6 +73,18 @@ const COMMENSURATE_FIRST_STEP_LIMIT = 2
 const COMMENSURATE_SECOND_STEP_LIMIT = 2
 const PARTIAL_FUTURE_EQUIVALENCE_KEY_VERSION = 'partial-future-equivalence-v1'
 const OCCUPIED_DISPERSION_VERSION = 'occupied-dispersion-v1'
+const PARTIAL_ALLOCATION_DIAGNOSTIC_CELLS = [
+  'w3-current',
+  'w3-contact',
+  'w4-no-contact',
+  'w4-current'
+] as const satisfies ReadonlyArray<IntrinsicPartialAllocationCellId>
+
+export type IntrinsicPartialAllocationCellId =
+  | 'w3-current'
+  | 'w3-contact'
+  | 'w4-no-contact'
+  | 'w4-current'
 
 const transformCandidateOrder = Order.combineAll<IrregularTransformCandidate>([
   Order.mapInput(Order.Number, (transform) => transform.index),
@@ -366,6 +378,21 @@ export interface IntrinsicPeelReinsertObserverResult {
         readonly canonicalGeometryDigest: string
         readonly axes: IntrinsicQueueBeamAxes
       }>
+      readonly allocationCells: ReadonlyArray<{
+        readonly cell: IntrinsicPartialAllocationCellId
+        readonly roles: ReadonlyArray<IntrinsicPartialGeometricBeamRole>
+        readonly selectedSlots: ReadonlyArray<IntrinsicPartialGeometricBeamTraceSlot>
+        readonly contactSelection:
+          | {
+              readonly futureEquivalenceDigest: string
+              readonly paretoLayer: number
+              readonly compactnessRank: number
+              readonly voidRank: number
+              readonly contactRank: number
+              readonly retainedByCompactnessWidthFour: boolean
+            }
+          | undefined
+      }>
     }>
   }>
   readonly boundedEndpointWitnesses: ReadonlyArray<{
@@ -397,6 +424,15 @@ export interface IntrinsicPeelReinsertObserverResult {
       readonly generatedCompleteSuccessorCount: number
       readonly uniqueEndpointCount: number
       readonly improvingEndpointCount: number
+      readonly seedKind: 'compactness-eviction' | 'contact-counterfactual' | 'both'
+      readonly selectedByAllocationCells: ReadonlyArray<IntrinsicPartialAllocationCellId>
+      readonly bestTerminalWitness:
+        | {
+            readonly canonicalGeometryDigest: string
+            readonly axes: IntrinsicQueueBeamAxes
+          }
+        | undefined
+      readonly bestFinalizedEndpointMetrics: IntrinsicStrictCompletedMetrics | undefined
     }>
   }
   readonly classification: 'better-exact-endpoint' | 'no-better-bounded-endpoint' | 'truncated'
@@ -1417,8 +1453,40 @@ export function runIntrinsicPeelReinsertObserver(input: {
         readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
         readonly evictionStepIndex: number
         readonly witnessDigest: string
+        readonly kinds: Set<'compactness-eviction' | 'contact-counterfactual'>
+        readonly selectedByAllocationCells: Set<IntrinsicPartialAllocationCellId>
       }
     >()
+    const appendShadowSeed = (input: {
+      readonly entry: IntrinsicPartialBeamEntry
+      readonly removedPieceIds: ReadonlyArray<PieceId>
+      readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
+      readonly evictionStepIndex: number
+      readonly kind: 'compactness-eviction' | 'contact-counterfactual'
+      readonly selectedByAllocationCell?: IntrinsicPartialAllocationCellId
+    }) => {
+      const incumbent = shadowSeeds.get(input.entry.futureEquivalenceKey)
+      if (incumbent !== undefined) {
+        incumbent.kinds.add(input.kind)
+        if (input.selectedByAllocationCell !== undefined) {
+          incumbent.selectedByAllocationCells.add(input.selectedByAllocationCell)
+        }
+        return
+      }
+      shadowSeeds.set(input.entry.futureEquivalenceKey, {
+        entry: input.entry,
+        removedPieceIds: input.removedPieceIds,
+        reinsertionOrderPieceIds: input.reinsertionOrderPieceIds,
+        evictionStepIndex: input.evictionStepIndex,
+        witnessDigest: digestSemanticIdentity(input.entry.futureEquivalenceKey),
+        kinds: new Set([input.kind]),
+        selectedByAllocationCells: new Set(
+          input.selectedByAllocationCell === undefined
+            ? []
+            : [input.selectedByAllocationCell]
+        )
+      })
+    }
     const appendTerminalRecord = (
       records: Map<string, TerminalRecord>,
       entry: IntrinsicPartialBeamEntry,
@@ -1527,17 +1595,64 @@ export function runIntrinsicPeelReinsertObserver(input: {
           const terminalStep = step === order.length - 1
           const retained = terminalStep ? orderedSuccessors : orderedSuccessors.slice(0, 4)
           const evicted = terminalStep ? [] : orderedSuccessors.slice(4)
+          const allocationContext = terminalStep
+            ? undefined
+            : prepareIntrinsicPartialAllocationContext({ candidates: uniqueSuccessors })
+          const allocationSelections = allocationContext === undefined
+            ? []
+            : PARTIAL_ALLOCATION_DIAGNOSTIC_CELLS.map((cell) => ({
+                cell,
+                selection: selectIntrinsicPartialAllocationCell({
+                  cell,
+                  context: allocationContext
+                })
+              }))
           retainedSuccessorCount += retained.length
           capacityEvictionCount += evicted.length
           if (!terminalStep) {
             for (const entry of evicted.slice(0, 4)) {
-              if (shadowSeeds.has(entry.futureEquivalenceKey)) continue
-              shadowSeeds.set(entry.futureEquivalenceKey, {
+              appendShadowSeed({
                 entry,
                 removedPieceIds: subset,
                 reinsertionOrderPieceIds: orderIds,
                 evictionStepIndex: step,
-                witnessDigest: digestSemanticIdentity(entry.futureEquivalenceKey)
+                kind: 'compactness-eviction'
+              })
+              for (const { cell, selection } of allocationSelections) {
+                if (
+                  !selection.retained.some(
+                    ({ futureEquivalenceKey }) =>
+                      futureEquivalenceKey === entry.futureEquivalenceKey
+                  )
+                ) {
+                  continue
+                }
+                appendShadowSeed({
+                  entry,
+                  removedPieceIds: subset,
+                  reinsertionOrderPieceIds: orderIds,
+                  evictionStepIndex: step,
+                  kind: 'compactness-eviction',
+                  selectedByAllocationCell: cell
+                })
+              }
+            }
+            for (const { cell, selection } of allocationSelections) {
+              const contactKey = selection.contactSelection?.futureEquivalenceKey
+              const contactEntry =
+                contactKey === undefined
+                  ? undefined
+                  : selection.retained.find(
+                      ({ futureEquivalenceKey }) => futureEquivalenceKey === contactKey
+                    )
+              if (contactEntry === undefined) continue
+              appendShadowSeed({
+                entry: contactEntry,
+                removedPieceIds: subset,
+                reinsertionOrderPieceIds: orderIds,
+                evictionStepIndex: step,
+                kind: 'contact-counterfactual',
+                selectedByAllocationCell: cell
               })
             }
           } else {
@@ -1560,7 +1675,26 @@ export function runIntrinsicPeelReinsertObserver(input: {
             canonicalLegalCandidateCount: stepCanonicalLegalCandidateCount,
             uniqueFittingSuccessorCount: uniqueSuccessors.length,
             boundedRetainedWitnesses: retained.slice(0, 4).map(traceWitness),
-            firstEvictedWitnesses: evicted.slice(0, 4).map(traceWitness)
+            firstEvictedWitnesses: evicted.slice(0, 4).map(traceWitness),
+            allocationCells: allocationSelections.map(({ cell, selection }) => ({
+              cell,
+              roles: selection.roles,
+              selectedSlots: selection.slots.map(traceSelectionSlot),
+              contactSelection:
+                selection.contactSelection === undefined
+                  ? undefined
+                  : {
+                      futureEquivalenceDigest: digestSemanticIdentity(
+                        selection.contactSelection.futureEquivalenceKey
+                      ),
+                      paretoLayer: selection.contactSelection.paretoLayer,
+                      compactnessRank: selection.contactSelection.compactnessRank,
+                      voidRank: selection.contactSelection.voidRank,
+                      contactRank: selection.contactSelection.contactRank,
+                      retainedByCompactnessWidthFour:
+                        selection.contactSelection.retainedByCompactnessWidthFour
+                    }
+            }))
           })
           states = retained
             .map(({ state }) => state)
@@ -1620,6 +1754,8 @@ export function runIntrinsicPeelReinsertObserver(input: {
       readonly canonicalLegalCandidateCount: number
       readonly generatedCompleteSuccessorCount: number
       readonly terminalKeys: ReadonlyArray<string>
+      readonly seedKind: 'compactness-eviction' | 'contact-counterfactual' | 'both'
+      readonly selectedByAllocationCells: ReadonlyArray<IntrinsicPartialAllocationCellId>
     }> = []
     let shadowGeneratedCandidateCount = 0
     let shadowCanonicalLegalCandidateCount = 0
@@ -1709,7 +1845,14 @@ export function runIntrinsicPeelReinsertObserver(input: {
           generatedCandidateCount,
           canonicalLegalCandidateCount,
           generatedCompleteSuccessorCount,
-          terminalKeys
+          terminalKeys,
+          seedKind:
+            shadow.kinds.size > 1
+              ? 'both'
+              : shadow.kinds.has('contact-counterfactual')
+                ? 'contact-counterfactual'
+                : 'compactness-eviction',
+          selectedByAllocationCells: [...shadow.selectedByAllocationCells]
         })
         if (shadowTruncated) break shadowLoop
       }
@@ -1846,6 +1989,12 @@ export function runIntrinsicPeelReinsertObserver(input: {
           ]
     })
     const shadowTraces = shadowTraceWork.map((trace) => {
+      const bestTerminalEntry = trace.terminalKeys
+        .flatMap((key) => {
+          const record = terminalRecords.get(key)
+          return record === undefined ? [] : [record.entry]
+        })
+        .toSorted(comparePartialCandidate)[0]
       const hashes = new Set(
         trace.terminalKeys.flatMap((key) => {
           const hash = terminalKeyToHash.get(key)
@@ -1856,6 +2005,9 @@ export function runIntrinsicPeelReinsertObserver(input: {
         const endpoint = endpoints.get(hash)
         return endpoint === undefined ? [] : [endpoint]
       })
+      const bestFinalizedEndpointMetrics = rankIntrinsicStrictCompletedLayouts(
+        traceEndpoints.map(({ metrics }) => metrics)
+      )[0]
       return {
         witnessDigest: trace.witnessDigest,
         removedPieceIds: trace.removedPieceIds,
@@ -1868,7 +2020,19 @@ export function runIntrinsicPeelReinsertObserver(input: {
         uniqueEndpointCount: hashes.size,
         improvingEndpointCount: traceEndpoints.filter(({ metrics }) =>
           improvesCommonArchive(metrics)
-        ).length
+        ).length,
+        seedKind: trace.seedKind,
+        selectedByAllocationCells: trace.selectedByAllocationCells,
+        bestTerminalWitness:
+          bestTerminalEntry === undefined
+            ? undefined
+            : {
+                canonicalGeometryDigest: digestSemanticIdentity(
+                  bestTerminalEntry.canonicalGeometryKey
+                ),
+                axes: bestTerminalEntry.axes
+              },
+        bestFinalizedEndpointMetrics
       }
     })
     const truncated = budget.truncationReason !== undefined
@@ -3372,6 +3536,185 @@ interface IntrinsicOccupiedDistance {
   readonly pairUnionDenominator: bigint
 }
 
+const PARTIAL_ALLOCATION_CELL_ROLES: Readonly<
+  Record<IntrinsicPartialAllocationCellId, ReadonlyArray<IntrinsicPartialGeometricBeamRole>>
+> = {
+  'w3-current': ['breadth', 'breadth', 'dispersion'],
+  'w3-contact': ['breadth', 'contact', 'dispersion'],
+  'w4-no-contact': ['breadth', 'breadth', 'dispersion', 'dispersion'],
+  'w4-current': ['breadth', 'breadth', 'contact', 'dispersion']
+}
+
+function prepareIntrinsicPartialAllocationContext<
+  T extends IntrinsicPartialGeometricBeamCandidate
+>(input: {
+  readonly candidates: ReadonlyArray<T>
+  readonly protectedControl?: T
+}): {
+  readonly selectable: ReadonlyArray<T>
+  readonly layers: ReadonlyArray<ReadonlyArray<T>>
+  readonly protectedControl: T | undefined
+  readonly compactnessWidthFourKeys: ReadonlySet<string>
+} {
+  const uniqueByFuture = new Map<string, T>()
+  for (const candidate of input.candidates) {
+    const incumbent = uniqueByFuture.get(candidate.futureEquivalenceKey)
+    if (incumbent === undefined || comparePartialCandidate(candidate, incumbent) < 0) {
+      uniqueByFuture.set(candidate.futureEquivalenceKey, candidate)
+    }
+  }
+  const protectedKey = input.protectedControl?.futureEquivalenceKey
+  const selectable = [...uniqueByFuture.values()].filter(
+    ({ futureEquivalenceKey }) => futureEquivalenceKey !== protectedKey
+  )
+  return {
+    selectable,
+    layers: partialNondominatedLayers(selectable),
+    protectedControl: input.protectedControl,
+    compactnessWidthFourKeys: new Set(
+      selectable
+        .toSorted(comparePartialCandidate)
+        .slice(0, 4)
+        .map(({ futureEquivalenceKey }) => futureEquivalenceKey)
+    )
+  }
+}
+
+function selectIntrinsicPartialAllocationCell<T extends IntrinsicPartialGeometricBeamCandidate>(
+  input: {
+    readonly cell: IntrinsicPartialAllocationCellId
+    readonly context: ReturnType<typeof prepareIntrinsicPartialAllocationContext<T>>
+  }
+): {
+  readonly retained: ReadonlyArray<T>
+  readonly roles: ReadonlyArray<IntrinsicPartialGeometricBeamRole>
+  readonly slots: ReadonlyArray<
+    IntrinsicPartialGeometricBeamSelection<T>['slots'][number]
+  >
+  readonly contactSelection:
+    | {
+        readonly futureEquivalenceKey: string
+        readonly paretoLayer: number
+        readonly compactnessRank: number
+        readonly voidRank: number
+        readonly contactRank: number
+        readonly retainedByCompactnessWidthFour: boolean
+      }
+    | undefined
+} {
+  const roles = PARTIAL_ALLOCATION_CELL_ROLES[input.cell]
+  const { selectable, layers } = input.context
+  const retained: T[] = []
+  const selectedKeys = new Set<string>()
+  const slots: Array<IntrinsicPartialGeometricBeamSelection<T>['slots'][number]> = []
+  const visits = new Map<number, number>()
+  let nextBreadthLayer = 0
+  let dispersionLayer = Math.max(0, roles.filter((role) => role === 'breadth').length - 1)
+
+  const append = (
+    candidate: T | undefined,
+    role: IntrinsicPartialGeometricBeamRole,
+    dispersion?: OccupiedDispersionWitness
+  ) => {
+    if (candidate === undefined || selectedKeys.has(candidate.futureEquivalenceKey)) return
+    const layer = Math.max(
+      0,
+      layers.findIndex((members) => members.includes(candidate))
+    )
+    const visit = (visits.get(layer) ?? 0) + 1
+    visits.set(layer, visit)
+    selectedKeys.add(candidate.futureEquivalenceKey)
+    retained.push(candidate)
+    slots.push({
+      role,
+      layer,
+      visit,
+      futureEquivalenceKey: candidate.futureEquivalenceKey,
+      parentFutureEquivalenceKey: candidate.parentFutureEquivalenceKey,
+      canonicalGeometryKey: candidate.canonicalGeometryKey,
+      axes: candidate.axes,
+      dispersion: dispersion === undefined ? undefined : serializeOccupiedDispersion(dispersion)
+    })
+  }
+
+  for (const role of roles) {
+    if (role === 'breadth') {
+      let candidate: T | undefined
+      while (candidate === undefined && nextBreadthLayer < layers.length) {
+        candidate = layers[nextBreadthLayer]
+          ?.filter(({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey))
+          .toSorted(comparePartialCandidate)[0]
+        nextBreadthLayer += 1
+      }
+      append(candidate, role)
+      continue
+    }
+    if (role === 'contact') {
+      append(
+        selectable
+          .filter(({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey))
+          .toSorted(comparePartialContactCandidate)[0],
+        role
+      )
+      continue
+    }
+    let dispersed:
+      | { readonly candidate: T; readonly witness: OccupiedDispersionWitness | undefined }
+      | undefined
+    for (let layer = dispersionLayer; layer >= 0 && dispersed === undefined; layer -= 1) {
+      dispersed = selectMostDispersedCandidate(
+        layers[layer]?.filter(
+          ({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey)
+        ) ?? [],
+        input.context.protectedControl === undefined
+          ? retained
+          : [input.context.protectedControl, ...retained]
+      )
+      if (dispersed !== undefined) dispersionLayer = layer - 1
+    }
+    append(dispersed?.candidate, role, dispersed?.witness)
+  }
+
+  const contactSlot = slots.find(({ role }) => role === 'contact')
+  const contactCandidate =
+    contactSlot === undefined
+      ? undefined
+      : retained.find(
+          ({ futureEquivalenceKey }) =>
+            futureEquivalenceKey === contactSlot.futureEquivalenceKey
+        )
+  return {
+    retained,
+    roles,
+    slots,
+    contactSelection:
+      contactSlot === undefined || contactCandidate === undefined
+        ? undefined
+        : {
+            futureEquivalenceKey: contactSlot.futureEquivalenceKey,
+            paretoLayer: contactSlot.layer,
+            compactnessRank: compoundAxisRank(
+              selectable,
+              contactCandidate,
+              compareCompactness
+            ),
+            voidRank: compoundAxisRank(
+              selectable,
+              contactCandidate,
+              compareVoids
+            ),
+            contactRank: compoundAxisRank(
+              selectable,
+              contactCandidate,
+              compareBoundedContact
+            ),
+            retainedByCompactnessWidthFour: input.context.compactnessWidthFourKeys.has(
+              contactSlot.futureEquivalenceKey
+            )
+          }
+  }
+}
+
 /** Deterministic Stage 2A retention over one synchronized global successor union. */
 export function selectIntrinsicPartialGeometricBeam<
   T extends IntrinsicPartialGeometricBeamCandidate
@@ -3859,9 +4202,9 @@ function rankWitnesses(
   }))
 }
 
-function compoundAxisRank(
-  candidates: ReadonlyArray<AuditCandidate>,
-  candidate: AuditCandidate,
+function compoundAxisRank<T extends { readonly axes: IntrinsicQueueBeamAxes }>(
+  candidates: ReadonlyArray<T>,
+  candidate: T,
   compare: (first: IntrinsicQueueBeamAxes, second: IntrinsicQueueBeamAxes) => number
 ): number {
   return 1 + candidates.filter((other) => compare(other.axes, candidate.axes) < 0).length
