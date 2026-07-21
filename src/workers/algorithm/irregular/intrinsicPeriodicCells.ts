@@ -183,6 +183,7 @@ export interface IntrinsicPeriodicFamilyCatalog {
   readonly enumeratedPairCount: number
   readonly pairCoverageComplete: boolean
   readonly cellCoverageComplete: boolean
+  readonly edgeContactDiagnostics: IntrinsicPeriodicEdgeContactDiagnostics
   /** Records source survival through the bounded cell frontier without changing admission. */
   readonly sourceSurvival: ReadonlyArray<IntrinsicPeriodicSourceCellSurvival>
   /** Retains bounded raw cells only for a separate observer; never used for live continuations. */
@@ -190,6 +191,19 @@ export interface IntrinsicPeriodicFamilyCatalog {
   readonly cells: ReadonlyArray<IntrinsicPeriodicCell>
   readonly rejected: Readonly<Record<string, number>>
   readonly rejectedSamples: ReadonlyArray<IntrinsicPeriodicCellRejection>
+}
+
+/** Separates contact-source absence from its independent bounded validation cap. */
+export interface IntrinsicPeriodicEdgeContactDiagnostics {
+  readonly generatedRelationCount: number
+  readonly retainedRelationCount: number
+  readonly nonCollinearPairCount: number
+  readonly areaFeasiblePairCount: number
+  readonly validationAttemptCount: number
+  readonly validationCoverageComplete: boolean
+  readonly latticeRejectedCount: number
+  readonly contactIncompleteCount: number
+  readonly admittedBasisCount: number
 }
 
 /** Records how many provenance-backed cells survive the P1/P2 frontier. */
@@ -377,13 +391,18 @@ function enumerateIntrinsicPeriodicFamily(input: {
     const rejectedSamples: IntrinsicPeriodicCellRejection[] = []
     const p1: IntrinsicPeriodicCell[] = []
     const p2: IntrinsicPeriodicCell[] = []
+    let edgeContactDiagnostics = emptyEdgeContactDiagnostics()
     const addDerived = (
       target: IntrinsicPeriodicCell[],
-      derived: ReadonlyArray<IntrinsicPeriodicCell>,
+      derived: IntrinsicPeriodicCellDerivation,
       emptyReason: string
     ) => {
-      if (derived.length === 0) rejected.set(emptyReason, (rejected.get(emptyReason) ?? 0) + 1)
-      target.push(...derived)
+      if (derived.cells.length === 0) rejected.set(emptyReason, (rejected.get(emptyReason) ?? 0) + 1)
+      target.push(...derived.cells)
+      edgeContactDiagnostics = mergeEdgeContactDiagnostics(
+        edgeContactDiagnostics,
+        derived.edgeContactDiagnostics
+      )
     }
 
     for (const { geometry } of transformed) {
@@ -399,7 +418,7 @@ function enumerateIntrinsicPeriodicFamily(input: {
         nfp: input.nfp,
         settings: input.settings
       })
-      addDerived(p1, derived.cells, 'noP1Basis')
+      addDerived(p1, derived, 'noP1Basis')
       mergeRejectedCounts(rejected, derived.rejected)
       appendRejectedSamples(rejectedSamples, derived.rejectedSamples)
     }
@@ -451,7 +470,7 @@ function enumerateIntrinsicPeriodicFamily(input: {
             nfp: input.nfp,
             settings: input.settings
           })
-          addDerived(p2, derived.cells, 'noP2Basis')
+          addDerived(p2, derived, 'noP2Basis')
           mergeRejectedCounts(rejected, derived.rejected)
           appendRejectedSamples(rejectedSamples, derived.rejectedSamples)
         }
@@ -480,6 +499,7 @@ function enumerateIntrinsicPeriodicFamily(input: {
       ),
       enumeratedPairCount,
       pairCoverageComplete,
+      edgeContactDiagnostics,
       cellCoverageComplete:
         runtimeCoverageComplete && pairCoverageComplete && p1Front.coverageComplete && p2Front.coverageComplete,
       sourceSurvival: summarizePeriodicCellSourceSurvival(p1, p1Front.cells, p2, p2Front.cells),
@@ -505,6 +525,7 @@ function emptyIntrinsicPeriodicFamilyCatalog(
     transformReservations: [],
     enumeratedPairCount: 0,
     pairCoverageComplete: true,
+    edgeContactDiagnostics: emptyEdgeContactDiagnostics(),
     cellCoverageComplete: true,
     sourceSurvival: [],
     cells: [],
@@ -865,6 +886,7 @@ function placedBounds(placed: ReadonlyArray<IrregularPlacedPiece>):
 
 interface IntrinsicPeriodicCellDerivation {
   readonly cells: ReadonlyArray<IntrinsicPeriodicCell>
+  readonly edgeContactDiagnostics: IntrinsicPeriodicEdgeContactDiagnostics
   readonly rejected: Readonly<Record<string, number>>
   readonly rejectedSamples: ReadonlyArray<IntrinsicPeriodicCellRejection>
 }
@@ -890,24 +912,34 @@ function deriveCells(input: {
         })
         const movingGrid = gridPoint(movingMember.point)
         if (movingGrid === undefined) {
-          return { cells: [], rejected: { invalidMovingGrid: 1 }, rejectedSamples: [] }
+          return {
+            cells: [],
+            edgeContactDiagnostics: emptyEdgeContactDiagnostics(),
+            rejected: { invalidMovingGrid: 1 },
+            rejectedSamples: []
+          }
         }
         const points = boundary.boundary.points
           .map(gridPoint)
           .filter((point): point is GridPoint => point !== undefined)
         const shiftedPoints = shiftOrderedPairForbiddenBoundary(points, movingGrid)
         if (points.length !== boundary.boundary.points.length) {
-          return { cells: [], rejected: { invalidForbiddenGrid: 1 }, rejectedSamples: [] }
+          return {
+            cells: [],
+            edgeContactDiagnostics: emptyEdgeContactDiagnostics(),
+            rejected: { invalidForbiddenGrid: 1 },
+            rejectedSamples: []
+          }
         }
         forbidden.push({ points: shiftedPoints })
       }
     }
-    const contactBases = yield* deriveEdgeContactBasisCandidates(input.members)
+    const contact = yield* deriveEdgeContactBasisCandidates(input.members)
     const bases = [
       ...deriveAxisBasisCandidates(forbidden, false),
       ...deriveAxisBasisCandidates(forbidden, true),
       ...deriveNfpBoundaryVertexBasisCandidates(forbidden),
-      ...contactBases
+      ...contact.candidates
     ]
     const result: IntrinsicPeriodicCell[] = []
     const rejected = new Map<string, number>()
@@ -970,6 +1002,7 @@ function deriveCells(input: {
     }
     return {
       cells: result,
+      edgeContactDiagnostics: contact.diagnostics,
       rejected: Object.fromEntries([...rejected.entries()].toSorted()),
       rejectedSamples
     }
@@ -1074,7 +1107,13 @@ interface GridEdge {
 /** Builds a bounded lattice basis from two exact, non-collinear side-to-side contacts. */
 function deriveEdgeContactBasisCandidates(
   members: ReadonlyArray<IntrinsicPeriodicBaseMember>
-): Effect.Effect<ReadonlyArray<IntrinsicPeriodicBasisCandidate>, IrregularGeometryInputError> {
+): Effect.Effect<
+  {
+    readonly candidates: ReadonlyArray<IntrinsicPeriodicBasisCandidate>
+    readonly diagnostics: IntrinsicPeriodicEdgeContactDiagnostics
+  },
+  IrregularGeometryInputError
+> {
   return Effect.gen(function* () {
     const relations = new Map<string, EdgeContactRelation>()
     for (let fixedMemberIndex = 0; fixedMemberIndex < members.length; fixedMemberIndex += 1) {
@@ -1147,6 +1186,8 @@ function deriveEdgeContactBasisCandidates(
       readonly contactLengthMm: number
       readonly candidate: IntrinsicPeriodicBasisCandidate
     }> = []
+    let nonCollinearPairCount = 0
+    let areaFeasiblePairCount = 0
     for (let firstIndex = 0; firstIndex < retainedRelations.length; firstIndex += 1) {
       const first = retainedRelations[firstIndex]
       if (first === undefined) continue
@@ -1154,7 +1195,10 @@ function deriveEdgeContactBasisCandidates(
         const second = retainedRelations[secondIndex]
         if (second === undefined) continue
         const determinant = absBigInt(crossGrid(first.vector, second.vector))
-        if (determinant === 0n || 2n * determinant < memberDoubledAreaGrid2) continue
+        if (determinant === 0n) continue
+        nonCollinearPairCount += 1
+        if (2n * determinant < memberDoubledAreaGrid2) continue
+        areaFeasiblePairCount += 1
         const sourcePoints: readonly [RationalPoint, RationalPoint] = [
           { x: rational(first.vector.x), y: rational(first.vector.y) },
           { x: rational(second.vector.x), y: rational(second.vector.y) }
@@ -1186,25 +1230,74 @@ function deriveEdgeContactBasisCandidates(
         first.candidate.sourceKey.localeCompare(second.candidate.sourceKey)
     )
     const admitted: IntrinsicPeriodicBasisCandidate[] = []
-    for (const { candidate } of ordered.slice(
+    let latticeRejectedCount = 0
+    let contactIncompleteCount = 0
+    const attempted = ordered.slice(
       0,
       MAXIMUM_EDGE_CONTACT_PAIR_VALIDATION_ATTEMPTS_PER_DERIVATION
-    )) {
+    )
+    for (const { candidate } of attempted) {
       const canonical = canonicalizeBasis(candidate.basis[0], candidate.basis[1])
       if (canonical === undefined) continue
       const diagnostic = yield* diagnoseLattice(members, canonical)
-      if (
-        !diagnostic.legal ||
-        !diagnostic.centreContactComplete ||
-        diagnostic.sharedBoundaryLengthMm <= 0
-      ) {
+      if (!diagnostic.legal) {
+        latticeRejectedCount += 1
+        continue
+      }
+      if (!diagnostic.centreContactComplete || diagnostic.sharedBoundaryLengthMm <= 0) {
+        contactIncompleteCount += 1
         continue
       }
       admitted.push(candidate)
       if (admitted.length >= MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION) break
     }
-    return admitted
+    return {
+      candidates: admitted,
+      diagnostics: {
+        generatedRelationCount: relations.size,
+        retainedRelationCount: retainedRelations.length,
+        nonCollinearPairCount,
+        areaFeasiblePairCount,
+        validationAttemptCount: attempted.length,
+        validationCoverageComplete: attempted.length === ordered.length,
+        latticeRejectedCount,
+        contactIncompleteCount,
+        admittedBasisCount: admitted.length
+      }
+    }
   })
+}
+
+function emptyEdgeContactDiagnostics(): IntrinsicPeriodicEdgeContactDiagnostics {
+  return {
+    generatedRelationCount: 0,
+    retainedRelationCount: 0,
+    nonCollinearPairCount: 0,
+    areaFeasiblePairCount: 0,
+    validationAttemptCount: 0,
+    validationCoverageComplete: true,
+    latticeRejectedCount: 0,
+    contactIncompleteCount: 0,
+    admittedBasisCount: 0
+  }
+}
+
+function mergeEdgeContactDiagnostics(
+  first: IntrinsicPeriodicEdgeContactDiagnostics,
+  second: IntrinsicPeriodicEdgeContactDiagnostics
+): IntrinsicPeriodicEdgeContactDiagnostics {
+  return {
+    generatedRelationCount: first.generatedRelationCount + second.generatedRelationCount,
+    retainedRelationCount: first.retainedRelationCount + second.retainedRelationCount,
+    nonCollinearPairCount: first.nonCollinearPairCount + second.nonCollinearPairCount,
+    areaFeasiblePairCount: first.areaFeasiblePairCount + second.areaFeasiblePairCount,
+    validationAttemptCount: first.validationAttemptCount + second.validationAttemptCount,
+    validationCoverageComplete:
+      first.validationCoverageComplete && second.validationCoverageComplete,
+    latticeRejectedCount: first.latticeRejectedCount + second.latticeRejectedCount,
+    contactIncompleteCount: first.contactIncompleteCount + second.contactIncompleteCount,
+    admittedBasisCount: first.admittedBasisCount + second.admittedBasisCount
+  }
 }
 
 function validateEdgeContactRelation(

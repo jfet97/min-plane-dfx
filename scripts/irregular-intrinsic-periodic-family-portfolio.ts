@@ -246,6 +246,7 @@ const report = {
       enumeratedPairCount: family.enumeratedPairCount,
       pairCoverageComplete: family.pairCoverageComplete,
       cellCoverageComplete: family.cellCoverageComplete,
+      edgeContactDiagnostics: family.edgeContactDiagnostics,
       sourceCellSurvival: family.sourceSurvival,
       rejectedSamples: family.rejectedSamples,
       finiteCropSources: family.cells.map((cell) => ({
