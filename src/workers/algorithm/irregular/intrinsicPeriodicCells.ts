@@ -154,9 +154,20 @@ export interface IntrinsicPeriodicFamilyCatalog {
   readonly enumeratedPairCount: number
   readonly pairCoverageComplete: boolean
   readonly cellCoverageComplete: boolean
+  /** Records source survival through the bounded cell frontier without changing admission. */
+  readonly sourceSurvival: ReadonlyArray<IntrinsicPeriodicSourceCellSurvival>
   readonly cells: ReadonlyArray<IntrinsicPeriodicCell>
   readonly rejected: Readonly<Record<string, number>>
   readonly rejectedSamples: ReadonlyArray<IntrinsicPeriodicCellRejection>
+}
+
+/** Records how many provenance-backed cells survive the P1/P2 frontier. */
+export interface IntrinsicPeriodicSourceCellSurvival {
+  readonly role: 'P1' | 'P2'
+  readonly sourceKey: string
+  readonly sourceKind: IntrinsicPeriodicBasisProvenance['sourceKind']
+  readonly cellsBeforeFront: number
+  readonly cellsRetained: number
 }
 
 export interface IntrinsicPeriodicSeed {
@@ -435,6 +446,7 @@ function enumerateIntrinsicPeriodicFamily(input: {
       pairCoverageComplete,
       cellCoverageComplete:
         runtimeCoverageComplete && pairCoverageComplete && p1Front.coverageComplete && p2Front.coverageComplete,
+      sourceSurvival: summarizePeriodicCellSourceSurvival(p1, p1Front.cells, p2, p2Front.cells),
       cells: rankIntrinsicPeriodicCells(cells),
       rejected: Object.fromEntries([...rejected.entries()].toSorted()),
       rejectedSamples
@@ -457,10 +469,54 @@ function emptyIntrinsicPeriodicFamilyCatalog(
     enumeratedPairCount: 0,
     pairCoverageComplete: true,
     cellCoverageComplete: true,
+    sourceSurvival: [],
     cells: [],
     rejected,
     rejectedSamples: []
   }
+}
+
+function summarizePeriodicCellSourceSurvival(
+  p1Before: ReadonlyArray<IntrinsicPeriodicCell>,
+  p1After: ReadonlyArray<IntrinsicPeriodicCell>,
+  p2Before: ReadonlyArray<IntrinsicPeriodicCell>,
+  p2After: ReadonlyArray<IntrinsicPeriodicCell>
+): ReadonlyArray<IntrinsicPeriodicSourceCellSurvival> {
+  const counts = new Map<
+    string,
+    Omit<IntrinsicPeriodicSourceCellSurvival, 'cellsBeforeFront' | 'cellsRetained'> & {
+      cellsBeforeFront: number
+      cellsRetained: number
+    }
+  >()
+  const count = (cells: ReadonlyArray<IntrinsicPeriodicCell>, retained: boolean) => {
+    for (const cell of cells) {
+      const provenance = cell.basisProvenance
+      if (provenance === undefined) continue
+      const key = `${cell.role}:${provenance.sourceKey}`
+      const current = counts.get(key) ?? {
+        role: cell.role,
+        sourceKey: provenance.sourceKey,
+        sourceKind: provenance.sourceKind,
+        cellsBeforeFront: 0,
+        cellsRetained: 0
+      }
+      counts.set(key, {
+        ...current,
+        ...(retained
+          ? { cellsRetained: current.cellsRetained + 1 }
+          : { cellsBeforeFront: current.cellsBeforeFront + 1 })
+      })
+    }
+  }
+  count(p1Before, false)
+  count(p2Before, false)
+  count(p1After, true)
+  count(p2After, true)
+  return [...counts.values()].toSorted(
+    (first, second) =>
+      first.role.localeCompare(second.role) || first.sourceKey.localeCompare(second.sourceKey)
+  )
 }
 
 function selectPeriodicTransformRepresentatives(
@@ -558,6 +614,16 @@ export function expandIntrinsicPeriodicCell(
   familyMembers: ReadonlyArray<IrregularPreparedPiece>,
   maximumCrops = 2
 ): Effect.Effect<ReadonlyArray<IntrinsicPeriodicSeed>, IrregularGeometryInputError> {
+  return Effect.map(enumerateIntrinsicPeriodicCellCrops(cell, familyMembers), (candidates) =>
+    selectIntrinsicPeriodicSeedFront(candidates, maximumCrops)
+  )
+}
+
+/** Enumerates every direct-valid finite crop before the bounded crop frontier. */
+export function enumerateIntrinsicPeriodicCellCrops(
+  cell: IntrinsicPeriodicCell,
+  familyMembers: ReadonlyArray<IrregularPreparedPiece>
+): Effect.Effect<ReadonlyArray<IntrinsicPeriodicSeed>, IrregularGeometryInputError> {
   return Effect.gen(function* () {
     const v1 = gridPoint(cell.v1)
     const v2 = gridPoint(cell.v2)
@@ -637,7 +703,7 @@ export function expandIntrinsicPeriodicCell(
         }
       }
     }
-    return periodicSeedFront(candidates, maximumCrops)
+    return candidates
   })
 }
 
@@ -682,7 +748,8 @@ export function rankIntrinsicPeriodicSeeds(
   return seeds.toSorted(compareSeeds)
 }
 
-function periodicSeedFront(
+/** Retains the bounded non-dominated crop front after direct finite validation. */
+export function selectIntrinsicPeriodicSeedFront(
   seeds: ReadonlyArray<IntrinsicPeriodicSeed>,
   maximumCrops: number
 ): ReadonlyArray<IntrinsicPeriodicSeed> {

@@ -196,6 +196,7 @@ const report = {
       enumeratedPairCount: family.enumeratedPairCount,
       pairCoverageComplete: family.pairCoverageComplete,
       cellCoverageComplete: family.cellCoverageComplete,
+      sourceCellSurvival: family.sourceSurvival,
       rejectedSamples: family.rejectedSamples,
       finiteCropSources: family.cells.map((cell) => ({
         role: cell.role,
@@ -221,6 +222,7 @@ const report = {
     }))
   },
   continuationCoverageComplete: result.continuationCoverageComplete,
+  sourceCropSurvival: result.sourceCropSurvival,
   continuationOmissions: result.continuationOmissions,
   archive: result.archive,
   winnerSourceId: result.winner?.continuation.sourceId,

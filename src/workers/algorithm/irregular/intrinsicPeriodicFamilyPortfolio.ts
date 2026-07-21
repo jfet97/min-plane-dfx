@@ -3,9 +3,11 @@ import type { SheetSpec } from '@shared/domain/nesting.js'
 import type { IrregularPreparedPiece } from '@shared/irregular/domain.js'
 import {
   enumerateIntrinsicPeriodicCells,
-  expandIntrinsicPeriodicCell,
+  enumerateIntrinsicPeriodicCellCrops,
   rankIntrinsicPeriodicSeeds,
+  selectIntrinsicPeriodicSeedFront,
   type IntrinsicPeriodicCatalog,
+  type IntrinsicPeriodicBasisProvenance,
   type IntrinsicPeriodicSeed
 } from './intrinsicPeriodicCells.js'
 import {
@@ -49,11 +51,24 @@ export interface IntrinsicPeriodicContinuationOmission {
   readonly reason: 'insufficient-seed' | 'duplicate-canonical-seed' | 'continuation-cap'
 }
 
+/** Records one retained source's survival through crop and continuation selection. */
+export interface IntrinsicPeriodicSourceCropSurvival {
+  readonly role: 'P1' | 'P2'
+  readonly sourceKey: string
+  readonly sourceKind: IntrinsicPeriodicBasisProvenance['sourceKind']
+  readonly retainedCellCount: number
+  readonly directValidCropCount: number
+  readonly cropFrontCount: number
+  readonly uniqueSeedCount: number
+  readonly selectedContinuationCount: number
+}
+
 export interface IntrinsicPeriodicFamilyPortfolioResult {
   readonly catalog: IntrinsicPeriodicCatalog
   readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
   readonly continuationOmissions: ReadonlyArray<IntrinsicPeriodicContinuationOmission>
   readonly continuationCoverageComplete: boolean
+  readonly sourceCropSurvival: ReadonlyArray<IntrinsicPeriodicSourceCropSurvival>
   readonly runs: ReadonlyArray<IntrinsicPeriodicContinuationResult>
   readonly archive: ReadonlyArray<IntrinsicStrictCompletedMetrics>
   readonly winner: IntrinsicPeriodicContinuationResult | undefined
@@ -169,6 +184,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       continuations: selected.continuations,
       continuationOmissions: selected.omissions,
       continuationCoverageComplete: selected.coverageComplete,
+      sourceCropSurvival: selected.sourceCropSurvival,
       runs,
       archive,
       winner:
@@ -191,6 +207,7 @@ function selectIntrinsicPeriodicContinuations(
     readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
     readonly omissions: ReadonlyArray<IntrinsicPeriodicContinuationOmission>
     readonly coverageComplete: boolean
+    readonly sourceCropSurvival: ReadonlyArray<IntrinsicPeriodicSourceCropSurvival>
   },
   IrregularGeometryInputError
 > {
@@ -201,13 +218,47 @@ function selectIntrinsicPeriodicContinuations(
     const perFamily: ReadonlyArray<IntrinsicPeriodicContinuation>[] = []
     const seenSeeds = new Set<string>()
     const omissions: IntrinsicPeriodicContinuationOmission[] = []
+    const sourceCropSurvival = new Map<
+      string,
+      Omit<IntrinsicPeriodicSourceCropSurvival, 'retainedCellCount' | 'directValidCropCount' | 'cropFrontCount' | 'uniqueSeedCount' | 'selectedContinuationCount'> & {
+        retainedCellCount: number
+        directValidCropCount: number
+        cropFrontCount: number
+        uniqueSeedCount: number
+        selectedContinuationCount: number
+      }
+    >()
+    const sourceAudit = (cell: IntrinsicPeriodicCatalog['cells'][number]) => {
+      const provenance = cell.basisProvenance
+      if (provenance === undefined) return undefined
+      const key = `${cell.role}:${provenance.sourceKey}`
+      const current = sourceCropSurvival.get(key) ?? {
+        role: cell.role,
+        sourceKey: provenance.sourceKey,
+        sourceKind: provenance.sourceKind,
+        retainedCellCount: 0,
+        directValidCropCount: 0,
+        cropFrontCount: 0,
+        uniqueSeedCount: 0,
+        selectedContinuationCount: 0
+      }
+      sourceCropSurvival.set(key, current)
+      return current
+    }
     for (const family of catalog.families) {
       const members = familyMembers.get(family.familyKey)
       if (members === undefined) continue
       const continuations: IntrinsicPeriodicContinuation[] = []
       for (const cell of family.cells) {
         if (basisSourceKey !== undefined && cell.basisProvenance?.sourceKey !== basisSourceKey) continue
-        const crops = yield* expandIntrinsicPeriodicCell(cell, members, maximumCropsPerCell)
+        const audit = sourceAudit(cell)
+        if (audit !== undefined) audit.retainedCellCount += 1
+        const directValidCrops = yield* enumerateIntrinsicPeriodicCellCrops(cell, members)
+        const crops = selectIntrinsicPeriodicSeedFront(directValidCrops, maximumCropsPerCell)
+        if (audit !== undefined) {
+          audit.directValidCropCount += directValidCrops.length
+          audit.cropFrontCount += crops.length
+        }
         for (const [cropIndex, seed] of crops.entries()) {
           const sourceId = `${family.familyKey}:${cell.role}:${cell.canonicalKey}:${cropIndex}`
           if (seed.placements.length < 4) {
@@ -219,6 +270,7 @@ function selectIntrinsicPeriodicContinuations(
             continue
           }
           seenSeeds.add(seed.canonicalKey)
+          if (audit !== undefined) audit.uniqueSeedCount += 1
           continuations.push({
             sourceId,
             role: cell.role,
@@ -235,13 +287,23 @@ function selectIntrinsicPeriodicContinuations(
     const fill = rankContinuations(perFamily.flatMap((continuations) => continuations.slice(1)))
     const all = [...reserved, ...fill]
     const selected = all.slice(0, maximumContinuationCount)
+    for (const continuation of selected) {
+      const sourceKey = continuation.basisSourceKey
+      if (sourceKey === undefined) continue
+      const audit = sourceCropSurvival.get(`${continuation.role}:${sourceKey}`)
+      if (audit !== undefined) audit.selectedContinuationCount += 1
+    }
     for (const continuation of all.slice(maximumContinuationCount)) {
       omissions.push({ sourceId: continuation.sourceId, reason: 'continuation-cap' })
     }
     return {
       continuations: selected,
       omissions,
-      coverageComplete: all.length <= maximumContinuationCount
+      coverageComplete: all.length <= maximumContinuationCount,
+      sourceCropSurvival: [...sourceCropSurvival.values()].toSorted(
+        (first, second) =>
+          first.role.localeCompare(second.role) || first.sourceKey.localeCompare(second.sourceKey)
+      )
     }
   })
 }
