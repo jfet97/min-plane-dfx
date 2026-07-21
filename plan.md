@@ -37,11 +37,14 @@ Therefore:
    contact-role allocation over one shared successor union. Neither width-four
    policy retained the known delayed-value witness, while raw contact survivors
    improved cohesion only by accepting a large envelope regression;
-6. **next, co-primary:** run a bounded two-placement compact-closure horizon on
-   Triangle and profile/run the bounded Mixed commensurate-only cost pilot. A
-   live fixed-width cap-0/cap-1 pair is eligible only if both cells are projected
-   to complete under one frozen budget and the Triangle observer has either
-   closed or explicitly falsified its bounded legal-closure hypothesis.
+6. **completed:** the bounded two-placement compact-closure horizon on Triangle
+   completed 24 equal-work candidate/sibling comparisons with zero passes. All
+   contact-improving candidates survived legally but remained geometrically
+   dominated and topologically fragmented;
+7. **next, co-primary:** start the bounded coordinated multi-piece transport
+   pilot defined in Conditional Stage 5 and profile/run the bounded Mixed
+   commensurate-only cost pilot. No live selector change is authorized by the
+   Triangle evidence.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -372,6 +375,32 @@ waste ratio relative to the seed. If all conditioned candidates remain
 dominated or cohesion-neutral, reject this bounded legal local-closure mechanism
 before considering coordinated movement. This is generic geometry search, not
 a triangle-specific side-placement rule.
+
+Commit `e22f2fe` implemented that observer and the clean run completed in
+`139,828.682 ms` with `104,749` evaluations. It produced 24 equal-work
+candidate/sibling comparisons from four distinct conditioned candidates and
+three distinct sibling states after future-equivalence deduplication. All 63
+shadow witnesses completed and no compact-closure comparison passed.
+
+At the first horizon placement, every conditioned candidate was already larger
+than its sibling: candidate areas ranged from `95,506.413961` to
+`99,443.140496 mm2`, while sibling areas ranged from `87,710.145649` to
+`88,104.577995 mm2`. After the second placement, candidates ranged from
+`99,028.956145` to `99,443.140496 mm2`; every sibling converged to
+`88,124.330 mm2`. The best conditioned endpoint reduced isolates from 11 to
+nine and could raise contacts from five to six, but retained 14 contact
+components with a largest component of three. None reached the exact common-
+archive front. The only strict exact improvement remains `88,124.026123 mm2`
+with unchanged cohesion.
+
+This is the required falsification of bounded legal compact closure: useful
+contact-conditioned alternatives were generated, remained canonical-legal,
+received two equal-work continuation steps, and still could not close the bad
+topology without a large envelope regression. Width-three role reallocation,
+one extra slot, raw contact protection, and this short legal horizon are not the
+Triangle solution. Conditional Stage 5 is now eligible because improving the
+layout requires moving already placed geometry rather than choosing one more
+single-piece continuation.
 
 ## What The Completed Proofs Rule Out
 
@@ -1391,15 +1420,19 @@ and admits only Clipper2-legal endpoints to the common archive.
   `/private/tmp/min-plane-provenance/v7-calibration-40c26dc-mixed/`
 - Completed four-cell allocation audit and exact counterfactual endpoints:
   `/private/tmp/min-plane-provenance/v7-allocation-d389195-triangle/`
+- Completed compact-closure horizon and equal-work pair traces:
+  `/private/tmp/min-plane-provenance/v7-compact-closure-e22f2fe-triangle/`
 
 ## Immediate Next Action
 
 Run two independent bounded workstreams:
 
-1. implement the trace-only two-placement compact-closure horizon defined
-   above. Keep live selection unchanged, condition contact improvement on low
-   marginal envelope and hull growth, compare equal-work descendants, and
-   finalize only under the common exact archive;
+1. implement the first bounded traceable Conditional Stage 5 pilot: start from
+   the exact legal Triangle incumbent, contract an intrinsic target envelope,
+   preserve the best legal incumbent, allow a separately bounded temporarily
+   infeasible pool, move conflict-connected pieces as a coordinated component,
+   separate conflicts, and admit only canonical Clipper2-legal endpoints to the
+   common exact archive;
 2. profile the existing Mixed commensurate discovery and symmetric two-order
    completion path, then run the bounded cold cost pilot. Reuse the selected
    alternate discovery enumeration, skip unrelated continuations, and record
@@ -1408,7 +1441,8 @@ Run two independent bounded workstreams:
 The corrected Triangle observer is positive delayed-value mechanism evidence,
 not a production-width calibration or a cohesion improvement. The completed
 four-cell audit makes width-three role allocation secondary and rejects raw
-maximum-contact retention. No live fixed-width cap, contact-role change,
-stagnation kick, or Sparrow-style coordinated movement is eligible until the
-compact-closure horizon has complete reviewed endpoints. The Mixed cost pilot
+maximum-contact retention. The completed compact-closure horizon also rejects
+the cheapest conditioned legal lookahead. Coordinated movement is now eligible
+as an isolated observer/pilot, not as production selection; no live fixed-width
+cap, contact-role change, or stagnation kick is authorized. The Mixed cost pilot
 remains independent and may proceed concurrently.
