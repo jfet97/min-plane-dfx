@@ -18,8 +18,14 @@ import {
 import { makePresetShapeDocument, type PresetShapeKind } from '../src/shared/presetShapes.js'
 import { preparePieces as prepareNestingPieces } from '../src/shared/preparePieces.js'
 import { IrregularBeamState } from '../src/workers/algorithm/irregular/irregularBeamState.js'
+import { projectIntrinsicLayoutExactly } from '../src/workers/algorithm/irregular/intrinsicExactProjection.js'
 import { runIntrinsicGlobalSqueezePortfolio } from '../src/workers/algorithm/irregular/intrinsicGlobalSqueezePortfolio.js'
 import { runIntrinsicPeriodicFamilyPortfolio } from '../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
+import {
+  INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
+  runIntrinsicSqueezeDisruptSeparateWithSchedule,
+  type IntrinsicContractedPressureAttemptTrace
+} from '../src/workers/algorithm/irregular/intrinsicSqueezeDisruptSeparate.js'
 import {
   measureIntrinsicSheetlessCompletedLayout,
   rankIntrinsicStrictCompletedLayouts
@@ -93,6 +99,7 @@ const maximumContinuationCount = positiveIntegerArgument('--continuations', 8)
 const basisSourceKey = argument('--basis-source-key')
 const captureSourceSurvivalAudit = process.argv.includes('--source-survival-audit')
 const adaptivePressurePilot = process.argv.includes('--adaptive-pressure-pilot')
+const adaptiveRestartAblation = process.argv.includes('--adaptive-restart-ablation')
 const requestedAdaptiveSeedHash = argument('--adaptive-seed-hash')
 await mkdir(outputDirectory, { recursive: true })
 
@@ -249,7 +256,7 @@ const adaptiveSeed =
     : [...adaptiveSeedsByHash.values()].find(({ measured }) =>
         measured.canonicalGeometryHash.startsWith(requestedAdaptiveSeedHash)
       )
-if (adaptivePressurePilot && adaptiveSeed === undefined) {
+if ((adaptivePressurePilot || adaptiveRestartAblation) && adaptiveSeed === undefined) {
   throw new Error(
     requestedAdaptiveSeedHash === undefined
       ? 'the adaptive pressure pilot found no complete exact seed'
@@ -268,6 +275,46 @@ const adaptiveResult =
           settings
         )
       )
+const adaptiveRestartAblationResults: Array<{
+  readonly pressureRestartPoolCapacity: number
+  readonly status: 'completed' | 'deadline-fallback' | 'budget-fallback'
+  readonly runtimeMs: number
+  readonly separationEvaluationCount: number
+  readonly pressureRepairSweepCount: number
+  readonly contractedPressureTrace: ReadonlyArray<IntrinsicContractedPressureAttemptTrace>
+}> = []
+if (adaptiveRestartAblation && adaptiveSeed !== undefined) {
+  for (const pressureRestartPoolCapacity of [0, 3]) {
+    const structural = await Effect.runPromise(
+      withLayers(
+        runIntrinsicSqueezeDisruptSeparateWithSchedule(
+          {
+            allPreparedPieces: preparedPieces,
+            fullE1Placed: adaptiveSeed.measured.placedCollisionGeometries
+          },
+          {
+            ...INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
+            forcedDisruptionSweeps: [
+              ...INTRINSIC_GLOBAL_SEARCH_DEFAULTS.forcedDisruptionSweeps
+            ],
+            maximumRuntimeMs: 240_000,
+            pressureRestartPoolCapacity
+          },
+          { project: projectIntrinsicLayoutExactly }
+        ),
+        settings
+      )
+    )
+    adaptiveRestartAblationResults.push({
+      pressureRestartPoolCapacity,
+      status: structural.status,
+      runtimeMs: structural.runtimeMs,
+      separationEvaluationCount: structural.separationEvaluationCount,
+      pressureRepairSweepCount: structural.pressureRepairSweepCount,
+      contractedPressureTrace: structural.contractedPressureTrace
+    })
+  }
+}
 const adaptiveSelectedSvgPath =
   adaptiveResult === undefined
     ? undefined
@@ -312,6 +359,7 @@ const report = {
     basisSourceKey,
     sourceSurvivalAudit: captureSourceSurvivalAudit,
     adaptivePressurePilot,
+    adaptiveRestartAblation,
     requestedAdaptiveSeedHash,
     continuationMs: 25_000,
     fixtureMs: 240_000
@@ -382,6 +430,21 @@ const report = {
           fillTrace: adaptiveResult.fillTrace,
           structuralOutcome: adaptiveResult.structuralOutcome,
           runtimeMs: adaptiveResult.runtimeMs
+        },
+  adaptiveRestartAblation:
+    !adaptiveRestartAblation || adaptiveSeed === undefined
+      ? undefined
+      : {
+          seed: {
+            source: adaptiveSeed.source,
+            canonicalGeometryHash: adaptiveSeed.measured.canonicalGeometryHash,
+            metrics: adaptiveSeed.measured.metrics
+          },
+          maximumRuntimeMsPerArm: 240_000,
+          maximumPressureEvaluationCountPerArm: Math.floor(
+            INTRINSIC_GLOBAL_SEARCH_DEFAULTS.maximumSeparationEvaluations / 4
+          ),
+          arms: adaptiveRestartAblationResults
         },
   sourceAuditNonDominatedCropCount: result.sourceAuditNonDominatedCropCount,
   continuationOmissions: result.continuationOmissions,

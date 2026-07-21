@@ -529,7 +529,10 @@ export interface IntrinsicContractedPressureAttemptTrace {
   readonly proposalWeightedLoss: number | undefined
   readonly proposalDispersion: number | undefined
   readonly separationEvaluationCount: number
+  readonly separationEvaluationCumulativeStart: number
+  readonly separationEvaluationCumulativeEnd: number
   readonly separationEvaluationLimit: number
+  readonly separationEvaluationQuota: number
   readonly bestRepairedLoss: number | undefined
   readonly bestEndpointExact: boolean
   readonly bestEndpointSatExactZero: boolean
@@ -1751,6 +1754,7 @@ function runIntrinsicContractedPressureLane(input: {
         failureIndex: consecutiveFailureCount,
         maximumConsecutiveFailureCount
       })
+      const attemptEvaluationStart = separationEvaluationCount
       const parentMeasured = incumbentMeasured
       const proposal = deriveIntrinsicContractedPressureProposal(
         input.catalog,
@@ -1768,6 +1772,7 @@ function runIntrinsicContractedPressureLane(input: {
             retainedPressureIdentity:
               acceptedEndpoint?.measured.compactness.canonicalIdentity,
             reason: 'the contracted target or area-weighted median split was unavailable',
+            separationEvaluationStart: attemptEvaluationStart,
             separationEvaluationLimit: attemptEvaluationLimit,
             consecutiveFailureCount,
             terminatedByFailureLimit:
@@ -1816,6 +1821,7 @@ function runIntrinsicContractedPressureLane(input: {
             retainedPressureIdentity:
               acceptedEndpoint?.measured.compactness.canonicalIdentity,
             preProjectionCompactness: undefined,
+            separationEvaluationStart: attemptEvaluationStart,
             separationEvaluationLimit: attemptEvaluationLimit,
             consecutiveFailureCount,
             terminatedByFailureLimit:
@@ -1852,6 +1858,7 @@ function runIntrinsicContractedPressureLane(input: {
             retainedPressureIdentity:
               acceptedEndpoint?.measured.compactness.canonicalIdentity,
             preProjectionCompactness: undefined,
+            separationEvaluationStart: attemptEvaluationStart,
             separationEvaluationLimit: attemptEvaluationLimit,
             consecutiveFailureCount,
             terminatedByFailureLimit:
@@ -2068,6 +2075,7 @@ function runIntrinsicContractedPressureLane(input: {
               retainedPressureIdentity:
                 acceptedEndpoint?.measured.compactness.canonicalIdentity,
               preProjectionCompactness: undefined,
+              separationEvaluationStart: attemptEvaluationStart,
               separationEvaluationLimit: attemptEvaluationLimit,
               restartSeedCount,
               restartDisruptionProposalCount,
@@ -2253,6 +2261,7 @@ function runIntrinsicContractedPressureLane(input: {
               retainedPressureIdentity:
                 acceptedEndpoint?.measured.compactness.canonicalIdentity,
               preProjectionCompactness: undefined,
+              separationEvaluationStart: attemptEvaluationStart,
               separationEvaluationLimit: attemptEvaluationLimit,
               restartSeedCount,
               restartDisruptionProposalCount,
@@ -2524,6 +2533,7 @@ function runIntrinsicContractedPressureLane(input: {
           retainedPressureIdentity:
             acceptedEndpoint?.measured.compactness.canonicalIdentity,
           preProjectionCompactness: accepted?.measured.compactness,
+          separationEvaluationStart: attemptEvaluationStart,
           separationEvaluationLimit: attemptEvaluationLimit,
           restartSeedCount,
           restartDisruptionProposalCount,
@@ -3896,6 +3906,7 @@ function unavailableContractedPressureAttemptTrace(input: {
   readonly parent: IntrinsicPressureMeasuredLayout
   readonly retainedPressureIdentity: string | undefined
   readonly reason: string
+  readonly separationEvaluationStart?: number
   readonly separationEvaluationLimit?: number
   readonly consecutiveFailureCount?: number
   readonly terminatedByFailureLimit?: boolean
@@ -3925,7 +3936,14 @@ function unavailableContractedPressureAttemptTrace(input: {
     proposalWeightedLoss: undefined,
     proposalDispersion: undefined,
     separationEvaluationCount: 0,
+    separationEvaluationCumulativeStart: input.separationEvaluationStart ?? 0,
+    separationEvaluationCumulativeEnd: input.separationEvaluationStart ?? 0,
     separationEvaluationLimit: input.separationEvaluationLimit ?? 0,
+    separationEvaluationQuota: Math.max(
+      0,
+      (input.separationEvaluationLimit ?? 0) -
+        (input.separationEvaluationStart ?? 0)
+    ),
     bestRepairedLoss: undefined,
     bestEndpointExact: false,
     bestEndpointSatExactZero: false,
@@ -3963,6 +3981,7 @@ function contractedPressureAttemptTrace(input: {
   readonly reason: string
   readonly retainedPressureIdentity: string | undefined
   readonly preProjectionCompactness: IntrinsicPressureCompactnessTuple | undefined
+  readonly separationEvaluationStart?: number
   readonly separationEvaluationLimit?: number
   readonly restartSeedCount?: number
   readonly restartDisruptionProposalCount?: number
@@ -3989,7 +4008,15 @@ function contractedPressureAttemptTrace(input: {
     proposalWeightedLoss: input.proposalEvaluation?.weightedLoss,
     proposalDispersion: input.proposalDispersion,
     separationEvaluationCount: input.evaluationCount,
+    separationEvaluationCumulativeStart: input.separationEvaluationStart ?? 0,
+    separationEvaluationCumulativeEnd:
+      (input.separationEvaluationStart ?? 0) + input.evaluationCount,
     separationEvaluationLimit: input.separationEvaluationLimit ?? 0,
+    separationEvaluationQuota: Math.max(
+      0,
+      (input.separationEvaluationLimit ?? 0) -
+        (input.separationEvaluationStart ?? 0)
+    ),
     bestRepairedLoss: input.bestRepairedLoss,
     bestEndpointExact: input.bestEndpoint !== undefined,
     bestEndpointSatExactZero:
