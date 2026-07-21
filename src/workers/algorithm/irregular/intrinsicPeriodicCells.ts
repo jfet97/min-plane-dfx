@@ -58,7 +58,6 @@ export interface IntrinsicPeriodicBasisProvenance {
   readonly selectedBasis: readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]
   readonly selectedResidualGrid: readonly [IntrinsicPeriodicRationalPoint, IntrinsicPeriodicRationalPoint]
   readonly canonicalBasis: readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]
-  readonly canonicalDeltaGrid: readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]
   readonly memberTransforms: ReadonlyArray<IntrinsicPeriodicMemberTransform>
 }
 
@@ -896,10 +895,6 @@ function makeBasisProvenance(
       serializeRationalPoint(candidate.selectedResidualGrid[1])
     ],
     canonicalBasis: [fromGridPoint(canonical[0]), fromGridPoint(canonical[1])],
-    canonicalDeltaGrid: [
-      fromGridPoint({ x: canonical[0].x - selectedFirst.x, y: canonical[0].y - selectedFirst.y }),
-      fromGridPoint({ x: canonical[1].x - selectedSecond.x, y: canonical[1].y - selectedSecond.y })
-    ],
     memberTransforms: members.map(({ piece, geometry }, memberIndex) => ({
       memberIndex,
       pieceId: `${piece.pieceId ?? piece.source.id}`,

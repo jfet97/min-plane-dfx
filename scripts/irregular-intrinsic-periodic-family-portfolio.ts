@@ -99,6 +99,15 @@ const result = await Effect.runPromise(
 
 const artifactPaths: string[] = []
 const runs = []
+const basisSourceVariantCounts = new Map<string, number>()
+for (const family of result.catalog.families) {
+  for (const cell of family.cells) {
+    const sourceKey = cell.basisProvenance?.sourceKey
+    if (sourceKey !== undefined) {
+      basisSourceVariantCounts.set(sourceKey, (basisSourceVariantCounts.get(sourceKey) ?? 0) + 1)
+    }
+  }
+}
 for (const run of result.runs) {
   const placed = run.result?.placedCollisionGeometries
   const svgPath =
@@ -202,7 +211,11 @@ const report = {
         infiniteFarProof: cell.infiniteFarProof,
         threeByThreeLatticeLegal: cell.threeByThreeLatticeLegal,
         threeByThreeCentreContactComplete: cell.threeByThreeCentreContactComplete,
-        basisProvenance: cell.basisProvenance
+        basisProvenance: cell.basisProvenance,
+        retainedBasisSourceVariantCount:
+          cell.basisProvenance === undefined
+            ? undefined
+            : basisSourceVariantCounts.get(cell.basisProvenance.sourceKey)
       })),
       rejected: family.rejected
     }))
