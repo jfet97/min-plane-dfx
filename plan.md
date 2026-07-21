@@ -1696,7 +1696,10 @@ NFP-boundary-vertex P1/P2 source as a Triangle golden generator; it does not
 reject the compact 74k seed or change its contact semantics. Each raw Pareto
 witness must carry its family identity, complete basis provenance, exact finite
 placements, canonical identity, and a rendered artifact so this conclusion can
-be independently replayed rather than inferred from aggregate counts.
+be independently replayed rather than inferred from aggregate counts. Commit
+`a7c697f` records those ten full witnesses—each with transformed members,
+ordered source provenance, placements, and SVG—under
+`/private/tmp/min-plane-provenance/v7-source-survival-pareto-a7c697f/triangle-20/`.
 
 The next constructive source must be stronger, not broader: form a shared
 periodic basis from two explicit, phase-compatible **edge-to-edge contact

@@ -328,11 +328,18 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   lattice is present, but every more connected witness remains fragmented (at
   least 9 components), while zero-isolate NFP-vertex layouts are much larger.
   Thus current axis-union plus arbitrary NFP-boundary-vertex P1/P2 sources do
-  do not hide a compact exact-contact Triangle lattice behind retention among
+  not hide a compact exact-contact Triangle lattice behind retention among
   the patterns they currently generate. Preserve the useful compact seed; next add a bounded, generic source based on two
   phase-compatible real edge-to-edge NFP contacts, not a wider frontier,
   endpoint sampling, or a contact-definition change. Immutable evidence is
   `/private/tmp/min-plane-provenance/v7-source-survival-pareto-71204b8/`.
+- Commit `a7c697f` upgrades that immutable audit to replayable evidence:
+  `report.json` now includes each raw Pareto witness's full family/source basis,
+  transformed members, exact finite placements, canonical identity, and its own
+  SVG. It also states the 64-candidate NFP-vertex cap and the finite crop
+  traversal bounds, so the conclusion is explicitly scoped to the generated
+  domain. Refreshed evidence is
+  `/private/tmp/min-plane-provenance/v7-source-survival-pareto-a7c697f/triangle-20/`.
 
 ### 2026-07-20 (Dalsoo source-control addition)
 
