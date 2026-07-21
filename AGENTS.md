@@ -91,6 +91,28 @@ Then verify the empty state, disabled controls, and that no fake algorithm outpu
   triangle golden and the relevant mixed/corpus gates. Keep rejected branches
   or their manifests until their findings have been documented.
 
+## Active Work Continuity
+
+- Starting a subagent, external reviewer, background command, detached process,
+  monitored experiment, or other asynchronous task creates an active obligation.
+  Do not end the turn with a progress-only response while any such work remains
+  relevant and non-terminal.
+- Keep monitoring active work until it completes, fails, is explicitly cancelled,
+  or reaches a genuine blocker that requires user input or an external state
+  change. A wait timeout, an empty poll, a slow reviewer, or "still running" is
+  not a terminal condition; check status and wait again.
+- If the user asks a status question or requests a brief explanation while work
+  is active, answer it and then immediately resume monitoring or execution in the
+  same turn. Treat the interruption as replacing the active task only when the
+  user clearly cancels or supersedes it.
+- After context compaction, reconnecting, a tool interruption, or uncertainty,
+  inspect the active processes, reviewer sessions, and subagents before doing
+  anything else. Reattach to existing work instead of launching duplicate work.
+- Before sending a final response, perform a terminal-state audit of every task
+  started during the turn. The final response must include the completed result,
+  a verified failure, an explicit cancellation, or a concrete blocker for each
+  one; never silently abandon an active task.
+
 ## Pull Requests
 
 Use exactly these sections, in order:
