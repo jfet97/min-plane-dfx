@@ -1562,18 +1562,77 @@ exactness, conflict accounting, composite movement, and projection machinery;
 its missing behavior is adaptive incumbent-to-next-target progression, not a
 new contact heuristic.
 
-Before editing either path, obtain a joint Kimi/Sol review of this evidence and
-the live source. The reviewers must recommend one ordered first implementation
-and concrete gates, explicitly rejecting either path if its precondition is not
-met. The decision must answer:
+#### Peer-reviewed decision (2026-07-21)
 
-- whether to first broaden periodic catalog coverage across repeatable families,
-  transforms, and bounded crop representatives, and how it remains generic;
-- whether the current Triangle/Mixed evidence instead justifies an adaptive
-  contraction controller immediately;
-- what exact archive, legality, runtime, determinism, and topology gates apply
-  to the selected first change; and
-- which existing V7 machinery is retained versus removed or left dormant.
+Kimi/Sol dual review `20260720T123621Z-95462`, cycle 4, reached unanimous
+`NEEDS_CHANGES` consensus after reading the current V7 sources, provenance,
+pinned Sparrow source, pinned Dalsoo source, and the available Abeysooriya
+manuscript extraction. The ordered decision is **periodic first; adaptive
+repair only after conclusive periodic falsification**.
+
+Implement one bounded, generic P1/P2 repeated-family seed portfolio:
+
+1. inspect at most eight collision families with multiplicity at least two,
+   ordered by multiplicity, total collision area, then family key;
+2. retain at most sixteen canonical transforms per family, reserving one from
+   every already-permitted orthogonal, mirror, and edge-alignment family before
+   deterministic fill; enumerate at most 120 pairs per family;
+3. retain at most four non-dominated certified cells per `(family, P1|P2)` on
+   exact density, maximum side, hull waste, and shared boundary, then at most
+   two canonically distinct finite crops per cell on component count, isolates,
+   largest component, maximum side, area, and span;
+4. admit at most eight independent periodic continuations, reserving one per
+   eligible family before topology-ranked fill; a cell is eligible only when it
+   places at least four family members or hands off a measured non-inert
+   remainder; and
+5. complete every frozen seed through the existing strict NFP/IFP constructor
+   and select all completed endpoints through the shared exact archive.
+
+The catalog must expose family and transform coverage-completeness flags. A
+cap-truncated result is inconclusive, not negative evidence. No P3-P6 cell,
+new placement geometry, fixture-specific motif, private winner lane, or score
+tuning is authorized in this implementation.
+
+The mechanism has a 15-second catalog cap, 25 seconds per continuation, eight
+periodic continuations, and 240 seconds per fixture. It records eligible and
+ineligible family identities, transform-family reservations, pair and cell
+certification/rejection, front admission/eviction, crop identity and parentage,
+continuation counters, archive decisions, requested-sheet fit, renders, and
+three byte-stable replays. Add an observer-only reference-prefix audit that
+classifies each expected pose as source-absent, direct/canonical illegal,
+deduplicated, locally unselected, whole-state evicted, or completed. This
+separates candidate coverage from retention without changing any live winner.
+
+Triangle is the primary falsifier. A periodic continuation must place all 20
+pieces and meet the current-main golden gates: side lengths at most `228/354
+mm`, area at most `80,200 mm2`, span at most `581 mm`, hull waste at most
+`0.05`, contacts at least `24/17` total/dominant, contact units at least
+`23.8`, contact band at least `23`, shared boundary at least `2,100 mm`, one
+free region, and zero holes, while retaining the current-main baseline. The
+same mechanism must run on two other homogeneous repeated-family corpora. On
+Mixed, a selected periodic endpoint must be canonical-legal, zero-cavity, and
+strictly non-dominated against E1/L1 and the `418,956.351872 mm2` L1 control on
+compactness plus cohesion.
+
+If coverage is complete but Triangle/Mixed find no useful exact cell or no
+archive-admitted continuation within budget, implement adaptive incumbent-driven
+contraction second. That controller replaces static roles with seed-derived
+small contractions, promotes only an exact archive improvement as the next
+incumbent, retains a bounded deterministic low-loss restart pool, disrupts
+between failures, and terminates on a fixed failure limit. Retain existing
+conflict accounting, projection, exact admission, and provenance; do not port
+Sparrow wholesale.
+
+NFP/IFP, direct validation, and canonical Clipper2 remain mandatory legality
+and projection machinery. The ordinary NFP boundary/support/intersection pool
+remains a baseline source but no longer the sole source: the architecture is a
+source-tagged, budgeted portfolio with common phase-aware deduplication,
+admission, continuation, archive, and provenance. Dalsoo contributes only
+orientation-family coverage before transform truncation and perhaps a future
+hull proposal tie-break; its floating feasibility, greedy hull terminal, edge
+subdivision, free-angle generator, and multi-bin logic are rejected. Sparrow's
+sampled coordinate descent and Abey join/release remain conditional on a
+measured finite-source omission or a traced compact component, respectively.
 
 ### Local research documents
 
@@ -1614,24 +1673,17 @@ met. The decision must answer:
 
 ## Immediate Next Action
 
-Run the bounded exact component-interface closure pilot on Triangle-20 before
-any further Mixed coordinated cost measurement. It directly tests whether the
-current disconnected triangle groups can be joined side-to-side while retaining
-their exact internal contacts and without enlarging the occupied envelope.
-Record the complete 2,000-materialization / 30-second trace and three replays.
-Only a passing exact interface authorizes seed-derived component-aware global
-transport and the later Mixed commensurate cost pilot; otherwise end this
-Triangle Stage 5 direction and return to the constructive motif/periodic-seed
-line.
+Implement and preregister the bounded generic P1/P2 repeated-family portfolio
+specified above. It must expose the eight-family / sixteen-transform /
+120-pair coverage contract, use only the existing exact periodic-cell
+certification and strict NFP/IFP continuation, and add the observer-only
+source-to-terminal prefix audit. Run the frozen Triangle, two additional
+homogeneous repeated-family, and Mixed controls under the stated budgets and
+three-replay requirement.
 
-The corrected Triangle observer is positive delayed-value mechanism evidence,
-not a production-width calibration or a cohesion improvement. The completed
-four-cell audit makes width-three role allocation secondary and rejects raw
-maximum-contact retention. The completed compact-closure horizon also rejects
-the cheapest conditioned legal lookahead. The completed four-contributor cell
-also found zero strict cohesive improvements, so coordinated movement is now
-measured rather than hypothetical. The first bounded schedule produced exact
-group-transport descendants but zero cohesive improvements, so it remains
-research-only. No live fixed-width cap, contact-role change, coordinated-search
-promotion, or stagnation kick is authorized. The exact component-interface
-pilot is next; the Mixed cost pilot is conditional.
+Do not change the live beam, contact comparator, static squeeze controller, or
+NFP legality machinery during this pass. The experiment decides only whether
+generic repeated-geometry construction can make a compact motif available
+before ordinary greedy retention discards its future. Move to Sparrow-shaped
+adaptive contraction only after a coverage-complete negative result; a
+cap-truncated catalog is explicitly inconclusive.

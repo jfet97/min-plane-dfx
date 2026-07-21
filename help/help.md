@@ -281,6 +281,19 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   bounded infeasible search phase whose only admitted outputs are canonical
   Clipper2-legal endpoints judged by this project's intrinsic geometry/topology
   archive. It is not another exact-contact comparator or rigid-component lane.
+- Completed Kimi/Sol dual review `20260720T123621Z-95462`, cycle 4, over the
+  live V7 sources and provenance, the pinned Sparrow and Dalsoo source trees,
+  and the available Abeysooriya extraction. Its unanimous decision is to test
+  a coverage-complete, bounded P1/P2 repeated-family portfolio before any
+  further global repair: up to eight repeated collision families, sixteen
+  transform representatives and 120 pairs per family, exact certified-cell and
+  crop frontiers, then up to eight strict NFP/IFP continuations into the common
+  archive. Coverage flags, rejection provenance, and three stable replays are
+  mandatory; a cap-truncated catalog is inconclusive. NFP/IFP and Clipper2
+  remain the exact legality backbone but no longer need be the only source of
+  promising starting geometry. The current static squeeze controller remains
+  dormant; only a coverage-complete periodic negative authorizes a later,
+  incumbent-driven Sparrow-style contraction/restart experiment.
 
 ### 2026-07-20 (Dalsoo source-control addition)
 
