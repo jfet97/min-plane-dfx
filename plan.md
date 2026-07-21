@@ -353,15 +353,25 @@ least `109,552.750624 mm2`. This rejects raw maximum-contact retention, not the
 idea that structurally useful contact needs bounded protection.
 
 The next Triangle gate is therefore a trace-only **compact-closure horizon**.
-For each parent, form the non-dominated contact-improving set and retain at most
-two candidates that minimize marginal maximum-side, envelope-area, and hull-
-waste growth. Force each candidate through exactly two further scheduled
-placements using the existing exact width-four micro-beam, then compare equal-
-work descendants after each horizon and at exact finalization. Pass requires a
-common-archive non-dominated descendant with improved cohesion and no cavity
-regression. If all conditioned candidates remain dominated, reject this bounded
-legal local-closure mechanism before considering coordinated movement. This is
-generic geometry search, not a triangle-specific side-placement rule.
+For each parent, first identify the compactness-first sibling successor that the
+current retention semantics would prefer. Form the set of successors whose
+bounded contact signature strictly improves on that sibling, then retain at
+most two candidates from the non-dominated front that minimizes marginal
+maximum-side, envelope-area, and hull-waste growth relative to the same sibling.
+This sibling baseline is essential: comparison against the parent would make
+almost every ordinary side-touching placement look contact-improving and spend
+the cap on states that current retention already covers.
+
+Force each conditioned candidate and its compactness-first sibling through
+exactly two further scheduled placements using the same exact width-four micro-
+beam and unchanged evaluation accounting. Compare equal-work descendants after
+each placement and at exact finalization. Pass requires a finalized descendant
+that is non-dominated under the common archive, improves cohesion, and does not
+regress enclosed cavity count or area, largest hull-gap ratio, or occupied hull-
+waste ratio relative to the seed. If all conditioned candidates remain
+dominated or cohesion-neutral, reject this bounded legal local-closure mechanism
+before considering coordinated movement. This is generic geometry search, not
+a triangle-specific side-placement rule.
 
 ## What The Completed Proofs Rule Out
 

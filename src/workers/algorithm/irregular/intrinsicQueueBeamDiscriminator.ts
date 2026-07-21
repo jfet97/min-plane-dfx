@@ -3672,7 +3672,17 @@ function selectIntrinsicPartialAllocationCell<T extends IntrinsicPartialGeometri
       )
       if (dispersed !== undefined) dispersionLayer = layer - 1
     }
-    append(dispersed?.candidate, role, dispersed?.witness)
+    if (dispersed !== undefined) {
+      append(dispersed.candidate, role, dispersed.witness)
+      continue
+    }
+    const openedLayer = nextBreadthLayer
+    const openedCandidate = layers[openedLayer]
+      ?.filter(({ futureEquivalenceKey }) => !selectedKeys.has(futureEquivalenceKey))
+      .toSorted(comparePartialCandidate)[0]
+    nextBreadthLayer += 1
+    if (openedCandidate !== undefined) dispersionLayer = openedLayer
+    append(openedCandidate, 'breadth')
   }
 
   const contactSlot = slots.find(({ role }) => role === 'contact')
