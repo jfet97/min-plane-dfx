@@ -46,10 +46,12 @@ Therefore:
    distinct geometry-class order and the first four globally deduplicated
    eviction shadows at every nonterminal step, produced zero endpoints that
    jointly improve the exact archive, cohesion, and topology;
-8. **next, co-primary:** start the bounded coordinated multi-piece transport
-   pilot defined in Conditional Stage 5 and profile/run the bounded Mixed
-   commensurate-only cost pilot. No live selector change is authorized by the
-   Triangle evidence.
+8. **completed:** the first bounded coordinated multi-piece transport pilot
+   produced four exact handoffs and one tiny strict geometric improvement, but
+   zero endpoints improved cohesion and zero passed the combined gate;
+9. **next:** profile/run the bounded Mixed commensurate-only cost pilot. No live
+   selector or coordinated-search promotion is authorized by the Triangle
+   evidence.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -1247,6 +1249,30 @@ has crossed from reachability into rearrangement and Stage 5 becomes necessary.
 - Runtime near the allowed multi-minute ceiling must be explained by counters;
   opaque wall-clock exhaustion is a profiling failure.
 
+### First pilot result
+
+The first trace-only pilot at commit `d55d55e` started from the exact
+`88,124.026123 mm2` peel endpoint and completed in `29,640.249 ms`. It searched
+three q0 basins, completed 36 sweeps and `27,470` separation evaluations,
+generated 51 group-transport plus 51 split-squeeze proposals, retained a
+coordinated lineage in every sweep, and completed all five exact projections.
+Four unique handoffs were retained. The best geometric handoff was novel and
+strictly improved area to `88,104.274118 mm2`, span to `593.811 mm`, and hull
+gap to `0.218880`, but cohesion remained 11 isolates, 15 components, largest
+component three, and five contacts; dominant contacts regressed from three to
+two. The other two novel disruption handoffs were larger and more fragmented.
+Zero endpoints passed the combined novelty, strict-geometric-improvement,
+cohesion, and topology gate.
+
+This is a real coordinated-search result, not an implementation no-op: the
+selected disruption projections carried `group-transport` lineages of depth
+10-11. It falsifies the current bounded schedule as a Triangle cohesion repair,
+while preserving its small exact geometric improvement as research evidence.
+Two of the three target roles expand toward the historical Mixed area cap and
+are intentionally poor Triangle targets; they explain the expansive handoffs
+but do not invalidate the useful q0 exact-envelope cell. No production change
+is authorized.
+
 ## Deferred Mechanisms
 
 ### Join and release
@@ -1448,21 +1474,15 @@ and admits only Clipper2-legal endpoints to the common archive.
   `/private/tmp/min-plane-provenance/v7-compact-closure-e22f2fe-triangle/`
 - Completed four-contributor legal reconstruction gate:
   `/private/tmp/min-plane-provenance/v7-four-contributor-2567e8a-triangle/`
+- Completed first coordinated multi-piece pilot:
+  `/private/tmp/min-plane-provenance/v7-coordinated-d55d55e-triangle/`
 
 ## Immediate Next Action
 
-Run two independent bounded workstreams:
-
-1. implement the first bounded traceable Conditional Stage 5 pilot: start from
-   the exact legal Triangle incumbent, contract an intrinsic target envelope,
-   preserve the best legal incumbent, allow a separately bounded temporarily
-   infeasible pool, move conflict-connected pieces as a coordinated component,
-   separate conflicts, and admit only canonical Clipper2-legal endpoints to the
-   common exact archive;
-2. profile the existing Mixed commensurate discovery and symmetric two-order
-   completion path, then run the bounded cold cost pilot. Reuse the selected
-   alternate discovery enumeration, skip unrelated continuations, and record
-   discovery, canonical-admission, topology, and completion costs separately.
+Profile the existing Mixed commensurate discovery and symmetric two-order
+completion path, then run the bounded cold cost pilot. Reuse the selected
+alternate discovery enumeration, skip unrelated continuations, and record
+discovery, canonical-admission, topology, and completion costs separately.
 
 The corrected Triangle observer is positive delayed-value mechanism evidence,
 not a production-width calibration or a cohesion improvement. The completed
@@ -1470,6 +1490,7 @@ four-cell audit makes width-three role allocation secondary and rejects raw
 maximum-contact retention. The completed compact-closure horizon also rejects
 the cheapest conditioned legal lookahead. The completed four-contributor cell
 also found zero strict cohesive improvements, so coordinated movement is now
-authorized as an isolated observer/pilot; it is not production selection. No
-live fixed-width cap, contact-role change, or stagnation kick is authorized. The
-Mixed cost pilot remains independent and may proceed concurrently.
+measured rather than hypothetical. The first bounded schedule produced exact
+group-transport descendants but zero cohesive improvements, so it remains
+research-only. No live fixed-width cap, contact-role change, coordinated-search
+promotion, or stagnation kick is authorized. The Mixed cost pilot is next.

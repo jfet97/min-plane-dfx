@@ -232,6 +232,35 @@ metrics, and artifact hashes. Future experiments must write an immutable manifes
 in their isolated worktree before production code is changed. Promote accepted
 artifacts into `help/artifacts/` and durable research reports into `help/research/`.
 
+### 2026-07-21 (V7 legal closure and coordinated pilot)
+
+- Completed the final generic four-contributor legal reconstruction gate at
+  `2567e8a`. Triangle has one geometry-class order; the run completed all four
+  depths, 21/21 eviction shadows, `17,757` complete successors, `11,849`
+  terminal assessments, and seven exact endpoints in `28,231` evaluations.
+- The only strict geometric improvement was the already known
+  `88,124.026123 mm2` endpoint with unchanged cohesion. The only cohesion
+  improvement was the already known `97,686.123682 mm2` tradeoff—nine isolates
+  and six contacts, but `10.85%` larger. Zero endpoints jointly improved exact
+  geometry, cohesion, and topology. Evidence is under
+  `/private/tmp/min-plane-provenance/v7-four-contributor-2567e8a-triangle/`.
+- Ran the first bounded Sparrow-style coordinated pilot at `d55d55e` from the
+  exact `88,124.026123 mm2` seed. It completed 36 sweeps, `27,470` separation
+  evaluations, 51 group-transport and 51 split-squeeze proposals, five exact
+  projections, and four retained exact handoffs in `29,640.249 ms`.
+- The best handoff is a novel strict geometric improvement at
+  `88,104.274118 mm2` with a slightly smaller span and hull gap, proving that
+  coordinated movement and exact projection are operational. It does not
+  improve cohesion: 11 isolates, 15 components, largest component three, five
+  contacts, and dominant contacts regress `3 -> 2`. The other novel handoffs
+  are larger and more fragmented. Zero handoffs pass the combined gate.
+- Reject the current coordinated schedule as a Triangle cohesion repair, not as
+  an implementation failure. The selected disruption endpoints carry real
+  depth-10/11 group-transport lineages. Keep the exact improvement and traces as
+  research evidence; do not promote the observer or change the live selector.
+  Immutable evidence is under
+  `/private/tmp/min-plane-provenance/v7-coordinated-d55d55e-triangle/`.
+
 ### 2026-07-20 (Dalsoo source-control addition)
 
 - Corrected the V7 completed-layout archive at `a3a7b95`: certificate contact

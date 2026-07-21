@@ -198,6 +198,17 @@ hashes finalized SVG and PNG output. Alternate-piece scheduling remains
 disabled until a later paired commensurate ablation at a successful fixed beam
 width.
 
+The same cold harness can run a diagnostic four-contributor legal reconstruction
+and a trace-only coordinated complete-layout pilot. The legal cell deduplicates
+reinsertion orders by intrinsic geometry class, keeps width four plus bounded
+eviction shadows, and finalizes all terminal successors through the common exact
+archive. The coordinated pilot then reuses the existing squeeze/disrupt/separate
+engine from an immutable exact incumbent. Temporary overlap states remain
+private; only canonical-legal handoffs are measured and rendered. A handoff is
+diagnostically qualifying only when it is novel, strictly improves the common
+geometric archive, improves cohesion, and does not regress cavity or hull
+topology. Neither observer is wired into production selection.
+
 Stage 2A also has one evidence-bounded intrinsic feature family. For every
 transformed moving polygon, it intersects axis-aligned NFP segments with the
 translations that align the moving min/max bounds to the occupied min/max
