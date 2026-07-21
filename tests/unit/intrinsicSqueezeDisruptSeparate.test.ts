@@ -215,6 +215,9 @@ function schedule(overrides: Partial<IntrinsicGlobalSearchSchedule> = {}): Intri
     interfaceDisruptionMaximumCavityCount: 2,
     interfaceDisruptionMaximumHullGapRatio: 0.15,
     interfaceDisruptionStagnationSweeps: 2,
+    pressureMaximumAttempts: 3,
+    pressureMaximumConsecutiveFailures: 3,
+    pressureRestartPoolCapacity: 3,
     seed: 1234,
     ...overrides
   }
@@ -264,6 +267,9 @@ function runController(
 describe('intrinsic global squeeze, disrupt, separate controller', () => {
   it('pins the registered five-projection schedule', () => {
     expect(INTRINSIC_GLOBAL_SEARCH_DEFAULTS.maximumProjectionAttempts).toBe(5)
+    expect(INTRINSIC_GLOBAL_SEARCH_DEFAULTS.pressureMaximumAttempts).toBe(9)
+    expect(INTRINSIC_GLOBAL_SEARCH_DEFAULTS.pressureMaximumConsecutiveFailures).toBe(3)
+    expect(INTRINSIC_GLOBAL_SEARCH_DEFAULTS.pressureRestartPoolCapacity).toBe(3)
   })
 
   it('preserves fractional translation phase through import, identity, and integer transport', async () => {
@@ -1779,7 +1785,7 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     })
   })
 
-  it('runs four deterministic composite passes without changing outer order', async () => {
+  it('runs deterministic mandatory and adaptive composite passes without changing outer order', async () => {
     const pieces = [preparedRectangle('near', 4, 2), preparedRectangle('far', 4, 2)]
     const catalog = await catalogFor(pieces)
     const touching = [
@@ -1809,8 +1815,20 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     ).toEqual(
       second.structuralHandoffs.map(({ metrics }) => metrics.canonicalGeometryIdentity)
     )
-    expect(attempts.every((repairSweeps) => repairSweeps.length <= 4)).toBe(true)
-    expect(attempts.some((repairSweeps) => repairSweeps.length === 4)).toBe(true)
+    expect(attempts.every((repairSweeps) => repairSweeps.length <= 8)).toBe(true)
+    expect(attempts.some((repairSweeps) => repairSweeps.length >= 4)).toBe(true)
+    expect(
+      first.contractedPressureTrace
+        .slice(1)
+        .some(
+          ({ restartSeedCount, restartDisruptionProposalCount }) =>
+            restartSeedCount > 0 && restartDisruptionProposalCount > 0
+        )
+    ).toBe(true)
+    expect(first.contractedPressureTrace.at(-1)).toMatchObject({
+      consecutiveFailureCount: 3,
+      terminatedByFailureLimit: true
+    })
     expect(
       completedSweeps
         .filter(({ sweepIndex }) => sweepIndex < 4)

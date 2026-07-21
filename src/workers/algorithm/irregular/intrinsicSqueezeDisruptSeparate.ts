@@ -70,6 +70,9 @@ export const INTRINSIC_GLOBAL_SEARCH_DEFAULTS = {
   interfaceDisruptionMaximumCavityCount: 2,
   interfaceDisruptionMaximumHullGapRatio: 0.15,
   interfaceDisruptionStagnationSweeps: 2,
+  pressureMaximumAttempts: 9,
+  pressureMaximumConsecutiveFailures: 3,
+  pressureRestartPoolCapacity: 3,
   seed: 0x4e_34_53_44
 } as const
 
@@ -537,6 +540,10 @@ export interface IntrinsicContractedPressureAttemptTrace {
   readonly canonicalLegalityCacheHitCount: number
   readonly canonicalLegalityDisagreementCount: number
   readonly bestEndpointCompactness: IntrinsicPressureCompactnessTuple | undefined
+  readonly restartSeedCount: number
+  readonly restartDisruptionProposalCount: number
+  readonly consecutiveFailureCount: number
+  readonly terminatedByFailureLimit: boolean
   readonly outcome: 'accepted' | 'rejected'
   readonly reason: string
   readonly retainedPressureIdentity: string | undefined
@@ -737,6 +744,9 @@ export interface IntrinsicGlobalSearchSchedule {
   readonly interfaceDisruptionMaximumCavityCount: number
   readonly interfaceDisruptionMaximumHullGapRatio: number
   readonly interfaceDisruptionStagnationSweeps: number
+  readonly pressureMaximumAttempts: number
+  readonly pressureMaximumConsecutiveFailures: number
+  readonly pressureRestartPoolCapacity: number
   readonly seed: number
 }
 
@@ -1583,6 +1593,10 @@ function snapshotIntrinsicGlobalSchedule(
     interfaceDisruptionMaximumHullGapRatio:
       schedule.interfaceDisruptionMaximumHullGapRatio,
     interfaceDisruptionStagnationSweeps: schedule.interfaceDisruptionStagnationSweeps,
+    pressureMaximumAttempts: schedule.pressureMaximumAttempts,
+    pressureMaximumConsecutiveFailures:
+      schedule.pressureMaximumConsecutiveFailures,
+    pressureRestartPoolCapacity: schedule.pressureRestartPoolCapacity,
     seed: schedule.seed
   }
 }
@@ -1691,11 +1705,32 @@ function runIntrinsicContractedPressureLane(input: {
     let acceptedEndpoint: IntrinsicPressureExactEndpoint | undefined
     let ratioCursor = 0
     let attemptIndex = 0
+    let consecutiveFailureCount = 0
     let separationEvaluationCount = 0
     let repairSweepCount = 0
+    let retainedRestartStates: ReadonlyArray<IntrinsicRelaxedState> = []
     const trace: IntrinsicContractedPressureAttemptTrace[] = []
+    const pressureOrdinalSeed = deriveIntrinsicGlobalOrdinalSeed(
+      input.catalog,
+      input.schedule.seed
+    )
+    const maximumAttemptCount = Math.max(
+      1,
+      Math.floor(input.schedule.pressureMaximumAttempts)
+    )
+    const maximumConsecutiveFailureCount = Math.max(
+      1,
+      Math.floor(input.schedule.pressureMaximumConsecutiveFailures)
+    )
+    const restartPoolCapacity = Math.max(
+      0,
+      Math.floor(input.schedule.pressureRestartPoolCapacity)
+    )
 
-    while (attemptIndex < INTRINSIC_PRESSURE_CONTRACTION_RATIOS.length) {
+    while (
+      attemptIndex < maximumAttemptCount &&
+      consecutiveFailureCount < maximumConsecutiveFailureCount
+    ) {
       if ((yield* globalSearchCheckpoint(input.control)) === 'deadline') {
         return {
           acceptedEndpoint,
@@ -1715,6 +1750,7 @@ function runIntrinsicContractedPressureLane(input: {
         contractionRatio
       )
       if (proposal === undefined) {
+        consecutiveFailureCount += 1
         trace.push(
           unavailableContractedPressureAttemptTrace({
             attemptIndex,
@@ -1723,7 +1759,10 @@ function runIntrinsicContractedPressureLane(input: {
             parent: parentMeasured,
             retainedPressureIdentity:
               acceptedEndpoint?.measured.compactness.canonicalIdentity,
-            reason: 'the contracted target or area-weighted median split was unavailable'
+            reason: 'the contracted target or area-weighted median split was unavailable',
+            consecutiveFailureCount,
+            terminatedByFailureLimit:
+              consecutiveFailureCount >= maximumConsecutiveFailureCount
           })
         )
         ratioCursor += 1
@@ -1747,6 +1786,7 @@ function runIntrinsicContractedPressureLane(input: {
         separationEvaluationCount >= input.maximumAdditionalEvaluations ||
         proposalPlaced === undefined
       ) {
+        consecutiveFailureCount += 1
         trace.push(
           contractedPressureAttemptTrace({
             attemptIndex,
@@ -1766,7 +1806,10 @@ function runIntrinsicContractedPressureLane(input: {
                 : 'the shared separation-evaluation budget was exhausted',
             retainedPressureIdentity:
               acceptedEndpoint?.measured.compactness.canonicalIdentity,
-            preProjectionCompactness: undefined
+            preProjectionCompactness: undefined,
+            consecutiveFailureCount,
+            terminatedByFailureLimit:
+              consecutiveFailureCount >= maximumConsecutiveFailureCount
           })
         )
         ratioCursor += 1
@@ -1781,6 +1824,7 @@ function runIntrinsicContractedPressureLane(input: {
       )
       separationEvaluationCount += 1
       if (initialEvaluation === undefined) {
+        consecutiveFailureCount += 1
         trace.push(
           contractedPressureAttemptTrace({
             attemptIndex,
@@ -1797,7 +1841,10 @@ function runIntrinsicContractedPressureLane(input: {
             reason: 'the translated pressure state produced a non-finite separation loss',
             retainedPressureIdentity:
               acceptedEndpoint?.measured.compactness.canonicalIdentity,
-            preProjectionCompactness: undefined
+            preProjectionCompactness: undefined,
+            consecutiveFailureCount,
+            terminatedByFailureLimit:
+              consecutiveFailureCount >= maximumConsecutiveFailureCount
           })
         )
         ratioCursor += 1
@@ -1807,12 +1854,13 @@ function runIntrinsicContractedPressureLane(input: {
 
       const canonicalLegalityMemo = createIntrinsicPressureCanonicalLegalityMemo()
       let weights: IntrinsicSeparatorWeights = { byConflictKey: new Map() }
-      let pool: ReadonlyArray<IntrinsicInfeasiblePoolEntry> = [
-        pressurePoolEntry(
-          proposal.state,
-          initialEvaluation,
-          intrinsicRelaxedStateKey(input.catalog, proposal.state)
-        )
+      const initialPoolEntry = pressurePoolEntry(
+        proposal.state,
+        initialEvaluation,
+        intrinsicRelaxedStateKey(input.catalog, proposal.state)
+      )
+      const seedCandidates: IntrinsicInfeasiblePoolEntry[] = [
+        initialPoolEntry
       ].filter((entry): entry is IntrinsicInfeasiblePoolEntry => entry !== undefined)
       const exactEndpoints: IntrinsicPressureExactEndpoint[] = []
       addExactPressureEndpoint(
@@ -1827,15 +1875,132 @@ function runIntrinsicContractedPressureLane(input: {
         })
       )
       let attemptEvaluationCount = 1
-      let bestRepairedLoss = initialEvaluation.rawLoss
+      let restartSeedCount = 0
+      let restartDisruptionProposalCount = 0
+      for (const [restartIndex, restartState] of retainedRestartStates.entries()) {
+        if (separationEvaluationCount >= input.maximumAdditionalEvaluations) break
+        const restartEvaluation = evaluateIntrinsicSeparation(
+          proposal.contractedBox,
+          input.catalog,
+          restartState,
+          weights
+        )
+        separationEvaluationCount += 1
+        attemptEvaluationCount += 1
+        const restartEntry =
+          restartEvaluation === undefined
+            ? undefined
+            : pressurePoolEntry(
+                restartState,
+                restartEvaluation,
+                intrinsicRelaxedStateKey(input.catalog, restartState)
+              )
+        if (restartEntry !== undefined) {
+          seedCandidates.push(restartEntry)
+          restartSeedCount += 1
+          addExactPressureEndpoint(
+            exactEndpoints,
+            pressureEndpointFromState({
+              catalog: input.catalog,
+              targetBox: proposal.contractedBox,
+              state: restartEntry.state,
+              evaluation: restartEntry.evaluation,
+              weights,
+              canonicalLegalityMemo
+            })
+          )
+        }
+        const disruptionProposals = intrinsicDisruptionProposals({
+          targetBox: proposal.contractedBox,
+          catalog: input.catalog,
+          state: restartState,
+          ordinal: deterministicOrdinal(
+            pressureOrdinalSeed,
+            attemptIndex,
+            restartIndex + 97
+          ),
+          maximumInterfaceCavityCount:
+            input.schedule.interfaceDisruptionMaximumCavityCount,
+          maximumInterfaceHullGapRatio:
+            input.schedule.interfaceDisruptionMaximumHullGapRatio,
+          interfaceDisruptionStagnated: true
+        })
+        restartDisruptionProposalCount += disruptionProposals.length
+        for (const disruptionProposal of disruptionProposals) {
+          if (!isIntrinsicDisruptionProposalKind(disruptionProposal.kind)) continue
+          if (separationEvaluationCount >= input.maximumAdditionalEvaluations) break
+          const disruptionEvaluation = evaluateIntrinsicSeparation(
+            proposal.contractedBox,
+            input.catalog,
+            disruptionProposal.state,
+            weights
+          )
+          separationEvaluationCount += 1
+          attemptEvaluationCount += 1
+          const disruptionEntry =
+            disruptionEvaluation === undefined
+              ? undefined
+              : pressurePoolEntry(
+                  disruptionProposal.state,
+                  disruptionEvaluation,
+                  intrinsicRelaxedStateKey(input.catalog, disruptionProposal.state),
+                  {
+                    parentStateKey: restartEntry?.key,
+                    generationDepth: 1,
+                    selectedPieceIds: disruptionProposal.affectedPieceIds,
+                    affectedPieceIds: disruptionProposal.affectedPieceIds,
+                    lineageAffectedPieceIds: disruptionProposal.affectedPieceIds,
+                    proposalKind: disruptionProposal.kind
+                  }
+                )
+          if (disruptionEntry === undefined) continue
+          seedCandidates.push({
+            ...disruptionEntry,
+            disruptionLineage: true,
+            disruptionLineageProvenance: {
+              originSweep: attemptIndex,
+              originProposalKind: disruptionProposal.kind,
+              originStateKey: restartEntry?.key ?? disruptionEntry.key,
+              depth: 1
+            },
+            disruptionProtectedUntilSweep: 0
+          })
+          addExactPressureEndpoint(
+            exactEndpoints,
+            pressureEndpointFromState({
+              catalog: input.catalog,
+              targetBox: proposal.contractedBox,
+              state: disruptionEntry.state,
+              evaluation: disruptionEntry.evaluation,
+              weights,
+              canonicalLegalityMemo
+            })
+          )
+        }
+      }
+      let pool: ReadonlyArray<IntrinsicInfeasiblePoolEntry> =
+        retainIntrinsicInfeasiblePool(
+          seedCandidates,
+          input.schedule.poolCapacity,
+          weights,
+          0
+        )
+      let bestRepairedLoss = Math.min(
+        initialEvaluation.rawLoss,
+        ...pool.map(({ evaluation }) => evaluation.rawLoss)
+      )
       let firstBestSweepIndex: number | undefined
       let budgetExhausted = false
       const repairSweeps: IntrinsicContractedPressureSweepTrace[] = []
       const mandatoryRepairSweepCount = pressureRepairSweepAllowance(
         input.schedule.sweepsPerBasin,
-        attemptIndex
+        ratioScheduleIndex
       )
-      const maximumRepairSweepCount = mandatoryRepairSweepCount
+      const maximumRepairSweepCount = pressureRepairMaximumSweepAllowance(
+        input.schedule.sweepsPerBasin,
+        ratioScheduleIndex
+      )
+      let consecutiveExtraNonImprovementCount = 0
 
       for (
         let repairSweep = 0;
@@ -2233,11 +2398,31 @@ function runIntrinsicContractedPressureLane(input: {
           (endpoint) =>
             pressureEndpointRejectionReason(parentMeasured, endpoint) === undefined
         )
+        const adaptiveDepth = advanceIntrinsicPressureAdaptiveDepth({
+          completedSweepCount: repairSweep + 1,
+          mandatorySweepCount: mandatoryRepairSweepCount,
+          priorBestRawLoss: bestRawLossBeforeSweep,
+          completedBestRawLoss: bestRepairedLoss,
+          consecutiveExtraNonImprovementCount
+        })
+        consecutiveExtraNonImprovementCount =
+          adaptiveDepth.consecutiveExtraNonImprovementCount
+        const activeAtCap = isIntrinsicPressureActiveAtCap({
+          adaptiveEnabled: maximumRepairSweepCount > mandatoryRepairSweepCount,
+          completedSweepCount: repairSweep + 1,
+          maximumSweepCount: maximumRepairSweepCount,
+          priorBestRawLoss: bestRawLossBeforeSweep,
+          completedBestRawLoss: bestRepairedLoss
+        })
         const terminationReason: IntrinsicContractedPressureSweepTrace['terminationReason'] =
           budgetExhausted
             ? 'evaluation-budget-exhausted'
             : acceptedEndpointReached
               ? 'accepted-exact-endpoint'
+              : adaptiveDepth.shouldStop
+                ? 'adaptive-non-improvement'
+                : activeAtCap
+                  ? 'active-at-cap'
               : repairSweep + 1 >= maximumRepairSweepCount
                 ? 'repair-sweep-allocation-exhausted'
                 : 'continue'
@@ -2253,7 +2438,7 @@ function runIntrinsicContractedPressureLane(input: {
           preGlsImprovementDeltaRawLoss: preGlsImprovement.rawLoss,
           preGlsImprovementDeltaWeightedLoss: preGlsImprovement.weightedLoss,
           firstBestSweepIndex,
-          consecutiveExtraNonImprovementCount: 0,
+          consecutiveExtraNonImprovementCount,
           emittedProposalCount,
           evaluatedProposalCount,
           generatedUniqueCandidateCount,
@@ -2268,7 +2453,7 @@ function runIntrinsicContractedPressureLane(input: {
           weightUpdates,
           compositeParents
         })
-        if (budgetExhausted) break
+        if (budgetExhausted || adaptiveDepth.shouldStop) break
       }
 
       const rankedEndpoints = exactEndpoints.toSorted(comparePressureEndpoints)
@@ -2293,6 +2478,14 @@ function runIntrinsicContractedPressureLane(input: {
         incumbentPlaced = accepted.placed
         incumbentMeasured = accepted.measured
         acceptedEndpoint = accepted
+        consecutiveFailureCount = 0
+        retainedRestartStates = []
+      } else {
+        consecutiveFailureCount += 1
+        retainedRestartStates = pool
+          .toSorted(comparePoolEntriesByRaw)
+          .slice(0, restartPoolCapacity)
+          .map(({ state }) => state)
       }
       trace.push(
         contractedPressureAttemptTrace({
@@ -2311,6 +2504,11 @@ function runIntrinsicContractedPressureLane(input: {
           retainedPressureIdentity:
             acceptedEndpoint?.measured.compactness.canonicalIdentity,
           preProjectionCompactness: accepted?.measured.compactness,
+          restartSeedCount,
+          restartDisruptionProposalCount,
+          consecutiveFailureCount,
+          terminatedByFailureLimit:
+            consecutiveFailureCount >= maximumConsecutiveFailureCount,
           canonicalLegalityMemo,
           repairSweeps
         })
@@ -3647,6 +3845,8 @@ function unavailableContractedPressureAttemptTrace(input: {
   readonly parent: IntrinsicPressureMeasuredLayout
   readonly retainedPressureIdentity: string | undefined
   readonly reason: string
+  readonly consecutiveFailureCount?: number
+  readonly terminatedByFailureLimit?: boolean
 }): IntrinsicContractedPressureAttemptTrace {
   const contraction = pressureContractionBox(
     input.parent.occupiedBox,
@@ -3682,6 +3882,10 @@ function unavailableContractedPressureAttemptTrace(input: {
     canonicalLegalityCacheHitCount: 0,
     canonicalLegalityDisagreementCount: 0,
     bestEndpointCompactness: undefined,
+    restartSeedCount: 0,
+    restartDisruptionProposalCount: 0,
+    consecutiveFailureCount: input.consecutiveFailureCount ?? 0,
+    terminatedByFailureLimit: input.terminatedByFailureLimit ?? false,
     outcome: 'rejected',
     reason: input.reason,
     retainedPressureIdentity: input.retainedPressureIdentity,
@@ -3706,6 +3910,10 @@ function contractedPressureAttemptTrace(input: {
   readonly reason: string
   readonly retainedPressureIdentity: string | undefined
   readonly preProjectionCompactness: IntrinsicPressureCompactnessTuple | undefined
+  readonly restartSeedCount?: number
+  readonly restartDisruptionProposalCount?: number
+  readonly consecutiveFailureCount?: number
+  readonly terminatedByFailureLimit?: boolean
   readonly canonicalLegalityMemo?: IntrinsicPressureCanonicalLegalityMemo
   readonly repairSweeps?: ReadonlyArray<IntrinsicContractedPressureSweepTrace>
 }): IntrinsicContractedPressureAttemptTrace {
@@ -3741,6 +3949,10 @@ function contractedPressureAttemptTrace(input: {
     canonicalLegalityDisagreementCount:
       input.canonicalLegalityMemo?.disagreementCount ?? 0,
     bestEndpointCompactness: input.bestEndpoint?.measured.compactness,
+    restartSeedCount: input.restartSeedCount ?? 0,
+    restartDisruptionProposalCount: input.restartDisruptionProposalCount ?? 0,
+    consecutiveFailureCount: input.consecutiveFailureCount ?? 0,
+    terminatedByFailureLimit: input.terminatedByFailureLimit ?? false,
     outcome: input.outcome,
     reason: input.reason,
     retainedPressureIdentity: input.retainedPressureIdentity,
