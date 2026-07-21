@@ -18,7 +18,11 @@ import {
 import { makePresetShapeDocument, type PresetShapeKind } from '../src/shared/presetShapes.js'
 import { preparePieces as prepareNestingPieces } from '../src/shared/preparePieces.js'
 import { runIntrinsicPeriodicFamilyPortfolio } from '../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
-import { MAXIMUM_NFP_BOUNDARY_VERTEX_BASIS_CANDIDATES } from '../src/workers/algorithm/irregular/intrinsicPeriodicCells.js'
+import {
+  MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION,
+  MAXIMUM_EDGE_CONTACT_RELATIONS_PER_DERIVATION,
+  MAXIMUM_NFP_BOUNDARY_VERTEX_BASIS_CANDIDATES
+} from '../src/workers/algorithm/irregular/intrinsicPeriodicCells.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
@@ -206,6 +210,9 @@ const report = {
     transformsPerFamily: 16,
     pairsPerFamily: 120,
     nfpBoundaryVertexBasisCandidatesPerDerivation: MAXIMUM_NFP_BOUNDARY_VERTEX_BASIS_CANDIDATES,
+    edgeContactRelationsPerDerivation: MAXIMUM_EDGE_CONTACT_RELATIONS_PER_DERIVATION,
+    edgeContactBasisCandidatesPerDerivation:
+      MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION,
     cellsPerFamilyRole: maximumCellsPerFamilyRole,
     cropsPerCell: maximumCropsPerCell,
     cropEnumeration: {
