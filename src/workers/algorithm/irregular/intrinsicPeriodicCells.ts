@@ -33,7 +33,10 @@ import {
   type IrregularNestingNotImplementedError,
   NfpIfpService
 } from '../../irregular/services.js'
-import { groupIntrinsicCollisionFamilies } from './intrinsicStrictFamilyPortfolio.js'
+import {
+  groupIntrinsicCollisionFamilies,
+  type IntrinsicCollisionFamily
+} from './intrinsicStrictFamilyPortfolio.js'
 
 const transformOrder = Order.combineAll<IrregularTransformCandidate>([
   Order.mapInput(Order.Number, ({ index }) => index),
@@ -68,9 +71,41 @@ export interface IntrinsicPeriodicCell {
 }
 
 export interface IntrinsicPeriodicCatalog {
+  readonly familyCoverageComplete: boolean
+  readonly runtimeCoverageComplete: boolean
+  readonly families: ReadonlyArray<IntrinsicPeriodicFamilyCatalog>
   readonly selectedFamilyKey: string | undefined
   readonly uniqueTransformCount: number
   readonly enumeratedPairCount: number
+  readonly cells: ReadonlyArray<IntrinsicPeriodicCell>
+  readonly rejected: Readonly<Record<string, number>>
+}
+
+export interface IntrinsicPeriodicCatalogOptions {
+  readonly maximumRuntimeMs?: number
+  readonly maximumFamilyCount?: number
+  readonly maximumTransformsPerFamily?: number
+  readonly maximumPairsPerFamily?: number
+  readonly maximumCellsPerFamilyRole?: number
+}
+
+export interface IntrinsicPeriodicTransformReservation {
+  readonly key: string
+  readonly availableCount: number
+  readonly retainedCount: number
+}
+
+export interface IntrinsicPeriodicFamilyCatalog {
+  readonly familyKey: string
+  readonly memberCount: number
+  readonly collisionAreaMm2: number
+  readonly uniqueTransformCount: number
+  readonly retainedTransformCount: number
+  readonly transformCoverageComplete: boolean
+  readonly transformReservations: ReadonlyArray<IntrinsicPeriodicTransformReservation>
+  readonly enumeratedPairCount: number
+  readonly pairCoverageComplete: boolean
+  readonly cellCoverageComplete: boolean
   readonly cells: ReadonlyArray<IntrinsicPeriodicCell>
   readonly rejected: Readonly<Record<string, number>>
 }
@@ -109,31 +144,37 @@ interface ForbiddenBoundary {
   readonly isHole?: boolean
 }
 
-/** Enumerates the bounded exact one- and two-transform periodic cell catalog. */
+/** Enumerates a bounded exact repeated-family one- and two-transform periodic cell catalog. */
 export function enumerateIntrinsicPeriodicCells(
   pieces: ReadonlyArray<IrregularPreparedPiece>,
-  maximumRuntimeMs = 5_000
+  options: number | IntrinsicPeriodicCatalogOptions = {}
 ): Effect.Effect<
   IntrinsicPeriodicCatalog,
   IrregularNestingNotImplementedError | IrregularGeometryInputError,
   GeometryKernel | GeometrySettings | NfpIfpService
 > {
   return Effect.gen(function* () {
+    const resolved = resolveCatalogOptions(options)
     const startedAt = performance.now()
     const geometryKernel = yield* GeometryKernel
     const nfp = yield* NfpIfpService
     const settings = yield* GeometrySettings
-    const family = groupIntrinsicCollisionFamilies(pieces)
+    const eligibleFamilies = groupIntrinsicCollisionFamilies(pieces)
       .filter(({ members }) => members.length >= 2)
       .toSorted(
         (first, second) =>
+          second.members.length - first.members.length ||
           second.members.length * second.collisionAreaMm2 -
             first.members.length * first.collisionAreaMm2 ||
-          second.members.length - first.members.length ||
           first.key.localeCompare(second.key)
-      )[0]
-    if (family === undefined) {
+      )
+    const selectedFamilies = eligibleFamilies.slice(0, resolved.maximumFamilyCount)
+    const familyCoverageComplete = selectedFamilies.length === eligibleFamilies.length
+    if (selectedFamilies.length === 0) {
       return {
+        familyCoverageComplete,
+        runtimeCoverageComplete: true,
+        families: [],
         selectedFamilyKey: undefined,
         uniqueTransformCount: 0,
         enumeratedPairCount: 0,
@@ -141,112 +182,317 @@ export function enumerateIntrinsicPeriodicCells(
         rejected: {}
       }
     }
-    const representative = family.members[0]
-    if (representative === undefined) {
-      return {
-        selectedFamilyKey: family.key,
-        uniqueTransformCount: 0,
-        enumeratedPairCount: 0,
-        cells: [],
-        rejected: { missingRepresentative: 1 }
-      }
+    const families: IntrinsicPeriodicFamilyCatalog[] = []
+    const globalCells = new Map<string, IntrinsicPeriodicCell>()
+    for (const family of selectedFamilies) {
+      if (performance.now() - startedAt >= resolved.maximumRuntimeMs) break
+      const catalog = yield* enumerateIntrinsicPeriodicFamily({
+        family,
+        geometryKernel,
+        nfp,
+        settings,
+        startedAt,
+        options: resolved
+      })
+      families.push(catalog)
+      for (const cell of catalog.cells) globalCells.set(cell.canonicalKey, cell)
     }
-    const transformed: TransformedCollisionGeometry[] = []
-    const transformKeys = new Set<string>()
+    const first = families[0]
+    return {
+      familyCoverageComplete,
+      runtimeCoverageComplete: performance.now() - startedAt < resolved.maximumRuntimeMs,
+      families,
+      selectedFamilyKey: first?.familyKey,
+      uniqueTransformCount: first?.retainedTransformCount ?? 0,
+      enumeratedPairCount: first?.enumeratedPairCount ?? 0,
+      cells: rankIntrinsicPeriodicCells([...globalCells.values()]),
+      rejected: mergeRejections(families.map(({ rejected }) => rejected))
+    }
+  })
+}
+
+interface ResolvedIntrinsicPeriodicCatalogOptions {
+  readonly maximumRuntimeMs: number
+  readonly maximumFamilyCount: number
+  readonly maximumTransformsPerFamily: number
+  readonly maximumPairsPerFamily: number
+  readonly maximumCellsPerFamilyRole: number
+}
+
+function resolveCatalogOptions(
+  options: number | IntrinsicPeriodicCatalogOptions
+): ResolvedIntrinsicPeriodicCatalogOptions {
+  const input = typeof options === 'number' ? { maximumRuntimeMs: options } : options
+  return {
+    maximumRuntimeMs: input.maximumRuntimeMs ?? 15_000,
+    maximumFamilyCount: input.maximumFamilyCount ?? 8,
+    maximumTransformsPerFamily: input.maximumTransformsPerFamily ?? 16,
+    maximumPairsPerFamily: input.maximumPairsPerFamily ?? 120,
+    maximumCellsPerFamilyRole: input.maximumCellsPerFamilyRole ?? 4
+  }
+}
+
+function enumerateIntrinsicPeriodicFamily(input: {
+  readonly family: IntrinsicCollisionFamily
+  readonly geometryKernel: GeometryKernel.Service
+  readonly nfp: NfpIfpService
+  readonly settings: IrregularNestingSettings
+  readonly startedAt: number
+  readonly options: ResolvedIntrinsicPeriodicCatalogOptions
+}): Effect.Effect<
+  IntrinsicPeriodicFamilyCatalog,
+  IrregularNestingNotImplementedError | IrregularGeometryInputError
+> {
+  return Effect.gen(function* () {
+    const representative = input.family.members[0]
+    if (representative === undefined) {
+      return emptyIntrinsicPeriodicFamilyCatalog(input.family, { missingRepresentative: 1 })
+    }
+    const transformedByCanonicalKey = new Map<
+      string,
+      { readonly geometry: TransformedCollisionGeometry; readonly transform: IrregularTransformCandidate }
+    >()
+    let runtimeCoverageComplete = true
     for (const transform of [...representative.transforms].sort(transformOrder)) {
-      if (performance.now() - startedAt >= maximumRuntimeMs) break
-      const geometry = yield* geometryKernel.transformCollisionGeometry({
+      if (performance.now() - input.startedAt >= input.options.maximumRuntimeMs) {
+        runtimeCoverageComplete = false
+        break
+      }
+      const geometry = yield* input.geometryKernel.transformCollisionGeometry({
         geometry: representative.collisionGeometry,
         transform
       })
       const key = canonicalTransformedPolygonKey(geometry)
-      if (!transformKeys.has(key)) {
-        transformKeys.add(key)
-        transformed.push(geometry)
-      }
-      if (transformed.length >= 8) break
+      if (!transformedByCanonicalKey.has(key)) transformedByCanonicalKey.set(key, { geometry, transform })
     }
-
+    const transformed = selectPeriodicTransformRepresentatives(
+      [...transformedByCanonicalKey.values()],
+      input.options.maximumTransformsPerFamily
+    )
+    const transformCoverageComplete =
+      runtimeCoverageComplete && transformed.length === transformedByCanonicalKey.size
     const rejected = new Map<string, number>()
-    const cells: IntrinsicPeriodicCell[] = []
-    const cellKeys = new Set<string>()
-    const addCell = (cell: IntrinsicPeriodicCell | undefined, reason: string) => {
-      if (cell === undefined) {
-        rejected.set(reason, (rejected.get(reason) ?? 0) + 1)
-      } else if (!cellKeys.has(cell.canonicalKey)) {
-        cellKeys.add(cell.canonicalKey)
-        cells.push(cell)
-      }
+    const p1: IntrinsicPeriodicCell[] = []
+    const p2: IntrinsicPeriodicCell[] = []
+    const addDerived = (
+      target: IntrinsicPeriodicCell[],
+      derived: ReadonlyArray<IntrinsicPeriodicCell>,
+      emptyReason: string
+    ) => {
+      if (derived.length === 0) rejected.set(emptyReason, (rejected.get(emptyReason) ?? 0) + 1)
+      target.push(...derived)
     }
 
-    for (const geometry of transformed) {
-      if (performance.now() - startedAt >= maximumRuntimeMs) break
+    for (const { geometry } of transformed) {
+      if (performance.now() - input.startedAt >= input.options.maximumRuntimeMs) {
+        runtimeCoverageComplete = false
+        break
+      }
       const point = anchorPoint(geometry)
-      const members = [{ piece: representative, geometry, point }]
       const derived = yield* deriveCells({
         role: 'P1',
-        familyKey: family.key,
-        members,
-        nfp,
-        settings
+        familyKey: input.family.key,
+        members: [{ piece: representative, geometry, point }],
+        nfp: input.nfp,
+        settings: input.settings
       })
-      for (const cell of derived) addCell(cell, 'invalidP1Cell')
-      if (derived.length === 0) addCell(undefined, 'noP1Basis')
+      addDerived(p1, derived, 'noP1Basis')
     }
 
     let enumeratedPairCount = 0
+    let pairCoverageComplete = true
     for (let firstIndex = 0; firstIndex < transformed.length; firstIndex += 1) {
       for (let secondIndex = firstIndex + 1; secondIndex < transformed.length; secondIndex += 1) {
-        if (enumeratedPairCount >= 28 || performance.now() - startedAt >= maximumRuntimeMs) break
+        if (enumeratedPairCount >= input.options.maximumPairsPerFamily) {
+          pairCoverageComplete = false
+          break
+        }
+        if (performance.now() - input.startedAt >= input.options.maximumRuntimeMs) {
+          runtimeCoverageComplete = false
+          pairCoverageComplete = false
+          break
+        }
         enumeratedPairCount += 1
-        const first = transformed[firstIndex]
-        const second = transformed[secondIndex]
+        const first = transformed[firstIndex]?.geometry
+        const second = transformed[secondIndex]?.geometry
         if (first === undefined || second === undefined) continue
         const firstPoint = anchorPoint(first)
         const fixed = makePlaced(representative, first, firstPoint)
-        const pairNfp = yield* nfp.computeNfp({
+        const pairNfp = yield* input.nfp.computeNfp({
           fixed,
           moving: second,
-          settings: settings.geometry
+          settings: input.settings.geometry
         })
         const offsets = boundaryCandidatePoints(pairNfp.boundary.points, second)
         for (const point of offsets) {
-          if (performance.now() - startedAt >= maximumRuntimeMs) break
+          if (performance.now() - input.startedAt >= input.options.maximumRuntimeMs) {
+            runtimeCoverageComplete = false
+            pairCoverageComplete = false
+            break
+          }
           const legal = yield* PlacementValidation.checkSheetless({
             placed: [fixed],
             moving: second,
             candidate: makeCandidate(second, point)
           })
           if (!legal || !combinedBoundsNonnegative([first, second], [firstPoint, point])) continue
-          const members = [
-            { piece: representative, geometry: first, point: firstPoint },
-            { piece: family.members[1] ?? representative, geometry: second, point }
-          ]
           const derived = yield* deriveCells({
             role: 'P2',
-            familyKey: family.key,
-            members,
-            nfp,
-            settings
+            familyKey: input.family.key,
+            members: [
+              { piece: representative, geometry: first, point: firstPoint },
+              { piece: input.family.members[1] ?? representative, geometry: second, point }
+            ],
+            nfp: input.nfp,
+            settings: input.settings
           })
-          for (const cell of derived) addCell(cell, 'invalidP2Cell')
+          addDerived(p2, derived, 'noP2Basis')
         }
       }
+      if (!pairCoverageComplete) break
     }
+
+    const p1Front = periodicCellFront(p1, input.options.maximumCellsPerFamilyRole)
+    const p2Front = periodicCellFront(p2, input.options.maximumCellsPerFamilyRole)
+    const cells = [...p1Front.cells, ...p2Front.cells]
+    if (!p1Front.coverageComplete) rejected.set('p1FrontierTruncated', 1)
+    if (!p2Front.coverageComplete) rejected.set('p2FrontierTruncated', 1)
     return {
-      selectedFamilyKey: family.key,
-      uniqueTransformCount: transformed.length,
+      familyKey: input.family.key,
+      memberCount: input.family.members.length,
+      collisionAreaMm2: input.family.collisionAreaMm2,
+      uniqueTransformCount: transformedByCanonicalKey.size,
+      retainedTransformCount: transformed.length,
+      transformCoverageComplete,
+      transformReservations: measureTransformReservations(
+        [...transformedByCanonicalKey.values()],
+        transformed
+      ),
       enumeratedPairCount,
+      pairCoverageComplete,
+      cellCoverageComplete:
+        runtimeCoverageComplete && pairCoverageComplete && p1Front.coverageComplete && p2Front.coverageComplete,
       cells: rankIntrinsicPeriodicCells(cells),
       rejected: Object.fromEntries([...rejected.entries()].toSorted())
     }
   })
 }
 
+function emptyIntrinsicPeriodicFamilyCatalog(
+  family: IntrinsicCollisionFamily,
+  rejected: Readonly<Record<string, number>>
+): IntrinsicPeriodicFamilyCatalog {
+  return {
+    familyKey: family.key,
+    memberCount: family.members.length,
+    collisionAreaMm2: family.collisionAreaMm2,
+    uniqueTransformCount: 0,
+    retainedTransformCount: 0,
+    transformCoverageComplete: true,
+    transformReservations: [],
+    enumeratedPairCount: 0,
+    pairCoverageComplete: true,
+    cellCoverageComplete: true,
+    cells: [],
+    rejected
+  }
+}
+
+function selectPeriodicTransformRepresentatives(
+  transformed: ReadonlyArray<{
+    readonly geometry: TransformedCollisionGeometry
+    readonly transform: IrregularTransformCandidate
+  }>,
+  maximumTransforms: number
+): ReadonlyArray<{ readonly geometry: TransformedCollisionGeometry; readonly transform: IrregularTransformCandidate }> {
+  const ordered = [...transformed].toSorted((first, second) => transformOrder(first.transform, second.transform))
+  const reserved = new Map<string, (typeof ordered)[number]>()
+  for (const candidate of ordered) {
+    const key = periodicTransformReservationKey(candidate.transform)
+    if (!reserved.has(key)) reserved.set(key, candidate)
+  }
+  const result = [...reserved.values()]
+  for (const candidate of ordered) {
+    if (result.length >= maximumTransforms) break
+    if (!result.includes(candidate)) result.push(candidate)
+  }
+  return result.slice(0, maximumTransforms)
+}
+
+function periodicTransformReservationKey(transform: IrregularTransformCandidate): string {
+  const normalized = ((transform.rotationDeg % 360) + 360) % 360
+  const rotationFamily = transform.reason === 'orthogonal' ? `q${Math.round(normalized / 90) % 4}` : transform.reason
+  return `${transform.mirrored ? 'mirror' : 'direct'}:${rotationFamily}`
+}
+
+function measureTransformReservations(
+  all: ReadonlyArray<{ readonly geometry: TransformedCollisionGeometry; readonly transform: IrregularTransformCandidate }>,
+  retained: ReadonlyArray<{
+    readonly geometry: TransformedCollisionGeometry
+    readonly transform: IrregularTransformCandidate
+  }>
+): ReadonlyArray<IntrinsicPeriodicTransformReservation> {
+  const counts = new Map<string, { availableCount: number; retainedCount: number }>()
+  for (const { transform } of all) {
+    const key = periodicTransformReservationKey(transform)
+    const value = counts.get(key) ?? { availableCount: 0, retainedCount: 0 }
+    counts.set(key, { ...value, availableCount: value.availableCount + 1 })
+  }
+  for (const { transform } of retained) {
+    const key = periodicTransformReservationKey(transform)
+    const value = counts.get(key) ?? { availableCount: 0, retainedCount: 0 }
+    counts.set(key, { ...value, retainedCount: value.retainedCount + 1 })
+  }
+  return [...counts.entries()]
+    .map(([key, value]) => ({ key, ...value }))
+    .toSorted((first, second) => first.key.localeCompare(second.key))
+}
+
+function periodicCellFront(
+  cells: ReadonlyArray<IntrinsicPeriodicCell>,
+  maximumCells: number
+): { readonly cells: ReadonlyArray<IntrinsicPeriodicCell>; readonly coverageComplete: boolean } {
+  const unique = new Map(cells.map((cell) => [cell.canonicalKey, cell]))
+  const nonDominated = [...unique.values()].filter(
+    (candidate) => ![...unique.values()].some((other) => other !== candidate && periodicCellDominates(other, candidate))
+  )
+  return {
+    cells: rankIntrinsicPeriodicCells(nonDominated).slice(0, maximumCells),
+    coverageComplete: nonDominated.length <= maximumCells
+  }
+}
+
+function periodicCellDominates(first: IntrinsicPeriodicCell, second: IntrinsicPeriodicCell): boolean {
+  const firstDensity = BigInt(first.memberDoubledAreaGrid2) * BigInt(second.determinantGrid2)
+  const secondDensity = BigInt(second.memberDoubledAreaGrid2) * BigInt(first.determinantGrid2)
+  const noWorse =
+    firstDensity >= secondDensity &&
+    first.envelopeMaximumSideMm <= second.envelopeMaximumSideMm &&
+    first.hullWasteRatio <= second.hullWasteRatio &&
+    first.sharedBoundaryLengthMm >= second.sharedBoundaryLengthMm
+  const strict =
+    firstDensity > secondDensity ||
+    first.envelopeMaximumSideMm < second.envelopeMaximumSideMm ||
+    first.hullWasteRatio < second.hullWasteRatio ||
+    first.sharedBoundaryLengthMm > second.sharedBoundaryLengthMm
+  return noWorse && strict
+}
+
+function mergeRejections(
+  rejections: ReadonlyArray<Readonly<Record<string, number>>>
+): Readonly<Record<string, number>> {
+  const result = new Map<string, number>()
+  for (const rejected of rejections) {
+    for (const [key, count] of Object.entries(rejected)) result.set(key, (result.get(key) ?? 0) + count)
+  }
+  return Object.fromEntries([...result.entries()].toSorted())
+}
+
 /** Expands one certified cell into every bounded finite crop and keeps its best topology. */
 export function expandIntrinsicPeriodicCell(
   cell: IntrinsicPeriodicCell,
-  familyMembers: ReadonlyArray<IrregularPreparedPiece>
+  familyMembers: ReadonlyArray<IrregularPreparedPiece>,
+  maximumCrops = 2
 ): Effect.Effect<ReadonlyArray<IntrinsicPeriodicSeed>, IrregularGeometryInputError> {
   return Effect.gen(function* () {
     const memberCount = cell.members.length
@@ -317,7 +563,7 @@ export function expandIntrinsicPeriodicCell(
         }
       }
     }
-    return rankIntrinsicPeriodicSeeds(candidates).slice(0, 1)
+    return periodicSeedFront(candidates, maximumCrops)
   })
 }
 
@@ -360,6 +606,34 @@ export function rankIntrinsicPeriodicSeeds(
   seeds: ReadonlyArray<IntrinsicPeriodicSeed>
 ): ReadonlyArray<IntrinsicPeriodicSeed> {
   return seeds.toSorted(compareSeeds)
+}
+
+function periodicSeedFront(
+  seeds: ReadonlyArray<IntrinsicPeriodicSeed>,
+  maximumCrops: number
+): ReadonlyArray<IntrinsicPeriodicSeed> {
+  const nonDominated = seeds.filter(
+    (candidate) => !seeds.some((other) => other !== candidate && periodicSeedDominates(other, candidate))
+  )
+  return rankIntrinsicPeriodicSeeds(nonDominated).slice(0, maximumCrops)
+}
+
+function periodicSeedDominates(first: IntrinsicPeriodicSeed, second: IntrinsicPeriodicSeed): boolean {
+  const noWorse =
+    first.componentCount <= second.componentCount &&
+    first.isolatedPieceCount <= second.isolatedPieceCount &&
+    first.largestComponentSize >= second.largestComponentSize &&
+    first.maximumSideMm <= second.maximumSideMm &&
+    first.envelopeAreaMm2 <= second.envelopeAreaMm2 &&
+    first.envelopeSpanMm <= second.envelopeSpanMm
+  const strict =
+    first.componentCount < second.componentCount ||
+    first.isolatedPieceCount < second.isolatedPieceCount ||
+    first.largestComponentSize > second.largestComponentSize ||
+    first.maximumSideMm < second.maximumSideMm ||
+    first.envelopeAreaMm2 < second.envelopeAreaMm2 ||
+    first.envelopeSpanMm < second.envelopeSpanMm
+  return noWorse && strict
 }
 
 function normalizePlacedBottomLeft(

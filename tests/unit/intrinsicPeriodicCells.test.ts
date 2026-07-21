@@ -134,6 +134,44 @@ describe('intrinsic periodic cells', () => {
     }
   })
 
+  it('preserves selected collision-family and transform-family coverage before caps', async () => {
+    const broad = Array.from({ length: 3 }, (_, index) =>
+      preparedPiece(
+        `broad-${index}`,
+        'broad',
+        [point(0, 0), point(6, 0), point(0, 2)],
+        [0, 90, 180, 270]
+      )
+    )
+    const narrow = Array.from({ length: 2 }, (_, index) =>
+      preparedPiece(
+        `narrow-${index}`,
+        'narrow',
+        [point(0, 0), point(3, 0), point(0, 3)],
+        [0, 90]
+      )
+    )
+    const catalog = await Effect.runPromise(
+      enumerateIntrinsicPeriodicCells([...broad, ...narrow], {
+        maximumFamilyCount: 1,
+        maximumTransformsPerFamily: 2,
+        maximumPairsPerFamily: 1
+      }).pipe(
+        Effect.provide(GeometryKernel.Live.pipe(Layer.provide(GeometrySettings.Live))),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+    expect(catalog.familyCoverageComplete).toBe(false)
+    expect(catalog.families).toHaveLength(1)
+    const family = catalog.families[0]
+    expect(family?.memberCount).toBe(3)
+    expect(family?.transformCoverageComplete).toBe(false)
+    expect(family?.transformReservations).toEqual(
+      expect.arrayContaining([expect.objectContaining({ availableCount: 4, retainedCount: 2 })])
+    )
+  })
+
   it('uses exact union, axis duality, and the negative moving-base offset', () => {
     const forbidden = [
       [
