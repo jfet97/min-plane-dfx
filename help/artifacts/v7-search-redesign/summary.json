@@ -588,6 +588,47 @@
    "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-divergence-mixed61-640/report.json",
    "reportSha256": "2cee038220fb564785def13154ad134ad13f3281c20030af850a72a9152ec3c5",
    "sourceCommit": null
+  },
+  "sheet-invariance-full-corpus": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-invariance-full/report.json",
+   "reportSha256": "7b377c3124d6177f1c674d9cbd521d6e3b373314ca6f22c1072320782401d8f4",
+   "cases": [
+    {
+     "caseId": "triangle-golden-20",
+     "geometryEquivalent": true,
+     "canonicalSha256": "d9d6605aa3e6420d049dba9f789580d069868b59c49f12296272a686d6019eeb"
+    },
+    {
+     "caseId": "rectangles-20",
+     "geometryEquivalent": true,
+     "canonicalSha256": "397a5d6b1a3c6718acb217d518b7b010cc2be31a604fdcde65e298c74db54d2c"
+    },
+    {
+     "caseId": "trapezoids-20",
+     "geometryEquivalent": true,
+     "canonicalSha256": "158b59d8654189f89c0293620b825c86fa17eaa6971d9bd35b2f7c3173f795e5"
+    },
+    {
+     "caseId": "pentagons-20",
+     "geometryEquivalent": true,
+     "canonicalSha256": "62c043d99da1dd2ea2a9355924f865064e27a3c9f9d00bd88e6fbbb293b339d4"
+    },
+    {
+     "caseId": "star-hulls-20",
+     "geometryEquivalent": true,
+     "canonicalSha256": "62c043d99da1dd2ea2a9355924f865064e27a3c9f9d00bd88e6fbbb293b339d4"
+    },
+    {
+     "caseId": "mixed-50",
+     "geometryEquivalent": true,
+     "canonicalSha256": "fa981c545724dba17d8865267b5965e1d5513b0f58357c018447bf4de730cb7c"
+    },
+    {
+     "caseId": "mixed-61",
+     "geometryEquivalent": true,
+     "canonicalSha256": "f58cf0f2f6664db10107bf5919167e443791c27924abab1ee6c920648ce1fd7f"
+    }
+   ]
   }
  }
 }

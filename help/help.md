@@ -272,12 +272,13 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   target on Mixed and irrelevant on the dense Triangle lattice; it is
   retained default-off as the per-piece primitive for a future LNS-style
   coordinated stage.
-- **Post-repair sheet-invariance evidence (production path):**
-  triangle-golden-20, rectangles-20, and mixed-61 are geometry-equivalent
-  across 1000x1700 and 2000x2700 (mixed-61: 61/61, 435,949.517 mm2, zero
-  cavities, hash `f58cf0f2…`); mixed-61 keeps the same hash on a 660-wide
-  sheet and diverges to a different legal 638.8-wide geometry only on a
-  640-wide sheet — divergence occurs exactly at the legality boundary.
+- **Post-repair sheet-invariance evidence (production path):** the full
+  seven-fixture corpus is geometry-equivalent across 1000x1700 and
+  2000x2700, including mixed-50 at 50/50 (`fa981c54…`) and mixed-61 at
+  61/61 (435,949.517 mm2, zero cavities, `f58cf0f2…`); mixed-61 keeps the
+  same hash on a 660-wide sheet and diverges to a different legal
+  638.8-wide geometry only on a 640-wide sheet — divergence occurs exactly
+  at the legality boundary.
 - Review memo: `reviews/v7-search-redesign-review.md`. Portable evidence and
   hashes: `help/artifacts/v7-search-redesign/`. Raw provenance:
   `/private/tmp/min-plane-provenance/v7-search-redesign-*`.

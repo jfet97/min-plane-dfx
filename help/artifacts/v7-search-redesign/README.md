@@ -31,7 +31,7 @@ d428e1b9cad776c09d53f71d90d8e710f115704267b6bafc293786b3cbcb0fab  triangle-20-wi
 3fbf1d0a74a6333ca98b0c39fa248f394b9e157a945b69b30dadb41ccaca34d8  mixed-61-periodic-420059-a79f6148.png
 3c4702c0271301d47f0bd69c9863a5f736406c380ea4a5529879afb868d0122b  mixed-61-production-invariant-f58cf0f2-2000x2700.svg
 e47c4eb47dfc446a831ff6143d1efb89f6489b9a04ed5446bfa5f0ac9d00a536  mixed-61-production-invariant-f58cf0f2-2000x2700.png
-878f5951aad15895b84123aee5cee0cb314f1b664d8d44bbce0f6314c79d95e2  summary.json
+7c2f5433a7e0ce9dc0761f4e1c8cbeb157c98105702a473b47681d355acf83cb  summary.json
 ```
 
 Rejected/diagnostic runs are indexed in `summary.json` with the same

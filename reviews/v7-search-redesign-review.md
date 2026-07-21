@@ -668,6 +668,13 @@ First working production-path corpus runs since `48abf69`
 | mixed-61 | 660×1200 vs 2000×2700 | still equivalent — the 654.13-wide common layout fits a 660 sheet |
 | mixed-61 | 640×1200 vs 2000×2700 | divergent (`b8e47901…`, 638.8 wide, 61/61) — divergence occurs exactly when the common layout stops fitting |
 
+The full seven-fixture corpus (triangle-golden-20, rectangles-20,
+trapezoids-20, pentagons-20, star-hulls-20, mixed-50, mixed-61) was then run
+on the same roomy pair: **all seven cases are geometry-equivalent**, with
+mixed-50 placing 50/50 (`fa981c54…`, 747.9 × 748.2 mm) — the first fully
+invariant roomy-sheet corpus result recorded for the production path
+(`v7-search-redesign-96368ca/sheet-invariance-full`).
+
 This is the measured form of the F28 guarantee: identical canonical geometry
 whenever the selected sheet-free layout fits, different legal geometry
 exactly at the legality boundary, no preference leakage detected on the
