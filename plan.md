@@ -1518,6 +1518,63 @@ only after legal search is exhausted. The project-specific version keeps SAT as
 directional guidance, uses the canonical pressure tuple for infeasible states,
 and admits only Clipper2-legal endpoints to the common archive.
 
+### Next-step decision: construct a good motif first, or repair globally
+
+The V7 work now has two independent paths. They must not be conflated into
+another score-tuple adjustment.
+
+1. **Constructive motif portfolio first.** Before ordinary beam retention can
+   discard a useful future, build a small number of exact, sheet-free seeds
+   from repeatable collision geometry, real pockets, and geometry-derived
+   orders. Each completed seed competes under the existing exact
+   compactness/void-topology archive. This is generic: repeated geometry is
+   discovered from collision-family identity and the remaining layout is
+   completed by ordinary NFP/IFP construction; it contains no fixture name,
+   count, remembered placement, or triangle rule. It is the route that already
+   produced the `405,773.434 mm2` Mixed-61 zero-cavity endpoint.
+2. **Adaptive global repair second.** When several complete constructive seeds
+   still retain the same poor topology, make the existing private relaxed
+   controller follow a sequence of small contractions from the current best
+   exact incumbent. At each target it may retain bounded low-conflict states,
+   run deterministic multi-piece separation and disruption, and publish only
+   a canonical-legal endpoint that improves the common archive. This is the
+   project-compatible part of Sparrow; it is not a terminal comparator or a
+   permission to return overlapping geometry.
+
+The old periodic E3 result is insufficient evidence against path 1. Its sole
+Mixed-61 run at
+`/private/tmp/min-plane-provenance/intrinsic-periodic-small-fill-e3/f8b8bf3-mixed61/report.json`
+selected only one largest repeatable family, inspected at most eight unique
+transforms and 28 transform pairs, retained only the single best P1/P2 crop,
+and found no certified periodic cell. It then measured only the L1 large-first
+fallback. It never establishes that no bounded family portfolio can form a
+useful motif, and it does not measure the Triangle lattice. Its P1/P2 failure
+is a catalog-coverage result, not proof that periodic construction is wrong.
+
+The current global controller is likewise not yet Sparrow-shaped. In
+`intrinsicSqueezeDisruptSeparate.ts`, it derives three static target roles
+(`e1-envelope`, `expanded-e1-envelope`, and `four-three-cap`), gives each a
+fixed sweep count, then projects. In Sparrow's actual `explore.rs` and
+`compress.rs`, a newly feasible layout becomes the next incumbent, the target
+is contracted again, failed low-loss layouts remain an explicit restart pool,
+and disruption occurs between attempts. The existing V7 controller has useful
+exactness, conflict accounting, composite movement, and projection machinery;
+its missing behavior is adaptive incumbent-to-next-target progression, not a
+new contact heuristic.
+
+Before editing either path, obtain a joint Kimi/Sol review of this evidence and
+the live source. The reviewers must recommend one ordered first implementation
+and concrete gates, explicitly rejecting either path if its precondition is not
+met. The decision must answer:
+
+- whether to first broaden periodic catalog coverage across repeatable families,
+  transforms, and bounded crop representatives, and how it remains generic;
+- whether the current Triangle/Mixed evidence instead justifies an adaptive
+  contraction controller immediately;
+- what exact archive, legality, runtime, determinism, and topology gates apply
+  to the selected first change; and
+- which existing V7 machinery is retained versus removed or left dormant.
+
 ### Local research documents
 
 - [`help/research/open-source-nesting-strategies.md`](help/research/open-source-nesting-strategies.md): pinned Deepnest, SVGnest, libnest2d, PackingSolver, and Sparrow control pass, plus the Dalsoo addition.
