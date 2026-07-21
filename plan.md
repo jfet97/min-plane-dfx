@@ -49,9 +49,14 @@ Therefore:
 8. **completed:** the first bounded coordinated multi-piece transport pilot
    produced four exact handoffs and one tiny strict geometric improvement, but
    zero endpoints improved cohesion and zero passed the combined gate;
-9. **next:** profile/run the bounded Mixed commensurate-only cost pilot. No live
-   selector or coordinated-search promotion is authorized by the Triangle
-   evidence.
+9. **completed:** the exact component-interface closure pilot exhaustively
+   tested every compatible long-edge pair under non-expanding exact legality.
+   It found only microscopic canonical-grid contact repairs, not a macroscopic
+   reassembly; this ends the rigid-legal Triangle Stage 5 direction;
+10. **next:** choose between the still-independent constructive/periodic-seed
+    line and a separately bounded Sparrow-style shrink-and-separate research
+    controller. No live selector or coordinated-search promotion is authorized
+    by the Triangle evidence.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -1308,6 +1313,43 @@ non-expanding target roles, per-piece quarter-turn fallback, a separate exact
 interface witness lane, and projection that freezes the rigid component plus
 the desired interface while rebuilding only external conflicts. The Mixed
 commensurate cost pilot is conditional on that Triangle mechanics pass.
+
+### Exact component-interface result (2026-07-21)
+
+Commit `5729b25` completed the bounded Triangle cell at:
+
+`/private/tmp/min-plane-provenance/v7-component-interface-5729b25-triangle/`
+
+It performed all 196 compatible antiparallel long-edge materializations in
+`236.060 ms`; all candidates were admitted or rejected by canonical exact
+legality. Five endpoints satisfy the deliberately weak local interface gate,
+but every one leaves the occupied envelope fixed at `88,124.026123 mm2`,
+maximum side `303.877 mm`, and span `593.876 mm`. The visually indistinguishable
+PNGs differ only by grid-scale changes: the best reduces components from 15 to 13 and
+isolates from 11 to nine, but it does not rebuild a side-to-side compact
+triangle lattice. The remaining endpoint differences are too small to be
+visible at render scale and none reaches the compact motif.
+
+This is a clean negative result, not a numerical failure. The exact pilot
+proves that the current legal seed has no useful macroscopic merge reachable
+by translating a complete component, preserving all its internal contacts,
+and forbidding any envelope growth. More edge pairings, looser grid tolerances,
+or an interface bonus would only manufacture near-duplicate states. Keep the
+primitive as a diagnostic and exact safety tool; do not promote it to a live
+lane.
+
+The pinned Sparrow source is now available locally at
+`knowledge/dependencies/sparrow` at commit
+`961ec31f576c5817ece779ff73982b4553760a4e`. Its actual mechanism establishes
+the next global-search boundary: `lbf.rs` builds a legal left-bottom seed;
+`compress.rs` and `explore.rs` contract the container; `separator.rs` moves
+multiple pieces through an intentionally infeasible layout while minimizing
+cached, adaptive weighted collision loss; only zero-loss endpoints return to
+the feasible solution set. This is categorically different from the rejected
+rigid legal component move. Any project adaptation must retain canonical
+Clipper2 as the sole endpoint admission authority, retain the exact legal
+incumbent, bound the infeasible pool and wall clock, and use the project
+geometric/topology archive rather than Sparrow's strip-width objective.
 
 ## Deferred Mechanisms
 

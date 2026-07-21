@@ -260,6 +260,27 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   research evidence; do not promote the observer or change the live selector.
   Immutable evidence is under
   `/private/tmp/min-plane-provenance/v7-coordinated-d55d55e-triangle/`.
+- Completed the follow-up exact component-interface closure probe at `5729b25`.
+  It tested all 196 compatible long-edge component translations from the exact
+  Triangle seed in `236.060 ms`, admitting/rejecting each candidate through
+  canonical exact legality. Five candidates met the local interface gate, but
+  all retained the same `88,124.026123 mm2` envelope, `303.877 mm` maximum
+  side, and `593.876 mm` span. Their apparent improvements are one- or two-grid
+  translations that merely create numerical contact signatures; the seven PNGs
+  are visually indistinguishable and do not reconstruct the desired side-to-side
+  triangle lattice. Reject rigid legal component closure as a Triangle quality
+  mechanism; retain it only as an exact diagnostic/safety primitive. Evidence:
+  `/private/tmp/min-plane-provenance/v7-component-interface-5729b25-triangle/`.
+- Checked out and read the actual pinned Sparrow source at
+  `knowledge/dependencies/sparrow` (`961ec31f576c5817ece779ff73982b4553760a4e`),
+  rather than relying only on the prior source summary. Its useful distinction
+  is architectural: legal left-bottom construction in `lbf.rs`; container
+  contraction in `compress.rs`/`explore.rs`; and multi-piece temporary-overlap
+  separation with cached adaptive collision weights in `separator.rs` and
+  `tracker.rs`. A future Sparrow-inspired controller must be a separately
+  bounded infeasible search phase whose only admitted outputs are canonical
+  Clipper2-legal endpoints judged by this project's intrinsic geometry/topology
+  archive. It is not another exact-contact comparator or rigid-component lane.
 
 ### 2026-07-20 (Dalsoo source-control addition)
 
