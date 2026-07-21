@@ -518,11 +518,27 @@ function periodicCellFront(
   maximumCells: number
 ): { readonly cells: ReadonlyArray<IntrinsicPeriodicCell>; readonly coverageComplete: boolean } {
   const unique = new Map(cells.map((cell) => [cell.canonicalKey, cell]))
+  const bySourceKind = new Map<string, IntrinsicPeriodicCell[]>()
+  for (const cell of unique.values()) {
+    const sourceKind = cell.basisProvenance?.sourceKind ?? 'legacy'
+    const group = bySourceKind.get(sourceKind) ?? []
+    group.push(cell)
+    bySourceKind.set(sourceKind, group)
+  }
+  const retained = [...bySourceKind.entries()].flatMap(([sourceKind, group]) =>
+    rankIntrinsicPeriodicCells(group)
+      .slice(0, maximumCells)
+      .map((cell) => ({ sourceKind, cell }))
+  )
   return {
-    // a local cell cannot Pareto-dominate a finite crop: different bases can expose different
-    // bounded aspect ratios after expansion, so retain the bounded diagnostic/density order
-    cells: rankIntrinsicPeriodicCells([...unique.values()]).slice(0, maximumCells),
-    coverageComplete: unique.size <= maximumCells
+    // a local cell cannot Pareto-dominate a finite crop or a different candidate source
+    cells: retained
+      .toSorted(
+        (first, second) =>
+          first.sourceKind.localeCompare(second.sourceKind) || compareCells(first.cell, second.cell)
+      )
+      .map(({ cell }) => cell),
+    coverageComplete: [...bySourceKind.values()].every((group) => group.length <= maximumCells)
   }
 }
 
