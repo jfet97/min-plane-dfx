@@ -480,31 +480,12 @@ function periodicCellFront(
   maximumCells: number
 ): { readonly cells: ReadonlyArray<IntrinsicPeriodicCell>; readonly coverageComplete: boolean } {
   const unique = new Map(cells.map((cell) => [cell.canonicalKey, cell]))
-  const nonDominated = [...unique.values()].filter(
-    (candidate) => ![...unique.values()].some((other) => other !== candidate && periodicCellDominates(other, candidate))
-  )
   return {
-    cells: rankIntrinsicPeriodicCells(nonDominated).slice(0, maximumCells),
-    coverageComplete: nonDominated.length <= maximumCells
+    // a local cell cannot Pareto-dominate a finite crop: different bases can expose different
+    // bounded aspect ratios after expansion, so retain the bounded diagnostic/density order
+    cells: rankIntrinsicPeriodicCells([...unique.values()]).slice(0, maximumCells),
+    coverageComplete: unique.size <= maximumCells
   }
-}
-
-function periodicCellDominates(first: IntrinsicPeriodicCell, second: IntrinsicPeriodicCell): boolean {
-  const firstDensity = BigInt(first.memberDoubledAreaGrid2) * BigInt(second.determinantGrid2)
-  const secondDensity = BigInt(second.memberDoubledAreaGrid2) * BigInt(first.determinantGrid2)
-  const noWorse =
-    finiteCropDiagnosticPriority(first) <= finiteCropDiagnosticPriority(second) &&
-    firstDensity >= secondDensity &&
-    first.envelopeMaximumSideMm <= second.envelopeMaximumSideMm &&
-    first.hullWasteRatio <= second.hullWasteRatio &&
-    first.sharedBoundaryLengthMm >= second.sharedBoundaryLengthMm
-  const strict =
-    finiteCropDiagnosticPriority(first) < finiteCropDiagnosticPriority(second) ||
-    firstDensity > secondDensity ||
-    first.envelopeMaximumSideMm < second.envelopeMaximumSideMm ||
-    first.hullWasteRatio < second.hullWasteRatio ||
-    first.sharedBoundaryLengthMm > second.sharedBoundaryLengthMm
-  return noWorse && strict
 }
 
 function mergeRejections(
