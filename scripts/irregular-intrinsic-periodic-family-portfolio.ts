@@ -20,7 +20,10 @@ import { preparePieces as prepareNestingPieces } from '../src/shared/preparePiec
 import { IrregularBeamState } from '../src/workers/algorithm/irregular/irregularBeamState.js'
 import { runIntrinsicGlobalSqueezePortfolio } from '../src/workers/algorithm/irregular/intrinsicGlobalSqueezePortfolio.js'
 import { runIntrinsicPeriodicFamilyPortfolio } from '../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
-import { measureIntrinsicSheetlessCompletedLayout } from '../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
+import {
+  measureIntrinsicSheetlessCompletedLayout,
+  rankIntrinsicStrictCompletedLayouts
+} from '../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
 import {
   MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION,
   MAXIMUM_EDGE_CONTACT_PAIR_VALIDATION_ATTEMPTS_PER_DERIVATION,
@@ -90,6 +93,7 @@ const maximumContinuationCount = positiveIntegerArgument('--continuations', 8)
 const basisSourceKey = argument('--basis-source-key')
 const captureSourceSurvivalAudit = process.argv.includes('--source-survival-audit')
 const adaptivePressurePilot = process.argv.includes('--adaptive-pressure-pilot')
+const requestedAdaptiveSeedHash = argument('--adaptive-seed-hash')
 await mkdir(outputDirectory, { recursive: true })
 
 const fixture = await loadFixture(fixtureName)
@@ -201,7 +205,7 @@ const auditWitnesses = await Promise.all(
 )
 const adaptiveSeedCandidates = [
   ...result.sourceAuditWitnesses.map((witness) => ({
-    source: `raw-crop:${witness.seed.canonicalKey}`,
+    source: `raw-crop:${sha256(witness.seed.canonicalKey).slice(0, 16)}`,
     placed: witness.placements
   })),
   ...result.runs.flatMap((run) =>
@@ -228,19 +232,30 @@ const adaptiveSeedCandidates = [
     )
     return measured === undefined ? [] : [{ ...candidate, measured }]
   })
-  .toSorted(
-    (first, second) =>
-      first.measured.metrics.enclosedCavityCount -
-        second.measured.metrics.enclosedCavityCount ||
-      first.measured.metrics.envelopeAreaMm2 - second.measured.metrics.envelopeAreaMm2 ||
-      first.measured.metrics.envelopeMaximumSideMm -
-        second.measured.metrics.envelopeMaximumSideMm ||
-      first.measured.metrics.envelopeSpanMm - second.measured.metrics.envelopeSpanMm ||
-      first.measured.canonicalGeometryHash.localeCompare(
-        second.measured.canonicalGeometryHash
+const adaptiveSeedsByHash = new Map(
+  adaptiveSeedCandidates.map((candidate) => [
+    candidate.measured.canonicalGeometryHash,
+    candidate
+  ])
+)
+const rankedAdaptiveSeedHashes = rankIntrinsicStrictCompletedLayouts(
+  [...adaptiveSeedsByHash.values()].map(({ measured }) => measured.metrics)
+).map(({ canonicalGeometryHash }) => canonicalGeometryHash)
+const adaptiveSeed =
+  requestedAdaptiveSeedHash === undefined
+    ? rankedAdaptiveSeedHashes
+        .map((hash) => adaptiveSeedsByHash.get(hash))
+        .find((candidate) => candidate !== undefined)
+    : [...adaptiveSeedsByHash.values()].find(({ measured }) =>
+        measured.canonicalGeometryHash.startsWith(requestedAdaptiveSeedHash)
       )
+if (adaptivePressurePilot && adaptiveSeed === undefined) {
+  throw new Error(
+    requestedAdaptiveSeedHash === undefined
+      ? 'the adaptive pressure pilot found no complete exact seed'
+      : `the adaptive pressure seed hash ${requestedAdaptiveSeedHash} was not found`
   )
-const adaptiveSeed = adaptiveSeedCandidates[0]
+}
 const adaptiveResult =
   !adaptivePressurePilot || adaptiveSeed === undefined
     ? undefined
@@ -297,6 +312,7 @@ const report = {
     basisSourceKey,
     sourceSurvivalAudit: captureSourceSurvivalAudit,
     adaptivePressurePilot,
+    requestedAdaptiveSeedHash,
     continuationMs: 25_000,
     fixtureMs: 240_000
   },
