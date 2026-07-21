@@ -347,7 +347,21 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(observer.reinsertionOrderCount).toBe(12)
     expect(observer.orderTraces).toHaveLength(observer.reinsertionOrderCount)
     expect(observer.orderTraces.every(({ status }) => status === 'completed')).toBe(true)
-    expect(observer.completeEndpointCount).toBeGreaterThan(0)
+    for (const trace of observer.orderTraces) {
+      const terminalStep = trace.steps.at(-1)
+      expect(terminalStep).toBeDefined()
+      expect(trace.generatedCompleteSuccessorCount).toBe(
+        terminalStep?.uniqueFittingSuccessorCount
+      )
+      expect(terminalStep?.firstEvictedWitnesses).toHaveLength(0)
+    }
+    expect(observer.generatedCompleteSuccessorCount).toBeGreaterThan(0)
+    expect(observer.terminallyAssessedSuccessorCount).toBeGreaterThan(0)
+    expect(observer.terminallyAssessedSuccessorCount).toBeLessThanOrEqual(
+      observer.generatedCompleteSuccessorCount
+    )
+    expect(observer.finalizedEndpointCount).toBeGreaterThan(0)
+    expect(observer.uniqueEndpointCount).toBeGreaterThan(0)
     expect(observer.evaluations).toBeGreaterThan(0)
     expect(seed.winner.placedCollisionGeometries).toEqual(seedPlacements)
   })

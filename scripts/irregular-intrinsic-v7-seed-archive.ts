@@ -639,8 +639,9 @@ async function runPartialBeamOnly(input: {
                     canonicalGeometryHash:
                       peelResult.bestEndpoint.canonicalGeometryHash,
                     metrics: peelResult.bestEndpoint.metrics,
-                    strictImprovementWithoutTopologyRegression:
-                      peelResult.bestEndpoint.strictImprovementWithoutTopologyRegression,
+                    source: peelResult.bestEndpoint.source,
+                    strictGeometricArchiveImprovement:
+                      peelResult.bestEndpoint.strictGeometricArchiveImprovement,
                     svgPath: peelSvgPath,
                     pngPath: peelPngPath
                   }

@@ -53,6 +53,7 @@ import { IrregularBeamState } from './irregularBeamState.js'
 import {
   IntrinsicStrictDecoderError,
   finalizeIntrinsicStrictState,
+  intrinsicStrictCompletedLayoutDominates,
   measureIntrinsicStrictCanonicalEnvelope,
   rankIntrinsicStrictCompletedLayouts,
   selectIntrinsicStrictFamilyWinner,
@@ -329,7 +330,11 @@ export interface IntrinsicPeelReinsertObserverResult {
   }>
   readonly subsetCount: number
   readonly reinsertionOrderCount: number
-  readonly completeEndpointCount: number
+  readonly generatedCompleteSuccessorCount: number
+  readonly terminallyAssessedSuccessorCount: number
+  readonly finalizationCandidateCount: number
+  readonly finalizedEndpointCount: number
+  readonly uniqueEndpointCount: number
   readonly improvingEndpointCount: number
   readonly orderTraces: ReadonlyArray<{
     readonly removedPieceIds: ReadonlyArray<PieceId>
@@ -343,7 +348,7 @@ export interface IntrinsicPeelReinsertObserverResult {
     readonly uniqueCanonicalSuccessorCount: number
     readonly retainedSuccessorCount: number
     readonly capacityEvictionCount: number
-    readonly completeEndpointCount: number
+    readonly generatedCompleteSuccessorCount: number
     readonly steps: ReadonlyArray<{
       readonly stepIndex: number
       readonly pieceId: PieceId
@@ -353,7 +358,7 @@ export interface IntrinsicPeelReinsertObserverResult {
       readonly scoredCandidateCount: number
       readonly canonicalLegalCandidateCount: number
       readonly uniqueFittingSuccessorCount: number
-      readonly retainedWitnesses: ReadonlyArray<{
+      readonly boundedRetainedWitnesses: ReadonlyArray<{
         readonly canonicalGeometryDigest: string
         readonly axes: IntrinsicQueueBeamAxes
       }>
@@ -364,12 +369,36 @@ export interface IntrinsicPeelReinsertObserverResult {
     }>
   }>
   readonly boundedEndpointWitnesses: ReadonlyArray<{
+    readonly source: 'primary' | 'shadow' | 'both'
     readonly removedPieceIds: ReadonlyArray<PieceId>
     readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
     readonly canonicalGeometryHash: string
     readonly metrics: IntrinsicStrictCompletedMetrics
-    readonly strictImprovementWithoutTopologyRegression: boolean
+    readonly strictGeometricArchiveImprovement: boolean
   }>
+  readonly shadowCompletion: {
+    readonly status: 'completed' | 'truncated'
+    readonly witnessCount: number
+    readonly completedWitnessCount: number
+    readonly generatedCandidateCount: number
+    readonly canonicalLegalCandidateCount: number
+    readonly terminallyAssessedSuccessorCount: number
+    readonly finalizationCandidateCount: number
+    readonly uniqueEndpointCount: number
+    readonly improvingEndpointCount: number
+    readonly traces: ReadonlyArray<{
+      readonly witnessDigest: string
+      readonly removedPieceIds: ReadonlyArray<PieceId>
+      readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
+      readonly evictionStepIndex: number
+      readonly status: 'completed' | 'no-successor' | 'truncated'
+      readonly generatedCandidateCount: number
+      readonly canonicalLegalCandidateCount: number
+      readonly generatedCompleteSuccessorCount: number
+      readonly uniqueEndpointCount: number
+      readonly improvingEndpointCount: number
+    }>
+  }
   readonly classification: 'better-exact-endpoint' | 'no-better-bounded-endpoint' | 'truncated'
   readonly bestEndpoint:
     | {
@@ -377,7 +406,8 @@ export interface IntrinsicPeelReinsertObserverResult {
         readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
         readonly canonicalGeometryHash: string
         readonly metrics: IntrinsicStrictCompletedMetrics
-        readonly strictImprovementWithoutTopologyRegression: boolean
+        readonly source: 'primary' | 'shadow' | 'both'
+        readonly strictGeometricArchiveImprovement: boolean
         readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
       }
     | undefined
@@ -1367,16 +1397,50 @@ export function runIntrinsicPeelReinsertObserver(input: {
       ...fixedSizeSubsets(topContributorPieceIds, 2),
       ...fixedSizeSubsets(topContributorPieceIds, 3)
     ]
-    const endpoints = new Map<
+    type TerminalOrigin = {
+      readonly source: 'primary' | 'shadow'
+      readonly removedPieceIds: ReadonlyArray<PieceId>
+      readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
+      readonly shadowWitnessDigest: string | undefined
+    }
+    type TerminalRecord = {
+      readonly entry: IntrinsicPartialBeamEntry
+      readonly origins: TerminalOrigin[]
+    }
+    const primaryTerminalRecords = new Map<string, TerminalRecord>()
+    const shadowTerminalRecords = new Map<string, TerminalRecord>()
+    const shadowSeeds = new Map<
       string,
       {
+        readonly entry: IntrinsicPartialBeamEntry
         readonly removedPieceIds: ReadonlyArray<PieceId>
         readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
-        readonly canonicalGeometryHash: string
-        readonly metrics: IntrinsicStrictCompletedMetrics
-        readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+        readonly evictionStepIndex: number
+        readonly witnessDigest: string
       }
     >()
+    const appendTerminalRecord = (
+      records: Map<string, TerminalRecord>,
+      entry: IntrinsicPartialBeamEntry,
+      origin: TerminalOrigin
+    ) => {
+      const incumbent = records.get(entry.futureEquivalenceKey)
+      if (incumbent === undefined) {
+        records.set(entry.futureEquivalenceKey, { entry, origins: [origin] })
+      } else if (
+        !incumbent.origins.some(
+          (candidate) =>
+            candidate.source === origin.source &&
+            candidate.shadowWitnessDigest === origin.shadowWitnessDigest
+        )
+      ) {
+        incumbent.origins.push(origin)
+      }
+    }
+    const traceWitness = (entry: IntrinsicPartialBeamEntry) => ({
+      canonicalGeometryDigest: digestSemanticIdentity(entry.canonicalGeometryKey),
+      axes: entry.axes
+    })
     const orderTraces: IntrinsicPeelReinsertObserverResult['orderTraces'][number][] = []
     let reinsertionOrderCount = 0
 
@@ -1460,13 +1524,32 @@ export function runIntrinsicPeelReinsertObserver(input: {
               .map(partialBeamEntry)
           )
           const orderedSuccessors = uniqueSuccessors.toSorted(comparePartialCandidate)
-          const retained = orderedSuccessors.slice(0, 4)
+          const terminalStep = step === order.length - 1
+          const retained = terminalStep ? orderedSuccessors : orderedSuccessors.slice(0, 4)
+          const evicted = terminalStep ? [] : orderedSuccessors.slice(4)
           retainedSuccessorCount += retained.length
-          capacityEvictionCount += Math.max(0, uniqueSuccessors.length - retained.length)
-          const traceWitness = (entry: IntrinsicPartialBeamEntry) => ({
-            canonicalGeometryDigest: digestSemanticIdentity(entry.canonicalGeometryKey),
-            axes: entry.axes
-          })
+          capacityEvictionCount += evicted.length
+          if (!terminalStep) {
+            for (const entry of evicted.slice(0, 4)) {
+              if (shadowSeeds.has(entry.futureEquivalenceKey)) continue
+              shadowSeeds.set(entry.futureEquivalenceKey, {
+                entry,
+                removedPieceIds: subset,
+                reinsertionOrderPieceIds: orderIds,
+                evictionStepIndex: step,
+                witnessDigest: digestSemanticIdentity(entry.futureEquivalenceKey)
+              })
+            }
+          } else {
+            for (const entry of retained) {
+              appendTerminalRecord(primaryTerminalRecords, entry, {
+                source: 'primary',
+                removedPieceIds: subset,
+                reinsertionOrderPieceIds: orderIds,
+                shadowWitnessDigest: undefined
+              })
+            }
+          }
           stepTraces.push({
             stepIndex: step,
             pieceId: preparedPieceId(piece),
@@ -1476,8 +1559,8 @@ export function runIntrinsicPeelReinsertObserver(input: {
             scoredCandidateCount: stepScoredCandidateCount,
             canonicalLegalCandidateCount: stepCanonicalLegalCandidateCount,
             uniqueFittingSuccessorCount: uniqueSuccessors.length,
-            retainedWitnesses: retained.map(traceWitness),
-            firstEvictedWitnesses: orderedSuccessors.slice(4, 8).map(traceWitness)
+            boundedRetainedWitnesses: retained.slice(0, 4).map(traceWitness),
+            firstEvictedWitnesses: evicted.slice(0, 4).map(traceWitness)
           })
           states = retained
             .map(({ state }) => state)
@@ -1497,42 +1580,15 @@ export function runIntrinsicPeelReinsertObserver(input: {
             uniqueCanonicalSuccessorCount,
             retainedSuccessorCount,
             capacityEvictionCount,
-            completeEndpointCount: 0,
+            generatedCompleteSuccessorCount: 0,
             steps: stepTraces
           })
           break subsetLoop
         }
-        let orderCompleteEndpointCount = 0
-        for (const state of states) {
-          if (state.remainingPreparedPieces.length > 0 || state.unplacedPieceIds.length > 0) continue
-          const finalized = yield* finalizeIntrinsicStrictState(
-            input.finalSheet,
-            {
-              state,
-              stepTrace: [],
-              gapFillEvidence: [],
-              runtimeMs: Math.max(0, performance.now() - startedAt)
-            },
-            Math.max(0, performance.now() - startedAt)
-          )
-          if (
-            finalized.status !== 'completed' ||
-            finalized.metrics === undefined ||
-            finalized.canonicalGeometryHash === undefined
-          ) {
-            continue
-          }
-          orderCompleteEndpointCount += 1
-          const incumbent = endpoints.get(finalized.canonicalGeometryHash)
-          if (incumbent !== undefined) continue
-          endpoints.set(finalized.canonicalGeometryHash, {
-            removedPieceIds: subset,
-            reinsertionOrderPieceIds: orderIds,
-            canonicalGeometryHash: finalized.canonicalGeometryHash,
-            metrics: finalized.metrics,
-            placedCollisionGeometries: finalized.placedCollisionGeometries
-          })
-        }
+        const orderGeneratedCompleteSuccessorCount = states.filter(
+          (state) =>
+            state.remainingPreparedPieces.length === 0 && state.unplacedPieceIds.length === 0
+        ).length
         orderTraces.push({
           removedPieceIds: subset,
           reinsertionOrderPieceIds: orderIds,
@@ -1548,21 +1604,216 @@ export function runIntrinsicPeelReinsertObserver(input: {
           uniqueCanonicalSuccessorCount,
           retainedSuccessorCount,
           capacityEvictionCount,
-          completeEndpointCount: orderCompleteEndpointCount,
+          generatedCompleteSuccessorCount: orderGeneratedCompleteSuccessorCount,
           steps: stepTraces
         })
       }
     }
 
+    const shadowTraceWork: Array<{
+      readonly witnessDigest: string
+      readonly removedPieceIds: ReadonlyArray<PieceId>
+      readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
+      readonly evictionStepIndex: number
+      readonly status: 'completed' | 'no-successor' | 'truncated'
+      readonly generatedCandidateCount: number
+      readonly canonicalLegalCandidateCount: number
+      readonly generatedCompleteSuccessorCount: number
+      readonly terminalKeys: ReadonlyArray<string>
+    }> = []
+    let shadowGeneratedCandidateCount = 0
+    let shadowCanonicalLegalCandidateCount = 0
+    let completedShadowWitnessCount = 0
+    if (budget.truncationReason === undefined) {
+      shadowLoop: for (const shadow of shadowSeeds.values()) {
+        let states: ReadonlyArray<IrregularBeamState> = [shadow.entry.state]
+        let generatedCandidateCount = 0
+        let canonicalLegalCandidateCount = 0
+        let generatedCompleteSuccessorCount = 0
+        let shadowTruncated = false
+        const remainingOrder = shadow.entry.state.remainingPreparedPieces
+        for (let step = 0; step < remainingOrder.length; step += 1) {
+          const piece = remainingOrder[step]
+          if (piece === undefined) continue
+          const remainingPreparedPieces = remainingOrder.slice(step + 1)
+          const successors: AuditCandidate[] = []
+          for (const state of states) {
+            const outcome = yield* enumerateWithDeadlineRecovery({
+              state,
+              piece,
+              remainingPreparedPieces,
+              budget,
+              settings,
+              geometryKernel,
+              nfpIfpService,
+              candidateMemoScope,
+              control,
+              measureGapContainment: false,
+              includeEnvelopeEventCandidates: true
+            })
+            if (outcome === undefined) {
+              shadowTruncated = true
+              break
+            }
+            generatedCandidateCount += outcome.generatedCandidateCount
+            canonicalLegalCandidateCount += outcome.canonicalLegalCandidateCount
+            shadowGeneratedCandidateCount += outcome.generatedCandidateCount
+            shadowCanonicalLegalCandidateCount += outcome.canonicalLegalCandidateCount
+            successors.push(...outcome.uniqueCanonicalSuccessors)
+            if (!outcome.fullyEnumerated) {
+              shadowTruncated = true
+              break
+            }
+          }
+          if (shadowTruncated) break
+          const orderedSuccessors = deduplicatePartialEntries(
+            successors
+              .filter(({ state }) => partialStateCanFit(state, input.finalSheet))
+              .map(partialBeamEntry)
+          ).toSorted(comparePartialCandidate)
+          const terminalStep = step === remainingOrder.length - 1
+          states = (terminalStep ? orderedSuccessors : orderedSuccessors.slice(0, 4)).map(
+            ({ state }) => state
+          )
+          if (terminalStep) {
+            generatedCompleteSuccessorCount = orderedSuccessors.length
+            for (const entry of orderedSuccessors) {
+              appendTerminalRecord(shadowTerminalRecords, entry, {
+                source: 'shadow',
+                removedPieceIds: shadow.removedPieceIds,
+                reinsertionOrderPieceIds: shadow.reinsertionOrderPieceIds,
+                shadowWitnessDigest: shadow.witnessDigest
+              })
+            }
+          }
+          if (states.length === 0) break
+        }
+        const terminalKeys = [...shadowTerminalRecords.entries()]
+          .filter(([, record]) =>
+            record.origins.some(
+              ({ shadowWitnessDigest }) => shadowWitnessDigest === shadow.witnessDigest
+            )
+          )
+          .map(([key]) => key)
+        if (!shadowTruncated) completedShadowWitnessCount += 1
+        shadowTraceWork.push({
+          witnessDigest: shadow.witnessDigest,
+          removedPieceIds: shadow.removedPieceIds,
+          reinsertionOrderPieceIds: shadow.reinsertionOrderPieceIds,
+          evictionStepIndex: shadow.evictionStepIndex,
+          status: shadowTruncated
+            ? 'truncated'
+            : generatedCompleteSuccessorCount > 0
+              ? 'completed'
+              : 'no-successor',
+          generatedCandidateCount,
+          canonicalLegalCandidateCount,
+          generatedCompleteSuccessorCount,
+          terminalKeys
+        })
+        if (shadowTruncated) break shadowLoop
+      }
+    }
+
+    const terminalRecords = new Map<string, TerminalRecord>()
+    for (const [key, record] of [...primaryTerminalRecords, ...shadowTerminalRecords]) {
+      const incumbent = terminalRecords.get(key)
+      if (incumbent === undefined) terminalRecords.set(key, record)
+      else incumbent.origins.push(...record.origins)
+    }
+    const eligibleTerminalRecords = [...terminalRecords.values()].filter(
+      ({ entry }) => !intrinsicQueueBeamAxesDominate(seedAxes, entry.axes)
+    )
+    const finalizationFrontKeys = new Set(
+      (partialNondominatedLayers(eligibleTerminalRecords.map(({ entry }) => entry), 1)[0] ?? []).map(
+        ({ futureEquivalenceKey }) => futureEquivalenceKey
+      )
+    )
+    const finalizationRecords = eligibleTerminalRecords.filter(({ entry }) =>
+      finalizationFrontKeys.has(entry.futureEquivalenceKey)
+    )
+    const endpoints = new Map<
+      string,
+      {
+        source: 'primary' | 'shadow' | 'both'
+        readonly removedPieceIds: ReadonlyArray<PieceId>
+        readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
+        readonly canonicalGeometryHash: string
+        readonly metrics: IntrinsicStrictCompletedMetrics
+        readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+        readonly terminalKeys: Set<string>
+        readonly shadowWitnessDigests: Set<string>
+      }
+    >()
+    const terminalKeyToHash = new Map<string, string>()
+    let finalizedEndpointCount = 0
+    for (const record of finalizationRecords) {
+      if (performance.now() - budget.startedAt >= budget.maximumRuntimeMs) {
+        budget.truncationReason = 'maximum-runtime'
+        break
+      }
+      const finalized = yield* finalizeIntrinsicStrictState(
+        input.finalSheet,
+        {
+          state: record.entry.state,
+          stepTrace: [],
+          gapFillEvidence: [],
+          runtimeMs: Math.max(0, performance.now() - startedAt)
+        },
+        Math.max(0, performance.now() - startedAt)
+      )
+      if (
+        finalized.status !== 'completed' ||
+        finalized.metrics === undefined ||
+        finalized.canonicalGeometryHash === undefined
+      ) {
+        continue
+      }
+      finalizedEndpointCount += 1
+      terminalKeyToHash.set(record.entry.futureEquivalenceKey, finalized.canonicalGeometryHash)
+      const primaryOrigin = record.origins.find(({ source }) => source === 'primary')
+      const shadowOrigin = record.origins.find(({ source }) => source === 'shadow')
+      const origin = primaryOrigin ?? shadowOrigin
+      if (origin === undefined) continue
+      const incumbent = endpoints.get(finalized.canonicalGeometryHash)
+      const shadowWitnessDigests = new Set(
+        record.origins.flatMap(({ shadowWitnessDigest }) =>
+          shadowWitnessDigest === undefined ? [] : [shadowWitnessDigest]
+        )
+      )
+      if (incumbent === undefined) {
+        endpoints.set(finalized.canonicalGeometryHash, {
+          source:
+            primaryOrigin !== undefined && shadowOrigin !== undefined
+              ? 'both'
+              : primaryOrigin !== undefined
+                ? 'primary'
+                : 'shadow',
+          removedPieceIds: origin.removedPieceIds,
+          reinsertionOrderPieceIds: origin.reinsertionOrderPieceIds,
+          canonicalGeometryHash: finalized.canonicalGeometryHash,
+          metrics: finalized.metrics,
+          placedCollisionGeometries: finalized.placedCollisionGeometries,
+          terminalKeys: new Set([record.entry.futureEquivalenceKey]),
+          shadowWitnessDigests
+        })
+      } else {
+        if (
+          incumbent.source !== 'both' &&
+          record.origins.some(({ source }) => source !== incumbent.source)
+        ) {
+          incumbent.source = 'both'
+        }
+        incumbent.terminalKeys.add(record.entry.futureEquivalenceKey)
+        for (const digest of shadowWitnessDigests) incumbent.shadowWitnessDigests.add(digest)
+      }
+    }
+
     const completeEndpoints = [...endpoints.values()]
-    const improvesWithoutTopologyRegression = (metrics: IntrinsicStrictCompletedMetrics) =>
-      metrics.envelopeAreaMm2 < input.seedMetrics.envelopeAreaMm2 &&
-      metrics.enclosedCavityCount <= input.seedMetrics.enclosedCavityCount &&
-      metrics.totalEnclosedCavityAreaMm2 <= input.seedMetrics.totalEnclosedCavityAreaMm2 &&
-      metrics.largestOccupiedHullGapRatio <= input.seedMetrics.largestOccupiedHullGapRatio &&
-      metrics.occupiedHullWasteRatio <= input.seedMetrics.occupiedHullWasteRatio
+    const improvesCommonArchive = (metrics: IntrinsicStrictCompletedMetrics) =>
+      intrinsicStrictCompletedLayoutDominates(metrics, input.seedMetrics)
     const improvingEndpoints = completeEndpoints.filter(({ metrics }) =>
-      improvesWithoutTopologyRegression(metrics)
+      improvesCommonArchive(metrics)
     )
     const improvingEndpointCount = improvingEndpoints.length
     const rankedEndpointMetrics = rankIntrinsicStrictCompletedLayouts(
@@ -1589,10 +1840,36 @@ export function runIntrinsicPeelReinsertObserver(input: {
               reinsertionOrderPieceIds: endpoint.reinsertionOrderPieceIds,
               canonicalGeometryHash: endpoint.canonicalGeometryHash,
               metrics: endpoint.metrics,
-              strictImprovementWithoutTopologyRegression:
-                improvesWithoutTopologyRegression(endpoint.metrics)
+              source: endpoint.source,
+              strictGeometricArchiveImprovement: improvesCommonArchive(endpoint.metrics)
             }
           ]
+    })
+    const shadowTraces = shadowTraceWork.map((trace) => {
+      const hashes = new Set(
+        trace.terminalKeys.flatMap((key) => {
+          const hash = terminalKeyToHash.get(key)
+          return hash === undefined ? [] : [hash]
+        })
+      )
+      const traceEndpoints = [...hashes].flatMap((hash) => {
+        const endpoint = endpoints.get(hash)
+        return endpoint === undefined ? [] : [endpoint]
+      })
+      return {
+        witnessDigest: trace.witnessDigest,
+        removedPieceIds: trace.removedPieceIds,
+        reinsertionOrderPieceIds: trace.reinsertionOrderPieceIds,
+        evictionStepIndex: trace.evictionStepIndex,
+        status: trace.status,
+        generatedCandidateCount: trace.generatedCandidateCount,
+        canonicalLegalCandidateCount: trace.canonicalLegalCandidateCount,
+        generatedCompleteSuccessorCount: trace.generatedCompleteSuccessorCount,
+        uniqueEndpointCount: hashes.size,
+        improvingEndpointCount: traceEndpoints.filter(({ metrics }) =>
+          improvesCommonArchive(metrics)
+        ).length
+      }
     })
     const truncated = budget.truncationReason !== undefined
     return {
@@ -1604,10 +1881,38 @@ export function runIntrinsicPeelReinsertObserver(input: {
       topContributors,
       subsetCount: subsets.length,
       reinsertionOrderCount,
-      completeEndpointCount: completeEndpoints.length,
+      generatedCompleteSuccessorCount:
+        orderTraces.reduce((sum, trace) => sum + trace.generatedCompleteSuccessorCount, 0) +
+        shadowTraceWork.reduce(
+          (sum, trace) => sum + trace.generatedCompleteSuccessorCount,
+          0
+        ),
+      terminallyAssessedSuccessorCount: terminalRecords.size,
+      finalizationCandidateCount: finalizationRecords.length,
+      finalizedEndpointCount,
+      uniqueEndpointCount: completeEndpoints.length,
       improvingEndpointCount,
       orderTraces,
       boundedEndpointWitnesses,
+      shadowCompletion: {
+        status:
+          budget.truncationReason !== undefined ||
+          shadowTraces.some(({ status }) => status === 'truncated')
+          ? 'truncated'
+          : 'completed',
+        witnessCount: shadowSeeds.size,
+        completedWitnessCount: completedShadowWitnessCount,
+        generatedCandidateCount: shadowGeneratedCandidateCount,
+        canonicalLegalCandidateCount: shadowCanonicalLegalCandidateCount,
+        terminallyAssessedSuccessorCount: shadowTerminalRecords.size,
+        finalizationCandidateCount: finalizationRecords.filter(({ origins }) =>
+          origins.some(({ source }) => source === 'shadow')
+        ).length,
+        uniqueEndpointCount: completeEndpoints.filter(({ source }) => source !== 'primary').length,
+        improvingEndpointCount: improvingEndpoints.filter(({ source }) => source !== 'primary')
+          .length,
+        traces: shadowTraces
+      },
       classification: truncated
         ? 'truncated'
         : improvingEndpointCount > 0
@@ -1617,9 +1922,13 @@ export function runIntrinsicPeelReinsertObserver(input: {
         best === undefined
           ? undefined
           : {
-              ...best,
-              strictImprovementWithoutTopologyRegression:
-                improvesWithoutTopologyRegression(best.metrics)
+              source: best.source,
+              removedPieceIds: best.removedPieceIds,
+              reinsertionOrderPieceIds: best.reinsertionOrderPieceIds,
+              canonicalGeometryHash: best.canonicalGeometryHash,
+              metrics: best.metrics,
+              placedCollisionGeometries: best.placedCollisionGeometries,
+              strictGeometricArchiveImprovement: improvesCommonArchive(best.metrics)
             }
     }
   })
