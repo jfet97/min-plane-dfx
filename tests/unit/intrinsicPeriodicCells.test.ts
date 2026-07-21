@@ -116,6 +116,8 @@ describe('intrinsic periodic cells', () => {
     expect(catalog.selectedFamilyKey).toContain('rectangle')
     expect(catalog.uniqueTransformCount).toBe(2)
     expect(catalog.cells.length).toBeGreaterThan(0)
+    expect(catalog.cells.every(({ basisProvenance }) => basisProvenance !== undefined)).toBe(true)
+    expect(catalog.cells.some(({ basisProvenance }) => basisProvenance?.sourceKey.length)).toBe(true)
     expect(catalog.cells.every(({ infiniteFarProof }) => infiniteFarProof)).toBe(false)
     expect(catalog.cells.some(({ threeByThreeLatticeLegal }) => !threeByThreeLatticeLegal)).toBe(true)
   })
@@ -370,6 +372,9 @@ describe('intrinsic periodic cells', () => {
     }
     const seed = (await Effect.runPromise(expandIntrinsicPeriodicCell(cell, pieces)))[0]
     expect(seed?.placements).toHaveLength(4)
+    expect(seed?.crop).toEqual(
+      expect.objectContaining({ rows: expect.any(Number), columns: expect.any(Number) })
+    )
     expect(seed?.remainingFamilyMembers.map(({ pieceId }) => pieceId)).toEqual([pieces[4]?.pieceId])
     expect(
       seed?.placements.map(({ placement, collisionGeometry }) => ({

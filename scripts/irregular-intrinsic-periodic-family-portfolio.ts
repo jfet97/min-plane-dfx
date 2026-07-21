@@ -121,6 +121,7 @@ for (const run of result.runs) {
       maximumSideMm: run.continuation.seed.maximumSideMm,
       envelopeAreaMm2: run.continuation.seed.envelopeAreaMm2,
       envelopeSpanMm: run.continuation.seed.envelopeSpanMm,
+      crop: run.continuation.seed.crop,
       placements: run.continuation.seed.placements.map(({ placement }) => ({
         pieceId: placement.pieceId,
         sourcePieceId: placement.sourcePieceId,
@@ -192,7 +193,8 @@ const report = {
         sharedBoundaryLengthMm: cell.sharedBoundaryLengthMm,
         infiniteFarProof: cell.infiniteFarProof,
         threeByThreeLatticeLegal: cell.threeByThreeLatticeLegal,
-        threeByThreeCentreContactComplete: cell.threeByThreeCentreContactComplete
+        threeByThreeCentreContactComplete: cell.threeByThreeCentreContactComplete,
+        basisProvenance: cell.basisProvenance
       })),
       rejected: family.rejected
     }))

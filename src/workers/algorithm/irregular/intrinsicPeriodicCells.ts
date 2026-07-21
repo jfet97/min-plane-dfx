@@ -49,6 +49,34 @@ export interface IntrinsicPeriodicVector {
   readonly y: number
 }
 
+/** Records one rational NFP-union basis source and its single shared grid realization. */
+export interface IntrinsicPeriodicBasisProvenance {
+  readonly sourceKey: string
+  readonly axis: 'x' | 'y'
+  readonly axisIntersection: IntrinsicPeriodicRationalPoint
+  readonly secondIntersection: IntrinsicPeriodicRationalPoint
+  readonly selectedBasis: readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]
+  readonly selectedResidualGrid: readonly [IntrinsicPeriodicRationalPoint, IntrinsicPeriodicRationalPoint]
+  readonly canonicalBasis: readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]
+  readonly canonicalDeltaGrid: readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]
+  readonly memberTransforms: ReadonlyArray<IntrinsicPeriodicMemberTransform>
+}
+
+/** Keeps exact rational provenance serializable without turning it into a floating score. */
+export interface IntrinsicPeriodicRationalPoint {
+  readonly x: string
+  readonly y: string
+}
+
+/** Identifies the transformed members whose ordered NFP union produced a basis source. */
+export interface IntrinsicPeriodicMemberTransform {
+  readonly memberIndex: number
+  readonly pieceId: string
+  readonly transformIndex: number
+  readonly rotationDeg: number
+  readonly mirrored: boolean
+}
+
 export interface IntrinsicPeriodicBaseMember {
   readonly piece: IrregularPreparedPiece
   readonly geometry: TransformedCollisionGeometry
@@ -73,6 +101,8 @@ export interface IntrinsicPeriodicCell {
   readonly threeByThreeLatticeLegal: boolean
   /** Records whether every central member contacts an exterior 3x3 member. */
   readonly threeByThreeCentreContactComplete: boolean
+  /** Records the common NFP-derived basis; it never permits per-member snapping. */
+  readonly basisProvenance?: IntrinsicPeriodicBasisProvenance
   readonly canonicalKey: string
 }
 
@@ -141,7 +171,16 @@ export interface IntrinsicPeriodicSeed {
   readonly maximumSideMm: number
   readonly envelopeAreaMm2: number
   readonly envelopeSpanMm: number
+  readonly crop: IntrinsicPeriodicCropProvenance
   readonly canonicalKey: string
+}
+
+/** Records the finite crop traversal that materialized a shared lattice basis. */
+export interface IntrinsicPeriodicCropProvenance {
+  readonly rows: number
+  readonly columns: number
+  readonly traversal: 'row' | 'column'
+  readonly corner: 0 | 1 | 2 | 3
 }
 
 interface GridPoint {
@@ -577,6 +616,7 @@ export function expandIntrinsicPeriodicCell(
             maximumSideMm: Math.max(bounds.width, bounds.height),
             envelopeAreaMm2: bounds.width * bounds.height,
             envelopeSpanMm: bounds.width + bounds.height,
+            crop: { rows, columns, traversal, corner },
             canonicalKey: identity
           })
         }
@@ -760,7 +800,8 @@ function deriveCells(input: {
       })
     }
     if (bases.length === 0) reject('axisBasisUnavailable', undefined)
-    for (const [rawV1, rawV2] of bases) {
+    for (const candidate of bases) {
+      const [rawV1, rawV2] = candidate.basis
       const canonical = canonicalizeBasis(rawV1, rawV2)
       if (canonical === undefined) {
         reject('degenerateBasis', [rawV1, rawV2])
@@ -795,6 +836,7 @@ function deriveCells(input: {
         infiniteFarProof,
         threeByThreeLatticeLegal: lattice.legal,
         threeByThreeCentreContactComplete: lattice.centreContactComplete,
+        basisProvenance: makeBasisProvenance(candidate, canonical, input.members),
         canonicalKey
       })
     }
@@ -837,17 +879,57 @@ function appendRejectedSamples(
   }
 }
 
+function makeBasisProvenance(
+  candidate: AxisBasisCandidate,
+  canonical: readonly [GridPoint, GridPoint],
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>
+): IntrinsicPeriodicBasisProvenance {
+  const [selectedFirst, selectedSecond] = candidate.basis
+  return {
+    sourceKey: candidate.sourceKey,
+    axis: candidate.axis,
+    axisIntersection: serializeRationalPoint(candidate.axisIntersection),
+    secondIntersection: serializeRationalPoint(candidate.secondIntersection),
+    selectedBasis: [fromGridPoint(selectedFirst), fromGridPoint(selectedSecond)],
+    selectedResidualGrid: [
+      serializeRationalPoint(candidate.selectedResidualGrid[0]),
+      serializeRationalPoint(candidate.selectedResidualGrid[1])
+    ],
+    canonicalBasis: [fromGridPoint(canonical[0]), fromGridPoint(canonical[1])],
+    canonicalDeltaGrid: [
+      fromGridPoint({ x: canonical[0].x - selectedFirst.x, y: canonical[0].y - selectedFirst.y }),
+      fromGridPoint({ x: canonical[1].x - selectedSecond.x, y: canonical[1].y - selectedSecond.y })
+    ],
+    memberTransforms: members.map(({ piece, geometry }, memberIndex) => ({
+      memberIndex,
+      pieceId: `${piece.pieceId ?? piece.source.id}`,
+      transformIndex: geometry.transform.index,
+      rotationDeg: geometry.transform.rotationDeg,
+      mirrored: geometry.transform.mirrored
+    }))
+  }
+}
+
 function deriveAxisBasis(
   boundaries: ReadonlyArray<ForbiddenBoundary>,
   swapAxes: boolean
 ): readonly [GridPoint, GridPoint] | undefined {
-  return deriveAxisBasisCandidates(boundaries, swapAxes)[0]
+  return deriveAxisBasisCandidates(boundaries, swapAxes)[0]?.basis
+}
+
+interface AxisBasisCandidate {
+  readonly basis: readonly [GridPoint, GridPoint]
+  readonly sourceKey: string
+  readonly axis: 'x' | 'y'
+  readonly axisIntersection: RationalPoint
+  readonly secondIntersection: RationalPoint
+  readonly selectedResidualGrid: readonly [RationalPoint, RationalPoint]
 }
 
 function deriveAxisBasisCandidates(
   boundaries: ReadonlyArray<ForbiddenBoundary>,
   swapAxes: boolean
-): ReadonlyArray<readonly [GridPoint, GridPoint]> {
+): ReadonlyArray<AxisBasisCandidate> {
   const orientedRaw = boundaries.map(({ points, isHole }) => ({
     points: points.map((point) => (swapAxes ? { x: point.y, y: point.x } : point)),
     ...(isHole !== undefined ? { isHole } : {})
@@ -859,7 +941,7 @@ function deriveAxisBasisCandidates(
     .toSorted((first, second) => compareRational(first.x, second.x))[0]
   if (axisIntersection === undefined) return []
   const unswap = (point: GridPoint): GridPoint => (swapAxes ? { x: point.y, y: point.x } : point)
-  const result = new Map<string, readonly [GridPoint, GridPoint]>()
+  const result = new Map<string, AxisBasisCandidate>()
   for (const axisX of canonicalGridAlternatives(axisIntersection.x).filter((value) => value > 0n)) {
     const axis = { x: axisX, y: 0n }
     const shifted = unionForbiddenBoundaries([
@@ -892,7 +974,27 @@ function deriveAxisBasisCandidates(
       for (const secondY of canonicalGridAlternatives(secondRational.y)) {
         if (secondY <= 0n || secondX < 0n || secondX >= axis.x) continue
         const basis = [unswap(axis), unswap({ x: secondX, y: secondY })] as const
-        result.set(`${basis[0].x},${basis[0].y};${basis[1].x},${basis[1].y}`, basis)
+        const selectedRational: readonly [RationalPoint, RationalPoint] = [
+          { x: rational(axisX), y: rational(0n) },
+          { x: rational(secondX), y: rational(secondY) }
+        ]
+        const originalRational: readonly [RationalPoint, RationalPoint] = [
+          { x: axisIntersection.x, y: rational(0n) },
+          secondRational
+        ]
+        const sourceKey = `${swapAxes ? 'y' : 'x'}:${rationalPointKey(originalRational[0])};${rationalPointKey(originalRational[1])}`
+        const key = `${basis[0].x},${basis[0].y};${basis[1].x},${basis[1].y}`
+        result.set(key, {
+          basis,
+          sourceKey,
+          axis: swapAxes ? 'y' : 'x',
+          axisIntersection: originalRational[0],
+          secondIntersection: originalRational[1],
+          selectedResidualGrid: [
+            subtractRationalPoints(selectedRational[0], originalRational[0]),
+            subtractRationalPoints(selectedRational[1], originalRational[1])
+          ]
+        })
       }
     }
   }
@@ -919,7 +1021,7 @@ export function derivePeriodicAxisBasisCandidatesControl(
   const converted: ForbiddenBoundary[] = boundaries.map((points) => ({
     points: points.map(({ x, y }) => ({ x: BigInt(x), y: BigInt(y) }))
   }))
-  return deriveAxisBasisCandidates(converted, swapAxes).map(([first, second]) => [
+  return deriveAxisBasisCandidates(converted, swapAxes).map(({ basis: [first, second] }) => [
     fromGridPoint(first),
     fromGridPoint(second)
   ])
@@ -1072,6 +1174,27 @@ function addRational(first: Rational, second: Rational): Rational {
     first.numerator * second.denominator + second.numerator * first.denominator,
     first.denominator * second.denominator
   )
+}
+
+function subtractRational(first: Rational, second: Rational): Rational {
+  return makeRational(
+    first.numerator * second.denominator - second.numerator * first.denominator,
+    first.denominator * second.denominator
+  )
+}
+
+function subtractRationalPoints(first: RationalPoint, second: RationalPoint): RationalPoint {
+  return {
+    x: subtractRational(first.x, second.x),
+    y: subtractRational(first.y, second.y)
+  }
+}
+
+function serializeRationalPoint(point: RationalPoint): IntrinsicPeriodicRationalPoint {
+  return {
+    x: `${point.x.numerator}/${point.x.denominator}`,
+    y: `${point.y.numerator}/${point.y.denominator}`
+  }
 }
 
 function compareRational(first: Rational, second: Rational): number {
