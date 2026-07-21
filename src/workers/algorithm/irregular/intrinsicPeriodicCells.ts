@@ -763,10 +763,16 @@ export function selectIntrinsicPeriodicSeedFront(
   seeds: ReadonlyArray<IntrinsicPeriodicSeed>,
   maximumCrops: number
 ): ReadonlyArray<IntrinsicPeriodicSeed> {
-  const nonDominated = seeds.filter(
+  return rankIntrinsicPeriodicSeeds(nonDominatedIntrinsicPeriodicSeeds(seeds)).slice(0, maximumCrops)
+}
+
+/** Returns the complete crop Pareto set before any bounded ranking cap. */
+export function nonDominatedIntrinsicPeriodicSeeds(
+  seeds: ReadonlyArray<IntrinsicPeriodicSeed>
+): ReadonlyArray<IntrinsicPeriodicSeed> {
+  return seeds.filter(
     (candidate) => !seeds.some((other) => other !== candidate && periodicSeedDominates(other, candidate))
   )
-  return rankIntrinsicPeriodicSeeds(nonDominated).slice(0, maximumCrops)
 }
 
 function periodicSeedDominates(first: IntrinsicPeriodicSeed, second: IntrinsicPeriodicSeed): boolean {

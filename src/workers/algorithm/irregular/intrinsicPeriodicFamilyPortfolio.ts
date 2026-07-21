@@ -4,6 +4,7 @@ import type { IrregularPreparedPiece } from '@shared/irregular/domain.js'
 import {
   enumerateIntrinsicPeriodicCells,
   enumerateIntrinsicPeriodicCellCrops,
+  nonDominatedIntrinsicPeriodicSeeds,
   rankIntrinsicPeriodicSeeds,
   selectIntrinsicPeriodicSeedFront,
   type IntrinsicPeriodicCatalog,
@@ -90,6 +91,7 @@ export interface IntrinsicPeriodicFamilyPortfolioResult {
   readonly continuationCoverageComplete: boolean
   readonly sourceCropSurvival: ReadonlyArray<IntrinsicPeriodicSourceCropSurvival>
   readonly sourceAuditWitnesses: ReadonlyArray<IntrinsicPeriodicSourceAuditWitness>
+  readonly sourceAuditNonDominatedCropCount: number
   readonly runs: ReadonlyArray<IntrinsicPeriodicContinuationResult>
   readonly archive: ReadonlyArray<IntrinsicStrictCompletedMetrics>
   readonly winner: IntrinsicPeriodicContinuationResult | undefined
@@ -211,6 +213,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       continuationCoverageComplete: selected.coverageComplete,
       sourceCropSurvival: selected.sourceCropSurvival,
       sourceAuditWitnesses: selected.sourceAuditWitnesses,
+      sourceAuditNonDominatedCropCount: selected.sourceAuditNonDominatedCropCount,
       runs,
       archive,
       winner:
@@ -236,6 +239,7 @@ function selectIntrinsicPeriodicContinuations(
     readonly coverageComplete: boolean
     readonly sourceCropSurvival: ReadonlyArray<IntrinsicPeriodicSourceCropSurvival>
     readonly sourceAuditWitnesses: ReadonlyArray<IntrinsicPeriodicSourceAuditWitness>
+    readonly sourceAuditNonDominatedCropCount: number
   },
   IrregularGeometryInputError
 > {
@@ -363,6 +367,9 @@ function selectIntrinsicPeriodicContinuations(
     for (const continuation of all.slice(maximumContinuationCount)) {
       omissions.push({ sourceId: continuation.sourceId, reason: 'continuation-cap' })
     }
+    const rawAuditFront = nonDominatedIntrinsicPeriodicSeeds(
+      [...sourceAuditWitnesses.values()].map(({ seed }) => seed)
+    )
     return {
       continuations: selected,
       omissions,
@@ -371,9 +378,7 @@ function selectIntrinsicPeriodicContinuations(
         (first, second) =>
           first.role.localeCompare(second.role) || first.sourceKey.localeCompare(second.sourceKey)
       ),
-      sourceAuditWitnesses: rankIntrinsicPeriodicSeeds(
-        [...sourceAuditWitnesses.values()].map(({ seed }) => seed)
-      )
+      sourceAuditWitnesses: rankIntrinsicPeriodicSeeds(rawAuditFront)
         .slice(0, 16)
         .flatMap((seed) => {
           const source = sourceAuditWitnesses.get(seed.canonicalKey)
@@ -397,7 +402,8 @@ function selectIntrinsicPeriodicContinuations(
                   }
                 }
               ]
-        })
+        }),
+      sourceAuditNonDominatedCropCount: rawAuditFront.length
     }
   })
 }
