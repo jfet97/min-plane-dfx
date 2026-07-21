@@ -1712,6 +1712,31 @@ sheet-free. It must first rerun Triangle and homogeneous controls before another
 Mixed budget. Do not change beam width, queue scheduling, contact definitions,
 or terminal scoring as a response to this result.
 
+#### Exact two-contact periodic source checkpoint (2026-07-21)
+
+Commits `9848e17`, `53e7904`, and `37fd64f` implement and measure that bounded
+source. It derives antiparallel physical-edge alignments on the canonical grid,
+records the fixed/moving members and overlapping edge segments, rejects bases
+whose determinant cannot contain the base-cell material, and admits a basis
+only after its complete 3x3 repetition is direct-legal and every central member
+has positive shared-boundary contact. It changes neither the ordinary beam nor
+terminal scoring.
+
+Triangle exhausts this source's measured domain: all 8 transforms and 28
+transform pairs are covered; 11 distinct exact contact translations survive
+deduplication, producing 4 non-collinear pairs. Two pairs fail the material-area
+bound and both remaining pairs are tested; both collide under 3x3 repetition.
+The validation cap is not reached and zero contact bases are admitted. The
+earlier loose run is useful causal evidence: the two contacts were legal in
+isolation, but every finite crop failed because their phases were incompatible.
+Therefore no P1/P2 periodic contact motif is being lost to ranking in this
+bounded Triangle domain. The source is retained as generic research machinery,
+but widening P1/P2 or changing the contact definition is not justified.
+Immutable reports are under
+`/private/tmp/min-plane-provenance/v7-edge-contact-cf9848d/triangle-20/`,
+`/private/tmp/min-plane-provenance/v7-edge-contact-53e7904/triangle-20/`, and
+`/private/tmp/min-plane-provenance/v7-edge-contact-coverage-37fd64f/triangle-20/`.
+
 ### Local research documents
 
 - [`help/research/open-source-nesting-strategies.md`](help/research/open-source-nesting-strategies.md): pinned Deepnest, SVGnest, libnest2d, PackingSolver, and Sparrow control pass, plus the Dalsoo addition.
@@ -1751,11 +1776,13 @@ or terminal scoring as a response to this result.
 
 ## Immediate Next Action
 
-Implement the bounded two-edge-contact periodic source specified above. The
-observer has ruled out a cell/crop-retention explanation for the current P1/P2
-domain on Triangle; do not widen it or add arbitrary endpoint sampling. Require
-segment-level NFP provenance, uniform shared basis translations, direct/canonical
-legality, source-to-crop survival traces, and Triangle plus homogeneous controls
-before another Mixed-61 fixture budget. Do not independently move members,
-weaken canonical contact, or change the live beam, contact comparator, static
-squeeze controller, or NFP legality machinery.
+Proceed to the already-reviewed adaptive incumbent-driven contraction stage.
+Replace the experimental controller's three static target boxes with a bounded
+sequence of small contractions derived from the current best exact incumbent.
+After each failed target, retain a deterministic low-conflict restart pool and
+apply the existing multi-piece disruption/separation machinery; after each
+successful exact projection, promote through the common archive and derive the
+next target from that improved incumbent. Terminate after a fixed consecutive
+failure count. Preserve exact Clipper2 admission, conflict accounting, existing
+production results, and the periodic 74k research seed; do not add a private
+winner lane or fixture-specific movement.

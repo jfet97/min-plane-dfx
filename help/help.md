@@ -340,6 +340,16 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   traversal bounds, so the conclusion is explicitly scoped to the generated
   domain. Refreshed evidence is
   `/private/tmp/min-plane-provenance/v7-source-survival-pareto-a7c697f/triangle-20/`.
+- The bounded exact two-contact source is now measured at `37fd64f`. It found
+  11 distinct physical-edge contact translations across complete Triangle
+  transform/pair coverage, but only four non-collinear pairs; two cannot contain
+  the base-cell material and both remaining pairs collide when repeated over the
+  required 3x3 neighbourhood. Validation coverage is complete and zero bases
+  are admitted. This closes the current P1/P2 contact-source hypothesis without
+  weakening exactness. The next stage is the reviewed Sparrow-style adaptive
+  incumbent contraction, using the existing separation/disruption machinery
+  and exact archive. Immutable coverage evidence is
+  `/private/tmp/min-plane-provenance/v7-edge-contact-coverage-37fd64f/triangle-20/`.
 
 ### 2026-07-20 (Dalsoo source-control addition)
 
