@@ -352,6 +352,8 @@ export interface IntrinsicPeelReinsertObserverResult {
     readonly envelopeAreaReductionGrid2: number
     readonly hullWasteReductionGrid2: number
   }>
+  readonly subsetSizes: ReadonlyArray<2 | 3 | 4>
+  readonly distinctGeometryClassOrdersOnly: boolean
   readonly subsetCount: number
   readonly reinsertionOrderCount: number
   readonly generatedCompleteSuccessorCount: number
@@ -360,6 +362,7 @@ export interface IntrinsicPeelReinsertObserverResult {
   readonly finalizedEndpointCount: number
   readonly uniqueEndpointCount: number
   readonly improvingEndpointCount: number
+  readonly qualifyingCohesiveEndpointCount: number
   readonly orderTraces: ReadonlyArray<{
     readonly removedPieceIds: ReadonlyArray<PieceId>
     readonly reinsertionOrderPieceIds: ReadonlyArray<PieceId>
@@ -424,6 +427,10 @@ export interface IntrinsicPeelReinsertObserverResult {
     readonly canonicalGeometryHash: string
     readonly metrics: IntrinsicStrictCompletedMetrics
     readonly strictGeometricArchiveImprovement: boolean
+    readonly commonArchiveNonDominated: boolean
+    readonly improvesCohesion: boolean
+    readonly passesTopologyGuard: boolean
+    readonly qualifiesCohesiveGate: boolean
   }>
   readonly shadowCompletion: {
     readonly status: 'completed' | 'truncated'
@@ -1406,6 +1413,8 @@ export function runIntrinsicPeelReinsertObserver(input: {
   readonly seedMetrics: IntrinsicStrictCompletedMetrics
   readonly maximumRuntimeMs: number
   readonly maximumEvaluations: number
+  readonly subsetSizes?: ReadonlyArray<2 | 3 | 4>
+  readonly distinctGeometryClassOrdersOnly?: boolean
 }): Effect.Effect<
   IntrinsicPeelReinsertObserverResult,
   AuditError,
@@ -1487,10 +1496,11 @@ export function runIntrinsicPeelReinsertObserver(input: {
       )
     const topContributors = rankedContributors.slice(0, 4)
     const topContributorPieceIds = topContributors.map(({ pieceId }) => pieceId)
-    const subsets = [
-      ...fixedSizeSubsets(topContributorPieceIds, 2),
-      ...fixedSizeSubsets(topContributorPieceIds, 3)
-    ]
+    const subsetSizes = input.subsetSizes ?? [2, 3]
+    const distinctGeometryClassOrdersOnly = input.distinctGeometryClassOrdersOnly ?? false
+    const subsets = subsetSizes.flatMap((size) =>
+      fixedSizeSubsets(topContributorPieceIds, size)
+    )
     type TerminalOrigin = {
       readonly source: 'primary' | 'shadow'
       readonly removedPieceIds: ReadonlyArray<PieceId>
@@ -1586,7 +1596,10 @@ export function runIntrinsicPeelReinsertObserver(input: {
         const pieceId = placedPieceId(placed)
         return pieceId === undefined || !removedIds.has(pieceId)
       })
-      for (const orderIds of permutations(subset)) {
+      const reinsertionOrders = distinctGeometryClassOrdersOnly
+        ? distinctGeometryClassPermutations(subset, preparedById)
+        : permutations(subset)
+      for (const orderIds of reinsertionOrders) {
         reinsertionOrderCount += 1
         const order = orderIds.flatMap((pieceId) => {
           const piece = preparedById.get(pieceId)
@@ -2103,6 +2116,25 @@ export function runIntrinsicPeelReinsertObserver(input: {
       improvesCommonArchive(metrics)
     )
     const improvingEndpointCount = improvingEndpoints.length
+    const commonArchiveNonDominated = (metrics: IntrinsicStrictCompletedMetrics) =>
+      !intrinsicStrictCompletedLayoutDominates(input.seedMetrics, metrics)
+    const improvesCohesion = (metrics: IntrinsicStrictCompletedMetrics) =>
+      metrics.isolatedPieceCount < input.seedMetrics.isolatedPieceCount ||
+      metrics.largestPositiveContactComponentSize >
+        input.seedMetrics.largestPositiveContactComponentSize ||
+      metrics.dominantStructuralContacts > input.seedMetrics.dominantStructuralContacts
+    const passesTopologyGuard = (metrics: IntrinsicStrictCompletedMetrics) =>
+      metrics.enclosedCavityCount <= input.seedMetrics.enclosedCavityCount &&
+      metrics.totalEnclosedCavityAreaMm2 <= input.seedMetrics.totalEnclosedCavityAreaMm2 &&
+      metrics.largestOccupiedHullGapRatio <= input.seedMetrics.largestOccupiedHullGapRatio &&
+      metrics.occupiedHullWasteRatio <= input.seedMetrics.occupiedHullWasteRatio
+    const qualifiesCohesiveGate = (metrics: IntrinsicStrictCompletedMetrics) =>
+      commonArchiveNonDominated(metrics) &&
+      improvesCohesion(metrics) &&
+      passesTopologyGuard(metrics)
+    const qualifyingCohesiveEndpointCount = completeEndpoints.filter(({ metrics }) =>
+      qualifiesCohesiveGate(metrics)
+    ).length
     const rankedEndpointMetrics = rankIntrinsicStrictCompletedLayouts(
       completeEndpoints.map(({ metrics }) => metrics)
     )
@@ -2128,7 +2160,11 @@ export function runIntrinsicPeelReinsertObserver(input: {
               canonicalGeometryHash: endpoint.canonicalGeometryHash,
               metrics: endpoint.metrics,
               source: endpoint.source,
-              strictGeometricArchiveImprovement: improvesCommonArchive(endpoint.metrics)
+              strictGeometricArchiveImprovement: improvesCommonArchive(endpoint.metrics),
+              commonArchiveNonDominated: commonArchiveNonDominated(endpoint.metrics),
+              improvesCohesion: improvesCohesion(endpoint.metrics),
+              passesTopologyGuard: passesTopologyGuard(endpoint.metrics),
+              qualifiesCohesiveGate: qualifiesCohesiveGate(endpoint.metrics)
             }
           ]
     })
@@ -2188,23 +2224,11 @@ export function runIntrinsicPeelReinsertObserver(input: {
       const candidate = shadowTraceByWitness.get(pair.candidateWitnessDigest)
       const candidateMetrics = candidate?.bestFinalizedEndpointMetrics
       const candidateCommonArchiveNonDominated =
-        candidateMetrics !== undefined &&
-        !intrinsicStrictCompletedLayoutDominates(input.seedMetrics, candidateMetrics)
+        candidateMetrics !== undefined && commonArchiveNonDominated(candidateMetrics)
       const candidateImprovesCohesion =
-        candidateMetrics !== undefined &&
-        (candidateMetrics.isolatedPieceCount < input.seedMetrics.isolatedPieceCount ||
-          candidateMetrics.largestPositiveContactComponentSize >
-            input.seedMetrics.largestPositiveContactComponentSize ||
-          candidateMetrics.dominantStructuralContacts >
-            input.seedMetrics.dominantStructuralContacts)
+        candidateMetrics !== undefined && improvesCohesion(candidateMetrics)
       const candidatePassesTopologyGuard =
-        candidateMetrics !== undefined &&
-        candidateMetrics.enclosedCavityCount <= input.seedMetrics.enclosedCavityCount &&
-        candidateMetrics.totalEnclosedCavityAreaMm2 <=
-          input.seedMetrics.totalEnclosedCavityAreaMm2 &&
-        candidateMetrics.largestOccupiedHullGapRatio <=
-          input.seedMetrics.largestOccupiedHullGapRatio &&
-        candidateMetrics.occupiedHullWasteRatio <= input.seedMetrics.occupiedHullWasteRatio
+        candidateMetrics !== undefined && passesTopologyGuard(candidateMetrics)
       return {
         ...pair,
         siblingBestTerminalWitness: sibling?.bestTerminalWitness,
@@ -2230,6 +2254,8 @@ export function runIntrinsicPeelReinsertObserver(input: {
       runtimeMs: Math.max(0, performance.now() - startedAt),
       topContributorPieceIds,
       topContributors,
+      subsetSizes,
+      distinctGeometryClassOrdersOnly,
       subsetCount: subsets.length,
       reinsertionOrderCount,
       generatedCompleteSuccessorCount:
@@ -2243,6 +2269,7 @@ export function runIntrinsicPeelReinsertObserver(input: {
       finalizedEndpointCount,
       uniqueEndpointCount: completeEndpoints.length,
       improvingEndpointCount,
+      qualifyingCohesiveEndpointCount,
       orderTraces,
       boundedEndpointWitnesses,
       shadowCompletion: {
@@ -2337,6 +2364,27 @@ function permutations<T>(values: ReadonlyArray<T>): ReadonlyArray<ReadonlyArray<
     for (const suffix of permutations(tail)) result.push([head, ...suffix])
   }
   return result
+}
+
+function distinctGeometryClassPermutations(
+  pieceIds: ReadonlyArray<PieceId>,
+  preparedById: ReadonlyMap<PieceId, IrregularPreparedPiece>
+): ReadonlyArray<ReadonlyArray<PieceId>> {
+  const representatives = new Map<string, ReadonlyArray<PieceId>>()
+  for (const order of permutations(pieceIds)) {
+    const preparedOrder = order.flatMap((pieceId) => {
+      const piece = preparedById.get(pieceId)
+      return piece === undefined ? [] : [piece]
+    })
+    if (preparedOrder.length !== order.length) continue
+    const geometryClassOrderKey = preparedOrder
+      .map(intrinsicPreparedPieceClassKey)
+      .join('\u0000')
+    if (!representatives.has(geometryClassOrderKey)) {
+      representatives.set(geometryClassOrderKey, order)
+    }
+  }
+  return [...representatives.values()]
 }
 
 function deduplicatePartialEntries(

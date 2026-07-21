@@ -382,6 +382,64 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(seed.winner.placedCollisionGeometries).toEqual(seedPlacements)
   })
 
+  it('deduplicates a four-piece reconstruction by geometry-class order', async () => {
+    const pieces = ['first', 'second', 'third', 'fourth'].map((id) =>
+      preparedPiece(id, rectanglePoints(1, 1), [transform(0, 0)])
+    )
+    const finalSheet = sheet(20, 10)
+    const seed = await Effect.runPromise(
+      runIntrinsicPartialGeometricBeam({
+        orderedPreparedPieces: pieces,
+        finalSheet,
+        experimentalWidth: 3,
+        maximumRuntimeMs: 10_000,
+        maximumEvaluations: 20_000
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+    expect(seed.winner).toBeDefined()
+    if (seed.winner === undefined) throw new Error('expected a completed four-piece seed')
+
+    const observer = await Effect.runPromise(
+      runIntrinsicPeelReinsertObserver({
+        orderedPreparedPieces: pieces,
+        finalSheet,
+        seedPlacedCollisionGeometries: seed.winner.placedCollisionGeometries,
+        seedMetrics: seed.winner.metrics,
+        maximumRuntimeMs: 10_000,
+        maximumEvaluations: 20_000,
+        subsetSizes: [4],
+        distinctGeometryClassOrdersOnly: true
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+
+    expect(observer.status).toBe('completed')
+    expect(observer.subsetSizes).toEqual([4])
+    expect(observer.distinctGeometryClassOrdersOnly).toBe(true)
+    expect(observer.subsetCount).toBe(1)
+    expect(observer.reinsertionOrderCount).toBe(1)
+    expect(observer.orderTraces).toHaveLength(1)
+    expect(observer.orderTraces[0]?.completedStepCount).toBe(4)
+    expect(observer.generatedCompleteSuccessorCount).toBeGreaterThan(0)
+    expect(observer.qualifyingCohesiveEndpointCount).toBeGreaterThanOrEqual(0)
+    expect(
+      observer.boundedEndpointWitnesses.every(
+        (witness) =>
+          witness.qualifiesCohesiveGate ===
+          (witness.commonArchiveNonDominated &&
+            witness.improvesCohesion &&
+            witness.passesTopologyGuard)
+      )
+    ).toBe(true)
+  })
+
   it('keeps the width-zero control identical to the strict decoder at every depth', async () => {
     const pieces = [
       preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),

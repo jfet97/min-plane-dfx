@@ -86,6 +86,9 @@ async function main(): Promise<void> {
   const partialBeamEnabled = partialBeamWidthArgument !== undefined
   const partialBeamOnly = process.argv.includes('--partial-beam-only')
   const peelReinsertObserver = process.argv.includes('--peel-reinsert-observer')
+  const fourContributorReconstruction = process.argv.includes(
+    '--four-contributor-reconstruction'
+  )
   const structuredLineagePath = argument('--structured-lineage')
   const lineageCalibrationOnly = process.argv.includes('--lineage-calibration-only')
   const firstMissAuditOnly = process.argv.includes('--first-miss-audit-only')
@@ -94,6 +97,9 @@ async function main(): Promise<void> {
   }
   if (peelReinsertObserver && !partialBeamOnly) {
     throw new Error('--peel-reinsert-observer requires --partial-beam-only')
+  }
+  if (fourContributorReconstruction && !peelReinsertObserver) {
+    throw new Error('--four-contributor-reconstruction requires --peel-reinsert-observer')
   }
   if ((lineageCalibrationOnly || firstMissAuditOnly) && structuredLineagePath === undefined) {
     throw new Error('lineage calibration/audit requires --structured-lineage')
@@ -170,6 +176,7 @@ async function main(): Promise<void> {
         compact ? 25_000 : 100_000
       ),
       peelReinsertObserver,
+      fourContributorReconstruction,
       peelMaximumRuntimeMs: positiveIntegerArgument('--peel-runtime-ms', 120_000),
       peelMaximumEvaluations: positiveIntegerArgument('--peel-evaluations', 100_000)
     })
@@ -488,6 +495,7 @@ async function runPartialBeamOnly(input: {
   readonly maximumRuntimeMs: number
   readonly maximumEvaluations: number
   readonly peelReinsertObserver: boolean
+  readonly fourContributorReconstruction: boolean
   readonly peelMaximumRuntimeMs: number
   readonly peelMaximumEvaluations: number
 }): Promise<void> {
@@ -531,7 +539,13 @@ async function runPartialBeamOnly(input: {
               seedPlacedCollisionGeometries: result.winner.placedCollisionGeometries,
               seedMetrics: result.winner.metrics,
               maximumRuntimeMs: input.peelMaximumRuntimeMs,
-              maximumEvaluations: input.peelMaximumEvaluations
+              maximumEvaluations: input.peelMaximumEvaluations,
+              ...(input.fourContributorReconstruction
+                ? {
+                    subsetSizes: [4] as const,
+                    distinctGeometryClassOrdersOnly: true
+                  }
+                : {})
             }),
             input.fixture.settings
           )
@@ -588,7 +602,8 @@ async function runPartialBeamOnly(input: {
           maximumEvaluations: input.peelMaximumEvaluations,
           retainedWidth: 4,
           maximumContributorCount: 4,
-          subsetSizes: [2, 3]
+          subsetSizes: input.fourContributorReconstruction ? [4] : [2, 3],
+          distinctGeometryClassOrdersOnly: input.fourContributorReconstruction
         }
       : undefined,
     serviceOwnership: 'cold-per-beam-run',
