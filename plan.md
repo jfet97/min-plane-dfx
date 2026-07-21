@@ -1665,6 +1665,42 @@ quality promotion nor a negative result about periodic construction. Immutable
 reports, manifests, SVGs, and PNGs are under
 `/private/tmp/min-plane-provenance/v7-shared-basis-9da94e2/`.
 
+#### Raw periodic source-survival falsifier (2026-07-21)
+
+Sol's reviewed F1 was correct: the earlier source filter ran after the bounded
+cell frontier, so it could not distinguish a missing common motif from a
+retention loss. Commits `3110a56`, `c615ff9`, `752407d`, and `71204b8` add an
+observer-only source-to-crop trace. It records raw provenance-backed cells,
+their survival through the P1/P2 frontier, every direct-valid finite crop, the
+crop frontier, the unique seed/continuation counts, and the complete raw crop
+Pareto witnesses. It changes no cell rank, continuation rank, decoder, archive,
+or live result.
+
+The Triangle audit at `71204b8` is decisive for the current bounded P1/P2
+source set. All eight transformed triangle geometries and all 28 transform
+pairs were covered. It generated 2,963 raw cells and 4,627 direct-valid finite
+crops; the bounded cell frontier retained 294 cells and its crop fronts retained
+303 entries. The unbounded raw crop Pareto set has only ten entries. The
+`74,428.143126 mm2` zero-cavity lattice is one of them. Every more connected
+raw witness remains fragmented: the best has nine positive-contact components,
+while the first zero-isolate NFP-boundary witness has ten components and a
+`133,622.99898 mm2` envelope. Therefore no compact, exact-contact lattice is
+being hidden by the cell/crop cap in this complete Triangle transform/pair
+domain. This falsifies the current axis-union plus arbitrary NFP-boundary-vertex
+P1/P2 source as a Triangle golden generator; it does not reject the compact
+74k seed or change its contact semantics.
+
+The next constructive source must be stronger, not broader: form a shared
+periodic basis from two explicit, phase-compatible **edge-to-edge contact
+relations** between transformed family members. Current NFP-boundary vertices
+are only legal displacement endpoints and can form sparse chains; the next
+source must retain the matched boundary segments, the two member transforms,
+and the two common contact vectors that close a base motif. It remains generic,
+bounded by the existing family/transform/pair budgets, direct-validated, and
+sheet-free. It must first rerun Triangle and homogeneous controls before another
+Mixed budget. Do not change beam width, queue scheduling, contact definitions,
+or terminal scoring as a response to this result.
+
 ### Local research documents
 
 - [`help/research/open-source-nesting-strategies.md`](help/research/open-source-nesting-strategies.md): pinned Deepnest, SVGnest, libnest2d, PackingSolver, and Sparrow control pass, plus the Dalsoo addition.
@@ -1704,11 +1740,11 @@ reports, manifests, SVGs, and PNGs are under
 
 ## Immediate Next Action
 
-Review the shared-basis checkpoint before changing the periodic source. The
-decision must distinguish a true NFP-derived, common-basis representability
-limit from a retained-source/crop ranking loss. Any follow-up may propose only
-uniform bases backed by actual NFP provenance; it may not independently move
-members, weaken canonical contact, or change the live beam, contact comparator,
-static squeeze controller, or NFP legality machinery. Re-run Triangle and the
-two homogeneous controls before spending another Mixed-61 fixture budget; a
-cap-truncated catalog remains explicitly inconclusive.
+Implement the bounded two-edge-contact periodic source specified above. The
+observer has ruled out a cell/crop-retention explanation for the current P1/P2
+domain on Triangle; do not widen it or add arbitrary endpoint sampling. Require
+segment-level NFP provenance, uniform shared basis translations, direct/canonical
+legality, source-to-crop survival traces, and Triangle plus homogeneous controls
+before another Mixed-61 fixture budget. Do not independently move members,
+weaken canonical contact, or change the live beam, contact comparator, static
+squeeze controller, or NFP legality machinery.

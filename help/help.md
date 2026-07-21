@@ -316,6 +316,21 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   leaving family and continuation coverage incomplete. It is neither a
   promotion nor a periodic negative. Immutable source-commit `9da94e2`
   evidence is in `/private/tmp/min-plane-provenance/v7-shared-basis-9da94e2/`.
+- Sol's approved source-survival review found that the prior source filter was
+  too late to prove a representability limit. Commits `3110a56`, `c615ff9`,
+  `752407d`, and `71204b8` add an observer-only raw-cell and finite-crop audit;
+  it does not alter periodic admission, continuation selection, or archive
+  comparison. Triangle covers all 8 transforms and 28 pairs, generating 2,963
+  raw cells and 4,627 direct-valid crops before the 294-cell / 303-crop bounded
+  fronts. The full raw crop Pareto set has ten layouts: the compact 74,428
+  lattice is present, but every more connected witness remains fragmented (at
+  least 9 components), while zero-isolate NFP-vertex layouts are much larger.
+  Thus current axis-union plus arbitrary NFP-boundary-vertex P1/P2 sources do
+  not hide a compact exact-contact Triangle lattice behind retention. Preserve
+  the useful compact seed; next add a bounded, generic source based on two
+  phase-compatible real edge-to-edge NFP contacts, not a wider frontier,
+  endpoint sampling, or a contact-definition change. Immutable evidence is
+  `/private/tmp/min-plane-provenance/v7-source-survival-pareto-71204b8/`.
 
 ### 2026-07-20 (Dalsoo source-control addition)
 
