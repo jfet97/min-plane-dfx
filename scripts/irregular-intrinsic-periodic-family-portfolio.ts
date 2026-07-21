@@ -138,8 +138,8 @@ const report = {
     families: 8,
     transformsPerFamily: 16,
     pairsPerFamily: 120,
-    cellsPerFamilyRole: 4,
-    cropsPerCell: 2,
+    cellsPerFamilyRole: 16,
+    cropsPerCell: 4,
     continuations: 8,
     continuationMs: 25_000,
     fixtureMs: 240_000

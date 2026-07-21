@@ -493,11 +493,13 @@ function periodicCellDominates(first: IntrinsicPeriodicCell, second: IntrinsicPe
   const firstDensity = BigInt(first.memberDoubledAreaGrid2) * BigInt(second.determinantGrid2)
   const secondDensity = BigInt(second.memberDoubledAreaGrid2) * BigInt(first.determinantGrid2)
   const noWorse =
+    finiteCropDiagnosticPriority(first) <= finiteCropDiagnosticPriority(second) &&
     firstDensity >= secondDensity &&
     first.envelopeMaximumSideMm <= second.envelopeMaximumSideMm &&
     first.hullWasteRatio <= second.hullWasteRatio &&
     first.sharedBoundaryLengthMm >= second.sharedBoundaryLengthMm
   const strict =
+    finiteCropDiagnosticPriority(first) < finiteCropDiagnosticPriority(second) ||
     firstDensity > secondDensity ||
     first.envelopeMaximumSideMm < second.envelopeMaximumSideMm ||
     first.hullWasteRatio < second.hullWasteRatio ||
@@ -1535,12 +1537,19 @@ function compareCells(first: IntrinsicPeriodicCell, second: IntrinsicPeriodicCel
     BigInt(first.memberDoubledAreaGrid2) * BigInt(second.determinantGrid2)
   )
   return (
+    finiteCropDiagnosticPriority(first) - finiteCropDiagnosticPriority(second) ||
     densityOrder ||
     first.envelopeMaximumSideMm - second.envelopeMaximumSideMm ||
     first.hullWasteRatio - second.hullWasteRatio ||
     second.sharedBoundaryLengthMm - first.sharedBoundaryLengthMm ||
     first.canonicalKey.localeCompare(second.canonicalKey)
   )
+}
+
+function finiteCropDiagnosticPriority(cell: IntrinsicPeriodicCell): number {
+  if (cell.threeByThreeLatticeLegal && cell.threeByThreeCentreContactComplete) return 0
+  if (cell.threeByThreeLatticeLegal) return 1
+  return 2
 }
 
 /** Exact-density periodic-cell archive order. */

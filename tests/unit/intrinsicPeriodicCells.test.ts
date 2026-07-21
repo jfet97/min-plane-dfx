@@ -400,6 +400,20 @@ describe('intrinsic periodic cells', () => {
     expect(
       rankIntrinsicPeriodicCells([lower, higher]).map(({ canonicalKey }) => canonicalKey)
     ).toEqual(['higher', 'lower'])
+    const certifiedFiniteSource = { ...cell, canonicalKey: 'certified-finite-source' }
+    const unverifiedFiniteSource = {
+      ...cell,
+      determinantGrid2: '1000000',
+      memberDoubledAreaGrid2: '4000000',
+      threeByThreeLatticeLegal: false,
+      threeByThreeCentreContactComplete: false,
+      canonicalKey: 'unverified-finite-source'
+    }
+    expect(
+      rankIntrinsicPeriodicCells([unverifiedFiniteSource, certifiedFiniteSource]).map(
+        ({ canonicalKey }) => canonicalKey
+      )
+    ).toEqual(['certified-finite-source', 'unverified-finite-source'])
     if (seed !== undefined) {
       const topologicallyWeak = {
         ...seed,

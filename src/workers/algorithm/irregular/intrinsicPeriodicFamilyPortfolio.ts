@@ -93,7 +93,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       maximumFamilyCount: 8,
       maximumTransformsPerFamily: 16,
       maximumPairsPerFamily: 120,
-      maximumCellsPerFamilyRole: 4
+      maximumCellsPerFamilyRole: 16
     })
     const selected = yield* selectIntrinsicPeriodicContinuations(
       catalog,
@@ -195,7 +195,7 @@ function selectIntrinsicPeriodicContinuations(
       if (members === undefined) continue
       const continuations: IntrinsicPeriodicContinuation[] = []
       for (const cell of family.cells) {
-        const crops = yield* expandIntrinsicPeriodicCell(cell, members, 2)
+        const crops = yield* expandIntrinsicPeriodicCell(cell, members, 4)
         for (const [cropIndex, seed] of crops.entries()) {
           const sourceId = `${family.familyKey}:${cell.role}:${cell.canonicalKey}:${cropIndex}`
           if (seed.placements.length < 4) {
