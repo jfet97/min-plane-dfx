@@ -41,14 +41,15 @@ Therefore:
    completed 24 equal-work candidate/sibling comparisons with zero passes. All
    contact-improving candidates survived legally but remained geometrically
    dominated and topologically fragmented;
-7. **next, final legal gate:** run one complete exact reconstruction of the
+7. **completed:** one complete exact reconstruction of the
    deterministic top-four contributor set, retaining one representative per
    distinct geometry-class order and the first four globally deduplicated
-   eviction shadows at every nonterminal step;
-8. **then, co-primary:** if that legal cell completes with zero qualifying
-   endpoints, start the bounded coordinated multi-piece transport pilot defined
-   in Conditional Stage 5 and profile/run the bounded Mixed commensurate-only
-   cost pilot. No live selector change is authorized by the Triangle evidence.
+   eviction shadows at every nonterminal step, produced zero endpoints that
+   jointly improve the exact archive, cohesion, and topology;
+8. **next, co-primary:** start the bounded coordinated multi-piece transport
+   pilot defined in Conditional Stage 5 and profile/run the bounded Mixed
+   commensurate-only cost pilot. No live selector change is authorized by the
+   Triangle evidence.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -410,6 +411,20 @@ candidate, retention, and horizon mechanisms—not literal competitive survival
 of those candidates. One final four-contributor legal reconstruction cell is a
 conservative gate before temporarily infeasible movement; a complete zero-pass
 result authorizes Stage 5 immediately.
+
+The final four-contributor cell at commit `2567e8a` completed without
+truncation in `34,148.001 ms` and `28,231` evaluations. Because all Triangle
+pieces share one geometry class, it evaluated one representative order. It
+completed all four placement depths, all 21 globally deduplicated eviction
+shadows, generated `17,757` complete successors, assessed `11,849` terminal
+states, and finalized seven exact endpoints. The only strict geometric
+improvement was the already observed `88,124.026123 mm2` endpoint with the same
+11 isolates, 15 components, largest component three, and five contacts. The
+only cohesion-improving endpoint was the already observed `97,686.123682 mm2`
+tradeoff with nine isolates and six contacts—`10.85%` larger than the
+`88,124.330 mm2` seed. Therefore the strict cohesive gate passed zero endpoints.
+Bounded legal reconstruction is now exhausted for this hypothesis, so the
+temporarily infeasible coordinated Stage 5 pilot is authorized.
 
 ## What The Completed Proofs Rule Out
 
@@ -1431,27 +1446,20 @@ and admits only Clipper2-legal endpoints to the common archive.
   `/private/tmp/min-plane-provenance/v7-allocation-d389195-triangle/`
 - Completed compact-closure horizon and equal-work pair traces:
   `/private/tmp/min-plane-provenance/v7-compact-closure-e22f2fe-triangle/`
+- Completed four-contributor legal reconstruction gate:
+  `/private/tmp/min-plane-provenance/v7-four-contributor-2567e8a-triangle/`
 
 ## Immediate Next Action
 
-Run the final legal gate, then two independent bounded workstreams:
+Run two independent bounded workstreams:
 
-1. remove the deterministic top-four Triangle contributors, enumerate one
-   representative per distinct geometry-class order, retain width four plus the
-   first four globally deduplicated eviction shadows at every nonterminal step,
-   and finalize every terminal successor under the exact common archive. The
-   run must complete without truncation. A pass requires one endpoint that is
-   strictly better under the common geometric archive, improves cohesion, and
-   does not regress cavities, hull gap, or hull waste; a merely non-dominated
-   but larger cohesion tradeoff is diagnostic only. A zero-pass result closes
-   bounded legal reconstruction and immediately authorizes item 2;
-2. implement the first bounded traceable Conditional Stage 5 pilot: start from
+1. implement the first bounded traceable Conditional Stage 5 pilot: start from
    the exact legal Triangle incumbent, contract an intrinsic target envelope,
    preserve the best legal incumbent, allow a separately bounded temporarily
    infeasible pool, move conflict-connected pieces as a coordinated component,
    separate conflicts, and admit only canonical Clipper2-legal endpoints to the
    common exact archive;
-3. profile the existing Mixed commensurate discovery and symmetric two-order
+2. profile the existing Mixed commensurate discovery and symmetric two-order
    completion path, then run the bounded cold cost pilot. Reuse the selected
    alternate discovery enumeration, skip unrelated continuations, and record
    discovery, canonical-admission, topology, and completion costs separately.
@@ -1460,8 +1468,8 @@ The corrected Triangle observer is positive delayed-value mechanism evidence,
 not a production-width calibration or a cohesion improvement. The completed
 four-cell audit makes width-three role allocation secondary and rejects raw
 maximum-contact retention. The completed compact-closure horizon also rejects
-the cheapest conditioned legal lookahead. Coordinated movement is eligible as
-an isolated observer/pilot once the final four-contributor legal cell completes
-with zero passes; it is not production selection. No live fixed-width cap,
-contact-role change, or stagnation kick is authorized. The Mixed cost pilot
-remains independent and may proceed concurrently.
+the cheapest conditioned legal lookahead. The completed four-contributor cell
+also found zero strict cohesive improvements, so coordinated movement is now
+authorized as an isolated observer/pilot; it is not production selection. No
+live fixed-width cap, contact-role change, or stagnation kick is authorized. The
+Mixed cost pilot remains independent and may proceed concurrently.
