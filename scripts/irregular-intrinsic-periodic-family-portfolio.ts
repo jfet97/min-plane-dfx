@@ -79,6 +79,7 @@ const maximumCellsPerFamilyRole = positiveIntegerArgument('--cells-per-role', 16
 const maximumCropsPerCell = positiveIntegerArgument('--crops-per-cell', 4)
 const maximumContinuationCount = positiveIntegerArgument('--continuations', 8)
 const basisSourceKey = argument('--basis-source-key')
+const captureSourceSurvivalAudit = process.argv.includes('--source-survival-audit')
 await mkdir(outputDirectory, { recursive: true })
 
 const fixture = await loadFixture(fixtureName)
@@ -91,6 +92,7 @@ const result = await Effect.runPromise(
       maximumCellsPerFamilyRole,
       maximumCropsPerCell,
       maximumContinuationCount,
+      captureSourceSurvivalAudit,
       ...(basisSourceKey === undefined ? {} : { basisSourceKey })
     }),
     settings
@@ -177,6 +179,7 @@ const report = {
     cropsPerCell: maximumCropsPerCell,
     continuations: maximumContinuationCount,
     basisSourceKey,
+    sourceSurvivalAudit: captureSourceSurvivalAudit,
     continuationMs: 25_000,
     fixtureMs: 240_000
   },

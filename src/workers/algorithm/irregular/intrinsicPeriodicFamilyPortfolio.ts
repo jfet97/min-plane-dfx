@@ -57,6 +57,7 @@ export interface IntrinsicPeriodicSourceCropSurvival {
   readonly sourceKey: string
   readonly sourceKind: IntrinsicPeriodicBasisProvenance['sourceKind']
   readonly retainedCellCount: number
+  readonly directValidCropCountBeforeFront: number
   readonly directValidCropCount: number
   readonly cropFrontCount: number
   readonly uniqueSeedCount: number
@@ -84,6 +85,8 @@ export interface IntrinsicPeriodicFamilyPortfolioOptions {
   readonly maximumTotalRuntimeMs?: number
   /** Restricts an experiment to one rational NFP-derived shared-basis source. */
   readonly basisSourceKey?: string
+  /** Enables a bounded observer over raw source cells without changing continuations. */
+  readonly captureSourceSurvivalAudit?: boolean
 }
 
 type PortfolioError =
@@ -115,14 +118,16 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       maximumFamilyCount: 8,
       maximumTransformsPerFamily: 16,
       maximumPairsPerFamily: 120,
-      maximumCellsPerFamilyRole
+      maximumCellsPerFamilyRole,
+      captureSourceSurvivalAudit: options.captureSourceSurvivalAudit ?? false
     })
     const selected = yield* selectIntrinsicPeriodicContinuations(
       catalog,
       pieces,
       maximumContinuationCount,
       maximumCropsPerCell,
-      options.basisSourceKey
+      options.basisSourceKey,
+      options.captureSourceSurvivalAudit ?? false
     )
     const runs: IntrinsicPeriodicContinuationResult[] = []
     for (const continuation of selected.continuations) {
@@ -201,7 +206,8 @@ function selectIntrinsicPeriodicContinuations(
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   maximumContinuationCount: number,
   maximumCropsPerCell: number,
-  basisSourceKey: string | undefined
+  basisSourceKey: string | undefined,
+  captureSourceSurvivalAudit: boolean
 ): Effect.Effect<
   {
     readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
@@ -220,8 +226,17 @@ function selectIntrinsicPeriodicContinuations(
     const omissions: IntrinsicPeriodicContinuationOmission[] = []
     const sourceCropSurvival = new Map<
       string,
-      Omit<IntrinsicPeriodicSourceCropSurvival, 'retainedCellCount' | 'directValidCropCount' | 'cropFrontCount' | 'uniqueSeedCount' | 'selectedContinuationCount'> & {
+      Omit<
+        IntrinsicPeriodicSourceCropSurvival,
+        | 'retainedCellCount'
+        | 'directValidCropCountBeforeFront'
+        | 'directValidCropCount'
+        | 'cropFrontCount'
+        | 'uniqueSeedCount'
+        | 'selectedContinuationCount'
+      > & {
         retainedCellCount: number
+        directValidCropCountBeforeFront: number
         directValidCropCount: number
         cropFrontCount: number
         uniqueSeedCount: number
@@ -237,6 +252,7 @@ function selectIntrinsicPeriodicContinuations(
         sourceKey: provenance.sourceKey,
         sourceKind: provenance.sourceKind,
         retainedCellCount: 0,
+        directValidCropCountBeforeFront: 0,
         directValidCropCount: 0,
         cropFrontCount: 0,
         uniqueSeedCount: 0,
@@ -249,11 +265,23 @@ function selectIntrinsicPeriodicContinuations(
       const members = familyMembers.get(family.familyKey)
       if (members === undefined) continue
       const continuations: IntrinsicPeriodicContinuation[] = []
+      const directValidCropsByCell = new Map<string, ReadonlyArray<IntrinsicPeriodicSeed>>()
+      if (captureSourceSurvivalAudit) {
+        for (const cell of family.sourceAuditCells ?? family.cells) {
+          if (basisSourceKey !== undefined && cell.basisProvenance?.sourceKey !== basisSourceKey) continue
+          const audit = sourceAudit(cell)
+          const directValidCrops = yield* enumerateIntrinsicPeriodicCellCrops(cell, members)
+          if (audit !== undefined) audit.directValidCropCountBeforeFront += directValidCrops.length
+          directValidCropsByCell.set(periodicSourceCellKey(cell), directValidCrops)
+        }
+      }
       for (const cell of family.cells) {
         if (basisSourceKey !== undefined && cell.basisProvenance?.sourceKey !== basisSourceKey) continue
         const audit = sourceAudit(cell)
         if (audit !== undefined) audit.retainedCellCount += 1
-        const directValidCrops = yield* enumerateIntrinsicPeriodicCellCrops(cell, members)
+        const directValidCrops =
+          directValidCropsByCell.get(periodicSourceCellKey(cell)) ??
+          (yield* enumerateIntrinsicPeriodicCellCrops(cell, members))
         const crops = selectIntrinsicPeriodicSeedFront(directValidCrops, maximumCropsPerCell)
         if (audit !== undefined) {
           audit.directValidCropCount += directValidCrops.length
@@ -306,6 +334,10 @@ function selectIntrinsicPeriodicContinuations(
       )
     }
   })
+}
+
+function periodicSourceCellKey(cell: IntrinsicPeriodicCatalog['cells'][number]): string {
+  return `${cell.role}:${cell.basisProvenance?.sourceKey ?? 'unprovenanced'}:${cell.canonicalKey}`
 }
 
 function rankContinuations(

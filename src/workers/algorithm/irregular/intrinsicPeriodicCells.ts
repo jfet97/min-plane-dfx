@@ -122,6 +122,8 @@ export interface IntrinsicPeriodicCatalogOptions {
   readonly maximumTransformsPerFamily?: number
   readonly maximumPairsPerFamily?: number
   readonly maximumCellsPerFamilyRole?: number
+  /** Retains pre-front cells for an observer-only source-survival audit. */
+  readonly captureSourceSurvivalAudit?: boolean
 }
 
 export interface IntrinsicPeriodicTransformReservation {
@@ -156,6 +158,8 @@ export interface IntrinsicPeriodicFamilyCatalog {
   readonly cellCoverageComplete: boolean
   /** Records source survival through the bounded cell frontier without changing admission. */
   readonly sourceSurvival: ReadonlyArray<IntrinsicPeriodicSourceCellSurvival>
+  /** Retains bounded raw cells only for a separate observer; never used for live continuations. */
+  readonly sourceAuditCells?: ReadonlyArray<IntrinsicPeriodicCell>
   readonly cells: ReadonlyArray<IntrinsicPeriodicCell>
   readonly rejected: Readonly<Record<string, number>>
   readonly rejectedSamples: ReadonlyArray<IntrinsicPeriodicCellRejection>
@@ -286,6 +290,7 @@ interface ResolvedIntrinsicPeriodicCatalogOptions {
   readonly maximumTransformsPerFamily: number
   readonly maximumPairsPerFamily: number
   readonly maximumCellsPerFamilyRole: number
+  readonly captureSourceSurvivalAudit: boolean
 }
 
 function resolveCatalogOptions(
@@ -297,7 +302,8 @@ function resolveCatalogOptions(
     maximumFamilyCount: input.maximumFamilyCount ?? 8,
     maximumTransformsPerFamily: input.maximumTransformsPerFamily ?? 16,
     maximumPairsPerFamily: input.maximumPairsPerFamily ?? 120,
-    maximumCellsPerFamilyRole: input.maximumCellsPerFamilyRole ?? 4
+    maximumCellsPerFamilyRole: input.maximumCellsPerFamilyRole ?? 4,
+    captureSourceSurvivalAudit: input.captureSourceSurvivalAudit ?? false
   }
 }
 
@@ -429,6 +435,9 @@ function enumerateIntrinsicPeriodicFamily(input: {
     const p1Front = periodicCellFront(p1, input.options.maximumCellsPerFamilyRole)
     const p2Front = periodicCellFront(p2, input.options.maximumCellsPerFamilyRole)
     const cells = [...p1Front.cells, ...p2Front.cells]
+    const sourceAuditCells = input.options.captureSourceSurvivalAudit
+      ? rankIntrinsicPeriodicCells([...p1, ...p2])
+      : undefined
     if (!p1Front.coverageComplete) rejected.set('p1FrontierTruncated', 1)
     if (!p2Front.coverageComplete) rejected.set('p2FrontierTruncated', 1)
     return {
@@ -447,6 +456,7 @@ function enumerateIntrinsicPeriodicFamily(input: {
       cellCoverageComplete:
         runtimeCoverageComplete && pairCoverageComplete && p1Front.coverageComplete && p2Front.coverageComplete,
       sourceSurvival: summarizePeriodicCellSourceSurvival(p1, p1Front.cells, p2, p2Front.cells),
+      ...(sourceAuditCells === undefined ? {} : { sourceAuditCells }),
       cells: rankIntrinsicPeriodicCells(cells),
       rejected: Object.fromEntries([...rejected.entries()].toSorted()),
       rejectedSamples
