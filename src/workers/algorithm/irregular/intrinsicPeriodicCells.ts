@@ -52,9 +52,9 @@ export interface IntrinsicPeriodicVector {
 /** Records one rational NFP-union basis source and its single shared grid realization. */
 export interface IntrinsicPeriodicBasisProvenance {
   readonly sourceKey: string
-  readonly axis: 'x' | 'y'
-  readonly axisIntersection: IntrinsicPeriodicRationalPoint
-  readonly secondIntersection: IntrinsicPeriodicRationalPoint
+  readonly sourceKind: 'axis-union' | 'nfp-boundary-vertex-pair'
+  readonly sourcePoints: readonly [IntrinsicPeriodicRationalPoint, IntrinsicPeriodicRationalPoint]
+  readonly axis?: 'x' | 'y'
   readonly selectedBasis: readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]
   readonly selectedResidualGrid: readonly [IntrinsicPeriodicRationalPoint, IntrinsicPeriodicRationalPoint]
   readonly canonicalBasis: readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]
@@ -778,7 +778,8 @@ function deriveCells(input: {
     }
     const bases = [
       ...deriveAxisBasisCandidates(forbidden, false),
-      ...deriveAxisBasisCandidates(forbidden, true)
+      ...deriveAxisBasisCandidates(forbidden, true),
+      ...deriveNfpBoundaryVertexBasisCandidates(forbidden)
     ]
     const result: IntrinsicPeriodicCell[] = []
     const rejected = new Map<string, number>()
@@ -879,16 +880,19 @@ function appendRejectedSamples(
 }
 
 function makeBasisProvenance(
-  candidate: AxisBasisCandidate,
+  candidate: IntrinsicPeriodicBasisCandidate,
   canonical: readonly [GridPoint, GridPoint],
   members: ReadonlyArray<IntrinsicPeriodicBaseMember>
 ): IntrinsicPeriodicBasisProvenance {
   const [selectedFirst, selectedSecond] = candidate.basis
   return {
     sourceKey: candidate.sourceKey,
-    axis: candidate.axis,
-    axisIntersection: serializeRationalPoint(candidate.axisIntersection),
-    secondIntersection: serializeRationalPoint(candidate.secondIntersection),
+    sourceKind: candidate.sourceKind,
+    sourcePoints: [
+      serializeRationalPoint(candidate.sourcePoints[0]),
+      serializeRationalPoint(candidate.sourcePoints[1])
+    ],
+    ...(candidate.axis === undefined ? {} : { axis: candidate.axis }),
     selectedBasis: [fromGridPoint(selectedFirst), fromGridPoint(selectedSecond)],
     selectedResidualGrid: [
       serializeRationalPoint(candidate.selectedResidualGrid[0]),
@@ -912,19 +916,19 @@ function deriveAxisBasis(
   return deriveAxisBasisCandidates(boundaries, swapAxes)[0]?.basis
 }
 
-interface AxisBasisCandidate {
+interface IntrinsicPeriodicBasisCandidate {
   readonly basis: readonly [GridPoint, GridPoint]
   readonly sourceKey: string
-  readonly axis: 'x' | 'y'
-  readonly axisIntersection: RationalPoint
-  readonly secondIntersection: RationalPoint
+  readonly sourceKind: 'axis-union' | 'nfp-boundary-vertex-pair'
+  readonly sourcePoints: readonly [RationalPoint, RationalPoint]
+  readonly axis?: 'x' | 'y'
   readonly selectedResidualGrid: readonly [RationalPoint, RationalPoint]
 }
 
 function deriveAxisBasisCandidates(
   boundaries: ReadonlyArray<ForbiddenBoundary>,
   swapAxes: boolean
-): ReadonlyArray<AxisBasisCandidate> {
+): ReadonlyArray<IntrinsicPeriodicBasisCandidate> {
   const orientedRaw = boundaries.map(({ points, isHole }) => ({
     points: points.map((point) => (swapAxes ? { x: point.y, y: point.x } : point)),
     ...(isHole !== undefined ? { isHole } : {})
@@ -936,7 +940,7 @@ function deriveAxisBasisCandidates(
     .toSorted((first, second) => compareRational(first.x, second.x))[0]
   if (axisIntersection === undefined) return []
   const unswap = (point: GridPoint): GridPoint => (swapAxes ? { x: point.y, y: point.x } : point)
-  const result = new Map<string, AxisBasisCandidate>()
+  const result = new Map<string, IntrinsicPeriodicBasisCandidate>()
   for (const axisX of canonicalGridAlternatives(axisIntersection.x).filter((value) => value > 0n)) {
     const axis = { x: axisX, y: 0n }
     const shifted = unionForbiddenBoundaries([
@@ -982,15 +986,61 @@ function deriveAxisBasisCandidates(
         result.set(key, {
           basis,
           sourceKey,
+          sourceKind: 'axis-union',
+          sourcePoints: originalRational,
           axis: swapAxes ? 'y' : 'x',
-          axisIntersection: originalRational[0],
-          secondIntersection: originalRational[1],
           selectedResidualGrid: [
             subtractRationalPoints(selectedRational[0], originalRational[0]),
             subtractRationalPoints(selectedRational[1], originalRational[1])
           ]
         })
       }
+    }
+  }
+  return [...result.values()]
+}
+
+/** Derives a bounded shared basis from two exact vertices on the real ordered-NFP boundaries. */
+function deriveNfpBoundaryVertexBasisCandidates(
+  boundaries: ReadonlyArray<ForbiddenBoundary>,
+  maximumCandidates = 64
+): ReadonlyArray<IntrinsicPeriodicBasisCandidate> {
+  const vectors = [
+    ...new Map(
+      boundaries
+        .flatMap(({ points }) => points)
+        .filter(({ x, y }) => y > 0n || (y === 0n && x > 0n))
+        .map((point) => [`${point.x},${point.y}`, point])
+    ).values()
+  ].toSorted((first, second) => {
+    const firstLength = first.x * first.x + first.y * first.y
+    const secondLength = second.x * second.x + second.y * second.y
+    return compareBigInt(firstLength, secondLength) || compareGridPoints(first, second)
+  })
+  const result = new Map<string, IntrinsicPeriodicBasisCandidate>()
+  for (let firstIndex = 0; firstIndex < vectors.length; firstIndex += 1) {
+    const first = vectors[firstIndex]
+    if (first === undefined) continue
+    for (let secondIndex = firstIndex + 1; secondIndex < vectors.length; secondIndex += 1) {
+      const second = vectors[secondIndex]
+      if (second === undefined || crossGrid(first, second) === 0n) continue
+      const basis = [first, second] as const
+      const sourcePoints: readonly [RationalPoint, RationalPoint] = [
+        { x: rational(first.x), y: rational(first.y) },
+        { x: rational(second.x), y: rational(second.y) }
+      ]
+      const sourceKey = `nfp-edge:${rationalPointKey(sourcePoints[0])};${rationalPointKey(sourcePoints[1])}`
+      result.set(`${first.x},${first.y};${second.x},${second.y}`, {
+        basis,
+        sourceKey,
+        sourceKind: 'nfp-boundary-vertex-pair',
+        sourcePoints,
+        selectedResidualGrid: [
+          { x: rational(0n), y: rational(0n) },
+          { x: rational(0n), y: rational(0n) }
+        ]
+      })
+      if (result.size >= maximumCandidates) return [...result.values()]
     }
   }
   return [...result.values()]

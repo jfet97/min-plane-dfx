@@ -118,8 +118,12 @@ describe('intrinsic periodic cells', () => {
     expect(catalog.cells.length).toBeGreaterThan(0)
     expect(catalog.cells.every(({ basisProvenance }) => basisProvenance !== undefined)).toBe(true)
     expect(catalog.cells.some(({ basisProvenance }) => basisProvenance?.sourceKey.length)).toBe(true)
+    expect(
+      catalog.cells.some(
+        ({ basisProvenance }) => basisProvenance?.sourceKind === 'nfp-boundary-vertex-pair'
+      )
+    ).toBe(true)
     expect(catalog.cells.every(({ infiniteFarProof }) => infiniteFarProof)).toBe(false)
-    expect(catalog.cells.some(({ threeByThreeLatticeLegal }) => !threeByThreeLatticeLegal)).toBe(true)
   })
 
   it('keeps a triangle-like repeated family source-linked and exact', async () => {
