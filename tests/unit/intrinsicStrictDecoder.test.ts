@@ -433,7 +433,7 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       observer.boundedEndpointWitnesses.every(
         (witness) =>
           witness.qualifiesCohesiveGate ===
-          (witness.commonArchiveNonDominated &&
+          (witness.strictGeometricArchiveImprovement &&
             witness.improvesCohesion &&
             witness.passesTopologyGuard)
       )

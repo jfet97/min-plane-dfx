@@ -1440,8 +1440,11 @@ Run the final legal gate, then two independent bounded workstreams:
    representative per distinct geometry-class order, retain width four plus the
    first four globally deduplicated eviction shadows at every nonterminal step,
    and finalize every terminal successor under the exact common archive. The
-   run must complete without truncation. A zero-pass result closes bounded legal
-   reconstruction and immediately authorizes item 2;
+   run must complete without truncation. A pass requires one endpoint that is
+   strictly better under the common geometric archive, improves cohesion, and
+   does not regress cavities, hull gap, or hull waste; a merely non-dominated
+   but larger cohesion tradeoff is diagnostic only. A zero-pass result closes
+   bounded legal reconstruction and immediately authorizes item 2;
 2. implement the first bounded traceable Conditional Stage 5 pilot: start from
    the exact legal Triangle incumbent, contract an intrinsic target envelope,
    preserve the best legal incumbent, allow a separately bounded temporarily

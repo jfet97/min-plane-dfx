@@ -2129,7 +2129,7 @@ export function runIntrinsicPeelReinsertObserver(input: {
       metrics.largestOccupiedHullGapRatio <= input.seedMetrics.largestOccupiedHullGapRatio &&
       metrics.occupiedHullWasteRatio <= input.seedMetrics.occupiedHullWasteRatio
     const qualifiesCohesiveGate = (metrics: IntrinsicStrictCompletedMetrics) =>
-      commonArchiveNonDominated(metrics) &&
+      improvesCommonArchive(metrics) &&
       improvesCohesion(metrics) &&
       passesTopologyGuard(metrics)
     const qualifyingCohesiveEndpointCount = completeEndpoints.filter(({ metrics }) =>
