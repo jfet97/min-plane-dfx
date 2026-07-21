@@ -296,7 +296,8 @@ function enumerateIntrinsicPeriodicFamily(input: {
         nfp: input.nfp,
         settings: input.settings
       })
-      addDerived(p1, derived, 'noP1Basis')
+      addDerived(p1, derived.cells, 'noP1Basis')
+      mergeRejectedCounts(rejected, derived.rejected)
     }
 
     let enumeratedPairCount = 0
@@ -346,7 +347,8 @@ function enumerateIntrinsicPeriodicFamily(input: {
             nfp: input.nfp,
             settings: input.settings
           })
-          addDerived(p2, derived, 'noP2Basis')
+          addDerived(p2, derived.cells, 'noP2Basis')
+          mergeRejectedCounts(rejected, derived.rejected)
         }
       }
       if (!pairCoverageComplete) break
@@ -679,6 +681,11 @@ function placedBounds(placed: ReadonlyArray<IrregularPlacedPiece>):
     : { ...bounds, width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY }
 }
 
+interface IntrinsicPeriodicCellDerivation {
+  readonly cells: ReadonlyArray<IntrinsicPeriodicCell>
+  readonly rejected: Readonly<Record<string, number>>
+}
+
 function deriveCells(input: {
   readonly role: 'P1' | 'P2'
   readonly familyKey: string
@@ -686,7 +693,7 @@ function deriveCells(input: {
   readonly nfp: NfpIfpService
   readonly settings: IrregularNestingSettings
 }): Effect.Effect<
-  ReadonlyArray<IntrinsicPeriodicCell>,
+  IntrinsicPeriodicCellDerivation,
   IrregularNestingNotImplementedError | IrregularGeometryInputError
 > {
   return Effect.gen(function* () {
@@ -699,12 +706,14 @@ function deriveCells(input: {
           settings: input.settings.geometry
         })
         const movingGrid = gridPoint(movingMember.point)
-        if (movingGrid === undefined) return []
+        if (movingGrid === undefined) return { cells: [], rejected: { invalidMovingGrid: 1 } }
         const points = boundary.boundary.points
           .map(gridPoint)
           .filter((point): point is GridPoint => point !== undefined)
         const shiftedPoints = shiftOrderedPairForbiddenBoundary(points, movingGrid)
-        if (points.length !== boundary.boundary.points.length) return []
+        if (points.length !== boundary.boundary.points.length) {
+          return { cells: [], rejected: { invalidForbiddenGrid: 1 } }
+        }
         forbidden.push({ points: shiftedPoints })
       }
     }
@@ -713,18 +722,33 @@ function deriveCells(input: {
       ...deriveAxisBasisCandidates(forbidden, true)
     ]
     const result: IntrinsicPeriodicCell[] = []
+    const rejected = new Map<string, number>()
+    if (bases.length === 0) rejected.set('axisBasisUnavailable', 1)
     for (const [rawV1, rawV2] of bases) {
       const canonical = canonicalizeBasis(rawV1, rawV2)
-      if (canonical === undefined || !farNeighborCertificate(input.members, canonical)) continue
+      if (canonical === undefined) {
+        rejected.set('degenerateBasis', (rejected.get('degenerateBasis') ?? 0) + 1)
+        continue
+      }
+      if (!farNeighborCertificate(input.members, canonical)) {
+        rejected.set('farNeighborRejected', (rejected.get('farNeighborRejected') ?? 0) + 1)
+        continue
+      }
       const certificate = yield* validateLattice(input.members, canonical)
-      if (certificate === undefined) continue
+      if (certificate === undefined) {
+        rejected.set('threeByThreeLatticeRejected', (rejected.get('threeByThreeLatticeRejected') ?? 0) + 1)
+        continue
+      }
       const determinantGrid2 = absBigInt(crossGrid(canonical[0], canonical[1]))
       const memberDoubledAreaGrid2 = input.members.reduce(
         (sum, member) => sum + polygonAreaGrid2(member.geometry, member.point),
         0n
       )
       const shape = measureBaseCellShape(input.members)
-      if (shape === undefined) continue
+      if (shape === undefined) {
+        rejected.set('baseShapeRejected', (rejected.get('baseShapeRejected') ?? 0) + 1)
+        continue
+      }
       const canonicalKey = canonicalCellKey(input.role, input.members, canonical)
       result.push({
         role: input.role,
@@ -741,8 +765,17 @@ function deriveCells(input: {
         canonicalKey
       })
     }
-    return result
+    return { cells: result, rejected: Object.fromEntries([...rejected.entries()].toSorted()) }
   })
+}
+
+function mergeRejectedCounts(
+  target: Map<string, number>,
+  incoming: Readonly<Record<string, number>>
+): void {
+  for (const [reason, count] of Object.entries(incoming)) {
+    target.set(reason, (target.get(reason) ?? 0) + count)
+  }
 }
 
 function deriveAxisBasis(
