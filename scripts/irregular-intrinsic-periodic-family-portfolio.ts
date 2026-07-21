@@ -50,6 +50,14 @@ function argument(name: string): string | undefined {
   return index < 0 ? undefined : process.argv[index + 1]
 }
 
+function positiveIntegerArgument(name: string, fallback: number): number {
+  const value = argument(name)
+  if (value === undefined) return fallback
+  const parsed = Number(value)
+  if (!Number.isSafeInteger(parsed) || parsed < 1) throw new Error(`${name} must be a positive integer`)
+  return parsed
+}
+
 function requiredFixture(value: string | undefined): FixtureName {
   if (
     value === 'triangle-20' ||
@@ -67,6 +75,9 @@ const outputDirectory =
   argument('--output') ??
   `/private/tmp/min-plane-provenance/v7-periodic-family-portfolio/${fixtureName}`
 const sourceCommit = argument('--source-commit') ?? 'unknown'
+const maximumCellsPerFamilyRole = positiveIntegerArgument('--cells-per-role', 16)
+const maximumCropsPerCell = positiveIntegerArgument('--crops-per-cell', 4)
+const maximumContinuationCount = positiveIntegerArgument('--continuations', 8)
 await mkdir(outputDirectory, { recursive: true })
 
 const fixture = await loadFixture(fixtureName)
@@ -74,7 +85,14 @@ const settings = fixture.request.options.irregularSettings
 if (settings === undefined) throw new Error(`${fixtureName} has no irregular settings`)
 const preparedPieces = await Effect.runPromise(withLayers(preparePieces(fixture.request, settings), settings))
 const result = await Effect.runPromise(
-  withLayers(runIntrinsicPeriodicFamilyPortfolio(fixture.request.sheet, preparedPieces), settings)
+  withLayers(
+    runIntrinsicPeriodicFamilyPortfolio(fixture.request.sheet, preparedPieces, {
+      maximumCellsPerFamilyRole,
+      maximumCropsPerCell,
+      maximumContinuationCount
+    }),
+    settings
+  )
 )
 
 const artifactPaths: string[] = []
@@ -138,9 +156,9 @@ const report = {
     families: 8,
     transformsPerFamily: 16,
     pairsPerFamily: 120,
-    cellsPerFamilyRole: 16,
-    cropsPerCell: 4,
-    continuations: 8,
+    cellsPerFamilyRole: maximumCellsPerFamilyRole,
+    cropsPerCell: maximumCropsPerCell,
+    continuations: maximumContinuationCount,
     continuationMs: 25_000,
     fixtureMs: 240_000
   },

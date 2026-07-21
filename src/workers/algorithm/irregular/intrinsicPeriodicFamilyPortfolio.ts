@@ -61,6 +61,8 @@ export interface IntrinsicPeriodicFamilyPortfolioResult {
 
 export interface IntrinsicPeriodicFamilyPortfolioOptions {
   readonly maximumCatalogRuntimeMs?: number
+  readonly maximumCellsPerFamilyRole?: number
+  readonly maximumCropsPerCell?: number
   readonly maximumContinuationRuntimeMs?: number
   readonly maximumContinuationCount?: number
   readonly maximumTotalRuntimeMs?: number
@@ -85,6 +87,8 @@ export function runIntrinsicPeriodicFamilyPortfolio(
   return Effect.gen(function* () {
     const startedAt = performance.now()
     const maximumCatalogRuntimeMs = options.maximumCatalogRuntimeMs ?? 15_000
+    const maximumCellsPerFamilyRole = options.maximumCellsPerFamilyRole ?? 16
+    const maximumCropsPerCell = options.maximumCropsPerCell ?? 4
     const maximumContinuationRuntimeMs = options.maximumContinuationRuntimeMs ?? 25_000
     const maximumContinuationCount = options.maximumContinuationCount ?? 8
     const maximumTotalRuntimeMs = options.maximumTotalRuntimeMs ?? 240_000
@@ -93,12 +97,13 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       maximumFamilyCount: 8,
       maximumTransformsPerFamily: 16,
       maximumPairsPerFamily: 120,
-      maximumCellsPerFamilyRole: 16
+      maximumCellsPerFamilyRole
     })
     const selected = yield* selectIntrinsicPeriodicContinuations(
       catalog,
       pieces,
-      maximumContinuationCount
+      maximumContinuationCount,
+      maximumCropsPerCell
     )
     const runs: IntrinsicPeriodicContinuationResult[] = []
     for (const continuation of selected.continuations) {
@@ -174,7 +179,8 @@ export function runIntrinsicPeriodicFamilyPortfolio(
 function selectIntrinsicPeriodicContinuations(
   catalog: IntrinsicPeriodicCatalog,
   pieces: ReadonlyArray<IrregularPreparedPiece>,
-  maximumContinuationCount: number
+  maximumContinuationCount: number,
+  maximumCropsPerCell: number
 ): Effect.Effect<
   {
     readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
@@ -195,7 +201,7 @@ function selectIntrinsicPeriodicContinuations(
       if (members === undefined) continue
       const continuations: IntrinsicPeriodicContinuation[] = []
       for (const cell of family.cells) {
-        const crops = yield* expandIntrinsicPeriodicCell(cell, members, 4)
+        const crops = yield* expandIntrinsicPeriodicCell(cell, members, maximumCropsPerCell)
         for (const [cropIndex, seed] of crops.entries()) {
           const sourceId = `${family.familyKey}:${cell.role}:${cell.canonicalKey}:${cropIndex}`
           if (seed.placements.length < 4) {
