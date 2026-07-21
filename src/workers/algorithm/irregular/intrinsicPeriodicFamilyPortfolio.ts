@@ -113,6 +113,13 @@ export interface IntrinsicPeriodicFamilyPortfolioOptions {
   readonly basisSourceKey?: string
   /** Enables a bounded observer over raw source cells without changing continuations. */
   readonly captureSourceSurvivalAudit?: boolean
+  /**
+   * Lets the bounded raw-crop Pareto witnesses compete as source-tagged
+   * continuations in the shared archive. Requires the source-survival audit;
+   * without this flag the best raw witnesses exist only as diagnostics even
+   * when every retained cell front evicted them.
+   */
+  readonly admitSourceAuditWitnesses?: boolean
 }
 
 type PortfolioError =
@@ -153,7 +160,9 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       maximumContinuationCount,
       maximumCropsPerCell,
       options.basisSourceKey,
-      options.captureSourceSurvivalAudit ?? false
+      options.captureSourceSurvivalAudit ?? false,
+      (options.captureSourceSurvivalAudit ?? false) &&
+        (options.admitSourceAuditWitnesses ?? false)
     )
     const runs: IntrinsicPeriodicContinuationResult[] = []
     for (const continuation of selected.continuations) {
@@ -235,7 +244,8 @@ function selectIntrinsicPeriodicContinuations(
   maximumContinuationCount: number,
   maximumCropsPerCell: number,
   basisSourceKey: string | undefined,
-  captureSourceSurvivalAudit: boolean
+  captureSourceSurvivalAudit: boolean,
+  admitSourceAuditWitnesses = false
 ): Effect.Effect<
   {
     readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
@@ -382,8 +392,36 @@ function selectIntrinsicPeriodicContinuations(
     const rawAuditFront = nonDominatedIntrinsicPeriodicSeeds(
       [...sourceAuditWitnesses.values()].map(({ seed }) => seed)
     )
+    const witnessContinuations = !admitSourceAuditWitnesses
+      ? []
+      : rankIntrinsicPeriodicSeeds(rawAuditFront)
+          .slice(0, 16)
+          .flatMap((seed) => {
+            const source = sourceAuditWitnesses.get(seed.canonicalKey)
+            if (source === undefined) return []
+            const sourceId = `raw-witness:${seed.role}:${source.sourceKey}:${seed.canonicalKey}`
+            if (seed.placements.length < 4) {
+              omissions.push({ sourceId, reason: 'insufficient-seed' })
+              return []
+            }
+            if (seenSeeds.has(seed.canonicalKey)) {
+              omissions.push({ sourceId, reason: 'duplicate-canonical-seed' })
+              return []
+            }
+            seenSeeds.add(seed.canonicalKey)
+            return [
+              {
+                sourceId,
+                role: seed.role,
+                familyKey: source.familyKey,
+                cellKey: seed.cellKey,
+                basisSourceKey: source.sourceKey,
+                seed
+              }
+            ]
+          })
     return {
-      continuations: selected,
+      continuations: [...selected, ...witnessContinuations],
       omissions,
       coverageComplete: all.length <= maximumContinuationCount,
       sourceCropSurvival: [...sourceCropSurvival.values()].toSorted(

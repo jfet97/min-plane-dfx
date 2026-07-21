@@ -98,6 +98,10 @@ const maximumCropsPerCell = positiveIntegerArgument('--crops-per-cell', 4)
 const maximumContinuationCount = positiveIntegerArgument('--continuations', 8)
 const basisSourceKey = argument('--basis-source-key')
 const captureSourceSurvivalAudit = process.argv.includes('--source-survival-audit')
+const admitSourceAuditWitnesses = process.argv.includes('--admit-raw-witnesses')
+if (admitSourceAuditWitnesses && !captureSourceSurvivalAudit) {
+  throw new Error('--admit-raw-witnesses requires --source-survival-audit')
+}
 const adaptivePressurePilot = process.argv.includes('--adaptive-pressure-pilot')
 const adaptiveRestartAblation = process.argv.includes('--adaptive-restart-ablation')
 const adaptivePressureMatrix = process.argv.includes('--adaptive-pressure-matrix')
@@ -116,6 +120,7 @@ const result = await Effect.runPromise(
       maximumCropsPerCell,
       maximumContinuationCount,
       captureSourceSurvivalAudit,
+      admitSourceAuditWitnesses,
       ...(basisSourceKey === undefined ? {} : { basisSourceKey })
     }),
     settings
@@ -448,6 +453,7 @@ const report = {
     continuations: maximumContinuationCount,
     basisSourceKey,
     sourceSurvivalAudit: captureSourceSurvivalAudit,
+    admitSourceAuditWitnesses,
     adaptivePressurePilot,
     adaptiveRestartAblation,
     adaptivePressureMatrix,

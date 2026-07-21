@@ -89,4 +89,51 @@ describe('intrinsic periodic family portfolio', () => {
       )
     ).toBe(true)
   })
+
+  it('admits raw-crop Pareto witnesses as source-tagged archive competitors on request', async () => {
+    const pieces = Array.from({ length: 4 }, (_, index) => preparedTriangle(`triangle-${index}`))
+    const run = (admitSourceAuditWitnesses: boolean) =>
+      Effect.runPromise(
+        runIntrinsicPeriodicFamilyPortfolio(
+          new SheetSpec({ width: 100, height: 100, label: 'test' }),
+          pieces,
+          {
+            maximumCatalogRuntimeMs: 1_000,
+            maximumContinuationRuntimeMs: 1_000,
+            maximumTotalRuntimeMs: 8_000,
+            captureSourceSurvivalAudit: true,
+            admitSourceAuditWitnesses
+          }
+        ).pipe(
+          Effect.provide(GeometryKernel.Live.pipe(Layer.provide(GeometrySettings.Live))),
+          Effect.provide(GeometrySettings.Live),
+          Effect.provide(NfpIfpServiceLive)
+        )
+      )
+    const withoutWitnesses = await run(false)
+    const withWitnesses = await run(true)
+
+    expect(
+      withoutWitnesses.continuations.some(({ sourceId }) => sourceId.startsWith('raw-witness:'))
+    ).toBe(false)
+    const witnessContinuations = withWitnesses.continuations.filter(({ sourceId }) =>
+      sourceId.startsWith('raw-witness:')
+    )
+    expect(
+      witnessContinuations.length +
+        withWitnesses.continuationOmissions.filter(({ sourceId }) =>
+          sourceId.startsWith('raw-witness:')
+        ).length
+    ).toBeGreaterThan(0)
+    // deduplication: no witness continuation repeats a selected canonical seed
+    const selectedSeedKeys = new Set(
+      withWitnesses.continuations
+        .filter(({ sourceId }) => !sourceId.startsWith('raw-witness:'))
+        .map(({ seed }) => seed.canonicalKey)
+    )
+    expect(
+      witnessContinuations.every(({ seed }) => !selectedSeedKeys.has(seed.canonicalKey))
+    ).toBe(true)
+    expect(withWitnesses.runs).toHaveLength(withWitnesses.continuations.length)
+  }, 30_000)
 })
