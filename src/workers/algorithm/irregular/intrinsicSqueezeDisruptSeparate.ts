@@ -43,6 +43,7 @@ import {
   intrinsicFocusedProposals,
   intrinsicFocusedProposalsForPiece,
   intrinsicProjectionPriority,
+  intrinsicSampledRelocationProposalsForPiece,
   intrinsicRelaxedStateKey,
   provisionalLayoutFromRelaxedState,
   relaxedStateFromExactLayout,
@@ -73,6 +74,8 @@ export const INTRINSIC_GLOBAL_SEARCH_DEFAULTS = {
   pressureMaximumAttempts: 9,
   pressureMaximumConsecutiveFailures: 3,
   pressureRestartPoolCapacity: 0,
+  pressureContractionRatios: [1 / 20, 1 / 40, 1 / 80] as const,
+  pressureMoveVocabulary: 'mtv' as const,
   seed: 0x4e_34_53_44
 } as const
 
@@ -305,10 +308,13 @@ export type IntrinsicPressureCompositeCandidateSource =
   | 'no-op'
   | 'existing-separate'
   | 'existing-transform'
+  | 'sampled-relocation'
+  | 'sampled-refinement'
   | 'adaptive-transform-family'
 
 export type IntrinsicPressureCandidatePass =
   | 'existing'
+  | 'sampled'
   | 'adaptive-axis-x'
   | 'adaptive-axis-y'
 
@@ -751,8 +757,14 @@ export interface IntrinsicGlobalSearchSchedule {
   readonly pressureMaximumAttempts: number
   readonly pressureMaximumConsecutiveFailures: number
   readonly pressureRestartPoolCapacity: number
+  /** Contraction schedule for the pressure lane; defaults to 5%, 2.5%, 1.25%. */
+  readonly pressureContractionRatios?: ReadonlyArray<number>
+  /** Collider move vocabulary for the pressure repair composite. */
+  readonly pressureMoveVocabulary?: IntrinsicPressureMoveVocabulary
   readonly seed: number
 }
+
+export type IntrinsicPressureMoveVocabulary = 'mtv' | 'sampled-relocation'
 
 export interface IntrinsicInfeasiblePoolEntry {
   readonly searchScope: IntrinsicInfeasibleSearchScope
@@ -1601,6 +1613,12 @@ function snapshotIntrinsicGlobalSchedule(
     pressureMaximumConsecutiveFailures:
       schedule.pressureMaximumConsecutiveFailures,
     pressureRestartPoolCapacity: schedule.pressureRestartPoolCapacity,
+    ...(schedule.pressureContractionRatios === undefined
+      ? {}
+      : { pressureContractionRatios: [...schedule.pressureContractionRatios] }),
+    ...(schedule.pressureMoveVocabulary === undefined
+      ? {}
+      : { pressureMoveVocabulary: schedule.pressureMoveVocabulary }),
     seed: schedule.seed
   }
 }
@@ -1745,7 +1763,10 @@ function runIntrinsicContractedPressureLane(input: {
           deadlineReached: true
         }
       }
-      const pressureStep = intrinsicPressureContractionStep(ratioCursor)
+      const pressureStep = intrinsicPressureContractionStep(
+        ratioCursor,
+        input.schedule.pressureContractionRatios ?? INTRINSIC_PRESSURE_CONTRACTION_RATIOS
+      )
       if (pressureStep === undefined) break
       const { ratioScheduleIndex, contractionRatio } = pressureStep
       const attemptEvaluationLimit = pressureAttemptEvaluationLimit({
@@ -2130,7 +2151,8 @@ function runIntrinsicContractedPressureLane(input: {
               maximumEvaluations: orderBudget,
               control: input.control,
               canonicalLegalityMemo,
-              orderIdentity
+              orderIdentity,
+              moveVocabulary: input.schedule.pressureMoveVocabulary ?? 'mtv'
             })
             compositeParents.push(composite.trace)
             separationEvaluationCount += composite.evaluationCount
@@ -2661,22 +2683,26 @@ export function measureIntrinsicPressureCompactness(
   }
 }
 
-function intrinsicPressureContractionStep(index: number):
+function intrinsicPressureContractionStep(
+  index: number,
+  ratios: ReadonlyArray<number> = INTRINSIC_PRESSURE_CONTRACTION_RATIOS
+):
   | {
       readonly ratioScheduleIndex: 0 | 1 | 2
       readonly contractionRatio: number
     }
   | undefined {
-  switch (index) {
-    case 0:
-      return { ratioScheduleIndex: 0, contractionRatio: INTRINSIC_PRESSURE_CONTRACTION_RATIOS[0] }
-    case 1:
-      return { ratioScheduleIndex: 1, contractionRatio: INTRINSIC_PRESSURE_CONTRACTION_RATIOS[1] }
-    case 2:
-      return { ratioScheduleIndex: 2, contractionRatio: INTRINSIC_PRESSURE_CONTRACTION_RATIOS[2] }
-    default:
-      return undefined
+  if (index !== 0 && index !== 1 && index !== 2) return undefined
+  const contractionRatio = ratios[index]
+  if (
+    contractionRatio === undefined ||
+    !Number.isFinite(contractionRatio) ||
+    contractionRatio <= 0 ||
+    contractionRatio >= 1
+  ) {
+    return undefined
   }
+  return { ratioScheduleIndex: index, contractionRatio }
 }
 
 export function pressureRepairSweepAllowance(
@@ -3292,12 +3318,14 @@ export function runIntrinsicSequentialColliderComposite(input: {
   readonly control: IrregularNfpIfpControl
   readonly canonicalLegalityMemo?: IntrinsicPressureCanonicalLegalityMemo
   readonly orderIdentity?: IntrinsicPressureCompositeOrderIdentity
+  readonly moveVocabulary?: IntrinsicPressureMoveVocabulary
 }): Effect.Effect<
   IntrinsicSequentialColliderCompositeResult,
   IrregularNfpIfpControlAbortError
 > {
   return Effect.gen(function* () {
     const orderIdentity = input.orderIdentity ?? 'priority-forward'
+    const moveVocabulary = input.moveVocabulary ?? 'mtv'
     const canonicalLegalityMemo =
       input.canonicalLegalityMemo ?? createIntrinsicPressureCanonicalLegalityMemo()
     const initialCanonicalCounters = canonicalLegalityCounters(canonicalLegalityMemo)
@@ -3453,33 +3481,58 @@ export function runIntrinsicSequentialColliderComposite(input: {
             : 'existing-separate') as IntrinsicPressureCompositeCandidateSource,
           pass: 'existing' as const,
           ordinal
-        }))
+        })),
+        ...(moveVocabulary === 'sampled-relocation'
+          ? intrinsicSampledRelocationProposalsForPiece({
+              catalog: input.catalog,
+              state: currentState,
+              selectedPieceId: pieceId,
+              targetBox: input.targetBox,
+              sampleOrdinal: visitIndex
+            }).map((proposal, ordinal) => ({
+              state: proposal.state,
+              source: 'sampled-relocation' as const,
+              pass: 'sampled' as const,
+              ordinal
+            }))
+          : [])
       ]
       const seenStateKeys = new Set([currentStateKey])
       const candidateTraces: IntrinsicPressureCandidateTrace[] = []
-      const proposals = rawCandidates.flatMap((candidate) => {
-        const stateKey =
-          candidate.knownStateKey ??
-          intrinsicRelaxedStateKey(input.catalog, candidate.state)
-        const pose = pressurePoseTrace(candidate.state, pieceId)
-        if (stateKey === undefined) {
+      const prepareCandidates = (
+        raw: ReadonlyArray<{
+          readonly state: IntrinsicRelaxedState
+          readonly source: IntrinsicPressureCompositeCandidateSource
+          readonly pass: IntrinsicPressureCandidatePass
+          readonly ordinal: number
+          readonly knownStateKey?: string
+          readonly orientationFamily?: string
+        }>
+      ) =>
+        raw.flatMap((candidate) => {
+          const stateKey =
+            candidate.knownStateKey ??
+            intrinsicRelaxedStateKey(input.catalog, candidate.state)
+          const pose = pressurePoseTrace(candidate.state, pieceId)
+          if (stateKey === undefined) {
+            candidateTraces.push(
+              pressureCandidateTrace(candidate, pose, undefined, 'invalid')
+            )
+            return []
+          }
+          if (seenStateKeys.has(stateKey)) {
+            candidateTraces.push(
+              pressureCandidateTrace(candidate, pose, stateKey, 'deduplicated')
+            )
+            return []
+          }
+          seenStateKeys.add(stateKey)
           candidateTraces.push(
-            pressureCandidateTrace(candidate, pose, undefined, 'invalid')
+            pressureCandidateTrace(candidate, pose, stateKey, 'cap-skipped')
           )
-          return []
-        }
-        if (seenStateKeys.has(stateKey)) {
-          candidateTraces.push(
-            pressureCandidateTrace(candidate, pose, stateKey, 'deduplicated')
-          )
-          return []
-        }
-        seenStateKeys.add(stateKey)
-        candidateTraces.push(
-          pressureCandidateTrace(candidate, pose, stateKey, 'cap-skipped')
-        )
-        return [{ ...candidate, stateKey, pose, traceIndex: candidateTraces.length - 1 }]
-      })
+          return [{ ...candidate, stateKey, pose, traceIndex: candidateTraces.length - 1 }]
+        })
+      const proposals = prepareCandidates(rawCandidates)
       const choices: Array<{
         readonly state: IntrinsicRelaxedState
         readonly evaluation: IntrinsicSeparationEvaluation
@@ -3493,7 +3546,11 @@ export function runIntrinsicSequentialColliderComposite(input: {
         readonly traceIndex: number
       }> = []
       let visitEvaluationCount = 0
-      for (const candidate of proposals) {
+      let totalProposalCount = rawCandidates.length
+      let pendingProposals = proposals
+      let refinementRound = 0
+      while (pendingProposals.length > 0) {
+      for (const candidate of pendingProposals) {
         if (evaluationCount >= input.maximumEvaluations) {
           evaluationCapReached = true
           break
@@ -3554,6 +3611,48 @@ export function runIntrinsicSequentialColliderComposite(input: {
           traceIndex: candidate.traceIndex
         })
       }
+      pendingProposals = []
+      if (
+        moveVocabulary !== 'sampled-relocation' ||
+        evaluationCapReached ||
+        deadlineReached ||
+        refinementRound >= 2 ||
+        choices.some(({ canonicalLegality }) => canonicalLegality.canonicalLegal)
+      ) {
+        break
+      }
+      const refinementBest = choices.toSorted(
+        (first, second) =>
+          intrinsicWeightedLoss(first.evaluation, input.weights) -
+            intrinsicWeightedLoss(second.evaluation, input.weights) ||
+          first.evaluation.rawLoss - second.evaluation.rawLoss ||
+          first.stateKey.localeCompare(second.stateKey)
+      )[0]
+      const refinementPose = refinementBest?.state.poses.find(
+        (pose) => pose.pieceId === pieceId
+      )
+      if (refinementBest === undefined || refinementPose === undefined) break
+      const refined = intrinsicSampledRelocationProposalsForPiece({
+        catalog: input.catalog,
+        state: currentState,
+        selectedPieceId: pieceId,
+        targetBox: input.targetBox,
+        sampleOrdinal: visitIndex,
+        refinement: {
+          centerTranslateXGrid: refinementPose.translateXGrid,
+          centerTranslateYGrid: refinementPose.translateYGrid,
+          round: refinementRound
+        }
+      }).map((proposal, ordinal) => ({
+        state: proposal.state,
+        source: 'sampled-refinement' as const,
+        pass: 'sampled' as const,
+        ordinal
+      }))
+      totalProposalCount += refined.length
+      pendingProposals = prepareCandidates(refined)
+      refinementRound += 1
+      }
       const canonicalSelected = choices.find(
         ({ canonicalLegality }) => canonicalLegality.canonicalLegal
       )
@@ -3562,7 +3661,7 @@ export function runIntrinsicSequentialColliderComposite(input: {
           pressureCompositeVisitTrace({
             pieceId,
             outcome: evaluationCapReached ? 'evaluation-cap' : 'deadline',
-            proposalCount: rawCandidates.length + 1,
+            proposalCount: totalProposalCount + 1,
             evaluationCount: visitEvaluationCount,
             selectedStateKey: currentStateKey,
             before: beforeEvaluation,
@@ -3591,7 +3690,7 @@ export function runIntrinsicSequentialColliderComposite(input: {
           pressureCompositeVisitTrace({
             pieceId,
             outcome: 'no-op',
-            proposalCount: rawCandidates.length + 1,
+            proposalCount: totalProposalCount + 1,
             evaluationCount: visitEvaluationCount,
             selectedStateKey: currentStateKey,
             before: beforeEvaluation,
@@ -3627,7 +3726,7 @@ export function runIntrinsicSequentialColliderComposite(input: {
           outcome: canonicalLegality.canonicalLegal
             ? 'canonical-legal'
             : 'committed',
-          proposalCount: rawCandidates.length + 1,
+          proposalCount: totalProposalCount + 1,
           evaluationCount: visitEvaluationCount,
           selectedStateKey: currentStateKey,
           before: beforeEvaluation,

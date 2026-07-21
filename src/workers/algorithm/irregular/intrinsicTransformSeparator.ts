@@ -56,6 +56,7 @@ export interface IntrinsicSeparatorProposal {
   readonly kind:
     | 'separate'
     | 'transform'
+    | 'sampled-relocation'
     | 'swap'
     | 'group-transport'
     | 'split-squeeze'
@@ -546,6 +547,144 @@ export function intrinsicFocusedProposalsForPiece(input: {
         affectedPieceIds: [selectedPieceId],
         key: `transform:${selectedPieceId}:${finiteTransform.canonicalTransformKey}`
       })
+    }
+  }
+  return dedupeProposals(input.catalog, proposals)
+}
+
+const SAMPLED_RELOCATION_RING_DIVISORS = [4, 16] as const
+const SAMPLED_RELOCATION_REFINEMENT_DIVISORS = [32, 128] as const
+const SAMPLED_RELOCATION_TARGET_SAMPLE_COUNT = 12
+
+export interface IntrinsicSampledRelocationRefinement {
+  /** The refined piece's translate in the best candidate found so far. */
+  readonly centerTranslateXGrid: number
+  readonly centerTranslateYGrid: number
+  /** Zero-based refinement round selecting the shrinking ring radius. */
+  readonly round: number
+}
+
+/**
+ * Deterministic sampled relocation vocabulary for one explicit collider.
+ *
+ * Unlike the MTV-directional `separate` proposals, these candidates place the
+ * piece at positions that are independent of the current penetration axis:
+ * two compass rings around the current pose scaled by the piece's
+ * characteristic length, plus a bounded Halton coverage of every legal
+ * bottom-left offset inside the contracted target box. A refinement request
+ * instead rings the best candidate found so far with a shrinking radius so a
+ * commit can descend toward a locally optimal grid position.
+ */
+export function intrinsicSampledRelocationProposalsForPiece(input: {
+  readonly catalog: IntrinsicTransformCatalog
+  readonly state: IntrinsicRelaxedState
+  readonly selectedPieceId: PieceId
+  readonly targetBox: IntrinsicTargetBox
+  readonly sampleOrdinal: number
+  readonly refinement?: IntrinsicSampledRelocationRefinement
+}): ReadonlyArray<IntrinsicSeparatorProposal> {
+  const canonical = canonicalizeRelaxedState(input.catalog, input.state)
+  const resolved =
+    canonical === undefined
+      ? undefined
+      : resolveStateUncanonicalized(input.catalog, canonical)
+  const entry = resolved?.find(({ pose }) => pose.pieceId === input.selectedPieceId)
+  if (canonical === undefined || resolved === undefined || entry === undefined) return []
+  const proposals: IntrinsicSeparatorProposal[] = []
+  const basePose = entry.pose
+  const pushTranslate = (
+    translateXGrid: number,
+    translateYGrid: number,
+    keySuffix: string
+  ) => {
+    if (!Number.isSafeInteger(translateXGrid) || !Number.isSafeInteger(translateYGrid)) return
+    if (
+      translateXGrid === basePose.translateXGrid &&
+      translateYGrid === basePose.translateYGrid
+    ) {
+      return
+    }
+    const next = canonicalizeRelaxedState(
+      input.catalog,
+      replacePose(canonical, input.selectedPieceId, {
+        ...basePose,
+        translateXGrid,
+        translateYGrid
+      })
+    )
+    if (next === undefined) return
+    proposals.push({
+      kind: 'sampled-relocation',
+      state: next,
+      affectedPieceIds: [input.selectedPieceId],
+      key: `sampled-relocation:${input.selectedPieceId}:${keySuffix}`
+    })
+  }
+  const pushRing = (radiusGrid: number, centerX: number, centerY: number, ringKey: string) => {
+    const radius = Math.max(1, Math.round(radiusGrid))
+    const diagonal = Math.max(1, Math.round(radius * Math.SQRT1_2))
+    const offsets: ReadonlyArray<GridPoint> = [
+      { x: radius, y: 0 },
+      { x: -radius, y: 0 },
+      { x: 0, y: radius },
+      { x: 0, y: -radius },
+      { x: diagonal, y: diagonal },
+      { x: diagonal, y: -diagonal },
+      { x: -diagonal, y: diagonal },
+      { x: -diagonal, y: -diagonal }
+    ]
+    for (const [offsetIndex, offset] of offsets.entries()) {
+      pushTranslate(
+        centerX + offset.x,
+        centerY + offset.y,
+        `${ringKey}:${offsetIndex}:${offset.x}:${offset.y}`
+      )
+    }
+  }
+  if (input.refinement !== undefined) {
+    const divisor =
+      SAMPLED_RELOCATION_REFINEMENT_DIVISORS[
+        Math.min(
+          Math.max(0, Math.floor(input.refinement.round)),
+          SAMPLED_RELOCATION_REFINEMENT_DIVISORS.length - 1
+        )
+      ] ?? SAMPLED_RELOCATION_REFINEMENT_DIVISORS[0]
+    pushRing(
+      entry.polygon.characteristicLength / divisor,
+      input.refinement.centerTranslateXGrid,
+      input.refinement.centerTranslateYGrid,
+      `refine:${input.refinement.round}`
+    )
+    return dedupeProposals(input.catalog, proposals)
+  }
+  for (const divisor of SAMPLED_RELOCATION_RING_DIVISORS) {
+    pushRing(
+      entry.polygon.characteristicLength / divisor,
+      basePose.translateXGrid,
+      basePose.translateYGrid,
+      `ring:${divisor}`
+    )
+  }
+  const bounds = polygonBounds(entry.polygon.points)
+  const targetWidthGrid = toGridMm(input.targetBox.widthMm)
+  const targetHeightGrid = toGridMm(input.targetBox.heightMm)
+  if (bounds !== undefined && targetWidthGrid !== undefined && targetHeightGrid !== undefined) {
+    const freeWidthGrid = targetWidthGrid - (bounds.maximumX - bounds.minimumX)
+    const freeHeightGrid = targetHeightGrid - (bounds.maximumY - bounds.minimumY)
+    if (freeWidthGrid > 0 && freeHeightGrid > 0) {
+      const ordinalBase =
+        Math.max(0, Math.floor(input.sampleOrdinal)) *
+        SAMPLED_RELOCATION_TARGET_SAMPLE_COUNT
+      for (let sample = 0; sample < SAMPLED_RELOCATION_TARGET_SAMPLE_COUNT; sample += 1) {
+        const index = ordinalBase + sample + 1
+        const positionX = Math.round(halton(index, HALTON_PRIMES[0]) * freeWidthGrid)
+        const positionY = Math.round(halton(index, HALTON_PRIMES[1]) * freeHeightGrid)
+        pushTranslate(
+          basePose.translateXGrid + (positionX - bounds.minimumX),
+          basePose.translateYGrid + (positionY - bounds.minimumY),
+          `target:${sample}`
+        )
+      }
     }
   }
   return dedupeProposals(input.catalog, proposals)

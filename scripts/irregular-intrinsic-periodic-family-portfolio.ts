@@ -100,6 +100,8 @@ const basisSourceKey = argument('--basis-source-key')
 const captureSourceSurvivalAudit = process.argv.includes('--source-survival-audit')
 const adaptivePressurePilot = process.argv.includes('--adaptive-pressure-pilot')
 const adaptiveRestartAblation = process.argv.includes('--adaptive-restart-ablation')
+const adaptivePressureMatrix = process.argv.includes('--adaptive-pressure-matrix')
+const adaptiveMatrixArmsArgument = argument('--adaptive-matrix-arms')
 const requestedAdaptiveSeedHash = argument('--adaptive-seed-hash')
 await mkdir(outputDirectory, { recursive: true })
 
@@ -256,7 +258,10 @@ const adaptiveSeed =
     : [...adaptiveSeedsByHash.values()].find(({ measured }) =>
         measured.canonicalGeometryHash.startsWith(requestedAdaptiveSeedHash)
       )
-if ((adaptivePressurePilot || adaptiveRestartAblation) && adaptiveSeed === undefined) {
+if (
+  (adaptivePressurePilot || adaptiveRestartAblation || adaptivePressureMatrix) &&
+  adaptiveSeed === undefined
+) {
   throw new Error(
     requestedAdaptiveSeedHash === undefined
       ? 'the adaptive pressure pilot found no complete exact seed'
@@ -315,6 +320,91 @@ if (adaptiveRestartAblation && adaptiveSeed !== undefined) {
     })
   }
 }
+interface AdaptivePressureMatrixArmSpec {
+  readonly name: string
+  readonly pressureContractionRatios: readonly [number, number, number]
+  readonly pressureMoveVocabulary: 'mtv' | 'sampled-relocation'
+}
+const ADAPTIVE_PRESSURE_MATRIX_ARMS: ReadonlyArray<AdaptivePressureMatrixArmSpec> = [
+  {
+    name: 'baseline-mtv',
+    pressureContractionRatios: [1 / 20, 1 / 40, 1 / 80],
+    pressureMoveVocabulary: 'mtv'
+  },
+  {
+    name: 'smaller-step-mtv',
+    pressureContractionRatios: [1 / 20, 1 / 40, 1 / 160],
+    pressureMoveVocabulary: 'mtv'
+  },
+  {
+    name: 'sampled-relocation',
+    pressureContractionRatios: [1 / 20, 1 / 40, 1 / 80],
+    pressureMoveVocabulary: 'sampled-relocation'
+  },
+  {
+    name: 'sampled-relocation-smaller-step',
+    pressureContractionRatios: [1 / 20, 1 / 40, 1 / 160],
+    pressureMoveVocabulary: 'sampled-relocation'
+  }
+]
+const requestedMatrixArmNames =
+  adaptiveMatrixArmsArgument === undefined
+    ? undefined
+    : new Set(adaptiveMatrixArmsArgument.split(',').map((name) => name.trim()))
+const selectedMatrixArms = ADAPTIVE_PRESSURE_MATRIX_ARMS.filter(
+  (arm) => requestedMatrixArmNames === undefined || requestedMatrixArmNames.has(arm.name)
+)
+if (adaptivePressureMatrix && selectedMatrixArms.length === 0) {
+  throw new Error('--adaptive-matrix-arms selected no known adaptive pressure matrix arm')
+}
+const adaptivePressureMatrixResults: Array<{
+  readonly arm: AdaptivePressureMatrixArmSpec
+  readonly status: 'completed' | 'deadline-fallback' | 'budget-fallback'
+  readonly runtimeMs: number
+  readonly separationEvaluationCount: number
+  readonly pressureRepairSweepCount: number
+  readonly structuralHandoffCount: number
+  readonly acceptedPressureAttemptCount: number
+  readonly contractedPressureTrace: ReadonlyArray<IntrinsicContractedPressureAttemptTrace>
+}> = []
+if (adaptivePressureMatrix && adaptiveSeed !== undefined) {
+  for (const arm of selectedMatrixArms) {
+    const structural = await Effect.runPromise(
+      withLayers(
+        runIntrinsicSqueezeDisruptSeparateWithSchedule(
+          {
+            allPreparedPieces: preparedPieces,
+            fullE1Placed: adaptiveSeed.measured.placedCollisionGeometries
+          },
+          {
+            ...INTRINSIC_GLOBAL_SEARCH_DEFAULTS,
+            forcedDisruptionSweeps: [
+              ...INTRINSIC_GLOBAL_SEARCH_DEFAULTS.forcedDisruptionSweeps
+            ],
+            maximumRuntimeMs: 240_000,
+            pressureRestartPoolCapacity: 0,
+            pressureContractionRatios: arm.pressureContractionRatios,
+            pressureMoveVocabulary: arm.pressureMoveVocabulary
+          },
+          { project: projectIntrinsicLayoutExactly }
+        ),
+        settings
+      )
+    )
+    adaptivePressureMatrixResults.push({
+      arm,
+      status: structural.status,
+      runtimeMs: structural.runtimeMs,
+      separationEvaluationCount: structural.separationEvaluationCount,
+      pressureRepairSweepCount: structural.pressureRepairSweepCount,
+      structuralHandoffCount: structural.structuralHandoffs.length,
+      acceptedPressureAttemptCount: structural.contractedPressureTrace.filter(
+        ({ outcome }) => outcome === 'accepted'
+      ).length,
+      contractedPressureTrace: structural.contractedPressureTrace
+    })
+  }
+}
 const adaptiveSelectedSvgPath =
   adaptiveResult === undefined
     ? undefined
@@ -360,6 +450,8 @@ const report = {
     sourceSurvivalAudit: captureSourceSurvivalAudit,
     adaptivePressurePilot,
     adaptiveRestartAblation,
+    adaptivePressureMatrix,
+    adaptiveMatrixArmNames: selectedMatrixArms.map(({ name }) => name),
     requestedAdaptiveSeedHash,
     continuationMs: 25_000,
     fixtureMs: 240_000
@@ -445,6 +537,33 @@ const report = {
             INTRINSIC_GLOBAL_SEARCH_DEFAULTS.maximumSeparationEvaluations / 4
           ),
           arms: adaptiveRestartAblationResults
+        },
+  adaptivePressureMatrix:
+    !adaptivePressureMatrix || adaptiveSeed === undefined
+      ? undefined
+      : {
+          seed: {
+            source: adaptiveSeed.source,
+            canonicalGeometryHash: adaptiveSeed.measured.canonicalGeometryHash,
+            metrics: adaptiveSeed.measured.metrics
+          },
+          maximumRuntimeMsPerArm: 240_000,
+          maximumPressureEvaluationCountPerArm: Math.floor(
+            INTRINSIC_GLOBAL_SEARCH_DEFAULTS.maximumSeparationEvaluations / 4
+          ),
+          pressureRestartPoolCapacity: 0,
+          arms: adaptivePressureMatrixResults.map((entry) => ({
+            name: entry.arm.name,
+            pressureContractionRatios: entry.arm.pressureContractionRatios,
+            pressureMoveVocabulary: entry.arm.pressureMoveVocabulary,
+            status: entry.status,
+            runtimeMs: entry.runtimeMs,
+            separationEvaluationCount: entry.separationEvaluationCount,
+            pressureRepairSweepCount: entry.pressureRepairSweepCount,
+            structuralHandoffCount: entry.structuralHandoffCount,
+            acceptedPressureAttemptCount: entry.acceptedPressureAttemptCount,
+            contractedPressureTrace: entry.contractedPressureTrace
+          }))
         },
   sourceAuditNonDominatedCropCount: result.sourceAuditNonDominatedCropCount,
   continuationOmissions: result.continuationOmissions,
