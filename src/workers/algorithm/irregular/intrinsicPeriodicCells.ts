@@ -44,6 +44,9 @@ const transformOrder = Order.combineAll<IrregularTransformCandidate>([
   Order.mapInput(Order.Boolean, ({ mirrored }) => mirrored)
 ])
 
+/** Caps the current boundary-vertex source domain; audit conclusions are scoped to this cap. */
+export const MAXIMUM_NFP_BOUNDARY_VERTEX_BASIS_CANDIDATES = 64
+
 export interface IntrinsicPeriodicVector {
   readonly x: number
   readonly y: number
@@ -1102,7 +1105,7 @@ function deriveAxisBasisCandidates(
 /** Derives a bounded shared basis from two exact vertices on the real ordered-NFP boundaries. */
 function deriveNfpBoundaryVertexBasisCandidates(
   boundaries: ReadonlyArray<ForbiddenBoundary>,
-  maximumCandidates = 64
+  maximumCandidates = MAXIMUM_NFP_BOUNDARY_VERTEX_BASIS_CANDIDATES
 ): ReadonlyArray<IntrinsicPeriodicBasisCandidate> {
   const vectors = [
     ...new Map(

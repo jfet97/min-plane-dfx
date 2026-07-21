@@ -1676,19 +1676,27 @@ crop frontier, the unique seed/continuation counts, and the complete raw crop
 Pareto witnesses. It changes no cell rank, continuation rank, decoder, archive,
 or live result.
 
-The Triangle audit at `71204b8` is decisive for the current bounded P1/P2
-source set. All eight transformed triangle geometries and all 28 transform
-pairs were covered. It generated 2,963 raw cells and 4,627 direct-valid finite
+The Triangle audit at `71204b8` is decisive only for the current generated
+P1/P2 source-and-crop domain. All eight transformed triangle geometries and all
+28 transform pairs were covered. For each derivation, the current
+NFP-boundary-vertex source stops after 64 candidate bases; each finite crop is
+one of the row/column traversals from one of four corners for
+`rows = 1..floor(family members / base-cell members)`, with
+`columns = ceil(family members / base-cell members / rows)`. Within those
+explicit bounds it generated 2,963 raw cells and 4,627 direct-valid finite
 crops; the bounded cell frontier retained 294 cells and its crop fronts retained
-303 entries. The unbounded raw crop Pareto set has only ten entries. The
+303 entries. The complete raw crop Pareto set for that generated domain has only ten entries. The
 `74,428.143126 mm2` zero-cavity lattice is one of them. Every more connected
 raw witness remains fragmented: the best has nine positive-contact components,
 while the first zero-isolate NFP-boundary witness has ten components and a
 `133,622.99898 mm2` envelope. Therefore no compact, exact-contact lattice is
-being hidden by the cell/crop cap in this complete Triangle transform/pair
-domain. This falsifies the current axis-union plus arbitrary NFP-boundary-vertex
-P1/P2 source as a Triangle golden generator; it does not reject the compact
-74k seed or change its contact semantics.
+being hidden by the cell/crop cap among crops the present generator actually
+produces. This falsifies the current bounded axis-union plus arbitrary
+NFP-boundary-vertex P1/P2 source as a Triangle golden generator; it does not
+reject the compact 74k seed or change its contact semantics. Each raw Pareto
+witness must carry its family identity, complete basis provenance, exact finite
+placements, canonical identity, and a rendered artifact so this conclusion can
+be independently replayed rather than inferred from aggregate counts.
 
 The next constructive source must be stronger, not broader: form a shared
 periodic basis from two explicit, phase-compatible **edge-to-edge contact

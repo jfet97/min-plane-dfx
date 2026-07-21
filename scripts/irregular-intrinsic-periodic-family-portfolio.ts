@@ -18,6 +18,7 @@ import {
 import { makePresetShapeDocument, type PresetShapeKind } from '../src/shared/presetShapes.js'
 import { preparePieces as prepareNestingPieces } from '../src/shared/preparePieces.js'
 import { runIntrinsicPeriodicFamilyPortfolio } from '../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
+import { MAXIMUM_NFP_BOUNDARY_VERTEX_BASIS_CANDIDATES } from '../src/workers/algorithm/irregular/intrinsicPeriodicCells.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
@@ -160,6 +161,35 @@ for (const run of result.runs) {
 }
 
 const reportPath = `${outputDirectory}/report.json`
+const auditWitnesses = await Promise.all(
+  result.sourceAuditWitnesses.map(async (witness, index) => {
+    const svgPath = `${outputDirectory}/${fixtureName}-raw-crop-pareto-${String(index + 1).padStart(2, '0')}-${safePath(witness.seed.canonicalKey)}.svg`
+    await writeFile(svgPath, renderSvg(witness.placements))
+    artifactPaths.push(svgPath)
+    return {
+      role: witness.role,
+      familyKeySha256: sha256(witness.familyKey),
+      sourceKey: witness.sourceKey,
+      sourceKeySha256: sha256(witness.sourceKey),
+      sourceKind: witness.sourceKind,
+      cellKeySha256: sha256(witness.cellKey),
+      basisProvenance: witness.basisProvenance,
+      seed: {
+        ...serializeSeed(witness.seed),
+        placementCount: witness.placements.length,
+        placements: witness.placements.map(({ placement }) => ({
+          pieceId: placement.pieceId,
+          sourcePieceId: placement.sourcePieceId,
+          rotationDeg: placement.transform.rotationDeg,
+          mirrored: placement.transform.mirrored,
+          translateX: placement.transform.translateX,
+          translateY: placement.transform.translateY
+        }))
+      },
+      svgPath
+    }
+  })
+)
 const report = {
   experiment: 'intrinsic-periodic-family-portfolio',
   sourceCommit,
@@ -175,8 +205,15 @@ const report = {
     families: 8,
     transformsPerFamily: 16,
     pairsPerFamily: 120,
+    nfpBoundaryVertexBasisCandidatesPerDerivation: MAXIMUM_NFP_BOUNDARY_VERTEX_BASIS_CANDIDATES,
     cellsPerFamilyRole: maximumCellsPerFamilyRole,
     cropsPerCell: maximumCropsPerCell,
+    cropEnumeration: {
+      rows: '1..floor(family member count / base-cell member count)',
+      columns: 'ceil(family member count / base-cell member count / rows)',
+      traversals: ['row', 'column'],
+      corners: [0, 1, 2, 3]
+    },
     continuations: maximumContinuationCount,
     basisSourceKey,
     sourceSurvivalAudit: captureSourceSurvivalAudit,
@@ -226,7 +263,7 @@ const report = {
   },
   continuationCoverageComplete: result.continuationCoverageComplete,
   sourceCropSurvival: result.sourceCropSurvival,
-  sourceAuditWitnesses: result.sourceAuditWitnesses,
+  sourceAuditWitnesses: auditWitnesses,
   sourceAuditNonDominatedCropCount: result.sourceAuditNonDominatedCropCount,
   continuationOmissions: result.continuationOmissions,
   archive: result.archive,
@@ -402,6 +439,28 @@ function renderSvg(
     .map((polygon) => `<polygon points="${polygon.map(({ x, y }) => `${x},${-y}`).join(' ')}"/>`)
     .join('')
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX - margin} ${-maxY - margin} ${maxX - minX + margin * 2} ${maxY - minY + margin * 2}" width="1200" height="1200"><rect x="${minX - margin}" y="${-maxY - margin}" width="${maxX - minX + margin * 2}" height="${maxY - minY + margin * 2}" fill="#1b2328"/><g fill="#22313b" stroke="#39a9ff" stroke-width="1">${polygonsSvg}</g></svg>`
+}
+
+function serializeSeed(seed: {
+  readonly canonicalKey: string
+  readonly componentCount: number
+  readonly isolatedPieceCount: number
+  readonly largestComponentSize: number
+  readonly maximumSideMm: number
+  readonly envelopeAreaMm2: number
+  readonly envelopeSpanMm: number
+  readonly crop: unknown
+}) {
+  return {
+    canonicalKeySha256: sha256(seed.canonicalKey),
+    componentCount: seed.componentCount,
+    isolatedPieceCount: seed.isolatedPieceCount,
+    largestComponentSize: seed.largestComponentSize,
+    maximumSideMm: seed.maximumSideMm,
+    envelopeAreaMm2: seed.envelopeAreaMm2,
+    envelopeSpanMm: seed.envelopeSpanMm,
+    crop: seed.crop
+  }
 }
 
 function safePath(value: string): string {

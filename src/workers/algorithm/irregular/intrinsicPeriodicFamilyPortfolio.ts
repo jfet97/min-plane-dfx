@@ -1,6 +1,6 @@
 import { Effect } from 'effect'
 import type { SheetSpec } from '@shared/domain/nesting.js'
-import type { IrregularPreparedPiece } from '@shared/irregular/domain.js'
+import type { IrregularPlacedPiece, IrregularPreparedPiece } from '@shared/irregular/domain.js'
 import {
   enumerateIntrinsicPeriodicCells,
   enumerateIntrinsicPeriodicCellCrops,
@@ -68,9 +68,13 @@ export interface IntrinsicPeriodicSourceCropSurvival {
 /** Records one best raw crop that existed before periodic cell/crop retention. */
 export interface IntrinsicPeriodicSourceAuditWitness {
   readonly role: 'P1' | 'P2'
+  readonly familyKey: string
   readonly sourceKey: string
   readonly sourceKind: IntrinsicPeriodicBasisProvenance['sourceKind']
   readonly cellKey: string
+  readonly basisProvenance: IntrinsicPeriodicBasisProvenance
+  /** Preserves the exact finite crop so an immutable report can replay and render it. */
+  readonly placements: ReadonlyArray<IrregularPlacedPiece>
   readonly seed: Pick<
     IntrinsicPeriodicSeed,
     | 'canonicalKey'
@@ -271,7 +275,13 @@ function selectIntrinsicPeriodicContinuations(
     >()
     const sourceAuditWitnesses = new Map<
       string,
-      { readonly sourceKey: string; readonly sourceKind: IntrinsicPeriodicBasisProvenance['sourceKind']; readonly seed: IntrinsicPeriodicSeed }
+      {
+        readonly familyKey: string
+        readonly basisProvenance: IntrinsicPeriodicBasisProvenance
+        readonly sourceKey: string
+        readonly sourceKind: IntrinsicPeriodicBasisProvenance['sourceKind']
+        readonly seed: IntrinsicPeriodicSeed
+      }
     >()
     const sourceAudit = (cell: IntrinsicPeriodicCatalog['cells'][number]) => {
       const provenance = cell.basisProvenance
@@ -308,6 +318,8 @@ function selectIntrinsicPeriodicContinuations(
               const current = sourceAuditWitnesses.get(seed.canonicalKey)
               if (current === undefined || provenance.sourceKey < current.sourceKey) {
                 sourceAuditWitnesses.set(seed.canonicalKey, {
+                  familyKey: family.familyKey,
+                  basisProvenance: provenance,
                   sourceKey: provenance.sourceKey,
                   sourceKind: provenance.sourceKind,
                   seed
@@ -387,9 +399,12 @@ function selectIntrinsicPeriodicContinuations(
             : [
                 {
                   role: seed.role,
+                  familyKey: source.familyKey,
                   sourceKey: source.sourceKey,
                   sourceKind: source.sourceKind,
                   cellKey: seed.cellKey,
+                  basisProvenance: source.basisProvenance,
+                  placements: seed.placements,
                   seed: {
                     canonicalKey: seed.canonicalKey,
                     componentCount: seed.componentCount,
