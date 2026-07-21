@@ -1825,16 +1825,69 @@ trace fields remain useful. Evidence is under
 - Completed first coordinated multi-piece pilot:
   `/private/tmp/min-plane-provenance/v7-coordinated-d55d55e-triangle/`
 
+#### Search-redesign review checkpoint (2026-07-21)
+
+The independent search-redesign review on branch `v7-search-redesign-review`
+(see `reviews/v7-search-redesign-review.md`) completed the mandated
+experiments and found two defects outside them:
+
+1. **Production regression repaired.** Commit `48abf69` had removed the
+   empty-layout IFP seed from candidate generation; under the production
+   beam's `contact-only` candidate domain every decode placed zero pieces
+   from that commit through `d56d9d7`. Repaired at `6bcba8c`; the focused
+   suites return to the documented pre-`48abf69` ancestry baseline. The
+   golden gate must become an automatic commit gate — convention did not
+   hold.
+2. **The 74,428 witness was retention-evicted by its own cell front.** The
+   shared basis is generated but retains zero cells in the default bounded
+   front at `d56d9d7` and at `9da94e2`; the default archive's best Triangle
+   entry was 102,182 mm2. Behind `--admit-raw-witnesses` (commit `96368ca`)
+   the raw-crop Pareto witnesses now compete as source-tagged continuations
+   in the shared archive; on Triangle this surfaces both the 74,428 witness
+   and a previously unseen 90,352.625 mm2 three-band lattice with 7 isolates
+   and 9 components (hash `4b87d6df…`) as the archive winner, replayed
+   hash-identically twice. Homogeneous controls are clean.
+
+The paired smaller-step experiment and the move-vocabulary extension were run
+as one equal-budget matrix from the pinned exact seeds (Triangle
+`371db269…`, Mixed `310adc64…`), restart capacity zero, 50,000 pressure
+evaluations per arm, arms {baseline 1.25%, smaller 0.625%, sampled-relocation
+vocabulary, both}: **zero canonical-exact endpoints in all eight arms across
+both fixtures.** The smaller-step arm reached raw loss 3.6e-06 on Triangle
+while retaining 12 pair conflicts across 16 pieces — the definitive
+demonstration that vanishing relaxed loss does not approach exact legality.
+The sampled-relocation vocabulary (deterministic per-collider position
+sampling with shrinking-ring refinement, faithful to Sparrow's separator) is
+a 2.7x better mover at the 5% target on heterogeneous Mixed but cannot close
+a dense-lattice contraction either. Per the preregistered stop rule, **the
+adaptive-pressure branch is closed on both fixtures.** The vocabulary and the
+configurable ratio schedule remain as default-off generic machinery.
+
+Mixed-61 periodic coverage was additionally shown to be machine-relative:
+under identical 25-second continuation deadlines this review's machine
+completed 4/8 continuations (vs 1/8 on the original machine) and produced a
+new best periodic endpoint at 420,059.254 mm2, zero cavities, 33/10 contacts
+(hash `a79f6148…`). Wall-clock continuation budgets must become evaluation
+budgets before any Mixed periodic conclusion is called conclusive.
+
 ## Immediate Next Action
 
-Disable cross-target restart injection in the experimental adaptive-pressure
-role while retaining the trace/accounting and adaptive-depth machinery. Then
-run one bounded, paired smaller-step experiment from the same exact Triangle
-and Mixed seeds: compare the current smallest 1.25% contraction with a smaller
-intrinsic contraction under equal evaluation and wall budgets. Do not add a new
-move family or finalizer in the same experiment. The sole positive gate is a
-canonical-exact endpoint that passes the existing strict improvement and
-admission checks. Lower relaxed loss or fewer relaxed conflicts cannot justify
-continuation because both become easier as contraction approaches zero. If
-neither equal-budget arm produces an admissible endpoint, stop this pressure
-branch. Preserve exact Clipper2 admission and both existing exact fallbacks.
+1. Wire the focused production suites (golden, windowed beam, NFP service,
+   layout scorer) into an automatic per-commit gate on research branches.
+2. Convert periodic continuation budgets from wall-clock to evaluation caps
+   (wall clock as safety abort only), then rerun Mixed-61 for a
+   machine-independent coverage-complete result.
+3. Consolidate one decision-grade portfolio run: ordinary strict, reversed,
+   endpoint-derived, pocket-first, periodic continuations, and raw-crop
+   witnesses competing in one shared archive under one budget report, on
+   Triangle, Mixed-61, and the homogeneous controls.
+4. Implement cavity-first scheduling as the next constructive experiment
+   (one bounded cavity-queue slot per depth, commensurate two-order
+   admission), gated on improving the shared archive against the 405,773
+   reference.
+5. Replace the closed pressure branch with bounded LNS destroy/repair from
+   archive endpoints (destroy a conflict- or cavity-adjacent subset, repair
+   through the strict decoder, canonical-exact-only acceptance), reusing the
+   sampled-relocation primitive inside repair. Equal 50,000-evaluation
+   budget; the same exact fallbacks; zero admissible improvements closes
+   that branch too.
