@@ -20,6 +20,7 @@ import { preparePieces as prepareNestingPieces } from '../src/shared/preparePiec
 import { runIntrinsicPeriodicFamilyPortfolio } from '../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
 import {
   MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION,
+  MAXIMUM_EDGE_CONTACT_PAIR_VALIDATION_ATTEMPTS_PER_DERIVATION,
   MAXIMUM_EDGE_CONTACT_RELATIONS_PER_DERIVATION,
   MAXIMUM_NFP_BOUNDARY_VERTEX_BASIS_CANDIDATES
 } from '../src/workers/algorithm/irregular/intrinsicPeriodicCells.js'
@@ -213,6 +214,8 @@ const report = {
     edgeContactRelationsPerDerivation: MAXIMUM_EDGE_CONTACT_RELATIONS_PER_DERIVATION,
     edgeContactBasisCandidatesPerDerivation:
       MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION,
+    edgeContactPairValidationAttemptsPerDerivation:
+      MAXIMUM_EDGE_CONTACT_PAIR_VALIDATION_ATTEMPTS_PER_DERIVATION,
     cellsPerFamilyRole: maximumCellsPerFamilyRole,
     cropsPerCell: maximumCropsPerCell,
     cropEnumeration: {

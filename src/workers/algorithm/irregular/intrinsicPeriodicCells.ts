@@ -51,6 +51,7 @@ const transformOrder = Order.combineAll<IrregularTransformCandidate>([
 export const MAXIMUM_NFP_BOUNDARY_VERTEX_BASIS_CANDIDATES = 64
 export const MAXIMUM_EDGE_CONTACT_RELATIONS_PER_DERIVATION = 64
 export const MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION = 64
+export const MAXIMUM_EDGE_CONTACT_PAIR_VALIDATION_ATTEMPTS_PER_DERIVATION = 256
 
 export interface IntrinsicPeriodicVector {
   readonly x: number
@@ -1136,6 +1137,10 @@ function deriveEdgeContactBasisCandidates(
     const retainedRelations = [...relations.values()]
       .toSorted(compareEdgeContactRelations)
       .slice(0, MAXIMUM_EDGE_CONTACT_RELATIONS_PER_DERIVATION)
+    const memberDoubledAreaGrid2 = members.reduce(
+      (sum, member) => sum + polygonAreaGrid2(member.geometry, member.point),
+      0n
+    )
     const candidates: Array<{
       readonly determinant: bigint
       readonly squaredSpan: bigint
@@ -1149,7 +1154,7 @@ function deriveEdgeContactBasisCandidates(
         const second = retainedRelations[secondIndex]
         if (second === undefined) continue
         const determinant = absBigInt(crossGrid(first.vector, second.vector))
-        if (determinant === 0n) continue
+        if (determinant === 0n || 2n * determinant < memberDoubledAreaGrid2) continue
         const sourcePoints: readonly [RationalPoint, RationalPoint] = [
           { x: rational(first.vector.x), y: rational(first.vector.y) },
           { x: rational(second.vector.x), y: rational(second.vector.y) }
@@ -1173,16 +1178,32 @@ function deriveEdgeContactBasisCandidates(
         })
       }
     }
-    return candidates
-      .toSorted(
-        (first, second) =>
-          compareBigInt(first.determinant, second.determinant) ||
-          compareBigInt(first.squaredSpan, second.squaredSpan) ||
-          second.contactLengthMm - first.contactLengthMm ||
-          first.candidate.sourceKey.localeCompare(second.candidate.sourceKey)
-      )
-      .slice(0, MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION)
-      .map(({ candidate }) => candidate)
+    const ordered = candidates.toSorted(
+      (first, second) =>
+        compareBigInt(first.determinant, second.determinant) ||
+        compareBigInt(first.squaredSpan, second.squaredSpan) ||
+        second.contactLengthMm - first.contactLengthMm ||
+        first.candidate.sourceKey.localeCompare(second.candidate.sourceKey)
+    )
+    const admitted: IntrinsicPeriodicBasisCandidate[] = []
+    for (const { candidate } of ordered.slice(
+      0,
+      MAXIMUM_EDGE_CONTACT_PAIR_VALIDATION_ATTEMPTS_PER_DERIVATION
+    )) {
+      const canonical = canonicalizeBasis(candidate.basis[0], candidate.basis[1])
+      if (canonical === undefined) continue
+      const diagnostic = yield* diagnoseLattice(members, canonical)
+      if (
+        !diagnostic.legal ||
+        !diagnostic.centreContactComplete ||
+        diagnostic.sharedBoundaryLengthMm <= 0
+      ) {
+        continue
+      }
+      admitted.push(candidate)
+      if (admitted.length >= MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION) break
+    }
+    return admitted
   })
 }
 
