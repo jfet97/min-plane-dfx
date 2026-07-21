@@ -6,9 +6,11 @@ for a summary, a generic code review, or a new implementation. Read the
 evidence and source below, challenge the current interpretation, and recommend
 one disciplined next experimental step.
 
-Work read-only. Do not edit files, run destructive commands, alter artifacts,
-or silently substitute a generic nesting recipe for the constraints of this
-engine.
+Inspect the repository, source, and provenance artifacts read-only. Do not edit
+implementation files, alter artifacts, run destructive commands, or silently
+substitute a generic nesting recipe for the constraints of this engine. The sole
+permitted write is the review document and its Git commit described under
+**Delivery Branch And Commit** below.
 
 ## Review Goal
 
@@ -430,6 +432,39 @@ For each route, state: what it changes, which evidence supports it, its main
 risk, whether it is generic, its expected cost, and the falsifiable condition
 under which it should be rejected. You may rank several paths, but nominate
 only one immediate implementation experiment under `# Verdict`.
+
+## Delivery Branch And Commit
+
+After completing the review, publish that one Markdown document in Git. This
+is part of the task, not an optional handoff.
+
+1. Starting from `v7-geometric-cohesion` at the review commit, create the
+   descendant branch `v7-geometric-cohesion-fable`.
+2. Write the complete review to exactly:
+
+   ```text
+   reviews/fable5-v7-search-quality-review.md
+   ```
+
+   Create `reviews/` if it does not exist. Do not modify any other tracked
+   project file.
+3. Run `git diff --check`.
+4. Commit only that file with this exact subject:
+
+   ```text
+   Add Fable V7 search-quality review
+   ```
+
+5. Push the branch and set its upstream:
+
+   ```sh
+   git push -u origin v7-geometric-cohesion-fable
+   ```
+
+At the end of your response, report the committed SHA, pushed branch, and the
+absolute path of the review file. If pushing is impossible due to missing
+credentials or remote access, do not pretend it succeeded: leave the review
+committed locally if possible and report the exact failure.
 
 Under **Verdict**, choose exactly one:
 
