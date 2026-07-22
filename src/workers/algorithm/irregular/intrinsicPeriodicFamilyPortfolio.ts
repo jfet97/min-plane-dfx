@@ -117,6 +117,10 @@ export interface IntrinsicPeriodicPortfolioPhaseTimings {
     readonly sourceAuditCropEnumerationMs: number
     readonly retainedCropEnumerationMs: number
     readonly cropFrontSelectionMs: number
+    readonly sourceAuditLogicalCropAttemptCount: number
+    readonly sourceAuditPhysicalCropAttemptCount: number
+    readonly sourceAuditUniqueCanonicalCellCount: number
+    readonly sourceAuditCanonicalCellReplayCount: number
     readonly bookkeepingMs: number
     readonly coverageComplete: boolean
     readonly totalMs: number
@@ -400,6 +404,10 @@ function selectIntrinsicPeriodicContinuations(
     let sourceAuditCropEnumerationMs = 0
     let retainedCropEnumerationMs = 0
     let cropFrontSelectionMs = 0
+    let sourceAuditLogicalCropAttemptCount = 0
+    let sourceAuditPhysicalCropAttemptCount = 0
+    let sourceAuditUniqueCanonicalCellCount = 0
+    let sourceAuditCanonicalCellReplayCount = 0
     const familyMembers = new Map(
       groupIntrinsicCollisionFamilies(pieces).map((family) => [family.key, family.members])
     )
@@ -458,15 +466,46 @@ function selectIntrinsicPeriodicContinuations(
       if (members === undefined) continue
       const continuations: IntrinsicPeriodicContinuation[] = []
       const directValidCropsByCell = new Map<string, ReadonlyArray<IntrinsicPeriodicSeed>>()
+      const directValidCropsByCanonicalCell = new Map<
+        string,
+        { readonly crops: ReadonlyArray<IntrinsicPeriodicSeed>; readonly attemptCount: number }
+      >()
+      const enumerateCrops = (
+        cell: IntrinsicPeriodicCatalog['cells'][number],
+        phase: 'source-audit' | 'retained'
+      ): Effect.Effect<ReadonlyArray<IntrinsicPeriodicSeed>, IrregularGeometryInputError> =>
+        Effect.gen(function* () {
+          const cached = directValidCropsByCanonicalCell.get(cell.canonicalKey)
+          if (cached !== undefined) {
+            if (phase === 'source-audit') {
+              sourceAuditLogicalCropAttemptCount += cached.attemptCount
+              sourceAuditCanonicalCellReplayCount += 1
+            }
+            return cached.crops
+          }
+          let attemptCount = 0
+          const enumerationStartedAt = capturePhaseTimings ? performance.now() : 0
+          const crops = yield* enumerateIntrinsicPeriodicCellCrops(cell, members, () => {
+            attemptCount += 1
+          })
+          if (capturePhaseTimings) {
+            const elapsed = performance.now() - enumerationStartedAt
+            if (phase === 'source-audit') sourceAuditCropEnumerationMs += elapsed
+            else retainedCropEnumerationMs += elapsed
+          }
+          directValidCropsByCanonicalCell.set(cell.canonicalKey, { crops, attemptCount })
+          if (phase === 'source-audit') {
+            sourceAuditLogicalCropAttemptCount += attemptCount
+            sourceAuditPhysicalCropAttemptCount += attemptCount
+            sourceAuditUniqueCanonicalCellCount += 1
+          }
+          return crops
+        })
       if (captureSourceSurvivalAudit) {
         for (const cell of family.sourceAuditCells ?? family.cells) {
           if (basisSourceKey !== undefined && cell.basisProvenance?.sourceKey !== basisSourceKey) continue
           const audit = sourceAudit(cell)
-          const enumerationStartedAt = capturePhaseTimings ? performance.now() : 0
-          const directValidCrops = yield* enumerateIntrinsicPeriodicCellCrops(cell, members)
-          if (capturePhaseTimings) {
-            sourceAuditCropEnumerationMs += performance.now() - enumerationStartedAt
-          }
+          const directValidCrops = yield* enumerateCrops(cell, 'source-audit')
           if (audit !== undefined) audit.directValidCropCountBeforeFront += directValidCrops.length
           const provenance = cell.basisProvenance
           if (provenance !== undefined) {
@@ -493,11 +532,7 @@ function selectIntrinsicPeriodicContinuations(
         if (audit !== undefined) audit.retainedCellCount += 1
         let directValidCrops = directValidCropsByCell.get(periodicSourceCellKey(cell))
         if (directValidCrops === undefined) {
-          const enumerationStartedAt = capturePhaseTimings ? performance.now() : 0
-          directValidCrops = yield* enumerateIntrinsicPeriodicCellCrops(cell, members)
-          if (capturePhaseTimings) {
-            retainedCropEnumerationMs += performance.now() - enumerationStartedAt
-          }
+          directValidCrops = yield* enumerateCrops(cell, 'retained')
         }
         const cropFrontStartedAt = capturePhaseTimings ? performance.now() : 0
         const crops = selectIntrinsicPeriodicSeedFront(directValidCrops, maximumCropsPerCell)
@@ -643,6 +678,10 @@ function selectIntrinsicPeriodicContinuations(
             sourceAuditCropEnumerationMs,
             retainedCropEnumerationMs,
             cropFrontSelectionMs,
+            sourceAuditLogicalCropAttemptCount,
+            sourceAuditPhysicalCropAttemptCount,
+            sourceAuditUniqueCanonicalCellCount,
+            sourceAuditCanonicalCellReplayCount,
             bookkeepingMs,
             coverageComplete: phaseResidualCoverageComplete(totalMs, bookkeepingMs),
             totalMs

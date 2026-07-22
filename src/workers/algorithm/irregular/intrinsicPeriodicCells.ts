@@ -680,7 +680,8 @@ export function expandIntrinsicPeriodicCell(
 /** Enumerates every direct-valid finite crop before the bounded crop frontier. */
 export function enumerateIntrinsicPeriodicCellCrops(
   cell: IntrinsicPeriodicCell,
-  familyMembers: ReadonlyArray<IrregularPreparedPiece>
+  familyMembers: ReadonlyArray<IrregularPreparedPiece>,
+  onCropAttempt?: () => void
 ): Effect.Effect<ReadonlyArray<IntrinsicPeriodicSeed>, IrregularGeometryInputError> {
   return Effect.gen(function* () {
     const v1 = gridPoint(cell.v1)
@@ -695,6 +696,7 @@ export function enumerateIntrinsicPeriodicCellCrops(
       const columns = Math.ceil(q / rows)
       for (const traversal of ['row', 'column'] as const) {
         for (const corner of [0, 1, 2, 3] as const) {
+          onCropAttempt?.()
           const coordinates = cropCoordinates(rows, columns, q, traversal, corner)
           const placed: IrregularPlacedPiece[] = []
           let sourceIndex = 0

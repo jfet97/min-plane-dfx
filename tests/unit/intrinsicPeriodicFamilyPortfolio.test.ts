@@ -135,6 +135,10 @@ describe('intrinsic periodic family portfolio', () => {
     expect(selectionTotal).toBeCloseTo(phaseTimings.selectionMs, 1)
     expect(phaseTimings.bookkeepingMs).toBeLessThanOrEqual(phaseTimings.totalMs)
     expect(phaseTimings.selection.bookkeepingMs).toBeLessThanOrEqual(phaseTimings.selectionMs)
+    expect(phaseTimings.selection.sourceAuditLogicalCropAttemptCount).toBeGreaterThanOrEqual(
+      phaseTimings.selection.sourceAuditPhysicalCropAttemptCount
+    )
+    expect(phaseTimings.selection.sourceAuditCanonicalCellReplayCount).toBeGreaterThanOrEqual(0)
     expect(typeof phaseTimings.coverageComplete).toBe('boolean')
   })
 
