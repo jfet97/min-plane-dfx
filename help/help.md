@@ -713,6 +713,8 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   endpoint is worse than its pure-order parent. The next experiment changes
   partial-state retention rather than adding another decode order.
 
+### 2026-07-20 (Dalsoo source-control addition)
+
 - Added a pinned source review of
   [`Dalsoo-Bin-Packing`](research/open-source-nesting-strategies.md#dalsoo-bin-packing)
   at `bde2a3ef09f48980e59328eae7b042e6d9fdd4bc`. It does not alter the V7

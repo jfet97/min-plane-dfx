@@ -1,6 +1,6 @@
 # Open-Source Irregular Nesting Strategy Review
 
-Date: 2026-07-17
+Date: 2026-07-17 (updated 2026-07-20)
 
 This is a final source-level control pass over the main open-source references
 that are relevant to the current `min-plane-dfx` irregular convex nesting
@@ -26,6 +26,7 @@ commit.
 | libnest2d | `663daa69e1d7478669f714218e27681edbc96640` | [tamasmeszaros/libnest2d at the inspected commit](https://github.com/tamasmeszaros/libnest2d/tree/663daa69e1d7478669f714218e27681edbc96640) |
 | PackingSolver | `3d8d97dd8ae5ac46f08328636f5e168283282ebc` | [fontanf/packingsolver at the inspected commit](https://github.com/fontanf/packingsolver/tree/3d8d97dd8ae5ac46f08328636f5e168283282ebc) |
 | Sparrow | `961ec31f576c5817ece779ff73982b4553760a4e` | [JeroenGar/sparrow at the inspected commit](https://github.com/JeroenGar/sparrow/tree/961ec31f576c5817ece779ff73982b4553760a4e) |
+| Dalsoo-Bin-Packing | `bde2a3ef09f48980e59328eae7b042e6d9fdd4bc` | [whitegreen/Dalsoo-Bin-Packing at the inspected commit](https://github.com/whitegreen/Dalsoo-Bin-Packing/tree/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc) |
 
 ## Executive Conclusion
 
@@ -42,6 +43,10 @@ PackingSolver uses a portfolio of tree search, local search, MILP, sequential
 value correction, and large-item-first phases. Sparrow uses a left-bottom
 constructor followed by strip shrinking, separation, disruption, and coordinate
 descent. libnest2d exposes a configurable NFP placer and simple selectors.
+Dalsoo-Bin-Packing is a useful contrast: it enumerates feature-aligned poses and
+maintains an incremental convex hull, but commits every successful greedy
+placement, then opens another bin. It has neither an endpoint archive nor a
+feasibility-restoration or topology-repair stage.
 
 Therefore:
 
@@ -72,6 +77,7 @@ Therefore:
 | libnest2d | best contour point across rotations | caller-selected order; no core GA | configurable objective; default center distance and overfit | contour optimization can inspect hole contours; selectors remain area-first |
 | PackingSolver | trapezoid/tree and local-search variants | algorithm portfolio | guide area or box area relative to occupied hull/profit | explicit large-item-first phase fixes large pieces, then solves small pieces |
 | Sparrow | left-bottom constructive seed | sampled starts, coordinate descent, exploration/disruption | strip width, feasibility, density | global squeeze and disruption can reopen gaps; no NFP cavity enumerator |
+| Dalsoo-Bin-Packing | vertex-to-vertex poses; its Abey mode also aligns adjacent edges | none; sequentially opens further bins | incremental convex-hull area times an origin/axis pressure | none; simple polygons only and no free-space or topology model |
 
 ## Deepnest
 
@@ -485,6 +491,10 @@ the long-chain failure.
    the general constructor but must not become a special-case final scorer.
 6. **Defer Sparrow-style squeeze/large-neighborhood search until the fast path is
    correct and profiled.** It is promising but materially more expensive.
+7. **Measure candidate-pose coverage before adding another generator.** If a
+   trace proves that an NFP decoder never materializes a useful compact feature
+   contact, test a bounded Dalsoo-style vertex/edge-alignment generator behind
+   the same exact admission and archive. Do not use it as a new greedy decoder.
 
 ## Rejected Shortcuts
 
@@ -545,6 +555,25 @@ Pass conditions:
 
 Failure meaning: order diversity is not the dominant limitation, so work should
 return to candidate generation, local ranking, or a stronger compaction phase.
+
+### Experiment D: feature-contact coverage audit
+
+For each rejected compact continuation, record whether an equivalent legal pose
+at the relevant candidate/fixed feature contact was materialized before
+deduplication, after deduplication, and after local fanout. Only if it was never
+materialized, add a bounded deterministic vertex/edge-alignment candidate
+generator for the allowed transform family, with canonical Clipper2 admission.
+
+Pass conditions:
+
+- it adds phase-distinct legal candidates rather than duplicate NFP endpoints;
+- at least one added candidate survives the ordinary intrinsic archive without
+  worsening the triangle golden;
+- runtime stays within a declared candidate-generation budget.
+
+Failure meaning: the weakness lies in retention, order, or global topology—not
+in missing feature-contact pose generation. Remove the probe rather than giving
+feature contact more comparator weight.
 
 ## Bottom Line
 
