@@ -1,0 +1,522 @@
+{
+  "experiment": "intrinsic-shared-archive-step4",
+  "mode": "calibration",
+  "sourceCommit": "8f84f8124ac3254e58a45d75b6c5d0f87df91d71",
+  "harness": {
+    "path": "/Users/andreasimonecosta/Documents/Work/min-plane-dfx-worktrees/deterministic-periodic-budget/scripts/irregular-intrinsic-shared-archive.ts",
+    "sha256": "71e781a3038e1e43e08314b563fd92ee0a35f41514c71655fa970f38240a45c6"
+  },
+  "fixture": {
+    "name": "shapes-17",
+    "path": "/Users/andreasimonecosta/Documents/Work/min-plane-dfx-worktrees/deterministic-periodic-budget/tests/fixtures/irregularSeventeenShapes",
+    "sha256": "1b4b29b54a1e29c0b923e81e3e19166767432747c376481907f186dee4e0b84b",
+    "pieceCount": 17,
+    "sheet": {
+      "width": 2000,
+      "height": 2700
+    }
+  },
+  "runtime": {
+    "node": "v24.16.0",
+    "v8": "13.6.233.17-node.49"
+  },
+  "limits": {
+    "maximumDirectRuntimeMs": 600000,
+    "maximumCatalogRuntimeMs": 30000,
+    "maximumContinuationRuntimeMs": 600000,
+    "maximumPeriodicRuntimeMs": 600000,
+    "rawSourceAudit": false,
+    "sourceAuditScope": "all",
+    "sourceAuditReplay": false
+  },
+  "directRuns": [
+    {
+      "role": "canonical-grid",
+      "status": "completed",
+      "consumedCandidateEvaluations": 9504,
+      "runtimeMs": 8218.439,
+      "endpoint": {
+        "role": "canonical-grid",
+        "sheetlessCanonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2",
+        "sheetlessCanonicalGeometryIdentityBytes": 3228,
+        "metrics": {
+          "envelopeMaximumSideMm": 578.418,
+          "envelopeAreaMm2": 310542.21267599997,
+          "envelopeSpanMm": 1115.3,
+          "enclosedCavityCount": 0,
+          "totalEnclosedCavityAreaMm2": 0,
+          "largestOccupiedHullGapRatio": 0.24211947627167232,
+          "isolatedPieceCount": 11,
+          "positiveContactComponentCount": 13,
+          "largestPositiveContactComponentSize": 4,
+          "largestPositiveContactComponentRatio": 0.23529411764705882,
+          "occupiedAreaOutsideLargestContactComponentMm2": 144764.509796,
+          "occupiedHullWasteRatio": 0.24211947627167232,
+          "totalStructuralContacts": 2,
+          "dominantStructuralContacts": 1,
+          "contactUnits": 3.104431216728186,
+          "sharedBoundaryLengthMm": 251.52199999999996,
+          "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2",
+          "runtimeMs": 8218.439
+        },
+        "certificate": {
+          "passes": false,
+          "violatedFloors": [
+            "maximumIsolatedPieceCount",
+            "minimumLargestPositiveContactComponentRatio",
+            "maximumLargestOccupiedHullGapRatio"
+          ],
+          "relativeDeficitSum": 2.3200121947523256
+        },
+        "requestedSheetFit": {
+          "q0": {
+            "fits": true,
+            "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+          },
+          "q90": {
+            "fits": true,
+            "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+          },
+          "selectedRotationDeg": 0,
+          "selectedCanonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+        }
+      },
+      "svgPath": "/private/tmp/min-plane-provenance/shapes-17-baseline-8f84f81/calibration/shapes-17-533a25d3e134933f.svg"
+    },
+    {
+      "role": "legacy-absolute-envelope",
+      "status": "completed",
+      "consumedCandidateEvaluations": 9679,
+      "runtimeMs": 8502.010499999999,
+      "endpoint": {
+        "role": "legacy-absolute-envelope",
+        "sheetlessCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+        "sheetlessCanonicalGeometryIdentityBytes": 3229,
+        "metrics": {
+          "envelopeMaximumSideMm": 559.975,
+          "envelopeAreaMm2": 304499.84565000003,
+          "envelopeSpanMm": 1103.749,
+          "enclosedCavityCount": 0,
+          "totalEnclosedCavityAreaMm2": 0,
+          "largestOccupiedHullGapRatio": 0.23359145881845145,
+          "isolatedPieceCount": 10,
+          "positiveContactComponentCount": 13,
+          "largestPositiveContactComponentSize": 3,
+          "largestPositiveContactComponentRatio": 0.17647058823529413,
+          "occupiedAreaOutsideLargestContactComponentMm2": 182216.003356,
+          "occupiedHullWasteRatio": 0.2377296103439605,
+          "totalStructuralContacts": 0,
+          "dominantStructuralContacts": 0,
+          "contactUnits": 2.829529761552637,
+          "sharedBoundaryLengthMm": 106.681,
+          "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+          "runtimeMs": 8502.010499999999
+        },
+        "certificate": {
+          "passes": false,
+          "violatedFloors": [
+            "maximumIsolatedPieceCount",
+            "minimumLargestPositiveContactComponentRatio",
+            "maximumLargestOccupiedHullGapRatio"
+          ],
+          "relativeDeficitSum": 2.3366881568288917
+        },
+        "requestedSheetFit": {
+          "q0": {
+            "fits": true,
+            "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+          },
+          "q90": {
+            "fits": true,
+            "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+          },
+          "selectedRotationDeg": 0,
+          "selectedCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+        }
+      },
+      "svgPath": "/private/tmp/min-plane-provenance/shapes-17-baseline-8f84f81/calibration/shapes-17-2ed3ee37529c8967.svg"
+    },
+    {
+      "role": "open-pocket-first",
+      "status": "completed",
+      "consumedCandidateEvaluations": 9504,
+      "runtimeMs": 8361.621208,
+      "endpoint": {
+        "role": "open-pocket-first",
+        "sheetlessCanonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2",
+        "sheetlessCanonicalGeometryIdentityBytes": 3228,
+        "metrics": {
+          "envelopeMaximumSideMm": 578.418,
+          "envelopeAreaMm2": 310542.21267599997,
+          "envelopeSpanMm": 1115.3,
+          "enclosedCavityCount": 0,
+          "totalEnclosedCavityAreaMm2": 0,
+          "largestOccupiedHullGapRatio": 0.24211947627167232,
+          "isolatedPieceCount": 11,
+          "positiveContactComponentCount": 13,
+          "largestPositiveContactComponentSize": 4,
+          "largestPositiveContactComponentRatio": 0.23529411764705882,
+          "occupiedAreaOutsideLargestContactComponentMm2": 144764.509796,
+          "occupiedHullWasteRatio": 0.24211947627167232,
+          "totalStructuralContacts": 2,
+          "dominantStructuralContacts": 1,
+          "contactUnits": 3.104431216728186,
+          "sharedBoundaryLengthMm": 251.52199999999996,
+          "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2",
+          "runtimeMs": 8361.621208
+        },
+        "certificate": {
+          "passes": false,
+          "violatedFloors": [
+            "maximumIsolatedPieceCount",
+            "minimumLargestPositiveContactComponentRatio",
+            "maximumLargestOccupiedHullGapRatio"
+          ],
+          "relativeDeficitSum": 2.3200121947523256
+        },
+        "requestedSheetFit": {
+          "q0": {
+            "fits": true,
+            "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+          },
+          "q90": {
+            "fits": true,
+            "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+          },
+          "selectedRotationDeg": 0,
+          "selectedCanonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+        }
+      },
+      "svgPath": "/private/tmp/min-plane-provenance/shapes-17-baseline-8f84f81/calibration/shapes-17-df323662a7207bb3.svg"
+    }
+  ],
+  "periodicRuns": [],
+  "sheetlessArchive": [
+    {
+      "role": "legacy-absolute-envelope",
+      "sheetlessCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+      "sheetlessCanonicalGeometryIdentityBytes": 3229,
+      "metrics": {
+        "envelopeMaximumSideMm": 559.975,
+        "envelopeAreaMm2": 304499.84565000003,
+        "envelopeSpanMm": 1103.749,
+        "enclosedCavityCount": 0,
+        "totalEnclosedCavityAreaMm2": 0,
+        "largestOccupiedHullGapRatio": 0.23359145881845145,
+        "isolatedPieceCount": 10,
+        "positiveContactComponentCount": 13,
+        "largestPositiveContactComponentSize": 3,
+        "largestPositiveContactComponentRatio": 0.17647058823529413,
+        "occupiedAreaOutsideLargestContactComponentMm2": 182216.003356,
+        "occupiedHullWasteRatio": 0.2377296103439605,
+        "totalStructuralContacts": 0,
+        "dominantStructuralContacts": 0,
+        "contactUnits": 2.829529761552637,
+        "sharedBoundaryLengthMm": 106.681,
+        "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+        "runtimeMs": 8502.010499999999
+      },
+      "certificate": {
+        "passes": false,
+        "violatedFloors": [
+          "maximumIsolatedPieceCount",
+          "minimumLargestPositiveContactComponentRatio",
+          "maximumLargestOccupiedHullGapRatio"
+        ],
+        "relativeDeficitSum": 2.3366881568288917
+      },
+      "requestedSheetFit": {
+        "q0": {
+          "fits": true,
+          "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+        },
+        "q90": {
+          "fits": true,
+          "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+        },
+        "selectedRotationDeg": 0,
+        "selectedCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+      }
+    },
+    {
+      "role": "canonical-grid",
+      "sheetlessCanonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2",
+      "sheetlessCanonicalGeometryIdentityBytes": 3228,
+      "metrics": {
+        "envelopeMaximumSideMm": 578.418,
+        "envelopeAreaMm2": 310542.21267599997,
+        "envelopeSpanMm": 1115.3,
+        "enclosedCavityCount": 0,
+        "totalEnclosedCavityAreaMm2": 0,
+        "largestOccupiedHullGapRatio": 0.24211947627167232,
+        "isolatedPieceCount": 11,
+        "positiveContactComponentCount": 13,
+        "largestPositiveContactComponentSize": 4,
+        "largestPositiveContactComponentRatio": 0.23529411764705882,
+        "occupiedAreaOutsideLargestContactComponentMm2": 144764.509796,
+        "occupiedHullWasteRatio": 0.24211947627167232,
+        "totalStructuralContacts": 2,
+        "dominantStructuralContacts": 1,
+        "contactUnits": 3.104431216728186,
+        "sharedBoundaryLengthMm": 251.52199999999996,
+        "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2",
+        "runtimeMs": 8218.439
+      },
+      "certificate": {
+        "passes": false,
+        "violatedFloors": [
+          "maximumIsolatedPieceCount",
+          "minimumLargestPositiveContactComponentRatio",
+          "maximumLargestOccupiedHullGapRatio"
+        ],
+        "relativeDeficitSum": 2.3200121947523256
+      },
+      "requestedSheetFit": {
+        "q0": {
+          "fits": true,
+          "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+        },
+        "q90": {
+          "fits": true,
+          "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+        },
+        "selectedRotationDeg": 0,
+        "selectedCanonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+      }
+    }
+  ],
+  "fittedArchive": [
+    {
+      "role": "legacy-absolute-envelope",
+      "sheetlessCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+      "sheetlessCanonicalGeometryIdentityBytes": 3229,
+      "metrics": {
+        "envelopeMaximumSideMm": 559.975,
+        "envelopeAreaMm2": 304499.84565000003,
+        "envelopeSpanMm": 1103.749,
+        "enclosedCavityCount": 0,
+        "totalEnclosedCavityAreaMm2": 0,
+        "largestOccupiedHullGapRatio": 0.23359145881845145,
+        "isolatedPieceCount": 10,
+        "positiveContactComponentCount": 13,
+        "largestPositiveContactComponentSize": 3,
+        "largestPositiveContactComponentRatio": 0.17647058823529413,
+        "occupiedAreaOutsideLargestContactComponentMm2": 182216.003356,
+        "occupiedHullWasteRatio": 0.2377296103439605,
+        "totalStructuralContacts": 0,
+        "dominantStructuralContacts": 0,
+        "contactUnits": 2.829529761552637,
+        "sharedBoundaryLengthMm": 106.681,
+        "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+        "runtimeMs": 8502.010499999999
+      },
+      "certificate": {
+        "passes": false,
+        "violatedFloors": [
+          "maximumIsolatedPieceCount",
+          "minimumLargestPositiveContactComponentRatio",
+          "maximumLargestOccupiedHullGapRatio"
+        ],
+        "relativeDeficitSum": 2.3366881568288917
+      },
+      "requestedSheetFit": {
+        "q0": {
+          "fits": true,
+          "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+        },
+        "q90": {
+          "fits": true,
+          "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+        },
+        "selectedRotationDeg": 0,
+        "selectedCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+      }
+    },
+    {
+      "role": "canonical-grid",
+      "sheetlessCanonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2",
+      "sheetlessCanonicalGeometryIdentityBytes": 3228,
+      "metrics": {
+        "envelopeMaximumSideMm": 578.418,
+        "envelopeAreaMm2": 310542.21267599997,
+        "envelopeSpanMm": 1115.3,
+        "enclosedCavityCount": 0,
+        "totalEnclosedCavityAreaMm2": 0,
+        "largestOccupiedHullGapRatio": 0.24211947627167232,
+        "isolatedPieceCount": 11,
+        "positiveContactComponentCount": 13,
+        "largestPositiveContactComponentSize": 4,
+        "largestPositiveContactComponentRatio": 0.23529411764705882,
+        "occupiedAreaOutsideLargestContactComponentMm2": 144764.509796,
+        "occupiedHullWasteRatio": 0.24211947627167232,
+        "totalStructuralContacts": 2,
+        "dominantStructuralContacts": 1,
+        "contactUnits": 3.104431216728186,
+        "sharedBoundaryLengthMm": 251.52199999999996,
+        "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2",
+        "runtimeMs": 8218.439
+      },
+      "certificate": {
+        "passes": false,
+        "violatedFloors": [
+          "maximumIsolatedPieceCount",
+          "minimumLargestPositiveContactComponentRatio",
+          "maximumLargestOccupiedHullGapRatio"
+        ],
+        "relativeDeficitSum": 2.3200121947523256
+      },
+      "requestedSheetFit": {
+        "q0": {
+          "fits": true,
+          "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+        },
+        "q90": {
+          "fits": true,
+          "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+        },
+        "selectedRotationDeg": 0,
+        "selectedCanonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+      }
+    }
+  ],
+  "sheetlessArchiveLeader": {
+    "role": "legacy-absolute-envelope",
+    "sheetlessCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+    "sheetlessCanonicalGeometryIdentityBytes": 3229,
+    "metrics": {
+      "envelopeMaximumSideMm": 559.975,
+      "envelopeAreaMm2": 304499.84565000003,
+      "envelopeSpanMm": 1103.749,
+      "enclosedCavityCount": 0,
+      "totalEnclosedCavityAreaMm2": 0,
+      "largestOccupiedHullGapRatio": 0.23359145881845145,
+      "isolatedPieceCount": 10,
+      "positiveContactComponentCount": 13,
+      "largestPositiveContactComponentSize": 3,
+      "largestPositiveContactComponentRatio": 0.17647058823529413,
+      "occupiedAreaOutsideLargestContactComponentMm2": 182216.003356,
+      "occupiedHullWasteRatio": 0.2377296103439605,
+      "totalStructuralContacts": 0,
+      "dominantStructuralContacts": 0,
+      "contactUnits": 2.829529761552637,
+      "sharedBoundaryLengthMm": 106.681,
+      "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+      "runtimeMs": 8502.010499999999
+    },
+    "certificate": {
+      "passes": false,
+      "violatedFloors": [
+        "maximumIsolatedPieceCount",
+        "minimumLargestPositiveContactComponentRatio",
+        "maximumLargestOccupiedHullGapRatio"
+      ],
+      "relativeDeficitSum": 2.3366881568288917
+    },
+    "requestedSheetFit": {
+      "q0": {
+        "fits": true,
+        "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+      },
+      "q90": {
+        "fits": true,
+        "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+      },
+      "selectedRotationDeg": 0,
+      "selectedCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+    }
+  },
+  "sheetlessSelectedWinner": {
+    "role": "legacy-absolute-envelope",
+    "sheetlessCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+    "sheetlessCanonicalGeometryIdentityBytes": 3229,
+    "metrics": {
+      "envelopeMaximumSideMm": 559.975,
+      "envelopeAreaMm2": 304499.84565000003,
+      "envelopeSpanMm": 1103.749,
+      "enclosedCavityCount": 0,
+      "totalEnclosedCavityAreaMm2": 0,
+      "largestOccupiedHullGapRatio": 0.23359145881845145,
+      "isolatedPieceCount": 10,
+      "positiveContactComponentCount": 13,
+      "largestPositiveContactComponentSize": 3,
+      "largestPositiveContactComponentRatio": 0.17647058823529413,
+      "occupiedAreaOutsideLargestContactComponentMm2": 182216.003356,
+      "occupiedHullWasteRatio": 0.2377296103439605,
+      "totalStructuralContacts": 0,
+      "dominantStructuralContacts": 0,
+      "contactUnits": 2.829529761552637,
+      "sharedBoundaryLengthMm": 106.681,
+      "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+      "runtimeMs": 8502.010499999999
+    },
+    "certificate": {
+      "passes": false,
+      "violatedFloors": [
+        "maximumIsolatedPieceCount",
+        "minimumLargestPositiveContactComponentRatio",
+        "maximumLargestOccupiedHullGapRatio"
+      ],
+      "relativeDeficitSum": 2.3366881568288917
+    },
+    "requestedSheetFit": {
+      "q0": {
+        "fits": true,
+        "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+      },
+      "q90": {
+        "fits": true,
+        "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+      },
+      "selectedRotationDeg": 0,
+      "selectedCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+    }
+  },
+  "fittedWinner": {
+    "role": "legacy-absolute-envelope",
+    "sheetlessCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+    "sheetlessCanonicalGeometryIdentityBytes": 3229,
+    "metrics": {
+      "envelopeMaximumSideMm": 559.975,
+      "envelopeAreaMm2": 304499.84565000003,
+      "envelopeSpanMm": 1103.749,
+      "enclosedCavityCount": 0,
+      "totalEnclosedCavityAreaMm2": 0,
+      "largestOccupiedHullGapRatio": 0.23359145881845145,
+      "isolatedPieceCount": 10,
+      "positiveContactComponentCount": 13,
+      "largestPositiveContactComponentSize": 3,
+      "largestPositiveContactComponentRatio": 0.17647058823529413,
+      "occupiedAreaOutsideLargestContactComponentMm2": 182216.003356,
+      "occupiedHullWasteRatio": 0.2377296103439605,
+      "totalStructuralContacts": 0,
+      "dominantStructuralContacts": 0,
+      "contactUnits": 2.829529761552637,
+      "sharedBoundaryLengthMm": 106.681,
+      "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+      "runtimeMs": 8502.010499999999
+    },
+    "certificate": {
+      "passes": false,
+      "violatedFloors": [
+        "maximumIsolatedPieceCount",
+        "minimumLargestPositiveContactComponentRatio",
+        "maximumLargestOccupiedHullGapRatio"
+      ],
+      "relativeDeficitSum": 2.3366881568288917
+    },
+    "requestedSheetFit": {
+      "q0": {
+        "fits": true,
+        "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+      },
+      "q90": {
+        "fits": true,
+        "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+      },
+      "selectedRotationDeg": 0,
+      "selectedCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+    }
+  },
+  "winnerSvgPath": "/private/tmp/min-plane-provenance/shapes-17-baseline-8f84f81/calibration/shapes-17-shared-archive-winner.svg",
+  "experimentValid": true
+}

@@ -260,6 +260,22 @@ narrower source set can change which later futures fit into the fixed cap, so
 this mode is judged by endpoint and corpus quality rather than source-list
 equality.
 
+The shared-archive runner also owns a heterogeneous direct-only baseline named
+`shapes-17`. It imports 17 committed DXFs with deterministic piece/source IDs,
+uses the shared `2000 x 2700 mm` roomy sheet and `10 mm` padding, and compares
+the same three sheet-free direct roles. Calibration is a complete decision run:
+it retains and ranks the direct endpoints, selects the fitting winner, and
+writes the winner SVG. Periodic source-count gates remain scoped to repeated-
+family experiments; an all-distinct job is valid with zero periodic cells.
+
+Clipper2 offset input is quantized once to the canonical `0.001 mm` grid. The
+adapter removes consecutive duplicates and an equal closing point created by
+that quantization before strict path validation. This is required for analytic
+full circles, whose final floating sample can be infinitesimally different from
+the first while representing the same grid point. No general tolerance or
+shape repair is introduced: non-adjacent duplicates, non-convex boundaries,
+and paths with fewer than three unique grid vertices remain invalid.
+
 The isolated V7 seed/archive experiment keeps that E4 path intact while
 testing a replacement controller with stricter observability boundaries. Each
 independent arm constructs two complete canonical-exact, sheet-free seeds:

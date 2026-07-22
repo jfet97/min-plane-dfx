@@ -77,6 +77,9 @@ the following order.
 
 - exact official 20-triangle repair-8 golden, rotations and mirroring enabled;
 - repair-0 triangle diagnostic no worse than the current baseline;
+- exact Shapes-17 direct-archive baseline: all 17 imported DXFs present, all
+  three direct roles complete, and comparison against `c640c06f...` at
+  `304,499.846 mm2`, zero cavities, and `559.975 mm` maximum side;
 - exact mixed-61 request on the accepted ten-sheet matrix, requiring one
   canonical hash wherever the common motif is legal and comparison against the
   approved reference's independent quality floors;
@@ -85,6 +88,48 @@ the following order.
 - rendered SVG/PNG inspection, not metrics alone;
 - isolated worktree, immutable manifest, exact commit/diff provenance, and a
   commit before the next experimental variant changes the code.
+
+### Shapes-17 Third Baseline
+
+The real 17-file job supplied on 2026-07-22 is now a durable third baseline
+beside Triangle-20 and Mixed-61. Its raw DXFs and job CSV live under
+`tests/fixtures/irregularSeventeenShapes/`. Every DXF imports as exactly one
+closed outline without warnings. The baseline uses the same sheet-free direct
+constructors as the shared archive, the shared `2000 x 2700 mm` roomy sheet,
+`10 mm` padding, compact-quality settings, and repair disabled.
+
+At source commit `8f84f8124ac3254e58a45d75b6c5d0f87df91d71`, all three direct roles
+complete deterministically. The selected `legacy-absolute-envelope` endpoint
+has canonical hash
+`c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a`,
+envelope area `304,499.845650 mm2`, maximum side `559.975 mm`, and zero
+enclosed cavities. It is a baseline rather than a quality ceiling: ten pieces
+remain isolated, including the visibly weak quarter-circle at the upper left.
+That makes this fixture a useful heterogeneous-cohesion gate for the next
+constructor and allocation changes.
+
+A second clean run at the same commit reproduced all direct statuses,
+evaluation counts, endpoint hashes, archive order, winner hash, and the winner
+SVG byte-for-byte.
+
+The fixture contains no repeated collision family, so the periodic catalog
+correctly selects zero continuations. The existing full-matrix experiment is
+invalid for this case only because its separate repeated-shape contract demands
+exactly eight periodic sources. Shapes-17 therefore gates the three direct
+roles; it must not be failed for lacking periodic cells that do not exist.
+
+The first attempted run exposed a real exactness defect rather than malformed
+input. A valid full circle can end with a floating sample infinitesimally
+different from its first sample; both points then map to the same `0.001 mm`
+Clipper2 grid coordinate. The offset adapter now removes only adjacent and
+closing duplicates after quantization and before strict validation. A polygon
+that truly collapses below three unique grid vertices still fails the original
+guard. Focused offset and collision-builder tests cover both cases.
+
+Portable evidence: [report](artifacts/shapes-17-baseline/report.json),
+[manifest](artifacts/shapes-17-baseline/manifest.json),
+[SVG](artifacts/shapes-17-baseline/shapes-17-shared-archive-winner.svg), and
+[PNG](artifacts/shapes-17-baseline/shapes-17-shared-archive-winner.png).
 
 ### Current Production Truth
 

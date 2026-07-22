@@ -78,6 +78,96 @@ Therefore:
     Keep warm replay as the semantics-preserving production candidate; treat
     the cold slice as a source-allocation candidate requiring corpus and sheet
     gates.
+12. **completed as the third durable baseline:** the imported Shapes-17 job now
+    sits beside Triangle-20 and Mixed-61. All 17 DXFs import without warnings;
+    the direct shared archive selects `c640c06f...` at `304,499.846 mm2`, zero
+    enclosed cavities, and `559.975 mm` maximum side on the shared
+    `2000 x 2700 mm` roomy sheet. The run exposed and fixed a valid-circle
+    quantization closure defect. Because every shape is distinct, the periodic
+    catalog correctly has zero repeated-family sources; Shapes-17 therefore
+    gates the three direct roles and must not be failed against the separate
+    exactly-eight-periodic-source experiment contract. Portable evidence is in
+    `help/artifacts/shapes-17-baseline/`.
+
+## Ranked Remaining Roadmap After The Three-Arm Audit
+
+The current results are valuable incumbents, not disposable probes. Every next
+experiment must keep the exact 74,428.143 mm2 / zero-cavity Triangle endpoint
+and the 391,605.850 mm2 / zero-cavity Mixed endpoint available in the shared
+archive. A faster or more invariant path is not a win if it silently removes
+either geometry before a strictly better exact endpoint replaces it.
+
+1. **Pre-front source-stratified periodic reservations plus decision controls.**
+   Keep exhaustive raw-source enumeration, but reserve bounded capacity across
+   ordinary retained cells, `P2 + axis-union`, NFP-boundary bases, and
+   edge-contact bases before the global raw Pareto reduction and top-16
+   truncation that currently removes the Mixed winner. Only after those
+   disjoint strata survive should future-key deduplication, existing family
+   reservations, and the final width-eight allocation run under an explicit
+   precedence rule. A final-pool reservation is too late. In the same change,
+   add three stable full-run replays, candidate-domain equivalence, observer-
+   only prefix survival, and measured non-inert eligibility. Warm replay is the
+   exact cache-equivalence/performance control, not a competing allocation
+   policy.
+2. **Repeated-fixture allocation falsifier.** Before the broad corpus, run the
+   exhaustive, filtered, and pre-front-stratified allocation policies
+   repeatedly on Triangle and Mixed with frozen caps. Pair exhaustive execution
+   with warm replay only as its exact cache-equivalence/performance control.
+   Require identical control domains and stable hashes; preserve
+   `371db269...` / `74,428.143 mm2` and require
+   `3839e80d...` / `391,605.850 mm2` as the Mixed quality floor. The
+   `5a1f1ba6...` / `405,773.434 mm2` pocket-first endpoint remains a mandatory
+   direct fallback, not the pass threshold.
+3. **Full corpus, sheet, and Shapes-17 gate.** Only after Step 2, compare the
+   accepted allocation against rectangles, pentagons, trapezoids, mixed-50,
+   mixed-61, the historical sheet matrix, and the direct-only Shapes-17
+   baseline. Require exact legality, deterministic source/endpoint reporting,
+   and no incumbent regression. Periodic-source count expectations are scoped
+   to fixtures that actually contain repeated collision families.
+4. **Cavity-first commensurate two-piece scheduling.** Resume Stage 2B only
+   after the periodic allocation gate. For one exact live gap and one alternate
+   geometry class, compare `scheduled -> alternate` with
+   `alternate -> scheduled`, then rejoin after the same two classes are placed.
+   This is the bounded generic transfer from Dalsoo/Abey/PackingSolver; it is
+   not a free queue or a fixture-specific small-piece rule.
+5. **Bounded archive-seeded destroy-and-repair before broad Sparrow control.**
+   Use the smallest exact falsifier first: remove one cavity-adjacent or
+   conflict-connected subset from an archive endpoint, freeze the complement,
+   and reconstruct the subset through the strict decoder. Preserve the best
+   canonical Clipper2-legal incumbent. Only if this produces a qualifying
+   endpoint or causal trace should the controller expand toward incumbent-
+   driven contraction, projection feedback, stagnation-adaptive disruption,
+   and coordinate refinement. The already rejected cross-target restart pool
+   remains excluded unless a materially different transport rule earns its own
+   positive ablation.
+6. **Deterministic stagnation kick.** Only after traces show surviving partial
+   diversity but no new endpoint, apply one bounded insertion, reversal, or
+   geometry-derived order rebuild. This transfers the useful Abey/Jostle and
+   Deepnest outer-order idea without an unbounded stochastic search.
+7. **Hull-guided proposal steering.** If candidate volume remains dominant,
+   use absolute convex-hull growth to order proposals cheaply. Hull pressure
+   never becomes terminal authority; exact envelope, void topology, and the
+   common archive remain decisive so rings cannot win through an attractive
+   outer hull alone.
+8. **Optional bounded GA.** Revisit priority/transform mutation only after the
+   deterministic constructor preserves useful futures. Keep the baseline
+   chromosome, fixed evaluation budgets, and common exact archive. Earlier GA
+   evidence improved rectangles but neither solved invariance nor protected
+   mixed topology, so this remains conditional.
+9. **Broader periodic representation.** Add oblique-only bases, P3+ cells, or
+   motif-of-motifs crops only after a coverage-complete P1/P2 failure on a
+   known compact motif proves the current representation insufficient. Fable's
+   evidence says P2 already expresses the Triangle motif; speculative breadth
+   would currently dilute the useful budget.
+10. **Complete production cache policy.** After the decision controls in Step 1
+    pass, define refresh, miss, corruption, and version-mismatch behavior for
+    the content-addressed replay cache before it becomes a production default.
+
+The default execution order is 1 -> 2 -> 3 -> 4. Step 5 becomes immediate only
+when completed construction variants preserve the same unacceptable global
+topology. Steps 6-9 are evidence-triggered, not a checklist to implement
+unconditionally. Step 10 follows the allocation decision rather than delaying
+its required controls.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -1423,11 +1513,22 @@ relevant Dalsoo finite families are already generated.
 ### Mixed-61
 
 - Beat the current search qualitatively and quantitatively.
-- The immediate geometric reference is the `405,773.434 mm2` zero-cavity
-  pocket-first layout, not the more contact-heavy `418k` layout.
+- The required quality floor is the `3839e80d...` / `391,605.850 mm2`
+  zero-cavity endpoint. The `405,773.434 mm2` pocket-first layout remains a
+  mandatory direct control and fallback, not an improvement threshold.
 - Prefer lower maximum side, area, cavities, hull gap, and hull waste.
 - Use contact as bounded structural evidence, never as permission to form a
   larger ring.
+
+### Shapes-17
+
+- Preserve the imported 17-file job as a third baseline on the shared
+  `2000 x 2700 mm` roomy sheet with `10 mm` padding.
+- Require all three direct roles to complete and retain or improve
+  `c640c06f...`, `304,499.846 mm2`, zero cavities, and `559.975 mm` maximum
+  side.
+- Do not require periodic continuations when the fixture contains no repeated
+  collision family; this baseline tests heterogeneous direct construction.
 
 ### Runtime
 
@@ -2058,17 +2159,19 @@ budgets before any Mixed periodic conclusion is called conclusive.
    `P2 + axis-union` cold slice reduces physical attempts to 12,560 on Triangle
    and 23,456 on Mixed, but deliberately changes the source set. Its better
    Mixed endpoint proves that the global raw front can crowd a more valuable
-   later continuation out of the width-eight cap. Next compare source-stratified
-   reservations under the full corpus rather than promoting this slice as an
-   exhaustive replacement.
+   later continuation out of the width-eight cap. Next implement pre-front
+   source-stratified reservations and run the frozen repeated Triangle/Mixed
+   allocation falsifier. Expand to the full corpus only after that gate passes;
+   do not promote the filtered slice as an exhaustive replacement.
 5. Implement cavity-first scheduling as the next constructive experiment
    (one bounded cavity-queue slot per depth, commensurate two-order
-   admission), gated on improving the shared archive against the 405,773
-   reference. This is the strongest untransferred Dalsoo/Abey and PackingSolver
-   lesson: change reconstruction order so a legal pocket is consumed before
-   ordinary boundary growth closes it, instead of adding more contact points
-   or more contact reward. The mechanism must be defined from live cavity
-   geometry and piece fit, never from fixture IDs or counts.
+   admission), gated on improving the shared archive against the 391,605
+   incumbent while retaining the 405,773 direct fallback. This is the strongest
+   untransferred Dalsoo/Abey and PackingSolver lesson: change reconstruction
+   order so a legal pocket is consumed before ordinary boundary growth closes
+   it, instead of adding more contact points or more contact reward. The
+   mechanism must be defined from live cavity geometry and piece fit, never from
+   fixture IDs or counts.
 6. Replace the closed pressure branch with bounded LNS destroy/repair from
    archive endpoints (destroy a conflict- or cavity-adjacent subset, repair
    through the strict decoder, canonical-exact-only acceptance), reusing the
