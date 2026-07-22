@@ -231,6 +231,24 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(historicalDefault.stepTrace).toEqual(constructed.stepTrace)
     expect('candidateEvaluationCount' in historicalDefault).toBe(false)
     expect('truncationReason' in historicalDefault).toBe(false)
+
+    const accountingOnly = await Effect.runPromise(
+      constructIntrinsicStrictState({
+        allPreparedPieces: pieces,
+        remainingPreparedPieces: pieces,
+        frozenPlaced: [],
+        candidateMode: 'pure-growth',
+        captureCandidateEvaluationCount: true
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+    expect(accountingOnly.state).toEqual(constructed.state)
+    expect(accountingOnly.stepTrace).toEqual(constructed.stepTrace)
+    expect(accountingOnly.candidateEvaluationCount).toBe(exactCandidateEvaluationCount)
+    expect(accountingOnly.truncationReason).toBeUndefined()
   })
 
   it('keeps the strict seed output byte-identical while F0 observes source admission', async () => {

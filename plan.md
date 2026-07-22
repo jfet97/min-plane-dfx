@@ -1973,17 +1973,28 @@ budgets before any Mixed periodic conclusion is called conclusive.
 
    Every arm reports role/source, requested and consumed evaluations, status,
    reason, and an optional exact endpoint. `evaluation-cap` is deterministic
-   budget settlement but produces no terminal candidate; invalid, deadline,
-   global-deadline, or not-started invalidates the experiment. Use fixed per-arm
-   evaluation caps with wall time only as a safety abort. Canonically deduplicate
-   complete endpoints and retain the full ranked terminal list without a new
-   capacity policy.
+   budget settlement but produces no terminal candidate; it is accepted only
+   for periodic continuations. All three calibrated direct roles must complete.
+   Invalid, deadline, global-deadline, or not-started invalidates the experiment;
+   aborted runs report consumed evaluations as unknown rather than a false zero.
+   Use fixed per-arm evaluation caps with wall time only as a safety abort.
+   Canonically deduplicate complete endpoints and retain the full ranked terminal
+   list without a new capacity policy.
 
-   Normalize every complete endpoint through one adapter: canonical sheetless
-   legality, identity, hash, and metrics first; requested-sheet q0/q90 fit as a
-   separate outcome; canonical-hash deduplication; unchanged
+   Normalize every untruncated complete endpoint through one adapter: canonical
+   sheetless legality, identity, hash, and metrics first; requested-sheet q0/q90
+   fit and per-orientation fitted hashes as a separate outcome; sheetless-hash
+   deduplication; unchanged
    `rankIntrinsicStrictCompletedLayouts`; unchanged certificate evaluation as
    diagnostic metadata, never an archive partition.
+
+   The sheetless leader and first fitting endpoint are distinct report fields.
+   The historical `5a1f1ba6…` Mixed pocket-first gate is sheetless; the
+   `310adc64…` periodic gate is the existing fitted hash. Periodic catalog
+   runtime coverage, exactly eight selected and executed sources, recorded
+   source order/omissions, and complete budget settlement are mandatory; two
+   equally censored catalogs cannot pass merely because their source order
+   repeats.
 
    Before integration, measure and freeze exact completion counts for the two
    protected and pocket-first arms under a 600 s safety ceiling; keep 19,862
@@ -1995,6 +2006,15 @@ budgets before any Mixed periodic conclusion is called conclusive.
    Triangle's protected winner by the 240,521 periodic endpoint, or changed
    homogeneous-control results. Only after this gate may Step 5 add a new
    constructor.
+
+   The decision harness is two-part: one fixture runner writes each immutable
+   report, while one verifier compares the two complete roots and enforces every
+   reference, status/evaluation/hash tuple, source-order/omission, archive-order,
+   protected-winner, and homogeneous-repeatability gate. A single green fixture
+   report is not a decision result. The verifier independently requires each
+   direct requested count to equal its consumed count and compares source commit,
+   harness hash, fixture hash/shape, runtime versions, and all fixed limits; it
+   does not accept stored validity booleans as proof by themselves.
 5. Implement cavity-first scheduling as the next constructive experiment
    (one bounded cavity-queue slot per depth, commensurate two-order
    admission), gated on improving the shared archive against the 405,773

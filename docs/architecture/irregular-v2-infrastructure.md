@@ -210,6 +210,23 @@ Telemetry coverage is complete only when both top-level and nested selection
 residuals are at most 1% of their respective totals; a large residual therefore
 fails the measurement gate instead of being hidden by arithmetic reconciliation.
 
+The Step 4 shared-archive experiment is the first common terminal boundary for
+the two protected direct constructors, baseline-order gap-contained
+construction, and eight no-audit periodic continuations. Direct constructors
+can enable trace-only candidate accounting without imposing a cap; the normal
+uncapped result shape stays unchanged. Calibration freezes the observed exact
+completion counts, while periodic continuations keep the fixed 19,862-candidate
+cap. Catalog runtime coverage, exactly eight selected and executed sources, and
+complete deterministic budget settlement are mandatory experiment gates.
+
+Every untruncated complete state enters one adapter that measures sheetless
+canonical legality, identity, hash, metrics, and certificate before consulting
+the requested sheet. Requested-sheet q0/q90 fit and fitted hashes are separate
+metadata. Deduplication and `rankIntrinsicStrictCompletedLayouts` use only the
+sheetless hash and metrics; filtering the already-ranked list yields the first
+endpoint that fits. Evaluation-capped partial states have no endpoint and
+cannot enter either archive.
+
 The isolated V7 seed/archive experiment keeps that E4 path intact while
 testing a replacement controller with stricter observability boundaries. Each
 independent arm constructs two complete canonical-exact, sheet-free seeds:

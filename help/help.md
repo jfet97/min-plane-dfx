@@ -310,12 +310,16 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   but its periodic-only winner is weak (240,521.398 mm2, seven contacts).
   Therefore retain audit witnesses for provenance and let periodic, ordinary,
   and pocket-first endpoints compete under one exact archive.
-- **Next implementation boundary:** one shared terminal adapter and archive for
-  only the two protected baselines, baseline-order pocket-first, and eight
-  no-audit periodic continuations. Partial evaluation-capped states remain
-  accounting records, not terminal candidates. Reversed/endpoint-derived
-  variants and raw witnesses stay deferred until this fixed matrix repeats
-  identically across Triangle, Mixed, and homogeneous controls.
+- **Shared terminal boundary implemented; decision matrix pending:** one
+  adapter now compares only the two protected baselines, baseline-order
+  pocket-first, and eight no-audit periodic continuations. It records separate
+  sheetless and requested-sheet q0/q90 identities, deduplicates/ranks only by
+  sheetless geometry, and prevents evaluation-capped partial states from
+  entering either archive. Direct trace-only accounting preserves the uncapped
+  result shape; catalog runtime coverage, eight selected/executed sources, and
+  periodic budget settlement are hard experiment gates. Reversed/endpoint-
+  derived variants and raw witnesses remain deferred until the fixed matrix
+  repeats identically across Triangle, Mixed, and homogeneous controls.
 - **Closed the adaptive-pressure branch by the preregistered gate.** One
   equal-budget matrix (50,000 pressure evaluations/arm, restart 0, pinned
   seeds `371db269…`/`310adc64…`) over {1.25% baseline, 0.625% smaller step,

@@ -201,6 +201,7 @@ export interface ConstructIntrinsicStrictStateInput {
   readonly candidateMode: IntrinsicStrictCandidateMode
   readonly maximumRuntimeMs?: number
   readonly maximumCandidateEvaluationCount?: number
+  readonly captureCandidateEvaluationCount?: boolean
   readonly featureContactObserver?: IntrinsicStrictFeatureContactObserver
   readonly control?: IrregularNfpIfpControl
 }
@@ -427,7 +428,12 @@ export function constructIntrinsicStrictState(
             truncationReason = 'maximum-candidate-evaluations'
             break pieceLoop
           }
-          if (maximumCandidateEvaluationCount !== undefined) candidateEvaluationCount += 1
+          if (
+            maximumCandidateEvaluationCount !== undefined ||
+            input.captureCandidateEvaluationCount === true
+          ) {
+            candidateEvaluationCount += 1
+          }
           const scored = scoreCandidate({
             state,
             piece,
@@ -583,7 +589,8 @@ export function constructIntrinsicStrictState(
       state,
       stepTrace,
       gapFillEvidence,
-      ...(maximumCandidateEvaluationCount === undefined
+      ...(maximumCandidateEvaluationCount === undefined &&
+      input.captureCandidateEvaluationCount !== true
         ? {}
         : {
             candidateEvaluationCount,
