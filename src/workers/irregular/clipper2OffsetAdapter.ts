@@ -124,7 +124,15 @@ function toIntegerPath(
         message: `polygon vertex ${index} cannot be represented by the Clipper2 integer grid.`
       }
     }
+    const previous = path.at(-1)
+    if (previous?.x === x && previous.y === y) continue
     path.push({ x, y })
+  }
+
+  const first = path[0]
+  const last = path.at(-1)
+  if (first !== undefined && last !== undefined && first.x === last.x && first.y === last.y) {
+    path.pop()
   }
 
   return { path }
@@ -132,7 +140,7 @@ function toIntegerPath(
 
 /** Rejects duplicate, non-convex, non-simple, zero-area, or unsafe integer paths. */
 function validatePath(path: Path64, label: string): string | undefined {
-  if (path.length < 3) return `${label} must contain at least three vertices.`
+  if (path.length < 3) return `${label} must contain at least three unique vertices.`
 
   const uniquePoints = new Set<string>()
   for (const point of path) {
