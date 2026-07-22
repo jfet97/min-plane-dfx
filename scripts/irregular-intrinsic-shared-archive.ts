@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Effect, Layer, Schema } from 'effect'
+import { importDxfFile } from '../src/main/services/DxfImportService.js'
 import { ImportedPiece } from '../src/shared/domain/dxf.js'
 import { JobId, PieceId, SourceFileId } from '../src/shared/domain/ids.js'
 import { NestingOptions, NestingRequest, SheetSpec } from '../src/shared/domain/nesting.js'
@@ -38,11 +40,16 @@ import { NfpIfpServiceLive } from '../src/workers/irregular/nfpIfpService.js'
 import { TransformGenerator } from '../src/workers/irregular/services.js'
 import { TransformGeneratorLive } from '../src/workers/irregular/transformGenerator.js'
 
-type FixtureName = 'triangle-20' | 'rectangles-20' | 'pentagons-20' | 'mixed-61'
+type FixtureName =
+  | 'triangle-20'
+  | 'rectangles-20'
+  | 'pentagons-20'
+  | 'mixed-61'
+  | 'shapes-17'
 type Mode = 'calibration' | 'matrix'
 
 interface GeneratedFixture {
-  readonly name: Exclude<FixtureName, 'mixed-61'>
+  readonly name: Exclude<FixtureName, 'mixed-61' | 'shapes-17'>
   readonly kind: PresetShapeKind
   readonly width: number
   readonly height: number
@@ -52,8 +59,13 @@ const HARNESS_PATH = fileURLToPath(import.meta.url)
 const MIXED_FIXTURE = fileURLToPath(
   new URL('../tests/fixtures/irregularSheetInvariance/mixed61-request.json', import.meta.url)
 )
+const SHAPES_17_FIXTURE = fileURLToPath(
+  new URL('../tests/fixtures/irregularSeventeenShapes', import.meta.url)
+)
 const ROOMY_SHEET = new SheetSpec({ width: 2000, height: 2700, label: 'shared archive roomy' })
-const generatedFixtures: Readonly<Record<Exclude<FixtureName, 'mixed-61'>, GeneratedFixture>> = {
+const generatedFixtures: Readonly<
+  Record<Exclude<FixtureName, 'mixed-61' | 'shapes-17'>, GeneratedFixture>
+> = {
   'triangle-20': { name: 'triangle-20', kind: 'triangle', width: 70, height: 60 },
   'rectangles-20': { name: 'rectangles-20', kind: 'rectangle', width: 154, height: 104 },
   'pentagons-20': { name: 'pentagons-20', kind: 'pentagon', width: 90, height: 90 }
@@ -333,11 +345,14 @@ function requiredFixture(value: string | undefined): FixtureName {
     value === 'triangle-20' ||
     value === 'rectangles-20' ||
     value === 'pentagons-20' ||
-    value === 'mixed-61'
+    value === 'mixed-61' ||
+    value === 'shapes-17'
   ) {
     return value
   }
-  throw new Error('--fixture must be triangle-20, rectangles-20, pentagons-20, or mixed-61')
+  throw new Error(
+    '--fixture must be triangle-20, rectangles-20, pentagons-20, mixed-61, or shapes-17'
+  )
 }
 
 function sourceAuditScopeArgument(value: string | undefined): IntrinsicPeriodicSourceAuditScope {
@@ -523,6 +538,46 @@ async function loadFixture(name: FixtureName): Promise<{
       request: Schema.decodeUnknownSync(NestingRequest)(JSON.parse(bytes.toString('utf8')))
     }
   }
+  if (name === 'shapes-17') {
+    const fileNames = (await readdir(SHAPES_17_FIXTURE))
+      .filter((fileName) => fileName.endsWith('.dxf'))
+      .sort((first, second) => first.localeCompare(second, undefined, { numeric: true }))
+    if (fileNames.length !== 17) {
+      throw new Error(`shapes-17 fixture requires 17 DXF files, found ${fileNames.length}`)
+    }
+    const sources = await Promise.all(
+      fileNames.map(async (fileName, index) => {
+        const document = await importDxfFile(join(SHAPES_17_FIXTURE, fileName))
+        const source = document.pieces[0]
+        if (source === undefined || document.pieces.length !== 1) {
+          throw new Error(`${fileName} must import exactly one piece`)
+        }
+        if (document.warnings.length > 0 || source.warnings.length > 0) {
+          throw new Error(`${fileName} imported with warnings`)
+        }
+        return new ImportedPiece({
+          ...source,
+          id: PieceId.make(`shapes-17-${index + 1}`),
+          sourceFileId: SourceFileId.make(`shapes-17-source-${index + 1}`),
+          label: fileName
+        })
+      })
+    )
+    const manifest = await Promise.all(
+      [...fileNames, 'ACRYL_5MM_EXTRUDIERT_TRANSPARENT_13-05-2026-13-53-20.csv'].map(
+        async (fileName) => ({
+          fileName,
+          sha256: sha256(await readFile(join(SHAPES_17_FIXTURE, fileName)))
+        })
+      )
+    )
+    const bytes = new TextEncoder().encode(JSON.stringify(manifest))
+    return {
+      path: SHAPES_17_FIXTURE,
+      bytes,
+      request: makeImportedRequest(name, sources)
+    }
+  }
   const generated = generatedFixtures[name]
   const request = makeGeneratedRequest(generated)
   return {
@@ -533,7 +588,6 @@ async function loadFixture(name: FixtureName): Promise<{
 }
 
 function makeGeneratedRequest(fixture: GeneratedFixture): NestingRequest {
-  const jobId = JobId.make(`shared-archive-${fixture.name}`)
   const base = makePresetShapeDocument({
     kind: fixture.kind,
     width: fixture.width,
@@ -551,6 +605,11 @@ function makeGeneratedRequest(fixture: GeneratedFixture): NestingRequest {
         label: `${fixture.name} copy ${index + 1}`
       })
   )
+  return makeImportedRequest(fixture.name, sources)
+}
+
+function makeImportedRequest(name: FixtureName, sources: ReadonlyArray<ImportedPiece>): NestingRequest {
+  const jobId = JobId.make(`shared-archive-${name}`)
   const prepared = prepareNestingPieces(
     sources,
     ROOMY_SHEET,
@@ -558,7 +617,7 @@ function makeGeneratedRequest(fixture: GeneratedFixture): NestingRequest {
     jobId,
     undefined,
     undefined,
-    () => fixture.name
+    () => name
   )
   if (prepared.warnings.length > 0) throw new Error(prepared.warnings.join('; '))
   const irregularSettings = new IrregularNestingSettings({
