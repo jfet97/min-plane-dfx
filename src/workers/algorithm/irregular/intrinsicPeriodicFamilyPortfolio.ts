@@ -27,6 +27,7 @@ import {
 } from './intrinsicStrictDecoder.js'
 import {
   IrregularGeometryInputError,
+  type IrregularNfpIfpControl,
   type IrregularNestingNotImplementedError,
   type IrregularNfpIfpControlAbortError,
   type NfpIfpService
@@ -161,6 +162,7 @@ export interface IntrinsicPeriodicFamilyPortfolioOptions {
   readonly maximumContinuationCandidateEvaluations?: number
   readonly maximumContinuationCount?: number
   readonly maximumTotalRuntimeMs?: number
+  readonly control?: IrregularNfpIfpControl
   /** Restricts an experiment to one rational NFP-derived shared-basis source. */
   readonly basisSourceKey?: string
   /** Enables a bounded observer over raw source cells without changing continuations. */
@@ -211,7 +213,8 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       maximumTransformsPerFamily: 16,
       maximumPairsPerFamily: 120,
       maximumCellsPerFamilyRole,
-      captureSourceSurvivalAudit: options.captureSourceSurvivalAudit ?? false
+      captureSourceSurvivalAudit: options.captureSourceSurvivalAudit ?? false,
+      ...(options.control === undefined ? {} : { control: options.control })
     })
     const catalogMs = capturePhaseTimings ? performance.now() - catalogStartedAt : 0
     const selected = yield* selectIntrinsicPeriodicContinuations(
@@ -224,7 +227,8 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       (options.captureSourceSurvivalAudit ?? false) && (options.admitSourceAuditWitnesses ?? false),
       capturePhaseTimings,
       options.sourceAuditReplay,
-      options.sourceAuditScope ?? 'all'
+      options.sourceAuditScope ?? 'all',
+      options.control
     )
     const selectionMs = selected.phaseTimings?.totalMs ?? 0
     const orderingStartedAt = capturePhaseTimings ? performance.now() : 0
@@ -257,6 +261,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
           frozenPlaced: continuation.seed.placements,
           candidateMode: 'pure-growth',
           maximumRuntimeMs: Math.min(maximumContinuationRuntimeMs, remainingMs),
+          ...(options.control === undefined ? {} : { control: options.control }),
           ...(maximumContinuationCandidateEvaluations === undefined
             ? {}
             : { maximumCandidateEvaluationCount: maximumContinuationCandidateEvaluations })
@@ -269,6 +274,12 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       const runtimeMs = performance.now() - startedContinuationAt
       if (capturePhaseTimings) constructionMs += runtimeMs
       if (constructed.kind === 'failure') {
+        if (
+          constructed.error._tag === 'IrregularNfpIfpControlAbortError' &&
+          constructed.error.reason === 'cancelled'
+        ) {
+          return yield* Effect.fail(constructed.error)
+        }
         runs.push({
           continuation,
           status:
@@ -412,7 +423,8 @@ function selectIntrinsicPeriodicContinuations(
   admitSourceAuditWitnesses = false,
   capturePhaseTimings = false,
   sourceAuditReplay: IntrinsicPeriodicSourceAuditReplay | undefined = undefined,
-  sourceAuditScope: IntrinsicPeriodicSourceAuditScope = 'all'
+  sourceAuditScope: IntrinsicPeriodicSourceAuditScope = 'all',
+  control: IrregularNfpIfpControl | undefined = undefined
 ): Effect.Effect<
   {
     readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
@@ -423,9 +435,10 @@ function selectIntrinsicPeriodicContinuations(
     readonly sourceAuditNonDominatedCropCount: number
     readonly phaseTimings?: IntrinsicPeriodicPortfolioPhaseTimings['selection']
   },
-  IrregularGeometryInputError
+  IrregularGeometryInputError | IrregularNfpIfpControlAbortError
 > {
   return Effect.gen(function* () {
+    yield* control?.checkpoint('candidate-points') ?? Effect.void
     const selectionStartedAt = capturePhaseTimings ? performance.now() : 0
     let sourceAuditCropEnumerationMs = 0
     let retainedCropEnumerationMs = 0
@@ -490,6 +503,7 @@ function selectIntrinsicPeriodicContinuations(
       return current
     }
     for (const family of catalog.families) {
+      yield* control?.checkpoint('candidate-points') ?? Effect.void
       const members = familyMembers.get(family.familyKey)
       if (members === undefined) continue
       const continuations: IntrinsicPeriodicContinuation[] = []
@@ -501,7 +515,10 @@ function selectIntrinsicPeriodicContinuations(
       const enumerateCrops = (
         cell: IntrinsicPeriodicCatalog['cells'][number],
         phase: 'source-audit' | 'retained'
-      ): Effect.Effect<ReadonlyArray<IntrinsicPeriodicSeed>, IrregularGeometryInputError> =>
+      ): Effect.Effect<
+        ReadonlyArray<IntrinsicPeriodicSeed>,
+        IrregularGeometryInputError | IrregularNfpIfpControlAbortError
+      > =>
         Effect.gen(function* () {
           const cached = directValidCropsByCanonicalCell.get(cell.canonicalKey)
           if (cached !== undefined) {
@@ -513,9 +530,14 @@ function selectIntrinsicPeriodicContinuations(
           }
           let attemptCount = 0
           const enumerationStartedAt = capturePhaseTimings ? performance.now() : 0
-          const crops = yield* enumerateIntrinsicPeriodicCellCrops(cell, members, () => {
-            attemptCount += 1
-          })
+          const crops = yield* enumerateIntrinsicPeriodicCellCrops(
+            cell,
+            members,
+            () => {
+              attemptCount += 1
+            },
+            control
+          )
           if (capturePhaseTimings) {
             const elapsed = performance.now() - enumerationStartedAt
             if (phase === 'source-audit') sourceAuditCropEnumerationMs += elapsed
@@ -531,6 +553,7 @@ function selectIntrinsicPeriodicContinuations(
         })
       if (captureSourceSurvivalAudit && sourceAuditReplay === undefined) {
         for (const cell of family.sourceAuditCells ?? family.cells) {
+          yield* control?.checkpoint('candidate-points') ?? Effect.void
           if (basisSourceKey !== undefined && cell.basisProvenance?.sourceKey !== basisSourceKey)
             continue
           if (!sourceAuditCellIncluded(cell, sourceAuditScope)) continue
@@ -557,6 +580,7 @@ function selectIntrinsicPeriodicContinuations(
         }
       }
       for (const cell of family.cells) {
+        yield* control?.checkpoint('candidate-points') ?? Effect.void
         if (basisSourceKey !== undefined && cell.basisProvenance?.sourceKey !== basisSourceKey)
           continue
         const audit = sourceAudit(cell)
@@ -599,6 +623,7 @@ function selectIntrinsicPeriodicContinuations(
     }
     if (captureSourceSurvivalAudit && sourceAuditReplay !== undefined) {
       for (const witness of sourceAuditReplay.witnesses) {
+        yield* control?.checkpoint('candidate-points') ?? Effect.void
         if (basisSourceKey !== undefined && witness.sourceKey !== basisSourceKey) continue
         const members = familyMembers.get(witness.familyKey)
         if (members === undefined) continue

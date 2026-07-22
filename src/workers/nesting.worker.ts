@@ -436,6 +436,12 @@ function toIrregularWorkerFailure(error: IrregularComputeErrorType): WorkerRespo
         message: error.message,
         context: { operation: error.operation, category: error.category }
       })
+    case 'IrregularNfpIfpControlAbortError':
+      return new WorkerResponseFailureError({
+        code: error.reason === 'cancelled' ? 'worker_cancelled' : 'worker_timeout',
+        message: error.message,
+        context: { reason: error.reason }
+      })
   }
 }
 

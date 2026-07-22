@@ -72,8 +72,8 @@ geometry and invalid derived arithmetic remain typed failures. The supplied
 order must remain untouched so future beam and portfolio layers can make their
 priority decisions outside this baseline.
 
-The experimental E1 intrinsic strict decoder is a separate constructor and is
-not wired into the production portfolio. It preserves the user-owned prepared
+The intrinsic strict decoder is a separate constructor used by the compact-quality
+production archive. It preserves the user-owned prepared
 piece order, anchors the first transformed polygon at the normalized origin,
 and asks the NFP service only for sheetless boundary, support, and intersection
 candidates. The geometry service still performs exact overlap validation and
@@ -82,8 +82,8 @@ The constructor retains the best candidate from each rotation/mirror family,
 then selects one winner by absolute maximum side, envelope area, envelope span,
 shared boundary as a bounded tie-break, and canonical combined geometry. Only a
 completed layout is tested against the real sheet, at q0 and q90. This path has
-its own provenance harness and cohesion certificate; it does not alter the
-legacy beam, protected lanes, reference-sheet coordinator, GA, or repair.
+its own provenance harness and exact topology metrics; it does not alter the
+ordinary beam, GA, repair, or explicit `short_side_fill` behavior.
 
 The preregistered E4 experiment is a separate complete-layout optimizer around
 that exact E1 seed. It has no requested-sheet input. Synthetic target boxes are
@@ -220,8 +220,10 @@ Direct constructors
 can enable trace-only candidate accounting without imposing a cap; the normal
 uncapped result shape stays unchanged. Calibration freezes the observed exact
 completion counts, while periodic continuations keep the fixed 19,862-candidate
-cap. Catalog runtime coverage, exactly eight selected and executed sources, and
-complete deterministic budget settlement are mandatory experiment gates.
+cap. Catalog runtime coverage, execution of every selected source, and complete
+deterministic budget settlement are mandatory experiment gates. The selector
+admits at most eight continuations; when fewer exist, complete continuation
+coverage proves that the smaller set is exhaustive rather than censored.
 
 Every untruncated complete state enters one adapter that measures sheetless
 canonical legality, identity, hash, metrics, and certificate before consulting
@@ -764,42 +766,39 @@ geometry becomes the typed
 `irregular_source_geometry_missing` worker failure; invalid derived geometry
 and scoring become distinct typed failures.
 
-For explicitly enabled compact-quality, deterministic, scale-diverse, multi-family
-jobs with more than twenty pieces, repair disabled, GA inactive, and no intentional
-short-side-fill policy,
-`computeIrregularNesting`
-coordinates two private uses of the existing single-sheet portfolio primitive:
-the requested sheet and a protected fixed `2000 x 2700` canonical-reference sheet.
-The reference sheet reuses the ordinary decode unconditionally when it is itself
-requested; certification arbitrates only a distinct protected decode.
-Both decodes forward progress through one stream with an explicit role and use
-role-prefixed decision-trace decode ids. Both roles retain their own history until
-terminal selection, then only the selected history is published. Cancellation is
-shared, benchmark decode counters are aggregated, and only the selected role is
-adapted into worker output. The renderer raises irregular jobs to a `120000 ms`
-timeout floor because the measured protected mixed-61 run takes about `89.5 s`;
-other worker modes retain their configured timeout.
+For the explicitly enabled compact-quality profile, with GA inactive and no
+intentional `short_side_fill` policy, `computeIrregularNesting` runs one intrinsic
+shared archive instead of the ordinary windowed beam. Three direct sheetless
+constructors and the bounded repeated-family periodic portfolio submit only complete
+canonical-exact endpoints. The archive deduplicates and ranks those endpoints by
+intrinsic geometry and topology, then tests q0 and q90 against the requested sheet.
+Sheet dimensions therefore constrain legality but never rank or prune construction.
 
-The protected role can supply only the exact terminal `IrregularBeamState` emitted
-by its real portfolio decode, rigidly anchored at q0 or q90. The integer-grid
-geometry layer verifies requested-sheet fit and zero positive polygon overlap;
-algorithm code does not reconstruct or revalidate placements through a different
-legality path. Selection does not compare the finalist with requested-production
-scores. A complete finite finalist receives priority only when its sheet-free
-certificate has at most two exact occupied-union cavities, hull-gap ratio at most
-`0.15`, envelope aspect ratio at most `1.5`, at most two isolated pieces, and a
-largest positive-contact component containing at least half the pieces. q0 is
-preferred when both q0 and q90 pass. Identity ties, incomplete or non-finite
-results, undefined topology, and failed certificates retain production.
+The compact path has no ordinary-beam competitor and no fixed-reference fallback.
+An incomplete direct state cannot become an endpoint, and a cancelled,
+deadline-censored, execution-incomplete, or non-fitting archive fails with a typed
+worker error. The fixed family, transform, pair, cell, and continuation caps are
+intentional deterministic search bounds rather than claims of exhaustive coverage;
+production requires their selected work to settle without runtime censoring.
+Cancellation checkpoints cover direct construction, periodic catalog selection,
+finite-crop enumeration, and continuation decoding. Progress reports the `shared_archive` phase
+after the direct and periodic boundaries, then emits the selected exact endpoint as
+`completed`. Irregular jobs use a `390000 ms` timeout floor; other worker modes retain
+their configured timeout.
 
-These deliberately conservative constants are anchored on the approved mixed-61
-motif. Envelope aspect replaces the retired relative max-side guard; hull gap and
-exact union cavities bound chain/remnant openings; isolation and component ratio
-protect contact cohesion. A certified layout may intentionally trade free-material
-remnants or raw contact totals on the requested sheet because those sheet-relative
-production comparisons are no longer allowed to veto invariant collision geometry.
-Layout identity ignores translation, rigid quarter-turn, copy order,
-ring origin, and winding while preserving reflection and relative placement.
+Selected archive history is a truthful one-frame terminal record labelled
+`shared-archive-final-selected`; it is not fabricated beam ancestry. The selected
+endpoint retains its exact canonical contact and hull metrics while free-material
+metrics are reconstructed on the requested sheet. Exact occupied-union cavity count
+is exposed separately as `canonicalEnclosedCavityCount`; it must not overwrite the
+sheet-space `freeMaterialHoleCount` measurement.
+
+The removed canonical-reference coordinator, fixed `2000 x 2700` decode, admission
+certificate, and `canonicalReferenceDecodeEnabled` schema field are historical only.
+The compact production baselines are Triangle-20 at `74,428.143126 mm2`, Mixed-61 at
+`391,605.850174 mm2`, and Shapes-17 at `304,499.845650 mm2`, all with zero canonical
+cavities. Layout identity ignores translation, rigid quarter-turn, copy order, ring
+origin, and winding while preserving reflection and relative placement.
 
 Do not route `irregular-convex-v2` requests to MaxRects.
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-This is the active implementation plan for branch `v7-geometric-cohesion`.
+This is the active implementation plan for branch `deterministic-periodic-budget`.
 It replaces the historical irregular-v2 construction plan. The geometry kernel,
 canonical exactness boundary, production beam, and experimental V7 foundation
 already exist; the remaining problem is search quality and topology.
@@ -86,8 +86,17 @@ Therefore:
     quantization closure defect. Because every shape is distinct, the periodic
     catalog correctly has zero repeated-family sources; Shapes-17 therefore
     gates the three direct roles and must not be failed against the separate
-    exactly-eight-periodic-source experiment contract. Portable evidence is in
+    bounded periodic-source experiment contract. Portable evidence is in
     `help/artifacts/shapes-17-baseline/`.
+
+13. **production integration completed on the feature branch, without starting
+    the remaining roadmap:**
+    compact-quality now selects directly from the complete canonical-exact shared
+    archive. The fixed-reference coordinator, its schema flag, and the ordinary
+    compact fallback are removed. Cancellation, coverage-completion admission,
+    honest terminal history, canonical cavity reporting, and three executable
+    production baselines are hard gates for the merge. This integration does not
+    implement any of the eleven remaining optimization items below.
 
 ## Ranked Remaining Roadmap After The Three-Arm Audit
 
@@ -162,12 +171,23 @@ either geometry before a strictly better exact endpoint replaces it.
 10. **Complete production cache policy.** After the decision controls in Step 1
     pass, define refresh, miss, corruption, and version-mismatch behavior for
     the content-addressed replay cache before it becomes a production default.
+11. **Increase performance without weakening accepted quality.** Profile the
+    archive-only production path and reduce duplicate catalog, source-audit, exact
+    topology, and replay work while preserving the exact accepted Triangle,
+    Mixed, and Shapes-17 endpoints. The current cold references are approximately
+    `16.621 s`, `268.978 s`, and `27.271 s`; removing the ordinary compact decode
+    already reduced Mixed from `293.456 s` by `22.091 s` (`7.5%`). The historical
+    `110.018 s` E4 result is not a valid target because it returned
+    `431,558.251 mm2` with 27 isolates, 33 contact components, and no admitted
+    improvement. Future speedups must pass the same exact hash, area, cavity,
+    legality, and coverage-completion gates; deadline-censored search is never a
+    performance win.
 
 The default execution order is 1 -> 2 -> 3 -> 4. Step 5 becomes immediate only
 when completed construction variants preserve the same unacceptable global
 topology. Steps 6-9 are evidence-triggered, not a checklist to implement
-unconditionally. Step 10 follows the allocation decision rather than delaying
-its required controls.
+unconditionally. Steps 10-11 follow the allocation decision rather than delaying
+their required controls.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -2114,10 +2134,11 @@ budgets before any Mixed periodic conclusion is called conclusive.
    The sheetless leader and first fitting endpoint are distinct report fields.
    The historical `5a1f1ba6…` Mixed pocket-first gate is sheetless; the
    `310adc64…` periodic gate is the existing fitted hash. Periodic catalog
-   runtime coverage, exactly eight selected and executed sources, recorded
-   source order/omissions, and complete budget settlement are mandatory; two
-   equally censored catalogs cannot pass merely because their source order
-   repeats.
+   runtime coverage, every selected source executed, recorded source
+   order/omissions, and complete budget settlement are mandatory. Eight is the
+   cap, not a required cardinality: a smaller set passes only when continuation
+   coverage proves it is exhaustive. Two equally censored catalogs cannot pass
+   merely because their source order repeats.
 
    Before integration, measure and freeze exact completion counts for the two
    protected and pocket-first arms under a 600 s safety ceiling; keep 19,862

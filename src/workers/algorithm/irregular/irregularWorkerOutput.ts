@@ -15,6 +15,7 @@ import type { IrregularComputeResult, IrregularStateSnapshot } from './computeIr
 
 const IRREGULAR_BEAM_STRATEGY_ID = 'irregular-convex-windowed-beam'
 const IRREGULAR_BEAM_STRATEGY_LABEL = 'Irregular convex windowed beam'
+const IRREGULAR_SHARED_ARCHIVE_STRATEGY_LABEL = 'Irregular convex shared archive'
 
 /** Real protocol-facing output derived from one completed irregular portfolio run. */
 export interface IrregularWorkerOutput {
@@ -36,14 +37,21 @@ export function makeIrregularHistoryFrame(input: {
   readonly createdAt: string
 }): IrregularHistoryFrame {
   const { snapshot } = input
+  const sharedArchive = snapshot.source === 'shared-archive'
   return new IrregularHistoryFrame({
     kind: 'irregular',
     frameId: `${input.strategyRunId}:${snapshot.stepIndex}:${snapshot.beamRank}`,
     jobId: input.request.jobId,
     strategyRunId: input.strategyRunId,
-    strategyLabel: IRREGULAR_BEAM_STRATEGY_LABEL,
+    strategyLabel: sharedArchive
+      ? IRREGULAR_SHARED_ARCHIVE_STRATEGY_LABEL
+      : IRREGULAR_BEAM_STRATEGY_LABEL,
     stepIndex: snapshot.stepIndex,
-    title: snapshot.stepIndex === 0 ? 'initial-beam' : 'beam-state-selected',
+    title: sharedArchive
+      ? 'shared-archive-final-selected'
+      : snapshot.stepIndex === 0
+        ? 'initial-beam'
+        : 'beam-state-selected',
     placements: snapshot.state.placedCollisionGeometries.map(({ placement }) => placement),
     collisionPolygons: translatedCollisionPolygons(snapshot.state.placedCollisionGeometries),
     remainingPieceIds: snapshot.state.remainingPreparedPieces.map(
@@ -51,7 +59,7 @@ export function makeIrregularHistoryFrame(input: {
     ),
     unplacedPieceIds: snapshot.state.unplacedPieceIds,
     beamRank: snapshot.beamRank,
-    beamWidth: input.beamWidth,
+    beamWidth: sharedArchive ? 1 : input.beamWidth,
     candidateCount: snapshot.candidateCount,
     createdAt: input.createdAt
   })
@@ -68,13 +76,20 @@ export function makeIrregularWorkerOutput(input: {
 }): IrregularWorkerOutput {
   const strategyRunId = irregularStrategyRunId(input.request)
   const portfolio = input.computed.portfolio
+  const strategyLabel =
+    portfolio.source === 'shared-archive'
+      ? IRREGULAR_SHARED_ARCHIVE_STRATEGY_LABEL
+      : IRREGULAR_BEAM_STRATEGY_LABEL
   const collisionPolygons = translatedCollisionPolygons(input.computed.placedCollisionGeometries)
   const layout = new IrregularLayout({
     kind: 'irregular',
     placements: input.computed.placedCollisionGeometries.map(({ placement }) => placement),
     collisionPolygons,
     unplacedPieceIds: input.computed.unplacedPieceIds,
-    score: scoreSummary(input.computed),
+    score: scoreSummary(
+      input.computed,
+      input.computed.portfolio.score?.canonicalEnclosedCavityCount
+    ),
     source: portfolio.source,
     status: portfolio.status,
     diagnostics: [...input.computed.diagnostics, ...portfolio.diagnostics]
@@ -91,9 +106,11 @@ export function makeIrregularWorkerOutput(input: {
   const strategyResult = NestingStrategyResult.fromAlgorithm({
     strategyRunId,
     strategyId: IRREGULAR_BEAM_STRATEGY_ID,
-    strategyLabel: IRREGULAR_BEAM_STRATEGY_LABEL,
+    strategyLabel,
     strategyDescription:
-      'Deterministic convex NFP/IFP search with a configurable windowed beam and seeded portfolio search.',
+      portfolio.source === 'shared-archive'
+        ? 'Deterministic sheet-independent direct and periodic constructors selected through one exact topology archive.'
+        : 'Deterministic convex NFP/IFP search with a configurable windowed beam and seeded portfolio search.',
     sortedPieceIds: input.computed.sortedPieceIds,
     placements: [],
     unplacedPieceIds: input.computed.unplacedPieceIds,
@@ -155,7 +172,10 @@ function translatedCollisionPolygons(
   })
 }
 
-function scoreSummary(computed: IrregularComputeResult): IrregularLayoutScoreSummary {
+function scoreSummary(
+  computed: IrregularComputeResult,
+  canonicalEnclosedCavityCount: number | undefined
+): IrregularLayoutScoreSummary {
   const score = computed.score
   return new IrregularLayoutScoreSummary({
     unplacedCount: score.unplacedCount,
@@ -168,6 +188,7 @@ function scoreSummary(computed: IrregularComputeResult): IrregularLayoutScoreSum
     largestNetFreeMaterialRegionAreaMm2: score.largestNetFreeMaterialRegionAreaMm2,
     freeMaterialRegionCount: score.freeMaterialRegionCount,
     freeMaterialHoleCount: score.freeMaterialHoleCount,
+    ...(canonicalEnclosedCavityCount === undefined ? {} : { canonicalEnclosedCavityCount }),
     freeMaterialSliverMetric: score.freeMaterialSliverMetric,
     collisionBoundsWorstNormalizedSheetConsumption:
       score.collisionBoundsWorstNormalizedSheetConsumption,

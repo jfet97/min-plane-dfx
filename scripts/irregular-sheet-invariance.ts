@@ -49,6 +49,11 @@ interface CorpusArguments {
   readonly outputDirectory: string
   readonly sheets: ReadonlyArray<SheetSpec>
   readonly strict: boolean
+  readonly allowSingleSheet: boolean
+  readonly expectedCanonicalSha256: string | undefined
+  readonly maximumAreaMm2: number | undefined
+  readonly maximumCanonicalCavities: number | undefined
+  readonly maximumElapsedMs: number | undefined
 }
 
 const COMPACT_SHEET = new SheetSpec({ width: 1000, height: 1700, label: 'compact roomy' })
@@ -99,10 +104,39 @@ function parseArguments(argumentsList: ReadonlyArray<string>): CorpusArguments {
   let outputDirectory = '/private/tmp/irregular-sheet-invariance'
   let sheets: ReadonlyArray<SheetSpec> = [COMPACT_SHEET, REFERENCE_SHEET]
   let strict = false
+  let allowSingleSheet = false
+  let expectedCanonicalSha256: string | undefined
+  let maximumAreaMm2: number | undefined
+  let maximumCanonicalCavities: number | undefined
+  let maximumElapsedMs: number | undefined
   for (let index = 0; index < argumentsList.length; index += 1) {
     const argument = argumentsList[index]
     if (argument === '--strict') {
       strict = true
+      continue
+    }
+    if (argument === '--allow-single-sheet') {
+      allowSingleSheet = true
+      continue
+    }
+    if (argument === '--expected-canonical-sha256') {
+      expectedCanonicalSha256 = requiredArgumentValue(argumentsList, index, argument)
+      index += 1
+      continue
+    }
+    if (argument === '--maximum-area-mm2') {
+      maximumAreaMm2 = positiveNumberArgument(argumentsList, index, argument)
+      index += 1
+      continue
+    }
+    if (argument === '--maximum-canonical-cavities') {
+      maximumCanonicalCavities = nonNegativeIntegerArgument(argumentsList, index, argument)
+      index += 1
+      continue
+    }
+    if (argument === '--maximum-elapsed-ms') {
+      maximumElapsedMs = positiveNumberArgument(argumentsList, index, argument)
+      index += 1
       continue
     }
     if (argument === '--case') {
@@ -128,7 +162,7 @@ function parseArguments(argumentsList: ReadonlyArray<string>): CorpusArguments {
     }
     if (argument === '--help') {
       console.log(
-        `Usage: pnpm corpus:sheet-invariance [--case ${allCaseIds.join(',')}] [--output <dir>] [--sheets WIDTHxHEIGHT,...] [--strict]`
+        `Usage: pnpm corpus:sheet-invariance [--case ${allCaseIds.join(',')}] [--output <dir>] [--sheets WIDTHxHEIGHT,...] [--strict] [--allow-single-sheet] [--expected-canonical-sha256 <hash>] [--maximum-area-mm2 <number>] [--maximum-canonical-cavities <integer>] [--maximum-elapsed-ms <number>]`
       )
       process.exit(0)
     }
@@ -140,12 +174,69 @@ function parseArguments(argumentsList: ReadonlyArray<string>): CorpusArguments {
   for (const caseId of selectedCaseIds) {
     if (!allCaseIds.includes(caseId)) throw new Error(`unknown corpus case ${caseId}`)
   }
-  return { selectedCaseIds, outputDirectory, sheets, strict }
+  if (strict && sheets.length < 2 && !allowSingleSheet) {
+    throw new Error('--strict with one sheet requires --allow-single-sheet and explicit quality gates')
+  }
+  if (
+    strict &&
+    sheets.length < 2 &&
+    (expectedCanonicalSha256 === undefined ||
+      maximumAreaMm2 === undefined ||
+      maximumCanonicalCavities === undefined ||
+      maximumElapsedMs === undefined)
+  ) {
+    throw new Error(
+      '--strict with one sheet requires hash, area, canonical-cavity, and runtime quality gates'
+    )
+  }
+  return {
+    selectedCaseIds,
+    outputDirectory,
+    sheets,
+    strict,
+    allowSingleSheet,
+    expectedCanonicalSha256,
+    maximumAreaMm2,
+    maximumCanonicalCavities,
+    maximumElapsedMs
+  }
+}
+
+function requiredArgumentValue(
+  argumentsList: ReadonlyArray<string>,
+  index: number,
+  name: string
+): string {
+  const value = argumentsList[index + 1]
+  if (value === undefined) throw new Error(`${name} requires a value`)
+  return value
+}
+
+function positiveNumberArgument(
+  argumentsList: ReadonlyArray<string>,
+  index: number,
+  name: string
+): number {
+  const value = Number(requiredArgumentValue(argumentsList, index, name))
+  if (!Number.isFinite(value) || value <= 0) throw new Error(`${name} must be positive`)
+  return value
+}
+
+function nonNegativeIntegerArgument(
+  argumentsList: ReadonlyArray<string>,
+  index: number,
+  name: string
+): number {
+  const value = Number(requiredArgumentValue(argumentsList, index, name))
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`${name} must be a non-negative integer`)
+  }
+  return value
 }
 
 function parseSheets(value: string): ReadonlyArray<SheetSpec> {
   const dimensions = value.split(',')
-  if (dimensions.length < 2) throw new Error('--sheets requires at least two sheets')
+  if (dimensions.length < 1) throw new Error('--sheets requires at least one sheet')
   const seen = new Set<string>()
   return dimensions.map((dimension) => {
     const match = /^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/.exec(dimension)
@@ -362,12 +453,33 @@ for (const caseId of allCaseIds) {
   }
   const firstRun = runs[0]
   const geometryEquivalent =
-    firstRun !== undefined &&
-    runs.every(({ canonicalSha256 }) => canonicalSha256 === firstRun.canonicalSha256)
+    runs.length < 2
+      ? null
+      : firstRun !== undefined &&
+        runs.every(({ canonicalSha256 }) => canonicalSha256 === firstRun.canonicalSha256)
+  const qualityChecks = runs.map((run) => ({
+    sheet: run.sheet,
+    canonicalHash:
+      argumentsData.expectedCanonicalSha256 === undefined ||
+      run.canonicalSha256 === argumentsData.expectedCanonicalSha256,
+    area:
+      argumentsData.maximumAreaMm2 === undefined ||
+      run.bounds.area <= argumentsData.maximumAreaMm2,
+    canonicalCavities:
+      argumentsData.maximumCanonicalCavities === undefined ||
+      (run.canonicalTopology?.enclosedCavityCount ?? Number.POSITIVE_INFINITY) <=
+        argumentsData.maximumCanonicalCavities,
+    runtime:
+      argumentsData.maximumElapsedMs === undefined ||
+      run.elapsedMs <= argumentsData.maximumElapsedMs
+  }))
+  const qualityAccepted = qualityChecks.every((checks) =>
+    Object.entries(checks).every(([key, value]) => key === 'sheet' || value === true)
+  )
   const report =
     runs.length === 2
-      ? { caseId, geometryEquivalent, compact: runs[0], reference: runs[1] }
-      : { caseId, geometryEquivalent, runs }
+      ? { caseId, geometryEquivalent, qualityAccepted, qualityChecks, compact: runs[0], reference: runs[1] }
+      : { caseId, geometryEquivalent, qualityAccepted, qualityChecks, runs }
   caseReports.push(report)
   console.log(JSON.stringify(report))
 }
@@ -383,7 +495,10 @@ const report = {
   cases: caseReports
 }
 await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
-console.log(JSON.stringify({ reportPath, passed: caseReports.every(({ geometryEquivalent }) => geometryEquivalent) }))
-if (argumentsData.strict && caseReports.some(({ geometryEquivalent }) => !geometryEquivalent)) {
+const passed = caseReports.every(
+  ({ geometryEquivalent, qualityAccepted }) => geometryEquivalent !== false && qualityAccepted
+)
+console.log(JSON.stringify({ reportPath, passed }))
+if (argumentsData.strict && !passed) {
   process.exitCode = 1
 }

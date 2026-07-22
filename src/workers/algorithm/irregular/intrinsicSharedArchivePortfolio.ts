@@ -10,6 +10,7 @@ import {
 import type { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import type {
   IrregularGeometryInputError,
+  IrregularNfpIfpControl,
   IrregularNestingNotImplementedError,
   IrregularNfpIfpControlAbortError,
   NfpIfpService
@@ -32,6 +33,7 @@ import {
   type IntrinsicStrictConstructResult,
   type IntrinsicStrictDecoderError
 } from './intrinsicStrictDecoder.js'
+import { IrregularBeamState } from './irregularBeamState.js'
 
 export const INTRINSIC_SHARED_ARCHIVE_DIRECT_ROLES = [
   'canonical-grid',
@@ -103,6 +105,8 @@ export interface IntrinsicSharedArchivePortfolioOptions {
     Readonly<Record<IntrinsicSharedArchiveDirectRole, number>>
   >
   readonly maximumDirectRuntimeMs?: number
+  readonly control?: IrregularNfpIfpControl
+  readonly onPhaseCompleted?: (phase: 'direct' | 'periodic') => Effect.Effect<void>
   /**
    * Includes bounded raw-crop Pareto witnesses in periodic continuation
    * selection so a retained-cell surrogate cannot silently remove a better
@@ -142,8 +146,10 @@ export function runIntrinsicSharedArchivePortfolio(
         : { directCandidateEvaluationCaps: options.directCandidateEvaluationCaps }),
       ...(options.maximumDirectRuntimeMs === undefined
         ? {}
-        : { maximumDirectRuntimeMs: options.maximumDirectRuntimeMs })
+        : { maximumDirectRuntimeMs: options.maximumDirectRuntimeMs }),
+      ...(options.control === undefined ? {} : { control: options.control })
     })
+    yield* options.onPhaseCompleted?.('direct') ?? Effect.void
 
     const periodicPortfolio = yield* runIntrinsicPeriodicFamilyPortfolio(
       sheet,
@@ -154,9 +160,11 @@ export function runIntrinsicSharedArchivePortfolio(
           INTRINSIC_SHARED_ARCHIVE_PERIODIC_EVALUATION_CAP,
         maximumContinuationCount: INTRINSIC_SHARED_ARCHIVE_PERIODIC_CONTINUATION_COUNT,
         captureSourceSurvivalAudit: includeSourceAuditWitnesses,
-        admitSourceAuditWitnesses: includeSourceAuditWitnesses
+        admitSourceAuditWitnesses: includeSourceAuditWitnesses,
+        ...(options.control === undefined ? {} : { control: options.control })
       }
     )
+    yield* options.onPhaseCompleted?.('periodic') ?? Effect.void
     const periodicRuns = periodicPortfolio.runs.map((run) =>
       normalizePeriodicRun(sheet, run, INTRINSIC_SHARED_ARCHIVE_PERIODIC_EVALUATION_CAP)
     )
@@ -168,6 +176,7 @@ export function runIntrinsicSharedArchivePortfolio(
     const winner = selectIntrinsicSharedArchiveWinner(archive)
     const periodicSelectionValid = intrinsicSharedPeriodicSelectionValid({
       catalogRuntimeCoverageComplete: periodicPortfolio.catalog.runtimeCoverageComplete,
+      continuationCoverageComplete: periodicPortfolio.continuationCoverageComplete,
       selectedContinuationCount: periodicPortfolio.continuations.length,
       runCount: periodicPortfolio.runs.length,
       budgetSettlementComplete:
@@ -196,11 +205,11 @@ export function runIntrinsicSharedArchiveDirectPortfolio(
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   options: Pick<
     IntrinsicSharedArchivePortfolioOptions,
-    'directCandidateEvaluationCaps' | 'maximumDirectRuntimeMs'
+    'directCandidateEvaluationCaps' | 'maximumDirectRuntimeMs' | 'control'
   > = {}
 ): Effect.Effect<
   ReadonlyArray<IntrinsicSharedArchiveRun>,
-  never,
+  IrregularNfpIfpControlAbortError,
   GeometryKernel | GeometrySettings | NfpIfpService
 > {
   return Effect.gen(function* () {
@@ -217,6 +226,7 @@ export function runIntrinsicSharedArchiveDirectPortfolio(
           candidateMode: directCandidateMode(role),
           maximumRuntimeMs: maximumDirectRuntimeMs,
           captureCandidateEvaluationCount: true,
+          ...(options.control === undefined ? {} : { control: options.control }),
           ...(requestedCandidateEvaluations === undefined
             ? {}
             : { maximumCandidateEvaluationCount: requestedCandidateEvaluations })
@@ -228,6 +238,12 @@ export function runIntrinsicSharedArchiveDirectPortfolio(
         }
       )
       if (outcome.kind === 'failure') {
+        if (
+          outcome.error._tag === 'IrregularNfpIfpControlAbortError' &&
+          outcome.error.reason === 'cancelled'
+        ) {
+          return yield* Effect.fail(outcome.error)
+        }
         runs.push({
           role,
           sourceId: undefined,
@@ -313,10 +329,11 @@ function compareIntrinsicSharedArchiveWinner(
   )
 }
 
-/** Requires uncensored catalog selection and deterministic settlement of all eight sources. */
+/** Requires uncensored selection and deterministic settlement of every selected source. */
 export function intrinsicSharedPeriodicSelectionValid(
   input: {
     readonly catalogRuntimeCoverageComplete: boolean
+    readonly continuationCoverageComplete: boolean
     readonly selectedContinuationCount: number
     readonly runCount: number
     readonly budgetSettlementComplete: boolean
@@ -324,8 +341,11 @@ export function intrinsicSharedPeriodicSelectionValid(
 ): boolean {
   return (
     input.catalogRuntimeCoverageComplete &&
-    input.selectedContinuationCount === INTRINSIC_SHARED_ARCHIVE_PERIODIC_CONTINUATION_COUNT &&
-    input.runCount === INTRINSIC_SHARED_ARCHIVE_PERIODIC_CONTINUATION_COUNT &&
+    input.selectedContinuationCount <= INTRINSIC_SHARED_ARCHIVE_PERIODIC_CONTINUATION_COUNT &&
+    input.runCount === input.selectedContinuationCount &&
+    (input.continuationCoverageComplete ||
+      input.selectedContinuationCount ===
+        INTRINSIC_SHARED_ARCHIVE_PERIODIC_CONTINUATION_COUNT) &&
     input.budgetSettlementComplete
   )
 }
@@ -351,6 +371,39 @@ export function intrinsicSharedArchiveExperimentValid(
     ) &&
     periodicRuns.every(
       ({ status }) => status === 'completed' || status === 'evaluation-cap'
+    )
+  )
+}
+
+/** Requires every uncapped direct role and every applicable periodic source to settle cleanly. */
+export function intrinsicSharedArchiveProductionValid(
+  result: IntrinsicSharedArchivePortfolioResult
+): boolean {
+  const directValid = result.directRuns.every(
+    ({ status, endpoint }) => status === 'completed' && endpoint !== undefined
+  )
+  const catalog = result.periodicPortfolio.catalog
+  const hasPeriodicFamilies = catalog.families.length > 0
+  const catalogCoverageValid = intrinsicSharedPeriodicCatalogCoverageValid(catalog)
+  return (
+    directValid &&
+    catalogCoverageValid &&
+    (!hasPeriodicFamilies || result.periodicSelectionValid) &&
+    result.periodicRuns.every(
+      ({ status }) => status === 'completed' || status === 'evaluation-cap'
+    )
+  )
+}
+
+/** Rejects runtime censoring while allowing fully executed deterministic family/front caps. */
+export function intrinsicSharedPeriodicCatalogCoverageValid(
+  catalog: IntrinsicPeriodicFamilyPortfolioResult['catalog']
+): boolean {
+  return (
+    catalog.runtimeCoverageComplete &&
+    (catalog.families.length > 0 || catalog.familyCoverageComplete) &&
+    catalog.families.every(
+      (family) => family.cellCoverageComplete || family.sourceAuditCells !== undefined
     )
   )
 }
@@ -381,11 +434,14 @@ export function normalizeIntrinsicSharedArchiveConstructedRun(input: {
       runtimeMs: input.constructed.runtimeMs
     }
   }
-  const measured = measureIntrinsicSheetlessCompletedLayout(
-    input.constructed.state,
-    input.constructed.runtimeMs
-  )
-  if (measured === undefined) {
+  const endpoint = makeIntrinsicSharedArchiveEndpoint({
+    sheet: input.sheet,
+    role: input.role,
+    sourceId: input.sourceId,
+    state: input.constructed.state,
+    runtimeMs: input.constructed.runtimeMs
+  })
+  if (endpoint === undefined) {
     return {
       role: input.role,
       sourceId: input.sourceId,
@@ -404,17 +460,36 @@ export function normalizeIntrinsicSharedArchiveConstructedRun(input: {
     requestedCandidateEvaluations: input.requestedCandidateEvaluations,
     consumedCandidateEvaluations,
     reason: undefined,
-    endpoint: {
-      role: input.role,
-      sourceId: input.sourceId,
-      sheetlessCanonicalGeometryIdentity: measured.canonicalGeometryIdentity,
-      sheetlessCanonicalGeometryHash: measured.canonicalGeometryHash,
-      placedCollisionGeometries: measured.placedCollisionGeometries,
-      metrics: measured.metrics,
-      certificate: evaluateIntrinsicStrictCertificate(measured.metrics),
-      requestedSheetFit: requestedSheetFit(input.sheet, input.constructed)
-    },
+    endpoint,
     runtimeMs: input.constructed.runtimeMs
+  }
+}
+
+/** Adapts any complete exact layout into the common sheetless archive boundary. */
+export function makeIntrinsicSharedArchiveEndpoint(input: {
+  readonly sheet: SheetSpec
+  readonly role: string
+  readonly sourceId: string | undefined
+  readonly state: IrregularBeamState
+  readonly runtimeMs?: number
+}): IntrinsicSharedArchiveEndpoint | undefined {
+  if (
+    input.state.remainingPreparedPieces.length > 0 ||
+    input.state.unplacedPieceIds.length > 0
+  ) {
+    return undefined
+  }
+  const measured = measureIntrinsicSheetlessCompletedLayout(input.state, input.runtimeMs ?? 0)
+  if (measured === undefined) return undefined
+  return {
+    role: input.role,
+    sourceId: input.sourceId,
+    sheetlessCanonicalGeometryIdentity: measured.canonicalGeometryIdentity,
+    sheetlessCanonicalGeometryHash: measured.canonicalGeometryHash,
+    placedCollisionGeometries: measured.placedCollisionGeometries,
+    metrics: measured.metrics,
+    certificate: evaluateIntrinsicStrictCertificate(measured.metrics),
+    requestedSheetFit: requestedSheetFit(input.sheet, input.state)
   }
 }
 
@@ -453,7 +528,7 @@ function normalizePeriodicRun(
 
 function requestedSheetFit(
   sheet: SheetSpec,
-  constructed: IntrinsicStrictConstructResult
+  state: IrregularBeamState
 ): IntrinsicSharedArchiveSheetFit {
   const fit = (rotationDeg: 0 | 90): {
     readonly rotationDeg: 0 | 90
@@ -461,7 +536,7 @@ function requestedSheetFit(
     readonly canonicalGeometryHash: string | undefined
     readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
   } => {
-    const oriented = constructed.state.withQuarterTurnBottomLeft(rotationDeg)
+    const oriented = state.withQuarterTurnBottomLeft(rotationDeg)
     if (
       oriented === undefined ||
       !assertCanonicalGridLegalLayout(sheet, oriented.placedCollisionGeometries)

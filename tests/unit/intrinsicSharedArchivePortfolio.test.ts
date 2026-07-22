@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   intrinsicSharedArchiveExperimentValid,
+  intrinsicSharedPeriodicCatalogCoverageValid,
   intrinsicSharedPeriodicSelectionValid,
   normalizeIntrinsicSharedArchiveConstructedRun,
   retainRankedSharedArchive,
@@ -10,6 +11,7 @@ import {
 } from '../../src/workers/algorithm/irregular/intrinsicSharedArchivePortfolio.js'
 import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
 import { SheetSpec } from '../../src/shared/domain/nesting.js'
+import { PieceId } from '../../src/shared/domain/ids.js'
 import type { IntrinsicStrictCompletedMetrics } from '../../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
 
 function metrics(hash: string, maximumSide: number): IntrinsicStrictCompletedMetrics {
@@ -194,10 +196,34 @@ describe('retainRankedSharedArchive', () => {
     expect(run.endpoint).toBeUndefined()
   })
 
+  it('keeps an unplaced-piece construction out of the endpoint archive', () => {
+    const run = normalizeIntrinsicSharedArchiveConstructedRun({
+      sheet: new SheetSpec({ width: 100, height: 100, label: 'test' }),
+      role: 'canonical-grid',
+      sourceId: undefined,
+      requestedCandidateEvaluations: undefined,
+      constructed: {
+        state: new IrregularBeamState({
+          remainingPreparedPieces: [],
+          placedCollisionGeometries: [],
+          unplacedPieceIds: [PieceId.make('unplaced')],
+          placementOrder: []
+        }),
+        stepTrace: [],
+        gapFillEvidence: [],
+        runtimeMs: 1
+      }
+    })
+
+    expect(run.status).toBe('incomplete')
+    expect(run.endpoint).toBeUndefined()
+  })
+
   it('requires direct completion and uncensored periodic settlement', () => {
     expect(
       intrinsicSharedPeriodicSelectionValid({
         catalogRuntimeCoverageComplete: true,
+        continuationCoverageComplete: false,
         selectedContinuationCount: 8,
         runCount: 8,
         budgetSettlementComplete: true
@@ -206,6 +232,7 @@ describe('retainRankedSharedArchive', () => {
     expect(
       intrinsicSharedPeriodicSelectionValid({
         catalogRuntimeCoverageComplete: false,
+        continuationCoverageComplete: false,
         selectedContinuationCount: 8,
         runCount: 8,
         budgetSettlementComplete: true
@@ -214,6 +241,7 @@ describe('retainRankedSharedArchive', () => {
     expect(
       intrinsicSharedPeriodicSelectionValid({
         catalogRuntimeCoverageComplete: true,
+        continuationCoverageComplete: false,
         selectedContinuationCount: 8,
         runCount: 8,
         budgetSettlementComplete: false
@@ -222,11 +250,30 @@ describe('retainRankedSharedArchive', () => {
     expect(
       intrinsicSharedPeriodicSelectionValid({
         catalogRuntimeCoverageComplete: true,
+        continuationCoverageComplete: false,
         selectedContinuationCount: 7,
         runCount: 8,
         budgetSettlementComplete: true
       })
     ).toBe(false)
+    expect(
+      intrinsicSharedPeriodicSelectionValid({
+        catalogRuntimeCoverageComplete: true,
+        continuationCoverageComplete: true,
+        selectedContinuationCount: 0,
+        runCount: 0,
+        budgetSettlementComplete: true
+      })
+    ).toBe(true)
+    expect(
+      intrinsicSharedPeriodicSelectionValid({
+        catalogRuntimeCoverageComplete: true,
+        continuationCoverageComplete: true,
+        selectedContinuationCount: 3,
+        runCount: 3,
+        budgetSettlementComplete: true
+      })
+    ).toBe(true)
     expect(
       intrinsicSharedArchiveExperimentValid(
         [
@@ -286,5 +333,61 @@ describe('retainRankedSharedArchive', () => {
         true
       )
     ).toBe(false)
+  })
+
+  it('rejects runtime-censored catalogs while allowing fully captured deterministic caps', () => {
+    expect(
+      intrinsicSharedPeriodicCatalogCoverageValid({
+        familyCoverageComplete: true,
+        runtimeCoverageComplete: false,
+        families: [],
+        selectedFamilyKey: undefined,
+        uniqueTransformCount: 0,
+        enumeratedPairCount: 0,
+        cells: [],
+        rejected: {}
+      })
+    ).toBe(false)
+    expect(
+      intrinsicSharedPeriodicCatalogCoverageValid({
+        familyCoverageComplete: false,
+        runtimeCoverageComplete: true,
+        families: [
+          {
+            familyKey: 'family',
+            memberCount: 2,
+            collisionAreaMm2: 1,
+            uniqueTransformCount: 1,
+            retainedTransformCount: 1,
+            transformCoverageComplete: true,
+            transformReservations: [],
+            enumeratedPairCount: 1,
+            pairCoverageComplete: true,
+            edgeContactDiagnostics: {
+              generatedRelationCount: 0,
+              retainedRelationCount: 0,
+              nonCollinearPairCount: 0,
+              areaFeasiblePairCount: 0,
+              validationAttemptCount: 0,
+              validationCoverageComplete: true,
+              latticeRejectedCount: 0,
+              contactIncompleteCount: 0,
+              admittedBasisCount: 0
+            },
+            cellCoverageComplete: false,
+            sourceSurvival: [],
+            sourceAuditCells: [],
+            cells: [],
+            rejected: {},
+            rejectedSamples: []
+          }
+        ],
+        selectedFamilyKey: 'family',
+        uniqueTransformCount: 1,
+        enumeratedPairCount: 1,
+        cells: [],
+        rejected: {}
+      })
+    ).toBe(true)
   })
 })

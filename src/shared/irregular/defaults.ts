@@ -12,8 +12,8 @@ import type { IrregularWorkerMode } from './domain.js'
 import type { NestingOptions } from '../domain/nesting.js'
 
 export const IRREGULAR_WORKER_MODE: IrregularWorkerMode = 'irregular-convex-v2'
-/** Covers the measured 89.5 s protected mixed-61 decode with worker-supervisor headroom. */
-export const DEFAULT_IRREGULAR_WORKER_TIMEOUT_MS = 120_000
+/** Covers the measured cold shared-archive mixed-61 decode with supervisor headroom. */
+export const DEFAULT_IRREGULAR_WORKER_TIMEOUT_MS = 390_000
 
 /** Raises only irregular jobs to their measured-safe worker timeout floor. */
 export function workerTimeoutForMode(
@@ -44,7 +44,7 @@ export const DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS = new IrregularOptimizerSettin
   beamWidth: 1,
   localCandidateFanout: DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT,
   localRepairBudget: 0,
-  canonicalReferenceDecodeEnabled: false,
+  intrinsicSharedArchiveEnabled: false,
   transformCap: 16,
   transformMinimumEdgeLengthMm: 1,
   transformAngleDeduplicationToleranceDeg: 0.01,
@@ -153,7 +153,7 @@ export function makeCompactQualityIrregularOptimizerSettings(
     beamWidth: 8,
     localCandidateFanout: 4,
     localRepairBudget: 8,
-    canonicalReferenceDecodeEnabled: false,
+    intrinsicSharedArchiveEnabled: true,
     baselineOnly: true,
     gaEnabled: false,
     placementPolicyId: 'edge-contact-then-balanced-compactness',

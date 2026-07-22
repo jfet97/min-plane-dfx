@@ -1,4 +1,4 @@
-import { Data, Effect, Exit, Layer, Schema } from 'effect'
+import { Data, Effect, Layer } from 'effect'
 import { performance } from 'node:perf_hooks'
 import type { ImportedPiece } from '@shared/domain/dxf.js'
 import type { PieceId } from '@shared/domain/ids.js'
@@ -18,6 +18,7 @@ import { CollisionGeometryBuilder } from '../../irregular/collisionGeometryBuild
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import {
   IrregularGeometryInputError,
+  IrregularNfpIfpControlAbortError,
   IrregularNestingNotImplementedError,
   IrregularNestingPortfolio,
   IrregularPortfolioError,
@@ -42,28 +43,14 @@ import {
 } from './portfolioSearch.js'
 import { PriorityOrderServiceLive } from './priorityOrderService.js'
 import type { EmitIrregularDecisionTrace } from './decisionTrace.js'
-import { hasScaleDiverseMultiFamilyWorkload } from './canonicalReferenceWorkload.js'
 import {
-  assertCanonicalGridLegalLayout,
-  canonicalCollisionLayoutIdentity,
-  measureCanonicalLayoutTopology,
-  type CanonicalLayoutTopology
-} from '../../irregular/canonicalLayoutGeometry.js'
-
-export const CANONICAL_REFERENCE_SHEET = new SheetSpec({
-  width: 2000,
-  height: 2700,
-  label: 'canonical-reference-2000x2700'
-})
-
-/** Sheet-free compactness certificate for canonical-reference priority. */
-export const CANONICAL_REFERENCE_PRIORITY_CERTIFICATE = {
-  maximumEnclosedCavityCount: 2,
-  maximumLargestOccupiedHullGapRatio: 0.15,
-  maximumOccupiedEnvelopeAspectRatio: 1.5,
-  maximumIsolatedPieceCount: 2,
-  minimumLargestPositiveContactComponentRatio: 0.5
-} as const
+  retainRankedSharedArchive,
+  intrinsicSharedArchiveProductionValid,
+  runIntrinsicSharedArchivePortfolio,
+  selectFittingSharedArchive,
+  selectIntrinsicSharedArchiveWinner,
+  type IntrinsicSharedArchiveEndpoint
+} from './intrinsicSharedArchivePortfolio.js'
 
 /** Reports that a prepared piece has no imported geometry available to the worker. */
 export class IrregularComputeError extends Data.TaggedError('IrregularComputeError')<{
@@ -77,6 +64,7 @@ export interface IrregularStateSnapshot {
   readonly stepIndex: number
   readonly beamRank: number
   readonly candidateCount: number
+  readonly source?: 'beam' | 'shared-archive'
   readonly state: IrregularBeamState
 }
 
@@ -115,6 +103,7 @@ export interface IrregularComputeResult {
 export type IrregularComputeErrorType =
   | IrregularComputeError
   | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError
   | IrregularNestingNotImplementedError
   | IrregularPortfolioError
   | IrregularPlacementScoringError
@@ -192,7 +181,7 @@ export function computeIrregularNesting(
         IrregularNestingPortfolioLive.pipe(Layer.provideMerge(PriorityOrderServiceLive))
       )
     )
-    return yield* coordinateCanonicalReferenceDecode({
+    return yield* coordinateIntrinsicSharedArchive({
       request,
       settings,
       preparedPieces,
@@ -214,7 +203,7 @@ interface SingleSheetDecode {
   readonly metrics: IrregularPortfolioMetrics | undefined
 }
 
-interface CanonicalReferenceCoordinatorInput {
+interface IrregularSearchCoordinatorInput {
   readonly request: NestingRequest
   readonly settings: IrregularNestingSettings
   readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
@@ -226,99 +215,114 @@ interface CanonicalReferenceCoordinatorInput {
   readonly options: ComputeIrregularNestingOptions | undefined
 }
 
-/**
- * Coordinates the real-sheet portfolio and one protected canonical-reference portfolio.
- *
- * This is deliberately outside the single-sheet portfolio primitive: neither role can
- * recurse into this coordinator or into `computeIrregularNesting`.
- */
-function coordinateCanonicalReferenceDecode(
-  input: CanonicalReferenceCoordinatorInput
+/** Runs the intrinsic archive as the compact production path. */
+function coordinateIntrinsicSharedArchive(
+  input: IrregularSearchCoordinatorInput
 ): Effect.Effect<
   IrregularComputeResult,
-  IrregularComputeErrorType
+  IrregularComputeErrorType,
+  GeometryKernel | GeometrySettings | NfpIfpService
 > {
   return Effect.gen(function* () {
-    const shouldAttemptCanonical = isCanonicalReferenceRoleEligible(
-      input.request,
-      input.settings,
-      input.preparedPieces
-    )
-    const reusesProduction = isCanonicalReferenceSheet(input.request.sheet) && shouldAttemptCanonical
-    const hasProtectedPass = shouldAttemptCanonical && !reusesProduction
-    const production = yield* runSingleSheetPortfolio(
-      input,
-      input.request.sheet,
-      hasProtectedPass ? 'production' : undefined
-    )
-    const canonical =
-      hasProtectedPass && production.portfolio.status !== 'cancelled'
-        ? yield* runSingleSheetPortfolio(input, CANONICAL_REFERENCE_SHEET, 'canonical-reference')
-        : production
+    const coordinatorStartedAt = performance.now()
+    const archiveEnabled = isIntrinsicSharedArchiveEligible(input.settings)
+    const archiveDiagnostics: CollisionGeometryDiagnostic[] = []
+    let selected: MaterializedDecode
 
-    if (input.options?.onPortfolioMetrics !== undefined) {
-      const metrics = combinePortfolioMetrics(
-        production.metrics,
-        canonical === production ? undefined : canonical.metrics
+    if (archiveEnabled) {
+      yield* emitSharedArchiveProgress(
+        input,
+        'shared_archive',
+        undefined,
+        performance.now() - coordinatorStartedAt
       )
-      if (metrics !== undefined) input.options.onPortfolioMetrics(metrics)
-    }
-
-    const productionFinal = yield* materializeProductionResult(input, production)
-    let selected = productionFinal
-    const roleDiagnostics = canonicalReferenceRoleLifecycleDiagnostics({
-      shouldAttemptCanonical,
-      reusesProduction,
-      productionStatus: production.portfolio.status,
-      canonicalAttempted: canonical !== production,
-      canonicalStatus: canonical.portfolio.status
-    })
-
-    if (canonical !== production && canonical.portfolio.status === 'cancelled') {
-      selected = {
-        ...productionFinal,
-        portfolio: withCancelledPortfolioStatus(productionFinal.portfolio)
-      }
-    } else if (shouldAttemptCanonical && !reusesProduction && canonical.terminalState !== undefined) {
-      const candidates = yield* fittingCanonicalCandidates(input, canonical)
-      if (candidates.length > 0) {
-        let rejectedReason = 'canonical role had no admissible rigid orientation'
-        let admittedCandidate: FittingCanonicalCandidate | undefined
-        for (const candidate of candidates) {
-          const decision = evaluateCanonicalReferenceAdmission({
-            productionPlaced: productionFinal.placedCollisionGeometries,
-            canonicalScore: candidate.score,
-            canonicalPlaced: candidate.state.placedCollisionGeometries
+      const control =
+        input.options?.isCancelled === undefined
+          ? undefined
+          : {
+              checkpoint: () =>
+                input.options?.isCancelled?.() === true
+                  ? Effect.fail(
+                      new IrregularNfpIfpControlAbortError({
+                        reason: 'cancelled',
+                        message: 'intrinsic shared archive was cancelled'
+                      })
+                    )
+                  : Effect.void
+            }
+      const archive = yield* runIntrinsicSharedArchivePortfolio(
+        input.request.sheet,
+        input.preparedPieces,
+        {
+          maximumDirectRuntimeMs: 35_000,
+          includeSourceAuditWitnesses: true,
+          ...(control === undefined ? {} : { control }),
+          onPhaseCompleted: () =>
+            emitSharedArchiveProgress(
+              input,
+              'shared_archive',
+              undefined,
+              performance.now() - coordinatorStartedAt
+            ),
+          periodic: {
+            maximumCatalogRuntimeMs: 30_000,
+            maximumContinuationRuntimeMs: 30_000,
+            maximumTotalRuntimeMs: 240_000,
+            maximumCellsPerFamilyRole: 16,
+            maximumCropsPerCell: 4,
+            sourceAuditScope: 'p2-axis-union'
+          }
+        }
+      ).pipe(
+        Effect.mapError((error) =>
+          error._tag === 'IntrinsicStrictDecoderError'
+            ? new IrregularPortfolioError({
+                operation: error.operation,
+                category: 'search',
+                message: error.message
+              })
+            : error
+        )
+      )
+      if (!intrinsicSharedArchiveProductionValid(archive)) {
+        return yield* Effect.fail(
+          new IrregularPortfolioError({
+            operation: 'intrinsicSharedArchive',
+            category: 'search',
+            message: 'intrinsic shared archive did not complete its production coverage contract'
           })
-          if (decision.admitted) {
-            admittedCandidate = candidate
-            rejectedReason = decision.reason
-            break
-          }
-          rejectedReason = decision.reason
-        }
-        if (admittedCandidate !== undefined) {
-          const materialized = materializeCanonicalResult(input, canonical, admittedCandidate)
-          if (materialized === undefined) {
-            roleDiagnostics.push(
-              canonicalRoleDiagnostic('rejected', 'canonical history could not be rigidly oriented')
-            )
-          } else {
-            selected = materialized
-            roleDiagnostics.push(canonicalRoleDiagnostic('admitted', rejectedReason))
-            roleDiagnostics.push(
-              canonicalRoleDiagnostic('selected', 'canonical role replaced production')
-            )
-          }
-        } else {
-          roleDiagnostics.push(canonicalRoleDiagnostic('rejected', rejectedReason))
-        }
-      } else {
-        roleDiagnostics.push(canonicalRoleDiagnostic(
-          'rejected',
-          'canonical collision arrangement does not fit the requested sheet at q0 or q90'
-        ))
+        )
       }
+      const sheetlessArchive = retainRankedSharedArchive(archive.sheetlessArchive)
+      const winner = selectIntrinsicSharedArchiveWinner(
+        selectFittingSharedArchive(sheetlessArchive)
+      )
+      if (winner === undefined) {
+        return yield* Effect.fail(
+          new IrregularPortfolioError({
+            operation: 'intrinsicSharedArchive',
+            category: 'search',
+            message: 'intrinsic shared archive produced no exact endpoint fitting the requested sheet'
+          })
+        )
+      }
+      selected = yield* materializeSharedArchiveResult(input, winner)
+      archiveDiagnostics.push(
+        sharedArchiveDiagnostic(
+          'completed',
+          `shared archive selected ${winner.role} from ${sheetlessArchive.length} exact endpoints`
+        )
+      )
+      yield* emitSharedArchiveProgress(
+        input,
+        'completed',
+        selected.portfolio.score,
+        performance.now() - coordinatorStartedAt
+      )
+    } else {
+      const production = yield* runSingleSheetPortfolio(input, input.request.sheet, undefined)
+      if (production.metrics !== undefined) input.options?.onPortfolioMetrics?.(production.metrics)
+      selected = yield* materializeProductionResult(input, production)
     }
 
     for (const snapshot of selected.stateSnapshots) {
@@ -332,7 +336,7 @@ function coordinateCanonicalReferenceDecode(
       diagnostics: [
         ...input.diagnostics,
         ...selected.score.freeMaterialSnapshot.diagnostics,
-        ...roleDiagnostics
+        ...archiveDiagnostics
       ],
       sortedPieceIds: input.sortedPieceIds,
       stateSnapshots: selected.stateSnapshots,
@@ -342,45 +346,8 @@ function coordinateCanonicalReferenceDecode(
   })
 }
 
-function withCancelledPortfolioStatus(portfolio: IrregularPortfolioResult): IrregularPortfolioResult {
-  return new IrregularPortfolioResult({
-    ...portfolio,
-    status: 'cancelled',
-    terminationReason: 'cancelled'
-  })
-}
-
-/** Truthful protected-role lifecycle diagnostics for attempted, reused, and skipped decodes. */
-export function canonicalReferenceRoleLifecycleDiagnostics(input: {
-  readonly shouldAttemptCanonical: boolean
-  readonly reusesProduction: boolean
-  readonly productionStatus: IrregularPortfolioResult['status']
-  readonly canonicalAttempted: boolean
-  readonly canonicalStatus: IrregularPortfolioResult['status']
-}): CollisionGeometryDiagnostic[] {
-  if (!input.shouldAttemptCanonical) return []
-  if (!input.canonicalAttempted) {
-    if (input.productionStatus === 'cancelled') {
-      return [
-        canonicalRoleDiagnostic(
-          'rejected',
-          input.reusesProduction
-            ? 'reference-sheet decode was cancelled before canonical reuse completed'
-            : 'protected canonical-reference decode was not attempted because production was cancelled'
-        )
-      ]
-    }
-    return input.reusesProduction
-      ? [canonicalRoleDiagnostic('admitted', 'reference sheet reused the ordinary decode')]
-      : []
-  }
-  return input.canonicalStatus === 'cancelled'
-    ? [canonicalRoleDiagnostic('rejected', 'protected canonical-reference decode was cancelled')]
-    : [canonicalRoleDiagnostic('attempted', 'protected canonical-reference decode completed')]
-}
-
 function runSingleSheetPortfolio(
-  input: CanonicalReferenceCoordinatorInput,
+  input: IrregularSearchCoordinatorInput,
   sheet: SheetSpec,
   decodeRole: 'production' | 'canonical-reference' | undefined
 ): Effect.Effect<SingleSheetDecode, IrregularComputeErrorType> {
@@ -446,6 +413,23 @@ function runSingleSheetPortfolio(
   })
 }
 
+function emitSharedArchiveProgress(
+  input: IrregularSearchCoordinatorInput,
+  phase: 'shared_archive' | 'completed',
+  bestScore: IrregularLayoutScoreSummary | undefined,
+  elapsedMs: number
+): Effect.Effect<void> {
+  return (
+    input.options?.emitPortfolioProgress?.(
+      new IrregularPortfolioProgress({
+        phase,
+        ...(bestScore === undefined ? {} : { bestScore }),
+        elapsedMs: Math.max(0, elapsedMs)
+      })
+    ) ?? Effect.void
+  )
+}
+
 export function portfolioProgressForDecodeRole(
   progress: IrregularPortfolioProgress,
   decodeRole: 'production' | 'canonical-reference' | undefined
@@ -460,7 +444,7 @@ interface MaterializedDecode extends IrregularComputeResult {
 }
 
 function materializeProductionResult(
-  input: CanonicalReferenceCoordinatorInput,
+  input: IrregularSearchCoordinatorInput,
   decoded: SingleSheetDecode
 ): Effect.Effect<MaterializedDecode, IrregularComputeErrorType> {
   return Effect.gen(function* () {
@@ -510,130 +494,74 @@ function materializeProductionResult(
   })
 }
 
-interface FittingCanonicalCandidate {
-  readonly rotationDeg: 0 | 90
-  readonly state: IrregularBeamState
-  readonly score: IrregularLayoutScore
-  readonly finalScoreElapsedMs: number
-}
-
-function fittingCanonicalCandidates(
-  input: CanonicalReferenceCoordinatorInput,
-  canonical: SingleSheetDecode
-): Effect.Effect<ReadonlyArray<FittingCanonicalCandidate>, IrregularComputeErrorType> {
+function materializeSharedArchiveResult(
+  input: IrregularSearchCoordinatorInput,
+  endpoint: IntrinsicSharedArchiveEndpoint
+): Effect.Effect<MaterializedDecode, IrregularComputeErrorType> {
   return Effect.gen(function* () {
-    const terminalState = canonical.terminalState
-    if (terminalState === undefined) return []
-    const candidates: FittingCanonicalCandidate[] = []
-    for (const { rotationDeg, state } of canonicalStateOrientationsFittingSheet(
-      terminalState,
-      input.request.sheet
-    )) {
-      const scoringStartedAt =
-        input.options?.onFinalizationMetrics === undefined ? 0 : performance.now()
-      const score = yield* input.layoutScorer.scoreState({ sheet: input.request.sheet, state })
-      candidates.push({
-        rotationDeg,
-        state,
-        score,
+    const placedCollisionGeometries = endpoint.requestedSheetFit.selectedPlacedCollisionGeometries
+    const state = new IrregularBeamState({
+      remainingPreparedPieces: [],
+      placedCollisionGeometries,
+      placementOrder: placedCollisionGeometries.map(
+        ({ placement }) => placement.pieceId ?? placement.sourcePieceId
+      )
+    })
+    const scoringStartedAt =
+      input.options?.onFinalizationMetrics === undefined ? 0 : performance.now()
+    const reconstructedScore = yield* input.layoutScorer.scoreState({
+      sheet: input.request.sheet,
+      state
+    })
+    const score = preserveSharedArchiveExactMetrics(reconstructedScore, endpoint)
+    const stateSnapshots =
+      input.request.options.historyMode === 'off'
+        ? []
+        : [
+            {
+              stepIndex: input.preparedPieces.length,
+              beamRank: 0,
+              candidateCount: 1,
+              source: 'shared-archive' as const,
+              state
+            }
+          ]
+    const portfolio = new IrregularPortfolioResult({
+      status: 'completed',
+      terminationReason: 'shared_archive_completed',
+      source: 'shared-archive',
+      placements: placedCollisionGeometries.map(({ placement }) => placement),
+      unplacedPieceIds: [],
+      score: layoutScoreSummary(score, endpoint.metrics.enclosedCavityCount),
+      diagnostics: [
+        sharedArchiveDiagnostic(
+          'selected',
+          `selected exact shared-archive role ${endpoint.role} (${endpoint.sheetlessCanonicalGeometryHash})`
+        )
+      ]
+    })
+    return {
+      placedCollisionGeometries,
+      score,
+      unplacedPieceIds: [],
+      diagnostics: [],
+      sortedPieceIds: input.sortedPieceIds,
+      stateSnapshots,
+      beamWidth: input.settings.optimizer.beamWidth,
+      portfolio,
+      finalizationMetrics: {
+        reconstructionElapsedMs: 0,
         finalScoreElapsedMs:
           input.options?.onFinalizationMetrics === undefined
             ? 0
             : Math.max(0, performance.now() - scoringStartedAt)
-      })
+      }
     }
-    return candidates
   })
 }
 
-export function canonicalStateOrientationsFittingSheet(
-  terminalState: IrregularBeamState,
-  sheet: SheetSpec
-): ReadonlyArray<{ readonly rotationDeg: 0 | 90; readonly state: IrregularBeamState }> {
-  const fitting: Array<{ readonly rotationDeg: 0 | 90; readonly state: IrregularBeamState }> = []
-  // q0 is the deterministic canonical preference whenever both rigid orientations fit
-  for (const rotationDeg of [0, 90] as const) {
-    const state = terminalState.withQuarterTurnBottomLeft(rotationDeg)
-    const bounds = state?.translatedCollisionBounds
-    if (
-      state !== undefined &&
-      bounds !== undefined &&
-      assertCanonicalGridLegalLayout(sheet, state.placedCollisionGeometries)
-    ) {
-      fitting.push({ rotationDeg, state })
-    }
-  }
-  return fitting
-}
-
-function materializeCanonicalResult(
-  input: CanonicalReferenceCoordinatorInput,
-  canonical: SingleSheetDecode,
-  candidate: FittingCanonicalCandidate
-): MaterializedDecode | undefined {
-  const stateSnapshots = orientCanonicalStateSnapshots(
-    canonical.stateSnapshots,
-    candidate.rotationDeg
-  )
-  if (stateSnapshots === undefined) return undefined
-  const portfolio = canonicalPortfolioResultFrom({
-    source: canonical.portfolio,
-    state: candidate.state,
-    score: candidate.score
-  })
-  return {
-    placedCollisionGeometries: candidate.state.placedCollisionGeometries,
-    score: candidate.score,
-    unplacedPieceIds: candidate.state.unplacedPieceIds,
-    diagnostics: [],
-    sortedPieceIds: input.sortedPieceIds,
-    stateSnapshots,
-    beamWidth: input.settings.optimizer.beamWidth,
-    portfolio,
-    finalizationMetrics: {
-      reconstructionElapsedMs: 0,
-      finalScoreElapsedMs: candidate.finalScoreElapsedMs
-    }
-  }
-}
-
-/** Schema-owned materialization for a selected canonical terminal state. */
-export function canonicalPortfolioResultFrom(input: {
-  readonly source: IrregularPortfolioResult
-  readonly state: IrregularBeamState
-  readonly score: IrregularLayoutScore
-}): IrregularPortfolioResult {
-  return new IrregularPortfolioResult({
-    status: input.source.status,
-    ...(input.source.terminationReason !== undefined
-      ? { terminationReason: input.source.terminationReason }
-      : {}),
-    source: input.source.source,
-    placements: input.state.placedCollisionGeometries.map(({ placement }) => placement),
-    unplacedPieceIds: input.state.unplacedPieceIds,
-    score: layoutScoreSummary(input.score),
-    diagnostics: input.source.diagnostics
-  })
-}
-
-export function orientCanonicalStateSnapshots(
-  snapshots: ReadonlyArray<IrregularStateSnapshot>,
-  rotationDeg: 0 | 90
-): ReadonlyArray<IrregularStateSnapshot> | undefined {
-  const oriented: IrregularStateSnapshot[] = []
-  for (const snapshot of snapshots) {
-    const state = snapshot.state.withQuarterTurnBottomLeft(rotationDeg)
-    if (state === undefined) return undefined
-    oriented.push({ ...snapshot, state })
-  }
-  return oriented
-}
-
-export function isCanonicalReferenceRoleEligible(
-  request: NestingRequest,
-  settings: IrregularNestingSettings,
-  preparedPieces: ReadonlyArray<IrregularPreparedPiece>
-): boolean {
+/** Explicit activation boundary for the production shared archive. */
+export function isIntrinsicSharedArchiveEligible(settings: IrregularNestingSettings): boolean {
   const optimizer = settings.optimizer
   const gaDisabled =
     optimizer.gaEnabled === false ||
@@ -642,139 +570,20 @@ export function isCanonicalReferenceRoleEligible(
     (optimizer.gaGenerationBudget ?? 4) === 0 ||
     (optimizer.gaEvaluationBudget ?? 128) === 0
   return (
-    request.pieces.length > 20 &&
-    preparedPieces.length > 20 &&
-    optimizer.canonicalReferenceDecodeEnabled === true &&
-    hasScaleDiverseMultiFamilyWorkload(
-      preparedPieces,
-      request.pieces.map((piece) => piece.interchangeabilityKey ?? piece.sourcePieceId)
-    ) &&
-    (optimizer.localRepairBudget ?? 0) === 0 &&
+    optimizer.intrinsicSharedArchiveEnabled === true &&
     gaDisabled &&
     optimizer.placementPolicyId !== 'short-side-fill'
   )
 }
 
-/** Exact one/two-decode plan used by the outer coordinator. */
-export function canonicalReferenceDecodeSheets(
-  request: NestingRequest,
-  settings: IrregularNestingSettings,
-  preparedPieces: ReadonlyArray<IrregularPreparedPiece>
-): ReadonlyArray<SheetSpec> {
-  if (
-    !isCanonicalReferenceRoleEligible(request, settings, preparedPieces) ||
-    isCanonicalReferenceSheet(request.sheet)
-  ) {
-    return [request.sheet]
-  }
-  return [request.sheet, CANONICAL_REFERENCE_SHEET]
-}
-
-function isCanonicalReferenceSheet(sheet: SheetSpec): boolean {
-  return sheet.width === CANONICAL_REFERENCE_SHEET.width && sheet.height === CANONICAL_REFERENCE_SHEET.height
-}
-
-export interface CanonicalAdmissionDecision {
-  readonly admitted: boolean
-  readonly reason: string
-}
-
-export function evaluateCanonicalReferenceAdmission(input: {
-  readonly productionPlaced: ReadonlyArray<IrregularPlacedPiece>
-  readonly canonicalScore: IrregularLayoutScore
-  readonly canonicalPlaced: ReadonlyArray<IrregularPlacedPiece>
-}): CanonicalAdmissionDecision {
-  const canonicalTopology = measureCanonicalLayoutTopology(input.canonicalPlaced)
-  const productionIdentity = canonicalCollisionLayoutIdentity(input.productionPlaced)
-  const canonicalIdentity = canonicalCollisionLayoutIdentity(input.canonicalPlaced)
-  if (
-    canonicalTopology === undefined ||
-    productionIdentity === undefined ||
-    canonicalIdentity === undefined
-  ) {
-    return { admitted: false, reason: 'protected topology or canonical identity is undefined' }
-  }
-  if (productionIdentity === canonicalIdentity) {
-    return { admitted: false, reason: 'canonical identity tie retains production' }
-  }
-  return evaluateCanonicalReferencePriorityMetrics({
-    canonical: input.canonicalScore,
-    canonicalTopology
+function layoutScoreSummary(
+  score: IrregularLayoutScore,
+  canonicalEnclosedCavityCount?: number
+): IrregularLayoutScoreSummary {
+  return new IrregularLayoutScoreSummary({
+    ...layoutScoreSummaryFields(score),
+    ...(canonicalEnclosedCavityCount === undefined ? {} : { canonicalEnclosedCavityCount })
   })
-}
-
-/** Candidate-intrinsic certificate for the protected canonical-reference role. */
-export function evaluateCanonicalReferencePriorityMetrics(input: {
-  readonly canonical: IrregularLayoutScore
-  readonly canonicalTopology: CanonicalLayoutTopology
-}): CanonicalAdmissionDecision {
-  const summary = decodeMaterializedLayoutScoreSummary(input.canonical)
-  if (
-    summary === undefined ||
-    ![
-      input.canonicalTopology.enclosedCavityCount,
-      input.canonicalTopology.largestOccupiedHullGapRatio,
-      input.canonicalTopology.occupiedEnvelopeAspectRatio,
-      input.canonicalTopology.positiveContactComponentCount,
-      input.canonicalTopology.isolatedPieceCount,
-      input.canonicalTopology.largestPositiveContactComponentSize,
-      input.canonicalTopology.largestPositiveContactComponentRatio
-    ].every(Number.isFinite)
-  ) {
-    return {
-      admitted: false,
-      reason: 'protected score summary or topology is invalid or non-finite'
-    }
-  }
-  if (summary.unplacedCount !== 0) {
-    return { admitted: false, reason: 'canonical role is incomplete' }
-  }
-  const checks: ReadonlyArray<readonly [boolean, string]> = [
-    [
-      input.canonicalTopology.enclosedCavityCount <=
-        CANONICAL_REFERENCE_PRIORITY_CERTIFICATE.maximumEnclosedCavityCount,
-      'canonical enclosed-cavity count exceeded the intrinsic certificate'
-    ],
-    [
-      input.canonicalTopology.largestOccupiedHullGapRatio <=
-        CANONICAL_REFERENCE_PRIORITY_CERTIFICATE.maximumLargestOccupiedHullGapRatio,
-      'canonical occupied-hull gap exceeded the intrinsic certificate'
-    ],
-    [
-      input.canonicalTopology.occupiedEnvelopeAspectRatio <=
-        CANONICAL_REFERENCE_PRIORITY_CERTIFICATE.maximumOccupiedEnvelopeAspectRatio,
-      'canonical envelope aspect ratio exceeded the intrinsic certificate'
-    ],
-    [
-      input.canonicalTopology.isolatedPieceCount <=
-        CANONICAL_REFERENCE_PRIORITY_CERTIFICATE.maximumIsolatedPieceCount,
-      'canonical isolated-piece count exceeded the intrinsic certificate'
-    ],
-    [
-      input.canonicalTopology.largestPositiveContactComponentRatio >=
-        CANONICAL_REFERENCE_PRIORITY_CERTIFICATE.minimumLargestPositiveContactComponentRatio,
-      'canonical largest contact-component ratio missed the intrinsic certificate'
-    ]
-  ]
-  const violation = checks.find(([passes]) => !passes)?.[1]
-  if (violation !== undefined) return { admitted: false, reason: violation }
-  return {
-    admitted: true,
-    reason: 'canonical role passed the sheet-free intrinsic compactness certificate'
-  }
-}
-
-function decodeMaterializedLayoutScoreSummary(
-  score: IrregularLayoutScore
-): IrregularLayoutScoreSummary | undefined {
-  const decoded = Schema.decodeUnknownExit(IrregularLayoutScoreSummary)(
-    layoutScoreSummaryFields(score)
-  )
-  return Exit.isSuccess(decoded) ? decoded.value : undefined
-}
-
-function layoutScoreSummary(score: IrregularLayoutScore): IrregularLayoutScoreSummary {
-  return new IrregularLayoutScoreSummary(layoutScoreSummaryFields(score))
 }
 
 function layoutScoreSummaryFields(score: IrregularLayoutScore) {
@@ -797,32 +606,12 @@ function layoutScoreSummaryFields(score: IrregularLayoutScore) {
   }
 }
 
-function combinePortfolioMetrics(
-  first: IrregularPortfolioMetrics | undefined,
-  second: IrregularPortfolioMetrics | undefined
-): IrregularPortfolioMetrics | undefined {
-  if (first === undefined) return second
-  if (second === undefined) return first
-  return {
-    scheduledEvaluationSlots: first.scheduledEvaluationSlots + second.scheduledEvaluationSlots,
-    distinctChromosomeKeys: first.distinctChromosomeKeys + second.distinctChromosomeKeys,
-    evaluatedChromosomeCacheHits:
-      first.evaluatedChromosomeCacheHits + second.evaluatedChromosomeCacheHits,
-    evaluatedChromosomeCacheMisses:
-      first.evaluatedChromosomeCacheMisses + second.evaluatedChromosomeCacheMisses,
-    actualFullBeamDecodes: first.actualFullBeamDecodes + second.actualFullBeamDecodes,
-    decodedBeamElapsedMs: first.decodedBeamElapsedMs + second.decodedBeamElapsedMs,
-    decodedBeamCandidateCount:
-      first.decodedBeamCandidateCount + second.decodedBeamCandidateCount
-  }
-}
-
-function canonicalRoleDiagnostic(
-  status: 'attempted' | 'admitted' | 'rejected' | 'selected',
+function sharedArchiveDiagnostic(
+  status: 'completed' | 'selected',
   message: string
 ): CollisionGeometryDiagnostic {
   return new CollisionGeometryDiagnostic({
-    code: `canonical_reference_role_${status}`,
+    code: `intrinsic_shared_archive_${status}`,
     message
   })
 }
@@ -860,6 +649,22 @@ export function preservePortfolioContactMetrics(
     nearCompleteStructuralContactCount: portfolio.nearCompleteStructuralContactCount,
     dominantNearCompleteStructuralContactCount:
       portfolio.dominantNearCompleteStructuralContactCount
+  }
+}
+
+/** Preserves canonical-grid topology and contact metrics from the selected archive endpoint. */
+export function preserveSharedArchiveExactMetrics(
+  reconstructed: IrregularLayoutScore,
+  endpoint: IntrinsicSharedArchiveEndpoint
+): IrregularLayoutScore {
+  return {
+    ...reconstructed,
+    sharedCollisionBoundaryLengthMm: endpoint.metrics.sharedBoundaryLengthMm,
+    sharedCollisionBoundaryContactUnits: endpoint.metrics.contactUnits,
+    sharedCollisionBoundaryContactBand: Math.floor(endpoint.metrics.contactUnits),
+    nearCompleteStructuralContactCount: endpoint.metrics.totalStructuralContacts,
+    dominantNearCompleteStructuralContactCount: endpoint.metrics.dominantStructuralContacts,
+    occupiedHullWasteRatio: endpoint.metrics.occupiedHullWasteRatio
   }
 }
 

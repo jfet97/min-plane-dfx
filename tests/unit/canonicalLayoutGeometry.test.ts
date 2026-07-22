@@ -20,11 +20,6 @@ import {
   measureCanonicalLayoutTopology,
   placedCollisionWorldGridPath
 } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
-import {
-  canonicalStateOrientationsFittingSheet,
-  orientCanonicalStateSnapshots
-} from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
-import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
 import { selectTargetedDestroySet } from '../../src/workers/algorithm/irregular/targetedExactLns.js'
 
 function placed(
@@ -276,44 +271,4 @@ describe('canonical collision layout geometry', () => {
     expect(assertCanonicalGridLegalLayout(sheet, frozen)).toBe(true)
   })
 
-  it('admits q0, q90-only, and unfit rigid states exactly', () => {
-    const geometry = [rectangle('wide', 6, 3, 0, 0)]
-    const state = new IrregularBeamState({
-      remainingPreparedPieces: [],
-      placedCollisionGeometries: geometry,
-      placementOrder: [PieceId.make('wide')]
-    })
-    expect(
-      canonicalStateOrientationsFittingSheet(
-        state,
-        new SheetSpec({ width: 6, height: 3, label: 'q0' })
-      ).map(({ rotationDeg }) => rotationDeg)
-    ).toEqual([0])
-    expect(
-      canonicalStateOrientationsFittingSheet(
-        state,
-        new SheetSpec({ width: 3, height: 6, label: 'q90' })
-      ).map(({ rotationDeg }) => rotationDeg)
-    ).toEqual([90])
-    expect(
-      canonicalStateOrientationsFittingSheet(
-        state,
-        new SheetSpec({ width: 6, height: 6, label: 'q0-first' })
-      ).map(({ rotationDeg }) => rotationDeg)
-    ).toEqual([0, 90])
-    expect(
-      canonicalStateOrientationsFittingSheet(
-        state,
-        new SheetSpec({ width: 5, height: 5, label: 'unfit' })
-      )
-    ).toEqual([])
-
-    const oriented = orientCanonicalStateSnapshots(
-      [{ stepIndex: 1, beamRank: 0, candidateCount: 1, state }],
-      90
-    )
-    expect(canonicalCollisionLayoutIdentity(oriented?.at(-1)?.state.placedCollisionGeometries ?? [])).toBe(
-      canonicalCollisionLayoutIdentity(state.placedCollisionGeometries)
-    )
-  })
 })

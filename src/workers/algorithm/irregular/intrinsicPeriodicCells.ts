@@ -33,6 +33,8 @@ import {
 } from '../../irregular/canonicalLayoutGeometry.js'
 import {
   type IrregularGeometryInputError,
+  type IrregularNfpIfpControl,
+  type IrregularNfpIfpControlAbortError,
   type IrregularNestingNotImplementedError,
   NfpIfpService
 } from '../../irregular/services.js'
@@ -149,6 +151,7 @@ export interface IntrinsicPeriodicCatalogOptions {
   readonly maximumTransformsPerFamily?: number
   readonly maximumPairsPerFamily?: number
   readonly maximumCellsPerFamilyRole?: number
+  readonly control?: IrregularNfpIfpControl
   /** Retains pre-front cells for an observer-only source-survival audit. */
   readonly captureSourceSurvivalAudit?: boolean
 }
@@ -264,7 +267,9 @@ export function enumerateIntrinsicPeriodicCells(
   options: number | IntrinsicPeriodicCatalogOptions = {}
 ): Effect.Effect<
   IntrinsicPeriodicCatalog,
-  IrregularNestingNotImplementedError | IrregularGeometryInputError,
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError,
   GeometryKernel | GeometrySettings | NfpIfpService
 > {
   return Effect.gen(function* () {
@@ -299,6 +304,7 @@ export function enumerateIntrinsicPeriodicCells(
     const families: IntrinsicPeriodicFamilyCatalog[] = []
     const globalCells = new Map<string, IntrinsicPeriodicCell>()
     for (const family of selectedFamilies) {
+      yield* resolved.control?.checkpoint('candidate-points') ?? Effect.void
       if (performance.now() - startedAt >= resolved.maximumRuntimeMs) break
       const catalog = yield* enumerateIntrinsicPeriodicFamily({
         family,
@@ -332,6 +338,7 @@ interface ResolvedIntrinsicPeriodicCatalogOptions {
   readonly maximumPairsPerFamily: number
   readonly maximumCellsPerFamilyRole: number
   readonly captureSourceSurvivalAudit: boolean
+  readonly control: IrregularNfpIfpControl | undefined
 }
 
 function resolveCatalogOptions(
@@ -344,7 +351,8 @@ function resolveCatalogOptions(
     maximumTransformsPerFamily: input.maximumTransformsPerFamily ?? 16,
     maximumPairsPerFamily: input.maximumPairsPerFamily ?? 120,
     maximumCellsPerFamilyRole: input.maximumCellsPerFamilyRole ?? 4,
-    captureSourceSurvivalAudit: input.captureSourceSurvivalAudit ?? false
+    captureSourceSurvivalAudit: input.captureSourceSurvivalAudit ?? false,
+    control: input.control
   }
 }
 
@@ -357,7 +365,9 @@ function enumerateIntrinsicPeriodicFamily(input: {
   readonly options: ResolvedIntrinsicPeriodicCatalogOptions
 }): Effect.Effect<
   IntrinsicPeriodicFamilyCatalog,
-  IrregularNestingNotImplementedError | IrregularGeometryInputError
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError
 > {
   return Effect.gen(function* () {
     const representative = input.family.members[0]
@@ -370,6 +380,7 @@ function enumerateIntrinsicPeriodicFamily(input: {
     >()
     let runtimeCoverageComplete = true
     for (const transform of [...representative.transforms].sort(transformOrder)) {
+      yield* input.options.control?.checkpoint('candidate-points') ?? Effect.void
       if (performance.now() - input.startedAt >= input.options.maximumRuntimeMs) {
         runtimeCoverageComplete = false
         break
@@ -406,6 +417,7 @@ function enumerateIntrinsicPeriodicFamily(input: {
     }
 
     for (const { geometry } of transformed) {
+      yield* input.options.control?.checkpoint('candidate-points') ?? Effect.void
       if (performance.now() - input.startedAt >= input.options.maximumRuntimeMs) {
         runtimeCoverageComplete = false
         break
@@ -416,7 +428,8 @@ function enumerateIntrinsicPeriodicFamily(input: {
         familyKey: input.family.key,
         members: [{ piece: representative, geometry, point }],
         nfp: input.nfp,
-        settings: input.settings
+        settings: input.settings,
+        control: input.options.control
       })
       addDerived(p1, derived, 'noP1Basis')
       mergeRejectedCounts(rejected, derived.rejected)
@@ -427,6 +440,7 @@ function enumerateIntrinsicPeriodicFamily(input: {
     let pairCoverageComplete = true
     for (let firstIndex = 0; firstIndex < transformed.length; firstIndex += 1) {
       for (let secondIndex = firstIndex + 1; secondIndex < transformed.length; secondIndex += 1) {
+        yield* input.options.control?.checkpoint('candidate-points') ?? Effect.void
         if (enumeratedPairCount >= input.options.maximumPairsPerFamily) {
           pairCoverageComplete = false
           break
@@ -449,6 +463,7 @@ function enumerateIntrinsicPeriodicFamily(input: {
         })
         const offsets = boundaryCandidatePoints(pairNfp.boundary.points, second)
         for (const point of offsets) {
+          yield* input.options.control?.checkpoint('candidate-points') ?? Effect.void
           if (performance.now() - input.startedAt >= input.options.maximumRuntimeMs) {
             runtimeCoverageComplete = false
             pairCoverageComplete = false
@@ -468,7 +483,8 @@ function enumerateIntrinsicPeriodicFamily(input: {
               { piece: input.family.members[1] ?? representative, geometry: second, point }
             ],
             nfp: input.nfp,
-            settings: input.settings
+            settings: input.settings,
+            control: input.options.control
           })
           addDerived(p2, derived, 'noP2Basis')
           mergeRejectedCounts(rejected, derived.rejected)
@@ -671,7 +687,10 @@ export function expandIntrinsicPeriodicCell(
   cell: IntrinsicPeriodicCell,
   familyMembers: ReadonlyArray<IrregularPreparedPiece>,
   maximumCrops = 2
-): Effect.Effect<ReadonlyArray<IntrinsicPeriodicSeed>, IrregularGeometryInputError> {
+): Effect.Effect<
+  ReadonlyArray<IntrinsicPeriodicSeed>,
+  IrregularGeometryInputError | IrregularNfpIfpControlAbortError
+> {
   return Effect.map(enumerateIntrinsicPeriodicCellCrops(cell, familyMembers), (candidates) =>
     selectIntrinsicPeriodicSeedFront(candidates, maximumCrops)
   )
@@ -681,9 +700,14 @@ export function expandIntrinsicPeriodicCell(
 export function enumerateIntrinsicPeriodicCellCrops(
   cell: IntrinsicPeriodicCell,
   familyMembers: ReadonlyArray<IrregularPreparedPiece>,
-  onCropAttempt?: () => void
-): Effect.Effect<ReadonlyArray<IntrinsicPeriodicSeed>, IrregularGeometryInputError> {
+  onCropAttempt?: () => void,
+  control?: IrregularNfpIfpControl
+): Effect.Effect<
+  ReadonlyArray<IntrinsicPeriodicSeed>,
+  IrregularGeometryInputError | IrregularNfpIfpControlAbortError
+> {
   return Effect.gen(function* () {
+    yield* control?.checkpoint('candidate-points') ?? Effect.void
     const v1 = gridPoint(cell.v1)
     const v2 = gridPoint(cell.v2)
     if (v1 === undefined || v2 === undefined) return []
@@ -693,15 +717,18 @@ export function enumerateIntrinsicPeriodicCellCrops(
     const candidates: IntrinsicPeriodicSeed[] = []
     const identities = new Set<string>()
     for (let rows = 1; rows <= q; rows += 1) {
+      yield* control?.checkpoint('candidate-points') ?? Effect.void
       const columns = Math.ceil(q / rows)
       for (const traversal of ['row', 'column'] as const) {
         for (const corner of [0, 1, 2, 3] as const) {
+          yield* control?.checkpoint('candidate-points') ?? Effect.void
           onCropAttempt?.()
           const coordinates = cropCoordinates(rows, columns, q, traversal, corner)
           const placed: IrregularPlacedPiece[] = []
           let sourceIndex = 0
           let legal = true
           for (const coordinate of coordinates) {
+            yield* control?.checkpoint('candidate-points') ?? Effect.void
             for (const base of cell.members) {
               const piece = familyMembers[sourceIndex]
               if (piece === undefined) break
@@ -899,14 +926,18 @@ function deriveCells(input: {
   readonly members: ReadonlyArray<IntrinsicPeriodicBaseMember>
   readonly nfp: NfpIfpService
   readonly settings: IrregularNestingSettings
+  readonly control: IrregularNfpIfpControl | undefined
 }): Effect.Effect<
   IntrinsicPeriodicCellDerivation,
-  IrregularNestingNotImplementedError | IrregularGeometryInputError
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError
 > {
   return Effect.gen(function* () {
     const forbidden: ForbiddenBoundary[] = []
     for (const fixedMember of input.members) {
       for (const movingMember of input.members) {
+        yield* input.control?.checkpoint('candidate-points') ?? Effect.void
         const boundary = yield* input.nfp.computeNfp({
           fixed: makePlaced(fixedMember.piece, fixedMember.geometry, fixedMember.point),
           moving: movingMember.geometry,

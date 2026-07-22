@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { Effect, Layer } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { ImportedPiece } from '@shared/domain/dxf.js'
@@ -19,13 +20,16 @@ import { FreeMaterialServiceLive } from '../../src/workers/irregular/freeMateria
 import { GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
 import { TransformGeneratorLive } from '../../src/workers/irregular/transformGenerator.js'
+import { canonicalCollisionLayoutIdentity } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 
 const TRIANGLE_COUNT = 20
-const MAX_COLLISION_SHORT_SIDE_MM = 228
-const MAX_COLLISION_LONG_SIDE_MM = 354
-const MAX_COLLISION_BOUNDS_AREA_MM2 = 80_200
-const MAX_COLLISION_BOUNDS_SPAN_MM = 581
-const MAX_OCCUPIED_HULL_WASTE_RATIO = 0.05
+const MAX_COLLISION_SHORT_SIDE_MM = 153
+const MAX_COLLISION_LONG_SIDE_MM = 488
+const MAX_COLLISION_BOUNDS_AREA_MM2 = 74_429
+const MAX_COLLISION_BOUNDS_SPAN_MM = 641
+const MAX_OCCUPIED_HULL_WASTE_RATIO = 0.061
+const EXPECTED_CANONICAL_HASH =
+  '371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127'
 
 const settings = new IrregularNestingSettings({
   geometry: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
@@ -172,13 +176,17 @@ describe('compact-quality repeated triangle golden', () => {
       expect(computed.score.collisionBoundsLeftMm).toBeCloseTo(0, 6)
       expect(computed.score.collisionBoundsBottomMm).toBeCloseTo(0, 6)
 
-      expect(winnerScore.nearCompleteStructuralContactCount).toBeGreaterThanOrEqual(24)
-      expect(winnerScore.dominantNearCompleteStructuralContactCount).toBeGreaterThanOrEqual(17)
-      expect(winnerScore.sharedCollisionBoundaryContactUnits).toBeGreaterThanOrEqual(23.8)
-      expect(winnerScore.sharedCollisionBoundaryContactBand).toBeGreaterThanOrEqual(23)
-      expect(winnerScore.sharedCollisionBoundaryLengthMm).toBeGreaterThanOrEqual(2100)
+      expect(computed.portfolio.source).toBe('shared-archive')
+      const canonicalIdentity = canonicalCollisionLayoutIdentity(
+        computed.placedCollisionGeometries
+      )
+      expect(canonicalIdentity).toBeDefined()
+      expect(createHash('sha256').update(canonicalIdentity ?? '').digest('hex')).toBe(
+        EXPECTED_CANONICAL_HASH
+      )
       expect(winnerScore.freeMaterialRegionCount).toBe(1)
-      expect(winnerScore.freeMaterialHoleCount).toBe(0)
+      expect(winnerScore.canonicalEnclosedCavityCount).toBe(0)
+      expect(layout.score.canonicalEnclosedCavityCount).toBe(0)
 
       expect(computed.score.sharedCollisionBoundaryLengthMm).toBe(
         winnerScore.sharedCollisionBoundaryLengthMm

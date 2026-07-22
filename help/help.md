@@ -22,14 +22,14 @@ the following order.
 
 ### Primary Problems
 
-1. **Replace the compatibility handoff with genuinely sheet-invariant search.**
-   The flagship mixed-61 output is currently unified across ten legal sheets by
-   an explicit protected canonical-reference decode and a sheet-free topology
-   certificate. That mechanism caches one historical sheet-relative trajectory;
-   it does not make ordinary requested-sheet search invariant. The active
-   replacement work removes sheet-derived preferences from every branch-removing
-   layer and uses real sheet dimensions only for legality. Sheet-relative
-   ranking remains intentional only for explicit `short_side_fill`.
+1. **Complete the production gate for genuinely sheet-invariant search.**
+   Compact-quality jobs now use the sheet-independent direct and periodic
+   constructors through one exact shared archive. The fixed `2000 x 2700`
+   canonical-reference handoff and its schema flag are removed. Sheet dimensions
+   enter only requested-sheet q0/q90 legality after sheetless construction and
+   ranking; `short_side_fill` remains an intentional sheet-relative policy and
+   is excluded from this path. The remaining work is the full roomy-sheet and
+   corpus gate, not another compatibility decode.
 2. **Preserve the 20-triangle golden.** The pointed-triangle lattice is a hard
    regression gate, not a special-case production heuristic. A candidate fails
    if it turns the lattice into a chain, fragments structural contacts, creates
@@ -113,10 +113,10 @@ evaluation counts, endpoint hashes, archive order, winner hash, and the winner
 SVG byte-for-byte.
 
 The fixture contains no repeated collision family, so the periodic catalog
-correctly selects zero continuations. The existing full-matrix experiment is
-invalid for this case only because its separate repeated-shape contract demands
-exactly eight periodic sources. Shapes-17 therefore gates the three direct
-roles; it must not be failed for lacking periodic cells that do not exist.
+correctly selects zero continuations. Production validity now accepts complete
+catalog coverage with fewer than eight available periodic sources, including
+zero, while still requiring every selected source to settle. Shapes-17 therefore
+gates the three direct roles without inventing periodic cells that do not exist.
 
 The first attempted run exposed a real exactness defect rather than malformed
 input. A valid full circle can end with a floating sample infinitesimally
@@ -133,42 +133,52 @@ Portable evidence: [report](artifacts/shapes-17-baseline/report.json),
 
 ### Current Production Truth
 
-The official repair-8 triangle golden remains exact. The boundary-anchor,
-max-side-first intrinsic, and protected Pareto lanes remain isolated from
-production retention and preserve their previously accepted corpus gains.
+The compact-quality profile now enables the intrinsic shared archive directly.
+It runs three sheetless direct constructors and the bounded repeated-family
+periodic portfolio, admits only complete canonical-exact endpoints, filters q0
+and q90 against the requested sheet, and selects from one geometric/topological
+archive. The ordinary windowed beam remains available to modes that explicitly
+select it, but it is neither a compact competitor nor a compact fallback. An
+incomplete, cancelled, deadline-censored, or non-fitting compact archive fails
+honestly instead of silently returning the historical hollow ring.
 
-The mixed-61 hollow-ring output is currently hidden through cross-decode
-coordination, not solved in the default decoder.
-Eligible explicit compact-quality jobs run the unchanged requested-sheet decode
-plus one protected decode on the fixed `2000 x 2700` reference sheet. The
-protected terminal is admitted on the real requested sheet only after exact
-q0/q90 fit, zero positive overlap, complete finite score decoding, and a
-sheet-free topology certificate. The certificate limits exact occupied-union
-cavities to two, hull-gap ratio to `0.15`, envelope aspect to `1.5`, isolated
-pieces to two, and requires at least half the pieces in the largest positive-
-contact component. It deliberately does not let requested-sheet remnant or
-normalized-consumption scores veto the same legal collision geometry.
+The retired fixed-reference machinery is deleted: there is no production
+`canonicalReferenceDecodeEnabled` flag, fixed-sheet coordinator, admission
+certificate, or second decode. This removes the sheet-relative compatibility
+hack rather than hiding it behind the new result.
 
-At candidate `5186255`, ten legal sheets from `900 x 1800` through
-`2000 x 2700` all select the exact approved motif: canonical hash
-`40f8ac9c0fb24073ac141b5fb667366af55df90c78c6cca21ff76703a4a7f300`,
-area `430,344.918 mm2`, two holes, and structural contacts `53/14`. The
-previous claim that reference reproduction and sheet independence were
-mutually exclusive was correct only for independent per-sheet decodes. Guided
-legality probes identified the missing architectural stage; the bounded
-cross-decode handoff supplies it without changing production beam ranking.
+The three production baselines are:
 
-Treat this as a compatibility fallback while the intrinsic replacement is
-measured. Its exact historic hash is no longer a mandatory equality gate for a
-general replacement; its area, hole, contact, legality, and topology are the
-quality witness the replacement must meet or improve.
+- Triangle-20: `371db269...`, `74,428.143126 mm2`, zero canonical cavities;
+- Mixed-61: `391,605.850174 mm2`, zero canonical cavities, all 61 pieces;
+- Shapes-17: `c640c06f...`, `304,499.845650 mm2`, zero canonical cavities.
 
-The capability is schema-owned, defaults off, and is enabled by the explicit
-compact-quality settings factory and flagship fixture. Repair, GA transform
-preferences, homogeneous jobs, small jobs, and `short_side_fill` remain outside
-this expensive path. See
-[the final handoff report](research/canonical-reference-decode-handoff.md) and
-[portable ten-sheet artifacts](artifacts/canonical-reference-decode-handoff/).
+The final archive-only production measurements on 2026-07-22 were `16.621 s`
+for Triangle, `268.978 s` for Mixed, and `27.271 s` for Shapes-17. The transitional
+Mixed integration that first ran the ordinary decoder took `293.456 s`; deleting
+that duplicate normal-path work saved `22.091 s` (`7.5%`) with identical area,
+topology, and rendered geometry. The remembered `110.018 s` Mixed experiment was
+the rejected E4 early gate: it returned `431,558.251 mm2`, 27 isolates, 33
+contact components, and no admitted improvement. It is a performance reference,
+not an accepted-quality baseline.
+
+The Mixed production gate is executable as `pnpm gate:mixed61-compact`. It pins
+the selected canonical hash, maximum `391,606 mm2` envelope, zero canonical
+cavities, and a `330 s` cold ceiling. Canonical occupied-union cavity count is a
+separate result metric; it no longer overwrites sheet-space free-material holes.
+The catalog contract rejects runtime-censored or unstarted work but intentionally
+allows fully settled fixed family/front caps; Mixed has more eligible repeated
+families than the configured max-eight budget, so exhaustive-family coverage is
+not and has never been the production search contract.
+
+The integration-focused suites pass, as do lint and both TypeScript builds. A
+full-suite control still exposes 35 branch-pre-existing expectation failures in
+the ordinary scorer/beam, strict-family archive, and legacy benchmark suites;
+the affected implementation and expectation files are byte-identical to commit
+`75b9699` and are outside this compact-path diff. Five timeout assertions that
+did belong to this integration were updated to the intentional `390 s` floor.
+The worktree-local Electron package also lacks its generated `path.txt`; full
+suite runs must point module resolution at the installed root Electron bundle.
 
 The near-parallel NFP crossing crash is resolved in production by merged pull
 request #1. The guarded fallback recovers only strict internal crossings and the
