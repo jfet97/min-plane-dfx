@@ -383,7 +383,7 @@ function makeSourceAuditReplaySchema() {
               Schema.Struct({ x: Schema.String, y: Schema.String }),
               Schema.Struct({ x: Schema.String, y: Schema.String })
             ]),
-            axis: Schema.optional(Schema.Union([Schema.Literal('x'), Schema.Literal('y')])),
+          axis: Schema.optionalKey(Schema.Union([Schema.Literal('x'), Schema.Literal('y')])),
             selectedBasis: Schema.Tuple([
               Schema.Struct({ x: Schema.Number, y: Schema.Number }),
               Schema.Struct({ x: Schema.Number, y: Schema.Number })
@@ -405,7 +405,7 @@ function makeSourceAuditReplaySchema() {
                 mirrored: Schema.Boolean
               })
             ),
-            contactRelations: Schema.optional(
+          contactRelations: Schema.optionalKey(
               Schema.Tuple([sourceAuditContactRelationSchema, sourceAuditContactRelationSchema])
             )
           }),
@@ -461,11 +461,16 @@ async function readSourceAuditReplay(
   return {
     witnesses: decoded.replay.witnesses.map((witness) => {
       const { axis, contactRelations, ...basisProvenance } = witness.basisProvenance
+      const replayAxis =
+        axis ??
+        (basisProvenance.sourceKind === 'axis-union'
+          ? axisFromSourceKey(basisProvenance.sourceKey)
+          : undefined)
       return {
         ...witness,
         basisProvenance: {
           ...basisProvenance,
-          ...(axis === undefined ? {} : { axis }),
+          ...(replayAxis === undefined ? {} : { axis: replayAxis }),
           ...(contactRelations === undefined ? {} : { contactRelations })
         }
       }
@@ -473,6 +478,12 @@ async function readSourceAuditReplay(
     nonDominatedCropCount: decoded.replay.nonDominatedCropCount,
     sourceCropSurvival: decoded.replay.sourceCropSurvival
   }
+}
+
+function axisFromSourceKey(sourceKey: string): 'x' | 'y' {
+  if (sourceKey.startsWith('x:')) return 'x'
+  if (sourceKey.startsWith('y:')) return 'y'
+  throw new Error('axis-union replay source key has no axis prefix')
 }
 
 function directCapsFromArguments(): Readonly<Record<IntrinsicSharedArchiveDirectRole, number>> {

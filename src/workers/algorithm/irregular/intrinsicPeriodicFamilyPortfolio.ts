@@ -702,7 +702,7 @@ function selectIntrinsicPeriodicContinuations(
                 sourceKey: source.sourceKey,
                 sourceKind: source.sourceKind,
                 cellKey: seed.cellKey,
-                basisProvenance: source.basisProvenance,
+                basisProvenance: completeBasisProvenance(source.basisProvenance),
                 placements: seed.placements,
                 seed: {
                   canonicalKey: seed.canonicalKey,
@@ -749,6 +749,18 @@ function selectIntrinsicPeriodicContinuations(
       ...(phaseTimings === undefined ? {} : { phaseTimings })
     }
   })
+}
+
+function completeBasisProvenance(
+  provenance: IntrinsicPeriodicBasisProvenance
+): IntrinsicPeriodicBasisProvenance {
+  if (provenance.sourceKind !== 'axis-union' || provenance.axis !== undefined) return provenance
+  const axis = provenance.sourceKey.startsWith('x:')
+    ? 'x'
+    : provenance.sourceKey.startsWith('y:')
+      ? 'y'
+      : undefined
+  return axis === undefined ? provenance : { ...provenance, axis }
 }
 
 function sourceAuditCellIncluded(

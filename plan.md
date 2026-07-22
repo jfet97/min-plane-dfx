@@ -65,6 +65,19 @@ Therefore:
     Triangle lattice and preserve Mixed's 405,773.434 zero-cavity pocket-first
     endpoint. The expensive audit remains an optimization target, but admitted
     hashes are a hard equivalence gate for any faster replacement.
+11. **completed as a three-arm source-audit speed experiment:** canonical-cell
+    memoization is exact but weak; a content-addressed warm replay is exact and
+    fast; a generic `P2 + axis-union` cold slice is faster and changes bounded
+    source competition. Triangle warm replay preserves the full source list and
+    `371db269...` winner while reducing periodic time 100.970 -> 6.793 seconds;
+    the cold slice preserves that winner in 12.388 seconds. Mixed warm replay
+    preserves the full source list and `5a1f1ba6...` / 405,773.434 mm2 winner
+    while reducing periodic time 347.944 -> 182.106 seconds. The cold slice
+    selects a different exact endpoint, `3839e80d...`, at 391,605.850 mm2 with
+    zero cavities. No rule refers to triangles, fixture IDs, or piece counts.
+    Keep warm replay as the semantics-preserving production candidate; treat
+    the cold slice as a source-allocation candidate requiring corpus and sheet
+    gates.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -2036,6 +2049,18 @@ budgets before any Mixed periodic conclusion is called conclusive.
    `5a1f1ba6...` at 405,773.434 mm2. A faster source selector is acceptable only
    if it reproduces the same admitted endpoint hashes; runtime cannot buy a
    quality regression.
+
+   **Measured acceleration at `4d30cf1`:** replay keys cover fixture content,
+   prepared collision geometry, settings, and crop/catalog limits. Untrusted
+   JSON is schema-decoded, then every witness is revalidated for canonical
+   Clipper2 legality, identity, topology, and envelope metrics. In-run canonical
+   cell memoization removes only 5,920 of 240,240 Triangle attempts. The generic
+   `P2 + axis-union` cold slice reduces physical attempts to 12,560 on Triangle
+   and 23,456 on Mixed, but deliberately changes the source set. Its better
+   Mixed endpoint proves that the global raw front can crowd a more valuable
+   later continuation out of the width-eight cap. Next compare source-stratified
+   reservations under the full corpus rather than promoting this slice as an
+   exhaustive replacement.
 5. Implement cavity-first scheduling as the next constructive experiment
    (one bounded cavity-queue slot per depth, commensurate two-order
    admission), gated on improving the shared archive against the 405,773

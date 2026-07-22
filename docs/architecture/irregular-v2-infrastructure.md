@@ -244,6 +244,22 @@ the 405,773.434 mm2 zero-cavity Mixed pocket-first endpoint. The source audit
 is currently expensive; later acceleration must reproduce its admitted hashes
 before replacing it.
 
+Source-audit acceleration has three explicit modes. Equivalent cells are
+memoized by canonical cell key within one run, with separate logical and
+physical attempt counters. A content-addressed warm replay can replace raw crop
+enumeration: the harness schema-decodes the product, then the algorithm checks
+canonical-grid legality, canonical identity, contact topology, and envelope
+metrics before rebuilding each ordinary seed future. Ranking, deduplication,
+reservations, and the continuation cap remain unchanged; a mismatch fails.
+
+The experimental `p2-axis-union` scope is a cold allocation policy, not an
+equivalent cache. It admits raw witnesses only from two-member periodic cells
+with an axis-union basis, then applies the unchanged Pareto/dedup/cap pipeline.
+It is generic over collision families and contains no fixture identifiers. A
+narrower source set can change which later futures fit into the fixed cap, so
+this mode is judged by endpoint and corpus quality rather than source-list
+equality.
+
 The isolated V7 seed/archive experiment keeps that E4 path intact while
 testing a replacement controller with stricter observability boundaries. Each
 independent arm constructs two complete canonical-exact, sheet-free seeds:

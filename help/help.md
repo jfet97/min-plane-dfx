@@ -232,6 +232,36 @@ metrics, and artifact hashes. Future experiments must write an immutable manifes
 in their isolated worktree before production code is changed. Promote accepted
 artifacts into `help/artifacts/` and durable research reports into `help/research/`.
 
+### 2026-07-22 (periodic source-audit speed arms)
+
+- Tried all three acceleration paths without fixture- or triangle-specific
+  behavior. Canonical-cell memoization is exact but small: Triangle uses
+  234,320 physical attempts for 240,240 logical attempts and still spends about
+  100 seconds in the audit.
+- Added content-addressed warm replay. The cache is schema-decoded and every
+  witness is rechecked with canonical Clipper2 legality, identity, topology,
+  and envelope metrics. Triangle preserves the exact source IDs, omissions,
+  and `371db269...` / 74,428.143 mm2 winner while periodic time falls
+  100.970 -> 6.793 seconds. Mixed preserves the source list and
+  `5a1f1ba6...` / 405,773.434 mm2 winner while periodic time falls
+  347.944 -> 182.106 seconds.
+- Added a generic cold scope for `P2` two-member cells backed by an axis-union
+  basis. Triangle keeps the exact 74,428.143 winner in 12.388 seconds. Mixed
+  produces a new canonical-exact zero-cavity winner `3839e80d...` at
+  391,605.850 mm2, maximum side 629.387 mm, hull waste 0.161151, seven isolates,
+  and 18 positive-contact components. It is 3.49% smaller than the 405,773.434
+  incumbent and more cohesive by component/isolate metrics, though it has fewer
+  structural contacts (14/2 versus 22/3).
+- The cold result exposes a search-allocation defect: the full raw Pareto set
+  crowds the 391,605 future out of the fixed width-eight continuation budget.
+  The scope is not source-equivalent and is not yet a production default. Gate
+  it across the corpus and roomy sheets, then test bounded source-stratified
+  reservations.
+- Immutable reports and replay products remain under
+  `/private/tmp/min-plane-provenance/periodic-speed-arms-b96249a/`; portable
+  renders and hashes are in
+  [`help/artifacts/periodic-audit-speed`](artifacts/periodic-audit-speed/README.md).
+
 ### 2026-07-21 (V7 search-redesign review, branch v7-search-redesign-review)
 
 - **Repaired a total production regression, then narrowed the repair after
