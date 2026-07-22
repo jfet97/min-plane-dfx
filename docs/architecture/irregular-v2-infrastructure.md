@@ -182,6 +182,16 @@ future is reached through both sources. Extending this periodic-specific
 mechanism into a universal all-front retention policy remains a hypothesis,
 not an established architecture.
 
+Periodic strict continuations also accept an optional deterministic candidate-
+evaluation cap. The counter increments exactly once before each direct-legal
+candidate enters strict local scoring; reaching the cap stops before committing
+the partially evaluated piece and reports `evaluation-cap` with the consumed
+count. Wall time remains an independent safety abort. This separates a stable
+search budget from machine speed while preserving the historical unbounded
+behavior when no evaluation cap is supplied. Selection coverage and execution
+coverage are reported separately: selecting every bounded continuation does not
+imply that every selected continuation reached a terminal decode.
+
 The isolated V7 seed/archive experiment keeps that E4 path intact while
 testing a replacement controller with stricter observability boundaries. Each
 independent arm constructs two complete canonical-exact, sheet-free seeds:

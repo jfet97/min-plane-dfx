@@ -270,6 +270,17 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   deadlines, yielding a new best periodic endpoint 420,059.254 mm2, zero
   cavities, 33/10 contacts (`a79f6148…`). Continuation budgets must become
   evaluation caps before Mixed periodic results can be conclusive.
+- **The corrected-frame replay exposed a seed-provenance blocker.** Triangle
+  found its pinned source and repeated the zero-endpoint matrix. Mixed did not
+  find the pinned `310adc64…` source in either a concurrent or a serial run
+  from merge `06892c9`: after raw witnesses were brought under the corrected
+  shared cap, that historical continuation is no longer selected. Therefore
+  the concurrent miss is not evidence that CPU contention alone removed the
+  seed. The older 1/8-versus-4/8 completion split still proves wall-clock
+  censoring, so the isolated `deterministic-periodic-budget` experiment caps
+  direct-legal strict candidate evaluations and reports evaluation truncation
+  separately. The Mixed pressure rerun additionally needs a committed source-
+  key replay path or a portable structured seed; an SVG is insufficient.
 - **Closed the adaptive-pressure branch by the preregistered gate.** One
   equal-budget matrix (50,000 pressure evaluations/arm, restart 0, pinned
   seeds `371db269…`/`310adc64…`) over {1.25% baseline, 0.625% smaller step,

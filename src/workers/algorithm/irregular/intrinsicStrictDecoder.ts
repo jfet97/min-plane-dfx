@@ -145,6 +145,8 @@ export interface IntrinsicStrictConstructResult {
   readonly state: IrregularBeamState
   readonly stepTrace: ReadonlyArray<IntrinsicStrictStepTrace>
   readonly gapFillEvidence: ReadonlyArray<IntrinsicStrictGapFillEvidence>
+  readonly candidateEvaluationCount?: number
+  readonly truncationReason?: 'maximum-candidate-evaluations'
   readonly runtimeMs: number
 }
 
@@ -198,6 +200,7 @@ export interface ConstructIntrinsicStrictStateInput {
   readonly frozenPlaced: ReadonlyArray<IrregularPlacedPiece>
   readonly candidateMode: IntrinsicStrictCandidateMode
   readonly maximumRuntimeMs?: number
+  readonly maximumCandidateEvaluationCount?: number
   readonly featureContactObserver?: IntrinsicStrictFeatureContactObserver
   readonly control?: IrregularNfpIfpControl
 }
@@ -313,6 +316,10 @@ export function constructIntrinsicStrictState(
     const geometryKernel = yield* GeometryKernel
     const nfpIfpService = yield* NfpIfpService
     const maximumRuntimeMs = input.maximumRuntimeMs ?? 120_000
+    const maximumCandidateEvaluationCount =
+      input.maximumCandidateEvaluationCount === undefined
+        ? undefined
+        : Math.max(1, Math.floor(input.maximumCandidateEvaluationCount))
     const partition = validateSeedPartition(input)
     if (partition !== undefined) {
       return yield* Effect.fail(
@@ -356,8 +363,14 @@ export function constructIntrinsicStrictState(
     }
     const stepTrace: IntrinsicStrictStepTrace[] = []
     const gapFillEvidence: IntrinsicStrictGapFillEvidence[] = []
+    let candidateEvaluationCount = 0
+    let truncationReason: IntrinsicStrictConstructResult['truncationReason']
 
-    for (let pieceIndex = 0; pieceIndex < input.remainingPreparedPieces.length; pieceIndex += 1) {
+    pieceLoop: for (
+      let pieceIndex = 0;
+      pieceIndex < input.remainingPreparedPieces.length;
+      pieceIndex += 1
+    ) {
       const piece = input.remainingPreparedPieces[pieceIndex]
       if (piece === undefined) continue
       const pieceId = piece.pieceId ?? piece.source.id
@@ -407,6 +420,14 @@ export function constructIntrinsicStrictState(
         const family = transformFamilyKey(transform)
         const scoredCandidates: ScoredCandidate[] = []
         for (const candidate of legalCandidates) {
+          if (
+            maximumCandidateEvaluationCount !== undefined &&
+            candidateEvaluationCount >= maximumCandidateEvaluationCount
+          ) {
+            truncationReason = 'maximum-candidate-evaluations'
+            break pieceLoop
+          }
+          if (maximumCandidateEvaluationCount !== undefined) candidateEvaluationCount += 1
           const scored = scoreCandidate({
             state,
             piece,
@@ -562,6 +583,12 @@ export function constructIntrinsicStrictState(
       state,
       stepTrace,
       gapFillEvidence,
+      ...(maximumCandidateEvaluationCount === undefined
+        ? {}
+        : {
+            candidateEvaluationCount,
+            ...(truncationReason === undefined ? {} : { truncationReason })
+          }),
       runtimeMs: Math.max(0, performance.now() - startedAt)
     }
   })

@@ -140,6 +140,32 @@ function decodeWithCandidateService(
 }
 
 describe('decodeIntrinsicStrictPriorityOrder', () => {
+  it('stops strict construction at an exact candidate-evaluation cap', async () => {
+    const pieces = [
+      preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0), transform(1, 90)])
+    ]
+    const constructed = await Effect.runPromise(
+      constructIntrinsicStrictState({
+        allPreparedPieces: pieces,
+        remainingPreparedPieces: pieces,
+        frozenPlaced: [],
+        candidateMode: 'pure-growth',
+        maximumCandidateEvaluationCount: 1
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+
+    expect(constructed.candidateEvaluationCount).toBe(1)
+    expect(constructed.truncationReason).toBe('maximum-candidate-evaluations')
+    expect(constructed.state.placedCollisionGeometries).toHaveLength(0)
+    expect(constructed.state.remainingPreparedPieces).toHaveLength(2)
+    expect(constructed.stepTrace).toEqual([])
+  })
+
   it('preserves E1 output through the empty seeded-construction wrapper', async () => {
     const pieces = [
       preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
@@ -152,7 +178,25 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
         allPreparedPieces: pieces,
         remainingPreparedPieces: pieces,
         frozenPlaced: [],
-        candidateMode: 'pure-growth'
+        candidateMode: 'pure-growth',
+        maximumCandidateEvaluationCount: Number.MAX_SAFE_INTEGER
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+    const exactCandidateEvaluationCount = constructed.candidateEvaluationCount
+    if (exactCandidateEvaluationCount === undefined) {
+      throw new Error('explicit candidate-evaluation accounting expected')
+    }
+    const exactlyCapped = await Effect.runPromise(
+      constructIntrinsicStrictState({
+        allPreparedPieces: pieces,
+        remainingPreparedPieces: pieces,
+        frozenPlaced: [],
+        candidateMode: 'pure-growth',
+        maximumCandidateEvaluationCount: exactCandidateEvaluationCount
       }).pipe(
         Effect.provide(GeometryKernel.Live),
         Effect.provide(GeometrySettings.Live),
@@ -162,6 +206,31 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
 
     expect(constructed.state.placedCollisionGeometries).toEqual(decoded.placedCollisionGeometries)
     expect(constructed.stepTrace).toEqual(decoded.stepTrace)
+    expect(constructed.candidateEvaluationCount).toBe(
+      constructed.stepTrace.reduce((sum, step) => sum + step.candidateCount, 0)
+    )
+    expect(constructed.truncationReason).toBeUndefined()
+    expect(exactlyCapped.state).toEqual(constructed.state)
+    expect(exactlyCapped.stepTrace).toEqual(constructed.stepTrace)
+    expect(exactlyCapped.candidateEvaluationCount).toBe(constructed.candidateEvaluationCount)
+    expect(exactlyCapped.truncationReason).toBeUndefined()
+
+    const historicalDefault = await Effect.runPromise(
+      constructIntrinsicStrictState({
+        allPreparedPieces: pieces,
+        remainingPreparedPieces: pieces,
+        frozenPlaced: [],
+        candidateMode: 'pure-growth'
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+    expect(historicalDefault.state).toEqual(constructed.state)
+    expect(historicalDefault.stepTrace).toEqual(constructed.stepTrace)
+    expect('candidateEvaluationCount' in historicalDefault).toBe(false)
+    expect('truncationReason' in historicalDefault).toBe(false)
   })
 
   it('keeps the strict seed output byte-identical while F0 observes source admission', async () => {

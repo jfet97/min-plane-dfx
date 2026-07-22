@@ -76,6 +76,16 @@ function positiveIntegerArgument(name: string, fallback: number): number {
   return parsed
 }
 
+function optionalPositiveIntegerArgument(name: string): number | undefined {
+  const value = argument(name)
+  if (value === undefined) return undefined
+  const parsed = Number(value)
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+    throw new Error(`${name} must be a positive integer`)
+  }
+  return parsed
+}
+
 function requiredFixture(value: string | undefined): FixtureName {
   if (
     value === 'triangle-20' ||
@@ -96,6 +106,12 @@ const sourceCommit = argument('--source-commit') ?? 'unknown'
 const maximumCellsPerFamilyRole = positiveIntegerArgument('--cells-per-role', 16)
 const maximumCropsPerCell = positiveIntegerArgument('--crops-per-cell', 4)
 const maximumContinuationCount = positiveIntegerArgument('--continuations', 8)
+const maximumCatalogRuntimeMs = positiveIntegerArgument('--catalog-ms', 15_000)
+const maximumContinuationRuntimeMs = positiveIntegerArgument('--continuation-ms', 25_000)
+const maximumTotalRuntimeMs = positiveIntegerArgument('--fixture-ms', 240_000)
+const maximumContinuationCandidateEvaluations = optionalPositiveIntegerArgument(
+  '--continuation-evaluations'
+)
 const basisSourceKey = argument('--basis-source-key')
 const captureSourceSurvivalAudit = process.argv.includes('--source-survival-audit')
 const admitSourceAuditWitnesses = process.argv.includes('--admit-raw-witnesses')
@@ -116,9 +132,15 @@ const preparedPieces = await Effect.runPromise(withLayers(preparePieces(fixture.
 const result = await Effect.runPromise(
   withLayers(
     runIntrinsicPeriodicFamilyPortfolio(fixture.request.sheet, preparedPieces, {
+      maximumCatalogRuntimeMs,
       maximumCellsPerFamilyRole,
       maximumCropsPerCell,
       maximumContinuationCount,
+      maximumContinuationRuntimeMs,
+      maximumTotalRuntimeMs,
+      ...(maximumContinuationCandidateEvaluations === undefined
+        ? {}
+        : { maximumContinuationCandidateEvaluations }),
       captureSourceSurvivalAudit,
       admitSourceAuditWitnesses,
       ...(basisSourceKey === undefined ? {} : { basisSourceKey })
@@ -180,6 +202,12 @@ for (const run of result.runs) {
     status: run.status,
     reason: run.reason,
     runtimeMs: run.runtimeMs,
+    ...(maximumContinuationCandidateEvaluations === undefined
+      ? {}
+      : {
+          candidateEvaluationCount: run.constructed?.candidateEvaluationCount,
+          truncationReason: run.constructed?.truncationReason
+        }),
     metrics: run.result?.metrics,
     certificate: run.result?.certificate,
     canonicalGeometryHash: run.result?.canonicalGeometryHash,
@@ -432,7 +460,7 @@ const report = {
   },
   runtime: { node: process.version, v8: process.versions.v8 },
   limits: {
-    catalogMs: 15_000,
+    catalogMs: maximumCatalogRuntimeMs,
     families: 8,
     transformsPerFamily: 16,
     pairsPerFamily: 120,
@@ -459,8 +487,9 @@ const report = {
     adaptivePressureMatrix,
     adaptiveMatrixArmNames: selectedMatrixArms.map(({ name }) => name),
     requestedAdaptiveSeedHash,
-    continuationMs: 25_000,
-    fixtureMs: 240_000
+    continuationMs: maximumContinuationRuntimeMs,
+    continuationCandidateEvaluations: maximumContinuationCandidateEvaluations,
+    fixtureMs: maximumTotalRuntimeMs
   },
   preparedPieceCount: preparedPieces.length,
   catalog: {
@@ -505,6 +534,11 @@ const report = {
     }))
   },
   continuationCoverageComplete: result.continuationCoverageComplete,
+  ...(maximumContinuationCandidateEvaluations === undefined
+    ? {}
+    : {
+        continuationExecutionCoverageComplete: result.continuationExecutionCoverageComplete
+      }),
   sourceCropSurvival: result.sourceCropSurvival,
   sourceAuditWitnesses: auditWitnesses,
   adaptivePressurePilot:

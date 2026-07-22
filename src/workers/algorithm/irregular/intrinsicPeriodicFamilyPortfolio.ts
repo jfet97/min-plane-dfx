@@ -40,7 +40,12 @@ export interface IntrinsicPeriodicContinuation {
 
 export interface IntrinsicPeriodicContinuationResult {
   readonly continuation: IntrinsicPeriodicContinuation
-  readonly status: IntrinsicStrictDecodeResult['status'] | 'invalid' | 'deadline' | 'global-deadline'
+  readonly status:
+    | IntrinsicStrictDecodeResult['status']
+    | 'invalid'
+    | 'deadline'
+    | 'global-deadline'
+    | 'evaluation-cap'
   readonly result: IntrinsicStrictDecodeResult | undefined
   readonly constructed: IntrinsicStrictConstructResult | undefined
   readonly reason: string | undefined
@@ -93,6 +98,7 @@ export interface IntrinsicPeriodicFamilyPortfolioResult {
   readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
   readonly continuationOmissions: ReadonlyArray<IntrinsicPeriodicContinuationOmission>
   readonly continuationCoverageComplete: boolean
+  readonly continuationExecutionCoverageComplete?: boolean
   readonly sourceCropSurvival: ReadonlyArray<IntrinsicPeriodicSourceCropSurvival>
   readonly sourceAuditWitnesses: ReadonlyArray<IntrinsicPeriodicSourceAuditWitness>
   readonly sourceAuditNonDominatedCropCount: number
@@ -107,6 +113,7 @@ export interface IntrinsicPeriodicFamilyPortfolioOptions {
   readonly maximumCellsPerFamilyRole?: number
   readonly maximumCropsPerCell?: number
   readonly maximumContinuationRuntimeMs?: number
+  readonly maximumContinuationCandidateEvaluations?: number
   readonly maximumContinuationCount?: number
   readonly maximumTotalRuntimeMs?: number
   /** Restricts an experiment to one rational NFP-derived shared-basis source. */
@@ -144,6 +151,8 @@ export function runIntrinsicPeriodicFamilyPortfolio(
     const maximumCellsPerFamilyRole = options.maximumCellsPerFamilyRole ?? 16
     const maximumCropsPerCell = options.maximumCropsPerCell ?? 4
     const maximumContinuationRuntimeMs = options.maximumContinuationRuntimeMs ?? 25_000
+    const maximumContinuationCandidateEvaluations =
+      options.maximumContinuationCandidateEvaluations
     const maximumContinuationCount = options.maximumContinuationCount ?? 8
     const maximumTotalRuntimeMs = options.maximumTotalRuntimeMs ?? 240_000
     const catalog = yield* enumerateIntrinsicPeriodicCells(pieces, {
@@ -185,7 +194,10 @@ export function runIntrinsicPeriodicFamilyPortfolio(
           remainingPreparedPieces: remainingAfterSeed(pieces, continuation.seed),
           frozenPlaced: continuation.seed.placements,
           candidateMode: 'pure-growth',
-          maximumRuntimeMs: Math.min(maximumContinuationRuntimeMs, remainingMs)
+          maximumRuntimeMs: Math.min(maximumContinuationRuntimeMs, remainingMs),
+          ...(maximumContinuationCandidateEvaluations === undefined
+            ? {}
+            : { maximumCandidateEvaluationCount: maximumContinuationCandidateEvaluations })
         }),
         {
           onFailure: (error) => Effect.succeed({ kind: 'failure' as const, error }),
@@ -201,6 +213,17 @@ export function runIntrinsicPeriodicFamilyPortfolio(
           result: undefined,
           constructed: undefined,
           reason: constructed.error._tag,
+          runtimeMs
+        })
+        continue
+      }
+      if (constructed.value.truncationReason === 'maximum-candidate-evaluations') {
+        runs.push({
+          continuation,
+          status: 'evaluation-cap',
+          result: undefined,
+          constructed: constructed.value,
+          reason: constructed.value.truncationReason,
           runtimeMs
         })
         continue
@@ -224,6 +247,17 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       continuations: selected.continuations,
       continuationOmissions: selected.omissions,
       continuationCoverageComplete: selected.coverageComplete,
+      ...(maximumContinuationCandidateEvaluations === undefined
+        ? {}
+        : {
+            continuationExecutionCoverageComplete: runs.every(
+              ({ status }) =>
+                status !== 'invalid' &&
+                status !== 'deadline' &&
+                status !== 'global-deadline' &&
+                status !== 'evaluation-cap'
+            )
+          }),
       sourceCropSurvival: selected.sourceCropSurvival,
       sourceAuditWitnesses: selected.sourceAuditWitnesses,
       sourceAuditNonDominatedCropCount: selected.sourceAuditNonDominatedCropCount,

@@ -1912,6 +1912,17 @@ budgets before any Mixed periodic conclusion is called conclusive.
    allowed to finish; seed ordering cannot be promoted while that censoring
    remains. The stop-line is unequal hashes or endpoint sets at equal completed
    evaluation budgets across machines.
+
+   Implementation checkpoint: branch `deterministic-periodic-budget` counts
+   direct-legal strict candidate evaluations and stops before committing a
+   partially evaluated piece. Selection coverage and execution coverage are
+   reported separately, and wall time remains only a safety abort. The post-
+   merge control found a separate provenance blocker: the pinned Mixed
+   `310adc64…` continuation no longer survives the corrected shared cap in
+   either concurrent or serial execution. The pressure rerun must pin its
+   historical basis source or consume a portable structured seed; it cannot
+   infer causality from that missing hash. Promotion still requires a committed
+   equal-evaluation Mixed run and endpoint-hash comparison.
 4. Consolidate one decision-grade portfolio run: ordinary strict, reversed,
    endpoint-derived, pocket-first, periodic continuations, and raw-crop
    witnesses competing in one shared archive under one budget report, on
