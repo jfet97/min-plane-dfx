@@ -346,113 +346,115 @@ function sourceAuditScopeArgument(value: string | undefined): IntrinsicPeriodicS
   throw new Error('--source-audit-scope must be all or p2-axis-union')
 }
 
-const sourceAuditRoleSchema = Schema.Union([Schema.Literal('P1'), Schema.Literal('P2')])
-const sourceAuditKindSchema = Schema.Union([
-  Schema.Literal('axis-union'),
-  Schema.Literal('nfp-boundary-vertex-pair'),
-  Schema.Literal('edge-contact-pair')
-])
-const sourceAuditContactRelationSchema = Schema.Struct({
-  vector: Schema.Struct({ x: Schema.Number, y: Schema.Number }),
-  fixedMemberIndex: Schema.Number,
-  fixedPieceId: Schema.String,
-  fixedEdgeIndex: Schema.Number,
-  movingMemberIndex: Schema.Number,
-  movingPieceId: Schema.String,
-  movingEdgeIndex: Schema.Number,
-  segmentStart: Schema.Struct({ x: Schema.Number, y: Schema.Number }),
-  segmentEnd: Schema.Struct({ x: Schema.Number, y: Schema.Number }),
-  lengthMm: Schema.Number
-})
-const sourceAuditReplaySchema = Schema.Struct({
-  version: Schema.Literal(1),
-  key: Schema.String,
-  replay: Schema.Struct({
-    witnesses: Schema.Array(
-      Schema.Struct({
-        role: sourceAuditRoleSchema,
-        familyKey: Schema.String,
-        sourceKey: Schema.String,
-        sourceKind: sourceAuditKindSchema,
-        cellKey: Schema.String,
-        basisProvenance: Schema.Struct({
+function makeSourceAuditReplaySchema() {
+  const sourceAuditRoleSchema = Schema.Union([Schema.Literal('P1'), Schema.Literal('P2')])
+  const sourceAuditKindSchema = Schema.Union([
+    Schema.Literal('axis-union'),
+    Schema.Literal('nfp-boundary-vertex-pair'),
+    Schema.Literal('edge-contact-pair')
+  ])
+  const sourceAuditContactRelationSchema = Schema.Struct({
+    vector: Schema.Struct({ x: Schema.Number, y: Schema.Number }),
+    fixedMemberIndex: Schema.Number,
+    fixedPieceId: Schema.String,
+    fixedEdgeIndex: Schema.Number,
+    movingMemberIndex: Schema.Number,
+    movingPieceId: Schema.String,
+    movingEdgeIndex: Schema.Number,
+    segmentStart: Schema.Struct({ x: Schema.Number, y: Schema.Number }),
+    segmentEnd: Schema.Struct({ x: Schema.Number, y: Schema.Number }),
+    lengthMm: Schema.Number
+  })
+  return Schema.Struct({
+    version: Schema.Literal(1),
+    key: Schema.String,
+    replay: Schema.Struct({
+      witnesses: Schema.Array(
+        Schema.Struct({
+          role: sourceAuditRoleSchema,
+          familyKey: Schema.String,
           sourceKey: Schema.String,
           sourceKind: sourceAuditKindSchema,
-          sourcePoints: Schema.Tuple([
-            Schema.Struct({ x: Schema.String, y: Schema.String }),
-            Schema.Struct({ x: Schema.String, y: Schema.String })
-          ]),
-          axis: Schema.optional(Schema.Union([Schema.Literal('x'), Schema.Literal('y')])),
-          selectedBasis: Schema.Tuple([
-            Schema.Struct({ x: Schema.Number, y: Schema.Number }),
-            Schema.Struct({ x: Schema.Number, y: Schema.Number })
-          ]),
-          selectedResidualGrid: Schema.Tuple([
-            Schema.Struct({ x: Schema.String, y: Schema.String }),
-            Schema.Struct({ x: Schema.String, y: Schema.String })
-          ]),
-          canonicalBasis: Schema.Tuple([
-            Schema.Struct({ x: Schema.Number, y: Schema.Number }),
-            Schema.Struct({ x: Schema.Number, y: Schema.Number })
-          ]),
-          memberTransforms: Schema.Array(
-            Schema.Struct({
-              memberIndex: Schema.Number,
-              pieceId: Schema.String,
-              transformIndex: Schema.Number,
-              rotationDeg: Schema.Number,
-              mirrored: Schema.Boolean
+          cellKey: Schema.String,
+          basisProvenance: Schema.Struct({
+            sourceKey: Schema.String,
+            sourceKind: sourceAuditKindSchema,
+            sourcePoints: Schema.Tuple([
+              Schema.Struct({ x: Schema.String, y: Schema.String }),
+              Schema.Struct({ x: Schema.String, y: Schema.String })
+            ]),
+            axis: Schema.optional(Schema.Union([Schema.Literal('x'), Schema.Literal('y')])),
+            selectedBasis: Schema.Tuple([
+              Schema.Struct({ x: Schema.Number, y: Schema.Number }),
+              Schema.Struct({ x: Schema.Number, y: Schema.Number })
+            ]),
+            selectedResidualGrid: Schema.Tuple([
+              Schema.Struct({ x: Schema.String, y: Schema.String }),
+              Schema.Struct({ x: Schema.String, y: Schema.String })
+            ]),
+            canonicalBasis: Schema.Tuple([
+              Schema.Struct({ x: Schema.Number, y: Schema.Number }),
+              Schema.Struct({ x: Schema.Number, y: Schema.Number })
+            ]),
+            memberTransforms: Schema.Array(
+              Schema.Struct({
+                memberIndex: Schema.Number,
+                pieceId: Schema.String,
+                transformIndex: Schema.Number,
+                rotationDeg: Schema.Number,
+                mirrored: Schema.Boolean
+              })
+            ),
+            contactRelations: Schema.optional(
+              Schema.Tuple([sourceAuditContactRelationSchema, sourceAuditContactRelationSchema])
+            )
+          }),
+          placements: Schema.Array(IrregularPlacedPiece),
+          seed: Schema.Struct({
+            canonicalKey: Schema.String,
+            componentCount: Schema.Number,
+            isolatedPieceCount: Schema.Number,
+            largestComponentSize: Schema.Number,
+            maximumSideMm: Schema.Number,
+            envelopeAreaMm2: Schema.Number,
+            envelopeSpanMm: Schema.Number,
+            crop: Schema.Struct({
+              rows: Schema.Number,
+              columns: Schema.Number,
+              traversal: Schema.Union([Schema.Literal('row'), Schema.Literal('column')]),
+              corner: Schema.Union([
+                Schema.Literal(0),
+                Schema.Literal(1),
+                Schema.Literal(2),
+                Schema.Literal(3)
+              ])
             })
-          ),
-          contactRelations: Schema.optional(
-            Schema.Tuple([sourceAuditContactRelationSchema, sourceAuditContactRelationSchema])
-          )
-        }),
-        placements: Schema.Array(IrregularPlacedPiece),
-        seed: Schema.Struct({
-          canonicalKey: Schema.String,
-          componentCount: Schema.Number,
-          isolatedPieceCount: Schema.Number,
-          largestComponentSize: Schema.Number,
-          maximumSideMm: Schema.Number,
-          envelopeAreaMm2: Schema.Number,
-          envelopeSpanMm: Schema.Number,
-          crop: Schema.Struct({
-            rows: Schema.Number,
-            columns: Schema.Number,
-            traversal: Schema.Union([Schema.Literal('row'), Schema.Literal('column')]),
-            corner: Schema.Union([
-              Schema.Literal(0),
-              Schema.Literal(1),
-              Schema.Literal(2),
-              Schema.Literal(3)
-            ])
           })
         })
-      })
-    ),
-    nonDominatedCropCount: Schema.Number,
-    sourceCropSurvival: Schema.Array(
-      Schema.Struct({
-        role: sourceAuditRoleSchema,
-        sourceKey: Schema.String,
-        sourceKind: sourceAuditKindSchema,
-        retainedCellCount: Schema.Number,
-        directValidCropCountBeforeFront: Schema.Number,
-        directValidCropCount: Schema.Number,
-        cropFrontCount: Schema.Number,
-        uniqueSeedCount: Schema.Number,
-        selectedContinuationCount: Schema.Number
-      })
-    )
+      ),
+      nonDominatedCropCount: Schema.Number,
+      sourceCropSurvival: Schema.Array(
+        Schema.Struct({
+          role: sourceAuditRoleSchema,
+          sourceKey: Schema.String,
+          sourceKind: sourceAuditKindSchema,
+          retainedCellCount: Schema.Number,
+          directValidCropCountBeforeFront: Schema.Number,
+          directValidCropCount: Schema.Number,
+          cropFrontCount: Schema.Number,
+          uniqueSeedCount: Schema.Number,
+          selectedContinuationCount: Schema.Number
+        })
+      )
+    })
   })
-})
+}
 
 async function readSourceAuditReplay(
   path: string,
   expectedKey: string
 ): Promise<IntrinsicPeriodicSourceAuditReplay> {
-  const decoded = Schema.decodeUnknownSync(sourceAuditReplaySchema)(
+  const decoded = Schema.decodeUnknownSync(makeSourceAuditReplaySchema())(
     JSON.parse((await readFile(path)).toString('utf8'))
   )
   if (decoded.key !== expectedKey) throw new Error('source-audit cache key mismatch')
