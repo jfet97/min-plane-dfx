@@ -212,7 +212,11 @@ fails the measurement gate instead of being hidden by arithmetic reconciliation.
 
 The Step 4 shared-archive experiment is the first common terminal boundary for
 the two protected direct constructors, baseline-order gap-contained
-construction, and eight no-audit periodic continuations. Direct constructors
+construction, and eight bounded periodic continuations. Periodic selection
+includes source-audit raw-crop Pareto witnesses under the same hard
+continuation cap as retained-cell sources; a retained-cell surrogate cannot
+silently remove a better exact completed layout from terminal competition.
+Direct constructors
 can enable trace-only candidate accounting without imposing a cap; the normal
 uncapped result shape stays unchanged. Calibration freezes the observed exact
 completion counts, while periodic continuations keep the fixed 19,862-candidate
@@ -222,17 +226,23 @@ complete deterministic budget settlement are mandatory experiment gates.
 Every untruncated complete state enters one adapter that measures sheetless
 canonical legality, identity, hash, metrics, and certificate before consulting
 the requested sheet. Requested-sheet q0/q90 fit and fitted hashes are separate
-metadata. Deduplication and `rankIntrinsicStrictCompletedLayouts` use only the
-sheetless hash and metrics; filtering the already-ranked list yields the first
-endpoint that fits. Evaluation-capped partial states have no endpoint and
-cannot enter either archive.
+metadata. Deduplication and geometric Pareto retention use only the sheetless
+hash and metrics. Final selection is restricted to the first compactness/void
+Pareto front, then minimizes the bounded cohesion-certificate deficit before
+cavity, hull-gap, and intrinsic compactness tie-breaks. Cohesion therefore
+selects among geometrically non-dominated endpoints; it cannot rescue dominated
+geometry or partition archive admission. Requested-sheet filtering occurs
+before this final selection. Evaluation-capped partial states have no endpoint
+and cannot enter either archive.
 
-The first frozen two-root matrix passed on Triangle-20, Mixed-61,
-Rectangles-20, and Pentagons-20. It promotes this shared boundary as retained
-experimental infrastructure, not its individual constructors as production
-defaults: Mixed selects the 405,773.434 mm2 pocket-first endpoint and
-Rectangles gains a cohesive periodic endpoint, while Triangle still requires a
-future constructor/source-retention improvement to expose its better lattice.
+The first frozen two-root no-audit matrix passed on Triangle-20, Mixed-61,
+Rectangles-20, and Pentagons-20, but it was only an infrastructure control: it
+excluded the known 74,428 Triangle witness and selected the 115,228 protected
+fallback. The quality-monotonic follow-up restores bounded witness admission
+and selects the exact 74,428.143 mm2 two-band Triangle lattice while preserving
+the 405,773.434 mm2 zero-cavity Mixed pocket-first endpoint. The source audit
+is currently expensive; later acceleration must reproduce its admitted hashes
+before replacing it.
 
 The isolated V7 seed/archive experiment keeps that E4 path intact while
 testing a replacement controller with stricter observability boundaries. Each

@@ -63,6 +63,8 @@ const Report = Schema.Struct({
   }),
   sheetlessArchive: Schema.Array(Endpoint),
   fittedArchive: Schema.Array(Endpoint),
+  sheetlessArchiveLeader: Schema.optional(Endpoint),
+  sheetlessSelectedWinner: Schema.optional(Endpoint),
   fittedWinner: Schema.optional(Endpoint),
   periodicSelectionValid: Schema.Boolean,
   experimentValid: Schema.Boolean
@@ -129,12 +131,9 @@ for (const fixture of fixtures) {
 
   if (fixture === 'triangle-20') {
     requireGate(
-      first.fittedArchive.some(
-        ({ sheetlessCanonicalGeometryHash }) =>
-          sheetlessCanonicalGeometryHash === TRIANGLE_TWO_BAND_WITNESS_HASH
-      ),
+      first.fittedWinner?.sheetlessCanonicalGeometryHash === TRIANGLE_TWO_BAND_WITNESS_HASH,
       fixture,
-      '74,428 two-band witness remains archive-resident'
+      '74,428 two-band witness is the selected winner'
     )
   }
   if (fixture === 'mixed-61') {
@@ -146,6 +145,11 @@ for (const fixture of fixtures) {
       ),
       fixture,
       '405,773 pocket-first sheetless reference'
+    )
+    requireGate(
+      first.fittedWinner?.sheetlessCanonicalGeometryHash === MIXED_POCKET_SHEETLESS_HASH,
+      fixture,
+      '405,773 pocket-first endpoint is the selected winner'
     )
     requireGate(
       first.periodicRuns.some(
@@ -213,7 +217,10 @@ function reportTuple(report: typeof Report.Type) {
     ),
     fittedArchive: report.fittedArchive.map(
       ({ sheetlessCanonicalGeometryHash }) => sheetlessCanonicalGeometryHash
-    )
+    ),
+    sheetlessArchiveLeader: report.sheetlessArchiveLeader,
+    sheetlessSelectedWinner: report.sheetlessSelectedWinner,
+    fittedWinner: report.fittedWinner
   }
 }
 

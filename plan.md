@@ -53,12 +53,18 @@ Therefore:
    tested every compatible long-edge pair under non-expanding exact legality.
    It found only microscopic canonical-grid contact repairs, not a macroscopic
    reassembly; this ends the rigid-legal Triangle Stage 5 direction;
-10. **completed through shared-archive Step 4:** the bounded constructive/
-    periodic-seed line now has one deterministic common terminal boundary. Two
-    complete four-fixture roots passed exact replay. Mixed selects the
-    405,773.434 pocket-first endpoint and Rectangles gains a cohesive periodic
-    winner; Triangle retains its protected direct control because the better
-    finite-crop witness is still absent from the selected no-audit source set.
+10. **completed through the quality-monotonic shared-archive correction:** the
+    bounded constructive/periodic-seed line has one deterministic common
+    terminal boundary. The initial no-audit Step 4 matrix proved repeatability
+    but made an unacceptable quality trade: it saved source-audit time by
+    excluding the exact 74,428 Triangle witness and selected the 115,228 direct
+    control. Commit `fa9ab29` restores Fable's bounded raw-witness admission
+    under the same eight-continuation cap. Final selection now starts from the
+    first geometric Pareto front and uses soft cohesion deficit only within
+    that non-dominated set. Committed runs select the 74,428.143 zero-cavity
+    Triangle lattice and preserve Mixed's 405,773.434 zero-cavity pocket-first
+    endpoint. The expensive audit remains an optimization target, but admitted
+    hashes are a hard equivalence gate for any faster replacement.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -2018,6 +2024,18 @@ budgets before any Mixed periodic conclusion is called conclusive.
    direct requested count to equal its consumed count and compares source commit,
    harness hash, fixture hash/shape, runtime versions, and all fixed limits; it
    does not accept stored validity booleans as proof by themselves.
+
+   **Quality correction at `fa9ab29`:** the no-audit entrant matrix was
+   repeatable but not quality-monotonic. It violated Fable's explicit finding
+   that raw finite-crop witnesses must compete under the same bounded cap, and
+   the archive's compactness representative then mislabeled the 115,228
+   Triangle control as the winner. The corrected matrix enables bounded source-
+   audit witness admission. It retains geometric Pareto dominance as the hard
+   boundary, then selects one winner by soft cohesion deficit and intrinsic
+   tie-breaks. Triangle returns `371db269...` at 74,428.143 mm2; Mixed remains
+   `5a1f1ba6...` at 405,773.434 mm2. A faster source selector is acceptable only
+   if it reproduces the same admitted endpoint hashes; runtime cannot buy a
+   quality regression.
 5. Implement cavity-first scheduling as the next constructive experiment
    (one bounded cavity-queue slot per depth, commensurate two-order
    admission), gated on improving the shared archive against the 405,773

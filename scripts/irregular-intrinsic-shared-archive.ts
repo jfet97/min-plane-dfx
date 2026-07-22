@@ -21,6 +21,7 @@ import {
   INTRINSIC_SHARED_ARCHIVE_DIRECT_ROLES,
   runIntrinsicSharedArchiveDirectPortfolio,
   runIntrinsicSharedArchivePortfolio,
+  selectIntrinsicSharedArchiveWinner,
   type IntrinsicSharedArchiveDirectRole,
   type IntrinsicSharedArchiveEndpoint,
   type IntrinsicSharedArchiveRun
@@ -169,9 +170,13 @@ const report = {
         },
   sheetlessArchive: result.sheetlessArchive.map(endpointRecord),
   fittedArchive: result.archive.map(endpointRecord),
-  sheetlessWinner: result.sheetlessArchive[0]
+  sheetlessArchiveLeader: result.sheetlessArchive[0]
     ? endpointRecord(result.sheetlessArchive[0])
     : undefined,
+  sheetlessSelectedWinner: (() => {
+    const winner = selectIntrinsicSharedArchiveWinner(result.sheetlessArchive)
+    return winner === undefined ? undefined : endpointRecord(winner)
+  })(),
   fittedWinner: result.winner === undefined ? undefined : endpointRecord(result.winner),
   winnerSvgPath,
   periodicSelectionValid: result.periodicSelectionValid,

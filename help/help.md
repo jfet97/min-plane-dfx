@@ -336,6 +336,21 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   that source is still lost before the no-audit selected continuation set. The
   shared archive is therefore accepted infrastructure, not a claim that
   Triangle construction is solved.
+- **Corrected the Step 4 quality regression at `fa9ab29`.** The no-audit
+  matrix above was a valid repeatability control but an invalid best-result
+  policy: it bypassed Fable's bounded raw-witness admission to save the
+  measured source-audit cost, excluding the exact 74,428.143 mm2 Triangle
+  lattice. The corrected shared portfolio admits raw Pareto witnesses under
+  the same eight-continuation cap, retains geometric Pareto dominance, and
+  selects within the first front by bounded soft cohesion deficit before
+  cavity/hull-gap and intrinsic compactness tie-breaks. The committed Triangle
+  run selects `371db269...` (74,428.143 mm2, zero cavities); the committed
+  Mixed run remains `5a1f1ba6...` (405,773.434 mm2, zero cavities). The full
+  audit currently costs about 103 seconds on Triangle and 353 seconds for the
+  Mixed periodic phase. Optimize that cost only behind exact admitted-hash and
+  winner-hash equivalence gates. Portable SVG/PNG evidence and checksums are in
+  `help/artifacts/intrinsic-shared-archive-quality/`; full reports remain under
+  `/private/tmp/min-plane-provenance/shared-archive-quality-fa9ab29/`.
 - **Closed the adaptive-pressure branch by the preregistered gate.** One
   equal-budget matrix (50,000 pressure evaluations/arm, restart 0, pinned
   seeds `371db269…`/`310adc64…`) over {1.25% baseline, 0.625% smaller step,
