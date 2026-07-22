@@ -19,6 +19,7 @@ import {
 import {
   continuationsForExecution,
   type IntrinsicPeriodicContinuation,
+  phaseResidualCoverageComplete,
   runIntrinsicPeriodicFamilyPortfolio
 } from '../../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
@@ -96,7 +97,49 @@ describe('intrinsic periodic family portfolio', () => {
           )
       )
     ).toBe(true)
+    expect(result.phaseTimings).toBeUndefined()
 
+    const budgeted = await Effect.runPromise(
+      runIntrinsicPeriodicFamilyPortfolio(
+        new SheetSpec({ width: 100, height: 100, label: 'test' }),
+        pieces,
+        {
+          maximumCatalogRuntimeMs: 1_000,
+          maximumContinuationRuntimeMs: 1_000,
+          maximumContinuationCandidateEvaluations: Number.MAX_SAFE_INTEGER,
+          maximumTotalRuntimeMs: 4_000
+        }
+      ).pipe(
+        Effect.provide(GeometryKernel.Live.pipe(Layer.provide(GeometrySettings.Live))),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+    const phaseTimings = budgeted.phaseTimings
+    if (phaseTimings === undefined) throw new Error('expected capped phase timings')
+    const topLevelTotal =
+      phaseTimings.catalogMs +
+      phaseTimings.selectionMs +
+      phaseTimings.executionOrderingMs +
+      phaseTimings.constructionMs +
+      phaseTimings.finalizationMs +
+      phaseTimings.archiveRankingMs +
+      phaseTimings.bookkeepingMs
+    const selectionTotal =
+      phaseTimings.selection.sourceAuditCropEnumerationMs +
+      phaseTimings.selection.retainedCropEnumerationMs +
+      phaseTimings.selection.cropFrontSelectionMs +
+      phaseTimings.selection.bookkeepingMs
+    expect(topLevelTotal).toBeCloseTo(phaseTimings.totalMs, 6)
+    expect(selectionTotal).toBeCloseTo(phaseTimings.selectionMs, 1)
+    expect(phaseTimings.bookkeepingMs).toBeLessThanOrEqual(phaseTimings.totalMs)
+    expect(phaseTimings.selection.bookkeepingMs).toBeLessThanOrEqual(phaseTimings.selectionMs)
+    expect(typeof phaseTimings.coverageComplete).toBe('boolean')
+  })
+
+  it('fails phase coverage when unclassified residual exceeds one percent', () => {
+    expect(phaseResidualCoverageComplete(100, 1)).toBe(true)
+    expect(phaseResidualCoverageComplete(100, 1.000_001)).toBe(false)
   })
 
   it('reorders capped continuations by compact seed cost without changing uncapped order', () => {

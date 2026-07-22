@@ -196,6 +196,15 @@ seed-envelope area, maximum side, and span, then by more already placed pieces
 and stable source identity. This changes only censored execution order: archive
 ranking and the selected continuation set remain unchanged. The no-cap path
 preserves its historical order.
+The same explicit cap enables phase telemetry without changing the uncapped
+result contract. Top-level timings isolate catalog construction, continuation
+selection, execution ordering, strict construction, exact finalization, archive
+ranking, and residual bookkeeping. Selection additionally separates source-
+audit crop enumeration, retained-cell crop enumeration, crop-front ranking, and
+its remaining bookkeeping so optimization follows measured cost.
+Telemetry coverage is complete only when both top-level and nested selection
+residuals are at most 1% of their respective totals; a large residual therefore
+fails the measurement gate instead of being hidden by arithmetic reconciliation.
 
 The isolated V7 seed/archive experiment keeps that E4 path intact while
 testing a replacement controller with stricter observability boundaries. Each

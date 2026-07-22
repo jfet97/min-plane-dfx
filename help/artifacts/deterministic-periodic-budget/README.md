@@ -17,12 +17,13 @@ crops first. The second crop completes with the same hash at 426,530.392211
 mm2, zero enclosed cavities, and 30/10 total/dominant contacts. The old source
 order reached this crop seventh and timed out before producing it.
 
-The full run remains execution-incomplete: five later sources reach the
+The full run remains execution-incomplete: five other sources reach the
 evaluation cap or wall-time safety limit, and two never start. The eight-source
 report spends 300,019 ms in total, of which 118,898 ms are attributed to
 continuation runs and 181,121 ms remain in catalog/selection and uninstrumented
-overhead. This makes phase-level timing and selection-cost reduction the next
-measurement; it does not justify claiming complete portfolio coverage.
+overhead. This makes phase-level timing the next measurement; the measured
+dominant phase, rather than this subtraction, decides what to optimize. It does
+not justify claiming complete portfolio coverage.
 
 Raw immutable evidence:
 

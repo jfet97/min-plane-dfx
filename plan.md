@@ -1942,9 +1942,15 @@ budgets before any Mixed periodic conclusion is called conclusive.
    portfolio is not coverage-complete: only one source completes, four hit the
    evaluation cap, one hits its wall-time safety limit, and two never start.
    Continuation bodies consume 118.898 s of 300.019 s; the residual 181.121 s
-   is catalog/selection plus uninstrumented overhead. Before changing search
-   semantics again, instrument those phase boundaries and reduce or reuse the
-   selection work under the same selected-set and archive invariants.
+   includes catalog, selection, exact finalization, archive work, and other
+   uninstrumented overhead. Before changing search semantics again, instrument
+   those phase boundaries. Cache or reuse selection only if it consumes at
+   least 70% of non-construction time; otherwise optimize the measured dominant
+   phase under the same selected-set and archive invariants. The decisive
+   control uses the same cap and sources with a 600 s safety ceiling, requires
+   every source to complete or hit the evaluation cap, and requires named
+   phases to leave at most 1% residual at both the portfolio and selection
+   levels.
 4. Consolidate one decision-grade portfolio run: ordinary strict, reversed,
    endpoint-derived, pocket-first, periodic continuations, and raw-crop
    witnesses competing in one shared archive under one budget report, on

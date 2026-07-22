@@ -539,6 +539,7 @@ const report = {
     : {
         continuationExecutionCoverageComplete: result.continuationExecutionCoverageComplete
       }),
+  ...(result.phaseTimings === undefined ? {} : { phaseTimings: result.phaseTimings }),
   sourceCropSurvival: result.sourceCropSurvival,
   sourceAuditWitnesses: auditWitnesses,
   adaptivePressurePilot:

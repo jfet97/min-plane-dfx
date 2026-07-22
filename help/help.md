@@ -296,9 +296,11 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   crops first and the second reproduces `310adc64…` at 426,530.392 mm2 with
   zero cavities and 30/10 contacts. Coverage is still incomplete: continuation
   bodies account for 118.898 s of the 300.019 s run, leaving 181.121 s in
-  catalog/selection and uninstrumented overhead. The next gate is therefore
-  phase-level timing plus selection-cost reduction, not another continuation
-  comparator. Portable evidence is under
+  catalog/selection, exact finalization, archive work, and other uninstrumented
+  overhead. The next gate is therefore named phase-level timing, not another
+  continuation comparator. Cache/reuse selection only if measurement assigns
+  at least 70% of non-construction time to it; otherwise optimize the measured
+  dominant phase. Portable evidence is under
   `help/artifacts/deterministic-periodic-budget/`.
 - **Closed the adaptive-pressure branch by the preregistered gate.** One
   equal-budget matrix (50,000 pressure evaluations/arm, restart 0, pinned

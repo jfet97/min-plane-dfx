@@ -105,7 +105,28 @@ export interface IntrinsicPeriodicFamilyPortfolioResult {
   readonly runs: ReadonlyArray<IntrinsicPeriodicContinuationResult>
   readonly archive: ReadonlyArray<IntrinsicStrictCompletedMetrics>
   readonly winner: IntrinsicPeriodicContinuationResult | undefined
+  readonly phaseTimings?: IntrinsicPeriodicPortfolioPhaseTimings
   readonly runtimeMs: number
+}
+
+export interface IntrinsicPeriodicPortfolioPhaseTimings {
+  readonly catalogMs: number
+  readonly selectionMs: number
+  readonly selection: {
+    readonly sourceAuditCropEnumerationMs: number
+    readonly retainedCropEnumerationMs: number
+    readonly cropFrontSelectionMs: number
+    readonly bookkeepingMs: number
+    readonly coverageComplete: boolean
+    readonly totalMs: number
+  }
+  readonly executionOrderingMs: number
+  readonly constructionMs: number
+  readonly finalizationMs: number
+  readonly archiveRankingMs: number
+  readonly bookkeepingMs: number
+  readonly coverageComplete: boolean
+  readonly totalMs: number
 }
 
 export interface IntrinsicPeriodicFamilyPortfolioOptions {
@@ -153,8 +174,10 @@ export function runIntrinsicPeriodicFamilyPortfolio(
     const maximumContinuationRuntimeMs = options.maximumContinuationRuntimeMs ?? 25_000
     const maximumContinuationCandidateEvaluations =
       options.maximumContinuationCandidateEvaluations
+    const capturePhaseTimings = maximumContinuationCandidateEvaluations !== undefined
     const maximumContinuationCount = options.maximumContinuationCount ?? 8
     const maximumTotalRuntimeMs = options.maximumTotalRuntimeMs ?? 240_000
+    const catalogStartedAt = capturePhaseTimings ? performance.now() : 0
     const catalog = yield* enumerateIntrinsicPeriodicCells(pieces, {
       maximumRuntimeMs: maximumCatalogRuntimeMs,
       maximumFamilyCount: 8,
@@ -163,6 +186,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       maximumCellsPerFamilyRole,
       captureSourceSurvivalAudit: options.captureSourceSurvivalAudit ?? false
     })
+    const catalogMs = capturePhaseTimings ? performance.now() - catalogStartedAt : 0
     const selected = yield* selectIntrinsicPeriodicContinuations(
       catalog,
       pieces,
@@ -171,13 +195,19 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       options.basisSourceKey,
       options.captureSourceSurvivalAudit ?? false,
       (options.captureSourceSurvivalAudit ?? false) &&
-        (options.admitSourceAuditWitnesses ?? false)
+        (options.admitSourceAuditWitnesses ?? false),
+      capturePhaseTimings
     )
+    const selectionMs = selected.phaseTimings?.totalMs ?? 0
+    const orderingStartedAt = capturePhaseTimings ? performance.now() : 0
     const continuations = continuationsForExecution(
       selected.continuations,
       maximumContinuationCandidateEvaluations
     )
+    const executionOrderingMs = capturePhaseTimings ? performance.now() - orderingStartedAt : 0
     const runs: IntrinsicPeriodicContinuationResult[] = []
+    let constructionMs = 0
+    let finalizationMs = 0
     for (const continuation of continuations) {
       const remainingMs = maximumTotalRuntimeMs - (performance.now() - startedAt)
       if (remainingMs <= 0) {
@@ -209,6 +239,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
         }
       )
       const runtimeMs = performance.now() - startedContinuationAt
+      if (capturePhaseTimings) constructionMs += runtimeMs
       if (constructed.kind === 'failure') {
         runs.push({
           continuation,
@@ -232,7 +263,9 @@ export function runIntrinsicPeriodicFamilyPortfolio(
         })
         continue
       }
+      const finalizationStartedAt = capturePhaseTimings ? performance.now() : 0
       const result = yield* finalizeIntrinsicStrictState(archiveSheet, constructed.value, runtimeMs)
+      if (capturePhaseTimings) finalizationMs += performance.now() - finalizationStartedAt
       runs.push({
         continuation,
         status: result.status,
@@ -242,16 +275,49 @@ export function runIntrinsicPeriodicFamilyPortfolio(
         runtimeMs
       })
     }
+    const archiveStartedAt = capturePhaseTimings ? performance.now() : 0
     const archive = rankIntrinsicStrictCompletedLayouts(
       runs.flatMap((run) => (run.result?.metrics === undefined ? [] : [run.result.metrics]))
     )
+    const archiveRankingMs = capturePhaseTimings ? performance.now() - archiveStartedAt : 0
     const winningHash = archive[0]?.canonicalGeometryHash
+    const winner =
+      winningHash === undefined
+        ? undefined
+        : runs.find((run) => run.result?.metrics?.canonicalGeometryHash === winningHash)
+    const phaseTimings = capturePhaseTimings && selected.phaseTimings !== undefined
+      ? (() => {
+          const totalMs = performance.now() - startedAt
+          const measuredPhaseMs =
+            catalogMs +
+            selectionMs +
+            executionOrderingMs +
+            constructionMs +
+            finalizationMs +
+            archiveRankingMs
+          const bookkeepingMs = Math.max(0, totalMs - measuredPhaseMs)
+          return {
+            catalogMs,
+            selectionMs,
+            selection: selected.phaseTimings,
+            executionOrderingMs,
+            constructionMs,
+            finalizationMs,
+            archiveRankingMs,
+            bookkeepingMs,
+            coverageComplete:
+              phaseResidualCoverageComplete(totalMs, bookkeepingMs) &&
+              selected.phaseTimings.coverageComplete,
+            totalMs
+          }
+        })()
+      : undefined
     return {
       catalog,
       continuations,
       continuationOmissions: selected.omissions,
       continuationCoverageComplete: selected.coverageComplete,
-      ...(maximumContinuationCandidateEvaluations === undefined
+      ...(!capturePhaseTimings
         ? {}
         : {
             continuationExecutionCoverageComplete: runs.every(
@@ -267,11 +333,9 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       sourceAuditNonDominatedCropCount: selected.sourceAuditNonDominatedCropCount,
       runs,
       archive,
-      winner:
-        winningHash === undefined
-          ? undefined
-          : runs.find((run) => run.result?.metrics?.canonicalGeometryHash === winningHash),
-      runtimeMs: performance.now() - startedAt
+      winner,
+      ...(phaseTimings === undefined ? {} : { phaseTimings }),
+      runtimeMs: phaseTimings?.totalMs ?? performance.now() - startedAt
     }
   })
 }
@@ -300,6 +364,11 @@ export function continuationsForExecution(
     : orderPeriodicContinuationsForExecution(continuations)
 }
 
+/** Requires unclassified timing residual to stay within one percent of its interval. */
+export function phaseResidualCoverageComplete(totalMs: number, residualMs: number): boolean {
+  return totalMs >= 0 && residualMs >= 0 && residualMs <= totalMs * 0.01
+}
+
 function selectIntrinsicPeriodicContinuations(
   catalog: IntrinsicPeriodicCatalog,
   pieces: ReadonlyArray<IrregularPreparedPiece>,
@@ -307,7 +376,8 @@ function selectIntrinsicPeriodicContinuations(
   maximumCropsPerCell: number,
   basisSourceKey: string | undefined,
   captureSourceSurvivalAudit: boolean,
-  admitSourceAuditWitnesses = false
+  admitSourceAuditWitnesses = false,
+  capturePhaseTimings = false
 ): Effect.Effect<
   {
     readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
@@ -316,10 +386,15 @@ function selectIntrinsicPeriodicContinuations(
     readonly sourceCropSurvival: ReadonlyArray<IntrinsicPeriodicSourceCropSurvival>
     readonly sourceAuditWitnesses: ReadonlyArray<IntrinsicPeriodicSourceAuditWitness>
     readonly sourceAuditNonDominatedCropCount: number
+    readonly phaseTimings?: IntrinsicPeriodicPortfolioPhaseTimings['selection']
   },
   IrregularGeometryInputError
 > {
   return Effect.gen(function* () {
+    const selectionStartedAt = capturePhaseTimings ? performance.now() : 0
+    let sourceAuditCropEnumerationMs = 0
+    let retainedCropEnumerationMs = 0
+    let cropFrontSelectionMs = 0
     const familyMembers = new Map(
       groupIntrinsicCollisionFamilies(pieces).map((family) => [family.key, family.members])
     )
@@ -382,7 +457,11 @@ function selectIntrinsicPeriodicContinuations(
         for (const cell of family.sourceAuditCells ?? family.cells) {
           if (basisSourceKey !== undefined && cell.basisProvenance?.sourceKey !== basisSourceKey) continue
           const audit = sourceAudit(cell)
+          const enumerationStartedAt = capturePhaseTimings ? performance.now() : 0
           const directValidCrops = yield* enumerateIntrinsicPeriodicCellCrops(cell, members)
+          if (capturePhaseTimings) {
+            sourceAuditCropEnumerationMs += performance.now() - enumerationStartedAt
+          }
           if (audit !== undefined) audit.directValidCropCountBeforeFront += directValidCrops.length
           const provenance = cell.basisProvenance
           if (provenance !== undefined) {
@@ -407,10 +486,17 @@ function selectIntrinsicPeriodicContinuations(
         if (basisSourceKey !== undefined && cell.basisProvenance?.sourceKey !== basisSourceKey) continue
         const audit = sourceAudit(cell)
         if (audit !== undefined) audit.retainedCellCount += 1
-        const directValidCrops =
-          directValidCropsByCell.get(periodicSourceCellKey(cell)) ??
-          (yield* enumerateIntrinsicPeriodicCellCrops(cell, members))
+        let directValidCrops = directValidCropsByCell.get(periodicSourceCellKey(cell))
+        if (directValidCrops === undefined) {
+          const enumerationStartedAt = capturePhaseTimings ? performance.now() : 0
+          directValidCrops = yield* enumerateIntrinsicPeriodicCellCrops(cell, members)
+          if (capturePhaseTimings) {
+            retainedCropEnumerationMs += performance.now() - enumerationStartedAt
+          }
+        }
+        const cropFrontStartedAt = capturePhaseTimings ? performance.now() : 0
         const crops = selectIntrinsicPeriodicSeedFront(directValidCrops, maximumCropsPerCell)
+        if (capturePhaseTimings) cropFrontSelectionMs += performance.now() - cropFrontStartedAt
         if (audit !== undefined) {
           audit.directValidCropCount += directValidCrops.length
           audit.cropFrontCount += crops.length
@@ -510,43 +596,62 @@ function selectIntrinsicPeriodicContinuations(
     for (const continuation of all.slice(maximumContinuationCount)) {
       omissions.push({ sourceId: continuation.sourceId, reason: 'continuation-cap' })
     }
+    const sourceCropSurvivalResult = [...sourceCropSurvival.values()].toSorted(
+      (first, second) =>
+        first.role.localeCompare(second.role) || first.sourceKey.localeCompare(second.sourceKey)
+    )
+    const sourceAuditWitnessResult = rankIntrinsicPeriodicSeeds(rawAuditFront)
+      .slice(0, 16)
+      .flatMap((seed) => {
+        const source = sourceAuditWitnesses.get(periodicContinuationFutureKey(pieces, seed))
+        return source === undefined
+          ? []
+          : [
+              {
+                role: seed.role,
+                familyKey: source.familyKey,
+                sourceKey: source.sourceKey,
+                sourceKind: source.sourceKind,
+                cellKey: seed.cellKey,
+                basisProvenance: source.basisProvenance,
+                placements: seed.placements,
+                seed: {
+                  canonicalKey: seed.canonicalKey,
+                  componentCount: seed.componentCount,
+                  isolatedPieceCount: seed.isolatedPieceCount,
+                  largestComponentSize: seed.largestComponentSize,
+                  maximumSideMm: seed.maximumSideMm,
+                  envelopeAreaMm2: seed.envelopeAreaMm2,
+                  envelopeSpanMm: seed.envelopeSpanMm,
+                  crop: seed.crop
+                }
+              }
+            ]
+      })
+    const phaseTimings = capturePhaseTimings
+      ? (() => {
+          const totalMs = performance.now() - selectionStartedAt
+          const measuredMs =
+            sourceAuditCropEnumerationMs + retainedCropEnumerationMs + cropFrontSelectionMs
+          const bookkeepingMs = Math.max(0, totalMs - measuredMs)
+          return {
+            sourceAuditCropEnumerationMs,
+            retainedCropEnumerationMs,
+            cropFrontSelectionMs,
+            bookkeepingMs,
+            coverageComplete: phaseResidualCoverageComplete(totalMs, bookkeepingMs),
+            totalMs
+          }
+        })()
+      : undefined
     return {
       continuations: selected,
       omissions,
       coverageComplete: all.length <= maximumContinuationCount,
-      sourceCropSurvival: [...sourceCropSurvival.values()].toSorted(
-        (first, second) =>
-          first.role.localeCompare(second.role) || first.sourceKey.localeCompare(second.sourceKey)
-      ),
-      sourceAuditWitnesses: rankIntrinsicPeriodicSeeds(rawAuditFront)
-        .slice(0, 16)
-        .flatMap((seed) => {
-          const source = sourceAuditWitnesses.get(periodicContinuationFutureKey(pieces, seed))
-          return source === undefined
-            ? []
-            : [
-                {
-                  role: seed.role,
-                  familyKey: source.familyKey,
-                  sourceKey: source.sourceKey,
-                  sourceKind: source.sourceKind,
-                  cellKey: seed.cellKey,
-                  basisProvenance: source.basisProvenance,
-                  placements: seed.placements,
-                  seed: {
-                    canonicalKey: seed.canonicalKey,
-                    componentCount: seed.componentCount,
-                    isolatedPieceCount: seed.isolatedPieceCount,
-                    largestComponentSize: seed.largestComponentSize,
-                    maximumSideMm: seed.maximumSideMm,
-                    envelopeAreaMm2: seed.envelopeAreaMm2,
-                    envelopeSpanMm: seed.envelopeSpanMm,
-                    crop: seed.crop
-                  }
-                }
-              ]
-        }),
-      sourceAuditNonDominatedCropCount: rawAuditFront.length
+      sourceCropSurvival: sourceCropSurvivalResult,
+      sourceAuditWitnesses: sourceAuditWitnessResult,
+      sourceAuditNonDominatedCropCount: rawAuditFront.length,
+      ...(phaseTimings === undefined ? {} : { phaseTimings })
     }
   })
 }
