@@ -1,8 +1,9 @@
 import { Effect } from 'effect'
-import type { SheetSpec } from '@shared/domain/nesting.js'
+import { SheetSpec } from '@shared/domain/nesting.js'
 import {
-  IrregularPlacementCandidate,
-  type IrregularPlacedPiece,
+  IrregularPlacedPiece,
+  IrregularPlacement,
+  IrregularTransform,
   type IrregularPreparedPiece
 } from '@shared/irregular/domain.js'
 import {
@@ -32,8 +33,8 @@ import {
 } from '../../irregular/services.js'
 import type { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import { groupIntrinsicCollisionFamilies } from './intrinsicStrictFamilyPortfolio.js'
-import { PlacementValidation } from '../../irregular/placementValidation.js'
 import {
+  assertCanonicalGridLegalLayout,
   canonicalCollisionLayoutIdentity,
   measureCanonicalLayoutTopology
 } from '../../irregular/canonicalLayoutGeometry.js'
@@ -772,28 +773,15 @@ function validateAndReconstructSourceAuditWitness(
     }
     const familyIds = new Set(familyMembers.map((piece) => piece.pieceId ?? piece.source.id))
     const placedIds = new Set<string>()
-    const accepted: IrregularPlacedPiece[] = []
     for (const placed of witness.placements) {
       const pieceId = placed.placement.pieceId ?? placed.placement.sourcePieceId
       if (!familyIds.has(pieceId) || placedIds.has(pieceId)) {
         return yield* invalidReplay('source-audit replay contains an unknown or duplicate piece')
       }
-      const legal = yield* PlacementValidation.checkSheetless({
-        placed: accepted,
-        moving: placed.collisionGeometry,
-        candidate: new IrregularPlacementCandidate({
-          pieceId,
-          transform: placed.collisionGeometry.transform,
-          point: {
-            x: placed.placement.transform.translateX,
-            y: placed.placement.transform.translateY
-          },
-          diagnostics: []
-        })
-      })
-      if (!legal) return yield* invalidReplay('source-audit replay is not sheetless legal')
       placedIds.add(pieceId)
-      accepted.push(placed)
+    }
+    if (!canonicalSheetlessLegal(witness.placements)) {
+      return yield* invalidReplay('source-audit replay is not canonically sheetless legal')
     }
     const canonicalKey = canonicalCollisionLayoutIdentity(witness.placements)
     if (canonicalKey === undefined || canonicalKey !== witness.seed.canonicalKey) {
@@ -851,6 +839,47 @@ function placedEnvelopeBounds(placed: ReadonlyArray<IrregularPlacedPiece>): {
     width: Math.max(...xs) - Math.min(...xs),
     height: Math.max(...ys) - Math.min(...ys)
   }
+}
+
+function canonicalSheetlessLegal(placed: ReadonlyArray<IrregularPlacedPiece>): boolean {
+  const points = placed.flatMap(({ placement, collisionGeometry }) =>
+    collisionGeometry.polygon.points.map(({ x, y }) => ({
+      x: x + placement.transform.translateX,
+      y: y + placement.transform.translateY
+    }))
+  )
+  if (points.length === 0) return false
+  const minX = Math.min(...points.map(({ x }) => x))
+  const minY = Math.min(...points.map(({ y }) => y))
+  const maxX = Math.max(...points.map(({ x }) => x))
+  const maxY = Math.max(...points.map(({ y }) => y))
+  const normalized = placed.map(
+    ({ placement, collisionGeometry }) =>
+      new IrregularPlacedPiece({
+        placement: new IrregularPlacement({
+          ...(placement.pieceId === undefined ? {} : { pieceId: placement.pieceId }),
+          sourcePieceId: placement.sourcePieceId,
+          ...(placement.placementReference === undefined
+            ? {}
+            : { placementReference: placement.placementReference }),
+          transform: new IrregularTransform({
+            translateX: placement.transform.translateX - minX,
+            translateY: placement.transform.translateY - minY,
+            rotationDeg: placement.transform.rotationDeg,
+            mirrored: placement.transform.mirrored
+          })
+        }),
+        collisionGeometry
+      })
+  )
+  return assertCanonicalGridLegalLayout(
+    new SheetSpec({
+      width: maxX - minX + 1,
+      height: maxY - minY + 1,
+      label: 'source-audit replay validation'
+    }),
+    normalized
+  )
 }
 
 function sameMetric(first: number, second: number): boolean {
