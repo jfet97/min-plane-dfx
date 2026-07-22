@@ -1,0 +1,28 @@
+{
+  "sourceCommit": "163fac1",
+  "fixture": "mixed-61",
+  "continuationCandidateEvaluationCap": 19862,
+  "winner": {
+    "canonicalGeometryHash": "310adc648970ae24798241bbb7178bbbc6f4506b1506012392235470a6dc6d0a",
+    "envelopeAreaMm2": 426530.39221099997,
+    "enclosedCavityCount": 0,
+    "totalStructuralContacts": 30,
+    "dominantStructuralContacts": 10,
+    "executionIndex": 1
+  },
+  "coverage": {
+    "selectionComplete": false,
+    "executionComplete": false,
+    "completed": 1,
+    "evaluationCap": 4,
+    "deadline": 1,
+    "globalDeadline": 2
+  },
+  "timingMs": {
+    "total": 300019.15216600004,
+    "continuations": 118897.90766600001,
+    "catalogSelectionAndUninstrumented": 181121.24450000003
+  },
+  "rawReportSha256": "1bd7f4a2cd3d1b767c25ba11a789c8f33af2be2d869632c78f50d587e0fdbf75",
+  "rawManifestSha256": "7375bbf7333814a60b1947e48076a38d88de0b76cb69ea0d8e0fad2e6449cd65"
+}

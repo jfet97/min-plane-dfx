@@ -291,6 +291,15 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   maximum side, and span, then by placed count descending and stable source
   identity. Selection and final archive ranking do not change, and no-cap
   execution keeps its old order.
+- **Compact-first scheduling recovers the known Mixed endpoint.** From commit
+  `163fac1`, the full width-eight/cap-19,862 run executes the two square-basis
+  crops first and the second reproduces `310adc64…` at 426,530.392 mm2 with
+  zero cavities and 30/10 contacts. Coverage is still incomplete: continuation
+  bodies account for 118.898 s of the 300.019 s run, leaving 181.121 s in
+  catalog/selection and uninstrumented overhead. The next gate is therefore
+  phase-level timing plus selection-cost reduction, not another continuation
+  comparator. Portable evidence is under
+  `help/artifacts/deterministic-periodic-budget/`.
 - **Closed the adaptive-pressure branch by the preregistered gate.** One
   equal-budget matrix (50,000 pressure evaluations/arm, restart 0, pinned
   seeds `371db269…`/`310adc64…`) over {1.25% baseline, 0.625% smaller step,

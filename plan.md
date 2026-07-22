@@ -1934,6 +1934,17 @@ budgets before any Mixed periodic conclusion is called conclusive.
    and span, then by placed count descending and source id. This is scheduling,
    not a selector or terminal-comparator change; the no-cap path remains byte-
    compatible.
+
+   Result at commit `163fac1`: this scheduling change succeeds at its narrow
+   goal. In a full width-eight Mixed-61 run at cap 19,862, the two smallest
+   square-basis crops run first and the second completes with the exact
+   `310adc64…` endpoint (426,530.392 mm2, zero cavities, 30/10 contacts). The
+   portfolio is not coverage-complete: only one source completes, four hit the
+   evaluation cap, one hits its wall-time safety limit, and two never start.
+   Continuation bodies consume 118.898 s of 300.019 s; the residual 181.121 s
+   is catalog/selection plus uninstrumented overhead. Before changing search
+   semantics again, instrument those phase boundaries and reduce or reuse the
+   selection work under the same selected-set and archive invariants.
 4. Consolidate one decision-grade portfolio run: ordinary strict, reversed,
    endpoint-derived, pocket-first, periodic continuations, and raw-crop
    witnesses competing in one shared archive under one budget report, on
