@@ -874,8 +874,8 @@ function canonicalSheetlessLegal(placed: ReadonlyArray<IrregularPlacedPiece>): b
   )
   return assertCanonicalGridLegalLayout(
     new SheetSpec({
-      width: maxX - minX + 1,
-      height: maxY - minY + 1,
+      width: Math.ceil(maxX - minX) + 1,
+      height: Math.ceil(maxY - minY) + 1,
       label: 'source-audit replay validation'
     }),
     normalized
