@@ -25,6 +25,7 @@ import {
   evaluateIntrinsicStrictCertificate,
   measureIntrinsicSheetlessCompletedLayout,
   rankIntrinsicStrictCompletedLayouts,
+  selectIntrinsicStrictCompletedParetoFront,
   type IntrinsicStrictCandidateMode,
   type IntrinsicStrictCertificate,
   type IntrinsicStrictCompletedMetrics,
@@ -102,6 +103,12 @@ export interface IntrinsicSharedArchivePortfolioOptions {
     Readonly<Record<IntrinsicSharedArchiveDirectRole, number>>
   >
   readonly maximumDirectRuntimeMs?: number
+  /**
+   * Includes bounded raw-crop Pareto witnesses in periodic continuation
+   * selection so a retained-cell surrogate cannot silently remove a better
+   * exact completed layout from the shared archive.
+   */
+  readonly includeSourceAuditWitnesses?: boolean
   readonly periodic?: Omit<
     IntrinsicPeriodicFamilyPortfolioOptions,
     | 'maximumContinuationCandidateEvaluations'
@@ -128,6 +135,7 @@ export function runIntrinsicSharedArchivePortfolio(
   GeometryKernel | GeometrySettings | NfpIfpService
 > {
   return Effect.gen(function* () {
+    const includeSourceAuditWitnesses = options.includeSourceAuditWitnesses ?? true
     const directRuns = yield* runIntrinsicSharedArchiveDirectPortfolio(sheet, pieces, {
       ...(options.directCandidateEvaluationCaps === undefined
         ? {}
@@ -145,8 +153,8 @@ export function runIntrinsicSharedArchivePortfolio(
         maximumContinuationCandidateEvaluations:
           INTRINSIC_SHARED_ARCHIVE_PERIODIC_EVALUATION_CAP,
         maximumContinuationCount: INTRINSIC_SHARED_ARCHIVE_PERIODIC_CONTINUATION_COUNT,
-        captureSourceSurvivalAudit: false,
-        admitSourceAuditWitnesses: false
+        captureSourceSurvivalAudit: includeSourceAuditWitnesses,
+        admitSourceAuditWitnesses: includeSourceAuditWitnesses
       }
     )
     const periodicRuns = periodicPortfolio.runs.map((run) =>
@@ -157,6 +165,7 @@ export function runIntrinsicSharedArchivePortfolio(
     )
     const sheetlessArchive = retainRankedSharedArchive(endpoints)
     const archive = selectFittingSharedArchive(sheetlessArchive)
+    const winner = selectIntrinsicSharedArchiveWinner(archive)
     const periodicSelectionValid = intrinsicSharedPeriodicSelectionValid({
       catalogRuntimeCoverageComplete: periodicPortfolio.catalog.runtimeCoverageComplete,
       selectedContinuationCount: periodicPortfolio.continuations.length,
@@ -170,7 +179,7 @@ export function runIntrinsicSharedArchivePortfolio(
       periodicPortfolio,
       sheetlessArchive,
       archive,
-      winner: archive[0],
+      winner,
       periodicSelectionValid,
       experimentValid: intrinsicSharedArchiveExperimentValid(
         directRuns,
@@ -269,6 +278,38 @@ export function selectFittingSharedArchive(
 ): ReadonlyArray<IntrinsicSharedArchiveEndpoint> {
   return sheetlessArchive.filter(
     ({ requestedSheetFit }) => requestedSheetFit.selectedRotationDeg !== undefined
+  )
+}
+
+/** Selects one cohesive winner without allowing contact to veto geometric dominance. */
+export function selectIntrinsicSharedArchiveWinner(
+  archive: ReadonlyArray<IntrinsicSharedArchiveEndpoint>
+): IntrinsicSharedArchiveEndpoint | undefined {
+  const geometricFrontHashes = new Set(
+    selectIntrinsicStrictCompletedParetoFront(archive.map(({ metrics }) => metrics)).map(
+      ({ canonicalGeometryHash }) => canonicalGeometryHash
+    )
+  )
+  return archive
+    .filter(({ sheetlessCanonicalGeometryHash }) =>
+      geometricFrontHashes.has(sheetlessCanonicalGeometryHash)
+    )
+    .toSorted(compareIntrinsicSharedArchiveWinner)[0]
+}
+
+function compareIntrinsicSharedArchiveWinner(
+  first: IntrinsicSharedArchiveEndpoint,
+  second: IntrinsicSharedArchiveEndpoint
+): number {
+  return (
+    first.certificate.relativeDeficitSum - second.certificate.relativeDeficitSum ||
+    first.metrics.enclosedCavityCount - second.metrics.enclosedCavityCount ||
+    first.metrics.largestOccupiedHullGapRatio -
+      second.metrics.largestOccupiedHullGapRatio ||
+    first.metrics.envelopeAreaMm2 - second.metrics.envelopeAreaMm2 ||
+    first.metrics.envelopeMaximumSideMm - second.metrics.envelopeMaximumSideMm ||
+    first.metrics.envelopeSpanMm - second.metrics.envelopeSpanMm ||
+    first.sheetlessCanonicalGeometryHash.localeCompare(second.sheetlessCanonicalGeometryHash)
   )
 }
 

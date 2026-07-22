@@ -7,6 +7,8 @@ const MIXED_POCKET_SHEETLESS_HASH =
   '5a1f1ba6957031d839862709f4390727b4bc878004a1660d4ffa45393eda0d21'
 const MIXED_PERIODIC_FITTED_HASH =
   '310adc648970ae24798241bbb7178bbbc6f4506b1506012392235470a6dc6d0a'
+const TRIANGLE_TWO_BAND_WITNESS_HASH =
+  '371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127'
 
 const Endpoint = Schema.Struct({
   role: Schema.String,
@@ -127,10 +129,12 @@ for (const fixture of fixtures) {
 
   if (fixture === 'triangle-20') {
     requireGate(
-      first.fittedWinner?.role === 'canonical-grid' ||
-        first.fittedWinner?.role === 'legacy-absolute-envelope',
+      first.fittedArchive.some(
+        ({ sheetlessCanonicalGeometryHash }) =>
+          sheetlessCanonicalGeometryHash === TRIANGLE_TWO_BAND_WITNESS_HASH
+      ),
       fixture,
-      'protected direct winner'
+      '74,428 two-band witness remains archive-resident'
     )
   }
   if (fixture === 'mixed-61') {

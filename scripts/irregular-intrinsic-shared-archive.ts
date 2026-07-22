@@ -97,6 +97,7 @@ const result =
           runIntrinsicSharedArchivePortfolio(fixture.request.sheet, preparedPieces, {
             directCandidateEvaluationCaps: requiredDirectCaps(directCandidateEvaluationCaps),
             maximumDirectRuntimeMs,
+            includeSourceAuditWitnesses: true,
             periodic: {
               maximumCatalogRuntimeMs,
               maximumCellsPerFamilyRole: 16,
@@ -148,7 +149,7 @@ const report = {
     directCandidateEvaluationCaps,
     periodicContinuationCandidateEvaluations: mode === 'matrix' ? 19_862 : undefined,
     periodicContinuationCount: mode === 'matrix' ? 8 : undefined,
-    rawSourceAudit: false
+    rawSourceAudit: mode === 'matrix'
   },
   directRuns,
   periodicRuns,

@@ -4,6 +4,7 @@ import {
   intrinsicSharedPeriodicSelectionValid,
   normalizeIntrinsicSharedArchiveConstructedRun,
   retainRankedSharedArchive,
+  selectIntrinsicSharedArchiveWinner,
   selectFittingSharedArchive,
   type IntrinsicSharedArchiveEndpoint
 } from '../../src/workers/algorithm/irregular/intrinsicSharedArchivePortfolio.js'
@@ -90,6 +91,83 @@ describe('retainRankedSharedArchive', () => {
     expect(selectFittingSharedArchive(sheetless).map(({ role }) => role)).toEqual([
       'fitting-second'
     ])
+  })
+
+  it('selects cohesive geometry from the first Pareto front instead of the smallest max side', () => {
+    const narrowControl = {
+      ...endpoint('legacy-absolute-envelope', 'narrow', 341.785),
+      metrics: {
+        ...metrics('narrow', 341.785),
+        envelopeAreaMm2: 115_228.71133,
+        envelopeSpanMm: 678.923,
+        largestOccupiedHullGapRatio: 0.3312548377545349,
+        isolatedPieceCount: 14,
+        positiveContactComponentCount: 17,
+        largestPositiveContactComponentSize: 2,
+        largestPositiveContactComponentRatio: 0.1
+      },
+      certificate: {
+        passes: false,
+        violatedFloors: [
+          'maximumIsolatedPieceCount',
+          'minimumLargestPositiveContactComponentRatio',
+          'maximumLargestOccupiedHullGapRatio'
+        ],
+        relativeDeficitSum: 2.875
+      }
+    } satisfies IntrinsicSharedArchiveEndpoint
+    const twoBandLattice = {
+      ...endpoint('periodic-P2', 'two-band', 487.983),
+      metrics: {
+        ...metrics('two-band', 487.983),
+        envelopeAreaMm2: 74_428.143126,
+        envelopeSpanMm: 640.505,
+        largestOccupiedHullGapRatio: 0.029710516900773094,
+        isolatedPieceCount: 10,
+        positiveContactComponentCount: 11,
+        largestPositiveContactComponentSize: 10,
+        largestPositiveContactComponentRatio: 0.5
+      },
+      certificate: {
+        passes: false,
+        violatedFloors: [
+          'maximumIsolatedPieceCount',
+          'minimumLargestPositiveContactComponentRatio'
+        ],
+        relativeDeficitSum: 1.375
+      }
+    } satisfies IntrinsicSharedArchiveEndpoint
+
+    expect(
+      selectIntrinsicSharedArchiveWinner([narrowControl, twoBandLattice])
+        ?.sheetlessCanonicalGeometryHash
+    ).toBe('two-band')
+  })
+
+  it('does not let a cohesion certificate rescue geometrically dominated geometry', () => {
+    const geometricallyBetter = {
+      ...endpoint('compact', 'compact', 10),
+      certificate: {
+        passes: false,
+        violatedFloors: ['maximumIsolatedPieceCount'],
+        relativeDeficitSum: 1
+      }
+    } satisfies IntrinsicSharedArchiveEndpoint
+    const dominatedButCertified = {
+      ...endpoint('cohesive', 'cohesive', 20),
+      metrics: {
+        ...metrics('cohesive', 20),
+        enclosedCavityCount: 1,
+        largestOccupiedHullGapRatio: 0.1,
+        occupiedHullWasteRatio: 0.1
+      },
+      certificate: { passes: true, violatedFloors: [], relativeDeficitSum: 0 }
+    } satisfies IntrinsicSharedArchiveEndpoint
+
+    expect(
+      selectIntrinsicSharedArchiveWinner([dominatedButCertified, geometricallyBetter])
+        ?.sheetlessCanonicalGeometryHash
+    ).toBe('compact')
   })
 
   it('keeps evaluation-capped partial construction out of the endpoint archive', () => {
