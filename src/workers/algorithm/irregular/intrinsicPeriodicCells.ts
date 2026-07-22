@@ -1,0 +1,2260 @@
+import { Effect, Order } from 'effect'
+import {
+  area,
+  booleanOpWithPolyTree,
+  ClipType,
+  FillRule,
+  type Path64,
+  type PolyPath64,
+  PolyTree64
+} from 'clipper2-ts'
+import {
+  IrregularPlacedPiece,
+  IrregularPlacement,
+  IrregularPlacementCandidate,
+  IrregularPreparedPiece,
+  type IrregularNestingSettings,
+  IrregularTransform,
+  TransformedCollisionGeometry,
+  type IrregularPoint,
+  type IrregularTransformCandidate
+} from '@shared/irregular/domain.js'
+import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
+import { boundsForPoints, translatePolygonWithBounds } from '../../irregular/convexBounds.js'
+import {
+  sharedConvexPolygonBoundaryLength,
+  sharedConvexPolygonBoundarySegments
+} from '../../irregular/convexPolygonContact.js'
+import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
+import { PlacementValidation } from '../../irregular/placementValidation.js'
+import {
+  canonicalCollisionLayoutIdentity,
+  measureCanonicalLayoutTopology
+} from '../../irregular/canonicalLayoutGeometry.js'
+import {
+  type IrregularGeometryInputError,
+  type IrregularNfpIfpControl,
+  type IrregularNfpIfpControlAbortError,
+  type IrregularNestingNotImplementedError,
+  NfpIfpService
+} from '../../irregular/services.js'
+import {
+  groupIntrinsicCollisionFamilies,
+  type IntrinsicCollisionFamily
+} from './intrinsicStrictFamilyPortfolio.js'
+
+const transformOrder = Order.combineAll<IrregularTransformCandidate>([
+  Order.mapInput(Order.Number, ({ index }) => index),
+  Order.mapInput(Order.Number, ({ rotationDeg }) => rotationDeg),
+  Order.mapInput(Order.Boolean, ({ mirrored }) => mirrored)
+])
+
+/** Caps the current boundary-vertex source domain; audit conclusions are scoped to this cap. */
+export const MAXIMUM_NFP_BOUNDARY_VERTEX_BASIS_CANDIDATES = 64
+export const MAXIMUM_EDGE_CONTACT_RELATIONS_PER_DERIVATION = 64
+export const MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION = 64
+export const MAXIMUM_EDGE_CONTACT_PAIR_VALIDATION_ATTEMPTS_PER_DERIVATION = 256
+
+export interface IntrinsicPeriodicVector {
+  readonly x: number
+  readonly y: number
+}
+
+/** Records one rational NFP-union basis source and its single shared grid realization. */
+export interface IntrinsicPeriodicBasisProvenance {
+  readonly sourceKey: string
+  readonly sourceKind: 'axis-union' | 'nfp-boundary-vertex-pair' | 'edge-contact-pair'
+  readonly sourcePoints: readonly [IntrinsicPeriodicRationalPoint, IntrinsicPeriodicRationalPoint]
+  readonly axis?: 'x' | 'y'
+  readonly selectedBasis: readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]
+  readonly selectedResidualGrid: readonly [IntrinsicPeriodicRationalPoint, IntrinsicPeriodicRationalPoint]
+  readonly canonicalBasis: readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]
+  readonly memberTransforms: ReadonlyArray<IntrinsicPeriodicMemberTransform>
+  readonly contactRelations?: readonly [
+    IntrinsicPeriodicEdgeContactProvenance,
+    IntrinsicPeriodicEdgeContactProvenance
+  ]
+}
+
+/** Records the two physical edges whose exact overlap supplies one lattice translation. */
+export interface IntrinsicPeriodicEdgeContactProvenance {
+  readonly vector: IntrinsicPeriodicVector
+  readonly fixedMemberIndex: number
+  readonly fixedPieceId: string
+  readonly fixedEdgeIndex: number
+  readonly movingMemberIndex: number
+  readonly movingPieceId: string
+  readonly movingEdgeIndex: number
+  readonly segmentStart: IntrinsicPeriodicVector
+  readonly segmentEnd: IntrinsicPeriodicVector
+  readonly lengthMm: number
+}
+
+/** Keeps exact rational provenance serializable without turning it into a floating score. */
+export interface IntrinsicPeriodicRationalPoint {
+  readonly x: string
+  readonly y: string
+}
+
+/** Identifies the transformed members whose ordered NFP union produced a basis source. */
+export interface IntrinsicPeriodicMemberTransform {
+  readonly memberIndex: number
+  readonly pieceId: string
+  readonly transformIndex: number
+  readonly rotationDeg: number
+  readonly mirrored: boolean
+}
+
+export interface IntrinsicPeriodicBaseMember {
+  readonly piece: IrregularPreparedPiece
+  readonly geometry: TransformedCollisionGeometry
+  readonly point: IrregularPoint
+}
+
+export interface IntrinsicPeriodicCell {
+  readonly role: 'P1' | 'P2'
+  readonly familyKey: string
+  readonly members: ReadonlyArray<IntrinsicPeriodicBaseMember>
+  readonly v1: IntrinsicPeriodicVector
+  readonly v2: IntrinsicPeriodicVector
+  readonly determinantGrid2: string
+  readonly memberDoubledAreaGrid2: string
+  readonly density: number
+  readonly envelopeMaximumSideMm: number
+  readonly hullWasteRatio: number
+  readonly sharedBoundaryLengthMm: number
+  /** Records an infinite-lattice sufficiency proof; it is never finite-crop admission. */
+  readonly infiniteFarProof: boolean
+  /** Records whether the local 3x3 neighbourhood is collision free. */
+  readonly threeByThreeLatticeLegal: boolean
+  /** Records whether every central member contacts an exterior 3x3 member. */
+  readonly threeByThreeCentreContactComplete: boolean
+  /** Records the common NFP-derived basis; it never permits per-member snapping. */
+  readonly basisProvenance?: IntrinsicPeriodicBasisProvenance
+  readonly canonicalKey: string
+}
+
+export interface IntrinsicPeriodicCatalog {
+  readonly familyCoverageComplete: boolean
+  readonly runtimeCoverageComplete: boolean
+  readonly families: ReadonlyArray<IntrinsicPeriodicFamilyCatalog>
+  readonly selectedFamilyKey: string | undefined
+  readonly uniqueTransformCount: number
+  readonly enumeratedPairCount: number
+  readonly cells: ReadonlyArray<IntrinsicPeriodicCell>
+  readonly rejected: Readonly<Record<string, number>>
+}
+
+export interface IntrinsicPeriodicCatalogOptions {
+  readonly maximumRuntimeMs?: number
+  readonly maximumFamilyCount?: number
+  readonly maximumTransformsPerFamily?: number
+  readonly maximumPairsPerFamily?: number
+  readonly maximumCellsPerFamilyRole?: number
+  readonly control?: IrregularNfpIfpControl
+  /** Retains pre-front cells for an observer-only source-survival audit. */
+  readonly captureSourceSurvivalAudit?: boolean
+}
+
+export interface IntrinsicPeriodicTransformReservation {
+  readonly key: string
+  readonly availableCount: number
+  readonly retainedCount: number
+}
+
+export interface IntrinsicPeriodicCellRejection {
+  readonly role: 'P1' | 'P2'
+  readonly stage:
+    | 'axisBasisUnavailable'
+    | 'degenerateBasis'
+    | 'farNeighborRejected'
+    | 'threeByThreeLatticeRejected'
+    | 'baseShapeRejected'
+  readonly v1: IntrinsicPeriodicVector | undefined
+  readonly v2: IntrinsicPeriodicVector | undefined
+  readonly determinantGrid2: string | undefined
+}
+
+export interface IntrinsicPeriodicFamilyCatalog {
+  readonly familyKey: string
+  readonly memberCount: number
+  readonly collisionAreaMm2: number
+  readonly uniqueTransformCount: number
+  readonly retainedTransformCount: number
+  readonly transformCoverageComplete: boolean
+  readonly transformReservations: ReadonlyArray<IntrinsicPeriodicTransformReservation>
+  readonly enumeratedPairCount: number
+  readonly pairCoverageComplete: boolean
+  readonly cellCoverageComplete: boolean
+  readonly edgeContactDiagnostics: IntrinsicPeriodicEdgeContactDiagnostics
+  /** Records source survival through the bounded cell frontier without changing admission. */
+  readonly sourceSurvival: ReadonlyArray<IntrinsicPeriodicSourceCellSurvival>
+  /** Retains bounded raw cells only for a separate observer; never used for live continuations. */
+  readonly sourceAuditCells?: ReadonlyArray<IntrinsicPeriodicCell>
+  readonly cells: ReadonlyArray<IntrinsicPeriodicCell>
+  readonly rejected: Readonly<Record<string, number>>
+  readonly rejectedSamples: ReadonlyArray<IntrinsicPeriodicCellRejection>
+}
+
+/** Separates contact-source absence from its independent bounded validation cap. */
+export interface IntrinsicPeriodicEdgeContactDiagnostics {
+  readonly generatedRelationCount: number
+  readonly retainedRelationCount: number
+  readonly nonCollinearPairCount: number
+  readonly areaFeasiblePairCount: number
+  readonly validationAttemptCount: number
+  readonly validationCoverageComplete: boolean
+  readonly latticeRejectedCount: number
+  readonly contactIncompleteCount: number
+  readonly admittedBasisCount: number
+}
+
+/** Records how many provenance-backed cells survive the P1/P2 frontier. */
+export interface IntrinsicPeriodicSourceCellSurvival {
+  readonly role: 'P1' | 'P2'
+  readonly sourceKey: string
+  readonly sourceKind: IntrinsicPeriodicBasisProvenance['sourceKind']
+  readonly cellsBeforeFront: number
+  readonly cellsRetained: number
+}
+
+export interface IntrinsicPeriodicSeed {
+  readonly role: 'P1' | 'P2'
+  readonly cellKey: string
+  readonly placements: ReadonlyArray<IrregularPlacedPiece>
+  readonly remainingFamilyMembers: ReadonlyArray<IrregularPreparedPiece>
+  readonly componentCount: number
+  readonly isolatedPieceCount: number
+  readonly largestComponentSize: number
+  readonly maximumSideMm: number
+  readonly envelopeAreaMm2: number
+  readonly envelopeSpanMm: number
+  readonly crop: IntrinsicPeriodicCropProvenance
+  readonly canonicalKey: string
+}
+
+/** Records the finite crop traversal that materialized a shared lattice basis. */
+export interface IntrinsicPeriodicCropProvenance {
+  readonly rows: number
+  readonly columns: number
+  readonly traversal: 'row' | 'column'
+  readonly corner: 0 | 1 | 2 | 3
+}
+
+interface GridPoint {
+  readonly x: bigint
+  readonly y: bigint
+}
+
+interface Rational {
+  readonly numerator: bigint
+  readonly denominator: bigint
+}
+
+interface RationalPoint {
+  readonly x: Rational
+  readonly y: Rational
+}
+
+interface ForbiddenBoundary {
+  readonly points: ReadonlyArray<GridPoint>
+  readonly isHole?: boolean
+}
+
+/** Enumerates a bounded exact repeated-family one- and two-transform periodic cell catalog. */
+export function enumerateIntrinsicPeriodicCells(
+  pieces: ReadonlyArray<IrregularPreparedPiece>,
+  options: number | IntrinsicPeriodicCatalogOptions = {}
+): Effect.Effect<
+  IntrinsicPeriodicCatalog,
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError,
+  GeometryKernel | GeometrySettings | NfpIfpService
+> {
+  return Effect.gen(function* () {
+    const resolved = resolveCatalogOptions(options)
+    const startedAt = performance.now()
+    const geometryKernel = yield* GeometryKernel
+    const nfp = yield* NfpIfpService
+    const settings = yield* GeometrySettings
+    const eligibleFamilies = groupIntrinsicCollisionFamilies(pieces)
+      .filter(({ members }) => members.length >= 2)
+      .toSorted(
+        (first, second) =>
+          second.members.length - first.members.length ||
+          second.members.length * second.collisionAreaMm2 -
+            first.members.length * first.collisionAreaMm2 ||
+          first.key.localeCompare(second.key)
+      )
+    const selectedFamilies = eligibleFamilies.slice(0, resolved.maximumFamilyCount)
+    const familyCoverageComplete = selectedFamilies.length === eligibleFamilies.length
+    if (selectedFamilies.length === 0) {
+      return {
+        familyCoverageComplete,
+        runtimeCoverageComplete: true,
+        families: [],
+        selectedFamilyKey: undefined,
+        uniqueTransformCount: 0,
+        enumeratedPairCount: 0,
+        cells: [],
+        rejected: {}
+      }
+    }
+    const families: IntrinsicPeriodicFamilyCatalog[] = []
+    const globalCells = new Map<string, IntrinsicPeriodicCell>()
+    for (const family of selectedFamilies) {
+      yield* resolved.control?.checkpoint('candidate-points') ?? Effect.void
+      if (performance.now() - startedAt >= resolved.maximumRuntimeMs) break
+      const catalog = yield* enumerateIntrinsicPeriodicFamily({
+        family,
+        geometryKernel,
+        nfp,
+        settings,
+        startedAt,
+        options: resolved
+      })
+      families.push(catalog)
+      for (const cell of catalog.cells) globalCells.set(cell.canonicalKey, cell)
+    }
+    const first = families[0]
+    return {
+      familyCoverageComplete,
+      runtimeCoverageComplete: performance.now() - startedAt < resolved.maximumRuntimeMs,
+      families,
+      selectedFamilyKey: first?.familyKey,
+      uniqueTransformCount: first?.retainedTransformCount ?? 0,
+      enumeratedPairCount: first?.enumeratedPairCount ?? 0,
+      cells: rankIntrinsicPeriodicCells([...globalCells.values()]),
+      rejected: mergeRejections(families.map(({ rejected }) => rejected))
+    }
+  })
+}
+
+interface ResolvedIntrinsicPeriodicCatalogOptions {
+  readonly maximumRuntimeMs: number
+  readonly maximumFamilyCount: number
+  readonly maximumTransformsPerFamily: number
+  readonly maximumPairsPerFamily: number
+  readonly maximumCellsPerFamilyRole: number
+  readonly captureSourceSurvivalAudit: boolean
+  readonly control: IrregularNfpIfpControl | undefined
+}
+
+function resolveCatalogOptions(
+  options: number | IntrinsicPeriodicCatalogOptions
+): ResolvedIntrinsicPeriodicCatalogOptions {
+  const input = typeof options === 'number' ? { maximumRuntimeMs: options } : options
+  return {
+    maximumRuntimeMs: input.maximumRuntimeMs ?? 15_000,
+    maximumFamilyCount: input.maximumFamilyCount ?? 8,
+    maximumTransformsPerFamily: input.maximumTransformsPerFamily ?? 16,
+    maximumPairsPerFamily: input.maximumPairsPerFamily ?? 120,
+    maximumCellsPerFamilyRole: input.maximumCellsPerFamilyRole ?? 4,
+    captureSourceSurvivalAudit: input.captureSourceSurvivalAudit ?? false,
+    control: input.control
+  }
+}
+
+function enumerateIntrinsicPeriodicFamily(input: {
+  readonly family: IntrinsicCollisionFamily
+  readonly geometryKernel: GeometryKernel.Service
+  readonly nfp: NfpIfpService
+  readonly settings: IrregularNestingSettings
+  readonly startedAt: number
+  readonly options: ResolvedIntrinsicPeriodicCatalogOptions
+}): Effect.Effect<
+  IntrinsicPeriodicFamilyCatalog,
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError
+> {
+  return Effect.gen(function* () {
+    const representative = input.family.members[0]
+    if (representative === undefined) {
+      return emptyIntrinsicPeriodicFamilyCatalog(input.family, { missingRepresentative: 1 })
+    }
+    const transformedByCanonicalKey = new Map<
+      string,
+      { readonly geometry: TransformedCollisionGeometry; readonly transform: IrregularTransformCandidate }
+    >()
+    let runtimeCoverageComplete = true
+    for (const transform of [...representative.transforms].sort(transformOrder)) {
+      yield* input.options.control?.checkpoint('candidate-points') ?? Effect.void
+      if (performance.now() - input.startedAt >= input.options.maximumRuntimeMs) {
+        runtimeCoverageComplete = false
+        break
+      }
+      const geometry = yield* input.geometryKernel.transformCollisionGeometry({
+        geometry: representative.collisionGeometry,
+        transform
+      })
+      const key = canonicalTransformedPolygonKey(geometry)
+      if (!transformedByCanonicalKey.has(key)) transformedByCanonicalKey.set(key, { geometry, transform })
+    }
+    const transformed = selectPeriodicTransformRepresentatives(
+      [...transformedByCanonicalKey.values()],
+      input.options.maximumTransformsPerFamily
+    )
+    const transformCoverageComplete =
+      runtimeCoverageComplete && transformed.length === transformedByCanonicalKey.size
+    const rejected = new Map<string, number>()
+    const rejectedSamples: IntrinsicPeriodicCellRejection[] = []
+    const p1: IntrinsicPeriodicCell[] = []
+    const p2: IntrinsicPeriodicCell[] = []
+    let edgeContactDiagnostics = emptyEdgeContactDiagnostics()
+    const addDerived = (
+      target: IntrinsicPeriodicCell[],
+      derived: IntrinsicPeriodicCellDerivation,
+      emptyReason: string
+    ) => {
+      if (derived.cells.length === 0) rejected.set(emptyReason, (rejected.get(emptyReason) ?? 0) + 1)
+      target.push(...derived.cells)
+      edgeContactDiagnostics = mergeEdgeContactDiagnostics(
+        edgeContactDiagnostics,
+        derived.edgeContactDiagnostics
+      )
+    }
+
+    for (const { geometry } of transformed) {
+      yield* input.options.control?.checkpoint('candidate-points') ?? Effect.void
+      if (performance.now() - input.startedAt >= input.options.maximumRuntimeMs) {
+        runtimeCoverageComplete = false
+        break
+      }
+      const point = anchorPoint(geometry)
+      const derived = yield* deriveCells({
+        role: 'P1',
+        familyKey: input.family.key,
+        members: [{ piece: representative, geometry, point }],
+        nfp: input.nfp,
+        settings: input.settings,
+        control: input.options.control
+      })
+      addDerived(p1, derived, 'noP1Basis')
+      mergeRejectedCounts(rejected, derived.rejected)
+      appendRejectedSamples(rejectedSamples, derived.rejectedSamples)
+    }
+
+    let enumeratedPairCount = 0
+    let pairCoverageComplete = true
+    for (let firstIndex = 0; firstIndex < transformed.length; firstIndex += 1) {
+      for (let secondIndex = firstIndex + 1; secondIndex < transformed.length; secondIndex += 1) {
+        yield* input.options.control?.checkpoint('candidate-points') ?? Effect.void
+        if (enumeratedPairCount >= input.options.maximumPairsPerFamily) {
+          pairCoverageComplete = false
+          break
+        }
+        if (performance.now() - input.startedAt >= input.options.maximumRuntimeMs) {
+          runtimeCoverageComplete = false
+          pairCoverageComplete = false
+          break
+        }
+        enumeratedPairCount += 1
+        const first = transformed[firstIndex]?.geometry
+        const second = transformed[secondIndex]?.geometry
+        if (first === undefined || second === undefined) continue
+        const firstPoint = anchorPoint(first)
+        const fixed = makePlaced(representative, first, firstPoint)
+        const pairNfp = yield* input.nfp.computeNfp({
+          fixed,
+          moving: second,
+          settings: input.settings.geometry
+        })
+        const offsets = boundaryCandidatePoints(pairNfp.boundary.points, second)
+        for (const point of offsets) {
+          yield* input.options.control?.checkpoint('candidate-points') ?? Effect.void
+          if (performance.now() - input.startedAt >= input.options.maximumRuntimeMs) {
+            runtimeCoverageComplete = false
+            pairCoverageComplete = false
+            break
+          }
+          const legal = yield* PlacementValidation.checkSheetless({
+            placed: [fixed],
+            moving: second,
+            candidate: makeCandidate(second, point)
+          })
+          if (!legal || !combinedBoundsNonnegative([first, second], [firstPoint, point])) continue
+          const derived = yield* deriveCells({
+            role: 'P2',
+            familyKey: input.family.key,
+            members: [
+              { piece: representative, geometry: first, point: firstPoint },
+              { piece: input.family.members[1] ?? representative, geometry: second, point }
+            ],
+            nfp: input.nfp,
+            settings: input.settings,
+            control: input.options.control
+          })
+          addDerived(p2, derived, 'noP2Basis')
+          mergeRejectedCounts(rejected, derived.rejected)
+          appendRejectedSamples(rejectedSamples, derived.rejectedSamples)
+        }
+      }
+      if (!pairCoverageComplete) break
+    }
+
+    const p1Front = periodicCellFront(p1, input.options.maximumCellsPerFamilyRole)
+    const p2Front = periodicCellFront(p2, input.options.maximumCellsPerFamilyRole)
+    const cells = [...p1Front.cells, ...p2Front.cells]
+    const sourceAuditCells = input.options.captureSourceSurvivalAudit
+      ? rankIntrinsicPeriodicCells([...p1, ...p2])
+      : undefined
+    if (!p1Front.coverageComplete) rejected.set('p1FrontierTruncated', 1)
+    if (!p2Front.coverageComplete) rejected.set('p2FrontierTruncated', 1)
+    return {
+      familyKey: input.family.key,
+      memberCount: input.family.members.length,
+      collisionAreaMm2: input.family.collisionAreaMm2,
+      uniqueTransformCount: transformedByCanonicalKey.size,
+      retainedTransformCount: transformed.length,
+      transformCoverageComplete,
+      transformReservations: measureTransformReservations(
+        [...transformedByCanonicalKey.values()],
+        transformed
+      ),
+      enumeratedPairCount,
+      pairCoverageComplete,
+      edgeContactDiagnostics,
+      cellCoverageComplete:
+        runtimeCoverageComplete && pairCoverageComplete && p1Front.coverageComplete && p2Front.coverageComplete,
+      sourceSurvival: summarizePeriodicCellSourceSurvival(p1, p1Front.cells, p2, p2Front.cells),
+      ...(sourceAuditCells === undefined ? {} : { sourceAuditCells }),
+      cells: rankIntrinsicPeriodicCells(cells),
+      rejected: Object.fromEntries([...rejected.entries()].toSorted()),
+      rejectedSamples
+    }
+  })
+}
+
+function emptyIntrinsicPeriodicFamilyCatalog(
+  family: IntrinsicCollisionFamily,
+  rejected: Readonly<Record<string, number>>
+): IntrinsicPeriodicFamilyCatalog {
+  return {
+    familyKey: family.key,
+    memberCount: family.members.length,
+    collisionAreaMm2: family.collisionAreaMm2,
+    uniqueTransformCount: 0,
+    retainedTransformCount: 0,
+    transformCoverageComplete: true,
+    transformReservations: [],
+    enumeratedPairCount: 0,
+    pairCoverageComplete: true,
+    edgeContactDiagnostics: emptyEdgeContactDiagnostics(),
+    cellCoverageComplete: true,
+    sourceSurvival: [],
+    cells: [],
+    rejected,
+    rejectedSamples: []
+  }
+}
+
+function summarizePeriodicCellSourceSurvival(
+  p1Before: ReadonlyArray<IntrinsicPeriodicCell>,
+  p1After: ReadonlyArray<IntrinsicPeriodicCell>,
+  p2Before: ReadonlyArray<IntrinsicPeriodicCell>,
+  p2After: ReadonlyArray<IntrinsicPeriodicCell>
+): ReadonlyArray<IntrinsicPeriodicSourceCellSurvival> {
+  const counts = new Map<
+    string,
+    Omit<IntrinsicPeriodicSourceCellSurvival, 'cellsBeforeFront' | 'cellsRetained'> & {
+      cellsBeforeFront: number
+      cellsRetained: number
+    }
+  >()
+  const count = (cells: ReadonlyArray<IntrinsicPeriodicCell>, retained: boolean) => {
+    for (const cell of cells) {
+      const provenance = cell.basisProvenance
+      if (provenance === undefined) continue
+      const key = `${cell.role}:${provenance.sourceKey}`
+      const current = counts.get(key) ?? {
+        role: cell.role,
+        sourceKey: provenance.sourceKey,
+        sourceKind: provenance.sourceKind,
+        cellsBeforeFront: 0,
+        cellsRetained: 0
+      }
+      counts.set(key, {
+        ...current,
+        ...(retained
+          ? { cellsRetained: current.cellsRetained + 1 }
+          : { cellsBeforeFront: current.cellsBeforeFront + 1 })
+      })
+    }
+  }
+  count(p1Before, false)
+  count(p2Before, false)
+  count(p1After, true)
+  count(p2After, true)
+  return [...counts.values()].toSorted(
+    (first, second) =>
+      first.role.localeCompare(second.role) || first.sourceKey.localeCompare(second.sourceKey)
+  )
+}
+
+function selectPeriodicTransformRepresentatives(
+  transformed: ReadonlyArray<{
+    readonly geometry: TransformedCollisionGeometry
+    readonly transform: IrregularTransformCandidate
+  }>,
+  maximumTransforms: number
+): ReadonlyArray<{ readonly geometry: TransformedCollisionGeometry; readonly transform: IrregularTransformCandidate }> {
+  const ordered = [...transformed].toSorted((first, second) => transformOrder(first.transform, second.transform))
+  const reserved = new Map<string, (typeof ordered)[number]>()
+  for (const candidate of ordered) {
+    const key = periodicTransformReservationKey(candidate.transform)
+    if (!reserved.has(key)) reserved.set(key, candidate)
+  }
+  const result = [...reserved.values()]
+  for (const candidate of ordered) {
+    if (result.length >= maximumTransforms) break
+    if (!result.includes(candidate)) result.push(candidate)
+  }
+  return result.slice(0, maximumTransforms)
+}
+
+function periodicTransformReservationKey(transform: IrregularTransformCandidate): string {
+  const normalized = ((transform.rotationDeg % 360) + 360) % 360
+  const rotationFamily = transform.reason === 'orthogonal' ? `q${Math.round(normalized / 90) % 4}` : transform.reason
+  return `${transform.mirrored ? 'mirror' : 'direct'}:${rotationFamily}`
+}
+
+function measureTransformReservations(
+  all: ReadonlyArray<{ readonly geometry: TransformedCollisionGeometry; readonly transform: IrregularTransformCandidate }>,
+  retained: ReadonlyArray<{
+    readonly geometry: TransformedCollisionGeometry
+    readonly transform: IrregularTransformCandidate
+  }>
+): ReadonlyArray<IntrinsicPeriodicTransformReservation> {
+  const counts = new Map<string, { availableCount: number; retainedCount: number }>()
+  for (const { transform } of all) {
+    const key = periodicTransformReservationKey(transform)
+    const value = counts.get(key) ?? { availableCount: 0, retainedCount: 0 }
+    counts.set(key, { ...value, availableCount: value.availableCount + 1 })
+  }
+  for (const { transform } of retained) {
+    const key = periodicTransformReservationKey(transform)
+    const value = counts.get(key) ?? { availableCount: 0, retainedCount: 0 }
+    counts.set(key, { ...value, retainedCount: value.retainedCount + 1 })
+  }
+  return [...counts.entries()]
+    .map(([key, value]) => ({ key, ...value }))
+    .toSorted((first, second) => first.key.localeCompare(second.key))
+}
+
+function periodicCellFront(
+  cells: ReadonlyArray<IntrinsicPeriodicCell>,
+  maximumCells: number
+): { readonly cells: ReadonlyArray<IntrinsicPeriodicCell>; readonly coverageComplete: boolean } {
+  const unique = new Map(cells.map((cell) => [cell.canonicalKey, cell]))
+  const bySourceKind = new Map<string, IntrinsicPeriodicCell[]>()
+  for (const cell of unique.values()) {
+    const sourceKind = cell.basisProvenance?.sourceKind ?? 'legacy'
+    const group = bySourceKind.get(sourceKind) ?? []
+    group.push(cell)
+    bySourceKind.set(sourceKind, group)
+  }
+  const retained = [...bySourceKind.entries()].flatMap(([sourceKind, group]) =>
+    rankIntrinsicPeriodicCells(group)
+      .slice(0, maximumCells)
+      .map((cell) => ({ sourceKind, cell }))
+  )
+  return {
+    // a local cell cannot Pareto-dominate a finite crop or a different candidate source
+    cells: retained
+      .toSorted(
+        (first, second) =>
+          first.sourceKind.localeCompare(second.sourceKind) || compareCells(first.cell, second.cell)
+      )
+      .map(({ cell }) => cell),
+    coverageComplete: [...bySourceKind.values()].every((group) => group.length <= maximumCells)
+  }
+}
+
+function mergeRejections(
+  rejections: ReadonlyArray<Readonly<Record<string, number>>>
+): Readonly<Record<string, number>> {
+  const result = new Map<string, number>()
+  for (const rejected of rejections) {
+    for (const [key, count] of Object.entries(rejected)) result.set(key, (result.get(key) ?? 0) + count)
+  }
+  return Object.fromEntries([...result.entries()].toSorted())
+}
+
+/** Expands one finite lattice source into bounded crops and keeps its best topology. */
+export function expandIntrinsicPeriodicCell(
+  cell: IntrinsicPeriodicCell,
+  familyMembers: ReadonlyArray<IrregularPreparedPiece>,
+  maximumCrops = 2
+): Effect.Effect<
+  ReadonlyArray<IntrinsicPeriodicSeed>,
+  IrregularGeometryInputError | IrregularNfpIfpControlAbortError
+> {
+  return Effect.map(enumerateIntrinsicPeriodicCellCrops(cell, familyMembers), (candidates) =>
+    selectIntrinsicPeriodicSeedFront(candidates, maximumCrops)
+  )
+}
+
+/** Enumerates every direct-valid finite crop before the bounded crop frontier. */
+export function enumerateIntrinsicPeriodicCellCrops(
+  cell: IntrinsicPeriodicCell,
+  familyMembers: ReadonlyArray<IrregularPreparedPiece>,
+  onCropAttempt?: () => void,
+  control?: IrregularNfpIfpControl
+): Effect.Effect<
+  ReadonlyArray<IntrinsicPeriodicSeed>,
+  IrregularGeometryInputError | IrregularNfpIfpControlAbortError
+> {
+  return Effect.gen(function* () {
+    yield* control?.checkpoint('candidate-points') ?? Effect.void
+    const v1 = gridPoint(cell.v1)
+    const v2 = gridPoint(cell.v2)
+    if (v1 === undefined || v2 === undefined) return []
+    const memberCount = cell.members.length
+    const q = Math.floor(familyMembers.length / memberCount)
+    if (q < 1) return []
+    const candidates: IntrinsicPeriodicSeed[] = []
+    const identities = new Set<string>()
+    for (let rows = 1; rows <= q; rows += 1) {
+      yield* control?.checkpoint('candidate-points') ?? Effect.void
+      const columns = Math.ceil(q / rows)
+      for (const traversal of ['row', 'column'] as const) {
+        for (const corner of [0, 1, 2, 3] as const) {
+          yield* control?.checkpoint('candidate-points') ?? Effect.void
+          onCropAttempt?.()
+          const coordinates = cropCoordinates(rows, columns, q, traversal, corner)
+          const placed: IrregularPlacedPiece[] = []
+          let sourceIndex = 0
+          let legal = true
+          for (const coordinate of coordinates) {
+            yield* control?.checkpoint('candidate-points') ?? Effect.void
+            for (const base of cell.members) {
+              const piece = familyMembers[sourceIndex]
+              if (piece === undefined) break
+              const basePoint = gridPoint(base.point)
+              if (basePoint === undefined) {
+                legal = false
+                break
+              }
+              // apply one exact lattice offset to the whole base cell; never snap members independently
+              const point = fromGridPoint({
+                x: basePoint.x + BigInt(coordinate.row) * v1.x + BigInt(coordinate.column) * v2.x,
+                y: basePoint.y + BigInt(coordinate.row) * v1.y + BigInt(coordinate.column) * v2.y
+              })
+              const actualGeometry = geometryForPiece(base.geometry, piece)
+              const candidate = makeCandidate(actualGeometry, point)
+              if (
+                !(yield* PlacementValidation.checkSheetless({
+                  placed,
+                  moving: actualGeometry,
+                  candidate
+                }))
+              ) {
+                legal = false
+                break
+              }
+              placed.push(makePlaced(piece, actualGeometry, point))
+              sourceIndex += 1
+            }
+            if (!legal || sourceIndex >= q * memberCount) break
+          }
+          if (!legal || placed.length !== q * memberCount) continue
+          const normalized = normalizePlacedBottomLeft(placed)
+          const identity = canonicalCollisionLayoutIdentity(normalized)
+          const topology = measureCanonicalLayoutTopology(normalized)
+          const bounds = placedBounds(normalized)
+          if (
+            identity === undefined ||
+            topology === undefined ||
+            bounds === undefined ||
+            identities.has(identity)
+          ) {
+            continue
+          }
+          identities.add(identity)
+          candidates.push({
+            role: cell.role,
+            cellKey: cell.canonicalKey,
+            placements: normalized,
+            remainingFamilyMembers: familyMembers.slice(q * memberCount),
+            componentCount: topology.positiveContactComponentCount,
+            isolatedPieceCount: topology.isolatedPieceCount,
+            largestComponentSize: topology.largestPositiveContactComponentSize,
+            maximumSideMm: Math.max(bounds.width, bounds.height),
+            envelopeAreaMm2: bounds.width * bounds.height,
+            envelopeSpanMm: bounds.width + bounds.height,
+            crop: { rows, columns, traversal, corner },
+            canonicalKey: identity
+          })
+        }
+      }
+    }
+    return candidates
+  })
+}
+
+function cropCoordinates(
+  rows: number,
+  columns: number,
+  count: number,
+  traversal: 'row' | 'column',
+  corner: 0 | 1 | 2 | 3
+): ReadonlyArray<{ readonly row: number; readonly column: number }> {
+  const coordinates: Array<{ readonly row: number; readonly column: number }> = []
+  for (let row = 0; row < rows; row += 1) {
+    for (let column = 0; column < columns; column += 1) coordinates.push({ row, column })
+  }
+  const ordered = coordinates.toSorted((first, second) =>
+    traversal === 'row'
+      ? first.row - second.row || first.column - second.column
+      : first.column - second.column || first.row - second.row
+  )
+  return ordered.slice(0, count).map(({ row, column }) => ({
+    row: corner === 1 || corner === 2 ? rows - 1 - row : row,
+    column: corner === 2 || corner === 3 ? columns - 1 - column : column
+  }))
+}
+
+function compareSeeds(first: IntrinsicPeriodicSeed, second: IntrinsicPeriodicSeed): number {
+  return (
+    first.componentCount - second.componentCount ||
+    first.isolatedPieceCount - second.isolatedPieceCount ||
+    second.largestComponentSize - first.largestComponentSize ||
+    first.maximumSideMm - second.maximumSideMm ||
+    first.envelopeAreaMm2 - second.envelopeAreaMm2 ||
+    first.envelopeSpanMm - second.envelopeSpanMm ||
+    first.canonicalKey.localeCompare(second.canonicalKey)
+  )
+}
+
+/** Topology-first finite periodic expansion order across certified cells. */
+export function rankIntrinsicPeriodicSeeds(
+  seeds: ReadonlyArray<IntrinsicPeriodicSeed>
+): ReadonlyArray<IntrinsicPeriodicSeed> {
+  return seeds.toSorted(compareSeeds)
+}
+
+/** Retains the bounded non-dominated crop front after direct finite validation. */
+export function selectIntrinsicPeriodicSeedFront(
+  seeds: ReadonlyArray<IntrinsicPeriodicSeed>,
+  maximumCrops: number
+): ReadonlyArray<IntrinsicPeriodicSeed> {
+  return rankIntrinsicPeriodicSeeds(nonDominatedIntrinsicPeriodicSeeds(seeds)).slice(0, maximumCrops)
+}
+
+/** Returns the complete crop Pareto set before any bounded ranking cap. */
+export function nonDominatedIntrinsicPeriodicSeeds(
+  seeds: ReadonlyArray<IntrinsicPeriodicSeed>
+): ReadonlyArray<IntrinsicPeriodicSeed> {
+  return seeds.filter(
+    (candidate) => !seeds.some((other) => other !== candidate && periodicSeedDominates(other, candidate))
+  )
+}
+
+function periodicSeedDominates(first: IntrinsicPeriodicSeed, second: IntrinsicPeriodicSeed): boolean {
+  const noWorse =
+    first.componentCount <= second.componentCount &&
+    first.isolatedPieceCount <= second.isolatedPieceCount &&
+    first.largestComponentSize >= second.largestComponentSize &&
+    first.maximumSideMm <= second.maximumSideMm &&
+    first.envelopeAreaMm2 <= second.envelopeAreaMm2 &&
+    first.envelopeSpanMm <= second.envelopeSpanMm
+  const strict =
+    first.componentCount < second.componentCount ||
+    first.isolatedPieceCount < second.isolatedPieceCount ||
+    first.largestComponentSize > second.largestComponentSize ||
+    first.maximumSideMm < second.maximumSideMm ||
+    first.envelopeAreaMm2 < second.envelopeAreaMm2 ||
+    first.envelopeSpanMm < second.envelopeSpanMm
+  return noWorse && strict
+}
+
+function normalizePlacedBottomLeft(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): ReadonlyArray<IrregularPlacedPiece> {
+  const bounds = placedBounds(placed)
+  if (bounds === undefined) return []
+  return placed.map(
+    ({ placement, collisionGeometry }) =>
+      new IrregularPlacedPiece({
+        placement: new IrregularPlacement({
+          ...placement,
+          transform: new IrregularTransform({
+            ...placement.transform,
+            translateX: placement.transform.translateX - bounds.minX,
+            translateY: placement.transform.translateY - bounds.minY
+          })
+        }),
+        collisionGeometry
+      })
+  )
+}
+
+function placedBounds(placed: ReadonlyArray<IrregularPlacedPiece>):
+  | {
+      readonly minX: number
+      readonly minY: number
+      readonly maxX: number
+      readonly maxY: number
+      readonly width: number
+      readonly height: number
+    }
+  | undefined {
+  const points = placed.flatMap(({ placement, collisionGeometry }) =>
+    collisionGeometry.polygon.points.map(({ x, y }) => ({
+      x: x + placement.transform.translateX,
+      y: y + placement.transform.translateY
+    }))
+  )
+  const bounds = boundsForPoints(points)
+  return bounds === undefined
+    ? undefined
+    : { ...bounds, width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY }
+}
+
+interface IntrinsicPeriodicCellDerivation {
+  readonly cells: ReadonlyArray<IntrinsicPeriodicCell>
+  readonly edgeContactDiagnostics: IntrinsicPeriodicEdgeContactDiagnostics
+  readonly rejected: Readonly<Record<string, number>>
+  readonly rejectedSamples: ReadonlyArray<IntrinsicPeriodicCellRejection>
+}
+
+function deriveCells(input: {
+  readonly role: 'P1' | 'P2'
+  readonly familyKey: string
+  readonly members: ReadonlyArray<IntrinsicPeriodicBaseMember>
+  readonly nfp: NfpIfpService
+  readonly settings: IrregularNestingSettings
+  readonly control: IrregularNfpIfpControl | undefined
+}): Effect.Effect<
+  IntrinsicPeriodicCellDerivation,
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError
+> {
+  return Effect.gen(function* () {
+    const forbidden: ForbiddenBoundary[] = []
+    for (const fixedMember of input.members) {
+      for (const movingMember of input.members) {
+        yield* input.control?.checkpoint('candidate-points') ?? Effect.void
+        const boundary = yield* input.nfp.computeNfp({
+          fixed: makePlaced(fixedMember.piece, fixedMember.geometry, fixedMember.point),
+          moving: movingMember.geometry,
+          settings: input.settings.geometry
+        })
+        const movingGrid = gridPoint(movingMember.point)
+        if (movingGrid === undefined) {
+          return {
+            cells: [],
+            edgeContactDiagnostics: emptyEdgeContactDiagnostics(),
+            rejected: { invalidMovingGrid: 1 },
+            rejectedSamples: []
+          }
+        }
+        const points = boundary.boundary.points
+          .map(gridPoint)
+          .filter((point): point is GridPoint => point !== undefined)
+        const shiftedPoints = shiftOrderedPairForbiddenBoundary(points, movingGrid)
+        if (points.length !== boundary.boundary.points.length) {
+          return {
+            cells: [],
+            edgeContactDiagnostics: emptyEdgeContactDiagnostics(),
+            rejected: { invalidForbiddenGrid: 1 },
+            rejectedSamples: []
+          }
+        }
+        forbidden.push({ points: shiftedPoints })
+      }
+    }
+    const contact = yield* deriveEdgeContactBasisCandidates(input.members)
+    const bases = [
+      ...deriveAxisBasisCandidates(forbidden, false),
+      ...deriveAxisBasisCandidates(forbidden, true),
+      ...deriveNfpBoundaryVertexBasisCandidates(forbidden),
+      ...contact.candidates
+    ]
+    const result: IntrinsicPeriodicCell[] = []
+    const rejected = new Map<string, number>()
+    const rejectedSamples: IntrinsicPeriodicCellRejection[] = []
+    const reject = (
+      stage: IntrinsicPeriodicCellRejection['stage'],
+      basis: readonly [GridPoint, GridPoint] | undefined
+    ) => {
+      rejected.set(stage, (rejected.get(stage) ?? 0) + 1)
+      if (rejectedSamples.length >= 8) return
+      rejectedSamples.push({
+        role: input.role,
+        stage,
+        v1: basis === undefined ? undefined : fromGridPoint(basis[0]),
+        v2: basis === undefined ? undefined : fromGridPoint(basis[1]),
+        determinantGrid2:
+          basis === undefined ? undefined : absBigInt(crossGrid(basis[0], basis[1])).toString()
+      })
+    }
+    if (bases.length === 0) reject('axisBasisUnavailable', undefined)
+    for (const candidate of bases) {
+      const [rawV1, rawV2] = candidate.basis
+      const canonical = canonicalizeBasis(rawV1, rawV2)
+      if (canonical === undefined) {
+        reject('degenerateBasis', [rawV1, rawV2])
+        continue
+      }
+      // infinite and 3x3 checks are provenance diagnostics; actual finite crops are checked later
+      const infiniteFarProof = farNeighborCertificate(input.members, canonical)
+      const lattice = yield* diagnoseLattice(input.members, canonical)
+      const determinantGrid2 = absBigInt(crossGrid(canonical[0], canonical[1]))
+      const memberDoubledAreaGrid2 = input.members.reduce(
+        (sum, member) => sum + polygonAreaGrid2(member.geometry, member.point),
+        0n
+      )
+      const shape = measureBaseCellShape(input.members)
+      if (shape === undefined) {
+        reject('baseShapeRejected', canonical)
+        continue
+      }
+      const canonicalKey = canonicalCellKey(input.role, input.members, canonical)
+      result.push({
+        role: input.role,
+        familyKey: input.familyKey,
+        members: input.members,
+        v1: fromGridPoint(canonical[0]),
+        v2: fromGridPoint(canonical[1]),
+        determinantGrid2: determinantGrid2.toString(),
+        memberDoubledAreaGrid2: memberDoubledAreaGrid2.toString(),
+        density: Number(memberDoubledAreaGrid2) / (2 * Number(determinantGrid2)),
+        envelopeMaximumSideMm: shape.maximumSideMm,
+        hullWasteRatio: shape.hullWasteRatio,
+        sharedBoundaryLengthMm: lattice.sharedBoundaryLengthMm,
+        infiniteFarProof,
+        threeByThreeLatticeLegal: lattice.legal,
+        threeByThreeCentreContactComplete: lattice.centreContactComplete,
+        basisProvenance: makeBasisProvenance(candidate, canonical, input.members),
+        canonicalKey
+      })
+    }
+    return {
+      cells: result,
+      edgeContactDiagnostics: contact.diagnostics,
+      rejected: Object.fromEntries([...rejected.entries()].toSorted()),
+      rejectedSamples
+    }
+  })
+}
+
+function mergeRejectedCounts(
+  target: Map<string, number>,
+  incoming: Readonly<Record<string, number>>
+): void {
+  for (const [reason, count] of Object.entries(incoming)) {
+    target.set(reason, (target.get(reason) ?? 0) + count)
+  }
+}
+
+function appendRejectedSamples(
+  target: IntrinsicPeriodicCellRejection[],
+  incoming: ReadonlyArray<IntrinsicPeriodicCellRejection>
+): void {
+  for (const sample of incoming) {
+    if (target.length >= 32) return
+    if (
+      !target.some(
+        (existing) =>
+          existing.role === sample.role &&
+          existing.stage === sample.stage &&
+          existing.v1?.x === sample.v1?.x &&
+          existing.v1?.y === sample.v1?.y &&
+          existing.v2?.x === sample.v2?.x &&
+          existing.v2?.y === sample.v2?.y
+      )
+    ) {
+      target.push(sample)
+    }
+  }
+}
+
+function makeBasisProvenance(
+  candidate: IntrinsicPeriodicBasisCandidate,
+  canonical: readonly [GridPoint, GridPoint],
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>
+): IntrinsicPeriodicBasisProvenance {
+  const [selectedFirst, selectedSecond] = candidate.basis
+  return {
+    sourceKey: candidate.sourceKey,
+    sourceKind: candidate.sourceKind,
+    sourcePoints: [
+      serializeRationalPoint(candidate.sourcePoints[0]),
+      serializeRationalPoint(candidate.sourcePoints[1])
+    ],
+    ...(candidate.axis === undefined ? {} : { axis: candidate.axis }),
+    selectedBasis: [fromGridPoint(selectedFirst), fromGridPoint(selectedSecond)],
+    selectedResidualGrid: [
+      serializeRationalPoint(candidate.selectedResidualGrid[0]),
+      serializeRationalPoint(candidate.selectedResidualGrid[1])
+    ],
+    canonicalBasis: [fromGridPoint(canonical[0]), fromGridPoint(canonical[1])],
+    memberTransforms: members.map(({ piece, geometry }, memberIndex) => ({
+      memberIndex,
+      pieceId: `${piece.pieceId ?? piece.source.id}`,
+      transformIndex: geometry.transform.index,
+      rotationDeg: geometry.transform.rotationDeg,
+      mirrored: geometry.transform.mirrored
+    })),
+    ...(candidate.contactRelations === undefined
+      ? {}
+      : { contactRelations: candidate.contactRelations })
+  }
+}
+
+function deriveAxisBasis(
+  boundaries: ReadonlyArray<ForbiddenBoundary>,
+  swapAxes: boolean
+): readonly [GridPoint, GridPoint] | undefined {
+  return deriveAxisBasisCandidates(boundaries, swapAxes)[0]?.basis
+}
+
+interface IntrinsicPeriodicBasisCandidate {
+  readonly basis: readonly [GridPoint, GridPoint]
+  readonly sourceKey: string
+  readonly sourceKind: IntrinsicPeriodicBasisProvenance['sourceKind']
+  readonly sourcePoints: readonly [RationalPoint, RationalPoint]
+  readonly axis?: 'x' | 'y'
+  readonly selectedResidualGrid: readonly [RationalPoint, RationalPoint]
+  readonly contactRelations?: readonly [
+    IntrinsicPeriodicEdgeContactProvenance,
+    IntrinsicPeriodicEdgeContactProvenance
+  ]
+}
+
+interface EdgeContactRelation {
+  readonly vector: GridPoint
+  readonly provenance: IntrinsicPeriodicEdgeContactProvenance
+}
+
+interface GridEdge {
+  readonly start: GridPoint
+  readonly end: GridPoint
+  readonly index: number
+}
+
+/** Builds a bounded lattice basis from two exact, non-collinear side-to-side contacts. */
+function deriveEdgeContactBasisCandidates(
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>
+): Effect.Effect<
+  {
+    readonly candidates: ReadonlyArray<IntrinsicPeriodicBasisCandidate>
+    readonly diagnostics: IntrinsicPeriodicEdgeContactDiagnostics
+  },
+  IrregularGeometryInputError
+> {
+  return Effect.gen(function* () {
+    const relations = new Map<string, EdgeContactRelation>()
+    for (let fixedMemberIndex = 0; fixedMemberIndex < members.length; fixedMemberIndex += 1) {
+      const fixedMember = members[fixedMemberIndex]
+      if (fixedMember === undefined) continue
+      const fixedPoint = gridPoint(fixedMember.point)
+      const fixedEdges =
+        fixedPoint === undefined
+          ? []
+          : translatedGridEdges(fixedMember.geometry.polygon.points, fixedPoint)
+      for (let movingMemberIndex = 0; movingMemberIndex < members.length; movingMemberIndex += 1) {
+        const movingMember = members[movingMemberIndex]
+        if (movingMember === undefined) continue
+        const movingPoint = gridPoint(movingMember.point)
+        const movingEdges = gridEdges(movingMember.geometry.polygon.points)
+        if (movingPoint === undefined) continue
+        for (const fixedEdge of fixedEdges) {
+          const fixedDirection = subtractGridPoints(fixedEdge.end, fixedEdge.start)
+          for (const movingEdge of movingEdges) {
+            const movingDirection = subtractGridPoints(movingEdge.end, movingEdge.start)
+            if (
+              crossGrid(fixedDirection, movingDirection) !== 0n ||
+              dotGrid(fixedDirection, movingDirection) >= 0n
+            ) {
+              continue
+            }
+            const candidatePoints = [
+              subtractGridPoints(fixedEdge.start, movingEdge.end),
+              subtractGridPoints(fixedEdge.end, movingEdge.start)
+            ]
+            for (const candidatePoint of candidatePoints) {
+              const vector = subtractGridPoints(candidatePoint, movingPoint)
+              if (!isCanonicalPositiveVector(vector)) continue
+              const relation = yield* validateEdgeContactRelation(
+                members,
+                vector,
+                fixedMemberIndex,
+                fixedEdge.index,
+                movingMemberIndex,
+                movingEdge.index
+              )
+              if (relation === undefined) continue
+              const key = `${vector.x},${vector.y}`
+              const current = relations.get(key)
+              if (
+                current === undefined ||
+                relation.provenance.lengthMm > current.provenance.lengthMm ||
+                (relation.provenance.lengthMm === current.provenance.lengthMm &&
+                  edgeContactProvenanceKey(relation.provenance) <
+                    edgeContactProvenanceKey(current.provenance))
+              ) {
+                relations.set(key, relation)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    const retainedRelations = [...relations.values()]
+      .toSorted(compareEdgeContactRelations)
+      .slice(0, MAXIMUM_EDGE_CONTACT_RELATIONS_PER_DERIVATION)
+    const memberDoubledAreaGrid2 = members.reduce(
+      (sum, member) => sum + polygonAreaGrid2(member.geometry, member.point),
+      0n
+    )
+    const candidates: Array<{
+      readonly determinant: bigint
+      readonly squaredSpan: bigint
+      readonly contactLengthMm: number
+      readonly candidate: IntrinsicPeriodicBasisCandidate
+    }> = []
+    let nonCollinearPairCount = 0
+    let areaFeasiblePairCount = 0
+    for (let firstIndex = 0; firstIndex < retainedRelations.length; firstIndex += 1) {
+      const first = retainedRelations[firstIndex]
+      if (first === undefined) continue
+      for (let secondIndex = firstIndex + 1; secondIndex < retainedRelations.length; secondIndex += 1) {
+        const second = retainedRelations[secondIndex]
+        if (second === undefined) continue
+        const determinant = absBigInt(crossGrid(first.vector, second.vector))
+        if (determinant === 0n) continue
+        nonCollinearPairCount += 1
+        if (2n * determinant < memberDoubledAreaGrid2) continue
+        areaFeasiblePairCount += 1
+        const sourcePoints: readonly [RationalPoint, RationalPoint] = [
+          { x: rational(first.vector.x), y: rational(first.vector.y) },
+          { x: rational(second.vector.x), y: rational(second.vector.y) }
+        ]
+        const sourceKey = `edge-contact:${edgeContactProvenanceKey(first.provenance)};${edgeContactProvenanceKey(second.provenance)}`
+        candidates.push({
+          determinant,
+          squaredSpan: squaredGridLength(first.vector) + squaredGridLength(second.vector),
+          contactLengthMm: first.provenance.lengthMm + second.provenance.lengthMm,
+          candidate: {
+            basis: [first.vector, second.vector],
+            sourceKey,
+            sourceKind: 'edge-contact-pair',
+            sourcePoints,
+            selectedResidualGrid: [
+              { x: rational(0n), y: rational(0n) },
+              { x: rational(0n), y: rational(0n) }
+            ],
+            contactRelations: [first.provenance, second.provenance]
+          }
+        })
+      }
+    }
+    const ordered = candidates.toSorted(
+      (first, second) =>
+        compareBigInt(first.determinant, second.determinant) ||
+        compareBigInt(first.squaredSpan, second.squaredSpan) ||
+        second.contactLengthMm - first.contactLengthMm ||
+        first.candidate.sourceKey.localeCompare(second.candidate.sourceKey)
+    )
+    const admitted: IntrinsicPeriodicBasisCandidate[] = []
+    let latticeRejectedCount = 0
+    let contactIncompleteCount = 0
+    const attempted = ordered.slice(
+      0,
+      MAXIMUM_EDGE_CONTACT_PAIR_VALIDATION_ATTEMPTS_PER_DERIVATION
+    )
+    for (const { candidate } of attempted) {
+      const canonical = canonicalizeBasis(candidate.basis[0], candidate.basis[1])
+      if (canonical === undefined) continue
+      const diagnostic = yield* diagnoseLattice(members, canonical)
+      if (!diagnostic.legal) {
+        latticeRejectedCount += 1
+        continue
+      }
+      if (!diagnostic.centreContactComplete || diagnostic.sharedBoundaryLengthMm <= 0) {
+        contactIncompleteCount += 1
+        continue
+      }
+      admitted.push(candidate)
+      if (admitted.length >= MAXIMUM_EDGE_CONTACT_BASIS_CANDIDATES_PER_DERIVATION) break
+    }
+    return {
+      candidates: admitted,
+      diagnostics: {
+        generatedRelationCount: relations.size,
+        retainedRelationCount: retainedRelations.length,
+        nonCollinearPairCount,
+        areaFeasiblePairCount,
+        validationAttemptCount: attempted.length,
+        validationCoverageComplete: attempted.length === ordered.length,
+        latticeRejectedCount,
+        contactIncompleteCount,
+        admittedBasisCount: admitted.length
+      }
+    }
+  })
+}
+
+function emptyEdgeContactDiagnostics(): IntrinsicPeriodicEdgeContactDiagnostics {
+  return {
+    generatedRelationCount: 0,
+    retainedRelationCount: 0,
+    nonCollinearPairCount: 0,
+    areaFeasiblePairCount: 0,
+    validationAttemptCount: 0,
+    validationCoverageComplete: true,
+    latticeRejectedCount: 0,
+    contactIncompleteCount: 0,
+    admittedBasisCount: 0
+  }
+}
+
+function mergeEdgeContactDiagnostics(
+  first: IntrinsicPeriodicEdgeContactDiagnostics,
+  second: IntrinsicPeriodicEdgeContactDiagnostics
+): IntrinsicPeriodicEdgeContactDiagnostics {
+  return {
+    generatedRelationCount: first.generatedRelationCount + second.generatedRelationCount,
+    retainedRelationCount: first.retainedRelationCount + second.retainedRelationCount,
+    nonCollinearPairCount: first.nonCollinearPairCount + second.nonCollinearPairCount,
+    areaFeasiblePairCount: first.areaFeasiblePairCount + second.areaFeasiblePairCount,
+    validationAttemptCount: first.validationAttemptCount + second.validationAttemptCount,
+    validationCoverageComplete:
+      first.validationCoverageComplete && second.validationCoverageComplete,
+    latticeRejectedCount: first.latticeRejectedCount + second.latticeRejectedCount,
+    contactIncompleteCount: first.contactIncompleteCount + second.contactIncompleteCount,
+    admittedBasisCount: first.admittedBasisCount + second.admittedBasisCount
+  }
+}
+
+function validateEdgeContactRelation(
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>,
+  vector: GridPoint,
+  fixedMemberIndex: number,
+  fixedEdgeIndex: number,
+  movingMemberIndex: number,
+  movingEdgeIndex: number
+): Effect.Effect<EdgeContactRelation | undefined, IrregularGeometryInputError> {
+  return Effect.gen(function* () {
+    const placed = members.map((member) => makePlaced(member.piece, member.geometry, member.point))
+    for (const member of members) {
+      const basePoint = gridPoint(member.point)
+      if (basePoint === undefined) return undefined
+      const point = fromGridPoint({ x: basePoint.x + vector.x, y: basePoint.y + vector.y })
+      const legal = yield* PlacementValidation.checkSheetless({
+        placed,
+        moving: member.geometry,
+        candidate: makeCandidate(member.geometry, point)
+      })
+      if (!legal) return undefined
+      placed.push(makePlaced(member.piece, member.geometry, point))
+    }
+
+    const fixedMember = members[fixedMemberIndex]
+    const movingMember = members[movingMemberIndex]
+    if (fixedMember === undefined || movingMember === undefined) return undefined
+    const movingBasePoint = gridPoint(movingMember.point)
+    if (movingBasePoint === undefined) return undefined
+    const fixedPolygon = translatePolygonWithBounds(fixedMember.geometry.polygon, fixedMember.point)
+    const movingPoint = fromGridPoint({
+      x: movingBasePoint.x + vector.x,
+      y: movingBasePoint.y + vector.y
+    })
+    const movingPolygon = translatePolygonWithBounds(movingMember.geometry.polygon, movingPoint)
+    if (fixedPolygon === undefined || movingPolygon === undefined) return undefined
+    const segments = sharedConvexPolygonBoundarySegments(fixedPolygon, movingPolygon)
+    if (segments === undefined) return undefined
+    const segment = segments
+      .filter(
+        (candidate) =>
+          candidate.firstEdgeIndex === fixedEdgeIndex &&
+          candidate.secondEdgeIndex === movingEdgeIndex
+      )
+      .toSorted((first, second) => second.lengthMm - first.lengthMm)[0]
+    if (segment === undefined || segment.lengthMm <= 0) return undefined
+    return {
+      vector,
+      provenance: {
+        vector: fromGridPoint(vector),
+        fixedMemberIndex,
+        fixedPieceId: `${fixedMember.piece.pieceId ?? fixedMember.piece.source.id}`,
+        fixedEdgeIndex,
+        movingMemberIndex,
+        movingPieceId: `${movingMember.piece.pieceId ?? movingMember.piece.source.id}`,
+        movingEdgeIndex,
+        segmentStart: segment.start,
+        segmentEnd: segment.end,
+        lengthMm: segment.lengthMm
+      }
+    }
+  })
+}
+
+function gridEdges(points: ReadonlyArray<IrregularPoint>): ReadonlyArray<GridEdge> {
+  const converted = points.map(gridPoint)
+  if (converted.some((point) => point === undefined)) return []
+  const edges: GridEdge[] = []
+  for (let index = 0; index < converted.length; index += 1) {
+    const start = converted[index]
+    const end = converted[(index + 1) % converted.length]
+    if (start === undefined || end === undefined) return []
+    edges.push({ start, end, index })
+  }
+  return edges
+}
+
+function translatedGridEdges(
+  points: ReadonlyArray<IrregularPoint>,
+  translation: GridPoint
+): ReadonlyArray<GridEdge> {
+  return gridEdges(points).map((edge) => ({
+    ...edge,
+    start: { x: edge.start.x + translation.x, y: edge.start.y + translation.y },
+    end: { x: edge.end.x + translation.x, y: edge.end.y + translation.y }
+  }))
+}
+
+function subtractGridPoints(first: GridPoint, second: GridPoint): GridPoint {
+  return { x: first.x - second.x, y: first.y - second.y }
+}
+
+function dotGrid(first: GridPoint, second: GridPoint): bigint {
+  return first.x * second.x + first.y * second.y
+}
+
+function squaredGridLength(vector: GridPoint): bigint {
+  return vector.x * vector.x + vector.y * vector.y
+}
+
+function isCanonicalPositiveVector(vector: GridPoint): boolean {
+  return vector.y > 0n || (vector.y === 0n && vector.x > 0n)
+}
+
+function edgeContactProvenanceKey(provenance: IntrinsicPeriodicEdgeContactProvenance): string {
+  return `${provenance.vector.x},${provenance.vector.y}:${provenance.fixedMemberIndex}/${provenance.fixedEdgeIndex}>${provenance.movingMemberIndex}/${provenance.movingEdgeIndex}`
+}
+
+function compareEdgeContactRelations(first: EdgeContactRelation, second: EdgeContactRelation): number {
+  return (
+    second.provenance.lengthMm - first.provenance.lengthMm ||
+    compareBigInt(squaredGridLength(first.vector), squaredGridLength(second.vector)) ||
+    edgeContactProvenanceKey(first.provenance).localeCompare(
+      edgeContactProvenanceKey(second.provenance)
+    )
+  )
+}
+
+function deriveAxisBasisCandidates(
+  boundaries: ReadonlyArray<ForbiddenBoundary>,
+  swapAxes: boolean
+): ReadonlyArray<IntrinsicPeriodicBasisCandidate> {
+  const orientedRaw = boundaries.map(({ points, isHole }) => ({
+    points: points.map((point) => (swapAxes ? { x: point.y, y: point.x } : point)),
+    ...(isHole !== undefined ? { isHole } : {})
+  }))
+  const oriented = unionForbiddenBoundaries(orientedRaw)
+  if (oriented === undefined) return []
+  const axisIntersection = boundaryLineIntersections(oriented, 'y', 0n)
+    .filter(({ x }) => compareRational(x, rational(0n)) > 0)
+    .toSorted((first, second) => compareRational(first.x, second.x))[0]
+  if (axisIntersection === undefined) return []
+  const unswap = (point: GridPoint): GridPoint => (swapAxes ? { x: point.y, y: point.x } : point)
+  const result = new Map<string, IntrinsicPeriodicBasisCandidate>()
+  for (const axisX of canonicalGridAlternatives(axisIntersection.x).filter((value) => value > 0n)) {
+    const axis = { x: axisX, y: 0n }
+    const shifted = unionForbiddenBoundaries([
+      ...oriented,
+      ...oriented.map(({ points, isHole }) => ({
+        points: points.map((point) => ({ x: point.x + axis.x, y: point.y })),
+        ...(isHole !== undefined ? { isHole } : {})
+      }))
+    ])
+    if (shifted === undefined) continue
+    const constrained = [
+      ...shifted.flatMap(({ points }) =>
+        points.map((point): RationalPoint => ({ x: rational(point.x), y: rational(point.y) }))
+      ),
+      ...boundaryLineIntersections(shifted, 'x', 0n),
+      ...boundaryLineIntersections(shifted, 'x', axis.x)
+    ]
+      .filter(
+        ({ x, y }) =>
+          compareRational(y, rational(0n)) > 0 &&
+          compareRational(x, rational(0n)) >= 0 &&
+          compareRational(x, rational(axis.x)) < 0
+      )
+      .toSorted(
+        (first, second) => compareRational(first.y, second.y) || compareRational(first.x, second.x)
+      )
+    const secondRational = constrained[0]
+    if (secondRational === undefined) continue
+    for (const secondX of canonicalGridAlternatives(secondRational.x)) {
+      for (const secondY of canonicalGridAlternatives(secondRational.y)) {
+        if (secondY <= 0n || secondX < 0n || secondX >= axis.x) continue
+        const basis = [unswap(axis), unswap({ x: secondX, y: secondY })] as const
+        const selectedRational: readonly [RationalPoint, RationalPoint] = [
+          { x: rational(axisX), y: rational(0n) },
+          { x: rational(secondX), y: rational(secondY) }
+        ]
+        const originalRational: readonly [RationalPoint, RationalPoint] = [
+          { x: axisIntersection.x, y: rational(0n) },
+          secondRational
+        ]
+        const sourceKey = `${swapAxes ? 'y' : 'x'}:${rationalPointKey(originalRational[0])};${rationalPointKey(originalRational[1])}`
+        const key = `${basis[0].x},${basis[0].y};${basis[1].x},${basis[1].y}`
+        result.set(key, {
+          basis,
+          sourceKey,
+          sourceKind: 'axis-union',
+          sourcePoints: originalRational,
+          axis: swapAxes ? 'y' : 'x',
+          selectedResidualGrid: [
+            subtractRationalPoints(selectedRational[0], originalRational[0]),
+            subtractRationalPoints(selectedRational[1], originalRational[1])
+          ]
+        })
+      }
+    }
+  }
+  return [...result.values()]
+}
+
+/** Derives a bounded shared basis from two exact vertices on the real ordered-NFP boundaries. */
+function deriveNfpBoundaryVertexBasisCandidates(
+  boundaries: ReadonlyArray<ForbiddenBoundary>,
+  maximumCandidates = MAXIMUM_NFP_BOUNDARY_VERTEX_BASIS_CANDIDATES
+): ReadonlyArray<IntrinsicPeriodicBasisCandidate> {
+  const vectors = [
+    ...new Map(
+      boundaries
+        .flatMap(({ points }) => points)
+        .filter(({ x, y }) => y > 0n || (y === 0n && x > 0n))
+        .map((point) => [`${point.x},${point.y}`, point])
+    ).values()
+  ].toSorted((first, second) => {
+    const firstLength = first.x * first.x + first.y * first.y
+    const secondLength = second.x * second.x + second.y * second.y
+    return compareBigInt(firstLength, secondLength) || compareGridPoints(first, second)
+  })
+  const result = new Map<string, IntrinsicPeriodicBasisCandidate>()
+  for (let firstIndex = 0; firstIndex < vectors.length; firstIndex += 1) {
+    const first = vectors[firstIndex]
+    if (first === undefined) continue
+    for (let secondIndex = firstIndex + 1; secondIndex < vectors.length; secondIndex += 1) {
+      const second = vectors[secondIndex]
+      if (second === undefined || crossGrid(first, second) === 0n) continue
+      const basis = [first, second] as const
+      const sourcePoints: readonly [RationalPoint, RationalPoint] = [
+        { x: rational(first.x), y: rational(first.y) },
+        { x: rational(second.x), y: rational(second.y) }
+      ]
+      const sourceKey = `nfp-edge:${rationalPointKey(sourcePoints[0])};${rationalPointKey(sourcePoints[1])}`
+      result.set(`${first.x},${first.y};${second.x},${second.y}`, {
+        basis,
+        sourceKey,
+        sourceKind: 'nfp-boundary-vertex-pair',
+        sourcePoints,
+        selectedResidualGrid: [
+          { x: rational(0n), y: rational(0n) },
+          { x: rational(0n), y: rational(0n) }
+        ]
+      })
+      if (result.size >= maximumCandidates) return [...result.values()]
+    }
+  }
+  return [...result.values()]
+}
+
+/** Source-control seam for exact union plus axis-dual basis derivation. */
+export function derivePeriodicAxisBasisControl(
+  boundaries: ReadonlyArray<ReadonlyArray<{ readonly x: number; readonly y: number }>>,
+  swapAxes = false
+): readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector] | undefined {
+  const converted: ForbiddenBoundary[] = boundaries.map((points) => ({
+    points: points.map(({ x, y }) => ({ x: BigInt(x), y: BigInt(y) }))
+  }))
+  const basis = deriveAxisBasis(converted, swapAxes)
+  return basis === undefined ? undefined : [fromGridPoint(basis[0]), fromGridPoint(basis[1])]
+}
+
+/** Source-control seam exposing every adjacent-grid basis candidate. */
+export function derivePeriodicAxisBasisCandidatesControl(
+  boundaries: ReadonlyArray<ReadonlyArray<{ readonly x: number; readonly y: number }>>,
+  swapAxes = false
+): ReadonlyArray<readonly [IntrinsicPeriodicVector, IntrinsicPeriodicVector]> {
+  const converted: ForbiddenBoundary[] = boundaries.map((points) => ({
+    points: points.map(({ x, y }) => ({ x: BigInt(x), y: BigInt(y) }))
+  }))
+  return deriveAxisBasisCandidates(converted, swapAxes).map(({ basis: [first, second] }) => [
+    fromGridPoint(first),
+    fromGridPoint(second)
+  ])
+}
+
+/** Source-control seam proving the ordered moving-base offset sign. */
+export function shiftOrderedPairForbiddenBoundaryControl(
+  boundary: ReadonlyArray<{ readonly x: number; readonly y: number }>,
+  movingBasePoint: { readonly x: number; readonly y: number }
+): ReadonlyArray<{ readonly x: number; readonly y: number }> {
+  return boundary.map(({ x, y }) => ({
+    x: x - movingBasePoint.x,
+    y: y - movingBasePoint.y
+  }))
+}
+
+function shiftOrderedPairForbiddenBoundary(
+  boundary: ReadonlyArray<GridPoint>,
+  movingBasePoint: GridPoint
+): ReadonlyArray<GridPoint> {
+  return boundary.map(({ x, y }) => ({
+    x: x - movingBasePoint.x,
+    y: y - movingBasePoint.y
+  }))
+}
+
+function boundaryLineIntersections(
+  boundaries: ReadonlyArray<ForbiddenBoundary>,
+  axis: 'x' | 'y',
+  value: bigint
+): ReadonlyArray<RationalPoint> {
+  const result = new Map<string, RationalPoint>()
+  for (const { points } of boundaries) {
+    for (let index = 0; index < points.length; index += 1) {
+      const first = points[index]
+      const second = points[(index + 1) % points.length]
+      if (first === undefined || second === undefined) continue
+      const firstValue = first[axis]
+      const secondValue = second[axis]
+      if (
+        (value < firstValue && value < secondValue) ||
+        (value > firstValue && value > secondValue)
+      ) {
+        continue
+      }
+      if (firstValue === secondValue) {
+        if (firstValue === value) {
+          const firstPoint = { x: rational(first.x), y: rational(first.y) }
+          const secondPoint = { x: rational(second.x), y: rational(second.y) }
+          result.set(rationalPointKey(firstPoint), firstPoint)
+          result.set(rationalPointKey(secondPoint), secondPoint)
+        }
+        continue
+      }
+      const numerator = value - firstValue
+      const denominator = secondValue - firstValue
+      const otherAxis = axis === 'x' ? 'y' : 'x'
+      const other = addRational(
+        rational(first[otherAxis]),
+        makeRational((second[otherAxis] - first[otherAxis]) * numerator, denominator)
+      )
+      const point: RationalPoint =
+        axis === 'x' ? { x: rational(value), y: other } : { x: other, y: rational(value) }
+      result.set(rationalPointKey(point), point)
+    }
+  }
+  return [...result.values()]
+}
+
+/** Source-control seam retaining non-integral exact axis intersections. */
+export function exactAxisIntersectionsControl(
+  boundary: ReadonlyArray<{ readonly x: number; readonly y: number }>,
+  axis: 'x' | 'y',
+  value: number
+): ReadonlyArray<{ readonly x: string; readonly y: string }> {
+  return boundaryLineIntersections(
+    [{ points: boundary.map(({ x, y }) => ({ x: BigInt(x), y: BigInt(y) })) }],
+    axis,
+    BigInt(value)
+  ).map(({ x, y }) => ({
+    x: `${x.numerator}/${x.denominator}`,
+    y: `${y.numerator}/${y.denominator}`
+  }))
+}
+
+function unionForbiddenBoundaries(
+  boundaries: ReadonlyArray<ForbiddenBoundary>
+): ReadonlyArray<ForbiddenBoundary> | undefined {
+  const paths: Path64[] = []
+  for (const { points, isHole } of boundaries) {
+    const path: Path64 = []
+    for (const point of points) {
+      const x = Number(point.x)
+      const y = Number(point.y)
+      if (!Number.isSafeInteger(x) || !Number.isSafeInteger(y)) return undefined
+      path.push({ x, y })
+    }
+    if (path.length >= 3) {
+      const positive = area(path) >= 0 ? path : [...path].reverse()
+      paths.push(isHole === true ? [...positive].reverse() : positive)
+    }
+  }
+  const tree = new PolyTree64()
+  try {
+    booleanOpWithPolyTree(ClipType.Union, paths, null, tree, FillRule.NonZero)
+  } catch {
+    return undefined
+  }
+  const result: ForbiddenBoundary[] = []
+  return collectForbiddenTree(tree, result) ? result : undefined
+}
+
+function collectForbiddenTree(parent: PolyPath64, result: ForbiddenBoundary[]): boolean {
+  for (let index = 0; index < parent.count; index += 1) {
+    let child: PolyPath64
+    try {
+      child = parent.child(index)
+    } catch {
+      return false
+    }
+    if (child.polygon !== null) {
+      result.push({
+        points: child.polygon.map(({ x, y }) => ({ x: BigInt(x), y: BigInt(y) })),
+        isHole: child.isHole
+      })
+    }
+    if (!collectForbiddenTree(child, result)) return false
+  }
+  return true
+}
+
+function rational(value: bigint): Rational {
+  return { numerator: value, denominator: 1n }
+}
+
+function makeRational(numerator: bigint, denominator: bigint): Rational {
+  if (denominator === 0n) return rational(0n)
+  const sign = denominator < 0n ? -1n : 1n
+  const normalizedNumerator = numerator * sign
+  const normalizedDenominator = denominator * sign
+  const divisor = greatestCommonDivisor(absBigInt(normalizedNumerator), normalizedDenominator)
+  return {
+    numerator: normalizedNumerator / divisor,
+    denominator: normalizedDenominator / divisor
+  }
+}
+
+function addRational(first: Rational, second: Rational): Rational {
+  return makeRational(
+    first.numerator * second.denominator + second.numerator * first.denominator,
+    first.denominator * second.denominator
+  )
+}
+
+function subtractRational(first: Rational, second: Rational): Rational {
+  return makeRational(
+    first.numerator * second.denominator - second.numerator * first.denominator,
+    first.denominator * second.denominator
+  )
+}
+
+function subtractRationalPoints(first: RationalPoint, second: RationalPoint): RationalPoint {
+  return {
+    x: subtractRational(first.x, second.x),
+    y: subtractRational(first.y, second.y)
+  }
+}
+
+function serializeRationalPoint(point: RationalPoint): IntrinsicPeriodicRationalPoint {
+  return {
+    x: `${point.x.numerator}/${point.x.denominator}`,
+    y: `${point.y.numerator}/${point.y.denominator}`
+  }
+}
+
+function compareRational(first: Rational, second: Rational): number {
+  return compareBigInt(first.numerator * second.denominator, second.numerator * first.denominator)
+}
+
+function roundRational(value: Rational): bigint {
+  const quotient = value.numerator / value.denominator
+  const remainder = value.numerator % value.denominator
+  if (remainder === 0n) return quotient
+  const direction = value.numerator < 0n ? -1n : 1n
+  return absBigInt(remainder) * 2n >= value.denominator ? quotient + direction : quotient
+}
+
+function canonicalGridAlternatives(value: Rational): ReadonlyArray<bigint> {
+  const quotient = value.numerator / value.denominator
+  const remainder = value.numerator % value.denominator
+  const floor = remainder < 0n ? quotient - 1n : quotient
+  const ceil = remainder > 0n ? quotient + 1n : quotient
+  return [...new Set([roundRational(value), floor, ceil])].toSorted(compareBigInt)
+}
+
+function rationalPointKey(point: RationalPoint): string {
+  return `${point.x.numerator}/${point.x.denominator},${point.y.numerator}/${point.y.denominator}`
+}
+
+function greatestCommonDivisor(first: bigint, second: bigint): bigint {
+  let a = first
+  let b = second
+  while (b !== 0n) {
+    const remainder = a % b
+    a = b
+    b = remainder
+  }
+  return a === 0n ? 1n : a
+}
+
+function canonicalizeBasis(
+  first: GridPoint,
+  second: GridPoint
+): readonly [GridPoint, GridPoint] | undefined {
+  const determinant = crossGrid(first, second)
+  if (determinant === 0n) return undefined
+  const basis: readonly [GridPoint, GridPoint] =
+    determinant > 0n ? [first, second] : [second, first]
+  return basis
+}
+
+/** Exact BigInt certificate proving all farther cells are outside base diameter. */
+export function farNeighborCertificate(
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>,
+  basis: readonly [GridPoint, GridPoint]
+): boolean {
+  const vertices = members.flatMap(({ geometry, point }) => {
+    const translation = gridPoint(point)
+    if (translation === undefined) return []
+    return geometry.polygon.points.flatMap((vertex) => {
+      const local = gridPoint(vertex)
+      return local === undefined ? [] : [{ x: local.x + translation.x, y: local.y + translation.y }]
+    })
+  })
+  if (vertices.length === 0) return false
+  let maximumDistanceSquared = 0n
+  for (const first of vertices) {
+    for (const second of vertices) {
+      const dx = first.x - second.x
+      const dy = first.y - second.y
+      const distance = dx * dx + dy * dy
+      if (distance > maximumDistanceSquared) maximumDistanceSquared = distance
+    }
+  }
+  const determinant = absBigInt(crossGrid(basis[0], basis[1]))
+  const f2 = basis[0].x ** 2n + basis[0].y ** 2n + basis[1].x ** 2n + basis[1].y ** 2n
+  return 4n * determinant * determinant > maximumDistanceSquared * f2
+}
+
+interface PeriodicLatticeDiagnostic {
+  readonly legal: boolean
+  readonly centreContactComplete: boolean
+  readonly sharedBoundaryLengthMm: number
+}
+
+function diagnoseLattice(
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>,
+  basis: readonly [GridPoint, GridPoint]
+): Effect.Effect<
+  PeriodicLatticeDiagnostic,
+  IrregularGeometryInputError
+> {
+  return Effect.gen(function* () {
+    const placed: IrregularPlacedPiece[] = []
+    const center = new Set<number>()
+    for (let n = -1; n <= 1; n += 1) {
+      for (let m = -1; m <= 1; m += 1) {
+        for (let memberIndex = 0; memberIndex < members.length; memberIndex += 1) {
+          const member = members[memberIndex]
+          if (member === undefined) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
+          const basePoint = gridPoint(member.point)
+          if (basePoint === undefined) {
+            return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
+          }
+          const point = fromGridPoint({
+            x: basePoint.x + BigInt(n) * basis[0].x + BigInt(m) * basis[1].x,
+            y: basePoint.y + BigInt(n) * basis[0].y + BigInt(m) * basis[1].y
+          })
+          const candidate = makeCandidate(member.geometry, point)
+          const legal = yield* PlacementValidation.checkSheetless({
+            placed,
+            moving: member.geometry,
+            candidate
+          })
+          if (!legal) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
+          if (n === 0 && m === 0) center.add(placed.length)
+          placed.push(makePlaced(member.piece, member.geometry, point))
+        }
+      }
+    }
+    let sharedBoundaryLengthMm = 0
+    const contactedCenter = new Set<number>()
+    for (const centerIndex of center) {
+      const first = placed[centerIndex]
+      if (first === undefined) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
+      const firstPolygon = translatePolygonWithBounds(first.collisionGeometry.polygon, {
+        x: first.placement.transform.translateX,
+        y: first.placement.transform.translateY
+      })
+      if (firstPolygon === undefined) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
+      for (let otherIndex = 0; otherIndex < placed.length; otherIndex += 1) {
+        if (center.has(otherIndex)) continue
+        const other = placed[otherIndex]
+        if (other === undefined) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
+        const otherPolygon = translatePolygonWithBounds(other.collisionGeometry.polygon, {
+          x: other.placement.transform.translateX,
+          y: other.placement.transform.translateY
+        })
+        if (otherPolygon === undefined) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
+        const contact = sharedConvexPolygonBoundaryLength(firstPolygon, otherPolygon)
+        if (contact === undefined) return { legal: false, centreContactComplete: false, sharedBoundaryLengthMm: 0 }
+        if (contact > 0) {
+          contactedCenter.add(centerIndex)
+          sharedBoundaryLengthMm += contact
+        }
+      }
+    }
+    return {
+      legal: true,
+      centreContactComplete: contactedCenter.size === center.size,
+      sharedBoundaryLengthMm
+    }
+  })
+}
+
+function validateLattice(
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>,
+  basis: readonly [GridPoint, GridPoint]
+): Effect.Effect<{ readonly sharedBoundaryLengthMm: number } | undefined, IrregularGeometryInputError> {
+  return diagnoseLattice(members, basis).pipe(
+    Effect.map((diagnostic) =>
+      diagnostic.legal && diagnostic.centreContactComplete
+        ? { sharedBoundaryLengthMm: diagnostic.sharedBoundaryLengthMm }
+        : undefined
+    )
+  )
+}
+
+/** Source-control seam for exact 3x3 legality/contact independently of the far proof. */
+export function validatePeriodicContactLatticeControl(
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>,
+  v1: IntrinsicPeriodicVector,
+  v2: IntrinsicPeriodicVector
+): Effect.Effect<boolean, IrregularGeometryInputError> {
+  const first = gridPoint(v1)
+  const second = gridPoint(v2)
+  if (first === undefined || second === undefined) return Effect.succeed(false)
+  return validateLattice(members, [first, second]).pipe(
+    Effect.map((certificate) => certificate !== undefined)
+  )
+}
+
+function boundaryCandidatePoints(
+  points: ReadonlyArray<IrregularPoint>,
+  moving: TransformedCollisionGeometry
+): ReadonlyArray<IrregularPoint> {
+  const boundaries: ForbiddenBoundary[] = [
+    { points: points.map(gridPoint).filter((point): point is GridPoint => point !== undefined) }
+  ]
+  const xValue = toGridMm(-moving.bounds.minX)
+  const yValue = toGridMm(-moving.bounds.minY)
+  const x = xValue === undefined ? undefined : BigInt(xValue)
+  const y = yValue === undefined ? undefined : BigInt(yValue)
+  const candidates = new Map<string, GridPoint>()
+  for (const point of boundaries[0]?.points ?? []) candidates.set(`${point.x},${point.y}`, point)
+  if (x !== undefined) {
+    for (const point of boundaryLineIntersections(boundaries, 'x', x)) {
+      const grid = { x: roundRational(point.x), y: roundRational(point.y) }
+      candidates.set(`${grid.x},${grid.y}`, grid)
+    }
+  }
+  if (y !== undefined) {
+    for (const point of boundaryLineIntersections(boundaries, 'y', y)) {
+      const grid = { x: roundRational(point.x), y: roundRational(point.y) }
+      candidates.set(`${grid.x},${grid.y}`, grid)
+    }
+  }
+  return [...candidates.values()].toSorted(compareGridPoints).map(fromGridPoint)
+}
+
+function combinedBoundsNonnegative(
+  geometries: ReadonlyArray<TransformedCollisionGeometry>,
+  points: ReadonlyArray<IrregularPoint>
+): boolean {
+  return geometries.every((geometry, index) => {
+    const point = points[index]
+    return (
+      point !== undefined &&
+      geometry.bounds.minX + point.x >= 0 &&
+      geometry.bounds.minY + point.y >= 0
+    )
+  })
+}
+
+function makePlaced(
+  piece: IrregularPreparedPiece,
+  geometry: TransformedCollisionGeometry,
+  point: IrregularPoint
+): IrregularPlacedPiece {
+  return new IrregularPlacedPiece({
+    placement: new IrregularPlacement({
+      pieceId: piece.pieceId ?? piece.source.id,
+      sourcePieceId: piece.source.id,
+      placementReference: piece.collisionGeometry.placementReference,
+      transform: new IrregularTransform({
+        translateX: point.x,
+        translateY: point.y,
+        rotationDeg: geometry.transform.rotationDeg,
+        mirrored: geometry.transform.mirrored
+      })
+    }),
+    collisionGeometry: geometry
+  })
+}
+
+function geometryForPiece(
+  geometry: TransformedCollisionGeometry,
+  piece: IrregularPreparedPiece
+): TransformedCollisionGeometry {
+  return new TransformedCollisionGeometry({
+    sourcePieceId: piece.source.id,
+    transform: geometry.transform,
+    polygon: geometry.polygon,
+    bounds: geometry.bounds
+  })
+}
+
+function makeCandidate(
+  geometry: TransformedCollisionGeometry,
+  point: IrregularPoint
+): IrregularPlacementCandidate {
+  return new IrregularPlacementCandidate({
+    pieceId: geometry.sourcePieceId,
+    transform: geometry.transform,
+    point,
+    diagnostics: []
+  })
+}
+
+function anchorPoint(geometry: TransformedCollisionGeometry): IrregularPoint {
+  const x = toGridMm(-geometry.bounds.minX)
+  const y = toGridMm(-geometry.bounds.minY)
+  return { x: fromGrid(x ?? 0), y: fromGrid(y ?? 0) }
+}
+
+function canonicalTransformedPolygonKey(geometry: TransformedCollisionGeometry): string {
+  const points = geometry.polygon.points.map((point) => gridPoint(point))
+  if (points.some((point) => point === undefined)) return 'invalid'
+  const valid = points.filter((point): point is GridPoint => point !== undefined)
+  const minX = valid.reduce((minimum, { x }) => (x < minimum ? x : minimum), valid[0]?.x ?? 0n)
+  const minY = valid.reduce((minimum, { y }) => (y < minimum ? y : minimum), valid[0]?.y ?? 0n)
+  return canonicalCycle(valid.map(({ x, y }) => ({ x: x - minX, y: y - minY })))
+}
+
+function canonicalCellKey(
+  role: 'P1' | 'P2',
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>,
+  basis: readonly [GridPoint, GridPoint]
+): string {
+  const worldPolygons = members.map(({ geometry, point }) => {
+    const translation = gridPoint(point)
+    if (translation === undefined) return []
+    return geometry.polygon.points.flatMap((vertex) => {
+      const local = gridPoint(vertex)
+      return local === undefined ? [] : [{ x: local.x + translation.x, y: local.y + translation.y }]
+    })
+  })
+  const variants: string[] = []
+  for (let turn = 0; turn < 4; turn += 1) {
+    const rotate = (point: GridPoint): GridPoint => {
+      switch (turn) {
+        case 1:
+          return { x: -point.y, y: point.x }
+        case 2:
+          return { x: -point.x, y: -point.y }
+        case 3:
+          return { x: point.y, y: -point.x }
+        default:
+          return point
+      }
+    }
+    const first = rotate(basis[0])
+    const second = rotate(basis[1])
+    const rotatedPolygons = worldPolygons.map((polygon) => polygon.map(rotate))
+    const all = rotatedPolygons.flat()
+    const minX = all.reduce(
+      (minimum, point) => (point.x < minimum ? point.x : minimum),
+      all[0]?.x ?? 0n
+    )
+    const minY = all.reduce(
+      (minimum, point) => (point.y < minimum ? point.y : minimum),
+      all[0]?.y ?? 0n
+    )
+    const memberKey = rotatedPolygons
+      .map((polygon) => canonicalCycle(polygon.map(({ x, y }) => ({ x: x - minX, y: y - minY }))))
+      .toSorted()
+      .join('|')
+    variants.push(`${memberKey}:${first.x},${first.y};${second.x},${second.y}`)
+    variants.push(`${memberKey}:${second.x},${second.y};${first.x},${first.y}`)
+  }
+  return `${role}:${variants.toSorted()[0]}`
+}
+
+/** Source-control seam for whole-cell quarter-turn and basis-swap identity. */
+export function canonicalPeriodicCellIdentityControl(
+  role: 'P1' | 'P2',
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>,
+  v1: IntrinsicPeriodicVector,
+  v2: IntrinsicPeriodicVector
+): string | undefined {
+  const first = gridPoint(v1)
+  const second = gridPoint(v2)
+  return first === undefined || second === undefined
+    ? undefined
+    : canonicalCellKey(role, members, [first, second])
+}
+
+function canonicalCycle(points: ReadonlyArray<GridPoint>): string {
+  const variants = [points, [...points].reverse()].flatMap((sequence) =>
+    sequence.map((_, offset) =>
+      [...sequence.slice(offset), ...sequence.slice(0, offset)]
+        .map(({ x, y }) => `${x},${y}`)
+        .join(';')
+    )
+  )
+  return variants.toSorted()[0] ?? ''
+}
+
+function polygonAreaGrid2(geometry: TransformedCollisionGeometry, point: IrregularPoint): bigint {
+  const translated = geometry.polygon.points.map(({ x, y }) => ({ x: x + point.x, y: y + point.y }))
+  let doubled = 0n
+  for (let index = 0; index < translated.length; index += 1) {
+    const first = gridPoint(translated[index] ?? { x: 0, y: 0 })
+    const second = gridPoint(translated[(index + 1) % translated.length] ?? { x: 0, y: 0 })
+    if (first === undefined || second === undefined) return 0n
+    doubled += first.x * second.y - second.x * first.y
+  }
+  return absBigInt(doubled)
+}
+
+/** Source-control seam preserving odd doubled grid areas without truncation. */
+export function periodicMemberDoubledAreaControl(member: IntrinsicPeriodicBaseMember): string {
+  return polygonAreaGrid2(member.geometry, member.point).toString()
+}
+
+function measureBaseCellShape(
+  members: ReadonlyArray<IntrinsicPeriodicBaseMember>
+): { readonly maximumSideMm: number; readonly hullWasteRatio: number } | undefined {
+  const points = members.flatMap(({ geometry, point }) =>
+    geometry.polygon.points.map(({ x, y }) => ({ x: x + point.x, y: y + point.y }))
+  )
+  const bounds = boundsForPoints(points)
+  if (bounds === undefined) return undefined
+  const hull = convexHullGrid(
+    points.flatMap((point) => {
+      const grid = gridPoint(point)
+      return grid === undefined ? [] : [grid]
+    })
+  )
+  if (hull.length < 3) return undefined
+  const hullDoubledAreaGrid2 = polygonGridArea(hull)
+  const memberDoubledAreaGrid2 = members.reduce(
+    (sum, member) => sum + polygonAreaGrid2(member.geometry, member.point),
+    0n
+  )
+  if (hullDoubledAreaGrid2 <= 0n || memberDoubledAreaGrid2 > hullDoubledAreaGrid2) return undefined
+  return {
+    maximumSideMm: Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY),
+    hullWasteRatio:
+      Number(hullDoubledAreaGrid2 - memberDoubledAreaGrid2) / Number(hullDoubledAreaGrid2)
+  }
+}
+
+function convexHullGrid(points: ReadonlyArray<GridPoint>): ReadonlyArray<GridPoint> {
+  const unique = [
+    ...new Map(points.map((point) => [`${point.x},${point.y}`, point])).values()
+  ].toSorted(compareGridPoints)
+  if (unique.length <= 1) return unique
+  const lower: GridPoint[] = []
+  for (const point of unique) {
+    while (lower.length >= 2 && orientationCross(lower.at(-2), lower.at(-1), point) <= 0n)
+      lower.pop()
+    lower.push(point)
+  }
+  const upper: GridPoint[] = []
+  for (const point of [...unique].reverse()) {
+    while (upper.length >= 2 && orientationCross(upper.at(-2), upper.at(-1), point) <= 0n)
+      upper.pop()
+    upper.push(point)
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)]
+}
+
+function orientationCross(
+  origin: GridPoint | undefined,
+  first: GridPoint | undefined,
+  second: GridPoint
+): bigint {
+  if (origin === undefined || first === undefined) return 0n
+  return (first.x - origin.x) * (second.y - origin.y) - (first.y - origin.y) * (second.x - origin.x)
+}
+
+function polygonGridArea(points: ReadonlyArray<GridPoint>): bigint {
+  let doubled = 0n
+  for (let index = 0; index < points.length; index += 1) {
+    const first = points[index]
+    const second = points[(index + 1) % points.length]
+    if (first === undefined || second === undefined) return 0n
+    doubled += first.x * second.y - second.x * first.y
+  }
+  return absBigInt(doubled)
+}
+
+function compareCells(first: IntrinsicPeriodicCell, second: IntrinsicPeriodicCell): number {
+  const densityOrder = compareBigInt(
+    BigInt(second.memberDoubledAreaGrid2) * BigInt(first.determinantGrid2),
+    BigInt(first.memberDoubledAreaGrid2) * BigInt(second.determinantGrid2)
+  )
+  return (
+    finiteCropDiagnosticPriority(first) - finiteCropDiagnosticPriority(second) ||
+    densityOrder ||
+    first.envelopeMaximumSideMm - second.envelopeMaximumSideMm ||
+    first.hullWasteRatio - second.hullWasteRatio ||
+    second.sharedBoundaryLengthMm - first.sharedBoundaryLengthMm ||
+    first.canonicalKey.localeCompare(second.canonicalKey)
+  )
+}
+
+function finiteCropDiagnosticPriority(cell: IntrinsicPeriodicCell): number {
+  if (cell.threeByThreeLatticeLegal && cell.threeByThreeCentreContactComplete) return 0
+  if (cell.threeByThreeLatticeLegal) return 1
+  return 2
+}
+
+/** Exact-density periodic-cell archive order. */
+export function rankIntrinsicPeriodicCells(
+  cells: ReadonlyArray<IntrinsicPeriodicCell>
+): ReadonlyArray<IntrinsicPeriodicCell> {
+  return cells.toSorted(compareCells)
+}
+
+function gridPoint(point: IrregularPoint): GridPoint | undefined {
+  const x = toGridMm(point.x)
+  const y = toGridMm(point.y)
+  return x === undefined || y === undefined ? undefined : { x: BigInt(x), y: BigInt(y) }
+}
+
+function fromGridPoint(point: GridPoint): IrregularPoint {
+  return { x: fromGrid(Number(point.x)), y: fromGrid(Number(point.y)) }
+}
+
+function compareGridPoints(first: GridPoint, second: GridPoint): number {
+  return compareBigInt(first.x, second.x) || compareBigInt(first.y, second.y)
+}
+
+function crossGrid(first: GridPoint, second: GridPoint): bigint {
+  return first.x * second.y - first.y * second.x
+}
+
+function absBigInt(value: bigint): bigint {
+  return value < 0n ? -value : value
+}
+
+function compareBigInt(first: bigint, second: bigint): number {
+  return first < second ? -1 : first > second ? 1 : 0
+}

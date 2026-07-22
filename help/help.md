@@ -22,23 +22,26 @@ the following order.
 
 ### Primary Problems
 
-1. **Preserve and generalize sheet-independent compactness.** The flagship
-   mixed-61 gap is closed across ten legal sheets by an explicit protected
-   canonical-reference decode and a sheet-free topology certificate. Ordinary
-   requested-sheet pruning is still sheet-relative, so future work should
-   generalize the mechanism only from measured workloads and should profile or
-   share the second decode. Sheet-relative ranking remains intentional for
-   `short_side_fill`.
+1. **Complete the production gate for genuinely sheet-invariant search.**
+   Compact-quality jobs now use the sheet-independent direct and periodic
+   constructors through one exact shared archive. The fixed `2000 x 2700`
+   canonical-reference handoff and its schema flag are removed. Sheet dimensions
+   enter only requested-sheet q0/q90 legality after sheetless construction and
+   ranking; `short_side_fill` remains an intentional sheet-relative policy and
+   is excluded from this path. The remaining work is the full roomy-sheet and
+   corpus gate, not another compatibility decode.
 2. **Preserve the 20-triangle golden.** The pointed-triangle lattice is a hard
    regression gate, not a special-case production heuristic. A candidate fails
    if it turns the lattice into a chain, fragments structural contacts, creates
    visible triangle-sized holes, or regresses the official repair-8 result. Keep
    the repair-0 search diagnostic separate; it is not the approved golden.
-3. **Preserve the approved mixed-61 layout.** The portable reference
-   `help/artifacts/approved-mixed61-ac75222-2000x2700.svg` is now reproduced
-   exactly across ten legal sheets by the protected canonical-reference handoff.
-   Any generalization must preserve its canonical hash, contact/hole quality,
-   legality, and the wider corpus gates.
+3. **Use the approved mixed-61 layout as a quality witness, not an equality
+   gate.** The portable reference
+   `help/artifacts/approved-mixed61-ac75222-2000x2700.svg` proves that the job can
+   reach `430,344.918 mm2`, two holes, and contacts `53/14`. A general replacement
+   may select a different canonical hash if it is exactly legal, invariant across
+   every roomy sheet, at least as compact and cohesive, and clears the wider
+   corpus gates.
 4. **Choose the right source of search diversity.** The current investigation
    compares deterministic candidate diversity with the existing GA. GA may be
    useful for global piece order and rotation, but it cannot repair a promising
@@ -74,46 +77,108 @@ the following order.
 
 - exact official 20-triangle repair-8 golden, rotations and mirroring enabled;
 - repair-0 triangle diagnostic no worse than the current baseline;
-- exact mixed-61 request on the accepted ten-sheet matrix, compared against the
-  canonical approved reference;
+- exact Shapes-17 direct-archive baseline: all 17 imported DXFs present, all
+  three direct roles complete, and comparison against `c640c06f...` at
+  `304,499.846 mm2`, zero cavities, and `559.975 mm` maximum side;
+- exact mixed-61 request on the accepted ten-sheet matrix, requiring one
+  canonical hash wherever the common motif is legal and comparison against the
+  approved reference's independent quality floors;
 - mixed-50, homogeneous rectangles, trapezoids, pentagons, and stars;
 - legality, deterministic geometry hashes, and replay/search equivalence;
 - rendered SVG/PNG inspection, not metrics alone;
 - isolated worktree, immutable manifest, exact commit/diff provenance, and a
   commit before the next experimental variant changes the code.
 
+### Shapes-17 Third Baseline
+
+The real 17-file job supplied on 2026-07-22 is now a durable third baseline
+beside Triangle-20 and Mixed-61. Its raw DXFs and job CSV live under
+`tests/fixtures/irregularSeventeenShapes/`. Every DXF imports as exactly one
+closed outline without warnings. The baseline uses the same sheet-free direct
+constructors as the shared archive, the shared `2000 x 2700 mm` roomy sheet,
+`10 mm` padding, compact-quality settings, and repair disabled.
+
+At source commit `8f84f8124ac3254e58a45d75b6c5d0f87df91d71`, all three direct roles
+complete deterministically. The selected `legacy-absolute-envelope` endpoint
+has canonical hash
+`c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a`,
+envelope area `304,499.845650 mm2`, maximum side `559.975 mm`, and zero
+enclosed cavities. It is a baseline rather than a quality ceiling: ten pieces
+remain isolated, including the visibly weak quarter-circle at the upper left.
+That makes this fixture a useful heterogeneous-cohesion gate for the next
+constructor and allocation changes.
+
+A second clean run at the same commit reproduced all direct statuses,
+evaluation counts, endpoint hashes, archive order, winner hash, and the winner
+SVG byte-for-byte.
+
+The fixture contains no repeated collision family, so the periodic catalog
+correctly selects zero continuations. Production validity now accepts complete
+catalog coverage with fewer than eight available periodic sources, including
+zero, while still requiring every selected source to settle. Shapes-17 therefore
+gates the three direct roles without inventing periodic cells that do not exist.
+
+The first attempted run exposed a real exactness defect rather than malformed
+input. A valid full circle can end with a floating sample infinitesimally
+different from its first sample; both points then map to the same `0.001 mm`
+Clipper2 grid coordinate. The offset adapter now removes only adjacent and
+closing duplicates after quantization and before strict validation. A polygon
+that truly collapses below three unique grid vertices still fails the original
+guard. Focused offset and collision-builder tests cover both cases.
+
+Portable evidence: [report](artifacts/shapes-17-baseline/report.json),
+[manifest](artifacts/shapes-17-baseline/manifest.json),
+[SVG](artifacts/shapes-17-baseline/shapes-17-shared-archive-winner.svg), and
+[PNG](artifacts/shapes-17-baseline/shapes-17-shared-archive-winner.png).
+
 ### Current Production Truth
 
-The official repair-8 triangle golden remains exact. The boundary-anchor,
-max-side-first intrinsic, and protected Pareto lanes remain isolated from
-production retention and preserve their previously accepted corpus gains.
+The compact-quality profile now enables the intrinsic shared archive directly.
+It runs three sheetless direct constructors and the bounded repeated-family
+periodic portfolio, admits only complete canonical-exact endpoints, filters q0
+and q90 against the requested sheet, and selects from one geometric/topological
+archive. The ordinary windowed beam remains available to modes that explicitly
+select it, but it is neither a compact competitor nor a compact fallback. An
+incomplete, cancelled, deadline-censored, or non-fitting compact archive fails
+honestly instead of silently returning the historical hollow ring.
 
-The mixed-61 hollow-ring failure is now closed through cross-decode coordination.
-Eligible explicit compact-quality jobs run the unchanged requested-sheet decode
-plus one protected decode on the fixed `2000 x 2700` reference sheet. The
-protected terminal is admitted on the real requested sheet only after exact
-q0/q90 fit, zero positive overlap, complete finite score decoding, and a
-sheet-free topology certificate. The certificate limits exact occupied-union
-cavities to two, hull-gap ratio to `0.15`, envelope aspect to `1.5`, isolated
-pieces to two, and requires at least half the pieces in the largest positive-
-contact component. It deliberately does not let requested-sheet remnant or
-normalized-consumption scores veto the same legal collision geometry.
+The retired fixed-reference machinery is deleted: there is no production
+`canonicalReferenceDecodeEnabled` flag, fixed-sheet coordinator, admission
+certificate, or second decode. This removes the sheet-relative compatibility
+hack rather than hiding it behind the new result.
 
-At candidate `5186255`, ten legal sheets from `900 x 1800` through
-`2000 x 2700` all select the exact approved motif: canonical hash
-`40f8ac9c0fb24073ac141b5fb667366af55df90c78c6cca21ff76703a4a7f300`,
-area `430,344.918 mm2`, two holes, and structural contacts `53/14`. The
-previous claim that reference reproduction and sheet independence were
-mutually exclusive was correct only for independent per-sheet decodes. Guided
-legality probes identified the missing architectural stage; the bounded
-cross-decode handoff supplies it without changing production beam ranking.
+The three production baselines are:
 
-The capability is schema-owned, defaults off, and is enabled by the explicit
-compact-quality settings factory and flagship fixture. Repair, GA transform
-preferences, homogeneous jobs, small jobs, and `short_side_fill` remain outside
-this expensive path. See
-[the final handoff report](research/canonical-reference-decode-handoff.md) and
-[portable ten-sheet artifacts](artifacts/canonical-reference-decode-handoff/).
+- Triangle-20: `371db269...`, `74,428.143126 mm2`, zero canonical cavities;
+- Mixed-61: `391,605.850174 mm2`, zero canonical cavities, all 61 pieces;
+- Shapes-17: `c640c06f...`, `304,499.845650 mm2`, zero canonical cavities.
+
+The final archive-only production measurements on 2026-07-22 were `16.621 s`
+for Triangle, `268.978 s` for Mixed, and `27.271 s` for Shapes-17. The transitional
+Mixed integration that first ran the ordinary decoder took `293.456 s`; deleting
+that duplicate normal-path work saved `22.091 s` (`7.5%`) with identical area,
+topology, and rendered geometry. The remembered `110.018 s` Mixed experiment was
+the rejected E4 early gate: it returned `431,558.251 mm2`, 27 isolates, 33
+contact components, and no admitted improvement. It is a performance reference,
+not an accepted-quality baseline.
+
+The Mixed production gate is executable as `pnpm gate:mixed61-compact`. It pins
+the selected canonical hash, maximum `391,606 mm2` envelope, zero canonical
+cavities, and a `330 s` cold ceiling. Canonical occupied-union cavity count is a
+separate result metric; it no longer overwrites sheet-space free-material holes.
+The catalog contract rejects runtime-censored or unstarted work but intentionally
+allows fully settled fixed family/front caps; Mixed has more eligible repeated
+families than the configured max-eight budget, so exhaustive-family coverage is
+not and has never been the production search contract.
+
+The integration-focused suites pass, as do lint and both TypeScript builds. A
+full-suite control still exposes 35 branch-pre-existing expectation failures in
+the ordinary scorer/beam, strict-family archive, and legacy benchmark suites;
+the affected implementation and expectation files are byte-identical to commit
+`75b9699` and are outside this compact-path diff. Five timeout assertions that
+did belong to this integration were updated to the intentional `390 s` floor.
+The worktree-local Electron package also lacks its generated `path.txt`; full
+suite runs must point module resolution at the installed root Electron bundle.
 
 The near-parallel NFP crossing crash is resolved in production by merged pull
 request #1. The guarded fallback recovers only strict internal crossings and the
@@ -163,6 +228,39 @@ automatically discards every intermediate branch that misses it.
   sheet dimensions. A universal single-sheet intrinsic decoder remains a
   separate research objective, not a blocker for this accepted result.
 
+### V7 Seed Archive And Independent Pressure Arms (Experiment Only)
+
+The V7 branch starts from the retained exactness foundation rather than changing
+production. It has two independently constructed, sheet-free canonical-exact
+seeds (max-side-first and legacy absolute-envelope), a phase-aware state-key
+cache, a capacity-eight legal endpoint archive keyed by future state identity,
+and independent control/split/atomic/refine pressure arms. Every protection and
+archive admission uses canonical grid structure; SAT is proposal guidance and a
+tie-break only. The 12,000-evaluation / 60-second budget is per arm, not per
+seed or ratio. The first reconstruction checkpoint at `e8748e1` combines raw,
+unsaturated compactness/cohesion Pareto retention with geometry-order plus
+pocket-placement roles. It improves the best measured Mixed cohesion to 13
+isolates and a largest 27/61 contact component at `418,220.374 mm2`, but remains
+below the production-quality contact gate. Further order variants are rejected;
+commit `a3a7b95` corrects the archive semantics: compactness and exact void
+topology decide geometric dominance, while exact-contact structure receives one
+bounded selection turn after those two axes and cannot veto a layout that is
+better on both. The selected Mixed layout is therefore the visually stronger
+`405,773.434 mm2` zero-cavity reconstruction. The next isolated measurement at
+`7be8d04` distinguishes dynamic remaining-piece choice from bounded partial-state
+retention without changing the live decode. Triangle has beam headroom at 15/20
+depths and no queue headroom; the original Mixed result showed apparent queue
+headroom but compared states with different placed material. The commensurate
+`40c26dc` follow-up places the same two geometry classes in both orders and is
+too sparse and too expensive to justify live reordering. Stage 2 therefore runs
+the bounded partial geometric beam first and keeps the dynamic queue disabled
+until a paired fixed-width ablation proves value. The first live experimental
+controller retains the exact width-one control outside capacity, allocates
+bounded Pareto-layer breadth, one optional contact turn, and guaranteed
+within-layer exact geometric-dispersion revisits. V7 remains diagnostic and
+cannot replace the current-main Triangle golden.
+See [the V7 Stage 0/1 report](research/v7-seed-archive-stage0-stage1.md).
+
 Every completed experiment must be recorded below as accepted or rejected. An
 uncommitted temporary script or a visually attractive image is not production
 evidence.
@@ -188,6 +286,432 @@ source commit, uncommitted diff or injected comparator, exact request, settings,
 metrics, and artifact hashes. Future experiments must write an immutable manifest
 in their isolated worktree before production code is changed. Promote accepted
 artifacts into `help/artifacts/` and durable research reports into `help/research/`.
+
+### 2026-07-22 (periodic source-audit speed arms)
+
+- Tried all three acceleration paths without fixture- or triangle-specific
+  behavior. Canonical-cell memoization is exact but small: Triangle uses
+  234,320 physical attempts for 240,240 logical attempts and still spends about
+  100 seconds in the audit.
+- Added content-addressed warm replay. The cache is schema-decoded and every
+  witness is rechecked with canonical Clipper2 legality, identity, topology,
+  and envelope metrics. Triangle preserves the exact source IDs, omissions,
+  and `371db269...` / 74,428.143 mm2 winner while periodic time falls
+  100.970 -> 6.793 seconds. Mixed preserves the source list and
+  `5a1f1ba6...` / 405,773.434 mm2 winner while periodic time falls
+  347.944 -> 182.106 seconds.
+- Added a generic cold scope for `P2` two-member cells backed by an axis-union
+  basis. Triangle keeps the exact 74,428.143 winner in 12.388 seconds. Mixed
+  produces a new canonical-exact zero-cavity winner `3839e80d...` at
+  391,605.850 mm2, maximum side 629.387 mm, hull waste 0.161151, seven isolates,
+  and 18 positive-contact components. It is 3.49% smaller than the 405,773.434
+  incumbent and more cohesive by component/isolate metrics, though it has fewer
+  structural contacts (14/2 versus 22/3).
+- The cold result exposes a search-allocation defect: the full raw Pareto set
+  crowds the 391,605 future out of the fixed width-eight continuation budget.
+  The scope is not source-equivalent and is not yet a production default. Gate
+  it across the corpus and roomy sheets, then test bounded source-stratified
+  reservations.
+- Immutable reports and replay products remain under
+  `/private/tmp/min-plane-provenance/periodic-speed-arms-b96249a/`; portable
+  renders and hashes are in
+  [`help/artifacts/periodic-audit-speed`](artifacts/periodic-audit-speed/README.md).
+
+### 2026-07-21 (V7 search-redesign review, branch v7-search-redesign-review)
+
+- **Repaired a total production regression, then narrowed the repair after
+  review.** `48abf69` removed the
+  empty-layout IFP seed candidate; under the `contact-only` candidate domain
+  the production beam placed zero pieces on every decode from that commit
+  through `d56d9d7`. The initial `6bcba8c` repair restored the seed but also
+  collapsed ordinary empty-sheet generation from four IFP corners to one;
+  review caught that regression. The corrected rule emits only bottom-left
+  for the empty `contact-only` production domain while preserving all four
+  ordinary IFP corners, with direct tests for both contracts. Focused suites
+  return to the documented ancestry baseline (the `305.631 > 228` golden
+  failure and the remaining windowed-beam failures predate this branch's work).
+  No automated gate ran the production suites during V7 evidence generation;
+  that gap, not the one-line bug, is the finding.
+- **Proved the 74,428 witness is retention-evicted by the default periodic
+  frontier.** Its shared basis retains zero cells in the bounded axis-union
+  front at `d56d9d7` and at `9da94e2`; only the source-survival audit
+  surfaces it. `96368ca` adds `--admit-raw-witnesses`, which lets the bounded
+  raw-crop Pareto front compete as source-tagged continuations in the shared
+  archive. Follow-up review found that the first implementation appended up
+  to 16 witnesses after the configured continuation cap and could deduplicate
+  against ordinary candidates that never ran. The corrected selector admits
+  ordinary and raw continuations through one hard cap, deduplicated by
+  canonical geometry plus the remaining piece order, and preserves the
+  ordinary representative when equivalent futures converge. Triangle's
+  diagnostic archive winner becomes a previously unsurfaced
+  90,352.625 mm2 / max side 394.922 / 7-isolate / 9-component three-band
+  lattice (`4b87d6df…`), with the 74,428 witness archive-resident; two full
+  replays are hash-identical; rectangles/pentagons controls are clean.
+- **Reproduced the restart ablation to the last digit** (capacity 0:
+  0.008297379 / 0.000525129; capacity 3: 0.013267824 / 0.003116739; no exact
+  endpoints) — evaluation-budgeted work is cross-machine deterministic.
+  Mixed-61 periodic coverage is not: this machine completed 4/8
+  continuations against the original 1/8 under identical 25 s wall
+  deadlines, yielding a new best periodic endpoint 420,059.254 mm2, zero
+  cavities, 33/10 contacts (`a79f6148…`). Continuation budgets must become
+  evaluation caps before Mixed periodic results can be conclusive.
+- **The corrected-frame replay exposed a seed-provenance blocker.** Triangle
+  found its pinned source and repeated the zero-endpoint matrix. Mixed did not
+  find the pinned `310adc64…` source in either a concurrent or a serial run
+  from merge `06892c9`: after raw witnesses were brought under the corrected
+  shared cap, that historical continuation is no longer selected. Therefore
+  the concurrent miss is not evidence that CPU contention alone removed the
+  seed. The older 1/8-versus-4/8 completion split still proves wall-clock
+  censoring, so the isolated `deterministic-periodic-budget` experiment caps
+  direct-legal strict candidate evaluations and reports evaluation truncation
+  separately. The Mixed pressure rerun additionally needs a committed source-
+  key replay path or a portable structured seed; an SVG is insufficient.
+- **Equal work exposes bad continuation scheduling.** The source-pinned square
+  basis reproduces `310adc64…` exactly in 19,862 candidate evaluations;
+  19,861 returns `evaluation-cap` with no winner. In the full eight-way run,
+  six larger-seed continuations consumed that exact cap first, while the two
+  square-basis crops had the smallest seed envelopes and ran seventh/eighth;
+  the useful source then hit the five-minute safety boundary. Evaluation-
+  budgeted execution now orders selected continuations by intrinsic seed area,
+  maximum side, and span, then by placed count descending and stable source
+  identity. Selection and final archive ranking do not change, and no-cap
+  execution keeps its old order.
+- **Compact-first scheduling recovers the known Mixed endpoint.** From commit
+  `163fac1`, the full width-eight/cap-19,862 run executes the two square-basis
+  crops first and the second reproduces `310adc64…` at 426,530.392 mm2 with
+  zero cavities and 30/10 contacts. Coverage is still incomplete: continuation
+  bodies account for 118.898 s of the 300.019 s run, leaving 181.121 s in
+  catalog/selection, exact finalization, archive work, and other uninstrumented
+  overhead. The next gate is therefore named phase-level timing, not another
+  continuation comparator. Cache/reuse selection only if measurement assigns
+  at least 70% of non-construction time to it; otherwise optimize the measured
+  dominant phase. Portable evidence is under
+  `help/artifacts/deterministic-periodic-budget/`.
+- **The raw-witness audit is diagnostic, not a production lane.** Phase timing
+  assigns 173.286 s of 173.702 s selection time to source-audit crop
+  enumeration. Turning the observer off preserves all eight Mixed source IDs,
+  their order, and `310adc64…`, while cutting total runtime from 344.751 s to
+  179.301 s. Triangle settles all eight ordinary periodic sources in 6.765 s,
+  but its periodic-only winner is weak (240,521.398 mm2, seven contacts).
+  Therefore retain audit witnesses for provenance and let periodic, ordinary,
+  and pocket-first endpoints compete under one exact archive.
+- **Shared terminal boundary implemented:** one
+  adapter now compares only the two protected baselines, baseline-order
+  pocket-first, and eight no-audit periodic continuations. It records separate
+  sheetless and requested-sheet q0/q90 identities, deduplicates/ranks only by
+  sheetless geometry, and prevents evaluation-capped partial states from
+  entering either archive. Direct trace-only accounting preserves the uncapped
+  result shape; catalog runtime coverage, eight selected/executed sources, and
+  periodic budget settlement are hard experiment gates. Reversed/endpoint-
+  derived variants and raw witnesses remain deferred until the fixed matrix
+  repeats identically across Triangle, Mixed, and homogeneous controls.
+- **Step 4 matrix passed at `4831035`.** Trace-only calibration froze exact
+  direct counts per fixture; two complete roots then reproduced identical
+  status/evaluation/hash tuples, periodic source order and omissions, and
+  sheetless/fitted archive order on Triangle-20, Mixed-61, Rectangles-20, and
+  Pentagons-20. Catalog runtime coverage and deterministic budget settlement
+  were complete in all eight runs. The verifier result is under
+  `help/artifacts/intrinsic-shared-archive-step4/`.
+- **Quality classification:** Mixed selects the known 405,773.434 mm2
+  `open-pocket-first` endpoint with zero enclosed cavities; Rectangles selects a
+  cohesive periodic P1 endpoint at 376,727.320 mm2; Pentagons preserves the
+  canonical direct winner. Triangle correctly keeps the protected
+  `legacy-absolute-envelope` control at 115,228.711 mm2 instead of the weak
+  240,521 periodic endpoint, but this is not the better 74,428 periodic witness:
+  that source is still lost before the no-audit selected continuation set. The
+  shared archive is therefore accepted infrastructure, not a claim that
+  Triangle construction is solved.
+- **Corrected the Step 4 quality regression at `fa9ab29`.** The no-audit
+  matrix above was a valid repeatability control but an invalid best-result
+  policy: it bypassed Fable's bounded raw-witness admission to save the
+  measured source-audit cost, excluding the exact 74,428.143 mm2 Triangle
+  lattice. The corrected shared portfolio admits raw Pareto witnesses under
+  the same eight-continuation cap, retains geometric Pareto dominance, and
+  selects within the first front by bounded soft cohesion deficit before
+  cavity/hull-gap and intrinsic compactness tie-breaks. The committed Triangle
+  run selects `371db269...` (74,428.143 mm2, zero cavities); the committed
+  Mixed run remains `5a1f1ba6...` (405,773.434 mm2, zero cavities). The full
+  audit currently costs about 103 seconds on Triangle and 353 seconds for the
+  Mixed periodic phase. Optimize that cost only behind exact admitted-hash and
+  winner-hash equivalence gates. Portable SVG/PNG evidence and checksums are in
+  `help/artifacts/intrinsic-shared-archive-quality/`; full reports remain under
+  `/private/tmp/min-plane-provenance/shared-archive-quality-fa9ab29/`.
+- **Closed the adaptive-pressure branch by the preregistered gate.** One
+  equal-budget matrix (50,000 pressure evaluations/arm, restart 0, pinned
+  seeds `371db269…`/`310adc64…`) over {1.25% baseline, 0.625% smaller step,
+  sampled-relocation vocabulary, both} on both fixtures: zero canonical-exact
+  endpoints in all eight arms. Smaller-step reached raw loss 3.6e-06 on
+  Triangle with 12 pair conflicts across 16 pieces still open — vanishing
+  relaxed loss demonstrably does not approach exact legality. The new
+  deterministic sampled-relocation vocabulary (per-collider compass rings +
+  Halton target coverage + shrinking-ring refinement inside the unchanged
+  weighted-nonworsening commit, `e77f3c1`) is a 2.7x better mover at the 5%
+  target on Mixed and irrelevant on the dense Triangle lattice; it is
+  retained default-off as the per-piece primitive for a future LNS-style
+  coordinated stage. Review also found that refinement mixed the best sampled
+  state's canonical frame with the current state's frame; refinement now
+  starts from the best sampled state it is meant to descend around. The
+  pressure matrix remains diagnostic until that corrected path is rerun.
+- **Post-repair pairwise sheet-invariance evidence (production path):** the full
+  seven-fixture corpus is geometry-equivalent across 1000x1700 and
+  2000x2700, including mixed-50 at 50/50 (`fa981c54…`) and mixed-61 at
+  61/61 (435,949.517 mm2, zero cavities, `f58cf0f2…`); mixed-61 keeps the
+  same hash on the tested 660-wide sheet and diverges to a different legal
+  638.8-wide geometry on the tested 640-wide sheet, where the 654.13-wide
+  common layout cannot fit. This brackets a legality-triggered divergence; it
+  does not prove that every possible sheet divergence occurs only at that
+  boundary. Portable summary entries now record source commit, commands, and
+  sheet pairs; raw reports remain machine-local.
+- Review memo: `reviews/v7-search-redesign-review.md`. Portable evidence and
+  hashes: `help/artifacts/v7-search-redesign/`. Raw provenance:
+  `/private/tmp/min-plane-provenance/v7-search-redesign-*`.
+
+### 2026-07-21 (V7 legal closure and coordinated pilot)
+
+- Completed the final generic four-contributor legal reconstruction gate at
+  `2567e8a`. Triangle has one geometry-class order; the run completed all four
+  depths, 21/21 eviction shadows, `17,757` complete successors, `11,849`
+  terminal assessments, and seven exact endpoints in `28,231` evaluations.
+- The only strict geometric improvement was the already known
+  `88,124.026123 mm2` endpoint with unchanged cohesion. The only cohesion
+  improvement was the already known `97,686.123682 mm2` tradeoff—nine isolates
+  and six contacts, but `10.85%` larger. Zero endpoints jointly improved exact
+  geometry, cohesion, and topology. Evidence is under
+  `/private/tmp/min-plane-provenance/v7-four-contributor-2567e8a-triangle/`.
+- Ran the first bounded Sparrow-style coordinated pilot at `d55d55e` from the
+  exact `88,124.026123 mm2` seed. It completed 36 sweeps, `27,470` separation
+  evaluations, 51 group-transport and 51 split-squeeze proposals, five exact
+  projections, and four retained exact handoffs in `29,640.249 ms`.
+- The best handoff is a novel strict geometric improvement at
+  `88,104.274118 mm2` with a slightly smaller span and hull gap, proving that
+  coordinated movement and exact projection are operational. It does not
+  improve cohesion: 11 isolates, 15 components, largest component three, five
+  contacts, and dominant contacts regress `3 -> 2`. The other novel handoffs
+  are larger and more fragmented. Zero handoffs pass the combined gate.
+- Reject the current coordinated schedule as a Triangle cohesion repair, not as
+  an implementation failure. The selected disruption endpoints carry real
+  depth-10/11 group-transport lineages. Keep the exact improvement and traces as
+  research evidence; do not promote the observer or change the live selector.
+  Immutable evidence is under
+  `/private/tmp/min-plane-provenance/v7-coordinated-d55d55e-triangle/`.
+- Completed the follow-up exact component-interface closure probe at `5729b25`.
+  It tested all 196 compatible long-edge component translations from the exact
+  Triangle seed in `236.060 ms`, admitting/rejecting each candidate through
+  canonical exact legality. Five candidates met the local interface gate, but
+  all retained the same `88,124.026123 mm2` envelope, `303.877 mm` maximum
+  side, and `593.876 mm` span. Their apparent improvements are one- or two-grid
+  translations that merely create numerical contact signatures; the seven PNGs
+  are visually indistinguishable and do not reconstruct the desired side-to-side
+  triangle lattice. Reject rigid legal component closure as a Triangle quality
+  mechanism; retain it only as an exact diagnostic/safety primitive. Evidence:
+  `/private/tmp/min-plane-provenance/v7-component-interface-5729b25-triangle/`.
+- Checked out and read the actual pinned Sparrow source at
+  `knowledge/dependencies/sparrow` (`961ec31f576c5817ece779ff73982b4553760a4e`),
+  rather than relying only on the prior source summary. Its useful distinction
+  is architectural: legal left-bottom construction in `lbf.rs`; container
+  contraction in `compress.rs`/`explore.rs`; and multi-piece temporary-overlap
+  separation with cached adaptive collision weights in `separator.rs` and
+  `tracker.rs`. A future Sparrow-inspired controller must be a separately
+  bounded infeasible search phase whose only admitted outputs are canonical
+  Clipper2-legal endpoints judged by this project's intrinsic geometry/topology
+  archive. It is not another exact-contact comparator or rigid-component lane.
+- Completed Kimi/Sol dual review `20260720T123621Z-95462`, cycle 4, over the
+  live V7 sources and provenance, the pinned Sparrow and Dalsoo source trees,
+  and the available Abeysooriya extraction. Its unanimous decision is to test
+  a coverage-complete, bounded P1/P2 repeated-family portfolio before any
+  further global repair: up to eight repeated collision families, sixteen
+  transform representatives and 120 pairs per family, exact certified-cell and
+  crop frontiers, then up to eight strict NFP/IFP continuations into the common
+  archive. Coverage flags, rejection provenance, and three stable replays are
+  mandatory; a cap-truncated catalog is inconclusive. NFP/IFP and Clipper2
+  remain the exact legality backbone but no longer need be the only source of
+  promising starting geometry. The current static squeeze controller remains
+  dormant; only a coverage-complete periodic negative authorizes a later,
+  incumbent-driven Sparrow-style contraction/restart experiment.
+- Corrected the periodic finite-crop boundary without weakening exactness.
+  `8ec00b4` records the far-neighbour proof as an infinite-lattice diagnostic;
+  all finite crops now use one shared BigInt lattice translation for the entire
+  base cell, direct validation, and canonical identity. It does not use Fable's
+  rejected per-member snap.
+- Added shared-basis provenance at `a7fbc24` and an exact source-group harness
+  at `909d099`: each retained cell records its rational NFP-union source,
+  canonical-grid residuals, transformed members, and crop traversal. A source
+  group can now be measured without mixing unrelated bases.
+- The complete Triangle run at `9da94e2` found a canonical-legal zero-cavity
+  two-band lattice at `74,428.143126 mm2`, but it has 11 exact-contact
+  components and 10 isolates, so it is research evidence rather than the
+  Triangle golden. Its basis `v1=(88.972, 0)`, `v2=(0, 76.261)` is already
+  exactly grid-representable and has no retained sibling alternative. A
+  separate four-variant shared-basis control yields only contactless strips;
+  do not invent a per-piece correction or redefine a grid gap as contact.
+- The matching Mixed-61 run produces one canonical-legal, zero-cavity
+  `426,530.392211 mm2` endpoint with 30/10 structural/dominant contacts, but
+  21 isolates and a 0.2392 hull-gap ratio. Seven continuations hit deadline,
+  leaving family and continuation coverage incomplete. It is neither a
+  promotion nor a periodic negative. Immutable source-commit `9da94e2`
+  evidence is in `/private/tmp/min-plane-provenance/v7-shared-basis-9da94e2/`.
+- Sol's approved source-survival review found that the prior source filter was
+  too late to prove a representability limit. Commits `3110a56`, `c615ff9`,
+  `752407d`, and `71204b8` add an observer-only raw-cell and finite-crop audit;
+  it does not alter periodic admission, continuation selection, or archive
+  comparison. Triangle covers all 8 transforms and 28 pairs; each current
+  derivation is capped at 64 NFP-boundary-vertex bases, and crops are limited to
+  row/column traversals from four corners. Within that generated domain it
+  produced 2,963 raw cells and 4,627 direct-valid crops before the 294-cell /
+  303-crop bounded fronts. The full raw crop Pareto set has ten layouts: the compact 74,428
+  lattice is present, but every more connected witness remains fragmented (at
+  least 9 components), while zero-isolate NFP-vertex layouts are much larger.
+  Thus current axis-union plus arbitrary NFP-boundary-vertex P1/P2 sources do
+  not hide a compact exact-contact Triangle lattice behind retention among
+  the patterns they currently generate. Preserve the useful compact seed; next add a bounded, generic source based on two
+  phase-compatible real edge-to-edge NFP contacts, not a wider frontier,
+  endpoint sampling, or a contact-definition change. Immutable evidence is
+  `/private/tmp/min-plane-provenance/v7-source-survival-pareto-71204b8/`.
+- Commit `a7c697f` upgrades that immutable audit to replayable evidence:
+  `report.json` now includes each raw Pareto witness's full family/source basis,
+  transformed members, exact finite placements, canonical identity, and its own
+  SVG. It also states the 64-candidate NFP-vertex cap and the finite crop
+  traversal bounds, so the conclusion is explicitly scoped to the generated
+  domain. Refreshed evidence is
+  `/private/tmp/min-plane-provenance/v7-source-survival-pareto-a7c697f/triangle-20/`.
+- The bounded exact two-contact source is now measured at `37fd64f`. It found
+  11 distinct physical-edge contact translations across complete Triangle
+  transform/pair coverage, but only four non-collinear pairs; two cannot contain
+  the base-cell material and both remaining pairs collide when repeated over the
+  required 3x3 neighbourhood. Validation coverage is complete and zero bases
+  are admitted. This closes the current P1/P2 contact-source hypothesis without
+  weakening exactness. The next stage is the reviewed Sparrow-style adaptive
+  incumbent contraction, using the existing separation/disruption machinery
+  and exact archive. Immutable coverage evidence is
+  `/private/tmp/min-plane-provenance/v7-edge-contact-coverage-37fd64f/triangle-20/`.
+- Commits `8e1e123` through `9bf429f` implement the authorized adaptive
+  incumbent-pressure checkpoint. A failed contraction retains at most three
+  deterministic low-loss states, adds bounded group/split/interface
+  disruptions at the next target, and stops after three consecutive failures.
+  The three failures share a fixed 50,000-evaluation pressure budget through
+  cumulative reservations; the exact input layout remains the immutable
+  fallback and no relaxed state can be published.
+- The first harness pass at `cc12bec` accidentally selected a `70,205.806 mm2`
+  one-row Triangle strip because its default seed rank was area-first. That is
+  a harness failure and a fresh demonstration that area-first greedy selection
+  is chain-forming, not a quality result. Commit `e5ceddf` added an explicit
+  canonical seed-hash pin so the adaptive experiment starts from the intended
+  `74,428.143126 mm2` zero-cavity periodic witness.
+- The fair-budget Triangle run at `9bf429f` completed all 50,000 pressure
+  evaluations in `55.399 s`. Best relaxed loss fell from `0.042353646` at the
+  5% target to `0.013267824` at 2.5% and `0.003116739` at 1.25%, but no
+  canonical-exact endpoint was found. The last state still had eight wall
+  conflicts, 24 pair conflicts, and 18 conflicted pieces. The exact 74k layout
+  remained selected.
+- The matching Mixed-61 run reached `37,942` pressure evaluations before the
+  110-second wall deadline. Best loss fell from `0.126383755` to `0.037917172`
+  and then `0.012752034`; the third target was still improving when censored,
+  but its best generated state still had 15 pair conflicts across 19 pieces.
+  No handoff or projection occurred, and the exact `426,530.392211 mm2`
+  zero-cavity fallback remained selected. Immutable reports and complete SVGs
+  are under `/private/tmp/min-plane-provenance/v7-adaptive-pressure-9bf429f/`.
+- Do not attribute the cross-target loss reduction to restart retention yet.
+  The target schedule becomes less aggressive (`5% -> 2.5% -> 1.25%`), so the
+  proposal itself becomes easier at every failure. Sol review round
+  `1784646378-4996` requires one paired causal measurement at the same 50,000
+  evaluations: restart-pool capacity three versus zero, with a larger wall
+  deadline only to remove Mixed censoring. Commit `9baaa95` also makes attempt
+  accounting explicit by reporting cumulative start/end, cumulative limit,
+  and local quota alongside the local evaluation count. No finalizer, movement
+  change, or larger evaluation budget is authorized before this ablation.
+- The paired ablation at `9baaa95` rejects cross-target restart transport as a
+  default. On Triangle, capacity zero improved the 2.5% target loss from
+  `0.013267824` to `0.008297379` and the 1.25% target from `0.003116739` to
+  `0.000525129` under the same 50,000 pressure evaluations; neither arm found
+  an exact endpoint. On Mixed-61, capacity zero and three reached identical
+  best loss at all three targets (`0.126383755`, `0.037917172`, and
+  `0.009810656`), but the restart arm took `169.928 s` versus `143.398 s` and
+  still found no exact endpoint. Keep the adaptive target-depth loop, exact
+  fallback, and truthful cumulative/local accounting; disable restart-state
+  injection unless a later paired corpus experiment supplies contrary evidence.
+  Immutable reports are under
+  `/private/tmp/min-plane-provenance/v7-restart-ablation-9baaa95/`.
+- For any smaller-step follow-up, lower relaxed loss and fewer relaxed conflicts
+  are not evidence of progress: both become easier as contraction tends to
+  zero. The only positive gate is a new canonical-exact endpoint that passes
+  the existing strict improvement/admission checks. If equal-budget 1.25% and
+  smaller-step arms both fail that gate, stop the adaptive-pressure branch. Sol
+  review `1784646378-4996` approved this classification and stop rule.
+
+### 2026-07-20 (Dalsoo source-control addition)
+
+- Corrected the V7 completed-layout archive at `a3a7b95`: certificate contact
+  floors no longer form a hard pass/fail partition. Compactness and void
+  topology determine dominance; contact receives one bounded frontier-selection
+  turn. Fresh immutable evidence is under
+  `/private/tmp/min-plane-provenance/v7-geometric-cohesion-a3a7b95/`.
+- Added the trace-only queue-vs-beam discriminator at `7be8d04`. It replays one
+  pure-growth order under independent runtime/evaluation limits, compares
+  distinct remaining geometry classes against the scheduled piece, and tests
+  up to four rejected same-piece frontier alternatives through one unchanged
+  continuation. It cannot change live candidates, ranking, selection, archive,
+  or deadlines.
+- Immutable discriminator evidence at commit `14868c2` is under
+  `/private/tmp/min-plane-provenance/v7-queue-beam-14868c2/`. Triangle completes
+  all 20 depths with 15 beam-headroom and zero queue-headroom depths. Mixed
+  reaches the 25,000-evaluation cap after 11 depths: 5 beam-only, 1 queue-only,
+  3 both, and 2 neither. This selects partial beam plus a heterogeneous-only
+  bounded dynamic queue for Stage 2. The Mixed trace followed `canonical-grid`
+  because compact reconstruction roles exceeded their 15-second per-decode
+  limit in that run; the result is reachability evidence, not a claim about the
+  complete `405k` pocket-first lineage.
+- The same-order calibration at commit `40c26dc` is under
+  `/private/tmp/min-plane-provenance/v7-calibration-40c26dc-triangle/` and
+  `/private/tmp/min-plane-provenance/v7-calibration-40c26dc-mixed/`. The
+  Triangle SVG reconstruction is explicitly inadmissible as lineage evidence:
+  a render does not preserve source order, local geometry, or transforms. Mixed
+  consumed 100,000 evaluations and 115.38 seconds, with useful commensurate
+  headroom only at isolated depths. This selects beam-only width calibration
+  before any live queue experiment.
+- The reviewed Stage 2A contract uses total capacities 1/2/4/8/13. Experimental
+  capacity is split between bounded frontier-layer breadth and repeated
+  deepest-first `occupied-dispersion-v1` visits; contact receives at most one
+  selection turn and never participates in Pareto dominance. Every selected
+  slot records its layer, visit number, and role.
+- The structured first-miss audit at `cfba923` proves one narrow exception to
+  the earlier candidate-coverage conclusion: the historical depth-1 Mixed pose
+  is legal and lies inside a horizontal NFP segment at intrinsic occupied-
+  envelope alignment events, but is not an ordinary NFP vertex. Commit
+  `1d527bc` adds that bounded sheet-free feature to the experimental pool while
+  keeping the protected control ordinary-only. The exact historical successor
+  is generated, and Triangle width 3 improves from `110,660.943411 mm2` to
+  `88,124.330 mm2`, with zero holes and contacts improving from `4/2` to `5/3`.
+  Evidence is under
+  `/private/tmp/min-plane-provenance/v7-envelope-events-1d527bc-first-miss/`
+  and `/private/tmp/min-plane-provenance/v7-envelope-events-1d527bc-triangle-w3/`.
+- Commit `d1130fc` tested one bounded cohesion slot when capacity permits. It
+  recovers the delayed-value depth-1 pose at widths 7/12, but does not force
+  the historical lineage: the generated depth-2 prefix remains only rank 3 in
+  Pareto layer 7. The slot was removed after review because it spent a second
+  contact-derived selection turn outside the approved breadth/contact/dispersion
+  contract, and no completed width-3 result exercised it. Commit `2411acc`
+  stages expensive exact topology measurement
+  after canonical deduplication because Mixed still reached only 55/61 depths
+  in 300 seconds. The staged 360-second run completes all 61 depths in
+  `320.989 s` at `431,558.250585 mm2`, zero holes, but only `17/2` contacts and
+  31 isolated pieces. It removes the giant ring but loses to the existing
+  `405,773.434 mm2` zero-hole reconstruction, so width 3 is diagnostic rather
+  than promotable. Commit `28e8db7` also stages canonical admission after
+  deduplication. It preserves the Triangle and Mixed hashes while reducing the
+  complete Mixed runtime from `320.989 s` to `287.698 s`; canonical admission
+  falls from `85.375 s` to `52.078 s`. Evidence is under
+  `/private/tmp/min-plane-provenance/v7-staged-admission-28e8db7-mixed-w3-300s/`.
+
+- Committed the generic compactness-cohesion reconstruction checkpoint as
+  `e8748e1`. Immutable Triangle and Mixed reports are under
+  `/private/tmp/min-plane-provenance/v7-cohesion-front-e8748e1/`.
+- Mixed `endpoint-q0-left-to-right` improves the prior cohesion frontier from
+  15 isolates / largest component 16 to 13 isolates / largest component 27,
+  while retaining a `418,220.374 mm2` envelope. It still has only 28/3
+  total/dominant contacts and is not promotable.
+- Rejected additional stacked order/pocket enumeration: the measured stacked
+  endpoint is worse than its pure-order parent. The next experiment changes
+  partial-state retention rather than adding another decode order.
 
 ### 2026-07-20 (Dalsoo source-control addition)
 
@@ -1864,6 +2388,298 @@ Do not end with only a brainstorm. Rank recommendations, state what evidence
 would falsify each one, and identify the smallest safe production experiment.
 
 ## Investigation Log
+
+### 2026-07-19 (intrinsic constructor redesign)
+
+- Proved cross-runtime divergence in the first sheetless constructor at trace
+  event 6744: adjacent floating `Math.cos` results moved one arbitrary-angle
+  tangency by `7.105e-15 mm`. Snapping transformed collision vertices to the
+  `0.001 mm` grid made Node and Electron traces byte-identical, while the
+  unchanged triangle layout exposed that fixed contact-count assertions are
+  classifier-fragile at exact boundaries.
+- Found a second geometry-authority split: local transformed vertices were
+  snapped but fractional placement translations were admitted before the final
+  world-grid canonicalization. One worker-legal trapezoid/hexagon tangency then
+  became a `0.000005 mm2` canonical overlap. Candidate translations must be
+  canonicalized and revalidated before placement storage; post-hoc output
+  snapping is not a legality authority.
+- Measured the corrected sheetless constructor at `435,949.517 mm2`, zero
+  enclosed cavities, but 31 positive-contact components and 23 isolates. This
+  proves sheet blindness alone is insufficient: area-first and contact-first
+  partial growth can both produce incoherent layouts.
+- Rejected fixed-rotation overlap relaxation after source-faithful schedules at
+  `0.05%` and `0.001%` step sizes restored no exactly legal layout. Near-zero
+  SAT residuals were not exact legality.
+- Rejected the preregistered exact targeted-LNS class on the fragmented seed.
+  After a warm-lineage correction proved that every destroyed piece could
+  replay its incumbent placement, 24 deterministic interface/hull/hazard rounds
+  produced nine exact legal incumbent-equivalent finalists, four unplaced
+  outcomes, three timeouts, eight duplicate skips, and zero admissible strict
+  improvements in `45.686 s`. Do not widen the same k=2/3/5/8 neighborhoods as a
+  tuning response.
+- Independent source-backed reviews converged on a replacement boundary: keep
+  exact NFP/collision/canonical-topology services, but treat the protected lanes,
+  fixed-reference handoff, sheet-normalized pruning, and historic hash as legacy
+  compatibility until a sheetless strict constructor wins. The next isolated
+  experiment is one strict user-order decode with origin anchoring,
+  orientation-family coverage, intrinsic marginal max-side/area/span ranking,
+  completed-layout topology floors plus a Pareto archive, and real-sheet q0/q90
+  legality only after construction.
+- The first replacement experiment is intentionally one decode, not a GA or
+  order portfolio: it must attribute success or failure to the intrinsic local
+  rule. Order diversity, large-first/small-fill, periodic-cell seeds, and a new
+  complete-state search remain separate falsifiable E2/E3 roles.
+- Completed E1 at `7ea2f1e`. The strict intrinsic constructor is the first
+  positive proof of the replacement's invariance thesis: all four primary
+  sheets return the same exact-legal 61-piece hash, area `418,956.352 mm2`, zero
+  union cavities, and a `649.972 mm` maximum side in about `22 s` per decode.
+  This is `2.64%` smaller than the historic witness and materially faster than
+  the production two-decode handoff.
+- Rejected E1 as the default local tuple because its cohesive structure misses
+  the preregistered floors: hull-gap ratio `0.224149`, 26 exact shared-edge
+  isolates, largest exact-contact component `14/61`, and contacts `21/4`.
+  Visual inspection confirms that the hollow ring is gone and the result is a
+  dense roughly square block, but several triangle and rectangle chains still
+  protrude. Do not describe area or invariance alone as success.
+- Audited canonical-grid proximity at 0, 1, sqrt(2), and 2 grid units. A one-
+  unit tolerance makes E1 one component with zero isolates, proving the exact
+  contact classifier is snap-fragile. It also makes the old fragmented f306
+  negative one component, while the ring and giant chain are already connected
+  at exact zero distance. Proximity is therefore diagnostic only, not a quality
+  gate. The independent hull-gap and envelope evidence still rejects the bad
+  layouts and leaves E1's `0.224149 > 0.15` deficit real.
+- Preregister the next variant as E1b with exactly one new variable: within an
+  exact maximum-side tie, a candidate may use shared-boundary priority only when
+  its envelope area is within `2%` of the moving piece's collision area above
+  the pure-growth leader. This bounded band targets protruding chains without
+  letting contact buy a large envelope regression. Order diversity, GA,
+  periodic cells, small-fill, and LNS remain deferred until E1b is classified.
+- Rejected E1b at `ebe6396` as exactly inert. All four sheets retain the same E1
+  hash and every metric remains unchanged: area `418,956.352 mm2`, maximum side
+  `649.972 mm`, hull-gap `0.224149`, contacts `21/4`, and certificate deficit
+  `2.207443`. The useful cohesive alternatives are therefore not reachable
+  inside an exact maximum-side tie plus the piece-scaled `2%` area band. Do not
+  widen that band as a tuning response.
+- The next independent variable is E2: a small explicit family-level order and
+  orientation portfolio over the unchanged sheetless strict decoder. This is
+  the transferable Deepnest/SVGnest split—outer order/rotation diversity around
+  a deterministic absolute-geometry decoder—without enabling the legacy GA or
+  its sheet-relative terminal comparator. Periodic cells and large-first exact
+  cavity fill remain later roles unless E2 proves order diversity insufficient.
+- Rejected E2 at `60fb82e` after six unique decodes in `130.742 s`. The
+  `maxArea/8` large-first order duplicated baseline and was recorded rather than
+  replaced. No other family-order/orientation chromosome met the early signal.
+  The best-area alternative (`423,572.835 mm2`) still had hull-gap `0.235042`,
+  32 components, 20 isolates, largest component 10, and contacts `18/3`; the
+  best-contact alternative reached only `20/3` at `453,270.499 mm2`. Bounded
+  generic order/rotation diversity is real but insufficient, so do not enable
+  or enlarge the legacy GA around this decoder.
+- Move next to the remaining open-source constructor roles, kept independently
+  measurable under the same sheet-free certificate: generic repeated-family
+  periodic seeds and exact large-first/small-fill cavity placement. PackingSolver
+  demonstrates both as separate construction phases; its periodic code is a
+  reusable building block rather than proof that cells alone solve a mixed job.
+  Do not tile every family into disconnected islands, create fake macro pieces,
+  or treat ordinary late small-piece order as a small-fill experiment.
+- Rejected the bounded E3 constructor portfolio at `f8b8bf3` after its exact
+  implementation passed two independent read-only audits. The selected repeated
+  family exposed eight unique transforms and all 28 bounded transform pairs,
+  but no P1/P2 cell survived the canonical forbidden-union, adjacent-grid basis,
+  BigInt far-neighbor, 3x3 exact-legality, and inter-cell contact certificate.
+  Do not weaken those proofs or replace the source-linked cells with fake macros
+  merely to force a periodic role to exist.
+- L1 was genuinely non-inert: the large-only phase froze 53 real placements and
+  five of the eight deferred small pieces entered exact hull-gap regions with
+  positive incremental shared-edge contact, zero envelope growth, and strictly
+  smaller recomputed gap area. The completed layout nevertheless converged to
+  the exact E1 hash and metrics (`418,956.352 mm2`, hull gap `0.224149`, 26
+  isolates, largest component 14, contacts `21/4`). Exact cavity access is now a
+  proven reusable primitive, but small-fill alone cannot repair the large-piece
+  contact topology inherited from the constructor.
+- The E3 run completed in `41.757 s` inside the unchanged 120-second hard gate;
+  the optional E1 control hit its 20-second lane deadline and was not replaced.
+  No non-control role met the early signal, so triangle and broad corpus gates
+  were correctly skipped. The immutable report and manifest are
+  `/private/tmp/min-plane-provenance/intrinsic-periodic-small-fill-e3/f8b8bf3-mixed61/report.json`
+  (`1faf35d50f447c02dcfdff72b2c957c48ddfc5b1f22c21839462a7f03ed5fc3e`)
+  and `manifest.json`
+  (`7f42ab9327496f18b342447d96e5f55c712ff3e57e11dfe4db5bbfb39de96e1f`).
+- Preserve the exact periodic catalog and gap-containment primitives as research
+  infrastructure, but leave them out of production. E1, E1b, E2, P1/P2, and L1
+  now agree on the next boundary: improving mixed-61 cohesion requires a search
+  class that changes the large-piece global topology, not another bounded local
+  comparator, order template, certified repeated-family seed, or late filler.
+- Preregistered E4 as the first complete-layout topology search. It is a
+  deterministic sheetless squeeze-disrupt-separate controller over finite
+  transform families, with a bounded infeasible pool, forced large-piece/group
+  disruptions, and at most five exact NFP conflict-closure projections. This is
+  materially different from the rejected fixed-rotation overlap probe, which
+  had no transform changes, disruption pool, alternative zero-loss basins, or
+  exact NFP reinsertion and aborted its narrow reconstruction path on conflict.
+- Two Kimi review exchanges initially proposed non-monotone exact-feasible LNS,
+  then withdrew it after its 900-move schedule was shown to require roughly
+  `1710 s` at the measured k<=8 cost and to retain the timed-out frozen-context
+  reconstruction bottleneck. An independent implementation audit selected the
+  same global separator direction and confirmed that the existing finite
+  transforms, SAT penetration, canonical legality, NFP candidates, structural
+  analysis, and exact gap filler are reusable.
+- Connectivity is no longer an E4 eligibility floor. The exact/proximity audit
+  proved component counts and isolates non-discriminative; E4 is gated by exact
+  legality, enclosed cavities, largest hull-gap region, and a hard area cap.
+  Contacts remain a post-floor promotion target rather than an unbounded search
+  prefix. The early class gate is hull-gap `<= 0.15`, cavities `<= 2`, area
+  `<= 439,904.170 mm2`, and completion inside the registered schedule; automatic
+  production promotion additionally requires area `<= 430,344.918 mm2`.
+- E4 search never receives the requested sheet. Its three target-box roles are
+  derived only from E1 geometry and stable per-instance caps; one selected exact
+  archive winner is terminal-fitted at q0/q90 across the sheet matrix. The
+  integer-counted controller budget is capped at 200,000 separation evaluations,
+  six deterministic basins, 12 sweeps per basin, pool width 8, and five exact
+  projections. If the full schedule misses the 110-second safety guard, E1 is
+  returned unchanged rather than publishing a machine-speed-dependent partial
+  winner.
+- The immutable E4 preregistration is
+  `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration.md`
+  (`823d3ecd4d2825f40dd4026dbeff8328814dd35980498086272b2b22ac6531bd`).
+  If its projection/class gate fails, the registered fallback is a separately
+  reviewed finite-position global-assignment experiment, not another comparator
+  or reconstruction-budget tuning pass.
+- E4.1 and E5 proved that complete exact handoffs, bounded semantic projection
+  lanes, and incumbent-inclusive certificate selection are mechanically viable,
+  but the first E5 trace never retained a disruption descendant to projection.
+  E5.1 at `a10f36a` repaired that precise post-birth eviction: all three role
+  lanes survive, all five exact projections succeed, and only attempts 2 and 4
+  are removed as canonical duplicates of attempts 1 and 3.
+- Rejected E5.1 as a quality solution, not as an implementation failure. Its E1
+  and expanded-E1 disruption descendants reach approximately zero relaxed loss
+  yet exact-project to E1-equivalent structure. The materially different
+  four-three lineage completes at `428,415.534 mm2` but worsens cohesion to 31
+  isolates, 41 components, and a largest component of 9. Triangle-20 is the
+  decisive control: several exact-zero-loss relaxed states remain around
+  `116,964-117,643 mm2`, 18 isolates, and 19 components.
+- The causal defect is now verified at sweep zero. Relaxed loss contains only
+  pair and target-wall penetration, and focused proposal generation becomes
+  inert when conflicts reach zero. Legal fragmented layouts are therefore
+  optimal. E5.1 improved lineage memory and exposure but supplied no compactness
+  pressure. Filler is downstream of the frozen structural skeleton, while the
+  fidelity-first projector is a separately measurable boundary rather than the
+  first cause.
+- Direct source review of Sparrow, Deepnest, SVGnest, PackingSolver, and
+  libnest2d rejected a terminal compactness tuple as V6's mechanism. The shared
+  transferable principle is to apply intrinsic geometric pressure before
+  irreversible selection. Sparrow supplies the closest controller: contract a
+  container, repair feasibility, archive only an exact feasible improvement,
+  and restart pressure from that incumbent.
+- Preregistered V6 as one private sheet-independent contracted-target
+  pressure-and-repair lane. It contracts the accepted structural incumbent's
+  longer side by a failure-decayed `1/20`, `1/40`, `1/80` schedule, translates
+  the far area-weighted-median partition across the removed width, and uses the
+  existing SAT/GLS separator only to restore legality. Acceptance requires an
+  exact distinct endpoint with smaller envelope/max side and area-weighted
+  centroid dispersion and no worse cavity or largest hull-gap metrics. Contacts
+  and components remain diagnostics rather than search rewards, preventing
+  chains and rings from buying acceptance.
+- V6 intentionally leaves ordinary target roles, the five-attempt cap,
+  projector, filler, complete certificate, requested-sheet fitting, and every
+  production path unchanged. The first kill gate occurs before projection: both
+  Mixed-61 and Triangle-20 must produce a distinct exact pressure endpoint with
+  negative dispersion delta. The immutable preregistration is
+  `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration-v6-contracted-pressure-repair.md`
+  (`d91795a097acaace3cb3c61f109da6c6b873357994b1b253c1c148b8359e8b9c`).
+- Pre-run review hardened orchestration without changing the V6 hypothesis:
+  pressure runs before ordinary basins with at most one quarter of the unchanged
+  global evaluation cap; exactly three attempts share twelve repair sweeps;
+  repair sweeps are reported separately; and pressure owns its projection slot
+  before cross-lane dedupe. This prevents starvation, unbounded success resets,
+  hidden work, and missing post-projection evidence. The immutable addendum is
+  `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration-v6-review-hardening-addendum.md`
+  (`b2f1f78fefdc8523dd953997a6b52b78b0090d1ba893794747470aade53e2316`).
+- V6 run 01 is censored, not rejected. All six pressure attempts materially
+  reduced aggregate separation loss, but every endpoint remained infeasible
+  and the selected layouts therefore stayed exact E1 fallbacks. The first
+  reports stored only proposal and all-time-best loss, so they could not prove
+  whether sweep four was active, flat, or cycling.
+- Added observer-only per-sweep pressure traces at `f0ca85b` and replayed
+  Triangle-20 and Mixed-61 from a clean committed worktree. Run 02 is exactly
+  equivalent to run 01 in geometry, metrics, proposal losses, evaluation
+  counts, candidate records, and outcomes; only runtime and artifact paths
+  differ. Triangle report SHA-256 is
+  `8ae3d9644aa302347fdcf1be47988617f1f64f7082d5e9961c6aec436848ff64`;
+  Mixed-61 report SHA-256 is
+  `c29a09b5061f3549b662cc0e6c67c2b41691193469383482a5eb2a449ef5d121`.
+- Run 02 initially localized the failure to insufficient one-piece lineage
+  depth rather than budget, deadline, wall conflicts, GLS, retention, or the
+  acceptance gate. V6.1 then tested that diagnosis directly by extending each
+  attempt from four to at most eight sweeps with a preregistered adaptive stop.
+  No Triangle-20 or Mixed-61 ratio reached an exact endpoint. The generated-best
+  lineages still touched only 3 Triangle pieces and 3-5 Mixed pieces while
+  12-17 pieces remained conflicted. Mixed `1/20` reduced raw loss from
+  `0.547864693` to `0.515495389` while pair conflicts increased from 17 to 18;
+  Mixed `1/40` regenerated the same worse child for sweeps 4-6. The separator is
+  therefore not merely under-iterated: the one-leader, one-piece vocabulary
+  redistributes penetration depth without coordinating conflict removal.
+- Rejected V6.1 adaptive depth as a sufficient mechanism, while retaining its
+  trace and stopping logic as valid diagnostics. Its Triangle report SHA-256 is
+  `95029fb607380de45ab7e0b7eb89c870f569d1e9f0aa9b6f256d3fa435949a9f`;
+  Mixed-61 report SHA-256 is
+  `7e957dc21e22604d2dcff51d8ea53e585e75a4526371daa6cade8cbdf2a9077b`.
+  Both selected results remain exact E1 fallbacks, so neither projection nor
+  pressure acceptance has yet been exercised.
+- Terra, Sol, and Kimi independently selected the same next boundary after
+  reviewing the V6.1 traces and Sparrow's separator: a deterministic sequential
+  all-collider composite pass. All-collider sibling fanout is skipped because it
+  still emits isolated one-piece children and immediately compresses at most
+  15-17 leader families into a width-eight pool; it cannot prove cooperative
+  composition and a failure would remain confounded by retention.
+- Preregistered V6.2 to freeze every start-of-pass collider in intrinsic
+  priority order, visit each once, recompute conflicts after every committed
+  weighted-nonworsening move, and emit one completed composite child per pool
+  parent before unchanged retention. It changes only the contracted-pressure
+  child generator, uses four composite passes, and keeps ratios, proposals, GLS
+  boundaries, pool width, caps, projection, acceptance, terminal comparison,
+  E1 fallback, and production paths unchanged. The mechanism must produce a
+  distinct exact pressure endpoint with negative dispersion delta on both
+  fixtures; positive-loss descent is diagnostic only. The immutable
+  preregistration is
+  `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration-v6.2-sequential-all-collider-composite.md`
+  (`9304fc38e9e71831a9050547366a937973c3b64940f2fef2e92bd3866a8f530b`).
+- V6.2 at `08f5f89` passed implementation review and fixed the measured coverage
+  defect, but failed its mechanism gate. Every frozen collider was visited;
+  winning passes affected 6-16 Triangle pieces and 7-26 Mixed pieces, raw
+  winners were retained, no attempt hit a cap or deadline, and all six ratios
+  materially beat V6.1 raw loss. None reached exact zero, however, so pressure
+  projection and acceptance remained unexercised and E1 correctly won as the
+  legal fallback. Triangle final pair counts were `16/19/13` from `8/7/7`;
+  Mixed final pair counts were `41/36/32` from `11/10/10`.
+- The V6.2 trace proves conflict fragmentation. The squared normalized-depth
+  objective prefers replacing a deep overlap with several shallow overlaps:
+  175 of 429 committed Triangle moves and 243 of 644 Mixed moves increased pair
+  count. Mixed `1/20` fell from raw loss `1.266460558` to `0.188600336` while
+  pair conflicts grew from 11 to 41 and conflicted pieces from 15 to 36. The
+  Triangle report SHA-256 is
+  `a372827afd4307512dccc1eb24019c2b4e575b696ee91f89c57536d513f5ca17`;
+  Mixed-61 is
+  `b46fb0545d85ecfa43f487877729fb5f97cf65d14ed5218bba49f3a46f4ec371`.
+- Kimi and Sol independently chose deterministic coordinate relocation as the
+  next boundary. Exact zero remains the unique minimum of the current loss;
+  the MTV-only neighborhood is what repeatedly pushes a piece from one crowded
+  seam into another. Both rejected a hard conflict-count guard because every
+  first V6.2 composite crosses a higher-cardinality barrier. The next work is a
+  parallel committed tournament rather than another serial micro-variant:
+  coordinate probes, coordinate/order and coordinate/retention stacks, a dense
+  refinement, transform-family coverage, and V6K updated with sequential
+  coordinate repair. The immutable matrix is
+  `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/preregistration-v6-coordinate-tournament.md`
+  (`9b3e44c49f4fdf849dddc6a73ee8e1a4528167431a8f1d498960588171ba09ce`).
+- Preserve Kimi's alternative static-shrink design as V6K, but do not implement
+  it concurrently with V6. If adaptive pressure fails before projection, V6K
+  replaces the current roles with aspect-preserving `1.000`, `0.925`, and
+  `0.850` boxes derived from the exact structural E1 envelope; the control must
+  reproduce E1, and shrink roles use exact hull waste only as a zero-loss
+  plateau order. Run it on a fresh branch/worktree so its result remains
+  causally separate. The registered fallback is
+  `/private/tmp/min-plane-provenance/intrinsic-global-squeeze-disrupt-e4/fallback-v6k-static-shrunken-roles.md`
+  (`bdd6bec7fb715bb11df3f1b4c099135c1e061fb38330523d36ae0a255730e98d`).
 
 ### 2026-07-19 (canonical reference decode handoff)
 

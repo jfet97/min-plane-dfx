@@ -4629,7 +4629,7 @@
         "beamWidth": 8,
         "localCandidateFanout": 4,
         "localRepairBudget": 0,
-        "canonicalReferenceDecodeEnabled": true,
+        "intrinsicSharedArchiveEnabled": true,
         "transformCap": 8,
         "transformMinimumEdgeLengthMm": 1.2,
         "transformAngleDeduplicationToleranceDeg": 0.051,

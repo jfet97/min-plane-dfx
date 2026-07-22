@@ -516,46 +516,30 @@ const strictLayoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineA
   scoreCriterion((score) => score.unplacedCount),
   descendingScoreCriterion((score) => score.dominantNearCompleteStructuralContactCount),
   descendingScoreCriterion((score) => score.nearCompleteStructuralContactCount),
-  scoreCriterion((score) => score.collisionBoundsWorstNormalizedSheetConsumption),
-  scoreCriterion((score) => score.collisionBoundsNormalizedSpanSum),
+  scoreCriterion(collisionBoundsMaxSideMm),
   scoreCriterion((score) => score.collisionBoundsAreaMm2),
   scoreCriterion((score) => score.collisionBoundsSpanMm),
   scoreCriterion((score) => score.occupiedHullWasteRatio),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactBand),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactUnits),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryLengthMm),
-  scoreCriterion((score) => score.collisionBoundsBottomMm),
-  scoreCriterion((score) => score.collisionBoundsLeftMm),
-  // free area is almost constant when every placed polygon remains inside one sheet region
-  // so compact bounds and symmetric lower-left anchoring decide before material diagnostics
-  descendingScoreCriterion((score) => score.largestNetFreeMaterialRegionAreaMm2),
-  scoreCriterion((score) => score.freeMaterialRegionCount),
-  scoreCriterion((score) => score.freeMaterialHoleCount),
-  scoreCriterion((score) => score.freeMaterialSliverMetric),
   Order.mapInput(Order.Array(Order.String), (score) => score.placementOrder),
   Order.mapInput(Order.Array(Order.String), (score) => score.unplacedSourcePieceIds)
 ])
 
 const scaleAwareLayoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.combineAll([
   scoreCriterion((score) => score.unplacedCount),
+  scoreCriterion(collisionBoundsMaxSideMm),
+  scoreCriterion((score) => score.collisionBoundsAreaMm2),
+  scoreCriterion((score) => score.collisionBoundsSpanMm),
+  scoreCriterion((score) => score.occupiedHullWasteRatio),
   descendingScoreCriterion((score) => score.dominantNearCompleteStructuralContactCount),
   descendingScoreCriterion((score) =>
     Math.floor(score.nearCompleteStructuralContactCount / STRUCTURAL_CONTACT_COUNT_BAND_WIDTH)
   ),
-  scoreCriterion((score) => score.collisionBoundsWorstNormalizedSheetConsumption),
-  scoreCriterion((score) => score.collisionBoundsNormalizedSpanSum),
-  scoreCriterion((score) => score.collisionBoundsAreaMm2),
-  scoreCriterion((score) => score.collisionBoundsSpanMm),
-  scoreCriterion((score) => score.occupiedHullWasteRatio),
   descendingScoreCriterion((score) => score.nearCompleteStructuralContactCount),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryContactUnits),
   descendingScoreCriterion((score) => score.sharedCollisionBoundaryLengthMm),
-  scoreCriterion((score) => score.collisionBoundsBottomMm),
-  scoreCriterion((score) => score.collisionBoundsLeftMm),
-  descendingScoreCriterion((score) => score.largestNetFreeMaterialRegionAreaMm2),
-  scoreCriterion((score) => score.freeMaterialRegionCount),
-  scoreCriterion((score) => score.freeMaterialHoleCount),
-  scoreCriterion((score) => score.freeMaterialSliverMetric),
   Order.mapInput(Order.Array(Order.String), (score) => score.placementOrder),
   Order.mapInput(Order.Array(Order.String), (score) => score.unplacedSourcePieceIds)
 ])
@@ -569,6 +553,15 @@ const layoutScoreOrder: Order.Order<IrregularLayoutScore> = Order.make((first, s
     ? scaleAwareLayoutScoreOrder(first, second)
     : strictLayoutScoreOrder(first, second)
 })
+
+function collisionBoundsMaxSideMm(score: IrregularLayoutScore): number {
+  const discriminant = Math.max(
+    0,
+    score.collisionBoundsSpanMm * score.collisionBoundsSpanMm -
+      4 * score.collisionBoundsAreaMm2
+  )
+  return (score.collisionBoundsSpanMm + Math.sqrt(discriminant)) / 2
+}
 
 function scoreCriterion(
   select: (score: IrregularLayoutScore) => number

@@ -81,10 +81,12 @@ beam survivor into history frames, and wraps the outcome into
 
 The rectangular hook path must stream events as the algorithm runs. Do not
 collect frames in the wrapper and flush them after the algorithm returns. The
-irregular portfolio needs its selected result before it can exclude losing beam
-alternatives, so it replays the selected chromosome, follows its beam-state
-parent links, then emits only those tagged states to the same Effect queue. The
-queue consumer performs NDJSON writes and live
+ordinary irregular portfolio needs its selected result before it can exclude
+losing beam alternatives, so it replays the selected chromosome, follows its
+beam-state parent links, then emits only those tagged states to the same Effect
+queue. The compact-quality shared archive does not claim beam ancestry: it emits
+one truthful terminal snapshot tagged `shared-archive-final-selected` from the
+selected complete exact endpoint. The queue consumer performs NDJSON writes and live
 `history_frame` sends outside the algorithm.
 
 ## Strategy Configuration

@@ -8,6 +8,7 @@ import {
 import type { TransformCollisionGeometryInput } from './services.js'
 import { IrregularGeometryInputError } from './services.js'
 import { ConvexPolygonValidation } from './convexPolygonValidation.js'
+import { fromGrid, toGridMm } from './clipper2OffsetPolicy.js'
 import type { InternalBounds, InternalPoint, InternalPolygon } from './internalGeometry.js'
 
 export const TransformCollisionGeometry = {
@@ -46,7 +47,19 @@ function compute(
       return failInvalidInput('transform must produce finite collision polygon coordinates.')
     }
 
-    transformedPoints.push(transformedPoint)
+    const snappedPoint = snapPointToCollisionGrid(transformedPoint)
+    if (snappedPoint === undefined) {
+      return failInvalidInput(
+        'transformed collision polygon coordinates must fit the canonical collision grid.'
+      )
+    }
+
+    transformedPoints.push(snappedPoint)
+  }
+
+  const transformedBoundary = ConvexPolygonValidation.validateStrictBoundary(transformedPoints)
+  if ('message' in transformedBoundary) {
+    return failInvalidInput(`transformed collision ${transformedBoundary.message}`)
   }
 
   const bounds = boundsForPoints(transformedPoints)
@@ -62,6 +75,23 @@ function compute(
       bounds: new IrregularBounds(bounds)
     })
   )
+}
+
+/**
+ * Quantizes one transformed vertex through the collision kernel's canonical
+ * 0.001 mm integer grid. Every downstream geometry authority consumes this
+ * same point, including strict validation, bounds, NFP construction, direct
+ * collision validation, scoring, and cache values.
+ */
+function snapPointToCollisionGrid(point: InternalPoint): InternalPoint | undefined {
+  const x = toGridMm(point.x)
+  const y = toGridMm(point.y)
+  if (x === undefined || y === undefined) return undefined
+
+  return {
+    x: normalizeNegativeZero(fromGrid(x)),
+    y: normalizeNegativeZero(fromGrid(y))
+  }
 }
 
 /**

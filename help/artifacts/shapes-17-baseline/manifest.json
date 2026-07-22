@@ -1,0 +1,22 @@
+{
+  "experiment": "intrinsic-shared-archive-step4",
+  "mode": "calibration",
+  "sourceCommit": "8f84f8124ac3254e58a45d75b6c5d0f87df91d71",
+  "fixture": {
+    "name": "shapes-17",
+    "path": "/Users/andreasimonecosta/Documents/Work/min-plane-dfx-worktrees/deterministic-periodic-budget/tests/fixtures/irregularSeventeenShapes",
+    "sha256": "1b4b29b54a1e29c0b923e81e3e19166767432747c376481907f186dee4e0b84b",
+    "pieceCount": 17,
+    "sheet": {
+      "width": 2000,
+      "height": 2700
+    }
+  },
+  "files": {
+    "/private/tmp/min-plane-provenance/shapes-17-baseline-8f84f81/calibration/report.json": "b666f941bd58258f8587d4930669c4d9284822be0c625ce7f021eedef6d0bdf6",
+    "/private/tmp/min-plane-provenance/shapes-17-baseline-8f84f81/calibration/shapes-17-533a25d3e134933f.svg": "42e2c146cde9a043f2542dd98554d6b27d650c9e7f87e705966238c43e7ec182",
+    "/private/tmp/min-plane-provenance/shapes-17-baseline-8f84f81/calibration/shapes-17-2ed3ee37529c8967.svg": "067591d5f868c2d45cca4cc354160f9a28e230b9afac39118a844d3bce44266d",
+    "/private/tmp/min-plane-provenance/shapes-17-baseline-8f84f81/calibration/shapes-17-df323662a7207bb3.svg": "42e2c146cde9a043f2542dd98554d6b27d650c9e7f87e705966238c43e7ec182",
+    "/private/tmp/min-plane-provenance/shapes-17-baseline-8f84f81/calibration/shapes-17-shared-archive-winner.svg": "067591d5f868c2d45cca4cc354160f9a28e230b9afac39118a844d3bce44266d"
+  }
+}

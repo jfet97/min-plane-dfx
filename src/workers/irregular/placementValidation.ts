@@ -19,6 +19,7 @@ import { GeometryPredicates } from './geometryPredicates.js'
 /** Checks translated convex placement geometry without using polygon booleans. */
 export const PlacementValidation = {
   check,
+  checkSheetless,
   validate
 } as const
 
@@ -32,7 +33,14 @@ export const PlacementValidation = {
  * rotated contact are legal.
  */
 function check(input: ValidatePlacementInput): Effect.Effect<boolean, IrregularGeometryInputError> {
-  return assess(input).pipe(Effect.map(({ legal }) => legal))
+  return assess(input, true).pipe(Effect.map(({ legal }) => legal))
+}
+
+/** Exact overlap validation for an intrinsic candidate whose sheet fit is deferred. */
+function checkSheetless(
+  input: Omit<ValidatePlacementInput, 'sheet'>
+): Effect.Effect<boolean, IrregularGeometryInputError> {
+  return assess(input, false).pipe(Effect.map(({ legal }) => legal))
 }
 
 /**
@@ -41,7 +49,7 @@ function check(input: ValidatePlacementInput): Effect.Effect<boolean, IrregularG
  * an invalid geometry input.
  */
 function validate(input: ValidatePlacementInput): Effect.Effect<void, IrregularGeometryInputError> {
-  return assess(input).pipe(
+  return assess(input, true).pipe(
     Effect.flatMap((assessment) =>
       assessment.legal
         ? Effect.void
@@ -51,7 +59,8 @@ function validate(input: ValidatePlacementInput): Effect.Effect<void, IrregularG
 }
 
 function assess(
-  input: ValidatePlacementInput
+  input: ValidatePlacementInput | Omit<ValidatePlacementInput, 'sheet'>,
+  enforceSheetBounds: boolean
 ): Effect.Effect<PlacementAssessment, IrregularGeometryInputError> {
   const movingPolygon = translateAndValidatePolygon(
     input.moving.polygon,
@@ -106,7 +115,11 @@ function assess(
     }
   }
 
-  if (!isInsideSheet(movingPolygon.polygon.points, input.sheet.width, input.sheet.height)) {
+  if (
+    enforceSheetBounds &&
+    'sheet' in input &&
+    !isInsideSheet(movingPolygon.polygon.points, input.sheet.width, input.sheet.height)
+  ) {
     return Effect.succeed({
       legal: false,
       message: 'moving polygon must remain inside the sheet.'

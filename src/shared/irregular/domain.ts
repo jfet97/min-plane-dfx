@@ -25,6 +25,7 @@ export const IrregularPortfolioPhase = Schema.Literals([
   'preparing_geometry',
   'deterministic_beam',
   'ga_search',
+  'shared_archive',
   'validating',
   'completed',
   'cancelled'
@@ -34,7 +35,7 @@ export const IrregularPortfolioPhase = Schema.Literals([
 export type IrregularPortfolioPhase = Schema.Schema.Type<typeof IrregularPortfolioPhase>
 
 /** Identifies which search source produced a portfolio result. */
-export const IrregularSearchSource = Schema.Literals(['beam', 'ga', 'none'])
+export const IrregularSearchSource = Schema.Literals(['beam', 'ga', 'shared-archive', 'none'])
 
 /** Type of an irregular portfolio search source. */
 export type IrregularSearchSource = Schema.Schema.Type<typeof IrregularSearchSource>
@@ -111,6 +112,7 @@ export const IrregularPortfolioTerminationReason = Schema.Literals([
   'evaluation_budget',
   'time_budget',
   'cancelled',
+  'shared_archive_completed',
   'no_valid_result'
 ])
 
@@ -229,8 +231,8 @@ const IrregularOptimizerSettingsFields = Schema.Struct({
     Schema.withConstructorDefault(Effect.succeed(0)),
     Schema.withDecodingDefaultKey(Effect.succeed(0))
   ),
-  /** Explicitly enables the expensive protected canonical-reference decode role. */
-  canonicalReferenceDecodeEnabled: Schema.Boolean.pipe(
+  /** Runs the sheet-independent direct and periodic constructors under one exact archive. */
+  intrinsicSharedArchiveEnabled: Schema.Boolean.pipe(
     Schema.optionalKey,
     Schema.withConstructorDefault(Effect.succeed(false)),
     Schema.withDecodingDefaultKey(Effect.succeed(false))
@@ -527,6 +529,8 @@ export class IrregularLayoutScoreSummary extends Schema.Class<IrregularLayoutSco
   largestNetFreeMaterialRegionAreaMm2: NonNegativeFiniteNumber,
   freeMaterialRegionCount: NonNegativeFiniteInteger,
   freeMaterialHoleCount: NonNegativeFiniteInteger,
+  /** Sheet-independent occupied-union cavities, when measured by an exact archive. */
+  canonicalEnclosedCavityCount: Schema.optional(NonNegativeFiniteInteger),
   freeMaterialSliverMetric: NonNegativeFiniteNumber,
   collisionBoundsWorstNormalizedSheetConsumption: NonNegativeFiniteNumber,
   collisionBoundsNormalizedSpanSum: NonNegativeFiniteNumber,

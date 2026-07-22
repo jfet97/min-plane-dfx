@@ -45,6 +45,34 @@ function rectanglePiece(input?: {
   })
 }
 
+function circlePiece(): ImportedPiece {
+  const arcs = [0, 90, 180, 270].map((startAngle) => {
+    const endAngle = startAngle + 90
+    const startRadians = (startAngle * Math.PI) / 180
+    const endRadians = (endAngle * Math.PI) / 180
+    return {
+      kind: 'arc' as const,
+      x1: 50 + Math.cos(startRadians) * 50,
+      y1: 50 + Math.sin(startRadians) * 50,
+      x2: 50 + Math.cos(endRadians) * 50,
+      y2: 50 + Math.sin(endRadians) * 50,
+      cx: 50,
+      cy: 50,
+      radius: 50,
+      startAngle,
+      endAngle
+    }
+  })
+  return new ImportedPiece({
+    id: PieceId.make('offset-circle'),
+    sourceFileId: SourceFileId.make('circle-source'),
+    label: 'Circle',
+    realBounds: new Rect({ x: 0, y: 0, width: 100, height: 100 }),
+    geometry: new DxfGeometrySummary({ entityType: 'CIRCLE', closed: true, segments: arcs }),
+    warnings: []
+  })
+}
+
 function runBuildPiece(input: { readonly piece: ImportedPiece; readonly totalPaddingMm: number }) {
   return Effect.runPromise(
     CollisionGeometryBuilder.use((builder) => builder.buildPiece(input)).pipe(
@@ -76,6 +104,13 @@ function runBuildPieceWithSettings(
 }
 
 describe('CollisionGeometryBuilder', () => {
+  it('builds an imported full circle whose closing samples share one quantized point', async () => {
+    const geometry = await runBuildPiece({ piece: circlePiece(), totalPaddingMm: 10 })
+
+    expect(geometry.sampledPoints.length).toBeGreaterThan(4)
+    expect(geometry.collisionPolygon.points.length).toBeGreaterThan(4)
+  })
+
   it('preserves source samples while producing a normalized padded collision polygon', async () => {
     const warning = new ImportWarning({
       code: 'source_note',

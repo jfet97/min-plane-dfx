@@ -72,6 +72,321 @@ geometry and invalid derived arithmetic remain typed failures. The supplied
 order must remain untouched so future beam and portfolio layers can make their
 priority decisions outside this baseline.
 
+The intrinsic strict decoder is a separate constructor used by the compact-quality
+production archive. It preserves the user-owned prepared
+piece order, anchors the first transformed polygon at the normalized origin,
+and asks the NFP service only for sheetless boundary, support, and intersection
+candidates. The geometry service still performs exact overlap validation and
+canonical translation admission, but rectangular sheet bounds are deferred.
+The constructor retains the best candidate from each rotation/mirror family,
+then selects one winner by absolute maximum side, envelope area, envelope span,
+shared boundary as a bounded tie-break, and canonical combined geometry. Only a
+completed layout is tested against the real sheet, at q0 and q90. This path has
+its own provenance harness and exact topology metrics; it does not alter the
+ordinary beam, GA, repair, or explicit `short_side_fill` behavior.
+
+The preregistered E4 experiment is a separate complete-layout optimizer around
+that exact E1 seed. It has no requested-sheet input. Synthetic target boxes are
+derived only from the seed's canonical occupied geometry and stable
+per-instance area caps. Private transient states may overlap while a
+transform-aware SAT/GLS separator changes finite transform families, swaps
+large pieces, transports bounded nearby groups, and crosses worse basins. These
+states are diagnostics only and never become worker results or history.
+SAT conflict depth remains a search heuristic: selected pressure intermediates
+and endpoints are cross-classified against canonical-grid Clipper2 legality,
+cached by canonical relaxed-state key, and only the canonical result decides
+whether an endpoint is exact. The trace retains SAT/canonical disagreements so
+floating separator residue cannot silently reject or admit a layout.
+Relaxed poses retain the exact finite translation as a phase basis plus integer
+grid search offsets. Every authoritative vertex is formed by adding the local
+coordinate and phase basis in millimetres, rounding once, and then applying the
+integer offset. Canonical state identity includes the current anchored world
+path and a deterministic phase signature over every finite transform; exact
+materialization fails if it cannot reproduce the requested canonical paths.
+The complete identity payload is stored as a SHA-256 key so traces and legality
+memos retain the phase distinction without duplicating full polygon catalogs.
+Initialization also publishes an observer-only identity-control witness for the
+exact structural E1 state inside its own canonical occupied box. It records the
+SAT raw and weighted loss, conflict tuple, exact-zero flag, canonical identity
+and coverage control, and canonical legality classification. This observation
+costs zero registered separation evaluations, is never selection-eligible, and
+therefore exposes SAT residue without allowing it to reject the canonical E1
+control. The portfolio carries this witness into its report-facing structural
+outcome instead of dropping it at the controller boundary.
+The retained pre-V7 pressure foundation evaluates the existing focused
+separator candidates first, deduplicates later sources by canonical state key,
+and records source, pass, ordinal, pose, conflict tuple, clearance, cap, winner,
+and outer-survival accounting. Every evaluated candidate is checked under
+canonical legality before SAT ranking; a canonical-legal state is retained even
+when SAT reports residue, while SAT-clear canonical-illegal states never become
+exact endpoints. Each retained parent runs bounded priority-forward and
+priority-reverse collider orders against one shared budget with a deterministic
+forward reservation, so reverse keeps its allocation and may reclaim unused
+forward budget. The adaptive transform-family generator remains typed and
+tested but is dormant here because the existing focused transform pass already
+produces the same states; its call-site trace reports zero cost. A two-radius,
+sixteen-position refinement generator is exposed only as
+a dormant intensifier API for a future explicitly promising coordinated atom;
+the current pressure loop never invokes it. No static shrink role, whole-box
+coordinate generator, or reserved conflict slot is part of this foundation.
+The older adaptive-depth helpers and adaptive-only termination labels are also
+dormant in the retained pre-V7 lanes.
+
+The V7 adaptive-pressure experiment is a separate use of that machinery. It
+derives 5%, 2.5%, and 1.25% contractions from the current exact incumbent,
+reserves a cumulative third of a 50,000-evaluation pressure budget for each
+failure, and can retain low-loss restart states for a paired research arm. Four
+mandatory sweeps may extend to eight while the raw loss keeps improving; two
+flat extra sweeps stop the attempt. An accepted exact endpoint resets the
+failure chain and becomes the next pressure incumbent; three consecutive
+failures terminate it. Attempt traces distinguish local evaluations from
+cumulative start/end, cumulative
+limit, and local quota. Relaxed states remain private and only canonical-legal,
+strictly improving endpoints can reach exact projection or the common archive.
+The paired Triangle/Mixed ablation at `9baaa95` found restart capacity three
+harmful on Triangle and quality-neutral but slower on Mixed. Cross-target
+restart injection is therefore rejected as a default; the production-facing
+contract remains capacity zero unless later paired corpus evidence reverses
+that result. Adaptive target depth and the exact-only handoff remain retained.
+
+The schedule additionally accepts an explicit `pressureContractionRatios`
+sequence (default 5%, 2.5%, 1.25%) and a `pressureMoveVocabulary`. The default
+`mtv` vocabulary preserves the historical behavior. The `sampled-relocation`
+vocabulary augments every composite collider visit with two deterministic
+compass rings scaled by the piece's characteristic length, a bounded Halton
+coverage of legal bottom-left positions inside the contracted target box, and
+at most two shrinking-ring refinement rounds around the best candidate before
+the unchanged weighted-nonworsening commit; evaluation accounting, GLS
+weights, canonical-legality classification, and the exact-only promotion gate
+are unchanged. Refinement starts from the best sampled state's canonical frame
+and rings that state's selected pose, avoiding the former re-anchor mismatch
+between the current and best states. The equal-budget Triangle matrix from the pinned
+74,428 mm2 seed (baseline, 0.625% final step, sampled relocation, both)
+produced no canonical-exact endpoint in any arm; the smaller-step arm reached
+raw loss 3.6e-06 while retaining 12 distributed pair conflicts, so the
+Triangle pressure branch is closed by the preregistered stop rule.
+
+The periodic family portfolio's source-survival audit can additionally admit
+its bounded raw-crop Pareto witnesses as source-tagged `raw-witness:`
+continuations (`admitSourceAuditWitnesses`, harness `--admit-raw-witnesses`):
+without it, cell fronts ranked by cell-local proxies can evict the source of
+the best known crops — measured on Triangle, where the 74,428 mm2 witness
+basis is generated but retains zero cells in a default run and the archive's
+best entry is 37% worse. With admission, the Triangle archive gains both the
+74,428 witness and a 90,352 mm2 three-band lattice with 7 isolates and 9
+components that the default pipeline had never surfaced. Ordinary and raw
+witness continuations compete inside the same `maximumContinuationCount` cap.
+Deduplication uses canonical occupied geometry plus the ordered remaining-piece
+future, and an ordinary continuation remains the representative when the same
+future is reached through both sources. Extending this periodic-specific
+mechanism into a universal all-front retention policy remains a hypothesis,
+not an established architecture.
+
+Periodic strict continuations also accept an optional deterministic candidate-
+evaluation cap. The counter increments exactly once before each direct-legal
+candidate enters strict local scoring; reaching the cap stops before committing
+the partially evaluated piece and reports `evaluation-cap` with the consumed
+count. Wall time remains an independent safety abort. This separates a stable
+search budget from machine speed while preserving the historical unbounded
+behavior when no evaluation cap is supplied. Selection coverage and execution
+coverage are reported separately: selecting every bounded continuation does not
+imply that every selected continuation reached a terminal decode.
+Explicitly capped runs also distinguish complete decodes from budget settlement:
+`continuationExecutionCoverageComplete` requires a completed decode, while
+`continuationBudgetSettlementComplete` also accepts a deliberate
+`evaluation-cap` stop and rejects invalid or wall-time-censored runs.
+When that explicit cap is active, selected continuations execute by ascending
+seed-envelope area, maximum side, and span, then by more already placed pieces
+and stable source identity. This changes only censored execution order: archive
+ranking and the selected continuation set remain unchanged. The no-cap path
+preserves its historical order.
+The same explicit cap enables phase telemetry without changing the uncapped
+result contract. Top-level timings isolate catalog construction, continuation
+selection, execution ordering, strict construction, exact finalization, archive
+ranking, and residual bookkeeping. Selection additionally separates source-
+audit crop enumeration, retained-cell crop enumeration, crop-front ranking, and
+its remaining bookkeeping so optimization follows measured cost.
+Telemetry coverage is complete only when both top-level and nested selection
+residuals are at most 1% of their respective totals; a large residual therefore
+fails the measurement gate instead of being hidden by arithmetic reconciliation.
+
+The Step 4 shared-archive experiment is the first common terminal boundary for
+the two protected direct constructors, baseline-order gap-contained
+construction, and eight bounded periodic continuations. Periodic selection
+includes source-audit raw-crop Pareto witnesses under the same hard
+continuation cap as retained-cell sources; a retained-cell surrogate cannot
+silently remove a better exact completed layout from terminal competition.
+Direct constructors
+can enable trace-only candidate accounting without imposing a cap; the normal
+uncapped result shape stays unchanged. Calibration freezes the observed exact
+completion counts, while periodic continuations keep the fixed 19,862-candidate
+cap. Catalog runtime coverage, execution of every selected source, and complete
+deterministic budget settlement are mandatory experiment gates. The selector
+admits at most eight continuations; when fewer exist, complete continuation
+coverage proves that the smaller set is exhaustive rather than censored.
+
+Every untruncated complete state enters one adapter that measures sheetless
+canonical legality, identity, hash, metrics, and certificate before consulting
+the requested sheet. Requested-sheet q0/q90 fit and fitted hashes are separate
+metadata. Deduplication and geometric Pareto retention use only the sheetless
+hash and metrics. Final selection is restricted to the first compactness/void
+Pareto front, then minimizes the bounded cohesion-certificate deficit before
+cavity, hull-gap, and intrinsic compactness tie-breaks. Cohesion therefore
+selects among geometrically non-dominated endpoints; it cannot rescue dominated
+geometry or partition archive admission. Requested-sheet filtering occurs
+before this final selection. Evaluation-capped partial states have no endpoint
+and cannot enter either archive.
+
+The first frozen two-root no-audit matrix passed on Triangle-20, Mixed-61,
+Rectangles-20, and Pentagons-20, but it was only an infrastructure control: it
+excluded the known 74,428 Triangle witness and selected the 115,228 protected
+fallback. The quality-monotonic follow-up restores bounded witness admission
+and selects the exact 74,428.143 mm2 two-band Triangle lattice while preserving
+the 405,773.434 mm2 zero-cavity Mixed pocket-first endpoint. The source audit
+is currently expensive; later acceleration must reproduce its admitted hashes
+before replacing it.
+
+Source-audit acceleration has three explicit modes. Equivalent cells are
+memoized by canonical cell key within one run, with separate logical and
+physical attempt counters. A content-addressed warm replay can replace raw crop
+enumeration: the harness schema-decodes the product, then the algorithm checks
+canonical-grid legality, canonical identity, contact topology, and envelope
+metrics before rebuilding each ordinary seed future. Ranking, deduplication,
+reservations, and the continuation cap remain unchanged; a mismatch fails.
+
+The experimental `p2-axis-union` scope is a cold allocation policy, not an
+equivalent cache. It admits raw witnesses only from two-member periodic cells
+with an axis-union basis, then applies the unchanged Pareto/dedup/cap pipeline.
+It is generic over collision families and contains no fixture identifiers. A
+narrower source set can change which later futures fit into the fixed cap, so
+this mode is judged by endpoint and corpus quality rather than source-list
+equality.
+
+The shared-archive runner also owns a heterogeneous direct-only baseline named
+`shapes-17`. It imports 17 committed DXFs with deterministic piece/source IDs,
+uses the shared `2000 x 2700 mm` roomy sheet and `10 mm` padding, and compares
+the same three sheet-free direct roles. Calibration is a complete decision run:
+it retains and ranks the direct endpoints, selects the fitting winner, and
+writes the winner SVG. Periodic source-count gates remain scoped to repeated-
+family experiments; an all-distinct job is valid with zero periodic cells.
+
+Clipper2 offset input is quantized once to the canonical `0.001 mm` grid. The
+adapter removes consecutive duplicates and an equal closing point created by
+that quantization before strict path validation. This is required for analytic
+full circles, whose final floating sample can be infinitesimally different from
+the first while representing the same grid point. No general tolerance or
+shape repair is introduced: non-adjacent duplicates, non-convex boundaries,
+and paths with fewer than three unique grid vertices remain invalid.
+
+The isolated V7 seed/archive experiment keeps that E4 path intact while
+testing a replacement controller with stricter observability boundaries. Each
+independent arm constructs two complete canonical-exact, sheet-free seeds:
+`canonical-grid` uses max-side-first growth and `legacy-absolute-envelope`
+uses area-first absolute-envelope growth. Neither seed reads a requested sheet.
+The controller caches immutable transform/basis phase signatures per run and
+reports hits/misses. It ranks all infeasible survivors by an exact canonical
+pressure tuple—wall offender count, overlap pair count, conflicted-piece count,
+wall overrun, doubled Clipper overlap area, envelope area, maximum side, and
+span—before using SAT only as a deterministic tie-break and proposal direction.
+Canonical legal states are archive-only: they do not terminate the scan or take
+an infeasible-pool slot. The capacity-eight endpoint archive deduplicates future
+states by phase-aware relaxed state key, while terminal rendering may later
+deduplicate rigid quarter turns. Its seed representatives and Pareto selections
+compare hull-gap fractions by cross multiplication, not floating ratios.
+
+V7 Stage 1 runs `control`, `split`, `atomic`, and `refine` as independent
+arms. Each arm receives one 12,000-evaluation / 60-second budget shared across
+both seeds and all three contraction ratios. `split` evaluates q=1/3, 1/2, and
+2/3 partitions on the existing contraction axis; `atomic` moves the strongest
+canonical positive-overlap pair with every exact balanced integer allocation;
+`refine` exposes the existing two-radius vocabulary without requiring atomic
+success. No combinations, graph cut, rigid component transport, or broad
+coordinate descent are enabled at this stage. Full candidate records are
+bounded to final pool/archive survivors and four deterministic sample kinds per
+`(arm, seed, ratio)`, so a Stage 1 arm has at most 24 samples. V7 remains
+experiment-only until its provenance runs, triangle gates, and review establish
+that it improves an exact completed layout rather than merely a relaxed state.
+
+The V7 reconstruction archive treats intrinsic envelope compactness and exact
+void topology as its two dominance axes. Exact-contact connectivity remains a
+real but bounded selection axis: each geometric frontier round chooses a
+compactness representative, a void representative, then one contact
+representative. Contact therefore preserves one structurally useful alternative
+without blocking strict improvement on both geometric axes. Diagnostic
+certificate floors do not partition the archive.
+
+The optional queue-vs-beam discriminator is an independent replay. At each
+synchronized depth it measures whether a distinct remaining geometry class can
+produce non-dominated gap-contained growth, and whether one of four rejected
+same-piece geometric-front alternatives produces a better one-step
+continuation. Its budgets, candidates, and output are trace-only and cannot
+alter the live reconstruction result.
+
+The experimental Stage 2A partial geometric beam reuses that exact sheetless
+successor enumeration but changes retention. One protected width-one control
+remains outside experimental capacity. The global canonical successor union is
+deduplicated by occupied geometry plus remaining geometry-class order and
+unplaced ids, partitioned into compactness/void Pareto layers, and retained by
+bounded layer breadth followed by guaranteed repeated within-layer geometric
+dispersion. Exact contact gets at most one post-breadth selection turn and is
+never a dominance axis. Dispersion compares exact occupied unions under rigid
+quarter turns using void/contact signature Hamming distance and a Clipper2 XOR
+area ratio computed with integer shoelace arithmetic. A failed Boolean distance
+measurement is unavailable, never a maximum-diversity reward. If the initially
+represented Pareto layers cannot fill capacity, retention opens the next layer
+deterministically; layer extraction stops once the bounded width cannot consult
+another layer. Requested sheet dimensions appear only in the monotone q0/q90
+fit gate and the shared canonical q0/q90 terminal finalizer. Trace identities
+are versioned SHA-256 digests; full future-equivalence keys remain internal.
+The evidence harness has a cold, isolated Stage 2A path that freezes and hashes
+the prepared-piece order, skips Stage 0/1 reconstruction and queue work, and
+hashes finalized SVG and PNG output. Alternate-piece scheduling remains
+disabled until a later paired commensurate ablation at a successful fixed beam
+width.
+
+The same cold harness can run a diagnostic four-contributor legal reconstruction
+and a trace-only coordinated complete-layout pilot. The legal cell deduplicates
+reinsertion orders by intrinsic geometry class, keeps width four plus bounded
+eviction shadows, and finalizes all terminal successors through the common exact
+archive. The coordinated pilot then reuses the existing squeeze/disrupt/separate
+engine from an immutable exact incumbent. Temporary overlap states remain
+private; only canonical-legal handoffs are measured and rendered. A handoff is
+diagnostically qualifying only when it is novel, strictly improves the common
+geometric archive, improves cohesion, and does not regress cavity or hull
+topology. Neither observer is wired into production selection.
+
+Stage 2A also has one evidence-bounded intrinsic feature family. For every
+transformed moving polygon, it intersects axis-aligned NFP segments with the
+translations that align the moving min/max bounds to the occupied min/max
+envelope. These sheet-free interior segment events enter only the experimental
+successor pool; ordinary candidates remain the sole source of the protected
+width-one winner. The protected lineage is completed first, then experimental
+expansion receives only the deterministic remainder of the declared search-wide
+evaluation/deadline cap; experimental parents and feature candidates therefore
+cannot starve it or double the cell budget. Width zero bypasses experimental
+expansion. Exact sheetless validation filters the added points before
+scoring. Experimental retention uses layer breadth, at most one bounded contact
+turn, and dispersion for every remaining slot. Canonical exact legality and the
+topology/cavity/contact axes are evaluated once per canonical successor after
+raw candidate deduplication, not once per duplicate placement; failure to
+measure an exact-legal representative aborts the run explicitly.
+
+At no more than five registered points, E4 projects a relaxed state back to the
+exact geometry domain: canonicalize to the collision grid, remove both
+endpoints of exact conflicts plus target-wall offenders, pin each removed piece
+to its relaxed finite transform, and reinsert the conflict closure with exact
+NFP/IFP candidates nearest the relaxed pose. Orientation-family fallback is
+allowed only when the pinned transform has no legal candidate. Only complete
+layouts passing canonical exact legality enter the bounded archive; E1 remains
+the immutable fallback. Projection preservation uses canonical layout identity,
+followed by the existing exact legality and complete piece-coverage checks,
+rather than equality between independently accumulated floating diagnostics.
+Complete intrinsic contact, occupied-envelope, and hull-waste certificates are
+likewise remeasured from snapped canonical polygons. Requested-sheet q0/q90 fit
+occurs after one archive winner is selected. E4 remains experiment-only until
+hull-gap, cavity, area, runtime, determinism, triangle, corpus, and visual gates
+all pass.
+
 Local compactness ranks the largest normalized sheet-axis consumption, the sum
 of both normalized spans, collision-bounds area, and then absolute span. Bounds,
 anchor coordinates, and shared boundary length are canonicalized to the existing
@@ -451,42 +766,39 @@ geometry becomes the typed
 `irregular_source_geometry_missing` worker failure; invalid derived geometry
 and scoring become distinct typed failures.
 
-For explicitly enabled compact-quality, deterministic, scale-diverse, multi-family
-jobs with more than twenty pieces, repair disabled, GA inactive, and no intentional
-short-side-fill policy,
-`computeIrregularNesting`
-coordinates two private uses of the existing single-sheet portfolio primitive:
-the requested sheet and a protected fixed `2000 x 2700` canonical-reference sheet.
-The reference sheet reuses the ordinary decode unconditionally when it is itself
-requested; certification arbitrates only a distinct protected decode.
-Both decodes forward progress through one stream with an explicit role and use
-role-prefixed decision-trace decode ids. Both roles retain their own history until
-terminal selection, then only the selected history is published. Cancellation is
-shared, benchmark decode counters are aggregated, and only the selected role is
-adapted into worker output. The renderer raises irregular jobs to a `120000 ms`
-timeout floor because the measured protected mixed-61 run takes about `89.5 s`;
-other worker modes retain their configured timeout.
+For the explicitly enabled compact-quality profile, with GA inactive and no
+intentional `short_side_fill` policy, `computeIrregularNesting` runs one intrinsic
+shared archive instead of the ordinary windowed beam. Three direct sheetless
+constructors and the bounded repeated-family periodic portfolio submit only complete
+canonical-exact endpoints. The archive deduplicates and ranks those endpoints by
+intrinsic geometry and topology, then tests q0 and q90 against the requested sheet.
+Sheet dimensions therefore constrain legality but never rank or prune construction.
 
-The protected role can supply only the exact terminal `IrregularBeamState` emitted
-by its real portfolio decode, rigidly anchored at q0 or q90. The integer-grid
-geometry layer verifies requested-sheet fit and zero positive polygon overlap;
-algorithm code does not reconstruct or revalidate placements through a different
-legality path. Selection does not compare the finalist with requested-production
-scores. A complete finite finalist receives priority only when its sheet-free
-certificate has at most two exact occupied-union cavities, hull-gap ratio at most
-`0.15`, envelope aspect ratio at most `1.5`, at most two isolated pieces, and a
-largest positive-contact component containing at least half the pieces. q0 is
-preferred when both q0 and q90 pass. Identity ties, incomplete or non-finite
-results, undefined topology, and failed certificates retain production.
+The compact path has no ordinary-beam competitor and no fixed-reference fallback.
+An incomplete direct state cannot become an endpoint, and a cancelled,
+deadline-censored, execution-incomplete, or non-fitting archive fails with a typed
+worker error. The fixed family, transform, pair, cell, and continuation caps are
+intentional deterministic search bounds rather than claims of exhaustive coverage;
+production requires their selected work to settle without runtime censoring.
+Cancellation checkpoints cover direct construction, periodic catalog selection,
+finite-crop enumeration, and continuation decoding. Progress reports the `shared_archive` phase
+after the direct and periodic boundaries, then emits the selected exact endpoint as
+`completed`. Irregular jobs use a `390000 ms` timeout floor; other worker modes retain
+their configured timeout.
 
-These deliberately conservative constants are anchored on the approved mixed-61
-motif. Envelope aspect replaces the retired relative max-side guard; hull gap and
-exact union cavities bound chain/remnant openings; isolation and component ratio
-protect contact cohesion. A certified layout may intentionally trade free-material
-remnants or raw contact totals on the requested sheet because those sheet-relative
-production comparisons are no longer allowed to veto invariant collision geometry.
-Layout identity ignores translation, rigid quarter-turn, copy order,
-ring origin, and winding while preserving reflection and relative placement.
+Selected archive history is a truthful one-frame terminal record labelled
+`shared-archive-final-selected`; it is not fabricated beam ancestry. The selected
+endpoint retains its exact canonical contact and hull metrics while free-material
+metrics are reconstructed on the requested sheet. Exact occupied-union cavity count
+is exposed separately as `canonicalEnclosedCavityCount`; it must not overwrite the
+sheet-space `freeMaterialHoleCount` measurement.
+
+The removed canonical-reference coordinator, fixed `2000 x 2700` decode, admission
+certificate, and `canonicalReferenceDecodeEnabled` schema field are historical only.
+The compact production baselines are Triangle-20 at `74,428.143126 mm2`, Mixed-61 at
+`391,605.850174 mm2`, and Shapes-17 at `304,499.845650 mm2`, all with zero canonical
+cavities. Layout identity ignores translation, rigid quarter-turn, copy order, ring
+origin, and winding while preserving reflection and relative placement.
 
 Do not route `irregular-convex-v2` requests to MaxRects.
 

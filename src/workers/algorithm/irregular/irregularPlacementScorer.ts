@@ -100,13 +100,13 @@ export namespace IrregularPlacementScorer {
  * otherwise identical legal candidates deterministic without changing their
  * geometric score.
  */
-const balancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
-  Order.mapInput(Order.Number, (score) => score.worstNormalizedSheetConsumption),
-  Order.mapInput(Order.Number, (score) => score.normalizedSheetSpanSum),
+const intrinsicEnvelopeOrder = Order.combineAll<IrregularPlacementScore>([
+  Order.mapInput(Order.Number, (score) => score.usedClusterMaxSideMm),
   Order.mapInput(Order.Number, (score) => score.usedClusterAreaMm2),
-  Order.mapInput(Order.Number, (score) => score.usedClusterSpanMm),
-  Order.mapInput(Order.Number, (score) => score.candidateBottomMm),
-  Order.mapInput(Order.Number, (score) => score.candidateLeftMm),
+  Order.mapInput(Order.Number, (score) => score.usedClusterSpanMm)
+])
+
+const deterministicLocalTieBreakOrder = Order.combineAll<IrregularPlacementScore>([
   Order.mapInput(Order.Number, (score) => score.candidate.transform.index),
   Order.mapInput(Order.Number, (score) => score.candidate.transform.rotationDeg),
   Order.mapInput(Order.Boolean, (score) => score.candidate.transform.mirrored),
@@ -114,9 +114,15 @@ const balancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
   Order.mapInput(Order.String, (score) => score.candidate.pieceId)
 ])
 
+const balancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
+  intrinsicEnvelopeOrder,
+  deterministicLocalTieBreakOrder
+])
+
 const edgeContactThenBalancedCompactnessOrder = Order.combineAll<IrregularPlacementScore>([
   Order.mapInput(Order.Number, (score) => -score.sharedCollisionBoundaryLengthMm),
-  balancedCompactnessOrder
+  intrinsicEnvelopeOrder,
+  deterministicLocalTieBreakOrder
 ])
 
 /**

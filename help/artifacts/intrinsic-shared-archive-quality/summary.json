@@ -1,0 +1,31 @@
+{
+  "sourceCommit": "fa9ab29",
+  "triangle": {
+    "role": "periodic-P2",
+    "canonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+    "envelopeAreaMm2": 74428.143126,
+    "enclosedCavityCount": 0,
+    "periodicRuntimeMs": 105914.8525,
+    "reportSha256": "0c0987c8dc4480d2d828c8e937218a59b5b7896ac6d29cfa8948eee1fcd57b7b",
+    "svgSha256": "172a45509fd36257514bb87f500f26a09bd9a9ce5c72976c0d4d916ae8c8975f",
+    "pngSha256": "1fa1781b47be1bb3c6061963c2a7d853b5c1ca6159fa34b144dee7ef1ca5918b"
+  },
+  "mixed": {
+    "role": "open-pocket-first",
+    "canonicalGeometryHash": "5a1f1ba6957031d839862709f4390727b4bc878004a1660d4ffa45393eda0d21",
+    "envelopeAreaMm2": 405773.434053,
+    "enclosedCavityCount": 0,
+    "periodicRuntimeMs": 353420.87025,
+    "reportSha256": "6408de5cfb636a33160e9b57a15a3089794ccb10748cabb6bcec65d4b4f6e9b1",
+    "svgSha256": "9ee32e2f114b051c138adc056a48168b23c96f8b157dbbc41f04fb2750ea8016",
+    "pngSha256": "f5f4ea5bc0777ec7b5bd4e87a63efb806a505d98e7ed1deaa4a33cadb749fa84"
+  },
+  "limits": {
+    "maximumCatalogRuntimeMs": 30000,
+    "maximumContinuationRuntimeMs": 600000,
+    "maximumPeriodicRuntimeMs": 600000,
+    "periodicContinuationCandidateEvaluations": 19862,
+    "periodicContinuationCount": 8,
+    "rawSourceAudit": true
+  }
+}

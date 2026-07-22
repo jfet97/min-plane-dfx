@@ -1,6 +1,7 @@
 import { Effect, Layer } from 'effect'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import {
+  CollisionGeometry,
   IrregularBounds,
   IrregularPlacedPiece,
   IrregularPlacement,
@@ -24,6 +25,7 @@ import type {
 } from '../../src/workers/irregular/nfpIfpService.js'
 import {
   canonicalizeTranslatedConvexRing,
+  canonicalPlacementPointAlternatives,
   makeNfpIfpServiceLive,
   makeNfpIfpServiceLayer,
   NfpBoundaryAlgorithms,
@@ -37,7 +39,8 @@ import { makePlacedCollisionSpatialIndex } from '../../src/workers/irregular/pla
 import type {
   ComputeIfpBoundsInput,
   ComputeNfpInput,
-  GeneratePlacementCandidatesInput
+  GeneratePlacementCandidatesInput,
+  NfpIfpCandidateProvenance
 } from '../../src/workers/irregular/services.js'
 import {
   GeometryCache,
@@ -46,9 +49,12 @@ import {
   IrregularGeometryInputError,
   IrregularNfpIfpCandidateMemoScope,
   IrregularNfpIfpControlAbortError,
+  NFP_IFP_CANDIDATE_SOURCE_MASK,
   NfpIfpService
 } from '../../src/workers/irregular/services.js'
 import { PlacementValidation } from '../../src/workers/irregular/placementValidation.js'
+import { TransformCollisionGeometry } from '../../src/workers/irregular/transformCollisionGeometry.js'
+import { assertCanonicalGridLegalLayout } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -81,6 +87,22 @@ function transformedGeometry(
     transform: transformCandidate,
     polygon: polygon(points),
     bounds: geometryBounds
+  })
+}
+
+function collisionGeometry(
+  pieceId: string,
+  points: ReadonlyArray<IrregularPoint>
+): CollisionGeometry {
+  const geometryBounds = bounds(points)
+  return new CollisionGeometry({
+    sourcePieceId: PieceId.make(pieceId),
+    sourceBounds: geometryBounds,
+    sampledPoints: points,
+    convexHull: polygon(points),
+    collisionPolygon: polygon(points),
+    placementReference: point(0, 0),
+    diagnostics: []
   })
 }
 
@@ -312,6 +334,235 @@ async function captureFailure(promise: Promise<unknown>) {
 }
 
 describe('NfpIfpServiceLive', () => {
+  it('reports phase-aware finite feature provenance without changing legal candidates', async () => {
+    const fixed = placedPiece(
+      'feature-fixed',
+      [point(0, 0), point(12, 0), point(12, 8), point(0, 8)],
+      20.123,
+      30.456
+    )
+    const movingFamilies = [
+      transformedGeometry(
+        'feature-q0',
+        [point(0, 0), point(8, 0), point(8, 4), point(0, 4)],
+        undefined,
+        transform(0, 0, false)
+      ),
+      transformedGeometry(
+        'feature-q90',
+        [point(0, -8), point(4, -8), point(4, 0), point(0, 0)],
+        undefined,
+        transform(1, 90, false)
+      ),
+      transformedGeometry(
+        'feature-mirror',
+        [point(-8, 0), point(0, 0), point(0, 4), point(-8, 4)],
+        undefined,
+        transform(2, 0, true)
+      )
+    ]
+
+    for (const moving of movingFamilies) {
+      let provenance:
+        | Parameters<NonNullable<GeneratePlacementCandidatesInput['onCandidateProvenance']>>[0]
+        | undefined
+      const input = {
+        sheet: sheet(100, 100),
+        placed: [fixed],
+        moving,
+        settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+        candidateDomain: 'sheetless-nfp' as const
+      }
+      const ordinary = await generateCandidates(input)
+      const observed = await generateCandidates({
+        ...input,
+        onCandidateProvenance: (snapshot) => {
+          provenance = snapshot
+        }
+      })
+
+      expect(observed).toEqual(ordinary)
+      expect(provenance).toBeDefined()
+      if (provenance === undefined) throw new Error('expected feature provenance')
+      expect(provenance.rawBySource.nfpVertex).toBeGreaterThan(0)
+      expect(provenance.rawBySource.antiparallelEdgeSupport).toBeGreaterThan(0)
+      expect(
+        provenance.uniqueBySourceMask.some(
+          ({ sourceMask }) => (sourceMask & NFP_IFP_CANDIDATE_SOURCE_MASK.nfpVertex) !== 0
+        )
+      ).toBe(true)
+      expect(
+        provenance.legalCandidateSources.some(
+          ({ sourceMask }) => (sourceMask & NFP_IFP_CANDIDATE_SOURCE_MASK.nfpVertex) !== 0
+        )
+      ).toBe(true)
+      expect(provenance.phaseIncompatible).toBe('not-evaluated')
+      expect(provenance.canonicalChecked).toBe('not-evaluated')
+      expect(provenance.canonicalLegal).toBe('not-evaluated')
+
+      // The raw vertex contact retains its fractional basis. We project it
+      // through the live canonical alternatives once, then check direct legality.
+      const fixedVertex = fixed.collisionGeometry.polygon.points[2]
+      const movingVertex = moving.polygon.points[0]
+      if (fixedVertex === undefined || movingVertex === undefined)
+        throw new Error('expected vertices')
+      const rawVertexContact = {
+        x: fixedVertex.x + fixed.placement.transform.translateX - movingVertex.x,
+        y: fixedVertex.y + fixed.placement.transform.translateY - movingVertex.y
+      }
+      const expectedLegalGridKeys = new Set<string>()
+      for (const candidatePoint of canonicalPlacementPointAlternatives(rawVertexContact)) {
+        const candidate = new IrregularPlacementCandidate({
+          pieceId: moving.sourcePieceId,
+          transform: moving.transform,
+          point: candidatePoint,
+          diagnostics: []
+        })
+        if (
+          await Effect.runPromise(
+            PlacementValidation.checkSheetless({ placed: [fixed], moving, candidate })
+          )
+        ) {
+          expectedLegalGridKeys.add(`${candidatePoint.gridX},${candidatePoint.gridY}`)
+          break
+        }
+      }
+      expect(expectedLegalGridKeys.size).toBeGreaterThan(0)
+      for (const expectedKey of expectedLegalGridKeys) {
+        const source = provenance.legalCandidateSources.find(
+          ({ gridX, gridY }) => `${gridX},${gridY}` === expectedKey
+        )
+        expect(source).toBeDefined()
+        expect(source?.sourceMask ?? 0).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('reports IFP/NFP and pairwise-NFP intersection source families', async () => {
+    const moving = transformedGeometry('intersection-moving', [
+      point(0, 0),
+      point(10, 0),
+      point(10, 10),
+      point(0, 10)
+    ])
+    const placed = [
+      placedPiece(
+        'intersection-fixed-a',
+        [point(0, 0), point(20, 0), point(20, 20), point(0, 20)],
+        20,
+        20
+      ),
+      placedPiece(
+        'intersection-fixed-b',
+        [point(0, 0), point(20, 0), point(20, 20), point(0, 20)],
+        45,
+        45
+      ),
+      placedPiece(
+        'intersection-fixed-edge',
+        [point(0, 0), point(20, 0), point(20, 20), point(0, 20)],
+        85,
+        45
+      )
+    ]
+    let provenance:
+      | Parameters<NonNullable<GeneratePlacementCandidatesInput['onCandidateProvenance']>>[0]
+      | undefined
+    await generateCandidates({
+      sheet: sheet(100, 100),
+      placed,
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      onCandidateProvenance: (snapshot) => {
+        provenance = snapshot
+      }
+    })
+
+    expect(provenance).toBeDefined()
+    if (provenance === undefined) throw new Error('expected intersection provenance')
+    expect(provenance.rawBySource.ifpNfpIntersection).toBeGreaterThan(0)
+    expect(provenance.rawBySource.nfpNfpIntersection).toBeGreaterThan(0)
+  })
+
+  it('orders the step-31 raw translation by canonical-grid distance and identity', () => {
+    const alternatives = canonicalPlacementPointAlternatives({
+      x: 509.4153570036576,
+      y: 527.8944897285338
+    })
+
+    expect(alternatives).toHaveLength(9)
+    expect(alternatives[0]).toMatchObject({ x: 509.415, y: 527.894 })
+    expect(
+      alternatives.every(({ x, y }) => Number.isInteger(x * 1_000) && Number.isInteger(y * 1_000))
+    ).toBe(true)
+    expect(new Set(alternatives.map(({ gridX, gridY }) => `${gridX},${gridY}`)).size).toBe(9)
+  })
+
+  it('keeps direct and final canonical legality aligned for the step-31 pair', async () => {
+    const fixedPoints = [
+      point(0, 23.502),
+      point(0, 91.072),
+      point(-70.504, 114.574),
+      point(-70.504, 0)
+    ]
+    const movingPoints = [point(0, -44.144), point(75.675, -88.288), point(75.675, 0)]
+    const fixedTranslation = canonicalPlacementPointAlternatives({
+      x: 527.902,
+      y: 381.8945535748431
+    })[0]
+    if (fixedTranslation === undefined) throw new Error('expected fixed canonical translation')
+    const fixed = placedPiece(
+      '604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4',
+      fixedPoints,
+      fixedTranslation.x,
+      fixedTranslation.y,
+      transform(1, 90, false)
+    )
+    const moving = transformedGeometry(
+      'd06db288-d2d6-4f40-874e-98287f516d93-copy-2',
+      movingPoints,
+      bounds(movingPoints),
+      transform(3, 270, false)
+    )
+    const canonicalAlternatives = canonicalPlacementPointAlternatives({
+      x: 509.4153570036576,
+      y: 527.8944897285338
+    })
+    let accepted: (typeof canonicalAlternatives)[number] | undefined
+    for (const candidatePoint of canonicalAlternatives) {
+      const candidate = new IrregularPlacementCandidate({
+        pieceId: moving.sourcePieceId,
+        transform: moving.transform,
+        point: candidatePoint,
+        diagnostics: []
+      })
+      if (
+        await Effect.runPromise(
+          PlacementValidation.check({
+            sheet: sheet(2000, 2700),
+            placed: [fixed],
+            moving,
+            candidate
+          })
+        )
+      ) {
+        accepted = candidatePoint
+        break
+      }
+    }
+    expect(accepted).toBeDefined()
+    if (accepted === undefined) throw new Error('expected a legal canonical alternative')
+    const acceptedMoving = placedPiece(
+      'd06db288-d2d6-4f40-874e-98287f516d93-copy-2',
+      movingPoints,
+      accepted.x,
+      accepted.y,
+      transform(3, 270, false)
+    )
+
+    expect(accepted).toMatchObject({ x: 509.416, y: 527.895 })
+    expect(assertCanonicalGridLegalLayout(sheet(2000, 2700), [fixed, acceptedMoving])).toBe(true)
+  })
   it('canonicalizes wrap-around collinear and repeated vertices without changing the ring', () => {
     const wrapAround = canonicalizeTranslatedConvexRing([
       point(0, 0),
@@ -382,6 +633,71 @@ describe('NfpIfpServiceLive', () => {
     const nfp = await computeNfp({ fixed, moving, settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS })
 
     expect(nfp.boundary.points).toEqual([point(8, 18), point(14, 18), point(14, 24), point(8, 24)])
+  })
+
+  it('keeps the disputed arbitrary-angle NFP tangent legal in direct validation', async () => {
+    const moving = Effect.runSync(
+      TransformCollisionGeometry.compute({
+        geometry: collisionGeometry('disputed-trapezoid', [
+          point(20, 0),
+          point(80, 0),
+          point(100, 60),
+          point(0, 60)
+        ]),
+        transform: transform(5, 71.56456358247075, false)
+      })
+    )
+    const fixedGeometry = Effect.runSync(
+      TransformCollisionGeometry.compute({
+        geometry: collisionGeometry('disputed-hexagon', [
+          point(35, 0),
+          point(70, 25),
+          point(70, 75),
+          point(35, 100),
+          point(0, 75),
+          point(0, 25)
+        ]),
+        transform: transform(4, 35.53727384446901, true)
+      })
+    )
+    const fixed = new IrregularPlacedPiece({
+      placement: new IrregularPlacement({
+        sourcePieceId: fixedGeometry.sourcePieceId,
+        transform: new IrregularTransform({
+          translateX: 406.0464207658377,
+          translateY: 242.57802340266528,
+          rotationDeg: fixedGeometry.transform.rotationDeg,
+          mirrored: fixedGeometry.transform.mirrored
+        })
+      }),
+      collisionGeometry: fixedGeometry
+    })
+    const nfp = await computeNfp({
+      fixed,
+      moving,
+      settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+    })
+    const tangentPoint = nfp.boundary.points[4]
+    if (tangentPoint === undefined) {
+      throw new Error('expected the disputed NFP support vertex')
+    }
+    const tangentCandidate = new IrregularPlacementCandidate({
+      pieceId: moving.sourcePieceId,
+      transform: moving.transform,
+      point: tangentPoint,
+      diagnostics: []
+    })
+
+    await expect(
+      Effect.runPromise(
+        PlacementValidation.check({
+          sheet: sheet(2000, 2700),
+          placed: [fixed],
+          moving,
+          candidate: tangentCandidate
+        })
+      )
+    ).resolves.toBe(true)
   })
 
   it('rejects a translated NFP whose strict boundary collapses numerically', async () => {
@@ -820,6 +1136,39 @@ describe('NfpIfpServiceLive', () => {
     expect(candidates.every(({ diagnostics }) => diagnostics.length === 0)).toBe(true)
   })
 
+  it('seeds an empty contact-only sheet at the bottom-left IFP corner', async () => {
+    const moving = transformedGeometry('moving-contact-seed', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    let provenance:
+      | Parameters<NonNullable<GeneratePlacementCandidatesInput['onCandidateProvenance']>>[0]
+      | undefined
+
+    const candidates = await generateCandidates({
+      sheet: sheet(10, 10),
+      placed: [],
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      candidateDomain: 'contact-only',
+      onCandidateProvenance: (snapshot) => {
+        provenance = snapshot
+      }
+    })
+
+    expect(candidatePoints(candidates)).toEqual([point(0, 0)])
+    expect(provenance?.rawBySource.ifpCorner).toBe(1)
+    expect(provenance?.legalCandidateSources).toEqual([
+      {
+        gridX: 0,
+        gridY: 0,
+        sourceMask: NFP_IFP_CANDIDATE_SOURCE_MASK.ifpCorner
+      }
+    ])
+  })
+
   it('memoizes legal points by geometry and remaps current candidate metadata', async () => {
     const values = new Map<string, unknown>()
     const counters: CacheCounters = { gets: 0, sets: 0, removes: 0 }
@@ -851,6 +1200,7 @@ describe('NfpIfpServiceLive', () => {
     )
     const firstScope = new IrregularNfpIfpCandidateMemoScope()
     const secondScope = new IrregularNfpIfpCandidateMemoScope()
+    const provenanceSnapshots: NfpIfpCandidateProvenance[] = []
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* NfpIfpService
@@ -859,7 +1209,10 @@ describe('NfpIfpServiceLive', () => {
           placed: [fixed],
           moving: firstMoving,
           settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
-          candidateMemoScope: firstScope
+          candidateMemoScope: firstScope,
+          onCandidateProvenance: (provenance) => {
+            provenanceSnapshots.push(provenance)
+          }
         })
         const getsAfterFirst = counters.gets
         const second = yield* service.generatePlacementCandidates({
@@ -867,7 +1220,10 @@ describe('NfpIfpServiceLive', () => {
           placed: [interchangeableFixedCopy],
           moving: secondMoving,
           settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
-          candidateMemoScope: firstScope
+          candidateMemoScope: firstScope,
+          onCandidateProvenance: (provenance) => {
+            provenanceSnapshots.push(provenance)
+          }
         })
         const getsAfterMemoHit = counters.gets
         yield* service.generatePlacementCandidates({
@@ -886,7 +1242,11 @@ describe('NfpIfpServiceLive', () => {
 
     expect(candidatePoints(result.second)).toEqual(candidatePoints(result.first))
     expect(result.second.every(({ pieceId }) => pieceId === secondMoving.sourcePieceId)).toBe(true)
-    expect(result.second.every(({ transform }) => transform.index === secondTransform.index)).toBe(true)
+    expect(result.second.every(({ transform }) => transform.index === secondTransform.index)).toBe(
+      true
+    )
+    expect(provenanceSnapshots).toHaveLength(2)
+    expect(provenanceSnapshots[1]).toEqual(provenanceSnapshots[0])
     expect(result.getsAfterMemoHit).toBe(result.getsAfterFirst)
     expect(result.getsAfterNewScope).toBeGreaterThan(result.getsAfterMemoHit)
   })
@@ -923,12 +1283,7 @@ describe('NfpIfpServiceLive', () => {
         )
       ]
     }
-    const additionalFixed = placedPiece(
-      'fixed-exact-memo-key-additional',
-      fixedPoints,
-      7,
-      4
-    )
+    const additionalFixed = placedPiece('fixed-exact-memo-key-additional', fixedPoints, 7, 4)
     const orderedPlacedInput = {
       ...baseInput,
       placed: [...baseInput.placed, additionalFixed]
@@ -1111,12 +1466,8 @@ describe('NfpIfpServiceLive', () => {
         }
       }
     }
-    type ControlledCandidateError = Effect.Error<
-      ReturnType<typeof generateCandidatesEffect>
-    >
-    expectTypeOf<IrregularNfpIfpControlAbortError>().toMatchTypeOf<
-      ControlledCandidateError
-    >()
+    type ControlledCandidateError = Effect.Error<ReturnType<typeof generateCandidatesEffect>>
+    expectTypeOf<IrregularNfpIfpControlAbortError>().toMatchTypeOf<ControlledCandidateError>()
 
     const failure = await captureFailure(
       Effect.runPromise(
@@ -1313,8 +1664,7 @@ describe('NfpIfpServiceLive', () => {
     const firstDirectionY = firstEnd.y - firstStart.y
     const secondDirectionX = secondEnd.x - secondStart.x
     const secondDirectionY = secondEnd.y - secondStart.y
-    const denominator =
-      firstDirectionX * secondDirectionY - firstDirectionY * secondDirectionX
+    const denominator = firstDirectionX * secondDirectionY - firstDirectionY * secondDirectionX
     const startArea =
       firstDirectionX * (secondStart.y - firstStart.y) -
       firstDirectionY * (secondStart.x - firstStart.x)
@@ -1326,9 +1676,18 @@ describe('NfpIfpServiceLive', () => {
       secondStart.x + fallbackParameter * secondDirectionX,
       secondStart.y + fallbackParameter * secondDirectionY
     )
+    const canonicalIntersectionAlternatives =
+      canonicalPlacementPointAlternatives(expectedIntersection)
+    const admittedPoints = candidatePoints(candidates)
 
     expect(denominator).toBe(0)
-    expect(candidatePoints(candidates)).toContainEqual(expectedIntersection)
+    expect(
+      admittedPoints.some((admitted) =>
+        canonicalIntersectionAlternatives.some(
+          (alternative) => alternative.x === admitted.x && alternative.y === admitted.y
+        )
+      )
+    ).toBe(true)
   })
 
   it('preserves an error result when crossing arithmetic overflows', () => {
@@ -1381,6 +1740,160 @@ describe('NfpIfpServiceLive', () => {
       point(0, 8),
       point(6, 8)
     ])
+  })
+
+  it('generates the same exact contact candidates without consulting sheet bounds', async () => {
+    const fixed = placedPiece(
+      'sheetless-fixed',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      0,
+      0
+    )
+    const moving = transformedGeometry('sheetless-moving', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const baseInput = {
+      placed: [fixed],
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      candidateDomain: 'sheetless-nfp' as const
+    }
+
+    const tinySheetCandidates = await generateCandidates({
+      ...baseInput,
+      sheet: sheet(1, 1)
+    })
+    const roomySheetCandidates = await generateCandidates({
+      ...baseInput,
+      sheet: sheet(10_000, 10_000)
+    })
+
+    expect(tinySheetCandidates).toEqual(roomySheetCandidates)
+    expect(candidatePoints(tinySheetCandidates)).toEqual([
+      point(-2, -2),
+      point(0, -2),
+      point(2, -2),
+      point(-2, 0),
+      point(2, 0),
+      point(-2, 2),
+      point(0, 2),
+      point(2, 2)
+    ])
+    expect(candidatePoints(tinySheetCandidates)).not.toContainEqual(point(0, 0))
+
+    for (const candidate of tinySheetCandidates) {
+      await expect(
+        Effect.runPromise(
+          PlacementValidation.checkSheetless({
+            placed: [fixed],
+            moving,
+            candidate
+          })
+        )
+      ).resolves.toBe(true)
+    }
+  })
+
+  it('does not invent an origin candidate for an empty sheetless contact domain', async () => {
+    const moving = transformedGeometry('sheetless-first', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+
+    const candidates = await generateCandidates({
+      sheet: sheet(1, 1),
+      placed: [],
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      candidateDomain: 'sheetless-nfp'
+    })
+
+    expect(candidates).toEqual([])
+  })
+
+  it('reuses one sheetless decoder memo entry across different real sheets', async () => {
+    const values = new Map<string, unknown>()
+    const counters: CacheCounters = { gets: 0, sets: 0, removes: 0 }
+    const scope = new IrregularNfpIfpCandidateMemoScope()
+    const fixed = placedPiece(
+      'sheetless-memo-fixed',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      -1,
+      -1
+    )
+    const moving = transformedGeometry('sheetless-memo-moving', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const baseInput = {
+      placed: [fixed],
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      candidateDomain: 'sheetless-nfp' as const,
+      candidateMemoScope: scope
+    }
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* NfpIfpService
+        const tiny = yield* service.generatePlacementCandidates({
+          ...baseInput,
+          sheet: sheet(1, 1)
+        })
+        const getsAfterFill = counters.gets
+        const roomy = yield* service.generatePlacementCandidates({
+          ...baseInput,
+          sheet: sheet(10_000, 10_000)
+        })
+        return { tiny, roomy, getsAfterFill, getsAfterHit: counters.gets }
+      }).pipe(
+        Effect.provide(makeNfpIfpServiceLayer()),
+        Effect.provide(cacheLayer(values, counters))
+      )
+    )
+
+    expect(result.roomy).toEqual(result.tiny)
+    expect(result.getsAfterHit).toBe(result.getsAfterFill)
+  })
+
+  it('keeps sheetless negative-coordinate candidates identical across pruning and index paths', async () => {
+    const fixed = placedPiece(
+      'sheetless-parity-fixed',
+      [point(0, 0), point(2, 0), point(2, 2), point(0, 2)],
+      -1,
+      -1
+    )
+    const moving = transformedGeometry('sheetless-parity-moving', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const placed = [fixed]
+    const input = {
+      sheet: sheet(1, 1),
+      placed,
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      candidateDomain: 'sheetless-nfp' as const
+    }
+
+    const indexed = await generateCandidatesWithPruning(input, 'indexed')
+    const reference = await generateCandidatesWithPruning(input, 'reference')
+    const indexedWithSpatialIndex = await generateCandidatesWithPruning(
+      { ...input, placedCollisionIndex: makePlacedCollisionSpatialIndex(placed) },
+      'indexed'
+    )
+
+    expect(reference).toEqual(indexed)
+    expect(indexedWithSpatialIndex).toEqual(indexed)
+    expect(candidatePoints(indexed).some(({ x, y }) => x < 0 || y < 0)).toBe(true)
   })
 
   it('keeps candidate generation identical with a persistent placed-collision index', async () => {

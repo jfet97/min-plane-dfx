@@ -28,8 +28,10 @@ export const CLIPPER2_OFFSET_POLICY = {
  *
  * A source point can move by at most half a grid step on each axis, or less
  * than `sqrt(2) * gridStepMm / 2` in any direction. The requested offset can
- * then round down by another half grid step. `0.002 mm` exceeds their combined
- * `0.001208 mm` maximum while staying far below the configured curve sag.
+ * then round down by another half grid step, and the transformed collision
+ * vertex can move by one more half-grid diagonal when arbitrary-angle output
+ * is canonicalized. `0.002 mm` exceeds their combined `0.001914 mm` maximum
+ * while staying far below the configured curve sag.
  */
 export function conservativeOffsetMm(distanceMm: number): number {
   return distanceMm + CLIPPER2_OFFSET_POLICY.conservativeOffsetAllowanceMm

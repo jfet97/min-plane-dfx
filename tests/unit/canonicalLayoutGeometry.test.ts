@@ -12,15 +12,15 @@ import {
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import {
+  analyzeCanonicalLayoutStructure,
   assertCanonicalGridLegalLayout,
   canonicalCollisionLayoutIdentity,
-  measureCanonicalLayoutTopology
+  measureCanonicalLayoutContacts,
+  measureCanonicalLayoutEnvelope,
+  measureCanonicalLayoutTopology,
+  placedCollisionWorldGridPath
 } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
-import {
-  canonicalStateOrientationsFittingSheet,
-  orientCanonicalStateSnapshots
-} from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
-import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
+import { selectTargetedDestroySet } from '../../src/workers/algorithm/irregular/targetedExactLns.js'
 
 function placed(
   id: string,
@@ -69,6 +69,24 @@ function quarterTurnLayout(layout: ReadonlyArray<IrregularPlacedPiece>) {
 }
 
 describe('canonical collision layout geometry', () => {
+  it('rounds local plus translation once for fractional and signed grid phases', () => {
+    const positive = placed(
+      'positive',
+      [[0.0004, 0.0005], [1.0004, 0.0005], [1.0004, 1.0005], [0.0004, 1.0005]],
+      0.0004,
+      0
+    )
+    const negative = placed(
+      'negative',
+      [[-0.0004, -0.0005], [0.9996, -0.0005], [0.9996, 0.9995], [-0.0004, 0.9995]],
+      -0.0004,
+      0
+    )
+
+    expect(placedCollisionWorldGridPath(positive)?.[0]).toEqual({ x: 1, y: 1 })
+    expect(placedCollisionWorldGridPath(negative)?.[0]).toEqual({ x: -1, y: -1 })
+  })
+
   it('ignores translation, quarter-turn, copy order, ring origin, and winding', () => {
     const first = [rectangle('a', 3, 1, 1, 2), rectangle('b', 1, 2, 5, 4)]
     const representedDifferently = [...quarterTurnLayout(first)]
@@ -151,50 +169,106 @@ describe('canonical collision layout geometry', () => {
     ).toBe(false)
   })
 
+  it('measures complete contact metrics from canonical geometry invariantly', () => {
+    const layout = [
+      rectangle('a', 3, 2, 0, 0),
+      rectangle('b', 2, 2, 3, 0),
+      rectangle('c', 1, 2, 5, 0)
+    ]
+    const representedDifferently = quarterTurnLayout(layout).toReversed()
+
+    expect(measureCanonicalLayoutContacts(representedDifferently)).toEqual(
+      measureCanonicalLayoutContacts(layout)
+    )
+    expect(measureCanonicalLayoutContacts(layout)).toMatchObject({
+      sharedBoundaryLengthMm: 4,
+      totalStructuralContacts: 2
+    })
+    expect(measureCanonicalLayoutEnvelope(representedDifferently)).toEqual(
+      measureCanonicalLayoutEnvelope(layout)
+    )
+    expect(measureCanonicalLayoutEnvelope(layout)).toMatchObject({
+      areaMm2: 12,
+      maximumSideMm: 6,
+      spanMm: 8,
+      occupiedHullWasteRatio: 0
+    })
+  })
+
   it('accepts exact sheet boundaries and rejects an overrun', () => {
     const sheet = new SheetSpec({ width: 4, height: 3, label: 'boundary' })
     expect(assertCanonicalGridLegalLayout(sheet, [rectangle('exact', 4, 3, 0, 0)])).toBe(true)
     expect(assertCanonicalGridLegalLayout(sheet, [rectangle('over', 4.001, 3, 0, 0)])).toBe(false)
   })
 
-  it('admits q0, q90-only, and unfit rigid states exactly', () => {
-    const geometry = [rectangle('wide', 6, 3, 0, 0)]
-    const state = new IrregularBeamState({
-      remainingPreparedPieces: [],
-      placedCollisionGeometries: geometry,
-      placementOrder: [PieceId.make('wide')]
-    })
-    expect(
-      canonicalStateOrientationsFittingSheet(
-        state,
-        new SheetSpec({ width: 6, height: 3, label: 'q0' })
-      ).map(({ rotationDeg }) => rotationDeg)
-    ).toEqual([0])
-    expect(
-      canonicalStateOrientationsFittingSheet(
-        state,
-        new SheetSpec({ width: 3, height: 6, label: 'q90' })
-      ).map(({ rotationDeg }) => rotationDeg)
-    ).toEqual([90])
-    expect(
-      canonicalStateOrientationsFittingSheet(
-        state,
-        new SheetSpec({ width: 6, height: 6, label: 'q0-first' })
-      ).map(({ rotationDeg }) => rotationDeg)
-    ).toEqual([0, 90])
-    expect(
-      canonicalStateOrientationsFittingSheet(
-        state,
-        new SheetSpec({ width: 5, height: 5, label: 'unfit' })
-      )
-    ).toEqual([])
+  it('reports exact components, hull gaps, conflicts, and wall offenders', () => {
+    const sheet = new SheetSpec({ width: 8, height: 6, label: 'structure' })
+    const layout = [
+      rectangle('primary-a', 2, 2, 0, 0),
+      rectangle('primary-b', 2, 2, 2, 0),
+      rectangle('detached', 1, 1, 6, 4),
+      rectangle('overlap', 1, 1, 6.5, 4),
+      rectangle('wall', 1, 1, 7.5, 0)
+    ]
 
-    const oriented = orientCanonicalStateSnapshots(
-      [{ stepIndex: 1, beamRank: 0, candidateCount: 1, state }],
-      90
-    )
-    expect(canonicalCollisionLayoutIdentity(oriented?.at(-1)?.state.placedCollisionGeometries ?? [])).toBe(
-      canonicalCollisionLayoutIdentity(state.placedCollisionGeometries)
+    const analysis = analyzeCanonicalLayoutStructure(sheet, layout)
+
+    expect(analysis?.positiveContactComponents.map((component) => component.length)).toEqual([
+      2,
+      2,
+      1
+    ])
+    expect(analysis?.positiveContactComponents[0]).toEqual([
+      PieceId.make('primary-a'),
+      PieceId.make('primary-b')
+    ])
+    expect(analysis?.pieces.find(({ pieceId }) => pieceId === PieceId.make('primary-a'))?.areaGrid2)
+      .toBe(4_000_000)
+    expect(analysis?.positiveContactPairs).toContainEqual([
+      PieceId.make('primary-a'),
+      PieceId.make('primary-b')
+    ])
+    expect(analysis?.positiveAreaConflicts).toContainEqual([
+      PieceId.make('detached'),
+      PieceId.make('overlap')
+    ])
+    expect(analysis?.wallOffenders).toEqual([PieceId.make('wall')])
+    expect(analysis?.largestHullGap?.areaMm2).toBeGreaterThan(0)
+    expect(analysis?.largestHullGap?.aabb.maxX).toBeGreaterThan(
+      analysis?.largestHullGap?.aabb.minX ?? Number.POSITIVE_INFINITY
     )
   })
+
+  it('forces exact conflict endpoints out of an otherwise retained frozen context', () => {
+    const sheet = new SheetSpec({ width: 10, height: 10, label: 'conflicting incumbent' })
+    const incumbent = [
+      rectangle('safe', 2, 2, 0, 0),
+      rectangle('conflict-a', 2, 2, 4, 4),
+      rectangle('conflict-b', 2, 2, 5.999, 4)
+    ]
+    const structure = analyzeCanonicalLayoutStructure(sheet, incumbent)
+    expect(structure?.positiveAreaConflictMeasurements).toEqual([
+      {
+        pair: [PieceId.make('conflict-a'), PieceId.make('conflict-b')],
+        areaMm2: 0.002
+      }
+    ])
+    if (structure === undefined) throw new Error('expected exact structural analysis')
+    const ranks = new Map(structure.pieces.map(({ pieceId }, index) => [pieceId, index]))
+    const selection = selectTargetedDestroySet({
+      target: 'hull_void',
+      requestedK: 2,
+      analysis: structure,
+      originalRankById: ranks
+    })
+    const destroyIds = new Set(selection.destroyIds)
+    const frozen = incumbent.filter(
+      ({ placement }) => !destroyIds.has(placement.pieceId ?? placement.sourcePieceId)
+    )
+
+    expect(selection.mandatoryIds).toContain(PieceId.make('conflict-a'))
+    expect(selection.mandatoryIds).toContain(PieceId.make('conflict-b'))
+    expect(assertCanonicalGridLegalLayout(sheet, frozen)).toBe(true)
+  })
+
 })

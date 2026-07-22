@@ -1,0 +1,47 @@
+{
+  "sourceCommit": "163fac1",
+  "fixture": "mixed-61",
+  "continuationCandidateEvaluationCap": 19862,
+  "winner": {
+    "canonicalGeometryHash": "310adc648970ae24798241bbb7178bbbc6f4506b1506012392235470a6dc6d0a",
+    "envelopeAreaMm2": 426530.39221099997,
+    "enclosedCavityCount": 0,
+    "totalStructuralContacts": 30,
+    "dominantStructuralContacts": 10,
+    "executionIndex": 1
+  },
+  "coverage": {
+    "selectionComplete": false,
+    "executionComplete": false,
+    "completed": 1,
+    "evaluationCap": 4,
+    "deadline": 1,
+    "globalDeadline": 2
+  },
+  "timingMs": {
+    "total": 300019.15216600004,
+    "continuations": 118897.90766600001,
+    "catalogSelectionAndUninstrumented": 181121.24450000003
+  },
+  "rawReportSha256": "1bd7f4a2cd3d1b767c25ba11a789c8f33af2be2d869632c78f50d587e0fdbf75",
+  "rawManifestSha256": "7375bbf7333814a60b1947e48076a38d88de0b76cb69ea0d8e0fad2e6449cd65",
+  "phaseControl": {
+    "sourceCommit": "e4378e51c0ef",
+    "auditRuntimeMs": 344750.753583,
+    "sourceAuditCropEnumerationMs": 173285.94258300064,
+    "noAuditRuntimeMs": 179301.164792,
+    "savedMs": 165449.588791,
+    "sameSourceOrder": true,
+    "sameWinner": true,
+    "auditReportSha256": "a8f4fac227d914ab83309afa009942a78f7df5d29ef24d6ecc039eace3f00b47",
+    "noAuditReportSha256": "95de04b66e13949abec4a48b6d6e4eef7f3ccb5b3ebb5e3f52f2169a74d81782"
+  },
+  "triangleControl": {
+    "runtimeMs": 6764.940334,
+    "completedSourceCount": 8,
+    "winnerCanonicalGeometryHash": "54bc4bfb67b313be9a68b9be15f8a820de8a35e28dc52e2de636a83f9bb075a4",
+    "winnerEnvelopeAreaMm2": 240521.39816399998,
+    "winnerTotalStructuralContacts": 7,
+    "reportSha256": "e6d083afeadefb8a9cab8fbddd2f92949c3aa1afc875b6a517e519f62474a7b7"
+  }
+}

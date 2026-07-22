@@ -38,9 +38,9 @@ function decode<S extends Schema.ConstraintDecoder<unknown>>(schema: S, input: u
 
 describe('irregular worker defaults', () => {
   it('raises only irregular jobs to the measured-safe timeout floor', () => {
-    expect(DEFAULT_IRREGULAR_WORKER_TIMEOUT_MS).toBe(120_000)
-    expect(workerTimeoutForMode('irregular-convex-v2', 30_000)).toBe(120_000)
-    expect(workerTimeoutForMode('irregular-convex-v2', 180_000)).toBe(180_000)
+    expect(DEFAULT_IRREGULAR_WORKER_TIMEOUT_MS).toBe(390_000)
+    expect(workerTimeoutForMode('irregular-convex-v2', 30_000)).toBe(390_000)
+    expect(workerTimeoutForMode('irregular-convex-v2', 480_000)).toBe(480_000)
     expect(workerTimeoutForMode('maxrects-beam-search', 30_000)).toBe(30_000)
   })
 })
@@ -54,7 +54,7 @@ describe('irregular schema contracts', () => {
     expect(first.optimizer.beamWidth).toBe(1)
     expect(first.optimizer.localCandidateFanout).toBe(4)
     expect(first.optimizer.localRepairBudget).toBe(0)
-    expect(first.optimizer.canonicalReferenceDecodeEnabled).toBe(false)
+    expect(first.optimizer.intrinsicSharedArchiveEnabled).toBe(false)
     expect(first.optimizer.transformCap).toBe(16)
     expect(first.optimizer.edgeAlignmentEnabled).toBe(true)
     expect(first.optimizer.gaEnabled).toBe(false)
@@ -105,7 +105,7 @@ describe('irregular schema contracts', () => {
       beamWidth: 8,
       localCandidateFanout: 4,
       localRepairBudget: 8,
-      canonicalReferenceDecodeEnabled: true,
+      intrinsicSharedArchiveEnabled: true,
       transformCap: 8,
       configuredRotationEnabled: true,
       edgeAlignmentEnabled: true,
@@ -128,7 +128,7 @@ describe('irregular schema contracts', () => {
     if (Exit.isFailure(decoded)) throw new Error('expected legacy settings to decode')
     expect(decoded.value.localCandidateFanout).toBe(4)
     expect(decoded.value.localRepairBudget).toBe(0)
-    expect(decoded.value.canonicalReferenceDecodeEnabled).toBe(false)
+    expect(decoded.value.intrinsicSharedArchiveEnabled).toBe(false)
     expect(decoded.value.edgeAlignmentEnabled).toBe(true)
     expect(decoded.value.gaEnabled).toBe(false)
     expect(decoded.value.baselineOnly).toBe(true)

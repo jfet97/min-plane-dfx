@@ -1,0 +1,24 @@
+{
+  "experiment": "intrinsic-shared-archive-step4",
+  "sourceCommit": "4831035c19e44cfd32fd07fd41e2e0dee90a4fb8",
+  "verificationPassed": true,
+  "verificationSha256": "b686a05cd0083da7dc731655aca4b12a587851f252336fb322c7234368066781",
+  "triangle20": {
+    "role": "legacy-absolute-envelope",
+    "sheetlessCanonicalGeometryHash": "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41",
+    "envelopeAreaMm2": 115228.71133,
+    "envelopeMaximumSideMm": 341.785,
+    "enclosedCavityCount": 0,
+    "svgSha256": "e988478fd8f5c5a7c6c9958a026e75e4279a0963894461f744f6225775ac5623",
+    "pngSha256": "c4763231ccc0af6b110d59d52f7daaae2550f14e9157af7e8ac0eb293ac46570"
+  },
+  "mixed61": {
+    "role": "open-pocket-first",
+    "sheetlessCanonicalGeometryHash": "5a1f1ba6957031d839862709f4390727b4bc878004a1660d4ffa45393eda0d21",
+    "envelopeAreaMm2": 405773.434053,
+    "envelopeMaximumSideMm": 642.501,
+    "enclosedCavityCount": 0,
+    "svgSha256": "9ee32e2f114b051c138adc056a48168b23c96f8b157dbbc41f04fb2750ea8016",
+    "pngSha256": "d986d2f7b0046476a939debdbd1286a639235fd0be077f5c2cc2e6caf8f1162f"
+  }
+}

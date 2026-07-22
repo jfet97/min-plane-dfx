@@ -79,6 +79,18 @@ describe('Clipper2 offset adapter', () => {
     expect(fromGrid(-1235)).toBe(-1.235)
   })
 
+  it('covers source, offset, and transformed half-grid displacement conservatively', () => {
+    const halfGridDiagonalMm = (Math.SQRT2 * CLIPPER2_OFFSET_POLICY.gridStepMm) / 2
+    const maximumInwardDisplacementMm =
+      halfGridDiagonalMm +
+      CLIPPER2_OFFSET_POLICY.gridStepMm / 2 +
+      halfGridDiagonalMm
+
+    expect(CLIPPER2_OFFSET_POLICY.conservativeOffsetAllowanceMm).toBeGreaterThan(
+      maximumInwardDisplacementMm
+    )
+  })
+
   it('normalizes the adapter result to a stable counter-clockwise collision ring', async () => {
     const result = await runAdapter({
       polygon: polygon([point(0, 0), point(4, 0), point(4, 3), point(0, 3)]),

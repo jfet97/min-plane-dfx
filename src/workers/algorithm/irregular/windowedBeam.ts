@@ -1,7 +1,8 @@
 import { Data, Effect, Order } from 'effect'
 import type { PieceId } from '@shared/domain/ids.js'
-import type { SheetSpec } from '@shared/domain/nesting.js'
+import { SheetSpec } from '@shared/domain/nesting.js'
 import {
+  CollisionGeometryDiagnostic,
   IrregularPlacement,
   IrregularPlacementCandidate,
   IrregularPlacedPiece,
@@ -26,7 +27,8 @@ import {
   EDGE_CONTACT_THEN_BALANCED_COMPACTNESS_POLICY_ID,
   IrregularPlacementScorer,
   IrregularPlacementScoringError,
-  IrregularPlacementScore
+  IrregularPlacementScore,
+  SHORT_SIDE_FILL_POLICY_ID
 } from './irregularPlacementScorer.js'
 import {
   deriveRawOccupiedHullWasteRatio,
@@ -75,6 +77,8 @@ import type {
   EmitIrregularDecisionTrace,
   IrregularDecisionTraceIdentity
 } from './decisionTrace.js'
+import { PlacementValidation } from '../../irregular/placementValidation.js'
+import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 
 /** The terminal states retained by one deterministic irregular beam run. */
 export interface IrregularWindowedBeamResult {
@@ -125,6 +129,37 @@ export class IrregularWindowedBeamAbortedError extends Data.TaggedError(
 export interface IrregularWindowedBeamOptions {
   readonly policyId?: IrregularPlacementPolicyId
   readonly transformPreferences?: ReadonlyMap<PieceId, number>
+  readonly incumbentPlacementCandidates?: ReadonlyMap<PieceId, IrregularPlacedPiece>
+}
+
+export interface IrregularWindowedReconstructionInput {
+  readonly constraintSheet: SheetSpec
+  readonly finalSheet: SheetSpec
+  readonly allPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly destroyedQueue: ReadonlyArray<IrregularPreparedPiece>
+  readonly frozenPlaced: ReadonlyArray<IrregularPlacedPiece>
+  readonly control?: IrregularWindowedBeamControl
+  readonly options?: IrregularWindowedBeamOptions
+  readonly instrumentation?: IrregularWindowedBeamInstrumentation
+}
+
+interface IrregularWindowedBeamCoreInput {
+  readonly sheet: SheetSpec
+  readonly scoringSheet: SheetSpec
+  readonly finalSheet: SheetSpec
+  readonly pieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly candidatePlanePieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly initialState: IrregularBeamState
+  readonly beamWidth: number
+  readonly localCandidateFanout: number
+  readonly localRepairBudget: number
+  readonly reconstructionMode: boolean
+  readonly hooks?: IrregularWindowedBeamHooks
+  readonly options?: IrregularWindowedBeamOptions
+  readonly control?: IrregularWindowedBeamControl
+  readonly instrumentation?: IrregularWindowedBeamInstrumentation
+  readonly emitDecisionTrace?: EmitIrregularDecisionTrace
+  readonly decisionTraceIdentity?: IrregularDecisionTraceIdentity
 }
 
 export type IrregularWindowedBeamError =
@@ -139,6 +174,7 @@ interface LocalCandidate {
   readonly candidate: IrregularPlacementCandidate
   readonly moving: TransformedCollisionGeometry
   readonly score: IrregularPlacementScore
+  readonly isReconstructionIncumbent: boolean
 }
 
 interface LocalCandidateSelection {
@@ -223,6 +259,93 @@ export function runWindowedIrregularBeam(input: {
   | IrregularPlacementScorer
   | IrregularLayoutScorer
 > {
+  return Effect.flatMap(GeometrySettings, (settings) =>
+    runWindowedIrregularBeamCore({
+      ...input,
+      finalSheet: input.sheet,
+      scoringSheet: input.sheet,
+      candidatePlanePieces: input.pieces,
+      initialState: IrregularBeamState.empty(input.pieces),
+      beamWidth: settings.optimizer.beamWidth,
+      localCandidateFanout:
+        settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth,
+      localRepairBudget: settings.optimizer.localRepairBudget ?? 0,
+      reconstructionMode: false
+    })
+  )
+}
+
+/** Reconstructs only a destroyed queue against a complete frozen exact layout. */
+export function runWindowedIrregularReconstruction(
+  input: IrregularWindowedReconstructionInput
+): Effect.Effect<
+  IrregularWindowedBeamResult,
+  IrregularWindowedBeamError,
+  | GeometryKernel
+  | GeometrySettings
+  | NfpIfpService
+  | IrregularPlacementScorer
+  | IrregularLayoutScorer
+> {
+  return Effect.gen(function* () {
+    const allById = new Map(input.allPreparedPieces.map((piece) => [preparedPieceId(piece), piece]))
+    const destroyedIds = input.destroyedQueue.map(preparedPieceId)
+    const frozenIds = input.frozenPlaced.map(
+      ({ placement }) => placement.pieceId ?? placement.sourcePieceId
+    )
+    const partitionIds = [...destroyedIds, ...frozenIds]
+    if (
+      allById.size !== input.allPreparedPieces.length ||
+      new Set(partitionIds).size !== partitionIds.length ||
+      partitionIds.length !== input.allPreparedPieces.length ||
+      partitionIds.some((pieceId) => !allById.has(pieceId))
+    ) {
+      return yield* Effect.fail(
+        new IrregularGeometryInputError({
+          operation: 'runWindowedIrregularReconstruction',
+          message: 'frozen placements and destroyed queue must partition all prepared pieces.'
+        })
+      )
+    }
+    const initialState = new IrregularBeamState({
+      remainingPreparedPieces: input.destroyedQueue,
+      placedCollisionGeometries: input.frozenPlaced,
+      unplacedPieceIds: [],
+      placementOrder: frozenIds
+    })
+    return yield* runWindowedIrregularBeamCore({
+      sheet: input.constraintSheet,
+      scoringSheet: new SheetSpec({
+        width: Math.max(1, Math.ceil(input.constraintSheet.width)),
+        height: Math.max(1, Math.ceil(input.constraintSheet.height)),
+        label: 'windowed reconstruction intrinsic scoring sheet'
+      }),
+      finalSheet: input.finalSheet,
+      pieces: input.destroyedQueue,
+      candidatePlanePieces: input.allPreparedPieces,
+      initialState,
+      beamWidth: 4,
+      localCandidateFanout: 4,
+      localRepairBudget: 0,
+      reconstructionMode: true,
+      ...(input.options !== undefined ? { options: input.options } : {}),
+      ...(input.instrumentation !== undefined
+        ? { instrumentation: input.instrumentation }
+        : {}),
+      ...(input.control !== undefined ? { control: input.control } : {})
+    })
+  })
+}
+
+function runWindowedIrregularBeamCore(input: IrregularWindowedBeamCoreInput): Effect.Effect<
+  IrregularWindowedBeamResult,
+  IrregularWindowedBeamError,
+  | GeometryKernel
+  | GeometrySettings
+  | NfpIfpService
+  | IrregularPlacementScorer
+  | IrregularLayoutScorer
+> {
   return Effect.gen(function* () {
     const settings = yield* GeometrySettings
     const geometryKernel = yield* GeometryKernel
@@ -233,13 +356,14 @@ export function runWindowedIrregularBeam(input: {
       input.emitDecisionTrace,
       input.decisionTraceIdentity
     )
-    const localCandidateFanout =
-      settings.optimizer.localCandidateFanout ?? settings.optimizer.beamWidth
-    const localRepairBudget = settings.optimizer.localRepairBudget ?? 0
-    const protectedDiversityEnabled =
-      (input.options?.transformPreferences?.size === undefined ||
-        input.options.transformPreferences.size === 0) &&
-      localRepairBudget === 0
+    const localCandidateFanout = input.localCandidateFanout
+    const localRepairBudget = input.localRepairBudget
+    const protectedDiversityEnabled = false
+    const selectedPolicyId = input.options?.policyId ?? placementScorer.policyId
+    const candidateSheet =
+      selectedPolicyId === SHORT_SIDE_FILL_POLICY_ID
+        ? input.sheet
+        : makeIntrinsicCandidateSheet(input.candidatePlanePieces)
     const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
     const stateKey = (state: IrregularBeamState): string =>
       beamStateKey(state, input.options?.transformPreferences)
@@ -254,7 +378,7 @@ export function runWindowedIrregularBeam(input: {
       }),
       settings: new IrregularDecisionTraceSearchSettings({
         orderWindow: settings.optimizer.orderWindow,
-        beamWidth: settings.optimizer.beamWidth,
+        beamWidth: input.beamWidth,
         localCandidateFanout,
         localRepairBudget,
         policyId: input.options?.policyId ?? placementScorer.policyId
@@ -268,12 +392,12 @@ export function runWindowedIrregularBeam(input: {
         )
     }))
 
-    let beam: ReadonlyArray<IrregularBeamState> = [IrregularBeamState.empty(input.pieces)]
+    let beam: ReadonlyArray<IrregularBeamState> = [input.initialState]
     let scoredBeam: ReadonlyArray<ScoredState> | undefined
     const initialPieceRankById = new Map(
       input.pieces.map((piece, index) => [preparedPieceId(piece), index] as const)
     )
-    const protectIncumbent = settings.optimizer.beamWidth > 1
+    const protectIncumbent = input.beamWidth > 1
     let incumbentState: IrregularBeamState | undefined = protectIncumbent ? beam[0] : undefined
     let productionBeamStates = new Set(beam)
     let boundaryAnchorStates: ReadonlyArray<IrregularBeamState> = []
@@ -345,7 +469,10 @@ export function runWindowedIrregularBeam(input: {
         for (const [pieceIndex, piece] of eligiblePieces.entries()) {
           yield* controlCheckpoint(input.control, controlState)
           const localCandidates = yield* collectLocalCandidates({
-            sheet: input.sheet,
+            sheet: candidateSheet,
+            ...(selectedPolicyId === SHORT_SIDE_FILL_POLICY_ID
+              ? {}
+              : { candidateDomain: 'contact-only' as const }),
             settings,
             state,
             piece,
@@ -375,9 +502,16 @@ export function runWindowedIrregularBeam(input: {
           )
           for (const candidate of selected.production) {
             yield* controlCheckpoint(input.control, controlState)
+            const successor = applyPlacement(state, pieceIndex, piece, candidate)
+              .withBottomLeftAnchored()
+            if (successor === undefined || !stateFitsSheetInQuarterTurn(successor, input.sheet)) {
+              continue
+            }
             legalSuccessors.push({
-              state: applyPlacement(state, pieceIndex, piece, candidate),
-              isIncumbent,
+              state: successor,
+              isIncumbent:
+                isIncumbent &&
+                (!input.reconstructionMode || candidate.isReconstructionIncumbent),
               eligibleForProductionLane,
               eligibleForProtectedLane,
               eligibleForProtectedIntrinsicLane:
@@ -423,7 +557,7 @@ export function runWindowedIrregularBeam(input: {
         if (legalSuccessors.length === 0) {
           successors.push({
             state: markFirstRemainingUnplaced(state),
-            isIncumbent,
+            isIncumbent: input.reconstructionMode ? false : isIncumbent,
             eligibleForProductionLane,
             eligibleForProtectedLane,
             eligibleForProtectedIntrinsicLane,
@@ -437,7 +571,7 @@ export function runWindowedIrregularBeam(input: {
       const uniqueSuccessors = dedupeRawSuccessors(successors, stateKey, decisionTrace, stepIndex)
       const scored = yield* scoreStates(
         uniqueSuccessors,
-        input.sheet,
+        input.scoringSheet,
         layoutScorer,
         input.control,
         controlState,
@@ -467,8 +601,8 @@ export function runWindowedIrregularBeam(input: {
       )
       const pruned = pruneScoredStates(
         scored,
-        settings.optimizer.beamWidth,
-        input.sheet,
+        input.beamWidth,
+        input.scoringSheet,
         layoutScorer,
         nextIncumbent,
         nextBoundaryAnchors,
@@ -514,7 +648,7 @@ export function runWindowedIrregularBeam(input: {
             eligibleForProtectedIntrinsicLane: intrinsicContactStates.includes(state),
             eligibleForProtectedParetoFrontierLane: paretoFrontierStates.includes(state)
           })),
-          input.sheet,
+          input.finalSheet,
           layoutScorer,
           input.control,
           controlState,
@@ -571,7 +705,7 @@ export function runWindowedIrregularBeam(input: {
         repairIteration += 1
       ) {
         const repairOutcome = yield* repairTerminalState({
-          sheet: input.sheet,
+          sheet: input.finalSheet,
           pieces: input.pieces,
           current: currentRepair,
           candidateFanout: localRepairBudget,
@@ -639,7 +773,7 @@ export function runWindowedIrregularBeam(input: {
         : { isCancelled: input.control.isCancelled }
       : input.control
     const productionOrientation = yield* selectTerminalOrientation({
-      sheet: input.sheet,
+      sheet: input.finalSheet,
       base: productionTerminalBase,
       layoutScorer,
       makeStateKey: stateKey,
@@ -651,7 +785,7 @@ export function runWindowedIrregularBeam(input: {
     const protectedOrientations: ProtectedTerminalOrientation[] = []
     for (const base of protectedTerminalBases) {
       const orientation = yield* selectTerminalOrientation({
-        sheet: input.sheet,
+        sheet: input.finalSheet,
         base,
         layoutScorer,
         makeStateKey: stateKey,
@@ -784,13 +918,13 @@ function selectTerminalOrientation(input: {
     }
 
     const rankedVariants = legalVariants.toSorted((first, second) => {
-      const cornerComparison = Order.Number(first.cornerGapMm, second.cornerGapMm)
-      if (cornerComparison !== 0) return cornerComparison
       const scoreComparison = input.layoutScorer.compare(
         first.scoredState.score,
         second.scoredState.score
       )
       if (scoreComparison !== 0) return scoreComparison
+      const cornerComparison = Order.Number(first.cornerGapMm, second.cornerGapMm)
+      if (cornerComparison !== 0) return cornerComparison
       return Order.Number(first.rotationDeg, second.rotationDeg)
     })
     const selected = rankedVariants[0]
@@ -978,12 +1112,19 @@ function terminalRepairPreservesEnvelope(
   current: IrregularLayoutScore
 ): boolean {
   return (
-    candidate.collisionBoundsWorstNormalizedSheetConsumption <=
-      current.collisionBoundsWorstNormalizedSheetConsumption &&
-    candidate.collisionBoundsNormalizedSpanSum <= current.collisionBoundsNormalizedSpanSum &&
+    intrinsicLayoutMaxSideMm(candidate) <= intrinsicLayoutMaxSideMm(current) &&
     candidate.collisionBoundsAreaMm2 <= current.collisionBoundsAreaMm2 &&
     candidate.collisionBoundsSpanMm <= current.collisionBoundsSpanMm
   )
+}
+
+function intrinsicLayoutMaxSideMm(score: IrregularLayoutScore): number {
+  const discriminant = Math.max(
+    0,
+    score.collisionBoundsSpanMm * score.collisionBoundsSpanMm -
+      4 * score.collisionBoundsAreaMm2
+  )
+  return (score.collisionBoundsSpanMm + Math.sqrt(discriminant)) / 2
 }
 
 /** Positional decoder alias matching the strict decoder's public shape. */
@@ -1075,6 +1216,7 @@ function yieldToEventLoop(): Effect.Effect<void> {
 
 function collectLocalCandidates(input: {
   readonly sheet: SheetSpec
+  readonly candidateDomain?: 'contact-only'
   readonly settings: IrregularNestingSettings
   readonly state: IrregularBeamState
   readonly piece: IrregularPreparedPiece
@@ -1112,7 +1254,10 @@ function collectLocalCandidates(input: {
         placedCollisionIndex: input.state.placedCollisionIndex,
         moving,
         settings: input.settings,
-        candidateMemoScope: input.candidateMemoScope
+        candidateMemoScope: input.candidateMemoScope,
+        ...(input.candidateDomain !== undefined
+          ? { candidateDomain: input.candidateDomain }
+          : {})
       }
       const legalCandidates =
         nfpControl === undefined
@@ -1121,6 +1266,44 @@ function collectLocalCandidates(input: {
               ...candidateInput,
               control: nfpControl
             })
+      const incumbentPlacement = input.options?.incumbentPlacementCandidates?.get(
+        preparedPieceId(input.piece)
+      )
+      let reconstructionIncumbentCandidate: IrregularPlacementCandidate | undefined
+      if (
+        incumbentPlacement !== undefined &&
+        incumbentPlacement.collisionGeometry.transform.index === transform.index
+      ) {
+        const rigidShift = reconstructionRigidShift(
+          input.state,
+          input.options?.incumbentPlacementCandidates
+        )
+        const point = canonicalReconstructionPoint({
+          x: incumbentPlacement.placement.transform.translateX + rigidShift.x,
+          y: incumbentPlacement.placement.transform.translateY + rigidShift.y
+        })
+        if (point === undefined) continue
+        const candidate = new IrregularPlacementCandidate({
+          pieceId: moving.sourcePieceId,
+          transform,
+          point,
+          diagnostics: [
+            new CollisionGeometryDiagnostic({
+              code: 'reconstruction_incumbent_candidate',
+              message: 'Exact incumbent placement reserved for reconstruction lineage.',
+              pieceId: preparedPieceId(input.piece)
+            })
+          ]
+        })
+        const legal = yield* PlacementValidation.check({
+          sheet: input.sheet,
+          placed: input.state.placedCollisionGeometries,
+          placedCollisionIndex: input.state.placedCollisionIndex,
+          moving,
+          candidate
+        })
+        if (legal) reconstructionIncumbentCandidate = candidate
+      }
       yield* controlCheckpoint(input.control, input.controlState)
       input.decisionTrace?.emit(new IrregularDecisionTraceTransformCandidatesGenerated({
         decodeId: input.decisionTrace.decodeId,
@@ -1130,9 +1313,15 @@ function collectLocalCandidates(input: {
         parentStateId: input.parentStateId,
         pieceId: preparedPieceId(input.piece),
         transform: decisionTraceTransform(transform),
-        legalCandidateCount: legalCandidates.length
+        legalCandidateCount:
+          legalCandidates.length + (reconstructionIncumbentCandidate === undefined ? 0 : 1)
       }))
-      for (const candidate of legalCandidates) {
+      for (const candidate of [
+        ...(reconstructionIncumbentCandidate === undefined
+          ? []
+          : [reconstructionIncumbentCandidate]),
+        ...legalCandidates
+      ]) {
         yield* controlCheckpoint(input.control, input.controlState)
         const score = yield* input.placementScorer.scoreCandidate({
           sheet: input.sheet,
@@ -1141,12 +1330,46 @@ function collectLocalCandidates(input: {
           candidate,
           ...(input.options?.policyId !== undefined ? { policyId: input.options.policyId } : {})
         })
-        candidates.push({ candidate, moving, score })
+        candidates.push({
+          candidate,
+          moving,
+          score,
+          isReconstructionIncumbent: candidate === reconstructionIncumbentCandidate
+        })
         yield* controlCheckpoint(input.control, input.controlState)
       }
     }
     return candidates
   })
+}
+
+function canonicalReconstructionPoint(
+  point: { readonly x: number; readonly y: number }
+): { readonly x: number; readonly y: number } | undefined {
+  const x = toGridMm(point.x)
+  const y = toGridMm(point.y)
+  return x === undefined || y === undefined ? undefined : { x: fromGrid(x), y: fromGrid(y) }
+}
+
+function reconstructionRigidShift(
+  state: IrregularBeamState,
+  incumbentPlacements: ReadonlyMap<PieceId, IrregularPlacedPiece> | undefined
+): { readonly x: number; readonly y: number } {
+  if (incumbentPlacements === undefined) return { x: 0, y: 0 }
+  for (const current of state.placedCollisionGeometries) {
+    const pieceId = current.placement.pieceId ?? current.placement.sourcePieceId
+    const incumbent = incumbentPlacements.get(pieceId)
+    if (incumbent === undefined) continue
+    return {
+      x:
+        current.placement.transform.translateX -
+        incumbent.placement.transform.translateX,
+      y:
+        current.placement.transform.translateY -
+        incumbent.placement.transform.translateY
+    }
+  }
+  return { x: 0, y: 0 }
 }
 
 function selectEligiblePieces(
@@ -1204,10 +1427,16 @@ function selectLocalCandidates(
   const candidateOrder = Order.combineAll<LocalCandidate>(
     preferredTransformIndex === undefined
       ? [
+          Order.mapInput(Order.Number, (candidate) =>
+            candidate.isReconstructionIncumbent ? 0 : 1
+          ),
           Order.make((first, second) => placementScorer.compare(first.score, second.score)),
           Order.mapInput(Order.String, (candidate) => localCandidateKey(candidate))
         ]
       : [
+          Order.mapInput(Order.Number, (candidate) =>
+            candidate.isReconstructionIncumbent ? 0 : 1
+          ),
           // preserve the chromosome's transform choice before ranking its local placements
           Order.mapInput(Order.Number, (candidate) =>
             candidate.candidate.transform.index === preferredTransformIndex ? 0 : 1
@@ -1262,6 +1491,16 @@ function selectLocalCandidates(
         compactnessReserved = compactnessWinner
       }
     }
+  }
+
+  const reconstructionIncumbent = rankedCandidates.find(
+    ({ isReconstructionIncumbent }) => isReconstructionIncumbent
+  )
+  if (reconstructionIncumbent !== undefined && !selected.includes(reconstructionIncumbent)) {
+    selected = [
+      reconstructionIncumbent,
+      ...selected.filter((candidate) => candidate !== reconstructionIncumbent)
+    ].slice(0, maximumCount)
   }
 
   const protectedIntrinsic =
@@ -1604,6 +1843,33 @@ function removeAt<A>(values: ReadonlyArray<A>, index: number): ReadonlyArray<A> 
 
 function preparedPieceId(piece: IrregularPreparedPiece): PieceId {
   return piece.pieceId ?? piece.source.id
+}
+
+function makeIntrinsicCandidateSheet(
+  pieces: ReadonlyArray<IrregularPreparedPiece>
+): SheetSpec {
+  const side = pieces.reduce((total, piece) => {
+    const points = piece.collisionGeometry.collisionPolygon.points
+    if (points.length === 0) return total
+    const xs = points.map(({ x }) => x)
+    const ys = points.map(({ y }) => y)
+    return total + Math.max(...xs) - Math.min(...xs) + Math.max(...ys) - Math.min(...ys)
+  }, 0)
+  const integerSide = Math.max(1, Math.ceil(side))
+  return new SheetSpec({
+    width: integerSide,
+    height: integerSide,
+    label: 'intrinsic candidate plane'
+  })
+}
+
+function stateFitsSheetInQuarterTurn(state: IrregularBeamState, sheet: SheetSpec): boolean {
+  const bounds = state.translatedCollisionBounds
+  if (bounds === undefined) return true
+  return (
+    (bounds.width <= sheet.width && bounds.height <= sheet.height) ||
+    (bounds.height <= sheet.width && bounds.width <= sheet.height)
+  )
 }
 
 function orderedTransforms(
@@ -2380,6 +2646,7 @@ function rankScoredStates(
 function makeStateOrder(layoutScorer: IrregularLayoutScorer.Service): Order.Order<ScoredState> {
   return Order.combineAll<ScoredState>([
     Order.make((first, second) => layoutScorer.compare(first.score, second.score)),
+    intrinsicGeometryStateCriterion,
     Order.mapInput(Order.String, (state) => state.key)
   ])
 }
