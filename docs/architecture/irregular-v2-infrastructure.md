@@ -227,6 +227,13 @@ sheetless hash and metrics; filtering the already-ranked list yields the first
 endpoint that fits. Evaluation-capped partial states have no endpoint and
 cannot enter either archive.
 
+The first frozen two-root matrix passed on Triangle-20, Mixed-61,
+Rectangles-20, and Pentagons-20. It promotes this shared boundary as retained
+experimental infrastructure, not its individual constructors as production
+defaults: Mixed selects the 405,773.434 mm2 pocket-first endpoint and
+Rectangles gains a cohesive periodic endpoint, while Triangle still requires a
+future constructor/source-retention improvement to expose its better lattice.
+
 The isolated V7 seed/archive experiment keeps that E4 path intact while
 testing a replacement controller with stricter observability boundaries. Each
 independent arm constructs two complete canonical-exact, sheet-free seeds:

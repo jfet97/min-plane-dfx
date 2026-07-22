@@ -53,10 +53,12 @@ Therefore:
    tested every compatible long-edge pair under non-expanding exact legality.
    It found only microscopic canonical-grid contact repairs, not a macroscopic
    reassembly; this ends the rigid-legal Triangle Stage 5 direction;
-10. **in progress:** the bounded constructive/periodic-seed line is now the
-    active falsifier. The first finite-crop correction produces a compact
-    Triangle lattice, but not one with exact structural contacts; no live
-    selector or coordinated-search promotion is authorized by this evidence.
+10. **completed through shared-archive Step 4:** the bounded constructive/
+    periodic-seed line now has one deterministic common terminal boundary. Two
+    complete four-fixture roots passed exact replay. Mixed selects the
+    405,773.434 pocket-first endpoint and Rectangles gains a cohesive periodic
+    winner; Triangle retains its protected direct control because the better
+    finite-crop witness is still absent from the selected no-audit source set.
 
 Richer non-causal diagnostics and wider sweeps remain secondary. The measured
 scoring/topology bottleneck becomes a gate immediately after the first-miss
@@ -1961,7 +1963,8 @@ budgets before any Mixed periodic conclusion is called conclusive.
    periodic-only winner is weak (240,521.398 mm2, seven contacts), confirming
    that Step 4's common archive is the next implementation boundary rather than
    promotion of the periodic decoder alone.
-4. Build the smallest decision-grade shared archive before adding constructors.
+4. **Completed at `4831035`:** build the smallest decision-grade shared archive
+   before adding constructors.
    The first matrix contains exactly the two protected baselines
    (`canonical-grid`, `legacy-absolute-envelope`), baseline-order
    `open-pocket-first`, and the eight selected no-audit periodic continuations.

@@ -310,7 +310,7 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   but its periodic-only winner is weak (240,521.398 mm2, seven contacts).
   Therefore retain audit witnesses for provenance and let periodic, ordinary,
   and pocket-first endpoints compete under one exact archive.
-- **Shared terminal boundary implemented; decision matrix pending:** one
+- **Shared terminal boundary implemented:** one
   adapter now compares only the two protected baselines, baseline-order
   pocket-first, and eight no-audit periodic continuations. It records separate
   sheetless and requested-sheet q0/q90 identities, deduplicates/ranks only by
@@ -320,6 +320,22 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   periodic budget settlement are hard experiment gates. Reversed/endpoint-
   derived variants and raw witnesses remain deferred until the fixed matrix
   repeats identically across Triangle, Mixed, and homogeneous controls.
+- **Step 4 matrix passed at `4831035`.** Trace-only calibration froze exact
+  direct counts per fixture; two complete roots then reproduced identical
+  status/evaluation/hash tuples, periodic source order and omissions, and
+  sheetless/fitted archive order on Triangle-20, Mixed-61, Rectangles-20, and
+  Pentagons-20. Catalog runtime coverage and deterministic budget settlement
+  were complete in all eight runs. The verifier result is under
+  `help/artifacts/intrinsic-shared-archive-step4/`.
+- **Quality classification:** Mixed selects the known 405,773.434 mm2
+  `open-pocket-first` endpoint with zero enclosed cavities; Rectangles selects a
+  cohesive periodic P1 endpoint at 376,727.320 mm2; Pentagons preserves the
+  canonical direct winner. Triangle correctly keeps the protected
+  `legacy-absolute-envelope` control at 115,228.711 mm2 instead of the weak
+  240,521 periodic endpoint, but this is not the better 74,428 periodic witness:
+  that source is still lost before the no-audit selected continuation set. The
+  shared archive is therefore accepted infrastructure, not a claim that
+  Triangle construction is solved.
 - **Closed the adaptive-pressure branch by the preregistered gate.** One
   equal-budget matrix (50,000 pressure evaluations/arm, restart 0, pinned
   seeds `371db269…`/`310adc64…`) over {1.25% baseline, 0.625% smaller step,
