@@ -34,7 +34,9 @@ results delivered on this branch:
    one commit (`6bcba8c`); the focused suites return exactly to their
    documented pre-`48abf69` state. This is the single most important process
    finding of this review: the branch's stated regression gate was not being
-   exercised by the workflow that mattered.
+   exercised by the workflow that mattered. Follow-up review narrowed the
+   repair to `contact-only`, preserving the four-corner ordinary domain, and
+   added the missing direct regression test.
 
 2. **The adaptive-pressure line is correctly diagnosed as move-vocabulary
    bound, and the mission's smaller-contraction falsifier measures the wrong
@@ -56,19 +58,22 @@ results delivered on this branch:
    front, at `d56d9d7` and at `9da94e2` alike. It exists only as a
    source-survival-audit diagnostic. The default-run archive's best entry is
    102,182 mm² — 37 % worse than the witness the plan reasons about. A bounded
-   witness-admission repair (`96368ca`) makes the raw-crop Pareto front
-   compete in the shared archive under an explicit flag, which restores the
-   74k endpoint to the archive it should have been winning all along.
+   witness-admission repair (`96368ca` plus follow-up) makes selected raw-crop
+   Pareto witnesses compete in the shared archive under the same hard
+   continuation cap as ordinary seeds, which restores the 74k endpoint to the
+   archive it should have been able to enter.
 
 The recommended architecture (detailed in "Recommended Production
 Architecture") keeps the mission's shape — generic exact constructors →
 behavior-aware bounded retention → one shared exact archive → optional
 faithful coordinated improvement → deterministic budget controller → exact
-final sheet fit — with two corrections learned here: retention repairs must be
-driven by the *raw-front vs bounded-front* gap the source-survival audit
-already measures, and the coordinated stage must adopt Sparrow's per-item
-sampled relocation before any further budget, ratio, or restart tuning is
-worth money.
+final sheet fit — with two corrections learned here: periodic retention must
+measure the *raw-front vs bounded-front* gap and admit witnesses inside one
+explicit cap, while generalized all-front replay remains a hypothesis; and a
+coordinated stage needs a richer movement vocabulary than MTV-only repair.
+Sparrow-inspired sampled relocation is retained default-off, but its corrected
+canonical-frame matrix must reproduce the earlier Mixed advantage before it is
+used as the basis of LNS.
 
 # Current Architecture And Failure Model
 
@@ -176,9 +181,12 @@ the IFP-corner path. Under `candidateDomain: 'contact-only'` (requested by
 `windowedBeam.ts:471-475` for every policy except short-side-fill since
 `a726b60`), an empty layout has no NFP boundaries and no IFP corners, so the
 decode places zero pieces. Verified by bisection: works at `634bf21`
-(`48abf69~1`), broken at `48abf69` through `d56d9d7`. Repaired in `6bcba8c`
-by restoring the single bottom-left IFP seed with its `ifpCorner` provenance
-tag. Process lesson: the golden is a *gate*, but nothing runs it — the V7
+(`48abf69~1`), broken at `48abf69` through `d56d9d7`. The initial `6bcba8c`
+repair restored a single bottom-left IFP seed too broadly: it also collapsed
+the ordinary empty-sheet domain from four corners to one. Follow-up review
+narrowed the seed to `candidateDomain: 'contact-only'`, retained all four
+ordinary IFP corners, and added a direct provenance regression test for the
+production case. Process lesson: the golden is a *gate*, but nothing runs it — the V7
 harnesses exercise only `src/workers/algorithm/irregular/intrinsic*`, and the
 Markdown-only-commit rule waived tests exactly when the tree was most active.
 A pre-push hook or CI running the four focused suites would have caught this
@@ -197,8 +205,11 @@ periodic pipeline is the **cell front**, which ranks by cell-local proxies
 (density, contact-completeness) that are provably non-predictive of crop
 quality — the highest-priority cells produce the 102k–240k archive entries
 while the evicted basis produces the 74k witness. `96368ca` routes the
-already-computed raw-crop Pareto front (bounded at 16) into continuation
-selection as source-tagged `raw-witness:` seeds behind `--admit-raw-witnesses`.
+already-computed raw-crop Pareto front (observed through a 16-entry diagnostic
+cap) into continuation selection as source-tagged `raw-witness:` seeds behind
+`--admit-raw-witnesses`. Follow-up review placed ordinary and raw candidates
+inside one hard continuation cap and deduplicated them by canonical geometry
+plus ordered remaining-piece future.
 
 **F3 — Nothing in the committed tree reproduces the number the plan
 reasons about.** Beyond F2's mechanism: the exact invocation that produced
@@ -262,15 +273,15 @@ from `48abf69` to the repair every corpus case would fail with the
 quarter-turn error. Runs after `6bcba8c` are the first sheet-invariance
 evidence since the regression.
 
-**F9 — Determinism of the new vocabulary is bounded by design but the
-refinement ring has one accepted imprecision.** The sampled-relocation
+**F9 — Determinism of the new vocabulary is bounded by design; a refinement
+frame defect was fixed after review.** The sampled-relocation
 refinement rings around the best candidate's pose translate expressed in that
-candidate's canonical frame; if the moved piece defines the layout's
-bottom-left anchor, the canonical re-anchor shifts the frame by the anchor
-delta, so the refinement ring lands offset by that delta. All candidates
-remain legal, deterministic, and evaluated under the same accounting — the
-descent target is merely displaced in a bounded, reproducible way. Recorded
-here so a future exactness pass doesn't rediscover it as a bug.
+candidate's canonical frame. The original implementation applied that center
+to the prior current state, so a bottom-left re-anchor displaced the ring.
+Refinement now starts from the best candidate state itself, keeping state and
+center in the same frame. Exact admission and accounting were unaffected, but
+the sampled-arm quality measurements below predate this correction and remain
+diagnostic until rerun.
 
 # Construction And Candidate Generation
 
@@ -343,19 +354,15 @@ current witness of loss after the envelope-event repair). The first two are
 cheap to fix and were fixed/flagged in this review; the third is expensive
 and its measured upside is negligible on Triangle.
 
-**B7 (generic delayed-value retention).** The generalizable pattern behind
-`96368ca`: *every bounded front must publish its raw non-dominated set, and
-an explicit arm must be able to admit that raw set into the terminal
-competition.* This is not another comparator tuple: it reuses each front's
-existing dominance definition and changes only what is allowed to compete.
-It is bounded (a Pareto front over ≤6 objective fields is small in practice:
-10 for Triangle's 4,627 crops), deterministic, and self-auditing (the front
-vs bounded-front gap is the retention loss, printed per run). Apply the same
-pattern next to the Stage 2A beam: retain the per-depth Pareto-layer-0 raw
-front digest in the trace, and allow a bounded "front-replay" arm that
-continues evicted layer-0 members. That is the trace-only counterfactual the
-mission's minimum experiment 2 asks for, and the periodic instance of it was
-implemented and measured here.
+**B7 (generic delayed-value retention).** The measured result is narrower:
+the periodic cell front must expose selected raw witnesses to the same bounded
+continuation competition because its cell-local proxies lose better crops.
+The corrected implementation is deterministic and hard-capped. A raw Pareto
+front is not intrinsically bounded, however, and the diagnostic 16-entry slice
+can itself discard delayed value. Applying an all-front replay rule to Stage 2A
+or other search stages is therefore a hypothesis, not a measured architecture.
+Its prerequisite is a trace-only counterfactual that measures front size,
+which member later wins, and whether a fixed replay allocation would retain it.
 
 **B8 (cheap surrogates for later value).** The periodic evidence is a
 warning: the cell front's surrogates (density, 3×3 contact completeness)
@@ -366,11 +373,12 @@ report, before it is allowed to prune. The codebase already has the right
 instrument (source-survival audits); make surrogate-vs-outcome correlation a
 standard report field wherever a front caps.
 
-**B9 (phase-aware dedup and histories).** The future-equivalence key
-(occupied geometry + remaining interchangeability order + unplaced set +
-reorder debt) is correct and should not be weakened. The measured risk is
-not the key but capacity eviction after dedup; nothing in this review
-justifies changing the key.
+**B9 (phase-aware dedup and histories).** Geometry alone is insufficient for
+continuation deduplication. The corrected periodic selector combines canonical
+occupied geometry with the ordered remaining-piece future; ordinary and raw
+sources that reach the same future converge on the ordinary representative.
+Other search stages must additionally retain any phase state that changes
+future eligibility (unplaced set, reorder debt, or scheduling role).
 
 # Coordinated Contraction And Global Search
 
@@ -558,10 +566,10 @@ citations verified in the reports retained in the session record):
 All on branch `v7-search-redesign-review`, each with focused tests, default
 behavior preserved:
 
-1. **`6bcba8c` — Restore empty-layout placement candidate seed.** One-line
-   geometry-pipeline repair (plus provenance tag); returns the production
-   beam, golden gate, benchmark runner, and sheet-invariance corpus to
-   operation. No search-policy change.
+1. **`6bcba8c` plus follow-up — Restore the empty `contact-only` placement
+   seed.** The reviewed version narrows the bottom-left seed to the production
+   domain that needs it and preserves the ordinary four-corner empty-sheet
+   contract. A direct service test covers the candidate and provenance.
 2. **`e77f3c1` — Pressure ratio schedule + sampled relocation vocabulary.**
    `IntrinsicGlobalSearchSchedule` gains optional
    `pressureContractionRatios` and `pressureMoveVocabulary`; the composite
@@ -572,11 +580,12 @@ behavior preserved:
    `sampled-relocation`, `sampled-relocation-smaller-step`; restart capacity
    0; equal 50k evaluation reservations; same pinned seed). Defaults
    reproduce the previous behavior byte-for-byte (63/63 suite green).
-3. **`96368ca` — Admit raw-crop Pareto witnesses to archive competition.**
+3. **`96368ca` plus follow-up — Admit raw-crop Pareto witnesses to archive competition.**
    `--admit-raw-witnesses` (requires the source-survival audit) turns the
-   bounded raw Pareto front into source-tagged continuations deduplicated
-   against retained seeds, finalized through the unchanged strict decoder,
-   ranked in the same archive.
+   diagnostic raw Pareto witnesses into source-tagged continuations, finalized
+   through the unchanged strict decoder and ranked in the same archive. The
+   reviewed selector puts ordinary and raw candidates inside one hard cap and
+   deduplicates future-equivalent states before reservation.
 
 # Experimental Results
 
@@ -589,6 +598,11 @@ restart capacity 0, wall deadline 240 s/arm (never binding), the same
 only positive gate was a canonical-exact strictly-improving endpoint.
 
 **Triangle-20** (`v7-search-redesign-e77f3c1/triangle-20-pressure-matrix`):
+
+The MTV arms remain valid. The sampled arms predate the canonical-frame fix
+described in F9 and are retained only as diagnostic evidence that the original
+sampler generated broader movement; their loss figures must be rerun before
+being used for a new design decision.
 
 | Arm | Ratios | Vocabulary | Loss @5 % | @2.5 % | @final | Final conflicts (pairs/pieces) | Evals | Runtime | Exact endpoint |
 | --- | --- | --- | ---: | ---: | ---: | --- | ---: | ---: | --- |
@@ -620,7 +634,7 @@ Readings, in decreasing certainty:
    microscopic penetrations distributed over most of the lattice, exactly the
    state the plan predicted lower relaxed loss would purchase. Nothing about
    this state is close to exact legality; the metric is simply exhausted.
-3. **The sampled vocabulary is a materially better mover on heterogeneous
+3. **The pre-fix sampled vocabulary appeared to be a materially better mover on heterogeneous
    geometry and an irrelevant one on a dense lattice.** On Mixed it reaches
    2.7× lower loss at the 5 % target (0.0465 vs 0.1264) and 1.7× at 2.5 %,
    with 12,700+ of its evaluations spent in sampled/refinement candidates;
@@ -628,9 +642,10 @@ Readings, in decreasing certainty:
    interpretation is geometric: contracting a dense repeated lattice by even
    0.6 % of one axis requires re-phasing many pieces at once (a coordinated
    basis change), which no single-piece move — sampled or not — can express;
-   a loose heterogeneous layout has real per-piece slack the sampler finds
-   quickly. The vocabulary is retained (default-off) as the per-piece
-   primitive for any future coordinated stage.
+   a loose heterogeneous layout has real per-piece slack the sampler appears
+   to find quickly. The vocabulary is retained default-off as a candidate
+   per-piece primitive, but the corrected-frame matrix must reproduce this
+   advantage before LNS or another coordinated stage relies on it.
 4. Budget accounting held exactly (the cumulative-thirds reservations and
    rollover reproduce; Triangle arms consumed identical evaluation counts),
    and no wall deadline was hit — the negatives are budget-complete, not
@@ -665,8 +680,8 @@ First working production-path corpus runs since `48abf69`
 | triangle-golden-20 | 1000×1700 vs 2000×2700 | geometry-equivalent (`d9d6605a…`), 20/20 — the documented ancestry shape (305.631 short side), not the approved golden |
 | rectangles-20 | same pair | geometry-equivalent (`397a5d6b…`), 20/20 |
 | mixed-61 | same pair | geometry-equivalent (`f58cf0f2…`), 61/61, 435,949.517 mm², 0 cavities, hull gap 0.2404, 23 isolates |
-| mixed-61 | 660×1200 vs 2000×2700 | still equivalent — the 654.13-wide common layout fits a 660 sheet |
-| mixed-61 | 640×1200 vs 2000×2700 | divergent (`b8e47901…`, 638.8 wide, 61/61) — divergence occurs exactly when the common layout stops fitting |
+| mixed-61 | 660×1200 vs 2000×2700 | still equivalent — the 654.13-wide common layout fits the tested 660 sheet |
+| mixed-61 | 640×1200 vs 2000×2700 | divergent (`b8e47901…`, 638.8 wide, 61/61) — the common layout cannot fit this tested sheet |
 
 The full seven-fixture corpus (triangle-golden-20, rectangles-20,
 trapezoids-20, pentagons-20, star-hulls-20, mixed-50, mixed-61) was then run
@@ -675,10 +690,11 @@ mixed-50 placing 50/50 (`fa981c54…`, 747.9 × 748.2 mm) — the first fully
 invariant roomy-sheet corpus result recorded for the production path
 (`v7-search-redesign-96368ca/sheet-invariance-full`).
 
-This is the measured form of the F28 guarantee: identical canonical geometry
-whenever the selected sheet-free layout fits, different legal geometry
-exactly at the legality boundary, no preference leakage detected on the
-tested pairs.
+This is pairwise evidence toward the F28 guarantee: identical canonical
+geometry on the tested roomy sheets and a legal alternative when the common
+layout cannot fit the tested 640-wide sheet. It brackets a legality-triggered
+divergence but does not prove that every possible sheet-relative pruning path
+is clean. No preference leakage was detected on these pairs.
 
 ## Anytime and budget measurements (E-D)
 
@@ -706,15 +722,16 @@ generic exact constructors
   · open-pocket-first (+ gap-contained variants)
   · periodic continuations · raw-crop Pareto witnesses      <- F2 repair
 -> behavior-aware bounded retention
-  every capped front publishes its raw non-dominated set,
-  and an explicit arm may admit that set to terminal competition
-  (the generic delayed-value rule measured here)
+  periodic raw witnesses share one hard continuation cap with
+  retained cells; generalized all-front replay remains a
+  measured-next hypothesis, not an assumed universal rule
 -> one shared exact archive
   compactness + void Pareto, contact one bounded turn (unchanged),
   with constructive baselines as first-class entries          <- F7 repair
 -> optional faithful coordinated improvement
   adaptive incumbent pressure with per-item sampled relocation
-  + descent (implemented), promoted only by canonical-exact
+  + same-frame descent (implemented; corrected matrix pending),
+  promoted only by canonical-exact
   strict improvement (unchanged gate); currently CLOSED on
   Triangle by the preregistered stop rule — reopen only with a
   mechanism that can re-phase a dense lattice (LNS destroy/repair
@@ -723,7 +740,7 @@ generic exact constructors
   evaluation budgets everywhere wall clocks now decide (F6),
   instance-trait routing (family multiplicity, class count,
   scale dispersion), seed-area-ascending continuation order
-  (measured 38 s vs 208 s to best endpoint on Mixed),
+  (38 s vs 208 s counterfactual on one censored Mixed run),
   cumulative reservation rollover generalized portfolio-wide
 -> exact final sheet fit  (unchanged)
 ```
@@ -738,29 +755,33 @@ Ranked, each with its falsifier:
 
 1. **Wire the four focused suites into an automatic gate** (pre-push hook or
    CI). Falsifier: none needed — F1 is the evidence.
-2. **Make Mixed-61 periodic continuations evaluation-budgeted** (wall clock
+2. **Rerun the sampled-relocation arms after the canonical-frame fix.** Keep
+   the same seeds, restart capacity zero, and 50,000 evaluations per arm.
+   Falsifier: if the earlier Mixed advantage disappears, retain the vocabulary
+   only as an unpromoted primitive and do not use it to justify LNS design.
+3. **Make Mixed-61 periodic continuations evaluation-budgeted** (wall clock
    as safety abort only), then rerun the portfolio on both machines.
    Falsifier: if hashes still differ across machines at equal evaluation
    budgets, the decoder has a hidden nondeterminism and that is a stop-line
    bug.
-3. **Consolidate one decision-grade portfolio run** (C10): all constructors
+4. **Consolidate one decision-grade portfolio run** (C10): all constructors
    plus witnesses into one archive with one budget report, on Triangle,
    Mixed-61, rectangles-20, pentagons-20. Success: the report can name, for
    every arm, its best endpoint and best evicted candidate. This replaces
    cross-run number comparison permanently.
-4. **Cavity-first scheduling (C11)** as the next constructive experiment on
+5. **Cavity-first scheduling (C11)** as the next constructive experiment on
    Mixed: one bounded cavity-queue slot per depth with the commensurate
    two-order admission barrier. Positive gate: a completed endpoint that
    improves the shared archive against the 405,773 reference. Falsifier:
    pocket opportunities exist but every commensurate branch loses the
    archive comparison.
-5. **LNS destroy/repair from archive endpoints** (D18) as the coordinated
+6. **LNS destroy/repair from archive endpoints** (D18) as the coordinated
    mechanism replacing pressure: destroy = remove a conflict-adjacent or
    cavity-adjacent subset (bounded k), repair = strict-decoder reinsertion,
    accept only canonical-exact archive improvement. Run it from the 90,352
    witness and the 420,059 Mixed endpoint. Falsifier: zero admissible
    improvements over the same 50k-evaluation budget the pressure line used.
-6. **Only after 3–5: revisit widths/queues.** Nothing measured here changes
+7. **Only after 4–6: revisit widths/queues.** Nothing measured here changes
    the Stage 2A conclusions.
 
 # Rejected Mechanisms And Why
@@ -813,8 +834,18 @@ pnpm exec tsx --tsconfig tsconfig.node.json \
   --fixture triangle-20 --output <dir> --source-commit "$(git rev-parse HEAD)" \
   --source-survival-audit --admit-raw-witnesses
 
+# Pairwise roomy-sheet corpus (portable compact summary in help/artifacts)
+pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --output <dir>
+
+# Mixed fit-boundary bracket
+pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --case mixed-61 \
+  --sheets 660x1200,2000x2700 --output <dir>
+pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --case mixed-61 \
+  --sheets 640x1200,2000x2700 --output <dir>
+
 # Focused suites
 ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/vitest/vitest.mjs run \
+  tests/unit/nfpIfpService.test.ts \
   tests/unit/intrinsicSqueezeDisruptSeparate.test.ts \
   tests/unit/intrinsicPeriodicFamilyPortfolio.test.ts
 ```

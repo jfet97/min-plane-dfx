@@ -712,7 +712,11 @@ function generatePlacementCandidatesUncached(
     const candidateBounds =
       !sheetlessNfp && candidatePruningMode === 'indexed' ? ifpBounds : undefined
 
-    if (input.placed.length === 0 && ifpBounds !== undefined) {
+    if (
+      input.placed.length === 0 &&
+      input.candidateDomain === 'contact-only' &&
+      ifpBounds !== undefined
+    ) {
       addPoint(
         points,
         { x: ifpBounds.minX, y: ifpBounds.minY },

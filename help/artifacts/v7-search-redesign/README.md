@@ -15,9 +15,9 @@ review's "Reproduction Commands" section and inside each raw report's
 | Artifact | Status | What it is |
 | --- | --- | --- |
 | `triangle-20-witness-74428-371db269.svg/.png` | diagnostic | The reproduced 74,428.143126 mm² two-band raw-crop Pareto witness (hash `371db269…`), source commit `6bcba8c`. Not reachable by the default portfolio (its basis retains zero cells in the bounded front); exists via `--source-survival-audit`. |
-| `triangle-20-witness-90352-4b87d6df.svg/.png` | accepted (archive content) | The 90,352.625 mm², max side 394.922, 7-isolate / 9-component three-band lattice that wins the Triangle archive once `--admit-raw-witnesses` lets raw Pareto witnesses compete (source commit `96368ca`, replay hash-identical). Not a golden; misses the production golden gates. |
-| `mixed-61-periodic-420059-a79f6148.svg/.png` | accepted (archive content) | New best periodic Mixed endpoint from this machine's default run at `6bcba8c`: 420,059.254 mm², 0 cavities, 33/10 contacts, 23 isolates. Exists because this machine completed 4/8 continuations inside the same 25 s wall deadlines (coverage is machine-relative — see review finding F6). |
-| `mixed-61-production-invariant-f58cf0f2-2000x2700.svg/.png` | diagnostic | The production-path sheet-invariant Mixed layout (61/61, 435,949.517 mm², 0 cavities, hash `f58cf0f2…` on 660–2700-wide sheets; diverges only below the 654.13 mm fit boundary). Quality is visibly below the 405,773 reference; the artifact documents invariance, not quality. |
+| `triangle-20-witness-90352-4b87d6df.svg/.png` | diagnostic archive witness | The 90,352.625 mm², max side 394.922, 7-isolate / 9-component three-band lattice that wins the Triangle archive once `--admit-raw-witnesses` lets raw Pareto witnesses compete (source commit `96368ca`, replay hash-identical). Not a golden; misses the production golden gates. |
+| `mixed-61-periodic-420059-a79f6148.svg/.png` | diagnostic archive witness | New best periodic Mixed endpoint from this machine's default run at `6bcba8c`: 420,059.254 mm², 0 cavities, 33/10 contacts, 23 isolates. It remains worse than the 405,773 reference and exists because this machine completed 4/8 continuations inside the same 25 s wall deadlines (coverage is machine-relative — see review finding F6). |
+| `mixed-61-production-invariant-f58cf0f2-2000x2700.svg/.png` | diagnostic | The production-path Mixed layout observed with the same hash on the tested 660×1200, 1000×1700, and 2000×2700 sheets (61/61, 435,949.517 mm², 0 cavities, hash `f58cf0f2…`). A 640×1200 run selected different legal geometry because this layout no longer fits. The tested widths bracket the fit threshold; they do not prove that legality is the only possible divergence for every sheet. Quality is visibly below the 405,773 reference. |
 | `summary.json` | index | Compact metrics + SHA-256 for all twelve cited runs, including the eight-arm pressure matrix (all arms: zero canonical-exact endpoints) and the restart-ablation reproduction (loss values byte-equal to the author machine). |
 
 SHA-256:
@@ -31,7 +31,20 @@ d428e1b9cad776c09d53f71d90d8e710f115704267b6bafc293786b3cbcb0fab  triangle-20-wi
 3fbf1d0a74a6333ca98b0c39fa248f394b9e157a945b69b30dadb41ccaca34d8  mixed-61-periodic-420059-a79f6148.png
 3c4702c0271301d47f0bd69c9863a5f736406c380ea4a5529879afb868d0122b  mixed-61-production-invariant-f58cf0f2-2000x2700.svg
 e47c4eb47dfc446a831ff6143d1efb89f6489b9a04ed5446bfa5f0ac9d00a536  mixed-61-production-invariant-f58cf0f2-2000x2700.png
-7c2f5433a7e0ce9dc0761f4e1c8cbeb157c98105702a473b47681d355acf83cb  summary.json
+d1a3f8322d83928a1690b5d5164af26ad45b3dd3c0bc10a25c27ed3b032e41b8  summary.json
+```
+
+Sheet-invariance reproduction:
+
+```sh
+pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict \
+  --output /private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-invariance-full
+pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --case mixed-61 \
+  --sheets 660x1200,2000x2700 \
+  --output /private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-divergence-mixed61
+pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --case mixed-61 \
+  --sheets 640x1200,2000x2700 \
+  --output /private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-divergence-mixed61-640
 ```
 
 Rejected/diagnostic runs are indexed in `summary.json` with the same

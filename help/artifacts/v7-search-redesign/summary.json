@@ -577,21 +577,42 @@
   "sheet-invariance-subset": {
    "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-invariance-subset/report.json",
    "reportSha256": "72bff957b57b13371cfc06a2aeccf50421b64015987ffa73b4b08f165f43e175",
-   "sourceCommit": null
+   "sourceCommit": "96368cadd99734c1610dac113c3cd7b9c6a6e795",
+   "command": "pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --case triangle-golden-20,rectangles-20,mixed-61 --output /private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-invariance-subset",
+   "sheets": [
+    { "widthMm": 1000, "heightMm": 1700 },
+    { "widthMm": 2000, "heightMm": 2700 }
+   ]
   },
   "sheet-divergence-mixed61-660": {
    "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-divergence-mixed61/report.json",
    "reportSha256": "b4be59a927afeaee01f0762abda258d67eae6e5b78da02d76fd957dea86e42e2",
-   "sourceCommit": null
+   "sourceCommit": "96368cadd99734c1610dac113c3cd7b9c6a6e795",
+   "command": "pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --case mixed-61 --sheets 660x1200,2000x2700 --output /private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-divergence-mixed61",
+   "sheets": [
+    { "widthMm": 660, "heightMm": 1200 },
+    { "widthMm": 2000, "heightMm": 2700 }
+   ]
   },
   "sheet-divergence-mixed61-640": {
    "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-divergence-mixed61-640/report.json",
    "reportSha256": "2cee038220fb564785def13154ad134ad13f3281c20030af850a72a9152ec3c5",
-   "sourceCommit": null
+   "sourceCommit": "96368cadd99734c1610dac113c3cd7b9c6a6e795",
+   "command": "pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --case mixed-61 --sheets 640x1200,2000x2700 --output /private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-divergence-mixed61-640",
+   "sheets": [
+    { "widthMm": 640, "heightMm": 1200 },
+    { "widthMm": 2000, "heightMm": 2700 }
+   ]
   },
   "sheet-invariance-full-corpus": {
    "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-invariance-full/report.json",
    "reportSha256": "7b377c3124d6177f1c674d9cbd521d6e3b373314ca6f22c1072320782401d8f4",
+   "sourceCommit": "96368cadd99734c1610dac113c3cd7b9c6a6e795",
+   "command": "pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --output /private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-invariance-full",
+   "sheets": [
+    { "widthMm": 1000, "heightMm": 1700 },
+    { "widthMm": 2000, "heightMm": 2700 }
+   ],
    "cases": [
     {
      "caseId": "triangle-golden-20",

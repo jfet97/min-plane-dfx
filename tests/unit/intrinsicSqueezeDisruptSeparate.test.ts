@@ -43,6 +43,7 @@ import {
   pressureRepairSweepAllowance,
   pressureRepairMaximumSweepAllowance,
   pressureProjectionPreserved,
+  intrinsicSampledRefinementProposalsForPiece,
   retainIntrinsicInfeasiblePool,
   retainIntrinsicInfeasiblePoolWithDiagnostics,
   retainIntrinsicStructuralHandoffs,
@@ -2964,6 +2965,41 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     })
     expect(refinement.length).toBeGreaterThan(0)
     expect(refinement.length).toBeLessThanOrEqual(8)
+  })
+
+  it('refines around the best sampled state in one canonical frame', async () => {
+    const pieces = [preparedRectangle('a', 2, 2), preparedRectangle('b', 2, 2)]
+    const catalog = await catalogFor(pieces)
+    const bestState = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 5, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 0, 0)
+    ])
+    if (bestState === undefined) throw new Error('best sampled state expected')
+
+    const refinement = intrinsicSampledRefinementProposalsForPiece({
+      catalog,
+      bestState,
+      selectedPieceId: PieceId.make('a'),
+      targetBox: { widthMm: 20, heightMm: 10 },
+      sampleOrdinal: 0,
+      round: 0
+    })
+
+    expect(refinement.length).toBeGreaterThan(0)
+    expect(
+      refinement.every(({ state }) => {
+        const moved = state.poses.find(({ pieceId }) => pieceId === PieceId.make('a'))
+        const fixed = state.poses.find(({ pieceId }) => pieceId === PieceId.make('b'))
+        const relative = relativeOffset(state, 'b', 'a')
+        return (
+          moved?.translationBasisXmm === 5 &&
+          fixed?.translationBasisXmm === 0 &&
+          relative !== undefined &&
+          Math.abs(relative.x) < 1_000 &&
+          Math.abs(relative.y) < 1_000
+        )
+      })
+    ).toBe(true)
   })
 
   it('lets the sampled-relocation vocabulary clear a collider the MTV vocabulary retains', async () => {

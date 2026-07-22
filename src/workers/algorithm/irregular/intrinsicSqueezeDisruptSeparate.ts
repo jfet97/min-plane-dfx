@@ -766,6 +766,33 @@ export interface IntrinsicGlobalSearchSchedule {
 
 export type IntrinsicPressureMoveVocabulary = 'mtv' | 'sampled-relocation'
 
+/** Refines one sampled state without crossing canonical coordinate frames. */
+export function intrinsicSampledRefinementProposalsForPiece(input: {
+  readonly catalog: IntrinsicTransformCatalog
+  readonly bestState: IntrinsicRelaxedState
+  readonly selectedPieceId: PieceId
+  readonly targetBox: IntrinsicTargetBox
+  readonly sampleOrdinal: number
+  readonly round: number
+}): ReadonlyArray<IntrinsicSeparatorProposal> {
+  const refinementPose = input.bestState.poses.find(
+    (pose) => pose.pieceId === input.selectedPieceId
+  )
+  if (refinementPose === undefined) return []
+  return intrinsicSampledRelocationProposalsForPiece({
+    catalog: input.catalog,
+    state: input.bestState,
+    selectedPieceId: input.selectedPieceId,
+    targetBox: input.targetBox,
+    sampleOrdinal: input.sampleOrdinal,
+    refinement: {
+      centerTranslateXGrid: refinementPose.translateXGrid,
+      centerTranslateYGrid: refinementPose.translateYGrid,
+      round: input.round
+    }
+  })
+}
+
 export interface IntrinsicInfeasiblePoolEntry {
   readonly searchScope: IntrinsicInfeasibleSearchScope
   readonly state: IntrinsicRelaxedState
@@ -3628,21 +3655,14 @@ export function runIntrinsicSequentialColliderComposite(input: {
           first.evaluation.rawLoss - second.evaluation.rawLoss ||
           first.stateKey.localeCompare(second.stateKey)
       )[0]
-      const refinementPose = refinementBest?.state.poses.find(
-        (pose) => pose.pieceId === pieceId
-      )
-      if (refinementBest === undefined || refinementPose === undefined) break
-      const refined = intrinsicSampledRelocationProposalsForPiece({
+      if (refinementBest === undefined) break
+      const refined = intrinsicSampledRefinementProposalsForPiece({
         catalog: input.catalog,
-        state: currentState,
+        bestState: refinementBest.state,
         selectedPieceId: pieceId,
         targetBox: input.targetBox,
         sampleOrdinal: visitIndex,
-        refinement: {
-          centerTranslateXGrid: refinementPose.translateXGrid,
-          centerTranslateYGrid: refinementPose.translateYGrid,
-          round: refinementRound
-        }
+        round: refinementRound
       }).map((proposal, ordinal) => ({
         state: proposal.state,
         source: 'sampled-refinement' as const,

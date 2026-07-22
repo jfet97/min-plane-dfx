@@ -1136,6 +1136,39 @@ describe('NfpIfpServiceLive', () => {
     expect(candidates.every(({ diagnostics }) => diagnostics.length === 0)).toBe(true)
   })
 
+  it('seeds an empty contact-only sheet at the bottom-left IFP corner', async () => {
+    const moving = transformedGeometry('moving-contact-seed', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    let provenance:
+      | Parameters<NonNullable<GeneratePlacementCandidatesInput['onCandidateProvenance']>>[0]
+      | undefined
+
+    const candidates = await generateCandidates({
+      sheet: sheet(10, 10),
+      placed: [],
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      candidateDomain: 'contact-only',
+      onCandidateProvenance: (snapshot) => {
+        provenance = snapshot
+      }
+    })
+
+    expect(candidatePoints(candidates)).toEqual([point(0, 0)])
+    expect(provenance?.rawBySource.ifpCorner).toBe(1)
+    expect(provenance?.legalCandidateSources).toEqual([
+      {
+        gridX: 0,
+        gridY: 0,
+        sourceMask: NFP_IFP_CANDIDATE_SOURCE_MASK.ifpCorner
+      }
+    ])
+  })
+
   it('memoizes legal points by geometry and remaps current candidate metadata', async () => {
     const values = new Map<string, unknown>()
     const counters: CacheCounters = { gets: 0, sets: 0, removes: 0 }

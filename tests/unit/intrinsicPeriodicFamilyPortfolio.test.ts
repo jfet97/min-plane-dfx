@@ -101,6 +101,7 @@ describe('intrinsic periodic family portfolio', () => {
             maximumCatalogRuntimeMs: 1_000,
             maximumContinuationRuntimeMs: 1_000,
             maximumTotalRuntimeMs: 8_000,
+            maximumContinuationCount: 1,
             captureSourceSurvivalAudit: true,
             admitSourceAuditWitnesses
           }
@@ -135,5 +136,9 @@ describe('intrinsic periodic family portfolio', () => {
       witnessContinuations.every(({ seed }) => !selectedSeedKeys.has(seed.canonicalKey))
     ).toBe(true)
     expect(withWitnesses.runs).toHaveLength(withWitnesses.continuations.length)
+    expect(withWitnesses.continuations.length).toBeLessThanOrEqual(1)
+    expect(withWitnesses.continuationCoverageComplete).toBe(
+      withWitnesses.continuationOmissions.every(({ reason }) => reason !== 'continuation-cap')
+    )
   }, 30_000)
 })
