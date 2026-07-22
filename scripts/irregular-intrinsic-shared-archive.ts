@@ -22,8 +22,10 @@ import { makePresetShapeDocument, type PresetShapeKind } from '../src/shared/pre
 import { preparePieces as prepareNestingPieces } from '../src/shared/preparePieces.js'
 import {
   INTRINSIC_SHARED_ARCHIVE_DIRECT_ROLES,
+  retainRankedSharedArchive,
   runIntrinsicSharedArchiveDirectPortfolio,
   runIntrinsicSharedArchivePortfolio,
+  selectFittingSharedArchive,
   selectIntrinsicSharedArchiveWinner,
   type IntrinsicSharedArchiveDirectRole,
   type IntrinsicSharedArchiveEndpoint,
@@ -110,23 +112,30 @@ const sourceAuditReplay =
     : await readSourceAuditReplay(sourceAuditCacheInput, sourceAuditCacheKey)
 const result =
   mode === 'calibration'
-    ? {
-        directRuns: await Effect.runPromise(
+    ? await (async () => {
+        const directRuns = await Effect.runPromise(
           withLayers(
             runIntrinsicSharedArchiveDirectPortfolio(fixture.request.sheet, preparedPieces, {
               maximumDirectRuntimeMs
             }),
             settings
           )
-        ),
-        periodicRuns: [],
-        periodicPortfolio: undefined,
-        sheetlessArchive: [],
-        archive: [],
-        winner: undefined,
-        periodicSelectionValid: undefined,
-        experimentValid: undefined
-      }
+        )
+        const sheetlessArchive = retainRankedSharedArchive(
+          directRuns.flatMap(({ endpoint }) => (endpoint === undefined ? [] : [endpoint]))
+        )
+        const archive = selectFittingSharedArchive(sheetlessArchive)
+        return {
+          directRuns,
+          periodicRuns: [],
+          periodicPortfolio: undefined,
+          sheetlessArchive,
+          archive,
+          winner: selectIntrinsicSharedArchiveWinner(archive),
+          periodicSelectionValid: undefined,
+          experimentValid: directRuns.every(({ status }) => status === 'completed')
+        }
+      })()
     : await Effect.runPromise(
         withLayers(
           runIntrinsicSharedArchivePortfolio(fixture.request.sheet, preparedPieces, {
