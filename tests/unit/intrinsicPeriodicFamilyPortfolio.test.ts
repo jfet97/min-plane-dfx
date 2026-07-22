@@ -7,12 +7,20 @@ import { SheetSpec } from '@shared/domain/nesting.js'
 import {
   CollisionGeometry,
   IrregularBounds,
+  IrregularPlacedPiece,
+  IrregularPlacement,
   IrregularPoint,
   IrregularPolygon,
   IrregularPreparedPiece,
-  IrregularTransformCandidate
+  IrregularTransform,
+  IrregularTransformCandidate,
+  TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
-import { runIntrinsicPeriodicFamilyPortfolio } from '../../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
+import {
+  continuationsForExecution,
+  type IntrinsicPeriodicContinuation,
+  runIntrinsicPeriodicFamilyPortfolio
+} from '../../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
 
@@ -88,6 +96,75 @@ describe('intrinsic periodic family portfolio', () => {
           )
       )
     ).toBe(true)
+
+  })
+
+  it('reorders capped continuations by compact seed cost without changing uncapped order', () => {
+    const prepared = preparedTriangle('seed-piece')
+    const transform = prepared.transforms[0]
+    if (transform === undefined) throw new Error('expected a transform fixture')
+    const placed = new IrregularPlacedPiece({
+      placement: new IrregularPlacement({
+        pieceId: prepared.pieceId,
+        sourcePieceId: prepared.source.id,
+        placementReference: prepared.collisionGeometry.placementReference,
+        transform: new IrregularTransform({
+          translateX: 0,
+          translateY: 0,
+          rotationDeg: transform.rotationDeg,
+          mirrored: transform.mirrored
+        })
+      }),
+      collisionGeometry: new TransformedCollisionGeometry({
+        sourcePieceId: prepared.source.id,
+        transform,
+        polygon: prepared.collisionGeometry.collisionPolygon,
+        bounds: prepared.collisionGeometry.sourceBounds
+      })
+    })
+    const continuation = (
+      sourceId: string,
+      envelopeAreaMm2: number,
+      maximumSideMm: number,
+      envelopeSpanMm: number,
+      placedCount: number
+    ): IntrinsicPeriodicContinuation => ({
+      sourceId,
+      role: 'P1',
+      familyKey: 'family',
+      cellKey: `cell-${sourceId}`,
+      basisSourceKey: undefined,
+      seed: {
+        role: 'P1',
+        cellKey: `cell-${sourceId}`,
+        placements: Array.from({ length: placedCount }, () => placed),
+        remainingFamilyMembers: [],
+        componentCount: 1,
+        isolatedPieceCount: 0,
+        largestComponentSize: placedCount,
+        maximumSideMm,
+        envelopeAreaMm2,
+        envelopeSpanMm,
+        crop: { rows: 1, columns: 1, traversal: 'row', corner: 0 },
+        canonicalKey: `seed-${sourceId}`
+      }
+    })
+    const input = [
+      continuation('large', 30, 6, 11, 4),
+      continuation('few-placed', 10, 5, 9, 2),
+      continuation('more-placed-z', 10, 5, 9, 4),
+      continuation('more-placed-a', 10, 5, 9, 4),
+      continuation('smaller-side', 10, 4, 10, 3)
+    ]
+
+    expect(continuationsForExecution(input, undefined)).toBe(input)
+    expect(continuationsForExecution(input, 100).map(({ sourceId }) => sourceId)).toEqual([
+      'smaller-side',
+      'more-placed-a',
+      'more-placed-z',
+      'few-placed',
+      'large'
+    ])
   })
 
   it('admits raw-crop Pareto witnesses as source-tagged archive competitors on request', async () => {

@@ -281,6 +281,16 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   direct-legal strict candidate evaluations and reports evaluation truncation
   separately. The Mixed pressure rerun additionally needs a committed source-
   key replay path or a portable structured seed; an SVG is insufficient.
+- **Equal work exposes bad continuation scheduling.** The source-pinned square
+  basis reproduces `310adc64…` exactly in 19,862 candidate evaluations;
+  19,861 returns `evaluation-cap` with no winner. In the full eight-way run,
+  six larger-seed continuations consumed that exact cap first, while the two
+  square-basis crops had the smallest seed envelopes and ran seventh/eighth;
+  the useful source then hit the five-minute safety boundary. Evaluation-
+  budgeted execution now orders selected continuations by intrinsic seed area,
+  maximum side, and span, then by placed count descending and stable source
+  identity. Selection and final archive ranking do not change, and no-cap
+  execution keeps its old order.
 - **Closed the adaptive-pressure branch by the preregistered gate.** One
   equal-budget matrix (50,000 pressure evaluations/arm, restart 0, pinned
   seeds `371db269…`/`310adc64…`) over {1.25% baseline, 0.625% smaller step,

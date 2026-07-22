@@ -191,6 +191,11 @@ search budget from machine speed while preserving the historical unbounded
 behavior when no evaluation cap is supplied. Selection coverage and execution
 coverage are reported separately: selecting every bounded continuation does not
 imply that every selected continuation reached a terminal decode.
+When that explicit cap is active, selected continuations execute by ascending
+seed-envelope area, maximum side, and span, then by more already placed pieces
+and stable source identity. This changes only censored execution order: archive
+ranking and the selected continuation set remain unchanged. The no-cap path
+preserves its historical order.
 
 The isolated V7 seed/archive experiment keeps that E4 path intact while
 testing a replacement controller with stricter observability boundaries. Each

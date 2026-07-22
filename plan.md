@@ -1923,6 +1923,17 @@ budgets before any Mixed periodic conclusion is called conclusive.
    historical basis source or consume a portable structured seed; it cannot
    infer causality from that missing hash. Promotion still requires a committed
    equal-evaluation Mixed run and endpoint-hash comparison.
+
+   The first exact-cap measurement establishes the execution unit: the pinned
+   square-basis continuation completes at 19,862 candidate evaluations with
+   hash `310adc64…`; cap 19,861 yields no endpoint and reports truncation. A
+   full width-eight run at 19,862 then spent the first six allocations on
+   larger seeds and reached the global safety deadline before the two smallest
+   square-basis crops. Under the explicit evaluation-budget mode only, execute
+   the already selected continuations by ascending seed area, maximum side,
+   and span, then by placed count descending and source id. This is scheduling,
+   not a selector or terminal-comparator change; the no-cap path remains byte-
+   compatible.
 4. Consolidate one decision-grade portfolio run: ordinary strict, reversed,
    endpoint-derived, pocket-first, periodic continuations, and raw-crop
    witnesses competing in one shared archive under one budget report, on

@@ -173,8 +173,12 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       (options.captureSourceSurvivalAudit ?? false) &&
         (options.admitSourceAuditWitnesses ?? false)
     )
+    const continuations = continuationsForExecution(
+      selected.continuations,
+      maximumContinuationCandidateEvaluations
+    )
     const runs: IntrinsicPeriodicContinuationResult[] = []
-    for (const continuation of selected.continuations) {
+    for (const continuation of continuations) {
       const remainingMs = maximumTotalRuntimeMs - (performance.now() - startedAt)
       if (remainingMs <= 0) {
         runs.push({
@@ -244,7 +248,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
     const winningHash = archive[0]?.canonicalGeometryHash
     return {
       catalog,
-      continuations: selected.continuations,
+      continuations,
       continuationOmissions: selected.omissions,
       continuationCoverageComplete: selected.coverageComplete,
       ...(maximumContinuationCandidateEvaluations === undefined
@@ -270,6 +274,30 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       runtimeMs: performance.now() - startedAt
     }
   })
+}
+
+/** Runs cheaper compact seeds first when execution is already evaluation-budgeted. */
+export function orderPeriodicContinuationsForExecution(
+  continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
+): ReadonlyArray<IntrinsicPeriodicContinuation> {
+  return [...continuations].toSorted(
+    (first, second) =>
+      first.seed.envelopeAreaMm2 - second.seed.envelopeAreaMm2 ||
+      first.seed.maximumSideMm - second.seed.maximumSideMm ||
+      first.seed.envelopeSpanMm - second.seed.envelopeSpanMm ||
+      second.seed.placements.length - first.seed.placements.length ||
+      first.sourceId.localeCompare(second.sourceId)
+  )
+}
+
+/** Preserves historical order unless deterministic execution budgeting is explicitly active. */
+export function continuationsForExecution(
+  continuations: ReadonlyArray<IntrinsicPeriodicContinuation>,
+  maximumCandidateEvaluationCount: number | undefined
+): ReadonlyArray<IntrinsicPeriodicContinuation> {
+  return maximumCandidateEvaluationCount === undefined
+    ? continuations
+    : orderPeriodicContinuationsForExecution(continuations)
 }
 
 function selectIntrinsicPeriodicContinuations(
