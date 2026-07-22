@@ -89,7 +89,7 @@ Therefore:
     bounded periodic-source experiment contract. Portable evidence is in
     `help/artifacts/shapes-17-baseline/`.
 
-13. **production integration completed on the feature branch, without starting
+13. **production integration completed and merged into `main`, without starting
     the remaining roadmap:**
     compact-quality now selects directly from the complete canonical-exact shared
     archive. The fixed-reference coordinator, its schema flag, and the ordinary
