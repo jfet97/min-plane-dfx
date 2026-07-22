@@ -149,6 +149,39 @@ restart injection is therefore rejected as a default; the production-facing
 contract remains capacity zero unless later paired corpus evidence reverses
 that result. Adaptive target depth and the exact-only handoff remain retained.
 
+The schedule additionally accepts an explicit `pressureContractionRatios`
+sequence (default 5%, 2.5%, 1.25%) and a `pressureMoveVocabulary`. The default
+`mtv` vocabulary preserves the historical behavior. The `sampled-relocation`
+vocabulary augments every composite collider visit with two deterministic
+compass rings scaled by the piece's characteristic length, a bounded Halton
+coverage of legal bottom-left positions inside the contracted target box, and
+at most two shrinking-ring refinement rounds around the best candidate before
+the unchanged weighted-nonworsening commit; evaluation accounting, GLS
+weights, canonical-legality classification, and the exact-only promotion gate
+are unchanged. Refinement starts from the best sampled state's canonical frame
+and rings that state's selected pose, avoiding the former re-anchor mismatch
+between the current and best states. The equal-budget Triangle matrix from the pinned
+74,428 mm2 seed (baseline, 0.625% final step, sampled relocation, both)
+produced no canonical-exact endpoint in any arm; the smaller-step arm reached
+raw loss 3.6e-06 while retaining 12 distributed pair conflicts, so the
+Triangle pressure branch is closed by the preregistered stop rule.
+
+The periodic family portfolio's source-survival audit can additionally admit
+its bounded raw-crop Pareto witnesses as source-tagged `raw-witness:`
+continuations (`admitSourceAuditWitnesses`, harness `--admit-raw-witnesses`):
+without it, cell fronts ranked by cell-local proxies can evict the source of
+the best known crops — measured on Triangle, where the 74,428 mm2 witness
+basis is generated but retains zero cells in a default run and the archive's
+best entry is 37% worse. With admission, the Triangle archive gains both the
+74,428 witness and a 90,352 mm2 three-band lattice with 7 isolates and 9
+components that the default pipeline had never surfaced. Ordinary and raw
+witness continuations compete inside the same `maximumContinuationCount` cap.
+Deduplication uses canonical occupied geometry plus the ordered remaining-piece
+future, and an ordinary continuation remains the representative when the same
+future is reached through both sources. Extending this periodic-specific
+mechanism into a universal all-front retention policy remains a hypothesis,
+not an established architecture.
+
 The isolated V7 seed/archive experiment keeps that E4 path intact while
 testing a replacement controller with stricter observability boundaries. Each
 independent arm constructs two complete canonical-exact, sheet-free seeds:

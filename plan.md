@@ -1825,16 +1825,122 @@ trace fields remain useful. Evidence is under
 - Completed first coordinated multi-piece pilot:
   `/private/tmp/min-plane-provenance/v7-coordinated-d55d55e-triangle/`
 
+#### Search-redesign review checkpoint (2026-07-21)
+
+The independent search-redesign review on branch `v7-search-redesign-review`
+(see `reviews/v7-search-redesign-review.md`) completed the pressure and
+periodic-witness experiments, but did **not** complete the mandated
+deterministic online-budget experiment. Follow-up review found four code or
+evidence defects that had to be corrected before integration:
+
+1. **Production regression repaired without changing the ordinary domain.** Commit `48abf69` had removed the
+   empty-layout IFP seed from candidate generation; under the production
+   beam's `contact-only` candidate domain every decode placed zero pieces
+   from that commit through `d56d9d7`. The first repair restored bottom-left
+   for every empty sheet and unintentionally removed the other three ordinary
+   IFP corners. The integrated repair applies only to `contact-only`, with a
+   direct provenance test, while ordinary sheet generation retains four
+   corners. The focused suites return to the documented ancestry baseline. The
+   golden gate must become an automatic commit gate — convention did not
+   hold.
+2. **The 74,428 witness was retention-evicted by its own cell front.** The
+   shared basis is generated but retains zero cells in the default bounded
+   front at `d56d9d7` and at `9da94e2`; the default archive's best Triangle
+   entry was 102,182 mm2. Behind `--admit-raw-witnesses` (commit `96368ca`)
+   the raw-crop Pareto witnesses now compete as source-tagged continuations
+   in the shared archive. Follow-up review found that the initial version
+   appended up to 16 witnesses after `maximumContinuationCount` and could
+   deduplicate against an ordinary continuation that never ran. The corrected
+   selector performs one capped selection and keys equivalence by canonical
+   geometry plus ordered remaining-piece future, preferring the ordinary
+   representative on convergence. On Triangle this surfaces both the 74,428 witness
+   and a previously unseen 90,352.625 mm2 three-band lattice with 7 isolates
+   and 9 components (hash `4b87d6df…`) as the archive winner, replayed
+   hash-identically twice. These remain diagnostic archive witnesses, not
+   accepted production layouts; homogeneous controls are clean.
+3. **Sampled relocation remains useful machinery but its published matrix is
+   pre-fix evidence.** Shrinking-ring refinement used the best candidate's
+   canonical translate with the prior current state, mixing frames when the
+   moved piece changed the bottom-left anchor. Refinement now starts from the
+   best sampled state. Exact admission and deterministic accounting never
+   changed, but the sampled arms must be rerun before their Mixed loss
+   advantage is used to justify LNS design.
+4. **Sheet invariance is a pairwise observation, not a universal guarantee.**
+   Seven fixtures matched across 1000x1700 and 2000x2700; Mixed also matched
+   at 660x1200 and diverged legally at 640x1200 where the 654.13-wide common
+   layout cannot fit. This brackets a legality-triggered divergence but does
+   not prove that no other sheet-relative pruning leak exists. The portable
+   summary now records source commit, commands, and sheet pairs.
+
+The paired smaller-step experiment and the move-vocabulary extension were run
+as one equal-budget matrix from the pinned exact seeds (Triangle
+`371db269…`, Mixed `310adc64…`), restart capacity zero, 50,000 pressure
+evaluations per arm, arms {baseline 1.25%, smaller 0.625%, sampled-relocation
+vocabulary, both}: **zero canonical-exact endpoints in all eight arms across
+both fixtures.** The smaller-step arm reached raw loss 3.6e-06 on Triangle
+while retaining 12 pair conflicts across 16 pieces — the definitive
+demonstration that vanishing relaxed loss does not approach exact legality.
+The sampled-relocation vocabulary (deterministic per-collider position
+sampling with shrinking-ring refinement, inspired by Sparrow's separator)
+appeared 2.7x better at the 5% target on heterogeneous Mixed before the frame
+fix but cannot close a dense-lattice contraction. Per the preregistered stop rule, **the
+adaptive-pressure branch is closed on both fixtures.** The vocabulary and the
+configurable ratio schedule remain as default-off generic machinery; the
+corrected-frame matrix must reproduce the Mixed advantage before LNS relies
+on it.
+
+Mixed-61 periodic coverage was additionally shown to be machine-relative:
+under identical 25-second continuation deadlines this review's machine
+completed 4/8 continuations (vs 1/8 on the original machine) and produced a
+new best periodic endpoint at 420,059.254 mm2, zero cavities, 33/10 contacts
+(hash `a79f6148…`). Wall-clock continuation budgets must become evaluation
+budgets before any Mixed periodic conclusion is called conclusive.
+
 ## Immediate Next Action
 
-Disable cross-target restart injection in the experimental adaptive-pressure
-role while retaining the trace/accounting and adaptive-depth machinery. Then
-run one bounded, paired smaller-step experiment from the same exact Triangle
-and Mixed seeds: compare the current smallest 1.25% contraction with a smaller
-intrinsic contraction under equal evaluation and wall budgets. Do not add a new
-move family or finalizer in the same experiment. The sole positive gate is a
-canonical-exact endpoint that passes the existing strict improvement and
-admission checks. Lower relaxed loss or fewer relaxed conflicts cannot justify
-continuation because both become easier as contraction approaches zero. If
-neither equal-budget arm produces an admissible endpoint, stop this pressure
-branch. Preserve exact Clipper2 admission and both existing exact fallbacks.
+1. Rerun the sampled-relocation matrix after the canonical-frame fix under the
+   same frozen evaluation budget; retain the primitive for LNS only if its
+   Mixed movement advantage reproduces. This is the smallest way to separate
+   Fable's useful Sparrow-inspired move vocabulary from the frame defect found
+   by follow-up review; no new search mechanism is introduced.
+2. Wire the focused production suites (golden, windowed beam, NFP service,
+   layout scorer) into an automatic per-commit gate on research branches.
+3. Convert periodic continuation budgets from wall-clock to evaluation caps
+   (wall clock as safety abort only), then rerun Mixed-61 for a
+   machine-independent coverage-complete result. The 1/8 versus 4/8 completion
+   split proves that wall time currently changes which constructors are even
+   allowed to finish; seed ordering cannot be promoted while that censoring
+   remains. The stop-line is unequal hashes or endpoint sets at equal completed
+   evaluation budgets across machines.
+4. Consolidate one decision-grade portfolio run: ordinary strict, reversed,
+   endpoint-derived, pocket-first, periodic continuations, and raw-crop
+   witnesses competing in one shared archive under one budget report, on
+   Triangle, Mixed-61, and the homogeneous controls. This comes from Fable's
+   F7 finding and the PackingSolver-style portfolio lesson: the current
+   periodic archive can declare a winner without ever comparing production or
+   the 405,773 pocket-first endpoint. Every arm must publish its best completed
+   endpoint and best cap-evicted candidate under one exact terminal order.
+5. Implement cavity-first scheduling as the next constructive experiment
+   (one bounded cavity-queue slot per depth, commensurate two-order
+   admission), gated on improving the shared archive against the 405,773
+   reference. This is the strongest untransferred Dalsoo/Abey and PackingSolver
+   lesson: change reconstruction order so a legal pocket is consumed before
+   ordinary boundary growth closes it, instead of adding more contact points
+   or more contact reward. The mechanism must be defined from live cavity
+   geometry and piece fit, never from fixture IDs or counts.
+6. Replace the closed pressure branch with bounded LNS destroy/repair from
+   archive endpoints (destroy a conflict- or cavity-adjacent subset, repair
+   through the strict decoder, canonical-exact-only acceptance), reusing the
+   sampled-relocation primitive inside repair. Equal 50,000-evaluation
+   budget; the same exact fallbacks; zero admissible improvements closes
+   that branch too. This is the closest faithful transfer from Sparrow's
+   disruption plus coordinated improvement and Abey Jostle's release/rebuild:
+   move a related subset, not one collider in isolation. Start only after the
+   corrected sampler and unified archive exist, so the experiment cannot hide
+   a weak move primitive or compare against an incomplete baseline.
+
+Do not generalize raw-front replay into every beam or queue yet. The periodic
+experiment proves one specific cell-front failure, but a Pareto front can grow
+without a useful bound and a second topology-first slice can recreate the same
+loss. First record per-depth raw-front size, later endpoint value, and the
+smallest fixed replay allocation that would have retained the winner.

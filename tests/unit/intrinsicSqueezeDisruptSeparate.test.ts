@@ -43,6 +43,7 @@ import {
   pressureRepairSweepAllowance,
   pressureRepairMaximumSweepAllowance,
   pressureProjectionPreserved,
+  intrinsicSampledRefinementProposalsForPiece,
   retainIntrinsicInfeasiblePool,
   retainIntrinsicInfeasiblePoolWithDiagnostics,
   retainIntrinsicStructuralHandoffs,
@@ -67,6 +68,7 @@ import {
   intrinsicFocusedProposals,
   intrinsicFocusedProposalsForPiece,
   intrinsicRelaxedStateKey,
+  intrinsicSampledRelocationProposalsForPiece,
   provisionalLayoutFromRelaxedState,
   relaxedStateFromExactLayout,
   remapIntrinsicTransformsQuarterTurn,
@@ -2891,7 +2893,224 @@ describe('intrinsic global squeeze, disrupt, separate controller', () => {
     expect(partition?.structuralPieces).toHaveLength(53)
     expect(partition?.fillerPieces).toHaveLength(8)
   }, 30_000)
+
+  it('generates bounded deterministic sampled relocation proposals for one collider', async () => {
+    const pieces = [preparedRectangle('a', 2, 2), preparedRectangle('b', 2, 2)]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 1, 0)
+    ])
+    if (state === undefined) throw new Error('sampled relocation state expected')
+    const targetBox = { widthMm: 20, heightMm: 10 }
+    const first = intrinsicSampledRelocationProposalsForPiece({
+      catalog,
+      state,
+      selectedPieceId: PieceId.make('b'),
+      targetBox,
+      sampleOrdinal: 0
+    })
+    const second = intrinsicSampledRelocationProposalsForPiece({
+      catalog,
+      state,
+      selectedPieceId: PieceId.make('b'),
+      targetBox,
+      sampleOrdinal: 0
+    })
+
+    expect(first.length).toBeGreaterThan(0)
+    // two 8-direction rings plus at most twelve Halton target placements
+    expect(first.length).toBeLessThanOrEqual(28)
+    expect(first.map(({ key }) => key)).toEqual(second.map(({ key }) => key))
+    expect(
+      first.every(
+        (proposal) =>
+          proposal.kind === 'sampled-relocation' &&
+          proposal.affectedPieceIds.length === 1 &&
+          proposal.affectedPieceIds[0] === PieceId.make('b')
+      )
+    ).toBe(true)
+    // canonicalization re-anchors the layout, so only relative geometry may move:
+    // piece a keeps its transform and piece b moves relative to a in every proposal
+    const baseRelative = relativeOffset(state, 'a', 'b')
+    expect(
+      first.every((proposal) => {
+        const poseA = proposal.state.poses.find(
+          ({ pieceId }) => pieceId === PieceId.make('a')
+        )
+        const relative = relativeOffset(proposal.state, 'a', 'b')
+        return (
+          poseA !== undefined &&
+          poseA.transformKey ===
+            state.poses.find(({ pieceId }) => pieceId === PieceId.make('a'))
+              ?.transformKey &&
+          relative !== undefined &&
+          baseRelative !== undefined &&
+          (relative.x !== baseRelative.x || relative.y !== baseRelative.y)
+        )
+      })
+    ).toBe(true)
+
+    const refinement = intrinsicSampledRelocationProposalsForPiece({
+      catalog,
+      state,
+      selectedPieceId: PieceId.make('b'),
+      targetBox,
+      sampleOrdinal: 0,
+      refinement: {
+        centerTranslateXGrid: 5_000,
+        centerTranslateYGrid: 0,
+        round: 0
+      }
+    })
+    expect(refinement.length).toBeGreaterThan(0)
+    expect(refinement.length).toBeLessThanOrEqual(8)
+  })
+
+  it('refines around the best sampled state in one canonical frame', async () => {
+    const pieces = [preparedRectangle('a', 2, 2), preparedRectangle('b', 2, 2)]
+    const catalog = await catalogFor(pieces)
+    const bestState = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 5, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 0, 0)
+    ])
+    if (bestState === undefined) throw new Error('best sampled state expected')
+
+    const refinement = intrinsicSampledRefinementProposalsForPiece({
+      catalog,
+      bestState,
+      selectedPieceId: PieceId.make('a'),
+      targetBox: { widthMm: 20, heightMm: 10 },
+      sampleOrdinal: 0,
+      round: 0
+    })
+
+    expect(refinement.length).toBeGreaterThan(0)
+    expect(
+      refinement.every(({ state }) => {
+        const moved = state.poses.find(({ pieceId }) => pieceId === PieceId.make('a'))
+        const fixed = state.poses.find(({ pieceId }) => pieceId === PieceId.make('b'))
+        const relative = relativeOffset(state, 'b', 'a')
+        return (
+          moved?.translationBasisXmm === 5 &&
+          fixed?.translationBasisXmm === 0 &&
+          relative !== undefined &&
+          Math.abs(relative.x) < 1_000 &&
+          Math.abs(relative.y) < 1_000
+        )
+      })
+    ).toBe(true)
+  })
+
+  it('lets the sampled-relocation vocabulary clear a collider the MTV vocabulary retains', async () => {
+    const pieces = [
+      preparedRectangle('a', 2, 2),
+      preparedRectangle('b', 2, 2),
+      preparedRectangle('c', 2, 2)
+    ]
+    const catalog = await catalogFor(pieces)
+    const state = relaxedStateFromExactLayout(catalog, [
+      placed(catalogEntry(catalog, 'a'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'b'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'c'), 0, 0, 0)
+    ])
+    if (state === undefined) throw new Error('sampled composite state expected')
+    const targetBox = { widthMm: 20, heightMm: 10 }
+    const evaluation = evaluateIntrinsicSeparation(targetBox, catalog, state)
+    const stateKey = intrinsicRelaxedStateKey(catalog, state)
+    if (evaluation === undefined || stateKey === undefined) {
+      throw new Error('sampled composite evaluation expected')
+    }
+    const run = () =>
+      Effect.runPromise(
+        runIntrinsicSequentialColliderComposite({
+          targetBox,
+          catalog,
+          parentState: state,
+          parentEvaluation: evaluation,
+          parentStateKey: stateKey,
+          weights: { byConflictKey: new Map() },
+          maximumEvaluations: 500,
+          control: { checkpoint: () => Effect.void },
+          moveVocabulary: 'sampled-relocation'
+        })
+      )
+    const result = await run()
+    const replay = await run()
+
+    const candidateSources = new Set(
+      result.trace.visits
+        .flatMap(({ candidates }) => candidates)
+        .map(({ source }) => source)
+    )
+    expect(candidateSources.has('sampled-relocation')).toBe(true)
+    expect(result.trace.committedPieceCount).toBeGreaterThanOrEqual(1)
+    expect(
+      result.trace.visits
+        .filter(({ outcome }) => outcome === 'committed')
+        .every(
+          ({ beforeWeightedLoss, afterWeightedLoss }) =>
+            afterWeightedLoss <= beforeWeightedLoss * 1.001
+        )
+    ).toBe(true)
+    expect(replay.key).toBe(result.key)
+    expect(replay.evaluationCount).toBe(result.evaluationCount)
+    expect(replay.trace.endRawLoss).toBe(result.trace.endRawLoss)
+  })
+
+  it('follows a schedule-supplied pressure contraction ratio sequence', async () => {
+    const transforms = [transform(0, 0), transform(1, 90)]
+    const pieces = [
+      preparedRectangle('near', 4, 2, transforms),
+      preparedRectangle('far', 4, 2, transforms)
+    ]
+    const catalog = await catalogFor(pieces)
+    const e1 = [
+      placed(catalogEntry(catalog, 'near'), 0, 0, 0),
+      placed(catalogEntry(catalog, 'far'), 0, 4, 0)
+    ]
+    const result = await runController(
+      pieces,
+      e1,
+      schedule({
+        sweepsPerBasin: 1,
+        maximumSeparationEvaluations: 400,
+        explorationAreaCapMm2: 20,
+        pressureMaximumAttempts: 3,
+        pressureMaximumConsecutiveFailures: 3,
+        pressureRestartPoolCapacity: 0,
+        pressureContractionRatios: [1 / 10, 1 / 20, 1 / 160]
+      }),
+      ({ provisionalPlaced }) => Effect.succeed(exactProjection(provisionalPlaced))
+    )
+
+    const observedRatios = result.contractedPressureTrace.map(
+      ({ contractionRatio }) => contractionRatio
+    )
+    expect(observedRatios.length).toBeGreaterThan(0)
+    expect(
+      observedRatios.every((ratio) =>
+        [1 / 10, 1 / 20, 1 / 160].includes(ratio)
+      )
+    ).toBe(true)
+    expect(observedRatios[0]).toBe(1 / 10)
+  })
 })
+
+function relativeOffset(
+  state: { readonly poses: ReadonlyArray<{ readonly pieceId: PieceId; readonly translateXGrid: number; readonly translateYGrid: number }> },
+  firstId: string,
+  secondId: string
+): { readonly x: number; readonly y: number } | undefined {
+  const first = state.poses.find(({ pieceId }) => pieceId === PieceId.make(firstId))
+  const second = state.poses.find(({ pieceId }) => pieceId === PieceId.make(secondId))
+  return first === undefined || second === undefined
+    ? undefined
+    : {
+        x: second.translateXGrid - first.translateXGrid,
+        y: second.translateYGrid - first.translateYGrid
+      }
+}
 
 function worldCenter(entry: IrregularPlacedPiece): { readonly x: number; readonly y: number } {
   const points = entry.collisionGeometry.polygon.points.map((point) => ({

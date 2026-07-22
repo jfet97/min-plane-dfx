@@ -113,6 +113,13 @@ export interface IntrinsicPeriodicFamilyPortfolioOptions {
   readonly basisSourceKey?: string
   /** Enables a bounded observer over raw source cells without changing continuations. */
   readonly captureSourceSurvivalAudit?: boolean
+  /**
+   * Lets the bounded raw-crop Pareto witnesses compete as source-tagged
+   * continuations in the shared archive. Requires the source-survival audit;
+   * without this flag the best raw witnesses exist only as diagnostics even
+   * when every retained cell front evicted them.
+   */
+  readonly admitSourceAuditWitnesses?: boolean
 }
 
 type PortfolioError =
@@ -153,7 +160,9 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       maximumContinuationCount,
       maximumCropsPerCell,
       options.basisSourceKey,
-      options.captureSourceSurvivalAudit ?? false
+      options.captureSourceSurvivalAudit ?? false,
+      (options.captureSourceSurvivalAudit ?? false) &&
+        (options.admitSourceAuditWitnesses ?? false)
     )
     const runs: IntrinsicPeriodicContinuationResult[] = []
     for (const continuation of selected.continuations) {
@@ -235,7 +244,8 @@ function selectIntrinsicPeriodicContinuations(
   maximumContinuationCount: number,
   maximumCropsPerCell: number,
   basisSourceKey: string | undefined,
-  captureSourceSurvivalAudit: boolean
+  captureSourceSurvivalAudit: boolean,
+  admitSourceAuditWitnesses = false
 ): Effect.Effect<
   {
     readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
@@ -251,8 +261,8 @@ function selectIntrinsicPeriodicContinuations(
     const familyMembers = new Map(
       groupIntrinsicCollisionFamilies(pieces).map((family) => [family.key, family.members])
     )
-    const perFamily: ReadonlyArray<IntrinsicPeriodicContinuation>[] = []
-    const seenSeeds = new Set<string>()
+    const perFamily = new Map<string, IntrinsicPeriodicContinuation[]>()
+    const seenOrdinaryFutures = new Set<string>()
     const omissions: IntrinsicPeriodicContinuationOmission[] = []
     const sourceCropSurvival = new Map<
       string,
@@ -315,9 +325,10 @@ function selectIntrinsicPeriodicContinuations(
           const provenance = cell.basisProvenance
           if (provenance !== undefined) {
             for (const seed of directValidCrops) {
-              const current = sourceAuditWitnesses.get(seed.canonicalKey)
+              const futureKey = periodicContinuationFutureKey(pieces, seed)
+              const current = sourceAuditWitnesses.get(futureKey)
               if (current === undefined || provenance.sourceKey < current.sourceKey) {
-                sourceAuditWitnesses.set(seed.canonicalKey, {
+                sourceAuditWitnesses.set(futureKey, {
                   familyKey: family.familyKey,
                   basisProvenance: provenance,
                   sourceKey: provenance.sourceKey,
@@ -348,11 +359,12 @@ function selectIntrinsicPeriodicContinuations(
             omissions.push({ sourceId, reason: 'insufficient-seed' })
             continue
           }
-          if (seenSeeds.has(seed.canonicalKey)) {
+          const futureKey = periodicContinuationFutureKey(pieces, seed)
+          if (seenOrdinaryFutures.has(futureKey)) {
             omissions.push({ sourceId, reason: 'duplicate-canonical-seed' })
             continue
           }
-          seenSeeds.add(seed.canonicalKey)
+          seenOrdinaryFutures.add(futureKey)
           if (audit !== undefined) audit.uniqueSeedCount += 1
           continuations.push({
             sourceId,
@@ -364,10 +376,67 @@ function selectIntrinsicPeriodicContinuations(
           })
         }
       }
-      perFamily.push(rankContinuations(continuations))
+      perFamily.set(family.familyKey, continuations)
     }
-    const reserved = perFamily.flatMap((continuations) => continuations.slice(0, 1))
-    const fill = rankContinuations(perFamily.flatMap((continuations) => continuations.slice(1)))
+    const rawAuditFront = nonDominatedIntrinsicPeriodicSeeds(
+      [...sourceAuditWitnesses.values()].map(({ seed }) => seed)
+    )
+    const witnessContinuations = !admitSourceAuditWitnesses
+      ? []
+      : rankIntrinsicPeriodicSeeds(rawAuditFront)
+          .slice(0, 16)
+          .flatMap((seed) => {
+            const source = sourceAuditWitnesses.get(periodicContinuationFutureKey(pieces, seed))
+            if (source === undefined) return []
+            const sourceId = `raw-witness:${seed.role}:${source.sourceKey}:${seed.canonicalKey}`
+            if (seed.placements.length < 4) {
+              omissions.push({ sourceId, reason: 'insufficient-seed' })
+              return []
+            }
+            return [
+              {
+                sourceId,
+                role: seed.role,
+                familyKey: source.familyKey,
+                cellKey: seed.cellKey,
+                basisSourceKey: source.sourceKey,
+                seed
+              }
+            ]
+          })
+    for (const continuation of witnessContinuations) {
+      const familyContinuations = perFamily.get(continuation.familyKey) ?? []
+      familyContinuations.push(continuation)
+      perFamily.set(continuation.familyKey, familyContinuations)
+    }
+    const preferredByFuture = new Map<string, IntrinsicPeriodicContinuation>()
+    for (const continuation of [...perFamily.values()].flat()) {
+      const futureKey = periodicContinuationFutureKey(pieces, continuation.seed)
+      const current = preferredByFuture.get(futureKey)
+      if (current === undefined) {
+        preferredByFuture.set(futureKey, continuation)
+        continue
+      }
+      const preferred = preferPeriodicContinuation(current, continuation)
+      const duplicate = preferred === current ? continuation : current
+      preferredByFuture.set(futureKey, preferred)
+      omissions.push({ sourceId: duplicate.sourceId, reason: 'duplicate-canonical-seed' })
+    }
+    const rankedPerFamily = [...perFamily]
+      .toSorted(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey))
+      .map(([, continuations]) =>
+        rankContinuations(
+          continuations.filter(
+            (continuation) =>
+              preferredByFuture.get(periodicContinuationFutureKey(pieces, continuation.seed)) ===
+              continuation
+          )
+        )
+      )
+    const reserved = rankedPerFamily.flatMap((continuations) => continuations.slice(0, 1))
+    const fill = rankContinuations(
+      rankedPerFamily.flatMap((continuations) => continuations.slice(1))
+    )
     const all = [...reserved, ...fill]
     const selected = all.slice(0, maximumContinuationCount)
     for (const continuation of selected) {
@@ -379,9 +448,6 @@ function selectIntrinsicPeriodicContinuations(
     for (const continuation of all.slice(maximumContinuationCount)) {
       omissions.push({ sourceId: continuation.sourceId, reason: 'continuation-cap' })
     }
-    const rawAuditFront = nonDominatedIntrinsicPeriodicSeeds(
-      [...sourceAuditWitnesses.values()].map(({ seed }) => seed)
-    )
     return {
       continuations: selected,
       omissions,
@@ -393,7 +459,7 @@ function selectIntrinsicPeriodicContinuations(
       sourceAuditWitnesses: rankIntrinsicPeriodicSeeds(rawAuditFront)
         .slice(0, 16)
         .flatMap((seed) => {
-          const source = sourceAuditWitnesses.get(seed.canonicalKey)
+          const source = sourceAuditWitnesses.get(periodicContinuationFutureKey(pieces, seed))
           return source === undefined
             ? []
             : [
@@ -436,6 +502,25 @@ function rankContinuations(
     const secondRank = ranks.get(second.seed.canonicalKey) ?? Number.MAX_SAFE_INTEGER
     return firstRank - secondRank || first.sourceId.localeCompare(second.sourceId)
   })
+}
+
+function periodicContinuationFutureKey(
+  pieces: ReadonlyArray<IrregularPreparedPiece>,
+  seed: IntrinsicPeriodicSeed
+): string {
+  const remainingOrder = remainingAfterSeed(pieces, seed)
+    .map((piece) => piece.pieceId ?? piece.source.id)
+  return JSON.stringify({ geometry: seed.canonicalKey, remainingOrder })
+}
+
+function preferPeriodicContinuation(
+  first: IntrinsicPeriodicContinuation,
+  second: IntrinsicPeriodicContinuation
+): IntrinsicPeriodicContinuation {
+  const firstIsWitness = first.sourceId.startsWith('raw-witness:')
+  const secondIsWitness = second.sourceId.startsWith('raw-witness:')
+  if (firstIsWitness !== secondIsWitness) return firstIsWitness ? second : first
+  return first.sourceId.localeCompare(second.sourceId) <= 0 ? first : second
 }
 
 function remainingAfterSeed(

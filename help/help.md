@@ -232,6 +232,74 @@ metrics, and artifact hashes. Future experiments must write an immutable manifes
 in their isolated worktree before production code is changed. Promote accepted
 artifacts into `help/artifacts/` and durable research reports into `help/research/`.
 
+### 2026-07-21 (V7 search-redesign review, branch v7-search-redesign-review)
+
+- **Repaired a total production regression, then narrowed the repair after
+  review.** `48abf69` removed the
+  empty-layout IFP seed candidate; under the `contact-only` candidate domain
+  the production beam placed zero pieces on every decode from that commit
+  through `d56d9d7`. The initial `6bcba8c` repair restored the seed but also
+  collapsed ordinary empty-sheet generation from four IFP corners to one;
+  review caught that regression. The corrected rule emits only bottom-left
+  for the empty `contact-only` production domain while preserving all four
+  ordinary IFP corners, with direct tests for both contracts. Focused suites
+  return to the documented ancestry baseline (the `305.631 > 228` golden
+  failure and the remaining windowed-beam failures predate this branch's work).
+  No automated gate ran the production suites during V7 evidence generation;
+  that gap, not the one-line bug, is the finding.
+- **Proved the 74,428 witness is retention-evicted by the default periodic
+  frontier.** Its shared basis retains zero cells in the bounded axis-union
+  front at `d56d9d7` and at `9da94e2`; only the source-survival audit
+  surfaces it. `96368ca` adds `--admit-raw-witnesses`, which lets the bounded
+  raw-crop Pareto front compete as source-tagged continuations in the shared
+  archive. Follow-up review found that the first implementation appended up
+  to 16 witnesses after the configured continuation cap and could deduplicate
+  against ordinary candidates that never ran. The corrected selector admits
+  ordinary and raw continuations through one hard cap, deduplicated by
+  canonical geometry plus the remaining piece order, and preserves the
+  ordinary representative when equivalent futures converge. Triangle's
+  diagnostic archive winner becomes a previously unsurfaced
+  90,352.625 mm2 / max side 394.922 / 7-isolate / 9-component three-band
+  lattice (`4b87d6df…`), with the 74,428 witness archive-resident; two full
+  replays are hash-identical; rectangles/pentagons controls are clean.
+- **Reproduced the restart ablation to the last digit** (capacity 0:
+  0.008297379 / 0.000525129; capacity 3: 0.013267824 / 0.003116739; no exact
+  endpoints) — evaluation-budgeted work is cross-machine deterministic.
+  Mixed-61 periodic coverage is not: this machine completed 4/8
+  continuations against the original 1/8 under identical 25 s wall
+  deadlines, yielding a new best periodic endpoint 420,059.254 mm2, zero
+  cavities, 33/10 contacts (`a79f6148…`). Continuation budgets must become
+  evaluation caps before Mixed periodic results can be conclusive.
+- **Closed the adaptive-pressure branch by the preregistered gate.** One
+  equal-budget matrix (50,000 pressure evaluations/arm, restart 0, pinned
+  seeds `371db269…`/`310adc64…`) over {1.25% baseline, 0.625% smaller step,
+  sampled-relocation vocabulary, both} on both fixtures: zero canonical-exact
+  endpoints in all eight arms. Smaller-step reached raw loss 3.6e-06 on
+  Triangle with 12 pair conflicts across 16 pieces still open — vanishing
+  relaxed loss demonstrably does not approach exact legality. The new
+  deterministic sampled-relocation vocabulary (per-collider compass rings +
+  Halton target coverage + shrinking-ring refinement inside the unchanged
+  weighted-nonworsening commit, `e77f3c1`) is a 2.7x better mover at the 5%
+  target on Mixed and irrelevant on the dense Triangle lattice; it is
+  retained default-off as the per-piece primitive for a future LNS-style
+  coordinated stage. Review also found that refinement mixed the best sampled
+  state's canonical frame with the current state's frame; refinement now
+  starts from the best sampled state it is meant to descend around. The
+  pressure matrix remains diagnostic until that corrected path is rerun.
+- **Post-repair pairwise sheet-invariance evidence (production path):** the full
+  seven-fixture corpus is geometry-equivalent across 1000x1700 and
+  2000x2700, including mixed-50 at 50/50 (`fa981c54…`) and mixed-61 at
+  61/61 (435,949.517 mm2, zero cavities, `f58cf0f2…`); mixed-61 keeps the
+  same hash on the tested 660-wide sheet and diverges to a different legal
+  638.8-wide geometry on the tested 640-wide sheet, where the 654.13-wide
+  common layout cannot fit. This brackets a legality-triggered divergence; it
+  does not prove that every possible sheet divergence occurs only at that
+  boundary. Portable summary entries now record source commit, commands, and
+  sheet pairs; raw reports remain machine-local.
+- Review memo: `reviews/v7-search-redesign-review.md`. Portable evidence and
+  hashes: `help/artifacts/v7-search-redesign/`. Raw provenance:
+  `/private/tmp/min-plane-provenance/v7-search-redesign-*`.
+
 ### 2026-07-21 (V7 legal closure and coordinated pilot)
 
 - Completed the final generic four-contributor legal reconstruction gate at

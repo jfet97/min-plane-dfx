@@ -1,0 +1,655 @@
+{
+ "experiment": "v7-search-redesign",
+ "runs": {
+  "triangle-20-periodic-default": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-6bcba8c/triangle-20-periodic/report.json",
+   "reportSha256": "c789f0a0775b4d96fb997ed85634f0c741fca45f705117da6f2586a31c3d1bea",
+   "sourceCommit": "6bcba8c87fe8ff574e5d10e1c8a7f5594459fd7e",
+   "archiveTop": [
+    {
+     "canonicalGeometryHash": "54bc4bfb67b313be9a68b9be15f8a820de8a35e28dc52e2de636a83f9bb075a4",
+     "envelopeAreaMm2": 240521.39816399998,
+     "envelopeMaximumSideMm": 525.654,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 6,
+     "positiveContactComponentCount": 13,
+     "totalStructuralContacts": 7,
+     "dominantStructuralContacts": 7
+    },
+    {
+     "canonicalGeometryHash": "7516ba012d14cc0139036a0739bd3dde1afae2f82d6240bd2211007bd84181d4",
+     "envelopeAreaMm2": 102182.426548,
+     "envelopeMaximumSideMm": 664.826,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 14,
+     "positiveContactComponentCount": 17,
+     "totalStructuralContacts": 0,
+     "dominantStructuralContacts": 0
+    },
+    {
+     "canonicalGeometryHash": "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae",
+     "envelopeAreaMm2": 187072.198572,
+     "envelopeMaximumSideMm": 613.263,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 4,
+     "positiveContactComponentCount": 12,
+     "totalStructuralContacts": 8,
+     "dominantStructuralContacts": 8
+    },
+    {
+     "canonicalGeometryHash": "2dabe7cc0ff237bda901bd2386a80977a348cab49b9bf0027167a45bb0a1fc5c",
+     "envelopeAreaMm2": 187072.198572,
+     "envelopeMaximumSideMm": 613.263,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 4,
+     "positiveContactComponentCount": 12,
+     "totalStructuralContacts": 8,
+     "dominantStructuralContacts": 8
+    }
+   ]
+  },
+  "triangle-20-adaptive-ablation": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-6bcba8c/triangle-20-adaptive-ablation/report.json",
+   "reportSha256": "e9c0f565aab9dce0f49a256c350948a56e7e7754760bcfffedf3dc33ce533d7f",
+   "sourceCommit": "6bcba8c87fe8ff574e5d10e1c8a7f5594459fd7e",
+   "archiveTop": [
+    {
+     "canonicalGeometryHash": "54bc4bfb67b313be9a68b9be15f8a820de8a35e28dc52e2de636a83f9bb075a4",
+     "envelopeAreaMm2": 240521.39816399998,
+     "envelopeMaximumSideMm": 525.654,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 6,
+     "positiveContactComponentCount": 13,
+     "totalStructuralContacts": 7,
+     "dominantStructuralContacts": 7
+    },
+    {
+     "canonicalGeometryHash": "7516ba012d14cc0139036a0739bd3dde1afae2f82d6240bd2211007bd84181d4",
+     "envelopeAreaMm2": 102182.426548,
+     "envelopeMaximumSideMm": 664.826,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 14,
+     "positiveContactComponentCount": 17,
+     "totalStructuralContacts": 0,
+     "dominantStructuralContacts": 0
+    },
+    {
+     "canonicalGeometryHash": "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae",
+     "envelopeAreaMm2": 187072.198572,
+     "envelopeMaximumSideMm": 613.263,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 4,
+     "positiveContactComponentCount": 12,
+     "totalStructuralContacts": 8,
+     "dominantStructuralContacts": 8
+    },
+    {
+     "canonicalGeometryHash": "2dabe7cc0ff237bda901bd2386a80977a348cab49b9bf0027167a45bb0a1fc5c",
+     "envelopeAreaMm2": 187072.198572,
+     "envelopeMaximumSideMm": 613.263,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 4,
+     "positiveContactComponentCount": 12,
+     "totalStructuralContacts": 8,
+     "dominantStructuralContacts": 8
+    }
+   ],
+   "restartAblation": [
+    {
+     "capacity": 0,
+     "runtimeMs": 57143.58575000001,
+     "evals": 51373,
+     "losses": [
+      0.04235364548793853,
+      0.008297378861463716,
+      0.0005251291086341655
+     ]
+    },
+    {
+     "capacity": 3,
+     "runtimeMs": 56237.55595800001,
+     "evals": 51373,
+     "losses": [
+      0.04235364548793853,
+      0.013267824225069466,
+      0.003116738615808857
+     ]
+    }
+   ]
+  },
+  "mixed-61-periodic-default": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-6bcba8c/mixed-61-periodic/report.json",
+   "reportSha256": "f9473167558e3cec3bfee49b118273f95632c35c3a74761873f702c3b6dac011",
+   "sourceCommit": "6bcba8c87fe8ff574e5d10e1c8a7f5594459fd7e",
+   "archiveTop": [
+    {
+     "canonicalGeometryHash": "a79f6148078f5c7c54a67ccafd5ca5e59e2f5ec554ad263e20cf11f5d0c83e03",
+     "envelopeAreaMm2": 420059.253754,
+     "envelopeMaximumSideMm": 649.999,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 23,
+     "positiveContactComponentCount": 30,
+     "totalStructuralContacts": 33,
+     "dominantStructuralContacts": 10
+    },
+    {
+     "canonicalGeometryHash": "310adc648970ae24798241bbb7178bbbc6f4506b1506012392235470a6dc6d0a",
+     "envelopeAreaMm2": 426530.39221099997,
+     "envelopeMaximumSideMm": 654.269,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 21,
+     "positiveContactComponentCount": 31,
+     "totalStructuralContacts": 30,
+     "dominantStructuralContacts": 10
+    },
+    {
+     "canonicalGeometryHash": "9954fcc76972332ca273cc78c1927c9c999e198cb6c9ad7893299ccd4e25d875",
+     "envelopeAreaMm2": 425585.179202,
+     "envelopeMaximumSideMm": 655.918,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 21,
+     "positiveContactComponentCount": 32,
+     "totalStructuralContacts": 23,
+     "dominantStructuralContacts": 6
+    },
+    {
+     "canonicalGeometryHash": "37f6d1b3eff84b3e4486a8bb467d865921655bb9be40ddd4fe0d223f2cf6bf50",
+     "envelopeAreaMm2": 433350.55086699995,
+     "envelopeMaximumSideMm": 658.957,
+     "enclosedCavityCount": 2,
+     "isolatedPieceCount": 27,
+     "positiveContactComponentCount": 32,
+     "totalStructuralContacts": 29,
+     "dominantStructuralContacts": 5
+    }
+   ]
+  },
+  "triangle-20-pressure-matrix": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-e77f3c1/triangle-20-pressure-matrix/report.json",
+   "reportSha256": "4765c422c2f5446c6ec6d7c3a038aaf6d3c3347d6a2e394eb38eee2206d7dd03",
+   "sourceCommit": "e77f3c18fd182bef7d59a750785eb9a33f36894c",
+   "archiveTop": [
+    {
+     "canonicalGeometryHash": "54bc4bfb67b313be9a68b9be15f8a820de8a35e28dc52e2de636a83f9bb075a4",
+     "envelopeAreaMm2": 240521.39816399998,
+     "envelopeMaximumSideMm": 525.654,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 6,
+     "positiveContactComponentCount": 13,
+     "totalStructuralContacts": 7,
+     "dominantStructuralContacts": 7
+    },
+    {
+     "canonicalGeometryHash": "7516ba012d14cc0139036a0739bd3dde1afae2f82d6240bd2211007bd84181d4",
+     "envelopeAreaMm2": 102182.426548,
+     "envelopeMaximumSideMm": 664.826,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 14,
+     "positiveContactComponentCount": 17,
+     "totalStructuralContacts": 0,
+     "dominantStructuralContacts": 0
+    },
+    {
+     "canonicalGeometryHash": "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae",
+     "envelopeAreaMm2": 187072.198572,
+     "envelopeMaximumSideMm": 613.263,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 4,
+     "positiveContactComponentCount": 12,
+     "totalStructuralContacts": 8,
+     "dominantStructuralContacts": 8
+    },
+    {
+     "canonicalGeometryHash": "2dabe7cc0ff237bda901bd2386a80977a348cab49b9bf0027167a45bb0a1fc5c",
+     "envelopeAreaMm2": 187072.198572,
+     "envelopeMaximumSideMm": 613.263,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 4,
+     "positiveContactComponentCount": 12,
+     "totalStructuralContacts": 8,
+     "dominantStructuralContacts": 8
+    }
+   ],
+   "pressureMatrix": [
+    {
+     "name": "baseline-mtv",
+     "vocabulary": "mtv",
+     "ratios": [
+      0.05,
+      0.025,
+      0.0125
+     ],
+     "status": "completed",
+     "runtimeMs": 56863.270000000004,
+     "separationEvaluationCount": 51373,
+     "accepted": 0,
+     "losses": [
+      0.04235364548793853,
+      0.008297378861463716,
+      0.0005251291086341655
+     ]
+    },
+    {
+     "name": "smaller-step-mtv",
+     "vocabulary": "mtv",
+     "ratios": [
+      0.05,
+      0.025,
+      0.00625
+     ],
+     "status": "completed",
+     "runtimeMs": 54778.81779199999,
+     "separationEvaluationCount": 51373,
+     "accepted": 0,
+     "losses": [
+      0.04235364548793853,
+      0.008297378861463716,
+      3.6335517106094095e-06
+     ]
+    },
+    {
+     "name": "sampled-relocation",
+     "vocabulary": "sampled-relocation",
+     "ratios": [
+      0.05,
+      0.025,
+      0.0125
+     ],
+     "status": "completed",
+     "runtimeMs": 56168.82308299997,
+     "separationEvaluationCount": 51373,
+     "accepted": 0,
+     "losses": [
+      0.03798564631924012,
+      0.005896333072143617,
+      0.000853587084947471
+     ]
+    },
+    {
+     "name": "sampled-relocation-smaller-step",
+     "vocabulary": "sampled-relocation",
+     "ratios": [
+      0.05,
+      0.025,
+      0.00625
+     ],
+     "status": "completed",
+     "runtimeMs": 54365.804542,
+     "separationEvaluationCount": 51373,
+     "accepted": 0,
+     "losses": [
+      0.03798564631924012,
+      0.005896333072143617,
+      4.304582505580923e-05
+     ]
+    }
+   ]
+  },
+  "mixed-61-pressure-matrix": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/mixed-61-pressure-matrix/report.json",
+   "reportSha256": "33eea0aafd6aab50d1c1afb25d8006eae13554e6312b029d7b8ec2b493f2156e",
+   "sourceCommit": "96368cadd99734c1610dac113c3cd7b9c6a6e795",
+   "archiveTop": [
+    {
+     "canonicalGeometryHash": "a79f6148078f5c7c54a67ccafd5ca5e59e2f5ec554ad263e20cf11f5d0c83e03",
+     "envelopeAreaMm2": 420059.253754,
+     "envelopeMaximumSideMm": 649.999,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 23,
+     "positiveContactComponentCount": 30,
+     "totalStructuralContacts": 33,
+     "dominantStructuralContacts": 10
+    },
+    {
+     "canonicalGeometryHash": "310adc648970ae24798241bbb7178bbbc6f4506b1506012392235470a6dc6d0a",
+     "envelopeAreaMm2": 426530.39221099997,
+     "envelopeMaximumSideMm": 654.269,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 21,
+     "positiveContactComponentCount": 31,
+     "totalStructuralContacts": 30,
+     "dominantStructuralContacts": 10
+    }
+   ],
+   "pressureMatrix": [
+    {
+     "name": "baseline-mtv",
+     "vocabulary": "mtv",
+     "ratios": [
+      0.05,
+      0.025,
+      0.0125
+     ],
+     "status": "completed",
+     "runtimeMs": 148393.04162499998,
+     "separationEvaluationCount": 48373,
+     "accepted": 0,
+     "losses": [
+      0.12638375504130656,
+      0.03791717197801917,
+      0.009810656162497126
+     ]
+    },
+    {
+     "name": "smaller-step-mtv",
+     "vocabulary": "mtv",
+     "ratios": [
+      0.05,
+      0.025,
+      0.00625
+     ],
+     "status": "completed",
+     "runtimeMs": 143394.11245800002,
+     "separationEvaluationCount": 45246,
+     "accepted": 0,
+     "losses": [
+      0.12638375504130656,
+      0.03791717197801917,
+      0.0026610886639351185
+     ]
+    },
+    {
+     "name": "sampled-relocation",
+     "vocabulary": "sampled-relocation",
+     "ratios": [
+      0.05,
+      0.025,
+      0.0125
+     ],
+     "status": "completed",
+     "runtimeMs": 193637.102916,
+     "separationEvaluationCount": 52235,
+     "accepted": 0,
+     "losses": [
+      0.04645985488689353,
+      0.021777091302267963,
+      0.006694162722740212
+     ]
+    },
+    {
+     "name": "sampled-relocation-smaller-step",
+     "vocabulary": "sampled-relocation",
+     "ratios": [
+      0.05,
+      0.025,
+      0.00625
+     ],
+     "status": "completed",
+     "runtimeMs": 187262.454958,
+     "separationEvaluationCount": 52235,
+     "accepted": 0,
+     "losses": [
+      0.04645985488689353,
+      0.021777091302267963,
+      0.002227404810646992
+     ]
+    }
+   ]
+  },
+  "triangle-20-witness-admission": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/triangle-20-witness-admission/report.json",
+   "reportSha256": "d82c3d603e774ab87704a5a073fa669b5575156c4bc18bf46f078667899b259c",
+   "sourceCommit": "96368cadd99734c1610dac113c3cd7b9c6a6e795",
+   "archiveTop": [
+    {
+     "canonicalGeometryHash": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+     "envelopeAreaMm2": 90352.62469200001,
+     "envelopeMaximumSideMm": 394.922,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 7,
+     "positiveContactComponentCount": 9,
+     "totalStructuralContacts": 0,
+     "dominantStructuralContacts": 0
+    },
+    {
+     "canonicalGeometryHash": "d7c135d4200ef46b3f40e316f86aa7724862b1d6d11ca3aacf730fea74db5ddf",
+     "envelopeAreaMm2": 70206.41589,
+     "envelopeMaximumSideMm": 920.595,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 20,
+     "positiveContactComponentCount": 20,
+     "totalStructuralContacts": 0,
+     "dominantStructuralContacts": 0
+    },
+    {
+     "canonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+     "envelopeAreaMm2": 74428.143126,
+     "envelopeMaximumSideMm": 487.983,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 10,
+     "positiveContactComponentCount": 11,
+     "totalStructuralContacts": 0,
+     "dominantStructuralContacts": 0
+    },
+    {
+     "canonicalGeometryHash": "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e",
+     "envelopeAreaMm2": 90352.62469200001,
+     "envelopeMaximumSideMm": 394.922,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 7,
+     "positiveContactComponentCount": 9,
+     "totalStructuralContacts": 0,
+     "dominantStructuralContacts": 0
+    }
+   ]
+  },
+  "triangle-20-witness-admission-replay": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/triangle-20-witness-admission-replay/report.json",
+   "reportSha256": "683839fabea80fece7ae8adfe60f73bf219d60bc6ef0762e70cc8c153cb78223",
+   "sourceCommit": "96368cadd99734c1610dac113c3cd7b9c6a6e795",
+   "archiveTop": [
+    {
+     "canonicalGeometryHash": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+     "envelopeAreaMm2": 90352.62469200001,
+     "envelopeMaximumSideMm": 394.922,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 7,
+     "positiveContactComponentCount": 9,
+     "totalStructuralContacts": 0,
+     "dominantStructuralContacts": 0
+    },
+    {
+     "canonicalGeometryHash": "d7c135d4200ef46b3f40e316f86aa7724862b1d6d11ca3aacf730fea74db5ddf",
+     "envelopeAreaMm2": 70206.41589,
+     "envelopeMaximumSideMm": 920.595,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 20,
+     "positiveContactComponentCount": 20,
+     "totalStructuralContacts": 0,
+     "dominantStructuralContacts": 0
+    },
+    {
+     "canonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+     "envelopeAreaMm2": 74428.143126,
+     "envelopeMaximumSideMm": 487.983,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 10,
+     "positiveContactComponentCount": 11,
+     "totalStructuralContacts": 0,
+     "dominantStructuralContacts": 0
+    },
+    {
+     "canonicalGeometryHash": "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e",
+     "envelopeAreaMm2": 90352.62469200001,
+     "envelopeMaximumSideMm": 394.922,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 7,
+     "positiveContactComponentCount": 9,
+     "totalStructuralContacts": 0,
+     "dominantStructuralContacts": 0
+    }
+   ]
+  },
+  "rectangles-20-witness-admission": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/rectangles-20-witness-admission/report.json",
+   "reportSha256": "6e24eabf7260e995c5d6a942b71c43f6a69a7b98bab2dcaa11f1d61ae041e475",
+   "sourceCommit": "96368cadd99734c1610dac113c3cd7b9c6a6e795",
+   "archiveTop": [
+    {
+     "canonicalGeometryHash": "b6ab6b58a60d3311f56d4d384ce250aa1c4bfdc1b966d19367c6accad426c89b",
+     "envelopeAreaMm2": 376727.32031999994,
+     "envelopeMaximumSideMm": 658.016,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 0,
+     "positiveContactComponentCount": 1,
+     "totalStructuralContacts": 31,
+     "dominantStructuralContacts": 16
+    },
+    {
+     "canonicalGeometryHash": "b831d92fa520281997ca3c7ce0f2994cc368830fc7448d508111158884a84212",
+     "envelopeAreaMm2": 458979.32031999994,
+     "envelopeMaximumSideMm": 822.52,
+     "enclosedCavityCount": 4,
+     "isolatedPieceCount": 0,
+     "positiveContactComponentCount": 1,
+     "totalStructuralContacts": 23,
+     "dominantStructuralContacts": 15
+    },
+    {
+     "canonicalGeometryHash": "13775aba948f2a273ee4ed5459531e8515d9f30cd698909018ab4992ab3d3f7f",
+     "envelopeAreaMm2": 376727.32031999994,
+     "envelopeMaximumSideMm": 1145.04,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 0,
+     "positiveContactComponentCount": 1,
+     "totalStructuralContacts": 28,
+     "dominantStructuralContacts": 18
+    },
+    {
+     "canonicalGeometryHash": "3d8d514d4618b628e5e8e3c2c9f4dbd87a8cbbb0066e20caa6f688632c53bb28",
+     "envelopeAreaMm2": 707419.3804799999,
+     "envelopeMaximumSideMm": 1595.04,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 1,
+     "positiveContactComponentCount": 2,
+     "totalStructuralContacts": 18,
+     "dominantStructuralContacts": 9
+    }
+   ]
+  },
+  "pentagons-20-witness-admission": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/pentagons-20-witness-admission/report.json",
+   "reportSha256": "316d9e46b8c81cdbb9fdfb03fe4ebc3f578c6b36a5ed7aaa374e7ac9ca65140d",
+   "sourceCommit": "96368cadd99734c1610dac113c3cd7b9c6a6e795",
+   "archiveTop": [
+    {
+     "canonicalGeometryHash": "eb3ad3f429c5c588879e8bf5f24e94d6c4f2c98faf2f38d2b6413dc72c80aa05",
+     "envelopeAreaMm2": 208199.80956000002,
+     "envelopeMaximumSideMm": 510.99,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 0,
+     "positiveContactComponentCount": 10,
+     "totalStructuralContacts": 10,
+     "dominantStructuralContacts": 10
+    },
+    {
+     "canonicalGeometryHash": "2209a5da0500e2e07d1eaed367eefe52cab1e44d72a6e709e3d4a6ad2120a168",
+     "envelopeAreaMm2": 188798.58519,
+     "envelopeMaximumSideMm": 579.119,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 10,
+     "positiveContactComponentCount": 11,
+     "totalStructuralContacts": 0,
+     "dominantStructuralContacts": 0
+    },
+    {
+     "canonicalGeometryHash": "e2257fff66fa01d0f4ad705a69b523b1910b76e3922b2e670804b1840d7dc829",
+     "envelopeAreaMm2": 230438.59704000002,
+     "envelopeMaximumSideMm": 516.123,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 0,
+     "positiveContactComponentCount": 4,
+     "totalStructuralContacts": 16,
+     "dominantStructuralContacts": 16
+    },
+    {
+     "canonicalGeometryHash": "cc11af326c7b68188e1cc93389bb5fcf1a687e1cea183fc3358e9d32d477699b",
+     "envelopeAreaMm2": 230438.59704000002,
+     "envelopeMaximumSideMm": 516.123,
+     "enclosedCavityCount": 0,
+     "isolatedPieceCount": 0,
+     "positiveContactComponentCount": 4,
+     "totalStructuralContacts": 16,
+     "dominantStructuralContacts": 16
+    }
+   ]
+  },
+  "sheet-invariance-subset": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-invariance-subset/report.json",
+   "reportSha256": "72bff957b57b13371cfc06a2aeccf50421b64015987ffa73b4b08f165f43e175",
+   "sourceCommit": "96368cadd99734c1610dac113c3cd7b9c6a6e795",
+   "command": "pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --case triangle-golden-20,rectangles-20,mixed-61 --output /private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-invariance-subset",
+   "sheets": [
+    { "widthMm": 1000, "heightMm": 1700 },
+    { "widthMm": 2000, "heightMm": 2700 }
+   ]
+  },
+  "sheet-divergence-mixed61-660": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-divergence-mixed61/report.json",
+   "reportSha256": "b4be59a927afeaee01f0762abda258d67eae6e5b78da02d76fd957dea86e42e2",
+   "sourceCommit": "96368cadd99734c1610dac113c3cd7b9c6a6e795",
+   "command": "pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --case mixed-61 --sheets 660x1200,2000x2700 --output /private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-divergence-mixed61",
+   "sheets": [
+    { "widthMm": 660, "heightMm": 1200 },
+    { "widthMm": 2000, "heightMm": 2700 }
+   ]
+  },
+  "sheet-divergence-mixed61-640": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-divergence-mixed61-640/report.json",
+   "reportSha256": "2cee038220fb564785def13154ad134ad13f3281c20030af850a72a9152ec3c5",
+   "sourceCommit": "96368cadd99734c1610dac113c3cd7b9c6a6e795",
+   "command": "pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --case mixed-61 --sheets 640x1200,2000x2700 --output /private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-divergence-mixed61-640",
+   "sheets": [
+    { "widthMm": 640, "heightMm": 1200 },
+    { "widthMm": 2000, "heightMm": 2700 }
+   ]
+  },
+  "sheet-invariance-full-corpus": {
+   "reportPath": "/private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-invariance-full/report.json",
+   "reportSha256": "7b377c3124d6177f1c674d9cbd521d6e3b373314ca6f22c1072320782401d8f4",
+   "sourceCommit": "96368cadd99734c1610dac113c3cd7b9c6a6e795",
+   "command": "pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --output /private/tmp/min-plane-provenance/v7-search-redesign-96368ca/sheet-invariance-full",
+   "sheets": [
+    { "widthMm": 1000, "heightMm": 1700 },
+    { "widthMm": 2000, "heightMm": 2700 }
+   ],
+   "cases": [
+    {
+     "caseId": "triangle-golden-20",
+     "geometryEquivalent": true,
+     "canonicalSha256": "d9d6605aa3e6420d049dba9f789580d069868b59c49f12296272a686d6019eeb"
+    },
+    {
+     "caseId": "rectangles-20",
+     "geometryEquivalent": true,
+     "canonicalSha256": "397a5d6b1a3c6718acb217d518b7b010cc2be31a604fdcde65e298c74db54d2c"
+    },
+    {
+     "caseId": "trapezoids-20",
+     "geometryEquivalent": true,
+     "canonicalSha256": "158b59d8654189f89c0293620b825c86fa17eaa6971d9bd35b2f7c3173f795e5"
+    },
+    {
+     "caseId": "pentagons-20",
+     "geometryEquivalent": true,
+     "canonicalSha256": "62c043d99da1dd2ea2a9355924f865064e27a3c9f9d00bd88e6fbbb293b339d4"
+    },
+    {
+     "caseId": "star-hulls-20",
+     "geometryEquivalent": true,
+     "canonicalSha256": "62c043d99da1dd2ea2a9355924f865064e27a3c9f9d00bd88e6fbbb293b339d4"
+    },
+    {
+     "caseId": "mixed-50",
+     "geometryEquivalent": true,
+     "canonicalSha256": "fa981c545724dba17d8865267b5965e1d5513b0f58357c018447bf4de730cb7c"
+    },
+    {
+     "caseId": "mixed-61",
+     "geometryEquivalent": true,
+     "canonicalSha256": "f58cf0f2f6664db10107bf5919167e443791c27924abab1ee6c920648ce1fd7f"
+    }
+   ]
+  }
+ }
+}
