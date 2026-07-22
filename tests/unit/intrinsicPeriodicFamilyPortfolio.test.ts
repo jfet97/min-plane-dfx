@@ -117,6 +117,7 @@ describe('intrinsic periodic family portfolio', () => {
     )
     const phaseTimings = budgeted.phaseTimings
     if (phaseTimings === undefined) throw new Error('expected capped phase timings')
+    expect(budgeted.continuationBudgetSettlementComplete).toBe(true)
     const topLevelTotal =
       phaseTimings.catalogMs +
       phaseTimings.selectionMs +

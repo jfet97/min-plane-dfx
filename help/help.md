@@ -302,6 +302,14 @@ artifacts into `help/artifacts/` and durable research reports into `help/researc
   at least 70% of non-construction time to it; otherwise optimize the measured
   dominant phase. Portable evidence is under
   `help/artifacts/deterministic-periodic-budget/`.
+- **The raw-witness audit is diagnostic, not a production lane.** Phase timing
+  assigns 173.286 s of 173.702 s selection time to source-audit crop
+  enumeration. Turning the observer off preserves all eight Mixed source IDs,
+  their order, and `310adc64…`, while cutting total runtime from 344.751 s to
+  179.301 s. Triangle settles all eight ordinary periodic sources in 6.765 s,
+  but its periodic-only winner is weak (240,521.398 mm2, seven contacts).
+  Therefore retain audit witnesses for provenance and let periodic, ordinary,
+  and pocket-first endpoints compete under one exact archive.
 - **Closed the adaptive-pressure branch by the preregistered gate.** One
   equal-budget matrix (50,000 pressure evaluations/arm, restart 0, pinned
   seeds `371db269…`/`310adc64…`) over {1.25% baseline, 0.625% smaller step,

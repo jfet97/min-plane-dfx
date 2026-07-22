@@ -1951,6 +1951,16 @@ budgets before any Mixed periodic conclusion is called conclusive.
    every source to complete or hit the evaluation cap, and requires named
    phases to leave at most 1% residual at both the portfolio and selection
    levels.
+
+   Measured result at `e4378e5`: source-audit crop enumeration is the dominant
+   cost (173.286 s of 173.702 s selection). Removing the diagnostic audit keeps
+   the exact same eight Mixed source IDs/order and `310adc64…` winner while
+   reducing total runtime from 344.751 s to 179.301 s. Keep the observer
+   available for provenance, but exclude it from the ordinary bounded lane.
+   Triangle completes all eight no-audit periodic sources in 6.765 s but its
+   periodic-only winner is weak (240,521.398 mm2, seven contacts), confirming
+   that Step 4's common archive is the next implementation boundary rather than
+   promotion of the periodic decoder alone.
 4. Consolidate one decision-grade portfolio run: ordinary strict, reversed,
    endpoint-derived, pocket-first, periodic continuations, and raw-crop
    witnesses competing in one shared archive under one budget report, on

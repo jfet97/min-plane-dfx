@@ -191,6 +191,10 @@ search budget from machine speed while preserving the historical unbounded
 behavior when no evaluation cap is supplied. Selection coverage and execution
 coverage are reported separately: selecting every bounded continuation does not
 imply that every selected continuation reached a terminal decode.
+Explicitly capped runs also distinguish complete decodes from budget settlement:
+`continuationExecutionCoverageComplete` requires a completed decode, while
+`continuationBudgetSettlementComplete` also accepts a deliberate
+`evaluation-cap` stop and rejects invalid or wall-time-censored runs.
 When that explicit cap is active, selected continuations execute by ascending
 seed-envelope area, maximum side, and span, then by more already placed pieces
 and stable source identity. This changes only censored execution order: archive

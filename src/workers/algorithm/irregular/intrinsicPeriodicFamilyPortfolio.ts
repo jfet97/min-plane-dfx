@@ -99,6 +99,7 @@ export interface IntrinsicPeriodicFamilyPortfolioResult {
   readonly continuationOmissions: ReadonlyArray<IntrinsicPeriodicContinuationOmission>
   readonly continuationCoverageComplete: boolean
   readonly continuationExecutionCoverageComplete?: boolean
+  readonly continuationBudgetSettlementComplete?: boolean
   readonly sourceCropSurvival: ReadonlyArray<IntrinsicPeriodicSourceCropSurvival>
   readonly sourceAuditWitnesses: ReadonlyArray<IntrinsicPeriodicSourceAuditWitness>
   readonly sourceAuditNonDominatedCropCount: number
@@ -326,6 +327,10 @@ export function runIntrinsicPeriodicFamilyPortfolio(
                 status !== 'deadline' &&
                 status !== 'global-deadline' &&
                 status !== 'evaluation-cap'
+            ),
+            continuationBudgetSettlementComplete: runs.every(
+              ({ status }) =>
+                status !== 'invalid' && status !== 'deadline' && status !== 'global-deadline'
             )
           }),
       sourceCropSurvival: selected.sourceCropSurvival,

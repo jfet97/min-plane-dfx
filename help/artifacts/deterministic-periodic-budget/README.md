@@ -33,3 +33,16 @@ Raw immutable evidence:
 - `/private/tmp/min-plane-provenance/deterministic-periodic-163fac1/mixed-full-eight-area-first-cap-19862/report.json`
 
 The compact machine-readable result is in `summary.json`.
+
+The phase-timed 600-second control at commit `e4378e5` settles all eight
+Mixed-61 sources: one completes and seven stop exactly at the 19,862-evaluation
+cap. Source-audit crop enumeration consumes 173,285.943 ms of 173,702.166 ms
+selection time. Disabling that diagnostic observer preserves all eight source
+IDs in the same order and the same winner while reducing total runtime from
+344,750.754 ms to 179,301.165 ms.
+
+The corresponding no-audit Triangle-20 control settles and completes all eight
+periodic sources in 6,764.940 ms. Its periodic-only winner is not promotable:
+240,521.398 mm2 with seven contacts is inferior to the protected triangle
+constructor. Periodic continuations must therefore compete in a shared archive;
+they cannot replace the ordinary constructor.

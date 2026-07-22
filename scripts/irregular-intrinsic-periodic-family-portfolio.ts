@@ -537,7 +537,8 @@ const report = {
   ...(maximumContinuationCandidateEvaluations === undefined
     ? {}
     : {
-        continuationExecutionCoverageComplete: result.continuationExecutionCoverageComplete
+        continuationExecutionCoverageComplete: result.continuationExecutionCoverageComplete,
+        continuationBudgetSettlementComplete: result.continuationBudgetSettlementComplete
       }),
   ...(result.phaseTimings === undefined ? {} : { phaseTimings: result.phaseTimings }),
   sourceCropSurvival: result.sourceCropSurvival,
