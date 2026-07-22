@@ -19,6 +19,7 @@ import {
 import {
   continuationsForExecution,
   type IntrinsicPeriodicContinuation,
+  type IntrinsicPeriodicSourceAuditReplay,
   phaseResidualCoverageComplete,
   runIntrinsicPeriodicFamilyPortfolio
 } from '../../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
@@ -264,6 +265,48 @@ describe('intrinsic periodic family portfolio', () => {
     expect(withWitnesses.continuations.length).toBeLessThanOrEqual(1)
     expect(withWitnesses.continuationCoverageComplete).toBe(
       withWitnesses.continuationOmissions.every(({ reason }) => reason !== 'continuation-cap')
+    )
+  }, 30_000)
+
+  it('replays validated raw witnesses without physical crop enumeration', async () => {
+    const pieces = Array.from({ length: 4 }, (_, index) => preparedTriangle(`replay-${index}`))
+    const run = (sourceAuditReplay?: IntrinsicPeriodicSourceAuditReplay) =>
+      Effect.runPromise(
+        runIntrinsicPeriodicFamilyPortfolio(
+          new SheetSpec({ width: 100, height: 100, label: 'test' }),
+          pieces,
+          {
+            maximumCatalogRuntimeMs: 1_000,
+            maximumContinuationRuntimeMs: 1_000,
+            maximumContinuationCandidateEvaluations: Number.MAX_SAFE_INTEGER,
+            maximumTotalRuntimeMs: 8_000,
+            maximumContinuationCount: 4,
+            captureSourceSurvivalAudit: true,
+            admitSourceAuditWitnesses: true,
+            ...(sourceAuditReplay === undefined ? {} : { sourceAuditReplay })
+          }
+        ).pipe(
+          Effect.provide(GeometryKernel.Live.pipe(Layer.provide(GeometrySettings.Live))),
+          Effect.provide(GeometrySettings.Live),
+          Effect.provide(NfpIfpServiceLive)
+        )
+      )
+    const cold = await run()
+    const warm = await run({
+      witnesses: cold.sourceAuditWitnesses,
+      nonDominatedCropCount: cold.sourceAuditNonDominatedCropCount,
+      sourceCropSurvival: cold.sourceCropSurvival
+    })
+
+    expect(warm.continuations.map(({ sourceId }) => sourceId)).toEqual(
+      cold.continuations.map(({ sourceId }) => sourceId)
+    )
+    expect(warm.continuationOmissions).toEqual(cold.continuationOmissions)
+    expect(warm.sourceAuditWitnesses).toEqual(cold.sourceAuditWitnesses)
+    expect(warm.sourceAuditNonDominatedCropCount).toBe(cold.sourceAuditNonDominatedCropCount)
+    expect(warm.phaseTimings?.selection.sourceAuditPhysicalCropAttemptCount).toBe(0)
+    expect(warm.phaseTimings?.selection.sourceAuditReplayWitnessCount).toBe(
+      cold.sourceAuditWitnesses.length
     )
   }, 30_000)
 })

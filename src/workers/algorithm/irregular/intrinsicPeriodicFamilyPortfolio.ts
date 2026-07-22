@@ -1,6 +1,10 @@
 import { Effect } from 'effect'
 import type { SheetSpec } from '@shared/domain/nesting.js'
-import type { IrregularPlacedPiece, IrregularPreparedPiece } from '@shared/irregular/domain.js'
+import {
+  IrregularPlacementCandidate,
+  type IrregularPlacedPiece,
+  type IrregularPreparedPiece
+} from '@shared/irregular/domain.js'
 import {
   enumerateIntrinsicPeriodicCells,
   enumerateIntrinsicPeriodicCellCrops,
@@ -21,13 +25,18 @@ import {
   type IntrinsicStrictDecoderError
 } from './intrinsicStrictDecoder.js'
 import {
-  type IrregularGeometryInputError,
+  IrregularGeometryInputError,
   type IrregularNestingNotImplementedError,
   type IrregularNfpIfpControlAbortError,
   type NfpIfpService
 } from '../../irregular/services.js'
 import type { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import { groupIntrinsicCollisionFamilies } from './intrinsicStrictFamilyPortfolio.js'
+import { PlacementValidation } from '../../irregular/placementValidation.js'
+import {
+  canonicalCollisionLayoutIdentity,
+  measureCanonicalLayoutTopology
+} from '../../irregular/canonicalLayoutGeometry.js'
 
 export interface IntrinsicPeriodicContinuation {
   readonly sourceId: string
@@ -93,6 +102,14 @@ export interface IntrinsicPeriodicSourceAuditWitness {
   >
 }
 
+export interface IntrinsicPeriodicSourceAuditReplay {
+  readonly witnesses: ReadonlyArray<IntrinsicPeriodicSourceAuditWitness>
+  readonly nonDominatedCropCount: number
+  readonly sourceCropSurvival: ReadonlyArray<IntrinsicPeriodicSourceCropSurvival>
+}
+
+export type IntrinsicPeriodicSourceAuditScope = 'all' | 'p2-axis-union'
+
 export interface IntrinsicPeriodicFamilyPortfolioResult {
   readonly catalog: IntrinsicPeriodicCatalog
   readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
@@ -121,6 +138,7 @@ export interface IntrinsicPeriodicPortfolioPhaseTimings {
     readonly sourceAuditPhysicalCropAttemptCount: number
     readonly sourceAuditUniqueCanonicalCellCount: number
     readonly sourceAuditCanonicalCellReplayCount: number
+    readonly sourceAuditReplayWitnessCount: number
     readonly bookkeepingMs: number
     readonly coverageComplete: boolean
     readonly totalMs: number
@@ -153,6 +171,10 @@ export interface IntrinsicPeriodicFamilyPortfolioOptions {
    * when every retained cell front evicted them.
    */
   readonly admitSourceAuditWitnesses?: boolean
+  /** Replays a previously validated bounded raw-crop product instead of enumerating it again. */
+  readonly sourceAuditReplay?: IntrinsicPeriodicSourceAuditReplay
+  /** Narrows the experimental cold audit while preserving the same downstream selection. */
+  readonly sourceAuditScope?: IntrinsicPeriodicSourceAuditScope
 }
 
 type PortfolioError =
@@ -177,8 +199,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
     const maximumCellsPerFamilyRole = options.maximumCellsPerFamilyRole ?? 16
     const maximumCropsPerCell = options.maximumCropsPerCell ?? 4
     const maximumContinuationRuntimeMs = options.maximumContinuationRuntimeMs ?? 25_000
-    const maximumContinuationCandidateEvaluations =
-      options.maximumContinuationCandidateEvaluations
+    const maximumContinuationCandidateEvaluations = options.maximumContinuationCandidateEvaluations
     const capturePhaseTimings = maximumContinuationCandidateEvaluations !== undefined
     const maximumContinuationCount = options.maximumContinuationCount ?? 8
     const maximumTotalRuntimeMs = options.maximumTotalRuntimeMs ?? 240_000
@@ -199,9 +220,10 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       maximumCropsPerCell,
       options.basisSourceKey,
       options.captureSourceSurvivalAudit ?? false,
-      (options.captureSourceSurvivalAudit ?? false) &&
-        (options.admitSourceAuditWitnesses ?? false),
-      capturePhaseTimings
+      (options.captureSourceSurvivalAudit ?? false) && (options.admitSourceAuditWitnesses ?? false),
+      capturePhaseTimings,
+      options.sourceAuditReplay,
+      options.sourceAuditScope ?? 'all'
     )
     const selectionMs = selected.phaseTimings?.totalMs ?? 0
     const orderingStartedAt = capturePhaseTimings ? performance.now() : 0
@@ -290,33 +312,34 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       winningHash === undefined
         ? undefined
         : runs.find((run) => run.result?.metrics?.canonicalGeometryHash === winningHash)
-    const phaseTimings = capturePhaseTimings && selected.phaseTimings !== undefined
-      ? (() => {
-          const totalMs = performance.now() - startedAt
-          const measuredPhaseMs =
-            catalogMs +
-            selectionMs +
-            executionOrderingMs +
-            constructionMs +
-            finalizationMs +
-            archiveRankingMs
-          const bookkeepingMs = Math.max(0, totalMs - measuredPhaseMs)
-          return {
-            catalogMs,
-            selectionMs,
-            selection: selected.phaseTimings,
-            executionOrderingMs,
-            constructionMs,
-            finalizationMs,
-            archiveRankingMs,
-            bookkeepingMs,
-            coverageComplete:
-              phaseResidualCoverageComplete(totalMs, bookkeepingMs) &&
-              selected.phaseTimings.coverageComplete,
-            totalMs
-          }
-        })()
-      : undefined
+    const phaseTimings =
+      capturePhaseTimings && selected.phaseTimings !== undefined
+        ? (() => {
+            const totalMs = performance.now() - startedAt
+            const measuredPhaseMs =
+              catalogMs +
+              selectionMs +
+              executionOrderingMs +
+              constructionMs +
+              finalizationMs +
+              archiveRankingMs
+            const bookkeepingMs = Math.max(0, totalMs - measuredPhaseMs)
+            return {
+              catalogMs,
+              selectionMs,
+              selection: selected.phaseTimings,
+              executionOrderingMs,
+              constructionMs,
+              finalizationMs,
+              archiveRankingMs,
+              bookkeepingMs,
+              coverageComplete:
+                phaseResidualCoverageComplete(totalMs, bookkeepingMs) &&
+                selected.phaseTimings.coverageComplete,
+              totalMs
+            }
+          })()
+        : undefined
     return {
       catalog,
       continuations,
@@ -386,7 +409,9 @@ function selectIntrinsicPeriodicContinuations(
   basisSourceKey: string | undefined,
   captureSourceSurvivalAudit: boolean,
   admitSourceAuditWitnesses = false,
-  capturePhaseTimings = false
+  capturePhaseTimings = false,
+  sourceAuditReplay: IntrinsicPeriodicSourceAuditReplay | undefined = undefined,
+  sourceAuditScope: IntrinsicPeriodicSourceAuditScope = 'all'
 ): Effect.Effect<
   {
     readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
@@ -408,6 +433,7 @@ function selectIntrinsicPeriodicContinuations(
     let sourceAuditPhysicalCropAttemptCount = 0
     let sourceAuditUniqueCanonicalCellCount = 0
     let sourceAuditCanonicalCellReplayCount = 0
+    let sourceAuditReplayWitnessCount = 0
     const familyMembers = new Map(
       groupIntrinsicCollisionFamilies(pieces).map((family) => [family.key, family.members])
     )
@@ -444,6 +470,7 @@ function selectIntrinsicPeriodicContinuations(
       }
     >()
     const sourceAudit = (cell: IntrinsicPeriodicCatalog['cells'][number]) => {
+      if (sourceAuditReplay !== undefined) return undefined
       const provenance = cell.basisProvenance
       if (provenance === undefined) return undefined
       const key = `${cell.role}:${provenance.sourceKey}`
@@ -501,9 +528,11 @@ function selectIntrinsicPeriodicContinuations(
           }
           return crops
         })
-      if (captureSourceSurvivalAudit) {
+      if (captureSourceSurvivalAudit && sourceAuditReplay === undefined) {
         for (const cell of family.sourceAuditCells ?? family.cells) {
-          if (basisSourceKey !== undefined && cell.basisProvenance?.sourceKey !== basisSourceKey) continue
+          if (basisSourceKey !== undefined && cell.basisProvenance?.sourceKey !== basisSourceKey)
+            continue
+          if (!sourceAuditCellIncluded(cell, sourceAuditScope)) continue
           const audit = sourceAudit(cell)
           const directValidCrops = yield* enumerateCrops(cell, 'source-audit')
           if (audit !== undefined) audit.directValidCropCountBeforeFront += directValidCrops.length
@@ -527,7 +556,8 @@ function selectIntrinsicPeriodicContinuations(
         }
       }
       for (const cell of family.cells) {
-        if (basisSourceKey !== undefined && cell.basisProvenance?.sourceKey !== basisSourceKey) continue
+        if (basisSourceKey !== undefined && cell.basisProvenance?.sourceKey !== basisSourceKey)
+          continue
         const audit = sourceAudit(cell)
         if (audit !== undefined) audit.retainedCellCount += 1
         let directValidCrops = directValidCropsByCell.get(periodicSourceCellKey(cell))
@@ -565,6 +595,22 @@ function selectIntrinsicPeriodicContinuations(
         }
       }
       perFamily.set(family.familyKey, continuations)
+    }
+    if (captureSourceSurvivalAudit && sourceAuditReplay !== undefined) {
+      for (const witness of sourceAuditReplay.witnesses) {
+        if (basisSourceKey !== undefined && witness.sourceKey !== basisSourceKey) continue
+        const members = familyMembers.get(witness.familyKey)
+        if (members === undefined) continue
+        const seed = yield* validateAndReconstructSourceAuditWitness(witness, members)
+        sourceAuditReplayWitnessCount += 1
+        sourceAuditWitnesses.set(periodicContinuationFutureKey(pieces, seed), {
+          familyKey: witness.familyKey,
+          basisProvenance: witness.basisProvenance,
+          sourceKey: witness.sourceKey,
+          sourceKind: witness.sourceKind,
+          seed
+        })
+      }
     }
     const rawAuditFront = nonDominatedIntrinsicPeriodicSeeds(
       [...sourceAuditWitnesses.values()].map(({ seed }) => seed)
@@ -636,7 +682,9 @@ function selectIntrinsicPeriodicContinuations(
     for (const continuation of all.slice(maximumContinuationCount)) {
       omissions.push({ sourceId: continuation.sourceId, reason: 'continuation-cap' })
     }
-    const sourceCropSurvivalResult = [...sourceCropSurvival.values()].toSorted(
+    const sourceCropSurvivalResult = (
+      sourceAuditReplay?.sourceCropSurvival ?? [...sourceCropSurvival.values()]
+    ).toSorted(
       (first, second) =>
         first.role.localeCompare(second.role) || first.sourceKey.localeCompare(second.sourceKey)
     )
@@ -682,6 +730,7 @@ function selectIntrinsicPeriodicContinuations(
             sourceAuditPhysicalCropAttemptCount,
             sourceAuditUniqueCanonicalCellCount,
             sourceAuditCanonicalCellReplayCount,
+            sourceAuditReplayWitnessCount,
             bookkeepingMs,
             coverageComplete: phaseResidualCoverageComplete(totalMs, bookkeepingMs),
             totalMs
@@ -694,10 +743,127 @@ function selectIntrinsicPeriodicContinuations(
       coverageComplete: all.length <= maximumContinuationCount,
       sourceCropSurvival: sourceCropSurvivalResult,
       sourceAuditWitnesses: sourceAuditWitnessResult,
-      sourceAuditNonDominatedCropCount: rawAuditFront.length,
+      sourceAuditNonDominatedCropCount:
+        sourceAuditReplay?.nonDominatedCropCount ?? rawAuditFront.length,
       ...(phaseTimings === undefined ? {} : { phaseTimings })
     }
   })
+}
+
+function sourceAuditCellIncluded(
+  cell: IntrinsicPeriodicCatalog['cells'][number],
+  scope: IntrinsicPeriodicSourceAuditScope
+): boolean {
+  return (
+    scope === 'all' || (cell.role === 'P2' && cell.basisProvenance?.sourceKind === 'axis-union')
+  )
+}
+
+function validateAndReconstructSourceAuditWitness(
+  witness: IntrinsicPeriodicSourceAuditWitness,
+  familyMembers: ReadonlyArray<IrregularPreparedPiece>
+): Effect.Effect<IntrinsicPeriodicSeed, IrregularGeometryInputError> {
+  return Effect.gen(function* () {
+    if (
+      witness.sourceKey !== witness.basisProvenance.sourceKey ||
+      witness.sourceKind !== witness.basisProvenance.sourceKind
+    ) {
+      return yield* invalidReplay('source-audit replay provenance does not match its seed')
+    }
+    const familyIds = new Set(familyMembers.map((piece) => piece.pieceId ?? piece.source.id))
+    const placedIds = new Set<string>()
+    const accepted: IrregularPlacedPiece[] = []
+    for (const placed of witness.placements) {
+      const pieceId = placed.placement.pieceId ?? placed.placement.sourcePieceId
+      if (!familyIds.has(pieceId) || placedIds.has(pieceId)) {
+        return yield* invalidReplay('source-audit replay contains an unknown or duplicate piece')
+      }
+      const legal = yield* PlacementValidation.checkSheetless({
+        placed: accepted,
+        moving: placed.collisionGeometry,
+        candidate: new IrregularPlacementCandidate({
+          pieceId,
+          transform: placed.collisionGeometry.transform,
+          point: {
+            x: placed.placement.transform.translateX,
+            y: placed.placement.transform.translateY
+          },
+          diagnostics: []
+        })
+      })
+      if (!legal) return yield* invalidReplay('source-audit replay is not sheetless legal')
+      placedIds.add(pieceId)
+      accepted.push(placed)
+    }
+    const canonicalKey = canonicalCollisionLayoutIdentity(witness.placements)
+    if (canonicalKey === undefined || canonicalKey !== witness.seed.canonicalKey) {
+      return yield* invalidReplay('source-audit replay canonical identity mismatch')
+    }
+    const topology = measureCanonicalLayoutTopology(witness.placements)
+    if (
+      topology === undefined ||
+      topology.positiveContactComponentCount !== witness.seed.componentCount ||
+      topology.isolatedPieceCount !== witness.seed.isolatedPieceCount ||
+      topology.largestPositiveContactComponentSize !== witness.seed.largestComponentSize
+    ) {
+      return yield* invalidReplay('source-audit replay topology mismatch')
+    }
+    const bounds = placedEnvelopeBounds(witness.placements)
+    if (
+      !sameMetric(Math.max(bounds.width, bounds.height), witness.seed.maximumSideMm) ||
+      !sameMetric(bounds.width * bounds.height, witness.seed.envelopeAreaMm2) ||
+      !sameMetric(bounds.width + bounds.height, witness.seed.envelopeSpanMm)
+    ) {
+      return yield* invalidReplay('source-audit replay envelope metric mismatch')
+    }
+    return {
+      role: witness.role,
+      cellKey: witness.cellKey,
+      placements: witness.placements,
+      remainingFamilyMembers: familyMembers.filter(
+        (piece) => !placedIds.has(piece.pieceId ?? piece.source.id)
+      ),
+      componentCount: witness.seed.componentCount,
+      isolatedPieceCount: witness.seed.isolatedPieceCount,
+      largestComponentSize: witness.seed.largestComponentSize,
+      maximumSideMm: witness.seed.maximumSideMm,
+      envelopeAreaMm2: witness.seed.envelopeAreaMm2,
+      envelopeSpanMm: witness.seed.envelopeSpanMm,
+      crop: witness.seed.crop,
+      canonicalKey: witness.seed.canonicalKey
+    }
+  })
+}
+
+function placedEnvelopeBounds(placed: ReadonlyArray<IrregularPlacedPiece>): {
+  readonly width: number
+  readonly height: number
+} {
+  const points = placed.flatMap(({ placement, collisionGeometry }) =>
+    collisionGeometry.polygon.points.map(({ x, y }) => ({
+      x: x + placement.transform.translateX,
+      y: y + placement.transform.translateY
+    }))
+  )
+  const xs = points.map(({ x }) => x)
+  const ys = points.map(({ y }) => y)
+  return {
+    width: Math.max(...xs) - Math.min(...xs),
+    height: Math.max(...ys) - Math.min(...ys)
+  }
+}
+
+function sameMetric(first: number, second: number): boolean {
+  return Math.abs(first - second) <= 1e-9 * Math.max(1, Math.abs(first), Math.abs(second))
+}
+
+function invalidReplay(message: string): Effect.Effect<never, IrregularGeometryInputError> {
+  return Effect.fail(
+    new IrregularGeometryInputError({
+      operation: 'intrinsicPeriodicSourceAuditReplay',
+      message
+    })
+  )
 }
 
 function periodicSourceCellKey(cell: IntrinsicPeriodicCatalog['cells'][number]): string {
@@ -707,7 +873,12 @@ function periodicSourceCellKey(cell: IntrinsicPeriodicCatalog['cells'][number]):
 function rankContinuations(
   continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
 ): ReadonlyArray<IntrinsicPeriodicContinuation> {
-  const ranks = new Map(rankIntrinsicPeriodicSeeds(continuations.map(({ seed }) => seed)).map((seed, index) => [seed.canonicalKey, index]))
+  const ranks = new Map(
+    rankIntrinsicPeriodicSeeds(continuations.map(({ seed }) => seed)).map((seed, index) => [
+      seed.canonicalKey,
+      index
+    ])
+  )
   return [...continuations].toSorted((first, second) => {
     const firstRank = ranks.get(first.seed.canonicalKey) ?? Number.MAX_SAFE_INTEGER
     const secondRank = ranks.get(second.seed.canonicalKey) ?? Number.MAX_SAFE_INTEGER
@@ -719,8 +890,9 @@ function periodicContinuationFutureKey(
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   seed: IntrinsicPeriodicSeed
 ): string {
-  const remainingOrder = remainingAfterSeed(pieces, seed)
-    .map((piece) => piece.pieceId ?? piece.source.id)
+  const remainingOrder = remainingAfterSeed(pieces, seed).map(
+    (piece) => piece.pieceId ?? piece.source.id
+  )
   return JSON.stringify({ geometry: seed.canonicalKey, remainingOrder })
 }
 
@@ -738,6 +910,8 @@ function remainingAfterSeed(
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   seed: IntrinsicPeriodicSeed
 ): ReadonlyArray<IrregularPreparedPiece> {
-  const frozen = new Set(seed.placements.map(({ placement }) => placement.pieceId ?? placement.sourcePieceId))
+  const frozen = new Set(
+    seed.placements.map(({ placement }) => placement.pieceId ?? placement.sourcePieceId)
+  )
   return pieces.filter((piece) => !frozen.has(piece.pieceId ?? piece.source.id))
 }

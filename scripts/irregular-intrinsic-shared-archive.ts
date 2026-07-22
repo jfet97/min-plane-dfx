@@ -11,6 +11,7 @@ import {
 } from '../src/shared/irregular/defaults.js'
 import {
   IrregularNestingSettings,
+  IrregularPlacedPiece,
   IrregularPreparedPiece,
   IrregularPriorityOrderKey,
   type IrregularNestingSettings as IrregularSettings
@@ -26,6 +27,10 @@ import {
   type IntrinsicSharedArchiveEndpoint,
   type IntrinsicSharedArchiveRun
 } from '../src/workers/algorithm/irregular/intrinsicSharedArchivePortfolio.js'
+import type {
+  IntrinsicPeriodicSourceAuditReplay,
+  IntrinsicPeriodicSourceAuditScope
+} from '../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
@@ -62,6 +67,9 @@ const maximumDirectRuntimeMs = positiveIntegerArgument('--direct-ms', 600_000)
 const maximumCatalogRuntimeMs = positiveIntegerArgument('--catalog-ms', 30_000)
 const maximumContinuationRuntimeMs = positiveIntegerArgument('--continuation-ms', 600_000)
 const maximumPeriodicRuntimeMs = positiveIntegerArgument('--periodic-ms', 600_000)
+const sourceAuditCacheInput = argument('--source-audit-cache-in')
+const sourceAuditCacheOutput = argument('--source-audit-cache-out')
+const sourceAuditScope = sourceAuditScopeArgument(argument('--source-audit-scope'))
 const fixture = await loadFixture(fixtureName)
 const settings = fixture.request.options.irregularSettings
 if (settings === undefined) throw new Error(`${fixtureName} has no irregular settings`)
@@ -69,11 +77,25 @@ await mkdir(outputDirectory, { recursive: true })
 const preparedPieces = await Effect.runPromise(
   withLayers(preparePieces(fixture.request, settings), settings)
 )
-const directCandidateEvaluationCaps =
-  mode === 'calibration' ? undefined : directCapsFromArguments()
+const directCandidateEvaluationCaps = mode === 'calibration' ? undefined : directCapsFromArguments()
 if (mode === 'matrix' && directCandidateEvaluationCaps === undefined) {
   throw new Error('matrix mode requires direct candidate-evaluation caps')
 }
+const sourceAuditCacheKey = sha256(
+  JSON.stringify({
+    version: 1,
+    fixture: sha256(fixture.bytes),
+    preparedPieces,
+    settings,
+    maximumCatalogRuntimeMs,
+    maximumCellsPerFamilyRole: 16,
+    maximumCropsPerCell: 4
+  })
+)
+const sourceAuditReplay =
+  sourceAuditCacheInput === undefined
+    ? undefined
+    : await readSourceAuditReplay(sourceAuditCacheInput, sourceAuditCacheKey)
 const result =
   mode === 'calibration'
     ? {
@@ -104,7 +126,9 @@ const result =
               maximumCellsPerFamilyRole: 16,
               maximumCropsPerCell: 4,
               maximumContinuationRuntimeMs,
-              maximumTotalRuntimeMs: maximumPeriodicRuntimeMs
+              maximumTotalRuntimeMs: maximumPeriodicRuntimeMs,
+              sourceAuditScope,
+              ...(sourceAuditReplay === undefined ? {} : { sourceAuditReplay })
             }
           }),
           settings
@@ -125,6 +149,25 @@ const winnerSvgPath =
 if (winnerSvgPath !== undefined && result.winner !== undefined) {
   await writeFile(winnerSvgPath, renderSvg(renderedPlacements(result.winner)))
   artifactPaths.push(winnerSvgPath)
+}
+if (sourceAuditCacheOutput !== undefined && result.periodicPortfolio !== undefined) {
+  await writeFile(
+    sourceAuditCacheOutput,
+    `${JSON.stringify(
+      {
+        version: 1,
+        key: sourceAuditCacheKey,
+        replay: {
+          witnesses: result.periodicPortfolio.sourceAuditWitnesses,
+          nonDominatedCropCount: result.periodicPortfolio.sourceAuditNonDominatedCropCount,
+          sourceCropSurvival: result.periodicPortfolio.sourceCropSurvival
+        }
+      },
+      null,
+      2
+    )}\n`
+  )
+  artifactPaths.push(sourceAuditCacheOutput)
 }
 const report = {
   experiment: 'intrinsic-shared-archive-step4',
@@ -150,7 +193,9 @@ const report = {
     directCandidateEvaluationCaps,
     periodicContinuationCandidateEvaluations: mode === 'matrix' ? 19_862 : undefined,
     periodicContinuationCount: mode === 'matrix' ? 8 : undefined,
-    rawSourceAudit: mode === 'matrix'
+    rawSourceAudit: mode === 'matrix',
+    sourceAuditScope,
+    sourceAuditReplay: sourceAuditReplay !== undefined
   },
   directRuns,
   periodicRuns,
@@ -158,15 +203,18 @@ const report = {
     result.periodicPortfolio === undefined
       ? undefined
       : {
-          catalogRuntimeCoverageComplete:
-            result.periodicPortfolio.catalog.runtimeCoverageComplete,
+          catalogRuntimeCoverageComplete: result.periodicPortfolio.catalog.runtimeCoverageComplete,
           catalogFamilyCoverageComplete: result.periodicPortfolio.catalog.familyCoverageComplete,
           continuationCoverageComplete: result.periodicPortfolio.continuationCoverageComplete,
           continuationBudgetSettlementComplete:
             result.periodicPortfolio.continuationBudgetSettlementComplete,
           selectedSourceIds: result.periodicPortfolio.continuations.map(({ sourceId }) => sourceId),
           omissions: result.periodicPortfolio.continuationOmissions,
-          phaseTimings: result.periodicPortfolio.phaseTimings
+          phaseTimings: result.periodicPortfolio.phaseTimings,
+          sourceAuditWitnesses: result.periodicPortfolio.sourceAuditWitnesses,
+          sourceAuditNonDominatedCropCount:
+            result.periodicPortfolio.sourceAuditNonDominatedCropCount,
+          sourceCropSurvival: result.periodicPortfolio.sourceCropSurvival
         },
   sheetlessArchive: result.sheetlessArchive.map(endpointRecord),
   fittedArchive: result.archive.map(endpointRecord),
@@ -245,8 +293,7 @@ function endpointRecord(endpoint: IntrinsicSharedArchiveEndpoint) {
       q0: endpoint.requestedSheetFit.q0,
       q90: endpoint.requestedSheetFit.q90,
       selectedRotationDeg: endpoint.requestedSheetFit.selectedRotationDeg,
-      selectedCanonicalGeometryHash:
-        endpoint.requestedSheetFit.selectedCanonicalGeometryHash
+      selectedCanonicalGeometryHash: endpoint.requestedSheetFit.selectedCanonicalGeometryHash
     }
   }
 }
@@ -291,6 +338,139 @@ function requiredFixture(value: string | undefined): FixtureName {
     return value
   }
   throw new Error('--fixture must be triangle-20, rectangles-20, pentagons-20, or mixed-61')
+}
+
+function sourceAuditScopeArgument(value: string | undefined): IntrinsicPeriodicSourceAuditScope {
+  if (value === undefined || value === 'all') return 'all'
+  if (value === 'p2-axis-union') return value
+  throw new Error('--source-audit-scope must be all or p2-axis-union')
+}
+
+const sourceAuditRoleSchema = Schema.Union([Schema.Literal('P1'), Schema.Literal('P2')])
+const sourceAuditKindSchema = Schema.Union([
+  Schema.Literal('axis-union'),
+  Schema.Literal('nfp-boundary-vertex-pair'),
+  Schema.Literal('edge-contact-pair')
+])
+const sourceAuditContactRelationSchema = Schema.Struct({
+  vector: Schema.Struct({ x: Schema.Number, y: Schema.Number }),
+  fixedMemberIndex: Schema.Number,
+  fixedPieceId: Schema.String,
+  fixedEdgeIndex: Schema.Number,
+  movingMemberIndex: Schema.Number,
+  movingPieceId: Schema.String,
+  movingEdgeIndex: Schema.Number,
+  segmentStart: Schema.Struct({ x: Schema.Number, y: Schema.Number }),
+  segmentEnd: Schema.Struct({ x: Schema.Number, y: Schema.Number }),
+  lengthMm: Schema.Number
+})
+const sourceAuditReplaySchema = Schema.Struct({
+  version: Schema.Literal(1),
+  key: Schema.String,
+  replay: Schema.Struct({
+    witnesses: Schema.Array(
+      Schema.Struct({
+        role: sourceAuditRoleSchema,
+        familyKey: Schema.String,
+        sourceKey: Schema.String,
+        sourceKind: sourceAuditKindSchema,
+        cellKey: Schema.String,
+        basisProvenance: Schema.Struct({
+          sourceKey: Schema.String,
+          sourceKind: sourceAuditKindSchema,
+          sourcePoints: Schema.Tuple([
+            Schema.Struct({ x: Schema.String, y: Schema.String }),
+            Schema.Struct({ x: Schema.String, y: Schema.String })
+          ]),
+          axis: Schema.optional(Schema.Union([Schema.Literal('x'), Schema.Literal('y')])),
+          selectedBasis: Schema.Tuple([
+            Schema.Struct({ x: Schema.Number, y: Schema.Number }),
+            Schema.Struct({ x: Schema.Number, y: Schema.Number })
+          ]),
+          selectedResidualGrid: Schema.Tuple([
+            Schema.Struct({ x: Schema.String, y: Schema.String }),
+            Schema.Struct({ x: Schema.String, y: Schema.String })
+          ]),
+          canonicalBasis: Schema.Tuple([
+            Schema.Struct({ x: Schema.Number, y: Schema.Number }),
+            Schema.Struct({ x: Schema.Number, y: Schema.Number })
+          ]),
+          memberTransforms: Schema.Array(
+            Schema.Struct({
+              memberIndex: Schema.Number,
+              pieceId: Schema.String,
+              transformIndex: Schema.Number,
+              rotationDeg: Schema.Number,
+              mirrored: Schema.Boolean
+            })
+          ),
+          contactRelations: Schema.optional(
+            Schema.Tuple([sourceAuditContactRelationSchema, sourceAuditContactRelationSchema])
+          )
+        }),
+        placements: Schema.Array(IrregularPlacedPiece),
+        seed: Schema.Struct({
+          canonicalKey: Schema.String,
+          componentCount: Schema.Number,
+          isolatedPieceCount: Schema.Number,
+          largestComponentSize: Schema.Number,
+          maximumSideMm: Schema.Number,
+          envelopeAreaMm2: Schema.Number,
+          envelopeSpanMm: Schema.Number,
+          crop: Schema.Struct({
+            rows: Schema.Number,
+            columns: Schema.Number,
+            traversal: Schema.Union([Schema.Literal('row'), Schema.Literal('column')]),
+            corner: Schema.Union([
+              Schema.Literal(0),
+              Schema.Literal(1),
+              Schema.Literal(2),
+              Schema.Literal(3)
+            ])
+          })
+        })
+      })
+    ),
+    nonDominatedCropCount: Schema.Number,
+    sourceCropSurvival: Schema.Array(
+      Schema.Struct({
+        role: sourceAuditRoleSchema,
+        sourceKey: Schema.String,
+        sourceKind: sourceAuditKindSchema,
+        retainedCellCount: Schema.Number,
+        directValidCropCountBeforeFront: Schema.Number,
+        directValidCropCount: Schema.Number,
+        cropFrontCount: Schema.Number,
+        uniqueSeedCount: Schema.Number,
+        selectedContinuationCount: Schema.Number
+      })
+    )
+  })
+})
+
+async function readSourceAuditReplay(
+  path: string,
+  expectedKey: string
+): Promise<IntrinsicPeriodicSourceAuditReplay> {
+  const decoded = Schema.decodeUnknownSync(sourceAuditReplaySchema)(
+    JSON.parse((await readFile(path)).toString('utf8'))
+  )
+  if (decoded.key !== expectedKey) throw new Error('source-audit cache key mismatch')
+  return {
+    witnesses: decoded.replay.witnesses.map((witness) => {
+      const { axis, contactRelations, ...basisProvenance } = witness.basisProvenance
+      return {
+        ...witness,
+        basisProvenance: {
+          ...basisProvenance,
+          ...(axis === undefined ? {} : { axis }),
+          ...(contactRelations === undefined ? {} : { contactRelations })
+        }
+      }
+    }),
+    nonDominatedCropCount: decoded.replay.nonDominatedCropCount,
+    sourceCropSurvival: decoded.replay.sourceCropSurvival
+  }
 }
 
 function directCapsFromArguments(): Readonly<Record<IntrinsicSharedArchiveDirectRole, number>> {
@@ -482,10 +662,7 @@ function renderSvg(
   const maxY = Math.max(...points.map(({ y }) => y))
   const margin = 20
   const polygonsSvg = polygons
-    .map(
-      (polygon) =>
-        `<polygon points="${polygon.map(({ x, y }) => `${x},${-y}`).join(' ')}"/>`
-    )
+    .map((polygon) => `<polygon points="${polygon.map(({ x, y }) => `${x},${-y}`).join(' ')}"/>`)
     .join('')
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX - margin} ${-maxY - margin} ${maxX - minX + margin * 2} ${maxY - minY + margin * 2}" width="1200" height="1200"><rect x="${minX - margin}" y="${-maxY - margin}" width="${maxX - minX + margin * 2}" height="${maxY - minY + margin * 2}" fill="#1b2328"/><g fill="#22313b" stroke="#39a9ff" stroke-width="1">${polygonsSvg}</g></svg>`
 }
