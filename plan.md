@@ -1961,14 +1961,40 @@ budgets before any Mixed periodic conclusion is called conclusive.
    periodic-only winner is weak (240,521.398 mm2, seven contacts), confirming
    that Step 4's common archive is the next implementation boundary rather than
    promotion of the periodic decoder alone.
-4. Consolidate one decision-grade portfolio run: ordinary strict, reversed,
-   endpoint-derived, pocket-first, periodic continuations, and raw-crop
-   witnesses competing in one shared archive under one budget report, on
-   Triangle, Mixed-61, and the homogeneous controls. This comes from Fable's
-   F7 finding and the PackingSolver-style portfolio lesson: the current
-   periodic archive can declare a winner without ever comparing production or
-   the 405,773 pocket-first endpoint. Every arm must publish its best completed
-   endpoint and best cap-evicted candidate under one exact terminal order.
+4. Build the smallest decision-grade shared archive before adding constructors.
+   The first matrix contains exactly the two protected baselines
+   (`canonical-grid`, `legacy-absolute-envelope`), baseline-order
+   `open-pocket-first`, and the eight selected no-audit periodic continuations.
+   Defer reversed, endpoint-derived, their pocket variants, and raw witnesses.
+   This comes from Fable's F7 finding and the PackingSolver-style portfolio
+   lesson, narrowed by the `e4378e5` phase controls: the archive must compare
+   the protected Triangle path, the 405,773 Mixed pocket-first endpoint, and
+   the bounded periodic family without paying for diagnostic search expansion.
+
+   Every arm reports role/source, requested and consumed evaluations, status,
+   reason, and an optional exact endpoint. `evaluation-cap` is deterministic
+   budget settlement but produces no terminal candidate; invalid, deadline,
+   global-deadline, or not-started invalidates the experiment. Use fixed per-arm
+   evaluation caps with wall time only as a safety abort. Canonically deduplicate
+   complete endpoints and retain the full ranked terminal list without a new
+   capacity policy.
+
+   Normalize every complete endpoint through one adapter: canonical sheetless
+   legality, identity, hash, and metrics first; requested-sheet q0/q90 fit as a
+   separate outcome; canonical-hash deduplication; unchanged
+   `rankIntrinsicStrictCompletedLayouts`; unchanged certificate evaluation as
+   diagnostic metadata, never an archive partition.
+
+   Before integration, measure and freeze exact completion counts for the two
+   protected and pocket-first arms under a 600 s safety ceiling; keep 19,862
+   evaluations per periodic continuation. Run the fixed matrix twice on
+   Triangle-20, Mixed-61, and homogeneous controls. Reject the slice on any
+   safety abort, invalid/unstarted arm, changed periodic source set/order,
+   unequal per-arm status/evaluation/hash tuples, unequal archive hash order,
+   missing Mixed `310adc64…` or the 405,773 pocket-first hash, displacement of
+   Triangle's protected winner by the 240,521 periodic endpoint, or changed
+   homogeneous-control results. Only after this gate may Step 5 add a new
+   constructor.
 5. Implement cavity-first scheduling as the next constructive experiment
    (one bounded cavity-queue slot per depth, commensurate two-order
    admission), gated on improving the shared archive against the 405,773
