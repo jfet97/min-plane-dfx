@@ -135,12 +135,15 @@ opt-in benchmark observer reports exact parts-per-million pressure plus a
 four-depth no-permanent-skip probe. Verified fitting prefixes may also seed
 independent resumable warm shadow lanes with protected budgets. Both observers
 are disabled in production and have no routing, ranking, or selection consumer.
-The opt-in Stage 4 scheduler now advances the cold lane through one four-depth
-checkpoint quantum, settles the unchanged complete cohort, then either cancels
-capacity on a fitting complete endpoint or coordinates protected checkpoints
-after the complete miss. One base-cap entitlement preserves the exact cold
-lane through settlement. Every fitting warm prefix receives one depth-boundary
-pilot under a second base-cap entitlement. The deepest fitting
+The opt-in Stage 4 scheduler starts the cold lane with one four-depth quantum,
+then alternates one committed `canonical-grid` piece with one resumed cold
+depth until either lane settles. The remaining protected complete producers
+retain their unchanged order. A fitting complete endpoint cancels any still
+paused capacity checkpoint; a complete miss hands the existing settled or
+paused cold state to the protected capacity coordinator without restarting it.
+One base-cap entitlement preserves the exact cold lane through settlement.
+Every fitting warm prefix receives one depth-boundary pilot under a second
+base-cap entitlement. The deepest fitting
 `canonical-grid` lane is then pinned across depth-boundary resumes until it
 settles or exhausts that entitlement; `open-pocket-first` and then
 `legacy-absolute-envelope` are deterministic fallbacks only when the preferred
@@ -164,11 +167,15 @@ cumulative phase ledger. The scheduler quantum alone is deliberately absent
 from the request fingerprint. Cyclic or overlong ancestry is rejected before
 hashing, and resume reconstructs the full state chain to sanitize all
 continuation-relevant private geometry caches.
-The canonical direct producer can now be advanced opt-in through one-piece
-portfolio quanta. An equivalence gate compares direct and periodic run order,
+The canonical direct producer is advanced opt-in through one-piece portfolio
+quanta. An equivalence gate compares direct and periodic run order,
 coverage, evaluations, endpoint hashes, constructed-prefix identities,
 sheetless/fitting archive order, and the final winner against uninterrupted
 execution before the capacity scheduler consumes this seam.
+The deterministic scheduler now consumes it: complete and cold states own
+separate protected checkpoints and alternate without sharing survivors or
+comparators. This proves intertwined chronology and no-restart reuse, not a
+parallel wall-time improvement.
 
 Stage 5 shares only archive mechanics: exact admission validation, canonical
 deduplication, namespace storage, and terminal complete dominance. Complete and

@@ -169,9 +169,18 @@ export function intrinsicAnytimeSchedulerTraceValid(
   const completeIndexes = quanta.flatMap(({ producerRole }, index) =>
     producerRole === 'legacy-complete' ? [index] : []
   )
-  if (completeIndexes.length !== 1) return false
-  const completeIndex = completeIndexes[0]
+  if (completeIndexes.length === 0) return false
+  const completeIndex = completeIndexes[completeIndexes.length - 1]
   if (completeIndex === undefined) return false
+  if (
+    completeIndexes.some(
+      (index, ordinal) =>
+        quanta[index]?.outcome !==
+        (ordinal === completeIndexes.length - 1 ? 'settled' : 'checkpointed')
+    )
+  ) {
+    return false
+  }
   const experimentalIndexes = quanta.flatMap(({ producerRole }, index) =>
     producerRole === 'experimental-place-defer-complete' ? [index] : []
   )
@@ -190,6 +199,12 @@ export function intrinsicAnytimeSchedulerTraceValid(
   const laterWarm = laterPartial.filter(
     ({ producerRole }) => producerRole === 'capacity-warm-prefix'
   )
+  const coldSettledBeforeComplete = quanta.some(
+    ({ producerRole, outcome }, index) =>
+      index < completeIndex &&
+      producerRole === 'capacity-cold' &&
+      outcome === 'settled'
+  )
   const firstLaterPartialIndex = quanta.findIndex(
     ({ cohort }, index) => index > completeIndex && cohort === 'partial'
   )
@@ -206,6 +221,7 @@ export function intrinsicAnytimeSchedulerTraceValid(
     }
     if (
       trace.coldStartStatus === 'paused' &&
+      !coldSettledBeforeComplete &&
       !laterCold.some(({ outcome }) => outcome === 'settled' || outcome === 'censored')
     ) {
       return false
@@ -219,6 +235,9 @@ export function intrinsicAnytimeSchedulerTraceValid(
     return warmTerminals >= warmCheckpoints
   }
   if (trace.cancellationReason === 'complete-endpoint-fitted') {
+    if (coldSettledBeforeComplete) {
+      return laterCold.length === 0 && laterWarm.length === 0
+    }
     return (
       trace.coldStartStatus === 'paused' &&
       laterCold.length === 1 &&
@@ -226,7 +245,10 @@ export function intrinsicAnytimeSchedulerTraceValid(
       laterWarm.length === 0
     )
   }
-  return trace.coldStartStatus === 'settled' && laterPartial.length === 0
+  return (
+    laterPartial.length === 0 &&
+    (trace.coldStartStatus === 'settled' || coldSettledBeforeComplete)
+  )
 }
 
 /** Plain algorithm output before any worker protocol or history DTO adaptation. */
@@ -454,7 +476,7 @@ function coordinateIntrinsicSharedArchive(
       } else {
         const schedulerEnabled =
           input.options?.intrinsicAnytimeSchedulerMode === 'deterministic-v1'
-        const scheduledColdStart = schedulerEnabled
+        let scheduledColdStart = schedulerEnabled
           ? yield* runIntrinsicCapacitySchedulerColdQuantum({
               sheet: input.request.sheet,
               preparedPieces: input.preparedPieces,
@@ -464,6 +486,7 @@ function coordinateIntrinsicSharedArchive(
                 : {})
             }).pipe(Effect.mapError(mapIntrinsicCapacityError))
           : undefined
+        let scheduledColdCheckpointReused = false
         if (scheduledColdStart !== undefined) {
           intrinsicAnytimeSchedulerTrace = {
             version: 'intrinsic-anytime-scheduler-v1',
@@ -494,6 +517,64 @@ function coordinateIntrinsicSharedArchive(
           {
             maximumDirectRuntimeMs: 35_000,
             includeSourceAuditWitnesses: true,
+            ...(schedulerEnabled
+              ? {
+                  canonicalGridCompletedPieceQuantum: 1,
+                  onCanonicalGridCheckpointed: () =>
+                    Effect.gen(function* () {
+                      if (intrinsicAnytimeSchedulerTrace !== undefined) {
+                        intrinsicAnytimeSchedulerTrace = {
+                          ...intrinsicAnytimeSchedulerTrace,
+                          quanta: [
+                            ...intrinsicAnytimeSchedulerTrace.quanta,
+                            {
+                              ordinal: intrinsicAnytimeSchedulerTrace.quanta.length,
+                              cohort: 'complete',
+                              producerRole: 'legacy-complete',
+                              outcome: 'checkpointed'
+                            }
+                          ]
+                        }
+                      }
+                      const checkpoint = scheduledColdStart?.checkpoint
+                      if (
+                        scheduledColdStart?.status !== 'paused' ||
+                        checkpoint === undefined
+                      ) {
+                        return
+                      }
+                      scheduledColdStart =
+                        yield* runIntrinsicCapacitySchedulerColdQuantum({
+                          sheet: input.request.sheet,
+                          preparedPieces: input.preparedPieces,
+                          checkpoint,
+                          maximumDepthBoundaries: 1,
+                          ...(control === undefined ? {} : { control }),
+                          ...(input.options?.captureCapacityPhaseTimings === true
+                            ? { capturePhaseTimings: true }
+                            : {})
+                        })
+                      scheduledColdCheckpointReused = true
+                      if (intrinsicAnytimeSchedulerTrace !== undefined) {
+                        intrinsicAnytimeSchedulerTrace = {
+                          ...intrinsicAnytimeSchedulerTrace,
+                          quanta: [
+                            ...intrinsicAnytimeSchedulerTrace.quanta,
+                            {
+                              ordinal: intrinsicAnytimeSchedulerTrace.quanta.length,
+                              cohort: 'partial',
+                              producerRole: 'capacity-cold',
+                              outcome:
+                                scheduledColdStart.status === 'paused'
+                                  ? 'checkpointed'
+                                  : 'settled'
+                            }
+                          ]
+                        }
+                      }
+                    })
+                }
+              : {}),
             ...(control === undefined ? {} : { control }),
             onDirectConstructed: (role, state) => {
               prefixSources.push({ role, state })
@@ -522,6 +603,8 @@ function coordinateIntrinsicSharedArchive(
                   category: 'search',
                   message: error.message
                 })
+              : error._tag === 'IntrinsicCapacityError'
+                ? mapIntrinsicCapacityError(error)
               : error
           )
         )
@@ -625,7 +708,7 @@ function coordinateIntrinsicSharedArchive(
               }))
             intrinsicAnytimeSchedulerTrace = {
               ...intrinsicAnytimeSchedulerTrace,
-              coldCheckpointReused: scheduledColdStart?.status === 'paused',
+              coldCheckpointReused: scheduledColdCheckpointReused,
               warmPrefixEndpointsAdmitted: capacity.trace.warmPrefixEndpointsAdmitted,
               cancellationReason: 'complete-cohort-miss',
               quanta: [
@@ -645,6 +728,7 @@ function coordinateIntrinsicSharedArchive(
         } else {
           if (intrinsicAnytimeSchedulerTrace !== undefined) {
             const capacityCancellation =
+              scheduledColdCheckpointReused &&
               scheduledColdStart?.status === 'paused'
                 ? [
                     {
@@ -658,7 +742,9 @@ function coordinateIntrinsicSharedArchive(
             intrinsicAnytimeSchedulerTrace = {
               ...intrinsicAnytimeSchedulerTrace,
               cancellationReason:
-                capacityCancellation.length > 0 ? 'complete-endpoint-fitted' : undefined,
+                scheduledColdStart === undefined
+                  ? undefined
+                  : 'complete-endpoint-fitted',
               quanta: [...intrinsicAnytimeSchedulerTrace.quanta, ...capacityCancellation]
             }
           }

@@ -36,6 +36,7 @@ import {
   type IntrinsicStrictDecoderError
 } from './intrinsicStrictDecoder.js'
 import { IrregularBeamState } from './irregularBeamState.js'
+import { IntrinsicCapacityError } from './intrinsicCapacityPreflight.js'
 
 export const INTRINSIC_SHARED_ARCHIVE_DIRECT_ROLES = [
   'canonical-grid',
@@ -102,6 +103,13 @@ export interface IntrinsicSharedArchivePortfolioResult {
   readonly experimentValid: boolean
 }
 
+type SharedArchiveError =
+  | IntrinsicStrictDecoderError
+  | IntrinsicCapacityError
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError
+
 export interface IntrinsicSharedArchivePortfolioOptions {
   readonly directCandidateEvaluationCaps?: Partial<
     Readonly<Record<IntrinsicSharedArchiveDirectRole, number>>
@@ -111,7 +119,11 @@ export interface IntrinsicSharedArchivePortfolioOptions {
   readonly canonicalGridCompletedPieceQuantum?: number
   readonly onCanonicalGridCheckpointed?: (
     checkpoint: IntrinsicStrictDirectCheckpoint
-  ) => Effect.Effect<void>
+  ) => Effect.Effect<
+    void,
+    SharedArchiveError,
+    GeometryKernel | GeometrySettings | NfpIfpService
+  >
   readonly control?: IrregularNfpIfpControl
   readonly onPhaseCompleted?: (phase: 'direct' | 'periodic') => Effect.Effect<void>
   /**
@@ -138,12 +150,6 @@ export interface IntrinsicSharedArchivePortfolioOptions {
     | 'admitSourceAuditWitnesses'
   >
 }
-
-type SharedArchiveError =
-  | IntrinsicStrictDecoderError
-  | IrregularNestingNotImplementedError
-  | IrregularGeometryInputError
-  | IrregularNfpIfpControlAbortError
 
 /** Runs the smallest protected, pocket-first, and periodic archive matrix. */
 export function runIntrinsicSharedArchivePortfolio(
@@ -246,7 +252,7 @@ export function runIntrinsicSharedArchiveDirectPortfolio(
   > = {}
 ): Effect.Effect<
   ReadonlyArray<IntrinsicSharedArchiveRun>,
-  IrregularNfpIfpControlAbortError,
+  SharedArchiveError,
   GeometryKernel | GeometrySettings | NfpIfpService
 > {
   return Effect.gen(function* () {

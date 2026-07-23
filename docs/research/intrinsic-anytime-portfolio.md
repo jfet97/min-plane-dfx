@@ -373,6 +373,17 @@ coverage, prefix identities, ordered sheetless/fitting archives, and winner.
 Runtime is cumulative and nonnegative but excluded from equality because
 validation overhead is real.
 
+The coordinator now uses that seam for the first genuinely intertwined trace.
+It starts the protected cold lane for four depths, then alternates one
+`canonical-grid` committed piece and one cold depth. Both retain their own
+checkpoint, budget, and comparator. If cold settles first, its exact result is
+retained while complete construction continues; if the complete archive later
+misses, the capacity coordinator receives that existing state rather than
+starting empty. Focused integration tests preserve the complete output, verify
+the cold settlement occurs before final complete settlement on the fixture,
+and validate the full quantum chronology. This remains cooperative
+single-worker execution and therefore makes no settled wall-time claim.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim

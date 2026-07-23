@@ -152,6 +152,11 @@ The next committed seam runs `canonical-grid` through those checkpoints inside
 the direct portfolio while leaving every later producer and archive operation
 in its settled order. Focused equivalence covers the complete observable
 portfolio except non-semantic runtime.
+That seam is now consumed by the deterministic coordinator: an initial
+four-depth cold quantum is followed by one canonical complete piece and one
+cold depth repeatedly. The cold checkpoint is never restarted on the later
+complete miss. This completes the single-worker intertwined chronology step;
+independent parallel execution remains the later wall-time step.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

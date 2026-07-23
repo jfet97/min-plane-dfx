@@ -216,6 +216,12 @@ The direct portfolio has an opt-in integration seam that advances only
 producer settles. It then continues the unchanged direct-role and periodic
 order. Checkpoint callbacks expose chronology only; archive retention,
 comparators, and the single final constructed-prefix callback remain unchanged.
+The opt-in anytime coordinator consumes that callback by resuming the protected
+cold checkpoint for one depth after each canonical complete piece. Complete and
+partial work remain separate state machines and archives. Once the cold lane
+settles, later complete checkpoints continue without duplicating capacity work;
+after a complete miss the settled/checkpointed cold state transfers directly to
+the capacity coordinator.
 
 An additional observer-only experimental complete cohort makes one explicit
 place/defer decision by moving the first pending piece to a second pass. Its

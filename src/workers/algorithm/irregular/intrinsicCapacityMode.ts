@@ -39,6 +39,7 @@ import {
   INTRINSIC_CAPACITY_V1_BOUNDS,
   materializeIntrinsicCapacityCheckpointEndpoints,
   runIntrinsicCapacityColdSearch,
+  type IntrinsicAnytimeCheckpoint,
   type IntrinsicCapacitySearchResult,
   type IntrinsicCapacitySearchPhaseTimings,
   type IntrinsicCapacitySearchTrace,
@@ -284,6 +285,8 @@ export const INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS = 4 as const
 export function runIntrinsicCapacitySchedulerColdQuantum(input: {
   readonly sheet: SheetSpec
   readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly checkpoint?: IntrinsicAnytimeCheckpoint
+  readonly maximumDepthBoundaries?: number
   readonly control?: IrregularNfpIfpControl
   readonly capturePhaseTimings?: boolean
 }): Effect.Effect<
@@ -306,11 +309,14 @@ export function runIntrinsicCapacitySchedulerColdQuantum(input: {
       preparedPieces: input.preparedPieces,
       materialAreasByPieceId: materials.areasByPieceId,
       cavityCache: new Map(),
-      maximumDepthBoundaries: Math.min(
-        INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS,
-        Math.max(1, input.preparedPieces.length)
-      ),
-      schedulerDeficit: 1,
+      maximumDepthBoundaries:
+        input.maximumDepthBoundaries ??
+        Math.min(
+          INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS,
+          Math.max(1, input.preparedPieces.length)
+        ),
+      ...(input.checkpoint === undefined ? {} : { checkpoint: input.checkpoint }),
+      schedulerDeficit: input.checkpoint?.schedulerDeficit ?? 1,
       ...(input.control === undefined ? {} : { control: input.control }),
       ...(input.capturePhaseTimings === undefined
         ? {}
