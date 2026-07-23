@@ -157,6 +157,11 @@ piece boundaries. Resume retains its exact parent lineage and cumulative
 active-work/evaluation ledgers. Mid-piece evaluation caps remain terminal
 truncation, never checkpoints. Ordinary strict construction does not compute a
 checkpoint fingerprint, and complete archive retention/ranking is unchanged.
+Resume rejects a missing consumed piece, altered placed/unplaced decision,
+placement-order or trace mismatch, broken parent chain, inconsistent derived
+occupied identity, changed settlement bounds, phase-capture toggle, or invalid
+cumulative phase ledger. The scheduler quantum alone is deliberately absent
+from the request fingerprint.
 
 Stage 5 shares only archive mechanics: exact admission validation, canonical
 deduplication, namespace storage, and terminal complete dominance. Complete and

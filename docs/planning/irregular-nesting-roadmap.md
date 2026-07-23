@@ -141,7 +141,10 @@ versioned `canonical-grid` strict-constructor checkpoint after fully committed
 piece boundaries. The initial equivalence gate resumes after every piece and
 compares exact state, placement order, traces, and evaluation count with the
 uninterrupted constructor. It does not yet interleave the portfolio or claim a
-wall-time improvement.
+wall-time improvement. Adversarial resume validation now additionally binds
+settlement bounds and phase policy and proves the frozen seed plus consumed
+prefix against every parent transition, exact placed/unplaced accounting,
+trace, occupied identity, and cumulative ledger before portfolio integration.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

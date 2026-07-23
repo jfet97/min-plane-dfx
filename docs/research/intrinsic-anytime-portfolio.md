@@ -344,6 +344,17 @@ and requires exact final state, placement order, step trace, gap evidence, and
 evaluation-count equality with uninterrupted construction. Scheduler and
 archive integration remain intentionally unchanged at this step.
 
+The first review of that seam found that an intact checkpoint resumed
+deterministically but the validator did not yet prove that its supplied state
+contained every consumed prefix piece, and did not bind settlement bounds or
+phase-capture policy. The hardened checkpoint hashes the retained state lineage
+and ledgers, replays the exact parent decision partition from the frozen seed,
+recomputes derived occupied geometry, reconciles per-piece candidate counts,
+and rejects changed runtime/evaluation bounds or phase policy. Corruption tests
+cover omitted pieces, placement-order and unplaced-decision changes, broken
+parents, mismatched identity, reduced counters, policy toggles, and invalid
+nested phase time.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim

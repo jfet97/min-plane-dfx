@@ -165,6 +165,7 @@ export interface IntrinsicStrictDirectCheckpoint {
   readonly version: typeof INTRINSIC_STRICT_DIRECT_CHECKPOINT_VERSION
   readonly producerRole: string
   readonly requestFingerprint: string
+  readonly integrityHash: string
   readonly state: IrregularBeamState
   readonly nextPieceIndex: number
   readonly stepTrace: ReadonlyArray<IntrinsicStrictStepTrace>
@@ -419,14 +420,19 @@ export function constructIntrinsicStrictState(
           frozenPlaced: input.frozenPlaced,
           candidateMode: input.candidateMode,
           settings,
-          producerRole
+          producerRole,
+          maximumRuntimeMs,
+          maximumCandidateEvaluationCount,
+          capturePhaseTimings
         })
       : undefined
     const checkpointError = validateIntrinsicStrictDirectCheckpoint({
       checkpoint: input.checkpoint,
       ...(requestFingerprint === undefined ? {} : { requestFingerprint }),
       producerRole,
-      remainingPreparedPieces: input.remainingPreparedPieces
+      remainingPreparedPieces: input.remainingPreparedPieces,
+      frozenPlaced: input.frozenPlaced,
+      capturePhaseTimings
     })
     if (checkpointError !== undefined) {
       return yield* Effect.fail(
@@ -837,7 +843,7 @@ function makeIntrinsicStrictDirectCheckpoint(input: {
   readonly activeRuntimeMs: number
   readonly phaseLedger: IntrinsicStrictDirectPhaseLedger | undefined
 }): IntrinsicStrictDirectCheckpoint {
-  return {
+  const checkpointWithoutIntegrity = {
     version: INTRINSIC_STRICT_DIRECT_CHECKPOINT_VERSION,
     producerRole: input.producerRole,
     requestFingerprint: input.requestFingerprint,
@@ -849,6 +855,12 @@ function makeIntrinsicStrictDirectCheckpoint(input: {
     activeRuntimeMs: input.activeRuntimeMs,
     phaseLedger: input.phaseLedger
   }
+  return {
+    ...checkpointWithoutIntegrity,
+    integrityHash: intrinsicStrictDirectCheckpointIntegrityHash(
+      checkpointWithoutIntegrity
+    )
+  }
 }
 
 function validateIntrinsicStrictDirectCheckpoint(input: {
@@ -856,6 +868,8 @@ function validateIntrinsicStrictDirectCheckpoint(input: {
   readonly requestFingerprint?: string
   readonly producerRole: string
   readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly frozenPlaced: ReadonlyArray<IrregularPlacedPiece>
+  readonly capturePhaseTimings: boolean
 }): string | undefined {
   const checkpoint = input.checkpoint
   if (checkpoint === undefined) return undefined
@@ -870,6 +884,21 @@ function validateIntrinsicStrictDirectCheckpoint(input: {
     checkpoint.requestFingerprint !== input.requestFingerprint
   ) {
     return 'direct checkpoint producer or request fingerprint does not match.'
+  }
+  const expectedIntegrityHash = intrinsicStrictDirectCheckpointIntegrityHash({
+    version: checkpoint.version,
+    producerRole: checkpoint.producerRole,
+    requestFingerprint: checkpoint.requestFingerprint,
+    state: checkpoint.state,
+    nextPieceIndex: checkpoint.nextPieceIndex,
+    stepTrace: checkpoint.stepTrace,
+    gapFillEvidence: checkpoint.gapFillEvidence,
+    candidateEvaluationCount: checkpoint.candidateEvaluationCount,
+    activeRuntimeMs: checkpoint.activeRuntimeMs,
+    phaseLedger: checkpoint.phaseLedger
+  })
+  if (checkpoint.integrityHash !== expectedIntegrityHash) {
+    return 'direct checkpoint integrity hash does not match its retained state.'
   }
   if (
     !Number.isSafeInteger(checkpoint.nextPieceIndex) ||
@@ -894,13 +923,46 @@ function validateIntrinsicStrictDirectCheckpoint(input: {
   ) {
     return 'direct checkpoint pending suffix does not match the prepared order.'
   }
+  const lineageError = validateIntrinsicStrictDirectCheckpointLineage({
+    checkpoint,
+    remainingPreparedPieces: input.remainingPreparedPieces,
+    frozenPlaced: input.frozenPlaced
+  })
+  if (lineageError !== undefined) return lineageError
+  if (
+    checkpoint.stepTrace.some(
+      (trace, index) => {
+        const preparedPiece = input.remainingPreparedPieces[index]
+        return (
+          preparedPiece === undefined ||
+          trace.pieceId !== preparedPieceId(preparedPiece) ||
+          !Number.isSafeInteger(trace.candidateCount) ||
+          trace.candidateCount < 0
+        )
+      }
+    )
+  ) {
+    return 'direct checkpoint trace does not match the consumed prepared prefix.'
+  }
+  const tracedCandidateEvaluations = checkpoint.stepTrace.reduce(
+    (sum, trace) => sum + trace.candidateCount,
+    0
+  )
   if (
     !Number.isSafeInteger(checkpoint.candidateEvaluationCount) ||
     checkpoint.candidateEvaluationCount < 0 ||
+    checkpoint.candidateEvaluationCount !== tracedCandidateEvaluations ||
     !Number.isFinite(checkpoint.activeRuntimeMs) ||
     checkpoint.activeRuntimeMs < 0
   ) {
     return 'direct checkpoint budget ledger is invalid.'
+  }
+  if (
+    (checkpoint.phaseLedger !== undefined) !== input.capturePhaseTimings ||
+    (checkpoint.phaseLedger !== undefined &&
+      !intrinsicStrictDirectPhaseLedgerValid(checkpoint.phaseLedger))
+  ) {
+    return 'direct checkpoint phase-accounting policy or ledger is invalid.'
   }
   return undefined
 }
@@ -912,6 +974,9 @@ function intrinsicStrictDirectRequestFingerprint(input: {
   readonly candidateMode: IntrinsicStrictCandidateMode
   readonly settings: IrregularNestingSettings
   readonly producerRole: string
+  readonly maximumRuntimeMs: number
+  readonly maximumCandidateEvaluationCount: number | undefined
+  readonly capturePhaseTimings: boolean
 }): string {
   return createHash('sha256')
     .update(
@@ -920,6 +985,11 @@ function intrinsicStrictDirectRequestFingerprint(input: {
         producerRole: input.producerRole,
         candidateMode: input.candidateMode,
         settings: input.settings,
+        settlement: {
+          maximumRuntimeMs: input.maximumRuntimeMs,
+          maximumCandidateEvaluationCount: input.maximumCandidateEvaluationCount,
+          capturePhaseTimings: input.capturePhaseTimings
+        },
         allPreparedPieces: input.allPreparedPieces.map((piece) => ({
           pieceId: preparedPieceId(piece),
           collisionGeometry: piece.collisionGeometry,
@@ -932,6 +1002,197 @@ function intrinsicStrictDirectRequestFingerprint(input: {
       })
     )
     .digest('hex')
+}
+
+function intrinsicStrictDirectCheckpointIntegrityHash(
+  checkpoint: Omit<IntrinsicStrictDirectCheckpoint, 'integrityHash'>
+): string {
+  return createHash('sha256')
+    .update(
+      intrinsicStrictCanonicalJson({
+        version: checkpoint.version,
+        producerRole: checkpoint.producerRole,
+        requestFingerprint: checkpoint.requestFingerprint,
+        stateLineage: intrinsicStrictDirectStateLineage(checkpoint.state),
+        nextPieceIndex: checkpoint.nextPieceIndex,
+        stepTrace: checkpoint.stepTrace,
+        gapFillEvidence: checkpoint.gapFillEvidence,
+        candidateEvaluationCount: checkpoint.candidateEvaluationCount,
+        activeRuntimeMs: checkpoint.activeRuntimeMs,
+        phaseLedger: checkpoint.phaseLedger
+      })
+    )
+    .digest('hex')
+}
+
+function intrinsicStrictDirectStateLineage(
+  state: IrregularBeamState
+): ReadonlyArray<Record<string, unknown>> {
+  const lineage: Array<Record<string, unknown>> = []
+  let cursor: IrregularBeamState | undefined = state
+  while (cursor !== undefined) {
+    lineage.push({
+      pendingIds: cursor.remainingPreparedPieces.map(preparedPieceId),
+      placedIds: cursor.placedCollisionGeometries.map(placedPieceId),
+      unplacedIds: cursor.unplacedPieceIds,
+      placementOrder: cursor.placementOrder,
+      canonicalGeometryIdentity:
+        canonicalCollisionLayoutIdentity(cursor.placedCollisionGeometries) ?? '',
+      canonicalOccupiedGeometryKey: cursor.canonicalOccupiedGeometryKey,
+      translatedCollisionBounds: cursor.translatedCollisionBounds,
+      sharedCollisionBoundaryLengthMm: cursor.sharedCollisionBoundaryLengthMm,
+      sharedCollisionBoundaryContactUnits:
+        cursor.sharedCollisionBoundaryContactUnits,
+      nearCompleteStructuralContactCount:
+        cursor.nearCompleteStructuralContactCount,
+      dominantNearCompleteStructuralContactCount:
+        cursor.dominantNearCompleteStructuralContactCount
+    })
+    cursor = cursor.parent
+  }
+  return lineage
+}
+
+function validateIntrinsicStrictDirectCheckpointLineage(input: {
+  readonly checkpoint: IntrinsicStrictDirectCheckpoint
+  readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly frozenPlaced: ReadonlyArray<IrregularPlacedPiece>
+}): string | undefined {
+  const preparedIds = input.remainingPreparedPieces.map(preparedPieceId)
+  const frozenIds = input.frozenPlaced.map(placedPieceId)
+  let state: IrregularBeamState | undefined = input.checkpoint.state
+
+  for (let depth = input.checkpoint.nextPieceIndex; depth > 0; depth -= 1) {
+    if (state === undefined) {
+      return 'direct checkpoint parent lineage ends before the consumed prefix.'
+    }
+    const stateError = validateIntrinsicStrictDirectState(state)
+    if (stateError !== undefined) return stateError
+    if (!samePieceIds(state.remainingPreparedPieces.map(preparedPieceId), preparedIds.slice(depth))) {
+      return 'direct checkpoint lineage pending order does not match its depth.'
+    }
+    const expectedConsumedIds = [...frozenIds, ...preparedIds.slice(0, depth)]
+    const accountedIds = [
+      ...state.placedCollisionGeometries.map(placedPieceId),
+      ...state.unplacedPieceIds
+    ]
+    if (!samePieceIdSet(accountedIds, expectedConsumedIds)) {
+      return 'direct checkpoint state does not exactly account for the consumed prefix.'
+    }
+    const parent: IrregularBeamState | undefined = state.parent
+    if (parent === undefined) {
+      return 'direct checkpoint parent lineage ends before the consumed prefix.'
+    }
+    const pieceId = preparedIds[depth - 1]
+    const placedDelta = state.placementOrder.length - parent.placementOrder.length
+    const unplacedDelta = state.unplacedPieceIds.length - parent.unplacedPieceIds.length
+    const placedTransition =
+      placedDelta === 1 &&
+      unplacedDelta === 0 &&
+      state.placementOrder[state.placementOrder.length - 1] === pieceId
+    const unplacedTransition =
+      placedDelta === 0 &&
+      unplacedDelta === 1 &&
+      state.unplacedPieceIds[state.unplacedPieceIds.length - 1] === pieceId
+    if (!placedTransition && !unplacedTransition) {
+      return 'direct checkpoint parent lineage has an invalid consumed-piece transition.'
+    }
+    state = parent
+  }
+
+  if (state === undefined) {
+    return 'direct checkpoint parent lineage has no frozen-seed root.'
+  }
+  const rootError = validateIntrinsicStrictDirectState(state)
+  if (rootError !== undefined) return rootError
+  const anchoredFrozen = new IrregularBeamState({
+    remainingPreparedPieces: input.remainingPreparedPieces,
+    placedCollisionGeometries: input.frozenPlaced,
+    placementOrder: frozenIds
+  }).withBottomLeftAnchored()
+  if (
+    anchoredFrozen === undefined ||
+    state.parent !== undefined ||
+    state.unplacedPieceIds.length !== 0 ||
+    !samePieceIds(state.remainingPreparedPieces.map(preparedPieceId), preparedIds) ||
+    !samePieceIds(state.placementOrder, frozenIds) ||
+    state.canonicalOccupiedGeometryKey !== anchoredFrozen.canonicalOccupiedGeometryKey
+  ) {
+    return 'direct checkpoint parent lineage does not terminate at the frozen seed.'
+  }
+  return undefined
+}
+
+function validateIntrinsicStrictDirectState(state: IrregularBeamState): string | undefined {
+  const placedIds = state.placedCollisionGeometries.map(placedPieceId)
+  if (!samePieceIds(placedIds, state.placementOrder)) {
+    return 'direct checkpoint placed geometry IDs do not match placement order.'
+  }
+  if (
+    state.placedCollisionGeometries.length > 0 &&
+    !assertCanonicalGridLegalLayout(
+      intrinsicBoundsSheet(state),
+      state.placedCollisionGeometries
+    )
+  ) {
+    return 'direct checkpoint lineage contains a non-canonical layout.'
+  }
+  const recomputed = new IrregularBeamState({
+    remainingPreparedPieces: state.remainingPreparedPieces,
+    placedCollisionGeometries: state.placedCollisionGeometries,
+    unplacedPieceIds: state.unplacedPieceIds,
+    placementOrder: state.placementOrder,
+    ...(state.parent === undefined ? {} : { parent: state.parent })
+  })
+  if (
+    recomputed.canonicalOccupiedGeometryKey !== state.canonicalOccupiedGeometryKey ||
+    intrinsicStrictCanonicalJson(recomputed.translatedCollisionBounds) !==
+      intrinsicStrictCanonicalJson(state.translatedCollisionBounds) ||
+    recomputed.sharedCollisionBoundaryLengthMm !==
+      state.sharedCollisionBoundaryLengthMm ||
+    recomputed.sharedCollisionBoundaryContactUnits !==
+      state.sharedCollisionBoundaryContactUnits ||
+    recomputed.nearCompleteStructuralContactCount !==
+      state.nearCompleteStructuralContactCount ||
+    recomputed.dominantNearCompleteStructuralContactCount !==
+      state.dominantNearCompleteStructuralContactCount ||
+    !state.placedCollisionIndex.matches(state.placedCollisionGeometries)
+  ) {
+    return 'direct checkpoint state derived geometry identity is inconsistent.'
+  }
+  return undefined
+}
+
+function intrinsicStrictDirectPhaseLedgerValid(
+  ledger: IntrinsicStrictDirectPhaseLedger
+): boolean {
+  return [
+    ledger.candidateGenerationMs,
+    ledger.candidateStateScoringMs,
+    ...Object.values(ledger.candidateState)
+  ].every((value) => Number.isFinite(value) && value >= 0)
+}
+
+function samePieceIds(
+  first: ReadonlyArray<PieceId>,
+  second: ReadonlyArray<PieceId>
+): boolean {
+  return (
+    first.length === second.length &&
+    first.every((pieceId, index) => pieceId === second[index])
+  )
+}
+
+function samePieceIdSet(
+  first: ReadonlyArray<PieceId>,
+  second: ReadonlyArray<PieceId>
+): boolean {
+  const firstSorted = first.toSorted()
+  const secondSorted = second.toSorted()
+  return (
+    firstSorted.length === secondSorted.length &&
+    firstSorted.every((pieceId, index) => pieceId === secondSorted[index])
+  )
 }
 
 function intrinsicStrictCanonicalJson(value: unknown): string {

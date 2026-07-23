@@ -26,6 +26,7 @@ import {
   measureIntrinsicStrictCanonicalEnvelope,
   rankIntrinsicStrictCompletedLayouts,
   selectIntrinsicStrictFamilyWinner,
+  type IntrinsicStrictDirectCheckpoint,
   type IntrinsicStrictComparatorMode,
   type IntrinsicStrictCompletedMetrics
 } from '../../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
@@ -40,6 +41,7 @@ import {
   type IntrinsicPartialGeometricBeamCandidate,
   type IntrinsicQueueBeamAxes
 } from '../../src/workers/algorithm/irregular/intrinsicQueueBeamDiscriminator.js'
+import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
 import { assertCanonicalGridLegalLayout } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
@@ -259,6 +261,154 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       _tag: 'IntrinsicStrictDecoderError',
       operation: 'directCheckpoint'
     })
+  })
+
+  it('rejects corrupted direct state lineage and changed settlement policy', async () => {
+    const pieces = [
+      preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('third', rectanglePoints(1, 2), [transform(0, 0), transform(1, 90)])
+    ]
+    const run = (input: {
+      readonly checkpoint?: IntrinsicStrictDirectCheckpoint
+      readonly maximumRuntimeMs?: number
+      readonly maximumCandidateEvaluationCount?: number
+      readonly capturePhaseTimings?: boolean
+    }) =>
+      Effect.runPromise(
+        constructIntrinsicStrictState({
+          allPreparedPieces: pieces,
+          remainingPreparedPieces: pieces,
+          frozenPlaced: [],
+          candidateMode: 'pure-growth',
+          producerRole: 'canonical-grid',
+          maximumCompletedPieceBoundaries: 1,
+          ...(input.checkpoint === undefined
+            ? {}
+            : { checkpoint: input.checkpoint }),
+          ...(input.maximumRuntimeMs === undefined
+            ? {}
+            : { maximumRuntimeMs: input.maximumRuntimeMs }),
+          ...(input.maximumCandidateEvaluationCount === undefined
+            ? {}
+            : {
+                maximumCandidateEvaluationCount:
+                  input.maximumCandidateEvaluationCount
+              }),
+          ...(input.capturePhaseTimings !== true
+            ? {}
+            : { capturePhaseTimings: true })
+        }).pipe(
+          Effect.provide(GeometryKernel.Live),
+          Effect.provide(GeometrySettings.Live),
+          Effect.provide(NfpIfpServiceLive)
+        )
+      )
+    const expectCheckpointRejection = async (
+      checkpoint: IntrinsicStrictDirectCheckpoint,
+      options: {
+        readonly maximumRuntimeMs?: number
+        readonly maximumCandidateEvaluationCount?: number
+        readonly capturePhaseTimings?: boolean
+      } = {}
+    ) => {
+      await expect(run({ checkpoint, ...options })).rejects.toMatchObject({
+        _tag: 'IntrinsicStrictDecoderError',
+        operation: 'directCheckpoint'
+      })
+    }
+
+    const first = await run({})
+    const checkpoint = first.checkpoint
+    if (checkpoint === undefined) throw new Error('expected direct checkpoint')
+    const root = checkpoint.state.parent
+    if (root === undefined) throw new Error('expected direct checkpoint root')
+
+    const missingProcessedState = new IrregularBeamState({
+      remainingPreparedPieces: checkpoint.state.remainingPreparedPieces,
+      placedCollisionGeometries: [],
+      placementOrder: [],
+      parent: root
+    })
+    const changedPlacementOrderState = new IrregularBeamState({
+      remainingPreparedPieces: checkpoint.state.remainingPreparedPieces,
+      placedCollisionGeometries: checkpoint.state.placedCollisionGeometries,
+      placementOrder: [],
+      parent: root
+    })
+    const changedUnplacedDecisionState = new IrregularBeamState({
+      remainingPreparedPieces: checkpoint.state.remainingPreparedPieces,
+      placedCollisionGeometries: checkpoint.state.placedCollisionGeometries,
+      unplacedPieceIds: [PieceId.make('first')],
+      placementOrder: checkpoint.state.placementOrder,
+      parent: root
+    })
+    const brokenParentState = new IrregularBeamState({
+      remainingPreparedPieces: checkpoint.state.remainingPreparedPieces,
+      placedCollisionGeometries: checkpoint.state.placedCollisionGeometries,
+      placementOrder: checkpoint.state.placementOrder
+    })
+    const mismatchedIdentityState = new IrregularBeamState({
+      remainingPreparedPieces: checkpoint.state.remainingPreparedPieces,
+      placedCollisionGeometries: checkpoint.state.placedCollisionGeometries,
+      placementOrder: checkpoint.state.placementOrder,
+      parent: root
+    })
+    Object.defineProperty(mismatchedIdentityState, 'canonicalOccupiedGeometryKey', {
+      value: 'corrupted-occupied-identity'
+    })
+
+    await expectCheckpointRejection({
+      ...checkpoint,
+      state: missingProcessedState
+    })
+    await expectCheckpointRejection({
+      ...checkpoint,
+      state: changedPlacementOrderState
+    })
+    await expectCheckpointRejection({
+      ...checkpoint,
+      state: changedUnplacedDecisionState
+    })
+    await expectCheckpointRejection({ ...checkpoint, state: brokenParentState })
+    await expectCheckpointRejection({
+      ...checkpoint,
+      state: mismatchedIdentityState
+    })
+    await expectCheckpointRejection({
+      ...checkpoint,
+      candidateEvaluationCount: checkpoint.candidateEvaluationCount - 1
+    })
+    await expectCheckpointRejection(checkpoint, { maximumRuntimeMs: 120_001 })
+
+    const capped = await run({
+      maximumCandidateEvaluationCount: Number.MAX_SAFE_INTEGER
+    })
+    const cappedCheckpoint = capped.checkpoint
+    if (cappedCheckpoint === undefined) {
+      throw new Error('expected candidate-bounded direct checkpoint')
+    }
+    await expectCheckpointRejection(cappedCheckpoint, {
+      maximumCandidateEvaluationCount: Number.MAX_SAFE_INTEGER - 1
+    })
+
+    const phased = await run({ capturePhaseTimings: true })
+    const phasedCheckpoint = phased.checkpoint
+    const phaseLedger = phasedCheckpoint?.phaseLedger
+    if (phasedCheckpoint === undefined || phaseLedger === undefined) {
+      throw new Error('expected phase-accounted direct checkpoint')
+    }
+    await expectCheckpointRejection(phasedCheckpoint)
+    await expectCheckpointRejection(
+      {
+        ...phasedCheckpoint,
+        phaseLedger: {
+          ...phaseLedger,
+          candidateGenerationMs: -1
+        }
+      },
+      { capturePhaseTimings: true }
+    )
   })
 
   it('preserves E1 output through the empty seeded-construction wrapper', async () => {

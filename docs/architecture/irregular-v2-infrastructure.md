@@ -199,7 +199,13 @@ state, and retained its parent lineage. The checkpoint is sheetless and binds
 the producer mode, prepared request/settings fingerprint, exact state, pending
 suffix, traces, and cumulative active-work/evaluation ledgers. Candidate caps
 that stop within a piece remain non-resumable truncation. Fingerprinting is
-disabled on the ordinary path.
+disabled on the ordinary path. Resume also revalidates the complete parent
+chain: every consumed prepared ID must occur exactly once as placed or
+unplaced, placement order and per-piece traces must agree with that chain, and
+derived occupied geometry must recompute exactly. The integrity hash covers the
+retained lineage and ledgers. Runtime/evaluation settlement bounds and
+phase-capture policy are fingerprinted; only the completed-piece scheduler
+quantum may change between resumes.
 
 An additional observer-only experimental complete cohort makes one explicit
 place/defer decision by moving the first pending piece to a second pass. Its
