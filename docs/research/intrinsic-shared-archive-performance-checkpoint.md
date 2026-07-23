@@ -141,3 +141,13 @@ Additional immutable evidence:
   `/private/tmp/min-plane-provenance/candidate-scoring-triangle-70b8a6d-20260723/`
 - current two-sheet production gate:
   `/private/tmp/min-plane-provenance/replay-scoring-two-sheet-7544766-20260723/`
+
+The final explicit-export boundary at `90ccd6e` preserves the same production
+Mixed identity in `52,050.925 ms`. Its paired `900 x 1800` and `1000 x 1300`
+runs remain geometry-equivalent at `52,487.343 ms` and `52,711.057 ms`.
+Final evidence:
+
+- production Mixed:
+  `/private/tmp/min-plane-provenance/replay-scoring-final-90ccd6e-20260723/`
+- paired sheet gate:
+  `/private/tmp/min-plane-provenance/replay-scoring-two-sheet-90ccd6e-20260723/`

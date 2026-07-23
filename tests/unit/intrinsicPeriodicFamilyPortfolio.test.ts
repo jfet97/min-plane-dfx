@@ -272,6 +272,7 @@ describe('intrinsic periodic family portfolio', () => {
     const withoutWitnesses = await run(false)
     const withWitnesses = await run(true)
 
+    expect(withWitnesses.sourceAuditReplayEnvelope).toBeUndefined()
     expect(
       withoutWitnesses.continuations.some(({ sourceId }) => sourceId.startsWith('raw-witness:'))
     ).toBe(false)
