@@ -1,4 +1,5 @@
 import { Effect } from 'effect'
+import { createHash } from 'node:crypto'
 import { performance } from 'node:perf_hooks'
 import type { PieceId } from '@shared/domain/ids.js'
 import type { SheetSpec } from '@shared/domain/nesting.js'
@@ -50,7 +51,94 @@ export const INTRINSIC_CAPACITY_V1_BOUNDS = {
   placementEvaluationQuotaPerDepth: 4_096
 } as const
 
-export type IntrinsicCapacitySettlement = 'exhausted' | 'evaluation-cap'
+export const INTRINSIC_ANYTIME_CHECKPOINT_VERSION = 'intrinsic-anytime-checkpoint-v1' as const
+
+export type IntrinsicCapacitySettlement = 'exhausted' | 'evaluation-cap' | 'paused'
+
+export type IntrinsicAnytimeProducerRole =
+  | 'capacity-cold'
+  | 'capacity-warm-prefix'
+  | 'legacy-complete'
+  | 'experimental-place-defer-complete'
+
+export type IntrinsicAnytimeArchiveCohort =
+  | 'complete'
+  | 'partial'
+  | 'experimental-complete'
+
+export type IntrinsicAnytimeEligibility = 'completeEligible' | 'subsetOnly'
+
+export interface IntrinsicAnytimeFitMask {
+  readonly q0: boolean
+  readonly q90: boolean
+}
+
+export interface IntrinsicAnytimeDecisionState {
+  readonly state: IrregularBeamState
+  readonly eligibility: IntrinsicAnytimeEligibility
+  readonly placedPreparedIds: ReadonlyArray<PieceId>
+  readonly pendingPreparedIds: ReadonlyArray<PieceId>
+  readonly deferredPreparedIds: ReadonlyArray<PieceId>
+  readonly permanentlySkippedPreparedIds: ReadonlyArray<PieceId>
+  readonly pendingOrder: ReadonlyArray<PieceId>
+  readonly cursor: number
+  readonly pass: number
+  readonly deferralCounts: Readonly<Record<string, number>>
+  readonly placedDoubledMaterialAreaGrid2: bigint
+  readonly cavities: IntrinsicCapacityCavityMetrics
+  readonly anchoredOccupiedKey: string
+  readonly gridSpan: IntrinsicCapacityGridSpan
+  readonly fitMask: IntrinsicAnytimeFitMask
+}
+
+export interface IntrinsicAnytimeDepthBudgetLedger {
+  readonly depth: number
+  readonly consumedPlacementEvaluations: number
+  readonly quotaExhausted: boolean
+}
+
+export interface IntrinsicAnytimeBudgetLedgers {
+  readonly totalPlacementEvaluationCap: number
+  readonly totalConsumedPlacementEvaluations: number
+  readonly perDepth: ReadonlyArray<IntrinsicAnytimeDepthBudgetLedger>
+  readonly perCohort: Readonly<{
+    readonly complete: number
+    readonly partial: number
+    readonly experimentalComplete: number
+  }>
+}
+
+export interface IntrinsicAnytimeNoSkipFrontierState {
+  readonly present: boolean
+  readonly firstLossDepth: number | undefined
+}
+
+export interface IntrinsicCapacitySearchCounters {
+  readonly prunedByAttainableCount: number
+  readonly prunedByAttainableMaterial: number
+  readonly deduplicatedSuccessors: number
+  readonly fitRejectedCandidates: number
+  readonly invalidCandidates: number
+  readonly endpointFitRejections: number
+  readonly completedDepths: number
+  readonly depthQuotaExhaustions: number
+}
+
+export interface IntrinsicAnytimeCheckpoint {
+  readonly version: typeof INTRINSIC_ANYTIME_CHECKPOINT_VERSION
+  readonly requestFingerprint: string
+  readonly producerRole: IntrinsicAnytimeProducerRole
+  readonly archiveCohort: IntrinsicAnytimeArchiveCohort
+  readonly frontier: ReadonlyArray<IntrinsicAnytimeDecisionState>
+  readonly nextDepth: number
+  readonly depthBoundaryResumePosition: number
+  readonly budgetLedgers: IntrinsicAnytimeBudgetLedgers
+  readonly schedulerDeficit: number
+  readonly settlement: 'active'
+  readonly censoring: 'none'
+  readonly noSkipFrontier: IntrinsicAnytimeNoSkipFrontierState
+  readonly counters: IntrinsicCapacitySearchCounters
+}
 
 export interface IntrinsicCapacitySearchTrace {
   readonly beamWidth: number
@@ -84,10 +172,12 @@ export interface IntrinsicCapacitySearchPhaseTimings {
 }
 
 export interface IntrinsicCapacitySearchResult {
+  readonly status: 'paused' | 'settled'
   /** Deduplicated cold endpoints ranked by the capacity objective. */
   readonly endpoints: ReadonlyArray<IntrinsicCapacityEndpoint>
   readonly trace: IntrinsicCapacitySearchTrace
   readonly phaseTimings: IntrinsicCapacitySearchPhaseTimings | undefined
+  readonly checkpoint: IntrinsicAnytimeCheckpoint | undefined
 }
 
 export interface RunIntrinsicCapacityColdSearchInput {
@@ -99,6 +189,10 @@ export interface RunIntrinsicCapacityColdSearchInput {
   readonly incumbent?: IntrinsicCapacityEndpoint
   readonly control?: IrregularNfpIfpControl
   readonly capturePhaseTimings?: boolean
+  /** Resume only from a validated depth-boundary checkpoint. */
+  readonly checkpoint?: IntrinsicAnytimeCheckpoint
+  /** Test/scheduler seam. Omit to run through settlement. */
+  readonly maximumDepthBoundaries?: number
 }
 
 interface CapacityBeamEntry {
@@ -182,6 +276,38 @@ export function runIntrinsicCapacityColdSearch(
         })
       )
     }
+    const requestFingerprint = intrinsicCapacityRequestFingerprint(input)
+    const maximumDepthBoundaries = input.maximumDepthBoundaries
+    if (
+      maximumDepthBoundaries !== undefined &&
+      (!Number.isSafeInteger(maximumDepthBoundaries) || maximumDepthBoundaries <= 0)
+    ) {
+      return yield* Effect.fail(
+        new IntrinsicCapacityError({
+          operation: 'coldSearchCheckpoint',
+          message: 'maximumDepthBoundaries must be a positive safe integer.'
+        })
+      )
+    }
+    if (input.checkpoint !== undefined) {
+      const checkpointError = validateIntrinsicCapacityCheckpoint({
+        checkpoint: input.checkpoint,
+        requestFingerprint,
+        preparedIds,
+        materialAreasByPieceId: input.materialAreasByPieceId,
+        placementEvaluationCap,
+        sheetWidthGrid,
+        sheetHeightGrid
+      })
+      if (checkpointError !== undefined) {
+        return yield* Effect.fail(
+          new IntrinsicCapacityError({
+            operation: 'coldSearchCheckpoint',
+            message: checkpointError
+          })
+        )
+      }
+    }
 
     const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
     const timings = {
@@ -192,38 +318,60 @@ export function runIntrinsicCapacityColdSearch(
       retentionMs: 0,
       endpointMaterializationMs: 0
     }
-    let consumedPlacementEvaluations = 0
-    let prunedByAttainableCount = 0
-    let prunedByAttainableMaterial = 0
-    let deduplicatedSuccessors = 0
-    let fitRejectedCandidates = 0
-    let invalidCandidates = 0
-    let endpointFitRejections = 0
-    let completedDepths = 0
-    let depthQuotaExhaustions = 0
+    const resumedCounters = input.checkpoint?.counters
+    let consumedPlacementEvaluations =
+      input.checkpoint?.budgetLedgers.totalConsumedPlacementEvaluations ?? 0
+    let prunedByAttainableCount = resumedCounters?.prunedByAttainableCount ?? 0
+    let prunedByAttainableMaterial = resumedCounters?.prunedByAttainableMaterial ?? 0
+    let deduplicatedSuccessors = resumedCounters?.deduplicatedSuccessors ?? 0
+    let fitRejectedCandidates = resumedCounters?.fitRejectedCandidates ?? 0
+    let invalidCandidates = resumedCounters?.invalidCandidates ?? 0
+    let endpointFitRejections = resumedCounters?.endpointFitRejections ?? 0
+    let completedDepths = resumedCounters?.completedDepths ?? 0
+    let depthQuotaExhaustions = resumedCounters?.depthQuotaExhaustions ?? 0
     let settlement: IntrinsicCapacitySettlement = 'exhausted'
-
-    const emptyState = IrregularBeamState.empty(input.preparedPieces)
-    const emptySpan = intrinsicCapacityStateGridSpan(emptyState)
-    if (emptySpan === undefined) {
-      return yield* Effect.fail(
-        new IntrinsicCapacityError({
-          operation: 'coldSearchEmptyState',
-          message: 'the empty capacity state must have finite occupied bounds.'
-        })
-      )
-    }
-    let beam: ReadonlyArray<CapacityBeamEntry> = [
-      {
-        state: emptyState,
-        placedDoubledMaterialAreaGrid2: 0n,
-        anchoredOccupiedKey: emptyState.canonicalOccupiedGeometryKey,
-        gridSpan: emptySpan,
-        cavities: { count: 0, totalAreaMm2: 0 }
+    let perDepthBudgetLedgers: ReadonlyArray<IntrinsicAnytimeDepthBudgetLedger> =
+      input.checkpoint?.budgetLedgers.perDepth ?? []
+    let noSkipFrontier: IntrinsicAnytimeNoSkipFrontierState =
+      input.checkpoint?.noSkipFrontier ?? {
+        present: true,
+        firstLossDepth: undefined
       }
-    ]
+    const startDepth = input.checkpoint?.nextDepth ?? 0
+    let completedDepthBoundariesThisInvocation = 0
 
-    for (let depth = 0; depth < input.preparedPieces.length; depth += 1) {
+    let beam: ReadonlyArray<CapacityBeamEntry>
+    if (input.checkpoint === undefined) {
+      const emptyState = IrregularBeamState.empty(input.preparedPieces)
+      const emptySpan = intrinsicCapacityStateGridSpan(emptyState)
+      if (emptySpan === undefined) {
+        return yield* Effect.fail(
+          new IntrinsicCapacityError({
+            operation: 'coldSearchEmptyState',
+            message: 'the empty capacity state must have finite occupied bounds.'
+          })
+        )
+      }
+      beam = [
+        {
+          state: emptyState,
+          placedDoubledMaterialAreaGrid2: 0n,
+          anchoredOccupiedKey: emptyState.canonicalOccupiedGeometryKey,
+          gridSpan: emptySpan,
+          cavities: { count: 0, totalAreaMm2: 0 }
+        }
+      ]
+    } else {
+      beam = input.checkpoint.frontier.map((entry) => ({
+        state: entry.state,
+        placedDoubledMaterialAreaGrid2: entry.placedDoubledMaterialAreaGrid2,
+        anchoredOccupiedKey: entry.anchoredOccupiedKey,
+        gridSpan: entry.gridSpan,
+        cavities: entry.cavities
+      }))
+    }
+
+    for (let depth = startDepth; depth < input.preparedPieces.length; depth += 1) {
       const piece = input.preparedPieces[depth]
       if (piece === undefined) continue
       const pieceId = preparedIds[depth]
@@ -430,8 +578,70 @@ export function runIntrinsicCapacityColdSearch(
       measuredSurvivors.sort(compareCapacityBeamEntries)
       beam = measuredSurvivors.slice(0, coldBeamWidth)
       completedDepths = depth + 1
+      completedDepthBoundariesThisInvocation += 1
+      perDepthBudgetLedgers = [
+        ...perDepthBudgetLedgers,
+        {
+          depth,
+          consumedPlacementEvaluations: consumedAtDepth,
+          quotaExhausted: depthQuotaExhausted
+        }
+      ]
+      const hasNoSkipState = beam.some((entry) => entry.state.unplacedPieceIds.length === 0)
+      noSkipFrontier = {
+        present: hasNoSkipState,
+        firstLossDepth:
+          noSkipFrontier.firstLossDepth ??
+          (noSkipFrontier.present && !hasNoSkipState ? depth + 1 : undefined)
+      }
       if (capture) timings.retentionMs += performance.now() - retentionStartedAt
       if (beam.length === 0) break
+      if (
+        maximumDepthBoundaries !== undefined &&
+        completedDepthBoundariesThisInvocation >= maximumDepthBoundaries &&
+        depth + 1 < input.preparedPieces.length
+      ) {
+        const counters = capacitySearchCounters({
+          prunedByAttainableCount,
+          prunedByAttainableMaterial,
+          deduplicatedSuccessors,
+          fitRejectedCandidates,
+          invalidCandidates,
+          endpointFitRejections,
+          completedDepths,
+          depthQuotaExhaustions
+        })
+        const checkpoint = makeIntrinsicCapacityCheckpoint({
+          requestFingerprint,
+          beam,
+          preparedIds,
+          nextDepth: depth + 1,
+          placementEvaluationCap,
+          consumedPlacementEvaluations,
+          perDepthBudgetLedgers,
+          noSkipFrontier,
+          counters,
+          sheetWidthGrid,
+          sheetHeightGrid
+        })
+        const totalMs = Math.max(0, performance.now() - startedAt)
+        return {
+          status: 'paused',
+          endpoints: [],
+          trace: makeIntrinsicCapacitySearchTrace({
+            coldBeamWidth,
+            localLegalPlacementFanout,
+            placementEvaluationCap,
+            placementEvaluationQuotaPerDepth,
+            consumedPlacementEvaluations,
+            counters,
+            pieceCount: input.preparedPieces.length,
+            settlement: 'paused'
+          }),
+          phaseTimings: capture ? { ...timings, totalMs } : undefined,
+          checkpoint
+        }
+      }
     }
 
     const materializationStartedAt = capture ? performance.now() : 0
@@ -462,29 +672,318 @@ export function runIntrinsicCapacityColdSearch(
     }
 
     const totalMs = Math.max(0, performance.now() - startedAt)
+    const counters = capacitySearchCounters({
+      prunedByAttainableCount,
+      prunedByAttainableMaterial,
+      deduplicatedSuccessors,
+      fitRejectedCandidates,
+      invalidCandidates,
+      endpointFitRejections,
+      completedDepths,
+      depthQuotaExhaustions
+    })
     return {
+      status: 'settled',
       endpoints,
-      trace: {
-        beamWidth: coldBeamWidth,
+      trace: makeIntrinsicCapacitySearchTrace({
+        coldBeamWidth,
         localLegalPlacementFanout,
         placementEvaluationCap,
         placementEvaluationQuotaPerDepth,
         consumedPlacementEvaluations,
-        auxiliaryPlacementEvaluations: 0,
-        prunedByAttainableCount,
-        prunedByAttainableMaterial,
-        deduplicatedSuccessors,
-        fitRejectedCandidates,
-        invalidCandidates,
-        endpointFitRejections,
-        completedDepths,
-        depthQuotaExhaustions,
+        counters,
         pieceCount: input.preparedPieces.length,
         settlement
-      },
-      phaseTimings: capture ? { ...timings, totalMs } : undefined
+      }),
+      phaseTimings: capture ? { ...timings, totalMs } : undefined,
+      checkpoint: undefined
     }
   })
+}
+
+function capacitySearchCounters(
+  counters: IntrinsicCapacitySearchCounters
+): IntrinsicCapacitySearchCounters {
+  return counters
+}
+
+function makeIntrinsicCapacitySearchTrace(input: {
+  readonly coldBeamWidth: number
+  readonly localLegalPlacementFanout: number
+  readonly placementEvaluationCap: number
+  readonly placementEvaluationQuotaPerDepth: number
+  readonly consumedPlacementEvaluations: number
+  readonly counters: IntrinsicCapacitySearchCounters
+  readonly pieceCount: number
+  readonly settlement: IntrinsicCapacitySettlement
+}): IntrinsicCapacitySearchTrace {
+  return {
+    beamWidth: input.coldBeamWidth,
+    localLegalPlacementFanout: input.localLegalPlacementFanout,
+    placementEvaluationCap: input.placementEvaluationCap,
+    placementEvaluationQuotaPerDepth: input.placementEvaluationQuotaPerDepth,
+    consumedPlacementEvaluations: input.consumedPlacementEvaluations,
+    auxiliaryPlacementEvaluations: 0,
+    ...input.counters,
+    pieceCount: input.pieceCount,
+    settlement: input.settlement
+  }
+}
+
+function makeIntrinsicCapacityCheckpoint(input: {
+  readonly requestFingerprint: string
+  readonly beam: ReadonlyArray<CapacityBeamEntry>
+  readonly preparedIds: ReadonlyArray<PieceId>
+  readonly nextDepth: number
+  readonly placementEvaluationCap: number
+  readonly consumedPlacementEvaluations: number
+  readonly perDepthBudgetLedgers: ReadonlyArray<IntrinsicAnytimeDepthBudgetLedger>
+  readonly noSkipFrontier: IntrinsicAnytimeNoSkipFrontierState
+  readonly counters: IntrinsicCapacitySearchCounters
+  readonly sheetWidthGrid: number
+  readonly sheetHeightGrid: number
+}): IntrinsicAnytimeCheckpoint {
+  const pendingPreparedIds = input.preparedIds.slice(input.nextDepth)
+  return {
+    version: INTRINSIC_ANYTIME_CHECKPOINT_VERSION,
+    requestFingerprint: input.requestFingerprint,
+    producerRole: 'capacity-cold',
+    archiveCohort: 'partial',
+    frontier: input.beam.map((entry) => {
+      const permanentlySkippedPreparedIds = [...entry.state.unplacedPieceIds]
+      const fitMask = intrinsicCapacitySpanFitsSheet(
+        entry.gridSpan,
+        input.sheetWidthGrid,
+        input.sheetHeightGrid
+      )
+      return {
+        state: entry.state,
+        eligibility:
+          permanentlySkippedPreparedIds.length === 0 ? 'completeEligible' : 'subsetOnly',
+        placedPreparedIds: [...entry.state.placementOrder],
+        pendingPreparedIds,
+        deferredPreparedIds: [],
+        permanentlySkippedPreparedIds,
+        pendingOrder: pendingPreparedIds,
+        cursor: input.nextDepth,
+        pass: 0,
+        deferralCounts: {},
+        placedDoubledMaterialAreaGrid2: entry.placedDoubledMaterialAreaGrid2,
+        cavities: entry.cavities,
+        anchoredOccupiedKey: entry.anchoredOccupiedKey,
+        gridSpan: entry.gridSpan,
+        fitMask
+      }
+    }),
+    nextDepth: input.nextDepth,
+    depthBoundaryResumePosition: input.nextDepth,
+    budgetLedgers: {
+      totalPlacementEvaluationCap: input.placementEvaluationCap,
+      totalConsumedPlacementEvaluations: input.consumedPlacementEvaluations,
+      perDepth: input.perDepthBudgetLedgers,
+      perCohort: {
+        complete: 0,
+        partial: input.consumedPlacementEvaluations,
+        experimentalComplete: 0
+      }
+    },
+    schedulerDeficit: 0,
+    settlement: 'active',
+    censoring: 'none',
+    noSkipFrontier: input.noSkipFrontier,
+    counters: input.counters
+  }
+}
+
+function validateIntrinsicCapacityCheckpoint(input: {
+  readonly checkpoint: IntrinsicAnytimeCheckpoint
+  readonly requestFingerprint: string
+  readonly preparedIds: ReadonlyArray<PieceId>
+  readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
+  readonly placementEvaluationCap: number
+  readonly sheetWidthGrid: number
+  readonly sheetHeightGrid: number
+}): string | undefined {
+  const { checkpoint } = input
+  if (checkpoint.version !== INTRINSIC_ANYTIME_CHECKPOINT_VERSION) {
+    return `unsupported checkpoint version ${checkpoint.version}.`
+  }
+  if (checkpoint.requestFingerprint !== input.requestFingerprint) {
+    return 'checkpoint request/prepared-order fingerprint does not match the current request.'
+  }
+  if (checkpoint.producerRole !== 'capacity-cold' || checkpoint.archiveCohort !== 'partial') {
+    return 'cold capacity search requires a capacity-cold partial-cohort checkpoint.'
+  }
+  if (
+    !Number.isSafeInteger(checkpoint.nextDepth) ||
+    checkpoint.nextDepth <= 0 ||
+    checkpoint.nextDepth >= input.preparedIds.length ||
+    checkpoint.depthBoundaryResumePosition !== checkpoint.nextDepth
+  ) {
+    return 'checkpoint is not positioned at a valid completed depth boundary.'
+  }
+  if (checkpoint.frontier.length === 0) return 'checkpoint frontier must not be empty.'
+  if (
+    checkpoint.budgetLedgers.totalPlacementEvaluationCap !== input.placementEvaluationCap ||
+    checkpoint.budgetLedgers.totalConsumedPlacementEvaluations < 0 ||
+    checkpoint.budgetLedgers.totalConsumedPlacementEvaluations >
+      checkpoint.budgetLedgers.totalPlacementEvaluationCap
+  ) {
+    return 'checkpoint total budget ledger is invalid for the current request.'
+  }
+  if (
+    checkpoint.budgetLedgers.perDepth.length !== checkpoint.nextDepth ||
+    checkpoint.budgetLedgers.perDepth.some(
+      (ledger, index) =>
+        ledger.depth !== index ||
+        !Number.isSafeInteger(ledger.consumedPlacementEvaluations) ||
+        ledger.consumedPlacementEvaluations < 0 ||
+        ledger.consumedPlacementEvaluations >
+          INTRINSIC_CAPACITY_V1_BOUNDS.placementEvaluationQuotaPerDepth
+    )
+  ) {
+    return 'checkpoint per-depth budget ledger is not contiguous or exceeds its quota.'
+  }
+  const consumedFromDepths = checkpoint.budgetLedgers.perDepth.reduce(
+    (sum, ledger) => sum + ledger.consumedPlacementEvaluations,
+    0
+  )
+  if (
+    consumedFromDepths !== checkpoint.budgetLedgers.totalConsumedPlacementEvaluations ||
+    checkpoint.budgetLedgers.perCohort.partial !== consumedFromDepths ||
+    checkpoint.budgetLedgers.perCohort.complete !== 0 ||
+    checkpoint.budgetLedgers.perCohort.experimentalComplete !== 0
+  ) {
+    return 'checkpoint total, per-depth, and per-cohort budget ledgers disagree.'
+  }
+  if (
+    checkpoint.schedulerDeficit !== 0 ||
+    checkpoint.settlement !== 'active' ||
+    checkpoint.censoring !== 'none' ||
+    checkpoint.counters.completedDepths !== checkpoint.nextDepth
+  ) {
+    return 'checkpoint scheduler or settlement state is invalid for a cold depth-boundary resume.'
+  }
+
+  const expectedPendingIds = input.preparedIds.slice(checkpoint.nextDepth)
+  let hasNoSkipState = false
+  for (const entry of checkpoint.frontier) {
+    const statePlacedIds = [...entry.state.placementOrder]
+    const statePendingIds = entry.state.remainingPreparedPieces.map(
+      intrinsicCapacityPreparedPieceId
+    )
+    const stateSkippedIds = [...entry.state.unplacedPieceIds]
+    if (
+      !equalPieceIdArrays(entry.placedPreparedIds, statePlacedIds) ||
+      !equalPieceIdArrays(entry.pendingPreparedIds, expectedPendingIds) ||
+      !equalPieceIdArrays(entry.pendingOrder, expectedPendingIds) ||
+      !equalPieceIdArrays(statePendingIds, expectedPendingIds) ||
+      !equalPieceIdArrays(entry.permanentlySkippedPreparedIds, stateSkippedIds) ||
+      entry.deferredPreparedIds.length !== 0 ||
+      entry.cursor !== checkpoint.nextDepth ||
+      entry.pass !== 0 ||
+      Object.keys(entry.deferralCounts).length !== 0
+    ) {
+      return 'checkpoint future-decision state does not match its beam geometry payload.'
+    }
+    const partition = [
+      ...entry.placedPreparedIds,
+      ...entry.pendingPreparedIds,
+      ...entry.deferredPreparedIds,
+      ...entry.permanentlySkippedPreparedIds
+    ]
+    if (
+      new Set(partition).size !== partition.length ||
+      !equalPieceIdArrays(
+        [...partition].toSorted(compareStrings),
+        [...input.preparedIds].toSorted(compareStrings)
+      )
+    ) {
+      return 'checkpoint placed, pending, deferred, and skipped IDs are not a disjoint request partition.'
+    }
+    const eligibility = stateSkippedIds.length === 0 ? 'completeEligible' : 'subsetOnly'
+    if (entry.eligibility !== eligibility) {
+      return 'checkpoint complete eligibility disagrees with permanent-skip accounting.'
+    }
+    hasNoSkipState ||= eligibility === 'completeEligible'
+    const expectedMaterial = statePlacedIds.reduce<bigint | undefined>((sum, pieceId) => {
+      const area = input.materialAreasByPieceId.get(pieceId)
+      return sum === undefined || area === undefined ? undefined : sum + area
+    }, 0n)
+    if (
+      expectedMaterial === undefined ||
+      expectedMaterial !== entry.placedDoubledMaterialAreaGrid2
+    ) {
+      return 'checkpoint placed-material accounting is invalid.'
+    }
+    const gridSpan = intrinsicCapacityStateGridSpan(entry.state)
+    if (
+      gridSpan === undefined ||
+      gridSpan.widthGrid !== entry.gridSpan.widthGrid ||
+      gridSpan.heightGrid !== entry.gridSpan.heightGrid
+    ) {
+      return 'checkpoint exact occupied span does not match its geometry payload.'
+    }
+    const fitMask = intrinsicCapacitySpanFitsSheet(
+      gridSpan,
+      input.sheetWidthGrid,
+      input.sheetHeightGrid
+    )
+    if (fitMask.q0 !== entry.fitMask.q0 || fitMask.q90 !== entry.fitMask.q90) {
+      return 'checkpoint q0/q90 fit mask does not match its exact occupied span.'
+    }
+    const anchoredOccupiedKey =
+      entry.state.bottomLeftAnchoredCanonicalOccupiedGeometryKey() ??
+      entry.state.canonicalOccupiedGeometryKey
+    if (anchoredOccupiedKey !== entry.anchoredOccupiedKey) {
+      return 'checkpoint anchored occupied identity does not match its geometry payload.'
+    }
+  }
+  if (
+    checkpoint.noSkipFrontier.present !== hasNoSkipState ||
+    (hasNoSkipState && checkpoint.noSkipFrontier.firstLossDepth !== undefined)
+  ) {
+    return 'checkpoint no-skip-frontier state disagrees with the retained frontier.'
+  }
+  return undefined
+}
+
+function intrinsicCapacityRequestFingerprint(input: {
+  readonly sheet: SheetSpec
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
+}): string {
+  const material = [...input.materialAreasByPieceId.entries()]
+    .map(([pieceId, area]) => [pieceId, area] as const)
+    .toSorted(([firstId], [secondId]) => compareStrings(firstId, secondId))
+  return createHash('sha256')
+    .update(
+      canonicalJson({
+        version: INTRINSIC_ANYTIME_CHECKPOINT_VERSION,
+        sheet: input.sheet,
+        preparedPieces: input.preparedPieces,
+        material
+      })
+    )
+    .digest('hex')
+}
+
+function canonicalJson(value: unknown): string {
+  if (typeof value === 'bigint') return JSON.stringify(value.toString())
+  if (value === null || typeof value !== 'object') return JSON.stringify(value)
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`
+  const fields = Object.entries(value)
+    .filter(([, fieldValue]) => fieldValue !== undefined)
+    .toSorted(([firstKey], [secondKey]) => compareStrings(firstKey, secondKey))
+    .map(([key, fieldValue]) => `${JSON.stringify(key)}:${canonicalJson(fieldValue)}`)
+  return `{${fields.join(',')}}`
+}
+
+function equalPieceIdArrays(
+  first: ReadonlyArray<PieceId>,
+  second: ReadonlyArray<PieceId>
+): boolean {
+  return first.length === second.length && first.every((pieceId, index) => pieceId === second[index])
 }
 
 function pushSuccessor(

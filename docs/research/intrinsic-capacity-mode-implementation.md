@@ -255,9 +255,12 @@ the binding constraint there.
 2. **Waste-factor preflight.** Rejected by contract: the preflight must stay
    a proof; every routing decision beyond the two exact proofs belongs to the
    bounded search.
-3. **Warm prefix beam.** Rejected by contract and by the paired evidence:
-   terminalized incumbents already capture the useful prefix value (30/61 on
-   Mixed 700x560) without consuming any cold budget.
+3. **Warm prefix beam.** Not tested by this implementation. The paired evidence
+   measured only terminalized prefix incumbents and their strict pruning value;
+   it did not continue placing later pieces from the captured legal geometry.
+   Those runs therefore do not falsify protected warm continuation. The cold
+   empty-start lane must remain protected in any comparison because a committed
+   prefix may retain early pieces that the best subset should skip.
 4. **Dalsoo-style feature-contact candidate generator and other open-source
    transfers.** The tracked source reviews were sufficient for every design
    decision in this work; no disputed choice required a fresh upstream
@@ -284,7 +287,21 @@ the binding constraint there.
   cavity-first two-piece scheduling, destroy/repair, hull steering, GA,
   broader periodic representation. Nothing in capacity v1 blocks them.
 
-## Remaining Risks And Ranked Next Steps
+## Reviewer Correction And Ranked Next Steps
+
+The accepted follow-up is one stratified anytime portfolio, not a heuristic
+choice between two cold engines. The smallest implemented seam on
+`intrinsic-anytime-portfolio` wraps the unchanged cold beam in a versioned,
+fingerprint-validated depth-boundary checkpoint. It records the retained exact
+geometry frontier, future-decision partitions, q0/q90 masks, exact material and
+cavity values, cumulative budget ledgers, and no-skip-frontier state. Pausing
+does not materialize an endpoint; resuming continues from the next prepared
+piece with cumulative semantic counters.
+
+The focused equivalence test pauses after depth two and proves that the resumed
+endpoint list and complete semantic trace equal an uninterrupted run. The
+production coordinator supplies neither a checkpoint nor a pause quantum, so
+this stage changes no routing or selected layout.
 
 1. **Per-depth quota fairness is not per-state fairness.** Every piece is now
    considered, but earlier retained states can spend a depth's quota before

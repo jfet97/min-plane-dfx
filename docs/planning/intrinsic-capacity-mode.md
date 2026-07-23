@@ -50,7 +50,9 @@ Documented implementation decisions within this contract:
   the structured `capacityTrace` on the compute result, and the portfolio
   termination reason `capacity_subset_settled`.
 
-Deferred, unchanged from this contract: identical-sheet continuation.
+The serial v1 implementation remains the production baseline. It is not the
+accepted end-state. The forward direction is the stratified anytime portfolio
+specified below; identical-sheet continuation remains separate and deferred.
 
 The remainder of this document is the reviewed contract that the
 implementation satisfies.
@@ -91,6 +93,60 @@ more placed pieces
 
 This is an internal production policy. It does not introduce customer-visible
 weights or sheet-relative compactness scoring.
+
+## Accepted Forward Architecture
+
+“Unified” means one deterministic scheduler, checkpoint protocol, exact
+geometry authority, and endpoint/archive service. It does not mean one flat
+beam or one comparator.
+
+The portfolio protects three distinct cohorts:
+
+- the legacy complete cohort keeps its current sheetless constructors, budget,
+  retention, and intrinsic comparator unchanged;
+- subset lanes may permanently skip pieces and keep independent slots and
+  budgets;
+- later place/defer complete-capable experiments remain shadow producers until
+  they reproduce the established complete winners.
+
+Complete and partial states never consume each other's survivor slots. Complete
+dominance applies only after exact endpoint materialization and requested-sheet
+q0/q90 fit. A fitting endpoint from a settled protected complete cohort
+dominates every partial endpoint. A deadline result is explicitly
+`deadline_censored_best_known` and carries a resumable checkpoint; it is not a
+settled capacity result and cannot claim infeasibility.
+
+The ordered implementation stages are:
+
+1. depth-boundary checkpoint/resume for the unchanged cold capacity beam;
+2. scale-free pressure and no-skip-frontier telemetry in shadow;
+3. protected warm-prefix continuation lanes alongside the unchanged cold lane;
+4. deterministic interleaving of protected complete and capacity work;
+5. shared exact endpoint/archive mechanics with separate complete and partial
+   namespaces;
+6. an experimental place/defer complete-capable shadow producer.
+
+No later stage may be promoted from an ambiguous or failed earlier
+measurement.
+
+## Checkpoint Contract
+
+`IrregularBeamState` remains the exact geometry payload. A versioned
+`IntrinsicAnytimeCheckpoint` wraps the retained frontier and records:
+
+- the algorithm version and request/prepared-order fingerprint;
+- producer role, archive cohort, and `completeEligible`/`subsetOnly` status;
+- a disjoint placed, pending, deferred, and permanently skipped partition;
+- pending order, decision cursor, pass and deferral counters, and the next
+  depth boundary;
+- exact material, cavity metrics, anchored identity, and q0/q90 fit mask;
+- total, per-depth, and per-cohort budget ledgers plus scheduler deficit;
+- active/settled/censored state and no-skip-frontier state.
+
+Resume initially occurs only between completed depths. Successor identity in a
+future place/defer producer must include the full future-decision state;
+geometry plus currently placed IDs is sufficient only for the synchronized v1
+cold depth.
 
 ## Stage 0: Proof-Only Capacity Preflight
 
@@ -206,9 +262,10 @@ candidates, capped or incomplete constructors, ordinary requested-sheet beam
 states, and request-oriented copies. Those states are not guaranteed to express
 the same original-order prefix contract.
 
-## Stage 3: Build a Prefix Incumbent
+## Stage 3: Build A Prefix Incumbent In Production V1
 
-Prefix reuse must not create a competing warm beam.
+Production v1 does not create a competing warm beam. This was a conservative
+first-version boundary, not evidence that warm continuation is useless.
 
 After a bounded complete-archive miss:
 
@@ -341,6 +398,8 @@ Reject or revise the implementation if:
 
 Required positive evidence:
 
+- uninterrupted and depth-boundary-resumed cold runs have identical semantic
+  traces and exact endpoint ordering;
 - the six durable Triangle-20, Mixed-61, and Shapes-17 baselines pass on both
   `2000 x 2700` and `600 x 400`;
 - current complete results remain at least equivalent in quality wherever they
@@ -382,13 +441,13 @@ or prevent duplicated work. A future version must evaluate protected reuse or
 handoff of exact complete-search partial states so inconclusive constrained
 sheets do not routinely pay for a full complete run followed by a cold restart.
 
-The user-requested `10%` waste allowance belongs in that routing decision, not
-in the exact proof: when
-`minimumCollisionAreaSum * 1.10 > sheetArea`, the coordinator may classify the
-request as likely constrained and prefer a capacity-first or warm-prefix route.
-It must report this as a heuristic and must not claim mathematical
-impossibility. Promotion requires a protected way to recover the complete
-all-piece result when the heuristic is pessimistic.
+A fixed `minimumCollisionAreaSum * 1.10 > sheetArea` routing rule is rejected.
+It misses both measured serial double-work cases: Mixed-61 on `700 x 500` and
+Shapes-17 on `600 x 400`. Exact raw-area and singleton-fit tests remain proofs.
+Scale-free density, span, fit-slack, or no-skip-frontier measurements may only
+schedule protected work or reserve named diversity buckets. They may not prune
+a complete-capable state, order the legacy complete cohort, consume its slots,
+or enter terminal compactness ranking.
 
 ## Later: Identical-Sheet Continuation
 

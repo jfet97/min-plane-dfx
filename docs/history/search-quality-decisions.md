@@ -236,3 +236,22 @@ See:
 - [`../research/deepnest-svgnest-source-comparison.md`](../research/deepnest-svgnest-source-comparison.md)
 - [`../research/dalsoo-abey-dalalah-transfer-study.md`](../research/dalsoo-abey-dalalah-transfer-study.md)
 - [`../research/irregular-nesting-literature-and-web-research.md`](../research/irregular-nesting-literature-and-web-research.md)
+
+## Unified Intrinsic Capacity Direction
+
+Capacity v1 established exact constrained-sheet output but retained a serial
+boundary: an inconclusive request may finish the complete archive and then
+restart a cold subset beam. Its captured prefixes were tested only as terminal
+incumbents. That evidence did not test continuation from their already legal
+geometry.
+
+The accepted correction is a stratified anytime portfolio. The protected
+legacy complete cohort remains sheetless and unchanged; capacity and later
+place/defer experiments receive independent slots and budgets. They share
+scheduling, checkpoints, exact geometry authority, and endpoint/archive
+mechanics, not one survivor list or comparator. Complete dominance occurs only
+after exact q0/q90 endpoint fit. Fixed `+10%` area routing is rejected.
+
+Implementation proceeds through six separately measurable stages, beginning
+with deterministic cold-search depth-boundary checkpoint/resume. See
+[`../research/intrinsic-anytime-portfolio.md`](../research/intrinsic-anytime-portfolio.md).

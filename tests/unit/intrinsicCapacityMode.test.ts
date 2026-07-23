@@ -509,6 +509,75 @@ describe('intrinsic capacity search', () => {
     expect(first.endpoint.placedPreparedIds).toEqual(second.endpoint.placedPreparedIds)
     expect(first.endpoint.unplacedPreparedIds).toEqual(second.endpoint.unplacedPreparedIds)
   })
+
+  it('resumes at depth boundaries with the uninterrupted trace and endpoint', async () => {
+    const pieces = [
+      preparedRectangle('large', 90, 90),
+      preparedRectangle('small-a', 50, 45),
+      preparedRectangle('small-b', 50, 45),
+      preparedRectangle('small-c', 45, 40)
+    ]
+    const finalSheet = sheet(100, 100)
+    const materialAreasByPieceId = materialsOf(pieces)
+    const uninterrupted = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map()
+      })
+    )
+    const paused = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        maximumDepthBoundaries: 2
+      })
+    )
+
+    expect(paused.status).toBe('paused')
+    expect(paused.endpoints).toEqual([])
+    expect(paused.trace.settlement).toBe('paused')
+    expect(paused.checkpoint?.nextDepth).toBe(2)
+    expect(paused.checkpoint?.frontier.length).toBeGreaterThan(0)
+    expect(paused.checkpoint?.budgetLedgers.perDepth).toHaveLength(2)
+    expect(paused.checkpoint?.frontier.every(({ cursor }) => cursor === 2)).toBe(true)
+
+    const checkpoint = paused.checkpoint
+    expect(checkpoint).toBeDefined()
+    if (checkpoint === undefined) return
+    const resumed = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        checkpoint
+      })
+    )
+
+    expect(uninterrupted.status).toBe('settled')
+    expect(resumed.status).toBe('settled')
+    expect(resumed.checkpoint).toBeUndefined()
+    expect(resumed.trace).toEqual(uninterrupted.trace)
+    expect(
+      resumed.endpoints.map((endpoint) => ({
+        hash: endpoint.canonicalGeometryHash,
+        placed: endpoint.placedPreparedIds,
+        unplaced: endpoint.unplacedPreparedIds,
+        objective: endpoint.metrics
+      }))
+    ).toEqual(
+      uninterrupted.endpoints.map((endpoint) => ({
+        hash: endpoint.canonicalGeometryHash,
+        placed: endpoint.placedPreparedIds,
+        unplaced: endpoint.unplacedPreparedIds,
+        objective: endpoint.metrics
+      }))
+    )
+  })
 })
 
 describe('intrinsic capacity prefixes', () => {

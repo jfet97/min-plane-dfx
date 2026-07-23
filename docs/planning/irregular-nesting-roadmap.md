@@ -71,9 +71,13 @@ evidence is in
 
 The first version does not close the inconclusive-sheet double-work problem:
 captured exact prefixes become terminal incumbents, not continuation states.
-The next capacity revision must compare protected warm-prefix continuation
-against cold capacity and may use the documented `10%` waste allowance only as
-a routing heuristic, never as an exact impossibility proof.
+The accepted next revision is a stratified anytime portfolio: first make the
+cold lane checkpointable, then add shadow pressure/no-skip telemetry, protected
+warm-prefix lanes, deterministic complete/capacity scheduling, shared exact
+archive mechanics, and only then a place/defer complete-capable shadow
+producer. A fixed `10%` waste route is rejected because it misses both measured
+serial-cost cases. Heuristic pressure may schedule protected work but may not
+prune, rank, or displace the legacy complete cohort.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

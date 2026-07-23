@@ -30,6 +30,7 @@ quality production path.
 ## Capacity Mode
 
 - [Intrinsic capacity mode implementation](./intrinsic-capacity-mode-implementation.md)
+- [Unified intrinsic anytime portfolio](./intrinsic-anytime-portfolio.md)
 
 ## Sheet Invariance and Archive Construction
 
