@@ -253,6 +253,18 @@ This is a work-reduction hypothesis until the committed full matrix proves the
 required `700 x 500` and `700 x 560` quality floors, lower aggregate
 evaluations/CPU, accepted-or-better `600 x 400` subsets, and exact roomy hashes.
 
+The first committed measurement at `d827971` rejects a one-depth
+objective-only pilot selector. On Mixed-61 `700 x 560`, it reduces elapsed time
+from the settle-all arm's roughly `105 s` to `67.45 s` and spends about
+`125,846` aggregate capacity evaluations instead of more than one million, but
+selects `legacy-absolute-envelope@30` and returns only `57/61`. The required
+floor is the already observed `59/61` from the canonical/open depth-30 lanes.
+Triangle-20 `300 x 300` also keeps count/material at `15/20` but selects a
+strictly worse exact endpoint than the cold control. One shallow exact partial
+objective is therefore not a reliable continuation-value estimate. This result
+must not be promoted; the next selector change needs an independently justified
+protected-diversity or longer-probe rule.
+
 ## Stage 5: Shared Exact Archive Mechanics
 
 Complete and partial endpoints now pass through one generic exact archive

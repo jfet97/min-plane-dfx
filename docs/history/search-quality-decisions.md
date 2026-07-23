@@ -12,6 +12,13 @@ without consuming their resumable checkpoints. Promotion remains contingent on
 the retained complete hashes, constrained quality floors, and lower aggregate
 work in the full matrix.
 
+The first one-depth selector at `d827971` is rejected. It lowered aggregate work
+substantially, but chose `legacy-absolute-envelope@30` on Mixed-61 `700 x 560`
+and produced `57/61`, below the known `59/61` warm floor. It also chose a
+Triangle-20 warm endpoint that tied count/material but lost the exact cold
+objective. Shallow terminal compactness is not accepted as a proxy for future
+continuation value.
+
 This document condenses the former chronological research ledger into decision
 arcs. Metrics describe the named commit and experiment, not current production,
 unless the row explicitly says otherwise. Detailed reports and negative results

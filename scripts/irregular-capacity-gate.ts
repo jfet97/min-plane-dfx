@@ -295,6 +295,7 @@ interface CapacityRunReport {
         readonly prefixIncumbent: unknown
         readonly coldSearch: unknown
         readonly warmPrefixLanes: unknown
+        readonly laneCoordinator: unknown
         readonly selected: IntrinsicCapacityObjective
         readonly preflightRuntimeMs: number | undefined
         readonly completeArchiveRuntimeMs: number | undefined
@@ -418,6 +419,7 @@ async function runArm(
             prefixIncumbent: trace.prefixIncumbent,
             coldSearch: trace.coldSearch,
             warmPrefixLanes: trace.warmPrefixLanes,
+            laneCoordinator: trace.laneCoordinator,
             selected: trace.selected,
             preflightRuntimeMs: trace.preflightRuntimeMs,
             completeArchiveRuntimeMs: trace.completeArchiveRuntimeMs,
