@@ -18,8 +18,10 @@ import { makePresetShapeDocument } from '../src/shared/presetShapes.js'
 import { preparePieces } from '../src/shared/preparePieces.js'
 import {
   computeIrregularNesting,
+  intrinsicAnytimeSchedulerTraceValid,
   type IrregularComputeResult
 } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
+import type { IntrinsicSharedArchiveEndpoint } from '../src/workers/algorithm/irregular/intrinsicSharedArchivePortfolio.js'
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import {
@@ -253,7 +255,7 @@ async function loadRequest(fixture: FixtureName, sheet: SheetSpec): Promise<Nest
 }
 
 function absoluteCollisionPolygons(
-  result: IrregularComputeResult
+  result: Pick<IrregularComputeResult, 'placedCollisionGeometries'>
 ): ReadonlyArray<ReadonlyArray<LayoutPoint>> {
   return result.placedCollisionGeometries.map(({ placement, collisionGeometry }) =>
     collisionGeometry.polygon.points.map(({ x, y }) => ({
@@ -318,13 +320,18 @@ const args = parseArguments()
 const request = await loadRequest(args.fixture, args.sheet)
 const settings = request.options.irregularSettings
 if (settings === undefined) throw new Error(`${args.fixture} has no irregular settings`)
+let experimentalPlaceDeferEndpoint: IntrinsicSharedArchiveEndpoint | undefined
 const startedAt = performance.now()
 const result = await Effect.runPromise(
   computeIrregularNesting(request, {
     captureCapacityPhaseTimings: true,
     captureCapacityShadowTelemetry: true,
     captureCapacityWarmPrefixTelemetry: true,
-    intrinsicAnytimeSchedulerMode: 'deterministic-v1'
+    intrinsicAnytimeSchedulerMode: 'deterministic-v1',
+    captureExperimentalPlaceDeferCompleteShadow: true,
+    onExperimentalPlaceDeferCompleteEndpoint: (endpoint) => {
+      experimentalPlaceDeferEndpoint = endpoint
+    }
   }).pipe(
     Effect.provide(CollisionGeometryBuilder.Live),
     Effect.provide(TransformGeneratorLive),
@@ -366,7 +373,10 @@ const checks = {
     args.maximumCanonicalCavities === undefined ||
     (canonicalTopology?.enclosedCavityCount ?? Number.POSITIVE_INFINITY) <=
       args.maximumCanonicalCavities,
-  runtime: args.maximumElapsedMs === undefined || elapsedMs <= args.maximumElapsedMs
+  runtime: args.maximumElapsedMs === undefined || elapsedMs <= args.maximumElapsedMs,
+  schedulerChronology:
+    result.intrinsicAnytimeSchedulerTrace === undefined ||
+    intrinsicAnytimeSchedulerTraceValid(result.intrinsicAnytimeSchedulerTrace)
 }
 const passed = Object.values(checks).every(Boolean)
 const report = jsonSafe({
@@ -388,7 +398,16 @@ const report = jsonSafe({
     portfolio: result.portfolio,
     capacityTrace: result.capacityTrace,
     capacityShadowTelemetry: result.capacityShadowTelemetry,
-    intrinsicAnytimeSchedulerTrace: result.intrinsicAnytimeSchedulerTrace
+    intrinsicAnytimeSchedulerTrace: result.intrinsicAnytimeSchedulerTrace,
+    experimentalPlaceDeferTrace: result.experimentalPlaceDeferTrace,
+    experimentalPlaceDeferEndpoint:
+      experimentalPlaceDeferEndpoint === undefined
+        ? undefined
+        : {
+            sheetlessCanonicalGeometryHash:
+              experimentalPlaceDeferEndpoint.sheetlessCanonicalGeometryHash,
+            requestedSheetFit: experimentalPlaceDeferEndpoint.requestedSheetFit
+          }
   },
   checks,
   passed,

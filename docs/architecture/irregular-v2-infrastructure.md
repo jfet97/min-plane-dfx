@@ -176,16 +176,19 @@ Capacity reveal frames carry the settled endpoint's exact unplaced IDs at
 every step, and the proof-only preflight observes the cooperative
 cancellation/deadline control before and during transform measurement.
 
-The serial routing above remains the current production behavior, but it is not
-the accepted final architecture. Development on
-`intrinsic-anytime-portfolio` begins by wrapping the unchanged cold depth loop
-in a versioned request-fingerprinted checkpoint. The checkpoint contains every
-retained `IrregularBeamState` plus its exact future-decision partition,
-material/topology/fit values, cumulative budget ledgers, and no-skip-frontier
-state. It resumes only after a completed depth and changes no production
-routing. Later stages must retain separate protected complete and subset
-cohorts; complete dominance is a terminal endpoint rule, never a shared
-frontier comparator.
+The serial routing above remains the default production behavior. The opt-in
+`intrinsic-anytime-portfolio` now wraps the unchanged cold depth loop in a
+versioned request-fingerprinted checkpoint, grants deterministic protected
+cold/complete/warm quanta, and resumes cold work after an uncensored complete
+miss. Complete and partial endpoints share exact archive storage mechanics but
+retain separate namespaces, survivor policies, and comparators; complete
+dominance is a terminal rule.
+
+An additional observer-only experimental complete cohort makes one explicit
+place/defer decision by moving the first pending piece to a second pass. Its
+checkpoint binds the exact future-decision partition and ledgers. It exposes
+only a skip-free complete endpoint, has no output authority, and remains
+ineligible for promotion until it reproduces the accepted complete matrix.
 
 ### Historical and Experimental Constructors
 

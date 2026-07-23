@@ -41,6 +41,7 @@ import {
   terminalizeIntrinsicCapacityPrefixEndpoints
 } from '../../src/workers/algorithm/irregular/intrinsicCapacityPrefixes.js'
 import { runIntrinsicCapacityColdSearch } from '../../src/workers/algorithm/irregular/intrinsicCapacitySearch.js'
+import { runIntrinsicPlaceDeferCompleteShadow } from '../../src/workers/algorithm/irregular/intrinsicPlaceDeferCompleteShadow.js'
 import { constructIntrinsicStrictState } from '../../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
 import { runIntrinsicSharedArchiveDirectPortfolio } from '../../src/workers/algorithm/irregular/intrinsicSharedArchivePortfolio.js'
 import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
@@ -980,6 +981,91 @@ describe('intrinsic capacity prefixes', () => {
     expect(
       compareIntrinsicCapacityEndpoints(prefixEnabled.endpoint, coldOnly.endpoint)
     ).toBeLessThanOrEqual(0)
+  })
+})
+
+describe('experimental place/defer complete shadow', () => {
+  it('resumes the defer boundary with the uninterrupted trace and endpoint', async () => {
+    const pieces = [
+      preparedRectangle('deferred-a', 20, 10),
+      preparedRectangle('pending-b', 15, 10),
+      preparedRectangle('pending-c', 10, 10)
+    ]
+    const finalSheet = sheet(200, 200)
+    const uninterrupted = await provideGeometry(
+      runIntrinsicPlaceDeferCompleteShadow({
+        sheet: finalSheet,
+        preparedPieces: pieces
+      })
+    )
+    const paused = await provideGeometry(
+      runIntrinsicPlaceDeferCompleteShadow({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        maximumDecisionBoundaries: 1
+      })
+    )
+    expect(paused.status).toBe('paused')
+    expect(paused.checkpoint?.placedPreparedIds).toEqual([])
+    expect(paused.checkpoint?.pendingPreparedIds).toEqual(['pending-b', 'pending-c'])
+    expect(paused.checkpoint?.deferredPreparedIds).toEqual(['deferred-a'])
+    expect(paused.checkpoint?.permanentlySkippedPreparedIds).toEqual([])
+    expect(paused.checkpoint?.pendingOrder).toEqual([
+      'pending-b',
+      'pending-c',
+      'deferred-a'
+    ])
+    const checkpoint = paused.checkpoint
+    expect(checkpoint).toBeDefined()
+    if (checkpoint === undefined) return
+    const resumed = await provideGeometry(
+      runIntrinsicPlaceDeferCompleteShadow({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        checkpoint
+      })
+    )
+    expect(resumed.trace).toEqual(uninterrupted.trace)
+    expect(resumed.endpoint).toEqual(uninterrupted.endpoint)
+    expect(resumed.trace.status).toBe('completed')
+    expect(resumed.trace.outputInfluence).toBe('none')
+    expect(resumed.endpoint?.placedCollisionGeometries).toHaveLength(pieces.length)
+  })
+
+  it('rejects a checkpoint whose future defer decision state changed', async () => {
+    const pieces = [
+      preparedRectangle('deferred-a', 20, 10),
+      preparedRectangle('pending-b', 15, 10)
+    ]
+    const finalSheet = sheet(200, 200)
+    const paused = await provideGeometry(
+      runIntrinsicPlaceDeferCompleteShadow({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        maximumDecisionBoundaries: 1
+      })
+    )
+    const checkpoint = paused.checkpoint
+    expect(checkpoint).toBeDefined()
+    if (checkpoint === undefined) return
+    await expect(
+      provideGeometry(
+        runIntrinsicPlaceDeferCompleteShadow({
+          sheet: finalSheet,
+          preparedPieces: pieces,
+          checkpoint: {
+            ...checkpoint,
+            pendingPreparedIds: [PieceId.make('deferred-a')],
+            deferredPreparedIds: [PieceId.make('pending-b')],
+            pendingOrder: [PieceId.make('deferred-a'), PieceId.make('pending-b')],
+            deferralCounts: { 'pending-b': 1 }
+          }
+        })
+      )
+    ).rejects.toMatchObject({
+      _tag: 'IntrinsicCapacityError',
+      operation: 'placeDeferCheckpoint'
+    })
   })
 })
 

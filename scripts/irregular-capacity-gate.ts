@@ -17,6 +17,7 @@ import { makePresetShapeDocument, type PresetShapeKind } from '../src/shared/pre
 import { preparePieces } from '../src/shared/preparePieces.js'
 import {
   computeIrregularNesting,
+  intrinsicAnytimeSchedulerTraceValid,
   type ComputeIrregularNestingOptions,
   type IrregularComputeResult
 } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
@@ -281,6 +282,7 @@ interface CapacityRunReport {
   readonly terminationReason: string | undefined
   readonly shadowTelemetry: IrregularComputeResult['capacityShadowTelemetry']
   readonly schedulerTrace: IrregularComputeResult['intrinsicAnytimeSchedulerTrace']
+  readonly experimentalPlaceDeferTrace: IrregularComputeResult['experimentalPlaceDeferTrace']
   readonly warmLaneArtifacts: ReadonlyArray<{
     readonly sourceRole: string
     readonly prefixDepth: number
@@ -329,6 +331,7 @@ async function runArm(
     captureCapacityShadowTelemetry: true,
     captureCapacityWarmPrefixTelemetry: true,
     intrinsicAnytimeSchedulerMode: 'deterministic-v1',
+    captureExperimentalPlaceDeferCompleteShadow: true,
     onCapacityWarmPrefixLane: (lane) => {
       warmLaneEndpoints.push(lane)
     }
@@ -405,6 +408,7 @@ async function runArm(
     terminationReason: result.portfolio.terminationReason,
     shadowTelemetry: result.capacityShadowTelemetry,
     schedulerTrace: result.intrinsicAnytimeSchedulerTrace,
+    experimentalPlaceDeferTrace: result.experimentalPlaceDeferTrace,
     warmLaneArtifacts,
     capacity:
       trace === undefined
@@ -506,6 +510,11 @@ for (const fixture of fixtures) {
         productionColdSearch.completedDepths === productionColdSearch.pieceCount) &&
       (coldOnlyColdSearch === undefined ||
         coldOnlyColdSearch.completedDepths === coldOnlyColdSearch.pieceCount),
+    schedulerChronology:
+      (production.schedulerTrace === undefined ||
+        intrinsicAnytimeSchedulerTraceValid(production.schedulerTrace)) &&
+      (coldOnly?.schedulerTrace === undefined ||
+        intrinsicAnytimeSchedulerTraceValid(coldOnly.schedulerTrace)),
     prefixNotBelowColdOnly:
       coldOnly === undefined ||
       (production.capacity !== undefined &&

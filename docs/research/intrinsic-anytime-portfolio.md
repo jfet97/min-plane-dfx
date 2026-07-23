@@ -217,6 +217,22 @@ inspected winning PNG are under
 `/private/tmp/min-plane-provenance/intrinsic-scheduler-b5bfa28/`. The render has
 visible background on all four sides and no truncated polygon.
 
+Post-measurement review found that this report is not valid scheduler-chronology
+evidence: execution settled the resumed cold lane before warm lanes, while the
+trace listed warm settlement first; already-settled short cold runs were also
+reported as cancelled. The layouts, objectives, evaluation totals, runtimes,
+and images remain valid, but the trace transition order is rejected evidence.
+The trace now appends transitions at their actual boundaries and a shared
+validator/gate falsifier rejects illegal ordinals, duplicate settlement, and
+cancellation of already-settled work.
+
+The same measurement also falsifies any Stage 4 speed claim. Checkpoint reuse
+removes a restart but not the summed work: the Mixed cold control still pays
+about `53.58 s` complete plus `9.07 s` cold, while settling every warm lane
+raises the quality arm to about `105.09 s`. This coarse scheduler is useful
+continuation infrastructure, not the final solution to serial cost. Finer
+complete quanta or a separately justified adaptive handoff remain required.
+
 ## Stage 5: Shared Exact Archive Mechanics
 
 Complete and partial endpoints now pass through one generic exact archive
@@ -241,7 +257,30 @@ selection, namespace isolation, and complete dominance. The complete archive,
 capacity mode, scheduler integration, and shared archive suites pass together
 without changing the Stage 4 evidence.
 
-## Remaining Stages
+## Stage 6: Experimental Place/Defer Complete Producer
 
-1. Add place/defer transitions only in an experimental complete-capable shadow
-   producer and judge promotion against the full baseline matrix.
+The first complete-capable experimental producer is deliberately narrow. It
+makes one explicit future decision: defer the first prepared piece, process the
+remaining immutable order, then retry the deferred piece in a second pass. It
+uses the existing exact sheetless strict constructor with a protected `19,862`
+candidate-evaluation cap.
+
+The versioned pause boundary occurs immediately after that defer transition.
+Its checkpoint binds the exact request and prepared geometry, producer and
+experimental archive cohort, `completeEligible` status, disjoint
+placed/pending/deferred/permanently-skipped IDs, future pending order, cursor,
+pass and per-piece deferral counters, exact empty-state geometry, material,
+topology, and fit accounting, protected budget ledgers, scheduler deficit,
+settlement/censoring, and no-skip-frontier state. Resume rejects any changed
+future defer decision.
+
+Only a skip-free complete exact endpoint is exposed. Evaluation-capped or
+incomplete construction produces telemetry but no archive endpoint. The
+producer is observer-only, uses an experimental namespace, and cannot alter
+the legacy complete archive, capacity archive, routing, or worker output.
+Focused tests prove uninterrupted/resumed semantic identity, corrupted future
+decision rejection, and unchanged roomy complete output.
+
+Promotion remains evidence-gated. The full roomy/constrained baseline matrix
+must determine whether this one-defer producer reproduces accepted winners or
+is retained only as rejected shadow evidence.

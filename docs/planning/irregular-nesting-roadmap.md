@@ -98,6 +98,13 @@ own ranking and duplicate policies. Terminal selection encodes fitting-complete
 dominance without flattening the archives. The remaining experimental step is
 the protected place/defer complete-capable shadow producer.
 
+That Stage 6 producer is now implemented behind an observer-only option. Its
+single deterministic transition defers the first pending piece to a second
+pass, and its versioned checkpoint binds the disjoint future-decision state and
+protected evaluation ledger. Only a complete skip-free exact result can become
+an experimental endpoint; it still cannot enter the settled legacy archive.
+Promotion remains blocked on the full matrix.
+
 ### P0: Freeze the archive-only correctness and quality gate
 
 Establish the archive-only baseline before changing allocation or search.

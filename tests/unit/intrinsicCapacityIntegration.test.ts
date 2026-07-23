@@ -12,6 +12,7 @@ import { makePresetShapeDocument } from '@shared/presetShapes.js'
 import { preparePieces } from '@shared/preparePieces.js'
 import {
   computeIrregularNesting,
+  intrinsicAnytimeSchedulerTraceValid,
   type ComputeIrregularNestingOptions
 } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { IrregularLayoutScorer } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
@@ -265,6 +266,24 @@ describe('intrinsic capacity integration', () => {
         true
       )
       expect(scheduled.capacityTrace?.warmPrefixEndpointsAdmitted).toBe(true)
+      expect(
+        scheduled.intrinsicAnytimeSchedulerTrace === undefined
+          ? false
+          : intrinsicAnytimeSchedulerTraceValid(scheduled.intrinsicAnytimeSchedulerTrace)
+      ).toBe(true)
+      expect(
+        scheduled.intrinsicAnytimeSchedulerTrace?.quanta.map(
+          ({ producerRole, outcome }) => `${producerRole}:${outcome}`
+        )
+      ).toEqual([
+        'capacity-cold:checkpointed',
+        'legacy-complete:settled',
+        'capacity-cold:settled',
+        ...Array.from(
+          { length: scheduled.capacityTrace?.warmPrefixLanes?.length ?? 0 },
+          () => 'capacity-warm-prefix:settled'
+        )
+      ])
       expect(scheduled.placedCollisionGeometries.length).toBeGreaterThanOrEqual(
         computed.placedCollisionGeometries.length
       )
@@ -280,7 +299,7 @@ describe('intrinsic capacity integration', () => {
     async () => {
       const request = makeRectangleRequest({
         jobKey: 'capacity-complete-fitted',
-        count: 2,
+        count: 5,
         widthMm: 40,
         heightMm: 30,
         sheet: new SheetSpec({ width: 2000, height: 2700, label: 'roomy 2000x2700' }),
@@ -289,6 +308,9 @@ describe('intrinsic capacity integration', () => {
       const computed = await compute(request)
       const scheduled = await compute(request, {
         intrinsicAnytimeSchedulerMode: 'deterministic-v1'
+      })
+      const experimental = await compute(request, {
+        captureExperimentalPlaceDeferCompleteShadow: true
       })
 
       expect(computed.capacityTrace).toBeUndefined()
@@ -302,6 +324,16 @@ describe('intrinsic capacity integration', () => {
       expect(scheduled.intrinsicAnytimeSchedulerTrace?.quanta.at(-1)?.outcome).toBe(
         'cancelled'
       )
+      expect(
+        scheduled.intrinsicAnytimeSchedulerTrace === undefined
+          ? false
+          : intrinsicAnytimeSchedulerTraceValid(scheduled.intrinsicAnytimeSchedulerTrace)
+      ).toBe(true)
+      expect(experimental.placedCollisionGeometries).toEqual(
+        computed.placedCollisionGeometries
+      )
+      expect(experimental.unplacedPieceIds).toEqual([])
+      expect(experimental.experimentalPlaceDeferTrace?.outputInfluence).toBe('none')
       const diagnosticCodes = computed.diagnostics.map(({ code }) => code)
       expect(diagnosticCodes).toContain('capacity_preflight_inconclusive')
       expect(diagnosticCodes).toContain('complete_archive_fitted')

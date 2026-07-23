@@ -70,6 +70,10 @@ import {
   measureIntrinsicCapacityShadowTelemetry,
   type IntrinsicCapacityShadowTelemetry
 } from './intrinsicCapacityTelemetry.js'
+import {
+  runIntrinsicPlaceDeferCompleteShadow,
+  type IntrinsicPlaceDeferTrace
+} from './intrinsicPlaceDeferCompleteShadow.js'
 
 /** Reports that a prepared piece has no imported geometry available to the worker. */
 export class IrregularComputeError extends Data.TaggedError('IrregularComputeError')<{
@@ -121,6 +125,11 @@ export interface ComputeIrregularNestingOptions {
   }) => void
   /** Opt-in deterministic coarse scheduler experiment. */
   readonly intrinsicAnytimeSchedulerMode?: 'deterministic-v1'
+  /** Opt-in complete-capable place/defer shadow producer. */
+  readonly captureExperimentalPlaceDeferCompleteShadow?: boolean
+  readonly onExperimentalPlaceDeferCompleteEndpoint?: (
+    endpoint: IntrinsicSharedArchiveEndpoint | undefined
+  ) => void
 }
 
 export interface IntrinsicAnytimeSchedulerTrace {
@@ -140,6 +149,56 @@ export interface IntrinsicAnytimeSchedulerTrace {
   }>
 }
 
+/** Verifies scheduler chronology and legal producer-state transitions. */
+export function intrinsicAnytimeSchedulerTraceValid(
+  trace: IntrinsicAnytimeSchedulerTrace
+): boolean {
+  const { quanta } = trace
+  if (
+    quanta.length < 2 ||
+    quanta.some(({ ordinal }, index) => ordinal !== index) ||
+    quanta[0]?.producerRole !== 'capacity-cold' ||
+    quanta[0]?.outcome !== (trace.coldStartStatus === 'paused' ? 'checkpointed' : 'settled')
+  ) {
+    return false
+  }
+  const completeIndexes = quanta.flatMap(({ producerRole }, index) =>
+    producerRole === 'legacy-complete' ? [index] : []
+  )
+  if (completeIndexes.length !== 1 || completeIndexes[0] !== 1) return false
+  const laterCold = quanta.filter(
+    ({ producerRole }, index) => index > 0 && producerRole === 'capacity-cold'
+  )
+  const warmIndexes = quanta.flatMap(({ producerRole }, index) =>
+    producerRole === 'capacity-warm-prefix' ? [index] : []
+  )
+  if (trace.cancellationReason === 'complete-cohort-miss') {
+    if (
+      laterCold.length !== (trace.coldStartStatus === 'paused' ? 1 : 0) ||
+      laterCold.some(({ outcome }) => outcome !== 'settled')
+    ) {
+      return false
+    }
+    const coldSettlementIndex =
+      trace.coldStartStatus === 'paused'
+        ? quanta.findIndex(
+            ({ producerRole, outcome }, index) =>
+              index > 0 && producerRole === 'capacity-cold' && outcome === 'settled'
+          )
+        : 0
+    return warmIndexes.every((index) => index > coldSettlementIndex)
+  }
+  if (trace.cancellationReason === 'complete-endpoint-fitted') {
+    return (
+      trace.coldStartStatus === 'paused' &&
+      laterCold.length === 1 &&
+      laterCold[0]?.outcome === 'cancelled' &&
+      warmIndexes.length === 0
+    )
+  }
+  return trace.coldStartStatus === 'settled' && laterCold.length === 0 && warmIndexes.length === 0
+}
+
 /** Plain algorithm output before any worker protocol or history DTO adaptation. */
 export interface IrregularComputeResult {
   readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
@@ -156,6 +215,8 @@ export interface IrregularComputeResult {
   readonly capacityShadowTelemetry?: IntrinsicCapacityShadowTelemetry
   /** Present only for the opt-in deterministic scheduler experiment. */
   readonly intrinsicAnytimeSchedulerTrace?: IntrinsicAnytimeSchedulerTrace
+  /** Observer-only experimental complete-capable producer. */
+  readonly experimentalPlaceDeferTrace?: IntrinsicPlaceDeferTrace
 }
 
 export type IrregularComputeErrorType =
@@ -290,6 +351,7 @@ function coordinateIntrinsicSharedArchive(
     let selected: MaterializedDecode
     let capacityShadowTelemetry: IntrinsicCapacityShadowTelemetry | undefined
     let intrinsicAnytimeSchedulerTrace: IntrinsicAnytimeSchedulerTrace | undefined
+    let experimentalPlaceDeferTrace: IntrinsicPlaceDeferTrace | undefined
 
     if (archiveEnabled) {
       yield* emitSharedArchiveProgress(
@@ -452,6 +514,25 @@ function coordinateIntrinsicSharedArchive(
             })
           )
         }
+        if (input.options?.captureExperimentalPlaceDeferCompleteShadow === true) {
+          const experimental = yield* runIntrinsicPlaceDeferCompleteShadow({
+            sheet: input.request.sheet,
+            preparedPieces: input.preparedPieces,
+            ...(control === undefined ? {} : { control })
+          }).pipe(
+            Effect.mapError((error) =>
+              error._tag === 'IntrinsicStrictDecoderError'
+                ? new IrregularPortfolioError({
+                    operation: error.operation,
+                    category: 'search',
+                    message: error.message
+                  })
+                : mapIntrinsicCapacityError(error)
+            )
+          )
+          experimentalPlaceDeferTrace = experimental.trace
+          input.options.onExperimentalPlaceDeferCompleteEndpoint?.(experimental.endpoint)
+        }
         const sheetlessArchive = retainRankedSharedArchive(archive.sheetlessArchive)
         const winner = selectIntrinsicSharedArchiveWinner(
           selectFittingSharedArchive(sheetlessArchive)
@@ -477,9 +558,20 @@ function coordinateIntrinsicSharedArchive(
           }).pipe(Effect.mapError(mapIntrinsicCapacityError))
           if (intrinsicAnytimeSchedulerTrace !== undefined) {
             const completeOrdinal = intrinsicAnytimeSchedulerTrace.quanta.length
+            const resumedColdQuanta =
+              scheduledColdStart?.status === 'paused'
+                ? [
+                    {
+                      ordinal: completeOrdinal + 1,
+                      cohort: 'partial' as const,
+                      producerRole: 'capacity-cold' as const,
+                      outcome: 'settled' as const
+                    }
+                  ]
+                : []
             const warmQuanta = (capacity.trace.warmPrefixLanes ?? []).map(
               (_lane, index) => ({
-                ordinal: completeOrdinal + 1 + index,
+                ordinal: completeOrdinal + 1 + resumedColdQuanta.length + index,
                 cohort: 'partial' as const,
                 producerRole: 'capacity-warm-prefix' as const,
                 outcome: 'settled' as const
@@ -498,13 +590,8 @@ function coordinateIntrinsicSharedArchive(
                   producerRole: 'legacy-complete',
                   outcome: 'settled'
                 },
-                ...warmQuanta,
-                {
-                  ordinal: completeOrdinal + 1 + warmQuanta.length,
-                  cohort: 'partial',
-                  producerRole: 'capacity-cold',
-                  outcome: 'settled'
-                }
+                ...resumedColdQuanta,
+                ...warmQuanta
               ]
             }
           }
@@ -518,9 +605,21 @@ function coordinateIntrinsicSharedArchive(
           )
         } else {
           if (intrinsicAnytimeSchedulerTrace !== undefined) {
+            const capacityCancellation =
+              scheduledColdStart?.status === 'paused'
+                ? [
+                    {
+                      ordinal: intrinsicAnytimeSchedulerTrace.quanta.length + 1,
+                      cohort: 'partial' as const,
+                      producerRole: 'capacity-cold' as const,
+                      outcome: 'cancelled' as const
+                    }
+                  ]
+                : []
             intrinsicAnytimeSchedulerTrace = {
               ...intrinsicAnytimeSchedulerTrace,
-              cancellationReason: 'complete-endpoint-fitted',
+              cancellationReason:
+                capacityCancellation.length > 0 ? 'complete-endpoint-fitted' : undefined,
               quanta: [
                 ...intrinsicAnytimeSchedulerTrace.quanta,
                 {
@@ -529,12 +628,7 @@ function coordinateIntrinsicSharedArchive(
                   producerRole: 'legacy-complete',
                   outcome: 'settled'
                 },
-                {
-                  ordinal: intrinsicAnytimeSchedulerTrace.quanta.length + 1,
-                  cohort: 'partial',
-                  producerRole: 'capacity-cold',
-                  outcome: 'cancelled'
-                }
+                ...capacityCancellation
               ]
             }
           }
@@ -550,7 +644,10 @@ function coordinateIntrinsicSharedArchive(
             }),
             new CollisionGeometryDiagnostic({
               code: 'complete_archive_fitted',
-              message: `complete endpoint ${winner.sheetlessCanonicalGeometryHash} fits the requested sheet; capacity mode did not run`
+              message:
+                scheduledColdStart === undefined
+                  ? `complete endpoint ${winner.sheetlessCanonicalGeometryHash} fits the requested sheet; capacity mode did not run`
+                  : `complete endpoint ${winner.sheetlessCanonicalGeometryHash} fits the requested sheet; scheduled capacity prework ${scheduledColdStart.status === 'paused' ? 'was cancelled at its checkpoint' : 'had already settled as observer-only work'}`
             })
           )
           yield* emitSharedArchiveProgress(
@@ -588,7 +685,10 @@ function coordinateIntrinsicSharedArchive(
       ...(capacityShadowTelemetry === undefined ? {} : { capacityShadowTelemetry }),
       ...(intrinsicAnytimeSchedulerTrace === undefined
         ? {}
-        : { intrinsicAnytimeSchedulerTrace })
+        : { intrinsicAnytimeSchedulerTrace }),
+      ...(experimentalPlaceDeferTrace === undefined
+        ? {}
+        : { experimentalPlaceDeferTrace })
     }
   })
 }
