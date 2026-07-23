@@ -143,6 +143,12 @@ independent slots and budgets and may contribute exact partial endpoints. It
 does not change complete construction or allow warm and cold states to share
 survivor slots.
 
+Stage 5 shares only archive mechanics: exact admission validation, canonical
+deduplication, namespace storage, and terminal complete dominance. Complete and
+partial namespaces still provide different duplicate ownership and ranking
+policies, so neither cohort can consume the other's survivor slots or alter its
+comparator.
+
 ## Checkpoint Contract
 
 `IrregularBeamState` remains the exact geometry payload. A versioned

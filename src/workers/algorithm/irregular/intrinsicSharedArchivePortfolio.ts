@@ -21,6 +21,7 @@ import {
   type IntrinsicPeriodicFamilyPortfolioOptions,
   type IntrinsicPeriodicFamilyPortfolioResult
 } from './intrinsicPeriodicFamilyPortfolio.js'
+import { retainIntrinsicAnytimeArchiveNamespace } from './intrinsicAnytimeArchive.js'
 import {
   constructIntrinsicStrictState,
   evaluateIntrinsicStrictCertificate,
@@ -295,17 +296,28 @@ export function runIntrinsicSharedArchiveDirectPortfolio(
 export function retainRankedSharedArchive(
   endpoints: ReadonlyArray<IntrinsicSharedArchiveEndpoint>
 ): ReadonlyArray<IntrinsicSharedArchiveEndpoint> {
-  const unique = new Map<string, IntrinsicSharedArchiveEndpoint>()
-  for (const endpoint of endpoints) {
-    if (!unique.has(endpoint.sheetlessCanonicalGeometryHash)) {
-      unique.set(endpoint.sheetlessCanonicalGeometryHash, endpoint)
+  const rankedByHash = new Map<string, IntrinsicSharedArchiveEndpoint>()
+  const retained = retainIntrinsicAnytimeArchiveNamespace({
+    namespace: 'complete',
+    endpoints,
+    identity: ({ sheetlessCanonicalGeometryHash }) => sheetlessCanonicalGeometryHash,
+    validate: ({ sheetlessCanonicalGeometryHash, metrics }) =>
+      sheetlessCanonicalGeometryHash === metrics.canonicalGeometryHash,
+    selectDuplicate: (first) => first,
+    rank: (unique) => {
+      rankedByHash.clear()
+      for (const endpoint of unique) {
+        rankedByHash.set(endpoint.sheetlessCanonicalGeometryHash, endpoint)
+      }
+      return rankIntrinsicStrictCompletedLayouts(unique.map(({ metrics }) => metrics)).flatMap(
+        (metrics) => {
+          const endpoint = rankedByHash.get(metrics.canonicalGeometryHash)
+          return endpoint === undefined ? [] : [endpoint]
+        }
+      )
     }
-  }
-  return rankIntrinsicStrictCompletedLayouts([...unique.values()].map(({ metrics }) => metrics))
-    .flatMap((metrics) => {
-      const endpoint = unique.get(metrics.canonicalGeometryHash)
-      return endpoint === undefined ? [] : [endpoint]
-    })
+  })
+  return retained
 }
 
 /** Keeps sheetless rank order while removing endpoints that do not fit the requested sheet. */

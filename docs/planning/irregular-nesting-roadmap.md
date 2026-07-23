@@ -92,6 +92,12 @@ partial archive. Complete and partial states never share survivor slots or a
 comparator. The next measurable step is shared exact archive mechanics with
 separate namespaces.
 
+That shared storage boundary is now implemented: complete and partial
+namespaces reuse exact validation/deduplication mechanics while retaining their
+own ranking and duplicate policies. Terminal selection encodes fitting-complete
+dominance without flattening the archives. The remaining experimental step is
+the protected place/defer complete-capable shadow producer.
+
 ### P0: Freeze the archive-only correctness and quality gate
 
 Establish the archive-only baseline before changing allocation or search.

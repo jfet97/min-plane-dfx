@@ -217,9 +217,31 @@ inspected winning PNG are under
 `/private/tmp/min-plane-provenance/intrinsic-scheduler-b5bfa28/`. The render has
 visible background on all four sides and no truncated polygon.
 
+## Stage 5: Shared Exact Archive Mechanics
+
+Complete and partial endpoints now pass through one generic exact archive
+storage boundary. Each namespace supplies its own validation, canonical
+identity, duplicate policy, and ranking function:
+
+- the complete namespace preserves first-producer ownership and the unchanged
+  strict sheetless ranking;
+- the partial namespace rechecks exact request partition accounting, retains
+  the comparator-best representative of a geometry identity, and applies the
+  existing count/material-first capacity objective;
+- terminal selection exposes the required complete-over-partial dominance
+  without merging the namespace arrays.
+
+The service owns validation, canonical deduplication, storage, and the terminal
+namespace choice only. It does not own candidate generation, survivor slots,
+budgets, or either comparator. The legacy complete winner contract and the
+capacity objective therefore remain independent.
+
+Focused tests cover invalid endpoint rejection, within-namespace duplicate
+selection, namespace isolation, and complete dominance. The complete archive,
+capacity mode, scheduler integration, and shared archive suites pass together
+without changing the Stage 4 evidence.
+
 ## Remaining Stages
 
-1. Share exact endpoint/archive storage mechanics while preserving separate
-   namespaces and selection keys.
-2. Add place/defer transitions only in an experimental complete-capable shadow
+1. Add place/defer transitions only in an experimental complete-capable shadow
    producer and judge promotion against the full baseline matrix.

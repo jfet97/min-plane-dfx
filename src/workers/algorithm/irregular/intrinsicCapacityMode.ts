@@ -13,13 +13,14 @@ import type {
 } from '../../irregular/services.js'
 import {
   compareIntrinsicCapacityEndpoints,
-  intrinsicCapacityObjective,
   intrinsicCapacityEndpointPartitionsRequest,
+  intrinsicCapacityObjective,
   materializeIntrinsicCapacityEndpoint,
   type IntrinsicCapacityCavityCache,
   type IntrinsicCapacityEndpoint,
   type IntrinsicCapacityObjective
 } from './intrinsicCapacityEndpoint.js'
+import { retainIntrinsicAnytimeArchiveNamespace } from './intrinsicAnytimeArchive.js'
 import {
   intrinsicCapacityMaterialAreas,
   intrinsicCapacityPreparedPieceId
@@ -304,11 +305,21 @@ export function runIntrinsicCapacityMode(
       warmPrefixLanes = measuredLanes
     }
 
-    const candidates = [
-      ...coldSearch.endpoints,
-      ...terminalization.endpoints,
-      ...(input.admitWarmPrefixEndpoints === true ? warmEndpoints : [])
-    ].toSorted(compareIntrinsicCapacityEndpoints)
+    const candidates = retainIntrinsicAnytimeArchiveNamespace({
+      namespace: 'partial',
+      endpoints: [
+        ...coldSearch.endpoints,
+        ...terminalization.endpoints,
+        ...(input.admitWarmPrefixEndpoints === true ? warmEndpoints : [])
+      ],
+      identity: ({ canonicalGeometryHash }) => canonicalGeometryHash,
+      validate: (endpoint) =>
+        endpoint.metrics.placedCount === endpoint.placedPreparedIds.length &&
+        intrinsicCapacityEndpointPartitionsRequest(endpoint, preparedIds),
+      selectDuplicate: (retained, candidate) =>
+        compareIntrinsicCapacityEndpoints(candidate, retained) < 0 ? candidate : retained,
+      rank: (unique) => unique.toSorted(compareIntrinsicCapacityEndpoints)
+    })
     const selected = candidates[0] ?? makeAllUnplacedFallbackEndpoint(input, materials.areasByPieceId, cavityCache)
     if (selected === undefined) {
       return yield* Effect.fail(
