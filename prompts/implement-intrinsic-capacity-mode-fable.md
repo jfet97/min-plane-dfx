@@ -7,6 +7,29 @@ not merely summarize the repository or write another speculative plan: inspect
 the current code, implement the highest-priority capacity mode, prove what you
 changed, and leave reviewable code and evidence.
 
+You are explicitly allowed to challenge the proposed architecture, reject
+individual mechanisms, combine them differently, or pursue a better design.
+`docs/planning/intrinsic-capacity-mode.md` is the strongest current proposal,
+not unquestionable doctrine. If source inspection, counterexamples, profiling,
+or controlled experiments reveal a cleaner, faster, more general, or more
+correct route, take it.
+
+That freedom does not relax the product contract. Any replacement must still:
+
+- preserve the same complete sheet-independent winner on roomy sheets;
+- return a deterministic exact best-known subset when everything cannot fit;
+- preserve canonical legality and complete placed/unplaced accounting;
+- keep sheet dimensions out of complete-layout compactness preferences;
+- avoid fixture-specific behavior and unsound feasibility guesses;
+- preserve or justify changes to the three current quality baselines;
+- measure runtime and search work rather than asserting improvement;
+- document which original assumption was disproved and the evidence that
+  supports the replacement.
+
+Prefer a principled redesign over mechanically implementing a weak specification.
+Keep the current proposal as the control arm so that every disruptive alternative
+can be compared against it.
+
 ## Repository And Delivery Contract
 
 1. Start from the latest remote `main` of:
@@ -90,7 +113,8 @@ measured justification.
 ## Primary Mission
 
 Implement the complete first production version specified in
-`docs/planning/intrinsic-capacity-mode.md`.
+`docs/planning/intrinsic-capacity-mode.md`, or a demonstrably superior design
+that satisfies the same product and exactness contract.
 
 The user-visible contract is:
 
