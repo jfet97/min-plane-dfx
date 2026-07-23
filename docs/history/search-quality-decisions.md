@@ -332,3 +332,12 @@ is impossible. The next experiment freezes 16 pieces and exhaustively
 reinserts each detached component through the existing legal candidate
 generator over the full requested sheet, observer-only and without beam
 truncation.
+
+The exact sweep at `015174c` finds no positive-boundary candidate for any of
+the three isolated pieces across their eight allowed transforms. It evaluates
+26 canonical-legal placements in `38.8 ms`; the only admissible objective
+change is a visually irrelevant `0.001 mm` maximum-side reduction with
+unchanged contact topology. The current 17-piece endpoint remains protected.
+This closes the current one-piece frozen-context candidate pool and permits
+the next generic observer to enumerate exact feature-to-feature contact
+placements before canonical legality and unchanged quality admission.

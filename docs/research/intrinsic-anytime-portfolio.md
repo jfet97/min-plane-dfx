@@ -509,6 +509,24 @@ would localize the loss to reconstruction diversity. No such placement would
 justify testing bounded feature-contact candidate generation, but would still
 not prove that a multi-piece global rearrangement is impossible.
 
+Commit `015174c` executes that falsifier over the three isolated pieces in the
+17-piece Triangle endpoint. The sweep covers all eight allowed transforms per
+piece, with the other 16 placements frozen, in `38.8 ms`. The existing exact
+sheet candidate pool returns 11, 12, and three canonical-legal candidates for
+the three pieces respectively, but **zero** positive-boundary candidates in
+all three cases. One placement changes the maximum side from `296.739 mm` to
+`296.738 mm`; contact components, isolated count, largest component, and
+structural contact metrics remain identical. The rendered result is visually
+unchanged and is not promotable.
+
+The measurement closes only the one-piece/frozen-context neighborhood exposed
+by the current candidate pool. It does not prove that a different exact
+contact placement or a multi-piece reconstruction is impossible. The next
+bounded experiment may therefore generate explicit exact feature-contact
+candidates for one detached piece against frozen component edges, validate
+them through the canonical sheet authority, and retain the current 17-piece
+endpoint when no strictly better legal result exists.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim

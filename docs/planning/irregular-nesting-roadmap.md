@@ -174,6 +174,13 @@ beam retention. The next generic shadow step keeps those three successors and
 adds at most one distinct positive-boundary successor from the existing exact
 legal NFP pool; only missing positive candidates can justify a new
 feature-contact generator.
+The contact successor grows the coherent core to `14/17`. A subsequent exact
+one-piece reinsertion sweep freezes the other 16 placements and exhausts the
+existing sheet candidate pool for all three isolated pieces and all eight
+allowed transforms. It finds 26 canonical-legal candidates but no
+positive-boundary placement. This now justifies one bounded observer-only
+feature-contact generator; it must retain the 17-piece incumbent unless exact
+topology and the existing non-regression guard both improve.
 
 ### P0: Freeze the archive-only correctness and quality gate
 
