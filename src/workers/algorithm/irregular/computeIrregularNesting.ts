@@ -616,7 +616,12 @@ function coordinateIntrinsicSharedArchive(
               category: 'search',
               message: [
                 'intrinsic shared archive did not complete its production coverage contract',
-                `direct=${archive.directRuns.map(({ role, status }) => `${role}:${status}`).join(',')}`,
+                `direct=${archive.directRuns
+                  .map(
+                    ({ role, status, reason }) =>
+                      `${role}:${status}${reason === undefined ? '' : `(${reason})`}`
+                  )
+                  .join(',')}`,
                 `catalog-runtime=${periodicCatalog.runtimeCoverageComplete}`,
                 `catalog-family=${periodicCatalog.familyCoverageComplete}`,
                 `periodic-selection=${archive.periodicSelectionValid}`,

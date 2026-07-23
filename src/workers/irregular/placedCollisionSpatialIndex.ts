@@ -30,6 +30,7 @@ export interface PlacedCollisionSpatialIndex {
   readonly add: (placed: IrregularPlacedPiece) => PlacedCollisionSpatialIndex
   readonly matches: (placed: ReadonlyArray<IrregularPlacedPiece>) => boolean
   readonly query: (bounds?: InternalBounds) => ReadonlyArray<PlacedCollisionSpatialEntry>
+  readonly continuationIdentity: () => string
 }
 
 export function makeEmptyPlacedCollisionSpatialIndex(
@@ -112,6 +113,17 @@ class UniformPlacedCollisionSpatialIndex implements PlacedCollisionSpatialIndex 
       }
     }
     return true
+  }
+
+  continuationIdentity(): string {
+    return JSON.stringify({
+      cellSizeMm: this.cellSizeMm,
+      entryOrdinals: this.entries.map(({ ordinal }) => ordinal),
+      buckets: [...this.buckets.entries()]
+        .map(([key, entries]) => [key, entries.map(({ ordinal }) => ordinal)] as const)
+        .toSorted(([first], [second]) => first.localeCompare(second)),
+      fallbackOrdinals: this.fallbackEntries.map(({ ordinal }) => ordinal)
+    })
   }
 
   query(bounds?: InternalBounds): ReadonlyArray<PlacedCollisionSpatialEntry> {

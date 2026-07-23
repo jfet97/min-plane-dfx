@@ -206,10 +206,10 @@ derived occupied geometry must recompute exactly. The integrity hash covers the
 retained lineage and ledgers. Runtime/evaluation settlement bounds and
 phase-capture policy are fingerprinted; only the completed-piece scheduler
 quantum may change between resumes. Lineage traversal is cycle checked and
-bounded by the committed cursor. After validation, every retained state is
-rebuilt from exact placed geometry and decision arrays, so private canonical,
-contact-signature, and spatial-index caches are authoritative rather than
-trusted checkpoint payload.
+bounded by the committed cursor. A class-owned continuation identity covers the
+private canonical, contact-signature, and spatial-index caches consumed by later
+placement. Resume preserves exact incremental state while rejecting cache
+mutation.
 
 The direct portfolio has an opt-in integration seam that advances only
 `canonical-grid` through a configurable completed-piece quantum until that

@@ -165,7 +165,7 @@ placement-order or trace mismatch, broken parent chain, inconsistent derived
 occupied identity, changed settlement bounds, phase-capture toggle, or invalid
 cumulative phase ledger. The scheduler quantum alone is deliberately absent
 from the request fingerprint. Cyclic or overlong ancestry is rejected before
-hashing, and resume reconstructs the full state chain to sanitize all
+hashing, and the integrity digest includes a class-owned identity for all
 continuation-relevant private geometry caches.
 The canonical direct producer is advanced opt-in through one-piece portfolio
 quanta. An equivalence gate compares direct and periodic run order,

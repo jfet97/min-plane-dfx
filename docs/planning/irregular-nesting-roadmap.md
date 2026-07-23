@@ -145,9 +145,9 @@ wall-time improvement. Adversarial resume validation now additionally binds
 settlement bounds and phase policy and proves the frozen seed plus consumed
 prefix against every parent transition, exact placed/unplaced accounting,
 trace, occupied identity, and cumulative ledger before portfolio integration.
-Cycle-bounded lineage collection and authoritative full-chain reconstruction
-now also prevent corrupted private canonical/contact/index caches from
-influencing future placement.
+Cycle-bounded lineage collection and a class-owned continuation identity now
+prevent corrupted private canonical/contact/index caches from influencing
+future placement without replacing valid incremental metadata.
 The next committed seam runs `canonical-grid` through those checkpoints inside
 the direct portfolio while leaving every later producer and archive operation
 in its settled order. Focused equivalence covers the complete observable

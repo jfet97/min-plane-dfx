@@ -324,7 +324,7 @@ export function runIntrinsicSharedArchiveDirectPortfolio(
             outcome.error._tag === 'IrregularNfpIfpControlAbortError' ? 'deadline' : 'invalid',
           requestedCandidateEvaluations,
           consumedCandidateEvaluations: undefined,
-          reason: outcome.error._tag,
+          reason: outcome.error.message,
           endpoint: undefined,
           runtimeMs: Math.max(0, performance.now() - startedAt)
         })

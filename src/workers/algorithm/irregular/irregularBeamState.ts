@@ -145,6 +145,20 @@ export class IrregularBeamState {
     })
   }
 
+  /** Deterministic identity of private caches consumed by the next placement. */
+  continuationMetadataIdentity(): string {
+    return JSON.stringify({
+      canonicalEntryKeys: this.canonicalEntryKeys,
+      nearCompleteStructuralContactSignatureCounts:
+        this.nearCompleteStructuralContactSignatureCounts === undefined
+          ? undefined
+          : [...this.nearCompleteStructuralContactSignatureCounts.entries()].toSorted(
+              ([first], [second]) => first.localeCompare(second)
+            ),
+      placedCollisionIndex: this.placedCollisionIndex.continuationIdentity()
+    })
+  }
+
   withPlacement(input: {
     readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
     readonly placedCollisionGeometry: IrregularPlacedPiece

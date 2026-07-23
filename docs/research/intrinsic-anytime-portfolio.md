@@ -359,10 +359,13 @@ A second integrity review found two continuation-specific hazards: unbounded
 parent traversal could loop on cyclic ancestry, and valid public aggregates did
 not prove the private canonical/contact/spatial caches used by the next
 placement. Lineage collection is now identity-cycle checked and capped at the
-cursor-derived state count before hashing. Validated checkpoints are resumed
-only through a freshly derived root-to-leaf state chain; corrupted private
-caches are therefore sanitized. Self-cycle, two-state-cycle, canonical-key,
-contact-signature, and spatial-bucket tests cover the new boundary.
+cursor-derived state count before hashing. `IrregularBeamState` and its spatial
+index expose a deterministic continuation identity covering the private
+canonical keys, contact-signature counts, bucket membership, and fallback
+entries consumed by later placement. The checkpoint digest binds that identity,
+so mutation is rejected while legitimate incremental metadata is preserved.
+Self-cycle, two-state-cycle, canonical-key, contact-signature, and
+spatial-bucket tests cover the new boundary.
 
 The first portfolio integration is intentionally narrower than scheduling.
 When enabled, `canonical-grid` resumes through one completed piece at a time,

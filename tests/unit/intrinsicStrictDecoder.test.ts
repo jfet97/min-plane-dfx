@@ -416,15 +416,10 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
       new Map([['corrupted', 99]])
     )
     Reflect.set(corruptedCacheState.placedCollisionIndex, 'buckets', new Map())
-    const cleanContinuation = await run({ checkpoint })
-    const sanitizedContinuation = await run({
-      checkpoint: { ...checkpoint, state: corruptedCacheState }
+    await expectCheckpointRejection({
+      ...checkpoint,
+      state: corruptedCacheState
     })
-    expect(sanitizedContinuation.state).toEqual(cleanContinuation.state)
-    expect(sanitizedContinuation.stepTrace).toEqual(cleanContinuation.stepTrace)
-    expect(sanitizedContinuation.candidateEvaluationCount).toBe(
-      cleanContinuation.candidateEvaluationCount
-    )
 
     const capped = await run({
       maximumCandidateEvaluationCount: Number.MAX_SAFE_INTEGER

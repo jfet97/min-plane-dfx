@@ -442,18 +442,6 @@ export function constructIntrinsicStrictState(
         })
       )
     }
-    const rebuiltCheckpointState =
-      input.checkpoint === undefined
-        ? undefined
-        : rebuildIntrinsicStrictDirectCheckpointState(input.checkpoint)
-    if (input.checkpoint !== undefined && rebuiltCheckpointState === undefined) {
-      return yield* Effect.fail(
-        new IntrinsicStrictDecoderError({
-          operation: 'directCheckpoint',
-          message: 'direct checkpoint lineage could not be rebuilt authoritatively.'
-        })
-      )
-    }
     const previousActiveRuntimeMs = input.checkpoint?.activeRuntimeMs ?? 0
     const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
     const control: IrregularNfpIfpControl = {
@@ -474,7 +462,7 @@ export function constructIntrinsicStrictState(
         })
     }
     let state =
-      rebuiltCheckpointState ??
+      input.checkpoint?.state ??
       new IrregularBeamState({
         remainingPreparedPieces: input.remainingPreparedPieces,
         placedCollisionGeometries: input.frozenPlaced,
@@ -1081,40 +1069,12 @@ function collectIntrinsicStrictDirectStateLineage(
       nearCompleteStructuralContactCount:
         cursor.nearCompleteStructuralContactCount,
       dominantNearCompleteStructuralContactCount:
-        cursor.dominantNearCompleteStructuralContactCount
+        cursor.dominantNearCompleteStructuralContactCount,
+      continuationMetadataIdentity: cursor.continuationMetadataIdentity()
     })
     cursor = cursor.parent
   }
   return lineage.length === expectedStateCount ? lineage : undefined
-}
-
-function rebuildIntrinsicStrictDirectCheckpointState(
-  checkpoint: IntrinsicStrictDirectCheckpoint
-): IrregularBeamState | undefined {
-  const lineage: IrregularBeamState[] = []
-  const visited = new Set<IrregularBeamState>()
-  let cursor: IrregularBeamState | undefined = checkpoint.state
-  while (cursor !== undefined) {
-    if (visited.has(cursor) || lineage.length >= checkpoint.nextPieceIndex + 1) {
-      return undefined
-    }
-    visited.add(cursor)
-    lineage.push(cursor)
-    cursor = cursor.parent
-  }
-  if (lineage.length !== checkpoint.nextPieceIndex + 1) return undefined
-
-  let rebuilt: IrregularBeamState | undefined
-  for (const retained of lineage.toReversed()) {
-    rebuilt = new IrregularBeamState({
-      remainingPreparedPieces: retained.remainingPreparedPieces,
-      placedCollisionGeometries: retained.placedCollisionGeometries,
-      unplacedPieceIds: retained.unplacedPieceIds,
-      placementOrder: retained.placementOrder,
-      ...(rebuilt === undefined ? {} : { parent: rebuilt })
-    })
-  }
-  return rebuilt
 }
 
 function validateIntrinsicStrictDirectCheckpointLineage(input: {
@@ -1208,21 +1168,17 @@ function validateIntrinsicStrictDirectState(state: IrregularBeamState): string |
     placementOrder: state.placementOrder,
     ...(state.parent === undefined ? {} : { parent: state.parent })
   })
+  if (recomputed.canonicalOccupiedGeometryKey !== state.canonicalOccupiedGeometryKey) {
+    return 'direct checkpoint canonical occupied identity is inconsistent.'
+  }
   if (
-    recomputed.canonicalOccupiedGeometryKey !== state.canonicalOccupiedGeometryKey ||
-    intrinsicStrictCanonicalJson(recomputed.translatedCollisionBounds) !==
-      intrinsicStrictCanonicalJson(state.translatedCollisionBounds) ||
-    recomputed.sharedCollisionBoundaryLengthMm !==
-      state.sharedCollisionBoundaryLengthMm ||
-    recomputed.sharedCollisionBoundaryContactUnits !==
-      state.sharedCollisionBoundaryContactUnits ||
-    recomputed.nearCompleteStructuralContactCount !==
-      state.nearCompleteStructuralContactCount ||
-    recomputed.dominantNearCompleteStructuralContactCount !==
-      state.dominantNearCompleteStructuralContactCount ||
-    !state.placedCollisionIndex.matches(state.placedCollisionGeometries)
+    recomputed.continuationMetadataIdentity() !==
+    state.continuationMetadataIdentity()
   ) {
-    return 'direct checkpoint state derived geometry identity is inconsistent.'
+    return 'direct checkpoint continuation metadata identity is inconsistent.'
+  }
+  if (!state.placedCollisionIndex.matches(state.placedCollisionGeometries)) {
+    return 'direct checkpoint spatial index does not own the placed geometry.'
   }
   return undefined
 }
