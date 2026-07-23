@@ -361,14 +361,9 @@ is rejected rather than admitted. Any next experiment must enlarge the
 reconstruction neighborhood under an explicit generic bound; the comparator
 is not weakened to accept this visually unchanged tradeoff.
 
-The final review permits exactly one lost-interface repair triple and rejects
-a general three-piece expansion. The implementation also separates observer
-admission evidence, promotion eligibility, and output influence, so rejected
-or censored diagnostics return the protected seed.
-
-At `e34ae3a`, future-state deduplication lets all six repair orders complete in
-`18.070 s`, with `51,737` evaluations, `8,665` deduplicated partial states,
-and `6,706` exact endpoints. Zero endpoint passes the unchanged admission
-guard and zero is promotion-eligible. The Triangle quality investigation
-therefore stops. The current 17-piece contact-fanout layout is retained; no
-unrestricted widening or Triangle-specific rule is justified.
+A subsequent lost-interface repair prototype is rejected before merge. Review
+found that its partial-state deduplication erased sheet-relative continuation
+state and that its deadline did not cover the full exact generator chain. The
+measured run found no promotable endpoint regardless. The observer code is
+removed, the current 17-piece contact-fanout layout remains authoritative, and
+the Triangle quality investigation stops.

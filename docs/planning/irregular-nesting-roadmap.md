@@ -192,11 +192,11 @@ pieces, but loses structural contact and remains visually unchanged: the same
 two detached triangles are present. It is rejected. A larger reconstruction
 neighborhood must be separately bounded and reviewed before implementation;
 the current 17-piece contact-fanout endpoint remains the fallback.
-The reviewed lost-interface repair triple completes all six orders after exact
-future-state deduplication but finds no admission-guard or promotion endpoint
-among `6,706` exact layouts. This closes the Triangle quality branch. Keep the
-current 17-piece endpoint and resume only the cross-fixture portfolio
-architecture; do not widen reconstruction or weaken the comparator.
+A reviewed lost-interface repair prototype is not retained because its
+deduplication was not continuation-exact and its deadline was incomplete. It
+also found no promotable layout. This closes the Triangle quality branch; keep
+the current 17-piece endpoint and do not widen reconstruction or weaken the
+comparator.
 
 ### P0: Freeze the archive-only correctness and quality gate
 
