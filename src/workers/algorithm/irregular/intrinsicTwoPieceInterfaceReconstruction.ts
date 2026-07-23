@@ -45,10 +45,14 @@ export interface IntrinsicTwoPieceInterfaceReconstructionResult {
   readonly interfacePieceIds: ReadonlyArray<PieceId>
   readonly selectedPair: readonly [PieceId, PieceId] | undefined
   readonly selectedOrder: ReadonlyArray<PieceId> | undefined
+  readonly bestExactPair: readonly [PieceId, PieceId] | undefined
+  readonly bestExactOrder: ReadonlyArray<PieceId> | undefined
   readonly seedMetrics: IntrinsicRelaxationMetrics | undefined
   readonly selectedMetrics: IntrinsicRelaxationMetrics | undefined
+  readonly bestExactMetrics: IntrinsicRelaxationMetrics | undefined
   readonly accepted: boolean
   readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+  readonly bestExactPlacedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
 }
 
 interface ExactCandidate {
@@ -139,6 +143,7 @@ export function runIntrinsicTwoPieceInterfaceReconstruction(input: {
     const memoScope = new IrregularNfpIfpCandidateMemoScope()
     const budget: CandidateBudget = { count: 0, exhausted: false }
     const acceptedCandidates: ExactCandidate[] = []
+    let bestExactCandidate: ExactCandidate | undefined
     const seenExactIdentities = new Set<string>()
     let exactEndpointCount = 0
     let admissibleEndpointCount = 0
@@ -218,20 +223,25 @@ export function runIntrinsicTwoPieceInterfaceReconstruction(input: {
               seenExactIdentities.add(identity)
               exactEndpointCount += 1
               const metrics = measureRelaxationMetrics(candidateLayout)
-              if (
-                metrics === undefined ||
-                !isAdmissibleTargetedImprovement(seedMetrics, metrics)
-              ) {
+              if (metrics === undefined) {
                 continue
               }
-              admissibleEndpointCount += 1
-              acceptedCandidates.push({
+              const exactCandidate = {
                 pair,
                 order,
                 identity,
                 metrics,
                 placedCollisionGeometries: candidateLayout
-              })
+              }
+              if (
+                bestExactCandidate === undefined ||
+                compareCandidates(exactCandidate, bestExactCandidate) < 0
+              ) {
+                bestExactCandidate = exactCandidate
+              }
+              if (!isAdmissibleTargetedImprovement(seedMetrics, metrics)) continue
+              admissibleEndpointCount += 1
+              acceptedCandidates.push(exactCandidate)
             }
           }
         }
@@ -258,11 +268,16 @@ export function runIntrinsicTwoPieceInterfaceReconstruction(input: {
       interfacePieceIds,
       selectedPair: selected?.pair,
       selectedOrder: selected?.order,
+      bestExactPair: bestExactCandidate?.pair,
+      bestExactOrder: bestExactCandidate?.order,
       seedMetrics,
       selectedMetrics: selected?.metrics ?? seedMetrics,
+      bestExactMetrics: bestExactCandidate?.metrics,
       accepted: selected !== undefined,
       placedCollisionGeometries:
-        selected?.placedCollisionGeometries ?? input.seedPlaced
+        selected?.placedCollisionGeometries ?? input.seedPlaced,
+      bestExactPlacedCollisionGeometries:
+        bestExactCandidate?.placedCollisionGeometries ?? input.seedPlaced
     }
   })
 }
@@ -420,10 +435,14 @@ function invalidResult(input: {
     interfacePieceIds: [],
     selectedPair: undefined,
     selectedOrder: undefined,
+    bestExactPair: undefined,
+    bestExactOrder: undefined,
     seedMetrics: input.seedMetrics,
     selectedMetrics: input.seedMetrics,
+    bestExactMetrics: undefined,
     accepted: false,
-    placedCollisionGeometries: input.input.seedPlaced
+    placedCollisionGeometries: input.input.seedPlaced,
+    bestExactPlacedCollisionGeometries: input.input.seedPlaced
   }
 }
 

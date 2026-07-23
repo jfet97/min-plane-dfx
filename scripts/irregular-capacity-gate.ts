@@ -391,8 +391,12 @@ interface CapacityRunReport {
         readonly admissibleEndpointCount: number
         readonly selectedPair: ReadonlyArray<string> | undefined
         readonly selectedOrder: ReadonlyArray<string> | undefined
+        readonly bestExactPair: ReadonlyArray<string> | undefined
+        readonly bestExactOrder: ReadonlyArray<string> | undefined
+        readonly bestExactArtifactPath: string
         readonly seedMetrics: unknown
         readonly selectedMetrics: unknown
+        readonly bestExactMetrics: unknown
       }
     | undefined
   readonly warmLaneArtifacts: ReadonlyArray<{
@@ -683,6 +687,16 @@ async function runCohesionTwoPieceInterfaceShadow(input: {
   )
   const canonical = canonicalizeIrregularLayout(polygons)
   await writeFile(input.artifactPath, renderSvg(input.request.sheet, polygons))
+  const bestExactArtifactPath = `${input.artifactPath.slice(0, -4)}-best-topology.svg`
+  await writeFile(
+    bestExactArtifactPath,
+    renderSvg(
+      input.request.sheet,
+      absolutePlacedCollisionPolygons(
+        result.bestExactPlacedCollisionGeometries
+      )
+    )
+  )
   return {
     artifactPath: input.artifactPath,
     accepted: result.accepted,
@@ -700,8 +714,12 @@ async function runCohesionTwoPieceInterfaceShadow(input: {
     admissibleEndpointCount: result.admissibleEndpointCount,
     selectedPair: result.selectedPair,
     selectedOrder: result.selectedOrder,
+    bestExactPair: result.bestExactPair,
+    bestExactOrder: result.bestExactOrder,
+    bestExactArtifactPath,
     seedMetrics: result.seedMetrics,
-    selectedMetrics: result.selectedMetrics
+    selectedMetrics: result.selectedMetrics,
+    bestExactMetrics: result.bestExactMetrics
   }
 }
 
