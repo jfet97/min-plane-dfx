@@ -422,8 +422,14 @@ describe('intrinsic capacity search', () => {
       preparedPieces: pieces,
       prefixSources: []
     })
-    const stripRuntime = ({ runtimeMs: _runtimeMs, ...trace }: IntrinsicCapacityModeResult['trace']) =>
-      trace
+    const stripRuntime = ({
+      runtimeMs: _runtimeMs,
+      coldSearchMs: _coldSearchMs,
+      prefixTerminalizationMs: _prefixTerminalizationMs,
+      preflightRuntimeMs: _preflightRuntimeMs,
+      completeArchiveRuntimeMs: _completeArchiveRuntimeMs,
+      ...trace
+    }: IntrinsicCapacityModeResult['trace']) => trace
     expect(stripRuntime(first.trace)).toEqual(stripRuntime(second.trace))
     expect(first.endpoint.canonicalGeometryHash).toBe(second.endpoint.canonicalGeometryHash)
     expect(first.endpoint.placedPreparedIds).toEqual(second.endpoint.placedPreparedIds)

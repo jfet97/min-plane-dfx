@@ -79,6 +79,14 @@ export interface IntrinsicCapacityTrace {
   readonly prefixIncumbent: IntrinsicCapacityIncumbentTrace | undefined
   readonly coldSearch: IntrinsicCapacitySearchTrace
   readonly selected: IntrinsicCapacitySelectionTrace
+  /** Coordinator-measured proof-only preflight runtime. */
+  readonly preflightRuntimeMs: number | undefined
+  /** Coordinator-measured unchanged complete archive runtime before the miss. */
+  readonly completeArchiveRuntimeMs: number | undefined
+  /** Descriptor capture plus prefix terminalization runtime. */
+  readonly prefixTerminalizationMs: number
+  /** Cold subset search runtime including endpoint materialization. */
+  readonly coldSearchMs: number
   readonly runtimeMs: number
 }
 
@@ -99,6 +107,10 @@ export interface RunIntrinsicCapacityModeInput {
   readonly disablePrefixReuse?: boolean
   readonly control?: IrregularNfpIfpControl
   readonly capturePhaseTimings?: boolean
+  /** Coordinator-measured preflight runtime carried into the trace. */
+  readonly preflightRuntimeMs?: number
+  /** Coordinator-measured complete archive runtime carried into the trace. */
+  readonly completeArchiveRuntimeMs?: number
 }
 
 type IntrinsicCapacityModeError =
@@ -134,6 +146,7 @@ export function runIntrinsicCapacityMode(
     const preparedIds = input.preparedPieces.map(intrinsicCapacityPreparedPieceId)
     const cavityCache: IntrinsicCapacityCavityCache = new Map()
 
+    const prefixStartedAt = performance.now()
     const descriptors =
       input.disablePrefixReuse === true
         ? []
@@ -147,7 +160,9 @@ export function runIntrinsicCapacityMode(
       materialAreasByPieceId: materials.areasByPieceId,
       cavityCache
     })
+    const prefixTerminalizationMs = Math.max(0, performance.now() - prefixStartedAt)
 
+    const coldSearchStartedAt = performance.now()
     const coldSearch = yield* runIntrinsicCapacityColdSearch({
       sheet: input.sheet,
       preparedPieces: input.preparedPieces,
@@ -161,6 +176,7 @@ export function runIntrinsicCapacityMode(
         ? {}
         : { capturePhaseTimings: input.capturePhaseTimings })
     })
+    const coldSearchMs = Math.max(0, performance.now() - coldSearchStartedAt)
 
     const candidates = [...coldSearch.endpoints, ...terminalization.endpoints].toSorted(
       compareIntrinsicCapacityEndpoints
@@ -217,6 +233,10 @@ export function runIntrinsicCapacityMode(
           selectedRotationDeg: selected.selectedRotationDeg,
           canonicalGeometryHash: selected.canonicalGeometryHash
         },
+        preflightRuntimeMs: input.preflightRuntimeMs,
+        completeArchiveRuntimeMs: input.completeArchiveRuntimeMs,
+        prefixTerminalizationMs,
+        coldSearchMs,
         runtimeMs: Math.max(0, performance.now() - startedAt)
       },
       phaseTimings: coldSearch.phaseTimings

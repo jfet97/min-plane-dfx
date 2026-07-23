@@ -98,6 +98,10 @@ export interface ComputeIrregularNestingOptions {
   readonly onPortfolioMetrics?: (metrics: IrregularPortfolioMetrics) => void
   /** standalone benchmark hook; metrics never enter normal app output. */
   readonly onFinalizationMetrics?: (metrics: IrregularFinalizationMetrics) => void
+  /** paired-comparison hook; production always keeps capacity prefix reuse on. */
+  readonly capacityControlArm?: 'disable-prefix-reuse'
+  /** standalone benchmark hook; capacity phase timings default off in production. */
+  readonly captureCapacityPhaseTimings?: boolean
 }
 
 /** Plain algorithm output before any worker protocol or history DTO adaptation. */
@@ -266,10 +270,20 @@ function coordinateIntrinsicSharedArchive(
                     )
                   : Effect.void
             }
+      const preflightStartedAt = performance.now()
       const preflight = yield* preflightIntrinsicCompleteCapacity(
         input.request.sheet,
         input.preparedPieces
       ).pipe(Effect.mapError(mapIntrinsicCapacityError))
+      const preflightRuntimeMs = Math.max(0, performance.now() - preflightStartedAt)
+      const capacityOptions = {
+        ...(input.options?.capacityControlArm === 'disable-prefix-reuse'
+          ? { disablePrefixReuse: true }
+          : {}),
+        ...(input.options?.captureCapacityPhaseTimings === true
+          ? { capturePhaseTimings: true }
+          : {})
+      }
       if (preflight.kind === 'proven_impossible') {
         const capacity = yield* runIntrinsicCapacityMode({
           sheet: input.request.sheet,
@@ -277,6 +291,8 @@ function coordinateIntrinsicSharedArchive(
           routing: 'preflight-proven-impossible',
           preflight,
           prefixSources: [],
+          preflightRuntimeMs,
+          ...capacityOptions,
           ...(control === undefined ? {} : { control })
         }).pipe(Effect.mapError(mapIntrinsicCapacityError))
         selected = yield* materializeIntrinsicCapacityResult(input, capacity)
@@ -289,6 +305,7 @@ function coordinateIntrinsicSharedArchive(
         )
       } else {
         const prefixSources: IntrinsicCapacityPrefixSource[] = []
+        const archiveStartedAt = performance.now()
         const archive = yield* runIntrinsicSharedArchivePortfolio(
           input.request.sheet,
           input.preparedPieces,
@@ -356,6 +373,9 @@ function coordinateIntrinsicSharedArchive(
             routing: 'bounded-complete-archive-miss',
             preflight,
             prefixSources,
+            preflightRuntimeMs,
+            completeArchiveRuntimeMs: Math.max(0, performance.now() - archiveStartedAt),
+            ...capacityOptions,
             ...(control === undefined ? {} : { control })
           }).pipe(Effect.mapError(mapIntrinsicCapacityError))
           selected = yield* materializeIntrinsicCapacityResult(input, capacity)
