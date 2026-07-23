@@ -143,8 +143,12 @@ export interface IntrinsicAnytimeSchedulerTrace {
   readonly cancellationReason: 'complete-endpoint-fitted' | 'complete-cohort-miss' | undefined
   readonly quanta: ReadonlyArray<{
     readonly ordinal: number
-    readonly cohort: 'partial' | 'complete'
-    readonly producerRole: 'capacity-cold' | 'legacy-complete' | 'capacity-warm-prefix'
+    readonly cohort: 'partial' | 'complete' | 'experimental-complete'
+    readonly producerRole:
+      | 'capacity-cold'
+      | 'legacy-complete'
+      | 'capacity-warm-prefix'
+      | 'experimental-place-defer-complete'
     readonly outcome: 'checkpointed' | 'settled' | 'cancelled'
   }>
 }
@@ -165,7 +169,18 @@ export function intrinsicAnytimeSchedulerTraceValid(
   const completeIndexes = quanta.flatMap(({ producerRole }, index) =>
     producerRole === 'legacy-complete' ? [index] : []
   )
-  if (completeIndexes.length !== 1 || completeIndexes[0] !== 1) return false
+  if (completeIndexes.length !== 1) return false
+  const completeIndex = completeIndexes[0]
+  if (completeIndex === undefined) return false
+  const experimentalIndexes = quanta.flatMap(({ producerRole }, index) =>
+    producerRole === 'experimental-place-defer-complete' ? [index] : []
+  )
+  if (
+    experimentalIndexes.length > 1 ||
+    experimentalIndexes.some((index) => index <= 0 || index >= completeIndex)
+  ) {
+    return false
+  }
   const laterCold = quanta.filter(
     ({ producerRole }, index) => index > 0 && producerRole === 'capacity-cold'
   )
@@ -186,13 +201,22 @@ export function intrinsicAnytimeSchedulerTraceValid(
               index > 0 && producerRole === 'capacity-cold' && outcome === 'settled'
           )
         : 0
-    return warmIndexes.every((index) => index > coldSettlementIndex)
+    return (
+      (trace.coldStartStatus === 'settled'
+        ? coldSettlementIndex === 0
+        : coldSettlementIndex > completeIndex) &&
+      warmIndexes.every((index) => index > coldSettlementIndex)
+    )
   }
   if (trace.cancellationReason === 'complete-endpoint-fitted') {
     return (
       trace.coldStartStatus === 'paused' &&
       laterCold.length === 1 &&
       laterCold[0]?.outcome === 'cancelled' &&
+      quanta.findIndex(
+        ({ producerRole, outcome }) =>
+          producerRole === 'capacity-cold' && outcome === 'cancelled'
+      ) > completeIndex &&
       warmIndexes.length === 0
     )
   }
@@ -456,6 +480,39 @@ function coordinateIntrinsicSharedArchive(
             ]
           }
         }
+        if (input.options?.captureExperimentalPlaceDeferCompleteShadow === true) {
+          const experimental = yield* runIntrinsicPlaceDeferCompleteShadow({
+            sheet: input.request.sheet,
+            preparedPieces: input.preparedPieces,
+            ...(control === undefined ? {} : { control })
+          }).pipe(
+            Effect.mapError((error) =>
+              error._tag === 'IntrinsicStrictDecoderError'
+                ? new IrregularPortfolioError({
+                    operation: error.operation,
+                    category: 'search',
+                    message: error.message
+                  })
+                : mapIntrinsicCapacityError(error)
+            )
+          )
+          experimentalPlaceDeferTrace = experimental.trace
+          input.options.onExperimentalPlaceDeferCompleteEndpoint?.(experimental.endpoint)
+          if (intrinsicAnytimeSchedulerTrace !== undefined) {
+            intrinsicAnytimeSchedulerTrace = {
+              ...intrinsicAnytimeSchedulerTrace,
+              quanta: [
+                ...intrinsicAnytimeSchedulerTrace.quanta,
+                {
+                  ordinal: intrinsicAnytimeSchedulerTrace.quanta.length,
+                  cohort: 'experimental-complete',
+                  producerRole: 'experimental-place-defer-complete',
+                  outcome: 'settled'
+                }
+              ]
+            }
+          }
+        }
         const prefixSources: IntrinsicCapacityPrefixSource[] = []
         const archiveStartedAt = performance.now()
         const archive = yield* runIntrinsicSharedArchivePortfolio(
@@ -514,24 +571,19 @@ function coordinateIntrinsicSharedArchive(
             })
           )
         }
-        if (input.options?.captureExperimentalPlaceDeferCompleteShadow === true) {
-          const experimental = yield* runIntrinsicPlaceDeferCompleteShadow({
-            sheet: input.request.sheet,
-            preparedPieces: input.preparedPieces,
-            ...(control === undefined ? {} : { control })
-          }).pipe(
-            Effect.mapError((error) =>
-              error._tag === 'IntrinsicStrictDecoderError'
-                ? new IrregularPortfolioError({
-                    operation: error.operation,
-                    category: 'search',
-                    message: error.message
-                  })
-                : mapIntrinsicCapacityError(error)
-            )
-          )
-          experimentalPlaceDeferTrace = experimental.trace
-          input.options.onExperimentalPlaceDeferCompleteEndpoint?.(experimental.endpoint)
+        if (intrinsicAnytimeSchedulerTrace !== undefined) {
+          intrinsicAnytimeSchedulerTrace = {
+            ...intrinsicAnytimeSchedulerTrace,
+            quanta: [
+              ...intrinsicAnytimeSchedulerTrace.quanta,
+              {
+                ordinal: intrinsicAnytimeSchedulerTrace.quanta.length,
+                cohort: 'complete',
+                producerRole: 'legacy-complete',
+                outcome: 'settled'
+              }
+            ]
+          }
         }
         const sheetlessArchive = retainRankedSharedArchive(archive.sheetlessArchive)
         const winner = selectIntrinsicSharedArchiveWinner(
@@ -557,12 +609,12 @@ function coordinateIntrinsicSharedArchive(
             ...(control === undefined ? {} : { control })
           }).pipe(Effect.mapError(mapIntrinsicCapacityError))
           if (intrinsicAnytimeSchedulerTrace !== undefined) {
-            const completeOrdinal = intrinsicAnytimeSchedulerTrace.quanta.length
+            const capacityResumeOrdinal = intrinsicAnytimeSchedulerTrace.quanta.length
             const resumedColdQuanta =
               scheduledColdStart?.status === 'paused'
                 ? [
                     {
-                      ordinal: completeOrdinal + 1,
+                      ordinal: capacityResumeOrdinal,
                       cohort: 'partial' as const,
                       producerRole: 'capacity-cold' as const,
                       outcome: 'settled' as const
@@ -571,7 +623,7 @@ function coordinateIntrinsicSharedArchive(
                 : []
             const warmQuanta = (capacity.trace.warmPrefixLanes ?? []).map(
               (_lane, index) => ({
-                ordinal: completeOrdinal + 1 + resumedColdQuanta.length + index,
+                ordinal: capacityResumeOrdinal + resumedColdQuanta.length + index,
                 cohort: 'partial' as const,
                 producerRole: 'capacity-warm-prefix' as const,
                 outcome: 'settled' as const
@@ -584,12 +636,6 @@ function coordinateIntrinsicSharedArchive(
               cancellationReason: 'complete-cohort-miss',
               quanta: [
                 ...intrinsicAnytimeSchedulerTrace.quanta,
-                {
-                  ordinal: completeOrdinal,
-                  cohort: 'complete',
-                  producerRole: 'legacy-complete',
-                  outcome: 'settled'
-                },
                 ...resumedColdQuanta,
                 ...warmQuanta
               ]
@@ -609,7 +655,7 @@ function coordinateIntrinsicSharedArchive(
               scheduledColdStart?.status === 'paused'
                 ? [
                     {
-                      ordinal: intrinsicAnytimeSchedulerTrace.quanta.length + 1,
+                      ordinal: intrinsicAnytimeSchedulerTrace.quanta.length,
                       cohort: 'partial' as const,
                       producerRole: 'capacity-cold' as const,
                       outcome: 'cancelled' as const
@@ -620,16 +666,7 @@ function coordinateIntrinsicSharedArchive(
               ...intrinsicAnytimeSchedulerTrace,
               cancellationReason:
                 capacityCancellation.length > 0 ? 'complete-endpoint-fitted' : undefined,
-              quanta: [
-                ...intrinsicAnytimeSchedulerTrace.quanta,
-                {
-                  ordinal: intrinsicAnytimeSchedulerTrace.quanta.length,
-                  cohort: 'complete',
-                  producerRole: 'legacy-complete',
-                  outcome: 'settled'
-                },
-                ...capacityCancellation
-              ]
+              quanta: [...intrinsicAnytimeSchedulerTrace.quanta, ...capacityCancellation]
             }
           }
           selected = yield* materializeSharedArchiveResult(input, winner)

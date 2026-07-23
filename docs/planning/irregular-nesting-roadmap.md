@@ -105,6 +105,14 @@ protected evaluation ledger. Only a complete skip-free exact result can become
 an experimental endpoint; it still cannot enter the settled legacy archive.
 Promotion remains blocked on the full matrix.
 
+The full matrix rejects promotion: Triangle and Shapes complete with different
+experimental hashes, while Mixed reaches the experimental evaluation cap.
+Returned roomy outputs remain exact; the one constrained baseline mismatch is
+a count/material/cavity improvement from warm capacity continuation and remains
+an unpromoted candidate because the strict accepted-hash gate correctly fails.
+The retained `700 x 500` historical run also confirms that summed serial work
+remains open.
+
 ### P0: Freeze the archive-only correctness and quality gate
 
 Establish the archive-only baseline before changing allocation or search.

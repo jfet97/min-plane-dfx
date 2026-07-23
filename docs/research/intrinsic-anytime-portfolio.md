@@ -284,3 +284,34 @@ decision rejection, and unchanged roomy complete output.
 Promotion remains evidence-gated. The full roomy/constrained baseline matrix
 must determine whether this one-defer producer reproduces accepted winners or
 is retained only as rejected shadow evidence.
+
+The matrix at committed implementation `c846745` rejects promotion of this
+producer:
+
+- Triangle-20 completes, but its experimental hash `ace7d11d...` differs from
+  the accepted `371db269...`;
+- Shapes-17 completes, but its experimental hash `580488e4...` differs from
+  the accepted `c640c06f...`;
+- Mixed-61 reaches the protected `19,862`-evaluation cap after 53 placements
+  and exposes no complete endpoint.
+
+The shadow therefore remains useful mechanism evidence only. Its pause/resume
+contract works, but it does not preserve the settled complete winner contract.
+
+The returned outputs preserve five of six accepted baseline hashes exactly,
+including all three roomy cases and Triangle-20/Mixed-61 on `600 x 400`.
+Shapes-17 `600 x 400` is a strict capacity-objective improvement rather than a
+loss: the admitted warm endpoint places `14/17` instead of `13/17`, increases
+exact placed material from `144,125.9382175` to `147,227.7221575 mm2`, and
+reduces exact cavities from one to zero. Its larger envelope is subordinate to
+count and material under the accepted partial objective. Because the current
+strict gate pins the old hash, the six-case command exits nonzero and this
+candidate is not silently copied over the accepted baseline.
+
+The historical Mixed-61 `700 x 500` serial-cost case places `49/61` from
+`canonical-grid@15` in `80.10 s`; it still pays about `54.46 s` complete,
+`6.90 s` cold, and three serial warm lanes. This independently confirms that
+the coarse scheduler has not resolved F4. Exact reports, source/input archives,
+checksums, SVGs, and the inspected Shapes constrained PNG are under
+`/private/tmp/min-plane-provenance/intrinsic-place-defer-c846745/`. The PNG has
+visible background on all four sides and no truncated polygon.
