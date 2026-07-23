@@ -202,6 +202,21 @@ that the cold checkpoint is reused and warm endpoints are admitted without
 losing placed/unplaced accounting; a roomy complete fit proves placement
 identity with the scheduler disabled and records capacity cancellation.
 
+Committed implementation `b5bfa28` passes the strict paired capacity gate. On
+Mixed-61 `700 x 560`, the first cold quantum consumes `3,195` evaluations and
+the resumed cold lane retains its prior total of `232,209`; it is not restarted
+from empty. After the complete miss, `open-pocket-first@30` wins the partial
+namespace with `59/61` pieces and exact capacity identity `119d85ce...`,
+compared with the protected cold control's `55/61` and `0ba279b5...`. The
+Triangle constrained fixture remains tied with cold at `15/20`.
+
+The full paired run passes in `181.97 s` wall, `196.80 s` user CPU, and
+`1.02 s` system CPU, with `1,132,445,696` bytes maximum resident set size.
+Exact source and input archives, the full report, checksums, SVGs, and an
+inspected winning PNG are under
+`/private/tmp/min-plane-provenance/intrinsic-scheduler-b5bfa28/`. The render has
+visible background on all four sides and no truncated polygon.
+
 ## Remaining Stages
 
 1. Share exact endpoint/archive storage mechanics while preserving separate
