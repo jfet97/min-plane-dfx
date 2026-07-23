@@ -14,6 +14,9 @@ work are deliberately separated from historical evidence.
   sheet-invariance gate.
 - [Irregular nesting roadmap](./planning/irregular-nesting-roadmap.md): the one
   active forward roadmap.
+- [Intrinsic capacity mode](./planning/intrinsic-capacity-mode.md): the detailed
+  plan for preserving complete sheet invariance while returning an exact best
+  subset on constrained sheets.
 
 ## Decisions and Evidence
 

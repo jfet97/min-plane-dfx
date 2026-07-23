@@ -43,6 +43,21 @@ so current ten-sheet invariance is not established.
 
 ## Priority Order
 
+### P0: Add exact constrained-sheet capacity mode
+
+Preserve the current sheetless complete archive for every request whose best
+complete motif fits. Add a proof-only capacity preflight and a separate
+empty-start subset search for sheets that provably cannot contain every piece
+or receive no fitting endpoint from valid bounded complete coverage. Reuse at
+most nine committed sheetless direct-constructor prefixes as zero-placement-
+evaluation incumbents; they may prune only through exact attainable-count and
+material-area bounds and may not consume cold beam capacity.
+
+The complete implementation contract, fixed first-version bounds, endpoint
+accounting, traces, falsifiers, runtime worst case, and later identical-sheet
+continuation are specified in
+[`intrinsic-capacity-mode.md`](./intrinsic-capacity-mode.md).
+
 ### P0: Freeze the archive-only correctness and quality gate
 
 Establish the archive-only baseline before changing allocation or search.
