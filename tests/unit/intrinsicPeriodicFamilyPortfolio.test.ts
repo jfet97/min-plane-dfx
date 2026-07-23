@@ -24,8 +24,13 @@ import {
   phaseResidualCoverageComplete,
   runIntrinsicPeriodicFamilyPortfolio
 } from '../../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
+import { enumerateIntrinsicPeriodicCells } from '../../src/workers/algorithm/irregular/intrinsicPeriodicCells.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
+import {
+  IrregularNfpIfpControlAbortError,
+  type IrregularNfpIfpControl
+} from '../../src/workers/irregular/services.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -306,7 +311,8 @@ describe('intrinsic periodic family portfolio', () => {
     const pieces = Array.from({ length: 4 }, (_, index) => preparedTriangle(`replay-${index}`))
     const run = (
       sourceAuditReplayEnvelope?: IntrinsicPeriodicSourceAuditReplayEnvelope,
-      expectedSourceAuditReplayDigest = sourceAuditReplayEnvelope?.replayDigest
+      expectedSourceAuditReplayDigest = sourceAuditReplayEnvelope?.replayDigest,
+      control?: IrregularNfpIfpControl
     ) =>
       Effect.runPromise(
         runIntrinsicPeriodicFamilyPortfolio(
@@ -322,6 +328,7 @@ describe('intrinsic periodic family portfolio', () => {
             captureSourceSurvivalAudit: true,
             captureSourceAuditReplayEnvelope: true,
             admitSourceAuditWitnesses: true,
+            ...(control === undefined ? {} : { control }),
             ...(sourceAuditReplayEnvelope === undefined
               ? {}
               : {
@@ -355,6 +362,49 @@ describe('intrinsic periodic family portfolio', () => {
     expect(warm.phaseTimings?.selection.sourceAuditReplayWitnessCount).toBe(
       cold.sourceAuditWitnesses.length
     )
+
+    let catalogCheckpointCount = 0
+    await Effect.runPromise(
+      enumerateIntrinsicPeriodicCells(pieces, {
+        maximumRuntimeMs: 1_000,
+        maximumFamilyCount: 8,
+        maximumTransformsPerFamily: 16,
+        maximumPairsPerFamily: 120,
+        maximumCellsPerFamilyRole: 16,
+        captureSourceSurvivalAudit: true,
+        control: {
+          checkpoint: () =>
+            Effect.sync(() => {
+              catalogCheckpointCount += 1
+            })
+        }
+      }).pipe(
+        Effect.provide(GeometryKernel.Live.pipe(Layer.provide(GeometrySettings.Live))),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+    let warmCheckpointCount = 0
+    await expect(
+      run(replayEnvelope, replayEnvelope.replayDigest, {
+        checkpoint: () =>
+          Effect.suspend(() => {
+            warmCheckpointCount += 1
+            return warmCheckpointCount > catalogCheckpointCount
+              ? Effect.fail(
+                  new IrregularNfpIfpControlAbortError({
+                    reason: 'cancelled',
+                    message: 'cancelled during replay reconstruction'
+                  })
+                )
+              : Effect.void
+          })
+      })
+    ).rejects.toMatchObject({
+      _tag: 'IrregularNfpIfpControlAbortError',
+      reason: 'cancelled',
+      message: 'cancelled during replay reconstruction'
+    })
 
     const coldFallback = await run({
       ...replayEnvelope,

@@ -259,7 +259,8 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       sourceAuditScope,
       options.basisSourceKey,
       options.expectedSourceAuditReplayDigest,
-      options.sourceAuditReplayEnvelope
+      options.sourceAuditReplayEnvelope,
+      options.control
     )
     const sourceAuditReplay = sourceAuditReplayResolution.replay
     const replayProbeExcludedMs =
@@ -1021,12 +1022,13 @@ function validateSourceAuditReplayEnvelope(
   scope: IntrinsicPeriodicSourceAuditScope,
   basisSourceKey: string | undefined,
   expectedReplayDigest: string | undefined,
-  envelope: IntrinsicPeriodicSourceAuditReplayEnvelope | undefined
+  envelope: IntrinsicPeriodicSourceAuditReplayEnvelope | undefined,
+  control: IrregularNfpIfpControl | undefined
 ): Effect.Effect<{
   readonly replay?: IntrinsicPeriodicSourceAuditReplay
   readonly rejectionReason?: string
   readonly validationCropAttemptCount: number
-}> {
+}, IrregularNfpIfpControlAbortError> {
   return Effect.gen(function* () {
     if (envelope === undefined) return { validationCropAttemptCount: 0 }
     if (expectedReplayDigest === undefined) return replayRejected('expected-replay-digest')
@@ -1130,9 +1132,12 @@ function validateSourceAuditReplayEnvelope(
         currentCrops = yield* Effect.matchEffect(
           enumerateIntrinsicPeriodicCellCrops(currentCell, members, () => {
             validationCropAttemptCount += 1
-          }),
+          }, control),
           {
-            onFailure: () => Effect.succeed(undefined),
+            onFailure: (error) =>
+              error._tag === 'IrregularNfpIfpControlAbortError'
+                ? Effect.fail(error)
+                : Effect.succeed(undefined),
             onSuccess: (crops) => Effect.succeed(crops)
           }
         )
