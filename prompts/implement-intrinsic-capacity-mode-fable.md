@@ -14,6 +14,20 @@ not unquestionable doctrine. If source inspection, counterexamples, profiling,
 or controlled experiments reveal a cleaner, faster, more general, or more
 correct route, take it.
 
+The required outcome is a production-worthy Compact capacity mode for small or
+constrained sheets: when all pieces cannot fit, place the best exact subset and
+report the rest honestly. Within that mission you have substantial room to
+move. You may refactor seams, replace the proposed search structure, improve
+shared primitives, explore several implementations, and pursue adjacent
+performance or search-quality work when it materially enables the capacity
+result. Do not constrain yourself to the smallest diff.
+
+Use that freedom purposefully. Do not drift into unrelated UI, persistence, or
+general algorithm work that neither improves constrained-sheet behavior nor
+protects complete Compact quality, invariance, exactness, or runtime. The final
+report must connect every promoted change to the capacity mission or to a
+measured regression it prevents.
+
 That freedom does not relax the product contract. Any replacement must still:
 
 - preserve the same complete sheet-independent winner on roomy sheets;
@@ -35,15 +49,31 @@ can be compared against it.
 1. Start from the latest remote `main` of:
    `https://github.com/jfet97/min-plane-dfx`.
 2. Read the root `AGENTS.md` and `CLAUDE.md`, if present, before editing.
-3. Create and work on a normal human-named branch:
-   `intrinsic-capacity-mode-fable`.
-4. Do not rewrite unrelated code or revive retired legacy controls/decoders.
-5. Commit all accepted implementation, tests, documentation, reports, and
+3. Use `intrinsic-capacity-mode-fable` as the final integration branch.
+4. You may create and push multiple additional human-named branches for
+   independent hypotheses, competing implementations, performance variants,
+   or improvements to different roadmap items. For example:
+   `capacity-prefix-incumbent`,
+   `capacity-cold-subset-search`, or
+   `capacity-preflight-alternative`.
+5. Keep each experimental branch independently reproducible. Commit its exact
+   implementation before measuring it, record the fixture/settings/runtime and
+   artifact paths, and do not silently stack unrelated hypotheses.
+6. Compare competing branches under the same exact quality, accounting,
+   invariance, and runtime gates. Preserve useful rejected branches and explain
+   why they lost. Compatible winners may be integrated into
+   `intrinsic-capacity-mode-fable`; incompatible winners may remain as separate
+   proposed pull requests or documented alternatives.
+7. Do not rewrite unrelated code or revive retired legacy controls/decoders.
+8. Commit all accepted implementation, tests, documentation, reports, and
    portable evidence.
-6. Push the branch and open a pull request against `main`.
-7. Use exactly these pull-request sections, in this order:
+9. Push every evidence-bearing branch. Open the primary pull request from
+   `intrinsic-capacity-mode-fable` against `main`, and open separate pull
+   requests only when an alternative is independently valuable and cannot be
+   cleanly integrated.
+10. Use exactly these pull-request sections, in this order:
    `Why`, `What`, `How`, `Remarks`.
-8. Never add model/tool attribution, co-author lines, or generated-by footers.
+11. Never add model/tool attribution, co-author lines, or generated-by footers.
 
 The repository may be on another machine. Do not rely on local knowledge-base
 files or `/private/tmp` paths referenced by earlier work. The tracked source,
@@ -266,6 +296,27 @@ Create constrained fixtures that isolate:
 Record PNG/SVG renders for representative complete and capacity outcomes. Keep
 large raw traces out of Git; commit bounded summaries, manifests, relevant
 excerpts, hashes, and portable renders.
+
+### Rendering Skill
+
+Use the repository skill at
+`.agents/skills/render-svg-with-electron/SKILL.md` whenever an SVG layout must
+be converted to PNG. Read that `SKILL.md` completely before rendering. In
+particular, run the bundled Node launcher from the repository root:
+
+```sh
+node .agents/skills/render-svg-with-electron/scripts/render-svg.cjs \
+  /absolute/input.svg \
+  /absolute/output.png \
+  1000
+```
+
+Run it outside a filesystem/process sandbox when Electron requires GUI access.
+Do not use Quick Look or square editor thumbnails for approval because they can
+crop wide layouts. After rendering, inspect the PNG and verify visible
+background margin on all four sides and that no polygon is truncated. Report
+and commit both the source SVG and its readable PNG when the visual result is
+part of the evidence.
 
 ## Future Directions To Protect, Not Prematurely Implement
 
