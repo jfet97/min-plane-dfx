@@ -342,13 +342,27 @@ const requestedPieceIds = request.pieces.map(({ id }) => id)
 const placedPieceIds = result.placedCollisionGeometries.map(
   ({ placement }) => placement.pieceId
 )
-const outputPieceIds = [...placedPieceIds, ...result.unplacedPieceIds]
+const definedPlacedPieceIds = placedPieceIds.filter(
+  (pieceId): pieceId is NonNullable<typeof pieceId> => pieceId !== undefined
+)
+const requestedPieceIdSet = new Set(requestedPieceIds)
+const placedPieceIdSet = new Set(definedPlacedPieceIds)
+const unplacedPieceIdSet = new Set(result.unplacedPieceIds)
 const exactPiecePartition =
-  new Set(requestedPieceIds).size === requestedPieceIds.length &&
-  new Set(placedPieceIds).size === placedPieceIds.length &&
-  new Set(result.unplacedPieceIds).size === result.unplacedPieceIds.length &&
-  new Set(outputPieceIds).size === outputPieceIds.length &&
-  requestedPieceIds.toSorted().join('\n') === outputPieceIds.toSorted().join('\n')
+  definedPlacedPieceIds.length === placedPieceIds.length &&
+  requestedPieceIdSet.size === requestedPieceIds.length &&
+  placedPieceIdSet.size === definedPlacedPieceIds.length &&
+  unplacedPieceIdSet.size === result.unplacedPieceIds.length &&
+  placedPieceIdSet.size + unplacedPieceIdSet.size === requestedPieceIdSet.size &&
+  definedPlacedPieceIds.every((pieceId) => requestedPieceIdSet.has(pieceId)) &&
+  result.unplacedPieceIds.every(
+    (pieceId) =>
+      requestedPieceIdSet.has(pieceId) && !placedPieceIdSet.has(pieceId)
+  ) &&
+  requestedPieceIds.every(
+    (pieceId) =>
+      placedPieceIdSet.has(pieceId) || unplacedPieceIdSet.has(pieceId)
+  )
 const svgPath = `${args.outputPrefix}.svg`
 const reportPath = `${args.outputPrefix}.json`
 await mkdir(dirname(args.outputPrefix), { recursive: true })

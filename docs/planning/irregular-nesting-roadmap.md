@@ -34,8 +34,9 @@ Current exact production baselines are:
 | Mixed-61 | `300 x 300` | 6/61 | `89,504.369008 mm2` | 0 | `1.466 s` | [`mixed-61-300x300.png`](../artifacts/current-compact-baselines/mixed-61-300x300.png) |
 | Shapes-17 | `300 x 300` | 5/17 | `87,791.951625 mm2` | 0 | `3.456 s` | [`shapes-17-300x300.png`](../artifacts/current-compact-baselines/shapes-17-300x300.png) |
 
-Runtime observations are from one sequential strict run at `7b71611` on
-2026-07-23, Node `v24.16.0`, V8 `13.6.233.17-node.49`, macOS arm64. They are
+Runtime observations are from the no-options sequential strict run at
+`2ede042` on 2026-07-23, Node `v24.16.0`, V8
+`13.6.233.17-node.49`, macOS arm64. They are
 measured baselines, not deterministic acceptance thresholds. The executable
 gate is `pnpm gate:compact-nine-baselines`; reports and renders are in
 [`../artifacts/current-compact-baselines/`](../artifacts/current-compact-baselines/).

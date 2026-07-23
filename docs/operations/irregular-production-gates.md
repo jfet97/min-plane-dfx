@@ -20,8 +20,8 @@ cancellation, history, or timeout behavior.
 
 The exact collision and fitted hashes, placed/unplaced partitions, area and
 cavity limits, and generous runtime ceilings live in
-`scripts/irregular-compact-nine-baselines.ts`. The observed runtimes above are
-measurements, not exact
+`scripts/irregular-compact-nine-baselines.ts`. The observed runtimes above came
+from the no-options sequential run at `2ede042`; they are measurements, not exact
 timing assertions. Portable reports and renders are under
 [`../artifacts/current-compact-baselines/`](../artifacts/current-compact-baselines/).
 
