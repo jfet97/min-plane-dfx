@@ -46,8 +46,9 @@ pnpm gate:capacity
 Runs the constrained capacity fixtures through the full production
 coordinator in paired production and cold-only arms. It fails when routing,
 exact placed/unplaced partitioning, deterministic capacity settlement, the
-zero auxiliary-evaluation contract, or the prefix-not-below-cold-only
-guarantee is violated. Reports and sheet-outline SVG renders land under
+zero auxiliary-evaluation contract, all-piece-depth coverage, or the
+prefix-not-below-cold-only guarantee under the complete capacity objective is
+violated. Reports and sheet-outline SVG renders land under
 `/private/tmp/irregular-capacity-gate/` by default.
 
 ## Full Current Sheet Matrix

@@ -47,6 +47,21 @@ export interface IntrinsicCapacityEndpoint {
   readonly metrics: IntrinsicCapacityEndpointMetrics
 }
 
+/** Stable value projection shared by endpoint selection, traces, and gates. */
+export interface IntrinsicCapacityObjective {
+  readonly placedCount: number
+  readonly placedDoubledMaterialAreaGrid2: bigint
+  readonly enclosedCavityCount: number
+  readonly totalEnclosedCavityAreaMm2: number
+  readonly envelopeMaximumSideMm: number
+  readonly envelopeAreaMm2: number
+  readonly envelopeSpanMm: number
+  readonly canonicalGeometryHash: string
+  readonly origin: IntrinsicCapacityEndpointOrigin
+  readonly prefixDepth: number | undefined
+  readonly sourceRole: string | undefined
+}
+
 export interface IntrinsicCapacityCavityMetrics {
   readonly count: number
   readonly totalAreaMm2: number
@@ -250,21 +265,51 @@ export function compareIntrinsicCapacityEndpoints(
   first: IntrinsicCapacityEndpoint,
   second: IntrinsicCapacityEndpoint
 ): number {
+  return compareIntrinsicCapacityObjectives(
+    intrinsicCapacityObjective(first),
+    intrinsicCapacityObjective(second)
+  )
+}
+
+/** Projects one endpoint into the complete versioned capacity objective. */
+export function intrinsicCapacityObjective(
+  endpoint: IntrinsicCapacityEndpoint
+): IntrinsicCapacityObjective {
+  return {
+    placedCount: endpoint.metrics.placedCount,
+    placedDoubledMaterialAreaGrid2: endpoint.metrics.placedDoubledMaterialAreaGrid2,
+    enclosedCavityCount: endpoint.metrics.enclosedCavityCount,
+    totalEnclosedCavityAreaMm2: endpoint.metrics.totalEnclosedCavityAreaMm2,
+    envelopeMaximumSideMm: endpoint.metrics.envelopeMaximumSideMm,
+    envelopeAreaMm2: endpoint.metrics.envelopeAreaMm2,
+    envelopeSpanMm: endpoint.metrics.envelopeSpanMm,
+    canonicalGeometryHash: endpoint.canonicalGeometryHash,
+    origin: endpoint.origin,
+    prefixDepth: endpoint.prefixDepth,
+    sourceRole: endpoint.sourceRole
+  }
+}
+
+/** Total ordering for the complete versioned capacity objective. */
+export function compareIntrinsicCapacityObjectives(
+  first: IntrinsicCapacityObjective,
+  second: IntrinsicCapacityObjective
+): number {
   return (
-    second.metrics.placedCount - first.metrics.placedCount ||
+    second.placedCount - first.placedCount ||
     compareBigintDescending(
-      first.metrics.placedDoubledMaterialAreaGrid2,
-      second.metrics.placedDoubledMaterialAreaGrid2
+      first.placedDoubledMaterialAreaGrid2,
+      second.placedDoubledMaterialAreaGrid2
     ) ||
-    first.metrics.enclosedCavityCount - second.metrics.enclosedCavityCount ||
-    canonicalAreaMetric(first.metrics.totalEnclosedCavityAreaMm2) -
-      canonicalAreaMetric(second.metrics.totalEnclosedCavityAreaMm2) ||
-    canonicalLinearMetric(first.metrics.envelopeMaximumSideMm) -
-      canonicalLinearMetric(second.metrics.envelopeMaximumSideMm) ||
-    canonicalAreaMetric(first.metrics.envelopeAreaMm2) -
-      canonicalAreaMetric(second.metrics.envelopeAreaMm2) ||
-    canonicalLinearMetric(first.metrics.envelopeSpanMm) -
-      canonicalLinearMetric(second.metrics.envelopeSpanMm) ||
+    first.enclosedCavityCount - second.enclosedCavityCount ||
+    canonicalAreaMetric(first.totalEnclosedCavityAreaMm2) -
+      canonicalAreaMetric(second.totalEnclosedCavityAreaMm2) ||
+    canonicalLinearMetric(first.envelopeMaximumSideMm) -
+      canonicalLinearMetric(second.envelopeMaximumSideMm) ||
+    canonicalAreaMetric(first.envelopeAreaMm2) -
+      canonicalAreaMetric(second.envelopeAreaMm2) ||
+    canonicalLinearMetric(first.envelopeSpanMm) -
+      canonicalLinearMetric(second.envelopeSpanMm) ||
     first.canonicalGeometryHash.localeCompare(second.canonicalGeometryHash) ||
     intrinsicCapacityOriginRank(first.origin) - intrinsicCapacityOriginRank(second.origin) ||
     (first.prefixDepth ?? -1) - (second.prefixDepth ?? -1) ||

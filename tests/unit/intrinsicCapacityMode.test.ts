@@ -113,6 +113,24 @@ function preparedRectangle(
   })
 }
 
+function preparedRectangleWithMaterialHull(
+  id: string,
+  collisionWidth: number,
+  collisionHeight: number,
+  materialWidth: number,
+  materialHeight: number
+): IrregularPreparedPiece {
+  const prepared = preparedRectangle(id, collisionWidth, collisionHeight)
+  const materialPoints = rectanglePoints(materialWidth, materialHeight)
+  return new IrregularPreparedPiece({
+    ...prepared,
+    collisionGeometry: new CollisionGeometry({
+      ...prepared.collisionGeometry,
+      convexHull: new IrregularPolygon({ points: materialPoints })
+    })
+  })
+}
+
 function sheet(width: number, height: number): SheetSpec {
   return new SheetSpec({ width, height, label: `${width}x${height}` })
 }
@@ -236,6 +254,47 @@ describe('intrinsic capacity preflight', () => {
     expect(outcome.kind).toBe('inconclusive')
     expect(outcome.measurements.singletonInfeasiblePieceIds).toEqual([])
   })
+
+  it('honors cancellation while measuring transformed proof geometry', async () => {
+    const pieces = [preparedRectangle('square-a', 60, 60)]
+    const failure = await provideGeometry(
+      preflightIntrinsicCompleteCapacity(sheet(100, 100), pieces, {
+        checkpoint: () =>
+          Effect.fail(
+            new IrregularNfpIfpControlAbortError({
+              reason: 'cancelled',
+              message: 'test preflight cancellation'
+            })
+          )
+      }).pipe(Effect.flip)
+    )
+    expect(failure._tag).toBe('IrregularNfpIfpControlAbortError')
+    if (failure._tag !== 'IrregularNfpIfpControlAbortError') return
+    expect(failure.reason).toBe('cancelled')
+  })
+
+  it('honors deadline censoring while measuring transformed proof geometry', async () => {
+    const pieces = [preparedRectangle('square-a', 60, 60)]
+    let checkpoints = 0
+    const failure = await provideGeometry(
+      preflightIntrinsicCompleteCapacity(sheet(100, 100), pieces, {
+        checkpoint: () => {
+          checkpoints += 1
+          return checkpoints > 1
+            ? Effect.fail(
+                new IrregularNfpIfpControlAbortError({
+                  reason: 'deadline',
+                  message: 'test preflight deadline'
+                })
+              )
+            : Effect.void
+        }
+      }).pipe(Effect.flip)
+    )
+    expect(failure._tag).toBe('IrregularNfpIfpControlAbortError')
+    if (failure._tag !== 'IrregularNfpIfpControlAbortError') return
+    expect(failure.reason).toBe('deadline')
+  })
 })
 
 describe('intrinsic capacity search', () => {
@@ -289,6 +348,21 @@ describe('intrinsic capacity search', () => {
     expect(result.endpoint.metrics.placedCount).toBe(1)
     expect(result.endpoint.placedPreparedIds).toEqual(['large'])
     expect(result.endpoint.unplacedPreparedIds).toEqual(['smaller'])
+  })
+
+  it('does not deduplicate equal collision geometry with different material accounting', async () => {
+    const pieces = [
+      preparedRectangleWithMaterialHull('low-material', 60, 60, 40, 40),
+      preparedRectangleWithMaterialHull('high-material', 60, 60, 60, 60)
+    ]
+    const result = await runMode({
+      sheet: sheet(60, 60),
+      preparedPieces: pieces,
+      prefixSources: []
+    })
+    expect(result.endpoint.metrics.placedCount).toBe(1)
+    expect(result.endpoint.placedPreparedIds).toEqual(['high-material'])
+    expect(result.endpoint.unplacedPreparedIds).toEqual(['low-material'])
   })
 
   it('keeps equal attainable count and material searchable and beats a spread incumbent', async () => {

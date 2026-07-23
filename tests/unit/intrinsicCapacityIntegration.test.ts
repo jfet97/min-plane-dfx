@@ -158,8 +158,10 @@ describe('intrinsic capacity integration', () => {
       expect(output.historyFrames).toHaveLength(2)
       expect(output.historyFrames[0]?.placements).toEqual([])
       expect(output.historyFrames[0]?.title).toBe('shared-archive-selected-layout-reveal')
+      expect(output.historyFrames[0]?.unplacedPieceIds).toEqual(computed.unplacedPieceIds)
       expect(output.historyFrames.at(-1)?.placements).toHaveLength(1)
       expect(output.historyFrames.at(-1)?.title).toBe('shared-archive-final-selected')
+      expect(output.historyFrames.at(-1)?.unplacedPieceIds).toEqual(computed.unplacedPieceIds)
     },
     120_000
   )

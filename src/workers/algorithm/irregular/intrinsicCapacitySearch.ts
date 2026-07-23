@@ -46,7 +46,8 @@ import { IrregularBeamState } from './irregularBeamState.js'
 export const INTRINSIC_CAPACITY_V1_BOUNDS = {
   coldBeamWidth: 16,
   localLegalPlacementFanout: 3,
-  placementEvaluationCap: 50_000
+  minimumPlacementEvaluationCap: 50_000,
+  placementEvaluationQuotaPerDepth: 4_096
 } as const
 
 export type IntrinsicCapacitySettlement = 'exhausted' | 'evaluation-cap'
@@ -55,6 +56,7 @@ export interface IntrinsicCapacitySearchTrace {
   readonly beamWidth: number
   readonly localLegalPlacementFanout: number
   readonly placementEvaluationCap: number
+  readonly placementEvaluationQuotaPerDepth: number
   readonly consumedPlacementEvaluations: number
   /** Prefix terminalization must never consume placement evaluations. */
   readonly auxiliaryPlacementEvaluations: number
@@ -65,6 +67,7 @@ export interface IntrinsicCapacitySearchTrace {
   readonly invalidCandidates: number
   readonly endpointFitRejections: number
   readonly completedDepths: number
+  readonly depthQuotaExhaustions: number
   readonly pieceCount: number
   readonly settlement: IntrinsicCapacitySettlement
 }
@@ -148,8 +151,16 @@ export function runIntrinsicCapacityColdSearch(
     const settings = yield* GeometrySettings
     const geometryKernel = yield* GeometryKernel
     const nfpIfpService = yield* NfpIfpService
-    const { coldBeamWidth, localLegalPlacementFanout, placementEvaluationCap } =
-      INTRINSIC_CAPACITY_V1_BOUNDS
+    const {
+      coldBeamWidth,
+      localLegalPlacementFanout,
+      minimumPlacementEvaluationCap,
+      placementEvaluationQuotaPerDepth
+    } = INTRINSIC_CAPACITY_V1_BOUNDS
+    const placementEvaluationCap = Math.max(
+      minimumPlacementEvaluationCap,
+      input.preparedPieces.length * placementEvaluationQuotaPerDepth
+    )
 
     const sheetWidthGrid = toGridMm(input.sheet.width)
     const sheetHeightGrid = toGridMm(input.sheet.height)
@@ -189,6 +200,7 @@ export function runIntrinsicCapacityColdSearch(
     let invalidCandidates = 0
     let endpointFitRejections = 0
     let completedDepths = 0
+    let depthQuotaExhaustions = 0
     let settlement: IntrinsicCapacitySettlement = 'exhausted'
 
     const emptyState = IrregularBeamState.empty(input.preparedPieces)
@@ -211,7 +223,7 @@ export function runIntrinsicCapacityColdSearch(
       }
     ]
 
-    depthLoop: for (let depth = 0; depth < input.preparedPieces.length; depth += 1) {
+    for (let depth = 0; depth < input.preparedPieces.length; depth += 1) {
       const piece = input.preparedPieces[depth]
       if (piece === undefined) continue
       const pieceId = preparedIds[depth]
@@ -229,6 +241,7 @@ export function runIntrinsicCapacityColdSearch(
       const successors: CapacityBeamEntry[] = []
       const successorKeys = new Set<string>()
 
+      // reserve the skip path for every retained state before spending this depth's placement quota
       for (const entry of beam) {
         const skipState = entry.state.withUnplacedPiece({
           remainingPreparedPieces,
@@ -248,7 +261,12 @@ export function runIntrinsicCapacityColdSearch(
             deduplicatedSuccessors += 1
           }
         )
+      }
 
+      let consumedAtDepth = 0
+      let depthQuotaExhausted = false
+      for (const entry of beam) {
+        if (depthQuotaExhausted) break
         const scored: ScoredCandidateReference[] = []
         const sortedTransforms = [...piece.transforms].sort((first, second) =>
           transformCandidateOrder(first, second)
@@ -258,6 +276,7 @@ export function runIntrinsicCapacityColdSearch(
           transformOrdinal < sortedTransforms.length;
           transformOrdinal += 1
         ) {
+          if (depthQuotaExhausted) break
           const transform = sortedTransforms[transformOrdinal]
           if (transform === undefined) continue
           const generationStartedAt = capture ? performance.now() : 0
@@ -283,13 +302,18 @@ export function runIntrinsicCapacityColdSearch(
 
           const evaluationStartedAt = capture ? performance.now() : 0
           for (const candidate of legalCandidates) {
-            if (consumedPlacementEvaluations >= placementEvaluationCap) {
+            if (
+              consumedAtDepth >= placementEvaluationQuotaPerDepth ||
+              consumedPlacementEvaluations >= placementEvaluationCap
+            ) {
               settlement = 'evaluation-cap'
+              depthQuotaExhausted = true
               if (capture) {
                 timings.candidateEvaluationMs += performance.now() - evaluationStartedAt
               }
-              break depthLoop
+              break
             }
+            consumedAtDepth += 1
             consumedPlacementEvaluations += 1
             const evaluated = evaluateCandidate(entry, moving, candidate, transformOrdinal)
             if (evaluated === undefined) {
@@ -361,6 +385,7 @@ export function runIntrinsicCapacityColdSearch(
         }
         if (capture) timings.successorConstructionMs += performance.now() - constructionStartedAt
       }
+      if (depthQuotaExhausted) depthQuotaExhaustions += 1
 
       const retentionStartedAt = capture ? performance.now() : 0
       const remainingCountAfterDepth = input.preparedPieces.length - (depth + 1)
@@ -443,6 +468,7 @@ export function runIntrinsicCapacityColdSearch(
         beamWidth: coldBeamWidth,
         localLegalPlacementFanout,
         placementEvaluationCap,
+        placementEvaluationQuotaPerDepth,
         consumedPlacementEvaluations,
         auxiliaryPlacementEvaluations: 0,
         prunedByAttainableCount,
@@ -452,6 +478,7 @@ export function runIntrinsicCapacityColdSearch(
         invalidCandidates,
         endpointFitRejections,
         completedDepths,
+        depthQuotaExhaustions,
         pieceCount: input.preparedPieces.length,
         settlement
       },
@@ -466,13 +493,21 @@ function pushSuccessor(
   successor: CapacityBeamEntry,
   onDuplicate: () => void
 ): boolean {
-  if (successorKeys.has(successor.anchoredOccupiedKey)) {
+  const successorKey = intrinsicCapacitySuccessorIdentity(successor)
+  if (successorKeys.has(successorKey)) {
     onDuplicate()
     return false
   }
-  successorKeys.add(successor.anchoredOccupiedKey)
+  successorKeys.add(successorKey)
   successors.push(successor)
   return true
+}
+
+/** Future-equivalent identity at one synchronized prepared-piece depth. */
+function intrinsicCapacitySuccessorIdentity(successor: CapacityBeamEntry): string {
+  return `${successor.anchoredOccupiedKey}|placed=${JSON.stringify(
+    [...successor.state.placementOrder].toSorted(compareStrings)
+  )}`
 }
 
 interface EvaluatedCandidateReference extends ScoredCandidateReference {

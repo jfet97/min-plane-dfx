@@ -13,10 +13,12 @@ import type {
 } from '../../irregular/services.js'
 import {
   compareIntrinsicCapacityEndpoints,
+  intrinsicCapacityObjective,
   intrinsicCapacityEndpointPartitionsRequest,
   materializeIntrinsicCapacityEndpoint,
   type IntrinsicCapacityCavityCache,
-  type IntrinsicCapacityEndpoint
+  type IntrinsicCapacityEndpoint,
+  type IntrinsicCapacityObjective
 } from './intrinsicCapacityEndpoint.js'
 import {
   intrinsicCapacityMaterialAreas,
@@ -62,14 +64,10 @@ export interface IntrinsicCapacityIncumbentTrace {
   readonly canonicalGeometryHash: string
 }
 
-export interface IntrinsicCapacitySelectionTrace {
-  readonly origin: IntrinsicCapacityEndpoint['origin']
-  readonly placedCount: number
+export interface IntrinsicCapacitySelectionTrace extends IntrinsicCapacityObjective {
   readonly unplacedCount: number
   readonly placedMaterialAreaMm2: number
-  readonly enclosedCavityCount: number
   readonly selectedRotationDeg: 0 | 90
-  readonly canonicalGeometryHash: string
 }
 
 export interface IntrinsicCapacityTrace {
@@ -225,13 +223,10 @@ export function runIntrinsicCapacityMode(
               },
         coldSearch: coldSearch.trace,
         selected: {
-          origin: selected.origin,
-          placedCount: selected.metrics.placedCount,
+          ...intrinsicCapacityObjective(selected),
           unplacedCount: selected.unplacedPreparedIds.length,
           placedMaterialAreaMm2: selected.metrics.placedMaterialAreaMm2,
-          enclosedCavityCount: selected.metrics.enclosedCavityCount,
-          selectedRotationDeg: selected.selectedRotationDeg,
-          canonicalGeometryHash: selected.canonicalGeometryHash
+          selectedRotationDeg: selected.selectedRotationDeg
         },
         preflightRuntimeMs: input.preflightRuntimeMs,
         completeArchiveRuntimeMs: input.completeArchiveRuntimeMs,

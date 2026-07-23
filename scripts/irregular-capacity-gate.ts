@@ -17,6 +17,10 @@ import {
   type ComputeIrregularNestingOptions,
   type IrregularComputeResult
 } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
+import {
+  compareIntrinsicCapacityObjectives,
+  type IntrinsicCapacityObjective
+} from '../src/workers/algorithm/irregular/intrinsicCapacityEndpoint.js'
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
@@ -270,7 +274,7 @@ interface CapacityRunReport {
         readonly prefixes: unknown
         readonly prefixIncumbent: unknown
         readonly coldSearch: unknown
-        readonly selected: unknown
+        readonly selected: IntrinsicCapacityObjective
         readonly preflightRuntimeMs: number | undefined
         readonly completeArchiveRuntimeMs: number | undefined
         readonly prefixTerminalizationMs: number
@@ -279,6 +283,18 @@ interface CapacityRunReport {
       }
     | undefined
   readonly artifactPath: string
+}
+
+interface CapacityColdSearchTrace {
+  readonly auxiliaryPlacementEvaluations: number
+  readonly completedDepths: number
+  readonly pieceCount: number
+}
+
+function capacityColdSearchTrace(
+  report: CapacityRunReport
+): CapacityColdSearchTrace | undefined {
+  return report.capacity?.coldSearch as CapacityColdSearchTrace | undefined
 }
 
 async function runArm(
@@ -416,6 +432,9 @@ for (const fixture of fixtures) {
     cli.paired && fixture.pairedEligible
       ? await runArm(request, 'cold-only', `${cli.outputDirectory}/${fixture.id}-cold-only.svg`)
       : undefined
+  const productionColdSearch = capacityColdSearchTrace(production)
+  const coldOnlyColdSearch =
+    coldOnly === undefined ? undefined : capacityColdSearchTrace(coldOnly)
 
   const checks = {
     partitionExact: production.partitionExact && (coldOnly?.partitionExact ?? true),
@@ -428,14 +447,21 @@ for (const fixture of fixtures) {
       production.capacity === undefined ||
       production.terminationReason === 'capacity_subset_settled',
     auxiliaryEvaluationsZero:
-      production.capacity === undefined ||
-      (production.capacity.coldSearch as { auxiliaryPlacementEvaluations: number })
-        .auxiliaryPlacementEvaluations === 0,
+      productionColdSearch === undefined ||
+      productionColdSearch.auxiliaryPlacementEvaluations === 0,
+    coldSearchReachedEveryDepth:
+      (productionColdSearch === undefined ||
+        productionColdSearch.completedDepths === productionColdSearch.pieceCount) &&
+      (coldOnlyColdSearch === undefined ||
+        coldOnlyColdSearch.completedDepths === coldOnlyColdSearch.pieceCount),
     prefixNotBelowColdOnly:
       coldOnly === undefined ||
-      production.placedCount > coldOnly.placedCount ||
-      (production.placedCount === coldOnly.placedCount &&
-        production.unplacedCount === coldOnly.unplacedCount)
+      (production.capacity !== undefined &&
+        coldOnly.capacity !== undefined &&
+        compareIntrinsicCapacityObjectives(
+          production.capacity.selected,
+          coldOnly.capacity.selected
+        ) <= 0)
   }
   const fixturePassed = Object.values(checks).every((value) => value)
   passed &&= fixturePassed

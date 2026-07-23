@@ -145,20 +145,23 @@ evaluations; the best becomes the initial incumbent.
 
 `intrinsic-capacity-v1` is a depth-synchronized cold beam over the prepared
 order with beam width `16`, local legal-placement fanout `3`, a deterministic
-`50,000` placement-evaluation cap, and one mandatory skip successor at every
-piece depth. Successor fanout ranks candidates by exact intrinsic envelope
-metrics from incrementally maintained occupied bounds without constructing
-placement objects, states, contact measurements, or anchored rebuilds for
-discarded candidates. Every successor is checked for exact partial q0/q90
-grid-span fit and deduplicated by anchored canonical occupied-union identity
-before retention; exact enclosed-cavity measurement is cached by that identity
-and covers every retained contender. The incumbent may prune a cold state only
-through the strict attainable-count and attainable-material bounds; equality
-always remains searchable. Retention and final endpoint selection follow the
-capacity objective: more placed pieces, more exact unpadded placed material
-(convex-hull `bigint` grid areas), fewer exact cavities, less cavity area,
-then smaller intrinsic maximum side, envelope area, and span, and finally
-deterministic geometry identity.
+`4,096`-evaluation quota per piece depth, a total allowance of
+`max(50,000, pieceCount * 4,096)`, and one mandatory skip successor at every
+piece depth. Skip paths are reserved before placement work, so exhausting a
+busy depth cannot prevent later pieces from being considered. Successor fanout
+ranks candidates by exact intrinsic envelope metrics from incrementally
+maintained occupied bounds without constructing placement objects, states,
+contact measurements, or anchored rebuilds for discarded candidates. Every
+successor is checked for exact partial q0/q90 grid-span fit and deduplicated by
+anchored canonical occupied-union identity plus the exact placed-ID set before
+retention; exact enclosed-cavity measurement is cached by geometry identity
+alone and covers every retained contender. The incumbent may prune a cold
+state only through the strict attainable-count and attainable-material bounds;
+equality always remains searchable. Retention and final endpoint selection
+follow the capacity objective: more placed pieces, more exact unpadded placed
+material (convex-hull `bigint` grid areas), fewer exact cavities, less cavity
+area, then smaller intrinsic maximum side, envelope area, and span, and
+finally deterministic geometry identity.
 
 Endpoint materialization re-runs the authoritative canonical legality per
 rigid orientation and returns an exact placed/unplaced partition of the
@@ -169,6 +172,9 @@ selected-layout reveal history, additive diagnostics codes
 `complete_archive_fitted`, `bounded_complete_archive_miss`,
 `capacity_subset_settled`), and the structured `capacityTrace` on the compute
 result. The evidence gate is `pnpm gate:capacity`.
+Capacity reveal frames carry the settled endpoint's exact unplaced IDs at
+every step, and the proof-only preflight observes the cooperative
+cancellation/deadline control before and during transform measurement.
 
 ### Historical and Experimental Constructors
 

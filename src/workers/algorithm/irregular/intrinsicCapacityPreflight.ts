@@ -6,7 +6,9 @@ import { toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { GeometryKernel } from '../../irregular/geometryKernel.js'
 import type {
   IrregularGeometryInputError,
-  IrregularNestingNotImplementedError
+  IrregularNestingNotImplementedError,
+  IrregularNfpIfpControl,
+  IrregularNfpIfpControlAbortError
 } from '../../irregular/services.js'
 import {
   exactDoubledPolygonAreaGrid2,
@@ -58,10 +60,14 @@ export type IntrinsicCapacityPreflightOutcome =
  */
 export function preflightIntrinsicCompleteCapacity(
   sheet: SheetSpec,
-  pieces: ReadonlyArray<IrregularPreparedPiece>
+  pieces: ReadonlyArray<IrregularPreparedPiece>,
+  control?: IrregularNfpIfpControl
 ): Effect.Effect<
   IntrinsicCapacityPreflightOutcome,
-  IntrinsicCapacityError | IrregularGeometryInputError | IrregularNestingNotImplementedError,
+  | IntrinsicCapacityError
+  | IrregularGeometryInputError
+  | IrregularNestingNotImplementedError
+  | IrregularNfpIfpControlAbortError,
   GeometryKernel
 > {
   return Effect.gen(function* () {
@@ -86,6 +92,7 @@ export function preflightIntrinsicCompleteCapacity(
     let minimumDoubledCollisionAreaSumGrid2 = 0n
     const singletonInfeasiblePieceIds: PieceId[] = []
     for (const piece of pieces) {
+      if (control !== undefined) yield* control.checkpoint('candidate-points')
       const pieceId = intrinsicCapacityPreparedPieceId(piece)
       if (piece.transforms.length === 0) {
         return yield* Effect.fail(
@@ -98,6 +105,7 @@ export function preflightIntrinsicCompleteCapacity(
       let minimumDoubledAreaGrid2: bigint | undefined
       let singletonFits = false
       for (const transform of piece.transforms) {
+        if (control !== undefined) yield* control.checkpoint('candidate-points')
         const moving = yield* geometryKernel.transformCollisionGeometry({
           geometry: piece.collisionGeometry,
           transform

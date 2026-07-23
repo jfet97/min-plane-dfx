@@ -273,7 +273,8 @@ function coordinateIntrinsicSharedArchive(
       const preflightStartedAt = performance.now()
       const preflight = yield* preflightIntrinsicCompleteCapacity(
         input.request.sheet,
-        input.preparedPieces
+        input.preparedPieces,
+        control
       ).pipe(Effect.mapError(mapIntrinsicCapacityError))
       const preflightRuntimeMs = Math.max(0, performance.now() - preflightStartedAt)
       const capacityOptions = {
@@ -473,7 +474,11 @@ function materializeIntrinsicCapacityResult(
     const stateSnapshots =
       input.request.options.historyMode === 'off'
         ? []
-        : selectedLayoutRevealSnapshots(input.preparedPieces, placedCollisionGeometries)
+        : selectedLayoutRevealSnapshots(
+            input.preparedPieces,
+            placedCollisionGeometries,
+            endpoint.unplacedPreparedIds
+          )
     const portfolio = new IrregularPortfolioResult({
       status: 'completed',
       terminationReason: 'capacity_subset_settled',
@@ -777,7 +782,8 @@ function materializeSharedArchiveResult(
 /** Builds a truthful scrub sequence from prefixes of the selected exact layout. */
 function selectedLayoutRevealSnapshots(
   preparedPieces: ReadonlyArray<IrregularPreparedPiece>,
-  placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+  placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>,
+  unplacedPieceIds: ReadonlyArray<PieceId> = []
 ): ReadonlyArray<IrregularStateSnapshot> {
   const preparedById = new Map(
     preparedPieces.map((piece) => [piece.pieceId ?? piece.source.id, piece] as const)
@@ -800,6 +806,7 @@ function selectedLayoutRevealSnapshots(
       state: new IrregularBeamState({
         remainingPreparedPieces,
         placedCollisionGeometries: placed,
+        unplacedPieceIds,
         placementOrder: placed.map(
           ({ placement }) => placement.pieceId ?? placement.sourcePieceId
         )
