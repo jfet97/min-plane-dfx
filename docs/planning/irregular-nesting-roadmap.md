@@ -181,6 +181,11 @@ allowed transforms. It finds 26 canonical-legal candidates but no
 positive-boundary placement. This now justifies one bounded observer-only
 feature-contact generator; it must retain the 17-piece incumbent unless exact
 topology and the existing non-regression guard both improve.
+That generator finds exact structural attachments, but the tightest grows the
+maximum side to `303.874 mm` and misses the `300 x 300` request. The current
+17-piece endpoint remains authoritative. The next bounded observer is a
+two-piece interface reconstruction selected from detached and exposed
+boundary geometry; it may not weaken exact fit or compactness admission.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

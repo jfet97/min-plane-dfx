@@ -527,6 +527,24 @@ candidates for one detached piece against frozen component edges, validate
 them through the canonical sheet authority, and retain the current 17-piece
 endpoint when no strictly better legal result exists.
 
+The generic component-edge closure probe at `2a6fdcb` enumerates 28 exact
+antiparallel edge alignments in `44.3 ms`. Eighteen collide. The remaining ten
+do create a structural interface: the best grows the largest component from
+14 to 15 pieces and reduces isolated pieces from three to two. However, its
+maximum side is `303.874 mm`, so it cannot fit the requested `300 x 300`
+sheet; the other exact alignments require still larger envelopes. No endpoint
+passes the unchanged envelope and requested-sheet gate, and the protected
+17-piece incumbent remains selected.
+
+Together, the two one-piece falsifiers distinguish missing contact proposals
+from usable constrained-sheet continuation. Explicit feature contact can
+attach a piece, but the frozen 14-piece core leaves insufficient slack. The
+next bounded generic experiment is therefore a two-piece interface sweep:
+remove one detached piece plus one geometry-selected boundary/interface piece,
+freeze the remaining 15, and enumerate exact reconstruction alternatives. It
+must preserve placed count, material, cavities, requested-sheet legality, and
+the existing terminal compactness guard.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim

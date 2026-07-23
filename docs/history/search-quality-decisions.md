@@ -341,3 +341,12 @@ unchanged contact topology. The current 17-piece endpoint remains protected.
 This closes the current one-piece frozen-context candidate pool and permits
 the next generic observer to enumerate exact feature-to-feature contact
 placements before canonical legality and unchanged quality admission.
+
+The exact component-edge probe at `2a6fdcb` tries 28 antiparallel alignments in
+`44.3 ms`: 18 collide and ten attach one isolated piece to the 14-piece core.
+The best attached result improves topology to a 15-piece largest component and
+two isolated pieces, but needs a `303.874 mm` maximum side and therefore misses
+the `300 x 300` request. It is rejected without replacing the current
+17-piece endpoint. With both one-piece neighborhoods now falsified, the next
+generic experiment may jointly reconstruct one detached piece and one
+geometry-selected interface piece.
