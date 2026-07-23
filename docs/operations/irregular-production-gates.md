@@ -27,6 +27,8 @@ accepted predecessors. See the
 ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/vitest/vitest.mjs run \
   tests/unit/intrinsicSharedArchiveAdmission.test.ts \
   tests/unit/intrinsicSharedArchivePortfolio.test.ts \
+  tests/unit/intrinsicCapacityMode.test.ts \
+  tests/unit/intrinsicCapacityIntegration.test.ts \
   tests/unit/irregularTriangleCompactGolden.test.ts \
   tests/unit/irregularSeventeenShapesCompactGolden.test.ts
 pnpm gate:mixed61-compact
@@ -34,6 +36,20 @@ pnpm gate:mixed61-compact
 
 The Mixed command is intentionally a one-sheet production-quality gate. Its
 report sets `geometryEquivalent` to `null`; it is not an invariance result.
+
+## Constrained Capacity Gate
+
+```sh
+pnpm gate:capacity
+```
+
+Runs the constrained capacity fixtures through the full production
+coordinator in paired production and cold-only arms. It fails when routing,
+exact placed/unplaced partitioning, deterministic capacity settlement, the
+zero auxiliary-evaluation contract, all-piece-depth coverage, or the
+prefix-not-below-cold-only guarantee under the complete capacity objective is
+violated. Reports and sheet-outline SVG renders land under
+`/private/tmp/irregular-capacity-gate/` by default.
 
 ## Full Current Sheet Matrix
 

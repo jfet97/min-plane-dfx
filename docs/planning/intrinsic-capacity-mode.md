@@ -1,8 +1,59 @@
 # Intrinsic Capacity Mode
 
-This document specifies the planned Compact behavior when the requested sheet
-cannot contain every prepared piece. It is a forward implementation contract,
-not current production behavior.
+This document specifies the Compact behavior when the requested sheet cannot
+contain every prepared piece.
+
+## Implementation Status
+
+The first production version, `intrinsic-capacity-v1`, is implemented:
+
+- Stage 0 proof-only preflight:
+  `src/workers/algorithm/irregular/intrinsicCapacityPreflight.ts`;
+- Stage 1 routing inside the Compact coordinator:
+  `src/workers/algorithm/irregular/computeIrregularNesting.ts`;
+- Stage 2 prefix capture and Stage 3 incumbent terminalization:
+  `src/workers/algorithm/irregular/intrinsicCapacityPrefixes.ts`;
+- Stage 4 empty-start cold subset search:
+  `src/workers/algorithm/irregular/intrinsicCapacitySearch.ts`;
+- exact endpoint, accounting, and comparator:
+  `src/workers/algorithm/irregular/intrinsicCapacityEndpoint.ts`;
+- orchestration and trace:
+  `src/workers/algorithm/irregular/intrinsicCapacityMode.ts`;
+- durable evidence gate: `pnpm gate:capacity`
+  (`scripts/irregular-capacity-gate.ts`).
+
+Documented implementation decisions within this contract:
+
+- the singleton proof is reported before the area proof when both hold
+  (deterministic priority; both route identically);
+- the cold fanout ranks a state's legal candidates by exact intrinsic envelope
+  metrics derived from incrementally maintained occupied bounds (maximum side,
+  envelope area, span, then deterministic transform/point order); no contact
+  measurement, placement object, beam state, or anchored rebuild is constructed
+  for candidates that are not selected, because the capacity objective contains
+  no contact criterion;
+- the in-loop partial q0/q90 fit check is the exact canonical-grid span test;
+  the authoritative full canonical legality and identity run at endpoint
+  materialization, which re-runs `assertCanonicalGridLegalLayout` per
+  orientation;
+- successor deduplication uses both the bottom-left anchored canonical
+  occupied-union identity and the exact set of placed prepared IDs, so two
+  geometrically identical partial layouts with different future material
+  accounting remain distinct; the cavity cache itself still keys only on
+  occupied geometry;
+- each piece depth receives a deterministic evaluation quota; all skip
+  successors are reserved before placement work, and exhausting one depth's
+  quota advances to the next piece rather than terminating the search;
+- when neither the cold beam nor a prefix produces a legal endpoint, the
+  honest all-unplaced empty endpoint is returned;
+- the trace vocabulary is realized as additive result diagnostics codes plus
+  the structured `capacityTrace` on the compute result, and the portfolio
+  termination reason `capacity_subset_settled`.
+
+Deferred, unchanged from this contract: identical-sheet continuation.
+
+The remainder of this document is the reviewed contract that the
+implementation satisfies.
 
 The design preserves the existing rule for roomy sheets:
 
@@ -177,11 +228,13 @@ but it cannot take beam slots or evaluation allowance from the capacity search.
 
 Implement `intrinsic-capacity-v1` as a separate search and endpoint type.
 
-Fixed first-version bounds:
+First-version bounds:
 
 - cold beam width: `16`;
 - local legal-placement fanout: `3`;
-- deterministic placement-evaluation cap: `50,000`;
+- deterministic minimum placement-evaluation allowance: `50,000`;
+- deterministic placement-evaluation quota per piece depth: `4,096`;
+- total allowance: `max(50,000, pieceCount * 4,096)`;
 - one mandatory skip successor at every piece depth.
 
 At every depth, each retained state emits:
@@ -192,8 +245,13 @@ one skip-this-piece successor
 ```
 
 Every successor is checked for exact partial q0/q90 fit and deduplicated before
-retention. Different piece depths never compete directly. The search starts
-from the empty state even when a prefix incumbent exists.
+retention. Different piece depths never compete directly. Skip successors are
+reserved for every retained state before that depth spends its placement
+quota. If the quota is exhausted, the already-scored placement successors are
+retained normally and the search continues at the next depth. The search
+therefore considers every prepared piece even when candidate density is heavily
+front-loaded. It starts from the empty state even when a prefix incumbent
+exists.
 
 The prefix incumbent may prune a cold state only when it is mathematically
 unable to tie or beat the incumbent:
@@ -256,6 +314,7 @@ It must also record:
 - descriptors captured, fitting, rejected, and terminalized;
 - prefix-incumbent count, material area, q0/q90 orientation, and identity;
 - cold beam width, fanout, available cap, and consumed evaluations;
+- per-depth quota, quota-exhaustion count, and completed piece depths;
 - auxiliary placement evaluations, which must be zero;
 - cold states pruned by count and by material bounds separately;
 - exact placed/unplaced partition;
@@ -276,6 +335,7 @@ Reject or revise the implementation if:
 - repeated runs produce different descriptors, pruning, endpoint, or trace
   identity;
 - placed and unplaced IDs do not form an exact partition of the request;
+- a settled capacity search does not reach every requested piece depth;
 - a runtime benefit is claimed without fewer cold successor evaluations and
   lower capacity elapsed time.
 
@@ -307,7 +367,7 @@ The unavoidable worst case is:
 inconclusive preflight
     + full complete archive
     + no useful fitting prefix
-    + full 50,000-evaluation cold capacity search
+    + full max(50,000, pieceCount * 4,096)-evaluation cold capacity search
 ```
 
 This worst case must be reported honestly. It can be optimized later only with
@@ -326,4 +386,3 @@ Once one capacity endpoint is settled:
 
 This later layer must not move pieces between settled sheets or change the
 single-sheet capacity objective without a separate reviewed design.
-

@@ -1,0 +1,1102 @@
+{
+  "generatedAt": "2026-07-23T12:52:19.968Z",
+  "cases": [
+    {
+      "caseId": "capacity-area-proven-rect2",
+      "sheet": {
+        "width": 100,
+        "height": 100
+      },
+      "pieceCount": 2,
+      "checks": {
+        "partitionExact": true,
+        "routing": true,
+        "placedCount": true,
+        "capacitySettled": true,
+        "auxiliaryEvaluationsZero": true,
+        "coldSearchReachedEveryDepth": true,
+        "prefixNotBelowColdOnly": true
+      },
+      "passed": true,
+      "production": {
+        "arm": "production",
+        "elapsedMs": 26.671415999999994,
+        "routing": "preflight-proven-impossible",
+        "preflight": {
+          "kind": "proven_impossible",
+          "reason": "minimum-collision-area-exceeds-sheet-area"
+        },
+        "placedCount": 1,
+        "unplacedCount": 1,
+        "unplacedPieceIds": [
+          "rectangle-80x60-copy-2"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "b8ca9e295460cab75f0d3d44d6ae3abe7fc987df8123ca823bada967c4388a71",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "placementEvaluationQuotaPerDepth": 4096,
+            "consumedPlacementEvaluations": 128,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 12,
+            "fitRejectedCandidates": 112,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 2,
+            "depthQuotaExhaustions": 0,
+            "pieceCount": 2,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "placedCount": 1,
+            "placedDoubledMaterialAreaGrid2": "9600000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 90.504,
+            "envelopeAreaMm2": 6380.894016000001,
+            "envelopeSpanMm": 161.008,
+            "canonicalGeometryHash": "d8bad00df73648e656bfcd4e8f54a217eb8a0390355b31a2706db36c7002fee4",
+            "origin": "cold-search",
+            "unplacedCount": 1,
+            "placedMaterialAreaMm2": 4800,
+            "selectedRotationDeg": 0
+          },
+          "preflightRuntimeMs": 1.6785420000000215,
+          "prefixTerminalizationMs": 0.06445899999999938,
+          "coldSearchMs": 17.26670899999999,
+          "runtimeMs": 17.396582999999993
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-capacity-review-fixes/capacity-area-proven-rect2-production.svg"
+      }
+    },
+    {
+      "caseId": "capacity-singleton-proven",
+      "sheet": {
+        "width": 100,
+        "height": 100
+      },
+      "pieceCount": 2,
+      "checks": {
+        "partitionExact": true,
+        "routing": true,
+        "placedCount": true,
+        "capacitySettled": true,
+        "auxiliaryEvaluationsZero": true,
+        "coldSearchReachedEveryDepth": true,
+        "prefixNotBelowColdOnly": true
+      },
+      "passed": true,
+      "production": {
+        "arm": "production",
+        "elapsedMs": 4.123874999999998,
+        "routing": "preflight-proven-impossible",
+        "preflight": {
+          "kind": "proven_impossible",
+          "reason": "singleton-transform-set-does-not-fit"
+        },
+        "placedCount": 1,
+        "unplacedCount": 1,
+        "unplacedPieceIds": [
+          "rectangle-150x20-copy-1"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "7d4001c841a1c55a4e44b2b6fb0205d6b707fdacfb86a05244691beec3e0686d",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "placementEvaluationQuotaPerDepth": 4096,
+            "consumedPlacementEvaluations": 10,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 6,
+            "fitRejectedCandidates": 2,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 2,
+            "depthQuotaExhaustions": 0,
+            "pieceCount": 2,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "placedCount": 1,
+            "placedDoubledMaterialAreaGrid2": "3600000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 90.504,
+            "envelopeAreaMm2": 1855.6940160000001,
+            "envelopeSpanMm": 111.00800000000001,
+            "canonicalGeometryHash": "bdad365575c47202d64f612c068a281fd29c2eeefde3d945a93ae6d97d1b2e24",
+            "origin": "cold-search",
+            "unplacedCount": 1,
+            "placedMaterialAreaMm2": 1800,
+            "selectedRotationDeg": 0
+          },
+          "preflightRuntimeMs": 0.5223749999999825,
+          "prefixTerminalizationMs": 0.008041999999989002,
+          "coldSearchMs": 1.5152499999999804,
+          "runtimeMs": 1.5380420000000186
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-capacity-review-fixes/capacity-singleton-proven-production.svg"
+      }
+    },
+    {
+      "caseId": "capacity-archive-miss-squares2",
+      "sheet": {
+        "width": 100,
+        "height": 100
+      },
+      "pieceCount": 2,
+      "checks": {
+        "partitionExact": true,
+        "routing": true,
+        "placedCount": true,
+        "capacitySettled": true,
+        "auxiliaryEvaluationsZero": true,
+        "coldSearchReachedEveryDepth": true,
+        "prefixNotBelowColdOnly": true
+      },
+      "passed": true,
+      "production": {
+        "arm": "production",
+        "elapsedMs": 58.71416700000003,
+        "routing": "bounded-complete-archive-miss",
+        "preflight": {
+          "kind": "inconclusive"
+        },
+        "placedCount": 1,
+        "unplacedCount": 1,
+        "unplacedPieceIds": [
+          "rectangle-55x55-copy-2"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "698a0fa0fc2c2eb163158b334d0ce9df500f96e30f79c2770deef35ccca561d2",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 3,
+            "fittingCount": 3,
+            "rejectedCount": 0,
+            "terminalizedCount": 1,
+            "descriptors": [
+              {
+                "role": "canonical-grid",
+                "depth": 1
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 1
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 1
+              }
+            ]
+          },
+          "prefixIncumbent": {
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 1,
+            "placedCount": 1,
+            "placedMaterialAreaMm2": 3025,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "228a5d6c99f8214b835ec056b28b7692dc800469ebe4b36c6c79d1cba40dac5c"
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "placementEvaluationQuotaPerDepth": 4096,
+            "consumedPlacementEvaluations": 64,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 1,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 14,
+            "fitRejectedCandidates": 48,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 2,
+            "depthQuotaExhaustions": 0,
+            "pieceCount": 2,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "placedCount": 1,
+            "placedDoubledMaterialAreaGrid2": "6050000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 55.504,
+            "envelopeAreaMm2": 3080.694016,
+            "envelopeSpanMm": 111.008,
+            "canonicalGeometryHash": "228a5d6c99f8214b835ec056b28b7692dc800469ebe4b36c6c79d1cba40dac5c",
+            "origin": "cold-search",
+            "unplacedCount": 1,
+            "placedMaterialAreaMm2": 3025,
+            "selectedRotationDeg": 0
+          },
+          "preflightRuntimeMs": 1.5470829999999864,
+          "completeArchiveRuntimeMs": 51.365542000000005,
+          "prefixTerminalizationMs": 0.7408330000000092,
+          "coldSearchMs": 2.5354580000000055,
+          "runtimeMs": 3.312749999999994
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-capacity-review-fixes/capacity-archive-miss-squares2-production.svg"
+      },
+      "coldOnly": {
+        "arm": "cold-only",
+        "elapsedMs": 22.018250000000023,
+        "routing": "bounded-complete-archive-miss",
+        "preflight": {
+          "kind": "inconclusive"
+        },
+        "placedCount": 1,
+        "unplacedCount": 1,
+        "unplacedPieceIds": [
+          "rectangle-55x55-copy-2"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "698a0fa0fc2c2eb163158b334d0ce9df500f96e30f79c2770deef35ccca561d2",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "placementEvaluationQuotaPerDepth": 4096,
+            "consumedPlacementEvaluations": 64,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 14,
+            "fitRejectedCandidates": 48,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 2,
+            "depthQuotaExhaustions": 0,
+            "pieceCount": 2,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "placedCount": 1,
+            "placedDoubledMaterialAreaGrid2": "6050000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 55.504,
+            "envelopeAreaMm2": 3080.694016,
+            "envelopeSpanMm": 111.008,
+            "canonicalGeometryHash": "228a5d6c99f8214b835ec056b28b7692dc800469ebe4b36c6c79d1cba40dac5c",
+            "origin": "cold-search",
+            "unplacedCount": 1,
+            "placedMaterialAreaMm2": 3025,
+            "selectedRotationDeg": 0
+          },
+          "preflightRuntimeMs": 0.7265409999999974,
+          "completeArchiveRuntimeMs": 17.005999999999972,
+          "prefixTerminalizationMs": 0.00533300000000736,
+          "coldSearchMs": 2.3271670000000313,
+          "runtimeMs": 2.3488330000000133
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-capacity-review-fixes/capacity-archive-miss-squares2-cold-only.svg"
+      }
+    },
+    {
+      "caseId": "capacity-count-vs-material",
+      "sheet": {
+        "width": 100,
+        "height": 100
+      },
+      "pieceCount": 3,
+      "checks": {
+        "partitionExact": true,
+        "routing": true,
+        "placedCount": true,
+        "capacitySettled": true,
+        "auxiliaryEvaluationsZero": true,
+        "coldSearchReachedEveryDepth": true,
+        "prefixNotBelowColdOnly": true
+      },
+      "passed": true,
+      "production": {
+        "arm": "production",
+        "elapsedMs": 15.73116600000003,
+        "routing": "preflight-proven-impossible",
+        "preflight": {
+          "kind": "proven_impossible",
+          "reason": "minimum-collision-area-exceeds-sheet-area"
+        },
+        "placedCount": 2,
+        "unplacedCount": 1,
+        "unplacedPieceIds": [
+          "rectangle-90x90-copy-1"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "2ad041fcd0792594365c6d74cd97923016d92f876bb22c55a02ae80e5690e766",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "placementEvaluationQuotaPerDepth": 4096,
+            "consumedPlacementEvaluations": 264,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 25,
+            "fitRejectedCandidates": 168,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 3,
+            "depthQuotaExhaustions": 0,
+            "pieceCount": 3,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "placedCount": 2,
+            "placedDoubledMaterialAreaGrid2": "9000000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 91.008,
+            "envelopeAreaMm2": 4596.268032,
+            "envelopeSpanMm": 141.512,
+            "canonicalGeometryHash": "70b74fbf22dbdc9980f7415e1f788d2564cbc32b92875183e32a8fa09c815482",
+            "origin": "cold-search",
+            "unplacedCount": 1,
+            "placedMaterialAreaMm2": 4500,
+            "selectedRotationDeg": 0
+          },
+          "preflightRuntimeMs": 0.8948330000000055,
+          "prefixTerminalizationMs": 0.017208999999979824,
+          "coldSearchMs": 12.616124999999954,
+          "runtimeMs": 12.659832999999992
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-capacity-review-fixes/capacity-count-vs-material-production.svg"
+      },
+      "coldOnly": {
+        "arm": "cold-only",
+        "elapsedMs": 13.862582999999972,
+        "routing": "preflight-proven-impossible",
+        "preflight": {
+          "kind": "proven_impossible",
+          "reason": "minimum-collision-area-exceeds-sheet-area"
+        },
+        "placedCount": 2,
+        "unplacedCount": 1,
+        "unplacedPieceIds": [
+          "rectangle-90x90-copy-1"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "2ad041fcd0792594365c6d74cd97923016d92f876bb22c55a02ae80e5690e766",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "placementEvaluationQuotaPerDepth": 4096,
+            "consumedPlacementEvaluations": 264,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 25,
+            "fitRejectedCandidates": 168,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 3,
+            "depthQuotaExhaustions": 0,
+            "pieceCount": 3,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "placedCount": 2,
+            "placedDoubledMaterialAreaGrid2": "9000000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 91.008,
+            "envelopeAreaMm2": 4596.268032,
+            "envelopeSpanMm": 141.512,
+            "canonicalGeometryHash": "70b74fbf22dbdc9980f7415e1f788d2564cbc32b92875183e32a8fa09c815482",
+            "origin": "cold-search",
+            "unplacedCount": 1,
+            "placedMaterialAreaMm2": 4500,
+            "selectedRotationDeg": 0
+          },
+          "preflightRuntimeMs": 1.1059169999999767,
+          "prefixTerminalizationMs": 0.005625000000009095,
+          "coldSearchMs": 10.672708999999998,
+          "runtimeMs": 10.702042000000006
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-capacity-review-fixes/capacity-count-vs-material-cold-only.svg"
+      }
+    },
+    {
+      "caseId": "capacity-triangles20-300x300",
+      "sheet": {
+        "width": 300,
+        "height": 300
+      },
+      "pieceCount": 20,
+      "checks": {
+        "partitionExact": true,
+        "routing": true,
+        "placedCount": true,
+        "capacitySettled": true,
+        "auxiliaryEvaluationsZero": true,
+        "coldSearchReachedEveryDepth": true,
+        "prefixNotBelowColdOnly": true
+      },
+      "passed": true,
+      "production": {
+        "arm": "production",
+        "elapsedMs": 2144.9995,
+        "routing": "bounded-complete-archive-miss",
+        "preflight": {
+          "kind": "inconclusive"
+        },
+        "placedCount": 15,
+        "unplacedCount": 5,
+        "unplacedPieceIds": [
+          "triangle-70x60-copy-16",
+          "triangle-70x60-copy-17",
+          "triangle-70x60-copy-18",
+          "triangle-70x60-copy-19",
+          "triangle-70x60-copy-20"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "b1455c81ff2a38ca93954d53464f79ab85c7631045f8fbee40b9467f0273bb17",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 9,
+            "fittingCount": 6,
+            "rejectedCount": 3,
+            "terminalizedCount": 4,
+            "descriptors": [
+              {
+                "role": "canonical-grid",
+                "depth": 5
+              },
+              {
+                "role": "canonical-grid",
+                "depth": 10
+              },
+              {
+                "role": "canonical-grid",
+                "depth": 15
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 5
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 10
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 15
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 5
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 10
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 15
+              }
+            ]
+          },
+          "prefixIncumbent": {
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 10,
+            "placedCount": 10,
+            "placedMaterialAreaMm2": 21000,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "6cb959c5f0e4c5edec786159d10e04cca57e46baf66811733d4245005b9085ab"
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 81920,
+            "placementEvaluationQuotaPerDepth": 4096,
+            "consumedPlacementEvaluations": 48159,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 18,
+            "fitRejectedCandidates": 30017,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 20,
+            "depthQuotaExhaustions": 0,
+            "pieceCount": 20,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "placedCount": 15,
+            "placedDoubledMaterialAreaGrid2": "63000000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 283.783,
+            "envelopeAreaMm2": 77750.86634000001,
+            "envelopeSpanMm": 557.763,
+            "canonicalGeometryHash": "2e40031e62bd39567e388649739ced2462e457dacf02d79f2a2abf4c6e97399a",
+            "origin": "cold-search",
+            "unplacedCount": 5,
+            "placedMaterialAreaMm2": 31500,
+            "selectedRotationDeg": 0
+          },
+          "preflightRuntimeMs": 4.951582999999971,
+          "completeArchiveRuntimeMs": 1042.19575,
+          "prefixTerminalizationMs": 11.531167000000096,
+          "coldSearchMs": 1077.838209,
+          "runtimeMs": 1089.454291
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-capacity-review-fixes/capacity-triangles20-300x300-production.svg"
+      },
+      "coldOnly": {
+        "arm": "cold-only",
+        "elapsedMs": 2011.076709,
+        "routing": "bounded-complete-archive-miss",
+        "preflight": {
+          "kind": "inconclusive"
+        },
+        "placedCount": 15,
+        "unplacedCount": 5,
+        "unplacedPieceIds": [
+          "triangle-70x60-copy-16",
+          "triangle-70x60-copy-17",
+          "triangle-70x60-copy-18",
+          "triangle-70x60-copy-19",
+          "triangle-70x60-copy-20"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "b1455c81ff2a38ca93954d53464f79ab85c7631045f8fbee40b9467f0273bb17",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 81920,
+            "placementEvaluationQuotaPerDepth": 4096,
+            "consumedPlacementEvaluations": 48159,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 18,
+            "fitRejectedCandidates": 30017,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 20,
+            "depthQuotaExhaustions": 0,
+            "pieceCount": 20,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "placedCount": 15,
+            "placedDoubledMaterialAreaGrid2": "63000000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 283.783,
+            "envelopeAreaMm2": 77750.86634000001,
+            "envelopeSpanMm": 557.763,
+            "canonicalGeometryHash": "2e40031e62bd39567e388649739ced2462e457dacf02d79f2a2abf4c6e97399a",
+            "origin": "cold-search",
+            "unplacedCount": 5,
+            "placedMaterialAreaMm2": 31500,
+            "selectedRotationDeg": 0
+          },
+          "preflightRuntimeMs": 4.176665999999841,
+          "completeArchiveRuntimeMs": 953.8704590000002,
+          "prefixTerminalizationMs": 0.009790999999950145,
+          "coldSearchMs": 1045.1455419999998,
+          "runtimeMs": 1045.2007500000004
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-capacity-review-fixes/capacity-triangles20-300x300-cold-only.svg"
+      }
+    },
+    {
+      "caseId": "capacity-mixed61-500x400",
+      "sheet": {
+        "width": 500,
+        "height": 400
+      },
+      "pieceCount": 61,
+      "checks": {
+        "partitionExact": true,
+        "routing": true,
+        "placedCount": true,
+        "capacitySettled": true,
+        "auxiliaryEvaluationsZero": true,
+        "coldSearchReachedEveryDepth": true,
+        "prefixNotBelowColdOnly": true
+      },
+      "passed": true,
+      "production": {
+        "arm": "production",
+        "elapsedMs": 2934.999208,
+        "routing": "preflight-proven-impossible",
+        "preflight": {
+          "kind": "proven_impossible",
+          "reason": "minimum-collision-area-exceeds-sheet-area"
+        },
+        "placedCount": 17,
+        "unplacedCount": 44,
+        "unplacedPieceIds": [
+          "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+          "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+          "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+          "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "fa7a3242ae8dc11f43fb5687a8435e529df77aec6d353c66c9a88cf99510f223",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 249856,
+            "placementEvaluationQuotaPerDepth": 4096,
+            "consumedPlacementEvaluations": 232209,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 212,
+            "fitRejectedCandidates": 209370,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 61,
+            "depthQuotaExhaustions": 53,
+            "pieceCount": 61,
+            "settlement": "evaluation-cap"
+          },
+          "selected": {
+            "placedCount": 17,
+            "placedDoubledMaterialAreaGrid2": "256355017836",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 494.915,
+            "envelopeAreaMm2": 195657.71644000002,
+            "envelopeSpanMm": 890.251,
+            "canonicalGeometryHash": "5c8e621bc2a32cb871f0e59875104308727b6e2d71be4ab7f8073e4f0788c7d3",
+            "origin": "cold-search",
+            "unplacedCount": 44,
+            "placedMaterialAreaMm2": 128177.508918,
+            "selectedRotationDeg": 90
+          },
+          "preflightRuntimeMs": 14.801499999999578,
+          "prefixTerminalizationMs": 0.029292000000168628,
+          "coldSearchMs": 2894.917209,
+          "runtimeMs": 2895.040333
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-capacity-review-fixes/capacity-mixed61-500x400-production.svg"
+      },
+      "coldOnly": {
+        "arm": "cold-only",
+        "elapsedMs": 3046.0280000000002,
+        "routing": "preflight-proven-impossible",
+        "preflight": {
+          "kind": "proven_impossible",
+          "reason": "minimum-collision-area-exceeds-sheet-area"
+        },
+        "placedCount": 17,
+        "unplacedCount": 44,
+        "unplacedPieceIds": [
+          "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+          "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+          "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+          "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "fa7a3242ae8dc11f43fb5687a8435e529df77aec6d353c66c9a88cf99510f223",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 249856,
+            "placementEvaluationQuotaPerDepth": 4096,
+            "consumedPlacementEvaluations": 232209,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 212,
+            "fitRejectedCandidates": 209370,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 61,
+            "depthQuotaExhaustions": 53,
+            "pieceCount": 61,
+            "settlement": "evaluation-cap"
+          },
+          "selected": {
+            "placedCount": 17,
+            "placedDoubledMaterialAreaGrid2": "256355017836",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 494.915,
+            "envelopeAreaMm2": 195657.71644000002,
+            "envelopeSpanMm": 890.251,
+            "canonicalGeometryHash": "5c8e621bc2a32cb871f0e59875104308727b6e2d71be4ab7f8073e4f0788c7d3",
+            "origin": "cold-search",
+            "unplacedCount": 44,
+            "placedMaterialAreaMm2": 128177.508918,
+            "selectedRotationDeg": 90
+          },
+          "preflightRuntimeMs": 14.6743749999996,
+          "prefixTerminalizationMs": 0.01041700000041601,
+          "coldSearchMs": 3007.6955,
+          "runtimeMs": 3007.800542
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-capacity-review-fixes/capacity-mixed61-500x400-cold-only.svg"
+      }
+    },
+    {
+      "caseId": "capacity-mixed61-700x560",
+      "sheet": {
+        "width": 700,
+        "height": 560
+      },
+      "pieceCount": 61,
+      "checks": {
+        "partitionExact": true,
+        "routing": true,
+        "placedCount": true,
+        "capacitySettled": true,
+        "auxiliaryEvaluationsZero": true,
+        "coldSearchReachedEveryDepth": true,
+        "prefixNotBelowColdOnly": true
+      },
+      "passed": true,
+      "production": {
+        "arm": "production",
+        "elapsedMs": 65692.990041,
+        "routing": "bounded-complete-archive-miss",
+        "preflight": {
+          "kind": "inconclusive"
+        },
+        "placedCount": 55,
+        "unplacedCount": 6,
+        "unplacedPieceIds": [
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-20"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "0c6cc5d567e0a8b3f74d00c06e6c569d5107949723e80bd111e48fedbaf9ef0e",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 9,
+            "fittingCount": 6,
+            "rejectedCount": 3,
+            "terminalizedCount": 5,
+            "descriptors": [
+              {
+                "role": "canonical-grid",
+                "depth": 15
+              },
+              {
+                "role": "canonical-grid",
+                "depth": 30
+              },
+              {
+                "role": "canonical-grid",
+                "depth": 45
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 15
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 30
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 45
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 15
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 30
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 45
+              }
+            ]
+          },
+          "prefixIncumbent": {
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 30,
+            "placedCount": 30,
+            "placedMaterialAreaMm2": 171261.116052,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "11e64e37a3c91334a12e19b3246a9fd11c3700a9fe21dfc0fd464202dcc6d4ee"
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 249856,
+            "placementEvaluationQuotaPerDepth": 4096,
+            "consumedPlacementEvaluations": 232209,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 272,
+            "fitRejectedCandidates": 95561,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 61,
+            "depthQuotaExhaustions": 53,
+            "pieceCount": 61,
+            "settlement": "evaluation-cap"
+          },
+          "selected": {
+            "placedCount": 55,
+            "placedDoubledMaterialAreaGrid2": "431922232104",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 696.276,
+            "envelopeAreaMm2": 389217.587724,
+            "envelopeSpanMm": 1255.275,
+            "canonicalGeometryHash": "0ba279b5f82d6f6d8ec9c83aa275e80eebf0e174107c8fac3d2d1429576792af",
+            "origin": "cold-search",
+            "unplacedCount": 6,
+            "placedMaterialAreaMm2": 215961.116052,
+            "selectedRotationDeg": 90
+          },
+          "preflightRuntimeMs": 14.874041999999463,
+          "completeArchiveRuntimeMs": 56424.481291,
+          "prefixTerminalizationMs": 40.79779199999757,
+          "coldSearchMs": 9184.652583000003,
+          "runtimeMs": 9225.538249999998
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-capacity-review-fixes/capacity-mixed61-700x560-production.svg"
+      },
+      "coldOnly": {
+        "arm": "cold-only",
+        "elapsedMs": 63918.049833,
+        "routing": "bounded-complete-archive-miss",
+        "preflight": {
+          "kind": "inconclusive"
+        },
+        "placedCount": 55,
+        "unplacedCount": 6,
+        "unplacedPieceIds": [
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-20"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "0c6cc5d567e0a8b3f74d00c06e6c569d5107949723e80bd111e48fedbaf9ef0e",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 249856,
+            "placementEvaluationQuotaPerDepth": 4096,
+            "consumedPlacementEvaluations": 232209,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 272,
+            "fitRejectedCandidates": 95561,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 61,
+            "depthQuotaExhaustions": 53,
+            "pieceCount": 61,
+            "settlement": "evaluation-cap"
+          },
+          "selected": {
+            "placedCount": 55,
+            "placedDoubledMaterialAreaGrid2": "431922232104",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 696.276,
+            "envelopeAreaMm2": 389217.587724,
+            "envelopeSpanMm": 1255.275,
+            "canonicalGeometryHash": "0ba279b5f82d6f6d8ec9c83aa275e80eebf0e174107c8fac3d2d1429576792af",
+            "origin": "cold-search",
+            "unplacedCount": 6,
+            "placedMaterialAreaMm2": 215961.116052,
+            "selectedRotationDeg": 90
+          },
+          "preflightRuntimeMs": 15.458166999989771,
+          "completeArchiveRuntimeMs": 54581.612333,
+          "prefixTerminalizationMs": 0.0033750000002328306,
+          "coldSearchMs": 9291.060916999995,
+          "runtimeMs": 9291.167125000007
+        },
+        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-capacity-review-fixes/capacity-mixed61-700x560-cold-only.svg"
+      }
+    }
+  ]
+}

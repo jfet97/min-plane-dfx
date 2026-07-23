@@ -52,6 +52,17 @@ import {
   selectIntrinsicSharedArchiveWinner,
   type IntrinsicSharedArchiveEndpoint
 } from './intrinsicSharedArchivePortfolio.js'
+import {
+  runIntrinsicCapacityMode,
+  type IntrinsicCapacityModeResult,
+  type IntrinsicCapacityTrace
+} from './intrinsicCapacityMode.js'
+import {
+  preflightIntrinsicCompleteCapacity,
+  type IntrinsicCapacityError,
+  type IntrinsicCapacityPreflightOutcome
+} from './intrinsicCapacityPreflight.js'
+import type { IntrinsicCapacityPrefixSource } from './intrinsicCapacityPrefixes.js'
 
 /** Reports that a prepared piece has no imported geometry available to the worker. */
 export class IrregularComputeError extends Data.TaggedError('IrregularComputeError')<{
@@ -87,6 +98,10 @@ export interface ComputeIrregularNestingOptions {
   readonly onPortfolioMetrics?: (metrics: IrregularPortfolioMetrics) => void
   /** standalone benchmark hook; metrics never enter normal app output. */
   readonly onFinalizationMetrics?: (metrics: IrregularFinalizationMetrics) => void
+  /** paired-comparison hook; production always keeps capacity prefix reuse on. */
+  readonly capacityControlArm?: 'disable-prefix-reuse'
+  /** standalone benchmark hook; capacity phase timings default off in production. */
+  readonly captureCapacityPhaseTimings?: boolean
 }
 
 /** Plain algorithm output before any worker protocol or history DTO adaptation. */
@@ -99,6 +114,8 @@ export interface IrregularComputeResult {
   readonly stateSnapshots: ReadonlyArray<IrregularStateSnapshot>
   readonly beamWidth: number
   readonly portfolio: IrregularPortfolioResult
+  /** Present only when intrinsic capacity mode settled this result. */
+  readonly capacityTrace?: IntrinsicCapacityTrace
 }
 
 export type IrregularComputeErrorType =
@@ -253,86 +270,147 @@ function coordinateIntrinsicSharedArchive(
                     )
                   : Effect.void
             }
-      const archive = yield* runIntrinsicSharedArchivePortfolio(
+      const preflightStartedAt = performance.now()
+      const preflight = yield* preflightIntrinsicCompleteCapacity(
         input.request.sheet,
         input.preparedPieces,
-        {
-          maximumDirectRuntimeMs: 35_000,
-          includeSourceAuditWitnesses: true,
-          ...(control === undefined ? {} : { control }),
-          onPhaseCompleted: () =>
-            emitSharedArchiveProgress(
-              input,
-              'shared_archive',
-              undefined,
-              performance.now() - coordinatorStartedAt
-            ),
-          periodic: {
-            maximumCatalogRuntimeMs: 30_000,
-            maximumContinuationRuntimeMs: 30_000,
-            maximumTotalRuntimeMs: 240_000,
-            maximumCellsPerFamilyRole: 16,
-            maximumCropsPerCell: 4,
-            sourceAuditScope: 'p2-axis-union'
-          }
-        }
-      ).pipe(
-        Effect.mapError((error) =>
-          error._tag === 'IntrinsicStrictDecoderError'
-            ? new IrregularPortfolioError({
-                operation: error.operation,
-                category: 'search',
-                message: error.message
-              })
-            : error
-        )
-      )
-      if (!intrinsicSharedArchiveProductionValid(archive)) {
-        const periodicCatalog = archive.periodicPortfolio.catalog
-        return yield* Effect.fail(
-          new IrregularPortfolioError({
-            operation: 'intrinsicSharedArchive',
-            category: 'search',
-            message: [
-              'intrinsic shared archive did not complete its production coverage contract',
-              `direct=${archive.directRuns.map(({ role, status }) => `${role}:${status}`).join(',')}`,
-              `catalog-runtime=${periodicCatalog.runtimeCoverageComplete}`,
-              `catalog-family=${periodicCatalog.familyCoverageComplete}`,
-              `periodic-selection=${archive.periodicSelectionValid}`,
-              `periodic=${archive.periodicRuns
-                .map(({ role, status }) => `${role}:${status}`)
-                .join(',')}`
-            ].join('; ')
-          })
-        )
+        control
+      ).pipe(Effect.mapError(mapIntrinsicCapacityError))
+      const preflightRuntimeMs = Math.max(0, performance.now() - preflightStartedAt)
+      const capacityOptions = {
+        ...(input.options?.capacityControlArm === 'disable-prefix-reuse'
+          ? { disablePrefixReuse: true }
+          : {}),
+        ...(input.options?.captureCapacityPhaseTimings === true
+          ? { capturePhaseTimings: true }
+          : {})
       }
-      const sheetlessArchive = retainRankedSharedArchive(archive.sheetlessArchive)
-      const winner = selectIntrinsicSharedArchiveWinner(
-        selectFittingSharedArchive(sheetlessArchive)
-      )
-      if (winner === undefined) {
-        return yield* Effect.fail(
-          new IrregularPortfolioError({
-            operation: 'intrinsicSharedArchive',
-            category: 'search',
-            message:
-              'intrinsic shared archive produced no exact endpoint fitting the requested sheet'
-          })
-        )
-      }
-      selected = yield* materializeSharedArchiveResult(input, winner)
-      archiveDiagnostics.push(
-        sharedArchiveDiagnostic(
+      if (preflight.kind === 'proven_impossible') {
+        const capacity = yield* runIntrinsicCapacityMode({
+          sheet: input.request.sheet,
+          preparedPieces: input.preparedPieces,
+          routing: 'preflight-proven-impossible',
+          preflight,
+          prefixSources: [],
+          preflightRuntimeMs,
+          ...capacityOptions,
+          ...(control === undefined ? {} : { control })
+        }).pipe(Effect.mapError(mapIntrinsicCapacityError))
+        selected = yield* materializeIntrinsicCapacityResult(input, capacity)
+        archiveDiagnostics.push(...intrinsicCapacityDiagnostics(preflight, capacity))
+        yield* emitSharedArchiveProgress(
+          input,
           'completed',
-          `shared archive selected ${winner.role} from ${sheetlessArchive.length} exact endpoints`
+          selected.portfolio.score,
+          performance.now() - coordinatorStartedAt
         )
-      )
-      yield* emitSharedArchiveProgress(
-        input,
-        'completed',
-        selected.portfolio.score,
-        performance.now() - coordinatorStartedAt
-      )
+      } else {
+        const prefixSources: IntrinsicCapacityPrefixSource[] = []
+        const archiveStartedAt = performance.now()
+        const archive = yield* runIntrinsicSharedArchivePortfolio(
+          input.request.sheet,
+          input.preparedPieces,
+          {
+            maximumDirectRuntimeMs: 35_000,
+            includeSourceAuditWitnesses: true,
+            ...(control === undefined ? {} : { control }),
+            onDirectConstructed: (role, state) => {
+              prefixSources.push({ role, state })
+            },
+            onPhaseCompleted: () =>
+              emitSharedArchiveProgress(
+                input,
+                'shared_archive',
+                undefined,
+                performance.now() - coordinatorStartedAt
+              ),
+            periodic: {
+              maximumCatalogRuntimeMs: 30_000,
+              maximumContinuationRuntimeMs: 30_000,
+              maximumTotalRuntimeMs: 240_000,
+              maximumCellsPerFamilyRole: 16,
+              maximumCropsPerCell: 4,
+              sourceAuditScope: 'p2-axis-union'
+            }
+          }
+        ).pipe(
+          Effect.mapError((error) =>
+            error._tag === 'IntrinsicStrictDecoderError'
+              ? new IrregularPortfolioError({
+                  operation: error.operation,
+                  category: 'search',
+                  message: error.message
+                })
+              : error
+          )
+        )
+        if (!intrinsicSharedArchiveProductionValid(archive)) {
+          const periodicCatalog = archive.periodicPortfolio.catalog
+          return yield* Effect.fail(
+            new IrregularPortfolioError({
+              operation: 'intrinsicSharedArchive',
+              category: 'search',
+              message: [
+                'intrinsic shared archive did not complete its production coverage contract',
+                `direct=${archive.directRuns.map(({ role, status }) => `${role}:${status}`).join(',')}`,
+                `catalog-runtime=${periodicCatalog.runtimeCoverageComplete}`,
+                `catalog-family=${periodicCatalog.familyCoverageComplete}`,
+                `periodic-selection=${archive.periodicSelectionValid}`,
+                `periodic=${archive.periodicRuns
+                  .map(({ role, status }) => `${role}:${status}`)
+                  .join(',')}`
+              ].join('; ')
+            })
+          )
+        }
+        const sheetlessArchive = retainRankedSharedArchive(archive.sheetlessArchive)
+        const winner = selectIntrinsicSharedArchiveWinner(
+          selectFittingSharedArchive(sheetlessArchive)
+        )
+        if (winner === undefined) {
+          const capacity = yield* runIntrinsicCapacityMode({
+            sheet: input.request.sheet,
+            preparedPieces: input.preparedPieces,
+            routing: 'bounded-complete-archive-miss',
+            preflight,
+            prefixSources,
+            preflightRuntimeMs,
+            completeArchiveRuntimeMs: Math.max(0, performance.now() - archiveStartedAt),
+            ...capacityOptions,
+            ...(control === undefined ? {} : { control })
+          }).pipe(Effect.mapError(mapIntrinsicCapacityError))
+          selected = yield* materializeIntrinsicCapacityResult(input, capacity)
+          archiveDiagnostics.push(...intrinsicCapacityDiagnostics(preflight, capacity))
+          yield* emitSharedArchiveProgress(
+            input,
+            'completed',
+            selected.portfolio.score,
+            performance.now() - coordinatorStartedAt
+          )
+        } else {
+          selected = yield* materializeSharedArchiveResult(input, winner)
+          archiveDiagnostics.push(
+            sharedArchiveDiagnostic(
+              'completed',
+              `shared archive selected ${winner.role} from ${sheetlessArchive.length} exact endpoints`
+            ),
+            new CollisionGeometryDiagnostic({
+              code: 'capacity_preflight_inconclusive',
+              message: 'proof-only capacity preflight was inconclusive; complete mode ran unchanged'
+            }),
+            new CollisionGeometryDiagnostic({
+              code: 'complete_archive_fitted',
+              message: `complete endpoint ${winner.sheetlessCanonicalGeometryHash} fits the requested sheet; capacity mode did not run`
+            })
+          )
+          yield* emitSharedArchiveProgress(
+            input,
+            'completed',
+            selected.portfolio.score,
+            performance.now() - coordinatorStartedAt
+          )
+        }
+      }
     } else {
       const production = yield* runSingleSheetPortfolio(input, input.request.sheet, undefined)
       if (production.metrics !== undefined) input.options?.onPortfolioMetrics?.(production.metrics)
@@ -355,9 +433,146 @@ function coordinateIntrinsicSharedArchive(
       sortedPieceIds: input.sortedPieceIds,
       stateSnapshots: selected.stateSnapshots,
       beamWidth: input.settings.optimizer.beamWidth,
-      portfolio: selected.portfolio
+      portfolio: selected.portfolio,
+      ...(selected.capacityTrace === undefined ? {} : { capacityTrace: selected.capacityTrace })
     }
   })
+}
+
+function mapIntrinsicCapacityError(
+  error: IrregularComputeErrorType | IntrinsicCapacityError
+): IrregularComputeErrorType {
+  return error._tag === 'IntrinsicCapacityError'
+    ? new IrregularPortfolioError({
+        operation: error.operation,
+        category: 'search',
+        message: error.message
+      })
+    : error
+}
+
+/** Adapts one settled exact capacity endpoint into the common compute result. */
+function materializeIntrinsicCapacityResult(
+  input: IrregularSearchCoordinatorInput,
+  capacity: IntrinsicCapacityModeResult
+): Effect.Effect<MaterializedDecode, IrregularComputeErrorType> {
+  return Effect.gen(function* () {
+    const endpoint = capacity.endpoint
+    const placedCollisionGeometries = endpoint.placedCollisionGeometries
+    const state = new IrregularBeamState({
+      remainingPreparedPieces: [],
+      placedCollisionGeometries,
+      unplacedPieceIds: endpoint.unplacedPreparedIds,
+      placementOrder: endpoint.placedPreparedIds
+    })
+    const scoringStartedAt =
+      input.options?.onFinalizationMetrics === undefined ? 0 : performance.now()
+    const score = yield* input.layoutScorer.scoreState({
+      sheet: input.request.sheet,
+      state
+    })
+    const stateSnapshots =
+      input.request.options.historyMode === 'off'
+        ? []
+        : selectedLayoutRevealSnapshots(
+            input.preparedPieces,
+            placedCollisionGeometries,
+            endpoint.unplacedPreparedIds
+          )
+    const portfolio = new IrregularPortfolioResult({
+      status: 'completed',
+      terminationReason: 'capacity_subset_settled',
+      source: 'shared-archive',
+      placements: placedCollisionGeometries.map(({ placement }) => placement),
+      unplacedPieceIds: endpoint.unplacedPreparedIds,
+      score: layoutScoreSummary(score, endpoint.metrics.enclosedCavityCount),
+      diagnostics: [
+        new CollisionGeometryDiagnostic({
+          code: 'capacity_subset_settled',
+          message: [
+            `intrinsic-capacity-v1 settled ${endpoint.metrics.placedCount} placed`,
+            `${endpoint.unplacedPreparedIds.length} unplaced`,
+            `origin ${endpoint.origin}`,
+            `q${endpoint.selectedRotationDeg}`,
+            `hash ${endpoint.canonicalGeometryHash}`
+          ].join('; ')
+        })
+      ]
+    })
+    return {
+      placedCollisionGeometries,
+      score,
+      unplacedPieceIds: endpoint.unplacedPreparedIds,
+      diagnostics: [],
+      sortedPieceIds: input.sortedPieceIds,
+      stateSnapshots,
+      beamWidth: input.settings.optimizer.beamWidth,
+      portfolio,
+      capacityTrace: capacity.trace,
+      finalizationMetrics: {
+        reconstructionElapsedMs: 0,
+        finalScoreElapsedMs:
+          input.options?.onFinalizationMetrics === undefined
+            ? 0
+            : Math.max(0, performance.now() - scoringStartedAt)
+      }
+    }
+  })
+}
+
+/** Bounded capacity trace summary in the additive diagnostics vocabulary. */
+function intrinsicCapacityDiagnostics(
+  preflight: IntrinsicCapacityPreflightOutcome,
+  capacity: IntrinsicCapacityModeResult
+): ReadonlyArray<CollisionGeometryDiagnostic> {
+  const diagnostics: CollisionGeometryDiagnostic[] = []
+  if (preflight.kind === 'proven_impossible') {
+    diagnostics.push(
+      new CollisionGeometryDiagnostic({
+        code: 'capacity_preflight_proven_impossible',
+        message: [
+          `reason ${preflight.reason}`,
+          `minimum-doubled-collision-area-grid2 ${String(
+            preflight.measurements.minimumDoubledCollisionAreaSumGrid2
+          )}`,
+          `sheet-doubled-area-grid2 ${String(preflight.measurements.sheetDoubledAreaGrid2)}`,
+          ...(preflight.reason === 'singleton-transform-set-does-not-fit'
+            ? [`piece ${preflight.pieceId}`]
+            : [])
+        ].join('; ')
+      })
+    )
+  } else {
+    diagnostics.push(
+      new CollisionGeometryDiagnostic({
+        code: 'capacity_preflight_inconclusive',
+        message: 'proof-only capacity preflight was inconclusive; complete mode ran unchanged'
+      }),
+      new CollisionGeometryDiagnostic({
+        code: 'bounded_complete_archive_miss',
+        message:
+          'valid, uncensored bounded complete archive produced no fitting endpoint; this is a bounded-search outcome, not an impossibility proof'
+      })
+    )
+  }
+  const trace = capacity.trace
+  diagnostics.push(
+    new CollisionGeometryDiagnostic({
+      code: 'capacity_subset_settled',
+      message: [
+        `settlement ${trace.coldSearch.settlement}`,
+        `placed ${trace.selected.placedCount}`,
+        `unplaced ${trace.selected.unplacedCount}`,
+        `origin ${trace.selected.origin}`,
+        `evaluations ${trace.coldSearch.consumedPlacementEvaluations}/${trace.coldSearch.placementEvaluationCap}`,
+        `pruned-count ${trace.coldSearch.prunedByAttainableCount}`,
+        `pruned-material ${trace.coldSearch.prunedByAttainableMaterial}`,
+        `prefixes ${trace.prefixes.fittingCount}/${trace.prefixes.capturedCount}`,
+        `hash ${trace.selected.canonicalGeometryHash}`
+      ].join('; ')
+    })
+  )
+  return diagnostics
 }
 
 function runSingleSheetPortfolio(
@@ -567,7 +782,8 @@ function materializeSharedArchiveResult(
 /** Builds a truthful scrub sequence from prefixes of the selected exact layout. */
 function selectedLayoutRevealSnapshots(
   preparedPieces: ReadonlyArray<IrregularPreparedPiece>,
-  placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+  placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>,
+  unplacedPieceIds: ReadonlyArray<PieceId> = []
 ): ReadonlyArray<IrregularStateSnapshot> {
   const preparedById = new Map(
     preparedPieces.map((piece) => [piece.pieceId ?? piece.source.id, piece] as const)
@@ -590,6 +806,7 @@ function selectedLayoutRevealSnapshots(
       state: new IrregularBeamState({
         remainingPreparedPieces,
         placedCollisionGeometries: placed,
+        unplacedPieceIds,
         placementOrder: placed.map(
           ({ placement }) => placement.pieceId ?? placement.sourcePieceId
         )

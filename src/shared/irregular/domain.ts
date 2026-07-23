@@ -113,6 +113,7 @@ export const IrregularPortfolioTerminationReason = Schema.Literals([
   'time_budget',
   'cancelled',
   'shared_archive_completed',
+  'capacity_subset_settled',
   'no_valid_result'
 ])
 

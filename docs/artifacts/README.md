@@ -10,6 +10,10 @@ baselines.
 - [`current-compact-baselines/`](./current-compact-baselines/): complete,
   Chromium-rendered PNG and SVG snapshots of the current Triangle-20, Mixed-61,
   and Shapes-17 durable Compact baselines.
+- [`intrinsic-capacity-v1/`](./intrinsic-capacity-v1/): constrained-sheet
+  capacity gate evidence — sheet-outline SVG/PNG renders of representative
+  exact partial layouts, the combined strict `gate:capacity` report with full
+  capacity traces, and the artifact manifest.
 - [`current-production-invariance-sample/`](./current-production-invariance-sample/):
   two completed archive-only production decodes from `b506344`. Their SVGs are
   byte-identical, but the full sheet matrix was cancelled and remains unproven.
