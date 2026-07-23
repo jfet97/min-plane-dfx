@@ -108,6 +108,8 @@ export interface ComputeIrregularNestingOptions {
   readonly captureCapacityPhaseTimings?: boolean
   /** observer-only pressure and no-skip probe; never consumed by routing. */
   readonly captureCapacityShadowTelemetry?: boolean
+  /** observer-only protected warm-prefix continuations; never consumed by selection. */
+  readonly captureCapacityWarmPrefixTelemetry?: boolean
 }
 
 /** Plain algorithm output before any worker protocol or history DTO adaptation. */
@@ -299,6 +301,9 @@ function coordinateIntrinsicSharedArchive(
           : {}),
         ...(input.options?.captureCapacityPhaseTimings === true
           ? { capturePhaseTimings: true }
+          : {}),
+        ...(input.options?.captureCapacityWarmPrefixTelemetry === true
+          ? { captureWarmPrefixTelemetry: true }
           : {})
       }
       if (preflight.kind === 'proven_impossible') {

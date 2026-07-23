@@ -308,7 +308,8 @@ async function runArm(
   const options: ComputeIrregularNestingOptions = {
     ...(arm === 'cold-only' ? { capacityControlArm: 'disable-prefix-reuse' } : {}),
     captureCapacityPhaseTimings: true,
-    captureCapacityShadowTelemetry: true
+    captureCapacityShadowTelemetry: true,
+    captureCapacityWarmPrefixTelemetry: true
   }
   const startedAt = performance.now()
   const result = await Effect.runPromise(

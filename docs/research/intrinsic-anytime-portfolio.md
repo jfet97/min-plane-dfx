@@ -120,13 +120,36 @@ manifest, SVG, PNG, and hashes are under
 The rendered Mixed-61 image has visible background on all four sides with no
 truncated polygon.
 
+## Stage 3: Protected Warm-Prefix Shadow Lanes
+
+Each captured descriptor that passes exact endpoint materialization at q0 or
+q90 can now seed an independent `capacity-warm-prefix` lane. Seed validation
+rechecks that the state is a skip-free exact prepared-order prefix, has the
+expected pending suffix, fits the requested sheet, and has exact material,
+cavity, span, and anchored-identity accounting.
+
+Warm lanes use the same place-or-permanently-skip depth loop and versioned
+checkpoint protocol as the cold lane. Their fingerprint additionally binds the
+source role, prefix depth, placed and pending IDs, and anchored occupied
+identity. A warm checkpoint cannot resume as a cold producer or from another
+prefix. Reused depths have zero evaluation ledgers; later depths retain the
+ordinary per-depth and total bounds.
+
+This stage remains benchmark opt-in. Every fitting descriptor receives its own
+frontier, cavity cache, and full protected capacity budget. The empty-start
+cold lane still runs first with unchanged inputs and remains the sole search
+lane admitted to final selection. Warm endpoint quality, reused placement
+count, evaluations, completed depth, and elapsed time are reported only in
+`warmPrefixLanes`.
+
+Focused tests prove warm pause/resume equivalence and that enabling warm
+observers leaves the cold trace, placed geometries, and unplaced IDs unchanged.
+
 ## Remaining Stages
 
-1. Continue verified fitting prefixes in independent protected shadow lanes
-   while retaining the empty cold lane.
-2. Interleave protected complete and capacity checkpoints in deterministic
+1. Interleave protected complete and capacity checkpoints in deterministic
    quanta.
-3. Share exact endpoint/archive storage mechanics while preserving separate
+2. Share exact endpoint/archive storage mechanics while preserving separate
    namespaces and selection keys.
-4. Add place/defer transitions only in an experimental complete-capable shadow
+3. Add place/defer transitions only in an experimental complete-capable shadow
    producer and judge promotion against the full baseline matrix.

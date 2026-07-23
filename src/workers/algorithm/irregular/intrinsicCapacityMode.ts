@@ -70,12 +70,25 @@ export interface IntrinsicCapacitySelectionTrace extends IntrinsicCapacityObject
   readonly selectedRotationDeg: 0 | 90
 }
 
+export interface IntrinsicCapacityWarmPrefixLaneTrace {
+  readonly sourceRole: string
+  readonly prefixDepth: number
+  readonly reusedPlacedCount: number
+  readonly status: 'settled'
+  readonly consumedPlacementEvaluations: number
+  readonly completedDepths: number
+  readonly elapsedMs: number
+  readonly endpoint: IntrinsicCapacityObjective | undefined
+}
+
 export interface IntrinsicCapacityTrace {
   readonly routing: IntrinsicCapacityRouting
   readonly preflight: IntrinsicCapacityPreflightOutcome
   readonly prefixes: IntrinsicCapacityPrefixTrace
   readonly prefixIncumbent: IntrinsicCapacityIncumbentTrace | undefined
   readonly coldSearch: IntrinsicCapacitySearchTrace
+  /** Observer-only independent warm lanes; excluded from final selection. */
+  readonly warmPrefixLanes: ReadonlyArray<IntrinsicCapacityWarmPrefixLaneTrace> | undefined
   readonly selected: IntrinsicCapacitySelectionTrace
   /** Coordinator-measured proof-only preflight runtime. */
   readonly preflightRuntimeMs: number | undefined
@@ -105,6 +118,8 @@ export interface RunIntrinsicCapacityModeInput {
   readonly disablePrefixReuse?: boolean
   readonly control?: IrregularNfpIfpControl
   readonly capturePhaseTimings?: boolean
+  /** Runs protected warm-prefix lanes as observers without changing selection. */
+  readonly captureWarmPrefixTelemetry?: boolean
   /** Coordinator-measured preflight runtime carried into the trace. */
   readonly preflightRuntimeMs?: number
   /** Coordinator-measured complete archive runtime carried into the trace. */
@@ -176,6 +191,50 @@ export function runIntrinsicCapacityMode(
     })
     const coldSearchMs = Math.max(0, performance.now() - coldSearchStartedAt)
 
+    let warmPrefixLanes: ReadonlyArray<IntrinsicCapacityWarmPrefixLaneTrace> | undefined
+    if (input.captureWarmPrefixTelemetry === true) {
+      const measuredLanes: IntrinsicCapacityWarmPrefixLaneTrace[] = []
+      for (const descriptor of terminalization.fittingDescriptors) {
+        const laneStartedAt = performance.now()
+        const lane = yield* runIntrinsicCapacityColdSearch({
+          sheet: input.sheet,
+          preparedPieces: input.preparedPieces,
+          materialAreasByPieceId: materials.areasByPieceId,
+          cavityCache: new Map(),
+          warmPrefixSeed: {
+            sourceRole: descriptor.role,
+            depth: descriptor.depth,
+            state: descriptor.state
+          },
+          ...(input.control === undefined ? {} : { control: input.control }),
+          ...(input.capturePhaseTimings === undefined
+            ? {}
+            : { capturePhaseTimings: input.capturePhaseTimings })
+        })
+        if (lane.status !== 'settled') {
+          return yield* Effect.fail(
+            new IntrinsicCapacityError({
+              operation: 'warmPrefixLane',
+              message: `warm prefix ${descriptor.role}@${descriptor.depth} did not settle.`
+            })
+          )
+        }
+        const endpoint = lane.endpoints[0]
+        measuredLanes.push({
+          sourceRole: descriptor.role,
+          prefixDepth: descriptor.depth,
+          reusedPlacedCount: descriptor.placedPreparedIds.length,
+          status: 'settled',
+          consumedPlacementEvaluations: lane.trace.consumedPlacementEvaluations,
+          completedDepths: lane.trace.completedDepths,
+          elapsedMs: Math.max(0, performance.now() - laneStartedAt),
+          endpoint:
+            endpoint === undefined ? undefined : intrinsicCapacityObjective(endpoint)
+        })
+      }
+      warmPrefixLanes = measuredLanes
+    }
+
     const candidates = [...coldSearch.endpoints, ...terminalization.endpoints].toSorted(
       compareIntrinsicCapacityEndpoints
     )
@@ -220,8 +279,9 @@ export function runIntrinsicCapacityMode(
                 placedMaterialAreaMm2: incumbent.metrics.placedMaterialAreaMm2,
                 selectedRotationDeg: incumbent.selectedRotationDeg,
                 canonicalGeometryHash: incumbent.canonicalGeometryHash
-              },
+        },
         coldSearch: coldSearch.trace,
+        warmPrefixLanes,
         selected: {
           ...intrinsicCapacityObjective(selected),
           unplacedCount: selected.unplacedPreparedIds.length,

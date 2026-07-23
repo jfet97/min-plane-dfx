@@ -28,7 +28,10 @@ export interface IntrinsicCapacityEndpointMetrics {
   readonly envelopeSpanMm: number
 }
 
-export type IntrinsicCapacityEndpointOrigin = 'cold-search' | 'prefix-incumbent'
+export type IntrinsicCapacityEndpointOrigin =
+  | 'cold-search'
+  | 'prefix-incumbent'
+  | 'warm-prefix-continuation'
 
 /** One exact partial capacity layout with a complete placed/unplaced partition. */
 export interface IntrinsicCapacityEndpoint {

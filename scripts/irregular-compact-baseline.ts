@@ -322,7 +322,8 @@ const startedAt = performance.now()
 const result = await Effect.runPromise(
   computeIrregularNesting(request, {
     captureCapacityPhaseTimings: true,
-    captureCapacityShadowTelemetry: true
+    captureCapacityShadowTelemetry: true,
+    captureCapacityWarmPrefixTelemetry: true
   }).pipe(
     Effect.provide(CollisionGeometryBuilder.Live),
     Effect.provide(TransformGeneratorLive),

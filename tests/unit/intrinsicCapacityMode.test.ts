@@ -786,6 +786,83 @@ describe('intrinsic capacity prefixes', () => {
     ).toBe(true)
   })
 
+  it('resumes an exact warm prefix with the uninterrupted trace and endpoint', async () => {
+    const pieces = [
+      preparedRectangle('square-a', 40, 40),
+      preparedRectangle('square-b', 40, 40),
+      preparedRectangle('square-c', 40, 40),
+      preparedRectangle('square-d', 40, 40)
+    ]
+    const finalSheet = sheet(90, 45)
+    const materialAreasByPieceId = materialsOf(pieces)
+    const constructed = await provideGeometry(
+      constructIntrinsicStrictState({
+        allPreparedPieces: pieces,
+        remainingPreparedPieces: pieces,
+        frozenPlaced: [],
+        candidateMode: 'pure-growth'
+      })
+    )
+    const descriptors = captureIntrinsicCapacityPrefixDescriptors({
+      preparedPieces: pieces,
+      sources: [{ role: 'canonical-grid', state: constructed.state }]
+    })
+    const terminalization = terminalizeIntrinsicCapacityPrefixEndpoints({
+      sheet: finalSheet,
+      descriptors,
+      materialAreasByPieceId,
+      cavityCache: new Map()
+    })
+    const descriptor = terminalization.fittingDescriptors[0]
+    expect(descriptor).toBeDefined()
+    if (descriptor === undefined) return
+    const warmPrefixSeed = {
+      sourceRole: descriptor.role,
+      depth: descriptor.depth,
+      state: descriptor.state
+    }
+    const uninterrupted = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        warmPrefixSeed
+      })
+    )
+    const paused = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        warmPrefixSeed,
+        maximumDepthBoundaries: 1
+      })
+    )
+    expect(paused.status).toBe('paused')
+    expect(paused.checkpoint?.producerRole).toBe('capacity-warm-prefix')
+    expect(paused.checkpoint?.nextDepth).toBe(descriptor.depth + 1)
+    const checkpoint = paused.checkpoint
+    expect(checkpoint).toBeDefined()
+    if (checkpoint === undefined) return
+    const resumed = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        warmPrefixSeed,
+        checkpoint
+      })
+    )
+    expect(resumed.trace).toEqual(uninterrupted.trace)
+    expect(resumed.endpoints).toEqual(uninterrupted.endpoints)
+    expect(
+      resumed.endpoints.every(({ origin }) => origin === 'warm-prefix-continuation')
+    ).toBe(true)
+  })
+
   it('matches cold-only output exactly when no descriptor is captured', async () => {
     const pieces = [
       preparedRectangle('square-a', 60, 60),

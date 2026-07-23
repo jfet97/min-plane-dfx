@@ -129,12 +129,14 @@ The ordered implementation stages are:
 No later stage may be promoted from an ambiguous or failed earlier
 measurement.
 
-Stages 1 and 2 are now implemented behind behavior-preserving seams. Cold
+Stages 1 through 3 are now implemented behind behavior-preserving seams. Cold
 capacity execution can pause and resume only at completed depths, and an
 opt-in benchmark observer reports exact parts-per-million pressure plus a
-four-depth no-permanent-skip probe. The observer is disabled in production and
-has no routing or ranking consumer. Stage 3 must retain the empty cold lane
-unchanged while measuring verified warm-prefix continuations independently.
+four-depth no-permanent-skip probe. Verified fitting prefixes may also seed
+independent resumable warm shadow lanes with protected budgets. Both observers
+are disabled in production and have no routing, ranking, or selection consumer.
+Stage 4 must interleave protected checkpoints without changing complete
+construction or allowing warm and cold states to share survivor slots.
 
 ## Checkpoint Contract
 

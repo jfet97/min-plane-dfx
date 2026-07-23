@@ -203,6 +203,14 @@ export interface RunIntrinsicCapacityColdSearchInput {
   readonly checkpoint?: IntrinsicAnytimeCheckpoint
   /** Test/scheduler seam. Omit to run through settlement. */
   readonly maximumDepthBoundaries?: number
+  /** Exact fitting, skip-free prefix used only by an independent warm lane. */
+  readonly warmPrefixSeed?: IntrinsicCapacityWarmPrefixSeed
+}
+
+export interface IntrinsicCapacityWarmPrefixSeed {
+  readonly sourceRole: string
+  readonly depth: number
+  readonly state: IrregularBeamState
 }
 
 interface CapacityBeamEntry {
@@ -286,6 +294,26 @@ export function runIntrinsicCapacityColdSearch(
         })
       )
     }
+    const warmPrefix = validateWarmPrefixSeed({
+      seed: input.warmPrefixSeed,
+      preparedPieces: input.preparedPieces,
+      preparedIds,
+      materialAreasByPieceId: input.materialAreasByPieceId,
+      cavityCache: input.cavityCache,
+      sheetWidthGrid,
+      sheetHeightGrid
+    })
+    if (warmPrefix.kind === 'invalid') {
+      return yield* Effect.fail(
+        new IntrinsicCapacityError({
+          operation: 'warmPrefixSeed',
+          message: warmPrefix.message
+        })
+      )
+    }
+    const initialDepth = warmPrefix.entry?.depth ?? 0
+    const producerRole: IntrinsicAnytimeProducerRole =
+      warmPrefix.entry === undefined ? 'capacity-cold' : 'capacity-warm-prefix'
     const maximumDepthBoundaries = input.maximumDepthBoundaries
     if (
       maximumDepthBoundaries !== undefined &&
@@ -315,6 +343,7 @@ export function runIntrinsicCapacityColdSearch(
         checkpoint: input.checkpoint,
         requestFingerprint,
         incumbentBinding: intrinsicCapacityIncumbentBinding(input.incumbent),
+        producerRole,
         preparedIds,
         materialAreasByPieceId: input.materialAreasByPieceId,
         placementEvaluationCap,
@@ -349,21 +378,28 @@ export function runIntrinsicCapacityColdSearch(
     let fitRejectedCandidates = resumedCounters?.fitRejectedCandidates ?? 0
     let invalidCandidates = resumedCounters?.invalidCandidates ?? 0
     let endpointFitRejections = resumedCounters?.endpointFitRejections ?? 0
-    let completedDepths = resumedCounters?.completedDepths ?? 0
+    let completedDepths = resumedCounters?.completedDepths ?? initialDepth
     let depthQuotaExhaustions = resumedCounters?.depthQuotaExhaustions ?? 0
     let settlement: IntrinsicCapacitySettlement = 'exhausted'
     let perDepthBudgetLedgers: ReadonlyArray<IntrinsicAnytimeDepthBudgetLedger> =
-      input.checkpoint?.budgetLedgers.perDepth ?? []
+      input.checkpoint?.budgetLedgers.perDepth ??
+      Array.from({ length: initialDepth }, (_, depth) => ({
+        depth,
+        consumedPlacementEvaluations: 0,
+        quotaExhausted: false
+      }))
     let noSkipFrontier: IntrinsicAnytimeNoSkipFrontierState =
       input.checkpoint?.noSkipFrontier ?? {
         present: true,
         firstLossDepth: undefined
       }
-    const startDepth = input.checkpoint?.nextDepth ?? 0
+    const startDepth = input.checkpoint?.nextDepth ?? initialDepth
     let completedDepthBoundariesThisInvocation = 0
 
     let beam: ReadonlyArray<CapacityBeamEntry>
-    if (input.checkpoint === undefined) {
+    if (input.checkpoint === undefined && warmPrefix.entry !== undefined) {
+      beam = [warmPrefix.entry.beamEntry]
+    } else if (input.checkpoint === undefined) {
       const emptyState = IrregularBeamState.empty(input.preparedPieces)
       const emptySpan = intrinsicCapacityStateGridSpan(emptyState)
       if (emptySpan === undefined) {
@@ -654,6 +690,7 @@ export function runIntrinsicCapacityColdSearch(
           perDepthBudgetLedgers,
           noSkipFrontier,
           counters,
+          producerRole,
           sheetWidthGrid,
           sheetHeightGrid
         })
@@ -686,7 +723,16 @@ export function runIntrinsicCapacityColdSearch(
         sheet: input.sheet,
         state: entry.state,
         unplacedPreparedIds,
-        origin: 'cold-search',
+        origin:
+          producerRole === 'capacity-warm-prefix'
+            ? 'warm-prefix-continuation'
+            : 'cold-search',
+        ...(input.warmPrefixSeed === undefined
+          ? {}
+          : {
+              sourceRole: input.warmPrefixSeed.sourceRole,
+              prefixDepth: input.warmPrefixSeed.depth
+            }),
         materialAreasByPieceId: input.materialAreasByPieceId,
         cavityCache: input.cavityCache
       })
@@ -763,6 +809,95 @@ function makeIntrinsicCapacitySearchTrace(input: {
   }
 }
 
+type WarmPrefixValidation =
+  | {
+      readonly kind: 'valid'
+      readonly entry:
+        | {
+            readonly depth: number
+            readonly beamEntry: CapacityBeamEntry
+          }
+        | undefined
+    }
+  | { readonly kind: 'invalid'; readonly message: string }
+
+function validateWarmPrefixSeed(input: {
+  readonly seed: IntrinsicCapacityWarmPrefixSeed | undefined
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly preparedIds: ReadonlyArray<PieceId>
+  readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
+  readonly cavityCache: IntrinsicCapacityCavityCache
+  readonly sheetWidthGrid: number
+  readonly sheetHeightGrid: number
+}): WarmPrefixValidation {
+  const seed = input.seed
+  if (seed === undefined) return { kind: 'valid', entry: undefined }
+  if (
+    seed.sourceRole.length === 0 ||
+    !Number.isSafeInteger(seed.depth) ||
+    seed.depth <= 0 ||
+    seed.depth >= input.preparedPieces.length
+  ) {
+    return { kind: 'invalid', message: 'warm prefix role or depth is invalid.' }
+  }
+  const expectedPlacedIds = input.preparedIds.slice(0, seed.depth)
+  const expectedPendingIds = input.preparedIds.slice(seed.depth)
+  const statePendingIds = seed.state.remainingPreparedPieces.map(
+    intrinsicCapacityPreparedPieceId
+  )
+  if (
+    seed.state.unplacedPieceIds.length !== 0 ||
+    !equalPieceIdArrays(seed.state.placementOrder, expectedPlacedIds) ||
+    !equalPieceIdArrays(statePendingIds, expectedPendingIds)
+  ) {
+    return {
+      kind: 'invalid',
+      message: 'warm prefix must be an exact skip-free prefix of the prepared order.'
+    }
+  }
+  let placedDoubledMaterialAreaGrid2 = 0n
+  for (const pieceId of expectedPlacedIds) {
+    const area = input.materialAreasByPieceId.get(pieceId)
+    if (area === undefined) {
+      return { kind: 'invalid', message: `warm prefix piece ${pieceId} has no material area.` }
+    }
+    placedDoubledMaterialAreaGrid2 += area
+  }
+  const gridSpan = intrinsicCapacityStateGridSpan(seed.state)
+  if (gridSpan === undefined) {
+    return { kind: 'invalid', message: 'warm prefix has no exact occupied span.' }
+  }
+  const fitMask = intrinsicCapacitySpanFitsSheet(
+    gridSpan,
+    input.sheetWidthGrid,
+    input.sheetHeightGrid
+  )
+  if (!fitMask.q0 && !fitMask.q90) {
+    return { kind: 'invalid', message: 'warm prefix does not fit the requested sheet.' }
+  }
+  const anchoredOccupiedKey = seed.state.bottomLeftAnchoredCanonicalOccupiedGeometryKey()
+  if (anchoredOccupiedKey === undefined) {
+    return { kind: 'invalid', message: 'warm prefix has no anchored occupied identity.' }
+  }
+  const cavities = measureIntrinsicCapacityCavities(seed.state, input.cavityCache)
+  if (cavities === undefined) {
+    return { kind: 'invalid', message: 'warm prefix cavity measurement failed.' }
+  }
+  return {
+    kind: 'valid',
+    entry: {
+      depth: seed.depth,
+      beamEntry: {
+        state: seed.state,
+        placedDoubledMaterialAreaGrid2,
+        anchoredOccupiedKey,
+        gridSpan,
+        cavities
+      }
+    }
+  }
+}
+
 function makeIntrinsicCapacityCheckpoint(input: {
   readonly requestFingerprint: string
   readonly incumbentBinding: IntrinsicAnytimeIncumbentBinding | undefined
@@ -774,6 +909,7 @@ function makeIntrinsicCapacityCheckpoint(input: {
   readonly perDepthBudgetLedgers: ReadonlyArray<IntrinsicAnytimeDepthBudgetLedger>
   readonly noSkipFrontier: IntrinsicAnytimeNoSkipFrontierState
   readonly counters: IntrinsicCapacitySearchCounters
+  readonly producerRole: 'capacity-cold' | 'capacity-warm-prefix'
   readonly sheetWidthGrid: number
   readonly sheetHeightGrid: number
 }): IntrinsicAnytimeCheckpoint {
@@ -781,7 +917,7 @@ function makeIntrinsicCapacityCheckpoint(input: {
   return {
     version: INTRINSIC_ANYTIME_CHECKPOINT_VERSION,
     requestFingerprint: input.requestFingerprint,
-    producerRole: 'capacity-cold',
+    producerRole: input.producerRole,
     archiveCohort: 'partial',
     searchBounds: INTRINSIC_CAPACITY_V1_BOUNDS,
     incumbentBinding: input.incumbentBinding,
@@ -835,6 +971,7 @@ function validateIntrinsicCapacityCheckpoint(input: {
   readonly checkpoint: IntrinsicAnytimeCheckpoint
   readonly requestFingerprint: string
   readonly incumbentBinding: IntrinsicAnytimeIncumbentBinding | undefined
+  readonly producerRole: 'capacity-cold' | 'capacity-warm-prefix'
   readonly preparedIds: ReadonlyArray<PieceId>
   readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
   readonly placementEvaluationCap: number
@@ -848,8 +985,11 @@ function validateIntrinsicCapacityCheckpoint(input: {
   if (checkpoint.requestFingerprint !== input.requestFingerprint) {
     return 'checkpoint request/prepared-order fingerprint does not match the current request.'
   }
-  if (checkpoint.producerRole !== 'capacity-cold' || checkpoint.archiveCohort !== 'partial') {
-    return 'cold capacity search requires a capacity-cold partial-cohort checkpoint.'
+  if (
+    checkpoint.producerRole !== input.producerRole ||
+    checkpoint.archiveCohort !== 'partial'
+  ) {
+    return `capacity search requires a ${input.producerRole} partial-cohort checkpoint.`
   }
   if (
     canonicalJson(checkpoint.searchBounds) !== canonicalJson(INTRINSIC_CAPACITY_V1_BOUNDS)
@@ -1016,6 +1156,7 @@ function intrinsicCapacityRequestFingerprint(input: {
   readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
   readonly incumbent?: IntrinsicCapacityEndpoint
+  readonly warmPrefixSeed?: IntrinsicCapacityWarmPrefixSeed
 }): string {
   const material = [...input.materialAreasByPieceId.entries()]
     .map(([pieceId, area]) => [pieceId, area] as const)
@@ -1028,7 +1169,20 @@ function intrinsicCapacityRequestFingerprint(input: {
         sheet: input.sheet,
         preparedPieces: input.preparedPieces,
         material,
-        incumbent: intrinsicCapacityIncumbentBinding(input.incumbent)
+        incumbent: intrinsicCapacityIncumbentBinding(input.incumbent),
+        warmPrefix:
+          input.warmPrefixSeed === undefined
+            ? undefined
+            : {
+                sourceRole: input.warmPrefixSeed.sourceRole,
+                depth: input.warmPrefixSeed.depth,
+                placedPreparedIds: input.warmPrefixSeed.state.placementOrder,
+                pendingPreparedIds: input.warmPrefixSeed.state.remainingPreparedPieces.map(
+                  intrinsicCapacityPreparedPieceId
+                ),
+                anchoredOccupiedKey:
+                  input.warmPrefixSeed.state.bottomLeftAnchoredCanonicalOccupiedGeometryKey()
+              }
       })
     )
     .digest('hex')

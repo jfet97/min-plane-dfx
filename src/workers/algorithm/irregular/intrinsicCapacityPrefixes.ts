@@ -106,6 +106,8 @@ export interface IntrinsicCapacityPrefixTerminalization {
   readonly capturedCount: number
   readonly fittingCount: number
   readonly rejectedCount: number
+  /** Exact fitting descriptors retained as independent warm-lane seeds. */
+  readonly fittingDescriptors: ReadonlyArray<IntrinsicCapacityPrefixDescriptor>
   /** Deduplicated fitting prefix endpoints ranked by the capacity objective. */
   readonly endpoints: ReadonlyArray<IntrinsicCapacityEndpoint>
   readonly incumbent: IntrinsicCapacityEndpoint | undefined
@@ -123,6 +125,7 @@ export function terminalizeIntrinsicCapacityPrefixEndpoints(input: {
   readonly cavityCache: IntrinsicCapacityCavityCache
 }): IntrinsicCapacityPrefixTerminalization {
   const endpointsByHash = new Map<string, IntrinsicCapacityEndpoint>()
+  const fittingDescriptors: IntrinsicCapacityPrefixDescriptor[] = []
   let fittingCount = 0
   for (const descriptor of input.descriptors) {
     const endpoint = materializeIntrinsicCapacityEndpoint({
@@ -136,6 +139,7 @@ export function terminalizeIntrinsicCapacityPrefixEndpoints(input: {
       cavityCache: input.cavityCache
     })
     if (endpoint === undefined) continue
+    fittingDescriptors.push(descriptor)
     fittingCount += 1
     const existing = endpointsByHash.get(endpoint.canonicalGeometryHash)
     if (existing === undefined || compareIntrinsicCapacityEndpoints(endpoint, existing) < 0) {
@@ -147,6 +151,7 @@ export function terminalizeIntrinsicCapacityPrefixEndpoints(input: {
     capturedCount: input.descriptors.length,
     fittingCount,
     rejectedCount: input.descriptors.length - fittingCount,
+    fittingDescriptors,
     endpoints,
     incumbent: endpoints[0]
   }

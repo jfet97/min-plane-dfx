@@ -216,6 +216,9 @@ describe('intrinsic capacity integration', () => {
         paddingMm: 0
       })
       const computed = await compute(request)
+      const observed = await compute(request, {
+        captureCapacityWarmPrefixTelemetry: true
+      })
 
       expect(computed.capacityTrace).toBeDefined()
       expect(computed.capacityTrace?.routing).toBe('bounded-complete-archive-miss')
@@ -236,6 +239,19 @@ describe('intrinsic capacity integration', () => {
       expect(prefixes !== undefined && prefixes.capturedCount).toBeGreaterThanOrEqual(1)
       expect(computed.capacityTrace?.prefixIncumbent).toBeDefined()
       expect(computed.capacityTrace?.prefixIncumbent?.placedCount).toBe(1)
+      expect(observed.capacityTrace?.warmPrefixLanes).toBeDefined()
+      expect(observed.capacityTrace?.warmPrefixLanes?.length).toBeGreaterThanOrEqual(1)
+      expect(
+        observed.capacityTrace?.warmPrefixLanes?.every(
+          ({ status, reusedPlacedCount, completedDepths }) =>
+            status === 'settled' &&
+            reusedPlacedCount === 1 &&
+            completedDepths === request.pieces.length
+        )
+      ).toBe(true)
+      expect(observed.capacityTrace?.coldSearch).toEqual(computed.capacityTrace?.coldSearch)
+      expect(observed.placedCollisionGeometries).toEqual(computed.placedCollisionGeometries)
+      expect(observed.unplacedPieceIds).toEqual(computed.unplacedPieceIds)
     },
     120_000
   )
