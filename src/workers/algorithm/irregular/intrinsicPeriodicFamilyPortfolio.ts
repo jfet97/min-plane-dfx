@@ -663,6 +663,7 @@ function selectIntrinsicPeriodicContinuations(
     >()
     const sourceAudit = (cell: IntrinsicPeriodicCatalog['cells'][number]) => {
       if (sourceAuditReplay !== undefined) return undefined
+      if (!sourceAuditCellIncluded(cell, sourceAuditScope)) return undefined
       const provenance = cell.basisProvenance
       if (provenance === undefined) return undefined
       const key = `${cell.role}:${provenance.sourceKey}`
