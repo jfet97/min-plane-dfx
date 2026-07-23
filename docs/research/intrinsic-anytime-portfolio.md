@@ -566,6 +566,28 @@ admit a visually unchanged tradeoff. That escalation needs a fixed generic
 selection rule, protected fallback, explicit evaluation cap, and review before
 implementation.
 
+The reviewed escalation permits exactly one lost-interface repair triple. Its
+members are derived from the best two-piece diagnostic: the detached piece,
+the moved interface piece, and the deterministic other endpoint of that
+piece's degraded structural contact. The other 14 placements remain frozen.
+Observer reporting separately records admission, promotion eligibility, and
+output influence; a rejected or censored diagnostic returns the original
+protected 17-piece endpoint.
+
+At `e34ae3a`, exact future-state deduplication lets the repair complete all six
+insertion orders in `18.070 s`. It consumes `51,737` candidate evaluations,
+deduplicates `8,665` partial states with the same remaining third piece, and
+produces `6,706` exact sheet-fitting endpoints. None passes the unchanged
+admission guard and none is promotion-eligible. The best exact diagnostic is
+the same visually unchanged `15/17` contact-component tradeoff found by the
+two-piece sweep.
+
+This completed targeted failure closes the Triangle quality investigation.
+It does not justify an unrestricted three-piece neighborhood, a weakened
+comparator, or shape-specific placement logic. The protected 17-piece
+contact-fanout endpoint remains the constrained-quality result, and production
+does not run this opt-in diagnostic.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim
