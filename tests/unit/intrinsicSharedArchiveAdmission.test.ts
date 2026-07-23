@@ -21,8 +21,8 @@ describe('intrinsic shared archive admission', () => {
     const defaults = makeDefaultIrregularNestingSettings()
     const compact = settings({})
 
-    expect(defaults.optimizer.intrinsicSharedArchiveEnabled).toBe(false)
-    expect(isIntrinsicSharedArchiveEligible(defaults)).toBe(false)
+    expect(defaults.optimizer.intrinsicSharedArchiveEnabled).toBe(true)
+    expect(isIntrinsicSharedArchiveEligible(defaults)).toBe(true)
     expect(compact.optimizer.intrinsicSharedArchiveEnabled).toBe(true)
     expect(isIntrinsicSharedArchiveEligible(compact)).toBe(true)
   })

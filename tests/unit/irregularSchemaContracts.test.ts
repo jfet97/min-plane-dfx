@@ -50,12 +50,12 @@ describe('irregular schema contracts', () => {
     const first = makeDefaultIrregularNestingSettings()
     const second = makeDefaultIrregularNestingSettings()
 
-    expect(first.optimizer.orderWindow).toBe(1)
-    expect(first.optimizer.beamWidth).toBe(1)
+    expect(first.optimizer.orderWindow).toBe(4)
+    expect(first.optimizer.beamWidth).toBe(8)
     expect(first.optimizer.localCandidateFanout).toBe(4)
     expect(first.optimizer.localRepairBudget).toBe(0)
-    expect(first.optimizer.intrinsicSharedArchiveEnabled).toBe(false)
-    expect(first.optimizer.transformCap).toBe(16)
+    expect(first.optimizer.intrinsicSharedArchiveEnabled).toBe(true)
+    expect(first.optimizer.transformCap).toBe(8)
     expect(first.optimizer.edgeAlignmentEnabled).toBe(true)
     expect(first.optimizer.gaEnabled).toBe(false)
     expect(first.optimizer.baselineOnly).toBe(true)
@@ -104,7 +104,7 @@ describe('irregular schema contracts', () => {
       orderWindow: 4,
       beamWidth: 8,
       localCandidateFanout: 4,
-      localRepairBudget: 8,
+      localRepairBudget: 0,
       intrinsicSharedArchiveEnabled: true,
       transformCap: 8,
       configuredRotationEnabled: true,

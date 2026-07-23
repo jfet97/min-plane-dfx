@@ -39,7 +39,7 @@ export const DEFAULT_IRREGULAR_GEOMETRY_SETTINGS = new IrregularGeometrySettings
   geometryBackendVersion: '0'
 })
 
-export const DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS = new IrregularOptimizerSettings({
+const BASE_IRREGULAR_OPTIMIZER_SETTINGS = new IrregularOptimizerSettings({
   orderWindow: 1,
   beamWidth: 1,
   localCandidateFanout: DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT,
@@ -109,7 +109,7 @@ function makeIrregularOptimizerSettings(
   overrides: IrregularOptimizerSettingsOverrides
 ): IrregularOptimizerSettings {
   return new IrregularOptimizerSettings({
-    ...DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS,
+    ...BASE_IRREGULAR_OPTIMIZER_SETTINGS,
     ...profile,
     ...overrides,
     configuredRotationDeg: [
@@ -117,7 +117,7 @@ function makeIrregularOptimizerSettings(
     ],
     placementPolicyIds: [
       ...(overrides.placementPolicyIds ??
-        DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS.placementPolicyIds ??
+        BASE_IRREGULAR_OPTIMIZER_SETTINGS.placementPolicyIds ??
         DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS)
     ]
   })
@@ -152,14 +152,19 @@ export function makeCompactQualityIrregularOptimizerSettings(
     orderWindow: 4,
     beamWidth: 8,
     localCandidateFanout: 4,
-    localRepairBudget: 8,
+    localRepairBudget: 0,
     intrinsicSharedArchiveEnabled: true,
+    transformMinimumEdgeLengthMm: 1.2,
+    transformAngleDeduplicationToleranceDeg: 0.051,
     baselineOnly: true,
     gaEnabled: false,
     placementPolicyId: 'edge-contact-then-balanced-compactness',
     ...overrides
   })
 }
+
+export const DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS =
+  makeCompactQualityIrregularOptimizerSettings()
 
 export const DEFAULT_IRREGULAR_NESTING_SETTINGS = new IrregularNestingSettings({
   geometry: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
@@ -168,18 +173,18 @@ export const DEFAULT_IRREGULAR_NESTING_SETTINGS = new IrregularNestingSettings({
 
 /** Creates an independent default profile for one editable irregular run. */
 export function makeDefaultIrregularNestingSettings(): IrregularNestingSettings {
+  const optimizer = makeCompactQualityIrregularOptimizerSettings()
   return new IrregularNestingSettings({
     geometry: new IrregularGeometrySettings({
       ...DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
     }),
     optimizer: new IrregularOptimizerSettings({
-      ...DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS,
+      ...optimizer,
       configuredRotationDeg: [
-        ...DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS.configuredRotationDeg
+        ...optimizer.configuredRotationDeg
       ],
       placementPolicyIds: [
-        ...(DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS.placementPolicyIds ??
-          DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS)
+        ...(optimizer.placementPolicyIds ?? DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS)
       ]
     })
   })

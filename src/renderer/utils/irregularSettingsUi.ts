@@ -8,19 +8,15 @@ import { intrinsicSharedArchiveEligibility } from '@shared/irregular/executionMo
 export type IrregularSettingsControlGroup =
   | 'geometry'
   | 'orientations'
-  | 'legacy-beam'
-  | 'legacy-local-scoring'
-  | 'legacy-ga'
 
 export interface IrregularSettingsUiState {
-  readonly mode: 'compact-shared-archive' | 'legacy-beam-ga'
+  readonly mode: 'compact-shared-archive' | 'legacy-requires-migration'
   readonly compactArchiveRequested: boolean
   readonly compactArchiveBlockedReason?: 'ga-active' | 'short-side-fill'
   readonly visibleControlGroups: ReadonlyArray<IrregularSettingsControlGroup>
 }
 
 const SHARED_CONTROL_GROUPS = ['geometry', 'orientations'] as const
-const LEGACY_CONTROL_GROUPS = ['legacy-beam', 'legacy-local-scoring', 'legacy-ga'] as const
 
 /** Derives the visible settings surface from the same Compact eligibility contract as the worker. */
 export function irregularSettingsUiState(
@@ -36,12 +32,12 @@ export function irregularSettingsUiState(
   }
 
   return {
-    mode: 'legacy-beam-ga',
+    mode: 'legacy-requires-migration',
     compactArchiveRequested: settings.optimizer.intrinsicSharedArchiveEnabled === true,
     ...(eligibility.reason === 'archive-disabled'
       ? {}
       : { compactArchiveBlockedReason: eligibility.reason }),
-    visibleControlGroups: [...SHARED_CONTROL_GROUPS, ...LEGACY_CONTROL_GROUPS]
+    visibleControlGroups: SHARED_CONTROL_GROUPS
   }
 }
 

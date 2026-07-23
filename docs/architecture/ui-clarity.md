@@ -23,9 +23,11 @@ portfolio phase directly rather than a fabricated completion percentage.
 Within convex-polygon settings, the active execution path must also be explicit.
 Compact shows the sheet-independent shared archive and explains that requested-
 sheet q0/q90 fit happens afterward. Geometry and orientation controls remain
-visible because both irregular paths consume them. Beam, local-scoring, terminal-
-repair, and GA controls appear only on the ordinary requested-sheet path; they
-must not remain as apparently active knobs while Compact is selected.
+visible because Compact consumes them. The production settings surface does not
+expose beam, local-scoring, terminal-repair, or GA controls: Compact does not
+consume them, so showing them would imply behavior they cannot influence.
+Saved legacy settings are migrated to the current Compact profile when this
+panel opens.
 
 Do not invent result previews, scores, or history that were not emitted by the worker.
 

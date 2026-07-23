@@ -19,8 +19,10 @@ describe('irregular settings UI', () => {
     expect(compact.optimizer.intrinsicSharedArchiveEnabled).toBe(true)
     expect(compact.optimizer.gaEnabled).toBe(false)
     expect(compact.optimizer.baselineOnly).toBe(true)
-    expect(compact.optimizer.localRepairBudget).toBe(8)
+    expect(compact.optimizer.localRepairBudget).toBe(0)
     expect(compact.optimizer.transformCap).toBe(8)
+    expect(compact.optimizer.transformMinimumEdgeLengthMm).toBe(1.2)
+    expect(compact.optimizer.transformAngleDeduplicationToleranceDeg).toBe(0.051)
   })
 
   it('removes legacy search controls when the Compact shared archive is active', () => {
@@ -33,19 +35,20 @@ describe('irregular settings UI', () => {
     })
   })
 
-  it('keeps behaviorally active legacy controls on the requested-sheet path', () => {
-    const state = irregularSettingsUiState(makeDefaultIrregularNestingSettings())
+  it('marks saved legacy settings for migration without exposing legacy controls', () => {
+    const base = makeDefaultIrregularNestingSettings()
+    const legacy = new IrregularNestingSettings({
+      geometry: base.geometry,
+      optimizer: makeCompactQualityIrregularOptimizerSettings({
+        intrinsicSharedArchiveEnabled: false
+      })
+    })
+    const state = irregularSettingsUiState(legacy)
 
     expect(state).toEqual({
-      mode: 'legacy-beam-ga',
+      mode: 'legacy-requires-migration',
       compactArchiveRequested: false,
-      visibleControlGroups: [
-        'geometry',
-        'orientations',
-        'legacy-beam',
-        'legacy-local-scoring',
-        'legacy-ga'
-      ]
+      visibleControlGroups: ['geometry', 'orientations']
     })
   })
 
