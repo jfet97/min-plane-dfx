@@ -168,6 +168,12 @@ all pass.
 That observer seam is now implemented with an independent producer identity,
 budget, exact topology cache, trace, and artifact hook. It has no output
 influence while the first Triangle/Mixed/Shapes falsifiers run.
+The corrected 16-state trace shows the topology opportunity is already absent
+after the three-candidate per-parent compactness fanout, not primarily lost in
+beam retention. The next generic shadow step keeps those three successors and
+adds at most one distinct positive-boundary successor from the existing exact
+legal NFP pool; only missing positive candidates can justify a new
+feature-contact generator.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

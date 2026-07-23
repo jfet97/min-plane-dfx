@@ -452,6 +452,26 @@ rejected rather than admitted. The next diagnostic must determine whether
 connected candidates are generated before retention and then lost, or whether
 candidate generation never proposes them.
 
+The bounded trace at `92729e0` exposed and Sol review caught a reservation
+off-by-one: the generic bucket helper could append a seventeenth state before
+checking the declared 16-state limit. Commit `d00413b` fixes both cohesion and
+the earlier axis helper and asserts the bound at every traced depth. The clean
+rerun preserves the same production and observer hashes with a maximum of 16
+survivors.
+
+That corrected trace localizes the missing mechanism before beam retention.
+At depth two, the best exact count/material/cavity stratum contains nine legal
+two-piece measured survivors, but its minimum contact-component count is two
+and its maximum connected component has size one. No connected multi-piece
+representative appears later. Across all depths, only one bounded topology
+representative is discarded, and it is less connected than the retained
+alternative. The NFP service already generates exact legal NFP-vertex and
+antiparallel-edge-support candidates; capacity then constructs only the three
+best-envelope candidates per parent. The next observer therefore preserves
+those three successors exactly and appends at most one distinct
+maximum-positive-boundary successor from the same legal pool. It records
+contact measurement and survival separately and still has no output authority.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim

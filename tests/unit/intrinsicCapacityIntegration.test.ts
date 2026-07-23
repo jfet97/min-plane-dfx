@@ -292,11 +292,23 @@ describe('intrinsic capacity integration', () => {
             depth.retainedCount <= 16 &&
             depth.topologyMeasurementCount > 0 &&
             depth.topologyMeasurementMs >= 0 &&
+            depth.legalCandidateCount >=
+              depth.contactMeasuredCandidateCount &&
+            depth.contactMeasuredCandidateCount >=
+              depth.positiveContactCandidateCount &&
+            depth.contactMeasurementMs >= 0 &&
+            depth.contactSelectedSuccessorCount <= 16 &&
+            depth.contactRetainedSuccessorCount <=
+              depth.contactSelectedSuccessorCount &&
             depth.representatives.every(
               (representative) =>
                 representative.parentDecisionIdentity.length > 0 &&
                 representative.decisionIdentity.length > 0 &&
-                representative.pieceId === depth.pieceId
+                representative.pieceId === depth.pieceId &&
+                (representative.decision === 'skip'
+                  ? representative.proposalRole === 'skip'
+                  : representative.proposalRole === 'compactness' ||
+                    representative.proposalRole === 'contact')
             )
         )
       ).toBe(true)

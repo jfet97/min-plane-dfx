@@ -41,6 +41,9 @@ import {
 } from './intrinsicCapacityMaterial.js'
 import { IntrinsicCapacityError } from './intrinsicCapacityPreflight.js'
 import {
+  IrregularPlacementScorer
+} from './irregularPlacementScorer.js'
+import {
   INTRINSIC_COORDINATE_DOMAIN,
   originAnchorCandidates,
   transformCandidateOrder
@@ -200,6 +203,7 @@ export interface IntrinsicCapacityTopologyRepresentative {
   readonly decisionIdentity: string
   readonly parentDecisionIdentity: string
   readonly decision: 'place' | 'skip'
+  readonly proposalRole: 'compactness' | 'contact' | 'skip'
   readonly pieceId: PieceId
   readonly anchoredOccupiedKey: string
   readonly placedCount: number
@@ -218,6 +222,13 @@ export interface IntrinsicCapacityTopologyRetentionDepthTrace {
   readonly bestAccountingStratumCount: number
   readonly topologyMeasurementCount: number
   readonly topologyMeasurementMs: number
+  readonly legalCandidateCount: number
+  readonly contactMeasuredCandidateCount: number
+  readonly positiveContactCandidateCount: number
+  readonly contactMeasurementMs: number
+  readonly contactSelectedSuccessorCount: number
+  readonly contactDeduplicatedSuccessorCount: number
+  readonly contactRetainedSuccessorCount: number
   readonly representatives: ReadonlyArray<IntrinsicCapacityTopologyRepresentative>
 }
 
@@ -277,6 +288,7 @@ interface CapacityBeamEntry {
   readonly observerTransition?: {
     readonly parentDecisionIdentity: string
     readonly decision: 'place' | 'skip'
+    readonly proposalRole: 'compactness' | 'contact' | 'skip'
     readonly pieceId: PieceId
   }
 }
@@ -514,6 +526,15 @@ export function runIntrinsicCapacityColdSearch(
       const remainingPreparedPieces = input.preparedPieces.slice(depth + 1)
       const successors: CapacityBeamEntry[] = []
       const successorKeys = new Set<string>()
+      const contactSuccessorIdentities = new Set<string>()
+      const contactFanoutTrace = {
+        legalCandidateCount: 0,
+        measuredCandidateCount: 0,
+        positiveCandidateCount: 0,
+        measurementMs: 0,
+        selectedSuccessorCount: 0,
+        deduplicatedSuccessorCount: 0
+      }
 
       // reserve the skip path for every retained state before spending this depth's placement quota
       for (const entry of beam) {
@@ -536,6 +557,7 @@ export function runIntrinsicCapacityColdSearch(
                     parentDecisionIdentity:
                       intrinsicCapacitySuccessorIdentity(entry),
                     decision: 'skip' as const,
+                    proposalRole: 'skip' as const,
                     pieceId
                   }
                 }
@@ -551,7 +573,7 @@ export function runIntrinsicCapacityColdSearch(
       let depthQuotaExhausted = false
       for (const entry of beam) {
         if (depthQuotaExhausted) break
-        const scored: ScoredCandidateReference[] = []
+        const scored: EvaluatedCandidateReference[] = []
         const sortedTransforms = [...piece.transforms].sort((first, second) =>
           transformCandidateOrder(first, second)
         )
@@ -582,6 +604,9 @@ export function runIntrinsicCapacityColdSearch(
                   candidateMemoScope,
                   ...(input.control === undefined ? {} : { control: input.control })
                 })
+          if (captureTopologyRetention) {
+            contactFanoutTrace.legalCandidateCount += legalCandidates.length
+          }
           if (capture) timings.candidateGenerationMs += performance.now() - generationStartedAt
 
           const evaluationStartedAt = capture ? performance.now() : 0
@@ -613,7 +638,39 @@ export function runIntrinsicCapacityColdSearch(
               fitRejectedCandidates += 1
               continue
             }
-            scored.push(evaluated)
+            if (captureTopologyRetention) {
+              const contactStartedAt = performance.now()
+              const contactScore =
+                yield* IrregularPlacementScorer.Make.scoreCandidate({
+                  sheet: INTRINSIC_COORDINATE_DOMAIN,
+                  placed: entry.state.placedCollisionGeometries,
+                  moving,
+                  candidate
+                }).pipe(
+                  Effect.mapError(
+                    (error) =>
+                      new IntrinsicCapacityError({
+                        operation: 'capacityContactFanout',
+                        message: error.message
+                      })
+                  )
+                )
+              contactFanoutTrace.measuredCandidateCount += 1
+              contactFanoutTrace.measurementMs += Math.max(
+                0,
+                performance.now() - contactStartedAt
+              )
+              if (contactScore.sharedCollisionBoundaryLengthMm > 0) {
+                contactFanoutTrace.positiveCandidateCount += 1
+              }
+              scored.push({
+                ...evaluated,
+                sharedBoundaryLengthMm:
+                  contactScore.sharedCollisionBoundaryLengthMm
+              })
+            } else {
+              scored.push(evaluated)
+            }
           }
           if (capture) timings.candidateEvaluationMs += performance.now() - evaluationStartedAt
         }
@@ -621,8 +678,12 @@ export function runIntrinsicCapacityColdSearch(
         const constructionStartedAt = capture ? performance.now() : 0
         scored.sort(compareScoredCandidateReferences)
         let builtCount = 0
-        for (const reference of scored) {
-          if (builtCount >= localLegalPlacementFanout) break
+        const builtCandidateKeys = new Set<string>()
+        const buildReference = (
+          reference: EvaluatedCandidateReference,
+          proposalRole: 'compactness' | 'contact'
+        ): { readonly added: boolean; readonly decisionIdentity?: string } => {
+          builtCandidateKeys.add(capacityCandidateReferenceIdentity(reference))
           const placedState = entry.state.withPlacement({
             remainingPreparedPieces,
             placedCollisionGeometry: new IrregularPlacedPiece({
@@ -634,7 +695,7 @@ export function runIntrinsicCapacityColdSearch(
           const gridSpan = intrinsicCapacityStateGridSpan(placedState)
           if (gridSpan === undefined) {
             invalidCandidates += 1
-            continue
+            return { added: false }
           }
           const builtFits = intrinsicCapacitySpanFitsSheet(
             gridSpan,
@@ -643,39 +704,72 @@ export function runIntrinsicCapacityColdSearch(
           )
           if (!builtFits.q0 && !builtFits.q90) {
             fitRejectedCandidates += 1
-            continue
+            return { added: false }
           }
-          const anchoredOccupiedKey = placedState.bottomLeftAnchoredCanonicalOccupiedGeometryKey()
+          const anchoredOccupiedKey =
+            placedState.bottomLeftAnchoredCanonicalOccupiedGeometryKey()
           if (anchoredOccupiedKey === undefined) {
             invalidCandidates += 1
-            continue
+            return { added: false }
           }
+          const successor: CapacityBeamEntry = {
+            state: placedState,
+            placedDoubledMaterialAreaGrid2:
+              entry.placedDoubledMaterialAreaGrid2 + pieceMaterial,
+            anchoredOccupiedKey,
+            gridSpan,
+            cavities: { count: 0, totalAreaMm2: 0 },
+            ...(captureTopologyRetention
+              ? {
+                  observerTransition: {
+                    parentDecisionIdentity:
+                      intrinsicCapacitySuccessorIdentity(entry),
+                    decision: 'place' as const,
+                    proposalRole,
+                    pieceId
+                  }
+                }
+              : {})
+          }
+          const decisionIdentity = intrinsicCapacitySuccessorIdentity(successor)
           const added = pushSuccessor(
             successors,
             successorKeys,
-            {
-              state: placedState,
-              placedDoubledMaterialAreaGrid2:
-                entry.placedDoubledMaterialAreaGrid2 + pieceMaterial,
-              anchoredOccupiedKey,
-              gridSpan,
-              cavities: { count: 0, totalAreaMm2: 0 },
-              ...(captureTopologyRetention
-                ? {
-                    observerTransition: {
-                      parentDecisionIdentity:
-                        intrinsicCapacitySuccessorIdentity(entry),
-                      decision: 'place' as const,
-                      pieceId
-                    }
-                  }
-                : {})
-            },
+            successor,
             () => {
               deduplicatedSuccessors += 1
+              if (proposalRole === 'contact') {
+                contactFanoutTrace.deduplicatedSuccessorCount += 1
+              }
             }
           )
-          if (added) builtCount += 1
+          return { added, decisionIdentity }
+        }
+        for (const reference of scored) {
+          if (builtCount >= localLegalPlacementFanout) break
+          if (buildReference(reference, 'compactness').added) builtCount += 1
+        }
+        if (captureTopologyRetention) {
+          const contactReference = scored
+            .filter(
+              (reference) =>
+                (reference.sharedBoundaryLengthMm ?? 0) > 0 &&
+                !builtCandidateKeys.has(
+                  capacityCandidateReferenceIdentity(reference)
+                )
+            )
+            .toSorted(compareContactCandidateReferences)[0]
+          if (contactReference !== undefined) {
+            const contactResult = buildReference(contactReference, 'contact')
+            if (contactResult.added) {
+              contactFanoutTrace.selectedSuccessorCount += 1
+              if (contactResult.decisionIdentity !== undefined) {
+                contactSuccessorIdentities.add(
+                  contactResult.decisionIdentity
+                )
+              }
+            }
+          }
         }
         if (capture) timings.successorConstructionMs += performance.now() - constructionStartedAt
       }
@@ -736,7 +830,15 @@ export function runIntrinsicCapacityColdSearch(
             pieceId,
             measuredSurvivors,
             retained: beam,
-            topologyMeasurements
+            topologyMeasurements,
+            contactFanoutTrace: {
+              ...contactFanoutTrace,
+              retainedSuccessorCount: beam.filter((entry) =>
+                contactSuccessorIdentities.has(
+                  intrinsicCapacitySuccessorIdentity(entry)
+                )
+              ).length
+            }
           })
         )
       }
@@ -1550,6 +1652,7 @@ function intrinsicCapacitySuccessorIdentity(successor: CapacityBeamEntry): strin
 interface EvaluatedCandidateReference extends ScoredCandidateReference {
   readonly widthGrid: number
   readonly heightGrid: number
+  readonly sharedBoundaryLengthMm?: number
 }
 
 /**
@@ -1618,6 +1721,23 @@ function compareScoredCandidateReferences(
     first.gridX - second.gridX ||
     first.gridY - second.gridY
   )
+}
+
+function compareContactCandidateReferences(
+  first: EvaluatedCandidateReference,
+  second: EvaluatedCandidateReference
+): number {
+  return (
+    (second.sharedBoundaryLengthMm ?? 0) -
+      (first.sharedBoundaryLengthMm ?? 0) ||
+    compareScoredCandidateReferences(first, second)
+  )
+}
+
+function capacityCandidateReferenceIdentity(
+  reference: EvaluatedCandidateReference
+): string {
+  return `${reference.candidate.transform.index}:${reference.gridX}:${reference.gridY}`
 }
 
 /**
@@ -1836,6 +1956,15 @@ function makeCapacityTopologyRetentionDepthTrace(input: {
   readonly measuredSurvivors: ReadonlyArray<CapacityBeamEntry>
   readonly retained: ReadonlyArray<CapacityBeamEntry>
   readonly topologyMeasurements: CapacityTopologyMeasurements
+  readonly contactFanoutTrace: {
+    readonly legalCandidateCount: number
+    readonly measuredCandidateCount: number
+    readonly positiveCandidateCount: number
+    readonly measurementMs: number
+    readonly selectedSuccessorCount: number
+    readonly deduplicatedSuccessorCount: number
+    readonly retainedSuccessorCount: number
+  }
 }): IntrinsicCapacityTopologyRetentionDepthTrace {
   const retainedIdentities = new Set(
     input.retained.map(intrinsicCapacitySuccessorIdentity)
@@ -1911,6 +2040,7 @@ function makeCapacityTopologyRetentionDepthTrace(input: {
       decisionIdentity,
       parentDecisionIdentity: transition.parentDecisionIdentity,
       decision: transition.decision,
+      proposalRole: transition.proposalRole,
       pieceId: transition.pieceId,
       anchoredOccupiedKey: entry.anchoredOccupiedKey,
       placedCount: entry.state.placementOrder.length,
@@ -1930,6 +2060,18 @@ function makeCapacityTopologyRetentionDepthTrace(input: {
     bestAccountingStratumCount: bestAccounting.length,
     topologyMeasurementCount: input.topologyMeasurements.counters.count,
     topologyMeasurementMs: input.topologyMeasurements.counters.elapsedMs,
+    legalCandidateCount: input.contactFanoutTrace.legalCandidateCount,
+    contactMeasuredCandidateCount:
+      input.contactFanoutTrace.measuredCandidateCount,
+    positiveContactCandidateCount:
+      input.contactFanoutTrace.positiveCandidateCount,
+    contactMeasurementMs: input.contactFanoutTrace.measurementMs,
+    contactSelectedSuccessorCount:
+      input.contactFanoutTrace.selectedSuccessorCount,
+    contactDeduplicatedSuccessorCount:
+      input.contactFanoutTrace.deduplicatedSuccessorCount,
+    contactRetainedSuccessorCount:
+      input.contactFanoutTrace.retainedSuccessorCount,
     representatives
   }
 }
