@@ -447,21 +447,17 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       continuations,
       continuationOmissions: selected.omissions,
       continuationCoverageComplete: selected.coverageComplete,
-      ...(!capturePhaseTimings
-        ? {}
-        : {
-            continuationExecutionCoverageComplete: runs.every(
-              ({ status }) =>
-                status !== 'invalid' &&
-                status !== 'deadline' &&
-                status !== 'global-deadline' &&
-                status !== 'evaluation-cap'
-            ),
-            continuationBudgetSettlementComplete: runs.every(
-              ({ status }) =>
-                status !== 'invalid' && status !== 'deadline' && status !== 'global-deadline'
-            )
-          }),
+      continuationExecutionCoverageComplete: runs.every(
+        ({ status }) =>
+          status !== 'invalid' &&
+          status !== 'deadline' &&
+          status !== 'global-deadline' &&
+          status !== 'evaluation-cap'
+      ),
+      continuationBudgetSettlementComplete: runs.every(
+        ({ status }) =>
+          status !== 'invalid' && status !== 'deadline' && status !== 'global-deadline'
+      ),
       sourceCropSurvival: selected.sourceCropSurvival,
       sourceAuditWitnesses: selected.sourceAuditWitnesses,
       sourceAuditNonDominatedCropCount: selected.sourceAuditNonDominatedCropCount,

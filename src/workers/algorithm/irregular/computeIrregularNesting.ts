@@ -285,11 +285,21 @@ function coordinateIntrinsicSharedArchive(
         )
       )
       if (!intrinsicSharedArchiveProductionValid(archive)) {
+        const periodicCatalog = archive.periodicPortfolio.catalog
         return yield* Effect.fail(
           new IrregularPortfolioError({
             operation: 'intrinsicSharedArchive',
             category: 'search',
-            message: 'intrinsic shared archive did not complete its production coverage contract'
+            message: [
+              'intrinsic shared archive did not complete its production coverage contract',
+              `direct=${archive.directRuns.map(({ role, status }) => `${role}:${status}`).join(',')}`,
+              `catalog-runtime=${periodicCatalog.runtimeCoverageComplete}`,
+              `catalog-family=${periodicCatalog.familyCoverageComplete}`,
+              `periodic-selection=${archive.periodicSelectionValid}`,
+              `periodic=${archive.periodicRuns
+                .map(({ role, status }) => `${role}:${status}`)
+                .join(',')}`
+            ].join('; ')
           })
         )
       }

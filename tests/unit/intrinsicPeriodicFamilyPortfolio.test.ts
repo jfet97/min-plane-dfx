@@ -117,6 +117,10 @@ describe('intrinsic periodic family portfolio', () => {
       )
     )
     expect(cappedWithoutTimings.phaseTimings).toBeUndefined()
+    expect(cappedWithoutTimings.continuationExecutionCoverageComplete).toBe(
+      cappedWithoutTimings.runs.every(({ status }) => status === 'completed')
+    )
+    expect(cappedWithoutTimings.continuationBudgetSettlementComplete).toBe(true)
 
     const budgeted = await Effect.runPromise(
       runIntrinsicPeriodicFamilyPortfolio(
