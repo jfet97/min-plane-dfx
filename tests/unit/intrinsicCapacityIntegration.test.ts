@@ -259,12 +259,29 @@ describe('intrinsic capacity integration', () => {
       expect(
         observed.capacityTrace?.warmPrefixLanes?.every(
           ({ status, reusedPlacedCount, completedDepths }) =>
-            status === 'settled' &&
+            (status === 'settled' ||
+              status === 'checkpointed-censored') &&
             reusedPlacedCount > 0 &&
-            completedDepths === request.pieces.length
+            completedDepths <= request.pieces.length
         )
       ).toBe(true)
-      expect(observed.capacityTrace?.coldSearch).toEqual(computed.capacityTrace?.coldSearch)
+      const omitRetentionTimings = (
+        trace: NonNullable<typeof computed.capacityTrace>['coldSearch']
+      ) => ({
+        ...trace,
+        topologyRetentionDepths: trace.topologyRetentionDepths?.map(
+          ({ topologyMeasurementMs, contactMeasurementMs, ...depth }) => depth
+        )
+      })
+      expect(
+        observed.capacityTrace?.coldSearch === undefined
+          ? undefined
+          : omitRetentionTimings(observed.capacityTrace.coldSearch)
+      ).toEqual(
+        computed.capacityTrace?.coldSearch === undefined
+          ? undefined
+          : omitRetentionTimings(computed.capacityTrace.coldSearch)
+      )
       expect(observed.placedCollisionGeometries).toEqual(computed.placedCollisionGeometries)
       expect(observed.unplacedPieceIds).toEqual(computed.unplacedPieceIds)
       expect(cohesionObserved.placedCollisionGeometries).toEqual(
@@ -311,6 +328,13 @@ describe('intrinsic capacity integration', () => {
                     representative.proposalRole === 'contact')
             )
         )
+      ).toBe(true)
+      expect(
+        computed.intrinsicAnytimeSchedulerTrace === undefined
+          ? false
+          : intrinsicAnytimeSchedulerTraceValid(
+              computed.intrinsicAnytimeSchedulerTrace
+            )
       ).toBe(true)
       expect(scheduled.intrinsicAnytimeSchedulerTrace?.coldCheckpointReused).toBe(true)
       expect(scheduled.intrinsicAnytimeSchedulerTrace?.cancellationReason).toBe(

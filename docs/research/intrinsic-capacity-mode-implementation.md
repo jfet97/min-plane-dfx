@@ -136,13 +136,18 @@ its ranking, hashes, and winners are unchanged, and a paired direct-portfolio
 run with and without the capture callback produces identical role statuses,
 consumed evaluations, and endpoint hashes (unit-tested).
 
-## Constrained Capacity Evidence
+## Historical Capacity-v1 Evidence
 
 `pnpm gate:capacity` runs the constrained fixtures through the full
 production coordinator. All checks pass: expected routing, exact partitions,
 `capacity_subset_settled`, zero auxiliary placement evaluations, and
 prefix-not-below-cold-only. Renders and the combined report are committed
 under `docs/artifacts/intrinsic-capacity-v1/`.
+
+This table records the pre-portfolio cold capacity implementation. The current
+production coordinator is documented in
+[`intrinsic-anytime-portfolio.md`](./intrinsic-anytime-portfolio.md); in
+particular, Triangle-20 `300 x 300` now settles at `17/20`.
 
 | Fixture | Routing | Placed/Total | Settlement | Selected origin | Cavities | Notes |
 | --- | --- | --- | --- | --- | --- | --- |

@@ -80,7 +80,8 @@ serial-cost cases. Heuristic pressure may schedule protected work but may not
 prune, rank, or displace the legacy complete cohort.
 
 The checkpoint, observer-only telemetry, protected warm-prefix seams, and
-deterministic scheduler are implemented. The telemetry
+deterministic scheduler are implemented. The scheduler is now the production
+Compact coordinator; the telemetry
 path is benchmark opt-in, records exact scale-free pressure and a bounded cold
 no-skip-frontier probe, and cannot affect routing or endpoint selection. The
 warm path gives every verified fitting captured prefix its own checkpoint,
@@ -195,8 +196,10 @@ the current 17-piece contact-fanout endpoint remains the fallback.
 A reviewed lost-interface repair prototype is not retained because its
 deduplication was not continuation-exact and its deadline was incomplete. It
 also found no promotable layout. This closes the Triangle quality branch; keep
-the current 17-piece endpoint and do not widen reconstruction or weaken the
-comparator.
+the current production 17-piece endpoint and do not widen reconstruction or
+weaken the comparator. The production promotion also improves Mixed-61
+`600 x 400` to `25/61` and Shapes-17 `600 x 400` to `14/17` with zero
+cavities while preserving all roomy complete winners.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

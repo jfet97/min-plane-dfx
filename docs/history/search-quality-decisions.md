@@ -367,3 +367,13 @@ state and that its deadline did not cover the full exact generator chain. The
 measured run found no promotable endpoint regardless. The observer code is
 removed, the current 17-piece contact-fanout layout remains authoritative, and
 the Triangle quality investigation stops.
+
+The deterministic anytime scheduler and generic cohesion frontier were then
+promoted together to the normal Compact path. This turns the prior
+contact-fanout result into the production Triangle-20 `300 x 300` endpoint:
+`17/20`, zero cavities, and three explicit unplaced IDs. The promotion contains
+no fixture identifiers or triangle-specific candidate generation. It also
+improves Mixed-61 `600 x 400` from `24/61` to `25/61` and Shapes-17
+`600 x 400` from `13/17` with one cavity to `14/17` with zero cavities. Roomy
+complete winners remain protected by the separate sheetless complete cohort
+and terminal complete-over-partial dominance.

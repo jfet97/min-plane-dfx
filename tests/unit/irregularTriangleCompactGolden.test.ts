@@ -11,7 +11,10 @@ import {
 import { IrregularNestingSettings } from '@shared/irregular/domain.js'
 import { makePresetShapeDocument } from '@shared/presetShapes.js'
 import { preparePieces } from '@shared/preparePieces.js'
-import { computeIrregularNesting } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
+import {
+  computeIrregularNesting,
+  intrinsicAnytimeSchedulerTraceValid
+} from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { IrregularLayoutScorer } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { makeIrregularWorkerOutput } from '../../src/workers/algorithm/irregular/irregularWorkerOutput.js'
@@ -30,13 +33,21 @@ const MAX_COLLISION_BOUNDS_SPAN_MM = 641
 const MAX_OCCUPIED_HULL_WASTE_RATIO = 0.061
 const EXPECTED_CANONICAL_HASH =
   '371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127'
+const EXPECTED_CAPACITY_CANONICAL_HASH =
+  '0f5befd7d02fc111be47ee447fab7f8778f06ae05d045448f22a916d66949410'
 
 const settings = new IrregularNestingSettings({
   geometry: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
   optimizer: makeCompactQualityIrregularOptimizerSettings()
 })
 
-function makeTriangleRequest(): NestingRequest {
+function makeTriangleRequest(
+  sheet = new SheetSpec({
+    width: 2000,
+    height: 2700,
+    label: 'triangle golden'
+  })
+): NestingRequest {
   const preset = makePresetShapeDocument({
     kind: 'triangle',
     width: 70,
@@ -56,8 +67,9 @@ function makeTriangleRequest(): NestingRequest {
         label: `triangle copy ${index + 1}`
       })
   )
-  const sheet = new SheetSpec({ width: 2000, height: 2700, label: 'triangle golden' })
-  const jobId = JobId.make('triangle-compact-golden')
+  const jobId = JobId.make(
+    `triangle-compact-golden-${sheet.width}x${sheet.height}`
+  )
   const prepared = preparePieces(
     sources,
     sheet,
@@ -227,6 +239,62 @@ describe('compact-quality repeated triangle golden', () => {
       expect(layout.score.dominantNearCompleteStructuralContactCount).toBe(
         winnerScore.dominantNearCompleteStructuralContactCount
       )
+    },
+    30_000
+  )
+
+  it(
+    'uses intertwined production capacity search for the exact 300x300 subset',
+    async () => {
+      const request = makeTriangleRequest(
+        new SheetSpec({
+          width: 300,
+          height: 300,
+          label: 'triangle capacity golden'
+        })
+      )
+      const computed = await Effect.runPromise(
+        computeIrregularNesting(request).pipe(
+          Effect.provide(CollisionGeometryBuilder.Live),
+          Effect.provide(TransformGeneratorLive),
+          Effect.provide(NfpIfpServiceLive),
+          Effect.provide(FreeMaterialServiceLive),
+          Effect.provide(IrregularPlacementScorer.Live),
+          Effect.provide(IrregularLayoutScorer.Live),
+          Effect.provide(Layer.succeed(GeometrySettings, settings))
+        )
+      )
+
+      expect(computed.placedCollisionGeometries).toHaveLength(17)
+      expect(computed.unplacedPieceIds).toEqual([
+        PieceId.make('triangle-copy-18'),
+        PieceId.make('triangle-copy-19'),
+        PieceId.make('triangle-copy-20')
+      ])
+      expect(computed.portfolio.terminationReason).toBe(
+        'capacity_subset_settled'
+      )
+      expect(computed.capacityTrace?.selected).toMatchObject({
+        placedCount: 17,
+        unplacedCount: 3,
+        enclosedCavityCount: 0,
+        canonicalGeometryHash: EXPECTED_CAPACITY_CANONICAL_HASH
+      })
+      expect(
+        computed.intrinsicAnytimeSchedulerTrace === undefined
+          ? false
+          : intrinsicAnytimeSchedulerTraceValid(
+              computed.intrinsicAnytimeSchedulerTrace
+            )
+      ).toBe(true)
+
+      const canonicalIdentity = canonicalCollisionLayoutIdentity(
+        computed.placedCollisionGeometries
+      )
+      expect(canonicalIdentity).toBeDefined()
+      expect(
+        createHash('sha256').update(canonicalIdentity ?? '').digest('hex')
+      ).toBe(EXPECTED_CAPACITY_CANONICAL_HASH)
     },
     30_000
   )

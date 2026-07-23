@@ -71,12 +71,12 @@ const BASELINES: ReadonlyArray<Baseline> = [
     fixture: 'mixed-61',
     sheet: '600x400',
     collisionIdentitySha256:
-      '120f5f1eef64411032d0aee828cb61bc0c5464015397b600f194d63e242f6569',
+      '2c53f3123d5d57ab5e120717ae1e49046bb574925c49c4a33ed4febe7e81e414',
     fittedCanonicalSha256:
-      'b0c0d8395758b62058d29efb9702bff8519fbba028a9d8beb6b46d1492ce9e3d',
-    placedCount: 24,
-    unplacedCount: 37,
-    maximumAreaMm2: 232_800.043098,
+      '39e74c34e0cfcd4929ba3dde53d1b0215ca2c48e383297b15922f07115569f38',
+    placedCount: 25,
+    unplacedCount: 36,
+    maximumAreaMm2: 239_484.9666,
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 330_000
   },
@@ -84,13 +84,13 @@ const BASELINES: ReadonlyArray<Baseline> = [
     fixture: 'shapes-17',
     sheet: '600x400',
     collisionIdentitySha256:
-      '510225fc9dba197e1b56d6f1d3ebd70963b13cdfcb23c567acd14b56653054a8',
+      '01b2060d87752bb36eebfd4eb8602709687d5cb00c71b8feaec14a6e7cf9ba12',
     fittedCanonicalSha256:
-      'e73b0cfa3f10056aa4bab547c928384300a41e81c35737a98014ecef2956a90f',
-    placedCount: 13,
-    unplacedCount: 4,
-    maximumAreaMm2: 228_616.694352,
-    maximumCanonicalCavities: 1,
+      '4472adc8ddfcc26af748adcfeb220e049a4f0e814cb17a99c0dc092db903921e',
+    placedCount: 14,
+    unplacedCount: 3,
+    maximumAreaMm2: 232_178.021694,
+    maximumCanonicalCavities: 0,
     maximumElapsedMs: 120_000
   }
 ]

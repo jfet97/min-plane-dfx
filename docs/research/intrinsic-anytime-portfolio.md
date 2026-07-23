@@ -667,3 +667,20 @@ the coarse scheduler has not resolved F4. Exact reports, source/input archives,
 checksums, SVGs, and the inspected Shapes constrained PNG are under
 `/private/tmp/min-plane-provenance/intrinsic-place-defer-c846745/`. The PNG has
 visible background on all four sides and no truncated polygon.
+
+## Production Promotion
+
+The deterministic intertwined coordinator and the generic cohesion frontier
+are now the Compact production defaults. A normal desktop request therefore
+starts the resumable cold capacity lane, advances the protected sheetless
+complete constructor in deterministic quanta, and resumes the existing
+capacity checkpoint after a complete miss. The complete and partial archives
+remain separate, and any fitting settled complete endpoint still dominates.
+
+The production golden for Triangle-20 on `300 x 300` now settles at `17/20`,
+zero cavities, with exactly three unplaced IDs and a valid scheduler ledger.
+The former `15/20` endpoint is no longer selected. The strict roomy golden
+still returns the accepted complete `20/20` canonical identity. The six-case
+matrix additionally improves Mixed-61 `600 x 400` from `24/61` to `25/61` and
+Shapes-17 `600 x 400` from `13/17` with one cavity to `14/17` with zero
+cavities; the three roomy winners and Triangle `600 x 400` remain unchanged.

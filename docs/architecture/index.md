@@ -11,6 +11,9 @@ Read the docs that match the task. For broad implementation work, read all of th
 - [Irregular V2 Infrastructure](./irregular-v2-infrastructure.md): convex
   irregular services, the ordinary requested-sheet beam/GA path, and the
   archive-only Compact quality path.
+- [Compact Architecture Explained](./compact-architecture-explained.md):
+  plain-language complete/subset cohorts, deterministic checkpoints, archive
+  dominance, sheet invariance, and production capacity behavior.
 
 ## Adding Docs
 

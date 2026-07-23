@@ -1,5 +1,10 @@
 {
-  "generatedAt": "2026-07-23T17:16:29.040Z",
+  "generatedAt": "2026-07-23T21:59:53.707Z",
+  "experiment": {
+    "retentionMode": "cohesion-frontier",
+    "cohesionShadow": false,
+    "requireCohesionPromotion": false
+  },
   "cases": [
     {
       "caseId": "capacity-triangles20-300x300",
@@ -13,6 +18,7 @@
         "routing": true,
         "placedCount": true,
         "minimumPlacedCount": true,
+        "canonicalIdentity": true,
         "capacitySettled": true,
         "auxiliaryEvaluationsZero": true,
         "coldSearchReachedEveryDepth": true,
@@ -24,22 +30,20 @@
       "passed": true,
       "production": {
         "arm": "production",
-        "elapsedMs": 3443.149,
+        "elapsedMs": 4387.726208,
         "routing": "bounded-complete-archive-miss",
         "preflight": {
           "kind": "inconclusive"
         },
-        "placedCount": 15,
-        "unplacedCount": 5,
+        "placedCount": 17,
+        "unplacedCount": 3,
         "unplacedPieceIds": [
-          "triangle-70x60-copy-16",
-          "triangle-70x60-copy-17",
           "triangle-70x60-copy-18",
           "triangle-70x60-copy-19",
           "triangle-70x60-copy-20"
         ],
         "partitionExact": true,
-        "canonicalSha256": "b1455c81ff2a38ca93954d53464f79ab85c7631045f8fbee40b9467f0273bb17",
+        "canonicalSha256": "2f236b79c7c49a999daf5363e257bbda6b8562239571c6fedab2485cffb38c35",
         "terminationReason": "capacity_subset_settled",
         "shadowTelemetry": {
           "pressure": {
@@ -51,9 +55,9 @@
             "completedDepths": 4,
             "noSkipFrontierPresent": true,
             "consumedPlacementEvaluations": 2651,
-            "elapsedMs": 71.49829199999999,
+            "elapsedMs": 79.11920800000001,
             "status": "observed",
-            "checkpointVersion": "intrinsic-anytime-checkpoint-v1"
+            "checkpointVersion": "intrinsic-anytime-checkpoint-v2"
           },
           "routingInfluence": "none"
         },
@@ -62,7 +66,7 @@
           "coldQuantumDepths": 4,
           "coldStartStatus": "paused",
           "coldStartCompletedDepths": 4,
-          "coldStartConsumedPlacementEvaluations": 2651,
+          "coldStartConsumedPlacementEvaluations": 2533,
           "coldCheckpointReused": true,
           "warmPrefixEndpointsAdmitted": true,
           "cancellationReason": "complete-cohort-miss",
@@ -77,88 +81,292 @@
               "ordinal": 1,
               "cohort": "complete",
               "producerRole": "legacy-complete",
-              "outcome": "settled"
+              "outcome": "checkpointed"
             },
             {
               "ordinal": 2,
-              "cohort": "experimental-complete",
-              "producerRole": "experimental-place-defer-complete",
-              "outcome": "settled"
+              "cohort": "partial",
+              "producerRole": "capacity-cold",
+              "outcome": "checkpointed"
             },
             {
               "ordinal": 3,
-              "cohort": "partial",
-              "producerRole": "capacity-cold",
-              "outcome": "settled"
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
             },
             {
               "ordinal": 4,
               "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
+              "producerRole": "capacity-cold",
               "outcome": "checkpointed"
             },
             {
               "ordinal": 5,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
               "outcome": "checkpointed"
             },
             {
               "ordinal": 6,
               "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
+              "producerRole": "capacity-cold",
               "outcome": "checkpointed"
             },
             {
               "ordinal": 7,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
               "outcome": "checkpointed"
             },
             {
               "ordinal": 8,
               "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
+              "producerRole": "capacity-cold",
               "outcome": "checkpointed"
             },
             {
               "ordinal": 9,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
               "outcome": "checkpointed"
             },
             {
               "ordinal": 10,
               "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "settled"
+              "producerRole": "capacity-cold",
+              "outcome": "checkpointed"
             },
             {
               "ordinal": 11,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "censored"
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
             },
             {
               "ordinal": 12,
               "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "censored"
+              "producerRole": "capacity-cold",
+              "outcome": "checkpointed"
             },
             {
               "ordinal": 13,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "censored"
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
             },
             {
               "ordinal": 14,
               "cohort": "partial",
+              "producerRole": "capacity-cold",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 15,
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 16,
+              "cohort": "partial",
+              "producerRole": "capacity-cold",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 17,
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 18,
+              "cohort": "partial",
+              "producerRole": "capacity-cold",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 19,
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 20,
+              "cohort": "partial",
+              "producerRole": "capacity-cold",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 21,
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 22,
+              "cohort": "partial",
+              "producerRole": "capacity-cold",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 23,
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 24,
+              "cohort": "partial",
+              "producerRole": "capacity-cold",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 25,
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 26,
+              "cohort": "partial",
+              "producerRole": "capacity-cold",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 27,
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 28,
+              "cohort": "partial",
+              "producerRole": "capacity-cold",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 29,
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 30,
+              "cohort": "partial",
+              "producerRole": "capacity-cold",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 31,
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 32,
+              "cohort": "partial",
+              "producerRole": "capacity-cold",
+              "outcome": "settled"
+            },
+            {
+              "ordinal": 33,
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 34,
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 35,
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 36,
+              "cohort": "complete",
+              "producerRole": "legacy-complete",
+              "outcome": "settled"
+            },
+            {
+              "ordinal": 37,
+              "cohort": "experimental-complete",
+              "producerRole": "experimental-place-defer-complete",
+              "outcome": "settled"
+            },
+            {
+              "ordinal": 38,
+              "cohort": "partial",
+              "producerRole": "capacity-warm-prefix",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 39,
+              "cohort": "partial",
+              "producerRole": "capacity-warm-prefix",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 40,
+              "cohort": "partial",
+              "producerRole": "capacity-warm-prefix",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 41,
+              "cohort": "partial",
+              "producerRole": "capacity-warm-prefix",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 42,
+              "cohort": "partial",
+              "producerRole": "capacity-warm-prefix",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 43,
+              "cohort": "partial",
+              "producerRole": "capacity-warm-prefix",
+              "outcome": "checkpointed"
+            },
+            {
+              "ordinal": 44,
+              "cohort": "partial",
+              "producerRole": "capacity-warm-prefix",
+              "outcome": "settled"
+            },
+            {
+              "ordinal": 45,
+              "cohort": "partial",
               "producerRole": "capacity-warm-prefix",
               "outcome": "censored"
             },
             {
-              "ordinal": 15,
+              "ordinal": 46,
+              "cohort": "partial",
+              "producerRole": "capacity-warm-prefix",
+              "outcome": "censored"
+            },
+            {
+              "ordinal": 47,
+              "cohort": "partial",
+              "producerRole": "capacity-warm-prefix",
+              "outcome": "censored"
+            },
+            {
+              "ordinal": 48,
+              "cohort": "partial",
+              "producerRole": "capacity-warm-prefix",
+              "outcome": "censored"
+            },
+            {
+              "ordinal": 49,
               "cohort": "partial",
               "producerRole": "capacity-warm-prefix",
               "outcome": "censored"
@@ -201,42 +409,43 @@
           },
           "outputInfluence": "none"
         },
+        "retentionMode": "cohesion-frontier",
         "warmLaneArtifacts": [
           {
             "sourceRole": "canonical-grid",
             "prefixDepth": 5,
             "canonicalGeometryHash": "852da63851288f87ff8d7d570260e2f2bfc39f620362f13b655aa6a2e5d7301c",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-triangles20-300x300-production-warm-canonical-grid-5.svg"
+            "artifactPath": "/private/tmp/min-plane-provenance/capacity-production-cohesion-main-accepted/capacity-triangles20-300x300-production-warm-canonical-grid-5.svg"
           },
           {
             "sourceRole": "canonical-grid",
             "prefixDepth": 10,
-            "canonicalGeometryHash": "325c50874fb965b21957f4c16eeba2d0e724c960853186e102fb47e80b88fe14",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-triangles20-300x300-production-warm-canonical-grid-10.svg"
+            "canonicalGeometryHash": "1785143d08c2d6223462fa9b1501d7ebcf03be236b5e7c1d6bec563d29e78aa2",
+            "artifactPath": "/private/tmp/min-plane-provenance/capacity-production-cohesion-main-accepted/capacity-triangles20-300x300-production-warm-canonical-grid-10.svg"
           },
           {
             "sourceRole": "legacy-absolute-envelope",
             "prefixDepth": 5,
             "canonicalGeometryHash": "b1a2836c7e2b2946fee37cdeca716cb9b6a021b0b89e7a3423a71ec2e051db61",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-triangles20-300x300-production-warm-legacy-absolute-envelope-5.svg"
+            "artifactPath": "/private/tmp/min-plane-provenance/capacity-production-cohesion-main-accepted/capacity-triangles20-300x300-production-warm-legacy-absolute-envelope-5.svg"
           },
           {
             "sourceRole": "legacy-absolute-envelope",
             "prefixDepth": 10,
             "canonicalGeometryHash": "7739ebd390e7e2616ba7418158c2a6ec83557405fbd2efc3f045407ec2c51cf8",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-triangles20-300x300-production-warm-legacy-absolute-envelope-10.svg"
+            "artifactPath": "/private/tmp/min-plane-provenance/capacity-production-cohesion-main-accepted/capacity-triangles20-300x300-production-warm-legacy-absolute-envelope-10.svg"
           },
           {
             "sourceRole": "open-pocket-first",
             "prefixDepth": 5,
             "canonicalGeometryHash": "852da63851288f87ff8d7d570260e2f2bfc39f620362f13b655aa6a2e5d7301c",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-triangles20-300x300-production-warm-open-pocket-first-5.svg"
+            "artifactPath": "/private/tmp/min-plane-provenance/capacity-production-cohesion-main-accepted/capacity-triangles20-300x300-production-warm-open-pocket-first-5.svg"
           },
           {
             "sourceRole": "open-pocket-first",
             "prefixDepth": 10,
             "canonicalGeometryHash": "d023e3296e76bdd2212fb9e7a8d3e083dd7276cb6590974b6c69928c1da84944",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-triangles20-300x300-production-warm-open-pocket-first-10.svg"
+            "artifactPath": "/private/tmp/min-plane-provenance/capacity-production-cohesion-main-accepted/capacity-triangles20-300x300-production-warm-open-pocket-first-10.svg"
           }
         ],
         "capacity": {
@@ -297,18 +506,203 @@
             "localLegalPlacementFanout": 3,
             "placementEvaluationCap": 81920,
             "placementEvaluationQuotaPerDepth": 4096,
-            "consumedPlacementEvaluations": 48159,
+            "consumedPlacementEvaluations": 40945,
             "auxiliaryPlacementEvaluations": 0,
             "prunedByAttainableCount": 0,
             "prunedByAttainableMaterial": 0,
-            "deduplicatedSuccessors": 18,
-            "fitRejectedCandidates": 30017,
+            "deduplicatedSuccessors": 73,
+            "fitRejectedCandidates": 27736,
             "invalidCandidates": 0,
             "endpointFitRejections": 0,
             "completedDepths": 20,
             "depthQuotaExhaustions": 0,
             "pieceCount": 20,
-            "settlement": "exhausted"
+            "settlement": "exhausted",
+            "topologyRetentionDepths": [
+              {
+                "depth": 19,
+                "pieceId": "triangle-70x60-copy-20",
+                "measuredSurvivorCount": 16,
+                "retainedCount": 16,
+                "bestAccountingStratumCount": 16,
+                "topologyMeasurementCount": 16,
+                "topologyMeasurementMs": 1.2632089999992786,
+                "legalCandidateCount": 3193,
+                "contactMeasuredCandidateCount": 0,
+                "positiveContactCandidateCount": 0,
+                "contactMeasurementMs": 0,
+                "contactSelectedSuccessorCount": 0,
+                "contactDeduplicatedSuccessorCount": 0,
+                "contactRetainedSuccessorCount": 0,
+                "representatives": [
+                  {
+                    "role": "terminal-objective",
+                    "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-70x60-copy-1\",\"triangle-70x60-copy-10\",\"triangle-70x60-copy-11\",\"triangle-70x60-copy-12\",\"triangle-70x60-copy-13\",\"triangle-70x60-copy-14\",\"triangle-70x60-copy-15\",\"triangle-70x60-copy-16\",\"triangle-70x60-copy-17\",\"triangle-70x60-copy-2\",\"triangle-70x60-copy-3\",\"triangle-70x60-copy-4\",\"triangle-70x60-copy-5\",\"triangle-70x60-copy-6\",\"triangle-70x60-copy-7\",\"triangle-70x60-copy-8\",\"triangle-70x60-copy-9\"]",
+                    "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-70x60-copy-1\",\"triangle-70x60-copy-10\",\"triangle-70x60-copy-11\",\"triangle-70x60-copy-12\",\"triangle-70x60-copy-13\",\"triangle-70x60-copy-14\",\"triangle-70x60-copy-15\",\"triangle-70x60-copy-16\",\"triangle-70x60-copy-17\",\"triangle-70x60-copy-2\",\"triangle-70x60-copy-3\",\"triangle-70x60-copy-4\",\"triangle-70x60-copy-5\",\"triangle-70x60-copy-6\",\"triangle-70x60-copy-7\",\"triangle-70x60-copy-8\",\"triangle-70x60-copy-9\"]",
+                    "decision": "skip",
+                    "proposalRole": "skip",
+                    "pieceId": "triangle-70x60-copy-20",
+                    "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647",
+                    "placedCount": 17,
+                    "placedDoubledMaterialAreaGrid2": "71400000000",
+                    "cavities": {
+                      "count": 0,
+                      "totalAreaMm2": 0
+                    },
+                    "gridSpan": {
+                      "widthGrid": 296739,
+                      "heightGrid": 265592
+                    },
+                    "topology": {
+                      "topology": {
+                        "enclosedCavityCount": 0,
+                        "largestOccupiedHullGapRatio": 0.15700093408717983,
+                        "occupiedEnvelopeAspectRatio": 1.1172738636705926,
+                        "positiveContactComponentCount": 4,
+                        "isolatedPieceCount": 3,
+                        "largestPositiveContactComponentSize": 14,
+                        "largestPositiveContactComponentRatio": 0.8235294117647058
+                      },
+                      "hullGapDoubledAreaGrid2": 22397690887,
+                      "hullDoubledAreaGrid2": 142659602742
+                    },
+                    "retained": true
+                  },
+                  {
+                    "role": "minimum-components",
+                    "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-70x60-copy-1\",\"triangle-70x60-copy-10\",\"triangle-70x60-copy-11\",\"triangle-70x60-copy-12\",\"triangle-70x60-copy-13\",\"triangle-70x60-copy-14\",\"triangle-70x60-copy-15\",\"triangle-70x60-copy-16\",\"triangle-70x60-copy-17\",\"triangle-70x60-copy-2\",\"triangle-70x60-copy-3\",\"triangle-70x60-copy-4\",\"triangle-70x60-copy-5\",\"triangle-70x60-copy-6\",\"triangle-70x60-copy-7\",\"triangle-70x60-copy-8\",\"triangle-70x60-copy-9\"]",
+                    "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-70x60-copy-1\",\"triangle-70x60-copy-10\",\"triangle-70x60-copy-11\",\"triangle-70x60-copy-12\",\"triangle-70x60-copy-13\",\"triangle-70x60-copy-14\",\"triangle-70x60-copy-15\",\"triangle-70x60-copy-16\",\"triangle-70x60-copy-17\",\"triangle-70x60-copy-2\",\"triangle-70x60-copy-3\",\"triangle-70x60-copy-4\",\"triangle-70x60-copy-5\",\"triangle-70x60-copy-6\",\"triangle-70x60-copy-7\",\"triangle-70x60-copy-8\",\"triangle-70x60-copy-9\"]",
+                    "decision": "skip",
+                    "proposalRole": "skip",
+                    "pieceId": "triangle-70x60-copy-20",
+                    "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647",
+                    "placedCount": 17,
+                    "placedDoubledMaterialAreaGrid2": "71400000000",
+                    "cavities": {
+                      "count": 0,
+                      "totalAreaMm2": 0
+                    },
+                    "gridSpan": {
+                      "widthGrid": 296739,
+                      "heightGrid": 265592
+                    },
+                    "topology": {
+                      "topology": {
+                        "enclosedCavityCount": 0,
+                        "largestOccupiedHullGapRatio": 0.15700093408717983,
+                        "occupiedEnvelopeAspectRatio": 1.1172738636705926,
+                        "positiveContactComponentCount": 4,
+                        "isolatedPieceCount": 3,
+                        "largestPositiveContactComponentSize": 14,
+                        "largestPositiveContactComponentRatio": 0.8235294117647058
+                      },
+                      "hullGapDoubledAreaGrid2": 22397690887,
+                      "hullDoubledAreaGrid2": 142659602742
+                    },
+                    "retained": true
+                  },
+                  {
+                    "role": "minimum-isolated",
+                    "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-70x60-copy-1\",\"triangle-70x60-copy-10\",\"triangle-70x60-copy-11\",\"triangle-70x60-copy-12\",\"triangle-70x60-copy-13\",\"triangle-70x60-copy-14\",\"triangle-70x60-copy-15\",\"triangle-70x60-copy-16\",\"triangle-70x60-copy-17\",\"triangle-70x60-copy-2\",\"triangle-70x60-copy-3\",\"triangle-70x60-copy-4\",\"triangle-70x60-copy-5\",\"triangle-70x60-copy-6\",\"triangle-70x60-copy-7\",\"triangle-70x60-copy-8\",\"triangle-70x60-copy-9\"]",
+                    "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-70x60-copy-1\",\"triangle-70x60-copy-10\",\"triangle-70x60-copy-11\",\"triangle-70x60-copy-12\",\"triangle-70x60-copy-13\",\"triangle-70x60-copy-14\",\"triangle-70x60-copy-15\",\"triangle-70x60-copy-16\",\"triangle-70x60-copy-17\",\"triangle-70x60-copy-2\",\"triangle-70x60-copy-3\",\"triangle-70x60-copy-4\",\"triangle-70x60-copy-5\",\"triangle-70x60-copy-6\",\"triangle-70x60-copy-7\",\"triangle-70x60-copy-8\",\"triangle-70x60-copy-9\"]",
+                    "decision": "skip",
+                    "proposalRole": "skip",
+                    "pieceId": "triangle-70x60-copy-20",
+                    "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647",
+                    "placedCount": 17,
+                    "placedDoubledMaterialAreaGrid2": "71400000000",
+                    "cavities": {
+                      "count": 0,
+                      "totalAreaMm2": 0
+                    },
+                    "gridSpan": {
+                      "widthGrid": 296739,
+                      "heightGrid": 265592
+                    },
+                    "topology": {
+                      "topology": {
+                        "enclosedCavityCount": 0,
+                        "largestOccupiedHullGapRatio": 0.15700093408717983,
+                        "occupiedEnvelopeAspectRatio": 1.1172738636705926,
+                        "positiveContactComponentCount": 4,
+                        "isolatedPieceCount": 3,
+                        "largestPositiveContactComponentSize": 14,
+                        "largestPositiveContactComponentRatio": 0.8235294117647058
+                      },
+                      "hullGapDoubledAreaGrid2": 22397690887,
+                      "hullDoubledAreaGrid2": 142659602742
+                    },
+                    "retained": true
+                  },
+                  {
+                    "role": "maximum-largest-component",
+                    "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-70x60-copy-1\",\"triangle-70x60-copy-10\",\"triangle-70x60-copy-11\",\"triangle-70x60-copy-12\",\"triangle-70x60-copy-13\",\"triangle-70x60-copy-14\",\"triangle-70x60-copy-15\",\"triangle-70x60-copy-16\",\"triangle-70x60-copy-17\",\"triangle-70x60-copy-2\",\"triangle-70x60-copy-3\",\"triangle-70x60-copy-4\",\"triangle-70x60-copy-5\",\"triangle-70x60-copy-6\",\"triangle-70x60-copy-7\",\"triangle-70x60-copy-8\",\"triangle-70x60-copy-9\"]",
+                    "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-70x60-copy-1\",\"triangle-70x60-copy-10\",\"triangle-70x60-copy-11\",\"triangle-70x60-copy-12\",\"triangle-70x60-copy-13\",\"triangle-70x60-copy-14\",\"triangle-70x60-copy-15\",\"triangle-70x60-copy-16\",\"triangle-70x60-copy-17\",\"triangle-70x60-copy-2\",\"triangle-70x60-copy-3\",\"triangle-70x60-copy-4\",\"triangle-70x60-copy-5\",\"triangle-70x60-copy-6\",\"triangle-70x60-copy-7\",\"triangle-70x60-copy-8\",\"triangle-70x60-copy-9\"]",
+                    "decision": "skip",
+                    "proposalRole": "skip",
+                    "pieceId": "triangle-70x60-copy-20",
+                    "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647",
+                    "placedCount": 17,
+                    "placedDoubledMaterialAreaGrid2": "71400000000",
+                    "cavities": {
+                      "count": 0,
+                      "totalAreaMm2": 0
+                    },
+                    "gridSpan": {
+                      "widthGrid": 296739,
+                      "heightGrid": 265592
+                    },
+                    "topology": {
+                      "topology": {
+                        "enclosedCavityCount": 0,
+                        "largestOccupiedHullGapRatio": 0.15700093408717983,
+                        "occupiedEnvelopeAspectRatio": 1.1172738636705926,
+                        "positiveContactComponentCount": 4,
+                        "isolatedPieceCount": 3,
+                        "largestPositiveContactComponentSize": 14,
+                        "largestPositiveContactComponentRatio": 0.8235294117647058
+                      },
+                      "hullGapDoubledAreaGrid2": 22397690887,
+                      "hullDoubledAreaGrid2": 142659602742
+                    },
+                    "retained": true
+                  },
+                  {
+                    "role": "minimum-hull-waste",
+                    "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:441441:y5:441447:point-117:1:x1:01:y6:1198197:point-221:1:x5:882881:y6:1198197:entry-1131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1198197:point-121:1:x5:441441:y6:1954947:point-221:1:x5:882881:y6:1198197:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x6:2963951:y1:07:point-121:1:x6:2207201:y5:441447:point-221:1:x6:2963951:y5:882887:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1954947:point-117:1:x1:01:y6:2711697:point-221:1:x5:882881:y6:2711697:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:441441:y5:441447:point-121:1:x5:882881:y6:1198197:point-221:1:x6:1324321:y5:441447:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1954947:point-121:1:x5:882881:y6:2711697:point-222:1:x6:1324321:y6:1954947:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1198197:point-121:1:x5:441441:y6:1954947:point-222:1:x6:1324321:y6:1954947:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1324321:y5:441447:point-121:1:x5:882881:y6:1198197:point-222:1:x6:1765761:y6:1198197:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1334531:y5:435577:point-122:1:x6:1765761:y6:1198197:point-221:1:x6:2210621:y5:435577:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:889671:y6:1198197:point-122:1:x6:1331111:y6:1954947:point-222:1:x6:1772551:y6:1198198:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2207201:y5:441447:point-122:1:x6:1765761:y6:1198197:point-222:1:x6:2648641:y6:1198198:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1331111:y6:1954947:point-121:1:x5:889671:y6:2711697:point-222:1:x6:1772551:y6:2711698:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1331111:y6:1954947:point-122:1:x6:1772551:y6:2711697:point-222:1:x6:2213991:y6:1954948:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1772551:y6:1198197:point-122:1:x6:1331111:y6:1954947:point-222:1:x6:2213991:y6:1954948:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1772551:y6:1198197:point-122:1:x6:2217411:y6:1960807:point-222:1:x6:2648641:y6:1198198:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2213991:y6:1954947:point-122:1:x6:1772551:y6:2711697:point-222:1:x6:2655431:y6:2711698:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2974171:y6:1519367:point-122:1:x6:2217421:y6:1960807:point-222:1:x6:2974171:y6:240224|placed=[\"triangle-70x60-copy-1\",\"triangle-70x60-copy-10\",\"triangle-70x60-copy-11\",\"triangle-70x60-copy-12\",\"triangle-70x60-copy-13\",\"triangle-70x60-copy-14\",\"triangle-70x60-copy-15\",\"triangle-70x60-copy-16\",\"triangle-70x60-copy-17\",\"triangle-70x60-copy-2\",\"triangle-70x60-copy-3\",\"triangle-70x60-copy-4\",\"triangle-70x60-copy-5\",\"triangle-70x60-copy-6\",\"triangle-70x60-copy-7\",\"triangle-70x60-copy-8\",\"triangle-70x60-copy-9\"]",
+                    "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:441441:y5:441447:point-117:1:x1:01:y6:1198197:point-221:1:x5:882881:y6:1198197:entry-1131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1198197:point-121:1:x5:441441:y6:1954947:point-221:1:x5:882881:y6:1198197:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x6:2963951:y1:07:point-121:1:x6:2207201:y5:441447:point-221:1:x6:2963951:y5:882887:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1954947:point-117:1:x1:01:y6:2711697:point-221:1:x5:882881:y6:2711697:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:441441:y5:441447:point-121:1:x5:882881:y6:1198197:point-221:1:x6:1324321:y5:441447:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1954947:point-121:1:x5:882881:y6:2711697:point-222:1:x6:1324321:y6:1954947:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1198197:point-121:1:x5:441441:y6:1954947:point-222:1:x6:1324321:y6:1954947:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1324321:y5:441447:point-121:1:x5:882881:y6:1198197:point-222:1:x6:1765761:y6:1198197:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1334531:y5:435577:point-122:1:x6:1765761:y6:1198197:point-221:1:x6:2210621:y5:435577:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:889671:y6:1198197:point-122:1:x6:1331111:y6:1954947:point-222:1:x6:1772551:y6:1198198:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2207201:y5:441447:point-122:1:x6:1765761:y6:1198197:point-222:1:x6:2648641:y6:1198198:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1331111:y6:1954947:point-121:1:x5:889671:y6:2711697:point-222:1:x6:1772551:y6:2711698:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1331111:y6:1954947:point-122:1:x6:1772551:y6:2711697:point-222:1:x6:2213991:y6:1954948:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1772551:y6:1198197:point-122:1:x6:1331111:y6:1954947:point-222:1:x6:2213991:y6:1954948:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1772551:y6:1198197:point-122:1:x6:2217411:y6:1960807:point-222:1:x6:2648641:y6:1198198:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2213991:y6:1954947:point-122:1:x6:1772551:y6:2711697:point-222:1:x6:2655431:y6:2711698:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2974171:y6:1519367:point-122:1:x6:2217421:y6:1960807:point-222:1:x6:2974171:y6:240224|placed=[\"triangle-70x60-copy-1\",\"triangle-70x60-copy-10\",\"triangle-70x60-copy-11\",\"triangle-70x60-copy-12\",\"triangle-70x60-copy-13\",\"triangle-70x60-copy-14\",\"triangle-70x60-copy-15\",\"triangle-70x60-copy-16\",\"triangle-70x60-copy-17\",\"triangle-70x60-copy-2\",\"triangle-70x60-copy-3\",\"triangle-70x60-copy-4\",\"triangle-70x60-copy-5\",\"triangle-70x60-copy-6\",\"triangle-70x60-copy-7\",\"triangle-70x60-copy-8\",\"triangle-70x60-copy-9\"]",
+                    "decision": "skip",
+                    "proposalRole": "skip",
+                    "pieceId": "triangle-70x60-copy-20",
+                    "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:441441:y5:441447:point-117:1:x1:01:y6:1198197:point-221:1:x5:882881:y6:1198197:entry-1131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1198197:point-121:1:x5:441441:y6:1954947:point-221:1:x5:882881:y6:1198197:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x6:2963951:y1:07:point-121:1:x6:2207201:y5:441447:point-221:1:x6:2963951:y5:882887:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1954947:point-117:1:x1:01:y6:2711697:point-221:1:x5:882881:y6:2711697:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:441441:y5:441447:point-121:1:x5:882881:y6:1198197:point-221:1:x6:1324321:y5:441447:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1954947:point-121:1:x5:882881:y6:2711697:point-222:1:x6:1324321:y6:1954947:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1198197:point-121:1:x5:441441:y6:1954947:point-222:1:x6:1324321:y6:1954947:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1324321:y5:441447:point-121:1:x5:882881:y6:1198197:point-222:1:x6:1765761:y6:1198197:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1334531:y5:435577:point-122:1:x6:1765761:y6:1198197:point-221:1:x6:2210621:y5:435577:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:889671:y6:1198197:point-122:1:x6:1331111:y6:1954947:point-222:1:x6:1772551:y6:1198198:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2207201:y5:441447:point-122:1:x6:1765761:y6:1198197:point-222:1:x6:2648641:y6:1198198:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1331111:y6:1954947:point-121:1:x5:889671:y6:2711697:point-222:1:x6:1772551:y6:2711698:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1331111:y6:1954947:point-122:1:x6:1772551:y6:2711697:point-222:1:x6:2213991:y6:1954948:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1772551:y6:1198197:point-122:1:x6:1331111:y6:1954947:point-222:1:x6:2213991:y6:1954948:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1772551:y6:1198197:point-122:1:x6:2217411:y6:1960807:point-222:1:x6:2648641:y6:1198198:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2213991:y6:1954947:point-122:1:x6:1772551:y6:2711697:point-222:1:x6:2655431:y6:2711698:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2974171:y6:1519367:point-122:1:x6:2217421:y6:1960807:point-222:1:x6:2974171:y6:240224",
+                    "placedCount": 17,
+                    "placedDoubledMaterialAreaGrid2": "71400000000",
+                    "cavities": {
+                      "count": 0,
+                      "totalAreaMm2": 0
+                    },
+                    "gridSpan": {
+                      "widthGrid": 297417,
+                      "heightGrid": 271169
+                    },
+                    "topology": {
+                      "topology": {
+                        "enclosedCavityCount": 0,
+                        "largestOccupiedHullGapRatio": 0.1503574332534875,
+                        "occupiedEnvelopeAspectRatio": 1.0967957251750753,
+                        "positiveContactComponentCount": 4,
+                        "isolatedPieceCount": 3,
+                        "largestPositiveContactComponentSize": 14,
+                        "largestPositiveContactComponentRatio": 0.8235294117647058
+                      },
+                      "hullGapDoubledAreaGrid2": 21318514469,
+                      "hullDoubledAreaGrid2": 141785570608
+                    },
+                    "retained": true
+                  }
+                ]
+              }
+            ]
           },
           "warmPrefixLanes": [
             {
@@ -320,7 +714,7 @@
               "checkpointRetained": true,
               "consumedPlacementEvaluations": 137,
               "completedDepths": 6,
-              "elapsedMs": 3.3526670000001104,
+              "elapsedMs": 3.9799999999995634,
               "endpoint": {
                 "placedCount": 6,
                 "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -342,18 +736,18 @@
               "status": "settled",
               "selectedForContinuation": true,
               "checkpointRetained": false,
-              "consumedPlacementEvaluations": 28461,
+              "consumedPlacementEvaluations": 28314,
               "completedDepths": 20,
-              "elapsedMs": 573.7329169999994,
+              "elapsedMs": 912.3552929999992,
               "endpoint": {
-                "placedCount": 13,
-                "placedDoubledMaterialAreaGrid2": "54600000000",
+                "placedCount": 14,
+                "placedDoubledMaterialAreaGrid2": "58800000000",
                 "enclosedCavityCount": 0,
                 "totalEnclosedCavityAreaMm2": 0,
-                "envelopeMaximumSideMm": 299.305,
-                "envelopeAreaMm2": 88515.86209,
-                "envelopeSpanMm": 595.043,
-                "canonicalGeometryHash": "325c50874fb965b21957f4c16eeba2d0e724c960853186e102fb47e80b88fe14",
+                "envelopeMaximumSideMm": 298.351,
+                "envelopeAreaMm2": 88946.488577,
+                "envelopeSpanMm": 596.4780000000001,
+                "canonicalGeometryHash": "1785143d08c2d6223462fa9b1501d7ebcf03be236b5e7c1d6bec563d29e78aa2",
                 "origin": "warm-prefix-continuation",
                 "prefixDepth": 10,
                 "sourceRole": "canonical-grid"
@@ -368,7 +762,7 @@
               "checkpointRetained": true,
               "consumedPlacementEvaluations": 123,
               "completedDepths": 6,
-              "elapsedMs": 2.9413330000002134,
+              "elapsedMs": 4.055832999999893,
               "endpoint": {
                 "placedCount": 6,
                 "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -392,7 +786,7 @@
               "checkpointRetained": true,
               "consumedPlacementEvaluations": 173,
               "completedDepths": 11,
-              "elapsedMs": 5.089207999999871,
+              "elapsedMs": 6.074583999999959,
               "endpoint": {
                 "placedCount": 11,
                 "placedDoubledMaterialAreaGrid2": "46200000000",
@@ -416,7 +810,7 @@
               "checkpointRetained": true,
               "consumedPlacementEvaluations": 137,
               "completedDepths": 6,
-              "elapsedMs": 3.3915830000000824,
+              "elapsedMs": 3.3865419999997357,
               "endpoint": {
                 "placedCount": 6,
                 "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -440,7 +834,7 @@
               "checkpointRetained": true,
               "consumedPlacementEvaluations": 187,
               "completedDepths": 11,
-              "elapsedMs": 5.012167000000318,
+              "elapsedMs": 6.1727920000003,
               "endpoint": {
                 "placedCount": 11,
                 "placedDoubledMaterialAreaGrid2": "46200000000",
@@ -459,12 +853,9 @@
           "laneCoordinator": {
             "version": "intrinsic-capacity-lane-coordinator-v2",
             "aggregatePlacementEvaluationCap": 163840,
-            "aggregateConsumedPlacementEvaluations": 77377,
+            "aggregateConsumedPlacementEvaluations": 70016,
             "warmPilotDepthBoundaries": 1,
             "continuedProducers": [
-              {
-                "role": "capacity-cold"
-              },
               {
                 "role": "capacity-warm-prefix",
                 "sourceRole": "canonical-grid",
@@ -479,21 +870,12 @@
                 "producerRole": "capacity-cold",
                 "phase": "initial",
                 "fromDepth": 0,
-                "toDepth": 4,
-                "placementEvaluationDelta": 2651,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 1,
-                "producerRole": "capacity-cold",
-                "phase": "resume",
-                "fromDepth": 4,
                 "toDepth": 20,
-                "placementEvaluationDelta": 45508,
+                "placementEvaluationDelta": 40945,
                 "outcome": "settled"
               },
               {
-                "ordinal": 2,
+                "ordinal": 1,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "canonical-grid",
                 "prefixDepth": 5,
@@ -504,7 +886,7 @@
                 "outcome": "checkpointed"
               },
               {
-                "ordinal": 3,
+                "ordinal": 2,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "canonical-grid",
                 "prefixDepth": 10,
@@ -515,7 +897,7 @@
                 "outcome": "checkpointed"
               },
               {
-                "ordinal": 4,
+                "ordinal": 3,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "legacy-absolute-envelope",
                 "prefixDepth": 5,
@@ -526,7 +908,7 @@
                 "outcome": "checkpointed"
               },
               {
-                "ordinal": 5,
+                "ordinal": 4,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "legacy-absolute-envelope",
                 "prefixDepth": 10,
@@ -537,7 +919,7 @@
                 "outcome": "checkpointed"
               },
               {
-                "ordinal": 6,
+                "ordinal": 5,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "open-pocket-first",
                 "prefixDepth": 5,
@@ -548,7 +930,7 @@
                 "outcome": "checkpointed"
               },
               {
-                "ordinal": 7,
+                "ordinal": 6,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "open-pocket-first",
                 "prefixDepth": 10,
@@ -559,47 +941,58 @@
                 "outcome": "checkpointed"
               },
               {
-                "ordinal": 8,
+                "ordinal": 7,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "canonical-grid",
                 "prefixDepth": 10,
                 "phase": "resume",
                 "fromDepth": 11,
                 "toDepth": 12,
-                "placementEvaluationDelta": 798,
+                "placementEvaluationDelta": 986,
                 "outcome": "checkpointed"
               },
               {
-                "ordinal": 9,
+                "ordinal": 8,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "canonical-grid",
                 "prefixDepth": 10,
                 "phase": "resume",
                 "fromDepth": 12,
                 "toDepth": 13,
-                "placementEvaluationDelta": 3272,
+                "placementEvaluationDelta": 3247,
                 "outcome": "checkpointed"
               },
               {
-                "ordinal": 10,
+                "ordinal": 9,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "canonical-grid",
                 "prefixDepth": 10,
                 "phase": "resume",
                 "fromDepth": 13,
                 "toDepth": 14,
-                "placementEvaluationDelta": 3396,
+                "placementEvaluationDelta": 3368,
                 "outcome": "checkpointed"
               },
               {
-                "ordinal": 11,
+                "ordinal": 10,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "canonical-grid",
                 "prefixDepth": 10,
                 "phase": "resume",
                 "fromDepth": 14,
                 "toDepth": 15,
-                "placementEvaluationDelta": 3468,
+                "placementEvaluationDelta": 3421,
+                "outcome": "checkpointed"
+              },
+              {
+                "ordinal": 11,
+                "producerRole": "capacity-warm-prefix",
+                "sourceRole": "canonical-grid",
+                "prefixDepth": 10,
+                "phase": "resume",
+                "fromDepth": 15,
+                "toDepth": 16,
+                "placementEvaluationDelta": 3421,
                 "outcome": "checkpointed"
               },
               {
@@ -608,9 +1001,9 @@
                 "sourceRole": "canonical-grid",
                 "prefixDepth": 10,
                 "phase": "resume",
-                "fromDepth": 15,
-                "toDepth": 16,
-                "placementEvaluationDelta": 3468,
+                "fromDepth": 16,
+                "toDepth": 17,
+                "placementEvaluationDelta": 3421,
                 "outcome": "checkpointed"
               },
               {
@@ -619,9 +1012,9 @@
                 "sourceRole": "canonical-grid",
                 "prefixDepth": 10,
                 "phase": "resume",
-                "fromDepth": 16,
-                "toDepth": 17,
-                "placementEvaluationDelta": 3468,
+                "fromDepth": 17,
+                "toDepth": 18,
+                "placementEvaluationDelta": 3421,
                 "outcome": "checkpointed"
               },
               {
@@ -630,9 +1023,9 @@
                 "sourceRole": "canonical-grid",
                 "prefixDepth": 10,
                 "phase": "resume",
-                "fromDepth": 17,
-                "toDepth": 18,
-                "placementEvaluationDelta": 3468,
+                "fromDepth": 18,
+                "toDepth": 19,
+                "placementEvaluationDelta": 3421,
                 "outcome": "checkpointed"
               },
               {
@@ -641,24 +1034,13 @@
                 "sourceRole": "canonical-grid",
                 "prefixDepth": 10,
                 "phase": "resume",
-                "fromDepth": 18,
-                "toDepth": 19,
-                "placementEvaluationDelta": 3468,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 16,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 10,
-                "phase": "resume",
                 "fromDepth": 19,
                 "toDepth": 20,
-                "placementEvaluationDelta": 3468,
+                "placementEvaluationDelta": 3421,
                 "outcome": "settled"
               },
               {
-                "ordinal": 17,
+                "ordinal": 16,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "canonical-grid",
                 "prefixDepth": 5,
@@ -669,7 +1051,7 @@
                 "outcome": "censored"
               },
               {
-                "ordinal": 18,
+                "ordinal": 17,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "legacy-absolute-envelope",
                 "prefixDepth": 5,
@@ -680,7 +1062,7 @@
                 "outcome": "censored"
               },
               {
-                "ordinal": 19,
+                "ordinal": 18,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "legacy-absolute-envelope",
                 "prefixDepth": 10,
@@ -691,7 +1073,7 @@
                 "outcome": "censored"
               },
               {
-                "ordinal": 20,
+                "ordinal": 19,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "open-pocket-first",
                 "prefixDepth": 5,
@@ -702,7 +1084,7 @@
                 "outcome": "censored"
               },
               {
-                "ordinal": 21,
+                "ordinal": 20,
                 "producerRole": "capacity-warm-prefix",
                 "sourceRole": "open-pocket-first",
                 "prefixDepth": 10,
@@ -715,2683 +1097,26 @@
             ]
           },
           "selected": {
-            "placedCount": 15,
-            "placedDoubledMaterialAreaGrid2": "63000000000",
+            "placedCount": 17,
+            "placedDoubledMaterialAreaGrid2": "71400000000",
             "enclosedCavityCount": 0,
             "totalEnclosedCavityAreaMm2": 0,
-            "envelopeMaximumSideMm": 283.783,
-            "envelopeAreaMm2": 77750.86634000001,
-            "envelopeSpanMm": 557.763,
-            "canonicalGeometryHash": "2e40031e62bd39567e388649739ced2462e457dacf02d79f2a2abf4c6e97399a",
+            "envelopeMaximumSideMm": 296.739,
+            "envelopeAreaMm2": 78811.50448799999,
+            "envelopeSpanMm": 562.3309999999999,
+            "canonicalGeometryHash": "0f5befd7d02fc111be47ee447fab7f8778f06ae05d045448f22a916d66949410",
             "origin": "cold-search",
-            "unplacedCount": 5,
-            "placedMaterialAreaMm2": 31500,
+            "unplacedCount": 3,
+            "placedMaterialAreaMm2": 35700,
             "selectedRotationDeg": 0
           },
-          "preflightRuntimeMs": 8.758582999999987,
-          "completeArchiveRuntimeMs": 1323.3060420000002,
-          "prefixTerminalizationMs": 11.359459000000015,
-          "coldSearchMs": 1952.533125,
-          "runtimeMs": 1964.3622910000001
+          "preflightRuntimeMs": 7.284208000000007,
+          "completeArchiveRuntimeMs": 2987.314542,
+          "prefixTerminalizationMs": 10.742291000000023,
+          "coldSearchMs": 1204.5266249999995,
+          "runtimeMs": 1215.7251659999997
         },
-        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-triangles20-300x300-production.svg"
-      },
-      "coldOnly": {
-        "arm": "cold-only",
-        "elapsedMs": 2386.043833,
-        "routing": "bounded-complete-archive-miss",
-        "preflight": {
-          "kind": "inconclusive"
-        },
-        "placedCount": 15,
-        "unplacedCount": 5,
-        "unplacedPieceIds": [
-          "triangle-70x60-copy-16",
-          "triangle-70x60-copy-17",
-          "triangle-70x60-copy-18",
-          "triangle-70x60-copy-19",
-          "triangle-70x60-copy-20"
-        ],
-        "partitionExact": true,
-        "canonicalSha256": "b1455c81ff2a38ca93954d53464f79ab85c7631045f8fbee40b9467f0273bb17",
-        "terminationReason": "capacity_subset_settled",
-        "shadowTelemetry": {
-          "pressure": {
-            "minimumCollisionAreaPressurePpm": "742350",
-            "maximumSingletonSpanPressurePpm": "292030"
-          },
-          "noSkipProbe": {
-            "maximumDepth": 4,
-            "completedDepths": 4,
-            "noSkipFrontierPresent": true,
-            "consumedPlacementEvaluations": 2651,
-            "elapsedMs": 41.71420900000021,
-            "status": "observed",
-            "checkpointVersion": "intrinsic-anytime-checkpoint-v1"
-          },
-          "routingInfluence": "none"
-        },
-        "schedulerTrace": {
-          "version": "intrinsic-anytime-scheduler-v1",
-          "coldQuantumDepths": 4,
-          "coldStartStatus": "paused",
-          "coldStartCompletedDepths": 4,
-          "coldStartConsumedPlacementEvaluations": 2651,
-          "coldCheckpointReused": true,
-          "warmPrefixEndpointsAdmitted": true,
-          "cancellationReason": "complete-cohort-miss",
-          "quanta": [
-            {
-              "ordinal": 0,
-              "cohort": "partial",
-              "producerRole": "capacity-cold",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 1,
-              "cohort": "complete",
-              "producerRole": "legacy-complete",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 2,
-              "cohort": "experimental-complete",
-              "producerRole": "experimental-place-defer-complete",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 3,
-              "cohort": "partial",
-              "producerRole": "capacity-cold",
-              "outcome": "settled"
-            }
-          ]
-        },
-        "experimentalPlaceDeferTrace": {
-          "version": "intrinsic-place-defer-checkpoint-v1",
-          "deferredPreparedId": "triangle-70x60-copy-1",
-          "pendingOrder": [
-            "triangle-70x60-copy-2",
-            "triangle-70x60-copy-3",
-            "triangle-70x60-copy-4",
-            "triangle-70x60-copy-5",
-            "triangle-70x60-copy-6",
-            "triangle-70x60-copy-7",
-            "triangle-70x60-copy-8",
-            "triangle-70x60-copy-9",
-            "triangle-70x60-copy-10",
-            "triangle-70x60-copy-11",
-            "triangle-70x60-copy-12",
-            "triangle-70x60-copy-13",
-            "triangle-70x60-copy-14",
-            "triangle-70x60-copy-15",
-            "triangle-70x60-copy-16",
-            "triangle-70x60-copy-17",
-            "triangle-70x60-copy-18",
-            "triangle-70x60-copy-19",
-            "triangle-70x60-copy-20",
-            "triangle-70x60-copy-1"
-          ],
-          "status": "completed",
-          "candidateEvaluations": 3439,
-          "placedCount": 20,
-          "unplacedCount": 0,
-          "completeEndpointHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
-          "requestedSheetFit": {
-            "q0": false,
-            "q90": false
-          },
-          "outputInfluence": "none"
-        },
-        "warmLaneArtifacts": [],
-        "capacity": {
-          "prefixes": {
-            "capturedCount": 0,
-            "fittingCount": 0,
-            "rejectedCount": 0,
-            "terminalizedCount": 0,
-            "descriptors": []
-          },
-          "coldSearch": {
-            "beamWidth": 16,
-            "localLegalPlacementFanout": 3,
-            "placementEvaluationCap": 81920,
-            "placementEvaluationQuotaPerDepth": 4096,
-            "consumedPlacementEvaluations": 48159,
-            "auxiliaryPlacementEvaluations": 0,
-            "prunedByAttainableCount": 0,
-            "prunedByAttainableMaterial": 0,
-            "deduplicatedSuccessors": 18,
-            "fitRejectedCandidates": 30017,
-            "invalidCandidates": 0,
-            "endpointFitRejections": 0,
-            "completedDepths": 20,
-            "depthQuotaExhaustions": 0,
-            "pieceCount": 20,
-            "settlement": "exhausted"
-          },
-          "warmPrefixLanes": [],
-          "laneCoordinator": {
-            "version": "intrinsic-capacity-lane-coordinator-v2",
-            "aggregatePlacementEvaluationCap": 163840,
-            "aggregateConsumedPlacementEvaluations": 48159,
-            "warmPilotDepthBoundaries": 1,
-            "continuedProducers": [
-              {
-                "role": "capacity-cold"
-              }
-            ],
-            "retainedCheckpointCount": 0,
-            "censoredLaneCount": 0,
-            "quanta": [
-              {
-                "ordinal": 0,
-                "producerRole": "capacity-cold",
-                "phase": "initial",
-                "fromDepth": 0,
-                "toDepth": 4,
-                "placementEvaluationDelta": 2651,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 1,
-                "producerRole": "capacity-cold",
-                "phase": "resume",
-                "fromDepth": 4,
-                "toDepth": 20,
-                "placementEvaluationDelta": 45508,
-                "outcome": "settled"
-              }
-            ]
-          },
-          "selected": {
-            "placedCount": 15,
-            "placedDoubledMaterialAreaGrid2": "63000000000",
-            "enclosedCavityCount": 0,
-            "totalEnclosedCavityAreaMm2": 0,
-            "envelopeMaximumSideMm": 283.783,
-            "envelopeAreaMm2": 77750.86634000001,
-            "envelopeSpanMm": 557.763,
-            "canonicalGeometryHash": "2e40031e62bd39567e388649739ced2462e457dacf02d79f2a2abf4c6e97399a",
-            "origin": "cold-search",
-            "unplacedCount": 5,
-            "placedMaterialAreaMm2": 31500,
-            "selectedRotationDeg": 0
-          },
-          "preflightRuntimeMs": 4.754374999999982,
-          "completeArchiveRuntimeMs": 1262.1772500000002,
-          "prefixTerminalizationMs": 0.007999999999810825,
-          "coldSearchMs": 1028.6876659999998,
-          "runtimeMs": 1028.7736670000004
-        },
-        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-triangles20-300x300-cold-only.svg"
-      }
-    },
-    {
-      "caseId": "capacity-mixed61-700x500",
-      "sheet": {
-        "width": 700,
-        "height": 500
-      },
-      "pieceCount": 61,
-      "checks": {
-        "partitionExact": true,
-        "routing": true,
-        "placedCount": true,
-        "minimumPlacedCount": true,
-        "capacitySettled": true,
-        "auxiliaryEvaluationsZero": true,
-        "coldSearchReachedEveryDepth": true,
-        "schedulerChronology": true,
-        "laneCoordinatorChronology": true,
-        "oneWarmLaneBeyondPilot": true,
-        "prefixNotBelowColdOnly": true
-      },
-      "passed": true,
-      "production": {
-        "arm": "production",
-        "elapsedMs": 78633.281542,
-        "routing": "bounded-complete-archive-miss",
-        "preflight": {
-          "kind": "inconclusive"
-        },
-        "placedCount": 49,
-        "unplacedCount": 12,
-        "unplacedPieceIds": [
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-20"
-        ],
-        "partitionExact": true,
-        "canonicalSha256": "8ef45c3fff80df977d6e79f90b19e29235e83d4f887f60fa89b35aba7a4fa02b",
-        "terminationReason": "capacity_subset_settled",
-        "shadowTelemetry": {
-          "pressure": {
-            "minimumCollisionAreaPressurePpm": "895677",
-            "maximumSingletonSpanPressurePpm": "235006"
-          },
-          "noSkipProbe": {
-            "maximumDepth": 4,
-            "completedDepths": 4,
-            "noSkipFrontierPresent": true,
-            "consumedPlacementEvaluations": 3195,
-            "elapsedMs": 62.366124999999556,
-            "status": "observed",
-            "checkpointVersion": "intrinsic-anytime-checkpoint-v1"
-          },
-          "routingInfluence": "none"
-        },
-        "schedulerTrace": {
-          "version": "intrinsic-anytime-scheduler-v1",
-          "coldQuantumDepths": 4,
-          "coldStartStatus": "paused",
-          "coldStartCompletedDepths": 4,
-          "coldStartConsumedPlacementEvaluations": 3195,
-          "coldCheckpointReused": true,
-          "warmPrefixEndpointsAdmitted": true,
-          "cancellationReason": "complete-cohort-miss",
-          "quanta": [
-            {
-              "ordinal": 0,
-              "cohort": "partial",
-              "producerRole": "capacity-cold",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 1,
-              "cohort": "complete",
-              "producerRole": "legacy-complete",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 2,
-              "cohort": "experimental-complete",
-              "producerRole": "experimental-place-defer-complete",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 3,
-              "cohort": "partial",
-              "producerRole": "capacity-cold",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 4,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 5,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 6,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 7,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 8,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "censored"
-            },
-            {
-              "ordinal": 9,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "censored"
-            }
-          ]
-        },
-        "experimentalPlaceDeferTrace": {
-          "version": "intrinsic-place-defer-checkpoint-v1",
-          "deferredPreparedId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
-          "pendingOrder": [
-            "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
-            "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
-            "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
-            "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
-            "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
-            "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
-            "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
-            "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
-            "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8",
-            "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1"
-          ],
-          "status": "evaluation-cap",
-          "candidateEvaluations": 19862,
-          "placedCount": 53,
-          "unplacedCount": 0,
-          "requestedSheetFit": {
-            "q0": false,
-            "q90": false
-          },
-          "outputInfluence": "none"
-        },
-        "warmLaneArtifacts": [
-          {
-            "sourceRole": "canonical-grid",
-            "prefixDepth": 15,
-            "canonicalGeometryHash": "1e2709bdeb3a200299b380360a576414f2bbbd1f1aa6172072cb4e3f1989a33e",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-mixed61-700x500-production-warm-canonical-grid-15.svg"
-          },
-          {
-            "sourceRole": "legacy-absolute-envelope",
-            "prefixDepth": 15,
-            "canonicalGeometryHash": "becf83032b3aaac7f0885853ad6ccd9ffcd67b5180089f0afc1d78c062de5910",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-mixed61-700x500-production-warm-legacy-absolute-envelope-15.svg"
-          },
-          {
-            "sourceRole": "open-pocket-first",
-            "prefixDepth": 15,
-            "canonicalGeometryHash": "55d87b1728097d72b15330e6c86ed321984fa935fb5adc61bc16e896778e7906",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-mixed61-700x500-production-warm-open-pocket-first-15.svg"
-          }
-        ],
-        "capacity": {
-          "prefixes": {
-            "capturedCount": 9,
-            "fittingCount": 3,
-            "rejectedCount": 6,
-            "terminalizedCount": 2,
-            "descriptors": [
-              {
-                "role": "canonical-grid",
-                "depth": 15
-              },
-              {
-                "role": "canonical-grid",
-                "depth": 30
-              },
-              {
-                "role": "canonical-grid",
-                "depth": 45
-              },
-              {
-                "role": "legacy-absolute-envelope",
-                "depth": 15
-              },
-              {
-                "role": "legacy-absolute-envelope",
-                "depth": 30
-              },
-              {
-                "role": "legacy-absolute-envelope",
-                "depth": 45
-              },
-              {
-                "role": "open-pocket-first",
-                "depth": 15
-              },
-              {
-                "role": "open-pocket-first",
-                "depth": 30
-              },
-              {
-                "role": "open-pocket-first",
-                "depth": 45
-              }
-            ]
-          },
-          "prefixIncumbent": {
-            "sourceRole": "legacy-absolute-envelope",
-            "prefixDepth": 15,
-            "placedCount": 15,
-            "placedMaterialAreaMm2": 125177.508918,
-            "selectedRotationDeg": 0,
-            "canonicalGeometryHash": "c1227ec536c6ae3dc70383e6837dd20e2ee46a13a92731d831e6422864b04c74"
-          },
-          "coldSearch": {
-            "beamWidth": 16,
-            "localLegalPlacementFanout": 3,
-            "placementEvaluationCap": 249856,
-            "placementEvaluationQuotaPerDepth": 4096,
-            "consumedPlacementEvaluations": 232209,
-            "auxiliaryPlacementEvaluations": 0,
-            "prunedByAttainableCount": 0,
-            "prunedByAttainableMaterial": 0,
-            "deduplicatedSuccessors": 275,
-            "fitRejectedCandidates": 140754,
-            "invalidCandidates": 0,
-            "endpointFitRejections": 0,
-            "completedDepths": 61,
-            "depthQuotaExhaustions": 53,
-            "pieceCount": 61,
-            "settlement": "evaluation-cap"
-          },
-          "warmPrefixLanes": [
-            {
-              "sourceRole": "canonical-grid",
-              "prefixDepth": 15,
-              "reusedPlacedCount": 15,
-              "status": "settled",
-              "selectedForContinuation": true,
-              "checkpointRetained": false,
-              "consumedPlacementEvaluations": 181875,
-              "completedDepths": 61,
-              "elapsedMs": 9319.662752999982,
-              "endpoint": {
-                "placedCount": 49,
-                "placedDoubledMaterialAreaGrid2": "406722232104",
-                "enclosedCavityCount": 0,
-                "totalEnclosedCavityAreaMm2": 0,
-                "envelopeMaximumSideMm": 697.678,
-                "envelopeAreaMm2": 346395.731644,
-                "envelopeSpanMm": 1194.176,
-                "canonicalGeometryHash": "1e2709bdeb3a200299b380360a576414f2bbbd1f1aa6172072cb4e3f1989a33e",
-                "origin": "warm-prefix-continuation",
-                "prefixDepth": 15,
-                "sourceRole": "canonical-grid"
-              }
-            },
-            {
-              "sourceRole": "legacy-absolute-envelope",
-              "prefixDepth": 15,
-              "reusedPlacedCount": 15,
-              "status": "checkpointed-censored",
-              "selectedForContinuation": false,
-              "checkpointRetained": true,
-              "consumedPlacementEvaluations": 322,
-              "completedDepths": 16,
-              "elapsedMs": 11.78079100001196,
-              "endpoint": {
-                "placedCount": 16,
-                "placedDoubledMaterialAreaGrid2": "259955017836",
-                "enclosedCavityCount": 0,
-                "totalEnclosedCavityAreaMm2": 0,
-                "envelopeMaximumSideMm": 470.999,
-                "envelopeAreaMm2": 215202.740093,
-                "envelopeSpanMm": 927.906,
-                "canonicalGeometryHash": "becf83032b3aaac7f0885853ad6ccd9ffcd67b5180089f0afc1d78c062de5910",
-                "origin": "warm-prefix-continuation",
-                "prefixDepth": 15,
-                "sourceRole": "legacy-absolute-envelope"
-              }
-            },
-            {
-              "sourceRole": "open-pocket-first",
-              "prefixDepth": 15,
-              "reusedPlacedCount": 15,
-              "status": "checkpointed-censored",
-              "selectedForContinuation": false,
-              "checkpointRetained": true,
-              "consumedPlacementEvaluations": 331,
-              "completedDepths": 16,
-              "elapsedMs": 10.991833000007318,
-              "endpoint": {
-                "placedCount": 16,
-                "placedDoubledMaterialAreaGrid2": "259955017836",
-                "enclosedCavityCount": 0,
-                "totalEnclosedCavityAreaMm2": 0,
-                "envelopeMaximumSideMm": 487.631,
-                "envelopeAreaMm2": 232082.122878,
-                "envelopeSpanMm": 963.569,
-                "canonicalGeometryHash": "55d87b1728097d72b15330e6c86ed321984fa935fb5adc61bc16e896778e7906",
-                "origin": "warm-prefix-continuation",
-                "prefixDepth": 15,
-                "sourceRole": "open-pocket-first"
-              }
-            }
-          ],
-          "laneCoordinator": {
-            "version": "intrinsic-capacity-lane-coordinator-v2",
-            "aggregatePlacementEvaluationCap": 499712,
-            "aggregateConsumedPlacementEvaluations": 414737,
-            "warmPilotDepthBoundaries": 1,
-            "continuedProducers": [
-              {
-                "role": "capacity-cold"
-              },
-              {
-                "role": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15
-              }
-            ],
-            "retainedCheckpointCount": 2,
-            "censoredLaneCount": 2,
-            "quanta": [
-              {
-                "ordinal": 0,
-                "producerRole": "capacity-cold",
-                "phase": "initial",
-                "fromDepth": 0,
-                "toDepth": 4,
-                "placementEvaluationDelta": 3195,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 1,
-                "producerRole": "capacity-cold",
-                "phase": "resume",
-                "fromDepth": 4,
-                "toDepth": 61,
-                "placementEvaluationDelta": 229014,
-                "outcome": "settled"
-              },
-              {
-                "ordinal": 2,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "initial",
-                "fromDepth": 15,
-                "toDepth": 16,
-                "placementEvaluationDelta": 331,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 3,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "legacy-absolute-envelope",
-                "prefixDepth": 15,
-                "phase": "initial",
-                "fromDepth": 15,
-                "toDepth": 16,
-                "placementEvaluationDelta": 322,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 4,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "open-pocket-first",
-                "prefixDepth": 15,
-                "phase": "initial",
-                "fromDepth": 15,
-                "toDepth": 16,
-                "placementEvaluationDelta": 331,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 5,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 16,
-                "toDepth": 17,
-                "placementEvaluationDelta": 1320,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 6,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 17,
-                "toDepth": 18,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 7,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 18,
-                "toDepth": 19,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 8,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 19,
-                "toDepth": 20,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 9,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 20,
-                "toDepth": 21,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 10,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 21,
-                "toDepth": 22,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 11,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 22,
-                "toDepth": 23,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 12,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 23,
-                "toDepth": 24,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 13,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 24,
-                "toDepth": 25,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 14,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 25,
-                "toDepth": 26,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 15,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 26,
-                "toDepth": 27,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 16,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 27,
-                "toDepth": 28,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 17,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 28,
-                "toDepth": 29,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 18,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 29,
-                "toDepth": 30,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 19,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 30,
-                "toDepth": 31,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 20,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 31,
-                "toDepth": 32,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 21,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 32,
-                "toDepth": 33,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 22,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 33,
-                "toDepth": 34,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 23,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 34,
-                "toDepth": 35,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 24,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 35,
-                "toDepth": 36,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 25,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 36,
-                "toDepth": 37,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 26,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 37,
-                "toDepth": 38,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 27,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 38,
-                "toDepth": 39,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 28,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 39,
-                "toDepth": 40,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 29,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 40,
-                "toDepth": 41,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 30,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 41,
-                "toDepth": 42,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 31,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 42,
-                "toDepth": 43,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 32,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 43,
-                "toDepth": 44,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 33,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 44,
-                "toDepth": 45,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 34,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 45,
-                "toDepth": 46,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 35,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 46,
-                "toDepth": 47,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 36,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 47,
-                "toDepth": 48,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 37,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 48,
-                "toDepth": 49,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 38,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 49,
-                "toDepth": 50,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 39,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 50,
-                "toDepth": 51,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 40,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 51,
-                "toDepth": 52,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 41,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 52,
-                "toDepth": 53,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 42,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 53,
-                "toDepth": 54,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 43,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 54,
-                "toDepth": 55,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 44,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 55,
-                "toDepth": 56,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 45,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 56,
-                "toDepth": 57,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 46,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 57,
-                "toDepth": 58,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 47,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 58,
-                "toDepth": 59,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 48,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 59,
-                "toDepth": 60,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 49,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "resume",
-                "fromDepth": 60,
-                "toDepth": 61,
-                "placementEvaluationDelta": 4096,
-                "outcome": "settled"
-              },
-              {
-                "ordinal": 50,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "legacy-absolute-envelope",
-                "prefixDepth": 15,
-                "phase": "censor",
-                "fromDepth": 16,
-                "toDepth": 16,
-                "placementEvaluationDelta": 0,
-                "outcome": "censored"
-              },
-              {
-                "ordinal": 51,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "open-pocket-first",
-                "prefixDepth": 15,
-                "phase": "censor",
-                "fromDepth": 16,
-                "toDepth": 16,
-                "placementEvaluationDelta": 0,
-                "outcome": "censored"
-              }
-            ]
-          },
-          "selected": {
-            "placedCount": 49,
-            "placedDoubledMaterialAreaGrid2": "406722232104",
-            "enclosedCavityCount": 0,
-            "totalEnclosedCavityAreaMm2": 0,
-            "envelopeMaximumSideMm": 697.678,
-            "envelopeAreaMm2": 346395.731644,
-            "envelopeSpanMm": 1194.176,
-            "canonicalGeometryHash": "1e2709bdeb3a200299b380360a576414f2bbbd1f1aa6172072cb4e3f1989a33e",
-            "origin": "warm-prefix-continuation",
-            "prefixDepth": 15,
-            "sourceRole": "canonical-grid",
-            "unplacedCount": 12,
-            "placedMaterialAreaMm2": 203361.116052,
-            "selectedRotationDeg": 0
-          },
-          "preflightRuntimeMs": 16.21137499999986,
-          "completeArchiveRuntimeMs": 57067.684416000004,
-          "prefixTerminalizationMs": 38.35533299999952,
-          "coldSearchMs": 21358.52116699999,
-          "runtimeMs": 21397.432458000003
-        },
-        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-mixed61-700x500-production.svg"
-      },
-      "coldOnly": {
-        "arm": "cold-only",
-        "elapsedMs": 64737.470292,
-        "routing": "bounded-complete-archive-miss",
-        "preflight": {
-          "kind": "inconclusive"
-        },
-        "placedCount": 45,
-        "unplacedCount": 16,
-        "unplacedPieceIds": [
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
-          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
-          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
-          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
-        ],
-        "partitionExact": true,
-        "canonicalSha256": "7efddf26ee859256845e88f83554ab661116ab37f29810ce263819e668610a02",
-        "terminationReason": "capacity_subset_settled",
-        "shadowTelemetry": {
-          "pressure": {
-            "minimumCollisionAreaPressurePpm": "895677",
-            "maximumSingletonSpanPressurePpm": "235006"
-          },
-          "noSkipProbe": {
-            "maximumDepth": 4,
-            "completedDepths": 4,
-            "noSkipFrontierPresent": true,
-            "consumedPlacementEvaluations": 3195,
-            "elapsedMs": 62.11566700000549,
-            "status": "observed",
-            "checkpointVersion": "intrinsic-anytime-checkpoint-v1"
-          },
-          "routingInfluence": "none"
-        },
-        "schedulerTrace": {
-          "version": "intrinsic-anytime-scheduler-v1",
-          "coldQuantumDepths": 4,
-          "coldStartStatus": "paused",
-          "coldStartCompletedDepths": 4,
-          "coldStartConsumedPlacementEvaluations": 3195,
-          "coldCheckpointReused": true,
-          "warmPrefixEndpointsAdmitted": true,
-          "cancellationReason": "complete-cohort-miss",
-          "quanta": [
-            {
-              "ordinal": 0,
-              "cohort": "partial",
-              "producerRole": "capacity-cold",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 1,
-              "cohort": "complete",
-              "producerRole": "legacy-complete",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 2,
-              "cohort": "experimental-complete",
-              "producerRole": "experimental-place-defer-complete",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 3,
-              "cohort": "partial",
-              "producerRole": "capacity-cold",
-              "outcome": "settled"
-            }
-          ]
-        },
-        "experimentalPlaceDeferTrace": {
-          "version": "intrinsic-place-defer-checkpoint-v1",
-          "deferredPreparedId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
-          "pendingOrder": [
-            "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
-            "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
-            "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
-            "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
-            "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
-            "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
-            "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
-            "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
-            "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8",
-            "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1"
-          ],
-          "status": "evaluation-cap",
-          "candidateEvaluations": 19862,
-          "placedCount": 53,
-          "unplacedCount": 0,
-          "requestedSheetFit": {
-            "q0": false,
-            "q90": false
-          },
-          "outputInfluence": "none"
-        },
-        "warmLaneArtifacts": [],
-        "capacity": {
-          "prefixes": {
-            "capturedCount": 0,
-            "fittingCount": 0,
-            "rejectedCount": 0,
-            "terminalizedCount": 0,
-            "descriptors": []
-          },
-          "coldSearch": {
-            "beamWidth": 16,
-            "localLegalPlacementFanout": 3,
-            "placementEvaluationCap": 249856,
-            "placementEvaluationQuotaPerDepth": 4096,
-            "consumedPlacementEvaluations": 232209,
-            "auxiliaryPlacementEvaluations": 0,
-            "prunedByAttainableCount": 0,
-            "prunedByAttainableMaterial": 0,
-            "deduplicatedSuccessors": 275,
-            "fitRejectedCandidates": 140754,
-            "invalidCandidates": 0,
-            "endpointFitRejections": 0,
-            "completedDepths": 61,
-            "depthQuotaExhaustions": 53,
-            "pieceCount": 61,
-            "settlement": "evaluation-cap"
-          },
-          "warmPrefixLanes": [],
-          "laneCoordinator": {
-            "version": "intrinsic-capacity-lane-coordinator-v2",
-            "aggregatePlacementEvaluationCap": 499712,
-            "aggregateConsumedPlacementEvaluations": 232209,
-            "warmPilotDepthBoundaries": 1,
-            "continuedProducers": [
-              {
-                "role": "capacity-cold"
-              }
-            ],
-            "retainedCheckpointCount": 0,
-            "censoredLaneCount": 0,
-            "quanta": [
-              {
-                "ordinal": 0,
-                "producerRole": "capacity-cold",
-                "phase": "initial",
-                "fromDepth": 0,
-                "toDepth": 4,
-                "placementEvaluationDelta": 3195,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 1,
-                "producerRole": "capacity-cold",
-                "phase": "resume",
-                "fromDepth": 4,
-                "toDepth": 61,
-                "placementEvaluationDelta": 229014,
-                "outcome": "settled"
-              }
-            ]
-          },
-          "selected": {
-            "placedCount": 45,
-            "placedDoubledMaterialAreaGrid2": "397122232104",
-            "enclosedCavityCount": 0,
-            "totalEnclosedCavityAreaMm2": 0,
-            "envelopeMaximumSideMm": 691.131,
-            "envelopeAreaMm2": 345342.264687,
-            "envelopeSpanMm": 1190.808,
-            "canonicalGeometryHash": "04420f4a81ddc3e10d4752881c2fb336a5bc1f2fe10b3093469ab8f423ba662a",
-            "origin": "cold-search",
-            "unplacedCount": 16,
-            "placedMaterialAreaMm2": 198561.116052,
-            "selectedRotationDeg": 0
-          },
-          "preflightRuntimeMs": 15.627666000000318,
-          "completeArchiveRuntimeMs": 57457.52470799998,
-          "prefixTerminalizationMs": 0.042625000001862645,
-          "coldSearchMs": 7112.297166999982,
-          "runtimeMs": 7112.587708000006
-        },
-        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-mixed61-700x500-cold-only.svg"
-      }
-    },
-    {
-      "caseId": "capacity-mixed61-700x560",
-      "sheet": {
-        "width": 700,
-        "height": 560
-      },
-      "pieceCount": 61,
-      "checks": {
-        "partitionExact": true,
-        "routing": true,
-        "placedCount": true,
-        "minimumPlacedCount": true,
-        "capacitySettled": true,
-        "auxiliaryEvaluationsZero": true,
-        "coldSearchReachedEveryDepth": true,
-        "schedulerChronology": true,
-        "laneCoordinatorChronology": true,
-        "oneWarmLaneBeyondPilot": true,
-        "prefixNotBelowColdOnly": true
-      },
-      "passed": true,
-      "production": {
-        "arm": "production",
-        "elapsedMs": 78044.05216700002,
-        "routing": "bounded-complete-archive-miss",
-        "preflight": {
-          "kind": "inconclusive"
-        },
-        "placedCount": 59,
-        "unplacedCount": 2,
-        "unplacedPieceIds": [
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-20"
-        ],
-        "partitionExact": true,
-        "canonicalSha256": "36cee3489abffe6f5961a7ae96cbe9ce34d33d8754c9822841abb7585117ba16",
-        "terminationReason": "capacity_subset_settled",
-        "shadowTelemetry": {
-          "pressure": {
-            "minimumCollisionAreaPressurePpm": "799712",
-            "maximumSingletonSpanPressurePpm": "235006"
-          },
-          "noSkipProbe": {
-            "maximumDepth": 4,
-            "completedDepths": 4,
-            "noSkipFrontierPresent": true,
-            "consumedPlacementEvaluations": 3195,
-            "elapsedMs": 61.14629200001946,
-            "status": "observed",
-            "checkpointVersion": "intrinsic-anytime-checkpoint-v1"
-          },
-          "routingInfluence": "none"
-        },
-        "schedulerTrace": {
-          "version": "intrinsic-anytime-scheduler-v1",
-          "coldQuantumDepths": 4,
-          "coldStartStatus": "paused",
-          "coldStartCompletedDepths": 4,
-          "coldStartConsumedPlacementEvaluations": 3195,
-          "coldCheckpointReused": true,
-          "warmPrefixEndpointsAdmitted": true,
-          "cancellationReason": "complete-cohort-miss",
-          "quanta": [
-            {
-              "ordinal": 0,
-              "cohort": "partial",
-              "producerRole": "capacity-cold",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 1,
-              "cohort": "complete",
-              "producerRole": "legacy-complete",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 2,
-              "cohort": "experimental-complete",
-              "producerRole": "experimental-place-defer-complete",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 3,
-              "cohort": "partial",
-              "producerRole": "capacity-cold",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 4,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 5,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 6,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 7,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 8,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 9,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 10,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 11,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "censored"
-            },
-            {
-              "ordinal": 12,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "censored"
-            },
-            {
-              "ordinal": 13,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "censored"
-            },
-            {
-              "ordinal": 14,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "censored"
-            },
-            {
-              "ordinal": 15,
-              "cohort": "partial",
-              "producerRole": "capacity-warm-prefix",
-              "outcome": "censored"
-            }
-          ]
-        },
-        "experimentalPlaceDeferTrace": {
-          "version": "intrinsic-place-defer-checkpoint-v1",
-          "deferredPreparedId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
-          "pendingOrder": [
-            "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
-            "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
-            "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
-            "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
-            "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
-            "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
-            "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
-            "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
-            "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8",
-            "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1"
-          ],
-          "status": "evaluation-cap",
-          "candidateEvaluations": 19862,
-          "placedCount": 53,
-          "unplacedCount": 0,
-          "requestedSheetFit": {
-            "q0": false,
-            "q90": false
-          },
-          "outputInfluence": "none"
-        },
-        "warmLaneArtifacts": [
-          {
-            "sourceRole": "canonical-grid",
-            "prefixDepth": 15,
-            "canonicalGeometryHash": "55d87b1728097d72b15330e6c86ed321984fa935fb5adc61bc16e896778e7906",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-mixed61-700x560-production-warm-canonical-grid-15.svg"
-          },
-          {
-            "sourceRole": "canonical-grid",
-            "prefixDepth": 30,
-            "canonicalGeometryHash": "2d252e359cf482f55bc5de60cdde7b3482a8f6b0493e1c686ae9d94296741e69",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-mixed61-700x560-production-warm-canonical-grid-30.svg"
-          },
-          {
-            "sourceRole": "legacy-absolute-envelope",
-            "prefixDepth": 15,
-            "canonicalGeometryHash": "becf83032b3aaac7f0885853ad6ccd9ffcd67b5180089f0afc1d78c062de5910",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-mixed61-700x560-production-warm-legacy-absolute-envelope-15.svg"
-          },
-          {
-            "sourceRole": "legacy-absolute-envelope",
-            "prefixDepth": 30,
-            "canonicalGeometryHash": "581b3c35c3fe0597409eca13030fb0235e67337e162270d23e15c9647e80a47c",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-mixed61-700x560-production-warm-legacy-absolute-envelope-30.svg"
-          },
-          {
-            "sourceRole": "open-pocket-first",
-            "prefixDepth": 15,
-            "canonicalGeometryHash": "55d87b1728097d72b15330e6c86ed321984fa935fb5adc61bc16e896778e7906",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-mixed61-700x560-production-warm-open-pocket-first-15.svg"
-          },
-          {
-            "sourceRole": "open-pocket-first",
-            "prefixDepth": 30,
-            "canonicalGeometryHash": "35494aceab62f37fa3a94da5adbc8a5784979c0aa780be7b99f1110b6ba8c0cf",
-            "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-mixed61-700x560-production-warm-open-pocket-first-30.svg"
-          }
-        ],
-        "capacity": {
-          "prefixes": {
-            "capturedCount": 9,
-            "fittingCount": 6,
-            "rejectedCount": 3,
-            "terminalizedCount": 5,
-            "descriptors": [
-              {
-                "role": "canonical-grid",
-                "depth": 15
-              },
-              {
-                "role": "canonical-grid",
-                "depth": 30
-              },
-              {
-                "role": "canonical-grid",
-                "depth": 45
-              },
-              {
-                "role": "legacy-absolute-envelope",
-                "depth": 15
-              },
-              {
-                "role": "legacy-absolute-envelope",
-                "depth": 30
-              },
-              {
-                "role": "legacy-absolute-envelope",
-                "depth": 45
-              },
-              {
-                "role": "open-pocket-first",
-                "depth": 15
-              },
-              {
-                "role": "open-pocket-first",
-                "depth": 30
-              },
-              {
-                "role": "open-pocket-first",
-                "depth": 45
-              }
-            ]
-          },
-          "prefixIncumbent": {
-            "sourceRole": "legacy-absolute-envelope",
-            "prefixDepth": 30,
-            "placedCount": 30,
-            "placedMaterialAreaMm2": 171261.116052,
-            "selectedRotationDeg": 0,
-            "canonicalGeometryHash": "11e64e37a3c91334a12e19b3246a9fd11c3700a9fe21dfc0fd464202dcc6d4ee"
-          },
-          "coldSearch": {
-            "beamWidth": 16,
-            "localLegalPlacementFanout": 3,
-            "placementEvaluationCap": 249856,
-            "placementEvaluationQuotaPerDepth": 4096,
-            "consumedPlacementEvaluations": 232209,
-            "auxiliaryPlacementEvaluations": 0,
-            "prunedByAttainableCount": 0,
-            "prunedByAttainableMaterial": 0,
-            "deduplicatedSuccessors": 272,
-            "fitRejectedCandidates": 95561,
-            "invalidCandidates": 0,
-            "endpointFitRejections": 0,
-            "completedDepths": 61,
-            "depthQuotaExhaustions": 53,
-            "pieceCount": 61,
-            "settlement": "evaluation-cap"
-          },
-          "warmPrefixLanes": [
-            {
-              "sourceRole": "canonical-grid",
-              "prefixDepth": 15,
-              "reusedPlacedCount": 15,
-              "status": "checkpointed-censored",
-              "selectedForContinuation": false,
-              "checkpointRetained": true,
-              "consumedPlacementEvaluations": 331,
-              "completedDepths": 16,
-              "elapsedMs": 11.241291999991518,
-              "endpoint": {
-                "placedCount": 16,
-                "placedDoubledMaterialAreaGrid2": "259955017836",
-                "enclosedCavityCount": 0,
-                "totalEnclosedCavityAreaMm2": 0,
-                "envelopeMaximumSideMm": 487.631,
-                "envelopeAreaMm2": 232082.122878,
-                "envelopeSpanMm": 963.569,
-                "canonicalGeometryHash": "55d87b1728097d72b15330e6c86ed321984fa935fb5adc61bc16e896778e7906",
-                "origin": "warm-prefix-continuation",
-                "prefixDepth": 15,
-                "sourceRole": "canonical-grid"
-              }
-            },
-            {
-              "sourceRole": "canonical-grid",
-              "prefixDepth": 30,
-              "reusedPlacedCount": 30,
-              "status": "settled",
-              "selectedForContinuation": true,
-              "checkpointRetained": false,
-              "consumedPlacementEvaluations": 121012,
-              "completedDepths": 61,
-              "elapsedMs": 6557.86895900013,
-              "endpoint": {
-                "placedCount": 59,
-                "placedDoubledMaterialAreaGrid2": "448722232104",
-                "enclosedCavityCount": 0,
-                "totalEnclosedCavityAreaMm2": 0,
-                "envelopeMaximumSideMm": 697.458,
-                "envelopeAreaMm2": 387398.163894,
-                "envelopeSpanMm": 1252.9009999999998,
-                "canonicalGeometryHash": "2d252e359cf482f55bc5de60cdde7b3482a8f6b0493e1c686ae9d94296741e69",
-                "origin": "warm-prefix-continuation",
-                "prefixDepth": 30,
-                "sourceRole": "canonical-grid"
-              }
-            },
-            {
-              "sourceRole": "legacy-absolute-envelope",
-              "prefixDepth": 15,
-              "reusedPlacedCount": 15,
-              "status": "checkpointed-censored",
-              "selectedForContinuation": false,
-              "checkpointRetained": true,
-              "consumedPlacementEvaluations": 322,
-              "completedDepths": 16,
-              "elapsedMs": 11.765166999975918,
-              "endpoint": {
-                "placedCount": 16,
-                "placedDoubledMaterialAreaGrid2": "259955017836",
-                "enclosedCavityCount": 0,
-                "totalEnclosedCavityAreaMm2": 0,
-                "envelopeMaximumSideMm": 470.999,
-                "envelopeAreaMm2": 215202.740093,
-                "envelopeSpanMm": 927.906,
-                "canonicalGeometryHash": "becf83032b3aaac7f0885853ad6ccd9ffcd67b5180089f0afc1d78c062de5910",
-                "origin": "warm-prefix-continuation",
-                "prefixDepth": 15,
-                "sourceRole": "legacy-absolute-envelope"
-              }
-            },
-            {
-              "sourceRole": "legacy-absolute-envelope",
-              "prefixDepth": 30,
-              "reusedPlacedCount": 30,
-              "status": "checkpointed-censored",
-              "selectedForContinuation": false,
-              "checkpointRetained": true,
-              "consumedPlacementEvaluations": 392,
-              "completedDepths": 31,
-              "elapsedMs": 18.963082999980543,
-              "endpoint": {
-                "placedCount": 31,
-                "placedDoubledMaterialAreaGrid2": "347922232104",
-                "enclosedCavityCount": 0,
-                "totalEnclosedCavityAreaMm2": 0,
-                "envelopeMaximumSideMm": 545.432,
-                "envelopeAreaMm2": 295440.878848,
-                "envelopeSpanMm": 1087.096,
-                "canonicalGeometryHash": "581b3c35c3fe0597409eca13030fb0235e67337e162270d23e15c9647e80a47c",
-                "origin": "warm-prefix-continuation",
-                "prefixDepth": 30,
-                "sourceRole": "legacy-absolute-envelope"
-              }
-            },
-            {
-              "sourceRole": "open-pocket-first",
-              "prefixDepth": 15,
-              "reusedPlacedCount": 15,
-              "status": "checkpointed-censored",
-              "selectedForContinuation": false,
-              "checkpointRetained": true,
-              "consumedPlacementEvaluations": 331,
-              "completedDepths": 16,
-              "elapsedMs": 10.89354099999764,
-              "endpoint": {
-                "placedCount": 16,
-                "placedDoubledMaterialAreaGrid2": "259955017836",
-                "enclosedCavityCount": 0,
-                "totalEnclosedCavityAreaMm2": 0,
-                "envelopeMaximumSideMm": 487.631,
-                "envelopeAreaMm2": 232082.122878,
-                "envelopeSpanMm": 963.569,
-                "canonicalGeometryHash": "55d87b1728097d72b15330e6c86ed321984fa935fb5adc61bc16e896778e7906",
-                "origin": "warm-prefix-continuation",
-                "prefixDepth": 15,
-                "sourceRole": "open-pocket-first"
-              }
-            },
-            {
-              "sourceRole": "open-pocket-first",
-              "prefixDepth": 30,
-              "reusedPlacedCount": 30,
-              "status": "checkpointed-censored",
-              "selectedForContinuation": false,
-              "checkpointRetained": true,
-              "consumedPlacementEvaluations": 438,
-              "completedDepths": 31,
-              "elapsedMs": 18.830042000015965,
-              "endpoint": {
-                "placedCount": 31,
-                "placedDoubledMaterialAreaGrid2": "347922232104",
-                "enclosedCavityCount": 0,
-                "totalEnclosedCavityAreaMm2": 0,
-                "envelopeMaximumSideMm": 552.381,
-                "envelopeAreaMm2": 303268.769001,
-                "envelopeSpanMm": 1101.402,
-                "canonicalGeometryHash": "35494aceab62f37fa3a94da5adbc8a5784979c0aa780be7b99f1110b6ba8c0cf",
-                "origin": "warm-prefix-continuation",
-                "prefixDepth": 30,
-                "sourceRole": "open-pocket-first"
-              }
-            }
-          ],
-          "laneCoordinator": {
-            "version": "intrinsic-capacity-lane-coordinator-v2",
-            "aggregatePlacementEvaluationCap": 499712,
-            "aggregateConsumedPlacementEvaluations": 355035,
-            "warmPilotDepthBoundaries": 1,
-            "continuedProducers": [
-              {
-                "role": "capacity-cold"
-              },
-              {
-                "role": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30
-              }
-            ],
-            "retainedCheckpointCount": 5,
-            "censoredLaneCount": 5,
-            "quanta": [
-              {
-                "ordinal": 0,
-                "producerRole": "capacity-cold",
-                "phase": "initial",
-                "fromDepth": 0,
-                "toDepth": 4,
-                "placementEvaluationDelta": 3195,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 1,
-                "producerRole": "capacity-cold",
-                "phase": "resume",
-                "fromDepth": 4,
-                "toDepth": 61,
-                "placementEvaluationDelta": 229014,
-                "outcome": "settled"
-              },
-              {
-                "ordinal": 2,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "initial",
-                "fromDepth": 15,
-                "toDepth": 16,
-                "placementEvaluationDelta": 331,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 3,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "initial",
-                "fromDepth": 30,
-                "toDepth": 31,
-                "placementEvaluationDelta": 446,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 4,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "legacy-absolute-envelope",
-                "prefixDepth": 15,
-                "phase": "initial",
-                "fromDepth": 15,
-                "toDepth": 16,
-                "placementEvaluationDelta": 322,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 5,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "legacy-absolute-envelope",
-                "prefixDepth": 30,
-                "phase": "initial",
-                "fromDepth": 30,
-                "toDepth": 31,
-                "placementEvaluationDelta": 392,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 6,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "open-pocket-first",
-                "prefixDepth": 15,
-                "phase": "initial",
-                "fromDepth": 15,
-                "toDepth": 16,
-                "placementEvaluationDelta": 331,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 7,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "open-pocket-first",
-                "prefixDepth": 30,
-                "phase": "initial",
-                "fromDepth": 30,
-                "toDepth": 31,
-                "placementEvaluationDelta": 438,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 8,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 31,
-                "toDepth": 32,
-                "placementEvaluationDelta": 1782,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 9,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 32,
-                "toDepth": 33,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 10,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 33,
-                "toDepth": 34,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 11,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 34,
-                "toDepth": 35,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 12,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 35,
-                "toDepth": 36,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 13,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 36,
-                "toDepth": 37,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 14,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 37,
-                "toDepth": 38,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 15,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 38,
-                "toDepth": 39,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 16,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 39,
-                "toDepth": 40,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 17,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 40,
-                "toDepth": 41,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 18,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 41,
-                "toDepth": 42,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 19,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 42,
-                "toDepth": 43,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 20,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 43,
-                "toDepth": 44,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 21,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 44,
-                "toDepth": 45,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 22,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 45,
-                "toDepth": 46,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 23,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 46,
-                "toDepth": 47,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 24,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 47,
-                "toDepth": 48,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 25,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 48,
-                "toDepth": 49,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 26,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 49,
-                "toDepth": 50,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 27,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 50,
-                "toDepth": 51,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 28,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 51,
-                "toDepth": 52,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 29,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 52,
-                "toDepth": 53,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 30,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 53,
-                "toDepth": 54,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 31,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 54,
-                "toDepth": 55,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 32,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 55,
-                "toDepth": 56,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 33,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 56,
-                "toDepth": 57,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 34,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 57,
-                "toDepth": 58,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 35,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 58,
-                "toDepth": 59,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 36,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 59,
-                "toDepth": 60,
-                "placementEvaluationDelta": 4096,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 37,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 30,
-                "phase": "resume",
-                "fromDepth": 60,
-                "toDepth": 61,
-                "placementEvaluationDelta": 4096,
-                "outcome": "settled"
-              },
-              {
-                "ordinal": 38,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "canonical-grid",
-                "prefixDepth": 15,
-                "phase": "censor",
-                "fromDepth": 16,
-                "toDepth": 16,
-                "placementEvaluationDelta": 0,
-                "outcome": "censored"
-              },
-              {
-                "ordinal": 39,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "legacy-absolute-envelope",
-                "prefixDepth": 15,
-                "phase": "censor",
-                "fromDepth": 16,
-                "toDepth": 16,
-                "placementEvaluationDelta": 0,
-                "outcome": "censored"
-              },
-              {
-                "ordinal": 40,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "legacy-absolute-envelope",
-                "prefixDepth": 30,
-                "phase": "censor",
-                "fromDepth": 31,
-                "toDepth": 31,
-                "placementEvaluationDelta": 0,
-                "outcome": "censored"
-              },
-              {
-                "ordinal": 41,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "open-pocket-first",
-                "prefixDepth": 15,
-                "phase": "censor",
-                "fromDepth": 16,
-                "toDepth": 16,
-                "placementEvaluationDelta": 0,
-                "outcome": "censored"
-              },
-              {
-                "ordinal": 42,
-                "producerRole": "capacity-warm-prefix",
-                "sourceRole": "open-pocket-first",
-                "prefixDepth": 30,
-                "phase": "censor",
-                "fromDepth": 31,
-                "toDepth": 31,
-                "placementEvaluationDelta": 0,
-                "outcome": "censored"
-              }
-            ]
-          },
-          "selected": {
-            "placedCount": 59,
-            "placedDoubledMaterialAreaGrid2": "448722232104",
-            "enclosedCavityCount": 0,
-            "totalEnclosedCavityAreaMm2": 0,
-            "envelopeMaximumSideMm": 697.458,
-            "envelopeAreaMm2": 387398.163894,
-            "envelopeSpanMm": 1252.9009999999998,
-            "canonicalGeometryHash": "2d252e359cf482f55bc5de60cdde7b3482a8f6b0493e1c686ae9d94296741e69",
-            "origin": "warm-prefix-continuation",
-            "prefixDepth": 30,
-            "sourceRole": "canonical-grid",
-            "unplacedCount": 2,
-            "placedMaterialAreaMm2": 224361.116052,
-            "selectedRotationDeg": 90
-          },
-          "preflightRuntimeMs": 15.363374999986263,
-          "completeArchiveRuntimeMs": 57537.383875,
-          "prefixTerminalizationMs": 41.832457999989856,
-          "coldSearchMs": 20297.045374999987,
-          "runtimeMs": 20339.368958999985
-        },
-        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-mixed61-700x560-production.svg"
-      },
-      "coldOnly": {
-        "arm": "cold-only",
-        "elapsedMs": 66866.624583,
-        "routing": "bounded-complete-archive-miss",
-        "preflight": {
-          "kind": "inconclusive"
-        },
-        "placedCount": 55,
-        "unplacedCount": 6,
-        "unplacedPieceIds": [
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
-          "d06db288-d2d6-4f40-874e-98287f516d93-copy-20"
-        ],
-        "partitionExact": true,
-        "canonicalSha256": "0c6cc5d567e0a8b3f74d00c06e6c569d5107949723e80bd111e48fedbaf9ef0e",
-        "terminationReason": "capacity_subset_settled",
-        "shadowTelemetry": {
-          "pressure": {
-            "minimumCollisionAreaPressurePpm": "799712",
-            "maximumSingletonSpanPressurePpm": "235006"
-          },
-          "noSkipProbe": {
-            "maximumDepth": 4,
-            "completedDepths": 4,
-            "noSkipFrontierPresent": true,
-            "consumedPlacementEvaluations": 3195,
-            "elapsedMs": 61.63854099999298,
-            "status": "observed",
-            "checkpointVersion": "intrinsic-anytime-checkpoint-v1"
-          },
-          "routingInfluence": "none"
-        },
-        "schedulerTrace": {
-          "version": "intrinsic-anytime-scheduler-v1",
-          "coldQuantumDepths": 4,
-          "coldStartStatus": "paused",
-          "coldStartCompletedDepths": 4,
-          "coldStartConsumedPlacementEvaluations": 3195,
-          "coldCheckpointReused": true,
-          "warmPrefixEndpointsAdmitted": true,
-          "cancellationReason": "complete-cohort-miss",
-          "quanta": [
-            {
-              "ordinal": 0,
-              "cohort": "partial",
-              "producerRole": "capacity-cold",
-              "outcome": "checkpointed"
-            },
-            {
-              "ordinal": 1,
-              "cohort": "complete",
-              "producerRole": "legacy-complete",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 2,
-              "cohort": "experimental-complete",
-              "producerRole": "experimental-place-defer-complete",
-              "outcome": "settled"
-            },
-            {
-              "ordinal": 3,
-              "cohort": "partial",
-              "producerRole": "capacity-cold",
-              "outcome": "settled"
-            }
-          ]
-        },
-        "experimentalPlaceDeferTrace": {
-          "version": "intrinsic-place-defer-checkpoint-v1",
-          "deferredPreparedId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
-          "pendingOrder": [
-            "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
-            "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
-            "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
-            "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
-            "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
-            "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
-            "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
-            "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
-            "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
-            "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
-            "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
-            "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
-            "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
-            "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
-            "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
-            "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8",
-            "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1"
-          ],
-          "status": "evaluation-cap",
-          "candidateEvaluations": 19862,
-          "placedCount": 53,
-          "unplacedCount": 0,
-          "requestedSheetFit": {
-            "q0": false,
-            "q90": false
-          },
-          "outputInfluence": "none"
-        },
-        "warmLaneArtifacts": [],
-        "capacity": {
-          "prefixes": {
-            "capturedCount": 0,
-            "fittingCount": 0,
-            "rejectedCount": 0,
-            "terminalizedCount": 0,
-            "descriptors": []
-          },
-          "coldSearch": {
-            "beamWidth": 16,
-            "localLegalPlacementFanout": 3,
-            "placementEvaluationCap": 249856,
-            "placementEvaluationQuotaPerDepth": 4096,
-            "consumedPlacementEvaluations": 232209,
-            "auxiliaryPlacementEvaluations": 0,
-            "prunedByAttainableCount": 0,
-            "prunedByAttainableMaterial": 0,
-            "deduplicatedSuccessors": 272,
-            "fitRejectedCandidates": 95561,
-            "invalidCandidates": 0,
-            "endpointFitRejections": 0,
-            "completedDepths": 61,
-            "depthQuotaExhaustions": 53,
-            "pieceCount": 61,
-            "settlement": "evaluation-cap"
-          },
-          "warmPrefixLanes": [],
-          "laneCoordinator": {
-            "version": "intrinsic-capacity-lane-coordinator-v2",
-            "aggregatePlacementEvaluationCap": 499712,
-            "aggregateConsumedPlacementEvaluations": 232209,
-            "warmPilotDepthBoundaries": 1,
-            "continuedProducers": [
-              {
-                "role": "capacity-cold"
-              }
-            ],
-            "retainedCheckpointCount": 0,
-            "censoredLaneCount": 0,
-            "quanta": [
-              {
-                "ordinal": 0,
-                "producerRole": "capacity-cold",
-                "phase": "initial",
-                "fromDepth": 0,
-                "toDepth": 4,
-                "placementEvaluationDelta": 3195,
-                "outcome": "checkpointed"
-              },
-              {
-                "ordinal": 1,
-                "producerRole": "capacity-cold",
-                "phase": "resume",
-                "fromDepth": 4,
-                "toDepth": 61,
-                "placementEvaluationDelta": 229014,
-                "outcome": "settled"
-              }
-            ]
-          },
-          "selected": {
-            "placedCount": 55,
-            "placedDoubledMaterialAreaGrid2": "431922232104",
-            "enclosedCavityCount": 0,
-            "totalEnclosedCavityAreaMm2": 0,
-            "envelopeMaximumSideMm": 696.276,
-            "envelopeAreaMm2": 389217.587724,
-            "envelopeSpanMm": 1255.275,
-            "canonicalGeometryHash": "0ba279b5f82d6f6d8ec9c83aa275e80eebf0e174107c8fac3d2d1429576792af",
-            "origin": "cold-search",
-            "unplacedCount": 6,
-            "placedMaterialAreaMm2": 215961.116052,
-            "selectedRotationDeg": 90
-          },
-          "preflightRuntimeMs": 15.293917000002693,
-          "completeArchiveRuntimeMs": 57472.932917,
-          "prefixTerminalizationMs": 0.038875000027474016,
-          "coldSearchMs": 9225.381707999972,
-          "runtimeMs": 9225.651291999966
-        },
-        "artifactPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-648a93e-targeted/capacity-mixed61-700x560-cold-only.svg"
+        "artifactPath": "/private/tmp/min-plane-provenance/capacity-production-cohesion-main-accepted/capacity-triangles20-300x300-production.svg"
       }
     }
   ]

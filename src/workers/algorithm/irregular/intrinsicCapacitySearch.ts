@@ -80,6 +80,7 @@ export type IntrinsicCapacityRetentionMode =
   | 'objective'
   | 'area-first-shadow'
   | 'axis-buckets-shadow'
+  | 'cohesion-frontier'
   | 'cohesion-frontier-shadow'
 
 export interface IntrinsicAnytimeFitMask {
@@ -333,6 +334,7 @@ export function runIntrinsicCapacityColdSearch(
     const startedAt = performance.now()
     const capture = input.capturePhaseTimings === true
     const captureTopologyRetention =
+      input.retentionMode === 'cohesion-frontier' ||
       input.retentionMode === 'cohesion-frontier-shadow'
     const settings = yield* GeometrySettings
     const geometryKernel = yield* GeometryKernel
@@ -1804,7 +1806,10 @@ function retainCapacityBeamEntries(
   if (mode === 'area-first-shadow') {
     return entries.toSorted(compareCapacityBeamEntriesAreaFirst).slice(0, beamWidth)
   }
-  if (mode === 'cohesion-frontier-shadow') {
+  if (
+    mode === 'cohesion-frontier' ||
+    mode === 'cohesion-frontier-shadow'
+  ) {
     return retainCapacityCohesionFrontier(
       entries,
       beamWidth,

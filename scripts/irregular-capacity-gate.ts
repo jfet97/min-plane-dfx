@@ -143,10 +143,10 @@ const fixtures: ReadonlyArray<CapacityFixture> = [
     paddingMm: 10,
     sheet: new SheetSpec({ width: 300, height: 300, label: 'constrained 300x300' }),
     expectedRouting: undefined,
-    expectedPlacedCount: undefined,
-    minimumPlacedCount: 15,
+    expectedPlacedCount: 17,
+    minimumPlacedCount: 17,
     expectedCanonicalSha256:
-      'b1455c81ff2a38ca93954d53464f79ab85c7631045f8fbee40b9467f0273bb17',
+      '2f236b79c7c49a999daf5363e257bbda6b8562239571c6fedab2485cffb38c35',
     pairedEligible: true
   },
   {
@@ -320,7 +320,10 @@ interface CapacityRunReport {
   readonly shadowTelemetry: IrregularComputeResult['capacityShadowTelemetry']
   readonly schedulerTrace: IrregularComputeResult['intrinsicAnytimeSchedulerTrace']
   readonly experimentalPlaceDeferTrace: IrregularComputeResult['experimentalPlaceDeferTrace']
-  readonly retentionMode: 'objective' | 'area-first' | 'axis-buckets'
+  readonly retentionMode:
+    | 'cohesion-frontier'
+    | 'area-first'
+    | 'axis-buckets'
   readonly cohesionShadow:
     | {
         readonly artifactPath: string
@@ -636,7 +639,8 @@ async function runArm(
     shadowTelemetry: result.capacityShadowTelemetry,
     schedulerTrace: result.intrinsicAnytimeSchedulerTrace,
     experimentalPlaceDeferTrace: result.experimentalPlaceDeferTrace,
-    retentionMode,
+    retentionMode:
+      retentionMode === 'objective' ? 'cohesion-frontier' : retentionMode,
     cohesionShadow,
     cohesionLnsShadow,
     cohesionReinsertionShadow,
@@ -1123,7 +1127,10 @@ await writeFile(
     {
       generatedAt: new Date().toISOString(),
       experiment: {
-        retentionMode: cli.retentionMode,
+        retentionMode:
+          cli.retentionMode === 'objective'
+            ? 'cohesion-frontier'
+            : cli.retentionMode,
         cohesionShadow: cli.cohesionShadow,
         requireCohesionPromotion: cli.requireCohesionPromotion
       },

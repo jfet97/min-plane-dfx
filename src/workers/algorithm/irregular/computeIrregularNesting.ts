@@ -123,7 +123,7 @@ export interface ComputeIrregularNestingOptions {
     readonly prefixDepth: number
     readonly endpoint: IntrinsicCapacityEndpoint | undefined
   }) => void
-  /** Opt-in deterministic coarse scheduler experiment. */
+  /** Legacy explicit marker; deterministic v1 is the production Compact default. */
   readonly intrinsicAnytimeSchedulerMode?: 'deterministic-v1'
   /** Experimental subset retention; terminal capacity comparator is unchanged. */
   readonly intrinsicCapacityRetentionShadow?: 'area-first' | 'axis-buckets'
@@ -451,7 +451,7 @@ function coordinateIntrinsicSharedArchive(
           ? ('area-first-shadow' as const)
           : input.options?.intrinsicCapacityRetentionShadow === 'axis-buckets'
             ? ('axis-buckets-shadow' as const)
-            : undefined
+            : ('cohesion-frontier' as const)
       if (input.options?.captureCapacityShadowTelemetry === true) {
         capacityShadowTelemetry = yield* measureIntrinsicCapacityShadowTelemetry({
           sheet: input.request.sheet,
@@ -481,9 +481,7 @@ function coordinateIntrinsicSharedArchive(
         ...(input.options?.onCapacityWarmPrefixLane === undefined
           ? {}
           : { onWarmPrefixLane: input.options.onCapacityWarmPrefixLane }),
-        ...(capacityRetentionMode === undefined
-          ? {}
-          : { retentionMode: capacityRetentionMode })
+        retentionMode: capacityRetentionMode
       }
       if (preflight.kind === 'proven_impossible') {
         const capacity = yield* runIntrinsicCapacityMode({
@@ -505,8 +503,7 @@ function coordinateIntrinsicSharedArchive(
           performance.now() - coordinatorStartedAt
         )
       } else {
-        const schedulerEnabled =
-          input.options?.intrinsicAnytimeSchedulerMode === 'deterministic-v1'
+        const schedulerEnabled = true
         let scheduledColdStart = schedulerEnabled
           ? yield* runIntrinsicCapacitySchedulerColdQuantum({
               sheet: input.request.sheet,
@@ -515,9 +512,7 @@ function coordinateIntrinsicSharedArchive(
               ...(input.options?.captureCapacityPhaseTimings === true
                 ? { capturePhaseTimings: true }
                 : {}),
-              ...(capacityRetentionMode === undefined
-                ? {}
-                : { retentionMode: capacityRetentionMode })
+              retentionMode: capacityRetentionMode
             }).pipe(Effect.mapError(mapIntrinsicCapacityError))
           : undefined
         let scheduledColdCheckpointReused = false
@@ -587,9 +582,7 @@ function coordinateIntrinsicSharedArchive(
                           ...(input.options?.captureCapacityPhaseTimings === true
                             ? { capturePhaseTimings: true }
                             : {}),
-                          ...(capacityRetentionMode === undefined
-                            ? {}
-                            : { retentionMode: capacityRetentionMode })
+                          retentionMode: capacityRetentionMode
                         })
                       scheduledColdCheckpointReused = true
                       if (intrinsicAnytimeSchedulerTrace !== undefined) {

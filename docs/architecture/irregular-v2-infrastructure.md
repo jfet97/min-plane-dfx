@@ -214,17 +214,19 @@ Canonical-entry and spatial-index structure are recomputed for validation.
 Incremental contact-signature history is instead integrity-bound exactly,
 because a whole-layout derivation is not the same continuation state.
 
-The direct portfolio has an opt-in integration seam that advances only
+The direct portfolio has an integration seam that advances only
 `canonical-grid` through a configurable completed-piece quantum until that
 producer settles. It then continues the unchanged direct-role and periodic
 order. Checkpoint callbacks expose chronology only; archive retention,
 comparators, and the single final constructed-prefix callback remain unchanged.
-The opt-in anytime coordinator consumes that callback by resuming the protected
+The production anytime coordinator consumes that callback by resuming the protected
 cold checkpoint for one depth after each canonical complete piece. Complete and
 partial work remain separate state machines and archives. Once the cold lane
 settles, later complete checkpoints continue without duplicating capacity work;
 after a complete miss the settled/checkpointed cold state transfers directly to
-the capacity coordinator.
+the capacity coordinator. The production capacity retention frontier protects
+generic compactness and exact contact/topology representatives inside its own
+16-state cohort; it does not alter complete-cohort survivor slots or ranking.
 
 An additional observer-only experimental complete cohort makes one explicit
 place/defer decision by moving the first pending piece to a second pass. Its
