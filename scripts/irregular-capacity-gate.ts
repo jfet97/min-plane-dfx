@@ -29,6 +29,7 @@ import {
 } from '../src/workers/algorithm/irregular/intrinsicCapacityEndpoint.js'
 import { runIntrinsicComponentInterfaceClosure } from '../src/workers/algorithm/irregular/intrinsicComponentInterfaceClosure.js'
 import { runIntrinsicDetachedPieceReinsertion } from '../src/workers/algorithm/irregular/intrinsicDetachedPieceReinsertion.js'
+import { runIntrinsicTwoPieceInterfaceReconstruction } from '../src/workers/algorithm/irregular/intrinsicTwoPieceInterfaceReconstruction.js'
 import {
   intrinsicCapacityLaneCoordinatorTraceValid,
   type IntrinsicCapacityTrace
@@ -374,6 +375,26 @@ interface CapacityRunReport {
         readonly attempts: unknown
       }
     | undefined
+  readonly cohesionTwoPieceInterfaceShadow:
+    | {
+        readonly artifactPath: string
+        readonly accepted: boolean
+        readonly status: string
+        readonly runtimeMs: number
+        readonly canonicalSha256: string
+        readonly placedCount: number
+        readonly topology: ReturnType<typeof measureCanonicalLayoutTopologyExact>
+        readonly candidateEvaluations: number
+        readonly pairCount: number
+        readonly orderCount: number
+        readonly exactEndpointCount: number
+        readonly admissibleEndpointCount: number
+        readonly selectedPair: ReadonlyArray<string> | undefined
+        readonly selectedOrder: ReadonlyArray<string> | undefined
+        readonly seedMetrics: unknown
+        readonly selectedMetrics: unknown
+      }
+    | undefined
   readonly warmLaneArtifacts: ReadonlyArray<{
     readonly sourceRole: string
     readonly prefixDepth: number
@@ -419,7 +440,8 @@ async function runArm(
   captureCohesionShadow: boolean,
   captureCohesionLnsShadow: boolean,
   captureCohesionReinsertionShadow: boolean,
-  captureCohesionFeatureContactShadow: boolean
+  captureCohesionFeatureContactShadow: boolean,
+  captureCohesionTwoPieceInterfaceShadow: boolean
 ): Promise<CapacityRunReport> {
   const settings = request.options.irregularSettings
   if (settings === undefined) throw new Error(`${request.jobId} has no irregular settings`)
@@ -449,7 +471,9 @@ async function runArm(
           }
         }
       : {}),
-    ...(captureCohesionLnsShadow || captureCohesionReinsertionShadow
+    ...(captureCohesionLnsShadow ||
+    captureCohesionReinsertionShadow ||
+    captureCohesionTwoPieceInterfaceShadow
       ? {
           onPreparedPieces: (
             observedPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
@@ -562,6 +586,16 @@ async function runArm(
           endpoint: cohesionEndpoint,
           artifactPath: `${artifactPath.slice(0, -4)}-cohesion-feature-contact-shadow.svg`
         })
+  const cohesionTwoPieceInterfaceShadow =
+    !captureCohesionTwoPieceInterfaceShadow || cohesionEndpoint === undefined
+      ? undefined
+      : await runCohesionTwoPieceInterfaceShadow({
+          request,
+          settings,
+          preparedPieces,
+          endpoint: cohesionEndpoint,
+          artifactPath: `${artifactPath.slice(0, -4)}-cohesion-two-piece-interface-shadow.svg`
+        })
   const requestIds = request.pieces.map(({ id }) => id)
   const accountedIds = [
     ...result.placedCollisionGeometries.map(
@@ -601,6 +635,7 @@ async function runArm(
     cohesionLnsShadow,
     cohesionReinsertionShadow,
     cohesionFeatureContactShadow,
+    cohesionTwoPieceInterfaceShadow,
     warmLaneArtifacts,
     capacity:
       trace === undefined
@@ -620,6 +655,53 @@ async function runArm(
             runtimeMs: trace.runtimeMs
           },
     artifactPath
+  }
+}
+
+async function runCohesionTwoPieceInterfaceShadow(input: {
+  readonly request: NestingRequest
+  readonly settings: IrregularNestingSettings
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly endpoint: IntrinsicCapacityEndpoint
+  readonly artifactPath: string
+}): Promise<NonNullable<CapacityRunReport['cohesionTwoPieceInterfaceShadow']>> {
+  const result = await Effect.runPromise(
+    runIntrinsicTwoPieceInterfaceReconstruction({
+      sheet: input.request.sheet,
+      allPreparedPieces: input.preparedPieces,
+      seedPlaced: input.endpoint.placedCollisionGeometries,
+      maximumRuntimeMs: 30_000,
+      maximumCandidateEvaluations: 200_000
+    }).pipe(
+      Effect.provide(GeometryKernel.Live),
+      Effect.provide(NfpIfpServiceLive),
+      Effect.provide(Layer.succeed(GeometrySettings, input.settings))
+    )
+  )
+  const polygons = absolutePlacedCollisionPolygons(
+    result.placedCollisionGeometries
+  )
+  const canonical = canonicalizeIrregularLayout(polygons)
+  await writeFile(input.artifactPath, renderSvg(input.request.sheet, polygons))
+  return {
+    artifactPath: input.artifactPath,
+    accepted: result.accepted,
+    status: result.status,
+    runtimeMs: result.runtimeMs,
+    canonicalSha256: canonical.sha256,
+    placedCount: result.placedCollisionGeometries.length,
+    topology: measureCanonicalLayoutTopologyExact(
+      result.placedCollisionGeometries
+    ),
+    candidateEvaluations: result.candidateEvaluations,
+    pairCount: result.pairCount,
+    orderCount: result.orderCount,
+    exactEndpointCount: result.exactEndpointCount,
+    admissibleEndpointCount: result.admissibleEndpointCount,
+    selectedPair: result.selectedPair,
+    selectedOrder: result.selectedOrder,
+    seedMetrics: result.seedMetrics,
+    selectedMetrics: result.selectedMetrics
   }
 }
 
@@ -806,6 +888,7 @@ interface CliArguments {
   readonly cohesionLnsShadow: boolean
   readonly cohesionReinsertionShadow: boolean
   readonly cohesionFeatureContactShadow: boolean
+  readonly cohesionTwoPieceInterfaceShadow: boolean
   readonly requireCohesionPromotion: boolean
 }
 
@@ -819,6 +902,7 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
   let cohesionLnsShadow = false
   let cohesionReinsertionShadow = false
   let cohesionFeatureContactShadow = false
+  let cohesionTwoPieceInterfaceShadow = false
   let requireCohesionPromotion = false
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]
@@ -858,6 +942,9 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
     } else if (argument === '--cohesion-feature-contact-shadow') {
       cohesionShadow = true
       cohesionFeatureContactShadow = true
+    } else if (argument === '--cohesion-two-piece-interface-shadow') {
+      cohesionShadow = true
+      cohesionTwoPieceInterfaceShadow = true
     } else if (argument === '--require-cohesion-promotion') {
       requireCohesionPromotion = true
     } else {
@@ -874,6 +961,7 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
     cohesionLnsShadow,
     cohesionReinsertionShadow,
     cohesionFeatureContactShadow,
+    cohesionTwoPieceInterfaceShadow,
     requireCohesionPromotion
   }
 }
@@ -893,7 +981,8 @@ for (const fixture of fixtures) {
     cli.cohesionShadow,
     cli.cohesionLnsShadow,
     cli.cohesionReinsertionShadow,
-    cli.cohesionFeatureContactShadow
+    cli.cohesionFeatureContactShadow,
+    cli.cohesionTwoPieceInterfaceShadow
   )
   const coldOnly =
     cli.paired && fixture.pairedEligible
@@ -905,7 +994,8 @@ for (const fixture of fixtures) {
           cli.cohesionShadow,
           cli.cohesionLnsShadow,
           cli.cohesionReinsertionShadow,
-          cli.cohesionFeatureContactShadow
+          cli.cohesionFeatureContactShadow,
+          cli.cohesionTwoPieceInterfaceShadow
         )
       : undefined
   const productionColdSearch = capacityColdSearchTrace(production)

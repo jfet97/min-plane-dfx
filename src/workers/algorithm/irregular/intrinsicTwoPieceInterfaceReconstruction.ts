@@ -1,0 +1,440 @@
+import { performance } from 'node:perf_hooks'
+import { Effect } from 'effect'
+import type { PieceId } from '@shared/domain/ids.js'
+import type { SheetSpec } from '@shared/domain/nesting.js'
+import {
+  IrregularPlacedPiece,
+  IrregularPlacement,
+  IrregularPlacementCandidate,
+  IrregularTransform,
+  type IrregularNestingSettings,
+  type IrregularPreparedPiece
+} from '@shared/irregular/domain.js'
+import {
+  analyzeCanonicalLayoutStructure,
+  assertCanonicalGridLegalLayout,
+  canonicalCollisionLayoutIdentity
+} from '../../irregular/canonicalLayoutGeometry.js'
+import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
+import { PlacementValidation } from '../../irregular/placementValidation.js'
+import {
+  IrregularNfpIfpCandidateMemoScope,
+  NfpIfpService
+} from '../../irregular/services.js'
+import {
+  measureRelaxationMetrics,
+  type IntrinsicRelaxationMetrics
+} from './overlapRelaxation.js'
+import { isAdmissibleTargetedImprovement } from './targetedExactLns.js'
+
+export interface IntrinsicTwoPieceInterfaceReconstructionResult {
+  readonly status:
+    | 'completed'
+    | 'invalid-seed'
+    | 'deadline-exhausted'
+    | 'candidate-cap-exhausted'
+  readonly runtimeMs: number
+  readonly maximumRuntimeMs: number
+  readonly maximumCandidateEvaluations: number
+  readonly candidateEvaluations: number
+  readonly pairCount: number
+  readonly orderCount: number
+  readonly exactEndpointCount: number
+  readonly admissibleEndpointCount: number
+  readonly detachedPieceIds: ReadonlyArray<PieceId>
+  readonly interfacePieceIds: ReadonlyArray<PieceId>
+  readonly selectedPair: readonly [PieceId, PieceId] | undefined
+  readonly selectedOrder: ReadonlyArray<PieceId> | undefined
+  readonly seedMetrics: IntrinsicRelaxationMetrics | undefined
+  readonly selectedMetrics: IntrinsicRelaxationMetrics | undefined
+  readonly accepted: boolean
+  readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+}
+
+interface ExactCandidate {
+  readonly pair: readonly [PieceId, PieceId]
+  readonly order: ReadonlyArray<PieceId>
+  readonly identity: string
+  readonly metrics: IntrinsicRelaxationMetrics
+  readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+}
+
+interface CandidateBudget {
+  count: number
+  exhausted: boolean
+}
+
+const DEFAULT_MAXIMUM_RUNTIME_MS = 30_000
+const DEFAULT_MAXIMUM_CANDIDATE_EVALUATIONS = 200_000
+
+/**
+ * Reconstructs one detached piece together with one piece from the largest
+ * contact component, without beam or local-fanout truncation.
+ */
+export function runIntrinsicTwoPieceInterfaceReconstruction(input: {
+  readonly sheet: SheetSpec
+  readonly allPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly seedPlaced: ReadonlyArray<IrregularPlacedPiece>
+  readonly maximumRuntimeMs?: number
+  readonly maximumCandidateEvaluations?: number
+}): Effect.Effect<
+  IntrinsicTwoPieceInterfaceReconstructionResult,
+  unknown,
+  GeometryKernel | GeometrySettings | NfpIfpService
+> {
+  return Effect.gen(function* () {
+    const startedAt = performance.now()
+    const maximumRuntimeMs = Math.max(
+      1,
+      input.maximumRuntimeMs ?? DEFAULT_MAXIMUM_RUNTIME_MS
+    )
+    const maximumCandidateEvaluations = Math.max(
+      1,
+      Math.floor(
+        input.maximumCandidateEvaluations ??
+          DEFAULT_MAXIMUM_CANDIDATE_EVALUATIONS
+      )
+    )
+    const settings = yield* GeometrySettings
+    const geometryKernel = yield* GeometryKernel
+    const nfpIfpService = yield* NfpIfpService
+    const seedMetrics = measureRelaxationMetrics(input.seedPlaced)
+    const structure = analyzeCanonicalLayoutStructure(
+      input.sheet,
+      input.seedPlaced
+    )
+    if (
+      seedMetrics === undefined ||
+      structure === undefined ||
+      !assertCanonicalGridLegalLayout(input.sheet, input.seedPlaced)
+    ) {
+      return invalidResult({
+        input,
+        startedAt,
+        maximumRuntimeMs,
+        maximumCandidateEvaluations,
+        seedMetrics
+      })
+    }
+    const largestComponent = [...structure.positiveContactComponents]
+      .toSorted(
+        (first, second) =>
+          second.length - first.length ||
+          componentKey(first).localeCompare(componentKey(second))
+      )[0]
+    const interfacePieceIds = [...(largestComponent ?? [])].toSorted()
+    const interfacePieceIdSet = new Set(interfacePieceIds)
+    const detachedPieceIds = input.seedPlaced
+      .map(placedPieceId)
+      .filter((pieceId) => !interfacePieceIdSet.has(pieceId))
+      .toSorted()
+    const preparedById = new Map(
+      input.allPreparedPieces.map(
+        (piece) => [preparedPieceId(piece), piece] as const
+      )
+    )
+    const incumbentById = new Map(
+      input.seedPlaced.map((piece) => [placedPieceId(piece), piece] as const)
+    )
+    const memoScope = new IrregularNfpIfpCandidateMemoScope()
+    const budget: CandidateBudget = { count: 0, exhausted: false }
+    const acceptedCandidates: ExactCandidate[] = []
+    const seenExactIdentities = new Set<string>()
+    let exactEndpointCount = 0
+    let admissibleEndpointCount = 0
+    let orderCount = 0
+    let deadlineExhausted = false
+
+    outer: for (const detachedPieceId of detachedPieceIds) {
+      for (const interfacePieceId of interfacePieceIds) {
+        const pair = [detachedPieceId, interfacePieceId] as const
+        const frozen = input.seedPlaced.filter(
+          (entry) => !pair.includes(placedPieceId(entry))
+        )
+        for (const order of [
+          [detachedPieceId, interfacePieceId],
+          [interfacePieceId, detachedPieceId]
+        ] as const) {
+          orderCount += 1
+          if (performance.now() - startedAt >= maximumRuntimeMs) {
+            deadlineExhausted = true
+            break outer
+          }
+          const firstPiece = preparedById.get(order[0])
+          const secondPiece = preparedById.get(order[1])
+          if (firstPiece === undefined || secondPiece === undefined) continue
+          const firstCandidates = yield* enumeratePlacedCandidates({
+            sheet: input.sheet,
+            placed: frozen,
+            piece: firstPiece,
+            incumbent: incumbentById.get(order[0]),
+            settings,
+            geometryKernel,
+            nfpIfpService,
+            memoScope,
+            budget,
+            maximumCandidateEvaluations
+          })
+          if (budget.exhausted) break outer
+          for (const firstPlaced of firstCandidates) {
+            if (performance.now() - startedAt >= maximumRuntimeMs) {
+              deadlineExhausted = true
+              break outer
+            }
+            const secondCandidates = yield* enumeratePlacedCandidates({
+              sheet: input.sheet,
+              placed: [...frozen, firstPlaced],
+              piece: secondPiece,
+              incumbent: incumbentById.get(order[1]),
+              settings,
+              geometryKernel,
+              nfpIfpService,
+              memoScope,
+              budget,
+              maximumCandidateEvaluations
+            })
+            if (budget.exhausted) break outer
+            for (const secondPlaced of secondCandidates) {
+              const replacements = new Map([
+                [order[0], firstPlaced],
+                [order[1], secondPlaced]
+              ])
+              const candidateLayout = input.seedPlaced.map(
+                (entry) => replacements.get(placedPieceId(entry)) ?? entry
+              )
+              if (
+                !assertCanonicalGridLegalLayout(input.sheet, candidateLayout)
+              ) {
+                continue
+              }
+              const identity =
+                canonicalCollisionLayoutIdentity(candidateLayout)
+              if (
+                identity === undefined ||
+                seenExactIdentities.has(identity)
+              ) {
+                continue
+              }
+              seenExactIdentities.add(identity)
+              exactEndpointCount += 1
+              const metrics = measureRelaxationMetrics(candidateLayout)
+              if (
+                metrics === undefined ||
+                !isAdmissibleTargetedImprovement(seedMetrics, metrics)
+              ) {
+                continue
+              }
+              admissibleEndpointCount += 1
+              acceptedCandidates.push({
+                pair,
+                order,
+                identity,
+                metrics,
+                placedCollisionGeometries: candidateLayout
+              })
+            }
+          }
+        }
+      }
+    }
+
+    acceptedCandidates.sort(compareCandidates)
+    const selected = acceptedCandidates[0]
+    return {
+      status: deadlineExhausted
+        ? 'deadline-exhausted'
+        : budget.exhausted
+          ? 'candidate-cap-exhausted'
+          : 'completed',
+      runtimeMs: performance.now() - startedAt,
+      maximumRuntimeMs,
+      maximumCandidateEvaluations,
+      candidateEvaluations: budget.count,
+      pairCount: detachedPieceIds.length * interfacePieceIds.length,
+      orderCount,
+      exactEndpointCount,
+      admissibleEndpointCount,
+      detachedPieceIds,
+      interfacePieceIds,
+      selectedPair: selected?.pair,
+      selectedOrder: selected?.order,
+      seedMetrics,
+      selectedMetrics: selected?.metrics ?? seedMetrics,
+      accepted: selected !== undefined,
+      placedCollisionGeometries:
+        selected?.placedCollisionGeometries ?? input.seedPlaced
+    }
+  })
+}
+
+function enumeratePlacedCandidates(input: {
+  readonly sheet: SheetSpec
+  readonly placed: ReadonlyArray<IrregularPlacedPiece>
+  readonly piece: IrregularPreparedPiece
+  readonly incumbent: IrregularPlacedPiece | undefined
+  readonly settings: IrregularNestingSettings
+  readonly geometryKernel: GeometryKernel.Service
+  readonly nfpIfpService: NfpIfpService
+  readonly memoScope: IrregularNfpIfpCandidateMemoScope
+  readonly budget: CandidateBudget
+  readonly maximumCandidateEvaluations: number
+}): Effect.Effect<ReadonlyArray<IrregularPlacedPiece>, unknown> {
+  return Effect.gen(function* () {
+    const result: IrregularPlacedPiece[] = []
+    const seen = new Set<string>()
+    const transforms = [...input.piece.transforms].toSorted(
+      (first, second) =>
+        first.index - second.index ||
+        first.rotationDeg - second.rotationDeg ||
+        Number(first.mirrored) - Number(second.mirrored) ||
+        first.reason.localeCompare(second.reason)
+    )
+    for (const transform of transforms) {
+      const moving = yield* input.geometryKernel.transformCollisionGeometry({
+        geometry: input.piece.collisionGeometry,
+        transform
+      })
+      const generated =
+        yield* input.nfpIfpService.generatePlacementCandidates({
+          sheet: input.sheet,
+          placed: input.placed,
+          moving,
+          settings: input.settings,
+          candidateDomain: 'sheet',
+          candidateMemoScope: input.memoScope
+        })
+      const candidates = [...generated]
+      if (
+        input.incumbent !== undefined &&
+        input.incumbent.collisionGeometry.transform.index === transform.index
+      ) {
+        const incumbentCandidate = new IrregularPlacementCandidate({
+          pieceId: preparedPieceId(input.piece),
+          transform,
+          point: {
+            x: input.incumbent.placement.transform.translateX,
+            y: input.incumbent.placement.transform.translateY
+          },
+          diagnostics: []
+        })
+        const legal = yield* PlacementValidation.check({
+          sheet: input.sheet,
+          placed: input.placed,
+          moving,
+          candidate: incumbentCandidate
+        })
+        if (legal) candidates.push(incumbentCandidate)
+      }
+      for (const candidate of candidates) {
+        if (input.budget.count >= input.maximumCandidateEvaluations) {
+          input.budget.exhausted = true
+          return result
+        }
+        input.budget.count += 1
+        const key = `${transform.index}:${candidate.point.x}:${candidate.point.y}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        result.push(
+          new IrregularPlacedPiece({
+            placement: makePlacement(input.piece, candidate),
+            collisionGeometry: moving
+          })
+        )
+      }
+    }
+    return result
+  })
+}
+
+function compareCandidates(
+  first: ExactCandidate,
+  second: ExactCandidate
+): number {
+  const pairs: ReadonlyArray<readonly [number, number]> = [
+    [
+      first.metrics.topology.positiveContactComponentCount,
+      second.metrics.topology.positiveContactComponentCount
+    ],
+    [
+      first.metrics.topology.isolatedPieceCount,
+      second.metrics.topology.isolatedPieceCount
+    ],
+    [
+      -first.metrics.topology.largestPositiveContactComponentSize,
+      -second.metrics.topology.largestPositiveContactComponentSize
+    ],
+    [first.metrics.maxSide, second.metrics.maxSide],
+    [first.metrics.area, second.metrics.area],
+    [first.metrics.span, second.metrics.span]
+  ]
+  for (const [left, right] of pairs) {
+    if (left !== right) return left < right ? -1 : 1
+  }
+  return (
+    first.pair[0].localeCompare(second.pair[0]) ||
+    first.pair[1].localeCompare(second.pair[1]) ||
+    first.order.join('|').localeCompare(second.order.join('|')) ||
+    first.identity.localeCompare(second.identity)
+  )
+}
+
+function makePlacement(
+  piece: IrregularPreparedPiece,
+  candidate: IrregularPlacementCandidate
+): IrregularPlacement {
+  const placementInput = {
+    sourcePieceId: piece.source.id,
+    placementReference: piece.collisionGeometry.placementReference,
+    transform: new IrregularTransform({
+      translateX: candidate.point.x,
+      translateY: candidate.point.y,
+      rotationDeg: candidate.transform.rotationDeg,
+      mirrored: candidate.transform.mirrored
+    })
+  }
+  return piece.pieceId === undefined
+    ? new IrregularPlacement(placementInput)
+    : new IrregularPlacement({ ...placementInput, pieceId: piece.pieceId })
+}
+
+function invalidResult(input: {
+  readonly input: {
+    readonly seedPlaced: ReadonlyArray<IrregularPlacedPiece>
+  }
+  readonly startedAt: number
+  readonly maximumRuntimeMs: number
+  readonly maximumCandidateEvaluations: number
+  readonly seedMetrics: IntrinsicRelaxationMetrics | undefined
+}): IntrinsicTwoPieceInterfaceReconstructionResult {
+  return {
+    status: 'invalid-seed',
+    runtimeMs: performance.now() - input.startedAt,
+    maximumRuntimeMs: input.maximumRuntimeMs,
+    maximumCandidateEvaluations: input.maximumCandidateEvaluations,
+    candidateEvaluations: 0,
+    pairCount: 0,
+    orderCount: 0,
+    exactEndpointCount: 0,
+    admissibleEndpointCount: 0,
+    detachedPieceIds: [],
+    interfacePieceIds: [],
+    selectedPair: undefined,
+    selectedOrder: undefined,
+    seedMetrics: input.seedMetrics,
+    selectedMetrics: input.seedMetrics,
+    accepted: false,
+    placedCollisionGeometries: input.input.seedPlaced
+  }
+}
+
+function componentKey(pieceIds: ReadonlyArray<PieceId>): string {
+  return [...pieceIds].toSorted().join('|')
+}
+
+function preparedPieceId(piece: IrregularPreparedPiece): PieceId {
+  return piece.pieceId ?? piece.source.id
+}
+
+function placedPieceId(piece: IrregularPlacedPiece): PieceId {
+  return piece.placement.pieceId ?? piece.placement.sourcePieceId
+}
