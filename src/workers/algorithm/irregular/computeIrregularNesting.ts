@@ -63,6 +63,7 @@ import {
   type IntrinsicCapacityPreflightOutcome
 } from './intrinsicCapacityPreflight.js'
 import type { IntrinsicCapacityPrefixSource } from './intrinsicCapacityPrefixes.js'
+import type { IntrinsicCapacityEndpoint } from './intrinsicCapacityEndpoint.js'
 import {
   measureIntrinsicCapacityShadowTelemetry,
   type IntrinsicCapacityShadowTelemetry
@@ -110,6 +111,12 @@ export interface ComputeIrregularNestingOptions {
   readonly captureCapacityShadowTelemetry?: boolean
   /** observer-only protected warm-prefix continuations; never consumed by selection. */
   readonly captureCapacityWarmPrefixTelemetry?: boolean
+  /** benchmark artifact hook; receives exact warm endpoints without selecting them. */
+  readonly onCapacityWarmPrefixLane?: (lane: {
+    readonly sourceRole: string
+    readonly prefixDepth: number
+    readonly endpoint: IntrinsicCapacityEndpoint | undefined
+  }) => void
 }
 
 /** Plain algorithm output before any worker protocol or history DTO adaptation. */
@@ -304,7 +311,10 @@ function coordinateIntrinsicSharedArchive(
           : {}),
         ...(input.options?.captureCapacityWarmPrefixTelemetry === true
           ? { captureWarmPrefixTelemetry: true }
-          : {})
+          : {}),
+        ...(input.options?.onCapacityWarmPrefixLane === undefined
+          ? {}
+          : { onWarmPrefixLane: input.options.onCapacityWarmPrefixLane })
       }
       if (preflight.kind === 'proven_impossible') {
         const capacity = yield* runIntrinsicCapacityMode({

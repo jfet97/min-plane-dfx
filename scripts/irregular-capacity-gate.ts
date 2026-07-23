@@ -9,7 +9,10 @@ import {
   DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
   makeCompactQualityIrregularOptimizerSettings
 } from '../src/shared/irregular/defaults.js'
-import { IrregularNestingSettings } from '../src/shared/irregular/domain.js'
+import {
+  IrregularNestingSettings,
+  type IrregularPlacedPiece
+} from '../src/shared/irregular/domain.js'
 import { makePresetShapeDocument, type PresetShapeKind } from '../src/shared/presetShapes.js'
 import { preparePieces } from '../src/shared/preparePieces.js'
 import {
@@ -19,6 +22,7 @@ import {
 } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import {
   compareIntrinsicCapacityObjectives,
+  type IntrinsicCapacityEndpoint,
   type IntrinsicCapacityObjective
 } from '../src/workers/algorithm/irregular/intrinsicCapacityEndpoint.js'
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
@@ -227,7 +231,13 @@ async function makeFixtureRequest(fixture: CapacityFixture): Promise<NestingRequ
 function absoluteCollisionPolygons(
   result: IrregularComputeResult
 ): ReadonlyArray<ReadonlyArray<LayoutPoint>> {
-  return result.placedCollisionGeometries.map(({ placement, collisionGeometry }) =>
+  return absolutePlacedCollisionPolygons(result.placedCollisionGeometries)
+}
+
+function absolutePlacedCollisionPolygons(
+  placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+): ReadonlyArray<ReadonlyArray<LayoutPoint>> {
+  return placedCollisionGeometries.map(({ placement, collisionGeometry }) =>
     collisionGeometry.polygon.points.map(({ x, y }) => ({
       x: x + placement.transform.translateX,
       y: y + placement.transform.translateY
@@ -270,6 +280,12 @@ interface CapacityRunReport {
   readonly canonicalSha256: string | undefined
   readonly terminationReason: string | undefined
   readonly shadowTelemetry: IrregularComputeResult['capacityShadowTelemetry']
+  readonly warmLaneArtifacts: ReadonlyArray<{
+    readonly sourceRole: string
+    readonly prefixDepth: number
+    readonly canonicalGeometryHash: string
+    readonly artifactPath: string
+  }>
   readonly capacity:
     | {
         readonly prefixes: unknown
@@ -310,8 +326,16 @@ async function runArm(
     ...(arm === 'cold-only' ? { capacityControlArm: 'disable-prefix-reuse' } : {}),
     captureCapacityPhaseTimings: true,
     captureCapacityShadowTelemetry: true,
-    captureCapacityWarmPrefixTelemetry: true
+    captureCapacityWarmPrefixTelemetry: true,
+    onCapacityWarmPrefixLane: (lane) => {
+      warmLaneEndpoints.push(lane)
+    }
   }
+  const warmLaneEndpoints: Array<{
+    readonly sourceRole: string
+    readonly prefixDepth: number
+    readonly endpoint: IntrinsicCapacityEndpoint | undefined
+  }> = []
   const startedAt = performance.now()
   const result = await Effect.runPromise(
     computeIrregularNesting(request, options).pipe(
@@ -328,6 +352,24 @@ async function runArm(
   const polygons = absoluteCollisionPolygons(result)
   const canonical = polygons.length === 0 ? undefined : canonicalizeIrregularLayout(polygons)
   await writeFile(artifactPath, renderSvg(request.sheet, polygons))
+  const warmLaneArtifacts: CapacityRunReport['warmLaneArtifacts'][number][] = []
+  for (const lane of warmLaneEndpoints) {
+    if (lane.endpoint === undefined) continue
+    const warmArtifactPath = `${artifactPath.slice(0, -4)}-warm-${lane.sourceRole}-${lane.prefixDepth}.svg`
+    await writeFile(
+      warmArtifactPath,
+      renderSvg(
+        request.sheet,
+        absolutePlacedCollisionPolygons(lane.endpoint.placedCollisionGeometries)
+      )
+    )
+    warmLaneArtifacts.push({
+      sourceRole: lane.sourceRole,
+      prefixDepth: lane.prefixDepth,
+      canonicalGeometryHash: lane.endpoint.canonicalGeometryHash,
+      artifactPath: warmArtifactPath
+    })
+  }
   const requestIds = request.pieces.map(({ id }) => id)
   const accountedIds = [
     ...result.placedCollisionGeometries.map(
@@ -360,6 +402,7 @@ async function runArm(
     canonicalSha256: canonical?.sha256,
     terminationReason: result.portfolio.terminationReason,
     shadowTelemetry: result.capacityShadowTelemetry,
+    warmLaneArtifacts,
     capacity:
       trace === undefined
         ? undefined

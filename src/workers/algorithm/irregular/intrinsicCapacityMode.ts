@@ -120,6 +120,12 @@ export interface RunIntrinsicCapacityModeInput {
   readonly capturePhaseTimings?: boolean
   /** Runs protected warm-prefix lanes as observers without changing selection. */
   readonly captureWarmPrefixTelemetry?: boolean
+  /** Benchmark artifact hook; never read by selection or production routing. */
+  readonly onWarmPrefixLane?: (lane: {
+    readonly sourceRole: string
+    readonly prefixDepth: number
+    readonly endpoint: IntrinsicCapacityEndpoint | undefined
+  }) => void
   /** Coordinator-measured preflight runtime carried into the trace. */
   readonly preflightRuntimeMs?: number
   /** Coordinator-measured complete archive runtime carried into the trace. */
@@ -220,6 +226,11 @@ export function runIntrinsicCapacityMode(
           )
         }
         const endpoint = lane.endpoints[0]
+        input.onWarmPrefixLane?.({
+          sourceRole: descriptor.role,
+          prefixDepth: descriptor.depth,
+          endpoint
+        })
         measuredLanes.push({
           sourceRole: descriptor.role,
           prefixDepth: descriptor.depth,
