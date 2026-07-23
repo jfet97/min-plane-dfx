@@ -170,6 +170,95 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(constructed.state.placedCollisionGeometries).toHaveLength(0)
     expect(constructed.state.remainingPreparedPieces).toHaveLength(2)
     expect(constructed.stepTrace).toEqual([])
+    expect(constructed.checkpoint).toBeUndefined()
+  })
+
+  it('reproduces uninterrupted canonical construction through every-piece resume', async () => {
+    const pieces = [
+      preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('second', rectanglePoints(2, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('third', rectanglePoints(1, 2), [transform(0, 0), transform(1, 90)]),
+      preparedPiece('fourth', rectanglePoints(2, 1), [transform(0, 0), transform(1, 90)])
+    ]
+    const run = (
+      checkpoint?: Parameters<typeof constructIntrinsicStrictState>[0]['checkpoint']
+    ) =>
+      Effect.runPromise(
+        constructIntrinsicStrictState({
+          allPreparedPieces: pieces,
+          remainingPreparedPieces: pieces,
+          frozenPlaced: [],
+          candidateMode: 'pure-growth',
+          producerRole: 'canonical-grid',
+          captureCandidateEvaluationCount: true,
+          ...(checkpoint === undefined ? {} : { checkpoint }),
+          ...(checkpoint === undefined ||
+          checkpoint.nextPieceIndex < pieces.length - 1
+            ? { maximumCompletedPieceBoundaries: 1 }
+            : {})
+        }).pipe(
+          Effect.provide(GeometryKernel.Live),
+          Effect.provide(GeometrySettings.Live),
+          Effect.provide(NfpIfpServiceLive)
+        )
+      )
+    const uninterrupted = await Effect.runPromise(
+      constructIntrinsicStrictState({
+        allPreparedPieces: pieces,
+        remainingPreparedPieces: pieces,
+        frozenPlaced: [],
+        candidateMode: 'pure-growth',
+        producerRole: 'canonical-grid',
+        captureCandidateEvaluationCount: true
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+
+    let resumed = await run()
+    const resumeBoundaries: number[] = []
+    while (resumed.checkpoint !== undefined) {
+      resumeBoundaries.push(resumed.checkpoint.nextPieceIndex)
+      resumed = await run(resumed.checkpoint)
+    }
+
+    expect(resumeBoundaries).toEqual([1, 2, 3])
+    expect(resumed.pauseReason).toBeUndefined()
+    expect(resumed.state).toEqual(uninterrupted.state)
+    expect(resumed.stepTrace).toEqual(uninterrupted.stepTrace)
+    expect(resumed.gapFillEvidence).toEqual(uninterrupted.gapFillEvidence)
+    expect(resumed.candidateEvaluationCount).toBe(
+      uninterrupted.candidateEvaluationCount
+    )
+    expect(resumed.state.placementOrder).toEqual(
+      uninterrupted.state.placementOrder
+    )
+
+    const firstCheckpointed = await run()
+    const checkpoint = firstCheckpointed.checkpoint
+    if (checkpoint === undefined) throw new Error('expected direct checkpoint')
+    await expect(
+      Effect.runPromise(
+        constructIntrinsicStrictState({
+          allPreparedPieces: pieces,
+          remainingPreparedPieces: pieces,
+          frozenPlaced: [],
+          candidateMode: 'legacy-absolute-envelope',
+          producerRole: 'canonical-grid',
+          checkpoint,
+          maximumCompletedPieceBoundaries: 1
+        }).pipe(
+          Effect.provide(GeometryKernel.Live),
+          Effect.provide(GeometrySettings.Live),
+          Effect.provide(NfpIfpServiceLive)
+        )
+      )
+    ).rejects.toMatchObject({
+      _tag: 'IntrinsicStrictDecoderError',
+      operation: 'directCheckpoint'
+    })
   })
 
   it('preserves E1 output through the empty seeded-construction wrapper', async () => {

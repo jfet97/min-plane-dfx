@@ -151,6 +151,13 @@ reconciles them with aggregate and per-lane ledgers. It does not change
 complete construction, use terminal compactness as a scheduling signal, or
 allow warm and cold states to share survivor slots.
 
+The next complete-side seam is now isolated but not scheduled: the strict
+sheetless constructor has an opt-in, versioned checkpoint at fully committed
+piece boundaries. Resume retains its exact parent lineage and cumulative
+active-work/evaluation ledgers. Mid-piece evaluation caps remain terminal
+truncation, never checkpoints. Ordinary strict construction does not compute a
+checkpoint fingerprint, and complete archive retention/ranking is unchanged.
+
 Stage 5 shares only archive mechanics: exact admission validation, canonical
 deduplication, namespace storage, and terminal complete dominance. Complete and
 partial namespaces still provide different duplicate ownership and ranking

@@ -192,6 +192,15 @@ partial endpoints share exact archive storage mechanics but retain separate
 namespaces, survivor policies, and comparators; complete dominance is a
 terminal rule.
 
+The strict sheetless direct constructor also exposes an opt-in direct
+checkpoint below portfolio scheduling. A pause is legal only after one complete
+piece transition has compared all transform families, anchored the selected
+state, and retained its parent lineage. The checkpoint is sheetless and binds
+the producer mode, prepared request/settings fingerprint, exact state, pending
+suffix, traces, and cumulative active-work/evaluation ledgers. Candidate caps
+that stop within a piece remain non-resumable truncation. Fingerprinting is
+disabled on the ordinary path.
+
 An additional observer-only experimental complete cohort makes one explicit
 place/defer decision by moving the first pending piece to a second pass. Its
 checkpoint binds the exact future-decision partition and ledgers. It exposes

@@ -7,6 +7,7 @@ import {
   IrregularPlacedPiece,
   IrregularPlacement,
   IrregularPlacementCandidate,
+  type IrregularNestingSettings,
   IrregularPreparedPiece,
   IrregularTransform,
   IrregularTransformCandidate,
@@ -151,8 +152,32 @@ export interface IntrinsicStrictConstructResult {
   readonly gapFillEvidence: ReadonlyArray<IntrinsicStrictGapFillEvidence>
   readonly candidateEvaluationCount?: number
   readonly truncationReason?: 'maximum-candidate-evaluations'
+  readonly pauseReason?: 'completed-piece-boundary'
+  readonly checkpoint?: IntrinsicStrictDirectCheckpoint
   readonly phaseTimings?: IntrinsicStrictConstructPhaseTimings
   readonly runtimeMs: number
+}
+
+export const INTRINSIC_STRICT_DIRECT_CHECKPOINT_VERSION =
+  'intrinsic-strict-direct-checkpoint-v1' as const
+
+export interface IntrinsicStrictDirectCheckpoint {
+  readonly version: typeof INTRINSIC_STRICT_DIRECT_CHECKPOINT_VERSION
+  readonly producerRole: string
+  readonly requestFingerprint: string
+  readonly state: IrregularBeamState
+  readonly nextPieceIndex: number
+  readonly stepTrace: ReadonlyArray<IntrinsicStrictStepTrace>
+  readonly gapFillEvidence: ReadonlyArray<IntrinsicStrictGapFillEvidence>
+  readonly candidateEvaluationCount: number
+  readonly activeRuntimeMs: number
+  readonly phaseLedger: IntrinsicStrictDirectPhaseLedger | undefined
+}
+
+interface IntrinsicStrictDirectPhaseLedger {
+  readonly candidateGenerationMs: number
+  readonly candidateStateScoringMs: number
+  readonly candidateState: MutableCandidateStatePhaseTimings
 }
 
 export interface IntrinsicStrictConstructPhaseTimings {
@@ -231,6 +256,9 @@ export interface ConstructIntrinsicStrictStateInput {
   readonly maximumCandidateEvaluationCount?: number
   readonly captureCandidateEvaluationCount?: boolean
   readonly capturePhaseTimings?: boolean
+  readonly producerRole?: string
+  readonly checkpoint?: IntrinsicStrictDirectCheckpoint
+  readonly maximumCompletedPieceBoundaries?: number
   readonly featureContactObserver?: IntrinsicStrictFeatureContactObserver
   readonly control?: IrregularNfpIfpControl
 }
@@ -365,6 +393,17 @@ export function constructIntrinsicStrictState(
       input.maximumCandidateEvaluationCount === undefined
         ? undefined
         : Math.max(1, Math.floor(input.maximumCandidateEvaluationCount))
+    const maximumCompletedPieceBoundaries =
+      input.maximumCompletedPieceBoundaries === undefined
+        ? undefined
+        : Math.max(1, Math.floor(input.maximumCompletedPieceBoundaries))
+    const captureCandidateEvaluationCount =
+      input.captureCandidateEvaluationCount === true ||
+      maximumCandidateEvaluationCount !== undefined ||
+      maximumCompletedPieceBoundaries !== undefined ||
+      input.checkpoint !== undefined
+    const checkpointingEnabled =
+      maximumCompletedPieceBoundaries !== undefined || input.checkpoint !== undefined
     const capturePhaseTimings = input.capturePhaseTimings === true
     const partition = validateSeedPartition(input)
     if (partition !== undefined) {
@@ -372,12 +411,41 @@ export function constructIntrinsicStrictState(
         new IntrinsicStrictDecoderError({ operation: 'seedPartition', message: partition })
       )
     }
+    const producerRole = input.producerRole ?? 'intrinsic-strict'
+    const requestFingerprint = checkpointingEnabled
+      ? intrinsicStrictDirectRequestFingerprint({
+          allPreparedPieces: input.allPreparedPieces,
+          remainingPreparedPieces: input.remainingPreparedPieces,
+          frozenPlaced: input.frozenPlaced,
+          candidateMode: input.candidateMode,
+          settings,
+          producerRole
+        })
+      : undefined
+    const checkpointError = validateIntrinsicStrictDirectCheckpoint({
+      checkpoint: input.checkpoint,
+      ...(requestFingerprint === undefined ? {} : { requestFingerprint }),
+      producerRole,
+      remainingPreparedPieces: input.remainingPreparedPieces
+    })
+    if (checkpointError !== undefined) {
+      return yield* Effect.fail(
+        new IntrinsicStrictDecoderError({
+          operation: 'directCheckpoint',
+          message: checkpointError
+        })
+      )
+    }
+    const previousActiveRuntimeMs = input.checkpoint?.activeRuntimeMs ?? 0
     const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
     const control: IrregularNfpIfpControl = {
       checkpoint: (phase) =>
         Effect.gen(function* () {
           if (input.control !== undefined) yield* input.control.checkpoint(phase)
-          if (performance.now() - startedAt >= maximumRuntimeMs) {
+          if (
+            previousActiveRuntimeMs + performance.now() - startedAt >=
+            maximumRuntimeMs
+          ) {
             return yield* Effect.fail(
               new IrregularNfpIfpControlAbortError({
                 reason: 'deadline',
@@ -387,11 +455,13 @@ export function constructIntrinsicStrictState(
           }
         })
     }
-    let state = new IrregularBeamState({
-      remainingPreparedPieces: input.remainingPreparedPieces,
-      placedCollisionGeometries: input.frozenPlaced,
-      placementOrder: input.frozenPlaced.map(placedPieceId)
-    }).withBottomLeftAnchored()
+    let state =
+      input.checkpoint?.state ??
+      new IrregularBeamState({
+        remainingPreparedPieces: input.remainingPreparedPieces,
+        placedCollisionGeometries: input.frozenPlaced,
+        placementOrder: input.frozenPlaced.map(placedPieceId)
+      }).withBottomLeftAnchored()
     if (
       state === undefined ||
       (state.placedCollisionGeometries.length > 0 &&
@@ -407,29 +477,48 @@ export function constructIntrinsicStrictState(
         })
       )
     }
-    const stepTrace: IntrinsicStrictStepTrace[] = []
-    const gapFillEvidence: IntrinsicStrictGapFillEvidence[] = []
-    let candidateEvaluationCount = 0
+    const stepTrace: IntrinsicStrictStepTrace[] = [
+      ...(input.checkpoint?.stepTrace ?? [])
+    ]
+    const gapFillEvidence: IntrinsicStrictGapFillEvidence[] = [
+      ...(input.checkpoint?.gapFillEvidence ?? [])
+    ]
+    let candidateEvaluationCount = input.checkpoint?.candidateEvaluationCount ?? 0
     let truncationReason: IntrinsicStrictConstructResult['truncationReason']
-    let candidateGenerationMs = 0
-    let candidateStateScoringMs = 0
+    let pauseReason: IntrinsicStrictConstructResult['pauseReason']
+    let candidateGenerationMs =
+      input.checkpoint?.phaseLedger?.candidateGenerationMs ?? 0
+    let candidateStateScoringMs =
+      input.checkpoint?.phaseLedger?.candidateStateScoringMs ?? 0
+    const previousCandidateStatePhaseTimings =
+      input.checkpoint?.phaseLedger?.candidateState
     const candidateStatePhaseTimings: MutableCandidateStatePhaseTimings = {
-      placementObjectMs: 0,
-      statePlacementMs: 0,
-      statePlacementCanonicalEntryKeyMs: 0,
-      statePlacementSpatialIndexMs: 0,
-      statePlacementContactMeasurementMs: 0,
-      statePlacementStateAssemblyMs: 0,
-      statePlacementBookkeepingMs: 0,
-      bottomLeftAnchoringMs: 0,
-      envelopeScoringMs: 0,
-      gapClassificationMs: 0,
-      candidateSelectionMs: 0,
-      totalMs: 0
+      placementObjectMs: previousCandidateStatePhaseTimings?.placementObjectMs ?? 0,
+      statePlacementMs: previousCandidateStatePhaseTimings?.statePlacementMs ?? 0,
+      statePlacementCanonicalEntryKeyMs:
+        previousCandidateStatePhaseTimings?.statePlacementCanonicalEntryKeyMs ?? 0,
+      statePlacementSpatialIndexMs:
+        previousCandidateStatePhaseTimings?.statePlacementSpatialIndexMs ?? 0,
+      statePlacementContactMeasurementMs:
+        previousCandidateStatePhaseTimings?.statePlacementContactMeasurementMs ?? 0,
+      statePlacementStateAssemblyMs:
+        previousCandidateStatePhaseTimings?.statePlacementStateAssemblyMs ?? 0,
+      statePlacementBookkeepingMs:
+        previousCandidateStatePhaseTimings?.statePlacementBookkeepingMs ?? 0,
+      bottomLeftAnchoringMs:
+        previousCandidateStatePhaseTimings?.bottomLeftAnchoringMs ?? 0,
+      envelopeScoringMs: previousCandidateStatePhaseTimings?.envelopeScoringMs ?? 0,
+      gapClassificationMs:
+        previousCandidateStatePhaseTimings?.gapClassificationMs ?? 0,
+      candidateSelectionMs:
+        previousCandidateStatePhaseTimings?.candidateSelectionMs ?? 0,
+      totalMs: previousCandidateStatePhaseTimings?.totalMs ?? 0
     }
+    let completedPieceBoundaries = 0
+    const firstPieceIndex = input.checkpoint?.nextPieceIndex ?? 0
 
     pieceLoop: for (
-      let pieceIndex = 0;
+      let pieceIndex = firstPieceIndex;
       pieceIndex < input.remainingPreparedPieces.length;
       pieceIndex += 1
     ) {
@@ -501,10 +590,7 @@ export function constructIntrinsicStrictState(
               truncationReason = 'maximum-candidate-evaluations'
               break pieceLoop
             }
-            if (
-              maximumCandidateEvaluationCount !== undefined ||
-              input.captureCandidateEvaluationCount === true
-            ) {
+            if (captureCandidateEvaluationCount) {
               candidateEvaluationCount += 1
             }
             const scored = scoreCandidate({
@@ -679,9 +765,41 @@ export function constructIntrinsicStrictState(
           remainingPreparedPieces,
           unplacedPieceId: pieceId
         })
+      completedPieceBoundaries += 1
+      if (
+        maximumCompletedPieceBoundaries !== undefined &&
+        completedPieceBoundaries >= maximumCompletedPieceBoundaries &&
+        pieceIndex + 1 < input.remainingPreparedPieces.length
+      ) {
+        pauseReason = 'completed-piece-boundary'
+        break
+      }
     }
 
-    const runtimeMs = Math.max(0, performance.now() - startedAt)
+    const runtimeMs =
+      previousActiveRuntimeMs + Math.max(0, performance.now() - startedAt)
+    const nextPieceIndex = firstPieceIndex + completedPieceBoundaries
+    const checkpoint =
+      pauseReason === 'completed-piece-boundary' &&
+      requestFingerprint !== undefined
+        ? makeIntrinsicStrictDirectCheckpoint({
+            producerRole,
+            requestFingerprint,
+            state,
+            nextPieceIndex,
+            stepTrace,
+            gapFillEvidence,
+            candidateEvaluationCount,
+            activeRuntimeMs: runtimeMs,
+            phaseLedger: capturePhaseTimings
+              ? {
+                  candidateGenerationMs,
+                  candidateStateScoringMs,
+                  candidateState: candidateStatePhaseTimings
+                }
+              : undefined
+          })
+        : undefined
     const phaseTimings = capturePhaseTimings
       ? makeConstructPhaseTimings(
           runtimeMs,
@@ -694,8 +812,9 @@ export function constructIntrinsicStrictState(
       state,
       stepTrace,
       gapFillEvidence,
-      ...(maximumCandidateEvaluationCount === undefined &&
-      input.captureCandidateEvaluationCount !== true
+      ...(pauseReason === undefined ? {} : { pauseReason }),
+      ...(checkpoint === undefined ? {} : { checkpoint }),
+      ...(!captureCandidateEvaluationCount
         ? {}
         : {
             candidateEvaluationCount,
@@ -705,6 +824,136 @@ export function constructIntrinsicStrictState(
       runtimeMs
     }
   })
+}
+
+function makeIntrinsicStrictDirectCheckpoint(input: {
+  readonly producerRole: string
+  readonly requestFingerprint: string
+  readonly state: IrregularBeamState
+  readonly nextPieceIndex: number
+  readonly stepTrace: ReadonlyArray<IntrinsicStrictStepTrace>
+  readonly gapFillEvidence: ReadonlyArray<IntrinsicStrictGapFillEvidence>
+  readonly candidateEvaluationCount: number
+  readonly activeRuntimeMs: number
+  readonly phaseLedger: IntrinsicStrictDirectPhaseLedger | undefined
+}): IntrinsicStrictDirectCheckpoint {
+  return {
+    version: INTRINSIC_STRICT_DIRECT_CHECKPOINT_VERSION,
+    producerRole: input.producerRole,
+    requestFingerprint: input.requestFingerprint,
+    state: input.state,
+    nextPieceIndex: input.nextPieceIndex,
+    stepTrace: [...input.stepTrace],
+    gapFillEvidence: [...input.gapFillEvidence],
+    candidateEvaluationCount: input.candidateEvaluationCount,
+    activeRuntimeMs: input.activeRuntimeMs,
+    phaseLedger: input.phaseLedger
+  }
+}
+
+function validateIntrinsicStrictDirectCheckpoint(input: {
+  readonly checkpoint: IntrinsicStrictDirectCheckpoint | undefined
+  readonly requestFingerprint?: string
+  readonly producerRole: string
+  readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+}): string | undefined {
+  const checkpoint = input.checkpoint
+  if (checkpoint === undefined) return undefined
+  if (input.requestFingerprint === undefined) {
+    return 'direct checkpoint fingerprinting is not enabled.'
+  }
+  if (checkpoint.version !== INTRINSIC_STRICT_DIRECT_CHECKPOINT_VERSION) {
+    return `unsupported direct checkpoint version ${checkpoint.version}.`
+  }
+  if (
+    checkpoint.producerRole !== input.producerRole ||
+    checkpoint.requestFingerprint !== input.requestFingerprint
+  ) {
+    return 'direct checkpoint producer or request fingerprint does not match.'
+  }
+  if (
+    !Number.isSafeInteger(checkpoint.nextPieceIndex) ||
+    checkpoint.nextPieceIndex <= 0 ||
+    checkpoint.nextPieceIndex >= input.remainingPreparedPieces.length ||
+    checkpoint.stepTrace.length !== checkpoint.nextPieceIndex ||
+    checkpoint.state.remainingPreparedPieces.length !==
+      input.remainingPreparedPieces.length - checkpoint.nextPieceIndex
+  ) {
+    return 'direct checkpoint is not positioned at a valid committed piece boundary.'
+  }
+  const expectedPendingIds = input.remainingPreparedPieces
+    .slice(checkpoint.nextPieceIndex)
+    .map(preparedPieceId)
+  const checkpointPendingIds =
+    checkpoint.state.remainingPreparedPieces.map(preparedPieceId)
+  if (
+    expectedPendingIds.length !== checkpointPendingIds.length ||
+    expectedPendingIds.some(
+      (pieceId, index) => pieceId !== checkpointPendingIds[index]
+    )
+  ) {
+    return 'direct checkpoint pending suffix does not match the prepared order.'
+  }
+  if (
+    !Number.isSafeInteger(checkpoint.candidateEvaluationCount) ||
+    checkpoint.candidateEvaluationCount < 0 ||
+    !Number.isFinite(checkpoint.activeRuntimeMs) ||
+    checkpoint.activeRuntimeMs < 0
+  ) {
+    return 'direct checkpoint budget ledger is invalid.'
+  }
+  return undefined
+}
+
+function intrinsicStrictDirectRequestFingerprint(input: {
+  readonly allPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly frozenPlaced: ReadonlyArray<IrregularPlacedPiece>
+  readonly candidateMode: IntrinsicStrictCandidateMode
+  readonly settings: IrregularNestingSettings
+  readonly producerRole: string
+}): string {
+  return createHash('sha256')
+    .update(
+      intrinsicStrictCanonicalJson({
+        version: INTRINSIC_STRICT_DIRECT_CHECKPOINT_VERSION,
+        producerRole: input.producerRole,
+        candidateMode: input.candidateMode,
+        settings: input.settings,
+        allPreparedPieces: input.allPreparedPieces.map((piece) => ({
+          pieceId: preparedPieceId(piece),
+          collisionGeometry: piece.collisionGeometry,
+          transforms: piece.transforms
+        })),
+        remainingPreparedIds: input.remainingPreparedPieces.map(preparedPieceId),
+        frozenPlacementOrder: input.frozenPlaced.map(placedPieceId),
+        frozenGeometryIdentity:
+          canonicalCollisionLayoutIdentity(input.frozenPlaced) ?? ''
+      })
+    )
+    .digest('hex')
+}
+
+function intrinsicStrictCanonicalJson(value: unknown): string {
+  if (typeof value === 'bigint') return JSON.stringify(value.toString())
+  if (value === null || typeof value !== 'object') return JSON.stringify(value)
+  if (Array.isArray(value)) {
+    return `[${value.map(intrinsicStrictCanonicalJson).join(',')}]`
+  }
+  if (value instanceof Map) {
+    const entries = [...value.entries()].toSorted(([first], [second]) =>
+      String(first).localeCompare(String(second))
+    )
+    return intrinsicStrictCanonicalJson(entries)
+  }
+  const fields = Object.entries(value)
+    .filter(([, fieldValue]) => fieldValue !== undefined)
+    .toSorted(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey))
+    .map(
+      ([key, fieldValue]) =>
+        `${JSON.stringify(key)}:${intrinsicStrictCanonicalJson(fieldValue)}`
+    )
+  return `{${fields.join(',')}}`
 }
 
 function makeConstructPhaseTimings(

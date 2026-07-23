@@ -136,6 +136,13 @@ not as completion of the roadmap. The next architecture must overlap useful
 capacity progress with protected complete work and address the visibly loose
 Triangle `300 x 300` partial without changing roomy-sheet complete identity.
 
+That design now begins with the smallest complete-side prerequisite: a
+versioned `canonical-grid` strict-constructor checkpoint after fully committed
+piece boundaries. The initial equivalence gate resumes after every piece and
+compares exact state, placement order, traces, and evaluation count with the
+uninterrupted constructor. It does not yet interleave the portfolio or claim a
+wall-time improvement.
+
 ### P0: Freeze the archive-only correctness and quality gate
 
 Establish the archive-only baseline before changing allocation or search.

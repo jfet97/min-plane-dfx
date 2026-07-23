@@ -325,6 +325,30 @@ The serial complete-miss cost remains, and the Triangle `300 x 300` endpoint is
 visually loose despite being exact cold. Both are explicit inputs to the next
 complete/capacity interleaving design.
 
+### Stage 4C: Direct Complete Piece-Boundary Checkpoint
+
+The next implementation seam is deliberately below the scheduler. The strict
+sheetless constructor can pause only after one whole prepared piece has
+compared every transform family, selected and anchored its winner, and committed
+the resulting `IrregularBeamState`. It never checkpoints the existing
+candidate-evaluation cap because that cap can stop mid-piece with incomplete
+family comparison.
+
+The versioned direct checkpoint binds the producer/candidate mode, prepared
+geometry and order, geometry settings, initial frozen seed, exact anchored
+state with parent lineage, pending suffix and next index, accumulated step/gap
+traces, candidate evaluations, cumulative active runtime, and optional phase
+ledger. Fingerprinting is opt-in with pause/resume and does not burden ordinary
+strict construction. The first falsifier resumes after every committed piece
+and requires exact final state, placement order, step trace, gap evidence, and
+evaluation-count equality with uninterrupted construction. Scheduler and
+archive integration remain intentionally unchanged at this step.
+
+Single-worker cooperative interleaving is not a settled wall-time
+optimization: the protected complete and capacity CPU work still sum. It first
+establishes reuse and truthful deadline chronology. A later wall-time claim
+requires independent parallel execution with a deterministic terminal join.
+
 ## Stage 5: Shared Exact Archive Mechanics
 
 Complete and partial endpoints now pass through one generic exact archive
