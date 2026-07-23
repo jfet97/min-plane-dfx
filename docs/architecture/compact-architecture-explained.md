@@ -389,10 +389,10 @@ On roomy sheets, the settled complete cohort remains authoritative and the
 accepted Triangle-20, Mixed-61, and Shapes-17 complete geometry is unchanged.
 
 On Triangle-20 at `300 × 300`, the production capacity lane now returns the
-exact `17/20` layout with three explicitly unplaced pieces. The measured run
-used about `1.2 s` for capacity settlement and `4.4 s` end to end, including
-the protected complete work. The former `15/20` production endpoint is no
-longer selected.
+exact `17/20` layout with three explicitly unplaced pieces. The accepted
+no-options run used `15.675 s` end to end, including `14.263 s` in protected
+complete-archive work. The former `15/20` production endpoint is no longer
+selected.
 
 One-piece, feature-contact, two-piece, and lost-interface repair experiments
 did not justify another production mechanism. The lost-interface prototype

@@ -1,19 +1,20 @@
 # Irregular Nesting Roadmap
 
 This is the active forward roadmap for convex irregular nesting after the
-`600 x 400` baseline replacement at `7b71611`.
+intertwined production promotion and nine-case baseline at `1eb60eb`.
 It contains only uncompleted work. Architecture and current behavior
 live in [`../architecture/irregular-v2-infrastructure.md`](../architecture/irregular-v2-infrastructure.md);
 past decisions live under [`../history/`](../history/README.md).
 
 ## Current Production Boundary
 
-The Compact quality profile runs the intrinsic shared archive directly. Three
-sheetless direct constructors and a bounded repeated-family periodic portfolio
-submit only complete canonical-exact endpoints. The archive deduplicates and
-ranks those endpoints without sheet dimensions, filters them by requested-sheet
-q0/q90 fit, and selects one fitting winner. It has no ordinary-beam competitor,
-ordinary-beam fallback, fixed reference sheet, or
+The Compact quality profile runs the intrinsic anytime coordinator. Its
+protected sheetless constructors submit complete canonical-exact endpoints to
+the complete namespace while resumable capacity lanes retain a separate exact
+partial namespace. A fitting settled complete endpoint dominates every partial
+endpoint; after a complete miss the existing capacity checkpoint continues
+without restarting. Complete ranking never uses requested-sheet dimensions.
+The profile has no ordinary-beam fallback, fixed reference sheet, or
 `canonicalReferenceDecodeEnabled` flag.
 
 The ordinary requested-sheet decoder remains available when the shared archive
@@ -52,7 +53,7 @@ so current ten-sheet invariance is not established.
 
 ## Priority Order
 
-### P0: Add exact constrained-sheet capacity mode — implemented
+### P0: Add exact constrained-sheet capacity mode — historical foundation
 
 `intrinsic-capacity-v1` is implemented and gated. The sheetless complete
 archive is preserved for every request whose best complete motif fits; the
@@ -73,13 +74,10 @@ deferred identical-sheet continuation are recorded in
 evidence is in
 [`../research/intrinsic-capacity-mode-implementation.md`](../research/intrinsic-capacity-mode-implementation.md).
 
-The first version does not close the inconclusive-sheet double-work problem:
-captured exact prefixes become terminal incumbents, not continuation states.
-The accepted next revision is a stratified anytime portfolio: first make the
-cold lane checkpointable, then add shadow pressure/no-skip telemetry, protected
-warm-prefix lanes, deterministic complete/capacity scheduling, shared exact
-archive mechanics, and only then a place/defer complete-capable shadow
-producer. A fixed `10%` waste route is rejected because it misses both measured
+That first version did not close the inconclusive-sheet double-work problem:
+captured exact prefixes became terminal incumbents rather than continuation
+states. The implemented correction is the stratified anytime portfolio below.
+A fixed `10%` waste route remains rejected because it misses both measured
 serial-cost cases. Heuristic pressure may schedule protected work but may not
 prune, rank, or displace the legacy complete cohort.
 
@@ -205,15 +203,15 @@ weaken the comparator. The production promotion also improves Mixed-61
 `600 x 400` to `25/61` and Shapes-17 `600 x 400` to `14/17` with zero
 cavities while preserving all roomy complete winners.
 
-### P0: Freeze the archive-only correctness and quality gate
+### P0: Freeze the complete-cohort correctness and quality gate
 
-Establish the archive-only baseline before changing allocation or search.
+Establish the complete-cohort baseline before changing allocation or search.
 
 Scope:
 
 - reproduce Triangle-20, Mixed-61, and Shapes-17 twice from clean current-main
   inputs;
-- establish current archive-only results for mixed-50, rectangles, trapezoids,
+- establish current complete-cohort results for mixed-50, rectangles, trapezoids,
   pentagons, stars, and the other maintained corpus cases;
 - preserve exact endpoint status, source selection, legality, canonical hash,
   area, cavity, runtime, and render provenance;
@@ -232,8 +230,8 @@ and SVG/PNG evidence; and a recorded current corpus baseline.
 
 ### P0: Complete current production sheet-invariance verification
 
-Run the historical roomy-sheet dimensions against the current archive-only
-production path. Classify each requested sheet by whether the same sheetless
+Run the historical roomy-sheet dimensions against the current protected
+complete cohort. Classify each requested sheet by whether the same sheetless
 leader fits at q0 or q90 before comparing final geometry.
 
 Dependencies: the frozen identities and uncensored execution from the previous

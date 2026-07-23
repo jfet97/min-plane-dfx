@@ -26,12 +26,11 @@ Documented implementation decisions within this contract:
 
 - the singleton proof is reported before the area proof when both hold
   (deterministic priority; both route identically);
-- the cold fanout ranks a state's legal candidates by exact intrinsic envelope
+- the cold fanout ranks ordinary legal candidates by exact intrinsic envelope
   metrics derived from incrementally maintained occupied bounds (maximum side,
-  envelope area, span, then deterministic transform/point order); no contact
-  measurement, placement object, beam state, or anchored rebuild is constructed
-  for candidates that are not selected, because the capacity objective contains
-  no contact criterion;
+  envelope area, span, then deterministic transform/point order); production
+  retention also protects a bounded distinct positive-contact candidate per
+  parent and measures exact contact/topology for the bounded survivor pool;
 - the in-loop partial q0/q90 fit check is the exact canonical-grid span test;
   the authoritative full canonical legality and identity run at endpoint
   materialization, which re-runs `assertCanonicalGridLegalLayout` per
@@ -50,9 +49,9 @@ Documented implementation decisions within this contract:
   the structured `capacityTrace` on the compute result, and the portfolio
   termination reason `capacity_subset_settled`.
 
-The serial v1 implementation remains the production baseline. It is not the
-accepted end-state. The forward direction is the stratified anytime portfolio
-specified below; identical-sheet continuation remains separate and deferred.
+The serial v1 implementation is the historical foundation. Production now uses
+the stratified anytime portfolio specified below; identical-sheet continuation
+remains separate and deferred.
 
 The remainder of this document is the reviewed contract that the
 implementation satisfies.
@@ -66,9 +65,10 @@ same pieces and settings
 ```
 
 Sheet dimensions must not influence complete-layout construction or intrinsic
-ranking. They enter only at exact final fit, or inside the separate capacity
-search after complete placement has been proved impossible or the bounded
-complete archive has produced no fitting endpoint.
+ranking. They enter at exact final fit and inside the separate capacity cohort.
+For inconclusive requests that cohort starts before the complete cohort has
+settled, but it cannot influence complete construction, survivor slots, archive
+ranking, or the complete-over-partial terminal rule.
 
 ## Required User Behavior
 
@@ -264,7 +264,10 @@ preflight proven impossible
     → run intrinsic-capacity-v1 from an empty state
 
 preflight inconclusive
-    → run the unchanged sheetless complete archive
+    → start a bounded cold-capacity checkpoint
+    → interleave unchanged sheetless complete and capacity quanta
+    → fitting complete endpoint wins and cancels capacity
+    → otherwise hand the existing checkpoint to capacity settlement
 ```
 
 The preflight avoids the complete run only for mathematically certain cases.
@@ -282,14 +285,17 @@ The current complete constructors and archive remain sheetless:
 - complete endpoints remain immutable;
 - q0/q90 fit remains after intrinsic archive ranking.
 
-If a complete endpoint fits, return it immediately. The capacity search must
-not run. Existing roomy-sheet hashes, archive order, source selection,
-evaluation counts, and renders are regression evidence for this boundary.
+For an inconclusive request, the scheduler starts bounded capacity work and
+advances the complete cohort in deterministic quanta. If a complete endpoint
+fits, it wins immediately and remaining capacity work is cancelled. Existing
+roomy-sheet hashes, archive order, source selection, evaluation counts, and
+renders are regression evidence for this boundary.
 
 If preflight was inconclusive and valid, uncensored, complete archive coverage
 produces no fitting endpoint, record `bounded_complete_archive_miss`. This is a
 bounded-search outcome, not proof that no complete arrangement exists. Capacity
-mode may then run because it can still provide a useful exact result.
+mode then resumes its existing checkpoint because it can still provide a useful
+exact result.
 
 Cancellation, deadline censoring, invalid geometry, or incomplete source
 accounting remain errors and must not be reclassified as capacity transitions.
@@ -474,8 +480,8 @@ Required positive evidence:
 
 - uninterrupted and depth-boundary-resumed cold runs have identical semantic
   traces and exact endpoint ordering;
-- the six durable Triangle-20, Mixed-61, and Shapes-17 baselines pass on both
-  `2000 x 2700` and `600 x 400`;
+- the nine durable Triangle-20, Mixed-61, and Shapes-17 baselines pass on
+  `2000 x 2700`, `600 x 400`, and `300 x 300`;
 - current complete results remain at least equivalent in quality wherever they
   fit;
 - multiple roomy sheets select the same complete motif;
@@ -492,28 +498,24 @@ Required positive evidence:
 The proof-only preflight should cheaply bypass complete construction for
 obviously area-deficient or singleton-infeasible sheets.
 
-For an inconclusive request, the complete archive still runs first. Prefix
-incumbents add only one bounded parent-chain walk and at most nine exact endpoint
-measurements. They do not run a second warm search.
+For an inconclusive request, production advances the cold capacity checkpoint
+and the protected sheetless complete constructor in deterministic quanta. A
+fitting complete endpoint cancels capacity. A complete miss hands the existing
+cold checkpoint to the capacity coordinator; it does not restart from empty.
 
-The unavoidable worst case is:
+The single-worker worst case still sums protected work:
 
 ```text
 inconclusive preflight
-    + full complete archive
-    + no useful fitting prefix
-    + full max(50,000, pieceCount * 4,096)-evaluation cold capacity search
+    + protected complete archive
+    + protected capacity settlement
 ```
 
-This worst case must be reported honestly. It can be optimized later only with
-sound additional bounds or measured scheduling changes; it must not be hidden
-by reclassifying a bounded archive miss as an impossibility proof.
-
-This remains an unresolved architectural cost, not an accepted final design.
-The prefix incumbents preserve quality but do not continue the complete search
-or prevent duplicated work. A future version must evaluate protected reuse or
-handoff of exact complete-search partial states so inconclusive constrained
-sheets do not routinely pay for a full complete run followed by a cold restart.
+This cost must be reported honestly. Cooperative interleaving eliminates the
+cold restart and preserves useful capacity progress, but it is not parallel
+execution: complete and capacity CPU work can still add. Later wall-time work
+requires measured parallel execution or sound additional bounds, not
+reclassification of a bounded complete miss as an impossibility proof.
 
 A fixed `minimumCollisionAreaSum * 1.10 > sheetArea` routing rule is rejected.
 It misses both measured serial double-work cases: Mixed-61 on `700 x 500` and

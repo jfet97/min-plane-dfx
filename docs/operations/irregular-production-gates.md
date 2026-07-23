@@ -63,8 +63,8 @@ violated. Reports and sheet-outline SVG renders land under
 
 ## Full Current Sheet Matrix
 
-Run the archive-only production fixture across the complete historical roomy
-matrix:
+Run the no-options intertwined production coordinator across the complete
+historical roomy matrix:
 
 ```sh
 pnpm corpus:sheet-invariance \
@@ -87,21 +87,25 @@ The current durable checkpoint contains only `900 x 1800` and `1000 x 1300`:
 [`../artifacts/current-production-invariance-sample/`](../artifacts/current-production-invariance-sample/).
 The wider run was cancelled and is not a passed gate.
 
-## Archive Admission
+## Complete-Archive Admission
 
-A production compact result is valid only when:
+A complete endpoint may enter the protected complete archive only when:
 
 - every direct role completes with one exact endpoint;
 - periodic catalog work is not runtime-censored;
 - every selected continuation runs and settles as completed or at its explicit
   deterministic evaluation cap;
 - incomplete or evaluation-capped partial states do not enter the archive;
-- final q0/q90 fit passes on the requested sheet;
-- no piece is unplaced;
 - canonical identity and topology are finite and valid.
 
 The configured family, cell, source, and continuation caps are intentional
 search bounds. Do not misreport them as exhaustive coverage.
+
+The coordinator applies requested-sheet q0/q90 fit after intrinsic complete
+construction. A fitting complete endpoint has no unplaced pieces and dominates
+every capacity endpoint. On constrained sheets where no complete endpoint fits,
+the separately protected capacity archive may instead return an exact
+canonical-legal placed/unplaced partition.
 
 ## Cancellation, Progress, History, and Timeout
 

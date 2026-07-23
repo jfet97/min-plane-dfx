@@ -5,14 +5,14 @@ outlines, builds padded convex collision polygons, generates finite
 rotation/mirror choices, produces NFP/IFP contact candidates, and validates
 placements directly. Its ordinary path runs a configurable requested-sheet beam
 plus optional bounded seeded GA. The eligible Compact quality profile instead
-runs the intrinsic shared archive directly. It is not a concave/hole-aware
-nesting engine.
+runs the intrinsic anytime coordinator around separate complete and capacity
+archives. It is not a concave/hole-aware nesting engine.
 
 For the current production contract, start with
 [`Current Integration State`](#current-integration-state). The constructor,
 pressure, protected-lane, and old Triangle sections retained earlier in this
 page document reusable machinery and historical experiments; they do not
-override the current archive-only Compact quality contract. Decision chronology
+override the current intertwined Compact quality contract. Decision chronology
 and full metrics live under [`../history/`](../history/README.md) and
 [`../research/`](../research/index.md).
 
@@ -129,11 +129,13 @@ coordinator no longer fails with "no fitting endpoint". The routing is:
    incomplete transform accounting is an error, never a proof.
 2. A proven-impossible request bypasses complete construction and runs
    `intrinsic-capacity-v1` from the empty state.
-3. An inconclusive request runs the unchanged sheetless complete archive. A
-   fitting complete endpoint returns immediately; a valid, uncensored archive
-   with no fitting endpoint records `bounded_complete_archive_miss` and then
-   runs capacity mode. Cancellation, deadline censoring, invalid geometry, and
-   incomplete coverage remain errors, not capacity transitions.
+3. An inconclusive request starts a bounded cold-capacity quantum, then
+   interleaves the unchanged sheetless complete constructor with resumes of
+   that checkpoint. A fitting complete endpoint wins and cancels capacity. A
+   valid, uncensored complete archive with no fitting endpoint records
+   `bounded_complete_archive_miss` and hands the existing cold checkpoint to
+   the capacity coordinator. Cancellation, deadline censoring, invalid
+   geometry, and incomplete coverage remain errors, not capacity transitions.
 
 After each committed, uncapped, complete direct constructor returns, one
 read-only parent-lineage walk captures at most nine prefix descriptors at
@@ -148,11 +150,13 @@ order with beam width `16`, local legal-placement fanout `3`, a deterministic
 `4,096`-evaluation quota per piece depth, a total allowance of
 `max(50,000, pieceCount * 4,096)`, and one mandatory skip successor at every
 piece depth. Skip paths are reserved before placement work, so exhausting a
-busy depth cannot prevent later pieces from being considered. Successor fanout
-ranks candidates by exact intrinsic envelope metrics from incrementally
-maintained occupied bounds without constructing placement objects, states,
-contact measurements, or anchored rebuilds for discarded candidates. Every
-successor is checked for exact partial q0/q90 grid-span fit and deduplicated by
+busy depth cannot prevent later pieces from being considered. Ordinary
+compactness proposals are ranked from incrementally maintained occupied bounds
+without constructing full placement states or anchored rebuilds for discarded
+candidates. The production contact fanout separately measures positive
+boundary contact for fitting legal candidates, and the bounded survivor pool
+receives exact topology measurement before retention. Every successor is
+checked for exact partial q0/q90 grid-span fit and deduplicated by
 anchored canonical occupied-union identity plus the exact placed-ID set before
 retention; exact enclosed-cavity measurement is cached by geometry identity
 alone and covers every retained contender. The incumbent may prune a cold
@@ -968,27 +972,32 @@ geometry becomes the typed
 and scoring become distinct typed failures.
 
 For the explicitly enabled compact-quality profile, with GA inactive and no
-intentional `short_side_fill` policy, `computeIrregularNesting` runs one intrinsic
-shared archive instead of the ordinary windowed beam. Three direct sheetless
-constructors and the bounded repeated-family periodic portfolio submit only complete
-canonical-exact endpoints. The archive deduplicates and ranks those endpoints by
-intrinsic geometry and topology, then tests q0 and q90 against the requested sheet.
-Sheet dimensions therefore constrain legality but never rank or prune construction.
+intentional `short_side_fill` policy, `computeIrregularNesting` runs the
+intrinsic anytime coordinator instead of the ordinary windowed beam. Exact
+preflight proofs may route directly to capacity. Otherwise the coordinator
+starts a bounded cold-capacity checkpoint and interleaves it with the protected
+sheetless complete constructors. Complete endpoints enter the complete
+namespace and remain ranked only by intrinsic geometry and topology; capacity
+endpoints enter a separate count/material-first namespace.
 
-The compact path has no ordinary-beam competitor and no fixed-reference fallback.
-An incomplete direct state cannot become an endpoint. A cooperatively cancelled,
-deadline-censored, execution-incomplete, or non-fitting archive fails with a
-typed worker error. External renderer cancellation remains a supervisor boundary
+A fitting settled complete endpoint wins and cancels capacity. If the complete
+archive settles without a fitting endpoint, that outcome is not an error: the
+existing cold/warm checkpoints continue to exact capacity settlement, which
+returns a disjoint placed/unplaced request partition. Sheet dimensions
+constrain capacity legality and q0/q90 endpoint fit, but never rank or prune the
+complete cohort.
+
+The compact path has no ordinary-beam competitor and no fixed-reference
+fallback. An incomplete direct state cannot become an endpoint. Cooperative
+cancellation, deadline censoring, incomplete execution, invalid geometry, or
+invalid accounting remain typed failures; a settled non-fitting complete
+archive does not. External renderer cancellation remains a supervisor boundary
 that disposes the worker and returns no partial result. The fixed family,
-transform, pair, cell, and continuation caps are intentional deterministic
-search bounds rather than claims of exhaustive coverage; production requires
-their selected work to settle without runtime censoring. Internal checkpoints
-cover direct construction, periodic catalog selection, finite-crop enumeration,
-and continuation decoding when a cooperative deadline or cancellation predicate
-is supplied. Progress reports the `shared_archive` phase after the direct and
-periodic boundaries, then emits the selected exact endpoint as `completed`.
-Irregular jobs use a `390000 ms` timeout floor; other worker modes retain their
-configured timeout.
+transform, pair, cell, continuation, and capacity caps are intentional
+deterministic search bounds rather than claims of exhaustive coverage.
+Progress reports the real coordinator phases and emits the selected exact
+complete or capacity endpoint as `completed`. Irregular jobs use a `390000 ms`
+timeout floor; other worker modes retain their configured timeout.
 
 Selected archive history truthfully reveals prefixes of the selected exact
 layout. Intermediate frames are labelled
