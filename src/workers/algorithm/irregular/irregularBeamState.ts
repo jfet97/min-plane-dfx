@@ -1,4 +1,5 @@
 import type { PieceId } from '@shared/domain/ids.js'
+import { performance } from 'node:perf_hooks'
 import {
   IrregularBounds,
   IrregularPlacement,
@@ -54,6 +55,15 @@ interface SharedCollisionBoundaryMetrics {
   readonly nearCompleteStructuralContactCount: number
   readonly dominantNearCompleteStructuralContactCount: number
   readonly nearCompleteStructuralContactSignatureCounts: ReadonlyMap<string, number>
+}
+
+export interface IrregularBeamStatePlacementPhaseTimings {
+  readonly canonicalEntryKeyMs: number
+  readonly spatialIndexMs: number
+  readonly contactMeasurementMs: number
+  readonly stateAssemblyMs: number
+  readonly bookkeepingMs: number
+  readonly totalMs: number
 }
 
 const derivedMetadata = Symbol('derivedMetadata')
@@ -139,17 +149,26 @@ export class IrregularBeamState {
     readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
     readonly placedCollisionGeometry: IrregularPlacedPiece
     readonly placementOrderPieceId: PieceId
+    readonly onPhaseTimings?: (timings: IrregularBeamStatePlacementPhaseTimings) => void
   }): IrregularBeamState {
+    const startedAt = input.onPhaseTimings === undefined ? 0 : performance.now()
     const placedCollisionGeometries = [
       ...this.placedCollisionGeometries,
       input.placedCollisionGeometry
     ]
+    const canonicalEntryStartedAt = input.onPhaseTimings === undefined ? 0 : performance.now()
     const canonicalEntryKeys = insertCanonicalEntryKey(
       this.canonicalEntryKeys,
       canonicalPlacedGeometryKey(input.placedCollisionGeometry)
     )
+    const canonicalEntryKeyMs =
+      input.onPhaseTimings === undefined ? 0 : performance.now() - canonicalEntryStartedAt
+    const spatialIndexStartedAt = input.onPhaseTimings === undefined ? 0 : performance.now()
     const placedCollisionIndex = this.placedCollisionIndex.add(input.placedCollisionGeometry)
     const addedEntry = placedCollisionIndex.entries[placedCollisionIndex.entries.length - 1]
+    const spatialIndexMs =
+      input.onPhaseTimings === undefined ? 0 : performance.now() - spatialIndexStartedAt
+    const contactStartedAt = input.onPhaseTimings === undefined ? 0 : performance.now()
     const sharedBoundaryMetrics = extendSharedCollisionBoundaryMetrics(
       {
         lengthMm: this.sharedCollisionBoundaryLengthMm,
@@ -161,7 +180,10 @@ export class IrregularBeamState {
       this.placedCollisionIndex,
       addedEntry
     )
-    return IrregularBeamState.fromDerivedMetadata(
+    const contactMeasurementMs =
+      input.onPhaseTimings === undefined ? 0 : performance.now() - contactStartedAt
+    const stateAssemblyStartedAt = input.onPhaseTimings === undefined ? 0 : performance.now()
+    const result = IrregularBeamState.fromDerivedMetadata(
       {
         remainingPreparedPieces: input.remainingPreparedPieces,
         placedCollisionGeometries,
@@ -187,6 +209,21 @@ export class IrregularBeamState {
         placedCollisionIndex
       }
     )
+    if (input.onPhaseTimings !== undefined) {
+      const stateAssemblyMs = performance.now() - stateAssemblyStartedAt
+      const totalMs = performance.now() - startedAt
+      const measuredMs =
+        canonicalEntryKeyMs + spatialIndexMs + contactMeasurementMs + stateAssemblyMs
+      input.onPhaseTimings({
+        canonicalEntryKeyMs,
+        spatialIndexMs,
+        contactMeasurementMs,
+        stateAssemblyMs,
+        bookkeepingMs: Math.max(0, totalMs - measuredMs),
+        totalMs
+      })
+    }
+    return result
   }
 
   withUnplacedPiece(input: {

@@ -148,6 +148,7 @@ const result =
               maximumCropsPerCell: 4,
               maximumContinuationRuntimeMs,
               maximumTotalRuntimeMs: maximumPeriodicRuntimeMs,
+              capturePhaseTimings: true,
               sourceAuditScope,
               ...(sourceAuditReplay === undefined ? {} : { sourceAuditReplay })
             }

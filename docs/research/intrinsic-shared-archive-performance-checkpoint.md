@@ -16,7 +16,8 @@ though local ranking consumed only maximum side, bounding area, and span.
 The strict decoder now derives those three values from the incrementally
 maintained occupied bounds after conversion to the same canonical 0.001 mm grid.
 Complete-layout hull metrics remain unchanged at archive admission. Timing is
-absent unless explicitly enabled by the evaluation-capped benchmark path.
+absent unless the benchmark harness explicitly enables it; deterministic
+evaluation caps no longer activate hot-loop telemetry in production.
 
 ## Frozen Work
 

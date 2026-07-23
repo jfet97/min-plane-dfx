@@ -100,6 +100,24 @@ describe('intrinsic periodic family portfolio', () => {
     ).toBe(true)
     expect(result.phaseTimings).toBeUndefined()
 
+    const cappedWithoutTimings = await Effect.runPromise(
+      runIntrinsicPeriodicFamilyPortfolio(
+        new SheetSpec({ width: 100, height: 100, label: 'test' }),
+        pieces,
+        {
+          maximumCatalogRuntimeMs: 1_000,
+          maximumContinuationRuntimeMs: 1_000,
+          maximumContinuationCandidateEvaluations: 1,
+          maximumTotalRuntimeMs: 4_000
+        }
+      ).pipe(
+        Effect.provide(GeometryKernel.Live.pipe(Layer.provide(GeometrySettings.Live))),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+    expect(cappedWithoutTimings.phaseTimings).toBeUndefined()
+
     const budgeted = await Effect.runPromise(
       runIntrinsicPeriodicFamilyPortfolio(
         new SheetSpec({ width: 100, height: 100, label: 'test' }),
@@ -108,7 +126,8 @@ describe('intrinsic periodic family portfolio', () => {
           maximumCatalogRuntimeMs: 1_000,
           maximumContinuationRuntimeMs: 1_000,
           maximumContinuationCandidateEvaluations: Number.MAX_SAFE_INTEGER,
-          maximumTotalRuntimeMs: 4_000
+          maximumTotalRuntimeMs: 4_000,
+          capturePhaseTimings: true
         }
       ).pipe(
         Effect.provide(GeometryKernel.Live.pipe(Layer.provide(GeometrySettings.Live))),
@@ -290,6 +309,7 @@ describe('intrinsic periodic family portfolio', () => {
             maximumContinuationCandidateEvaluations: Number.MAX_SAFE_INTEGER,
             maximumTotalRuntimeMs: 8_000,
             maximumContinuationCount: 4,
+            capturePhaseTimings: true,
             captureSourceSurvivalAudit: true,
             admitSourceAuditWitnesses: true,
             ...(sourceAuditReplay === undefined ? {} : { sourceAuditReplay })

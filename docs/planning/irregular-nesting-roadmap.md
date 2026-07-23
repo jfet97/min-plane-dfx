@@ -116,6 +116,9 @@ canonical geometry-key construction, and gap classification. Do not optimize
 NFP generation first: it consumed only about `8.8 s` of the approximately
 `153-156 s` optimized strict-construction runs.
 
+Nested timing must remain explicitly enabled by the benchmark harness and
+default off in production, independently of deterministic evaluation caps.
+
 A content-addressed replay may be promoted only with explicit refresh, miss,
 corruption, schema-version, and algorithm-version behavior and with canonical
 revalidation of untrusted entries. Warm replay is a separate cache result: it

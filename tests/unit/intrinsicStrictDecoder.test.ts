@@ -279,6 +279,18 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
         phaseTimings.candidateStateScoringMs +
         phaseTimings.bookkeepingMs
     ).toBeCloseTo(phaseTimings.totalMs, 6)
+    expect(
+      phaseTimings.candidateStateScoring.placementObjectMs +
+        phaseTimings.candidateStateScoring.statePlacementMs +
+        phaseTimings.candidateStateScoring.bottomLeftAnchoringMs +
+        phaseTimings.candidateStateScoring.envelopeScoringMs +
+        phaseTimings.candidateStateScoring.gapClassificationMs +
+        phaseTimings.candidateStateScoring.scoreBookkeepingMs +
+        phaseTimings.candidateStateScoring.candidateSelectionMs +
+        phaseTimings.candidateStateScoring.bookkeepingMs
+    ).toBeCloseTo(phaseTimings.candidateStateScoring.totalMs, 6)
+    expect(phaseTimings.candidateStateScoring.coverageComplete).toBe(true)
+    expect(phaseTimings.candidateStateScoring.gapClassificationMs).toBeGreaterThanOrEqual(0)
     expect(phaseTimings.coverageComplete).toBe(true)
   })
 

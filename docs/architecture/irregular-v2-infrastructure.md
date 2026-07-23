@@ -220,11 +220,15 @@ seed-envelope area, maximum side, and span, then by more already placed pieces
 and stable source identity. This changes only censored execution order: archive
 ranking and the selected continuation set remain unchanged. The no-cap path
 preserves its historical order.
-The same explicit cap enables phase telemetry without changing the uncapped
-result contract. Top-level timings isolate catalog construction, continuation
+An independent, explicit, default-off benchmark flag enables phase telemetry
+without changing capped or uncapped production execution. Top-level timings isolate catalog construction, continuation
 selection, execution ordering, strict construction, exact finalization, archive
 ranking, and residual bookkeeping. Strict construction separates candidate
-generation from candidate state construction/scoring; selection separates source-
+generation from candidate state construction/scoring. Candidate-state telemetry
+further isolates placement materialization, canonical-entry insertion, spatial-
+index extension, exact contact extension, state assembly, bottom-left
+anchoring, envelope scoring, candidate selection, and residual bookkeeping.
+Selection separates source-
 audit crop enumeration, retained-cell crop enumeration, crop-front ranking, and
 its remaining bookkeeping so optimization follows measured cost.
 Telemetry coverage is complete only when top-level, nested selection, and nested

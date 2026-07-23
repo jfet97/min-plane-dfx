@@ -172,6 +172,8 @@ export interface IntrinsicPeriodicFamilyPortfolioOptions {
   readonly maximumContinuationCandidateEvaluations?: number
   readonly maximumContinuationCount?: number
   readonly maximumTotalRuntimeMs?: number
+  /** Enables benchmark-only nested wall-time telemetry. */
+  readonly capturePhaseTimings?: boolean
   readonly control?: IrregularNfpIfpControl
   /** Restricts an experiment to one rational NFP-derived shared-basis source. */
   readonly basisSourceKey?: string
@@ -213,7 +215,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
     const maximumCropsPerCell = options.maximumCropsPerCell ?? 4
     const maximumContinuationRuntimeMs = options.maximumContinuationRuntimeMs ?? 25_000
     const maximumContinuationCandidateEvaluations = options.maximumContinuationCandidateEvaluations
-    const capturePhaseTimings = maximumContinuationCandidateEvaluations !== undefined
+    const capturePhaseTimings = options.capturePhaseTimings === true
     const maximumContinuationCount = options.maximumContinuationCount ?? 8
     const maximumTotalRuntimeMs = options.maximumTotalRuntimeMs ?? 240_000
     const catalogStartedAt = capturePhaseTimings ? performance.now() : 0

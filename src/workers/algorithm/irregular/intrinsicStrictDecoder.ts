@@ -32,7 +32,10 @@ import {
   type NfpIfpCandidateProvenance,
   NfpIfpService
 } from '../../irregular/services.js'
-import { IrregularBeamState } from './irregularBeamState.js'
+import {
+  IrregularBeamState,
+  type IrregularBeamStatePlacementPhaseTimings
+} from './irregularBeamState.js'
 import {
   candidateContainedInIntrinsicGap,
   deriveCanonicalIntrinsicGapRegions,
@@ -154,6 +157,21 @@ export interface IntrinsicStrictConstructResult {
 export interface IntrinsicStrictConstructPhaseTimings {
   readonly candidateGenerationMs: number
   readonly candidateStateScoringMs: number
+  readonly candidateStateScoring: IntrinsicStrictCandidateStatePhaseTimings
+  readonly bookkeepingMs: number
+  readonly coverageComplete: boolean
+  readonly totalMs: number
+}
+
+export interface IntrinsicStrictCandidateStatePhaseTimings {
+  readonly placementObjectMs: number
+  readonly statePlacementMs: number
+  readonly statePlacement: IrregularBeamStatePlacementPhaseTimings
+  readonly bottomLeftAnchoringMs: number
+  readonly envelopeScoringMs: number
+  readonly gapClassificationMs: number
+  readonly scoreBookkeepingMs: number
+  readonly candidateSelectionMs: number
   readonly bookkeepingMs: number
   readonly coverageComplete: boolean
   readonly totalMs: number
@@ -223,6 +241,21 @@ interface ScoredCandidate {
   readonly candidate: IrregularPlacementCandidate
   readonly movingCollisionAreaMm2: number
   readonly containingGap: CanonicalIntrinsicGapRegion | undefined
+}
+
+interface MutableCandidateStatePhaseTimings {
+  placementObjectMs: number
+  statePlacementMs: number
+  statePlacementCanonicalEntryKeyMs: number
+  statePlacementSpatialIndexMs: number
+  statePlacementContactMeasurementMs: number
+  statePlacementStateAssemblyMs: number
+  statePlacementBookkeepingMs: number
+  bottomLeftAnchoringMs: number
+  envelopeScoringMs: number
+  gapClassificationMs: number
+  candidateSelectionMs: number
+  totalMs: number
 }
 
 export function measureIntrinsicStrictCanonicalEnvelope(
@@ -379,6 +412,20 @@ export function constructIntrinsicStrictState(
     let truncationReason: IntrinsicStrictConstructResult['truncationReason']
     let candidateGenerationMs = 0
     let candidateStateScoringMs = 0
+    const candidateStatePhaseTimings: MutableCandidateStatePhaseTimings = {
+      placementObjectMs: 0,
+      statePlacementMs: 0,
+      statePlacementCanonicalEntryKeyMs: 0,
+      statePlacementSpatialIndexMs: 0,
+      statePlacementContactMeasurementMs: 0,
+      statePlacementStateAssemblyMs: 0,
+      statePlacementBookkeepingMs: 0,
+      bottomLeftAnchoringMs: 0,
+      envelopeScoringMs: 0,
+      gapClassificationMs: 0,
+      candidateSelectionMs: 0,
+      totalMs: 0
+    }
 
     pieceLoop: for (
       let pieceIndex = 0;
@@ -467,9 +514,11 @@ export function constructIntrinsicStrictState(
               remainingPreparedPieces,
               transformFamily: family,
               movingCollisionAreaMm2,
-              gapRegions
+              gapRegions,
+              phaseTimings: capturePhaseTimings ? candidateStatePhaseTimings : undefined
             })
             if (scored === undefined) continue
+            const candidateSelectionStartedAt = capturePhaseTimings ? performance.now() : 0
             scoredCandidates.push(scored)
             const incumbent = candidatesByFamily.get(family)
             if (incumbent === undefined || compareLocalScores(scored.score, incumbent.score) < 0) {
@@ -484,6 +533,10 @@ export function constructIntrinsicStrictState(
               ) {
                 containedCandidatesByFamily.set(family, containedScored)
               }
+            }
+            if (capturePhaseTimings) {
+              candidateStatePhaseTimings.candidateSelectionMs +=
+                performance.now() - candidateSelectionStartedAt
             }
           }
         } finally {
@@ -617,7 +670,12 @@ export function constructIntrinsicStrictState(
 
     const runtimeMs = Math.max(0, performance.now() - startedAt)
     const phaseTimings = capturePhaseTimings
-      ? makeConstructPhaseTimings(runtimeMs, candidateGenerationMs, candidateStateScoringMs)
+      ? makeConstructPhaseTimings(
+          runtimeMs,
+          candidateGenerationMs,
+          candidateStateScoringMs,
+          candidateStatePhaseTimings
+        )
       : undefined
     return {
       state,
@@ -639,8 +697,46 @@ export function constructIntrinsicStrictState(
 function makeConstructPhaseTimings(
   totalMs: number,
   candidateGenerationMs: number,
-  candidateStateScoringMs: number
+  candidateStateScoringMs: number,
+  candidateState: MutableCandidateStatePhaseTimings
 ): IntrinsicStrictConstructPhaseTimings {
+  const statePlacement = {
+    canonicalEntryKeyMs: candidateState.statePlacementCanonicalEntryKeyMs,
+    spatialIndexMs: candidateState.statePlacementSpatialIndexMs,
+    contactMeasurementMs: candidateState.statePlacementContactMeasurementMs,
+    stateAssemblyMs: candidateState.statePlacementStateAssemblyMs,
+    bookkeepingMs: candidateState.statePlacementBookkeepingMs,
+    totalMs: candidateState.statePlacementMs
+  }
+  const candidateStateMeasuredMs =
+    candidateState.placementObjectMs +
+    candidateState.statePlacementMs +
+    candidateState.bottomLeftAnchoringMs +
+    candidateState.envelopeScoringMs +
+    candidateState.gapClassificationMs
+  const scoreBookkeepingMs = Math.max(0, candidateState.totalMs - candidateStateMeasuredMs)
+  const measuredCandidateStateScoringMs =
+    candidateState.totalMs + candidateState.candidateSelectionMs
+  const candidateStateBookkeepingMs = Math.max(
+    0,
+    candidateStateScoringMs - measuredCandidateStateScoringMs
+  )
+  const candidateStateScoring = {
+    placementObjectMs: candidateState.placementObjectMs,
+    statePlacementMs: candidateState.statePlacementMs,
+    statePlacement,
+    bottomLeftAnchoringMs: candidateState.bottomLeftAnchoringMs,
+    envelopeScoringMs: candidateState.envelopeScoringMs,
+    gapClassificationMs: candidateState.gapClassificationMs,
+    scoreBookkeepingMs,
+    candidateSelectionMs: candidateState.candidateSelectionMs,
+    bookkeepingMs: candidateStateBookkeepingMs,
+    coverageComplete: intrinsicStrictPhaseCoverageComplete(
+      candidateStateScoringMs,
+      candidateStateBookkeepingMs
+    ),
+    totalMs: candidateStateScoringMs
+  }
   const measuredMs = candidateGenerationMs + candidateStateScoringMs
   const bookkeepingMs = Math.max(0, totalMs - measuredMs)
   const coverageComplete =
@@ -650,6 +746,7 @@ function makeConstructPhaseTimings(
   return {
     candidateGenerationMs,
     candidateStateScoringMs,
+    candidateStateScoring,
     bookkeepingMs,
     coverageComplete,
     totalMs
@@ -702,49 +799,91 @@ function scoreCandidate(input: {
   readonly transformFamily: string
   readonly movingCollisionAreaMm2: number
   readonly gapRegions: ReadonlyArray<CanonicalIntrinsicGapRegion> | undefined
+  readonly phaseTimings: MutableCandidateStatePhaseTimings | undefined
 }): ScoredCandidate | undefined {
-  const placement = makePlacement(input.piece, input.candidate)
-  const placed = new IrregularPlacedPiece({
-    placement,
-    collisionGeometry: input.moving
-  })
-  const anchored = input.state
-    .withPlacement({
+  const startedAt = input.phaseTimings === undefined ? 0 : performance.now()
+  try {
+    const placementStartedAt = input.phaseTimings === undefined ? 0 : performance.now()
+    const placement = makePlacement(input.piece, input.candidate)
+    const placed = new IrregularPlacedPiece({
+      placement,
+      collisionGeometry: input.moving
+    })
+    if (input.phaseTimings !== undefined) {
+      input.phaseTimings.placementObjectMs += performance.now() - placementStartedAt
+    }
+    const statePlacementStartedAt = input.phaseTimings === undefined ? 0 : performance.now()
+    const phaseTimings = input.phaseTimings
+    const placedState = input.state.withPlacement({
       remainingPreparedPieces: input.remainingPreparedPieces,
       placedCollisionGeometry: placed,
-      placementOrderPieceId: input.piece.pieceId ?? input.piece.source.id
+      placementOrderPieceId: input.piece.pieceId ?? input.piece.source.id,
+      ...(phaseTimings === undefined
+        ? {}
+        : {
+            onPhaseTimings: (timings: IrregularBeamStatePlacementPhaseTimings) => {
+              phaseTimings.statePlacementCanonicalEntryKeyMs += timings.canonicalEntryKeyMs
+              phaseTimings.statePlacementSpatialIndexMs += timings.spatialIndexMs
+              phaseTimings.statePlacementContactMeasurementMs += timings.contactMeasurementMs
+              phaseTimings.statePlacementStateAssemblyMs += timings.stateAssemblyMs
+              phaseTimings.statePlacementBookkeepingMs += timings.bookkeepingMs
+            }
+          })
     })
-    .withBottomLeftAnchored()
-  if (anchored === undefined) return undefined
-  const envelope = measureIntrinsicStrictEnvelopeFromState(anchored)
-  if (envelope === undefined) return undefined
-  const { maximumSideMm, envelopeAreaMm2, envelopeSpanMm } = envelope
-  const sharedBoundaryLengthMm = anchored.sharedCollisionBoundaryLengthMm
-  if (
-    sharedBoundaryLengthMm === undefined ||
-    ![maximumSideMm, envelopeAreaMm2, envelopeSpanMm, sharedBoundaryLengthMm].every(Number.isFinite)
-  ) {
-    return undefined
-  }
-  return {
-    state: anchored,
-    transformFamily: input.transformFamily,
-    candidate: input.candidate,
-    movingCollisionAreaMm2: input.movingCollisionAreaMm2,
-    containingGap: input.gapRegions
+    if (input.phaseTimings !== undefined) {
+      input.phaseTimings.statePlacementMs += performance.now() - statePlacementStartedAt
+    }
+    const anchoringStartedAt = input.phaseTimings === undefined ? 0 : performance.now()
+    const anchored = placedState.withBottomLeftAnchored()
+    if (input.phaseTimings !== undefined) {
+      input.phaseTimings.bottomLeftAnchoringMs += performance.now() - anchoringStartedAt
+    }
+    if (anchored === undefined) return undefined
+    const envelopeStartedAt = input.phaseTimings === undefined ? 0 : performance.now()
+    const envelope = measureIntrinsicStrictEnvelopeFromState(anchored)
+    if (input.phaseTimings !== undefined) {
+      input.phaseTimings.envelopeScoringMs += performance.now() - envelopeStartedAt
+    }
+    if (envelope === undefined) return undefined
+    const { maximumSideMm, envelopeAreaMm2, envelopeSpanMm } = envelope
+    const sharedBoundaryLengthMm = anchored.sharedCollisionBoundaryLengthMm
+    if (
+      sharedBoundaryLengthMm === undefined ||
+      ![maximumSideMm, envelopeAreaMm2, envelopeSpanMm, sharedBoundaryLengthMm].every(
+        Number.isFinite
+      )
+    ) {
+      return undefined
+    }
+    const gapStartedAt = input.phaseTimings === undefined ? 0 : performance.now()
+    const containingGap = input.gapRegions
       ?.filter((region) =>
         candidateContainedInIntrinsicGap(input.moving, input.candidate.point, region)
       )
       .toSorted(
         (first, second) =>
           first.areaMm2 - second.areaMm2 || first.canonicalKey.localeCompare(second.canonicalKey)
-      )[0],
-    score: {
-      maximumSideMm,
-      envelopeAreaMm2,
-      envelopeSpanMm,
-      sharedBoundaryLengthMm,
-      canonicalCombinedGeometryKey: anchored.canonicalOccupiedGeometryKey
+      )[0]
+    if (input.phaseTimings !== undefined) {
+      input.phaseTimings.gapClassificationMs += performance.now() - gapStartedAt
+    }
+    return {
+      state: anchored,
+      transformFamily: input.transformFamily,
+      candidate: input.candidate,
+      movingCollisionAreaMm2: input.movingCollisionAreaMm2,
+      containingGap,
+      score: {
+        maximumSideMm,
+        envelopeAreaMm2,
+        envelopeSpanMm,
+        sharedBoundaryLengthMm,
+        canonicalCombinedGeometryKey: anchored.canonicalOccupiedGeometryKey
+      }
+    }
+  } finally {
+    if (input.phaseTimings !== undefined) {
+      input.phaseTimings.totalMs += performance.now() - startedAt
     }
   }
 }
