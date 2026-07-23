@@ -490,6 +490,25 @@ candidate from depth 16 onward. This is the retained-coherent-state/poor-close
 case that justifies a bounded generic exact reconstruction experiment over the
 selected 17-piece subset. It does not justify Triangle-specific placement.
 
+Commit `394b040` rejects that first reconstruction schedule without changing
+production or the 17-piece observer incumbent. The existing targeted exact LNS
+ran for `2.848 s`, but only nine of its 24 deterministic schedule entries
+performed distinct searches; 15 collapsed as duplicate destroy/queue
+signatures for interchangeable pieces. Its four-wide reconstruction beam and
+local fanout found no accepted result. Larger rounds sometimes failed to
+replace every destroyed piece, while the best legal alternative was
+topologically worse than the incumbent.
+
+This is evidence against that bounded schedule, not proof that the exact-fit
+frontier is closed. The next falsifier is an observer-only detached-component
+reinsertion sweep. For each component outside the largest positive-contact
+component, it freezes every other placed piece and exhausts the existing legal
+NFP candidates for every allowed transform over the full requested sheet,
+without beam or local-fanout truncation. A positive-contact legal placement
+would localize the loss to reconstruction diversity. No such placement would
+justify testing bounded feature-contact candidate generation, but would still
+not prove that a multi-piece global rearrangement is impossible.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim

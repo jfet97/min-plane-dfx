@@ -322,3 +322,13 @@ fanout, while production remains exact. The result is retained as successful
 mechanism evidence but rejected for output: three pieces remain isolated and
 maximum side regresses to `296.739 mm`. The next justified experiment is
 bounded exact reconstruction of that legal 17-piece subset.
+
+Commit `394b040` records the rejected reconstruction result. The generic
+targeted exact LNS retained all 17 pieces but accepted no changed layout in
+`2.848 s`. Only nine distinct searches executed because 15 of 24 schedule
+entries deduplicated; reconstruction remained limited to a four-wide beam and
+four successors per parent. This does not establish that a better exact layout
+is impossible. The next experiment freezes 16 pieces and exhaustively
+reinserts each detached component through the existing legal candidate
+generator over the full requested sheet, observer-only and without beam
+truncation.

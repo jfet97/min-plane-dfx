@@ -27,6 +27,7 @@ import {
   type IntrinsicCapacityEndpoint,
   type IntrinsicCapacityObjective
 } from '../src/workers/algorithm/irregular/intrinsicCapacityEndpoint.js'
+import { runIntrinsicDetachedPieceReinsertion } from '../src/workers/algorithm/irregular/intrinsicDetachedPieceReinsertion.js'
 import {
   intrinsicCapacityLaneCoordinatorTraceValid,
   type IntrinsicCapacityTrace
@@ -332,6 +333,21 @@ interface CapacityRunReport {
         readonly rounds: unknown
       }
     | undefined
+  readonly cohesionReinsertionShadow:
+    | {
+        readonly artifactPath: string
+        readonly accepted: boolean
+        readonly runtimeMs: number
+        readonly canonicalSha256: string
+        readonly placedCount: number
+        readonly selectedPieceId: string | undefined
+        readonly detachedPieceIds: ReadonlyArray<string>
+        readonly topology: ReturnType<typeof measureCanonicalLayoutTopologyExact>
+        readonly seedMetrics: unknown
+        readonly selectedMetrics: unknown
+        readonly pieceReports: unknown
+      }
+    | undefined
   readonly warmLaneArtifacts: ReadonlyArray<{
     readonly sourceRole: string
     readonly prefixDepth: number
@@ -375,7 +391,8 @@ async function runArm(
   artifactPath: string,
   retentionMode: 'objective' | 'area-first' | 'axis-buckets',
   captureCohesionShadow: boolean,
-  captureCohesionLnsShadow: boolean
+  captureCohesionLnsShadow: boolean,
+  captureCohesionReinsertionShadow: boolean
 ): Promise<CapacityRunReport> {
   const settings = request.options.irregularSettings
   if (settings === undefined) throw new Error(`${request.jobId} has no irregular settings`)
@@ -405,7 +422,7 @@ async function runArm(
           }
         }
       : {}),
-    ...(captureCohesionLnsShadow
+    ...(captureCohesionLnsShadow || captureCohesionReinsertionShadow
       ? {
           onPreparedPieces: (
             observedPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
@@ -500,6 +517,16 @@ async function runArm(
           endpoint: cohesionEndpoint,
           artifactPath: `${artifactPath.slice(0, -4)}-cohesion-lns-shadow.svg`
         })
+  const cohesionReinsertionShadow =
+    !captureCohesionReinsertionShadow || cohesionEndpoint === undefined
+      ? undefined
+      : await runCohesionReinsertionShadow({
+          request,
+          settings,
+          preparedPieces,
+          endpoint: cohesionEndpoint,
+          artifactPath: `${artifactPath.slice(0, -4)}-cohesion-reinsertion-shadow.svg`
+        })
   const requestIds = request.pieces.map(({ id }) => id)
   const accountedIds = [
     ...result.placedCollisionGeometries.map(
@@ -537,6 +564,7 @@ async function runArm(
     retentionMode,
     cohesionShadow,
     cohesionLnsShadow,
+    cohesionReinsertionShadow,
     warmLaneArtifacts,
     capacity:
       trace === undefined
@@ -556,6 +584,47 @@ async function runArm(
             runtimeMs: trace.runtimeMs
           },
     artifactPath
+  }
+}
+
+async function runCohesionReinsertionShadow(input: {
+  readonly request: NestingRequest
+  readonly settings: IrregularNestingSettings
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly endpoint: IntrinsicCapacityEndpoint
+  readonly artifactPath: string
+}): Promise<NonNullable<CapacityRunReport['cohesionReinsertionShadow']>> {
+  const result = await Effect.runPromise(
+    runIntrinsicDetachedPieceReinsertion({
+      sheet: input.request.sheet,
+      allPreparedPieces: input.preparedPieces,
+      seedPlaced: input.endpoint.placedCollisionGeometries
+    }).pipe(
+      Effect.provide(GeometryKernel.Live),
+      Effect.provide(NfpIfpServiceLive),
+      Effect.provide(IrregularPlacementScorer.Live),
+      Effect.provide(Layer.succeed(GeometrySettings, input.settings))
+    )
+  )
+  const polygons = absolutePlacedCollisionPolygons(
+    result.placedCollisionGeometries
+  )
+  const canonical = canonicalizeIrregularLayout(polygons)
+  await writeFile(input.artifactPath, renderSvg(input.request.sheet, polygons))
+  return {
+    artifactPath: input.artifactPath,
+    accepted: result.accepted,
+    runtimeMs: result.runtimeMs,
+    canonicalSha256: canonical.sha256,
+    placedCount: result.placedCollisionGeometries.length,
+    selectedPieceId: result.selectedPieceId,
+    detachedPieceIds: result.detachedPieceIds,
+    topology: measureCanonicalLayoutTopologyExact(
+      result.placedCollisionGeometries
+    ),
+    seedMetrics: result.seedMetrics,
+    selectedMetrics: result.selectedMetrics,
+    pieceReports: result.pieceReports
   }
 }
 
@@ -636,6 +705,7 @@ interface CliArguments {
   readonly retentionMode: 'objective' | 'area-first' | 'axis-buckets'
   readonly cohesionShadow: boolean
   readonly cohesionLnsShadow: boolean
+  readonly cohesionReinsertionShadow: boolean
   readonly requireCohesionPromotion: boolean
 }
 
@@ -647,6 +717,7 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
   let retentionMode: 'objective' | 'area-first' | 'axis-buckets' = 'objective'
   let cohesionShadow = false
   let cohesionLnsShadow = false
+  let cohesionReinsertionShadow = false
   let requireCohesionPromotion = false
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]
@@ -680,6 +751,9 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
     } else if (argument === '--cohesion-lns-shadow') {
       cohesionShadow = true
       cohesionLnsShadow = true
+    } else if (argument === '--cohesion-reinsertion-shadow') {
+      cohesionShadow = true
+      cohesionReinsertionShadow = true
     } else if (argument === '--require-cohesion-promotion') {
       requireCohesionPromotion = true
     } else {
@@ -694,6 +768,7 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
     retentionMode,
     cohesionShadow,
     cohesionLnsShadow,
+    cohesionReinsertionShadow,
     requireCohesionPromotion
   }
 }
@@ -711,7 +786,8 @@ for (const fixture of fixtures) {
     `${cli.outputDirectory}/${fixture.id}-production.svg`,
     cli.retentionMode,
     cli.cohesionShadow,
-    cli.cohesionLnsShadow
+    cli.cohesionLnsShadow,
+    cli.cohesionReinsertionShadow
   )
   const coldOnly =
     cli.paired && fixture.pairedEligible
@@ -721,7 +797,8 @@ for (const fixture of fixtures) {
           `${cli.outputDirectory}/${fixture.id}-cold-only.svg`,
           cli.retentionMode,
           cli.cohesionShadow,
-          cli.cohesionLnsShadow
+          cli.cohesionLnsShadow,
+          cli.cohesionReinsertionShadow
         )
       : undefined
   const productionColdSearch = capacityColdSearchTrace(production)
