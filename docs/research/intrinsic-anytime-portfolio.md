@@ -145,6 +145,11 @@ count, evaluations, completed depth, and elapsed time are reported only in
 Focused tests prove warm pause/resume equivalence and that enabling warm
 observers leaves the cold trace, placed geometries, and unplaced IDs unchanged.
 
+The first gate launch was stopped after `6.73 s` because the gate report
+projection omitted `warmPrefixLanes` even though the observers executed. It is
+not comparable evidence. The reporter was corrected and committed before the
+measurement was restarted.
+
 ## Remaining Stages
 
 1. Interleave protected complete and capacity checkpoints in deterministic
