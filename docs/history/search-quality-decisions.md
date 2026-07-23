@@ -42,6 +42,14 @@ known Mixed constrained floors within one entitlement. Detailed coordinator
 quanta and ledger reconciliation must prove that exactly one warm lane receives
 post-pilot work.
 
+That experiment passes at `648a93e`: exact Triangle cold identity, Mixed
+`700 x 500` at `49/61`, and Mixed `700 x 560` at `59/61`. The subsequent
+six-baseline matrix at `c171f21` retains every accepted complete/constrained
+hash and count. The policy is therefore accepted as the bounded warm
+continuation step. It does not resolve serial complete-miss cost, and the
+Triangle `300 x 300` render remains visibly loose; those limitations carry
+forward rather than being hidden by the passing gates.
+
 This document condenses the former chronological research ledger into decision
 arcs. Metrics describe the named commit and experiment, not current production,
 unless the row explicitly says otherwise. Detailed reports and negative results

@@ -1,0 +1,1126 @@
+{
+  "fixture": "mixed-61",
+  "sheet": {
+    "width": 600,
+    "height": 400
+  },
+  "sourceCommit": "c171f213e0a5826a2d83a09f472498c9366a900b",
+  "runtime": {
+    "elapsedMs": 3938.7034999999996,
+    "node": "v24.16.0",
+    "v8": "13.6.233.17-node.49"
+  },
+  "result": {
+    "placedCount": 24,
+    "unplacedCount": 37,
+    "unplacedPieceIds": [
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+      "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+      "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+      "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+      "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+    ],
+    "collisionIdentitySha256": "120f5f1eef64411032d0aee828cb61bc0c5464015397b600f194d63e242f6569",
+    "fittedCanonicalSha256": "b0c0d8395758b62058d29efb9702bff8519fbba028a9d8beb6b46d1492ce9e3d",
+    "canonicalTopology": {
+      "enclosedCavityCount": 0,
+      "largestOccupiedHullGapRatio": 0.15146855881746987,
+      "occupiedEnvelopeAspectRatio": 1.5159142698931563,
+      "positiveContactComponentCount": 11,
+      "isolatedPieceCount": 8,
+      "largestPositiveContactComponentSize": 11,
+      "largestPositiveContactComponentRatio": 0.4583333333333333
+    },
+    "bounds": {
+      "width": 594.058,
+      "height": 391.88100000000003,
+      "area": 232800.04309800002,
+      "span": 985.9390000000001
+    },
+    "score": {
+      "unplacedCount": 37,
+      "sharedCollisionBoundaryLengthMm": 721.09,
+      "sharedCollisionBoundaryContactUnits": 7.981281,
+      "sharedCollisionBoundaryContactBand": 7,
+      "nearCompleteStructuralContactCount": 7,
+      "dominantNearCompleteStructuralContactCount": 1,
+      "largestNetFreeMaterialRegionAreaMm2": 48085.30008099998,
+      "freeMaterialRegionCount": 1,
+      "freeMaterialHoleCount": 9,
+      "freeMaterialSliverMetric": 1197.464629606086,
+      "collisionBoundsWorstNormalizedSheetConsumption": 0.9900966666666666,
+      "collisionBoundsNormalizedSpanSum": 1.9697991666666665,
+      "collisionBoundsAreaMm2": 232800.043098,
+      "collisionBoundsSpanMm": 985.939,
+      "occupiedHullWasteRatio": 0.151469,
+      "collisionBoundsBottomMm": 0,
+      "collisionBoundsLeftMm": 0,
+      "freeMaterialSnapshot": {
+        "sheet": {
+          "width": 600,
+          "height": 400,
+          "label": "600x400"
+        },
+        "regions": [
+          {
+            "boundary": {
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 314.546,
+                  "y": 0
+                },
+                {
+                  "x": 314.546,
+                  "y": 76.92
+                },
+                {
+                  "x": 263.926,
+                  "y": 15.091
+                },
+                {
+                  "x": 209.868,
+                  "y": 34.398
+                },
+                {
+                  "x": 209.868,
+                  "y": 114.305
+                },
+                {
+                  "x": 260.488,
+                  "y": 176.134
+                },
+                {
+                  "x": 314.546,
+                  "y": 156.827
+                },
+                {
+                  "x": 314.546,
+                  "y": 164.504
+                },
+                {
+                  "x": 379.05,
+                  "y": 164.504
+                },
+                {
+                  "x": 379.05,
+                  "y": 187.542
+                },
+                {
+                  "x": 303.798,
+                  "y": 160.666
+                },
+                {
+                  "x": 228.546,
+                  "y": 187.542
+                },
+                {
+                  "x": 228.546,
+                  "y": 137.119
+                },
+                {
+                  "x": 188.294,
+                  "y": 108.368
+                },
+                {
+                  "x": 148.042,
+                  "y": 137.119
+                },
+                {
+                  "x": 148.042,
+                  "y": 124.955
+                },
+                {
+                  "x": 77.538,
+                  "y": 101.453
+                },
+                {
+                  "x": 7.034,
+                  "y": 124.955
+                },
+                {
+                  "x": 7.034,
+                  "y": 192.525
+                },
+                {
+                  "x": 77.538,
+                  "y": 216.027
+                },
+                {
+                  "x": 148.042,
+                  "y": 192.525
+                },
+                {
+                  "x": 188.294,
+                  "y": 221.276
+                },
+                {
+                  "x": 228.546,
+                  "y": 192.525
+                },
+                {
+                  "x": 228.546,
+                  "y": 244.944
+                },
+                {
+                  "x": 303.798,
+                  "y": 271.82
+                },
+                {
+                  "x": 379.05,
+                  "y": 244.944
+                },
+                {
+                  "x": 379.05,
+                  "y": 279.008
+                },
+                {
+                  "x": 543.554,
+                  "y": 279.008
+                },
+                {
+                  "x": 543.554,
+                  "y": 238.846
+                },
+                {
+                  "x": 584.058,
+                  "y": 238.846
+                },
+                {
+                  "x": 584.058,
+                  "y": 198.342
+                },
+                {
+                  "x": 543.554,
+                  "y": 198.342
+                },
+                {
+                  "x": 543.554,
+                  "y": 170.495
+                },
+                {
+                  "x": 594.058,
+                  "y": 205.216
+                },
+                {
+                  "x": 594.058,
+                  "y": 85.248
+                },
+                {
+                  "x": 543.554,
+                  "y": 119.969
+                },
+                {
+                  "x": 543.554,
+                  "y": 119.968
+                },
+                {
+                  "x": 594.058,
+                  "y": 85.247
+                },
+                {
+                  "x": 594.058,
+                  "y": 34.721
+                },
+                {
+                  "x": 543.554,
+                  "y": 0
+                },
+                {
+                  "x": 600,
+                  "y": 0
+                },
+                {
+                  "x": 600,
+                  "y": 400
+                },
+                {
+                  "x": 0,
+                  "y": 400
+                },
+                {
+                  "x": 0,
+                  "y": 307.658
+                },
+                {
+                  "x": 50.504,
+                  "y": 272.937
+                },
+                {
+                  "x": 50.504,
+                  "y": 292.609
+                },
+                {
+                  "x": 121.008,
+                  "y": 316.111
+                },
+                {
+                  "x": 121.008,
+                  "y": 295.334
+                },
+                {
+                  "x": 167.799,
+                  "y": 311.377
+                },
+                {
+                  "x": 212.885,
+                  "y": 279.173
+                },
+                {
+                  "x": 212.885,
+                  "y": 229.708
+                },
+                {
+                  "x": 166.094,
+                  "y": 213.664
+                },
+                {
+                  "x": 121.008,
+                  "y": 245.868
+                },
+                {
+                  "x": 121.008,
+                  "y": 201.537
+                },
+                {
+                  "x": 50.504,
+                  "y": 225.039
+                },
+                {
+                  "x": 50.504,
+                  "y": 222.411
+                },
+                {
+                  "x": 0,
+                  "y": 187.69
+                }
+              ]
+            },
+            "holes": [
+              {
+                "points": [
+                  {
+                    "x": 129.362,
+                    "y": 4.154
+                  },
+                  {
+                    "x": 58.858,
+                    "y": 27.656
+                  },
+                  {
+                    "x": 58.858,
+                    "y": 39.267
+                  },
+                  {
+                    "x": 8.354,
+                    "y": 4.546
+                  },
+                  {
+                    "x": 8.354,
+                    "y": 124.514
+                  },
+                  {
+                    "x": 58.858,
+                    "y": 89.793
+                  },
+                  {
+                    "x": 58.858,
+                    "y": 95.226
+                  },
+                  {
+                    "x": 129.362,
+                    "y": 118.728
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 169.615,
+                    "y": 5.647
+                  },
+                  {
+                    "x": 129.363,
+                    "y": 34.398
+                  },
+                  {
+                    "x": 129.363,
+                    "y": 89.804
+                  },
+                  {
+                    "x": 169.615,
+                    "y": 118.555
+                  },
+                  {
+                    "x": 209.867,
+                    "y": 89.804
+                  },
+                  {
+                    "x": 209.867,
+                    "y": 34.398
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 234.793,
+                    "y": 250.497
+                  },
+                  {
+                    "x": 191.937,
+                    "y": 306.596
+                  },
+                  {
+                    "x": 234.793,
+                    "y": 362.695
+                  },
+                  {
+                    "x": 303.798,
+                    "y": 341.372
+                  },
+                  {
+                    "x": 303.798,
+                    "y": 271.82
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 576.503,
+                    "y": 256.356
+                  },
+                  {
+                    "x": 525.999,
+                    "y": 291.077
+                  },
+                  {
+                    "x": 525.999,
+                    "y": 341.603
+                  },
+                  {
+                    "x": 576.503,
+                    "y": 376.324
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 346.021,
+                    "y": 266.852
+                  },
+                  {
+                    "x": 303.798,
+                    "y": 322.121
+                  },
+                  {
+                    "x": 345.689,
+                    "y": 380.956
+                  },
+                  {
+                    "x": 413.8,
+                    "y": 362.393
+                  },
+                  {
+                    "x": 413.8,
+                    "y": 291.798
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 469.9,
+                    "y": 279.008
+                  },
+                  {
+                    "x": 413.801,
+                    "y": 321.864
+                  },
+                  {
+                    "x": 435.124,
+                    "y": 390.869
+                  },
+                  {
+                    "x": 504.676,
+                    "y": 390.869
+                  },
+                  {
+                    "x": 525.999,
+                    "y": 321.864
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 140.183,
+                    "y": 311.377
+                  },
+                  {
+                    "x": 111.432,
+                    "y": 351.629
+                  },
+                  {
+                    "x": 140.183,
+                    "y": 391.881
+                  },
+                  {
+                    "x": 195.589,
+                    "y": 391.881
+                  },
+                  {
+                    "x": 224.34,
+                    "y": 351.629
+                  },
+                  {
+                    "x": 195.589,
+                    "y": 311.377
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 8.697,
+                    "y": 316.111
+                  },
+                  {
+                    "x": 32.199,
+                    "y": 386.615
+                  },
+                  {
+                    "x": 99.769,
+                    "y": 386.615
+                  },
+                  {
+                    "x": 123.271,
+                    "y": 316.111
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 281.833,
+                    "y": 348.16
+                  },
+                  {
+                    "x": 281.833,
+                    "y": 388.664
+                  },
+                  {
+                    "x": 322.337,
+                    "y": 388.664
+                  },
+                  {
+                    "x": 322.337,
+                    "y": 348.16
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "diagnostics": []
+      },
+      "placementOrder": [
+        "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+        "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+        "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+        "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+        "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+        "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+        "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+        "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2"
+      ],
+      "unplacedSourcePieceIds": [
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+        "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+        "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+      ]
+    },
+    "portfolio": {
+      "status": "completed",
+      "terminationReason": "capacity_subset_settled",
+      "source": "shared-archive",
+      "placements": [
+        {
+          "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 429.05,
+            "translateY": 0,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 543.554,
+            "translateY": 0,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 379.05,
+            "translateY": 164.504,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+          "sourcePieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.577
+          },
+          "transform": {
+            "translateX": 379.05,
+            "translateY": 271.82,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+          "sourcePieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.577
+          },
+          "transform": {
+            "translateX": 235.178,
+            "translateY": 185.173,
+            "rotationDeg": 250.34598301192344,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+          "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+          "placementReference": {
+            "x": -6.099,
+            "y": -6.609
+          },
+          "transform": {
+            "translateX": 191.937,
+            "translateY": 362.695,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+          "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+          "placementReference": {
+            "x": -6.099,
+            "y": -6.609
+          },
+          "transform": {
+            "translateX": 447.856,
+            "translateY": 317.814,
+            "rotationDeg": 127.37748259910418,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+          "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+          "placementReference": {
+            "x": -6.099,
+            "y": -6.609
+          },
+          "transform": {
+            "translateX": 413.801,
+            "translateY": 279.008,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+          "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+          "placementReference": {
+            "x": -5.252,
+            "y": -6.454
+          },
+          "transform": {
+            "translateX": 228.54600000000002,
+            "translateY": 221.276,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+          "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+          "placementReference": {
+            "x": -5.252,
+            "y": -6.454
+          },
+          "transform": {
+            "translateX": 209.86700000000002,
+            "translateY": 118.555,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+          "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+          "placementReference": {
+            "x": -5.252,
+            "y": -6.454
+          },
+          "transform": {
+            "translateX": 97.61200000000002,
+            "translateY": 262.579,
+            "rotationDeg": 234.462726155531,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+          "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+          "placementReference": {
+            "x": -5.252,
+            "y": -6.454
+          },
+          "transform": {
+            "translateX": 224.34,
+            "translateY": 311.377,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 148.04200000000003,
+            "translateY": 101.453,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 58.858000000000004,
+            "translateY": 118.728,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 50.50400000000002,
+            "translateY": 316.111,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 123.27100000000002,
+            "translateY": 386.615,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 7.033999999999992,
+            "translateY": 216.027,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+          "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+          "placementReference": {
+            "x": -9.984,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 58.858000000000004,
+            "translateY": 4.546,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+          "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+          "placementReference": {
+            "x": -9.984,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 50.50400000000002,
+            "translateY": 187.69,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+          "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+          "placementReference": {
+            "x": -9.984,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 525.999,
+            "translateY": 376.324,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+          "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+          "placementReference": {
+            "x": -9.984,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 594.058,
+            "translateY": 0,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+          "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+          "placementReference": {
+            "x": -9.984,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 543.554,
+            "translateY": 205.216,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+          "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 584.058,
+            "translateY": 198.342,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+          "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 322.337,
+            "translateY": 348.16,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        }
+      ],
+      "unplacedPieceIds": [
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+        "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+        "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+      ],
+      "score": {
+        "unplacedCount": 37,
+        "sharedCollisionBoundaryLengthMm": 721.09,
+        "sharedCollisionBoundaryContactUnits": 7.981281,
+        "sharedCollisionBoundaryContactBand": 7,
+        "nearCompleteStructuralContactCount": 7,
+        "dominantNearCompleteStructuralContactCount": 1,
+        "largestNetFreeMaterialRegionAreaMm2": 48085.30008099998,
+        "freeMaterialRegionCount": 1,
+        "freeMaterialHoleCount": 9,
+        "freeMaterialSliverMetric": 1197.464629606086,
+        "collisionBoundsWorstNormalizedSheetConsumption": 0.9900966666666666,
+        "collisionBoundsNormalizedSpanSum": 1.9697991666666665,
+        "collisionBoundsAreaMm2": 232800.043098,
+        "collisionBoundsSpanMm": 985.939,
+        "canonicalEnclosedCavityCount": 0
+      },
+      "diagnostics": [
+        {
+          "code": "capacity_subset_settled",
+          "message": "intrinsic-capacity-v1 settled 24 placed; 37 unplaced; origin cold-search; q90; hash 120f5f1eef64411032d0aee828cb61bc0c5464015397b600f194d63e242f6569"
+        }
+      ]
+    },
+    "capacityTrace": {
+      "routing": "preflight-proven-impossible",
+      "preflight": {
+        "kind": "proven_impossible",
+        "reason": "minimum-collision-area-exceeds-sheet-area",
+        "measurements": {
+          "pieceCount": 61,
+          "sheetWidthGrid": 600000,
+          "sheetHeightGrid": 400000,
+          "sheetDoubledAreaGrid2": "480000000000",
+          "minimumDoubledCollisionAreaSumGrid2": "626973708439",
+          "minimumCollisionAreaPressurePpm": "1306196",
+          "maximumSingletonSpanPressurePpm": "286260",
+          "singletonInfeasiblePieceIds": []
+        }
+      },
+      "prefixes": {
+        "capturedCount": 0,
+        "fittingCount": 0,
+        "rejectedCount": 0,
+        "terminalizedCount": 0,
+        "descriptors": []
+      },
+      "coldSearch": {
+        "beamWidth": 16,
+        "localLegalPlacementFanout": 3,
+        "placementEvaluationCap": 249856,
+        "placementEvaluationQuotaPerDepth": 4096,
+        "consumedPlacementEvaluations": 232209,
+        "auxiliaryPlacementEvaluations": 0,
+        "prunedByAttainableCount": 0,
+        "prunedByAttainableMaterial": 0,
+        "deduplicatedSuccessors": 223,
+        "fitRejectedCandidates": 200523,
+        "invalidCandidates": 0,
+        "endpointFitRejections": 0,
+        "completedDepths": 61,
+        "depthQuotaExhaustions": 53,
+        "pieceCount": 61,
+        "settlement": "evaluation-cap"
+      },
+      "warmPrefixLanes": [],
+      "warmPrefixEndpointsAdmitted": false,
+      "selected": {
+        "placedCount": 24,
+        "placedDoubledMaterialAreaGrid2": "302155017836",
+        "enclosedCavityCount": 0,
+        "totalEnclosedCavityAreaMm2": 0,
+        "envelopeMaximumSideMm": 594.058,
+        "envelopeAreaMm2": 232800.043098,
+        "envelopeSpanMm": 985.939,
+        "canonicalGeometryHash": "120f5f1eef64411032d0aee828cb61bc0c5464015397b600f194d63e242f6569",
+        "origin": "cold-search",
+        "unplacedCount": 37,
+        "placedMaterialAreaMm2": 151077.508918,
+        "selectedRotationDeg": 90
+      },
+      "preflightRuntimeMs": 22.281459000000012,
+      "prefixTerminalizationMs": 0.08029200000004266,
+      "coldSearchMs": 3786.863542,
+      "runtimeMs": 3787.2372499999997
+    },
+    "capacityShadowTelemetry": {
+      "pressure": {
+        "minimumCollisionAreaPressurePpm": "1306196",
+        "maximumSingletonSpanPressurePpm": "286260"
+      },
+      "noSkipProbe": {
+        "maximumDepth": 4,
+        "completedDepths": 4,
+        "noSkipFrontierPresent": true,
+        "consumedPlacementEvaluations": 3195,
+        "elapsedMs": 88.105208,
+        "status": "observed",
+        "checkpointVersion": "intrinsic-anytime-checkpoint-v1"
+      },
+      "routingInfluence": "none"
+    }
+  },
+  "checks": {
+    "collisionIdentity": true,
+    "fittedCanonical": true,
+    "placedCount": true,
+    "unplacedCount": true,
+    "area": true,
+    "canonicalCavities": true,
+    "runtime": true,
+    "schedulerChronology": true
+  },
+  "passed": true,
+  "svgPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-c171f21-six/mixed-61-600x400.svg"
+}

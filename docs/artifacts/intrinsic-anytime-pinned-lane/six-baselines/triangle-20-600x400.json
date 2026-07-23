@@ -1,0 +1,1743 @@
+{
+  "fixture": "triangle-20",
+  "sheet": {
+    "width": 600,
+    "height": 400
+  },
+  "sourceCommit": "c171f213e0a5826a2d83a09f472498c9366a900b",
+  "runtime": {
+    "elapsedMs": 13270.969375,
+    "node": "v24.16.0",
+    "v8": "13.6.233.17-node.49"
+  },
+  "result": {
+    "placedCount": 20,
+    "unplacedCount": 0,
+    "unplacedPieceIds": [],
+    "collisionIdentitySha256": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+    "fittedCanonicalSha256": "b4d1fd9af8a1ecb4a17f1031546c1dbbb5afb19b2d99e41bdb646e52084092f7",
+    "canonicalTopology": {
+      "enclosedCavityCount": 0,
+      "largestOccupiedHullGapRatio": 0.029710516900773094,
+      "occupiedEnvelopeAspectRatio": 3.1994269679128258,
+      "positiveContactComponentCount": 11,
+      "isolatedPieceCount": 10,
+      "largestPositiveContactComponentSize": 10,
+      "largestPositiveContactComponentRatio": 0.5
+    },
+    "bounds": {
+      "width": 487.983,
+      "height": 152.522,
+      "area": 74428.143126,
+      "span": 640.505
+    },
+    "score": {
+      "unplacedCount": 0,
+      "sharedCollisionBoundaryLengthMm": 388.1070000000001,
+      "sharedCollisionBoundaryContactUnits": 4.395927678620076,
+      "sharedCollisionBoundaryContactBand": 4,
+      "nearCompleteStructuralContactCount": 0,
+      "dominantNearCompleteStructuralContactCount": 0,
+      "largestNetFreeMaterialRegionAreaMm2": 173188.50051,
+      "freeMaterialRegionCount": 1,
+      "freeMaterialHoleCount": 6,
+      "freeMaterialSliverMetric": 182.2281385566096,
+      "collisionBoundsWorstNormalizedSheetConsumption": 0.8133050000000001,
+      "collisionBoundsNormalizedSpanSum": 1.19461,
+      "collisionBoundsAreaMm2": 74428.143126,
+      "collisionBoundsSpanMm": 640.505,
+      "occupiedHullWasteRatio": 0.06015213029072752,
+      "collisionBoundsBottomMm": 0,
+      "collisionBoundsLeftMm": 0,
+      "freeMaterialSnapshot": {
+        "sheet": {
+          "width": 600,
+          "height": 400,
+          "label": "600x400"
+        },
+        "regions": [
+          {
+            "boundary": {
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 44.486,
+                  "y": 0
+                },
+                {
+                  "x": 88.972,
+                  "y": 76.261
+                },
+                {
+                  "x": 132.095,
+                  "y": 0
+                },
+                {
+                  "x": 133.458,
+                  "y": 0
+                },
+                {
+                  "x": 177.944,
+                  "y": 76.261
+                },
+                {
+                  "x": 221.067,
+                  "y": 0
+                },
+                {
+                  "x": 222.43,
+                  "y": 0
+                },
+                {
+                  "x": 266.916,
+                  "y": 76.261
+                },
+                {
+                  "x": 310.039,
+                  "y": 0
+                },
+                {
+                  "x": 311.402,
+                  "y": 0
+                },
+                {
+                  "x": 355.888,
+                  "y": 76.261
+                },
+                {
+                  "x": 399.011,
+                  "y": 0
+                },
+                {
+                  "x": 400.374,
+                  "y": 0
+                },
+                {
+                  "x": 444.86,
+                  "y": 76.261
+                },
+                {
+                  "x": 487.983,
+                  "y": 0
+                },
+                {
+                  "x": 600,
+                  "y": 0
+                },
+                {
+                  "x": 600,
+                  "y": 400
+                },
+                {
+                  "x": 0,
+                  "y": 400
+                }
+              ]
+            },
+            "holes": [
+              {
+                "points": [
+                  {
+                    "x": 44.486,
+                    "y": 0
+                  },
+                  {
+                    "x": 0,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 44.486,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 88.972,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 132.095,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 133.458,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 177.944,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 221.067,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 222.43,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 266.916,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 310.039,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 311.402,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 355.888,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 399.011,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 400.374,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 444.86,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 487.983,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 443.497,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 400.374,
+                    "y": 0
+                  },
+                  {
+                    "x": 355.888,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 354.525,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 311.402,
+                    "y": 0
+                  },
+                  {
+                    "x": 266.916,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 265.553,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 222.43,
+                    "y": 0
+                  },
+                  {
+                    "x": 177.944,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 176.581,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 133.458,
+                    "y": 0
+                  },
+                  {
+                    "x": 88.972,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 87.609,
+                    "y": 76.261
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 44.486,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 0,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 87.609,
+                    "y": 152.522
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 133.458,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 88.972,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 176.581,
+                    "y": 152.522
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 222.43,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 177.944,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 265.553,
+                    "y": 152.522
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 311.402,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 266.916,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 354.525,
+                    "y": 152.522
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 400.374,
+                    "y": 76.261
+                  },
+                  {
+                    "x": 355.888,
+                    "y": 152.522
+                  },
+                  {
+                    "x": 443.497,
+                    "y": 152.522
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "diagnostics": []
+      },
+      "placementOrder": [
+        "triangle-copy-1",
+        "triangle-copy-2",
+        "triangle-copy-3",
+        "triangle-copy-4",
+        "triangle-copy-5",
+        "triangle-copy-6",
+        "triangle-copy-7",
+        "triangle-copy-8",
+        "triangle-copy-9",
+        "triangle-copy-10",
+        "triangle-copy-11",
+        "triangle-copy-12",
+        "triangle-copy-13",
+        "triangle-copy-14",
+        "triangle-copy-15",
+        "triangle-copy-16",
+        "triangle-copy-17",
+        "triangle-copy-18",
+        "triangle-copy-19",
+        "triangle-copy-20"
+      ],
+      "unplacedSourcePieceIds": []
+    },
+    "portfolio": {
+      "status": "completed",
+      "terminationReason": "shared_archive_completed",
+      "source": "shared-archive",
+      "placements": [
+        {
+          "pieceId": "triangle-copy-1",
+          "sourcePieceId": "triangle-copy-1",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 421.254,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-2",
+          "sourcePieceId": "triangle-copy-2",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 465.74,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-3",
+          "sourcePieceId": "triangle-copy-3",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 421.254,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-4",
+          "sourcePieceId": "triangle-copy-4",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 465.74,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-5",
+          "sourcePieceId": "triangle-copy-5",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 332.28200000000004,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-6",
+          "sourcePieceId": "triangle-copy-6",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 376.76800000000003,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-7",
+          "sourcePieceId": "triangle-copy-7",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 332.28200000000004,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-8",
+          "sourcePieceId": "triangle-copy-8",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 376.76800000000003,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-9",
+          "sourcePieceId": "triangle-copy-9",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 243.31,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-10",
+          "sourcePieceId": "triangle-copy-10",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 287.796,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-11",
+          "sourcePieceId": "triangle-copy-11",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 243.31,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-12",
+          "sourcePieceId": "triangle-copy-12",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 287.796,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-13",
+          "sourcePieceId": "triangle-copy-13",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 154.33800000000002,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-14",
+          "sourcePieceId": "triangle-copy-14",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 198.824,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-15",
+          "sourcePieceId": "triangle-copy-15",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 154.33800000000002,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-16",
+          "sourcePieceId": "triangle-copy-16",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 198.824,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-17",
+          "sourcePieceId": "triangle-copy-17",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 65.366,
+            "translateY": 114.392,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-18",
+          "sourcePieceId": "triangle-copy-18",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 109.85200000000002,
+            "translateY": -38.131,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-19",
+          "sourcePieceId": "triangle-copy-19",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 65.366,
+            "translateY": 190.653,
+            "rotationDeg": 120.25657838956553,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-20",
+          "sourcePieceId": "triangle-copy-20",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 109.85200000000002,
+            "translateY": 38.13,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        }
+      ],
+      "unplacedPieceIds": [],
+      "score": {
+        "unplacedCount": 0,
+        "sharedCollisionBoundaryLengthMm": 388.1070000000001,
+        "sharedCollisionBoundaryContactUnits": 4.395927678620076,
+        "sharedCollisionBoundaryContactBand": 4,
+        "nearCompleteStructuralContactCount": 0,
+        "dominantNearCompleteStructuralContactCount": 0,
+        "largestNetFreeMaterialRegionAreaMm2": 173188.50051,
+        "freeMaterialRegionCount": 1,
+        "freeMaterialHoleCount": 6,
+        "freeMaterialSliverMetric": 182.2281385566096,
+        "collisionBoundsWorstNormalizedSheetConsumption": 0.8133050000000001,
+        "collisionBoundsNormalizedSpanSum": 1.19461,
+        "collisionBoundsAreaMm2": 74428.143126,
+        "collisionBoundsSpanMm": 640.505,
+        "canonicalEnclosedCavityCount": 0
+      },
+      "diagnostics": [
+        {
+          "code": "intrinsic_shared_archive_selected",
+          "message": "selected exact shared-archive role periodic-P2 (371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127)"
+        }
+      ]
+    },
+    "capacityShadowTelemetry": {
+      "pressure": {
+        "minimumCollisionAreaPressurePpm": "278382",
+        "maximumSingletonSpanPressurePpm": "189188"
+      },
+      "noSkipProbe": {
+        "maximumDepth": 4,
+        "completedDepths": 4,
+        "noSkipFrontierPresent": true,
+        "consumedPlacementEvaluations": 2651,
+        "elapsedMs": 71.45083299999999,
+        "status": "observed",
+        "checkpointVersion": "intrinsic-anytime-checkpoint-v1"
+      },
+      "routingInfluence": "none"
+    },
+    "intrinsicAnytimeSchedulerTrace": {
+      "version": "intrinsic-anytime-scheduler-v1",
+      "coldQuantumDepths": 4,
+      "coldStartStatus": "paused",
+      "coldStartCompletedDepths": 4,
+      "coldStartConsumedPlacementEvaluations": 2651,
+      "coldCheckpointReused": false,
+      "warmPrefixEndpointsAdmitted": false,
+      "cancellationReason": "complete-endpoint-fitted",
+      "quanta": [
+        {
+          "ordinal": 0,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 1,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "settled"
+        },
+        {
+          "ordinal": 2,
+          "cohort": "experimental-complete",
+          "producerRole": "experimental-place-defer-complete",
+          "outcome": "settled"
+        },
+        {
+          "ordinal": 3,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "cancelled"
+        }
+      ]
+    },
+    "experimentalPlaceDeferTrace": {
+      "version": "intrinsic-place-defer-checkpoint-v1",
+      "deferredPreparedId": "triangle-copy-1",
+      "pendingOrder": [
+        "triangle-copy-2",
+        "triangle-copy-3",
+        "triangle-copy-4",
+        "triangle-copy-5",
+        "triangle-copy-6",
+        "triangle-copy-7",
+        "triangle-copy-8",
+        "triangle-copy-9",
+        "triangle-copy-10",
+        "triangle-copy-11",
+        "triangle-copy-12",
+        "triangle-copy-13",
+        "triangle-copy-14",
+        "triangle-copy-15",
+        "triangle-copy-16",
+        "triangle-copy-17",
+        "triangle-copy-18",
+        "triangle-copy-19",
+        "triangle-copy-20",
+        "triangle-copy-1"
+      ],
+      "status": "completed",
+      "candidateEvaluations": 3439,
+      "placedCount": 20,
+      "unplacedCount": 0,
+      "completeEndpointHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
+      "requestedSheetFit": {
+        "q0": true,
+        "q90": true
+      },
+      "outputInfluence": "none"
+    },
+    "experimentalPlaceDeferEndpoint": {
+      "sheetlessCanonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
+      "requestedSheetFit": {
+        "q0": {
+          "fits": true,
+          "canonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81"
+        },
+        "q90": {
+          "fits": true,
+          "canonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81"
+        },
+        "selectedRotationDeg": 0,
+        "selectedCanonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
+        "selectedPlacedCollisionGeometries": [
+          {
+            "placement": {
+              "pieceId": "triangle-copy-2",
+              "sourcePieceId": "triangle-copy-2",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 253.77999999999997,
+                "translateY": 71.32799999999997,
+                "rotationDeg": 59.743421610434474,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-2",
+              "transform": {
+                "index": 5,
+                "rotationDeg": 59.743421610434474,
+                "mirrored": false,
+                "reason": "edge_alignment"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 22.243,
+                    "y": 38.131
+                  },
+                  {
+                    "x": -20.88,
+                    "y": 114.392
+                  },
+                  {
+                    "x": -65.366,
+                    "y": 38.131
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": -65.366,
+                "minY": 38.131,
+                "maxX": 22.243,
+                "maxY": 114.392
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-3",
+              "sourcePieceId": "triangle-copy-3",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 232.89999999999998,
+                "translateY": 141.57599999999996,
+                "rotationDeg": 90,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-3",
+              "transform": {
+                "index": 1,
+                "rotationDeg": 90,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 0,
+                    "y": 44.144
+                  },
+                  {
+                    "x": -75.675,
+                    "y": 88.288
+                  },
+                  {
+                    "x": -75.675,
+                    "y": 0
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": -75.675,
+                "minY": 0,
+                "maxX": 0,
+                "maxY": 88.288
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-4",
+              "sourcePieceId": "triangle-copy-4",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 232.89999999999998,
+                "translateY": 229.86499999999998,
+                "rotationDeg": 270,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-4",
+              "transform": {
+                "index": 3,
+                "rotationDeg": 270,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 0,
+                    "y": -44.144
+                  },
+                  {
+                    "x": 75.675,
+                    "y": -88.288
+                  },
+                  {
+                    "x": 75.675,
+                    "y": 0
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": 0,
+                "minY": -88.288,
+                "maxX": 75.675,
+                "maxY": 0
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-5",
+              "sourcePieceId": "triangle-copy-5",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 188.75599999999997,
+                "translateY": 185.72099999999998,
+                "rotationDeg": 0,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-5",
+              "transform": {
+                "index": 0,
+                "rotationDeg": 0,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 44.144,
+                    "y": 0
+                  },
+                  {
+                    "x": 88.288,
+                    "y": 75.675
+                  },
+                  {
+                    "x": 0,
+                    "y": 75.675
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": 0,
+                "minY": 0,
+                "maxX": 88.288,
+                "maxY": 75.675
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-6",
+              "sourcePieceId": "triangle-copy-6",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 270.441,
+                "translateY": 163.476,
+                "rotationDeg": 270,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-6",
+              "transform": {
+                "index": 3,
+                "rotationDeg": 270,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 0,
+                    "y": -44.144
+                  },
+                  {
+                    "x": 75.675,
+                    "y": -88.288
+                  },
+                  {
+                    "x": 75.675,
+                    "y": 0
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": 0,
+                "minY": -88.288,
+                "maxX": 75.675,
+                "maxY": 0
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-7",
+              "sourcePieceId": "triangle-copy-7",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 271.327,
+                "translateY": 295.73800000000006,
+                "rotationDeg": 270,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-7",
+              "transform": {
+                "index": 3,
+                "rotationDeg": 270,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 0,
+                    "y": -44.144
+                  },
+                  {
+                    "x": 75.675,
+                    "y": -88.288
+                  },
+                  {
+                    "x": 75.675,
+                    "y": 0
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": 0,
+                "minY": -88.288,
+                "maxX": 75.675,
+                "maxY": 0
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-8",
+              "sourcePieceId": "triangle-copy-8",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 210.66099999999997,
+                "translateY": 146.99599999999998,
+                "rotationDeg": 180,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-8",
+              "transform": {
+                "index": 2,
+                "rotationDeg": 180,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": -44.144,
+                    "y": 0
+                  },
+                  {
+                    "x": -88.288,
+                    "y": -75.675
+                  },
+                  {
+                    "x": 0,
+                    "y": -75.675
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": -88.288,
+                "minY": -75.675,
+                "maxX": 0,
+                "maxY": 0
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-9",
+              "sourcePieceId": "triangle-copy-9",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 194.474,
+                "translateY": 207.44899999999998,
+                "rotationDeg": 90,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-9",
+              "transform": {
+                "index": 1,
+                "rotationDeg": 90,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 0,
+                    "y": 44.144
+                  },
+                  {
+                    "x": -75.675,
+                    "y": 88.288
+                  },
+                  {
+                    "x": -75.675,
+                    "y": 0
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": -75.675,
+                "minY": 0,
+                "maxX": 0,
+                "maxY": 88.288
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-10",
+              "sourcePieceId": "triangle-copy-10",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 323.047,
+                "translateY": 114.395,
+                "rotationDeg": 180,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-10",
+              "transform": {
+                "index": 2,
+                "rotationDeg": 180,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": -44.144,
+                    "y": 0
+                  },
+                  {
+                    "x": -88.288,
+                    "y": -75.675
+                  },
+                  {
+                    "x": 0,
+                    "y": -75.675
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": -88.288,
+                "minY": -75.675,
+                "maxX": 0,
+                "maxY": 0
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-11",
+              "sourcePieceId": "triangle-copy-11",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 161.798,
+                "translateY": 94.764,
+                "rotationDeg": 90,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-11",
+              "transform": {
+                "index": 1,
+                "rotationDeg": 90,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 0,
+                    "y": 44.144
+                  },
+                  {
+                    "x": -75.675,
+                    "y": 88.288
+                  },
+                  {
+                    "x": -75.675,
+                    "y": 0
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": -75.675,
+                "minY": 0,
+                "maxX": 0,
+                "maxY": 88.288
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-12",
+              "sourcePieceId": "triangle-copy-12",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 37.599999999999994,
+                "translateY": 66.458,
+                "rotationDeg": 300.2565783895655,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-12",
+              "transform": {
+                "index": 7,
+                "rotationDeg": 300.2565783895655,
+                "mirrored": false,
+                "reason": "edge_alignment"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 22.243,
+                    "y": -38.131
+                  },
+                  {
+                    "x": 109.852,
+                    "y": -38.131
+                  },
+                  {
+                    "x": 65.366,
+                    "y": 38.131
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": 22.243,
+                "minY": -38.131,
+                "maxX": 109.852,
+                "maxY": 38.131
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-13",
+              "sourcePieceId": "triangle-copy-13",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 257.34499999999997,
+                "translateY": 75.675,
+                "rotationDeg": 180,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-13",
+              "transform": {
+                "index": 2,
+                "rotationDeg": 180,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": -44.144,
+                    "y": 0
+                  },
+                  {
+                    "x": -88.288,
+                    "y": -75.675
+                  },
+                  {
+                    "x": 0,
+                    "y": -75.675
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": -88.288,
+                "minY": -75.675,
+                "maxX": 0,
+                "maxY": 0
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-14",
+              "sourcePieceId": "triangle-copy-14",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 123.37199999999999,
+                "translateY": 160.637,
+                "rotationDeg": 90,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-14",
+              "transform": {
+                "index": 1,
+                "rotationDeg": 90,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 0,
+                    "y": 44.144
+                  },
+                  {
+                    "x": -75.675,
+                    "y": 88.288
+                  },
+                  {
+                    "x": -75.675,
+                    "y": 0
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": -75.675,
+                "minY": 0,
+                "maxX": 0,
+                "maxY": 88.288
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-15",
+              "sourcePieceId": "triangle-copy-15",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 43.123000000000005,
+                "translateY": 295.738,
+                "rotationDeg": 270,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-15",
+              "transform": {
+                "index": 3,
+                "rotationDeg": 270,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 0,
+                    "y": -44.144
+                  },
+                  {
+                    "x": 75.675,
+                    "y": -88.288
+                  },
+                  {
+                    "x": 75.675,
+                    "y": 0
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": 0,
+                "minY": -88.288,
+                "maxX": 75.675,
+                "maxY": 0
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-16",
+              "sourcePieceId": "triangle-copy-16",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 94.61,
+                "translateY": 45.669,
+                "rotationDeg": 90,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-16",
+              "transform": {
+                "index": 1,
+                "rotationDeg": 90,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 0,
+                    "y": 44.144
+                  },
+                  {
+                    "x": -75.675,
+                    "y": 88.288
+                  },
+                  {
+                    "x": -75.675,
+                    "y": 0
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": -75.675,
+                "minY": 0,
+                "maxX": 0,
+                "maxY": 88.288
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-17",
+              "sourcePieceId": "triangle-copy-17",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 141.797,
+                "translateY": 256.571,
+                "rotationDeg": 0,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-17",
+              "transform": {
+                "index": 0,
+                "rotationDeg": 0,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 44.144,
+                    "y": 0
+                  },
+                  {
+                    "x": 88.288,
+                    "y": 75.675
+                  },
+                  {
+                    "x": 0,
+                    "y": 75.675
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": 0,
+                "minY": 0,
+                "maxX": 88.288,
+                "maxY": 75.675
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-18",
+              "sourcePieceId": "triangle-copy-18",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 235.715,
+                "translateY": 256.572,
+                "rotationDeg": 0,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-18",
+              "transform": {
+                "index": 0,
+                "rotationDeg": 0,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 44.144,
+                    "y": 0
+                  },
+                  {
+                    "x": 88.288,
+                    "y": 75.675
+                  },
+                  {
+                    "x": 0,
+                    "y": 75.675
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": 0,
+                "minY": 0,
+                "maxX": 88.288,
+                "maxY": 75.675
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-19",
+              "sourcePieceId": "triangle-copy-19",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 10.448000000000004,
+                "translateY": 183.052,
+                "rotationDeg": 270,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-19",
+              "transform": {
+                "index": 3,
+                "rotationDeg": 270,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 0,
+                    "y": -44.144
+                  },
+                  {
+                    "x": 75.675,
+                    "y": -88.288
+                  },
+                  {
+                    "x": 75.675,
+                    "y": 0
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": 0,
+                "minY": -88.288,
+                "maxX": 75.675,
+                "maxY": 0
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-20",
+              "sourcePieceId": "triangle-copy-20",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": 277.044,
+                "translateY": 337.071,
+                "rotationDeg": 180,
+                "mirrored": false
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-20",
+              "transform": {
+                "index": 2,
+                "rotationDeg": 180,
+                "mirrored": false,
+                "reason": "orthogonal"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": -44.144,
+                    "y": 0
+                  },
+                  {
+                    "x": -88.288,
+                    "y": -75.675
+                  },
+                  {
+                    "x": 0,
+                    "y": -75.675
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": -88.288,
+                "minY": -75.675,
+                "maxX": 0,
+                "maxY": 0
+              }
+            }
+          },
+          {
+            "placement": {
+              "pieceId": "triangle-copy-1",
+              "sourcePieceId": "triangle-copy-1",
+              "placementReference": {
+                "x": -9.144,
+                "y": -10.423
+              },
+              "transform": {
+                "translateX": -22.243,
+                "translateY": 289.725,
+                "rotationDeg": 239.7434216104345,
+                "mirrored": true
+              }
+            },
+            "collisionGeometry": {
+              "sourcePieceId": "triangle-copy-1",
+              "transform": {
+                "index": 6,
+                "rotationDeg": 239.7434216104345,
+                "mirrored": true,
+                "reason": "edge_alignment"
+              },
+              "polygon": {
+                "points": [
+                  {
+                    "x": 22.243,
+                    "y": 38.131
+                  },
+                  {
+                    "x": 109.852,
+                    "y": 38.131
+                  },
+                  {
+                    "x": 65.366,
+                    "y": -38.131
+                  }
+                ]
+              },
+              "bounds": {
+                "minX": 22.243,
+                "minY": -38.131,
+                "maxX": 109.852,
+                "maxY": 38.131
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "checks": {
+    "collisionIdentity": true,
+    "fittedCanonical": true,
+    "placedCount": true,
+    "unplacedCount": true,
+    "area": true,
+    "canonicalCavities": true,
+    "runtime": true,
+    "schedulerChronology": true
+  },
+  "passed": true,
+  "svgPath": "/private/tmp/min-plane-provenance/intrinsic-pinned-lane-c171f21-six/triangle-20-600x400.svg"
+}

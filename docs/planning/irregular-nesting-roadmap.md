@@ -127,6 +127,15 @@ until all three leading lanes are censored near depth `52`, returning cold at
 `55/61`. The next scheduler hypothesis must provide sufficient warm settlement
 runway without restoring settle-all cost.
 
+The pinned canonical settlement experiment clears that gate at `648a93e`:
+Triangle is cold-exact, Mixed `700 x 500` reaches `49/61`, and Mixed
+`700 x 560` reaches `59/61`, with only one warm lane receiving post-pilot
+work. The strict six-baseline matrix also passes at `c171f21`. This promotes the
+bounded warm-continuation mechanism as evidence for the next scheduler stage,
+not as completion of the roadmap. The next architecture must overlap useful
+capacity progress with protected complete work and address the visibly loose
+Triangle `300 x 300` partial without changing roomy-sheet complete identity.
+
 ### P0: Freeze the archive-only correctness and quality gate
 
 Establish the archive-only baseline before changing allocation or search.

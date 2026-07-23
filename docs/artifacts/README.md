@@ -15,6 +15,9 @@ baselines.
   capacity gate evidence — sheet-outline SVG/PNG renders of representative
   exact partial layouts, the combined strict `gate:capacity` report with full
   capacity traces, and the artifact manifest.
+- [`intrinsic-anytime-pinned-lane/`](./intrinsic-anytime-pinned-lane/): accepted
+  experimental evidence for one protected resumed warm lane, including the
+  three constrained falsifiers and the exact six-baseline matrix.
 - [`current-production-invariance-sample/`](./current-production-invariance-sample/):
   two completed archive-only production decodes from `b506344`. Their SVGs are
   byte-identical, but the full sheet matrix was cancelled and remains unproven.

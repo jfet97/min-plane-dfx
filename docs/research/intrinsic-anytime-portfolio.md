@@ -306,6 +306,25 @@ answer and reach the known `59/61` on `700 x 560` and `49/61` on `700 x 500`;
 only one warm lane may exceed pilot cost. The full constrained/roomy matrix is
 still conditional on those targeted falsifiers.
 
+Commit `648a93e` passes all three targeted falsifiers. Triangle remains exact
+cold at `15/20`; Mixed `700 x 500` reaches `49/61` versus cold `45/61`; Mixed
+`700 x 560` reaches `59/61` versus cold `55/61`. Aggregate evaluations are
+`77,377`, `414,737`, and `355,035` respectively, each within the two-base-cap
+allowance. Only the deepest canonical lane exceeds pilot work and every
+coordinator chronology and ledger validates. The paired run uses `294.61 s`
+wall, `313.96 s` user CPU, and `1,029,423,104` bytes maximum RSS.
+
+At packaging commit `c171f21`, all six strict accepted baselines pass with
+their exact canonical hashes and accounting. The matrix uses `112.23 s` wall,
+`123.35 s` user CPU, and `910,721,024` bytes maximum RSS. Portable reports,
+SVGs, and full Electron PNGs are in
+[`../artifacts/intrinsic-anytime-pinned-lane/`](../artifacts/intrinsic-anytime-pinned-lane/).
+
+This accepts the bounded pinned-lane capacity step, not the final architecture.
+The serial complete-miss cost remains, and the Triangle `300 x 300` endpoint is
+visually loose despite being exact cold. Both are explicit inputs to the next
+complete/capacity interleaving design.
+
 ## Stage 5: Shared Exact Archive Mechanics
 
 Complete and partial endpoints now pass through one generic exact archive
