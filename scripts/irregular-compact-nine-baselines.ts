@@ -4,7 +4,7 @@ import { join } from 'node:path'
 
 interface Baseline {
   readonly fixture: 'triangle-20' | 'mixed-61' | 'shapes-17'
-  readonly sheet: '2000x2700' | '600x400'
+  readonly sheet: '2000x2700' | '600x400' | '300x300'
   readonly collisionIdentitySha256: string
   readonly fittedCanonicalSha256: string
   readonly placedCount: number
@@ -92,6 +92,45 @@ const BASELINES: ReadonlyArray<Baseline> = [
     maximumAreaMm2: 232_178.021694,
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 120_000
+  },
+  {
+    fixture: 'triangle-20',
+    sheet: '300x300',
+    collisionIdentitySha256:
+      '0f5befd7d02fc111be47ee447fab7f8778f06ae05d045448f22a916d66949410',
+    fittedCanonicalSha256:
+      '2f236b79c7c49a999daf5363e257bbda6b8562239571c6fedab2485cffb38c35',
+    placedCount: 17,
+    unplacedCount: 3,
+    maximumAreaMm2: 78_811.504488,
+    maximumCanonicalCavities: 0,
+    maximumElapsedMs: 120_000
+  },
+  {
+    fixture: 'mixed-61',
+    sheet: '300x300',
+    collisionIdentitySha256:
+      'bb22df3517b4f2bbbdebc1d35704dbf4374f96d264af919a4c8d29dc2168fa33',
+    fittedCanonicalSha256:
+      '37d7bf9c37dfe2b9702bf8df73791782006178eb570ac043b23f1ca20ca22c0b',
+    placedCount: 6,
+    unplacedCount: 55,
+    maximumAreaMm2: 89_504.369008,
+    maximumCanonicalCavities: 0,
+    maximumElapsedMs: 330_000
+  },
+  {
+    fixture: 'shapes-17',
+    sheet: '300x300',
+    collisionIdentitySha256:
+      'e4ad1ce1c7fa26e7a00ba38a5d9c11e1908ebf753031ff4811420d5097be7c71',
+    fittedCanonicalSha256:
+      'bccfa5a4b7db4b5009a8c0f12d7c6f308c9a72550df3feb218355f33a5c1ef18',
+    placedCount: 5,
+    unplacedCount: 12,
+    maximumAreaMm2: 87_791.951625,
+    maximumCanonicalCavities: 0,
+    maximumElapsedMs: 120_000
   }
 ]
 
@@ -149,7 +188,7 @@ function runBaseline(baseline: Baseline, outputDirectory: string): Promise<void>
 }
 
 const outputDirectory =
-  argument('--output-dir') ?? '/private/tmp/min-plane-provenance/compact-six-baselines'
+  argument('--output-dir') ?? '/private/tmp/min-plane-provenance/compact-nine-baselines'
 await mkdir(outputDirectory, { recursive: true })
 
 const outcomes: Array<{

@@ -1,0 +1,1588 @@
+{
+  "fixture": "triangle-20",
+  "sheet": {
+    "width": 300,
+    "height": 300
+  },
+  "sourceCommit": "38e4bf0eeca8c9e8cbe80591647bf01a3b5950d4",
+  "runtime": {
+    "elapsedMs": 16173.468207999998,
+    "node": "v24.16.0",
+    "v8": "13.6.233.17-node.49"
+  },
+  "result": {
+    "placedCount": 17,
+    "unplacedCount": 3,
+    "unplacedPieceIds": [
+      "triangle-copy-18",
+      "triangle-copy-19",
+      "triangle-copy-20"
+    ],
+    "collisionIdentitySha256": "0f5befd7d02fc111be47ee447fab7f8778f06ae05d045448f22a916d66949410",
+    "fittedCanonicalSha256": "2f236b79c7c49a999daf5363e257bbda6b8562239571c6fedab2485cffb38c35",
+    "canonicalTopology": {
+      "enclosedCavityCount": 0,
+      "largestOccupiedHullGapRatio": 0.15700093408717983,
+      "occupiedEnvelopeAspectRatio": 1.1172738636705926,
+      "positiveContactComponentCount": 4,
+      "isolatedPieceCount": 3,
+      "largestPositiveContactComponentSize": 14,
+      "largestPositiveContactComponentRatio": 0.8235294117647058
+    },
+    "bounds": {
+      "width": 296.739,
+      "height": 265.592,
+      "area": 78811.50448799999,
+      "span": 562.3309999999999
+    },
+    "score": {
+      "unplacedCount": 3,
+      "sharedCollisionBoundaryLengthMm": 351.793,
+      "sharedCollisionBoundaryContactUnits": 3.984613,
+      "sharedCollisionBoundaryContactBand": 3,
+      "nearCompleteStructuralContactCount": 4,
+      "dominantNearCompleteStructuralContactCount": 2,
+      "largestNetFreeMaterialRegionAreaMm2": 33209.792622500005,
+      "freeMaterialRegionCount": 1,
+      "freeMaterialHoleCount": 3,
+      "freeMaterialSliverMetric": 347.0649576607306,
+      "collisionBoundsWorstNormalizedSheetConsumption": 0.98913,
+      "collisionBoundsNormalizedSpanSum": 1.8744366666666665,
+      "collisionBoundsAreaMm2": 78811.50448799999,
+      "collisionBoundsSpanMm": 562.3309999999999,
+      "occupiedHullWasteRatio": 0.203836,
+      "collisionBoundsBottomMm": 0,
+      "collisionBoundsLeftMm": 0,
+      "freeMaterialSnapshot": {
+        "sheet": {
+          "width": 300,
+          "height": 300,
+          "label": "300x300"
+        },
+        "regions": [
+          {
+            "boundary": {
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 198.908,
+                  "y": 0
+                },
+                {
+                  "x": 242.031,
+                  "y": 76.262
+                },
+                {
+                  "x": 286.517,
+                  "y": 0
+                },
+                {
+                  "x": 300,
+                  "y": 0
+                },
+                {
+                  "x": 300,
+                  "y": 300
+                },
+                {
+                  "x": 0,
+                  "y": 300
+                }
+              ]
+            },
+            "holes": [
+              {
+                "points": [
+                  {
+                    "x": 43.123,
+                    "y": 37.98
+                  },
+                  {
+                    "x": 0,
+                    "y": 114.242
+                  },
+                  {
+                    "x": 44.144,
+                    "y": 189.917
+                  },
+                  {
+                    "x": 0,
+                    "y": 265.592
+                  },
+                  {
+                    "x": 88.288,
+                    "y": 265.592
+                  },
+                  {
+                    "x": 132.432,
+                    "y": 189.917
+                  },
+                  {
+                    "x": 88.288,
+                    "y": 114.242
+                  },
+                  {
+                    "x": 88.289,
+                    "y": 114.242
+                  },
+                  {
+                    "x": 132.433,
+                    "y": 189.917
+                  },
+                  {
+                    "x": 88.289,
+                    "y": 265.592
+                  },
+                  {
+                    "x": 176.577,
+                    "y": 265.592
+                  },
+                  {
+                    "x": 264.865,
+                    "y": 265.592
+                  },
+                  {
+                    "x": 221.063,
+                    "y": 190.503
+                  },
+                  {
+                    "x": 264.186,
+                    "y": 114.242
+                  },
+                  {
+                    "x": 220.042,
+                    "y": 38.567
+                  },
+                  {
+                    "x": 175.898,
+                    "y": 114.242
+                  },
+                  {
+                    "x": 131.754,
+                    "y": 38.567
+                  },
+                  {
+                    "x": 43.466,
+                    "y": 38.567
+                  },
+                  {
+                    "x": 87.61,
+                    "y": 114.242
+                  },
+                  {
+                    "x": 87.609,
+                    "y": 114.242
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 132.775,
+                    "y": 37.98
+                  },
+                  {
+                    "x": 175.898,
+                    "y": 114.242
+                  },
+                  {
+                    "x": 220.384,
+                    "y": 37.98
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 296.739,
+                    "y": 146.359
+                  },
+                  {
+                    "x": 221.064,
+                    "y": 190.503
+                  },
+                  {
+                    "x": 296.739,
+                    "y": 234.647
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "diagnostics": []
+      },
+      "placementOrder": [
+        "triangle-copy-1",
+        "triangle-copy-2",
+        "triangle-copy-3",
+        "triangle-copy-4",
+        "triangle-copy-5",
+        "triangle-copy-6",
+        "triangle-copy-7",
+        "triangle-copy-8",
+        "triangle-copy-9",
+        "triangle-copy-10",
+        "triangle-copy-11",
+        "triangle-copy-12",
+        "triangle-copy-13",
+        "triangle-copy-14",
+        "triangle-copy-15",
+        "triangle-copy-16",
+        "triangle-copy-17"
+      ],
+      "unplacedSourcePieceIds": [
+        "triangle-copy-18",
+        "triangle-copy-19",
+        "triangle-copy-20"
+      ]
+    },
+    "portfolio": {
+      "status": "completed",
+      "terminationReason": "capacity_subset_settled",
+      "source": "shared-archive",
+      "placements": [
+        {
+          "pieceId": "triangle-copy-1",
+          "sourcePieceId": "triangle-copy-1",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 241.94299999999998,
+            "translateY": 76.111,
+            "rotationDeg": 59.743421610434474,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-2",
+          "sourcePieceId": "triangle-copy-2",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 175.898,
+            "translateY": 38.56700000000001,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-3",
+          "sourcePieceId": "triangle-copy-3",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 132.433,
+            "translateY": 114.242,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-4",
+          "sourcePieceId": "triangle-copy-4",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 176.577,
+            "translateY": 189.917,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-5",
+          "sourcePieceId": "triangle-copy-5",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 220.721,
+            "translateY": 265.592,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-6",
+          "sourcePieceId": "triangle-copy-6",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 88.289,
+            "translateY": 189.917,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-7",
+          "sourcePieceId": "triangle-copy-7",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 87.61,
+            "translateY": 38.56700000000001,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-8",
+          "sourcePieceId": "triangle-copy-8",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 176.577,
+            "translateY": 189.917,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-9",
+          "sourcePieceId": "triangle-copy-9",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 131.754,
+            "translateY": 114.242,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-10",
+          "sourcePieceId": "triangle-copy-10",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 44.144000000000005,
+            "translateY": 114.242,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-11",
+          "sourcePieceId": "triangle-copy-11",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 132.432,
+            "translateY": 265.592,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-12",
+          "sourcePieceId": "triangle-copy-12",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 0,
+            "translateY": 189.917,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-13",
+          "sourcePieceId": "triangle-copy-13",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 88.288,
+            "translateY": 189.917,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-14",
+          "sourcePieceId": "triangle-copy-14",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": -22.242999999999995,
+            "translateY": 76.111,
+            "rotationDeg": 239.7434216104345,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-15",
+          "sourcePieceId": "triangle-copy-15",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 110.532,
+            "translateY": 76.111,
+            "rotationDeg": 300.2565783895655,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-16",
+          "sourcePieceId": "triangle-copy-16",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 176.665,
+            "translateY": 38.131,
+            "rotationDeg": 300.2565783895655,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-17",
+          "sourcePieceId": "triangle-copy-17",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 221.064,
+            "translateY": 234.647,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        }
+      ],
+      "unplacedPieceIds": [
+        "triangle-copy-18",
+        "triangle-copy-19",
+        "triangle-copy-20"
+      ],
+      "score": {
+        "unplacedCount": 3,
+        "sharedCollisionBoundaryLengthMm": 351.793,
+        "sharedCollisionBoundaryContactUnits": 3.984613,
+        "sharedCollisionBoundaryContactBand": 3,
+        "nearCompleteStructuralContactCount": 4,
+        "dominantNearCompleteStructuralContactCount": 2,
+        "largestNetFreeMaterialRegionAreaMm2": 33209.792622500005,
+        "freeMaterialRegionCount": 1,
+        "freeMaterialHoleCount": 3,
+        "freeMaterialSliverMetric": 347.0649576607306,
+        "collisionBoundsWorstNormalizedSheetConsumption": 0.98913,
+        "collisionBoundsNormalizedSpanSum": 1.8744366666666665,
+        "collisionBoundsAreaMm2": 78811.50448799999,
+        "collisionBoundsSpanMm": 562.3309999999999,
+        "canonicalEnclosedCavityCount": 0
+      },
+      "diagnostics": [
+        {
+          "code": "capacity_subset_settled",
+          "message": "intrinsic-capacity-v1 settled 17 placed; 3 unplaced; origin cold-search; q0; hash 0f5befd7d02fc111be47ee447fab7f8778f06ae05d045448f22a916d66949410"
+        }
+      ]
+    },
+    "capacityTrace": {
+      "routing": "bounded-complete-archive-miss",
+      "preflight": {
+        "kind": "inconclusive",
+        "measurements": {
+          "pieceCount": 20,
+          "sheetWidthGrid": 300000,
+          "sheetHeightGrid": 300000,
+          "sheetDoubledAreaGrid2": "180000000000",
+          "minimumDoubledCollisionAreaSumGrid2": "133622998980",
+          "minimumCollisionAreaPressurePpm": "742350",
+          "maximumSingletonSpanPressurePpm": "292030",
+          "singletonInfeasiblePieceIds": []
+        }
+      },
+      "prefixes": {
+        "capturedCount": 9,
+        "fittingCount": 6,
+        "rejectedCount": 3,
+        "terminalizedCount": 4,
+        "descriptors": [
+          {
+            "role": "canonical-grid",
+            "depth": 5
+          },
+          {
+            "role": "canonical-grid",
+            "depth": 10
+          },
+          {
+            "role": "canonical-grid",
+            "depth": 15
+          },
+          {
+            "role": "legacy-absolute-envelope",
+            "depth": 5
+          },
+          {
+            "role": "legacy-absolute-envelope",
+            "depth": 10
+          },
+          {
+            "role": "legacy-absolute-envelope",
+            "depth": 15
+          },
+          {
+            "role": "open-pocket-first",
+            "depth": 5
+          },
+          {
+            "role": "open-pocket-first",
+            "depth": 10
+          },
+          {
+            "role": "open-pocket-first",
+            "depth": 15
+          }
+        ]
+      },
+      "prefixIncumbent": {
+        "sourceRole": "legacy-absolute-envelope",
+        "prefixDepth": 10,
+        "placedCount": 10,
+        "placedMaterialAreaMm2": 21000,
+        "selectedRotationDeg": 0,
+        "canonicalGeometryHash": "6cb959c5f0e4c5edec786159d10e04cca57e46baf66811733d4245005b9085ab"
+      },
+      "coldSearch": {
+        "beamWidth": 16,
+        "localLegalPlacementFanout": 3,
+        "placementEvaluationCap": 81920,
+        "placementEvaluationQuotaPerDepth": 4096,
+        "consumedPlacementEvaluations": 40945,
+        "auxiliaryPlacementEvaluations": 0,
+        "prunedByAttainableCount": 0,
+        "prunedByAttainableMaterial": 0,
+        "deduplicatedSuccessors": 73,
+        "fitRejectedCandidates": 27736,
+        "invalidCandidates": 0,
+        "endpointFitRejections": 0,
+        "completedDepths": 20,
+        "depthQuotaExhaustions": 0,
+        "pieceCount": 20,
+        "settlement": "exhausted",
+        "topologyRetentionDepths": [
+          {
+            "depth": 19,
+            "pieceId": "triangle-copy-20",
+            "measuredSurvivorCount": 16,
+            "retainedCount": 16,
+            "bestAccountingStratumCount": 16,
+            "topologyMeasurementCount": 16,
+            "topologyMeasurementMs": 1.2520009999993817,
+            "legalCandidateCount": 3193,
+            "contactMeasuredCandidateCount": 0,
+            "positiveContactCandidateCount": 0,
+            "contactMeasurementMs": 0,
+            "contactSelectedSuccessorCount": 0,
+            "contactDeduplicatedSuccessorCount": 0,
+            "contactRetainedSuccessorCount": 0,
+            "representatives": [
+              {
+                "role": "terminal-objective",
+                "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-copy-1\",\"triangle-copy-10\",\"triangle-copy-11\",\"triangle-copy-12\",\"triangle-copy-13\",\"triangle-copy-14\",\"triangle-copy-15\",\"triangle-copy-16\",\"triangle-copy-17\",\"triangle-copy-2\",\"triangle-copy-3\",\"triangle-copy-4\",\"triangle-copy-5\",\"triangle-copy-6\",\"triangle-copy-7\",\"triangle-copy-8\",\"triangle-copy-9\"]",
+                "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-copy-1\",\"triangle-copy-10\",\"triangle-copy-11\",\"triangle-copy-12\",\"triangle-copy-13\",\"triangle-copy-14\",\"triangle-copy-15\",\"triangle-copy-16\",\"triangle-copy-17\",\"triangle-copy-2\",\"triangle-copy-3\",\"triangle-copy-4\",\"triangle-copy-5\",\"triangle-copy-6\",\"triangle-copy-7\",\"triangle-copy-8\",\"triangle-copy-9\"]",
+                "decision": "skip",
+                "proposalRole": "skip",
+                "pieceId": "triangle-copy-20",
+                "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647",
+                "placedCount": 17,
+                "placedDoubledMaterialAreaGrid2": "71400000000",
+                "cavities": {
+                  "count": 0,
+                  "totalAreaMm2": 0
+                },
+                "gridSpan": {
+                  "widthGrid": 296739,
+                  "heightGrid": 265592
+                },
+                "topology": {
+                  "topology": {
+                    "enclosedCavityCount": 0,
+                    "largestOccupiedHullGapRatio": 0.15700093408717983,
+                    "occupiedEnvelopeAspectRatio": 1.1172738636705926,
+                    "positiveContactComponentCount": 4,
+                    "isolatedPieceCount": 3,
+                    "largestPositiveContactComponentSize": 14,
+                    "largestPositiveContactComponentRatio": 0.8235294117647058
+                  },
+                  "hullGapDoubledAreaGrid2": 22397690887,
+                  "hullDoubledAreaGrid2": 142659602742
+                },
+                "retained": true
+              },
+              {
+                "role": "minimum-components",
+                "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-copy-1\",\"triangle-copy-10\",\"triangle-copy-11\",\"triangle-copy-12\",\"triangle-copy-13\",\"triangle-copy-14\",\"triangle-copy-15\",\"triangle-copy-16\",\"triangle-copy-17\",\"triangle-copy-2\",\"triangle-copy-3\",\"triangle-copy-4\",\"triangle-copy-5\",\"triangle-copy-6\",\"triangle-copy-7\",\"triangle-copy-8\",\"triangle-copy-9\"]",
+                "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-copy-1\",\"triangle-copy-10\",\"triangle-copy-11\",\"triangle-copy-12\",\"triangle-copy-13\",\"triangle-copy-14\",\"triangle-copy-15\",\"triangle-copy-16\",\"triangle-copy-17\",\"triangle-copy-2\",\"triangle-copy-3\",\"triangle-copy-4\",\"triangle-copy-5\",\"triangle-copy-6\",\"triangle-copy-7\",\"triangle-copy-8\",\"triangle-copy-9\"]",
+                "decision": "skip",
+                "proposalRole": "skip",
+                "pieceId": "triangle-copy-20",
+                "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647",
+                "placedCount": 17,
+                "placedDoubledMaterialAreaGrid2": "71400000000",
+                "cavities": {
+                  "count": 0,
+                  "totalAreaMm2": 0
+                },
+                "gridSpan": {
+                  "widthGrid": 296739,
+                  "heightGrid": 265592
+                },
+                "topology": {
+                  "topology": {
+                    "enclosedCavityCount": 0,
+                    "largestOccupiedHullGapRatio": 0.15700093408717983,
+                    "occupiedEnvelopeAspectRatio": 1.1172738636705926,
+                    "positiveContactComponentCount": 4,
+                    "isolatedPieceCount": 3,
+                    "largestPositiveContactComponentSize": 14,
+                    "largestPositiveContactComponentRatio": 0.8235294117647058
+                  },
+                  "hullGapDoubledAreaGrid2": 22397690887,
+                  "hullDoubledAreaGrid2": 142659602742
+                },
+                "retained": true
+              },
+              {
+                "role": "minimum-isolated",
+                "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-copy-1\",\"triangle-copy-10\",\"triangle-copy-11\",\"triangle-copy-12\",\"triangle-copy-13\",\"triangle-copy-14\",\"triangle-copy-15\",\"triangle-copy-16\",\"triangle-copy-17\",\"triangle-copy-2\",\"triangle-copy-3\",\"triangle-copy-4\",\"triangle-copy-5\",\"triangle-copy-6\",\"triangle-copy-7\",\"triangle-copy-8\",\"triangle-copy-9\"]",
+                "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-copy-1\",\"triangle-copy-10\",\"triangle-copy-11\",\"triangle-copy-12\",\"triangle-copy-13\",\"triangle-copy-14\",\"triangle-copy-15\",\"triangle-copy-16\",\"triangle-copy-17\",\"triangle-copy-2\",\"triangle-copy-3\",\"triangle-copy-4\",\"triangle-copy-5\",\"triangle-copy-6\",\"triangle-copy-7\",\"triangle-copy-8\",\"triangle-copy-9\"]",
+                "decision": "skip",
+                "proposalRole": "skip",
+                "pieceId": "triangle-copy-20",
+                "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647",
+                "placedCount": 17,
+                "placedDoubledMaterialAreaGrid2": "71400000000",
+                "cavities": {
+                  "count": 0,
+                  "totalAreaMm2": 0
+                },
+                "gridSpan": {
+                  "widthGrid": 296739,
+                  "heightGrid": 265592
+                },
+                "topology": {
+                  "topology": {
+                    "enclosedCavityCount": 0,
+                    "largestOccupiedHullGapRatio": 0.15700093408717983,
+                    "occupiedEnvelopeAspectRatio": 1.1172738636705926,
+                    "positiveContactComponentCount": 4,
+                    "isolatedPieceCount": 3,
+                    "largestPositiveContactComponentSize": 14,
+                    "largestPositiveContactComponentRatio": 0.8235294117647058
+                  },
+                  "hullGapDoubledAreaGrid2": 22397690887,
+                  "hullDoubledAreaGrid2": 142659602742
+                },
+                "retained": true
+              },
+              {
+                "role": "maximum-largest-component",
+                "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-copy-1\",\"triangle-copy-10\",\"triangle-copy-11\",\"triangle-copy-12\",\"triangle-copy-13\",\"triangle-copy-14\",\"triangle-copy-15\",\"triangle-copy-16\",\"triangle-copy-17\",\"triangle-copy-2\",\"triangle-copy-3\",\"triangle-copy-4\",\"triangle-copy-5\",\"triangle-copy-6\",\"triangle-copy-7\",\"triangle-copy-8\",\"triangle-copy-9\"]",
+                "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647|placed=[\"triangle-copy-1\",\"triangle-copy-10\",\"triangle-copy-11\",\"triangle-copy-12\",\"triangle-copy-13\",\"triangle-copy-14\",\"triangle-copy-15\",\"triangle-copy-16\",\"triangle-copy-17\",\"triangle-copy-2\",\"triangle-copy-3\",\"triangle-copy-4\",\"triangle-copy-5\",\"triangle-copy-6\",\"triangle-copy-7\",\"triangle-copy-8\",\"triangle-copy-9\"]",
+                "decision": "skip",
+                "proposalRole": "skip",
+                "pieceId": "triangle-copy-20",
+                "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0127:12:polygon-ring108:11:point-count1:37:point-017:1:x6:1989081:y1:07:point-121:1:x6:2420311:y5:762627:point-217:1:x6:2865171:y1:07:entry-1130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:431231:y5:379807:point-117:1:x1:01:y6:1142427:point-221:1:x5:876091:y6:1142427:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1142427:point-121:1:x5:441441:y6:1899177:point-221:1:x5:882881:y6:1142427:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-117:1:x1:01:y6:2655927:point-221:1:x5:882881:y6:2655927:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:434661:y5:385677:point-121:1:x5:876101:y6:1142427:point-221:1:x6:1317541:y5:385677:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1899177:point-121:1:x5:882881:y6:2655927:point-222:1:x6:1324321:y6:1899177:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1142427:point-121:1:x5:441441:y6:1899177:point-222:1:x6:1324321:y6:1899177:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1317541:y5:385677:point-121:1:x5:876101:y6:1142427:point-222:1:x6:1758981:y6:1142427:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1327751:y5:379807:point-122:1:x6:1758981:y6:1142427:point-221:1:x6:2203841:y5:379807:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:882891:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:1765771:y6:1142428:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2200421:y5:385677:point-122:1:x6:1758981:y6:1142427:point-222:1:x6:2641861:y6:1142428:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-121:1:x5:882891:y6:2655927:point-222:1:x6:1765771:y6:2655928:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1324331:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2207211:y6:1899178:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:1324331:y6:1899177:point-222:1:x6:2207211:y6:1899178:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1765771:y6:1142427:point-122:1:x6:2210631:y6:1905037:point-222:1:x6:2641861:y6:1142428:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2207211:y6:1899177:point-122:1:x6:1765771:y6:2655927:point-222:1:x6:2648651:y6:2655928:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2967391:y6:1463597:point-122:1:x6:2210641:y6:1905037:point-222:1:x6:2967391:y6:234647",
+                "placedCount": 17,
+                "placedDoubledMaterialAreaGrid2": "71400000000",
+                "cavities": {
+                  "count": 0,
+                  "totalAreaMm2": 0
+                },
+                "gridSpan": {
+                  "widthGrid": 296739,
+                  "heightGrid": 265592
+                },
+                "topology": {
+                  "topology": {
+                    "enclosedCavityCount": 0,
+                    "largestOccupiedHullGapRatio": 0.15700093408717983,
+                    "occupiedEnvelopeAspectRatio": 1.1172738636705926,
+                    "positiveContactComponentCount": 4,
+                    "isolatedPieceCount": 3,
+                    "largestPositiveContactComponentSize": 14,
+                    "largestPositiveContactComponentRatio": 0.8235294117647058
+                  },
+                  "hullGapDoubledAreaGrid2": 22397690887,
+                  "hullDoubledAreaGrid2": 142659602742
+                },
+                "retained": true
+              },
+              {
+                "role": "minimum-hull-waste",
+                "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:441441:y5:441447:point-117:1:x1:01:y6:1198197:point-221:1:x5:882881:y6:1198197:entry-1131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1198197:point-121:1:x5:441441:y6:1954947:point-221:1:x5:882881:y6:1198197:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x6:2963951:y1:07:point-121:1:x6:2207201:y5:441447:point-221:1:x6:2963951:y5:882887:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1954947:point-117:1:x1:01:y6:2711697:point-221:1:x5:882881:y6:2711697:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:441441:y5:441447:point-121:1:x5:882881:y6:1198197:point-221:1:x6:1324321:y5:441447:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1954947:point-121:1:x5:882881:y6:2711697:point-222:1:x6:1324321:y6:1954947:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1198197:point-121:1:x5:441441:y6:1954947:point-222:1:x6:1324321:y6:1954947:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1324321:y5:441447:point-121:1:x5:882881:y6:1198197:point-222:1:x6:1765761:y6:1198197:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1334531:y5:435577:point-122:1:x6:1765761:y6:1198197:point-221:1:x6:2210621:y5:435577:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:889671:y6:1198197:point-122:1:x6:1331111:y6:1954947:point-222:1:x6:1772551:y6:1198198:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2207201:y5:441447:point-122:1:x6:1765761:y6:1198197:point-222:1:x6:2648641:y6:1198198:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1331111:y6:1954947:point-121:1:x5:889671:y6:2711697:point-222:1:x6:1772551:y6:2711698:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1331111:y6:1954947:point-122:1:x6:1772551:y6:2711697:point-222:1:x6:2213991:y6:1954948:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1772551:y6:1198197:point-122:1:x6:1331111:y6:1954947:point-222:1:x6:2213991:y6:1954948:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1772551:y6:1198197:point-122:1:x6:2217411:y6:1960807:point-222:1:x6:2648641:y6:1198198:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2213991:y6:1954947:point-122:1:x6:1772551:y6:2711697:point-222:1:x6:2655431:y6:2711698:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2974171:y6:1519367:point-122:1:x6:2217421:y6:1960807:point-222:1:x6:2974171:y6:240224|placed=[\"triangle-copy-1\",\"triangle-copy-10\",\"triangle-copy-11\",\"triangle-copy-12\",\"triangle-copy-13\",\"triangle-copy-14\",\"triangle-copy-15\",\"triangle-copy-16\",\"triangle-copy-17\",\"triangle-copy-2\",\"triangle-copy-3\",\"triangle-copy-4\",\"triangle-copy-5\",\"triangle-copy-6\",\"triangle-copy-7\",\"triangle-copy-8\",\"triangle-copy-9\"]",
+                "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:441441:y5:441447:point-117:1:x1:01:y6:1198197:point-221:1:x5:882881:y6:1198197:entry-1131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1198197:point-121:1:x5:441441:y6:1954947:point-221:1:x5:882881:y6:1198197:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x6:2963951:y1:07:point-121:1:x6:2207201:y5:441447:point-221:1:x6:2963951:y5:882887:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1954947:point-117:1:x1:01:y6:2711697:point-221:1:x5:882881:y6:2711697:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:441441:y5:441447:point-121:1:x5:882881:y6:1198197:point-221:1:x6:1324321:y5:441447:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1954947:point-121:1:x5:882881:y6:2711697:point-222:1:x6:1324321:y6:1954947:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1198197:point-121:1:x5:441441:y6:1954947:point-222:1:x6:1324321:y6:1954947:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1324321:y5:441447:point-121:1:x5:882881:y6:1198197:point-222:1:x6:1765761:y6:1198197:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1334531:y5:435577:point-122:1:x6:1765761:y6:1198197:point-221:1:x6:2210621:y5:435577:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:889671:y6:1198197:point-122:1:x6:1331111:y6:1954947:point-222:1:x6:1772551:y6:1198198:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2207201:y5:441447:point-122:1:x6:1765761:y6:1198197:point-222:1:x6:2648641:y6:1198198:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1331111:y6:1954947:point-121:1:x5:889671:y6:2711697:point-222:1:x6:1772551:y6:2711698:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1331111:y6:1954947:point-122:1:x6:1772551:y6:2711697:point-222:1:x6:2213991:y6:1954948:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1772551:y6:1198197:point-122:1:x6:1331111:y6:1954947:point-222:1:x6:2213991:y6:1954948:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1772551:y6:1198197:point-122:1:x6:2217411:y6:1960807:point-222:1:x6:2648641:y6:1198198:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2213991:y6:1954947:point-122:1:x6:1772551:y6:2711697:point-222:1:x6:2655431:y6:2711698:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2974171:y6:1519367:point-122:1:x6:2217421:y6:1960807:point-222:1:x6:2974171:y6:240224|placed=[\"triangle-copy-1\",\"triangle-copy-10\",\"triangle-copy-11\",\"triangle-copy-12\",\"triangle-copy-13\",\"triangle-copy-14\",\"triangle-copy-15\",\"triangle-copy-16\",\"triangle-copy-17\",\"triangle-copy-2\",\"triangle-copy-3\",\"triangle-copy-4\",\"triangle-copy-5\",\"triangle-copy-6\",\"triangle-copy-7\",\"triangle-copy-8\",\"triangle-copy-9\"]",
+                "decision": "skip",
+                "proposalRole": "skip",
+                "pieceId": "triangle-copy-20",
+                "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:177:entry-0130:12:polygon-ring111:11:point-count1:37:point-020:1:x5:441441:y5:441447:point-117:1:x1:01:y6:1198197:point-221:1:x5:882881:y6:1198197:entry-1131:12:polygon-ring112:11:point-count1:37:point-017:1:x1:01:y6:1198197:point-121:1:x5:441441:y6:1954947:point-221:1:x5:882881:y6:1198197:entry-2131:12:polygon-ring112:11:point-count1:37:point-017:1:x6:2963951:y1:07:point-121:1:x6:2207201:y5:441447:point-221:1:x6:2963951:y5:882887:entry-3131:12:polygon-ring112:11:point-count1:37:point-021:1:x5:441441:y6:1954947:point-117:1:x1:01:y6:2711697:point-221:1:x5:882881:y6:2711697:entry-4134:12:polygon-ring115:11:point-count1:37:point-020:1:x5:441441:y5:441447:point-121:1:x5:882881:y6:1198197:point-221:1:x6:1324321:y5:441447:entry-5136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:441441:y6:1954947:point-121:1:x5:882881:y6:2711697:point-222:1:x6:1324321:y6:1954947:entry-6136:12:polygon-ring117:11:point-count1:37:point-021:1:x5:882881:y6:1198197:point-121:1:x5:441441:y6:1954947:point-222:1:x6:1324321:y6:1954947:entry-7136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1324321:y5:441447:point-121:1:x5:882881:y6:1198197:point-222:1:x6:1765761:y6:1198197:entry-8136:12:polygon-ring117:11:point-count1:37:point-021:1:x6:1334531:y5:435577:point-122:1:x6:1765761:y6:1198197:point-221:1:x6:2210621:y5:435577:entry-9137:12:polygon-ring118:11:point-count1:37:point-021:1:x5:889671:y6:1198197:point-122:1:x6:1331111:y6:1954947:point-222:1:x6:1772551:y6:1198198:entry-10137:12:polygon-ring118:11:point-count1:37:point-021:1:x6:2207201:y5:441447:point-122:1:x6:1765761:y6:1198197:point-222:1:x6:2648641:y6:1198198:entry-11137:12:polygon-ring118:11:point-count1:37:point-022:1:x6:1331111:y6:1954947:point-121:1:x5:889671:y6:2711697:point-222:1:x6:1772551:y6:2711698:entry-12138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1331111:y6:1954947:point-122:1:x6:1772551:y6:2711697:point-222:1:x6:2213991:y6:1954948:entry-13138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1772551:y6:1198197:point-122:1:x6:1331111:y6:1954947:point-222:1:x6:2213991:y6:1954948:entry-14138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:1772551:y6:1198197:point-122:1:x6:2217411:y6:1960807:point-222:1:x6:2648641:y6:1198198:entry-15138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2213991:y6:1954947:point-122:1:x6:1772551:y6:2711697:point-222:1:x6:2655431:y6:2711698:entry-16138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:2974171:y6:1519367:point-122:1:x6:2217421:y6:1960807:point-222:1:x6:2974171:y6:240224",
+                "placedCount": 17,
+                "placedDoubledMaterialAreaGrid2": "71400000000",
+                "cavities": {
+                  "count": 0,
+                  "totalAreaMm2": 0
+                },
+                "gridSpan": {
+                  "widthGrid": 297417,
+                  "heightGrid": 271169
+                },
+                "topology": {
+                  "topology": {
+                    "enclosedCavityCount": 0,
+                    "largestOccupiedHullGapRatio": 0.1503574332534875,
+                    "occupiedEnvelopeAspectRatio": 1.0967957251750753,
+                    "positiveContactComponentCount": 4,
+                    "isolatedPieceCount": 3,
+                    "largestPositiveContactComponentSize": 14,
+                    "largestPositiveContactComponentRatio": 0.8235294117647058
+                  },
+                  "hullGapDoubledAreaGrid2": 21318514469,
+                  "hullDoubledAreaGrid2": 141785570608
+                },
+                "retained": true
+              }
+            ]
+          }
+        ]
+      },
+      "warmPrefixLanes": [
+        {
+          "sourceRole": "canonical-grid",
+          "prefixDepth": 5,
+          "reusedPlacedCount": 5,
+          "status": "checkpointed-censored",
+          "selectedForContinuation": false,
+          "checkpointRetained": true,
+          "consumedPlacementEvaluations": 137,
+          "completedDepths": 6,
+          "elapsedMs": 4.07366699999875,
+          "endpoint": {
+            "placedCount": 6,
+            "placedDoubledMaterialAreaGrid2": "25200000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 220.55,
+            "envelopeAreaMm2": 41855.31735,
+            "envelopeSpanMm": 410.327,
+            "canonicalGeometryHash": "852da63851288f87ff8d7d570260e2f2bfc39f620362f13b655aa6a2e5d7301c",
+            "origin": "warm-prefix-continuation",
+            "prefixDepth": 5,
+            "sourceRole": "canonical-grid"
+          }
+        },
+        {
+          "sourceRole": "canonical-grid",
+          "prefixDepth": 10,
+          "reusedPlacedCount": 10,
+          "status": "settled",
+          "selectedForContinuation": true,
+          "checkpointRetained": false,
+          "consumedPlacementEvaluations": 28314,
+          "completedDepths": 20,
+          "elapsedMs": 939.0711670000001,
+          "endpoint": {
+            "placedCount": 14,
+            "placedDoubledMaterialAreaGrid2": "58800000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 298.351,
+            "envelopeAreaMm2": 88946.488577,
+            "envelopeSpanMm": 596.4780000000001,
+            "canonicalGeometryHash": "1785143d08c2d6223462fa9b1501d7ebcf03be236b5e7c1d6bec563d29e78aa2",
+            "origin": "warm-prefix-continuation",
+            "prefixDepth": 10,
+            "sourceRole": "canonical-grid"
+          }
+        },
+        {
+          "sourceRole": "legacy-absolute-envelope",
+          "prefixDepth": 5,
+          "reusedPlacedCount": 5,
+          "status": "checkpointed-censored",
+          "selectedForContinuation": false,
+          "checkpointRetained": true,
+          "consumedPlacementEvaluations": 123,
+          "completedDepths": 6,
+          "elapsedMs": 3.5568750000002183,
+          "endpoint": {
+            "placedCount": 6,
+            "placedDoubledMaterialAreaGrid2": "25200000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 196.1,
+            "envelopeAreaMm2": 37387.2494,
+            "envelopeSpanMm": 386.754,
+            "canonicalGeometryHash": "b1a2836c7e2b2946fee37cdeca716cb9b6a021b0b89e7a3423a71ec2e051db61",
+            "origin": "warm-prefix-continuation",
+            "prefixDepth": 5,
+            "sourceRole": "legacy-absolute-envelope"
+          }
+        },
+        {
+          "sourceRole": "legacy-absolute-envelope",
+          "prefixDepth": 10,
+          "reusedPlacedCount": 10,
+          "status": "checkpointed-censored",
+          "selectedForContinuation": false,
+          "checkpointRetained": true,
+          "consumedPlacementEvaluations": 173,
+          "completedDepths": 11,
+          "elapsedMs": 6.201291999999739,
+          "endpoint": {
+            "placedCount": 11,
+            "placedDoubledMaterialAreaGrid2": "46200000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 261.954,
+            "envelopeAreaMm2": 64492.81284600001,
+            "envelopeSpanMm": 508.153,
+            "canonicalGeometryHash": "7739ebd390e7e2616ba7418158c2a6ec83557405fbd2efc3f045407ec2c51cf8",
+            "origin": "warm-prefix-continuation",
+            "prefixDepth": 10,
+            "sourceRole": "legacy-absolute-envelope"
+          }
+        },
+        {
+          "sourceRole": "open-pocket-first",
+          "prefixDepth": 5,
+          "reusedPlacedCount": 5,
+          "status": "checkpointed-censored",
+          "selectedForContinuation": false,
+          "checkpointRetained": true,
+          "consumedPlacementEvaluations": 137,
+          "completedDepths": 6,
+          "elapsedMs": 4.059165999999095,
+          "endpoint": {
+            "placedCount": 6,
+            "placedDoubledMaterialAreaGrid2": "25200000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 220.55,
+            "envelopeAreaMm2": 41855.31735,
+            "envelopeSpanMm": 410.327,
+            "canonicalGeometryHash": "852da63851288f87ff8d7d570260e2f2bfc39f620362f13b655aa6a2e5d7301c",
+            "origin": "warm-prefix-continuation",
+            "prefixDepth": 5,
+            "sourceRole": "open-pocket-first"
+          }
+        },
+        {
+          "sourceRole": "open-pocket-first",
+          "prefixDepth": 10,
+          "reusedPlacedCount": 10,
+          "status": "checkpointed-censored",
+          "selectedForContinuation": false,
+          "checkpointRetained": true,
+          "consumedPlacementEvaluations": 187,
+          "completedDepths": 11,
+          "elapsedMs": 6.679709000000003,
+          "endpoint": {
+            "placedCount": 11,
+            "placedDoubledMaterialAreaGrid2": "46200000000",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 287.159,
+            "envelopeAreaMm2": 76789.475349,
+            "envelopeSpanMm": 554.5699999999999,
+            "canonicalGeometryHash": "d023e3296e76bdd2212fb9e7a8d3e083dd7276cb6590974b6c69928c1da84944",
+            "origin": "warm-prefix-continuation",
+            "prefixDepth": 10,
+            "sourceRole": "open-pocket-first"
+          }
+        }
+      ],
+      "warmPrefixEndpointsAdmitted": true,
+      "laneCoordinator": {
+        "version": "intrinsic-capacity-lane-coordinator-v2",
+        "aggregatePlacementEvaluationCap": 163840,
+        "aggregateConsumedPlacementEvaluations": 70016,
+        "warmPilotDepthBoundaries": 1,
+        "continuedProducers": [
+          {
+            "role": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 10
+          }
+        ],
+        "retainedCheckpointCount": 5,
+        "censoredLaneCount": 5,
+        "quanta": [
+          {
+            "ordinal": 0,
+            "producerRole": "capacity-cold",
+            "phase": "initial",
+            "fromDepth": 0,
+            "toDepth": 20,
+            "placementEvaluationDelta": 40945,
+            "outcome": "settled"
+          },
+          {
+            "ordinal": 1,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 5,
+            "phase": "initial",
+            "fromDepth": 5,
+            "toDepth": 6,
+            "placementEvaluationDelta": 137,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 2,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 10,
+            "phase": "initial",
+            "fromDepth": 10,
+            "toDepth": 11,
+            "placementEvaluationDelta": 187,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 3,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 5,
+            "phase": "initial",
+            "fromDepth": 5,
+            "toDepth": 6,
+            "placementEvaluationDelta": 123,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 4,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 10,
+            "phase": "initial",
+            "fromDepth": 10,
+            "toDepth": 11,
+            "placementEvaluationDelta": 173,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 5,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "open-pocket-first",
+            "prefixDepth": 5,
+            "phase": "initial",
+            "fromDepth": 5,
+            "toDepth": 6,
+            "placementEvaluationDelta": 137,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 6,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "open-pocket-first",
+            "prefixDepth": 10,
+            "phase": "initial",
+            "fromDepth": 10,
+            "toDepth": 11,
+            "placementEvaluationDelta": 187,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 7,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 10,
+            "phase": "resume",
+            "fromDepth": 11,
+            "toDepth": 12,
+            "placementEvaluationDelta": 986,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 8,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 10,
+            "phase": "resume",
+            "fromDepth": 12,
+            "toDepth": 13,
+            "placementEvaluationDelta": 3247,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 9,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 10,
+            "phase": "resume",
+            "fromDepth": 13,
+            "toDepth": 14,
+            "placementEvaluationDelta": 3368,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 10,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 10,
+            "phase": "resume",
+            "fromDepth": 14,
+            "toDepth": 15,
+            "placementEvaluationDelta": 3421,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 11,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 10,
+            "phase": "resume",
+            "fromDepth": 15,
+            "toDepth": 16,
+            "placementEvaluationDelta": 3421,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 12,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 10,
+            "phase": "resume",
+            "fromDepth": 16,
+            "toDepth": 17,
+            "placementEvaluationDelta": 3421,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 13,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 10,
+            "phase": "resume",
+            "fromDepth": 17,
+            "toDepth": 18,
+            "placementEvaluationDelta": 3421,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 14,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 10,
+            "phase": "resume",
+            "fromDepth": 18,
+            "toDepth": 19,
+            "placementEvaluationDelta": 3421,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 15,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 10,
+            "phase": "resume",
+            "fromDepth": 19,
+            "toDepth": 20,
+            "placementEvaluationDelta": 3421,
+            "outcome": "settled"
+          },
+          {
+            "ordinal": 16,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 5,
+            "phase": "censor",
+            "fromDepth": 6,
+            "toDepth": 6,
+            "placementEvaluationDelta": 0,
+            "outcome": "censored"
+          },
+          {
+            "ordinal": 17,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 5,
+            "phase": "censor",
+            "fromDepth": 6,
+            "toDepth": 6,
+            "placementEvaluationDelta": 0,
+            "outcome": "censored"
+          },
+          {
+            "ordinal": 18,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 10,
+            "phase": "censor",
+            "fromDepth": 11,
+            "toDepth": 11,
+            "placementEvaluationDelta": 0,
+            "outcome": "censored"
+          },
+          {
+            "ordinal": 19,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "open-pocket-first",
+            "prefixDepth": 5,
+            "phase": "censor",
+            "fromDepth": 6,
+            "toDepth": 6,
+            "placementEvaluationDelta": 0,
+            "outcome": "censored"
+          },
+          {
+            "ordinal": 20,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "open-pocket-first",
+            "prefixDepth": 10,
+            "phase": "censor",
+            "fromDepth": 11,
+            "toDepth": 11,
+            "placementEvaluationDelta": 0,
+            "outcome": "censored"
+          }
+        ]
+      },
+      "selected": {
+        "placedCount": 17,
+        "placedDoubledMaterialAreaGrid2": "71400000000",
+        "enclosedCavityCount": 0,
+        "totalEnclosedCavityAreaMm2": 0,
+        "envelopeMaximumSideMm": 296.739,
+        "envelopeAreaMm2": 78811.50448799999,
+        "envelopeSpanMm": 562.3309999999999,
+        "canonicalGeometryHash": "0f5befd7d02fc111be47ee447fab7f8778f06ae05d045448f22a916d66949410",
+        "origin": "cold-search",
+        "unplacedCount": 3,
+        "placedMaterialAreaMm2": 35700,
+        "selectedRotationDeg": 0
+      },
+      "preflightRuntimeMs": 6.994833,
+      "completeArchiveRuntimeMs": 14740.701041999999,
+      "prefixTerminalizationMs": 10.912500000000364,
+      "coldSearchMs": 1231.9260830000003,
+      "runtimeMs": 1243.3423330000005
+    },
+    "capacityShadowTelemetry": {
+      "pressure": {
+        "minimumCollisionAreaPressurePpm": "742350",
+        "maximumSingletonSpanPressurePpm": "292030"
+      },
+      "noSkipProbe": {
+        "maximumDepth": 4,
+        "completedDepths": 4,
+        "noSkipFrontierPresent": true,
+        "consumedPlacementEvaluations": 2651,
+        "elapsedMs": 81.352667,
+        "status": "observed",
+        "checkpointVersion": "intrinsic-anytime-checkpoint-v2"
+      },
+      "routingInfluence": "none"
+    },
+    "intrinsicAnytimeSchedulerTrace": {
+      "version": "intrinsic-anytime-scheduler-v1",
+      "coldQuantumDepths": 4,
+      "coldStartStatus": "paused",
+      "coldStartCompletedDepths": 4,
+      "coldStartConsumedPlacementEvaluations": 2533,
+      "coldCheckpointReused": true,
+      "warmPrefixEndpointsAdmitted": true,
+      "cancellationReason": "complete-cohort-miss",
+      "quanta": [
+        {
+          "ordinal": 0,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 1,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 2,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 3,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 4,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 5,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 6,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 7,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 8,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 9,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 10,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 11,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 12,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 13,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 14,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 15,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 16,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 17,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 18,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 19,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 20,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 21,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 22,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 23,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 24,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 25,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 26,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 27,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 28,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 29,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 30,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 31,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 32,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "settled"
+        },
+        {
+          "ordinal": 33,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 34,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 35,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 36,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "settled"
+        },
+        {
+          "ordinal": 37,
+          "cohort": "experimental-complete",
+          "producerRole": "experimental-place-defer-complete",
+          "outcome": "settled"
+        },
+        {
+          "ordinal": 38,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 39,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 40,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 41,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 42,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 43,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 44,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "settled"
+        },
+        {
+          "ordinal": 45,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "censored"
+        },
+        {
+          "ordinal": 46,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "censored"
+        },
+        {
+          "ordinal": 47,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "censored"
+        },
+        {
+          "ordinal": 48,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "censored"
+        },
+        {
+          "ordinal": 49,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "censored"
+        }
+      ]
+    },
+    "experimentalPlaceDeferTrace": {
+      "version": "intrinsic-place-defer-checkpoint-v1",
+      "deferredPreparedId": "triangle-copy-1",
+      "pendingOrder": [
+        "triangle-copy-2",
+        "triangle-copy-3",
+        "triangle-copy-4",
+        "triangle-copy-5",
+        "triangle-copy-6",
+        "triangle-copy-7",
+        "triangle-copy-8",
+        "triangle-copy-9",
+        "triangle-copy-10",
+        "triangle-copy-11",
+        "triangle-copy-12",
+        "triangle-copy-13",
+        "triangle-copy-14",
+        "triangle-copy-15",
+        "triangle-copy-16",
+        "triangle-copy-17",
+        "triangle-copy-18",
+        "triangle-copy-19",
+        "triangle-copy-20",
+        "triangle-copy-1"
+      ],
+      "status": "completed",
+      "candidateEvaluations": 3439,
+      "placedCount": 20,
+      "unplacedCount": 0,
+      "completeEndpointHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
+      "requestedSheetFit": {
+        "q0": false,
+        "q90": false
+      },
+      "outputInfluence": "none"
+    },
+    "experimentalPlaceDeferEndpoint": {
+      "sheetlessCanonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
+      "requestedSheetFit": {
+        "q0": {
+          "fits": false
+        },
+        "q90": {
+          "fits": false
+        },
+        "selectedPlacedCollisionGeometries": []
+      }
+    }
+  },
+  "checks": {
+    "collisionIdentity": true,
+    "fittedCanonical": true,
+    "placedCount": true,
+    "unplacedCount": true,
+    "area": true,
+    "canonicalCavities": true,
+    "runtime": true,
+    "schedulerChronology": true
+  },
+  "passed": true,
+  "svgPath": "/private/tmp/min-plane-provenance/production-cohesion-nine-preliminary/triangle-20-300x300.svg"
+}
