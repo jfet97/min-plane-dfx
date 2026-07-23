@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { JobId, PieceId } from '@shared/domain/ids.js'
+import { isIrregularHistoryFrame } from '@shared/domain/nesting.js'
 import {
   IrregularHistoryFrame,
   IrregularPlacement,
@@ -19,6 +20,7 @@ function frame(input: {
   readonly stepIndex: number
   readonly beamRank: number
   readonly pieceIds: ReadonlyArray<PieceId>
+  readonly title?: string
 }): IrregularHistoryFrame {
   return new IrregularHistoryFrame({
     kind: 'irregular',
@@ -27,7 +29,7 @@ function frame(input: {
     strategyRunId: 'irregular-run',
     strategyLabel: 'Irregular convex windowed beam',
     stepIndex: input.stepIndex,
-    title: `Step ${input.stepIndex}`,
+    title: input.title ?? `Step ${input.stepIndex}`,
     placements: input.pieceIds.map(
       (pieceId, index) =>
         new IrregularPlacement({
@@ -78,5 +80,24 @@ describe('run history GIF sequence selection', () => {
     const selected = selectFirstBeamSequence(frames, 'irregular-run')
 
     expect(selected.map(({ frameId }) => frameId)).toEqual(['first', 'second'])
+  })
+
+  it('expands a legacy terminal-only shared archive replay for GIF export', () => {
+    const terminal = frame({
+      id: 'legacy-terminal',
+      stepIndex: 2,
+      beamRank: 0,
+      pieceIds: [firstPieceId, secondPieceId],
+      title: 'shared-archive-final-selected'
+    })
+
+    const selected = selectFirstBeamSequence([terminal], 'irregular-run')
+
+    expect(
+      selected.map((selectedFrame) =>
+        isIrregularHistoryFrame(selectedFrame) ? selectedFrame.placements.length : -1
+      )
+    ).toEqual([1, 2])
+    expect(selected[selected.length - 1]?.title).toBe('shared-archive-final-selected')
   })
 })

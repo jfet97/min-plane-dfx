@@ -92,6 +92,9 @@ a truthful reveal of the selected complete exact endpoint, tagged
 `shared-archive-selected-layout-reveal` until the terminal
 `shared-archive-final-selected` frame. The queue consumer performs NDJSON
 writes and live `history_frame` sends outside the algorithm.
+The renderer expands legacy terminal-only shared-archive replays into the same
+selected-layout reveal from their real final placements, so saved timelines and
+GIFs remain useful without altering the persisted result.
 
 ## Strategy Configuration
 

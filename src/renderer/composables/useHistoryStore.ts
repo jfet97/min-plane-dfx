@@ -13,6 +13,7 @@ import type {
   ProjectRunRecord,
   WorkspaceProjectSettings
 } from '@shared/domain/project.js'
+import { expandSharedArchiveSelectedLayoutReveal } from '../utils/sharedArchiveHistory.js'
 
 /**
  * Bounded history retention policy. Keeps the most recent N frames in memory;
@@ -278,7 +279,9 @@ export function useHistoryStore() {
       const runId = frame.strategyRunId
       const existing = state.framesByRun[runId] ?? []
       if (existing.some((current) => current.frameId === frame.frameId)) return
-      const next = [...existing, frame]
+      const incoming =
+        existing.length === 0 ? expandSharedArchiveSelectedLayoutReveal(frame) : [frame]
+      const next = [...existing, ...incoming]
       if (next.length > MAX_RETAINED_FRAMES) {
         next.splice(0, next.length - MAX_RETAINED_FRAMES)
         state.truncated = true

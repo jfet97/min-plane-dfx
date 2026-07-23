@@ -11,6 +11,7 @@ import {
   gifPaletteCssColor,
   nearestGifPaletteIndex
 } from '@shared/utils/gifEncoder.js'
+import { expandSharedArchiveSelectedLayoutReveal } from './sharedArchiveHistory.js'
 
 export interface RunHistoryGifOptions {
   readonly sheet: SheetSpec
@@ -26,14 +27,15 @@ export function selectFirstBeamSequence(
   frames: ReadonlyArray<NestingHistoryFramePayload>,
   strategyRunId: string
 ): ReadonlyArray<NestingHistoryFramePayload> {
+  const expandedFrames = frames.flatMap(expandSharedArchiveSelectedLayoutReveal)
   const selectedByStep = new Map<number, NestingHistoryFramePayload>()
-  for (const frame of frames) {
+  for (const frame of expandedFrames) {
     if (frame.strategyRunId === strategyRunId && frame.beamRank === 0) {
       selectedByStep.set(frame.stepIndex, frame)
     }
   }
   if (selectedByStep.size === 0) {
-    for (const frame of frames) {
+    for (const frame of expandedFrames) {
       if (frame.strategyRunId === strategyRunId) {
         const existing = selectedByStep.get(frame.stepIndex)
         if (!existing || frame.beamRank < existing.beamRank) {

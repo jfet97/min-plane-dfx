@@ -62,6 +62,13 @@ function selectedTransform(frame: NestingHistoryFramePayload): string | null {
 function isSharedArchiveFrame(frame: NestingHistoryFramePayload): boolean {
   return isIrregularHistoryFrame(frame) && frame.title.startsWith('shared-archive-')
 }
+
+function displayedStrategyId(): string {
+  const run = history.selectedRun.value
+  return run?.layout?.kind === 'irregular' && run.layout.source === 'shared-archive'
+    ? 'irregular-convex-shared-archive'
+    : (run?.strategyId ?? '')
+}
 </script>
 
 <template>
@@ -71,7 +78,7 @@ function isSharedArchiveFrame(frame: NestingHistoryFramePayload): boolean {
       <div class="run-label" v-if="history.selectedRun.value">
         <span class="muted">Run:</span>
         <strong>{{ history.selectedRun.value.strategyLabel }}</strong>
-        <code class="muted">({{ history.selectedRun.value.strategyId }})</code>
+        <code class="muted">({{ displayedStrategyId() }})</code>
       </div>
     </header>
 
