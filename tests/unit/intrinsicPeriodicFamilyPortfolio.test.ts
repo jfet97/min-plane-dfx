@@ -19,7 +19,7 @@ import {
 import {
   continuationsForExecution,
   type IntrinsicPeriodicContinuation,
-  type IntrinsicPeriodicSourceAuditReplay,
+  type IntrinsicPeriodicSourceAuditReplayEnvelope,
   phaseResidualCoverageComplete,
   runIntrinsicPeriodicFamilyPortfolio
 } from '../../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
@@ -298,7 +298,7 @@ describe('intrinsic periodic family portfolio', () => {
 
   it('replays validated raw witnesses without physical crop enumeration', async () => {
     const pieces = Array.from({ length: 4 }, (_, index) => preparedTriangle(`replay-${index}`))
-    const run = (sourceAuditReplay?: IntrinsicPeriodicSourceAuditReplay) =>
+    const run = (sourceAuditReplayEnvelope?: IntrinsicPeriodicSourceAuditReplayEnvelope) =>
       Effect.runPromise(
         runIntrinsicPeriodicFamilyPortfolio(
           new SheetSpec({ width: 100, height: 100, label: 'test' }),
@@ -312,7 +312,9 @@ describe('intrinsic periodic family portfolio', () => {
             capturePhaseTimings: true,
             captureSourceSurvivalAudit: true,
             admitSourceAuditWitnesses: true,
-            ...(sourceAuditReplay === undefined ? {} : { sourceAuditReplay })
+            ...(sourceAuditReplayEnvelope === undefined
+              ? {}
+              : { sourceAuditReplayEnvelope })
           }
         ).pipe(
           Effect.provide(GeometryKernel.Live.pipe(Layer.provide(GeometrySettings.Live))),
@@ -321,11 +323,10 @@ describe('intrinsic periodic family portfolio', () => {
         )
       )
     const cold = await run()
-    const warm = await run({
-      witnesses: cold.sourceAuditWitnesses,
-      nonDominatedCropCount: cold.sourceAuditNonDominatedCropCount,
-      sourceCropSurvival: cold.sourceCropSurvival
-    })
+    const replayEnvelope = cold.sourceAuditReplayEnvelope
+    expect(replayEnvelope).toBeDefined()
+    if (replayEnvelope === undefined) throw new Error('cold replay envelope missing')
+    const warm = await run(replayEnvelope)
 
     expect(warm.continuations.map(({ sourceId }) => sourceId)).toEqual(
       cold.continuations.map(({ sourceId }) => sourceId)
@@ -333,9 +334,23 @@ describe('intrinsic periodic family portfolio', () => {
     expect(warm.continuationOmissions).toEqual(cold.continuationOmissions)
     expect(warm.sourceAuditWitnesses).toEqual(cold.sourceAuditWitnesses)
     expect(warm.sourceAuditNonDominatedCropCount).toBe(cold.sourceAuditNonDominatedCropCount)
+    expect(warm.sourceAuditReplayAccepted).toBe(true)
     expect(warm.phaseTimings?.selection.sourceAuditPhysicalCropAttemptCount).toBe(0)
     expect(warm.phaseTimings?.selection.sourceAuditReplayWitnessCount).toBe(
       cold.sourceAuditWitnesses.length
     )
+
+    const coldFallback = await run({
+      ...replayEnvelope,
+      replayDigest: `stale-${replayEnvelope.replayDigest}`
+    })
+    expect(coldFallback.sourceAuditReplayAccepted).toBe(false)
+    expect(coldFallback.continuations.map(({ sourceId }) => sourceId)).toEqual(
+      cold.continuations.map(({ sourceId }) => sourceId)
+    )
+    expect(coldFallback.sourceAuditWitnesses).toEqual(cold.sourceAuditWitnesses)
+    expect(
+      coldFallback.phaseTimings?.selection.sourceAuditPhysicalCropAttemptCount
+    ).toBeGreaterThan(0)
   }, 30_000)
 })

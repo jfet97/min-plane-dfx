@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { Effect } from 'effect'
 import { SheetSpec } from '@shared/domain/nesting.js'
 import {
@@ -114,6 +115,16 @@ export interface IntrinsicPeriodicSourceAuditReplay {
 
 export type IntrinsicPeriodicSourceAuditScope = 'all' | 'p2-axis-union'
 
+export interface IntrinsicPeriodicSourceAuditReplayEnvelope {
+  readonly formatVersion: 2
+  readonly algorithmVersion: 'intrinsic-periodic-source-audit-v2'
+  readonly scope: IntrinsicPeriodicSourceAuditScope
+  readonly preparedInputDigest: string
+  readonly eligibleSourceDomainDigest: string
+  readonly replayDigest: string
+  readonly replay: IntrinsicPeriodicSourceAuditReplay
+}
+
 export interface IntrinsicPeriodicFamilyPortfolioResult {
   readonly catalog: IntrinsicPeriodicCatalog
   readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
@@ -124,6 +135,8 @@ export interface IntrinsicPeriodicFamilyPortfolioResult {
   readonly sourceCropSurvival: ReadonlyArray<IntrinsicPeriodicSourceCropSurvival>
   readonly sourceAuditWitnesses: ReadonlyArray<IntrinsicPeriodicSourceAuditWitness>
   readonly sourceAuditNonDominatedCropCount: number
+  readonly sourceAuditReplayAccepted: boolean
+  readonly sourceAuditReplayEnvelope?: IntrinsicPeriodicSourceAuditReplayEnvelope
   readonly runs: ReadonlyArray<IntrinsicPeriodicContinuationResult>
   readonly archive: ReadonlyArray<IntrinsicStrictCompletedMetrics>
   readonly winner: IntrinsicPeriodicContinuationResult | undefined
@@ -188,8 +201,8 @@ export interface IntrinsicPeriodicFamilyPortfolioOptions {
    * when every retained cell front evicted them.
    */
   readonly admitSourceAuditWitnesses?: boolean
-  /** Replays a previously validated bounded raw-crop product instead of enumerating it again. */
-  readonly sourceAuditReplay?: IntrinsicPeriodicSourceAuditReplay
+  /** Replays a bounded raw-crop product only after validating its complete algorithm-owned envelope. */
+  readonly sourceAuditReplayEnvelope?: IntrinsicPeriodicSourceAuditReplayEnvelope
   /** Narrows the experimental cold audit while preserving the same downstream selection. */
   readonly sourceAuditScope?: IntrinsicPeriodicSourceAuditScope
 }
@@ -231,6 +244,18 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       ...(options.control === undefined ? {} : { control: options.control })
     })
     const catalogMs = capturePhaseTimings ? performance.now() - catalogStartedAt : 0
+    const sourceAuditScope = options.sourceAuditScope ?? 'all'
+    const replayProbeStartedAt = performance.now()
+    const sourceAuditReplay = yield* validateSourceAuditReplayEnvelope(
+      catalog,
+      pieces,
+      sourceAuditScope,
+      options.sourceAuditReplayEnvelope
+    )
+    const replayProbeExcludedMs =
+      options.sourceAuditReplayEnvelope !== undefined && sourceAuditReplay === undefined
+        ? performance.now() - replayProbeStartedAt
+        : 0
     const selected = yield* selectIntrinsicPeriodicContinuations(
       catalog,
       pieces,
@@ -240,8 +265,8 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       options.captureSourceSurvivalAudit ?? false,
       (options.captureSourceSurvivalAudit ?? false) && (options.admitSourceAuditWitnesses ?? false),
       capturePhaseTimings,
-      options.sourceAuditReplay,
-      options.sourceAuditScope ?? 'all',
+      sourceAuditReplay,
+      sourceAuditScope,
       options.control
     )
     const selectionMs = selected.phaseTimings?.totalMs ?? 0
@@ -260,7 +285,8 @@ export function runIntrinsicPeriodicFamilyPortfolio(
     let constructionRunCoverageComplete = true
     let finalizationMs = 0
     for (const continuation of continuations) {
-      const remainingMs = maximumTotalRuntimeMs - (performance.now() - startedAt)
+      const remainingMs =
+        maximumTotalRuntimeMs - (performance.now() - startedAt - replayProbeExcludedMs)
       if (remainingMs <= 0) {
         runs.push({
           continuation,
@@ -437,6 +463,21 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       sourceCropSurvival: selected.sourceCropSurvival,
       sourceAuditWitnesses: selected.sourceAuditWitnesses,
       sourceAuditNonDominatedCropCount: selected.sourceAuditNonDominatedCropCount,
+      sourceAuditReplayAccepted: sourceAuditReplay !== undefined,
+      ...(!(options.captureSourceSurvivalAudit ?? false)
+        ? {}
+        : {
+            sourceAuditReplayEnvelope: makeSourceAuditReplayEnvelope(
+              catalog,
+              pieces,
+              sourceAuditScope,
+              {
+                witnesses: selected.sourceAuditWitnesses,
+                nonDominatedCropCount: selected.sourceAuditNonDominatedCropCount,
+                sourceCropSurvival: selected.sourceCropSurvival
+              }
+            )
+          }),
       runs,
       archive,
       winner,
@@ -932,6 +973,181 @@ function sourceAuditCellIncluded(
   return (
     scope === 'all' || (cell.role === 'P2' && cell.basisProvenance?.sourceKind === 'axis-union')
   )
+}
+
+interface EligibleSourceDomainEntry {
+  readonly familyKey: string
+  readonly role: 'P1' | 'P2'
+  readonly sourceKey: string
+  readonly sourceKind: IntrinsicPeriodicBasisProvenance['sourceKind']
+  readonly cellKey: string
+}
+
+function makeSourceAuditReplayEnvelope(
+  catalog: IntrinsicPeriodicCatalog,
+  pieces: ReadonlyArray<IrregularPreparedPiece>,
+  scope: IntrinsicPeriodicSourceAuditScope,
+  replay: IntrinsicPeriodicSourceAuditReplay
+): IntrinsicPeriodicSourceAuditReplayEnvelope {
+  return {
+    formatVersion: 2,
+    algorithmVersion: 'intrinsic-periodic-source-audit-v2',
+    scope,
+    preparedInputDigest: sourceAuditPreparedInputDigest(pieces),
+    eligibleSourceDomainDigest: sourceAuditEligibleDomainDigest(catalog, scope),
+    replayDigest: sourceAuditReplayDigest(replay),
+    replay
+  }
+}
+
+function validateSourceAuditReplayEnvelope(
+  catalog: IntrinsicPeriodicCatalog,
+  pieces: ReadonlyArray<IrregularPreparedPiece>,
+  scope: IntrinsicPeriodicSourceAuditScope,
+  envelope: IntrinsicPeriodicSourceAuditReplayEnvelope | undefined
+): Effect.Effect<IntrinsicPeriodicSourceAuditReplay | undefined> {
+  return Effect.gen(function* () {
+    if (envelope === undefined) return undefined
+    if (
+      envelope.formatVersion !== 2 ||
+      envelope.algorithmVersion !== 'intrinsic-periodic-source-audit-v2' ||
+      envelope.scope !== scope ||
+      envelope.preparedInputDigest !== sourceAuditPreparedInputDigest(pieces) ||
+      envelope.eligibleSourceDomainDigest !== sourceAuditEligibleDomainDigest(catalog, scope) ||
+      envelope.replayDigest !== sourceAuditReplayDigest(envelope.replay) ||
+      envelope.replay.witnesses.length > 16
+    ) {
+      return undefined
+    }
+
+    const eligibleEntries = eligibleSourceDomainEntries(catalog, scope)
+    const eligibleWitnesses = new Set(eligibleEntries.map(eligibleSourceDomainEntryKey))
+    const eligibleSurvival = new Set(
+      eligibleEntries.map(({ role, sourceKey, sourceKind }) =>
+        sourceAuditSurvivalKey({ role, sourceKey, sourceKind })
+      )
+    )
+    if (
+      !Number.isSafeInteger(envelope.replay.nonDominatedCropCount) ||
+      envelope.replay.nonDominatedCropCount < 0 ||
+      envelope.replay.sourceCropSurvival.length > eligibleSurvival.size
+    ) {
+      return undefined
+    }
+    const seenSurvival = new Set<string>()
+    for (const survival of envelope.replay.sourceCropSurvival) {
+      const key = sourceAuditSurvivalKey(survival)
+      if (
+        !eligibleSurvival.has(key) ||
+        seenSurvival.has(key) ||
+        !sourceAuditSurvivalCountsValid(survival)
+      ) {
+        return undefined
+      }
+      seenSurvival.add(key)
+    }
+
+    const familyMembers = new Map(
+      groupIntrinsicCollisionFamilies(pieces).map((family) => [family.key, family.members])
+    )
+    const seenWitnesses = new Set<string>()
+    for (const witness of envelope.replay.witnesses) {
+      const witnessKey = eligibleSourceDomainEntryKey(witness)
+      if (!eligibleWitnesses.has(witnessKey) || seenWitnesses.has(witness.seed.canonicalKey)) {
+        return undefined
+      }
+      seenWitnesses.add(witness.seed.canonicalKey)
+      const members = familyMembers.get(witness.familyKey)
+      if (members === undefined) return undefined
+      const valid = yield* Effect.matchEffect(
+        validateAndReconstructSourceAuditWitness(witness, members),
+        {
+          onFailure: () => Effect.succeed(false),
+          onSuccess: () => Effect.succeed(true)
+        }
+      )
+      if (!valid) return undefined
+    }
+    return envelope.replay
+  })
+}
+
+function sourceAuditPreparedInputDigest(
+  pieces: ReadonlyArray<IrregularPreparedPiece>
+): string {
+  return sha256(JSON.stringify(pieces))
+}
+
+function sourceAuditEligibleDomainDigest(
+  catalog: IntrinsicPeriodicCatalog,
+  scope: IntrinsicPeriodicSourceAuditScope
+): string {
+  return sha256(JSON.stringify(eligibleSourceDomainEntries(catalog, scope)))
+}
+
+function sourceAuditReplayDigest(replay: IntrinsicPeriodicSourceAuditReplay): string {
+  return sha256(JSON.stringify(replay))
+}
+
+function eligibleSourceDomainEntries(
+  catalog: IntrinsicPeriodicCatalog,
+  scope: IntrinsicPeriodicSourceAuditScope
+): ReadonlyArray<EligibleSourceDomainEntry> {
+  return catalog.families
+    .flatMap((family) =>
+      (family.sourceAuditCells ?? family.cells).flatMap((cell) => {
+        const provenance = cell.basisProvenance
+        return provenance === undefined || !sourceAuditCellIncluded(cell, scope)
+          ? []
+          : [
+              {
+                familyKey: family.familyKey,
+                role: cell.role,
+                sourceKey: provenance.sourceKey,
+                sourceKind: provenance.sourceKind,
+                cellKey: cell.canonicalKey
+              }
+            ]
+      })
+    )
+    .toSorted((first, second) =>
+      eligibleSourceDomainEntryKey(first).localeCompare(eligibleSourceDomainEntryKey(second))
+    )
+}
+
+function eligibleSourceDomainEntryKey(entry: EligibleSourceDomainEntry): string {
+  return JSON.stringify([
+    entry.familyKey,
+    entry.role,
+    entry.sourceKey,
+    entry.sourceKind,
+    entry.cellKey
+  ])
+}
+
+function sourceAuditSurvivalKey(entry: {
+  readonly role: 'P1' | 'P2'
+  readonly sourceKey: string
+  readonly sourceKind: IntrinsicPeriodicBasisProvenance['sourceKind']
+}): string {
+  return JSON.stringify([entry.role, entry.sourceKey, entry.sourceKind])
+}
+
+function sourceAuditSurvivalCountsValid(
+  survival: IntrinsicPeriodicSourceCropSurvival
+): boolean {
+  return [
+    survival.retainedCellCount,
+    survival.directValidCropCountBeforeFront,
+    survival.directValidCropCount,
+    survival.cropFrontCount,
+    survival.uniqueSeedCount,
+    survival.selectedContinuationCount
+  ].every((value) => Number.isSafeInteger(value) && value >= 0)
+}
+
+function sha256(value: string): string {
+  return createHash('sha256').update(value).digest('hex')
 }
 
 function validateAndReconstructSourceAuditWitness(

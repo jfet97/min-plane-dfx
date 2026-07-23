@@ -32,7 +32,7 @@ import {
   type IntrinsicSharedArchiveRun
 } from '../src/workers/algorithm/irregular/intrinsicSharedArchivePortfolio.js'
 import type {
-  IntrinsicPeriodicSourceAuditReplay,
+  IntrinsicPeriodicSourceAuditReplayEnvelope,
   IntrinsicPeriodicSourceAuditScope
 } from '../src/workers/algorithm/irregular/intrinsicPeriodicFamilyPortfolio.js'
 import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
@@ -95,21 +95,10 @@ const directCandidateEvaluationCaps = mode === 'calibration' ? undefined : direc
 if (mode === 'matrix' && directCandidateEvaluationCaps === undefined) {
   throw new Error('matrix mode requires direct candidate-evaluation caps')
 }
-const sourceAuditCacheKey = sha256(
-  JSON.stringify({
-    version: 1,
-    fixture: sha256(fixture.bytes),
-    preparedPieces,
-    settings,
-    maximumCatalogRuntimeMs,
-    maximumCellsPerFamilyRole: 16,
-    maximumCropsPerCell: 4
-  })
-)
-const sourceAuditReplay =
+const sourceAuditReplayEnvelope =
   sourceAuditCacheInput === undefined
     ? undefined
-    : await readSourceAuditReplay(sourceAuditCacheInput, sourceAuditCacheKey)
+    : await readSourceAuditReplayEnvelope(sourceAuditCacheInput)
 const result =
   mode === 'calibration'
     ? await (async () => {
@@ -150,7 +139,9 @@ const result =
               maximumTotalRuntimeMs: maximumPeriodicRuntimeMs,
               capturePhaseTimings: true,
               sourceAuditScope,
-              ...(sourceAuditReplay === undefined ? {} : { sourceAuditReplay })
+              ...(sourceAuditReplayEnvelope === undefined
+                ? {}
+                : { sourceAuditReplayEnvelope })
             }
           }),
           settings
@@ -172,22 +163,13 @@ if (winnerSvgPath !== undefined && result.winner !== undefined) {
   await writeFile(winnerSvgPath, renderSvg(renderedPlacements(result.winner)))
   artifactPaths.push(winnerSvgPath)
 }
-if (sourceAuditCacheOutput !== undefined && result.periodicPortfolio !== undefined) {
+if (
+  sourceAuditCacheOutput !== undefined &&
+  result.periodicPortfolio?.sourceAuditReplayEnvelope !== undefined
+) {
   await writeFile(
     sourceAuditCacheOutput,
-    `${JSON.stringify(
-      {
-        version: 1,
-        key: sourceAuditCacheKey,
-        replay: {
-          witnesses: result.periodicPortfolio.sourceAuditWitnesses,
-          nonDominatedCropCount: result.periodicPortfolio.sourceAuditNonDominatedCropCount,
-          sourceCropSurvival: result.periodicPortfolio.sourceCropSurvival
-        }
-      },
-      null,
-      2
-    )}\n`
+    `${JSON.stringify(result.periodicPortfolio.sourceAuditReplayEnvelope, null, 2)}\n`
   )
   artifactPaths.push(sourceAuditCacheOutput)
 }
@@ -217,7 +199,8 @@ const report = {
     periodicContinuationCount: mode === 'matrix' ? 8 : undefined,
     rawSourceAudit: mode === 'matrix',
     sourceAuditScope,
-    sourceAuditReplay: sourceAuditReplay !== undefined
+    sourceAuditReplayProvided: sourceAuditReplayEnvelope !== undefined,
+    sourceAuditReplayAccepted: result.periodicPortfolio?.sourceAuditReplayAccepted ?? false
   },
   directRuns,
   periodicRuns,
@@ -391,8 +374,12 @@ function makeSourceAuditReplaySchema() {
     lengthMm: Schema.Number
   })
   return Schema.Struct({
-    version: Schema.Literal(1),
-    key: Schema.String,
+    formatVersion: Schema.Literal(2),
+    algorithmVersion: Schema.Literal('intrinsic-periodic-source-audit-v2'),
+    scope: Schema.Union([Schema.Literal('all'), Schema.Literal('p2-axis-union')]),
+    preparedInputDigest: Schema.String,
+    eligibleSourceDomainDigest: Schema.String,
+    replayDigest: Schema.String,
     replay: Schema.Struct({
       witnesses: Schema.Array(
         Schema.Struct({
@@ -475,33 +462,37 @@ function makeSourceAuditReplaySchema() {
   })
 }
 
-async function readSourceAuditReplay(
-  path: string,
-  expectedKey: string
-): Promise<IntrinsicPeriodicSourceAuditReplay> {
-  const decoded = Schema.decodeUnknownSync(makeSourceAuditReplaySchema())(
-    JSON.parse((await readFile(path)).toString('utf8'))
-  )
-  if (decoded.key !== expectedKey) throw new Error('source-audit cache key mismatch')
-  return {
-    witnesses: decoded.replay.witnesses.map((witness) => {
-      const { axis, contactRelations, ...basisProvenance } = witness.basisProvenance
-      const replayAxis =
-        axis ??
-        (basisProvenance.sourceKind === 'axis-union'
-          ? axisFromSourceKey(basisProvenance.sourceKey)
-          : undefined)
-      return {
-        ...witness,
-        basisProvenance: {
-          ...basisProvenance,
-          ...(replayAxis === undefined ? {} : { axis: replayAxis }),
-          ...(contactRelations === undefined ? {} : { contactRelations })
-        }
+async function readSourceAuditReplayEnvelope(
+  path: string
+): Promise<IntrinsicPeriodicSourceAuditReplayEnvelope | undefined> {
+  try {
+    const decoded = Schema.decodeUnknownSync(makeSourceAuditReplaySchema())(
+      JSON.parse((await readFile(path)).toString('utf8'))
+    )
+    return {
+      ...decoded,
+      replay: {
+        ...decoded.replay,
+        witnesses: decoded.replay.witnesses.map((witness) => {
+          const { axis, contactRelations, ...basisProvenance } = witness.basisProvenance
+          const replayAxis =
+            axis ??
+            (basisProvenance.sourceKind === 'axis-union'
+              ? axisFromSourceKey(basisProvenance.sourceKey)
+              : undefined)
+          return {
+            ...witness,
+            basisProvenance: {
+              ...basisProvenance,
+              ...(replayAxis === undefined ? {} : { axis: replayAxis }),
+              ...(contactRelations === undefined ? {} : { contactRelations })
+            }
+          }
+        })
       }
-    }),
-    nonDominatedCropCount: decoded.replay.nonDominatedCropCount,
-    sourceCropSurvival: decoded.replay.sourceCropSurvival
+    }
+  } catch {
+    return undefined
   }
 }
 
