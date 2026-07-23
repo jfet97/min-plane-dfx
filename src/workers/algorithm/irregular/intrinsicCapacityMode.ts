@@ -277,7 +277,7 @@ export interface RunIntrinsicCapacityModeInput {
   readonly preflightRuntimeMs?: number
   /** Coordinator-measured complete archive runtime carried into the trace. */
   readonly completeArchiveRuntimeMs?: number
-  readonly retentionMode?: 'objective' | 'area-first-shadow'
+  readonly retentionMode?: 'objective' | 'area-first-shadow' | 'axis-buckets-shadow'
 }
 
 export const INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS = 4 as const
@@ -290,7 +290,7 @@ export function runIntrinsicCapacitySchedulerColdQuantum(input: {
   readonly maximumDepthBoundaries?: number
   readonly control?: IrregularNfpIfpControl
   readonly capturePhaseTimings?: boolean
-  readonly retentionMode?: 'objective' | 'area-first-shadow'
+  readonly retentionMode?: 'objective' | 'area-first-shadow' | 'axis-buckets-shadow'
 }): Effect.Effect<
   IntrinsicCapacitySearchResult,
   IntrinsicCapacityModeError,
@@ -365,7 +365,11 @@ function runProtectedCapacityLaneCoordinator(input: {
   readonly scheduledColdStart: IntrinsicCapacitySearchResult | undefined
   readonly control: IrregularNfpIfpControl | undefined
   readonly capturePhaseTimings: boolean | undefined
-  readonly retentionMode: 'objective' | 'area-first-shadow' | undefined
+  readonly retentionMode:
+    | 'objective'
+    | 'area-first-shadow'
+    | 'axis-buckets-shadow'
+    | undefined
   readonly onWarmPrefixLane:
     | ((lane: {
         readonly sourceRole: string

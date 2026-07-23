@@ -208,7 +208,7 @@ export interface RunIntrinsicCapacityColdSearchInput {
   /** Deterministic scheduler credit carried by a paused protected lane. */
   readonly schedulerDeficit?: number
   /** Experimental protected-lane retention; terminal objective stays unchanged. */
-  readonly retentionMode?: 'objective' | 'area-first-shadow'
+  readonly retentionMode?: 'objective' | 'area-first-shadow' | 'axis-buckets-shadow'
 }
 
 export interface IntrinsicCapacityWarmPrefixSeed {
@@ -638,12 +638,11 @@ export function runIntrinsicCapacityColdSearch(
       }
       if (capture) timings.cavityMeasurementMs += performance.now() - cavityStartedAt
 
-      measuredSurvivors.sort(
-        input.retentionMode === 'area-first-shadow'
-          ? compareCapacityBeamEntriesAreaFirst
-          : compareCapacityBeamEntries
+      beam = retainCapacityBeamEntries(
+        measuredSurvivors,
+        coldBeamWidth,
+        input.retentionMode ?? 'objective'
       )
-      beam = measuredSurvivors.slice(0, coldBeamWidth)
       completedDepths = depth + 1
       completedDepthBoundariesThisInvocation += 1
       if (checkpointEnabled) {
@@ -1225,7 +1224,7 @@ function intrinsicCapacityRequestFingerprint(input: {
   readonly incumbent?: IntrinsicCapacityEndpoint
   readonly warmPrefixSeed?: IntrinsicCapacityWarmPrefixSeed
   readonly schedulerDeficit?: number
-  readonly retentionMode?: 'objective' | 'area-first-shadow'
+  readonly retentionMode?: 'objective' | 'area-first-shadow' | 'axis-buckets-shadow'
 }): string {
   const material = [...input.materialAreasByPieceId.entries()]
     .map(([pieceId, area]) => [pieceId, area] as const)
@@ -1440,6 +1439,82 @@ function compareCapacityBeamEntriesAreaFirst(
       first.gridSpan.heightGrid -
       (second.gridSpan.widthGrid + second.gridSpan.heightGrid) ||
     compareStrings(first.anchoredOccupiedKey, second.anchoredOccupiedKey)
+  )
+}
+
+function retainCapacityBeamEntries(
+  entries: ReadonlyArray<CapacityBeamEntry>,
+  beamWidth: number,
+  mode: 'objective' | 'area-first-shadow' | 'axis-buckets-shadow'
+): ReadonlyArray<CapacityBeamEntry> {
+  if (mode === 'objective') {
+    return entries.toSorted(compareCapacityBeamEntries).slice(0, beamWidth)
+  }
+  if (mode === 'area-first-shadow') {
+    return entries.toSorted(compareCapacityBeamEntriesAreaFirst).slice(0, beamWidth)
+  }
+
+  const retained: CapacityBeamEntry[] = []
+  const retainedKeys = new Set<string>()
+  const reserve = (
+    ordered: ReadonlyArray<CapacityBeamEntry>,
+    maximum: number
+  ): void => {
+    let added = 0
+    for (const entry of ordered) {
+      const key = intrinsicCapacitySuccessorIdentity(entry)
+      if (retainedKeys.has(key)) continue
+      retained.push(entry)
+      retainedKeys.add(key)
+      added += 1
+      if (added >= maximum || retained.length >= beamWidth) return
+    }
+  }
+  reserve(entries.toSorted(compareCapacityBeamEntries), Math.max(1, beamWidth - 8))
+  reserve(entries.toSorted(compareCapacityBeamEntriesWidthFirst), 4)
+  reserve(entries.toSorted(compareCapacityBeamEntriesHeightFirst), 4)
+  reserve(entries.toSorted(compareCapacityBeamEntries), beamWidth)
+  return retained
+}
+
+function compareCapacityBeamEntriesWidthFirst(
+  first: CapacityBeamEntry,
+  second: CapacityBeamEntry
+): number {
+  return (
+    compareCapacityBeamEntryAccounting(first, second) ||
+    first.gridSpan.widthGrid - second.gridSpan.widthGrid ||
+    first.gridSpan.heightGrid - second.gridSpan.heightGrid ||
+    compareCapacityBeamEntries(first, second)
+  )
+}
+
+function compareCapacityBeamEntriesHeightFirst(
+  first: CapacityBeamEntry,
+  second: CapacityBeamEntry
+): number {
+  return (
+    compareCapacityBeamEntryAccounting(first, second) ||
+    first.gridSpan.heightGrid - second.gridSpan.heightGrid ||
+    first.gridSpan.widthGrid - second.gridSpan.widthGrid ||
+    compareCapacityBeamEntries(first, second)
+  )
+}
+
+function compareCapacityBeamEntryAccounting(
+  first: CapacityBeamEntry,
+  second: CapacityBeamEntry
+): number {
+  const firstCount = first.state.placementOrder.length
+  const secondCount = second.state.placementOrder.length
+  if (firstCount !== secondCount) return secondCount - firstCount
+  if (first.placedDoubledMaterialAreaGrid2 !== second.placedDoubledMaterialAreaGrid2) {
+    return first.placedDoubledMaterialAreaGrid2 > second.placedDoubledMaterialAreaGrid2 ? -1 : 1
+  }
+  return (
+    first.cavities.count - second.cavities.count ||
+    Math.round(first.cavities.totalAreaMm2 * 1_000_000) -
+      Math.round(second.cavities.totalAreaMm2 * 1_000_000)
   )
 }
 

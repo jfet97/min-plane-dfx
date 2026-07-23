@@ -407,6 +407,13 @@ requires at least `15/20`, no material/cavity/maximum-side regression, a strict
 envelope-area improvement, and an inspected full PNG; otherwise the exact cold
 baseline remains selected and the hypothesis is recorded as rejected.
 
+Commit `4b09d0d` rejects that area-first lane: it places only `13/20` versus the
+protected objective lane's `15/20`, despite a smaller envelope for the reduced
+material. The next probe restores the objective-best half of the 16 survivor
+slots and reserves four width-first plus four height-first states. These are
+named intermediate orientation/slack buckets only; the exact terminal
+count/material/cavity/envelope comparator remains unchanged.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim

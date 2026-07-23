@@ -126,7 +126,7 @@ export interface ComputeIrregularNestingOptions {
   /** Opt-in deterministic coarse scheduler experiment. */
   readonly intrinsicAnytimeSchedulerMode?: 'deterministic-v1'
   /** Experimental subset retention; terminal capacity comparator is unchanged. */
-  readonly intrinsicCapacityRetentionShadow?: 'area-first'
+  readonly intrinsicCapacityRetentionShadow?: 'area-first' | 'axis-buckets'
   /** Opt-in complete-capable place/defer shadow producer. */
   readonly captureExperimentalPlaceDeferCompleteShadow?: boolean
   readonly onExperimentalPlaceDeferCompleteEndpoint?: (
@@ -435,6 +435,12 @@ function coordinateIntrinsicSharedArchive(
         control
       ).pipe(Effect.mapError(mapIntrinsicCapacityError))
       const preflightRuntimeMs = Math.max(0, performance.now() - preflightStartedAt)
+      const capacityRetentionMode =
+        input.options?.intrinsicCapacityRetentionShadow === 'area-first'
+          ? ('area-first-shadow' as const)
+          : input.options?.intrinsicCapacityRetentionShadow === 'axis-buckets'
+            ? ('axis-buckets-shadow' as const)
+            : undefined
       if (input.options?.captureCapacityShadowTelemetry === true) {
         capacityShadowTelemetry = yield* measureIntrinsicCapacityShadowTelemetry({
           sheet: input.request.sheet,
@@ -455,9 +461,9 @@ function coordinateIntrinsicSharedArchive(
         ...(input.options?.onCapacityWarmPrefixLane === undefined
           ? {}
           : { onWarmPrefixLane: input.options.onCapacityWarmPrefixLane }),
-        ...(input.options?.intrinsicCapacityRetentionShadow === 'area-first'
-          ? { retentionMode: 'area-first-shadow' as const }
-          : {})
+        ...(capacityRetentionMode === undefined
+          ? {}
+          : { retentionMode: capacityRetentionMode })
       }
       if (preflight.kind === 'proven_impossible') {
         const capacity = yield* runIntrinsicCapacityMode({
@@ -489,9 +495,9 @@ function coordinateIntrinsicSharedArchive(
               ...(input.options?.captureCapacityPhaseTimings === true
                 ? { capturePhaseTimings: true }
                 : {}),
-              ...(input.options?.intrinsicCapacityRetentionShadow === 'area-first'
-                ? { retentionMode: 'area-first-shadow' as const }
-                : {})
+              ...(capacityRetentionMode === undefined
+                ? {}
+                : { retentionMode: capacityRetentionMode })
             }).pipe(Effect.mapError(mapIntrinsicCapacityError))
           : undefined
         let scheduledColdCheckpointReused = false
@@ -561,10 +567,9 @@ function coordinateIntrinsicSharedArchive(
                           ...(input.options?.captureCapacityPhaseTimings === true
                             ? { capturePhaseTimings: true }
                             : {}),
-                          ...(input.options?.intrinsicCapacityRetentionShadow ===
-                          'area-first'
-                            ? { retentionMode: 'area-first-shadow' as const }
-                            : {})
+                          ...(capacityRetentionMode === undefined
+                            ? {}
+                            : { retentionMode: capacityRetentionMode })
                         })
                       scheduledColdCheckpointReused = true
                       if (intrinsicAnytimeSchedulerTrace !== undefined) {

@@ -162,6 +162,10 @@ area-first intermediate retention and the unchanged terminal objective. It may
 replace nothing unless Triangle `300 x 300` passes the explicit exact
 non-regression and strict envelope-improvement guard and its full PNG is
 visibly tighter.
+The pure area-first probe is rejected at `13/20`. The replacement keeps eight
+objective survivors protected and uses the remaining eight slots for bounded
+width/height orientation diversity; it faces the same `15/20` and strict
+quality guard.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

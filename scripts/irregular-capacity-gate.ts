@@ -340,7 +340,7 @@ async function runArm(
   request: NestingRequest,
   arm: 'production' | 'cold-only',
   artifactPath: string,
-  retentionMode: 'objective' | 'area-first'
+  retentionMode: 'objective' | 'area-first' | 'axis-buckets'
 ): Promise<CapacityRunReport> {
   const settings = request.options.irregularSettings
   if (settings === undefined) throw new Error(`${request.jobId} has no irregular settings`)
@@ -350,9 +350,9 @@ async function runArm(
     captureCapacityShadowTelemetry: true,
     captureCapacityWarmPrefixTelemetry: true,
     intrinsicAnytimeSchedulerMode: 'deterministic-v1',
-    ...(retentionMode === 'area-first'
-      ? { intrinsicCapacityRetentionShadow: 'area-first' }
-      : {}),
+    ...(retentionMode === 'objective'
+      ? {}
+      : { intrinsicCapacityRetentionShadow: retentionMode }),
     captureExperimentalPlaceDeferCompleteShadow: true,
     onCapacityWarmPrefixLane: (lane) => {
       warmLaneEndpoints.push(lane)
@@ -465,7 +465,7 @@ interface CliArguments {
   readonly outputDirectory: string
   readonly paired: boolean
   readonly strict: boolean
-  readonly retentionMode: 'objective' | 'area-first'
+  readonly retentionMode: 'objective' | 'area-first' | 'axis-buckets'
 }
 
 function parseArguments(argv: ReadonlyArray<string>): CliArguments {
@@ -473,7 +473,7 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
   let selected: ReadonlySet<string> = new Set(fixtures.map(({ id }) => id))
   let paired = false
   let strict = false
-  let retentionMode: 'objective' | 'area-first' = 'objective'
+  let retentionMode: 'objective' | 'area-first' | 'axis-buckets' = 'objective'
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]
     if (argument === '--output') {
@@ -492,8 +492,12 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
       strict = true
     } else if (argument === '--retention') {
       const value = argv[index + 1]
-      if (value !== 'objective' && value !== 'area-first') {
-        throw new Error('--retention requires objective or area-first')
+      if (
+        value !== 'objective' &&
+        value !== 'area-first' &&
+        value !== 'axis-buckets'
+      ) {
+        throw new Error('--retention requires objective, area-first, or axis-buckets')
       }
       retentionMode = value
       index += 1
