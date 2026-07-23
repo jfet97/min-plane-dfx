@@ -301,7 +301,7 @@ describe('intrinsic periodic family portfolio', () => {
     )
   }, 30_000)
 
-  it('replays validated raw witnesses without physical crop enumeration', async () => {
+  it('replays validated raw witnesses without full source-audit enumeration', async () => {
     const pieces = Array.from({ length: 4 }, (_, index) => preparedTriangle(`replay-${index}`))
     const run = (sourceAuditReplayEnvelope?: IntrinsicPeriodicSourceAuditReplayEnvelope) =>
       Effect.runPromise(
@@ -341,6 +341,7 @@ describe('intrinsic periodic family portfolio', () => {
     expect(warm.sourceAuditWitnesses).toEqual(cold.sourceAuditWitnesses)
     expect(warm.sourceAuditNonDominatedCropCount).toBe(cold.sourceAuditNonDominatedCropCount)
     expect(warm.sourceAuditReplayAccepted).toBe(true)
+    expect(warm.sourceAuditReplayValidationCropAttemptCount).toBeGreaterThan(0)
     expect(warm.phaseTimings?.selection.sourceAuditPhysicalCropAttemptCount).toBe(0)
     expect(warm.phaseTimings?.selection.sourceAuditReplayWitnessCount).toBe(
       cold.sourceAuditWitnesses.length
@@ -351,6 +352,7 @@ describe('intrinsic periodic family portfolio', () => {
       replayDigest: `stale-${replayEnvelope.replayDigest}`
     })
     expect(coldFallback.sourceAuditReplayAccepted).toBe(false)
+    expect(coldFallback.sourceAuditReplayRejectionReason).toBe('replay-digest')
     expect(coldFallback.continuations.map(({ sourceId }) => sourceId)).toEqual(
       cold.continuations.map(({ sourceId }) => sourceId)
     )
@@ -358,5 +360,12 @@ describe('intrinsic periodic family portfolio', () => {
     expect(
       coldFallback.phaseTimings?.selection.sourceAuditPhysicalCropAttemptCount
     ).toBeGreaterThan(0)
+
+    const basisFallback = await run({
+      ...replayEnvelope,
+      basisSourceKey: 'different-source'
+    })
+    expect(basisFallback.sourceAuditReplayAccepted).toBe(false)
+    expect(basisFallback.sourceAuditReplayRejectionReason).toBe('basis-source')
   }, 30_000)
 })

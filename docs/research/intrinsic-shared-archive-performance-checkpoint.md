@@ -104,15 +104,18 @@ Construction improves 6.60x and the complete periodic phase improves 3.83x.
 The normalized reports are semantically identical and the winner SVGs are
 byte-identical. Both select `391,605.850174 mm2` with zero canonical cavities.
 
-The validated replay follow-up at `f4df9e4` uses the same `p2-axis-union`
-domain. The cold run used `43,110.438 ms`; an accepted version-2 replay used
+The historical validated replay follow-up at `f4df9e4` uses the same
+`p2-axis-union` domain. The cold run used `43,110.438 ms`; an accepted
+version-2 replay used
 `35,059.694 ms`. Selection fell from `16,323.322 ms` to `8,206.836 ms`, with
 physical source-crop attempts falling from `23,456` to zero and 12 witnesses
 revalidated. The speedup is 1.23x end to end, with byte-identical output. This
 supports an in-memory replay seam but is not enough evidence to add durable
 Electron persistence. Envelope export is explicitly requested by the harness;
 ordinary production audit runs do not construct or retain an unused replay
-artifact.
+artifact. Version 3 additionally binds the optional basis-source restriction
+and reconstructs each cached crop from its current catalog cell; its warm gain
+must be measured separately below.
 
 Production validation at `7544766` preserves:
 

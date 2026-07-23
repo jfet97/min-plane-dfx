@@ -292,16 +292,19 @@ before replacing it.
 Source-audit acceleration has three explicit modes. Equivalent cells are
 memoized by canonical cell key within one run, with separate logical and
 physical attempt counters. A content-addressed warm replay can replace raw crop
-enumeration. Its version-2 algorithm-owned envelope binds the source scope,
-canonical prepared-input digest, current eligible family/cell/source domain,
-and replay digest. The harness schema-decodes the untrusted product; the
-algorithm then checks domain membership, bounded survival records and
-witnesses, canonical-grid legality, canonical identity, contact topology, and
-envelope metrics before rebuilding each ordinary seed future. Ranking,
+enumeration. Its version-3 algorithm-owned envelope binds the source scope,
+optional basis-source restriction, canonical prepared-input digest, current
+eligible family/cell/source domain, and replay digest. The harness schema-
+decodes the untrusted product; the algorithm then checks domain membership,
+reconstructs every declared finite crop from the current cell, and revalidates
+bounded survival records, witnesses, canonical-grid legality, canonical
+identity, contact topology, and envelope metrics before rebuilding each
+ordinary seed future. Ranking,
 deduplication, reservations, and the continuation cap remain unchanged. A
-schema, version, digest, scope, domain, or witness mismatch is a cache miss and
-executes the unchanged cold path; it does not fail the nesting request or spend
-the cold continuation budget. Replay-envelope emission is independently
+schema, version, digest, scope, domain, crop, or witness mismatch is a cache
+miss and executes the unchanged cold path; it does not fail the nesting request
+or spend the cold continuation budget. File-read, JSON, schema, and provenance
+failures remain distinguished in harness diagnostics. Replay-envelope emission is independently
 opt-in, so production source-audit quality does not pay digest construction or
 retain an unused cache artifact. Durable Electron persistence remains deferred.
 

@@ -123,14 +123,16 @@ default off in production, independently of deterministic evaluation caps.
 Semantic execution and budget-settlement flags must remain available even when
 timing is disabled.
 
-The version-2 same-process replay contract is also complete. It binds algorithm
-version, scope, prepared input, eligible source domain, and replay content, then
-revalidates membership, legality, identity, topology, and metrics. Every invalid
-entry falls back cold without consuming the cold continuation budget. On the
-same Mixed scope it reduces the periodic phase from `43,110 ms` to `35,060 ms`
-(1.23x). Replay-envelope export remains explicit so ordinary production audit
+The version-3 same-process replay contract is also complete. It binds algorithm
+version, scope, optional basis-source restriction, prepared input, eligible
+source domain, and replay content, then reconstructs each crop from its current
+cell and revalidates membership, legality, identity, topology, and metrics.
+Every invalid entry falls back cold without consuming the cold continuation
+budget. Replay-envelope export remains explicit so ordinary production audit
 runs do not pay cache-artifact construction. Keep durable Electron persistence
-deferred unless repeated-job measurement shows enough practical value.
+deferred unless repeated-job measurement shows enough practical value. Remeasure
+the accepted warm gain after the stronger crop reconstruction; the earlier
+version-2 `1.23x` result is historical evidence, not the current claim.
 
 The next performance pass should profile the new 21.7-second construction
 floor before changing behavior. Current single-sample buckets point to

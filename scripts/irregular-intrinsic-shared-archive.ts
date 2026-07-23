@@ -95,10 +95,15 @@ const directCandidateEvaluationCaps = mode === 'calibration' ? undefined : direc
 if (mode === 'matrix' && directCandidateEvaluationCaps === undefined) {
   throw new Error('matrix mode requires direct candidate-evaluation caps')
 }
-const sourceAuditReplayEnvelope =
+const sourceAuditReplayRead =
   sourceAuditCacheInput === undefined
-    ? undefined
+    ? {
+        provided: false as const,
+        envelope: undefined,
+        rejectionReason: undefined
+      }
     : await readSourceAuditReplayEnvelope(sourceAuditCacheInput)
+const sourceAuditReplayEnvelope = sourceAuditReplayRead.envelope
 const result =
   mode === 'calibration'
     ? await (async () => {
@@ -200,10 +205,11 @@ const report = {
     periodicContinuationCount: mode === 'matrix' ? 8 : undefined,
     rawSourceAudit: mode === 'matrix',
     sourceAuditScope,
-    sourceAuditReplayProvided: sourceAuditReplayEnvelope !== undefined,
+    sourceAuditReplayProvided: sourceAuditReplayRead.provided,
     sourceAuditReplayAccepted: result.periodicPortfolio?.sourceAuditReplayAccepted ?? false,
     sourceAuditReplayRejectionReason:
-      result.periodicPortfolio?.sourceAuditReplayRejectionReason
+      result.periodicPortfolio?.sourceAuditReplayRejectionReason ??
+      sourceAuditReplayRead.rejectionReason
   },
   directRuns,
   periodicRuns,
@@ -222,6 +228,8 @@ const report = {
           sourceAuditWitnesses: result.periodicPortfolio.sourceAuditWitnesses,
           sourceAuditNonDominatedCropCount:
             result.periodicPortfolio.sourceAuditNonDominatedCropCount,
+          sourceAuditReplayValidationCropAttemptCount:
+            result.periodicPortfolio.sourceAuditReplayValidationCropAttemptCount,
           sourceCropSurvival: result.periodicPortfolio.sourceCropSurvival
         },
   sheetlessArchive: result.sheetlessArchive.map(endpointRecord),
@@ -377,9 +385,10 @@ function makeSourceAuditReplaySchema() {
     lengthMm: Schema.Number
   })
   return Schema.Struct({
-    formatVersion: Schema.Literal(2),
-    algorithmVersion: Schema.Literal('intrinsic-periodic-source-audit-v2'),
+    formatVersion: Schema.Literal(3),
+    algorithmVersion: Schema.Literal('intrinsic-periodic-source-audit-v3'),
     scope: Schema.Union([Schema.Literal('all'), Schema.Literal('p2-axis-union')]),
+    basisSourceKey: Schema.Union([Schema.String, Schema.Null]),
     preparedInputDigest: Schema.String,
     eligibleSourceDomainDigest: Schema.String,
     replayDigest: Schema.String,
@@ -467,35 +476,57 @@ function makeSourceAuditReplaySchema() {
 
 async function readSourceAuditReplayEnvelope(
   path: string
-): Promise<IntrinsicPeriodicSourceAuditReplayEnvelope | undefined> {
+): Promise<{
+  readonly provided: true
+  readonly envelope?: IntrinsicPeriodicSourceAuditReplayEnvelope
+  readonly rejectionReason?: 'read' | 'json' | 'schema' | 'axis-provenance'
+}> {
+  let bytes: Buffer
   try {
-    const decoded = Schema.decodeUnknownSync(makeSourceAuditReplaySchema())(
-      JSON.parse((await readFile(path)).toString('utf8'))
-    )
+    bytes = await readFile(path)
+  } catch {
+    return { provided: true, rejectionReason: 'read' }
+  }
+  let json: unknown
+  try {
+    json = JSON.parse(bytes.toString('utf8'))
+  } catch {
+    return { provided: true, rejectionReason: 'json' }
+  }
+  let decoded: IntrinsicPeriodicSourceAuditReplayEnvelope
+  try {
+    decoded = Schema.decodeUnknownSync(makeSourceAuditReplaySchema())(json)
+  } catch {
+    return { provided: true, rejectionReason: 'schema' }
+  }
+  try {
     return {
-      ...decoded,
-      replay: {
-        ...decoded.replay,
-        witnesses: decoded.replay.witnesses.map((witness) => {
-          const { axis, contactRelations, ...basisProvenance } = witness.basisProvenance
-          const replayAxis =
-            axis ??
-            (basisProvenance.sourceKind === 'axis-union'
-              ? axisFromSourceKey(basisProvenance.sourceKey)
-              : undefined)
-          return {
-            ...witness,
-            basisProvenance: {
-              ...basisProvenance,
-              ...(replayAxis === undefined ? {} : { axis: replayAxis }),
-              ...(contactRelations === undefined ? {} : { contactRelations })
+      provided: true,
+      envelope: {
+        ...decoded,
+        replay: {
+          ...decoded.replay,
+          witnesses: decoded.replay.witnesses.map((witness) => {
+            const { axis, contactRelations, ...basisProvenance } = witness.basisProvenance
+            const replayAxis =
+              axis ??
+              (basisProvenance.sourceKind === 'axis-union'
+                ? axisFromSourceKey(basisProvenance.sourceKey)
+                : undefined)
+            return {
+              ...witness,
+              basisProvenance: {
+                ...basisProvenance,
+                ...(replayAxis === undefined ? {} : { axis: replayAxis }),
+                ...(contactRelations === undefined ? {} : { contactRelations })
+              }
             }
-          }
-        })
+          })
+        }
       }
     }
   } catch {
-    return undefined
+    return { provided: true, rejectionReason: 'axis-provenance' }
   }
 }
 
