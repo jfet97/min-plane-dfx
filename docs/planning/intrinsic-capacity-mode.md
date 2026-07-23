@@ -129,18 +129,19 @@ The ordered implementation stages are:
 No later stage may be promoted from an ambiguous or failed earlier
 measurement.
 
-Stages 1 through 3 are now implemented behind behavior-preserving seams. Cold
+Stages 1 through 4 are now implemented. Cold
 capacity execution can pause and resume only at completed depths, and an
 opt-in benchmark observer reports exact parts-per-million pressure plus a
 four-depth no-permanent-skip probe. Verified fitting prefixes may also seed
-independent resumable warm shadow lanes with protected budgets. Both observers
-are disabled in production and have no routing, ranking, or selection consumer.
+independent resumable warm lanes with protected budgets. Telemetry observers
+remain disabled in production and have no routing, ranking, or selection
+consumer.
 The cold checkpoint format is now `intrinsic-anytime-checkpoint-v2`; its
 integrity hash binds every frontier decision plus the private canonical,
 incremental-contact, and spatial-index continuation identity. Resume also
 rebuilds canonical-entry and spatial-index structure from exact placed
 geometry, and corruption of any private cache is rejected.
-The opt-in Stage 4 scheduler starts the cold lane with one four-depth quantum,
+The production Stage 4 scheduler starts the cold lane with one four-depth quantum,
 then alternates one committed `canonical-grid` piece with one resumed cold
 depth until either lane settles. The remaining protected complete producers
 retain their unchanged order. A fitting complete endpoint cancels any still

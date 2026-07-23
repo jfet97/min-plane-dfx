@@ -176,8 +176,7 @@ Capacity reveal frames carry the settled endpoint's exact unplaced IDs at
 every step, and the proof-only preflight observes the cooperative
 cancellation/deadline control before and during transform measurement.
 
-The serial routing above remains the default production behavior. The opt-in
-`intrinsic-anytime-portfolio` now wraps the unchanged cold depth loop in a
+The production `intrinsic-anytime-portfolio` wraps the unchanged cold depth loop in a
 versioned request-fingerprinted checkpoint, grants deterministic protected
 cold/complete/warm quanta, and coordinates capacity checkpoints after an
 uncensored complete miss. The cold checkpoint owns one base-cap entitlement
@@ -1003,16 +1002,18 @@ occupied-union cavity count is exposed separately as
 
 The removed canonical-reference coordinator, fixed `2000 x 2700` decode, admission
 certificate, and `canonicalReferenceDecodeEnabled` schema field are historical only.
-The compact production gate now contains six baselines. On `2000 x 2700`,
+The compact production gate now contains nine baselines. On `2000 x 2700`,
 Triangle-20 is `74,428.143126 mm2`, Mixed-61 is `391,605.850174 mm2`, and
 Shapes-17 is `304,499.845650 mm2`; all pieces are placed and canonical cavity
 count is zero. On `600 x 400`, Triangle-20 retains the exact same canonical
-motif, Shapes-17 settles an exact 13-piece subset at `228,616.694352 mm2` with
-four pieces unplaced and one canonical cavity, and Mixed-61 settles an exact
-24-piece subset at `232,800.043098 mm2` with 37 pieces unplaced and zero
-canonical cavities. Layout identity ignores translation, rigid quarter-turn,
-copy order, ring origin, and winding while preserving reflection and relative
-placement.
+motif, Shapes-17 settles an exact 14-piece subset at `232,178.021694 mm2`
+with three pieces unplaced and zero canonical cavities, and Mixed-61 settles an
+exact 25-piece subset at `239,484.9666 mm2` with 36 pieces unplaced and zero
+canonical cavities. On `300 x 300`, Triangle-20 places 17, Mixed-61 places 6,
+and Shapes-17 places 5; every result has an exact placed/unplaced partition and
+zero canonical cavities. Layout identity ignores translation, rigid
+quarter-turn, copy order, ring origin, and winding while preserving reflection
+and relative placement.
 
 Two fresh production decodes at `b506344`, on `900 x 1800` and `1000 x 1300`,
 produced byte-identical SVGs. The wider matrix was cancelled before completion,

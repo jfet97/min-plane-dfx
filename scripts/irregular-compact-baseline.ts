@@ -21,7 +21,6 @@ import {
   intrinsicAnytimeSchedulerTraceValid,
   type IrregularComputeResult
 } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
-import type { IntrinsicSharedArchiveEndpoint } from '../src/workers/algorithm/irregular/intrinsicSharedArchivePortfolio.js'
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import {
@@ -320,19 +319,9 @@ const args = parseArguments()
 const request = await loadRequest(args.fixture, args.sheet)
 const settings = request.options.irregularSettings
 if (settings === undefined) throw new Error(`${args.fixture} has no irregular settings`)
-let experimentalPlaceDeferEndpoint: IntrinsicSharedArchiveEndpoint | undefined
 const startedAt = performance.now()
 const result = await Effect.runPromise(
-  computeIrregularNesting(request, {
-    captureCapacityPhaseTimings: true,
-    captureCapacityShadowTelemetry: true,
-    captureCapacityWarmPrefixTelemetry: true,
-    intrinsicAnytimeSchedulerMode: 'deterministic-v1',
-    captureExperimentalPlaceDeferCompleteShadow: true,
-    onExperimentalPlaceDeferCompleteEndpoint: (endpoint) => {
-      experimentalPlaceDeferEndpoint = endpoint
-    }
-  }).pipe(
+  computeIrregularNesting(request).pipe(
     Effect.provide(CollisionGeometryBuilder.Live),
     Effect.provide(TransformGeneratorLive),
     Effect.provide(NfpIfpServiceLive),
@@ -349,6 +338,17 @@ const canonicalTopology = measureCanonicalLayoutTopology(result.placedCollisionG
 const collisionIdentitySha256 = sha256CanonicalLayout(result)
 const fittedCanonicalSha256 =
   polygons.length === 0 ? undefined : canonicalizeIrregularLayout(polygons).sha256
+const requestedPieceIds = request.pieces.map(({ id }) => id)
+const placedPieceIds = result.placedCollisionGeometries.map(
+  ({ placement }) => placement.pieceId
+)
+const outputPieceIds = [...placedPieceIds, ...result.unplacedPieceIds]
+const exactPiecePartition =
+  new Set(requestedPieceIds).size === requestedPieceIds.length &&
+  new Set(placedPieceIds).size === placedPieceIds.length &&
+  new Set(result.unplacedPieceIds).size === result.unplacedPieceIds.length &&
+  new Set(outputPieceIds).size === outputPieceIds.length &&
+  requestedPieceIds.toSorted().join('\n') === outputPieceIds.toSorted().join('\n')
 const svgPath = `${args.outputPrefix}.svg`
 const reportPath = `${args.outputPrefix}.json`
 await mkdir(dirname(args.outputPrefix), { recursive: true })
@@ -367,6 +367,7 @@ const checks = {
   unplacedCount:
     args.expectedUnplacedCount === undefined ||
     result.unplacedPieceIds.length === args.expectedUnplacedCount,
+  exactPiecePartition,
   area:
     args.maximumAreaMm2 === undefined || bounds.area <= args.maximumAreaMm2 + 0.000_001,
   canonicalCavities:
@@ -399,15 +400,7 @@ const report = jsonSafe({
     capacityTrace: result.capacityTrace,
     capacityShadowTelemetry: result.capacityShadowTelemetry,
     intrinsicAnytimeSchedulerTrace: result.intrinsicAnytimeSchedulerTrace,
-    experimentalPlaceDeferTrace: result.experimentalPlaceDeferTrace,
-    experimentalPlaceDeferEndpoint:
-      experimentalPlaceDeferEndpoint === undefined
-        ? undefined
-        : {
-            sheetlessCanonicalGeometryHash:
-              experimentalPlaceDeferEndpoint.sheetlessCanonicalGeometryHash,
-            requestedSheetFit: experimentalPlaceDeferEndpoint.requestedSheetFit
-          }
+    experimentalPlaceDeferTrace: result.experimentalPlaceDeferTrace
   },
   checks,
   passed,

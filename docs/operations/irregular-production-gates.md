@@ -12,21 +12,21 @@ cancellation, history, or timeout behavior.
 | Mixed-61 | `2000 x 2700` | fitted hash `ef2b783a...`, area `391,605.850174 mm2`, zero canonical cavities, 61/61 pieces | `52.535 s` |
 | Shapes-17 | `2000 x 2700` | collision hash `c640c06f...`, area `304,499.845650 mm2`, zero canonical cavities, 17/17 pieces | `6.489 s` |
 | Triangle-20 | `600 x 400` | collision hash `371db269...`, area `74,428.143126 mm2`, zero canonical cavities, 20/20 pieces | `12.761 s` |
-| Mixed-61 | `600 x 400` | collision hash `120f5f1e...`, area `232,800.043098 mm2`, zero canonical cavities, 24/61 pieces | `3.726 s` |
-| Shapes-17 | `600 x 400` | collision hash `510225fc...`, area `228,616.694352 mm2`, at most one canonical cavity, 13/17 pieces | `9.326 s` |
+| Mixed-61 | `600 x 400` | collision hash `2c53f312...`, area `239,484.966600 mm2`, zero canonical cavities, 25/61 pieces | `4.625 s` |
+| Shapes-17 | `600 x 400` | collision hash `01b2060d...`, area `232,178.021694 mm2`, zero canonical cavities, 14/17 pieces | `14.764 s` |
+| Triangle-20 | `300 x 300` | collision hash `0f5befd7...`, area `78,811.504488 mm2`, zero canonical cavities, 17/20 pieces | `16.173 s` |
+| Mixed-61 | `300 x 300` | collision hash `bb22df35...`, area `89,504.369008 mm2`, zero canonical cavities, 6/61 pieces | `1.466 s` |
+| Shapes-17 | `300 x 300` | collision hash `e4ad1ce1...`, area `87,791.951625 mm2`, zero canonical cavities, 5/17 pieces | `3.456 s` |
 
 The exact collision and fitted hashes, placed/unplaced partitions, area and
 cavity limits, and generous runtime ceilings live in
-`scripts/irregular-compact-six-baselines.ts`. The observed runtimes above came
-from one sequential strict run at `7b71611`; they are measurements, not exact
+`scripts/irregular-compact-nine-baselines.ts`. The observed runtimes above are
+measurements, not exact
 timing assertions. Portable reports and renders are under
 [`../artifacts/current-compact-baselines/`](../artifacts/current-compact-baselines/).
 
-Triangle-20 retains the same canonical geometry on both sheets. On
-`600 x 400`, Shapes-17 settles 13 placed / 4 unplaced and Mixed-61 settles
-24 placed / 37 unplaced. Mixed-61 is preflight-proven impossible and therefore
-bypasses complete construction; Shapes-17 remains inconclusive and still pays
-for complete construction before capacity search.
+Triangle-20 retains the same canonical complete geometry on both roomy sheets.
+Every constrained result has an exact disjoint placed/unplaced partition.
 
 ## Focused Correctness Gate
 
@@ -39,13 +39,13 @@ ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/vitest/vitest.mjs run \
   tests/unit/irregularTriangleCompactGolden.test.ts \
   tests/unit/irregularSeventeenShapesCompactGolden.test.ts
 pnpm gate:mixed61-compact
-pnpm gate:compact-six-baselines
+pnpm gate:compact-nine-baselines
 ```
 
 The Mixed command is intentionally a one-sheet production-quality gate. Its
 report sets `geometryEquivalent` to `null`; it is not an invariance result.
-The six-baseline command runs serially and covers both the roomy complete path
-and constrained final-fit/capacity behavior.
+The nine-baseline command runs serially and covers the roomy complete path plus
+`600 x 400` and `300 x 300` constrained final-fit/capacity behavior.
 
 ## Constrained Capacity Gate
 

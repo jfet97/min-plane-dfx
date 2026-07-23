@@ -270,7 +270,11 @@ describe('intrinsic capacity integration', () => {
       ) => ({
         ...trace,
         topologyRetentionDepths: trace.topologyRetentionDepths?.map(
-          ({ topologyMeasurementMs, contactMeasurementMs, ...depth }) => depth
+          ({
+            topologyMeasurementMs: _topologyMeasurementMs,
+            contactMeasurementMs: _contactMeasurementMs,
+            ...depth
+          }) => depth
         )
       })
       expect(

@@ -28,13 +28,16 @@ Current exact production baselines are:
 | Mixed-61 | `2000 x 2700` | 61/61 | `391,605.850174 mm2` | 0 | `52.535 s` | [`mixed-61-2000x2700.png`](../artifacts/current-compact-baselines/mixed-61-2000x2700.png) |
 | Shapes-17 | `2000 x 2700` | 17/17 | `304,499.845650 mm2` | 0 | `6.489 s` | [`shapes-17-2000x2700.png`](../artifacts/current-compact-baselines/shapes-17-2000x2700.png) |
 | Triangle-20 | `600 x 400` | 20/20 | `74,428.143126 mm2` | 0 | `12.761 s` | [`triangle-20-600x400.png`](../artifacts/current-compact-baselines/triangle-20-600x400.png) |
-| Mixed-61 | `600 x 400` | 24/61 | `232,800.043098 mm2` | 0 | `3.726 s` | [`mixed-61-600x400.png`](../artifacts/current-compact-baselines/mixed-61-600x400.png) |
-| Shapes-17 | `600 x 400` | 13/17 | `228,616.694352 mm2` | 1 | `9.326 s` | [`shapes-17-600x400.png`](../artifacts/current-compact-baselines/shapes-17-600x400.png) |
+| Mixed-61 | `600 x 400` | 25/61 | `239,484.966600 mm2` | 0 | `4.625 s` | [`mixed-61-600x400.png`](../artifacts/current-compact-baselines/mixed-61-600x400.png) |
+| Shapes-17 | `600 x 400` | 14/17 | `232,178.021694 mm2` | 0 | `14.764 s` | [`shapes-17-600x400.png`](../artifacts/current-compact-baselines/shapes-17-600x400.png) |
+| Triangle-20 | `300 x 300` | 17/20 | `78,811.504488 mm2` | 0 | `16.173 s` | [`triangle-20-300x300.png`](../artifacts/current-compact-baselines/triangle-20-300x300.png) |
+| Mixed-61 | `300 x 300` | 6/61 | `89,504.369008 mm2` | 0 | `1.466 s` | [`mixed-61-300x300.png`](../artifacts/current-compact-baselines/mixed-61-300x300.png) |
+| Shapes-17 | `300 x 300` | 5/17 | `87,791.951625 mm2` | 0 | `3.456 s` | [`shapes-17-300x300.png`](../artifacts/current-compact-baselines/shapes-17-300x300.png) |
 
 Runtime observations are from one sequential strict run at `7b71611` on
 2026-07-23, Node `v24.16.0`, V8 `13.6.233.17-node.49`, macOS arm64. They are
 measured baselines, not deterministic acceptance thresholds. The executable
-gate is `pnpm gate:compact-six-baselines`; reports and renders are in
+gate is `pnpm gate:compact-nine-baselines`; reports and renders are in
 [`../artifacts/current-compact-baselines/`](../artifacts/current-compact-baselines/).
 
 Do not substitute the earlier sheetless Mixed experiment hash `3839e80d...`
@@ -85,7 +88,7 @@ Compact coordinator; the telemetry
 path is benchmark opt-in, records exact scale-free pressure and a bounded cold
 no-skip-frontier probe, and cannot affect routing or endpoint selection. The
 warm path gives every verified fitting captured prefix its own checkpoint,
-frontier, and cache. The opt-in scheduler grants a four-depth quantum to the
+frontier, and cache. The production scheduler grants a four-depth quantum to the
 empty cold lane before the unchanged complete cohort; a fitting complete
 endpoint cancels capacity. After a complete miss, each fitting warm lane
 receives one pilot depth. The cold checkpoint has one protected base-cap
