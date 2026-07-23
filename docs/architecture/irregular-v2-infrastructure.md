@@ -182,13 +182,15 @@ versioned request-fingerprinted checkpoint, grants deterministic protected
 cold/complete/warm quanta, and coordinates capacity checkpoints after an
 uncensored complete miss. The cold checkpoint owns one base-cap entitlement
 through exact settlement. Every warm lane receives one bounded pilot under a
-second entitlement, and the coordinator reselects a warm checkpoint after
-every depth boundary or settlement. Equal-depth selection uses only no-skip
-persistence, placed count, exact placed material, and round-robin diversity of
-exact frontier identity. Other checkpoints become explicit censored best-known
-states. Complete and partial endpoints share exact archive storage mechanics
-but retain separate namespaces, survivor policies, and comparators; complete
-dominance is a terminal rule.
+second entitlement. The deepest fitting `canonical-grid` checkpoint is then
+pinned through depth-boundary resumes until settlement or exhaustion;
+open-pocket and legacy are deterministic absence fallbacks. Other checkpoints
+become explicit censored best-known states. Coordinator telemetry records every
+actual pilot and resume with lane identity, depth transition, and evaluation
+delta; its validator reconciles aggregate and per-lane accounting. Complete and
+partial endpoints share exact archive storage mechanics but retain separate
+namespaces, survivor policies, and comparators; complete dominance is a
+terminal rule.
 
 An additional observer-only experimental complete cohort makes one explicit
 place/defer decision by moving the first pending piece to a second pass. Its

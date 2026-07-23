@@ -90,7 +90,7 @@ export interface IntrinsicCapacityWarmPrefixLaneTrace {
 }
 
 export interface IntrinsicCapacityLaneCoordinatorTrace {
-  readonly version: 'intrinsic-capacity-lane-coordinator-v1'
+  readonly version: 'intrinsic-capacity-lane-coordinator-v2'
   readonly aggregatePlacementEvaluationCap: number
   readonly aggregateConsumedPlacementEvaluations: number
   readonly warmPilotDepthBoundaries: number
@@ -107,13 +107,22 @@ export interface IntrinsicCapacityLaneCoordinatorTrace {
   readonly retainedCheckpointCount: number
   readonly censoredLaneCount: number
   readonly quanta: ReadonlyArray<{
+    readonly ordinal: number
     readonly producerRole: 'capacity-cold' | 'capacity-warm-prefix'
+    readonly sourceRole: string | undefined
+    readonly prefixDepth: number | undefined
+    readonly phase: 'initial' | 'resume' | 'censor'
+    readonly fromDepth: number
+    readonly toDepth: number
+    readonly placementEvaluationDelta: number
     readonly outcome: 'checkpointed' | 'settled' | 'censored'
   }>
 }
 
 type IntrinsicCapacityContinuedProducer =
   IntrinsicCapacityLaneCoordinatorTrace['continuedProducers'][number]
+type IntrinsicCapacityLaneCoordinatorQuantum =
+  IntrinsicCapacityLaneCoordinatorTrace['quanta'][number]
 
 export interface IntrinsicCapacityTrace {
   readonly routing: IntrinsicCapacityRouting
@@ -135,6 +144,101 @@ export interface IntrinsicCapacityTrace {
   /** Cold subset search runtime including endpoint materialization. */
   readonly coldSearchMs: number
   readonly runtimeMs: number
+}
+
+/** Verifies exact coordinator chronology and per-lane evaluation accounting. */
+export function intrinsicCapacityLaneCoordinatorTraceValid(
+  trace: IntrinsicCapacityLaneCoordinatorTrace,
+  warmLanes: ReadonlyArray<IntrinsicCapacityWarmPrefixLaneTrace>
+): boolean {
+  if (
+    trace.aggregateConsumedPlacementEvaluations >
+      trace.aggregatePlacementEvaluationCap ||
+    trace.quanta.some(
+      (quantum, index) =>
+        quantum.ordinal !== index ||
+        !Number.isInteger(quantum.fromDepth) ||
+        !Number.isInteger(quantum.toDepth) ||
+        quantum.fromDepth < 0 ||
+        quantum.toDepth < quantum.fromDepth ||
+        !Number.isInteger(quantum.placementEvaluationDelta) ||
+        quantum.placementEvaluationDelta < 0
+    )
+  ) {
+    return false
+  }
+  const coldQuanta = trace.quanta.filter(
+    ({ producerRole }) => producerRole === 'capacity-cold'
+  )
+  if (
+    coldQuanta.length === 0 ||
+    coldQuanta[0]?.phase !== 'initial' ||
+    coldQuanta.some(
+      ({ sourceRole, prefixDepth }) =>
+        sourceRole !== undefined || prefixDepth !== undefined
+    )
+  ) {
+    return false
+  }
+  const evaluationSum = trace.quanta.reduce(
+    (sum, { placementEvaluationDelta }) => sum + placementEvaluationDelta,
+    0
+  )
+  if (evaluationSum !== trace.aggregateConsumedPlacementEvaluations) {
+    return false
+  }
+  const warmResumeIdentities = new Set(
+    trace.quanta.flatMap((quantum) =>
+      quantum.producerRole === 'capacity-warm-prefix' &&
+      quantum.phase === 'resume' &&
+      quantum.placementEvaluationDelta > 0
+        ? [capacityLaneQuantumIdentity(quantum)]
+        : []
+    )
+  )
+  if (warmResumeIdentities.size > 1) return false
+  for (const lane of warmLanes) {
+    const laneIdentity = capacityLaneIdentity(lane.sourceRole, lane.prefixDepth)
+    const laneQuanta = trace.quanta.filter(
+      (quantum) =>
+        quantum.producerRole === 'capacity-warm-prefix' &&
+        capacityLaneQuantumIdentity(quantum) === laneIdentity
+    )
+    if (
+      laneQuanta.length === 0 ||
+      laneQuanta[0]?.phase !== 'initial' ||
+      laneQuanta.some(
+        (quantum, index) =>
+          index > 0 &&
+          quantum.fromDepth !== laneQuanta[index - 1]?.toDepth
+      ) ||
+      laneQuanta.reduce(
+        (sum, { placementEvaluationDelta }) =>
+          sum + placementEvaluationDelta,
+        0
+      ) !== lane.consumedPlacementEvaluations ||
+      laneQuanta.at(-1)?.toDepth !== lane.completedDepths ||
+      (lane.status === 'checkpointed-censored'
+        ? laneQuanta.at(-1)?.outcome !== 'censored'
+        : laneQuanta.at(-1)?.outcome !== 'settled')
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
+function capacityLaneIdentity(sourceRole: string, prefixDepth: number): string {
+  return `${sourceRole}@${prefixDepth}`
+}
+
+function capacityLaneQuantumIdentity(
+  quantum: IntrinsicCapacityLaneCoordinatorQuantum
+): string {
+  return capacityLaneIdentity(
+    quantum.sourceRole ?? 'unknown',
+    quantum.prefixDepth ?? 0
+  )
 }
 
 export interface IntrinsicCapacityModeResult {
@@ -271,10 +375,15 @@ function runProtectedCapacityLaneCoordinator(input: {
     )
     const aggregatePlacementEvaluationCap = basePlacementEvaluationCap * 2
     const lanes: ProtectedCapacityLane[] = []
-    const coordinatorQuanta: Array<{
-      readonly producerRole: 'capacity-cold' | 'capacity-warm-prefix'
-      readonly outcome: 'checkpointed' | 'settled' | 'censored'
-    }> = []
+    const coordinatorQuanta: IntrinsicCapacityLaneCoordinatorQuantum[] = []
+    const appendCoordinatorQuantum = (
+      quantum: Omit<IntrinsicCapacityLaneCoordinatorQuantum, 'ordinal'>
+    ): void => {
+      coordinatorQuanta.push({
+        ordinal: coordinatorQuanta.length,
+        ...quantum
+      })
+    }
 
     const coldStartedAt = performance.now()
     const coldResult =
@@ -304,6 +413,16 @@ function runProtectedCapacityLaneCoordinator(input: {
         materialAreasByPieceId: input.materialAreasByPieceId
       })
     )
+    appendCoordinatorQuantum({
+      producerRole: 'capacity-cold',
+      sourceRole: undefined,
+      prefixDepth: undefined,
+      phase: 'initial',
+      fromDepth: 0,
+      toDepth: coldResult.trace.completedDepths,
+      placementEvaluationDelta: coldResult.trace.consumedPlacementEvaluations,
+      outcome: coldResult.status === 'paused' ? 'checkpointed' : 'settled'
+    })
     const continuedLaneIndexes = new Set<number>()
     const initialColdLane = lanes[0]
     if (initialColdLane?.result.status === 'paused') {
@@ -340,8 +459,18 @@ function runProtectedCapacityLaneCoordinator(input: {
         materialAreasByPieceId: input.materialAreasByPieceId
       })
       continuedLaneIndexes.add(0)
-      coordinatorQuanta.push({
+      appendCoordinatorQuantum({
         producerRole: 'capacity-cold',
+        sourceRole: undefined,
+        prefixDepth: undefined,
+        phase: 'resume',
+        fromDepth: initialColdLane.result.trace.completedDepths,
+        toDepth: resumed.trace.completedDepths,
+        placementEvaluationDelta: Math.max(
+          0,
+          resumed.trace.consumedPlacementEvaluations -
+            initialColdLane.result.trace.consumedPlacementEvaluations
+        ),
         outcome: resumed.status === 'paused' ? 'censored' : 'settled'
       })
     }
@@ -379,8 +508,14 @@ function runProtectedCapacityLaneCoordinator(input: {
           materialAreasByPieceId: input.materialAreasByPieceId
         })
       )
-      coordinatorQuanta.push({
+      appendCoordinatorQuantum({
         producerRole: 'capacity-warm-prefix',
+        sourceRole: descriptor.role,
+        prefixDepth: descriptor.depth,
+        phase: 'initial',
+        fromDepth: descriptor.depth,
+        toDepth: result.trace.completedDepths,
+        placementEvaluationDelta: result.trace.consumedPlacementEvaluations,
         outcome: result.status === 'paused' ? 'checkpointed' : 'settled'
       })
     }
@@ -392,16 +527,12 @@ function runProtectedCapacityLaneCoordinator(input: {
           : sum,
       0
     )
-    let lastWarmLaneIndex = -1
+    const selectedWarmLaneIndex = selectProtectedWarmSettlementLane(lanes)
     while (
+      selectedWarmLaneIndex !== undefined &&
       basePlacementEvaluationCap - warmConsumedPlacementEvaluations >=
       INTRINSIC_CAPACITY_V1_BOUNDS.placementEvaluationQuotaPerDepth
     ) {
-      const selectedWarmLaneIndex = selectProtectedWarmCapacityLane(
-        lanes,
-        lastWarmLaneIndex
-      )
-      if (selectedWarmLaneIndex === undefined) break
       const selectedWarmLane = lanes[selectedWarmLaneIndex]
       const checkpoint = selectedWarmLane?.result.checkpoint
       if (
@@ -445,7 +576,16 @@ function runProtectedCapacityLaneCoordinator(input: {
         materialAreasByPieceId: input.materialAreasByPieceId
       })
       continuedLaneIndexes.add(selectedWarmLaneIndex)
-      lastWarmLaneIndex = selectedWarmLaneIndex
+      appendCoordinatorQuantum({
+        producerRole: 'capacity-warm-prefix',
+        sourceRole: selectedWarmLane.sourceRole ?? 'unknown',
+        prefixDepth: selectedWarmLane.prefixDepth ?? 0,
+        phase: 'resume',
+        fromDepth: selectedWarmLane.result.trace.completedDepths,
+        toDepth: resumed.trace.completedDepths,
+        placementEvaluationDelta: Math.max(0, consumedDelta),
+        outcome: resumed.status === 'paused' ? 'checkpointed' : 'settled'
+      })
     }
 
     const coldLane = lanes.find(({ role }) => role === 'capacity-cold')
@@ -476,14 +616,15 @@ function runProtectedCapacityLaneCoordinator(input: {
     ).length
     for (const lane of warmLanes) {
       if (lane.result.status === 'paused') {
-        coordinatorQuanta.push({
+        appendCoordinatorQuantum({
           producerRole: 'capacity-warm-prefix',
+          sourceRole: lane.sourceRole ?? 'unknown',
+          prefixDepth: lane.prefixDepth ?? 0,
+          phase: 'censor',
+          fromDepth: lane.result.trace.completedDepths,
+          toDepth: lane.result.trace.completedDepths,
+          placementEvaluationDelta: 0,
           outcome: 'censored'
-        })
-      } else if (lane.selectedForContinuation) {
-        coordinatorQuanta.push({
-          producerRole: 'capacity-warm-prefix',
-          outcome: 'settled'
         })
       }
     }
@@ -511,7 +652,7 @@ function runProtectedCapacityLaneCoordinator(input: {
             : intrinsicCapacityObjective(lane.endpoints[0])
       })),
       trace: {
-        version: 'intrinsic-capacity-lane-coordinator-v1',
+        version: 'intrinsic-capacity-lane-coordinator-v2',
         aggregatePlacementEvaluationCap,
         aggregateConsumedPlacementEvaluations,
         warmPilotDepthBoundaries: INTRINSIC_CAPACITY_WARM_PILOT_DEPTH_BOUNDARIES,
@@ -582,11 +723,10 @@ function makeProtectedCapacityLane(input: {
   }
 }
 
-function selectProtectedWarmCapacityLane(
-  lanes: ReadonlyArray<ProtectedCapacityLane>,
-  lastSelectedIndex: number
+function selectProtectedWarmSettlementLane(
+  lanes: ReadonlyArray<ProtectedCapacityLane>
 ): number | undefined {
-  let candidates = lanes.flatMap((lane, index) =>
+  const candidates = lanes.flatMap((lane, index) =>
     lane.role === 'capacity-warm-prefix' &&
     lane.result.status === 'paused' &&
     lane.result.checkpoint !== undefined &&
@@ -597,67 +737,21 @@ function selectProtectedWarmCapacityLane(
   const maximumPrefixDepth = Math.max(
     ...candidates.map(({ lane }) => lane.prefixDepth ?? 0)
   )
-  candidates = candidates.filter(
+  const deepestCandidates = candidates.filter(
     ({ lane }) => (lane.prefixDepth ?? 0) === maximumPrefixDepth
   )
-  const minimumNextDepth = Math.min(
-    ...candidates.map(({ lane }) => lane.result.checkpoint?.nextDepth ?? Number.MAX_SAFE_INTEGER)
-  )
-  candidates = candidates.filter(
-    ({ lane }) => lane.result.checkpoint?.nextDepth === minimumNextDepth
-  )
-  const noSkipFrontierPresent = candidates.some(
-    ({ lane }) => lane.result.checkpoint?.noSkipFrontier.present === true
-  )
-  candidates = candidates.filter(
-    ({ lane }) =>
-      (lane.result.checkpoint?.noSkipFrontier.present === true) ===
-      noSkipFrontierPresent
-  )
-  const maximumPlacedCount = Math.max(
-    ...candidates.map(({ lane }) => lane.endpoints[0]?.metrics.placedCount ?? 0)
-  )
-  candidates = candidates.filter(
-    ({ lane }) => lane.endpoints[0]?.metrics.placedCount === maximumPlacedCount
-  )
-  const maximumPlacedMaterial = candidates.reduce(
-    (maximum, { lane }) => {
-      const material = lane.endpoints[0]?.metrics.placedDoubledMaterialAreaGrid2 ?? 0n
-      return material > maximum ? material : maximum
-    },
-    0n
-  )
-  candidates = candidates.filter(
-    ({ lane }) =>
-      lane.endpoints[0]?.metrics.placedDoubledMaterialAreaGrid2 ===
-      maximumPlacedMaterial
-  )
-  const distinctByFrontier = new Map<string, (typeof candidates)[number]>()
-  for (const candidate of candidates) {
-    const identity = protectedCapacityLaneFrontierIdentity(candidate.lane)
-    if (!distinctByFrontier.has(identity)) distinctByFrontier.set(identity, candidate)
+  const sourcePriority = [
+    'canonical-grid',
+    'open-pocket-first',
+    'legacy-absolute-envelope'
+  ]
+  for (const sourceRole of sourcePriority) {
+    const candidate = deepestCandidates.find(
+      ({ lane }) => lane.sourceRole === sourceRole
+    )
+    if (candidate !== undefined) return candidate.index
   }
-  const distinct = [...distinctByFrontier.values()].toSorted(
-    (first, second) => first.index - second.index
-  )
-  return (
-    distinct.find(({ index }) => index > lastSelectedIndex)?.index ??
-    distinct[0]?.index
-  )
-}
-
-function protectedCapacityLaneFrontierIdentity(lane: ProtectedCapacityLane): string {
-  return (
-    lane.result.checkpoint?.frontier
-      .map(
-        (entry) =>
-          `${entry.anchoredOccupiedKey}|placed=${JSON.stringify(
-            entry.placedPreparedIds
-          )}|skipped=${JSON.stringify(entry.permanentlySkippedPreparedIds)}`
-      )
-      .toSorted()
-      .join('\n') ?? ''
-  )
+  return deepestCandidates[0]?.index
 }
 
 type IntrinsicCapacityModeError =

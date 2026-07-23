@@ -88,11 +88,13 @@ frontier, and cache. The opt-in scheduler grants a four-depth quantum to the
 empty cold lane before the unchanged complete cohort; a fitting complete
 endpoint cancels capacity. After a complete miss, each fitting warm lane
 receives one pilot depth. The cold checkpoint has one protected base-cap
-entitlement; warm lanes share a second and are reselected after every depth
-boundary. Equal-depth warm comparisons use no-skip persistence, placed count,
-and exact material, with round-robin protection for distinct tied frontiers.
-Every budget-censored checkpoint is retained. Complete and partial states never
-share survivor slots or a comparator.
+entitlement; warm lanes share a second. After every pilot, the deepest fitting
+`canonical-grid` lane is pinned through settlement, with open-pocket and legacy
+fallbacks only when that producer is unavailable. Every budget-censored
+checkpoint is retained. Detailed coordinator quanta bind lane identity, depth
+transition, and exact evaluation delta, and a validator reconciles them with
+the ledgers. Complete and partial states never share survivor slots or a
+comparator.
 
 That shared storage boundary is now implemented: complete and partial
 namespaces reuse exact validation/deduplication mechanics while retaining their

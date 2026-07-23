@@ -608,14 +608,21 @@ function coordinateIntrinsicSharedArchive(
           }).pipe(Effect.mapError(mapIntrinsicCapacityError))
           if (intrinsicAnytimeSchedulerTrace !== undefined) {
             const capacityResumeOrdinal = intrinsicAnytimeSchedulerTrace.quanta.length
-            const capacityQuanta = (capacity.trace.laneCoordinator?.quanta ?? []).map(
-              ({ producerRole, outcome }, index) => ({
+            const capacityQuanta = (capacity.trace.laneCoordinator?.quanta ?? [])
+              .filter(
+                ({ producerRole, phase, outcome }) =>
+                  (producerRole === 'capacity-cold' && phase === 'resume') ||
+                  (producerRole === 'capacity-warm-prefix' &&
+                    (phase === 'initial' ||
+                      phase === 'censor' ||
+                      outcome === 'settled'))
+              )
+              .map(({ producerRole, outcome }, index) => ({
                 ordinal: capacityResumeOrdinal + index,
                 cohort: 'partial' as const,
                 producerRole,
                 outcome
-              })
-            )
+              }))
             intrinsicAnytimeSchedulerTrace = {
               ...intrinsicAnytimeSchedulerTrace,
               coldCheckpointReused: scheduledColdStart?.status === 'paused',

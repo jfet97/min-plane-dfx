@@ -26,6 +26,10 @@ import {
   type IntrinsicCapacityEndpoint,
   type IntrinsicCapacityObjective
 } from '../src/workers/algorithm/irregular/intrinsicCapacityEndpoint.js'
+import {
+  intrinsicCapacityLaneCoordinatorTraceValid,
+  type IntrinsicCapacityTrace
+} from '../src/workers/algorithm/irregular/intrinsicCapacityMode.js'
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
@@ -133,6 +137,17 @@ const fixtures: ReadonlyArray<CapacityFixture> = [
     sheet: new SheetSpec({ width: 500, height: 400, label: 'constrained 500x400' }),
     expectedRouting: undefined,
     expectedPlacedCount: undefined,
+    pairedEligible: true
+  },
+  {
+    id: 'capacity-mixed61-700x500',
+    source: 'mixed-61',
+    shapes: [],
+    paddingMm: 10,
+    sheet: new SheetSpec({ width: 700, height: 500, label: 'constrained 700x500' }),
+    expectedRouting: undefined,
+    expectedPlacedCount: undefined,
+    minimumPlacedCount: 49,
     pairedEligible: true
   },
   {
@@ -296,8 +311,8 @@ interface CapacityRunReport {
         readonly prefixes: unknown
         readonly prefixIncumbent: unknown
         readonly coldSearch: unknown
-        readonly warmPrefixLanes: unknown
-        readonly laneCoordinator: unknown
+        readonly warmPrefixLanes: IntrinsicCapacityTrace['warmPrefixLanes']
+        readonly laneCoordinator: IntrinsicCapacityTrace['laneCoordinator']
         readonly selected: IntrinsicCapacityObjective
         readonly preflightRuntimeMs: number | undefined
         readonly completeArchiveRuntimeMs: number | undefined
@@ -522,6 +537,17 @@ for (const fixture of fixtures) {
         intrinsicAnytimeSchedulerTraceValid(production.schedulerTrace)) &&
       (coldOnly?.schedulerTrace === undefined ||
         intrinsicAnytimeSchedulerTraceValid(coldOnly.schedulerTrace)),
+    laneCoordinatorChronology:
+      production.capacity?.laneCoordinator === undefined ||
+      intrinsicCapacityLaneCoordinatorTraceValid(
+        production.capacity.laneCoordinator,
+        production.capacity.warmPrefixLanes ?? []
+      ),
+    oneWarmLaneBeyondPilot:
+      production.capacity?.laneCoordinator === undefined ||
+      (production.capacity.warmPrefixLanes ?? []).filter(
+        ({ selectedForContinuation }) => selectedForContinuation
+      ).length <= 1,
     prefixNotBelowColdOnly:
       coldOnly === undefined ||
       (production.capacity !== undefined &&

@@ -245,17 +245,23 @@ new placement evaluations and does not mutate the resumable state.
 The revised coordinator reserves one entire single-lane entitlement for the
 protected cold checkpoint, preserving the exact cold terminal candidate. Warm
 pilots and continuations share a separate single-lane entitlement. After every
-warm depth boundary or settlement, the coordinator reselects among paused warm
-lanes. Only equal-next-depth frontiers compete: no-permanent-skip persistence,
-placed count, and exact placed material are scheduling signals; distinct exact
-frontier identities round-robin while those signals remain tied. Cavity,
-envelope, terminal hash, and requested-sheet compactness are not scheduling
-ties. Cold and warm states still never share survivor slots.
+pilot, the deepest fitting `canonical-grid` lane is pinned across
+depth-boundary resumes until it settles or exhausts that entitlement.
+`open-pocket-first` and then `legacy-absolute-envelope` are deterministic
+fallbacks only when the preferred producer is unavailable. This is a bounded
+producer-prior experiment backed by the existing constrained evidence, not a
+general continuation-value predictor. Cavity, envelope, terminal hash, and
+requested-sheet compactness remain excluded from scheduling. Cold and warm
+states still never share survivor slots.
 
 The aggregate allowance remains twice the existing single-lane bound, and a
 new warm quantum starts only when the warm entitlement can reserve all `4,096`
 evaluations of one depth. Budget-censored lanes remain explicit retained
 checkpoints, and their exact best-known endpoints remain terminal candidates.
+Each pilot, resume, and final censor transition records ordinal, lane identity,
+from/to depth, evaluation delta, and outcome. The coordinator validator
+reconciles these quanta with aggregate consumption and every warm-lane ledger,
+and rejects a trace where more than one warm lane exceeds pilot work.
 
 This is a work-reduction hypothesis until the committed full matrix proves the
 required `700 x 500` and `700 x 560` quality floors, lower aggregate
@@ -292,6 +298,13 @@ SVGs, and run log are retained under
 `/private/tmp/min-plane-provenance/intrinsic-lane-reselection-86875e0-targeted/`.
 The strict gate now encodes the `59/61` minimum explicitly; generic
 cold-or-better comparison is not sufficient promotion evidence.
+
+The next experiment replaces only the rejected reselection loop. All pilots,
+the cold entitlement, checkpoint retention, and terminal comparison remain
+unchanged. The pinned canonical lane must first preserve Triangle's exact cold
+answer and reach the known `59/61` on `700 x 560` and `49/61` on `700 x 500`;
+only one warm lane may exceed pilot cost. The full constrained/roomy matrix is
+still conditional on those targeted falsifiers.
 
 ## Stage 5: Shared Exact Archive Mechanics
 

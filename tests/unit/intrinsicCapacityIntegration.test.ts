@@ -15,6 +15,7 @@ import {
   intrinsicAnytimeSchedulerTraceValid,
   type ComputeIrregularNestingOptions
 } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
+import { intrinsicCapacityLaneCoordinatorTraceValid } from '../../src/workers/algorithm/irregular/intrinsicCapacityMode.js'
 import { IrregularLayoutScorer } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { makeIrregularWorkerOutput } from '../../src/workers/algorithm/irregular/irregularWorkerOutput.js'
@@ -273,6 +274,52 @@ describe('intrinsic capacity integration', () => {
           : intrinsicAnytimeSchedulerTraceValid(scheduled.intrinsicAnytimeSchedulerTrace)
       ).toBe(true)
       const warmLaneCount = scheduled.capacityTrace?.warmPrefixLanes?.length ?? 0
+      const laneCoordinator = scheduled.capacityTrace?.laneCoordinator
+      const warmPrefixLanes = scheduled.capacityTrace?.warmPrefixLanes ?? []
+      expect(
+        laneCoordinator === undefined
+          ? false
+          : intrinsicCapacityLaneCoordinatorTraceValid(
+              laneCoordinator,
+              warmPrefixLanes
+            )
+      ).toBe(true)
+      expect(
+        new Set(
+          laneCoordinator?.quanta.flatMap((quantum) =>
+            quantum.producerRole === 'capacity-warm-prefix' &&
+            quantum.phase === 'resume' &&
+            quantum.placementEvaluationDelta > 0
+              ? [`${quantum.sourceRole}@${quantum.prefixDepth}`]
+              : []
+          )
+        ).size
+      ).toBe(warmLaneCount > 0 ? 1 : 0)
+      if (laneCoordinator !== undefined) {
+        const firstPositiveQuantumIndex = laneCoordinator.quanta.findIndex(
+          ({ placementEvaluationDelta }) => placementEvaluationDelta > 0
+        )
+        const firstPositiveQuantum =
+          laneCoordinator.quanta[firstPositiveQuantumIndex]
+        expect(firstPositiveQuantum).toBeDefined()
+        if (firstPositiveQuantum !== undefined) {
+          const corruptedQuanta = [...laneCoordinator.quanta]
+          corruptedQuanta[firstPositiveQuantumIndex] = {
+            ...firstPositiveQuantum,
+            placementEvaluationDelta:
+              firstPositiveQuantum.placementEvaluationDelta + 1
+          }
+          expect(
+            intrinsicCapacityLaneCoordinatorTraceValid(
+              {
+                ...laneCoordinator,
+                quanta: corruptedQuanta
+              },
+              warmPrefixLanes
+            )
+          ).toBe(false)
+        }
+      }
       const schedulerQuanta =
         scheduled.intrinsicAnytimeSchedulerTrace?.quanta ?? []
       expect(schedulerQuanta[0]).toMatchObject({

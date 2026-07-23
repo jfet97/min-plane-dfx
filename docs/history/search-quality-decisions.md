@@ -34,6 +34,14 @@ across three Mixed depth-30 lanes and leaves all three censored around depth
 `59/61`. Protected diversity without enough settlement runway is therefore not
 itself a continuation strategy.
 
+The next bounded experiment retains every pilot but pins the deepest fitting
+`canonical-grid` lane through settlement under the same warm entitlement.
+Open-pocket and legacy are absence fallbacks, not competing predictions. The
+choice is intentionally evidence-specific: canonical already produced both
+known Mixed constrained floors within one entitlement. Detailed coordinator
+quanta and ledger reconciliation must prove that exactly one warm lane receives
+post-pilot work.
+
 This document condenses the former chronological research ledger into decision
 arcs. Metrics describe the named commit and experiment, not current production,
 unless the row explicitly says otherwise. Detailed reports and negative results

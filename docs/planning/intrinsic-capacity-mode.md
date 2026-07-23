@@ -140,13 +140,16 @@ checkpoint quantum, settles the unchanged complete cohort, then either cancels
 capacity on a fitting complete endpoint or coordinates protected checkpoints
 after the complete miss. One base-cap entitlement preserves the exact cold
 lane through settlement. Every fitting warm prefix receives one depth-boundary
-pilot under a second base-cap entitlement; warm checkpoints are reselected
-after every completed depth or settlement. Selection compares only equal-depth
-frontiers by no-skip persistence, placed count, and exact placed material, then
-round-robins distinct tied frontier identities. Exact best-known endpoints can
-be materialized from paused frontiers without consuming or mutating them. The
-coordinator does not change complete construction, use terminal compactness as
-a scheduling signal, or allow warm and cold states to share survivor slots.
+pilot under a second base-cap entitlement. The deepest fitting
+`canonical-grid` lane is then pinned across depth-boundary resumes until it
+settles or exhausts that entitlement; `open-pocket-first` and then
+`legacy-absolute-envelope` are deterministic fallbacks only when the preferred
+producer is unavailable. Exact best-known endpoints can be materialized from
+paused frontiers without consuming or mutating them. The coordinator records
+every pilot and resume with exact depth and evaluation deltas, and a validator
+reconciles them with aggregate and per-lane ledgers. It does not change
+complete construction, use terminal compactness as a scheduling signal, or
+allow warm and cold states to share survivor slots.
 
 Stage 5 shares only archive mechanics: exact admission validation, canonical
 deduplication, namespace storage, and terminal complete dominance. Complete and
