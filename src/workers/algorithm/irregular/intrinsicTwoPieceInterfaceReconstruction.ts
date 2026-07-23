@@ -406,6 +406,20 @@ function compareCandidates(
   )
 }
 
+function strictlyImprovesTopology(
+  seed: IntrinsicRelaxationMetrics,
+  candidate: IntrinsicRelaxationMetrics
+): boolean {
+  return (
+    candidate.topology.positiveContactComponentCount <
+      seed.topology.positiveContactComponentCount ||
+    candidate.topology.isolatedPieceCount <
+      seed.topology.isolatedPieceCount ||
+    candidate.topology.largestPositiveContactComponentSize >
+      seed.topology.largestPositiveContactComponentSize
+  )
+}
+
 function makePlacement(
   piece: IrregularPreparedPiece,
   candidate: IrregularPlacementCandidate
