@@ -57,6 +57,7 @@ interface CapacityFixture {
     | 'bounded-complete-archive-miss'
     | undefined
   readonly expectedPlacedCount: number | undefined
+  readonly minimumPlacedCount?: number
   readonly pairedEligible: boolean
   /** Allows expected shell-side preparation warnings such as piece_does_not_fit. */
   readonly allowPrepareWarnings?: boolean
@@ -142,6 +143,7 @@ const fixtures: ReadonlyArray<CapacityFixture> = [
     sheet: new SheetSpec({ width: 700, height: 560, label: 'constrained 700x560' }),
     expectedRouting: undefined,
     expectedPlacedCount: undefined,
+    minimumPlacedCount: 59,
     pairedEligible: true
   }
 ]
@@ -501,6 +503,9 @@ for (const fixture of fixtures) {
     placedCount:
       fixture.expectedPlacedCount === undefined ||
       production.placedCount === fixture.expectedPlacedCount,
+    minimumPlacedCount:
+      fixture.minimumPlacedCount === undefined ||
+      production.placedCount >= fixture.minimumPlacedCount,
     capacitySettled:
       production.capacity === undefined ||
       production.terminationReason === 'capacity_subset_settled',

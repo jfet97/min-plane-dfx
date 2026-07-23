@@ -280,6 +280,19 @@ least `59/61`, `700 x 500` must retain the accepted `49/61`, Triangle must be
 cold-exact-or-better, the constrained matrix must not regress, roomy complete
 hashes must remain exact, and CPU/evaluations must stay below settle-all.
 
+The targeted measurement at `86875e0` rejects this equal-depth round-robin
+allocation as implemented. Triangle remains cold-exact at `15/20`, but
+Mixed-61 `700 x 560` returns the cold `55/61` endpoint. The three depth-30 warm
+lanes consume about `80k` to `84k` evaluations each and reach only depths
+`51-52`; none receives enough of the `249,856`-evaluation warm entitlement to
+settle its known `59/61` endpoint. Aggregate capacity work is `481,272`
+evaluations, wall time is `161.80 s` for the paired targeted run, user CPU is
+`173.98 s`, and maximum resident set size is `1,003,880,448` bytes. The report,
+SVGs, and run log are retained under
+`/private/tmp/min-plane-provenance/intrinsic-lane-reselection-86875e0-targeted/`.
+The strict gate now encodes the `59/61` minimum explicitly; generic
+cold-or-better comparison is not sufficient promotion evidence.
+
 ## Stage 5: Shared Exact Archive Mechanics
 
 Complete and partial endpoints now pass through one generic exact archive

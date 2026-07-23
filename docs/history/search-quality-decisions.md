@@ -27,6 +27,13 @@ material. Distinct tied frontier identities advance round-robin. It deliberately
 excludes cavities, envelope dimensions, terminal hashes, and sheet-relative
 compactness from scheduling.
 
+The targeted `86875e0` measurement rejects that allocation too. Round-robin
+preserves Triangle's exact cold endpoint, but splits the warm entitlement
+across three Mixed depth-30 lanes and leaves all three censored around depth
+`51-52`; final selection falls back to cold at `55/61`, below the required
+`59/61`. Protected diversity without enough settlement runway is therefore not
+itself a continuation strategy.
+
 This document condenses the former chronological research ledger into decision
 arcs. Metrics describe the named commit and experiment, not current production,
 unless the row explicitly says otherwise. Detailed reports and negative results

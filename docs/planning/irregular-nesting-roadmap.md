@@ -118,6 +118,13 @@ The retained `700 x 500` historical run confirms the failure of the superseded
 settle-all scheduler. The shared-budget coordinator must clear the same quality
 floor with lower aggregate work before promotion.
 
+The first two shared-budget selectors are now rejected evidence. A one-depth
+terminal-objective choice reaches only `57/61` on Mixed `700 x 560`; equal-depth
+round-robin at `86875e0` protects cold exactly but divides the warm allowance
+until all three leading lanes are censored near depth `52`, returning cold at
+`55/61`. The next scheduler hypothesis must provide sufficient warm settlement
+runway without restoring settle-all cost.
+
 ### P0: Freeze the archive-only correctness and quality gate
 
 Establish the archive-only baseline before changing allocation or search.
