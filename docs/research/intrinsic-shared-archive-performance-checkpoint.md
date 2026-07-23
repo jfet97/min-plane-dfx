@@ -82,3 +82,62 @@ still-pending ten-sheet matrix.
 Every directory contains its report, manifest, and winner SVG where applicable.
 The baseline repeat was executed from the persistent detached checkout at
 `/Users/andreasimonecosta/Documents/Work/min-plane-dfx-worktrees/performance-baseline-4f3ddb8`.
+
+## Candidate-State and Replay Follow-up
+
+The next exact profile at `a57894c` confirmed that NFP generation was not the
+dominant cost. On Mixed-61, periodic construction used `143,042.452 ms`;
+candidate generation used `8,714.091 ms`, while candidate-state scoring used
+`134,314.318 ms`. Rebuilding every proposal as a fully bottom-left-anchored
+state alone used `125,999.267 ms`, or 93.8% of candidate scoring.
+
+Commit `70b8a6d` preserves the exact bottom-left canonical comparison key but
+defers the full placement and spatial-index rebuild until the one retained step
+winner. The paired cold result is:
+
+| Implementation | Periodic total | Construction | Candidate scoring | Winner |
+| --- | ---: | ---: | ---: | --- |
+| `a57894c` eager anchoring | `162,386.206 ms` | `143,042.452 ms` | `134,314.318 ms` | `3839e80d...` |
+| `70b8a6d` retained-only anchoring | `42,375.459 ms` | `21,668.909 ms` | `13,316.301 ms` | `3839e80d...` |
+
+Construction improves 6.60x and the complete periodic phase improves 3.83x.
+The normalized reports are semantically identical and the winner SVGs are
+byte-identical. Both select `391,605.850174 mm2` with zero canonical cavities.
+
+The validated replay follow-up at `f4df9e4` uses the same `p2-axis-union`
+domain. The cold run used `43,110.438 ms`; an accepted version-2 replay used
+`35,059.694 ms`. Selection fell from `16,323.322 ms` to `8,206.836 ms`, with
+physical source-crop attempts falling from `23,456` to zero and 12 witnesses
+revalidated. The speedup is 1.23x end to end, with byte-identical output. This
+supports an in-memory replay seam but is not enough evidence to add durable
+Electron persistence. Envelope export is explicitly requested by the harness;
+ordinary production audit runs do not construct or retain an unused replay
+artifact.
+
+Production validation at `7544766` preserves:
+
+- Triangle-20 hash `371db269...`, `74,428.143126 mm2`, zero cavities;
+- Shapes-17 hash `c640c06f...`, `304,499.845650 mm2`, zero cavities;
+- Mixed-61 hash `ef2b783a...`, `391,605.850174 mm2`, zero cavities, in
+  `52,563.021 ms`;
+- exact Mixed equivalence on `900 x 1800` and `1000 x 1300`, in
+  `52,266.519 ms` and `52,207.177 ms`.
+
+One validation regression was found and fixed: semantic continuation coverage
+flags had accidentally remained conditional on benchmark timing. Production
+therefore rejected eight completed Triangle continuations when telemetry was
+off. They are now reported independently of timing, and the regression is
+covered by the no-telemetry capped test.
+
+Additional immutable evidence:
+
+- eager profile:
+  `/private/tmp/min-plane-provenance/candidate-scoring-profile-a57894c-20260723/`
+- retained-only profile:
+  `/private/tmp/min-plane-provenance/candidate-scoring-profile-70b8a6d-20260723/`
+- accepted cold/warm replay:
+  `/private/tmp/min-plane-provenance/replay-envelope-f4df9e4-20260723/`
+- exact Triangle matrix:
+  `/private/tmp/min-plane-provenance/candidate-scoring-triangle-70b8a6d-20260723/`
+- current two-sheet production gate:
+  `/private/tmp/min-plane-provenance/replay-scoring-two-sheet-7544766-20260723/`

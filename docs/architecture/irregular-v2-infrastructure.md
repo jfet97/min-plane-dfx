@@ -244,6 +244,15 @@ hull waste remains a completed-layout/archive measurement. This optimization
 does not change candidate generation, local comparison order, archive identity,
 or requested-sheet fitting.
 
+Candidate comparison also avoids rebuilding a fully bottom-left-anchored state
+for every discarded proposal. The scorer derives the exact canonical identity
+that full anchoring would produce using the same translation arithmetic,
+polygon canonicalization, and sorted entry record. It then performs the full
+placement and spatial-index rebuild only for the retained step winner. Envelope
+and contact terms are translation-invariant, and the retained state is anchored
+before traces, gap evidence, parent history, or the next construction step can
+observe it.
+
 The Step 4 shared-archive experiment is the first common terminal boundary for
 the two protected direct constructors, baseline-order gap-contained
 construction, and eight bounded periodic continuations. Periodic selection
@@ -283,10 +292,18 @@ before replacing it.
 Source-audit acceleration has three explicit modes. Equivalent cells are
 memoized by canonical cell key within one run, with separate logical and
 physical attempt counters. A content-addressed warm replay can replace raw crop
-enumeration: the harness schema-decodes the product, then the algorithm checks
-canonical-grid legality, canonical identity, contact topology, and envelope
-metrics before rebuilding each ordinary seed future. Ranking, deduplication,
-reservations, and the continuation cap remain unchanged; a mismatch fails.
+enumeration. Its version-2 algorithm-owned envelope binds the source scope,
+canonical prepared-input digest, current eligible family/cell/source domain,
+and replay digest. The harness schema-decodes the untrusted product; the
+algorithm then checks domain membership, bounded survival records and
+witnesses, canonical-grid legality, canonical identity, contact topology, and
+envelope metrics before rebuilding each ordinary seed future. Ranking,
+deduplication, reservations, and the continuation cap remain unchanged. A
+schema, version, digest, scope, domain, or witness mismatch is a cache miss and
+executes the unchanged cold path; it does not fail the nesting request or spend
+the cold continuation budget. Replay-envelope emission is independently
+opt-in, so production source-audit quality does not pay digest construction or
+retain an unused cache artifact. Durable Electron persistence remains deferred.
 
 The experimental `p2-axis-union` scope is a cold allocation policy, not an
 equivalent cache. It admits raw witnesses only from two-member periodic cells

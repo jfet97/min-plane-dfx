@@ -130,8 +130,8 @@ export interface IntrinsicPeriodicFamilyPortfolioResult {
   readonly continuations: ReadonlyArray<IntrinsicPeriodicContinuation>
   readonly continuationOmissions: ReadonlyArray<IntrinsicPeriodicContinuationOmission>
   readonly continuationCoverageComplete: boolean
-  readonly continuationExecutionCoverageComplete?: boolean
-  readonly continuationBudgetSettlementComplete?: boolean
+  readonly continuationExecutionCoverageComplete: boolean
+  readonly continuationBudgetSettlementComplete: boolean
   readonly sourceCropSurvival: ReadonlyArray<IntrinsicPeriodicSourceCropSurvival>
   readonly sourceAuditWitnesses: ReadonlyArray<IntrinsicPeriodicSourceAuditWitness>
   readonly sourceAuditNonDominatedCropCount: number
@@ -195,6 +195,8 @@ export interface IntrinsicPeriodicFamilyPortfolioOptions {
   readonly basisSourceKey?: string
   /** Enables a bounded observer over raw source cells without changing continuations. */
   readonly captureSourceSurvivalAudit?: boolean
+  /** Emits the validated replay envelope for an explicitly requested cache export. */
+  readonly captureSourceAuditReplayEnvelope?: boolean
   /**
    * Lets the bounded raw-crop Pareto witnesses compete as source-tagged
    * continuations in the shared archive. Requires the source-survival audit;
@@ -465,7 +467,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       ...(sourceAuditReplayResolution.rejectionReason === undefined
         ? {}
         : { sourceAuditReplayRejectionReason: sourceAuditReplayResolution.rejectionReason }),
-      ...(!(options.captureSourceSurvivalAudit ?? false)
+      ...(!(options.captureSourceAuditReplayEnvelope ?? false)
         ? {}
         : {
             sourceAuditReplayEnvelope: makeSourceAuditReplayEnvelope(

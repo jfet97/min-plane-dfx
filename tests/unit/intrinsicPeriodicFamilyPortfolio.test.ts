@@ -315,6 +315,7 @@ describe('intrinsic periodic family portfolio', () => {
             maximumContinuationCount: 4,
             capturePhaseTimings: true,
             captureSourceSurvivalAudit: true,
+            captureSourceAuditReplayEnvelope: true,
             admitSourceAuditWitnesses: true,
             ...(sourceAuditReplayEnvelope === undefined
               ? {}

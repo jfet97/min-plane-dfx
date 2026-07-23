@@ -138,6 +138,7 @@ const result =
               maximumContinuationRuntimeMs,
               maximumTotalRuntimeMs: maximumPeriodicRuntimeMs,
               capturePhaseTimings: true,
+              captureSourceAuditReplayEnvelope: sourceAuditCacheOutput !== undefined,
               sourceAuditScope,
               ...(sourceAuditReplayEnvelope === undefined
                 ? {}

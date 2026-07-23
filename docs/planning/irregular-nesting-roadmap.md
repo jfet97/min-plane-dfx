@@ -110,20 +110,33 @@ q0/q90 fit, hashes, all three fixture identities, and the current two-sheet
 invariance sample. Full evidence is in
 [`../research/intrinsic-shared-archive-performance-checkpoint.md`](../research/intrinsic-shared-archive-performance-checkpoint.md).
 
-The next cold-path measurement should split candidate state scoring further:
-incremental contact measurement, state materialization/bottom-left anchoring,
-canonical geometry-key construction, and gap classification. Do not optimize
-NFP generation first: it consumed only about `8.8 s` of the approximately
-`153-156 s` optimized strict-construction runs.
+The candidate-state split and first major optimization are complete. On the
+exact `a57894c` Mixed profile, bottom-left state realization consumed
+`125,999 ms` of `134,314 ms` candidate scoring. Commit `70b8a6d` computes the
+same anchored comparison identity without rebuilding discarded states and
+anchors only the retained winner. Construction improves from `143,042 ms` to
+`21,669 ms` (6.60x), while the periodic phase improves from `162,386 ms` to
+`42,375 ms` (3.83x), with identical archives, hashes, and SVG.
 
 Nested timing must remain explicitly enabled by the benchmark harness and
 default off in production, independently of deterministic evaluation caps.
+Semantic execution and budget-settlement flags must remain available even when
+timing is disabled.
 
-A content-addressed replay may be promoted only with explicit refresh, miss,
-corruption, schema-version, and algorithm-version behavior and with canonical
-revalidation of untrusted entries. Warm replay is a separate cache result: it
-must not close the cold-path task, and every miss or invalid entry must fall
-back to unchanged cold execution.
+The version-2 same-process replay contract is also complete. It binds algorithm
+version, scope, prepared input, eligible source domain, and replay content, then
+revalidates membership, legality, identity, topology, and metrics. Every invalid
+entry falls back cold without consuming the cold continuation budget. On the
+same Mixed scope it reduces the periodic phase from `43,110 ms` to `35,060 ms`
+(1.23x). Replay-envelope export remains explicit so ordinary production audit
+runs do not pay cache-artifact construction. Keep durable Electron persistence
+deferred unless repeated-job measurement shows enough practical value.
+
+The next performance pass should profile the new 21.7-second construction
+floor before changing behavior. Current single-sample buckets point to
+placement-object materialization (`6.7 s`), anchored canonical-key derivation
+(`4.9 s`), and candidate generation (`8.3 s`); none should be optimized without
+a repeated serial profile and the same exact-output gates.
 
 Dependencies: freeze the current allocation and acceptance corpus for this
 work. If the later allocation audit changes either, remeasure before accepting
