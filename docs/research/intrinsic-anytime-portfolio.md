@@ -439,6 +439,19 @@ trace, and SVG hook. The original 16-slot cold search and every warm lane
 remain unchanged, and the cohesion endpoint is excluded from terminal
 selection until its quality and cross-fixture gates pass.
 
+The first committed measurement at `9faaf61` rejects that retention policy as
+an output candidate while preserving the observer seam. Triangle-20 on
+`300 x 300` kept the production `15/20` result and canonical hash
+`b1455c81...` exactly. The independent lane reached `16/20` in `44,214`
+placement evaluations and `1.271 s` of observer search, but exact topology
+reported eight positive-contact components, six isolated pieces, and only
+eight pieces in the largest component. Its `289.490 mm` maximum side also
+regressed the `283.783 mm` production incumbent. The rendered PNG confirms a
+strong central block with detached left and bottom pieces. It is therefore
+rejected rather than admitted. The next diagnostic must determine whether
+connected candidates are generated before retention and then lost, or whether
+candidate generation never proposes them.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim

@@ -44,6 +44,7 @@ import {
   type IntrinsicCapacitySearchResult,
   type IntrinsicCapacitySearchPhaseTimings,
   type IntrinsicCapacitySearchTrace,
+  type IntrinsicCapacityTopologyRetentionDepthTrace,
   type IntrinsicCapacityWarmPrefixSeed
 } from './intrinsicCapacitySearch.js'
 import { IrregularBeamState } from './irregularBeamState.js'
@@ -99,6 +100,9 @@ export interface IntrinsicCapacityCohesionShadowTrace {
   readonly completedDepths: number
   readonly elapsedMs: number
   readonly endpoint: IntrinsicCapacityObjective | undefined
+  readonly retentionDepths:
+    | ReadonlyArray<IntrinsicCapacityTopologyRetentionDepthTrace>
+    | undefined
 }
 
 export interface IntrinsicCapacityLaneCoordinatorTrace {
@@ -843,7 +847,8 @@ function runIntrinsicCapacityCohesionShadow(input: {
         completedDepths: result.trace.completedDepths,
         elapsedMs: Math.max(0, performance.now() - startedAt),
         endpoint:
-          endpoint === undefined ? undefined : intrinsicCapacityObjective(endpoint)
+          endpoint === undefined ? undefined : intrinsicCapacityObjective(endpoint),
+        retentionDepths: result.trace.topologyRetentionDepths
       }
     }
   })

@@ -182,6 +182,43 @@ export interface IntrinsicCapacitySearchTrace {
   readonly depthQuotaExhaustions: number
   readonly pieceCount: number
   readonly settlement: IntrinsicCapacitySettlement
+  /** Observer-only exact topology representatives around each retention boundary. */
+  readonly topologyRetentionDepths:
+    | ReadonlyArray<IntrinsicCapacityTopologyRetentionDepthTrace>
+    | undefined
+}
+
+export type IntrinsicCapacityTopologyRepresentativeRole =
+  | 'terminal-objective'
+  | 'minimum-components'
+  | 'minimum-isolated'
+  | 'maximum-largest-component'
+  | 'minimum-hull-waste'
+
+export interface IntrinsicCapacityTopologyRepresentative {
+  readonly role: IntrinsicCapacityTopologyRepresentativeRole
+  readonly decisionIdentity: string
+  readonly parentDecisionIdentity: string
+  readonly decision: 'place' | 'skip'
+  readonly pieceId: PieceId
+  readonly anchoredOccupiedKey: string
+  readonly placedCount: number
+  readonly placedDoubledMaterialAreaGrid2: bigint
+  readonly cavities: IntrinsicCapacityCavityMetrics
+  readonly gridSpan: IntrinsicCapacityGridSpan
+  readonly topology: CanonicalLayoutTopologyExact | undefined
+  readonly retained: boolean
+}
+
+export interface IntrinsicCapacityTopologyRetentionDepthTrace {
+  readonly depth: number
+  readonly pieceId: PieceId
+  readonly measuredSurvivorCount: number
+  readonly retainedCount: number
+  readonly bestAccountingStratumCount: number
+  readonly topologyMeasurementCount: number
+  readonly topologyMeasurementMs: number
+  readonly representatives: ReadonlyArray<IntrinsicCapacityTopologyRepresentative>
 }
 
 /** Benchmark-only phase buckets; capture must default off in production. */
@@ -237,6 +274,11 @@ interface CapacityBeamEntry {
   readonly anchoredOccupiedKey: string
   readonly gridSpan: IntrinsicCapacityGridSpan
   readonly cavities: IntrinsicCapacityCavityMetrics
+  readonly observerTransition?: {
+    readonly parentDecisionIdentity: string
+    readonly decision: 'place' | 'skip'
+    readonly pieceId: PieceId
+  }
 }
 
 interface ScoredCandidateReference {
@@ -278,6 +320,8 @@ export function runIntrinsicCapacityColdSearch(
   return Effect.gen(function* () {
     const startedAt = performance.now()
     const capture = input.capturePhaseTimings === true
+    const captureTopologyRetention =
+      input.retentionMode === 'cohesion-frontier-shadow'
     const settings = yield* GeometrySettings
     const geometryKernel = yield* GeometryKernel
     const nfpIfpService = yield* NfpIfpService
@@ -418,6 +462,7 @@ export function runIntrinsicCapacityColdSearch(
       }
     const startDepth = input.checkpoint?.nextDepth ?? initialDepth
     let completedDepthBoundariesThisInvocation = 0
+    const topologyRetentionDepths: IntrinsicCapacityTopologyRetentionDepthTrace[] = []
 
     let beam: ReadonlyArray<CapacityBeamEntry>
     if (input.checkpoint === undefined && warmPrefix.entry !== undefined) {
@@ -484,7 +529,17 @@ export function runIntrinsicCapacityColdSearch(
             placedDoubledMaterialAreaGrid2: entry.placedDoubledMaterialAreaGrid2,
             anchoredOccupiedKey: entry.anchoredOccupiedKey,
             gridSpan: entry.gridSpan,
-            cavities: entry.cavities
+            cavities: entry.cavities,
+            ...(captureTopologyRetention
+              ? {
+                  observerTransition: {
+                    parentDecisionIdentity:
+                      intrinsicCapacitySuccessorIdentity(entry),
+                    decision: 'skip' as const,
+                    pieceId
+                  }
+                }
+              : {})
           },
           () => {
             deduplicatedSuccessors += 1
@@ -604,7 +659,17 @@ export function runIntrinsicCapacityColdSearch(
                 entry.placedDoubledMaterialAreaGrid2 + pieceMaterial,
               anchoredOccupiedKey,
               gridSpan,
-              cavities: { count: 0, totalAreaMm2: 0 }
+              cavities: { count: 0, totalAreaMm2: 0 },
+              ...(captureTopologyRetention
+                ? {
+                    observerTransition: {
+                      parentDecisionIdentity:
+                        intrinsicCapacitySuccessorIdentity(entry),
+                      decision: 'place' as const,
+                      pieceId
+                    }
+                  }
+                : {})
             },
             () => {
               deduplicatedSuccessors += 1
@@ -656,11 +721,25 @@ export function runIntrinsicCapacityColdSearch(
       }
       if (capture) timings.cavityMeasurementMs += performance.now() - cavityStartedAt
 
+      const topologyMeasurements =
+        captureTopologyRetention ? makeCapacityTopologyMeasurements() : undefined
       beam = retainCapacityBeamEntries(
         measuredSurvivors,
         coldBeamWidth,
-        input.retentionMode ?? 'objective'
+        input.retentionMode ?? 'objective',
+        topologyMeasurements
       )
+      if (topologyMeasurements !== undefined) {
+        topologyRetentionDepths.push(
+          makeCapacityTopologyRetentionDepthTrace({
+            depth,
+            pieceId,
+            measuredSurvivors,
+            retained: beam,
+            topologyMeasurements
+          })
+        )
+      }
       completedDepths = depth + 1
       completedDepthBoundariesThisInvocation += 1
       if (checkpointEnabled) {
@@ -733,7 +812,8 @@ export function runIntrinsicCapacityColdSearch(
             consumedPlacementEvaluations,
             counters,
             pieceCount: input.preparedPieces.length,
-            settlement: 'paused'
+            settlement: 'paused',
+            topologyRetentionDepths
           }),
           phaseTimings: capture ? { ...timings, totalMs } : undefined,
           checkpoint
@@ -799,7 +879,8 @@ export function runIntrinsicCapacityColdSearch(
         consumedPlacementEvaluations,
         counters,
         pieceCount: input.preparedPieces.length,
-        settlement
+        settlement,
+        topologyRetentionDepths
       }),
       phaseTimings: capture ? { ...timings, totalMs } : undefined,
       checkpoint: undefined
@@ -866,6 +947,7 @@ function makeIntrinsicCapacitySearchTrace(input: {
   readonly counters: IntrinsicCapacitySearchCounters
   readonly pieceCount: number
   readonly settlement: IntrinsicCapacitySettlement
+  readonly topologyRetentionDepths: ReadonlyArray<IntrinsicCapacityTopologyRetentionDepthTrace>
 }): IntrinsicCapacitySearchTrace {
   return {
     beamWidth: input.coldBeamWidth,
@@ -876,7 +958,11 @@ function makeIntrinsicCapacitySearchTrace(input: {
     auxiliaryPlacementEvaluations: 0,
     ...input.counters,
     pieceCount: input.pieceCount,
-    settlement: input.settlement
+    settlement: input.settlement,
+    topologyRetentionDepths:
+      input.topologyRetentionDepths.length === 0
+        ? undefined
+        : input.topologyRetentionDepths
   }
 }
 
@@ -1589,7 +1675,8 @@ function compareCapacityBeamEntriesAreaFirst(
 function retainCapacityBeamEntries(
   entries: ReadonlyArray<CapacityBeamEntry>,
   beamWidth: number,
-  mode: IntrinsicCapacityRetentionMode
+  mode: IntrinsicCapacityRetentionMode,
+  topologyMeasurements?: CapacityTopologyMeasurements
 ): ReadonlyArray<CapacityBeamEntry> {
   if (mode === 'objective') {
     return entries.toSorted(compareCapacityBeamEntries).slice(0, beamWidth)
@@ -1598,7 +1685,11 @@ function retainCapacityBeamEntries(
     return entries.toSorted(compareCapacityBeamEntriesAreaFirst).slice(0, beamWidth)
   }
   if (mode === 'cohesion-frontier-shadow') {
-    return retainCapacityCohesionFrontier(entries, beamWidth)
+    return retainCapacityCohesionFrontier(
+      entries,
+      beamWidth,
+      topologyMeasurements ?? makeCapacityTopologyMeasurements()
+    )
   }
 
   const retained: CapacityBeamEntry[] = []
@@ -1626,23 +1717,9 @@ function retainCapacityBeamEntries(
 
 function retainCapacityCohesionFrontier(
   entries: ReadonlyArray<CapacityBeamEntry>,
-  beamWidth: number
+  beamWidth: number,
+  topologyMeasurements: CapacityTopologyMeasurements
 ): ReadonlyArray<CapacityBeamEntry> {
-  const topologyByIdentity = new Map<string, CanonicalLayoutTopologyExact | undefined>()
-  const topologyOf = (entry: CapacityBeamEntry): CanonicalLayoutTopologyExact | undefined => {
-    const cached = topologyByIdentity.get(entry.anchoredOccupiedKey)
-    if (cached !== undefined || topologyByIdentity.has(entry.anchoredOccupiedKey)) {
-      return cached
-    }
-    const measured =
-      entry.state.placedCollisionGeometries.length === 0
-        ? undefined
-        : measureCanonicalLayoutTopologyExact(
-            entry.state.placedCollisionGeometries
-          )
-    topologyByIdentity.set(entry.anchoredOccupiedKey, measured)
-    return measured
-  }
   const compareTopology = (
     first: CapacityBeamEntry,
     second: CapacityBeamEntry,
@@ -1654,8 +1731,8 @@ function retainCapacityCohesionFrontier(
   ): number => {
     const accounting = compareCapacityBeamEntryAccounting(first, second)
     if (accounting !== 0) return accounting
-    const firstTopology = topologyOf(first)
-    const secondTopology = topologyOf(second)
+    const firstTopology = topologyMeasurements.measure(first)
+    const secondTopology = topologyMeasurements.measure(second)
     if (firstTopology === undefined || secondTopology === undefined) {
       return firstTopology === secondTopology ? compareCapacityBeamEntries(first, second) : firstTopology === undefined ? 1 : -1
     }
@@ -1712,6 +1789,181 @@ function retainCapacityCohesionFrontier(
   )
   reserve(entries.toSorted(compareCapacityBeamEntries), beamWidth)
   return retained
+}
+
+interface CapacityTopologyMeasurements {
+  readonly measure: (
+    entry: CapacityBeamEntry
+  ) => CanonicalLayoutTopologyExact | undefined
+  readonly counters: {
+    count: number
+    elapsedMs: number
+  }
+}
+
+function makeCapacityTopologyMeasurements(): CapacityTopologyMeasurements {
+  const topologyByIdentity = new Map<
+    string,
+    CanonicalLayoutTopologyExact | undefined
+  >()
+  const counters = { count: 0, elapsedMs: 0 }
+  return {
+    counters,
+    measure: (entry) => {
+      const identity = intrinsicCapacitySuccessorIdentity(entry)
+      const cached = topologyByIdentity.get(identity)
+      if (cached !== undefined || topologyByIdentity.has(identity)) return cached
+      const startedAt = performance.now()
+      const measured =
+        entry.state.placedCollisionGeometries.length === 0
+          ? undefined
+          : measureCanonicalLayoutTopologyExact(
+              entry.state.placedCollisionGeometries
+            )
+      counters.count += 1
+      counters.elapsedMs += Math.max(0, performance.now() - startedAt)
+      topologyByIdentity.set(identity, measured)
+      return measured
+    }
+  }
+}
+
+function makeCapacityTopologyRetentionDepthTrace(input: {
+  readonly depth: number
+  readonly pieceId: PieceId
+  readonly measuredSurvivors: ReadonlyArray<CapacityBeamEntry>
+  readonly retained: ReadonlyArray<CapacityBeamEntry>
+  readonly topologyMeasurements: CapacityTopologyMeasurements
+}): IntrinsicCapacityTopologyRetentionDepthTrace {
+  const retainedIdentities = new Set(
+    input.retained.map(intrinsicCapacitySuccessorIdentity)
+  )
+  const objectiveOrdered = input.measuredSurvivors.toSorted(
+    compareCapacityBeamEntries
+  )
+  const best = objectiveOrdered[0]
+  const bestAccounting =
+    best === undefined
+      ? []
+      : input.measuredSurvivors.filter(
+          (entry) => compareCapacityBeamEntryAccounting(entry, best) === 0
+        )
+  const specifications: ReadonlyArray<{
+    readonly role: IntrinsicCapacityTopologyRepresentativeRole
+    readonly compare: (
+      first: CapacityBeamEntry,
+      second: CapacityBeamEntry
+    ) => number
+  }> = [
+    { role: 'terminal-objective', compare: compareCapacityBeamEntries },
+    {
+      role: 'minimum-components',
+      compare: (first, second) =>
+        compareTopologyMetric(
+          input.topologyMeasurements,
+          first,
+          second,
+          'component-count'
+        )
+    },
+    {
+      role: 'minimum-isolated',
+      compare: (first, second) =>
+        compareTopologyMetric(
+          input.topologyMeasurements,
+          first,
+          second,
+          'isolated'
+        )
+    },
+    {
+      role: 'maximum-largest-component',
+      compare: (first, second) =>
+        compareTopologyMetric(
+          input.topologyMeasurements,
+          first,
+          second,
+          'largest-component'
+        )
+    },
+    {
+      role: 'minimum-hull-waste',
+      compare: (first, second) =>
+        compareTopologyMetric(
+          input.topologyMeasurements,
+          first,
+          second,
+          'hull-waste'
+        )
+    }
+  ]
+  const representatives: IntrinsicCapacityTopologyRepresentative[] = []
+  for (const specification of specifications) {
+    const entry = bestAccounting.toSorted(specification.compare)[0]
+    if (entry === undefined) continue
+    const decisionIdentity = intrinsicCapacitySuccessorIdentity(entry)
+    const transition = entry.observerTransition
+    if (transition === undefined) continue
+    representatives.push({
+      role: specification.role,
+      decisionIdentity,
+      parentDecisionIdentity: transition.parentDecisionIdentity,
+      decision: transition.decision,
+      pieceId: transition.pieceId,
+      anchoredOccupiedKey: entry.anchoredOccupiedKey,
+      placedCount: entry.state.placementOrder.length,
+      placedDoubledMaterialAreaGrid2:
+        entry.placedDoubledMaterialAreaGrid2,
+      cavities: entry.cavities,
+      gridSpan: entry.gridSpan,
+      topology: input.topologyMeasurements.measure(entry),
+      retained: retainedIdentities.has(decisionIdentity)
+    })
+  }
+  return {
+    depth: input.depth,
+    pieceId: input.pieceId,
+    measuredSurvivorCount: input.measuredSurvivors.length,
+    retainedCount: input.retained.length,
+    bestAccountingStratumCount: bestAccounting.length,
+    topologyMeasurementCount: input.topologyMeasurements.counters.count,
+    topologyMeasurementMs: input.topologyMeasurements.counters.elapsedMs,
+    representatives
+  }
+}
+
+function compareTopologyMetric(
+  topologyMeasurements: CapacityTopologyMeasurements,
+  first: CapacityBeamEntry,
+  second: CapacityBeamEntry,
+  metric:
+    | 'isolated'
+    | 'largest-component'
+    | 'component-count'
+    | 'hull-waste'
+): number {
+  const firstTopology = topologyMeasurements.measure(first)
+  const secondTopology = topologyMeasurements.measure(second)
+  if (firstTopology === undefined || secondTopology === undefined) {
+    return firstTopology === secondTopology
+      ? compareCapacityBeamEntries(first, second)
+      : firstTopology === undefined
+        ? 1
+        : -1
+  }
+  const firstMetrics = firstTopology.topology
+  const secondMetrics = secondTopology.topology
+  const difference =
+    metric === 'isolated'
+      ? firstMetrics.isolatedPieceCount - secondMetrics.isolatedPieceCount
+      : metric === 'largest-component'
+        ? secondMetrics.largestPositiveContactComponentSize -
+          firstMetrics.largestPositiveContactComponentSize
+        : metric === 'component-count'
+          ? firstMetrics.positiveContactComponentCount -
+            secondMetrics.positiveContactComponentCount
+          : compareExactHullWaste(firstTopology, secondTopology)
+  return difference || compareCapacityBeamEntries(first, second)
 }
 
 function compareExactHullWaste(

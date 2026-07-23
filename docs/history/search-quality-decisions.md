@@ -305,3 +305,11 @@ after exact q0/q90 endpoint fit. Fixed `+10%` area routing is rejected.
 Implementation proceeds through six separately measurable stages, beginning
 with deterministic cold-search depth-boundary checkpoint/resume. See
 [`../research/intrinsic-anytime-portfolio.md`](../research/intrinsic-anytime-portfolio.md).
+
+The first independent generic cohesion-frontier observer at `9faaf61` retained
+the exact production Triangle-20 `300 x 300` hash and found one additional
+piece, but its endpoint had eight contact components and six isolated pieces.
+The inspected PNG remained fragmented on the left and bottom, so the result is
+recorded as a rejected retention experiment. No Triangle-specific placement
+rule was introduced: the observer ranks exact component, isolation, cavity,
+hull-waste, and envelope signals applicable to arbitrary polygons.

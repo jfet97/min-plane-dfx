@@ -282,6 +282,23 @@ describe('intrinsic capacity integration', () => {
       expect(cohesionEndpointPlacedCount).toBe(
         cohesionObserved.capacityTrace?.cohesionShadow?.endpoint?.placedCount
       )
+      const retentionDepths =
+        cohesionObserved.capacityTrace?.cohesionShadow?.retentionDepths
+      expect(retentionDepths).toHaveLength(request.pieces.length)
+      expect(
+        retentionDepths?.every(
+          (depth) =>
+            depth.representatives.length === 5 &&
+            depth.topologyMeasurementCount > 0 &&
+            depth.topologyMeasurementMs >= 0 &&
+            depth.representatives.every(
+              (representative) =>
+                representative.parentDecisionIdentity.length > 0 &&
+                representative.decisionIdentity.length > 0 &&
+                representative.pieceId === depth.pieceId
+            )
+        )
+      ).toBe(true)
       expect(scheduled.intrinsicAnytimeSchedulerTrace?.coldCheckpointReused).toBe(true)
       expect(scheduled.intrinsicAnytimeSchedulerTrace?.cancellationReason).toBe(
         'complete-cohort-miss'
