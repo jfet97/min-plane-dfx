@@ -1094,18 +1094,18 @@ function replayRejected(rejectionReason: string): {
 function sourceAuditPreparedInputDigest(
   pieces: ReadonlyArray<IrregularPreparedPiece>
 ): string {
-  return sha256(JSON.stringify(pieces))
+  return sha256(canonicalJson(pieces))
 }
 
 function sourceAuditEligibleDomainDigest(
   catalog: IntrinsicPeriodicCatalog,
   scope: IntrinsicPeriodicSourceAuditScope
 ): string {
-  return sha256(JSON.stringify(eligibleSourceDomainEntries(catalog, scope)))
+  return sha256(canonicalJson(eligibleSourceDomainEntries(catalog, scope)))
 }
 
 function sourceAuditReplayDigest(replay: IntrinsicPeriodicSourceAuditReplay): string {
-  return sha256(JSON.stringify(replay))
+  return sha256(canonicalJson(replay))
 }
 
 function eligibleSourceDomainEntries(
@@ -1167,6 +1167,16 @@ function sourceAuditSurvivalCountsValid(
 
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex')
+}
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value)
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`
+  const fields = Object.entries(value)
+    .filter(([, fieldValue]) => fieldValue !== undefined)
+    .toSorted(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey))
+    .map(([key, fieldValue]) => `${JSON.stringify(key)}:${canonicalJson(fieldValue)}`)
+  return `{${fields.join(',')}}`
 }
 
 function validateAndReconstructSourceAuditWitness(
