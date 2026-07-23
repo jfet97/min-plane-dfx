@@ -114,7 +114,7 @@ describe('compact-quality repeated triangle golden', () => {
         orderWindow: 4,
         beamWidth: 8,
         localCandidateFanout: 4,
-        localRepairBudget: 8,
+        localRepairBudget: 0,
         transformCap: 8,
         baselineOnly: true,
         gaEnabled: false,
