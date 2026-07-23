@@ -74,6 +74,7 @@ export interface IntrinsicLostInterfaceRepairResult {
   readonly lostContactPair: readonly [PieceId, PieceId] | undefined
   readonly orderCount: number
   readonly exactEndpointCount: number
+  readonly deduplicatedPartialStateCount: number
   readonly admissionGuardEndpointCount: number
   readonly promotionEndpointCount: number
   readonly admissionGuardPassed: boolean
@@ -511,10 +512,12 @@ export function runIntrinsicLostInterfaceRepair(input: {
     const memoScope = new IrregularNfpIfpCandidateMemoScope()
     const budget: CandidateBudget = { count: 0, exhausted: false }
     const seenExactIdentities = new Set<string>()
+    const seenSecondStageStates = new Set<string>()
     const guardCandidates: TripleCandidate[] = []
     const promotionCandidates: TripleCandidate[] = []
     let bestExactCandidate: TripleCandidate | undefined
     let exactEndpointCount = 0
+    let deduplicatedPartialStateCount = 0
     let orderCount = 0
     let deadlineExhausted = false
 
@@ -558,6 +561,18 @@ export function runIntrinsicLostInterfaceRepair(input: {
         })
         if (budget.exhausted) break outer
         for (const secondPlaced of secondCandidates) {
+          const secondStageIdentity = canonicalCollisionLayoutIdentity([
+            ...frozen,
+            firstPlaced,
+            secondPlaced
+          ])
+          if (secondStageIdentity === undefined) continue
+          const secondStageKey = `${order[2]}::${secondStageIdentity}`
+          if (seenSecondStageStates.has(secondStageKey)) {
+            deduplicatedPartialStateCount += 1
+            continue
+          }
+          seenSecondStageStates.add(secondStageKey)
           const thirdCandidates = yield* enumeratePlacedCandidates({
             sheet: input.sheet,
             placed: [...frozen, firstPlaced, secondPlaced],
@@ -643,6 +658,7 @@ export function runIntrinsicLostInterfaceRepair(input: {
       lostContactPair,
       orderCount,
       exactEndpointCount,
+      deduplicatedPartialStateCount,
       admissionGuardEndpointCount: guardCandidates.length,
       promotionEndpointCount: promotionCandidates.length,
       admissionGuardPassed: diagnostic !== undefined,
@@ -884,6 +900,7 @@ function invalidTripleResult(input: {
     lostContactPair: undefined,
     orderCount: 0,
     exactEndpointCount: 0,
+    deduplicatedPartialStateCount: 0,
     admissionGuardEndpointCount: 0,
     promotionEndpointCount: 0,
     admissionGuardPassed: false,

@@ -423,6 +423,7 @@ interface CapacityRunReport {
         readonly lostContactPair: ReadonlyArray<string> | undefined
         readonly orderCount: number
         readonly exactEndpointCount: number
+        readonly deduplicatedPartialStateCount: number
         readonly admissionGuardEndpointCount: number
         readonly promotionEndpointCount: number
         readonly seedMetrics: unknown
@@ -852,6 +853,7 @@ async function runCohesionLostInterfaceRepairShadow(input: {
     lostContactPair: result.lostContactPair,
     orderCount: result.orderCount,
     exactEndpointCount: result.exactEndpointCount,
+    deduplicatedPartialStateCount: result.deduplicatedPartialStateCount,
     admissionGuardEndpointCount: result.admissionGuardEndpointCount,
     promotionEndpointCount: result.promotionEndpointCount,
     seedMetrics: result.seedMetrics,
