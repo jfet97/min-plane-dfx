@@ -165,6 +165,9 @@ must instead be an independent observer-only generic topology frontier beside
 the full unchanged cold lane. It may replace nothing until Triangle
 `300 x 300`, Mixed, Shapes, exact checkpoint equivalence, and full PNG gates
 all pass.
+That observer seam is now implemented with an independent producer identity,
+budget, exact topology cache, trace, and artifact hook. It has no output
+influence while the first Triangle/Mixed/Shapes falsifiers run.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

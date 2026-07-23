@@ -12,6 +12,10 @@ import {
   type TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import { toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
+import {
+  measureCanonicalLayoutTopologyExact,
+  type CanonicalLayoutTopologyExact
+} from '../../irregular/canonicalLayoutGeometry.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import {
   IrregularNfpIfpCandidateMemoScope,
@@ -57,6 +61,7 @@ export type IntrinsicCapacitySettlement = 'exhausted' | 'evaluation-cap' | 'paus
 
 export type IntrinsicAnytimeProducerRole =
   | 'capacity-cold'
+  | 'capacity-cohesion-shadow'
   | 'capacity-warm-prefix'
   | 'legacy-complete'
   | 'experimental-place-defer-complete'
@@ -67,6 +72,12 @@ export type IntrinsicAnytimeArchiveCohort =
   | 'experimental-complete'
 
 export type IntrinsicAnytimeEligibility = 'completeEligible' | 'subsetOnly'
+
+export type IntrinsicCapacityRetentionMode =
+  | 'objective'
+  | 'area-first-shadow'
+  | 'axis-buckets-shadow'
+  | 'cohesion-frontier-shadow'
 
 export interface IntrinsicAnytimeFitMask {
   readonly q0: boolean
@@ -211,7 +222,7 @@ export interface RunIntrinsicCapacityColdSearchInput {
   /** Deterministic scheduler credit carried by a paused protected lane. */
   readonly schedulerDeficit?: number
   /** Experimental protected-lane retention; terminal objective stays unchanged. */
-  readonly retentionMode?: 'objective' | 'area-first-shadow' | 'axis-buckets-shadow'
+  readonly retentionMode?: IntrinsicCapacityRetentionMode
 }
 
 export interface IntrinsicCapacityWarmPrefixSeed {
@@ -320,7 +331,11 @@ export function runIntrinsicCapacityColdSearch(
     }
     const initialDepth = warmPrefix.entry?.depth ?? 0
     const producerRole: IntrinsicAnytimeProducerRole =
-      warmPrefix.entry === undefined ? 'capacity-cold' : 'capacity-warm-prefix'
+      warmPrefix.entry === undefined
+        ? input.retentionMode === 'cohesion-frontier-shadow'
+          ? 'capacity-cohesion-shadow'
+          : 'capacity-cold'
+        : 'capacity-warm-prefix'
     const maximumDepthBoundaries = input.maximumDepthBoundaries
     if (
       maximumDepthBoundaries !== undefined &&
@@ -965,7 +980,10 @@ function makeIntrinsicCapacityCheckpoint(input: {
   readonly perDepthBudgetLedgers: ReadonlyArray<IntrinsicAnytimeDepthBudgetLedger>
   readonly noSkipFrontier: IntrinsicAnytimeNoSkipFrontierState
   readonly counters: IntrinsicCapacitySearchCounters
-  readonly producerRole: 'capacity-cold' | 'capacity-warm-prefix'
+  readonly producerRole:
+    | 'capacity-cold'
+    | 'capacity-cohesion-shadow'
+    | 'capacity-warm-prefix'
   readonly schedulerDeficit: number
   readonly sheetWidthGrid: number
   readonly sheetHeightGrid: number
@@ -1033,7 +1051,10 @@ function validateIntrinsicCapacityCheckpoint(input: {
   readonly checkpoint: IntrinsicAnytimeCheckpoint
   readonly requestFingerprint: string
   readonly incumbentBinding: IntrinsicAnytimeIncumbentBinding | undefined
-  readonly producerRole: 'capacity-cold' | 'capacity-warm-prefix'
+  readonly producerRole:
+    | 'capacity-cold'
+    | 'capacity-cohesion-shadow'
+    | 'capacity-warm-prefix'
   readonly schedulerDeficit: number
   readonly preparedIds: ReadonlyArray<PieceId>
   readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
@@ -1347,7 +1368,7 @@ function intrinsicCapacityRequestFingerprint(input: {
   readonly incumbent?: IntrinsicCapacityEndpoint
   readonly warmPrefixSeed?: IntrinsicCapacityWarmPrefixSeed
   readonly schedulerDeficit?: number
-  readonly retentionMode?: 'objective' | 'area-first-shadow' | 'axis-buckets-shadow'
+  readonly retentionMode?: IntrinsicCapacityRetentionMode
 }): string {
   const material = [...input.materialAreasByPieceId.entries()]
     .map(([pieceId, area]) => [pieceId, area] as const)
@@ -1568,13 +1589,16 @@ function compareCapacityBeamEntriesAreaFirst(
 function retainCapacityBeamEntries(
   entries: ReadonlyArray<CapacityBeamEntry>,
   beamWidth: number,
-  mode: 'objective' | 'area-first-shadow' | 'axis-buckets-shadow'
+  mode: IntrinsicCapacityRetentionMode
 ): ReadonlyArray<CapacityBeamEntry> {
   if (mode === 'objective') {
     return entries.toSorted(compareCapacityBeamEntries).slice(0, beamWidth)
   }
   if (mode === 'area-first-shadow') {
     return entries.toSorted(compareCapacityBeamEntriesAreaFirst).slice(0, beamWidth)
+  }
+  if (mode === 'cohesion-frontier-shadow') {
+    return retainCapacityCohesionFrontier(entries, beamWidth)
   }
 
   const retained: CapacityBeamEntry[] = []
@@ -1598,6 +1622,115 @@ function retainCapacityBeamEntries(
   reserve(entries.toSorted(compareCapacityBeamEntriesHeightFirst), 4)
   reserve(entries.toSorted(compareCapacityBeamEntries), beamWidth)
   return retained
+}
+
+function retainCapacityCohesionFrontier(
+  entries: ReadonlyArray<CapacityBeamEntry>,
+  beamWidth: number
+): ReadonlyArray<CapacityBeamEntry> {
+  const topologyByIdentity = new Map<string, CanonicalLayoutTopologyExact | undefined>()
+  const topologyOf = (entry: CapacityBeamEntry): CanonicalLayoutTopologyExact | undefined => {
+    const cached = topologyByIdentity.get(entry.anchoredOccupiedKey)
+    if (cached !== undefined || topologyByIdentity.has(entry.anchoredOccupiedKey)) {
+      return cached
+    }
+    const measured =
+      entry.state.placedCollisionGeometries.length === 0
+        ? undefined
+        : measureCanonicalLayoutTopologyExact(
+            entry.state.placedCollisionGeometries
+          )
+    topologyByIdentity.set(entry.anchoredOccupiedKey, measured)
+    return measured
+  }
+  const compareTopology = (
+    first: CapacityBeamEntry,
+    second: CapacityBeamEntry,
+    metric:
+      | 'isolated'
+      | 'largest-component'
+      | 'component-count'
+      | 'hull-waste'
+  ): number => {
+    const accounting = compareCapacityBeamEntryAccounting(first, second)
+    if (accounting !== 0) return accounting
+    const firstTopology = topologyOf(first)
+    const secondTopology = topologyOf(second)
+    if (firstTopology === undefined || secondTopology === undefined) {
+      return firstTopology === secondTopology ? compareCapacityBeamEntries(first, second) : firstTopology === undefined ? 1 : -1
+    }
+    const firstMetrics = firstTopology.topology
+    const secondMetrics = secondTopology.topology
+    const metricDifference =
+      metric === 'isolated'
+        ? firstMetrics.isolatedPieceCount - secondMetrics.isolatedPieceCount
+        : metric === 'largest-component'
+          ? secondMetrics.largestPositiveContactComponentSize -
+            firstMetrics.largestPositiveContactComponentSize
+          : metric === 'component-count'
+            ? firstMetrics.positiveContactComponentCount -
+              secondMetrics.positiveContactComponentCount
+            : compareExactHullWaste(firstTopology, secondTopology)
+    return metricDifference || compareCapacityBeamEntries(first, second)
+  }
+  const retained: CapacityBeamEntry[] = []
+  const retainedKeys = new Set<string>()
+  const reserve = (
+    ordered: ReadonlyArray<CapacityBeamEntry>,
+    maximum: number
+  ): void => {
+    let added = 0
+    for (const entry of ordered) {
+      const key = intrinsicCapacitySuccessorIdentity(entry)
+      if (retainedKeys.has(key)) continue
+      retained.push(entry)
+      retainedKeys.add(key)
+      added += 1
+      if (added >= maximum || retained.length >= beamWidth) return
+    }
+  }
+  const bucketWidth = Math.max(1, Math.floor(beamWidth / 4))
+  reserve(entries.toSorted(compareCapacityBeamEntries), bucketWidth)
+  reserve(
+    entries.toSorted((first, second) =>
+      compareTopology(first, second, 'isolated')
+    ),
+    bucketWidth
+  )
+  reserve(
+    entries.toSorted((first, second) =>
+      compareTopology(first, second, 'largest-component')
+    ),
+    bucketWidth
+  )
+  reserve(
+    entries.toSorted((first, second) =>
+      compareTopology(first, second, 'component-count') ||
+      compareTopology(first, second, 'hull-waste')
+    ),
+    beamWidth
+  )
+  reserve(entries.toSorted(compareCapacityBeamEntries), beamWidth)
+  return retained
+}
+
+function compareExactHullWaste(
+  first: CanonicalLayoutTopologyExact,
+  second: CanonicalLayoutTopologyExact
+): number {
+  if (
+    first.hullDoubledAreaGrid2 === 0 ||
+    second.hullDoubledAreaGrid2 === 0
+  ) {
+    return first.hullGapDoubledAreaGrid2 - second.hullGapDoubledAreaGrid2
+  }
+  const firstScaled =
+    BigInt(first.hullGapDoubledAreaGrid2) *
+    BigInt(second.hullDoubledAreaGrid2)
+  const secondScaled =
+    BigInt(second.hullGapDoubledAreaGrid2) *
+    BigInt(first.hullDoubledAreaGrid2)
+  return firstScaled === secondScaled ? 0 : firstScaled < secondScaled ? -1 : 1
 }
 
 function compareCapacityBeamEntriesWidthFirst(

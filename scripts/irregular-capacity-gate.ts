@@ -37,6 +37,7 @@ import { FreeMaterialServiceLive } from '../src/workers/irregular/freeMaterialSe
 import { GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../src/workers/irregular/nfpIfpService.js'
 import { TransformGeneratorLive } from '../src/workers/irregular/transformGenerator.js'
+import { measureCanonicalLayoutTopologyExact } from '../src/workers/irregular/canonicalLayoutGeometry.js'
 import {
   canonicalizeIrregularLayout,
   type LayoutPoint
@@ -62,6 +63,7 @@ interface CapacityFixture {
     | undefined
   readonly expectedPlacedCount: number | undefined
   readonly minimumPlacedCount?: number
+  readonly expectedCanonicalSha256?: string
   readonly pairedEligible: boolean
   /** Allows expected shell-side preparation warnings such as piece_does_not_fit. */
   readonly allowPrepareWarnings?: boolean
@@ -127,6 +129,9 @@ const fixtures: ReadonlyArray<CapacityFixture> = [
     sheet: new SheetSpec({ width: 300, height: 300, label: 'constrained 300x300' }),
     expectedRouting: undefined,
     expectedPlacedCount: undefined,
+    minimumPlacedCount: 15,
+    expectedCanonicalSha256:
+      'b1455c81ff2a38ca93954d53464f79ab85c7631045f8fbee40b9467f0273bb17',
     pairedEligible: true
   },
   {
@@ -300,6 +305,15 @@ interface CapacityRunReport {
   readonly shadowTelemetry: IrregularComputeResult['capacityShadowTelemetry']
   readonly schedulerTrace: IrregularComputeResult['intrinsicAnytimeSchedulerTrace']
   readonly experimentalPlaceDeferTrace: IrregularComputeResult['experimentalPlaceDeferTrace']
+  readonly retentionMode: 'objective' | 'area-first' | 'axis-buckets'
+  readonly cohesionShadow:
+    | {
+        readonly artifactPath: string
+        readonly canonicalGeometryHash: string
+        readonly objective: IntrinsicCapacityObjective
+        readonly topology: ReturnType<typeof measureCanonicalLayoutTopologyExact>
+      }
+    | undefined
   readonly warmLaneArtifacts: ReadonlyArray<{
     readonly sourceRole: string
     readonly prefixDepth: number
@@ -312,6 +326,7 @@ interface CapacityRunReport {
         readonly prefixIncumbent: unknown
         readonly coldSearch: unknown
         readonly warmPrefixLanes: IntrinsicCapacityTrace['warmPrefixLanes']
+        readonly cohesionShadow: IntrinsicCapacityTrace['cohesionShadow']
         readonly laneCoordinator: IntrinsicCapacityTrace['laneCoordinator']
         readonly selected: IntrinsicCapacityObjective
         readonly preflightRuntimeMs: number | undefined
@@ -340,10 +355,17 @@ async function runArm(
   request: NestingRequest,
   arm: 'production' | 'cold-only',
   artifactPath: string,
-  retentionMode: 'objective' | 'area-first' | 'axis-buckets'
+  retentionMode: 'objective' | 'area-first' | 'axis-buckets',
+  captureCohesionShadow: boolean
 ): Promise<CapacityRunReport> {
   const settings = request.options.irregularSettings
   if (settings === undefined) throw new Error(`${request.jobId} has no irregular settings`)
+  const warmLaneEndpoints: Array<{
+    readonly sourceRole: string
+    readonly prefixDepth: number
+    readonly endpoint: IntrinsicCapacityEndpoint | undefined
+  }> = []
+  let cohesionEndpoint: IntrinsicCapacityEndpoint | undefined
   const options: ComputeIrregularNestingOptions = {
     ...(arm === 'cold-only' ? { capacityControlArm: 'disable-prefix-reuse' } : {}),
     captureCapacityPhaseTimings: true,
@@ -353,16 +375,21 @@ async function runArm(
     ...(retentionMode === 'objective'
       ? {}
       : { intrinsicCapacityRetentionShadow: retentionMode }),
+    ...(captureCohesionShadow
+      ? {
+          captureCapacityCohesionShadow: true,
+          onCapacityCohesionShadowLane: (
+            endpoint: IntrinsicCapacityEndpoint | undefined
+          ) => {
+            cohesionEndpoint = endpoint
+          }
+        }
+      : {}),
     captureExperimentalPlaceDeferCompleteShadow: true,
     onCapacityWarmPrefixLane: (lane) => {
       warmLaneEndpoints.push(lane)
     }
   }
-  const warmLaneEndpoints: Array<{
-    readonly sourceRole: string
-    readonly prefixDepth: number
-    readonly endpoint: IntrinsicCapacityEndpoint | undefined
-  }> = []
   const startedAt = performance.now()
   const result = await Effect.runPromise(
     computeIrregularNesting(request, options).pipe(
@@ -396,6 +423,43 @@ async function runArm(
       canonicalGeometryHash: lane.endpoint.canonicalGeometryHash,
       artifactPath: warmArtifactPath
     })
+  }
+  const cohesionShadow =
+    cohesionEndpoint === undefined
+      ? undefined
+      : {
+          artifactPath: `${artifactPath.slice(0, -4)}-cohesion-shadow.svg`,
+          canonicalGeometryHash: cohesionEndpoint.canonicalGeometryHash,
+          objective: {
+            placedCount: cohesionEndpoint.metrics.placedCount,
+            placedDoubledMaterialAreaGrid2:
+              cohesionEndpoint.metrics.placedDoubledMaterialAreaGrid2,
+            enclosedCavityCount: cohesionEndpoint.metrics.enclosedCavityCount,
+            totalEnclosedCavityAreaMm2:
+              cohesionEndpoint.metrics.totalEnclosedCavityAreaMm2,
+            envelopeMaximumSideMm:
+              cohesionEndpoint.metrics.envelopeMaximumSideMm,
+            envelopeAreaMm2: cohesionEndpoint.metrics.envelopeAreaMm2,
+            envelopeSpanMm: cohesionEndpoint.metrics.envelopeSpanMm,
+            canonicalGeometryHash: cohesionEndpoint.canonicalGeometryHash,
+            origin: cohesionEndpoint.origin,
+            prefixDepth: cohesionEndpoint.prefixDepth,
+            sourceRole: cohesionEndpoint.sourceRole
+          },
+          topology: measureCanonicalLayoutTopologyExact(
+            cohesionEndpoint.placedCollisionGeometries
+          )
+        }
+  if (cohesionShadow !== undefined && cohesionEndpoint !== undefined) {
+    await writeFile(
+      cohesionShadow.artifactPath,
+      renderSvg(
+        request.sheet,
+        absolutePlacedCollisionPolygons(
+          cohesionEndpoint.placedCollisionGeometries
+        )
+      )
+    )
   }
   const requestIds = request.pieces.map(({ id }) => id)
   const accountedIds = [
@@ -431,6 +495,8 @@ async function runArm(
     shadowTelemetry: result.capacityShadowTelemetry,
     schedulerTrace: result.intrinsicAnytimeSchedulerTrace,
     experimentalPlaceDeferTrace: result.experimentalPlaceDeferTrace,
+    retentionMode,
+    cohesionShadow,
     warmLaneArtifacts,
     capacity:
       trace === undefined
@@ -440,6 +506,7 @@ async function runArm(
             prefixIncumbent: trace.prefixIncumbent,
             coldSearch: trace.coldSearch,
             warmPrefixLanes: trace.warmPrefixLanes,
+            cohesionShadow: trace.cohesionShadow,
             laneCoordinator: trace.laneCoordinator,
             selected: trace.selected,
             preflightRuntimeMs: trace.preflightRuntimeMs,
@@ -466,6 +533,8 @@ interface CliArguments {
   readonly paired: boolean
   readonly strict: boolean
   readonly retentionMode: 'objective' | 'area-first' | 'axis-buckets'
+  readonly cohesionShadow: boolean
+  readonly requireCohesionPromotion: boolean
 }
 
 function parseArguments(argv: ReadonlyArray<string>): CliArguments {
@@ -474,6 +543,8 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
   let paired = false
   let strict = false
   let retentionMode: 'objective' | 'area-first' | 'axis-buckets' = 'objective'
+  let cohesionShadow = false
+  let requireCohesionPromotion = false
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]
     if (argument === '--output') {
@@ -501,11 +572,23 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
       }
       retentionMode = value
       index += 1
+    } else if (argument === '--cohesion-shadow') {
+      cohesionShadow = true
+    } else if (argument === '--require-cohesion-promotion') {
+      requireCohesionPromotion = true
     } else {
       throw new Error(`unknown argument ${argument}`)
     }
   }
-  return { selectedCaseIds: selected, outputDirectory, paired, strict, retentionMode }
+  return {
+    selectedCaseIds: selected,
+    outputDirectory,
+    paired,
+    strict,
+    retentionMode,
+    cohesionShadow,
+    requireCohesionPromotion
+  }
 }
 
 const cli = parseArguments(process.argv.slice(2))
@@ -519,7 +602,8 @@ for (const fixture of fixtures) {
     request,
     'production',
     `${cli.outputDirectory}/${fixture.id}-production.svg`,
-    cli.retentionMode
+    cli.retentionMode,
+    cli.cohesionShadow
   )
   const coldOnly =
     cli.paired && fixture.pairedEligible
@@ -527,7 +611,8 @@ for (const fixture of fixtures) {
           request,
           'cold-only',
           `${cli.outputDirectory}/${fixture.id}-cold-only.svg`,
-          cli.retentionMode
+          cli.retentionMode,
+          cli.cohesionShadow
         )
       : undefined
   const productionColdSearch = capacityColdSearchTrace(production)
@@ -544,6 +629,10 @@ for (const fixture of fixtures) {
     minimumPlacedCount:
       fixture.minimumPlacedCount === undefined ||
       production.placedCount >= fixture.minimumPlacedCount,
+    canonicalIdentity:
+      fixture.expectedCanonicalSha256 === undefined ||
+      cli.retentionMode !== 'objective' ||
+      production.canonicalSha256 === fixture.expectedCanonicalSha256,
     capacitySettled:
       production.capacity === undefined ||
       production.terminationReason === 'capacity_subset_settled',
@@ -580,13 +669,41 @@ for (const fixture of fixtures) {
           coldOnly.capacity.selected
         ) <= 0)
   }
-  const fixturePassed = Object.values(checks).every((value) => value)
+  const cohesion = production.cohesionShadow
+  const cohesionPromotion =
+    fixture.id === 'capacity-triangles20-300x300' && cohesion !== undefined
+      ? {
+          eligible:
+            cohesion.objective.placedCount >= 16 &&
+            cohesion.objective.enclosedCavityCount === 0 &&
+            cohesion.objective.envelopeMaximumSideMm <= 283.783 &&
+            cohesion.objective.envelopeAreaMm2 < 77_750.86634 &&
+            cohesion.topology?.topology.positiveContactComponentCount === 1 &&
+            cohesion.topology.topology.isolatedPieceCount === 0 &&
+            cohesion.topology.topology.largestPositiveContactComponentSize ===
+              cohesion.objective.placedCount,
+          requirements: {
+            minimumPlacedCount: 16,
+            enclosedCavityCount: 0,
+            maximumSideUpperBoundMm: 283.783,
+            envelopeAreaStrictUpperBoundMm2: 77_750.86634,
+            positiveContactComponentCount: 1,
+            isolatedPieceCount: 0,
+            largestComponentMustContainEveryPlacedPiece: true,
+            inspectedPngRequired: true
+          }
+        }
+      : undefined
+  const fixturePassed =
+    Object.values(checks).every((value) => value) &&
+    (!cli.requireCohesionPromotion || cohesionPromotion?.eligible === true)
   passed &&= fixturePassed
   const report = jsonSafe({
     caseId: fixture.id,
     sheet: { width: fixture.sheet.width, height: fixture.sheet.height },
     pieceCount: request.pieces.length,
     checks,
+    cohesionPromotion,
     passed: fixturePassed,
     production,
     ...(coldOnly === undefined ? {} : { coldOnly })
@@ -597,7 +714,19 @@ for (const fixture of fixtures) {
 const reportPath = `${cli.outputDirectory}/report.json`
 await writeFile(
   reportPath,
-  `${JSON.stringify({ generatedAt: new Date().toISOString(), cases: caseReports }, null, 2)}\n`
+  `${JSON.stringify(
+    {
+      generatedAt: new Date().toISOString(),
+      experiment: {
+        retentionMode: cli.retentionMode,
+        cohesionShadow: cli.cohesionShadow,
+        requireCohesionPromotion: cli.requireCohesionPromotion
+      },
+      cases: caseReports
+    },
+    null,
+    2
+  )}\n`
 )
 console.log(JSON.stringify({ reportPath, passed }))
 if (cli.strict && !passed) {

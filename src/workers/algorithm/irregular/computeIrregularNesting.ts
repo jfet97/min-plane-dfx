@@ -127,6 +127,12 @@ export interface ComputeIrregularNestingOptions {
   readonly intrinsicAnytimeSchedulerMode?: 'deterministic-v1'
   /** Experimental subset retention; terminal capacity comparator is unchanged. */
   readonly intrinsicCapacityRetentionShadow?: 'area-first' | 'axis-buckets'
+  /** Independent observer-only generic topology-frontier lane. */
+  readonly captureCapacityCohesionShadow?: boolean
+  /** Benchmark hook for the independent exact cohesion endpoint. */
+  readonly onCapacityCohesionShadowLane?: (
+    endpoint: IntrinsicCapacityEndpoint | undefined
+  ) => void
   /** Opt-in complete-capable place/defer shadow producer. */
   readonly captureExperimentalPlaceDeferCompleteShadow?: boolean
   readonly onExperimentalPlaceDeferCompleteEndpoint?: (
@@ -458,6 +464,15 @@ function coordinateIntrinsicSharedArchive(
         ...(input.options?.captureCapacityWarmPrefixTelemetry === true
           ? { captureWarmPrefixTelemetry: true }
           : {}),
+        ...(input.options?.captureCapacityCohesionShadow === true
+          ? { captureCohesionShadow: true }
+          : {}),
+        ...(input.options?.onCapacityCohesionShadowLane === undefined
+          ? {}
+          : {
+              onCohesionShadowLane:
+                input.options.onCapacityCohesionShadowLane
+            }),
         ...(input.options?.onCapacityWarmPrefixLane === undefined
           ? {}
           : { onWarmPrefixLane: input.options.onCapacityWarmPrefixLane }),

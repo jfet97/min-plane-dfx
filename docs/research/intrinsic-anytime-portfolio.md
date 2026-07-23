@@ -432,6 +432,13 @@ compactness, isolated-piece count, largest positive-contact component, and
 hull waste. Triangle is only the falsifier; Mixed and Shapes remain required
 non-regression controls.
 
+The first implementation exposes that frontier only through an explicit
+observer option. It starts from empty with its own producer role, fingerprint,
+checkpoint identity, exact topology measurements, evaluation budget, endpoint,
+trace, and SVG hook. The original 16-slot cold search and every warm lane
+remain unchanged, and the cohesion endpoint is excluded from terminal
+selection until its quality and cross-fixture gates pass.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim

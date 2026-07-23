@@ -40,6 +40,7 @@ import {
   materializeIntrinsicCapacityCheckpointEndpoints,
   runIntrinsicCapacityColdSearch,
   type IntrinsicAnytimeCheckpoint,
+  type IntrinsicCapacityRetentionMode,
   type IntrinsicCapacitySearchResult,
   type IntrinsicCapacitySearchPhaseTimings,
   type IntrinsicCapacitySearchTrace,
@@ -90,6 +91,16 @@ export interface IntrinsicCapacityWarmPrefixLaneTrace {
   readonly endpoint: IntrinsicCapacityObjective | undefined
 }
 
+export interface IntrinsicCapacityCohesionShadowTrace {
+  readonly producerRole: 'capacity-cohesion-shadow'
+  readonly status: 'settled'
+  readonly outputInfluence: 'none'
+  readonly consumedPlacementEvaluations: number
+  readonly completedDepths: number
+  readonly elapsedMs: number
+  readonly endpoint: IntrinsicCapacityObjective | undefined
+}
+
 export interface IntrinsicCapacityLaneCoordinatorTrace {
   readonly version: 'intrinsic-capacity-lane-coordinator-v2'
   readonly aggregatePlacementEvaluationCap: number
@@ -134,6 +145,7 @@ export interface IntrinsicCapacityTrace {
   /** Observer-only independent warm lanes; excluded from final selection. */
   readonly warmPrefixLanes: ReadonlyArray<IntrinsicCapacityWarmPrefixLaneTrace> | undefined
   readonly warmPrefixEndpointsAdmitted: boolean
+  readonly cohesionShadow: IntrinsicCapacityCohesionShadowTrace | undefined
   readonly laneCoordinator: IntrinsicCapacityLaneCoordinatorTrace | undefined
   readonly selected: IntrinsicCapacitySelectionTrace
   /** Coordinator-measured proof-only preflight runtime. */
@@ -261,6 +273,12 @@ export interface RunIntrinsicCapacityModeInput {
   readonly capturePhaseTimings?: boolean
   /** Runs protected warm-prefix lanes as observers without changing selection. */
   readonly captureWarmPrefixTelemetry?: boolean
+  /** Runs one independent generic topology frontier without selecting it. */
+  readonly captureCohesionShadow?: boolean
+  /** Benchmark hook for the exact observer endpoint. */
+  readonly onCohesionShadowLane?: (
+    endpoint: IntrinsicCapacityEndpoint | undefined
+  ) => void
   /** Benchmark artifact hook; never read by selection or production routing. */
   readonly onWarmPrefixLane?: (lane: {
     readonly sourceRole: string
@@ -277,7 +295,7 @@ export interface RunIntrinsicCapacityModeInput {
   readonly preflightRuntimeMs?: number
   /** Coordinator-measured complete archive runtime carried into the trace. */
   readonly completeArchiveRuntimeMs?: number
-  readonly retentionMode?: 'objective' | 'area-first-shadow' | 'axis-buckets-shadow'
+  readonly retentionMode?: IntrinsicCapacityRetentionMode
 }
 
 export const INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS = 4 as const
@@ -290,7 +308,7 @@ export function runIntrinsicCapacitySchedulerColdQuantum(input: {
   readonly maximumDepthBoundaries?: number
   readonly control?: IrregularNfpIfpControl
   readonly capturePhaseTimings?: boolean
-  readonly retentionMode?: 'objective' | 'area-first-shadow' | 'axis-buckets-shadow'
+  readonly retentionMode?: IntrinsicCapacityRetentionMode
 }): Effect.Effect<
   IntrinsicCapacitySearchResult,
   IntrinsicCapacityModeError,
@@ -365,11 +383,7 @@ function runProtectedCapacityLaneCoordinator(input: {
   readonly scheduledColdStart: IntrinsicCapacitySearchResult | undefined
   readonly control: IrregularNfpIfpControl | undefined
   readonly capturePhaseTimings: boolean | undefined
-  readonly retentionMode:
-    | 'objective'
-    | 'area-first-shadow'
-    | 'axis-buckets-shadow'
-    | undefined
+  readonly retentionMode: IntrinsicCapacityRetentionMode | undefined
   readonly onWarmPrefixLane:
     | ((lane: {
         readonly sourceRole: string
@@ -782,6 +796,59 @@ function selectProtectedWarmSettlementLane(
   return deepestCandidates[0]?.index
 }
 
+function runIntrinsicCapacityCohesionShadow(input: {
+  readonly sheet: SheetSpec
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
+  readonly control?: IrregularNfpIfpControl
+  readonly capturePhaseTimings?: boolean
+}): Effect.Effect<
+  {
+    readonly endpoint: IntrinsicCapacityEndpoint | undefined
+    readonly trace: IntrinsicCapacityCohesionShadowTrace
+  },
+  IntrinsicCapacityModeError,
+  GeometryKernel | GeometrySettings | NfpIfpService
+> {
+  return Effect.gen(function* () {
+    const startedAt = performance.now()
+    const result = yield* runIntrinsicCapacityColdSearch({
+      sheet: input.sheet,
+      preparedPieces: input.preparedPieces,
+      materialAreasByPieceId: input.materialAreasByPieceId,
+      cavityCache: new Map(),
+      retentionMode: 'cohesion-frontier-shadow',
+      ...(input.control === undefined ? {} : { control: input.control }),
+      ...(input.capturePhaseTimings === undefined
+        ? {}
+        : { capturePhaseTimings: input.capturePhaseTimings })
+    })
+    if (result.status !== 'settled') {
+      return yield* Effect.fail(
+        new IntrinsicCapacityError({
+          operation: 'capacityCohesionShadow',
+          message: 'the independent cohesion observer did not settle.'
+        })
+      )
+    }
+    const endpoint = result.endpoints[0]
+    return {
+      endpoint,
+      trace: {
+        producerRole: 'capacity-cohesion-shadow',
+        status: 'settled',
+        outputInfluence: 'none',
+        consumedPlacementEvaluations:
+          result.trace.consumedPlacementEvaluations,
+        completedDepths: result.trace.completedDepths,
+        elapsedMs: Math.max(0, performance.now() - startedAt),
+        endpoint:
+          endpoint === undefined ? undefined : intrinsicCapacityObjective(endpoint)
+      }
+    }
+  })
+}
+
 type IntrinsicCapacityModeError =
   | IntrinsicCapacityError
   | IrregularGeometryInputError
@@ -874,6 +941,20 @@ export function runIntrinsicCapacityMode(
           }))
     const coldSearchMs =
       coordinated?.elapsedMs ?? Math.max(0, performance.now() - coldSearchStartedAt)
+
+    const cohesionShadow =
+      input.captureCohesionShadow === true
+        ? yield* runIntrinsicCapacityCohesionShadow({
+            sheet: input.sheet,
+            preparedPieces: input.preparedPieces,
+            materialAreasByPieceId: materials.areasByPieceId,
+            ...(input.control === undefined ? {} : { control: input.control }),
+            ...(input.capturePhaseTimings === undefined
+              ? {}
+              : { capturePhaseTimings: input.capturePhaseTimings })
+          })
+        : undefined
+    input.onCohesionShadowLane?.(cohesionShadow?.endpoint)
 
     let warmPrefixLanes:
       | ReadonlyArray<IntrinsicCapacityWarmPrefixLaneTrace>
@@ -995,6 +1076,7 @@ export function runIntrinsicCapacityMode(
         coldSearch: coldSearch.trace,
         warmPrefixLanes,
         warmPrefixEndpointsAdmitted: input.admitWarmPrefixEndpoints === true,
+        cohesionShadow: cohesionShadow?.trace,
         laneCoordinator: coordinated?.trace,
         selected: {
           ...intrinsicCapacityObjective(selected),

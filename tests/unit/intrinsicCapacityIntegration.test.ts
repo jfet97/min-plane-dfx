@@ -221,6 +221,13 @@ describe('intrinsic capacity integration', () => {
       const observed = await compute(request, {
         captureCapacityWarmPrefixTelemetry: true
       })
+      let cohesionEndpointPlacedCount: number | undefined
+      const cohesionObserved = await compute(request, {
+        captureCapacityCohesionShadow: true,
+        onCapacityCohesionShadowLane: (endpoint) => {
+          cohesionEndpointPlacedCount = endpoint?.metrics.placedCount
+        }
+      })
       const scheduled = await compute(request, {
         intrinsicAnytimeSchedulerMode: 'deterministic-v1',
         captureExperimentalPlaceDeferCompleteShadow: true
@@ -260,6 +267,21 @@ describe('intrinsic capacity integration', () => {
       expect(observed.capacityTrace?.coldSearch).toEqual(computed.capacityTrace?.coldSearch)
       expect(observed.placedCollisionGeometries).toEqual(computed.placedCollisionGeometries)
       expect(observed.unplacedPieceIds).toEqual(computed.unplacedPieceIds)
+      expect(cohesionObserved.placedCollisionGeometries).toEqual(
+        computed.placedCollisionGeometries
+      )
+      expect(cohesionObserved.unplacedPieceIds).toEqual(
+        computed.unplacedPieceIds
+      )
+      expect(cohesionObserved.capacityTrace?.cohesionShadow).toMatchObject({
+        producerRole: 'capacity-cohesion-shadow',
+        status: 'settled',
+        outputInfluence: 'none',
+        completedDepths: request.pieces.length
+      })
+      expect(cohesionEndpointPlacedCount).toBe(
+        cohesionObserved.capacityTrace?.cohesionShadow?.endpoint?.placedCount
+      )
       expect(scheduled.intrinsicAnytimeSchedulerTrace?.coldCheckpointReused).toBe(true)
       expect(scheduled.intrinsicAnytimeSchedulerTrace?.cancellationReason).toBe(
         'complete-cohort-miss'
