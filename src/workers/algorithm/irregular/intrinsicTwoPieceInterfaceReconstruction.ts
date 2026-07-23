@@ -421,36 +421,52 @@ export function runIntrinsicLostInterfaceRepair(input: {
         seedMetrics
       })
     }
-    const diagnosticPairKeys = new Set(
-      diagnosticStructure.positiveContactPairs.map(([first, second]) =>
-        pairKey(first, second)
-      )
-    )
     const seedById = new Map(
       input.seedPlaced.map((piece) => [placedPieceId(piece), piece] as const)
+    )
+    const diagnosticById = new Map(
+      input.twoPieceDiagnosticPlaced.map(
+        (piece) => [placedPieceId(piece), piece] as const
+      )
     )
     const lostContactPair = seedStructure.positiveContactPairs
       .filter(
         ([first, second]) =>
-          (first === movedInterfacePieceId ||
-            second === movedInterfacePieceId) &&
-          !diagnosticPairKeys.has(pairKey(first, second))
+          first === movedInterfacePieceId || second === movedInterfacePieceId
       )
       .map((pair) => {
-        const first = seedById.get(pair[0])
-        const second = seedById.get(pair[1])
-        const contact =
-          first === undefined || second === undefined
+        const seedFirst = seedById.get(pair[0])
+        const seedSecond = seedById.get(pair[1])
+        const diagnosticFirst = diagnosticById.get(pair[0])
+        const diagnosticSecond = diagnosticById.get(pair[1])
+        const seedContact =
+          seedFirst === undefined || seedSecond === undefined
             ? undefined
-            : measureCanonicalLayoutContacts([first, second])
-        return { pair, contact }
+            : measureCanonicalLayoutContacts([seedFirst, seedSecond])
+        const diagnosticContact =
+          diagnosticFirst === undefined || diagnosticSecond === undefined
+            ? undefined
+            : measureCanonicalLayoutContacts([
+                diagnosticFirst,
+                diagnosticSecond
+              ])
+        return { pair, seedContact, diagnosticContact }
       })
+      .filter(
+        ({ seedContact, diagnosticContact }) =>
+          seedContact !== undefined &&
+          (diagnosticContact === undefined ||
+            diagnosticContact.totalStructuralContacts <
+              seedContact.totalStructuralContacts ||
+            diagnosticContact.sharedBoundaryLengthMm <
+              seedContact.sharedBoundaryLengthMm - 1e-9)
+      )
       .toSorted(
         (first, second) =>
-          Number((second.contact?.totalStructuralContacts ?? 0) > 0) -
-            Number((first.contact?.totalStructuralContacts ?? 0) > 0) ||
-          (second.contact?.sharedBoundaryLengthMm ?? 0) -
-            (first.contact?.sharedBoundaryLengthMm ?? 0) ||
+          Number((second.seedContact?.totalStructuralContacts ?? 0) > 0) -
+            Number((first.seedContact?.totalStructuralContacts ?? 0) > 0) ||
+          (second.seedContact?.sharedBoundaryLengthMm ?? 0) -
+            (first.seedContact?.sharedBoundaryLengthMm ?? 0) ||
           otherPairEndpoint(first.pair, movedInterfacePieceId).localeCompare(
             otherPairEndpoint(second.pair, movedInterfacePieceId)
           )
