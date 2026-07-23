@@ -395,6 +395,18 @@ the cold settlement occurs before final complete settlement on the fixture,
 and validate the full quantum chronology. This remains cooperative
 single-worker execution and therefore makes no settled wall-time claim.
 
+### Constrained Triangle Protected-Diversity Probe
+
+The first post-scheduler quality probe is opt-in and subset-only. It keeps the
+same beam width, exact legality, count/material/cavity precedence, endpoint
+archive, and terminal comparator, but orders the protected lane's local
+survivors by envelope area before maximum side. This tests whether the visibly
+loose Triangle `300 x 300` result comes from losing a temporarily less-square
+but eventually tighter branch. It has no production authority. Promotion
+requires at least `15/20`, no material/cavity/maximum-side regression, a strict
+envelope-area improvement, and an inspected full PNG; otherwise the exact cold
+baseline remains selected and the hypothesis is recorded as rejected.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim

@@ -339,7 +339,8 @@ function capacityColdSearchTrace(
 async function runArm(
   request: NestingRequest,
   arm: 'production' | 'cold-only',
-  artifactPath: string
+  artifactPath: string,
+  retentionMode: 'objective' | 'area-first'
 ): Promise<CapacityRunReport> {
   const settings = request.options.irregularSettings
   if (settings === undefined) throw new Error(`${request.jobId} has no irregular settings`)
@@ -349,6 +350,9 @@ async function runArm(
     captureCapacityShadowTelemetry: true,
     captureCapacityWarmPrefixTelemetry: true,
     intrinsicAnytimeSchedulerMode: 'deterministic-v1',
+    ...(retentionMode === 'area-first'
+      ? { intrinsicCapacityRetentionShadow: 'area-first' }
+      : {}),
     captureExperimentalPlaceDeferCompleteShadow: true,
     onCapacityWarmPrefixLane: (lane) => {
       warmLaneEndpoints.push(lane)
@@ -461,6 +465,7 @@ interface CliArguments {
   readonly outputDirectory: string
   readonly paired: boolean
   readonly strict: boolean
+  readonly retentionMode: 'objective' | 'area-first'
 }
 
 function parseArguments(argv: ReadonlyArray<string>): CliArguments {
@@ -468,6 +473,7 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
   let selected: ReadonlySet<string> = new Set(fixtures.map(({ id }) => id))
   let paired = false
   let strict = false
+  let retentionMode: 'objective' | 'area-first' = 'objective'
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]
     if (argument === '--output') {
@@ -484,11 +490,18 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
       paired = true
     } else if (argument === '--strict') {
       strict = true
+    } else if (argument === '--retention') {
+      const value = argv[index + 1]
+      if (value !== 'objective' && value !== 'area-first') {
+        throw new Error('--retention requires objective or area-first')
+      }
+      retentionMode = value
+      index += 1
     } else {
       throw new Error(`unknown argument ${argument}`)
     }
   }
-  return { selectedCaseIds: selected, outputDirectory, paired, strict }
+  return { selectedCaseIds: selected, outputDirectory, paired, strict, retentionMode }
 }
 
 const cli = parseArguments(process.argv.slice(2))
@@ -501,11 +514,17 @@ for (const fixture of fixtures) {
   const production = await runArm(
     request,
     'production',
-    `${cli.outputDirectory}/${fixture.id}-production.svg`
+    `${cli.outputDirectory}/${fixture.id}-production.svg`,
+    cli.retentionMode
   )
   const coldOnly =
     cli.paired && fixture.pairedEligible
-      ? await runArm(request, 'cold-only', `${cli.outputDirectory}/${fixture.id}-cold-only.svg`)
+      ? await runArm(
+          request,
+          'cold-only',
+          `${cli.outputDirectory}/${fixture.id}-cold-only.svg`,
+          cli.retentionMode
+        )
       : undefined
   const productionColdSearch = capacityColdSearchTrace(production)
   const coldOnlyColdSearch =

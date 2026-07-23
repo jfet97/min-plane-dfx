@@ -277,6 +277,7 @@ export interface RunIntrinsicCapacityModeInput {
   readonly preflightRuntimeMs?: number
   /** Coordinator-measured complete archive runtime carried into the trace. */
   readonly completeArchiveRuntimeMs?: number
+  readonly retentionMode?: 'objective' | 'area-first-shadow'
 }
 
 export const INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS = 4 as const
@@ -289,6 +290,7 @@ export function runIntrinsicCapacitySchedulerColdQuantum(input: {
   readonly maximumDepthBoundaries?: number
   readonly control?: IrregularNfpIfpControl
   readonly capturePhaseTimings?: boolean
+  readonly retentionMode?: 'objective' | 'area-first-shadow'
 }): Effect.Effect<
   IntrinsicCapacitySearchResult,
   IntrinsicCapacityModeError,
@@ -317,6 +319,9 @@ export function runIntrinsicCapacitySchedulerColdQuantum(input: {
         ),
       ...(input.checkpoint === undefined ? {} : { checkpoint: input.checkpoint }),
       schedulerDeficit: input.checkpoint?.schedulerDeficit ?? 1,
+      ...(input.retentionMode === undefined
+        ? {}
+        : { retentionMode: input.retentionMode }),
       ...(input.control === undefined ? {} : { control: input.control }),
       ...(input.capturePhaseTimings === undefined
         ? {}
@@ -360,6 +365,7 @@ function runProtectedCapacityLaneCoordinator(input: {
   readonly scheduledColdStart: IntrinsicCapacitySearchResult | undefined
   readonly control: IrregularNfpIfpControl | undefined
   readonly capturePhaseTimings: boolean | undefined
+  readonly retentionMode: 'objective' | 'area-first-shadow' | undefined
   readonly onWarmPrefixLane:
     | ((lane: {
         readonly sourceRole: string
@@ -404,6 +410,9 @@ function runProtectedCapacityLaneCoordinator(input: {
           Math.max(1, input.preparedPieces.length)
         ),
         schedulerDeficit: 1,
+        ...(input.retentionMode === undefined
+          ? {}
+          : { retentionMode: input.retentionMode }),
         ...(input.control === undefined ? {} : { control: input.control }),
         ...(input.capturePhaseTimings === undefined
           ? {}
@@ -449,6 +458,9 @@ function runProtectedCapacityLaneCoordinator(input: {
         cavityCache: new Map(),
         checkpoint,
         schedulerDeficit: checkpoint.schedulerDeficit,
+        ...(input.retentionMode === undefined
+          ? {}
+          : { retentionMode: input.retentionMode }),
         ...(input.control === undefined ? {} : { control: input.control }),
         ...(input.capturePhaseTimings === undefined
           ? {}
@@ -495,6 +507,9 @@ function runProtectedCapacityLaneCoordinator(input: {
         cavityCache: new Map(),
         warmPrefixSeed,
         maximumDepthBoundaries: INTRINSIC_CAPACITY_WARM_PILOT_DEPTH_BOUNDARIES,
+        ...(input.retentionMode === undefined
+          ? {}
+          : { retentionMode: input.retentionMode }),
         ...(input.control === undefined ? {} : { control: input.control }),
         ...(input.capturePhaseTimings === undefined
           ? {}
@@ -558,6 +573,9 @@ function runProtectedCapacityLaneCoordinator(input: {
         checkpoint,
         schedulerDeficit: checkpoint.schedulerDeficit,
         maximumDepthBoundaries: 1,
+        ...(input.retentionMode === undefined
+          ? {}
+          : { retentionMode: input.retentionMode }),
         ...(input.control === undefined ? {} : { control: input.control }),
         ...(input.capturePhaseTimings === undefined
           ? {}
@@ -821,6 +839,7 @@ export function runIntrinsicCapacityMode(
             scheduledColdStart,
             control: input.control,
             capturePhaseTimings: input.capturePhaseTimings,
+            retentionMode: input.retentionMode,
             onWarmPrefixLane: input.onWarmPrefixLane
           })
         : undefined
@@ -833,6 +852,9 @@ export function runIntrinsicCapacityMode(
             preparedPieces: input.preparedPieces,
             materialAreasByPieceId: materials.areasByPieceId,
             cavityCache,
+            ...(input.retentionMode === undefined
+              ? {}
+              : { retentionMode: input.retentionMode }),
             ...(scheduledColdStart?.checkpoint === undefined
               ? terminalization.incumbent === undefined
                 ? {}
@@ -869,6 +891,9 @@ export function runIntrinsicCapacityMode(
             depth: descriptor.depth,
             state: descriptor.state
           },
+          ...(input.retentionMode === undefined
+            ? {}
+            : { retentionMode: input.retentionMode }),
           ...(input.control === undefined ? {} : { control: input.control }),
           ...(input.capturePhaseTimings === undefined
             ? {}

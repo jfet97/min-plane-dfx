@@ -157,6 +157,11 @@ four-depth cold quantum is followed by one canonical complete piece and one
 cold depth repeatedly. The cold checkpoint is never restarted on the later
 complete miss. This completes the single-worker intertwined chronology step;
 independent parallel execution remains the later wall-time step.
+The immediate constrained-quality probe is an independent subset lane with
+area-first intermediate retention and the unchanged terminal objective. It may
+replace nothing unless Triangle `300 x 300` passes the explicit exact
+non-regression and strict envelope-improvement guard and its full PNG is
+visibly tighter.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

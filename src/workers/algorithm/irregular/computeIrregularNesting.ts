@@ -125,6 +125,8 @@ export interface ComputeIrregularNestingOptions {
   }) => void
   /** Opt-in deterministic coarse scheduler experiment. */
   readonly intrinsicAnytimeSchedulerMode?: 'deterministic-v1'
+  /** Experimental subset retention; terminal capacity comparator is unchanged. */
+  readonly intrinsicCapacityRetentionShadow?: 'area-first'
   /** Opt-in complete-capable place/defer shadow producer. */
   readonly captureExperimentalPlaceDeferCompleteShadow?: boolean
   readonly onExperimentalPlaceDeferCompleteEndpoint?: (
@@ -452,7 +454,10 @@ function coordinateIntrinsicSharedArchive(
           : {}),
         ...(input.options?.onCapacityWarmPrefixLane === undefined
           ? {}
-          : { onWarmPrefixLane: input.options.onCapacityWarmPrefixLane })
+          : { onWarmPrefixLane: input.options.onCapacityWarmPrefixLane }),
+        ...(input.options?.intrinsicCapacityRetentionShadow === 'area-first'
+          ? { retentionMode: 'area-first-shadow' as const }
+          : {})
       }
       if (preflight.kind === 'proven_impossible') {
         const capacity = yield* runIntrinsicCapacityMode({
@@ -483,6 +488,9 @@ function coordinateIntrinsicSharedArchive(
               ...(control === undefined ? {} : { control }),
               ...(input.options?.captureCapacityPhaseTimings === true
                 ? { capturePhaseTimings: true }
+                : {}),
+              ...(input.options?.intrinsicCapacityRetentionShadow === 'area-first'
+                ? { retentionMode: 'area-first-shadow' as const }
                 : {})
             }).pipe(Effect.mapError(mapIntrinsicCapacityError))
           : undefined
@@ -552,6 +560,10 @@ function coordinateIntrinsicSharedArchive(
                           ...(control === undefined ? {} : { control }),
                           ...(input.options?.captureCapacityPhaseTimings === true
                             ? { capturePhaseTimings: true }
+                            : {}),
+                          ...(input.options?.intrinsicCapacityRetentionShadow ===
+                          'area-first'
+                            ? { retentionMode: 'area-first-shadow' as const }
                             : {})
                         })
                       scheduledColdCheckpointReused = true
