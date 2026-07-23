@@ -135,8 +135,13 @@ opt-in benchmark observer reports exact parts-per-million pressure plus a
 four-depth no-permanent-skip probe. Verified fitting prefixes may also seed
 independent resumable warm shadow lanes with protected budgets. Both observers
 are disabled in production and have no routing, ranking, or selection consumer.
-Stage 4 must interleave protected checkpoints without changing complete
-construction or allowing warm and cold states to share survivor slots.
+The opt-in Stage 4 scheduler now advances the cold lane through one four-depth
+checkpoint quantum, settles the unchanged complete cohort, then either cancels
+capacity on a fitting complete endpoint or resumes that exact cold checkpoint
+after the complete miss. On the miss branch, verified warm lanes retain
+independent slots and budgets and may contribute exact partial endpoints. It
+does not change complete construction or allow warm and cold states to share
+survivor slots.
 
 ## Checkpoint Contract
 
@@ -271,10 +276,12 @@ candidates, capped or incomplete constructors, ordinary requested-sheet beam
 states, and request-oriented copies. Those states are not guaranteed to express
 the same original-order prefix contract.
 
-## Stage 3: Build A Prefix Incumbent In Production V1
+## Legacy Stage 3: Build A Prefix Incumbent In Production V1
 
-Production v1 does not create a competing warm beam. This was a conservative
-first-version boundary, not evidence that warm continuation is useless.
+The serial `intrinsic-capacity-v1` production baseline does not create a
+competing warm beam. This historical boundary remains the disabled-option
+control, not the current forward architecture and not evidence that warm
+continuation is useless.
 
 After a bounded complete-archive miss:
 
@@ -290,9 +297,11 @@ This performs zero warm placement evaluations. A useful complete-search prefix
 can improve partial-layout quality immediately and can reduce later cold work,
 but it cannot take beam slots or evaluation allowance from the capacity search.
 
-## Stage 4: Empty-Start Intrinsic Capacity Search
+## Legacy Stage 4: Empty-Start Intrinsic Capacity Search
 
-Implement `intrinsic-capacity-v1` as a separate search and endpoint type.
+The original `intrinsic-capacity-v1` implemented a separate empty-start search
+and endpoint type. Its bounds remain the cold-lane semantics inside the unified
+portfolio.
 
 First-version bounds:
 

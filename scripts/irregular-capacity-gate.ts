@@ -280,6 +280,7 @@ interface CapacityRunReport {
   readonly canonicalSha256: string | undefined
   readonly terminationReason: string | undefined
   readonly shadowTelemetry: IrregularComputeResult['capacityShadowTelemetry']
+  readonly schedulerTrace: IrregularComputeResult['intrinsicAnytimeSchedulerTrace']
   readonly warmLaneArtifacts: ReadonlyArray<{
     readonly sourceRole: string
     readonly prefixDepth: number
@@ -327,6 +328,7 @@ async function runArm(
     captureCapacityPhaseTimings: true,
     captureCapacityShadowTelemetry: true,
     captureCapacityWarmPrefixTelemetry: true,
+    intrinsicAnytimeSchedulerMode: 'deterministic-v1',
     onCapacityWarmPrefixLane: (lane) => {
       warmLaneEndpoints.push(lane)
     }
@@ -402,6 +404,7 @@ async function runArm(
     canonicalSha256: canonical?.sha256,
     terminationReason: result.portfolio.terminationReason,
     shadowTelemetry: result.capacityShadowTelemetry,
+    schedulerTrace: result.intrinsicAnytimeSchedulerTrace,
     warmLaneArtifacts,
     capacity:
       trace === undefined

@@ -323,7 +323,8 @@ const result = await Effect.runPromise(
   computeIrregularNesting(request, {
     captureCapacityPhaseTimings: true,
     captureCapacityShadowTelemetry: true,
-    captureCapacityWarmPrefixTelemetry: true
+    captureCapacityWarmPrefixTelemetry: true,
+    intrinsicAnytimeSchedulerMode: 'deterministic-v1'
   }).pipe(
     Effect.provide(CollisionGeometryBuilder.Live),
     Effect.provide(TransformGeneratorLive),
@@ -386,7 +387,8 @@ const report = jsonSafe({
     score: result.score,
     portfolio: result.portfolio,
     capacityTrace: result.capacityTrace,
-    capacityShadowTelemetry: result.capacityShadowTelemetry
+    capacityShadowTelemetry: result.capacityShadowTelemetry,
+    intrinsicAnytimeSchedulerTrace: result.intrinsicAnytimeSchedulerTrace
   },
   checks,
   passed,

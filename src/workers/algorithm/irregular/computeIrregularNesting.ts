@@ -53,7 +53,9 @@ import {
   type IntrinsicSharedArchiveEndpoint
 } from './intrinsicSharedArchivePortfolio.js'
 import {
+  INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS,
   runIntrinsicCapacityMode,
+  runIntrinsicCapacitySchedulerColdQuantum,
   type IntrinsicCapacityModeResult,
   type IntrinsicCapacityTrace
 } from './intrinsicCapacityMode.js'
@@ -117,6 +119,25 @@ export interface ComputeIrregularNestingOptions {
     readonly prefixDepth: number
     readonly endpoint: IntrinsicCapacityEndpoint | undefined
   }) => void
+  /** Opt-in deterministic coarse scheduler experiment. */
+  readonly intrinsicAnytimeSchedulerMode?: 'deterministic-v1'
+}
+
+export interface IntrinsicAnytimeSchedulerTrace {
+  readonly version: 'intrinsic-anytime-scheduler-v1'
+  readonly coldQuantumDepths: number
+  readonly coldStartStatus: 'paused' | 'settled'
+  readonly coldStartCompletedDepths: number
+  readonly coldStartConsumedPlacementEvaluations: number
+  readonly coldCheckpointReused: boolean
+  readonly warmPrefixEndpointsAdmitted: boolean
+  readonly cancellationReason: 'complete-endpoint-fitted' | 'complete-cohort-miss' | undefined
+  readonly quanta: ReadonlyArray<{
+    readonly ordinal: number
+    readonly cohort: 'partial' | 'complete'
+    readonly producerRole: 'capacity-cold' | 'legacy-complete' | 'capacity-warm-prefix'
+    readonly outcome: 'checkpointed' | 'settled' | 'cancelled'
+  }>
 }
 
 /** Plain algorithm output before any worker protocol or history DTO adaptation. */
@@ -133,6 +154,8 @@ export interface IrregularComputeResult {
   readonly capacityTrace?: IntrinsicCapacityTrace
   /** Opt-in observer output; never consumed by routing or ranking. */
   readonly capacityShadowTelemetry?: IntrinsicCapacityShadowTelemetry
+  /** Present only for the opt-in deterministic scheduler experiment. */
+  readonly intrinsicAnytimeSchedulerTrace?: IntrinsicAnytimeSchedulerTrace
 }
 
 export type IrregularComputeErrorType =
@@ -266,6 +289,7 @@ function coordinateIntrinsicSharedArchive(
     const archiveDiagnostics: CollisionGeometryDiagnostic[] = []
     let selected: MaterializedDecode
     let capacityShadowTelemetry: IntrinsicCapacityShadowTelemetry | undefined
+    let intrinsicAnytimeSchedulerTrace: IntrinsicAnytimeSchedulerTrace | undefined
 
     if (archiveEnabled) {
       yield* emitSharedArchiveProgress(
@@ -336,6 +360,40 @@ function coordinateIntrinsicSharedArchive(
           performance.now() - coordinatorStartedAt
         )
       } else {
+        const schedulerEnabled =
+          input.options?.intrinsicAnytimeSchedulerMode === 'deterministic-v1'
+        const scheduledColdStart = schedulerEnabled
+          ? yield* runIntrinsicCapacitySchedulerColdQuantum({
+              sheet: input.request.sheet,
+              preparedPieces: input.preparedPieces,
+              ...(control === undefined ? {} : { control }),
+              ...(input.options?.captureCapacityPhaseTimings === true
+                ? { capturePhaseTimings: true }
+                : {})
+            }).pipe(Effect.mapError(mapIntrinsicCapacityError))
+          : undefined
+        if (scheduledColdStart !== undefined) {
+          intrinsicAnytimeSchedulerTrace = {
+            version: 'intrinsic-anytime-scheduler-v1',
+            coldQuantumDepths: INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS,
+            coldStartStatus: scheduledColdStart.status,
+            coldStartCompletedDepths: scheduledColdStart.trace.completedDepths,
+            coldStartConsumedPlacementEvaluations:
+              scheduledColdStart.trace.consumedPlacementEvaluations,
+            coldCheckpointReused: false,
+            warmPrefixEndpointsAdmitted: false,
+            cancellationReason: undefined,
+            quanta: [
+              {
+                ordinal: 0,
+                cohort: 'partial',
+                producerRole: 'capacity-cold',
+                outcome:
+                  scheduledColdStart.status === 'paused' ? 'checkpointed' : 'settled'
+              }
+            ]
+          }
+        }
         const prefixSources: IntrinsicCapacityPrefixSource[] = []
         const archiveStartedAt = performance.now()
         const archive = yield* runIntrinsicSharedArchivePortfolio(
@@ -408,8 +466,48 @@ function coordinateIntrinsicSharedArchive(
             preflightRuntimeMs,
             completeArchiveRuntimeMs: Math.max(0, performance.now() - archiveStartedAt),
             ...capacityOptions,
+            ...(scheduledColdStart === undefined
+              ? {}
+              : {
+                  scheduledColdStart,
+                  captureWarmPrefixTelemetry: true,
+                  admitWarmPrefixEndpoints: true
+                }),
             ...(control === undefined ? {} : { control })
           }).pipe(Effect.mapError(mapIntrinsicCapacityError))
+          if (intrinsicAnytimeSchedulerTrace !== undefined) {
+            const completeOrdinal = intrinsicAnytimeSchedulerTrace.quanta.length
+            const warmQuanta = (capacity.trace.warmPrefixLanes ?? []).map(
+              (_lane, index) => ({
+                ordinal: completeOrdinal + 1 + index,
+                cohort: 'partial' as const,
+                producerRole: 'capacity-warm-prefix' as const,
+                outcome: 'settled' as const
+              })
+            )
+            intrinsicAnytimeSchedulerTrace = {
+              ...intrinsicAnytimeSchedulerTrace,
+              coldCheckpointReused: scheduledColdStart?.status === 'paused',
+              warmPrefixEndpointsAdmitted: capacity.trace.warmPrefixEndpointsAdmitted,
+              cancellationReason: 'complete-cohort-miss',
+              quanta: [
+                ...intrinsicAnytimeSchedulerTrace.quanta,
+                {
+                  ordinal: completeOrdinal,
+                  cohort: 'complete',
+                  producerRole: 'legacy-complete',
+                  outcome: 'settled'
+                },
+                ...warmQuanta,
+                {
+                  ordinal: completeOrdinal + 1 + warmQuanta.length,
+                  cohort: 'partial',
+                  producerRole: 'capacity-cold',
+                  outcome: 'settled'
+                }
+              ]
+            }
+          }
           selected = yield* materializeIntrinsicCapacityResult(input, capacity)
           archiveDiagnostics.push(...intrinsicCapacityDiagnostics(preflight, capacity))
           yield* emitSharedArchiveProgress(
@@ -419,6 +517,27 @@ function coordinateIntrinsicSharedArchive(
             performance.now() - coordinatorStartedAt
           )
         } else {
+          if (intrinsicAnytimeSchedulerTrace !== undefined) {
+            intrinsicAnytimeSchedulerTrace = {
+              ...intrinsicAnytimeSchedulerTrace,
+              cancellationReason: 'complete-endpoint-fitted',
+              quanta: [
+                ...intrinsicAnytimeSchedulerTrace.quanta,
+                {
+                  ordinal: intrinsicAnytimeSchedulerTrace.quanta.length,
+                  cohort: 'complete',
+                  producerRole: 'legacy-complete',
+                  outcome: 'settled'
+                },
+                {
+                  ordinal: intrinsicAnytimeSchedulerTrace.quanta.length + 1,
+                  cohort: 'partial',
+                  producerRole: 'capacity-cold',
+                  outcome: 'cancelled'
+                }
+              ]
+            }
+          }
           selected = yield* materializeSharedArchiveResult(input, winner)
           archiveDiagnostics.push(
             sharedArchiveDiagnostic(
@@ -466,7 +585,10 @@ function coordinateIntrinsicSharedArchive(
       beamWidth: input.settings.optimizer.beamWidth,
       portfolio: selected.portfolio,
       ...(selected.capacityTrace === undefined ? {} : { capacityTrace: selected.capacityTrace }),
-      ...(capacityShadowTelemetry === undefined ? {} : { capacityShadowTelemetry })
+      ...(capacityShadowTelemetry === undefined ? {} : { capacityShadowTelemetry }),
+      ...(intrinsicAnytimeSchedulerTrace === undefined
+        ? {}
+        : { intrinsicAnytimeSchedulerTrace })
     }
   })
 }

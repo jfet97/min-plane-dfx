@@ -205,6 +205,8 @@ export interface RunIntrinsicCapacityColdSearchInput {
   readonly maximumDepthBoundaries?: number
   /** Exact fitting, skip-free prefix used only by an independent warm lane. */
   readonly warmPrefixSeed?: IntrinsicCapacityWarmPrefixSeed
+  /** Deterministic scheduler credit carried by a paused protected lane. */
+  readonly schedulerDeficit?: number
 }
 
 export interface IntrinsicCapacityWarmPrefixSeed {
@@ -344,6 +346,7 @@ export function runIntrinsicCapacityColdSearch(
         requestFingerprint,
         incumbentBinding: intrinsicCapacityIncumbentBinding(input.incumbent),
         producerRole,
+        schedulerDeficit: input.schedulerDeficit ?? 0,
         preparedIds,
         materialAreasByPieceId: input.materialAreasByPieceId,
         placementEvaluationCap,
@@ -691,6 +694,7 @@ export function runIntrinsicCapacityColdSearch(
           noSkipFrontier,
           counters,
           producerRole,
+          schedulerDeficit: input.schedulerDeficit ?? 0,
           sheetWidthGrid,
           sheetHeightGrid
         })
@@ -910,6 +914,7 @@ function makeIntrinsicCapacityCheckpoint(input: {
   readonly noSkipFrontier: IntrinsicAnytimeNoSkipFrontierState
   readonly counters: IntrinsicCapacitySearchCounters
   readonly producerRole: 'capacity-cold' | 'capacity-warm-prefix'
+  readonly schedulerDeficit: number
   readonly sheetWidthGrid: number
   readonly sheetHeightGrid: number
 }): IntrinsicAnytimeCheckpoint {
@@ -959,7 +964,7 @@ function makeIntrinsicCapacityCheckpoint(input: {
         experimentalComplete: 0
       }
     },
-    schedulerDeficit: 0,
+    schedulerDeficit: input.schedulerDeficit,
     settlement: 'active',
     censoring: 'none',
     noSkipFrontier: input.noSkipFrontier,
@@ -972,6 +977,7 @@ function validateIntrinsicCapacityCheckpoint(input: {
   readonly requestFingerprint: string
   readonly incumbentBinding: IntrinsicAnytimeIncumbentBinding | undefined
   readonly producerRole: 'capacity-cold' | 'capacity-warm-prefix'
+  readonly schedulerDeficit: number
   readonly preparedIds: ReadonlyArray<PieceId>
   readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
   readonly placementEvaluationCap: number
@@ -1047,7 +1053,9 @@ function validateIntrinsicCapacityCheckpoint(input: {
     return 'checkpoint total, per-depth, and per-cohort budget ledgers disagree.'
   }
   if (
-    checkpoint.schedulerDeficit !== 0 ||
+    !Number.isSafeInteger(checkpoint.schedulerDeficit) ||
+    checkpoint.schedulerDeficit < 0 ||
+    checkpoint.schedulerDeficit !== input.schedulerDeficit ||
     checkpoint.settlement !== 'active' ||
     checkpoint.censoring !== 'none' ||
     checkpoint.counters.completedDepths !== checkpoint.nextDepth ||
@@ -1166,6 +1174,7 @@ function intrinsicCapacityRequestFingerprint(input: {
   readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
   readonly incumbent?: IntrinsicCapacityEndpoint
   readonly warmPrefixSeed?: IntrinsicCapacityWarmPrefixSeed
+  readonly schedulerDeficit?: number
 }): string {
   const material = [...input.materialAreasByPieceId.entries()]
     .map(([pieceId, area]) => [pieceId, area] as const)
@@ -1179,6 +1188,7 @@ function intrinsicCapacityRequestFingerprint(input: {
         preparedPieces: input.preparedPieces,
         material,
         incumbent: intrinsicCapacityIncumbentBinding(input.incumbent),
+        schedulerDeficit: input.schedulerDeficit ?? 0,
         warmPrefix:
           input.warmPrefixSeed === undefined
             ? undefined

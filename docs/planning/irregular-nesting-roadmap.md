@@ -79,14 +79,18 @@ producer. A fixed `10%` waste route is rejected because it misses both measured
 serial-cost cases. Heuristic pressure may schedule protected work but may not
 prune, rank, or displace the legacy complete cohort.
 
-The checkpoint, observer-only telemetry, and protected warm-prefix seams are
-implemented. The telemetry
+The checkpoint, observer-only telemetry, protected warm-prefix seams, and first
+deterministic scheduler are implemented. The telemetry
 path is benchmark opt-in, records exact scale-free pressure and a bounded cold
 no-skip-frontier probe, and cannot affect routing or endpoint selection. The
 warm path independently continues every verified fitting captured prefix with
-its own checkpoint, frontier, cache, and budget; the unchanged empty cold lane
-remains authoritative. The next measurable step is deterministic interleaving
-of protected complete and capacity checkpoints.
+its own checkpoint, frontier, cache, and budget. The opt-in scheduler grants a
+four-depth quantum to the empty cold lane before the unchanged complete cohort;
+a fitting complete endpoint cancels capacity, while a complete miss resumes the
+same cold checkpoint and admits independently settled warm endpoints to the
+partial archive. Complete and partial states never share survivor slots or a
+comparator. The next measurable step is shared exact archive mechanics with
+separate namespaces.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

@@ -35,6 +35,7 @@ import {
 } from './intrinsicCapacityPrefixes.js'
 import {
   runIntrinsicCapacityColdSearch,
+  type IntrinsicCapacitySearchResult,
   type IntrinsicCapacitySearchPhaseTimings,
   type IntrinsicCapacitySearchTrace
 } from './intrinsicCapacitySearch.js'
@@ -89,6 +90,7 @@ export interface IntrinsicCapacityTrace {
   readonly coldSearch: IntrinsicCapacitySearchTrace
   /** Observer-only independent warm lanes; excluded from final selection. */
   readonly warmPrefixLanes: ReadonlyArray<IntrinsicCapacityWarmPrefixLaneTrace> | undefined
+  readonly warmPrefixEndpointsAdmitted: boolean
   readonly selected: IntrinsicCapacitySelectionTrace
   /** Coordinator-measured proof-only preflight runtime. */
   readonly preflightRuntimeMs: number | undefined
@@ -126,10 +128,55 @@ export interface RunIntrinsicCapacityModeInput {
     readonly prefixDepth: number
     readonly endpoint: IntrinsicCapacityEndpoint | undefined
   }) => void
+  /** Existing protected cold work produced before complete-cohort settlement. */
+  readonly scheduledColdStart?: IntrinsicCapacitySearchResult
+  /** Allows settled warm lanes into the partial archive after a complete miss. */
+  readonly admitWarmPrefixEndpoints?: boolean
   /** Coordinator-measured preflight runtime carried into the trace. */
   readonly preflightRuntimeMs?: number
   /** Coordinator-measured complete archive runtime carried into the trace. */
   readonly completeArchiveRuntimeMs?: number
+}
+
+export const INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS = 4 as const
+
+/** Advances the protected cold lane once before complete-cohort settlement. */
+export function runIntrinsicCapacitySchedulerColdQuantum(input: {
+  readonly sheet: SheetSpec
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly control?: IrregularNfpIfpControl
+  readonly capturePhaseTimings?: boolean
+}): Effect.Effect<
+  IntrinsicCapacitySearchResult,
+  IntrinsicCapacityModeError,
+  GeometryKernel | GeometrySettings | NfpIfpService
+> {
+  return Effect.gen(function* () {
+    const materials = intrinsicCapacityMaterialAreas(input.preparedPieces)
+    if (materials.kind === 'invalid') {
+      return yield* Effect.fail(
+        new IntrinsicCapacityError({
+          operation: 'schedulerMaterialAreas',
+          message: `piece ${materials.pieceId} has no exact positive unpadded material area.`
+        })
+      )
+    }
+    return yield* runIntrinsicCapacityColdSearch({
+      sheet: input.sheet,
+      preparedPieces: input.preparedPieces,
+      materialAreasByPieceId: materials.areasByPieceId,
+      cavityCache: new Map(),
+      maximumDepthBoundaries: Math.min(
+        INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS,
+        Math.max(1, input.preparedPieces.length)
+      ),
+      schedulerDeficit: 1,
+      ...(input.control === undefined ? {} : { control: input.control }),
+      ...(input.capturePhaseTimings === undefined
+        ? {}
+        : { capturePhaseTimings: input.capturePhaseTimings })
+    })
+  })
 }
 
 type IntrinsicCapacityModeError =
@@ -182,22 +229,32 @@ export function runIntrinsicCapacityMode(
     const prefixTerminalizationMs = Math.max(0, performance.now() - prefixStartedAt)
 
     const coldSearchStartedAt = performance.now()
-    const coldSearch = yield* runIntrinsicCapacityColdSearch({
-      sheet: input.sheet,
-      preparedPieces: input.preparedPieces,
-      materialAreasByPieceId: materials.areasByPieceId,
-      cavityCache,
-      ...(terminalization.incumbent === undefined
-        ? {}
-        : { incumbent: terminalization.incumbent }),
-      ...(input.control === undefined ? {} : { control: input.control }),
-      ...(input.capturePhaseTimings === undefined
-        ? {}
-        : { capturePhaseTimings: input.capturePhaseTimings })
-    })
+    const scheduledColdStart = input.scheduledColdStart
+    const coldSearch =
+      scheduledColdStart?.status === 'settled'
+        ? scheduledColdStart
+        : yield* runIntrinsicCapacityColdSearch({
+            sheet: input.sheet,
+            preparedPieces: input.preparedPieces,
+            materialAreasByPieceId: materials.areasByPieceId,
+            cavityCache,
+            ...(scheduledColdStart?.checkpoint === undefined
+              ? terminalization.incumbent === undefined
+                ? {}
+                : { incumbent: terminalization.incumbent }
+              : {
+                  checkpoint: scheduledColdStart.checkpoint,
+                  schedulerDeficit: scheduledColdStart.checkpoint.schedulerDeficit
+                }),
+            ...(input.control === undefined ? {} : { control: input.control }),
+            ...(input.capturePhaseTimings === undefined
+              ? {}
+              : { capturePhaseTimings: input.capturePhaseTimings })
+          })
     const coldSearchMs = Math.max(0, performance.now() - coldSearchStartedAt)
 
     let warmPrefixLanes: ReadonlyArray<IntrinsicCapacityWarmPrefixLaneTrace> | undefined
+    const warmEndpoints: IntrinsicCapacityEndpoint[] = []
     if (input.captureWarmPrefixTelemetry === true) {
       const measuredLanes: IntrinsicCapacityWarmPrefixLaneTrace[] = []
       for (const descriptor of terminalization.fittingDescriptors) {
@@ -226,6 +283,7 @@ export function runIntrinsicCapacityMode(
           )
         }
         const endpoint = lane.endpoints[0]
+        warmEndpoints.push(...lane.endpoints)
         input.onWarmPrefixLane?.({
           sourceRole: descriptor.role,
           prefixDepth: descriptor.depth,
@@ -246,9 +304,11 @@ export function runIntrinsicCapacityMode(
       warmPrefixLanes = measuredLanes
     }
 
-    const candidates = [...coldSearch.endpoints, ...terminalization.endpoints].toSorted(
-      compareIntrinsicCapacityEndpoints
-    )
+    const candidates = [
+      ...coldSearch.endpoints,
+      ...terminalization.endpoints,
+      ...(input.admitWarmPrefixEndpoints === true ? warmEndpoints : [])
+    ].toSorted(compareIntrinsicCapacityEndpoints)
     const selected = candidates[0] ?? makeAllUnplacedFallbackEndpoint(input, materials.areasByPieceId, cavityCache)
     if (selected === undefined) {
       return yield* Effect.fail(
@@ -293,6 +353,7 @@ export function runIntrinsicCapacityMode(
         },
         coldSearch: coldSearch.trace,
         warmPrefixLanes,
+        warmPrefixEndpointsAdmitted: input.admitWarmPrefixEndpoints === true,
         selected: {
           ...intrinsicCapacityObjective(selected),
           unplacedCount: selected.unplacedPreparedIds.length,

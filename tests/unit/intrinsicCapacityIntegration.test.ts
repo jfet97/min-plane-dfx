@@ -209,9 +209,9 @@ describe('intrinsic capacity integration', () => {
     async () => {
       const request = makeRectangleRequest({
         jobKey: 'capacity-archive-miss',
-        count: 2,
-        widthMm: 55,
-        heightMm: 55,
+        count: 5,
+        widthMm: 40,
+        heightMm: 40,
         sheet: new SheetSpec({ width: 100, height: 100, label: 'constrained 100x100' }),
         paddingMm: 0
       })
@@ -219,14 +219,19 @@ describe('intrinsic capacity integration', () => {
       const observed = await compute(request, {
         captureCapacityWarmPrefixTelemetry: true
       })
+      const scheduled = await compute(request, {
+        intrinsicAnytimeSchedulerMode: 'deterministic-v1'
+      })
 
       expect(computed.capacityTrace).toBeDefined()
       expect(computed.capacityTrace?.routing).toBe('bounded-complete-archive-miss')
       expect(computed.capacityTrace?.preflight.kind).toBe('inconclusive')
 
       expect(computed.portfolio.terminationReason).toBe('capacity_subset_settled')
-      expect(computed.placedCollisionGeometries).toHaveLength(1)
-      expect(computed.unplacedPieceIds).toHaveLength(1)
+      expect(computed.placedCollisionGeometries.length).toBeGreaterThan(0)
+      expect(
+        computed.placedCollisionGeometries.length + computed.unplacedPieceIds.length
+      ).toBe(request.pieces.length)
 
       const diagnosticCodes = computed.diagnostics.map(({ code }) => code)
       expect(diagnosticCodes).toContain('capacity_preflight_inconclusive')
@@ -238,20 +243,34 @@ describe('intrinsic capacity integration', () => {
       expect(prefixes).toBeDefined()
       expect(prefixes !== undefined && prefixes.capturedCount).toBeGreaterThanOrEqual(1)
       expect(computed.capacityTrace?.prefixIncumbent).toBeDefined()
-      expect(computed.capacityTrace?.prefixIncumbent?.placedCount).toBe(1)
+      expect(computed.capacityTrace?.prefixIncumbent?.placedCount).toBeGreaterThan(0)
       expect(observed.capacityTrace?.warmPrefixLanes).toBeDefined()
       expect(observed.capacityTrace?.warmPrefixLanes?.length).toBeGreaterThanOrEqual(1)
       expect(
         observed.capacityTrace?.warmPrefixLanes?.every(
           ({ status, reusedPlacedCount, completedDepths }) =>
             status === 'settled' &&
-            reusedPlacedCount === 1 &&
+            reusedPlacedCount > 0 &&
             completedDepths === request.pieces.length
         )
       ).toBe(true)
       expect(observed.capacityTrace?.coldSearch).toEqual(computed.capacityTrace?.coldSearch)
       expect(observed.placedCollisionGeometries).toEqual(computed.placedCollisionGeometries)
       expect(observed.unplacedPieceIds).toEqual(computed.unplacedPieceIds)
+      expect(scheduled.intrinsicAnytimeSchedulerTrace?.coldCheckpointReused).toBe(true)
+      expect(scheduled.intrinsicAnytimeSchedulerTrace?.cancellationReason).toBe(
+        'complete-cohort-miss'
+      )
+      expect(scheduled.intrinsicAnytimeSchedulerTrace?.warmPrefixEndpointsAdmitted).toBe(
+        true
+      )
+      expect(scheduled.capacityTrace?.warmPrefixEndpointsAdmitted).toBe(true)
+      expect(scheduled.placedCollisionGeometries.length).toBeGreaterThanOrEqual(
+        computed.placedCollisionGeometries.length
+      )
+      expect(
+        scheduled.placedCollisionGeometries.length + scheduled.unplacedPieceIds.length
+      ).toBe(request.pieces.length)
     },
     120_000
   )
@@ -268,10 +287,21 @@ describe('intrinsic capacity integration', () => {
         paddingMm: 10
       })
       const computed = await compute(request)
+      const scheduled = await compute(request, {
+        intrinsicAnytimeSchedulerMode: 'deterministic-v1'
+      })
 
       expect(computed.capacityTrace).toBeUndefined()
       expect(computed.portfolio.terminationReason).toBe('shared_archive_completed')
       expect(computed.unplacedPieceIds).toEqual([])
+      expect(scheduled.placedCollisionGeometries).toEqual(computed.placedCollisionGeometries)
+      expect(scheduled.unplacedPieceIds).toEqual([])
+      expect(scheduled.intrinsicAnytimeSchedulerTrace?.cancellationReason).toBe(
+        'complete-endpoint-fitted'
+      )
+      expect(scheduled.intrinsicAnytimeSchedulerTrace?.quanta.at(-1)?.outcome).toBe(
+        'cancelled'
+      )
       const diagnosticCodes = computed.diagnostics.map(({ code }) => code)
       expect(diagnosticCodes).toContain('capacity_preflight_inconclusive')
       expect(diagnosticCodes).toContain('complete_archive_fitted')

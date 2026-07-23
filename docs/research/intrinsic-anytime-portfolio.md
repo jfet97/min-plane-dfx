@@ -171,15 +171,40 @@ checksums, all six warm SVGs, and inspected cold/best-warm PNGs are under
 `/private/tmp/min-plane-provenance/intrinsic-warm-prefix-68168bc/`.
 
 This result promotes warm continuation as scheduler-worthy work, not as a new
-unprotected production winner. Stage 4 must interleave checkpoints so the
-valuable warm lane starts before a complete miss, while preserving the legacy
-complete cohort's protected settlement contract.
+unprotected production winner.
+
+## Stage 4: Deterministic Protected Scheduler V1
+
+The first scheduler increment is deliberately coarse and opt-in. It establishes
+the ownership and continuation contracts before attempting finer-grained
+producer interleaving:
+
+1. the protected empty-start cold lane receives one four-depth quantum;
+2. its paused checkpoint carries a scheduler deficit bound into the request
+   fingerprint and resume validator;
+3. the unchanged sheetless legacy complete cohort receives its full protected
+   settlement quantum;
+4. a fitting complete endpoint cancels capacity work and returns the exact
+   legacy complete winner;
+5. after an uncensored complete miss, verified warm-prefix lanes settle
+   independently, their exact endpoints become partial candidates, and the cold
+   lane resumes its existing checkpoint rather than restarting from empty.
+
+The trace records every protected quantum, the initial cold evaluation ledger,
+checkpoint reuse, warm admission, and the cancellation reason. Complete and
+partial states still have disjoint frontiers, budgets, and comparators. Warm
+endpoints are admitted only after the settled legacy cohort produces no fitting
+complete endpoint. The scheduler remains disabled unless the experiment option
+is selected.
+
+Focused integration tests cover both terminal branches: a complete miss proves
+that the cold checkpoint is reused and warm endpoints are admitted without
+losing placed/unplaced accounting; a roomy complete fit proves placement
+identity with the scheduler disabled and records capacity cancellation.
 
 ## Remaining Stages
 
-1. Interleave protected complete and capacity checkpoints in deterministic
-   quanta.
-2. Share exact endpoint/archive storage mechanics while preserving separate
+1. Share exact endpoint/archive storage mechanics while preserving separate
    namespaces and selection keys.
-3. Add place/defer transitions only in an experimental complete-capable shadow
+2. Add place/defer transitions only in an experimental complete-capable shadow
    producer and judge promotion against the full baseline matrix.
