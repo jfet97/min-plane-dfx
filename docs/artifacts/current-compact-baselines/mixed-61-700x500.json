@@ -1,0 +1,1778 @@
+{
+  "fixture": "mixed-61",
+  "sheet": {
+    "width": 700,
+    "height": 500
+  },
+  "sourceCommit": "976b6dae38679cf385aafce1242825c59b295ba4",
+  "runtime": {
+    "elapsedMs": 60239.594,
+    "node": "v24.16.0",
+    "v8": "13.6.233.17-node.49"
+  },
+  "result": {
+    "placedCount": 45,
+    "unplacedCount": 16,
+    "unplacedPieceIds": [
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+      "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+      "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+    ],
+    "collisionIdentitySha256": "04420f4a81ddc3e10d4752881c2fb336a5bc1f2fe10b3093469ab8f423ba662a",
+    "fittedCanonicalSha256": "7efddf26ee859256845e88f83554ab661116ab37f29810ce263819e668610a02",
+    "canonicalTopology": {
+      "enclosedCavityCount": 0,
+      "largestOccupiedHullGapRatio": 0.20965782587022194,
+      "occupiedEnvelopeAspectRatio": 1.3831555184649282,
+      "positiveContactComponentCount": 26,
+      "isolatedPieceCount": 17,
+      "largestPositiveContactComponentSize": 9,
+      "largestPositiveContactComponentRatio": 0.2
+    },
+    "bounds": {
+      "width": 691.131,
+      "height": 499.677,
+      "area": 345342.264687,
+      "span": 1190.808
+    },
+    "score": {
+      "unplacedCount": 16,
+      "sharedCollisionBoundaryLengthMm": 905.926,
+      "sharedCollisionBoundaryContactUnits": 10.637148,
+      "sharedCollisionBoundaryContactBand": 10,
+      "nearCompleteStructuralContactCount": 9,
+      "dominantNearCompleteStructuralContactCount": 1,
+      "largestNetFreeMaterialRegionAreaMm2": 84861.54503599991,
+      "freeMaterialRegionCount": 1,
+      "freeMaterialHoleCount": 25,
+      "freeMaterialSliverMetric": 2018.5024611983156,
+      "collisionBoundsWorstNormalizedSheetConsumption": 0.9993540000000001,
+      "collisionBoundsNormalizedSpanSum": 1.986684,
+      "collisionBoundsAreaMm2": 345342.264687,
+      "collisionBoundsSpanMm": 1190.808,
+      "occupiedHullWasteRatio": 0.209658,
+      "collisionBoundsBottomMm": 0,
+      "collisionBoundsLeftMm": 0,
+      "freeMaterialSnapshot": {
+        "sheet": {
+          "width": 700,
+          "height": 500,
+          "label": "700x500"
+        },
+        "regions": [
+          {
+            "boundary": {
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 166.923,
+                  "y": 0
+                },
+                {
+                  "x": 166.923,
+                  "y": 47.542
+                },
+                {
+                  "x": 134.148,
+                  "y": 22.221
+                },
+                {
+                  "x": 116.179,
+                  "y": 81.023
+                },
+                {
+                  "x": 134.148,
+                  "y": 139.825
+                },
+                {
+                  "x": 166.923,
+                  "y": 114.504
+                },
+                {
+                  "x": 166.923,
+                  "y": 192.712
+                },
+                {
+                  "x": 134.148,
+                  "y": 167.391
+                },
+                {
+                  "x": 116.179,
+                  "y": 226.193
+                },
+                {
+                  "x": 134.148,
+                  "y": 284.995
+                },
+                {
+                  "x": 166.923,
+                  "y": 259.674
+                },
+                {
+                  "x": 166.923,
+                  "y": 229.008
+                },
+                {
+                  "x": 243.843,
+                  "y": 229.008
+                },
+                {
+                  "x": 182.014,
+                  "y": 279.628
+                },
+                {
+                  "x": 201.321,
+                  "y": 333.686
+                },
+                {
+                  "x": 281.228,
+                  "y": 333.686
+                },
+                {
+                  "x": 343.057,
+                  "y": 283.066
+                },
+                {
+                  "x": 323.75,
+                  "y": 229.008
+                },
+                {
+                  "x": 331.427,
+                  "y": 229.008
+                },
+                {
+                  "x": 331.427,
+                  "y": 164.504
+                },
+                {
+                  "x": 354.465,
+                  "y": 164.504
+                },
+                {
+                  "x": 327.589,
+                  "y": 239.756
+                },
+                {
+                  "x": 354.465,
+                  "y": 315.008
+                },
+                {
+                  "x": 304.042,
+                  "y": 315.008
+                },
+                {
+                  "x": 275.291,
+                  "y": 355.26
+                },
+                {
+                  "x": 304.042,
+                  "y": 395.512
+                },
+                {
+                  "x": 280.54,
+                  "y": 466.016
+                },
+                {
+                  "x": 395.114,
+                  "y": 466.016
+                },
+                {
+                  "x": 371.612,
+                  "y": 395.512
+                },
+                {
+                  "x": 359.448,
+                  "y": 395.512
+                },
+                {
+                  "x": 388.199,
+                  "y": 355.26
+                },
+                {
+                  "x": 359.448,
+                  "y": 315.008
+                },
+                {
+                  "x": 411.867,
+                  "y": 315.008
+                },
+                {
+                  "x": 438.743,
+                  "y": 239.756
+                },
+                {
+                  "x": 411.867,
+                  "y": 164.504
+                },
+                {
+                  "x": 445.931,
+                  "y": 164.504
+                },
+                {
+                  "x": 445.931,
+                  "y": 0
+                },
+                {
+                  "x": 700,
+                  "y": 0
+                },
+                {
+                  "x": 700,
+                  "y": 500
+                },
+                {
+                  "x": 0,
+                  "y": 500
+                }
+              ]
+            },
+            "holes": [
+              {
+                "points": [
+                  {
+                    "x": 557.792,
+                    "y": 0.223
+                  },
+                  {
+                    "x": 557.792,
+                    "y": 38.878
+                  },
+                  {
+                    "x": 488.787,
+                    "y": 17.555
+                  },
+                  {
+                    "x": 445.931,
+                    "y": 73.654
+                  },
+                  {
+                    "x": 488.787,
+                    "y": 129.753
+                  },
+                  {
+                    "x": 557.792,
+                    "y": 108.43
+                  },
+                  {
+                    "x": 557.792,
+                    "y": 114.797
+                  },
+                  {
+                    "x": 628.296,
+                    "y": 91.295
+                  },
+                  {
+                    "x": 628.296,
+                    "y": 63.449
+                  },
+                  {
+                    "x": 668.8,
+                    "y": 63.449
+                  },
+                  {
+                    "x": 668.8,
+                    "y": 22.945
+                  },
+                  {
+                    "x": 628.296,
+                    "y": 22.945
+                  },
+                  {
+                    "x": 628.296,
+                    "y": 23.725
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 75.675,
+                    "y": 2.851
+                  },
+                  {
+                    "x": 0,
+                    "y": 46.995
+                  },
+                  {
+                    "x": 75.675,
+                    "y": 91.139
+                  },
+                  {
+                    "x": 75.675,
+                    "y": 103.355
+                  },
+                  {
+                    "x": 116.179,
+                    "y": 103.355
+                  },
+                  {
+                    "x": 116.179,
+                    "y": 2.851
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 6.824,
+                    "y": 63.192
+                  },
+                  {
+                    "x": 6.824,
+                    "y": 151.48
+                  },
+                  {
+                    "x": 82.499,
+                    "y": 107.336
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 668.888,
+                    "y": 63.389
+                  },
+                  {
+                    "x": 618.384,
+                    "y": 98.11
+                  },
+                  {
+                    "x": 618.384,
+                    "y": 134.995
+                  },
+                  {
+                    "x": 547.88,
+                    "y": 111.493
+                  },
+                  {
+                    "x": 547.88,
+                    "y": 226.067
+                  },
+                  {
+                    "x": 618.384,
+                    "y": 202.565
+                  },
+                  {
+                    "x": 618.384,
+                    "y": 148.636
+                  },
+                  {
+                    "x": 668.888,
+                    "y": 183.357
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 82.499,
+                    "y": 103.356
+                  },
+                  {
+                    "x": 82.499,
+                    "y": 203.86
+                  },
+                  {
+                    "x": 123.003,
+                    "y": 203.86
+                  },
+                  {
+                    "x": 123.003,
+                    "y": 103.356
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 82.498,
+                    "y": 107.337
+                  },
+                  {
+                    "x": 6.823,
+                    "y": 151.481
+                  },
+                  {
+                    "x": 82.498,
+                    "y": 195.625
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 458.721,
+                    "y": 129.754
+                  },
+                  {
+                    "x": 433.775,
+                    "y": 197.533
+                  },
+                  {
+                    "x": 489.044,
+                    "y": 239.756
+                  },
+                  {
+                    "x": 547.879,
+                    "y": 197.865
+                  },
+                  {
+                    "x": 529.316,
+                    "y": 129.754
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 16.45,
+                    "y": 165.332
+                  },
+                  {
+                    "x": 16.45,
+                    "y": 253.62
+                  },
+                  {
+                    "x": 92.125,
+                    "y": 209.476
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 650.627,
+                    "y": 183.357
+                  },
+                  {
+                    "x": 650.627,
+                    "y": 243.374
+                  },
+                  {
+                    "x": 600.123,
+                    "y": 208.653
+                  },
+                  {
+                    "x": 600.123,
+                    "y": 328.621
+                  },
+                  {
+                    "x": 650.627,
+                    "y": 293.9
+                  },
+                  {
+                    "x": 650.627,
+                    "y": 283.861
+                  },
+                  {
+                    "x": 691.131,
+                    "y": 283.861
+                  },
+                  {
+                    "x": 691.131,
+                    "y": 183.357
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 600.122,
+                    "y": 217.689
+                  },
+                  {
+                    "x": 529.618,
+                    "y": 241.191
+                  },
+                  {
+                    "x": 529.618,
+                    "y": 308.761
+                  },
+                  {
+                    "x": 600.122,
+                    "y": 332.263
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 55.426,
+                    "y": 230.884
+                  },
+                  {
+                    "x": 55.426,
+                    "y": 253.62
+                  },
+                  {
+                    "x": 14.922,
+                    "y": 253.62
+                  },
+                  {
+                    "x": 14.922,
+                    "y": 294.124
+                  },
+                  {
+                    "x": 14.922,
+                    "y": 334.628
+                  },
+                  {
+                    "x": 55.426,
+                    "y": 334.628
+                  },
+                  {
+                    "x": 55.426,
+                    "y": 319.172
+                  },
+                  {
+                    "x": 131.101,
+                    "y": 275.028
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 438.743,
+                    "y": 239.756
+                  },
+                  {
+                    "x": 417.42,
+                    "y": 308.761
+                  },
+                  {
+                    "x": 473.519,
+                    "y": 351.617
+                  },
+                  {
+                    "x": 529.618,
+                    "y": 308.761
+                  },
+                  {
+                    "x": 508.295,
+                    "y": 239.756
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 174.198,
+                    "y": 254.054
+                  },
+                  {
+                    "x": 141.423,
+                    "y": 279.375
+                  },
+                  {
+                    "x": 141.423,
+                    "y": 346.337
+                  },
+                  {
+                    "x": 174.198,
+                    "y": 371.658
+                  },
+                  {
+                    "x": 192.167,
+                    "y": 312.856
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 100.786,
+                    "y": 292.712
+                  },
+                  {
+                    "x": 92.376,
+                    "y": 360.75
+                  },
+                  {
+                    "x": 117.79,
+                    "y": 409.286
+                  },
+                  {
+                    "x": 143.204,
+                    "y": 360.75
+                  },
+                  {
+                    "x": 134.794,
+                    "y": 292.712
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 649.256,
+                    "y": 294.843
+                  },
+                  {
+                    "x": 649.256,
+                    "y": 298.485
+                  },
+                  {
+                    "x": 598.752,
+                    "y": 333.206
+                  },
+                  {
+                    "x": 598.752,
+                    "y": 383.732
+                  },
+                  {
+                    "x": 649.256,
+                    "y": 418.453
+                  },
+                  {
+                    "x": 649.256,
+                    "y": 495.851
+                  },
+                  {
+                    "x": 689.76,
+                    "y": 495.851
+                  },
+                  {
+                    "x": 689.76,
+                    "y": 395.347
+                  },
+                  {
+                    "x": 689.76,
+                    "y": 294.843
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 512.801,
+                    "y": 321.609
+                  },
+                  {
+                    "x": 480.597,
+                    "y": 366.695
+                  },
+                  {
+                    "x": 496.641,
+                    "y": 413.486
+                  },
+                  {
+                    "x": 505.602,
+                    "y": 413.486
+                  },
+                  {
+                    "x": 505.602,
+                    "y": 453.99
+                  },
+                  {
+                    "x": 546.106,
+                    "y": 453.99
+                  },
+                  {
+                    "x": 546.106,
+                    "y": 413.486
+                  },
+                  {
+                    "x": 578.31,
+                    "y": 368.4
+                  },
+                  {
+                    "x": 562.267,
+                    "y": 321.609
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 201.321,
+                    "y": 333.687
+                  },
+                  {
+                    "x": 172.57,
+                    "y": 373.939
+                  },
+                  {
+                    "x": 201.321,
+                    "y": 414.191
+                  },
+                  {
+                    "x": 256.727,
+                    "y": 414.191
+                  },
+                  {
+                    "x": 285.478,
+                    "y": 373.939
+                  },
+                  {
+                    "x": 256.727,
+                    "y": 333.687
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 400.443,
+                    "y": 338.119
+                  },
+                  {
+                    "x": 371.692,
+                    "y": 378.371
+                  },
+                  {
+                    "x": 400.443,
+                    "y": 418.623
+                  },
+                  {
+                    "x": 427.697,
+                    "y": 418.623
+                  },
+                  {
+                    "x": 392.976,
+                    "y": 469.127
+                  },
+                  {
+                    "x": 512.944,
+                    "y": 469.127
+                  },
+                  {
+                    "x": 478.223,
+                    "y": 418.623
+                  },
+                  {
+                    "x": 455.849,
+                    "y": 418.623
+                  },
+                  {
+                    "x": 484.6,
+                    "y": 378.371
+                  },
+                  {
+                    "x": 455.849,
+                    "y": 338.119
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 28.096,
+                    "y": 338.369
+                  },
+                  {
+                    "x": 28.096,
+                    "y": 426.657
+                  },
+                  {
+                    "x": 103.771,
+                    "y": 382.513
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 161.96,
+                    "y": 362.204
+                  },
+                  {
+                    "x": 129.185,
+                    "y": 387.525
+                  },
+                  {
+                    "x": 129.185,
+                    "y": 454.487
+                  },
+                  {
+                    "x": 161.96,
+                    "y": 479.808
+                  },
+                  {
+                    "x": 179.929,
+                    "y": 421.006
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 578.31,
+                    "y": 368.4
+                  },
+                  {
+                    "x": 542.077,
+                    "y": 477.094
+                  },
+                  {
+                    "x": 616.395,
+                    "y": 477.094
+                  },
+                  {
+                    "x": 637.763,
+                    "y": 412.992
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 103.771,
+                    "y": 382.513
+                  },
+                  {
+                    "x": 78.357,
+                    "y": 431.049
+                  },
+                  {
+                    "x": 86.767,
+                    "y": 499.087
+                  },
+                  {
+                    "x": 120.775,
+                    "y": 499.087
+                  },
+                  {
+                    "x": 129.185,
+                    "y": 431.049
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 78.357,
+                    "y": 397.338
+                  },
+                  {
+                    "x": 2.682,
+                    "y": 441.482
+                  },
+                  {
+                    "x": 78.357,
+                    "y": 485.626
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 177.847,
+                    "y": 414.192
+                  },
+                  {
+                    "x": 212.568,
+                    "y": 464.696
+                  },
+                  {
+                    "x": 263.094,
+                    "y": 464.696
+                  },
+                  {
+                    "x": 297.815,
+                    "y": 414.192
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 168.266,
+                    "y": 459.173
+                  },
+                  {
+                    "x": 168.266,
+                    "y": 499.677
+                  },
+                  {
+                    "x": 208.77,
+                    "y": 499.677
+                  },
+                  {
+                    "x": 208.77,
+                    "y": 459.173
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "diagnostics": []
+      },
+      "placementOrder": [
+        "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+        "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+        "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+        "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+        "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+        "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+        "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+        "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+        "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+        "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+        "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+        "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+        "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+        "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+        "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5"
+      ],
+      "unplacedSourcePieceIds": [
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+      ]
+    },
+    "portfolio": {
+      "status": "completed",
+      "terminationReason": "capacity_subset_settled",
+      "source": "shared-archive",
+      "placements": [
+        {
+          "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-1",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 166.923,
+            "translateY": 114.504,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-2",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 166.923,
+            "translateY": 0,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+          "sourcePieceId": "28f5a1d1-afd4-46e4-b2b9-f1841386be28-copy-3",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 331.427,
+            "translateY": 164.50400000000002,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+          "sourcePieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-1",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.577
+          },
+          "transform": {
+            "translateX": 438.743,
+            "translateY": 164.50400000000002,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+          "sourcePieceId": "c5135087-12f0-44f9-bd91-4bcf67affd8b-copy-2",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.577
+          },
+          "transform": {
+            "translateX": 352.096,
+            "translateY": 308.37600000000003,
+            "rotationDeg": 160.34598301192344,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+          "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-1",
+          "placementReference": {
+            "x": -6.099,
+            "y": -6.609
+          },
+          "transform": {
+            "translateX": 529.6179999999999,
+            "translateY": 351.617,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+          "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-2",
+          "placementReference": {
+            "x": -6.099,
+            "y": -6.609
+          },
+          "transform": {
+            "translateX": 484.737,
+            "translateY": 95.69800000000001,
+            "rotationDeg": 37.37748259910419,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+          "sourcePieceId": "0aff79d8-47d7-49b2-958b-8f8648eafc07-copy-3",
+          "placementReference": {
+            "x": -6.099,
+            "y": -6.609
+          },
+          "transform": {
+            "translateX": 445.931,
+            "translateY": 129.75300000000001,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+          "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-1",
+          "placementReference": {
+            "x": -5.252,
+            "y": -6.454
+          },
+          "transform": {
+            "translateX": 388.199,
+            "translateY": 315.008,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+          "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-2",
+          "placementReference": {
+            "x": -5.252,
+            "y": -6.454
+          },
+          "transform": {
+            "translateX": 285.478,
+            "translateY": 333.687,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+          "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-3",
+          "placementReference": {
+            "x": -5.252,
+            "y": -6.454
+          },
+          "transform": {
+            "translateX": 484.6,
+            "translateY": 338.119,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+          "sourcePieceId": "68c5a4cc-cf24-447c-ad54-974a021198a8-copy-4",
+          "placementReference": {
+            "x": -5.252,
+            "y": -6.454
+          },
+          "transform": {
+            "translateX": 529.512,
+            "translateY": 298.213,
+            "rotationDeg": 35.53727384446902,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-1",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 529.6179999999999,
+            "translateY": 332.263,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 618.384,
+            "translateY": 111.49300000000001,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-3",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 628.296,
+            "translateY": 0.22299999999999898,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 280.54,
+            "translateY": 395.512,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+          "sourcePieceId": "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+          "placementReference": {
+            "x": -7.287,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 608.963,
+            "translateY": 499.39000000000004,
+            "rotationDeg": 108.43543641752925,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+          "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+          "placementReference": {
+            "x": -9.984,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 392.976,
+            "translateY": 418.62300000000005,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+          "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+          "placementReference": {
+            "x": -9.984,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 297.815,
+            "translateY": 464.696,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+          "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+          "placementReference": {
+            "x": -9.984,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 598.752,
+            "translateY": 418.45300000000003,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+          "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+          "placementReference": {
+            "x": -9.984,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 650.627,
+            "translateY": 208.65300000000002,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+          "sourcePieceId": "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+          "placementReference": {
+            "x": -9.984,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 618.384,
+            "translateY": 183.357,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+          "sourcePieceId": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+          "placementReference": {
+            "x": -8.802,
+            "y": -5.492
+          },
+          "transform": {
+            "translateX": 192.167,
+            "translateY": 254.05400000000003,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+          "sourcePieceId": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+          "placementReference": {
+            "x": -8.802,
+            "y": -5.492
+          },
+          "transform": {
+            "translateX": 179.929,
+            "translateY": 362.204,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+          "sourcePieceId": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+          "placementReference": {
+            "x": -8.802,
+            "y": -5.492
+          },
+          "transform": {
+            "translateX": 116.179,
+            "translateY": 139.82500000000002,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+          "sourcePieceId": "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+          "placementReference": {
+            "x": -8.802,
+            "y": -5.492
+          },
+          "transform": {
+            "translateX": 116.179,
+            "translateY": 284.995,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+          "sourcePieceId": "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+          "placementReference": {
+            "x": -5.414,
+            "y": -11.322
+          },
+          "transform": {
+            "translateX": 143.204,
+            "translateY": 409.286,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+          "sourcePieceId": "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+          "placementReference": {
+            "x": -5.414,
+            "y": -11.322
+          },
+          "transform": {
+            "translateX": 78.357,
+            "translateY": 382.51300000000003,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+          "sourcePieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 82.499,
+            "translateY": 103.35600000000001,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+          "sourcePieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 75.675,
+            "translateY": 2.850999999999999,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+          "sourcePieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 649.2560000000001,
+            "translateY": 294.843,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+          "sourcePieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 649.2560000000001,
+            "translateY": 395.34700000000004,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+          "sourcePieceId": "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 650.627,
+            "translateY": 183.357,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+          "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 131.101,
+            "translateY": 230.88400000000001,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+          "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 103.771,
+            "translateY": 338.369,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+          "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 92.125,
+            "translateY": 165.332,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+          "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 82.499,
+            "translateY": 63.19200000000001,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+          "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 6.8230000000000075,
+            "translateY": 195.625,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+          "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 2.681999999999988,
+            "translateY": 485.62600000000003,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+          "sourcePieceId": "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 0,
+            "translateY": 91.13900000000001,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+          "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 14.921999999999997,
+            "translateY": 253.62,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+          "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 14.921999999999997,
+            "translateY": 294.124,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+          "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 505.602,
+            "translateY": 413.48600000000005,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+          "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 628.296,
+            "translateY": 22.945000000000007,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+          "sourcePieceId": "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 168.266,
+            "translateY": 459.173,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        }
+      ],
+      "unplacedPieceIds": [
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+        "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+        "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+      ],
+      "score": {
+        "unplacedCount": 16,
+        "sharedCollisionBoundaryLengthMm": 905.926,
+        "sharedCollisionBoundaryContactUnits": 10.637148,
+        "sharedCollisionBoundaryContactBand": 10,
+        "nearCompleteStructuralContactCount": 9,
+        "dominantNearCompleteStructuralContactCount": 1,
+        "largestNetFreeMaterialRegionAreaMm2": 84861.54503599991,
+        "freeMaterialRegionCount": 1,
+        "freeMaterialHoleCount": 25,
+        "freeMaterialSliverMetric": 2018.5024611983156,
+        "collisionBoundsWorstNormalizedSheetConsumption": 0.9993540000000001,
+        "collisionBoundsNormalizedSpanSum": 1.986684,
+        "collisionBoundsAreaMm2": 345342.264687,
+        "collisionBoundsSpanMm": 1190.808,
+        "canonicalEnclosedCavityCount": 0
+      },
+      "diagnostics": [
+        {
+          "code": "capacity_subset_settled",
+          "message": "intrinsic-capacity-v1 settled 45 placed; 16 unplaced; origin cold-search; q0; hash 04420f4a81ddc3e10d4752881c2fb336a5bc1f2fe10b3093469ab8f423ba662a"
+        }
+      ]
+    },
+    "capacityTrace": {
+      "routing": "bounded-complete-archive-miss",
+      "preflight": {
+        "kind": "inconclusive",
+        "measurements": {
+          "pieceCount": 61,
+          "sheetWidthGrid": 700000,
+          "sheetHeightGrid": 500000,
+          "sheetDoubledAreaGrid2": "700000000000",
+          "minimumDoubledCollisionAreaSumGrid2": "626973708439",
+          "singletonInfeasiblePieceIds": []
+        }
+      },
+      "prefixes": {
+        "capturedCount": 9,
+        "fittingCount": 3,
+        "rejectedCount": 6,
+        "terminalizedCount": 2,
+        "descriptors": [
+          {
+            "role": "canonical-grid",
+            "depth": 15
+          },
+          {
+            "role": "canonical-grid",
+            "depth": 30
+          },
+          {
+            "role": "canonical-grid",
+            "depth": 45
+          },
+          {
+            "role": "legacy-absolute-envelope",
+            "depth": 15
+          },
+          {
+            "role": "legacy-absolute-envelope",
+            "depth": 30
+          },
+          {
+            "role": "legacy-absolute-envelope",
+            "depth": 45
+          },
+          {
+            "role": "open-pocket-first",
+            "depth": 15
+          },
+          {
+            "role": "open-pocket-first",
+            "depth": 30
+          },
+          {
+            "role": "open-pocket-first",
+            "depth": 45
+          }
+        ]
+      },
+      "prefixIncumbent": {
+        "sourceRole": "legacy-absolute-envelope",
+        "prefixDepth": 15,
+        "placedCount": 15,
+        "placedMaterialAreaMm2": 125177.508918,
+        "selectedRotationDeg": 0,
+        "canonicalGeometryHash": "c1227ec536c6ae3dc70383e6837dd20e2ee46a13a92731d831e6422864b04c74"
+      },
+      "coldSearch": {
+        "beamWidth": 16,
+        "localLegalPlacementFanout": 3,
+        "placementEvaluationCap": 249856,
+        "placementEvaluationQuotaPerDepth": 4096,
+        "consumedPlacementEvaluations": 232209,
+        "auxiliaryPlacementEvaluations": 0,
+        "prunedByAttainableCount": 0,
+        "prunedByAttainableMaterial": 0,
+        "deduplicatedSuccessors": 275,
+        "fitRejectedCandidates": 140754,
+        "invalidCandidates": 0,
+        "endpointFitRejections": 0,
+        "completedDepths": 61,
+        "depthQuotaExhaustions": 53,
+        "pieceCount": 61,
+        "settlement": "evaluation-cap"
+      },
+      "selected": {
+        "placedCount": 45,
+        "placedDoubledMaterialAreaGrid2": "397122232104",
+        "enclosedCavityCount": 0,
+        "totalEnclosedCavityAreaMm2": 0,
+        "envelopeMaximumSideMm": 691.131,
+        "envelopeAreaMm2": 345342.264687,
+        "envelopeSpanMm": 1190.808,
+        "canonicalGeometryHash": "04420f4a81ddc3e10d4752881c2fb336a5bc1f2fe10b3093469ab8f423ba662a",
+        "origin": "cold-search",
+        "unplacedCount": 16,
+        "placedMaterialAreaMm2": 198561.116052,
+        "selectedRotationDeg": 0
+      },
+      "preflightRuntimeMs": 22.01429200000004,
+      "completeArchiveRuntimeMs": 53182.628333,
+      "prefixTerminalizationMs": 34.91070799999579,
+      "coldSearchMs": 6957.832499999997,
+      "runtimeMs": 6992.955499999996
+    }
+  },
+  "checks": {
+    "collisionIdentity": true,
+    "fittedCanonical": true,
+    "placedCount": true,
+    "unplacedCount": true,
+    "area": true,
+    "canonicalCavities": true,
+    "runtime": true
+  },
+  "passed": true,
+  "svgPath": "/private/tmp/min-plane-provenance/compact-six-baselines-976b6da/mixed-61-700x500.svg"
+}

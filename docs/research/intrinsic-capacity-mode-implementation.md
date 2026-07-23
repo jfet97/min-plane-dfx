@@ -160,6 +160,23 @@ Key canonical identities (production arms):
 - Mixed-61 500x400: `5c8e621bc2a32cb...`, q90, material `128,177.508918 mm2`;
 - Mixed-61 700x560: `0ba279b5f82d6f6d...`, q90, material `215,961.116052 mm2`.
 
+### Durable `700 x 500` production baselines
+
+Commit `976b6da` adds `700 x 500` production runs to the same strict baseline
+gate as the three roomy `2000 x 2700` fixtures:
+
+| Fixture | Result | Canonical result | Runtime |
+| --- | --- | --- | ---: |
+| Triangle-20 | 20/20, `74,428.143126 mm2`, 0 cavities | same collision identity `371db269...` as the roomy sheet | `13.673 s` |
+| Mixed-61 | 45/61, `345,342.264687 mm2`, 0 cavities | capacity collision identity `04420f4a...`; 16 ids honestly unplaced | `60.240 s` |
+| Shapes-17 | 17/17, `303,852.763787 mm2`, 0 cavities | capacity collision identity `00ba6de8...` | `9.681 s` |
+
+This distinguishes two capacity outcomes that the smaller-sheet gate must
+retain: a different full-piece fitting motif for Shapes-17, and an exact
+partial settlement for Mixed-61. The complete Triangle motif remains invariant
+because it already fits. Reports and full-sheet renders are under
+`docs/artifacts/current-compact-baselines/`.
+
 ## Performance Profile And Paired Comparisons
 
 Separately measured phases (production arms, cold runs):

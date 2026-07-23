@@ -1,6 +1,7 @@
 # Irregular Nesting Roadmap
 
-This is the active forward roadmap for convex irregular nesting at `2174c63`.
+This is the active forward roadmap for convex irregular nesting after the
+six-baseline gate at `976b6da`.
 It contains only uncompleted work. Architecture and current behavior
 live in [`../architecture/irregular-v2-infrastructure.md`](../architecture/irregular-v2-infrastructure.md);
 past decisions live under [`../history/`](../history/README.md).
@@ -19,19 +20,22 @@ The ordinary requested-sheet decoder remains available when the shared archive
 is not explicitly eligible, including intentional `short_side_fill` and active
 GA configurations.
 
-Current exact one-sheet production baselines are:
+Current exact production baselines are:
 
-| Fixture | Envelope area | Canonical cavities | Observed runtime | Durable gate | PNG |
-| --- | ---: | ---: | ---: | --- | --- |
-| Triangle-20 | `74,428.143126 mm2` | 0 | `12.635 s` | exact hash `371db269...` in the unit golden | [`triangle-20.png`](../artifacts/current-compact-baselines/triangle-20.png) |
-| Mixed-61 | `391,605.850174 mm2` | 0 | `52.962 s` | fitted hash `ef2b783a...` in `pnpm gate:mixed61-compact` | [`mixed-61.png`](../artifacts/current-compact-baselines/mixed-61.png) |
-| Shapes-17 | `304,499.845650 mm2` | 0 | `7.447 s` | exact hash `c640c06f...` in the unit golden | [`shapes-17.png`](../artifacts/current-compact-baselines/shapes-17.png) |
+| Fixture | Sheet | Placed | Envelope area | Cavities | Runtime | PNG |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Triangle-20 | `2000 x 2700` | 20/20 | `74,428.143126 mm2` | 0 | `12.702 s` | [`triangle-20-2000x2700.png`](../artifacts/current-compact-baselines/triangle-20-2000x2700.png) |
+| Mixed-61 | `2000 x 2700` | 61/61 | `391,605.850174 mm2` | 0 | `52.535 s` | [`mixed-61-2000x2700.png`](../artifacts/current-compact-baselines/mixed-61-2000x2700.png) |
+| Shapes-17 | `2000 x 2700` | 17/17 | `304,499.845650 mm2` | 0 | `6.489 s` | [`shapes-17-2000x2700.png`](../artifacts/current-compact-baselines/shapes-17-2000x2700.png) |
+| Triangle-20 | `700 x 500` | 20/20 | `74,428.143126 mm2` | 0 | `13.673 s` | [`triangle-20-700x500.png`](../artifacts/current-compact-baselines/triangle-20-700x500.png) |
+| Mixed-61 | `700 x 500` | 45/61 | `345,342.264687 mm2` | 0 | `60.240 s` | [`mixed-61-700x500.png`](../artifacts/current-compact-baselines/mixed-61-700x500.png) |
+| Shapes-17 | `700 x 500` | 17/17 | `303,852.763787 mm2` | 0 | `9.681 s` | [`shapes-17-700x500.png`](../artifacts/current-compact-baselines/shapes-17-700x500.png) |
 
-Runtime observations are from serial post-commit `2174c63` gates on
+Runtime observations are from one sequential strict run at `976b6da` on
 2026-07-23, Node `v24.16.0`, V8 `13.6.233.17-node.49`, macOS arm64. They are
-measured baselines, not deterministic acceptance thresholds. The adaptive
-transform-policy evidence is recorded in
-[`../research/adaptive-compact-transform-policy.md`](../research/adaptive-compact-transform-policy.md).
+measured baselines, not deterministic acceptance thresholds. The executable
+gate is `pnpm gate:compact-six-baselines`; reports and renders are in
+[`../artifacts/current-compact-baselines/`](../artifacts/current-compact-baselines/).
 
 Do not substitute the earlier sheetless Mixed experiment hash `3839e80d...`
 for the fitted production hash. Do not use the retired fixed-reference

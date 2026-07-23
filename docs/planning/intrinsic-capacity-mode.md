@@ -341,8 +341,10 @@ Reject or revise the implementation if:
 
 Required positive evidence:
 
-- current Triangle-20, Mixed-61, and Shapes-17 complete results remain at least
-  equivalent in quality wherever they fit;
+- the six durable Triangle-20, Mixed-61, and Shapes-17 baselines pass on both
+  `2000 x 2700` and `700 x 500`;
+- current complete results remain at least equivalent in quality wherever they
+  fit;
 - multiple roomy sheets select the same complete motif;
 - an area-proven constrained fixture bypasses complete construction;
 - a singleton-infeasible fixture bypasses complete construction;

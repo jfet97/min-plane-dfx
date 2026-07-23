@@ -86,19 +86,20 @@ total command time.
 | Shapes-17 | `7.447 s` | `8.52 s` | `304,499.845650 mm2` | 0 | `c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a` |
 
 Every requested piece was placed. All three canonical winners remain exact.
-The regenerated SVG and PNG hashes are byte-identical to the accepted portable
-artifacts.
+The original regenerated SVG and PNG hashes were byte-identical to the
+then-accepted portable artifacts. The current artifact directory retains the
+same exact geometry under explicit sheet-qualified names.
 
 ## Artifact Evidence
 
 Portable artifacts:
 
-- [`triangle-20.svg`](../artifacts/current-compact-baselines/triangle-20.svg)
-  and [`triangle-20.png`](../artifacts/current-compact-baselines/triangle-20.png);
-- [`mixed-61.svg`](../artifacts/current-compact-baselines/mixed-61.svg)
-  and [`mixed-61.png`](../artifacts/current-compact-baselines/mixed-61.png);
-- [`shapes-17.svg`](../artifacts/current-compact-baselines/shapes-17.svg)
-  and [`shapes-17.png`](../artifacts/current-compact-baselines/shapes-17.png).
+- [`triangle-20-2000x2700.svg`](../artifacts/current-compact-baselines/triangle-20-2000x2700.svg)
+  and [`triangle-20-2000x2700.png`](../artifacts/current-compact-baselines/triangle-20-2000x2700.png);
+- [`mixed-61-2000x2700.svg`](../artifacts/current-compact-baselines/mixed-61-2000x2700.svg)
+  and [`mixed-61-2000x2700.png`](../artifacts/current-compact-baselines/mixed-61-2000x2700.png);
+- [`shapes-17-2000x2700.svg`](../artifacts/current-compact-baselines/shapes-17-2000x2700.svg)
+  and [`shapes-17-2000x2700.png`](../artifacts/current-compact-baselines/shapes-17-2000x2700.png).
 
 Immutable local provenance:
 
@@ -122,4 +123,3 @@ should include curves, `1-10 mm` pieces with intentional short edges,
 `1-5 m` pieces with shallow facets, and normalized `0.1x/1x/10x` copies.
 Promotion remains valid for the current production gates; broader evidence may
 refine the formulas or transform cap later without restoring UI knobs.
-

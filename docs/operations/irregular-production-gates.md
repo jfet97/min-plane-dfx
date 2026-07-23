@@ -6,20 +6,26 @@ cancellation, history, or timeout behavior.
 
 ## Current Baselines
 
-| Fixture | Sheet | Required result |
-| --- | --- | --- |
-| Triangle-20 | `2000 x 2700` | hash `371db269...`, area `74,428.143126 mm2`, zero canonical cavities, all pieces |
-| Mixed-61 | `2000 x 2700` | fitted hash `ef2b783a...`, area `391,605.850174 mm2`, zero canonical cavities, all pieces |
-| Shapes-17 | `2000 x 2700` | hash `c640c06f...`, area `304,499.845650 mm2`, zero canonical cavities, all pieces |
+| Fixture | Sheet | Required result | Observed runtime |
+| --- | --- | --- | ---: |
+| Triangle-20 | `2000 x 2700` | collision hash `371db269...`, area `74,428.143126 mm2`, zero canonical cavities, 20/20 pieces | `12.702 s` |
+| Mixed-61 | `2000 x 2700` | fitted hash `ef2b783a...`, area `391,605.850174 mm2`, zero canonical cavities, 61/61 pieces | `52.535 s` |
+| Shapes-17 | `2000 x 2700` | collision hash `c640c06f...`, area `304,499.845650 mm2`, zero canonical cavities, 17/17 pieces | `6.489 s` |
+| Triangle-20 | `700 x 500` | collision hash `371db269...`, area `74,428.143126 mm2`, zero canonical cavities, 20/20 pieces | `13.673 s` |
+| Mixed-61 | `700 x 500` | collision hash `04420f4a...`, area `345,342.264687 mm2`, zero canonical cavities, 45/61 pieces | `60.240 s` |
+| Shapes-17 | `700 x 500` | collision hash `00ba6de8...`, area `303,852.763787 mm2`, zero canonical cavities, 17/17 pieces | `9.681 s` |
 
-The exact hash and threshold assertions live in the tests and `package.json`.
-This page summarizes them; it does not replace them.
+The exact collision and fitted hashes, placed/unplaced partitions, area and
+cavity limits, and generous runtime ceilings live in
+`scripts/irregular-compact-six-baselines.ts`. The observed runtimes above came
+from one sequential strict run at `976b6da`; they are measurements, not exact
+timing assertions. Portable reports and renders are under
+[`../artifacts/current-compact-baselines/`](../artifacts/current-compact-baselines/).
 
-The latest serial observations at adaptive-policy commit `2174c63` are
-`12.635 s` for Triangle-20, `52.962 s` for Mixed-61, and `7.447 s` for
-Shapes-17. All three SVG and PNG artifacts remain byte-identical to their
-accepted predecessors. See the
-[adaptive transform report](../research/adaptive-compact-transform-policy.md).
+Triangle-20 retains the same canonical geometry on both sheets. Shapes-17 uses
+the constrained capacity path on `700 x 500` but still places every piece.
+Mixed-61 cannot place every piece on `700 x 500`; the exact capacity baseline
+there is therefore an honest 45 placed / 16 unplaced result.
 
 ## Focused Correctness Gate
 
@@ -32,10 +38,13 @@ ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/vitest/vitest.mjs run \
   tests/unit/irregularTriangleCompactGolden.test.ts \
   tests/unit/irregularSeventeenShapesCompactGolden.test.ts
 pnpm gate:mixed61-compact
+pnpm gate:compact-six-baselines
 ```
 
 The Mixed command is intentionally a one-sheet production-quality gate. Its
 report sets `geometryEquivalent` to `null`; it is not an invariance result.
+The six-baseline command runs serially and covers both the roomy complete path
+and constrained final-fit/capacity behavior.
 
 ## Constrained Capacity Gate
 

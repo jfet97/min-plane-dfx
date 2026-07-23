@@ -942,10 +942,16 @@ occupied-union cavity count is exposed separately as
 
 The removed canonical-reference coordinator, fixed `2000 x 2700` decode, admission
 certificate, and `canonicalReferenceDecodeEnabled` schema field are historical only.
-The compact production baselines are Triangle-20 at `74,428.143126 mm2`, Mixed-61 at
-`391,605.850174 mm2`, and Shapes-17 at `304,499.845650 mm2`, all with zero canonical
-cavities. Layout identity ignores translation, rigid quarter-turn, copy order, ring
-origin, and winding while preserving reflection and relative placement.
+The compact production gate now contains six baselines. On `2000 x 2700`,
+Triangle-20 is `74,428.143126 mm2`, Mixed-61 is `391,605.850174 mm2`, and
+Shapes-17 is `304,499.845650 mm2`; all pieces are placed and canonical cavity
+count is zero. On `700 x 500`, Triangle-20 retains the exact same canonical
+motif, Shapes-17 reaches a different exact fitting 17-piece motif at
+`303,852.763787 mm2`, and Mixed-61 settles an exact 45-piece subset at
+`345,342.264687 mm2` with 16 pieces honestly unplaced. All six have zero
+canonical cavities. Layout identity ignores translation, rigid quarter-turn,
+copy order, ring origin, and winding while preserving reflection and relative
+placement.
 
 Two fresh production decodes at `b506344`, on `900 x 1800` and `1000 x 1300`,
 produced byte-identical SVGs. The wider matrix was cancelled before completion,
