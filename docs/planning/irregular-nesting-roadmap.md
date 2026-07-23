@@ -145,6 +145,9 @@ wall-time improvement. Adversarial resume validation now additionally binds
 settlement bounds and phase policy and proves the frozen seed plus consumed
 prefix against every parent transition, exact placed/unplaced accounting,
 trace, occupied identity, and cumulative ledger before portfolio integration.
+Cycle-bounded lineage collection and authoritative full-chain reconstruction
+now also prevent corrupted private canonical/contact/index caches from
+influencing future placement.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

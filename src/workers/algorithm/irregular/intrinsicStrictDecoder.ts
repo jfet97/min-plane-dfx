@@ -442,6 +442,18 @@ export function constructIntrinsicStrictState(
         })
       )
     }
+    const rebuiltCheckpointState =
+      input.checkpoint === undefined
+        ? undefined
+        : rebuildIntrinsicStrictDirectCheckpointState(input.checkpoint)
+    if (input.checkpoint !== undefined && rebuiltCheckpointState === undefined) {
+      return yield* Effect.fail(
+        new IntrinsicStrictDecoderError({
+          operation: 'directCheckpoint',
+          message: 'direct checkpoint lineage could not be rebuilt authoritatively.'
+        })
+      )
+    }
     const previousActiveRuntimeMs = input.checkpoint?.activeRuntimeMs ?? 0
     const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
     const control: IrregularNfpIfpControl = {
@@ -462,7 +474,7 @@ export function constructIntrinsicStrictState(
         })
     }
     let state =
-      input.checkpoint?.state ??
+      rebuiltCheckpointState ??
       new IrregularBeamState({
         remainingPreparedPieces: input.remainingPreparedPieces,
         placedCollisionGeometries: input.frozenPlaced,
@@ -843,6 +855,13 @@ function makeIntrinsicStrictDirectCheckpoint(input: {
   readonly activeRuntimeMs: number
   readonly phaseLedger: IntrinsicStrictDirectPhaseLedger | undefined
 }): IntrinsicStrictDirectCheckpoint {
+  const stateLineage = collectIntrinsicStrictDirectStateLineage(
+    input.state,
+    input.nextPieceIndex + 1
+  )
+  if (stateLineage === undefined) {
+    throw new Error('committed direct checkpoint lineage is invalid.')
+  }
   const checkpointWithoutIntegrity = {
     version: INTRINSIC_STRICT_DIRECT_CHECKPOINT_VERSION,
     producerRole: input.producerRole,
@@ -858,7 +877,8 @@ function makeIntrinsicStrictDirectCheckpoint(input: {
   return {
     ...checkpointWithoutIntegrity,
     integrityHash: intrinsicStrictDirectCheckpointIntegrityHash(
-      checkpointWithoutIntegrity
+      checkpointWithoutIntegrity,
+      stateLineage
     )
   }
 }
@@ -885,21 +905,6 @@ function validateIntrinsicStrictDirectCheckpoint(input: {
   ) {
     return 'direct checkpoint producer or request fingerprint does not match.'
   }
-  const expectedIntegrityHash = intrinsicStrictDirectCheckpointIntegrityHash({
-    version: checkpoint.version,
-    producerRole: checkpoint.producerRole,
-    requestFingerprint: checkpoint.requestFingerprint,
-    state: checkpoint.state,
-    nextPieceIndex: checkpoint.nextPieceIndex,
-    stepTrace: checkpoint.stepTrace,
-    gapFillEvidence: checkpoint.gapFillEvidence,
-    candidateEvaluationCount: checkpoint.candidateEvaluationCount,
-    activeRuntimeMs: checkpoint.activeRuntimeMs,
-    phaseLedger: checkpoint.phaseLedger
-  })
-  if (checkpoint.integrityHash !== expectedIntegrityHash) {
-    return 'direct checkpoint integrity hash does not match its retained state.'
-  }
   if (
     !Number.isSafeInteger(checkpoint.nextPieceIndex) ||
     checkpoint.nextPieceIndex <= 0 ||
@@ -909,6 +914,31 @@ function validateIntrinsicStrictDirectCheckpoint(input: {
       input.remainingPreparedPieces.length - checkpoint.nextPieceIndex
   ) {
     return 'direct checkpoint is not positioned at a valid committed piece boundary.'
+  }
+  const stateLineage = collectIntrinsicStrictDirectStateLineage(
+    checkpoint.state,
+    checkpoint.nextPieceIndex + 1
+  )
+  if (stateLineage === undefined) {
+    return 'direct checkpoint parent lineage is cyclic or has an invalid length.'
+  }
+  const expectedIntegrityHash = intrinsicStrictDirectCheckpointIntegrityHash(
+    {
+      version: checkpoint.version,
+      producerRole: checkpoint.producerRole,
+      requestFingerprint: checkpoint.requestFingerprint,
+      state: checkpoint.state,
+      nextPieceIndex: checkpoint.nextPieceIndex,
+      stepTrace: checkpoint.stepTrace,
+      gapFillEvidence: checkpoint.gapFillEvidence,
+      candidateEvaluationCount: checkpoint.candidateEvaluationCount,
+      activeRuntimeMs: checkpoint.activeRuntimeMs,
+      phaseLedger: checkpoint.phaseLedger
+    },
+    stateLineage
+  )
+  if (checkpoint.integrityHash !== expectedIntegrityHash) {
+    return 'direct checkpoint integrity hash does not match its retained state.'
   }
   const expectedPendingIds = input.remainingPreparedPieces
     .slice(checkpoint.nextPieceIndex)
@@ -1005,7 +1035,8 @@ function intrinsicStrictDirectRequestFingerprint(input: {
 }
 
 function intrinsicStrictDirectCheckpointIntegrityHash(
-  checkpoint: Omit<IntrinsicStrictDirectCheckpoint, 'integrityHash'>
+  checkpoint: Omit<IntrinsicStrictDirectCheckpoint, 'integrityHash'>,
+  stateLineage: ReadonlyArray<Record<string, unknown>>
 ): string {
   return createHash('sha256')
     .update(
@@ -1013,7 +1044,7 @@ function intrinsicStrictDirectCheckpointIntegrityHash(
         version: checkpoint.version,
         producerRole: checkpoint.producerRole,
         requestFingerprint: checkpoint.requestFingerprint,
-        stateLineage: intrinsicStrictDirectStateLineage(checkpoint.state),
+        stateLineage,
         nextPieceIndex: checkpoint.nextPieceIndex,
         stepTrace: checkpoint.stepTrace,
         gapFillEvidence: checkpoint.gapFillEvidence,
@@ -1025,12 +1056,16 @@ function intrinsicStrictDirectCheckpointIntegrityHash(
     .digest('hex')
 }
 
-function intrinsicStrictDirectStateLineage(
-  state: IrregularBeamState
-): ReadonlyArray<Record<string, unknown>> {
+function collectIntrinsicStrictDirectStateLineage(
+  state: IrregularBeamState,
+  expectedStateCount: number
+): ReadonlyArray<Record<string, unknown>> | undefined {
   const lineage: Array<Record<string, unknown>> = []
+  const visited = new Set<IrregularBeamState>()
   let cursor: IrregularBeamState | undefined = state
   while (cursor !== undefined) {
+    if (visited.has(cursor) || lineage.length >= expectedStateCount) return undefined
+    visited.add(cursor)
     lineage.push({
       pendingIds: cursor.remainingPreparedPieces.map(preparedPieceId),
       placedIds: cursor.placedCollisionGeometries.map(placedPieceId),
@@ -1050,7 +1085,36 @@ function intrinsicStrictDirectStateLineage(
     })
     cursor = cursor.parent
   }
-  return lineage
+  return lineage.length === expectedStateCount ? lineage : undefined
+}
+
+function rebuildIntrinsicStrictDirectCheckpointState(
+  checkpoint: IntrinsicStrictDirectCheckpoint
+): IrregularBeamState | undefined {
+  const lineage: IrregularBeamState[] = []
+  const visited = new Set<IrregularBeamState>()
+  let cursor: IrregularBeamState | undefined = checkpoint.state
+  while (cursor !== undefined) {
+    if (visited.has(cursor) || lineage.length >= checkpoint.nextPieceIndex + 1) {
+      return undefined
+    }
+    visited.add(cursor)
+    lineage.push(cursor)
+    cursor = cursor.parent
+  }
+  if (lineage.length !== checkpoint.nextPieceIndex + 1) return undefined
+
+  let rebuilt: IrregularBeamState | undefined
+  for (const retained of lineage.toReversed()) {
+    rebuilt = new IrregularBeamState({
+      remainingPreparedPieces: retained.remainingPreparedPieces,
+      placedCollisionGeometries: retained.placedCollisionGeometries,
+      unplacedPieceIds: retained.unplacedPieceIds,
+      placementOrder: retained.placementOrder,
+      ...(rebuilt === undefined ? {} : { parent: rebuilt })
+    })
+  }
+  return rebuilt
 }
 
 function validateIntrinsicStrictDirectCheckpointLineage(input: {

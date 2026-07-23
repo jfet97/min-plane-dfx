@@ -381,6 +381,51 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     })
     await expectCheckpointRejection(checkpoint, { maximumRuntimeMs: 120_001 })
 
+    const selfCycleState = new IrregularBeamState({
+      remainingPreparedPieces: checkpoint.state.remainingPreparedPieces,
+      placedCollisionGeometries: checkpoint.state.placedCollisionGeometries,
+      placementOrder: checkpoint.state.placementOrder
+    })
+    Reflect.set(selfCycleState, 'parent', selfCycleState)
+    await expectCheckpointRejection({ ...checkpoint, state: selfCycleState })
+
+    const firstCycleState = new IrregularBeamState({
+      remainingPreparedPieces: checkpoint.state.remainingPreparedPieces,
+      placedCollisionGeometries: checkpoint.state.placedCollisionGeometries,
+      placementOrder: checkpoint.state.placementOrder
+    })
+    const secondCycleState = new IrregularBeamState({
+      remainingPreparedPieces: checkpoint.state.remainingPreparedPieces,
+      placedCollisionGeometries: checkpoint.state.placedCollisionGeometries,
+      placementOrder: checkpoint.state.placementOrder,
+      parent: firstCycleState
+    })
+    Reflect.set(firstCycleState, 'parent', secondCycleState)
+    await expectCheckpointRejection({ ...checkpoint, state: secondCycleState })
+
+    const corruptedCacheState = new IrregularBeamState({
+      remainingPreparedPieces: checkpoint.state.remainingPreparedPieces,
+      placedCollisionGeometries: checkpoint.state.placedCollisionGeometries,
+      placementOrder: checkpoint.state.placementOrder,
+      parent: root
+    })
+    Reflect.set(corruptedCacheState, 'canonicalEntryKeys', ['corrupted'])
+    Reflect.set(
+      corruptedCacheState,
+      'nearCompleteStructuralContactSignatureCounts',
+      new Map([['corrupted', 99]])
+    )
+    Reflect.set(corruptedCacheState.placedCollisionIndex, 'buckets', new Map())
+    const cleanContinuation = await run({ checkpoint })
+    const sanitizedContinuation = await run({
+      checkpoint: { ...checkpoint, state: corruptedCacheState }
+    })
+    expect(sanitizedContinuation.state).toEqual(cleanContinuation.state)
+    expect(sanitizedContinuation.stepTrace).toEqual(cleanContinuation.stepTrace)
+    expect(sanitizedContinuation.candidateEvaluationCount).toBe(
+      cleanContinuation.candidateEvaluationCount
+    )
+
     const capped = await run({
       maximumCandidateEvaluationCount: Number.MAX_SAFE_INTEGER
     })

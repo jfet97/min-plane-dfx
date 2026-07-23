@@ -355,6 +355,15 @@ cover omitted pieces, placement-order and unplaced-decision changes, broken
 parents, mismatched identity, reduced counters, policy toggles, and invalid
 nested phase time.
 
+A second integrity review found two continuation-specific hazards: unbounded
+parent traversal could loop on cyclic ancestry, and valid public aggregates did
+not prove the private canonical/contact/spatial caches used by the next
+placement. Lineage collection is now identity-cycle checked and capped at the
+cursor-derived state count before hashing. Validated checkpoints are resumed
+only through a freshly derived root-to-leaf state chain; corrupted private
+caches are therefore sanitized. Self-cycle, two-state-cycle, canonical-key,
+contact-signature, and spatial-bucket tests cover the new boundary.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim

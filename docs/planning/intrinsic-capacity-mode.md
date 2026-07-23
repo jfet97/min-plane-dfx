@@ -161,7 +161,9 @@ Resume rejects a missing consumed piece, altered placed/unplaced decision,
 placement-order or trace mismatch, broken parent chain, inconsistent derived
 occupied identity, changed settlement bounds, phase-capture toggle, or invalid
 cumulative phase ledger. The scheduler quantum alone is deliberately absent
-from the request fingerprint.
+from the request fingerprint. Cyclic or overlong ancestry is rejected before
+hashing, and resume reconstructs the full state chain to sanitize all
+continuation-relevant private geometry caches.
 
 Stage 5 shares only archive mechanics: exact admission validation, canonical
 deduplication, namespace storage, and terminal complete dominance. Complete and

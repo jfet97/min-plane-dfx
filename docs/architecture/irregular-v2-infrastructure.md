@@ -205,7 +205,11 @@ unplaced, placement order and per-piece traces must agree with that chain, and
 derived occupied geometry must recompute exactly. The integrity hash covers the
 retained lineage and ledgers. Runtime/evaluation settlement bounds and
 phase-capture policy are fingerprinted; only the completed-piece scheduler
-quantum may change between resumes.
+quantum may change between resumes. Lineage traversal is cycle checked and
+bounded by the committed cursor. After validation, every retained state is
+rebuilt from exact placed geometry and decision arrays, so private canonical,
+contact-signature, and spatial-index caches are authoritative rather than
+trusted checkpoint payload.
 
 An additional observer-only experimental complete cohort makes one explicit
 place/defer decision by moving the first pending piece to a second pass. Its
