@@ -11,21 +11,22 @@ cancellation, history, or timeout behavior.
 | Triangle-20 | `2000 x 2700` | collision hash `371db269...`, area `74,428.143126 mm2`, zero canonical cavities, 20/20 pieces | `12.702 s` |
 | Mixed-61 | `2000 x 2700` | fitted hash `ef2b783a...`, area `391,605.850174 mm2`, zero canonical cavities, 61/61 pieces | `52.535 s` |
 | Shapes-17 | `2000 x 2700` | collision hash `c640c06f...`, area `304,499.845650 mm2`, zero canonical cavities, 17/17 pieces | `6.489 s` |
-| Triangle-20 | `700 x 500` | collision hash `371db269...`, area `74,428.143126 mm2`, zero canonical cavities, 20/20 pieces | `13.673 s` |
-| Mixed-61 | `700 x 500` | collision hash `04420f4a...`, area `345,342.264687 mm2`, zero canonical cavities, 45/61 pieces | `60.240 s` |
-| Shapes-17 | `700 x 500` | collision hash `00ba6de8...`, area `303,852.763787 mm2`, zero canonical cavities, 17/17 pieces | `9.681 s` |
+| Triangle-20 | `600 x 400` | collision hash `371db269...`, area `74,428.143126 mm2`, zero canonical cavities, 20/20 pieces | `12.761 s` |
+| Mixed-61 | `600 x 400` | collision hash `120f5f1e...`, area `232,800.043098 mm2`, zero canonical cavities, 24/61 pieces | `3.726 s` |
+| Shapes-17 | `600 x 400` | collision hash `510225fc...`, area `228,616.694352 mm2`, at most one canonical cavity, 13/17 pieces | `9.326 s` |
 
 The exact collision and fitted hashes, placed/unplaced partitions, area and
 cavity limits, and generous runtime ceilings live in
 `scripts/irregular-compact-six-baselines.ts`. The observed runtimes above came
-from one sequential strict run at `976b6da`; they are measurements, not exact
+from one sequential strict run at `7b71611`; they are measurements, not exact
 timing assertions. Portable reports and renders are under
 [`../artifacts/current-compact-baselines/`](../artifacts/current-compact-baselines/).
 
-Triangle-20 retains the same canonical geometry on both sheets. Shapes-17 uses
-the constrained capacity path on `700 x 500` but still places every piece.
-Mixed-61 cannot place every piece on `700 x 500`; the exact capacity baseline
-there is therefore an honest 45 placed / 16 unplaced result.
+Triangle-20 retains the same canonical geometry on both sheets. On
+`600 x 400`, Shapes-17 settles 13 placed / 4 unplaced and Mixed-61 settles
+24 placed / 37 unplaced. Mixed-61 is preflight-proven impossible and therefore
+bypasses complete construction; Shapes-17 remains inconclusive and still pays
+for complete construction before capacity search.
 
 ## Focused Correctness Gate
 

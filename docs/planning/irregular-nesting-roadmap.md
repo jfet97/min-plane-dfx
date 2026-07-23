@@ -1,7 +1,7 @@
 # Irregular Nesting Roadmap
 
 This is the active forward roadmap for convex irregular nesting after the
-six-baseline gate at `976b6da`.
+`600 x 400` baseline replacement at `7b71611`.
 It contains only uncompleted work. Architecture and current behavior
 live in [`../architecture/irregular-v2-infrastructure.md`](../architecture/irregular-v2-infrastructure.md);
 past decisions live under [`../history/`](../history/README.md).
@@ -27,11 +27,11 @@ Current exact production baselines are:
 | Triangle-20 | `2000 x 2700` | 20/20 | `74,428.143126 mm2` | 0 | `12.702 s` | [`triangle-20-2000x2700.png`](../artifacts/current-compact-baselines/triangle-20-2000x2700.png) |
 | Mixed-61 | `2000 x 2700` | 61/61 | `391,605.850174 mm2` | 0 | `52.535 s` | [`mixed-61-2000x2700.png`](../artifacts/current-compact-baselines/mixed-61-2000x2700.png) |
 | Shapes-17 | `2000 x 2700` | 17/17 | `304,499.845650 mm2` | 0 | `6.489 s` | [`shapes-17-2000x2700.png`](../artifacts/current-compact-baselines/shapes-17-2000x2700.png) |
-| Triangle-20 | `700 x 500` | 20/20 | `74,428.143126 mm2` | 0 | `13.673 s` | [`triangle-20-700x500.png`](../artifacts/current-compact-baselines/triangle-20-700x500.png) |
-| Mixed-61 | `700 x 500` | 45/61 | `345,342.264687 mm2` | 0 | `60.240 s` | [`mixed-61-700x500.png`](../artifacts/current-compact-baselines/mixed-61-700x500.png) |
-| Shapes-17 | `700 x 500` | 17/17 | `303,852.763787 mm2` | 0 | `9.681 s` | [`shapes-17-700x500.png`](../artifacts/current-compact-baselines/shapes-17-700x500.png) |
+| Triangle-20 | `600 x 400` | 20/20 | `74,428.143126 mm2` | 0 | `12.761 s` | [`triangle-20-600x400.png`](../artifacts/current-compact-baselines/triangle-20-600x400.png) |
+| Mixed-61 | `600 x 400` | 24/61 | `232,800.043098 mm2` | 0 | `3.726 s` | [`mixed-61-600x400.png`](../artifacts/current-compact-baselines/mixed-61-600x400.png) |
+| Shapes-17 | `600 x 400` | 13/17 | `228,616.694352 mm2` | 1 | `9.326 s` | [`shapes-17-600x400.png`](../artifacts/current-compact-baselines/shapes-17-600x400.png) |
 
-Runtime observations are from one sequential strict run at `976b6da` on
+Runtime observations are from one sequential strict run at `7b71611` on
 2026-07-23, Node `v24.16.0`, V8 `13.6.233.17-node.49`, macOS arm64. They are
 measured baselines, not deterministic acceptance thresholds. The executable
 gate is `pnpm gate:compact-six-baselines`; reports and renders are in
@@ -68,6 +68,12 @@ deferred identical-sheet continuation are recorded in
 [`intrinsic-capacity-mode.md`](./intrinsic-capacity-mode.md). Implementation
 evidence is in
 [`../research/intrinsic-capacity-mode-implementation.md`](../research/intrinsic-capacity-mode-implementation.md).
+
+The first version does not close the inconclusive-sheet double-work problem:
+captured exact prefixes become terminal incumbents, not continuation states.
+The next capacity revision must compare protected warm-prefix continuation
+against cold capacity and may use the documented `10%` waste allowance only as
+a routing heuristic, never as an exact impossibility proof.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

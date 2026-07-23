@@ -10,7 +10,7 @@ baselines.
 - [`current-compact-baselines/`](./current-compact-baselines/): complete,
   Chromium-rendered PNG, SVG, and JSON evidence for the six durable Compact
   baselines: Triangle-20, Mixed-61, and Shapes-17 on both `2000 x 2700` and
-  `700 x 500`.
+  `600 x 400`.
 - [`intrinsic-capacity-v1/`](./intrinsic-capacity-v1/): constrained-sheet
   capacity gate evidence — sheet-outline SVG/PNG renders of representative
   exact partial layouts, the combined strict `gate:capacity` report with full

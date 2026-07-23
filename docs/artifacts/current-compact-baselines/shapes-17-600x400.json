@@ -1,0 +1,1197 @@
+{
+  "fixture": "shapes-17",
+  "sheet": {
+    "width": 600,
+    "height": 400
+  },
+  "sourceCommit": "7b71611547518b7bfb6478b64efac8e4597401db",
+  "runtime": {
+    "elapsedMs": 9325.549584,
+    "node": "v24.16.0",
+    "v8": "13.6.233.17-node.49"
+  },
+  "result": {
+    "placedCount": 13,
+    "unplacedCount": 4,
+    "unplacedPieceIds": [
+      "shapes-17-10",
+      "shapes-17-12",
+      "shapes-17-16",
+      "shapes-17-4"
+    ],
+    "collisionIdentitySha256": "510225fc9dba197e1b56d6f1d3ebd70963b13cdfcb23c567acd14b56653054a8",
+    "fittedCanonicalSha256": "e73b0cfa3f10056aa4bab547c928384300a41e81c35737a98014ecef2956a90f",
+    "canonicalTopology": {
+      "enclosedCavityCount": 1,
+      "largestOccupiedHullGapRatio": 0.1789282979940511,
+      "occupiedEnvelopeAspectRatio": 1.5738274403618693,
+      "positiveContactComponentCount": 7,
+      "isolatedPieceCount": 4,
+      "largestPositiveContactComponentSize": 4,
+      "largestPositiveContactComponentRatio": 0.3076923076923077
+    },
+    "bounds": {
+      "width": 599.836,
+      "height": 381.132,
+      "area": 228616.69435200002,
+      "span": 980.9680000000001
+    },
+    "score": {
+      "unplacedCount": 4,
+      "sharedCollisionBoundaryLengthMm": 368.469,
+      "sharedCollisionBoundaryContactUnits": 3.814985,
+      "sharedCollisionBoundaryContactBand": 3,
+      "nearCompleteStructuralContactCount": 3,
+      "dominantNearCompleteStructuralContactCount": 1,
+      "largestNetFreeMaterialRegionAreaMm2": 66911.99892750004,
+      "freeMaterialRegionCount": 2,
+      "freeMaterialHoleCount": 6,
+      "freeMaterialSliverMetric": 750.8470646163887,
+      "collisionBoundsWorstNormalizedSheetConsumption": 0.9997266666666667,
+      "collisionBoundsNormalizedSpanSum": 1.9525566666666667,
+      "collisionBoundsAreaMm2": 228616.69435200002,
+      "collisionBoundsSpanMm": 980.9680000000001,
+      "occupiedHullWasteRatio": 0.180618,
+      "collisionBoundsBottomMm": 0,
+      "collisionBoundsLeftMm": 0,
+      "freeMaterialSnapshot": {
+        "sheet": {
+          "width": 600,
+          "height": 400,
+          "label": "600x400"
+        },
+        "regions": [
+          {
+            "boundary": {
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 330.876,
+                  "y": 0
+                },
+                {
+                  "x": 320.247,
+                  "y": 2.115
+                },
+                {
+                  "x": 310.237,
+                  "y": 6.262
+                },
+                {
+                  "x": 301.228,
+                  "y": 12.282
+                },
+                {
+                  "x": 293.565,
+                  "y": 19.945
+                },
+                {
+                  "x": 287.545,
+                  "y": 28.955
+                },
+                {
+                  "x": 283.399,
+                  "y": 38.967
+                },
+                {
+                  "x": 281.285,
+                  "y": 49.596
+                },
+                {
+                  "x": 281.285,
+                  "y": 60.432
+                },
+                {
+                  "x": 283.4,
+                  "y": 71.06
+                },
+                {
+                  "x": 287.547,
+                  "y": 81.071
+                },
+                {
+                  "x": 293.567,
+                  "y": 90.08
+                },
+                {
+                  "x": 301.23,
+                  "y": 97.743
+                },
+                {
+                  "x": 310.24,
+                  "y": 103.762
+                },
+                {
+                  "x": 320.252,
+                  "y": 107.909
+                },
+                {
+                  "x": 330.881,
+                  "y": 110.023
+                },
+                {
+                  "x": 341.716,
+                  "y": 110.023
+                },
+                {
+                  "x": 352.345,
+                  "y": 107.908
+                },
+                {
+                  "x": 362.355,
+                  "y": 103.761
+                },
+                {
+                  "x": 371.365,
+                  "y": 97.741
+                },
+                {
+                  "x": 379.028,
+                  "y": 90.078
+                },
+                {
+                  "x": 385.047,
+                  "y": 81.068
+                },
+                {
+                  "x": 389.194,
+                  "y": 71.056
+                },
+                {
+                  "x": 391.308,
+                  "y": 60.427
+                },
+                {
+                  "x": 391.308,
+                  "y": 49.591
+                },
+                {
+                  "x": 389.192,
+                  "y": 38.963
+                },
+                {
+                  "x": 385.046,
+                  "y": 28.952
+                },
+                {
+                  "x": 379.025,
+                  "y": 19.943
+                },
+                {
+                  "x": 371.363,
+                  "y": 12.28
+                },
+                {
+                  "x": 362.353,
+                  "y": 6.261
+                },
+                {
+                  "x": 352.34,
+                  "y": 2.114
+                },
+                {
+                  "x": 341.711,
+                  "y": 0
+                },
+                {
+                  "x": 600,
+                  "y": 0
+                },
+                {
+                  "x": 600,
+                  "y": 400
+                },
+                {
+                  "x": 0,
+                  "y": 400
+                }
+              ]
+            },
+            "holes": [
+              {
+                "points": [
+                  {
+                    "x": 161.83,
+                    "y": 1.038
+                  },
+                  {
+                    "x": 206.352,
+                    "y": 107.89
+                  },
+                  {
+                    "x": 312.313,
+                    "y": 1.038
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 489.332,
+                    "y": 11.441
+                  },
+                  {
+                    "x": 470.34,
+                    "y": 12.687
+                  },
+                  {
+                    "x": 456.836,
+                    "y": 15.372
+                  },
+                  {
+                    "x": 443.798,
+                    "y": 19.798
+                  },
+                  {
+                    "x": 431.448,
+                    "y": 25.888
+                  },
+                  {
+                    "x": 420,
+                    "y": 33.538
+                  },
+                  {
+                    "x": 409.647,
+                    "y": 42.616
+                  },
+                  {
+                    "x": 400.569,
+                    "y": 52.969
+                  },
+                  {
+                    "x": 392.919,
+                    "y": 64.417
+                  },
+                  {
+                    "x": 386.829,
+                    "y": 76.767
+                  },
+                  {
+                    "x": 382.403,
+                    "y": 89.805
+                  },
+                  {
+                    "x": 379.718,
+                    "y": 103.309
+                  },
+                  {
+                    "x": 378.472,
+                    "y": 122.301
+                  },
+                  {
+                    "x": 326.492,
+                    "y": 122.301
+                  },
+                  {
+                    "x": 319.082,
+                    "y": 123.475
+                  },
+                  {
+                    "x": 312.024,
+                    "y": 127.071
+                  },
+                  {
+                    "x": 306.423,
+                    "y": 132.672
+                  },
+                  {
+                    "x": 302.827,
+                    "y": 139.73
+                  },
+                  {
+                    "x": 301.653,
+                    "y": 147.14
+                  },
+                  {
+                    "x": 301.653,
+                    "y": 207.966
+                  },
+                  {
+                    "x": 302.827,
+                    "y": 215.376
+                  },
+                  {
+                    "x": 306.423,
+                    "y": 222.434
+                  },
+                  {
+                    "x": 312.024,
+                    "y": 228.035
+                  },
+                  {
+                    "x": 319.082,
+                    "y": 231.631
+                  },
+                  {
+                    "x": 326.492,
+                    "y": 232.805
+                  },
+                  {
+                    "x": 412.157,
+                    "y": 232.805
+                  },
+                  {
+                    "x": 412.157,
+                    "y": 122.301
+                  },
+                  {
+                    "x": 479.237,
+                    "y": 122.301
+                  },
+                  {
+                    "x": 534.489,
+                    "y": 232.805
+                  },
+                  {
+                    "x": 592.987,
+                    "y": 232.805
+                  },
+                  {
+                    "x": 592.987,
+                    "y": 122.301
+                  },
+                  {
+                    "x": 489.332,
+                    "y": 122.301
+                  },
+                  {
+                    "x": 489.332,
+                    "y": 121.945
+                  },
+                  {
+                    "x": 599.836,
+                    "y": 121.945
+                  },
+                  {
+                    "x": 599.836,
+                    "y": 11.441
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 57.258,
+                    "y": 36.092
+                  },
+                  {
+                    "x": 0,
+                    "y": 107.892
+                  },
+                  {
+                    "x": 20.436,
+                    "y": 197.425
+                  },
+                  {
+                    "x": 103.177,
+                    "y": 237.27
+                  },
+                  {
+                    "x": 185.918,
+                    "y": 197.423
+                  },
+                  {
+                    "x": 206.352,
+                    "y": 107.89
+                  },
+                  {
+                    "x": 149.093,
+                    "y": 36.092
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 217.42,
+                    "y": 105.546
+                  },
+                  {
+                    "x": 185.918,
+                    "y": 197.423
+                  },
+                  {
+                    "x": 185.919,
+                    "y": 197.423
+                  },
+                  {
+                    "x": 132.887,
+                    "y": 289.278
+                  },
+                  {
+                    "x": 185.919,
+                    "y": 381.132
+                  },
+                  {
+                    "x": 291.983,
+                    "y": 381.132
+                  },
+                  {
+                    "x": 345.015,
+                    "y": 289.278
+                  },
+                  {
+                    "x": 291.983,
+                    "y": 197.423
+                  },
+                  {
+                    "x": 283.046,
+                    "y": 197.423
+                  },
+                  {
+                    "x": 314.547,
+                    "y": 105.546
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 493.711,
+                    "y": 151.251
+                  },
+                  {
+                    "x": 375.78,
+                    "y": 269.182
+                  },
+                  {
+                    "x": 382.404,
+                    "y": 269.182
+                  },
+                  {
+                    "x": 373.828,
+                    "y": 270.027
+                  },
+                  {
+                    "x": 365.336,
+                    "y": 272.603
+                  },
+                  {
+                    "x": 357.507,
+                    "y": 276.787
+                  },
+                  {
+                    "x": 350.646,
+                    "y": 282.418
+                  },
+                  {
+                    "x": 345.015,
+                    "y": 289.279
+                  },
+                  {
+                    "x": 340.831,
+                    "y": 297.108
+                  },
+                  {
+                    "x": 338.255,
+                    "y": 305.6
+                  },
+                  {
+                    "x": 337.41,
+                    "y": 314.176
+                  },
+                  {
+                    "x": 337.41,
+                    "y": 364.951
+                  },
+                  {
+                    "x": 338.476,
+                    "y": 370.31
+                  },
+                  {
+                    "x": 341.805,
+                    "y": 375.291
+                  },
+                  {
+                    "x": 346.786,
+                    "y": 378.62
+                  },
+                  {
+                    "x": 352.145,
+                    "y": 379.686
+                  },
+                  {
+                    "x": 423.075,
+                    "y": 379.686
+                  },
+                  {
+                    "x": 430.485,
+                    "y": 378.512
+                  },
+                  {
+                    "x": 437.543,
+                    "y": 374.916
+                  },
+                  {
+                    "x": 443.144,
+                    "y": 369.315
+                  },
+                  {
+                    "x": 446.74,
+                    "y": 362.257
+                  },
+                  {
+                    "x": 447.914,
+                    "y": 354.847
+                  },
+                  {
+                    "x": 447.914,
+                    "y": 356.609
+                  },
+                  {
+                    "x": 470.991,
+                    "y": 379.686
+                  },
+                  {
+                    "x": 535.341,
+                    "y": 379.686
+                  },
+                  {
+                    "x": 558.418,
+                    "y": 356.609
+                  },
+                  {
+                    "x": 558.418,
+                    "y": 269.182
+                  },
+                  {
+                    "x": 493.711,
+                    "y": 269.182
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 74.194,
+                    "y": 229.441
+                  },
+                  {
+                    "x": 68.616,
+                    "y": 230.211
+                  },
+                  {
+                    "x": 63.162,
+                    "y": 231.74
+                  },
+                  {
+                    "x": 57.901,
+                    "y": 234
+                  },
+                  {
+                    "x": 52.889,
+                    "y": 236.957
+                  },
+                  {
+                    "x": 48.177,
+                    "y": 240.565
+                  },
+                  {
+                    "x": 43.806,
+                    "y": 244.777
+                  },
+                  {
+                    "x": 39.807,
+                    "y": 249.543
+                  },
+                  {
+                    "x": 36.213,
+                    "y": 254.812
+                  },
+                  {
+                    "x": 33.043,
+                    "y": 260.529
+                  },
+                  {
+                    "x": 30.325,
+                    "y": 266.643
+                  },
+                  {
+                    "x": 28.073,
+                    "y": 273.094
+                  },
+                  {
+                    "x": 26.277,
+                    "y": 279.919
+                  },
+                  {
+                    "x": 24.241,
+                    "y": 293.88
+                  },
+                  {
+                    "x": 24.218,
+                    "y": 308.316
+                  },
+                  {
+                    "x": 26.216,
+                    "y": 322.613
+                  },
+                  {
+                    "x": 30.142,
+                    "y": 336.164
+                  },
+                  {
+                    "x": 32.854,
+                    "y": 342.68
+                  },
+                  {
+                    "x": 35.967,
+                    "y": 348.762
+                  },
+                  {
+                    "x": 39.496,
+                    "y": 354.447
+                  },
+                  {
+                    "x": 43.418,
+                    "y": 359.677
+                  },
+                  {
+                    "x": 47.699,
+                    "y": 364.404
+                  },
+                  {
+                    "x": 52.312,
+                    "y": 368.579
+                  },
+                  {
+                    "x": 57.218,
+                    "y": 372.153
+                  },
+                  {
+                    "x": 62.379,
+                    "y": 375.083
+                  },
+                  {
+                    "x": 67.749,
+                    "y": 377.326
+                  },
+                  {
+                    "x": 73.269,
+                    "y": 378.846
+                  },
+                  {
+                    "x": 78.881,
+                    "y": 379.615
+                  },
+                  {
+                    "x": 84.512,
+                    "y": 379.615
+                  },
+                  {
+                    "x": 90.09,
+                    "y": 378.845
+                  },
+                  {
+                    "x": 95.544,
+                    "y": 377.315
+                  },
+                  {
+                    "x": 100.805,
+                    "y": 375.055
+                  },
+                  {
+                    "x": 105.817,
+                    "y": 372.099
+                  },
+                  {
+                    "x": 110.529,
+                    "y": 368.49
+                  },
+                  {
+                    "x": 114.9,
+                    "y": 364.279
+                  },
+                  {
+                    "x": 118.899,
+                    "y": 359.512
+                  },
+                  {
+                    "x": 122.493,
+                    "y": 354.244
+                  },
+                  {
+                    "x": 125.663,
+                    "y": 348.527
+                  },
+                  {
+                    "x": 128.381,
+                    "y": 342.412
+                  },
+                  {
+                    "x": 130.633,
+                    "y": 335.962
+                  },
+                  {
+                    "x": 132.429,
+                    "y": 329.137
+                  },
+                  {
+                    "x": 134.464,
+                    "y": 315.175
+                  },
+                  {
+                    "x": 134.488,
+                    "y": 300.74
+                  },
+                  {
+                    "x": 132.49,
+                    "y": 286.443
+                  },
+                  {
+                    "x": 128.564,
+                    "y": 272.891
+                  },
+                  {
+                    "x": 125.852,
+                    "y": 266.376
+                  },
+                  {
+                    "x": 122.739,
+                    "y": 260.294
+                  },
+                  {
+                    "x": 119.21,
+                    "y": 254.608
+                  },
+                  {
+                    "x": 115.288,
+                    "y": 249.379
+                  },
+                  {
+                    "x": 111.007,
+                    "y": 244.651
+                  },
+                  {
+                    "x": 106.394,
+                    "y": 240.477
+                  },
+                  {
+                    "x": 101.488,
+                    "y": 236.903
+                  },
+                  {
+                    "x": 96.327,
+                    "y": 233.972
+                  },
+                  {
+                    "x": 90.957,
+                    "y": 231.729
+                  },
+                  {
+                    "x": 85.437,
+                    "y": 230.21
+                  },
+                  {
+                    "x": 79.825,
+                    "y": 229.441
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "boundary": {
+              "points": [
+                {
+                  "x": 407.957,
+                  "y": 269.182
+                },
+                {
+                  "x": 447.914,
+                  "y": 269.182
+                },
+                {
+                  "x": 447.914,
+                  "y": 309.139
+                },
+                {
+                  "x": 446.937,
+                  "y": 300.47
+                },
+                {
+                  "x": 443.958,
+                  "y": 291.955
+                },
+                {
+                  "x": 439.158,
+                  "y": 284.317
+                },
+                {
+                  "x": 432.779,
+                  "y": 277.938
+                },
+                {
+                  "x": 425.141,
+                  "y": 273.138
+                },
+                {
+                  "x": 416.626,
+                  "y": 270.159
+                }
+              ]
+            },
+            "holes": []
+          }
+        ],
+        "diagnostics": []
+      },
+      "placementOrder": [
+        "shapes-17-14",
+        "shapes-17-15",
+        "shapes-17-6",
+        "shapes-17-13",
+        "shapes-17-7",
+        "shapes-17-1",
+        "shapes-17-2",
+        "shapes-17-3",
+        "shapes-17-5",
+        "shapes-17-8",
+        "shapes-17-9",
+        "shapes-17-11",
+        "shapes-17-17"
+      ],
+      "unplacedSourcePieceIds": [
+        "shapes-17-10",
+        "shapes-17-12",
+        "shapes-17-16",
+        "shapes-17-4"
+      ]
+    },
+    "portfolio": {
+      "status": "completed",
+      "terminationReason": "capacity_subset_settled",
+      "source": "shared-archive",
+      "placements": [
+        {
+          "pieceId": "shapes-17-14",
+          "sourcePieceId": "shapes-17-14",
+          "placementReference": {
+            "x": -4.854540378443862,
+            "y": -6.064
+          },
+          "transform": {
+            "translateX": 345.015,
+            "translateY": 197.423,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-15",
+          "sourcePieceId": "shapes-17-15",
+          "placementReference": {
+            "x": -5.175791218182361,
+            "y": -5.829
+          },
+          "transform": {
+            "translateX": 56.134,
+            "translateY": -8.674000000000007,
+            "rotationDeg": 25.713742974913643,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-6",
+          "sourcePieceId": "shapes-17-6",
+          "placementReference": {
+            "x": -5.265,
+            "y": -5.264
+          },
+          "transform": {
+            "translateX": 29.376999999999995,
+            "translateY": 383.403,
+            "rotationDeg": 176.06951450945465,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "shapes-17-13",
+          "sourcePieceId": "shapes-17-13",
+          "placementReference": {
+            "x": -6.454,
+            "y": -9.036
+          },
+          "transform": {
+            "translateX": 281.73400000000004,
+            "translateY": 59.607,
+            "rotationDeg": 54.46245935768658,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-7",
+          "sourcePieceId": "shapes-17-7",
+          "placementReference": {
+            "x": -7.878,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 206.352,
+            "translateY": 107.89,
+            "rotationDeg": 247.38010576374148,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-1",
+          "sourcePieceId": "shapes-17-1",
+          "placementReference": {
+            "x": -5.277,
+            "y": -5.277
+          },
+          "transform": {
+            "translateX": 299.443,
+            "translateY": -13.930000000000007,
+            "rotationDeg": 16.87296703752724,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-2",
+          "sourcePieceId": "shapes-17-2",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 412.157,
+            "translateY": 122.301,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-3",
+          "sourcePieceId": "shapes-17-3",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 337.40999999999997,
+            "translateY": 269.182,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-5",
+          "sourcePieceId": "shapes-17-5",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 489.332,
+            "translateY": 122.301,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-8",
+          "sourcePieceId": "shapes-17-8",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 493.711,
+            "translateY": 269.182,
+            "rotationDeg": 180,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-9",
+          "sourcePieceId": "shapes-17-9",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 447.914,
+            "translateY": 269.182,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-11",
+          "sourcePieceId": "shapes-17-11",
+          "placementReference": {
+            "x": -8.498,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 479.237,
+            "translateY": 122.301,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-17",
+          "sourcePieceId": "shapes-17-17",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 489.332,
+            "translateY": 11.441000000000003,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        }
+      ],
+      "unplacedPieceIds": [
+        "shapes-17-10",
+        "shapes-17-12",
+        "shapes-17-16",
+        "shapes-17-4"
+      ],
+      "score": {
+        "unplacedCount": 4,
+        "sharedCollisionBoundaryLengthMm": 368.469,
+        "sharedCollisionBoundaryContactUnits": 3.814985,
+        "sharedCollisionBoundaryContactBand": 3,
+        "nearCompleteStructuralContactCount": 3,
+        "dominantNearCompleteStructuralContactCount": 1,
+        "largestNetFreeMaterialRegionAreaMm2": 66911.99892750004,
+        "freeMaterialRegionCount": 2,
+        "freeMaterialHoleCount": 6,
+        "freeMaterialSliverMetric": 750.8470646163887,
+        "collisionBoundsWorstNormalizedSheetConsumption": 0.9997266666666667,
+        "collisionBoundsNormalizedSpanSum": 1.9525566666666667,
+        "collisionBoundsAreaMm2": 228616.69435200002,
+        "collisionBoundsSpanMm": 980.9680000000001,
+        "canonicalEnclosedCavityCount": 1
+      },
+      "diagnostics": [
+        {
+          "code": "capacity_subset_settled",
+          "message": "intrinsic-capacity-v1 settled 13 placed; 4 unplaced; origin cold-search; q0; hash 510225fc9dba197e1b56d6f1d3ebd70963b13cdfcb23c567acd14b56653054a8"
+        }
+      ]
+    },
+    "capacityTrace": {
+      "routing": "bounded-complete-archive-miss",
+      "preflight": {
+        "kind": "inconclusive",
+        "measurements": {
+          "pieceCount": 17,
+          "sheetWidthGrid": 600000,
+          "sheetHeightGrid": 400000,
+          "sheetDoubledAreaGrid2": "480000000000",
+          "minimumDoubledCollisionAreaSumGrid2": "420710030874",
+          "singletonInfeasiblePieceIds": []
+        }
+      },
+      "prefixes": {
+        "capturedCount": 9,
+        "fittingCount": 4,
+        "rejectedCount": 5,
+        "terminalizedCount": 3,
+        "descriptors": [
+          {
+            "role": "canonical-grid",
+            "depth": 4
+          },
+          {
+            "role": "canonical-grid",
+            "depth": 8
+          },
+          {
+            "role": "canonical-grid",
+            "depth": 12
+          },
+          {
+            "role": "legacy-absolute-envelope",
+            "depth": 4
+          },
+          {
+            "role": "legacy-absolute-envelope",
+            "depth": 8
+          },
+          {
+            "role": "legacy-absolute-envelope",
+            "depth": 12
+          },
+          {
+            "role": "open-pocket-first",
+            "depth": 4
+          },
+          {
+            "role": "open-pocket-first",
+            "depth": 8
+          },
+          {
+            "role": "open-pocket-first",
+            "depth": 12
+          }
+        ]
+      },
+      "prefixIncumbent": {
+        "sourceRole": "legacy-absolute-envelope",
+        "prefixDepth": 8,
+        "placedCount": 8,
+        "placedMaterialAreaMm2": 104194.3619575,
+        "selectedRotationDeg": 0,
+        "canonicalGeometryHash": "84a2696e8904d696aec367c327a4c7e1d4116dcc264872bc69632afa12c3f8cd"
+      },
+      "coldSearch": {
+        "beamWidth": 16,
+        "localLegalPlacementFanout": 3,
+        "placementEvaluationCap": 69632,
+        "placementEvaluationQuotaPerDepth": 4096,
+        "consumedPlacementEvaluations": 61774,
+        "auxiliaryPlacementEvaluations": 0,
+        "prunedByAttainableCount": 0,
+        "prunedByAttainableMaterial": 0,
+        "deduplicatedSuccessors": 29,
+        "fitRejectedCandidates": 40687,
+        "invalidCandidates": 0,
+        "endpointFitRejections": 0,
+        "completedDepths": 17,
+        "depthQuotaExhaustions": 15,
+        "pieceCount": 17,
+        "settlement": "evaluation-cap"
+      },
+      "selected": {
+        "placedCount": 13,
+        "placedDoubledMaterialAreaGrid2": "288251876435",
+        "enclosedCavityCount": 1,
+        "totalEnclosedCavityAreaMm2": 356.2907685,
+        "envelopeMaximumSideMm": 599.836,
+        "envelopeAreaMm2": 228616.69435200002,
+        "envelopeSpanMm": 980.9680000000001,
+        "canonicalGeometryHash": "510225fc9dba197e1b56d6f1d3ebd70963b13cdfcb23c567acd14b56653054a8",
+        "origin": "cold-search",
+        "unplacedCount": 4,
+        "placedMaterialAreaMm2": 144125.9382175,
+        "selectedRotationDeg": 0
+      },
+      "preflightRuntimeMs": 14.045957999999985,
+      "completeArchiveRuntimeMs": 5948.343833,
+      "prefixTerminalizationMs": 28.579625000000306,
+      "coldSearchMs": 3301.8215,
+      "runtimeMs": 3330.564125000001
+    }
+  },
+  "checks": {
+    "collisionIdentity": true,
+    "fittedCanonical": true,
+    "placedCount": true,
+    "unplacedCount": true,
+    "area": true,
+    "canonicalCavities": true,
+    "runtime": true
+  },
+  "passed": true,
+  "svgPath": "/private/tmp/min-plane-provenance/compact-600x400-7b71611/shapes-17-600x400.svg"
+}

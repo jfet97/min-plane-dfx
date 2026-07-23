@@ -342,7 +342,7 @@ Reject or revise the implementation if:
 Required positive evidence:
 
 - the six durable Triangle-20, Mixed-61, and Shapes-17 baselines pass on both
-  `2000 x 2700` and `700 x 500`;
+  `2000 x 2700` and `600 x 400`;
 - current complete results remain at least equivalent in quality wherever they
   fit;
 - multiple roomy sheets select the same complete motif;
@@ -375,6 +375,20 @@ inconclusive preflight
 This worst case must be reported honestly. It can be optimized later only with
 sound additional bounds or measured scheduling changes; it must not be hidden
 by reclassifying a bounded archive miss as an impossibility proof.
+
+This remains an unresolved architectural cost, not an accepted final design.
+The prefix incumbents preserve quality but do not continue the complete search
+or prevent duplicated work. A future version must evaluate protected reuse or
+handoff of exact complete-search partial states so inconclusive constrained
+sheets do not routinely pay for a full complete run followed by a cold restart.
+
+The user-requested `10%` waste allowance belongs in that routing decision, not
+in the exact proof: when
+`minimumCollisionAreaSum * 1.10 > sheetArea`, the coordinator may classify the
+request as likely constrained and prefer a capacity-first or warm-prefix route.
+It must report this as a heuristic and must not claim mathematical
+impossibility. Promotion requires a protected way to recover the complete
+all-piece result when the heuristic is pessimistic.
 
 ## Later: Identical-Sheet Continuation
 

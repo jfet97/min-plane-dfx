@@ -945,10 +945,10 @@ certificate, and `canonicalReferenceDecodeEnabled` schema field are historical o
 The compact production gate now contains six baselines. On `2000 x 2700`,
 Triangle-20 is `74,428.143126 mm2`, Mixed-61 is `391,605.850174 mm2`, and
 Shapes-17 is `304,499.845650 mm2`; all pieces are placed and canonical cavity
-count is zero. On `700 x 500`, Triangle-20 retains the exact same canonical
-motif, Shapes-17 reaches a different exact fitting 17-piece motif at
-`303,852.763787 mm2`, and Mixed-61 settles an exact 45-piece subset at
-`345,342.264687 mm2` with 16 pieces honestly unplaced. All six have zero
+count is zero. On `600 x 400`, Triangle-20 retains the exact same canonical
+motif, Shapes-17 settles an exact 13-piece subset at `228,616.694352 mm2` with
+four pieces unplaced and one canonical cavity, and Mixed-61 settles an exact
+24-piece subset at `232,800.043098 mm2` with 37 pieces unplaced and zero
 canonical cavities. Layout identity ignores translation, rigid quarter-turn,
 copy order, ring origin, and winding while preserving reflection and relative
 placement.
