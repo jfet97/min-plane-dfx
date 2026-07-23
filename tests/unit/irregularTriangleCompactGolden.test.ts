@@ -81,7 +81,7 @@ function makeTriangleRequest(): NestingRequest {
       allowGlobalMirror: true,
       timeoutMs: 60_000,
       workerMode: 'irregular-convex-v2',
-      historyMode: 'off',
+      historyMode: 'final',
       historyScope: 'winning_path',
       strategySelectionMode: 'single',
       strategyIds: [],
@@ -177,6 +177,15 @@ describe('compact-quality repeated triangle golden', () => {
       expect(computed.score.collisionBoundsBottomMm).toBeCloseTo(0, 6)
 
       expect(computed.portfolio.source).toBe('shared-archive')
+      expect(output.result.strategyResults[0]?.strategyId).toBe(
+        'irregular-convex-shared-archive'
+      )
+      expect(output.historyFrames).toHaveLength(TRIANGLE_COUNT + 1)
+      expect(output.historyFrames[0]?.placements).toEqual([])
+      expect(output.historyFrames[0]?.title).toBe('shared-archive-selected-layout-reveal')
+      expect(output.historyFrames.at(-1)?.placements).toHaveLength(TRIANGLE_COUNT)
+      expect(output.historyFrames.at(-1)?.remainingPieceIds).toEqual([])
+      expect(output.historyFrames.at(-1)?.title).toBe('shared-archive-final-selected')
       const canonicalIdentity = canonicalCollisionLayoutIdentity(
         computed.placedCollisionGeometries
       )

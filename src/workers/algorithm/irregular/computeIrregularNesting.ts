@@ -529,15 +529,7 @@ function materializeSharedArchiveResult(
     const stateSnapshots =
       input.request.options.historyMode === 'off'
         ? []
-        : [
-            {
-              stepIndex: input.preparedPieces.length,
-              beamRank: 0,
-              candidateCount: 1,
-              source: 'shared-archive' as const,
-              state
-            }
-          ]
+        : selectedLayoutRevealSnapshots(input.preparedPieces, placedCollisionGeometries)
     const portfolio = new IrregularPortfolioResult({
       status: 'completed',
       terminationReason: 'shared_archive_completed',
@@ -568,6 +560,40 @@ function materializeSharedArchiveResult(
             ? 0
             : Math.max(0, performance.now() - scoringStartedAt)
       }
+    }
+  })
+}
+
+/** Builds a truthful scrub sequence from prefixes of the selected exact layout. */
+function selectedLayoutRevealSnapshots(
+  preparedPieces: ReadonlyArray<IrregularPreparedPiece>,
+  placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+): ReadonlyArray<IrregularStateSnapshot> {
+  const preparedById = new Map(
+    preparedPieces.map((piece) => [piece.pieceId ?? piece.source.id, piece] as const)
+  )
+
+  return Array.from({ length: placedCollisionGeometries.length + 1 }, (_, stepIndex) => {
+    const placed = placedCollisionGeometries.slice(0, stepIndex)
+    const remainingPreparedPieces = placedCollisionGeometries
+      .slice(stepIndex)
+      .flatMap(({ placement }) => {
+        const piece = preparedById.get(placement.pieceId ?? placement.sourcePieceId)
+        return piece === undefined ? [] : [piece]
+      })
+
+    return {
+      stepIndex,
+      beamRank: 0,
+      candidateCount: 1,
+      source: 'shared-archive' as const,
+      state: new IrregularBeamState({
+        remainingPreparedPieces,
+        placedCollisionGeometries: placed,
+        placementOrder: placed.map(
+          ({ placement }) => placement.pieceId ?? placement.sourcePieceId
+        )
+      })
     }
   })
 }

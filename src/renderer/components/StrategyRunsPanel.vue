@@ -326,7 +326,7 @@ function subRunLabel(subRun: NestingSubRun): string {
             :title="
               !record.history
                 ? 'GIF export needs a saved history replay for this run.'
-                : 'Export an animated GIF from the first retained beam of this run.'
+                : 'Export an animated GIF from the primary history sequence of this run.'
             "
             @click="exportRunGif(record)"
           >

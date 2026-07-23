@@ -60,11 +60,14 @@ The `irregular-convex-v2` worker mode has two real algorithm paths. The ordinary
 requested-sheet path runs the convex beam and optional seeded GA portfolio. Its
 selected replay follows explicit parent links from the terminal beam state, so
 history contains the actual winning path rather than discarded alternatives.
-The eligible Compact quality path instead runs the sheetless shared archive,
-ranks complete canonical-exact endpoints intrinsically, and emits one selected
-terminal history frame. Neither path fabricates rectangle placements or fake
-beam ancestry. `GeometrySettings` supplies the complete schema-validated
-geometry and optimizer configuration for one run.
+The eligible Compact quality path instead runs the sheetless shared archive and
+ranks complete canonical-exact endpoints intrinsically. Its history is a
+selected-layout reveal: an empty frame followed by successive prefixes of the
+actual winning exact layout. This makes timeline and GIF inspection useful
+without claiming that those prefixes are search ancestry. Neither path
+fabricates rectangle placements or fake beam ancestry. `GeometrySettings`
+supplies the complete schema-validated geometry and optimizer configuration for
+one run.
 
 The core emits algorithm events from `src/workers/algorithm/events.ts`, not
 history frames and not worker-wire payloads. The event stream is the raw
@@ -85,9 +88,10 @@ ordinary irregular portfolio needs its selected result before it can exclude
 losing beam alternatives, so it replays the selected chromosome, follows its
 beam-state parent links, then emits only those tagged states to the same Effect
 queue. The compact-quality shared archive does not claim beam ancestry: it emits
-one truthful terminal snapshot tagged `shared-archive-final-selected` from the
-selected complete exact endpoint. The queue consumer performs NDJSON writes and live
-`history_frame` sends outside the algorithm.
+a truthful reveal of the selected complete exact endpoint, tagged
+`shared-archive-selected-layout-reveal` until the terminal
+`shared-archive-final-selected` frame. The queue consumer performs NDJSON
+writes and live `history_frame` sends outside the algorithm.
 
 ## Strategy Configuration
 

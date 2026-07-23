@@ -345,8 +345,6 @@ function computeIrregularWorkerResult(
 ): Effect.Effect<NestingResult, WorkerResponseFailureError> {
   const startedAt = new Date().toISOString()
   const startedAtMs = Date.now()
-  const strategyRunId = irregularStrategyRunId(request)
-
   const options =
     emitFrame === undefined &&
     emitPortfolioProgress === undefined &&
@@ -359,7 +357,10 @@ function computeIrregularWorkerResult(
                   emitFrame(
                     makeIrregularHistoryFrame({
                       request,
-                      strategyRunId,
+                      strategyRunId: irregularStrategyRunId(
+                        request,
+                        snapshot.source ?? 'beam'
+                      ),
                       snapshot,
                       beamWidth,
                       createdAt: new Date().toISOString()

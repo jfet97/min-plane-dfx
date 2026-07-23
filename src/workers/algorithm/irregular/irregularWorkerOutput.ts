@@ -14,6 +14,7 @@ import { IrregularPoint, IrregularPolygon } from '@shared/irregular/domain.js'
 import type { IrregularComputeResult, IrregularStateSnapshot } from './computeIrregularNesting.js'
 
 const IRREGULAR_BEAM_STRATEGY_ID = 'irregular-convex-windowed-beam'
+const IRREGULAR_SHARED_ARCHIVE_STRATEGY_ID = 'irregular-convex-shared-archive'
 const IRREGULAR_BEAM_STRATEGY_LABEL = 'Irregular convex windowed beam'
 const IRREGULAR_SHARED_ARCHIVE_STRATEGY_LABEL = 'Irregular convex shared archive'
 
@@ -24,8 +25,15 @@ export interface IrregularWorkerOutput {
 }
 
 /** Stable worker-run identifier shared by result output and every history frame. */
-export function irregularStrategyRunId(request: NestingRequest): string {
-  return request.strategyRunId ?? `${request.jobId}-${IRREGULAR_BEAM_STRATEGY_ID}`
+export function irregularStrategyRunId(
+  request: NestingRequest,
+  source: 'beam' | 'shared-archive' = 'beam'
+): string {
+  const strategyId =
+    source === 'shared-archive'
+      ? IRREGULAR_SHARED_ARCHIVE_STRATEGY_ID
+      : IRREGULAR_BEAM_STRATEGY_ID
+  return request.strategyRunId ?? `${request.jobId}-${strategyId}`
 }
 
 /** Maps one beam-selected state into its tagged transform-based history record. */
@@ -48,7 +56,9 @@ export function makeIrregularHistoryFrame(input: {
       : IRREGULAR_BEAM_STRATEGY_LABEL,
     stepIndex: snapshot.stepIndex,
     title: sharedArchive
-      ? 'shared-archive-final-selected'
+      ? snapshot.state.remainingPreparedPieces.length === 0
+        ? 'shared-archive-final-selected'
+        : 'shared-archive-selected-layout-reveal'
       : snapshot.stepIndex === 0
         ? 'initial-beam'
         : 'beam-state-selected',
@@ -74,8 +84,15 @@ export function makeIrregularWorkerOutput(input: {
   readonly computed: IrregularComputeResult
   readonly algorithmBenchmark: AlgorithmBenchmark
 }): IrregularWorkerOutput {
-  const strategyRunId = irregularStrategyRunId(input.request)
   const portfolio = input.computed.portfolio
+  const strategyRunId = irregularStrategyRunId(
+    input.request,
+    portfolio.source === 'shared-archive' ? 'shared-archive' : 'beam'
+  )
+  const strategyId =
+    portfolio.source === 'shared-archive'
+      ? IRREGULAR_SHARED_ARCHIVE_STRATEGY_ID
+      : IRREGULAR_BEAM_STRATEGY_ID
   const strategyLabel =
     portfolio.source === 'shared-archive'
       ? IRREGULAR_SHARED_ARCHIVE_STRATEGY_LABEL
@@ -105,7 +122,7 @@ export function makeIrregularWorkerOutput(input: {
   )
   const strategyResult = NestingStrategyResult.fromAlgorithm({
     strategyRunId,
-    strategyId: IRREGULAR_BEAM_STRATEGY_ID,
+    strategyId,
     strategyLabel,
     strategyDescription:
       portfolio.source === 'shared-archive'

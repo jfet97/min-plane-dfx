@@ -870,12 +870,15 @@ periodic boundaries, then emits the selected exact endpoint as `completed`.
 Irregular jobs use a `390000 ms` timeout floor; other worker modes retain their
 configured timeout.
 
-Selected archive history is a truthful one-frame terminal record labelled
-`shared-archive-final-selected`; it is not fabricated beam ancestry. The selected
-endpoint retains its exact canonical contact and hull metrics while free-material
-metrics are reconstructed on the requested sheet. Exact occupied-union cavity count
-is exposed separately as `canonicalEnclosedCavityCount`; it must not overwrite the
-sheet-space `freeMaterialHoleCount` measurement.
+Selected archive history truthfully reveals prefixes of the selected exact
+layout. Intermediate frames are labelled
+`shared-archive-selected-layout-reveal` and the terminal record is
+`shared-archive-final-selected`; this is not fabricated beam ancestry. The
+selected endpoint retains its exact canonical contact and hull metrics while
+free-material metrics are reconstructed on the requested sheet. Exact
+occupied-union cavity count is exposed separately as
+`canonicalEnclosedCavityCount`; it must not overwrite the sheet-space
+`freeMaterialHoleCount` measurement.
 
 The removed canonical-reference coordinator, fixed `2000 x 2700` decode, admission
 certificate, and `canonicalReferenceDecodeEnabled` schema field are historical only.

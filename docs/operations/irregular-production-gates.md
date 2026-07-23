@@ -84,8 +84,12 @@ search bounds. Do not misreport them as exhaustive coverage.
 - Internal archive checkpoints protect long construction phases, but they are
   not a substitute for the supervisor boundary.
 - Archive progress reports `shared_archive` and then `completed`.
-- Archive history is zero frames when history is off, otherwise one truthful
-  `shared-archive-final-selected` terminal snapshot. It is not beam ancestry.
+- Archive history is zero frames when history is off. Otherwise it reveals the
+  selected exact layout from empty through one additional final placement per
+  frame. Intermediate frames are tagged
+  `shared-archive-selected-layout-reveal`; the last is
+  `shared-archive-final-selected`. This supports timeline and GIF inspection
+  without claiming beam ancestry.
 - Canonical occupied-union cavities and requested-sheet free-material holes are
   distinct metrics.
 - The irregular request timeout floor is `390,000 ms`. Internal experimental

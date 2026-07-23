@@ -72,7 +72,7 @@ export function createRunHistoryGif(
     selectFirstBeamSequence(frames, strategyRunId)
   )
   if (sequence.length === 0) {
-    throw new Error('No first-beam history frames available for this run.')
+    throw new Error('No primary history frames available for this run.')
   }
 
   const size = fitCanvasSize(options.sheet, options.width ?? 720)

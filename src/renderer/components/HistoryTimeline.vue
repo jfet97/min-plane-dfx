@@ -58,6 +58,10 @@ function selectedTransform(frame: NestingHistoryFramePayload): string | null {
     ' mm'
   )
 }
+
+function isSharedArchiveFrame(frame: NestingHistoryFramePayload): boolean {
+  return isIrregularHistoryFrame(frame) && frame.title.startsWith('shared-archive-')
+}
 </script>
 
 <template>
@@ -124,8 +128,17 @@ function selectedTransform(frame: NestingHistoryFramePayload): string | null {
         </label>
       </div>
       <p class="frame-info">
-        Step {{ history.selectedStepPosition.value + 1 }} of {{ history.stepCount.value }}
-        <span v-if="history.selectedFrame.value" class="rank">
+        Frame {{ history.selectedStepPosition.value + 1 }} of {{ history.stepCount.value }}
+        <span
+          v-if="
+            history.selectedFrame.value &&
+            isSharedArchiveFrame(history.selectedFrame.value)
+          "
+          class="rank"
+        >
+          Selected layout reveal · {{ placedCount(history.selectedFrame.value) }} placed
+        </span>
+        <span v-else-if="history.selectedFrame.value" class="rank">
           History step {{ history.selectedFrame.value.stepIndex }} · Beam rank
           {{ history.selectedFrame.value.beamRank + 1 }}
         </span>
@@ -134,7 +147,13 @@ function selectedTransform(frame: NestingHistoryFramePayload): string | null {
         >
       </p>
       <div v-if="history.selectedFrame.value" class="state-info">
-        <span title="Number of committed placements in this retained beam state.">
+        <span
+          :title="
+            isSharedArchiveFrame(history.selectedFrame.value)
+              ? 'Number of pieces visible in this prefix of the selected exact layout.'
+              : 'Number of committed placements in this retained beam state.'
+          "
+        >
           Placed {{ placedCount(history.selectedFrame.value) }}
         </span>
         <span
@@ -143,7 +162,13 @@ function selectedTransform(frame: NestingHistoryFramePayload): string | null {
         >
           Free rects {{ freeRectangleCount(history.selectedFrame.value) }}
         </span>
-        <span title="Pieces still queued for future placement attempts in the selected beam state.">
+        <span
+          :title="
+            isSharedArchiveFrame(history.selectedFrame.value)
+              ? 'Pieces not yet visible in this selected-layout reveal.'
+              : 'Pieces still queued for future placement attempts in the selected beam state.'
+          "
+        >
           Remaining {{ remainingCount(history.selectedFrame.value) }}
         </span>
         <span title="Pieces already rejected as not fitting in the selected beam state.">
@@ -162,7 +187,14 @@ function selectedTransform(frame: NestingHistoryFramePayload): string | null {
           Transform {{ selectedTransform(history.selectedFrame.value) }}
         </span>
       </div>
-      <div v-if="history.selectedStepFrames.value.length > 1" class="beam-ranks">
+      <div
+        v-if="
+          history.selectedStepFrames.value.length > 1 &&
+          history.selectedFrame.value &&
+          !isSharedArchiveFrame(history.selectedFrame.value)
+        "
+        class="beam-ranks"
+      >
         <span class="muted">Beam rank</span>
         <button
           v-for="frame in history.selectedStepFrames.value"
@@ -175,8 +207,24 @@ function selectedTransform(frame: NestingHistoryFramePayload): string | null {
           {{ frame.beamRank + 1 }}
         </button>
       </div>
-      <p v-if="history.selectedStepFrames.value.length > 1" class="beam-note">
+      <p
+        v-if="
+          history.selectedStepFrames.value.length > 1 &&
+          history.selectedFrame.value &&
+          !isSharedArchiveFrame(history.selectedFrame.value)
+        "
+        class="beam-note"
+      >
         Beam rank is a snapshot at this step; rank 1 across steps can switch lineage.
+      </p>
+      <p
+        v-if="
+          history.selectedFrame.value &&
+          isSharedArchiveFrame(history.selectedFrame.value)
+        "
+        class="beam-note"
+      >
+        This reveals the selected exact layout piece by piece; it is not search ancestry.
       </p>
     </div>
   </div>

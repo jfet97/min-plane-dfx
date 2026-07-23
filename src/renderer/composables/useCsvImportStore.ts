@@ -320,7 +320,9 @@ function buildSyntheticStrategyResult(
     strategyRunId: subRun.subRunId,
     strategyId:
       subRun.layout?.kind === 'irregular'
-        ? 'irregular-convex-windowed-beam'
+        ? subRun.layout.source === 'shared-archive'
+          ? 'irregular-convex-shared-archive'
+          : 'irregular-convex-windowed-beam'
         : 'maxrects-beam-search',
     strategyLabel: `Subrun ${subRun.index + 1}`,
     status,
