@@ -108,6 +108,16 @@ export interface IntrinsicSharedArchivePortfolioOptions {
   readonly control?: IrregularNfpIfpControl
   readonly onPhaseCompleted?: (phase: 'direct' | 'periodic') => Effect.Effect<void>
   /**
+   * Read-only observation of one committed, uncapped, complete direct
+   * constructor state after its construction returned. Capacity prefix capture
+   * uses this without changing construction, archive order, evaluations,
+   * hashes, or source selection.
+   */
+  readonly onDirectConstructed?: (
+    role: IntrinsicSharedArchiveDirectRole,
+    state: IrregularBeamState
+  ) => void
+  /**
    * Includes bounded raw-crop Pareto witnesses in periodic continuation
    * selection so a retained-cell surrogate cannot silently remove a better
    * exact completed layout from the shared archive.
@@ -147,7 +157,10 @@ export function runIntrinsicSharedArchivePortfolio(
       ...(options.maximumDirectRuntimeMs === undefined
         ? {}
         : { maximumDirectRuntimeMs: options.maximumDirectRuntimeMs }),
-      ...(options.control === undefined ? {} : { control: options.control })
+      ...(options.control === undefined ? {} : { control: options.control }),
+      ...(options.onDirectConstructed === undefined
+        ? {}
+        : { onDirectConstructed: options.onDirectConstructed })
     })
     yield* options.onPhaseCompleted?.('direct') ?? Effect.void
 
@@ -205,7 +218,7 @@ export function runIntrinsicSharedArchiveDirectPortfolio(
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   options: Pick<
     IntrinsicSharedArchivePortfolioOptions,
-    'directCandidateEvaluationCaps' | 'maximumDirectRuntimeMs' | 'control'
+    'directCandidateEvaluationCaps' | 'maximumDirectRuntimeMs' | 'control' | 'onDirectConstructed'
   > = {}
 ): Effect.Effect<
   ReadonlyArray<IntrinsicSharedArchiveRun>,
@@ -256,6 +269,13 @@ export function runIntrinsicSharedArchiveDirectPortfolio(
           runtimeMs: Math.max(0, performance.now() - startedAt)
         })
         continue
+      }
+      if (
+        outcome.constructed.truncationReason === undefined &&
+        outcome.constructed.state.remainingPreparedPieces.length === 0 &&
+        outcome.constructed.state.unplacedPieceIds.length === 0
+      ) {
+        options.onDirectConstructed?.(role, outcome.constructed.state)
       }
       runs.push(
         normalizeIntrinsicSharedArchiveConstructedRun({

@@ -42,13 +42,14 @@ import {
   type CanonicalIntrinsicGapRegion
 } from './intrinsicGapRegions.js'
 
-const INTRINSIC_COORDINATE_DOMAIN = new SheetSpec({
+/** Placeholder sheet for candidate generation in the deferred sheetless domain. */
+export const INTRINSIC_COORDINATE_DOMAIN = new SheetSpec({
   width: 1,
   height: 1,
   label: 'intrinsic-sheetless-coordinate-domain'
 })
 
-const transformCandidateOrder = Order.combineAll<IrregularTransformCandidate>([
+export const transformCandidateOrder = Order.combineAll<IrregularTransformCandidate>([
   Order.mapInput(Order.Number, (transform) => transform.index),
   Order.mapInput(Order.Number, (transform) => transform.rotationDeg),
   Order.mapInput(Order.Boolean, (transform) => transform.mirrored),
@@ -1020,11 +1021,13 @@ function compareLocalScores(
   )
 }
 
-function canonicalLinearMetric(valueMm: number): number {
+/** Canonicalizes one linear millimeter metric to the deterministic 0.001 mm grid. */
+export function canonicalLinearMetric(valueMm: number): number {
   return Math.round(valueMm * 1_000)
 }
 
-function canonicalAreaMetric(valueMm2: number): number {
+/** Canonicalizes one square-millimeter metric to the deterministic 1e-6 mm2 grid. */
+export function canonicalAreaMetric(valueMm2: number): number {
   return Math.round(valueMm2 * 1_000_000)
 }
 
@@ -1052,7 +1055,8 @@ function canonicalCollisionAreaMm2(moving: TransformedCollisionGeometry): number
   return Number.isFinite(areaMm2) && areaMm2 > 0 ? areaMm2 : undefined
 }
 
-function originAnchorCandidates(
+/** Deterministic origin anchor for the first placement of an empty sheetless state. */
+export function originAnchorCandidates(
   moving: TransformedCollisionGeometry
 ): ReadonlyArray<IrregularPlacementCandidate> {
   const gridX = toGridMm(-moving.bounds.minX)
