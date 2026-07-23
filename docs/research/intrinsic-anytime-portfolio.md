@@ -150,6 +150,31 @@ projection omitted `warmPrefixLanes` even though the observers executed. It is
 not comparable evidence. The reporter was corrected and committed before the
 measurement was restarted.
 
+The committed artifact-capable measurement at
+`68168bc3692e73e65553c40af60cacc961cb2170` proves that continuation has
+material value on the prior serial regression:
+
+- the unchanged cold lane consumes `232,209` evaluations in about `9.01 s`
+  after approximately `51.90 s` of complete construction and places `55/61`;
+- `canonical-grid@30` reuses 30 placements, consumes `121,012` evaluations in
+  about `6.02 s`, and places `59/61`;
+- `open-pocket-first@30` reuses 30 placements, consumes `120,972` evaluations
+  in about `6.07 s`, and also places `59/61`;
+- on Triangle-20, no warm lane beats cold: the one count tie has a worse exact
+  partial compactness objective.
+
+The strict full paired run at reporter commit `4ac2707` passed in `181.86 s`.
+The artifact-capable Mixed-only rerun passed in `165.72 s` wall,
+`178.86 s` user CPU, and `0.90 s` system CPU, with `1,081,524,224` bytes
+maximum resident set size. Immutable exact source/input archives, report,
+checksums, all six warm SVGs, and inspected cold/best-warm PNGs are under
+`/private/tmp/min-plane-provenance/intrinsic-warm-prefix-68168bc/`.
+
+This result promotes warm continuation as scheduler-worthy work, not as a new
+unprotected production winner. Stage 4 must interleave checkpoints so the
+valuable warm lane starts before a complete miss, while preserving the legacy
+complete cohort's protected settlement contract.
+
 ## Remaining Stages
 
 1. Interleave protected complete and capacity checkpoints in deterministic
