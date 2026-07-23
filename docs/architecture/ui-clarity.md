@@ -20,6 +20,13 @@ explicit GA controls; it must not show MaxRects strategy controls as if they
 affected polygon placement. While a worker runs, surface its typed lifecycle or
 portfolio phase directly rather than a fabricated completion percentage.
 
+Within convex-polygon settings, the active execution path must also be explicit.
+Compact shows the sheet-independent shared archive and explains that requested-
+sheet q0/q90 fit happens afterward. Geometry and orientation controls remain
+visible because both irregular paths consume them. Beam, local-scoring, terminal-
+repair, and GA controls appear only on the ordinary requested-sheet path; they
+must not remain as apparently active knobs while Compact is selected.
+
 Do not invent result previews, scores, or history that were not emitted by the worker.
 
 ## Tooltips

@@ -14,6 +14,7 @@ import {
   IrregularTransformCandidate,
   type IrregularNestingSettings
 } from '@shared/irregular/domain.js'
+import { intrinsicSharedArchiveEligibility } from '@shared/irregular/executionMode.js'
 import { CollisionGeometryBuilder } from '../../irregular/collisionGeometryBuilder.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import {
@@ -151,7 +152,8 @@ export function computeIrregularNesting(
         totalPaddingMm: request.padding
       })
       const allowRotation = request.options.allowGlobalRotation && prepared.allowRotation
-      const allowMirror = (request.options.allowGlobalMirror ?? true) && (prepared.allowMirror ?? true)
+      const allowMirror =
+        (request.options.allowGlobalMirror ?? true) && (prepared.allowMirror ?? true)
       const transforms = yield* transformGenerator.generateTransforms({
         geometry: collisionGeometry,
         allowRotation,
@@ -312,7 +314,8 @@ function coordinateIntrinsicSharedArchive(
           new IrregularPortfolioError({
             operation: 'intrinsicSharedArchive',
             category: 'search',
-            message: 'intrinsic shared archive produced no exact endpoint fitting the requested sheet'
+            message:
+              'intrinsic shared archive produced no exact endpoint fitting the requested sheet'
           })
         )
       }
@@ -410,9 +413,7 @@ function runSingleSheetPortfolio(
       input.options?.emitDecisionTrace !== undefined
         ? { emitDecisionTrace: input.options.emitDecisionTrace }
         : {}),
-      ...(decodeRole !== undefined
-        ? { decisionTraceDecodeIdPrefix: `${decodeRole}:` }
-        : {}),
+      ...(decodeRole !== undefined ? { decisionTraceDecodeIdPrefix: `${decodeRole}:` } : {}),
       ...(input.options?.isCancelled !== undefined
         ? { isCancelled: input.options.isCancelled }
         : {}),
@@ -572,18 +573,7 @@ function materializeSharedArchiveResult(
 
 /** Explicit activation boundary for the production shared archive. */
 export function isIntrinsicSharedArchiveEligible(settings: IrregularNestingSettings): boolean {
-  const optimizer = settings.optimizer
-  const gaDisabled =
-    optimizer.gaEnabled === false ||
-    optimizer.baselineOnly === true ||
-    optimizer.gaTimeBudgetMs === 0 ||
-    (optimizer.gaGenerationBudget ?? 4) === 0 ||
-    (optimizer.gaEvaluationBudget ?? 128) === 0
-  return (
-    optimizer.intrinsicSharedArchiveEnabled === true &&
-    gaDisabled &&
-    optimizer.placementPolicyId !== 'short-side-fill'
-  )
+  return intrinsicSharedArchiveEligibility(settings.optimizer).eligible
 }
 
 function layoutScoreSummary(
@@ -657,8 +647,7 @@ export function preservePortfolioContactMetrics(
     sharedCollisionBoundaryContactUnits: portfolio.sharedCollisionBoundaryContactUnits,
     sharedCollisionBoundaryContactBand: portfolio.sharedCollisionBoundaryContactBand,
     nearCompleteStructuralContactCount: portfolio.nearCompleteStructuralContactCount,
-    dominantNearCompleteStructuralContactCount:
-      portfolio.dominantNearCompleteStructuralContactCount
+    dominantNearCompleteStructuralContactCount: portfolio.dominantNearCompleteStructuralContactCount
   }
 }
 

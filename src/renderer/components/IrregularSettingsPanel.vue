@@ -8,11 +8,12 @@ import {
   IrregularOptimizerSettings,
   type IrregularPlacementPolicyId
 } from '@shared/irregular/domain.js'
-import {
-  makeCompactQualityIrregularOptimizerSettings,
-  makeDefaultIrregularNestingSettings
-} from '@shared/irregular/defaults.js'
+import { makeDefaultIrregularNestingSettings } from '@shared/irregular/defaults.js'
 import type { NestingOptions } from '@shared/domain/nesting.js'
+import {
+  applyCompactQualityPreset,
+  irregularSettingsUiState
+} from '../utils/irregularSettingsUi.js'
 
 const props = defineProps<{
   settings?: NestingOptions['irregularSettings']
@@ -26,6 +27,20 @@ const emit = defineEmits<{
 const currentSettings = computed(() => props.settings ?? makeDefaultIrregularNestingSettings())
 const optimizer = computed(() => currentSettings.value.optimizer)
 const geometry = computed(() => currentSettings.value.geometry)
+const uiState = computed(() => irregularSettingsUiState(currentSettings.value))
+const compactArchiveActive = computed(() => uiState.value.mode === 'compact-shared-archive')
+const showLegacySearchControls = computed(() =>
+  uiState.value.visibleControlGroups.includes('legacy-beam')
+)
+const compactArchiveBlockedHelp = computed(() => {
+  if (uiState.value.compactArchiveBlockedReason === 'ga-active') {
+    return 'Compact was requested, but active GA budgets select the legacy requested-sheet path.'
+  }
+  if (uiState.value.compactArchiveBlockedReason === 'short-side-fill') {
+    return 'Compact was requested, but Short-side fill selects the legacy requested-sheet path.'
+  }
+  return undefined
+})
 const placementPolicyIds = computed(
   () => optimizer.value.placementPolicyIds ?? DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS
 )
@@ -40,8 +55,10 @@ const portfolioMayExceedTimeout = computed(
 )
 const transformCapHelp = computed(() => {
   const cap = optimizer.value.transformCap
-  if (cap === 1) return 'Identity only: 0°. The rotation and mirror gates cannot add another transform.'
-  if (cap < 4) return `Keeps the first ${cap} quarter-turns: 0°${cap >= 2 ? ', 90°' : ''}${cap >= 3 ? ', 180°' : ''}.`
+  if (cap === 1)
+    return 'Identity only: 0°. The rotation and mirror gates cannot add another transform.'
+  if (cap < 4)
+    return `Keeps the first ${cap} quarter-turns: 0°${cap >= 2 ? ', 90°' : ''}${cap >= 3 ? ', 180°' : ''}.`
   if (cap === 4) return 'Uses the four quarter-turns: 0°, 90°, 180°, and 270°.'
   return `Uses the four quarter-turns, then up to ${cap - 4} explicit or edge-derived orientations.`
 })
@@ -56,7 +73,8 @@ const beamWidthHelp = computed(() => {
   return `Keeps the best ${width} partial layouts after each expansion.`
 })
 const localCandidateFanoutHelp = computed(
-  () => `Keeps up to ${optimizer.value.localCandidateFanout} legal contact positions per piece before beam pruning.`
+  () =>
+    `Keeps up to ${optimizer.value.localCandidateFanout} legal contact positions per piece before beam pruning.`
 )
 const localRepairHelp = computed(() => {
   const budget = optimizer.value.localRepairBudget ?? 0
@@ -127,7 +145,11 @@ function replaceOptimizer(nextOptimizer: IrregularOptimizerSettings): void {
 }
 
 function useCompactQualityProfile(): void {
-  replaceOptimizer(makeCompactQualityIrregularOptimizerSettings())
+  emit('update', applyCompactQualityPreset(currentSettings.value))
+}
+
+function useLegacySearch(): void {
+  updateOptimizer({ intrinsicSharedArchiveEnabled: false })
 }
 
 function setLocalRepairEnabled(enabled: boolean): void {
@@ -158,28 +180,54 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
   if (nextPlacementPolicyId === undefined) return
   updateOptimizer({ placementPolicyIds: nextPolicyIds, placementPolicyId: nextPlacementPolicyId })
 }
-
 </script>
 
 <template>
   <section class="irregular-settings">
-    <div class="mode-summary">
-      <strong>Convex polygon nesting</strong>
-      <p>
-        Uses source outlines to build conservative convex collision polygons. The geometry, beam,
-        and portfolio controls below apply only to this algorithm.
+    <div class="mode-summary" :class="{ 'compact-active': compactArchiveActive }">
+      <div class="mode-heading">
+        <strong>Convex polygon nesting</strong>
+        <span class="mode-badge">
+          {{ compactArchiveActive ? 'Compact · shared archive' : 'Legacy · beam / GA' }}
+        </span>
+      </div>
+      <p v-if="compactArchiveActive">
+        Builds and ranks complete layouts in one sheet-independent shared archive. Requested-sheet
+        fit at 0° or 90° is applied afterward.
       </p>
+      <p v-else>
+        Builds and scores partial layouts against the requested sheet with the deterministic beam
+        and optional GA.
+      </p>
+      <p v-if="compactArchiveBlockedHelp" class="warning">{{ compactArchiveBlockedHelp }}</p>
       <button
+        v-if="!compactArchiveActive"
         type="button"
-        title="Apply the measured compact-search preset for small repeated-shape jobs. This replaces the optimizer settings below."
+        title="Select the production sheet-independent shared archive and replace the optimizer settings below."
         @click="useCompactQualityProfile"
       >
         Apply compact preset
       </button>
-      <p class="field-help">Sets reorder 4, beam 8, fanout 4, repair 8, transform cap 8, and edge contact.</p>
+      <button
+        v-else
+        type="button"
+        title="Return to the requested-sheet deterministic beam and optional GA controls."
+        @click="useLegacySearch"
+      >
+        Use legacy beam / GA
+      </button>
+      <p v-if="!compactArchiveActive" class="field-help">
+        Shared archive on · GA off · transform cap 8.
+      </p>
+      <p v-else class="field-help">
+        Beam, local scoring, repair, and GA settings are hidden because Compact does not consume
+        them.
+      </p>
     </div>
 
-    <h3 title="Controls how source curves and padding become conservative collision geometry.">Geometry</h3>
+    <h3 title="Controls how source curves and padding become conservative collision geometry.">
+      Geometry
+    </h3>
     <div class="grid">
       <label
         title="Maximum inward curve approximation error in millimeters while flattening DXF arcs and ellipses."
@@ -192,7 +240,9 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           :value="geometry.flatteningSagToleranceMm"
           @input="updateGeometryField('flatteningSagToleranceMm', $event)"
         />
-        <span class="field-help">Smaller follows curves more closely but creates more polygon vertices.</span>
+        <span class="field-help"
+          >Smaller follows curves more closely but creates more polygon vertices.</span
+        >
       </label>
       <label
         title="Extra conservative clearance added after flattening; it must be at least the sag tolerance."
@@ -205,76 +255,16 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
           :value="geometry.clearanceSafetyMarginMm"
           @input="updateGeometryField('clearanceSafetyMarginMm', $event)"
         />
-        <span class="field-help">Extra outward buffer after half of the total cutting padding.</span>
+        <span class="field-help"
+          >Extra outward buffer after half of the total cutting padding.</span
+        >
       </label>
     </div>
 
-    <h3 title="The deterministic baseline explores several partial layouts and retains only the best ones.">Deterministic beam</h3>
+    <h3 title="Controls the finite orientations available to both irregular execution paths.">
+      Orientations
+    </h3>
     <div class="grid">
-      <label
-        title="How many remaining pieces each beam state may reorder at one decision point. Higher values branch more heavily."
-      >
-        Reorder window
-        <input
-          type="number"
-          min="1"
-          step="1"
-          :value="optimizer.orderWindow"
-          @input="updateOptimizer({ orderWindow: Number(inputValue($event)) })"
-        />
-        <span class="field-help">{{ reorderWindowHelp }}</span>
-      </label>
-      <label
-        title="How many partial layouts survive each beam expansion. Higher values improve search breadth but can become expensive quickly."
-      >
-        Beam width
-        <input
-          type="number"
-          min="1"
-          step="1"
-          :value="optimizer.beamWidth"
-          @input="updateOptimizer({ beamWidth: Number(inputValue($event)) })"
-        />
-        <span class="field-help">{{ beamWidthHelp }}</span>
-      </label>
-      <label
-        title="How many legal local placements are retained per selected piece before whole-layout beam scoring."
-      >
-        Local candidate fanout
-        <input
-          type="number"
-          min="1"
-          step="1"
-          :value="optimizer.localCandidateFanout"
-          @input="updateOptimizer({ localCandidateFanout: Number(inputValue($event)) })"
-        />
-        <span class="field-help">{{ localCandidateFanoutHelp }}</span>
-      </label>
-      <label
-        class="checkbox-row span-2"
-        title="Run deterministic remove-and-reinsert improvements after the beam completes."
-      >
-        <input
-          type="checkbox"
-          :checked="localRepairEnabled"
-          @change="setLocalRepairEnabled(inputChecked($event))"
-        />
-        Enable local repair
-      </label>
-      <label
-        title="Maximum deterministic terminal repair iterations. Each iteration tries to remove and legally reinsert one placed piece."
-      >
-        Local repair budget
-        <input
-          type="number"
-          min="1"
-          step="1"
-          :disabled="!localRepairEnabled"
-          :value="optimizer.localRepairBudget ?? 0"
-          @input="updateOptimizer({ localRepairBudget: Number(inputValue($event)) })"
-        />
-        <span class="field-help">{{ localRepairHelp }}</span>
-      </label>
       <label
         title="Maximum orientation candidates generated for one prepared polygon. Cap 4 covers the four quarter-turns; larger caps also admit explicit and edge-derived angles."
       >
@@ -312,12 +302,18 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
             updateOptimizer({ transformAngleDeduplicationToleranceDeg: Number(inputValue($event)) })
           "
         />
-        <span class="field-help">Larger values merge nearly equal derived angles and reduce work.</span>
+        <span class="field-help"
+          >Larger values merge nearly equal derived angles and reduce work.</span
+        >
       </label>
     </div>
 
     <details>
-      <summary title="Adds non-quarter-turn orientations after the Transform cap has room beyond four.">Additional rotations</summary>
+      <summary
+        title="Adds non-quarter-turn orientations after the Transform cap has room beyond four."
+      >
+        Additional rotations
+      </summary>
       <div class="grid details-grid">
         <label
           class="span-2"
@@ -356,150 +352,240 @@ function togglePolicy(policyId: IrregularPlacementPolicyId): void {
       </div>
     </details>
 
-    <h3 title="Ranks legal contact positions for one piece before the beam compares whole partial layouts.">Local candidate scoring</h3>
-    <div class="grid">
-      <label
-        title="The one policy used by the deterministic beam. GA uses this only when policy mutation is disabled."
+    <template v-if="showLegacySearchControls">
+      <h3
+        title="The requested-sheet baseline explores partial layouts and retains only the best ones."
       >
-        Deterministic beam policy
-        <select
-          :value="placementPolicyId"
-          @change="
-            updateOptimizer({
-              placementPolicyId: selectValue($event) as IrregularPlacementPolicyId
-            })
-          "
-        >
-          <option value="balanced-compactness">Balanced compactness</option>
-          <option value="short-side-fill">Short-side fill</option>
-          <option value="edge-contact-then-balanced-compactness">Edge contact, then compactness</option>
-        </select>
-      </label>
-      <div class="policy-list" title="Policies that an enabled GA may choose among as chromosome values.">
-        <span>GA policy options</span>
-        <small class="field-help">
-          {{ portfolioEnabled ? 'GA may try any checked policy.' : 'Enable GA portfolio search to use these.' }}
-        </small>
+        Legacy deterministic beam
+      </h3>
+      <div class="grid">
         <label
-          v-for="policyId in DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS"
-          :key="policyId"
-          class="checkbox-row"
+          title="How many remaining pieces each beam state may reorder at one decision point. Higher values branch more heavily."
+        >
+          Reorder window
+          <input
+            type="number"
+            min="1"
+            step="1"
+            :value="optimizer.orderWindow"
+            @input="updateOptimizer({ orderWindow: Number(inputValue($event)) })"
+          />
+          <span class="field-help">{{ reorderWindowHelp }}</span>
+        </label>
+        <label
+          title="How many partial layouts survive each beam expansion. Higher values improve search breadth but can become expensive quickly."
+        >
+          Beam width
+          <input
+            type="number"
+            min="1"
+            step="1"
+            :value="optimizer.beamWidth"
+            @input="updateOptimizer({ beamWidth: Number(inputValue($event)) })"
+          />
+          <span class="field-help">{{ beamWidthHelp }}</span>
+        </label>
+        <label
+          title="How many legal local placements are retained per selected piece before whole-layout beam scoring."
+        >
+          Local candidate fanout
+          <input
+            type="number"
+            min="1"
+            step="1"
+            :value="optimizer.localCandidateFanout"
+            @input="updateOptimizer({ localCandidateFanout: Number(inputValue($event)) })"
+          />
+          <span class="field-help">{{ localCandidateFanoutHelp }}</span>
+        </label>
+        <label
+          class="checkbox-row span-2"
+          title="Run deterministic remove-and-reinsert improvements after the beam completes."
         >
           <input
             type="checkbox"
-            :checked="placementPolicyIds.includes(policyId)"
-            :disabled="!portfolioEnabled"
-            @change="togglePolicy(policyId)"
+            :checked="localRepairEnabled"
+            @change="setLocalRepairEnabled(inputChecked($event))"
           />
-          {{
-            policyId === 'balanced-compactness'
-              ? 'Balanced compactness'
-              : policyId === 'short-side-fill'
-                ? 'Short-side fill'
-                : 'Edge contact, then compactness'
-          }}
+          Enable local repair
+        </label>
+        <label
+          title="Maximum deterministic terminal repair iterations. Each iteration tries to remove and legally reinsert one placed piece."
+        >
+          Local repair budget
+          <input
+            type="number"
+            min="1"
+            step="1"
+            :disabled="!localRepairEnabled"
+            :value="optimizer.localRepairBudget ?? 0"
+            @input="updateOptimizer({ localRepairBudget: Number(inputValue($event)) })"
+          />
+          <span class="field-help">{{ localRepairHelp }}</span>
         </label>
       </div>
-    </div>
 
-    <h3 title="Runs a bounded genetic search after the deterministic beam and keeps only a better legal layout.">Portfolio search</h3>
-    <label
-      class="checkbox-row"
-      title="After the deterministic result, evaluates seeded genetic-search alternatives. This can take much longer."
-    >
-      <input
-        type="checkbox"
-        :checked="portfolioEnabled"
-        @change="setPortfolioEnabled(inputChecked($event))"
-      />
-      Enable GA portfolio after the deterministic beam
-    </label>
-    <p v-if="portfolioEnabled" class="field-help">
-      The GA starts from the beam result. Generation, evaluation, and time budgets are independent stop limits; the first one reached ends it.
-    </p>
-    <p v-if="portfolioMayExceedTimeout" class="warning">
-      The GA time budget is at least as long as the worker timeout. Increase the job timeout or
-      lower the GA time budget to avoid an intentional worker timeout.
-    </p>
-    <div v-if="portfolioEnabled" class="grid">
-      <label title="Number of chromosomes in each GA generation.">
-        Population
-        <input
-          type="number"
-          min="1"
-          step="1"
-          :value="optimizer.gaPopulation"
-          @input="updateOptimizer({ gaPopulation: Number(inputValue($event)) })"
-        />
-      </label>
-      <label title="Maximum generated populations after the deterministic baseline.">
-        Generation budget
-        <input
-          type="number"
-          min="0"
-          step="1"
-          :value="optimizer.gaGenerationBudget"
-          @input="updateOptimizer({ gaGenerationBudget: Number(inputValue($event)) })"
-        />
-      </label>
-      <label title="Maximum total chromosome decodes across every generation.">
-        Evaluation budget
-        <input
-          type="number"
-          min="0"
-          step="1"
-          :value="optimizer.gaEvaluationBudget"
-          @input="updateOptimizer({ gaEvaluationBudget: Number(inputValue($event)) })"
-        />
-      </label>
-      <label
-        title="Wall-clock budget for GA evaluations only. The whole worker is still bounded by the job timeout."
+      <h3 title="Ranks legal contact positions before the legacy beam compares partial layouts.">
+        Legacy local candidate scoring
+      </h3>
+      <div class="grid">
+        <label
+          title="The one policy used by the deterministic beam. GA uses this only when policy mutation is disabled."
+        >
+          Deterministic beam policy
+          <select
+            :value="placementPolicyId"
+            @change="
+              updateOptimizer({
+                placementPolicyId: selectValue($event) as IrregularPlacementPolicyId
+              })
+            "
+          >
+            <option value="balanced-compactness">Balanced compactness</option>
+            <option value="short-side-fill">Short-side fill</option>
+            <option value="edge-contact-then-balanced-compactness">
+              Edge contact, then compactness
+            </option>
+          </select>
+        </label>
+        <div
+          class="policy-list"
+          title="Policies that an enabled GA may choose among as chromosome values."
+        >
+          <span>GA policy options</span>
+          <small class="field-help">
+            {{
+              portfolioEnabled
+                ? 'GA may try any checked policy.'
+                : 'Enable GA portfolio search to use these.'
+            }}
+          </small>
+          <label
+            v-for="policyId in DEFAULT_IRREGULAR_PLACEMENT_POLICY_IDS"
+            :key="policyId"
+            class="checkbox-row"
+          >
+            <input
+              type="checkbox"
+              :checked="placementPolicyIds.includes(policyId)"
+              :disabled="!portfolioEnabled"
+              @change="togglePolicy(policyId)"
+            />
+            {{
+              policyId === 'balanced-compactness'
+                ? 'Balanced compactness'
+                : policyId === 'short-side-fill'
+                  ? 'Short-side fill'
+                  : 'Edge contact, then compactness'
+            }}
+          </label>
+        </div>
+      </div>
+
+      <h3
+        title="Runs a bounded genetic search after the deterministic beam and keeps only a better legal layout."
       >
-        GA time budget (ms)
-        <input
-          type="number"
-          min="0"
-          step="1000"
-          :value="optimizer.gaTimeBudgetMs"
-          @input="updateOptimizer({ gaTimeBudgetMs: Number(inputValue($event)) })"
-        />
-      </label>
-      <label class="span-2" title="Stable seed for reproducible portfolio experiments.">
-        Seed
-        <input
-          type="text"
-          :value="optimizer.gaSeed"
-          @change="updateOptimizer({ gaSeed: inputValue($event) })"
-        />
-      </label>
-      <label class="checkbox-row" title="Lets GA mutate the piece priority order.">
-        <input
-          type="checkbox"
-          :checked="optimizer.priorityOrderMutationEnabled"
-          @change="updateOptimizer({ priorityOrderMutationEnabled: inputChecked($event) })"
-        />
-        Mutate piece order
-      </label>
-      <label class="checkbox-row" title="Lets GA prefer different orientation candidates.">
-        <input
-          type="checkbox"
-          :checked="optimizer.transformPreferenceMutationEnabled"
-          @change="updateOptimizer({ transformPreferenceMutationEnabled: inputChecked($event) })"
-        />
-        Mutate transform preference
-      </label>
+        Legacy portfolio search
+      </h3>
       <label
         class="checkbox-row"
-        title="Lets GA select among the enabled local candidate policies."
+        title="After the deterministic result, evaluates seeded genetic-search alternatives. This can take much longer."
       >
         <input
           type="checkbox"
-          :checked="optimizer.placementPolicyMutationEnabled"
-          @change="updateOptimizer({ placementPolicyMutationEnabled: inputChecked($event) })"
+          :checked="portfolioEnabled"
+          @change="setPortfolioEnabled(inputChecked($event))"
         />
-        Mutate scoring policy
+        Enable GA portfolio after the deterministic beam
       </label>
-    </div>
+      <p v-if="portfolioEnabled" class="field-help">
+        The GA starts from the beam result. Generation, evaluation, and time budgets are independent
+        stop limits; the first one reached ends it.
+      </p>
+      <p v-if="portfolioMayExceedTimeout" class="warning">
+        The GA time budget is at least as long as the worker timeout. Increase the job timeout or
+        lower the GA time budget to avoid an intentional worker timeout.
+      </p>
+      <div v-if="portfolioEnabled" class="grid">
+        <label title="Number of chromosomes in each GA generation.">
+          Population
+          <input
+            type="number"
+            min="1"
+            step="1"
+            :value="optimizer.gaPopulation"
+            @input="updateOptimizer({ gaPopulation: Number(inputValue($event)) })"
+          />
+        </label>
+        <label title="Maximum generated populations after the deterministic baseline.">
+          Generation budget
+          <input
+            type="number"
+            min="0"
+            step="1"
+            :value="optimizer.gaGenerationBudget"
+            @input="updateOptimizer({ gaGenerationBudget: Number(inputValue($event)) })"
+          />
+        </label>
+        <label title="Maximum total chromosome decodes across every generation.">
+          Evaluation budget
+          <input
+            type="number"
+            min="0"
+            step="1"
+            :value="optimizer.gaEvaluationBudget"
+            @input="updateOptimizer({ gaEvaluationBudget: Number(inputValue($event)) })"
+          />
+        </label>
+        <label
+          title="Wall-clock budget for GA evaluations only. The whole worker is still bounded by the job timeout."
+        >
+          GA time budget (ms)
+          <input
+            type="number"
+            min="0"
+            step="1000"
+            :value="optimizer.gaTimeBudgetMs"
+            @input="updateOptimizer({ gaTimeBudgetMs: Number(inputValue($event)) })"
+          />
+        </label>
+        <label class="span-2" title="Stable seed for reproducible portfolio experiments.">
+          Seed
+          <input
+            type="text"
+            :value="optimizer.gaSeed"
+            @change="updateOptimizer({ gaSeed: inputValue($event) })"
+          />
+        </label>
+        <label class="checkbox-row" title="Lets GA mutate the piece priority order.">
+          <input
+            type="checkbox"
+            :checked="optimizer.priorityOrderMutationEnabled"
+            @change="updateOptimizer({ priorityOrderMutationEnabled: inputChecked($event) })"
+          />
+          Mutate piece order
+        </label>
+        <label class="checkbox-row" title="Lets GA prefer different orientation candidates.">
+          <input
+            type="checkbox"
+            :checked="optimizer.transformPreferenceMutationEnabled"
+            @change="updateOptimizer({ transformPreferenceMutationEnabled: inputChecked($event) })"
+          />
+          Mutate transform preference
+        </label>
+        <label
+          class="checkbox-row"
+          title="Lets GA select among the enabled local candidate policies."
+        >
+          <input
+            type="checkbox"
+            :checked="optimizer.placementPolicyMutationEnabled"
+            @change="updateOptimizer({ placementPolicyMutationEnabled: inputChecked($event) })"
+          />
+          Mutate scoring policy
+        </label>
+      </div>
+    </template>
   </section>
 </template>
 
@@ -524,6 +610,34 @@ h3 {
   padding: 8px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--panel) 80%, #174d63 20%);
+}
+
+.mode-summary.compact-active {
+  border-color: color-mix(in srgb, var(--border) 55%, #43a6bd 45%);
+  background: color-mix(in srgb, var(--panel) 72%, #13576b 28%);
+}
+
+.mode-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mode-badge {
+  padding: 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text-secondary);
+  font-size: 9px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.compact-active .mode-badge {
+  border-color: color-mix(in srgb, var(--border) 45%, #57bdd1 55%);
+  color: var(--text-primary);
 }
 
 .mode-summary p,
