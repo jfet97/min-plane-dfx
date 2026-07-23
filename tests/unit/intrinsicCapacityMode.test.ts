@@ -533,28 +533,44 @@ describe('intrinsic capacity search', () => {
         preparedPieces: pieces,
         materialAreasByPieceId,
         cavityCache: new Map(),
-        maximumDepthBoundaries: 2
+        maximumDepthBoundaries: 1
       })
     )
 
     expect(paused.status).toBe('paused')
     expect(paused.endpoints).toEqual([])
     expect(paused.trace.settlement).toBe('paused')
-    expect(paused.checkpoint?.nextDepth).toBe(2)
+    expect(paused.checkpoint?.nextDepth).toBe(1)
     expect(paused.checkpoint?.frontier.length).toBeGreaterThan(0)
-    expect(paused.checkpoint?.budgetLedgers.perDepth).toHaveLength(2)
-    expect(paused.checkpoint?.frontier.every(({ cursor }) => cursor === 2)).toBe(true)
+    expect(paused.checkpoint?.budgetLedgers.perDepth).toHaveLength(1)
+    expect(paused.checkpoint?.frontier.every(({ cursor }) => cursor === 1)).toBe(true)
 
-    const checkpoint = paused.checkpoint
-    expect(checkpoint).toBeDefined()
-    if (checkpoint === undefined) return
+    const firstCheckpoint = paused.checkpoint
+    expect(firstCheckpoint).toBeDefined()
+    if (firstCheckpoint === undefined) return
+    const pausedAgain = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        checkpoint: firstCheckpoint,
+        maximumDepthBoundaries: 1
+      })
+    )
+    expect(pausedAgain.status).toBe('paused')
+    expect(pausedAgain.checkpoint?.nextDepth).toBe(2)
+    expect(pausedAgain.checkpoint?.budgetLedgers.perDepth).toHaveLength(2)
+    const secondCheckpoint = pausedAgain.checkpoint
+    expect(secondCheckpoint).toBeDefined()
+    if (secondCheckpoint === undefined) return
     const resumed = await provideGeometry(
       runIntrinsicCapacityColdSearch({
         sheet: finalSheet,
         preparedPieces: pieces,
         materialAreasByPieceId,
         cavityCache: new Map(),
-        checkpoint
+        checkpoint: secondCheckpoint
       })
     )
 
@@ -577,6 +593,93 @@ describe('intrinsic capacity search', () => {
         objective: endpoint.metrics
       }))
     )
+  })
+
+  it('rejects corrupted checkpoint accounting and a changed pruning incumbent', async () => {
+    const pieces = [
+      preparedRectangle('square-a', 60, 60),
+      preparedRectangle('square-b', 60, 60),
+      preparedRectangle('small', 40, 40)
+    ]
+    const finalSheet = sheet(110, 62)
+    const materialAreasByPieceId = materialsOf(pieces)
+    const complete = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map()
+      })
+    )
+    const paused = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        maximumDepthBoundaries: 1
+      })
+    )
+    const checkpoint = paused.checkpoint
+    const incumbent = complete.endpoints[0]
+    expect(checkpoint).toBeDefined()
+    expect(incumbent).toBeDefined()
+    if (checkpoint === undefined || incumbent === undefined) return
+
+    const corruptedCounter = {
+      ...checkpoint,
+      counters: {
+        ...checkpoint.counters,
+        deduplicatedSuccessors: -1
+      }
+    }
+    const counterFailure = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        checkpoint: corruptedCounter
+      }).pipe(Effect.flip)
+    )
+    expect(counterFailure._tag).toBe('IntrinsicCapacityError')
+    if (counterFailure._tag !== 'IntrinsicCapacityError') return
+    expect(counterFailure.operation).toBe('coldSearchCheckpoint')
+
+    const firstDepthLedger = checkpoint.budgetLedgers.perDepth[0]
+    expect(firstDepthLedger).toBeDefined()
+    if (firstDepthLedger === undefined) return
+    const corruptedQuota = {
+      ...checkpoint,
+      budgetLedgers: {
+        ...checkpoint.budgetLedgers,
+        perDepth: [{ ...firstDepthLedger, quotaExhausted: true }]
+      }
+    }
+    const quotaFailure = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        checkpoint: corruptedQuota
+      }).pipe(Effect.flip)
+    )
+    expect(quotaFailure._tag).toBe('IntrinsicCapacityError')
+
+    const incumbentFailure = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        checkpoint,
+        incumbent
+      }).pipe(Effect.flip)
+    )
+    expect(incumbentFailure._tag).toBe('IntrinsicCapacityError')
+    if (incumbentFailure._tag !== 'IntrinsicCapacityError') return
+    expect(incumbentFailure.message).toContain('fingerprint')
   })
 })
 

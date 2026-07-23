@@ -113,6 +113,14 @@ export interface IntrinsicAnytimeNoSkipFrontierState {
   readonly firstLossDepth: number | undefined
 }
 
+export interface IntrinsicAnytimeIncumbentBinding {
+  readonly canonicalGeometryHash: string
+  readonly placedCount: number
+  readonly placedDoubledMaterialAreaGrid2: bigint
+  readonly origin: IntrinsicCapacityEndpoint['origin']
+  readonly selectedRotationDeg: 0 | 90
+}
+
 export interface IntrinsicCapacitySearchCounters {
   readonly prunedByAttainableCount: number
   readonly prunedByAttainableMaterial: number
@@ -129,6 +137,8 @@ export interface IntrinsicAnytimeCheckpoint {
   readonly requestFingerprint: string
   readonly producerRole: IntrinsicAnytimeProducerRole
   readonly archiveCohort: IntrinsicAnytimeArchiveCohort
+  readonly searchBounds: typeof INTRINSIC_CAPACITY_V1_BOUNDS
+  readonly incumbentBinding: IntrinsicAnytimeIncumbentBinding | undefined
   readonly frontier: ReadonlyArray<IntrinsicAnytimeDecisionState>
   readonly nextDepth: number
   readonly depthBoundaryResumePosition: number
@@ -276,7 +286,6 @@ export function runIntrinsicCapacityColdSearch(
         })
       )
     }
-    const requestFingerprint = intrinsicCapacityRequestFingerprint(input)
     const maximumDepthBoundaries = input.maximumDepthBoundaries
     if (
       maximumDepthBoundaries !== undefined &&
@@ -289,10 +298,23 @@ export function runIntrinsicCapacityColdSearch(
         })
       )
     }
+    const checkpointEnabled = input.checkpoint !== undefined || maximumDepthBoundaries !== undefined
+    const requestFingerprint = checkpointEnabled
+      ? intrinsicCapacityRequestFingerprint(input)
+      : undefined
     if (input.checkpoint !== undefined) {
+      if (requestFingerprint === undefined) {
+        return yield* Effect.fail(
+          new IntrinsicCapacityError({
+            operation: 'coldSearchCheckpoint',
+            message: 'checkpoint fingerprinting must be enabled for resume.'
+          })
+        )
+      }
       const checkpointError = validateIntrinsicCapacityCheckpoint({
         checkpoint: input.checkpoint,
         requestFingerprint,
+        incumbentBinding: intrinsicCapacityIncumbentBinding(input.incumbent),
         preparedIds,
         materialAreasByPieceId: input.materialAreasByPieceId,
         placementEvaluationCap,
@@ -579,20 +601,22 @@ export function runIntrinsicCapacityColdSearch(
       beam = measuredSurvivors.slice(0, coldBeamWidth)
       completedDepths = depth + 1
       completedDepthBoundariesThisInvocation += 1
-      perDepthBudgetLedgers = [
-        ...perDepthBudgetLedgers,
-        {
-          depth,
-          consumedPlacementEvaluations: consumedAtDepth,
-          quotaExhausted: depthQuotaExhausted
+      if (checkpointEnabled) {
+        perDepthBudgetLedgers = [
+          ...perDepthBudgetLedgers,
+          {
+            depth,
+            consumedPlacementEvaluations: consumedAtDepth,
+            quotaExhausted: depthQuotaExhausted
+          }
+        ]
+        const hasNoSkipState = beam.some((entry) => entry.state.unplacedPieceIds.length === 0)
+        noSkipFrontier = {
+          present: hasNoSkipState,
+          firstLossDepth:
+            noSkipFrontier.firstLossDepth ??
+            (noSkipFrontier.present && !hasNoSkipState ? depth + 1 : undefined)
         }
-      ]
-      const hasNoSkipState = beam.some((entry) => entry.state.unplacedPieceIds.length === 0)
-      noSkipFrontier = {
-        present: hasNoSkipState,
-        firstLossDepth:
-          noSkipFrontier.firstLossDepth ??
-          (noSkipFrontier.present && !hasNoSkipState ? depth + 1 : undefined)
       }
       if (capture) timings.retentionMs += performance.now() - retentionStartedAt
       if (beam.length === 0) break
@@ -601,6 +625,14 @@ export function runIntrinsicCapacityColdSearch(
         completedDepthBoundariesThisInvocation >= maximumDepthBoundaries &&
         depth + 1 < input.preparedPieces.length
       ) {
+        if (requestFingerprint === undefined) {
+          return yield* Effect.fail(
+            new IntrinsicCapacityError({
+              operation: 'coldSearchCheckpoint',
+              message: 'checkpoint fingerprint is unavailable at a requested pause boundary.'
+            })
+          )
+        }
         const counters = capacitySearchCounters({
           prunedByAttainableCount,
           prunedByAttainableMaterial,
@@ -613,6 +645,7 @@ export function runIntrinsicCapacityColdSearch(
         })
         const checkpoint = makeIntrinsicCapacityCheckpoint({
           requestFingerprint,
+          incumbentBinding: intrinsicCapacityIncumbentBinding(input.incumbent),
           beam,
           preparedIds,
           nextDepth: depth + 1,
@@ -732,6 +765,7 @@ function makeIntrinsicCapacitySearchTrace(input: {
 
 function makeIntrinsicCapacityCheckpoint(input: {
   readonly requestFingerprint: string
+  readonly incumbentBinding: IntrinsicAnytimeIncumbentBinding | undefined
   readonly beam: ReadonlyArray<CapacityBeamEntry>
   readonly preparedIds: ReadonlyArray<PieceId>
   readonly nextDepth: number
@@ -749,6 +783,8 @@ function makeIntrinsicCapacityCheckpoint(input: {
     requestFingerprint: input.requestFingerprint,
     producerRole: 'capacity-cold',
     archiveCohort: 'partial',
+    searchBounds: INTRINSIC_CAPACITY_V1_BOUNDS,
+    incumbentBinding: input.incumbentBinding,
     frontier: input.beam.map((entry) => {
       const permanentlySkippedPreparedIds = [...entry.state.unplacedPieceIds]
       const fitMask = intrinsicCapacitySpanFitsSheet(
@@ -798,6 +834,7 @@ function makeIntrinsicCapacityCheckpoint(input: {
 function validateIntrinsicCapacityCheckpoint(input: {
   readonly checkpoint: IntrinsicAnytimeCheckpoint
   readonly requestFingerprint: string
+  readonly incumbentBinding: IntrinsicAnytimeIncumbentBinding | undefined
   readonly preparedIds: ReadonlyArray<PieceId>
   readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
   readonly placementEvaluationCap: number
@@ -813,6 +850,16 @@ function validateIntrinsicCapacityCheckpoint(input: {
   }
   if (checkpoint.producerRole !== 'capacity-cold' || checkpoint.archiveCohort !== 'partial') {
     return 'cold capacity search requires a capacity-cold partial-cohort checkpoint.'
+  }
+  if (
+    canonicalJson(checkpoint.searchBounds) !== canonicalJson(INTRINSIC_CAPACITY_V1_BOUNDS)
+  ) {
+    return 'checkpoint search bounds do not match the current capacity implementation.'
+  }
+  if (
+    canonicalJson(checkpoint.incumbentBinding) !== canonicalJson(input.incumbentBinding)
+  ) {
+    return 'checkpoint pruning incumbent does not match the current resume request.'
   }
   if (
     !Number.isSafeInteger(checkpoint.nextDepth) ||
@@ -839,7 +886,10 @@ function validateIntrinsicCapacityCheckpoint(input: {
         !Number.isSafeInteger(ledger.consumedPlacementEvaluations) ||
         ledger.consumedPlacementEvaluations < 0 ||
         ledger.consumedPlacementEvaluations >
-          INTRINSIC_CAPACITY_V1_BOUNDS.placementEvaluationQuotaPerDepth
+          INTRINSIC_CAPACITY_V1_BOUNDS.placementEvaluationQuotaPerDepth ||
+        (ledger.quotaExhausted &&
+          ledger.consumedPlacementEvaluations !==
+            INTRINSIC_CAPACITY_V1_BOUNDS.placementEvaluationQuotaPerDepth)
     )
   ) {
     return 'checkpoint per-depth budget ledger is not contiguous or exceeds its quota.'
@@ -860,9 +910,22 @@ function validateIntrinsicCapacityCheckpoint(input: {
     checkpoint.schedulerDeficit !== 0 ||
     checkpoint.settlement !== 'active' ||
     checkpoint.censoring !== 'none' ||
-    checkpoint.counters.completedDepths !== checkpoint.nextDepth
+    checkpoint.counters.completedDepths !== checkpoint.nextDepth ||
+    checkpoint.counters.depthQuotaExhaustions !==
+      checkpoint.budgetLedgers.perDepth.filter(({ quotaExhausted }) => quotaExhausted).length ||
+    !Object.values(checkpoint.counters).every(isNonNegativeSafeInteger)
   ) {
     return 'checkpoint scheduler or settlement state is invalid for a cold depth-boundary resume.'
+  }
+  if (
+    checkpoint.noSkipFrontier.present
+      ? checkpoint.noSkipFrontier.firstLossDepth !== undefined
+      : checkpoint.noSkipFrontier.firstLossDepth === undefined ||
+        !Number.isSafeInteger(checkpoint.noSkipFrontier.firstLossDepth) ||
+        checkpoint.noSkipFrontier.firstLossDepth < 1 ||
+        checkpoint.noSkipFrontier.firstLossDepth > checkpoint.nextDepth
+  ) {
+    return 'checkpoint no-skip-frontier loss depth is invalid for its resume boundary.'
   }
 
   const expectedPendingIds = input.preparedIds.slice(checkpoint.nextDepth)
@@ -952,6 +1015,7 @@ function intrinsicCapacityRequestFingerprint(input: {
   readonly sheet: SheetSpec
   readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
+  readonly incumbent?: IntrinsicCapacityEndpoint
 }): string {
   const material = [...input.materialAreasByPieceId.entries()]
     .map(([pieceId, area]) => [pieceId, area] as const)
@@ -960,12 +1024,28 @@ function intrinsicCapacityRequestFingerprint(input: {
     .update(
       canonicalJson({
         version: INTRINSIC_ANYTIME_CHECKPOINT_VERSION,
+        searchBounds: INTRINSIC_CAPACITY_V1_BOUNDS,
         sheet: input.sheet,
         preparedPieces: input.preparedPieces,
-        material
+        material,
+        incumbent: intrinsicCapacityIncumbentBinding(input.incumbent)
       })
     )
     .digest('hex')
+}
+
+function intrinsicCapacityIncumbentBinding(
+  incumbent: IntrinsicCapacityEndpoint | undefined
+): IntrinsicAnytimeIncumbentBinding | undefined {
+  return incumbent === undefined
+    ? undefined
+    : {
+        canonicalGeometryHash: incumbent.canonicalGeometryHash,
+        placedCount: incumbent.metrics.placedCount,
+        placedDoubledMaterialAreaGrid2: incumbent.metrics.placedDoubledMaterialAreaGrid2,
+        origin: incumbent.origin,
+        selectedRotationDeg: incumbent.selectedRotationDeg
+      }
 }
 
 function canonicalJson(value: unknown): string {
@@ -984,6 +1064,10 @@ function equalPieceIdArrays(
   second: ReadonlyArray<PieceId>
 ): boolean {
   return first.length === second.length && first.every((pieceId, index) => pieceId === second[index])
+}
+
+function isNonNegativeSafeInteger(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0
 }
 
 function pushSuccessor(

@@ -46,6 +46,22 @@ geometry identity, fit-mask, material, or budget mismatch. Candidate memoization
 is invocation-local and intentionally omitted; it affects only recomputation
 cost, not search semantics.
 
+The first Sol review found three checkpoint defects before Stage 2:
+
+- the irreversible pruning incumbent and fixed search bounds were not bound to
+  the checkpoint;
+- historical quota flags, cumulative counters, and no-skip loss depth were
+  under-validated;
+- the no-option production path still paid input hashing and checkpoint-ledger
+  allocation.
+
+The corrected checkpoint fingerprints and stores the exact incumbent binding
+and current v1 bounds, reconciles every depth flag and cumulative counter, and
+requires a bounded first no-skip-loss depth. Multi-pause replay and corrupted
+counter/quota/incumbent resumes are now tested. Fingerprinting, per-depth ledger
+copies, and no-skip checkpoint accounting are lazy and run only when pausing or
+resuming; the ordinary no-option production path does none of that work.
+
 The focused test pauses after depth two on a four-piece constrained fixture,
 resumes with a fresh cavity cache, and compares the entire semantic trace plus
 the ordered endpoint hashes, partitions, and objectives against an
@@ -59,11 +75,12 @@ consume `232,209` placement evaluations, retain zero cavities, and select
 canonical capacity identity `0ba279b5...`; total wall times are about `61.76 s`
 and `61.65 s`. This stage is semantic infrastructure, not a speed claim.
 
-The focused checkpoint/capacity suites pass `24/24` in `1.46 s` wall,
+The initial focused checkpoint/capacity suites passed `24/24` in `1.46 s` wall,
 `3.32 s` user, and `0.65 s` system time with `160,989,184` bytes maximum
 resident set. Immutable reports, SVG/PNG renders, hashes, and environment
 metadata are under
 `/private/tmp/min-plane-provenance/intrinsic-checkpoint-970ed2b-pMI3QZ/`.
+After the review corrections, the expanded focused suites pass `25/25`.
 
 ## Remaining Stages
 
