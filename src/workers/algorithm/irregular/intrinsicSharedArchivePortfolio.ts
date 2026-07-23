@@ -32,6 +32,7 @@ import {
   type IntrinsicStrictCertificate,
   type IntrinsicStrictCompletedMetrics,
   type IntrinsicStrictConstructResult,
+  type IntrinsicStrictDirectCheckpoint,
   type IntrinsicStrictDecoderError
 } from './intrinsicStrictDecoder.js'
 import { IrregularBeamState } from './irregularBeamState.js'
@@ -106,6 +107,11 @@ export interface IntrinsicSharedArchivePortfolioOptions {
     Readonly<Record<IntrinsicSharedArchiveDirectRole, number>>
   >
   readonly maximumDirectRuntimeMs?: number
+  /** Opt-in canonical-grid pause quantum; other direct roles remain unchanged. */
+  readonly canonicalGridCompletedPieceQuantum?: number
+  readonly onCanonicalGridCheckpointed?: (
+    checkpoint: IntrinsicStrictDirectCheckpoint
+  ) => Effect.Effect<void>
   readonly control?: IrregularNfpIfpControl
   readonly onPhaseCompleted?: (phase: 'direct' | 'periodic') => Effect.Effect<void>
   /**
@@ -158,6 +164,18 @@ export function runIntrinsicSharedArchivePortfolio(
       ...(options.maximumDirectRuntimeMs === undefined
         ? {}
         : { maximumDirectRuntimeMs: options.maximumDirectRuntimeMs }),
+      ...(options.canonicalGridCompletedPieceQuantum === undefined
+        ? {}
+        : {
+            canonicalGridCompletedPieceQuantum:
+              options.canonicalGridCompletedPieceQuantum
+          }),
+      ...(options.onCanonicalGridCheckpointed === undefined
+        ? {}
+        : {
+            onCanonicalGridCheckpointed:
+              options.onCanonicalGridCheckpointed
+          }),
       ...(options.control === undefined ? {} : { control: options.control }),
       ...(options.onDirectConstructed === undefined
         ? {}
@@ -219,7 +237,12 @@ export function runIntrinsicSharedArchiveDirectPortfolio(
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   options: Pick<
     IntrinsicSharedArchivePortfolioOptions,
-    'directCandidateEvaluationCaps' | 'maximumDirectRuntimeMs' | 'control' | 'onDirectConstructed'
+    | 'directCandidateEvaluationCaps'
+    | 'maximumDirectRuntimeMs'
+    | 'canonicalGridCompletedPieceQuantum'
+    | 'onCanonicalGridCheckpointed'
+    | 'control'
+    | 'onDirectConstructed'
   > = {}
 ): Effect.Effect<
   ReadonlyArray<IntrinsicSharedArchiveRun>,
@@ -232,25 +255,55 @@ export function runIntrinsicSharedArchiveDirectPortfolio(
     for (const role of INTRINSIC_SHARED_ARCHIVE_DIRECT_ROLES) {
       const startedAt = performance.now()
       const requestedCandidateEvaluations = options.directCandidateEvaluationCaps?.[role]
-      const outcome = yield* Effect.matchEffect(
-        constructIntrinsicStrictState({
-          allPreparedPieces: pieces,
-          remainingPreparedPieces: pieces,
-          frozenPlaced: [],
-          candidateMode: directCandidateMode(role),
-          maximumRuntimeMs: maximumDirectRuntimeMs,
-          captureCandidateEvaluationCount: true,
-          ...(options.control === undefined ? {} : { control: options.control }),
-          ...(requestedCandidateEvaluations === undefined
-            ? {}
-            : { maximumCandidateEvaluationCount: requestedCandidateEvaluations })
-        }),
-        {
-          onFailure: (error) => Effect.succeed({ kind: 'failure' as const, error }),
-          onSuccess: (constructed) =>
-            Effect.succeed({ kind: 'success' as const, constructed })
+      let checkpoint: IntrinsicStrictDirectCheckpoint | undefined
+      let outcome:
+        | {
+            readonly kind: 'failure'
+            readonly error:
+              | IntrinsicStrictDecoderError
+              | IrregularNestingNotImplementedError
+              | IrregularGeometryInputError
+              | IrregularNfpIfpControlAbortError
+          }
+        | { readonly kind: 'success'; readonly constructed: IntrinsicStrictConstructResult }
+      while (true) {
+        outcome = yield* Effect.matchEffect(
+          constructIntrinsicStrictState({
+            allPreparedPieces: pieces,
+            remainingPreparedPieces: pieces,
+            frozenPlaced: [],
+            candidateMode: directCandidateMode(role),
+            producerRole: role,
+            maximumRuntimeMs: maximumDirectRuntimeMs,
+            captureCandidateEvaluationCount: true,
+            ...(options.control === undefined ? {} : { control: options.control }),
+            ...(requestedCandidateEvaluations === undefined
+              ? {}
+              : { maximumCandidateEvaluationCount: requestedCandidateEvaluations }),
+            ...(checkpoint === undefined ? {} : { checkpoint }),
+            ...(role !== 'canonical-grid' ||
+            options.canonicalGridCompletedPieceQuantum === undefined
+              ? {}
+              : {
+                  maximumCompletedPieceBoundaries:
+                    options.canonicalGridCompletedPieceQuantum
+                })
+          }),
+          {
+            onFailure: (error) => Effect.succeed({ kind: 'failure' as const, error }),
+            onSuccess: (constructed) =>
+              Effect.succeed({ kind: 'success' as const, constructed })
+          }
+        )
+        if (
+          outcome.kind !== 'success' ||
+          outcome.constructed.checkpoint === undefined
+        ) {
+          break
         }
-      )
+        checkpoint = outcome.constructed.checkpoint
+        yield* options.onCanonicalGridCheckpointed?.(checkpoint) ?? Effect.void
+      }
       if (outcome.kind === 'failure') {
         if (
           outcome.error._tag === 'IrregularNfpIfpControlAbortError' &&

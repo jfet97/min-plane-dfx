@@ -148,6 +148,10 @@ trace, occupied identity, and cumulative ledger before portfolio integration.
 Cycle-bounded lineage collection and authoritative full-chain reconstruction
 now also prevent corrupted private canonical/contact/index caches from
 influencing future placement.
+The next committed seam runs `canonical-grid` through those checkpoints inside
+the direct portfolio while leaving every later producer and archive operation
+in its settled order. Focused equivalence covers the complete observable
+portfolio except non-semantic runtime.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

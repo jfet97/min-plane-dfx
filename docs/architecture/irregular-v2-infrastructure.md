@@ -211,6 +211,12 @@ rebuilt from exact placed geometry and decision arrays, so private canonical,
 contact-signature, and spatial-index caches are authoritative rather than
 trusted checkpoint payload.
 
+The direct portfolio has an opt-in integration seam that advances only
+`canonical-grid` through a configurable completed-piece quantum until that
+producer settles. It then continues the unchanged direct-role and periodic
+order. Checkpoint callbacks expose chronology only; archive retention,
+comparators, and the single final constructed-prefix callback remain unchanged.
+
 An additional observer-only experimental complete cohort makes one explicit
 place/defer decision by moving the first pending piece to a second pass. Its
 checkpoint binds the exact future-decision partition and ledgers. It exposes

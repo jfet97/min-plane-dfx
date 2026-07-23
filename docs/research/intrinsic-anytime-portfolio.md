@@ -364,6 +364,15 @@ only through a freshly derived root-to-leaf state chain; corrupted private
 caches are therefore sanitized. Self-cycle, two-state-cycle, canonical-key,
 contact-signature, and spatial-bucket tests cover the new boundary.
 
+The first portfolio integration is intentionally narrower than scheduling.
+When enabled, `canonical-grid` resumes through one completed piece at a time,
+settles fully, emits its final prefix callback once, and only then allows the
+unchanged direct and periodic producers to continue. The uninterrupted and
+checkpointed arms match direct/periodic status, evaluations, endpoint hashes,
+coverage, prefix identities, ordered sheetless/fitting archives, and winner.
+Runtime is cumulative and nonnegative but excluded from equality because
+validation overhead is real.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim

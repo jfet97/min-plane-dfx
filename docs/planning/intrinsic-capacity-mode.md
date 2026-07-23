@@ -164,6 +164,11 @@ cumulative phase ledger. The scheduler quantum alone is deliberately absent
 from the request fingerprint. Cyclic or overlong ancestry is rejected before
 hashing, and resume reconstructs the full state chain to sanitize all
 continuation-relevant private geometry caches.
+The canonical direct producer can now be advanced opt-in through one-piece
+portfolio quanta. An equivalence gate compares direct and periodic run order,
+coverage, evaluations, endpoint hashes, constructed-prefix identities,
+sheetless/fitting archive order, and the final winner against uninterrupted
+execution before the capacity scheduler consumes this seam.
 
 Stage 5 shares only archive mechanics: exact admission validation, canonical
 deduplication, namespace storage, and terminal complete dominance. Complete and

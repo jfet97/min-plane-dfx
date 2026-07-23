@@ -46,7 +46,10 @@ import {
   runIntrinsicPlaceDeferCompleteShadow
 } from '../../src/workers/algorithm/irregular/intrinsicPlaceDeferCompleteShadow.js'
 import { constructIntrinsicStrictState } from '../../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
-import { runIntrinsicSharedArchiveDirectPortfolio } from '../../src/workers/algorithm/irregular/intrinsicSharedArchivePortfolio.js'
+import {
+  runIntrinsicSharedArchiveDirectPortfolio,
+  runIntrinsicSharedArchivePortfolio
+} from '../../src/workers/algorithm/irregular/intrinsicSharedArchivePortfolio.js'
 import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
@@ -1153,5 +1156,73 @@ describe('capacity prefix capture isolation', () => {
     const without = await runDirect(false)
     const withCapture = await runDirect(true)
     expect(projection(withCapture)).toEqual(projection(without))
+  })
+
+  it('keeps the complete portfolio identical through canonical-grid checkpoints', async () => {
+    const pieces = [
+      preparedRectangle('square-a', 40, 40, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('square-b', 40, 40, [transform(0, 0), transform(1, 90)]),
+      preparedRectangle('square-c', 40, 40, [transform(0, 0), transform(1, 90)])
+    ]
+    const run = async (checkpointed: boolean) => {
+      const completed: string[] = []
+      const checkpoints: number[] = []
+      const result = await provideGeometry(
+        runIntrinsicSharedArchivePortfolio(sheet(2000, 2700), pieces, {
+          ...(checkpointed
+            ? {
+                canonicalGridCompletedPieceQuantum: 1,
+                onCanonicalGridCheckpointed: (checkpoint) => {
+                  checkpoints.push(checkpoint.nextPieceIndex)
+                  return Effect.void
+                }
+              }
+            : {}),
+          onDirectConstructed: (role, state) => {
+            completed.push(`${role}:${state.canonicalOccupiedGeometryKey}`)
+          }
+        })
+      )
+      return {
+        checkpoints,
+        completed,
+        direct: result.directRuns.map((directRun) => ({
+          role: directRun.role,
+          status: directRun.status,
+          evaluations: directRun.consumedCandidateEvaluations,
+          hash: directRun.endpoint?.sheetlessCanonicalGeometryHash
+        })),
+        periodic: result.periodicRuns.map((periodicRun) => ({
+          role: periodicRun.role,
+          sourceId: periodicRun.sourceId,
+          status: periodicRun.status,
+          evaluations: periodicRun.consumedCandidateEvaluations,
+          hash: periodicRun.endpoint?.sheetlessCanonicalGeometryHash
+        })),
+        periodicCoverage: {
+          catalogRuntimeCoverageComplete:
+            result.periodicPortfolio.catalog.runtimeCoverageComplete,
+          familyCoverageComplete:
+            result.periodicPortfolio.catalog.familyCoverageComplete,
+          continuationCoverageComplete:
+            result.periodicPortfolio.continuationCoverageComplete,
+          budgetSettlementComplete:
+            result.periodicPortfolio.continuationBudgetSettlementComplete
+        },
+        sheetlessArchive: result.sheetlessArchive.map(
+          ({ sheetlessCanonicalGeometryHash }) => sheetlessCanonicalGeometryHash
+        ),
+        archive: result.archive.map(
+          ({ sheetlessCanonicalGeometryHash }) => sheetlessCanonicalGeometryHash
+        ),
+        winner: result.winner?.sheetlessCanonicalGeometryHash
+      }
+    }
+
+    const uninterrupted = await run(false)
+    const checkpointed = await run(true)
+
+    expect(checkpointed.checkpoints).toEqual([1, 2])
+    expect({ ...checkpointed, checkpoints: [] }).toEqual(uninterrupted)
   })
 })
