@@ -4,9 +4,9 @@
     "width": 300,
     "height": 300
   },
-  "sourceCommit": "38e4bf0eeca8c9e8cbe80591647bf01a3b5950d4",
+  "sourceCommit": "2ede04287740ebf2d8bfbde6706435739c0d4b53",
   "runtime": {
-    "elapsedMs": 16173.468207999998,
+    "elapsedMs": 15810.821375,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -605,7 +605,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 16,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.2520009999993817,
+            "topologyMeasurementMs": 1.314122999999654,
             "legalCandidateCount": 3193,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -793,7 +793,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 137,
           "completedDepths": 6,
-          "elapsedMs": 4.07366699999875,
+          "elapsedMs": 5.296291000000565,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -817,7 +817,7 @@
           "checkpointRetained": false,
           "consumedPlacementEvaluations": 28314,
           "completedDepths": 20,
-          "elapsedMs": 939.0711670000001,
+          "elapsedMs": 940.9941680000029,
           "endpoint": {
             "placedCount": 14,
             "placedDoubledMaterialAreaGrid2": "58800000000",
@@ -841,7 +841,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 123,
           "completedDepths": 6,
-          "elapsedMs": 3.5568750000002183,
+          "elapsedMs": 3.820499999999811,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -865,7 +865,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 173,
           "completedDepths": 11,
-          "elapsedMs": 6.201291999999739,
+          "elapsedMs": 6.845833999999741,
           "endpoint": {
             "placedCount": 11,
             "placedDoubledMaterialAreaGrid2": "46200000000",
@@ -889,7 +889,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 137,
           "completedDepths": 6,
-          "elapsedMs": 4.059165999999095,
+          "elapsedMs": 3.8885410000002594,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -913,7 +913,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 187,
           "completedDepths": 11,
-          "elapsedMs": 6.679709000000003,
+          "elapsedMs": 6.3712500000001455,
           "endpoint": {
             "placedCount": 11,
             "placedDoubledMaterialAreaGrid2": "46200000000",
@@ -1190,27 +1190,11 @@
         "placedMaterialAreaMm2": 35700,
         "selectedRotationDeg": 0
       },
-      "preflightRuntimeMs": 6.994833,
-      "completeArchiveRuntimeMs": 14740.701041999999,
-      "prefixTerminalizationMs": 10.912500000000364,
-      "coldSearchMs": 1231.9260830000003,
-      "runtimeMs": 1243.3423330000005
-    },
-    "capacityShadowTelemetry": {
-      "pressure": {
-        "minimumCollisionAreaPressurePpm": "742350",
-        "maximumSingletonSpanPressurePpm": "292030"
-      },
-      "noSkipProbe": {
-        "maximumDepth": 4,
-        "completedDepths": 4,
-        "noSkipFrontierPresent": true,
-        "consumedPlacementEvaluations": 2651,
-        "elapsedMs": 81.352667,
-        "status": "observed",
-        "checkpointVersion": "intrinsic-anytime-checkpoint-v2"
-      },
-      "routingInfluence": "none"
+      "preflightRuntimeMs": 7.202624999999983,
+      "completeArchiveRuntimeMs": 14418.794709000002,
+      "prefixTerminalizationMs": 10.685832999999548,
+      "coldSearchMs": 1236.661583000001,
+      "runtimeMs": 1247.8471659999996
     },
     "intrinsicAnytimeSchedulerTrace": {
       "version": "intrinsic-anytime-scheduler-v1",
@@ -1446,9 +1430,9 @@
         },
         {
           "ordinal": 37,
-          "cohort": "experimental-complete",
-          "producerRole": "experimental-place-defer-complete",
-          "outcome": "settled"
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "checkpointed"
         },
         {
           "ordinal": 38,
@@ -1484,13 +1468,13 @@
           "ordinal": 43,
           "cohort": "partial",
           "producerRole": "capacity-warm-prefix",
-          "outcome": "checkpointed"
+          "outcome": "settled"
         },
         {
           "ordinal": 44,
           "cohort": "partial",
           "producerRole": "capacity-warm-prefix",
-          "outcome": "settled"
+          "outcome": "censored"
         },
         {
           "ordinal": 45,
@@ -1515,62 +1499,8 @@
           "cohort": "partial",
           "producerRole": "capacity-warm-prefix",
           "outcome": "censored"
-        },
-        {
-          "ordinal": 49,
-          "cohort": "partial",
-          "producerRole": "capacity-warm-prefix",
-          "outcome": "censored"
         }
       ]
-    },
-    "experimentalPlaceDeferTrace": {
-      "version": "intrinsic-place-defer-checkpoint-v1",
-      "deferredPreparedId": "triangle-copy-1",
-      "pendingOrder": [
-        "triangle-copy-2",
-        "triangle-copy-3",
-        "triangle-copy-4",
-        "triangle-copy-5",
-        "triangle-copy-6",
-        "triangle-copy-7",
-        "triangle-copy-8",
-        "triangle-copy-9",
-        "triangle-copy-10",
-        "triangle-copy-11",
-        "triangle-copy-12",
-        "triangle-copy-13",
-        "triangle-copy-14",
-        "triangle-copy-15",
-        "triangle-copy-16",
-        "triangle-copy-17",
-        "triangle-copy-18",
-        "triangle-copy-19",
-        "triangle-copy-20",
-        "triangle-copy-1"
-      ],
-      "status": "completed",
-      "candidateEvaluations": 3439,
-      "placedCount": 20,
-      "unplacedCount": 0,
-      "completeEndpointHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
-      "requestedSheetFit": {
-        "q0": false,
-        "q90": false
-      },
-      "outputInfluence": "none"
-    },
-    "experimentalPlaceDeferEndpoint": {
-      "sheetlessCanonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
-      "requestedSheetFit": {
-        "q0": {
-          "fits": false
-        },
-        "q90": {
-          "fits": false
-        },
-        "selectedPlacedCollisionGeometries": []
-      }
     }
   },
   "checks": {
@@ -1578,11 +1508,12 @@
     "fittedCanonical": true,
     "placedCount": true,
     "unplacedCount": true,
+    "exactPiecePartition": true,
     "area": true,
     "canonicalCavities": true,
     "runtime": true,
     "schedulerChronology": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/production-cohesion-nine-preliminary/triangle-20-300x300.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/compact-nine-baselines-2ede042/triangle-20-300x300.svg"
 }
