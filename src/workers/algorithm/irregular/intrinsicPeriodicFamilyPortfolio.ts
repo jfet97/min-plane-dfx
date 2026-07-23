@@ -136,6 +136,7 @@ export interface IntrinsicPeriodicFamilyPortfolioResult {
   readonly sourceAuditWitnesses: ReadonlyArray<IntrinsicPeriodicSourceAuditWitness>
   readonly sourceAuditNonDominatedCropCount: number
   readonly sourceAuditReplayAccepted: boolean
+  readonly sourceAuditReplayRejectionReason?: string
   readonly sourceAuditReplayEnvelope?: IntrinsicPeriodicSourceAuditReplayEnvelope
   readonly runs: ReadonlyArray<IntrinsicPeriodicContinuationResult>
   readonly archive: ReadonlyArray<IntrinsicStrictCompletedMetrics>
@@ -246,12 +247,13 @@ export function runIntrinsicPeriodicFamilyPortfolio(
     const catalogMs = capturePhaseTimings ? performance.now() - catalogStartedAt : 0
     const sourceAuditScope = options.sourceAuditScope ?? 'all'
     const replayProbeStartedAt = performance.now()
-    const sourceAuditReplay = yield* validateSourceAuditReplayEnvelope(
+    const sourceAuditReplayResolution = yield* validateSourceAuditReplayEnvelope(
       catalog,
       pieces,
       sourceAuditScope,
       options.sourceAuditReplayEnvelope
     )
+    const sourceAuditReplay = sourceAuditReplayResolution.replay
     const replayProbeExcludedMs =
       options.sourceAuditReplayEnvelope !== undefined && sourceAuditReplay === undefined
         ? performance.now() - replayProbeStartedAt
@@ -464,6 +466,9 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       sourceAuditWitnesses: selected.sourceAuditWitnesses,
       sourceAuditNonDominatedCropCount: selected.sourceAuditNonDominatedCropCount,
       sourceAuditReplayAccepted: sourceAuditReplay !== undefined,
+      ...(sourceAuditReplayResolution.rejectionReason === undefined
+        ? {}
+        : { sourceAuditReplayRejectionReason: sourceAuditReplayResolution.rejectionReason }),
       ...(!(options.captureSourceSurvivalAudit ?? false)
         ? {}
         : {
@@ -1006,20 +1011,27 @@ function validateSourceAuditReplayEnvelope(
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   scope: IntrinsicPeriodicSourceAuditScope,
   envelope: IntrinsicPeriodicSourceAuditReplayEnvelope | undefined
-): Effect.Effect<IntrinsicPeriodicSourceAuditReplay | undefined> {
+): Effect.Effect<{
+  readonly replay?: IntrinsicPeriodicSourceAuditReplay
+  readonly rejectionReason?: string
+}> {
   return Effect.gen(function* () {
-    if (envelope === undefined) return undefined
-    if (
-      envelope.formatVersion !== 2 ||
-      envelope.algorithmVersion !== 'intrinsic-periodic-source-audit-v2' ||
-      envelope.scope !== scope ||
-      envelope.preparedInputDigest !== sourceAuditPreparedInputDigest(pieces) ||
-      envelope.eligibleSourceDomainDigest !== sourceAuditEligibleDomainDigest(catalog, scope) ||
-      envelope.replayDigest !== sourceAuditReplayDigest(envelope.replay) ||
-      envelope.replay.witnesses.length > 16
-    ) {
-      return undefined
+    if (envelope === undefined) return {}
+    if (envelope.formatVersion !== 2) return replayRejected('format-version')
+    if (envelope.algorithmVersion !== 'intrinsic-periodic-source-audit-v2') {
+      return replayRejected('algorithm-version')
     }
+    if (envelope.scope !== scope) return replayRejected('scope')
+    if (envelope.preparedInputDigest !== sourceAuditPreparedInputDigest(pieces)) {
+      return replayRejected('prepared-input')
+    }
+    if (envelope.eligibleSourceDomainDigest !== sourceAuditEligibleDomainDigest(catalog, scope)) {
+      return replayRejected('eligible-source-domain')
+    }
+    if (envelope.replayDigest !== sourceAuditReplayDigest(envelope.replay)) {
+      return replayRejected('replay-digest')
+    }
+    if (envelope.replay.witnesses.length > 16) return replayRejected('witness-cap')
 
     const eligibleEntries = eligibleSourceDomainEntries(catalog, scope)
     const eligibleWitnesses = new Set(eligibleEntries.map(eligibleSourceDomainEntryKey))
@@ -1033,7 +1045,7 @@ function validateSourceAuditReplayEnvelope(
       envelope.replay.nonDominatedCropCount < 0 ||
       envelope.replay.sourceCropSurvival.length > eligibleSurvival.size
     ) {
-      return undefined
+      return replayRejected('non-dominated-count')
     }
     const seenSurvival = new Set<string>()
     for (const survival of envelope.replay.sourceCropSurvival) {
@@ -1043,7 +1055,7 @@ function validateSourceAuditReplayEnvelope(
         seenSurvival.has(key) ||
         !sourceAuditSurvivalCountsValid(survival)
       ) {
-        return undefined
+        return replayRejected('source-survival')
       }
       seenSurvival.add(key)
     }
@@ -1055,11 +1067,11 @@ function validateSourceAuditReplayEnvelope(
     for (const witness of envelope.replay.witnesses) {
       const witnessKey = eligibleSourceDomainEntryKey(witness)
       if (!eligibleWitnesses.has(witnessKey) || seenWitnesses.has(witness.seed.canonicalKey)) {
-        return undefined
+        return replayRejected('witness-domain')
       }
       seenWitnesses.add(witness.seed.canonicalKey)
       const members = familyMembers.get(witness.familyKey)
-      if (members === undefined) return undefined
+      if (members === undefined) return replayRejected('witness-family')
       const valid = yield* Effect.matchEffect(
         validateAndReconstructSourceAuditWitness(witness, members),
         {
@@ -1067,10 +1079,16 @@ function validateSourceAuditReplayEnvelope(
           onSuccess: () => Effect.succeed(true)
         }
       )
-      if (!valid) return undefined
+      if (!valid) return replayRejected('witness-validation')
     }
-    return envelope.replay
+    return { replay: envelope.replay }
   })
+}
+
+function replayRejected(rejectionReason: string): {
+  readonly rejectionReason: string
+} {
+  return { rejectionReason }
 }
 
 function sourceAuditPreparedInputDigest(

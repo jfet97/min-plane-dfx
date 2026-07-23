@@ -200,7 +200,9 @@ const report = {
     rawSourceAudit: mode === 'matrix',
     sourceAuditScope,
     sourceAuditReplayProvided: sourceAuditReplayEnvelope !== undefined,
-    sourceAuditReplayAccepted: result.periodicPortfolio?.sourceAuditReplayAccepted ?? false
+    sourceAuditReplayAccepted: result.periodicPortfolio?.sourceAuditReplayAccepted ?? false,
+    sourceAuditReplayRejectionReason:
+      result.periodicPortfolio?.sourceAuditReplayRejectionReason
   },
   directRuns,
   periodicRuns,
