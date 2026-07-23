@@ -272,6 +272,7 @@ describe('intrinsic capacity integration', () => {
           ? false
           : intrinsicAnytimeSchedulerTraceValid(scheduled.intrinsicAnytimeSchedulerTrace)
       ).toBe(true)
+      const warmLaneCount = scheduled.capacityTrace?.warmPrefixLanes?.length ?? 0
       expect(
         scheduled.intrinsicAnytimeSchedulerTrace?.quanta.map(
           ({ producerRole, outcome }) => `${producerRole}:${outcome}`
@@ -280,12 +281,27 @@ describe('intrinsic capacity integration', () => {
         'capacity-cold:checkpointed',
         'legacy-complete:settled',
         'experimental-place-defer-complete:settled',
+        ...Array.from(
+          { length: warmLaneCount },
+          () => 'capacity-warm-prefix:checkpointed'
+        ),
         'capacity-cold:settled',
         ...Array.from(
-          { length: scheduled.capacityTrace?.warmPrefixLanes?.length ?? 0 },
-          () => 'capacity-warm-prefix:settled'
+          { length: warmLaneCount },
+          () => 'capacity-warm-prefix:censored'
         )
       ])
+      expect(scheduled.capacityTrace?.laneCoordinator?.selectedProducer).toEqual({
+        role: 'capacity-cold'
+      })
+      expect(
+        scheduled.capacityTrace?.laneCoordinator?.aggregateConsumedPlacementEvaluations
+      ).toBeLessThanOrEqual(
+        scheduled.capacityTrace?.laneCoordinator?.aggregatePlacementEvaluationCap ?? 0
+      )
+      expect(scheduled.capacityTrace?.laneCoordinator?.retainedCheckpointCount).toBe(
+        warmLaneCount
+      )
       expect(scheduled.placedCollisionGeometries.length).toBeGreaterThanOrEqual(
         computed.placedCollisionGeometries.length
       )

@@ -1,5 +1,17 @@
 # Irregular Search Quality Decisions
 
+## Intrinsic Capacity Lane Budget
+
+The first deterministic anytime scheduler proved checkpoint reuse but still
+settled cold and every warm lane serially, increasing total work. The
+`intrinsic-anytime-portfolio` branch therefore keeps the same exact lanes and
+replaces settle-all execution with one warm pilot depth per fitting prefix, one
+shared aggregate evaluation allowance, and continuation of at most one exact
+pilot winner. Paused frontiers materialize honest best-known partial endpoints
+without consuming their resumable checkpoints. Promotion remains contingent on
+the retained complete hashes, constrained quality floors, and lower aggregate
+work in the full matrix.
+
 This document condenses the former chronological research ledger into decision
 arcs. Metrics describe the named commit and experiment, not current production,
 unless the row explicitly says otherwise. Detailed reports and negative results

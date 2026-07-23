@@ -32,13 +32,17 @@ import {
 import {
   captureIntrinsicCapacityPrefixDescriptors,
   terminalizeIntrinsicCapacityPrefixEndpoints,
+  type IntrinsicCapacityPrefixDescriptor,
   type IntrinsicCapacityPrefixSource
 } from './intrinsicCapacityPrefixes.js'
 import {
+  INTRINSIC_CAPACITY_V1_BOUNDS,
+  materializeIntrinsicCapacityCheckpointEndpoints,
   runIntrinsicCapacityColdSearch,
   type IntrinsicCapacitySearchResult,
   type IntrinsicCapacitySearchPhaseTimings,
-  type IntrinsicCapacitySearchTrace
+  type IntrinsicCapacitySearchTrace,
+  type IntrinsicCapacityWarmPrefixSeed
 } from './intrinsicCapacitySearch.js'
 import { IrregularBeamState } from './irregularBeamState.js'
 
@@ -76,11 +80,36 @@ export interface IntrinsicCapacityWarmPrefixLaneTrace {
   readonly sourceRole: string
   readonly prefixDepth: number
   readonly reusedPlacedCount: number
-  readonly status: 'settled'
+  readonly status: 'settled' | 'checkpointed-censored'
+  readonly selectedForContinuation: boolean
+  readonly checkpointRetained: boolean
   readonly consumedPlacementEvaluations: number
   readonly completedDepths: number
   readonly elapsedMs: number
   readonly endpoint: IntrinsicCapacityObjective | undefined
+}
+
+export interface IntrinsicCapacityLaneCoordinatorTrace {
+  readonly version: 'intrinsic-capacity-lane-coordinator-v1'
+  readonly aggregatePlacementEvaluationCap: number
+  readonly aggregateConsumedPlacementEvaluations: number
+  readonly warmPilotDepthBoundaries: number
+  readonly selectedProducer:
+    | {
+        readonly role: 'capacity-cold'
+      }
+    | {
+        readonly role: 'capacity-warm-prefix'
+        readonly sourceRole: string
+        readonly prefixDepth: number
+      }
+    | undefined
+  readonly retainedCheckpointCount: number
+  readonly censoredLaneCount: number
+  readonly quanta: ReadonlyArray<{
+    readonly producerRole: 'capacity-cold' | 'capacity-warm-prefix'
+    readonly outcome: 'checkpointed' | 'settled' | 'censored'
+  }>
 }
 
 export interface IntrinsicCapacityTrace {
@@ -92,6 +121,7 @@ export interface IntrinsicCapacityTrace {
   /** Observer-only independent warm lanes; excluded from final selection. */
   readonly warmPrefixLanes: ReadonlyArray<IntrinsicCapacityWarmPrefixLaneTrace> | undefined
   readonly warmPrefixEndpointsAdmitted: boolean
+  readonly laneCoordinator: IntrinsicCapacityLaneCoordinatorTrace | undefined
   readonly selected: IntrinsicCapacitySelectionTrace
   /** Coordinator-measured proof-only preflight runtime. */
   readonly preflightRuntimeMs: number | undefined
@@ -133,6 +163,8 @@ export interface RunIntrinsicCapacityModeInput {
   readonly scheduledColdStart?: IntrinsicCapacitySearchResult
   /** Allows settled warm lanes into the partial archive after a complete miss. */
   readonly admitWarmPrefixEndpoints?: boolean
+  /** Coordinates cold and warm lanes under one aggregate evaluation budget. */
+  readonly coordinateProtectedLanes?: boolean
   /** Coordinator-measured preflight runtime carried into the trace. */
   readonly preflightRuntimeMs?: number
   /** Coordinator-measured complete archive runtime carried into the trace. */
@@ -178,6 +210,344 @@ export function runIntrinsicCapacitySchedulerColdQuantum(input: {
         : { capturePhaseTimings: input.capturePhaseTimings })
     })
   })
+}
+
+interface ProtectedCapacityLane {
+  readonly role: 'capacity-cold' | 'capacity-warm-prefix'
+  readonly sourceRole: string | undefined
+  readonly prefixDepth: number | undefined
+  readonly reusedPlacedCount: number
+  readonly warmPrefixSeed: IntrinsicCapacityWarmPrefixSeed | undefined
+  readonly elapsedMs: number
+  readonly result: IntrinsicCapacitySearchResult
+  readonly endpoints: ReadonlyArray<IntrinsicCapacityEndpoint>
+  readonly selectedForContinuation: boolean
+}
+
+interface ProtectedCapacityLaneCoordinatorResult {
+  readonly coldSearch: IntrinsicCapacitySearchResult
+  readonly coldEndpoints: ReadonlyArray<IntrinsicCapacityEndpoint>
+  readonly warmEndpoints: ReadonlyArray<IntrinsicCapacityEndpoint>
+  readonly warmPrefixLanes: ReadonlyArray<IntrinsicCapacityWarmPrefixLaneTrace>
+  readonly trace: IntrinsicCapacityLaneCoordinatorTrace
+  readonly elapsedMs: number
+}
+
+const INTRINSIC_CAPACITY_WARM_PILOT_DEPTH_BOUNDARIES = 1 as const
+
+/**
+ * Gives every protected lane one bounded sample, then resumes only the best
+ * paused lane while a shared aggregate budget can reserve one full depth.
+ */
+function runProtectedCapacityLaneCoordinator(input: {
+  readonly sheet: SheetSpec
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
+  readonly fittingDescriptors: ReadonlyArray<IntrinsicCapacityPrefixDescriptor>
+  readonly scheduledColdStart: IntrinsicCapacitySearchResult | undefined
+  readonly control: IrregularNfpIfpControl | undefined
+  readonly capturePhaseTimings: boolean | undefined
+  readonly onWarmPrefixLane:
+    | ((lane: {
+        readonly sourceRole: string
+        readonly prefixDepth: number
+        readonly endpoint: IntrinsicCapacityEndpoint | undefined
+      }) => void)
+    | undefined
+}): Effect.Effect<
+  ProtectedCapacityLaneCoordinatorResult,
+  IntrinsicCapacityModeError,
+  GeometryKernel | GeometrySettings | NfpIfpService
+> {
+  return Effect.gen(function* () {
+    const startedAt = performance.now()
+    const basePlacementEvaluationCap = Math.max(
+      INTRINSIC_CAPACITY_V1_BOUNDS.minimumPlacementEvaluationCap,
+      input.preparedPieces.length *
+        INTRINSIC_CAPACITY_V1_BOUNDS.placementEvaluationQuotaPerDepth
+    )
+    const aggregatePlacementEvaluationCap = basePlacementEvaluationCap * 2
+    const lanes: ProtectedCapacityLane[] = []
+    const coordinatorQuanta: Array<{
+      readonly producerRole: 'capacity-cold' | 'capacity-warm-prefix'
+      readonly outcome: 'checkpointed' | 'settled' | 'censored'
+    }> = []
+
+    const coldStartedAt = performance.now()
+    const coldResult =
+      input.scheduledColdStart ??
+      (yield* runIntrinsicCapacityColdSearch({
+        sheet: input.sheet,
+        preparedPieces: input.preparedPieces,
+        materialAreasByPieceId: input.materialAreasByPieceId,
+        cavityCache: new Map(),
+        maximumDepthBoundaries: Math.min(
+          INTRINSIC_ANYTIME_SCHEDULER_COLD_QUANTUM_DEPTHS,
+          Math.max(1, input.preparedPieces.length)
+        ),
+        schedulerDeficit: 1,
+        ...(input.control === undefined ? {} : { control: input.control }),
+        ...(input.capturePhaseTimings === undefined
+          ? {}
+          : { capturePhaseTimings: input.capturePhaseTimings })
+      }))
+    lanes.push(
+      makeProtectedCapacityLane({
+        role: 'capacity-cold',
+        result: coldResult,
+        elapsedMs: Math.max(0, performance.now() - coldStartedAt),
+        sheet: input.sheet,
+        preparedPieces: input.preparedPieces,
+        materialAreasByPieceId: input.materialAreasByPieceId
+      })
+    )
+
+    for (const descriptor of input.fittingDescriptors) {
+      const laneStartedAt = performance.now()
+      const warmPrefixSeed: IntrinsicCapacityWarmPrefixSeed = {
+        sourceRole: descriptor.role,
+        depth: descriptor.depth,
+        state: descriptor.state
+      }
+      const result = yield* runIntrinsicCapacityColdSearch({
+        sheet: input.sheet,
+        preparedPieces: input.preparedPieces,
+        materialAreasByPieceId: input.materialAreasByPieceId,
+        cavityCache: new Map(),
+        warmPrefixSeed,
+        maximumDepthBoundaries: INTRINSIC_CAPACITY_WARM_PILOT_DEPTH_BOUNDARIES,
+        ...(input.control === undefined ? {} : { control: input.control }),
+        ...(input.capturePhaseTimings === undefined
+          ? {}
+          : { capturePhaseTimings: input.capturePhaseTimings })
+      })
+      lanes.push(
+        makeProtectedCapacityLane({
+          role: 'capacity-warm-prefix',
+          sourceRole: descriptor.role,
+          prefixDepth: descriptor.depth,
+          reusedPlacedCount: descriptor.placedPreparedIds.length,
+          warmPrefixSeed,
+          result,
+          elapsedMs: Math.max(0, performance.now() - laneStartedAt),
+          sheet: input.sheet,
+          preparedPieces: input.preparedPieces,
+          materialAreasByPieceId: input.materialAreasByPieceId
+        })
+      )
+      coordinatorQuanta.push({
+        producerRole: 'capacity-warm-prefix',
+        outcome: result.status === 'paused' ? 'checkpointed' : 'settled'
+      })
+    }
+
+    let aggregateConsumedPlacementEvaluations = lanes.reduce(
+      (sum, lane) => sum + lane.result.trace.consumedPlacementEvaluations,
+      0
+    )
+    const selectedLaneIndex = selectProtectedCapacityLane(lanes)
+    if (selectedLaneIndex !== undefined) {
+      let selectedLane = lanes[selectedLaneIndex]
+      while (
+        selectedLane !== undefined &&
+        selectedLane.result.status === 'paused' &&
+        aggregatePlacementEvaluationCap - aggregateConsumedPlacementEvaluations >=
+          INTRINSIC_CAPACITY_V1_BOUNDS.placementEvaluationQuotaPerDepth
+      ) {
+        const checkpoint = selectedLane.result.checkpoint
+        if (checkpoint === undefined) break
+        const resumedAt = performance.now()
+        const resumed = yield* runIntrinsicCapacityColdSearch({
+          sheet: input.sheet,
+          preparedPieces: input.preparedPieces,
+          materialAreasByPieceId: input.materialAreasByPieceId,
+          cavityCache: new Map(),
+          checkpoint,
+          schedulerDeficit: checkpoint.schedulerDeficit,
+          maximumDepthBoundaries: 1,
+          ...(selectedLane.warmPrefixSeed === undefined
+            ? {}
+            : { warmPrefixSeed: selectedLane.warmPrefixSeed }),
+          ...(input.control === undefined ? {} : { control: input.control }),
+          ...(input.capturePhaseTimings === undefined
+            ? {}
+            : { capturePhaseTimings: input.capturePhaseTimings })
+        })
+        const consumedDelta =
+          resumed.trace.consumedPlacementEvaluations -
+          selectedLane.result.trace.consumedPlacementEvaluations
+        aggregateConsumedPlacementEvaluations += Math.max(0, consumedDelta)
+        selectedLane = makeProtectedCapacityLane({
+          role: selectedLane.role,
+          ...(selectedLane.sourceRole === undefined
+            ? {}
+            : { sourceRole: selectedLane.sourceRole }),
+          ...(selectedLane.prefixDepth === undefined
+            ? {}
+            : { prefixDepth: selectedLane.prefixDepth }),
+          reusedPlacedCount: selectedLane.reusedPlacedCount,
+          ...(selectedLane.warmPrefixSeed === undefined
+            ? {}
+            : { warmPrefixSeed: selectedLane.warmPrefixSeed }),
+          result: resumed,
+          elapsedMs:
+            selectedLane.elapsedMs + Math.max(0, performance.now() - resumedAt),
+          selectedForContinuation: true,
+          sheet: input.sheet,
+          preparedPieces: input.preparedPieces,
+          materialAreasByPieceId: input.materialAreasByPieceId
+        })
+        lanes[selectedLaneIndex] = selectedLane
+      }
+    }
+
+    const coldLane = lanes.find(({ role }) => role === 'capacity-cold')
+    if (coldLane === undefined) {
+      return yield* Effect.fail(
+        new IntrinsicCapacityError({
+          operation: 'capacityLaneCoordinator',
+          message: 'protected capacity coordination lost the cold lane.'
+        })
+      )
+    }
+    const warmLanes = lanes.filter(
+      (
+        lane
+      ): lane is ProtectedCapacityLane & {
+        readonly role: 'capacity-warm-prefix'
+      } => lane.role === 'capacity-warm-prefix'
+    )
+    for (const lane of warmLanes) {
+      input.onWarmPrefixLane?.({
+        sourceRole: lane.sourceRole ?? 'unknown',
+        prefixDepth: lane.prefixDepth ?? 0,
+        endpoint: lane.endpoints[0]
+      })
+    }
+    const retainedCheckpointCount = lanes.filter(
+      ({ result }) => result.status === 'paused'
+    ).length
+    const selectedLane =
+      selectedLaneIndex === undefined ? undefined : lanes[selectedLaneIndex]
+    if (selectedLane !== undefined) {
+      coordinatorQuanta.push({
+        producerRole: selectedLane.role,
+        outcome: selectedLane.result.status === 'paused' ? 'censored' : 'settled'
+      })
+    }
+    for (const [laneIndex, lane] of lanes.entries()) {
+      if (
+        laneIndex !== selectedLaneIndex &&
+        lane.result.status === 'paused'
+      ) {
+        coordinatorQuanta.push({
+          producerRole: lane.role,
+          outcome: 'censored'
+        })
+      }
+    }
+    return {
+      coldSearch: coldLane.result,
+      coldEndpoints: coldLane.endpoints,
+      warmEndpoints: warmLanes.flatMap(({ endpoints }) => endpoints),
+      warmPrefixLanes: warmLanes.map((lane) => ({
+        sourceRole: lane.sourceRole ?? 'unknown',
+        prefixDepth: lane.prefixDepth ?? 0,
+        reusedPlacedCount: lane.reusedPlacedCount,
+        status:
+          lane.result.status === 'paused' ? 'checkpointed-censored' : 'settled',
+        selectedForContinuation: lane.selectedForContinuation,
+        checkpointRetained: lane.result.checkpoint !== undefined,
+        consumedPlacementEvaluations: lane.result.trace.consumedPlacementEvaluations,
+        completedDepths: lane.result.trace.completedDepths,
+        elapsedMs: lane.elapsedMs,
+        endpoint:
+          lane.endpoints[0] === undefined
+            ? undefined
+            : intrinsicCapacityObjective(lane.endpoints[0])
+      })),
+      trace: {
+        version: 'intrinsic-capacity-lane-coordinator-v1',
+        aggregatePlacementEvaluationCap,
+        aggregateConsumedPlacementEvaluations,
+        warmPilotDepthBoundaries: INTRINSIC_CAPACITY_WARM_PILOT_DEPTH_BOUNDARIES,
+        selectedProducer:
+          selectedLane === undefined
+            ? undefined
+            : selectedLane.role === 'capacity-cold'
+              ? { role: 'capacity-cold' }
+              : {
+                  role: 'capacity-warm-prefix',
+                  sourceRole: selectedLane.sourceRole ?? 'unknown',
+                  prefixDepth: selectedLane.prefixDepth ?? 0
+                },
+        retainedCheckpointCount,
+        censoredLaneCount: retainedCheckpointCount,
+        quanta: coordinatorQuanta
+      },
+      elapsedMs: Math.max(0, performance.now() - startedAt)
+    }
+  })
+}
+
+function makeProtectedCapacityLane(input: {
+  readonly role: 'capacity-cold' | 'capacity-warm-prefix'
+  readonly sourceRole?: string
+  readonly prefixDepth?: number
+  readonly reusedPlacedCount?: number
+  readonly warmPrefixSeed?: IntrinsicCapacityWarmPrefixSeed
+  readonly result: IntrinsicCapacitySearchResult
+  readonly elapsedMs: number
+  readonly selectedForContinuation?: boolean
+  readonly sheet: SheetSpec
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
+}): ProtectedCapacityLane {
+  const checkpoint = input.result.checkpoint
+  const endpoints =
+    input.result.status === 'settled'
+      ? input.result.endpoints
+      : checkpoint === undefined
+        ? []
+        : materializeIntrinsicCapacityCheckpointEndpoints({
+            sheet: input.sheet,
+            preparedPieces: input.preparedPieces,
+            materialAreasByPieceId: input.materialAreasByPieceId,
+            cavityCache: new Map(),
+            checkpoint,
+            ...(input.warmPrefixSeed === undefined
+              ? {}
+              : { warmPrefixSeed: input.warmPrefixSeed })
+          })
+  return {
+    role: input.role,
+    sourceRole: input.sourceRole,
+    prefixDepth: input.prefixDepth,
+    reusedPlacedCount: input.reusedPlacedCount ?? 0,
+    warmPrefixSeed: input.warmPrefixSeed,
+    elapsedMs: input.elapsedMs,
+    result: input.result,
+    endpoints,
+    selectedForContinuation: input.selectedForContinuation === true
+  }
+}
+
+function selectProtectedCapacityLane(
+  lanes: ReadonlyArray<ProtectedCapacityLane>
+): number | undefined {
+  const paused = lanes.flatMap((lane, index) =>
+    lane.result.status === 'paused' && lane.endpoints[0] !== undefined
+      ? [{ lane, index }]
+      : []
+  )
+  paused.sort((first, second) => {
+    const firstEndpoint = first.lane.endpoints[0]
+    const secondEndpoint = second.lane.endpoints[0]
+    if (firstEndpoint === undefined || secondEndpoint === undefined) return first.index - second.index
+    const objectiveOrder = compareIntrinsicCapacityEndpoints(firstEndpoint, secondEndpoint)
+    return objectiveOrder !== 0 ? objectiveOrder : first.index - second.index
+  })
+  return paused[0]?.index
 }
 
 type IntrinsicCapacityModeError =
@@ -231,8 +601,22 @@ export function runIntrinsicCapacityMode(
 
     const coldSearchStartedAt = performance.now()
     const scheduledColdStart = input.scheduledColdStart
+    const coordinated =
+      input.coordinateProtectedLanes === true
+        ? yield* runProtectedCapacityLaneCoordinator({
+            sheet: input.sheet,
+            preparedPieces: input.preparedPieces,
+            materialAreasByPieceId: materials.areasByPieceId,
+            fittingDescriptors: terminalization.fittingDescriptors,
+            scheduledColdStart,
+            control: input.control,
+            capturePhaseTimings: input.capturePhaseTimings,
+            onWarmPrefixLane: input.onWarmPrefixLane
+          })
+        : undefined
     const coldSearch =
-      scheduledColdStart?.status === 'settled'
+      coordinated?.coldSearch ??
+      (scheduledColdStart?.status === 'settled'
         ? scheduledColdStart
         : yield* runIntrinsicCapacityColdSearch({
             sheet: input.sheet,
@@ -251,12 +635,17 @@ export function runIntrinsicCapacityMode(
             ...(input.capturePhaseTimings === undefined
               ? {}
               : { capturePhaseTimings: input.capturePhaseTimings })
-          })
-    const coldSearchMs = Math.max(0, performance.now() - coldSearchStartedAt)
+          }))
+    const coldSearchMs =
+      coordinated?.elapsedMs ?? Math.max(0, performance.now() - coldSearchStartedAt)
 
-    let warmPrefixLanes: ReadonlyArray<IntrinsicCapacityWarmPrefixLaneTrace> | undefined
-    const warmEndpoints: IntrinsicCapacityEndpoint[] = []
-    if (input.captureWarmPrefixTelemetry === true) {
+    let warmPrefixLanes:
+      | ReadonlyArray<IntrinsicCapacityWarmPrefixLaneTrace>
+      | undefined = coordinated?.warmPrefixLanes
+    const warmEndpoints: IntrinsicCapacityEndpoint[] = [
+      ...(coordinated?.warmEndpoints ?? [])
+    ]
+    if (coordinated === undefined && input.captureWarmPrefixTelemetry === true) {
       const measuredLanes: IntrinsicCapacityWarmPrefixLaneTrace[] = []
       for (const descriptor of terminalization.fittingDescriptors) {
         const laneStartedAt = performance.now()
@@ -295,6 +684,8 @@ export function runIntrinsicCapacityMode(
           prefixDepth: descriptor.depth,
           reusedPlacedCount: descriptor.placedPreparedIds.length,
           status: 'settled',
+          selectedForContinuation: false,
+          checkpointRetained: false,
           consumedPlacementEvaluations: lane.trace.consumedPlacementEvaluations,
           completedDepths: lane.trace.completedDepths,
           elapsedMs: Math.max(0, performance.now() - laneStartedAt),
@@ -308,7 +699,7 @@ export function runIntrinsicCapacityMode(
     const candidates = retainIntrinsicAnytimeArchiveNamespace({
       namespace: 'partial',
       endpoints: [
-        ...coldSearch.endpoints,
+        ...(coordinated?.coldEndpoints ?? coldSearch.endpoints),
         ...terminalization.endpoints,
         ...(input.admitWarmPrefixEndpoints === true ? warmEndpoints : [])
       ],
@@ -365,6 +756,7 @@ export function runIntrinsicCapacityMode(
         coldSearch: coldSearch.trace,
         warmPrefixLanes,
         warmPrefixEndpointsAdmitted: input.admitWarmPrefixEndpoints === true,
+        laneCoordinator: coordinated?.trace,
         selected: {
           ...intrinsicCapacityObjective(selected),
           unplacedCount: selected.unplacedPreparedIds.length,

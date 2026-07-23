@@ -233,6 +233,26 @@ raises the quality arm to about `105.09 s`. This coarse scheduler is useful
 continuation infrastructure, not the final solution to serial cost. Finer
 complete quanta or a separately justified adaptive handoff remain required.
 
+### Stage 4B: Shared Capacity-Lane Budget
+
+The next opt-in scheduler increment replaces settle-all capacity execution
+after a complete miss. The existing four-depth cold checkpoint is retained.
+Every verified fitting warm prefix receives one depth-boundary pilot and keeps
+its resulting checkpoint. Exact best-known endpoints are materialized from
+paused frontiers by reporting all pending pieces as unplaced; this consumes no
+new placement evaluations and does not mutate the resumable state.
+
+The coordinator ranks those pilot endpoints with the existing partial
+objective and continues at most one paused lane, one completed depth at a time.
+Cold and warm states still never share survivor slots. The aggregate allowance
+is twice the existing single-lane bound, and a new quantum starts only when the
+remaining allowance can reserve all `4,096` evaluations of one depth.
+Unselected or budget-censored lanes remain explicit retained checkpoints.
+
+This is a work-reduction hypothesis until the committed full matrix proves the
+required `700 x 500` and `700 x 560` quality floors, lower aggregate
+evaluations/CPU, accepted-or-better `600 x 400` subsets, and exact roomy hashes.
+
 ## Stage 5: Shared Exact Archive Mechanics
 
 Complete and partial endpoints now pass through one generic exact archive
@@ -314,7 +334,7 @@ count and material under the accepted partial objective. Because the current
 strict gate pins the old hash, the six-case command exits nonzero and this
 candidate is not silently copied over the accepted baseline.
 
-The historical Mixed-61 `700 x 500` serial-cost case places `49/61` from
+The historical pre-Stage-4B Mixed-61 `700 x 500` serial-cost case places `49/61` from
 `canonical-grid@15` in `80.10 s`; it still pays about `54.46 s` complete,
 `6.90 s` cold, and three serial warm lanes. This independently confirms that
 the coarse scheduler has not resolved F4. Exact reports, source/input archives,

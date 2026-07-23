@@ -137,9 +137,12 @@ independent resumable warm shadow lanes with protected budgets. Both observers
 are disabled in production and have no routing, ranking, or selection consumer.
 The opt-in Stage 4 scheduler now advances the cold lane through one four-depth
 checkpoint quantum, settles the unchanged complete cohort, then either cancels
-capacity on a fitting complete endpoint or resumes that exact cold checkpoint
-after the complete miss. On the miss branch, verified warm lanes retain
-independent slots and budgets and may contribute exact partial endpoints. It
+capacity on a fitting complete endpoint or coordinates protected checkpoints
+after the complete miss. Every fitting warm prefix receives one depth-boundary
+pilot. The existing partial objective selects at most one paused lane for
+further one-depth quanta under one aggregate evaluation cap; every other
+checkpoint is retained as explicitly censored. Exact best-known endpoints can
+be materialized from paused frontiers without consuming or mutating them. It
 does not change complete construction or allow warm and cold states to share
 survivor slots.
 

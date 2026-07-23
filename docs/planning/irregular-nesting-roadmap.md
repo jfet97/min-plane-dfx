@@ -79,18 +79,18 @@ producer. A fixed `10%` waste route is rejected because it misses both measured
 serial-cost cases. Heuristic pressure may schedule protected work but may not
 prune, rank, or displace the legacy complete cohort.
 
-The checkpoint, observer-only telemetry, protected warm-prefix seams, and first
+The checkpoint, observer-only telemetry, protected warm-prefix seams, and
 deterministic scheduler are implemented. The telemetry
 path is benchmark opt-in, records exact scale-free pressure and a bounded cold
 no-skip-frontier probe, and cannot affect routing or endpoint selection. The
-warm path independently continues every verified fitting captured prefix with
-its own checkpoint, frontier, cache, and budget. The opt-in scheduler grants a
-four-depth quantum to the empty cold lane before the unchanged complete cohort;
-a fitting complete endpoint cancels capacity, while a complete miss resumes the
-same cold checkpoint and admits independently settled warm endpoints to the
-partial archive. Complete and partial states never share survivor slots or a
-comparator. The next measurable step is shared exact archive mechanics with
-separate namespaces.
+warm path gives every verified fitting captured prefix its own checkpoint,
+frontier, and cache. The opt-in scheduler grants a four-depth quantum to the
+empty cold lane before the unchanged complete cohort; a fitting complete
+endpoint cancels capacity. After a complete miss, each fitting warm lane
+receives one pilot depth, at most one paused lane continues under a shared
+aggregate evaluation cap, and every other checkpoint is explicitly censored
+but retained. Complete and partial states never share survivor slots or a
+comparator.
 
 That shared storage boundary is now implemented: complete and partial
 namespaces reuse exact validation/deduplication mechanics while retaining their
@@ -112,8 +112,9 @@ experimental hashes, while Mixed reaches the experimental evaluation cap.
 Returned roomy outputs remain exact; the one constrained baseline mismatch is
 a count/material/cavity improvement from warm capacity continuation and remains
 an unpromoted candidate because the strict accepted-hash gate correctly fails.
-The retained `700 x 500` historical run also confirms that summed serial work
-remains open.
+The retained `700 x 500` historical run confirms the failure of the superseded
+settle-all scheduler. The shared-budget coordinator must clear the same quality
+floor with lower aggregate work before promotion.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

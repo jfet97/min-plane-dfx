@@ -179,10 +179,13 @@ cancellation/deadline control before and during transform measurement.
 The serial routing above remains the default production behavior. The opt-in
 `intrinsic-anytime-portfolio` now wraps the unchanged cold depth loop in a
 versioned request-fingerprinted checkpoint, grants deterministic protected
-cold/complete/warm quanta, and resumes cold work after an uncensored complete
-miss. Complete and partial endpoints share exact archive storage mechanics but
-retain separate namespaces, survivor policies, and comparators; complete
-dominance is a terminal rule.
+cold/complete/warm quanta, and coordinates capacity checkpoints after an
+uncensored complete miss. Every warm lane receives one bounded pilot; one
+exactly ranked paused lane may continue under the shared aggregate capacity
+budget while all other checkpoints become explicit censored best-known states.
+Complete and partial endpoints share exact archive storage mechanics but retain
+separate namespaces, survivor policies, and comparators; complete dominance is
+a terminal rule.
 
 An additional observer-only experimental complete cohort makes one explicit
 place/defer decision by moving the first pending piece to a second pass. Its

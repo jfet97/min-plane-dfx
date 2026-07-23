@@ -784,6 +784,50 @@ export function runIntrinsicCapacityColdSearch(
   })
 }
 
+/**
+ * Materializes exact best-known endpoints from one paused protected lane.
+ * Pending work is reported honestly as unplaced; the checkpoint itself remains
+ * resumable and unchanged.
+ */
+export function materializeIntrinsicCapacityCheckpointEndpoints(input: {
+  readonly sheet: SheetSpec
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly materialAreasByPieceId: ReadonlyMap<PieceId, bigint>
+  readonly cavityCache: IntrinsicCapacityCavityCache
+  readonly checkpoint: IntrinsicAnytimeCheckpoint
+  readonly warmPrefixSeed?: IntrinsicCapacityWarmPrefixSeed
+}): ReadonlyArray<IntrinsicCapacityEndpoint> {
+  const preparedIds = input.preparedPieces.map(intrinsicCapacityPreparedPieceId)
+  const endpointsByHash = new Map<string, IntrinsicCapacityEndpoint>()
+  for (const entry of input.checkpoint.frontier) {
+    const placedIdSet = new Set(entry.state.placementOrder)
+    const unplacedPreparedIds = preparedIds.filter((pieceId) => !placedIdSet.has(pieceId))
+    const endpoint = materializeIntrinsicCapacityEndpoint({
+      sheet: input.sheet,
+      state: entry.state,
+      unplacedPreparedIds,
+      origin:
+        input.checkpoint.producerRole === 'capacity-warm-prefix'
+          ? 'warm-prefix-continuation'
+          : 'cold-search',
+      ...(input.warmPrefixSeed === undefined
+        ? {}
+        : {
+            sourceRole: input.warmPrefixSeed.sourceRole,
+            prefixDepth: input.warmPrefixSeed.depth
+          }),
+      materialAreasByPieceId: input.materialAreasByPieceId,
+      cavityCache: input.cavityCache
+    })
+    if (endpoint === undefined) continue
+    const existing = endpointsByHash.get(endpoint.canonicalGeometryHash)
+    if (existing === undefined || compareIntrinsicCapacityEndpoints(endpoint, existing) < 0) {
+      endpointsByHash.set(endpoint.canonicalGeometryHash, endpoint)
+    }
+  }
+  return [...endpointsByHash.values()].toSorted(compareIntrinsicCapacityEndpoints)
+}
+
 function capacitySearchCounters(
   counters: IntrinsicCapacitySearchCounters
 ): IntrinsicCapacitySearchCounters {

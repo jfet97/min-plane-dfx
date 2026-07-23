@@ -181,46 +181,52 @@ export function intrinsicAnytimeSchedulerTraceValid(
   ) {
     return false
   }
-  const laterCold = quanta.filter(
-    ({ producerRole }, index) => index > 0 && producerRole === 'capacity-cold'
+  const laterPartial = quanta.filter(
+    ({ cohort }, index) => index > completeIndex && cohort === 'partial'
   )
-  const warmIndexes = quanta.flatMap(({ producerRole }, index) =>
-    producerRole === 'capacity-warm-prefix' ? [index] : []
+  const laterCold = laterPartial.filter(
+    ({ producerRole }) => producerRole === 'capacity-cold'
   )
+  const laterWarm = laterPartial.filter(
+    ({ producerRole }) => producerRole === 'capacity-warm-prefix'
+  )
+  const firstLaterPartialIndex = quanta.findIndex(
+    ({ cohort }, index) => index > completeIndex && cohort === 'partial'
+  )
+  if (
+    experimentalIndexes.some(
+      (index) => firstLaterPartialIndex >= 0 && index >= firstLaterPartialIndex
+    )
+  ) {
+    return false
+  }
   if (trace.cancellationReason === 'complete-cohort-miss') {
+    if (laterPartial.some(({ outcome }) => outcome === 'cancelled')) {
+      return false
+    }
     if (
-      laterCold.length !== (trace.coldStartStatus === 'paused' ? 1 : 0) ||
-      laterCold.some(({ outcome }) => outcome !== 'settled')
+      trace.coldStartStatus === 'paused' &&
+      !laterCold.some(({ outcome }) => outcome === 'settled' || outcome === 'censored')
     ) {
       return false
     }
-    const coldSettlementIndex =
-      trace.coldStartStatus === 'paused'
-        ? quanta.findIndex(
-            ({ producerRole, outcome }, index) =>
-              index > 0 && producerRole === 'capacity-cold' && outcome === 'settled'
-          )
-        : 0
-    return (
-      (trace.coldStartStatus === 'settled'
-        ? coldSettlementIndex === 0
-        : coldSettlementIndex > completeIndex) &&
-      warmIndexes.every((index) => index > coldSettlementIndex)
-    )
+    const warmCheckpoints = laterWarm.filter(
+      ({ outcome }) => outcome === 'checkpointed'
+    ).length
+    const warmTerminals = laterWarm.filter(
+      ({ outcome }) => outcome === 'settled' || outcome === 'censored'
+    ).length
+    return warmTerminals >= warmCheckpoints
   }
   if (trace.cancellationReason === 'complete-endpoint-fitted') {
     return (
       trace.coldStartStatus === 'paused' &&
       laterCold.length === 1 &&
       laterCold[0]?.outcome === 'cancelled' &&
-      quanta.findIndex(
-        ({ producerRole, outcome }) =>
-          producerRole === 'capacity-cold' && outcome === 'cancelled'
-      ) > completeIndex &&
-      warmIndexes.length === 0
+      laterWarm.length === 0
     )
   }
-  return trace.coldStartStatus === 'settled' && laterCold.length === 0 && warmIndexes.length === 0
+  return trace.coldStartStatus === 'settled' && laterPartial.length === 0
 }
 
 /** Plain algorithm output before any worker protocol or history DTO adaptation. */
@@ -595,29 +601,19 @@ function coordinateIntrinsicSharedArchive(
               : {
                   scheduledColdStart,
                   captureWarmPrefixTelemetry: true,
-                  admitWarmPrefixEndpoints: true
+                  admitWarmPrefixEndpoints: true,
+                  coordinateProtectedLanes: true
                 }),
             ...(control === undefined ? {} : { control })
           }).pipe(Effect.mapError(mapIntrinsicCapacityError))
           if (intrinsicAnytimeSchedulerTrace !== undefined) {
             const capacityResumeOrdinal = intrinsicAnytimeSchedulerTrace.quanta.length
-            const resumedColdQuanta =
-              scheduledColdStart?.status === 'paused'
-                ? [
-                    {
-                      ordinal: capacityResumeOrdinal,
-                      cohort: 'partial' as const,
-                      producerRole: 'capacity-cold' as const,
-                      outcome: 'settled' as const
-                    }
-                  ]
-                : []
-            const warmQuanta = (capacity.trace.warmPrefixLanes ?? []).map(
-              (_lane, index) => ({
-                ordinal: capacityResumeOrdinal + resumedColdQuanta.length + index,
+            const capacityQuanta = (capacity.trace.laneCoordinator?.quanta ?? []).map(
+              ({ producerRole, outcome }, index) => ({
+                ordinal: capacityResumeOrdinal + index,
                 cohort: 'partial' as const,
-                producerRole: 'capacity-warm-prefix' as const,
-                outcome: 'settled' as const
+                producerRole,
+                outcome
               })
             )
             intrinsicAnytimeSchedulerTrace = {
@@ -627,8 +623,7 @@ function coordinateIntrinsicSharedArchive(
               cancellationReason: 'complete-cohort-miss',
               quanta: [
                 ...intrinsicAnytimeSchedulerTrace.quanta,
-                ...resumedColdQuanta,
-                ...warmQuanta
+                ...capacityQuanta
               ]
             }
           }
