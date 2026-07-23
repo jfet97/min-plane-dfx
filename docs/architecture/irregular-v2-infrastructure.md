@@ -116,6 +116,60 @@ for ordinary-path and replay compatibility, but Compact ignores their numeric
 values. Only the transform cap and enabled orientation sources remain
 user-visible Compact controls.
 
+### Intrinsic Capacity Mode
+
+When the eligible Compact request cannot hold every prepared piece, the
+coordinator no longer fails with "no fitting endpoint". The routing is:
+
+1. `preflightIntrinsicCompleteCapacity` runs before the shared archive. It is
+   proof-only: exact `bigint` shoelace sums of the minimum valid canonical
+   collision areas against the doubled canonical sheet area, plus an exact
+   singleton q0/q90 span test per piece. Its outcomes are only
+   `proven_impossible(reason)` or `inconclusive`; invalid geometry or
+   incomplete transform accounting is an error, never a proof.
+2. A proven-impossible request bypasses complete construction and runs
+   `intrinsic-capacity-v1` from the empty state.
+3. An inconclusive request runs the unchanged sheetless complete archive. A
+   fitting complete endpoint returns immediately; a valid, uncensored archive
+   with no fitting endpoint records `bounded_complete_archive_miss` and then
+   runs capacity mode. Cancellation, deadline censoring, invalid geometry, and
+   incomplete coverage remain errors, not capacity transitions.
+
+After each committed, uncapped, complete direct constructor returns, one
+read-only parent-lineage walk captures at most nine prefix descriptors at
+quarter/half/three-quarter depths of the immutable prepared order
+(`canonical-grid`, `legacy-absolute-envelope`, `open-pocket-first` only; a
+descriptor must be a skip-free processed prefix). Fitting descriptors
+terminalize into fully accounted partial endpoints with zero placement
+evaluations; the best becomes the initial incumbent.
+
+`intrinsic-capacity-v1` is a depth-synchronized cold beam over the prepared
+order with beam width `16`, local legal-placement fanout `3`, a deterministic
+`50,000` placement-evaluation cap, and one mandatory skip successor at every
+piece depth. Successor fanout ranks candidates by exact intrinsic envelope
+metrics from incrementally maintained occupied bounds without constructing
+placement objects, states, contact measurements, or anchored rebuilds for
+discarded candidates. Every successor is checked for exact partial q0/q90
+grid-span fit and deduplicated by anchored canonical occupied-union identity
+before retention; exact enclosed-cavity measurement is cached by that identity
+and covers every retained contender. The incumbent may prune a cold state only
+through the strict attainable-count and attainable-material bounds; equality
+always remains searchable. Retention and final endpoint selection follow the
+capacity objective: more placed pieces, more exact unpadded placed material
+(convex-hull `bigint` grid areas), fewer exact cavities, less cavity area,
+then smaller intrinsic maximum side, envelope area, and span, and finally
+deterministic geometry identity.
+
+Endpoint materialization re-runs the authoritative canonical legality per
+rigid orientation and returns an exact placed/unplaced partition of the
+request. The result reaches the app as an ordinary completed portfolio with
+termination reason `capacity_subset_settled`, honest `unplacedPieceIds`, the
+selected-layout reveal history, additive diagnostics codes
+(`capacity_preflight_proven_impossible`, `capacity_preflight_inconclusive`,
+`complete_archive_fitted`, `bounded_complete_archive_miss`,
+`capacity_subset_settled`), and the structured `capacityTrace` on the compute
+result. The evidence gate is `pnpm gate:capacity`.
+
 ### Historical and Experimental Constructors
 
 The following E4, V7, pressure, and early shared-archive descriptions preserve

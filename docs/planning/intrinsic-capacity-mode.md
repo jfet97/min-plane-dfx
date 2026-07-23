@@ -1,8 +1,56 @@
 # Intrinsic Capacity Mode
 
-This document specifies the planned Compact behavior when the requested sheet
-cannot contain every prepared piece. It is a forward implementation contract,
-not current production behavior.
+This document specifies the Compact behavior when the requested sheet cannot
+contain every prepared piece.
+
+## Implementation Status
+
+The first production version, `intrinsic-capacity-v1`, is implemented:
+
+- Stage 0 proof-only preflight:
+  `src/workers/algorithm/irregular/intrinsicCapacityPreflight.ts`;
+- Stage 1 routing inside the Compact coordinator:
+  `src/workers/algorithm/irregular/computeIrregularNesting.ts`;
+- Stage 2 prefix capture and Stage 3 incumbent terminalization:
+  `src/workers/algorithm/irregular/intrinsicCapacityPrefixes.ts`;
+- Stage 4 empty-start cold subset search:
+  `src/workers/algorithm/irregular/intrinsicCapacitySearch.ts`;
+- exact endpoint, accounting, and comparator:
+  `src/workers/algorithm/irregular/intrinsicCapacityEndpoint.ts`;
+- orchestration and trace:
+  `src/workers/algorithm/irregular/intrinsicCapacityMode.ts`;
+- durable evidence gate: `pnpm gate:capacity`
+  (`scripts/irregular-capacity-gate.ts`).
+
+Documented implementation decisions within this contract:
+
+- the singleton proof is reported before the area proof when both hold
+  (deterministic priority; both route identically);
+- the cold fanout ranks a state's legal candidates by exact intrinsic envelope
+  metrics derived from incrementally maintained occupied bounds (maximum side,
+  envelope area, span, then deterministic transform/point order); no contact
+  measurement, placement object, beam state, or anchored rebuild is constructed
+  for candidates that are not selected, because the capacity objective contains
+  no contact criterion;
+- the in-loop partial q0/q90 fit check is the exact canonical-grid span test;
+  the authoritative full canonical legality and identity run at endpoint
+  materialization, which re-runs `assertCanonicalGridLegalLayout` per
+  orientation;
+- successor deduplication and the cavity cache key on the bottom-left anchored
+  canonical occupied-union identity;
+- an evaluation-cap settlement discards the partially expanded depth and
+  terminalizes the last fully retained beam, which keeps the stop point
+  deterministic;
+- when neither the cold beam nor a prefix produces a legal endpoint, the
+  honest all-unplaced empty endpoint is returned;
+- the trace vocabulary is realized as additive result diagnostics codes plus
+  the structured `capacityTrace` on the compute result, and the portfolio
+  termination reason `capacity_subset_settled`.
+
+Deferred, unchanged from this contract: identical-sheet continuation.
+
+The remainder of this document is the reviewed contract that the
+implementation satisfies.
 
 The design preserves the existing rule for roomy sheets:
 

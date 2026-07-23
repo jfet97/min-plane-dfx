@@ -124,6 +124,16 @@ const fixtures: ReadonlyArray<CapacityFixture> = [
     expectedRouting: undefined,
     expectedPlacedCount: undefined,
     pairedEligible: true
+  },
+  {
+    id: 'capacity-mixed61-700x560',
+    source: 'mixed-61',
+    shapes: [],
+    paddingMm: 10,
+    sheet: new SheetSpec({ width: 700, height: 560, label: 'constrained 700x560' }),
+    expectedRouting: undefined,
+    expectedPlacedCount: undefined,
+    pairedEligible: true
   }
 ]
 

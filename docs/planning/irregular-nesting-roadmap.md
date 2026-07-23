@@ -44,20 +44,26 @@ so current ten-sheet invariance is not established.
 
 ## Priority Order
 
-### P0: Add exact constrained-sheet capacity mode
+### P0: Add exact constrained-sheet capacity mode — implemented
 
-Preserve the current sheetless complete archive for every request whose best
-complete motif fits. Add a proof-only capacity preflight and a separate
-empty-start subset search for sheets that provably cannot contain every piece
-or receive no fitting endpoint from valid bounded complete coverage. Reuse at
-most nine committed sheetless direct-constructor prefixes as zero-placement-
-evaluation incumbents; they may prune only through exact attainable-count and
-material-area bounds and may not consume cold beam capacity.
+`intrinsic-capacity-v1` is implemented and gated. The sheetless complete
+archive is preserved for every request whose best complete motif fits; the
+proof-only preflight bypasses complete construction only for exact
+area-sum or singleton impossibility; a valid bounded complete archive miss
+routes into the separate empty-start subset search; at most nine committed
+sheetless direct-constructor prefixes terminalize into zero-placement-
+evaluation incumbents that prune only through the strict attainable-count
+and material-area bounds. Focused falsifier tests live in
+`tests/unit/intrinsicCapacityMode.test.ts` and
+`tests/unit/intrinsicCapacityIntegration.test.ts`; the constrained fixture
+gate is `pnpm gate:capacity`.
 
-The complete implementation contract, fixed first-version bounds, endpoint
-accounting, traces, falsifiers, runtime worst case, and later identical-sheet
-continuation are specified in
-[`intrinsic-capacity-mode.md`](./intrinsic-capacity-mode.md).
+The reviewed contract, implementation decisions, fixed first-version bounds,
+endpoint accounting, traces, falsifiers, runtime worst case, and the still
+deferred identical-sheet continuation are recorded in
+[`intrinsic-capacity-mode.md`](./intrinsic-capacity-mode.md). Implementation
+evidence is in
+[`../research/intrinsic-capacity-mode-implementation.md`](../research/intrinsic-capacity-mode-implementation.md).
 
 ### P0: Freeze the archive-only correctness and quality gate
 

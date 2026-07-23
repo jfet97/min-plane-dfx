@@ -1,0 +1,935 @@
+{
+  "gate": "irregular-capacity-gate",
+  "sourceOutput": "pnpm gate:capacity",
+  "cases": [
+    {
+      "caseId": "capacity-archive-miss-squares2",
+      "sheet": {
+        "width": 100,
+        "height": 100
+      },
+      "pieceCount": 2,
+      "checks": {
+        "partitionExact": true,
+        "routing": true,
+        "placedCount": true,
+        "capacitySettled": true,
+        "auxiliaryEvaluationsZero": true,
+        "prefixNotBelowColdOnly": true
+      },
+      "passed": true,
+      "production": {
+        "arm": "production",
+        "elapsedMs": 58.44050000000004,
+        "routing": "bounded-complete-archive-miss",
+        "preflight": {
+          "kind": "inconclusive"
+        },
+        "placedCount": 1,
+        "unplacedCount": 1,
+        "unplacedPieceIds": [
+          "rectangle-55x55-copy-2"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "698a0fa0fc2c2eb163158b334d0ce9df500f96e30f79c2770deef35ccca561d2",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 3,
+            "fittingCount": 3,
+            "rejectedCount": 0,
+            "terminalizedCount": 1,
+            "descriptors": [
+              {
+                "role": "canonical-grid",
+                "depth": 1
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 1
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 1
+              }
+            ]
+          },
+          "prefixIncumbent": {
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 1,
+            "placedCount": 1,
+            "placedMaterialAreaMm2": 3025,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "228a5d6c99f8214b835ec056b28b7692dc800469ebe4b36c6c79d1cba40dac5c"
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "consumedPlacementEvaluations": 64,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 1,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 15,
+            "fitRejectedCandidates": 48,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 2,
+            "pieceCount": 2,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "origin": "cold-search",
+            "placedCount": 1,
+            "unplacedCount": 1,
+            "placedMaterialAreaMm2": 3025,
+            "enclosedCavityCount": 0,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "228a5d6c99f8214b835ec056b28b7692dc800469ebe4b36c6c79d1cba40dac5c"
+          },
+          "preflightRuntimeMs": 1.8809999999999718,
+          "completeArchiveRuntimeMs": 43.70712499999996,
+          "prefixTerminalizationMs": 1.4867499999999723,
+          "coldSearchMs": 3.322833000000003,
+          "runtimeMs": 4.889875000000018
+        },
+        "artifactPath": "capacity-archive-miss-squares2-production.svg"
+      },
+      "coldOnly": {
+        "arm": "cold-only",
+        "elapsedMs": 29.386209000000008,
+        "routing": "bounded-complete-archive-miss",
+        "preflight": {
+          "kind": "inconclusive"
+        },
+        "placedCount": 1,
+        "unplacedCount": 1,
+        "unplacedPieceIds": [
+          "rectangle-55x55-copy-2"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "698a0fa0fc2c2eb163158b334d0ce9df500f96e30f79c2770deef35ccca561d2",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "consumedPlacementEvaluations": 64,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 15,
+            "fitRejectedCandidates": 48,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 2,
+            "pieceCount": 2,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "origin": "cold-search",
+            "placedCount": 1,
+            "unplacedCount": 1,
+            "placedMaterialAreaMm2": 3025,
+            "enclosedCavityCount": 0,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "228a5d6c99f8214b835ec056b28b7692dc800469ebe4b36c6c79d1cba40dac5c"
+          },
+          "preflightRuntimeMs": 0.7699589999999716,
+          "completeArchiveRuntimeMs": 21.137125000000026,
+          "prefixTerminalizationMs": 0.004542000000014923,
+          "coldSearchMs": 5.369208000000015,
+          "runtimeMs": 5.3993750000000205
+        },
+        "artifactPath": "capacity-archive-miss-squares2-cold-only.svg"
+      }
+    },
+    {
+      "caseId": "capacity-count-vs-material",
+      "sheet": {
+        "width": 100,
+        "height": 100
+      },
+      "pieceCount": 3,
+      "checks": {
+        "partitionExact": true,
+        "routing": true,
+        "placedCount": true,
+        "capacitySettled": true,
+        "auxiliaryEvaluationsZero": true,
+        "prefixNotBelowColdOnly": true
+      },
+      "passed": true,
+      "production": {
+        "arm": "production",
+        "elapsedMs": 14.074416999999983,
+        "routing": "preflight-proven-impossible",
+        "preflight": {
+          "kind": "proven_impossible",
+          "reason": "minimum-collision-area-exceeds-sheet-area"
+        },
+        "placedCount": 2,
+        "unplacedCount": 1,
+        "unplacedPieceIds": [
+          "rectangle-90x90-copy-1"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "2ad041fcd0792594365c6d74cd97923016d92f876bb22c55a02ae80e5690e766",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "consumedPlacementEvaluations": 264,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 27,
+            "fitRejectedCandidates": 168,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 3,
+            "pieceCount": 3,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "origin": "cold-search",
+            "placedCount": 2,
+            "unplacedCount": 1,
+            "placedMaterialAreaMm2": 4500,
+            "enclosedCavityCount": 0,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "70b74fbf22dbdc9980f7415e1f788d2564cbc32b92875183e32a8fa09c815482"
+          },
+          "preflightRuntimeMs": 0.8971250000000168,
+          "prefixTerminalizationMs": 0.008082999999999174,
+          "coldSearchMs": 10.876832999999976,
+          "runtimeMs": 10.905708000000004
+        },
+        "artifactPath": "capacity-count-vs-material-production.svg"
+      },
+      "coldOnly": {
+        "arm": "cold-only",
+        "elapsedMs": 13.365542000000005,
+        "routing": "preflight-proven-impossible",
+        "preflight": {
+          "kind": "proven_impossible",
+          "reason": "minimum-collision-area-exceeds-sheet-area"
+        },
+        "placedCount": 2,
+        "unplacedCount": 1,
+        "unplacedPieceIds": [
+          "rectangle-90x90-copy-1"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "2ad041fcd0792594365c6d74cd97923016d92f876bb22c55a02ae80e5690e766",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "consumedPlacementEvaluations": 264,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 27,
+            "fitRejectedCandidates": 168,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 3,
+            "pieceCount": 3,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "origin": "cold-search",
+            "placedCount": 2,
+            "unplacedCount": 1,
+            "placedMaterialAreaMm2": 4500,
+            "enclosedCavityCount": 0,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "70b74fbf22dbdc9980f7415e1f788d2564cbc32b92875183e32a8fa09c815482"
+          },
+          "preflightRuntimeMs": 0.8712919999999826,
+          "prefixTerminalizationMs": 0.004750000000001364,
+          "coldSearchMs": 10.316208000000017,
+          "runtimeMs": 10.342791000000034
+        },
+        "artifactPath": "capacity-count-vs-material-cold-only.svg"
+      }
+    },
+    {
+      "caseId": "capacity-mixed61-500x400",
+      "sheet": {
+        "width": 500,
+        "height": 400
+      },
+      "pieceCount": 61,
+      "checks": {
+        "partitionExact": true,
+        "routing": true,
+        "placedCount": true,
+        "capacitySettled": true,
+        "auxiliaryEvaluationsZero": true,
+        "prefixNotBelowColdOnly": true
+      },
+      "passed": true,
+      "production": {
+        "arm": "production",
+        "elapsedMs": 1491.5453749999997,
+        "routing": "preflight-proven-impossible",
+        "preflight": {
+          "kind": "proven_impossible",
+          "reason": "minimum-collision-area-exceeds-sheet-area"
+        },
+        "placedCount": 15,
+        "unplacedCount": 46,
+        "unplacedPieceIds": [
+          "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+          "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+          "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+          "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "f55ebf37ea6e0ebe90a0dbb9d5d03cbd99f3d54db3e5056e82b4d3d17ed50cc1",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "consumedPlacementEvaluations": 50000,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 151,
+            "fitRejectedCandidates": 26980,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 15,
+            "pieceCount": 61,
+            "settlement": "evaluation-cap"
+          },
+          "selected": {
+            "origin": "cold-search",
+            "placedCount": 15,
+            "unplacedCount": 46,
+            "placedMaterialAreaMm2": 125177.508918,
+            "enclosedCavityCount": 0,
+            "selectedRotationDeg": 90,
+            "canonicalGeometryHash": "00aa5ecfd03a135813657fbbbdc264dc8241e257bd0437caf01cef3159bd28fd"
+          },
+          "preflightRuntimeMs": 15.844417000000249,
+          "prefixTerminalizationMs": 0.03333399999974063,
+          "coldSearchMs": 1449.1816659999995,
+          "runtimeMs": 1449.315458
+        },
+        "artifactPath": "capacity-mixed61-500x400-production.svg"
+      },
+      "coldOnly": {
+        "arm": "cold-only",
+        "elapsedMs": 1834.8848750000006,
+        "routing": "preflight-proven-impossible",
+        "preflight": {
+          "kind": "proven_impossible",
+          "reason": "minimum-collision-area-exceeds-sheet-area"
+        },
+        "placedCount": 15,
+        "unplacedCount": 46,
+        "unplacedPieceIds": [
+          "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+          "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+          "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+          "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "f55ebf37ea6e0ebe90a0dbb9d5d03cbd99f3d54db3e5056e82b4d3d17ed50cc1",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "consumedPlacementEvaluations": 50000,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 151,
+            "fitRejectedCandidates": 26980,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 15,
+            "pieceCount": 61,
+            "settlement": "evaluation-cap"
+          },
+          "selected": {
+            "origin": "cold-search",
+            "placedCount": 15,
+            "unplacedCount": 46,
+            "placedMaterialAreaMm2": 125177.508918,
+            "enclosedCavityCount": 0,
+            "selectedRotationDeg": 90,
+            "canonicalGeometryHash": "00aa5ecfd03a135813657fbbbdc264dc8241e257bd0437caf01cef3159bd28fd"
+          },
+          "preflightRuntimeMs": 16.828125,
+          "prefixTerminalizationMs": 0.018999999999323336,
+          "coldSearchMs": 1791.1143330000004,
+          "runtimeMs": 1791.240999999999
+        },
+        "artifactPath": "capacity-mixed61-500x400-cold-only.svg"
+      }
+    },
+    {
+      "caseId": "capacity-mixed61-700x560",
+      "sheet": {
+        "width": 700,
+        "height": 560
+      },
+      "pieceCount": 61,
+      "checks": {
+        "partitionExact": true,
+        "routing": true,
+        "placedCount": true,
+        "capacitySettled": true,
+        "auxiliaryEvaluationsZero": true,
+        "prefixNotBelowColdOnly": true
+      },
+      "passed": true,
+      "production": {
+        "arm": "production",
+        "elapsedMs": 55888.871084,
+        "routing": "bounded-complete-archive-miss",
+        "preflight": {
+          "kind": "inconclusive"
+        },
+        "placedCount": 30,
+        "unplacedCount": 31,
+        "unplacedPieceIds": [
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "1222e15c4ac2fd0cd9c1fd29fd07ced7ed457ada8f878e5dcef5a8582e81dfe1",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 9,
+            "fittingCount": 6,
+            "rejectedCount": 3,
+            "terminalizedCount": 5,
+            "descriptors": [
+              {
+                "role": "canonical-grid",
+                "depth": 15
+              },
+              {
+                "role": "canonical-grid",
+                "depth": 30
+              },
+              {
+                "role": "canonical-grid",
+                "depth": 45
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 15
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 30
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 45
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 15
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 30
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 45
+              }
+            ]
+          },
+          "prefixIncumbent": {
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 30,
+            "placedCount": 30,
+            "placedMaterialAreaMm2": 171261.116052,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "11e64e37a3c91334a12e19b3246a9fd11c3700a9fe21dfc0fd464202dcc6d4ee"
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "consumedPlacementEvaluations": 50000,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 141,
+            "fitRejectedCandidates": 0,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 15,
+            "pieceCount": 61,
+            "settlement": "evaluation-cap"
+          },
+          "selected": {
+            "origin": "prefix-incumbent",
+            "placedCount": 30,
+            "unplacedCount": 31,
+            "placedMaterialAreaMm2": 171261.116052,
+            "enclosedCavityCount": 0,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "11e64e37a3c91334a12e19b3246a9fd11c3700a9fe21dfc0fd464202dcc6d4ee"
+          },
+          "preflightRuntimeMs": 18.126874999999927,
+          "completeArchiveRuntimeMs": 54326.083291999996,
+          "prefixTerminalizationMs": 40.524209000002884,
+          "coldSearchMs": 1459.3810000000012,
+          "runtimeMs": 1500.112374999997
+        },
+        "artifactPath": "capacity-mixed61-700x560-production.svg"
+      },
+      "coldOnly": {
+        "arm": "cold-only",
+        "elapsedMs": 55691.814249999996,
+        "routing": "bounded-complete-archive-miss",
+        "preflight": {
+          "kind": "inconclusive"
+        },
+        "placedCount": 15,
+        "unplacedCount": 46,
+        "unplacedPieceIds": [
+          "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-4",
+          "604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-5",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-1",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-2",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-3",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-4",
+          "54345eb7-a37e-45eb-b0fd-eccffdfa14cc-copy-5",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-1",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-2",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-3",
+          "b8721c24-33b9-4244-9ce6-fff728f7e73b-copy-4",
+          "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-1",
+          "25cc62e4-e3e7-4b00-b8b7-7a2ef22b6846-copy-2",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-1",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-2",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-3",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-4",
+          "3c364de9-07d8-4e8f-8e47-d5ac4961f640-copy-5",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-1",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-2",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-3",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-4",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-5",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-6",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-7",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-8",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-9",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-10",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-11",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-12",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-13",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-14",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-15",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-16",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-17",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-18",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-19",
+          "d06db288-d2d6-4f40-874e-98287f516d93-copy-20",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-1",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-2",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-3",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-4",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-5",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-6",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-7",
+          "e4b6ebdf-5ca2-4c2d-bcd5-2a963f106dc5-copy-8"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "a7e77906f3c46c259c7ea37993e7f36ccb2c14743e97c5f464630ff074a1fde0",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "consumedPlacementEvaluations": 50000,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 141,
+            "fitRejectedCandidates": 0,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 15,
+            "pieceCount": 61,
+            "settlement": "evaluation-cap"
+          },
+          "selected": {
+            "origin": "cold-search",
+            "placedCount": 15,
+            "unplacedCount": 46,
+            "placedMaterialAreaMm2": 125177.508918,
+            "enclosedCavityCount": 0,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "38503e91e8a80e98078f9d6681579deeb7d35697275670b3bcd87dd351e62113"
+          },
+          "preflightRuntimeMs": 15.653999999994994,
+          "completeArchiveRuntimeMs": 54250.422917,
+          "prefixTerminalizationMs": 0.03762499999720603,
+          "coldSearchMs": 1399.0690410000097,
+          "runtimeMs": 1399.2113329999993
+        },
+        "artifactPath": "capacity-mixed61-700x560-cold-only.svg"
+      }
+    },
+    {
+      "caseId": "capacity-triangles20-300x300",
+      "sheet": {
+        "width": 300,
+        "height": 300
+      },
+      "pieceCount": 20,
+      "checks": {
+        "partitionExact": true,
+        "routing": true,
+        "placedCount": true,
+        "capacitySettled": true,
+        "auxiliaryEvaluationsZero": true,
+        "prefixNotBelowColdOnly": true
+      },
+      "passed": true,
+      "production": {
+        "arm": "production",
+        "elapsedMs": 2349.1001659999997,
+        "routing": "bounded-complete-archive-miss",
+        "preflight": {
+          "kind": "inconclusive"
+        },
+        "placedCount": 15,
+        "unplacedCount": 5,
+        "unplacedPieceIds": [
+          "triangle-70x60-copy-16",
+          "triangle-70x60-copy-17",
+          "triangle-70x60-copy-18",
+          "triangle-70x60-copy-19",
+          "triangle-70x60-copy-20"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "b1455c81ff2a38ca93954d53464f79ab85c7631045f8fbee40b9467f0273bb17",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 9,
+            "fittingCount": 6,
+            "rejectedCount": 3,
+            "terminalizedCount": 4,
+            "descriptors": [
+              {
+                "role": "canonical-grid",
+                "depth": 5
+              },
+              {
+                "role": "canonical-grid",
+                "depth": 10
+              },
+              {
+                "role": "canonical-grid",
+                "depth": 15
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 5
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 10
+              },
+              {
+                "role": "legacy-absolute-envelope",
+                "depth": 15
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 5
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 10
+              },
+              {
+                "role": "open-pocket-first",
+                "depth": 15
+              }
+            ]
+          },
+          "prefixIncumbent": {
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 10,
+            "placedCount": 10,
+            "placedMaterialAreaMm2": 21000,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "6cb959c5f0e4c5edec786159d10e04cca57e46baf66811733d4245005b9085ab"
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "consumedPlacementEvaluations": 48167,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 42,
+            "fitRejectedCandidates": 30017,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 20,
+            "pieceCount": 20,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "origin": "cold-search",
+            "placedCount": 15,
+            "unplacedCount": 5,
+            "placedMaterialAreaMm2": 31500,
+            "enclosedCavityCount": 0,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "2e40031e62bd39567e388649739ced2462e457dacf02d79f2a2abf4c6e97399a"
+          },
+          "preflightRuntimeMs": 8.198125000000005,
+          "completeArchiveRuntimeMs": 1152.1677089999998,
+          "prefixTerminalizationMs": 12.16945899999996,
+          "coldSearchMs": 1152.761958,
+          "runtimeMs": 1165.0867079999998
+        },
+        "artifactPath": "capacity-triangles20-300x300-production.svg"
+      },
+      "coldOnly": {
+        "arm": "cold-only",
+        "elapsedMs": 2318.4539160000004,
+        "routing": "bounded-complete-archive-miss",
+        "preflight": {
+          "kind": "inconclusive"
+        },
+        "placedCount": 15,
+        "unplacedCount": 5,
+        "unplacedPieceIds": [
+          "triangle-70x60-copy-16",
+          "triangle-70x60-copy-17",
+          "triangle-70x60-copy-18",
+          "triangle-70x60-copy-19",
+          "triangle-70x60-copy-20"
+        ],
+        "partitionExact": true,
+        "canonicalSha256": "b1455c81ff2a38ca93954d53464f79ab85c7631045f8fbee40b9467f0273bb17",
+        "terminationReason": "capacity_subset_settled",
+        "capacity": {
+          "prefixes": {
+            "capturedCount": 0,
+            "fittingCount": 0,
+            "rejectedCount": 0,
+            "terminalizedCount": 0,
+            "descriptors": []
+          },
+          "coldSearch": {
+            "beamWidth": 16,
+            "localLegalPlacementFanout": 3,
+            "placementEvaluationCap": 50000,
+            "consumedPlacementEvaluations": 48167,
+            "auxiliaryPlacementEvaluations": 0,
+            "prunedByAttainableCount": 0,
+            "prunedByAttainableMaterial": 0,
+            "deduplicatedSuccessors": 42,
+            "fitRejectedCandidates": 30017,
+            "invalidCandidates": 0,
+            "endpointFitRejections": 0,
+            "completedDepths": 20,
+            "pieceCount": 20,
+            "settlement": "exhausted"
+          },
+          "selected": {
+            "origin": "cold-search",
+            "placedCount": 15,
+            "unplacedCount": 5,
+            "placedMaterialAreaMm2": 31500,
+            "enclosedCavityCount": 0,
+            "selectedRotationDeg": 0,
+            "canonicalGeometryHash": "2e40031e62bd39567e388649739ced2462e457dacf02d79f2a2abf4c6e97399a"
+          },
+          "preflightRuntimeMs": 4.514709000000039,
+          "completeArchiveRuntimeMs": 1036.2266250000002,
+          "prefixTerminalizationMs": 0.007291999999779364,
+          "coldSearchMs": 1268.9253330000001,
+          "runtimeMs": 1268.9794169999996
+        },
+        "artifactPath": "capacity-triangles20-300x300-cold-only.svg"
+      }
+    }
+  ]
+}
