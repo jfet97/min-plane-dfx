@@ -157,15 +157,14 @@ four-depth cold quantum is followed by one canonical complete piece and one
 cold depth repeatedly. The cold checkpoint is never restarted on the later
 complete miss. This completes the single-worker intertwined chronology step;
 independent parallel execution remains the later wall-time step.
-The immediate constrained-quality probe is an independent subset lane with
-area-first intermediate retention and the unchanged terminal objective. It may
-replace nothing unless Triangle `300 x 300` passes the explicit exact
-non-regression and strict envelope-improvement guard and its full PNG is
-visibly tighter.
-The pure area-first probe is rejected at `13/20`. The replacement keeps eight
-objective survivors protected and uses the remaining eight slots for bounded
-width/height orientation diversity; it faces the same `15/20` and strict
-quality guard.
+The pure area-first probe is rejected at `13/20`. The later width/height bucket
+probe reaches `16/20`, but it is also rejected: it replaces half of the cold
+objective slots, affects warm continuations, regresses maximum-side/envelope
+metrics, and remains visibly fragmented. The next constrained-quality probe
+must instead be an independent observer-only generic topology frontier beside
+the full unchanged cold lane. It may replace nothing until Triangle
+`300 x 300`, Mixed, Shapes, exact checkpoint equivalence, and full PNG gates
+all pass.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

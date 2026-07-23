@@ -395,6 +395,15 @@ the cold settlement occurs before final complete settlement on the fixture,
 and validate the full quantum chronology. This remains cooperative
 single-worker execution and therefore makes no settled wall-time claim.
 
+The capacity checkpoint is now `intrinsic-anytime-checkpoint-v2`. Each retained
+frontier entry records the class-owned continuation identity consumed by its
+next placement, while the checkpoint integrity hash binds the exact decision
+partition, public objective data, incremental contact history, canonical-entry
+cache, and spatial-index identity. Resume additionally rebuilds canonical-entry
+and spatial-index structure from placed geometry. Corruption tests mutate each
+private cache independently and require rejection; uninterrupted and resumed
+endpoint/trace equality remains exact.
+
 ### Constrained Triangle Protected-Diversity Probe
 
 The first post-scheduler quality probe is opt-in and subset-only. It keeps the
@@ -409,10 +418,19 @@ baseline remains selected and the hypothesis is recorded as rejected.
 
 Commit `4b09d0d` rejects that area-first lane: it places only `13/20` versus the
 protected objective lane's `15/20`, despite a smaller envelope for the reduced
-material. The next probe restores the objective-best half of the 16 survivor
-slots and reserves four width-first plus four height-first states. These are
-named intermediate orientation/slack buckets only; the exact terminal
-count/material/cavity/envelope comparator remains unchanged.
+material. Commit `05670f1` then places `16/20` by reserving width/height
+orientation buckets, but it reduces the original objective survivors from 16
+to 8 and applies the same switch to cold and warm continuations. Its endpoint
+also regresses maximum side and envelope area and remains visibly fragmented
+in the inspected PNG. It is valid rejected evidence, not an independent
+protected lane and not a promotable Triangle result.
+
+The next probe must run beside the full unchanged cold lane. It is an
+observer-only generic topology frontier whose exact strata retain
+count/material/cavities first, then bounded representatives for intrinsic
+compactness, isolated-piece count, largest positive-contact component, and
+hull waste. Triangle is only the falsifier; Mixed and Shapes remain required
+non-regression controls.
 
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first

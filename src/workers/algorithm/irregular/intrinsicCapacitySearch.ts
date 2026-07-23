@@ -51,7 +51,7 @@ export const INTRINSIC_CAPACITY_V1_BOUNDS = {
   placementEvaluationQuotaPerDepth: 4_096
 } as const
 
-export const INTRINSIC_ANYTIME_CHECKPOINT_VERSION = 'intrinsic-anytime-checkpoint-v1' as const
+export const INTRINSIC_ANYTIME_CHECKPOINT_VERSION = 'intrinsic-anytime-checkpoint-v2' as const
 
 export type IntrinsicCapacitySettlement = 'exhausted' | 'evaluation-cap' | 'paused'
 
@@ -75,6 +75,8 @@ export interface IntrinsicAnytimeFitMask {
 
 export interface IntrinsicAnytimeDecisionState {
   readonly state: IrregularBeamState
+  /** Exact private metadata consumed by the next placement after resume. */
+  readonly continuationMetadataIdentity: string
   readonly eligibility: IntrinsicAnytimeEligibility
   readonly placedPreparedIds: ReadonlyArray<PieceId>
   readonly pendingPreparedIds: ReadonlyArray<PieceId>
@@ -148,6 +150,7 @@ export interface IntrinsicAnytimeCheckpoint {
   readonly censoring: 'none'
   readonly noSkipFrontier: IntrinsicAnytimeNoSkipFrontierState
   readonly counters: IntrinsicCapacitySearchCounters
+  readonly integrityHash: string
 }
 
 export interface IntrinsicCapacitySearchTrace {
@@ -968,7 +971,7 @@ function makeIntrinsicCapacityCheckpoint(input: {
   readonly sheetHeightGrid: number
 }): IntrinsicAnytimeCheckpoint {
   const pendingPreparedIds = input.preparedIds.slice(input.nextDepth)
-  return {
+  const checkpointWithoutIntegrity: Omit<IntrinsicAnytimeCheckpoint, 'integrityHash'> = {
     version: INTRINSIC_ANYTIME_CHECKPOINT_VERSION,
     requestFingerprint: input.requestFingerprint,
     producerRole: input.producerRole,
@@ -984,6 +987,7 @@ function makeIntrinsicCapacityCheckpoint(input: {
       )
       return {
         state: entry.state,
+        continuationMetadataIdentity: entry.state.continuationMetadataIdentity(),
         eligibility:
           permanentlySkippedPreparedIds.length === 0 ? 'completeEligible' : 'subsetOnly',
         placedPreparedIds: [...entry.state.placementOrder],
@@ -1019,6 +1023,10 @@ function makeIntrinsicCapacityCheckpoint(input: {
     noSkipFrontier: input.noSkipFrontier,
     counters: input.counters
   }
+  return {
+    ...checkpointWithoutIntegrity,
+    integrityHash: intrinsicCapacityCheckpointIntegrityHash(checkpointWithoutIntegrity)
+  }
 }
 
 function validateIntrinsicCapacityCheckpoint(input: {
@@ -1036,6 +1044,26 @@ function validateIntrinsicCapacityCheckpoint(input: {
   const { checkpoint } = input
   if (checkpoint.version !== INTRINSIC_ANYTIME_CHECKPOINT_VERSION) {
     return `unsupported checkpoint version ${checkpoint.version}.`
+  }
+  const expectedIntegrityHash = intrinsicCapacityCheckpointIntegrityHash({
+    version: checkpoint.version,
+    requestFingerprint: checkpoint.requestFingerprint,
+    producerRole: checkpoint.producerRole,
+    archiveCohort: checkpoint.archiveCohort,
+    searchBounds: checkpoint.searchBounds,
+    incumbentBinding: checkpoint.incumbentBinding,
+    frontier: checkpoint.frontier,
+    nextDepth: checkpoint.nextDepth,
+    depthBoundaryResumePosition: checkpoint.depthBoundaryResumePosition,
+    budgetLedgers: checkpoint.budgetLedgers,
+    schedulerDeficit: checkpoint.schedulerDeficit,
+    settlement: checkpoint.settlement,
+    censoring: checkpoint.censoring,
+    noSkipFrontier: checkpoint.noSkipFrontier,
+    counters: checkpoint.counters
+  })
+  if (checkpoint.integrityHash !== expectedIntegrityHash) {
+    return 'checkpoint integrity hash does not match its retained frontier.'
   }
   if (checkpoint.requestFingerprint !== input.requestFingerprint) {
     return 'checkpoint request/prepared-order fingerprint does not match the current request.'
@@ -1135,6 +1163,34 @@ function validateIntrinsicCapacityCheckpoint(input: {
     )
     const stateSkippedIds = [...entry.state.unplacedPieceIds]
     if (
+      entry.continuationMetadataIdentity !==
+      entry.state.continuationMetadataIdentity()
+    ) {
+      return 'checkpoint continuation metadata identity does not match its beam state.'
+    }
+    const recomputedState = new IrregularBeamState({
+      remainingPreparedPieces: entry.state.remainingPreparedPieces,
+      placedCollisionGeometries: entry.state.placedCollisionGeometries,
+      unplacedPieceIds: entry.state.unplacedPieceIds,
+      placementOrder: entry.state.placementOrder,
+      ...(entry.state.parent === undefined ? {} : { parent: entry.state.parent })
+    })
+    if (
+      recomputedState.canonicalEntryContinuationIdentity() !==
+      entry.state.canonicalEntryContinuationIdentity()
+    ) {
+      return 'checkpoint canonical-entry cache is inconsistent.'
+    }
+    if (
+      recomputedState.placedCollisionIndex.continuationIdentity() !==
+      entry.state.placedCollisionIndex.continuationIdentity() ||
+      !entry.state.placedCollisionIndex.matches(
+        entry.state.placedCollisionGeometries
+      )
+    ) {
+      return 'checkpoint spatial-index cache is inconsistent.'
+    }
+    if (
       !equalPieceIdArrays(entry.placedPreparedIds, statePlacedIds) ||
       !equalPieceIdArrays(entry.pendingPreparedIds, expectedPendingIds) ||
       !equalPieceIdArrays(entry.pendingOrder, expectedPendingIds) ||
@@ -1215,6 +1271,73 @@ function validateIntrinsicCapacityCheckpoint(input: {
     return 'checkpoint no-skip-frontier state disagrees with the retained frontier.'
   }
   return undefined
+}
+
+function intrinsicCapacityCheckpointIntegrityHash(
+  checkpoint: Omit<IntrinsicAnytimeCheckpoint, 'integrityHash'>
+): string {
+  return createHash('sha256')
+    .update(
+      canonicalJson({
+        version: checkpoint.version,
+        requestFingerprint: checkpoint.requestFingerprint,
+        producerRole: checkpoint.producerRole,
+        archiveCohort: checkpoint.archiveCohort,
+        searchBounds: checkpoint.searchBounds,
+        incumbentBinding: checkpoint.incumbentBinding,
+        frontier: checkpoint.frontier.map((entry) => ({
+          state: {
+            pendingIds: entry.state.remainingPreparedPieces.map(
+              intrinsicCapacityPreparedPieceId
+            ),
+            placedIds: entry.state.placedCollisionGeometries.map(
+              ({ placement }) => placement.pieceId ?? placement.sourcePieceId
+            ),
+            unplacedIds: entry.state.unplacedPieceIds,
+            placementOrder: entry.state.placementOrder,
+            canonicalOccupiedGeometryKey:
+              entry.state.canonicalOccupiedGeometryKey,
+            translatedCollisionBounds: entry.state.translatedCollisionBounds,
+            sharedCollisionBoundaryLengthMm:
+              entry.state.sharedCollisionBoundaryLengthMm,
+            sharedCollisionBoundaryContactUnits:
+              entry.state.sharedCollisionBoundaryContactUnits,
+            nearCompleteStructuralContactCount:
+              entry.state.nearCompleteStructuralContactCount,
+            dominantNearCompleteStructuralContactCount:
+              entry.state.dominantNearCompleteStructuralContactCount,
+            continuationMetadataIdentity:
+              entry.state.continuationMetadataIdentity()
+          },
+          continuationMetadataIdentity: entry.continuationMetadataIdentity,
+          eligibility: entry.eligibility,
+          placedPreparedIds: entry.placedPreparedIds,
+          pendingPreparedIds: entry.pendingPreparedIds,
+          deferredPreparedIds: entry.deferredPreparedIds,
+          permanentlySkippedPreparedIds:
+            entry.permanentlySkippedPreparedIds,
+          pendingOrder: entry.pendingOrder,
+          cursor: entry.cursor,
+          pass: entry.pass,
+          deferralCounts: entry.deferralCounts,
+          placedDoubledMaterialAreaGrid2:
+            entry.placedDoubledMaterialAreaGrid2,
+          cavities: entry.cavities,
+          anchoredOccupiedKey: entry.anchoredOccupiedKey,
+          gridSpan: entry.gridSpan,
+          fitMask: entry.fitMask
+        })),
+        nextDepth: checkpoint.nextDepth,
+        depthBoundaryResumePosition: checkpoint.depthBoundaryResumePosition,
+        budgetLedgers: checkpoint.budgetLedgers,
+        schedulerDeficit: checkpoint.schedulerDeficit,
+        settlement: checkpoint.settlement,
+        censoring: checkpoint.censoring,
+        noSkipFrontier: checkpoint.noSkipFrontier,
+        counters: checkpoint.counters
+      })
+    )
+    .digest('hex')
 }
 
 function intrinsicCapacityRequestFingerprint(input: {

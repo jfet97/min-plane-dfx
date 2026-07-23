@@ -135,6 +135,11 @@ opt-in benchmark observer reports exact parts-per-million pressure plus a
 four-depth no-permanent-skip probe. Verified fitting prefixes may also seed
 independent resumable warm shadow lanes with protected budgets. Both observers
 are disabled in production and have no routing, ranking, or selection consumer.
+The cold checkpoint format is now `intrinsic-anytime-checkpoint-v2`; its
+integrity hash binds every frontier decision plus the private canonical,
+incremental-contact, and spatial-index continuation identity. Resume also
+rebuilds canonical-entry and spatial-index structure from exact placed
+geometry, and corruption of any private cache is rejected.
 The opt-in Stage 4 scheduler starts the cold lane with one four-depth quantum,
 then alternates one committed `canonical-grid` piece with one resumed cold
 depth until either lane settles. The remaining protected complete producers

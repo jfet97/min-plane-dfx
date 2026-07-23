@@ -53,6 +53,7 @@ import {
 import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
+import { makePlacedCollisionSpatialIndex } from '../../src/workers/irregular/placedCollisionSpatialIndex.js'
 import {
   IrregularNfpIfpControlAbortError,
   type NfpIfpService
@@ -705,7 +706,52 @@ describe('intrinsic capacity search', () => {
     )
     expect(cavityFailure._tag).toBe('IntrinsicCapacityError')
     if (cavityFailure._tag !== 'IntrinsicCapacityError') return
-    expect(cavityFailure.message).toContain('cavity objective')
+    expect(cavityFailure.message).toContain('integrity hash')
+
+    const state = firstFrontierEntry.state
+    const privateCorruptions: ReadonlyArray<{
+      readonly property: string
+      readonly value: unknown
+    }> = [
+      {
+        property: 'canonicalEntryKeys',
+        value: ['corrupted-canonical-entry']
+      },
+      {
+        property: 'nearCompleteStructuralContactSignatureCounts',
+        value: new Map([['corrupted-contact-signature', 1]])
+      },
+      {
+        property: 'placedCollisionIndex',
+        value: makePlacedCollisionSpatialIndex([])
+      }
+    ]
+    for (const corruption of privateCorruptions) {
+      const original = Object.getOwnPropertyDescriptor(state, corruption.property)
+      expect(original).toBeDefined()
+      Object.defineProperty(state, corruption.property, {
+        configurable: true,
+        enumerable: false,
+        writable: false,
+        value: corruption.value
+      })
+      const privateMetadataFailure = await provideGeometry(
+        runIntrinsicCapacityColdSearch({
+          sheet: finalSheet,
+          preparedPieces: pieces,
+          materialAreasByPieceId,
+          cavityCache: new Map(),
+          checkpoint
+        }).pipe(Effect.flip)
+      )
+      expect(privateMetadataFailure._tag).toBe('IntrinsicCapacityError')
+      if (privateMetadataFailure._tag === 'IntrinsicCapacityError') {
+        expect(privateMetadataFailure.message).toContain('integrity hash')
+      }
+      if (original !== undefined) {
+        Object.defineProperty(state, corruption.property, original)
+      }
+    }
 
     const incumbentFailure = await provideGeometry(
       runIntrinsicCapacityColdSearch({
@@ -910,7 +956,7 @@ describe('intrinsic capacity prefixes', () => {
     )
     expect(cavityFailure._tag).toBe('IntrinsicCapacityError')
     if (cavityFailure._tag !== 'IntrinsicCapacityError') return
-    expect(cavityFailure.message).toContain('cavity objective')
+    expect(cavityFailure.message).toContain('integrity hash')
     const resumed = await provideGeometry(
       runIntrinsicCapacityColdSearch({
         sheet: finalSheet,
