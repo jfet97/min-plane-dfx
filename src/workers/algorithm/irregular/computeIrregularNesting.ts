@@ -133,6 +133,10 @@ export interface ComputeIrregularNestingOptions {
   readonly onCapacityCohesionShadowLane?: (
     endpoint: IntrinsicCapacityEndpoint | undefined
   ) => void
+  /** Benchmark hook exposing the exact prepared order without affecting search. */
+  readonly onPreparedPieces?: (
+    preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  ) => void
   /** Opt-in complete-capable place/defer shadow producer. */
   readonly captureExperimentalPlaceDeferCompleteShadow?: boolean
   readonly onExperimentalPlaceDeferCompleteEndpoint?: (
@@ -356,6 +360,7 @@ export function computeIrregularNesting(
       )
       diagnostics.push(...collisionGeometry.diagnostics)
     }
+    options?.onPreparedPieces?.(preparedPieces)
 
     const portfolioService = yield* Effect.service(IrregularNestingPortfolio).pipe(
       Effect.provide(

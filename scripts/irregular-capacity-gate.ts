@@ -11,6 +11,7 @@ import {
 } from '../src/shared/irregular/defaults.js'
 import {
   IrregularNestingSettings,
+  type IrregularPreparedPiece,
   type IrregularPlacedPiece
 } from '../src/shared/irregular/domain.js'
 import { makePresetShapeDocument, type PresetShapeKind } from '../src/shared/presetShapes.js'
@@ -32,9 +33,13 @@ import {
 } from '../src/workers/algorithm/irregular/intrinsicCapacityMode.js'
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
+import { runTargetedExactLns } from '../src/workers/algorithm/irregular/targetedExactLns.js'
 import { CollisionGeometryBuilder } from '../src/workers/irregular/collisionGeometryBuilder.js'
 import { FreeMaterialServiceLive } from '../src/workers/irregular/freeMaterialService.js'
-import { GeometrySettings } from '../src/workers/irregular/geometryKernel.js'
+import {
+  GeometryKernel,
+  GeometrySettings
+} from '../src/workers/irregular/geometryKernel.js'
 import { NfpIfpServiceLive } from '../src/workers/irregular/nfpIfpService.js'
 import { TransformGeneratorLive } from '../src/workers/irregular/transformGenerator.js'
 import { measureCanonicalLayoutTopologyExact } from '../src/workers/irregular/canonicalLayoutGeometry.js'
@@ -314,6 +319,19 @@ interface CapacityRunReport {
         readonly topology: ReturnType<typeof measureCanonicalLayoutTopologyExact>
       }
     | undefined
+  readonly cohesionLnsShadow:
+    | {
+        readonly artifactPath: string
+        readonly accepted: boolean
+        readonly runtimeMs: number
+        readonly canonicalSha256: string
+        readonly placedCount: number
+        readonly topology: ReturnType<typeof measureCanonicalLayoutTopologyExact>
+        readonly incumbentMetrics: unknown
+        readonly selectedMetrics: unknown
+        readonly rounds: unknown
+      }
+    | undefined
   readonly warmLaneArtifacts: ReadonlyArray<{
     readonly sourceRole: string
     readonly prefixDepth: number
@@ -356,7 +374,8 @@ async function runArm(
   arm: 'production' | 'cold-only',
   artifactPath: string,
   retentionMode: 'objective' | 'area-first' | 'axis-buckets',
-  captureCohesionShadow: boolean
+  captureCohesionShadow: boolean,
+  captureCohesionLnsShadow: boolean
 ): Promise<CapacityRunReport> {
   const settings = request.options.irregularSettings
   if (settings === undefined) throw new Error(`${request.jobId} has no irregular settings`)
@@ -366,6 +385,7 @@ async function runArm(
     readonly endpoint: IntrinsicCapacityEndpoint | undefined
   }> = []
   let cohesionEndpoint: IntrinsicCapacityEndpoint | undefined
+  let preparedPieces: ReadonlyArray<IrregularPreparedPiece> = []
   const options: ComputeIrregularNestingOptions = {
     ...(arm === 'cold-only' ? { capacityControlArm: 'disable-prefix-reuse' } : {}),
     captureCapacityPhaseTimings: true,
@@ -382,6 +402,15 @@ async function runArm(
             endpoint: IntrinsicCapacityEndpoint | undefined
           ) => {
             cohesionEndpoint = endpoint
+          }
+        }
+      : {}),
+    ...(captureCohesionLnsShadow
+      ? {
+          onPreparedPieces: (
+            observedPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+          ) => {
+            preparedPieces = observedPreparedPieces
           }
         }
       : {}),
@@ -461,6 +490,16 @@ async function runArm(
       )
     )
   }
+  const cohesionLnsShadow =
+    !captureCohesionLnsShadow || cohesionEndpoint === undefined
+      ? undefined
+      : await runCohesionLnsShadow({
+          request,
+          settings,
+          preparedPieces,
+          endpoint: cohesionEndpoint,
+          artifactPath: `${artifactPath.slice(0, -4)}-cohesion-lns-shadow.svg`
+        })
   const requestIds = request.pieces.map(({ id }) => id)
   const accountedIds = [
     ...result.placedCollisionGeometries.map(
@@ -497,6 +536,7 @@ async function runArm(
     experimentalPlaceDeferTrace: result.experimentalPlaceDeferTrace,
     retentionMode,
     cohesionShadow,
+    cohesionLnsShadow,
     warmLaneArtifacts,
     capacity:
       trace === undefined
@@ -519,6 +559,67 @@ async function runArm(
   }
 }
 
+async function runCohesionLnsShadow(input: {
+  readonly request: NestingRequest
+  readonly settings: IrregularNestingSettings
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly endpoint: IntrinsicCapacityEndpoint
+  readonly artifactPath: string
+}): Promise<NonNullable<CapacityRunReport['cohesionLnsShadow']>> {
+  const placedIds = new Set(
+    input.endpoint.placedCollisionGeometries.map(
+      ({ placement }) => placement.pieceId ?? placement.sourcePieceId
+    )
+  )
+  const subsetPreparedPieces = input.preparedPieces.filter((piece) =>
+    placedIds.has(piece.pieceId ?? piece.source.id)
+  )
+  if (
+    subsetPreparedPieces.length !==
+    input.endpoint.placedCollisionGeometries.length
+  ) {
+    throw new Error(
+      `${input.request.jobId}: cohesion LNS could not resolve every placed prepared piece`
+    )
+  }
+  const result = await Effect.runPromise(
+    runTargetedExactLns({
+      sheet: input.request.sheet,
+      allPreparedPieces: subsetPreparedPieces,
+      incumbent: input.endpoint.placedCollisionGeometries,
+      roundDeadlineMs: 1_000,
+      globalDeadlineMs: 15_000
+    }).pipe(
+      Effect.provide(GeometryKernel.Live),
+      Effect.provide(NfpIfpServiceLive),
+      Effect.provide(IrregularPlacementScorer.Live),
+      Effect.provide(IrregularLayoutScorer.Live),
+      Effect.provide(Layer.succeed(GeometrySettings, input.settings))
+    )
+  )
+  const polygons = absolutePlacedCollisionPolygons(
+    result.placedCollisionGeometries
+  )
+  const canonical = canonicalizeIrregularLayout(polygons)
+  await writeFile(
+    input.artifactPath,
+    renderSvg(input.request.sheet, polygons)
+  )
+  return {
+    artifactPath: input.artifactPath,
+    accepted: result.accepted,
+    runtimeMs: result.runtimeMs,
+    canonicalSha256: canonical.sha256,
+    placedCount: result.placedCollisionGeometries.length,
+    topology: measureCanonicalLayoutTopologyExact(
+      result.placedCollisionGeometries
+    ),
+    incumbentMetrics: result.incumbentMetrics,
+    selectedMetrics: result.selectedMetrics,
+    rounds: result.rounds
+  }
+}
+
 function jsonSafe(value: unknown): unknown {
   return JSON.parse(
     JSON.stringify(value, (_key, entry: unknown) =>
@@ -534,6 +635,7 @@ interface CliArguments {
   readonly strict: boolean
   readonly retentionMode: 'objective' | 'area-first' | 'axis-buckets'
   readonly cohesionShadow: boolean
+  readonly cohesionLnsShadow: boolean
   readonly requireCohesionPromotion: boolean
 }
 
@@ -544,6 +646,7 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
   let strict = false
   let retentionMode: 'objective' | 'area-first' | 'axis-buckets' = 'objective'
   let cohesionShadow = false
+  let cohesionLnsShadow = false
   let requireCohesionPromotion = false
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]
@@ -574,6 +677,9 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
       index += 1
     } else if (argument === '--cohesion-shadow') {
       cohesionShadow = true
+    } else if (argument === '--cohesion-lns-shadow') {
+      cohesionShadow = true
+      cohesionLnsShadow = true
     } else if (argument === '--require-cohesion-promotion') {
       requireCohesionPromotion = true
     } else {
@@ -587,6 +693,7 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
     strict,
     retentionMode,
     cohesionShadow,
+    cohesionLnsShadow,
     requireCohesionPromotion
   }
 }
@@ -603,7 +710,8 @@ for (const fixture of fixtures) {
     'production',
     `${cli.outputDirectory}/${fixture.id}-production.svg`,
     cli.retentionMode,
-    cli.cohesionShadow
+    cli.cohesionShadow,
+    cli.cohesionLnsShadow
   )
   const coldOnly =
     cli.paired && fixture.pairedEligible
@@ -612,7 +720,8 @@ for (const fixture of fixtures) {
           'cold-only',
           `${cli.outputDirectory}/${fixture.id}-cold-only.svg`,
           cli.retentionMode,
-          cli.cohesionShadow
+          cli.cohesionShadow,
+          cli.cohesionLnsShadow
         )
       : undefined
   const productionColdSearch = capacityColdSearchTrace(production)

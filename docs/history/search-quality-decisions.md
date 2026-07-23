@@ -313,3 +313,12 @@ The inspected PNG remained fragmented on the left and bottom, so the result is
 recorded as a rejected retention experiment. No Triangle-specific placement
 rule was introduced: the observer ranks exact component, isolation, cavity,
 hull-waste, and envelope signals applicable to arbitrary polygons.
+
+The subsequent bounded contact-fanout observer at `8ac35c8` preserves the
+existing three compactness successors and adds at most one distinct
+positive-boundary successor from the already exact-legal NFP pool. It reaches
+`17/20` and a `14/17` largest connected component, versus `8/16` before the
+fanout, while production remains exact. The result is retained as successful
+mechanism evidence but rejected for output: three pieces remain isolated and
+maximum side regresses to `296.739 mm`. The next justified experiment is
+bounded exact reconstruction of that legal 17-piece subset.

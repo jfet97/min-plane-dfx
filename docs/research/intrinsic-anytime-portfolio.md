@@ -472,6 +472,24 @@ those three successors exactly and appends at most one distinct
 maximum-positive-boundary successor from the same legal pool. It records
 contact measurement and survival separately and still has no output authority.
 
+Commit `8ac35c8` validates that missing fanout. Triangle-20 `300 x 300` keeps
+the exact production `15/20` hash while the independent lane improves from
+`16/20` to `17/20`. The legal pool contains 679 positive-contact candidates;
+127 distinct contact successors are added across the run and 63 survive their
+immediate depth boundary. The final largest contact component grows from
+`8/16` to `14/17`, exact components fall from eight to four, and isolated
+pieces fall from six to three. Contact measurement adds only `28.9 ms` in the
+captured run.
+
+The inspected PNG is materially better but still not promotable. It contains a
+clean 14-piece connected core plus three detached right/lower pieces, and its
+`296.739 mm` maximum side exceeds the `283.783 mm` production guard. The depth
+trace shows the connected 14-piece state survives, then has no fitting
+positive-contact continuation; the legal pool has no positive-contact
+candidate from depth 16 onward. This is the retained-coherent-state/poor-close
+case that justifies a bounded generic exact reconstruction experiment over the
+selected 17-piece subset. It does not justify Triangle-specific placement.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim
