@@ -914,10 +914,6 @@ function permutations(
   ]
 }
 
-function pairKey(first: PieceId, second: PieceId): string {
-  return first < second ? `${first}|${second}` : `${second}|${first}`
-}
-
 function otherPairEndpoint(
   pair: readonly [PieceId, PieceId],
   knownPieceId: PieceId
