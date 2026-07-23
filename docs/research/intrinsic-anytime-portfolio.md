@@ -106,6 +106,20 @@ pressure `1,098,221 ppm`, singleton-span pressure `605,040 ppm`, and first
 no-skip loss at depth two while producing byte-for-byte identical placements,
 unplaced IDs, routing, and termination to the unobserved control.
 
+Committed implementation `63126a8afd0b06ab60e336e54d57e335aaf5b0e7`
+passes the strict paired capacity gate. On the longest Mixed-61 `700 x 560`
+case the four-depth probe consumes `3,195` evaluations and about `58 ms`, while
+the unchanged production path still spends about `52.09 s` in the complete
+archive and `8.78 s` in its later `232,209`-evaluation cold search. Production
+and cold-only arms retain `55/61` and capacity identity `0ba279b5...`.
+
+The full gate takes `132.78 s` wall, `142.82 s` user CPU, `0.75 s` system CPU,
+and reports `1,019,691,008` bytes maximum resident set size. Immutable report,
+manifest, SVG, PNG, and hashes are under
+`/private/tmp/min-plane-provenance/intrinsic-shadow-telemetry-63126a8/`.
+The rendered Mixed-61 image has visible background on all four sides with no
+truncated polygon.
+
 ## Remaining Stages
 
 1. Continue verified fitting prefixes in independent protected shadow lanes
