@@ -117,19 +117,21 @@ artifact. Version 3 additionally binds the optional basis-source restriction
 and reconstructs each cached crop from its current catalog cell; its warm gain
 is measured separately below.
 
-The exact version-3 pair at `c1f4705` preserves the same archive and
-byte-identical winner SVG while strengthening cache validation:
+The fully trusted version-3 pair at `f65a4e5` preserves the same archive and
+byte-identical winner SVG while binding completeness to an expected digest
+held separately from the untrusted envelope. Regenerated current-cell seeds,
+not cached placements, continue downstream:
 
 | Version-3 mode | Direct total | Periodic total | Combined measured work | Validation crops |
 | --- | ---: | ---: | ---: | ---: |
-| cold | `10,399.369 ms` | `42,898.174 ms` | `53,297.543 ms` | `0` |
-| warm | `10,515.694 ms` | `35,043.023 ms` | `45,558.717 ms` | `352` |
+| cold | `10,201.561 ms` | `41,592.532 ms` | `51,794.093 ms` | `0` |
+| warm | `10,205.825 ms` | `34,368.084 ms` | `44,573.909 ms` | `352` |
 
-The periodic phase remains 1.224x faster and combined measured work is 1.170x
+The periodic phase remains 1.210x faster and combined measured work is 1.162x
 faster. The warm path replaces 23,456 exhaustive physical source-audit crop
 attempts with 352 targeted reconstruction attempts. Both select hash
 `3839e80d...`, `391,605.850174 mm2`, and zero cavities. Evidence:
-`/private/tmp/min-plane-provenance/replay-envelope-v3-c1f4705-20260723/`.
+`/private/tmp/min-plane-provenance/replay-envelope-trusted-f65a4e5-20260723/`.
 
 Production validation at `7544766` preserves:
 

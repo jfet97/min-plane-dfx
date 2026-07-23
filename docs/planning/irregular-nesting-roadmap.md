@@ -21,11 +21,16 @@ GA configurations.
 
 Current exact one-sheet production baselines are:
 
-| Fixture | Envelope area | Canonical cavities | Durable gate |
-| --- | ---: | ---: | --- |
-| Triangle-20 | `74,428.143126 mm2` | 0 | exact hash `371db269...` in the unit golden |
-| Mixed-61 | `391,605.850174 mm2` | 0 | fitted hash `ef2b783a...` in `pnpm gate:mixed61-compact` |
-| Shapes-17 | `304,499.845650 mm2` | 0 | exact hash `c640c06f...` in the unit golden |
+| Fixture | Envelope area | Canonical cavities | Observed runtime | Durable gate | PNG |
+| --- | ---: | ---: | ---: | --- | --- |
+| Triangle-20 | `74,428.143126 mm2` | 0 | `13.007 s` | exact hash `371db269...` in the unit golden | [`triangle-20.png`](../artifacts/current-compact-baselines/triangle-20.png) |
+| Mixed-61 | `391,605.850174 mm2` | 0 | `53.100 s` | fitted hash `ef2b783a...` in `pnpm gate:mixed61-compact` | [`mixed-61.png`](../artifacts/current-compact-baselines/mixed-61.png) |
+| Shapes-17 | `304,499.845650 mm2` | 0 | `7.651 s` | exact hash `c640c06f...` in the unit golden | [`shapes-17.png`](../artifacts/current-compact-baselines/shapes-17.png) |
+
+Runtime observations are from the 2026-07-23 `f65a4e5` fixture-golden run for
+Triangle-20 and Shapes-17 and the clean `c3849fd` production gate for Mixed-61
+on Node `v24.16.0`, V8 `13.6.233.17-node.49`, macOS arm64. They are measured
+baselines, not deterministic acceptance thresholds.
 
 Do not substitute the earlier sheetless Mixed experiment hash `3839e80d...`
 for the fitted production hash. Do not use the retired fixed-reference
@@ -132,9 +137,11 @@ channel, and only regenerated current-cell seeds continue downstream. Every
 invalid entry falls back cold without consuming the cold continuation budget.
 Replay-envelope export remains explicit so ordinary production audit runs do
 not pay cache-artifact construction. Keep durable Electron persistence deferred
-unless repeated-job measurement shows enough practical value. Remeasure the
-fully trusted replay pair before retaining the earlier 1.224x periodic and
-1.170x combined figures as current evidence.
+unless repeated-job measurement shows enough practical value. The exact
+`f65a4e5` trusted pair measures a 1.210x periodic and 1.162x combined warm gain
+with the same archive, hash, metrics, and byte-identical winner SVG. The earlier
+1.224x periodic and 1.170x combined figures remain historical version-2
+evidence, not the current replay contract.
 
 The next performance pass should profile the new 21.7-second construction
 floor before changing behavior. Current single-sample buckets point to

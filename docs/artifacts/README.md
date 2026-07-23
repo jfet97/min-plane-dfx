@@ -7,6 +7,9 @@ baselines.
 
 ## Current Production Evidence
 
+- [`current-compact-baselines/`](./current-compact-baselines/): complete,
+  Chromium-rendered PNG and SVG snapshots of the current Triangle-20, Mixed-61,
+  and Shapes-17 durable Compact baselines.
 - [`current-production-invariance-sample/`](./current-production-invariance-sample/):
   two completed archive-only production decodes from `b506344`. Their SVGs are
   byte-identical, but the full sheet matrix was cancelled and remains unproven.
