@@ -87,10 +87,12 @@ warm path gives every verified fitting captured prefix its own checkpoint,
 frontier, and cache. The opt-in scheduler grants a four-depth quantum to the
 empty cold lane before the unchanged complete cohort; a fitting complete
 endpoint cancels capacity. After a complete miss, each fitting warm lane
-receives one pilot depth, at most one paused lane continues under a shared
-aggregate evaluation cap, and every other checkpoint is explicitly censored
-but retained. Complete and partial states never share survivor slots or a
-comparator.
+receives one pilot depth. The cold checkpoint has one protected base-cap
+entitlement; warm lanes share a second and are reselected after every depth
+boundary. Equal-depth warm comparisons use no-skip persistence, placed count,
+and exact material, with round-robin protection for distinct tied frontiers.
+Every budget-censored checkpoint is retained. Complete and partial states never
+share survivor slots or a comparator.
 
 That shared storage boundary is now implemented: complete and partial
 namespaces reuse exact validation/deduplication mechanics while retaining their

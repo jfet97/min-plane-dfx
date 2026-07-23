@@ -242,12 +242,20 @@ its resulting checkpoint. Exact best-known endpoints are materialized from
 paused frontiers by reporting all pending pieces as unplaced; this consumes no
 new placement evaluations and does not mutate the resumable state.
 
-The coordinator ranks those pilot endpoints with the existing partial
-objective and continues at most one paused lane, one completed depth at a time.
-Cold and warm states still never share survivor slots. The aggregate allowance
-is twice the existing single-lane bound, and a new quantum starts only when the
-remaining allowance can reserve all `4,096` evaluations of one depth.
-Unselected or budget-censored lanes remain explicit retained checkpoints.
+The revised coordinator reserves one entire single-lane entitlement for the
+protected cold checkpoint, preserving the exact cold terminal candidate. Warm
+pilots and continuations share a separate single-lane entitlement. After every
+warm depth boundary or settlement, the coordinator reselects among paused warm
+lanes. Only equal-next-depth frontiers compete: no-permanent-skip persistence,
+placed count, and exact placed material are scheduling signals; distinct exact
+frontier identities round-robin while those signals remain tied. Cavity,
+envelope, terminal hash, and requested-sheet compactness are not scheduling
+ties. Cold and warm states still never share survivor slots.
+
+The aggregate allowance remains twice the existing single-lane bound, and a
+new warm quantum starts only when the warm entitlement can reserve all `4,096`
+evaluations of one depth. Budget-censored lanes remain explicit retained
+checkpoints, and their exact best-known endpoints remain terminal candidates.
 
 This is a work-reduction hypothesis until the committed full matrix proves the
 required `700 x 500` and `700 x 560` quality floors, lower aggregate
@@ -264,6 +272,13 @@ strictly worse exact endpoint than the cold control. One shallow exact partial
 objective is therefore not a reliable continuation-value estimate. This result
 must not be promoted; the next selector change needs an independently justified
 protected-diversity or longer-probe rule.
+
+The next committed hypothesis therefore keeps the cold candidate protected and
+replaces the rejected terminal-objective selector with equal-depth warm
+reselection. Its falsifiers are unchanged: Mixed-61 `700 x 560` must recover at
+least `59/61`, `700 x 500` must retain the accepted `49/61`, Triangle must be
+cold-exact-or-better, the constrained matrix must not regress, roomy complete
+hashes must remain exact, and CPU/evaluations must stay below settle-all.
 
 ## Stage 5: Shared Exact Archive Mechanics
 

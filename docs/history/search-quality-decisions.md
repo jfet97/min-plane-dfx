@@ -19,6 +19,14 @@ Triangle-20 warm endpoint that tied count/material but lost the exact cold
 objective. Shallow terminal compactness is not accepted as a proxy for future
 continuation value.
 
+The replacement hypothesis protects the exact cold checkpoint with one
+single-lane entitlement and gives warm checkpoints a separate entitlement.
+Warm selection is repeated after each completed depth and compares only
+equal-depth continuation signals: no-skip persistence, placed count, and exact
+material. Distinct tied frontier identities advance round-robin. It deliberately
+excludes cavities, envelope dimensions, terminal hashes, and sheet-relative
+compactness from scheduling.
+
 This document condenses the former chronological research ledger into decision
 arcs. Metrics describe the named commit and experiment, not current production,
 unless the row explicitly says otherwise. Detailed reports and negative results

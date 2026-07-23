@@ -94,7 +94,7 @@ export interface IntrinsicCapacityLaneCoordinatorTrace {
   readonly aggregatePlacementEvaluationCap: number
   readonly aggregateConsumedPlacementEvaluations: number
   readonly warmPilotDepthBoundaries: number
-  readonly selectedProducer:
+  readonly continuedProducers: ReadonlyArray<
     | {
         readonly role: 'capacity-cold'
       }
@@ -103,7 +103,7 @@ export interface IntrinsicCapacityLaneCoordinatorTrace {
         readonly sourceRole: string
         readonly prefixDepth: number
       }
-    | undefined
+  >
   readonly retainedCheckpointCount: number
   readonly censoredLaneCount: number
   readonly quanta: ReadonlyArray<{
@@ -111,6 +111,9 @@ export interface IntrinsicCapacityLaneCoordinatorTrace {
     readonly outcome: 'checkpointed' | 'settled' | 'censored'
   }>
 }
+
+type IntrinsicCapacityContinuedProducer =
+  IntrinsicCapacityLaneCoordinatorTrace['continuedProducers'][number]
 
 export interface IntrinsicCapacityTrace {
   readonly routing: IntrinsicCapacityRouting
@@ -301,6 +304,47 @@ function runProtectedCapacityLaneCoordinator(input: {
         materialAreasByPieceId: input.materialAreasByPieceId
       })
     )
+    const continuedLaneIndexes = new Set<number>()
+    const initialColdLane = lanes[0]
+    if (initialColdLane?.result.status === 'paused') {
+      const checkpoint = initialColdLane.result.checkpoint
+      if (checkpoint === undefined) {
+        return yield* Effect.fail(
+          new IntrinsicCapacityError({
+            operation: 'capacityLaneCoordinator',
+            message: 'paused protected cold lane has no checkpoint.'
+          })
+        )
+      }
+      const resumedAt = performance.now()
+      const resumed = yield* runIntrinsicCapacityColdSearch({
+        sheet: input.sheet,
+        preparedPieces: input.preparedPieces,
+        materialAreasByPieceId: input.materialAreasByPieceId,
+        cavityCache: new Map(),
+        checkpoint,
+        schedulerDeficit: checkpoint.schedulerDeficit,
+        ...(input.control === undefined ? {} : { control: input.control }),
+        ...(input.capturePhaseTimings === undefined
+          ? {}
+          : { capturePhaseTimings: input.capturePhaseTimings })
+      })
+      lanes[0] = makeProtectedCapacityLane({
+        role: 'capacity-cold',
+        result: resumed,
+        elapsedMs:
+          initialColdLane.elapsedMs + Math.max(0, performance.now() - resumedAt),
+        selectedForContinuation: true,
+        sheet: input.sheet,
+        preparedPieces: input.preparedPieces,
+        materialAreasByPieceId: input.materialAreasByPieceId
+      })
+      continuedLaneIndexes.add(0)
+      coordinatorQuanta.push({
+        producerRole: 'capacity-cold',
+        outcome: resumed.status === 'paused' ? 'censored' : 'settled'
+      })
+    }
 
     for (const descriptor of input.fittingDescriptors) {
       const laneStartedAt = performance.now()
@@ -341,64 +385,67 @@ function runProtectedCapacityLaneCoordinator(input: {
       })
     }
 
-    let aggregateConsumedPlacementEvaluations = lanes.reduce(
-      (sum, lane) => sum + lane.result.trace.consumedPlacementEvaluations,
+    let warmConsumedPlacementEvaluations = lanes.reduce(
+      (sum, lane) =>
+        lane.role === 'capacity-warm-prefix'
+          ? sum + lane.result.trace.consumedPlacementEvaluations
+          : sum,
       0
     )
-    const selectedLaneIndex = selectProtectedCapacityLane(lanes)
-    if (selectedLaneIndex !== undefined) {
-      let selectedLane = lanes[selectedLaneIndex]
-      while (
-        selectedLane !== undefined &&
-        selectedLane.result.status === 'paused' &&
-        aggregatePlacementEvaluationCap - aggregateConsumedPlacementEvaluations >=
-          INTRINSIC_CAPACITY_V1_BOUNDS.placementEvaluationQuotaPerDepth
+    let lastWarmLaneIndex = -1
+    while (
+      basePlacementEvaluationCap - warmConsumedPlacementEvaluations >=
+      INTRINSIC_CAPACITY_V1_BOUNDS.placementEvaluationQuotaPerDepth
+    ) {
+      const selectedWarmLaneIndex = selectProtectedWarmCapacityLane(
+        lanes,
+        lastWarmLaneIndex
+      )
+      if (selectedWarmLaneIndex === undefined) break
+      const selectedWarmLane = lanes[selectedWarmLaneIndex]
+      const checkpoint = selectedWarmLane?.result.checkpoint
+      if (
+        selectedWarmLane === undefined ||
+        selectedWarmLane.warmPrefixSeed === undefined ||
+        checkpoint === undefined
       ) {
-        const checkpoint = selectedLane.result.checkpoint
-        if (checkpoint === undefined) break
-        const resumedAt = performance.now()
-        const resumed = yield* runIntrinsicCapacityColdSearch({
-          sheet: input.sheet,
-          preparedPieces: input.preparedPieces,
-          materialAreasByPieceId: input.materialAreasByPieceId,
-          cavityCache: new Map(),
-          checkpoint,
-          schedulerDeficit: checkpoint.schedulerDeficit,
-          maximumDepthBoundaries: 1,
-          ...(selectedLane.warmPrefixSeed === undefined
-            ? {}
-            : { warmPrefixSeed: selectedLane.warmPrefixSeed }),
-          ...(input.control === undefined ? {} : { control: input.control }),
-          ...(input.capturePhaseTimings === undefined
-            ? {}
-            : { capturePhaseTimings: input.capturePhaseTimings })
-        })
-        const consumedDelta =
-          resumed.trace.consumedPlacementEvaluations -
-          selectedLane.result.trace.consumedPlacementEvaluations
-        aggregateConsumedPlacementEvaluations += Math.max(0, consumedDelta)
-        selectedLane = makeProtectedCapacityLane({
-          role: selectedLane.role,
-          ...(selectedLane.sourceRole === undefined
-            ? {}
-            : { sourceRole: selectedLane.sourceRole }),
-          ...(selectedLane.prefixDepth === undefined
-            ? {}
-            : { prefixDepth: selectedLane.prefixDepth }),
-          reusedPlacedCount: selectedLane.reusedPlacedCount,
-          ...(selectedLane.warmPrefixSeed === undefined
-            ? {}
-            : { warmPrefixSeed: selectedLane.warmPrefixSeed }),
-          result: resumed,
-          elapsedMs:
-            selectedLane.elapsedMs + Math.max(0, performance.now() - resumedAt),
-          selectedForContinuation: true,
-          sheet: input.sheet,
-          preparedPieces: input.preparedPieces,
-          materialAreasByPieceId: input.materialAreasByPieceId
-        })
-        lanes[selectedLaneIndex] = selectedLane
+        break
       }
+      const resumedAt = performance.now()
+      const resumed = yield* runIntrinsicCapacityColdSearch({
+        sheet: input.sheet,
+        preparedPieces: input.preparedPieces,
+        materialAreasByPieceId: input.materialAreasByPieceId,
+        cavityCache: new Map(),
+        warmPrefixSeed: selectedWarmLane.warmPrefixSeed,
+        checkpoint,
+        schedulerDeficit: checkpoint.schedulerDeficit,
+        maximumDepthBoundaries: 1,
+        ...(input.control === undefined ? {} : { control: input.control }),
+        ...(input.capturePhaseTimings === undefined
+          ? {}
+          : { capturePhaseTimings: input.capturePhaseTimings })
+      })
+      const consumedDelta =
+        resumed.trace.consumedPlacementEvaluations -
+        selectedWarmLane.result.trace.consumedPlacementEvaluations
+      warmConsumedPlacementEvaluations += Math.max(0, consumedDelta)
+      lanes[selectedWarmLaneIndex] = makeProtectedCapacityLane({
+        role: 'capacity-warm-prefix',
+        sourceRole: selectedWarmLane.sourceRole ?? 'unknown',
+        prefixDepth: selectedWarmLane.prefixDepth ?? 0,
+        reusedPlacedCount: selectedWarmLane.reusedPlacedCount,
+        warmPrefixSeed: selectedWarmLane.warmPrefixSeed,
+        result: resumed,
+        elapsedMs:
+          selectedWarmLane.elapsedMs + Math.max(0, performance.now() - resumedAt),
+        selectedForContinuation: true,
+        sheet: input.sheet,
+        preparedPieces: input.preparedPieces,
+        materialAreasByPieceId: input.materialAreasByPieceId
+      })
+      continuedLaneIndexes.add(selectedWarmLaneIndex)
+      lastWarmLaneIndex = selectedWarmLaneIndex
     }
 
     const coldLane = lanes.find(({ role }) => role === 'capacity-cold')
@@ -427,25 +474,22 @@ function runProtectedCapacityLaneCoordinator(input: {
     const retainedCheckpointCount = lanes.filter(
       ({ result }) => result.status === 'paused'
     ).length
-    const selectedLane =
-      selectedLaneIndex === undefined ? undefined : lanes[selectedLaneIndex]
-    if (selectedLane !== undefined) {
-      coordinatorQuanta.push({
-        producerRole: selectedLane.role,
-        outcome: selectedLane.result.status === 'paused' ? 'censored' : 'settled'
-      })
-    }
-    for (const [laneIndex, lane] of lanes.entries()) {
-      if (
-        laneIndex !== selectedLaneIndex &&
-        lane.result.status === 'paused'
-      ) {
+    for (const lane of warmLanes) {
+      if (lane.result.status === 'paused') {
         coordinatorQuanta.push({
-          producerRole: lane.role,
+          producerRole: 'capacity-warm-prefix',
           outcome: 'censored'
+        })
+      } else if (lane.selectedForContinuation) {
+        coordinatorQuanta.push({
+          producerRole: 'capacity-warm-prefix',
+          outcome: 'settled'
         })
       }
     }
+    const aggregateConsumedPlacementEvaluations =
+      coldLane.result.trace.consumedPlacementEvaluations +
+      warmConsumedPlacementEvaluations
     return {
       coldSearch: coldLane.result,
       coldEndpoints: coldLane.endpoints,
@@ -471,16 +515,22 @@ function runProtectedCapacityLaneCoordinator(input: {
         aggregatePlacementEvaluationCap,
         aggregateConsumedPlacementEvaluations,
         warmPilotDepthBoundaries: INTRINSIC_CAPACITY_WARM_PILOT_DEPTH_BOUNDARIES,
-        selectedProducer:
-          selectedLane === undefined
-            ? undefined
-            : selectedLane.role === 'capacity-cold'
+        continuedProducers: [...continuedLaneIndexes].reduce<
+          IntrinsicCapacityContinuedProducer[]
+        >((continued, laneIndex) => {
+          const lane = lanes[laneIndex]
+          if (lane === undefined) return continued
+          continued.push(
+            lane.role === 'capacity-cold'
               ? { role: 'capacity-cold' }
               : {
                   role: 'capacity-warm-prefix',
-                  sourceRole: selectedLane.sourceRole ?? 'unknown',
-                  prefixDepth: selectedLane.prefixDepth ?? 0
-                },
+                  sourceRole: lane.sourceRole ?? 'unknown',
+                  prefixDepth: lane.prefixDepth ?? 0
+                }
+          )
+          return continued
+        }, []),
         retainedCheckpointCount,
         censoredLaneCount: retainedCheckpointCount,
         quanta: coordinatorQuanta
@@ -532,22 +582,82 @@ function makeProtectedCapacityLane(input: {
   }
 }
 
-function selectProtectedCapacityLane(
-  lanes: ReadonlyArray<ProtectedCapacityLane>
+function selectProtectedWarmCapacityLane(
+  lanes: ReadonlyArray<ProtectedCapacityLane>,
+  lastSelectedIndex: number
 ): number | undefined {
-  const paused = lanes.flatMap((lane, index) =>
-    lane.result.status === 'paused' && lane.endpoints[0] !== undefined
+  let candidates = lanes.flatMap((lane, index) =>
+    lane.role === 'capacity-warm-prefix' &&
+    lane.result.status === 'paused' &&
+    lane.result.checkpoint !== undefined &&
+    lane.endpoints[0] !== undefined
       ? [{ lane, index }]
       : []
   )
-  paused.sort((first, second) => {
-    const firstEndpoint = first.lane.endpoints[0]
-    const secondEndpoint = second.lane.endpoints[0]
-    if (firstEndpoint === undefined || secondEndpoint === undefined) return first.index - second.index
-    const objectiveOrder = compareIntrinsicCapacityEndpoints(firstEndpoint, secondEndpoint)
-    return objectiveOrder !== 0 ? objectiveOrder : first.index - second.index
-  })
-  return paused[0]?.index
+  const maximumPrefixDepth = Math.max(
+    ...candidates.map(({ lane }) => lane.prefixDepth ?? 0)
+  )
+  candidates = candidates.filter(
+    ({ lane }) => (lane.prefixDepth ?? 0) === maximumPrefixDepth
+  )
+  const minimumNextDepth = Math.min(
+    ...candidates.map(({ lane }) => lane.result.checkpoint?.nextDepth ?? Number.MAX_SAFE_INTEGER)
+  )
+  candidates = candidates.filter(
+    ({ lane }) => lane.result.checkpoint?.nextDepth === minimumNextDepth
+  )
+  const noSkipFrontierPresent = candidates.some(
+    ({ lane }) => lane.result.checkpoint?.noSkipFrontier.present === true
+  )
+  candidates = candidates.filter(
+    ({ lane }) =>
+      (lane.result.checkpoint?.noSkipFrontier.present === true) ===
+      noSkipFrontierPresent
+  )
+  const maximumPlacedCount = Math.max(
+    ...candidates.map(({ lane }) => lane.endpoints[0]?.metrics.placedCount ?? 0)
+  )
+  candidates = candidates.filter(
+    ({ lane }) => lane.endpoints[0]?.metrics.placedCount === maximumPlacedCount
+  )
+  const maximumPlacedMaterial = candidates.reduce(
+    (maximum, { lane }) => {
+      const material = lane.endpoints[0]?.metrics.placedDoubledMaterialAreaGrid2 ?? 0n
+      return material > maximum ? material : maximum
+    },
+    0n
+  )
+  candidates = candidates.filter(
+    ({ lane }) =>
+      lane.endpoints[0]?.metrics.placedDoubledMaterialAreaGrid2 ===
+      maximumPlacedMaterial
+  )
+  const distinctByFrontier = new Map<string, (typeof candidates)[number]>()
+  for (const candidate of candidates) {
+    const identity = protectedCapacityLaneFrontierIdentity(candidate.lane)
+    if (!distinctByFrontier.has(identity)) distinctByFrontier.set(identity, candidate)
+  }
+  const distinct = [...distinctByFrontier.values()].toSorted(
+    (first, second) => first.index - second.index
+  )
+  return (
+    distinct.find(({ index }) => index > lastSelectedIndex)?.index ??
+    distinct[0]?.index
+  )
+}
+
+function protectedCapacityLaneFrontierIdentity(lane: ProtectedCapacityLane): string {
+  return (
+    lane.result.checkpoint?.frontier
+      .map(
+        (entry) =>
+          `${entry.anchoredOccupiedKey}|placed=${JSON.stringify(
+            entry.placedPreparedIds
+          )}|skipped=${JSON.stringify(entry.permanentlySkippedPreparedIds)}`
+      )
+      .toSorted()
+      .join('\n') ?? ''
+  )
 }
 
 type IntrinsicCapacityModeError =

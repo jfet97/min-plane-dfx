@@ -273,35 +273,36 @@ describe('intrinsic capacity integration', () => {
           : intrinsicAnytimeSchedulerTraceValid(scheduled.intrinsicAnytimeSchedulerTrace)
       ).toBe(true)
       const warmLaneCount = scheduled.capacityTrace?.warmPrefixLanes?.length ?? 0
+      const schedulerQuanta =
+        scheduled.intrinsicAnytimeSchedulerTrace?.quanta ?? []
+      expect(schedulerQuanta[0]).toMatchObject({
+        producerRole: 'capacity-cold',
+        outcome: 'checkpointed'
+      })
+      expect(schedulerQuanta).toContainEqual(
+        expect.objectContaining({
+          producerRole: 'capacity-cold',
+          outcome: 'settled'
+        })
+      )
       expect(
-        scheduled.intrinsicAnytimeSchedulerTrace?.quanta.map(
-          ({ producerRole, outcome }) => `${producerRole}:${outcome}`
-        )
-      ).toEqual([
-        'capacity-cold:checkpointed',
-        'legacy-complete:settled',
-        'experimental-place-defer-complete:settled',
-        ...Array.from(
-          { length: warmLaneCount },
-          () => 'capacity-warm-prefix:checkpointed'
-        ),
-        'capacity-cold:settled',
-        ...Array.from(
-          { length: warmLaneCount },
-          () => 'capacity-warm-prefix:censored'
-        )
-      ])
-      expect(scheduled.capacityTrace?.laneCoordinator?.selectedProducer).toEqual({
+        scheduled.capacityTrace?.laneCoordinator?.continuedProducers
+      ).toContainEqual({
         role: 'capacity-cold'
       })
+      expect(
+        scheduled.capacityTrace?.laneCoordinator?.continuedProducers.some(
+          ({ role }) => role === 'capacity-warm-prefix'
+        )
+      ).toBe(warmLaneCount > 0)
       expect(
         scheduled.capacityTrace?.laneCoordinator?.aggregateConsumedPlacementEvaluations
       ).toBeLessThanOrEqual(
         scheduled.capacityTrace?.laneCoordinator?.aggregatePlacementEvaluationCap ?? 0
       )
-      expect(scheduled.capacityTrace?.laneCoordinator?.retainedCheckpointCount).toBe(
-        warmLaneCount
-      )
+      expect(
+        scheduled.capacityTrace?.laneCoordinator?.retainedCheckpointCount
+      ).toBeLessThanOrEqual(warmLaneCount)
       expect(scheduled.placedCollisionGeometries.length).toBeGreaterThanOrEqual(
         computed.placedCollisionGeometries.length
       )
