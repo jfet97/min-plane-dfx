@@ -1172,10 +1172,16 @@ function validateIntrinsicStrictDirectState(state: IrregularBeamState): string |
     return 'direct checkpoint canonical occupied identity is inconsistent.'
   }
   if (
-    recomputed.continuationMetadataIdentity() !==
-    state.continuationMetadataIdentity()
+    recomputed.canonicalEntryContinuationIdentity() !==
+    state.canonicalEntryContinuationIdentity()
   ) {
-    return 'direct checkpoint continuation metadata identity is inconsistent.'
+    return 'direct checkpoint canonical-entry cache is inconsistent.'
+  }
+  if (
+    recomputed.placedCollisionIndex.continuationIdentity() !==
+    state.placedCollisionIndex.continuationIdentity()
+  ) {
+    return 'direct checkpoint spatial-index cache is inconsistent.'
   }
   if (!state.placedCollisionIndex.matches(state.placedCollisionGeometries)) {
     return 'direct checkpoint spatial index does not own the placed geometry.'

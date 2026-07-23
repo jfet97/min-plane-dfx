@@ -148,15 +148,25 @@ export class IrregularBeamState {
   /** Deterministic identity of private caches consumed by the next placement. */
   continuationMetadataIdentity(): string {
     return JSON.stringify({
-      canonicalEntryKeys: this.canonicalEntryKeys,
+      canonicalEntryKeys: this.canonicalEntryContinuationIdentity(),
       nearCompleteStructuralContactSignatureCounts:
-        this.nearCompleteStructuralContactSignatureCounts === undefined
-          ? undefined
-          : [...this.nearCompleteStructuralContactSignatureCounts.entries()].toSorted(
-              ([first], [second]) => first.localeCompare(second)
-            ),
+        this.contactSignatureContinuationIdentity(),
       placedCollisionIndex: this.placedCollisionIndex.continuationIdentity()
     })
+  }
+
+  canonicalEntryContinuationIdentity(): string {
+    return JSON.stringify(this.canonicalEntryKeys)
+  }
+
+  contactSignatureContinuationIdentity(): string {
+    return JSON.stringify(
+      this.nearCompleteStructuralContactSignatureCounts === undefined
+        ? undefined
+        : [...this.nearCompleteStructuralContactSignatureCounts.entries()].toSorted(
+            ([first], [second]) => first.localeCompare(second)
+          )
+    )
   }
 
   withPlacement(input: {

@@ -367,6 +367,14 @@ so mutation is rejected while legitimate incremental metadata is preserved.
 Self-cycle, two-state-cycle, canonical-key, contact-signature, and
 spatial-bucket tests cover the new boundary.
 
+The Mixed-61 roomy falsifier showed why contact-signature cache validation
+cannot substitute a fresh whole-layout derivation: the constructor owns an
+incremental signature history that is continuation-relevant but not identical
+to recomputation from the terminal placement array. The checkpoint therefore
+binds that exact class-owned identity in its integrity digest; it recomputes
+canonical-entry and spatial-index structure, but preserves and hash-validates
+the legitimate incremental contact history.
+
 The first portfolio integration is intentionally narrower than scheduling.
 When enabled, `canonical-grid` resumes through one completed piece at a time,
 settles fully, emits its final prefix callback once, and only then allows the

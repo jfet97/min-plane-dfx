@@ -210,6 +210,9 @@ bounded by the committed cursor. A class-owned continuation identity covers the
 private canonical, contact-signature, and spatial-index caches consumed by later
 placement. Resume preserves exact incremental state while rejecting cache
 mutation.
+Canonical-entry and spatial-index structure are recomputed for validation.
+Incremental contact-signature history is instead integrity-bound exactly,
+because a whole-layout derivation is not the same continuation state.
 
 The direct portfolio has an opt-in integration seam that advances only
 `canonical-grid` through a configurable completed-piece quantum until that
