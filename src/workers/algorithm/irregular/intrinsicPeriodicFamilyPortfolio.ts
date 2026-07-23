@@ -21,6 +21,7 @@ import {
   finalizeIntrinsicStrictState,
   intrinsicStrictPhaseCoverageComplete,
   rankIntrinsicStrictCompletedLayouts,
+  type IntrinsicStrictCandidateStatePhaseTimings,
   type IntrinsicStrictCompletedMetrics,
   type IntrinsicStrictConstructResult,
   type IntrinsicStrictDecodeResult,
@@ -151,6 +152,7 @@ export interface IntrinsicPeriodicPortfolioPhaseTimings {
   readonly construction: {
     readonly candidateGenerationMs: number
     readonly candidateStateScoringMs: number
+    readonly candidateStateScoring: IntrinsicStrictCandidateStatePhaseTimings
     readonly bookkeepingMs: number
     readonly measuredRunCount: number
     readonly expectedRunCount: number
@@ -253,6 +255,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
     let constructionMs = 0
     let constructionCandidateGenerationMs = 0
     let constructionCandidateStateScoringMs = 0
+    const constructionCandidateStateScoring = emptyCandidateStatePhaseTimings()
     let constructionMeasuredRunCount = 0
     let constructionRunCoverageComplete = true
     let finalizationMs = 0
@@ -316,6 +319,10 @@ export function runIntrinsicPeriodicFamilyPortfolio(
           constructionMeasuredRunCount += 1
           constructionCandidateGenerationMs += constructionTiming.candidateGenerationMs
           constructionCandidateStateScoringMs += constructionTiming.candidateStateScoringMs
+          addCandidateStatePhaseTimings(
+            constructionCandidateStateScoring,
+            constructionTiming.candidateStateScoring
+          )
           constructionRunCoverageComplete =
             constructionRunCoverageComplete && constructionTiming.coverageComplete
         }
@@ -387,6 +394,9 @@ export function runIntrinsicPeriodicFamilyPortfolio(
               construction: {
                 candidateGenerationMs: constructionCandidateGenerationMs,
                 candidateStateScoringMs: constructionCandidateStateScoringMs,
+                candidateStateScoring: freezeCandidateStatePhaseTimings(
+                  constructionCandidateStateScoring
+                ),
                 bookkeepingMs: constructionBookkeepingMs,
                 measuredRunCount: constructionMeasuredRunCount,
                 expectedRunCount: continuations.length,
@@ -434,6 +444,81 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       runtimeMs: phaseTimings?.totalMs ?? performance.now() - startedAt
     }
   })
+}
+
+interface MutableCandidateStatePhaseTimings {
+  placementObjectMs: number
+  statePlacementMs: number
+  statePlacement: {
+    canonicalEntryKeyMs: number
+    spatialIndexMs: number
+    contactMeasurementMs: number
+    stateAssemblyMs: number
+    bookkeepingMs: number
+    totalMs: number
+  }
+  bottomLeftAnchoringMs: number
+  envelopeScoringMs: number
+  gapClassificationMs: number
+  scoreBookkeepingMs: number
+  candidateSelectionMs: number
+  bookkeepingMs: number
+  coverageComplete: boolean
+  totalMs: number
+}
+
+function emptyCandidateStatePhaseTimings(): MutableCandidateStatePhaseTimings {
+  return {
+    placementObjectMs: 0,
+    statePlacementMs: 0,
+    statePlacement: {
+      canonicalEntryKeyMs: 0,
+      spatialIndexMs: 0,
+      contactMeasurementMs: 0,
+      stateAssemblyMs: 0,
+      bookkeepingMs: 0,
+      totalMs: 0
+    },
+    bottomLeftAnchoringMs: 0,
+    envelopeScoringMs: 0,
+    gapClassificationMs: 0,
+    scoreBookkeepingMs: 0,
+    candidateSelectionMs: 0,
+    bookkeepingMs: 0,
+    coverageComplete: true,
+    totalMs: 0
+  }
+}
+
+function addCandidateStatePhaseTimings(
+  target: MutableCandidateStatePhaseTimings,
+  source: IntrinsicStrictCandidateStatePhaseTimings
+): void {
+  target.placementObjectMs += source.placementObjectMs
+  target.statePlacementMs += source.statePlacementMs
+  target.statePlacement.canonicalEntryKeyMs += source.statePlacement.canonicalEntryKeyMs
+  target.statePlacement.spatialIndexMs += source.statePlacement.spatialIndexMs
+  target.statePlacement.contactMeasurementMs += source.statePlacement.contactMeasurementMs
+  target.statePlacement.stateAssemblyMs += source.statePlacement.stateAssemblyMs
+  target.statePlacement.bookkeepingMs += source.statePlacement.bookkeepingMs
+  target.statePlacement.totalMs += source.statePlacement.totalMs
+  target.bottomLeftAnchoringMs += source.bottomLeftAnchoringMs
+  target.envelopeScoringMs += source.envelopeScoringMs
+  target.gapClassificationMs += source.gapClassificationMs
+  target.scoreBookkeepingMs += source.scoreBookkeepingMs
+  target.candidateSelectionMs += source.candidateSelectionMs
+  target.bookkeepingMs += source.bookkeepingMs
+  target.coverageComplete = target.coverageComplete && source.coverageComplete
+  target.totalMs += source.totalMs
+}
+
+function freezeCandidateStatePhaseTimings(
+  timings: MutableCandidateStatePhaseTimings
+): IntrinsicStrictCandidateStatePhaseTimings {
+  return {
+    ...timings,
+    statePlacement: { ...timings.statePlacement }
+  }
 }
 
 /** Runs cheaper compact seeds first when execution is already evaluation-budgeted. */
