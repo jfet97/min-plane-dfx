@@ -221,7 +221,8 @@ describe('intrinsic capacity integration', () => {
         captureCapacityWarmPrefixTelemetry: true
       })
       const scheduled = await compute(request, {
-        intrinsicAnytimeSchedulerMode: 'deterministic-v1'
+        intrinsicAnytimeSchedulerMode: 'deterministic-v1',
+        captureExperimentalPlaceDeferCompleteShadow: true
       })
 
       expect(computed.capacityTrace).toBeDefined()
@@ -278,6 +279,7 @@ describe('intrinsic capacity integration', () => {
       ).toEqual([
         'capacity-cold:checkpointed',
         'legacy-complete:settled',
+        'experimental-place-defer-complete:settled',
         'capacity-cold:settled',
         ...Array.from(
           { length: scheduled.capacityTrace?.warmPrefixLanes?.length ?? 0 },
@@ -307,9 +309,7 @@ describe('intrinsic capacity integration', () => {
       })
       const computed = await compute(request)
       const scheduled = await compute(request, {
-        intrinsicAnytimeSchedulerMode: 'deterministic-v1'
-      })
-      const experimental = await compute(request, {
+        intrinsicAnytimeSchedulerMode: 'deterministic-v1',
         captureExperimentalPlaceDeferCompleteShadow: true
       })
 
@@ -329,11 +329,21 @@ describe('intrinsic capacity integration', () => {
           ? false
           : intrinsicAnytimeSchedulerTraceValid(scheduled.intrinsicAnytimeSchedulerTrace)
       ).toBe(true)
-      expect(experimental.placedCollisionGeometries).toEqual(
+      expect(scheduled.placedCollisionGeometries).toEqual(
         computed.placedCollisionGeometries
       )
-      expect(experimental.unplacedPieceIds).toEqual([])
-      expect(experimental.experimentalPlaceDeferTrace?.outputInfluence).toBe('none')
+      expect(scheduled.unplacedPieceIds).toEqual([])
+      expect(scheduled.experimentalPlaceDeferTrace?.outputInfluence).toBe('none')
+      expect(
+        scheduled.intrinsicAnytimeSchedulerTrace?.quanta.map(
+          ({ producerRole, outcome }) => `${producerRole}:${outcome}`
+        )
+      ).toEqual([
+        'capacity-cold:checkpointed',
+        'legacy-complete:settled',
+        'experimental-place-defer-complete:settled',
+        'capacity-cold:cancelled'
+      ])
       const diagnosticCodes = computed.diagnostics.map(({ code }) => code)
       expect(diagnosticCodes).toContain('capacity_preflight_inconclusive')
       expect(diagnosticCodes).toContain('complete_archive_fitted')

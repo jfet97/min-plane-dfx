@@ -41,7 +41,10 @@ import {
   terminalizeIntrinsicCapacityPrefixEndpoints
 } from '../../src/workers/algorithm/irregular/intrinsicCapacityPrefixes.js'
 import { runIntrinsicCapacityColdSearch } from '../../src/workers/algorithm/irregular/intrinsicCapacitySearch.js'
-import { runIntrinsicPlaceDeferCompleteShadow } from '../../src/workers/algorithm/irregular/intrinsicPlaceDeferCompleteShadow.js'
+import {
+  observeIntrinsicPlaceDeferCompleteShadow,
+  runIntrinsicPlaceDeferCompleteShadow
+} from '../../src/workers/algorithm/irregular/intrinsicPlaceDeferCompleteShadow.js'
 import { constructIntrinsicStrictState } from '../../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
 import { runIntrinsicSharedArchiveDirectPortfolio } from '../../src/workers/algorithm/irregular/intrinsicSharedArchivePortfolio.js'
 import { IrregularBeamState } from '../../src/workers/algorithm/irregular/irregularBeamState.js'
@@ -1065,6 +1068,54 @@ describe('experimental place/defer complete shadow', () => {
     ).rejects.toMatchObject({
       _tag: 'IntrinsicCapacityError',
       operation: 'placeDeferCheckpoint'
+    })
+  })
+
+  it('censors bounded observer failures but preserves explicit cancellation', async () => {
+    const pieces = [
+      preparedRectangle('deferred-a', 20, 10),
+      preparedRectangle('pending-b', 15, 10)
+    ]
+    const finalSheet = sheet(200, 200)
+    const deadline = await provideGeometry(
+      observeIntrinsicPlaceDeferCompleteShadow({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        control: {
+          checkpoint: () =>
+            Effect.fail(
+              new IrregularNfpIfpControlAbortError({
+                reason: 'deadline',
+                message: 'isolated shadow deadline'
+              })
+            )
+        }
+      })
+    )
+    expect(deadline.endpoint).toBeUndefined()
+    expect(deadline.trace.status).toBe('censored')
+    expect(deadline.trace.censoringReason).toBe('deadline')
+    expect(deadline.trace.outputInfluence).toBe('none')
+
+    await expect(
+      provideGeometry(
+        observeIntrinsicPlaceDeferCompleteShadow({
+          sheet: finalSheet,
+          preparedPieces: pieces,
+          control: {
+            checkpoint: () =>
+              Effect.fail(
+                new IrregularNfpIfpControlAbortError({
+                  reason: 'cancelled',
+                  message: 'explicit user cancellation'
+                })
+              )
+          }
+        })
+      )
+    ).rejects.toMatchObject({
+      _tag: 'IrregularNfpIfpControlAbortError',
+      reason: 'cancelled'
     })
   })
 })

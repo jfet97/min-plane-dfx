@@ -187,8 +187,11 @@ dominance is a terminal rule.
 An additional observer-only experimental complete cohort makes one explicit
 place/defer decision by moving the first pending piece to a second pass. Its
 checkpoint binds the exact future-decision partition and ledgers. It exposes
-only a skip-free complete endpoint, has no output authority, and remains
-ineligible for promotion until it reproduces the accepted complete matrix.
+only a skip-free complete endpoint, has no output authority, and runs only
+after the protected legacy archive settles. Its local runtime or geometry
+failures become censored telemetry; explicit user cancellation is the only
+shadow failure propagated to the parent job. It remains ineligible for
+promotion until it reproduces the accepted complete matrix.
 
 ### Historical and Experimental Constructors
 

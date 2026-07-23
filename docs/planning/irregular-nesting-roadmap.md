@@ -103,7 +103,9 @@ single deterministic transition defers the first pending piece to a second
 pass, and its versioned checkpoint binds the disjoint future-decision state and
 protected evaluation ledger. Only a complete skip-free exact result can become
 an experimental endpoint; it still cannot enter the settled legacy archive.
-Promotion remains blocked on the full matrix.
+The legacy archive settles before the bounded observer starts, non-cancellation
+failures become censored telemetry, and only explicit user cancellation
+propagates. Promotion remains blocked on the full matrix.
 
 The full matrix rejects promotion: Triangle and Shapes complete with different
 experimental hashes, while Mixed reaches the experimental evaluation cap.

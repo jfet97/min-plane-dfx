@@ -26,6 +26,7 @@ import { IrregularBeamState } from './irregularBeamState.js'
 export const INTRINSIC_PLACE_DEFER_CHECKPOINT_VERSION =
   'intrinsic-place-defer-checkpoint-v1' as const
 export const INTRINSIC_PLACE_DEFER_EVALUATION_CAP = 19_862 as const
+export const INTRINSIC_PLACE_DEFER_RUNTIME_CAP_MS = 35_000 as const
 
 export interface IntrinsicPlaceDeferCheckpoint {
   readonly version: typeof INTRINSIC_PLACE_DEFER_CHECKPOINT_VERSION
@@ -77,7 +78,18 @@ export interface IntrinsicPlaceDeferTrace {
   readonly version: typeof INTRINSIC_PLACE_DEFER_CHECKPOINT_VERSION
   readonly deferredPreparedId: PieceId | undefined
   readonly pendingOrder: ReadonlyArray<PieceId>
-  readonly status: 'paused' | 'completed' | 'incomplete' | 'evaluation-cap'
+  readonly status:
+    | 'paused'
+    | 'completed'
+    | 'incomplete'
+    | 'evaluation-cap'
+    | 'censored'
+  readonly censoringReason:
+    | 'deadline'
+    | 'capacity-error'
+    | 'strict-decoder-error'
+    | 'geometry-error'
+    | undefined
   readonly candidateEvaluations: number
   readonly placedCount: number
   readonly unplacedCount: number
@@ -147,6 +159,7 @@ export function runIntrinsicPlaceDeferCompleteShadow(
           deferredPreparedId,
           pendingOrder: checkpoint.pendingOrder,
           status: 'paused',
+          censoringReason: undefined,
           candidateEvaluations: 0,
           placedCount: 0,
           unplacedCount: 0,
@@ -170,6 +183,7 @@ export function runIntrinsicPlaceDeferCompleteShadow(
       frozenPlaced: [],
       candidateMode: 'pure-growth',
       maximumCandidateEvaluationCount: INTRINSIC_PLACE_DEFER_EVALUATION_CAP,
+      maximumRuntimeMs: INTRINSIC_PLACE_DEFER_RUNTIME_CAP_MS,
       captureCandidateEvaluationCount: true,
       ...(input.control === undefined ? {} : { control: input.control })
     })
@@ -202,6 +216,7 @@ export function runIntrinsicPlaceDeferCompleteShadow(
         deferredPreparedId,
         pendingOrder: checkpoint.pendingOrder,
         status,
+        censoringReason: undefined,
         candidateEvaluations: constructed.candidateEvaluationCount ?? 0,
         placedCount: constructed.state.placementOrder.length,
         unplacedCount: constructed.state.unplacedPieceIds.length,
@@ -214,6 +229,54 @@ export function runIntrinsicPlaceDeferCompleteShadow(
       }
     }
   })
+}
+
+/**
+ * Converts every bounded shadow failure into observer-only censoring. Explicit
+ * user cancellation remains the sole failure that may abort the parent job.
+ */
+export function observeIntrinsicPlaceDeferCompleteShadow(
+  input: RunIntrinsicPlaceDeferInput
+): Effect.Effect<
+  IntrinsicPlaceDeferResult,
+  IrregularNfpIfpControlAbortError,
+  GeometryKernel | GeometrySettings | NfpIfpService
+> {
+  return runIntrinsicPlaceDeferCompleteShadow(input).pipe(
+    Effect.catch((error) => {
+      if (error._tag === 'IrregularNfpIfpControlAbortError' && error.reason === 'cancelled') {
+        return Effect.fail(error)
+      }
+      const pendingOrder = intrinsicPlaceDeferPendingOrder(input.preparedPieces)
+      const deferredPreparedId = pendingOrder.at(-1)
+      const censoringReason: IntrinsicPlaceDeferTrace['censoringReason'] =
+        error._tag === 'IrregularNfpIfpControlAbortError'
+          ? 'deadline'
+          : error._tag === 'IntrinsicCapacityError'
+            ? 'capacity-error'
+            : error._tag === 'IntrinsicStrictDecoderError'
+              ? 'strict-decoder-error'
+              : 'geometry-error'
+      return Effect.succeed({
+        status: 'settled' as const,
+        checkpoint: undefined,
+        endpoint: undefined,
+        trace: {
+          version: INTRINSIC_PLACE_DEFER_CHECKPOINT_VERSION,
+          deferredPreparedId,
+          pendingOrder,
+          status: 'censored' as const,
+          censoringReason,
+          candidateEvaluations: 0,
+          placedCount: 0,
+          unplacedCount: input.preparedPieces.length,
+          completeEndpointHash: undefined,
+          requestedSheetFit: { q0: false, q90: false },
+          outputInfluence: 'none' as const
+        }
+      })
+    })
+  )
 }
 
 function makePlaceDeferCheckpoint(
@@ -387,4 +450,15 @@ function intrinsicPlaceDeferFingerprint(input: RunIntrinsicPlaceDeferInput): str
       )
     )
     .digest('hex')
+}
+
+function intrinsicPlaceDeferPendingOrder(
+  preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+): ReadonlyArray<PieceId> {
+  const preparedIds = preparedPieces.map(intrinsicCapacityPreparedPieceId)
+  const deferredPreparedId = preparedIds[0]
+  return [
+    ...preparedIds.slice(1),
+    ...(deferredPreparedId === undefined ? [] : [deferredPreparedId])
+  ]
 }

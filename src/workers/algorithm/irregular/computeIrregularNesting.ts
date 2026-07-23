@@ -71,7 +71,7 @@ import {
   type IntrinsicCapacityShadowTelemetry
 } from './intrinsicCapacityTelemetry.js'
 import {
-  runIntrinsicPlaceDeferCompleteShadow,
+  observeIntrinsicPlaceDeferCompleteShadow,
   type IntrinsicPlaceDeferTrace
 } from './intrinsicPlaceDeferCompleteShadow.js'
 
@@ -149,7 +149,7 @@ export interface IntrinsicAnytimeSchedulerTrace {
       | 'legacy-complete'
       | 'capacity-warm-prefix'
       | 'experimental-place-defer-complete'
-    readonly outcome: 'checkpointed' | 'settled' | 'cancelled'
+    readonly outcome: 'checkpointed' | 'settled' | 'cancelled' | 'censored'
   }>
 }
 
@@ -177,7 +177,7 @@ export function intrinsicAnytimeSchedulerTraceValid(
   )
   if (
     experimentalIndexes.length > 1 ||
-    experimentalIndexes.some((index) => index <= 0 || index >= completeIndex)
+    experimentalIndexes.some((index) => index <= completeIndex)
   ) {
     return false
   }
@@ -480,39 +480,6 @@ function coordinateIntrinsicSharedArchive(
             ]
           }
         }
-        if (input.options?.captureExperimentalPlaceDeferCompleteShadow === true) {
-          const experimental = yield* runIntrinsicPlaceDeferCompleteShadow({
-            sheet: input.request.sheet,
-            preparedPieces: input.preparedPieces,
-            ...(control === undefined ? {} : { control })
-          }).pipe(
-            Effect.mapError((error) =>
-              error._tag === 'IntrinsicStrictDecoderError'
-                ? new IrregularPortfolioError({
-                    operation: error.operation,
-                    category: 'search',
-                    message: error.message
-                  })
-                : mapIntrinsicCapacityError(error)
-            )
-          )
-          experimentalPlaceDeferTrace = experimental.trace
-          input.options.onExperimentalPlaceDeferCompleteEndpoint?.(experimental.endpoint)
-          if (intrinsicAnytimeSchedulerTrace !== undefined) {
-            intrinsicAnytimeSchedulerTrace = {
-              ...intrinsicAnytimeSchedulerTrace,
-              quanta: [
-                ...intrinsicAnytimeSchedulerTrace.quanta,
-                {
-                  ordinal: intrinsicAnytimeSchedulerTrace.quanta.length,
-                  cohort: 'experimental-complete',
-                  producerRole: 'experimental-place-defer-complete',
-                  outcome: 'settled'
-                }
-              ]
-            }
-          }
-        }
         const prefixSources: IntrinsicCapacityPrefixSource[] = []
         const archiveStartedAt = performance.now()
         const archive = yield* runIntrinsicSharedArchivePortfolio(
@@ -583,6 +550,30 @@ function coordinateIntrinsicSharedArchive(
                 outcome: 'settled'
               }
             ]
+          }
+        }
+        if (input.options?.captureExperimentalPlaceDeferCompleteShadow === true) {
+          const experimental = yield* observeIntrinsicPlaceDeferCompleteShadow({
+            sheet: input.request.sheet,
+            preparedPieces: input.preparedPieces,
+            ...(control === undefined ? {} : { control })
+          })
+          experimentalPlaceDeferTrace = experimental.trace
+          input.options.onExperimentalPlaceDeferCompleteEndpoint?.(experimental.endpoint)
+          if (intrinsicAnytimeSchedulerTrace !== undefined) {
+            intrinsicAnytimeSchedulerTrace = {
+              ...intrinsicAnytimeSchedulerTrace,
+              quanta: [
+                ...intrinsicAnytimeSchedulerTrace.quanta,
+                {
+                  ordinal: intrinsicAnytimeSchedulerTrace.quanta.length,
+                  cohort: 'experimental-complete',
+                  producerRole: 'experimental-place-defer-complete',
+                  outcome:
+                    experimental.trace.status === 'censored' ? 'censored' : 'settled'
+                }
+              ]
+            }
           }
         }
         const sheetlessArchive = retainRankedSharedArchive(archive.sheetlessArchive)

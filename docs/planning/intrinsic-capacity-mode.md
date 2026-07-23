@@ -152,9 +152,12 @@ comparator.
 Stage 6 now has one bounded shadow producer. It defers the first prepared piece
 to a second pass and checkpoints the exact future-decision partition before
 continuation. It may report only a skip-free complete exact endpoint in the
-experimental namespace and has no output influence. Promotion depends on the
-full roomy/constrained baseline matrix; a mismatch remains useful rejected
-evidence, not permission to displace the legacy winner.
+experimental namespace and has no output influence. The protected legacy
+archive settles first; the observer then runs under its own `19,862`-evaluation
+and `35 s` bounds. Non-cancellation failures become censored telemetry, while
+explicit user cancellation remains authoritative. Promotion depends on the full
+roomy/constrained baseline matrix; a mismatch remains useful rejected evidence,
+not permission to displace the legacy winner.
 
 ## Checkpoint Contract
 

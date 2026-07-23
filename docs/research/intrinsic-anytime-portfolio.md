@@ -263,7 +263,7 @@ The first complete-capable experimental producer is deliberately narrow. It
 makes one explicit future decision: defer the first prepared piece, process the
 remaining immutable order, then retry the deferred piece in a second pass. It
 uses the existing exact sheetless strict constructor with a protected `19,862`
-candidate-evaluation cap.
+candidate-evaluation cap and a `35 s` producer-local runtime cap.
 
 The versioned pause boundary occurs immediately after that defer transition.
 Its checkpoint binds the exact request and prepared geometry, producer and
@@ -278,8 +278,14 @@ Only a skip-free complete exact endpoint is exposed. Evaluation-capped or
 incomplete construction produces telemetry but no archive endpoint. The
 producer is observer-only, uses an experimental namespace, and cannot alter
 the legacy complete archive, capacity archive, routing, or worker output.
-Focused tests prove uninterrupted/resumed semantic identity, corrupted future
-decision rejection, and unchanged roomy complete output.
+The protected legacy archive now settles before this opt-in observer starts, so
+the experimental arm cannot consume its time allocation. A producer-local
+deadline, geometry failure, strict-decoder failure, or invalid checkpoint is
+converted to an explicit censored observer trace; only explicit user
+cancellation may abort the parent job. Focused tests prove
+uninterrupted/resumed semantic identity, corrupted future-decision rejection,
+failure censoring, cancellation propagation, combined scheduler chronology,
+and unchanged roomy complete output.
 
 Promotion remains evidence-gated. The full roomy/constrained baseline matrix
 must determine whether this one-defer producer reproduces accepted winners or
