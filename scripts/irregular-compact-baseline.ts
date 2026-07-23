@@ -320,7 +320,10 @@ const settings = request.options.irregularSettings
 if (settings === undefined) throw new Error(`${args.fixture} has no irregular settings`)
 const startedAt = performance.now()
 const result = await Effect.runPromise(
-  computeIrregularNesting(request, { captureCapacityPhaseTimings: true }).pipe(
+  computeIrregularNesting(request, {
+    captureCapacityPhaseTimings: true,
+    captureCapacityShadowTelemetry: true
+  }).pipe(
     Effect.provide(CollisionGeometryBuilder.Live),
     Effect.provide(TransformGeneratorLive),
     Effect.provide(NfpIfpServiceLive),
@@ -381,7 +384,8 @@ const report = jsonSafe({
     bounds,
     score: result.score,
     portfolio: result.portfolio,
-    capacityTrace: result.capacityTrace
+    capacityTrace: result.capacityTrace,
+    capacityShadowTelemetry: result.capacityShadowTelemetry
   },
   checks,
   passed,

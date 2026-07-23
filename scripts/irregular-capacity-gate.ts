@@ -269,6 +269,7 @@ interface CapacityRunReport {
   readonly partitionExact: boolean
   readonly canonicalSha256: string | undefined
   readonly terminationReason: string | undefined
+  readonly shadowTelemetry: IrregularComputeResult['capacityShadowTelemetry']
   readonly capacity:
     | {
         readonly prefixes: unknown
@@ -306,7 +307,8 @@ async function runArm(
   if (settings === undefined) throw new Error(`${request.jobId} has no irregular settings`)
   const options: ComputeIrregularNestingOptions = {
     ...(arm === 'cold-only' ? { capacityControlArm: 'disable-prefix-reuse' } : {}),
-    captureCapacityPhaseTimings: true
+    captureCapacityPhaseTimings: true,
+    captureCapacityShadowTelemetry: true
   }
   const startedAt = performance.now()
   const result = await Effect.runPromise(
@@ -355,6 +357,7 @@ async function runArm(
     partitionExact,
     canonicalSha256: canonical?.sha256,
     terminationReason: result.portfolio.terminationReason,
+    shadowTelemetry: result.capacityShadowTelemetry,
     capacity:
       trace === undefined
         ? undefined

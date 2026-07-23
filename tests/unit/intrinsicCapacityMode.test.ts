@@ -166,6 +166,8 @@ function inconclusiveOutcome(
       sheetHeightGrid: finalSheet.height * 1000,
       sheetDoubledAreaGrid2: 0n,
       minimumDoubledCollisionAreaSumGrid2: 0n,
+      minimumCollisionAreaPressurePpm: 0n,
+      maximumSingletonSpanPressurePpm: 0n,
       singletonInfeasiblePieceIds: []
     }
   }
@@ -233,6 +235,8 @@ describe('intrinsic capacity preflight', () => {
       3n * 2n * 60_000n * 60_000n
     )
     expect(outcome.measurements.sheetDoubledAreaGrid2).toBe(2n * 100_000n * 100_000n)
+    expect(outcome.measurements.minimumCollisionAreaPressurePpm).toBe(1_080_000n)
+    expect(outcome.measurements.maximumSingletonSpanPressurePpm).toBe(600_000n)
   })
 
   it('proves impossibility from an exact singleton q0/q90 fit failure', async () => {

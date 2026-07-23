@@ -82,15 +82,37 @@ metadata are under
 `/private/tmp/min-plane-provenance/intrinsic-checkpoint-970ed2b-pMI3QZ/`.
 After the review corrections, the expanded focused suites pass `25/25`.
 
+## Stage 2: Observer-Only Pressure and No-Skip Probe
+
+The coordinator now has an explicit benchmark-only
+`captureCapacityShadowTelemetry` option. When enabled, it records two
+scale-free exact pressures from the proof preflight:
+
+- minimum summed collision area divided by requested-sheet area;
+- the worst piece's best q0/q90 axis-span pressure.
+
+Both ratios are integer parts per million rounded upward. They are observations,
+not feasibility proofs beyond the existing raw-area and singleton checks.
+
+The same option runs an independent cold lane for at most four completed depth
+boundaries and returns its checkpoint's no-permanent-skip frontier state,
+first-loss depth, evaluation count, and elapsed time. The probe has a fresh
+cavity cache, no incumbent, and no access to the production result. Its output
+declares `routingInfluence: none`; no production call enables it by default,
+and no routing, ranking, survivor, or terminal-selection code reads it.
+
+The constrained three-square integration falsifier observes collision-area
+pressure `1,098,221 ppm`, singleton-span pressure `605,040 ppm`, and first
+no-skip loss at depth two while producing byte-for-byte identical placements,
+unplaced IDs, routing, and termination to the unobserved control.
+
 ## Remaining Stages
 
-1. Add scale-free pressure and bounded no-skip-frontier probe telemetry without
-   changing routing.
-2. Continue verified fitting prefixes in independent protected shadow lanes
+1. Continue verified fitting prefixes in independent protected shadow lanes
    while retaining the empty cold lane.
-3. Interleave protected complete and capacity checkpoints in deterministic
+2. Interleave protected complete and capacity checkpoints in deterministic
    quanta.
-4. Share exact endpoint/archive storage mechanics while preserving separate
+3. Share exact endpoint/archive storage mechanics while preserving separate
    namespaces and selection keys.
-5. Add place/defer transitions only in an experimental complete-capable shadow
+4. Add place/defer transitions only in an experimental complete-capable shadow
    producer and judge promotion against the full baseline matrix.

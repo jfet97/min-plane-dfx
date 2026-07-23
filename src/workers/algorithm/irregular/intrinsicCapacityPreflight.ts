@@ -29,6 +29,10 @@ export interface IntrinsicCapacityPreflightMeasurements {
   readonly sheetDoubledAreaGrid2: bigint
   /** Exact sum over pieces of the minimum valid doubled collision area. */
   readonly minimumDoubledCollisionAreaSumGrid2: bigint
+  /** Scale-free minimum collision-area pressure, rounded up to parts per million. */
+  readonly minimumCollisionAreaPressurePpm: bigint
+  /** Worst piece's best exact q0/q90 axis pressure, rounded up to parts per million. */
+  readonly maximumSingletonSpanPressurePpm: bigint
   /** Prepared ids whose entire transform set cannot fit the sheet at q0 or q90. */
   readonly singletonInfeasiblePieceIds: ReadonlyArray<PieceId>
 }
@@ -90,6 +94,7 @@ export function preflightIntrinsicCompleteCapacity(
     const sheetDoubledAreaGrid2 = 2n * BigInt(sheetWidthGrid) * BigInt(sheetHeightGrid)
 
     let minimumDoubledCollisionAreaSumGrid2 = 0n
+    let maximumSingletonSpanPressurePpm = 0n
     const singletonInfeasiblePieceIds: PieceId[] = []
     for (const piece of pieces) {
       if (control !== undefined) yield* control.checkpoint('candidate-points')
@@ -103,6 +108,7 @@ export function preflightIntrinsicCompleteCapacity(
         )
       }
       let minimumDoubledAreaGrid2: bigint | undefined
+      let minimumSingletonSpanPressurePpm: bigint | undefined
       let singletonFits = false
       for (const transform of piece.transforms) {
         if (control !== undefined) yield* control.checkpoint('candidate-points')
@@ -123,11 +129,22 @@ export function preflightIntrinsicCompleteCapacity(
         if (minimumDoubledAreaGrid2 === undefined || doubledAreaGrid2 < minimumDoubledAreaGrid2) {
           minimumDoubledAreaGrid2 = doubledAreaGrid2
         }
+        const spanPressurePpm = minimumRigidSpanPressurePpm(
+          span,
+          sheetWidthGrid,
+          sheetHeightGrid
+        )
+        if (
+          minimumSingletonSpanPressurePpm === undefined ||
+          spanPressurePpm < minimumSingletonSpanPressurePpm
+        ) {
+          minimumSingletonSpanPressurePpm = spanPressurePpm
+        }
         singletonFits ||=
           (span.width <= sheetWidthGrid && span.height <= sheetHeightGrid) ||
           (span.height <= sheetWidthGrid && span.width <= sheetHeightGrid)
       }
-      if (minimumDoubledAreaGrid2 === undefined) {
+      if (minimumDoubledAreaGrid2 === undefined || minimumSingletonSpanPressurePpm === undefined) {
         return yield* Effect.fail(
           new IntrinsicCapacityError({
             operation: 'preflightTransformAccounting',
@@ -136,6 +153,9 @@ export function preflightIntrinsicCompleteCapacity(
         )
       }
       minimumDoubledCollisionAreaSumGrid2 += minimumDoubledAreaGrid2
+      if (minimumSingletonSpanPressurePpm > maximumSingletonSpanPressurePpm) {
+        maximumSingletonSpanPressurePpm = minimumSingletonSpanPressurePpm
+      }
       if (!singletonFits) singletonInfeasiblePieceIds.push(pieceId)
     }
 
@@ -145,6 +165,11 @@ export function preflightIntrinsicCompleteCapacity(
       sheetHeightGrid,
       sheetDoubledAreaGrid2,
       minimumDoubledCollisionAreaSumGrid2,
+      minimumCollisionAreaPressurePpm: scaledRatioCeilPpm(
+        minimumDoubledCollisionAreaSumGrid2,
+        sheetDoubledAreaGrid2
+      ),
+      maximumSingletonSpanPressurePpm,
       singletonInfeasiblePieceIds
     }
     const firstSingletonInfeasiblePieceId = singletonInfeasiblePieceIds[0]
@@ -165,6 +190,42 @@ export function preflightIntrinsicCompleteCapacity(
     }
     return { kind: 'inconclusive', measurements }
   })
+}
+
+function minimumRigidSpanPressurePpm(
+  span: { readonly width: number; readonly height: number },
+  sheetWidthGrid: number,
+  sheetHeightGrid: number
+): bigint {
+  const q0 = maximumRatioPpm(
+    span.width,
+    sheetWidthGrid,
+    span.height,
+    sheetHeightGrid
+  )
+  const q90 = maximumRatioPpm(
+    span.height,
+    sheetWidthGrid,
+    span.width,
+    sheetHeightGrid
+  )
+  return q0 < q90 ? q0 : q90
+}
+
+function maximumRatioPpm(
+  firstNumerator: number,
+  firstDenominator: number,
+  secondNumerator: number,
+  secondDenominator: number
+): bigint {
+  const first = scaledRatioCeilPpm(BigInt(firstNumerator), BigInt(firstDenominator))
+  const second = scaledRatioCeilPpm(BigInt(secondNumerator), BigInt(secondDenominator))
+  return first > second ? first : second
+}
+
+function scaledRatioCeilPpm(numerator: bigint, denominator: bigint): bigint {
+  const scaled = numerator * 1_000_000n
+  return (scaled + denominator - 1n) / denominator
 }
 
 /**

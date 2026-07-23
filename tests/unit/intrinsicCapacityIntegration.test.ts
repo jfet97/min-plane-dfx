@@ -10,7 +10,10 @@ import {
 import { IrregularNestingSettings } from '@shared/irregular/domain.js'
 import { makePresetShapeDocument } from '@shared/presetShapes.js'
 import { preparePieces } from '@shared/preparePieces.js'
-import { computeIrregularNesting } from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
+import {
+  computeIrregularNesting,
+  type ComputeIrregularNestingOptions
+} from '../../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { IrregularLayoutScorer } from '../../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { makeIrregularWorkerOutput } from '../../src/workers/algorithm/irregular/irregularWorkerOutput.js'
@@ -87,9 +90,9 @@ function makeRectangleRequest(input: {
   })
 }
 
-function compute(request: NestingRequest) {
+function compute(request: NestingRequest, options?: ComputeIrregularNestingOptions) {
   return Effect.runPromise(
-    computeIrregularNesting(request).pipe(
+    computeIrregularNesting(request, options).pipe(
       Effect.provide(CollisionGeometryBuilder.Live),
       Effect.provide(TransformGeneratorLive),
       Effect.provide(NfpIfpServiceLive),
@@ -102,6 +105,41 @@ function compute(request: NestingRequest) {
 }
 
 describe('intrinsic capacity integration', () => {
+  it(
+    'captures pressure and a bounded no-skip probe without changing routing or output',
+    async () => {
+      const request = makeRectangleRequest({
+        jobKey: 'capacity-shadow-telemetry',
+        count: 3,
+        widthMm: 60,
+        heightMm: 60,
+        sheet: new SheetSpec({ width: 100, height: 100, label: 'constrained 100x100' }),
+        paddingMm: 0
+      })
+      const baseline = await compute(request)
+      const observed = await compute(request, { captureCapacityShadowTelemetry: true })
+
+      expect(observed.capacityShadowTelemetry).toBeDefined()
+      expect(observed.capacityShadowTelemetry?.routingInfluence).toBe('none')
+      expect(observed.capacityShadowTelemetry?.pressure.minimumCollisionAreaPressurePpm).toBe(
+        1_098_221n
+      )
+      expect(observed.capacityShadowTelemetry?.pressure.maximumSingletonSpanPressurePpm).toBe(
+        605_040n
+      )
+      expect(observed.capacityShadowTelemetry?.noSkipProbe.status).toBe('observed')
+      expect(observed.capacityShadowTelemetry?.noSkipProbe.maximumDepth).toBe(2)
+      expect(observed.capacityShadowTelemetry?.noSkipProbe.completedDepths).toBe(2)
+      expect(observed.capacityShadowTelemetry?.noSkipProbe.noSkipFrontierPresent).toBe(false)
+      expect(observed.capacityShadowTelemetry?.noSkipProbe.firstLossDepth).toBe(2)
+      expect(observed.capacityTrace?.routing).toBe(baseline.capacityTrace?.routing)
+      expect(observed.portfolio.terminationReason).toBe(baseline.portfolio.terminationReason)
+      expect(observed.unplacedPieceIds).toEqual(baseline.unplacedPieceIds)
+      expect(observed.placedCollisionGeometries).toEqual(baseline.placedCollisionGeometries)
+    },
+    120_000
+  )
+
   it(
     'bypasses complete construction for an area-proven impossible sheet and reports the honest partial result',
     async () => {

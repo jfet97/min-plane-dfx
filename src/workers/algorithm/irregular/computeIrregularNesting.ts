@@ -63,6 +63,10 @@ import {
   type IntrinsicCapacityPreflightOutcome
 } from './intrinsicCapacityPreflight.js'
 import type { IntrinsicCapacityPrefixSource } from './intrinsicCapacityPrefixes.js'
+import {
+  measureIntrinsicCapacityShadowTelemetry,
+  type IntrinsicCapacityShadowTelemetry
+} from './intrinsicCapacityTelemetry.js'
 
 /** Reports that a prepared piece has no imported geometry available to the worker. */
 export class IrregularComputeError extends Data.TaggedError('IrregularComputeError')<{
@@ -102,6 +106,8 @@ export interface ComputeIrregularNestingOptions {
   readonly capacityControlArm?: 'disable-prefix-reuse'
   /** standalone benchmark hook; capacity phase timings default off in production. */
   readonly captureCapacityPhaseTimings?: boolean
+  /** observer-only pressure and no-skip probe; never consumed by routing. */
+  readonly captureCapacityShadowTelemetry?: boolean
 }
 
 /** Plain algorithm output before any worker protocol or history DTO adaptation. */
@@ -116,6 +122,8 @@ export interface IrregularComputeResult {
   readonly portfolio: IrregularPortfolioResult
   /** Present only when intrinsic capacity mode settled this result. */
   readonly capacityTrace?: IntrinsicCapacityTrace
+  /** Opt-in observer output; never consumed by routing or ranking. */
+  readonly capacityShadowTelemetry?: IntrinsicCapacityShadowTelemetry
 }
 
 export type IrregularComputeErrorType =
@@ -248,6 +256,7 @@ function coordinateIntrinsicSharedArchive(
     const archiveEnabled = isIntrinsicSharedArchiveEligible(input.settings)
     const archiveDiagnostics: CollisionGeometryDiagnostic[] = []
     let selected: MaterializedDecode
+    let capacityShadowTelemetry: IntrinsicCapacityShadowTelemetry | undefined
 
     if (archiveEnabled) {
       yield* emitSharedArchiveProgress(
@@ -277,6 +286,13 @@ function coordinateIntrinsicSharedArchive(
         control
       ).pipe(Effect.mapError(mapIntrinsicCapacityError))
       const preflightRuntimeMs = Math.max(0, performance.now() - preflightStartedAt)
+      if (input.options?.captureCapacityShadowTelemetry === true) {
+        capacityShadowTelemetry = yield* measureIntrinsicCapacityShadowTelemetry({
+          sheet: input.request.sheet,
+          preparedPieces: input.preparedPieces,
+          preflight
+        })
+      }
       const capacityOptions = {
         ...(input.options?.capacityControlArm === 'disable-prefix-reuse'
           ? { disablePrefixReuse: true }
@@ -434,7 +450,8 @@ function coordinateIntrinsicSharedArchive(
       stateSnapshots: selected.stateSnapshots,
       beamWidth: input.settings.optimizer.beamWidth,
       portfolio: selected.portfolio,
-      ...(selected.capacityTrace === undefined ? {} : { capacityTrace: selected.capacityTrace })
+      ...(selected.capacityTrace === undefined ? {} : { capacityTrace: selected.capacityTrace }),
+      ...(capacityShadowTelemetry === undefined ? {} : { capacityShadowTelemetry })
     }
   })
 }

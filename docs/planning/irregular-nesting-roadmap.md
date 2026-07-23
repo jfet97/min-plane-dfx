@@ -79,6 +79,12 @@ producer. A fixed `10%` waste route is rejected because it misses both measured
 serial-cost cases. Heuristic pressure may schedule protected work but may not
 prune, rank, or displace the legacy complete cohort.
 
+The checkpoint and observer-only telemetry seams are implemented. The telemetry
+path is benchmark opt-in, records exact scale-free pressure and a bounded cold
+no-skip-frontier probe, and cannot affect routing or endpoint selection. The
+next measurable step is protected warm-prefix continuation alongside the
+unchanged empty cold lane.
+
 ### P0: Freeze the archive-only correctness and quality gate
 
 Establish the archive-only baseline before changing allocation or search.
