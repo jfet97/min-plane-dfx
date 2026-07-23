@@ -147,7 +147,16 @@ export interface IntrinsicStrictConstructResult {
   readonly gapFillEvidence: ReadonlyArray<IntrinsicStrictGapFillEvidence>
   readonly candidateEvaluationCount?: number
   readonly truncationReason?: 'maximum-candidate-evaluations'
+  readonly phaseTimings?: IntrinsicStrictConstructPhaseTimings
   readonly runtimeMs: number
+}
+
+export interface IntrinsicStrictConstructPhaseTimings {
+  readonly candidateGenerationMs: number
+  readonly candidateStateScoringMs: number
+  readonly bookkeepingMs: number
+  readonly coverageComplete: boolean
+  readonly totalMs: number
 }
 
 export interface IntrinsicStrictGapFillEvidence {
@@ -202,6 +211,7 @@ export interface ConstructIntrinsicStrictStateInput {
   readonly maximumRuntimeMs?: number
   readonly maximumCandidateEvaluationCount?: number
   readonly captureCandidateEvaluationCount?: boolean
+  readonly capturePhaseTimings?: boolean
   readonly featureContactObserver?: IntrinsicStrictFeatureContactObserver
   readonly control?: IrregularNfpIfpControl
 }
@@ -321,6 +331,7 @@ export function constructIntrinsicStrictState(
       input.maximumCandidateEvaluationCount === undefined
         ? undefined
         : Math.max(1, Math.floor(input.maximumCandidateEvaluationCount))
+    const capturePhaseTimings = input.capturePhaseTimings === true
     const partition = validateSeedPartition(input)
     if (partition !== undefined) {
       return yield* Effect.fail(
@@ -366,6 +377,8 @@ export function constructIntrinsicStrictState(
     const gapFillEvidence: IntrinsicStrictGapFillEvidence[] = []
     let candidateEvaluationCount = 0
     let truncationReason: IntrinsicStrictConstructResult['truncationReason']
+    let candidateGenerationMs = 0
+    let candidateStateScoringMs = 0
 
     pieceLoop: for (
       let pieceIndex = 0;
@@ -389,76 +402,93 @@ export function constructIntrinsicStrictState(
       let candidateCount = 0
 
       for (const transform of [...piece.transforms].sort(transformCandidateOrder)) {
-        yield* control.checkpoint('candidate-points')
-        const moving = yield* geometryKernel.transformCollisionGeometry({
-          geometry: piece.collisionGeometry,
-          transform
-        })
-        const movingCollisionAreaMm2 = canonicalCollisionAreaMm2(moving)
-        if (movingCollisionAreaMm2 === undefined) continue
+        const candidateGenerationStartedAt = capturePhaseTimings ? performance.now() : 0
+        let moving: TransformedCollisionGeometry
+        let movingCollisionAreaMm2: number | undefined
         let candidateProvenance: NfpIfpCandidateProvenance | undefined
-        const legalCandidates =
-          state.placedCollisionGeometries.length === 0
-            ? originAnchorCandidates(moving)
-            : yield* nfpIfpService.generatePlacementCandidates({
-                sheet: INTRINSIC_COORDINATE_DOMAIN,
-                placed: state.placedCollisionGeometries,
-                placedCollisionIndex: state.placedCollisionIndex,
-                moving,
-                settings,
-                candidateDomain: 'sheetless-nfp',
-                candidateMemoScope,
-                ...(input.featureContactObserver === undefined
-                  ? {}
-                  : {
-                      onCandidateProvenance: (provenance: NfpIfpCandidateProvenance) => {
-                        candidateProvenance = provenance
-                      }
-                    }),
-                control
-              })
+        let legalCandidates: ReadonlyArray<IrregularPlacementCandidate> = []
+        try {
+          yield* control.checkpoint('candidate-points')
+          moving = yield* geometryKernel.transformCollisionGeometry({
+            geometry: piece.collisionGeometry,
+            transform
+          })
+          movingCollisionAreaMm2 = canonicalCollisionAreaMm2(moving)
+          if (movingCollisionAreaMm2 === undefined) continue
+          legalCandidates =
+            state.placedCollisionGeometries.length === 0
+              ? originAnchorCandidates(moving)
+              : yield* nfpIfpService.generatePlacementCandidates({
+                  sheet: INTRINSIC_COORDINATE_DOMAIN,
+                  placed: state.placedCollisionGeometries,
+                  placedCollisionIndex: state.placedCollisionIndex,
+                  moving,
+                  settings,
+                  candidateDomain: 'sheetless-nfp',
+                  candidateMemoScope,
+                  ...(input.featureContactObserver === undefined
+                    ? {}
+                    : {
+                        onCandidateProvenance: (provenance: NfpIfpCandidateProvenance) => {
+                          candidateProvenance = provenance
+                        }
+                      }),
+                  control
+                })
+        } finally {
+          if (capturePhaseTimings) {
+            candidateGenerationMs += performance.now() - candidateGenerationStartedAt
+          }
+        }
         candidateCount += legalCandidates.length
         const family = transformFamilyKey(transform)
         const scoredCandidates: ScoredCandidate[] = []
-        for (const candidate of legalCandidates) {
-          if (
-            maximumCandidateEvaluationCount !== undefined &&
-            candidateEvaluationCount >= maximumCandidateEvaluationCount
-          ) {
-            truncationReason = 'maximum-candidate-evaluations'
-            break pieceLoop
-          }
-          if (
-            maximumCandidateEvaluationCount !== undefined ||
-            input.captureCandidateEvaluationCount === true
-          ) {
-            candidateEvaluationCount += 1
-          }
-          const scored = scoreCandidate({
-            state,
-            piece,
-            moving,
-            candidate,
-            remainingPreparedPieces,
-            transformFamily: family,
-            movingCollisionAreaMm2,
-            gapRegions
-          })
-          if (scored === undefined) continue
-          scoredCandidates.push(scored)
-          const incumbent = candidatesByFamily.get(family)
-          if (incumbent === undefined || compareLocalScores(scored.score, incumbent.score) < 0) {
-            candidatesByFamily.set(family, scored)
-          }
-          if (scored.containingGap !== undefined) {
-            const containedScored = { ...scored, containingGap: scored.containingGap }
-            const containedIncumbent = containedCandidatesByFamily.get(family)
+        const candidateStateScoringStartedAt = capturePhaseTimings ? performance.now() : 0
+        try {
+          for (const candidate of legalCandidates) {
             if (
-              containedIncumbent === undefined ||
-              compareGapContainedCandidates(containedScored, containedIncumbent) < 0
+              maximumCandidateEvaluationCount !== undefined &&
+              candidateEvaluationCount >= maximumCandidateEvaluationCount
             ) {
-              containedCandidatesByFamily.set(family, containedScored)
+              truncationReason = 'maximum-candidate-evaluations'
+              break pieceLoop
             }
+            if (
+              maximumCandidateEvaluationCount !== undefined ||
+              input.captureCandidateEvaluationCount === true
+            ) {
+              candidateEvaluationCount += 1
+            }
+            const scored = scoreCandidate({
+              state,
+              piece,
+              moving,
+              candidate,
+              remainingPreparedPieces,
+              transformFamily: family,
+              movingCollisionAreaMm2,
+              gapRegions
+            })
+            if (scored === undefined) continue
+            scoredCandidates.push(scored)
+            const incumbent = candidatesByFamily.get(family)
+            if (incumbent === undefined || compareLocalScores(scored.score, incumbent.score) < 0) {
+              candidatesByFamily.set(family, scored)
+            }
+            if (scored.containingGap !== undefined) {
+              const containedScored = { ...scored, containingGap: scored.containingGap }
+              const containedIncumbent = containedCandidatesByFamily.get(family)
+              if (
+                containedIncumbent === undefined ||
+                compareGapContainedCandidates(containedScored, containedIncumbent) < 0
+              ) {
+                containedCandidatesByFamily.set(family, containedScored)
+              }
+            }
+          }
+        } finally {
+          if (capturePhaseTimings) {
+            candidateStateScoringMs += performance.now() - candidateStateScoringStartedAt
           }
         }
         if (candidateProvenance !== undefined) {
@@ -585,6 +615,10 @@ export function constructIntrinsicStrictState(
         })
     }
 
+    const runtimeMs = Math.max(0, performance.now() - startedAt)
+    const phaseTimings = capturePhaseTimings
+      ? makeConstructPhaseTimings(runtimeMs, candidateGenerationMs, candidateStateScoringMs)
+      : undefined
     return {
       state,
       stepTrace,
@@ -596,9 +630,38 @@ export function constructIntrinsicStrictState(
             candidateEvaluationCount,
             ...(truncationReason === undefined ? {} : { truncationReason })
           }),
-      runtimeMs: Math.max(0, performance.now() - startedAt)
+      ...(phaseTimings === undefined ? {} : { phaseTimings }),
+      runtimeMs
     }
   })
+}
+
+function makeConstructPhaseTimings(
+  totalMs: number,
+  candidateGenerationMs: number,
+  candidateStateScoringMs: number
+): IntrinsicStrictConstructPhaseTimings {
+  const measuredMs = candidateGenerationMs + candidateStateScoringMs
+  const bookkeepingMs = Math.max(0, totalMs - measuredMs)
+  const coverageComplete =
+    [totalMs, candidateGenerationMs, candidateStateScoringMs, bookkeepingMs].every(
+      (value) => Number.isFinite(value) && value >= 0
+    ) && intrinsicStrictPhaseCoverageComplete(totalMs, bookkeepingMs)
+  return {
+    candidateGenerationMs,
+    candidateStateScoringMs,
+    bookkeepingMs,
+    coverageComplete,
+    totalMs
+  }
+}
+
+/** Requires unclassified strict-construction time to stay within one percent. */
+export function intrinsicStrictPhaseCoverageComplete(
+  totalMs: number,
+  bookkeepingMs: number
+): boolean {
+  return totalMs >= 0 && bookkeepingMs >= 0 && bookkeepingMs <= totalMs * 0.01
 }
 
 function validateSeedPartition(input: ConstructIntrinsicStrictStateInput): string | undefined {
@@ -653,7 +716,7 @@ function scoreCandidate(input: {
     })
     .withBottomLeftAnchored()
   if (anchored === undefined) return undefined
-  const envelope = measureIntrinsicStrictCanonicalEnvelope(anchored.placedCollisionGeometries)
+  const envelope = measureIntrinsicStrictEnvelopeFromState(anchored)
   if (envelope === undefined) return undefined
   const { maximumSideMm, envelopeAreaMm2, envelopeSpanMm } = envelope
   const sharedBoundaryLengthMm = anchored.sharedCollisionBoundaryLengthMm
@@ -684,6 +747,26 @@ function scoreCandidate(input: {
       canonicalCombinedGeometryKey: anchored.canonicalOccupiedGeometryKey
     }
   }
+}
+
+function measureIntrinsicStrictEnvelopeFromState(
+  state: IrregularBeamState
+): Pick<IntrinsicStrictLocalScore, 'maximumSideMm' | 'envelopeAreaMm2' | 'envelopeSpanMm'> | undefined {
+  const bounds = state.translatedCollisionBounds
+  if (bounds === undefined) return undefined
+  const widthGrid = toGridMm(bounds.width)
+  const heightGrid = toGridMm(bounds.height)
+  if (widthGrid === undefined || heightGrid === undefined || widthGrid < 0 || heightGrid < 0) {
+    return undefined
+  }
+  const widthMm = fromGrid(widthGrid)
+  const heightMm = fromGrid(heightGrid)
+  const metrics = {
+    maximumSideMm: Math.max(widthMm, heightMm),
+    envelopeAreaMm2: widthMm * heightMm,
+    envelopeSpanMm: widthMm + heightMm
+  }
+  return Object.values(metrics).every(Number.isFinite) ? metrics : undefined
 }
 
 function selectGapContainedWinner(

@@ -89,22 +89,38 @@ references are approximately `16.621 s` for Triangle, `268.978 s` for Mixed,
 and `27.271 s` for Shapes-17. The `390 s` worker timeout floor is the current
 safety boundary, not a performance target.
 
-Prioritize measured duplicate catalog, source-audit, exact-topology, and
-finalization work. A content-addressed replay may be promoted only with explicit
-refresh, miss, corruption, schema-version, and algorithm-version behavior and
-with canonical revalidation of untrusted entries.
+The first measurement is a fresh cache-disabled, production-equivalent
+Mixed-61 run in separate serial processes. Record direct-role runtimes, catalog
+and source-selection phases, strict periodic construction, per-continuation
+runtime/status/evaluation counts, finalization, archive ranking, and timing
+coverage. Historical filtered evidence points to strict construction as the
+dominant phase, but it is not current proof. If the fresh run confirms that
+result, split the opaque construction phase into candidate generation versus
+state construction/scoring before choosing an optimization.
+
+A content-addressed replay may be promoted only with explicit refresh, miss,
+corruption, schema-version, and algorithm-version behavior and with canonical
+revalidation of untrusted entries. Warm replay is a separate cache result: it
+must not close the cold-path task, and every miss or invalid entry must fall
+back to unchanged cold execution.
 
 Dependencies: freeze the current allocation and acceptance corpus for this
 work. If the later allocation audit changes either, remeasure before accepting
 the change.
 
 Falsifiers: changed selected sources, status tuples, archive order, endpoint
-hashes, or legality; new deadline censoring; or a speedup obtained by omitting
-accepted search work.
+hashes, fit orientation, or legality; new deadline censoring; or a speedup
+obtained by omitting accepted search work.
 
-Acceptance gate: exact source/status/hash equivalence, cache failure-path tests
-when applicable, coverage-complete execution, repeated serial timing with
-dispersion, and a material cold or warm improvement.
+Acceptance gate for every performance-only change: freeze ordered selected
+source ids; direct and periodic status/evaluation tuples; coverage and
+production-validity flags; ordered sheetless and fitted archives with roles,
+sources, metrics, certificates, and hashes; q0/q90 fit classifications and
+selected rotation; and the three current exact fixture identities. Preserve the
+two-sheet invariance sample immediately and the full matrix once established.
+Require repeated serial timings with dispersion and report cold and warm/cache
+improvements separately. Any better layout belongs to a separate search-quality
+experiment rather than equivalence evidence.
 
 ### P1: Audit periodic source allocation
 

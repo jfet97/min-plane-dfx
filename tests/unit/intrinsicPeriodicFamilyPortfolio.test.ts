@@ -132,8 +132,17 @@ describe('intrinsic periodic family portfolio', () => {
       phaseTimings.selection.retainedCropEnumerationMs +
       phaseTimings.selection.cropFrontSelectionMs +
       phaseTimings.selection.bookkeepingMs
+    const constructionTotal =
+      phaseTimings.construction.candidateGenerationMs +
+      phaseTimings.construction.candidateStateScoringMs +
+      phaseTimings.construction.bookkeepingMs
     expect(topLevelTotal).toBeCloseTo(phaseTimings.totalMs, 6)
     expect(selectionTotal).toBeCloseTo(phaseTimings.selectionMs, 1)
+    expect(constructionTotal).toBeCloseTo(phaseTimings.constructionMs, 6)
+    expect(phaseTimings.construction.measuredRunCount).toBe(
+      phaseTimings.construction.expectedRunCount
+    )
+    expect(typeof phaseTimings.construction.coverageComplete).toBe('boolean')
     expect(phaseTimings.bookkeepingMs).toBeLessThanOrEqual(phaseTimings.totalMs)
     expect(phaseTimings.selection.bookkeepingMs).toBeLessThanOrEqual(phaseTimings.selectionMs)
     expect(phaseTimings.selection.sourceAuditLogicalCropAttemptCount).toBeGreaterThanOrEqual(

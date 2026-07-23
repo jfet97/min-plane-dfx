@@ -19,6 +19,7 @@ import {
 import {
   constructIntrinsicStrictState,
   finalizeIntrinsicStrictState,
+  intrinsicStrictPhaseCoverageComplete,
   rankIntrinsicStrictCompletedLayouts,
   type IntrinsicStrictCompletedMetrics,
   type IntrinsicStrictConstructResult,
@@ -147,6 +148,15 @@ export interface IntrinsicPeriodicPortfolioPhaseTimings {
   }
   readonly executionOrderingMs: number
   readonly constructionMs: number
+  readonly construction: {
+    readonly candidateGenerationMs: number
+    readonly candidateStateScoringMs: number
+    readonly bookkeepingMs: number
+    readonly measuredRunCount: number
+    readonly expectedRunCount: number
+    readonly coverageComplete: boolean
+    readonly totalMs: number
+  }
   readonly finalizationMs: number
   readonly archiveRankingMs: number
   readonly bookkeepingMs: number
@@ -239,6 +249,10 @@ export function runIntrinsicPeriodicFamilyPortfolio(
     const executionOrderingMs = capturePhaseTimings ? performance.now() - orderingStartedAt : 0
     const runs: IntrinsicPeriodicContinuationResult[] = []
     let constructionMs = 0
+    let constructionCandidateGenerationMs = 0
+    let constructionCandidateStateScoringMs = 0
+    let constructionMeasuredRunCount = 0
+    let constructionRunCoverageComplete = true
     let finalizationMs = 0
     for (const continuation of continuations) {
       const remainingMs = maximumTotalRuntimeMs - (performance.now() - startedAt)
@@ -264,7 +278,8 @@ export function runIntrinsicPeriodicFamilyPortfolio(
           ...(options.control === undefined ? {} : { control: options.control }),
           ...(maximumContinuationCandidateEvaluations === undefined
             ? {}
-            : { maximumCandidateEvaluationCount: maximumContinuationCandidateEvaluations })
+            : { maximumCandidateEvaluationCount: maximumContinuationCandidateEvaluations }),
+          ...(capturePhaseTimings ? { capturePhaseTimings: true } : {})
         }),
         {
           onFailure: (error) => Effect.succeed({ kind: 'failure' as const, error }),
@@ -290,6 +305,18 @@ export function runIntrinsicPeriodicFamilyPortfolio(
           runtimeMs
         })
         continue
+      }
+      if (capturePhaseTimings) {
+        const constructionTiming = constructed.value.phaseTimings
+        if (constructionTiming === undefined) {
+          constructionRunCoverageComplete = false
+        } else {
+          constructionMeasuredRunCount += 1
+          constructionCandidateGenerationMs += constructionTiming.candidateGenerationMs
+          constructionCandidateStateScoringMs += constructionTiming.candidateStateScoringMs
+          constructionRunCoverageComplete =
+            constructionRunCoverageComplete && constructionTiming.coverageComplete
+        }
       }
       if (constructed.value.truncationReason === 'maximum-candidate-evaluations') {
         runs.push({
@@ -336,18 +363,41 @@ export function runIntrinsicPeriodicFamilyPortfolio(
               finalizationMs +
               archiveRankingMs
             const bookkeepingMs = Math.max(0, totalMs - measuredPhaseMs)
+            const constructionBookkeepingMs = Math.max(
+              0,
+              constructionMs -
+                constructionCandidateGenerationMs -
+                constructionCandidateStateScoringMs
+            )
+            const constructionCoverageComplete =
+              constructionRunCoverageComplete &&
+              constructionMeasuredRunCount === continuations.length &&
+              intrinsicStrictPhaseCoverageComplete(
+                constructionMs,
+                constructionBookkeepingMs
+              )
             return {
               catalogMs,
               selectionMs,
               selection: selected.phaseTimings,
               executionOrderingMs,
               constructionMs,
+              construction: {
+                candidateGenerationMs: constructionCandidateGenerationMs,
+                candidateStateScoringMs: constructionCandidateStateScoringMs,
+                bookkeepingMs: constructionBookkeepingMs,
+                measuredRunCount: constructionMeasuredRunCount,
+                expectedRunCount: continuations.length,
+                coverageComplete: constructionCoverageComplete,
+                totalMs: constructionMs
+              },
               finalizationMs,
               archiveRankingMs,
               bookkeepingMs,
               coverageComplete:
                 phaseResidualCoverageComplete(totalMs, bookkeepingMs) &&
-                selected.phaseTimings.coverageComplete,
+                selected.phaseTimings.coverageComplete &&
+                constructionCoverageComplete,
               totalMs
             }
           })()

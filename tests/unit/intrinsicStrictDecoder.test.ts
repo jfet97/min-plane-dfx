@@ -21,6 +21,7 @@ import {
   compareIntrinsicStrictCompletedLayoutDominance,
   decodeIntrinsicStrictPriorityOrder,
   constructIntrinsicStrictState,
+  intrinsicStrictPhaseCoverageComplete,
   intrinsicStrictCompletedLayoutDominates,
   measureIntrinsicStrictCanonicalEnvelope,
   rankIntrinsicStrictCompletedLayouts,
@@ -140,6 +141,11 @@ function decodeWithCandidateService(
 }
 
 describe('decodeIntrinsicStrictPriorityOrder', () => {
+  it('fails strict phase coverage when unclassified residual exceeds one percent', () => {
+    expect(intrinsicStrictPhaseCoverageComplete(100, 1)).toBe(true)
+    expect(intrinsicStrictPhaseCoverageComplete(100, 1.000_001)).toBe(false)
+  })
+
   it('stops strict construction at an exact candidate-evaluation cap', async () => {
     const pieces = [
       preparedPiece('first', rectanglePoints(3, 2), [transform(0, 0), transform(1, 90)]),
@@ -231,6 +237,7 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(historicalDefault.stepTrace).toEqual(constructed.stepTrace)
     expect('candidateEvaluationCount' in historicalDefault).toBe(false)
     expect('truncationReason' in historicalDefault).toBe(false)
+    expect('phaseTimings' in historicalDefault).toBe(false)
 
     const accountingOnly = await Effect.runPromise(
       constructIntrinsicStrictState({
@@ -249,6 +256,30 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(accountingOnly.stepTrace).toEqual(constructed.stepTrace)
     expect(accountingOnly.candidateEvaluationCount).toBe(exactCandidateEvaluationCount)
     expect(accountingOnly.truncationReason).toBeUndefined()
+
+    const timed = await Effect.runPromise(
+      constructIntrinsicStrictState({
+        allPreparedPieces: pieces,
+        remainingPreparedPieces: pieces,
+        frozenPlaced: [],
+        candidateMode: 'pure-growth',
+        capturePhaseTimings: true
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
+      )
+    )
+    expect(timed.state).toEqual(constructed.state)
+    expect(timed.stepTrace).toEqual(constructed.stepTrace)
+    const phaseTimings = timed.phaseTimings
+    if (phaseTimings === undefined) throw new Error('expected strict construction phase timings')
+    expect(
+      phaseTimings.candidateGenerationMs +
+        phaseTimings.candidateStateScoringMs +
+        phaseTimings.bookkeepingMs
+    ).toBeCloseTo(phaseTimings.totalMs, 6)
+    expect(phaseTimings.coverageComplete).toBe(true)
   })
 
   it('keeps the strict seed output byte-identical while F0 observes source admission', async () => {
