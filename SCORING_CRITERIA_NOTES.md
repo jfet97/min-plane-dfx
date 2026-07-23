@@ -1,7 +1,9 @@
 # Scoring Criteria Notes
 
-These are working notes for the future nesting algorithm.
-The app implementer must not implement the algorithm yet.
+These notes preserve the scoring rationale for the rectangular MaxRects beam
+and its initial ordering boundary. They are not the architecture or roadmap for
+the convex irregular Compact quality path, which uses the intrinsic shared
+archive documented under `docs/architecture/`.
 
 ## Initial Rectangle Ordering
 
@@ -39,7 +41,8 @@ Rationale:
 - larger pieces are generally harder to place than smaller pieces;
 - more imbalanced pieces are less flexible than square-ish pieces.
 
-This ordering is part of the future algorithm and must not be implemented by the app shell.
+This ordering is implemented behind the worker algorithm boundary. The app
+shell must not duplicate or override it.
 
 ## Shared Setup
 

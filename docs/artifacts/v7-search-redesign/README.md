@@ -1,6 +1,7 @@
 # V7 Search Redesign Evidence
 
-Portable evidence for `reviews/v7-search-redesign-review.md`, produced on the
+Portable historical evidence for
+[`../../history/reviews/v7-search-redesign-review.md`](../../history/reviews/v7-search-redesign-review.md), produced on the
 review machine (darwin arm64, node v24.11.1) from committed harnesses on
 branch `v7-search-redesign-review`. Raw immutable reports live under
 `/private/tmp/min-plane-provenance/v7-search-redesign-*`; `summary.json` here

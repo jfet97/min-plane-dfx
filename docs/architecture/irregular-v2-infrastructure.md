@@ -1,10 +1,20 @@
 # Irregular V2 Infrastructure
 
-Irregular v2 has a real deterministic convex baseline. It flattens imported
-closed outlines, builds padded convex collision polygons, generates finite
-rotation/mirror choices, produces NFP/IFP contact candidates, validates each
-placement directly, and runs a configurable windowed beam plus a bounded seeded
-GA portfolio. It is not a concave/hole-aware nesting engine.
+Irregular v2 is a real deterministic convex engine. It flattens imported closed
+outlines, builds padded convex collision polygons, generates finite
+rotation/mirror choices, produces NFP/IFP contact candidates, and validates
+placements directly. Its ordinary path runs a configurable requested-sheet beam
+plus optional bounded seeded GA. The eligible Compact quality profile instead
+runs the intrinsic shared archive directly. It is not a concave/hole-aware
+nesting engine.
+
+For the current production contract, start with
+[`Current Integration State`](#current-integration-state). The constructor,
+pressure, protected-lane, and old Triangle sections retained earlier in this
+page document reusable machinery and historical experiments; they do not
+override the current archive-only Compact quality contract. Decision chronology
+and full metrics live under [`../history/`](../history/README.md) and
+[`../research/`](../research/index.md).
 
 ## Shared DTOs
 
@@ -32,7 +42,7 @@ construction while preserving those public contracts.
 
 ## Worker Services
 
-`src/workers/irregular/` owns Effect service tags for the future engine:
+`src/workers/irregular/` owns Effect service tags for the engine:
 
 - `GeometryKernel`;
 - `CollisionGeometryBuilder`;
@@ -72,7 +82,9 @@ geometry and invalid derived arithmetic remain typed failures. The supplied
 order must remain untouched so future beam and portfolio layers can make their
 priority decisions outside this baseline.
 
-The intrinsic strict decoder is a separate constructor used by the compact-quality
+### Current Compact-Archive Constructors
+
+The intrinsic strict decoder is a separate constructor used by the Compact quality
 production archive. It preserves the user-owned prepared
 piece order, anchors the first transformed polygon at the normalized origin,
 and asks the NFP service only for sheetless boundary, support, and intersection
@@ -84,6 +96,14 @@ shared boundary as a bounded tie-break, and canonical combined geometry. Only a
 completed layout is tested against the real sheet, at q0 and q90. This path has
 its own provenance harness and exact topology metrics; it does not alter the
 ordinary beam, GA, repair, or explicit `short_side_fill` behavior.
+
+### Historical and Experimental Constructors
+
+The following E4, V7, pressure, and early shared-archive descriptions preserve
+the design and failure mechanisms of their named experiments. They are not the
+current Compact quality selection contract. Current decisions and retained
+lessons are summarized in
+[`../history/search-quality-decisions.md`](../history/search-quality-decisions.md).
 
 The preregistered E4 experiment is a separate complete-layout optimizer around
 that exact E1 seed. It has no requested-sheet input. Synthetic target boxes are
@@ -387,6 +407,8 @@ occurs after one archive winner is selected. E4 remains experiment-only until
 hull-gap, cavity, area, runtime, determinism, triangle, corpus, and visual gates
 all pass.
 
+### Ordinary Requested-Sheet Decoder
+
 Local compactness ranks the largest normalized sheet-axis consumption, the sum
 of both normalized spans, collision-bounds area, and then absolute span. Bounds,
 anchor coordinates, and shared boundary length are canonicalized to the existing
@@ -537,7 +559,7 @@ becomes the branch's only eligible next piece. This preserves useful local
 reordering without allowing a stream of newly entering small pieces to starve a
 large piece from the user-owned initial sort order indefinitely.
 
-### Repeated-Triangle Pruning Finding
+### Historical Ordinary-Decoder Triangle Pruning Finding
 
 The 20-copy pointed-triangle regression demonstrates a real delayed-reward
 limit of the current beam score. With order window `4`, local fanout `4`,
@@ -575,10 +597,12 @@ ratio `0.047619` in about `4.53 s` on the benchmark machine. It is a general
 remove-and-reinsert improvement using real candidates, not a triangle-specific
 override. The unrepaired beam remains available with repair budget `0`.
 
-### Repeated-Triangle Golden Regression
+### Historical Ordinary-Decoder Triangle Golden
 
-The hermetic repeated-triangle golden is derived only from replay job
-`e8ed1b5a-b18f-4f3d-ada1-79634bb10bb0`. The test does not read replay files,
+This section records the earlier beam-plus-repair golden; it is not the current
+archive-only Triangle production gate. The hermetic repeated-triangle golden is
+derived only from replay job `e8ed1b5a-b18f-4f3d-ada1-79634bb10bb0`. The test
+does not read replay files,
 the workspace database, or renderer state at runtime. It creates 20 deterministic
 copies of the built-in `70 x 60 mm` triangle and runs them on the original
 `2000 x 2700 mm` sheet with `10 mm` total padding, rotations and mirroring
@@ -598,7 +622,7 @@ quarter-turns, and equivalent compact arrangements therefore remain valid,
 while upward or rightward chains, missing pieces, weak contact graphs, and
 triangle-sized lattice gaps fail the contract.
 
-### Decision Trace
+### Ordinary-Decoder Decision Trace
 
 When worker history is enabled, every irregular beam decode can synchronously
 emit plain internal decision-event classes. The trace identifies the executed
@@ -775,16 +799,19 @@ intrinsic geometry and topology, then tests q0 and q90 against the requested she
 Sheet dimensions therefore constrain legality but never rank or prune construction.
 
 The compact path has no ordinary-beam competitor and no fixed-reference fallback.
-An incomplete direct state cannot become an endpoint, and a cancelled,
-deadline-censored, execution-incomplete, or non-fitting archive fails with a typed
-worker error. The fixed family, transform, pair, cell, and continuation caps are
-intentional deterministic search bounds rather than claims of exhaustive coverage;
-production requires their selected work to settle without runtime censoring.
-Cancellation checkpoints cover direct construction, periodic catalog selection,
-finite-crop enumeration, and continuation decoding. Progress reports the `shared_archive` phase
-after the direct and periodic boundaries, then emits the selected exact endpoint as
-`completed`. Irregular jobs use a `390000 ms` timeout floor; other worker modes retain
-their configured timeout.
+An incomplete direct state cannot become an endpoint. A cooperatively cancelled,
+deadline-censored, execution-incomplete, or non-fitting archive fails with a
+typed worker error. External renderer cancellation remains a supervisor boundary
+that disposes the worker and returns no partial result. The fixed family,
+transform, pair, cell, and continuation caps are intentional deterministic
+search bounds rather than claims of exhaustive coverage; production requires
+their selected work to settle without runtime censoring. Internal checkpoints
+cover direct construction, periodic catalog selection, finite-crop enumeration,
+and continuation decoding when a cooperative deadline or cancellation predicate
+is supplied. Progress reports the `shared_archive` phase after the direct and
+periodic boundaries, then emits the selected exact endpoint as `completed`.
+Irregular jobs use a `390000 ms` timeout floor; other worker modes retain their
+configured timeout.
 
 Selected archive history is a truthful one-frame terminal record labelled
 `shared-archive-final-selected`; it is not fabricated beam ancestry. The selected
@@ -799,6 +826,12 @@ The compact production baselines are Triangle-20 at `74,428.143126 mm2`, Mixed-6
 `391,605.850174 mm2`, and Shapes-17 at `304,499.845650 mm2`, all with zero canonical
 cavities. Layout identity ignores translation, rigid quarter-turn, copy order, ring
 origin, and winding while preserving reflection and relative placement.
+
+Two fresh production decodes at `b506344`, on `900 x 1800` and `1000 x 1300`,
+produced byte-identical SVGs. The wider matrix was cancelled before completion,
+so current ten-sheet invariance is not established. See the
+[`current-production-invariance-sample`](../artifacts/current-production-invariance-sample/)
+and the [forward verification gate](../operations/irregular-production-gates.md#full-current-sheet-matrix).
 
 Do not route `irregular-convex-v2` requests to MaxRects.
 

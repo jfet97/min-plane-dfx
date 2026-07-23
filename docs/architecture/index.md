@@ -8,10 +8,15 @@ Read the docs that match the task. For broad implementation work, read all of th
 - [Project Persistence](./project-persistence.md): single JSON snapshots, hydration, history references, and missing replay behavior.
 - [UI Clarity](./ui-clarity.md): desktop-tool UI expectations and honest algorithm state.
 - [Algorithm Boundary](./algorithm-boundary.md): worker algorithm ownership and wrapper responsibilities.
-- [Irregular V2 Infrastructure](./irregular-v2-infrastructure.md): convex irregular services, configurable beam/GA portfolio, and default settings layers.
+- [Irregular V2 Infrastructure](./irregular-v2-infrastructure.md): convex
+  irregular services, the ordinary requested-sheet beam/GA path, and the
+  archive-only Compact quality path.
 
 ## Adding Docs
 
 - Cross-cutting app architecture goes in `docs/architecture/`.
-- Short task plans can go in `docs/planning/` if they need to survive a branch.
+- The active irregular roadmap is
+  [`../planning/irregular-nesting-roadmap.md`](../planning/irregular-nesting-roadmap.md).
+  Short task plans can also go in `docs/planning/` when they need to survive a
+  branch.
 - Do not add docs that describe fake algorithm behavior as if it exists.

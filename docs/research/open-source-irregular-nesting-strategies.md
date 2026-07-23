@@ -4,7 +4,7 @@
 
 This report compares three additional open-source irregular nesting engines
 against the current `min-plane-dfx` irregular beam. It complements the existing
-Deepnest/SVGnest analysis in `plan.md` and focuses on mechanisms that may improve
+Deepnest/SVGnest analysis in `docs/planning/irregular-nesting-roadmap.md` and focuses on mechanisms that may improve
 both the repeated-triangle fixture and larger mixed-shape jobs.
 
 The source was read from local checkouts under `/private/tmp`; no behavior below

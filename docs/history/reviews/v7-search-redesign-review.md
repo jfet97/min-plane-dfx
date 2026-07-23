@@ -1,5 +1,9 @@
 # V7 Irregular Search Redesign: Review And Decision Memo
 
+> Historical independent review. All “current” and “production” claims are
+> scoped to the review basis below and do not override production architecture
+> at `b506344`.
+
 Reviewer basis: branch `v7-geometric-cohesion` at required base commit
 `d56d9d7` ("Reject ineffective pressure restarts"), reviewed and extended from
 descendant branch `v7-search-redesign-review`. Every source citation below is
@@ -123,7 +127,7 @@ distinct modes that must not be conflated:
 
 # What Changed Since The Previous Review
 
-The previous review (`reviews/fable5-v7-search-quality-review.md`) localized
+The previous review (`docs/history/reviews/fable5-v7-search-quality-review.md`) localized
 the far-neighbour certificate defect. Everything it demanded was implemented
 and honestly measured by the branch:
 
@@ -153,7 +157,7 @@ retention repair, and the external-source re-audit from fresh pinned clones.
 
 All raw provenance is under `/private/tmp/min-plane-provenance/`; compact
 copies of accepted evidence are committed under
-`help/artifacts/v7-search-redesign/`.
+`docs/artifacts/v7-search-redesign/`.
 
 | Claim | Source run (this machine) | Result |
 | --- | --- | --- |
@@ -213,7 +217,7 @@ plus ordered remaining-piece future.
 
 **F3 — Nothing in the committed tree reproduces the number the plan
 reasons about.** Beyond F2's mechanism: the exact invocation that produced
-the 74,428 report at `9da94e2` is not recorded in the repository (plan.md
+the 74,428 report at `9da94e2` is not recorded in the repository (docs/planning/irregular-nesting-roadmap.md
 cites only the machine-local report path), and this review could not find
 *any* flag combination at `9da94e2` that emits it except the raw-witness
 diagnostic at later commits. Decision-gating numbers must carry their replay
@@ -316,7 +320,7 @@ direct-legal gap-contained candidate for some remaining geometry class
 assignment = smallest remaining class that fits with maximal region-area
 consumption; scheduling = one bounded look-ahead slot per depth (the
 commensurate two-order barrier from Stage 2B is the right admission
-discipline, already specified in plan.md). This is the highest-leverage
+discipline, already specified in docs/planning/irregular-nesting-roadmap.md). This is the highest-leverage
 constructive follow-up and needs no new geometry.
 
 **C12 (finite motif grammar beyond P1/P2).** Not yet justified. The
@@ -623,7 +627,7 @@ being used for a new design decision.
 Readings, in decreasing certainty:
 
 1. **The preregistered stop rule fires on both fixtures.** Eight arms, equal
-   budgets, zero admissible endpoints. Per plan.md's standing rule ("if
+   budgets, zero admissible endpoints. Per docs/planning/irregular-nesting-roadmap.md's standing rule ("if
    neither equal-budget arm produces an admissible endpoint, stop this
    pressure branch"), the adaptive-pressure branch is closed — not the idea
    of coordinated repair, but this contraction-framed, penetration-loss-driven
@@ -834,7 +838,7 @@ pnpm exec tsx --tsconfig tsconfig.node.json \
   --fixture triangle-20 --output <dir> --source-commit "$(git rev-parse HEAD)" \
   --source-survival-audit --admit-raw-witnesses
 
-# Pairwise roomy-sheet corpus (portable compact summary in help/artifacts)
+# Pairwise roomy-sheet corpus (portable compact summary in docs/artifacts)
 pnpm exec tsx scripts/irregular-sheet-invariance.ts --strict --output <dir>
 
 # Mixed fit-boundary bracket
@@ -852,7 +856,7 @@ ELECTRON_RUN_AS_NODE=1 pnpm exec electron ./node_modules/vitest/vitest.mjs run \
 
 # Artifact Index
 
-Committed portable evidence (`help/artifacts/v7-search-redesign/`, hashes in
+Committed portable evidence (`docs/artifacts/v7-search-redesign/`, hashes in
 its README):
 
 - `triangle-20-witness-74428-371db269.{svg,png}` — the reproduced 74,428 mm²

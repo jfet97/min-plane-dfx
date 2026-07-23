@@ -1,11 +1,18 @@
 # Canonical Reference Decode Handoff
 
+> Historical report, accepted on its named branch in July 2026 and retired by
+> archive-only production commit `8b0fba4`. The fixed-reference coordinator,
+> fixed `2000 x 2700` decode, admission flag, `120 s` timeout, and ten-sheet
+> result below do not describe current production. See
+> [`../history/sheet-invariance-decisions.md`](../history/sheet-invariance-decisions.md).
+
 ## Status
 
-Accepted production implementation on branch `canonical-reference-decode-handoff`.
+Accepted historical implementation on branch `canonical-reference-decode-handoff`.
 The consolidated, review-hardened candidate is green across ten mixed-61 sheets
-and all twelve non-mixed corpus lanes. It closes the flagship sheet-invariance
-gap with the exact approved collision geometry and is ready to merge.
+and all twelve non-mixed corpus lanes at its recorded commit. It closed the
+then-current sheet-invariance gap with the approved collision geometry and was
+subsequently replaced.
 
 ## Measured Premise
 
@@ -122,6 +129,6 @@ over the measured protected pass without changing rectangular-worker defaults.
 The immutable final report is
 `/private/tmp/min-plane-provenance/canonical-reference-decode-handoff/5186255-ten-sheets/report.json`.
 Portable copies of the report and all ten SVG/PNG renders live under
-[`help/artifacts/canonical-reference-decode-handoff/`](../artifacts/canonical-reference-decode-handoff/).
+[`docs/artifacts/canonical-reference-decode-handoff/`](../artifacts/canonical-reference-decode-handoff/).
 The report hash is
 `b1e1059231312200ec9879a25697bcadd8fdd622b8d28a32eacb4750af1e0d84`.

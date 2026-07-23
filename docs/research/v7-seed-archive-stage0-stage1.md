@@ -103,7 +103,7 @@ The isolated report identifies the Stage 2A schema explicitly, records the
 ordered piece IDs and their SHA-256 digest, applies canonical q0/q90 terminal
 sheet finalization, hashes SVG and PNG outputs, and keeps full semantic state
 keys internal. A width or diversity-order decision still requires the
-structured delayed-lineage calibration described in `plan.md`.
+structured delayed-lineage calibration described in `docs/planning/irregular-nesting-roadmap.md`.
 
 The reviewer must inspect cache savings, endpoint archive handoffs, all
 independent arms, exact legality classifications, counter deltas, and rendered

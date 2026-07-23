@@ -2,7 +2,9 @@
 
 This is the entry point for architecture documentation in `min-plane-dfx`.
 
-Read this file first, then [`architecture/index.md`](./architecture/index.md) before designing or implementing changes.
+Start from the [documentation index](./README.md), then read this file and
+[`architecture/index.md`](./architecture/index.md) before designing or
+implementing changes.
 
 ## Architecture Tree
 
@@ -25,10 +27,17 @@ Vue renderer
   -> Effect-backed main services
   -> WorkerSupervisor
   -> worker_threads nesting worker
-  -> MaxRects beam search
+     -> rectangular MaxRects beam search
+     -> convex irregular algorithm path
 ```
 
-Main owns filesystem, dialogs, project files, imports, exports, and worker lifecycle. The renderer owns UI state only. The worker owns computation workflow and history emission for a single job.
+Main owns filesystem, dialogs, project files, imports, exports, and worker
+lifecycle. The renderer owns UI state only. The worker owns computation
+workflow and history emission for a single job. Rectangular nesting uses
+MaxRects. Convex irregular nesting uses either its ordinary requested-sheet
+beam/GA decoder or, for the eligible Compact quality profile, the intrinsic
+shared archive described in
+[`architecture/irregular-v2-infrastructure.md`](./architecture/irregular-v2-infrastructure.md).
 
 ## Non-Negotiable Boundary
 

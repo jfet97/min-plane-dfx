@@ -1,5 +1,9 @@
 # Fable 5 Review: V7 Search Quality, Periodic Seeds, And the Next Decision
 
+> Historical review brief retained as decision provenance. “Current” refers to
+> the named V7 research checkout, not production at `b506344`. Repository paths
+> were updated after the documentation move; this is not an active work plan.
+
 You are conducting an independent, adversarial architecture and experiment review
 of a deterministic irregular-convex nesting engine. This is **not** a request
 for a summary, a generic code review, or a new implementation. Read the
@@ -170,7 +174,7 @@ tests/fixtures/irregularSheetInvariance/mixed61-request.json
 Read the full active plan first:
 
 ```text
-plan.md
+docs/planning/irregular-nesting-roadmap.md
 ```
 
 It includes detailed provenance and explicit rejected mechanisms. At a high
@@ -316,9 +320,9 @@ continuation schedule were truncated.
 Read the actual research documents and, where useful, pinned local source:
 
 ```text
-help/research/open-source-nesting-strategies.md
+docs/research/open-source-nesting-strategies.md
 docs/research/open-source-irregular-nesting-strategies.md
-help/research/dalsoo-abey-dalalah-transfer-study.md
+docs/research/dalsoo-abey-dalalah-transfer-study.md
 knowledge/dependencies/sparrow
 knowledge/dependencies/dalsoo-bin-packing
 ```
@@ -361,7 +365,7 @@ NFP/IFP contact families existed.
 
 ### B. Assess the architecture and current plan
 
-6. Audit `plan.md` for stale, contradictory, or overly confident claims. Is the
+6. Audit `docs/planning/irregular-nesting-roadmap.md` for stale, contradictory, or overly confident claims. Is the
    order “periodic portfolio first, faithful adaptive Sparrow controller only
    after a conclusive periodic result” still sound after the new artifacts?
 7. Is the current *periodic-only* archive acceptable as an experiment, or must
@@ -443,10 +447,10 @@ is part of the task, not an optional handoff.
 2. Write the complete review to exactly:
 
    ```text
-   reviews/fable5-v7-search-quality-review.md
+   docs/history/reviews/fable5-v7-search-quality-review.md
    ```
 
-   Create `reviews/` if it does not exist. Do not modify any other tracked
+   Create `docs/history/reviews/` if it does not exist. Do not modify any other tracked
    project file.
 3. Run `git diff --check`.
 4. Commit only that file with this exact subject:
@@ -533,14 +537,14 @@ and continue with the evidence that is present.
 
 ## Suggested Reading Order
 
-1. `plan.md`: current decision history, gates, and source map.
+1. `docs/planning/irregular-nesting-roadmap.md`: current decision history, gates, and source map.
 2. The two `report.json` files and manifests for the current periodic run.
 3. `intrinsicPeriodicCells.ts`, `intrinsicPeriodicFamilyPortfolio.ts`, and the
    harness script.
 4. `docs/architecture/irregular-v2-infrastructure.md` and
    `SCORING_CRITERIA_NOTES.md` for the exactness boundary.
-5. `help/research/open-source-nesting-strategies.md` and
-   `help/research/dalsoo-abey-dalalah-transfer-study.md`.
+5. `docs/research/open-source-nesting-strategies.md` and
+   `docs/research/dalsoo-abey-dalalah-transfer-study.md`.
 6. Pinned Sparrow and Dalsoo source only for claims that materially change the
    decision.
 

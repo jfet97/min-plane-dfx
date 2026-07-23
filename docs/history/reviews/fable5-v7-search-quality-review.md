@@ -1,5 +1,8 @@
 # Fable 5 Review: V7 Search Quality, Periodic Seeds, And The Next Decision
 
+> Historical independent review. All “current” claims are scoped to the review
+> basis below and do not override production architecture at `b506344`.
+
 Reviewer: Claude (Fable 5), independent adversarial review.
 Review basis: branch `v7-geometric-cohesion`, evidence commit `0b3309e`
 ("Record rejected periodic lattice witnesses"), reviewed from descendant
@@ -13,7 +16,7 @@ could not be inspected directly:
   `v7-periodic-family-portfolio-0b3309e/{triangle-20,mixed-61}`,
   `v7-peel-shadow-e41897b-triangle`, `v7-coordinated-d55d55e-triangle`,
   `v7-component-interface-5729b25-triangle`, and every report referenced by
-  `plan.md`);
+  `docs/planning/irregular-nesting-roadmap.md`);
 - `knowledge/dependencies/sparrow` (pinned commit `961ec31…`);
 - `knowledge/dependencies/dalsoo-bin-packing` (pinned commit `bde2a3e…`).
 
@@ -144,7 +147,7 @@ not conclusive.
   probably adequate (the seed provides the structure), but it must be stated
   in provenance because a failed continuation could otherwise be misread as a
   seed failure.
-- **The Sparrow-fidelity gap claimed by `plan.md` is real in the controller
+- **The Sparrow-fidelity gap claimed by `docs/planning/irregular-nesting-roadmap.md` is real in the controller
   source.** `intrinsicSqueezeDisruptSeparate.ts` derives its three target
   roles once at initialization (`deriveIntrinsicGlobalTargetRoles`,
   lines 863–890), runs fixed sweep counts (`sweepsPerBasin: 12`, forced
@@ -255,7 +258,7 @@ that reading should be confirmed by the split counters, not assumed.
 
 **B6 (plan audit).** The ordering decision ("periodic portfolio first,
 faithful adaptive Sparrow only after a conclusive periodic result",
-`plan.md:1565–1624`) survives this review — precisely because the periodic
+`docs/planning/irregular-nesting-roadmap.md:1565–1624`) survives this review — precisely because the periodic
 result is *not* conclusive. Stale/overconfident items found: (i) the
 "Immediate Next Action" reads as if the P1/P2 portfolio contract were fully
 implemented, but three peer-mandated elements are absent from the tree — the
@@ -297,7 +300,7 @@ homogeneous controls, Mixed) with the archive correction of B7 — this is the
 same experiment's confirmation arm, not a separate mechanism. (3) Broaden
 finite contact-pose generation — **not now**: F0 concluded the finite contact
 families already exist in NFP/IFP generation
-(`help/research/dalsoo-abey-dalalah-transfer-study.md`, mapping section), and
+(`docs/research/dalsoo-abey-dalalah-transfer-study.md`, mapping section), and
 nothing in the periodic evidence reopens that. (4) Start the Sparrow-shaped
 controller — only after (1)+(2) complete conclusively; its architecture gap
 list is now precise (see F8), so it can be scheduled with confidence but

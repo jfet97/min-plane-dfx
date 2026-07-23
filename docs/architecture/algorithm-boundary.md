@@ -56,15 +56,15 @@ decoder, local candidate scorer, whole-layout scorer, and windowed beam under
 remain the legality authority; scorers only rank already legal candidates or
 partial layouts.
 
-The `irregular-convex-v2` worker mode runs a real convex beam and seeded
-portfolio. The worker-facing adapter translates only algorithm-produced
-transform placements and tagged irregular history states into shared schemas;
-it never converts them into fake rectangle placements. The selected portfolio
-replay follows explicit parent links from its selected terminal beam state, so
-the recorded irregular history is the actual winning path rather than a mixture
-of discarded beam alternatives. `GeometrySettings` is yielded by the
-algorithm services and supplies the complete schema-validated geometry plus
-optimizer configuration for one run.
+The `irregular-convex-v2` worker mode has two real algorithm paths. The ordinary
+requested-sheet path runs the convex beam and optional seeded GA portfolio. Its
+selected replay follows explicit parent links from the terminal beam state, so
+history contains the actual winning path rather than discarded alternatives.
+The eligible Compact quality path instead runs the sheetless shared archive,
+ranks complete canonical-exact endpoints intrinsically, and emits one selected
+terminal history frame. Neither path fabricates rectangle placements or fake
+beam ancestry. `GeometrySettings` supplies the complete schema-validated
+geometry and optimizer configuration for one run.
 
 The core emits algorithm events from `src/workers/algorithm/events.ts`, not
 history frames and not worker-wire payloads. The event stream is the raw

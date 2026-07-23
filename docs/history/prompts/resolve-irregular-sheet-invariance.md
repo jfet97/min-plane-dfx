@@ -1,5 +1,10 @@
 # Resolve irregular nesting sheet invariance
 
+> Historical execution brief retained as decision provenance. Its “current”
+> claims describe the fixed-reference era, not production at `b506344`; use the
+> active roadmap and architecture for new work. Repository paths were updated
+> after the documentation move, but the instructions themselves are not active.
+
 You are taking over a real production investigation in
 `min-plane-dfx`. Work as an expert algorithm engineer and experimental
 researcher. Do not stop at a code review, a list of ideas, or a generic nesting
@@ -8,7 +13,7 @@ implement the strongest safe candidate in an isolated worktree, test it against
 all quality gates, inspect rendered layouts, and leave the repository with a
 reproducible result and a clear production decision.
 
-The living project ledger is [`help/help.md`](../help/help.md). Read it before
+The living project ledger is [`docs/history/search-quality-decisions.md`](../search-quality-decisions.md). Read it before
 acting, treat it as authoritative for accepted and rejected checkpoints, and
 update it before leaving any new experiment or production decision. If this
 prompt and the live ledger disagree, verify current `main` and follow the ledger.
@@ -43,10 +48,10 @@ Start from the repository root:
 At this prompt revision, the canonical-reference decode handoff is the accepted
 production result. Refresh `main` and record the actual starting commit. This
 hash is a handoff checkpoint, not permission to skip live verification. Read
-[`help/research/canonical-reference-decode-handoff.md`](../help/research/canonical-reference-decode-handoff.md)
+[`docs/research/canonical-reference-decode-handoff.md`](../../research/canonical-reference-decode-handoff.md)
 first. The preceding step-0 divergence and per-sheet-decode blocker remain
 recorded in
-[`help/research/sheet-invariance-mechanism-arc-and-blocker.md`](../help/research/sheet-invariance-mechanism-arc-and-blocker.md);
+[`docs/research/sheet-invariance-mechanism-arc-and-blocker.md`](../../research/sheet-invariance-mechanism-arc-and-blocker.md);
 read it to understand why comparator-only changes failed.
 
 Read these files in order before editing:
@@ -56,18 +61,18 @@ Read these files in order before editing:
 3. `SCORING_CRITERIA_NOTES.md`;
 4. `docs/architecture.md`;
 5. `docs/architecture/irregular-v2-infrastructure.md`;
-6. [`help/help.md`](../help/help.md), especially Current Production Truth,
+6. [`docs/history/search-quality-decisions.md`](../search-quality-decisions.md), especially Current Production Truth,
    Current Research Status, the provenance ledger, and the newest
    investigation-log entry;
-7. [`help/research/protected-intrinsic-contact-seed.md`](../help/research/protected-intrinsic-contact-seed.md);
-8. [`help/research/contact-tier-intrinsic-reservation.md`](../help/research/contact-tier-intrinsic-reservation.md);
-9. [`help/research/protected-contact-tier-reservation.md`](../help/research/protected-contact-tier-reservation.md);
-10. [`help/research/protected-boundary-anchor-diversity.md`](../help/research/protected-boundary-anchor-diversity.md);
-11. [`help/research/open-source-nesting-strategies.md`](../help/research/open-source-nesting-strategies.md);
-12. [`help/research/bounded-ga-order-rotation-probe.md`](../help/research/bounded-ga-order-rotation-probe.md);
-13. [`docs/research/deepnest-svgnest-source-comparison.md`](../docs/research/deepnest-svgnest-source-comparison.md);
-14. [`docs/research/irregular-nesting-literature-and-web-research.md`](../docs/research/irregular-nesting-literature-and-web-research.md);
-15. [`help/research/canonical-reference-decode-handoff.md`](../help/research/canonical-reference-decode-handoff.md).
+7. [`docs/research/protected-intrinsic-contact-seed.md`](../../research/protected-intrinsic-contact-seed.md);
+8. [`docs/research/contact-tier-intrinsic-reservation.md`](../../research/contact-tier-intrinsic-reservation.md);
+9. [`docs/research/protected-contact-tier-reservation.md`](../../research/protected-contact-tier-reservation.md);
+10. [`docs/research/protected-boundary-anchor-diversity.md`](../../research/protected-boundary-anchor-diversity.md);
+11. [`docs/research/open-source-nesting-strategies.md`](../../research/open-source-nesting-strategies.md);
+12. [`docs/research/bounded-ga-order-rotation-probe.md`](../../research/bounded-ga-order-rotation-probe.md);
+13. [`docs/research/deepnest-svgnest-source-comparison.md`](../../research/deepnest-svgnest-source-comparison.md);
+14. [`docs/research/irregular-nesting-literature-and-web-research.md`](../../research/irregular-nesting-literature-and-web-research.md);
+15. [`docs/research/canonical-reference-decode-handoff.md`](../../research/canonical-reference-decode-handoff.md).
 
 Then inspect the current implementation, especially:
 
@@ -119,7 +124,7 @@ to skip the baseline run.
   private until one real winner is selected.
 - A distinct canonical finalist must fit the requested sheet at q0 or q90 with
   zero positive overlap and pass the intrinsic certificate documented in
-  [`help/research/canonical-reference-decode-handoff.md`](../help/research/canonical-reference-decode-handoff.md).
+  [`docs/research/canonical-reference-decode-handoff.md`](../../research/canonical-reference-decode-handoff.md).
   Incomplete, non-finite, schema-invalid, uncertified, or identity-equivalent
   candidates retain production. The capability defaults off.
 - The NFP near-parallel crossing recovery is already merged. Do not conflate
@@ -502,7 +507,7 @@ Reject a specific implementation, not the underlying research direction, when:
 
 Keep the branch, commit, manifest, metrics, traces, and renders for every
 coherent rejected candidate. Update the living
-[`help/help.md`](../help/help.md) ledger before switching to a materially
+[`docs/history/search-quality-decisions.md`](../search-quality-decisions.md) ledger before switching to a materially
 different hypothesis.
 
 ## Required deliverables
@@ -520,7 +525,7 @@ Do not finish with only recommendations. Produce:
    PackingSolver, and Sparrow principles were transferred or rejected;
 7. a production decision: promote, reject, or blocked by a precise falsifiable
    condition;
-8. updated [`help/help.md`](../help/help.md), the relevant architecture page,
+8. updated [`docs/history/search-quality-decisions.md`](../search-quality-decisions.md), the relevant architecture page,
    artifact index, durable research report, and this prompt when its verified
    starting truth or next hypothesis changes;
 9. a final project knowledge update with fresh qmd index and embeddings;

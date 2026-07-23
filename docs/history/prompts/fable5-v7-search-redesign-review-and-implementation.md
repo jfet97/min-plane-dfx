@@ -1,5 +1,10 @@
 # V7 Irregular Nesting: Independent Search Redesign, Implementation, And Evidence Mission
 
+> Historical implementation brief retained as decision provenance. “Current”
+> refers to its named research checkout, not production at `b506344`.
+> Repository paths were updated after the documentation move; this is not an
+> active work plan.
+
 You are taking over an advanced research branch of a deterministic convex
 irregular-nesting engine. This is a combined architecture review,
 implementation, experimentation, and evidence-delivery mission. It is not a
@@ -101,15 +106,15 @@ SCORING_CRITERIA_NOTES.md
 docs/architecture.md
 docs/architecture/index.md
 docs/architecture/irregular-v2-infrastructure.md
-plan.md
-help/help.md
-reviews/fable5-v7-search-quality-review.md
-help/research/open-source-nesting-strategies.md
+docs/planning/irregular-nesting-roadmap.md
+docs/history/search-quality-decisions.md
+docs/history/reviews/fable5-v7-search-quality-review.md
+docs/research/open-source-nesting-strategies.md
 docs/research/open-source-irregular-nesting-strategies.md
-help/research/dalsoo-abey-dalalah-transfer-study.md
-help/research/pre-v7-exactness-retained-foundations.md
-help/research/v7-seed-archive-stage0-stage1.md
-prompts/resolve-irregular-sheet-invariance.md
+docs/research/dalsoo-abey-dalalah-transfer-study.md
+docs/research/pre-v7-exactness-retained-foundations.md
+docs/research/v7-seed-archive-stage0-stage1.md
+docs/history/prompts/resolve-irregular-sheet-invariance.md
 ```
 
 There is no portable `knowledge/` directory on your machine. Do not cite or
@@ -675,7 +680,7 @@ For every run:
 6. Copy only accepted, reasonably sized evidence into the repository under:
 
    ```text
-   help/artifacts/v7-search-redesign/
+   docs/artifacts/v7-search-redesign/
    ```
 
    Include compact manifests, summaries, selected SVGs, readable PNGs, and a
@@ -779,7 +784,7 @@ Commit and push all useful work to `v7-search-redesign-review`.
 Create exactly:
 
 ```text
-reviews/v7-search-redesign-review.md
+docs/history/reviews/v7-search-redesign-review.md
 ```
 
 It must be understandable without access to the original machine's
@@ -822,7 +827,7 @@ Do not put pseudocode in place of executable evidence.
 Commit small summaries, manifests, selected SVGs/PNGs, and their hashes under:
 
 ```text
-help/artifacts/v7-search-redesign/
+docs/artifacts/v7-search-redesign/
 ```
 
 Update its README with fixture, source commit, command, settings, metrics, and
@@ -833,8 +838,8 @@ whether each artifact is accepted, rejected, or diagnostic.
 Update, as warranted by actual findings:
 
 ```text
-plan.md
-help/help.md
+docs/planning/irregular-nesting-roadmap.md
+docs/history/search-quality-decisions.md
 docs/architecture/irregular-v2-infrastructure.md
 ```
 

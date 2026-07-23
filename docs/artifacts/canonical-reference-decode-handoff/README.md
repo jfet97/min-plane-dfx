@@ -1,5 +1,8 @@
 # Canonical Reference Decode Handoff Artifacts
 
+> Historical immutable evidence for the retired fixed-reference coordinator.
+> It does not establish current archive-only production invariance.
+
 These artifacts certify the mixed-61 sheet-invariance gate at source commit
 `5186255` on branch `canonical-reference-decode-handoff`.
 

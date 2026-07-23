@@ -54,8 +54,11 @@ RunNestingPayload -> Stream<WorkerResponse>
 Renderer cancellation and the outer request timeout are supervisor safety
 boundaries: they emit a terminal cancellation progress event and dispose the
 worker runtime. They do not claim a partial result from a computation that was
-interrupted externally. Portfolio-owned GA budgets remain separate, cooperative
-algorithm checkpoints that only publish validated layouts.
+interrupted externally. Internal irregular deadline and cancellation checks are
+cooperative algorithm boundaries; the current renderer cancellation path still
+acts by supervisor disposal rather than by promising that an internal callback
+observed the request. Portfolio-owned GA budgets and deterministic archive caps
+remain separate and publish only validated complete layouts.
 
 Do not bypass `NodeWorker` / `NodeWorkerRunner` with direct `parentPort` listeners in the same worker.
 

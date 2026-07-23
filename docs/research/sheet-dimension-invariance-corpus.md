@@ -1,5 +1,10 @@
 # Sheet-Dimension Invariance Corpus
 
+> Historical diagnostic report for the independent requested-sheet decoder.
+> Its failures and figures do not describe the archive-only Compact quality
+> implementation at `b506344`. The current full matrix remains open; see
+> [`../operations/irregular-production-gates.md`](../operations/irregular-production-gates.md).
+
 ## Purpose
 
 Balanced compactness and edge-contact search should treat the sheet as a

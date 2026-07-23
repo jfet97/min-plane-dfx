@@ -82,9 +82,11 @@ Then verify the empty state, disabled controls, and that no fake algorithm outpu
   settings, runtime environment, metrics, and SVG/PNG paths.
 - Keep immutable experiment manifests and artifact hashes under
   `/private/tmp/min-plane-provenance/` while iterating. Copy accepted reference
-  artifacts into `help/artifacts/` so they remain readable on other machines.
-- Update `help/help.md` with accepted results, rejected hypotheses, regressions,
-  and open questions before starting the next materially different experiment.
+  artifacts into `docs/artifacts/` so they remain readable on other machines.
+- Update the relevant topic under `docs/history/` and `docs/research/`, plus the
+  active roadmap when forward work changes, with accepted results, rejected
+  hypotheses, regressions, and open questions before starting the next
+  materially different experiment.
 - Never describe a layout as reproducible until its recorded checkout and
   command regenerate the same canonical geometry hash.
 - Merge or cherry-pick only after comparing the isolated result against the

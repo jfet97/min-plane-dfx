@@ -88,17 +88,18 @@ Replay history persistence is authoritative: selected-state frames are appended
 to the per-job NDJSON file before optional live streaming. Live `history_frame`
 delivery is best-effort; persistence failures still fail the job.
 
-Irregular runs with history enabled also write a separate
-`<jobId>.decision-trace.ndjson` file beside replay history. It records every
-executed baseline or GA beam decode decision, including bounded local-fanout
-detail, aggregate local-candidate counts, deduplication, whole-layout scoring,
-and beam pruning. The worker drains both queues before completion and reports
-the decision-trace path and event count in `NestingHistorySummary`. Decision
-traces are diagnostic data, not replay frames, and are not streamed to the
-renderer. Per-decode registries replace repeated canonical chromosome, state,
-and retained diagnostic candidate keys with compact deterministic ids, and the
-worker persists ordered bounded batches rather than appending each event
-separately.
+Ordinary irregular runs with history enabled also write a separate
+`<jobId>.decision-trace.ndjson` file beside replay history. It records each
+executed baseline or GA beam decode, including bounded local-fanout detail,
+aggregate local-candidate counts, deduplication, whole-layout scoring, and beam
+pruning. The Compact quality shared archive does not claim those beam decisions
+or ancestry; its replay history is a single truthful selected terminal frame.
+The worker drains every active history/trace queue before completion and reports
+the available paths and counts in `NestingHistorySummary`. Decision traces are
+diagnostic data, not replay frames, and are not streamed to the renderer.
+Per-decode registries replace repeated chromosome, state, and retained
+diagnostic candidate keys with compact deterministic ids, and the worker
+persists ordered bounded batches rather than appending each event separately.
 
 Saved-run history deletion is a main-process filesystem operation. Renderer
 requests contain only schema-decoded job ids; main derives the two managed
