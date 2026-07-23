@@ -98,6 +98,24 @@ dominant phase, but it is not current proof. If the fresh run confirms that
 result, split the opaque construction phase into candidate generation versus
 state construction/scoring before choosing an optimization.
 
+Checkpoint `54b437a` completed that measurement and the first cold-path
+optimization. On the clean `4f3ddb8` baseline, two serial Mixed-61 samples put
+direct-plus-periodic work at `251,188-253,774 ms`; two exact-commit optimized
+samples put it at `244,420-248,283 ms`. The medians improve from `252,481 ms` to
+`246,352 ms` (`-2.43%`), with non-overlapping ranges. Strict-construction
+medians improve from `158,551 ms` to `154,347 ms` (`-2.65%`). The optimization
+removes a redundant complete-layout hull calculation from local envelope
+ranking; it preserves selected sources, budget settlements, archive order,
+q0/q90 fit, hashes, all three fixture identities, and the current two-sheet
+invariance sample. Full evidence is in
+[`../research/intrinsic-shared-archive-performance-checkpoint.md`](../research/intrinsic-shared-archive-performance-checkpoint.md).
+
+The next cold-path measurement should split candidate state scoring further:
+incremental contact measurement, state materialization/bottom-left anchoring,
+canonical geometry-key construction, and gap classification. Do not optimize
+NFP generation first: it consumed only about `8.8 s` of the approximately
+`153-156 s` optimized strict-construction runs.
+
 A content-addressed replay may be promoted only with explicit refresh, miss,
 corruption, schema-version, and algorithm-version behavior and with canonical
 revalidation of untrusted entries. Warm replay is a separate cache result: it

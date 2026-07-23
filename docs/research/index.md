@@ -51,6 +51,10 @@ full sheet matrix remains open.
 
 - [Mixed trace analysis, 2026-07-17](./morning-mixed-trace-analysis-2026-07-17.md)
 
+## Performance
+
+- [Intrinsic shared-archive performance checkpoint](./intrinsic-shared-archive-performance-checkpoint.md)
+
 Portable evidence referenced by these reports is indexed under
 [`../artifacts/`](../artifacts/README.md). Raw paths under
 `/private/tmp/min-plane-provenance/` identify the original immutable run and may

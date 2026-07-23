@@ -223,12 +223,22 @@ preserves its historical order.
 The same explicit cap enables phase telemetry without changing the uncapped
 result contract. Top-level timings isolate catalog construction, continuation
 selection, execution ordering, strict construction, exact finalization, archive
-ranking, and residual bookkeeping. Selection additionally separates source-
+ranking, and residual bookkeeping. Strict construction separates candidate
+generation from candidate state construction/scoring; selection separates source-
 audit crop enumeration, retained-cell crop enumeration, crop-front ranking, and
 its remaining bookkeeping so optimization follows measured cost.
-Telemetry coverage is complete only when both top-level and nested selection
-residuals are at most 1% of their respective totals; a large residual therefore
-fails the measurement gate instead of being hidden by arithmetic reconciliation.
+Telemetry coverage is complete only when top-level, nested selection, and nested
+construction residuals are at most 1% of their respective totals and every
+selected continuation has nested construction telemetry. A large residual or
+missing run therefore fails the measurement gate instead of being hidden by
+arithmetic reconciliation.
+
+Local strict ranking obtains maximum side, envelope area, and span from the
+incrementally maintained occupied bounds after canonical 0.001 mm conversion.
+It does not recompute complete-layout convex-hull metrics for each candidate;
+hull waste remains a completed-layout/archive measurement. This optimization
+does not change candidate generation, local comparison order, archive identity,
+or requested-sheet fitting.
 
 The Step 4 shared-archive experiment is the first common terminal boundary for
 the two protected direct constructors, baseline-order gap-contained

@@ -13,8 +13,9 @@ ship are summarized separately in
 | Shared archive research | `ee9d0fa`, `e4378e5`, `4831035`, `fa9ab29`, `ed90f87` | deterministic periodic budgets, phase measurement, common exact archive, Triangle witness restoration, filtered source allocation |
 | Third baseline | `ec6fb90`, `6d1cfa1`, `8f84f81`, `75b9699` | added the all-distinct Shapes-17 direct-archive gate |
 | Archive-only production | `8b0fba4`, merge `f33831f`, recorded by `b506344` | removed the fixed coordinator/flag and ordinary compact fallback; Compact quality selects directly from the intrinsic shared archive |
+| First archive performance pass | `54b437a` | added coverage-checked construction telemetry and removed redundant per-candidate hull work while preserving exact production identities and the current invariance sample |
 
-## Current Contract at `b506344`
+## Current Contract at `54b437a`
 
 - Compact quality uses three sheetless direct constructors and a bounded
   repeated-family periodic portfolio.
