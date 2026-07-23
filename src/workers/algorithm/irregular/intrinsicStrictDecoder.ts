@@ -583,10 +583,22 @@ export function constructIntrinsicStrictState(
       }
 
       const familyWinners = [...candidatesByFamily.values()]
-      const selected =
+      const unanchoredSelected =
         typeof input.candidateMode === 'object'
           ? selectGapContainedWinner([...containedCandidatesByFamily.values(), ...familyWinners])
           : selectIntrinsicStrictFamilyWinner(familyWinners, input.candidateMode)
+      const retainedStateAnchoringStartedAt = capturePhaseTimings ? performance.now() : 0
+      const selectedState = unanchoredSelected?.state.withBottomLeftAnchored()
+      if (capturePhaseTimings) {
+        const retainedStateAnchoringMs = performance.now() - retainedStateAnchoringStartedAt
+        candidateStateScoringMs += retainedStateAnchoringMs
+        candidateStatePhaseTimings.bottomLeftAnchoringMs += retainedStateAnchoringMs
+        candidateStatePhaseTimings.totalMs += retainedStateAnchoringMs
+      }
+      const selected =
+        unanchoredSelected === undefined || selectedState === undefined
+          ? undefined
+          : { ...unanchoredSelected, state: selectedState }
       stepTrace.push({
         pieceId,
         candidateCount,
@@ -834,19 +846,20 @@ function scoreCandidate(input: {
       input.phaseTimings.statePlacementMs += performance.now() - statePlacementStartedAt
     }
     const anchoringStartedAt = input.phaseTimings === undefined ? 0 : performance.now()
-    const anchored = placedState.withBottomLeftAnchored()
+    const canonicalCombinedGeometryKey =
+      placedState.bottomLeftAnchoredCanonicalOccupiedGeometryKey()
     if (input.phaseTimings !== undefined) {
       input.phaseTimings.bottomLeftAnchoringMs += performance.now() - anchoringStartedAt
     }
-    if (anchored === undefined) return undefined
+    if (canonicalCombinedGeometryKey === undefined) return undefined
     const envelopeStartedAt = input.phaseTimings === undefined ? 0 : performance.now()
-    const envelope = measureIntrinsicStrictEnvelopeFromState(anchored)
+    const envelope = measureIntrinsicStrictEnvelopeFromState(placedState)
     if (input.phaseTimings !== undefined) {
       input.phaseTimings.envelopeScoringMs += performance.now() - envelopeStartedAt
     }
     if (envelope === undefined) return undefined
     const { maximumSideMm, envelopeAreaMm2, envelopeSpanMm } = envelope
-    const sharedBoundaryLengthMm = anchored.sharedCollisionBoundaryLengthMm
+    const sharedBoundaryLengthMm = placedState.sharedCollisionBoundaryLengthMm
     if (
       sharedBoundaryLengthMm === undefined ||
       ![maximumSideMm, envelopeAreaMm2, envelopeSpanMm, sharedBoundaryLengthMm].every(
@@ -868,7 +881,7 @@ function scoreCandidate(input: {
       input.phaseTimings.gapClassificationMs += performance.now() - gapStartedAt
     }
     return {
-      state: anchored,
+      state: placedState,
       transformFamily: input.transformFamily,
       candidate: input.candidate,
       movingCollisionAreaMm2: input.movingCollisionAreaMm2,
@@ -878,7 +891,7 @@ function scoreCandidate(input: {
         envelopeAreaMm2,
         envelopeSpanMm,
         sharedBoundaryLengthMm,
-        canonicalCombinedGeometryKey: anchored.canonicalOccupiedGeometryKey
+        canonicalCombinedGeometryKey
       }
     }
   } finally {

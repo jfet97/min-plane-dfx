@@ -324,6 +324,31 @@ export class IrregularBeamState {
     )
   }
 
+  /**
+   * Computes the exact occupied-geometry identity produced by
+   * `withBottomLeftAnchored` without rebuilding placements or the spatial index.
+   */
+  bottomLeftAnchoredCanonicalOccupiedGeometryKey(): string | undefined {
+    const bounds = this.translatedCollisionBounds
+    if (bounds === undefined || (bounds.minX === 0 && bounds.minY === 0)) {
+      return this.canonicalOccupiedGeometryKey
+    }
+
+    const translateX = -bounds.minX
+    const translateY = -bounds.minY
+    const canonicalEntryKeys: string[] = []
+    for (const placed of this.placedCollisionGeometries) {
+      const nextTranslateX = placed.placement.transform.translateX + translateX
+      const nextTranslateY = placed.placement.transform.translateY + translateY
+      if (!Number.isFinite(nextTranslateX) || !Number.isFinite(nextTranslateY)) return undefined
+      canonicalEntryKeys.push(
+        canonicalPlacedGeometryKeyAtTranslation(placed, nextTranslateX, nextTranslateY)
+      )
+    }
+    canonicalEntryKeys.sort(compareCanonicalKeys)
+    return canonicalEntryListKey(canonicalEntryKeys)
+  }
+
   /** Rigidly rotates the complete layout, then anchors its occupied bounds bottom-left. */
   withQuarterTurnBottomLeft(
     rotationDeg: IrregularQuarterTurnDegrees
@@ -663,10 +688,21 @@ function dominantSignatureCount(counts: ReadonlyMap<string, number>): number {
 type CanonicalPoint = readonly [x: number, y: number]
 
 function canonicalPlacedGeometryKey(placed: IrregularPlacedPiece): string {
-  const translation = placed.placement.transform
+  return canonicalPlacedGeometryKeyAtTranslation(
+    placed,
+    placed.placement.transform.translateX,
+    placed.placement.transform.translateY
+  )
+}
+
+function canonicalPlacedGeometryKeyAtTranslation(
+  placed: IrregularPlacedPiece,
+  translateX: number,
+  translateY: number
+): string {
   const translatedPoints = placed.collisionGeometry.polygon.points.map((point) => ({
-    x: point.x + translation.translateX,
-    y: point.y + translation.translateY
+    x: point.x + translateX,
+    y: point.y + translateY
   }))
   return canonicalCollisionPolygonKey(translatedPoints)
 }

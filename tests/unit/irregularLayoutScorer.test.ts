@@ -1004,9 +1004,14 @@ describe('IrregularLayoutScorer', () => {
     })
     const rebuilt = state([firstPlaced, secondPlaced])
     const reversed = state([secondPlaced, firstPlaced], [], ['second', 'first'])
+    const anchored = child.withBottomLeftAnchored()
 
     expect(child.canonicalOccupiedGeometryKey).toBe(rebuilt.canonicalOccupiedGeometryKey)
     expect(child.canonicalOccupiedGeometryKey).toBe(reversed.canonicalOccupiedGeometryKey)
+    expect(anchored).toBeDefined()
+    expect(child.bottomLeftAnchoredCanonicalOccupiedGeometryKey()).toBe(
+      anchored?.canonicalOccupiedGeometryKey
+    )
     expect(child.translatedCollisionBounds).toEqual({
       minX: 1,
       minY: 1,
