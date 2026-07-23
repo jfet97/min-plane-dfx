@@ -371,6 +371,7 @@ interface CapacityRunReport {
         readonly exactEndpointCount: number
         readonly qualifyingEndpointCount: number
         readonly attemptOutcomeCounts: Readonly<Record<string, number>>
+        readonly attempts: unknown
       }
     | undefined
   readonly warmLaneArtifacts: ReadonlyArray<{
@@ -680,7 +681,8 @@ async function runCohesionFeatureContactShadow(input: {
     materializationCount: result.materializationCount,
     exactEndpointCount: result.exactEndpoints.length,
     qualifyingEndpointCount: result.qualifyingEndpoints.length,
-    attemptOutcomeCounts
+    attemptOutcomeCounts,
+    attempts: result.attempts
   }
 }
 
