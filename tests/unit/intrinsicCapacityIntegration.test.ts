@@ -289,6 +289,7 @@ describe('intrinsic capacity integration', () => {
         retentionDepths?.every(
           (depth) =>
             depth.representatives.length === 5 &&
+            depth.retainedCount <= 16 &&
             depth.topologyMeasurementCount > 0 &&
             depth.topologyMeasurementMs >= 0 &&
             depth.representatives.every(

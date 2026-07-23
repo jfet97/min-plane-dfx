@@ -1700,6 +1700,7 @@ function retainCapacityBeamEntries(
   ): void => {
     let added = 0
     for (const entry of ordered) {
+      if (retained.length >= beamWidth) return
       const key = intrinsicCapacitySuccessorIdentity(entry)
       if (retainedKeys.has(key)) continue
       retained.push(entry)
@@ -1758,6 +1759,7 @@ function retainCapacityCohesionFrontier(
   ): void => {
     let added = 0
     for (const entry of ordered) {
+      if (retained.length >= beamWidth) return
       const key = intrinsicCapacitySuccessorIdentity(entry)
       if (retainedKeys.has(key)) continue
       retained.push(entry)
