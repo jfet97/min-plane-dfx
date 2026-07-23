@@ -52,6 +52,19 @@ the ordered endpoint hashes, partitions, and objectives against an
 uninterrupted run. Both capacity suites pass. The broader suite still reports
 the 35 unrelated baseline failures already documented by capacity v1.
 
+Committed implementation `970ed2be14edb69d41333b8d48377514aab80eed`
+passes the strict paired capacity gate. The longest control remains the serial
+Mixed-61 `700 x 560` path: production and cold-only arms both place `55/61`,
+consume `232,209` placement evaluations, retain zero cavities, and select
+canonical capacity identity `0ba279b5...`; total wall times are about `61.76 s`
+and `61.65 s`. This stage is semantic infrastructure, not a speed claim.
+
+The focused checkpoint/capacity suites pass `24/24` in `1.46 s` wall,
+`3.32 s` user, and `0.65 s` system time with `160,989,184` bytes maximum
+resident set. Immutable reports, SVG/PNG renders, hashes, and environment
+metadata are under
+`/private/tmp/min-plane-provenance/intrinsic-checkpoint-970ed2b-pMI3QZ/`.
+
 ## Remaining Stages
 
 1. Add scale-free pressure and bounded no-skip-frontier probe telemetry without
