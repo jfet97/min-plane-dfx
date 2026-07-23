@@ -4,7 +4,7 @@ import { join } from 'node:path'
 
 interface Baseline {
   readonly fixture: 'triangle-20' | 'mixed-61' | 'shapes-17'
-  readonly sheet: '2000x2700' | '700x500'
+  readonly sheet: '2000x2700' | '600x400'
   readonly collisionIdentitySha256: string
   readonly fittedCanonicalSha256: string
   readonly placedCount: number
@@ -56,7 +56,7 @@ const BASELINES: ReadonlyArray<Baseline> = [
   },
   {
     fixture: 'triangle-20',
-    sheet: '700x500',
+    sheet: '600x400',
     collisionIdentitySha256:
       '371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127',
     fittedCanonicalSha256:
@@ -69,28 +69,28 @@ const BASELINES: ReadonlyArray<Baseline> = [
   },
   {
     fixture: 'mixed-61',
-    sheet: '700x500',
+    sheet: '600x400',
     collisionIdentitySha256:
-      '04420f4a81ddc3e10d4752881c2fb336a5bc1f2fe10b3093469ab8f423ba662a',
+      '120f5f1eef64411032d0aee828cb61bc0c5464015397b600f194d63e242f6569',
     fittedCanonicalSha256:
-      '7efddf26ee859256845e88f83554ab661116ab37f29810ce263819e668610a02',
-    placedCount: 45,
-    unplacedCount: 16,
-    maximumAreaMm2: 345_342.264687,
+      'b0c0d8395758b62058d29efb9702bff8519fbba028a9d8beb6b46d1492ce9e3d',
+    placedCount: 24,
+    unplacedCount: 37,
+    maximumAreaMm2: 232_800.043098,
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 330_000
   },
   {
     fixture: 'shapes-17',
-    sheet: '700x500',
+    sheet: '600x400',
     collisionIdentitySha256:
-      '00ba6de8152a6b249f2426ff79881bcc4c2c4459630f29b931554f4c354bf584',
+      '510225fc9dba197e1b56d6f1d3ebd70963b13cdfcb23c567acd14b56653054a8',
     fittedCanonicalSha256:
-      '22da57edfe5a2ef2b1c5aa432372e1e5cabce850775089fd6aa4442cae9dfd3d',
-    placedCount: 17,
-    unplacedCount: 0,
-    maximumAreaMm2: 303_852.763787,
-    maximumCanonicalCavities: 0,
+      'e73b0cfa3f10056aa4bab547c928384300a41e81c35737a98014ecef2956a90f',
+    placedCount: 13,
+    unplacedCount: 4,
+    maximumAreaMm2: 228_616.694352,
+    maximumCanonicalCavities: 1,
     maximumElapsedMs: 120_000
   }
 ]
