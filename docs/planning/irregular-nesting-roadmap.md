@@ -1,7 +1,7 @@
 # Irregular Nesting Roadmap
 
-This is the active forward roadmap for convex irregular nesting on `main` at
-`b506344`. It contains only uncompleted work. Architecture and current behavior
+This is the active forward roadmap for convex irregular nesting at `2174c63`.
+It contains only uncompleted work. Architecture and current behavior
 live in [`../architecture/irregular-v2-infrastructure.md`](../architecture/irregular-v2-infrastructure.md);
 past decisions live under [`../history/`](../history/README.md).
 
@@ -23,14 +23,15 @@ Current exact one-sheet production baselines are:
 
 | Fixture | Envelope area | Canonical cavities | Observed runtime | Durable gate | PNG |
 | --- | ---: | ---: | ---: | --- | --- |
-| Triangle-20 | `74,428.143126 mm2` | 0 | `13.007 s` | exact hash `371db269...` in the unit golden | [`triangle-20.png`](../artifacts/current-compact-baselines/triangle-20.png) |
-| Mixed-61 | `391,605.850174 mm2` | 0 | `53.100 s` | fitted hash `ef2b783a...` in `pnpm gate:mixed61-compact` | [`mixed-61.png`](../artifacts/current-compact-baselines/mixed-61.png) |
-| Shapes-17 | `304,499.845650 mm2` | 0 | `7.651 s` | exact hash `c640c06f...` in the unit golden | [`shapes-17.png`](../artifacts/current-compact-baselines/shapes-17.png) |
+| Triangle-20 | `74,428.143126 mm2` | 0 | `12.635 s` | exact hash `371db269...` in the unit golden | [`triangle-20.png`](../artifacts/current-compact-baselines/triangle-20.png) |
+| Mixed-61 | `391,605.850174 mm2` | 0 | `52.962 s` | fitted hash `ef2b783a...` in `pnpm gate:mixed61-compact` | [`mixed-61.png`](../artifacts/current-compact-baselines/mixed-61.png) |
+| Shapes-17 | `304,499.845650 mm2` | 0 | `7.447 s` | exact hash `c640c06f...` in the unit golden | [`shapes-17.png`](../artifacts/current-compact-baselines/shapes-17.png) |
 
-Runtime observations are from the 2026-07-23 `f65a4e5` fixture-golden run for
-Triangle-20 and Shapes-17 and the clean `c3849fd` production gate for Mixed-61
-on Node `v24.16.0`, V8 `13.6.233.17-node.49`, macOS arm64. They are measured
-baselines, not deterministic acceptance thresholds.
+Runtime observations are from serial post-commit `2174c63` gates on
+2026-07-23, Node `v24.16.0`, V8 `13.6.233.17-node.49`, macOS arm64. They are
+measured baselines, not deterministic acceptance thresholds. The adaptive
+transform-policy evidence is recorded in
+[`../research/adaptive-compact-transform-policy.md`](../research/adaptive-compact-transform-policy.md).
 
 Do not substitute the earlier sheetless Mixed experiment hash `3839e80d...`
 for the fitted production hash. Do not use the retired fixed-reference

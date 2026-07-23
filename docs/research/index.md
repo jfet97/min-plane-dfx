@@ -53,6 +53,7 @@ full sheet matrix remains open.
 
 ## Performance
 
+- [Adaptive Compact transform policy](./adaptive-compact-transform-policy.md)
 - [Intrinsic shared-archive performance checkpoint](./intrinsic-shared-archive-performance-checkpoint.md)
 
 Portable evidence referenced by these reports is indexed under

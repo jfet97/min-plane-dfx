@@ -15,6 +15,12 @@ cancellation, history, or timeout behavior.
 The exact hash and threshold assertions live in the tests and `package.json`.
 This page summarizes them; it does not replace them.
 
+The latest serial observations at adaptive-policy commit `2174c63` are
+`12.635 s` for Triangle-20, `52.962 s` for Mixed-61, and `7.447 s` for
+Shapes-17. All three SVG and PNG artifacts remain byte-identical to their
+accepted predecessors. See the
+[adaptive transform report](../research/adaptive-compact-transform-policy.md).
+
 ## Focused Correctness Gate
 
 ```sh
