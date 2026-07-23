@@ -725,6 +725,7 @@ function preparePieces(
         geometry: collisionGeometry,
         allowRotation: request.options.allowGlobalRotation && prepared.allowRotation,
         allowMirror: (request.options.allowGlobalMirror ?? true) && (prepared.allowMirror ?? true),
+        geometrySettings: settings.geometry,
         settings: settings.optimizer
       })
       pieces.push(

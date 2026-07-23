@@ -106,6 +106,7 @@ export const GenerateTransformsInput = Schema.Struct({
   geometry: CollisionGeometry,
   allowRotation: Schema.Boolean,
   allowMirror: Schema.Boolean,
+  geometrySettings: IrregularGeometrySettings,
   settings: IrregularOptimizerSettings
 })
 export type GenerateTransformsInput = Schema.Schema.Type<typeof GenerateTransformsInput>

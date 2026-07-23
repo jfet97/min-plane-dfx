@@ -247,6 +247,7 @@ function prepareIrregularPieces(
         allowRotation:
           requestInput.options.allowGlobalRotation && prepared.allowRotation,
         allowMirror,
+        geometrySettings: settings.geometry,
         settings: settings.optimizer
       })
       result.push(

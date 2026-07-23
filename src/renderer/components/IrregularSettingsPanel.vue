@@ -190,34 +190,6 @@ watch(
         />
         <span class="field-help">{{ transformCapHelp }}</span>
       </label>
-      <label
-        title="Ignores source edges shorter than this length when deriving useful rotation angles."
-      >
-        Minimum edge (mm)
-        <input
-          type="number"
-          min="0"
-          step="0.1"
-          :value="optimizer.transformMinimumEdgeLengthMm"
-          @input="updateOptimizer({ transformMinimumEdgeLengthMm: Number(inputValue($event)) })"
-        />
-        <span class="field-help">Shorter edges do not contribute derived angle candidates.</span>
-      </label>
-      <label title="Treats derived angles within this number of degrees as the same orientation.">
-        Angle dedupe (deg)
-        <input
-          type="number"
-          min="0.001"
-          step="0.01"
-          :value="optimizer.transformAngleDeduplicationToleranceDeg"
-          @input="
-            updateOptimizer({ transformAngleDeduplicationToleranceDeg: Number(inputValue($event)) })
-          "
-        />
-        <span class="field-help"
-          >Larger values merge nearly equal derived angles and reduce work.</span
-        >
-      </label>
     </div>
 
     <details>

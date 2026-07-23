@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CollisionGeometry,
   IrregularBounds,
+  IrregularGeometrySettings,
   IrregularOptimizerSettings,
   IrregularPoint,
   IrregularPolygon
@@ -28,20 +29,25 @@ function polygon(points: ReadonlyArray<IrregularPoint>): IrregularPolygon {
   return new IrregularPolygon({ points })
 }
 
-function collisionGeometry(points: ReadonlyArray<IrregularPoint>): CollisionGeometry {
+function collisionGeometry(
+  points: ReadonlyArray<IrregularPoint>,
+  placementReference: IrregularPoint = point(0, 0)
+): CollisionGeometry {
   return new CollisionGeometry({
     sourcePieceId: PieceId.make('transform-test-piece'),
     sourceBounds: new IrregularBounds({ minX: 0, minY: 0, maxX: 10, maxY: 10 }),
     sampledPoints: [point(0, 0), point(10, 0), point(10, 10), point(0, 10)],
     convexHull: polygon([point(0, 0), point(10, 0), point(10, 10), point(0, 10)]),
     collisionPolygon: polygon(points),
-    placementReference: point(0, 0),
+    placementReference,
     diagnostics: []
   })
 }
 
 function settings(
   overrides: {
+    readonly intrinsicSharedArchiveEnabled?: boolean
+    readonly placementPolicyId?: IrregularOptimizerSettings['placementPolicyId']
     readonly transformCap?: number
     readonly transformMinimumEdgeLengthMm?: number
     readonly transformAngleDeduplicationToleranceDeg?: number
@@ -53,6 +59,10 @@ function settings(
   return new IrregularOptimizerSettings({
     orderWindow: 2,
     beamWidth: 8,
+    intrinsicSharedArchiveEnabled: overrides.intrinsicSharedArchiveEnabled ?? false,
+    ...(overrides.placementPolicyId === undefined
+      ? {}
+      : { placementPolicyId: overrides.placementPolicyId }),
     transformCap: overrides.transformCap ?? 16,
     transformMinimumEdgeLengthMm: overrides.transformMinimumEdgeLengthMm ?? 1,
     transformAngleDeduplicationToleranceDeg:
@@ -71,15 +81,24 @@ function generate(
   options: {
     readonly allowRotation?: boolean
     readonly allowMirror?: boolean
+    readonly flatteningSagToleranceMm?: number
+    readonly placementReference?: IrregularPoint
     readonly settings?: IrregularOptimizerSettings
   } = {}
 ) {
+  const flatteningSagToleranceMm = options.flatteningSagToleranceMm ?? 0.25
   return Effect.runPromise(
     TransformGenerator.use((service) =>
       service.generateTransforms({
-        geometry: collisionGeometry(points),
+        geometry: collisionGeometry(points, options.placementReference),
         allowRotation: options.allowRotation ?? true,
         allowMirror: options.allowMirror ?? false,
+        geometrySettings: new IrregularGeometrySettings({
+          flatteningSagToleranceMm,
+          clearanceSafetyMarginMm: flatteningSagToleranceMm,
+          geometryBackendId: 'transform-test',
+          geometryBackendVersion: '0'
+        }),
         settings: options.settings ?? settings()
       })
     ).pipe(Effect.provide(TransformGeneratorLive))
@@ -260,6 +279,146 @@ describe('TransformGenerator.Live', () => {
     })
 
     expect(candidates.some(({ rotationDeg }) => Math.abs(rotationDeg - 315) < 1e-12)).toBe(false)
+  })
+
+  it('scales Compact edge and angle tolerances with the collision polygon and sag', async () => {
+    const base = [point(0, 0), point(12, 0), point(10, 5), point(1, 7)]
+    const compactSettings = settings({
+      intrinsicSharedArchiveEnabled: true,
+      transformMinimumEdgeLengthMm: 100,
+      transformAngleDeduplicationToleranceDeg: 10
+    })
+
+    const transforms = await Promise.all(
+      [0.1, 1, 10].map((scale) =>
+        generate(
+          base.map(({ x, y }) => point(x * scale, y * scale)),
+          {
+            flatteningSagToleranceMm: 0.25 * scale,
+            settings: compactSettings
+          }
+        )
+      )
+    )
+
+    const identities = transforms.map((candidates) =>
+      candidates.map(({ rotationDeg, mirrored, reason }) => ({
+        rotationDeg: Number(rotationDeg.toFixed(9)),
+        mirrored,
+        reason
+      }))
+    )
+    expect(identities[1]).toEqual(identities[0])
+    expect(identities[2]).toEqual(identities[0])
+  })
+
+  it('keeps large-radius angles distinct when merging them would exceed curve sag', async () => {
+    const candidates = await generate(
+      [point(0, 0), point(1000, 0), point(1000, 1000), point(0, 1000)],
+      {
+        flatteningSagToleranceMm: 0.25,
+        settings: settings({
+          intrinsicSharedArchiveEnabled: true,
+          configuredRotationDeg: [10, 10.04]
+        })
+      }
+    )
+
+    expect(
+      candidates
+        .filter(({ reason }) => reason === 'configured')
+        .map(({ rotationDeg }) => rotationDeg)
+    ).toEqual([10, 10.04])
+  })
+
+  it('keeps adaptive transforms invariant when the source-space placement reference moves', async () => {
+    const boundary = [point(0, 0), point(1000, 0), point(1000, 1000), point(0, 1000)]
+    const compactSettings = settings({
+      intrinsicSharedArchiveEnabled: true,
+      configuredRotationDeg: [10, 10.04]
+    })
+    const origin = await generate(boundary, {
+      placementReference: point(0, 0),
+      settings: compactSettings
+    })
+    const translatedSource = await generate(boundary, {
+      placementReference: point(1_000_000, -2_000_000),
+      settings: compactSettings
+    })
+
+    expect(translatedSource).toEqual(origin)
+  })
+
+  it('retains a short but scale-meaningful Compact edge', async () => {
+    const candidates = await generate([point(0, 0), point(0.5, 0.5), point(4, 0.5)], {
+      settings: settings({
+        intrinsicSharedArchiveEnabled: true,
+        transformMinimumEdgeLengthMm: 1.2
+      })
+    })
+
+    expect(candidates.some(({ rotationDeg }) => Math.abs(rotationDeg - 315) < 1e-12)).toBe(true)
+  })
+
+  it('keeps persisted thresholds when an archive-requested profile is not Compact-eligible', async () => {
+    const candidates = await generate([point(0, 0), point(0.5, 0.5), point(4, 0.5)], {
+      settings: settings({
+        intrinsicSharedArchiveEnabled: true,
+        placementPolicyId: 'short-side-fill',
+        transformMinimumEdgeLengthMm: 1.2
+      })
+    })
+
+    expect(candidates.some(({ rotationDeg }) => Math.abs(rotationDeg - 315) < 1e-12)).toBe(false)
+  })
+
+  it('uses the longer near-angle edge as the capped Compact representative', async () => {
+    const degreesToRadians = Math.PI / 180
+    const edgeVectors = [
+      { length: 10, directionDeg: -10.04 },
+      { length: 1, directionDeg: -10 },
+      { length: 5.590984394749958, directionDeg: 120 },
+      { length: 8.551922421444505, directionDeg: 200 }
+    ]
+    const rawPoints = [{ x: 0, y: 0 }]
+    for (const edge of edgeVectors.slice(0, -1)) {
+      const previous = rawPoints.at(-1)
+      if (previous === undefined) throw new Error('expected polygon construction point')
+      rawPoints.push({
+        x: previous.x + edge.length * Math.cos(edge.directionDeg * degreesToRadians),
+        y: previous.y + edge.length * Math.sin(edge.directionDeg * degreesToRadians)
+      })
+    }
+    const minX = Math.min(...rawPoints.map(({ x }) => x))
+    const minY = Math.min(...rawPoints.map(({ y }) => y))
+    const candidates = await generate(
+      rawPoints.map(({ x, y }) => point(x - minX, y - minY)),
+      {
+        settings: settings({
+          intrinsicSharedArchiveEnabled: true,
+          transformCap: 5,
+          configuredRotationDeg: [20]
+        })
+      }
+    )
+
+    expect(candidates).toHaveLength(5)
+    expect(candidates.at(-1)?.reason).toBe('edge_alignment')
+    expect(candidates.at(-1)?.rotationDeg).toBeCloseTo(10.04, 12)
+    expect(candidates.some(({ rotationDeg }) => rotationDeg === 10)).toBe(false)
+    expect(candidates.some(({ rotationDeg }) => rotationDeg === 20)).toBe(false)
+  })
+
+  it('deduplicates Compact angles across the circular zero-degree seam', async () => {
+    const candidates = await generate([point(0, 0), point(10, 0), point(10, 10), point(0, 10)], {
+      settings: settings({
+        intrinsicSharedArchiveEnabled: true,
+        configuredRotationDeg: [359.98, 0.02]
+      })
+    })
+
+    expect(candidates.filter(({ reason }) => reason === 'configured')).toEqual([])
+    expect(candidates.filter(({ rotationDeg }) => rotationDeg === 0)).toHaveLength(1)
   })
 
   it('normalizes periodic configured angles and keeps the lower duplicate', async () => {

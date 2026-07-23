@@ -239,11 +239,11 @@ const IrregularOptimizerSettingsFields = Schema.Struct({
   ),
   /** Maximum orientation candidates emitted for one prepared collision polygon. */
   transformCap: PositiveFiniteInteger,
-  /** Edges shorter than this millimeter length are ignored as geometric noise. */
+  /** Ordinary-path edge threshold; Compact derives a scale-aware value per collision polygon. */
   transformMinimumEdgeLengthMm: NonNegativeFiniteMillimeters.pipe(
     Schema.withDecodingDefaultKey(Effect.succeed(1))
   ),
-  /** Circular angular distance at or below this degree value is one transform. */
+  /** Ordinary-path angle tolerance; Compact derives a sag-bounded value per collision polygon. */
   transformAngleDeduplicationToleranceDeg: PositiveFiniteDegrees.pipe(
     Schema.withDecodingDefaultKey(Effect.succeed(0.01))
   ),

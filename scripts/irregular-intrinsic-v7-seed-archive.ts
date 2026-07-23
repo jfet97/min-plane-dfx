@@ -1844,6 +1844,9 @@ function prepareIrregularPieces(
         geometry: collisionGeometry,
         allowRotation: request.options.allowGlobalRotation && prepared.allowRotation,
         allowMirror,
+        geometrySettings:
+          request.options.irregularSettings?.geometry ??
+          DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
         settings:
           request.options.irregularSettings?.optimizer ??
           makeCompactQualityIrregularOptimizerSettings()

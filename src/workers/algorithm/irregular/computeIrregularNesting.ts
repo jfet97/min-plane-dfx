@@ -158,6 +158,7 @@ export function computeIrregularNesting(
         geometry: collisionGeometry,
         allowRotation,
         allowMirror,
+        geometrySettings: settings.geometry,
         settings: settings.optimizer
       })
       preparedPieces.push(

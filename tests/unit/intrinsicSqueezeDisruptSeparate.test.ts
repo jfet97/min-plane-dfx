@@ -3382,6 +3382,7 @@ function prepareMixedPieces(
         geometry: collisionGeometry,
         allowRotation: request.options.allowGlobalRotation && prepared.allowRotation,
         allowMirror,
+        geometrySettings: settings.geometry,
         settings: settings.optimizer
       })
       result.push(

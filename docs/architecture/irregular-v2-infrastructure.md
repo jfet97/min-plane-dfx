@@ -97,6 +97,25 @@ completed layout is tested against the real sheet, at q0 and q90. This path has
 its own provenance harness and exact topology metrics; it does not alter the
 ordinary beam, GA, repair, or explicit `short_side_fill` behavior.
 
+Compact derives its transform-noise policy independently for every prepared
+collision polygon. An edge is usable when its length reaches
+`min(4 * flatteningSagToleranceMm, 0.01 * smallerCollisionDimensionMm)`.
+Near-angle deduplication is capped at `0.051 degrees` and tightened until the
+worst vertex displacement around the collision polygon's local placement
+origin stays within the flattening sag:
+`2 * asin(min(1, sag / (2 * maximumVertexRadius)))`. Collision vertices are
+already rebased to that origin; `placementReference` stores the corresponding
+source-space coordinate and is not subtracted from local points.
+
+Within one near-angle group, source priority remains orthogonal, edge-derived,
+then configured. Competing edge-derived angles use the longer usable collision
+edge as their representative before the transform cap is applied, with stable
+angle and source-order tie-breaks. Circular distance handles the zero/full-turn
+seam. The persisted minimum-edge and angle-deduplication fields remain decoded
+for ordinary-path and replay compatibility, but Compact ignores their numeric
+values. Only the transform cap and enabled orientation sources remain
+user-visible Compact controls.
+
 ### Historical and Experimental Constructors
 
 The following E4, V7, pressure, and early shared-archive descriptions preserve

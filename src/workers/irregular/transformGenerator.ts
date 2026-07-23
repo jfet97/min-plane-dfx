@@ -5,6 +5,7 @@ import type {
   IrregularTransformReason
 } from '@shared/irregular/domain.js'
 import { IrregularTransformCandidate as IrregularTransformCandidateSchema } from '@shared/irregular/domain.js'
+import { intrinsicSharedArchiveEligibility } from '@shared/irregular/executionMode.js'
 import {
   GenerateTransformsInput,
   IrregularGeometryInputError,
@@ -14,20 +15,32 @@ import { ConvexPolygonValidation } from './convexPolygonValidation.js'
 
 const FULL_TURN_DEGREES = 360
 const DEGREES_PER_RADIAN = 180 / Math.PI
+const COMPACT_MAXIMUM_ANGLE_DEDUPLICATION_DEG = 0.051
+const COMPACT_EDGE_SAG_MULTIPLIER = 4
+const COMPACT_EDGE_SMALLER_DIMENSION_RATIO = 0.01
 
 type AngleReason = IrregularTransformReason
 
 interface AngleCandidate {
   readonly rotationDeg: number
   readonly reason: AngleReason
+  readonly edgeLengthMm: number
+  readonly sourceOrdinal: number
 }
 
 interface UsableEdge {
   readonly rotationDeg: number
+  readonly lengthMm: number
+  readonly sourceOrdinal: number
 }
 
 interface GeometryFailure {
   readonly message: string
+}
+
+interface EffectiveTransformPolicy {
+  readonly minimumEdgeLengthMm: number
+  readonly angleDeduplicationToleranceDeg: number
 }
 
 /**
@@ -66,14 +79,22 @@ function generateTransforms(
         return failInvalidGeometry('generateTransforms', validation.message)
       }
 
-      const usableEdges = deriveUsableEdges(boundary, decoded.settings.transformMinimumEdgeLengthMm)
+      const effectivePolicy = deriveEffectiveTransformPolicy(decoded, boundary)
+      if ('message' in effectivePolicy) {
+        return failInvalidGeometry('generateTransforms', effectivePolicy.message)
+      }
+
+      const usableEdges = deriveUsableEdges(
+        boundary,
+        effectivePolicy.value.minimumEdgeLengthMm
+      )
       if ('message' in usableEdges) {
         return failInvalidGeometry('generateTransforms', usableEdges.message)
       }
 
       const candidates = deduplicateAngles(
         transformAngleCandidates(decoded.allowRotation, decoded.settings, usableEdges.value),
-        decoded.settings.transformAngleDeduplicationToleranceDeg
+        effectivePolicy.value.angleDeduplicationToleranceDeg
       )
       if ('message' in candidates) {
         return failInvalidGeometry('generateTransforms', candidates.message)
@@ -83,7 +104,7 @@ function generateTransforms(
         candidates.value,
         decoded.settings.transformCap,
         decoded.allowMirror,
-        decoded.settings.transformAngleDeduplicationToleranceDeg
+        effectivePolicy.value.angleDeduplicationToleranceDeg
       )
 
       return Effect.succeed(
@@ -107,26 +128,115 @@ function transformAngleCandidates(
   settings: GenerateTransformsInput['settings'],
   usableEdges: ReadonlyArray<UsableEdge>
 ): ReadonlyArray<AngleCandidate> {
-  if (!allowRotation) return [{ rotationDeg: 0, reason: 'orthogonal' }]
+  if (!allowRotation) {
+    return [{ rotationDeg: 0, reason: 'orthogonal', edgeLengthMm: 0, sourceOrdinal: 0 }]
+  }
 
   return [
-    { rotationDeg: 0, reason: 'orthogonal' },
-    { rotationDeg: 90, reason: 'orthogonal' },
-    { rotationDeg: 180, reason: 'orthogonal' },
-    { rotationDeg: 270, reason: 'orthogonal' },
+    { rotationDeg: 0, reason: 'orthogonal', edgeLengthMm: 0, sourceOrdinal: 0 },
+    { rotationDeg: 90, reason: 'orthogonal', edgeLengthMm: 0, sourceOrdinal: 1 },
+    { rotationDeg: 180, reason: 'orthogonal', edgeLengthMm: 0, sourceOrdinal: 2 },
+    { rotationDeg: 270, reason: 'orthogonal', edgeLengthMm: 0, sourceOrdinal: 3 },
     ...(settings.edgeAlignmentEnabled !== false
-      ? usableEdges.map(({ rotationDeg }) => ({
+      ? usableEdges.map(({ rotationDeg, lengthMm, sourceOrdinal }) => ({
           rotationDeg,
-          reason: 'edge_alignment' as const
+          reason: 'edge_alignment' as const,
+          edgeLengthMm: lengthMm,
+          sourceOrdinal
         }))
       : []),
     ...(settings.configuredRotationEnabled !== false
-      ? settings.configuredRotationDeg.map((rotationDeg) => ({
+      ? settings.configuredRotationDeg.map((rotationDeg, sourceOrdinal) => ({
           rotationDeg,
-          reason: 'configured' as const
+          reason: 'configured' as const,
+          edgeLengthMm: 0,
+          sourceOrdinal
         }))
       : [])
   ]
+}
+
+function deriveEffectiveTransformPolicy(
+  input: GenerateTransformsInput,
+  boundary: ReadonlyArray<IrregularPoint>
+): { readonly value: EffectiveTransformPolicy } | GeometryFailure {
+  if (!intrinsicSharedArchiveEligibility(input.settings).eligible) {
+    return {
+      value: {
+        minimumEdgeLengthMm: input.settings.transformMinimumEdgeLengthMm,
+        angleDeduplicationToleranceDeg:
+          input.settings.transformAngleDeduplicationToleranceDeg
+      }
+    }
+  }
+
+  const bounds = boundsForBoundary(boundary)
+  if ('message' in bounds) return bounds
+
+  const sagMm = input.geometrySettings.flatteningSagToleranceMm
+  const smallerCollisionDimensionMm = Math.min(bounds.value.widthMm, bounds.value.heightMm)
+  const minimumEdgeLengthMm = Math.min(
+    COMPACT_EDGE_SAG_MULTIPLIER * sagMm,
+    COMPACT_EDGE_SMALLER_DIMENSION_RATIO * smallerCollisionDimensionMm
+  )
+  // collision vertices are already local to placementReference, whose local coordinate is (0, 0)
+  const maximumRadiusMm = boundary.reduce(
+    (maximum, point) => Math.max(maximum, Math.hypot(point.x, point.y)),
+    0
+  )
+  const angleDeduplicationToleranceDeg =
+    maximumRadiusMm === 0
+      ? COMPACT_MAXIMUM_ANGLE_DEDUPLICATION_DEG
+      : Math.min(
+          COMPACT_MAXIMUM_ANGLE_DEDUPLICATION_DEG,
+          2 *
+            Math.asin(Math.min(1, sagMm / (2 * maximumRadiusMm))) *
+            DEGREES_PER_RADIAN
+        )
+
+  if (
+    !Number.isFinite(minimumEdgeLengthMm) ||
+    minimumEdgeLengthMm < 0 ||
+    !Number.isFinite(angleDeduplicationToleranceDeg) ||
+    angleDeduplicationToleranceDeg <= 0
+  ) {
+    return { message: 'adaptive transform tolerances must be finite and non-negative.' }
+  }
+
+  return {
+    value: {
+      minimumEdgeLengthMm,
+      angleDeduplicationToleranceDeg
+    }
+  }
+}
+
+function boundsForBoundary(
+  points: ReadonlyArray<IrregularPoint>
+):
+  | { readonly value: { readonly widthMm: number; readonly heightMm: number } }
+  | GeometryFailure {
+  const first = points[0]
+  if (first === undefined) return { message: 'polygon boundary must contain points.' }
+
+  let minX = first.x
+  let minY = first.y
+  let maxX = first.x
+  let maxY = first.y
+  for (const point of points.slice(1)) {
+    minX = Math.min(minX, point.x)
+    minY = Math.min(minY, point.y)
+    maxX = Math.max(maxX, point.x)
+    maxY = Math.max(maxY, point.y)
+  }
+
+  const widthMm = maxX - minX
+  const heightMm = maxY - minY
+  if (!Number.isFinite(widthMm) || !Number.isFinite(heightMm)) {
+    return { message: 'collision polygon bounds must be finite.' }
+  }
+
+  return { value: { widthMm, heightMm } }
 }
 
 function decodeInput(
@@ -167,7 +277,7 @@ function deriveUsableEdges(
     }
 
     if (length >= minimumLength) {
-      usableEdges.push({ rotationDeg })
+      usableEdges.push({ rotationDeg, lengthMm: length, sourceOrdinal: index })
     }
   }
 
@@ -184,14 +294,10 @@ function deduplicateAngles(
     if (rotationDeg === undefined) {
       return { message: 'derived transform rotation must be finite.' }
     }
-    normalized.push({ rotationDeg, reason: candidate.reason })
+    normalized.push({ ...candidate, rotationDeg })
   }
 
-  normalized.sort((first, second) => {
-    const priorityComparison = reasonPriority(first.reason) - reasonPriority(second.reason)
-    if (priorityComparison !== 0) return priorityComparison
-    return first.rotationDeg - second.rotationDeg
-  })
+  normalized.sort(compareRepresentativeSignificance)
 
   const retained: AngleCandidate[] = []
   for (const candidate of normalized) {
@@ -207,7 +313,35 @@ function deduplicateAngles(
     retained.push(candidate)
   }
 
+  retained.sort(compareOutputOrder)
   return { value: retained }
+}
+
+function compareRepresentativeSignificance(
+  first: AngleCandidate,
+  second: AngleCandidate
+): number {
+  const priorityComparison = reasonPriority(first.reason) - reasonPriority(second.reason)
+  if (priorityComparison !== 0) return priorityComparison
+
+  if (first.reason === 'edge_alignment' && second.reason === 'edge_alignment') {
+    const lengthComparison = second.edgeLengthMm - first.edgeLengthMm
+    if (lengthComparison !== 0) return lengthComparison
+  }
+
+  const rotationComparison = first.rotationDeg - second.rotationDeg
+  if (rotationComparison !== 0) return rotationComparison
+  return first.sourceOrdinal - second.sourceOrdinal
+}
+
+function compareOutputOrder(first: AngleCandidate, second: AngleCandidate): number {
+  const priorityComparison = reasonPriority(first.reason) - reasonPriority(second.reason)
+  if (priorityComparison !== 0) return priorityComparison
+  const rotationComparison = first.rotationDeg - second.rotationDeg
+  if (rotationComparison !== 0) return rotationComparison
+  const lengthComparison = second.edgeLengthMm - first.edgeLengthMm
+  if (lengthComparison !== 0) return lengthComparison
+  return first.sourceOrdinal - second.sourceOrdinal
 }
 
 interface TransformChoice {

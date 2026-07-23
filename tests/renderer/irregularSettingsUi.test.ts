@@ -21,6 +21,11 @@ describe('irregular settings UI', () => {
     expect(compact.optimizer.baselineOnly).toBe(true)
     expect(compact.optimizer.localRepairBudget).toBe(0)
     expect(compact.optimizer.transformCap).toBe(8)
+  })
+
+  it('keeps persisted transform thresholds stable for replay compatibility', () => {
+    const compact = applyCompactQualityPreset(makeDefaultIrregularNestingSettings())
+
     expect(compact.optimizer.transformMinimumEdgeLengthMm).toBe(1.2)
     expect(compact.optimizer.transformAngleDeduplicationToleranceDeg).toBe(0.051)
   })
