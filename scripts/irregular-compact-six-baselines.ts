@@ -152,8 +152,28 @@ const outputDirectory =
   argument('--output-dir') ?? '/private/tmp/min-plane-provenance/compact-six-baselines'
 await mkdir(outputDirectory, { recursive: true })
 
+const outcomes: Array<{
+  readonly fixture: Baseline['fixture']
+  readonly sheet: Baseline['sheet']
+  readonly passed: boolean
+  readonly error?: string
+}> = []
 for (const baseline of BASELINES) {
-  await runBaseline(baseline, outputDirectory)
+  try {
+    await runBaseline(baseline, outputDirectory)
+    outcomes.push({
+      fixture: baseline.fixture,
+      sheet: baseline.sheet,
+      passed: true
+    })
+  } catch (error) {
+    outcomes.push({
+      fixture: baseline.fixture,
+      sheet: baseline.sheet,
+      passed: false,
+      error: error instanceof Error ? error.message : String(error)
+    })
+  }
 }
 
 const reports = await Promise.all(
@@ -165,6 +185,17 @@ const reports = await Promise.all(
 )
 await writeFile(
   join(outputDirectory, 'summary.json'),
-  `${JSON.stringify({ generatedAt: new Date().toISOString(), reports }, null, 2)}\n`
+  `${JSON.stringify(
+    {
+      generatedAt: new Date().toISOString(),
+      passed: outcomes.every(({ passed }) => passed),
+      outcomes,
+      reports
+    },
+    null,
+    2
+  )}\n`
 )
-console.log(JSON.stringify({ outputDirectory, baselineCount: BASELINES.length, passed: true }))
+const passed = outcomes.every((outcome) => outcome.passed)
+console.log(JSON.stringify({ outputDirectory, baselineCount: BASELINES.length, passed }))
+if (!passed) process.exitCode = 1
