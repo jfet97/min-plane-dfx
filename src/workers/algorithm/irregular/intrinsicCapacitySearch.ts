@@ -1069,6 +1069,7 @@ function validateIntrinsicCapacityCheckpoint(input: {
   }
 
   const expectedPendingIds = input.preparedIds.slice(checkpoint.nextDepth)
+  const validationCavityCache: IntrinsicCapacityCavityCache = new Map()
   let hasNoSkipState = false
   for (const entry of checkpoint.frontier) {
     const statePlacedIds = [...entry.state.placementOrder]
@@ -1140,6 +1141,14 @@ function validateIntrinsicCapacityCheckpoint(input: {
       entry.state.canonicalOccupiedGeometryKey
     if (anchoredOccupiedKey !== entry.anchoredOccupiedKey) {
       return 'checkpoint anchored occupied identity does not match its geometry payload.'
+    }
+    const cavities = measureIntrinsicCapacityCavities(entry.state, validationCavityCache)
+    if (
+      cavities === undefined ||
+      cavities.count !== entry.cavities.count ||
+      cavities.totalAreaMm2 !== entry.cavities.totalAreaMm2
+    ) {
+      return 'checkpoint cavity objective does not match its exact geometry payload.'
     }
   }
   if (

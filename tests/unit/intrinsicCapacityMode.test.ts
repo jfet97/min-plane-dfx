@@ -671,6 +671,35 @@ describe('intrinsic capacity search', () => {
     )
     expect(quotaFailure._tag).toBe('IntrinsicCapacityError')
 
+    const firstFrontierEntry = checkpoint.frontier[0]
+    expect(firstFrontierEntry).toBeDefined()
+    if (firstFrontierEntry === undefined) return
+    const corruptedCavity = {
+      ...checkpoint,
+      frontier: [
+        {
+          ...firstFrontierEntry,
+          cavities: {
+            ...firstFrontierEntry.cavities,
+            count: firstFrontierEntry.cavities.count + 1
+          }
+        },
+        ...checkpoint.frontier.slice(1)
+      ]
+    }
+    const cavityFailure = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        checkpoint: corruptedCavity
+      }).pipe(Effect.flip)
+    )
+    expect(cavityFailure._tag).toBe('IntrinsicCapacityError')
+    if (cavityFailure._tag !== 'IntrinsicCapacityError') return
+    expect(cavityFailure.message).toContain('cavity objective')
+
     const incumbentFailure = await provideGeometry(
       runIntrinsicCapacityColdSearch({
         sheet: finalSheet,
@@ -846,6 +875,35 @@ describe('intrinsic capacity prefixes', () => {
     const checkpoint = paused.checkpoint
     expect(checkpoint).toBeDefined()
     if (checkpoint === undefined) return
+    const firstFrontierEntry = checkpoint.frontier[0]
+    expect(firstFrontierEntry).toBeDefined()
+    if (firstFrontierEntry === undefined) return
+    const corruptedCavity = {
+      ...checkpoint,
+      frontier: [
+        {
+          ...firstFrontierEntry,
+          cavities: {
+            ...firstFrontierEntry.cavities,
+            totalAreaMm2: firstFrontierEntry.cavities.totalAreaMm2 + 1
+          }
+        },
+        ...checkpoint.frontier.slice(1)
+      ]
+    }
+    const cavityFailure = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        warmPrefixSeed,
+        checkpoint: corruptedCavity
+      }).pipe(Effect.flip)
+    )
+    expect(cavityFailure._tag).toBe('IntrinsicCapacityError')
+    if (cavityFailure._tag !== 'IntrinsicCapacityError') return
+    expect(cavityFailure.message).toContain('cavity objective')
     const resumed = await provideGeometry(
       runIntrinsicCapacityColdSearch({
         sheet: finalSheet,
