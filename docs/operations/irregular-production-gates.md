@@ -8,20 +8,20 @@ cancellation, history, or timeout behavior.
 
 | Fixture | Sheet | Required result | Observed runtime |
 | --- | --- | --- | ---: |
-| Triangle-20 | `2000 x 2700` | collision hash `371db269...`, area `74,428.143126 mm2`, zero canonical cavities, 20/20 pieces | `14.614 s` |
-| Mixed-61 | `2000 x 2700` | fitted hash `ef2b783a...`, area `391,605.850174 mm2`, zero canonical cavities, 61/61 pieces | `66.974 s` |
-| Shapes-17 | `2000 x 2700` | collision hash `c640c06f...`, area `304,499.845650 mm2`, zero canonical cavities, 17/17 pieces | `10.828 s` |
-| Triangle-20 | `600 x 400` | collision hash `371db269...`, area `74,428.143126 mm2`, zero canonical cavities, 20/20 pieces | `14.794 s` |
-| Mixed-61 | `600 x 400` | collision hash `2c53f312...`, area `239,484.966600 mm2`, zero canonical cavities, 25/61 pieces | `4.618 s` |
-| Shapes-17 | `600 x 400` | collision hash `01b2060d...`, area `232,178.021694 mm2`, zero canonical cavities, 14/17 pieces | `12.713 s` |
-| Triangle-20 | `300 x 300` | collision hash `0f5befd7...`, area `78,811.504488 mm2`, zero canonical cavities, 17/20 pieces | `15.811 s` |
-| Mixed-61 | `300 x 300` | collision hash `bb22df35...`, area `89,504.369008 mm2`, zero canonical cavities, 6/61 pieces | `1.347 s` |
-| Shapes-17 | `300 x 300` | collision hash `e4ad1ce1...`, area `87,791.951625 mm2`, zero canonical cavities, 5/17 pieces | `3.013 s` |
+| Triangle-20 | `2000 x 2700` | collision hash `371db269...`, area `74,428.143126 mm2`, zero canonical cavities, 20/20 pieces | `14.643 s` |
+| Mixed-61 | `2000 x 2700` | fitted hash `ef2b783a...`, area `391,605.850174 mm2`, zero canonical cavities, 61/61 pieces | `66.902 s` |
+| Shapes-17 | `2000 x 2700` | collision hash `c640c06f...`, area `304,499.845650 mm2`, zero canonical cavities, 17/17 pieces | `10.788 s` |
+| Triangle-20 | `600 x 400` | collision hash `371db269...`, area `74,428.143126 mm2`, zero canonical cavities, 20/20 pieces | `14.762 s` |
+| Mixed-61 | `600 x 400` | collision hash `2c53f312...`, area `239,484.966600 mm2`, zero canonical cavities, 25/61 pieces | `4.571 s` |
+| Shapes-17 | `600 x 400` | collision hash `01b2060d...`, area `232,178.021694 mm2`, zero canonical cavities, 14/17 pieces | `12.705 s` |
+| Triangle-20 | `300 x 300` | collision hash `0f5befd7...`, area `78,811.504488 mm2`, zero canonical cavities, 17/20 pieces | `15.675 s` |
+| Mixed-61 | `300 x 300` | collision hash `bb22df35...`, area `89,504.369008 mm2`, zero canonical cavities, 6/61 pieces | `1.325 s` |
+| Shapes-17 | `300 x 300` | collision hash `e4ad1ce1...`, area `87,791.951625 mm2`, zero canonical cavities, 5/17 pieces | `3.000 s` |
 
 The exact collision and fitted hashes, placed/unplaced partitions, area and
 cavity limits, and generous runtime ceilings live in
 `scripts/irregular-compact-nine-baselines.ts`. The observed runtimes above came
-from the no-options sequential run at `2ede042`; they are measurements, not exact
+from the no-options sequential run at `1eb60eb`; they are measurements, not exact
 timing assertions. Portable reports and renders are under
 [`../artifacts/current-compact-baselines/`](../artifacts/current-compact-baselines/).
 

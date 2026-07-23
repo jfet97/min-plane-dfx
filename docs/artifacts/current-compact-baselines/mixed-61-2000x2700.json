@@ -4,9 +4,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "2ede04287740ebf2d8bfbde6706435739c0d4b53",
+  "sourceCommit": "1eb60ebc729928df8a6d0a3566a2bff59f5c7886",
   "runtime": {
-    "elapsedMs": 66973.61770799999,
+    "elapsedMs": 66901.76775,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -2703,5 +2703,5 @@
     "schedulerChronology": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/compact-nine-baselines-2ede042/mixed-61-2000x2700.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/compact-nine-baselines-1eb60eb/mixed-61-2000x2700.svg"
 }
