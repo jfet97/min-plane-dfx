@@ -306,7 +306,11 @@ miss and executes the unchanged cold path; it does not fail the nesting request
 or spend the cold continuation budget. File-read, JSON, schema, and provenance
 failures remain distinguished in harness diagnostics. Replay-envelope emission is independently
 opt-in, so production source-audit quality does not pay digest construction or
-retain an unused cache artifact. Durable Electron persistence remains deferred.
+retain an unused cache artifact. Acceptance also requires the replay digest
+through a separately trusted channel; the digest stored inside the untrusted
+envelope cannot certify that witnesses were not removed. Regenerated current-
+cell seeds, not cached placement objects, become the downstream replay.
+Durable Electron persistence remains deferred.
 
 The experimental `p2-axis-union` scope is a cold allocation policy, not an
 equivalent cache. It admits raw witnesses only from two-member periodic cells

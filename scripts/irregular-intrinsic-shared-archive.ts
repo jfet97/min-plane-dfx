@@ -83,6 +83,7 @@ const maximumContinuationRuntimeMs = positiveIntegerArgument('--continuation-ms'
 const maximumPeriodicRuntimeMs = positiveIntegerArgument('--periodic-ms', 600_000)
 const sourceAuditCacheInput = argument('--source-audit-cache-in')
 const sourceAuditCacheOutput = argument('--source-audit-cache-out')
+const sourceAuditCacheSha256 = argument('--source-audit-cache-sha256')
 const sourceAuditScope = sourceAuditScopeArgument(argument('--source-audit-scope'))
 const fixture = await loadFixture(fixtureName)
 const settings = fixture.request.options.irregularSettings
@@ -147,7 +148,12 @@ const result =
               sourceAuditScope,
               ...(sourceAuditReplayEnvelope === undefined
                 ? {}
-                : { sourceAuditReplayEnvelope })
+                : {
+                    sourceAuditReplayEnvelope,
+                    ...(sourceAuditCacheSha256 === undefined
+                      ? {}
+                      : { expectedSourceAuditReplayDigest: sourceAuditCacheSha256 })
+                  })
             }
           }),
           settings
@@ -206,6 +212,7 @@ const report = {
     rawSourceAudit: mode === 'matrix',
     sourceAuditScope,
     sourceAuditReplayProvided: sourceAuditReplayRead.provided,
+    sourceAuditReplayExpectedDigestProvided: sourceAuditCacheSha256 !== undefined,
     sourceAuditReplayAccepted: result.periodicPortfolio?.sourceAuditReplayAccepted ?? false,
     sourceAuditReplayRejectionReason:
       result.periodicPortfolio?.sourceAuditReplayRejectionReason ??

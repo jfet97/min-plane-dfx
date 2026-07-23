@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { Effect, Layer } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { DxfGeometrySummary, ImportedPiece } from '@shared/domain/dxf.js'
@@ -303,7 +304,10 @@ describe('intrinsic periodic family portfolio', () => {
 
   it('replays validated raw witnesses without full source-audit enumeration', async () => {
     const pieces = Array.from({ length: 4 }, (_, index) => preparedTriangle(`replay-${index}`))
-    const run = (sourceAuditReplayEnvelope?: IntrinsicPeriodicSourceAuditReplayEnvelope) =>
+    const run = (
+      sourceAuditReplayEnvelope?: IntrinsicPeriodicSourceAuditReplayEnvelope,
+      expectedSourceAuditReplayDigest = sourceAuditReplayEnvelope?.replayDigest
+    ) =>
       Effect.runPromise(
         runIntrinsicPeriodicFamilyPortfolio(
           new SheetSpec({ width: 100, height: 100, label: 'test' }),
@@ -320,7 +324,12 @@ describe('intrinsic periodic family portfolio', () => {
             admitSourceAuditWitnesses: true,
             ...(sourceAuditReplayEnvelope === undefined
               ? {}
-              : { sourceAuditReplayEnvelope })
+              : {
+                  sourceAuditReplayEnvelope,
+                  ...(expectedSourceAuditReplayDigest === undefined
+                    ? {}
+                    : { expectedSourceAuditReplayDigest })
+                })
           }
         ).pipe(
           Effect.provide(GeometryKernel.Live.pipe(Layer.provide(GeometrySettings.Live))),
@@ -367,5 +376,83 @@ describe('intrinsic periodic family portfolio', () => {
     })
     expect(basisFallback.sourceAuditReplayAccepted).toBe(false)
     expect(basisFallback.sourceAuditReplayRejectionReason).toBe('basis-source')
+
+    const truncatedReplay = {
+      witnesses: [],
+      nonDominatedCropCount: 0,
+      sourceCropSurvival: []
+    }
+    const truncatedFallback = await run(
+      {
+        ...replayEnvelope,
+        replay: truncatedReplay,
+        replayDigest: replayDigest(truncatedReplay)
+      },
+      replayEnvelope.replayDigest
+    )
+    expect(truncatedFallback.sourceAuditReplayAccepted).toBe(false)
+    expect(truncatedFallback.sourceAuditReplayRejectionReason).toBe(
+      'expected-replay-digest'
+    )
+
+    const firstWitness = replayEnvelope.replay.witnesses[0]
+    if (firstWitness === undefined || firstWitness.placements.length < 2) {
+      throw new Error('expected a replay witness with at least two placements')
+    }
+    const [firstPlacement, secondPlacement, ...remainingPlacements] = firstWitness.placements
+    if (firstPlacement === undefined || secondPlacement === undefined) {
+      throw new Error('expected two replay placements')
+    }
+    const alteredWitness = {
+      ...firstWitness,
+      placements: [
+        new IrregularPlacedPiece({
+          ...firstPlacement,
+          placement: new IrregularPlacement({
+            ...firstPlacement.placement,
+            pieceId: secondPlacement.placement.pieceId
+          })
+        }),
+        new IrregularPlacedPiece({
+          ...secondPlacement,
+          placement: new IrregularPlacement({
+            ...secondPlacement.placement,
+            pieceId: firstPlacement.placement.pieceId
+          })
+        }),
+        ...remainingPlacements
+      ]
+    }
+    const alteredReplay = {
+      ...replayEnvelope.replay,
+      witnesses: [alteredWitness, ...replayEnvelope.replay.witnesses.slice(1)]
+    }
+    const alteredDigest = replayDigest(alteredReplay)
+    const alteredFallback = await run(
+      {
+        ...replayEnvelope,
+        replay: alteredReplay,
+        replayDigest: alteredDigest
+      },
+      alteredDigest
+    )
+    expect(alteredFallback.sourceAuditReplayAccepted).toBe(false)
+    expect(alteredFallback.sourceAuditReplayRejectionReason).toBe(
+      'witness-regenerated-seed'
+    )
   }, 30_000)
 })
+
+function replayDigest(value: unknown): string {
+  return createHash('sha256').update(canonicalJson(value)).digest('hex')
+}
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value)
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`
+  return `{${Object.entries(value)
+    .filter(([, fieldValue]) => fieldValue !== undefined)
+    .toSorted(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey))
+    .map(([key, fieldValue]) => `${JSON.stringify(key)}:${canonicalJson(fieldValue)}`)
+    .join(',')}}`
+}

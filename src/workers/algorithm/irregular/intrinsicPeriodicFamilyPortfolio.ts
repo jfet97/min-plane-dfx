@@ -208,6 +208,8 @@ export interface IntrinsicPeriodicFamilyPortfolioOptions {
   readonly admitSourceAuditWitnesses?: boolean
   /** Replays a bounded raw-crop product only after validating its complete algorithm-owned envelope. */
   readonly sourceAuditReplayEnvelope?: IntrinsicPeriodicSourceAuditReplayEnvelope
+  /** Trusted digest retained separately from the untrusted replay envelope. */
+  readonly expectedSourceAuditReplayDigest?: string
   /** Narrows the experimental cold audit while preserving the same downstream selection. */
   readonly sourceAuditScope?: IntrinsicPeriodicSourceAuditScope
 }
@@ -256,6 +258,7 @@ export function runIntrinsicPeriodicFamilyPortfolio(
       pieces,
       sourceAuditScope,
       options.basisSourceKey,
+      options.expectedSourceAuditReplayDigest,
       options.sourceAuditReplayEnvelope
     )
     const sourceAuditReplay = sourceAuditReplayResolution.replay
@@ -1017,6 +1020,7 @@ function validateSourceAuditReplayEnvelope(
   pieces: ReadonlyArray<IrregularPreparedPiece>,
   scope: IntrinsicPeriodicSourceAuditScope,
   basisSourceKey: string | undefined,
+  expectedReplayDigest: string | undefined,
   envelope: IntrinsicPeriodicSourceAuditReplayEnvelope | undefined
 ): Effect.Effect<{
   readonly replay?: IntrinsicPeriodicSourceAuditReplay
@@ -1025,6 +1029,7 @@ function validateSourceAuditReplayEnvelope(
 }> {
   return Effect.gen(function* () {
     if (envelope === undefined) return { validationCropAttemptCount: 0 }
+    if (expectedReplayDigest === undefined) return replayRejected('expected-replay-digest')
     if (envelope.formatVersion !== 3) return replayRejected('format-version')
     if (envelope.algorithmVersion !== 'intrinsic-periodic-source-audit-v3') {
       return replayRejected('algorithm-version')
@@ -1044,6 +1049,9 @@ function validateSourceAuditReplayEnvelope(
     }
     if (envelope.replayDigest !== sourceAuditReplayDigest(envelope.replay)) {
       return replayRejected('replay-digest')
+    }
+    if (envelope.replayDigest !== expectedReplayDigest) {
+      return replayRejected('expected-replay-digest')
     }
     if (envelope.replay.witnesses.length > 16) return replayRejected('witness-cap')
 
@@ -1105,6 +1113,7 @@ function validateSourceAuditReplayEnvelope(
     )
     const reconstructedCrops = new Map<string, ReadonlyArray<IntrinsicPeriodicSeed>>()
     let validationCropAttemptCount = 0
+    const validatedWitnesses: IntrinsicPeriodicSourceAuditWitness[] = []
     const seenWitnesses = new Set<string>()
     for (const witness of envelope.replay.witnesses) {
       const witnessKey = eligibleSourceDomainEntryKey(witness)
@@ -1130,23 +1139,60 @@ function validateSourceAuditReplayEnvelope(
         if (currentCrops === undefined) return replayRejected('witness-crop-reconstruction')
         reconstructedCrops.set(witnessKey, currentCrops)
       }
-      const cropReconstructed = currentCrops.some(
+      const regeneratedSeed = currentCrops.find(
         (seed) =>
           seed.canonicalKey === witness.seed.canonicalKey &&
           canonicalJson(seed.crop) === canonicalJson(witness.seed.crop)
       )
-      if (!cropReconstructed) return replayRejected('witness-crop')
+      if (regeneratedSeed === undefined) return replayRejected('witness-crop')
+      if (
+        canonicalJson(regeneratedSeed.placements) !== canonicalJson(witness.placements) ||
+        canonicalJson(sourceAuditWitnessSeed(regeneratedSeed)) !== canonicalJson(witness.seed)
+      ) {
+        return replayRejected('witness-regenerated-seed')
+      }
+      const currentProvenance = currentCell.basisProvenance
+      if (currentProvenance === undefined) return replayRejected('witness-provenance')
+      const validatedWitness: IntrinsicPeriodicSourceAuditWitness = {
+        role: currentCell.role,
+        familyKey: witness.familyKey,
+        sourceKey: currentProvenance.sourceKey,
+        sourceKind: currentProvenance.sourceKind,
+        cellKey: currentCell.canonicalKey,
+        basisProvenance: currentProvenance,
+        placements: regeneratedSeed.placements,
+        seed: sourceAuditWitnessSeed(regeneratedSeed)
+      }
       const valid = yield* Effect.matchEffect(
-        validateAndReconstructSourceAuditWitness(witness, members),
+        validateAndReconstructSourceAuditWitness(validatedWitness, members),
         {
           onFailure: () => Effect.succeed(false),
           onSuccess: () => Effect.succeed(true)
         }
       )
       if (!valid) return replayRejected('witness-validation')
+      validatedWitnesses.push(validatedWitness)
     }
-    return { replay: envelope.replay, validationCropAttemptCount }
+    return {
+      replay: { ...envelope.replay, witnesses: validatedWitnesses },
+      validationCropAttemptCount
+    }
   })
+}
+
+function sourceAuditWitnessSeed(
+  seed: IntrinsicPeriodicSeed
+): IntrinsicPeriodicSourceAuditWitness['seed'] {
+  return {
+    canonicalKey: seed.canonicalKey,
+    componentCount: seed.componentCount,
+    isolatedPieceCount: seed.isolatedPieceCount,
+    largestComponentSize: seed.largestComponentSize,
+    maximumSideMm: seed.maximumSideMm,
+    envelopeAreaMm2: seed.envelopeAreaMm2,
+    envelopeSpanMm: seed.envelopeSpanMm,
+    crop: seed.crop
+  }
 }
 
 function replayRejected(rejectionReason: string): {

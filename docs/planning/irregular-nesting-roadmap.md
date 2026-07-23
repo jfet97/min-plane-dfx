@@ -127,14 +127,14 @@ The version-3 same-process replay contract is also complete. It binds algorithm
 version, scope, optional basis-source restriction, prepared input, eligible
 source domain, and replay content, then reconstructs each crop from its current
 cell and revalidates membership, legality, identity, topology, and metrics.
-Every invalid entry falls back cold without consuming the cold continuation
-budget. Replay-envelope export remains explicit so ordinary production audit
-runs do not pay cache-artifact construction. Keep durable Electron persistence
-deferred unless repeated-job measurement shows enough practical value. The
-stronger crop reconstruction preserves a 1.224x periodic and 1.170x combined
-warm gain while replacing 23,456 exhaustive crop attempts with 352 targeted
-reconstructions. The earlier version-2 `1.23x` result remains historical
-evidence rather than the current contract.
+Completeness requires the expected replay digest from a separately trusted
+channel, and only regenerated current-cell seeds continue downstream. Every
+invalid entry falls back cold without consuming the cold continuation budget.
+Replay-envelope export remains explicit so ordinary production audit runs do
+not pay cache-artifact construction. Keep durable Electron persistence deferred
+unless repeated-job measurement shows enough practical value. Remeasure the
+fully trusted replay pair before retaining the earlier 1.224x periodic and
+1.170x combined figures as current evidence.
 
 The next performance pass should profile the new 21.7-second construction
 floor before changing behavior. Current single-sample buckets point to
