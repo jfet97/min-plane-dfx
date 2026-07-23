@@ -186,6 +186,12 @@ maximum side to `303.874 mm` and misses the `300 x 300` request. The current
 17-piece endpoint remains authoritative. The next bounded observer is a
 two-piece interface reconstruction selected from detached and exposed
 boundary geometry; it may not weaken exact fit or compactness admission.
+The exhaustive two-piece sweep finds `2,379` exact sheet-fitting endpoints.
+Its best topology reaches a `15/17` largest component with two isolated
+pieces, but loses structural contact and remains visually unchanged: the same
+two detached triangles are present. It is rejected. A larger reconstruction
+neighborhood must be separately bounded and reviewed before implementation;
+the current 17-piece contact-fanout endpoint remains the fallback.
 
 ### P0: Freeze the archive-only correctness and quality gate
 

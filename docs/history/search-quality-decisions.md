@@ -350,3 +350,13 @@ the `300 x 300` request. It is rejected without replacing the current
 17-piece endpoint. With both one-piece neighborhoods now falsified, the next
 generic experiment may jointly reconstruct one detached piece and one
 geometry-selected interface piece.
+
+The exact two-piece sweep at `5f7fd9b` completes all 84 orders in `6.743 s`,
+evaluates `11,206` placements, and produces `2,379` exact sheet-fitting
+endpoints. Its best-topology result improves the largest component to `15/17`
+and reduces isolated pieces to two without changing maximum side or envelope
+area. It loses structural contact elsewhere, slightly worsens hull gap, and
+the inspected PNG still contains the same two visibly detached triangles. It
+is rejected rather than admitted. Any next experiment must enlarge the
+reconstruction neighborhood under an explicit generic bound; the comparator
+is not weakened to accept this visually unchanged tradeoff.

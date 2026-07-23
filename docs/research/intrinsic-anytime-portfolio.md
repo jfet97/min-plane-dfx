@@ -545,6 +545,27 @@ freeze the remaining 15, and enumerate exact reconstruction alternatives. It
 must preserve placed count, material, cavities, requested-sheet legality, and
 the existing terminal compactness guard.
 
+The exhaustive two-piece sweep at `5f7fd9b` completes all 42
+detached/interface pairs in both orders. It evaluates `11,206` placements and
+deduplicates `2,379` exact sheet-fitting endpoints in `6.743 s`. Four pass the
+existing targeted-LNS admission, but only through visually irrelevant
+`0.001 mm` envelope changes with unchanged topology.
+
+The best topology endpoint is more informative: it stays at 17 pieces, zero
+cavities, `296.739 mm` maximum side, and `78,811.504488 mm2` envelope area
+while growing the largest contact component from 14 to 15 and reducing
+isolated pieces from three to two. It is not admissible because its hull-gap
+ratio increases from `0.1570009341` to `0.1570015482` and its structural
+contact counts fall. The inspected PNG still shows the same two visibly
+detached right/bottom triangles, so it is rejected as an output improvement.
+The current 17-piece contact-fanout endpoint remains protected.
+
+Further constrained-layout work now requires a larger neighborhood, such as a
+three-piece interface reconstruction, rather than weakening the comparator to
+admit a visually unchanged tradeoff. That escalation needs a fixed generic
+selection rule, protected fallback, explicit evaluation cap, and review before
+implementation.
+
 Single-worker cooperative interleaving is not a settled wall-time
 optimization: the protected complete and capacity CPU work still sum. It first
 establishes reuse and truthful deadline chronology. A later wall-time claim
