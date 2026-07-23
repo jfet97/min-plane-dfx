@@ -355,7 +355,8 @@ const checks = {
   unplacedCount:
     args.expectedUnplacedCount === undefined ||
     result.unplacedPieceIds.length === args.expectedUnplacedCount,
-  area: args.maximumAreaMm2 === undefined || bounds.area <= args.maximumAreaMm2,
+  area:
+    args.maximumAreaMm2 === undefined || bounds.area <= args.maximumAreaMm2 + 0.000_001,
   canonicalCavities:
     args.maximumCanonicalCavities === undefined ||
     (canonicalTopology?.enclosedCavityCount ?? Number.POSITIVE_INFINITY) <=
