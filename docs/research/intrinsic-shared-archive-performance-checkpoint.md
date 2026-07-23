@@ -115,7 +115,21 @@ Electron persistence. Envelope export is explicitly requested by the harness;
 ordinary production audit runs do not construct or retain an unused replay
 artifact. Version 3 additionally binds the optional basis-source restriction
 and reconstructs each cached crop from its current catalog cell; its warm gain
-must be measured separately below.
+is measured separately below.
+
+The exact version-3 pair at `c1f4705` preserves the same archive and
+byte-identical winner SVG while strengthening cache validation:
+
+| Version-3 mode | Direct total | Periodic total | Combined measured work | Validation crops |
+| --- | ---: | ---: | ---: | ---: |
+| cold | `10,399.369 ms` | `42,898.174 ms` | `53,297.543 ms` | `0` |
+| warm | `10,515.694 ms` | `35,043.023 ms` | `45,558.717 ms` | `352` |
+
+The periodic phase remains 1.224x faster and combined measured work is 1.170x
+faster. The warm path replaces 23,456 exhaustive physical source-audit crop
+attempts with 352 targeted reconstruction attempts. Both select hash
+`3839e80d...`, `391,605.850174 mm2`, and zero cavities. Evidence:
+`/private/tmp/min-plane-provenance/replay-envelope-v3-c1f4705-20260723/`.
 
 Production validation at `7544766` preserves:
 

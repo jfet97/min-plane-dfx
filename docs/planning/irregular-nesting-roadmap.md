@@ -130,9 +130,11 @@ cell and revalidates membership, legality, identity, topology, and metrics.
 Every invalid entry falls back cold without consuming the cold continuation
 budget. Replay-envelope export remains explicit so ordinary production audit
 runs do not pay cache-artifact construction. Keep durable Electron persistence
-deferred unless repeated-job measurement shows enough practical value. Remeasure
-the accepted warm gain after the stronger crop reconstruction; the earlier
-version-2 `1.23x` result is historical evidence, not the current claim.
+deferred unless repeated-job measurement shows enough practical value. The
+stronger crop reconstruction preserves a 1.224x periodic and 1.170x combined
+warm gain while replacing 23,456 exhaustive crop attempts with 352 targeted
+reconstructions. The earlier version-2 `1.23x` result remains historical
+evidence rather than the current contract.
 
 The next performance pass should profile the new 21.7-second construction
 floor before changing behavior. Current single-sample buckets point to
