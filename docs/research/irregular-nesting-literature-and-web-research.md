@@ -13,6 +13,11 @@ Two upstream source snapshots were inspected directly:
 - Sparrow commit [`961ec31f576c5817ece779ff73982b4553760a4e`](https://github.com/JeroenGar/sparrow/tree/961ec31f576c5817ece779ff73982b4553760a4e)
 - PackingSolver commit [`3d8d97dd8ae5ac46f08328636f5e168283282ebc`](https://github.com/fontanf/packingsolver/tree/3d8d97dd8ae5ac46f08328636f5e168283282ebc)
 
+This is a dated research report. Several recommended construction, diversity,
+periodic, and contact mechanisms are now implemented or rejected evidence.
+Current experiments are prioritized only in
+[`../planning/irregular-nesting-roadmap.md`](../planning/irregular-nesting-roadmap.md).
+
 ## Main conclusion
 
 The current strict structural-contact-first comparator is not supported by the strongest source-backed approaches inspected here. Contact is useful for generating placements, recognizing repeated motifs, or breaking near-ties. It is not a sufficient global layout objective.

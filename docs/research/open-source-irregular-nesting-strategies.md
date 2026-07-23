@@ -22,6 +22,12 @@ tested or callable in isolation, but neither is called from the main irregular
 `optimize` entry point at this revision. They are useful algorithm references,
 not evidence of production integration.
 
+This is a dated comparison. Its experiment ordering predates the intertwined
+Compact coordinator, production periodic cells, transform-family coverage,
+contact fanout, and exact capacity continuation. Use the active
+[`../planning/irregular-nesting-roadmap.md`](../planning/irregular-nesting-roadmap.md)
+for current priorities.
+
 ## Executive Conclusion
 
 None of the inspected engines treats total shared boundary as a universal proxy
@@ -311,4 +317,3 @@ use the measured gates for acceptance.
   quality gain.
 - Do not silently change the user-owned initial piece ordering. Add and compare
   a separate decoder or survivor family instead.
-

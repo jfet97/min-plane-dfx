@@ -680,7 +680,9 @@ remain separate, and any fitting settled complete endpoint still dominates.
 The production golden for Triangle-20 on `300 x 300` now settles at `17/20`,
 zero cavities, with exactly three unplaced IDs and a valid scheduler ledger.
 The former `15/20` endpoint is no longer selected. The strict roomy golden
-still returns the accepted complete `20/20` canonical identity. The six-case
-matrix additionally improves Mixed-61 `600 x 400` from `24/61` to `25/61` and
+still returns the accepted complete `20/20` canonical identity. The accepted
+nine-case matrix additionally improves Mixed-61 `600 x 400` from `24/61` to `25/61` and
 Shapes-17 `600 x 400` from `13/17` with one cavity to `14/17` with zero
 cavities; the three roomy winners and Triangle `600 x 400` remain unchanged.
+The additional `300 x 300` baselines are Mixed-61 `6/61` and Shapes-17 `5/17`,
+both with zero cavities.

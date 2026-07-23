@@ -28,6 +28,14 @@ commit.
 | Sparrow | `961ec31f576c5817ece779ff73982b4553760a4e` | [JeroenGar/sparrow at the inspected commit](https://github.com/JeroenGar/sparrow/tree/961ec31f576c5817ece779ff73982b4553760a4e) |
 | Dalsoo-Bin-Packing | `bde2a3ef09f48980e59328eae7b042e6d9fdd4bc` | [whitegreen/Dalsoo-Bin-Packing at the inspected commit](https://github.com/whitegreen/Dalsoo-Bin-Packing/tree/bde2a3ef09f48980e59328eae7b042e6d9fdd4bc) |
 
+## Current Disposition
+
+This is a dated source-control report, not the active priority list. Compact
+now implements protected complete/capacity scheduling, exact skip continuation,
+contact fanout, transform-family coverage, periodic cells, and shared exact
+archive mechanics. Current evidence-triggered priorities live in
+[`../planning/irregular-nesting-roadmap.md`](../planning/irregular-nesting-roadmap.md).
+
 ## Executive Conclusion
 
 The evidence does **not** say that GA is universally better than beam search.
