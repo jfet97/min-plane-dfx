@@ -27,6 +27,10 @@ and [`../history/sheet-invariance-decisions.md`](../history/sheet-invariance-dec
 These mechanisms remain part of the ordinary decoder. They are not the Compact
 quality production path.
 
+## Capacity Mode
+
+- [Intrinsic capacity mode implementation](./intrinsic-capacity-mode-implementation.md)
+
 ## Sheet Invariance and Archive Construction
 
 - [Sheet-dimension invariance corpus](./sheet-dimension-invariance-corpus.md)
