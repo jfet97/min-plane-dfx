@@ -267,6 +267,21 @@ Evidence:
 - [`../artifacts/periodic-audit-speed/`](../artifacts/periodic-audit-speed/)
 - [`../artifacts/shapes-17-baseline/`](../artifacts/shapes-17-baseline/)
 
+## Shapes-17 bounded singleton reinsertion
+
+The `complete-terminal-compaction` branch tested a sheetless, observer-only
+one-piece reinsertion pass against the accepted Shapes-17 complete endpoint.
+The `500 ms` all-transform pass completed zero singleton neighborhoods. A final
+Sol-approved incumbent-orientation pass at `1,000 ms` completed `3/10` and was
+also censored. Its best observed candidate reduced isolated pieces from 10 to 8
+but enlarged the envelope by about 4%.
+
+The protected `17/17` hash remained exact and no experimental output was
+promoted. The result closes cheap frozen-neighbor singleton translation as a
+production candidate; it does not falsify a larger resumable compaction cohort
+or construction-time diversity. Evidence is recorded in
+[`../research/shapes-17-bounded-complete-reinsertion.md`](../research/shapes-17-bounded-complete-reinsertion.md).
+
 ## External Provenance and Transfer Limits
 
 The source audits preserve pinned evidence from Deepnest `2fb1051`, SVGnest

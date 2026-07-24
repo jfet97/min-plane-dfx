@@ -78,6 +78,16 @@ reported as proof of infeasibility or settled completeness.
 
 ## Active Priorities
 
+### Latest completed quality checkpoint
+
+The observer-only Shapes-17 complete reinsertion experiment is closed and
+rejected. An all-transform `500 ms` pass completed no singleton neighborhood;
+the final incumbent-orientation `1,000 ms` pass completed only `3/10`.
+Both preserved the protected `17/17` hash and exposed candidates with fewer
+isolated pieces but roughly 4% larger envelopes. No experimental code was
+promoted and the two-piece stage remained gated off. See
+[`../research/shapes-17-bounded-complete-reinsertion.md`](../research/shapes-17-bounded-complete-reinsertion.md).
+
 ### P0: One-count-deficit capacity observer
 
 Hypothesis: on Mixed-61 `300 x 300`, a useful large-piece state is generated but
