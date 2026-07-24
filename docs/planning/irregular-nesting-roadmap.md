@@ -230,8 +230,11 @@ and remove them from active work.
 
 ### P3: Conditional large-first/small-fill subset observer
 
-Start this only if P0 proves that the required state is never generated or
-cannot recover under the immutable prepared-order pass.
+Start this only if an uncensored P0 trace proves a causal ordering loss under
+the immutable prepared-order pass: a competitive macro lineage must have
+irrevocably processed a small-tier piece before the required macro state became
+available. Do not start P3 merely because P0 has no eligible deficit witness,
+loses terminally, or is censored.
 
 Hypothesis: a bounded two-phase decision schedule can protect a legal macro
 arrangement and then fill its remaining space with smaller pending pieces.
@@ -282,7 +285,10 @@ resource growth beyond the declared operational budget.
 
 Promotion gate: the exact nine-case archive, deterministic repeated results,
 failure/deadline/cancellation coverage, and a meaningful paired wall-time gain
-on the expensive-miss case.
+on the expensive-miss case. Require exact ledger equality for settled-miss and
+exact-preflight cases. On fitting cases, preserve endpoint identity and require
+the timing-dependent capacity ledger to be internally reconciled, monotonic,
+restart-free, and free of work after cancellation acknowledgement.
 
 Stop condition: stop after the three-case measurement if concurrency only
 redistributes chronology or increases operational cost.
