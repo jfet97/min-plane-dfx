@@ -4,8 +4,8 @@ This directory is the portable P2 evidence captured from the committed
 measurement harness on 2026-07-24.
 
 - `inventory.json` freezes the included and excluded cases before search,
-  including exact sources, prepared order, settings, and expected sheet
-  classification.
+  including exact sources, request order, sorted production prepared order,
+  settings, and expected sheet classification.
 - `reproduction.json` compares two sequential current-source reproductions.
 - every included case has an SVG and Electron-rendered PNG for both
   `1000 x 1700` and `2000 x 2700`.

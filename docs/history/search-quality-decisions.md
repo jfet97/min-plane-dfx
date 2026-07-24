@@ -448,9 +448,9 @@ production is unchanged. Detailed evidence is in
 ## Maintained Compact corpus
 
 P2 froze the existing seven-case no-options corpus before decoding, including
-exact source and generator hashes, prepared order, settings, sheet
-classification, and explicit exclusions. Two strict sequential reproductions
-then completed all 14 layouts.
+exact source and generator hashes, request order, sorted production prepared
+order, settings, sheet classification, and explicit exclusions. Two strict
+sequential reproductions then completed all 14 layouts.
 
 Triangle, rectangles, trapezoids, pentagons, star hulls, Mixed-50, and Mixed-61
 were canonical-identical on `1000 x 1700` and `2000 x 2700` and across both

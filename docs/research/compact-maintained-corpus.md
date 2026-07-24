@@ -13,6 +13,10 @@ mode to the existing no-options sheet-invariance harness. Commit
 `0ca9ad6e047ebed8500af97825fc52d0f6ba963d` freezes the inventory before
 the first search run.
 
+The inventory records both immutable request order and the actual production
+prepared order after `sortPiecesForNesting`. These are separate fields because
+mixed generated recipes are not already sorted by the production comparator.
+
 The maintained set contains seven existing exact requests:
 
 | Case | Pieces | Source |

@@ -16,6 +16,7 @@ import {
   type PresetShapeKind
 } from '../src/shared/presetShapes.js'
 import { preparePieces } from '../src/shared/preparePieces.js'
+import { sortPiecesForNesting } from '../src/workers/algorithm/sortPiecesForNesting.js'
 import { computeIrregularNesting } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
@@ -364,7 +365,8 @@ async function writeInventory(argumentsData: CorpusArguments): Promise<string> {
     if (!argumentsData.selectedCaseIds.has(caseId)) continue
     const generated = generatedCases.find(({ id }) => id === caseId)
     const request = generated === undefined ? await loadMixed61Request() : makeGeneratedRequest(generated)
-    const preparedOrder = request.pieces.map(({ id }) => id)
+    const requestOrder = request.pieces.map(({ id }) => id)
+    const productionPreparedOrder = sortPiecesForNesting(request.pieces).map(({ id }) => id)
     const source =
       generated === undefined
         ? {
@@ -383,8 +385,10 @@ async function writeInventory(argumentsData: CorpusArguments): Promise<string> {
       source,
       requestSha256: sha256(JSON.stringify(request)),
       pieceCount: request.pieces.length,
-      preparedOrder,
-      preparedOrderSha256: sha256(preparedOrder.join('\n')),
+      requestOrder,
+      requestOrderSha256: sha256(requestOrder.join('\n')),
+      productionPreparedOrder,
+      productionPreparedOrderSha256: sha256(productionPreparedOrder.join('\n')),
       paddingMm: request.padding,
       optimizerSettingsSha256: sha256(JSON.stringify(request.options.irregularSettings)),
       compactEligible:
@@ -399,7 +403,7 @@ async function writeInventory(argumentsData: CorpusArguments): Promise<string> {
   }
   const inventoryPath = `${argumentsData.outputDirectory}/inventory.json`
   const inventory = {
-    version: 1,
+    version: 2,
     sourceCommit: argumentsData.sourceCommit,
     harness: {
       path: 'scripts/irregular-sheet-invariance.ts',
