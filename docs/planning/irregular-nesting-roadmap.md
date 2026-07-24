@@ -98,7 +98,11 @@ historical evidence that local one-piece repair could not reach this result.
 Status: closed and rejected on 2026-07-24. Four eligible deficit witnesses
 existed in the unchanged Mixed-61 `300 x 300` frontier. The protected
 continuation settled exactly and resumed deterministically, but returned the
-same `6/61`, `89,504.369008 mm2`, zero-cavity endpoint. See
+same `6/61`, `89,504.369008 mm2`, zero-cavity endpoint. A user-requested
+production-shaped follow-up and the full nine-case matrix preserved every
+accepted layout. The largest evaluation reduction was `0.35%`, and the
+targeted median wall-time gain was only `0.21%`, which does not justify the
+additional retention mode and checkpoint role. See
 [`../research/capacity-one-count-deficit-continuation.md`](../research/capacity-one-count-deficit-continuation.md).
 
 Hypothesis: on Mixed-61 `300 x 300`, a useful large-piece state is generated but

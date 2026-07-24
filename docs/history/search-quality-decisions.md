@@ -468,10 +468,16 @@ evaluations nor the accepted hashes, and added a median `23.815 ms`.
 
 A protected observer then replaced only the sixteenth control state at eligible
 depths. It settled in `1,176.694 ms` and 149,200 evaluations, with exact
-seven-depth checkpoint/resume equivalence, but returned the same `6/61`,
-zero-cavity, `89,504.369008 mm2` endpoint. The hypothesis is closed without a
-matrix because it has no targeted quality win. Its trace also does not prove
-the causal prepared-order loss required to activate the conditional
+seven-depth endpoint, consumed-evaluation, settlement, and trace resume
+equivalence, but returned the same `6/61`, zero-cavity,
+`89,504.369008 mm2` endpoint.
+
+A user-requested production-shaped follow-up preserved all nine accepted
+layouts exactly. Mixed-61 `300 x 300` saved 519 evaluations but only a median
+`2.776 ms` (`0.21%`) wall time; all other evaluation reductions were smaller
+or zero. The hypothesis is rejected because that benefit does not justify
+another production retention mode and checkpoint role. Its trace also does not
+prove the causal prepared-order loss required to activate the conditional
 large-first/small-fill observer.
 
 Detailed evidence is in
