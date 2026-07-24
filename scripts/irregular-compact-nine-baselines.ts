@@ -45,12 +45,12 @@ const BASELINES: ReadonlyArray<Baseline> = [
     fixture: 'shapes-17',
     sheet: '2000x2700',
     collisionIdentitySha256:
-      'c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a',
+      '1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d',
     fittedCanonicalSha256:
-      'ae54425025fa5060057342f00a4c7ed9957c0740722e91e32919db553949e38d',
+      '490194ca505f545cfb5880209d20b2f48cdcffbc847c8686705fd12661b5e7bf',
     placedCount: 17,
     unplacedCount: 0,
-    maximumAreaMm2: 304_499.84565,
+    maximumAreaMm2: 281_233.148068,
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 120_000
   },
@@ -167,7 +167,8 @@ function runBaseline(baseline: Baseline, outputDirectory: string): Promise<void>
     '--maximum-canonical-cavities',
     String(baseline.maximumCanonicalCavities),
     '--maximum-elapsed-ms',
-    String(baseline.maximumElapsedMs)
+    String(baseline.maximumElapsedMs),
+    ...focusedExpectedArguments(baseline)
   ]
 
   return new Promise((resolve, reject) => {
@@ -185,6 +186,87 @@ function runBaseline(baseline: Baseline, outputDirectory: string): Promise<void>
       )
     })
   })
+}
+
+function focusedExpectedArguments(
+  baseline: Baseline
+): ReadonlyArray<string> {
+  const triangleHash =
+    '371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127'
+  const mixedHash =
+    '3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742'
+  const shapesProtectedHash =
+    'c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a'
+  const shapesPromotedHash =
+    '1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d'
+  const values =
+    baseline.fixture === 'triangle-20' && baseline.sheet !== '300x300'
+      ? {
+          status: 'duplicate-order',
+          evaluations: 0,
+          source: triangleHash,
+          candidate: 'none',
+          selected: triangleHash,
+          influence: 'protected-fallback'
+        }
+      : baseline.fixture === 'mixed-61' && baseline.sheet === '2000x2700'
+        ? {
+            status: 'evaluation-cap',
+            evaluations: 12_000,
+            source: mixedHash,
+            candidate: 'none',
+            selected: mixedHash,
+            influence: 'protected-fallback'
+          }
+        : baseline.fixture === 'shapes-17' && baseline.sheet === '2000x2700'
+          ? {
+              status: 'completed',
+              evaluations: 8_035,
+              source: shapesProtectedHash,
+              candidate: shapesPromotedHash,
+              selected: shapesPromotedHash,
+              influence: 'selected'
+            }
+          : baseline.fixture === 'shapes-17' && baseline.sheet === '600x400'
+            ? {
+                status: 'skipped-no-fitting-protected-endpoint',
+                evaluations: 0,
+                source: shapesProtectedHash,
+                candidate: 'none',
+                selected: 'none',
+                influence: 'none'
+              }
+            : baseline.fixture === 'triangle-20' && baseline.sheet === '300x300'
+              ? {
+                  status: 'skipped-no-fitting-protected-endpoint',
+                  evaluations: 0,
+                  source: triangleHash,
+                  candidate: 'none',
+                  selected: 'none',
+                  influence: 'none'
+                }
+              : {
+                  status: 'skipped-preflight-proven-impossible',
+                  evaluations: 0,
+                  source: 'none',
+                  candidate: 'none',
+                  selected: 'none',
+                  influence: 'none'
+                }
+  return [
+    '--expected-focused-status',
+    values.status,
+    '--expected-focused-evaluations',
+    String(values.evaluations),
+    '--expected-focused-source-hash',
+    values.source,
+    '--expected-focused-candidate-hash',
+    values.candidate,
+    '--expected-focused-selected-hash',
+    values.selected,
+    '--expected-focused-influence',
+    values.influence
+  ]
 }
 
 const outputDirectory =

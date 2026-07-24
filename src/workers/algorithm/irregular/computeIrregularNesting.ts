@@ -147,8 +147,8 @@ export interface ComputeIrregularNestingOptions {
   readonly onExperimentalPlaceDeferCompleteEndpoint?: (
     endpoint: IntrinsicSharedArchiveEndpoint | undefined
   ) => void
-  /** Opt-in exact complete reconstruction from the settled protected endpoint. */
-  readonly enableFocusedCompleteReconstruction?: boolean
+  /** Paired benchmark arm; production keeps focused reconstruction enabled. */
+  readonly focusedCompleteReconstructionControlArm?: 'disable'
 }
 
 export interface IntrinsicFocusedCompleteReconstructionTrace {
@@ -159,14 +159,17 @@ export interface IntrinsicFocusedCompleteReconstructionTrace {
     | 'evaluation-cap'
     | 'deadline'
     | 'incomplete'
+    | 'failed-protected-fallback'
     | 'skipped-preflight-proven-impossible'
     | 'skipped-no-fitting-protected-endpoint'
   readonly sourceCanonicalGeometryHash: string | undefined
+  readonly candidateCanonicalGeometryHash: string | undefined
   readonly selectedCanonicalGeometryHash: string | undefined
   readonly consumedCandidateEvaluations: number
   readonly candidateEvaluationAccountingComplete: boolean
   readonly runtimeMs: number
   readonly outputInfluence: 'selected' | 'protected-fallback' | 'none'
+  readonly failureReason: string | undefined
 }
 
 export interface IntrinsicAnytimeSchedulerTrace {
@@ -439,6 +442,8 @@ function coordinateIntrinsicSharedArchive(
   return Effect.gen(function* () {
     const coordinatorStartedAt = performance.now()
     const archiveEnabled = isIntrinsicSharedArchiveEligible(input.settings)
+    const focusedCompleteReconstructionEnabled =
+      input.options?.focusedCompleteReconstructionControlArm !== 'disable'
     const archiveDiagnostics: CollisionGeometryDiagnostic[] = []
     let selected: MaterializedDecode
     let capacityShadowTelemetry: IntrinsicCapacityShadowTelemetry | undefined
@@ -514,16 +519,18 @@ function coordinateIntrinsicSharedArchive(
         retentionMode: capacityRetentionMode
       }
       if (preflight.kind === 'proven_impossible') {
-        if (input.options?.enableFocusedCompleteReconstruction === true) {
+        if (focusedCompleteReconstructionEnabled) {
           focusedCompleteReconstructionTrace = {
             version: 'intrinsic-focused-complete-reconstruction-v1',
             status: 'skipped-preflight-proven-impossible',
             sourceCanonicalGeometryHash: undefined,
+            candidateCanonicalGeometryHash: undefined,
             selectedCanonicalGeometryHash: undefined,
             consumedCandidateEvaluations: 0,
             candidateEvaluationAccountingComplete: true,
             runtimeMs: 0,
-            outputInfluence: 'none'
+            outputInfluence: 'none',
+            failureReason: undefined
           }
         }
         const capacity = yield* runIntrinsicCapacityMode({
@@ -745,99 +752,133 @@ function coordinateIntrinsicSharedArchive(
         const protectedSheetlessArchive = retainRankedSharedArchive(
           archive.sheetlessArchive
         )
-        const protectedWinner = selectIntrinsicSharedArchiveWinner(
+        const protectedSheetlessWinner =
+          selectIntrinsicSharedArchiveWinner(protectedSheetlessArchive)
+        const protectedFittingWinner = selectIntrinsicSharedArchiveWinner(
           selectFittingSharedArchive(protectedSheetlessArchive)
         )
         let focusedReconstructionEndpoints: ReadonlyArray<IntrinsicSharedArchiveEndpoint> =
           []
-        if (input.options?.enableFocusedCompleteReconstruction === true) {
-          if (protectedWinner === undefined) {
+        if (focusedCompleteReconstructionEnabled) {
+          if (
+            protectedSheetlessWinner === undefined ||
+            protectedFittingWinner === undefined
+          ) {
             focusedCompleteReconstructionTrace = {
               version: 'intrinsic-focused-complete-reconstruction-v1',
               status: 'skipped-no-fitting-protected-endpoint',
-              sourceCanonicalGeometryHash: undefined,
+              sourceCanonicalGeometryHash:
+                protectedSheetlessWinner?.sheetlessCanonicalGeometryHash,
+              candidateCanonicalGeometryHash: undefined,
               selectedCanonicalGeometryHash: undefined,
               consumedCandidateEvaluations: 0,
               candidateEvaluationAccountingComplete: true,
               runtimeMs: 0,
-              outputInfluence: 'none'
+              outputInfluence: 'none',
+              failureReason: undefined
             }
           } else {
             const reconstructionSeed: IntrinsicReconstructionSeed = {
               role: 'settled-protected',
               canonicalGeometryHash:
-                protectedWinner.sheetlessCanonicalGeometryHash,
+                protectedSheetlessWinner.sheetlessCanonicalGeometryHash,
               placedCollisionGeometries:
-                protectedWinner.placedCollisionGeometries,
+                protectedSheetlessWinner.placedCollisionGeometries,
               stepTrace: [],
-              metrics: protectedWinner.metrics
+              metrics: protectedSheetlessWinner.metrics
             }
-            const reconstruction = yield* runIntrinsicReconstructionPortfolio({
-              allPreparedPieces: input.preparedPieces,
-              baselineSeeds: [reconstructionSeed],
-              roleFamily: 'endpoint-q90-right-to-left',
-              maximumRuntimeMsPerDecode: 15_000,
-              maximumTotalRuntimeMs: 15_000,
-              maximumCandidateEvaluationsPerDecode: 12_000,
-              maximumTotalCandidateEvaluations: 12_000
-            }).pipe(
-              Effect.mapError((error) =>
-                error._tag === 'IntrinsicReconstructionPortfolioError' ||
-                error._tag === 'IntrinsicStrictDecoderError'
-                  ? new IrregularPortfolioError({
-                      operation: error.operation,
-                      category: 'search',
-                      message: error.message
-                    })
-                  : error
-              )
-            )
-            const focusedRun = reconstruction.runs.find(
-              ({ role }) => role === 'endpoint-q90-right-to-left'
-            )
-            focusedReconstructionEndpoints =
-              focusedRun?.status !== 'completed' ||
-              focusedRun.metrics === undefined
-                ? []
-                : [
-                    makeIntrinsicSharedArchiveEndpoint({
-                      sheet: input.request.sheet,
-                      role: `reconstruction-${focusedRun.role}`,
-                      sourceId: focusedRun.sourceEndpointHash,
-                      state: new IrregularBeamState({
-                        remainingPreparedPieces: [],
-                        placedCollisionGeometries:
-                          focusedRun.placedCollisionGeometries,
-                        unplacedPieceIds: [],
-                        placementOrder:
-                          focusedRun.placedCollisionGeometries.flatMap(
-                            ({ placement }) => {
-                              const pieceId =
-                                placement.pieceId ??
-                                placement.sourcePieceId
-                              return pieceId === undefined ? [] : [pieceId]
-                            }
-                          )
+            const reconstructionOutcome = yield* Effect.matchEffect(
+              runIntrinsicReconstructionPortfolio({
+                allPreparedPieces: input.preparedPieces,
+                baselineSeeds: [reconstructionSeed],
+                roleFamily: 'endpoint-q90-right-to-left',
+                maximumRuntimeMsPerDecode: 15_000,
+                maximumTotalRuntimeMs: 15_000,
+                maximumCandidateEvaluationsPerDecode: 12_000,
+                maximumTotalCandidateEvaluations: 12_000,
+                ...(control === undefined ? {} : { control })
+              }),
+              {
+                onFailure: (error) =>
+                  error._tag === 'IrregularNfpIfpControlAbortError' &&
+                  error.reason === 'cancelled'
+                    ? Effect.fail(error)
+                    : Effect.succeed({
+                        kind: 'failed' as const,
+                        error
                       }),
-                      runtimeMs: focusedRun.runtimeMs
-                    })
-                  ].flatMap((endpoint) =>
-                    endpoint === undefined ? [] : [endpoint]
-                  )
-            focusedCompleteReconstructionTrace = {
-              version: 'intrinsic-focused-complete-reconstruction-v1',
-              status: focusedRun?.status ?? 'incomplete',
-              sourceCanonicalGeometryHash:
-                protectedWinner.sheetlessCanonicalGeometryHash,
-              selectedCanonicalGeometryHash:
-                focusedReconstructionEndpoints[0]
-                  ?.sheetlessCanonicalGeometryHash,
-              consumedCandidateEvaluations:
-                reconstruction.consumedCandidateEvaluations,
-              candidateEvaluationAccountingComplete:
-                reconstruction.candidateEvaluationAccountingComplete,
-              runtimeMs: reconstruction.runtimeMs,
-              outputInfluence: 'none'
+                onSuccess: (reconstruction) =>
+                  Effect.succeed({
+                    kind: 'completed' as const,
+                    reconstruction
+                  })
+              }
+            )
+            if (reconstructionOutcome.kind === 'failed') {
+              focusedCompleteReconstructionTrace = {
+                version: 'intrinsic-focused-complete-reconstruction-v1',
+                status: 'failed-protected-fallback',
+                sourceCanonicalGeometryHash:
+                  protectedSheetlessWinner.sheetlessCanonicalGeometryHash,
+                candidateCanonicalGeometryHash: undefined,
+                selectedCanonicalGeometryHash: undefined,
+                consumedCandidateEvaluations: 0,
+                candidateEvaluationAccountingComplete: false,
+                runtimeMs: 0,
+                outputInfluence: 'none',
+                failureReason: `${reconstructionOutcome.error._tag}: ${reconstructionOutcome.error.message}`
+              }
+            } else {
+              const reconstruction = reconstructionOutcome.reconstruction
+              const focusedRun = reconstruction.runs.find(
+                ({ role }) => role === 'endpoint-q90-right-to-left'
+              )
+              focusedReconstructionEndpoints =
+                focusedRun?.status !== 'completed' ||
+                focusedRun.metrics === undefined
+                  ? []
+                  : [
+                      makeIntrinsicSharedArchiveEndpoint({
+                        sheet: input.request.sheet,
+                        role: `reconstruction-${focusedRun.role}`,
+                        sourceId: focusedRun.sourceEndpointHash,
+                        state: new IrregularBeamState({
+                          remainingPreparedPieces: [],
+                          placedCollisionGeometries:
+                            focusedRun.placedCollisionGeometries,
+                          unplacedPieceIds: [],
+                          placementOrder:
+                            focusedRun.placedCollisionGeometries.flatMap(
+                              ({ placement }) => {
+                                const pieceId =
+                                  placement.pieceId ??
+                                  placement.sourcePieceId
+                                return pieceId === undefined ? [] : [pieceId]
+                              }
+                            )
+                        }),
+                        runtimeMs: focusedRun.runtimeMs
+                      })
+                    ].flatMap((endpoint) =>
+                      endpoint === undefined ? [] : [endpoint]
+                    )
+              focusedCompleteReconstructionTrace = {
+                version: 'intrinsic-focused-complete-reconstruction-v1',
+                status: focusedRun?.status ?? 'incomplete',
+                sourceCanonicalGeometryHash:
+                  protectedSheetlessWinner.sheetlessCanonicalGeometryHash,
+                candidateCanonicalGeometryHash:
+                  focusedReconstructionEndpoints[0]
+                    ?.sheetlessCanonicalGeometryHash,
+                selectedCanonicalGeometryHash: undefined,
+                consumedCandidateEvaluations:
+                  reconstruction.consumedCandidateEvaluations,
+                candidateEvaluationAccountingComplete:
+                  reconstruction.candidateEvaluationAccountingComplete,
+                runtimeMs: reconstruction.runtimeMs,
+                outputInfluence: 'none',
+                failureReason: undefined
+              }
             }
           }
         }
@@ -851,6 +892,8 @@ function coordinateIntrinsicSharedArchive(
         if (focusedCompleteReconstructionTrace !== undefined) {
           focusedCompleteReconstructionTrace = {
             ...focusedCompleteReconstructionTrace,
+            selectedCanonicalGeometryHash:
+              winner?.sheetlessCanonicalGeometryHash,
             outputInfluence:
               winner === undefined
                 ? 'none'

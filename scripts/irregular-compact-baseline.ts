@@ -51,7 +51,13 @@ interface Arguments {
   readonly maximumAreaMm2: number | undefined
   readonly maximumCanonicalCavities: number | undefined
   readonly maximumElapsedMs: number | undefined
-  readonly focusedCompleteReconstruction: boolean
+  readonly disableFocusedCompleteReconstruction: boolean
+  readonly expectedFocusedStatus: string | undefined
+  readonly expectedFocusedEvaluations: number | undefined
+  readonly expectedFocusedSourceHash: string | undefined
+  readonly expectedFocusedCandidateHash: string | undefined
+  readonly expectedFocusedSelectedHash: string | undefined
+  readonly expectedFocusedInfluence: string | undefined
 }
 
 const MIXED_61_FIXTURE = fileURLToPath(
@@ -116,9 +122,19 @@ function parseArguments(): Arguments {
     maximumAreaMm2: optionalNumberArgument('--maximum-area-mm2'),
     maximumCanonicalCavities: optionalIntegerArgument('--maximum-canonical-cavities'),
     maximumElapsedMs: optionalNumberArgument('--maximum-elapsed-ms'),
-    focusedCompleteReconstruction: process.argv.includes(
-      '--focused-complete-reconstruction'
-    )
+    disableFocusedCompleteReconstruction: process.argv.includes(
+      '--disable-focused-complete-reconstruction'
+    ),
+    expectedFocusedStatus: argument('--expected-focused-status'),
+    expectedFocusedEvaluations: optionalIntegerArgument(
+      '--expected-focused-evaluations'
+    ),
+    expectedFocusedSourceHash: argument('--expected-focused-source-hash'),
+    expectedFocusedCandidateHash: argument(
+      '--expected-focused-candidate-hash'
+    ),
+    expectedFocusedSelectedHash: argument('--expected-focused-selected-hash'),
+    expectedFocusedInfluence: argument('--expected-focused-influence')
   }
 }
 
@@ -327,8 +343,8 @@ const startedAt = performance.now()
 const result = await Effect.runPromise(
   computeIrregularNesting(
     request,
-    args.focusedCompleteReconstruction
-      ? { enableFocusedCompleteReconstruction: true }
+    args.disableFocusedCompleteReconstruction
+      ? { focusedCompleteReconstructionControlArm: 'disable' }
       : undefined
   ).pipe(
     Effect.provide(CollisionGeometryBuilder.Live),
@@ -347,6 +363,16 @@ const canonicalTopology = measureCanonicalLayoutTopology(result.placedCollisionG
 const collisionIdentitySha256 = sha256CanonicalLayout(result)
 const fittedCanonicalSha256 =
   polygons.length === 0 ? undefined : canonicalizeIrregularLayout(polygons).sha256
+const focusedTrace = result.focusedCompleteReconstructionTrace
+const matchesExpectedOptional = (
+  actual: string | undefined,
+  expected: string | undefined
+): boolean =>
+  expected === undefined
+    ? true
+    : expected === 'none'
+      ? actual === undefined
+      : actual === expected
 const requestedPieceIds = request.pieces.map(({ id }) => id)
 const placedPieceIds = result.placedCollisionGeometries.map(
   ({ placement }) => placement.pieceId
@@ -400,7 +426,37 @@ const checks = {
   runtime: args.maximumElapsedMs === undefined || elapsedMs <= args.maximumElapsedMs,
   schedulerChronology:
     result.intrinsicAnytimeSchedulerTrace === undefined ||
-    intrinsicAnytimeSchedulerTraceValid(result.intrinsicAnytimeSchedulerTrace)
+    intrinsicAnytimeSchedulerTraceValid(result.intrinsicAnytimeSchedulerTrace),
+  focusedTracePresent:
+    args.disableFocusedCompleteReconstruction ||
+    focusedTrace !== undefined,
+  focusedStatus:
+    args.expectedFocusedStatus === undefined ||
+    focusedTrace?.status === args.expectedFocusedStatus,
+  focusedEvaluations:
+    args.expectedFocusedEvaluations === undefined ||
+    focusedTrace?.consumedCandidateEvaluations ===
+      args.expectedFocusedEvaluations,
+  focusedSourceHash: matchesExpectedOptional(
+    focusedTrace?.sourceCanonicalGeometryHash,
+    args.expectedFocusedSourceHash
+  ),
+  focusedCandidateHash: matchesExpectedOptional(
+    focusedTrace?.candidateCanonicalGeometryHash,
+    args.expectedFocusedCandidateHash
+  ),
+  focusedSelectedHash: matchesExpectedOptional(
+    focusedTrace?.selectedCanonicalGeometryHash,
+    args.expectedFocusedSelectedHash
+  ),
+  focusedInfluence:
+    args.expectedFocusedInfluence === undefined ||
+    focusedTrace?.outputInfluence === args.expectedFocusedInfluence,
+  focusedAccounting:
+    focusedTrace === undefined ||
+    focusedTrace.candidateEvaluationAccountingComplete,
+  focusedFailureReason:
+    focusedTrace === undefined || focusedTrace.failureReason === undefined
 }
 const passed = Object.values(checks).every(Boolean)
 const report = jsonSafe({

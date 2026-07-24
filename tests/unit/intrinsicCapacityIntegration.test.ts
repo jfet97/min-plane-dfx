@@ -108,6 +108,51 @@ function compute(request: NestingRequest, options?: ComputeIrregularNestingOptio
 
 describe('intrinsic capacity integration', () => {
   it(
+    'runs focused complete reconstruction by default and preserves the protected duplicate fallback',
+    async () => {
+      const request = makeRectangleRequest({
+        jobKey: 'focused-complete-duplicate',
+        count: 2,
+        widthMm: 40,
+        heightMm: 30,
+        sheet: new SheetSpec({ width: 200, height: 200, label: 'roomy 200x200' }),
+        paddingMm: 0
+      })
+      const computed = await compute(request)
+      const disabled = await compute(request, {
+        focusedCompleteReconstructionControlArm: 'disable'
+      })
+
+      expect(computed.focusedCompleteReconstructionTrace).toMatchObject({
+        version: 'intrinsic-focused-complete-reconstruction-v1',
+        status: 'duplicate-order',
+        candidateCanonicalGeometryHash: undefined,
+        consumedCandidateEvaluations: 0,
+        candidateEvaluationAccountingComplete: true,
+        outputInfluence: 'protected-fallback',
+        failureReason: undefined
+      })
+      expect(
+        computed.focusedCompleteReconstructionTrace
+          ?.sourceCanonicalGeometryHash
+      ).toBeDefined()
+      expect(
+        computed.focusedCompleteReconstructionTrace
+          ?.selectedCanonicalGeometryHash
+      ).toBe(
+        computed.focusedCompleteReconstructionTrace
+          ?.sourceCanonicalGeometryHash
+      )
+      expect(disabled.focusedCompleteReconstructionTrace).toBeUndefined()
+      expect(computed.placedCollisionGeometries).toEqual(
+        disabled.placedCollisionGeometries
+      )
+      expect(computed.unplacedPieceIds).toEqual(disabled.unplacedPieceIds)
+    },
+    120_000
+  )
+
+  it(
     'captures pressure and a bounded no-skip probe without changing routing or output',
     async () => {
       const request = makeRectangleRequest({
@@ -160,6 +205,14 @@ describe('intrinsic capacity integration', () => {
       expect(computed.capacityTrace?.preflight.kind).toBe('proven_impossible')
       expect(computed.capacityTrace?.prefixes.capturedCount).toBe(0)
       expect(computed.capacityTrace?.coldSearch.auxiliaryPlacementEvaluations).toBe(0)
+      expect(computed.focusedCompleteReconstructionTrace).toMatchObject({
+        status: 'skipped-preflight-proven-impossible',
+        sourceCanonicalGeometryHash: undefined,
+        candidateCanonicalGeometryHash: undefined,
+        selectedCanonicalGeometryHash: undefined,
+        consumedCandidateEvaluations: 0,
+        outputInfluence: 'none'
+      })
 
       expect(computed.portfolio.status).toBe('completed')
       expect(computed.portfolio.terminationReason).toBe('capacity_subset_settled')
@@ -236,6 +289,17 @@ describe('intrinsic capacity integration', () => {
       expect(computed.capacityTrace).toBeDefined()
       expect(computed.capacityTrace?.routing).toBe('bounded-complete-archive-miss')
       expect(computed.capacityTrace?.preflight.kind).toBe('inconclusive')
+      expect(computed.focusedCompleteReconstructionTrace).toMatchObject({
+        status: 'skipped-no-fitting-protected-endpoint',
+        candidateCanonicalGeometryHash: undefined,
+        selectedCanonicalGeometryHash: undefined,
+        consumedCandidateEvaluations: 0,
+        outputInfluence: 'none'
+      })
+      expect(
+        computed.focusedCompleteReconstructionTrace
+          ?.sourceCanonicalGeometryHash
+      ).toBeDefined()
 
       expect(computed.portfolio.terminationReason).toBe('capacity_subset_settled')
       expect(computed.placedCollisionGeometries.length).toBeGreaterThan(0)

@@ -1,3 +1,4 @@
+import { Effect, Layer } from 'effect'
 import { describe, expect, it } from 'vitest'
 import { DxfGeometrySummary, ImportedPiece } from '@shared/domain/dxf.js'
 import { Rect } from '@shared/domain/geometry.js'
@@ -21,10 +22,17 @@ import {
   intrinsicReconstructionSpecMatchesFamily,
   INTRINSIC_RECONSTRUCTION_ROLES,
   retainIntrinsicReconstructionArchive,
+  runIntrinsicReconstructionPortfolio,
   type IntrinsicReconstructionRole,
   type IntrinsicReconstructionRun
 } from '../../src/workers/algorithm/irregular/intrinsicReconstructionPortfolio.js'
 import type { IntrinsicStrictCompletedMetrics } from '../../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
+import {
+  GeometryKernel,
+  GeometrySettings
+} from '../../src/workers/irregular/geometryKernel.js'
+import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
+import { IrregularNfpIfpControlAbortError } from '../../src/workers/irregular/services.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -278,5 +286,81 @@ describe('intrinsic reconstruction portfolio', () => {
       'canonical-seed',
       'legacy-seed'
     ])
+  })
+
+  it('reports exact bounded terminals and propagates cancellation', async () => {
+    const first = piece('first', 2, 2)
+    const second = piece('second', 3, 2)
+    const third = piece('third', 4, 2)
+    const pieces = [first, second, third]
+    const seed = {
+      role: 'settled-protected' as const,
+      canonicalGeometryHash: 'protected',
+      placedCollisionGeometries: [
+        place(first, 0, 0),
+        place(second, 10, 20),
+        place(third, 20, 10)
+      ],
+      stepTrace: [],
+      metrics: metrics('protected', 30)
+    }
+    const runPortfolio = (
+      options: Parameters<typeof runIntrinsicReconstructionPortfolio>[0]
+    ) =>
+      Effect.runPromise(
+        runIntrinsicReconstructionPortfolio(options).pipe(
+          Effect.provide(GeometryKernel.Live),
+          Effect.provide(NfpIfpServiceLive),
+          Effect.provide(Layer.succeed(GeometrySettings, GeometrySettings.Make))
+        )
+      )
+
+    const deadline = await runPortfolio({
+      allPreparedPieces: pieces,
+      baselineSeeds: [seed],
+      roleFamily: 'endpoint-q90-right-to-left',
+      maximumTotalRuntimeMs: 0
+    })
+    expect(
+      deadline.runs.find(
+        ({ role }) => role === 'endpoint-q90-right-to-left'
+      )?.status
+    ).toBe('deadline')
+    expect(deadline.candidateEvaluationAccountingComplete).toBe(false)
+
+    const capped = await runPortfolio({
+      allPreparedPieces: pieces,
+      baselineSeeds: [seed],
+      roleFamily: 'endpoint-q90-right-to-left',
+      maximumCandidateEvaluationsPerDecode: 1,
+      maximumTotalCandidateEvaluations: 1
+    })
+    expect(
+      capped.runs.find(
+        ({ role }) => role === 'endpoint-q90-right-to-left'
+      )?.status
+    ).toBe('evaluation-cap')
+    expect(capped.consumedCandidateEvaluations).toBe(1)
+    expect(capped.candidateEvaluationAccountingComplete).toBe(true)
+
+    await expect(
+      runPortfolio({
+        allPreparedPieces: pieces,
+        baselineSeeds: [seed],
+        roleFamily: 'endpoint-q90-right-to-left',
+        control: {
+          checkpoint: () =>
+            Effect.fail(
+              new IrregularNfpIfpControlAbortError({
+                reason: 'cancelled',
+                message: 'cancelled'
+              })
+            )
+        }
+      })
+    ).rejects.toMatchObject({
+      _tag: 'IrregularNfpIfpControlAbortError',
+      reason: 'cancelled'
+    })
   })
 })

@@ -7,6 +7,8 @@ import { toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import type { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import type {
   IrregularGeometryInputError,
+  IrregularNfpIfpControl,
+  IrregularNfpIfpControlAbortError,
   IrregularNestingNotImplementedError,
   NfpIfpService
 } from '../../irregular/services.js'
@@ -106,6 +108,7 @@ type PortfolioError =
   | IntrinsicStrictDecoderError
   | IrregularNestingNotImplementedError
   | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError
 
 interface DecodeSpec {
   readonly role: Exclude<IntrinsicReconstructionRole, 'canonical-grid' | 'legacy-absolute-envelope'>
@@ -126,6 +129,7 @@ export function runIntrinsicReconstructionPortfolio(input: {
   readonly roleFamily?: IntrinsicReconstructionRoleFamily
   readonly maximumCandidateEvaluationsPerDecode?: number
   readonly maximumTotalCandidateEvaluations?: number
+  readonly control?: IrregularNfpIfpControl
 }): Effect.Effect<
   IntrinsicReconstructionPortfolioResult,
   PortfolioError,
@@ -222,13 +226,19 @@ export function runIntrinsicReconstructionPortfolio(input: {
         candidateMode: spec.candidateMode,
         maximumRuntimeMs: Math.min(maximumRuntimeMsPerDecode, remainingTotalMs),
         captureCandidateEvaluationCount: true,
+        ...(input.control === undefined ? {} : { control: input.control }),
         ...(requestedCandidateEvaluations === undefined
           ? {}
           : { maximumCandidateEvaluationCount: requestedCandidateEvaluations })
       }).pipe(
         Effect.map((constructed) => ({ status: 'completed' as const, constructed })),
-        Effect.catchTag('IrregularNfpIfpControlAbortError', () =>
-          Effect.succeed({ status: 'deadline' as const, constructed: undefined })
+        Effect.catchTag('IrregularNfpIfpControlAbortError', (error) =>
+          error.reason === 'cancelled'
+            ? Effect.fail(error)
+            : Effect.succeed({
+                status: 'deadline' as const,
+                constructed: undefined
+              })
         )
       )
       if (outcome.constructed === undefined) {
