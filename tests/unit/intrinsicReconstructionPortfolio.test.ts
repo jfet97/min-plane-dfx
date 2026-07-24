@@ -122,6 +122,7 @@ function run(
     sourceEndpointHash: undefined,
     candidateMode: 'pure-growth',
     pieceIds: [],
+    effectiveOrderKey: '',
     status: 'completed',
     duplicateOf: undefined,
     requestedCandidateEvaluations: undefined,

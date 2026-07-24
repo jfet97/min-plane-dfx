@@ -59,6 +59,7 @@ export interface IntrinsicReconstructionRun {
   readonly sourceEndpointHash: string | undefined
   readonly candidateMode: IntrinsicStrictCandidateMode
   readonly pieceIds: ReadonlyArray<PieceId>
+  readonly effectiveOrderKey: string
   readonly status:
     | 'completed'
     | 'deadline'
@@ -85,6 +86,7 @@ export interface IntrinsicReconstructionPortfolioResult {
     | undefined
   readonly runtimeMs: number
   readonly consumedCandidateEvaluations: number
+  readonly candidateEvaluationAccountingComplete: boolean
 }
 
 export class IntrinsicReconstructionPortfolioError extends Data.TaggedError(
@@ -134,6 +136,7 @@ export function runIntrinsicReconstructionPortfolio(input: {
     const maximumTotalCandidateEvaluations =
       input.maximumTotalCandidateEvaluations
     let consumedCandidateEvaluations = 0
+    let candidateEvaluationAccountingComplete = true
     const seedRuns = baselineSeedRuns(input.baselineSeeds, input.allPreparedPieces)
     const endpoint = selectReconstructionEndpoint(input.baselineSeeds)
     if (endpoint === undefined) {
@@ -166,6 +169,7 @@ export function runIntrinsicReconstructionPortfolio(input: {
           sourceEndpointHash: spec.sourceEndpointHash,
           candidateMode: spec.candidateMode,
           pieceIds: spec.pieces.map(preparedPieceId),
+          effectiveOrderKey: orderKey,
           status: 'duplicate-order',
           duplicateOf,
           requestedCandidateEvaluations: 0,
@@ -182,6 +186,7 @@ export function runIntrinsicReconstructionPortfolio(input: {
       const remainingTotalMs = maximumTotalRuntimeMs - (performance.now() - startedAt)
       if (remainingTotalMs <= 0) {
         runs.push(deadlineRun(spec))
+        candidateEvaluationAccountingComplete = false
         continue
       }
       const remainingCandidateEvaluations =
@@ -222,7 +227,11 @@ export function runIntrinsicReconstructionPortfolio(input: {
         )
       )
       if (outcome.constructed === undefined) {
-        runs.push({ ...deadlineRun(spec), runtimeMs: performance.now() - decodeStartedAt })
+        candidateEvaluationAccountingComplete = false
+        runs.push({
+          ...deadlineRun(spec, requestedCandidateEvaluations),
+          runtimeMs: performance.now() - decodeStartedAt
+        })
         continue
       }
       const consumedByDecode = outcome.constructed.candidateEvaluationCount ?? 0
@@ -248,6 +257,7 @@ export function runIntrinsicReconstructionPortfolio(input: {
         sourceEndpointHash: spec.sourceEndpointHash,
         candidateMode: spec.candidateMode,
         pieceIds: spec.pieces.map(preparedPieceId),
+        effectiveOrderKey: orderKey,
         status: measured === undefined ? 'incomplete' : 'completed',
         duplicateOf: undefined,
         requestedCandidateEvaluations,
@@ -266,7 +276,8 @@ export function runIntrinsicReconstructionPortfolio(input: {
       archive,
       winner: archive[0],
       runtimeMs: performance.now() - startedAt,
-      consumedCandidateEvaluations
+      consumedCandidateEvaluations,
+      candidateEvaluationAccountingComplete
     }
   })
 }
@@ -456,6 +467,7 @@ function baselineSeedRuns(
         ? ('pure-growth' as const)
         : ('legacy-absolute-envelope' as const),
     pieceIds,
+    effectiveOrderKey: intrinsicReconstructionEffectiveOrderKey(pieces),
     status: 'completed' as const,
     duplicateOf: undefined,
     requestedCandidateEvaluations: 0,
@@ -476,15 +488,19 @@ function selectReconstructionEndpoint(
   return seeds.find(({ canonicalGeometryHash }) => canonicalGeometryHash === winningHash)
 }
 
-function deadlineRun(spec: DecodeSpec): IntrinsicReconstructionRun {
+function deadlineRun(
+  spec: DecodeSpec,
+  requestedCandidateEvaluations?: number
+): IntrinsicReconstructionRun {
   return {
     role: spec.role,
     sourceEndpointHash: spec.sourceEndpointHash,
     candidateMode: spec.candidateMode,
     pieceIds: spec.pieces.map(preparedPieceId),
+    effectiveOrderKey: intrinsicReconstructionEffectiveOrderKey(spec.pieces),
     status: 'deadline',
     duplicateOf: undefined,
-    requestedCandidateEvaluations: undefined,
+    requestedCandidateEvaluations,
     consumedCandidateEvaluations: undefined,
     placedCollisionGeometries: [],
     stepTrace: [],

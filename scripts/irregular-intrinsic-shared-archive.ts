@@ -454,11 +454,14 @@ const report = {
           ...reconstructionLimits,
           consumedCandidateEvaluations:
             reconstructionPortfolio.consumedCandidateEvaluations,
+          candidateEvaluationAccountingComplete:
+            reconstructionPortfolio.candidateEvaluationAccountingComplete,
           runtimeMs: reconstructionPortfolio.runtimeMs,
           runs: reconstructionPortfolio.runs.map((run) => ({
             role: run.role,
             status: run.status,
             duplicateOf: run.duplicateOf,
+            effectiveOrderKey: run.effectiveOrderKey,
             requestedCandidateEvaluations: run.requestedCandidateEvaluations,
             consumedCandidateEvaluations: run.consumedCandidateEvaluations,
             runtimeMs: run.runtimeMs,
