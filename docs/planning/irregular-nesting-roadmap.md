@@ -132,37 +132,54 @@ Stop condition: if the targeted run shows no causal recovery or strict
 improvement, archive the trace and remove the observer. Do not widen the beam
 or add more deficit bands.
 
-### P1: Fixed-width complete survivor-diversity observer
+### P1: Discarded-family complete continuation observer
 
 Start this only after the focused reconstruction producer has settled in
 production and a construction trace shows a useful generated state disappearing
 before completion.
 
-Hypothesis: one protected slot inside an existing fixed-width complete
-constructor can preserve a geometrically distinct pending-aware state without
-increasing the beam or changing the terminal comparator.
+Source correction: the production direct constructor is width one. It has no
+replaceable retained survivor slot, and the bounded periodic continuations are
+protected producers rather than disposable beam entries. Accepted Triangle and
+Mixed winners currently depend on `periodic-P2`.
+
+Hypothesis: the best canonically distinct non-selected transform-family winner
+inside the Shapes-producing `legacy-absolute-envelope` role may expose one
+useful generated future that the width-one lineage discards.
 
 Protected scope:
 
-- compute the unchanged survivor list first;
-- replace at most one deterministic control slot with a state from a distinct
-  intrinsic spatial/contact basin;
-- use pending pieces only to classify future opportunity, never requested-sheet
-  dimensions or a sheet-relative score;
-- retain exact NFP legality, the protected complete fallback, the current width,
-  and the existing evaluation entitlement;
-- run as an observer until a causal trace shows that the protected state
-  survives, completes, and strictly improves the exact complete objective.
+- first add a zero-evaluation-delta trace with no selection or output influence;
+- record at most one exact distinct non-selected family winner per depth,
+  candidate/family counts, selected and alternate canonical future identity,
+  and the original pending-order digest;
+- cap serialized trace data at `1 MiB` and reject paired Shapes overhead above
+  `500 ms`;
+- do not add a basin heuristic, topology calculation, new candidate geometry,
+  wider beam, periodic-slot replacement, requested-sheet feature, or
+  sheet-relative score;
+- only after one exact witness exists, deterministically capture its live state,
+  bottom-left anchor it, verify its traced identity, and continue it from exact
+  frozen placements plus the original pending suffix;
+- give that one continuation a separate observer-only `12,000`-evaluation /
+  `15,000 ms` cap and no production output influence.
 
 Measurement: begin with Shapes-17 `2000 x 2700`; record the displaced control
-state, protected state, remaining-piece features, recovery depth, exact
-endpoint, evaluations, elapsed/CPU time, and memory. Run the nine-case gate only
-after a targeted gain.
+future, alternate future, pending suffix, exact endpoint, evaluations,
+elapsed/CPU time, and memory. A first win remains separately budgeted and
+output-neutral through two targeted reproductions and the nine-case and
+ten-sheet matrices.
 
-Falsifier: no distinct candidate exists before retention; the protected state
-never completes; it duplicates focused reconstruction; or improvement requires
-a wider beam, extra evaluations, sheet-relative pressure, or new candidate
-geometry.
+Falsifier: no distinct family winner exists; trace overhead exceeds `500 ms`;
+the alternate cannot be rehydrated exactly; continuation reaches its cap,
+remains incomplete, duplicates an accepted endpoint, or does not strictly
+improve the exact complete objective. Stop before any matrix on those outcomes.
+
+Promotion remains a later decision. Do not borrow the accepted focused
+reconstruction entitlement unless both the focused fallback and the new
+continuation are proven to settle within one aggregate `12,000`-evaluation
+budget. Otherwise an additional production entitlement requires explicit
+acceptance.
 
 The pinned libnest2d, Sparrow, Deepnest/SVGnest, and PackingSolver sources
 support pending-aware protected diversity and bounded portfolio accounting.
