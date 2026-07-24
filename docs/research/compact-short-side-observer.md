@@ -56,6 +56,16 @@ is used when one exists; otherwise the short-side profile is the exact Compact
 fallback with explicit provenance. This makes the archive a complete
 18-layout contract without claiming that all 18 geometries are distinct.
 
+The current-source promotion run at `63dd350` passed the full contract:
+
+- 18/18 layouts passed exact piece accounting and rendering;
+- all nine Compact collision and fitted hashes remained exact;
+- four short-side outputs selected guarded Stage 1 archive winners;
+- five short-side outputs recorded exact Compact fallbacks;
+- the maximum observer runtime was `56.989 ms`;
+- at most one algorithm process was active and all nine cases ran
+  sequentially.
+
 Triangle-20 `600 x 400` contains one reproducible, guard-eligible Pareto
 alternative:
 

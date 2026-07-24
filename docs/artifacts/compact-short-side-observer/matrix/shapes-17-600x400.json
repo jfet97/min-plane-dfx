@@ -4,9 +4,9 @@
     "width": 600,
     "height": 400
   },
-  "sourceCommit": "dfb458ff8bbaa5ca0832e71bd1062ee29e397b22",
+  "sourceCommit": "63dd350",
   "runtime": {
-    "elapsedMs": 12349.626667,
+    "elapsedMs": 12495.102625000001,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -1276,11 +1276,11 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 20,
             "topologyMeasurementCount": 36,
-            "topologyMeasurementMs": 8.399622999999337,
+            "topologyMeasurementMs": 8.628584999998566,
             "legalCandidateCount": 4144,
             "contactMeasuredCandidateCount": 46,
             "positiveContactCandidateCount": 10,
-            "contactMeasurementMs": 1.0573779999995168,
+            "contactMeasurementMs": 1.231999999999971,
             "contactSelectedSuccessorCount": 5,
             "contactDeduplicatedSuccessorCount": 0,
             "contactRetainedSuccessorCount": 5,
@@ -1464,7 +1464,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 341,
           "completedDepths": 5,
-          "elapsedMs": 11.861750000000029,
+          "elapsedMs": 12.682333000000654,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1488,7 +1488,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 335,
           "completedDepths": 5,
-          "elapsedMs": 12.13537499999984,
+          "elapsedMs": 12.323667000000569,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1512,7 +1512,7 @@
           "checkpointRetained": false,
           "consumedPlacementEvaluations": 32273,
           "completedDepths": 17,
-          "elapsedMs": 1698.7756670000035,
+          "elapsedMs": 1725.3027519999996,
           "endpoint": {
             "placedCount": 14,
             "placedDoubledMaterialAreaGrid2": "294455444315",
@@ -1536,7 +1536,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 341,
           "completedDepths": 5,
-          "elapsedMs": 11.102875000000495,
+          "elapsedMs": 12.036333000000013,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1758,11 +1758,11 @@
         "placedMaterialAreaMm2": 147227.7221575,
         "selectedRotationDeg": 0
       },
-      "preflightRuntimeMs": 13.058750000000003,
-      "completeArchiveRuntimeMs": 9292.668875,
-      "prefixTerminalizationMs": 25.366916000000856,
-      "coldSearchMs": 2381.3769169999996,
-      "runtimeMs": 2407.259915999999
+      "preflightRuntimeMs": 13.614584000000008,
+      "completeArchiveRuntimeMs": 9379.702207999999,
+      "prefixTerminalizationMs": 28.625292000000627,
+      "coldSearchMs": 2424.0795419999995,
+      "runtimeMs": 2453.3152499999997
     },
     "intrinsicAnytimeSchedulerTrace": {
       "version": "intrinsic-anytime-scheduler-v1",
@@ -2034,9 +2034,9 @@
       "geometricParetoEligibleEndpointCount": 0,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 14.863000000001193,
+      "runtimeMs": 14.79816700000083,
       "runtimeBudgetExceeded": false,
-      "serializedTraceBytes": 6167,
+      "serializedTraceBytes": 6172,
       "endpoints": [
         {
           "archiveIndex": 0,
@@ -2302,8 +2302,12 @@
     "shortSideObserverTracePresent": true,
     "shortSideObserverOutputInfluence": true,
     "shortSideObserverRuntimeBudget": true,
-    "shortSideObserverContract": true
+    "shortSideObserverContract": true,
+    "shortSideProfileMaterialized": true,
+    "shortSideProfileExactPiecePartition": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-observer-dfb458f-run1/shapes-17-600x400.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-600x400.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-600x400.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-600x400.short-side-profile.json"
 }

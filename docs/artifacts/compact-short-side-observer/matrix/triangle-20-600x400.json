@@ -4,9 +4,9 @@
     "width": 600,
     "height": 400
   },
-  "sourceCommit": "dfb458ff8bbaa5ca0832e71bd1062ee29e397b22",
+  "sourceCommit": "63dd350",
   "runtime": {
-    "elapsedMs": 14307.324792,
+    "elapsedMs": 14318.003208,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -923,7 +923,7 @@
       "selectedCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
       "consumedCandidateEvaluations": 0,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 0.6520419999997102,
+      "runtimeMs": 0.6614169999993464,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -941,9 +941,9 @@
       "geometricParetoEligibleEndpointCount": 2,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 25.243000000000393,
+      "runtimeMs": 25.139375000000655,
       "runtimeBudgetExceeded": false,
-      "serializedTraceBytes": 32494,
+      "serializedTraceBytes": 32499,
       "endpoints": [
         {
           "archiveIndex": 0,
@@ -2174,9 +2174,12 @@
     "shortSideObserverTracePresent": true,
     "shortSideObserverOutputInfluence": true,
     "shortSideObserverRuntimeBudget": true,
-    "shortSideObserverContract": true
+    "shortSideObserverContract": true,
+    "shortSideProfileMaterialized": true,
+    "shortSideProfileExactPiecePartition": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-observer-dfb458f-run1/triangle-20-600x400.svg",
-  "observerSvgPath": "/private/tmp/min-plane-provenance/short-side-observer-dfb458f-run1/triangle-20-600x400.short-side-observer.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-600x400.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-600x400.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-600x400.short-side-profile.json"
 }

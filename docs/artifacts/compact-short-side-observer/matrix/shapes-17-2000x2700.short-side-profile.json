@@ -1,0 +1,33 @@
+{
+  "fixture": "shapes-17",
+  "profile": "short-side",
+  "sheet": {
+    "width": 2000,
+    "height": 2700
+  },
+  "source": "guarded-stage1-winner",
+  "observerStatus": "observed",
+  "selectedRotationDeg": 0,
+  "placedCount": 17,
+  "unplacedCount": 0,
+  "unplacedPieceIds": [],
+  "collisionIdentitySha256": "1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d",
+  "fittedCanonicalSha256": "490194ca505f545cfb5880209d20b2f48cdcffbc847c8686705fd12661b5e7bf",
+  "canonicalTopology": {
+    "enclosedCavityCount": 0,
+    "largestOccupiedHullGapRatio": 0.1001646831166667,
+    "occupiedEnvelopeAspectRatio": 1.0089838393175086,
+    "positiveContactComponentCount": 7,
+    "isolatedPieceCount": 4,
+    "largestPositiveContactComponentSize": 8,
+    "largestPositiveContactComponentRatio": 0.47058823529411764
+  },
+  "bounds": {
+    "width": 532.6909999999999,
+    "height": 527.948,
+    "area": 281233.1480679999,
+    "span": 1060.639
+  },
+  "exactPiecePartition": true,
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-2000x2700.short-side-profile.svg"
+}

@@ -1,6 +1,6 @@
 # Compact Short-Side Observer Artifacts
 
-Source commit: `dfb458ff8bbaa5ca0832e71bd1062ee29e397b22`.
+Current 18-layout matrix source commit: `63dd350`.
 
 - `matrix/` contains the strict nine-case production-preservation gate as 18
   layouts: nine Compact controls and nine short-side-profile outputs. A
@@ -11,6 +11,10 @@ Source commit: `dfb458ff8bbaa5ca0832e71bd1062ee29e397b22`.
   complete production/observer SVG and PNG comparison.
 - `shapes-transpose/` contains the `2700 x 2000` transpose proof paired with
   Shapes-17 `2000 x 2700` in the matrix.
+
+The reproduction and transpose directories retain the earlier Stage 1
+acceptance evidence. The `matrix/` directory is the current-source promotion
+gate.
 
 Algorithm cases were executed strictly sequentially with at most one algorithm
 process active. The observer performed zero placement and candidate evaluations

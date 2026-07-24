@@ -4,9 +4,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "dfb458ff8bbaa5ca0832e71bd1062ee29e397b22",
+  "sourceCommit": "63dd350",
   "runtime": {
-    "elapsedMs": 65858.182708,
+    "elapsedMs": 67069.428542,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -2697,7 +2697,7 @@
       "selectedCanonicalGeometryHash": "3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742",
       "consumedCandidateEvaluations": 12000,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 1454.4149170000092,
+      "runtimeMs": 1473.6900419999874,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -2715,9 +2715,9 @@
       "geometricParetoEligibleEndpointCount": 1,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 56.13324999999895,
+      "runtimeMs": 56.9890000000014,
       "runtimeBudgetExceeded": false,
-      "serializedTraceBytes": 15882,
+      "serializedTraceBytes": 15888,
       "endpoints": [
         {
           "archiveIndex": 0,
@@ -3346,9 +3346,12 @@
     "shortSideObserverTracePresent": true,
     "shortSideObserverOutputInfluence": true,
     "shortSideObserverRuntimeBudget": true,
-    "shortSideObserverContract": true
+    "shortSideObserverContract": true,
+    "shortSideProfileMaterialized": true,
+    "shortSideProfileExactPiecePartition": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-observer-dfb458f-run1/mixed-61-2000x2700.svg",
-  "observerSvgPath": "/private/tmp/min-plane-provenance/short-side-observer-dfb458f-run1/mixed-61-2000x2700.short-side-observer.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-2000x2700.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-2000x2700.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-2000x2700.short-side-profile.json"
 }

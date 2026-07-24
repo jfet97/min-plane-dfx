@@ -14,6 +14,12 @@
   short-side profile records and renders the exact Compact result as an
   explicit fallback instead of inventing or omitting a layout.
 
+The current-source promotion run at `63dd350` passed all 18 layouts: four
+guarded Stage 1 winners and five exact Compact fallbacks. Every layout has an
+exact piece partition, SVG, PNG, canonical hashes, and checksummed provenance.
+The maximum observed Stage 1 runtime was `56.989 ms`; placement and candidate
+evaluations remained zero.
+
 ## Rejected
 
 - Reusing the old ordinary `short-side-fill` scorer or beam.
