@@ -62,6 +62,7 @@ function endpoint(
   height: number,
   input: {
     readonly cavities?: number
+    readonly totalCavityAreaMm2?: number
     readonly hullGapRatio?: number
     readonly cohesionPasses?: boolean
     readonly cohesionDeficit?: number
@@ -76,7 +77,7 @@ function endpoint(
     envelopeAreaMm2: width * height,
     envelopeSpanMm: width + height,
     enclosedCavityCount: input.cavities ?? 0,
-    totalEnclosedCavityAreaMm2: 0,
+    totalEnclosedCavityAreaMm2: input.totalCavityAreaMm2 ?? 0,
     largestOccupiedHullGapRatio: input.hullGapRatio ?? 0,
     isolatedPieceCount: 0,
     positiveContactComponentCount: 1,
@@ -141,6 +142,37 @@ describe('intrinsic short-side observer', () => {
     expect(trace.placementEvaluations).toBe(0)
     expect(trace.candidateEvaluations).toBe(0)
     expect(trace.outputInfluence).toBe('none')
+  })
+
+  it('rewards short-axis fill before intrinsic tie-breakers on the Pareto front', () => {
+    const betterFill = endpoint('better-fill', 4, 6, {
+      cavities: 1,
+      totalCavityAreaMm2: 1,
+      hullGapRatio: 0.1,
+    })
+    const betterHullGap = endpoint('better-hull-gap', 4, 5, {
+      cavities: 1,
+      totalCavityAreaMm2: 2,
+      hullGapRatio: 0,
+    })
+    const trace = observeIntrinsicShortSideOrientations({
+      sheet: new SheetSpec({ width: 10, height: 6, label: 'landscape' }),
+      endpoints: [betterHullGap, betterFill],
+      now: deterministicClock(0, 1)
+    })
+
+    expect(trace.status).toBe('observed')
+    expect(trace.geometricParetoEligibleEndpointCount).toBe(2)
+    expect(trace.observerWinnerCanonicalGeometryHash).toBe(
+      betterFill.sheetlessCanonicalGeometryHash
+    )
+    expect(
+      trace.endpoints.find(({ role }) => role === 'better-fill')?.selected
+    ).toMatchObject({
+      requestedLongAxisUsedSpanMm: 4,
+      requestedShortAxisShortfallMm: 0,
+      hullGapRatio: 0.1
+    })
   })
 
   it('rejects a shorter but geometrically dominated wasteful strip before ranking', () => {

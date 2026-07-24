@@ -16,7 +16,7 @@ import {
 import { IrregularBeamState } from './irregularBeamState.js'
 
 export const INTRINSIC_SHORT_SIDE_OBSERVER_VERSION =
-  'intrinsic-short-side-observer-v1' as const
+  'intrinsic-short-side-observer-v2' as const
 export const INTRINSIC_SHORT_SIDE_OBSERVER_MAX_RUNTIME_MS = 250 as const
 export const INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES = 1_048_576 as const
 
@@ -347,11 +347,11 @@ function comparisonTuple(input: {
   return [
     input.exactLegal ? 0 : 1,
     input.requestedLongAxisUsedSpanMm ?? Number.POSITIVE_INFINITY,
+    input.requestedShortAxisShortfallMm ?? Number.POSITIVE_INFINITY,
     input.cavityCount,
     input.hullGapRatio,
     input.cohesionPasses ? 0 : 1,
     input.cohesionDeficit,
-    input.requestedShortAxisShortfallMm ?? Number.POSITIVE_INFINITY,
     input.intrinsicEnvelopeAreaMm2,
     input.intrinsicEnvelopeMaximumSideMm,
     input.intrinsicEnvelopeSpanMm,
