@@ -122,6 +122,15 @@ describe('intrinsic capacity integration', () => {
       const disabled = await compute(request, {
         focusedCompleteReconstructionControlArm: 'disable'
       })
+      let callbackTrace:
+        | NonNullable<typeof computed.intrinsicShortSideObserverTrace>
+        | undefined
+      const observed = await compute(request, {
+        captureIntrinsicShortSideObserver: true,
+        onIntrinsicShortSideObserver: (trace) => {
+          callbackTrace = trace
+        }
+      })
 
       expect(computed.focusedCompleteReconstructionTrace).toMatchObject({
         version: 'intrinsic-focused-complete-reconstruction-v1',
@@ -148,6 +157,18 @@ describe('intrinsic capacity integration', () => {
         disabled.placedCollisionGeometries
       )
       expect(computed.unplacedPieceIds).toEqual(disabled.unplacedPieceIds)
+      expect(observed.placedCollisionGeometries).toEqual(
+        computed.placedCollisionGeometries
+      )
+      expect(observed.unplacedPieceIds).toEqual(computed.unplacedPieceIds)
+      expect(observed.portfolio).toEqual(computed.portfolio)
+      expect(observed.intrinsicShortSideObserverTrace).toMatchObject({
+        status: 'observed',
+        outputInfluence: 'none',
+        placementEvaluations: 0,
+        candidateEvaluations: 0
+      })
+      expect(callbackTrace).toEqual(observed.intrinsicShortSideObserverTrace)
     },
     120_000
   )
@@ -198,7 +219,16 @@ describe('intrinsic capacity integration', () => {
         sheet: new SheetSpec({ width: 100, height: 100, label: 'constrained 100x100' }),
         paddingMm: 10
       })
-      const computed = await compute(request)
+      const baseline = await compute(request)
+      let callbackTrace:
+        | NonNullable<typeof baseline.intrinsicShortSideObserverTrace>
+        | undefined
+      const computed = await compute(request, {
+        captureIntrinsicShortSideObserver: true,
+        onIntrinsicShortSideObserver: (trace) => {
+          callbackTrace = trace
+        }
+      })
 
       expect(computed.capacityTrace).toBeDefined()
       expect(computed.capacityTrace?.routing).toBe('preflight-proven-impossible')
@@ -213,6 +243,20 @@ describe('intrinsic capacity integration', () => {
         consumedCandidateEvaluations: 0,
         outputInfluence: 'none'
       })
+      expect(computed.intrinsicShortSideObserverTrace).toMatchObject({
+        status: 'skipped-no-settled-complete-endpoints',
+        outputInfluence: 'none',
+        settledEndpointCount: 0,
+        evaluatedOrientationCount: 0,
+        placementEvaluations: 0,
+        candidateEvaluations: 0
+      })
+      expect(callbackTrace).toEqual(computed.intrinsicShortSideObserverTrace)
+      expect(computed.placedCollisionGeometries).toEqual(
+        baseline.placedCollisionGeometries
+      )
+      expect(computed.unplacedPieceIds).toEqual(baseline.unplacedPieceIds)
+      expect(computed.portfolio).toEqual(baseline.portfolio)
 
       expect(computed.portfolio.status).toBe('completed')
       expect(computed.portfolio.terminationReason).toBe('capacity_subset_settled')

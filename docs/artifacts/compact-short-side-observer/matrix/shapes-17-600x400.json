@@ -1,0 +1,2309 @@
+{
+  "fixture": "shapes-17",
+  "sheet": {
+    "width": 600,
+    "height": 400
+  },
+  "sourceCommit": "dfb458ff8bbaa5ca0832e71bd1062ee29e397b22",
+  "runtime": {
+    "elapsedMs": 12349.626667,
+    "node": "v24.16.0",
+    "v8": "13.6.233.17-node.49"
+  },
+  "result": {
+    "placedCount": 14,
+    "unplacedCount": 3,
+    "unplacedPieceIds": [
+      "shapes-17-12",
+      "shapes-17-16",
+      "shapes-17-17"
+    ],
+    "collisionIdentitySha256": "01b2060d87752bb36eebfd4eb8602709687d5cb00c71b8feaec14a6e7cf9ba12",
+    "fittedCanonicalSha256": "4472adc8ddfcc26af748adcfeb220e049a4f0e814cb17a99c0dc092db903921e",
+    "canonicalTopology": {
+      "enclosedCavityCount": 0,
+      "largestOccupiedHullGapRatio": 0.19975967300609712,
+      "occupiedEnvelopeAspectRatio": 1.5103141689748574,
+      "positiveContactComponentCount": 11,
+      "isolatedPieceCount": 8,
+      "largestPositiveContactComponentSize": 2,
+      "largestPositiveContactComponentRatio": 0.14285714285714285
+    },
+    "bounds": {
+      "width": 592.167,
+      "height": 392.082,
+      "area": 232178.021694,
+      "span": 984.249
+    },
+    "score": {
+      "unplacedCount": 3,
+      "sharedCollisionBoundaryLengthMm": 113.334,
+      "sharedCollisionBoundaryContactUnits": 1.473131,
+      "sharedCollisionBoundaryContactBand": 1,
+      "nearCompleteStructuralContactCount": 0,
+      "dominantNearCompleteStructuralContactCount": 0,
+      "largestNetFreeMaterialRegionAreaMm2": 62981.21780900005,
+      "freeMaterialRegionCount": 1,
+      "freeMaterialHoleCount": 9,
+      "freeMaterialSliverMetric": 822.7536109648937,
+      "collisionBoundsWorstNormalizedSheetConsumption": 0.9869450000000001,
+      "collisionBoundsNormalizedSpanSum": 1.9671500000000002,
+      "collisionBoundsAreaMm2": 232178.021694,
+      "collisionBoundsSpanMm": 984.249,
+      "occupiedHullWasteRatio": 0.19976,
+      "collisionBoundsBottomMm": 0,
+      "collisionBoundsLeftMm": 0,
+      "freeMaterialSnapshot": {
+        "sheet": {
+          "width": 600,
+          "height": 400,
+          "label": "600x400"
+        },
+        "regions": [
+          {
+            "boundary": {
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 51.465,
+                  "y": 0
+                },
+                {
+                  "x": 25.304,
+                  "y": 52.322
+                },
+                {
+                  "x": 124.141,
+                  "y": 101.741
+                },
+                {
+                  "x": 175.012,
+                  "y": 0
+                },
+                {
+                  "x": 600,
+                  "y": 0
+                },
+                {
+                  "x": 600,
+                  "y": 400
+                },
+                {
+                  "x": 0,
+                  "y": 400
+                },
+                {
+                  "x": 0,
+                  "y": 170.811
+                },
+                {
+                  "x": 23.077,
+                  "y": 193.888
+                },
+                {
+                  "x": 29.025,
+                  "y": 193.888
+                },
+                {
+                  "x": 29.025,
+                  "y": 304.392
+                },
+                {
+                  "x": 116.452,
+                  "y": 304.392
+                },
+                {
+                  "x": 139.529,
+                  "y": 281.315
+                },
+                {
+                  "x": 139.529,
+                  "y": 216.965
+                },
+                {
+                  "x": 116.452,
+                  "y": 193.888
+                },
+                {
+                  "x": 87.427,
+                  "y": 193.888
+                },
+                {
+                  "x": 110.504,
+                  "y": 170.811
+                },
+                {
+                  "x": 110.504,
+                  "y": 106.461
+                },
+                {
+                  "x": 87.427,
+                  "y": 83.384
+                },
+                {
+                  "x": 23.077,
+                  "y": 83.384
+                },
+                {
+                  "x": 0,
+                  "y": 106.461
+                }
+              ]
+            },
+            "holes": [
+              {
+                "points": [
+                  {
+                    "x": 473.767,
+                    "y": 2.016
+                  },
+                  {
+                    "x": 475.013,
+                    "y": 21.008
+                  },
+                  {
+                    "x": 477.698,
+                    "y": 34.512
+                  },
+                  {
+                    "x": 482.124,
+                    "y": 47.55
+                  },
+                  {
+                    "x": 488.214,
+                    "y": 59.9
+                  },
+                  {
+                    "x": 495.864,
+                    "y": 71.348
+                  },
+                  {
+                    "x": 504.942,
+                    "y": 81.701
+                  },
+                  {
+                    "x": 515.295,
+                    "y": 90.779
+                  },
+                  {
+                    "x": 526.743,
+                    "y": 98.429
+                  },
+                  {
+                    "x": 539.093,
+                    "y": 104.519
+                  },
+                  {
+                    "x": 552.131,
+                    "y": 108.945
+                  },
+                  {
+                    "x": 565.635,
+                    "y": 111.63
+                  },
+                  {
+                    "x": 584.627,
+                    "y": 112.876
+                  },
+                  {
+                    "x": 584.627,
+                    "y": 2.016
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 423.807,
+                    "y": 8.587
+                  },
+                  {
+                    "x": 413.179,
+                    "y": 10.701
+                  },
+                  {
+                    "x": 403.168,
+                    "y": 14.849
+                  },
+                  {
+                    "x": 394.159,
+                    "y": 20.869
+                  },
+                  {
+                    "x": 386.497,
+                    "y": 28.531
+                  },
+                  {
+                    "x": 380.476,
+                    "y": 37.541
+                  },
+                  {
+                    "x": 376.33,
+                    "y": 47.552
+                  },
+                  {
+                    "x": 374.216,
+                    "y": 58.181
+                  },
+                  {
+                    "x": 374.216,
+                    "y": 69.018
+                  },
+                  {
+                    "x": 376.33,
+                    "y": 79.645
+                  },
+                  {
+                    "x": 380.478,
+                    "y": 89.657
+                  },
+                  {
+                    "x": 386.498,
+                    "y": 98.666
+                  },
+                  {
+                    "x": 394.16,
+                    "y": 106.328
+                  },
+                  {
+                    "x": 403.17,
+                    "y": 112.349
+                  },
+                  {
+                    "x": 413.181,
+                    "y": 116.495
+                  },
+                  {
+                    "x": 423.81,
+                    "y": 118.609
+                  },
+                  {
+                    "x": 434.647,
+                    "y": 118.609
+                  },
+                  {
+                    "x": 445.275,
+                    "y": 116.495
+                  },
+                  {
+                    "x": 455.286,
+                    "y": 112.347
+                  },
+                  {
+                    "x": 464.295,
+                    "y": 106.327
+                  },
+                  {
+                    "x": 471.957,
+                    "y": 98.665
+                  },
+                  {
+                    "x": 477.978,
+                    "y": 89.655
+                  },
+                  {
+                    "x": 482.124,
+                    "y": 79.644
+                  },
+                  {
+                    "x": 484.238,
+                    "y": 69.015
+                  },
+                  {
+                    "x": 484.238,
+                    "y": 58.178
+                  },
+                  {
+                    "x": 482.124,
+                    "y": 47.55
+                  },
+                  {
+                    "x": 477.976,
+                    "y": 37.539
+                  },
+                  {
+                    "x": 471.956,
+                    "y": 28.529
+                  },
+                  {
+                    "x": 464.294,
+                    "y": 20.868
+                  },
+                  {
+                    "x": 455.284,
+                    "y": 14.847
+                  },
+                  {
+                    "x": 445.273,
+                    "y": 10.701
+                  },
+                  {
+                    "x": 434.644,
+                    "y": 8.587
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 222.511,
+                    "y": 9.644
+                  },
+                  {
+                    "x": 328.472,
+                    "y": 116.496
+                  },
+                  {
+                    "x": 372.994,
+                    "y": 9.644
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 167.762,
+                    "y": 47.042
+                  },
+                  {
+                    "x": 110.504,
+                    "y": 118.842
+                  },
+                  {
+                    "x": 130.94,
+                    "y": 208.375
+                  },
+                  {
+                    "x": 213.681,
+                    "y": 248.22
+                  },
+                  {
+                    "x": 296.422,
+                    "y": 208.373
+                  },
+                  {
+                    "x": 316.856,
+                    "y": 118.84
+                  },
+                  {
+                    "x": 259.597,
+                    "y": 47.042
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 466.303,
+                    "y": 109.336
+                  },
+                  {
+                    "x": 458.893,
+                    "y": 110.51
+                  },
+                  {
+                    "x": 451.835,
+                    "y": 114.106
+                  },
+                  {
+                    "x": 446.234,
+                    "y": 119.707
+                  },
+                  {
+                    "x": 442.638,
+                    "y": 126.765
+                  },
+                  {
+                    "x": 441.464,
+                    "y": 134.175
+                  },
+                  {
+                    "x": 441.464,
+                    "y": 195.001
+                  },
+                  {
+                    "x": 442.638,
+                    "y": 202.411
+                  },
+                  {
+                    "x": 446.234,
+                    "y": 209.469
+                  },
+                  {
+                    "x": 451.835,
+                    "y": 215.07
+                  },
+                  {
+                    "x": 458.893,
+                    "y": 218.666
+                  },
+                  {
+                    "x": 466.303,
+                    "y": 219.84
+                  },
+                  {
+                    "x": 474.236,
+                    "y": 219.84
+                  },
+                  {
+                    "x": 592.167,
+                    "y": 337.771
+                  },
+                  {
+                    "x": 592.167,
+                    "y": 219.84
+                  },
+                  {
+                    "x": 551.968,
+                    "y": 219.84
+                  },
+                  {
+                    "x": 551.968,
+                    "y": 109.336
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 316.053,
+                    "y": 116.496
+                  },
+                  {
+                    "x": 347.555,
+                    "y": 208.373
+                  },
+                  {
+                    "x": 296.423,
+                    "y": 208.373
+                  },
+                  {
+                    "x": 243.391,
+                    "y": 300.228
+                  },
+                  {
+                    "x": 296.423,
+                    "y": 392.082
+                  },
+                  {
+                    "x": 402.487,
+                    "y": 392.082
+                  },
+                  {
+                    "x": 455.519,
+                    "y": 300.228
+                  },
+                  {
+                    "x": 402.487,
+                    "y": 208.373
+                  },
+                  {
+                    "x": 444.682,
+                    "y": 208.373
+                  },
+                  {
+                    "x": 413.181,
+                    "y": 116.496
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 184.698,
+                    "y": 240.391
+                  },
+                  {
+                    "x": 179.12,
+                    "y": 241.161
+                  },
+                  {
+                    "x": 173.666,
+                    "y": 242.69
+                  },
+                  {
+                    "x": 168.405,
+                    "y": 244.95
+                  },
+                  {
+                    "x": 163.393,
+                    "y": 247.907
+                  },
+                  {
+                    "x": 158.681,
+                    "y": 251.515
+                  },
+                  {
+                    "x": 154.31,
+                    "y": 255.727
+                  },
+                  {
+                    "x": 150.311,
+                    "y": 260.493
+                  },
+                  {
+                    "x": 146.717,
+                    "y": 265.762
+                  },
+                  {
+                    "x": 143.547,
+                    "y": 271.479
+                  },
+                  {
+                    "x": 140.829,
+                    "y": 277.593
+                  },
+                  {
+                    "x": 138.577,
+                    "y": 284.044
+                  },
+                  {
+                    "x": 136.781,
+                    "y": 290.869
+                  },
+                  {
+                    "x": 134.745,
+                    "y": 304.83
+                  },
+                  {
+                    "x": 134.722,
+                    "y": 319.266
+                  },
+                  {
+                    "x": 136.72,
+                    "y": 333.563
+                  },
+                  {
+                    "x": 140.646,
+                    "y": 347.114
+                  },
+                  {
+                    "x": 143.358,
+                    "y": 353.63
+                  },
+                  {
+                    "x": 146.471,
+                    "y": 359.712
+                  },
+                  {
+                    "x": 150,
+                    "y": 365.397
+                  },
+                  {
+                    "x": 153.922,
+                    "y": 370.627
+                  },
+                  {
+                    "x": 158.203,
+                    "y": 375.354
+                  },
+                  {
+                    "x": 162.816,
+                    "y": 379.529
+                  },
+                  {
+                    "x": 167.722,
+                    "y": 383.103
+                  },
+                  {
+                    "x": 172.883,
+                    "y": 386.033
+                  },
+                  {
+                    "x": 178.253,
+                    "y": 388.276
+                  },
+                  {
+                    "x": 183.773,
+                    "y": 389.796
+                  },
+                  {
+                    "x": 189.385,
+                    "y": 390.565
+                  },
+                  {
+                    "x": 195.016,
+                    "y": 390.565
+                  },
+                  {
+                    "x": 200.594,
+                    "y": 389.795
+                  },
+                  {
+                    "x": 206.048,
+                    "y": 388.265
+                  },
+                  {
+                    "x": 211.309,
+                    "y": 386.005
+                  },
+                  {
+                    "x": 216.321,
+                    "y": 383.049
+                  },
+                  {
+                    "x": 221.033,
+                    "y": 379.44
+                  },
+                  {
+                    "x": 225.404,
+                    "y": 375.229
+                  },
+                  {
+                    "x": 229.403,
+                    "y": 370.462
+                  },
+                  {
+                    "x": 232.997,
+                    "y": 365.194
+                  },
+                  {
+                    "x": 236.167,
+                    "y": 359.477
+                  },
+                  {
+                    "x": 238.885,
+                    "y": 353.362
+                  },
+                  {
+                    "x": 241.137,
+                    "y": 346.912
+                  },
+                  {
+                    "x": 242.933,
+                    "y": 340.087
+                  },
+                  {
+                    "x": 244.968,
+                    "y": 326.125
+                  },
+                  {
+                    "x": 244.992,
+                    "y": 311.69
+                  },
+                  {
+                    "x": 242.994,
+                    "y": 297.393
+                  },
+                  {
+                    "x": 239.068,
+                    "y": 283.841
+                  },
+                  {
+                    "x": 236.356,
+                    "y": 277.326
+                  },
+                  {
+                    "x": 233.243,
+                    "y": 271.244
+                  },
+                  {
+                    "x": 229.714,
+                    "y": 265.558
+                  },
+                  {
+                    "x": 225.792,
+                    "y": 260.329
+                  },
+                  {
+                    "x": 221.511,
+                    "y": 255.601
+                  },
+                  {
+                    "x": 216.898,
+                    "y": 251.427
+                  },
+                  {
+                    "x": 211.992,
+                    "y": 247.853
+                  },
+                  {
+                    "x": 206.831,
+                    "y": 244.922
+                  },
+                  {
+                    "x": 201.461,
+                    "y": 242.679
+                  },
+                  {
+                    "x": 195.941,
+                    "y": 241.16
+                  },
+                  {
+                    "x": 190.329,
+                    "y": 240.391
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 492.908,
+                    "y": 280.132
+                  },
+                  {
+                    "x": 484.332,
+                    "y": 280.977
+                  },
+                  {
+                    "x": 475.84,
+                    "y": 283.553
+                  },
+                  {
+                    "x": 468.011,
+                    "y": 287.737
+                  },
+                  {
+                    "x": 461.15,
+                    "y": 293.368
+                  },
+                  {
+                    "x": 455.519,
+                    "y": 300.229
+                  },
+                  {
+                    "x": 451.335,
+                    "y": 308.058
+                  },
+                  {
+                    "x": 448.759,
+                    "y": 316.55
+                  },
+                  {
+                    "x": 447.914,
+                    "y": 325.126
+                  },
+                  {
+                    "x": 447.914,
+                    "y": 375.901
+                  },
+                  {
+                    "x": 448.98,
+                    "y": 381.26
+                  },
+                  {
+                    "x": 452.309,
+                    "y": 386.241
+                  },
+                  {
+                    "x": 457.29,
+                    "y": 389.57
+                  },
+                  {
+                    "x": 462.649,
+                    "y": 390.636
+                  },
+                  {
+                    "x": 533.579,
+                    "y": 390.636
+                  },
+                  {
+                    "x": 540.989,
+                    "y": 389.462
+                  },
+                  {
+                    "x": 548.047,
+                    "y": 385.866
+                  },
+                  {
+                    "x": 553.648,
+                    "y": 380.265
+                  },
+                  {
+                    "x": 557.244,
+                    "y": 373.207
+                  },
+                  {
+                    "x": 558.418,
+                    "y": 365.797
+                  },
+                  {
+                    "x": 558.418,
+                    "y": 320.089
+                  },
+                  {
+                    "x": 557.441,
+                    "y": 311.42
+                  },
+                  {
+                    "x": 554.462,
+                    "y": 302.905
+                  },
+                  {
+                    "x": 549.662,
+                    "y": 295.267
+                  },
+                  {
+                    "x": 543.283,
+                    "y": 288.888
+                  },
+                  {
+                    "x": 535.645,
+                    "y": 284.088
+                  },
+                  {
+                    "x": 527.13,
+                    "y": 281.109
+                  },
+                  {
+                    "x": 518.461,
+                    "y": 280.132
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 23.131,
+                    "y": 319.266
+                  },
+                  {
+                    "x": 24.711,
+                    "y": 335.303
+                  },
+                  {
+                    "x": 27.856,
+                    "y": 345.672
+                  },
+                  {
+                    "x": 32.965,
+                    "y": 355.229
+                  },
+                  {
+                    "x": 39.839,
+                    "y": 363.605
+                  },
+                  {
+                    "x": 48.215,
+                    "y": 370.479
+                  },
+                  {
+                    "x": 57.772,
+                    "y": 375.588
+                  },
+                  {
+                    "x": 68.141,
+                    "y": 378.733
+                  },
+                  {
+                    "x": 78.926,
+                    "y": 379.795
+                  },
+                  {
+                    "x": 89.711,
+                    "y": 378.733
+                  },
+                  {
+                    "x": 100.08,
+                    "y": 375.588
+                  },
+                  {
+                    "x": 109.637,
+                    "y": 370.479
+                  },
+                  {
+                    "x": 118.013,
+                    "y": 363.605
+                  },
+                  {
+                    "x": 124.887,
+                    "y": 355.229
+                  },
+                  {
+                    "x": 129.996,
+                    "y": 345.672
+                  },
+                  {
+                    "x": 133.141,
+                    "y": 335.303
+                  },
+                  {
+                    "x": 134.721,
+                    "y": 319.266
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "diagnostics": []
+      },
+      "placementOrder": [
+        "shapes-17-14",
+        "shapes-17-15",
+        "shapes-17-6",
+        "shapes-17-13",
+        "shapes-17-7",
+        "shapes-17-1",
+        "shapes-17-2",
+        "shapes-17-3",
+        "shapes-17-5",
+        "shapes-17-8",
+        "shapes-17-9",
+        "shapes-17-10",
+        "shapes-17-11",
+        "shapes-17-4"
+      ],
+      "unplacedSourcePieceIds": [
+        "shapes-17-12",
+        "shapes-17-16",
+        "shapes-17-17"
+      ]
+    },
+    "portfolio": {
+      "status": "completed",
+      "terminationReason": "capacity_subset_settled",
+      "source": "shared-archive",
+      "placements": [
+        {
+          "pieceId": "shapes-17-14",
+          "sourcePieceId": "shapes-17-14",
+          "placementReference": {
+            "x": -4.854540378443862,
+            "y": -6.064
+          },
+          "transform": {
+            "translateX": 455.519,
+            "translateY": 208.373,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-15",
+          "sourcePieceId": "shapes-17-15",
+          "placementReference": {
+            "x": -5.175791218182361,
+            "y": -5.829
+          },
+          "transform": {
+            "translateX": 166.63800000000003,
+            "translateY": 2.275999999999982,
+            "rotationDeg": 25.713742974913643,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-6",
+          "sourcePieceId": "shapes-17-6",
+          "placementReference": {
+            "x": -5.265,
+            "y": -5.264
+          },
+          "transform": {
+            "translateX": 139.88100000000003,
+            "translateY": 394.35299999999995,
+            "rotationDeg": 176.06951450945465,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "shapes-17-13",
+          "sourcePieceId": "shapes-17-13",
+          "placementReference": {
+            "x": -6.454,
+            "y": -9.036
+          },
+          "transform": {
+            "translateX": 411.869,
+            "translateY": 254.31199999999998,
+            "rotationDeg": 125.53754064231342,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "shapes-17-7",
+          "sourcePieceId": "shapes-17-7",
+          "placementReference": {
+            "x": -7.878,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 372.994,
+            "translateY": 9.643999999999977,
+            "rotationDeg": 112.6198942362585,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-1",
+          "sourcePieceId": "shapes-17-1",
+          "placementReference": {
+            "x": -5.277,
+            "y": -5.277
+          },
+          "transform": {
+            "translateX": 379.63300000000004,
+            "translateY": 3.1699999999999875,
+            "rotationDeg": 5.6237909817505365,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-2",
+          "sourcePieceId": "shapes-17-2",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 551.9680000000001,
+            "translateY": 109.33599999999998,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-3",
+          "sourcePieceId": "shapes-17-3",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 447.914,
+            "translateY": 280.132,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-5",
+          "sourcePieceId": "shapes-17-5",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 584.627,
+            "translateY": 2.015999999999991,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-8",
+          "sourcePieceId": "shapes-17-8",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 592.167,
+            "translateY": 219.84,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-9",
+          "sourcePieceId": "shapes-17-9",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 29.025000000000006,
+            "translateY": 304.392,
+            "rotationDeg": 270,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-10",
+          "sourcePieceId": "shapes-17-10",
+          "placementReference": {
+            "x": -5.252,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 110.50400000000002,
+            "translateY": 83.38399999999999,
+            "rotationDeg": 90,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-11",
+          "sourcePieceId": "shapes-17-11",
+          "placementReference": {
+            "x": -8.498,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 175.012,
+            "translateY": 0,
+            "rotationDeg": 116.56505117707799,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "shapes-17-4",
+          "sourcePieceId": "shapes-17-4",
+          "placementReference": {
+            "x": -5.795,
+            "y": -5.252
+          },
+          "transform": {
+            "translateX": 23.13100000000003,
+            "translateY": 319.26599999999996,
+            "rotationDeg": 0,
+            "mirrored": false
+          }
+        }
+      ],
+      "unplacedPieceIds": [
+        "shapes-17-12",
+        "shapes-17-16",
+        "shapes-17-17"
+      ],
+      "score": {
+        "unplacedCount": 3,
+        "sharedCollisionBoundaryLengthMm": 113.334,
+        "sharedCollisionBoundaryContactUnits": 1.473131,
+        "sharedCollisionBoundaryContactBand": 1,
+        "nearCompleteStructuralContactCount": 0,
+        "dominantNearCompleteStructuralContactCount": 0,
+        "largestNetFreeMaterialRegionAreaMm2": 62981.21780900005,
+        "freeMaterialRegionCount": 1,
+        "freeMaterialHoleCount": 9,
+        "freeMaterialSliverMetric": 822.7536109648937,
+        "collisionBoundsWorstNormalizedSheetConsumption": 0.9869450000000001,
+        "collisionBoundsNormalizedSpanSum": 1.9671500000000002,
+        "collisionBoundsAreaMm2": 232178.021694,
+        "collisionBoundsSpanMm": 984.249,
+        "canonicalEnclosedCavityCount": 0
+      },
+      "diagnostics": [
+        {
+          "code": "capacity_subset_settled",
+          "message": "intrinsic-capacity-v1 settled 14 placed; 3 unplaced; origin cold-search; q0; hash 01b2060d87752bb36eebfd4eb8602709687d5cb00c71b8feaec14a6e7cf9ba12"
+        }
+      ]
+    },
+    "capacityTrace": {
+      "routing": "bounded-complete-archive-miss",
+      "preflight": {
+        "kind": "inconclusive",
+        "measurements": {
+          "pieceCount": 17,
+          "sheetWidthGrid": 600000,
+          "sheetHeightGrid": 400000,
+          "sheetDoubledAreaGrid2": "480000000000",
+          "minimumDoubledCollisionAreaSumGrid2": "420710030874",
+          "minimumCollisionAreaPressurePpm": "876480",
+          "maximumSingletonSpanPressurePpm": "502945",
+          "singletonInfeasiblePieceIds": []
+        }
+      },
+      "prefixes": {
+        "capturedCount": 9,
+        "fittingCount": 4,
+        "rejectedCount": 5,
+        "terminalizedCount": 3,
+        "descriptors": [
+          {
+            "role": "canonical-grid",
+            "depth": 4
+          },
+          {
+            "role": "canonical-grid",
+            "depth": 8
+          },
+          {
+            "role": "canonical-grid",
+            "depth": 12
+          },
+          {
+            "role": "legacy-absolute-envelope",
+            "depth": 4
+          },
+          {
+            "role": "legacy-absolute-envelope",
+            "depth": 8
+          },
+          {
+            "role": "legacy-absolute-envelope",
+            "depth": 12
+          },
+          {
+            "role": "open-pocket-first",
+            "depth": 4
+          },
+          {
+            "role": "open-pocket-first",
+            "depth": 8
+          },
+          {
+            "role": "open-pocket-first",
+            "depth": 12
+          }
+        ]
+      },
+      "prefixIncumbent": {
+        "sourceRole": "legacy-absolute-envelope",
+        "prefixDepth": 8,
+        "placedCount": 8,
+        "placedMaterialAreaMm2": 104194.3619575,
+        "selectedRotationDeg": 0,
+        "canonicalGeometryHash": "84a2696e8904d696aec367c327a4c7e1d4116dcc264872bc69632afa12c3f8cd"
+      },
+      "coldSearch": {
+        "beamWidth": 16,
+        "localLegalPlacementFanout": 3,
+        "placementEvaluationCap": 69632,
+        "placementEvaluationQuotaPerDepth": 4096,
+        "consumedPlacementEvaluations": 61774,
+        "auxiliaryPlacementEvaluations": 0,
+        "prunedByAttainableCount": 0,
+        "prunedByAttainableMaterial": 0,
+        "deduplicatedSuccessors": 35,
+        "fitRejectedCandidates": 42535,
+        "invalidCandidates": 0,
+        "endpointFitRejections": 0,
+        "completedDepths": 17,
+        "depthQuotaExhaustions": 15,
+        "pieceCount": 17,
+        "settlement": "evaluation-cap",
+        "topologyRetentionDepths": [
+          {
+            "depth": 16,
+            "pieceId": "shapes-17-4",
+            "measuredSurvivorCount": 36,
+            "retainedCount": 16,
+            "bestAccountingStratumCount": 20,
+            "topologyMeasurementCount": 36,
+            "topologyMeasurementMs": 8.399622999999337,
+            "legalCandidateCount": 4144,
+            "contactMeasuredCandidateCount": 46,
+            "positiveContactCandidateCount": 10,
+            "contactMeasurementMs": 1.0573779999995168,
+            "contactSelectedSuccessorCount": 5,
+            "contactDeduplicatedSuccessorCount": 0,
+            "contactRetainedSuccessorCount": 5,
+            "representatives": [
+              {
+                "role": "terminal-objective",
+                "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:147:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4737671:y4:20167:point-121:1:x6:4750131:y5:210087:point-221:1:x6:4776981:y5:345127:point-321:1:x6:4821241:y5:475507:point-421:1:x6:4882141:y5:599007:point-521:1:x6:4958641:y5:713487:point-621:1:x6:5049421:y5:817017:point-721:1:x6:5152951:y5:907797:point-821:1:x6:5267431:y5:984297:point-922:1:x6:5390931:y6:1045198:point-1022:1:x6:5521311:y6:1089458:point-1122:1:x6:5656351:y6:1116308:point-1222:1:x6:5846271:y6:1128768:point-1320:1:x6:5846271:y4:20168:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-12606:12:polygon-ring587:11:point-count2:177:point-020:1:x4:48621:y6:3043927:point-120:1:x4:64421:y6:3204297:point-220:1:x4:95871:y6:3307987:point-321:1:x5:146961:y6:3403557:point-421:1:x5:215701:y6:3487317:point-521:1:x5:299461:y6:3556057:point-621:1:x5:395031:y6:3607147:point-721:1:x5:498721:y6:3638597:point-821:1:x5:606571:y6:3649217:point-921:1:x5:714421:y6:3638598:point-1021:1:x5:818111:y6:3607148:point-1121:1:x5:913681:y6:3556058:point-1221:1:x5:997441:y6:3487318:point-1322:1:x6:1066181:y6:3403558:point-1422:1:x6:1117271:y6:3307988:point-1522:1:x6:1148721:y6:3204298:point-1622:1:x6:1164521:y6:3043928:entry-131007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132|placed=[\"shapes-17-1\",\"shapes-17-10\",\"shapes-17-11\",\"shapes-17-13\",\"shapes-17-14\",\"shapes-17-15\",\"shapes-17-2\",\"shapes-17-3\",\"shapes-17-4\",\"shapes-17-5\",\"shapes-17-6\",\"shapes-17-7\",\"shapes-17-8\",\"shapes-17-9\"]",
+                "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:137:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4737671:y4:20167:point-121:1:x6:4750131:y5:210087:point-221:1:x6:4776981:y5:345127:point-321:1:x6:4821241:y5:475507:point-421:1:x6:4882141:y5:599007:point-521:1:x6:4958641:y5:713487:point-621:1:x6:5049421:y5:817017:point-721:1:x6:5152951:y5:907797:point-821:1:x6:5267431:y5:984297:point-922:1:x6:5390931:y6:1045198:point-1022:1:x6:5521311:y6:1089458:point-1122:1:x6:5656351:y6:1116308:point-1222:1:x6:5846271:y6:1128768:point-1320:1:x6:5846271:y4:20168:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-121007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132|placed=[\"shapes-17-1\",\"shapes-17-10\",\"shapes-17-11\",\"shapes-17-13\",\"shapes-17-14\",\"shapes-17-15\",\"shapes-17-2\",\"shapes-17-3\",\"shapes-17-5\",\"shapes-17-6\",\"shapes-17-7\",\"shapes-17-8\",\"shapes-17-9\"]",
+                "decision": "place",
+                "proposalRole": "compactness",
+                "pieceId": "shapes-17-4",
+                "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:147:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4737671:y4:20167:point-121:1:x6:4750131:y5:210087:point-221:1:x6:4776981:y5:345127:point-321:1:x6:4821241:y5:475507:point-421:1:x6:4882141:y5:599007:point-521:1:x6:4958641:y5:713487:point-621:1:x6:5049421:y5:817017:point-721:1:x6:5152951:y5:907797:point-821:1:x6:5267431:y5:984297:point-922:1:x6:5390931:y6:1045198:point-1022:1:x6:5521311:y6:1089458:point-1122:1:x6:5656351:y6:1116308:point-1222:1:x6:5846271:y6:1128768:point-1320:1:x6:5846271:y4:20168:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-12606:12:polygon-ring587:11:point-count2:177:point-020:1:x4:48621:y6:3043927:point-120:1:x4:64421:y6:3204297:point-220:1:x4:95871:y6:3307987:point-321:1:x5:146961:y6:3403557:point-421:1:x5:215701:y6:3487317:point-521:1:x5:299461:y6:3556057:point-621:1:x5:395031:y6:3607147:point-721:1:x5:498721:y6:3638597:point-821:1:x5:606571:y6:3649217:point-921:1:x5:714421:y6:3638598:point-1021:1:x5:818111:y6:3607148:point-1121:1:x5:913681:y6:3556058:point-1221:1:x5:997441:y6:3487318:point-1322:1:x6:1066181:y6:3403558:point-1422:1:x6:1117271:y6:3307988:point-1522:1:x6:1148721:y6:3204298:point-1622:1:x6:1164521:y6:3043928:entry-131007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132",
+                "placedCount": 14,
+                "placedDoubledMaterialAreaGrid2": "294455444315",
+                "cavities": {
+                  "count": 0,
+                  "totalAreaMm2": 0
+                },
+                "gridSpan": {
+                  "widthGrid": 592167,
+                  "heightGrid": 392082
+                },
+                "topology": {
+                  "topology": {
+                    "enclosedCavityCount": 0,
+                    "largestOccupiedHullGapRatio": 0.18831274710702284,
+                    "occupiedEnvelopeAspectRatio": 1.5103141689748574,
+                    "positiveContactComponentCount": 10,
+                    "isolatedPieceCount": 7,
+                    "largestPositiveContactComponentSize": 3,
+                    "largestPositiveContactComponentRatio": 0.21428571428571427
+                  },
+                  "hullGapDoubledAreaGrid2": 83598391579,
+                  "hullDoubledAreaGrid2": 443933790268
+                },
+                "retained": true
+              },
+              {
+                "role": "minimum-components",
+                "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:147:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4737671:y4:20167:point-121:1:x6:4750131:y5:210087:point-221:1:x6:4776981:y5:345127:point-321:1:x6:4821241:y5:475507:point-421:1:x6:4882141:y5:599007:point-521:1:x6:4958641:y5:713487:point-621:1:x6:5049421:y5:817017:point-721:1:x6:5152951:y5:907797:point-821:1:x6:5267431:y5:984297:point-922:1:x6:5390931:y6:1045198:point-1022:1:x6:5521311:y6:1089458:point-1122:1:x6:5656351:y6:1116308:point-1222:1:x6:5846271:y6:1128768:point-1320:1:x6:5846271:y4:20168:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-12606:12:polygon-ring587:11:point-count2:177:point-020:1:x4:48621:y6:3043927:point-120:1:x4:64421:y6:3204297:point-220:1:x4:95871:y6:3307987:point-321:1:x5:146961:y6:3403557:point-421:1:x5:215701:y6:3487317:point-521:1:x5:299461:y6:3556057:point-621:1:x5:395031:y6:3607147:point-721:1:x5:498721:y6:3638597:point-821:1:x5:606571:y6:3649217:point-921:1:x5:714421:y6:3638598:point-1021:1:x5:818111:y6:3607148:point-1121:1:x5:913681:y6:3556058:point-1221:1:x5:997441:y6:3487318:point-1322:1:x6:1066181:y6:3403558:point-1422:1:x6:1117271:y6:3307988:point-1522:1:x6:1148721:y6:3204298:point-1622:1:x6:1164521:y6:3043928:entry-131007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132|placed=[\"shapes-17-1\",\"shapes-17-10\",\"shapes-17-11\",\"shapes-17-13\",\"shapes-17-14\",\"shapes-17-15\",\"shapes-17-2\",\"shapes-17-3\",\"shapes-17-4\",\"shapes-17-5\",\"shapes-17-6\",\"shapes-17-7\",\"shapes-17-8\",\"shapes-17-9\"]",
+                "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:137:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4737671:y4:20167:point-121:1:x6:4750131:y5:210087:point-221:1:x6:4776981:y5:345127:point-321:1:x6:4821241:y5:475507:point-421:1:x6:4882141:y5:599007:point-521:1:x6:4958641:y5:713487:point-621:1:x6:5049421:y5:817017:point-721:1:x6:5152951:y5:907797:point-821:1:x6:5267431:y5:984297:point-922:1:x6:5390931:y6:1045198:point-1022:1:x6:5521311:y6:1089458:point-1122:1:x6:5656351:y6:1116308:point-1222:1:x6:5846271:y6:1128768:point-1320:1:x6:5846271:y4:20168:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-121007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132|placed=[\"shapes-17-1\",\"shapes-17-10\",\"shapes-17-11\",\"shapes-17-13\",\"shapes-17-14\",\"shapes-17-15\",\"shapes-17-2\",\"shapes-17-3\",\"shapes-17-5\",\"shapes-17-6\",\"shapes-17-7\",\"shapes-17-8\",\"shapes-17-9\"]",
+                "decision": "place",
+                "proposalRole": "compactness",
+                "pieceId": "shapes-17-4",
+                "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:147:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4737671:y4:20167:point-121:1:x6:4750131:y5:210087:point-221:1:x6:4776981:y5:345127:point-321:1:x6:4821241:y5:475507:point-421:1:x6:4882141:y5:599007:point-521:1:x6:4958641:y5:713487:point-621:1:x6:5049421:y5:817017:point-721:1:x6:5152951:y5:907797:point-821:1:x6:5267431:y5:984297:point-922:1:x6:5390931:y6:1045198:point-1022:1:x6:5521311:y6:1089458:point-1122:1:x6:5656351:y6:1116308:point-1222:1:x6:5846271:y6:1128768:point-1320:1:x6:5846271:y4:20168:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-12606:12:polygon-ring587:11:point-count2:177:point-020:1:x4:48621:y6:3043927:point-120:1:x4:64421:y6:3204297:point-220:1:x4:95871:y6:3307987:point-321:1:x5:146961:y6:3403557:point-421:1:x5:215701:y6:3487317:point-521:1:x5:299461:y6:3556057:point-621:1:x5:395031:y6:3607147:point-721:1:x5:498721:y6:3638597:point-821:1:x5:606571:y6:3649217:point-921:1:x5:714421:y6:3638598:point-1021:1:x5:818111:y6:3607148:point-1121:1:x5:913681:y6:3556058:point-1221:1:x5:997441:y6:3487318:point-1322:1:x6:1066181:y6:3403558:point-1422:1:x6:1117271:y6:3307988:point-1522:1:x6:1148721:y6:3204298:point-1622:1:x6:1164521:y6:3043928:entry-131007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132",
+                "placedCount": 14,
+                "placedDoubledMaterialAreaGrid2": "294455444315",
+                "cavities": {
+                  "count": 0,
+                  "totalAreaMm2": 0
+                },
+                "gridSpan": {
+                  "widthGrid": 592167,
+                  "heightGrid": 392082
+                },
+                "topology": {
+                  "topology": {
+                    "enclosedCavityCount": 0,
+                    "largestOccupiedHullGapRatio": 0.18831274710702284,
+                    "occupiedEnvelopeAspectRatio": 1.5103141689748574,
+                    "positiveContactComponentCount": 10,
+                    "isolatedPieceCount": 7,
+                    "largestPositiveContactComponentSize": 3,
+                    "largestPositiveContactComponentRatio": 0.21428571428571427
+                  },
+                  "hullGapDoubledAreaGrid2": 83598391579,
+                  "hullDoubledAreaGrid2": 443933790268
+                },
+                "retained": true
+              },
+              {
+                "role": "minimum-isolated",
+                "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:147:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4737671:y4:20167:point-121:1:x6:4750131:y5:210087:point-221:1:x6:4776981:y5:345127:point-321:1:x6:4821241:y5:475507:point-421:1:x6:4882141:y5:599007:point-521:1:x6:4958641:y5:713487:point-621:1:x6:5049421:y5:817017:point-721:1:x6:5152951:y5:907797:point-821:1:x6:5267431:y5:984297:point-922:1:x6:5390931:y6:1045198:point-1022:1:x6:5521311:y6:1089458:point-1122:1:x6:5656351:y6:1116308:point-1222:1:x6:5846271:y6:1128768:point-1320:1:x6:5846271:y4:20168:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-12606:12:polygon-ring587:11:point-count2:177:point-020:1:x4:48621:y6:3043927:point-120:1:x4:64421:y6:3204297:point-220:1:x4:95871:y6:3307987:point-321:1:x5:146961:y6:3403557:point-421:1:x5:215701:y6:3487317:point-521:1:x5:299461:y6:3556057:point-621:1:x5:395031:y6:3607147:point-721:1:x5:498721:y6:3638597:point-821:1:x5:606571:y6:3649217:point-921:1:x5:714421:y6:3638598:point-1021:1:x5:818111:y6:3607148:point-1121:1:x5:913681:y6:3556058:point-1221:1:x5:997441:y6:3487318:point-1322:1:x6:1066181:y6:3403558:point-1422:1:x6:1117271:y6:3307988:point-1522:1:x6:1148721:y6:3204298:point-1622:1:x6:1164521:y6:3043928:entry-131007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132|placed=[\"shapes-17-1\",\"shapes-17-10\",\"shapes-17-11\",\"shapes-17-13\",\"shapes-17-14\",\"shapes-17-15\",\"shapes-17-2\",\"shapes-17-3\",\"shapes-17-4\",\"shapes-17-5\",\"shapes-17-6\",\"shapes-17-7\",\"shapes-17-8\",\"shapes-17-9\"]",
+                "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:137:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4737671:y4:20167:point-121:1:x6:4750131:y5:210087:point-221:1:x6:4776981:y5:345127:point-321:1:x6:4821241:y5:475507:point-421:1:x6:4882141:y5:599007:point-521:1:x6:4958641:y5:713487:point-621:1:x6:5049421:y5:817017:point-721:1:x6:5152951:y5:907797:point-821:1:x6:5267431:y5:984297:point-922:1:x6:5390931:y6:1045198:point-1022:1:x6:5521311:y6:1089458:point-1122:1:x6:5656351:y6:1116308:point-1222:1:x6:5846271:y6:1128768:point-1320:1:x6:5846271:y4:20168:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-121007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132|placed=[\"shapes-17-1\",\"shapes-17-10\",\"shapes-17-11\",\"shapes-17-13\",\"shapes-17-14\",\"shapes-17-15\",\"shapes-17-2\",\"shapes-17-3\",\"shapes-17-5\",\"shapes-17-6\",\"shapes-17-7\",\"shapes-17-8\",\"shapes-17-9\"]",
+                "decision": "place",
+                "proposalRole": "compactness",
+                "pieceId": "shapes-17-4",
+                "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:147:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4737671:y4:20167:point-121:1:x6:4750131:y5:210087:point-221:1:x6:4776981:y5:345127:point-321:1:x6:4821241:y5:475507:point-421:1:x6:4882141:y5:599007:point-521:1:x6:4958641:y5:713487:point-621:1:x6:5049421:y5:817017:point-721:1:x6:5152951:y5:907797:point-821:1:x6:5267431:y5:984297:point-922:1:x6:5390931:y6:1045198:point-1022:1:x6:5521311:y6:1089458:point-1122:1:x6:5656351:y6:1116308:point-1222:1:x6:5846271:y6:1128768:point-1320:1:x6:5846271:y4:20168:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-12606:12:polygon-ring587:11:point-count2:177:point-020:1:x4:48621:y6:3043927:point-120:1:x4:64421:y6:3204297:point-220:1:x4:95871:y6:3307987:point-321:1:x5:146961:y6:3403557:point-421:1:x5:215701:y6:3487317:point-521:1:x5:299461:y6:3556057:point-621:1:x5:395031:y6:3607147:point-721:1:x5:498721:y6:3638597:point-821:1:x5:606571:y6:3649217:point-921:1:x5:714421:y6:3638598:point-1021:1:x5:818111:y6:3607148:point-1121:1:x5:913681:y6:3556058:point-1221:1:x5:997441:y6:3487318:point-1322:1:x6:1066181:y6:3403558:point-1422:1:x6:1117271:y6:3307988:point-1522:1:x6:1148721:y6:3204298:point-1622:1:x6:1164521:y6:3043928:entry-131007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132",
+                "placedCount": 14,
+                "placedDoubledMaterialAreaGrid2": "294455444315",
+                "cavities": {
+                  "count": 0,
+                  "totalAreaMm2": 0
+                },
+                "gridSpan": {
+                  "widthGrid": 592167,
+                  "heightGrid": 392082
+                },
+                "topology": {
+                  "topology": {
+                    "enclosedCavityCount": 0,
+                    "largestOccupiedHullGapRatio": 0.18831274710702284,
+                    "occupiedEnvelopeAspectRatio": 1.5103141689748574,
+                    "positiveContactComponentCount": 10,
+                    "isolatedPieceCount": 7,
+                    "largestPositiveContactComponentSize": 3,
+                    "largestPositiveContactComponentRatio": 0.21428571428571427
+                  },
+                  "hullGapDoubledAreaGrid2": 83598391579,
+                  "hullDoubledAreaGrid2": 443933790268
+                },
+                "retained": true
+              },
+              {
+                "role": "maximum-largest-component",
+                "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:147:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4737671:y4:20167:point-121:1:x6:4750131:y5:210087:point-221:1:x6:4776981:y5:345127:point-321:1:x6:4821241:y5:475507:point-421:1:x6:4882141:y5:599007:point-521:1:x6:4958641:y5:713487:point-621:1:x6:5049421:y5:817017:point-721:1:x6:5152951:y5:907797:point-821:1:x6:5267431:y5:984297:point-922:1:x6:5390931:y6:1045198:point-1022:1:x6:5521311:y6:1089458:point-1122:1:x6:5656351:y6:1116308:point-1222:1:x6:5846271:y6:1128768:point-1320:1:x6:5846271:y4:20168:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-12606:12:polygon-ring587:11:point-count2:177:point-020:1:x4:48621:y6:3043927:point-120:1:x4:64421:y6:3204297:point-220:1:x4:95871:y6:3307987:point-321:1:x5:146961:y6:3403557:point-421:1:x5:215701:y6:3487317:point-521:1:x5:299461:y6:3556057:point-621:1:x5:395031:y6:3607147:point-721:1:x5:498721:y6:3638597:point-821:1:x5:606571:y6:3649217:point-921:1:x5:714421:y6:3638598:point-1021:1:x5:818111:y6:3607148:point-1121:1:x5:913681:y6:3556058:point-1221:1:x5:997441:y6:3487318:point-1322:1:x6:1066181:y6:3403558:point-1422:1:x6:1117271:y6:3307988:point-1522:1:x6:1148721:y6:3204298:point-1622:1:x6:1164521:y6:3043928:entry-131007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132|placed=[\"shapes-17-1\",\"shapes-17-10\",\"shapes-17-11\",\"shapes-17-13\",\"shapes-17-14\",\"shapes-17-15\",\"shapes-17-2\",\"shapes-17-3\",\"shapes-17-4\",\"shapes-17-5\",\"shapes-17-6\",\"shapes-17-7\",\"shapes-17-8\",\"shapes-17-9\"]",
+                "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:137:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4737671:y4:20167:point-121:1:x6:4750131:y5:210087:point-221:1:x6:4776981:y5:345127:point-321:1:x6:4821241:y5:475507:point-421:1:x6:4882141:y5:599007:point-521:1:x6:4958641:y5:713487:point-621:1:x6:5049421:y5:817017:point-721:1:x6:5152951:y5:907797:point-821:1:x6:5267431:y5:984297:point-922:1:x6:5390931:y6:1045198:point-1022:1:x6:5521311:y6:1089458:point-1122:1:x6:5656351:y6:1116308:point-1222:1:x6:5846271:y6:1128768:point-1320:1:x6:5846271:y4:20168:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-121007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132|placed=[\"shapes-17-1\",\"shapes-17-10\",\"shapes-17-11\",\"shapes-17-13\",\"shapes-17-14\",\"shapes-17-15\",\"shapes-17-2\",\"shapes-17-3\",\"shapes-17-5\",\"shapes-17-6\",\"shapes-17-7\",\"shapes-17-8\",\"shapes-17-9\"]",
+                "decision": "place",
+                "proposalRole": "compactness",
+                "pieceId": "shapes-17-4",
+                "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:147:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4737671:y4:20167:point-121:1:x6:4750131:y5:210087:point-221:1:x6:4776981:y5:345127:point-321:1:x6:4821241:y5:475507:point-421:1:x6:4882141:y5:599007:point-521:1:x6:4958641:y5:713487:point-621:1:x6:5049421:y5:817017:point-721:1:x6:5152951:y5:907797:point-821:1:x6:5267431:y5:984297:point-922:1:x6:5390931:y6:1045198:point-1022:1:x6:5521311:y6:1089458:point-1122:1:x6:5656351:y6:1116308:point-1222:1:x6:5846271:y6:1128768:point-1320:1:x6:5846271:y4:20168:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-12606:12:polygon-ring587:11:point-count2:177:point-020:1:x4:48621:y6:3043927:point-120:1:x4:64421:y6:3204297:point-220:1:x4:95871:y6:3307987:point-321:1:x5:146961:y6:3403557:point-421:1:x5:215701:y6:3487317:point-521:1:x5:299461:y6:3556057:point-621:1:x5:395031:y6:3607147:point-721:1:x5:498721:y6:3638597:point-821:1:x5:606571:y6:3649217:point-921:1:x5:714421:y6:3638598:point-1021:1:x5:818111:y6:3607148:point-1121:1:x5:913681:y6:3556058:point-1221:1:x5:997441:y6:3487318:point-1322:1:x6:1066181:y6:3403558:point-1422:1:x6:1117271:y6:3307988:point-1522:1:x6:1148721:y6:3204298:point-1622:1:x6:1164521:y6:3043928:entry-131007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132",
+                "placedCount": 14,
+                "placedDoubledMaterialAreaGrid2": "294455444315",
+                "cavities": {
+                  "count": 0,
+                  "totalAreaMm2": 0
+                },
+                "gridSpan": {
+                  "widthGrid": 592167,
+                  "heightGrid": 392082
+                },
+                "topology": {
+                  "topology": {
+                    "enclosedCavityCount": 0,
+                    "largestOccupiedHullGapRatio": 0.18831274710702284,
+                    "occupiedEnvelopeAspectRatio": 1.5103141689748574,
+                    "positiveContactComponentCount": 10,
+                    "isolatedPieceCount": 7,
+                    "largestPositiveContactComponentSize": 3,
+                    "largestPositiveContactComponentRatio": 0.21428571428571427
+                  },
+                  "hullGapDoubledAreaGrid2": 83598391579,
+                  "hullDoubledAreaGrid2": 443933790268
+                },
+                "retained": true
+              },
+              {
+                "role": "minimum-hull-waste",
+                "decisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:147:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4739391:y4:25207:point-121:1:x6:4751851:y5:215127:point-221:1:x6:4778701:y5:350167:point-321:1:x6:4822961:y5:480547:point-421:1:x6:4883861:y5:604047:point-521:1:x6:4960361:y5:718527:point-621:1:x6:5051141:y5:822057:point-721:1:x6:5154671:y5:912837:point-821:1:x6:5269151:y5:989337:point-922:1:x6:5392651:y6:1050238:point-1022:1:x6:5523031:y6:1094498:point-1122:1:x6:5658071:y6:1121348:point-1222:1:x6:5847991:y6:1133808:point-1320:1:x6:5847991:y4:25208:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-12612:12:polygon-ring593:11:point-count2:177:point-021:1:x5:231981:y6:3043927:point-121:1:x5:247781:y6:3204297:point-221:1:x5:279231:y6:3307987:point-321:1:x5:330321:y6:3403557:point-421:1:x5:399061:y6:3487317:point-521:1:x5:482821:y6:3556057:point-621:1:x5:578391:y6:3607147:point-721:1:x5:682081:y6:3638597:point-821:1:x5:789931:y6:3649217:point-921:1:x5:897781:y6:3638598:point-1022:1:x6:1001471:y6:3607148:point-1122:1:x6:1097041:y6:3556058:point-1222:1:x6:1180801:y6:3487318:point-1322:1:x6:1249541:y6:3403558:point-1422:1:x6:1300631:y6:3307988:point-1522:1:x6:1332081:y6:3204298:point-1622:1:x6:1347881:y6:3043928:entry-131007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132|placed=[\"shapes-17-1\",\"shapes-17-10\",\"shapes-17-11\",\"shapes-17-13\",\"shapes-17-14\",\"shapes-17-15\",\"shapes-17-2\",\"shapes-17-3\",\"shapes-17-4\",\"shapes-17-5\",\"shapes-17-6\",\"shapes-17-7\",\"shapes-17-8\",\"shapes-17-9\"]",
+                "parentDecisionIdentity": "7:version30:irregular-occupied-geometry-v211:entry-count2:137:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4739391:y4:25207:point-121:1:x6:4751851:y5:215127:point-221:1:x6:4778701:y5:350167:point-321:1:x6:4822961:y5:480547:point-421:1:x6:4883861:y5:604047:point-521:1:x6:4960361:y5:718527:point-621:1:x6:5051141:y5:822057:point-721:1:x6:5154671:y5:912837:point-821:1:x6:5269151:y5:989337:point-922:1:x6:5392651:y6:1050238:point-1022:1:x6:5523031:y6:1094498:point-1122:1:x6:5658071:y6:1121348:point-1222:1:x6:5847991:y6:1133808:point-1320:1:x6:5847991:y4:25208:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-121007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132|placed=[\"shapes-17-1\",\"shapes-17-10\",\"shapes-17-11\",\"shapes-17-13\",\"shapes-17-14\",\"shapes-17-15\",\"shapes-17-2\",\"shapes-17-3\",\"shapes-17-5\",\"shapes-17-6\",\"shapes-17-7\",\"shapes-17-8\",\"shapes-17-9\"]",
+                "decision": "place",
+                "proposalRole": "contact",
+                "pieceId": "shapes-17-4",
+                "anchoredOccupiedKey": "7:version30:irregular-occupied-geometry-v211:entry-count2:147:entry-01122:12:polygon-ring1102:11:point-count2:327:point-020:1:x6:4238071:y4:85877:point-121:1:x6:4131791:y5:107017:point-221:1:x6:4031681:y5:148497:point-321:1:x6:3941591:y5:208697:point-421:1:x6:3864971:y5:285317:point-521:1:x6:3804761:y5:375417:point-621:1:x6:3763301:y5:475527:point-721:1:x6:3742161:y5:581817:point-821:1:x6:3742161:y5:690187:point-921:1:x6:3763301:y5:796458:point-1021:1:x6:3804781:y5:896578:point-1121:1:x6:3864981:y5:986668:point-1222:1:x6:3941601:y6:1063288:point-1322:1:x6:4031701:y6:1123498:point-1422:1:x6:4131811:y6:1164958:point-1522:1:x6:4238101:y6:1186098:point-1622:1:x6:4346471:y6:1186098:point-1722:1:x6:4452751:y6:1164958:point-1822:1:x6:4552861:y6:1123478:point-1922:1:x6:4642951:y6:1063278:point-2021:1:x6:4719571:y5:986658:point-2121:1:x6:4779781:y5:896558:point-2221:1:x6:4821241:y5:796448:point-2321:1:x6:4842381:y5:690158:point-2421:1:x6:4842381:y5:581788:point-2521:1:x6:4821241:y5:475508:point-2621:1:x6:4779761:y5:375398:point-2721:1:x6:4719561:y5:285298:point-2821:1:x6:4642941:y5:208688:point-2921:1:x6:4552841:y5:148478:point-3021:1:x6:4452731:y5:107018:point-3120:1:x6:4346441:y4:85877:entry-1134:12:polygon-ring115:11:point-count1:37:point-020:1:x6:2225111:y4:96447:point-122:1:x6:3284721:y6:1164967:point-220:1:x6:3729941:y4:96447:entry-2138:12:polygon-ring119:11:point-count1:37:point-022:1:x6:4742361:y6:2198407:point-122:1:x6:5921671:y6:2198407:point-222:1:x6:5921671:y6:3377717:entry-3159:12:polygon-ring140:11:point-count1:47:point-016:1:x5:514651:y1:07:point-120:1:x5:253041:y5:523227:point-222:1:x6:1241411:y6:1017417:point-317:1:x6:1750121:y1:07:entry-4172:12:polygon-ring153:11:point-count1:47:point-022:1:x6:3160531:y6:1164967:point-122:1:x6:3475551:y6:2083737:point-222:1:x6:4446821:y6:2083737:point-322:1:x6:4131811:y6:1164967:entry-51988:12:polygon-ring1968:11:point-count2:567:point-022:1:x6:1846981:y6:2403917:point-122:1:x6:1791201:y6:2411617:point-222:1:x6:1736661:y6:2426907:point-322:1:x6:1684051:y6:2449507:point-422:1:x6:1633931:y6:2479077:point-522:1:x6:1586811:y6:2515157:point-622:1:x6:1543101:y6:2557277:point-722:1:x6:1503111:y6:2604937:point-822:1:x6:1467171:y6:2657627:point-922:1:x6:1435471:y6:2714798:point-1022:1:x6:1408291:y6:2775938:point-1122:1:x6:1385771:y6:2840448:point-1222:1:x6:1367811:y6:2908698:point-1322:1:x6:1347451:y6:3048308:point-1422:1:x6:1347221:y6:3192668:point-1522:1:x6:1367201:y6:3335638:point-1622:1:x6:1406461:y6:3471148:point-1722:1:x6:1433581:y6:3536308:point-1822:1:x6:1464711:y6:3597128:point-1922:1:x6:1500001:y6:3653978:point-2022:1:x6:1539221:y6:3706278:point-2122:1:x6:1582031:y6:3753548:point-2222:1:x6:1628161:y6:3795298:point-2322:1:x6:1677221:y6:3831038:point-2422:1:x6:1728831:y6:3860338:point-2522:1:x6:1782531:y6:3882768:point-2622:1:x6:1837731:y6:3897968:point-2722:1:x6:1893851:y6:3905658:point-2822:1:x6:1950161:y6:3905658:point-2922:1:x6:2005941:y6:3897958:point-3022:1:x6:2060481:y6:3882658:point-3122:1:x6:2113091:y6:3860058:point-3222:1:x6:2163211:y6:3830498:point-3322:1:x6:2210331:y6:3794408:point-3422:1:x6:2254041:y6:3752298:point-3522:1:x6:2294031:y6:3704628:point-3622:1:x6:2329971:y6:3651948:point-3722:1:x6:2361671:y6:3594778:point-3822:1:x6:2388851:y6:3533628:point-3922:1:x6:2411371:y6:3469128:point-4022:1:x6:2429331:y6:3400878:point-4122:1:x6:2449681:y6:3261258:point-4222:1:x6:2449921:y6:3116908:point-4322:1:x6:2429941:y6:2973938:point-4422:1:x6:2390681:y6:2838418:point-4522:1:x6:2363561:y6:2773268:point-4622:1:x6:2332431:y6:2712448:point-4722:1:x6:2297141:y6:2655588:point-4822:1:x6:2257921:y6:2603298:point-4922:1:x6:2215111:y6:2556018:point-5022:1:x6:2168981:y6:2514278:point-5122:1:x6:2119921:y6:2478538:point-5222:1:x6:2068311:y6:2449228:point-5322:1:x6:2014611:y6:2426798:point-5422:1:x6:1959411:y6:2411608:point-5522:1:x6:1903291:y6:2403917:entry-6238:12:polygon-ring219:11:point-count1:67:point-021:1:x5:290251:y6:1938887:point-121:1:x5:290251:y6:3043927:point-222:1:x6:1164521:y6:3043927:point-322:1:x6:1395291:y6:2813157:point-422:1:x6:1395291:y6:2169657:point-522:1:x6:1164521:y6:1938887:entry-7240:12:polygon-ring221:11:point-count1:67:point-022:1:x6:2964231:y6:2083737:point-122:1:x6:2433911:y6:3002287:point-222:1:x6:2964231:y6:3920827:point-322:1:x6:4024871:y6:3920827:point-422:1:x6:4555191:y6:3002287:point-522:1:x6:4024871:y6:2083737:entry-8272:12:polygon-ring253:11:point-count1:77:point-021:1:x6:1677621:y5:470427:point-122:1:x6:1105041:y6:1188427:point-222:1:x6:1309401:y6:2083757:point-322:1:x6:2136811:y6:2482207:point-422:1:x6:2964221:y6:2083737:point-522:1:x6:3168561:y6:1188407:point-621:1:x6:2595971:y5:470427:entry-9292:12:polygon-ring273:11:point-count1:87:point-020:1:x5:230771:y5:833847:point-117:1:x1:01:y6:1064617:point-217:1:x1:01:y6:1708117:point-321:1:x5:230771:y6:1938887:point-421:1:x5:874271:y6:1938887:point-522:1:x6:1105041:y6:1708117:point-622:1:x6:1105041:y6:1064617:point-720:1:x5:874271:y5:833848:entry-10505:12:polygon-ring486:11:point-count2:147:point-020:1:x6:4739391:y4:25207:point-121:1:x6:4751851:y5:215127:point-221:1:x6:4778701:y5:350167:point-321:1:x6:4822961:y5:480547:point-421:1:x6:4883861:y5:604047:point-521:1:x6:4960361:y5:718527:point-621:1:x6:5051141:y5:822057:point-721:1:x6:5154671:y5:912837:point-821:1:x6:5269151:y5:989337:point-922:1:x6:5392651:y6:1050238:point-1022:1:x6:5523031:y6:1094498:point-1122:1:x6:5658071:y6:1121348:point-1222:1:x6:5847991:y6:1133808:point-1320:1:x6:5847991:y4:25208:entry-11517:12:polygon-ring498:11:point-count2:147:point-022:1:x6:4663031:y6:1093367:point-122:1:x6:4588931:y6:1105107:point-222:1:x6:4518351:y6:1141067:point-322:1:x6:4462341:y6:1197077:point-422:1:x6:4426381:y6:1267657:point-522:1:x6:4414641:y6:1341757:point-622:1:x6:4414641:y6:1950017:point-722:1:x6:4426381:y6:2024117:point-822:1:x6:4462341:y6:2094697:point-922:1:x6:4518351:y6:2150708:point-1022:1:x6:4588931:y6:2186668:point-1122:1:x6:4663031:y6:2198408:point-1222:1:x6:5519681:y6:2198408:point-1322:1:x6:5519681:y6:1093368:entry-12612:12:polygon-ring593:11:point-count2:177:point-021:1:x5:231981:y6:3043927:point-121:1:x5:247781:y6:3204297:point-221:1:x5:279231:y6:3307987:point-321:1:x5:330321:y6:3403557:point-421:1:x5:399061:y6:3487317:point-521:1:x5:482821:y6:3556057:point-621:1:x5:578391:y6:3607147:point-721:1:x5:682081:y6:3638597:point-821:1:x5:789931:y6:3649217:point-921:1:x5:897781:y6:3638598:point-1022:1:x6:1001471:y6:3607148:point-1122:1:x6:1097041:y6:3556058:point-1222:1:x6:1180801:y6:3487318:point-1322:1:x6:1249541:y6:3403558:point-1422:1:x6:1300631:y6:3307988:point-1522:1:x6:1332081:y6:3204298:point-1622:1:x6:1347881:y6:3043928:entry-131007:12:polygon-ring988:11:point-count2:287:point-022:1:x6:4929081:y6:2801327:point-122:1:x6:4843321:y6:2809777:point-222:1:x6:4758401:y6:2835537:point-322:1:x6:4680111:y6:2877377:point-422:1:x6:4611501:y6:2933687:point-522:1:x6:4555191:y6:3002297:point-622:1:x6:4513351:y6:3080587:point-722:1:x6:4487591:y6:3165507:point-822:1:x6:4479141:y6:3251267:point-922:1:x6:4479141:y6:3759018:point-1022:1:x6:4489801:y6:3812608:point-1122:1:x6:4523091:y6:3862418:point-1222:1:x6:4572901:y6:3895708:point-1322:1:x6:4626491:y6:3906368:point-1422:1:x6:5335791:y6:3906368:point-1522:1:x6:5409891:y6:3894628:point-1622:1:x6:5480471:y6:3858668:point-1722:1:x6:5536481:y6:3802658:point-1822:1:x6:5572441:y6:3732078:point-1922:1:x6:5584181:y6:3657978:point-2022:1:x6:5584181:y6:3200898:point-2122:1:x6:5574411:y6:3114208:point-2222:1:x6:5544621:y6:3029058:point-2322:1:x6:5496621:y6:2952678:point-2422:1:x6:5432831:y6:2888888:point-2522:1:x6:5356451:y6:2840888:point-2622:1:x6:5271301:y6:2811098:point-2722:1:x6:5184611:y6:280132",
+                "placedCount": 14,
+                "placedDoubledMaterialAreaGrid2": "294455444315",
+                "cavities": {
+                  "count": 0,
+                  "totalAreaMm2": 0
+                },
+                "gridSpan": {
+                  "widthGrid": 592167,
+                  "heightGrid": 392082
+                },
+                "topology": {
+                  "topology": {
+                    "enclosedCavityCount": 0,
+                    "largestOccupiedHullGapRatio": 0.18406231196909734,
+                    "occupiedEnvelopeAspectRatio": 1.5103141689748574,
+                    "positiveContactComponentCount": 10,
+                    "isolatedPieceCount": 7,
+                    "largestPositiveContactComponentSize": 3,
+                    "largestPositiveContactComponentRatio": 0.21428571428571427
+                  },
+                  "hullGapDoubledAreaGrid2": 80769603283,
+                  "hullDoubledAreaGrid2": 438816629102
+                },
+                "retained": true
+              }
+            ]
+          }
+        ]
+      },
+      "warmPrefixLanes": [
+        {
+          "sourceRole": "canonical-grid",
+          "prefixDepth": 4,
+          "reusedPlacedCount": 4,
+          "status": "checkpointed-censored",
+          "selectedForContinuation": false,
+          "checkpointRetained": true,
+          "consumedPlacementEvaluations": 341,
+          "completedDepths": 5,
+          "elapsedMs": 11.861750000000029,
+          "endpoint": {
+            "placedCount": 5,
+            "placedDoubledMaterialAreaGrid2": "154619195557",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 386.379,
+            "envelopeAreaMm2": 133306.550685,
+            "envelopeSpanMm": 731.394,
+            "canonicalGeometryHash": "7990c111d22d2c2187ed415049abc380500af6a513a36abb901c5cbd668d320a",
+            "origin": "warm-prefix-continuation",
+            "prefixDepth": 4,
+            "sourceRole": "canonical-grid"
+          }
+        },
+        {
+          "sourceRole": "legacy-absolute-envelope",
+          "prefixDepth": 4,
+          "reusedPlacedCount": 4,
+          "status": "checkpointed-censored",
+          "selectedForContinuation": false,
+          "checkpointRetained": true,
+          "consumedPlacementEvaluations": 335,
+          "completedDepths": 5,
+          "elapsedMs": 12.13537499999984,
+          "endpoint": {
+            "placedCount": 5,
+            "placedDoubledMaterialAreaGrid2": "154619195557",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 376.525,
+            "envelopeAreaMm2": 129905.266775,
+            "envelopeSpanMm": 721.5360000000001,
+            "canonicalGeometryHash": "e254b752383124b559fef56a545dc4a2cafe7edc22a4e656f9e58125e81d2bae",
+            "origin": "warm-prefix-continuation",
+            "prefixDepth": 4,
+            "sourceRole": "legacy-absolute-envelope"
+          }
+        },
+        {
+          "sourceRole": "legacy-absolute-envelope",
+          "prefixDepth": 8,
+          "reusedPlacedCount": 8,
+          "status": "settled",
+          "selectedForContinuation": true,
+          "checkpointRetained": false,
+          "consumedPlacementEvaluations": 32273,
+          "completedDepths": 17,
+          "elapsedMs": 1698.7756670000035,
+          "endpoint": {
+            "placedCount": 14,
+            "placedDoubledMaterialAreaGrid2": "294455444315",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 598.151,
+            "envelopeAreaMm2": 239077.36579399998,
+            "envelopeSpanMm": 997.845,
+            "canonicalGeometryHash": "55caf8b3aed370269b258560f7e83fc0e98e1bbb678196bac267c9c325208d51",
+            "origin": "warm-prefix-continuation",
+            "prefixDepth": 8,
+            "sourceRole": "legacy-absolute-envelope"
+          }
+        },
+        {
+          "sourceRole": "open-pocket-first",
+          "prefixDepth": 4,
+          "reusedPlacedCount": 4,
+          "status": "checkpointed-censored",
+          "selectedForContinuation": false,
+          "checkpointRetained": true,
+          "consumedPlacementEvaluations": 341,
+          "completedDepths": 5,
+          "elapsedMs": 11.102875000000495,
+          "endpoint": {
+            "placedCount": 5,
+            "placedDoubledMaterialAreaGrid2": "154619195557",
+            "enclosedCavityCount": 0,
+            "totalEnclosedCavityAreaMm2": 0,
+            "envelopeMaximumSideMm": 386.379,
+            "envelopeAreaMm2": 133306.550685,
+            "envelopeSpanMm": 731.394,
+            "canonicalGeometryHash": "7990c111d22d2c2187ed415049abc380500af6a513a36abb901c5cbd668d320a",
+            "origin": "warm-prefix-continuation",
+            "prefixDepth": 4,
+            "sourceRole": "open-pocket-first"
+          }
+        }
+      ],
+      "warmPrefixEndpointsAdmitted": true,
+      "laneCoordinator": {
+        "version": "intrinsic-capacity-lane-coordinator-v2",
+        "aggregatePlacementEvaluationCap": 139264,
+        "aggregateConsumedPlacementEvaluations": 95064,
+        "warmPilotDepthBoundaries": 1,
+        "continuedProducers": [
+          {
+            "role": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 8
+          }
+        ],
+        "retainedCheckpointCount": 3,
+        "censoredLaneCount": 3,
+        "quanta": [
+          {
+            "ordinal": 0,
+            "producerRole": "capacity-cold",
+            "phase": "initial",
+            "fromDepth": 0,
+            "toDepth": 17,
+            "placementEvaluationDelta": 61774,
+            "outcome": "settled"
+          },
+          {
+            "ordinal": 1,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 4,
+            "phase": "initial",
+            "fromDepth": 4,
+            "toDepth": 5,
+            "placementEvaluationDelta": 341,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 2,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 4,
+            "phase": "initial",
+            "fromDepth": 4,
+            "toDepth": 5,
+            "placementEvaluationDelta": 335,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 3,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 8,
+            "phase": "initial",
+            "fromDepth": 8,
+            "toDepth": 9,
+            "placementEvaluationDelta": 693,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 4,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "open-pocket-first",
+            "prefixDepth": 4,
+            "phase": "initial",
+            "fromDepth": 4,
+            "toDepth": 5,
+            "placementEvaluationDelta": 341,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 5,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 8,
+            "phase": "resume",
+            "fromDepth": 9,
+            "toDepth": 10,
+            "placementEvaluationDelta": 2908,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 6,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 8,
+            "phase": "resume",
+            "fromDepth": 10,
+            "toDepth": 11,
+            "placementEvaluationDelta": 4096,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 7,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 8,
+            "phase": "resume",
+            "fromDepth": 11,
+            "toDepth": 12,
+            "placementEvaluationDelta": 4096,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 8,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 8,
+            "phase": "resume",
+            "fromDepth": 12,
+            "toDepth": 13,
+            "placementEvaluationDelta": 4096,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 9,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 8,
+            "phase": "resume",
+            "fromDepth": 13,
+            "toDepth": 14,
+            "placementEvaluationDelta": 4096,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 10,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 8,
+            "phase": "resume",
+            "fromDepth": 14,
+            "toDepth": 15,
+            "placementEvaluationDelta": 4096,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 11,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 8,
+            "phase": "resume",
+            "fromDepth": 15,
+            "toDepth": 16,
+            "placementEvaluationDelta": 4096,
+            "outcome": "checkpointed"
+          },
+          {
+            "ordinal": 12,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 8,
+            "phase": "resume",
+            "fromDepth": 16,
+            "toDepth": 17,
+            "placementEvaluationDelta": 4096,
+            "outcome": "settled"
+          },
+          {
+            "ordinal": 13,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "canonical-grid",
+            "prefixDepth": 4,
+            "phase": "censor",
+            "fromDepth": 5,
+            "toDepth": 5,
+            "placementEvaluationDelta": 0,
+            "outcome": "censored"
+          },
+          {
+            "ordinal": 14,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "legacy-absolute-envelope",
+            "prefixDepth": 4,
+            "phase": "censor",
+            "fromDepth": 5,
+            "toDepth": 5,
+            "placementEvaluationDelta": 0,
+            "outcome": "censored"
+          },
+          {
+            "ordinal": 15,
+            "producerRole": "capacity-warm-prefix",
+            "sourceRole": "open-pocket-first",
+            "prefixDepth": 4,
+            "phase": "censor",
+            "fromDepth": 5,
+            "toDepth": 5,
+            "placementEvaluationDelta": 0,
+            "outcome": "censored"
+          }
+        ]
+      },
+      "selected": {
+        "placedCount": 14,
+        "placedDoubledMaterialAreaGrid2": "294455444315",
+        "enclosedCavityCount": 0,
+        "totalEnclosedCavityAreaMm2": 0,
+        "envelopeMaximumSideMm": 592.167,
+        "envelopeAreaMm2": 232178.021694,
+        "envelopeSpanMm": 984.249,
+        "canonicalGeometryHash": "01b2060d87752bb36eebfd4eb8602709687d5cb00c71b8feaec14a6e7cf9ba12",
+        "origin": "cold-search",
+        "unplacedCount": 3,
+        "placedMaterialAreaMm2": 147227.7221575,
+        "selectedRotationDeg": 0
+      },
+      "preflightRuntimeMs": 13.058750000000003,
+      "completeArchiveRuntimeMs": 9292.668875,
+      "prefixTerminalizationMs": 25.366916000000856,
+      "coldSearchMs": 2381.3769169999996,
+      "runtimeMs": 2407.259915999999
+    },
+    "intrinsicAnytimeSchedulerTrace": {
+      "version": "intrinsic-anytime-scheduler-v1",
+      "coldQuantumDepths": 4,
+      "coldStartStatus": "paused",
+      "coldStartCompletedDepths": 4,
+      "coldStartConsumedPlacementEvaluations": 8526,
+      "coldCheckpointReused": true,
+      "warmPrefixEndpointsAdmitted": true,
+      "cancellationReason": "complete-cohort-miss",
+      "quanta": [
+        {
+          "ordinal": 0,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 1,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 2,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 3,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 4,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 5,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 6,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 7,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 8,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 9,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 10,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 11,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 12,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 13,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 14,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 15,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 16,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 17,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 18,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 19,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 20,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 21,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 22,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 23,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 24,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 25,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 26,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "settled"
+        },
+        {
+          "ordinal": 27,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 28,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 29,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 30,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "settled"
+        },
+        {
+          "ordinal": 31,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 32,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 33,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 34,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 35,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "settled"
+        },
+        {
+          "ordinal": 36,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "censored"
+        },
+        {
+          "ordinal": 37,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "censored"
+        },
+        {
+          "ordinal": 38,
+          "cohort": "partial",
+          "producerRole": "capacity-warm-prefix",
+          "outcome": "censored"
+        }
+      ]
+    },
+    "focusedCompleteReconstructionTrace": {
+      "version": "intrinsic-focused-complete-reconstruction-v1",
+      "status": "skipped-no-fitting-protected-endpoint",
+      "sourceCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+      "consumedCandidateEvaluations": 0,
+      "candidateEvaluationAccountingComplete": true,
+      "runtimeMs": 0,
+      "outputInfluence": "none"
+    },
+    "intrinsicShortSideObserverTrace": {
+      "version": "intrinsic-short-side-observer-v1",
+      "status": "observed-no-legal-orientation",
+      "outputInfluence": "none",
+      "requestedSheetWidthMm": 600,
+      "requestedSheetHeightMm": 400,
+      "requestedLongAxisMm": 600,
+      "requestedShortAxisMm": 400,
+      "requestedLongAxis": "width",
+      "settledEndpointCount": 2,
+      "evaluatedOrientationCount": 4,
+      "cavityHullGuardEligibleEndpointCount": 0,
+      "geometricParetoEligibleEndpointCount": 0,
+      "placementEvaluations": 0,
+      "candidateEvaluations": 0,
+      "runtimeMs": 14.863000000001193,
+      "runtimeBudgetExceeded": false,
+      "serializedTraceBytes": 6167,
+      "endpoints": [
+        {
+          "archiveIndex": 0,
+          "role": "legacy-absolute-envelope",
+          "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+          "q0": {
+            "rotationDeg": 0,
+            "exactLegal": false,
+            "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+            "usedWidthMm": 559.975,
+            "usedHeightMm": 543.774,
+            "requestedLongAxisUsedSpanMm": 559.975,
+            "requestedShortAxisShortfallMm": -143.774,
+            "cavityCount": 0,
+            "hullGapRatio": 0.23359145881845145,
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.3366881568288917,
+            "intrinsicEnvelopeAreaMm2": 304499.84565000003,
+            "intrinsicEnvelopeMaximumSideMm": 559.975,
+            "intrinsicEnvelopeSpanMm": 1103.749,
+            "dominantStructuralContacts": 0,
+            "totalStructuralContacts": 0,
+            "contactUnits": 2.829529761552637,
+            "sharedBoundaryLengthMm": 106.681,
+            "comparisonTuple": [
+              1,
+              559.975,
+              0,
+              0.23359145881845145,
+              1,
+              2.3366881568288917,
+              -143.774,
+              304499.84565000003,
+              559.975,
+              1103.749,
+              0,
+              0,
+              -2.829529761552637,
+              -106.681,
+              "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+            ]
+          },
+          "q90": {
+            "rotationDeg": 90,
+            "exactLegal": false,
+            "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+            "usedWidthMm": 543.774,
+            "usedHeightMm": 559.975,
+            "requestedLongAxisUsedSpanMm": 543.774,
+            "requestedShortAxisShortfallMm": -159.97500000000002,
+            "cavityCount": 0,
+            "hullGapRatio": 0.23359145881845145,
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.3366881568288917,
+            "intrinsicEnvelopeAreaMm2": 304499.84565000003,
+            "intrinsicEnvelopeMaximumSideMm": 559.975,
+            "intrinsicEnvelopeSpanMm": 1103.749,
+            "dominantStructuralContacts": 0,
+            "totalStructuralContacts": 0,
+            "contactUnits": 2.829529761552637,
+            "sharedBoundaryLengthMm": 106.681,
+            "comparisonTuple": [
+              1,
+              543.774,
+              0,
+              0.23359145881845145,
+              1,
+              2.3366881568288917,
+              -159.97500000000002,
+              304499.84565000003,
+              559.975,
+              1103.749,
+              0,
+              0,
+              -2.829529761552637,
+              -106.681,
+              "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+            ]
+          },
+          "selectedRotationDeg": 90,
+          "selected": {
+            "rotationDeg": 90,
+            "exactLegal": false,
+            "canonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+            "usedWidthMm": 543.774,
+            "usedHeightMm": 559.975,
+            "requestedLongAxisUsedSpanMm": 543.774,
+            "requestedShortAxisShortfallMm": -159.97500000000002,
+            "cavityCount": 0,
+            "hullGapRatio": 0.23359145881845145,
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.3366881568288917,
+            "intrinsicEnvelopeAreaMm2": 304499.84565000003,
+            "intrinsicEnvelopeMaximumSideMm": 559.975,
+            "intrinsicEnvelopeSpanMm": 1103.749,
+            "dominantStructuralContacts": 0,
+            "totalStructuralContacts": 0,
+            "contactUnits": 2.829529761552637,
+            "sharedBoundaryLengthMm": 106.681,
+            "comparisonTuple": [
+              1,
+              543.774,
+              0,
+              0.23359145881845145,
+              1,
+              2.3366881568288917,
+              -159.97500000000002,
+              304499.84565000003,
+              559.975,
+              1103.749,
+              0,
+              0,
+              -2.829529761552637,
+              -106.681,
+              "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a"
+            ]
+          },
+          "cavityHullGuardEligible": false,
+          "geometricParetoEligible": false
+        },
+        {
+          "archiveIndex": 1,
+          "role": "canonical-grid",
+          "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2",
+          "q0": {
+            "rotationDeg": 0,
+            "exactLegal": false,
+            "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2",
+            "usedWidthMm": 578.418,
+            "usedHeightMm": 536.882,
+            "requestedLongAxisUsedSpanMm": 578.418,
+            "requestedShortAxisShortfallMm": -136.88199999999995,
+            "cavityCount": 0,
+            "hullGapRatio": 0.24211947627167232,
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.3200121947523256,
+            "intrinsicEnvelopeAreaMm2": 310542.21267599997,
+            "intrinsicEnvelopeMaximumSideMm": 578.418,
+            "intrinsicEnvelopeSpanMm": 1115.3,
+            "dominantStructuralContacts": 1,
+            "totalStructuralContacts": 2,
+            "contactUnits": 3.104431216728186,
+            "sharedBoundaryLengthMm": 251.52199999999996,
+            "comparisonTuple": [
+              1,
+              578.418,
+              0,
+              0.24211947627167232,
+              1,
+              2.3200121947523256,
+              -136.88199999999995,
+              310542.21267599997,
+              578.418,
+              1115.3,
+              -1,
+              -2,
+              -3.104431216728186,
+              -251.52199999999996,
+              "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+            ]
+          },
+          "q90": {
+            "rotationDeg": 90,
+            "exactLegal": false,
+            "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2",
+            "usedWidthMm": 536.882,
+            "usedHeightMm": 578.418,
+            "requestedLongAxisUsedSpanMm": 536.882,
+            "requestedShortAxisShortfallMm": -178.418,
+            "cavityCount": 0,
+            "hullGapRatio": 0.24211947627167232,
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.3200121947523256,
+            "intrinsicEnvelopeAreaMm2": 310542.21267599997,
+            "intrinsicEnvelopeMaximumSideMm": 578.418,
+            "intrinsicEnvelopeSpanMm": 1115.3,
+            "dominantStructuralContacts": 1,
+            "totalStructuralContacts": 2,
+            "contactUnits": 3.104431216728186,
+            "sharedBoundaryLengthMm": 251.52199999999996,
+            "comparisonTuple": [
+              1,
+              536.882,
+              0,
+              0.24211947627167232,
+              1,
+              2.3200121947523256,
+              -178.418,
+              310542.21267599997,
+              578.418,
+              1115.3,
+              -1,
+              -2,
+              -3.104431216728186,
+              -251.52199999999996,
+              "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+            ]
+          },
+          "selectedRotationDeg": 90,
+          "selected": {
+            "rotationDeg": 90,
+            "exactLegal": false,
+            "canonicalGeometryHash": "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2",
+            "usedWidthMm": 536.882,
+            "usedHeightMm": 578.418,
+            "requestedLongAxisUsedSpanMm": 536.882,
+            "requestedShortAxisShortfallMm": -178.418,
+            "cavityCount": 0,
+            "hullGapRatio": 0.24211947627167232,
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.3200121947523256,
+            "intrinsicEnvelopeAreaMm2": 310542.21267599997,
+            "intrinsicEnvelopeMaximumSideMm": 578.418,
+            "intrinsicEnvelopeSpanMm": 1115.3,
+            "dominantStructuralContacts": 1,
+            "totalStructuralContacts": 2,
+            "contactUnits": 3.104431216728186,
+            "sharedBoundaryLengthMm": 251.52199999999996,
+            "comparisonTuple": [
+              1,
+              536.882,
+              0,
+              0.24211947627167232,
+              1,
+              2.3200121947523256,
+              -178.418,
+              310542.21267599997,
+              578.418,
+              1115.3,
+              -1,
+              -2,
+              -3.104431216728186,
+              -251.52199999999996,
+              "104f99eeb590de49b27bbd1dbf881ba967b0b0af0f9f16680174fc6e65a095a2"
+            ]
+          },
+          "cavityHullGuardEligible": false,
+          "geometricParetoEligible": false
+        }
+      ],
+      "rankedCanonicalGeometryHashes": []
+    }
+  },
+  "checks": {
+    "collisionIdentity": true,
+    "fittedCanonical": true,
+    "placedCount": true,
+    "unplacedCount": true,
+    "exactPiecePartition": true,
+    "area": true,
+    "canonicalCavities": true,
+    "runtime": true,
+    "schedulerChronology": true,
+    "focusedTracePresent": true,
+    "focusedStatus": true,
+    "focusedEvaluations": true,
+    "focusedSourceHash": true,
+    "focusedCandidateHash": true,
+    "focusedSelectedHash": true,
+    "focusedInfluence": true,
+    "focusedAccounting": true,
+    "focusedFailureReason": true,
+    "shortSideObserverTracePresent": true,
+    "shortSideObserverOutputInfluence": true,
+    "shortSideObserverRuntimeBudget": true,
+    "shortSideObserverContract": true
+  },
+  "passed": true,
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-observer-dfb458f-run1/shapes-17-600x400.svg"
+}

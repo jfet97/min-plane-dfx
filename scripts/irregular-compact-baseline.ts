@@ -13,7 +13,10 @@ import {
   DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
   makeCompactQualityIrregularOptimizerSettings
 } from '../src/shared/irregular/defaults.js'
-import { IrregularNestingSettings } from '../src/shared/irregular/domain.js'
+import {
+  IrregularNestingSettings,
+  type IrregularPlacedPiece
+} from '../src/shared/irregular/domain.js'
 import { makePresetShapeDocument } from '../src/shared/presetShapes.js'
 import { preparePieces } from '../src/shared/preparePieces.js'
 import {
@@ -23,6 +26,7 @@ import {
 } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
+import { INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES } from '../src/workers/algorithm/irregular/intrinsicShortSideObserver.js'
 import {
   canonicalCollisionLayoutIdentity,
   measureCanonicalLayoutTopology
@@ -52,6 +56,7 @@ interface Arguments {
   readonly maximumCanonicalCavities: number | undefined
   readonly maximumElapsedMs: number | undefined
   readonly disableFocusedCompleteReconstruction: boolean
+  readonly captureShortSideObserver: boolean
   readonly expectedFocusedStatus: string | undefined
   readonly expectedFocusedEvaluations: number | undefined
   readonly expectedFocusedSourceHash: string | undefined
@@ -124,6 +129,9 @@ function parseArguments(): Arguments {
     maximumElapsedMs: optionalNumberArgument('--maximum-elapsed-ms'),
     disableFocusedCompleteReconstruction: process.argv.includes(
       '--disable-focused-complete-reconstruction'
+    ),
+    captureShortSideObserver: process.argv.includes(
+      '--capture-short-side-observer'
     ),
     expectedFocusedStatus: argument('--expected-focused-status'),
     expectedFocusedEvaluations: optionalIntegerArgument(
@@ -322,7 +330,9 @@ function layoutBounds(polygons: ReadonlyArray<ReadonlyArray<LayoutPoint>>): {
   return { width, height, area: width * height, span: width + height }
 }
 
-function sha256CanonicalLayout(result: IrregularComputeResult): string | undefined {
+function sha256CanonicalLayout(
+  result: Pick<IrregularComputeResult, 'placedCollisionGeometries'>
+): string | undefined {
   const identity = canonicalCollisionLayoutIdentity(result.placedCollisionGeometries)
   return identity === undefined ? undefined : createHash('sha256').update(identity).digest('hex')
 }
@@ -339,13 +349,32 @@ const args = parseArguments()
 const request = await loadRequest(args.fixture, args.sheet)
 const settings = request.options.irregularSettings
 if (settings === undefined) throw new Error(`${args.fixture} has no irregular settings`)
+let observerWinner:
+  | {
+      readonly canonicalGeometryHash: string
+      readonly rotationDeg: 0 | 90
+      readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+    }
+  | undefined
 const startedAt = performance.now()
 const result = await Effect.runPromise(
   computeIrregularNesting(
     request,
-    args.disableFocusedCompleteReconstruction
-      ? { focusedCompleteReconstructionControlArm: 'disable' }
-      : undefined
+    {
+      ...(args.disableFocusedCompleteReconstruction
+        ? { focusedCompleteReconstructionControlArm: 'disable' as const }
+        : {}),
+      ...(args.captureShortSideObserver
+        ? {
+            captureIntrinsicShortSideObserver: true,
+            onIntrinsicShortSideObserverWinner: (
+              winner: typeof observerWinner
+            ) => {
+              observerWinner = winner
+            }
+          }
+        : {})
+    }
   ).pipe(
     Effect.provide(CollisionGeometryBuilder.Live),
     Effect.provide(TransformGeneratorLive),
@@ -364,6 +393,105 @@ const collisionIdentitySha256 = sha256CanonicalLayout(result)
 const fittedCanonicalSha256 =
   polygons.length === 0 ? undefined : canonicalizeIrregularLayout(polygons).sha256
 const focusedTrace = result.focusedCompleteReconstructionTrace
+const shortSideObserverTrace = result.intrinsicShortSideObserverTrace
+const shortSideObserverWinner =
+  shortSideObserverTrace?.observerWinnerCanonicalGeometryHash === undefined
+    ? undefined
+    : shortSideObserverTrace.endpoints.find(
+        ({ canonicalGeometryHash }) =>
+          canonicalGeometryHash ===
+          shortSideObserverTrace.observerWinnerCanonicalGeometryHash
+      )
+const shortSideGuardEligibleEndpoints =
+  shortSideObserverTrace?.endpoints.filter(
+    ({ cavityHullGuardEligible }) => cavityHullGuardEligible
+  ) ?? []
+const shortSideParetoEligibleEndpoints =
+  shortSideObserverTrace?.endpoints.filter(
+    ({ geometricParetoEligible }) => geometricParetoEligible
+  ) ?? []
+const shortSideParetoHashes = shortSideParetoEligibleEndpoints.map(
+  ({ canonicalGeometryHash }) => canonicalGeometryHash
+)
+const shortSideRankedHashes =
+  shortSideObserverTrace?.rankedCanonicalGeometryHashes ?? []
+const shortSideParetoHashSet = new Set(shortSideParetoHashes)
+const shortSideRankedHashSet = new Set(shortSideRankedHashes)
+const shortSideRankingExactlyMatchesPareto =
+  shortSideParetoHashes.length === shortSideParetoHashSet.size &&
+  shortSideRankedHashes.length === shortSideRankedHashSet.size &&
+  shortSideParetoHashSet.size === shortSideRankedHashSet.size &&
+  shortSideParetoHashes.every((hash) => shortSideRankedHashSet.has(hash))
+const shortSideObserverContractValid =
+  shortSideObserverTrace === undefined ||
+  (shortSideObserverTrace.placementEvaluations === 0 &&
+    shortSideObserverTrace.candidateEvaluations === 0 &&
+    shortSideObserverTrace.serializedTraceBytes <=
+      INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES &&
+    shortSideObserverTrace.evaluatedOrientationCount ===
+      shortSideObserverTrace.settledEndpointCount * 2 &&
+    shortSideObserverTrace.cavityHullGuardEligibleEndpointCount ===
+      shortSideGuardEligibleEndpoints.length &&
+    shortSideObserverTrace.geometricParetoEligibleEndpointCount ===
+      shortSideParetoEligibleEndpoints.length &&
+    shortSideRankingExactlyMatchesPareto &&
+    shortSideObserverTrace.status !== 'runtime-budget-exceeded' &&
+    shortSideObserverTrace.status !== 'trace-budget-exceeded' &&
+    (shortSideObserverTrace.status === 'observed'
+      ? shortSideObserverWinner?.selected.exactLegal === true &&
+        shortSideObserverWinner.geometricParetoEligible &&
+        shortSideObserverTrace.rankedCanonicalGeometryHashes[0] ===
+          shortSideObserverTrace.observerWinnerCanonicalGeometryHash
+      : shortSideObserverTrace.observerWinnerCanonicalGeometryHash ===
+          undefined &&
+        shortSideObserverTrace.observerWinnerRotationDeg === undefined &&
+        shortSideObserverTrace.rankedCanonicalGeometryHashes.length === 0))
+const shortSideProfileSource =
+  !args.captureShortSideObserver
+    ? undefined
+    : observerWinner === undefined
+      ? ('compact-fallback' as const)
+      : ('guarded-stage1-winner' as const)
+const shortSideProfilePlacedCollisionGeometries =
+  shortSideProfileSource === undefined
+    ? undefined
+    : observerWinner?.placedCollisionGeometries ??
+      result.placedCollisionGeometries
+const shortSideProfileUnplacedPieceIds =
+  shortSideProfileSource === undefined
+    ? undefined
+    : observerWinner === undefined
+      ? result.unplacedPieceIds
+      : []
+const shortSideProfilePolygons =
+  shortSideProfilePlacedCollisionGeometries === undefined
+    ? undefined
+    : absoluteCollisionPolygons({
+        placedCollisionGeometries:
+          shortSideProfilePlacedCollisionGeometries
+      })
+const shortSideProfileBounds =
+  shortSideProfilePolygons === undefined
+    ? undefined
+    : layoutBounds(shortSideProfilePolygons)
+const shortSideProfileTopology =
+  shortSideProfilePlacedCollisionGeometries === undefined
+    ? undefined
+    : measureCanonicalLayoutTopology(
+        shortSideProfilePlacedCollisionGeometries
+      )
+const shortSideProfileCollisionIdentitySha256 =
+  shortSideProfilePlacedCollisionGeometries === undefined
+    ? undefined
+    : sha256CanonicalLayout({
+        placedCollisionGeometries:
+          shortSideProfilePlacedCollisionGeometries
+      })
+const shortSideProfileFittedCanonicalSha256 =
+  shortSideProfilePolygons === undefined ||
+  shortSideProfilePolygons.length === 0
+    ? undefined
+    : canonicalizeIrregularLayout(shortSideProfilePolygons).sha256
 const matchesExpectedOptional = (
   actual: string | undefined,
   expected: string | undefined
@@ -398,10 +526,104 @@ const exactPiecePartition =
     (pieceId) =>
       placedPieceIdSet.has(pieceId) || unplacedPieceIdSet.has(pieceId)
   )
+const shortSideProfilePlacedPieceIds =
+  shortSideProfilePlacedCollisionGeometries?.map(
+    ({ placement }) => placement.pieceId
+  ) ?? []
+const shortSideProfileDefinedPlacedPieceIds =
+  shortSideProfilePlacedPieceIds.filter(
+    (pieceId): pieceId is NonNullable<typeof pieceId> =>
+      pieceId !== undefined
+  )
+const shortSideProfilePlacedPieceIdSet = new Set(
+  shortSideProfileDefinedPlacedPieceIds
+)
+const shortSideProfileUnplacedPieceIdSet = new Set(
+  shortSideProfileUnplacedPieceIds ?? []
+)
+const shortSideProfileExactPiecePartition =
+  shortSideProfileSource === undefined ||
+  (shortSideProfileUnplacedPieceIds !== undefined &&
+    shortSideProfileDefinedPlacedPieceIds.length ===
+    shortSideProfilePlacedPieceIds.length &&
+    shortSideProfilePlacedPieceIdSet.size ===
+      shortSideProfileDefinedPlacedPieceIds.length &&
+    shortSideProfileUnplacedPieceIdSet.size ===
+      shortSideProfileUnplacedPieceIds.length &&
+    shortSideProfilePlacedPieceIdSet.size +
+      shortSideProfileUnplacedPieceIdSet.size ===
+      requestedPieceIdSet.size &&
+    shortSideProfileDefinedPlacedPieceIds.every((pieceId) =>
+      requestedPieceIdSet.has(pieceId)
+    ) &&
+    shortSideProfileUnplacedPieceIds.every(
+      (pieceId) =>
+        requestedPieceIdSet.has(pieceId) &&
+        !shortSideProfilePlacedPieceIdSet.has(pieceId)
+    ) &&
+    requestedPieceIds.every(
+      (pieceId) =>
+        shortSideProfilePlacedPieceIdSet.has(pieceId) ||
+        shortSideProfileUnplacedPieceIdSet.has(pieceId)
+    ))
 const svgPath = `${args.outputPrefix}.svg`
+const shortSideProfileSvgPath =
+  shortSideProfilePolygons === undefined
+    ? undefined
+    : `${args.outputPrefix}.short-side-profile.svg`
+const shortSideProfileReportPath =
+  shortSideProfileSource === undefined
+    ? undefined
+    : `${args.outputPrefix}.short-side-profile.json`
 const reportPath = `${args.outputPrefix}.json`
 await mkdir(dirname(args.outputPrefix), { recursive: true })
 await writeFile(svgPath, renderSvg(args.sheet, polygons))
+if (
+  shortSideProfilePolygons !== undefined &&
+  shortSideProfileSvgPath !== undefined
+) {
+  await writeFile(
+    shortSideProfileSvgPath,
+    renderSvg(args.sheet, shortSideProfilePolygons)
+  )
+}
+if (
+  shortSideProfileSource !== undefined &&
+  shortSideProfileReportPath !== undefined
+) {
+  await writeFile(
+    shortSideProfileReportPath,
+    `${JSON.stringify(
+      jsonSafe({
+        fixture: args.fixture,
+        profile: 'short-side',
+        sheet: {
+          width: args.sheet.width,
+          height: args.sheet.height
+        },
+        source: shortSideProfileSource,
+        observerStatus: shortSideObserverTrace?.status,
+        selectedRotationDeg:
+          shortSideObserverTrace?.observerWinnerRotationDeg,
+        placedCount:
+          shortSideProfilePlacedCollisionGeometries?.length ?? 0,
+        unplacedCount:
+          shortSideProfileUnplacedPieceIds?.length ?? 0,
+        unplacedPieceIds: shortSideProfileUnplacedPieceIds ?? [],
+        collisionIdentitySha256:
+          shortSideProfileCollisionIdentitySha256,
+        fittedCanonicalSha256:
+          shortSideProfileFittedCanonicalSha256,
+        canonicalTopology: shortSideProfileTopology,
+        bounds: shortSideProfileBounds,
+        exactPiecePartition: shortSideProfileExactPiecePartition,
+        svgPath: shortSideProfileSvgPath
+      }),
+      null,
+      2
+    )}\n`
+  )
+}
 
 const checks = {
   collisionIdentity:
@@ -456,7 +678,25 @@ const checks = {
     focusedTrace === undefined ||
     focusedTrace.candidateEvaluationAccountingComplete,
   focusedFailureReason:
-    focusedTrace === undefined || focusedTrace.failureReason === undefined
+    focusedTrace === undefined || focusedTrace.failureReason === undefined,
+  shortSideObserverTracePresent:
+    !args.captureShortSideObserver ||
+    result.intrinsicShortSideObserverTrace !== undefined,
+  shortSideObserverOutputInfluence:
+    result.intrinsicShortSideObserverTrace === undefined ||
+    result.intrinsicShortSideObserverTrace.outputInfluence === 'none',
+  shortSideObserverRuntimeBudget:
+    shortSideObserverTrace === undefined ||
+    !shortSideObserverTrace.runtimeBudgetExceeded,
+  shortSideObserverContract: shortSideObserverContractValid,
+  shortSideProfileMaterialized:
+    !args.captureShortSideObserver ||
+    (shortSideProfileSource !== undefined &&
+      shortSideProfilePlacedCollisionGeometries !== undefined &&
+      shortSideProfileUnplacedPieceIds !== undefined &&
+      shortSideProfileSvgPath !== undefined &&
+      shortSideProfileReportPath !== undefined),
+  shortSideProfileExactPiecePartition
 }
 const passed = Object.values(checks).every(Boolean)
 const report = jsonSafe({
@@ -481,11 +721,15 @@ const report = jsonSafe({
     intrinsicAnytimeSchedulerTrace: result.intrinsicAnytimeSchedulerTrace,
     experimentalPlaceDeferTrace: result.experimentalPlaceDeferTrace,
     focusedCompleteReconstructionTrace:
-      result.focusedCompleteReconstructionTrace
+      result.focusedCompleteReconstructionTrace,
+    intrinsicShortSideObserverTrace:
+      result.intrinsicShortSideObserverTrace
   },
   checks,
   passed,
-  svgPath
+  svgPath,
+  shortSideProfileSvgPath,
+  shortSideProfileReportPath
 })
 await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
 console.log(JSON.stringify({ reportPath, svgPath, elapsedMs, checks, passed }))

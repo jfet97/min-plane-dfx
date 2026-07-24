@@ -1,0 +1,32 @@
+{
+  "version": "compact-short-side-observer-provenance-v1",
+  "sourceCommit": "dfb458ff8bbaa5ca0832e71bd1062ee29e397b22",
+  "fixture": "triangle-20",
+  "sheet": "600x400",
+  "execution": {
+    "algorithmProcesses": 1,
+    "strictlySequential": true
+  },
+  "artifacts": [
+    {
+      "name": "triangle-20-600x400.json",
+      "sha256": "d077d57bfd3b592d83bde857b7aa4cf5fc66649b20717000c9e644c1aca910a5"
+    },
+    {
+      "name": "triangle-20-600x400.short-side-observer.svg",
+      "sha256": "00294a5e9e7910d569662bad8e6129cef5055351f4c463e24dcd0c8155616eab"
+    },
+    {
+      "name": "triangle-20-600x400.svg",
+      "sha256": "af965275b6e4f6b5d956c8617198e4fd21ee3fbdb1f402efc4b278b98afa9aa7"
+    },
+    {
+      "name": "triangle-20-600x400.production.png",
+      "sha256": "9b8546922595f21b351e9e18ff47e4707905998cbb40da0696bf67de2c4065cf"
+    },
+    {
+      "name": "triangle-20-600x400.short-side-observer.png",
+      "sha256": "54b88c6d5145f1316836ee17d41515418c3fa82e9c38c33227e022d4fb05f9a8"
+    }
+  ]
+}

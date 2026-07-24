@@ -1,0 +1,457 @@
+import { createHash } from 'node:crypto'
+import type { PieceId } from '@shared/domain/ids.js'
+import type { SheetSpec } from '@shared/domain/nesting.js'
+import type { IrregularPlacedPiece } from '@shared/irregular/domain.js'
+import {
+  assertCanonicalGridLegalLayout,
+  canonicalCollisionLayoutIdentity,
+  placedCollisionWorldGridPath
+} from '../../irregular/canonicalLayoutGeometry.js'
+import { fromGrid } from '../../irregular/clipper2OffsetPolicy.js'
+import type { IntrinsicSharedArchiveEndpoint } from './intrinsicSharedArchivePortfolio.js'
+import {
+  INTRINSIC_STRICT_COHESION_FLOORS,
+  intrinsicStrictCompletedLayoutDominates
+} from './intrinsicStrictDecoder.js'
+import { IrregularBeamState } from './irregularBeamState.js'
+
+export const INTRINSIC_SHORT_SIDE_OBSERVER_VERSION =
+  'intrinsic-short-side-observer-v1' as const
+export const INTRINSIC_SHORT_SIDE_OBSERVER_MAX_RUNTIME_MS = 250 as const
+export const INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES = 1_048_576 as const
+
+export type IntrinsicShortSideObserverRotation = 0 | 90
+export type IntrinsicShortSideObserverStatus =
+  | 'observed'
+  | 'observed-no-legal-orientation'
+  | 'observed-no-guard-eligible-endpoint'
+  | 'skipped-no-settled-complete-endpoints'
+  | 'runtime-budget-exceeded'
+  | 'trace-budget-exceeded'
+
+export interface IntrinsicShortSideOrientationObservation {
+  readonly rotationDeg: IntrinsicShortSideObserverRotation
+  readonly exactLegal: boolean
+  readonly canonicalGeometryHash: string | undefined
+  readonly usedWidthMm: number | undefined
+  readonly usedHeightMm: number | undefined
+  readonly requestedLongAxisUsedSpanMm: number | undefined
+  readonly requestedShortAxisShortfallMm: number | undefined
+  readonly cavityCount: number
+  readonly hullGapRatio: number
+  readonly cohesionPasses: boolean
+  readonly cohesionDeficit: number
+  readonly intrinsicEnvelopeAreaMm2: number
+  readonly intrinsicEnvelopeMaximumSideMm: number
+  readonly intrinsicEnvelopeSpanMm: number
+  readonly dominantStructuralContacts: number
+  readonly totalStructuralContacts: number
+  readonly contactUnits: number
+  readonly sharedBoundaryLengthMm: number
+  readonly comparisonTuple: ReadonlyArray<number | string>
+}
+
+export interface IntrinsicShortSideEndpointObservation {
+  readonly archiveIndex: number
+  readonly role: string
+  readonly sourceId: string | undefined
+  readonly canonicalGeometryHash: string
+  readonly q0: IntrinsicShortSideOrientationObservation
+  readonly q90: IntrinsicShortSideOrientationObservation
+  readonly selectedRotationDeg: IntrinsicShortSideObserverRotation
+  readonly selected: IntrinsicShortSideOrientationObservation
+  readonly cavityHullGuardEligible: boolean
+  readonly geometricParetoEligible: boolean
+}
+
+export interface IntrinsicShortSideObserverTrace {
+  readonly version: typeof INTRINSIC_SHORT_SIDE_OBSERVER_VERSION
+  readonly status: IntrinsicShortSideObserverStatus
+  readonly outputInfluence: 'none'
+  readonly requestedSheetWidthMm: number
+  readonly requestedSheetHeightMm: number
+  readonly requestedLongAxisMm: number
+  readonly requestedShortAxisMm: number
+  readonly requestedLongAxis: 'width' | 'height' | 'square'
+  readonly settledEndpointCount: number
+  readonly evaluatedOrientationCount: number
+  readonly cavityHullGuardEligibleEndpointCount: number
+  readonly geometricParetoEligibleEndpointCount: number
+  readonly placementEvaluations: 0
+  readonly candidateEvaluations: 0
+  readonly runtimeMs: number
+  readonly runtimeBudgetExceeded: boolean
+  readonly serializedTraceBytes: number
+  readonly endpoints: ReadonlyArray<IntrinsicShortSideEndpointObservation>
+  readonly rankedCanonicalGeometryHashes: ReadonlyArray<string>
+  readonly observerWinnerCanonicalGeometryHash: string | undefined
+  readonly observerWinnerRotationDeg: IntrinsicShortSideObserverRotation | undefined
+}
+
+/** Evaluates settled complete endpoints without constructing placements or candidates. */
+export function observeIntrinsicShortSideOrientations(input: {
+  readonly sheet: SheetSpec
+  readonly endpoints: ReadonlyArray<IntrinsicSharedArchiveEndpoint>
+  readonly now?: () => number
+}): IntrinsicShortSideObserverTrace {
+  const now = input.now ?? performance.now.bind(performance)
+  const startedAt = now()
+  const requestedLongAxis =
+    input.sheet.width === input.sheet.height
+      ? ('square' as const)
+      : input.sheet.width > input.sheet.height
+        ? ('width' as const)
+        : ('height' as const)
+  const requestedLongAxisMm = Math.max(input.sheet.width, input.sheet.height)
+  const requestedShortAxisMm = Math.min(input.sheet.width, input.sheet.height)
+  const observedEndpoints = input.endpoints.map((endpoint, archiveIndex) =>
+    observeEndpoint({
+      sheet: input.sheet,
+      endpoint,
+      archiveIndex,
+      requestedLongAxis,
+      requestedShortAxisMm
+    })
+  )
+  const legalEndpoints = observedEndpoints.filter(({ selected }) => selected.exactLegal)
+  const guardEligibleEndpoints = legalEndpoints.filter(cavityHullGuardEligible)
+  const geometricParetoEndpoints = guardEligibleEndpoints.filter(
+    (candidate) => {
+      const candidateSource = input.endpoints[candidate.archiveIndex]
+      if (candidateSource === undefined) return false
+      return !guardEligibleEndpoints.some((other) => {
+        const otherSource = input.endpoints[other.archiveIndex]
+        return (
+          other !== candidate &&
+          otherSource !== undefined &&
+          intrinsicStrictCompletedLayoutDominates(
+            otherSource.metrics,
+            candidateSource.metrics
+          )
+        )
+      })
+    }
+  )
+  const geometricParetoIndexes = new Set(
+    geometricParetoEndpoints.map(({ archiveIndex }) => archiveIndex)
+  )
+  const endpoints = observedEndpoints.map((endpoint) => ({
+    ...endpoint,
+    cavityHullGuardEligible: cavityHullGuardEligible(endpoint),
+    geometricParetoEligible: geometricParetoIndexes.has(endpoint.archiveIndex)
+  }))
+  const ranked = endpoints
+    .filter(({ geometricParetoEligible }) => geometricParetoEligible)
+    .toSorted(compareEndpointObservations)
+  const winner = ranked[0]
+  const observed = {
+    version: INTRINSIC_SHORT_SIDE_OBSERVER_VERSION,
+    status:
+      endpoints.length === 0
+        ? ('skipped-no-settled-complete-endpoints' as const)
+        : legalEndpoints.length === 0
+          ? ('observed-no-legal-orientation' as const)
+          : guardEligibleEndpoints.length === 0
+            ? ('observed-no-guard-eligible-endpoint' as const)
+          : ('observed' as const),
+    outputInfluence: 'none',
+    requestedSheetWidthMm: input.sheet.width,
+    requestedSheetHeightMm: input.sheet.height,
+    requestedLongAxisMm,
+    requestedShortAxisMm,
+    requestedLongAxis,
+    settledEndpointCount: endpoints.length,
+    evaluatedOrientationCount: endpoints.length * 2,
+    cavityHullGuardEligibleEndpointCount: guardEligibleEndpoints.length,
+    geometricParetoEligibleEndpointCount: geometricParetoEndpoints.length,
+    placementEvaluations: 0,
+    candidateEvaluations: 0,
+    runtimeMs: 0,
+    runtimeBudgetExceeded: false,
+    serializedTraceBytes: 0,
+    endpoints,
+    rankedCanonicalGeometryHashes: ranked.map(
+      ({ canonicalGeometryHash }) => canonicalGeometryHash
+    ),
+    observerWinnerCanonicalGeometryHash: winner?.canonicalGeometryHash,
+    observerWinnerRotationDeg: winner?.selectedRotationDeg
+  } satisfies IntrinsicShortSideObserverTrace
+  const materialized = withMeasuredTraceSize({
+    ...observed,
+    runtimeMs: Number.MAX_VALUE
+  })
+  const measured = {
+    ...materialized,
+    runtimeMs: Math.max(0, now() - startedAt)
+  }
+  if (measured.runtimeMs > INTRINSIC_SHORT_SIDE_OBSERVER_MAX_RUNTIME_MS) {
+    return censoredTrace(measured, 'runtime-budget-exceeded', true)
+  }
+  if (measured.serializedTraceBytes <= INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES) {
+    return measured
+  }
+  return censoredTrace(measured, 'trace-budget-exceeded', false)
+}
+
+function observeEndpoint(input: {
+  readonly sheet: SheetSpec
+  readonly endpoint: IntrinsicSharedArchiveEndpoint
+  readonly archiveIndex: number
+  readonly requestedLongAxis: 'width' | 'height' | 'square'
+  readonly requestedShortAxisMm: number
+}): IntrinsicShortSideEndpointObservation {
+  const state = new IrregularBeamState({
+    remainingPreparedPieces: [],
+    placedCollisionGeometries: input.endpoint.placedCollisionGeometries,
+    unplacedPieceIds: [],
+    placementOrder: input.endpoint.placedCollisionGeometries.map(placedPieceId)
+  })
+  const q0 = observeOrientation({
+    sheet: input.sheet,
+    endpoint: input.endpoint,
+    state,
+    rotationDeg: 0,
+    requestedLongAxis: input.requestedLongAxis,
+    requestedShortAxisMm: input.requestedShortAxisMm
+  })
+  const q90 = observeOrientation({
+    sheet: input.sheet,
+    endpoint: input.endpoint,
+    state,
+    rotationDeg: 90,
+    requestedLongAxis: input.requestedLongAxis,
+    requestedShortAxisMm: input.requestedShortAxisMm
+  })
+  const selected = compareOrientationObservations(q0, q90) <= 0 ? q0 : q90
+  return {
+    archiveIndex: input.archiveIndex,
+    role: input.endpoint.role,
+    sourceId: input.endpoint.sourceId,
+    canonicalGeometryHash: input.endpoint.sheetlessCanonicalGeometryHash,
+    q0,
+    q90,
+    selectedRotationDeg: selected.rotationDeg,
+    selected,
+    cavityHullGuardEligible: false,
+    geometricParetoEligible: false
+  }
+}
+
+function cavityHullGuardEligible(
+  endpoint: IntrinsicShortSideEndpointObservation
+): boolean {
+  return (
+    endpoint.selected.exactLegal &&
+    endpoint.selected.cavityCount <=
+      INTRINSIC_STRICT_COHESION_FLOORS.maximumEnclosedCavityCount &&
+    endpoint.selected.hullGapRatio <=
+      INTRINSIC_STRICT_COHESION_FLOORS.maximumLargestOccupiedHullGapRatio
+  )
+}
+
+function observeOrientation(input: {
+  readonly sheet: SheetSpec
+  readonly endpoint: IntrinsicSharedArchiveEndpoint
+  readonly state: IrregularBeamState
+  readonly rotationDeg: IntrinsicShortSideObserverRotation
+  readonly requestedLongAxis: 'width' | 'height' | 'square'
+  readonly requestedShortAxisMm: number
+}): IntrinsicShortSideOrientationObservation {
+  const oriented = input.state.withQuarterTurnBottomLeft(input.rotationDeg)
+  const exactLegal =
+    oriented !== undefined &&
+    assertCanonicalGridLegalLayout(input.sheet, oriented.placedCollisionGeometries)
+  const dimensions = oriented === undefined ? undefined : canonicalDimensions(oriented.placedCollisionGeometries)
+  const canonicalGeometryHash =
+    oriented === undefined
+      ? undefined
+      : hashCanonicalIdentity(canonicalCollisionLayoutIdentity(oriented.placedCollisionGeometries))
+  const usedLongAxisSpanMm =
+    dimensions === undefined
+      ? undefined
+      : input.requestedLongAxis === 'square'
+        ? Math.max(dimensions.widthMm, dimensions.heightMm)
+        : input.requestedLongAxis === 'width'
+          ? dimensions.widthMm
+          : dimensions.heightMm
+  const usedShortAxisSpanMm =
+    dimensions === undefined || input.requestedLongAxis === 'square'
+      ? undefined
+      : input.requestedLongAxis === 'width'
+        ? dimensions.heightMm
+        : dimensions.widthMm
+  const requestedShortAxisShortfallMm =
+    input.requestedLongAxis === 'square'
+      ? 0
+      : usedShortAxisSpanMm === undefined
+        ? undefined
+        : input.requestedShortAxisMm - usedShortAxisSpanMm
+  const metrics = input.endpoint.metrics
+  const tuple = comparisonTuple({
+    exactLegal,
+    requestedLongAxisUsedSpanMm: usedLongAxisSpanMm,
+    cavityCount: metrics.enclosedCavityCount,
+    hullGapRatio: metrics.largestOccupiedHullGapRatio,
+    cohesionPasses: input.endpoint.certificate.passes,
+    cohesionDeficit: input.endpoint.certificate.relativeDeficitSum,
+    requestedShortAxisShortfallMm,
+    intrinsicEnvelopeAreaMm2: metrics.envelopeAreaMm2,
+    intrinsicEnvelopeMaximumSideMm: metrics.envelopeMaximumSideMm,
+    intrinsicEnvelopeSpanMm: metrics.envelopeSpanMm,
+    dominantStructuralContacts: metrics.dominantStructuralContacts,
+    totalStructuralContacts: metrics.totalStructuralContacts,
+    contactUnits: metrics.contactUnits,
+    sharedBoundaryLengthMm: metrics.sharedBoundaryLengthMm,
+    canonicalGeometryHash
+  })
+  return {
+    rotationDeg: input.rotationDeg,
+    exactLegal,
+    canonicalGeometryHash,
+    usedWidthMm: dimensions?.widthMm,
+    usedHeightMm: dimensions?.heightMm,
+    requestedLongAxisUsedSpanMm: usedLongAxisSpanMm,
+    requestedShortAxisShortfallMm,
+    cavityCount: metrics.enclosedCavityCount,
+    hullGapRatio: metrics.largestOccupiedHullGapRatio,
+    cohesionPasses: input.endpoint.certificate.passes,
+    cohesionDeficit: input.endpoint.certificate.relativeDeficitSum,
+    intrinsicEnvelopeAreaMm2: metrics.envelopeAreaMm2,
+    intrinsicEnvelopeMaximumSideMm: metrics.envelopeMaximumSideMm,
+    intrinsicEnvelopeSpanMm: metrics.envelopeSpanMm,
+    dominantStructuralContacts: metrics.dominantStructuralContacts,
+    totalStructuralContacts: metrics.totalStructuralContacts,
+    contactUnits: metrics.contactUnits,
+    sharedBoundaryLengthMm: metrics.sharedBoundaryLengthMm,
+    comparisonTuple: tuple
+  }
+}
+
+function comparisonTuple(input: {
+  readonly exactLegal: boolean
+  readonly requestedLongAxisUsedSpanMm: number | undefined
+  readonly cavityCount: number
+  readonly hullGapRatio: number
+  readonly cohesionPasses: boolean
+  readonly cohesionDeficit: number
+  readonly requestedShortAxisShortfallMm: number | undefined
+  readonly intrinsicEnvelopeAreaMm2: number
+  readonly intrinsicEnvelopeMaximumSideMm: number
+  readonly intrinsicEnvelopeSpanMm: number
+  readonly dominantStructuralContacts: number
+  readonly totalStructuralContacts: number
+  readonly contactUnits: number
+  readonly sharedBoundaryLengthMm: number
+  readonly canonicalGeometryHash: string | undefined
+}): ReadonlyArray<number | string> {
+  return [
+    input.exactLegal ? 0 : 1,
+    input.requestedLongAxisUsedSpanMm ?? Number.POSITIVE_INFINITY,
+    input.cavityCount,
+    input.hullGapRatio,
+    input.cohesionPasses ? 0 : 1,
+    input.cohesionDeficit,
+    input.requestedShortAxisShortfallMm ?? Number.POSITIVE_INFINITY,
+    input.intrinsicEnvelopeAreaMm2,
+    input.intrinsicEnvelopeMaximumSideMm,
+    input.intrinsicEnvelopeSpanMm,
+    -input.dominantStructuralContacts,
+    -input.totalStructuralContacts,
+    -input.contactUnits,
+    -input.sharedBoundaryLengthMm,
+    input.canonicalGeometryHash ?? '￿'
+  ]
+}
+
+function compareEndpointObservations(
+  first: IntrinsicShortSideEndpointObservation,
+  second: IntrinsicShortSideEndpointObservation
+): number {
+  return (
+    compareOrientationObservations(first.selected, second.selected) ||
+    first.canonicalGeometryHash.localeCompare(second.canonicalGeometryHash) ||
+    first.archiveIndex - second.archiveIndex
+  )
+}
+
+function compareOrientationObservations(
+  first: IntrinsicShortSideOrientationObservation,
+  second: IntrinsicShortSideOrientationObservation
+): number {
+  const firstTuple = first.comparisonTuple
+  const secondTuple = second.comparisonTuple
+  for (let index = 0; index < Math.max(firstTuple.length, secondTuple.length); index += 1) {
+    const firstValue = firstTuple[index]
+    const secondValue = secondTuple[index]
+    if (firstValue === undefined || secondValue === undefined) {
+      if (firstValue === secondValue) continue
+      return firstValue === undefined ? -1 : 1
+    }
+    if (typeof firstValue === 'string' || typeof secondValue === 'string') {
+      const comparison = String(firstValue).localeCompare(String(secondValue))
+      if (comparison !== 0) return comparison
+    } else if (firstValue !== secondValue) {
+      return firstValue < secondValue ? -1 : 1
+    }
+  }
+  return first.rotationDeg - second.rotationDeg
+}
+
+function canonicalDimensions(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): { readonly widthMm: number; readonly heightMm: number } | undefined {
+  const points = placed.flatMap((entry) => placedCollisionWorldGridPath(entry) ?? [])
+  if (points.length === 0) return undefined
+  const minX = Math.min(...points.map(({ x }) => x))
+  const minY = Math.min(...points.map(({ y }) => y))
+  const maxX = Math.max(...points.map(({ x }) => x))
+  const maxY = Math.max(...points.map(({ y }) => y))
+  const widthGrid = maxX - minX
+  const heightGrid = maxY - minY
+  if (
+    ![minX, minY, maxX, maxY, widthGrid, heightGrid].every(Number.isSafeInteger) ||
+    widthGrid < 0 ||
+    heightGrid < 0
+  ) {
+    return undefined
+  }
+  const widthMm = fromGrid(widthGrid)
+  const heightMm = fromGrid(heightGrid)
+  return Number.isFinite(widthMm) && Number.isFinite(heightMm)
+    ? { widthMm, heightMm }
+    : undefined
+}
+
+function hashCanonicalIdentity(identity: string | undefined): string | undefined {
+  return identity === undefined ? undefined : createHash('sha256').update(identity).digest('hex')
+}
+
+function withMeasuredTraceSize(
+  trace: IntrinsicShortSideObserverTrace
+): IntrinsicShortSideObserverTrace {
+  const firstMeasurement = Buffer.byteLength(JSON.stringify(trace), 'utf8')
+  const measured = { ...trace, serializedTraceBytes: firstMeasurement }
+  const finalMeasurement = Buffer.byteLength(JSON.stringify(measured), 'utf8')
+  return { ...measured, serializedTraceBytes: finalMeasurement }
+}
+
+function censoredTrace(
+  trace: IntrinsicShortSideObserverTrace,
+  status: 'runtime-budget-exceeded' | 'trace-budget-exceeded',
+  runtimeBudgetExceeded: boolean
+): IntrinsicShortSideObserverTrace {
+  return withMeasuredTraceSize({
+    ...trace,
+    status,
+    runtimeBudgetExceeded,
+    endpoints: [],
+    rankedCanonicalGeometryHashes: [],
+    observerWinnerCanonicalGeometryHash: undefined,
+    observerWinnerRotationDeg: undefined,
+    serializedTraceBytes: 0
+  })
+}
+
+function placedPieceId(placed: IrregularPlacedPiece): PieceId {
+  return placed.placement.pieceId ?? placed.placement.sourcePieceId
+}

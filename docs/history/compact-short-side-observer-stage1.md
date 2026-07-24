@@ -1,0 +1,35 @@
+# Compact Short-Side Observer Stage 1
+
+## Accepted
+
+- A sibling-profile, zero-search q0/q90 observer over settled complete Compact
+  endpoints.
+- Exact sheet legality, hard cavity/hull eligibility, and the existing
+  intrinsic geometric Pareto front before directional ranking.
+- Censored runtime/trace budgets and strict zero-evaluation accounting.
+- Separate observer geometry artifacts with immutable checksums.
+- The reproducible Triangle-20 `600 x 400` directional tradeoff.
+- A strict promotion matrix with nine Compact controls and nine materialized
+  short-side-profile layouts. When Stage 1 has no legal guarded winner, the
+  short-side profile records and renders the exact Compact result as an
+  explicit fallback instead of inventing or omitting a layout.
+
+## Rejected
+
+- Reusing the old ordinary `short-side-fill` scorer or beam.
+- A fixed `material area + 20%` target as proof, pruning, or routing.
+- Raw long-axis minimization without hard geometric guards. The rejected
+  `1513.5 x 88.288 mm` Triangle strip was the concrete falsifier.
+- Any Stage 1 influence on production Compact or capacity output.
+- Parallel algorithm execution or cross-target checkpoint resume.
+
+## Later experiments
+
+- Fixed-target exact projection was tested as Stage 2 and rejected after exact
+  closure exhausted at piece 17 without a complete endpoint.
+- Width-one target-aware construction was tested as Stage 3 and rejected
+  because it lost to the free Stage 1 winner and exceeded the `0.15`
+  occupied-hull-gap admission floor.
+
+Neither rejected implementation is part of the Stage 1 promotion. Their
+measurements and stop decisions remain in the corresponding history pages.

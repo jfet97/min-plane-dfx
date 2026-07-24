@@ -306,6 +306,65 @@ the constraint. It is not promotable evidence. Reopen P4 only after a new
 explicit user instruction authorizes concurrent algorithm execution and
 defines its operational limits.
 
+### P5: Compact short-side sibling profile
+
+Status: Stage 1 accepted at `a9504d3`; fixed-target Stage 2 rejected at
+`8f66399`; width-one target-aware Stage 3 rejected at `e19ddf1`; production
+influence remains zero.
+
+The zero-search archive observer establishes exact q0/q90 legality, hard
+cavity/hull eligibility, the existing intrinsic geometric Pareto front,
+directional ranking, censored budgets, and checksummed evidence. It rejects the
+initial sparse-strip false positive and preserves every strict nine-case
+production hash. Its promotion gate materializes 18 layouts: nine Compact
+controls plus nine short-side-profile outputs. Missing Stage 1 winners become
+explicit exact Compact fallbacks, so every fixture/sheet pair remains visible
+and honestly sourced.
+
+The surviving signal is Triangle-20 `600 x 400`: a reproducible exact endpoint
+reduces requested long-axis use by `53.116%` and fills `98.731%` of the short
+side, at a `21.396%` envelope-area cost. Shapes transpose symmetry is exact;
+complete-miss capacity outputs remain untouched.
+
+The separately budgeted fixed-target Stage 2 used the exact area/singleton lower
+bound, witnessed archive upper bound, and one deterministic midpoint. Its first
+run proved cooperative checkpoints must be accounting-only. The corrected
+identical-target rerun settled in `330.309 ms` after `1,281` scored candidates
+but exhausted exact closure at the seventeenth Triangle piece and produced no
+endpoint. Production hashes remained exact.
+
+Do not sweep targets or add seeds under this hypothesis. Reopen short-side
+search only for a materially different, separately reviewed mechanism.
+
+The first construction-time alternative has now also been measured. Its
+matched control and target-aware arm settled sequentially on Triangle-20
+`600 x 400`, but the directional result used `271.256 x 380.723 mm` and
+`103,273.398088 mm2` with `0.288475` occupied-hull gap. The accepted free
+Stage 1 winner remains better at `228.786 x 394.922 mm`,
+`90,352.624692 mm2`, and `0.086902` hull gap. Per the predeclared stop rule,
+there was no reproduction or matrix expansion.
+
+The accepted zero-search Stage 1 archive observer remains the current sibling
+result. Do not promote the width-one target-aware selector or retain it as an
+automatic post-production cost. Its raw completed diagnostic also fails the
+existing `0.15` hull-gap floor. Post-run review found incomplete finalization
+coverage in budget accounting and disabled-path state retention; `edeed42`
+removes the rejected implementation while preserving its history and immutable
+evidence.
+
+Promotion gate: a directional gain beyond archive-only selection on more than
+one shape family, exact legality and accounting, bounded runtime/memory, two
+identical reproductions, and an explicit accepted area-versus-fill tradeoff.
+The profile must remain a sibling; it may not alter production Compact
+sheetless ranking or capacity fallback.
+
+Falsifier: no improvement beyond the free archive observer; a sparse/hull-waste
+regression; fixture-specific construction; target-box restart cost dominates;
+or any production matrix/hash/runtime regression.
+
+Evidence:
+[`../research/compact-short-side-observer.md`](../research/compact-short-side-observer.md).
+
 ## Open-Source Mechanism Disposition
 
 The locally pinned sources under `knowledge/dependencies/` are controls, not

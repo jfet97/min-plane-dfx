@@ -72,6 +72,10 @@ import {
 import type { IntrinsicCapacityPrefixSource } from './intrinsicCapacityPrefixes.js'
 import type { IntrinsicCapacityEndpoint } from './intrinsicCapacityEndpoint.js'
 import {
+  observeIntrinsicShortSideOrientations,
+  type IntrinsicShortSideObserverTrace
+} from './intrinsicShortSideObserver.js'
+import {
   measureIntrinsicCapacityShadowTelemetry,
   type IntrinsicCapacityShadowTelemetry
 } from './intrinsicCapacityTelemetry.js'
@@ -149,6 +153,20 @@ export interface ComputeIrregularNestingOptions {
   ) => void
   /** Paired benchmark arm; production keeps focused reconstruction enabled. */
   readonly focusedCompleteReconstructionControlArm?: 'disable'
+  /** Zero-search q0/q90 observation over settled complete Compact endpoints. */
+  readonly captureIntrinsicShortSideObserver?: boolean
+  /** Receives the observer trace without affecting production selection or output. */
+  readonly onIntrinsicShortSideObserver?: (trace: IntrinsicShortSideObserverTrace) => void
+  /** Benchmark artifact hook for the exact observer-selected complete geometry. */
+  readonly onIntrinsicShortSideObserverWinner?: (
+    winner:
+      | {
+          readonly canonicalGeometryHash: string
+          readonly rotationDeg: 0 | 90
+          readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+        }
+      | undefined
+  ) => void
 }
 
 export interface IntrinsicFocusedCompleteReconstructionTrace {
@@ -311,6 +329,8 @@ export interface IrregularComputeResult {
   readonly experimentalPlaceDeferTrace?: IntrinsicPlaceDeferTrace
   /** Present only when the focused complete reconstruction experiment is enabled. */
   readonly focusedCompleteReconstructionTrace?: IntrinsicFocusedCompleteReconstructionTrace
+  /** Present only when the zero-search Compact short-side observer is enabled. */
+  readonly intrinsicShortSideObserverTrace?: IntrinsicShortSideObserverTrace
 }
 
 export type IrregularComputeErrorType =
@@ -452,8 +472,13 @@ function coordinateIntrinsicSharedArchive(
     let focusedCompleteReconstructionTrace:
       | IntrinsicFocusedCompleteReconstructionTrace
       | undefined
+    let settledCompleteArchiveForShortSideObserver:
+      | ReadonlyArray<IntrinsicSharedArchiveEndpoint>
+      | undefined
+    let intrinsicShortSideObserverTrace: IntrinsicShortSideObserverTrace | undefined
 
     if (archiveEnabled) {
+      settledCompleteArchiveForShortSideObserver = []
       yield* emitSharedArchiveProgress(
         input,
         'shared_archive',
@@ -886,6 +911,7 @@ function coordinateIntrinsicSharedArchive(
           ...protectedSheetlessArchive,
           ...focusedReconstructionEndpoints
         ])
+        settledCompleteArchiveForShortSideObserver = sheetlessArchive
         const winner = selectIntrinsicSharedArchiveWinner(
           selectFittingSharedArchive(sheetlessArchive)
         )
@@ -1021,6 +1047,49 @@ function coordinateIntrinsicSharedArchive(
       input.options?.emitStateSnapshot?.(snapshot, input.settings.optimizer.beamWidth)
     }
     input.options?.onFinalizationMetrics?.(selected.finalizationMetrics)
+    if (
+      settledCompleteArchiveForShortSideObserver !== undefined &&
+      (input.options?.captureIntrinsicShortSideObserver === true ||
+        input.options?.onIntrinsicShortSideObserver !== undefined)
+    ) {
+      intrinsicShortSideObserverTrace = observeIntrinsicShortSideOrientations({
+        sheet: input.request.sheet,
+        endpoints: settledCompleteArchiveForShortSideObserver
+      })
+      input.options.onIntrinsicShortSideObserver?.(intrinsicShortSideObserverTrace)
+      const winnerHash =
+        intrinsicShortSideObserverTrace.observerWinnerCanonicalGeometryHash
+      const winnerRotation =
+        intrinsicShortSideObserverTrace.observerWinnerRotationDeg
+      const winnerEndpoint = settledCompleteArchiveForShortSideObserver.find(
+        ({ sheetlessCanonicalGeometryHash }) =>
+          sheetlessCanonicalGeometryHash === winnerHash
+      )
+      const winnerState =
+        winnerEndpoint === undefined || winnerRotation === undefined
+          ? undefined
+          : new IrregularBeamState({
+              remainingPreparedPieces: [],
+              placedCollisionGeometries:
+                winnerEndpoint.placedCollisionGeometries,
+              placementOrder: winnerEndpoint.placedCollisionGeometries.map(
+                ({ placement }) =>
+                  placement.pieceId ?? placement.sourcePieceId
+              )
+            }).withQuarterTurnBottomLeft(winnerRotation)
+      input.options.onIntrinsicShortSideObserverWinner?.(
+        winnerHash === undefined ||
+          winnerRotation === undefined ||
+          winnerState === undefined
+          ? undefined
+          : {
+              canonicalGeometryHash: winnerHash,
+              rotationDeg: winnerRotation,
+              placedCollisionGeometries:
+                winnerState.placedCollisionGeometries
+            }
+      )
+    }
     return {
       placedCollisionGeometries: selected.placedCollisionGeometries,
       score: selected.score,
@@ -1044,7 +1113,10 @@ function coordinateIntrinsicSharedArchive(
         : { experimentalPlaceDeferTrace }),
       ...(focusedCompleteReconstructionTrace === undefined
         ? {}
-        : { focusedCompleteReconstructionTrace })
+        : { focusedCompleteReconstructionTrace }),
+      ...(intrinsicShortSideObserverTrace === undefined
+        ? {}
+        : { intrinsicShortSideObserverTrace })
     }
   })
 }

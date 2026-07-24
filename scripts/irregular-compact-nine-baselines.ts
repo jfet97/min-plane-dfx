@@ -1,5 +1,6 @@
-import { spawn } from 'node:child_process'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { execFileSync, spawn } from 'node:child_process'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 interface Baseline {
@@ -168,6 +169,7 @@ function runBaseline(baseline: Baseline, outputDirectory: string): Promise<void>
     String(baseline.maximumCanonicalCavities),
     '--maximum-elapsed-ms',
     String(baseline.maximumElapsedMs),
+    '--capture-short-side-observer',
     ...focusedExpectedArguments(baseline)
   ]
 
@@ -297,26 +299,287 @@ for (const baseline of BASELINES) {
   }
 }
 
-const reports = await Promise.all(
-  BASELINES.map(async (baseline) =>
-    JSON.parse(
-      await readFile(join(outputDirectory, `${baseline.fixture}-${baseline.sheet}.json`), 'utf8')
-    )
+interface CompactReport {
+  readonly fixture: Baseline['fixture']
+  readonly sheet: {
+    readonly width: number
+    readonly height: number
+  }
+  readonly result: {
+    readonly placedCount: number
+    readonly unplacedCount: number
+    readonly collisionIdentitySha256: string
+    readonly fittedCanonicalSha256: string
+    readonly canonicalTopology?: {
+      readonly enclosedCavityCount: number
+    }
+    readonly bounds: {
+      readonly width: number
+      readonly height: number
+      readonly area: number
+      readonly span: number
+    }
+  }
+  readonly checks: Readonly<Record<string, boolean>>
+  readonly passed: boolean
+  readonly svgPath: string
+}
+
+interface ShortSideProfileReport {
+  readonly fixture: Baseline['fixture']
+  readonly profile: 'short-side'
+  readonly sheet: {
+    readonly width: number
+    readonly height: number
+  }
+  readonly source: 'guarded-stage1-winner' | 'compact-fallback'
+  readonly observerStatus: string
+  readonly selectedRotationDeg?: 0 | 90
+  readonly placedCount: number
+  readonly unplacedCount: number
+  readonly collisionIdentitySha256: string
+  readonly fittedCanonicalSha256: string
+  readonly canonicalTopology?: {
+    readonly enclosedCavityCount: number
+  }
+  readonly bounds: {
+    readonly width: number
+    readonly height: number
+    readonly area: number
+    readonly span: number
+  }
+  readonly exactPiecePartition: boolean
+  readonly svgPath: string
+}
+
+const compactReports: Array<CompactReport> = []
+const shortSideReports: Array<ShortSideProfileReport> = []
+for (const baseline of BASELINES) {
+  const prefix = join(
+    outputDirectory,
+    `${baseline.fixture}-${baseline.sheet}`
   )
-)
+  compactReports.push(
+    JSON.parse(await readFile(`${prefix}.json`, 'utf8')) as CompactReport
+  )
+  shortSideReports.push(
+    JSON.parse(
+      await readFile(`${prefix}.short-side-profile.json`, 'utf8')
+    ) as ShortSideProfileReport
+  )
+}
+
+const layoutRecords = []
+for (let index = 0; index < BASELINES.length; index += 1) {
+  const baseline = BASELINES[index]
+  const compactReport = compactReports[index]
+  const shortSideReport = shortSideReports[index]
+  if (
+    baseline === undefined ||
+    compactReport === undefined ||
+    shortSideReport === undefined
+  ) {
+    throw new Error(`missing layout report at matrix index ${index}`)
+  }
+  const compactPngPath = join(
+    outputDirectory,
+    `${baseline.fixture}-${baseline.sheet}.png`
+  )
+  const shortSidePngPath = join(
+    outputDirectory,
+    `${baseline.fixture}-${baseline.sheet}.short-side-profile.png`
+  )
+  execFileSync(
+    process.execPath,
+    [
+      '.agents/skills/render-svg-with-electron/scripts/render-svg.cjs',
+      compactReport.svgPath,
+      compactPngPath,
+      '1000'
+    ],
+    { stdio: 'inherit' }
+  )
+  execFileSync(
+    process.execPath,
+    [
+      '.agents/skills/render-svg-with-electron/scripts/render-svg.cjs',
+      shortSideReport.svgPath,
+      shortSidePngPath,
+      '1000'
+    ],
+    { stdio: 'inherit' }
+  )
+  layoutRecords.push(
+    {
+      fixture: baseline.fixture,
+      sheet: baseline.sheet,
+      profile: 'compact',
+      source: 'production-compact',
+      placedCount: compactReport.result.placedCount,
+      unplacedCount: compactReport.result.unplacedCount,
+      collisionIdentitySha256:
+        compactReport.result.collisionIdentitySha256,
+      fittedCanonicalSha256:
+        compactReport.result.fittedCanonicalSha256,
+      canonicalCavities:
+        compactReport.result.canonicalTopology?.enclosedCavityCount,
+      bounds: compactReport.result.bounds,
+      exactPiecePartition: compactReport.checks.exactPiecePartition,
+      passed: compactReport.passed,
+      svgPath: compactReport.svgPath,
+      pngPath: compactPngPath
+    },
+    {
+      fixture: baseline.fixture,
+      sheet: baseline.sheet,
+      profile: 'short-side',
+      source: shortSideReport.source,
+      observerStatus: shortSideReport.observerStatus,
+      selectedRotationDeg: shortSideReport.selectedRotationDeg,
+      placedCount: shortSideReport.placedCount,
+      unplacedCount: shortSideReport.unplacedCount,
+      collisionIdentitySha256:
+        shortSideReport.collisionIdentitySha256,
+      fittedCanonicalSha256:
+        shortSideReport.fittedCanonicalSha256,
+      canonicalCavities:
+        shortSideReport.canonicalTopology?.enclosedCavityCount,
+      bounds: shortSideReport.bounds,
+      exactPiecePartition: shortSideReport.exactPiecePartition,
+      passed:
+        shortSideReport.exactPiecePartition &&
+        compactReport.passed,
+      svgPath: shortSideReport.svgPath,
+      pngPath: shortSidePngPath
+    }
+  )
+}
+
+const compactLayoutCount = layoutRecords.filter(
+  ({ profile }) => profile === 'compact'
+).length
+const shortSideLayoutCount = layoutRecords.filter(
+  ({ profile }) => profile === 'short-side'
+).length
+const guardedStage1WinnerCount = layoutRecords.filter(
+  ({ profile, source }) =>
+    profile === 'short-side' && source === 'guarded-stage1-winner'
+).length
+const compactFallbackCount = layoutRecords.filter(
+  ({ profile, source }) =>
+    profile === 'short-side' && source === 'compact-fallback'
+).length
+const layoutContractPassed =
+  layoutRecords.length === 18 &&
+  compactLayoutCount === 9 &&
+  shortSideLayoutCount === 9 &&
+  guardedStage1WinnerCount + compactFallbackCount === 9 &&
+  layoutRecords.every(({ exactPiecePartition, passed }) =>
+    Boolean(exactPiecePartition && passed)
+  )
+const summaryPath = join(outputDirectory, 'summary.json')
 await writeFile(
-  join(outputDirectory, 'summary.json'),
+  summaryPath,
   `${JSON.stringify(
     {
       generatedAt: new Date().toISOString(),
-      passed: outcomes.every(({ passed }) => passed),
+      passed:
+        outcomes.every(({ passed }) => passed) &&
+        layoutContractPassed,
+      caseCount: BASELINES.length,
+      layoutCount: layoutRecords.length,
+      compactLayoutCount,
+      shortSideLayoutCount,
+      guardedStage1WinnerCount,
+      compactFallbackCount,
       outcomes,
-      reports
+      layouts: layoutRecords
     },
     null,
     2
   )}\n`
 )
-const passed = outcomes.every((outcome) => outcome.passed)
-console.log(JSON.stringify({ outputDirectory, baselineCount: BASELINES.length, passed }))
+const sourceCommit =
+  process.env.BASELINE_SOURCE_COMMIT ??
+  execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+const artifactNames = (await readdir(outputDirectory))
+  .filter(
+    (name) =>
+      name !== 'manifest.json' &&
+      name !== 'SHA256SUMS' &&
+      (name.endsWith('.json') || name.endsWith('.svg') || name.endsWith('.png'))
+  )
+  .sort((first, second) => first.localeCompare(second))
+const artifacts = await Promise.all(
+  artifactNames.map(async (name) => ({
+    name,
+    sha256: createHash('sha256')
+      .update(await readFile(join(outputDirectory, name)))
+      .digest('hex')
+  }))
+)
+const manifestPath = join(outputDirectory, 'manifest.json')
+await writeFile(
+  manifestPath,
+  `${JSON.stringify(
+    {
+      version: 'compact-short-side-observer-provenance-v1',
+      generatedAt: new Date().toISOString(),
+      sourceCommit,
+      command: process.argv,
+      runtime: {
+        node: process.version,
+        v8: process.versions.v8
+      },
+      execution: {
+        maximumConcurrentAlgorithmProcesses: 1,
+        algorithmCases: BASELINES.length,
+        materializedLayouts: layoutRecords.length,
+        strictlySequential: true
+      },
+      artifacts
+    },
+    null,
+    2
+  )}\n`
+)
+const checksumEntries = [
+  ...artifacts,
+  {
+    name: 'manifest.json',
+    sha256: createHash('sha256')
+      .update(await readFile(manifestPath))
+      .digest('hex')
+  }
+]
+const checksumPath = join(outputDirectory, 'SHA256SUMS')
+await writeFile(
+  checksumPath,
+  `${checksumEntries
+    .map(({ sha256, name }) => `${sha256}  ${name}`)
+    .join('\n')}\n`
+)
+for (const { sha256, name } of checksumEntries) {
+  const verified = createHash('sha256')
+    .update(await readFile(join(outputDirectory, name)))
+    .digest('hex')
+  if (verified !== sha256) {
+    throw new Error(`provenance checksum mismatch for ${name}`)
+  }
+}
+const passed =
+  outcomes.every((outcome) => outcome.passed) &&
+  layoutContractPassed
+console.log(
+  JSON.stringify({
+    outputDirectory,
+    caseCount: BASELINES.length,
+    layoutCount: layoutRecords.length,
+    compactLayoutCount,
+    shortSideLayoutCount,
+    guardedStage1WinnerCount,
+    compactFallbackCount,
+    passed
+  })
+)
 if (!passed) process.exitCode = 1

@@ -1,0 +1,114 @@
+{
+  "version": "compact-short-side-observer-provenance-v1",
+  "generatedAt": "2026-07-24T17:36:15.668Z",
+  "sourceCommit": "dfb458ff8bbaa5ca0832e71bd1062ee29e397b22",
+  "command": [
+    "/nix/store/hnksp0i3h476mak0x1np8x2nqnajhv4f-nodejs-slim-24.16.0/bin/node",
+    "/private/tmp/min-plane-dfx-short-side-integration/scripts/irregular-compact-nine-baselines.ts",
+    "--capture-short-side-observer",
+    "--output-dir",
+    "/private/tmp/min-plane-provenance/short-side-observer-dfb458f-run1"
+  ],
+  "runtime": {
+    "node": "v24.16.0",
+    "v8": "13.6.233.17-node.49"
+  },
+  "execution": {
+    "algorithmProcesses": 1,
+    "strictlySequential": true
+  },
+  "artifacts": [
+    {
+      "name": "mixed-61-2000x2700.json",
+      "sha256": "e0819037512ae60220d9282c857873654e52188e4cd40aa722113b24637d96d0"
+    },
+    {
+      "name": "mixed-61-2000x2700.short-side-observer.svg",
+      "sha256": "96917e83c98dff6121a9548b80436372c6a73969a234ad27ba4c5e67d410a484"
+    },
+    {
+      "name": "mixed-61-2000x2700.svg",
+      "sha256": "b9719ab4aa8c9da652b424e35910ef39e0a073261003bd4b439a2f51ac353a63"
+    },
+    {
+      "name": "mixed-61-300x300.json",
+      "sha256": "00016dad1d6f064f4b3fc69e0ff53ef80246d6f6ca6d70637f732ee9d242530f"
+    },
+    {
+      "name": "mixed-61-300x300.svg",
+      "sha256": "0d498d2050cbfc01521c4d1d6c222fd6cfe9c5ad95576ea4567177bff44f6af4"
+    },
+    {
+      "name": "mixed-61-600x400.json",
+      "sha256": "c0700fc7c987e56a90dd0124ea4da7869b0c92f5f0b5d69d1c195af4678f278a"
+    },
+    {
+      "name": "mixed-61-600x400.svg",
+      "sha256": "cb29d43c3bf6e55c95f0d848be87b4755db21313463057f9d470c0fcf3aad1fc"
+    },
+    {
+      "name": "shapes-17-2000x2700.json",
+      "sha256": "756ad8b43ea82ee271837effa8f042f46f41866c24ac96cfe40b82a9273e7a83"
+    },
+    {
+      "name": "shapes-17-2000x2700.short-side-observer.svg",
+      "sha256": "abbf7e8a5520838de3e37992e0e89eb854302f45f02c99eb8d8ce394f44b361f"
+    },
+    {
+      "name": "shapes-17-2000x2700.svg",
+      "sha256": "abbf7e8a5520838de3e37992e0e89eb854302f45f02c99eb8d8ce394f44b361f"
+    },
+    {
+      "name": "shapes-17-300x300.json",
+      "sha256": "979a146210bab0fbb93f9341be6eea3844ff0bbbdc565940b35e77ca63420409"
+    },
+    {
+      "name": "shapes-17-300x300.svg",
+      "sha256": "73deb7cee14096c4041c5933fad3268b2bb5e71ecd8d5ead213e0de83b0b8c87"
+    },
+    {
+      "name": "shapes-17-600x400.json",
+      "sha256": "d74535ccadb838c1247f45a72548a9fd9f88d886a69171c87ad1537490c372ce"
+    },
+    {
+      "name": "shapes-17-600x400.svg",
+      "sha256": "dd1f8108a50660fb0c3d7341ba4d4c280430d37d3640af941348401e89b1746c"
+    },
+    {
+      "name": "summary.json",
+      "sha256": "a1532c926b4b0e8a059e3390ac8894cb8ea1cf0a815dc1ceca987830c690b5d6"
+    },
+    {
+      "name": "triangle-20-2000x2700.json",
+      "sha256": "61c9f2c88aa39cad1d985d11494d13b22e751029132858fd6e1ebfb0fd54f3ac"
+    },
+    {
+      "name": "triangle-20-2000x2700.short-side-observer.svg",
+      "sha256": "081dbde55846d949b2f093c42c13167fee95f73ed2893f31ca829668697465d6"
+    },
+    {
+      "name": "triangle-20-2000x2700.svg",
+      "sha256": "081dbde55846d949b2f093c42c13167fee95f73ed2893f31ca829668697465d6"
+    },
+    {
+      "name": "triangle-20-300x300.json",
+      "sha256": "8371ccfc1d6f1eed450bb974f72092fff53b7396d899878bf45cac7152ec8830"
+    },
+    {
+      "name": "triangle-20-300x300.svg",
+      "sha256": "4f79e5616d9c8041a6c0c39ae78fc31294eef57681bfbdb56e2c8d98557e01d4"
+    },
+    {
+      "name": "triangle-20-600x400.json",
+      "sha256": "6c6b6ad39f1075ba573adaf51367f78a5af978127e1ff9956de2cdffa9b62518"
+    },
+    {
+      "name": "triangle-20-600x400.short-side-observer.svg",
+      "sha256": "00294a5e9e7910d569662bad8e6129cef5055351f4c463e24dcd0c8155616eab"
+    },
+    {
+      "name": "triangle-20-600x400.svg",
+      "sha256": "af965275b6e4f6b5d956c8617198e4fd21ee3fbdb1f402efc4b278b98afa9aa7"
+    }
+  ]
+}
