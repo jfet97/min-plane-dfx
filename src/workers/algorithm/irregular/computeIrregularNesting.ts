@@ -154,8 +154,12 @@ export interface ComputeIrregularNestingOptions {
 export interface IntrinsicFocusedCompleteReconstructionTrace {
   readonly version: 'intrinsic-focused-complete-reconstruction-v1'
   readonly status:
-    | 'settled'
-    | 'censored'
+    | 'completed'
+    | 'duplicate-order'
+    | 'evaluation-cap'
+    | 'deadline'
+    | 'incomplete'
+    | 'skipped-preflight-proven-impossible'
     | 'skipped-no-fitting-protected-endpoint'
   readonly sourceCanonicalGeometryHash: string | undefined
   readonly selectedCanonicalGeometryHash: string | undefined
@@ -510,6 +514,18 @@ function coordinateIntrinsicSharedArchive(
         retentionMode: capacityRetentionMode
       }
       if (preflight.kind === 'proven_impossible') {
+        if (input.options?.enableFocusedCompleteReconstruction === true) {
+          focusedCompleteReconstructionTrace = {
+            version: 'intrinsic-focused-complete-reconstruction-v1',
+            status: 'skipped-preflight-proven-impossible',
+            sourceCanonicalGeometryHash: undefined,
+            selectedCanonicalGeometryHash: undefined,
+            consumedCandidateEvaluations: 0,
+            candidateEvaluationAccountingComplete: true,
+            runtimeMs: 0,
+            outputInfluence: 'none'
+          }
+        }
         const capacity = yield* runIntrinsicCapacityMode({
           sheet: input.request.sheet,
           preparedPieces: input.preparedPieces,
@@ -810,10 +826,7 @@ function coordinateIntrinsicSharedArchive(
                   )
             focusedCompleteReconstructionTrace = {
               version: 'intrinsic-focused-complete-reconstruction-v1',
-              status:
-                focusedRun?.status === 'completed'
-                  ? 'settled'
-                  : 'censored',
+              status: focusedRun?.status ?? 'incomplete',
               sourceCanonicalGeometryHash:
                 protectedWinner.sheetlessCanonicalGeometryHash,
               selectedCanonicalGeometryHash:
