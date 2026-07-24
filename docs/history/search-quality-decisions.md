@@ -272,7 +272,7 @@ Evidence:
 The `complete-terminal-compaction` branch tested a sheetless, observer-only
 one-piece reinsertion pass against the accepted Shapes-17 complete endpoint.
 The `500 ms` all-transform pass completed zero singleton neighborhoods. A final
-Sol-approved incumbent-orientation pass at `1,000 ms` completed `3/10` and was
+reviewed incumbent-orientation pass at `1,000 ms` completed `3/10` and was
 also censored. Its best observed candidate reduced isolated pieces from 10 to 8
 but enlarged the envelope by about 4%.
 

@@ -25,9 +25,7 @@ observer-only, sheetless, and never had output authority.
 - no fixture identifier, dimension, or Shapes-specific threshold entered the
   algorithm.
 
-The design was reviewed on retained Sol thread
-`019f8f39-988e-78c0-aac0-ccc83ca8410c`. The final review log is
-`/tmp/codex-review-chat-1784874795-shapes.md`.
+The design and promotion guard were reviewed before either trial.
 
 ## Control
 
@@ -56,7 +54,7 @@ Production remained byte-identical.
 
 ## Trial 2: incumbent orientation
 
-Sol approved one final smaller neighborhood: preserve each incumbent's exact
+The reviewed final variant used one smaller neighborhood: preserve each incumbent's exact
 rotation and mirror, choose the first matching prepared transform under the
 existing deterministic transform order, and search translations only. Source
 commit `64ac438fbc238260657265dbd32abd8fdb7bccbb` used a fixed `1,000 ms` /
