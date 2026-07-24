@@ -26,6 +26,7 @@ export const INTRINSIC_RECONSTRUCTION_ARCHIVE_CAPACITY = 8
 export const INTRINSIC_RECONSTRUCTION_ROLES = [
   'canonical-grid',
   'legacy-absolute-envelope',
+  'settled-protected',
   'reversed-priority',
   'endpoint-q0-left-to-right',
   'endpoint-q0-right-to-left',
@@ -48,7 +49,10 @@ export type IntrinsicReconstructionRoleFamily =
   | 'endpoint-q90-right-to-left'
 
 export interface IntrinsicReconstructionSeed {
-  readonly role: 'canonical-grid' | 'legacy-absolute-envelope'
+  readonly role:
+    | 'canonical-grid'
+    | 'legacy-absolute-envelope'
+    | 'settled-protected'
   readonly canonicalGeometryHash: string
   readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
   readonly stepTrace: IntrinsicStrictConstructResult['stepTrace']
@@ -469,7 +473,9 @@ function baselineSeedRuns(
     candidateMode:
       seed.role === 'canonical-grid'
         ? ('pure-growth' as const)
-        : ('legacy-absolute-envelope' as const),
+        : seed.role === 'legacy-absolute-envelope'
+          ? ('legacy-absolute-envelope' as const)
+          : ('pure-growth' as const),
     pieceIds,
     effectiveOrderKey: intrinsicReconstructionEffectiveOrderKey(pieces),
     status: 'completed' as const,

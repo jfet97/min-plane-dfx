@@ -196,7 +196,7 @@ describe('intrinsic reconstruction portfolio', () => {
       'endpoint-q90-left-to-right-open-pocket-first',
       'endpoint-q90-right-to-left-open-pocket-first'
     ])
-    expect(INTRINSIC_RECONSTRUCTION_ROLES).toHaveLength(13)
+    expect(INTRINSIC_RECONSTRUCTION_ROLES).toHaveLength(14)
     expect(
       specs
         .filter(({ candidateMode }) => typeof candidateMode === 'object')

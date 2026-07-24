@@ -51,6 +51,7 @@ interface Arguments {
   readonly maximumAreaMm2: number | undefined
   readonly maximumCanonicalCavities: number | undefined
   readonly maximumElapsedMs: number | undefined
+  readonly focusedCompleteReconstruction: boolean
 }
 
 const MIXED_61_FIXTURE = fileURLToPath(
@@ -114,7 +115,10 @@ function parseArguments(): Arguments {
     expectedUnplacedCount: optionalIntegerArgument('--expected-unplaced-count'),
     maximumAreaMm2: optionalNumberArgument('--maximum-area-mm2'),
     maximumCanonicalCavities: optionalIntegerArgument('--maximum-canonical-cavities'),
-    maximumElapsedMs: optionalNumberArgument('--maximum-elapsed-ms')
+    maximumElapsedMs: optionalNumberArgument('--maximum-elapsed-ms'),
+    focusedCompleteReconstruction: process.argv.includes(
+      '--focused-complete-reconstruction'
+    )
   }
 }
 
@@ -321,7 +325,12 @@ const settings = request.options.irregularSettings
 if (settings === undefined) throw new Error(`${args.fixture} has no irregular settings`)
 const startedAt = performance.now()
 const result = await Effect.runPromise(
-  computeIrregularNesting(request).pipe(
+  computeIrregularNesting(
+    request,
+    args.focusedCompleteReconstruction
+      ? { enableFocusedCompleteReconstruction: true }
+      : undefined
+  ).pipe(
     Effect.provide(CollisionGeometryBuilder.Live),
     Effect.provide(TransformGeneratorLive),
     Effect.provide(NfpIfpServiceLive),
@@ -414,7 +423,9 @@ const report = jsonSafe({
     capacityTrace: result.capacityTrace,
     capacityShadowTelemetry: result.capacityShadowTelemetry,
     intrinsicAnytimeSchedulerTrace: result.intrinsicAnytimeSchedulerTrace,
-    experimentalPlaceDeferTrace: result.experimentalPlaceDeferTrace
+    experimentalPlaceDeferTrace: result.experimentalPlaceDeferTrace,
+    focusedCompleteReconstructionTrace:
+      result.focusedCompleteReconstructionTrace
   },
   checks,
   passed,
