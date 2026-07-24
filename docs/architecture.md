@@ -2,6 +2,19 @@
 
 This is the entry point for architecture documentation in `min-plane-dfx`.
 
+## HARD CONSTRAINT: ONE NESTING PROCESS ONLY
+
+> **UNTIL THE USER EXPLICITLY REVOKES THIS RULE, ONE NESTING JOB MUST USE
+> EXACTLY ONE ALGORITHM WORKER EXECUTION. DO NOT START NESTED WORKERS,
+> `worker_threads`, CHILD PROCESSES, SUBPROCESSES, OR CONCURRENT COMPLETE AND
+> CAPACITY EXECUTIONS. ALL PORTFOLIO COHORTS MUST ADVANCE COOPERATIVELY AND
+> SEQUENTIALLY INSIDE THE EXISTING WORKER.**
+
+“Single process” here describes algorithm execution for one nesting job. It
+does not remove Electron's existing renderer/main/worker application boundary.
+No benchmark result, roadmap item, or external-project pattern authorizes an
+exception. Only a new explicit user instruction can change this rule.
+
 Start from the [documentation index](./README.md), then read this file and
 [`architecture/index.md`](./architecture/index.md) before designing or
 implementing changes.

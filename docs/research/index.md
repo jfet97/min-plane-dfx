@@ -61,6 +61,7 @@ ten-sheet Mixed-61 reproductions with identical accepted geometry.
 
 ## Performance
 
+- [Single-process Compact cohort boundary](./single-process-cohort-boundary.md)
 - [Adaptive Compact transform policy](./adaptive-compact-transform-policy.md)
 - [Intrinsic shared-archive performance checkpoint](./intrinsic-shared-archive-performance-checkpoint.md)
 - [Shapes-17 bounded complete reinsertion](./shapes-17-bounded-complete-reinsertion.md)

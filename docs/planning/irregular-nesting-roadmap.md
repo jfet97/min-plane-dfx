@@ -1,5 +1,16 @@
 # Irregular Nesting Roadmap
 
+## HARD CONSTRAINT: SINGLE-PROCESS ONLY
+
+> **ALL NESTING WORK FOR ONE JOB MUST RUN COOPERATIVELY AND SEQUENTIALLY IN
+> THE EXISTING ALGORITHM WORKER. DO NOT USE SUBPROCESSES, CHILD PROCESSES,
+> NESTED WORKERS, `worker_threads`, OR CONCURRENT COHORT EXECUTION UNTIL THE
+> USER EXPLICITLY ORDERS OTHERWISE.**
+
+This constraint overrides any older performance proposal below. Logical
+portfolio independence and deterministic interleaving do not authorize CPU
+parallelism.
+
 This is the active forward roadmap for convex irregular nesting after the
 intertwined Compact promotion. It contains only current behavior, standing
 promotion gates, and uncompleted work. Completed and rejected experiments live
@@ -278,37 +289,22 @@ accounting.
 Stop condition: reject after the one bounded rule. Do not proceed directly to
 GA order mutation.
 
-### P4: Parallel protected-cohort wall-time experiment
+### P4: Parallel protected-cohort wall-time experiment — PAUSED BY USER
 
-This is a separate performance track, not a search-quality mechanism.
+**Do not implement or benchmark this stage.** The user requires single-process,
+single-worker algorithm execution until an explicit contrary instruction.
 
-Hypothesis: independently executing complete and capacity work can reduce
-elapsed time on expensive complete misses while retaining deterministic reuse
-and complete dominance.
+The isolated sequential measurements are retained only as historical evidence:
+Mixed-61 `700 x 500` took `79.164 s` through production and placed `48/61`;
+complete-only work took `54.116 s`; cold capacity-only took `9.194 s` but
+placed only `47/61`. The current 48th piece therefore depends on warm-prefix
+continuation, and the apparent cold-overlap ceiling was neither an achieved
+speedup nor a quality-preserving result.
 
-Protected scope: give each cohort private state and caches, merge endpoints
-deterministically, cancel capacity after a fitting complete settlement, and
-retain the live capacity checkpoint/result after a complete miss. Do not alter
-search order, comparators, survivor lists, or CPU entitlements.
-
-Measurement: use one roomy fitting case, Mixed-61 `700 x 500` as the historical
-expensive miss, and one exact-preflight bypass. Compare repeated wall time,
-user CPU, peak RSS, hashes, checkpoint ledgers, cancellation latency, and join
-order against current single-worker production.
-
-Falsifier: no preregistered wall-time reduction; restarted/lost capacity work;
-output dependent on task completion order; changed complete dominance; or
-resource growth beyond the declared operational budget.
-
-Promotion gate: the exact nine-case archive, deterministic repeated results,
-failure/deadline/cancellation coverage, and a meaningful paired wall-time gain
-on the expensive-miss case. Require exact ledger equality for settled-miss and
-exact-preflight cases. On fitting cases, preserve endpoint identity and require
-the timing-dependent capacity ledger to be internally reconciled, monotonic,
-restart-free, and free of work after cancellation acknowledgement.
-
-Stop condition: stop after the three-case measurement if concurrency only
-redistributes chronology or increases operational cost.
+The attempted concurrent pilot was stopped immediately after the user restated
+the constraint. It is not promotable evidence. Reopen P4 only after a new
+explicit user instruction authorizes concurrent algorithm execution and
+defines its operational limits.
 
 ## Open-Source Mechanism Disposition
 

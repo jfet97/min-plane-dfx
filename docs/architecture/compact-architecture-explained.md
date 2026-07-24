@@ -2,6 +2,18 @@
 
 The Compact path is a competition between several independent layout builders.
 
+## HARD CONSTRAINT: COMPACT IS SINGLE-PROCESS
+
+> **UNTIL THE USER EXPLICITLY SAYS OTHERWISE, COMPLETE AND CAPACITY WORK MUST
+> RUN COOPERATIVELY AND SEQUENTIALLY INSIDE ONE EXISTING ALGORITHM WORKER.
+> NEVER LAUNCH ANOTHER PROCESS, CHILD PROCESS, NESTED WORKER, `worker_thread`,
+> OR CONCURRENT COHORT EXECUTION FOR ONE NESTING JOB.**
+
+Independent builders are logical cohorts, not CPU-parallel tasks. “Interleaved”
+always means deterministic pause/resume on one execution thread. This rule
+overrides performance experiments and remains in force until the user
+personally revokes it.
+
 ## 0. Essential Vocabulary
 
 ### Piece
@@ -368,6 +380,10 @@ from an empty layout.
 This is cooperative interleaving on one worker. It prevents the old
 complete-miss-then-cold-restart boundary, but it is not parallel execution:
 the CPU costs of both protected cohorts can still add.
+
+This single-worker behavior is mandatory, not merely the current
+implementation. Do not turn the logical cohorts into concurrent processes or
+threads without a new explicit user instruction.
 
 ## 6. What a capacity checkpoint contains
 

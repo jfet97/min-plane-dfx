@@ -1,5 +1,16 @@
 # Irregular V2 Infrastructure
 
+## HARD CONSTRAINT: NO PARALLEL NESTING EXECUTION
+
+> **ONE NESTING JOB MUST REMAIN INSIDE ONE EXISTING ALGORITHM WORKER.
+> SUBPROCESSES, CHILD PROCESSES, NESTED WORKERS, `worker_threads`, AND
+> CONCURRENT COMPLETE/CAPACITY EXECUTION ARE FORBIDDEN UNTIL THE USER
+> EXPLICITLY REVOKES THIS RULE.**
+
+Compact cohorts may checkpoint and interleave deterministically, but they must
+not execute simultaneously. This restriction applies to production changes
+and performance experiments.
+
 Irregular v2 is a real deterministic convex engine. It flattens imported closed
 outlines, builds padded convex collision polygons, generates finite
 rotation/mirror choices, produces NFP/IFP contact candidates, and validates
