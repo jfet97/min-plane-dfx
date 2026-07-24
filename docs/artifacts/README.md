@@ -8,9 +8,13 @@ baselines.
 ## Current Production Evidence
 
 - [`current-compact-baselines/`](./current-compact-baselines/): complete,
-  Chromium-rendered PNG, SVG, and JSON evidence for the six durable Compact
-  baselines: Triangle-20, Mixed-61, and Shapes-17 on both `2000 x 2700` and
-  `600 x 400`.
+  Chromium-rendered PNG, SVG, and JSON evidence for the nine durable Compact
+  baselines: Triangle-20, Mixed-61, and Shapes-17 on `2000 x 2700`,
+  `600 x 400`, and `300 x 300`.
+- [`focused-complete-reconstruction-boundary/`](./focused-complete-reconstruction-boundary/):
+  enabled/disabled Shapes-17 `540 x 580` evidence proving that focused
+  reconstruction starts from the sheetless complete leader even when a
+  different protected endpoint is the first one that fits.
 - [`intrinsic-capacity-v1/`](./intrinsic-capacity-v1/): constrained-sheet
   capacity gate evidence — sheet-outline SVG/PNG renders of representative
   exact partial layouts, the combined strict `gate:capacity` report with full

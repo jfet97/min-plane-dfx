@@ -28,11 +28,13 @@ const FIXTURE_DIRECTORY = fileURLToPath(
   new URL('../fixtures/irregularSeventeenShapes', import.meta.url)
 )
 const EXPECTED_CANONICAL_HASH =
+  '1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d'
+const EXPECTED_PROTECTED_SOURCE_HASH =
   'c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a'
 
 describe('compact-quality seventeen-shape golden', () => {
   it(
-    'keeps the heterogeneous direct-archive baseline exact',
+    'keeps the heterogeneous focused-reconstruction baseline exact',
     async () => {
       const fileNames = (await readdir(FIXTURE_DIRECTORY))
         .filter((fileName) => fileName.endsWith('.dxf'))
@@ -110,9 +112,18 @@ describe('compact-quality seventeen-shape golden', () => {
           .update(canonicalCollisionLayoutIdentity(computed.placedCollisionGeometries) ?? '')
           .digest('hex')
       ).toBe(EXPECTED_CANONICAL_HASH)
-      expect(computed.score.collisionBoundsAreaMm2).toBeLessThanOrEqual(304_500)
-      expect(maximumSide).toBeLessThanOrEqual(559.976)
+      expect(computed.score.collisionBoundsAreaMm2).toBeLessThanOrEqual(281_234)
+      expect(maximumSide).toBeLessThanOrEqual(532.692)
       expect(computed.portfolio.score?.canonicalEnclosedCavityCount).toBe(0)
+      expect(computed.focusedCompleteReconstructionTrace).toMatchObject({
+        status: 'completed',
+        sourceCanonicalGeometryHash: EXPECTED_PROTECTED_SOURCE_HASH,
+        candidateCanonicalGeometryHash: EXPECTED_CANONICAL_HASH,
+        selectedCanonicalGeometryHash: EXPECTED_CANONICAL_HASH,
+        consumedCandidateEvaluations: 8_035,
+        candidateEvaluationAccountingComplete: true,
+        outputInfluence: 'selected'
+      })
     },
     120_000
   )

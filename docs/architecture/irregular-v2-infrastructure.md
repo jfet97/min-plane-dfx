@@ -980,6 +980,22 @@ sheetless complete constructors. Complete endpoints enter the complete
 namespace and remain ranked only by intrinsic geometry and topology; capacity
 endpoints enter a separate count/material-first namespace.
 
+A settled fitting complete archive may then run one bounded focused complete
+reconstruction producer. It derives a deterministic q90 right-to-left piece
+order from the unfiltered settled sheetless leader and rebuilds through the
+existing exact strict constructor. The result enters the same complete archive;
+it receives no scoring exemption and cannot weaken the protected endpoint.
+The producer has fixed runtime and candidate-evaluation bounds, propagates
+external cancellation, and records explicit duplicate, evaluation-cap,
+deadline, incomplete, skip, failure, candidate, and selected states.
+
+Requested-sheet fit determines whether the producer can affect the current
+request, but never chooses its source. The source remains the highest-ranked
+unfiltered sheetless complete endpoint even if a lower-ranked protected
+endpoint is the first one that fits. Exact preflight impossibility and a
+settled complete archive with no fitting endpoint both skip reconstruction
+with zero focused work, preserving the existing capacity checkpoint path.
+
 A fitting settled complete endpoint wins and cancels capacity. If the complete
 archive settles without a fitting endpoint, that outcome is not an error: the
 existing cold/warm checkpoints continue to exact capacity settlement, which
@@ -1013,8 +1029,11 @@ The removed canonical-reference coordinator, fixed `2000 x 2700` decode, admissi
 certificate, and `canonicalReferenceDecodeEnabled` schema field are historical only.
 The compact production gate now contains nine baselines. On `2000 x 2700`,
 Triangle-20 is `74,428.143126 mm2`, Mixed-61 is `391,605.850174 mm2`, and
-Shapes-17 is `304,499.845650 mm2`; all pieces are placed and canonical cavity
-count is zero. On `600 x 400`, Triangle-20 retains the exact same canonical
+Shapes-17 is `281,233.148068 mm2`; all pieces are placed and canonical cavity
+count is zero. The Shapes endpoint is the exact `1ddc8426...` focused
+reconstruction of protected sheetless source `c640c06f...`; it is unchanged on
+the tested `600 x 600`, `5000 x 5000`, and `10000 x 10000` roomy sheets. On
+`600 x 400`, Triangle-20 retains the exact same canonical
 motif, Shapes-17 settles an exact 14-piece subset at `232,178.021694 mm2`
 with three pieces unplaced and zero canonical cavities, and Mixed-61 settles an
 exact 25-piece subset at `239,484.9666 mm2` with 36 pieces unplaced and zero

@@ -4,9 +4,9 @@
     "width": 600,
     "height": 400
   },
-  "sourceCommit": "1eb60ebc729928df8a6d0a3566a2bff59f5c7886",
+  "sourceCommit": "acb418629cf4f494f5322829cc04cc9f859b3a4a",
   "runtime": {
-    "elapsedMs": 12704.895999999999,
+    "elapsedMs": 12873.574792,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -1276,11 +1276,11 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 20,
             "topologyMeasurementCount": 36,
-            "topologyMeasurementMs": 8.473374999999578,
+            "topologyMeasurementMs": 8.497122000001582,
             "legalCandidateCount": 4144,
             "contactMeasuredCandidateCount": 46,
             "positiveContactCandidateCount": 10,
-            "contactMeasurementMs": 1.0894179999959306,
+            "contactMeasurementMs": 1.1967120000044815,
             "contactSelectedSuccessorCount": 5,
             "contactDeduplicatedSuccessorCount": 0,
             "contactRetainedSuccessorCount": 5,
@@ -1464,7 +1464,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 341,
           "completedDepths": 5,
-          "elapsedMs": 12.535167000000001,
+          "elapsedMs": 12.439625000000888,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1488,7 +1488,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 335,
           "completedDepths": 5,
-          "elapsedMs": 12.518500000000131,
+          "elapsedMs": 12.59387500000048,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1512,7 +1512,7 @@
           "checkpointRetained": false,
           "consumedPlacementEvaluations": 32273,
           "completedDepths": 17,
-          "elapsedMs": 1764.8918339999964,
+          "elapsedMs": 1824.6122929999983,
           "endpoint": {
             "placedCount": 14,
             "placedDoubledMaterialAreaGrid2": "294455444315",
@@ -1536,7 +1536,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 341,
           "completedDepths": 5,
-          "elapsedMs": 11.752207999999882,
+          "elapsedMs": 11.955915999998979,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1758,11 +1758,11 @@
         "placedMaterialAreaMm2": 147227.7221575,
         "selectedRotationDeg": 0
       },
-      "preflightRuntimeMs": 13.64416700000001,
-      "completeArchiveRuntimeMs": 9551.604040999999,
-      "prefixTerminalizationMs": 25.709084000000075,
-      "coldSearchMs": 2470.738958,
-      "runtimeMs": 2496.983375
+      "preflightRuntimeMs": 14.071167000000003,
+      "completeArchiveRuntimeMs": 9658.126375,
+      "prefixTerminalizationMs": 26.246541000000434,
+      "coldSearchMs": 2532.6187090000003,
+      "runtimeMs": 2559.428415999999
     },
     "intrinsicAnytimeSchedulerTrace": {
       "version": "intrinsic-anytime-scheduler-v1",
@@ -2009,6 +2009,15 @@
           "outcome": "censored"
         }
       ]
+    },
+    "focusedCompleteReconstructionTrace": {
+      "version": "intrinsic-focused-complete-reconstruction-v1",
+      "status": "skipped-no-fitting-protected-endpoint",
+      "sourceCanonicalGeometryHash": "c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a",
+      "consumedCandidateEvaluations": 0,
+      "candidateEvaluationAccountingComplete": true,
+      "runtimeMs": 0,
+      "outputInfluence": "none"
     }
   },
   "checks": {
@@ -2020,8 +2029,17 @@
     "area": true,
     "canonicalCavities": true,
     "runtime": true,
-    "schedulerChronology": true
+    "schedulerChronology": true,
+    "focusedTracePresent": true,
+    "focusedStatus": true,
+    "focusedEvaluations": true,
+    "focusedSourceHash": true,
+    "focusedCandidateHash": true,
+    "focusedSelectedHash": true,
+    "focusedInfluence": true,
+    "focusedAccounting": true,
+    "focusedFailureReason": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/compact-nine-baselines-1eb60eb/shapes-17-600x400.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/focused-complete-promotion-acb4186/run-1/shapes-17-600x400.svg"
 }

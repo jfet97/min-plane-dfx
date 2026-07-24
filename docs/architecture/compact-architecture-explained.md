@@ -252,6 +252,30 @@ identity, and finite measurements. At final selection, any fitting complete
 endpoint dominates every subset endpoint. A subset wins only when no settled
 complete endpoint fits the requested sheet.
 
+### Reusing a settled complete result
+
+The complete archive can give its settled sheetless leader to one small,
+bounded reconstruction producer. This is useful when the original constructor
+found all pieces but made poor early choices.
+
+The producer does not start from empty and it does not try to move one piece at
+a time inside the old layout. It reuses the old endpoint as information:
+
+```text
+settled exact complete layout
+    -> derive one deterministic geometric piece order
+    -> rebuild all pieces with the existing exact constructor
+    -> submit the rebuilt endpoint to the same complete archive
+```
+
+If rebuilding finds a better exact complete layout, the archive may select it.
+If it duplicates the old order, runs out of its fixed budget, fails to finish,
+or produces a worse layout, the protected result remains untouched.
+
+The current focused order reads the settled layout in a rigid q90 frame from
+right to left. This is generic geometry-derived ordering: it contains no
+Shapes-17 IDs and no requested-sheet dimensions.
+
 ## 3. The sheet-independent complete archive
 
 Conceptually, the archive resembles this table:
@@ -385,8 +409,16 @@ early.
 
 ## 8. Current measured behavior
 
-On roomy sheets, the settled complete cohort remains authoritative and the
-accepted Triangle-20, Mixed-61, and Shapes-17 complete geometry is unchanged.
+On roomy sheets, the settled complete cohort remains authoritative. Triangle-20
+and Mixed-61 retain their accepted geometry. Shapes-17 now uses the focused
+reconstruction winner: all `17/17` pieces, zero cavities,
+`281,233.148068 mm2` instead of `304,499.845650 mm2`, and four isolated pieces
+instead of ten.
+
+The same Shapes-17 canonical hash is selected on `600 x 600`, `2000 x 2700`,
+`5000 x 5000`, and `10000 x 10000`. A `540 x 580` boundary test also proves
+that the reconstruction source remains the top sheetless leader even when that
+source itself does not fit the requested sheet.
 
 On Triangle-20 at `300 × 300`, the production capacity lane now returns the
 exact `17/20` layout with three explicitly unplaced pieces. The accepted

@@ -4,9 +4,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "1eb60ebc729928df8a6d0a3566a2bff59f5c7886",
+  "sourceCommit": "acb418629cf4f494f5322829cc04cc9f859b3a4a",
   "runtime": {
-    "elapsedMs": 14642.821916,
+    "elapsedMs": 14942.35825,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -915,6 +915,16 @@
           "outcome": "settled"
         }
       ]
+    },
+    "focusedCompleteReconstructionTrace": {
+      "version": "intrinsic-focused-complete-reconstruction-v1",
+      "status": "duplicate-order",
+      "sourceCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+      "selectedCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+      "consumedCandidateEvaluations": 0,
+      "candidateEvaluationAccountingComplete": true,
+      "runtimeMs": 0.6889590000009775,
+      "outputInfluence": "protected-fallback"
     }
   },
   "checks": {
@@ -926,8 +936,17 @@
     "area": true,
     "canonicalCavities": true,
     "runtime": true,
-    "schedulerChronology": true
+    "schedulerChronology": true,
+    "focusedTracePresent": true,
+    "focusedStatus": true,
+    "focusedEvaluations": true,
+    "focusedSourceHash": true,
+    "focusedCandidateHash": true,
+    "focusedSelectedHash": true,
+    "focusedInfluence": true,
+    "focusedAccounting": true,
+    "focusedFailureReason": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/compact-nine-baselines-1eb60eb/triangle-20-2000x2700.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/focused-complete-promotion-acb4186/run-1/triangle-20-2000x2700.svg"
 }

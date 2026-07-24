@@ -392,3 +392,36 @@ improves Mixed-61 `600 x 400` from `24/61` to `25/61` and Shapes-17
 `600 x 400` from `13/17` with one cavity to `14/17` with zero cavities. Roomy
 complete winners remain protected by the separate sheetless complete cohort
 and terminal complete-over-partial dominance.
+
+## Focused complete reconstruction
+
+The accepted Shapes-17 complete endpoint exposed a different failure mode from
+the constrained Triangle case: all `17/17` pieces were present, but early
+construction choices left ten isolated pieces and a `304,499.845650 mm2`
+envelope. Frozen-neighbor singleton reinsertion had already failed to improve
+the exact objective.
+
+A bounded generic reconstruction portfolio then rebuilt the settled protected
+endpoint under geometry-derived q0/q90, topology, and gap orders. Three full
+probe reproductions selected the same exact `1ddc8426...` endpoint. The full
+family was too expensive at roughly `39,698` evaluations and `8.3 s`, so it
+was not promoted.
+
+The isolated `endpoint-q90-right-to-left` role reproduces the winner in `8,035`
+evaluations and about `1.7 s`. It improves Shapes-17 to
+`281,233.148068 mm2`, maximum side `532.691 mm`, four isolated pieces, seven
+positive-contact components, and zero cavities. It contains no fixture
+identity, requested-sheet score, new placement generator, or widened beam.
+
+The production integration submits the reconstruction only to the complete
+archive. The settled protected endpoint remains the fallback for duplicate,
+capped, censored, incomplete, invalid, failing, or losing work. Exact
+preflight and no-fitting-complete cases skip the producer with zero
+reconstruction work. A `540 x 580` enabled/disabled boundary proves that the
+source is the unfiltered sheetless leader, not a sheet-selected endpoint.
+
+Two strict current-source nine-case runs have identical normalized digests and
+preserve every other accepted canonical result. The Shapes winner is also
+identical on tested `600 x 600`, `5000 x 5000`, and `10000 x 10000` sheets.
+The promoted mechanism and evidence are documented in
+[`../research/focused-complete-reconstruction.md`](../research/focused-complete-reconstruction.md).

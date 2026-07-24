@@ -14,17 +14,23 @@ ship are summarized separately in
 | Third baseline | `ec6fb90`, `6d1cfa1`, `8f84f81`, `75b9699` | added the all-distinct Shapes-17 direct-archive gate |
 | Archive-only production | `8b0fba4`, merge `f33831f`, recorded by `b506344` | removed the fixed coordinator/flag and ordinary compact fallback; Compact quality selects directly from the intrinsic shared archive |
 | First archive performance pass | `54b437a` | added coverage-checked construction telemetry and removed redundant per-candidate hull work while preserving exact production identities and the current invariance sample |
+| Intrinsic anytime portfolio | through `c8a3cda` | added resumable protected capacity work, deterministic interleaving, exact complete/subset namespaces, and no-restart continuation after a complete miss |
+| Focused complete reconstruction | `84e0b81`, `f63dbd9`, `acb4186` | added one bounded generic rebuild of the settled sheetless leader; Shapes-17 improves by 7.64% area while protected complete and capacity fallbacks remain intact |
 
-## Current Contract at `54b437a`
+## Current Contract at `acb4186`
 
-- Compact quality uses three sheetless direct constructors and a bounded
-  repeated-family periodic portfolio.
-- Only complete canonical-exact endpoints enter the sheetless archive.
+- Compact quality coordinates protected sheetless complete constructors with
+  resumable requested-sheet capacity lanes.
+- Complete and subset endpoints have separate survivor lists, budgets,
+  comparators, and exact archive namespaces.
 - Deduplication and intrinsic ranking occur before requested-sheet q0/q90 fit.
-- An invalid, cancelled, deadline-censored, execution-incomplete, or non-fitting
-  archive fails; it does not return a partial or ordinary-beam fallback.
-- History is one truthful selected terminal snapshot, not invented beam
-  ancestry.
+- A fitting settled complete endpoint dominates all subset endpoints; after a
+  complete miss, existing capacity checkpoints continue without restarting.
+- One bounded q90-right-to-left reconstruction of the unfiltered settled
+  sheetless leader may submit an additional exact complete endpoint.
+- Invalid focused work cannot displace the protected endpoint. Cancellation is
+  propagated; other focused failures record a protected fallback.
+- History reveals the exact selected layout and does not invent losing ancestry.
 - Canonical occupied-union cavities remain separate from requested-sheet
   free-material holes.
 - The irregular worker timeout floor is `390,000 ms`.
@@ -35,7 +41,7 @@ Current exact one-sheet baselines:
 | --- | ---: | ---: | --- |
 | Triangle-20 | `74,428.143126 mm2` | 0 | `371db269...` |
 | Mixed-61 | `391,605.850174 mm2` | 0 | fitted production gate `ef2b783a...` |
-| Shapes-17 | `304,499.845650 mm2` | 0 | `c640c06f...` |
+| Shapes-17 | `281,233.148068 mm2` | 0 | `1ddc8426...` |
 
 The `405,773.434053 mm2` pocket-first Mixed endpoint remains an important
 direct fallback inside the historical shared-archive research. The

@@ -72,8 +72,12 @@ sheets with sheetless construction and ranking:
 - `f33831f` merged the integration, recorded on `main` by `b506344`.
 
 Current one-sheet baselines are Triangle `74,428.143126 mm2`, Mixed
-`391,605.850174 mm2`, and Shapes-17 `304,499.845650 mm2`, all with zero
-canonical occupied-union cavities. These are not the fixed-reference results.
+`391,605.850174 mm2`, and Shapes-17 `281,233.148068 mm2`, all with zero
+canonical occupied-union cavities. Shapes-17 now selects the bounded focused
+reconstruction hash `1ddc8426...` from protected sheetless source
+`c640c06f...`. Exact extra gates select that same reconstructed hash on
+`600 x 600`, `5000 x 5000`, and `10000 x 10000`. These are not the
+fixed-reference results.
 
 ## Current Evidence Limit
 

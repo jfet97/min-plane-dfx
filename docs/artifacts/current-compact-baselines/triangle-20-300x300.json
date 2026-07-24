@@ -4,9 +4,9 @@
     "width": 300,
     "height": 300
   },
-  "sourceCommit": "1eb60ebc729928df8a6d0a3566a2bff59f5c7886",
+  "sourceCommit": "acb418629cf4f494f5322829cc04cc9f859b3a4a",
   "runtime": {
-    "elapsedMs": 15675.102208,
+    "elapsedMs": 15840.64575,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -605,7 +605,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 16,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.2451280000004772,
+            "topologyMeasurementMs": 1.2836270000002514,
             "legalCandidateCount": 3193,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -793,7 +793,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 137,
           "completedDepths": 6,
-          "elapsedMs": 5.427917000000889,
+          "elapsedMs": 5.532583000000159,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -817,7 +817,7 @@
           "checkpointRetained": false,
           "consumedPlacementEvaluations": 28314,
           "completedDepths": 20,
-          "elapsedMs": 960.3551650000009,
+          "elapsedMs": 954.2392479999999,
           "endpoint": {
             "placedCount": 14,
             "placedDoubledMaterialAreaGrid2": "58800000000",
@@ -841,7 +841,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 123,
           "completedDepths": 6,
-          "elapsedMs": 4.138666999999259,
+          "elapsedMs": 4.227957999999489,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -865,7 +865,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 173,
           "completedDepths": 11,
-          "elapsedMs": 6.693832999999358,
+          "elapsedMs": 6.543791999998575,
           "endpoint": {
             "placedCount": 11,
             "placedDoubledMaterialAreaGrid2": "46200000000",
@@ -889,7 +889,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 137,
           "completedDepths": 6,
-          "elapsedMs": 4.092208000000028,
+          "elapsedMs": 3.8677499999994325,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -913,7 +913,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 187,
           "completedDepths": 11,
-          "elapsedMs": 7.03583400000025,
+          "elapsedMs": 7.0697500000005675,
           "endpoint": {
             "placedCount": 11,
             "placedDoubledMaterialAreaGrid2": "46200000000",
@@ -1190,11 +1190,11 @@
         "placedMaterialAreaMm2": 35700,
         "selectedRotationDeg": 0
       },
-      "preflightRuntimeMs": 7.20720799999998,
-      "completeArchiveRuntimeMs": 14263.038999999999,
-      "prefixTerminalizationMs": 11.34570800000074,
-      "coldSearchMs": 1257.8889579999995,
-      "runtimeMs": 1269.7169159999994
+      "preflightRuntimeMs": 7.328792000000021,
+      "completeArchiveRuntimeMs": 14437.319040999999,
+      "prefixTerminalizationMs": 10.916291999999885,
+      "coldSearchMs": 1252.3448750000007,
+      "runtimeMs": 1263.7236249999987
     },
     "intrinsicAnytimeSchedulerTrace": {
       "version": "intrinsic-anytime-scheduler-v1",
@@ -1501,6 +1501,15 @@
           "outcome": "censored"
         }
       ]
+    },
+    "focusedCompleteReconstructionTrace": {
+      "version": "intrinsic-focused-complete-reconstruction-v1",
+      "status": "skipped-no-fitting-protected-endpoint",
+      "sourceCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+      "consumedCandidateEvaluations": 0,
+      "candidateEvaluationAccountingComplete": true,
+      "runtimeMs": 0,
+      "outputInfluence": "none"
     }
   },
   "checks": {
@@ -1512,8 +1521,17 @@
     "area": true,
     "canonicalCavities": true,
     "runtime": true,
-    "schedulerChronology": true
+    "schedulerChronology": true,
+    "focusedTracePresent": true,
+    "focusedStatus": true,
+    "focusedEvaluations": true,
+    "focusedSourceHash": true,
+    "focusedCandidateHash": true,
+    "focusedSelectedHash": true,
+    "focusedInfluence": true,
+    "focusedAccounting": true,
+    "focusedFailureReason": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/compact-nine-baselines-1eb60eb/triangle-20-300x300.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/focused-complete-promotion-acb4186/run-1/triangle-20-300x300.svg"
 }

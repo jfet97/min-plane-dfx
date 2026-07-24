@@ -1,12 +1,12 @@
 {
   "fixture": "shapes-17",
   "sheet": {
-    "width": 2000,
-    "height": 2700
+    "width": 540,
+    "height": 580
   },
   "sourceCommit": "acb418629cf4f494f5322829cc04cc9f859b3a4a",
   "runtime": {
-    "elapsedMs": 12657.733333,
+    "elapsedMs": 12432.244,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -38,12 +38,12 @@
       "sharedCollisionBoundaryContactBand": 8,
       "nearCompleteStructuralContactCount": 4,
       "dominantNearCompleteStructuralContactCount": 1,
-      "largestNetFreeMaterialRegionAreaMm2": 5189378.338716,
+      "largestNetFreeMaterialRegionAreaMm2": 102578.33871599997,
       "freeMaterialRegionCount": 2,
       "freeMaterialHoleCount": 6,
-      "freeMaterialSliverMetric": 65.99333622613482,
-      "collisionBoundsWorstNormalizedSheetConsumption": 0.2663455,
-      "collisionBoundsNormalizedSpanSum": 0.46188179629629633,
+      "freeMaterialSliverMetric": 604.6529971232204,
+      "collisionBoundsWorstNormalizedSheetConsumption": 0.9864648148148148,
+      "collisionBoundsNormalizedSpanSum": 1.8967199872286078,
       "collisionBoundsAreaMm2": 281233.148068,
       "collisionBoundsSpanMm": 1060.6390000000001,
       "occupiedHullWasteRatio": 0.19857813794316298,
@@ -51,9 +51,9 @@
       "collisionBoundsLeftMm": 0,
       "freeMaterialSnapshot": {
         "sheet": {
-          "width": 2000,
-          "height": 2700,
-          "label": "2000x2700"
+          "width": 540,
+          "height": 580,
+          "label": "540x580"
         },
         "regions": [
           {
@@ -83,16 +83,16 @@
                   "y": 0
                 },
                 {
-                  "x": 2000,
+                  "x": 540,
                   "y": 0
                 },
                 {
-                  "x": 2000,
-                  "y": 2700
+                  "x": 540,
+                  "y": 580
                 },
                 {
                   "x": 0,
-                  "y": 2700
+                  "y": 580
                 },
                 {
                   "x": 0,
@@ -1315,12 +1315,12 @@
         "sharedCollisionBoundaryContactBand": 8,
         "nearCompleteStructuralContactCount": 4,
         "dominantNearCompleteStructuralContactCount": 1,
-        "largestNetFreeMaterialRegionAreaMm2": 5189378.338716,
+        "largestNetFreeMaterialRegionAreaMm2": 102578.33871599997,
         "freeMaterialRegionCount": 2,
         "freeMaterialHoleCount": 6,
-        "freeMaterialSliverMetric": 65.99333622613482,
-        "collisionBoundsWorstNormalizedSheetConsumption": 0.2663455,
-        "collisionBoundsNormalizedSpanSum": 0.46188179629629633,
+        "freeMaterialSliverMetric": 604.6529971232204,
+        "collisionBoundsWorstNormalizedSheetConsumption": 0.9864648148148148,
+        "collisionBoundsNormalizedSpanSum": 1.8967199872286078,
         "collisionBoundsAreaMm2": 281233.148068,
         "collisionBoundsSpanMm": 1060.6390000000001,
         "canonicalEnclosedCavityCount": 0
@@ -1538,7 +1538,7 @@
       "selectedCanonicalGeometryHash": "1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d",
       "consumedCandidateEvaluations": 8035,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 1746.3152919999993,
+      "runtimeMs": 1728.1278750000001,
       "outputInfluence": "selected"
     }
   },
@@ -1563,5 +1563,5 @@
     "focusedFailureReason": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/focused-complete-promotion-acb4186/run-1/shapes-17-2000x2700.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/focused-complete-boundary-acb4186/shapes-17-540x580.svg"
 }
