@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "sourceCommit": "0ca9ad6e047ebed8500af97825fc52d0f6ba963d",
+  "firstRun": {
+    "wallSeconds": 418.84,
+    "userSeconds": 439.01,
+    "peakRssBytes": 949288960
+  },
+  "secondRun": {
+    "wallSeconds": 424.30,
+    "userSeconds": 443.82,
+    "peakRssBytes": 954531840
+  },
+  "cases": [
+    {
+      "caseId": "triangle-golden-20",
+      "withinRunSheetInvariant": true,
+      "compactHash": "b4d1fd9af8a1ecb4a17f1031546c1dbbb5afb19b2d99e41bdb646e52084092f7",
+      "referenceHash": "b4d1fd9af8a1ecb4a17f1031546c1dbbb5afb19b2d99e41bdb646e52084092f7",
+      "crossRunCompactHashEqual": true,
+      "crossRunReferenceHashEqual": true,
+      "areaMm2": 74428.143126,
+      "canonicalCavities": 0,
+      "placedCount": 20,
+      "unplacedCount": 0,
+      "svg": "triangle-golden-20-1000x1700.svg",
+      "png": "triangle-golden-20-1000x1700.png"
+    },
+    {
+      "caseId": "rectangles-20",
+      "withinRunSheetInvariant": true,
+      "compactHash": "c6cdd1389733b48447ab32a52014239734f6d6a6e2d07ea977febb9ea4624743",
+      "referenceHash": "c6cdd1389733b48447ab32a52014239734f6d6a6e2d07ea977febb9ea4624743",
+      "crossRunCompactHashEqual": true,
+      "crossRunReferenceHashEqual": true,
+      "areaMm2": 376727.32031999994,
+      "canonicalCavities": 0,
+      "placedCount": 20,
+      "unplacedCount": 0,
+      "svg": "rectangles-20-1000x1700.svg",
+      "png": "rectangles-20-1000x1700.png"
+    },
+    {
+      "caseId": "trapezoids-20",
+      "withinRunSheetInvariant": true,
+      "compactHash": "1b64d1877b3d78db68bae5a588111086d19ae525965147f06b97372fd332896b",
+      "referenceHash": "1b64d1877b3d78db68bae5a588111086d19ae525965147f06b97372fd332896b",
+      "crossRunCompactHashEqual": true,
+      "crossRunReferenceHashEqual": true,
+      "areaMm2": 194388.21376,
+      "canonicalCavities": 0,
+      "placedCount": 20,
+      "unplacedCount": 0,
+      "svg": "trapezoids-20-1000x1700.svg",
+      "png": "trapezoids-20-1000x1700.png"
+    },
+    {
+      "caseId": "pentagons-20",
+      "withinRunSheetInvariant": true,
+      "compactHash": "51326c214524c68b71011e40584c6e0257e881eab54982abf59ec4eb89a88403",
+      "referenceHash": "51326c214524c68b71011e40584c6e0257e881eab54982abf59ec4eb89a88403",
+      "crossRunCompactHashEqual": true,
+      "crossRunReferenceHashEqual": true,
+      "areaMm2": 230438.59704000002,
+      "canonicalCavities": 0,
+      "placedCount": 20,
+      "unplacedCount": 0,
+      "svg": "pentagons-20-1000x1700.svg",
+      "png": "pentagons-20-1000x1700.png"
+    },
+    {
+      "caseId": "star-hulls-20",
+      "withinRunSheetInvariant": true,
+      "compactHash": "51326c214524c68b71011e40584c6e0257e881eab54982abf59ec4eb89a88403",
+      "referenceHash": "51326c214524c68b71011e40584c6e0257e881eab54982abf59ec4eb89a88403",
+      "crossRunCompactHashEqual": true,
+      "crossRunReferenceHashEqual": true,
+      "areaMm2": 230438.59704000002,
+      "canonicalCavities": 0,
+      "placedCount": 20,
+      "unplacedCount": 0,
+      "svg": "star-hulls-20-1000x1700.svg",
+      "png": "star-hulls-20-1000x1700.png"
+    },
+    {
+      "caseId": "mixed-50",
+      "withinRunSheetInvariant": true,
+      "compactHash": "3726e499eec0e1a94e87867dc0cc6ef00a4422722a57cfb5f03bdb8d73e17954",
+      "referenceHash": "3726e499eec0e1a94e87867dc0cc6ef00a4422722a57cfb5f03bdb8d73e17954",
+      "crossRunCompactHashEqual": true,
+      "crossRunReferenceHashEqual": true,
+      "areaMm2": 543814.047975,
+      "canonicalCavities": 1,
+      "placedCount": 50,
+      "unplacedCount": 0,
+      "svg": "mixed-50-1000x1700.svg",
+      "png": "mixed-50-1000x1700.png"
+    },
+    {
+      "caseId": "mixed-61",
+      "withinRunSheetInvariant": true,
+      "compactHash": "ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b",
+      "referenceHash": "ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b",
+      "crossRunCompactHashEqual": true,
+      "crossRunReferenceHashEqual": true,
+      "areaMm2": 391605.85017399996,
+      "canonicalCavities": 0,
+      "placedCount": 61,
+      "unplacedCount": 0,
+      "svg": "mixed-61-1000x1700.svg",
+      "png": "mixed-61-1000x1700.png"
+    }
+  ]
+}

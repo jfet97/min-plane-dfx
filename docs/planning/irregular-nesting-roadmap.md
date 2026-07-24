@@ -200,10 +200,13 @@ widening this hypothesis.
 
 ### P2: Close complete-cohort invariance and corpus coverage
 
-Status: the historical ten-sheet Mixed-61 subgate passed twice at `6179cef` on
-2026-07-24 with identical geometry and portable artifacts. Keep it as a
-standing gate. Broader mixed-50, rectangle, trapezoid, pentagon, star, and other
-representative-fixture coverage remains open.
+Status: closed on 2026-07-24. The historical ten-sheet Mixed-61 subgate passed
+twice at `6179cef`. The maintained seven-case corpus then passed twice from
+the committed inventory at `0ca9ad6`: all 14 layouts were complete and
+canonical-identical across `1000 x 1700` and `2000 x 2700`, with portable SVG,
+PNG, report, and checksum evidence. Both remain standing gates alongside the
+separate nine-case archive. See
+[`../research/compact-maintained-corpus.md`](../research/compact-maintained-corpus.md).
 
 Hypothesis: the protected sheetless complete winner remains identical on every
 roomy sheet where the same leader fits, and the nine-case gate generalizes to
@@ -225,8 +228,9 @@ render/report mismatch.
 Promotion gate: two clean reproductions, portable artifacts, exact existing
 goldens, and documented fit-boundary explanations for legitimate divergence.
 
-Stop condition: once reproducible, make the matrix and corpus a standing gate
-and remove them from active work.
+Stop condition: satisfied. Keep the matrix and corpus as standing gates and do
+not expand them with historical fixtures until an exact current request is
+inventoried before decoding.
 
 ### P3: Conditional large-first/small-fill subset observer
 

@@ -35,6 +35,7 @@ quality production path.
 
 ## Sheet Invariance and Archive Construction
 
+- [Maintained Compact corpus](./compact-maintained-corpus.md)
 - [Sheet-dimension invariance corpus](./sheet-dimension-invariance-corpus.md)
 - [Mechanism arc and independent-decoder blocker](./sheet-invariance-mechanism-arc-and-blocker.md)
 - [Retired canonical-reference handoff](./canonical-reference-decode-handoff.md)
