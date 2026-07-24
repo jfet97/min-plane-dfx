@@ -458,3 +458,21 @@ runs. Every case placed all pieces. Full Electron PNGs confirmed complete
 margins, and each sheet pair produced byte-identical SVG and PNG files. P2 is
 therefore closed as a standing measurement gate without changing production
 search. The accepted nine-case and ten-sheet gates remain separate.
+
+## Capacity one-count-deficit continuation
+
+The unchanged width-16 capacity frontier on Mixed-61 `300 x 300` contained
+four exact candidates one placed piece behind a full all-best-count control
+frontier. The bounded trace was deterministic, changed neither the 149,719
+evaluations nor the accepted hashes, and added a median `23.815 ms`.
+
+A protected observer then replaced only the sixteenth control state at eligible
+depths. It settled in `1,176.694 ms` and 149,200 evaluations, with exact
+seven-depth checkpoint/resume equivalence, but returned the same `6/61`,
+zero-cavity, `89,504.369008 mm2` endpoint. The hypothesis is closed without a
+matrix because it has no targeted quality win. Its trace also does not prove
+the causal prepared-order loss required to activate the conditional
+large-first/small-fill observer.
+
+Detailed evidence is in
+[`../research/capacity-one-count-deficit-continuation.md`](../research/capacity-one-count-deficit-continuation.md).

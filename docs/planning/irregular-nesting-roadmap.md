@@ -95,6 +95,12 @@ historical evidence that local one-piece repair could not reach this result.
 
 ### P0: One-count-deficit capacity observer
 
+Status: closed and rejected on 2026-07-24. Four eligible deficit witnesses
+existed in the unchanged Mixed-61 `300 x 300` frontier. The protected
+continuation settled exactly and resumed deterministically, but returned the
+same `6/61`, `89,504.369008 mm2`, zero-cavity endpoint. See
+[`../research/capacity-one-count-deficit-continuation.md`](../research/capacity-one-count-deficit-continuation.md).
+
 Hypothesis: on Mixed-61 `300 x 300`, a useful large-piece state is generated but
 discarded because all 16 cohesion slots remain at the current best placed
 count. Preserving one state exactly one piece behind may let it accept later
@@ -239,6 +245,9 @@ the immutable prepared-order pass: a competitive macro lineage must have
 irrevocably processed a small-tier piece before the required macro state became
 available. Do not start P3 merely because P0 has no eligible deficit witness,
 loses terminally, or is censored.
+
+Status: not activated by the closed P0 experiment. Its terminal tie did not
+prove the required small-before-macro ordering loss.
 
 Hypothesis: a bounded two-phase decision schedule can protect a legal macro
 arrangement and then fill its remaining space with smaller pending pieces.

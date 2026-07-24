@@ -17,6 +17,7 @@ and [`../history/sheet-invariance-decisions.md`](../history/sheet-invariance-dec
 - [Bounded GA order/rotation probe](./bounded-ga-order-rotation-probe.md)
 - [Deterministic portfolio probe](./deterministic-portfolio-probe.md)
 - [Discarded-family complete continuation](./discarded-family-complete-continuation.md)
+- [Capacity one-count-deficit continuation](./capacity-one-count-deficit-continuation.md)
 
 ## Protected Ordinary-Decoder Lanes
 
