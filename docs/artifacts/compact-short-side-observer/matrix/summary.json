@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-24T21:30:51.425Z",
+  "generatedAt": "2026-07-24T21:46:44.404Z",
   "passed": true,
   "caseCount": 9,
   "layoutCount": 18,
@@ -73,8 +73,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-2000x2700.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-2000x2700.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-2000x2700.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-2000x2700.png"
     },
     {
       "fixture": "triangle-20",
@@ -96,8 +96,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-2000x2700.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-2000x2700.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-2000x2700.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-2000x2700.short-side-profile.png"
     },
     {
       "fixture": "mixed-61",
@@ -117,8 +117,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-2000x2700.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-2000x2700.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/mixed-61-2000x2700.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/mixed-61-2000x2700.png"
     },
     {
       "fixture": "mixed-61",
@@ -140,8 +140,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-2000x2700.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-2000x2700.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/mixed-61-2000x2700.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/mixed-61-2000x2700.short-side-profile.png"
     },
     {
       "fixture": "shapes-17",
@@ -161,8 +161,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-2000x2700.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-2000x2700.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-2000x2700.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-2000x2700.png"
     },
     {
       "fixture": "shapes-17",
@@ -184,8 +184,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-2000x2700.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-2000x2700.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-2000x2700.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-2000x2700.short-side-profile.png"
     },
     {
       "fixture": "triangle-20",
@@ -205,8 +205,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-600x400.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-600x400.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-600x400.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-600x400.png"
     },
     {
       "fixture": "triangle-20",
@@ -228,8 +228,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-600x400.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-600x400.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-600x400.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-600x400.short-side-profile.png"
     },
     {
       "fixture": "mixed-61",
@@ -249,8 +249,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-600x400.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-600x400.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/mixed-61-600x400.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/mixed-61-600x400.png"
     },
     {
       "fixture": "mixed-61",
@@ -271,8 +271,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-600x400.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-600x400.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/mixed-61-600x400.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/mixed-61-600x400.short-side-profile.png"
     },
     {
       "fixture": "shapes-17",
@@ -292,8 +292,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-600x400.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-600x400.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-600x400.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-600x400.png"
     },
     {
       "fixture": "shapes-17",
@@ -314,8 +314,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-600x400.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-600x400.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-600x400.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-600x400.short-side-profile.png"
     },
     {
       "fixture": "triangle-20",
@@ -335,8 +335,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-300x300.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-300x300.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-300x300.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-300x300.png"
     },
     {
       "fixture": "triangle-20",
@@ -357,8 +357,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-300x300.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/triangle-20-300x300.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-300x300.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-300x300.short-side-profile.png"
     },
     {
       "fixture": "mixed-61",
@@ -378,8 +378,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-300x300.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-300x300.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/mixed-61-300x300.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/mixed-61-300x300.png"
     },
     {
       "fixture": "mixed-61",
@@ -400,8 +400,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-300x300.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/mixed-61-300x300.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/mixed-61-300x300.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/mixed-61-300x300.short-side-profile.png"
     },
     {
       "fixture": "shapes-17",
@@ -421,8 +421,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-300x300.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-300x300.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-300x300.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-300x300.png"
     },
     {
       "fixture": "shapes-17",
@@ -443,8 +443,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-300x300.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-300x300.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-300x300.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-300x300.short-side-profile.png"
     }
   ]
 }

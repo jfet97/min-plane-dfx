@@ -1,6 +1,6 @@
 # Compact Short-Side Observer Artifacts
 
-Current 18-layout matrix source commit: `63dd350`.
+Current 18-layout matrix source commit: `1cd5ac7`.
 
 - `matrix/` contains the strict nine-case production-preservation gate as 18
   layouts: nine Compact controls and nine short-side-profile outputs. A

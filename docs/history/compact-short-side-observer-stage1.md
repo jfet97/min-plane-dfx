@@ -14,11 +14,18 @@
   short-side profile records and renders the exact Compact result as an
   explicit fallback instead of inventing or omitting a layout.
 
-The current-source promotion run at `63dd350` passed all 18 layouts: four
+The current-source promotion run at `1cd5ac7` passed all 18 layouts: four
 guarded Stage 1 winners and five exact Compact fallbacks. Every layout has an
 exact piece partition, SVG, PNG, canonical hashes, and checksummed provenance.
-The maximum observed Stage 1 runtime was `56.989 ms`; placement and candidate
+The maximum observed Stage 1 runtime was `57.984 ms`; placement and candidate
 evaluations remained zero.
+
+Final review found that the v1 comparison tuple placed intrinsic hull/cohesion
+tie-breakers before the documented short-axis shortfall. Version v2 restores
+the declared order: exact legality, requested long-axis span, requested
+short-axis shortfall, then intrinsic metrics. A discriminating Pareto-front
+test covers the ordering. The corrected full matrix produced the same 18
+layout hashes as v1.
 
 ## Rejected
 

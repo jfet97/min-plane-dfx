@@ -4,9 +4,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "63dd350",
+  "sourceCommit": "1cd5ac7",
   "runtime": {
-    "elapsedMs": 12220.272917,
+    "elapsedMs": 12340.381875,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -1538,11 +1538,11 @@
       "selectedCanonicalGeometryHash": "1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d",
       "consumedCandidateEvaluations": 8035,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 1654.5714580000003,
+      "runtimeMs": 1706.261625000001,
       "outputInfluence": "selected"
     },
     "intrinsicShortSideObserverTrace": {
-      "version": "intrinsic-short-side-observer-v1",
+      "version": "intrinsic-short-side-observer-v2",
       "status": "observed",
       "outputInfluence": "none",
       "requestedSheetWidthMm": 2000,
@@ -1556,7 +1556,7 @@
       "geometricParetoEligibleEndpointCount": 1,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 24.356416999999055,
+      "runtimeMs": 24.032749999998487,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 9191,
       "endpoints": [
@@ -1587,11 +1587,11 @@
             "comparisonTuple": [
               0,
               527.948,
+              1467.309,
               0,
               0.1001646831166667,
               1,
               1.411764705882353,
-              1467.309,
               281233.148068,
               532.691,
               1060.6390000000001,
@@ -1624,11 +1624,11 @@
             "comparisonTuple": [
               0,
               532.691,
+              1472.0520000000001,
               0,
               0.1001646831166667,
               1,
               1.411764705882353,
-              1472.0520000000001,
               281233.148068,
               532.691,
               1060.6390000000001,
@@ -1662,11 +1662,11 @@
             "comparisonTuple": [
               0,
               527.948,
+              1467.309,
               0,
               0.1001646831166667,
               1,
               1.411764705882353,
-              1467.309,
               281233.148068,
               532.691,
               1060.6390000000001,
@@ -1706,11 +1706,11 @@
             "comparisonTuple": [
               0,
               543.774,
+              1440.025,
               0,
               0.23359145881845145,
               1,
               2.3366881568288917,
-              1440.025,
               304499.84565000003,
               559.975,
               1103.749,
@@ -1743,11 +1743,11 @@
             "comparisonTuple": [
               0,
               559.975,
+              1456.226,
               0,
               0.23359145881845145,
               1,
               2.3366881568288917,
-              1456.226,
               304499.84565000003,
               559.975,
               1103.749,
@@ -1781,11 +1781,11 @@
             "comparisonTuple": [
               0,
               543.774,
+              1440.025,
               0,
               0.23359145881845145,
               1,
               2.3366881568288917,
-              1440.025,
               304499.84565000003,
               559.975,
               1103.749,
@@ -1825,11 +1825,11 @@
             "comparisonTuple": [
               0,
               536.882,
+              1421.5819999999999,
               0,
               0.24211947627167232,
               1,
               2.3200121947523256,
-              1421.5819999999999,
               310542.21267599997,
               578.418,
               1115.3,
@@ -1862,11 +1862,11 @@
             "comparisonTuple": [
               0,
               578.418,
+              1463.118,
               0,
               0.24211947627167232,
               1,
               2.3200121947523256,
-              1463.118,
               310542.21267599997,
               578.418,
               1115.3,
@@ -1900,11 +1900,11 @@
             "comparisonTuple": [
               0,
               536.882,
+              1421.5819999999999,
               0,
               0.24211947627167232,
               1,
               2.3200121947523256,
-              1421.5819999999999,
               310542.21267599997,
               578.418,
               1115.3,
@@ -1953,7 +1953,7 @@
     "shortSideProfileExactPiecePartition": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-2000x2700.svg",
-  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-2000x2700.short-side-profile.svg",
-  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-stage1-18-layouts.duVyQv/shapes-17-2000x2700.short-side-profile.json"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-2000x2700.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-2000x2700.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-2000x2700.short-side-profile.json"
 }

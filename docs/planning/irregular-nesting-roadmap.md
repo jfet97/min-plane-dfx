@@ -321,9 +321,11 @@ controls plus nine short-side-profile outputs. Missing Stage 1 winners become
 explicit exact Compact fallbacks, so every fixture/sheet pair remains visible
 and honestly sourced.
 
-The `63dd350` promotion run passed all 18 layouts with four guarded Stage 1
+The `1cd5ac7` promotion run passed all 18 layouts with four guarded Stage 1
 winners, five exact Compact fallbacks, unchanged production hashes, a maximum
-`56.989 ms` observer runtime, and strictly sequential algorithm execution.
+`57.984 ms` observer runtime, and strictly sequential algorithm execution.
+The reviewed v2 tuple places short-axis shortfall before intrinsic
+tie-breakers, and its full rerun preserved every v1 materialized layout hash.
 
 The surviving signal is Triangle-20 `600 x 400`: a reproducible exact endpoint
 reduces requested long-axis use by `53.116%` and fills `98.731%` of the short
