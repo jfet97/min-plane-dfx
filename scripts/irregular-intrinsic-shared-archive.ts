@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
 import { Effect, Layer, Schema } from 'effect'
 import { importDxfFile } from '../src/main/services/DxfImportService.js'
@@ -22,6 +23,7 @@ import { makePresetShapeDocument, type PresetShapeKind } from '../src/shared/pre
 import { preparePieces as prepareNestingPieces } from '../src/shared/preparePieces.js'
 import {
   INTRINSIC_SHARED_ARCHIVE_DIRECT_ROLES,
+  normalizeIntrinsicSharedArchiveConstructedRun,
   retainRankedSharedArchive,
   runIntrinsicSharedArchiveDirectPortfolio,
   runIntrinsicSharedArchivePortfolio,
@@ -31,6 +33,9 @@ import {
   type IntrinsicSharedArchiveEndpoint,
   type IntrinsicSharedArchiveRun
 } from '../src/workers/algorithm/irregular/intrinsicSharedArchivePortfolio.js'
+import { orderIntrinsicFamilyPortfolioPieces } from '../src/workers/algorithm/irregular/intrinsicStrictFamilyPortfolio.js'
+import { intrinsicReconstructionEffectiveOrderKey } from '../src/workers/algorithm/irregular/intrinsicReconstructionPortfolio.js'
+import { constructIntrinsicStrictState } from '../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
 import type {
   IntrinsicPeriodicSourceAuditReplayEnvelope,
   IntrinsicPeriodicSourceAuditScope
@@ -85,6 +90,12 @@ const sourceAuditCacheInput = argument('--source-audit-cache-in')
 const sourceAuditCacheOutput = argument('--source-audit-cache-out')
 const sourceAuditCacheSha256 = argument('--source-audit-cache-sha256')
 const sourceAuditScope = sourceAuditScopeArgument(argument('--source-audit-scope'))
+const largeFirstProbeEnabled = process.argv.includes('--large-first-probe')
+const largeFirstMaximumEvaluations = positiveIntegerArgument(
+  '--large-first-evaluations',
+  12_000
+)
+const largeFirstMaximumRuntimeMs = positiveIntegerArgument('--large-first-ms', 15_000)
 const fixture = await loadFixture(fixtureName)
 const settings = fixture.request.options.irregularSettings
 if (settings === undefined) throw new Error(`${fixtureName} has no irregular settings`)
@@ -161,6 +172,73 @@ const result =
       )
 
 const artifactPaths: string[] = []
+const largeFirstPieces = orderIntrinsicFamilyPortfolioPieces(
+  preparedPieces,
+  'large-first-small-fill'
+)
+const baselineOrderKey = intrinsicReconstructionEffectiveOrderKey(preparedPieces)
+const largeFirstOrderKey = intrinsicReconstructionEffectiveOrderKey(largeFirstPieces)
+const largeFirstOrderDuplicate = baselineOrderKey === largeFirstOrderKey
+const largeFirstStartedAt = performance.now()
+const largeFirstRun =
+  !largeFirstProbeEnabled || largeFirstOrderDuplicate
+    ? undefined
+    : await Effect.runPromise(
+        withLayers(
+          Effect.matchEffect(
+            constructIntrinsicStrictState({
+              allPreparedPieces: largeFirstPieces,
+              remainingPreparedPieces: largeFirstPieces,
+              frozenPlaced: [],
+              candidateMode: 'pure-growth',
+              producerRole: 'complete-large-first-observer',
+              maximumRuntimeMs: largeFirstMaximumRuntimeMs,
+              maximumCandidateEvaluationCount: largeFirstMaximumEvaluations,
+              captureCandidateEvaluationCount: true
+            }),
+            {
+              onFailure: (error) =>
+                Effect.succeed({
+                  role: 'complete-large-first-observer',
+                  sourceId: undefined,
+                  status:
+                    error._tag === 'IrregularNfpIfpControlAbortError'
+                      ? ('deadline' as const)
+                      : ('invalid' as const),
+                  requestedCandidateEvaluations: largeFirstMaximumEvaluations,
+                  consumedCandidateEvaluations: undefined,
+                  reason: error.message,
+                  endpoint: undefined,
+                  runtimeMs: Math.max(0, performance.now() - largeFirstStartedAt)
+                }),
+              onSuccess: (constructed) =>
+                Effect.succeed(
+                  normalizeIntrinsicSharedArchiveConstructedRun({
+                    sheet: fixture.request.sheet,
+                    role: 'complete-large-first-observer',
+                    sourceId: undefined,
+                    requestedCandidateEvaluations: largeFirstMaximumEvaluations,
+                    constructed
+                  })
+                )
+            }
+          ),
+          settings
+        )
+      )
+const largeFirstCandidateArchive = retainRankedSharedArchive([
+  ...result.sheetlessArchive,
+  ...(largeFirstRun?.endpoint === undefined ? [] : [largeFirstRun.endpoint])
+])
+const protectedWinner = selectIntrinsicSharedArchiveWinner(result.sheetlessArchive)
+const largeFirstSelectedWinner = selectIntrinsicSharedArchiveWinner(largeFirstCandidateArchive)
+const largeFirstStrictImprovement =
+  largeFirstRun?.status === 'completed' &&
+  largeFirstRun.endpoint !== undefined &&
+  largeFirstSelectedWinner?.sheetlessCanonicalGeometryHash ===
+    largeFirstRun.endpoint.sheetlessCanonicalGeometryHash &&
+  largeFirstSelectedWinner.sheetlessCanonicalGeometryHash !==
+    protectedWinner?.sheetlessCanonicalGeometryHash
 const directRuns = await Promise.all(
   result.directRuns.map((run) => runRecord(run, fixtureName, outputDirectory, artifactPaths))
 )
@@ -174,6 +252,14 @@ const winnerSvgPath =
 if (winnerSvgPath !== undefined && result.winner !== undefined) {
   await writeFile(winnerSvgPath, renderSvg(renderedPlacements(result.winner)))
   artifactPaths.push(winnerSvgPath)
+}
+const largeFirstSvgPath =
+  largeFirstRun?.endpoint === undefined
+    ? undefined
+    : `${outputDirectory}/${fixtureName}-complete-large-first-observer.svg`
+if (largeFirstSvgPath !== undefined && largeFirstRun?.endpoint !== undefined) {
+  await writeFile(largeFirstSvgPath, renderSvg(renderedPlacements(largeFirstRun.endpoint)))
+  artifactPaths.push(largeFirstSvgPath)
 }
 if (
   sourceAuditCacheOutput !== undefined &&
@@ -217,6 +303,40 @@ const report = {
     sourceAuditReplayRejectionReason:
       result.periodicPortfolio?.sourceAuditReplayRejectionReason ??
       sourceAuditReplayRead.rejectionReason
+  },
+  largeFirstProbe: {
+    enabled: largeFirstProbeEnabled,
+    outputInfluence: 'none',
+    candidateMode: 'pure-growth',
+    maximumCandidateEvaluations: largeFirstMaximumEvaluations,
+    maximumRuntimeMs: largeFirstMaximumRuntimeMs,
+    baselineOrderKey,
+    largeFirstOrderKey,
+    duplicateOrder: largeFirstOrderDuplicate,
+    pieceIds: largeFirstPieces.map(({ pieceId, source }) => pieceId ?? source.id),
+    run:
+      largeFirstRun === undefined
+        ? undefined
+        : {
+            role: largeFirstRun.role,
+            status: largeFirstRun.status,
+            requestedCandidateEvaluations: largeFirstRun.requestedCandidateEvaluations,
+            consumedCandidateEvaluations: largeFirstRun.consumedCandidateEvaluations,
+            reason: largeFirstRun.reason,
+            runtimeMs: largeFirstRun.runtimeMs,
+            endpoint:
+              largeFirstRun.endpoint === undefined
+                ? undefined
+                : endpointRecord(largeFirstRun.endpoint),
+            svgPath: largeFirstSvgPath
+          },
+    protectedWinner:
+      protectedWinner === undefined ? undefined : endpointRecord(protectedWinner),
+    selectedWinner:
+      largeFirstSelectedWinner === undefined
+        ? undefined
+        : endpointRecord(largeFirstSelectedWinner),
+    strictImprovement: largeFirstStrictImprovement
   },
   directRuns,
   periodicRuns,
