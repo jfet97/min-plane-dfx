@@ -41,6 +41,11 @@ export const INTRINSIC_RECONSTRUCTION_ROLES = [
 
 export type IntrinsicReconstructionRole = (typeof INTRINSIC_RECONSTRUCTION_ROLES)[number]
 
+export type IntrinsicReconstructionRoleFamily =
+  | 'all'
+  | 'pure-growth'
+  | 'gap-contained'
+
 export interface IntrinsicReconstructionSeed {
   readonly role: 'canonical-grid' | 'legacy-absolute-envelope'
   readonly canonicalGeometryHash: string
@@ -54,8 +59,15 @@ export interface IntrinsicReconstructionRun {
   readonly sourceEndpointHash: string | undefined
   readonly candidateMode: IntrinsicStrictCandidateMode
   readonly pieceIds: ReadonlyArray<PieceId>
-  readonly status: 'completed' | 'deadline' | 'duplicate-order' | 'incomplete'
+  readonly status:
+    | 'completed'
+    | 'deadline'
+    | 'evaluation-cap'
+    | 'duplicate-order'
+    | 'incomplete'
   readonly duplicateOf: IntrinsicReconstructionRole | undefined
+  readonly requestedCandidateEvaluations: number | undefined
+  readonly consumedCandidateEvaluations: number | undefined
   readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
   readonly stepTrace: IntrinsicStrictConstructResult['stepTrace']
   readonly gapFillEvidence: IntrinsicStrictConstructResult['gapFillEvidence']
@@ -72,6 +84,7 @@ export interface IntrinsicReconstructionPortfolioResult {
     | (IntrinsicReconstructionRun & { metrics: IntrinsicStrictCompletedMetrics })
     | undefined
   readonly runtimeMs: number
+  readonly consumedCandidateEvaluations: number
 }
 
 export class IntrinsicReconstructionPortfolioError extends Data.TaggedError(
@@ -103,6 +116,9 @@ export function runIntrinsicReconstructionPortfolio(input: {
   readonly baselineSeeds: ReadonlyArray<IntrinsicReconstructionSeed>
   readonly maximumRuntimeMsPerDecode?: number
   readonly maximumTotalRuntimeMs?: number
+  readonly roleFamily?: IntrinsicReconstructionRoleFamily
+  readonly maximumCandidateEvaluationsPerDecode?: number
+  readonly maximumTotalCandidateEvaluations?: number
 }): Effect.Effect<
   IntrinsicReconstructionPortfolioResult,
   PortfolioError,
@@ -112,6 +128,12 @@ export function runIntrinsicReconstructionPortfolio(input: {
     const startedAt = performance.now()
     const maximumRuntimeMsPerDecode = input.maximumRuntimeMsPerDecode ?? 120_000
     const maximumTotalRuntimeMs = input.maximumTotalRuntimeMs ?? 300_000
+    const roleFamily = input.roleFamily ?? 'all'
+    const maximumCandidateEvaluationsPerDecode =
+      input.maximumCandidateEvaluationsPerDecode
+    const maximumTotalCandidateEvaluations =
+      input.maximumTotalCandidateEvaluations
+    let consumedCandidateEvaluations = 0
     const seedRuns = baselineSeedRuns(input.baselineSeeds, input.allPreparedPieces)
     const endpoint = selectReconstructionEndpoint(input.baselineSeeds)
     if (endpoint === undefined) {
@@ -122,7 +144,10 @@ export function runIntrinsicReconstructionPortfolio(input: {
         })
       )
     }
-    const specs = buildIntrinsicReconstructionSpecs(input.allPreparedPieces, endpoint)
+    const specs = buildIntrinsicReconstructionSpecs(
+      input.allPreparedPieces,
+      endpoint
+    ).filter((spec) => intrinsicReconstructionSpecMatchesFamily(spec, roleFamily))
     const runs: IntrinsicReconstructionRun[] = [...seedRuns]
     const orderOwners = new Map<string, IntrinsicReconstructionRole>()
     for (const run of seedRuns) {
@@ -143,6 +168,8 @@ export function runIntrinsicReconstructionPortfolio(input: {
           pieceIds: spec.pieces.map(preparedPieceId),
           status: 'duplicate-order',
           duplicateOf,
+          requestedCandidateEvaluations: 0,
+          consumedCandidateEvaluations: 0,
           placedCollisionGeometries: [],
           stepTrace: [],
           gapFillEvidence: [],
@@ -157,13 +184,37 @@ export function runIntrinsicReconstructionPortfolio(input: {
         runs.push(deadlineRun(spec))
         continue
       }
+      const remainingCandidateEvaluations =
+        maximumTotalCandidateEvaluations === undefined
+          ? undefined
+          : maximumTotalCandidateEvaluations - consumedCandidateEvaluations
+      if (
+        remainingCandidateEvaluations !== undefined &&
+        remainingCandidateEvaluations <= 0
+      ) {
+        runs.push(evaluationCapRun(spec))
+        continue
+      }
+      const requestedCandidateEvaluations =
+        maximumCandidateEvaluationsPerDecode === undefined
+          ? remainingCandidateEvaluations
+          : remainingCandidateEvaluations === undefined
+            ? maximumCandidateEvaluationsPerDecode
+            : Math.min(
+                maximumCandidateEvaluationsPerDecode,
+                remainingCandidateEvaluations
+              )
       const decodeStartedAt = performance.now()
       const outcome = yield* constructIntrinsicStrictState({
         allPreparedPieces: spec.pieces,
         remainingPreparedPieces: spec.pieces,
         frozenPlaced: [],
         candidateMode: spec.candidateMode,
-        maximumRuntimeMs: Math.min(maximumRuntimeMsPerDecode, remainingTotalMs)
+        maximumRuntimeMs: Math.min(maximumRuntimeMsPerDecode, remainingTotalMs),
+        captureCandidateEvaluationCount: true,
+        ...(requestedCandidateEvaluations === undefined
+          ? {}
+          : { maximumCandidateEvaluationCount: requestedCandidateEvaluations })
       }).pipe(
         Effect.map((constructed) => ({ status: 'completed' as const, constructed })),
         Effect.catchTag('IrregularNfpIfpControlAbortError', () =>
@@ -172,6 +223,20 @@ export function runIntrinsicReconstructionPortfolio(input: {
       )
       if (outcome.constructed === undefined) {
         runs.push({ ...deadlineRun(spec), runtimeMs: performance.now() - decodeStartedAt })
+        continue
+      }
+      const consumedByDecode = outcome.constructed.candidateEvaluationCount ?? 0
+      consumedCandidateEvaluations += consumedByDecode
+      if (
+        outcome.constructed.truncationReason ===
+        'maximum-candidate-evaluations'
+      ) {
+        runs.push({
+          ...evaluationCapRun(spec),
+          requestedCandidateEvaluations,
+          consumedCandidateEvaluations: consumedByDecode,
+          runtimeMs: performance.now() - decodeStartedAt
+        })
         continue
       }
       const measured = measureIntrinsicSheetlessCompletedLayout(
@@ -185,6 +250,8 @@ export function runIntrinsicReconstructionPortfolio(input: {
         pieceIds: spec.pieces.map(preparedPieceId),
         status: measured === undefined ? 'incomplete' : 'completed',
         duplicateOf: undefined,
+        requestedCandidateEvaluations,
+        consumedCandidateEvaluations: consumedByDecode,
         placedCollisionGeometries: measured?.placedCollisionGeometries ?? [],
         stepTrace: outcome.constructed.stepTrace,
         gapFillEvidence: outcome.constructed.gapFillEvidence,
@@ -198,7 +265,8 @@ export function runIntrinsicReconstructionPortfolio(input: {
       runs,
       archive,
       winner: archive[0],
-      runtimeMs: performance.now() - startedAt
+      runtimeMs: performance.now() - startedAt,
+      consumedCandidateEvaluations
     }
   })
 }
@@ -242,6 +310,16 @@ export function buildIntrinsicReconstructionSpecs(
     },
     ...gapContainedEndpointOrders
   ]
+}
+
+/** Selects one deterministic reconstruction family without changing role order. */
+export function intrinsicReconstructionSpecMatchesFamily(
+  spec: Pick<DecodeSpec, 'candidateMode'>,
+  family: IntrinsicReconstructionRoleFamily
+): boolean {
+  if (family === 'all') return true
+  const isGapContained = typeof spec.candidateMode === 'object'
+  return family === 'gap-contained' ? isGapContained : !isGapContained
 }
 
 /** Derives deterministic q0/q90 traversal orders from one exact endpoint. */
@@ -380,6 +458,8 @@ function baselineSeedRuns(
     pieceIds,
     status: 'completed' as const,
     duplicateOf: undefined,
+    requestedCandidateEvaluations: 0,
+    consumedCandidateEvaluations: 0,
     placedCollisionGeometries: seed.placedCollisionGeometries,
     stepTrace: seed.stepTrace,
     gapFillEvidence: [],
@@ -404,11 +484,20 @@ function deadlineRun(spec: DecodeSpec): IntrinsicReconstructionRun {
     pieceIds: spec.pieces.map(preparedPieceId),
     status: 'deadline',
     duplicateOf: undefined,
+    requestedCandidateEvaluations: undefined,
+    consumedCandidateEvaluations: undefined,
     placedCollisionGeometries: [],
     stepTrace: [],
     gapFillEvidence: [],
     metrics: undefined,
     runtimeMs: 0
+  }
+}
+
+function evaluationCapRun(spec: DecodeSpec): IntrinsicReconstructionRun {
+  return {
+    ...deadlineRun(spec),
+    status: 'evaluation-cap'
   }
 }
 

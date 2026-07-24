@@ -23,6 +23,7 @@ import { makePresetShapeDocument, type PresetShapeKind } from '../src/shared/pre
 import { preparePieces as prepareNestingPieces } from '../src/shared/preparePieces.js'
 import {
   INTRINSIC_SHARED_ARCHIVE_DIRECT_ROLES,
+  makeIntrinsicSharedArchiveEndpoint,
   normalizeIntrinsicSharedArchiveConstructedRun,
   retainRankedSharedArchive,
   runIntrinsicSharedArchiveDirectPortfolio,
@@ -34,8 +35,14 @@ import {
   type IntrinsicSharedArchiveRun
 } from '../src/workers/algorithm/irregular/intrinsicSharedArchivePortfolio.js'
 import { orderIntrinsicFamilyPortfolioPieces } from '../src/workers/algorithm/irregular/intrinsicStrictFamilyPortfolio.js'
-import { intrinsicReconstructionEffectiveOrderKey } from '../src/workers/algorithm/irregular/intrinsicReconstructionPortfolio.js'
+import {
+  intrinsicReconstructionEffectiveOrderKey,
+  runIntrinsicReconstructionPortfolio,
+  type IntrinsicReconstructionRoleFamily,
+  type IntrinsicReconstructionSeed
+} from '../src/workers/algorithm/irregular/intrinsicReconstructionPortfolio.js'
 import { constructIntrinsicStrictState } from '../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
+import { IrregularBeamState } from '../src/workers/algorithm/irregular/irregularBeamState.js'
 import type {
   IntrinsicPeriodicSourceAuditReplayEnvelope,
   IntrinsicPeriodicSourceAuditScope
@@ -96,6 +103,9 @@ const largeFirstMaximumEvaluations = positiveIntegerArgument(
   12_000
 )
 const largeFirstMaximumRuntimeMs = positiveIntegerArgument('--large-first-ms', 15_000)
+const reconstructionProbeFamily = reconstructionRoleFamilyArgument(
+  argument('--reconstruction-probe')
+)
 const fixture = await loadFixture(fixtureName)
 const settings = fixture.request.options.irregularSettings
 if (settings === undefined) throw new Error(`${fixtureName} has no irregular settings`)
@@ -230,8 +240,12 @@ const largeFirstCandidateArchive = retainRankedSharedArchive([
   ...result.sheetlessArchive,
   ...(largeFirstRun?.endpoint === undefined ? [] : [largeFirstRun.endpoint])
 ])
-const protectedWinner = selectIntrinsicSharedArchiveWinner(result.sheetlessArchive)
-const largeFirstSelectedWinner = selectIntrinsicSharedArchiveWinner(largeFirstCandidateArchive)
+const protectedWinner = selectIntrinsicSharedArchiveWinner(
+  selectFittingSharedArchive(result.sheetlessArchive)
+)
+const largeFirstSelectedWinner = selectIntrinsicSharedArchiveWinner(
+  selectFittingSharedArchive(largeFirstCandidateArchive)
+)
 const largeFirstStrictImprovement =
   largeFirstRun?.status === 'completed' &&
   largeFirstRun.endpoint !== undefined &&
@@ -239,6 +253,89 @@ const largeFirstStrictImprovement =
     largeFirstRun.endpoint.sheetlessCanonicalGeometryHash &&
   largeFirstSelectedWinner.sheetlessCanonicalGeometryHash !==
     protectedWinner?.sheetlessCanonicalGeometryHash
+const reconstructionLimits =
+  reconstructionProbeFamily === 'pure-growth'
+    ? {
+        maximumTotalRuntimeMs: 60_000,
+        maximumTotalCandidateEvaluations: 60_000
+      }
+    : {
+        maximumTotalRuntimeMs: 75_000,
+        maximumTotalCandidateEvaluations: 72_000
+      }
+const reconstructionSeeds = result.directRuns.flatMap(
+  (run): ReadonlyArray<IntrinsicReconstructionSeed> => {
+    if (
+      (run.role !== 'canonical-grid' &&
+        run.role !== 'legacy-absolute-envelope') ||
+      run.endpoint === undefined
+    ) {
+      return []
+    }
+    return [
+      {
+        role: run.role,
+        canonicalGeometryHash: run.endpoint.sheetlessCanonicalGeometryHash,
+        placedCollisionGeometries: run.endpoint.placedCollisionGeometries,
+        stepTrace: [],
+        metrics: run.endpoint.metrics
+      }
+    ]
+  }
+)
+const reconstructionPortfolio =
+  reconstructionProbeFamily === undefined
+    ? undefined
+    : await Effect.runPromise(
+        withLayers(
+          runIntrinsicReconstructionPortfolio({
+            allPreparedPieces: preparedPieces,
+            baselineSeeds: reconstructionSeeds,
+            roleFamily: reconstructionProbeFamily,
+            maximumRuntimeMsPerDecode: 15_000,
+            maximumCandidateEvaluationsPerDecode: 12_000,
+            ...reconstructionLimits
+          }),
+          settings
+        )
+      )
+const reconstructionEndpoints =
+  reconstructionPortfolio?.runs.flatMap((run) => {
+    if (run.status !== 'completed' || run.metrics === undefined) return []
+    const state = new IrregularBeamState({
+      remainingPreparedPieces: [],
+      placedCollisionGeometries: run.placedCollisionGeometries,
+      unplacedPieceIds: [],
+      placementOrder: run.placedCollisionGeometries.flatMap(({ placement }) => {
+        const pieceId = placement.pieceId ?? placement.sourcePieceId
+        return pieceId === undefined ? [] : [pieceId]
+      })
+    })
+    const endpoint = makeIntrinsicSharedArchiveEndpoint({
+      sheet: fixture.request.sheet,
+      role: `reconstruction-${run.role}`,
+      sourceId: run.sourceEndpointHash,
+      state,
+      runtimeMs: run.runtimeMs
+    })
+    return endpoint === undefined ? [] : [endpoint]
+  }) ?? []
+const reconstructionCandidateArchive = retainRankedSharedArchive([
+  ...result.sheetlessArchive,
+  ...reconstructionEndpoints
+])
+const reconstructionSelectedWinner = selectIntrinsicSharedArchiveWinner(
+  selectFittingSharedArchive(reconstructionCandidateArchive)
+)
+const reconstructionStrictImprovement =
+  reconstructionSelectedWinner !== undefined &&
+  reconstructionSelectedWinner.sheetlessCanonicalGeometryHash !==
+    protectedWinner?.sheetlessCanonicalGeometryHash &&
+  reconstructionEndpoints.some(
+    ({ sheetlessCanonicalGeometryHash }) =>
+      sheetlessCanonicalGeometryHash ===
+      reconstructionSelectedWinner.sheetlessCanonicalGeometryHash
+  )
 const directRuns = await Promise.all(
   result.directRuns.map((run) => runRecord(run, fixtureName, outputDirectory, artifactPaths))
 )
@@ -260,6 +357,13 @@ const largeFirstSvgPath =
 if (largeFirstSvgPath !== undefined && largeFirstRun?.endpoint !== undefined) {
   await writeFile(largeFirstSvgPath, renderSvg(renderedPlacements(largeFirstRun.endpoint)))
   artifactPaths.push(largeFirstSvgPath)
+}
+const reconstructionSvgPaths = new Map<string, string>()
+for (const endpoint of reconstructionEndpoints) {
+  const path = `${outputDirectory}/${fixtureName}-${safePath(endpoint.role)}.svg`
+  await writeFile(path, renderSvg(renderedPlacements(endpoint)))
+  artifactPaths.push(path)
+  reconstructionSvgPaths.set(endpoint.sheetlessCanonicalGeometryHash, path)
 }
 if (
   sourceAuditCacheOutput !== undefined &&
@@ -338,6 +442,40 @@ const report = {
         : endpointRecord(largeFirstSelectedWinner),
     strictImprovement: largeFirstStrictImprovement
   },
+  reconstructionProbe:
+    reconstructionPortfolio === undefined || reconstructionProbeFamily === undefined
+      ? undefined
+      : {
+          enabled: true,
+          outputInfluence: 'none',
+          roleFamily: reconstructionProbeFamily,
+          maximumCandidateEvaluationsPerDecode: 12_000,
+          maximumRuntimeMsPerDecode: 15_000,
+          ...reconstructionLimits,
+          consumedCandidateEvaluations:
+            reconstructionPortfolio.consumedCandidateEvaluations,
+          runtimeMs: reconstructionPortfolio.runtimeMs,
+          runs: reconstructionPortfolio.runs.map((run) => ({
+            role: run.role,
+            status: run.status,
+            duplicateOf: run.duplicateOf,
+            requestedCandidateEvaluations: run.requestedCandidateEvaluations,
+            consumedCandidateEvaluations: run.consumedCandidateEvaluations,
+            runtimeMs: run.runtimeMs,
+            metrics: run.metrics,
+            svgPath:
+              run.metrics === undefined
+                ? undefined
+                : reconstructionSvgPaths.get(run.metrics.canonicalGeometryHash)
+          })),
+          protectedWinner:
+            protectedWinner === undefined ? undefined : endpointRecord(protectedWinner),
+          selectedWinner:
+            reconstructionSelectedWinner === undefined
+              ? undefined
+              : endpointRecord(reconstructionSelectedWinner),
+          strictImprovement: reconstructionStrictImprovement
+        },
   directRuns,
   periodicRuns,
   periodic:
@@ -490,6 +628,14 @@ function sourceAuditScopeArgument(value: string | undefined): IntrinsicPeriodicS
   if (value === undefined || value === 'all') return 'all'
   if (value === 'p2-axis-union') return value
   throw new Error('--source-audit-scope must be all or p2-axis-union')
+}
+
+function reconstructionRoleFamilyArgument(
+  value: string | undefined
+): Exclude<IntrinsicReconstructionRoleFamily, 'all'> | undefined {
+  if (value === undefined) return undefined
+  if (value === 'pure-growth' || value === 'gap-contained') return value
+  throw new Error('--reconstruction-probe must be pure-growth or gap-contained')
 }
 
 function makeSourceAuditReplaySchema() {

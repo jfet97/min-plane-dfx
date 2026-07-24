@@ -18,6 +18,7 @@ import {
   buildIntrinsicReconstructionSpecs,
   buildCanonicalEndpointOrders,
   intrinsicReconstructionEffectiveOrderKey,
+  intrinsicReconstructionSpecMatchesFamily,
   INTRINSIC_RECONSTRUCTION_ROLES,
   retainIntrinsicReconstructionArchive,
   type IntrinsicReconstructionRole,
@@ -123,6 +124,8 @@ function run(
     pieceIds: [],
     status: 'completed',
     duplicateOf: undefined,
+    requestedCandidateEvaluations: undefined,
+    consumedCandidateEvaluations: undefined,
     placedCollisionGeometries: [],
     stepTrace: [],
     gapFillEvidence: [],
@@ -198,6 +201,32 @@ describe('intrinsic reconstruction portfolio', () => {
         .filter(({ candidateMode }) => typeof candidateMode === 'object')
         .map(({ candidateMode }) => candidateMode)
     ).toHaveLength(6)
+  })
+
+  it('selects role families without changing reconstruction order', () => {
+    const first = piece('first')
+    const second = piece('second', 3, 2)
+    const specs = buildIntrinsicReconstructionSpecs([first, second], {
+      role: 'canonical-grid',
+      canonicalGeometryHash: 'endpoint',
+      placedCollisionGeometries: [place(first, 0, 0), place(second, 2, 0)],
+      stepTrace: [],
+      metrics: metrics('endpoint', 5)
+    })
+
+    expect(
+      specs.filter((spec) =>
+        intrinsicReconstructionSpecMatchesFamily(spec, 'pure-growth')
+      )
+    ).toHaveLength(5)
+    expect(
+      specs.filter((spec) =>
+        intrinsicReconstructionSpecMatchesFamily(spec, 'gap-contained')
+      )
+    ).toHaveLength(6)
+    expect(
+      specs.filter((spec) => intrinsicReconstructionSpecMatchesFamily(spec, 'all'))
+    ).toEqual(specs)
   })
 
   it('deduplicates effective orders of interchangeable geometry without collapsing distinct shapes', () => {
