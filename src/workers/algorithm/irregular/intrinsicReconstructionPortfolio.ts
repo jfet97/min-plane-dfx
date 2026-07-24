@@ -45,6 +45,7 @@ export type IntrinsicReconstructionRoleFamily =
   | 'all'
   | 'pure-growth'
   | 'gap-contained'
+  | 'endpoint-q90-right-to-left'
 
 export interface IntrinsicReconstructionSeed {
   readonly role: 'canonical-grid' | 'legacy-absolute-envelope'
@@ -325,10 +326,13 @@ export function buildIntrinsicReconstructionSpecs(
 
 /** Selects one deterministic reconstruction family without changing role order. */
 export function intrinsicReconstructionSpecMatchesFamily(
-  spec: Pick<DecodeSpec, 'candidateMode'>,
+  spec: Pick<DecodeSpec, 'role' | 'candidateMode'>,
   family: IntrinsicReconstructionRoleFamily
 ): boolean {
   if (family === 'all') return true
+  if (family === 'endpoint-q90-right-to-left') {
+    return spec.role === family
+  }
   const isGapContained = typeof spec.candidateMode === 'object'
   return family === 'gap-contained' ? isGapContained : !isGapContained
 }

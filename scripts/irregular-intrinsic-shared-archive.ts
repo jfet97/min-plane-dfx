@@ -254,7 +254,12 @@ const largeFirstStrictImprovement =
   largeFirstSelectedWinner.sheetlessCanonicalGeometryHash !==
     protectedWinner?.sheetlessCanonicalGeometryHash
 const reconstructionLimits =
-  reconstructionProbeFamily === 'pure-growth'
+  reconstructionProbeFamily === 'endpoint-q90-right-to-left'
+    ? {
+        maximumTotalRuntimeMs: 15_000,
+        maximumTotalCandidateEvaluations: 12_000
+      }
+    : reconstructionProbeFamily === 'pure-growth'
     ? {
         maximumTotalRuntimeMs: 60_000,
         maximumTotalCandidateEvaluations: 60_000
@@ -637,8 +642,16 @@ function reconstructionRoleFamilyArgument(
   value: string | undefined
 ): Exclude<IntrinsicReconstructionRoleFamily, 'all'> | undefined {
   if (value === undefined) return undefined
-  if (value === 'pure-growth' || value === 'gap-contained') return value
-  throw new Error('--reconstruction-probe must be pure-growth or gap-contained')
+  if (
+    value === 'pure-growth' ||
+    value === 'gap-contained' ||
+    value === 'endpoint-q90-right-to-left'
+  ) {
+    return value
+  }
+  throw new Error(
+    '--reconstruction-probe must be pure-growth, gap-contained, or endpoint-q90-right-to-left'
+  )
 }
 
 function makeSourceAuditReplaySchema() {

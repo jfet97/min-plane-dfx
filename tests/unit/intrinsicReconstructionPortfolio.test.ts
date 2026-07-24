@@ -228,6 +228,16 @@ describe('intrinsic reconstruction portfolio', () => {
     expect(
       specs.filter((spec) => intrinsicReconstructionSpecMatchesFamily(spec, 'all'))
     ).toEqual(specs)
+    expect(
+      specs.filter((spec) =>
+        intrinsicReconstructionSpecMatchesFamily(
+          spec,
+          'endpoint-q90-right-to-left'
+        )
+      )
+    ).toEqual([
+      expect.objectContaining({ role: 'endpoint-q90-right-to-left' })
+    ])
   })
 
   it('deduplicates effective orders of interchangeable geometry without collapsing distinct shapes', () => {
