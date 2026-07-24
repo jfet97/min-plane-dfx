@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { performance } from 'node:perf_hooks'
 import { Effect, Layer, Schema } from 'effect'
@@ -54,6 +55,8 @@ interface CorpusArguments {
   readonly maximumAreaMm2: number | undefined
   readonly maximumCanonicalCavities: number | undefined
   readonly maximumElapsedMs: number | undefined
+  readonly inventoryOnly: boolean
+  readonly sourceCommit: string | undefined
 }
 
 const COMPACT_SHEET = new SheetSpec({ width: 1000, height: 1700, label: 'compact roomy' })
@@ -65,6 +68,8 @@ const REFERENCE_SHEET = new SheetSpec({
 const MIXED_61_FIXTURE = fileURLToPath(
   new URL('../tests/fixtures/irregularSheetInvariance/mixed61-request.json', import.meta.url)
 )
+const HARNESS_SOURCE = fileURLToPath(import.meta.url)
+const PRESET_SOURCE = fileURLToPath(new URL('../src/shared/presetShapes.ts', import.meta.url))
 
 const triangle: ShapeSpec = { id: 'triangle-70x60', kind: 'triangle', width: 70, height: 60 }
 const trapezoid: ShapeSpec = {
@@ -109,8 +114,19 @@ function parseArguments(argumentsList: ReadonlyArray<string>): CorpusArguments {
   let maximumAreaMm2: number | undefined
   let maximumCanonicalCavities: number | undefined
   let maximumElapsedMs: number | undefined
+  let inventoryOnly = false
+  let sourceCommit: string | undefined
   for (let index = 0; index < argumentsList.length; index += 1) {
     const argument = argumentsList[index]
+    if (argument === '--inventory-only') {
+      inventoryOnly = true
+      continue
+    }
+    if (argument === '--source-commit') {
+      sourceCommit = requiredArgumentValue(argumentsList, index, argument)
+      index += 1
+      continue
+    }
     if (argument === '--strict') {
       strict = true
       continue
@@ -162,7 +178,7 @@ function parseArguments(argumentsList: ReadonlyArray<string>): CorpusArguments {
     }
     if (argument === '--help') {
       console.log(
-        `Usage: pnpm corpus:sheet-invariance [--case ${allCaseIds.join(',')}] [--output <dir>] [--sheets WIDTHxHEIGHT,...] [--strict] [--allow-single-sheet] [--expected-canonical-sha256 <hash>] [--maximum-area-mm2 <number>] [--maximum-canonical-cavities <integer>] [--maximum-elapsed-ms <number>]`
+        `Usage: pnpm corpus:sheet-invariance [--case ${allCaseIds.join(',')}] [--output <dir>] [--sheets WIDTHxHEIGHT,...] [--strict] [--allow-single-sheet] [--expected-canonical-sha256 <hash>] [--maximum-area-mm2 <number>] [--maximum-canonical-cavities <integer>] [--maximum-elapsed-ms <number>] [--inventory-only --source-commit <sha>]`
       )
       process.exit(0)
     }
@@ -189,6 +205,9 @@ function parseArguments(argumentsList: ReadonlyArray<string>): CorpusArguments {
       '--strict with one sheet requires hash, area, canonical-cavity, and runtime quality gates'
     )
   }
+  if (inventoryOnly && sourceCommit === undefined) {
+    throw new Error('--inventory-only requires --source-commit')
+  }
   return {
     selectedCaseIds,
     outputDirectory,
@@ -198,7 +217,9 @@ function parseArguments(argumentsList: ReadonlyArray<string>): CorpusArguments {
     expectedCanonicalSha256,
     maximumAreaMm2,
     maximumCanonicalCavities,
-    maximumElapsedMs
+    maximumElapsedMs,
+    inventoryOnly,
+    sourceCommit
   }
 }
 
@@ -329,6 +350,90 @@ async function loadMixed61Request(): Promise<NestingRequest> {
   return Schema.decodeUnknownSync(NestingRequest)(document)
 }
 
+function sha256(value: string): string {
+  return createHash('sha256').update(value).digest('hex')
+}
+
+async function fileSha256(path: string): Promise<string> {
+  return sha256(await readFile(path, 'utf8'))
+}
+
+async function writeInventory(argumentsData: CorpusArguments): Promise<string> {
+  const cases = []
+  for (const caseId of allCaseIds) {
+    if (!argumentsData.selectedCaseIds.has(caseId)) continue
+    const generated = generatedCases.find(({ id }) => id === caseId)
+    const request = generated === undefined ? await loadMixed61Request() : makeGeneratedRequest(generated)
+    const preparedOrder = request.pieces.map(({ id }) => id)
+    const source =
+      generated === undefined
+        ? {
+            kind: 'persisted-request',
+            path: 'tests/fixtures/irregularSheetInvariance/mixed61-request.json',
+            sha256: await fileSha256(MIXED_61_FIXTURE)
+          }
+        : {
+            kind: 'generated-preset-recipe',
+            recipe: generated,
+            recipeSha256: sha256(JSON.stringify(generated))
+          }
+    cases.push({
+      caseId,
+      included: true,
+      source,
+      requestSha256: sha256(JSON.stringify(request)),
+      pieceCount: request.pieces.length,
+      preparedOrder,
+      preparedOrderSha256: sha256(preparedOrder.join('\n')),
+      paddingMm: request.padding,
+      optimizerSettingsSha256: sha256(JSON.stringify(request.options.irregularSettings)),
+      compactEligible:
+        request.options.workerMode === 'irregular-convex-v2' &&
+        request.options.layoutSelectionStrategyId === 'compact-first',
+      sheetClassification: argumentsData.sheets.map(({ width, height }) => ({
+        width,
+        height,
+        expected: 'roomy_same_complete'
+      }))
+    })
+  }
+  const inventoryPath = `${argumentsData.outputDirectory}/inventory.json`
+  const inventory = {
+    version: 1,
+    sourceCommit: argumentsData.sourceCommit,
+    harness: {
+      path: 'scripts/irregular-sheet-invariance.ts',
+      sha256: await fileSha256(HARNESS_SOURCE)
+    },
+    presetGenerator: {
+      path: 'src/shared/presetShapes.ts',
+      sha256: await fileSha256(PRESET_SOURCE)
+    },
+    sheets: argumentsData.sheets,
+    cases,
+    excluded: [
+      {
+        classification: 'curved',
+        reason: 'no exact current request exists in the maintained no-options harness'
+      },
+      {
+        classification: 'scale-diverse',
+        reason: 'no exact current request exists in the maintained no-options harness'
+      },
+      {
+        classification: 'Shapes-17 and current constrained baselines',
+        reason: 'covered by the separate accepted nine-case gate'
+      },
+      {
+        classification: 'historical Mixed-61 aspect-ratio sheets',
+        reason: 'covered by the separate accepted ten-sheet gate'
+      }
+    ]
+  }
+  await writeFile(inventoryPath, `${JSON.stringify(inventory, null, 2)}\n`)
+  return inventoryPath
+}
+
 function withSheet(request: NestingRequest, sheet: SheetSpec, suffix: string): NestingRequest {
   const settings = request.options.irregularSettings
   if (settings === undefined) throw new Error(`${request.jobId} has no irregular settings`)
@@ -434,71 +539,87 @@ async function runRequest(request: NestingRequest, artifactPath: string) {
   }
 }
 
+async function runCorpus(argumentsData: CorpusArguments): Promise<void> {
+  const caseReports = []
+  for (const caseId of allCaseIds) {
+    if (!argumentsData.selectedCaseIds.has(caseId)) continue
+    const generated = generatedCases.find(({ id }) => id === caseId)
+    const sourceRequest =
+      generated === undefined ? await loadMixed61Request() : makeGeneratedRequest(generated)
+    const runs = []
+    for (const currentSheet of argumentsData.sheets) {
+      const sheetId = `${currentSheet.width}x${currentSheet.height}`
+      runs.push(
+        await runRequest(
+          withSheet(sourceRequest, currentSheet, sheetId),
+          `${argumentsData.outputDirectory}/${caseId}-${sheetId}.svg`
+        )
+      )
+    }
+    const firstRun = runs[0]
+    const geometryEquivalent =
+      runs.length < 2
+        ? null
+        : firstRun !== undefined &&
+          runs.every(({ canonicalSha256 }) => canonicalSha256 === firstRun.canonicalSha256)
+    const qualityChecks = runs.map((run) => ({
+      sheet: run.sheet,
+      canonicalHash:
+        argumentsData.expectedCanonicalSha256 === undefined ||
+        run.canonicalSha256 === argumentsData.expectedCanonicalSha256,
+      area:
+        argumentsData.maximumAreaMm2 === undefined ||
+        run.bounds.area <= argumentsData.maximumAreaMm2,
+      canonicalCavities:
+        argumentsData.maximumCanonicalCavities === undefined ||
+        (run.canonicalTopology?.enclosedCavityCount ?? Number.POSITIVE_INFINITY) <=
+          argumentsData.maximumCanonicalCavities,
+      runtime:
+        argumentsData.maximumElapsedMs === undefined ||
+        run.elapsedMs <= argumentsData.maximumElapsedMs
+    }))
+    const qualityAccepted = qualityChecks.every((checks) =>
+      Object.entries(checks).every(([key, value]) => key === 'sheet' || value === true)
+    )
+    const report =
+      runs.length === 2
+        ? {
+            caseId,
+            geometryEquivalent,
+            qualityAccepted,
+            qualityChecks,
+            compact: runs[0],
+            reference: runs[1]
+          }
+        : { caseId, geometryEquivalent, qualityAccepted, qualityChecks, runs }
+    caseReports.push(report)
+    console.log(JSON.stringify(report))
+  }
+  const reportPath = `${argumentsData.outputDirectory}/report.json`
+  const report = {
+    generatedAt: new Date().toISOString(),
+    sheets: argumentsData.sheets,
+    comparison: {
+      gridSizeMm: 0.001,
+      ignores: ['piece order', 'polygon winding', 'ring origin', 'translation', 'quarter-turn'],
+      preserves: ['collision geometry', 'relative placement', 'reflection']
+    },
+    cases: caseReports
+  }
+  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
+  const passed = caseReports.every(
+    ({ geometryEquivalent, qualityAccepted }) => geometryEquivalent !== false && qualityAccepted
+  )
+  console.log(JSON.stringify({ reportPath, passed }))
+  if (argumentsData.strict && !passed) {
+    process.exitCode = 1
+  }
+}
+
 const argumentsData = parseArguments(process.argv.slice(2))
 await mkdir(argumentsData.outputDirectory, { recursive: true })
-const caseReports = []
-for (const caseId of allCaseIds) {
-  if (!argumentsData.selectedCaseIds.has(caseId)) continue
-  const generated = generatedCases.find(({ id }) => id === caseId)
-  const sourceRequest = generated === undefined ? await loadMixed61Request() : makeGeneratedRequest(generated)
-  const runs = []
-  for (const currentSheet of argumentsData.sheets) {
-    const sheetId = `${currentSheet.width}x${currentSheet.height}`
-    runs.push(
-      await runRequest(
-        withSheet(sourceRequest, currentSheet, sheetId),
-        `${argumentsData.outputDirectory}/${caseId}-${sheetId}.svg`
-      )
-    )
-  }
-  const firstRun = runs[0]
-  const geometryEquivalent =
-    runs.length < 2
-      ? null
-      : firstRun !== undefined &&
-        runs.every(({ canonicalSha256 }) => canonicalSha256 === firstRun.canonicalSha256)
-  const qualityChecks = runs.map((run) => ({
-    sheet: run.sheet,
-    canonicalHash:
-      argumentsData.expectedCanonicalSha256 === undefined ||
-      run.canonicalSha256 === argumentsData.expectedCanonicalSha256,
-    area:
-      argumentsData.maximumAreaMm2 === undefined ||
-      run.bounds.area <= argumentsData.maximumAreaMm2,
-    canonicalCavities:
-      argumentsData.maximumCanonicalCavities === undefined ||
-      (run.canonicalTopology?.enclosedCavityCount ?? Number.POSITIVE_INFINITY) <=
-        argumentsData.maximumCanonicalCavities,
-    runtime:
-      argumentsData.maximumElapsedMs === undefined ||
-      run.elapsedMs <= argumentsData.maximumElapsedMs
-  }))
-  const qualityAccepted = qualityChecks.every((checks) =>
-    Object.entries(checks).every(([key, value]) => key === 'sheet' || value === true)
-  )
-  const report =
-    runs.length === 2
-      ? { caseId, geometryEquivalent, qualityAccepted, qualityChecks, compact: runs[0], reference: runs[1] }
-      : { caseId, geometryEquivalent, qualityAccepted, qualityChecks, runs }
-  caseReports.push(report)
-  console.log(JSON.stringify(report))
-}
-const reportPath = `${argumentsData.outputDirectory}/report.json`
-const report = {
-  generatedAt: new Date().toISOString(),
-  sheets: argumentsData.sheets,
-  comparison: {
-    gridSizeMm: 0.001,
-    ignores: ['piece order', 'polygon winding', 'ring origin', 'translation', 'quarter-turn'],
-    preserves: ['collision geometry', 'relative placement', 'reflection']
-  },
-  cases: caseReports
-}
-await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
-const passed = caseReports.every(
-  ({ geometryEquivalent, qualityAccepted }) => geometryEquivalent !== false && qualityAccepted
-)
-console.log(JSON.stringify({ reportPath, passed }))
-if (argumentsData.strict && !passed) {
-  process.exitCode = 1
+if (argumentsData.inventoryOnly) {
+  console.log(JSON.stringify({ inventoryPath: await writeInventory(argumentsData) }))
+} else {
+  await runCorpus(argumentsData)
 }
