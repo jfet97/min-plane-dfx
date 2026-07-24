@@ -425,3 +425,22 @@ preserve every other accepted canonical result. The Shapes winner is also
 identical on tested `600 x 600`, `5000 x 5000`, and `10000 x 10000` sheets.
 The promoted mechanism and evidence are documented in
 [`../research/focused-complete-reconstruction.md`](../research/focused-complete-reconstruction.md).
+
+## Discarded-family complete continuation
+
+The production direct constructor is width one; it has no replaceable
+fixed-width survivor slot. A zero-evaluation-delta observer therefore measured
+the best canonically distinct transform-family future discarded at each depth
+without displacing periodic producers or changing output.
+
+Shapes-17 exposed 16 exact alternatives. The unique depth-10 crossover reduced
+local maximum side from `502.469` to `493.265 mm` while slightly increasing
+area. Its exact live state continued to all 17 pieces in `798.724 ms` and 3,902
+evaluations, proving that resumable handoff works at this boundary.
+
+The completed endpoint nevertheless regressed area to `297,570.451566 mm2`,
+maximum side to `557.878 mm`, and largest contact component from eight pieces
+to two. The unchanged archive retained `1ddc8426...`. The hypothesis is closed
+before either matrix, the implementation remains experiment-only, and
+production is unchanged. Detailed evidence is in
+[`../research/discarded-family-complete-continuation.md`](../research/discarded-family-complete-continuation.md).

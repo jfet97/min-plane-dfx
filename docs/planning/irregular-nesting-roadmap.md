@@ -134,6 +134,13 @@ or add more deficit bands.
 
 ### P1: Discarded-family complete continuation observer
 
+Status: closed and rejected on 2026-07-24. The observer found 16 distinct
+alternates with negligible measured overhead. The single preregistered
+depth-10 crossover continued exactly to completion in `798.724 ms` and 3,902
+evaluations, but produced a worse `297,570.451566 mm2` endpoint. The accepted
+`281,233.148068 mm2` Shapes endpoint remained authoritative. See
+[`../research/discarded-family-complete-continuation.md`](../research/discarded-family-complete-continuation.md).
+
 Start this only after the focused reconstruction producer has settled in
 production and a construction trace shows a useful generated state disappearing
 before completion.
@@ -185,6 +192,11 @@ The pinned libnest2d, Sparrow, Deepnest/SVGnest, and PackingSolver sources
 support pending-aware protected diversity and bounded portfolio accounting.
 They do not justify random GA mutation, overlapping infeasible states,
 restart-based widening, or strip-width fitness.
+
+Decision: do not promote or generalize this observer from the losing witness.
+The exact warm-handoff mechanism remains useful evidence, but it is not a
+production quality improvement. Continue with P2 corpus coverage rather than
+widening this hypothesis.
 
 ### P2: Close complete-cohort invariance and corpus coverage
 

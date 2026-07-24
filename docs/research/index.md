@@ -16,6 +16,7 @@ and [`../history/sheet-invariance-decisions.md`](../history/sheet-invariance-dec
 - [Small-piece gap diversity](./small-piece-gap-diversity-experiment.md)
 - [Bounded GA order/rotation probe](./bounded-ga-order-rotation-probe.md)
 - [Deterministic portfolio probe](./deterministic-portfolio-probe.md)
+- [Discarded-family complete continuation](./discarded-family-complete-continuation.md)
 
 ## Protected Ordinary-Decoder Lanes
 
@@ -41,8 +42,8 @@ quality production path.
 - [V7 seed/archive stages 0 and 1](./v7-seed-archive-stage0-stage1.md)
 
 The retired fixed-reference report proves only its dated coordinator. Current
-archive-only production has two completed byte-identical sample decodes; its
-full sheet matrix remains open.
+production has two strict nine-case reproductions and two strict historical
+ten-sheet Mixed-61 reproductions with identical accepted geometry.
 
 ## External Sources and Transfer Studies
 
