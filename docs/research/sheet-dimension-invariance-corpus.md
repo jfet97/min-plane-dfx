@@ -1,9 +1,18 @@
 # Sheet-Dimension Invariance Corpus
 
 > Historical diagnostic report for the independent requested-sheet decoder.
-> Its failures and figures do not describe the archive-only Compact quality
-> implementation at `b506344`. The current full matrix remains open; see
-> [`../operations/irregular-production-gates.md`](../operations/irregular-production-gates.md).
+> Its failures and figures do not describe current archive-only Compact
+> quality. The current ten-sheet Mixed-61 matrix passed twice at `6179cef`; see
+> [`../artifacts/current-production-invariance-matrix/`](../artifacts/current-production-invariance-matrix/).
+
+## Current Archive-Only Closure
+
+On 2026-07-24, two independent strict runs completed Mixed-61 on all ten
+historical sheets. All twenty decodes placed `61/61` pieces with canonical hash
+`ef2b783a...`, area `391,605.850174 mm2`, zero canonical cavities, and
+byte-identical normalized SVG SHA-256 `febad20a...`. The runs took `695.18 s`
+and `701.04 s` wall. This closes the current ten-sheet Mixed-61 invariance
+subgate; the broader representative-fixture corpus remains separate.
 
 ## Purpose
 

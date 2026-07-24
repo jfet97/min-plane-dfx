@@ -22,9 +22,9 @@ baselines.
 - [`intrinsic-anytime-pinned-lane/`](./intrinsic-anytime-pinned-lane/): accepted
   experimental evidence for one protected resumed warm lane, including the
   three constrained falsifiers and the exact six-baseline matrix.
-- [`current-production-invariance-sample/`](./current-production-invariance-sample/):
-  two completed archive-only production decodes from `b506344`. Their SVGs are
-  byte-identical, but the full sheet matrix was cancelled and remains unproven.
+- [`current-production-invariance-matrix/`](./current-production-invariance-matrix/):
+  two complete strict runs of the ten-sheet Mixed-61 production matrix at
+  `6179cef`, including exact reports and byte-identical SVG/PNG renders.
 - [`intrinsic-shared-archive-quality/`](./intrinsic-shared-archive-quality/):
   archive-quality calibration that established the current Triangle-20 and
   Mixed-61 area floors before production integration.

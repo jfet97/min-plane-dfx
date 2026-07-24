@@ -1,0 +1,42 @@
+{
+  "status": "accepted-two-run-ten-sheet-matrix",
+  "sourceCommit": "6179cefec8548395e075df2d0da6c09532a20953",
+  "recordedAt": "2026-07-24",
+  "fixture": "mixed-61",
+  "sheets": [
+    "900x1800",
+    "1000x1300",
+    "1000x1700",
+    "1100x1100",
+    "1200x1600",
+    "1400x1100",
+    "1500x2200",
+    "1700x1000",
+    "2000x1700",
+    "2000x2700"
+  ],
+  "runs": [
+    {
+      "report": "run-1-report.json",
+      "reportSha256": "645e26c93ab2a1cf2b3e851d3bb63971e8898cafc22769af70e373ad5f93f1e5",
+      "wallSeconds": 695.18,
+      "maximumResidentSetBytes": 1051525120
+    },
+    {
+      "report": "run-2-report.json",
+      "reportSha256": "af21a56ba31aef72c8e18ca625a3881c68f8a05f9cb698e5b66d74bd609352cf",
+      "wallSeconds": 701.04,
+      "maximumResidentSetBytes": 1284128768
+    }
+  ],
+  "placedCount": 61,
+  "unplacedCount": 0,
+  "canonicalGeometrySha256": "ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b",
+  "occupiedEnvelopeAreaMm2": 391605.850174,
+  "canonicalEnclosedCavityCount": 0,
+  "normalizedSvgSha256": "febad20a8357356edb383086591e3f3f6d455e1efe8d06ec2ce0b04856b6582c",
+  "renderedPngSha256": "f644305569cef8e8fcc87b2acb8b9bd7e51834832ddab000c4336e2af4a4a02c",
+  "matrixComplete": true,
+  "geometryEquivalent": true,
+  "qualityAccepted": true
+}

@@ -1043,11 +1043,12 @@ zero canonical cavities. Layout identity ignores translation, rigid
 quarter-turn, copy order, ring origin, and winding while preserving reflection
 and relative placement.
 
-Two fresh production decodes at `b506344`, on `900 x 1800` and `1000 x 1300`,
-produced byte-identical SVGs. The wider matrix was cancelled before completion,
-so current ten-sheet invariance is not established. See the
-[`current-production-invariance-sample`](../artifacts/current-production-invariance-sample/)
-and the [forward verification gate](../operations/irregular-production-gates.md#full-current-sheet-matrix).
+Two independent strict ten-sheet production runs at `6179cef` completed on
+2026-07-24. All twenty Mixed-61 decodes placed every piece and returned the same
+canonical collision geometry, area, topology, and byte-identical normalized
+SVG. See the
+[`current-production-invariance-matrix`](../artifacts/current-production-invariance-matrix/)
+and the [standing verification gate](../operations/irregular-production-gates.md#full-current-sheet-matrix).
 
 Do not route `irregular-convex-v2` requests to MaxRects.
 

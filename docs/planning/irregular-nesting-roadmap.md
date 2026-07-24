@@ -171,6 +171,11 @@ restart-based widening, or strip-width fitness.
 
 ### P2: Close complete-cohort invariance and corpus coverage
 
+Status: the historical ten-sheet Mixed-61 subgate passed twice at `6179cef` on
+2026-07-24 with identical geometry and portable artifacts. Keep it as a
+standing gate. Broader mixed-50, rectangle, trapezoid, pentagon, star, and other
+representative-fixture coverage remains open.
+
 Hypothesis: the protected sheetless complete winner remains identical on every
 roomy sheet where the same leader fits, and the nine-case gate generalizes to
 the maintained corpus.
@@ -178,10 +183,11 @@ the maintained corpus.
 Protected scope: measurement only. Do not modify search, allocation, ranking,
 candidate generation, or fit behavior.
 
-Measurement: finish the historical roomy-sheet matrix and archive source order,
-settlement, canonical hash, normalized SVG, q0/q90 fit, exact partition,
-runtime, and checksums. Add maintained mixed-50, rectangle, trapezoid, pentagon,
-star, and other representative fixtures to a reusable corpus gate.
+Measurement: retain the historical roomy-sheet matrix as a standing gate with
+source order, settlement, canonical hash, normalized SVG, q0/q90 fit, exact
+partition, runtime, and checksums. Add maintained mixed-50, rectangle,
+trapezoid, pentagon, star, and other representative fixtures to a reusable
+corpus gate.
 
 Falsifier: different complete selection or geometry where the same leader fits;
 nondeterministic source order; censored work reported as settled; or a

@@ -84,9 +84,11 @@ Before claiming invariance, require:
 - a complete report, exact source commit, runtime versions, commands, hashes,
   and portable renders.
 
-The current durable checkpoint contains only `900 x 1800` and `1000 x 1300`:
-[`../artifacts/current-production-invariance-sample/`](../artifacts/current-production-invariance-sample/).
-The wider run was cancelled and is not a passed gate.
+The full matrix passed twice at `6179cef` on 2026-07-24. All twenty decodes
+placed `61/61` pieces, returned canonical hash `ef2b783a...`, area
+`391,605.850174 mm2`, zero canonical cavities, and byte-identical normalized
+SVGs. Reports and portable renders are archived under
+[`../artifacts/current-production-invariance-matrix/`](../artifacts/current-production-invariance-matrix/).
 
 ## Complete-Archive Admission
 
