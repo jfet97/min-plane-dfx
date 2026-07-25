@@ -76,6 +76,10 @@ import {
   type IntrinsicShortSideObserverTrace
 } from './intrinsicShortSideObserver.js'
 import {
+  observeIntrinsicShortSideBand,
+  type IntrinsicShortSideBandTrace
+} from './intrinsicShortSideBandObserver.js'
+import {
   measureIntrinsicCapacityShadowTelemetry,
   type IntrinsicCapacityShadowTelemetry
 } from './intrinsicCapacityTelemetry.js'
@@ -166,6 +170,12 @@ export interface ComputeIrregularNestingOptions {
           readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
         }
       | undefined
+  ) => void
+  /** Bounded observer-only width-four short-side construction lane. */
+  readonly captureIntrinsicShortSideBandObserver?: boolean
+  /** Benchmark hook for an admitted exact band endpoint. */
+  readonly onIntrinsicShortSideBandObserverWinner?: (
+    winner: ReadonlyArray<IrregularPlacedPiece> | undefined
   ) => void
 }
 
@@ -331,6 +341,8 @@ export interface IrregularComputeResult {
   readonly focusedCompleteReconstructionTrace?: IntrinsicFocusedCompleteReconstructionTrace
   /** Present only when the zero-search Compact short-side observer is enabled. */
   readonly intrinsicShortSideObserverTrace?: IntrinsicShortSideObserverTrace
+  /** Present only when the bounded short-side band observer is enabled. */
+  readonly intrinsicShortSideBandTrace?: IntrinsicShortSideBandTrace
 }
 
 export type IrregularComputeErrorType =
@@ -476,6 +488,7 @@ function coordinateIntrinsicSharedArchive(
       | ReadonlyArray<IntrinsicSharedArchiveEndpoint>
       | undefined
     let intrinsicShortSideObserverTrace: IntrinsicShortSideObserverTrace | undefined
+    let intrinsicShortSideBandTrace: IntrinsicShortSideBandTrace | undefined
 
     if (archiveEnabled) {
       settledCompleteArchiveForShortSideObserver = []
@@ -1054,7 +1067,9 @@ function coordinateIntrinsicSharedArchive(
     ) {
       intrinsicShortSideObserverTrace = observeIntrinsicShortSideOrientations({
         sheet: input.request.sheet,
-        endpoints: settledCompleteArchiveForShortSideObserver
+        endpoints: settledCompleteArchiveForShortSideObserver,
+        productionPlacedCollisionGeometries:
+          selected.placedCollisionGeometries
       })
       input.options.onIntrinsicShortSideObserver?.(intrinsicShortSideObserverTrace)
       const winnerHash =
@@ -1089,6 +1104,28 @@ function coordinateIntrinsicSharedArchive(
                 winnerState.placedCollisionGeometries
             }
       )
+      if (
+        intrinsicShortSideObserverTrace.observerWinnerCanonicalGeometryHash ===
+          undefined &&
+        input.options.captureIntrinsicShortSideBandObserver === true &&
+        intrinsicShortSideObserverTrace.productionShortAxisSpanMm !==
+          undefined &&
+        intrinsicShortSideObserverTrace.productionMaximumSideMm !==
+          undefined
+      ) {
+        const bandOutcome = yield* observeIntrinsicShortSideBand({
+          sheet: input.request.sheet,
+          preparedPieces: input.preparedPieces,
+          productionShortAxisSpanMm:
+            intrinsicShortSideObserverTrace.productionShortAxisSpanMm,
+          productionMaximumSideMm:
+            intrinsicShortSideObserverTrace.productionMaximumSideMm
+        })
+        intrinsicShortSideBandTrace = bandOutcome.trace
+        input.options.onIntrinsicShortSideBandObserverWinner?.(
+          bandOutcome.endpoint?.placedCollisionGeometries
+        )
+      }
     }
     return {
       placedCollisionGeometries: selected.placedCollisionGeometries,
@@ -1116,7 +1153,10 @@ function coordinateIntrinsicSharedArchive(
         : { focusedCompleteReconstructionTrace }),
       ...(intrinsicShortSideObserverTrace === undefined
         ? {}
-        : { intrinsicShortSideObserverTrace })
+        : { intrinsicShortSideObserverTrace }),
+      ...(intrinsicShortSideBandTrace === undefined
+        ? {}
+        : { intrinsicShortSideBandTrace })
     }
   })
 }

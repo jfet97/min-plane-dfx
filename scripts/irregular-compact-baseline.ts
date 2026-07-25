@@ -27,6 +27,7 @@ import {
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES } from '../src/workers/algorithm/irregular/intrinsicShortSideObserver.js'
+import { INTRINSIC_SHORT_SIDE_BAND_MAX_TRACE_BYTES } from '../src/workers/algorithm/irregular/intrinsicShortSideBandObserver.js'
 import {
   canonicalCollisionLayoutIdentity,
   measureCanonicalLayoutTopology
@@ -57,6 +58,7 @@ interface Arguments {
   readonly maximumElapsedMs: number | undefined
   readonly disableFocusedCompleteReconstruction: boolean
   readonly captureShortSideObserver: boolean
+  readonly captureShortSideBandObserver: boolean
   readonly expectedFocusedStatus: string | undefined
   readonly expectedFocusedEvaluations: number | undefined
   readonly expectedFocusedSourceHash: string | undefined
@@ -132,6 +134,9 @@ function parseArguments(): Arguments {
     ),
     captureShortSideObserver: process.argv.includes(
       '--capture-short-side-observer'
+    ),
+    captureShortSideBandObserver: process.argv.includes(
+      '--capture-short-side-band-observer'
     ),
     expectedFocusedStatus: argument('--expected-focused-status'),
     expectedFocusedEvaluations: optionalIntegerArgument(
@@ -356,6 +361,9 @@ let observerWinner:
       readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
     }
   | undefined
+let bandObserverWinner:
+  | ReadonlyArray<IrregularPlacedPiece>
+  | undefined
 const startedAt = performance.now()
 const result = await Effect.runPromise(
   computeIrregularNesting(
@@ -371,7 +379,17 @@ const result = await Effect.runPromise(
               winner: typeof observerWinner
             ) => {
               observerWinner = winner
-            }
+            },
+            ...(args.captureShortSideBandObserver
+              ? {
+                  captureIntrinsicShortSideBandObserver: true,
+                  onIntrinsicShortSideBandObserverWinner: (
+                    winner: typeof bandObserverWinner
+                  ) => {
+                    bandObserverWinner = winner
+                  }
+                }
+              : {})
           }
         : {})
     }
@@ -394,6 +412,7 @@ const fittedCanonicalSha256 =
   polygons.length === 0 ? undefined : canonicalizeIrregularLayout(polygons).sha256
 const focusedTrace = result.focusedCompleteReconstructionTrace
 const shortSideObserverTrace = result.intrinsicShortSideObserverTrace
+const shortSideBandTrace = result.intrinsicShortSideBandTrace
 const shortSideObserverWinner =
   shortSideObserverTrace?.observerWinnerCanonicalGeometryHash === undefined
     ? undefined
@@ -449,13 +468,16 @@ const shortSideObserverContractValid =
 const shortSideProfileSource =
   !args.captureShortSideObserver
     ? undefined
-    : observerWinner === undefined
-      ? ('compact-fallback' as const)
-      : ('guarded-stage1-winner' as const)
+    : observerWinner !== undefined
+      ? ('guarded-stage1-winner' as const)
+      : bandObserverWinner !== undefined
+        ? ('protected-band-winner' as const)
+        : ('compact-fallback' as const)
 const shortSideProfilePlacedCollisionGeometries =
   shortSideProfileSource === undefined
     ? undefined
     : observerWinner?.placedCollisionGeometries ??
+      bandObserverWinner ??
       result.placedCollisionGeometries
 const shortSideProfileUnplacedPieceIds =
   shortSideProfileSource === undefined
@@ -689,6 +711,21 @@ const checks = {
     shortSideObserverTrace === undefined ||
     !shortSideObserverTrace.runtimeBudgetExceeded,
   shortSideObserverContract: shortSideObserverContractValid,
+  shortSideBandObserverTracePresent:
+    !args.captureShortSideBandObserver ||
+    result.intrinsicShortSideBandTrace !== undefined,
+  shortSideBandObserverOutputInfluence:
+    shortSideBandTrace === undefined ||
+    shortSideBandTrace.outputInfluence === 'none',
+  shortSideBandObserverBudget:
+    shortSideBandTrace === undefined ||
+    (shortSideBandTrace.serializedTraceBytes <=
+      INTRINSIC_SHORT_SIDE_BAND_MAX_TRACE_BYTES &&
+      shortSideBandTrace.status !== 'deadline' &&
+      shortSideBandTrace.status !== 'memory-cap' &&
+      shortSideBandTrace.status !== 'trace-cap' &&
+      shortSideBandTrace.status !== 'evaluation-cap' &&
+      shortSideBandTrace.status !== 'failed-protected-fallback'),
   shortSideProfileMaterialized:
     !args.captureShortSideObserver ||
     (shortSideProfileSource !== undefined &&
@@ -723,7 +760,9 @@ const report = jsonSafe({
     focusedCompleteReconstructionTrace:
       result.focusedCompleteReconstructionTrace,
     intrinsicShortSideObserverTrace:
-      result.intrinsicShortSideObserverTrace
+      result.intrinsicShortSideObserverTrace,
+    intrinsicShortSideBandTrace:
+      result.intrinsicShortSideBandTrace
   },
   checks,
   passed,

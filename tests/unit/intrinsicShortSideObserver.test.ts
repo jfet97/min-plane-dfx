@@ -120,24 +120,28 @@ function deterministicClock(...readings: ReadonlyArray<number>): () => number {
 }
 
 describe('intrinsic short-side observer', () => {
-  it('minimizes requested long-axis span before rewarding short-axis fill', () => {
+  it('rewards material short-axis fill before long-axis depth', () => {
     const fullShortSide = endpoint('full-short-side', 4, 6)
-    const shorterLongAxis = endpoint('shorter-long-axis', 3, 5)
+    const shorterLongAxis = endpoint('shorter-long-axis', 3, 5, {
+      cavities: 1
+    })
     const trace = observeIntrinsicShortSideOrientations({
       sheet: new SheetSpec({ width: 10, height: 6, label: 'landscape' }),
       endpoints: [fullShortSide, shorterLongAxis],
+      productionPlacedCollisionGeometries:
+        shorterLongAxis.placedCollisionGeometries,
       now: deterministicClock(0, 1)
     })
 
     expect(trace.status).toBe('observed')
     expect(trace.observerWinnerCanonicalGeometryHash).toBe(
-      shorterLongAxis.sheetlessCanonicalGeometryHash
+      fullShortSide.sheetlessCanonicalGeometryHash
     )
     expect(trace.observerWinnerRotationDeg).toBe(0)
-    expect(trace.endpoints.find(({ role }) => role === 'shorter-long-axis')?.selected).toMatchObject({
+    expect(trace.endpoints.find(({ role }) => role === 'full-short-side')?.selected).toMatchObject({
       exactLegal: true,
-      requestedLongAxisUsedSpanMm: 3,
-      requestedShortAxisShortfallMm: 1
+      requestedLongAxisUsedSpanMm: 4,
+      requestedShortAxisShortfallMm: 0
     })
     expect(trace.placementEvaluations).toBe(0)
     expect(trace.candidateEvaluations).toBe(0)
@@ -188,10 +192,8 @@ describe('intrinsic short-side observer', () => {
       now: deterministicClock(0, 1)
     })
 
-    expect(trace.status).toBe('observed')
-    expect(trace.observerWinnerCanonicalGeometryHash).toBe(
-      production.sheetlessCanonicalGeometryHash
-    )
+    expect(trace.status).toBe('observed-no-directional-improvement')
+    expect(trace.observerWinnerCanonicalGeometryHash).toBeUndefined()
     expect(
       trace.endpoints.find(({ role }) => role === 'wasteful-strip')
     ).toMatchObject({
@@ -204,15 +206,21 @@ describe('intrinsic short-side observer', () => {
 
   it('preserves endpoint selection and swaps orientation on a transposed sheet', () => {
     const fullShortSide = endpoint('full-short-side', 4, 6)
-    const shorterLongAxis = endpoint('shorter-long-axis', 3, 5)
+    const shorterLongAxis = endpoint('shorter-long-axis', 3, 5, {
+      cavities: 1
+    })
     const landscape = observeIntrinsicShortSideOrientations({
       sheet: new SheetSpec({ width: 10, height: 6, label: 'landscape' }),
       endpoints: [fullShortSide, shorterLongAxis],
+      productionPlacedCollisionGeometries:
+        shorterLongAxis.placedCollisionGeometries,
       now: deterministicClock(0, 1)
     })
     const portrait = observeIntrinsicShortSideOrientations({
       sheet: new SheetSpec({ width: 6, height: 10, label: 'portrait' }),
       endpoints: [fullShortSide, shorterLongAxis],
+      productionPlacedCollisionGeometries:
+        shorterLongAxis.placedCollisionGeometries,
       now: deterministicClock(0, 1)
     })
 
@@ -221,10 +229,10 @@ describe('intrinsic short-side observer', () => {
     )
     expect(landscape.observerWinnerRotationDeg).toBe(0)
     expect(portrait.observerWinnerRotationDeg).toBe(90)
-    expect(portrait.endpoints.find(({ role }) => role === 'shorter-long-axis')?.selected).toMatchObject(
+    expect(portrait.endpoints.find(({ role }) => role === 'full-short-side')?.selected).toMatchObject(
       {
-        requestedLongAxisUsedSpanMm: 3,
-        requestedShortAxisShortfallMm: 1
+        requestedLongAxisUsedSpanMm: 4,
+        requestedShortAxisShortfallMm: 0
       }
     )
   })
@@ -238,6 +246,8 @@ describe('intrinsic short-side observer', () => {
     })
 
     expect(trace.requestedLongAxis).toBe('square')
+    expect(trace.status).toBe('skipped-square-sheet')
+    expect(trace.observerWinnerCanonicalGeometryHash).toBeUndefined()
     expect(trace.endpoints[0]?.q0.requestedShortAxisShortfallMm).toBe(0)
     expect(trace.endpoints[0]?.q90.requestedShortAxisShortfallMm).toBe(0)
     expect(trace.endpoints[0]?.q0.requestedLongAxisUsedSpanMm).toBe(4)
@@ -248,7 +258,7 @@ describe('intrinsic short-side observer', () => {
 
   it('does not select an endpoint when neither orientation is exactly legal', () => {
     const trace = observeIntrinsicShortSideOrientations({
-      sheet: new SheetSpec({ width: 3, height: 3, label: 'too small' }),
+      sheet: new SheetSpec({ width: 3, height: 2, label: 'too small' }),
       endpoints: [endpoint('does-not-fit', 4, 2)],
       now: deterministicClock(0, 1)
     })

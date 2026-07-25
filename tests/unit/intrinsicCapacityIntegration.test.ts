@@ -163,7 +163,7 @@ describe('intrinsic capacity integration', () => {
       expect(observed.unplacedPieceIds).toEqual(computed.unplacedPieceIds)
       expect(observed.portfolio).toEqual(computed.portfolio)
       expect(observed.intrinsicShortSideObserverTrace).toMatchObject({
-        status: 'observed',
+        status: 'skipped-square-sheet',
         outputInfluence: 'none',
         placementEvaluations: 0,
         candidateEvaluations: 0
@@ -244,7 +244,7 @@ describe('intrinsic capacity integration', () => {
         outputInfluence: 'none'
       })
       expect(computed.intrinsicShortSideObserverTrace).toMatchObject({
-        status: 'skipped-no-settled-complete-endpoints',
+        status: 'skipped-square-sheet',
         outputInfluence: 'none',
         settledEndpointCount: 0,
         evaluatedOrientationCount: 0,

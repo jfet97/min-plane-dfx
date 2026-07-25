@@ -16,7 +16,7 @@ import {
 import { IrregularBeamState } from './irregularBeamState.js'
 
 export const INTRINSIC_SHORT_SIDE_OBSERVER_VERSION =
-  'intrinsic-short-side-observer-v2' as const
+  'intrinsic-short-side-observer-v3' as const
 export const INTRINSIC_SHORT_SIDE_OBSERVER_MAX_RUNTIME_MS = 250 as const
 export const INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES = 1_048_576 as const
 
@@ -25,6 +25,8 @@ export type IntrinsicShortSideObserverStatus =
   | 'observed'
   | 'observed-no-legal-orientation'
   | 'observed-no-guard-eligible-endpoint'
+  | 'observed-no-directional-improvement'
+  | 'skipped-square-sheet'
   | 'skipped-no-settled-complete-endpoints'
   | 'runtime-budget-exceeded'
   | 'trace-budget-exceeded'
@@ -73,6 +75,8 @@ export interface IntrinsicShortSideObserverTrace {
   readonly requestedLongAxisMm: number
   readonly requestedShortAxisMm: number
   readonly requestedLongAxis: 'width' | 'height' | 'square'
+  readonly productionShortAxisSpanMm: number | undefined
+  readonly productionMaximumSideMm: number | undefined
   readonly settledEndpointCount: number
   readonly evaluatedOrientationCount: number
   readonly cavityHullGuardEligibleEndpointCount: number
@@ -92,6 +96,7 @@ export interface IntrinsicShortSideObserverTrace {
 export function observeIntrinsicShortSideOrientations(input: {
   readonly sheet: SheetSpec
   readonly endpoints: ReadonlyArray<IntrinsicSharedArchiveEndpoint>
+  readonly productionPlacedCollisionGeometries?: ReadonlyArray<IrregularPlacedPiece>
   readonly now?: () => number
 }): IntrinsicShortSideObserverTrace {
   const now = input.now ?? performance.now.bind(performance)
@@ -104,6 +109,15 @@ export function observeIntrinsicShortSideOrientations(input: {
         : ('height' as const)
   const requestedLongAxisMm = Math.max(input.sheet.width, input.sheet.height)
   const requestedShortAxisMm = Math.min(input.sheet.width, input.sheet.height)
+  const productionReference = directionalReference({
+    sheet: input.sheet,
+    placedCollisionGeometries:
+      input.productionPlacedCollisionGeometries ??
+      input.endpoints[0]?.placedCollisionGeometries ??
+      [],
+    requestedLongAxis,
+    requestedShortAxisMm
+  })
   const observedEndpoints = input.endpoints.map((endpoint, archiveIndex) =>
     observeEndpoint({
       sheet: input.sheet,
@@ -143,23 +157,41 @@ export function observeIntrinsicShortSideOrientations(input: {
   const ranked = endpoints
     .filter(({ geometricParetoEligible }) => geometricParetoEligible)
     .toSorted(compareEndpointObservations)
-  const winner = ranked[0]
+  const rankedWinner = ranked[0]
+  const winner =
+    rankedWinner !== undefined &&
+    productionReference !== undefined &&
+    directionalImprovementAdmitted({
+      candidate: rankedWinner.selected,
+      production: productionReference,
+      requestedShortAxisMm
+    })
+      ? rankedWinner
+      : undefined
   const observed = {
     version: INTRINSIC_SHORT_SIDE_OBSERVER_VERSION,
     status:
-      endpoints.length === 0
+      requestedLongAxis === 'square'
+        ? ('skipped-square-sheet' as const)
+        : endpoints.length === 0
         ? ('skipped-no-settled-complete-endpoints' as const)
         : legalEndpoints.length === 0
           ? ('observed-no-legal-orientation' as const)
           : guardEligibleEndpoints.length === 0
             ? ('observed-no-guard-eligible-endpoint' as const)
-          : ('observed' as const),
+            : winner === undefined
+              ? ('observed-no-directional-improvement' as const)
+              : ('observed' as const),
     outputInfluence: 'none',
     requestedSheetWidthMm: input.sheet.width,
     requestedSheetHeightMm: input.sheet.height,
     requestedLongAxisMm,
     requestedShortAxisMm,
     requestedLongAxis,
+    productionShortAxisSpanMm:
+      productionReference?.usedShortAxisSpanMm,
+    productionMaximumSideMm:
+      productionReference?.maximumSideMm,
     settledEndpointCount: endpoints.length,
     evaluatedOrientationCount: endpoints.length * 2,
     cavityHullGuardEligibleEndpointCount: guardEligibleEndpoints.length,
@@ -346,8 +378,8 @@ function comparisonTuple(input: {
 }): ReadonlyArray<number | string> {
   return [
     input.exactLegal ? 0 : 1,
-    input.requestedLongAxisUsedSpanMm ?? Number.POSITIVE_INFINITY,
     input.requestedShortAxisShortfallMm ?? Number.POSITIVE_INFINITY,
+    input.requestedLongAxisUsedSpanMm ?? Number.POSITIVE_INFINITY,
     input.cavityCount,
     input.hullGapRatio,
     input.cohesionPasses ? 0 : 1,
@@ -361,6 +393,100 @@ function comparisonTuple(input: {
     -input.sharedBoundaryLengthMm,
     input.canonicalGeometryHash ?? '￿'
   ]
+}
+
+interface DirectionalReference {
+  readonly usedShortAxisSpanMm: number
+  readonly usedLongAxisSpanMm: number
+  readonly maximumSideMm: number
+}
+
+function directionalReference(input: {
+  readonly sheet: SheetSpec
+  readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+  readonly requestedLongAxis: 'width' | 'height' | 'square'
+  readonly requestedShortAxisMm: number
+}): DirectionalReference | undefined {
+  if (
+    input.requestedLongAxis === 'square' ||
+    input.placedCollisionGeometries.length === 0
+  ) {
+    return undefined
+  }
+  const state = new IrregularBeamState({
+    remainingPreparedPieces: [],
+    placedCollisionGeometries: input.placedCollisionGeometries,
+    placementOrder: input.placedCollisionGeometries.map(placedPieceId)
+  })
+  const orientations = ([0, 90] as const).flatMap((rotationDeg) => {
+    const oriented = state.withQuarterTurnBottomLeft(rotationDeg)
+    if (
+      oriented === undefined ||
+      !assertCanonicalGridLegalLayout(
+        input.sheet,
+        oriented.placedCollisionGeometries
+      )
+    ) {
+      return []
+    }
+    const dimensions = canonicalDimensions(
+      oriented.placedCollisionGeometries
+    )
+    if (dimensions === undefined) return []
+    const usedShortAxisSpanMm =
+      input.requestedLongAxis === 'width'
+        ? dimensions.heightMm
+        : dimensions.widthMm
+    const usedLongAxisSpanMm =
+      input.requestedLongAxis === 'width'
+        ? dimensions.widthMm
+        : dimensions.heightMm
+    return [
+      {
+        usedShortAxisSpanMm,
+        usedLongAxisSpanMm,
+        maximumSideMm: Math.max(
+          dimensions.widthMm,
+          dimensions.heightMm
+        )
+      }
+    ]
+  })
+  return orientations.toSorted(
+    (first, second) =>
+      second.usedShortAxisSpanMm - first.usedShortAxisSpanMm ||
+      first.usedLongAxisSpanMm - second.usedLongAxisSpanMm
+  )[0]
+}
+
+function directionalImprovementAdmitted(input: {
+  readonly candidate: IntrinsicShortSideOrientationObservation
+  readonly production: DirectionalReference
+  readonly requestedShortAxisMm: number
+}): boolean {
+  const candidateShortfall =
+    input.candidate.requestedShortAxisShortfallMm
+  const candidateDepth =
+    input.candidate.requestedLongAxisUsedSpanMm
+  if (
+    candidateShortfall === undefined ||
+    candidateDepth === undefined ||
+    input.requestedShortAxisMm <= 0
+  ) {
+    return false
+  }
+  const candidateShortAxisSpanMm =
+    input.requestedShortAxisMm - candidateShortfall
+  const productionShortfall = Math.max(
+    0,
+    input.requestedShortAxisMm -
+      input.production.usedShortAxisSpanMm
+  )
+  return (
+    candidateShortAxisSpanMm / input.requestedShortAxisMm >= 0.8 &&
+    candidateShortfall <= productionShortfall / 2 &&
+    candidateDepth <= input.production.maximumSideMm
+  )
 }
 
 function compareEndpointObservations(

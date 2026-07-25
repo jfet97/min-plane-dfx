@@ -273,6 +273,19 @@ interface ScoredCandidate {
   readonly containingGap: CanonicalIntrinsicGapRegion | undefined
 }
 
+export interface IntrinsicStrictObserverSuccessor {
+  readonly state: IrregularBeamState
+  readonly score: IntrinsicStrictLocalScore
+  readonly transformFamily: string
+}
+
+export interface IntrinsicStrictObserverSuccessorEnumeration {
+  readonly successors: ReadonlyArray<IntrinsicStrictObserverSuccessor>
+  readonly generatedCandidateCount: number
+  readonly candidateEvaluationCount: number
+  readonly evaluationCapReached: boolean
+}
+
 interface MutableCandidateStatePhaseTimings {
   placementObjectMs: number
   statePlacementMs: number
@@ -828,6 +841,116 @@ export function constructIntrinsicStrictState(
           }),
       ...(phaseTimings === undefined ? {} : { phaseTimings }),
       runtimeMs
+    }
+  })
+}
+
+/**
+ * Enumerates exact transform-family winners for an isolated observer frontier.
+ * The production width-one constructor does not call or retain this frontier.
+ */
+export function enumerateIntrinsicStrictObserverSuccessors(input: {
+  readonly state: IrregularBeamState
+  readonly piece: IrregularPreparedPiece
+  readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly maximumCandidateEvaluations: number
+  readonly control?: IrregularNfpIfpControl
+}): Effect.Effect<
+  IntrinsicStrictObserverSuccessorEnumeration,
+  | IrregularNestingNotImplementedError
+  | IrregularGeometryInputError
+  | IrregularNfpIfpControlAbortError,
+  GeometryKernel | GeometrySettings | NfpIfpService
+> {
+  return Effect.gen(function* () {
+    const settings = yield* GeometrySettings
+    const geometryKernel = yield* GeometryKernel
+    const nfpIfpService = yield* NfpIfpService
+    const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
+    const candidatesByFamily = new Map<string, ScoredCandidate>()
+    let generatedCandidateCount = 0
+    let candidateEvaluationCount = 0
+    let evaluationCapReached = false
+
+    transformLoop: for (const transform of [...input.piece.transforms].sort(
+      transformCandidateOrder
+    )) {
+      if (input.control !== undefined) {
+        yield* input.control.checkpoint('candidate-points')
+      }
+      const moving = yield* geometryKernel.transformCollisionGeometry({
+        geometry: input.piece.collisionGeometry,
+        transform
+      })
+      const movingCollisionAreaMm2 = canonicalCollisionAreaMm2(moving)
+      if (movingCollisionAreaMm2 === undefined) continue
+      const legalCandidates =
+        input.state.placedCollisionGeometries.length === 0
+          ? originAnchorCandidates(moving)
+          : yield* nfpIfpService.generatePlacementCandidates({
+              sheet: INTRINSIC_COORDINATE_DOMAIN,
+              placed: input.state.placedCollisionGeometries,
+              placedCollisionIndex: input.state.placedCollisionIndex,
+              moving,
+              settings,
+              candidateDomain: 'sheetless-nfp',
+              candidateMemoScope,
+              ...(input.control === undefined
+                ? {}
+                : { control: input.control })
+            })
+      generatedCandidateCount += legalCandidates.length
+      const family = transformFamilyKey(transform)
+      for (const candidate of legalCandidates) {
+        if (
+          candidateEvaluationCount >=
+          input.maximumCandidateEvaluations
+        ) {
+          evaluationCapReached = true
+          break transformLoop
+        }
+        candidateEvaluationCount += 1
+        const scored = scoreCandidate({
+          state: input.state,
+          piece: input.piece,
+          moving,
+          candidate,
+          remainingPreparedPieces: input.remainingPreparedPieces,
+          transformFamily: family,
+          movingCollisionAreaMm2,
+          gapRegions: undefined,
+          phaseTimings: undefined
+        })
+        if (
+          scored === undefined ||
+          !isCanonicalSheetlessStateLegal(scored.state)
+        ) {
+          continue
+        }
+        const anchoredState = scored.state.withBottomLeftAnchored()
+        if (anchoredState === undefined) continue
+        const anchored = { ...scored, state: anchoredState }
+        const incumbent = candidatesByFamily.get(family)
+        if (
+          incumbent === undefined ||
+          compareLocalScores(anchored.score, incumbent.score) < 0
+        ) {
+          candidatesByFamily.set(family, anchored)
+        }
+      }
+    }
+
+    return {
+      successors: [...candidatesByFamily.values()].map(
+        ({ state, score, transformFamily }) => ({
+          state,
+          score,
+          transformFamily
+        })
+      ),
+      generatedCandidateCount,
+      candidateEvaluationCount,
+      evaluationCapReached
     }
   })
 }
