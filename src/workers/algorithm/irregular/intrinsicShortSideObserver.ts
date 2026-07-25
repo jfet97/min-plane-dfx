@@ -77,6 +77,7 @@ export interface IntrinsicShortSideObserverTrace {
   readonly requestedLongAxis: 'width' | 'height' | 'square'
   readonly productionShortAxisSpanMm: number | undefined
   readonly productionMaximumSideMm: number | undefined
+  readonly productionEnvelopeAreaMm2: number | undefined
   readonly settledEndpointCount: number
   readonly evaluatedOrientationCount: number
   readonly cavityHullGuardEligibleEndpointCount: number
@@ -192,6 +193,8 @@ export function observeIntrinsicShortSideOrientations(input: {
       productionReference?.usedShortAxisSpanMm,
     productionMaximumSideMm:
       productionReference?.maximumSideMm,
+    productionEnvelopeAreaMm2:
+      productionReference?.envelopeAreaMm2,
     settledEndpointCount: endpoints.length,
     evaluatedOrientationCount: endpoints.length * 2,
     cavityHullGuardEligibleEndpointCount: guardEligibleEndpoints.length,
@@ -399,6 +402,7 @@ interface DirectionalReference {
   readonly usedShortAxisSpanMm: number
   readonly usedLongAxisSpanMm: number
   readonly maximumSideMm: number
+  readonly envelopeAreaMm2: number
 }
 
 function directionalReference(input: {
@@ -448,7 +452,9 @@ function directionalReference(input: {
         maximumSideMm: Math.max(
           dimensions.widthMm,
           dimensions.heightMm
-        )
+        ),
+        envelopeAreaMm2:
+          dimensions.widthMm * dimensions.heightMm
       }
     ]
   })

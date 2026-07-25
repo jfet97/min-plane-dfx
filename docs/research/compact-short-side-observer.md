@@ -208,24 +208,6 @@ observer-only enumeration seam were removed; immutable failure provenance
 remains under
 `/private/tmp/min-plane-provenance/short-side-band-1163bd3-run1/`.
 
-## Stage 5 one-row shelf result
-
-Commit `999e9fb` tested a linear terminal shelf using the minimum-width member
-of each existing prepared transform catalog. The construction was exact,
-single-process, and output-neutral, but the one-row Shapes-17
-`2000 x 2700` pilot failed its hard fit condition at piece 17. After `136`
-transform evaluations and `3.451 ms`, the exact catalog required
-`2007.195 mm`, exceeding the physical short edge by `7.195 mm`.
-
-This falsifies the no-fold one-row mechanism despite the earlier SVG-only
-preview. The preview had rotated already placed polygons independently and did
-not represent the prepared transform catalog. No endpoint was produced and
-Compact remained authoritative. The implementation was removed before any
-reproduction or matrix expansion. The near-boundary miss is causal evidence
-for exactly one separately reviewed single-pair fold experiment; it does not
-authorize multiple folds, transform reselection, NFP work, or iterative
-escalation.
-
 ## Evidence
 
 - [`../artifacts/compact-short-side-observer/README.md`](../artifacts/compact-short-side-observer/README.md)
