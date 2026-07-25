@@ -256,17 +256,17 @@ describe('intrinsic strict family portfolio', () => {
     expect(chromosomes.some(({ status }) => status === 'duplicate')).toBe(true)
   })
 
-  it('selects completed layouts through the intrinsic archive order', () => {
+  it('starts a tradeoff front with its compactness representative', () => {
     const cohesive = metrics('cohesive', { isolatedPieceCount: 0, envelopeAreaMm2: 10_000 })
     const fragment = metrics('fragment', { isolatedPieceCount: 9, envelopeAreaMm2: 5_000 })
     const runs = [portfolioRun('fragment', fragment), portfolioRun('cohesive', cohesive)]
 
     const selected = selectIntrinsicFamilyPortfolioWinner(runs)
     expect(selected.archive.map(({ canonicalGeometryHash }) => canonicalGeometryHash)).toEqual([
-      'cohesive',
-      'fragment'
+      'fragment',
+      'cohesive'
     ])
-    expect(selected.winner?.result?.metrics?.canonicalGeometryHash).toBe('cohesive')
+    expect(selected.winner?.result?.metrics?.canonicalGeometryHash).toBe('fragment')
   })
 
   it('keeps the eight-chromosome decode sheet-blind wherever the winner fits', async () => {

@@ -221,7 +221,7 @@ function scoreWithService(
 }
 
 describe('IrregularLayoutScorer', () => {
-  it('preserves translation-invariant layout quality while bottom-anchoring', async () => {
+  it('preserves translation-invariant layout quality after bottom-left anchoring', async () => {
     const raised = state([
       placedRectangle('left', 1, 1, 1.125, 2.375),
       placedRectangle('right', 1, 1, 2.125, 2.375)
@@ -246,7 +246,7 @@ describe('IrregularLayoutScorer', () => {
     expect(anchoredScore.occupiedHullWasteRatio).toBe(raisedScore.occupiedHullWasteRatio)
     expect(anchoredScore.collisionBoundsBottomMm).toBe(0)
     expect(anchoredScore.collisionBoundsLeftMm).toBe(0)
-    expect(await compareScores(anchoredScore, raisedScore)).toBeLessThan(0)
+    expect(await compareScores(anchoredScore, raisedScore)).toBe(0)
   })
 
   it('lets unplaced count dominate every prettier layout', async () => {
@@ -454,7 +454,7 @@ describe('IrregularLayoutScorer', () => {
     expect(await compareScores(compactAtScale, extendedAtScale)).toBeLessThan(0)
   })
 
-  it('keeps structural-contact bands authoritative at scale', async () => {
+  it('keeps compactness authoritative before structural-contact bands at scale', async () => {
     const compact = await score(state([placedRectangle('compact', 2, 2, 0, 0)]))
     const extended = await score(state([placedRectangle('extended', 4, 4, 0, 0)]))
     const placementOrder = Array.from({ length: 21 }, (_, index) =>
@@ -473,7 +473,7 @@ describe('IrregularLayoutScorer', () => {
       placementOrder
     }
 
-    expect(await compareScores(extendedAtScale, compactAtScale)).toBeLessThan(0)
+    expect(await compareScores(compactAtScale, extendedAtScale)).toBeLessThan(0)
   })
 
   it('lets compactness decide inside one normalized contact band', async () => {

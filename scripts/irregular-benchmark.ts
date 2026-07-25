@@ -11,9 +11,7 @@ import { NestingOptions, NestingRequest, SheetSpec } from '../src/shared/domain/
 import { makeDefaultIrregularNestingSettings } from '../src/shared/irregular/defaults.js'
 import {
   IrregularNestingSettings,
-  IrregularOptimizerSettings,
-  IrregularPlacementCandidate,
-  IrregularPoint
+  IrregularOptimizerSettings
 } from '../src/shared/irregular/domain.js'
 import type { IrregularLayoutScore } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { preparePieces } from '../src/shared/preparePieces.js'
@@ -34,8 +32,7 @@ import {
 import { TransformGeneratorLive } from '../src/workers/irregular/transformGenerator.js'
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
-import { PlacementValidation } from '../src/workers/irregular/placementValidation.js'
-import type { IrregularPlacedPiece } from '../src/shared/irregular/domain.js'
+import { assertCanonicalGridLegalLayout } from '../src/workers/irregular/canonicalLayoutGeometry.js'
 import { FreeMaterialService } from '../src/workers/irregular/services.js'
 import {
   computeIrregularNesting,
@@ -62,7 +59,7 @@ const DEFAULT_RUN_COUNT = 5
 const DEFAULT_FREE_MATERIAL_OPERATION: FreeMaterialOperation = 'union-then-difference'
 const DEFAULT_NFP_CONSTRUCTION: NfpConstructionAlgorithm = DEFAULT_NFP_CONSTRUCTION_ALGORITHM
 
-export const IRREGULAR_BENCHMARK_RUNNER_VERSION = '4'
+export const IRREGULAR_BENCHMARK_RUNNER_VERSION = '5'
 
 const flagAliases = new Map<string, string>([
   ['fixture', 'fixture'],
@@ -198,7 +195,7 @@ export interface IrregularBenchmarkTimedRun {
   readonly portfolioSource: IrregularComputeResult['portfolio']['source']
   readonly portfolioStatus: IrregularComputeResult['portfolio']['status']
   readonly portfolioTerminationReason: IrregularComputeResult['portfolio']['terminationReason']
-  readonly gaMetrics: IrregularBenchmarkGaMetrics
+  readonly gaMetrics: IrregularBenchmarkGaMetrics | null
 }
 
 /** Benchmark-only decoder and selected-output work observed for one run. */
@@ -973,30 +970,8 @@ async function auditResult(
   result: IrregularComputeResult,
   request: NestingRequest
 ): Promise<'passed'> {
-  const placedSoFar: IrregularPlacedPiece[] = []
-  try {
-    for (const placed of result.placedCollisionGeometries) {
-      const candidate = new IrregularPlacementCandidate({
-        pieceId: placed.placement.pieceId ?? placed.placement.sourcePieceId,
-        transform: placed.collisionGeometry.transform,
-        point: new IrregularPoint({
-          x: placed.placement.transform.translateX,
-          y: placed.placement.transform.translateY
-        }),
-        diagnostics: []
-      })
-      await Effect.runPromise(
-        PlacementValidation.validate({
-          sheet: request.sheet,
-          placed: placedSoFar,
-          moving: placed.collisionGeometry,
-          candidate
-        })
-      )
-      placedSoFar.push(placed)
-    }
-  } catch (error) {
-    throw new Error(`Terminal placement audit failed: ${errorMessage(error)}`)
+  if (!assertCanonicalGridLegalLayout(request.sheet, result.placedCollisionGeometries)) {
+    throw new Error('Terminal placement audit failed: canonical-grid layout is illegal.')
   }
   return 'passed'
 }
@@ -1022,8 +997,14 @@ async function measureRun(
   )
   const elapsedMs = performance.now() - startedAt
   const auditStatus = await auditResult(result, request)
-  if (portfolioMetrics === undefined || finalizationMetrics === undefined) {
-    throw new Error('Benchmark run completed without required GA instrumentation.')
+  if (finalizationMetrics === undefined) {
+    throw new Error('Benchmark run completed without required finalization instrumentation.')
+  }
+  if (
+    portfolioMetrics === undefined &&
+    (result.portfolio.source === 'beam' || result.portfolio.source === 'ga')
+  ) {
+    throw new Error('Benchmark portfolio run completed without required search instrumentation.')
   }
   return {
     elapsedMs,
@@ -1034,7 +1015,10 @@ async function measureRun(
     portfolioSource: result.portfolio.source,
     portfolioStatus: result.portfolio.status,
     portfolioTerminationReason: result.portfolio.terminationReason,
-    gaMetrics: summarizeBenchmarkGaMetrics(portfolioMetrics, finalizationMetrics)
+    gaMetrics:
+      portfolioMetrics === undefined
+        ? null
+        : summarizeBenchmarkGaMetrics(portfolioMetrics, finalizationMetrics)
   }
 }
 

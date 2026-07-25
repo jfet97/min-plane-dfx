@@ -179,17 +179,17 @@ describe('IrregularPlacementScorer', () => {
     expect(absoluteSpanWins.candidate.point).toEqual(point(3, 3))
 
     const largePlaced = [placedGeometry('placed-large', rectanglePoints(10, 10), 0, 0)]
-    const bottomWins = await rank([
-      baseInput(sheet(20, 20), moving, candidate('piece', 1, 2), largePlaced),
-      baseInput(sheet(20, 20), moving, candidate('piece', 1, 1), largePlaced)
+    const [raised, bottom] = await Promise.all([
+      score(baseInput(sheet(20, 20), moving, candidate('piece', 1, 2), largePlaced)),
+      score(baseInput(sheet(20, 20), moving, candidate('piece', 1, 1), largePlaced))
     ])
-    expect(bottomWins.candidate.point).toEqual(point(1, 1))
+    expect(IrregularPlacementScorer.Make.compare(raised, bottom)).toBe(0)
 
-    const leftWins = await rank([
-      baseInput(sheet(20, 20), moving, candidate('piece', 2, 1), largePlaced),
-      baseInput(sheet(20, 20), moving, candidate('piece', 1, 1), largePlaced)
+    const [right, left] = await Promise.all([
+      score(baseInput(sheet(20, 20), moving, candidate('piece', 2, 1), largePlaced)),
+      score(baseInput(sheet(20, 20), moving, candidate('piece', 1, 1), largePlaced))
     ])
-    expect(leftWins.candidate.point).toEqual(point(1, 1))
+    expect(IrregularPlacementScorer.Make.compare(right, left)).toBe(0)
   })
 
   it('guards short-side fill with global envelope quality on landscape sheets', async () => {
@@ -286,7 +286,9 @@ describe('IrregularPlacementScorer', () => {
 
     expect(compact.sharedCollisionBoundaryLengthMm).toBe(2)
     expect(contact.sharedCollisionBoundaryLengthMm).toBe(4)
-    expect(IrregularPlacementScorer.Make.compare(balancedCompact, balancedContact)).toBeLessThan(0)
+    expect(IrregularPlacementScorer.Make.compare(balancedCompact, balancedContact)).toBeGreaterThan(
+      0
+    )
     expect(IrregularPlacementScorer.Make.compare(contact, compact)).toBeLessThan(0)
   })
 
@@ -335,7 +337,7 @@ describe('IrregularPlacementScorer', () => {
 
     expect(landscapeWide.usedClusterMaxSideMm).toBe(10)
     expect(landscapeSquare.usedClusterMaxSideMm).toBe(8)
-    expect(IrregularPlacementScorer.Make.compare(landscapeWide, landscapeSquare)).toBeLessThan(0)
+    expect(IrregularPlacementScorer.Make.compare(landscapeWide, landscapeSquare)).toBeGreaterThan(0)
     expect(IrregularPlacementScorer.Make.compare(portraitWide, portraitSquare)).toBeGreaterThan(0)
     expect(
       compareIntrinsicCompactnessPlacementScores(landscapeWide, landscapeSquare)
@@ -395,16 +397,18 @@ describe('IrregularPlacementScorer', () => {
     expect(result.candidateLeftMm).toBe(1)
   })
 
-  it('selects the same winner when candidate input is reversed', async () => {
+  it('leaves translation-equivalent candidates tied for upstream canonical ordering', async () => {
     const moving = movingGeometry('piece', rectanglePoints(1, 1))
     const inputs = [
       baseInput(sheet(10, 10), moving, candidate('piece', 4, 4)),
       baseInput(sheet(10, 10), moving, candidate('piece', 6, 0))
     ]
 
-    const forward = await rank(inputs)
-    const reversed = await rank([...inputs].reverse())
-    expect(reversed.candidate).toEqual(forward.candidate)
+    const scores = await Promise.all(inputs.map(score))
+    const first = scores[0]
+    const second = scores[1]
+    if (first === undefined || second === undefined) throw new Error('expected two scores')
+    expect(IrregularPlacementScorer.Make.compare(first, second)).toBe(0)
   })
 
   it('resolves exact score ties by transform metadata and then piece id', async () => {
