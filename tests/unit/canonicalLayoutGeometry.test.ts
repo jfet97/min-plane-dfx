@@ -195,6 +195,44 @@ describe('canonical collision layout geometry', () => {
     })
   })
 
+  it('keeps high-coordinate collinear contact on the canonical integer grid', () => {
+    const first = placed(
+      'first',
+      [
+        [900_000, 900_000.017],
+        [900_000.002, 900_000.021],
+        [899_999.996, 900_000.019]
+      ],
+      0,
+      0
+    )
+    const second = placed(
+      'second',
+      [
+        [900_000.001, 900_000.019],
+        [900_000.003, 900_000.023],
+        [900_000.005, 900_000.017]
+      ],
+      0,
+      0
+    )
+    const layout = [first, second]
+    const sheet = new SheetSpec({ width: 900_001, height: 900_001, label: 'large-grid' })
+
+    expect(measureCanonicalLayoutTopology(layout)).toMatchObject({
+      positiveContactComponentCount: 1,
+      isolatedPieceCount: 0,
+      largestPositiveContactComponentSize: 2
+    })
+    expect(measureCanonicalLayoutContacts(layout)?.sharedBoundaryLengthMm).toBeCloseTo(
+      Math.sqrt(5) / 1_000,
+      12
+    )
+    expect(analyzeCanonicalLayoutStructure(sheet, layout)?.positiveContactPairs).toEqual([
+      [PieceId.make('first'), PieceId.make('second')]
+    ])
+  })
+
   it('accepts exact sheet boundaries and rejects an overrun', () => {
     const sheet = new SheetSpec({ width: 4, height: 3, label: 'boundary' })
     expect(assertCanonicalGridLegalLayout(sheet, [rectangle('exact', 4, 3, 0, 0)])).toBe(true)

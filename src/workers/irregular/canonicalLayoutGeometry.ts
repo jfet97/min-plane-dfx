@@ -10,10 +10,12 @@ import {
 import type { SheetSpec } from '@shared/domain/nesting.js'
 import type { PieceId } from '@shared/domain/ids.js'
 import type { IrregularPlacedPiece } from '@shared/irregular/domain.js'
-import { measureSharedConvexPolygonBoundaryContact } from './convexPolygonContact.js'
+import {
+  hasPositiveCanonicalGridBoundaryContact,
+  measureCanonicalGridBoundaryContact
+} from './canonicalGridContact.js'
 import { fromGrid, toGridMm } from './clipper2OffsetPolicy.js'
-import { boundsForPoints } from './convexBounds.js'
-import type { InternalPoint, InternalPolygonWithBounds } from './internalGeometry.js'
+import type { InternalPoint } from './internalGeometry.js'
 import {
   canonicalGridAbsoluteDoubledArea,
   canonicalGridConvexHull,
@@ -72,7 +74,6 @@ export interface CanonicalLayoutEnvelopeMetrics {
 interface CanonicalPlacedPolygon {
   readonly pieceId: PieceId
   readonly path: Path64
-  readonly contactPolygon: InternalPolygonWithBounds
 }
 
 export interface CanonicalGridAabb {
@@ -172,7 +173,7 @@ export function measureCanonicalLayoutTopologyExact(
   )
   const enclosedCavityCount = countEnclosedOccupiedCavities(polygons.map(({ path }) => path))
   const occupiedEnvelopeAspectRatio = envelopeAspectRatio(polygons.map(({ path }) => path))
-  const graph = measureContactGraph(polygons.map(({ contactPolygon }) => contactPolygon))
+  const graph = measureContactGraph(polygons.map(({ path }) => path))
   if (
     hullDoubledArea === undefined ||
     largestGapDoubledArea === undefined ||
@@ -232,10 +233,7 @@ export function measureCanonicalLayoutContacts(
     for (let secondIndex = 0; secondIndex < firstIndex; secondIndex += 1) {
       const second = polygons[secondIndex]
       if (second === undefined) return undefined
-      const contact = measureSharedConvexPolygonBoundaryContact(
-        first.contactPolygon,
-        second.contactPolygon
-      )
+      const contact = measureCanonicalGridBoundaryContact(first.path, second.path)
       if (contact === undefined) return undefined
       sharedBoundaryLengthMm += contact.lengthMm
       contactUnits += contact.normalizedUnits
@@ -413,12 +411,9 @@ export function analyzeCanonicalLayoutStructure(
     for (let secondIndex = 0; secondIndex < firstIndex; secondIndex += 1) {
       const second = polygons[secondIndex]
       if (second === undefined) return undefined
-      const contact = measureSharedConvexPolygonBoundaryContact(
-        first.contactPolygon,
-        second.contactPolygon
-      )
-      if (contact === undefined) return undefined
-      if (contact.lengthMm > 0) {
+      const hasPositiveContact = hasPositiveCanonicalGridBoundaryContact(first.path, second.path)
+      if (hasPositiveContact === undefined) return undefined
+      if (hasPositiveContact) {
         neighbors[firstIndex]?.add(secondIndex)
         neighbors[secondIndex]?.add(firstIndex)
         positiveContactPairs.push(orderedPiecePair(first.pieceId, second.pieceId))
@@ -511,18 +506,11 @@ function canonicalPlacedPolygons(
     const worldPath = placedCollisionWorldGridPath(entry)
     if (worldPath === undefined) return undefined
     const path: Path64 = worldPath.map(({ x, y }) => ({ x, y }))
-    const points: InternalPoint[] = worldPath.map(({ x, y }) => ({
-      x: fromGrid(x),
-      y: fromGrid(y)
-    }))
     const doubledArea = canonicalGridSignedDoubledArea(path)
     if (path.length < 3 || doubledArea === undefined || doubledArea === 0n) return undefined
-    const bounds = boundsForPoints(points)
-    if (bounds === undefined) return undefined
     result.push({
       pieceId: entry.placement.pieceId ?? entry.placement.sourcePieceId,
-      path,
-      contactPolygon: { polygon: { points }, bounds }
+      path
     })
   }
   return result
@@ -854,7 +842,7 @@ function largestNetRegionDoubledArea(tree: PolyPath64): bigint | undefined {
   return visit(tree) ? largest : undefined
 }
 
-function measureContactGraph(polygons: ReadonlyArray<InternalPolygonWithBounds>) {
+function measureContactGraph(polygons: ReadonlyArray<Path64>) {
   const neighbors = polygons.map(() => new Set<number>())
   for (let firstIndex = 0; firstIndex < polygons.length; firstIndex += 1) {
     const first = polygons[firstIndex]
@@ -862,9 +850,9 @@ function measureContactGraph(polygons: ReadonlyArray<InternalPolygonWithBounds>)
     for (let secondIndex = 0; secondIndex < firstIndex; secondIndex += 1) {
       const second = polygons[secondIndex]
       if (second === undefined) return undefined
-      const contact = measureSharedConvexPolygonBoundaryContact(first, second)
-      if (contact === undefined) return undefined
-      if (contact.lengthMm > 0) {
+      const hasPositiveContact = hasPositiveCanonicalGridBoundaryContact(first, second)
+      if (hasPositiveContact === undefined) return undefined
+      if (hasPositiveContact) {
         neighbors[firstIndex]?.add(secondIndex)
         neighbors[secondIndex]?.add(firstIndex)
       }
