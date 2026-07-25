@@ -452,7 +452,7 @@ from Compact:
 | Fixture `2000 x 2700` | Strip candidates | Strip runtime | Observer runtime | Observer RSS delta |
 | --- | ---: | ---: | ---: | ---: |
 | Triangle-20 | `2,809` | `91.3 ms` | `97.9 ms` | small |
-| Mixed-61 | `25,788` | `1,005.6 ms` | `1,027.9 ms` | `5,636,096 bytes` |
+| Mixed-61 | `25,788` | `956.9 ms` | `972.6 ms` | `2,359,296 bytes` |
 | Shapes-17 | `6,561` | `480.3 ms` | `493.8 ms` | small |
 
 The terminal observer budget is raised from `500 ms` to `30,000 ms` and its
@@ -462,7 +462,7 @@ strip may use at most `20,000 ms` and `256 MiB`, but only from the outer
 observer's remaining allowance. Both phases share the same clock, RSS sampler,
 and cooperative NFP/IFP checkpoints, and the final composite trace is checked
 against the common `1 MiB` cap. These are runaway guards, not working limits:
-the largest measured case uses about `3.4%` of the observer budget.
+the largest measured case uses about `3.2%` of the observer budget.
 
 This remains an experimental benchmark-side sibling. The production worker and
 UI do not enable the capture callbacks, and the coordinator still returns the

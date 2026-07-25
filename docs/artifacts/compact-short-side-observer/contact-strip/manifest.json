@@ -1,18 +1,18 @@
 {
   "version": "compact-short-side-observer-provenance-v1",
-  "generatedAt": "2026-07-25T11:39:40.911Z",
-  "sourceCommit": "36e237725bad6bd2ddd3c8dec85e90776fddc0e0",
+  "generatedAt": "2026-07-25T12:37:25.564Z",
+  "sourceCommit": "7689a869cc65fca63a352e70983aa0dfa95e47a8",
   "command": [
-    "/nix/store/0nbp03038s33ck712yx9219gcj3a2sqm-nodejs-slim-24.18.0/bin/node",
-    "/var/tmp/min-plane-worktrees/contact-driven-short-side/scripts/irregular-compact-nine-baselines.ts",
+    "pnpm",
+    "gate:compact-nine-baselines",
     "--output-dir",
-    "/var/tmp/min-plane-provenance/contact-strip-final"
+    "<output-directory>"
   ],
   "runtime": {
-    "node": "v24.18.0",
-    "v8": "13.6.233.17-node.50"
+    "node": "v24.16.0",
+    "v8": "13.6.233.17-node.49"
   },
-  "svgRenderer": "scripts/render-svg-magick.cjs",
+  "svgRenderer": ".agents/skills/render-svg-with-electron/scripts/render-svg.cjs",
   "execution": {
     "maximumConcurrentAlgorithmProcesses": 1,
     "algorithmCases": 9,
@@ -22,19 +22,19 @@
   "artifacts": [
     {
       "name": "mixed-61-2000x2700.json",
-      "sha256": "1131b8a1076570d71b618cc47f8835c95b97ecba684bf792833b9ab21748d8b5"
+      "sha256": "cf7028fe6da5303f9656b4276b60e9756b544524bf9c0374ff90ac65990953ac"
     },
     {
       "name": "mixed-61-2000x2700.png",
-      "sha256": "8bf7b84494ce4c4f2397a8ab96246d610013c0c16f3ed80d0619199cd692b5aa"
+      "sha256": "29c9064423e601342b074053833624382e263c8fa99097bb0dac63b46a7e0b39"
     },
     {
       "name": "mixed-61-2000x2700.short-side-profile.json",
-      "sha256": "051a1a0a116e96db50ba9690bf16786c3ff686f90fa9f7532902a4870d7e2592"
+      "sha256": "e804b91f33f1e7d44339f970ec7a876f75cf02d5d15a9df6ed028bd41454fd4a"
     },
     {
       "name": "mixed-61-2000x2700.short-side-profile.png",
-      "sha256": "0f4f5fe5d08697ffabc751577260a3b172b5c05784e86f1057c29221edfd6554"
+      "sha256": "6029827ccc4f4137bf2bfae6493aa04d81ca2ae41a365073b48077ea901799cc"
     },
     {
       "name": "mixed-61-2000x2700.short-side-profile.svg",
@@ -46,19 +46,19 @@
     },
     {
       "name": "mixed-61-300x300.json",
-      "sha256": "9d45f57280ab0237cf2aadfe1ae9cac66d53e94923e762404080fa1af7c07789"
+      "sha256": "695090952a35e33aa1b8127567f4a521fe762834a74171cf9936456cf28a04c0"
     },
     {
       "name": "mixed-61-300x300.png",
-      "sha256": "1e6a7a606b143863a88046218837e0a18fc2e754d7e1524f4dfebefa42b8622b"
+      "sha256": "7de13122aca38edacd7602e5562c849aa653e1956198b5c32fb07e95ad92eae9"
     },
     {
       "name": "mixed-61-300x300.short-side-profile.json",
-      "sha256": "7359aa3724075b328d7185c3331bf6368745ffe0728a3cfdb1a79f74d517d695"
+      "sha256": "b9550ca67be8c27e320b1ca0eeb60aeddfffbcc47699f11e86bdf4625cd10d86"
     },
     {
       "name": "mixed-61-300x300.short-side-profile.png",
-      "sha256": "3734ddc31496c16c3649e1e25e667aba09776b78a715bcf15bb5792e7b4c9f6c"
+      "sha256": "7de13122aca38edacd7602e5562c849aa653e1956198b5c32fb07e95ad92eae9"
     },
     {
       "name": "mixed-61-300x300.short-side-profile.svg",
@@ -70,19 +70,19 @@
     },
     {
       "name": "mixed-61-600x400.json",
-      "sha256": "e123105eff0d801231eb2eab401ca06549316648cf42072506f85a1aead1bc32"
+      "sha256": "87de14f1decc48fb8a690e488c76b238662fd66bd2a4f1be5400cf18952795a2"
     },
     {
       "name": "mixed-61-600x400.png",
-      "sha256": "4e97484d81a5879f9f74995fc850c35fa56b113590296d5593d2205e98c5f115"
+      "sha256": "52bf52770c4e9b19f15d9d214afaaa8d315264a063646c9903de9c8189688f76"
     },
     {
       "name": "mixed-61-600x400.short-side-profile.json",
-      "sha256": "87c4f39a6e3636ca72d08cbd7f24d0f4e451ef0c16c0bf8239f2f365aef18615"
+      "sha256": "7be7a44d654e74905c395743684d5a71fc18efa635e1826a552963f60fe50f7e"
     },
     {
       "name": "mixed-61-600x400.short-side-profile.png",
-      "sha256": "a66db71512b1831a130e1b0bbb1a9cc9c48355614aebbac67a7ee11ac53adf51"
+      "sha256": "52bf52770c4e9b19f15d9d214afaaa8d315264a063646c9903de9c8189688f76"
     },
     {
       "name": "mixed-61-600x400.short-side-profile.svg",
@@ -94,19 +94,19 @@
     },
     {
       "name": "shapes-17-2000x2700.json",
-      "sha256": "f41e516189c2d7514f97d484d3daeed120e2f201003d216f722f4ac3a2546cff"
+      "sha256": "e9e589c2ec53676ebbb989dfb1c9192c05ad44154ec49a9356d568560cb59511"
     },
     {
       "name": "shapes-17-2000x2700.png",
-      "sha256": "f8407941ede7bc14f3600aaae1f7e4f86598944c2c36ac19a1d5e4ca73f58273"
+      "sha256": "36dcfd7f0fadb9610e93c1082e2c24ebd4b8619580c4f3a316bec34172e66e5c"
     },
     {
       "name": "shapes-17-2000x2700.short-side-profile.json",
-      "sha256": "fe65bb311e81a580847ac34ce219c9784e98e7fd6cd14bc930504a94f2aa1995"
+      "sha256": "5a68e2b3c2f4a44ed236d1081fc3314c9a9de5f50f5d6a8c40fcd2e9a4a22942"
     },
     {
       "name": "shapes-17-2000x2700.short-side-profile.png",
-      "sha256": "1d176df188413e552c8cca5a39aedf68a435711353b9d503a979556a3924edac"
+      "sha256": "653ad7b21669e792eeef7bb29d866867fcace6df64df01e9fa3a6048012f7577"
     },
     {
       "name": "shapes-17-2000x2700.short-side-profile.svg",
@@ -118,19 +118,19 @@
     },
     {
       "name": "shapes-17-300x300.json",
-      "sha256": "5f6418ebb677b59808b4d92ece3484271103bf8a20b34416b82bc10cb464a9fb"
+      "sha256": "31551da8345f51c5010f215316bfb61af7fafc835f52731debf719e402597864"
     },
     {
       "name": "shapes-17-300x300.png",
-      "sha256": "96cf6c403688f2d3f3356dca0df0e16a792c0562f2ecdf62594c29d5486c2b71"
+      "sha256": "12c5b8f9dfad323924be4f0ae916d1680648acad5f5eca46dc7380f3497e4d11"
     },
     {
       "name": "shapes-17-300x300.short-side-profile.json",
-      "sha256": "19dcba400db20269c3cdc8c76007642c632ff519bbbd2826c68b12b38d18e8f1"
+      "sha256": "216d78de3b7a225f51a726122876b4c28ca904344429d44ebae8741878c858d7"
     },
     {
       "name": "shapes-17-300x300.short-side-profile.png",
-      "sha256": "ae7ea68a19d86c2580c6717f510264cc7a01fc5e6d28f6fea35b09ba9f08d953"
+      "sha256": "12c5b8f9dfad323924be4f0ae916d1680648acad5f5eca46dc7380f3497e4d11"
     },
     {
       "name": "shapes-17-300x300.short-side-profile.svg",
@@ -142,19 +142,19 @@
     },
     {
       "name": "shapes-17-600x400.json",
-      "sha256": "332b982450b037ac111d81aa71dfe00f38554e63a0c271eaa200358542aa4863"
+      "sha256": "342622b6b2c25d25a855172a06f59918b90a683afa4f7a5a8dc3a61c04e9ba6e"
     },
     {
       "name": "shapes-17-600x400.png",
-      "sha256": "2567515a02199a3d50d383ec47678edfe4e38dffd314b658e3bfc97418b071d9"
+      "sha256": "1f162e59a19ec3413300849811fc95da69ee263d88ec02abf4ff11881acf31fa"
     },
     {
       "name": "shapes-17-600x400.short-side-profile.json",
-      "sha256": "c1cde96e942b226f76dd258940930fdeb45829a2d16ba2e23979b944144e73af"
+      "sha256": "e1b521a7d92ca3a60eab8df26eb7efb5d9a90d11d96176f574acb49cbd2d431d"
     },
     {
       "name": "shapes-17-600x400.short-side-profile.png",
-      "sha256": "2d7a3a877eb64d5600d26e8bcbb72d4399464aa5dd0163af4e1579a8e1a89a36"
+      "sha256": "1f162e59a19ec3413300849811fc95da69ee263d88ec02abf4ff11881acf31fa"
     },
     {
       "name": "shapes-17-600x400.short-side-profile.svg",
@@ -166,23 +166,23 @@
     },
     {
       "name": "summary.json",
-      "sha256": "c981b3a17329e8d27fe0d06178c2ac63c2777d9168317a3cd76327fc2dfe3eba"
+      "sha256": "20b928ee0085e642338f526e1d8d83f969e1c734ee3992b615218b3994a895c9"
     },
     {
       "name": "triangle-20-2000x2700.json",
-      "sha256": "1d8224e8d884a06faf7418f67ae98626822b030b9b74e2d3ece0141513ed039c"
+      "sha256": "4b4dd9da943872c86fe8c1ca0f9b87cc7183e2546cfc398428866b5e831939ca"
     },
     {
       "name": "triangle-20-2000x2700.png",
-      "sha256": "a139a0d141b77efc4d6a4db43c416c9c696cd20f0c490ab4a1d12efc2e57be17"
+      "sha256": "a9a75618625204e57da68485e1f341f9187fcbe5ab194e2e0effb57adf552559"
     },
     {
       "name": "triangle-20-2000x2700.short-side-profile.json",
-      "sha256": "50fb77efacf5e3a947550ed4530b2fba3f4672d622998f315d31a196ba54bf26"
+      "sha256": "b0a8e67a9671ac6853df765919b4335525c2bb0689955dac5f3b881bf262278c"
     },
     {
       "name": "triangle-20-2000x2700.short-side-profile.png",
-      "sha256": "7f2c40d0d937f1d624412789d0713401412b4e92477d54a6a8760fce86a7e53c"
+      "sha256": "4590b971a10d4f55f39d51afbccb0d53e63db043ff3006828c7f04783575f0d8"
     },
     {
       "name": "triangle-20-2000x2700.short-side-profile.svg",
@@ -194,19 +194,19 @@
     },
     {
       "name": "triangle-20-300x300.json",
-      "sha256": "2b0b851fd71ffdbcddfccd688c9fe6bdb4d2e0ef7dd8a8cfe96991121c708f63"
+      "sha256": "d706cf590471894ad05f9153d9b6c81894aea804dc992a5af50552023fa02000"
     },
     {
       "name": "triangle-20-300x300.png",
-      "sha256": "b45a4c2ed7fd25872c47d05be8b2723b9863827069901c73cbc14e9e9f8d821c"
+      "sha256": "d9780936abf919963291f1c73066fa62e3d9bcdda440eeaf8ba96f1afcf2d291"
     },
     {
       "name": "triangle-20-300x300.short-side-profile.json",
-      "sha256": "e2050c7ec97c7688f6897dbbfd882d2031dc6125d94f47049af150f80828dff4"
+      "sha256": "ebe4a8e3a25d94985764c9aa9c498686092935dbc27759e92e8149980f4bcdc4"
     },
     {
       "name": "triangle-20-300x300.short-side-profile.png",
-      "sha256": "be438b7ffc0178b85178762baa99054d755071a092952a6dcebbecd9733a5290"
+      "sha256": "d9780936abf919963291f1c73066fa62e3d9bcdda440eeaf8ba96f1afcf2d291"
     },
     {
       "name": "triangle-20-300x300.short-side-profile.svg",
@@ -218,19 +218,19 @@
     },
     {
       "name": "triangle-20-600x400.json",
-      "sha256": "2d8dcae7e757506d04eac67038aaa97ffa75afa203faa69a756481f567698b12"
+      "sha256": "a39a445c4f08b56e12bb4d0bcbdaa5ec9795d68ba65e65f019859c2a0d34e8fd"
     },
     {
       "name": "triangle-20-600x400.png",
-      "sha256": "76a18bcd85e5107e9b4f5b1a4a22b386bf9b6e5cdc999de7eb69d338a7eb500a"
+      "sha256": "620a9bcb2ddacca23d9241f794216ba9f1614974edf7243146e9f40d3ad166d7"
     },
     {
       "name": "triangle-20-600x400.short-side-profile.json",
-      "sha256": "bdc09ae6102ba801e4b29ab8d9bc1b9a196eec5f4d3f24213cacc8caf6e3e394"
+      "sha256": "5819c0897c5b370f3fe020312eb887c7711f31ee959ef3cff195040948ccedcb"
     },
     {
       "name": "triangle-20-600x400.short-side-profile.png",
-      "sha256": "365c8a7e7b5b9a9aed6b0f90197db1929f8af90477c82c187e5db6d5966f65cb"
+      "sha256": "0fd0499707983f53322065044077aaae6f515ddc3ffa67b0e0f638ede07ba3ac"
     },
     {
       "name": "triangle-20-600x400.short-side-profile.svg",

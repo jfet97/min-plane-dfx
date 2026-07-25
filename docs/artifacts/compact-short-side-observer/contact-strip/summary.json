@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T11:39:40.887Z",
+  "generatedAt": "2026-07-25T12:37:25.547Z",
   "passed": true,
   "caseCount": 9,
   "layoutCount": 18,
@@ -79,8 +79,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/triangle-20-2000x2700.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/triangle-20-2000x2700.png"
+      "svgPath": "triangle-20-2000x2700.svg",
+      "pngPath": "triangle-20-2000x2700.png"
     },
     {
       "fixture": "triangle-20",
@@ -104,8 +104,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/triangle-20-2000x2700.short-side-profile.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/triangle-20-2000x2700.short-side-profile.png"
+      "svgPath": "triangle-20-2000x2700.short-side-profile.svg",
+      "pngPath": "triangle-20-2000x2700.short-side-profile.png"
     },
     {
       "fixture": "mixed-61",
@@ -125,8 +125,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/mixed-61-2000x2700.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/mixed-61-2000x2700.png"
+      "svgPath": "mixed-61-2000x2700.svg",
+      "pngPath": "mixed-61-2000x2700.png"
     },
     {
       "fixture": "mixed-61",
@@ -150,8 +150,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/mixed-61-2000x2700.short-side-profile.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/mixed-61-2000x2700.short-side-profile.png"
+      "svgPath": "mixed-61-2000x2700.short-side-profile.svg",
+      "pngPath": "mixed-61-2000x2700.short-side-profile.png"
     },
     {
       "fixture": "shapes-17",
@@ -171,8 +171,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-2000x2700.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-2000x2700.png"
+      "svgPath": "shapes-17-2000x2700.svg",
+      "pngPath": "shapes-17-2000x2700.png"
     },
     {
       "fixture": "shapes-17",
@@ -196,8 +196,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-2000x2700.short-side-profile.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-2000x2700.short-side-profile.png"
+      "svgPath": "shapes-17-2000x2700.short-side-profile.svg",
+      "pngPath": "shapes-17-2000x2700.short-side-profile.png"
     },
     {
       "fixture": "triangle-20",
@@ -217,8 +217,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/triangle-20-600x400.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/triangle-20-600x400.png"
+      "svgPath": "triangle-20-600x400.svg",
+      "pngPath": "triangle-20-600x400.png"
     },
     {
       "fixture": "triangle-20",
@@ -242,8 +242,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/triangle-20-600x400.short-side-profile.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/triangle-20-600x400.short-side-profile.png"
+      "svgPath": "triangle-20-600x400.short-side-profile.svg",
+      "pngPath": "triangle-20-600x400.short-side-profile.png"
     },
     {
       "fixture": "mixed-61",
@@ -263,8 +263,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/mixed-61-600x400.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/mixed-61-600x400.png"
+      "svgPath": "mixed-61-600x400.svg",
+      "pngPath": "mixed-61-600x400.png"
     },
     {
       "fixture": "mixed-61",
@@ -287,8 +287,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/mixed-61-600x400.short-side-profile.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/mixed-61-600x400.short-side-profile.png"
+      "svgPath": "mixed-61-600x400.short-side-profile.svg",
+      "pngPath": "mixed-61-600x400.short-side-profile.png"
     },
     {
       "fixture": "shapes-17",
@@ -308,8 +308,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-600x400.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-600x400.png"
+      "svgPath": "shapes-17-600x400.svg",
+      "pngPath": "shapes-17-600x400.png"
     },
     {
       "fixture": "shapes-17",
@@ -332,8 +332,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-600x400.short-side-profile.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-600x400.short-side-profile.png"
+      "svgPath": "shapes-17-600x400.short-side-profile.svg",
+      "pngPath": "shapes-17-600x400.short-side-profile.png"
     },
     {
       "fixture": "triangle-20",
@@ -353,8 +353,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/triangle-20-300x300.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/triangle-20-300x300.png"
+      "svgPath": "triangle-20-300x300.svg",
+      "pngPath": "triangle-20-300x300.png"
     },
     {
       "fixture": "triangle-20",
@@ -377,8 +377,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/triangle-20-300x300.short-side-profile.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/triangle-20-300x300.short-side-profile.png"
+      "svgPath": "triangle-20-300x300.short-side-profile.svg",
+      "pngPath": "triangle-20-300x300.short-side-profile.png"
     },
     {
       "fixture": "mixed-61",
@@ -398,8 +398,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/mixed-61-300x300.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/mixed-61-300x300.png"
+      "svgPath": "mixed-61-300x300.svg",
+      "pngPath": "mixed-61-300x300.png"
     },
     {
       "fixture": "mixed-61",
@@ -422,8 +422,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/mixed-61-300x300.short-side-profile.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/mixed-61-300x300.short-side-profile.png"
+      "svgPath": "mixed-61-300x300.short-side-profile.svg",
+      "pngPath": "mixed-61-300x300.short-side-profile.png"
     },
     {
       "fixture": "shapes-17",
@@ -443,8 +443,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-300x300.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-300x300.png"
+      "svgPath": "shapes-17-300x300.svg",
+      "pngPath": "shapes-17-300x300.png"
     },
     {
       "fixture": "shapes-17",
@@ -467,8 +467,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-300x300.short-side-profile.svg",
-      "pngPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-300x300.short-side-profile.png"
+      "svgPath": "shapes-17-300x300.short-side-profile.svg",
+      "pngPath": "shapes-17-300x300.short-side-profile.png"
     }
   ]
 }

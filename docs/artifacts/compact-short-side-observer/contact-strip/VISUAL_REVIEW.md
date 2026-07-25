@@ -45,6 +45,5 @@ identical; only its connectivity changed.
 
 ## Renderer
 
-PNGs were produced with `scripts/render-svg-magick.cjs` because Electron cannot
-initialize a display in the execution environment. The manifest records the
-renderer that ran.
+PNGs were produced with the repository Electron/Chromium renderer. The manifest
+records the exact renderer and source commit.

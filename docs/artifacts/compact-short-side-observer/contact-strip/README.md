@@ -44,12 +44,14 @@ identical. The observer has no production output influence.
 
 ## Reproduction
 
-Three sequential runs of `pnpm gate:compact-nine-baselines` produced identical
-canonical collision and fitted hashes for all 18 layouts. Two ran before the
-trace-reporting correction and one after; only trace bookkeeping differed.
+The recorded final-source run of `pnpm gate:compact-nine-baselines` reproduced
+the established canonical collision and fitted hashes for all 18 layouts.
+Earlier development runs produced the same geometry; their trace bookkeeping is
+not part of this archive.
 
-Every run executed the nine algorithm cases strictly sequentially with at most
-one algorithm process active.
+The recorded run executed the nine algorithm cases strictly sequentially with
+at most one algorithm process active. `manifest.json` identifies its exact
+source commit and portable reproduction command.
 
 ## Rejected constructions retained
 
@@ -67,6 +69,5 @@ Both remain readable in each case's
 
 ## Renderer
 
-PNGs were produced with `scripts/render-svg-magick.cjs` because Electron cannot
-initialize a display in the execution environment. `manifest.json` records the
-renderer that ran.
+PNGs were produced with the repository Electron/Chromium renderer and inspected
+one by one. `manifest.json` records the exact renderer and source commit.

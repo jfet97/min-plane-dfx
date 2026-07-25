@@ -110,7 +110,8 @@ exact construction instead of a fixed-transform accounting pass. The strip may
 use at most `20,000 ms` and `256 MiB`, but only from the outer observer's
 remaining allowance. Both phases share the clock and RSS sampler, and the final
 composite trace is checked against the common `1 MiB` cap. The largest measured
-case, Mixed-61, uses `1,005.6 ms` and `5,636,096 bytes` inside the coordinator.
+case, Mixed-61, uses `972.6 ms` and `2,359,296 bytes` inside the coordinator
+in the final Electron-backed matrix.
 
 ## Evidence
 
