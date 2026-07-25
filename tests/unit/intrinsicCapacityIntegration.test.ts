@@ -127,6 +127,7 @@ describe('intrinsic capacity integration', () => {
         | undefined
       const observed = await compute(request, {
         captureIntrinsicShortSideObserver: true,
+        captureIntrinsicShortSidePairFoldObserver: true,
         onIntrinsicShortSideObserver: (trace) => {
           callbackTrace = trace
         }
@@ -169,6 +170,7 @@ describe('intrinsic capacity integration', () => {
         candidateEvaluations: 0
       })
       expect(callbackTrace).toEqual(observed.intrinsicShortSideObserverTrace)
+      expect(observed.intrinsicShortSidePairFoldTrace).toBeUndefined()
     },
     120_000
   )
