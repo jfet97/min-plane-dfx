@@ -12,12 +12,20 @@ import {
   IrregularPreparedPiece,
   IrregularTransformCandidate
 } from '@shared/irregular/domain.js'
-import { observeIntrinsicShortSidePairFold } from '../../src/workers/algorithm/irregular/intrinsicShortSidePairFoldObserver.js'
+import {
+  evaluateIntrinsicShortSideContactStripPromotion,
+  observeIntrinsicShortSidePairFold,
+  type IntrinsicShortSidePairFoldOutcome,
+  type IntrinsicShortSidePairFoldStatus
+} from '../../src/workers/algorithm/irregular/intrinsicShortSidePairFoldObserver.js'
 import {
   assertCanonicalGridLegalLayout,
   canonicalCollisionLayoutIdentity
 } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
+import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
+
+const OBSERVER_SETTINGS = GeometrySettings.Make
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -79,8 +87,7 @@ function preparedRectangle(
 function preparedTriangle(
   id: string,
   width: number,
-  height: number,
-  rotations: ReadonlyArray<number>
+  height: number
 ): IrregularPreparedPiece {
   const points = [point(0, 0), point(width, 0), point(width / 2, height)]
   const polygon = new IrregularPolygon({ points })
@@ -102,7 +109,7 @@ function preparedTriangle(
       placementReference: point(0, 0),
       diagnostics: []
     }),
-    transforms: rotations.map(
+    transforms: [0, 180].map(
       (rotationDeg, index) =>
         new IrregularTransformCandidate({
           index,
@@ -117,6 +124,59 @@ function preparedTriangle(
 function readings(...values: ReadonlyArray<number>): () => number {
   let index = 0
   return () => values[Math.min(index++, values.length - 1)] ?? 0
+}
+
+function controlledPromotionOutcome(
+  base: IntrinsicShortSidePairFoldOutcome,
+  input: {
+    readonly status?: IntrinsicShortSidePairFoldStatus
+    readonly shortAxisSpanGrid?: number
+    readonly longAxisDepthGrid?: number
+    readonly envelopeAreaGrid2?: bigint
+    readonly materialDoubledAreaGrid2?: bigint
+    readonly hullGapDoubledAreaGrid2?: number
+    readonly hullDoubledAreaGrid2?: number
+    readonly isolatedPieceCount?: number
+    readonly positiveContactComponentCount?: number
+    readonly largestPositiveContactComponentSize?: number
+  } = {}
+): IntrinsicShortSidePairFoldOutcome {
+  const admission = base.trace.admission
+  const interlocking = base.trace.interlocking
+  if (admission === undefined || interlocking === undefined) {
+    throw new Error('controlled promotion requires measured base metrics')
+  }
+  const status = input.status ?? 'accepted'
+  return {
+    ...base,
+    trace: {
+      ...base.trace,
+      status,
+      constructionKind: 'contact-strip',
+      usedShortAxisSpanGrid: input.shortAxisSpanGrid ?? 100,
+      usedLongAxisDepthGrid: input.longAxisDepthGrid ?? 100,
+      envelopeAreaGrid2:
+        (input.envelopeAreaGrid2 ?? 10_000n).toString(),
+      collisionMaterialDoubledAreaGrid2:
+        (input.materialDoubledAreaGrid2 ?? 10_000n).toString(),
+      admission: {
+        ...admission,
+        accepted: status === 'accepted'
+      },
+      interlocking: {
+        ...interlocking,
+        largestOccupiedHullGapDoubledAreaGrid2:
+          input.hullGapDoubledAreaGrid2 ?? 1,
+        occupiedHullDoubledAreaGrid2:
+          input.hullDoubledAreaGrid2 ?? 10,
+        isolatedPieceCount: input.isolatedPieceCount ?? 0,
+        positiveContactComponentCount:
+          input.positiveContactComponentCount ?? 1,
+        largestPositiveContactComponentSize:
+          input.largestPositiveContactComponentSize ?? 4
+      }
+    }
+  }
 }
 
 function observe(input: {
@@ -141,9 +201,18 @@ function observe(input: {
           label: 'portrait'
         }),
       preparedPieces: input.pieces,
+      settings: OBSERVER_SETTINGS,
       productionShortAxisSpanMm: input.productionShortAxisSpanMm ?? 40,
       productionMaximumSideMm: input.productionMaximumSideMm ?? 100,
       productionEnvelopeAreaMm2: input.productionEnvelopeAreaMm2 ?? 1_600,
+      productionShortAxisSpanGrid:
+        Math.round((input.productionShortAxisSpanMm ?? 40) * 1_000),
+      productionMaximumSideGrid:
+        Math.round((input.productionMaximumSideMm ?? 100) * 1_000),
+      productionEnvelopeAreaGrid2:
+        Math.round(
+          (input.productionEnvelopeAreaMm2 ?? 1_600) * 1_000_000
+        ).toString(),
       runtimeControl: {
         ...(input.maximumRuntimeMs === undefined
           ? {}
@@ -159,7 +228,11 @@ function observe(input: {
         ...(input.now === undefined ? {} : { now: input.now }),
         ...(input.currentRssBytes === undefined ? {} : { currentRssBytes: input.currentRssBytes })
       }
-    }).pipe(Effect.provide(GeometryKernel.Live), Effect.provide(GeometrySettings.Live))
+    }).pipe(
+      Effect.provide(GeometryKernel.Live),
+      Effect.provide(NfpIfpServiceLive),
+      Effect.provide(GeometrySettings.Live)
+    )
   )
 }
 
@@ -304,26 +377,6 @@ describe('intrinsic short-side pair-fold observer', () => {
     expect(outcome.placedCollisionGeometries).toHaveLength(3)
   })
 
-  it('prefers the longest exact row-baseline support when shelf envelopes tie', async () => {
-    const outcome = await observe({
-      pieces: [
-        preparedTriangle('stable-1', 40, 20, [180, 0]),
-        preparedTriangle('stable-2', 40, 20, [180, 0]),
-        preparedTriangle('stable-3', 40, 20, [180, 0]),
-        preparedTriangle('stable-4', 40, 20, [180, 0])
-      ],
-      productionEnvelopeAreaMm2: 4_000
-    })
-
-    expect(outcome.trace).toMatchObject({
-      status: 'accepted',
-      constructionKind: 'multi-row-shelf'
-    })
-    expect(
-      outcome.placedCollisionGeometries?.map(({ placement }) => placement.transform.rotationDeg)
-    ).toEqual([0, 0, 0, 0])
-  })
-
   it('censors after completed transform work with exact counters', async () => {
     const deadline = await observe({
       pieces: acceptedPieces,
@@ -350,6 +403,27 @@ describe('intrinsic short-side pair-fold observer', () => {
     })
   })
 
+  it('shares the outer deadline and RSS ceiling with contact-strip work', async () => {
+    let nowCalls = 0
+    const deadline = await observe({
+      pieces: acceptedPieces,
+      maximumRuntimeMs: 500,
+      now: () => (nowCalls++ < 15 ? 0 : 501)
+    })
+    let rssCalls = 0
+    const memory = await observe({
+      pieces: acceptedPieces,
+      maximumRssDeltaBytes: 64 * 1_048_576,
+      currentRssBytes: () => (rssCalls++ < 15 ? 0 : 65 * 1_048_576)
+    })
+
+    expect(deadline.trace.status).toBe('deadline')
+    expect(deadline.placedCollisionGeometries).toBeUndefined()
+    expect(memory.trace.status).toBe('memory-cap')
+    expect(memory.trace.peakRssDeltaBytes).toBe(65 * 1_048_576)
+    expect(memory.placedCollisionGeometries).toBeUndefined()
+  })
+
   it('discards an accepted layout when its stabilized trace exceeds the cap', async () => {
     const outcome = await observe({
       pieces: acceptedPieces,
@@ -363,5 +437,215 @@ describe('intrinsic short-side pair-fold observer', () => {
       evaluatedPairCount: 3
     })
     expect(outcome.placedCollisionGeometries).toBeUndefined()
+  })
+
+  it('enforces the trace cap after attaching the contact-strip comparison', async () => {
+    const measured = await observe({
+      pieces: acceptedPieces,
+      now: () => 0,
+      currentRssBytes: () => 0
+    })
+    const outcome = await observe({
+      pieces: acceptedPieces,
+      maximumTraceBytes: measured.trace.serializedTraceBytes - 1,
+      now: () => 0,
+      currentRssBytes: () => 0
+    })
+
+    expect(measured.trace.contactStripPromotion).toBeDefined()
+    expect(outcome.trace.status).toBe('trace-cap')
+    expect(outcome.placedCollisionGeometries).toBeUndefined()
+  })
+
+  it('promotes one exact contact strip identically at q0 and q90', async () => {
+    const pieces = [
+      preparedTriangle('triangle-1', 40, 30),
+      preparedTriangle('triangle-2', 40, 30),
+      preparedTriangle('triangle-3', 40, 30),
+      preparedTriangle('triangle-4', 40, 30)
+    ]
+    const portraitSheet = new SheetSpec({ width: 100, height: 240, label: 'portrait-strip' })
+    const landscapeSheet = new SheetSpec({ width: 240, height: 100, label: 'landscape-strip' })
+    const portrait = await observe({
+      pieces,
+      sheet: portraitSheet,
+      productionShortAxisSpanMm: 50,
+      productionMaximumSideMm: 240,
+      productionEnvelopeAreaMm2: 6_000
+    })
+    const landscape = await observe({
+      pieces,
+      sheet: landscapeSheet,
+      productionShortAxisSpanMm: 50,
+      productionMaximumSideMm: 240,
+      productionEnvelopeAreaMm2: 6_000
+    })
+
+    expect(portrait.trace).toMatchObject({
+      status: 'accepted',
+      constructionKind: 'contact-strip',
+      prescribedRotationDeg: 0,
+      contactStripPromotion: { promoted: true }
+    })
+    expect(landscape.trace).toMatchObject({
+      status: 'accepted',
+      constructionKind: 'contact-strip',
+      prescribedRotationDeg: 90,
+      contactStripPromotion: { promoted: true }
+    })
+    expect(assertCanonicalGridLegalLayout(portraitSheet, portrait.placedCollisionGeometries ?? []))
+      .toBe(true)
+    expect(assertCanonicalGridLegalLayout(landscapeSheet, landscape.placedCollisionGeometries ?? []))
+      .toBe(true)
+    expect(canonicalCollisionLayoutIdentity(landscape.placedCollisionGeometries ?? [])).toBe(
+      canonicalCollisionLayoutIdentity(portrait.placedCollisionGeometries ?? [])
+    )
+  })
+
+  it('records the contact strip and promotes it only without any regression', async () => {
+    const outcome = await observe({ pieces: acceptedPieces })
+    const promotion = outcome.trace.contactStripPromotion
+
+    expect(outcome.trace.contactStrip?.status).toBe('constructed')
+    expect(outcome.trace.interlocking).toBeDefined()
+    expect(promotion).toBeDefined()
+    if (promotion === undefined) return
+    expect(promotion.promoted).toBe(
+      promotion.contactStripAdmitted &&
+        promotion.fillNotRegressed &&
+        promotion.envelopeAreaNotRegressed &&
+        promotion.depthNotRegressed &&
+        promotion.densityNotRegressed &&
+        promotion.hullGapNotRegressed &&
+        promotion.isolatedPiecesNotRegressed &&
+        promotion.positiveContactComponentsNotRegressed &&
+        promotion.largestContactComponentNotRegressed &&
+        promotion.strictlyImproved
+    )
+    expect(outcome.trace.constructionKind).toBe(
+      promotion.promoted ? 'contact-strip' : promotion.incumbentConstructionKind
+    )
+  })
+
+  it('compares controlled promotion boundaries instead of trusting emitted flags', async () => {
+    const base = await observe({ pieces: acceptedPieces })
+    const contactStripTrace = base.trace.contactStrip
+    if (contactStripTrace === undefined) {
+      throw new Error('test construction must retain its contact-strip trace')
+    }
+    const constructedTrace = {
+      ...contactStripTrace,
+      status: 'constructed' as const
+    }
+    const compare = (
+      incumbent: IntrinsicShortSidePairFoldOutcome,
+      strip: IntrinsicShortSidePairFoldOutcome
+    ) =>
+      evaluateIntrinsicShortSideContactStripPromotion(
+        incumbent,
+        strip,
+        constructedTrace
+      )
+
+    const equal = compare(
+      controlledPromotionOutcome(base),
+      controlledPromotionOutcome(base)
+    )
+    expect(equal).toMatchObject({
+      strictlyImproved: false,
+      promoted: false
+    })
+
+    const rejectedIncumbent = compare(
+      controlledPromotionOutcome(base, {
+        status: 'rejected-admission'
+      }),
+      controlledPromotionOutcome(base, {
+        shortAxisSpanGrid: 101
+      })
+    )
+    expect(rejectedIncumbent).toMatchObject({
+      fillNotRegressed: true,
+      strictlyImproved: true,
+      promoted: true
+    })
+
+    const componentRegression = compare(
+      controlledPromotionOutcome(base),
+      controlledPromotionOutcome(base, {
+        shortAxisSpanGrid: 101,
+        positiveContactComponentCount: 2
+      })
+    )
+    expect(componentRegression).toMatchObject({
+      positiveContactComponentsNotRegressed: false,
+      promoted: false
+    })
+
+    const largestComponentRegression = compare(
+      controlledPromotionOutcome(base),
+      controlledPromotionOutcome(base, {
+        shortAxisSpanGrid: 101,
+        largestPositiveContactComponentSize: 3
+      })
+    )
+    expect(largestComponentRegression).toMatchObject({
+      largestContactComponentNotRegressed: false,
+      promoted: false
+    })
+
+    const exactDensityEquality = compare(
+      controlledPromotionOutcome(base, {
+        envelopeAreaGrid2: 3n,
+        materialDoubledAreaGrid2: 2n
+      }),
+      controlledPromotionOutcome(base, {
+        envelopeAreaGrid2: 6n,
+        materialDoubledAreaGrid2: 4n
+      })
+    )
+    expect(exactDensityEquality.densityNotRegressed).toBe(true)
+
+    const exactDensityRegression = compare(
+      controlledPromotionOutcome(base, {
+        envelopeAreaGrid2: 3n,
+        materialDoubledAreaGrid2: 2n
+      }),
+      controlledPromotionOutcome(base, {
+        envelopeAreaGrid2: 6n,
+        materialDoubledAreaGrid2: 3n
+      })
+    )
+    expect(exactDensityRegression).toMatchObject({
+      densityNotRegressed: false,
+      promoted: false
+    })
+
+    const exactHullEquality = compare(
+      controlledPromotionOutcome(base, {
+        hullGapDoubledAreaGrid2: 1,
+        hullDoubledAreaGrid2: 3
+      }),
+      controlledPromotionOutcome(base, {
+        hullGapDoubledAreaGrid2: 2,
+        hullDoubledAreaGrid2: 6
+      })
+    )
+    expect(exactHullEquality.hullGapNotRegressed).toBe(true)
+
+    const exactHullRegression = compare(
+      controlledPromotionOutcome(base, {
+        hullGapDoubledAreaGrid2: 1,
+        hullDoubledAreaGrid2: 3
+      }),
+      controlledPromotionOutcome(base, {
+        hullGapDoubledAreaGrid2: 3,
+        hullDoubledAreaGrid2: 6
+      })
+    )
+    expect(exactHullRegression).toMatchObject({
+      hullGapNotRegressed: false,
+      promoted: false
+    })
   })
 })

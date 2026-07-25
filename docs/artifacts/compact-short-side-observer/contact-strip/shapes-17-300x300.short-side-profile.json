@@ -1,0 +1,47 @@
+{
+  "fixture": "shapes-17",
+  "profile": "short-side",
+  "sheet": {
+    "width": 300,
+    "height": 300
+  },
+  "source": "compact-fallback",
+  "profileOutcome": "short-side-satisfied-by-compact",
+  "shortAxisFillRatio": 0.9985833333333332,
+  "observerStatus": "skipped-square-sheet",
+  "placedCount": 5,
+  "unplacedCount": 12,
+  "unplacedPieceIds": [
+    "shapes-17-14",
+    "shapes-17-1",
+    "shapes-17-2",
+    "shapes-17-3",
+    "shapes-17-5",
+    "shapes-17-8",
+    "shapes-17-9",
+    "shapes-17-10",
+    "shapes-17-11",
+    "shapes-17-12",
+    "shapes-17-16",
+    "shapes-17-17"
+  ],
+  "collisionIdentitySha256": "e4ad1ce1c7fa26e7a00ba38a5d9c11e1908ebf753031ff4811420d5097be7c71",
+  "fittedCanonicalSha256": "bccfa5a4b7db4b5009a8c0f12d7c6f308c9a72550df3feb218355f33a5c1ef18",
+  "canonicalTopology": {
+    "enclosedCavityCount": 0,
+    "largestOccupiedHullGapRatio": 0.1646643735584797,
+    "occupiedEnvelopeAspectRatio": 1.0222483834092577,
+    "positiveContactComponentCount": 5,
+    "isolatedPieceCount": 5,
+    "largestPositiveContactComponentSize": 1,
+    "largestPositiveContactComponentRatio": 0.2
+  },
+  "bounds": {
+    "width": 299.57499999999993,
+    "height": 293.05500000000006,
+    "area": 87791.951625,
+    "span": 592.63
+  },
+  "exactPiecePartition": true,
+  "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-300x300.short-side-profile.svg"
+}

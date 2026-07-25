@@ -312,9 +312,10 @@ Status: Stage 1 accepted at `a9504d3`; fixed-target Stage 2 rejected at
 `8f66399`; width-one target-aware Stage 3 rejected at `e19ddf1`; protected
 width-four Stage 4 rejected at `1163bd3`; exact one-row Stage 5 rejected at
 `999e9fb`; exact terminal pair fold accepted at `2645e7c`; exact multi-row
-terminal shelf accepted at `d57b7d6`; production Compact influence remains
-zero. Generic stable-baseline shelf orientation accepted at `9193f26` with all
-18 matrix envelopes and production hashes preserved.
+terminal shelf accepted at `d57b7d6`; generic stable-baseline shelf orientation
+rejected and reverted after `9193f26`; exact contact-driven directional strip
+accepted as an experimental Stage 8 gate; production Compact influence remains
+zero and no worker or UI path enables the sibling profile yet.
 
 The zero-search archive observer establishes exact q0/q90 legality, hard
 cavity/hull eligibility, the existing intrinsic geometric Pareto front,
@@ -388,17 +389,45 @@ fill. The full matrix has four generated directional winners, five explicit
 `short-side-satisfied-by-compact` results, and zero misses. All nine production
 hashes and piece partitions remain exact.
 
-Do not generalize this result into NFP search, a beam, iterative repair, target
-sweeps, or restarted construction. Further work requires a concrete visual or
-metric regression in the accepted matrix and must preserve the exact 9/9
-directional contract.
+The `9193f26` stable-baseline tie-break is now rejected and reverted. It chose
+shelf transforms before any row or neighbour existed, so it flipped whole
+asymmetric families onto flat bases while preserving all 18 envelopes, every
+production hash, fill, density, and legality result. The user rejected the
+resulting Mixed-61 layout on sight. Treat that outcome as the standing proof
+that unchanged envelopes are not promotion evidence.
+
+The follow-up diagnosis is that no tie-break can repair the shelf family. Its
+cursor advances by the AABB width and its rows are separated by the tallest
+bounding box, so a piece can never enter a neighbour's concavity. All three
+roomy fixtures therefore sit near `50%` collision-envelope density against
+production Compact's `80.05%`. Row-tail backfill was considered and not
+implemented: the photographed voids are interior to the rows, not in the tails.
+
+Stage 8 replaces the mechanism rather than its tie-break. One exact
+contact-driven directional strip reuses production Compact's NFP/IFP candidate
+generation and canonical legality, and places each prepared piece once at the
+legal candidate whose occupied grid anchor is lexicographically smallest in
+`(long axis, short axis)`. Interlocking emerges from exact contact rather than
+from any shape rule. It is promoted only under a strict no-regression rule over
+fill, envelope area, depth, density, occupied-hull gap, isolated pieces,
+positive-contact component count, and largest positive-contact component size.
+
+Do not generalize this result into a beam, iterative repair, target sweeps,
+reordering, or restarted construction. The strip is one greedy sequential pass.
+Further work requires a concrete visual or metric regression in the accepted
+matrix and must preserve the exact 9/9 directional contract.
+
+A measured and rejected Stage 8 variant ordered candidates by the lowest
+resulting long-axis extent instead of the lowest anchor. It improved Triangle-20
+and Shapes-17 but regressed the targeted Mixed-61 case from
+`207.700 mm` to `221.043 mm` depth, so it was not adopted. Do not retry it
+without a rule that keeps the Mixed-61 depth.
 
 Promotion gate for any further mechanism: a directional gain beyond the
-accepted archive/pair-fold sources on more than one shape family, exact
-legality and accounting, bounded runtime/memory, two identical reproductions,
-and an explicit accepted area-versus-fill tradeoff. The profile must remain a
-sibling; it may not alter production Compact sheetless ranking or capacity
-fallback.
+accepted archive, pair-fold, shelf, and contact-strip sources, exact legality
+and accounting, bounded runtime/memory, two identical reproductions, and an
+explicit accepted area-versus-fill tradeoff. The profile must remain a sibling;
+it may not alter production Compact sheetless ranking or capacity fallback.
 
 Falsifier: no improvement beyond the accepted sibling sources; a sparse or
 hull-waste regression; fixture-specific construction; target-box restart cost
@@ -406,6 +435,23 @@ dominates; or any production matrix/hash/runtime regression.
 
 Evidence:
 [`../research/compact-short-side-observer.md`](../research/compact-short-side-observer.md).
+
+### P6: canonical-grid metric exactness
+
+Status: audited; high-priority follow-up, not folded into the experimental
+Short Side profile.
+
+Clipper2 remains the Boolean geometry authority and robust predicates remain
+the unsnapped source-geometry authority. The audit found that several older
+topology, gap-region, capacity, and strict/archive comparators convert canonical
+integer paths or area accumulators back to `Number` before ranking. The next
+tranche should introduce one shared BigInt shoelace/cross/rational-comparison
+utility and migrate consumers incrementally.
+
+Promotion gate: unchanged current hashes and winners, deterministic resume,
+near-policy-limit paths whose area or hull differs by one grid square, and
+translation-invariant capacity/Short Side winner tests. Do not add a numeric
+epsilon as a substitute.
 
 ## Open-Source Mechanism Disposition
 

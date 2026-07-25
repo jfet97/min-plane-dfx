@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { performance } from 'node:perf_hooks'
 import { Effect, Layer, Schema } from 'effect'
@@ -425,10 +425,14 @@ const shortSidePairFoldContractValid =
             ? shortSidePairFoldTrace.selectedBottomPieceId !== undefined &&
               shortSidePairFoldTrace.selectedUpperPieceId !== undefined &&
               shortSidePairFoldTrace.rowCount === 1
-            : shortSidePairFoldTrace.constructionKind === 'multi-row-shelf' &&
-              shortSidePairFoldTrace.selectedBottomPieceId === undefined &&
+            : shortSidePairFoldTrace.selectedBottomPieceId === undefined &&
               shortSidePairFoldTrace.selectedUpperPieceId === undefined &&
-              shortSidePairFoldTrace.rowCount >= 1) &&
+              (shortSidePairFoldTrace.constructionKind === 'multi-row-shelf'
+                ? shortSidePairFoldTrace.rowCount >= 1
+                : shortSidePairFoldTrace.constructionKind === 'contact-strip' &&
+                  shortSidePairFoldTrace.rowCount === 0 &&
+                  shortSidePairFoldTrace.contactStripPromotion?.promoted === true &&
+                  shortSidePairFoldTrace.contactStrip?.status === 'constructed')) &&
           shortSidePairFoldTrace.canonicalGeometryHash === pairFoldObserverWinnerHash
         : pairFoldObserverWinner === undefined &&
           shortSidePairFoldTrace.admission?.accepted !== true)
@@ -484,9 +488,11 @@ const shortSideProfileSource = !args.captureShortSideObserver
   : observerWinner !== undefined
     ? ('guarded-stage1-winner' as const)
     : pairFoldObserverWinner !== undefined
-      ? shortSidePairFoldTrace?.constructionKind === 'multi-row-shelf'
-        ? ('terminal-multi-row-shelf-winner' as const)
-        : ('terminal-pair-fold-winner' as const)
+      ? shortSidePairFoldTrace?.constructionKind === 'contact-strip'
+        ? ('terminal-contact-strip-winner' as const)
+        : shortSidePairFoldTrace?.constructionKind === 'multi-row-shelf'
+          ? ('terminal-multi-row-shelf-winner' as const)
+          : ('terminal-pair-fold-winner' as const)
       : ('compact-fallback' as const)
 const shortSideProfilePlacedCollisionGeometries =
   shortSideProfileSource === undefined
@@ -623,7 +629,8 @@ if (shortSideProfileSource !== undefined && shortSideProfileReportPath !== undef
           shortSideProfileSource === 'guarded-stage1-winner'
             ? shortSideObserverTrace?.observerWinnerRotationDeg
             : shortSideProfileSource === 'terminal-pair-fold-winner' ||
-                shortSideProfileSource === 'terminal-multi-row-shelf-winner'
+                shortSideProfileSource === 'terminal-multi-row-shelf-winner' ||
+                shortSideProfileSource === 'terminal-contact-strip-winner'
               ? shortSidePairFoldTrace?.prescribedRotationDeg
               : undefined,
         placedCount: shortSideProfilePlacedCollisionGeometries?.length ?? 0,
@@ -634,7 +641,8 @@ if (shortSideProfileSource !== undefined && shortSideProfileReportPath !== undef
         canonicalTopology: shortSideProfileTopology,
         bounds: shortSideProfileBounds,
         exactPiecePartition: shortSideProfileExactPiecePartition,
-        svgPath: shortSideProfileSvgPath
+        svgPath:
+          shortSideProfileSvgPath === undefined ? undefined : basename(shortSideProfileSvgPath)
       }),
       null,
       2
@@ -751,9 +759,11 @@ const report = jsonSafe({
   },
   checks,
   passed,
-  svgPath,
-  shortSideProfileSvgPath,
-  shortSideProfileReportPath
+  svgPath: basename(svgPath),
+  shortSideProfileSvgPath:
+    shortSideProfileSvgPath === undefined ? undefined : basename(shortSideProfileSvgPath),
+  shortSideProfileReportPath:
+    shortSideProfileReportPath === undefined ? undefined : basename(shortSideProfileReportPath)
 })
 await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`)
 console.log(JSON.stringify({ reportPath, svgPath, elapsedMs, checks, passed }))

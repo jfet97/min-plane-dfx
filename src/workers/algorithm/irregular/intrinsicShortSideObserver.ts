@@ -7,7 +7,10 @@ import {
   canonicalCollisionLayoutIdentity,
   placedCollisionWorldGridPath
 } from '../../irregular/canonicalLayoutGeometry.js'
-import { fromGrid } from '../../irregular/clipper2OffsetPolicy.js'
+import {
+  fromGrid,
+  toGridMm
+} from '../../irregular/clipper2OffsetPolicy.js'
 import type { IntrinsicSharedArchiveEndpoint } from './intrinsicSharedArchivePortfolio.js'
 import {
   INTRINSIC_STRICT_COHESION_FLOORS,
@@ -16,7 +19,7 @@ import {
 import { IrregularBeamState } from './irregularBeamState.js'
 
 export const INTRINSIC_SHORT_SIDE_OBSERVER_VERSION =
-  'intrinsic-short-side-observer-v3' as const
+  'intrinsic-short-side-observer-v4' as const
 export const INTRINSIC_SHORT_SIDE_OBSERVER_MAX_RUNTIME_MS = 250 as const
 export const INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES = 1_048_576 as const
 
@@ -39,6 +42,8 @@ export interface IntrinsicShortSideOrientationObservation {
   readonly usedHeightMm: number | undefined
   readonly requestedLongAxisUsedSpanMm: number | undefined
   readonly requestedShortAxisShortfallMm: number | undefined
+  readonly requestedLongAxisUsedSpanGrid: number | undefined
+  readonly requestedShortAxisShortfallGrid: number | undefined
   readonly cavityCount: number
   readonly hullGapRatio: number
   readonly cohesionPasses: boolean
@@ -78,6 +83,9 @@ export interface IntrinsicShortSideObserverTrace {
   readonly productionShortAxisSpanMm: number | undefined
   readonly productionMaximumSideMm: number | undefined
   readonly productionEnvelopeAreaMm2: number | undefined
+  readonly productionShortAxisSpanGrid: number | undefined
+  readonly productionMaximumSideGrid: number | undefined
+  readonly productionEnvelopeAreaGrid2: string | undefined
   readonly settledEndpointCount: number
   readonly evaluatedOrientationCount: number
   readonly cavityHullGuardEligibleEndpointCount: number
@@ -110,6 +118,7 @@ export function observeIntrinsicShortSideOrientations(input: {
         : ('height' as const)
   const requestedLongAxisMm = Math.max(input.sheet.width, input.sheet.height)
   const requestedShortAxisMm = Math.min(input.sheet.width, input.sheet.height)
+  const requestedShortAxisGrid = toGridMm(requestedShortAxisMm)
   const productionReference = directionalReference({
     sheet: input.sheet,
     placedCollisionGeometries:
@@ -165,7 +174,7 @@ export function observeIntrinsicShortSideOrientations(input: {
     directionalImprovementAdmitted({
       candidate: rankedWinner.selected,
       production: productionReference,
-      requestedShortAxisMm
+      requestedShortAxisGrid
     })
       ? rankedWinner
       : undefined
@@ -195,6 +204,12 @@ export function observeIntrinsicShortSideOrientations(input: {
       productionReference?.maximumSideMm,
     productionEnvelopeAreaMm2:
       productionReference?.envelopeAreaMm2,
+    productionShortAxisSpanGrid:
+      productionReference?.usedShortAxisSpanGrid,
+    productionMaximumSideGrid:
+      productionReference?.maximumSideGrid,
+    productionEnvelopeAreaGrid2:
+      productionReference?.envelopeAreaGrid2.toString(),
     settledEndpointCount: endpoints.length,
     evaluatedOrientationCount: endpoints.length * 2,
     cavityHullGuardEligibleEndpointCount: guardEligibleEndpoints.length,
@@ -315,12 +330,34 @@ function observeOrientation(input: {
       : input.requestedLongAxis === 'width'
         ? dimensions.heightMm
         : dimensions.widthMm
+  const usedLongAxisSpanGrid =
+    dimensions === undefined
+      ? undefined
+      : input.requestedLongAxis === 'square'
+        ? Math.max(dimensions.widthGrid, dimensions.heightGrid)
+        : input.requestedLongAxis === 'width'
+          ? dimensions.widthGrid
+          : dimensions.heightGrid
+  const usedShortAxisSpanGrid =
+    dimensions === undefined || input.requestedLongAxis === 'square'
+      ? undefined
+      : input.requestedLongAxis === 'width'
+        ? dimensions.heightGrid
+        : dimensions.widthGrid
+  const requestedShortAxisGrid = toGridMm(input.requestedShortAxisMm)
   const requestedShortAxisShortfallMm =
     input.requestedLongAxis === 'square'
       ? 0
       : usedShortAxisSpanMm === undefined
         ? undefined
         : input.requestedShortAxisMm - usedShortAxisSpanMm
+  const requestedShortAxisShortfallGrid =
+    input.requestedLongAxis === 'square'
+      ? 0
+      : usedShortAxisSpanGrid === undefined ||
+          requestedShortAxisGrid === undefined
+        ? undefined
+        : requestedShortAxisGrid - usedShortAxisSpanGrid
   const metrics = input.endpoint.metrics
   const tuple = comparisonTuple({
     exactLegal,
@@ -347,6 +384,8 @@ function observeOrientation(input: {
     usedHeightMm: dimensions?.heightMm,
     requestedLongAxisUsedSpanMm: usedLongAxisSpanMm,
     requestedShortAxisShortfallMm,
+    requestedLongAxisUsedSpanGrid: usedLongAxisSpanGrid,
+    requestedShortAxisShortfallGrid,
     cavityCount: metrics.enclosedCavityCount,
     hullGapRatio: metrics.largestOccupiedHullGapRatio,
     cohesionPasses: input.endpoint.certificate.passes,
@@ -403,6 +442,10 @@ interface DirectionalReference {
   readonly usedLongAxisSpanMm: number
   readonly maximumSideMm: number
   readonly envelopeAreaMm2: number
+  readonly usedShortAxisSpanGrid: number
+  readonly usedLongAxisSpanGrid: number
+  readonly maximumSideGrid: number
+  readonly envelopeAreaGrid2: bigint
 }
 
 function directionalReference(input: {
@@ -445,16 +488,30 @@ function directionalReference(input: {
       input.requestedLongAxis === 'width'
         ? dimensions.widthMm
         : dimensions.heightMm
+    const usedShortAxisSpanGrid =
+      input.requestedLongAxis === 'width'
+        ? dimensions.heightGrid
+        : dimensions.widthGrid
+    const usedLongAxisSpanGrid =
+      input.requestedLongAxis === 'width'
+        ? dimensions.widthGrid
+        : dimensions.heightGrid
+    const maximumSideGrid = Math.max(dimensions.widthGrid, dimensions.heightGrid)
+    const envelopeAreaGrid2 = BigInt(dimensions.widthGrid) * BigInt(dimensions.heightGrid)
     return [
       {
         usedShortAxisSpanMm,
         usedLongAxisSpanMm,
+        usedShortAxisSpanGrid,
+        usedLongAxisSpanGrid,
         maximumSideMm: Math.max(
           dimensions.widthMm,
           dimensions.heightMm
         ),
+        maximumSideGrid,
         envelopeAreaMm2:
-          dimensions.widthMm * dimensions.heightMm
+          Number(envelopeAreaGrid2) / 1_000_000,
+        envelopeAreaGrid2
       }
     ]
   })
@@ -468,30 +525,31 @@ function directionalReference(input: {
 function directionalImprovementAdmitted(input: {
   readonly candidate: IntrinsicShortSideOrientationObservation
   readonly production: DirectionalReference
-  readonly requestedShortAxisMm: number
+  readonly requestedShortAxisGrid: number | undefined
 }): boolean {
   const candidateShortfall =
-    input.candidate.requestedShortAxisShortfallMm
+    input.candidate.requestedShortAxisShortfallGrid
   const candidateDepth =
-    input.candidate.requestedLongAxisUsedSpanMm
+    input.candidate.requestedLongAxisUsedSpanGrid
   if (
     candidateShortfall === undefined ||
     candidateDepth === undefined ||
-    input.requestedShortAxisMm <= 0
+    input.requestedShortAxisGrid === undefined ||
+    input.requestedShortAxisGrid <= 0
   ) {
     return false
   }
-  const candidateShortAxisSpanMm =
-    input.requestedShortAxisMm - candidateShortfall
+  const candidateShortAxisSpanGrid =
+    input.requestedShortAxisGrid - candidateShortfall
   const productionShortfall = Math.max(
     0,
-    input.requestedShortAxisMm -
-      input.production.usedShortAxisSpanMm
+    input.requestedShortAxisGrid -
+      input.production.usedShortAxisSpanGrid
   )
   return (
-    candidateShortAxisSpanMm / input.requestedShortAxisMm >= 0.8 &&
-    candidateShortfall <= productionShortfall / 2 &&
-    candidateDepth <= input.production.maximumSideMm
+    5 * candidateShortAxisSpanGrid >= 4 * input.requestedShortAxisGrid &&
+    2 * candidateShortfall <= productionShortfall &&
+    candidateDepth <= input.production.maximumSideGrid
   )
 }
 
@@ -510,9 +568,20 @@ function compareOrientationObservations(
   first: IntrinsicShortSideOrientationObservation,
   second: IntrinsicShortSideOrientationObservation
 ): number {
+  const exactDimensionComparison =
+    Number(!first.exactLegal) - Number(!second.exactLegal) ||
+    compareOptionalGrid(
+      first.requestedShortAxisShortfallGrid,
+      second.requestedShortAxisShortfallGrid
+    ) ||
+    compareOptionalGrid(
+      first.requestedLongAxisUsedSpanGrid,
+      second.requestedLongAxisUsedSpanGrid
+    )
+  if (exactDimensionComparison !== 0) return exactDimensionComparison
   const firstTuple = first.comparisonTuple
   const secondTuple = second.comparisonTuple
-  for (let index = 0; index < Math.max(firstTuple.length, secondTuple.length); index += 1) {
+  for (let index = 3; index < Math.max(firstTuple.length, secondTuple.length); index += 1) {
     const firstValue = firstTuple[index]
     const secondValue = secondTuple[index]
     if (firstValue === undefined || secondValue === undefined) {
@@ -529,9 +598,25 @@ function compareOrientationObservations(
   return first.rotationDeg - second.rotationDeg
 }
 
+function compareOptionalGrid(
+  first: number | undefined,
+  second: number | undefined
+): number {
+  if (first === undefined) return second === undefined ? 0 : 1
+  if (second === undefined) return -1
+  return first < second ? -1 : first > second ? 1 : 0
+}
+
 function canonicalDimensions(
   placed: ReadonlyArray<IrregularPlacedPiece>
-): { readonly widthMm: number; readonly heightMm: number } | undefined {
+):
+  | {
+      readonly widthMm: number
+      readonly heightMm: number
+      readonly widthGrid: number
+      readonly heightGrid: number
+    }
+  | undefined {
   const points = placed.flatMap((entry) => placedCollisionWorldGridPath(entry) ?? [])
   if (points.length === 0) return undefined
   const minX = Math.min(...points.map(({ x }) => x))
@@ -550,7 +635,7 @@ function canonicalDimensions(
   const widthMm = fromGrid(widthGrid)
   const heightMm = fromGrid(heightGrid)
   return Number.isFinite(widthMm) && Number.isFinite(heightMm)
-    ? { widthMm, heightMm }
+    ? { widthMm, heightMm, widthGrid, heightGrid }
     : undefined
 }
 

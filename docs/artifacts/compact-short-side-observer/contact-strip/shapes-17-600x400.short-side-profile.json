@@ -1,0 +1,38 @@
+{
+  "fixture": "shapes-17",
+  "profile": "short-side",
+  "sheet": {
+    "width": 600,
+    "height": 400
+  },
+  "source": "compact-fallback",
+  "profileOutcome": "short-side-satisfied-by-compact",
+  "shortAxisFillRatio": 0.980205,
+  "observerStatus": "observed-no-legal-orientation",
+  "placedCount": 14,
+  "unplacedCount": 3,
+  "unplacedPieceIds": [
+    "shapes-17-12",
+    "shapes-17-16",
+    "shapes-17-17"
+  ],
+  "collisionIdentitySha256": "01b2060d87752bb36eebfd4eb8602709687d5cb00c71b8feaec14a6e7cf9ba12",
+  "fittedCanonicalSha256": "4472adc8ddfcc26af748adcfeb220e049a4f0e814cb17a99c0dc092db903921e",
+  "canonicalTopology": {
+    "enclosedCavityCount": 0,
+    "largestOccupiedHullGapRatio": 0.19975967300609712,
+    "occupiedEnvelopeAspectRatio": 1.5103141689748574,
+    "positiveContactComponentCount": 11,
+    "isolatedPieceCount": 8,
+    "largestPositiveContactComponentSize": 2,
+    "largestPositiveContactComponentRatio": 0.14285714285714285
+  },
+  "bounds": {
+    "width": 592.167,
+    "height": 392.082,
+    "area": 232178.021694,
+    "span": 984.249
+  },
+  "exactPiecePartition": true,
+  "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-600x400.short-side-profile.svg"
+}

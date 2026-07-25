@@ -30,6 +30,11 @@ baselines.
   Mixed-61 area floors before production integration.
 - [`shapes-17-baseline/`](./shapes-17-baseline/): the all-distinct Shapes-17
   archive baseline.
+- [`compact-short-side-observer/contact-strip/`](./compact-short-side-observer/contact-strip/README.md):
+  the current 18-layout short-side promotion gate, including the rejected-shelf
+  versus accepted contact-strip comparison for the targeted Mixed-61
+  `2000 x 2700` case and the retained measurements of the two contact strips
+  that were rejected.
 
 The executable current gates, including the fitted Mixed production hash, are
 documented in

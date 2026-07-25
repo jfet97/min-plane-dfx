@@ -1,0 +1,35 @@
+{
+  "fixture": "triangle-20",
+  "profile": "short-side",
+  "sheet": {
+    "width": 600,
+    "height": 400
+  },
+  "source": "guarded-stage1-winner",
+  "profileOutcome": "directional-success",
+  "shortAxisFillRatio": 0.9873050000000001,
+  "observerStatus": "observed",
+  "selectedRotationDeg": 90,
+  "placedCount": 20,
+  "unplacedCount": 0,
+  "unplacedPieceIds": [],
+  "collisionIdentitySha256": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+  "fittedCanonicalSha256": "bf23f53f3bb796f082dc7a1e1257df3a366351bc2a637bfba08b9f5d0be929a8",
+  "canonicalTopology": {
+    "enclosedCavityCount": 0,
+    "largestOccupiedHullGapRatio": 0.13102827749717894,
+    "occupiedEnvelopeAspectRatio": 1.7261633141888053,
+    "positiveContactComponentCount": 9,
+    "isolatedPieceCount": 7,
+    "largestPositiveContactComponentSize": 8,
+    "largestPositiveContactComponentRatio": 0.4
+  },
+  "bounds": {
+    "width": 228.78600000000003,
+    "height": 394.922,
+    "area": 90352.62469200001,
+    "span": 623.7080000000001
+  },
+  "exactPiecePartition": true,
+  "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/triangle-20-600x400.short-side-profile.svg"
+}

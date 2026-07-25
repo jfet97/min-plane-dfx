@@ -237,6 +237,48 @@ describe('intrinsic short-side observer', () => {
     )
   })
 
+  it('applies the directional admission boundary on canonical grid integers', () => {
+    const production = endpoint('production', 6, 2)
+    const admitted = endpoint('admitted', 4, 4)
+    const rejectedBelowGridBoundary = endpoint(
+      'rejected-below-grid-boundary',
+      3.999,
+      3.999
+    )
+    const sheet = new SheetSpec({
+      width: 10,
+      height: 5,
+      label: 'exact-boundary'
+    })
+    const acceptedTrace = observeIntrinsicShortSideOrientations({
+      sheet,
+      endpoints: [admitted],
+      productionPlacedCollisionGeometries:
+        production.placedCollisionGeometries,
+      now: deterministicClock(0, 1)
+    })
+    const rejectedTrace = observeIntrinsicShortSideOrientations({
+      sheet,
+      endpoints: [rejectedBelowGridBoundary],
+      productionPlacedCollisionGeometries:
+        production.placedCollisionGeometries,
+      now: deterministicClock(0, 1)
+    })
+
+    expect(acceptedTrace.status).toBe('observed')
+    expect(acceptedTrace.endpoints[0]?.selected).toMatchObject({
+      requestedLongAxisUsedSpanGrid: 4_000,
+      requestedShortAxisShortfallGrid: 1_000
+    })
+    expect(rejectedTrace.status).toBe(
+      'observed-no-directional-improvement'
+    )
+    expect(rejectedTrace.endpoints[0]?.selected).toMatchObject({
+      requestedLongAxisUsedSpanGrid: 3_999,
+      requestedShortAxisShortfallGrid: 1_001
+    })
+  })
+
   it('uses deterministic intrinsic behavior without a directional shortfall on square sheets', () => {
     const candidate = endpoint('square-candidate', 4, 2)
     const trace = observeIntrinsicShortSideOrientations({

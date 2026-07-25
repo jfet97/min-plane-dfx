@@ -1115,17 +1115,30 @@ function coordinateIntrinsicSharedArchive(
         intrinsicShortSideObserverTrace.productionMaximumSideMm !==
           undefined &&
         intrinsicShortSideObserverTrace.productionEnvelopeAreaMm2 !==
+          undefined &&
+        intrinsicShortSideObserverTrace.productionShortAxisSpanGrid !==
+          undefined &&
+        intrinsicShortSideObserverTrace.productionMaximumSideGrid !==
+          undefined &&
+        intrinsicShortSideObserverTrace.productionEnvelopeAreaGrid2 !==
           undefined
       ) {
         const pairFoldOutcome = yield* observeIntrinsicShortSidePairFold({
           sheet: input.request.sheet,
           preparedPieces: input.preparedPieces,
+          settings: input.settings,
           productionShortAxisSpanMm:
             intrinsicShortSideObserverTrace.productionShortAxisSpanMm,
           productionMaximumSideMm:
             intrinsicShortSideObserverTrace.productionMaximumSideMm,
           productionEnvelopeAreaMm2:
-            intrinsicShortSideObserverTrace.productionEnvelopeAreaMm2
+            intrinsicShortSideObserverTrace.productionEnvelopeAreaMm2,
+          productionShortAxisSpanGrid:
+            intrinsicShortSideObserverTrace.productionShortAxisSpanGrid,
+          productionMaximumSideGrid:
+            intrinsicShortSideObserverTrace.productionMaximumSideGrid,
+          productionEnvelopeAreaGrid2:
+            intrinsicShortSideObserverTrace.productionEnvelopeAreaGrid2
         })
         intrinsicShortSidePairFoldTrace = pairFoldOutcome.trace
         input.options.onIntrinsicShortSidePairFoldObserverWinner?.(

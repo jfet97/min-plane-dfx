@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { execFileSync, spawn } from 'node:child_process'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 
 interface Baseline {
   readonly fixture: 'triangle-20' | 'mixed-61' | 'shapes-17'
@@ -116,6 +116,26 @@ const BASELINES: ReadonlyArray<Baseline> = [
     maximumElapsedMs: 120_000
   }
 ]
+
+
+const SVG_RENDERER_SCRIPT =
+  process.env.IRREGULAR_SVG_RENDERER === 'magick'
+    ? 'scripts/render-svg-magick.cjs'
+    : '.agents/skills/render-svg-with-electron/scripts/render-svg.cjs'
+
+/**
+ * Renders one layout SVG to PNG for visual review.
+ *
+ * The Electron renderer is the default because it uses the same engine as the
+ * app preview. It aborts during platform initialization on machines without a
+ * display, so `IRREGULAR_SVG_RENDERER=magick` selects the ImageMagick fallback
+ * and the chosen renderer is recorded in the provenance manifest.
+ */
+function renderSvgToPng(svgPath: string, pngPath: string): void {
+  execFileSync(process.execPath, [SVG_RENDERER_SCRIPT, svgPath, pngPath, '1000'], {
+    stdio: 'inherit'
+  })
+}
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(name)
@@ -311,6 +331,7 @@ interface ShortSideProfileReport {
     | 'guarded-stage1-winner'
     | 'terminal-pair-fold-winner'
     | 'terminal-multi-row-shelf-winner'
+    | 'terminal-contact-strip-winner'
     | 'compact-fallback'
   readonly profileOutcome:
     | 'directional-success'
@@ -361,26 +382,8 @@ for (let index = 0; index < BASELINES.length; index += 1) {
     outputDirectory,
     `${baseline.fixture}-${baseline.sheet}.short-side-profile.png`
   )
-  execFileSync(
-    process.execPath,
-    [
-      '.agents/skills/render-svg-with-electron/scripts/render-svg.cjs',
-      compactReport.svgPath,
-      compactPngPath,
-      '1000'
-    ],
-    { stdio: 'inherit' }
-  )
-  execFileSync(
-    process.execPath,
-    [
-      '.agents/skills/render-svg-with-electron/scripts/render-svg.cjs',
-      shortSideReport.svgPath,
-      shortSidePngPath,
-      '1000'
-    ],
-    { stdio: 'inherit' }
-  )
+  renderSvgToPng(join(outputDirectory, compactReport.svgPath), compactPngPath)
+  renderSvgToPng(join(outputDirectory, shortSideReport.svgPath), shortSidePngPath)
   layoutRecords.push(
     {
       fixture: baseline.fixture,
@@ -396,7 +399,7 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       exactPiecePartition: compactReport.checks.exactPiecePartition,
       passed: compactReport.passed,
       svgPath: compactReport.svgPath,
-      pngPath: compactPngPath
+      pngPath: basename(compactPngPath)
     },
     {
       fixture: baseline.fixture,
@@ -416,7 +419,7 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       exactPiecePartition: shortSideReport.exactPiecePartition,
       passed: shortSideReport.exactPiecePartition && compactReport.passed,
       svgPath: shortSideReport.svgPath,
-      pngPath: shortSidePngPath
+      pngPath: basename(shortSidePngPath)
     }
   )
 }
@@ -431,6 +434,9 @@ const terminalPairFoldWinnerCount = layoutRecords.filter(
 ).length
 const terminalMultiRowShelfWinnerCount = layoutRecords.filter(
   ({ profile, source }) => profile === 'short-side' && source === 'terminal-multi-row-shelf-winner'
+).length
+const terminalContactStripWinnerCount = layoutRecords.filter(
+  ({ profile, source }) => profile === 'short-side' && source === 'terminal-contact-strip-winner'
 ).length
 const compactFallbackCount = layoutRecords.filter(
   ({ profile, source }) => profile === 'short-side' && source === 'compact-fallback'
@@ -453,6 +459,7 @@ const layoutContractPassed =
   guardedStage1WinnerCount +
     terminalPairFoldWinnerCount +
     terminalMultiRowShelfWinnerCount +
+    terminalContactStripWinnerCount +
     compactFallbackCount ===
     9 &&
   directionalSuccessCount + shortSideSatisfiedByCompactCount === 9 &&
@@ -472,6 +479,7 @@ await writeFile(
       guardedStage1WinnerCount,
       terminalPairFoldWinnerCount,
       terminalMultiRowShelfWinnerCount,
+      terminalContactStripWinnerCount,
       compactFallbackCount,
       directionalSuccessCount,
       shortSideSatisfiedByCompactCount,
@@ -510,11 +518,12 @@ await writeFile(
       version: 'compact-short-side-observer-provenance-v1',
       generatedAt: new Date().toISOString(),
       sourceCommit,
-      command: process.argv,
+      command: ['pnpm', 'gate:compact-nine-baselines', '--output-dir', '<output-directory>'],
       runtime: {
         node: process.version,
         v8: process.versions.v8
       },
+      svgRenderer: SVG_RENDERER_SCRIPT,
       execution: {
         maximumConcurrentAlgorithmProcesses: 1,
         algorithmCases: BASELINES.length,
@@ -560,6 +569,7 @@ console.log(
     guardedStage1WinnerCount,
     terminalPairFoldWinnerCount,
     terminalMultiRowShelfWinnerCount,
+    terminalContactStripWinnerCount,
     compactFallbackCount,
     directionalSuccessCount,
     shortSideSatisfiedByCompactCount,

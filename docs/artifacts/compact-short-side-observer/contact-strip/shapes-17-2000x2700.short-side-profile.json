@@ -1,0 +1,35 @@
+{
+  "fixture": "shapes-17",
+  "profile": "short-side",
+  "sheet": {
+    "width": 2000,
+    "height": 2700
+  },
+  "source": "terminal-pair-fold-winner",
+  "profileOutcome": "directional-success",
+  "shortAxisFillRatio": 0.9485865,
+  "observerStatus": "observed-no-directional-improvement",
+  "selectedRotationDeg": 0,
+  "placedCount": 17,
+  "unplacedCount": 0,
+  "unplacedPieceIds": [],
+  "collisionIdentitySha256": "4dd34dcee54caa79e1cc0dc3fc88b867ddfa15a98588dda1083e820cdb44c0bb",
+  "fittedCanonicalSha256": "063f740ff97b154ab9b3116023da7de3da1de33322a27ca53f56b43b21a3c7bb",
+  "canonicalTopology": {
+    "enclosedCavityCount": 0,
+    "largestOccupiedHullGapRatio": 0.20422385726235945,
+    "occupiedEnvelopeAspectRatio": 8.602944777486554,
+    "positiveContactComponentCount": 9,
+    "isolatedPieceCount": 5,
+    "largestPositiveContactComponentSize": 5,
+    "largestPositiveContactComponentRatio": 0.29411764705882354
+  },
+  "bounds": {
+    "width": 1897.173,
+    "height": 220.526,
+    "area": 418375.97299800004,
+    "span": 2117.699
+  },
+  "exactPiecePartition": true,
+  "svgPath": "/var/tmp/min-plane-provenance/contact-strip-final/shapes-17-2000x2700.short-side-profile.svg"
+}
