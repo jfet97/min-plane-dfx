@@ -4,9 +4,9 @@
     "width": 300,
     "height": 300
   },
-  "sourceCommit": "d57b7d627369e6abf2396d8a7eba7c283029df5c",
+  "sourceCommit": "9193f2672c9f3451d2acf06d72321114d18ea94d",
   "runtime": {
-    "elapsedMs": 16741.03125,
+    "elapsedMs": 15701.48025,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -605,7 +605,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 16,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.7634569999991072,
+            "topologyMeasurementMs": 1.2982509999992544,
             "legalCandidateCount": 3193,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -793,7 +793,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 137,
           "completedDepths": 6,
-          "elapsedMs": 5.524999999999636,
+          "elapsedMs": 5.326583000000028,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -817,7 +817,7 @@
           "checkpointRetained": false,
           "consumedPlacementEvaluations": 28314,
           "completedDepths": 20,
-          "elapsedMs": 1023.2396260000005,
+          "elapsedMs": 949.9748759999984,
           "endpoint": {
             "placedCount": 14,
             "placedDoubledMaterialAreaGrid2": "58800000000",
@@ -841,7 +841,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 123,
           "completedDepths": 6,
-          "elapsedMs": 4.59454100000039,
+          "elapsedMs": 4.184124999999767,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -865,7 +865,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 173,
           "completedDepths": 11,
-          "elapsedMs": 7.004833999999391,
+          "elapsedMs": 6.6550829999996495,
           "endpoint": {
             "placedCount": 11,
             "placedDoubledMaterialAreaGrid2": "46200000000",
@@ -889,7 +889,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 137,
           "completedDepths": 6,
-          "elapsedMs": 4.402874999999767,
+          "elapsedMs": 3.7068749999998545,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -913,7 +913,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 187,
           "completedDepths": 11,
-          "elapsedMs": 7.407083000000057,
+          "elapsedMs": 6.7945420000014565,
           "endpoint": {
             "placedCount": 11,
             "placedDoubledMaterialAreaGrid2": "46200000000",
@@ -1190,11 +1190,11 @@
         "placedMaterialAreaMm2": 35700,
         "selectedRotationDeg": 0
       },
-      "preflightRuntimeMs": 8.428417000000024,
-      "completeArchiveRuntimeMs": 15212.534417,
-      "prefixTerminalizationMs": 11.344208000000435,
-      "coldSearchMs": 1337.275540999999,
-      "runtimeMs": 1349.1346250000006
+      "preflightRuntimeMs": 7.676749999999998,
+      "completeArchiveRuntimeMs": 14278.192417,
+      "prefixTerminalizationMs": 10.562874999999622,
+      "coldSearchMs": 1245.0427080000009,
+      "runtimeMs": 1256.0830829999995
     },
     "intrinsicAnytimeSchedulerTrace": {
       "version": "intrinsic-anytime-scheduler-v1",
@@ -1526,7 +1526,7 @@
       "geometricParetoEligibleEndpointCount": 0,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 26.607750000002852,
+      "runtimeMs": 25.20483299999978,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 31456,
       "endpoints": [
@@ -2764,7 +2764,7 @@
     "shortSideProfileDirectionalContract": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-300x300.svg",
-  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-300x300.short-side-profile.svg",
-  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-300x300.short-side-profile.json"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-300x300.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-300x300.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-300x300.short-side-profile.json"
 }

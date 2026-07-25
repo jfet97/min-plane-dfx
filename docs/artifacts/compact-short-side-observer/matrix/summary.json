@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T08:14:11.754Z",
+  "generatedAt": "2026-07-25T08:32:55.625Z",
   "passed": true,
   "caseCount": 9,
   "layoutCount": 18,
@@ -78,8 +78,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-2000x2700.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-2000x2700.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-2000x2700.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-2000x2700.png"
     },
     {
       "fixture": "triangle-20",
@@ -103,8 +103,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-2000x2700.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-2000x2700.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-2000x2700.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-2000x2700.short-side-profile.png"
     },
     {
       "fixture": "mixed-61",
@@ -124,8 +124,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-2000x2700.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-2000x2700.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-2000x2700.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-2000x2700.png"
     },
     {
       "fixture": "mixed-61",
@@ -138,8 +138,8 @@
       "selectedRotationDeg": 0,
       "placedCount": 61,
       "unplacedCount": 0,
-      "collisionIdentitySha256": "de6dff6d3b0745055d3cefc54d468b2fa6f5bb72ab4e0a1b749b70c7261f8918",
-      "fittedCanonicalSha256": "d2720832612e2f8a9bb401f8de8064789ce116344de647830cece15e47feee6e",
+      "collisionIdentitySha256": "b3b65580038e3d9d0b0ae471461212e240958f0890e622265856b880cdd56d57",
+      "fittedCanonicalSha256": "376a559865da50076b1531db2df56d700dd4782e75754402d26c7bfc3e5380ee",
       "canonicalCavities": 0,
       "bounds": {
         "width": 1987.7759999999998,
@@ -149,8 +149,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-2000x2700.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-2000x2700.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-2000x2700.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-2000x2700.short-side-profile.png"
     },
     {
       "fixture": "shapes-17",
@@ -170,8 +170,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-2000x2700.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-2000x2700.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-2000x2700.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-2000x2700.png"
     },
     {
       "fixture": "shapes-17",
@@ -195,8 +195,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-2000x2700.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-2000x2700.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-2000x2700.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-2000x2700.short-side-profile.png"
     },
     {
       "fixture": "triangle-20",
@@ -216,8 +216,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-600x400.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-600x400.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-600x400.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-600x400.png"
     },
     {
       "fixture": "triangle-20",
@@ -241,8 +241,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-600x400.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-600x400.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-600x400.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-600x400.short-side-profile.png"
     },
     {
       "fixture": "mixed-61",
@@ -262,8 +262,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-600x400.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-600x400.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-600x400.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-600x400.png"
     },
     {
       "fixture": "mixed-61",
@@ -286,8 +286,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-600x400.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-600x400.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-600x400.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-600x400.short-side-profile.png"
     },
     {
       "fixture": "shapes-17",
@@ -307,8 +307,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-600x400.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-600x400.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-600x400.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-600x400.png"
     },
     {
       "fixture": "shapes-17",
@@ -331,8 +331,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-600x400.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-600x400.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-600x400.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-600x400.short-side-profile.png"
     },
     {
       "fixture": "triangle-20",
@@ -352,8 +352,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-300x300.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-300x300.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-300x300.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-300x300.png"
     },
     {
       "fixture": "triangle-20",
@@ -376,8 +376,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-300x300.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-300x300.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-300x300.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-300x300.short-side-profile.png"
     },
     {
       "fixture": "mixed-61",
@@ -397,8 +397,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-300x300.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-300x300.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-300x300.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-300x300.png"
     },
     {
       "fixture": "mixed-61",
@@ -421,8 +421,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-300x300.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-300x300.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-300x300.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-300x300.short-side-profile.png"
     },
     {
       "fixture": "shapes-17",
@@ -442,8 +442,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-300x300.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-300x300.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-300x300.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-300x300.png"
     },
     {
       "fixture": "shapes-17",
@@ -466,8 +466,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-300x300.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-300x300.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-300x300.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-300x300.short-side-profile.png"
     }
   ]
 }

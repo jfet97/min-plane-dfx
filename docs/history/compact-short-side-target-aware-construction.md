@@ -190,3 +190,18 @@ Evidence:
 - `/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-run3/`;
 - `/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-run4/`;
 - `/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/`.
+
+The follow-up at `9193f26` resolves tied shelf orientations with a generic
+longest-row-baseline-support rule. The strict sequential matrix preserves all
+18 envelopes, counts, and production Compact hashes. It changes only the two
+multi-row shelf identities, producing stable-base pointed pieces without
+measurable algorithm cost:
+
+- Mixed-61 end-to-end runtime: `68.971 s` versus `68.721 s`;
+- Mixed-61 isolated pieces: `38` versus `39`;
+- Mixed-61 largest positive-contact component: `11` versus `8`.
+
+Evidence:
+
+- `/private/tmp/min-plane-provenance/short-side-flat-base-dirty-20260725/`;
+- `/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/`.

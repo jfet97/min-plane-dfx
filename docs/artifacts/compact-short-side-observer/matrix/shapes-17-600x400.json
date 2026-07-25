@@ -4,9 +4,9 @@
     "width": 600,
     "height": 400
   },
-  "sourceCommit": "d57b7d627369e6abf2396d8a7eba7c283029df5c",
+  "sourceCommit": "9193f2672c9f3451d2acf06d72321114d18ea94d",
   "runtime": {
-    "elapsedMs": 13631.928833,
+    "elapsedMs": 12773.108917,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -1276,11 +1276,11 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 20,
             "topologyMeasurementCount": 36,
-            "topologyMeasurementMs": 9.893834999997125,
+            "topologyMeasurementMs": 8.64703699999518,
             "legalCandidateCount": 4144,
             "contactMeasuredCandidateCount": 46,
             "positiveContactCandidateCount": 10,
-            "contactMeasurementMs": 1.323379000001296,
+            "contactMeasurementMs": 1.1783759999980248,
             "contactSelectedSuccessorCount": 5,
             "contactDeduplicatedSuccessorCount": 0,
             "contactRetainedSuccessorCount": 5,
@@ -1464,7 +1464,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 341,
           "completedDepths": 5,
-          "elapsedMs": 13.419458999998824,
+          "elapsedMs": 12.698875000000044,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1488,7 +1488,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 335,
           "completedDepths": 5,
-          "elapsedMs": 13.272750000000087,
+          "elapsedMs": 12.50275000000147,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1512,7 +1512,7 @@
           "checkpointRetained": false,
           "consumedPlacementEvaluations": 32273,
           "completedDepths": 17,
-          "elapsedMs": 1920.4685820000032,
+          "elapsedMs": 1766.2387940000008,
           "endpoint": {
             "placedCount": 14,
             "placedDoubledMaterialAreaGrid2": "294455444315",
@@ -1536,7 +1536,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 341,
           "completedDepths": 5,
-          "elapsedMs": 12.918999999999869,
+          "elapsedMs": 11.844166999999288,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1758,11 +1758,11 @@
         "placedMaterialAreaMm2": 147227.7221575,
         "selectedRotationDeg": 0
       },
-      "preflightRuntimeMs": 14.636374999999987,
-      "completeArchiveRuntimeMs": 10221.954667,
-      "prefixTerminalizationMs": 27.515041999999085,
-      "coldSearchMs": 2668.6760000000013,
-      "runtimeMs": 2696.8886250000014
+      "preflightRuntimeMs": 13.917334000000011,
+      "completeArchiveRuntimeMs": 9587.787833999999,
+      "prefixTerminalizationMs": 26.373584000000847,
+      "coldSearchMs": 2480.232209,
+      "runtimeMs": 2507.1516250000004
     },
     "intrinsicAnytimeSchedulerTrace": {
       "version": "intrinsic-anytime-scheduler-v1",
@@ -2037,7 +2037,7 @@
       "geometricParetoEligibleEndpointCount": 0,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 21.763584000000264,
+      "runtimeMs": 20.603957999999693,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 6284,
       "endpoints": [
@@ -2298,9 +2298,9 @@
       "evaluatedPairCount": 136,
       "rowCount": 0,
       "placedCount": 0,
-      "runtimeMs": 3.3109589999985474,
-      "peakRssDeltaBytes": 0,
-      "serializedTraceBytes": 655,
+      "runtimeMs": 3.3135409999995318,
+      "peakRssDeltaBytes": 16384,
+      "serializedTraceBytes": 659,
       "failureReason": "neither the fixed-transform pair fold nor the deterministic multi-row shelf fits both requested sheet axes."
     }
   },
@@ -2336,7 +2336,7 @@
     "shortSideProfileDirectionalContract": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-600x400.svg",
-  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-600x400.short-side-profile.svg",
-  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-600x400.short-side-profile.json"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-600x400.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-600x400.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/shapes-17-600x400.short-side-profile.json"
 }

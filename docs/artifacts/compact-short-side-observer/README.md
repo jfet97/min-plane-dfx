@@ -1,6 +1,6 @@
 # Compact Short-Side Observer Artifacts
 
-Current 18-layout matrix source commit: `d57b7d6`.
+Current 18-layout matrix source commit: `9193f26`.
 
 - `matrix/` contains the strict nine-case production-preservation gate as 18
   layouts: nine Compact controls and nine short-side-profile outputs. A
@@ -24,7 +24,10 @@ evaluations. The terminal observer evaluates the prepared transform catalog
 once, evaluates each unordered pair once, and never performs NFP search or beam
 expansion. After a pair miss it may run one prepared-order next-fit shelf using
 the depth-minimizing transform retained from that same catalog evaluation.
-Neither observer has production Compact output influence.
+When equally shallow and wide shelf transforms exist, it prefers the transform
+with the longest exact support on the row baseline. This is shape-generic and
+does not change the shelf envelope. Neither observer has production Compact
+output influence.
 
 The current matrix contains one guarded Stage 1 winner, one exact terminal
 pair-fold winner, two exact multi-row winners, and five Compact layouts that

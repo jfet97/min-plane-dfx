@@ -4,9 +4,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "d57b7d627369e6abf2396d8a7eba7c283029df5c",
+  "sourceCommit": "9193f2672c9f3451d2acf06d72321114d18ea94d",
   "runtime": {
-    "elapsedMs": 72773.30949999999,
+    "elapsedMs": 68971.221625,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -2697,7 +2697,7 @@
       "selectedCanonicalGeometryHash": "3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742",
       "consumedCandidateEvaluations": 12000,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 1674.5697919999948,
+      "runtimeMs": 1518.1057089999958,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -2718,7 +2718,7 @@
       "geometricParetoEligibleEndpointCount": 1,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 75.56399999999849,
+      "runtimeMs": 69.38316700000723,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 15896,
       "endpoints": [
@@ -3344,7 +3344,7 @@
       "usedShortAxisSpanMm": 1987.776,
       "usedLongAxisDepthMm": 301.187,
       "envelopeAreaMm2": 598692.2901120001,
-      "canonicalGeometryHash": "de6dff6d3b0745055d3cefc54d468b2fa6f5bb72ab4e0a1b749b70c7261f8918",
+      "canonicalGeometryHash": "b3b65580038e3d9d0b0ae471461212e240958f0890e622265856b880cdd56d57",
       "admission": {
         "exactLegal": true,
         "allPiecesPlaced": true,
@@ -3359,9 +3359,9 @@
         "directionallyEfficient": true,
         "accepted": true
       },
-      "runtimeMs": 12.524374999993597,
-      "peakRssDeltaBytes": 0,
-      "serializedTraceBytes": 1135
+      "runtimeMs": 11.034125000005588,
+      "peakRssDeltaBytes": 32768,
+      "serializedTraceBytes": 1139
     }
   },
   "checks": {
@@ -3396,7 +3396,7 @@
     "shortSideProfileDirectionalContract": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-2000x2700.svg",
-  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-2000x2700.short-side-profile.svg",
-  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-2000x2700.short-side-profile.json"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-2000x2700.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-2000x2700.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-2000x2700.short-side-profile.json"
 }

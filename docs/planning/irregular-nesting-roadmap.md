@@ -313,7 +313,8 @@ Status: Stage 1 accepted at `a9504d3`; fixed-target Stage 2 rejected at
 width-four Stage 4 rejected at `1163bd3`; exact one-row Stage 5 rejected at
 `999e9fb`; exact terminal pair fold accepted at `2645e7c`; exact multi-row
 terminal shelf accepted at `d57b7d6`; production Compact influence remains
-zero.
+zero. Generic stable-baseline shelf orientation accepted at `9193f26` with all
+18 matrix envelopes and production hashes preserved.
 
 The zero-search archive observer establishes exact q0/q90 legality, hard
 cavity/hull eligibility, the existing intrinsic geometric Pareto front,

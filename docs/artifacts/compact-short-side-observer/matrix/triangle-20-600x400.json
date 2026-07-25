@@ -4,9 +4,9 @@
     "width": 600,
     "height": 400
   },
-  "sourceCommit": "d57b7d627369e6abf2396d8a7eba7c283029df5c",
+  "sourceCommit": "9193f2672c9f3451d2acf06d72321114d18ea94d",
   "runtime": {
-    "elapsedMs": 15906.9635,
+    "elapsedMs": 14827.765249999999,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -923,7 +923,7 @@
       "selectedCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
       "consumedCandidateEvaluations": 0,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 0.7518749999999272,
+      "runtimeMs": 0.8602089999985765,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -944,7 +944,7 @@
       "geometricParetoEligibleEndpointCount": 2,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 32.730625000000146,
+      "runtimeMs": 30.134375000001455,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 32610,
       "endpoints": [
@@ -2187,7 +2187,7 @@
     "shortSideProfileDirectionalContract": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-600x400.svg",
-  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-600x400.short-side-profile.svg",
-  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-600x400.short-side-profile.json"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-600x400.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-600x400.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-600x400.short-side-profile.json"
 }

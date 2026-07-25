@@ -13,16 +13,16 @@
   "placedCount": 61,
   "unplacedCount": 0,
   "unplacedPieceIds": [],
-  "collisionIdentitySha256": "de6dff6d3b0745055d3cefc54d468b2fa6f5bb72ab4e0a1b749b70c7261f8918",
-  "fittedCanonicalSha256": "d2720832612e2f8a9bb401f8de8064789ce116344de647830cece15e47feee6e",
+  "collisionIdentitySha256": "b3b65580038e3d9d0b0ae471461212e240958f0890e622265856b880cdd56d57",
+  "fittedCanonicalSha256": "376a559865da50076b1531db2df56d700dd4782e75754402d26c7bfc3e5380ee",
   "canonicalTopology": {
     "enclosedCavityCount": 0,
-    "largestOccupiedHullGapRatio": 0.4325051759018452,
+    "largestOccupiedHullGapRatio": 0.43256001182424386,
     "occupiedEnvelopeAspectRatio": 6.599806764568192,
-    "positiveContactComponentCount": 43,
-    "isolatedPieceCount": 39,
-    "largestPositiveContactComponentSize": 8,
-    "largestPositiveContactComponentRatio": 0.13114754098360656
+    "positiveContactComponentCount": 42,
+    "isolatedPieceCount": 38,
+    "largestPositiveContactComponentSize": 11,
+    "largestPositiveContactComponentRatio": 0.18032786885245902
   },
   "bounds": {
     "width": 1987.7759999999998,
@@ -31,5 +31,5 @@
     "span": 2288.9629999999997
   },
   "exactPiecePartition": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-2000x2700.short-side-profile.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/mixed-61-2000x2700.short-side-profile.svg"
 }

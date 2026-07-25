@@ -459,6 +459,11 @@ depth-minimizing transform per piece and performs one prepared-order,
 next-fit multi-row shelf. It does not run NFP search, beam search, or restart
 construction.
 
+The shelf selects the shallowest transform first, then the widest. If those
+envelope dimensions tie, it prefers the transform with the longest exact
+horizontal support on the row baseline. This is a generic stability tie-break:
+it does not identify triangles or change the occupied shelf envelope.
+
 Shapes-17 on `2000 x 2700` remains the terminal-pair winner:
 `1897.173 x 220.526 mm`, all `17/17` pieces, zero cavities, and `94.85865%`
 short-edge fill. The multi-row shelf additionally produces Triangle-20 at

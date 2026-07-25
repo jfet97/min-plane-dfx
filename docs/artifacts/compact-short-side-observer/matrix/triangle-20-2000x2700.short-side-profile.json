@@ -17,7 +17,7 @@
   "fittedCanonicalSha256": "bc978c3710e6865a68c4c965fde545d0421d5d915319056b5a67689a6e918e5a",
   "canonicalTopology": {
     "enclosedCavityCount": 0,
-    "largestOccupiedHullGapRatio": 0.48717948717948717,
+    "largestOccupiedHullGapRatio": 0.02564102564102564,
     "occupiedEnvelopeAspectRatio": 23.333465477370332,
     "positiveContactComponentCount": 20,
     "isolatedPieceCount": 20,
@@ -31,5 +31,5 @@
     "span": 1841.435
   },
   "exactPiecePartition": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-2000x2700.short-side-profile.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-stable-shelf-9193f26-matrix/triangle-20-2000x2700.short-side-profile.svg"
 }

@@ -307,6 +307,16 @@ The terminal work measured `11–13 ms`; all production Compact hashes, counts,
 areas, cavities, and scheduler chronology remained exact. Every matrix PNG was
 opened individually and recorded in `matrix/VISUAL_REVIEW.md`.
 
+Commit `9193f26` adds one generic tie-break inside the shelf transform order:
+after equal depth and width, prefer the longest exact horizontal support on the
+row baseline. The full matrix retains the same 18 envelopes and all production
+Compact hashes. Triangle-20 and Mixed-61 change only their shelf orientation
+identities; their pointed pieces now rest on stable bases. Mixed-61 remains
+`1987.776 x 301.187 mm`, while isolated pieces improve from `39` to `38` and
+the largest positive-contact component grows from `8` to `11`. End-to-end
+runtime was `68.971 s`, comparable with the preceding `68.721 s`
+reproduction.
+
 ## Evidence
 
 - [`../artifacts/compact-short-side-observer/README.md`](../artifacts/compact-short-side-observer/README.md)
