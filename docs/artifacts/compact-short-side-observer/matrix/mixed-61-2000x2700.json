@@ -4,9 +4,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "e97225c",
+  "sourceCommit": "2645e7c",
   "runtime": {
-    "elapsedMs": 68193.435084,
+    "elapsedMs": 68030.720833,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -2697,7 +2697,7 @@
       "selectedCanonicalGeometryHash": "3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742",
       "consumedCandidateEvaluations": 12000,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 1524.5054589999927,
+      "runtimeMs": 1500.9969999999885,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -2718,7 +2718,7 @@
       "geometricParetoEligibleEndpointCount": 1,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 68.73549999999523,
+      "runtimeMs": 69.5995830000029,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 15896,
       "endpoints": [
@@ -3339,10 +3339,10 @@
       "expectedPairCount": 1830,
       "evaluatedPairCount": 1830,
       "placedCount": 0,
-      "runtimeMs": 4.028082999997423,
-      "peakRssDeltaBytes": 0,
-      "serializedTraceBytes": 609,
-      "failureReason": "no single fixed-transform pair fold fits the requested short axis."
+      "runtimeMs": 5.25062499998603,
+      "peakRssDeltaBytes": 16384,
+      "serializedTraceBytes": 613,
+      "failureReason": "no single fixed-transform pair fold fits both requested sheet axes."
     }
   },
   "checks": {
@@ -3371,11 +3371,12 @@
     "shortSidePairFoldTracePresent": true,
     "shortSidePairFoldOutputInfluence": true,
     "shortSidePairFoldBudget": true,
+    "shortSidePairFoldContract": true,
     "shortSideProfileMaterialized": true,
     "shortSideProfileExactPiecePartition": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-2000x2700.svg",
-  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-2000x2700.short-side-profile.svg",
-  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-2000x2700.short-side-profile.json"
+  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-2000x2700.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-2000x2700.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-2000x2700.short-side-profile.json"
 }

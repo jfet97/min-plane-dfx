@@ -215,6 +215,13 @@ describe('intrinsic short-side pair-fold observer', () => {
         preparedRectangle('wide-3', 60, 20)
       ]
     })
+    const noDepthFit = await observe({
+      pieces: [
+        preparedRectangle('tall-1', 40, 60),
+        preparedRectangle('tall-2', 40, 60),
+        preparedRectangle('tall-3', 40, 60)
+      ]
+    })
     const noPair = await observe({
       pieces: [preparedRectangle('only-piece', 20, 20)]
     })
@@ -232,6 +239,11 @@ describe('intrinsic short-side pair-fold observer', () => {
       evaluatedPairCount: 3,
       selectedBottomPieceId: undefined,
       selectedUpperPieceId: undefined
+    })
+    expect(noDepthFit.trace).toMatchObject({
+      status: 'no-fitting-pair',
+      expectedPairCount: 3,
+      evaluatedPairCount: 3
     })
     expect(noPair.trace).toMatchObject({
       status: 'no-pair',

@@ -311,7 +311,7 @@ defines its operational limits.
 Status: Stage 1 accepted at `a9504d3`; fixed-target Stage 2 rejected at
 `8f66399`; width-one target-aware Stage 3 rejected at `e19ddf1`; protected
 width-four Stage 4 rejected at `1163bd3`; exact one-row Stage 5 rejected at
-`999e9fb`; exact terminal pair fold accepted at `e97225c`; production Compact
+`999e9fb`; exact terminal pair fold accepted at `2645e7c`; production Compact
 influence remains zero.
 
 The zero-search archive observer establishes exact q0/q90 legality, hard
@@ -372,8 +372,8 @@ The exact one-row shelf then missed Shapes-17 `2000 x 2700` by only
 `7.195 mm`. The accepted terminal relaxation fixes every transform once,
 enumerates each unordered pair once, and stacks only the best fitting pair.
 It produces `1897.173 x 220.526 mm`, zero cavities, and `50.2790%` exact
-collision-envelope density in `6.481–7.626 ms` across two identical runs. The
-transpose is exact. The `e97225c` matrix passes all nine cases and 18 layouts
+collision-envelope density in `6.834–6.865 ms` across two identical runs. The
+transpose is exact. The `2645e7c` matrix passes all nine cases and 18 layouts
 sequentially, preserving every production hash while adding exactly one
 pair-fold winner.
 

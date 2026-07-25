@@ -4,9 +4,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "e97225c",
+  "sourceCommit": "2645e7c",
   "runtime": {
-    "elapsedMs": 12460.255541999999,
+    "elapsedMs": 12432.50425,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -1538,7 +1538,7 @@
       "selectedCanonicalGeometryHash": "1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d",
       "consumedCandidateEvaluations": 8035,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 1715.5178749999995,
+      "runtimeMs": 1694.506292,
       "outputInfluence": "selected"
     },
     "intrinsicShortSideObserverTrace": {
@@ -1559,7 +1559,7 @@
       "geometricParetoEligibleEndpointCount": 1,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 29.11479099999997,
+      "runtimeMs": 29.075291999999536,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 9195,
       "endpoints": [
@@ -1961,9 +1961,9 @@
         "directionallyEfficient": true,
         "accepted": true
       },
-      "runtimeMs": 6.75891700000102,
+      "runtimeMs": 6.912167000000409,
       "peakRssDeltaBytes": 0,
-      "serializedTraceBytes": 1154
+      "serializedTraceBytes": 1155
     }
   },
   "checks": {
@@ -1992,11 +1992,12 @@
     "shortSidePairFoldTracePresent": true,
     "shortSidePairFoldOutputInfluence": true,
     "shortSidePairFoldBudget": true,
+    "shortSidePairFoldContract": true,
     "shortSideProfileMaterialized": true,
     "shortSideProfileExactPiecePartition": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-2000x2700.svg",
-  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-2000x2700.short-side-profile.svg",
-  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-2000x2700.short-side-profile.json"
+  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-2000x2700.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-2000x2700.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-2000x2700.short-side-profile.json"
 }

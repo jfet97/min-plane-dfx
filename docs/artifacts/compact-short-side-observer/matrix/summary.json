@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T06:35:01.337Z",
+  "generatedAt": "2026-07-25T06:57:53.317Z",
   "passed": true,
   "caseCount": 9,
   "layoutCount": 18,
@@ -74,8 +74,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-2000x2700.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-2000x2700.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-2000x2700.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-2000x2700.png"
     },
     {
       "fixture": "triangle-20",
@@ -83,7 +83,6 @@
       "profile": "short-side",
       "source": "compact-fallback",
       "observerStatus": "observed-no-directional-improvement",
-      "selectedRotationDeg": 0,
       "placedCount": 20,
       "unplacedCount": 0,
       "collisionIdentitySha256": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
@@ -97,8 +96,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-2000x2700.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-2000x2700.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-2000x2700.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-2000x2700.short-side-profile.png"
     },
     {
       "fixture": "mixed-61",
@@ -118,8 +117,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-2000x2700.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-2000x2700.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-2000x2700.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-2000x2700.png"
     },
     {
       "fixture": "mixed-61",
@@ -127,7 +126,6 @@
       "profile": "short-side",
       "source": "compact-fallback",
       "observerStatus": "observed-no-directional-improvement",
-      "selectedRotationDeg": 0,
       "placedCount": 61,
       "unplacedCount": 0,
       "collisionIdentitySha256": "3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742",
@@ -141,8 +139,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-2000x2700.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-2000x2700.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-2000x2700.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-2000x2700.short-side-profile.png"
     },
     {
       "fixture": "shapes-17",
@@ -162,8 +160,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-2000x2700.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-2000x2700.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-2000x2700.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-2000x2700.png"
     },
     {
       "fixture": "shapes-17",
@@ -185,8 +183,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-2000x2700.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-2000x2700.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-2000x2700.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-2000x2700.short-side-profile.png"
     },
     {
       "fixture": "triangle-20",
@@ -206,8 +204,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-600x400.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-600x400.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-600x400.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-600x400.png"
     },
     {
       "fixture": "triangle-20",
@@ -229,8 +227,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-600x400.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-600x400.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-600x400.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-600x400.short-side-profile.png"
     },
     {
       "fixture": "mixed-61",
@@ -250,8 +248,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-600x400.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-600x400.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-600x400.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-600x400.png"
     },
     {
       "fixture": "mixed-61",
@@ -259,7 +257,6 @@
       "profile": "short-side",
       "source": "compact-fallback",
       "observerStatus": "skipped-no-settled-complete-endpoints",
-      "selectedRotationDeg": 90,
       "placedCount": 25,
       "unplacedCount": 36,
       "collisionIdentitySha256": "2c53f3123d5d57ab5e120717ae1e49046bb574925c49c4a33ed4febe7e81e414",
@@ -273,8 +270,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-600x400.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-600x400.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-600x400.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-600x400.short-side-profile.png"
     },
     {
       "fixture": "shapes-17",
@@ -294,8 +291,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-600x400.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-600x400.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-600x400.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-600x400.png"
     },
     {
       "fixture": "shapes-17",
@@ -303,7 +300,6 @@
       "profile": "short-side",
       "source": "compact-fallback",
       "observerStatus": "observed-no-legal-orientation",
-      "selectedRotationDeg": 90,
       "placedCount": 14,
       "unplacedCount": 3,
       "collisionIdentitySha256": "01b2060d87752bb36eebfd4eb8602709687d5cb00c71b8feaec14a6e7cf9ba12",
@@ -317,8 +313,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-600x400.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-600x400.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-600x400.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-600x400.short-side-profile.png"
     },
     {
       "fixture": "triangle-20",
@@ -338,8 +334,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-300x300.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-300x300.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-300x300.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-300x300.png"
     },
     {
       "fixture": "triangle-20",
@@ -360,8 +356,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-300x300.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-300x300.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-300x300.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-300x300.short-side-profile.png"
     },
     {
       "fixture": "mixed-61",
@@ -381,8 +377,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-300x300.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-300x300.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-300x300.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-300x300.png"
     },
     {
       "fixture": "mixed-61",
@@ -403,8 +399,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-300x300.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-300x300.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-300x300.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-300x300.short-side-profile.png"
     },
     {
       "fixture": "shapes-17",
@@ -424,8 +420,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-300x300.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-300x300.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-300x300.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-300x300.png"
     },
     {
       "fixture": "shapes-17",
@@ -446,8 +442,8 @@
       },
       "exactPiecePartition": true,
       "passed": true,
-      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-300x300.short-side-profile.svg",
-      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-300x300.short-side-profile.png"
+      "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-300x300.short-side-profile.svg",
+      "pngPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-300x300.short-side-profile.png"
     }
   ]
 }

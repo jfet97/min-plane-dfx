@@ -4,9 +4,9 @@
     "width": 300,
     "height": 300
   },
-  "sourceCommit": "e97225c",
+  "sourceCommit": "2645e7c",
   "runtime": {
-    "elapsedMs": 15663.253125000001,
+    "elapsedMs": 15599.241542,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -605,7 +605,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 16,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.2654590000011012,
+            "topologyMeasurementMs": 1.2502910000002885,
             "legalCandidateCount": 3193,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -793,7 +793,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 137,
           "completedDepths": 6,
-          "elapsedMs": 5.047375000000102,
+          "elapsedMs": 5.1489999999994325,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -817,7 +817,7 @@
           "checkpointRetained": false,
           "consumedPlacementEvaluations": 28314,
           "completedDepths": 20,
-          "elapsedMs": 943.9819179999995,
+          "elapsedMs": 928.8441249999978,
           "endpoint": {
             "placedCount": 14,
             "placedDoubledMaterialAreaGrid2": "58800000000",
@@ -841,7 +841,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 123,
           "completedDepths": 6,
-          "elapsedMs": 4.292166999999608,
+          "elapsedMs": 3.6505420000012236,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -865,7 +865,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 173,
           "completedDepths": 11,
-          "elapsedMs": 6.612457999999606,
+          "elapsedMs": 6.508750000000873,
           "endpoint": {
             "placedCount": 11,
             "placedDoubledMaterialAreaGrid2": "46200000000",
@@ -889,7 +889,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 137,
           "completedDepths": 6,
-          "elapsedMs": 4.117500000000291,
+          "elapsedMs": 4.036582999999155,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -913,7 +913,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 187,
           "completedDepths": 11,
-          "elapsedMs": 6.884665999999925,
+          "elapsedMs": 6.788709000000381,
           "endpoint": {
             "placedCount": 11,
             "placedDoubledMaterialAreaGrid2": "46200000000",
@@ -1190,11 +1190,11 @@
         "placedMaterialAreaMm2": 35700,
         "selectedRotationDeg": 0
       },
-      "preflightRuntimeMs": 7.994209000000012,
-      "completeArchiveRuntimeMs": 14240.394542,
-      "prefixTerminalizationMs": 10.426707999999053,
-      "coldSearchMs": 1237.3612090000006,
-      "runtimeMs": 1248.2487920000003
+      "preflightRuntimeMs": 8.993250000000018,
+      "completeArchiveRuntimeMs": 14201.137791000001,
+      "prefixTerminalizationMs": 10.681791000000885,
+      "coldSearchMs": 1219.4889169999988,
+      "runtimeMs": 1230.6324160000004
     },
     "intrinsicAnytimeSchedulerTrace": {
       "version": "intrinsic-anytime-scheduler-v1",
@@ -1526,7 +1526,7 @@
       "geometricParetoEligibleEndpointCount": 0,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 24.400124999998297,
+      "runtimeMs": 24.810999999999694,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 31456,
       "endpoints": [
@@ -2758,11 +2758,12 @@
     "shortSidePairFoldTracePresent": true,
     "shortSidePairFoldOutputInfluence": true,
     "shortSidePairFoldBudget": true,
+    "shortSidePairFoldContract": true,
     "shortSideProfileMaterialized": true,
     "shortSideProfileExactPiecePartition": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-300x300.svg",
-  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-300x300.short-side-profile.svg",
-  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-300x300.short-side-profile.json"
+  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-300x300.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-300x300.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-300x300.short-side-profile.json"
 }

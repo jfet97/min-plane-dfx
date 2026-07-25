@@ -4,9 +4,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "e97225c",
+  "sourceCommit": "2645e7c",
   "runtime": {
-    "elapsedMs": 14661.2175,
+    "elapsedMs": 14366.304542,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -923,7 +923,7 @@
       "selectedCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
       "consumedCandidateEvaluations": 0,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 0.9522080000006099,
+      "runtimeMs": 0.6745840000003227,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -944,7 +944,7 @@
       "geometricParetoEligibleEndpointCount": 2,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 30.218291000001045,
+      "runtimeMs": 29.13854199999878,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 32132,
       "endpoints": [
@@ -2187,9 +2187,9 @@
         "directionallyEfficient": false,
         "accepted": false
       },
-      "runtimeMs": 2.842624999999316,
-      "peakRssDeltaBytes": 0,
-      "serializedTraceBytes": 1246,
+      "runtimeMs": 2.831916999999521,
+      "peakRssDeltaBytes": 16384,
+      "serializedTraceBytes": 1250,
       "failureReason": "exact pair fold failed one or more admission gates."
     }
   },
@@ -2219,11 +2219,12 @@
     "shortSidePairFoldTracePresent": true,
     "shortSidePairFoldOutputInfluence": true,
     "shortSidePairFoldBudget": true,
+    "shortSidePairFoldContract": true,
     "shortSideProfileMaterialized": true,
     "shortSideProfileExactPiecePartition": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-2000x2700.svg",
-  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-2000x2700.short-side-profile.svg",
-  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-2000x2700.short-side-profile.json"
+  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-2000x2700.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-2000x2700.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-2000x2700.short-side-profile.json"
 }

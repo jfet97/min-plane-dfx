@@ -226,8 +226,8 @@ Immutable evidence remains under:
 
 ## Stage 6 exact terminal pair fold
 
-Commit `d8f9275` retained the Stage 5 fixed transforms and tested the smallest
-possible generic relaxation: enumerate every unordered pair once and stack
+Corrected source commit `2645e7c` retained the Stage 5 fixed transforms and
+tested the smallest possible generic relaxation: enumerate every unordered pair once and stack
 exactly one pair at the first member's row position. The lower prepared index
 is bottom, the higher index is upper, and all other pieces remain in their
 original one-row order. There is no transform reselection, NFP search, beam,
@@ -247,7 +247,7 @@ selected the same pair and canonical geometry:
 | envelope area | `418,375.972998 mm2` |
 | collision-envelope density | `50.2790%` |
 | enclosed cavities | `0` |
-| observer runtime | `6.481 ms`, `7.626 ms` |
+| observer runtime | `6.834 ms`, `6.865 ms` |
 | canonical hash | `4dd34dcee54caa79e1cc0dc3fc88b867ddfa15a98588dda1083e820cdb44c0bb` |
 
 The transpose preserved the same intrinsic identity, pair, span, and depth
@@ -257,12 +257,12 @@ than production Compact's maximum side, `99%` projection coverage in one
 component, zero cavities, at least `50%` exact collision-envelope density, and
 a short-axis gain factor no smaller than the envelope-area cost factor.
 
-The current-source matrix at `e97225c` passed all nine algorithm cases and all
+The current-source matrix at `2645e7c` passed all nine algorithm cases and all
 18 rendered layouts sequentially in one process. Every production Compact
 hash, placed/unplaced count, area ceiling, and cavity gate remained exact. The
 short-side outputs now comprise one guarded Stage 1 winner, one terminal
 pair-fold winner, and seven exact Compact fallbacks. When the pair observer
-runs, measured overhead is `2.350–6.759 ms`; square sheets perform zero pair
+runs, measured overhead is `2.462–6.912 ms`; square sheets perform zero pair
 work.
 
 This is a user-directed, narrow exception to the earlier multi-family promotion

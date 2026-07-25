@@ -458,7 +458,7 @@ run an NFP search, create a second row, or restart construction.
 
 Shapes-17 on `2000 x 2700` is the one current terminal-pair winner:
 `1897.173 x 220.526 mm`, all `17/17` pieces, zero cavities, and `94.85865%`
-short-edge fill. The observer costs `2.350–6.759 ms` across the strict matrix.
+short-edge fill. The observer costs `2.462–6.912 ms` across the strict matrix.
 If its exact density, topology, fill, depth, and area-cost guards fail, the
 sibling output is the unchanged Compact layout. Square sheets bypass the
 terminal observer entirely.

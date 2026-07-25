@@ -7,7 +7,6 @@
   },
   "source": "compact-fallback",
   "observerStatus": "skipped-no-settled-complete-endpoints",
-  "selectedRotationDeg": 90,
   "placedCount": 25,
   "unplacedCount": 36,
   "unplacedPieceIds": [
@@ -66,5 +65,5 @@
     "span": 999.0620000000001
   },
   "exactPiecePartition": true,
-  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-600x400.short-side-profile.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-600x400.short-side-profile.svg"
 }
