@@ -58,15 +58,21 @@ product requirement may instead require a protected directional Compact
 construction cohort that reuses exact NFP/contact search while treating
 short-edge coverage as a protected directional objective.
 
-## Required correction and next decision
+## Applied correction
 
-Treat the stable-baseline state as rejected, not production-quality evidence.
-Before implementing a replacement, compare:
+The `9193f26` comparator and its test are reverted. The tie-break is recorded
+as a rejected experiment: it preserved every envelope and production hash while
+degrading interlocking quality, which proves that unchanged envelopes are not
+promotion evidence.
 
-- clean revert plus bounded row-tail backfill;
-- contextual row/neighbor-aware orientation;
-- a protected directional Compact construction cohort;
-- warm target-envelope continuation from existing Compact states.
+The diagnosis that followed the revert is that no tie-break can fix this
+family. `constructNextFitShelf` advances an AABB cursor and separates rows by
+the tallest bounding box, so a piece can never enter a neighbour's concavity.
+Both control and rejected comparator therefore sit at roughly `50%`
+collision-envelope density while production Compact reaches about `80%`. Row-tail
+backfill only moves the tail rectangles; the voids the user photographed are
+interior to the rows.
 
-No replacement may be shape-specific, concurrent, nondeterministic, or allowed
-to alter production Compact hashes.
+The accepted replacement is the exact contact-driven directional strip described
+in
+[`../contact-strip/README.md`](../contact-strip/README.md).

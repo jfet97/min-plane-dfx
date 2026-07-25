@@ -447,30 +447,58 @@ did not justify another production mechanism. The lost-interface prototype
 was removed because its continuation deduplication and deadline contract were
 invalid and it found no promotable result.
 
-### 8.1 The optional short-side sibling
+### 8.1 The experimental short-side sibling
 
-The short-side profile does not replace production Compact. It first asks
+The short-side profile is currently materialized only by the benchmark and
+artifact gate. The worker and UI do not enable it, so it is not yet a
+user-facing production strategy. `outputInfluence: none` means specifically
+that it cannot alter the production Compact result returned by the coordinator.
+
+The experimental sibling first asks
 whether an already-settled complete archive endpoint gives a material,
 exactly-legal fill of the requested short edge. If not, one bounded terminal
-observer may fix each piece's minimum-width transform, enumerate every
-unordered pair once, and stack exactly one pair. If that pair is absent or
-fails admission, the same transform evaluation also retains one
-depth-minimizing transform per piece and performs one prepared-order,
-next-fit multi-row shelf. It does not run NFP search, beam search, or restart
-construction.
+observer constructs directional layouts and admits at most one of them.
 
-The shelf selects the shallowest transform first, then the widest. If those
-envelope dimensions tie, it prefers the transform with the longest exact
-horizontal support on the row baseline. This is a generic stability tie-break:
-it does not identify triangles or change the occupied shelf envelope.
+The observer builds two families.
 
-Shapes-17 on `2000 x 2700` remains the terminal-pair winner:
-`1897.173 x 220.526 mm`, all `17/17` pieces, zero cavities, and `94.85865%`
-short-edge fill. The multi-row shelf additionally produces Triangle-20 at
-`1765.760 x 75.675 mm` and Mixed-61 at
-`1987.776 x 301.187 mm` on `2000 x 2700`, with `88.288%` and `99.389%`
-short-edge fill respectively. Its exact terminal work remains below `13 ms`
-in the accepted matrix.
+The historical family is search-free. It fixes each piece's minimum-width
+transform, enumerates every unordered pair once, and stacks exactly one pair.
+If that pair is absent or fails admission, the same transform evaluation
+retains one depth-minimizing transform per piece and performs one
+prepared-order, next-fit multi-row shelf.
+
+The second family is the exact contact-driven strip. It works in normalized
+directional coordinates where `x` is the requested short axis and `y` is the
+requested long axis, so filling the short edge means spreading along `x` and
+compactness means minimizing `y`. Each prepared piece is placed once, in
+prepared order, at the legal candidate whose occupied grid anchor is
+lexicographically smallest in `(y, x)`. Candidates come from the same exact
+NFP/IFP generator and canonical legality check production Compact uses, so a
+piece settles into a neighbour's concavity instead of advancing by bounding box,
+and opposed orientations interlock without any shape-specific rule. There is
+still no beam, no reordering, no repair, and no restart.
+
+The two families exist because the historical one cannot express interlocking
+at all. Its cursor advances by the AABB width and its rows are separated by the
+tallest bounding box, which pins every roomy fixture near `50%`
+collision-envelope density while production Compact reaches about `80%`.
+
+The strip replaces the historical incumbent only when it regresses none of
+short-edge fill, envelope area, long-axis depth, collision-envelope density,
+occupied-hull gap, isolated-piece count, positive-contact component count, or
+largest positive-contact component size, and strictly improves at least one.
+This strict no-regression rule exists because the rejected `9193f26`
+stable-baseline tie-break preserved every envelope, fill, density, legality
+result, and production hash while visibly degrading packing quality. A rejected
+strip stays in the trace with its full measurements rather than disappearing.
+
+On `2000 x 2700` the contact strip wins Mixed-61 with `2000.000 x 207.700 mm`,
+all `61/61` pieces, zero cavities, `100%` short-edge fill, `75.4664%` density,
+and a `0.215088` occupied-hull gap, replacing the shelf's
+`1987.776 x 301.187 mm`, `52.3621%` density, and `0.432505` hull gap. Triangle-20
+and Shapes-17 keep their historical sources: their strips are measured, recorded,
+and rejected because the Triangle strip fills only `46.2333%` of the short edge
+and the Shapes strip regresses density and hull gap.
 
 Exact density, topology, fill, depth, and area-cost guards remain mandatory.
 When Compact already fills at least `80%` of the short edge, reuse is reported
@@ -479,11 +507,11 @@ observer-generated winner. Any output below that floor is a
 `directional-miss`, so a corner Compact fallback cannot make the profile gate
 pass. Square sheets use their larger occupied span against the common side.
 
-This remains single-process and sequential. The strict gate contains nine
+This experiment remains single-process and sequential. The strict gate contains nine
 unchanged Compact controls plus nine sibling outputs. The current sources are
-one archive winner, one terminal-pair winner, two multi-row winners, and five
-Compact layouts that already satisfy the short-edge contract. The gate
-requires nine satisfied profiles and zero directional misses.
+one archive winner, one terminal-pair winner, one contact-strip winner, one
+multi-row winner, and five Compact layouts that already satisfy the short-edge
+contract. The gate requires nine satisfied profiles and zero directional misses.
 
 ## 9. How candidate scoring worked before
 

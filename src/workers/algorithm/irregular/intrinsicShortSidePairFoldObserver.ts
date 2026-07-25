@@ -1,28 +1,37 @@
 import { createHash } from 'node:crypto'
 import { performance } from 'node:perf_hooks'
 import { Effect } from 'effect'
-import type { SheetSpec } from '@shared/domain/nesting.js'
+import { SheetSpec } from '@shared/domain/nesting.js'
 import {
   IrregularPlacedPiece,
   IrregularPlacement,
   IrregularTransform,
+  type IrregularNestingSettings,
   type IrregularPreparedPiece,
   type TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import {
   assertCanonicalGridLegalLayout,
   canonicalCollisionLayoutIdentity,
-  measureCanonicalLayoutTopology,
+  measureCanonicalLayoutContacts,
+  measureCanonicalLayoutTopologyExact,
   placedCollisionWorldGridPath
 } from '../../irregular/canonicalLayoutGeometry.js'
 import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { GeometryKernel } from '../../irregular/geometryKernel.js'
+import { NfpIfpService } from '../../irregular/services.js'
+import {
+  INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RSS_DELTA_BYTES,
+  INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RUNTIME_MS,
+  constructIntrinsicShortSideContactStrip,
+  type IntrinsicShortSideContactStripTrace
+} from './intrinsicShortSideContactStrip.js'
 import { IrregularBeamState } from './irregularBeamState.js'
 
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION =
-  'intrinsic-short-side-terminal-observer-v2' as const
-export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS = 500 as const
-export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RSS_DELTA_BYTES = 64 * 1_048_576
+  'intrinsic-short-side-terminal-observer-v4' as const
+export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS = 30_000 as const
+export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RSS_DELTA_BYTES = 512 * 1_048_576
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES = 1_048_576 as const
 
 export interface IntrinsicShortSidePairFoldRuntimeControl {
@@ -59,6 +68,24 @@ export interface IntrinsicShortSidePairFoldAdmission {
   readonly accepted: boolean
 }
 
+/**
+ * Interlocking-quality measurements for one terminal construction.
+ *
+ * The rejected `9193f26` promotion showed that equal envelope, fill, density,
+ * legality, and production hashes cannot detect degraded packing quality. These
+ * terms make the packing structure itself explicit so a replacement cannot be
+ * promoted while regressing it.
+ */
+export interface IntrinsicShortSideInterlockingMetrics {
+  readonly largestOccupiedHullGapRatio: number
+  readonly largestOccupiedHullGapDoubledAreaGrid2: number
+  readonly occupiedHullDoubledAreaGrid2: number
+  readonly isolatedPieceCount: number
+  readonly positiveContactComponentCount: number
+  readonly largestPositiveContactComponentSize: number
+  readonly sharedBoundaryLengthMm: number
+}
+
 export interface IntrinsicShortSidePairFoldTrace {
   readonly version: typeof INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION
   readonly status: IntrinsicShortSidePairFoldStatus
@@ -70,10 +97,13 @@ export interface IntrinsicShortSidePairFoldTrace {
   readonly productionShortAxisSpanMm: number
   readonly productionMaximumSideMm: number
   readonly productionEnvelopeAreaMm2: number
+  readonly productionShortAxisSpanGrid: number
+  readonly productionMaximumSideGrid: number
+  readonly productionEnvelopeAreaGrid2: string
   readonly transformEvaluations: number
   readonly expectedPairCount: number
   readonly evaluatedPairCount: number
-  readonly constructionKind: 'pair-fold' | 'multi-row-shelf' | undefined
+  readonly constructionKind: IntrinsicShortSideConstructionKind | undefined
   readonly rowCount: number
   readonly selectedBottomPieceId: string | undefined
   readonly selectedUpperPieceId: string | undefined
@@ -81,12 +111,54 @@ export interface IntrinsicShortSidePairFoldTrace {
   readonly usedShortAxisSpanMm: number | undefined
   readonly usedLongAxisDepthMm: number | undefined
   readonly envelopeAreaMm2: number | undefined
+  readonly usedShortAxisSpanGrid: number | undefined
+  readonly usedLongAxisDepthGrid: number | undefined
+  readonly envelopeAreaGrid2: string | undefined
+  readonly collisionMaterialDoubledAreaGrid2: string | undefined
   readonly canonicalGeometryHash: string | undefined
   readonly admission: IntrinsicShortSidePairFoldAdmission | undefined
+  readonly interlocking: IntrinsicShortSideInterlockingMetrics | undefined
+  readonly contactStrip: IntrinsicShortSideContactStripTrace | undefined
+  readonly contactStripPromotion: IntrinsicShortSideContactStripPromotion | undefined
   readonly runtimeMs: number
   readonly peakRssDeltaBytes: number
   readonly serializedTraceBytes: number
   readonly failureReason: string | undefined
+}
+
+export type IntrinsicShortSideConstructionKind = 'pair-fold' | 'multi-row-shelf' | 'contact-strip'
+
+/** Measured directional summary of one terminal construction, promoted or not. */
+export interface IntrinsicShortSideConstructionSummary {
+  readonly usedShortAxisSpanMm: number | undefined
+  readonly usedLongAxisDepthMm: number | undefined
+  readonly envelopeAreaMm2: number | undefined
+  readonly usedShortAxisSpanGrid: number | undefined
+  readonly usedLongAxisDepthGrid: number | undefined
+  readonly envelopeAreaGrid2: string | undefined
+  readonly collisionMaterialDoubledAreaGrid2: string | undefined
+  readonly admission: IntrinsicShortSidePairFoldAdmission | undefined
+  readonly interlocking: IntrinsicShortSideInterlockingMetrics | undefined
+  readonly status: IntrinsicShortSidePairFoldStatus
+  readonly failureReason: string | undefined
+}
+
+/** Strict no-regression comparison between the contact strip and the incumbent. */
+export interface IntrinsicShortSideContactStripPromotion {
+  readonly incumbentConstructionKind: IntrinsicShortSideConstructionKind | undefined
+  readonly contactStripSummary: IntrinsicShortSideConstructionSummary | undefined
+  readonly contactStripAdmitted: boolean
+  /** `undefined` when the comparison could not be measured at all. */
+  readonly fillNotRegressed: boolean | undefined
+  readonly envelopeAreaNotRegressed: boolean | undefined
+  readonly depthNotRegressed: boolean | undefined
+  readonly densityNotRegressed: boolean | undefined
+  readonly hullGapNotRegressed: boolean | undefined
+  readonly isolatedPiecesNotRegressed: boolean | undefined
+  readonly positiveContactComponentsNotRegressed: boolean | undefined
+  readonly largestContactComponentNotRegressed: boolean | undefined
+  readonly strictlyImproved: boolean | undefined
+  readonly promoted: boolean
 }
 
 export interface IntrinsicShortSidePairFoldOutcome {
@@ -116,7 +188,6 @@ interface SelectedTransform {
   readonly heightGrid: number
   readonly minXGrid: number
   readonly minYGrid: number
-  readonly bottomSupportGrid: number
 }
 
 interface SelectedPair {
@@ -132,15 +203,27 @@ interface ShelfLayout {
   readonly rowCount: number
 }
 
-/** Evaluates bounded exact terminal layouts without NFP or beam search. */
+/**
+ * Evaluates bounded exact terminal directional layouts.
+ *
+ * Two families are constructed sequentially: the historical fixed-transform
+ * pair fold and AABB shelf, and one exact contact-driven strip that reuses
+ * production Compact's NFP/IFP candidate generation. The contact strip replaces
+ * the historical incumbent only when it regresses none of the directional and
+ * interlocking measurements and strictly improves at least one.
+ */
 export function observeIntrinsicShortSidePairFold(input: {
   readonly sheet: SheetSpec
   readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly settings: IrregularNestingSettings
   readonly productionShortAxisSpanMm: number
   readonly productionMaximumSideMm: number
   readonly productionEnvelopeAreaMm2: number
+  readonly productionShortAxisSpanGrid: number
+  readonly productionMaximumSideGrid: number
+  readonly productionEnvelopeAreaGrid2: string
   readonly runtimeControl?: IntrinsicShortSidePairFoldRuntimeControl
-}): Effect.Effect<IntrinsicShortSidePairFoldOutcome, never, GeometryKernel> {
+}): Effect.Effect<IntrinsicShortSidePairFoldOutcome, never, GeometryKernel | NfpIfpService> {
   const now = input.runtimeControl?.now ?? (() => performance.now())
   const currentRssBytes = input.runtimeControl?.currentRssBytes ?? (() => process.memoryUsage.rss())
   const startingRssBytes = currentRssBytes()
@@ -193,17 +276,20 @@ export function observeIntrinsicShortSidePairFold(input: {
   )
 }
 
-function constructPairFold(
-  input: {
-    readonly sheet: SheetSpec
-    readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
-    readonly productionShortAxisSpanMm: number
-    readonly productionMaximumSideMm: number
-    readonly productionEnvelopeAreaMm2: number
-    readonly runtimeControl?: IntrinsicShortSidePairFoldRuntimeControl
-  },
-  runtime: ObserverRuntime
-) {
+interface TerminalObserverInput {
+  readonly sheet: SheetSpec
+  readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+  readonly settings: IrregularNestingSettings
+  readonly productionShortAxisSpanMm: number
+  readonly productionMaximumSideMm: number
+  readonly productionEnvelopeAreaMm2: number
+  readonly productionShortAxisSpanGrid: number
+  readonly productionMaximumSideGrid: number
+  readonly productionEnvelopeAreaGrid2: string
+  readonly runtimeControl?: IntrinsicShortSidePairFoldRuntimeControl
+}
+
+function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntime) {
   return Effect.gen(function* () {
     const requestedShortAxisMm = Math.min(input.sheet.width, input.sheet.height)
     if (input.sheet.width === input.sheet.height) {
@@ -265,8 +351,7 @@ function constructPairFold(
           widthGrid: maxXGrid - minXGrid,
           heightGrid: maxYGrid - minYGrid,
           minXGrid,
-          minYGrid,
-          bottomSupportGrid: bottomSupportLengthGrid(geometry, minYGrid)
+          minYGrid
         }
         if (candidate.widthGrid <= 0 || candidate.heightGrid <= 0) {
           continue
@@ -375,6 +460,7 @@ function constructPairFold(
         }
       }
     }
+    let incumbent: IntrinsicShortSidePairFoldOutcome | undefined
     if (selectedPair !== undefined) {
       const pairPlaced = constructPairLayout(
         selectedTransforms,
@@ -399,37 +485,294 @@ function constructPairFold(
         selectedUpperPieceId: selectedTransforms[selectedPair.upperIndex]?.pieceId
       })
       if (pairOutcome.trace.status === 'accepted') {
-        return pairOutcome
+        incumbent = pairOutcome
       }
     }
 
-    const shelf = constructNextFitShelf(
-      shelfTransforms,
-      requestedShortAxisGrid,
-      requestedLongAxisGrid
+    if (incumbent === undefined) {
+      const shelf = constructNextFitShelf(
+        shelfTransforms,
+        requestedShortAxisGrid,
+        requestedLongAxisGrid
+      )
+      incumbent =
+        shelf === undefined
+          ? failedOutcome(
+              input,
+              runtime,
+              'no-fitting-pair',
+              'neither the fixed-transform pair fold nor the deterministic multi-row shelf fits both requested sheet axes.',
+              runtime.transformEvaluations,
+              0,
+              runtime.expectedPairCount,
+              runtime.evaluatedPairCount
+            )
+          : finalizePlacedLayout({
+              input,
+              runtime,
+              placed: shelf.placed,
+              constructionKind: 'multi-row-shelf',
+              rowCount: shelf.rowCount,
+              selectedBottomPieceId: undefined,
+              selectedUpperPieceId: undefined
+            })
+    }
+
+    const outerRuntimeRemainingMs = Math.max(
+      0,
+      runtime.maximumRuntimeMs - (runtime.now() - runtime.startedAt)
     )
-    if (shelf === undefined) {
+    const outerRssRemainingBytes = Math.max(
+      0,
+      runtime.maximumRssDeltaBytes - sampleRss(runtime)
+    )
+    const strip = yield* constructIntrinsicShortSideContactStrip({
+      stripSheet: new SheetSpec({
+        width: requestedShortAxisMm,
+        height: Math.max(input.sheet.width, input.sheet.height),
+        label: `short-side-strip-${requestedShortAxisMm}x${Math.max(input.sheet.width, input.sheet.height)}`
+      }),
+      preparedPieces: input.preparedPieces,
+      settings: input.settings,
+      runtimeControl: {
+        maximumRuntimeMs: Math.min(
+          INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RUNTIME_MS,
+          outerRuntimeRemainingMs
+        ),
+        maximumRssDeltaBytes: Math.min(
+          INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RSS_DELTA_BYTES,
+          outerRssRemainingBytes
+        ),
+        now: runtime.now,
+        currentRssBytes: () => {
+          const current = runtime.currentRssBytes()
+          runtime.peakRssBytes = Math.max(runtime.peakRssBytes, current)
+          return current
+        }
+      }
+    })
+    const boundedAfterStrip = boundedStatus(runtime)
+    if (boundedAfterStrip !== undefined) {
       return failedOutcome(
         input,
         runtime,
-        'no-fitting-pair',
-        'neither the fixed-transform pair fold nor the deterministic multi-row shelf fits both requested sheet axes.',
-        runtime.transformEvaluations,
-        0,
-        runtime.expectedPairCount,
-        runtime.evaluatedPairCount
+        boundedAfterStrip,
+        `${boundedAfterStrip} reached during contact-strip construction.`
       )
     }
-    return finalizePlacedLayout({
-      input,
-      runtime,
-      placed: shelf.placed,
-      constructionKind: 'multi-row-shelf',
-      rowCount: shelf.rowCount,
-      selectedBottomPieceId: undefined,
-      selectedUpperPieceId: undefined
+    const stripOutcome =
+      strip.placedCollisionGeometries === undefined
+        ? undefined
+        : finalizePlacedLayout({
+            input,
+            runtime,
+            placed: strip.placedCollisionGeometries,
+            constructionKind: 'contact-strip',
+            rowCount: 0,
+            selectedBottomPieceId: undefined,
+            selectedUpperPieceId: undefined
+          })
+    const promotion = evaluateIntrinsicShortSideContactStripPromotion(
+      incumbent,
+      stripOutcome,
+      strip.trace
+    )
+    const selected = promotion.promoted && stripOutcome !== undefined ? stripOutcome : incumbent
+    const trace = measureTraceSize({
+      ...selected.trace,
+      contactStrip: strip.trace,
+      contactStripPromotion: promotion,
+      peakRssDeltaBytes: sampleRss(runtime),
+      runtimeMs: Math.max(0, runtime.now() - runtime.startedAt),
+      serializedTraceBytes: 0
     })
+    if (trace.serializedTraceBytes > runtime.maximumTraceBytes) {
+      return failedOutcome(
+        input,
+        runtime,
+        'trace-cap',
+        'composite terminal short-side trace exceeds its byte cap.'
+      )
+    }
+    return {
+      trace,
+      placedCollisionGeometries: selected.placedCollisionGeometries
+    }
   })
+}
+
+/**
+ * Decides whether the contact strip replaces the historical incumbent.
+ *
+ * Promotion requires the strip to regress none of fill, envelope area, depth,
+ * collision density, occupied-hull gap, isolated-piece count, component count,
+ * or largest contact component, and to strictly improve at least one of them.
+ * Equal envelopes therefore can no longer hide a packing-quality regression,
+ * and a strip that merely relocates waste is rejected rather than promoted.
+ */
+export function evaluateIntrinsicShortSideContactStripPromotion(
+  incumbent: IntrinsicShortSidePairFoldOutcome,
+  strip: IntrinsicShortSidePairFoldOutcome | undefined,
+  stripTrace: IntrinsicShortSideContactStripTrace
+): IntrinsicShortSideContactStripPromotion {
+  const contactStripSummary =
+    strip === undefined
+      ? undefined
+      : {
+          usedShortAxisSpanMm: strip.trace.usedShortAxisSpanMm,
+          usedLongAxisDepthMm: strip.trace.usedLongAxisDepthMm,
+          envelopeAreaMm2: strip.trace.envelopeAreaMm2,
+          usedShortAxisSpanGrid: strip.trace.usedShortAxisSpanGrid,
+          usedLongAxisDepthGrid: strip.trace.usedLongAxisDepthGrid,
+          envelopeAreaGrid2: strip.trace.envelopeAreaGrid2,
+          collisionMaterialDoubledAreaGrid2:
+            strip.trace.collisionMaterialDoubledAreaGrid2,
+          admission: strip.trace.admission,
+          interlocking: strip.trace.interlocking,
+          status: strip.trace.status,
+          failureReason: strip.trace.failureReason
+        }
+  const unmeasured: IntrinsicShortSideContactStripPromotion = {
+    incumbentConstructionKind: incumbent.trace.constructionKind,
+    contactStripSummary,
+    contactStripAdmitted: false,
+    fillNotRegressed: undefined,
+    envelopeAreaNotRegressed: undefined,
+    depthNotRegressed: undefined,
+    densityNotRegressed: undefined,
+    hullGapNotRegressed: undefined,
+    isolatedPiecesNotRegressed: undefined,
+    positiveContactComponentsNotRegressed: undefined,
+    largestContactComponentNotRegressed: undefined,
+    strictlyImproved: undefined,
+    promoted: false
+  }
+  if (stripTrace.status !== 'constructed' || strip === undefined) return unmeasured
+  const contactStripAdmitted = strip.trace.status === 'accepted'
+  const stripAdmission = strip.trace.admission
+  const stripInterlocking = strip.trace.interlocking
+  const incumbentAdmission = incumbent.trace.admission
+  const incumbentInterlocking = incumbent.trace.interlocking
+  const stripExact = exactPromotionMetrics(strip)
+  const incumbentExact = exactPromotionMetrics(incumbent)
+  if (
+    stripAdmission === undefined ||
+    stripInterlocking === undefined ||
+    stripExact === undefined
+  ) {
+    return { ...unmeasured, contactStripAdmitted }
+  }
+  if (
+    incumbentAdmission === undefined ||
+    incumbentInterlocking === undefined ||
+    incumbentExact === undefined
+  ) {
+    return {
+      ...unmeasured,
+      contactStripAdmitted,
+      fillNotRegressed: true,
+      envelopeAreaNotRegressed: true,
+      depthNotRegressed: true,
+      densityNotRegressed: true,
+      hullGapNotRegressed: true,
+      isolatedPiecesNotRegressed: true,
+      positiveContactComponentsNotRegressed: true,
+      largestContactComponentNotRegressed: true,
+      strictlyImproved: true,
+      promoted: contactStripAdmitted
+    }
+  }
+  const fillNotRegressed = stripExact.shortAxisSpanGrid >= incumbentExact.shortAxisSpanGrid
+  const envelopeAreaNotRegressed =
+    stripExact.envelopeAreaGrid2 <= incumbentExact.envelopeAreaGrid2
+  const depthNotRegressed =
+    stripExact.longAxisDepthGrid <= incumbentExact.longAxisDepthGrid
+  const densityNotRegressed =
+    stripExact.materialDoubledAreaGrid2 * incumbentExact.envelopeAreaGrid2 >=
+    incumbentExact.materialDoubledAreaGrid2 * stripExact.envelopeAreaGrid2
+  const hullGapNotRegressed =
+    BigInt(stripInterlocking.largestOccupiedHullGapDoubledAreaGrid2) *
+      BigInt(incumbentInterlocking.occupiedHullDoubledAreaGrid2) <=
+    BigInt(incumbentInterlocking.largestOccupiedHullGapDoubledAreaGrid2) *
+      BigInt(stripInterlocking.occupiedHullDoubledAreaGrid2)
+  const isolatedPiecesNotRegressed =
+    stripInterlocking.isolatedPieceCount <= incumbentInterlocking.isolatedPieceCount
+  const positiveContactComponentsNotRegressed =
+    stripInterlocking.positiveContactComponentCount <=
+    incumbentInterlocking.positiveContactComponentCount
+  const largestContactComponentNotRegressed =
+    stripInterlocking.largestPositiveContactComponentSize >=
+    incumbentInterlocking.largestPositiveContactComponentSize
+  const strictlyImproved =
+    stripExact.shortAxisSpanGrid > incumbentExact.shortAxisSpanGrid ||
+    stripExact.envelopeAreaGrid2 < incumbentExact.envelopeAreaGrid2 ||
+    stripExact.longAxisDepthGrid < incumbentExact.longAxisDepthGrid ||
+    stripExact.materialDoubledAreaGrid2 * incumbentExact.envelopeAreaGrid2 >
+      incumbentExact.materialDoubledAreaGrid2 * stripExact.envelopeAreaGrid2 ||
+    BigInt(stripInterlocking.largestOccupiedHullGapDoubledAreaGrid2) *
+      BigInt(incumbentInterlocking.occupiedHullDoubledAreaGrid2) <
+      BigInt(incumbentInterlocking.largestOccupiedHullGapDoubledAreaGrid2) *
+        BigInt(stripInterlocking.occupiedHullDoubledAreaGrid2) ||
+    stripInterlocking.isolatedPieceCount < incumbentInterlocking.isolatedPieceCount ||
+    stripInterlocking.positiveContactComponentCount <
+      incumbentInterlocking.positiveContactComponentCount ||
+    stripInterlocking.largestPositiveContactComponentSize >
+      incumbentInterlocking.largestPositiveContactComponentSize
+  return {
+    incumbentConstructionKind: incumbent.trace.constructionKind,
+    contactStripSummary,
+    contactStripAdmitted,
+    fillNotRegressed,
+    envelopeAreaNotRegressed,
+    depthNotRegressed,
+    densityNotRegressed,
+    hullGapNotRegressed,
+    isolatedPiecesNotRegressed,
+    positiveContactComponentsNotRegressed,
+    largestContactComponentNotRegressed,
+    strictlyImproved,
+    promoted:
+      contactStripAdmitted &&
+      fillNotRegressed &&
+      envelopeAreaNotRegressed &&
+      depthNotRegressed &&
+      densityNotRegressed &&
+      hullGapNotRegressed &&
+      isolatedPiecesNotRegressed &&
+      positiveContactComponentsNotRegressed &&
+      largestContactComponentNotRegressed &&
+      strictlyImproved
+  }
+}
+
+function exactPromotionMetrics(
+  outcome: IntrinsicShortSidePairFoldOutcome
+):
+  | {
+      readonly shortAxisSpanGrid: number
+      readonly longAxisDepthGrid: number
+      readonly envelopeAreaGrid2: bigint
+      readonly materialDoubledAreaGrid2: bigint
+    }
+  | undefined {
+  const shortAxisSpanGrid = outcome.trace.usedShortAxisSpanGrid
+  const longAxisDepthGrid = outcome.trace.usedLongAxisDepthGrid
+  const envelopeAreaGrid2 = outcome.trace.envelopeAreaGrid2
+  const materialDoubledAreaGrid2 = outcome.trace.collisionMaterialDoubledAreaGrid2
+  if (
+    shortAxisSpanGrid === undefined ||
+    longAxisDepthGrid === undefined ||
+    envelopeAreaGrid2 === undefined ||
+    materialDoubledAreaGrid2 === undefined
+  ) {
+    return undefined
+  }
+  return {
+    shortAxisSpanGrid,
+    longAxisDepthGrid,
+    envelopeAreaGrid2: BigInt(envelopeAreaGrid2),
+    materialDoubledAreaGrid2: BigInt(materialDoubledAreaGrid2)
+  }
 }
 
 function compareSelectedTransforms(first: SelectedTransform, second: SelectedTransform): number {
@@ -446,38 +789,10 @@ function compareShelfTransforms(first: SelectedTransform, second: SelectedTransf
   return (
     first.heightGrid - second.heightGrid ||
     second.widthGrid - first.widthGrid ||
-    second.bottomSupportGrid - first.bottomSupportGrid ||
     first.geometry.transform.index - second.geometry.transform.index ||
     first.geometry.transform.rotationDeg - second.geometry.transform.rotationDeg ||
     Number(first.geometry.transform.mirrored) - Number(second.geometry.transform.mirrored)
   )
-}
-
-function bottomSupportLengthGrid(
-  geometry: TransformedCollisionGeometry,
-  minimumYGrid: number
-): number {
-  let supportGrid = 0
-  const points = geometry.polygon.points
-  for (let index = 0; index < points.length; index += 1) {
-    const first = points[index]
-    const second = points[(index + 1) % points.length]
-    if (first === undefined || second === undefined) continue
-    const firstXGrid = toGridMm(first.x)
-    const firstYGrid = toGridMm(first.y)
-    const secondXGrid = toGridMm(second.x)
-    const secondYGrid = toGridMm(second.y)
-    if (
-      firstXGrid === undefined ||
-      firstYGrid !== minimumYGrid ||
-      secondXGrid === undefined ||
-      secondYGrid !== minimumYGrid
-    ) {
-      continue
-    }
-    supportGrid += Math.abs(secondXGrid - firstXGrid)
-  }
-  return supportGrid
 }
 
 function compareSelectedPairs(
@@ -588,16 +903,10 @@ function createPlacedPiece(
 }
 
 function finalizePlacedLayout(input: {
-  readonly input: {
-    readonly sheet: SheetSpec
-    readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
-    readonly productionShortAxisSpanMm: number
-    readonly productionMaximumSideMm: number
-    readonly productionEnvelopeAreaMm2: number
-  }
+  readonly input: TerminalObserverInput
   readonly runtime: ObserverRuntime
   readonly placed: ReadonlyArray<IrregularPlacedPiece>
-  readonly constructionKind: 'pair-fold' | 'multi-row-shelf'
+  readonly constructionKind: IntrinsicShortSideConstructionKind
   readonly rowCount: number
   readonly selectedBottomPieceId: string | undefined
   readonly selectedUpperPieceId: string | undefined
@@ -687,40 +996,36 @@ function finalizePlacedLayout(input: {
 }
 
 function finalizeOutcome(input: {
-  readonly input: {
-    readonly sheet: SheetSpec
-    readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
-    readonly productionShortAxisSpanMm: number
-    readonly productionMaximumSideMm: number
-    readonly productionEnvelopeAreaMm2: number
-  }
+  readonly input: TerminalObserverInput
   readonly runtime: ObserverRuntime
   readonly state: IrregularBeamState
   readonly prescribedRotationDeg: 0 | 90
   readonly transformEvaluations: number
   readonly expectedPairCount: number
   readonly evaluatedPairCount: number
-  readonly constructionKind: 'pair-fold' | 'multi-row-shelf'
+  readonly constructionKind: IntrinsicShortSideConstructionKind
   readonly rowCount: number
   readonly selectedBottomPieceId: string | undefined
   readonly selectedUpperPieceId: string | undefined
 }): IntrinsicShortSidePairFoldOutcome {
   const placed = input.state.placedCollisionGeometries
   const dimensions = physicalDimensions(placed, input.input.sheet)
-  const topology = measureCanonicalLayoutTopology(placed)
-  const materialAreaMm2 = collisionMaterialAreaMm2(placed)
+  const topologyExact = measureCanonicalLayoutTopologyExact(placed)
+  const contacts = measureCanonicalLayoutContacts(placed)
+  const material = collisionMaterialArea(placed)
   const identity = canonicalCollisionLayoutIdentity(placed)
   if (
     dimensions === undefined ||
-    topology === undefined ||
-    materialAreaMm2 === undefined ||
+    topologyExact === undefined ||
+    contacts === undefined ||
+    material === undefined ||
     identity === undefined
   ) {
     return failedOutcome(
       input.input,
       input.runtime,
       'failed-protected-fallback',
-      'exact pair-fold metrics could not be materialized.',
+      'exact terminal construction metrics could not be materialized.',
       input.transformEvaluations,
       placed.length,
       input.expectedPairCount,
@@ -729,42 +1034,82 @@ function finalizeOutcome(input: {
       input.selectedUpperPieceId
     )
   }
-  const envelopeAreaMm2 = dimensions.shortAxisMm * dimensions.longAxisMm
-  const fillRatio = dimensions.shortAxisMm / dimensions.requestedShortAxisMm
-  const density = envelopeAreaMm2 <= 0 ? 0 : materialAreaMm2 / envelopeAreaMm2
-  const projection = shortAxisProjectionMetrics(placed, input.input.sheet)
-  const shortAxisSpanGainFactor =
-    input.input.productionShortAxisSpanMm <= 0
+  const topology = topologyExact.topology
+  const envelopeAreaGrid2 =
+    BigInt(dimensions.shortAxisGrid) * BigInt(dimensions.longAxisGrid)
+  const envelopeAreaMm2 = Number(envelopeAreaGrid2) / 1_000_000
+  const fillRatio = dimensions.shortAxisGrid / dimensions.requestedShortAxisGrid
+  const density =
+    envelopeAreaGrid2 <= 0n
       ? 0
-      : dimensions.shortAxisMm / input.input.productionShortAxisSpanMm
+      : Number(material.doubledAreaGrid2) / (2 * Number(envelopeAreaGrid2))
+  const projection = shortAxisProjectionMetrics(placed, input.input.sheet)
+  const productionShortAxisSpanGrid = input.input.productionShortAxisSpanGrid
+  const productionMaximumSideGrid = input.input.productionMaximumSideGrid
+  const productionEnvelopeAreaGrid2 = BigInt(input.input.productionEnvelopeAreaGrid2)
+  if (
+    !Number.isSafeInteger(productionShortAxisSpanGrid) ||
+    !Number.isSafeInteger(productionMaximumSideGrid) ||
+    productionShortAxisSpanGrid <= 0 ||
+    productionEnvelopeAreaGrid2 <= 0n
+  ) {
+    return failedOutcome(
+      input.input,
+      input.runtime,
+      'failed-protected-fallback',
+      'production comparison metrics must fit the canonical grid.',
+      input.transformEvaluations,
+      placed.length,
+      input.expectedPairCount,
+      input.evaluatedPairCount,
+      input.selectedBottomPieceId,
+      input.selectedUpperPieceId
+    )
+  }
+  const shortAxisSpanGainFactor =
+    dimensions.shortAxisGrid / productionShortAxisSpanGrid
   const envelopeAreaCostFactor =
-    input.input.productionEnvelopeAreaMm2 <= 0
-      ? Number.POSITIVE_INFINITY
-      : envelopeAreaMm2 / input.input.productionEnvelopeAreaMm2
+    Number(envelopeAreaGrid2) / Number(productionEnvelopeAreaGrid2)
+  const depthWithinProductionMaximumSide =
+    dimensions.longAxisGrid <= productionMaximumSideGrid
+  const directionallyEfficient =
+    BigInt(dimensions.shortAxisGrid) * productionEnvelopeAreaGrid2 >=
+    BigInt(productionShortAxisSpanGrid) * envelopeAreaGrid2
   const admission: IntrinsicShortSidePairFoldAdmission = {
     exactLegal: true,
     allPiecesPlaced: placed.length === input.input.preparedPieces.length,
     fillRatio,
-    depthWithinProductionMaximumSide: dimensions.longAxisMm <= input.input.productionMaximumSideMm,
+    depthWithinProductionMaximumSide,
     projectionCoverageRatio: projection.coverageRatio,
     projectionComponentCount: projection.componentCount,
     enclosedCavityCount: topology.enclosedCavityCount,
     collisionEnvelopeDensity: density,
     shortAxisSpanGainFactor,
     envelopeAreaCostFactor,
-    directionallyEfficient: shortAxisSpanGainFactor >= envelopeAreaCostFactor,
+    directionallyEfficient,
     accepted: false
   }
   const accepted =
     admission.allPiecesPlaced &&
-    fillRatio >= 0.8 &&
+    5n * BigInt(dimensions.shortAxisGrid) >=
+      4n * BigInt(dimensions.requestedShortAxisGrid) &&
     admission.depthWithinProductionMaximumSide &&
-    projection.coverageRatio >= 0.99 &&
+    (projection.spanGrid <= 0 ||
+      100n * BigInt(projection.coveredGrid) >= 99n * BigInt(projection.spanGrid)) &&
     projection.componentCount === 1 &&
     topology.enclosedCavityCount === 0 &&
-    density >= 0.5 &&
+    material.doubledAreaGrid2 >= envelopeAreaGrid2 &&
     admission.directionallyEfficient
   const measuredAdmission = { ...admission, accepted }
+  const interlocking: IntrinsicShortSideInterlockingMetrics = {
+    largestOccupiedHullGapRatio: topology.largestOccupiedHullGapRatio,
+    largestOccupiedHullGapDoubledAreaGrid2: topologyExact.hullGapDoubledAreaGrid2,
+    occupiedHullDoubledAreaGrid2: topologyExact.hullDoubledAreaGrid2,
+    isolatedPieceCount: topology.isolatedPieceCount,
+    positiveContactComponentCount: topology.positiveContactComponentCount,
+    largestPositiveContactComponentSize: topology.largestPositiveContactComponentSize,
+    sharedBoundaryLengthMm: contacts.sharedBoundaryLengthMm
+  }
   const rawTrace: IntrinsicShortSidePairFoldTrace = {
     version: INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION,
     status: accepted ? 'accepted' : 'rejected-admission',
@@ -776,6 +1121,9 @@ function finalizeOutcome(input: {
     productionShortAxisSpanMm: input.input.productionShortAxisSpanMm,
     productionMaximumSideMm: input.input.productionMaximumSideMm,
     productionEnvelopeAreaMm2: input.input.productionEnvelopeAreaMm2,
+    productionShortAxisSpanGrid: input.input.productionShortAxisSpanGrid,
+    productionMaximumSideGrid: input.input.productionMaximumSideGrid,
+    productionEnvelopeAreaGrid2: input.input.productionEnvelopeAreaGrid2,
     transformEvaluations: input.transformEvaluations,
     expectedPairCount: input.expectedPairCount,
     evaluatedPairCount: input.evaluatedPairCount,
@@ -787,12 +1135,21 @@ function finalizeOutcome(input: {
     usedShortAxisSpanMm: dimensions.shortAxisMm,
     usedLongAxisDepthMm: dimensions.longAxisMm,
     envelopeAreaMm2,
+    usedShortAxisSpanGrid: dimensions.shortAxisGrid,
+    usedLongAxisDepthGrid: dimensions.longAxisGrid,
+    envelopeAreaGrid2: envelopeAreaGrid2.toString(),
+    collisionMaterialDoubledAreaGrid2: material.doubledAreaGrid2.toString(),
     canonicalGeometryHash: createHash('sha256').update(identity).digest('hex'),
     admission: measuredAdmission,
+    interlocking,
+    contactStrip: undefined,
+    contactStripPromotion: undefined,
     runtimeMs: Math.max(0, input.runtime.now() - input.runtime.startedAt),
     peakRssDeltaBytes: sampleRss(input.runtime),
     serializedTraceBytes: 0,
-    failureReason: accepted ? undefined : 'exact pair fold failed one or more admission gates.'
+    failureReason: accepted
+      ? undefined
+      : 'the exact terminal construction failed one or more admission gates.'
   }
   const trace = measureTraceSize(rawTrace)
   return {
@@ -810,25 +1167,42 @@ function physicalDimensions(
       readonly longAxisMm: number
       readonly requestedShortAxisMm: number
       readonly requestedLongAxisMm: number
+      readonly shortAxisGrid: number
+      readonly longAxisGrid: number
+      readonly requestedShortAxisGrid: number
+      readonly requestedLongAxisGrid: number
     }
   | undefined {
   const points = placed.flatMap((entry) => placedCollisionWorldGridPath(entry) ?? [])
   if (points.length === 0) return undefined
-  const widthMm = fromGrid(
+  const widthGrid =
     Math.max(...points.map(({ x }) => x)) - Math.min(...points.map(({ x }) => x))
-  )
-  const heightMm = fromGrid(
+  const heightGrid =
     Math.max(...points.map(({ y }) => y)) - Math.min(...points.map(({ y }) => y))
-  )
+  const requestedShortAxisMm = Math.min(sheet.width, sheet.height)
+  const requestedLongAxisMm = Math.max(sheet.width, sheet.height)
+  const requestedShortAxisGrid = toGridMm(requestedShortAxisMm)
+  const requestedLongAxisGrid = toGridMm(requestedLongAxisMm)
+  if (requestedShortAxisGrid === undefined || requestedLongAxisGrid === undefined) {
+    return undefined
+  }
+  const shortAxisGrid = sheet.width < sheet.height ? widthGrid : heightGrid
+  const longAxisGrid = sheet.width < sheet.height ? heightGrid : widthGrid
   return {
-    shortAxisMm: sheet.width < sheet.height ? widthMm : heightMm,
-    longAxisMm: sheet.width < sheet.height ? heightMm : widthMm,
-    requestedShortAxisMm: Math.min(sheet.width, sheet.height),
-    requestedLongAxisMm: Math.max(sheet.width, sheet.height)
+    shortAxisMm: fromGrid(shortAxisGrid),
+    longAxisMm: fromGrid(longAxisGrid),
+    requestedShortAxisMm,
+    requestedLongAxisMm,
+    shortAxisGrid,
+    longAxisGrid,
+    requestedShortAxisGrid,
+    requestedLongAxisGrid
   }
 }
 
-function collisionMaterialAreaMm2(placed: ReadonlyArray<IrregularPlacedPiece>): number | undefined {
+function collisionMaterialArea(
+  placed: ReadonlyArray<IrregularPlacedPiece>
+): { readonly doubledAreaGrid2: bigint } | undefined {
   let doubledAreaGrid2 = 0n
   for (const entry of placed) {
     const path = placedCollisionWorldGridPath(entry)
@@ -842,14 +1216,18 @@ function collisionMaterialAreaMm2(placed: ReadonlyArray<IrregularPlacedPiece>): 
     }
     doubledAreaGrid2 += signed < 0n ? -signed : signed
   }
-  const areaMm2 = Number(doubledAreaGrid2) / 2_000_000
-  return Number.isFinite(areaMm2) ? areaMm2 : undefined
+  return { doubledAreaGrid2 }
 }
 
 function shortAxisProjectionMetrics(
   placed: ReadonlyArray<IrregularPlacedPiece>,
   sheet: SheetSpec
-): { readonly coverageRatio: number; readonly componentCount: number } {
+): {
+  readonly coverageRatio: number
+  readonly componentCount: number
+  readonly coveredGrid: number
+  readonly spanGrid: number
+} {
   const intervals = placed
     .flatMap((entry) => {
       const path = placedCollisionWorldGridPath(entry)
@@ -870,13 +1248,15 @@ function shortAxisProjectionMetrics(
   const first = merged[0]
   const last = merged.at(-1)
   if (first === undefined || last === undefined) {
-    return { coverageRatio: 0, componentCount: 0 }
+    return { coverageRatio: 0, componentCount: 0, coveredGrid: 0, spanGrid: 0 }
   }
   const span = last.end - first.start
   const covered = merged.reduce((sum, interval) => sum + interval.end - interval.start, 0)
   return {
     coverageRatio: span <= 0 ? 1 : covered / span,
-    componentCount: merged.length
+    componentCount: merged.length,
+    coveredGrid: covered,
+    spanGrid: span
   }
 }
 
@@ -898,6 +1278,9 @@ function failedOutcome(
     readonly productionShortAxisSpanMm: number
     readonly productionMaximumSideMm: number
     readonly productionEnvelopeAreaMm2: number
+    readonly productionShortAxisSpanGrid: number
+    readonly productionMaximumSideGrid: number
+    readonly productionEnvelopeAreaGrid2: string
   },
   runtime: ObserverRuntime,
   status: Exclude<IntrinsicShortSidePairFoldStatus, 'accepted' | 'rejected-admission'>,
@@ -926,6 +1309,9 @@ function failedOutcome(
       productionShortAxisSpanMm: input.productionShortAxisSpanMm,
       productionMaximumSideMm: input.productionMaximumSideMm,
       productionEnvelopeAreaMm2: input.productionEnvelopeAreaMm2,
+      productionShortAxisSpanGrid: input.productionShortAxisSpanGrid,
+      productionMaximumSideGrid: input.productionMaximumSideGrid,
+      productionEnvelopeAreaGrid2: input.productionEnvelopeAreaGrid2,
       transformEvaluations,
       expectedPairCount,
       evaluatedPairCount,
@@ -937,8 +1323,15 @@ function failedOutcome(
       usedShortAxisSpanMm: undefined,
       usedLongAxisDepthMm: undefined,
       envelopeAreaMm2: undefined,
+      usedShortAxisSpanGrid: undefined,
+      usedLongAxisDepthGrid: undefined,
+      envelopeAreaGrid2: undefined,
+      collisionMaterialDoubledAreaGrid2: undefined,
       canonicalGeometryHash: undefined,
       admission: undefined,
+      interlocking: undefined,
+      contactStrip: undefined,
+      contactStripPromotion: undefined,
       runtimeMs: Math.max(0, runtime.now() - runtime.startedAt),
       peakRssDeltaBytes: sampleRss(runtime),
       serializedTraceBytes: 0,

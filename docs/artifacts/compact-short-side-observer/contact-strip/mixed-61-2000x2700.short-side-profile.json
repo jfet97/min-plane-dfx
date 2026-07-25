@@ -1,0 +1,35 @@
+{
+  "fixture": "mixed-61",
+  "profile": "short-side",
+  "sheet": {
+    "width": 2000,
+    "height": 2700
+  },
+  "source": "terminal-contact-strip-winner",
+  "profileOutcome": "directional-success",
+  "shortAxisFillRatio": 1,
+  "observerStatus": "observed-no-directional-improvement",
+  "selectedRotationDeg": 0,
+  "placedCount": 61,
+  "unplacedCount": 0,
+  "unplacedPieceIds": [],
+  "collisionIdentitySha256": "c6fb2fa21ffa6d3bee75ea5cedc6b4f74a3b0ca0e48b6540be0b10f87ae4ce76",
+  "fittedCanonicalSha256": "914bb181f71cf450d22bff7342ee9310aa4f76ec180126083e43747740b444c0",
+  "canonicalTopology": {
+    "enclosedCavityCount": 0,
+    "largestOccupiedHullGapRatio": 0.2150884212578726,
+    "occupiedEnvelopeAspectRatio": 9.629272989889264,
+    "positiveContactComponentCount": 37,
+    "isolatedPieceCount": 28,
+    "largestPositiveContactComponentSize": 12,
+    "largestPositiveContactComponentRatio": 0.19672131147540983
+  },
+  "bounds": {
+    "width": 2000,
+    "height": 207.7,
+    "area": 415400,
+    "span": 2207.7
+  },
+  "exactPiecePartition": true,
+  "svgPath": "mixed-61-2000x2700.short-side-profile.svg"
+}

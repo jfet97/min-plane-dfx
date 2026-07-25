@@ -10,6 +10,9 @@ roadmap:
   current evidence limit.
 - [Search quality decisions](./search-quality-decisions.md): scoring, topology,
   V7, global repair, periodic construction, and shared-archive outcomes.
+- [Compact short-side contact strip](./compact-short-side-contact-strip.md):
+  why the AABB shelf could not reach Compact quality, the reverted
+  stable-baseline tie-break, and the exact contact-driven replacement.
 - [Historical reviews](./reviews/): dated independent review outputs.
 - [Historical prompts](./prompts/): dated execution and review briefs retained
   as provenance, not current instructions.

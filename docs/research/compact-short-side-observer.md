@@ -317,8 +317,182 @@ the largest positive-contact component grows from `8` to `11`. End-to-end
 runtime was `68.971 s`, comparable with the preceding `68.721 s`
 reproduction.
 
+That tie-break is now **rejected and reverted**. The user rejected the Mixed-61
+`2000 x 2700` result on sight despite every numeric gate passing. The comparator
+decides orientation before a row or neighbour exists, so it flips whole
+asymmetric families onto flat bases and leaves systematic triangular voids. Its
+occupied-hull gap also worsened from `0.4325051759018452` to
+`0.43256001182424386`. Treat this as the standing proof that unchanged
+envelopes, fill, density, legality, and production hashes are not promotion
+evidence.
+
+## Stage 8 exact contact-driven directional strip
+
+### Why no tie-break could work
+
+`constructNextFitShelf` advances a cursor by each piece's AABB width and starts
+a new row at the tallest bounding box in the closed row. Neither decision reads
+polygon geometry, so a piece can never enter a neighbour's concavity. The
+consequence is measurable and family-independent:
+
+| Fixture `2000 x 2700` | Shelf/pair density | Production Compact density |
+| --- | ---: | ---: |
+| Triangle-20 | `50.0000%` | `80.05%` |
+| Mixed-61 | `52.3621%` | `80.05%` |
+| Shapes-17 | `50.2790%` | `80.05%` |
+
+Triangle-20 is the clearest case: its shelf reports `20` isolated pieces, a
+largest positive-contact component of `1`, and `0 mm` shared boundary. The
+layout has no interlocking at all, by construction.
+
+Sol's proposed row-tail backfill was therefore considered and not implemented.
+Retaining closed-row rectangular tails and probing later pieces into them only
+relocates the trailing rectangles; the voids the user photographed are interior
+to the rows, above flat-bottomed pieces, and no tail rule can reach them.
+
+### Mechanism
+
+One exact contact-driven strip replaces the mechanism rather than its tie-break.
+It works in normalized directional coordinates where `x` is the requested short
+axis and `y` is the requested long axis. Each prepared piece is placed once, in
+prepared order, at the legal candidate whose occupied grid anchor is
+lexicographically smallest in `(y, x)`.
+
+Candidates come from `NfpIfpService.generatePlacementCandidates` against a strip
+sheet, which is production Compact's own exact generator: IFP corners, NFP
+vertices, antiparallel edge-support points, IFP/NFP and NFP/NFP intersections,
+each already filtered to canonical grid legality. Interlocking is therefore an
+emergent consequence of exact contact, not a shape rule: an inverted triangle
+advances the frontier less than an upright one, so the comparator selects it.
+
+There is no beam, no reordering, no repair, no restart, and no new geometry
+kernel. The construction remains single-process and sequential, and production
+Compact keeps full authority.
+
+### Promotion contract
+
+The strip replaces the historical incumbent only when it regresses none of
+short-edge fill, envelope area, long-axis depth, collision-envelope density,
+occupied-hull gap, isolated-piece count, positive-contact component count, or
+largest positive-contact component size, and strictly improves at least one.
+The trace keeps `contactStripSummary` for rejected strips so their measurements
+stay reviewable.
+
+Admission and promotion retain canonical-grid spans and doubled polygon areas.
+The `80%`, `99%`, and `50%` product floors are evaluated by integer
+cross-multiplication; density and hull comparisons use cross-products rather
+than float tolerances. Millimetre ratios in the trace are display telemetry,
+not winner authority. The existing topology service declines hull-area terms
+outside its safe-integer range, so the experimental observer falls back instead
+of ranking an inexact result.
+
+### Which metrics are robust and which are gameable
+
+The metrics were chosen against the `9193f26` failure, and the revert produced a
+second, sharper demonstration.
+
+- **Envelope area, maximum side, depth, short-edge fill, exact legality, and
+  canonical hashes are gameable.** They are invariant to orientation flips that
+  destroy interlocking. That is exactly how `9193f26` passed.
+- **Occupied-hull gap is partly gameable.** Reverting the tie-break leaves
+  Triangle-20 `2000 x 2700` with the same canonical collision identity, the same
+  `1765.760 x 75.675 mm` envelope, the same `50%` density, the same `20`
+  isolated pieces, and the same largest contact component of `1` — yet its hull
+  gap moves from `0.02564102564102564` to `0.48717948717948717`. The upright
+  row leaves `19` separate notches, so the largest single gap is one notch; the
+  inverted row leaves one connected band under the whole row. The wasted area is
+  identical in both. The ratio measures how the waste is connected, not how much
+  there is.
+- **Collision-envelope density, isolated-piece count, and largest contact
+  component are robust.** They cannot improve without the pieces actually
+  touching more.
+- **Shared boundary length is descriptive, not comparable.** It grows with piece
+  count and perimeter, so it is reported and excluded from the gate.
+
+The promotion rule therefore uses hull gap only as a conservative
+no-regression guard, never as a reward. A partly gameable metric used that way
+can block a good candidate, as it does for Shapes-17, but cannot admit a bad
+one. Density and isolated pieces carry the real signal.
+
+### Measured result
+
+Mixed-61 `2000 x 2700` is promoted:
+
+| Measurement | Multi-row shelf | Contact strip |
+| --- | ---: | ---: |
+| bounds | `1987.776 x 301.187 mm` | `2000.000 x 207.700 mm` |
+| envelope area | `598,692.290112 mm2` | `415,400.000000 mm2` |
+| long-axis depth | `301.187 mm` | `207.700 mm` |
+| short-edge fill | `99.3888%` | `100.0000%` |
+| collision-envelope density | `52.3621%` | `75.4664%` |
+| occupied-hull gap | `0.4325051759018452` | `0.2150884212578726` |
+| isolated pieces | `39` | `28` |
+| largest contact component | `8` | `12` |
+| shared boundary | `0 mm` | `1356.501 mm` |
+| pieces / cavities | `61/61`, `0` | `61/61`, `0` |
+
+Triangle-20 and Shapes-17 keep their historical sources. Both strips are
+constructed, measured, and recorded as rejected:
+
+- Triangle-20 packs all `20` pieces into one interlocked row of
+  `924.666 x 76.262 mm` with `94.7458%` density and a `0.006194` hull gap. That
+  is materially more compact than production Compact's `74,428.143126 mm2`
+  envelope, but it fills only `46.2333%` of the short edge and fails the
+  directional admission floor. The two goals genuinely conflict for this
+  fixture: `20` padded triangles cannot both interlock and span `2000 mm`.
+- Shapes-17 reaches `1990.872 x 212.128 mm` and `99.5436%` fill, but its density
+  falls to `49.8095%` and its hull gap rises to `0.353270` against the pair
+  fold's `50.2790%` and `0.204224`. The no-regression rule rejects the trade.
+
+### Cost
+
+Measured inside the production coordinator, with the geometry cache already warm
+from Compact:
+
+| Fixture `2000 x 2700` | Strip candidates | Strip runtime | Observer runtime | Observer RSS delta |
+| --- | ---: | ---: | ---: | ---: |
+| Triangle-20 | `2,809` | `91.3 ms` | `97.9 ms` | small |
+| Mixed-61 | `25,788` | `956.9 ms` | `972.6 ms` | `2,359,296 bytes` |
+| Shapes-17 | `6,561` | `480.3 ms` | `493.8 ms` | small |
+
+The terminal observer budget is raised from `500 ms` to `30,000 ms` and its
+sampled RSS ceiling from `64 MiB` to `512 MiB` because the observer now performs
+a real exact construction rather than a fixed-transform accounting pass. The
+strip may use at most `20,000 ms` and `256 MiB`, but only from the outer
+observer's remaining allowance. Both phases share the same clock, RSS sampler,
+and cooperative NFP/IFP checkpoints, and the final composite trace is checked
+against the common `1 MiB` cap. These are runaway guards, not working limits:
+the largest measured case uses about `3.2%` of the observer budget.
+
+This remains an experimental benchmark-side sibling. The production worker and
+UI do not enable the capture callbacks, and the coordinator still returns the
+unchanged Compact result. Promotion here means selection inside the recorded
+Short Side profile only.
+
+An exactness audit found broader pre-existing Number conversions after
+canonical Clipper2 Boolean operations in topology, gap-region, capacity, and
+strict/archive ranking. Those paths require a separate shared BigInt
+shoelace/cross/rational-comparison tranche with near-policy-limit
+one-grid-square regressions. They are not silently treated as solved by this
+Short Side change.
+
+### Rejected Stage 8 variant
+
+One comparator variant was measured and rejected. Ordering candidates by the
+lowest resulting long-axis extent rather than the lowest anchor improved
+Triangle-20 to `927.027 x 75.675 mm` at `95.2378%` density and Shapes-17 to
+`1995.632 x 201.178 mm` at `52.3953%` density, but regressed the targeted
+Mixed-61 case from `207.700 mm` to `221.043 mm` depth and from `415,400 mm2` to
+`442,086 mm2`. Neither variant dominates the other; the anchor rule was kept
+because it wins the case the user rejected. Do not retry the extent rule without
+a rule that also holds the Mixed-61 depth.
+
 ## Evidence
 
+- [`../artifacts/compact-short-side-observer/contact-strip/README.md`](../artifacts/compact-short-side-observer/contact-strip/README.md)
+- [`../artifacts/compact-short-side-observer/contact-strip/VISUAL_REVIEW.md`](../artifacts/compact-short-side-observer/contact-strip/VISUAL_REVIEW.md)
+- [`../artifacts/compact-short-side-observer/rejected-stable-baseline/README.md`](../artifacts/compact-short-side-observer/rejected-stable-baseline/README.md)
+- [`../history/compact-short-side-contact-strip.md`](../history/compact-short-side-contact-strip.md)
 - [`../artifacts/compact-short-side-observer/README.md`](../artifacts/compact-short-side-observer/README.md)
 - [`../artifacts/compact-short-side-observer/matrix/summary.json`](../artifacts/compact-short-side-observer/matrix/summary.json)
 - [`../artifacts/compact-short-side-observer/matrix/shapes-17-2000x2700.short-side-profile.png`](../artifacts/compact-short-side-observer/matrix/shapes-17-2000x2700.short-side-profile.png)

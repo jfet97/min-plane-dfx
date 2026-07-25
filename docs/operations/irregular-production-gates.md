@@ -57,6 +57,19 @@ already fills at least `80%` of the relevant edge, and is reported as
 review are under
 [`../artifacts/compact-short-side-observer/matrix/`](../artifacts/compact-short-side-observer/matrix/).
 
+The terminal short-side observer now also builds one exact contact-driven strip
+and promotes it over the historical pair fold or shelf only when it regresses
+none of short-edge fill, envelope area, depth, collision-envelope density,
+occupied-hull gap, or isolated-piece count. A rejected strip stays in the trace
+with its full measurements. Visual review is a first-class promotion gate: do not
+promote a short-side change because the numeric matrix passes.
+
+The matrix renders every layout with
+`.agents/skills/render-svg-with-electron/scripts/render-svg.cjs` by default,
+which needs a display server. On a headless machine set
+`IRREGULAR_SVG_RENDERER=magick` to use `scripts/render-svg-magick.cjs` instead.
+The manifest records which renderer produced the PNGs.
+
 ## Constrained Capacity Gate
 
 ```sh
