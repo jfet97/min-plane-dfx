@@ -4,9 +4,9 @@
     "width": 300,
     "height": 300
   },
-  "sourceCommit": "7689a869cc65fca63a352e70983aa0dfa95e47a8",
+  "sourceCommit": "0a46c0fae6ffccef087d9dcd2e6d44838c8d6160",
   "runtime": {
-    "elapsedMs": 16051.180417,
+    "elapsedMs": 16686.688792,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -605,7 +605,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 16,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.3329969999995228,
+            "topologyMeasurementMs": 1.3758739999989302,
             "legalCandidateCount": 3193,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -626,7 +626,8 @@
                 "placedDoubledMaterialAreaGrid2": "71400000000",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 296739,
@@ -643,7 +644,9 @@
                     "largestPositiveContactComponentRatio": 0.8235294117647058
                   },
                   "hullGapDoubledAreaGrid2": 22397690887,
-                  "hullDoubledAreaGrid2": 142659602742
+                  "hullDoubledAreaGrid2": 142659602742,
+                  "exactHullGapDoubledAreaGrid2": "22397690887",
+                  "exactHullDoubledAreaGrid2": "142659602742"
                 },
                 "retained": true
               },
@@ -659,7 +662,8 @@
                 "placedDoubledMaterialAreaGrid2": "71400000000",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 296739,
@@ -676,7 +680,9 @@
                     "largestPositiveContactComponentRatio": 0.8235294117647058
                   },
                   "hullGapDoubledAreaGrid2": 22397690887,
-                  "hullDoubledAreaGrid2": 142659602742
+                  "hullDoubledAreaGrid2": 142659602742,
+                  "exactHullGapDoubledAreaGrid2": "22397690887",
+                  "exactHullDoubledAreaGrid2": "142659602742"
                 },
                 "retained": true
               },
@@ -692,7 +698,8 @@
                 "placedDoubledMaterialAreaGrid2": "71400000000",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 296739,
@@ -709,7 +716,9 @@
                     "largestPositiveContactComponentRatio": 0.8235294117647058
                   },
                   "hullGapDoubledAreaGrid2": 22397690887,
-                  "hullDoubledAreaGrid2": 142659602742
+                  "hullDoubledAreaGrid2": 142659602742,
+                  "exactHullGapDoubledAreaGrid2": "22397690887",
+                  "exactHullDoubledAreaGrid2": "142659602742"
                 },
                 "retained": true
               },
@@ -725,7 +734,8 @@
                 "placedDoubledMaterialAreaGrid2": "71400000000",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 296739,
@@ -742,7 +752,9 @@
                     "largestPositiveContactComponentRatio": 0.8235294117647058
                   },
                   "hullGapDoubledAreaGrid2": 22397690887,
-                  "hullDoubledAreaGrid2": 142659602742
+                  "hullDoubledAreaGrid2": 142659602742,
+                  "exactHullGapDoubledAreaGrid2": "22397690887",
+                  "exactHullDoubledAreaGrid2": "142659602742"
                 },
                 "retained": true
               },
@@ -758,7 +770,8 @@
                 "placedDoubledMaterialAreaGrid2": "71400000000",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 297417,
@@ -775,7 +788,9 @@
                     "largestPositiveContactComponentRatio": 0.8235294117647058
                   },
                   "hullGapDoubledAreaGrid2": 21318514469,
-                  "hullDoubledAreaGrid2": 141785570608
+                  "hullDoubledAreaGrid2": 141785570608,
+                  "exactHullGapDoubledAreaGrid2": "21318514469",
+                  "exactHullDoubledAreaGrid2": "141785570608"
                 },
                 "retained": true
               }
@@ -793,15 +808,19 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 137,
           "completedDepths": 6,
-          "elapsedMs": 5.469916000000012,
+          "elapsedMs": 5.883874999999534,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
             "enclosedCavityCount": 0,
             "totalEnclosedCavityAreaMm2": 0,
+            "totalEnclosedCavityDoubledAreaGrid2": "0",
             "envelopeMaximumSideMm": 220.55,
             "envelopeAreaMm2": 41855.31735,
             "envelopeSpanMm": 410.327,
+            "envelopeMaximumSideGrid": 220550,
+            "envelopeAreaGrid2": "41855317350",
+            "envelopeSpanGrid": 410327,
             "canonicalGeometryHash": "852da63851288f87ff8d7d570260e2f2bfc39f620362f13b655aa6a2e5d7301c",
             "origin": "warm-prefix-continuation",
             "prefixDepth": 5,
@@ -817,15 +836,19 @@
           "checkpointRetained": false,
           "consumedPlacementEvaluations": 28314,
           "completedDepths": 20,
-          "elapsedMs": 972.4607090000027,
+          "elapsedMs": 1011.1522499999974,
           "endpoint": {
             "placedCount": 14,
             "placedDoubledMaterialAreaGrid2": "58800000000",
             "enclosedCavityCount": 0,
             "totalEnclosedCavityAreaMm2": 0,
+            "totalEnclosedCavityDoubledAreaGrid2": "0",
             "envelopeMaximumSideMm": 298.351,
             "envelopeAreaMm2": 88946.488577,
             "envelopeSpanMm": 596.4780000000001,
+            "envelopeMaximumSideGrid": 298351,
+            "envelopeAreaGrid2": "88946488577",
+            "envelopeSpanGrid": 596478,
             "canonicalGeometryHash": "1785143d08c2d6223462fa9b1501d7ebcf03be236b5e7c1d6bec563d29e78aa2",
             "origin": "warm-prefix-continuation",
             "prefixDepth": 10,
@@ -841,15 +864,19 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 123,
           "completedDepths": 6,
-          "elapsedMs": 4.693457999999737,
+          "elapsedMs": 4.098332999999911,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
             "enclosedCavityCount": 0,
             "totalEnclosedCavityAreaMm2": 0,
+            "totalEnclosedCavityDoubledAreaGrid2": "0",
             "envelopeMaximumSideMm": 196.1,
             "envelopeAreaMm2": 37387.2494,
             "envelopeSpanMm": 386.754,
+            "envelopeMaximumSideGrid": 196100,
+            "envelopeAreaGrid2": "37387249400",
+            "envelopeSpanGrid": 386754,
             "canonicalGeometryHash": "b1a2836c7e2b2946fee37cdeca716cb9b6a021b0b89e7a3423a71ec2e051db61",
             "origin": "warm-prefix-continuation",
             "prefixDepth": 5,
@@ -865,15 +892,19 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 173,
           "completedDepths": 11,
-          "elapsedMs": 7.17962499999885,
+          "elapsedMs": 7.481707999999344,
           "endpoint": {
             "placedCount": 11,
             "placedDoubledMaterialAreaGrid2": "46200000000",
             "enclosedCavityCount": 0,
             "totalEnclosedCavityAreaMm2": 0,
+            "totalEnclosedCavityDoubledAreaGrid2": "0",
             "envelopeMaximumSideMm": 261.954,
             "envelopeAreaMm2": 64492.81284600001,
             "envelopeSpanMm": 508.153,
+            "envelopeMaximumSideGrid": 261954,
+            "envelopeAreaGrid2": "64492812846",
+            "envelopeSpanGrid": 508153,
             "canonicalGeometryHash": "7739ebd390e7e2616ba7418158c2a6ec83557405fbd2efc3f045407ec2c51cf8",
             "origin": "warm-prefix-continuation",
             "prefixDepth": 10,
@@ -889,15 +920,19 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 137,
           "completedDepths": 6,
-          "elapsedMs": 4.185041000000638,
+          "elapsedMs": 4.150166999999783,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
             "enclosedCavityCount": 0,
             "totalEnclosedCavityAreaMm2": 0,
+            "totalEnclosedCavityDoubledAreaGrid2": "0",
             "envelopeMaximumSideMm": 220.55,
             "envelopeAreaMm2": 41855.31735,
             "envelopeSpanMm": 410.327,
+            "envelopeMaximumSideGrid": 220550,
+            "envelopeAreaGrid2": "41855317350",
+            "envelopeSpanGrid": 410327,
             "canonicalGeometryHash": "852da63851288f87ff8d7d570260e2f2bfc39f620362f13b655aa6a2e5d7301c",
             "origin": "warm-prefix-continuation",
             "prefixDepth": 5,
@@ -913,15 +948,19 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 187,
           "completedDepths": 11,
-          "elapsedMs": 7.379459000001589,
+          "elapsedMs": 6.905500000000757,
           "endpoint": {
             "placedCount": 11,
             "placedDoubledMaterialAreaGrid2": "46200000000",
             "enclosedCavityCount": 0,
             "totalEnclosedCavityAreaMm2": 0,
+            "totalEnclosedCavityDoubledAreaGrid2": "0",
             "envelopeMaximumSideMm": 287.159,
             "envelopeAreaMm2": 76789.475349,
             "envelopeSpanMm": 554.5699999999999,
+            "envelopeMaximumSideGrid": 287159,
+            "envelopeAreaGrid2": "76789475349",
+            "envelopeSpanGrid": 554570,
             "canonicalGeometryHash": "d023e3296e76bdd2212fb9e7a8d3e083dd7276cb6590974b6c69928c1da84944",
             "origin": "warm-prefix-continuation",
             "prefixDepth": 10,
@@ -1181,20 +1220,24 @@
         "placedDoubledMaterialAreaGrid2": "71400000000",
         "enclosedCavityCount": 0,
         "totalEnclosedCavityAreaMm2": 0,
+        "totalEnclosedCavityDoubledAreaGrid2": "0",
         "envelopeMaximumSideMm": 296.739,
         "envelopeAreaMm2": 78811.50448799999,
         "envelopeSpanMm": 562.3309999999999,
+        "envelopeMaximumSideGrid": 296739,
+        "envelopeAreaGrid2": "78811504488",
+        "envelopeSpanGrid": 562331,
         "canonicalGeometryHash": "0f5befd7d02fc111be47ee447fab7f8778f06ae05d045448f22a916d66949410",
         "origin": "cold-search",
         "unplacedCount": 3,
         "placedMaterialAreaMm2": 35700,
         "selectedRotationDeg": 0
       },
-      "preflightRuntimeMs": 8.345708000000002,
-      "completeArchiveRuntimeMs": 14587.809875,
-      "prefixTerminalizationMs": 13.242874999999913,
-      "coldSearchMs": 1277.4764169999999,
-      "runtimeMs": 1291.2692079999997
+      "preflightRuntimeMs": 6.648125000000022,
+      "completeArchiveRuntimeMs": 15170.675292,
+      "prefixTerminalizationMs": 11.111249999999927,
+      "coldSearchMs": 1324.8511670000007,
+      "runtimeMs": 1336.4193329999998
     },
     "intrinsicAnytimeSchedulerTrace": {
       "version": "intrinsic-anytime-scheduler-v1",
@@ -1526,7 +1569,7 @@
       "geometricParetoEligibleEndpointCount": 0,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 25.532375000000684,
+      "runtimeMs": 26.750749999999243,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 33709,
       "endpoints": [

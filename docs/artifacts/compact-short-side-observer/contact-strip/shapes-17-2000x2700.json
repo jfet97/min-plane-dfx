@@ -4,9 +4,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "7689a869cc65fca63a352e70983aa0dfa95e47a8",
+  "sourceCommit": "0a46c0fae6ffccef087d9dcd2e6d44838c8d6160",
   "runtime": {
-    "elapsedMs": 13560.030916000002,
+    "elapsedMs": 13607.9315,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -1538,7 +1538,7 @@
       "selectedCanonicalGeometryHash": "1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d",
       "consumedCandidateEvaluations": 8035,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 1756.9828749999997,
+      "runtimeMs": 1808.242583000001,
       "outputInfluence": "selected"
     },
     "intrinsicShortSideObserverTrace": {
@@ -1562,7 +1562,7 @@
       "geometricParetoEligibleEndpointCount": 1,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 31.193375000000742,
+      "runtimeMs": 33.587249999998676,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 10042,
       "endpoints": [
@@ -1993,8 +1993,8 @@
       },
       "interlocking": {
         "largestOccupiedHullGapRatio": 0.20422385726235945,
-        "largestOccupiedHullGapDoubledAreaGrid2": 143297603572,
-        "occupiedHullDoubledAreaGrid2": 701669263782,
+        "largestOccupiedHullGapDoubledAreaGrid2": "143297603572",
+        "occupiedHullDoubledAreaGrid2": "701669263782",
         "isolatedPieceCount": 5,
         "positiveContactComponentCount": 9,
         "largestPositiveContactComponentSize": 5,
@@ -2010,8 +2010,8 @@
         "candidateEvaluations": 6561,
         "placedCount": 17,
         "requestedCount": 17,
-        "runtimeMs": 428.8010830000003,
-        "peakRssDeltaBytes": 5390336
+        "runtimeMs": 413.2509579999987,
+        "peakRssDeltaBytes": 2801664
       },
       "contactStripPromotion": {
         "incumbentConstructionKind": "pair-fold",
@@ -2039,8 +2039,8 @@
           },
           "interlocking": {
             "largestOccupiedHullGapRatio": 0.35326965600045357,
-            "largestOccupiedHullGapDoubledAreaGrid2": 231586650220,
-            "occupiedHullDoubledAreaGrid2": 655552058566,
+            "largestOccupiedHullGapDoubledAreaGrid2": "231586650220",
+            "occupiedHullDoubledAreaGrid2": "655552058566",
             "isolatedPieceCount": 11,
             "positiveContactComponentCount": 13,
             "largestPositiveContactComponentSize": 3,
@@ -2061,9 +2061,9 @@
         "strictlyImproved": true,
         "promoted": false
       },
-      "runtimeMs": 439.87824999999975,
-      "peakRssDeltaBytes": 5423104,
-      "serializedTraceBytes": 3572
+      "runtimeMs": 424.8412499999995,
+      "peakRssDeltaBytes": 2801664,
+      "serializedTraceBytes": 3579
     }
   },
   "checks": {

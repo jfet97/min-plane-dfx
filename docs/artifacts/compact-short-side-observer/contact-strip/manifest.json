@@ -1,7 +1,7 @@
 {
   "version": "compact-short-side-observer-provenance-v1",
-  "generatedAt": "2026-07-25T12:37:25.564Z",
-  "sourceCommit": "7689a869cc65fca63a352e70983aa0dfa95e47a8",
+  "generatedAt": "2026-07-25T13:29:44.523Z",
+  "sourceCommit": "0a46c0fae6ffccef087d9dcd2e6d44838c8d6160",
   "command": [
     "pnpm",
     "gate:compact-nine-baselines",
@@ -22,7 +22,7 @@
   "artifacts": [
     {
       "name": "mixed-61-2000x2700.json",
-      "sha256": "cf7028fe6da5303f9656b4276b60e9756b544524bf9c0374ff90ac65990953ac"
+      "sha256": "2fa8b750fc0ed76b766d124e73b01b34ba55e17cf00153581e14a3be9347f7f8"
     },
     {
       "name": "mixed-61-2000x2700.png",
@@ -46,7 +46,7 @@
     },
     {
       "name": "mixed-61-300x300.json",
-      "sha256": "695090952a35e33aa1b8127567f4a521fe762834a74171cf9936456cf28a04c0"
+      "sha256": "8558521ace2c12029289fbcdf8be6e09143cc5f9943b69a801436d56c0a91861"
     },
     {
       "name": "mixed-61-300x300.png",
@@ -70,7 +70,7 @@
     },
     {
       "name": "mixed-61-600x400.json",
-      "sha256": "87de14f1decc48fb8a690e488c76b238662fd66bd2a4f1be5400cf18952795a2"
+      "sha256": "fd33b1712e342481bc2ab0eaa46aa4298a6dafac6dad4a07602c4dda4c1530f6"
     },
     {
       "name": "mixed-61-600x400.png",
@@ -94,7 +94,7 @@
     },
     {
       "name": "shapes-17-2000x2700.json",
-      "sha256": "e9e589c2ec53676ebbb989dfb1c9192c05ad44154ec49a9356d568560cb59511"
+      "sha256": "360379354d18b047cdd7eb5905ef6a3fae26a6aad4acaf95e22fa4ae77673540"
     },
     {
       "name": "shapes-17-2000x2700.png",
@@ -118,7 +118,7 @@
     },
     {
       "name": "shapes-17-300x300.json",
-      "sha256": "31551da8345f51c5010f215316bfb61af7fafc835f52731debf719e402597864"
+      "sha256": "dc6e2f2179dcd5208ffe92902910d89bdb5a4abc6b5bb826cc02a0d2b9007fc6"
     },
     {
       "name": "shapes-17-300x300.png",
@@ -142,7 +142,7 @@
     },
     {
       "name": "shapes-17-600x400.json",
-      "sha256": "342622b6b2c25d25a855172a06f59918b90a683afa4f7a5a8dc3a61c04e9ba6e"
+      "sha256": "4febb85222e08dbadc1d216414f2978ceb1c11094950aee2da8d346029d7ae8e"
     },
     {
       "name": "shapes-17-600x400.png",
@@ -166,11 +166,11 @@
     },
     {
       "name": "summary.json",
-      "sha256": "20b928ee0085e642338f526e1d8d83f969e1c734ee3992b615218b3994a895c9"
+      "sha256": "1aa7a62841f92e9941a019db62a6b685be6ac73a020cdd6a1f1074aec87e09c7"
     },
     {
       "name": "triangle-20-2000x2700.json",
-      "sha256": "4b4dd9da943872c86fe8c1ca0f9b87cc7183e2546cfc398428866b5e831939ca"
+      "sha256": "b076f501cededd4b5804599137e75aea566b40b2a64b1da6ac03f44390dca178"
     },
     {
       "name": "triangle-20-2000x2700.png",
@@ -194,7 +194,7 @@
     },
     {
       "name": "triangle-20-300x300.json",
-      "sha256": "d706cf590471894ad05f9153d9b6c81894aea804dc992a5af50552023fa02000"
+      "sha256": "88cbe82e97920b08225b4203d50335eb06fd1a0506683b9d261cd3b6e57b6158"
     },
     {
       "name": "triangle-20-300x300.png",
@@ -218,7 +218,7 @@
     },
     {
       "name": "triangle-20-600x400.json",
-      "sha256": "a39a445c4f08b56e12bb4d0bcbdaa5ec9795d68ba65e65f019859c2a0d34e8fd"
+      "sha256": "4e55fc8b8f56b5cf0f387efb9418cb91fcf2d5076ed42568e995e57f4294f4b5"
     },
     {
       "name": "triangle-20-600x400.png",

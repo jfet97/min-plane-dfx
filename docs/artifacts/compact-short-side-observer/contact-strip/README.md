@@ -1,9 +1,11 @@
 # Accepted Contact-Strip Short-Side Matrix
 
-This is the current 18-layout promotion gate: nine production Compact controls
-and nine short-side-profile outputs, each with JSON, SVG, and PNG evidence, a
+This is the current-source 18-layout production gate: nine Compact controls and
+nine Short Side profile outputs, each with JSON, SVG, and PNG evidence, a
 provenance manifest, verified `SHA256SUMS`, and an individual visual review in
-[`VISUAL_REVIEW.md`](./VISUAL_REVIEW.md).
+[`VISUAL_REVIEW.md`](./VISUAL_REVIEW.md). The profile is now schema-backed and
+selectable through the production UI; both profiles still execute through one
+sequential algorithm worker.
 
 ## The targeted case
 
@@ -39,15 +41,18 @@ which is what the rejected screenshot was missing.
 
 Every production Compact canonical collision hash, fitted hash, placed/unplaced
 partition, area ceiling, and cavity gate is byte-identical to
-[`../matrix/`](../matrix/). Eight of the nine short-side layouts are also
-identical. The observer has no production output influence.
+[`../matrix/`](../matrix/). Eight of the nine Short Side layouts are also
+identical. In the Short Side profile, the guarded observer and terminal
+construction lanes may select the returned legal layout; ordinary Compact
+remains the default profile and retains its exact established output.
 
 ## Reproduction
 
-The recorded final-source run of `pnpm gate:compact-nine-baselines` reproduced
-the established canonical collision and fitted hashes for all 18 layouts.
-Earlier development runs produced the same geometry; their trace bookkeeping is
-not part of this archive.
+The recorded final-source run at source commit `0a46c0f` used
+`pnpm gate:compact-nine-baselines` and reproduced the established canonical
+collision and fitted hashes for all 18 layouts. Earlier development runs
+produced the same geometry; their trace bookkeeping is not part of this
+archive.
 
 The recorded run executed the nine algorithm cases strictly sequentially with
 at most one algorithm process active. `manifest.json` identifies its exact
