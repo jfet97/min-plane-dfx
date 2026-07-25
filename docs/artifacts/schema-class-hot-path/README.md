@@ -115,6 +115,35 @@ and point set on each quarter turn.
 `402 ns` to `225 ns` against `4 ns` for a plain class. The cost is the schema
 construction machinery, not only the checks.
 
+## Paired committed result
+
+The optimized report is generated from committed implementation
+`701992da9a6930e15a3012b819ba711b054464f9`; the paired baseline is generated
+from `ae7540979bec202b231f1bb642a683f6fd568ee0`. Both use the same command on
+the same host without another measured workload running:
+
+```text
+node              v24.16.0
+os                macOS 26.5.2, arm64
+cpu               Apple M4 Max
+```
+
+| Committed stage | Wall time | Relative speed |
+| --- | ---: | ---: |
+| baseline `ae75409` | 78,695 ms | 1.000 |
+| plain internal classes `701992d` | 48,827 ms | **1.612x** |
+
+Both reports retain:
+
+- collision identity
+  `3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742`;
+- fitted canonical identity
+  `ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b`;
+- `61 / 0` placed/unplaced accounting and identical bounds;
+- five settled endpoints, 12,000 focused candidate evaluations, and 25,788
+  contact-strip candidate evaluations;
+- every production, trace, scheduler, observer, and directional check.
+
 ## Rejected in passing
 
 Memoizing `canonicalPolygonDigest` and `polygonDigest` by point-array identity
@@ -130,3 +159,7 @@ another argument for attacking reconstruction directly.
 - `mixed-61-2000x2700.baseline.cpuprofile.gz` — raw V8 CPU profile at `ae75409`
 - `mixed-61-2000x2700.baseline-profiled.json` — report from the profiled run
 - `mixed-61-2000x2700.baseline-unprofiled.json` — report from the unprofiled control
+- `mixed-61-2000x2700.baseline-local-macos.json` — paired local baseline at
+  `ae75409`
+- `mixed-61-2000x2700.plain-classes-local-macos.json` — paired optimized report
+  at `701992d`

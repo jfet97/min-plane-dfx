@@ -46,13 +46,13 @@ classes.
 
 They must stay plain. `Schema.Class` construction revalidates the entire nested
 value on every instantiation, including nested values that are already validated
-instances passed by reference. Constructing one `IrregularPlacedPiece` around a
-reused geometry cost `37-250 us` depending on ring size, growing linearly with
-vertex count, against `5 ns` for the equivalent plain object. The search
+instances passed by reference. Constructing one `IrregularPlacedPiece` around
+a reused geometry cost `37-250 us` depending on ring size, growing linearly
+with vertex count, against `5 ns` for the equivalent plain object. The search
 instantiates these per placement and per quarter turn, so the whole nested ring
-was being rewalked continuously. Converting these three types cut the Mixed-61
-`2000 x 2700` production case from `94.4 s` to `61.4 s` with every canonical
-hash, count, and work ledger unchanged.
+was being rewalked continuously. A paired macOS run at committed source states
+cut the Mixed-61 `2000 x 2700` production case from `78.7 s` to `48.8 s` with
+every canonical hash, count, and work ledger unchanged.
 
 A type belongs in this category only when its class is never used as an encoded
 schema or trusted as boundary validation. Verify that before adding one. The
