@@ -17,10 +17,7 @@ import {
   assertCanonicalGridLegalLayout,
   canonicalCollisionLayoutIdentity
 } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
-import {
-  GeometryKernel,
-  GeometrySettings
-} from '../../src/workers/irregular/geometryKernel.js'
+import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -44,14 +41,10 @@ function sourcePiece(id: string): ImportedPiece {
 function preparedRectangle(
   id: string,
   width: number,
-  height: number
+  height: number,
+  rotations: ReadonlyArray<number> = [0]
 ): IrregularPreparedPiece {
-  const points = [
-    point(0, 0),
-    point(width, 0),
-    point(width, height),
-    point(0, height)
-  ]
+  const points = [point(0, 0), point(width, 0), point(width, height), point(0, height)]
   const polygon = new IrregularPolygon({ points })
   return new IrregularPreparedPiece({
     pieceId: PieceId.make(id),
@@ -71,14 +64,15 @@ function preparedRectangle(
       placementReference: point(0, 0),
       diagnostics: []
     }),
-    transforms: [
-      new IrregularTransformCandidate({
-        index: 0,
-        rotationDeg: 0,
-        mirrored: false,
-        reason: 'configured'
-      })
-    ]
+    transforms: rotations.map(
+      (rotationDeg, index) =>
+        new IrregularTransformCandidate({
+          index,
+          rotationDeg,
+          mirrored: false,
+          reason: 'configured'
+        })
+    )
   })
 }
 
@@ -109,12 +103,9 @@ function observe(input: {
           label: 'portrait'
         }),
       preparedPieces: input.pieces,
-      productionShortAxisSpanMm:
-        input.productionShortAxisSpanMm ?? 40,
-      productionMaximumSideMm:
-        input.productionMaximumSideMm ?? 100,
-      productionEnvelopeAreaMm2:
-        input.productionEnvelopeAreaMm2 ?? 1_600,
+      productionShortAxisSpanMm: input.productionShortAxisSpanMm ?? 40,
+      productionMaximumSideMm: input.productionMaximumSideMm ?? 100,
+      productionEnvelopeAreaMm2: input.productionEnvelopeAreaMm2 ?? 1_600,
       runtimeControl: {
         ...(input.maximumRuntimeMs === undefined
           ? {}
@@ -122,21 +113,15 @@ function observe(input: {
         ...(input.maximumRssDeltaBytes === undefined
           ? {}
           : {
-              maximumRssDeltaBytes:
-                input.maximumRssDeltaBytes
+              maximumRssDeltaBytes: input.maximumRssDeltaBytes
             }),
         ...(input.maximumTraceBytes === undefined
           ? {}
           : { maximumTraceBytes: input.maximumTraceBytes }),
         ...(input.now === undefined ? {} : { now: input.now }),
-        ...(input.currentRssBytes === undefined
-          ? {}
-          : { currentRssBytes: input.currentRssBytes })
+        ...(input.currentRssBytes === undefined ? {} : { currentRssBytes: input.currentRssBytes })
       }
-    }).pipe(
-      Effect.provide(GeometryKernel.Live),
-      Effect.provide(GeometrySettings.Live)
-    )
+    }).pipe(Effect.provide(GeometryKernel.Live), Effect.provide(GeometrySettings.Live))
   )
 }
 
@@ -160,6 +145,8 @@ describe('intrinsic short-side pair-fold observer', () => {
 
     expect(portrait.trace).toMatchObject({
       status: 'accepted',
+      constructionKind: 'pair-fold',
+      rowCount: 1,
       transformEvaluations: 3,
       expectedPairCount: 3,
       evaluatedPairCount: 3,
@@ -187,14 +174,8 @@ describe('intrinsic short-side pair-fold observer', () => {
     ).toBe(true)
     expect(landscape.trace.status).toBe('accepted')
     expect(landscape.trace.prescribedRotationDeg).toBe(90)
-    expect(
-      canonicalCollisionLayoutIdentity(
-        landscape.placedCollisionGeometries ?? []
-      )
-    ).toBe(
-      canonicalCollisionLayoutIdentity(
-        portrait.placedCollisionGeometries ?? []
-      )
+    expect(canonicalCollisionLayoutIdentity(landscape.placedCollisionGeometries ?? [])).toBe(
+      canonicalCollisionLayoutIdentity(portrait.placedCollisionGeometries ?? [])
     )
   })
 
@@ -234,7 +215,9 @@ describe('intrinsic short-side pair-fold observer', () => {
     })
     expect(rejected.placedCollisionGeometries).toBeUndefined()
     expect(noFit.trace).toMatchObject({
-      status: 'no-fitting-pair',
+      status: 'rejected-admission',
+      constructionKind: 'multi-row-shelf',
+      rowCount: 3,
       expectedPairCount: 3,
       evaluatedPairCount: 3,
       selectedBottomPieceId: undefined,
@@ -251,6 +234,36 @@ describe('intrinsic short-side pair-fold observer', () => {
       expectedPairCount: 0,
       evaluatedPairCount: 0
     })
+  })
+
+  it('falls through to one deterministic multi-row shelf', async () => {
+    const outcome = await observe({
+      pieces: [
+        preparedRectangle('shelf-1', 20, 40, [0, 90]),
+        preparedRectangle('shelf-2', 20, 40, [0, 90]),
+        preparedRectangle('shelf-3', 20, 40, [0, 90])
+      ]
+    })
+
+    expect(outcome.trace).toMatchObject({
+      status: 'accepted',
+      constructionKind: 'multi-row-shelf',
+      rowCount: 2,
+      transformEvaluations: 6,
+      expectedPairCount: 3,
+      evaluatedPairCount: 3,
+      selectedBottomPieceId: undefined,
+      selectedUpperPieceId: undefined,
+      placedCount: 3,
+      usedShortAxisSpanMm: 80,
+      usedLongAxisDepthMm: 40,
+      admission: {
+        exactLegal: true,
+        allPiecesPlaced: true,
+        accepted: true
+      }
+    })
+    expect(outcome.placedCollisionGeometries).toHaveLength(3)
   })
 
   it('censors after completed transform work with exact counters', async () => {

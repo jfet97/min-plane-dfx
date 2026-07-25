@@ -15,20 +15,15 @@ import {
   measureCanonicalLayoutTopology,
   placedCollisionWorldGridPath
 } from '../../irregular/canonicalLayoutGeometry.js'
-import {
-  fromGrid,
-  toGridMm
-} from '../../irregular/clipper2OffsetPolicy.js'
+import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { GeometryKernel } from '../../irregular/geometryKernel.js'
 import { IrregularBeamState } from './irregularBeamState.js'
 
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION =
-  'intrinsic-short-side-pair-fold-observer-v1' as const
+  'intrinsic-short-side-terminal-observer-v2' as const
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS = 500 as const
-export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RSS_DELTA_BYTES =
-  64 * 1_048_576
-export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES =
-  1_048_576 as const
+export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RSS_DELTA_BYTES = 64 * 1_048_576
+export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES = 1_048_576 as const
 
 export interface IntrinsicShortSidePairFoldRuntimeControl {
   readonly maximumRuntimeMs?: number
@@ -78,6 +73,8 @@ export interface IntrinsicShortSidePairFoldTrace {
   readonly transformEvaluations: number
   readonly expectedPairCount: number
   readonly evaluatedPairCount: number
+  readonly constructionKind: 'pair-fold' | 'multi-row-shelf' | undefined
+  readonly rowCount: number
   readonly selectedBottomPieceId: string | undefined
   readonly selectedUpperPieceId: string | undefined
   readonly placedCount: number
@@ -94,9 +91,7 @@ export interface IntrinsicShortSidePairFoldTrace {
 
 export interface IntrinsicShortSidePairFoldOutcome {
   readonly trace: IntrinsicShortSidePairFoldTrace
-  readonly placedCollisionGeometries:
-    | ReadonlyArray<IrregularPlacedPiece>
-    | undefined
+  readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece> | undefined
 }
 
 interface ObserverRuntime {
@@ -131,7 +126,12 @@ interface SelectedPair {
   readonly envelopeAreaGrid2: bigint
 }
 
-/** Exhaustively evaluates one bounded exact pair fold without NFP or beam search. */
+interface ShelfLayout {
+  readonly placed: ReadonlyArray<IrregularPlacedPiece>
+  readonly rowCount: number
+}
+
+/** Evaluates bounded exact terminal layouts without NFP or beam search. */
 export function observeIntrinsicShortSidePairFold(input: {
   readonly sheet: SheetSpec
   readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
@@ -140,11 +140,8 @@ export function observeIntrinsicShortSidePairFold(input: {
   readonly productionEnvelopeAreaMm2: number
   readonly runtimeControl?: IntrinsicShortSidePairFoldRuntimeControl
 }): Effect.Effect<IntrinsicShortSidePairFoldOutcome, never, GeometryKernel> {
-  const now =
-    input.runtimeControl?.now ?? (() => performance.now())
-  const currentRssBytes =
-    input.runtimeControl?.currentRssBytes ??
-    (() => process.memoryUsage.rss())
+  const now = input.runtimeControl?.now ?? (() => performance.now())
+  const currentRssBytes = input.runtimeControl?.currentRssBytes ?? (() => process.memoryUsage.rss())
   const startingRssBytes = currentRssBytes()
   const runtime: ObserverRuntime = {
     startedAt: now(),
@@ -154,14 +151,12 @@ export function observeIntrinsicShortSidePairFold(input: {
     expectedPairCount: 0,
     evaluatedPairCount: 0,
     maximumRuntimeMs:
-      input.runtimeControl?.maximumRuntimeMs ??
-      INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS,
+      input.runtimeControl?.maximumRuntimeMs ?? INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS,
     maximumRssDeltaBytes:
       input.runtimeControl?.maximumRssDeltaBytes ??
       INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RSS_DELTA_BYTES,
     maximumTraceBytes:
-      input.runtimeControl?.maximumTraceBytes ??
-      INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES,
+      input.runtimeControl?.maximumTraceBytes ?? INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES,
     now,
     currentRssBytes
   }
@@ -209,10 +204,7 @@ function constructPairFold(
   runtime: ObserverRuntime
 ) {
   return Effect.gen(function* () {
-    const requestedShortAxisMm = Math.min(
-      input.sheet.width,
-      input.sheet.height
-    )
+    const requestedShortAxisMm = Math.min(input.sheet.width, input.sheet.height)
     if (input.sheet.width === input.sheet.height) {
       return failedOutcome(
         input,
@@ -223,13 +215,8 @@ function constructPairFold(
     }
     const geometryKernel = yield* GeometryKernel
     const requestedShortAxisGrid = toGridMm(requestedShortAxisMm)
-    const requestedLongAxisGrid = toGridMm(
-      Math.max(input.sheet.width, input.sheet.height)
-    )
-    if (
-      requestedShortAxisGrid === undefined ||
-      requestedLongAxisGrid === undefined
-    ) {
+    const requestedLongAxisGrid = toGridMm(Math.max(input.sheet.width, input.sheet.height))
+    if (requestedShortAxisGrid === undefined || requestedLongAxisGrid === undefined) {
       return failedOutcome(
         input,
         runtime,
@@ -239,8 +226,10 @@ function constructPairFold(
     }
 
     const selectedTransforms: SelectedTransform[] = []
+    const shelfTransforms: SelectedTransform[] = []
     for (const piece of input.preparedPieces) {
       let selected: SelectedTransform | undefined
+      let shelfSelected: SelectedTransform | undefined
       for (const transform of piece.transforms) {
         runtime.transformEvaluations += 1
         const geometry = yield* geometryKernel.transformCollisionGeometry({
@@ -277,20 +266,17 @@ function constructPairFold(
           minXGrid,
           minYGrid
         }
-        if (
-          candidate.widthGrid <= 0 ||
-          candidate.heightGrid <= 0
-        ) {
+        if (candidate.widthGrid <= 0 || candidate.heightGrid <= 0) {
           continue
         }
-        if (
-          selected === undefined ||
-          compareSelectedTransforms(candidate, selected) < 0
-        ) {
+        if (selected === undefined || compareSelectedTransforms(candidate, selected) < 0) {
           selected = candidate
         }
+        if (shelfSelected === undefined || compareShelfTransforms(candidate, shelfSelected) < 0) {
+          shelfSelected = candidate
+        }
       }
-      if (selected === undefined) {
+      if (selected === undefined || shelfSelected === undefined) {
         return failedOutcome(
           input,
           runtime,
@@ -301,10 +287,10 @@ function constructPairFold(
         )
       }
       selectedTransforms.push(selected)
+      shelfTransforms.push(shelfSelected)
     }
 
-    runtime.expectedPairCount =
-      (selectedTransforms.length * (selectedTransforms.length - 1)) / 2
+    runtime.expectedPairCount = (selectedTransforms.length * (selectedTransforms.length - 1)) / 2
     if (runtime.expectedPairCount === 0) {
       return failedOutcome(
         input,
@@ -317,16 +303,9 @@ function constructPairFold(
         0
       )
     }
-    const totalWidthGrid = selectedTransforms.reduce(
-      (sum, selected) => sum + selected.widthGrid,
-      0
-    )
+    const totalWidthGrid = selectedTransforms.reduce((sum, selected) => sum + selected.widthGrid, 0)
     let selectedPair: SelectedPair | undefined
-    for (
-      let bottomIndex = 0;
-      bottomIndex < selectedTransforms.length - 1;
-      bottomIndex += 1
-    ) {
+    for (let bottomIndex = 0; bottomIndex < selectedTransforms.length - 1; bottomIndex += 1) {
       const bottom = selectedTransforms[bottomIndex]
       if (bottom === undefined) continue
       for (
@@ -361,10 +340,7 @@ function constructPairFold(
               : Math.max(maximum, selected.heightGrid),
           0
         )
-        const depthGrid = Math.max(
-          bottom.heightGrid + upper.heightGrid,
-          otherMaximumHeightGrid
-        )
+        const depthGrid = Math.max(bottom.heightGrid + upper.heightGrid, otherMaximumHeightGrid)
         runtime.evaluatedPairCount += 1
         const boundedAfterPair = boundedStatus(runtime)
         if (boundedAfterPair !== undefined) {
@@ -379,10 +355,7 @@ function constructPairFold(
             runtime.evaluatedPairCount
           )
         }
-        if (
-          widthGrid > requestedShortAxisGrid ||
-          depthGrid > requestedLongAxisGrid
-        ) {
+        if (widthGrid > requestedShortAxisGrid || depthGrid > requestedLongAxisGrid) {
           continue
         }
         const candidate: SelectedPair = {
@@ -394,192 +367,86 @@ function constructPairFold(
         }
         if (
           selectedPair === undefined ||
-          compareSelectedPairs(
-            candidate,
-            selectedPair,
-            selectedTransforms
-          ) < 0
+          compareSelectedPairs(candidate, selectedPair, selectedTransforms) < 0
         ) {
           selectedPair = candidate
         }
       }
     }
-    if (selectedPair === undefined) {
+    if (selectedPair !== undefined) {
+      const pairPlaced = constructPairLayout(
+        selectedTransforms,
+        selectedPair,
+        requestedShortAxisGrid
+      )
+      if (pairPlaced === undefined) {
+        return failedOutcome(
+          input,
+          runtime,
+          'failed-protected-fallback',
+          'selected pair accounting exceeded the requested short axis.'
+        )
+      }
+      const pairOutcome = finalizePlacedLayout({
+        input,
+        runtime,
+        placed: pairPlaced,
+        constructionKind: 'pair-fold',
+        rowCount: 1,
+        selectedBottomPieceId: selectedTransforms[selectedPair.bottomIndex]?.pieceId,
+        selectedUpperPieceId: selectedTransforms[selectedPair.upperIndex]?.pieceId
+      })
+      if (pairOutcome.trace.status === 'accepted') {
+        return pairOutcome
+      }
+    }
+
+    const shelf = constructNextFitShelf(
+      shelfTransforms,
+      requestedShortAxisGrid,
+      requestedLongAxisGrid
+    )
+    if (shelf === undefined) {
       return failedOutcome(
         input,
         runtime,
         'no-fitting-pair',
-        'no single fixed-transform pair fold fits both requested sheet axes.',
+        'neither the fixed-transform pair fold nor the deterministic multi-row shelf fits both requested sheet axes.',
         runtime.transformEvaluations,
         0,
         runtime.expectedPairCount,
         runtime.evaluatedPairCount
       )
     }
-
-    let cursorGrid = 0
-    const placed: IrregularPlacedPiece[] = []
-    for (
-      let index = 0;
-      index < selectedTransforms.length;
-      index += 1
-    ) {
-      if (index === selectedPair.upperIndex) continue
-      const selected = selectedTransforms[index]
-      if (selected === undefined) continue
-      if (index === selectedPair.bottomIndex) {
-        const upper = selectedTransforms[selectedPair.upperIndex]
-        if (upper === undefined) {
-          return failedOutcome(
-            input,
-            runtime,
-            'failed-protected-fallback',
-            'the selected upper pair member was unavailable.',
-            runtime.transformEvaluations,
-            placed.length,
-            runtime.expectedPairCount,
-            runtime.evaluatedPairCount
-          )
-        }
-        placed.push(createPlacedPiece(selected, cursorGrid, 0))
-        placed.push(
-          createPlacedPiece(
-            upper,
-            cursorGrid,
-            selected.heightGrid
-          )
-        )
-        cursorGrid += Math.max(
-          selected.widthGrid,
-          upper.widthGrid
-        )
-        continue
-      }
-      if (cursorGrid + selected.widthGrid > requestedShortAxisGrid) {
-        return failedOutcome(
-          input,
-          runtime,
-          'failed-protected-fallback',
-          'selected pair accounting exceeded the requested short axis.',
-          runtime.transformEvaluations,
-          placed.length,
-          runtime.expectedPairCount,
-          runtime.evaluatedPairCount
-        )
-      }
-      placed.push(createPlacedPiece(selected, cursorGrid, 0))
-      cursorGrid += selected.widthGrid
-    }
-
-    const beforeFinalization = boundedStatus(runtime)
-    if (beforeFinalization !== undefined) {
-      return failedOutcome(
-        input,
-        runtime,
-        beforeFinalization,
-        `${beforeFinalization} reached before exact finalization.`,
-        runtime.transformEvaluations,
-        placed.length,
-        runtime.expectedPairCount,
-        runtime.evaluatedPairCount,
-        selectedTransforms[selectedPair.bottomIndex]?.pieceId,
-        selectedTransforms[selectedPair.upperIndex]?.pieceId
-      )
-    }
-    const normalizedState = new IrregularBeamState({
-      remainingPreparedPieces: [],
-      placedCollisionGeometries: placed,
-      placementOrder: input.preparedPieces.map(
-        (piece) => piece.pieceId ?? piece.source.id
-      )
-    })
-    const prescribedRotationDeg =
-      input.sheet.width < input.sheet.height ? 0 : 90
-    const physicalState =
-      normalizedState.withQuarterTurnBottomLeft(
-        prescribedRotationDeg
-      )
-    if (
-      physicalState === undefined ||
-      !assertCanonicalGridLegalLayout(
-        input.sheet,
-        physicalState.placedCollisionGeometries
-      )
-    ) {
-      return failedOutcome(
-        input,
-        runtime,
-        'failed-protected-fallback',
-        'the prescribed physical pair-fold orientation failed exact legality.',
-        runtime.transformEvaluations,
-        placed.length,
-        runtime.expectedPairCount,
-        runtime.evaluatedPairCount,
-        selectedTransforms[selectedPair.bottomIndex]?.pieceId,
-        selectedTransforms[selectedPair.upperIndex]?.pieceId
-      )
-    }
-    const outcome = finalizeOutcome({
+    return finalizePlacedLayout({
       input,
       runtime,
-      state: physicalState,
-      prescribedRotationDeg,
-      transformEvaluations: runtime.transformEvaluations,
-      expectedPairCount: runtime.expectedPairCount,
-      evaluatedPairCount: runtime.evaluatedPairCount,
-      selectedBottomPieceId:
-        selectedTransforms[selectedPair.bottomIndex]?.pieceId,
-      selectedUpperPieceId:
-        selectedTransforms[selectedPair.upperIndex]?.pieceId
+      placed: shelf.placed,
+      constructionKind: 'multi-row-shelf',
+      rowCount: shelf.rowCount,
+      selectedBottomPieceId: undefined,
+      selectedUpperPieceId: undefined
     })
-    const boundedAfterFinalization = boundedStatus(runtime)
-    if (boundedAfterFinalization !== undefined) {
-      return failedOutcome(
-        input,
-        runtime,
-        boundedAfterFinalization,
-        `${boundedAfterFinalization} reached after exact finalization.`,
-        runtime.transformEvaluations,
-        placed.length,
-        runtime.expectedPairCount,
-        runtime.evaluatedPairCount,
-        selectedTransforms[selectedPair.bottomIndex]?.pieceId,
-        selectedTransforms[selectedPair.upperIndex]?.pieceId
-      )
-    }
-    if (
-      outcome.trace.serializedTraceBytes >
-      runtime.maximumTraceBytes
-    ) {
-      return failedOutcome(
-        input,
-        runtime,
-        'trace-cap',
-        'stabilized pair-fold trace exceeds its byte cap.',
-        runtime.transformEvaluations,
-        placed.length,
-        runtime.expectedPairCount,
-        runtime.evaluatedPairCount,
-        selectedTransforms[selectedPair.bottomIndex]?.pieceId,
-        selectedTransforms[selectedPair.upperIndex]?.pieceId
-      )
-    }
-    return outcome
   })
 }
 
-function compareSelectedTransforms(
-  first: SelectedTransform,
-  second: SelectedTransform
-): number {
+function compareSelectedTransforms(first: SelectedTransform, second: SelectedTransform): number {
   return (
     first.widthGrid - second.widthGrid ||
     first.heightGrid - second.heightGrid ||
     first.geometry.transform.index - second.geometry.transform.index ||
-    first.geometry.transform.rotationDeg -
-      second.geometry.transform.rotationDeg ||
-    Number(first.geometry.transform.mirrored) -
-      Number(second.geometry.transform.mirrored)
+    first.geometry.transform.rotationDeg - second.geometry.transform.rotationDeg ||
+    Number(first.geometry.transform.mirrored) - Number(second.geometry.transform.mirrored)
+  )
+}
+
+function compareShelfTransforms(first: SelectedTransform, second: SelectedTransform): number {
+  return (
+    first.heightGrid - second.heightGrid ||
+    second.widthGrid - first.widthGrid ||
+    first.geometry.transform.index - second.geometry.transform.index ||
+    first.geometry.transform.rotationDeg - second.geometry.transform.rotationDeg ||
+    Number(first.geometry.transform.mirrored) - Number(second.geometry.transform.mirrored)
   )
 }
 
@@ -602,6 +469,67 @@ function compareSelectedPairs(
   )
 }
 
+function constructPairLayout(
+  selectedTransforms: ReadonlyArray<SelectedTransform>,
+  selectedPair: SelectedPair,
+  requestedShortAxisGrid: number
+): ReadonlyArray<IrregularPlacedPiece> | undefined {
+  let cursorGrid = 0
+  const placed: IrregularPlacedPiece[] = []
+  for (let index = 0; index < selectedTransforms.length; index += 1) {
+    if (index === selectedPair.upperIndex) continue
+    const selected = selectedTransforms[index]
+    if (selected === undefined) return undefined
+    if (index === selectedPair.bottomIndex) {
+      const upper = selectedTransforms[selectedPair.upperIndex]
+      if (upper === undefined) return undefined
+      placed.push(createPlacedPiece(selected, cursorGrid, 0))
+      placed.push(createPlacedPiece(upper, cursorGrid, selected.heightGrid))
+      cursorGrid += Math.max(selected.widthGrid, upper.widthGrid)
+      continue
+    }
+    if (cursorGrid + selected.widthGrid > requestedShortAxisGrid) {
+      return undefined
+    }
+    placed.push(createPlacedPiece(selected, cursorGrid, 0))
+    cursorGrid += selected.widthGrid
+  }
+  return placed
+}
+
+function constructNextFitShelf(
+  selectedTransforms: ReadonlyArray<SelectedTransform>,
+  requestedShortAxisGrid: number,
+  requestedLongAxisGrid: number
+): ShelfLayout | undefined {
+  let cursorGrid = 0
+  let rowStartGrid = 0
+  let rowHeightGrid = 0
+  let rowCount = selectedTransforms.length === 0 ? 0 : 1
+  const placed: IrregularPlacedPiece[] = []
+  for (const selected of selectedTransforms) {
+    if (
+      selected.widthGrid > requestedShortAxisGrid ||
+      selected.heightGrid > requestedLongAxisGrid
+    ) {
+      return undefined
+    }
+    if (cursorGrid > 0 && cursorGrid + selected.widthGrid > requestedShortAxisGrid) {
+      rowStartGrid += rowHeightGrid
+      cursorGrid = 0
+      rowHeightGrid = 0
+      rowCount += 1
+    }
+    if (rowStartGrid + selected.heightGrid > requestedLongAxisGrid) {
+      return undefined
+    }
+    placed.push(createPlacedPiece(selected, cursorGrid, rowStartGrid))
+    cursorGrid += selected.widthGrid
+    rowHeightGrid = Math.max(rowHeightGrid, selected.heightGrid)
+  }
+  return { placed, rowCount }
+}
+
 function createPlacedPiece(
   selected: SelectedTransform,
   cursorGrid: number,
@@ -609,13 +537,10 @@ function createPlacedPiece(
 ): IrregularPlacedPiece {
   const placementInput = {
     sourcePieceId: selected.piece.source.id,
-    placementReference:
-      selected.piece.collisionGeometry.placementReference,
+    placementReference: selected.piece.collisionGeometry.placementReference,
     transform: new IrregularTransform({
       translateX: fromGrid(cursorGrid - selected.minXGrid),
-      translateY: fromGrid(
-        verticalOffsetGrid - selected.minYGrid
-      ),
+      translateY: fromGrid(verticalOffsetGrid - selected.minYGrid),
       rotationDeg: selected.geometry.transform.rotationDeg,
       mirrored: selected.geometry.transform.mirrored
     })
@@ -632,6 +557,105 @@ function createPlacedPiece(
   })
 }
 
+function finalizePlacedLayout(input: {
+  readonly input: {
+    readonly sheet: SheetSpec
+    readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+    readonly productionShortAxisSpanMm: number
+    readonly productionMaximumSideMm: number
+    readonly productionEnvelopeAreaMm2: number
+  }
+  readonly runtime: ObserverRuntime
+  readonly placed: ReadonlyArray<IrregularPlacedPiece>
+  readonly constructionKind: 'pair-fold' | 'multi-row-shelf'
+  readonly rowCount: number
+  readonly selectedBottomPieceId: string | undefined
+  readonly selectedUpperPieceId: string | undefined
+}): IntrinsicShortSidePairFoldOutcome {
+  const beforeFinalization = boundedStatus(input.runtime)
+  if (beforeFinalization !== undefined) {
+    return failedOutcome(
+      input.input,
+      input.runtime,
+      beforeFinalization,
+      `${beforeFinalization} reached before exact finalization.`,
+      input.runtime.transformEvaluations,
+      input.placed.length,
+      input.runtime.expectedPairCount,
+      input.runtime.evaluatedPairCount,
+      input.selectedBottomPieceId,
+      input.selectedUpperPieceId
+    )
+  }
+  const normalizedState = new IrregularBeamState({
+    remainingPreparedPieces: [],
+    placedCollisionGeometries: input.placed,
+    placementOrder: input.input.preparedPieces.map((piece) => piece.pieceId ?? piece.source.id)
+  })
+  const prescribedRotationDeg = input.input.sheet.width < input.input.sheet.height ? 0 : 90
+  const physicalState = normalizedState.withQuarterTurnBottomLeft(prescribedRotationDeg)
+  if (
+    physicalState === undefined ||
+    !assertCanonicalGridLegalLayout(input.input.sheet, physicalState.placedCollisionGeometries)
+  ) {
+    return failedOutcome(
+      input.input,
+      input.runtime,
+      'failed-protected-fallback',
+      'the prescribed physical terminal orientation failed exact legality.',
+      input.runtime.transformEvaluations,
+      input.placed.length,
+      input.runtime.expectedPairCount,
+      input.runtime.evaluatedPairCount,
+      input.selectedBottomPieceId,
+      input.selectedUpperPieceId
+    )
+  }
+  const outcome = finalizeOutcome({
+    input: input.input,
+    runtime: input.runtime,
+    state: physicalState,
+    prescribedRotationDeg,
+    transformEvaluations: input.runtime.transformEvaluations,
+    expectedPairCount: input.runtime.expectedPairCount,
+    evaluatedPairCount: input.runtime.evaluatedPairCount,
+    constructionKind: input.constructionKind,
+    rowCount: input.rowCount,
+    selectedBottomPieceId: input.selectedBottomPieceId,
+    selectedUpperPieceId: input.selectedUpperPieceId
+  })
+  const boundedAfterFinalization = boundedStatus(input.runtime)
+  if (boundedAfterFinalization !== undefined) {
+    return failedOutcome(
+      input.input,
+      input.runtime,
+      boundedAfterFinalization,
+      `${boundedAfterFinalization} reached after exact finalization.`,
+      input.runtime.transformEvaluations,
+      input.placed.length,
+      input.runtime.expectedPairCount,
+      input.runtime.evaluatedPairCount,
+      input.selectedBottomPieceId,
+      input.selectedUpperPieceId
+    )
+  }
+  if (outcome.trace.serializedTraceBytes > input.runtime.maximumTraceBytes) {
+    return failedOutcome(
+      input.input,
+      input.runtime,
+      'trace-cap',
+      'stabilized terminal short-side trace exceeds its byte cap.',
+      input.runtime.transformEvaluations,
+      input.placed.length,
+      input.runtime.expectedPairCount,
+      input.runtime.evaluatedPairCount,
+      input.selectedBottomPieceId,
+      input.selectedUpperPieceId
+    )
+  }
+  return outcome
+}
+
 function finalizeOutcome(input: {
   readonly input: {
     readonly sheet: SheetSpec
@@ -646,14 +670,13 @@ function finalizeOutcome(input: {
   readonly transformEvaluations: number
   readonly expectedPairCount: number
   readonly evaluatedPairCount: number
+  readonly constructionKind: 'pair-fold' | 'multi-row-shelf'
+  readonly rowCount: number
   readonly selectedBottomPieceId: string | undefined
   readonly selectedUpperPieceId: string | undefined
 }): IntrinsicShortSidePairFoldOutcome {
   const placed = input.state.placedCollisionGeometries
-  const dimensions = physicalDimensions(
-    placed,
-    input.input.sheet
-  )
+  const dimensions = physicalDimensions(placed, input.input.sheet)
   const topology = measureCanonicalLayoutTopology(placed)
   const materialAreaMm2 = collisionMaterialAreaMm2(placed)
   const identity = canonicalCollisionLayoutIdentity(placed)
@@ -676,44 +699,30 @@ function finalizeOutcome(input: {
       input.selectedUpperPieceId
     )
   }
-  const envelopeAreaMm2 =
-    dimensions.shortAxisMm * dimensions.longAxisMm
-  const fillRatio =
-    dimensions.shortAxisMm / dimensions.requestedShortAxisMm
-  const density =
-    envelopeAreaMm2 <= 0
-      ? 0
-      : materialAreaMm2 / envelopeAreaMm2
-  const projection = shortAxisProjectionMetrics(
-    placed,
-    input.input.sheet
-  )
+  const envelopeAreaMm2 = dimensions.shortAxisMm * dimensions.longAxisMm
+  const fillRatio = dimensions.shortAxisMm / dimensions.requestedShortAxisMm
+  const density = envelopeAreaMm2 <= 0 ? 0 : materialAreaMm2 / envelopeAreaMm2
+  const projection = shortAxisProjectionMetrics(placed, input.input.sheet)
   const shortAxisSpanGainFactor =
     input.input.productionShortAxisSpanMm <= 0
       ? 0
-      : dimensions.shortAxisMm /
-        input.input.productionShortAxisSpanMm
+      : dimensions.shortAxisMm / input.input.productionShortAxisSpanMm
   const envelopeAreaCostFactor =
     input.input.productionEnvelopeAreaMm2 <= 0
       ? Number.POSITIVE_INFINITY
-      : envelopeAreaMm2 /
-        input.input.productionEnvelopeAreaMm2
+      : envelopeAreaMm2 / input.input.productionEnvelopeAreaMm2
   const admission: IntrinsicShortSidePairFoldAdmission = {
     exactLegal: true,
-    allPiecesPlaced:
-      placed.length === input.input.preparedPieces.length,
+    allPiecesPlaced: placed.length === input.input.preparedPieces.length,
     fillRatio,
-    depthWithinProductionMaximumSide:
-      dimensions.longAxisMm <=
-      input.input.productionMaximumSideMm,
+    depthWithinProductionMaximumSide: dimensions.longAxisMm <= input.input.productionMaximumSideMm,
     projectionCoverageRatio: projection.coverageRatio,
     projectionComponentCount: projection.componentCount,
     enclosedCavityCount: topology.enclosedCavityCount,
     collisionEnvelopeDensity: density,
     shortAxisSpanGainFactor,
     envelopeAreaCostFactor,
-    directionallyEfficient:
-      shortAxisSpanGainFactor >= envelopeAreaCostFactor,
+    directionallyEfficient: shortAxisSpanGainFactor >= envelopeAreaCostFactor,
     accepted: false
   }
   const accepted =
@@ -734,34 +743,26 @@ function finalizeOutcome(input: {
     requestedShortAxisMm: dimensions.requestedShortAxisMm,
     requestedLongAxisMm: dimensions.requestedLongAxisMm,
     prescribedRotationDeg: input.prescribedRotationDeg,
-    productionShortAxisSpanMm:
-      input.input.productionShortAxisSpanMm,
-    productionMaximumSideMm:
-      input.input.productionMaximumSideMm,
-    productionEnvelopeAreaMm2:
-      input.input.productionEnvelopeAreaMm2,
+    productionShortAxisSpanMm: input.input.productionShortAxisSpanMm,
+    productionMaximumSideMm: input.input.productionMaximumSideMm,
+    productionEnvelopeAreaMm2: input.input.productionEnvelopeAreaMm2,
     transformEvaluations: input.transformEvaluations,
     expectedPairCount: input.expectedPairCount,
     evaluatedPairCount: input.evaluatedPairCount,
+    constructionKind: input.constructionKind,
+    rowCount: input.rowCount,
     selectedBottomPieceId: input.selectedBottomPieceId,
     selectedUpperPieceId: input.selectedUpperPieceId,
     placedCount: placed.length,
     usedShortAxisSpanMm: dimensions.shortAxisMm,
     usedLongAxisDepthMm: dimensions.longAxisMm,
     envelopeAreaMm2,
-    canonicalGeometryHash: createHash('sha256')
-      .update(identity)
-      .digest('hex'),
+    canonicalGeometryHash: createHash('sha256').update(identity).digest('hex'),
     admission: measuredAdmission,
-    runtimeMs: Math.max(
-      0,
-      input.runtime.now() - input.runtime.startedAt
-    ),
+    runtimeMs: Math.max(0, input.runtime.now() - input.runtime.startedAt),
     peakRssDeltaBytes: sampleRss(input.runtime),
     serializedTraceBytes: 0,
-    failureReason: accepted
-      ? undefined
-      : 'exact pair fold failed one or more admission gates.'
+    failureReason: accepted ? undefined : 'exact pair fold failed one or more admission gates.'
   }
   const trace = measureTraceSize(rawTrace)
   return {
@@ -781,31 +782,23 @@ function physicalDimensions(
       readonly requestedLongAxisMm: number
     }
   | undefined {
-  const points = placed.flatMap(
-    (entry) => placedCollisionWorldGridPath(entry) ?? []
-  )
+  const points = placed.flatMap((entry) => placedCollisionWorldGridPath(entry) ?? [])
   if (points.length === 0) return undefined
   const widthMm = fromGrid(
-    Math.max(...points.map(({ x }) => x)) -
-      Math.min(...points.map(({ x }) => x))
+    Math.max(...points.map(({ x }) => x)) - Math.min(...points.map(({ x }) => x))
   )
   const heightMm = fromGrid(
-    Math.max(...points.map(({ y }) => y)) -
-      Math.min(...points.map(({ y }) => y))
+    Math.max(...points.map(({ y }) => y)) - Math.min(...points.map(({ y }) => y))
   )
   return {
-    shortAxisMm:
-      sheet.width < sheet.height ? widthMm : heightMm,
-    longAxisMm:
-      sheet.width < sheet.height ? heightMm : widthMm,
+    shortAxisMm: sheet.width < sheet.height ? widthMm : heightMm,
+    longAxisMm: sheet.width < sheet.height ? heightMm : widthMm,
     requestedShortAxisMm: Math.min(sheet.width, sheet.height),
     requestedLongAxisMm: Math.max(sheet.width, sheet.height)
   }
 }
 
-function collisionMaterialAreaMm2(
-  placed: ReadonlyArray<IrregularPlacedPiece>
-): number | undefined {
+function collisionMaterialAreaMm2(placed: ReadonlyArray<IrregularPlacedPiece>): number | undefined {
   let doubledAreaGrid2 = 0n
   for (const entry of placed) {
     const path = placedCollisionWorldGridPath(entry)
@@ -815,9 +808,7 @@ function collisionMaterialAreaMm2(
       const point = path[index]
       const next = path[(index + 1) % path.length]
       if (point === undefined || next === undefined) return undefined
-      signed +=
-        BigInt(point.x) * BigInt(next.y) -
-        BigInt(next.x) * BigInt(point.y)
+      signed += BigInt(point.x) * BigInt(next.y) - BigInt(next.x) * BigInt(point.y)
     }
     doubledAreaGrid2 += signed < 0n ? -signed : signed
   }
@@ -833,9 +824,7 @@ function shortAxisProjectionMetrics(
     .flatMap((entry) => {
       const path = placedCollisionWorldGridPath(entry)
       if (path === undefined || path.length === 0) return []
-      const values = path.map((point) =>
-        sheet.width < sheet.height ? point.x : point.y
-      )
+      const values = path.map((point) => (sheet.width < sheet.height ? point.x : point.y))
       return [{ start: Math.min(...values), end: Math.max(...values) }]
     })
     .toSorted((first, second) => first.start - second.start)
@@ -854,40 +843,23 @@ function shortAxisProjectionMetrics(
     return { coverageRatio: 0, componentCount: 0 }
   }
   const span = last.end - first.start
-  const covered = merged.reduce(
-    (sum, interval) => sum + interval.end - interval.start,
-    0
-  )
+  const covered = merged.reduce((sum, interval) => sum + interval.end - interval.start, 0)
   return {
     coverageRatio: span <= 0 ? 1 : covered / span,
     componentCount: merged.length
   }
 }
 
-function boundedStatus(
-  runtime: ObserverRuntime
-): 'deadline' | 'memory-cap' | undefined {
-  if (
-    runtime.now() - runtime.startedAt >
-    runtime.maximumRuntimeMs
-  ) {
+function boundedStatus(runtime: ObserverRuntime): 'deadline' | 'memory-cap' | undefined {
+  if (runtime.now() - runtime.startedAt > runtime.maximumRuntimeMs) {
     return 'deadline'
   }
-  return sampleRss(runtime) >
-    runtime.maximumRssDeltaBytes
-    ? 'memory-cap'
-    : undefined
+  return sampleRss(runtime) > runtime.maximumRssDeltaBytes ? 'memory-cap' : undefined
 }
 
 function sampleRss(runtime: ObserverRuntime): number {
-  runtime.peakRssBytes = Math.max(
-    runtime.peakRssBytes,
-    runtime.currentRssBytes()
-  )
-  return Math.max(
-    0,
-    runtime.peakRssBytes - runtime.startingRssBytes
-  )
+  runtime.peakRssBytes = Math.max(runtime.peakRssBytes, runtime.currentRssBytes())
+  return Math.max(0, runtime.peakRssBytes - runtime.startingRssBytes)
 }
 
 function failedOutcome(
@@ -898,10 +870,7 @@ function failedOutcome(
     readonly productionEnvelopeAreaMm2: number
   },
   runtime: ObserverRuntime,
-  status: Exclude<
-    IntrinsicShortSidePairFoldStatus,
-    'accepted' | 'rejected-admission'
-  >,
+  status: Exclude<IntrinsicShortSidePairFoldStatus, 'accepted' | 'rejected-admission'>,
   failureReason: string,
   transformEvaluations = runtime.transformEvaluations,
   placedCount = 0,
@@ -916,29 +885,22 @@ function failedOutcome(
       status,
       outputInfluence: 'none',
       executionModel: 'single-process-sequential',
-      requestedShortAxisMm: Math.min(
-        input.sheet.width,
-        input.sheet.height
-      ),
-      requestedLongAxisMm: Math.max(
-        input.sheet.width,
-        input.sheet.height
-      ),
+      requestedShortAxisMm: Math.min(input.sheet.width, input.sheet.height),
+      requestedLongAxisMm: Math.max(input.sheet.width, input.sheet.height),
       prescribedRotationDeg:
         input.sheet.width === input.sheet.height
           ? undefined
           : input.sheet.width < input.sheet.height
             ? 0
             : 90,
-      productionShortAxisSpanMm:
-        input.productionShortAxisSpanMm,
-      productionMaximumSideMm:
-        input.productionMaximumSideMm,
-      productionEnvelopeAreaMm2:
-        input.productionEnvelopeAreaMm2,
+      productionShortAxisSpanMm: input.productionShortAxisSpanMm,
+      productionMaximumSideMm: input.productionMaximumSideMm,
+      productionEnvelopeAreaMm2: input.productionEnvelopeAreaMm2,
       transformEvaluations,
       expectedPairCount,
       evaluatedPairCount,
+      constructionKind: undefined,
+      rowCount: 0,
       selectedBottomPieceId,
       selectedUpperPieceId,
       placedCount,
@@ -947,10 +909,7 @@ function failedOutcome(
       envelopeAreaMm2: undefined,
       canonicalGeometryHash: undefined,
       admission: undefined,
-      runtimeMs: Math.max(
-        0,
-        runtime.now() - runtime.startedAt
-      ),
+      runtimeMs: Math.max(0, runtime.now() - runtime.startedAt),
       peakRssDeltaBytes: sampleRss(runtime),
       serializedTraceBytes: 0,
       failureReason
@@ -959,21 +918,13 @@ function failedOutcome(
   }
 }
 
-function measureTraceSize(
-  trace: IntrinsicShortSidePairFoldTrace
-): IntrinsicShortSidePairFoldTrace {
+function measureTraceSize(trace: IntrinsicShortSidePairFoldTrace): IntrinsicShortSidePairFoldTrace {
   const first = {
     ...trace,
-    serializedTraceBytes: Buffer.byteLength(
-      JSON.stringify(trace),
-      'utf8'
-    )
+    serializedTraceBytes: Buffer.byteLength(JSON.stringify(trace), 'utf8')
   }
   return {
     ...first,
-    serializedTraceBytes: Buffer.byteLength(
-      JSON.stringify(first),
-      'utf8'
-    )
+    serializedTraceBytes: Buffer.byteLength(JSON.stringify(first), 'utf8')
   }
 }
