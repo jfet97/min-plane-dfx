@@ -36,6 +36,15 @@ contract check. The measured gain is only `0.635%`; the accepted value is the
 smaller trusted hot-path surface with no observed performance or output
 regression, not a material speedup.
 
+## Merge validation
+
+Committed PR state `96a1419` passed the complete test suite with 844 tests
+passing, 17 explicitly skipped historical protected-lane tests, and zero
+failures. The serial production gate also passed all nine Compact and nine Short
+Side layouts: four directional successes, five Compact fallbacks, and zero
+directional misses. The gate ran with
+`maximumConcurrentAlgorithmProcesses: 1`.
+
 ## The block
 
 After the Effect Schema and `bigint` orientation work, canonical key
