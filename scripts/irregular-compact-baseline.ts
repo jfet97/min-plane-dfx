@@ -27,7 +27,7 @@ import {
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES } from '../src/workers/algorithm/irregular/intrinsicShortSideObserver.js'
-import { INTRINSIC_SHORT_SIDE_SHELF_MAX_TRACE_BYTES } from '../src/workers/algorithm/irregular/intrinsicShortSideShelfObserver.js'
+import { INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES } from '../src/workers/algorithm/irregular/intrinsicShortSidePairFoldObserver.js'
 import {
   canonicalCollisionLayoutIdentity,
   measureCanonicalLayoutTopology
@@ -58,7 +58,7 @@ interface Arguments {
   readonly maximumElapsedMs: number | undefined
   readonly disableFocusedCompleteReconstruction: boolean
   readonly captureShortSideObserver: boolean
-  readonly captureShortSideShelfObserver: boolean
+  readonly captureShortSidePairFoldObserver: boolean
   readonly expectedFocusedStatus: string | undefined
   readonly expectedFocusedEvaluations: number | undefined
   readonly expectedFocusedSourceHash: string | undefined
@@ -135,8 +135,8 @@ function parseArguments(): Arguments {
     captureShortSideObserver: process.argv.includes(
       '--capture-short-side-observer'
     ),
-    captureShortSideShelfObserver: process.argv.includes(
-      '--capture-short-side-shelf-observer'
+    captureShortSidePairFoldObserver: process.argv.includes(
+      '--capture-short-side-pair-fold-observer'
     ),
     expectedFocusedStatus: argument('--expected-focused-status'),
     expectedFocusedEvaluations: optionalIntegerArgument(
@@ -361,7 +361,7 @@ let observerWinner:
       readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
     }
   | undefined
-let shelfObserverWinner:
+let pairFoldObserverWinner:
   | ReadonlyArray<IrregularPlacedPiece>
   | undefined
 const startedAt = performance.now()
@@ -380,13 +380,13 @@ const result = await Effect.runPromise(
             ) => {
               observerWinner = winner
             },
-            ...(args.captureShortSideShelfObserver
+            ...(args.captureShortSidePairFoldObserver
               ? {
-                  captureIntrinsicShortSideShelfObserver: true,
-                  onIntrinsicShortSideShelfObserverWinner: (
-                    winner: typeof shelfObserverWinner
+                  captureIntrinsicShortSidePairFoldObserver: true,
+                  onIntrinsicShortSidePairFoldObserverWinner: (
+                    winner: typeof pairFoldObserverWinner
                   ) => {
-                    shelfObserverWinner = winner
+                    pairFoldObserverWinner = winner
                   }
                 }
               : {})
@@ -412,7 +412,8 @@ const fittedCanonicalSha256 =
   polygons.length === 0 ? undefined : canonicalizeIrregularLayout(polygons).sha256
 const focusedTrace = result.focusedCompleteReconstructionTrace
 const shortSideObserverTrace = result.intrinsicShortSideObserverTrace
-const shortSideShelfTrace = result.intrinsicShortSideShelfTrace
+const shortSidePairFoldTrace =
+  result.intrinsicShortSidePairFoldTrace
 const shortSideObserverWinner =
   shortSideObserverTrace?.observerWinnerCanonicalGeometryHash === undefined
     ? undefined
@@ -469,14 +470,14 @@ const shortSideProfileSource =
     ? undefined
     : observerWinner !== undefined
       ? ('guarded-stage1-winner' as const)
-      : shelfObserverWinner !== undefined
-        ? ('terminal-shelf-winner' as const)
+      : pairFoldObserverWinner !== undefined
+        ? ('terminal-pair-fold-winner' as const)
         : ('compact-fallback' as const)
 const shortSideProfilePlacedCollisionGeometries =
   shortSideProfileSource === undefined
     ? undefined
     : observerWinner?.placedCollisionGeometries ??
-      shelfObserverWinner ??
+      pairFoldObserverWinner ??
       result.placedCollisionGeometries
 const shortSideProfileUnplacedPieceIds =
   shortSideProfileSource === undefined
@@ -626,7 +627,7 @@ if (
         observerStatus: shortSideObserverTrace?.status,
         selectedRotationDeg:
           shortSideObserverTrace?.observerWinnerRotationDeg ??
-          shortSideShelfTrace?.prescribedRotationDeg,
+          shortSidePairFoldTrace?.prescribedRotationDeg,
         placedCount:
           shortSideProfilePlacedCollisionGeometries?.length ?? 0,
         unplacedCount:
@@ -711,20 +712,21 @@ const checks = {
     shortSideObserverTrace === undefined ||
     !shortSideObserverTrace.runtimeBudgetExceeded,
   shortSideObserverContract: shortSideObserverContractValid,
-  shortSideShelfTracePresent:
-    !args.captureShortSideShelfObserver ||
-    result.intrinsicShortSideShelfTrace !== undefined,
-  shortSideShelfOutputInfluence:
-    shortSideShelfTrace === undefined ||
-    shortSideShelfTrace.outputInfluence === 'none',
-  shortSideShelfBudget:
-    shortSideShelfTrace === undefined ||
-    (shortSideShelfTrace.serializedTraceBytes <=
-      INTRINSIC_SHORT_SIDE_SHELF_MAX_TRACE_BYTES &&
-      shortSideShelfTrace.status !== 'deadline' &&
-      shortSideShelfTrace.status !== 'memory-cap' &&
-      shortSideShelfTrace.status !== 'trace-cap' &&
-      shortSideShelfTrace.status !== 'failed-protected-fallback'),
+  shortSidePairFoldTracePresent:
+    !args.captureShortSidePairFoldObserver ||
+    result.intrinsicShortSidePairFoldTrace !== undefined,
+  shortSidePairFoldOutputInfluence:
+    shortSidePairFoldTrace === undefined ||
+    shortSidePairFoldTrace.outputInfluence === 'none',
+  shortSidePairFoldBudget:
+    shortSidePairFoldTrace === undefined ||
+    (shortSidePairFoldTrace.serializedTraceBytes <=
+      INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES &&
+      shortSidePairFoldTrace.status !== 'deadline' &&
+      shortSidePairFoldTrace.status !== 'memory-cap' &&
+      shortSidePairFoldTrace.status !== 'trace-cap' &&
+      shortSidePairFoldTrace.status !==
+        'failed-protected-fallback'),
   shortSideProfileMaterialized:
     !args.captureShortSideObserver ||
     (shortSideProfileSource !== undefined &&
@@ -760,8 +762,8 @@ const report = jsonSafe({
       result.focusedCompleteReconstructionTrace,
     intrinsicShortSideObserverTrace:
       result.intrinsicShortSideObserverTrace,
-    intrinsicShortSideShelfTrace:
-      result.intrinsicShortSideShelfTrace
+    intrinsicShortSidePairFoldTrace:
+      result.intrinsicShortSidePairFoldTrace
   },
   checks,
   passed,

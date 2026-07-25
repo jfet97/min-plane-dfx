@@ -76,9 +76,9 @@ import {
   type IntrinsicShortSideObserverTrace
 } from './intrinsicShortSideObserver.js'
 import {
-  observeIntrinsicShortSideShelf,
-  type IntrinsicShortSideShelfTrace
-} from './intrinsicShortSideShelfObserver.js'
+  observeIntrinsicShortSidePairFold,
+  type IntrinsicShortSidePairFoldTrace
+} from './intrinsicShortSidePairFoldObserver.js'
 import {
   measureIntrinsicCapacityShadowTelemetry,
   type IntrinsicCapacityShadowTelemetry
@@ -171,10 +171,10 @@ export interface ComputeIrregularNestingOptions {
         }
       | undefined
   ) => void
-  /** Search-free observer-only rigid shelf along the physical short edge. */
-  readonly captureIntrinsicShortSideShelfObserver?: boolean
-  /** Benchmark hook for one admitted exact shelf. */
-  readonly onIntrinsicShortSideShelfObserverWinner?: (
+  /** Search-free observer-only pair fold along the physical short edge. */
+  readonly captureIntrinsicShortSidePairFoldObserver?: boolean
+  /** Benchmark hook for one admitted exact pair fold. */
+  readonly onIntrinsicShortSidePairFoldObserverWinner?: (
     winner: ReadonlyArray<IrregularPlacedPiece> | undefined
   ) => void
 }
@@ -341,8 +341,8 @@ export interface IrregularComputeResult {
   readonly focusedCompleteReconstructionTrace?: IntrinsicFocusedCompleteReconstructionTrace
   /** Present only when the zero-search Compact short-side observer is enabled. */
   readonly intrinsicShortSideObserverTrace?: IntrinsicShortSideObserverTrace
-  /** Present only when the search-free short-edge shelf observer is enabled. */
-  readonly intrinsicShortSideShelfTrace?: IntrinsicShortSideShelfTrace
+  /** Present only when the search-free short-edge pair-fold observer is enabled. */
+  readonly intrinsicShortSidePairFoldTrace?: IntrinsicShortSidePairFoldTrace
 }
 
 export type IrregularComputeErrorType =
@@ -488,7 +488,9 @@ function coordinateIntrinsicSharedArchive(
       | ReadonlyArray<IntrinsicSharedArchiveEndpoint>
       | undefined
     let intrinsicShortSideObserverTrace: IntrinsicShortSideObserverTrace | undefined
-    let intrinsicShortSideShelfTrace: IntrinsicShortSideShelfTrace | undefined
+    let intrinsicShortSidePairFoldTrace:
+      | IntrinsicShortSidePairFoldTrace
+      | undefined
 
     if (archiveEnabled) {
       settledCompleteArchiveForShortSideObserver = []
@@ -1105,7 +1107,7 @@ function coordinateIntrinsicSharedArchive(
             }
       )
       if (
-        input.options.captureIntrinsicShortSideShelfObserver === true &&
+        input.options.captureIntrinsicShortSidePairFoldObserver === true &&
         intrinsicShortSideObserverTrace.observerWinnerCanonicalGeometryHash ===
           undefined &&
         intrinsicShortSideObserverTrace.productionShortAxisSpanMm !==
@@ -1115,7 +1117,7 @@ function coordinateIntrinsicSharedArchive(
         intrinsicShortSideObserverTrace.productionEnvelopeAreaMm2 !==
           undefined
       ) {
-        const shelfOutcome = yield* observeIntrinsicShortSideShelf({
+        const pairFoldOutcome = yield* observeIntrinsicShortSidePairFold({
           sheet: input.request.sheet,
           preparedPieces: input.preparedPieces,
           productionShortAxisSpanMm:
@@ -1125,9 +1127,9 @@ function coordinateIntrinsicSharedArchive(
           productionEnvelopeAreaMm2:
             intrinsicShortSideObserverTrace.productionEnvelopeAreaMm2
         })
-        intrinsicShortSideShelfTrace = shelfOutcome.trace
-        input.options.onIntrinsicShortSideShelfObserverWinner?.(
-          shelfOutcome.placedCollisionGeometries
+        intrinsicShortSidePairFoldTrace = pairFoldOutcome.trace
+        input.options.onIntrinsicShortSidePairFoldObserverWinner?.(
+          pairFoldOutcome.placedCollisionGeometries
         )
       }
     }
@@ -1158,9 +1160,9 @@ function coordinateIntrinsicSharedArchive(
       ...(intrinsicShortSideObserverTrace === undefined
         ? {}
         : { intrinsicShortSideObserverTrace }),
-      ...(intrinsicShortSideShelfTrace === undefined
+      ...(intrinsicShortSidePairFoldTrace === undefined
         ? {}
-        : { intrinsicShortSideShelfTrace })
+        : { intrinsicShortSidePairFoldTrace })
     }
   })
 }

@@ -22,24 +22,26 @@ import {
 import { GeometryKernel } from '../../irregular/geometryKernel.js'
 import { IrregularBeamState } from './irregularBeamState.js'
 
-export const INTRINSIC_SHORT_SIDE_SHELF_OBSERVER_VERSION =
-  'intrinsic-short-side-shelf-observer-v1' as const
-export const INTRINSIC_SHORT_SIDE_SHELF_MAX_RUNTIME_MS = 500 as const
-export const INTRINSIC_SHORT_SIDE_SHELF_MAX_RSS_DELTA_BYTES =
+export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION =
+  'intrinsic-short-side-pair-fold-observer-v1' as const
+export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS = 500 as const
+export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RSS_DELTA_BYTES =
   64 * 1_048_576
-export const INTRINSIC_SHORT_SIDE_SHELF_MAX_TRACE_BYTES = 1_048_576 as const
+export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES =
+  1_048_576 as const
 
-export type IntrinsicShortSideShelfStatus =
+export type IntrinsicShortSidePairFoldStatus =
   | 'accepted'
   | 'skipped-square-sheet'
-  | 'does-not-fit-short-axis'
+  | 'no-pair'
+  | 'no-fitting-pair'
   | 'rejected-admission'
   | 'deadline'
   | 'memory-cap'
   | 'trace-cap'
   | 'failed-protected-fallback'
 
-export interface IntrinsicShortSideShelfAdmission {
+export interface IntrinsicShortSidePairFoldAdmission {
   readonly exactLegal: boolean
   readonly allPiecesPlaced: boolean
   readonly fillRatio: number
@@ -54,9 +56,9 @@ export interface IntrinsicShortSideShelfAdmission {
   readonly accepted: boolean
 }
 
-export interface IntrinsicShortSideShelfTrace {
-  readonly version: typeof INTRINSIC_SHORT_SIDE_SHELF_OBSERVER_VERSION
-  readonly status: IntrinsicShortSideShelfStatus
+export interface IntrinsicShortSidePairFoldTrace {
+  readonly version: typeof INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION
+  readonly status: IntrinsicShortSidePairFoldStatus
   readonly outputInfluence: 'none'
   readonly executionModel: 'single-process-sequential'
   readonly requestedShortAxisMm: number
@@ -66,20 +68,24 @@ export interface IntrinsicShortSideShelfTrace {
   readonly productionMaximumSideMm: number
   readonly productionEnvelopeAreaMm2: number
   readonly transformEvaluations: number
+  readonly expectedPairCount: number
+  readonly evaluatedPairCount: number
+  readonly selectedBottomPieceId: string | undefined
+  readonly selectedUpperPieceId: string | undefined
   readonly placedCount: number
   readonly usedShortAxisSpanMm: number | undefined
   readonly usedLongAxisDepthMm: number | undefined
   readonly envelopeAreaMm2: number | undefined
   readonly canonicalGeometryHash: string | undefined
-  readonly admission: IntrinsicShortSideShelfAdmission | undefined
+  readonly admission: IntrinsicShortSidePairFoldAdmission | undefined
   readonly runtimeMs: number
   readonly peakRssDeltaBytes: number
   readonly serializedTraceBytes: number
   readonly failureReason: string | undefined
 }
 
-export interface IntrinsicShortSideShelfOutcome {
-  readonly trace: IntrinsicShortSideShelfTrace
+export interface IntrinsicShortSidePairFoldOutcome {
+  readonly trace: IntrinsicShortSidePairFoldTrace
   readonly placedCollisionGeometries:
     | ReadonlyArray<IrregularPlacedPiece>
     | undefined
@@ -92,6 +98,8 @@ interface ObserverRuntime {
 }
 
 interface SelectedTransform {
+  readonly piece: IrregularPreparedPiece
+  readonly pieceId: string
   readonly geometry: TransformedCollisionGeometry
   readonly widthGrid: number
   readonly heightGrid: number
@@ -99,20 +107,28 @@ interface SelectedTransform {
   readonly minYGrid: number
 }
 
-/** Constructs one exact, search-free shelf along the physical short edge. */
-export function observeIntrinsicShortSideShelf(input: {
+interface SelectedPair {
+  readonly bottomIndex: number
+  readonly upperIndex: number
+  readonly widthGrid: number
+  readonly depthGrid: number
+  readonly envelopeAreaGrid2: bigint
+}
+
+/** Constructs one exact, search-free terminal pair fold along the physical short edge. */
+export function observeIntrinsicShortSidePairFold(input: {
   readonly sheet: SheetSpec
   readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly productionShortAxisSpanMm: number
   readonly productionMaximumSideMm: number
   readonly productionEnvelopeAreaMm2: number
-}): Effect.Effect<IntrinsicShortSideShelfOutcome, never, GeometryKernel> {
+}): Effect.Effect<IntrinsicShortSidePairFoldOutcome, never, GeometryKernel> {
   const runtime: ObserverRuntime = {
     startedAt: performance.now(),
     startingRssBytes: process.memoryUsage.rss(),
     peakRssBytes: process.memoryUsage.rss()
   }
-  return constructShelf(input, runtime).pipe(
+  return constructPairFold(input, runtime).pipe(
     Effect.catchTags({
       IrregularGeometryInputError: (error) =>
         Effect.succeed(
@@ -136,7 +152,7 @@ export function observeIntrinsicShortSideShelf(input: {
   )
 }
 
-function constructShelf(
+function constructPairFold(
   input: {
     readonly sheet: SheetSpec
     readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
@@ -170,9 +186,8 @@ function constructShelf(
       )
     }
 
-    let cursorGrid = 0
     let transformEvaluations = 0
-    const placed: IrregularPlacedPiece[] = []
+    const selectedTransforms: SelectedTransform[] = []
     for (const piece of input.preparedPieces) {
       let selected: SelectedTransform | undefined
       for (const transform of piece.transforms) {
@@ -194,6 +209,8 @@ function constructShelf(
           continue
         }
         const candidate = {
+          piece,
+          pieceId: piece.pieceId ?? piece.source.id,
           geometry,
           widthGrid: maxXGrid - minXGrid,
           heightGrid: maxYGrid - minYGrid,
@@ -221,7 +238,7 @@ function constructShelf(
           bounded,
           `${bounded} reached after ${transformEvaluations} transform evaluations.`,
           transformEvaluations,
-          placed.length
+          0
         )
       }
       if (selected === undefined) {
@@ -229,45 +246,162 @@ function constructShelf(
           input,
           runtime,
           'failed-protected-fallback',
-          `piece ${piece.pieceId ?? piece.source.id} has no valid shelf transform.`,
+          `piece ${piece.pieceId ?? piece.source.id} has no valid pair-fold transform.`,
           transformEvaluations,
-          placed.length
+          0
         )
+      }
+      selectedTransforms.push(selected)
+    }
+
+    const expectedPairCount =
+      (selectedTransforms.length * (selectedTransforms.length - 1)) / 2
+    if (expectedPairCount === 0) {
+      return failedOutcome(
+        input,
+        runtime,
+        'no-pair',
+        'the terminal pair fold requires at least two prepared pieces.',
+        transformEvaluations,
+        0,
+        expectedPairCount,
+        0
+      )
+    }
+    const totalWidthGrid = selectedTransforms.reduce(
+      (sum, selected) => sum + selected.widthGrid,
+      0
+    )
+    let evaluatedPairCount = 0
+    let selectedPair: SelectedPair | undefined
+    for (
+      let bottomIndex = 0;
+      bottomIndex < selectedTransforms.length - 1;
+      bottomIndex += 1
+    ) {
+      const bottom = selectedTransforms[bottomIndex]
+      if (bottom === undefined) continue
+      for (
+        let upperIndex = bottomIndex + 1;
+        upperIndex < selectedTransforms.length;
+        upperIndex += 1
+      ) {
+        const upper = selectedTransforms[upperIndex]
+        if (upper === undefined) continue
+        evaluatedPairCount += 1
+        const bounded = boundedStatus(runtime)
+        if (bounded !== undefined) {
+          return failedOutcome(
+            input,
+            runtime,
+            bounded,
+            `${bounded} reached after ${evaluatedPairCount} pair evaluations.`,
+            transformEvaluations,
+            0,
+            expectedPairCount,
+            evaluatedPairCount
+          )
+        }
+        const widthGrid =
+          totalWidthGrid -
+          bottom.widthGrid -
+          upper.widthGrid +
+          Math.max(bottom.widthGrid, upper.widthGrid)
+        const otherMaximumHeightGrid = selectedTransforms.reduce(
+          (maximum, selected, index) =>
+            index === bottomIndex || index === upperIndex
+              ? maximum
+              : Math.max(maximum, selected.heightGrid),
+          0
+        )
+        const depthGrid = Math.max(
+          bottom.heightGrid + upper.heightGrid,
+          otherMaximumHeightGrid
+        )
+        if (widthGrid > requestedShortAxisGrid) continue
+        const candidate: SelectedPair = {
+          bottomIndex,
+          upperIndex,
+          widthGrid,
+          depthGrid,
+          envelopeAreaGrid2: BigInt(widthGrid) * BigInt(depthGrid)
+        }
+        if (
+          selectedPair === undefined ||
+          compareSelectedPairs(
+            candidate,
+            selectedPair,
+            selectedTransforms
+          ) < 0
+        ) {
+          selectedPair = candidate
+        }
+      }
+    }
+    if (selectedPair === undefined) {
+      return failedOutcome(
+        input,
+        runtime,
+        'no-fitting-pair',
+        'no single fixed-transform pair fold fits the requested short axis.',
+        transformEvaluations,
+        0,
+        expectedPairCount,
+        evaluatedPairCount
+      )
+    }
+
+    let cursorGrid = 0
+    const placed: IrregularPlacedPiece[] = []
+    for (
+      let index = 0;
+      index < selectedTransforms.length;
+      index += 1
+    ) {
+      if (index === selectedPair.upperIndex) continue
+      const selected = selectedTransforms[index]
+      if (selected === undefined) continue
+      if (index === selectedPair.bottomIndex) {
+        const upper = selectedTransforms[selectedPair.upperIndex]
+        if (upper === undefined) {
+          return failedOutcome(
+            input,
+            runtime,
+            'failed-protected-fallback',
+            'the selected upper pair member was unavailable.',
+            transformEvaluations,
+            placed.length,
+            expectedPairCount,
+            evaluatedPairCount
+          )
+        }
+        placed.push(createPlacedPiece(selected, cursorGrid, 0))
+        placed.push(
+          createPlacedPiece(
+            upper,
+            cursorGrid,
+            selected.heightGrid
+          )
+        )
+        cursorGrid += Math.max(
+          selected.widthGrid,
+          upper.widthGrid
+        )
+        continue
       }
       if (cursorGrid + selected.widthGrid > requestedShortAxisGrid) {
         return failedOutcome(
           input,
           runtime,
-          'does-not-fit-short-axis',
-          'minimum-width rigid shelf exceeds the requested short axis.',
+          'failed-protected-fallback',
+          'selected pair accounting exceeded the requested short axis.',
           transformEvaluations,
-          placed.length
+          placed.length,
+          expectedPairCount,
+          evaluatedPairCount
         )
       }
-      const pieceId = piece.pieceId ?? piece.source.id
-      const placementInput = {
-        sourcePieceId: piece.source.id,
-        placementReference:
-          piece.collisionGeometry.placementReference,
-        transform: new IrregularTransform({
-          translateX: fromGrid(cursorGrid - selected.minXGrid),
-          translateY: fromGrid(-selected.minYGrid),
-          rotationDeg: selected.geometry.transform.rotationDeg,
-          mirrored: selected.geometry.transform.mirrored
-        })
-      }
-      placed.push(
-        new IrregularPlacedPiece({
-          placement:
-            piece.pieceId === undefined
-              ? new IrregularPlacement(placementInput)
-              : new IrregularPlacement({
-                  ...placementInput,
-                  pieceId
-                }),
-          collisionGeometry: selected.geometry
-        })
-      )
+      placed.push(createPlacedPiece(selected, cursorGrid, 0))
       cursorGrid += selected.widthGrid
     }
 
@@ -279,7 +413,11 @@ function constructShelf(
         beforeFinalization,
         `${beforeFinalization} reached before exact finalization.`,
         transformEvaluations,
-        placed.length
+        placed.length,
+        expectedPairCount,
+        evaluatedPairCount,
+        selectedTransforms[selectedPair.bottomIndex]?.pieceId,
+        selectedTransforms[selectedPair.upperIndex]?.pieceId
       )
     }
     const normalizedState = new IrregularBeamState({
@@ -306,9 +444,13 @@ function constructShelf(
         input,
         runtime,
         'failed-protected-fallback',
-        'the prescribed physical shelf orientation failed exact legality.',
+        'the prescribed physical pair-fold orientation failed exact legality.',
         transformEvaluations,
-        placed.length
+        placed.length,
+        expectedPairCount,
+        evaluatedPairCount,
+        selectedTransforms[selectedPair.bottomIndex]?.pieceId,
+        selectedTransforms[selectedPair.upperIndex]?.pieceId
       )
     }
     const outcome = finalizeOutcome({
@@ -316,7 +458,13 @@ function constructShelf(
       runtime,
       state: physicalState,
       prescribedRotationDeg,
-      transformEvaluations
+      transformEvaluations,
+      expectedPairCount,
+      evaluatedPairCount,
+      selectedBottomPieceId:
+        selectedTransforms[selectedPair.bottomIndex]?.pieceId,
+      selectedUpperPieceId:
+        selectedTransforms[selectedPair.upperIndex]?.pieceId
     })
     const boundedAfterFinalization = boundedStatus(runtime)
     if (boundedAfterFinalization !== undefined) {
@@ -326,20 +474,28 @@ function constructShelf(
         boundedAfterFinalization,
         `${boundedAfterFinalization} reached after exact finalization.`,
         transformEvaluations,
-        placed.length
+        placed.length,
+        expectedPairCount,
+        evaluatedPairCount,
+        selectedTransforms[selectedPair.bottomIndex]?.pieceId,
+        selectedTransforms[selectedPair.upperIndex]?.pieceId
       )
     }
     if (
       outcome.trace.serializedTraceBytes >
-      INTRINSIC_SHORT_SIDE_SHELF_MAX_TRACE_BYTES
+      INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES
     ) {
       return failedOutcome(
         input,
         runtime,
         'trace-cap',
-        'stabilized shelf trace exceeds its byte cap.',
+        'stabilized pair-fold trace exceeds its byte cap.',
         transformEvaluations,
-        placed.length
+        placed.length,
+        expectedPairCount,
+        evaluatedPairCount,
+        selectedTransforms[selectedPair.bottomIndex]?.pieceId,
+        selectedTransforms[selectedPair.upperIndex]?.pieceId
       )
     }
     return outcome
@@ -361,6 +517,55 @@ function compareSelectedTransforms(
   )
 }
 
+function compareSelectedPairs(
+  first: SelectedPair,
+  second: SelectedPair,
+  selectedTransforms: ReadonlyArray<SelectedTransform>
+): number {
+  if (first.envelopeAreaGrid2 !== second.envelopeAreaGrid2) {
+    return first.envelopeAreaGrid2 < second.envelopeAreaGrid2 ? -1 : 1
+  }
+  return (
+    first.depthGrid - second.depthGrid ||
+    (selectedTransforms[first.bottomIndex]?.pieceId ?? '').localeCompare(
+      selectedTransforms[second.bottomIndex]?.pieceId ?? ''
+    ) ||
+    (selectedTransforms[first.upperIndex]?.pieceId ?? '').localeCompare(
+      selectedTransforms[second.upperIndex]?.pieceId ?? ''
+    )
+  )
+}
+
+function createPlacedPiece(
+  selected: SelectedTransform,
+  cursorGrid: number,
+  verticalOffsetGrid: number
+): IrregularPlacedPiece {
+  const placementInput = {
+    sourcePieceId: selected.piece.source.id,
+    placementReference:
+      selected.piece.collisionGeometry.placementReference,
+    transform: new IrregularTransform({
+      translateX: fromGrid(cursorGrid - selected.minXGrid),
+      translateY: fromGrid(
+        verticalOffsetGrid - selected.minYGrid
+      ),
+      rotationDeg: selected.geometry.transform.rotationDeg,
+      mirrored: selected.geometry.transform.mirrored
+    })
+  }
+  return new IrregularPlacedPiece({
+    placement:
+      selected.piece.pieceId === undefined
+        ? new IrregularPlacement(placementInput)
+        : new IrregularPlacement({
+            ...placementInput,
+            pieceId: selected.piece.pieceId
+          }),
+    collisionGeometry: selected.geometry
+  })
+}
+
 function finalizeOutcome(input: {
   readonly input: {
     readonly sheet: SheetSpec
@@ -373,7 +578,11 @@ function finalizeOutcome(input: {
   readonly state: IrregularBeamState
   readonly prescribedRotationDeg: 0 | 90
   readonly transformEvaluations: number
-}): IntrinsicShortSideShelfOutcome {
+  readonly expectedPairCount: number
+  readonly evaluatedPairCount: number
+  readonly selectedBottomPieceId: string | undefined
+  readonly selectedUpperPieceId: string | undefined
+}): IntrinsicShortSidePairFoldOutcome {
   const placed = input.state.placedCollisionGeometries
   const dimensions = physicalDimensions(
     placed,
@@ -392,9 +601,13 @@ function finalizeOutcome(input: {
       input.input,
       input.runtime,
       'failed-protected-fallback',
-      'exact shelf metrics could not be materialized.',
+      'exact pair-fold metrics could not be materialized.',
       input.transformEvaluations,
-      placed.length
+      placed.length,
+      input.expectedPairCount,
+      input.evaluatedPairCount,
+      input.selectedBottomPieceId,
+      input.selectedUpperPieceId
     )
   }
   const envelopeAreaMm2 =
@@ -419,7 +632,7 @@ function finalizeOutcome(input: {
       ? Number.POSITIVE_INFINITY
       : envelopeAreaMm2 /
         input.input.productionEnvelopeAreaMm2
-  const admission: IntrinsicShortSideShelfAdmission = {
+  const admission: IntrinsicShortSidePairFoldAdmission = {
     exactLegal: true,
     allPiecesPlaced:
       placed.length === input.input.preparedPieces.length,
@@ -447,8 +660,8 @@ function finalizeOutcome(input: {
     density >= 0.5 &&
     admission.directionallyEfficient
   const measuredAdmission = { ...admission, accepted }
-  const rawTrace: IntrinsicShortSideShelfTrace = {
-    version: INTRINSIC_SHORT_SIDE_SHELF_OBSERVER_VERSION,
+  const rawTrace: IntrinsicShortSidePairFoldTrace = {
+    version: INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION,
     status: accepted ? 'accepted' : 'rejected-admission',
     outputInfluence: 'none',
     executionModel: 'single-process-sequential',
@@ -462,6 +675,10 @@ function finalizeOutcome(input: {
     productionEnvelopeAreaMm2:
       input.input.productionEnvelopeAreaMm2,
     transformEvaluations: input.transformEvaluations,
+    expectedPairCount: input.expectedPairCount,
+    evaluatedPairCount: input.evaluatedPairCount,
+    selectedBottomPieceId: input.selectedBottomPieceId,
+    selectedUpperPieceId: input.selectedUpperPieceId,
     placedCount: placed.length,
     usedShortAxisSpanMm: dimensions.shortAxisMm,
     usedLongAxisDepthMm: dimensions.longAxisMm,
@@ -478,7 +695,7 @@ function finalizeOutcome(input: {
     serializedTraceBytes: 0,
     failureReason: accepted
       ? undefined
-      : 'exact shelf failed one or more admission gates.'
+      : 'exact pair fold failed one or more admission gates.'
   }
   const trace = measureTraceSize(rawTrace)
   return {
@@ -586,12 +803,12 @@ function boundedStatus(
 ): 'deadline' | 'memory-cap' | undefined {
   if (
     performance.now() - runtime.startedAt >
-    INTRINSIC_SHORT_SIDE_SHELF_MAX_RUNTIME_MS
+    INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS
   ) {
     return 'deadline'
   }
   return sampleRss(runtime) >
-    INTRINSIC_SHORT_SIDE_SHELF_MAX_RSS_DELTA_BYTES
+    INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RSS_DELTA_BYTES
     ? 'memory-cap'
     : undefined
 }
@@ -616,16 +833,20 @@ function failedOutcome(
   },
   runtime: ObserverRuntime,
   status: Exclude<
-    IntrinsicShortSideShelfStatus,
+    IntrinsicShortSidePairFoldStatus,
     'accepted' | 'rejected-admission'
   >,
   failureReason: string,
   transformEvaluations = 0,
-  placedCount = 0
-): IntrinsicShortSideShelfOutcome {
+  placedCount = 0,
+  expectedPairCount = 0,
+  evaluatedPairCount = 0,
+  selectedBottomPieceId?: string,
+  selectedUpperPieceId?: string
+): IntrinsicShortSidePairFoldOutcome {
   return {
     trace: measureTraceSize({
-      version: INTRINSIC_SHORT_SIDE_SHELF_OBSERVER_VERSION,
+      version: INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION,
       status,
       outputInfluence: 'none',
       executionModel: 'single-process-sequential',
@@ -650,6 +871,10 @@ function failedOutcome(
       productionEnvelopeAreaMm2:
         input.productionEnvelopeAreaMm2,
       transformEvaluations,
+      expectedPairCount,
+      evaluatedPairCount,
+      selectedBottomPieceId,
+      selectedUpperPieceId,
       placedCount,
       usedShortAxisSpanMm: undefined,
       usedLongAxisDepthMm: undefined,
@@ -669,8 +894,8 @@ function failedOutcome(
 }
 
 function measureTraceSize(
-  trace: IntrinsicShortSideShelfTrace
-): IntrinsicShortSideShelfTrace {
+  trace: IntrinsicShortSidePairFoldTrace
+): IntrinsicShortSidePairFoldTrace {
   const first = {
     ...trace,
     serializedTraceBytes: Buffer.byteLength(
