@@ -10,6 +10,7 @@ import {
 import {
   enumerateIntrinsicPeriodicCells,
   enumerateIntrinsicPeriodicCellCrops,
+  compareIntrinsicPeriodicSeedEnvelopeAreaFirst,
   nonDominatedIntrinsicPeriodicSeeds,
   rankIntrinsicPeriodicSeeds,
   selectIntrinsicPeriodicSeedFront,
@@ -583,9 +584,7 @@ export function orderPeriodicContinuationsForExecution(
 ): ReadonlyArray<IntrinsicPeriodicContinuation> {
   return [...continuations].toSorted(
     (first, second) =>
-      first.seed.envelopeAreaMm2 - second.seed.envelopeAreaMm2 ||
-      first.seed.maximumSideMm - second.seed.maximumSideMm ||
-      first.seed.envelopeSpanMm - second.seed.envelopeSpanMm ||
+      compareIntrinsicPeriodicSeedEnvelopeAreaFirst(first.seed, second.seed) ||
       second.seed.placements.length - first.seed.placements.length ||
       first.sourceId.localeCompare(second.sourceId)
   )

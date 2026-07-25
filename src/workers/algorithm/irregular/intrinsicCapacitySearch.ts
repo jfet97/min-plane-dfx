@@ -298,7 +298,7 @@ interface ScoredCandidateReference {
   readonly moving: TransformedCollisionGeometry
   readonly candidate: IrregularPlacementCandidate
   readonly maximumSideGrid: number
-  readonly envelopeAreaGrid2: number
+  readonly envelopeAreaGrid2: bigint
   readonly envelopeSpanGrid: number
   readonly transformOrdinal: number
   readonly gridX: number
@@ -1701,7 +1701,7 @@ function evaluateCandidate(
     moving,
     candidate,
     maximumSideGrid: Math.max(widthGrid, heightGrid),
-    envelopeAreaGrid2: widthGrid * heightGrid,
+    envelopeAreaGrid2: BigInt(widthGrid) * BigInt(heightGrid),
     envelopeSpanGrid: widthGrid + heightGrid,
     transformOrdinal,
     gridX,
@@ -1717,7 +1717,7 @@ function compareScoredCandidateReferences(
 ): number {
   return (
     first.maximumSideGrid - second.maximumSideGrid ||
-    first.envelopeAreaGrid2 - second.envelopeAreaGrid2 ||
+    compareBigintsAscending(first.envelopeAreaGrid2, second.envelopeAreaGrid2) ||
     first.envelopeSpanGrid - second.envelopeSpanGrid ||
     first.transformOrdinal - second.transformOrdinal ||
     first.gridX - second.gridX ||
@@ -1762,8 +1762,7 @@ function compareCapacityBeamEntries(first: CapacityBeamEntry, second: CapacityBe
     ) ||
     Math.max(first.gridSpan.widthGrid, first.gridSpan.heightGrid) -
       Math.max(second.gridSpan.widthGrid, second.gridSpan.heightGrid) ||
-    first.gridSpan.widthGrid * first.gridSpan.heightGrid -
-      second.gridSpan.widthGrid * second.gridSpan.heightGrid ||
+    compareIntrinsicCapacityEnvelopeAreas(first.gridSpan, second.gridSpan) ||
     first.gridSpan.widthGrid +
       first.gridSpan.heightGrid -
       (second.gridSpan.widthGrid + second.gridSpan.heightGrid) ||
@@ -1783,16 +1782,28 @@ function compareCapacityBeamEntriesAreaFirst(
   }
   return (
     first.cavities.count - second.cavities.count ||
-    Math.round(first.cavities.totalAreaMm2 * 1_000_000) -
-      Math.round(second.cavities.totalAreaMm2 * 1_000_000) ||
-    first.gridSpan.widthGrid * first.gridSpan.heightGrid -
-      second.gridSpan.widthGrid * second.gridSpan.heightGrid ||
+    compareBigintsAscending(
+      BigInt(first.cavities.totalDoubledAreaGrid2),
+      BigInt(second.cavities.totalDoubledAreaGrid2)
+    ) ||
+    compareIntrinsicCapacityEnvelopeAreas(first.gridSpan, second.gridSpan) ||
     Math.max(first.gridSpan.widthGrid, first.gridSpan.heightGrid) -
       Math.max(second.gridSpan.widthGrid, second.gridSpan.heightGrid) ||
     first.gridSpan.widthGrid +
       first.gridSpan.heightGrid -
       (second.gridSpan.widthGrid + second.gridSpan.heightGrid) ||
     compareStrings(first.anchoredOccupiedKey, second.anchoredOccupiedKey)
+  )
+}
+
+/** Compares canonical capacity envelopes without losing one-grid-square differences. */
+export function compareIntrinsicCapacityEnvelopeAreas(
+  first: Pick<IntrinsicCapacityGridSpan, 'widthGrid' | 'heightGrid'>,
+  second: Pick<IntrinsicCapacityGridSpan, 'widthGrid' | 'heightGrid'>
+): number {
+  return compareBigintsAscending(
+    BigInt(first.widthGrid) * BigInt(first.heightGrid),
+    BigInt(second.widthGrid) * BigInt(second.heightGrid)
   )
 }
 

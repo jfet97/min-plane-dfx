@@ -15,6 +15,7 @@ import {
 } from '../src/shared/irregular/defaults.js'
 import {
   IrregularNestingSettings,
+  IrregularOptimizerSettings,
   type IrregularPlacedPiece
 } from '../src/shared/irregular/domain.js'
 import { makePresetShapeDocument } from '../src/shared/presetShapes.js'
@@ -26,6 +27,7 @@ import {
 } from '../src/workers/algorithm/irregular/computeIrregularNesting.js'
 import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregularLayoutScorer.js'
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
+import { makeIrregularWorkerOutput } from '../src/workers/algorithm/irregular/irregularWorkerOutput.js'
 import { INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES } from '../src/workers/algorithm/irregular/intrinsicShortSideObserver.js'
 import { INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES } from '../src/workers/algorithm/irregular/intrinsicShortSidePairFoldObserver.js'
 import {
@@ -43,11 +45,13 @@ import {
 } from './lib/irregularLayoutCanonicalization.js'
 
 type FixtureName = 'triangle-20' | 'mixed-61' | 'shapes-17'
+type ObjectiveProfile = 'compact' | 'short-side'
 
 interface Arguments {
   readonly fixture: FixtureName
   readonly sheet: SheetSpec
   readonly outputPrefix: string
+  readonly objectiveProfile: ObjectiveProfile
   readonly strict: boolean
   readonly expectedCollisionIdentitySha256: string | undefined
   readonly expectedFittedCanonicalSha256: string | undefined
@@ -90,6 +94,12 @@ function fixtureArgument(value: string): FixtureName {
   throw new Error('--fixture must be triangle-20, mixed-61, or shapes-17')
 }
 
+function objectiveProfileArgument(value: string | undefined): ObjectiveProfile {
+  if (value === undefined || value === 'compact') return 'compact'
+  if (value === 'short-side') return value
+  throw new Error('--objective-profile must be compact or short-side')
+}
+
 function sheetArgument(value: string): SheetSpec {
   const match = /^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)$/.exec(value)
   if (match === null) throw new Error('--sheet must be WIDTHxHEIGHT')
@@ -121,6 +131,7 @@ function parseArguments(): Arguments {
     fixture: fixtureArgument(requiredArgument('--fixture')),
     sheet: sheetArgument(requiredArgument('--sheet')),
     outputPrefix: requiredArgument('--output-prefix'),
+    objectiveProfile: objectiveProfileArgument(argument('--objective-profile')),
     strict: process.argv.includes('--strict'),
     expectedCollisionIdentitySha256: argument('--expected-collision-identity-sha256'),
     expectedFittedCanonicalSha256: argument('--expected-fitted-canonical-sha256'),
@@ -342,9 +353,23 @@ function jsonSafe(value: unknown): unknown {
 }
 
 const args = parseArguments()
-const request = await loadRequest(args.fixture, args.sheet)
-const settings = request.options.irregularSettings
-if (settings === undefined) throw new Error(`${args.fixture} has no irregular settings`)
+const loadedRequest = await loadRequest(args.fixture, args.sheet)
+const loadedSettings = loadedRequest.options.irregularSettings
+if (loadedSettings === undefined) throw new Error(`${args.fixture} has no irregular settings`)
+const settings = new IrregularNestingSettings({
+  ...loadedSettings,
+  optimizer: new IrregularOptimizerSettings({
+    ...loadedSettings.optimizer,
+    intrinsicObjectiveProfileId: args.objectiveProfile
+  })
+})
+const request = new NestingRequest({
+  ...loadedRequest,
+  options: new NestingOptions({
+    ...loadedRequest.options,
+    irregularSettings: settings
+  })
+})
 let observerWinner:
   | {
       readonly canonicalGeometryHash: string
@@ -388,6 +413,16 @@ const result = await Effect.runPromise(
   )
 )
 const elapsedMs = Math.max(0, performance.now() - startedAt)
+const workerOutput = makeIrregularWorkerOutput({
+  request,
+  computed: result,
+  algorithmBenchmark: {
+    startedAt: '2026-07-25T00:00:00.000Z',
+    endedAt: '2026-07-25T00:00:00.000Z',
+    elapsedMs
+  }
+})
+const workerStrategy = workerOutput.result.strategyResults[0]
 const polygons = absoluteCollisionPolygons(result)
 const bounds = layoutBounds(polygons)
 const canonicalTopology = measureCanonicalLayoutTopology(result.placedCollisionGeometries)
@@ -673,6 +708,11 @@ const checks = {
   schedulerChronology:
     result.intrinsicAnytimeSchedulerTrace === undefined ||
     intrinsicAnytimeSchedulerTraceValid(result.intrinsicAnytimeSchedulerTrace),
+  productionStrategyIdentity:
+    workerStrategy?.strategyId ===
+      (args.objectiveProfile === 'short-side'
+        ? 'irregular-convex-compact-short-side'
+        : 'irregular-convex-shared-archive'),
   focusedTracePresent: args.disableFocusedCompleteReconstruction || focusedTrace !== undefined,
   focusedStatus:
     args.expectedFocusedStatus === undefined || focusedTrace?.status === args.expectedFocusedStatus,
@@ -701,14 +741,24 @@ const checks = {
     !args.captureShortSideObserver || result.intrinsicShortSideObserverTrace !== undefined,
   shortSideObserverOutputInfluence:
     result.intrinsicShortSideObserverTrace === undefined ||
-    result.intrinsicShortSideObserverTrace.outputInfluence === 'none',
+    result.intrinsicShortSideObserverTrace.outputInfluence ===
+      (args.objectiveProfile === 'short-side' &&
+      result.intrinsicShortSideObserverTrace
+        .observerWinnerCanonicalGeometryHash !== undefined
+        ? 'selected'
+        : 'none'),
   shortSideObserverRuntimeBudget:
     shortSideObserverTrace === undefined || !shortSideObserverTrace.runtimeBudgetExceeded,
   shortSideObserverContract: shortSideObserverContractValid,
   shortSidePairFoldTracePresent:
     !shortSidePairFoldExpected || result.intrinsicShortSidePairFoldTrace !== undefined,
   shortSidePairFoldOutputInfluence:
-    shortSidePairFoldTrace === undefined || shortSidePairFoldTrace.outputInfluence === 'none',
+    shortSidePairFoldTrace === undefined ||
+    shortSidePairFoldTrace.outputInfluence ===
+      (args.objectiveProfile === 'short-side' &&
+      shortSidePairFoldTrace.status === 'accepted'
+        ? 'selected'
+        : 'none'),
   shortSidePairFoldBudget:
     shortSidePairFoldTrace === undefined ||
     (shortSidePairFoldTrace.serializedTraceBytes <=
@@ -734,6 +784,7 @@ const checks = {
 const passed = Object.values(checks).every(Boolean)
 const report = jsonSafe({
   fixture: args.fixture,
+  objectiveProfile: args.objectiveProfile,
   sheet: { width: args.sheet.width, height: args.sheet.height },
   sourceCommit:
     process.env.BASELINE_SOURCE_COMMIT ??
@@ -756,6 +807,11 @@ const report = jsonSafe({
     focusedCompleteReconstructionTrace: result.focusedCompleteReconstructionTrace,
     intrinsicShortSideObserverTrace: result.intrinsicShortSideObserverTrace,
     intrinsicShortSidePairFoldTrace: result.intrinsicShortSidePairFoldTrace
+  },
+  workerOutput: {
+    strategyId: workerStrategy?.strategyId,
+    strategyLabel: workerStrategy?.strategyLabel,
+    historyFrameCount: workerOutput.historyFrames.length
   },
   checks,
   passed,

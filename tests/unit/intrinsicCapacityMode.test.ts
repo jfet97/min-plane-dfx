@@ -40,7 +40,10 @@ import {
   intrinsicCapacityPrefixDepths,
   terminalizeIntrinsicCapacityPrefixEndpoints
 } from '../../src/workers/algorithm/irregular/intrinsicCapacityPrefixes.js'
-import { runIntrinsicCapacityColdSearch } from '../../src/workers/algorithm/irregular/intrinsicCapacitySearch.js'
+import {
+  compareIntrinsicCapacityEnvelopeAreas,
+  runIntrinsicCapacityColdSearch
+} from '../../src/workers/algorithm/irregular/intrinsicCapacitySearch.js'
 import {
   observeIntrinsicPlaceDeferCompleteShadow,
   runIntrinsicPlaceDeferCompleteShadow
@@ -310,6 +313,15 @@ describe('intrinsic capacity preflight', () => {
 })
 
 describe('intrinsic capacity search', () => {
+  it('orders one-grid-square envelope differences exactly near the coordinate limit', () => {
+    expect(
+      compareIntrinsicCapacityEnvelopeAreas(
+        { widthGrid: 999_999_999, heightGrid: 999_999_999 },
+        { widthGrid: 999_999_998, heightGrid: 1_000_000_000 }
+      )
+    ).toBeGreaterThan(0)
+  })
+
   it('returns the exact best subset with a complete partition when only one piece fits', async () => {
     const pieces = [
       preparedRectangle('square-a', 60, 60),

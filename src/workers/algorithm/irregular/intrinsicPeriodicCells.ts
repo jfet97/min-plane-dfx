@@ -32,6 +32,7 @@ import {
   measureCanonicalLayoutEnvelope,
   measureCanonicalLayoutTopology
 } from '../../irregular/canonicalLayoutGeometry.js'
+import { compareBigInts } from '../../irregular/canonicalGridMath.js'
 import {
   type IrregularGeometryInputError,
   type IrregularNfpIfpControl,
@@ -834,10 +835,74 @@ function compareSeeds(first: IntrinsicPeriodicSeed, second: IntrinsicPeriodicSee
     first.componentCount - second.componentCount ||
     first.isolatedPieceCount - second.isolatedPieceCount ||
     second.largestComponentSize - first.largestComponentSize ||
-    first.maximumSideMm - second.maximumSideMm ||
-    first.envelopeAreaMm2 - second.envelopeAreaMm2 ||
-    first.envelopeSpanMm - second.envelopeSpanMm ||
+    compareIntrinsicPeriodicSeedEnvelope(first, second) ||
     first.canonicalKey.localeCompare(second.canonicalKey)
+  )
+}
+
+interface IntrinsicPeriodicExactEnvelope {
+  readonly maximumSideGrid: number
+  readonly areaGrid2: string
+  readonly spanGrid: number
+}
+
+function exactEnvelopeForSeed(
+  seed: IntrinsicPeriodicSeed
+): IntrinsicPeriodicExactEnvelope | undefined {
+  if (seed.exactEnvelope !== undefined) return seed.exactEnvelope
+  const envelope = measureCanonicalLayoutEnvelope(seed.placements)
+  return envelope === undefined
+    ? undefined
+    : {
+        maximumSideGrid: envelope.maximumSideGrid,
+        areaGrid2: envelope.envelopeAreaGrid2,
+        spanGrid: envelope.spanGrid
+      }
+}
+
+/** Compares canonical seed envelopes by max side, exact area, then span. */
+export function compareIntrinsicPeriodicSeedEnvelope(
+  first: IntrinsicPeriodicSeed,
+  second: IntrinsicPeriodicSeed
+): number {
+  const firstEnvelope = exactEnvelopeForSeed(first)
+  const secondEnvelope = exactEnvelopeForSeed(second)
+  if (firstEnvelope === undefined || secondEnvelope === undefined) {
+    return firstEnvelope === undefined && secondEnvelope === undefined
+      ? first.maximumSideMm - second.maximumSideMm ||
+          first.envelopeAreaMm2 - second.envelopeAreaMm2 ||
+          first.envelopeSpanMm - second.envelopeSpanMm
+      : firstEnvelope === undefined
+        ? 1
+        : -1
+  }
+  return (
+    firstEnvelope.maximumSideGrid - secondEnvelope.maximumSideGrid ||
+    compareBigInts(BigInt(firstEnvelope.areaGrid2), BigInt(secondEnvelope.areaGrid2)) ||
+    firstEnvelope.spanGrid - secondEnvelope.spanGrid
+  )
+}
+
+/** Compares canonical seed envelopes by exact area, max side, then span. */
+export function compareIntrinsicPeriodicSeedEnvelopeAreaFirst(
+  first: IntrinsicPeriodicSeed,
+  second: IntrinsicPeriodicSeed
+): number {
+  const firstEnvelope = exactEnvelopeForSeed(first)
+  const secondEnvelope = exactEnvelopeForSeed(second)
+  if (firstEnvelope === undefined || secondEnvelope === undefined) {
+    return firstEnvelope === undefined && secondEnvelope === undefined
+      ? first.envelopeAreaMm2 - second.envelopeAreaMm2 ||
+          first.maximumSideMm - second.maximumSideMm ||
+          first.envelopeSpanMm - second.envelopeSpanMm
+      : firstEnvelope === undefined
+        ? 1
+        : -1
+  }
+  return (
+    compareBigInts(BigInt(firstEnvelope.areaGrid2), BigInt(secondEnvelope.areaGrid2)) ||
+    firstEnvelope.maximumSideGrid - secondEnvelope.maximumSideGrid ||
+    firstEnvelope.spanGrid - secondEnvelope.spanGrid
   )
 }
 
@@ -866,20 +931,47 @@ export function nonDominatedIntrinsicPeriodicSeeds(
 }
 
 function periodicSeedDominates(first: IntrinsicPeriodicSeed, second: IntrinsicPeriodicSeed): boolean {
+  const firstEnvelope = exactEnvelopeForSeed(first)
+  const secondEnvelope = exactEnvelopeForSeed(second)
+  if (firstEnvelope === undefined || secondEnvelope === undefined) {
+    if (firstEnvelope !== undefined || secondEnvelope !== undefined) return false
+    const noWorse =
+      first.componentCount <= second.componentCount &&
+      first.isolatedPieceCount <= second.isolatedPieceCount &&
+      first.largestComponentSize >= second.largestComponentSize &&
+      first.maximumSideMm <= second.maximumSideMm &&
+      first.envelopeAreaMm2 <= second.envelopeAreaMm2 &&
+      first.envelopeSpanMm <= second.envelopeSpanMm
+    const strict =
+      first.componentCount < second.componentCount ||
+      first.isolatedPieceCount < second.isolatedPieceCount ||
+      first.largestComponentSize > second.largestComponentSize ||
+      first.maximumSideMm < second.maximumSideMm ||
+      first.envelopeAreaMm2 < second.envelopeAreaMm2 ||
+      first.envelopeSpanMm < second.envelopeSpanMm
+    return noWorse && strict
+  }
+  const maximumSideComparison =
+    firstEnvelope.maximumSideGrid - secondEnvelope.maximumSideGrid
+  const areaComparison = compareBigInts(
+    BigInt(firstEnvelope.areaGrid2),
+    BigInt(secondEnvelope.areaGrid2)
+  )
+  const spanComparison = firstEnvelope.spanGrid - secondEnvelope.spanGrid
   const noWorse =
     first.componentCount <= second.componentCount &&
     first.isolatedPieceCount <= second.isolatedPieceCount &&
     first.largestComponentSize >= second.largestComponentSize &&
-    first.maximumSideMm <= second.maximumSideMm &&
-    first.envelopeAreaMm2 <= second.envelopeAreaMm2 &&
-    first.envelopeSpanMm <= second.envelopeSpanMm
+    maximumSideComparison <= 0 &&
+    areaComparison <= 0 &&
+    spanComparison <= 0
   const strict =
     first.componentCount < second.componentCount ||
     first.isolatedPieceCount < second.isolatedPieceCount ||
     first.largestComponentSize > second.largestComponentSize ||
-    first.maximumSideMm < second.maximumSideMm ||
-    first.envelopeAreaMm2 < second.envelopeAreaMm2 ||
-    first.envelopeSpanMm < second.envelopeSpanMm
+    maximumSideComparison < 0 ||
+    areaComparison < 0 ||
+    spanComparison < 0
   return noWorse && strict
 }
 

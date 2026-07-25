@@ -83,6 +83,11 @@ export interface IntrinsicStrictLocalScore {
   readonly envelopeSpanMm: number
   readonly sharedBoundaryLengthMm: number
   readonly canonicalCombinedGeometryKey: string
+  readonly exact?: {
+    readonly maximumSideGrid: number
+    readonly envelopeAreaGrid2: string
+    readonly envelopeSpanGrid: number
+  }
 }
 
 export type IntrinsicStrictComparatorMode =
@@ -97,6 +102,7 @@ export type IntrinsicStrictCandidateMode =
 export interface IntrinsicStrictFamilyWinner {
   readonly score: IntrinsicStrictLocalScore
   readonly movingCollisionAreaMm2: number
+  readonly movingCollisionDoubledAreaGrid2?: string
 }
 
 export interface IntrinsicStrictCompletedMetrics {
@@ -285,6 +291,7 @@ interface ScoredCandidate {
   readonly transformFamily: string
   readonly candidate: IrregularPlacementCandidate
   readonly movingCollisionAreaMm2: number
+  readonly movingCollisionDoubledAreaGrid2: string
   readonly containingGap: CanonicalIntrinsicGapRegion | undefined
 }
 
@@ -562,7 +569,12 @@ export function constructIntrinsicStrictState(
       for (const transform of [...piece.transforms].sort(transformCandidateOrder)) {
         const candidateGenerationStartedAt = capturePhaseTimings ? performance.now() : 0
         let moving: TransformedCollisionGeometry
-        let movingCollisionAreaMm2: number | undefined
+        let movingCollisionArea:
+          | {
+              readonly areaMm2: number
+              readonly doubledAreaGrid2: string
+            }
+          | undefined
         let candidateProvenance: NfpIfpCandidateProvenance | undefined
         let legalCandidates: ReadonlyArray<IrregularPlacementCandidate> = []
         try {
@@ -571,8 +583,8 @@ export function constructIntrinsicStrictState(
             geometry: piece.collisionGeometry,
             transform
           })
-          movingCollisionAreaMm2 = canonicalCollisionAreaMm2(moving)
-          if (movingCollisionAreaMm2 === undefined) continue
+          movingCollisionArea = canonicalCollisionArea(moving)
+          if (movingCollisionArea === undefined) continue
           legalCandidates =
             state.placedCollisionGeometries.length === 0
               ? originAnchorCandidates(moving)
@@ -621,7 +633,9 @@ export function constructIntrinsicStrictState(
               candidate,
               remainingPreparedPieces,
               transformFamily: family,
-              movingCollisionAreaMm2,
+              movingCollisionAreaMm2: movingCollisionArea.areaMm2,
+              movingCollisionDoubledAreaGrid2:
+                movingCollisionArea.doubledAreaGrid2,
               gapRegions,
               phaseTimings: capturePhaseTimings ? candidateStatePhaseTimings : undefined
             })
@@ -1362,6 +1376,7 @@ function scoreCandidate(input: {
   readonly remainingPreparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly transformFamily: string
   readonly movingCollisionAreaMm2: number
+  readonly movingCollisionDoubledAreaGrid2: string
   readonly gapRegions: ReadonlyArray<CanonicalIntrinsicGapRegion> | undefined
   readonly phaseTimings: MutableCandidateStatePhaseTimings | undefined
 }): ScoredCandidate | undefined {
@@ -1437,13 +1452,16 @@ function scoreCandidate(input: {
       transformFamily: input.transformFamily,
       candidate: input.candidate,
       movingCollisionAreaMm2: input.movingCollisionAreaMm2,
+      movingCollisionDoubledAreaGrid2:
+        input.movingCollisionDoubledAreaGrid2,
       containingGap,
       score: {
         maximumSideMm,
         envelopeAreaMm2,
         envelopeSpanMm,
         sharedBoundaryLengthMm,
-        canonicalCombinedGeometryKey
+        canonicalCombinedGeometryKey,
+        ...(envelope.exact === undefined ? {} : { exact: envelope.exact })
       }
     }
   } finally {
@@ -1455,7 +1473,10 @@ function scoreCandidate(input: {
 
 function measureIntrinsicStrictEnvelopeFromState(
   state: IrregularBeamState
-): Pick<IntrinsicStrictLocalScore, 'maximumSideMm' | 'envelopeAreaMm2' | 'envelopeSpanMm'> | undefined {
+): Pick<
+  IntrinsicStrictLocalScore,
+  'maximumSideMm' | 'envelopeAreaMm2' | 'envelopeSpanMm' | 'exact'
+> | undefined {
   const bounds = state.translatedCollisionBounds
   if (bounds === undefined) return undefined
   const widthGrid = toGridMm(bounds.width)
@@ -1468,9 +1489,22 @@ function measureIntrinsicStrictEnvelopeFromState(
   const metrics = {
     maximumSideMm: Math.max(widthMm, heightMm),
     envelopeAreaMm2: widthMm * heightMm,
-    envelopeSpanMm: widthMm + heightMm
+    envelopeSpanMm: widthMm + heightMm,
+    exact: {
+      maximumSideGrid: Math.max(widthGrid, heightGrid),
+      envelopeAreaGrid2: (BigInt(widthGrid) * BigInt(heightGrid)).toString(),
+      envelopeSpanGrid: widthGrid + heightGrid
+    }
   }
-  return Object.values(metrics).every(Number.isFinite) ? metrics : undefined
+  return [
+    metrics.maximumSideMm,
+    metrics.envelopeAreaMm2,
+    metrics.envelopeSpanMm,
+    metrics.exact.maximumSideGrid,
+    metrics.exact.envelopeSpanGrid
+  ].every(Number.isFinite)
+    ? metrics
+    : undefined
 }
 
 function selectGapContainedWinner(
@@ -1490,7 +1524,10 @@ function compareGapContainedCandidates(
   second: ScoredCandidate & { containingGap: CanonicalIntrinsicGapRegion }
 ): number {
   return (
-    first.containingGap.areaMm2 - second.containingGap.areaMm2 ||
+    compareBigIntAscending(
+      BigInt(first.containingGap.doubledAreaGrid2),
+      BigInt(second.containingGap.doubledAreaGrid2)
+    ) ||
     second.score.sharedBoundaryLengthMm - first.score.sharedBoundaryLengthMm ||
     compareLocalScores(first.score, second.score)
   )
@@ -1513,13 +1550,34 @@ export function selectIntrinsicStrictFamilyWinner<T extends IntrinsicStrictFamil
 
   return candidates
     .filter(
-      (candidate) =>
-        canonicalLinearMetric(candidate.score.maximumSideMm) ===
-          canonicalLinearMetric(pureLeader.score.maximumSideMm) &&
-        canonicalAreaMetric(candidate.score.envelopeAreaMm2) <=
-          canonicalAreaMetric(
-            pureLeader.score.envelopeAreaMm2 + 0.02 * candidate.movingCollisionAreaMm2
+      (candidate) => {
+        const candidateExact = candidate.score.exact
+        const leaderExact = pureLeader.score.exact
+        const movingDoubledArea =
+          candidate.movingCollisionDoubledAreaGrid2
+        if (
+          candidateExact !== undefined &&
+          leaderExact !== undefined &&
+          movingDoubledArea !== undefined
+        ) {
+          return (
+            candidateExact.maximumSideGrid ===
+              leaderExact.maximumSideGrid &&
+            100n * BigInt(candidateExact.envelopeAreaGrid2) <=
+              100n * BigInt(leaderExact.envelopeAreaGrid2) +
+                BigInt(movingDoubledArea)
           )
+        }
+        return (
+          canonicalLinearMetric(candidate.score.maximumSideMm) ===
+            canonicalLinearMetric(pureLeader.score.maximumSideMm) &&
+          canonicalAreaMetric(candidate.score.envelopeAreaMm2) <=
+            canonicalAreaMetric(
+              pureLeader.score.envelopeAreaMm2 +
+                0.02 * candidate.movingCollisionAreaMm2
+            )
+        )
+      }
     )
     .toSorted(compareContactBandCandidates)[0]
 }
@@ -1529,13 +1587,17 @@ function compareLegacyAbsoluteEnvelopeCandidates(
   first: IntrinsicStrictFamilyWinner,
   second: IntrinsicStrictFamilyWinner
 ): number {
+  const exact = compareExactLocalEnvelopes(first.score, second.score, 'area-first')
+  if (exact !== undefined && exact !== 0) return exact
   return (
-    canonicalAreaMetric(first.score.envelopeAreaMm2) -
-      canonicalAreaMetric(second.score.envelopeAreaMm2) ||
-    canonicalLinearMetric(first.score.maximumSideMm) -
-      canonicalLinearMetric(second.score.maximumSideMm) ||
-    canonicalLinearMetric(first.score.envelopeSpanMm) -
-      canonicalLinearMetric(second.score.envelopeSpanMm) ||
+    (exact ?? (
+      canonicalAreaMetric(first.score.envelopeAreaMm2) -
+        canonicalAreaMetric(second.score.envelopeAreaMm2) ||
+      canonicalLinearMetric(first.score.maximumSideMm) -
+        canonicalLinearMetric(second.score.maximumSideMm) ||
+      canonicalLinearMetric(first.score.envelopeSpanMm) -
+        canonicalLinearMetric(second.score.envelopeSpanMm)
+    )) ||
     second.score.sharedBoundaryLengthMm - first.score.sharedBoundaryLengthMm ||
     first.score.canonicalCombinedGeometryKey.localeCompare(
       second.score.canonicalCombinedGeometryKey
@@ -1547,12 +1609,15 @@ function compareContactBandCandidates(
   first: IntrinsicStrictFamilyWinner,
   second: IntrinsicStrictFamilyWinner
 ): number {
+  const exact = compareExactLocalEnvelopes(first.score, second.score, 'area-first')
   return (
     second.score.sharedBoundaryLengthMm - first.score.sharedBoundaryLengthMm ||
-    canonicalAreaMetric(first.score.envelopeAreaMm2) -
-      canonicalAreaMetric(second.score.envelopeAreaMm2) ||
-    canonicalLinearMetric(first.score.envelopeSpanMm) -
-      canonicalLinearMetric(second.score.envelopeSpanMm) ||
+    (exact ?? (
+      canonicalAreaMetric(first.score.envelopeAreaMm2) -
+        canonicalAreaMetric(second.score.envelopeAreaMm2) ||
+      canonicalLinearMetric(first.score.envelopeSpanMm) -
+        canonicalLinearMetric(second.score.envelopeSpanMm)
+    )) ||
     first.score.canonicalCombinedGeometryKey.localeCompare(
       second.score.canonicalCombinedGeometryKey
     )
@@ -1563,13 +1628,38 @@ function compareLocalScores(
   first: IntrinsicStrictLocalScore,
   second: IntrinsicStrictLocalScore
 ): number {
+  const exact = compareExactLocalEnvelopes(first, second, 'maximum-side-first')
   return (
-    canonicalLinearMetric(first.maximumSideMm) - canonicalLinearMetric(second.maximumSideMm) ||
-    canonicalAreaMetric(first.envelopeAreaMm2) - canonicalAreaMetric(second.envelopeAreaMm2) ||
-    canonicalLinearMetric(first.envelopeSpanMm) - canonicalLinearMetric(second.envelopeSpanMm) ||
+    (exact ?? (
+      canonicalLinearMetric(first.maximumSideMm) -
+        canonicalLinearMetric(second.maximumSideMm) ||
+      canonicalAreaMetric(first.envelopeAreaMm2) -
+        canonicalAreaMetric(second.envelopeAreaMm2) ||
+      canonicalLinearMetric(first.envelopeSpanMm) -
+        canonicalLinearMetric(second.envelopeSpanMm)
+    )) ||
     second.sharedBoundaryLengthMm - first.sharedBoundaryLengthMm ||
     first.canonicalCombinedGeometryKey.localeCompare(second.canonicalCombinedGeometryKey)
   )
+}
+
+function compareExactLocalEnvelopes(
+  first: IntrinsicStrictLocalScore,
+  second: IntrinsicStrictLocalScore,
+  mode: 'maximum-side-first' | 'area-first'
+): number | undefined {
+  if (first.exact === undefined || second.exact === undefined) return undefined
+  const areaComparison = compareBigIntAscending(
+    BigInt(first.exact.envelopeAreaGrid2),
+    BigInt(second.exact.envelopeAreaGrid2)
+  )
+  return mode === 'maximum-side-first'
+    ? first.exact.maximumSideGrid - second.exact.maximumSideGrid ||
+        areaComparison ||
+        first.exact.envelopeSpanGrid - second.exact.envelopeSpanGrid
+    : areaComparison ||
+        first.exact.maximumSideGrid - second.exact.maximumSideGrid ||
+        first.exact.envelopeSpanGrid - second.exact.envelopeSpanGrid
 }
 
 /** Canonicalizes one linear millimeter metric to the deterministic 0.001 mm grid. */
@@ -1582,8 +1672,15 @@ export function canonicalAreaMetric(valueMm2: number): number {
   return Math.round(valueMm2 * 1_000_000)
 }
 
-function canonicalCollisionAreaMm2(moving: TransformedCollisionGeometry): number | undefined {
-  let doubledAreaGrid2 = 0
+function canonicalCollisionArea(
+  moving: TransformedCollisionGeometry
+):
+  | {
+      readonly areaMm2: number
+      readonly doubledAreaGrid2: string
+    }
+  | undefined {
+  let doubledAreaGrid2 = 0n
   for (let index = 0; index < moving.polygon.points.length; index += 1) {
     const first = moving.polygon.points[index]
     const second = moving.polygon.points[(index + 1) % moving.polygon.points.length]
@@ -1600,10 +1697,19 @@ function canonicalCollisionAreaMm2(moving: TransformedCollisionGeometry): number
     ) {
       return undefined
     }
-    doubledAreaGrid2 += firstX * secondY - secondX * firstY
+    doubledAreaGrid2 +=
+      BigInt(firstX) * BigInt(secondY) -
+      BigInt(secondX) * BigInt(firstY)
   }
-  const areaMm2 = Math.abs(doubledAreaGrid2) / 2_000_000
-  return Number.isFinite(areaMm2) && areaMm2 > 0 ? areaMm2 : undefined
+  const absoluteDoubledAreaGrid2 =
+    doubledAreaGrid2 < 0n ? -doubledAreaGrid2 : doubledAreaGrid2
+  const areaMm2 = Number(absoluteDoubledAreaGrid2) / 2_000_000
+  return Number.isFinite(areaMm2) && areaMm2 > 0
+    ? {
+        areaMm2,
+        doubledAreaGrid2: absoluteDoubledAreaGrid2.toString()
+      }
+    : undefined
 }
 
 /** Deterministic origin anchor for the first placement of an empty sheetless state. */

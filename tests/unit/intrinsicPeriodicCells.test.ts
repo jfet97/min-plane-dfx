@@ -451,6 +451,34 @@ describe('intrinsic periodic cells', () => {
       expect(rankIntrinsicPeriodicSeeds([topologicallyWeak, topologicallyStrong])[0]?.cellKey).toBe(
         'less-dense-cell'
       )
+      const oneGridSquareLarger = {
+        ...seed,
+        cellKey: 'one-grid-square-larger',
+        canonicalKey: 'larger',
+        maximumSideMm: 1_000_000,
+        envelopeAreaMm2: 999_999_998_000,
+        envelopeSpanMm: 2_000_000,
+        exactEnvelope: {
+          maximumSideGrid: 1_000_000_000,
+          areaGrid2: '999999998000000001',
+          spanGrid: 2_000_000_000
+        }
+      }
+      const oneGridSquareSmaller = {
+        ...oneGridSquareLarger,
+        cellKey: 'one-grid-square-smaller',
+        canonicalKey: 'smaller',
+        exactEnvelope: {
+          ...oneGridSquareLarger.exactEnvelope,
+          areaGrid2: '999999998000000000'
+        }
+      }
+      expect(
+        rankIntrinsicPeriodicSeeds([
+          oneGridSquareLarger,
+          oneGridSquareSmaller
+        ])[0]?.cellKey
+      ).toBe('one-grid-square-smaller')
     }
   })
 })

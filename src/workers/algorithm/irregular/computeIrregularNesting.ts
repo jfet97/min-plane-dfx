@@ -1081,7 +1081,6 @@ function coordinateIntrinsicSharedArchive(
         productionPlacedCollisionGeometries:
           selected.placedCollisionGeometries
       })
-      input.options?.onIntrinsicShortSideObserver?.(intrinsicShortSideObserverTrace)
       const winnerHash =
         intrinsicShortSideObserverTrace.observerWinnerCanonicalGeometryHash
       const winnerRotation =
@@ -1122,6 +1121,10 @@ function coordinateIntrinsicSharedArchive(
           selection: 'archive-endpoint',
           canonicalGeometryHash: winnerHash
         })
+        intrinsicShortSideObserverTrace = {
+          ...intrinsicShortSideObserverTrace,
+          outputInfluence: 'selected'
+        }
         archiveDiagnostics.push(
           intrinsicShortSideProfileDiagnostic(
             'selected',
@@ -1181,6 +1184,10 @@ function coordinateIntrinsicSharedArchive(
             selection: pairFoldOutcome.trace.constructionKind ?? 'pair-fold',
             canonicalGeometryHash: pairFoldOutcome.trace.canonicalGeometryHash
           })
+          intrinsicShortSidePairFoldTrace = {
+            ...pairFoldOutcome.trace,
+            outputInfluence: 'selected'
+          }
           archiveDiagnostics.push(
             intrinsicShortSideProfileDiagnostic(
               'selected',
@@ -1198,6 +1205,7 @@ function coordinateIntrinsicSharedArchive(
           )
         )
       }
+      input.options?.onIntrinsicShortSideObserver?.(intrinsicShortSideObserverTrace)
     }
     for (const snapshot of selected.stateSnapshots) {
       input.options?.emitStateSnapshot?.(snapshot, input.settings.optimizer.beamWidth)

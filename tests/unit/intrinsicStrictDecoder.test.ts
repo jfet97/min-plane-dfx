@@ -1117,6 +1117,38 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
     expect(selectIntrinsicStrictFamilyWinner([quiet, contact], 'contact-band')?.id).toBe('contact')
   })
 
+  it('keeps one-grid-square envelope differences exact near the coordinate limit', () => {
+    const larger = familyWinner('larger', {
+      maximumSideMm: 1_000_000,
+      envelopeAreaMm2: 999_999_998_000,
+      envelopeSpanMm: 2_000_000,
+      sharedBoundaryLengthMm: 0,
+      exact: {
+        maximumSideGrid: 1_000_000_000,
+        envelopeAreaGrid2: '999999998000000001',
+        envelopeSpanGrid: 2_000_000_000
+      }
+    })
+    const smaller = familyWinner('smaller', {
+      maximumSideMm: 1_000_000,
+      envelopeAreaMm2: 999_999_998_000,
+      envelopeSpanMm: 2_000_000,
+      sharedBoundaryLengthMm: 0,
+      exact: {
+        maximumSideGrid: 1_000_000_000,
+        envelopeAreaGrid2: '999999998000000000',
+        envelopeSpanGrid: 2_000_000_000
+      }
+    })
+
+    expect(
+      selectIntrinsicStrictFamilyWinner(
+        [larger, smaller],
+        'legacy-absolute-envelope'
+      )?.id
+    ).toBe('smaller')
+  })
+
   it('measures the authoritative rounded world envelope after fractional translation', () => {
     const pieceId = PieceId.make('fractional-envelope')
     const localPoints = [point(0.00049, 0), point(1.001, 0), point(1.001, 1), point(0.00049, 1)]

@@ -13,6 +13,10 @@ interface Baseline {
   readonly maximumAreaMm2: number
   readonly maximumCanonicalCavities: number
   readonly maximumElapsedMs: number
+  readonly shortSideCollisionIdentitySha256: string
+  readonly shortSideFittedCanonicalSha256: string
+  readonly shortSidePlacedCount: number
+  readonly shortSideUnplacedCount: number
 }
 
 const BASELINES: ReadonlyArray<Baseline> = [
@@ -25,7 +29,13 @@ const BASELINES: ReadonlyArray<Baseline> = [
     unplacedCount: 0,
     maximumAreaMm2: 74_428.143126,
     maximumCanonicalCavities: 0,
-    maximumElapsedMs: 120_000
+    maximumElapsedMs: 120_000,
+    shortSideCollisionIdentitySha256:
+      '7a79ebd40029094854748d569acb52f95f32a96e71b3b674941ba7f20f9cfe15',
+    shortSideFittedCanonicalSha256:
+      'bc978c3710e6865a68c4c965fde545d0421d5d915319056b5a67689a6e918e5a',
+    shortSidePlacedCount: 20,
+    shortSideUnplacedCount: 0
   },
   {
     fixture: 'mixed-61',
@@ -36,7 +46,13 @@ const BASELINES: ReadonlyArray<Baseline> = [
     unplacedCount: 0,
     maximumAreaMm2: 391_605.850174,
     maximumCanonicalCavities: 0,
-    maximumElapsedMs: 330_000
+    maximumElapsedMs: 330_000,
+    shortSideCollisionIdentitySha256:
+      'c6fb2fa21ffa6d3bee75ea5cedc6b4f74a3b0ca0e48b6540be0b10f87ae4ce76',
+    shortSideFittedCanonicalSha256:
+      '914bb181f71cf450d22bff7342ee9310aa4f76ec180126083e43747740b444c0',
+    shortSidePlacedCount: 61,
+    shortSideUnplacedCount: 0
   },
   {
     fixture: 'shapes-17',
@@ -47,7 +63,13 @@ const BASELINES: ReadonlyArray<Baseline> = [
     unplacedCount: 0,
     maximumAreaMm2: 281_233.148068,
     maximumCanonicalCavities: 0,
-    maximumElapsedMs: 120_000
+    maximumElapsedMs: 120_000,
+    shortSideCollisionIdentitySha256:
+      '4dd34dcee54caa79e1cc0dc3fc88b867ddfa15a98588dda1083e820cdb44c0bb',
+    shortSideFittedCanonicalSha256:
+      '063f740ff97b154ab9b3116023da7de3da1de33322a27ca53f56b43b21a3c7bb',
+    shortSidePlacedCount: 17,
+    shortSideUnplacedCount: 0
   },
   {
     fixture: 'triangle-20',
@@ -58,7 +80,13 @@ const BASELINES: ReadonlyArray<Baseline> = [
     unplacedCount: 0,
     maximumAreaMm2: 74_428.143126,
     maximumCanonicalCavities: 0,
-    maximumElapsedMs: 120_000
+    maximumElapsedMs: 120_000,
+    shortSideCollisionIdentitySha256:
+      '4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f',
+    shortSideFittedCanonicalSha256:
+      'bf23f53f3bb796f082dc7a1e1257df3a366351bc2a637bfba08b9f5d0be929a8',
+    shortSidePlacedCount: 20,
+    shortSideUnplacedCount: 0
   },
   {
     fixture: 'mixed-61',
@@ -69,7 +97,13 @@ const BASELINES: ReadonlyArray<Baseline> = [
     unplacedCount: 36,
     maximumAreaMm2: 239_484.9666,
     maximumCanonicalCavities: 0,
-    maximumElapsedMs: 330_000
+    maximumElapsedMs: 330_000,
+    shortSideCollisionIdentitySha256:
+      '2c53f3123d5d57ab5e120717ae1e49046bb574925c49c4a33ed4febe7e81e414',
+    shortSideFittedCanonicalSha256:
+      '39e74c34e0cfcd4929ba3dde53d1b0215ca2c48e383297b15922f07115569f38',
+    shortSidePlacedCount: 25,
+    shortSideUnplacedCount: 36
   },
   {
     fixture: 'shapes-17',
@@ -80,7 +114,13 @@ const BASELINES: ReadonlyArray<Baseline> = [
     unplacedCount: 3,
     maximumAreaMm2: 232_178.021694,
     maximumCanonicalCavities: 0,
-    maximumElapsedMs: 120_000
+    maximumElapsedMs: 120_000,
+    shortSideCollisionIdentitySha256:
+      '01b2060d87752bb36eebfd4eb8602709687d5cb00c71b8feaec14a6e7cf9ba12',
+    shortSideFittedCanonicalSha256:
+      '4472adc8ddfcc26af748adcfeb220e049a4f0e814cb17a99c0dc092db903921e',
+    shortSidePlacedCount: 14,
+    shortSideUnplacedCount: 3
   },
   {
     fixture: 'triangle-20',
@@ -91,7 +131,13 @@ const BASELINES: ReadonlyArray<Baseline> = [
     unplacedCount: 3,
     maximumAreaMm2: 78_811.504488,
     maximumCanonicalCavities: 0,
-    maximumElapsedMs: 120_000
+    maximumElapsedMs: 120_000,
+    shortSideCollisionIdentitySha256:
+      '0f5befd7d02fc111be47ee447fab7f8778f06ae05d045448f22a916d66949410',
+    shortSideFittedCanonicalSha256:
+      '2f236b79c7c49a999daf5363e257bbda6b8562239571c6fedab2485cffb38c35',
+    shortSidePlacedCount: 17,
+    shortSideUnplacedCount: 3
   },
   {
     fixture: 'mixed-61',
@@ -102,7 +148,13 @@ const BASELINES: ReadonlyArray<Baseline> = [
     unplacedCount: 55,
     maximumAreaMm2: 89_504.369008,
     maximumCanonicalCavities: 0,
-    maximumElapsedMs: 330_000
+    maximumElapsedMs: 330_000,
+    shortSideCollisionIdentitySha256:
+      'bb22df3517b4f2bbbdebc1d35704dbf4374f96d264af919a4c8d29dc2168fa33',
+    shortSideFittedCanonicalSha256:
+      '37d7bf9c37dfe2b9702bf8df73791782006178eb570ac043b23f1ca20ca22c0b',
+    shortSidePlacedCount: 6,
+    shortSideUnplacedCount: 55
   },
   {
     fixture: 'shapes-17',
@@ -113,7 +165,13 @@ const BASELINES: ReadonlyArray<Baseline> = [
     unplacedCount: 12,
     maximumAreaMm2: 87_791.951625,
     maximumCanonicalCavities: 0,
-    maximumElapsedMs: 120_000
+    maximumElapsedMs: 120_000,
+    shortSideCollisionIdentitySha256:
+      'e4ad1ce1c7fa26e7a00ba38a5d9c11e1908ebf753031ff4811420d5097be7c71',
+    shortSideFittedCanonicalSha256:
+      'bccfa5a4b7db4b5009a8c0f12d7c6f308c9a72550df3feb218355f33a5c1ef18',
+    shortSidePlacedCount: 5,
+    shortSideUnplacedCount: 12
   }
 ]
 
@@ -142,9 +200,31 @@ function argument(name: string): string | undefined {
   return index < 0 ? undefined : process.argv[index + 1]
 }
 
-function runBaseline(baseline: Baseline, outputDirectory: string): Promise<void> {
+function runProcess(
+  baseline: Baseline,
+  arguments_: ReadonlyArray<string>,
+  profile: 'compact' | 'short-side'
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('pnpm', arguments_, { stdio: 'inherit' })
+    child.once('error', reject)
+    child.once('exit', (code, signal) => {
+      if (code === 0) {
+        resolve()
+        return
+      }
+      reject(
+        new Error(
+          `${baseline.fixture} ${baseline.sheet} ${profile} exited with ${code ?? `signal ${signal}`}`
+        )
+      )
+    })
+  })
+}
+
+async function runBaseline(baseline: Baseline, outputDirectory: string): Promise<void> {
   const outputPrefix = join(outputDirectory, `${baseline.fixture}-${baseline.sheet}`)
-  const arguments_ = [
+  const compactArguments = [
     'exec',
     'tsx',
     '--tsconfig',
@@ -171,24 +251,39 @@ function runBaseline(baseline: Baseline, outputDirectory: string): Promise<void>
     String(baseline.maximumCanonicalCavities),
     '--maximum-elapsed-ms',
     String(baseline.maximumElapsedMs),
-    '--capture-short-side-observer',
-    '--capture-short-side-pair-fold-observer',
     ...focusedExpectedArguments(baseline)
   ]
-
-  return new Promise((resolve, reject) => {
-    const child = spawn('pnpm', arguments_, { stdio: 'inherit' })
-    child.once('error', reject)
-    child.once('exit', (code, signal) => {
-      if (code === 0) {
-        resolve()
-        return
-      }
-      reject(
-        new Error(`${baseline.fixture} ${baseline.sheet} exited with ${code ?? `signal ${signal}`}`)
-      )
-    })
-  })
+  await runProcess(baseline, compactArguments, 'compact')
+  const shortSideArguments = [
+    'exec',
+    'tsx',
+    '--tsconfig',
+    'tsconfig.node.json',
+    'scripts/irregular-compact-baseline.ts',
+    '--fixture',
+    baseline.fixture,
+    '--sheet',
+    baseline.sheet,
+    '--output-prefix',
+    `${outputPrefix}.short-side-profile`,
+    '--objective-profile',
+    'short-side',
+    '--strict',
+    '--expected-collision-identity-sha256',
+    baseline.shortSideCollisionIdentitySha256,
+    '--expected-fitted-canonical-sha256',
+    baseline.shortSideFittedCanonicalSha256,
+    '--expected-placed-count',
+    String(baseline.shortSidePlacedCount),
+    '--expected-unplaced-count',
+    String(baseline.shortSideUnplacedCount),
+    '--maximum-canonical-cavities',
+    String(baseline.maximumCanonicalCavities),
+    '--maximum-elapsed-ms',
+    String(baseline.maximumElapsedMs),
+    ...focusedExpectedArguments(baseline)
+  ]
+  await runProcess(baseline, shortSideArguments, 'short-side')
 }
 
 function focusedExpectedArguments(baseline: Baseline): ReadonlyArray<string> {
@@ -296,6 +391,7 @@ for (const baseline of BASELINES) {
 
 interface CompactReport {
   readonly fixture: Baseline['fixture']
+  readonly objectiveProfile: 'compact' | 'short-side'
   readonly sheet: {
     readonly width: number
     readonly height: number
@@ -314,58 +410,34 @@ interface CompactReport {
       readonly area: number
       readonly span: number
     }
+    readonly intrinsicShortSideObserverTrace?: {
+      readonly status: string
+      readonly outputInfluence: 'none' | 'selected'
+      readonly observerWinnerRotationDeg?: 0 | 90
+    }
+    readonly intrinsicShortSidePairFoldTrace?: {
+      readonly status: string
+      readonly outputInfluence: 'none' | 'selected'
+      readonly constructionKind?: 'pair-fold' | 'multi-row-shelf' | 'contact-strip'
+    }
   }
   readonly checks: Readonly<Record<string, boolean>>
   readonly passed: boolean
   readonly svgPath: string
-}
-
-interface ShortSideProfileReport {
-  readonly fixture: Baseline['fixture']
-  readonly profile: 'short-side'
-  readonly sheet: {
-    readonly width: number
-    readonly height: number
+  readonly workerOutput: {
+    readonly strategyId: string | undefined
+    readonly strategyLabel: string | undefined
+    readonly historyFrameCount: number
   }
-  readonly source:
-    | 'guarded-stage1-winner'
-    | 'terminal-pair-fold-winner'
-    | 'terminal-multi-row-shelf-winner'
-    | 'terminal-contact-strip-winner'
-    | 'compact-fallback'
-  readonly profileOutcome:
-    | 'directional-success'
-    | 'short-side-satisfied-by-compact'
-    | 'directional-miss'
-  readonly shortAxisFillRatio: number
-  readonly observerStatus: string
-  readonly selectedRotationDeg?: 0 | 90
-  readonly placedCount: number
-  readonly unplacedCount: number
-  readonly collisionIdentitySha256: string
-  readonly fittedCanonicalSha256: string
-  readonly canonicalTopology?: {
-    readonly enclosedCavityCount: number
-  }
-  readonly bounds: {
-    readonly width: number
-    readonly height: number
-    readonly area: number
-    readonly span: number
-  }
-  readonly exactPiecePartition: boolean
-  readonly svgPath: string
 }
 
 const compactReports: Array<CompactReport> = []
-const shortSideReports: Array<ShortSideProfileReport> = []
+const shortSideReports: Array<CompactReport> = []
 for (const baseline of BASELINES) {
   const prefix = join(outputDirectory, `${baseline.fixture}-${baseline.sheet}`)
   compactReports.push(JSON.parse(await readFile(`${prefix}.json`, 'utf8')) as CompactReport)
   shortSideReports.push(
-    JSON.parse(
-      await readFile(`${prefix}.short-side-profile.json`, 'utf8')
-    ) as ShortSideProfileReport
+    JSON.parse(await readFile(`${prefix}.short-side-profile.json`, 'utf8')) as CompactReport
   )
 }
 
@@ -384,12 +456,46 @@ for (let index = 0; index < BASELINES.length; index += 1) {
   )
   renderSvgToPng(join(outputDirectory, compactReport.svgPath), compactPngPath)
   renderSvgToPng(join(outputDirectory, shortSideReport.svgPath), shortSidePngPath)
+  const archiveSelected =
+    shortSideReport.result.intrinsicShortSideObserverTrace?.outputInfluence ===
+    'selected'
+  const terminalTrace =
+    shortSideReport.result.intrinsicShortSidePairFoldTrace
+  const terminalSelected = terminalTrace?.outputInfluence === 'selected'
+  const shortSideSource = archiveSelected
+    ? ('guarded-stage1-winner' as const)
+    : terminalSelected
+      ? terminalTrace.constructionKind === 'contact-strip'
+        ? ('terminal-contact-strip-winner' as const)
+        : terminalTrace.constructionKind === 'multi-row-shelf'
+          ? ('terminal-multi-row-shelf-winner' as const)
+          : ('terminal-pair-fold-winner' as const)
+      : ('compact-fallback' as const)
+  const shortAxisSpan =
+    shortSideReport.sheet.width === shortSideReport.sheet.height
+      ? Math.max(
+          shortSideReport.result.bounds.width,
+          shortSideReport.result.bounds.height
+        )
+      : shortSideReport.sheet.width < shortSideReport.sheet.height
+        ? shortSideReport.result.bounds.width
+        : shortSideReport.result.bounds.height
+  const shortAxisFillRatio =
+    shortAxisSpan /
+    Math.min(shortSideReport.sheet.width, shortSideReport.sheet.height)
+  const profileOutcome =
+    shortSideSource !== 'compact-fallback'
+      ? ('directional-success' as const)
+      : shortAxisFillRatio >= 0.8
+        ? ('short-side-satisfied-by-compact' as const)
+        : ('directional-miss' as const)
   layoutRecords.push(
     {
       fixture: baseline.fixture,
       sheet: baseline.sheet,
       profile: 'compact',
       source: 'production-compact',
+      strategyId: compactReport.workerOutput.strategyId,
       placedCount: compactReport.result.placedCount,
       unplacedCount: compactReport.result.unplacedCount,
       collisionIdentitySha256: compactReport.result.collisionIdentitySha256,
@@ -397,7 +503,9 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       canonicalCavities: compactReport.result.canonicalTopology?.enclosedCavityCount,
       bounds: compactReport.result.bounds,
       exactPiecePartition: compactReport.checks.exactPiecePartition,
-      passed: compactReport.passed,
+      passed:
+        compactReport.objectiveProfile === 'compact' &&
+        compactReport.passed,
       svgPath: compactReport.svgPath,
       pngPath: basename(compactPngPath)
     },
@@ -405,19 +513,30 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       fixture: baseline.fixture,
       sheet: baseline.sheet,
       profile: 'short-side',
-      source: shortSideReport.source,
-      profileOutcome: shortSideReport.profileOutcome,
-      shortAxisFillRatio: shortSideReport.shortAxisFillRatio,
-      observerStatus: shortSideReport.observerStatus,
-      selectedRotationDeg: shortSideReport.selectedRotationDeg,
-      placedCount: shortSideReport.placedCount,
-      unplacedCount: shortSideReport.unplacedCount,
-      collisionIdentitySha256: shortSideReport.collisionIdentitySha256,
-      fittedCanonicalSha256: shortSideReport.fittedCanonicalSha256,
-      canonicalCavities: shortSideReport.canonicalTopology?.enclosedCavityCount,
-      bounds: shortSideReport.bounds,
-      exactPiecePartition: shortSideReport.exactPiecePartition,
-      passed: shortSideReport.exactPiecePartition && compactReport.passed,
+      source: shortSideSource,
+      strategyId: shortSideReport.workerOutput.strategyId,
+      profileOutcome,
+      shortAxisFillRatio,
+      observerStatus:
+        shortSideReport.result.intrinsicShortSideObserverTrace?.status ??
+        'missing',
+      selectedRotationDeg:
+        shortSideReport.result.intrinsicShortSideObserverTrace
+          ?.observerWinnerRotationDeg,
+      placedCount: shortSideReport.result.placedCount,
+      unplacedCount: shortSideReport.result.unplacedCount,
+      collisionIdentitySha256:
+        shortSideReport.result.collisionIdentitySha256,
+      fittedCanonicalSha256:
+        shortSideReport.result.fittedCanonicalSha256,
+      canonicalCavities:
+        shortSideReport.result.canonicalTopology?.enclosedCavityCount,
+      bounds: shortSideReport.result.bounds,
+      exactPiecePartition: shortSideReport.checks.exactPiecePartition,
+      passed:
+        shortSideReport.objectiveProfile === 'short-side' &&
+        Boolean(shortSideReport.checks.exactPiecePartition) &&
+        shortSideReport.passed,
       svgPath: shortSideReport.svgPath,
       pngPath: basename(shortSidePngPath)
     }
@@ -515,7 +634,7 @@ await writeFile(
   manifestPath,
   `${JSON.stringify(
     {
-      version: 'compact-short-side-observer-provenance-v1',
+      version: 'compact-short-side-production-provenance-v2',
       generatedAt: new Date().toISOString(),
       sourceCommit,
       command: ['pnpm', 'gate:compact-nine-baselines', '--output-dir', '<output-directory>'],
@@ -526,7 +645,7 @@ await writeFile(
       svgRenderer: SVG_RENDERER_SCRIPT,
       execution: {
         maximumConcurrentAlgorithmProcesses: 1,
-        algorithmCases: BASELINES.length,
+        algorithmCases: BASELINES.length * 2,
         materializedLayouts: layoutRecords.length,
         strictlySequential: true
       },

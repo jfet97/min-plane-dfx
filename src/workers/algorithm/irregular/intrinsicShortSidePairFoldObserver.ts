@@ -89,7 +89,7 @@ export interface IntrinsicShortSideInterlockingMetrics {
 export interface IntrinsicShortSidePairFoldTrace {
   readonly version: typeof INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION
   readonly status: IntrinsicShortSidePairFoldStatus
-  readonly outputInfluence: 'none'
+  readonly outputInfluence: 'none' | 'selected'
   readonly executionModel: 'single-process-sequential'
   readonly requestedShortAxisMm: number
   readonly requestedLongAxisMm: number

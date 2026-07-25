@@ -23,9 +23,11 @@ hashes. It also does not run concurrent algorithm work: the existing Electron
 renderer/main/worker boundary remains, and all Short Side stages advance
 sequentially inside that one algorithm worker execution.
 
-The first experiment is deliberately smaller than a new search lane. It
-observes every settled complete Compact archive endpoint at q0/q90, performs no
-placement or candidate evaluation, and cannot change output.
+The first stage is deliberately smaller than a new search lane. It observes
+every settled complete Compact archive endpoint at q0/q90 and performs no
+placement or candidate evaluation. Its trace records `outputInfluence:
+'selected'` only when its admitted endpoint becomes the returned Short Side
+layout; shadow capture and Compact fallback retain `outputInfluence: 'none'`.
 
 ## Exact observer contract
 
@@ -43,12 +45,13 @@ of the short axis, closes at least half the production Compact shortfall, and
 uses no more long-axis depth than production Compact's maximum side. Square
 sheets have no directional winner. A legal ranked archive endpoint that misses
 these materiality gates remains visible in telemetry but produces an explicit
-Compact fallback.
+Compact fallback. Ordinary Compact and capacity selection remain unchanged;
+only the requested Short Side profile may select the admitted endpoint after
+the protected Compact result has settled.
 
 The observer is censored without a winner if runtime exceeds `250 ms` or the
 serialized trace exceeds `1 MiB`. Complete misses and exact preflight
-impossibility report explicit zero-work states. Production Compact and capacity
-selection remain unchanged.
+impossibility report explicit zero-work states.
 
 ## Rejected first measurement
 

@@ -72,6 +72,17 @@ function endpoint(
   const identity = canonicalCollisionLayoutIdentity(placedCollisionGeometries)
   if (identity === undefined) throw new Error('test endpoint must have a canonical identity')
   const hash = createHash('sha256').update(identity).digest('hex')
+  const widthGrid = Math.round(width * 1_000)
+  const heightGrid = Math.round(height * 1_000)
+  const hullAreaDoubledGrid2 =
+    2n * BigInt(widthGrid) * BigInt(heightGrid)
+  const hullGapDoubledGrid2 =
+    BigInt(Math.round((input.hullGapRatio ?? 0) * 1_000_000)) *
+    hullAreaDoubledGrid2 /
+    1_000_000n
+  const cohesionDeficitNumerator = BigInt(
+    Math.round((input.cohesionDeficit ?? 0) * 1_000_000)
+  )
   const metrics: IntrinsicStrictCompletedMetrics = {
     envelopeMaximumSideMm: Math.max(width, height),
     envelopeAreaMm2: width * height,
@@ -90,7 +101,24 @@ function endpoint(
     contactUnits: 0,
     sharedBoundaryLengthMm: 0,
     canonicalGeometryHash: hash,
-    runtimeMs: 0
+    runtimeMs: 0,
+    exact: {
+      envelopeMaximumSideGrid: Math.max(widthGrid, heightGrid),
+      envelopeAreaGrid2: (
+        BigInt(widthGrid) * BigInt(heightGrid)
+      ).toString(),
+      envelopeSpanGrid: widthGrid + heightGrid,
+      totalEnclosedCavityDoubledAreaGrid2: String(
+        Math.round((input.totalCavityAreaMm2 ?? 0) * 2_000_000)
+      ),
+      largestOccupiedHullGapDoubledAreaGrid2:
+        hullGapDoubledGrid2.toString(),
+      occupiedHullDoubledAreaGrid2: hullAreaDoubledGrid2.toString(),
+      occupiedHullWasteDoubledAreaGrid2: '0',
+      largestPositiveContactComponentSize: 1,
+      placedPieceCount: 1,
+      occupiedOutsideLargestContactComponentDoubledAreaGrid2: '0'
+    }
   }
   return {
     role,
@@ -102,7 +130,10 @@ function endpoint(
     certificate: {
       passes: input.cohesionPasses ?? true,
       violatedFloors: [],
-      relativeDeficitSum: input.cohesionDeficit ?? 0
+      relativeDeficitSum: input.cohesionDeficit ?? 0,
+      exactRelativeDeficitNumerator:
+        cohesionDeficitNumerator.toString(),
+      exactRelativeDeficitDenominator: '1000000'
     },
     requestedSheetFit: {
       q0: { fits: true, canonicalGeometryHash: hash },
