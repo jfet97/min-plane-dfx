@@ -2,8 +2,8 @@
 
 ## Question
 
-Can an alternative Compact profile aggressively reduce the requested long-axis
-span while filling the requested short side, without reviving the historical
+Can an alternative Compact profile substantially fill the requested short
+axis while remaining compact along the requested long axis, without reviving the historical
 ordinary `short-side-fill` beam or contaminating production Compact?
 
 The first experiment is deliberately smaller than a new search lane. It
@@ -17,9 +17,16 @@ For every complete endpoint:
 1. rigidly orient at q0 and q90 and require canonical exact sheet legality;
 2. require the existing cavity and occupied-hull floors;
 3. retain only the existing intrinsic geometric Pareto front;
-4. minimize requested long-axis used span;
-5. minimize requested short-axis shortfall;
+4. minimize requested short-axis shortfall;
+5. minimize requested long-axis used span;
 6. apply intrinsic envelope/contact metrics and canonical identity.
+
+Version 3 only materializes that ranked endpoint when it fills at least `80%`
+of the short axis, closes at least half the production Compact shortfall, and
+uses no more long-axis depth than production Compact's maximum side. Square
+sheets have no directional winner. A legal ranked archive endpoint that misses
+these materiality gates remains visible in telemetry but produces an explicit
+Compact fallback.
 
 The observer is censored without a winner if runtime exceeds `250 ms` or the
 serialized trace exceeds `1 MiB`. Complete misses and exact preflight
@@ -66,11 +73,11 @@ The current-source promotion run at `1cd5ac7` passed the full contract:
 - at most one algorithm process was active and all nine cases ran
   sequentially.
 
-The promotion review also corrected the trace to
-`intrinsic-short-side-observer-v2`: after legality and long-axis span, the tuple
-now compares requested short-axis shortfall before intrinsic tie-breakers,
-exactly matching the contract above. A Pareto-front regression test
-distinguishes the two orders. The full v2 rerun preserved every v1 layout hash.
+The first promotion review corrected the trace to
+`intrinsic-short-side-observer-v2`. Version 3 then corrected the profile's
+meaning: after legality it ranks short-axis fill before long-axis depth and
+requires a material improvement over production. This prevents a merely thin
+cluster from being labelled short-side fill.
 
 Triangle-20 `600 x 400` contains one reproducible, guard-eligible Pareto
 alternative:
@@ -95,9 +102,9 @@ Stage 1 proves that settled archive reuse can sometimes provide the requested
 directional behavior for almost no extra cost. It also proves that raw
 long-axis minimization is unsafe without geometric admissibility.
 
-Stage 2 and Stage 3 tested two materially different ways to go beyond archive
-reuse. Both were rejected under their predeclared stop rules, so Stage 1 is the
-only promoted short-side mechanism.
+Stages 2 through 4 tested three materially different ways to go beyond archive
+reuse. All were rejected under their predeclared stop rules, so Stage 1 is the
+only retained short-side mechanism.
 
 ## Stage 2 fixed-target result
 
@@ -172,6 +179,34 @@ runtime, sampled-RSS, and self-sized trace accounting, plus disabled-path state
 retention in the strict constructor. These do not weaken the rejection, but
 they prevent budget-passing claims. Commit `edeed42` removes the rejected
 implementation while its committed provenance remains available.
+
+## Stage 4 protected width-four band result
+
+Commit `1163bd3` tested a separate observer-only width-four construction beam
+on Shapes-17 `2000 x 2700`. It retained deterministic fill, depth, projection,
+and intrinsic roles, used exact legality and canonical deduplication, and ran
+strictly sequentially after production. Hard limits were `20,000` candidate
+evaluations, `5,000 ms`, `256 MiB` sampled RSS delta, and a `1 MiB` trace.
+
+The lane reached only five of seventeen depths before the deadline:
+
+| Measurement | Value |
+| --- | ---: |
+| runtime | `5,000.534 ms` |
+| candidate evaluations | `6,118` |
+| deepest completed depth | `5/17` |
+| best retained short-axis span | `402.892 mm` |
+| required admission span | `1,600 mm` |
+| sampled RSS delta | `557,056 bytes` |
+| trace size | `1,685 bytes` |
+
+It produced no endpoint and had zero output influence. The existing Compact
+geometry remained the honest fallback. This is not close enough to justify a
+second reproduction, a matrix expansion, a higher cap, or a narrower variant
+of the same greedy construction hypothesis. The implementation and its
+observer-only enumeration seam were removed; immutable failure provenance
+remains under
+`/private/tmp/min-plane-provenance/short-side-band-1163bd3-run1/`.
 
 ## Evidence
 
