@@ -25,10 +25,6 @@ result as the 43,015.86 ms unprofiled run. Its categorized samples place
 canonical-grid exact math at 1.29 s (2.9%); `canonicalGridCross` is no longer a
 top function. See `mixed-61-2000x2700.after-profile-analysis.txt`.
 
-Earlier Linux measurements reported 58,153 ms before and 52,314 ms after
-(1.112x), consistent with this controlled rerun. They are historical
-corroboration, not mixed into the local speedup ratio above.
-
 ## Environment and reproduction
 
 ```
@@ -157,5 +153,6 @@ doing. They now need the design decision above rather than a micro-optimization.
 
 - `mixed-61-2000x2700.before.json` — parent-commit unprofiled report;
 - `mixed-61-2000x2700.after.json` — implementation-commit unprofiled report;
+- `mixed-61-2000x2700.after-profiled.json` — implementation-commit profiled report;
 - `mixed-61-2000x2700.after.cpuprofile.gz` — implementation-commit raw V8 profile;
 - `mixed-61-2000x2700.after-profile-analysis.txt` — reproducible profile categorization.
