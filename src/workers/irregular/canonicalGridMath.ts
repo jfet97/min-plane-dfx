@@ -47,6 +47,67 @@ export function canonicalGridCross(
   )
 }
 
+/**
+ * Largest coordinate magnitude for which the cross product is exact in `Number`.
+ *
+ * With every coordinate bounded by `L`, each difference is at most `2L`, each
+ * product at most `4L^2`, and their difference at most `8L^2`. Choosing
+ * `L = 2^25 - 1` gives `8L^2 = 2^53 - 2^29 + 8`, strictly below
+ * `Number.MAX_SAFE_INTEGER`, so no intermediate value can round. In canonical
+ * grid units of a thousandth of a millimetre this covers `+/- 33.5 m`, more
+ * than twelve times the largest dimension in the maintained production gates.
+ *
+ * Coordinates outside this bound are not approximated: they take the exact
+ * `bigint` path instead.
+ */
+export const CANONICAL_GRID_EXACT_NUMBER_CROSS_LIMIT = 2 ** 25 - 1
+
+function withinExactNumberCrossLimit(point: CanonicalGridPoint): boolean {
+  return (
+    Math.abs(point.x) <= CANONICAL_GRID_EXACT_NUMBER_CROSS_LIMIT &&
+    Math.abs(point.y) <= CANONICAL_GRID_EXACT_NUMBER_CROSS_LIMIT
+  )
+}
+
+/**
+ * Exact orientation sign of `origin -> first -> second`.
+ *
+ * Every caller of {@link canonicalGridCross} needs only the sign, and `bigint`
+ * allocation for that answer dominated the canonical grid predicates. Inside the
+ * bound proved by {@link CANONICAL_GRID_EXACT_NUMBER_CROSS_LIMIT} the sign is
+ * computed in `Number` with no rounding possible; outside it the exact `bigint`
+ * value still decides. The result is therefore identical to
+ * `canonicalGridCross(...)` compared against zero, for every input.
+ */
+export function canonicalGridCrossSign(
+  origin: CanonicalGridPoint,
+  first: CanonicalGridPoint,
+  second: CanonicalGridPoint
+): -1 | 0 | 1 | undefined {
+  if (
+    !isCanonicalGridCoordinate(origin.x) ||
+    !isCanonicalGridCoordinate(origin.y) ||
+    !isCanonicalGridCoordinate(first.x) ||
+    !isCanonicalGridCoordinate(first.y) ||
+    !isCanonicalGridCoordinate(second.x) ||
+    !isCanonicalGridCoordinate(second.y)
+  ) {
+    return undefined
+  }
+  if (
+    withinExactNumberCrossLimit(origin) &&
+    withinExactNumberCrossLimit(first) &&
+    withinExactNumberCrossLimit(second)
+  ) {
+    const cross =
+      (first.x - origin.x) * (second.y - origin.y) - (first.y - origin.y) * (second.x - origin.x)
+    return cross === 0 ? 0 : cross < 0 ? -1 : 1
+  }
+  const exact = canonicalGridCross(origin, first, second)
+  if (exact === undefined) return undefined
+  return exact === 0n ? 0 : exact < 0n ? -1 : 1
+}
+
 export function canonicalGridSignedDoubledArea(path: Path64): bigint | undefined {
   if (path.length < 3) return 0n
   let doubledArea = 0n
@@ -93,9 +154,9 @@ export function canonicalGridConvexHull(points: ReadonlyArray<CanonicalGridPoint
         const origin = half.at(-2)
         const first = half.at(-1)
         if (origin === undefined || first === undefined) return undefined
-        const turn = canonicalGridCross(origin, first, point)
+        const turn = canonicalGridCrossSign(origin, first, point)
         if (turn === undefined) return undefined
-        if (turn > 0n) break
+        if (turn > 0) break
         half.pop()
       }
       half.push(point)
@@ -114,9 +175,9 @@ export function canonicalGridPointOnSegment(
   start: CanonicalGridPoint,
   end: CanonicalGridPoint
 ): boolean {
-  const cross = canonicalGridCross(start, end, point)
+  const cross = canonicalGridCrossSign(start, end, point)
   return (
-    cross === 0n &&
+    cross === 0 &&
     point.x >= Math.min(start.x, end.x) &&
     point.x <= Math.max(start.x, end.x) &&
     point.y >= Math.min(start.y, end.y) &&
