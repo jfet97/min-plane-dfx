@@ -23,7 +23,7 @@ hashes. It also does not run concurrent algorithm work: the existing Electron
 renderer/main/worker boundary remains, and all Short Side stages advance
 sequentially inside that one algorithm worker execution.
 
-The current-source production gate at `2f308bb` executes 18 real requests
+The current-source production gate at `31d760c` executes 18 real requests
 strictly sequentially: one persisted Compact request and one persisted Short
 Side request for each of the nine fixture/sheet pairs. All expected hashes,
 counts, topology gates, strategy identities, and exact partitions pass. Four
