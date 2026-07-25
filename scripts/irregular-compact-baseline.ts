@@ -444,6 +444,11 @@ const pairFoldObserverWinnerHash =
     : sha256CanonicalLayout({
         placedCollisionGeometries: pairFoldObserverWinner
       })
+const pairFoldSelectedGeometryHash =
+  pairFoldObserverWinnerHash ??
+  (shortSidePairFoldTrace?.outputInfluence === 'selected'
+    ? collisionIdentitySha256
+    : undefined)
 const expectedPairCount = (request.pieces.length * (request.pieces.length - 1)) / 2
 const shortSidePairFoldContractValid =
   shortSidePairFoldTrace === undefined
@@ -452,7 +457,7 @@ const shortSidePairFoldContractValid =
       shortSidePairFoldTrace.transformEvaluations >= request.pieces.length &&
       shortSidePairFoldTrace.evaluatedPairCount <= shortSidePairFoldTrace.expectedPairCount &&
       (shortSidePairFoldTrace.status === 'accepted'
-        ? pairFoldObserverWinner !== undefined &&
+        ? pairFoldSelectedGeometryHash !== undefined &&
           shortSidePairFoldTrace.admission?.accepted === true &&
           shortSidePairFoldTrace.placedCount === request.pieces.length &&
           shortSidePairFoldTrace.evaluatedPairCount === shortSidePairFoldTrace.expectedPairCount &&
@@ -468,7 +473,8 @@ const shortSidePairFoldContractValid =
                   shortSidePairFoldTrace.rowCount === 0 &&
                   shortSidePairFoldTrace.contactStripPromotion?.promoted === true &&
                   shortSidePairFoldTrace.contactStrip?.status === 'constructed')) &&
-          shortSidePairFoldTrace.canonicalGeometryHash === pairFoldObserverWinnerHash
+          shortSidePairFoldTrace.canonicalGeometryHash ===
+            pairFoldSelectedGeometryHash
         : pairFoldObserverWinner === undefined &&
           shortSidePairFoldTrace.admission?.accepted !== true)
 const shortSideObserverWinner =
