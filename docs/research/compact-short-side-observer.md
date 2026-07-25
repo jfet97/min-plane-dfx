@@ -6,9 +6,35 @@ Can an alternative Compact profile substantially fill the requested short
 axis while remaining compact along the requested long axis, without reviving the historical
 ordinary `short-side-fill` beam or contaminating production Compact?
 
-The first experiment is deliberately smaller than a new search lane. It
-observes every settled complete Compact archive endpoint at q0/q90, performs no
-placement or candidate evaluation, and cannot change output.
+## Production activation
+
+The accepted sibling is now a schema-backed production objective profile rather
+than a benchmark-only callback. `intrinsicObjectiveProfileId: 'short-side'`
+preserves the normal protected Compact/cohort execution and then runs the
+accepted terminal sequence inside that same worker: guarded q0/q90 archive
+selection, followed on a miss by pair fold, multi-row shelf, and contact strip.
+Every result remains canonical-legal and has complete placed/unplaced
+accounting. An inadmissible, bounded, square-sheet, or unavailable terminal
+result keeps the Compact/capacity layout and emits an explicit fallback
+diagnostic; it is not represented as a directional success.
+
+This activation does not change ordinary Compact defaults or their canonical
+hashes. It also does not run concurrent algorithm work: the existing Electron
+renderer/main/worker boundary remains, and all Short Side stages advance
+sequentially inside that one algorithm worker execution.
+
+The current-source production gate at `31d760c` executes 18 real requests
+strictly sequentially: one persisted Compact request and one persisted Short
+Side request for each of the nine fixture/sheet pairs. All expected hashes,
+counts, topology gates, strategy identities, and exact partitions pass. Four
+Short Side requests select a directional layout, five retain Compact because it
+already satisfies the short edge, and none report a directional miss.
+
+The first stage is deliberately smaller than a new search lane. It observes
+every settled complete Compact archive endpoint at q0/q90 and performs no
+placement or candidate evaluation. Its trace records `outputInfluence:
+'selected'` only when its admitted endpoint becomes the returned Short Side
+layout; shadow capture and Compact fallback retain `outputInfluence: 'none'`.
 
 ## Exact observer contract
 
@@ -26,12 +52,13 @@ of the short axis, closes at least half the production Compact shortfall, and
 uses no more long-axis depth than production Compact's maximum side. Square
 sheets have no directional winner. A legal ranked archive endpoint that misses
 these materiality gates remains visible in telemetry but produces an explicit
-Compact fallback.
+Compact fallback. Ordinary Compact and capacity selection remain unchanged;
+only the requested Short Side profile may select the admitted endpoint after
+the protected Compact result has settled.
 
 The observer is censored without a winner if runtime exceeds `250 ms` or the
 serialized trace exceeds `1 MiB`. Complete misses and exact preflight
-impossibility report explicit zero-work states. Production Compact and capacity
-selection remain unchanged.
+impossibility report explicit zero-work states.
 
 ## Rejected first measurement
 
@@ -464,17 +491,18 @@ and cooperative NFP/IFP checkpoints, and the final composite trace is checked
 against the common `1 MiB` cap. These are runaway guards, not working limits:
 the largest measured case uses about `3.2%` of the observer budget.
 
-This remains an experimental benchmark-side sibling. The production worker and
-UI do not enable the capture callbacks, and the coordinator still returns the
-unchanged Compact result. Promotion here means selection inside the recorded
-Short Side profile only.
+This is now a production-selectable sibling profile. The UI persists the choice,
+the worker executes Compact first and Short Side second in the same sequential
+process, and the coordinator returns an admitted Short Side layout or an
+explicit unchanged-Compact fallback. Capture callbacks remain evidence hooks;
+they are not the activation mechanism.
 
-An exactness audit found broader pre-existing Number conversions after
-canonical Clipper2 Boolean operations in topology, gap-region, capacity, and
-strict/archive ranking. Those paths require a separate shared BigInt
-shoelace/cross/rational-comparison tranche with near-policy-limit
-one-grid-square regressions. They are not silently treated as solved by this
-Short Side change.
+The canonical-grid exactness tranche is also implemented. Shared BigInt
+shoelace, cross-product, envelope-product, and rational-comparison helpers now
+preserve Clipper2-grid decisions through strict/archive, capacity, topology,
+gap-region, relaxation/LNS, V7, and Short Side ranking. Near-policy-limit
+regressions distinguish layouts whose canonical areas differ by one grid square
+even above `Number.MAX_SAFE_INTEGER`.
 
 ### Rejected Stage 8 variant
 

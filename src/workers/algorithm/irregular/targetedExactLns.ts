@@ -13,6 +13,10 @@ import {
   type CanonicalGridAabb,
   type CanonicalLayoutStructuralAnalysis
 } from '../../irregular/canonicalLayoutGeometry.js'
+import {
+  compareBigInts,
+  compareCanonicalGridRatios
+} from '../../irregular/canonicalGridMath.js'
 import { IrregularGeometryInputError } from '../../irregular/services.js'
 import {
   measureRelaxationMetrics,
@@ -36,8 +40,6 @@ import { PlacementValidation } from '../../irregular/placementValidation.js'
 const REQUESTED_DESTROY_SIZES = [2, 3, 5, 8] as const
 const ROUND_DEADLINE_MS = 5_000
 const GLOBAL_DEADLINE_MS = 60_000
-const GRID_MM = 0.001
-
 export type TargetedExactLnsTarget = 'interface' | 'hull_void' | 'v1_hazard'
 export type TargetedExactLnsQueueOrder = 'priority' | 'small_first'
 
@@ -379,7 +381,7 @@ export function runTargetedExactLns(
                 readonly key: string
               } => candidate !== undefined
             )
-            .toSorted(compareFinalists)
+            .toSorted(compareTargetedExactLnsFinalists)
           const candidate = rankedFinalists[0]
           const legal =
             candidate !== undefined &&
@@ -530,12 +532,38 @@ export function isAdmissibleTargetedImprovement(
   incumbent: IntrinsicRelaxationMetrics,
   candidate: IntrinsicRelaxationMetrics
 ): boolean {
+  const exactEnvelopeNonWorse =
+    incumbent.exact === undefined || candidate.exact === undefined
+      ? candidate.maxSide <= incumbent.maxSide && candidate.area <= incumbent.area
+      : candidate.exact.maximumSideGrid <= incumbent.exact.maximumSideGrid &&
+        BigInt(candidate.exact.envelopeAreaGrid2) <=
+          BigInt(incumbent.exact.envelopeAreaGrid2)
+  const exactHullNonWorse =
+    incumbent.exact === undefined || candidate.exact === undefined
+      ? candidate.topology.largestOccupiedHullGapRatio <=
+        incumbent.topology.largestOccupiedHullGapRatio
+      : BigInt(candidate.exact.largestHullGapDoubledAreaGrid2) *
+          BigInt(incumbent.exact.hullDoubledAreaGrid2) <=
+        BigInt(incumbent.exact.largestHullGapDoubledAreaGrid2) *
+          BigInt(candidate.exact.hullDoubledAreaGrid2)
+  const exactEnvelopeImproved =
+    incumbent.exact === undefined || candidate.exact === undefined
+      ? candidate.maxSide < incumbent.maxSide || candidate.area < incumbent.area
+      : candidate.exact.maximumSideGrid < incumbent.exact.maximumSideGrid ||
+        BigInt(candidate.exact.envelopeAreaGrid2) <
+          BigInt(incumbent.exact.envelopeAreaGrid2)
+  const exactHullImproved =
+    incumbent.exact === undefined || candidate.exact === undefined
+      ? candidate.topology.largestOccupiedHullGapRatio <
+        incumbent.topology.largestOccupiedHullGapRatio
+      : BigInt(candidate.exact.largestHullGapDoubledAreaGrid2) *
+          BigInt(incumbent.exact.hullDoubledAreaGrid2) <
+        BigInt(incumbent.exact.largestHullGapDoubledAreaGrid2) *
+          BigInt(candidate.exact.hullDoubledAreaGrid2)
   const nonWorse =
-    candidate.maxSide <= incumbent.maxSide + GRID_MM &&
-    candidate.area <= incumbent.area + GRID_MM &&
+    exactEnvelopeNonWorse &&
     candidate.topology.enclosedCavityCount <= incumbent.topology.enclosedCavityCount &&
-    candidate.topology.largestOccupiedHullGapRatio <=
-      incumbent.topology.largestOccupiedHullGapRatio + 1e-12 &&
+    exactHullNonWorse &&
     candidate.topology.positiveContactComponentCount <=
       incumbent.topology.positiveContactComponentCount &&
     candidate.topology.isolatedPieceCount <= incumbent.topology.isolatedPieceCount &&
@@ -545,14 +573,12 @@ export function isAdmissibleTargetedImprovement(
       incumbent.nearCompleteStructuralContactCount &&
     candidate.dominantNearCompleteStructuralContactCount >=
       incumbent.dominantNearCompleteStructuralContactCount &&
-    candidate.sharedCollisionBoundaryContactUnits + 1e-9 >=
+    candidate.sharedCollisionBoundaryContactUnits >=
       incumbent.sharedCollisionBoundaryContactUnits
   const strict =
-    candidate.maxSide < incumbent.maxSide - GRID_MM ||
-    candidate.area < incumbent.area - GRID_MM ||
+    exactEnvelopeImproved ||
     candidate.topology.enclosedCavityCount < incumbent.topology.enclosedCavityCount ||
-    candidate.topology.largestOccupiedHullGapRatio <
-      incumbent.topology.largestOccupiedHullGapRatio - 1e-12 ||
+    exactHullImproved ||
     candidate.topology.positiveContactComponentCount <
       incumbent.topology.positiveContactComponentCount ||
     candidate.topology.isolatedPieceCount < incumbent.topology.isolatedPieceCount ||
@@ -562,7 +588,7 @@ export function isAdmissibleTargetedImprovement(
     candidate.dominantNearCompleteStructuralContactCount >
       incumbent.dominantNearCompleteStructuralContactCount ||
     candidate.sharedCollisionBoundaryContactUnits >
-      incumbent.sharedCollisionBoundaryContactUnits + 1e-9
+      incumbent.sharedCollisionBoundaryContactUnits
   return nonWorse && strict
 }
 
@@ -589,18 +615,60 @@ function enumerateExactQuarterTurnFinalists(
   return [...byKey.values()]
 }
 
-function compareFinalists(
+export function compareTargetedExactLnsFinalists(
   first: { readonly metrics: IntrinsicRelaxationMetrics; readonly key: string },
   second: { readonly metrics: IntrinsicRelaxationMetrics; readonly key: string }
 ): number {
-  const pairs: ReadonlyArray<readonly [number, number]> = [
+  const topologyPairs: ReadonlyArray<readonly [number, number]> = [
     [first.metrics.topology.enclosedCavityCount, second.metrics.topology.enclosedCavityCount],
     [first.metrics.topology.positiveContactComponentCount, second.metrics.topology.positiveContactComponentCount],
     [first.metrics.topology.isolatedPieceCount, second.metrics.topology.isolatedPieceCount],
-    [-first.metrics.topology.largestPositiveContactComponentSize, -second.metrics.topology.largestPositiveContactComponentSize],
-    [first.metrics.topology.largestOccupiedHullGapRatio, second.metrics.topology.largestOccupiedHullGapRatio],
-    [first.metrics.maxSide, second.metrics.maxSide],
-    [first.metrics.area, second.metrics.area],
+    [-first.metrics.topology.largestPositiveContactComponentSize, -second.metrics.topology.largestPositiveContactComponentSize]
+  ]
+  for (const [left, right] of topologyPairs) {
+    if (left !== right) return left < right ? -1 : 1
+  }
+  const firstExact = first.metrics.exact
+  const secondExact = second.metrics.exact
+  const exactHull =
+    firstExact === undefined || secondExact === undefined
+      ? undefined
+      : compareCanonicalGridRatios(
+          BigInt(firstExact.largestHullGapDoubledAreaGrid2),
+          BigInt(firstExact.hullDoubledAreaGrid2),
+          BigInt(secondExact.largestHullGapDoubledAreaGrid2),
+          BigInt(secondExact.hullDoubledAreaGrid2)
+        )
+  if (exactHull !== undefined && exactHull !== 0) return exactHull
+  if (
+    exactHull === undefined &&
+    first.metrics.topology.largestOccupiedHullGapRatio !==
+      second.metrics.topology.largestOccupiedHullGapRatio
+  ) {
+    return first.metrics.topology.largestOccupiedHullGapRatio <
+      second.metrics.topology.largestOccupiedHullGapRatio
+      ? -1
+      : 1
+  }
+  const exactEnvelope =
+    firstExact === undefined || secondExact === undefined
+      ? undefined
+      : compareBigInts(
+            BigInt(firstExact.maximumSideGrid),
+            BigInt(secondExact.maximumSideGrid)
+          ) ||
+        compareBigInts(
+          BigInt(firstExact.envelopeAreaGrid2),
+          BigInt(secondExact.envelopeAreaGrid2)
+        )
+  if (exactEnvelope !== undefined && exactEnvelope !== 0) return exactEnvelope
+  const pairs: ReadonlyArray<readonly [number, number]> = [
+    ...(exactEnvelope === undefined
+      ? [
+          [first.metrics.maxSide, second.metrics.maxSide] as const,
+          [first.metrics.area, second.metrics.area] as const
+        ]
+      : []),
     [-first.metrics.dominantNearCompleteStructuralContactCount, -second.metrics.dominantNearCompleteStructuralContactCount],
     [-first.metrics.nearCompleteStructuralContactCount, -second.metrics.nearCompleteStructuralContactCount],
     [-first.metrics.sharedCollisionBoundaryContactUnits, -second.metrics.sharedCollisionBoundaryContactUnits]

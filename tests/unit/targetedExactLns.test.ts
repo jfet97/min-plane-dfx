@@ -3,6 +3,7 @@ import { PieceId } from '@shared/domain/ids.js'
 import type { CanonicalLayoutStructuralAnalysis } from '../../src/workers/irregular/canonicalLayoutGeometry.js'
 import type { IntrinsicRelaxationMetrics } from '../../src/workers/algorithm/irregular/overlapRelaxation.js'
 import {
+  compareTargetedExactLnsFinalists,
   isAdmissibleTargetedImprovement,
   selectTargetedDestroySet
 } from '../../src/workers/algorithm/irregular/targetedExactLns.js'
@@ -24,7 +25,8 @@ function analysis(input: {
         maxX: index * 2_000 + 1_000,
         maxY: 1_000
       },
-      areaGrid2: 1_000_000
+      areaGrid2: 1_000_000,
+      doubledAreaGrid2: '2000000'
     })),
     positiveContactComponents: input.components.map((component) => component.map(id)),
     positiveContactPairs: [],
@@ -69,6 +71,34 @@ function metrics(overrides: Partial<IntrinsicRelaxationMetrics> = {}): Intrinsic
 }
 
 describe('targeted exact LNS policy', () => {
+  it('orders one-grid-square finalist differences above Number.MAX_SAFE_INTEGER exactly', () => {
+    const smaller = metrics({
+      area: 1_000_000_000_000_000_000,
+      exact: {
+        maximumSideGrid: 1_000_000_000,
+        envelopeAreaGrid2: '999999999999999999',
+        largestHullGapDoubledAreaGrid2: '0',
+        hullDoubledAreaGrid2: '1'
+      }
+    })
+    const larger = metrics({
+      area: 1_000_000_000_000_000_000,
+      exact: {
+        maximumSideGrid: 1_000_000_000,
+        envelopeAreaGrid2: '1000000000000000000',
+        largestHullGapDoubledAreaGrid2: '0',
+        hullDoubledAreaGrid2: '1'
+      }
+    })
+
+    expect(
+      compareTargetedExactLnsFinalists(
+        { metrics: smaller, key: 'smaller' },
+        { metrics: larger, key: 'larger' }
+      )
+    ).toBeLessThan(0)
+  })
+
   it('selects only the nearest interface pair before filling a component larger than k', () => {
     const current = analysis({
       components: [

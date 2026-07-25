@@ -73,10 +73,13 @@ import type { IntrinsicCapacityPrefixSource } from './intrinsicCapacityPrefixes.
 import type { IntrinsicCapacityEndpoint } from './intrinsicCapacityEndpoint.js'
 import {
   observeIntrinsicShortSideOrientations,
+  withMeasuredIntrinsicShortSideObserverTrace,
   type IntrinsicShortSideObserverTrace
 } from './intrinsicShortSideObserver.js'
 import {
   observeIntrinsicShortSidePairFold,
+  withMeasuredIntrinsicShortSidePairFoldTrace,
+  type IntrinsicShortSideConstructionKind,
   type IntrinsicShortSidePairFoldTrace
 } from './intrinsicShortSidePairFoldObserver.js'
 import {
@@ -474,6 +477,8 @@ function coordinateIntrinsicSharedArchive(
   return Effect.gen(function* () {
     const coordinatorStartedAt = performance.now()
     const archiveEnabled = isIntrinsicSharedArchiveEligible(input.settings)
+    const shortSideProfileRequested =
+      input.settings.optimizer.intrinsicObjectiveProfileId === 'short-side'
     const focusedCompleteReconstructionEnabled =
       input.options?.focusedCompleteReconstructionControlArm !== 'disable'
     const archiveDiagnostics: CollisionGeometryDiagnostic[] = []
@@ -1058,22 +1063,26 @@ function coordinateIntrinsicSharedArchive(
       selected = yield* materializeProductionResult(input, production)
     }
 
-    for (const snapshot of selected.stateSnapshots) {
-      input.options?.emitStateSnapshot?.(snapshot, input.settings.optimizer.beamWidth)
-    }
-    input.options?.onFinalizationMetrics?.(selected.finalizationMetrics)
     if (
       settledCompleteArchiveForShortSideObserver !== undefined &&
-      (input.options?.captureIntrinsicShortSideObserver === true ||
+      (shortSideProfileRequested ||
+        input.options?.captureIntrinsicShortSideObserver === true ||
         input.options?.onIntrinsicShortSideObserver !== undefined)
     ) {
+      if (shortSideProfileRequested) {
+        yield* emitSharedArchiveProgress(
+          input,
+          'short_side_profile',
+          selected.portfolio.score,
+          performance.now() - coordinatorStartedAt
+        )
+      }
       intrinsicShortSideObserverTrace = observeIntrinsicShortSideOrientations({
         sheet: input.request.sheet,
         endpoints: settledCompleteArchiveForShortSideObserver,
         productionPlacedCollisionGeometries:
           selected.placedCollisionGeometries
       })
-      input.options.onIntrinsicShortSideObserver?.(intrinsicShortSideObserverTrace)
       const winnerHash =
         intrinsicShortSideObserverTrace.observerWinnerCanonicalGeometryHash
       const winnerRotation =
@@ -1094,7 +1103,7 @@ function coordinateIntrinsicSharedArchive(
                   placement.pieceId ?? placement.sourcePieceId
               )
             }).withQuarterTurnBottomLeft(winnerRotation)
-      input.options.onIntrinsicShortSideObserverWinner?.(
+      input.options?.onIntrinsicShortSideObserverWinner?.(
         winnerHash === undefined ||
           winnerRotation === undefined ||
           winnerState === undefined
@@ -1106,8 +1115,30 @@ function coordinateIntrinsicSharedArchive(
                 winnerState.placedCollisionGeometries
             }
       )
+      let shortSideSelected = false
+      if (shortSideProfileRequested && winnerState !== undefined) {
+        selected = yield* materializeIntrinsicShortSideProfileResult({
+          input,
+          placedCollisionGeometries: winnerState.placedCollisionGeometries,
+          selection: 'archive-endpoint',
+          canonicalGeometryHash: winnerHash
+        })
+        intrinsicShortSideObserverTrace = withMeasuredIntrinsicShortSideObserverTrace({
+          ...intrinsicShortSideObserverTrace,
+          outputInfluence: 'selected'
+        })
+        archiveDiagnostics.push(
+          intrinsicShortSideProfileDiagnostic(
+            'selected',
+            `selected admitted complete archive endpoint ${winnerHash} at q${winnerRotation}`
+          )
+        )
+        shortSideSelected = true
+      }
       if (
-        input.options.captureIntrinsicShortSidePairFoldObserver === true &&
+        (shortSideProfileRequested ||
+          input.options?.captureIntrinsicShortSidePairFoldObserver === true) &&
+        !shortSideSelected &&
         intrinsicShortSideObserverTrace.observerWinnerCanonicalGeometryHash ===
           undefined &&
         intrinsicShortSideObserverTrace.productionShortAxisSpanMm !==
@@ -1141,11 +1172,47 @@ function coordinateIntrinsicSharedArchive(
             intrinsicShortSideObserverTrace.productionEnvelopeAreaGrid2
         })
         intrinsicShortSidePairFoldTrace = pairFoldOutcome.trace
-        input.options.onIntrinsicShortSidePairFoldObserverWinner?.(
+        input.options?.onIntrinsicShortSidePairFoldObserverWinner?.(
           pairFoldOutcome.placedCollisionGeometries
         )
+        if (
+          shortSideProfileRequested &&
+          pairFoldOutcome.trace.status === 'accepted' &&
+          pairFoldOutcome.placedCollisionGeometries !== undefined
+        ) {
+          selected = yield* materializeIntrinsicShortSideProfileResult({
+            input,
+            placedCollisionGeometries: pairFoldOutcome.placedCollisionGeometries,
+            selection: pairFoldOutcome.trace.constructionKind ?? 'pair-fold',
+            canonicalGeometryHash: pairFoldOutcome.trace.canonicalGeometryHash
+          })
+          intrinsicShortSidePairFoldTrace = withMeasuredIntrinsicShortSidePairFoldTrace({
+            ...pairFoldOutcome.trace,
+            outputInfluence: 'selected'
+          })
+          archiveDiagnostics.push(
+            intrinsicShortSideProfileDiagnostic(
+              'selected',
+              `selected admitted ${pairFoldOutcome.trace.constructionKind ?? 'terminal'} construction ${pairFoldOutcome.trace.canonicalGeometryHash ?? 'without-canonical-hash'}`
+            )
+          )
+          shortSideSelected = true
+        }
       }
+      if (shortSideProfileRequested && !shortSideSelected) {
+        archiveDiagnostics.push(
+          intrinsicShortSideProfileDiagnostic(
+            'compact-fallback',
+            `no admitted Short Side layout; retained Compact result (archive=${intrinsicShortSideObserverTrace.status}, terminal=${intrinsicShortSidePairFoldTrace?.status ?? 'not-run'})`
+          )
+        )
+      }
+      input.options?.onIntrinsicShortSideObserver?.(intrinsicShortSideObserverTrace)
     }
+    for (const snapshot of selected.stateSnapshots) {
+      input.options?.emitStateSnapshot?.(snapshot, input.settings.optimizer.beamWidth)
+    }
+    input.options?.onFinalizationMetrics?.(selected.finalizationMetrics)
     return {
       placedCollisionGeometries: selected.placedCollisionGeometries,
       score: selected.score,
@@ -1383,7 +1450,7 @@ function runSingleSheetPortfolio(
 
 function emitSharedArchiveProgress(
   input: IrregularSearchCoordinatorInput,
-  phase: 'shared_archive' | 'completed',
+  phase: 'shared_archive' | 'short_side_profile' | 'completed',
   bestScore: IrregularLayoutScoreSummary | undefined,
   elapsedMs: number
 ): Effect.Effect<void> {
@@ -1520,6 +1587,69 @@ function materializeSharedArchiveResult(
   })
 }
 
+/** Materializes one already-admitted Short Side layout through the normal result path. */
+function materializeIntrinsicShortSideProfileResult(input: {
+  readonly input: IrregularSearchCoordinatorInput
+  readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
+  readonly selection: 'archive-endpoint' | IntrinsicShortSideConstructionKind
+  readonly canonicalGeometryHash: string | undefined
+}): Effect.Effect<MaterializedDecode, IrregularComputeErrorType> {
+  return Effect.gen(function* () {
+    const state = new IrregularBeamState({
+      remainingPreparedPieces: [],
+      placedCollisionGeometries: input.placedCollisionGeometries,
+      placementOrder: input.placedCollisionGeometries.map(
+        ({ placement }) => placement.pieceId ?? placement.sourcePieceId
+      )
+    })
+    const scoringStartedAt =
+      input.input.options?.onFinalizationMetrics === undefined ? 0 : performance.now()
+    const score = yield* input.input.layoutScorer.scoreState({
+      sheet: input.input.request.sheet,
+      state
+    })
+    const stateSnapshots =
+      input.input.request.options.historyMode === 'off'
+        ? []
+        : selectedLayoutRevealSnapshots(input.input.preparedPieces, input.placedCollisionGeometries)
+    const selectionDescription =
+      input.selection === 'archive-endpoint'
+        ? 'settled archive endpoint'
+        : `terminal ${input.selection} construction`
+    const portfolio = new IrregularPortfolioResult({
+      status: 'completed',
+      terminationReason: 'shared_archive_completed',
+      source: 'shared-archive',
+      placements: input.placedCollisionGeometries.map(({ placement }) => placement),
+      unplacedPieceIds: [],
+      score: layoutScoreSummary(score),
+      diagnostics: [
+        intrinsicShortSideProfileDiagnostic(
+          'selected',
+          `selected ${selectionDescription}${input.canonicalGeometryHash === undefined ? '' : ` (${input.canonicalGeometryHash})`}`
+        )
+      ]
+    })
+    return {
+      placedCollisionGeometries: input.placedCollisionGeometries,
+      score,
+      unplacedPieceIds: [],
+      diagnostics: [],
+      sortedPieceIds: input.input.sortedPieceIds,
+      stateSnapshots,
+      beamWidth: input.input.settings.optimizer.beamWidth,
+      portfolio,
+      finalizationMetrics: {
+        reconstructionElapsedMs: 0,
+        finalScoreElapsedMs:
+          input.input.options?.onFinalizationMetrics === undefined
+            ? 0
+            : Math.max(0, performance.now() - scoringStartedAt)
+      }
+    }
+  })
+}
+
 /** Builds a truthful scrub sequence from prefixes of the selected exact layout. */
 function selectedLayoutRevealSnapshots(
   preparedPieces: ReadonlyArray<IrregularPreparedPiece>,
@@ -1597,6 +1727,17 @@ function sharedArchiveDiagnostic(
 ): CollisionGeometryDiagnostic {
   return new CollisionGeometryDiagnostic({
     code: `intrinsic_shared_archive_${status}`,
+    message
+  })
+}
+
+/** Adds a truthful terminal-profile status to the ordinary worker diagnostics. */
+function intrinsicShortSideProfileDiagnostic(
+  status: 'selected' | 'compact-fallback',
+  message: string
+): CollisionGeometryDiagnostic {
+  return new CollisionGeometryDiagnostic({
+    code: `intrinsic_short_side_${status}`,
     message
   })
 }

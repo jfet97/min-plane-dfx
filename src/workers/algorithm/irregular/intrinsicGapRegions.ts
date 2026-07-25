@@ -1,5 +1,4 @@
 import {
-  area,
   booleanOpWithPolyTree,
   ClipType,
   FillRule,
@@ -13,12 +12,23 @@ import type {
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import { toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
+import {
+  canonicalGridAbsoluteDoubledArea,
+  canonicalGridClockwise,
+  canonicalGridConvexHull,
+  canonicalGridCounterClockwise,
+  canonicalGridPointOnSegment,
+  canonicalGridSignedDoubledArea,
+  compareBigInts,
+  doubledGridAreaToMm2
+} from '../../irregular/canonicalGridMath.js'
 
 export interface CanonicalIntrinsicGapRegion {
   readonly kind: 'enclosed-cavity' | 'hull-open-gap'
   readonly boundary: Path64
   readonly holes: ReadonlyArray<Path64>
   readonly areaMm2: number
+  readonly doubledAreaGrid2: string
   readonly aabb: {
     readonly minX: number
     readonly minY: number
@@ -35,7 +45,8 @@ export function deriveCanonicalIntrinsicGapRegions(
   const occupied = placed.map(placedPath)
   if (occupied.some((path) => path === undefined)) return undefined
   const paths = occupied.filter((path): path is Path64 => path !== undefined)
-  const hull = convexHull(paths.flat())
+  const hull = canonicalGridConvexHull(paths.flat())
+  if (hull === undefined) return undefined
   if (hull.length < 3) return []
   const occupiedTree = new PolyTree64()
   const gapTree = new PolyTree64()
@@ -43,7 +54,7 @@ export function deriveCanonicalIntrinsicGapRegions(
     booleanOpWithPolyTree(ClipType.Union, paths, null, occupiedTree, FillRule.EvenOdd)
     booleanOpWithPolyTree(
       ClipType.Difference,
-      [counterClockwise(hull)],
+      [canonicalGridCounterClockwise(hull) ?? hull],
       polyTreeToPaths64(occupiedTree),
       gapTree,
       FillRule.NonZero
@@ -55,7 +66,8 @@ export function deriveCanonicalIntrinsicGapRegions(
   if (!collectRegions(gapTree, hull, regions)) return undefined
   return regions.toSorted(
     (first, second) =>
-      first.areaMm2 - second.areaMm2 || first.canonicalKey.localeCompare(second.canonicalKey)
+      compareBigInts(BigInt(first.doubledAreaGrid2), BigInt(second.doubledAreaGrid2)) ||
+      first.canonicalKey.localeCompare(second.canonicalKey)
   )
 }
 
@@ -71,12 +83,18 @@ export function candidateContainedInIntrinsicGap(
   }))
   if (candidate.some(({ x, y }) => x === undefined || y === undefined)) return false
   const candidatePath = candidate.map(({ x, y }) => ({ x: x ?? 0, y: y ?? 0 }))
-  const solid = [counterClockwise(region.boundary), ...region.holes.map(clockwise)]
+  const boundary = canonicalGridCounterClockwise(region.boundary)
+  const holes = region.holes.map(canonicalGridClockwise)
+  if (boundary === undefined || holes.some((path) => path === undefined)) return false
+  const solid = [
+    boundary,
+    ...holes.filter((path): path is Path64 => path !== undefined)
+  ]
   const difference = new PolyTree64()
   try {
     booleanOpWithPolyTree(
       ClipType.Difference,
-      [counterClockwise(candidatePath)],
+      [canonicalGridCounterClockwise(candidatePath) ?? candidatePath],
       solid,
       difference,
       FillRule.NonZero
@@ -84,7 +102,7 @@ export function candidateContainedInIntrinsicGap(
   } catch {
     return false
   }
-  return totalPositiveArea(difference) === 0
+  return totalPositiveDoubledArea(difference) === 0n
 }
 
 function collectRegions(
@@ -101,7 +119,9 @@ function collectRegions(
     }
     if (!child.isHole && child.polygon !== null) {
       const holes: Path64[] = []
-      let netArea = Math.abs(area(child.polygon))
+      const outerDoubledArea = canonicalGridAbsoluteDoubledArea(child.polygon)
+      if (outerDoubledArea === undefined) return false
+      let netDoubledArea = outerDoubledArea
       for (let holeIndex = 0; holeIndex < child.count; holeIndex += 1) {
         let hole: PolyPath64
         try {
@@ -111,20 +131,28 @@ function collectRegions(
         }
         if (hole.isHole && hole.polygon !== null) {
           holes.push(hole.polygon)
-          netArea -= Math.abs(area(hole.polygon))
+          const holeDoubledArea = canonicalGridAbsoluteDoubledArea(hole.polygon)
+          if (holeDoubledArea === undefined) return false
+          netDoubledArea -= holeDoubledArea
         }
       }
       const aabb = pathBounds(child.polygon)
-      if (!Number.isFinite(netArea) || netArea <= 0 || aabb === undefined) return false
-      const boundary = counterClockwise(child.polygon)
+      const areaMm2 = doubledGridAreaToMm2(netDoubledArea)
+      const boundary = canonicalGridCounterClockwise(child.polygon)
+      if (netDoubledArea <= 0n || aabb === undefined || areaMm2 === undefined || boundary === undefined) {
+        return false
+      }
       const orderedHoles = holes
-        .map(clockwise)
+        .map(canonicalGridClockwise)
+        .filter((path): path is Path64 => path !== undefined)
         .toSorted((first, second) => canonicalRing(first).localeCompare(canonicalRing(second)))
+      if (orderedHoles.length !== holes.length) return false
       result.push({
         kind: pathTouchesBoundary(boundary, hull) ? 'hull-open-gap' : 'enclosed-cavity',
         boundary,
         holes: orderedHoles,
-        areaMm2: netArea / 1_000_000,
+        areaMm2,
+        doubledAreaGrid2: netDoubledArea.toString(),
         aabb,
         canonicalKey: `${canonicalRing(boundary)}|${orderedHoles.map(canonicalRing).join('|')}`
       })
@@ -140,11 +168,7 @@ function pathTouchesBoundary(path: Path64, boundary: Path64): boolean {
       const end = boundary[(index + 1) % boundary.length]
       if (end === undefined) return false
       return (
-        cross(start, end, point) === 0 &&
-        point.x >= Math.min(start.x, end.x) &&
-        point.x <= Math.max(start.x, end.x) &&
-        point.y >= Math.min(start.y, end.y) &&
-        point.y <= Math.max(start.y, end.y)
+        canonicalGridPointOnSegment(point, start, end)
       )
     })
   )
@@ -158,11 +182,14 @@ function placedPath(placed: IrregularPlacedPiece): Path64 | undefined {
     if (x === undefined || y === undefined) return undefined
     path.push({ x, y })
   }
-  return path.length >= 3 && area(path) !== 0 ? counterClockwise(path) : undefined
+  const signedDoubledArea = canonicalGridSignedDoubledArea(path)
+  return path.length >= 3 && signedDoubledArea !== undefined && signedDoubledArea !== 0n
+    ? canonicalGridCounterClockwise(path)
+    : undefined
 }
 
-function totalPositiveArea(parent: PolyPath64): number | undefined {
-  let total = 0
+function totalPositiveDoubledArea(parent: PolyPath64): bigint | undefined {
+  let total = 0n
   const visit = (node: PolyPath64): boolean => {
     for (let index = 0; index < node.count; index += 1) {
       let child: PolyPath64
@@ -171,39 +198,16 @@ function totalPositiveArea(parent: PolyPath64): number | undefined {
       } catch {
         return false
       }
-      if (!child.isHole && child.polygon !== null) total += Math.abs(area(child.polygon))
+      if (!child.isHole && child.polygon !== null) {
+        const doubledArea = canonicalGridAbsoluteDoubledArea(child.polygon)
+        if (doubledArea === undefined) return false
+        total += doubledArea
+      }
       if (!visit(child)) return false
     }
     return true
   }
   return visit(parent) ? total : undefined
-}
-
-function convexHull(points: ReadonlyArray<{ readonly x: number; readonly y: number }>): Path64 {
-  const unique = [
-    ...new Map(points.map((point) => [`${point.x},${point.y}`, point])).values()
-  ].sort((first, second) => first.x - second.x || first.y - second.y)
-  if (unique.length <= 1) return unique
-  const lower: Path64 = []
-  for (const point of unique) {
-    while (lower.length >= 2 && cross(lower.at(-2), lower.at(-1), point) <= 0) lower.pop()
-    lower.push(point)
-  }
-  const upper: Path64 = []
-  for (const point of [...unique].reverse()) {
-    while (upper.length >= 2 && cross(upper.at(-2), upper.at(-1), point) <= 0) upper.pop()
-    upper.push(point)
-  }
-  return [...lower.slice(0, -1), ...upper.slice(0, -1)]
-}
-
-function cross(
-  origin: { readonly x: number; readonly y: number } | undefined,
-  first: { readonly x: number; readonly y: number } | undefined,
-  second: { readonly x: number; readonly y: number }
-): number {
-  if (origin === undefined || first === undefined) return 0
-  return (first.x - origin.x) * (second.y - origin.y) - (first.y - origin.y) * (second.x - origin.x)
 }
 
 function pathBounds(path: Path64): CanonicalIntrinsicGapRegion['aabb'] | undefined {
@@ -231,12 +235,4 @@ function canonicalRing(path: Path64): string {
     )
   )
   return variants.toSorted()[0] ?? ''
-}
-
-function counterClockwise(path: Path64): Path64 {
-  return area(path) >= 0 ? path : [...path].reverse()
-}
-
-function clockwise(path: Path64): Path64 {
-  return area(path) <= 0 ? path : [...path].reverse()
 }

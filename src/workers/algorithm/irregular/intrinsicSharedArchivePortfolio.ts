@@ -409,15 +409,67 @@ function compareIntrinsicSharedArchiveWinner(
   second: IntrinsicSharedArchiveEndpoint
 ): number {
   return (
-    first.certificate.relativeDeficitSum - second.certificate.relativeDeficitSum ||
+    compareCertificateDeficit(first, second) ||
     first.metrics.enclosedCavityCount - second.metrics.enclosedCavityCount ||
-    first.metrics.largestOccupiedHullGapRatio -
-      second.metrics.largestOccupiedHullGapRatio ||
-    first.metrics.envelopeAreaMm2 - second.metrics.envelopeAreaMm2 ||
-    first.metrics.envelopeMaximumSideMm - second.metrics.envelopeMaximumSideMm ||
-    first.metrics.envelopeSpanMm - second.metrics.envelopeSpanMm ||
+    compareLargestHullGap(first, second) ||
+    compareEnvelope(first, second) ||
     first.sheetlessCanonicalGeometryHash.localeCompare(second.sheetlessCanonicalGeometryHash)
   )
+}
+
+function compareBigIntAscending(first: bigint, second: bigint): number {
+  return first === second ? 0 : first < second ? -1 : 1
+}
+
+function compareCertificateDeficit(
+  first: IntrinsicSharedArchiveEndpoint,
+  second: IntrinsicSharedArchiveEndpoint
+): number {
+  const firstNumerator = first.certificate.exactRelativeDeficitNumerator
+  const firstDenominator = first.certificate.exactRelativeDeficitDenominator
+  const secondNumerator = second.certificate.exactRelativeDeficitNumerator
+  const secondDenominator = second.certificate.exactRelativeDeficitDenominator
+  return firstNumerator !== undefined &&
+    firstDenominator !== undefined &&
+    secondNumerator !== undefined &&
+    secondDenominator !== undefined
+    ? compareBigIntAscending(
+        BigInt(firstNumerator) * BigInt(secondDenominator),
+        BigInt(secondNumerator) * BigInt(firstDenominator)
+      )
+    : first.certificate.relativeDeficitSum - second.certificate.relativeDeficitSum
+}
+
+function compareLargestHullGap(
+  first: IntrinsicSharedArchiveEndpoint,
+  second: IntrinsicSharedArchiveEndpoint
+): number {
+  return first.metrics.exact !== undefined && second.metrics.exact !== undefined
+    ? compareBigIntAscending(
+        BigInt(first.metrics.exact.largestOccupiedHullGapDoubledAreaGrid2) *
+          BigInt(second.metrics.exact.occupiedHullDoubledAreaGrid2),
+        BigInt(second.metrics.exact.largestOccupiedHullGapDoubledAreaGrid2) *
+          BigInt(first.metrics.exact.occupiedHullDoubledAreaGrid2)
+      )
+    : first.metrics.largestOccupiedHullGapRatio -
+        second.metrics.largestOccupiedHullGapRatio
+}
+
+function compareEnvelope(
+  first: IntrinsicSharedArchiveEndpoint,
+  second: IntrinsicSharedArchiveEndpoint
+): number {
+  return first.metrics.exact !== undefined && second.metrics.exact !== undefined
+    ? compareBigIntAscending(
+        BigInt(first.metrics.exact.envelopeAreaGrid2),
+        BigInt(second.metrics.exact.envelopeAreaGrid2)
+      ) ||
+        first.metrics.exact.envelopeMaximumSideGrid -
+          second.metrics.exact.envelopeMaximumSideGrid ||
+        first.metrics.exact.envelopeSpanGrid - second.metrics.exact.envelopeSpanGrid
+    : first.metrics.envelopeAreaMm2 - second.metrics.envelopeAreaMm2 ||
+        first.metrics.envelopeMaximumSideMm - second.metrics.envelopeMaximumSideMm ||
+        first.metrics.envelopeSpanMm - second.metrics.envelopeSpanMm
 }
 
 /** Requires uncensored selection and deterministic settlement of every selected source. */

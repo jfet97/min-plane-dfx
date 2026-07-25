@@ -1,12 +1,13 @@
 {
   "fixture": "shapes-17",
+  "objectiveProfile": "compact",
   "sheet": {
     "width": 300,
     "height": 300
   },
-  "sourceCommit": "7689a869cc65fca63a352e70983aa0dfa95e47a8",
+  "sourceCommit": "31d760ccf19078a3eb8165434a66be57942138fc",
   "runtime": {
-    "elapsedMs": 3040.5750829999997,
+    "elapsedMs": 3171.410084,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -644,11 +645,11 @@
             "retainedCount": 4,
             "bestAccountingStratumCount": 3,
             "topologyMeasurementCount": 3,
-            "topologyMeasurementMs": 0.6832919999999945,
+            "topologyMeasurementMs": 0.7142079999999851,
             "legalCandidateCount": 8,
             "contactMeasuredCandidateCount": 8,
             "positiveContactCandidateCount": 0,
-            "contactMeasurementMs": 0.31537499999984675,
+            "contactMeasurementMs": 0.29974899999996296,
             "contactSelectedSuccessorCount": 0,
             "contactDeduplicatedSuccessorCount": 0,
             "contactRetainedSuccessorCount": 0,
@@ -665,7 +666,8 @@
                 "placedDoubledMaterialAreaGrid2": "51961500000",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 212128,
@@ -682,7 +684,9 @@
                     "largestPositiveContactComponentRatio": 1
                   },
                   "hullGapDoubledAreaGrid2": 0,
-                  "hullDoubledAreaGrid2": 58454734128
+                  "hullDoubledAreaGrid2": 58454734128,
+                  "exactHullGapDoubledAreaGrid2": "0",
+                  "exactHullDoubledAreaGrid2": "58454734128"
                 },
                 "retained": true
               },
@@ -698,7 +702,8 @@
                 "placedDoubledMaterialAreaGrid2": "51961500000",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 212128,
@@ -715,7 +720,9 @@
                     "largestPositiveContactComponentRatio": 1
                   },
                   "hullGapDoubledAreaGrid2": 0,
-                  "hullDoubledAreaGrid2": 58454734128
+                  "hullDoubledAreaGrid2": 58454734128,
+                  "exactHullGapDoubledAreaGrid2": "0",
+                  "exactHullDoubledAreaGrid2": "58454734128"
                 },
                 "retained": true
               },
@@ -731,7 +738,8 @@
                 "placedDoubledMaterialAreaGrid2": "51961500000",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 212128,
@@ -748,7 +756,9 @@
                     "largestPositiveContactComponentRatio": 1
                   },
                   "hullGapDoubledAreaGrid2": 0,
-                  "hullDoubledAreaGrid2": 58454734128
+                  "hullDoubledAreaGrid2": 58454734128,
+                  "exactHullGapDoubledAreaGrid2": "0",
+                  "exactHullDoubledAreaGrid2": "58454734128"
                 },
                 "retained": true
               },
@@ -764,7 +774,8 @@
                 "placedDoubledMaterialAreaGrid2": "51961500000",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 212128,
@@ -781,7 +792,9 @@
                     "largestPositiveContactComponentRatio": 1
                   },
                   "hullGapDoubledAreaGrid2": 0,
-                  "hullDoubledAreaGrid2": 58454734128
+                  "hullDoubledAreaGrid2": 58454734128,
+                  "exactHullGapDoubledAreaGrid2": "0",
+                  "exactHullDoubledAreaGrid2": "58454734128"
                 },
                 "retained": true
               },
@@ -797,7 +810,8 @@
                 "placedDoubledMaterialAreaGrid2": "51961500000",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 212128,
@@ -814,7 +828,9 @@
                     "largestPositiveContactComponentRatio": 1
                   },
                   "hullGapDoubledAreaGrid2": 0,
-                  "hullDoubledAreaGrid2": 58454734128
+                  "hullDoubledAreaGrid2": 58454734128,
+                  "exactHullGapDoubledAreaGrid2": "0",
+                  "exactHullDoubledAreaGrid2": "58454734128"
                 },
                 "retained": true
               }
@@ -827,11 +843,11 @@
             "retainedCount": 7,
             "bestAccountingStratumCount": 3,
             "topologyMeasurementCount": 6,
-            "topologyMeasurementMs": 0.43637400000005755,
+            "topologyMeasurementMs": 0.4181250000000887,
             "legalCandidateCount": 326,
             "contactMeasuredCandidateCount": 8,
             "positiveContactCandidateCount": 0,
-            "contactMeasurementMs": 0.08750099999997474,
+            "contactMeasurementMs": 0.08000099999998156,
             "contactSelectedSuccessorCount": 0,
             "contactDeduplicatedSuccessorCount": 0,
             "contactRetainedSuccessorCount": 0,
@@ -848,7 +864,8 @@
                 "placedDoubledMaterialAreaGrid2": "54728277553",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 206351,
@@ -865,7 +882,9 @@
                     "largestPositiveContactComponentRatio": 1
                   },
                   "hullGapDoubledAreaGrid2": 0,
-                  "hullDoubledAreaGrid2": 61294642727
+                  "hullDoubledAreaGrid2": 61294642727,
+                  "exactHullGapDoubledAreaGrid2": "0",
+                  "exactHullDoubledAreaGrid2": "61294642727"
                 },
                 "retained": true
               },
@@ -881,7 +900,8 @@
                 "placedDoubledMaterialAreaGrid2": "54728277553",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 206351,
@@ -898,7 +918,9 @@
                     "largestPositiveContactComponentRatio": 1
                   },
                   "hullGapDoubledAreaGrid2": 0,
-                  "hullDoubledAreaGrid2": 61294642727
+                  "hullDoubledAreaGrid2": 61294642727,
+                  "exactHullGapDoubledAreaGrid2": "0",
+                  "exactHullDoubledAreaGrid2": "61294642727"
                 },
                 "retained": true
               },
@@ -914,7 +936,8 @@
                 "placedDoubledMaterialAreaGrid2": "54728277553",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 206351,
@@ -931,7 +954,9 @@
                     "largestPositiveContactComponentRatio": 1
                   },
                   "hullGapDoubledAreaGrid2": 0,
-                  "hullDoubledAreaGrid2": 61294642727
+                  "hullDoubledAreaGrid2": 61294642727,
+                  "exactHullGapDoubledAreaGrid2": "0",
+                  "exactHullDoubledAreaGrid2": "61294642727"
                 },
                 "retained": true
               },
@@ -947,7 +972,8 @@
                 "placedDoubledMaterialAreaGrid2": "54728277553",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 206351,
@@ -964,7 +990,9 @@
                     "largestPositiveContactComponentRatio": 1
                   },
                   "hullGapDoubledAreaGrid2": 0,
-                  "hullDoubledAreaGrid2": 61294642727
+                  "hullDoubledAreaGrid2": 61294642727,
+                  "exactHullGapDoubledAreaGrid2": "0",
+                  "exactHullDoubledAreaGrid2": "61294642727"
                 },
                 "retained": true
               },
@@ -980,7 +1008,8 @@
                 "placedDoubledMaterialAreaGrid2": "54728277553",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 206351,
@@ -997,7 +1026,9 @@
                     "largestPositiveContactComponentRatio": 1
                   },
                   "hullGapDoubledAreaGrid2": 0,
-                  "hullDoubledAreaGrid2": 61294642727
+                  "hullDoubledAreaGrid2": 61294642727,
+                  "exactHullGapDoubledAreaGrid2": "0",
+                  "exactHullDoubledAreaGrid2": "61294642727"
                 },
                 "retained": true
               }
@@ -1010,11 +1041,11 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 9,
             "topologyMeasurementCount": 27,
-            "topologyMeasurementMs": 4.331336000000306,
+            "topologyMeasurementMs": 7.462041999999997,
             "legalCandidateCount": 3008,
             "contactMeasuredCandidateCount": 874,
             "positiveContactCandidateCount": 0,
-            "contactMeasurementMs": 10.044742999999016,
+            "contactMeasurementMs": 9.776093000000571,
             "contactSelectedSuccessorCount": 0,
             "contactDeduplicatedSuccessorCount": 0,
             "contactRetainedSuccessorCount": 0,
@@ -1031,7 +1062,8 @@
                 "placedDoubledMaterialAreaGrid2": "76657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 282851,
@@ -1048,7 +1080,9 @@
                     "largestPositiveContactComponentRatio": 0.5
                   },
                   "hullGapDoubledAreaGrid2": 13114051983,
-                  "hullDoubledAreaGrid2": 100496726088
+                  "hullDoubledAreaGrid2": 100496726088,
+                  "exactHullGapDoubledAreaGrid2": "13114051983",
+                  "exactHullDoubledAreaGrid2": "100496726088"
                 },
                 "retained": true
               },
@@ -1064,7 +1098,8 @@
                 "placedDoubledMaterialAreaGrid2": "76657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 282851,
@@ -1081,7 +1116,9 @@
                     "largestPositiveContactComponentRatio": 0.5
                   },
                   "hullGapDoubledAreaGrid2": 13114051983,
-                  "hullDoubledAreaGrid2": 100496726088
+                  "hullDoubledAreaGrid2": 100496726088,
+                  "exactHullGapDoubledAreaGrid2": "13114051983",
+                  "exactHullDoubledAreaGrid2": "100496726088"
                 },
                 "retained": true
               },
@@ -1097,7 +1134,8 @@
                 "placedDoubledMaterialAreaGrid2": "76657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 282851,
@@ -1114,7 +1152,9 @@
                     "largestPositiveContactComponentRatio": 0.5
                   },
                   "hullGapDoubledAreaGrid2": 13114051983,
-                  "hullDoubledAreaGrid2": 100496726088
+                  "hullDoubledAreaGrid2": 100496726088,
+                  "exactHullGapDoubledAreaGrid2": "13114051983",
+                  "exactHullDoubledAreaGrid2": "100496726088"
                 },
                 "retained": true
               },
@@ -1130,7 +1170,8 @@
                 "placedDoubledMaterialAreaGrid2": "76657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 282851,
@@ -1147,7 +1188,9 @@
                     "largestPositiveContactComponentRatio": 0.5
                   },
                   "hullGapDoubledAreaGrid2": 13114051983,
-                  "hullDoubledAreaGrid2": 100496726088
+                  "hullDoubledAreaGrid2": 100496726088,
+                  "exactHullGapDoubledAreaGrid2": "13114051983",
+                  "exactHullDoubledAreaGrid2": "100496726088"
                 },
                 "retained": true
               },
@@ -1163,7 +1206,8 @@
                 "placedDoubledMaterialAreaGrid2": "76657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 282851,
@@ -1180,7 +1224,9 @@
                     "largestPositiveContactComponentRatio": 0.5
                   },
                   "hullGapDoubledAreaGrid2": 13114051983,
-                  "hullDoubledAreaGrid2": 100496726088
+                  "hullDoubledAreaGrid2": 100496726088,
+                  "exactHullGapDoubledAreaGrid2": "13114051983",
+                  "exactHullDoubledAreaGrid2": "100496726088"
                 },
                 "retained": true
               }
@@ -1193,11 +1239,11 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 27,
             "topologyMeasurementCount": 43,
-            "topologyMeasurementMs": 5.264085000000364,
+            "topologyMeasurementMs": 10.944794000000002,
             "legalCandidateCount": 4141,
             "contactMeasuredCandidateCount": 54,
             "positiveContactCandidateCount": 0,
-            "contactMeasurementMs": 0.36616800000069816,
+            "contactMeasurementMs": 0.5226269999997157,
             "contactSelectedSuccessorCount": 0,
             "contactDeduplicatedSuccessorCount": 0,
             "contactRetainedSuccessorCount": 0,
@@ -1214,7 +1260,8 @@
                 "placedDoubledMaterialAreaGrid2": "90657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 282851,
@@ -1231,7 +1278,9 @@
                     "largestPositiveContactComponentRatio": 0.3333333333333333
                   },
                   "hullGapDoubledAreaGrid2": 19432532829,
-                  "hullDoubledAreaGrid2": 124662773569
+                  "hullDoubledAreaGrid2": 124662773569,
+                  "exactHullGapDoubledAreaGrid2": "19432532829",
+                  "exactHullDoubledAreaGrid2": "124662773569"
                 },
                 "retained": true
               },
@@ -1247,7 +1296,8 @@
                 "placedDoubledMaterialAreaGrid2": "90657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 282851,
@@ -1264,7 +1314,9 @@
                     "largestPositiveContactComponentRatio": 0.3333333333333333
                   },
                   "hullGapDoubledAreaGrid2": 19432532829,
-                  "hullDoubledAreaGrid2": 124662773569
+                  "hullDoubledAreaGrid2": 124662773569,
+                  "exactHullGapDoubledAreaGrid2": "19432532829",
+                  "exactHullDoubledAreaGrid2": "124662773569"
                 },
                 "retained": true
               },
@@ -1280,7 +1332,8 @@
                 "placedDoubledMaterialAreaGrid2": "90657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 282851,
@@ -1297,7 +1350,9 @@
                     "largestPositiveContactComponentRatio": 0.3333333333333333
                   },
                   "hullGapDoubledAreaGrid2": 19432532829,
-                  "hullDoubledAreaGrid2": 124662773569
+                  "hullDoubledAreaGrid2": 124662773569,
+                  "exactHullGapDoubledAreaGrid2": "19432532829",
+                  "exactHullDoubledAreaGrid2": "124662773569"
                 },
                 "retained": true
               },
@@ -1313,7 +1368,8 @@
                 "placedDoubledMaterialAreaGrid2": "90657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 282851,
@@ -1330,7 +1386,9 @@
                     "largestPositiveContactComponentRatio": 0.3333333333333333
                   },
                   "hullGapDoubledAreaGrid2": 19432532829,
-                  "hullDoubledAreaGrid2": 124662773569
+                  "hullDoubledAreaGrid2": 124662773569,
+                  "exactHullGapDoubledAreaGrid2": "19432532829",
+                  "exactHullDoubledAreaGrid2": "124662773569"
                 },
                 "retained": true
               },
@@ -1346,7 +1404,8 @@
                 "placedDoubledMaterialAreaGrid2": "90657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 282852,
@@ -1363,7 +1422,9 @@
                     "largestPositiveContactComponentRatio": 0.3333333333333333
                   },
                   "hullGapDoubledAreaGrid2": 12675954000,
-                  "hullDoubledAreaGrid2": 117906422425
+                  "hullDoubledAreaGrid2": 117906422425,
+                  "exactHullGapDoubledAreaGrid2": "12675954000",
+                  "exactHullDoubledAreaGrid2": "117906422425"
                 },
                 "retained": true
               }
@@ -1376,11 +1437,11 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 11,
             "topologyMeasurementCount": 27,
-            "topologyMeasurementMs": 3.2311260000000175,
+            "topologyMeasurementMs": 7.513878000000204,
             "legalCandidateCount": 4098,
             "contactMeasuredCandidateCount": 11,
             "positiveContactCandidateCount": 0,
-            "contactMeasurementMs": 0.143458000000237,
+            "contactMeasurementMs": 0.21095800000023246,
             "contactSelectedSuccessorCount": 0,
             "contactDeduplicatedSuccessorCount": 0,
             "contactRetainedSuccessorCount": 0,
@@ -1397,7 +1458,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1414,7 +1476,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -1430,7 +1494,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1447,7 +1512,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -1463,7 +1530,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1480,7 +1548,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -1496,7 +1566,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1513,7 +1584,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -1529,7 +1602,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299576,
@@ -1546,7 +1620,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 22447280682,
-                  "hullDoubledAreaGrid2": 143757158623
+                  "hullDoubledAreaGrid2": 143757158623,
+                  "exactHullGapDoubledAreaGrid2": "22447280682",
+                  "exactHullDoubledAreaGrid2": "143757158623"
                 },
                 "retained": true
               }
@@ -1559,7 +1635,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 11,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 2.084750000000213,
+            "topologyMeasurementMs": 4.335915999999543,
             "legalCandidateCount": 4098,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -1580,7 +1656,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1597,7 +1674,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -1613,7 +1692,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1630,7 +1710,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -1646,7 +1728,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1663,7 +1746,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -1679,7 +1764,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1696,7 +1782,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -1712,7 +1800,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299576,
@@ -1729,7 +1818,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 22447280682,
-                  "hullDoubledAreaGrid2": 143757158623
+                  "hullDoubledAreaGrid2": 143757158623,
+                  "exactHullGapDoubledAreaGrid2": "22447280682",
+                  "exactHullDoubledAreaGrid2": "143757158623"
                 },
                 "retained": true
               }
@@ -1742,7 +1833,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 11,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 2.0151660000001357,
+            "topologyMeasurementMs": 4.340582999999697,
             "legalCandidateCount": 4104,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -1763,7 +1854,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1780,7 +1872,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -1796,7 +1890,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1813,7 +1908,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -1829,7 +1926,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1846,7 +1944,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -1862,7 +1962,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1879,7 +1980,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -1895,7 +1998,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299576,
@@ -1912,7 +2016,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 22447280682,
-                  "hullDoubledAreaGrid2": 143757158623
+                  "hullDoubledAreaGrid2": 143757158623,
+                  "exactHullGapDoubledAreaGrid2": "22447280682",
+                  "exactHullDoubledAreaGrid2": "143757158623"
                 },
                 "retained": true
               }
@@ -1925,7 +2031,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 11,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.966417999999976,
+            "topologyMeasurementMs": 4.913664999999355,
             "legalCandidateCount": 4146,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -1946,7 +2052,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1963,7 +2070,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -1979,7 +2088,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -1996,7 +2106,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2012,7 +2124,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2029,7 +2142,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2045,7 +2160,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2062,7 +2178,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2078,7 +2196,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299576,
@@ -2095,7 +2214,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 22447280682,
-                  "hullDoubledAreaGrid2": 143757158623
+                  "hullDoubledAreaGrid2": 143757158623,
+                  "exactHullGapDoubledAreaGrid2": "22447280682",
+                  "exactHullDoubledAreaGrid2": "143757158623"
                 },
                 "retained": true
               }
@@ -2108,7 +2229,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 11,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.7119599999998627,
+            "topologyMeasurementMs": 4.1169579999998405,
             "legalCandidateCount": 4128,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -2129,7 +2250,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2146,7 +2268,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2162,7 +2286,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2179,7 +2304,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2195,7 +2322,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2212,7 +2340,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2228,7 +2358,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2245,7 +2376,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2261,7 +2394,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299576,
@@ -2278,7 +2412,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 22447280682,
-                  "hullDoubledAreaGrid2": 143757158623
+                  "hullDoubledAreaGrid2": 143757158623,
+                  "exactHullGapDoubledAreaGrid2": "22447280682",
+                  "exactHullDoubledAreaGrid2": "143757158623"
                 },
                 "retained": true
               }
@@ -2291,11 +2427,11 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 11,
             "topologyMeasurementCount": 18,
-            "topologyMeasurementMs": 1.7447490000001835,
+            "topologyMeasurementMs": 4.7285430000001725,
             "legalCandidateCount": 4101,
             "contactMeasuredCandidateCount": 2,
             "positiveContactCandidateCount": 0,
-            "contactMeasurementMs": 0.033333999999968,
+            "contactMeasurementMs": 0.03491699999995035,
             "contactSelectedSuccessorCount": 0,
             "contactDeduplicatedSuccessorCount": 0,
             "contactRetainedSuccessorCount": 0,
@@ -2312,7 +2448,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2329,7 +2466,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2345,7 +2484,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2362,7 +2502,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2378,7 +2520,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2395,7 +2538,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2411,7 +2556,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2428,7 +2574,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2444,7 +2592,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299576,
@@ -2461,7 +2610,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 22447280682,
-                  "hullDoubledAreaGrid2": 143757158623
+                  "hullDoubledAreaGrid2": 143757158623,
+                  "exactHullGapDoubledAreaGrid2": "22447280682",
+                  "exactHullDoubledAreaGrid2": "143757158623"
                 },
                 "retained": true
               }
@@ -2474,7 +2625,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 11,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.5440010000015718,
+            "topologyMeasurementMs": 4.070207999998729,
             "legalCandidateCount": 4138,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -2495,7 +2646,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2512,7 +2664,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2528,7 +2682,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2545,7 +2700,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2561,7 +2718,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2578,7 +2736,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2594,7 +2754,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2611,7 +2772,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2627,7 +2790,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299576,
@@ -2644,7 +2808,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 22447280682,
-                  "hullDoubledAreaGrid2": 143757158623
+                  "hullDoubledAreaGrid2": 143757158623,
+                  "exactHullGapDoubledAreaGrid2": "22447280682",
+                  "exactHullDoubledAreaGrid2": "143757158623"
                 },
                 "retained": true
               }
@@ -2657,7 +2823,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 11,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.6347519999994802,
+            "topologyMeasurementMs": 4.0066670000005615,
             "legalCandidateCount": 4138,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -2678,7 +2844,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2695,7 +2862,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2711,7 +2880,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2728,7 +2898,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2744,7 +2916,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2761,7 +2934,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2777,7 +2952,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2794,7 +2970,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2810,7 +2988,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299576,
@@ -2827,7 +3006,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 22447280682,
-                  "hullDoubledAreaGrid2": 143757158623
+                  "hullDoubledAreaGrid2": 143757158623,
+                  "exactHullGapDoubledAreaGrid2": "22447280682",
+                  "exactHullDoubledAreaGrid2": "143757158623"
                 },
                 "retained": true
               }
@@ -2840,7 +3021,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 11,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.4627089999989948,
+            "topologyMeasurementMs": 4.037791000000652,
             "legalCandidateCount": 4111,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -2861,7 +3042,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2878,7 +3060,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2894,7 +3078,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2911,7 +3096,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2927,7 +3114,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2944,7 +3132,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2960,7 +3150,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -2977,7 +3168,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -2993,7 +3186,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299576,
@@ -3010,7 +3204,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 22447280682,
-                  "hullDoubledAreaGrid2": 143757158623
+                  "hullDoubledAreaGrid2": 143757158623,
+                  "exactHullGapDoubledAreaGrid2": "22447280682",
+                  "exactHullDoubledAreaGrid2": "143757158623"
                 },
                 "retained": true
               }
@@ -3023,7 +3219,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 11,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.5150830000006863,
+            "topologyMeasurementMs": 4.070375999999669,
             "legalCandidateCount": 4112,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -3044,7 +3240,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3061,7 +3258,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -3077,7 +3276,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3094,7 +3294,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -3110,7 +3312,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3127,7 +3330,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -3143,7 +3348,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3160,7 +3366,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -3176,7 +3384,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299576,
@@ -3193,7 +3402,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 22447280682,
-                  "hullDoubledAreaGrid2": 143757158623
+                  "hullDoubledAreaGrid2": 143757158623,
+                  "exactHullGapDoubledAreaGrid2": "22447280682",
+                  "exactHullDoubledAreaGrid2": "143757158623"
                 },
                 "retained": true
               }
@@ -3206,7 +3417,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 11,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.6376670000004196,
+            "topologyMeasurementMs": 4.147915999999441,
             "legalCandidateCount": 4149,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -3227,7 +3438,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3244,7 +3456,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -3260,7 +3474,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3277,7 +3492,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -3293,7 +3510,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3310,7 +3528,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -3326,7 +3546,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3343,7 +3564,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -3359,7 +3582,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299576,
@@ -3376,7 +3600,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 22447280682,
-                  "hullDoubledAreaGrid2": 143757158623
+                  "hullDoubledAreaGrid2": 143757158623,
+                  "exactHullGapDoubledAreaGrid2": "22447280682",
+                  "exactHullDoubledAreaGrid2": "143757158623"
                 },
                 "retained": true
               }
@@ -3389,7 +3615,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 11,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.5667919999987134,
+            "topologyMeasurementMs": 3.8087480000008327,
             "legalCandidateCount": 4103,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -3410,7 +3636,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3427,7 +3654,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -3443,7 +3672,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3460,7 +3690,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -3476,7 +3708,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3493,7 +3726,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -3509,7 +3744,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3526,7 +3762,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 29203605353,
-                  "hullDoubledAreaGrid2": 150513255609
+                  "hullDoubledAreaGrid2": 150513255609,
+                  "exactHullGapDoubledAreaGrid2": "29203605353",
+                  "exactHullDoubledAreaGrid2": "150513255609"
                 },
                 "retained": true
               },
@@ -3542,7 +3780,8 @@
                 "placedDoubledMaterialAreaGrid2": "102657695557",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299576,
@@ -3559,7 +3798,9 @@
                     "largestPositiveContactComponentRatio": 0.25
                   },
                   "hullGapDoubledAreaGrid2": 22447280682,
-                  "hullDoubledAreaGrid2": 143757158623
+                  "hullDoubledAreaGrid2": 143757158623,
+                  "exactHullGapDoubledAreaGrid2": "22447280682",
+                  "exactHullDoubledAreaGrid2": "143757158623"
                 },
                 "retained": true
               }
@@ -3572,11 +3813,11 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 16,
             "topologyMeasurementCount": 32,
-            "topologyMeasurementMs": 3.969163999999637,
+            "topologyMeasurementMs": 11.98996200000147,
             "legalCandidateCount": 4108,
             "contactMeasuredCandidateCount": 21,
             "positiveContactCandidateCount": 0,
-            "contactMeasurementMs": 0.2555420000007871,
+            "contactMeasurementMs": 0.3915410000004158,
             "contactSelectedSuccessorCount": 0,
             "contactDeduplicatedSuccessorCount": 0,
             "contactRetainedSuccessorCount": 0,
@@ -3593,7 +3834,8 @@
                 "placedDoubledMaterialAreaGrid2": "110461263437",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3610,7 +3852,9 @@
                     "largestPositiveContactComponentRatio": 0.2
                   },
                   "hullGapDoubledAreaGrid2": 26023121299,
-                  "hullDoubledAreaGrid2": 158037350379
+                  "hullDoubledAreaGrid2": 158037350379,
+                  "exactHullGapDoubledAreaGrid2": "26023121299",
+                  "exactHullDoubledAreaGrid2": "158037350379"
                 },
                 "retained": true
               },
@@ -3626,7 +3870,8 @@
                 "placedDoubledMaterialAreaGrid2": "110461263437",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3643,7 +3888,9 @@
                     "largestPositiveContactComponentRatio": 0.2
                   },
                   "hullGapDoubledAreaGrid2": 26023121299,
-                  "hullDoubledAreaGrid2": 158037350379
+                  "hullDoubledAreaGrid2": 158037350379,
+                  "exactHullGapDoubledAreaGrid2": "26023121299",
+                  "exactHullDoubledAreaGrid2": "158037350379"
                 },
                 "retained": true
               },
@@ -3659,7 +3906,8 @@
                 "placedDoubledMaterialAreaGrid2": "110461263437",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3676,7 +3924,9 @@
                     "largestPositiveContactComponentRatio": 0.2
                   },
                   "hullGapDoubledAreaGrid2": 26023121299,
-                  "hullDoubledAreaGrid2": 158037350379
+                  "hullDoubledAreaGrid2": 158037350379,
+                  "exactHullGapDoubledAreaGrid2": "26023121299",
+                  "exactHullDoubledAreaGrid2": "158037350379"
                 },
                 "retained": true
               },
@@ -3692,7 +3942,8 @@
                 "placedDoubledMaterialAreaGrid2": "110461263437",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299575,
@@ -3709,7 +3960,9 @@
                     "largestPositiveContactComponentRatio": 0.2
                   },
                   "hullGapDoubledAreaGrid2": 26023121299,
-                  "hullDoubledAreaGrid2": 158037350379
+                  "hullDoubledAreaGrid2": 158037350379,
+                  "exactHullGapDoubledAreaGrid2": "26023121299",
+                  "exactHullDoubledAreaGrid2": "158037350379"
                 },
                 "retained": true
               },
@@ -3725,7 +3978,8 @@
                 "placedDoubledMaterialAreaGrid2": "110461263437",
                 "cavities": {
                   "count": 0,
-                  "totalAreaMm2": 0
+                  "totalAreaMm2": 0,
+                  "totalDoubledAreaGrid2": "0"
                 },
                 "gridSpan": {
                   "widthGrid": 299577,
@@ -3742,7 +3996,9 @@
                     "largestPositiveContactComponentRatio": 0.2
                   },
                   "hullGapDoubledAreaGrid2": 25475948505,
-                  "hullDoubledAreaGrid2": 157490438050
+                  "hullDoubledAreaGrid2": 157490438050,
+                  "exactHullGapDoubledAreaGrid2": "25475948505",
+                  "exactHullDoubledAreaGrid2": "157490438050"
                 },
                 "retained": true
               }
@@ -3756,19 +4012,23 @@
         "placedDoubledMaterialAreaGrid2": "110461263437",
         "enclosedCavityCount": 0,
         "totalEnclosedCavityAreaMm2": 0,
+        "totalEnclosedCavityDoubledAreaGrid2": "0",
         "envelopeMaximumSideMm": 299.575,
         "envelopeAreaMm2": 87791.951625,
         "envelopeSpanMm": 592.63,
+        "envelopeMaximumSideGrid": 299575,
+        "envelopeAreaGrid2": "87791951625",
+        "envelopeSpanGrid": 592630,
         "canonicalGeometryHash": "e4ad1ce1c7fa26e7a00ba38a5d9c11e1908ebf753031ff4811420d5097be7c71",
         "origin": "cold-search",
         "unplacedCount": 12,
         "placedMaterialAreaMm2": 55230.6317185,
         "selectedRotationDeg": 0
       },
-      "preflightRuntimeMs": 14.847750000000019,
-      "prefixTerminalizationMs": 0.0865840000000162,
-      "coldSearchMs": 2991.372417,
-      "runtimeMs": 2991.680125
+      "preflightRuntimeMs": 14.05008300000003,
+      "prefixTerminalizationMs": 0.08491600000002109,
+      "coldSearchMs": 3124.921042,
+      "runtimeMs": 3125.196833
     },
     "focusedCompleteReconstructionTrace": {
       "version": "intrinsic-focused-complete-reconstruction-v1",
@@ -3777,28 +4037,12 @@
       "candidateEvaluationAccountingComplete": true,
       "runtimeMs": 0,
       "outputInfluence": "none"
-    },
-    "intrinsicShortSideObserverTrace": {
-      "version": "intrinsic-short-side-observer-v4",
-      "status": "skipped-square-sheet",
-      "outputInfluence": "none",
-      "requestedSheetWidthMm": 300,
-      "requestedSheetHeightMm": 300,
-      "requestedLongAxisMm": 300,
-      "requestedShortAxisMm": 300,
-      "requestedLongAxis": "square",
-      "settledEndpointCount": 0,
-      "evaluatedOrientationCount": 0,
-      "cavityHullGuardEligibleEndpointCount": 0,
-      "geometricParetoEligibleEndpointCount": 0,
-      "placementEvaluations": 0,
-      "candidateEvaluations": 0,
-      "runtimeMs": 0.060833999999886146,
-      "runtimeBudgetExceeded": false,
-      "serializedTraceBytes": 572,
-      "endpoints": [],
-      "rankedCanonicalGeometryHashes": []
     }
+  },
+  "workerOutput": {
+    "strategyId": "irregular-convex-shared-archive",
+    "strategyLabel": "Irregular convex shared archive",
+    "historyFrameCount": 0
   },
   "checks": {
     "collisionIdentity": true,
@@ -3810,6 +4054,7 @@
     "canonicalCavities": true,
     "runtime": true,
     "schedulerChronology": true,
+    "productionStrategyIdentity": true,
     "focusedTracePresent": true,
     "focusedStatus": true,
     "focusedEvaluations": true,
@@ -3832,7 +4077,5 @@
     "shortSideProfileDirectionalContract": true
   },
   "passed": true,
-  "svgPath": "shapes-17-300x300.svg",
-  "shortSideProfileSvgPath": "shapes-17-300x300.short-side-profile.svg",
-  "shortSideProfileReportPath": "shapes-17-300x300.short-side-profile.json"
+  "svgPath": "shapes-17-300x300.svg"
 }

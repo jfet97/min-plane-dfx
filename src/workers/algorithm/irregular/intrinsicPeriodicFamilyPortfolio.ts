@@ -10,6 +10,7 @@ import {
 import {
   enumerateIntrinsicPeriodicCells,
   enumerateIntrinsicPeriodicCellCrops,
+  compareIntrinsicPeriodicSeedEnvelopeAreaFirst,
   nonDominatedIntrinsicPeriodicSeeds,
   rankIntrinsicPeriodicSeeds,
   selectIntrinsicPeriodicSeedFront,
@@ -40,6 +41,7 @@ import { groupIntrinsicCollisionFamilies } from './intrinsicStrictFamilyPortfoli
 import {
   assertCanonicalGridLegalLayout,
   canonicalCollisionLayoutIdentity,
+  measureCanonicalLayoutEnvelope,
   measureCanonicalLayoutTopology
 } from '../../irregular/canonicalLayoutGeometry.js'
 
@@ -103,6 +105,7 @@ export interface IntrinsicPeriodicSourceAuditWitness {
     | 'maximumSideMm'
     | 'envelopeAreaMm2'
     | 'envelopeSpanMm'
+    | 'exactEnvelope'
     | 'crop'
   >
 }
@@ -581,9 +584,7 @@ export function orderPeriodicContinuationsForExecution(
 ): ReadonlyArray<IntrinsicPeriodicContinuation> {
   return [...continuations].toSorted(
     (first, second) =>
-      first.seed.envelopeAreaMm2 - second.seed.envelopeAreaMm2 ||
-      first.seed.maximumSideMm - second.seed.maximumSideMm ||
-      first.seed.envelopeSpanMm - second.seed.envelopeSpanMm ||
+      compareIntrinsicPeriodicSeedEnvelopeAreaFirst(first.seed, second.seed) ||
       second.seed.placements.length - first.seed.placements.length ||
       first.sourceId.localeCompare(second.sourceId)
   )
@@ -921,16 +922,7 @@ function selectIntrinsicPeriodicContinuations(
                 cellKey: seed.cellKey,
                 basisProvenance: completeBasisProvenance(source.basisProvenance),
                 placements: seed.placements,
-                seed: {
-                  canonicalKey: seed.canonicalKey,
-                  componentCount: seed.componentCount,
-                  isolatedPieceCount: seed.isolatedPieceCount,
-                  largestComponentSize: seed.largestComponentSize,
-                  maximumSideMm: seed.maximumSideMm,
-                  envelopeAreaMm2: seed.envelopeAreaMm2,
-                  envelopeSpanMm: seed.envelopeSpanMm,
-                  crop: seed.crop
-                }
+                seed: sourceAuditWitnessSeed(seed)
               }
             ]
       })
@@ -1196,6 +1188,7 @@ function sourceAuditWitnessSeed(
     maximumSideMm: seed.maximumSideMm,
     envelopeAreaMm2: seed.envelopeAreaMm2,
     envelopeSpanMm: seed.envelopeSpanMm,
+    ...(seed.exactEnvelope === undefined ? {} : { exactEnvelope: seed.exactEnvelope }),
     crop: seed.crop
   }
 }
@@ -1336,11 +1329,16 @@ function validateAndReconstructSourceAuditWitness(
       return yield* invalidReplay('source-audit replay topology mismatch')
     }
     const bounds = placedEnvelopeBounds(witness.placements)
-    if (
-      !sameMetric(Math.max(bounds.width, bounds.height), witness.seed.maximumSideMm) ||
-      !sameMetric(bounds.width * bounds.height, witness.seed.envelopeAreaMm2) ||
-      !sameMetric(bounds.width + bounds.height, witness.seed.envelopeSpanMm)
-    ) {
+    const envelope = measureCanonicalLayoutEnvelope(witness.placements)
+    const envelopeMatches =
+      envelope !== undefined && witness.seed.exactEnvelope !== undefined
+        ? envelope.maximumSideGrid === witness.seed.exactEnvelope.maximumSideGrid &&
+          envelope.envelopeAreaGrid2 === witness.seed.exactEnvelope.areaGrid2 &&
+          envelope.spanGrid === witness.seed.exactEnvelope.spanGrid
+        : Math.max(bounds.width, bounds.height) === witness.seed.maximumSideMm &&
+          bounds.width * bounds.height === witness.seed.envelopeAreaMm2 &&
+          bounds.width + bounds.height === witness.seed.envelopeSpanMm
+    if (!envelopeMatches) {
       return yield* invalidReplay('source-audit replay envelope metric mismatch')
     }
     return {
@@ -1356,6 +1354,9 @@ function validateAndReconstructSourceAuditWitness(
       maximumSideMm: witness.seed.maximumSideMm,
       envelopeAreaMm2: witness.seed.envelopeAreaMm2,
       envelopeSpanMm: witness.seed.envelopeSpanMm,
+      ...(witness.seed.exactEnvelope === undefined
+        ? {}
+        : { exactEnvelope: witness.seed.exactEnvelope }),
       crop: witness.seed.crop,
       canonicalKey: witness.seed.canonicalKey
     }
@@ -1419,10 +1420,6 @@ function canonicalSheetlessLegal(placed: ReadonlyArray<IrregularPlacedPiece>): b
     }),
     normalized
   )
-}
-
-function sameMetric(first: number, second: number): boolean {
-  return Math.abs(first - second) <= 1e-9 * Math.max(1, Math.abs(first), Math.abs(second))
 }
 
 function invalidReplay(message: string): Effect.Effect<never, IrregularGeometryInputError> {

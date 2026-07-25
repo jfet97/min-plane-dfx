@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   makeCompactQualityIrregularOptimizerSettings,
+  makeCompactShortSideIrregularOptimizerSettings,
   makeDefaultIrregularNestingSettings
 } from '@shared/irregular/defaults.js'
 import { IrregularNestingSettings } from '@shared/irregular/domain.js'
 import {
   applyCompactQualityPreset,
+  applyCompactShortSidePreset,
   irregularSettingsUiState
 } from '../../src/renderer/utils/irregularSettingsUi.js'
 
@@ -36,7 +38,7 @@ describe('irregular settings UI', () => {
     expect(irregularSettingsUiState(compact)).toEqual({
       mode: 'compact-shared-archive',
       compactArchiveRequested: true,
-      visibleControlGroups: ['geometry', 'orientations']
+      visibleControlGroups: ['objective', 'geometry', 'orientations']
     })
   })
 
@@ -53,7 +55,7 @@ describe('irregular settings UI', () => {
     expect(state).toEqual({
       mode: 'legacy-requires-migration',
       compactArchiveRequested: false,
-      visibleControlGroups: ['geometry', 'orientations']
+      visibleControlGroups: ['objective', 'geometry', 'orientations']
     })
   })
 
@@ -76,5 +78,24 @@ describe('irregular settings UI', () => {
       irregularSettingsUiState(withOptimizer({ placementPolicyId: 'short-side-fill' }))
         .compactArchiveBlockedReason
     ).toBe('short-side-fill')
+  })
+
+  it('selects the bounded Short Side profile without reviving the legacy beam path', () => {
+    const initial = makeDefaultIrregularNestingSettings()
+    const shortSide = applyCompactShortSidePreset(initial)
+
+    expect(shortSide.geometry).toEqual(initial.geometry)
+    expect(shortSide.optimizer).toEqual(makeCompactShortSideIrregularOptimizerSettings())
+    expect(irregularSettingsUiState(shortSide)).toEqual({
+      mode: 'compact-short-side',
+      compactArchiveRequested: true,
+      visibleControlGroups: ['objective', 'geometry', 'orientations']
+    })
+    expect(shortSide.optimizer.intrinsicSharedArchiveEnabled).toBe(true)
+    expect(shortSide.optimizer.intrinsicObjectiveProfileId).toBe('short-side')
+    expect(shortSide.optimizer.placementPolicyId).toBe(
+      'edge-contact-then-balanced-compactness'
+    )
+    expect(shortSide.optimizer.gaEnabled).toBe(false)
   })
 })

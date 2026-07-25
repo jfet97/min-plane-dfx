@@ -66,7 +66,9 @@ function isSharedArchiveFrame(frame: NestingHistoryFramePayload): boolean {
 function displayedStrategyId(): string {
   const run = history.selectedRun.value
   return run?.layout?.kind === 'irregular' && run.layout.source === 'shared-archive'
-    ? 'irregular-convex-shared-archive'
+    ? run.strategyId === 'irregular-convex-compact-short-side'
+      ? 'irregular-convex-compact-short-side'
+      : 'irregular-convex-shared-archive'
     : (run?.strategyId ?? '')
 }
 </script>

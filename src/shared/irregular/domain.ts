@@ -26,6 +26,7 @@ export const IrregularPortfolioPhase = Schema.Literals([
   'deterministic_beam',
   'ga_search',
   'shared_archive',
+  'short_side_profile',
   'validating',
   'completed',
   'cancelled'
@@ -49,6 +50,12 @@ export const IrregularPlacementPolicyId = Schema.Literals([
 
 /** Type of a configured irregular local placement policy. */
 export type IrregularPlacementPolicyId = Schema.Schema.Type<typeof IrregularPlacementPolicyId>
+
+/** Selects the terminal objective applied after protected Compact construction settles. */
+export const IntrinsicObjectiveProfileId = Schema.Literals(['compact', 'short-side'])
+
+/** Type of the production Compact objective profile. */
+export type IntrinsicObjectiveProfileId = Schema.Schema.Type<typeof IntrinsicObjectiveProfileId>
 
 /** Stable default local policy retained for the deterministic beam baseline. */
 export const DEFAULT_IRREGULAR_PLACEMENT_POLICY_ID: IrregularPlacementPolicyId =
@@ -238,6 +245,12 @@ const IrregularOptimizerSettingsFields = Schema.Struct({
     Schema.withConstructorDefault(Effect.succeed(false)),
     Schema.withDecodingDefaultKey(Effect.succeed(false))
   ),
+  /** Keeps ordinary Compact or applies the bounded Short Side terminal profile after it settles. */
+  intrinsicObjectiveProfileId: IntrinsicObjectiveProfileId.pipe(
+    Schema.optionalKey,
+    Schema.withConstructorDefault(Effect.succeed('compact' as const)),
+    Schema.withDecodingDefaultKey(Effect.succeed('compact' as const))
+  ),
   /** Maximum orientation candidates emitted for one prepared collision polygon. */
   transformCap: PositiveFiniteInteger,
   /** Ordinary-path edge threshold; Compact derives a scale-aware value per collision polygon. */
@@ -342,6 +355,26 @@ const IrregularOptimizerSettingsFields = Schema.Struct({
       return {
         path: ['placementPolicyIds'],
         issue: 'placementPolicyIds must not contain duplicates.'
+      }
+    }
+    if (settings.intrinsicObjectiveProfileId === 'short-side') {
+      const gaDisabled =
+        settings.gaEnabled === false ||
+        settings.baselineOnly === true ||
+        settings.gaTimeBudgetMs === 0 ||
+        (settings.gaGenerationBudget ?? DEFAULT_IRREGULAR_GA_GENERATION_BUDGET) === 0 ||
+        (settings.gaEvaluationBudget ?? DEFAULT_IRREGULAR_GA_EVALUATION_BUDGET) === 0
+      if (settings.intrinsicSharedArchiveEnabled !== true || !gaDisabled) {
+        return {
+          path: ['intrinsicObjectiveProfileId'],
+          issue: 'the Short Side objective requires the protected Compact shared archive with GA inactive.'
+        }
+      }
+      if (placementPolicyId === 'short-side-fill') {
+        return {
+          path: ['placementPolicyId'],
+          issue: 'the Short Side objective cannot use the legacy short-side-fill beam policy.'
+        }
       }
     }
     return undefined

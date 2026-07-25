@@ -11,7 +11,7 @@ function endpoint(input: {
   readonly seedRole: IntrinsicV7Endpoint['seedRole']
   readonly stateKey: string
   readonly terminalIdentity?: string
-  readonly area?: number
+  readonly area?: string
   readonly hullNumerator?: number
   readonly hullDenominator?: number
 }): IntrinsicV7Endpoint {
@@ -21,12 +21,12 @@ function endpoint(input: {
     terminalIdentity: input.terminalIdentity ?? 'same-quarter-turn-terminal',
     placedCollisionGeometries: [],
     metric: {
-      envelopeAreaGrid2: input.area ?? 100,
+      envelopeAreaGrid2: input.area ?? '100',
       envelopeMaximumSideGrid: 10,
       enclosedCavityCount: 0,
       hullGapRatio: (input.hullNumerator ?? 1) / (input.hullDenominator ?? 10),
-      hullGapDoubledAreaGrid2: input.hullNumerator ?? 1,
-      hullDoubledAreaGrid2: input.hullDenominator ?? 10,
+      hullGapDoubledAreaGrid2: String(input.hullNumerator ?? 1),
+      hullDoubledAreaGrid2: String(input.hullDenominator ?? 10),
       isolatedPieceCount: 0,
       positiveContactComponentCount: 1,
       largestPositiveContactComponentRatio: 1,
@@ -64,6 +64,26 @@ describe('intrinsic V7 seed archive', () => {
     ])
 
     expect(retained.map(({ stateKey }) => stateKey)).toContain('ten-percent')
+  })
+
+  it('retains one-grid-square area improvements above Number.MAX_SAFE_INTEGER', () => {
+    const retained = retainV7LegalEndpointArchive(
+      [
+        endpoint({
+          seedRole: 'canonical-grid',
+          stateKey: 'larger',
+          area: '1000000000000000000'
+        }),
+        endpoint({
+          seedRole: 'canonical-grid',
+          stateKey: 'smaller',
+          area: '999999999999999999'
+        })
+      ],
+      1
+    )
+
+    expect(retained.map(({ stateKey }) => stateKey)).toEqual(['smaller'])
   })
 
   it('accepts half-grid hull areas through a doubled integer representation', () => {

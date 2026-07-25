@@ -78,8 +78,8 @@ export interface IntrinsicShortSidePairFoldAdmission {
  */
 export interface IntrinsicShortSideInterlockingMetrics {
   readonly largestOccupiedHullGapRatio: number
-  readonly largestOccupiedHullGapDoubledAreaGrid2: number
-  readonly occupiedHullDoubledAreaGrid2: number
+  readonly largestOccupiedHullGapDoubledAreaGrid2: string
+  readonly occupiedHullDoubledAreaGrid2: string
   readonly isolatedPieceCount: number
   readonly positiveContactComponentCount: number
   readonly largestPositiveContactComponentSize: number
@@ -89,7 +89,7 @@ export interface IntrinsicShortSideInterlockingMetrics {
 export interface IntrinsicShortSidePairFoldTrace {
   readonly version: typeof INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION
   readonly status: IntrinsicShortSidePairFoldStatus
-  readonly outputInfluence: 'none'
+  readonly outputInfluence: 'none' | 'selected'
   readonly executionModel: 'single-process-sequential'
   readonly requestedShortAxisMm: number
   readonly requestedLongAxisMm: number
@@ -586,7 +586,7 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
       runtimeMs: Math.max(0, runtime.now() - runtime.startedAt),
       serializedTraceBytes: 0
     })
-    if (trace.serializedTraceBytes > runtime.maximumTraceBytes) {
+    if (selectedOutputTraceSize(trace) > runtime.maximumTraceBytes) {
       return failedOutcome(
         input,
         runtime,
@@ -978,7 +978,7 @@ function finalizePlacedLayout(input: {
       input.selectedUpperPieceId
     )
   }
-  if (outcome.trace.serializedTraceBytes > input.runtime.maximumTraceBytes) {
+  if (selectedOutputTraceSize(outcome.trace) > input.runtime.maximumTraceBytes) {
     return failedOutcome(
       input.input,
       input.runtime,
@@ -1103,8 +1103,9 @@ function finalizeOutcome(input: {
   const measuredAdmission = { ...admission, accepted }
   const interlocking: IntrinsicShortSideInterlockingMetrics = {
     largestOccupiedHullGapRatio: topology.largestOccupiedHullGapRatio,
-    largestOccupiedHullGapDoubledAreaGrid2: topologyExact.hullGapDoubledAreaGrid2,
-    occupiedHullDoubledAreaGrid2: topologyExact.hullDoubledAreaGrid2,
+    largestOccupiedHullGapDoubledAreaGrid2:
+      topologyExact.exactHullGapDoubledAreaGrid2,
+    occupiedHullDoubledAreaGrid2: topologyExact.exactHullDoubledAreaGrid2,
     isolatedPieceCount: topology.isolatedPieceCount,
     positiveContactComponentCount: topology.positiveContactComponentCount,
     largestPositiveContactComponentSize: topology.largestPositiveContactComponentSize,
@@ -1341,7 +1342,9 @@ function failedOutcome(
   }
 }
 
-function measureTraceSize(trace: IntrinsicShortSidePairFoldTrace): IntrinsicShortSidePairFoldTrace {
+export function withMeasuredIntrinsicShortSidePairFoldTrace(
+  trace: IntrinsicShortSidePairFoldTrace
+): IntrinsicShortSidePairFoldTrace {
   const first = {
     ...trace,
     serializedTraceBytes: Buffer.byteLength(JSON.stringify(trace), 'utf8')
@@ -1350,4 +1353,15 @@ function measureTraceSize(trace: IntrinsicShortSidePairFoldTrace): IntrinsicShor
     ...first,
     serializedTraceBytes: Buffer.byteLength(JSON.stringify(first), 'utf8')
   }
+}
+
+function measureTraceSize(trace: IntrinsicShortSidePairFoldTrace): IntrinsicShortSidePairFoldTrace {
+  return withMeasuredIntrinsicShortSidePairFoldTrace(trace)
+}
+
+function selectedOutputTraceSize(trace: IntrinsicShortSidePairFoldTrace): number {
+  return withMeasuredIntrinsicShortSidePairFoldTrace({
+    ...trace,
+    outputInfluence: 'selected'
+  }).serializedTraceBytes
 }

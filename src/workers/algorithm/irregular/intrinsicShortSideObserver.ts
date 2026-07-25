@@ -11,6 +11,10 @@ import {
   fromGrid,
   toGridMm
 } from '../../irregular/clipper2OffsetPolicy.js'
+import {
+  compareBigInts,
+  compareCanonicalGridRatios
+} from '../../irregular/canonicalGridMath.js'
 import type { IntrinsicSharedArchiveEndpoint } from './intrinsicSharedArchivePortfolio.js'
 import {
   INTRINSIC_STRICT_COHESION_FLOORS,
@@ -46,11 +50,18 @@ export interface IntrinsicShortSideOrientationObservation {
   readonly requestedShortAxisShortfallGrid: number | undefined
   readonly cavityCount: number
   readonly hullGapRatio: number
+  readonly hullGapDoubledAreaGrid2: string | undefined
+  readonly occupiedHullDoubledAreaGrid2: string | undefined
   readonly cohesionPasses: boolean
   readonly cohesionDeficit: number
+  readonly cohesionDeficitNumerator: string | undefined
+  readonly cohesionDeficitDenominator: string | undefined
   readonly intrinsicEnvelopeAreaMm2: number
   readonly intrinsicEnvelopeMaximumSideMm: number
   readonly intrinsicEnvelopeSpanMm: number
+  readonly intrinsicEnvelopeAreaGrid2: string | undefined
+  readonly intrinsicEnvelopeMaximumSideGrid: number | undefined
+  readonly intrinsicEnvelopeSpanGrid: number | undefined
   readonly dominantStructuralContacts: number
   readonly totalStructuralContacts: number
   readonly contactUnits: number
@@ -74,7 +85,7 @@ export interface IntrinsicShortSideEndpointObservation {
 export interface IntrinsicShortSideObserverTrace {
   readonly version: typeof INTRINSIC_SHORT_SIDE_OBSERVER_VERSION
   readonly status: IntrinsicShortSideObserverStatus
-  readonly outputInfluence: 'none'
+  readonly outputInfluence: 'none' | 'selected'
   readonly requestedSheetWidthMm: number
   readonly requestedSheetHeightMm: number
   readonly requestedLongAxisMm: number
@@ -226,18 +237,18 @@ export function observeIntrinsicShortSideOrientations(input: {
     observerWinnerCanonicalGeometryHash: winner?.canonicalGeometryHash,
     observerWinnerRotationDeg: winner?.selectedRotationDeg
   } satisfies IntrinsicShortSideObserverTrace
-  const materialized = withMeasuredTraceSize({
+  const measured = withMeasuredIntrinsicShortSideObserverTrace({
     ...observed,
-    runtimeMs: Number.MAX_VALUE
-  })
-  const measured = {
-    ...materialized,
     runtimeMs: Math.max(0, now() - startedAt)
-  }
+  })
   if (measured.runtimeMs > INTRINSIC_SHORT_SIDE_OBSERVER_MAX_RUNTIME_MS) {
     return censoredTrace(measured, 'runtime-budget-exceeded', true)
   }
-  if (measured.serializedTraceBytes <= INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES) {
+  const selectedSize = withMeasuredIntrinsicShortSideObserverTrace({
+    ...measured,
+    outputInfluence: 'selected'
+  }).serializedTraceBytes
+  if (selectedSize <= INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES) {
     return measured
   }
   return censoredTrace(measured, 'trace-budget-exceeded', false)
@@ -290,12 +301,15 @@ function observeEndpoint(input: {
 function cavityHullGuardEligible(
   endpoint: IntrinsicShortSideEndpointObservation
 ): boolean {
+  const gapArea = endpoint.selected.hullGapDoubledAreaGrid2
+  const hullArea = endpoint.selected.occupiedHullDoubledAreaGrid2
   return (
     endpoint.selected.exactLegal &&
     endpoint.selected.cavityCount <=
       INTRINSIC_STRICT_COHESION_FLOORS.maximumEnclosedCavityCount &&
-    endpoint.selected.hullGapRatio <=
-      INTRINSIC_STRICT_COHESION_FLOORS.maximumLargestOccupiedHullGapRatio
+    gapArea !== undefined &&
+    hullArea !== undefined &&
+    20n * BigInt(gapArea) <= 3n * BigInt(hullArea)
   )
 }
 
@@ -388,11 +402,23 @@ function observeOrientation(input: {
     requestedShortAxisShortfallGrid,
     cavityCount: metrics.enclosedCavityCount,
     hullGapRatio: metrics.largestOccupiedHullGapRatio,
+    hullGapDoubledAreaGrid2:
+      metrics.exact?.largestOccupiedHullGapDoubledAreaGrid2,
+    occupiedHullDoubledAreaGrid2:
+      metrics.exact?.occupiedHullDoubledAreaGrid2,
     cohesionPasses: input.endpoint.certificate.passes,
     cohesionDeficit: input.endpoint.certificate.relativeDeficitSum,
+    cohesionDeficitNumerator:
+      input.endpoint.certificate.exactRelativeDeficitNumerator,
+    cohesionDeficitDenominator:
+      input.endpoint.certificate.exactRelativeDeficitDenominator,
     intrinsicEnvelopeAreaMm2: metrics.envelopeAreaMm2,
     intrinsicEnvelopeMaximumSideMm: metrics.envelopeMaximumSideMm,
     intrinsicEnvelopeSpanMm: metrics.envelopeSpanMm,
+    intrinsicEnvelopeAreaGrid2: metrics.exact?.envelopeAreaGrid2,
+    intrinsicEnvelopeMaximumSideGrid:
+      metrics.exact?.envelopeMaximumSideGrid,
+    intrinsicEnvelopeSpanGrid: metrics.exact?.envelopeSpanGrid,
     dominantStructuralContacts: metrics.dominantStructuralContacts,
     totalStructuralContacts: metrics.totalStructuralContacts,
     contactUnits: metrics.contactUnits,
@@ -517,8 +543,8 @@ function directionalReference(input: {
   })
   return orientations.toSorted(
     (first, second) =>
-      second.usedShortAxisSpanMm - first.usedShortAxisSpanMm ||
-      first.usedLongAxisSpanMm - second.usedLongAxisSpanMm
+      second.usedShortAxisSpanGrid - first.usedShortAxisSpanGrid ||
+      first.usedLongAxisSpanGrid - second.usedLongAxisSpanGrid
   )[0]
 }
 
@@ -547,8 +573,9 @@ function directionalImprovementAdmitted(input: {
       input.production.usedShortAxisSpanGrid
   )
   return (
-    5 * candidateShortAxisSpanGrid >= 4 * input.requestedShortAxisGrid &&
-    2 * candidateShortfall <= productionShortfall &&
+    5n * BigInt(candidateShortAxisSpanGrid) >=
+      4n * BigInt(input.requestedShortAxisGrid) &&
+    2n * BigInt(candidateShortfall) <= BigInt(productionShortfall) &&
     candidateDepth <= input.production.maximumSideGrid
   )
 }
@@ -579,23 +606,72 @@ function compareOrientationObservations(
       second.requestedLongAxisUsedSpanGrid
     )
   if (exactDimensionComparison !== 0) return exactDimensionComparison
-  const firstTuple = first.comparisonTuple
-  const secondTuple = second.comparisonTuple
-  for (let index = 3; index < Math.max(firstTuple.length, secondTuple.length); index += 1) {
-    const firstValue = firstTuple[index]
-    const secondValue = secondTuple[index]
-    if (firstValue === undefined || secondValue === undefined) {
-      if (firstValue === secondValue) continue
-      return firstValue === undefined ? -1 : 1
-    }
-    if (typeof firstValue === 'string' || typeof secondValue === 'string') {
-      const comparison = String(firstValue).localeCompare(String(secondValue))
-      if (comparison !== 0) return comparison
-    } else if (firstValue !== secondValue) {
-      return firstValue < secondValue ? -1 : 1
-    }
+  return (
+    first.cavityCount - second.cavityCount ||
+    compareOptionalExactRatio(
+      first.hullGapDoubledAreaGrid2,
+      first.occupiedHullDoubledAreaGrid2,
+      second.hullGapDoubledAreaGrid2,
+      second.occupiedHullDoubledAreaGrid2
+    ) ||
+    Number(!first.cohesionPasses) - Number(!second.cohesionPasses) ||
+    compareOptionalExactRatio(
+      first.cohesionDeficitNumerator,
+      first.cohesionDeficitDenominator,
+      second.cohesionDeficitNumerator,
+      second.cohesionDeficitDenominator
+    ) ||
+    compareOptionalBigIntStrings(
+      first.intrinsicEnvelopeAreaGrid2,
+      second.intrinsicEnvelopeAreaGrid2
+    ) ||
+    compareOptionalGrid(
+      first.intrinsicEnvelopeMaximumSideGrid,
+      second.intrinsicEnvelopeMaximumSideGrid
+    ) ||
+    compareOptionalGrid(
+      first.intrinsicEnvelopeSpanGrid,
+      second.intrinsicEnvelopeSpanGrid
+    ) ||
+    second.dominantStructuralContacts - first.dominantStructuralContacts ||
+    second.totalStructuralContacts - first.totalStructuralContacts ||
+    (first.canonicalGeometryHash ?? '￿').localeCompare(
+      second.canonicalGeometryHash ?? '￿'
+    ) ||
+    first.rotationDeg - second.rotationDeg
+  )
+}
+
+function compareOptionalExactRatio(
+  firstNumerator: string | undefined,
+  firstDenominator: string | undefined,
+  secondNumerator: string | undefined,
+  secondDenominator: string | undefined
+): number {
+  const firstDefined =
+    firstNumerator !== undefined && firstDenominator !== undefined
+  const secondDefined =
+    secondNumerator !== undefined && secondDenominator !== undefined
+  if (!firstDefined || !secondDefined) {
+    return firstDefined === secondDefined ? 0 : firstDefined ? -1 : 1
   }
-  return first.rotationDeg - second.rotationDeg
+  return (
+    compareCanonicalGridRatios(
+      BigInt(firstNumerator),
+      BigInt(firstDenominator),
+      BigInt(secondNumerator),
+      BigInt(secondDenominator)
+    ) ?? 0
+  )
+}
+
+function compareOptionalBigIntStrings(
+  first: string | undefined,
+  second: string | undefined
+): number {
+  if (first === undefined) return second === undefined ? 0 : 1
+  if (second === undefined) return -1
+  return compareBigInts(BigInt(first), BigInt(second))
 }
 
 function compareOptionalGrid(
@@ -643,7 +719,7 @@ function hashCanonicalIdentity(identity: string | undefined): string | undefined
   return identity === undefined ? undefined : createHash('sha256').update(identity).digest('hex')
 }
 
-function withMeasuredTraceSize(
+export function withMeasuredIntrinsicShortSideObserverTrace(
   trace: IntrinsicShortSideObserverTrace
 ): IntrinsicShortSideObserverTrace {
   const firstMeasurement = Buffer.byteLength(JSON.stringify(trace), 'utf8')
@@ -657,7 +733,7 @@ function censoredTrace(
   status: 'runtime-budget-exceeded' | 'trace-budget-exceeded',
   runtimeBudgetExceeded: boolean
 ): IntrinsicShortSideObserverTrace {
-  return withMeasuredTraceSize({
+  return withMeasuredIntrinsicShortSideObserverTrace({
     ...trace,
     status,
     runtimeBudgetExceeded,

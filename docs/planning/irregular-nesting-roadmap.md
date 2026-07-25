@@ -314,8 +314,12 @@ width-four Stage 4 rejected at `1163bd3`; exact one-row Stage 5 rejected at
 `999e9fb`; exact terminal pair fold accepted at `2645e7c`; exact multi-row
 terminal shelf accepted at `d57b7d6`; generic stable-baseline shelf orientation
 rejected and reverted after `9193f26`; exact contact-driven directional strip
-accepted as an experimental Stage 8 gate; production Compact influence remains
-zero and no worker or UI path enables the sibling profile yet.
+accepted as an experimental Stage 8 gate. The accepted terminal sequence is
+now exposed as the schema-backed production `short-side` Compact objective;
+ordinary Compact remains the default and retains its settled hash contract.
+The UI and worker use the same single sequential algorithm execution. Short
+Side may select only an admitted canonical-legal all-piece layout and otherwise
+records an explicit Compact/capacity fallback.
 
 The zero-search archive observer establishes exact q0/q90 legality, hard
 cavity/hull eligibility, the existing intrinsic geometric Pareto front,
@@ -326,9 +330,13 @@ controls plus nine short-side-profile outputs. Missing Stage 1 winners become
 explicit exact Compact fallbacks, so every fixture/sheet pair remains visible
 and honestly sourced.
 
-The `1cd5ac7` promotion run passed all 18 layouts with four guarded Stage 1
-winners, five exact Compact fallbacks, unchanged production hashes, a maximum
-`57.984 ms` observer runtime, and strictly sequential algorithm execution.
+The current-source production run at `2f308bb` passed 18 strictly sequential
+worker executions: one Compact and one persisted Short Side request for every
+fixture/sheet pair. It retained every expected collision/fitted hash and
+placed/unplaced partition, verified the distinct production strategy identity,
+selected four directional layouts (one archive endpoint, pair fold, multi-row
+shelf, and contact strip), and retained five exact Compact fallbacks with zero
+directional misses.
 The reviewed v3 contract places short-axis shortfall before long-axis depth,
 then admits a winner only after material fill, shortfall-closure, and
 Compact-derived depth gates. Legal but immaterial alternatives remain telemetry
@@ -438,20 +446,15 @@ Evidence:
 
 ### P6: canonical-grid metric exactness
 
-Status: audited; high-priority follow-up, not folded into the experimental
-Short Side profile.
+Status: implemented and production-gated.
 
 Clipper2 remains the Boolean geometry authority and robust predicates remain
-the unsnapped source-geometry authority. The audit found that several older
-topology, gap-region, capacity, and strict/archive comparators convert canonical
-integer paths or area accumulators back to `Number` before ranking. The next
-tranche should introduce one shared BigInt shoelace/cross/rational-comparison
-utility and migrate consumers incrementally.
-
-Promotion gate: unchanged current hashes and winners, deterministic resume,
-near-policy-limit paths whose area or hull differs by one grid square, and
-translation-invariant capacity/Short Side winner tests. Do not add a numeric
-epsilon as a substitute.
+the unsnapped source-geometry authority. Shared canonical-grid helpers now keep
+shoelace areas, cross products, envelope products, and hull ratios exact through
+topology, gap-region, strict/archive, capacity, relaxation/LNS, V7, and Short
+Side ranking. The production matrix preserves the accepted hashes and winners;
+targeted regressions cover one-grid-square area differences near the coordinate
+policy limit. Numeric epsilon remains forbidden as a substitute.
 
 ## Open-Source Mechanism Disposition
 

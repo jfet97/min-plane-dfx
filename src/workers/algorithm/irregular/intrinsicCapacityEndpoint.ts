@@ -10,7 +10,6 @@ import {
 } from '../../irregular/canonicalLayoutGeometry.js'
 import { toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { doubledGrid2ToMm2 } from './intrinsicCapacityMaterial.js'
-import { canonicalAreaMetric, canonicalLinearMetric } from './intrinsicStrictDecoder.js'
 import type { IrregularBeamState } from './irregularBeamState.js'
 
 /** Constant identity for the honest all-unplaced capacity layout. */
@@ -23,9 +22,13 @@ export interface IntrinsicCapacityEndpointMetrics {
   readonly placedMaterialAreaMm2: number
   readonly enclosedCavityCount: number
   readonly totalEnclosedCavityAreaMm2: number
+  readonly totalEnclosedCavityDoubledAreaGrid2: string
   readonly envelopeMaximumSideMm: number
   readonly envelopeAreaMm2: number
   readonly envelopeSpanMm: number
+  readonly envelopeMaximumSideGrid: number
+  readonly envelopeAreaGrid2: string
+  readonly envelopeSpanGrid: number
 }
 
 export type IntrinsicCapacityEndpointOrigin =
@@ -56,9 +59,13 @@ export interface IntrinsicCapacityObjective {
   readonly placedDoubledMaterialAreaGrid2: bigint
   readonly enclosedCavityCount: number
   readonly totalEnclosedCavityAreaMm2: number
+  readonly totalEnclosedCavityDoubledAreaGrid2: string
   readonly envelopeMaximumSideMm: number
   readonly envelopeAreaMm2: number
   readonly envelopeSpanMm: number
+  readonly envelopeMaximumSideGrid: number
+  readonly envelopeAreaGrid2: string
+  readonly envelopeSpanGrid: number
   readonly canonicalGeometryHash: string
   readonly origin: IntrinsicCapacityEndpointOrigin
   readonly prefixDepth: number | undefined
@@ -68,6 +75,7 @@ export interface IntrinsicCapacityObjective {
 export interface IntrinsicCapacityCavityMetrics {
   readonly count: number
   readonly totalAreaMm2: number
+  readonly totalDoubledAreaGrid2: string
 }
 
 /** Exact cavity results cached by canonical occupied-union identity. */
@@ -82,14 +90,20 @@ export function measureIntrinsicCapacityCavities(
   state: IrregularBeamState,
   cache: IntrinsicCapacityCavityCache
 ): IntrinsicCapacityCavityMetrics | undefined {
-  if (state.placedCollisionGeometries.length === 0) return { count: 0, totalAreaMm2: 0 }
+  if (state.placedCollisionGeometries.length === 0) {
+    return { count: 0, totalAreaMm2: 0, totalDoubledAreaGrid2: '0' }
+  }
   const occupiedKey = state.bottomLeftAnchoredCanonicalOccupiedGeometryKey()
   if (occupiedKey === undefined) return undefined
   const cached = cache.get(occupiedKey)
   if (cached !== undefined) return cached
   const measured = measureCanonicalEnclosedCavities(state.placedCollisionGeometries)
   if (measured === undefined) return undefined
-  const metrics = { count: measured.count, totalAreaMm2: measured.totalAreaMm2 }
+  const metrics = {
+    count: measured.count,
+    totalAreaMm2: measured.totalAreaMm2,
+    totalDoubledAreaGrid2: measured.totalDoubledAreaGrid2
+  }
   cache.set(occupiedKey, metrics)
   return metrics
 }
@@ -205,9 +219,13 @@ export function materializeIntrinsicCapacityEndpoint(
       placedMaterialAreaMm2: doubledGrid2ToMm2(placedDoubledMaterialAreaGrid2),
       enclosedCavityCount: cavities.count,
       totalEnclosedCavityAreaMm2: cavities.totalAreaMm2,
+      totalEnclosedCavityDoubledAreaGrid2: cavities.totalDoubledAreaGrid2,
       envelopeMaximumSideMm: envelope.maximumSideMm,
       envelopeAreaMm2: envelope.areaMm2,
-      envelopeSpanMm: envelope.spanMm
+      envelopeSpanMm: envelope.spanMm,
+      envelopeMaximumSideGrid: envelope.maximumSideGrid,
+      envelopeAreaGrid2: envelope.envelopeAreaGrid2,
+      envelopeSpanGrid: envelope.spanGrid
     }
   }
 }
@@ -233,9 +251,13 @@ function makeEmptyIntrinsicCapacityEndpoint(
       placedMaterialAreaMm2: 0,
       enclosedCavityCount: 0,
       totalEnclosedCavityAreaMm2: 0,
+      totalEnclosedCavityDoubledAreaGrid2: '0',
       envelopeMaximumSideMm: 0,
       envelopeAreaMm2: 0,
-      envelopeSpanMm: 0
+      envelopeSpanMm: 0,
+      envelopeMaximumSideGrid: 0,
+      envelopeAreaGrid2: '0',
+      envelopeSpanGrid: 0
     }
   }
 }
@@ -283,9 +305,14 @@ export function intrinsicCapacityObjective(
     placedDoubledMaterialAreaGrid2: endpoint.metrics.placedDoubledMaterialAreaGrid2,
     enclosedCavityCount: endpoint.metrics.enclosedCavityCount,
     totalEnclosedCavityAreaMm2: endpoint.metrics.totalEnclosedCavityAreaMm2,
+    totalEnclosedCavityDoubledAreaGrid2:
+      endpoint.metrics.totalEnclosedCavityDoubledAreaGrid2,
     envelopeMaximumSideMm: endpoint.metrics.envelopeMaximumSideMm,
     envelopeAreaMm2: endpoint.metrics.envelopeAreaMm2,
     envelopeSpanMm: endpoint.metrics.envelopeSpanMm,
+    envelopeMaximumSideGrid: endpoint.metrics.envelopeMaximumSideGrid,
+    envelopeAreaGrid2: endpoint.metrics.envelopeAreaGrid2,
+    envelopeSpanGrid: endpoint.metrics.envelopeSpanGrid,
     canonicalGeometryHash: endpoint.canonicalGeometryHash,
     origin: endpoint.origin,
     prefixDepth: endpoint.prefixDepth,
@@ -305,19 +332,23 @@ export function compareIntrinsicCapacityObjectives(
       second.placedDoubledMaterialAreaGrid2
     ) ||
     first.enclosedCavityCount - second.enclosedCavityCount ||
-    canonicalAreaMetric(first.totalEnclosedCavityAreaMm2) -
-      canonicalAreaMetric(second.totalEnclosedCavityAreaMm2) ||
-    canonicalLinearMetric(first.envelopeMaximumSideMm) -
-      canonicalLinearMetric(second.envelopeMaximumSideMm) ||
-    canonicalAreaMetric(first.envelopeAreaMm2) -
-      canonicalAreaMetric(second.envelopeAreaMm2) ||
-    canonicalLinearMetric(first.envelopeSpanMm) -
-      canonicalLinearMetric(second.envelopeSpanMm) ||
+    compareBigintAscending(
+      BigInt(first.totalEnclosedCavityDoubledAreaGrid2),
+      BigInt(second.totalEnclosedCavityDoubledAreaGrid2)
+    ) ||
+    first.envelopeMaximumSideGrid - second.envelopeMaximumSideGrid ||
+    compareBigintAscending(BigInt(first.envelopeAreaGrid2), BigInt(second.envelopeAreaGrid2)) ||
+    first.envelopeSpanGrid - second.envelopeSpanGrid ||
     first.canonicalGeometryHash.localeCompare(second.canonicalGeometryHash) ||
     intrinsicCapacityOriginRank(first.origin) - intrinsicCapacityOriginRank(second.origin) ||
     (first.prefixDepth ?? -1) - (second.prefixDepth ?? -1) ||
     (first.sourceRole ?? '').localeCompare(second.sourceRole ?? '')
   )
+}
+
+function compareBigintAscending(first: bigint, second: bigint): number {
+  if (first === second) return 0
+  return first < second ? -1 : 1
 }
 
 function intrinsicCapacityOriginRank(origin: IntrinsicCapacityEndpointOrigin): number {

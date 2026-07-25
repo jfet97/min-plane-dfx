@@ -447,12 +447,14 @@ did not justify another production mechanism. The lost-interface prototype
 was removed because its continuation deduplication and deadline contract were
 invalid and it found no promotable result.
 
-### 8.1 The experimental short-side sibling
+### 8.1 The Short Side production sibling
 
-The short-side profile is currently materialized only by the benchmark and
-artifact gate. The worker and UI do not enable it, so it is not yet a
-user-facing production strategy. `outputInfluence: none` means specifically
-that it cannot alter the production Compact result returned by the coordinator.
+The Short Side profile is schema-backed and selectable in the UI. It preserves
+the normal Compact construction first, then evaluates the accepted directional
+archive and terminal stages sequentially in the same algorithm worker.
+`outputInfluence: 'selected'` means that a directional winner became the
+returned Short Side layout; `outputInfluence: 'none'` means shadow capture or an
+explicit Compact fallback.
 
 The experimental sibling first asks
 whether an already-settled complete archive endpoint gives a material,

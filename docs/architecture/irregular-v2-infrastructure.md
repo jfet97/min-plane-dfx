@@ -1014,6 +1014,18 @@ returns a disjoint placed/unplaced request partition. Sheet dimensions
 constrain capacity legality and q0/q90 endpoint fit, but never rank or prune the
 complete cohort.
 
+The schema-backed `intrinsicObjectiveProfileId` may select `compact` or
+`short-side`. Both first run the same protected Compact coordinator on the same
+single worker. `short-side` then observes settled complete endpoints at q0/q90;
+if that has no admitted winner, it evaluates the bounded pair-fold, multi-row
+shelf, and contact-strip terminal constructions sequentially under their shared
+runtime and RSS limits. Only a canonical-legal, all-piece admitted result may
+replace the selected Compact result. Otherwise the worker returns the exact
+Compact or capacity result with an `intrinsic_short_side_compact-fallback`
+diagnostic. The selector changes neither complete-cohort construction nor
+intrinsic archive ranking, and does not create another worker or a concurrent
+algorithm execution.
+
 The compact path has no ordinary-beam competitor and no fixed-reference
 fallback. An incomplete direct state cannot become an endpoint. Cooperative
 cancellation, deadline censoring, incomplete execution, invalid geometry, or

@@ -7,9 +7,14 @@ import {
 } from '@shared/irregular/domain.js'
 import {
   assertCanonicalGridLegalLayout,
-  measureCanonicalLayoutTopology,
+  measureCanonicalLayoutEnvelope,
+  measureCanonicalLayoutTopologyExact,
   type CanonicalLayoutTopology
 } from '../../irregular/canonicalLayoutGeometry.js'
+import {
+  compareBigInts,
+  compareCanonicalGridRatios
+} from '../../irregular/canonicalGridMath.js'
 import { boundsForPoints } from '../../irregular/convexBounds.js'
 import { measureConvexSatPenetration } from '../../irregular/convexSatPenetration.js'
 import type { InternalPoint } from '../../irregular/internalGeometry.js'
@@ -37,6 +42,12 @@ export interface IntrinsicRelaxationMetrics {
   readonly nearCompleteStructuralContactCount: number
   readonly dominantNearCompleteStructuralContactCount: number
   readonly sharedCollisionBoundaryContactUnits: number
+  readonly exact?: {
+    readonly maximumSideGrid: number
+    readonly envelopeAreaGrid2: string
+    readonly largestHullGapDoubledAreaGrid2: string
+    readonly hullDoubledAreaGrid2: string
+  }
 }
 
 export interface OverlapRelaxationResult {
@@ -154,7 +165,7 @@ export function relaxOverlappingLayout(
       if (
         attempt !== undefined &&
         isAdmissibleRelaxationImprovement(incumbentMetrics, attempt.metrics) &&
-        compareMetrics(attempt.metrics, selectedMetrics) < 0
+        compareIntrinsicRelaxationMetrics(attempt.metrics, selectedMetrics) < 0
       ) {
         selected = attempt.placed
         selectedMetrics = attempt.metrics
@@ -575,8 +586,9 @@ export function measureRelaxationMetrics(
     }))
   )
   const bounds = boundsForPoints(points)
-  const topology = measureCanonicalLayoutTopology(placed)
-  if (bounds === undefined || topology === undefined) return undefined
+  const topologyExact = measureCanonicalLayoutTopologyExact(placed)
+  const envelope = measureCanonicalLayoutEnvelope(placed)
+  if (bounds === undefined || topologyExact === undefined || envelope === undefined) return undefined
   const width = bounds.maxX - bounds.minX
   const height = bounds.maxY - bounds.minY
   const state = new IrregularBeamState({
@@ -590,11 +602,18 @@ export function measureRelaxationMetrics(
     maxSide: Math.max(width, height),
     area: width * height,
     span: width + height,
-    topology,
+    topology: topologyExact.topology,
     nearCompleteStructuralContactCount: state.nearCompleteStructuralContactCount ?? 0,
     dominantNearCompleteStructuralContactCount:
       state.dominantNearCompleteStructuralContactCount ?? 0,
-    sharedCollisionBoundaryContactUnits: state.sharedCollisionBoundaryContactUnits ?? 0
+    sharedCollisionBoundaryContactUnits: state.sharedCollisionBoundaryContactUnits ?? 0,
+    exact: {
+      maximumSideGrid: envelope.maximumSideGrid,
+      envelopeAreaGrid2: envelope.envelopeAreaGrid2,
+      largestHullGapDoubledAreaGrid2:
+        topologyExact.exactHullGapDoubledAreaGrid2,
+      hullDoubledAreaGrid2: topologyExact.exactHullDoubledAreaGrid2
+    }
   }
 }
 
@@ -602,41 +621,102 @@ export function isAdmissibleRelaxationImprovement(
   incumbent: IntrinsicRelaxationMetrics,
   candidate: IntrinsicRelaxationMetrics
 ): boolean {
+  const exactEnvelopeNonWorse =
+    incumbent.exact === undefined || candidate.exact === undefined
+      ? candidate.maxSide <= incumbent.maxSide && candidate.area <= incumbent.area
+      : candidate.exact.maximumSideGrid <= incumbent.exact.maximumSideGrid &&
+        BigInt(candidate.exact.envelopeAreaGrid2) <=
+          BigInt(incumbent.exact.envelopeAreaGrid2)
+  const exactHullNonWorse =
+    incumbent.exact === undefined || candidate.exact === undefined
+      ? candidate.topology.largestOccupiedHullGapRatio <=
+        incumbent.topology.largestOccupiedHullGapRatio
+      : BigInt(candidate.exact.largestHullGapDoubledAreaGrid2) *
+          BigInt(incumbent.exact.hullDoubledAreaGrid2) <=
+        BigInt(incumbent.exact.largestHullGapDoubledAreaGrid2) *
+          BigInt(candidate.exact.hullDoubledAreaGrid2)
+  const exactEnvelopeImproved =
+    incumbent.exact === undefined || candidate.exact === undefined
+      ? candidate.maxSide < incumbent.maxSide || candidate.area < incumbent.area
+      : candidate.exact.maximumSideGrid < incumbent.exact.maximumSideGrid ||
+        BigInt(candidate.exact.envelopeAreaGrid2) <
+          BigInt(incumbent.exact.envelopeAreaGrid2)
+  const exactHullImproved =
+    incumbent.exact === undefined || candidate.exact === undefined
+      ? candidate.topology.largestOccupiedHullGapRatio <
+        incumbent.topology.largestOccupiedHullGapRatio
+      : BigInt(candidate.exact.largestHullGapDoubledAreaGrid2) *
+          BigInt(incumbent.exact.hullDoubledAreaGrid2) <
+        BigInt(incumbent.exact.largestHullGapDoubledAreaGrid2) *
+          BigInt(candidate.exact.hullDoubledAreaGrid2)
   const contactFloorsPreserved =
     candidate.nearCompleteStructuralContactCount >= incumbent.nearCompleteStructuralContactCount &&
     candidate.dominantNearCompleteStructuralContactCount >=
       incumbent.dominantNearCompleteStructuralContactCount &&
-    candidate.sharedCollisionBoundaryContactUnits + 1e-9 >=
+    candidate.sharedCollisionBoundaryContactUnits >=
       incumbent.sharedCollisionBoundaryContactUnits
   const intrinsicGuardsPreserved =
-    candidate.maxSide <= incumbent.maxSide + GRID_MM &&
-    candidate.area <= incumbent.area + GRID_MM &&
+    exactEnvelopeNonWorse &&
     candidate.topology.enclosedCavityCount <= incumbent.topology.enclosedCavityCount &&
-    candidate.topology.largestOccupiedHullGapRatio <=
-      incumbent.topology.largestOccupiedHullGapRatio + 1e-12 &&
+    exactHullNonWorse &&
     candidate.topology.positiveContactComponentCount <=
       incumbent.topology.positiveContactComponentCount &&
     candidate.topology.isolatedPieceCount <= incumbent.topology.isolatedPieceCount &&
     candidate.topology.largestPositiveContactComponentSize >=
       incumbent.topology.largestPositiveContactComponentSize
   const strictImprovement =
-    candidate.maxSide < incumbent.maxSide - GRID_MM ||
-    candidate.area < incumbent.area - GRID_MM ||
-    candidate.topology.largestOccupiedHullGapRatio <
-      incumbent.topology.largestOccupiedHullGapRatio - 1e-12 ||
+    exactEnvelopeImproved ||
+    exactHullImproved ||
     candidate.topology.positiveContactComponentCount <
       incumbent.topology.positiveContactComponentCount
   return contactFloorsPreserved && intrinsicGuardsPreserved && strictImprovement
 }
 
-function compareMetrics(
+export function compareIntrinsicRelaxationMetrics(
   first: IntrinsicRelaxationMetrics,
   second: IntrinsicRelaxationMetrics
 ): number {
+  const exactEnvelope =
+    first.exact === undefined || second.exact === undefined
+      ? undefined
+      : compareBigInts(
+            BigInt(first.exact.maximumSideGrid),
+            BigInt(second.exact.maximumSideGrid)
+          ) ||
+        compareBigInts(
+          BigInt(first.exact.envelopeAreaGrid2),
+          BigInt(second.exact.envelopeAreaGrid2)
+        )
+  if (exactEnvelope !== undefined && exactEnvelope !== 0) return exactEnvelope
+  const fallbackEnvelope: ReadonlyArray<readonly [number, number]> =
+    exactEnvelope === undefined
+      ? [
+          [first.maxSide, second.maxSide],
+          [first.area, second.area]
+        ]
+      : []
+  for (const [left, right] of fallbackEnvelope) {
+    if (left !== right) return left < right ? -1 : 1
+  }
+  const exactHull =
+    first.exact === undefined || second.exact === undefined
+      ? undefined
+      : compareCanonicalGridRatios(
+          BigInt(first.exact.largestHullGapDoubledAreaGrid2),
+          BigInt(first.exact.hullDoubledAreaGrid2),
+          BigInt(second.exact.largestHullGapDoubledAreaGrid2),
+          BigInt(second.exact.hullDoubledAreaGrid2)
+        )
+  if (exactHull !== undefined && exactHull !== 0) return exactHull
   const pairs: ReadonlyArray<readonly [number, number]> = [
-    [first.maxSide, second.maxSide],
-    [first.area, second.area],
-    [first.topology.largestOccupiedHullGapRatio, second.topology.largestOccupiedHullGapRatio],
+    ...(exactHull === undefined
+      ? [
+          [
+            first.topology.largestOccupiedHullGapRatio,
+            second.topology.largestOccupiedHullGapRatio
+          ] as const
+        ]
+      : []),
     [first.topology.positiveContactComponentCount, second.topology.positiveContactComponentCount],
     [first.topology.isolatedPieceCount, second.topology.isolatedPieceCount],
     [-first.nearCompleteStructuralContactCount, -second.nearCompleteStructuralContactCount]

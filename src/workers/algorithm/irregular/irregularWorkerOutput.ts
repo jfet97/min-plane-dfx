@@ -15,8 +15,10 @@ import type { IrregularComputeResult, IrregularStateSnapshot } from './computeIr
 
 const IRREGULAR_BEAM_STRATEGY_ID = 'irregular-convex-windowed-beam'
 const IRREGULAR_SHARED_ARCHIVE_STRATEGY_ID = 'irregular-convex-shared-archive'
+const IRREGULAR_SHORT_SIDE_STRATEGY_ID = 'irregular-convex-compact-short-side'
 const IRREGULAR_BEAM_STRATEGY_LABEL = 'Irregular convex windowed beam'
 const IRREGULAR_SHARED_ARCHIVE_STRATEGY_LABEL = 'Irregular convex shared archive'
+const IRREGULAR_SHORT_SIDE_STRATEGY_LABEL = 'Irregular convex Compact Short Side'
 
 /** Real protocol-facing output derived from one completed irregular portfolio run. */
 export interface IrregularWorkerOutput {
@@ -31,7 +33,7 @@ export function irregularStrategyRunId(
 ): string {
   const strategyId =
     source === 'shared-archive'
-      ? IRREGULAR_SHARED_ARCHIVE_STRATEGY_ID
+      ? sharedArchiveStrategyId(request)
       : IRREGULAR_BEAM_STRATEGY_ID
   return request.strategyRunId ?? `${request.jobId}-${strategyId}`
 }
@@ -46,14 +48,18 @@ export function makeIrregularHistoryFrame(input: {
 }): IrregularHistoryFrame {
   const { snapshot } = input
   const sharedArchive = snapshot.source === 'shared-archive'
+  const strategyLabel =
+    sharedArchive && shortSideProfileRequested(input.request)
+      ? IRREGULAR_SHORT_SIDE_STRATEGY_LABEL
+      : sharedArchive
+        ? IRREGULAR_SHARED_ARCHIVE_STRATEGY_LABEL
+        : IRREGULAR_BEAM_STRATEGY_LABEL
   return new IrregularHistoryFrame({
     kind: 'irregular',
     frameId: `${input.strategyRunId}:${snapshot.stepIndex}:${snapshot.beamRank}`,
     jobId: input.request.jobId,
     strategyRunId: input.strategyRunId,
-    strategyLabel: sharedArchive
-      ? IRREGULAR_SHARED_ARCHIVE_STRATEGY_LABEL
-      : IRREGULAR_BEAM_STRATEGY_LABEL,
+    strategyLabel,
     stepIndex: snapshot.stepIndex,
     title: sharedArchive
       ? snapshot.state.remainingPreparedPieces.length === 0
@@ -91,11 +97,13 @@ export function makeIrregularWorkerOutput(input: {
   )
   const strategyId =
     portfolio.source === 'shared-archive'
-      ? IRREGULAR_SHARED_ARCHIVE_STRATEGY_ID
+      ? sharedArchiveStrategyId(input.request)
       : IRREGULAR_BEAM_STRATEGY_ID
   const strategyLabel =
     portfolio.source === 'shared-archive'
-      ? IRREGULAR_SHARED_ARCHIVE_STRATEGY_LABEL
+      ? shortSideProfileRequested(input.request)
+        ? IRREGULAR_SHORT_SIDE_STRATEGY_LABEL
+        : IRREGULAR_SHARED_ARCHIVE_STRATEGY_LABEL
       : IRREGULAR_BEAM_STRATEGY_LABEL
   const collisionPolygons = translatedCollisionPolygons(input.computed.placedCollisionGeometries)
   const layout = new IrregularLayout({
@@ -126,7 +134,9 @@ export function makeIrregularWorkerOutput(input: {
     strategyLabel,
     strategyDescription:
       portfolio.source === 'shared-archive'
-        ? 'Deterministic sheet-independent direct and periodic constructors selected through one exact topology archive.'
+        ? shortSideProfileRequested(input.request)
+          ? 'Protected Compact construction followed by one bounded, exact, single-worker Short Side terminal selector with an explicit Compact fallback.'
+          : 'Deterministic sheet-independent direct and periodic constructors selected through one exact topology archive.'
         : 'Deterministic convex NFP/IFP search with a configurable windowed beam and seeded portfolio search.',
     sortedPieceIds: input.computed.sortedPieceIds,
     placements: [],
@@ -174,6 +184,16 @@ export function makeIrregularWorkerOutput(input: {
     }),
     historyFrames
   }
+}
+
+function shortSideProfileRequested(request: NestingRequest): boolean {
+  return request.options.irregularSettings?.optimizer.intrinsicObjectiveProfileId === 'short-side'
+}
+
+function sharedArchiveStrategyId(request: NestingRequest): string {
+  return shortSideProfileRequested(request)
+    ? IRREGULAR_SHORT_SIDE_STRATEGY_ID
+    : IRREGULAR_SHARED_ARCHIVE_STRATEGY_ID
 }
 
 function translatedCollisionPolygons(
