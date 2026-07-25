@@ -498,7 +498,7 @@ export function runIntrinsicCapacityColdSearch(
           placedDoubledMaterialAreaGrid2: 0n,
           anchoredOccupiedKey: emptyState.canonicalOccupiedGeometryKey,
           gridSpan: emptySpan,
-          cavities: { count: 0, totalAreaMm2: 0 }
+          cavities: { count: 0, totalAreaMm2: 0, totalDoubledAreaGrid2: '0' }
         }
       ]
     } else {
@@ -720,7 +720,7 @@ export function runIntrinsicCapacityColdSearch(
               entry.placedDoubledMaterialAreaGrid2 + pieceMaterial,
             anchoredOccupiedKey,
             gridSpan,
-            cavities: { count: 0, totalAreaMm2: 0 },
+            cavities: { count: 0, totalAreaMm2: 0, totalDoubledAreaGrid2: '0' },
             ...(captureTopologyRetention
               ? {
                   observerTransition: {
@@ -1756,8 +1756,10 @@ function compareCapacityBeamEntries(first: CapacityBeamEntry, second: CapacityBe
   }
   return (
     first.cavities.count - second.cavities.count ||
-    Math.round(first.cavities.totalAreaMm2 * 1_000_000) -
-      Math.round(second.cavities.totalAreaMm2 * 1_000_000) ||
+    compareBigintsAscending(
+      BigInt(first.cavities.totalDoubledAreaGrid2),
+      BigInt(second.cavities.totalDoubledAreaGrid2)
+    ) ||
     Math.max(first.gridSpan.widthGrid, first.gridSpan.heightGrid) -
       Math.max(second.gridSpan.widthGrid, second.gridSpan.heightGrid) ||
     first.gridSpan.widthGrid * first.gridSpan.heightGrid -
@@ -2120,17 +2122,20 @@ function compareExactHullWaste(
   second: CanonicalLayoutTopologyExact
 ): number {
   if (
-    first.hullDoubledAreaGrid2 === 0 ||
-    second.hullDoubledAreaGrid2 === 0
+    first.exactHullDoubledAreaGrid2 === '0' ||
+    second.exactHullDoubledAreaGrid2 === '0'
   ) {
-    return first.hullGapDoubledAreaGrid2 - second.hullGapDoubledAreaGrid2
+    return compareBigintsAscending(
+      BigInt(first.exactHullGapDoubledAreaGrid2),
+      BigInt(second.exactHullGapDoubledAreaGrid2)
+    )
   }
   const firstScaled =
-    BigInt(first.hullGapDoubledAreaGrid2) *
-    BigInt(second.hullDoubledAreaGrid2)
+    BigInt(first.exactHullGapDoubledAreaGrid2) *
+    BigInt(second.exactHullDoubledAreaGrid2)
   const secondScaled =
-    BigInt(second.hullGapDoubledAreaGrid2) *
-    BigInt(first.hullDoubledAreaGrid2)
+    BigInt(second.exactHullGapDoubledAreaGrid2) *
+    BigInt(first.exactHullDoubledAreaGrid2)
   return firstScaled === secondScaled ? 0 : firstScaled < secondScaled ? -1 : 1
 }
 
@@ -2170,9 +2175,16 @@ function compareCapacityBeamEntryAccounting(
   }
   return (
     first.cavities.count - second.cavities.count ||
-    Math.round(first.cavities.totalAreaMm2 * 1_000_000) -
-      Math.round(second.cavities.totalAreaMm2 * 1_000_000)
+    compareBigintsAscending(
+      BigInt(first.cavities.totalDoubledAreaGrid2),
+      BigInt(second.cavities.totalDoubledAreaGrid2)
+    )
   )
+}
+
+function compareBigintsAscending(first: bigint, second: bigint): number {
+  if (first === second) return 0
+  return first < second ? -1 : 1
 }
 
 function compareStrings(first: string, second: string): number {

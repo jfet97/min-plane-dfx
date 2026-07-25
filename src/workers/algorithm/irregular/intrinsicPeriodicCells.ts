@@ -29,6 +29,7 @@ import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel
 import { PlacementValidation } from '../../irregular/placementValidation.js'
 import {
   canonicalCollisionLayoutIdentity,
+  measureCanonicalLayoutEnvelope,
   measureCanonicalLayoutTopology
 } from '../../irregular/canonicalLayoutGeometry.js'
 import {
@@ -229,6 +230,11 @@ export interface IntrinsicPeriodicSeed {
   readonly maximumSideMm: number
   readonly envelopeAreaMm2: number
   readonly envelopeSpanMm: number
+  readonly exactEnvelope?: {
+    readonly maximumSideGrid: number
+    readonly areaGrid2: string
+    readonly spanGrid: number
+  }
   readonly crop: IntrinsicPeriodicCropProvenance
   readonly canonicalKey: string
 }
@@ -763,10 +769,12 @@ export function enumerateIntrinsicPeriodicCellCrops(
           const normalized = normalizePlacedBottomLeft(placed)
           const identity = canonicalCollisionLayoutIdentity(normalized)
           const topology = measureCanonicalLayoutTopology(normalized)
+          const envelope = measureCanonicalLayoutEnvelope(normalized)
           const bounds = placedBounds(normalized)
           if (
             identity === undefined ||
             topology === undefined ||
+            envelope === undefined ||
             bounds === undefined ||
             identities.has(identity)
           ) {
@@ -784,6 +792,11 @@ export function enumerateIntrinsicPeriodicCellCrops(
             maximumSideMm: Math.max(bounds.width, bounds.height),
             envelopeAreaMm2: bounds.width * bounds.height,
             envelopeSpanMm: bounds.width + bounds.height,
+            exactEnvelope: {
+              maximumSideGrid: envelope.maximumSideGrid,
+              areaGrid2: envelope.envelopeAreaGrid2,
+              spanGrid: envelope.spanGrid
+            },
             crop: { rows, columns, traversal, corner },
             canonicalKey: identity
           })

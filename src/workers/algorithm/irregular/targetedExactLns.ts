@@ -36,8 +36,6 @@ import { PlacementValidation } from '../../irregular/placementValidation.js'
 const REQUESTED_DESTROY_SIZES = [2, 3, 5, 8] as const
 const ROUND_DEADLINE_MS = 5_000
 const GLOBAL_DEADLINE_MS = 60_000
-const GRID_MM = 0.001
-
 export type TargetedExactLnsTarget = 'interface' | 'hull_void' | 'v1_hazard'
 export type TargetedExactLnsQueueOrder = 'priority' | 'small_first'
 
@@ -530,12 +528,38 @@ export function isAdmissibleTargetedImprovement(
   incumbent: IntrinsicRelaxationMetrics,
   candidate: IntrinsicRelaxationMetrics
 ): boolean {
+  const exactEnvelopeNonWorse =
+    incumbent.exact === undefined || candidate.exact === undefined
+      ? candidate.maxSide <= incumbent.maxSide && candidate.area <= incumbent.area
+      : candidate.exact.maximumSideGrid <= incumbent.exact.maximumSideGrid &&
+        BigInt(candidate.exact.envelopeAreaGrid2) <=
+          BigInt(incumbent.exact.envelopeAreaGrid2)
+  const exactHullNonWorse =
+    incumbent.exact === undefined || candidate.exact === undefined
+      ? candidate.topology.largestOccupiedHullGapRatio <=
+        incumbent.topology.largestOccupiedHullGapRatio
+      : BigInt(candidate.exact.largestHullGapDoubledAreaGrid2) *
+          BigInt(incumbent.exact.hullDoubledAreaGrid2) <=
+        BigInt(incumbent.exact.largestHullGapDoubledAreaGrid2) *
+          BigInt(candidate.exact.hullDoubledAreaGrid2)
+  const exactEnvelopeImproved =
+    incumbent.exact === undefined || candidate.exact === undefined
+      ? candidate.maxSide < incumbent.maxSide || candidate.area < incumbent.area
+      : candidate.exact.maximumSideGrid < incumbent.exact.maximumSideGrid ||
+        BigInt(candidate.exact.envelopeAreaGrid2) <
+          BigInt(incumbent.exact.envelopeAreaGrid2)
+  const exactHullImproved =
+    incumbent.exact === undefined || candidate.exact === undefined
+      ? candidate.topology.largestOccupiedHullGapRatio <
+        incumbent.topology.largestOccupiedHullGapRatio
+      : BigInt(candidate.exact.largestHullGapDoubledAreaGrid2) *
+          BigInt(incumbent.exact.hullDoubledAreaGrid2) <
+        BigInt(incumbent.exact.largestHullGapDoubledAreaGrid2) *
+          BigInt(candidate.exact.hullDoubledAreaGrid2)
   const nonWorse =
-    candidate.maxSide <= incumbent.maxSide + GRID_MM &&
-    candidate.area <= incumbent.area + GRID_MM &&
+    exactEnvelopeNonWorse &&
     candidate.topology.enclosedCavityCount <= incumbent.topology.enclosedCavityCount &&
-    candidate.topology.largestOccupiedHullGapRatio <=
-      incumbent.topology.largestOccupiedHullGapRatio + 1e-12 &&
+    exactHullNonWorse &&
     candidate.topology.positiveContactComponentCount <=
       incumbent.topology.positiveContactComponentCount &&
     candidate.topology.isolatedPieceCount <= incumbent.topology.isolatedPieceCount &&
@@ -545,14 +569,12 @@ export function isAdmissibleTargetedImprovement(
       incumbent.nearCompleteStructuralContactCount &&
     candidate.dominantNearCompleteStructuralContactCount >=
       incumbent.dominantNearCompleteStructuralContactCount &&
-    candidate.sharedCollisionBoundaryContactUnits + 1e-9 >=
+    candidate.sharedCollisionBoundaryContactUnits >=
       incumbent.sharedCollisionBoundaryContactUnits
   const strict =
-    candidate.maxSide < incumbent.maxSide - GRID_MM ||
-    candidate.area < incumbent.area - GRID_MM ||
+    exactEnvelopeImproved ||
     candidate.topology.enclosedCavityCount < incumbent.topology.enclosedCavityCount ||
-    candidate.topology.largestOccupiedHullGapRatio <
-      incumbent.topology.largestOccupiedHullGapRatio - 1e-12 ||
+    exactHullImproved ||
     candidate.topology.positiveContactComponentCount <
       incumbent.topology.positiveContactComponentCount ||
     candidate.topology.isolatedPieceCount < incumbent.topology.isolatedPieceCount ||
@@ -562,7 +584,7 @@ export function isAdmissibleTargetedImprovement(
     candidate.dominantNearCompleteStructuralContactCount >
       incumbent.dominantNearCompleteStructuralContactCount ||
     candidate.sharedCollisionBoundaryContactUnits >
-      incumbent.sharedCollisionBoundaryContactUnits + 1e-9
+      incumbent.sharedCollisionBoundaryContactUnits
   return nonWorse && strict
 }
 

@@ -78,8 +78,8 @@ export interface IntrinsicShortSidePairFoldAdmission {
  */
 export interface IntrinsicShortSideInterlockingMetrics {
   readonly largestOccupiedHullGapRatio: number
-  readonly largestOccupiedHullGapDoubledAreaGrid2: number
-  readonly occupiedHullDoubledAreaGrid2: number
+  readonly largestOccupiedHullGapDoubledAreaGrid2: string
+  readonly occupiedHullDoubledAreaGrid2: string
   readonly isolatedPieceCount: number
   readonly positiveContactComponentCount: number
   readonly largestPositiveContactComponentSize: number
@@ -1103,8 +1103,9 @@ function finalizeOutcome(input: {
   const measuredAdmission = { ...admission, accepted }
   const interlocking: IntrinsicShortSideInterlockingMetrics = {
     largestOccupiedHullGapRatio: topology.largestOccupiedHullGapRatio,
-    largestOccupiedHullGapDoubledAreaGrid2: topologyExact.hullGapDoubledAreaGrid2,
-    occupiedHullDoubledAreaGrid2: topologyExact.hullDoubledAreaGrid2,
+    largestOccupiedHullGapDoubledAreaGrid2:
+      topologyExact.exactHullGapDoubledAreaGrid2,
+    occupiedHullDoubledAreaGrid2: topologyExact.exactHullDoubledAreaGrid2,
     isolatedPieceCount: topology.isolatedPieceCount,
     positiveContactComponentCount: topology.positiveContactComponentCount,
     largestPositiveContactComponentSize: topology.largestPositiveContactComponentSize,

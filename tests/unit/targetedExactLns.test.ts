@@ -24,7 +24,8 @@ function analysis(input: {
         maxX: index * 2_000 + 1_000,
         maxY: 1_000
       },
-      areaGrid2: 1_000_000
+      areaGrid2: 1_000_000,
+      doubledAreaGrid2: '2000000'
     })),
     positiveContactComponents: input.components.map((component) => component.map(id)),
     positiveContactPairs: [],

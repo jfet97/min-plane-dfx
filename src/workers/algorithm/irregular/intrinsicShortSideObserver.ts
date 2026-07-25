@@ -517,8 +517,8 @@ function directionalReference(input: {
   })
   return orientations.toSorted(
     (first, second) =>
-      second.usedShortAxisSpanMm - first.usedShortAxisSpanMm ||
-      first.usedLongAxisSpanMm - second.usedLongAxisSpanMm
+      second.usedShortAxisSpanGrid - first.usedShortAxisSpanGrid ||
+      first.usedLongAxisSpanGrid - second.usedLongAxisSpanGrid
   )[0]
 }
 
@@ -547,8 +547,9 @@ function directionalImprovementAdmitted(input: {
       input.production.usedShortAxisSpanGrid
   )
   return (
-    5 * candidateShortAxisSpanGrid >= 4 * input.requestedShortAxisGrid &&
-    2 * candidateShortfall <= productionShortfall &&
+    5n * BigInt(candidateShortAxisSpanGrid) >=
+      4n * BigInt(input.requestedShortAxisGrid) &&
+    2n * BigInt(candidateShortfall) <= BigInt(productionShortfall) &&
     candidateDepth <= input.production.maximumSideGrid
   )
 }

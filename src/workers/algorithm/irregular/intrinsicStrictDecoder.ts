@@ -20,7 +20,7 @@ import {
   measureCanonicalEnclosedCavities,
   measureCanonicalLayoutContacts,
   measureCanonicalLayoutEnvelope,
-  measureCanonicalLayoutTopology
+  measureCanonicalLayoutTopologyExact
 } from '../../irregular/canonicalLayoutGeometry.js'
 import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
@@ -118,6 +118,19 @@ export interface IntrinsicStrictCompletedMetrics {
   readonly sharedBoundaryLengthMm: number
   readonly canonicalGeometryHash: string
   readonly runtimeMs: number
+  /** Serializable exact grid terms used by production ranking and thresholds. */
+  readonly exact?: {
+    readonly envelopeMaximumSideGrid: number
+    readonly envelopeAreaGrid2: string
+    readonly envelopeSpanGrid: number
+    readonly totalEnclosedCavityDoubledAreaGrid2: string
+    readonly largestOccupiedHullGapDoubledAreaGrid2: string
+    readonly occupiedHullDoubledAreaGrid2: string
+    readonly occupiedHullWasteDoubledAreaGrid2: string
+    readonly largestPositiveContactComponentSize: number
+    readonly placedPieceCount: number
+    readonly occupiedOutsideLargestContactComponentDoubledAreaGrid2: string
+  }
 }
 
 export interface IntrinsicSheetlessCompletedLayout {
@@ -131,6 +144,8 @@ export interface IntrinsicStrictCertificate {
   readonly passes: boolean
   readonly violatedFloors: ReadonlyArray<keyof typeof INTRINSIC_STRICT_COHESION_FLOORS>
   readonly relativeDeficitSum: number
+  readonly exactRelativeDeficitNumerator?: string
+  readonly exactRelativeDeficitDenominator?: string
 }
 
 export interface IntrinsicStrictDecodeResult {
@@ -1709,7 +1724,7 @@ function completedMetrics(
   canonicalGeometryHash: string,
   runtimeMs: number
 ): IntrinsicStrictCompletedMetrics | undefined {
-  const topology = measureCanonicalLayoutTopology(state.placedCollisionGeometries)
+  const topologyExact = measureCanonicalLayoutTopologyExact(state.placedCollisionGeometries)
   const cavities = measureCanonicalEnclosedCavities(state.placedCollisionGeometries)
   const structure = analyzeCanonicalLayoutStructure(
     intrinsicBoundsSheet(state),
@@ -1718,7 +1733,7 @@ function completedMetrics(
   const contacts = measureCanonicalLayoutContacts(state.placedCollisionGeometries)
   const envelope = measureCanonicalLayoutEnvelope(state.placedCollisionGeometries)
   if (
-    topology === undefined ||
+    topologyExact === undefined ||
     cavities === undefined ||
     structure === undefined ||
     contacts === undefined ||
@@ -1726,12 +1741,18 @@ function completedMetrics(
   ) {
     return undefined
   }
+  const topology = topologyExact.topology
   const largestComponent = new Set(structure.positiveContactComponents[0] ?? [])
+  const occupiedOutsideLargestDoubledArea = structure.pieces.reduce(
+    (sum, piece) =>
+      sum +
+      (largestComponent.has(piece.pieceId) ? 0n : BigInt(piece.doubledAreaGrid2)),
+    0n
+  )
   const occupiedAreaOutsideLargestContactComponentMm2 =
-    structure.pieces.reduce(
-      (sum, piece) => sum + (largestComponent.has(piece.pieceId) ? 0 : piece.areaGrid2),
-      0
-    ) / 1_000_000
+    Number(occupiedOutsideLargestDoubledArea) / 2_000_000
+  const occupiedHullDoubledArea = BigInt(envelope.hullDoubledAreaGrid2)
+  const occupiedDoubledArea = BigInt(envelope.occupiedDoubledAreaGrid2)
   const metrics = {
     envelopeMaximumSideMm: envelope.maximumSideMm,
     envelopeAreaMm2: envelope.areaMm2,
@@ -1750,10 +1771,31 @@ function completedMetrics(
     contactUnits: contacts.contactUnits,
     sharedBoundaryLengthMm: contacts.sharedBoundaryLengthMm,
     canonicalGeometryHash,
-    runtimeMs
+    runtimeMs,
+    exact: {
+      envelopeMaximumSideGrid: envelope.maximumSideGrid,
+      envelopeAreaGrid2: envelope.envelopeAreaGrid2,
+      envelopeSpanGrid: envelope.spanGrid,
+      totalEnclosedCavityDoubledAreaGrid2: cavities.totalDoubledAreaGrid2,
+      largestOccupiedHullGapDoubledAreaGrid2:
+        topologyExact.exactHullGapDoubledAreaGrid2,
+      occupiedHullDoubledAreaGrid2: topologyExact.exactHullDoubledAreaGrid2,
+      occupiedHullWasteDoubledAreaGrid2: (
+        occupiedHullDoubledArea - occupiedDoubledArea
+      ).toString(),
+      largestPositiveContactComponentSize:
+        topology.largestPositiveContactComponentSize,
+      placedPieceCount: state.placedCollisionGeometries.length,
+      occupiedOutsideLargestContactComponentDoubledAreaGrid2:
+        occupiedOutsideLargestDoubledArea.toString()
+    }
   }
-  return Object.values(metrics).every((value) =>
-    typeof value === 'string' ? value.length > 0 : Number.isFinite(value)
+  return Object.entries(metrics).every(([key, value]) =>
+    key === 'exact'
+      ? value !== undefined
+      : typeof value === 'string'
+        ? value.length > 0
+        : Number.isFinite(value)
   )
     ? metrics
     : undefined
@@ -1801,10 +1843,13 @@ export function evaluateIntrinsicStrictCertificate(
         Math.max(1, floors.maximumIsolatedPieceCount)
     )
   }
-  if (
-    metrics.largestPositiveContactComponentRatio <
-    floors.minimumLargestPositiveContactComponentRatio
-  ) {
+  const largestComponentBelowFloor =
+    metrics.exact === undefined
+      ? metrics.largestPositiveContactComponentRatio <
+        floors.minimumLargestPositiveContactComponentRatio
+      : 5n * BigInt(metrics.exact.largestPositiveContactComponentSize) <
+        4n * BigInt(metrics.exact.placedPieceCount)
+  if (largestComponentBelowFloor) {
     violations.push('minimumLargestPositiveContactComponentRatio')
     relativeDeficitSum += Math.min(
       1,
@@ -1813,7 +1858,12 @@ export function evaluateIntrinsicStrictCertificate(
         floors.minimumLargestPositiveContactComponentRatio
     )
   }
-  if (metrics.largestOccupiedHullGapRatio > floors.maximumLargestOccupiedHullGapRatio) {
+  const largestHullGapAboveFloor =
+    metrics.exact === undefined
+      ? metrics.largestOccupiedHullGapRatio > floors.maximumLargestOccupiedHullGapRatio
+      : 20n * BigInt(metrics.exact.largestOccupiedHullGapDoubledAreaGrid2) >
+        3n * BigInt(metrics.exact.occupiedHullDoubledAreaGrid2)
+  if (largestHullGapAboveFloor) {
     violations.push('maximumLargestOccupiedHullGapRatio')
     relativeDeficitSum += Math.min(
       1,
@@ -1821,11 +1871,90 @@ export function evaluateIntrinsicStrictCertificate(
         floors.maximumLargestOccupiedHullGapRatio
     )
   }
+  const exactRelativeDeficit = exactStrictRelativeDeficit(metrics)
   return {
     passes: violations.length === 0,
     violatedFloors: violations,
-    relativeDeficitSum
+    relativeDeficitSum,
+    ...(exactRelativeDeficit === undefined
+      ? {}
+      : {
+          exactRelativeDeficitNumerator: exactRelativeDeficit.numerator.toString(),
+          exactRelativeDeficitDenominator: exactRelativeDeficit.denominator.toString()
+        })
   }
+}
+
+interface ExactFraction {
+  readonly numerator: bigint
+  readonly denominator: bigint
+}
+
+function greatestCommonDivisor(first: bigint, second: bigint): bigint {
+  let left = first < 0n ? -first : first
+  let right = second < 0n ? -second : second
+  while (right !== 0n) {
+    const remainder = left % right
+    left = right
+    right = remainder
+  }
+  return left
+}
+
+function normalizedFraction(numerator: bigint, denominator: bigint): ExactFraction {
+  if (denominator <= 0n) return { numerator: 0n, denominator: 1n }
+  const divisor = greatestCommonDivisor(numerator, denominator)
+  return {
+    numerator: numerator / (divisor === 0n ? 1n : divisor),
+    denominator: denominator / (divisor === 0n ? 1n : divisor)
+  }
+}
+
+function addFractions(first: ExactFraction, second: ExactFraction): ExactFraction {
+  return normalizedFraction(
+    first.numerator * second.denominator + second.numerator * first.denominator,
+    first.denominator * second.denominator
+  )
+}
+
+function cappedDeficit(numerator: bigint, denominator: bigint): ExactFraction {
+  if (numerator <= 0n) return { numerator: 0n, denominator: 1n }
+  return numerator >= denominator
+    ? { numerator: 1n, denominator: 1n }
+    : normalizedFraction(numerator, denominator)
+}
+
+function exactStrictRelativeDeficit(
+  metrics: IntrinsicStrictCompletedMetrics
+): ExactFraction | undefined {
+  if (metrics.exact === undefined) return undefined
+  let total: ExactFraction = { numerator: 0n, denominator: 1n }
+  if (metrics.enclosedCavityCount > 2) {
+    total = addFractions(
+      total,
+      cappedDeficit(BigInt(metrics.enclosedCavityCount - 2), 2n)
+    )
+  }
+  if (metrics.isolatedPieceCount > 2) {
+    total = addFractions(
+      total,
+      cappedDeficit(BigInt(metrics.isolatedPieceCount - 2), 2n)
+    )
+  }
+  const placedCount = BigInt(metrics.exact.placedPieceCount)
+  const largestComponent = BigInt(metrics.exact.largestPositiveContactComponentSize)
+  if (5n * largestComponent < 4n * placedCount) {
+    total = addFractions(
+      total,
+      cappedDeficit(4n * placedCount - 5n * largestComponent, 4n * placedCount)
+    )
+  }
+  const hull = BigInt(metrics.exact.occupiedHullDoubledAreaGrid2)
+  const hullGap = BigInt(metrics.exact.largestOccupiedHullGapDoubledAreaGrid2)
+  if (20n * hullGap > 3n * hull) {
+    total = addFractions(total, cappedDeficit(20n * hullGap - 3n * hull, 3n * hull))
+  }
+  return total
 }
 
 type IntrinsicStrictParetoComparison = -1 | 0 | 1
@@ -1837,33 +1966,134 @@ interface IntrinsicStrictParetoObjective {
   ) => number
 }
 
-const intrinsicStrictCompactnessObjective = combineMetricObjectives([
-  minimizeMetric((metrics) => metrics.envelopeMaximumSideMm, canonicalLinearMetric),
-  minimizeMetric((metrics) => metrics.envelopeAreaMm2, canonicalAreaMetric),
-  minimizeMetric((metrics) => metrics.envelopeSpanMm, canonicalLinearMetric)
-])
+function compareBigIntAscending(first: bigint, second: bigint): number {
+  return first === second ? 0 : first < second ? -1 : 1
+}
 
-const intrinsicStrictVoidTopologyObjective = combineMetricObjectives([
-  minimizeMetric((metrics) => metrics.enclosedCavityCount),
-  minimizeMetric((metrics) => metrics.totalEnclosedCavityAreaMm2, canonicalAreaMetric),
-  minimizeMetric((metrics) => metrics.largestOccupiedHullGapRatio, canonicalRatioMetric),
-  minimizeMetric((metrics) => metrics.occupiedHullWasteRatio, canonicalRatioMetric)
-])
+function compareExactRatio(
+  firstNumerator: bigint,
+  firstDenominator: bigint,
+  secondNumerator: bigint,
+  secondDenominator: bigint
+): number {
+  if (firstDenominator <= 0n || secondDenominator <= 0n) {
+    return compareBigIntAscending(firstNumerator, secondNumerator)
+  }
+  return compareBigIntAscending(
+    firstNumerator * secondDenominator,
+    secondNumerator * firstDenominator
+  )
+}
 
-const intrinsicStrictContactObjective = combineMetricObjectives([
-  minimizeMetric((metrics) => metrics.isolatedPieceCount),
-  minimizeMetric((metrics) => metrics.positiveContactComponentCount),
-  maximizeMetric((metrics) => metrics.largestPositiveContactComponentSize),
-  maximizeMetric((metrics) => metrics.largestPositiveContactComponentRatio, canonicalRatioMetric),
-  minimizeMetric(
-    (metrics) => metrics.occupiedAreaOutsideLargestContactComponentMm2,
-    canonicalAreaMetric
-  ),
-  maximizeMetric((metrics) => metrics.totalStructuralContacts),
-  maximizeMetric((metrics) => metrics.dominantStructuralContacts),
-  maximizeMetric((metrics) => metrics.contactUnits),
-  maximizeMetric((metrics) => metrics.sharedBoundaryLengthMm, canonicalLinearMetric)
-])
+function compareIntrinsicStrictCompactness(
+  first: IntrinsicStrictCompletedMetrics,
+  second: IntrinsicStrictCompletedMetrics
+): number {
+  if (first.exact !== undefined && second.exact !== undefined) {
+    return (
+      first.exact.envelopeMaximumSideGrid - second.exact.envelopeMaximumSideGrid ||
+      compareBigIntAscending(
+        BigInt(first.exact.envelopeAreaGrid2),
+        BigInt(second.exact.envelopeAreaGrid2)
+      ) ||
+      first.exact.envelopeSpanGrid - second.exact.envelopeSpanGrid
+    )
+  }
+  return (
+    canonicalLinearMetric(first.envelopeMaximumSideMm) -
+      canonicalLinearMetric(second.envelopeMaximumSideMm) ||
+    canonicalAreaMetric(first.envelopeAreaMm2) -
+      canonicalAreaMetric(second.envelopeAreaMm2) ||
+    canonicalLinearMetric(first.envelopeSpanMm) -
+      canonicalLinearMetric(second.envelopeSpanMm)
+  )
+}
+
+function compareIntrinsicStrictVoidTopology(
+  first: IntrinsicStrictCompletedMetrics,
+  second: IntrinsicStrictCompletedMetrics
+): number {
+  const cavityCount = first.enclosedCavityCount - second.enclosedCavityCount
+  if (cavityCount !== 0) return cavityCount
+  if (first.exact !== undefined && second.exact !== undefined) {
+    return (
+      compareBigIntAscending(
+        BigInt(first.exact.totalEnclosedCavityDoubledAreaGrid2),
+        BigInt(second.exact.totalEnclosedCavityDoubledAreaGrid2)
+      ) ||
+      compareExactRatio(
+        BigInt(first.exact.largestOccupiedHullGapDoubledAreaGrid2),
+        BigInt(first.exact.occupiedHullDoubledAreaGrid2),
+        BigInt(second.exact.largestOccupiedHullGapDoubledAreaGrid2),
+        BigInt(second.exact.occupiedHullDoubledAreaGrid2)
+      ) ||
+      compareExactRatio(
+        BigInt(first.exact.occupiedHullWasteDoubledAreaGrid2),
+        BigInt(first.exact.occupiedHullDoubledAreaGrid2),
+        BigInt(second.exact.occupiedHullWasteDoubledAreaGrid2),
+        BigInt(second.exact.occupiedHullDoubledAreaGrid2)
+      )
+    )
+  }
+  return (
+    canonicalAreaMetric(first.totalEnclosedCavityAreaMm2) -
+      canonicalAreaMetric(second.totalEnclosedCavityAreaMm2) ||
+    first.largestOccupiedHullGapRatio - second.largestOccupiedHullGapRatio ||
+    first.occupiedHullWasteRatio - second.occupiedHullWasteRatio
+  )
+}
+
+function compareIntrinsicStrictContact(
+  first: IntrinsicStrictCompletedMetrics,
+  second: IntrinsicStrictCompletedMetrics
+): number {
+  const discrete =
+    first.isolatedPieceCount - second.isolatedPieceCount ||
+    first.positiveContactComponentCount - second.positiveContactComponentCount ||
+    second.largestPositiveContactComponentSize -
+      first.largestPositiveContactComponentSize
+  if (discrete !== 0) return discrete
+  if (first.exact !== undefined && second.exact !== undefined) {
+    const ratioComparison = compareExactRatio(
+      BigInt(second.exact.largestPositiveContactComponentSize),
+      BigInt(second.exact.placedPieceCount),
+      BigInt(first.exact.largestPositiveContactComponentSize),
+      BigInt(first.exact.placedPieceCount)
+    )
+    if (ratioComparison !== 0) return ratioComparison
+    const outsideAreaComparison = compareBigIntAscending(
+      BigInt(first.exact.occupiedOutsideLargestContactComponentDoubledAreaGrid2),
+      BigInt(second.exact.occupiedOutsideLargestContactComponentDoubledAreaGrid2)
+    )
+    if (outsideAreaComparison !== 0) return outsideAreaComparison
+  } else {
+    const legacy =
+      second.largestPositiveContactComponentRatio -
+        first.largestPositiveContactComponentRatio ||
+      canonicalAreaMetric(first.occupiedAreaOutsideLargestContactComponentMm2) -
+        canonicalAreaMetric(second.occupiedAreaOutsideLargestContactComponentMm2)
+    if (legacy !== 0) return legacy
+  }
+  return (
+    second.totalStructuralContacts - first.totalStructuralContacts ||
+    second.dominantStructuralContacts - first.dominantStructuralContacts ||
+    second.contactUnits - first.contactUnits ||
+    canonicalLinearMetric(second.sharedBoundaryLengthMm) -
+      canonicalLinearMetric(first.sharedBoundaryLengthMm)
+  )
+}
+
+const intrinsicStrictCompactnessObjective: IntrinsicStrictParetoObjective = {
+  compare: compareIntrinsicStrictCompactness
+}
+
+const intrinsicStrictVoidTopologyObjective: IntrinsicStrictParetoObjective = {
+  compare: compareIntrinsicStrictVoidTopology
+}
+
+const intrinsicStrictContactObjective: IntrinsicStrictParetoObjective = {
+  compare: compareIntrinsicStrictContact
+}
 
 const intrinsicStrictGeometricObjectives: ReadonlyArray<IntrinsicStrictParetoObjective> = [
   intrinsicStrictCompactnessObjective,
@@ -1978,46 +2208,6 @@ function orderIntrinsicStrictParetoFront(
     if (!selectedAny) break
   }
   return ordered
-}
-
-function minimizeMetric(
-  value: (metrics: IntrinsicStrictCompletedMetrics) => number,
-  canonicalize: (metric: number) => number = identityMetric
-): IntrinsicStrictParetoObjective {
-  return {
-    compare: (first, second) => canonicalize(value(first)) - canonicalize(value(second))
-  }
-}
-
-function maximizeMetric(
-  value: (metrics: IntrinsicStrictCompletedMetrics) => number,
-  canonicalize: (metric: number) => number = identityMetric
-): IntrinsicStrictParetoObjective {
-  return {
-    compare: (first, second) => canonicalize(value(second)) - canonicalize(value(first))
-  }
-}
-
-function combineMetricObjectives(
-  objectives: ReadonlyArray<IntrinsicStrictParetoObjective>
-): IntrinsicStrictParetoObjective {
-  return {
-    compare: (first, second) => {
-      for (const objective of objectives) {
-        const comparison = objective.compare(first, second)
-        if (comparison !== 0) return comparison
-      }
-      return 0
-    }
-  }
-}
-
-function identityMetric(metric: number): number {
-  return metric
-}
-
-function canonicalRatioMetric(metric: number): number {
-  return Math.round(metric * 1_000_000_000)
 }
 
 function makeResult(input: {

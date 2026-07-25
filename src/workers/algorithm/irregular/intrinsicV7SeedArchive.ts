@@ -100,8 +100,8 @@ export interface IntrinsicV7LegalEndpointMetric {
   readonly envelopeMaximumSideGrid: number
   readonly enclosedCavityCount: number
   readonly hullGapRatio: number
-  readonly hullGapDoubledAreaGrid2: number
-  readonly hullDoubledAreaGrid2: number
+  readonly hullGapDoubledAreaGrid2: string
+  readonly hullDoubledAreaGrid2: string
   readonly isolatedPieceCount: number
   readonly positiveContactComponentCount: number
   readonly largestPositiveContactComponentRatio: number
@@ -829,8 +829,8 @@ function makeV7LegalEndpoint(
       envelopeMaximumSideGrid: Math.round(envelope.maximumSideMm * 1_000),
       enclosedCavityCount: cavities.count,
       hullGapRatio: topologyExact.topology.largestOccupiedHullGapRatio,
-      hullGapDoubledAreaGrid2: topologyExact.hullGapDoubledAreaGrid2,
-      hullDoubledAreaGrid2: topologyExact.hullDoubledAreaGrid2,
+      hullGapDoubledAreaGrid2: topologyExact.exactHullGapDoubledAreaGrid2,
+      hullDoubledAreaGrid2: topologyExact.exactHullDoubledAreaGrid2,
       isolatedPieceCount: topologyExact.topology.isolatedPieceCount,
       positiveContactComponentCount: topologyExact.topology.positiveContactComponentCount,
       largestPositiveContactComponentRatio:
@@ -1004,8 +1004,11 @@ function compareHullGapRatio(
 ): number {
   const firstNumerator = BigInt(first.hullGapDoubledAreaGrid2)
   const secondNumerator = BigInt(second.hullGapDoubledAreaGrid2)
-  const firstDenominator = BigInt(Math.max(1, first.hullDoubledAreaGrid2))
-  const secondDenominator = BigInt(Math.max(1, second.hullDoubledAreaGrid2))
+  const firstDenominator = BigInt(first.hullDoubledAreaGrid2)
+  const secondDenominator = BigInt(second.hullDoubledAreaGrid2)
+  if (firstDenominator <= 0n || secondDenominator <= 0n) {
+    return firstNumerator < secondNumerator ? -1 : firstNumerator > secondNumerator ? 1 : 0
+  }
   const left = firstNumerator * secondDenominator
   const right = secondNumerator * firstDenominator
   return left < right ? -1 : left > right ? 1 : 0

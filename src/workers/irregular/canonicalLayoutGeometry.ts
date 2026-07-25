@@ -1,5 +1,4 @@
 import {
-  area,
   booleanOpWithPolyTree,
   ClipType,
   FillRule,
@@ -15,6 +14,14 @@ import { measureSharedConvexPolygonBoundaryContact } from './convexPolygonContac
 import { fromGrid, toGridMm } from './clipper2OffsetPolicy.js'
 import { boundsForPoints } from './convexBounds.js'
 import type { InternalPoint, InternalPolygonWithBounds } from './internalGeometry.js'
+import {
+  canonicalGridAbsoluteDoubledArea,
+  canonicalGridConvexHull,
+  canonicalGridCounterClockwise,
+  canonicalGridSignedDoubledArea,
+  compareBigInts,
+  doubledGridAreaToMm2
+} from './canonicalGridMath.js'
 
 export interface CanonicalLayoutTopology {
   readonly enclosedCavityCount: number
@@ -29,13 +36,18 @@ export interface CanonicalLayoutTopology {
 /** Exact grid-area representation of the topology hull-gap ratio. */
 export interface CanonicalLayoutTopologyExact {
   readonly topology: CanonicalLayoutTopology
+  /** Rounded display/backward-compatibility projection; never use for exact ranking. */
   readonly hullGapDoubledAreaGrid2: number
+  /** Rounded display/backward-compatibility projection; never use for exact ranking. */
   readonly hullDoubledAreaGrid2: number
+  readonly exactHullGapDoubledAreaGrid2: string
+  readonly exactHullDoubledAreaGrid2: string
 }
 
 export interface CanonicalEnclosedCavityMetrics {
   readonly count: number
   readonly totalAreaMm2: number
+  readonly totalDoubledAreaGrid2: string
 }
 
 export interface CanonicalLayoutContactMetrics {
@@ -50,6 +62,11 @@ export interface CanonicalLayoutEnvelopeMetrics {
   readonly maximumSideMm: number
   readonly spanMm: number
   readonly occupiedHullWasteRatio: number
+  readonly maximumSideGrid: number
+  readonly spanGrid: number
+  readonly envelopeAreaGrid2: string
+  readonly occupiedDoubledAreaGrid2: string
+  readonly hullDoubledAreaGrid2: string
 }
 
 interface CanonicalPlacedPolygon {
@@ -96,6 +113,7 @@ export interface CanonicalLayoutStructuralAnalysis {
     readonly pieceId: PieceId
     readonly aabb: CanonicalGridAabb
     readonly areaGrid2: number
+    readonly doubledAreaGrid2: string
   }>
   readonly positiveContactComponents: ReadonlyArray<ReadonlyArray<PieceId>>
   readonly positiveContactPairs: ReadonlyArray<readonly [PieceId, PieceId]>
@@ -143,27 +161,32 @@ export function measureCanonicalLayoutTopologyExact(
 ): CanonicalLayoutTopologyExact | undefined {
   const polygons = canonicalPlacedPolygons(placed)
   if (polygons === undefined) return undefined
-  const hull = convexHull(polygons.flatMap(({ path }) => path.map(({ x, y }) => ({ x, y }))))
-  const hullArea = Math.abs(signedArea(hull))
-  if (!Number.isFinite(hullArea)) return undefined
-  const largestGapArea = largestHullGapArea(hull, polygons.map(({ path }) => path))
+  const hull = canonicalGridConvexHull(
+    polygons.flatMap(({ path }) => path.map(({ x, y }) => ({ x, y })))
+  )
+  if (hull === undefined) return undefined
+  const hullDoubledArea = canonicalGridAbsoluteDoubledArea(hull)
+  const largestGapDoubledArea = largestHullGapDoubledArea(
+    hull,
+    polygons.map(({ path }) => path)
+  )
   const enclosedCavityCount = countEnclosedOccupiedCavities(polygons.map(({ path }) => path))
   const occupiedEnvelopeAspectRatio = envelopeAspectRatio(polygons.map(({ path }) => path))
   const graph = measureContactGraph(polygons.map(({ contactPolygon }) => contactPolygon))
   if (
-    largestGapArea === undefined ||
+    hullDoubledArea === undefined ||
+    largestGapDoubledArea === undefined ||
     enclosedCavityCount === undefined ||
     occupiedEnvelopeAspectRatio === undefined ||
     graph === undefined
   ) {
     return undefined
   }
-  const largestOccupiedHullGapRatio = hullArea === 0 ? 0 : largestGapArea / hullArea
-  const hullGapDoubledAreaGrid2 = Math.round(largestGapArea * 2)
-  const hullDoubledAreaGrid2 = Math.round(hullArea * 2)
+  const largestOccupiedHullGapRatio =
+    hullDoubledArea === 0n
+      ? 0
+      : Number(largestGapDoubledArea) / Number(hullDoubledArea)
   return Number.isFinite(largestOccupiedHullGapRatio)
-    && Number.isSafeInteger(hullGapDoubledAreaGrid2)
-    && Number.isSafeInteger(hullDoubledAreaGrid2)
     ? {
         topology: {
           enclosedCavityCount,
@@ -173,8 +196,10 @@ export function measureCanonicalLayoutTopologyExact(
           largestPositiveContactComponentRatio:
             polygons.length === 0 ? 0 : graph.largestPositiveContactComponentSize / polygons.length
         },
-        hullGapDoubledAreaGrid2,
-        hullDoubledAreaGrid2
+        hullGapDoubledAreaGrid2: Number(largestGapDoubledArea),
+        hullDoubledAreaGrid2: Number(hullDoubledArea),
+        exactHullGapDoubledAreaGrid2: largestGapDoubledArea.toString(),
+        exactHullDoubledAreaGrid2: hullDoubledArea.toString()
       }
     : undefined
 }
@@ -255,8 +280,18 @@ export function measureCanonicalLayoutEnvelope(
   const maximumY = Math.max(...points.map(({ y }) => y))
   const widthGrid = maximumX - minimumX
   const heightGrid = maximumY - minimumY
-  const occupiedAreaGrid2 = paths.reduce((sum, path) => sum + Math.abs(area(path)), 0)
-  const hullAreaGrid2 = Math.abs(area(convexHull(points)))
+  const occupiedAreas = paths.map(canonicalGridAbsoluteDoubledArea)
+  const hull = canonicalGridConvexHull(points)
+  if (occupiedAreas.some((value) => value === undefined) || hull === undefined) return undefined
+  const definedOccupiedAreas = occupiedAreas.filter(
+    (value): value is bigint => value !== undefined
+  )
+  const occupiedDoubledAreaGrid2 = definedOccupiedAreas.reduce(
+    (sum, value) => sum + value,
+    0n
+  )
+  const hullDoubledAreaGrid2 = canonicalGridAbsoluteDoubledArea(hull)
+  if (hullDoubledAreaGrid2 === undefined) return undefined
   if (
     ![
       minimumX,
@@ -265,27 +300,41 @@ export function measureCanonicalLayoutEnvelope(
       maximumY,
       widthGrid,
       heightGrid,
-      occupiedAreaGrid2,
-      hullAreaGrid2
     ].every(Number.isFinite) ||
     widthGrid < 0 ||
     heightGrid < 0 ||
-    occupiedAreaGrid2 < 0 ||
-    hullAreaGrid2 < occupiedAreaGrid2
+    occupiedDoubledAreaGrid2 < 0n ||
+    hullDoubledAreaGrid2 < occupiedDoubledAreaGrid2
   ) {
     return undefined
   }
   const widthMm = fromGrid(widthGrid)
   const heightMm = fromGrid(heightGrid)
   const occupiedHullWasteRatio =
-    hullAreaGrid2 === 0 ? 0 : (hullAreaGrid2 - occupiedAreaGrid2) / hullAreaGrid2
+    hullDoubledAreaGrid2 === 0n
+      ? 0
+      : Number(hullDoubledAreaGrid2 - occupiedDoubledAreaGrid2) /
+        Number(hullDoubledAreaGrid2)
+  const envelopeAreaGrid2 = BigInt(widthGrid) * BigInt(heightGrid)
   const metrics = {
     areaMm2: widthMm * heightMm,
     maximumSideMm: Math.max(widthMm, heightMm),
     spanMm: widthMm + heightMm,
-    occupiedHullWasteRatio
+    occupiedHullWasteRatio,
+    maximumSideGrid: Math.max(widthGrid, heightGrid),
+    spanGrid: widthGrid + heightGrid,
+    envelopeAreaGrid2: envelopeAreaGrid2.toString(),
+    occupiedDoubledAreaGrid2: occupiedDoubledAreaGrid2.toString(),
+    hullDoubledAreaGrid2: hullDoubledAreaGrid2.toString()
   }
-  return Object.values(metrics).every(Number.isFinite) &&
+  return [
+    metrics.areaMm2,
+    metrics.maximumSideMm,
+    metrics.spanMm,
+    metrics.occupiedHullWasteRatio,
+    metrics.maximumSideGrid,
+    metrics.spanGrid
+  ].every(Number.isFinite) &&
     occupiedHullWasteRatio >= 0 &&
     occupiedHullWasteRatio <= 1
     ? metrics
@@ -325,7 +374,14 @@ export function assertCanonicalGridLegalLayout(
       } catch {
         return false
       }
-      if (polyTreeToPaths64(intersection).some((path) => Math.abs(area(path)) > 0)) return false
+      if (
+        polyTreeToPaths64(intersection).some((path) => {
+          const doubledArea = canonicalGridAbsoluteDoubledArea(path)
+          return doubledArea === undefined || doubledArea > 0n
+        })
+      ) {
+        return false
+      }
     }
   }
   return true
@@ -379,28 +435,45 @@ export function analyzeCanonicalLayoutStructure(
       } catch {
         return undefined
       }
-      const intersectionAreaGrid2 = polyTreeToPaths64(intersection).reduce(
-        (sum, path) => sum + Math.abs(area(path)),
-        0
+      const intersectionAreas = polyTreeToPaths64(intersection).map(
+        canonicalGridAbsoluteDoubledArea
       )
-      if (intersectionAreaGrid2 > 0) {
+      if (intersectionAreas.some((value) => value === undefined)) return undefined
+      const intersectionDoubledAreaGrid2 = intersectionAreas
+        .filter((value): value is bigint => value !== undefined)
+        .reduce(
+        (sum, value) => sum + value,
+        0n
+      )
+      if (intersectionDoubledAreaGrid2 > 0n) {
         const pair = orderedPiecePair(first.pieceId, second.pieceId)
         positiveAreaConflicts.push(pair)
+        const areaMm2 = doubledGridAreaToMm2(intersectionDoubledAreaGrid2)
+        if (areaMm2 === undefined) return undefined
         positiveAreaConflictMeasurements.push({
           pair,
-          areaMm2: intersectionAreaGrid2 / 1_000_000
+          areaMm2
         })
       }
     }
   }
   const positiveContactComponents = contactComponents(polygons, neighbors)
   if (positiveContactComponents === undefined) return undefined
-  const hull = convexHull(polygons.flatMap(({ path }) => path))
+  const hull = canonicalGridConvexHull(polygons.flatMap(({ path }) => path))
+  if (hull === undefined) return undefined
   const largestHullGap = largestHullGapRegion(hull, polygons.map(({ path }) => path))
   if (largestHullGap === null) return undefined
   const pieces = polygons.map(({ pieceId, path }) => {
     const aabb = gridPathAabb(path)
-    return aabb === undefined ? undefined : { pieceId, aabb, areaGrid2: Math.abs(area(path)) }
+    const doubledAreaGrid2 = canonicalGridAbsoluteDoubledArea(path)
+    return aabb === undefined || doubledAreaGrid2 === undefined
+      ? undefined
+      : {
+          pieceId,
+          aabb,
+          areaGrid2: Number(doubledAreaGrid2) / 2,
+          doubledAreaGrid2: doubledAreaGrid2.toString()
+        }
   })
   if (pieces.some((piece) => piece === undefined)) return undefined
   const wallOffenders = polygons
@@ -415,6 +488,7 @@ export function analyzeCanonicalLayoutStructure(
         readonly pieceId: PieceId
         readonly aabb: CanonicalGridAabb
         readonly areaGrid2: number
+        readonly doubledAreaGrid2: string
       } =>
         piece !== undefined
     ),
@@ -441,7 +515,8 @@ function canonicalPlacedPolygons(
       x: fromGrid(x),
       y: fromGrid(y)
     }))
-    if (path.length < 3 || signedArea(path) === 0) return undefined
+    const doubledArea = canonicalGridSignedDoubledArea(path)
+    if (path.length < 3 || doubledArea === undefined || doubledArea === 0n) return undefined
     const bounds = boundsForPoints(points)
     if (bounds === undefined) return undefined
     result.push({
@@ -489,15 +564,22 @@ function contactComponents(
     }
     components.push(component.toSorted())
   }
+  const areaEntries = polygons.map(({ pieceId, path }) => {
+    const doubledArea = canonicalGridAbsoluteDoubledArea(path)
+    return doubledArea === undefined ? undefined : ([pieceId, doubledArea] as const)
+  })
+  if (areaEntries.some((entry) => entry === undefined)) return undefined
   const areaById = new Map(
-    polygons.map(({ pieceId, path }) => [pieceId, Math.abs(area(path))] as const)
+    areaEntries.filter(
+      (entry): entry is readonly [PieceId, bigint] => entry !== undefined
+    )
   )
   return components.toSorted((first, second) => {
-    const firstArea = first.reduce((sum, pieceId) => sum + (areaById.get(pieceId) ?? 0), 0)
-    const secondArea = second.reduce((sum, pieceId) => sum + (areaById.get(pieceId) ?? 0), 0)
+    const firstArea = first.reduce((sum, pieceId) => sum + (areaById.get(pieceId) ?? 0n), 0n)
+    const secondArea = second.reduce((sum, pieceId) => sum + (areaById.get(pieceId) ?? 0n), 0n)
     return (
       second.length - first.length ||
-      secondArea - firstArea ||
+      compareBigInts(secondArea, firstArea) ||
       first.join('|').localeCompare(second.join('|'))
     )
   })
@@ -572,15 +654,20 @@ function rotateGridPoint(point: { readonly x: number; readonly y: number }, rota
   }
 }
 
-function largestHullGapArea(hull: Path64, occupied: ReadonlyArray<Path64>): number | undefined {
-  if (hull.length < 3) return 0
+function largestHullGapDoubledArea(
+  hull: Path64,
+  occupied: ReadonlyArray<Path64>
+): bigint | undefined {
+  if (hull.length < 3) return 0n
   const occupiedTree = new PolyTree64()
   const gapTree = new PolyTree64()
+  const orientedHull = canonicalGridCounterClockwise(hull)
+  if (orientedHull === undefined) return undefined
   try {
     booleanOpWithPolyTree(ClipType.Union, [...occupied], null, occupiedTree, FillRule.EvenOdd)
     booleanOpWithPolyTree(
       ClipType.Difference,
-      [counterClockwise(hull)],
+      [orientedHull],
       polyTreeToPaths64(occupiedTree),
       gapTree,
       FillRule.NonZero
@@ -588,7 +675,7 @@ function largestHullGapArea(hull: Path64, occupied: ReadonlyArray<Path64>): numb
   } catch {
     return undefined
   }
-  return largestNetRegionArea(gapTree)
+  return largestNetRegionDoubledArea(gapTree)
 }
 
 function largestHullGapRegion(
@@ -605,11 +692,13 @@ function largestHullGapRegion(
   if (hull.length < 3) return undefined
   const occupiedTree = new PolyTree64()
   const gapTree = new PolyTree64()
+  const orientedHull = canonicalGridCounterClockwise(hull)
+  if (orientedHull === undefined) return null
   try {
     booleanOpWithPolyTree(ClipType.Union, [...occupied], null, occupiedTree, FillRule.EvenOdd)
     booleanOpWithPolyTree(
       ClipType.Difference,
-      [counterClockwise(hull)],
+      [orientedHull],
       polyTreeToPaths64(occupiedTree),
       gapTree,
       FillRule.NonZero
@@ -618,7 +707,7 @@ function largestHullGapRegion(
     return null
   }
   let selectedPath: Path64 | undefined
-  let selectedArea = 0
+  let selectedDoubledArea = 0n
   const visit = (parent: PolyPath64): boolean => {
     for (let index = 0; index < parent.count; index += 1) {
       let child: PolyPath64
@@ -628,22 +717,16 @@ function largestHullGapRegion(
         return false
       }
       if (!child.isHole && child.polygon !== null) {
-        let netArea = Math.abs(area(child.polygon))
-        for (let holeIndex = 0; holeIndex < child.count; holeIndex += 1) {
-          let hole: PolyPath64
-          try {
-            hole = child.child(holeIndex)
-          } catch {
-            return false
-          }
-          if (hole.isHole && hole.polygon !== null) netArea -= Math.abs(area(hole.polygon))
-        }
-        if (!Number.isFinite(netArea) || netArea < 0) return false
+        const netDoubledArea = netSolidDoubledArea(child)
+        if (netDoubledArea === undefined) return false
         const key = canonicalRing(child.polygon)
         const selectedKey = selectedPath === undefined ? undefined : canonicalRing(selectedPath)
-        if (netArea > selectedArea || (netArea === selectedArea && key < (selectedKey ?? key))) {
+        if (
+          netDoubledArea > selectedDoubledArea ||
+          (netDoubledArea === selectedDoubledArea && key < (selectedKey ?? key))
+        ) {
           selectedPath = child.polygon
-          selectedArea = netArea
+          selectedDoubledArea = netDoubledArea
         }
       }
       if (!visit(child)) return false
@@ -653,10 +736,11 @@ function largestHullGapRegion(
   if (!visit(gapTree)) return null
   if (selectedPath === undefined) return undefined
   const aabb = gridPathAabb(selectedPath)
-  if (aabb === undefined) return null
+  const areaMm2 = doubledGridAreaToMm2(selectedDoubledArea)
+  if (aabb === undefined || areaMm2 === undefined) return null
   return {
     path: selectedPath.map(({ x, y }) => ({ x: fromGrid(x), y: fromGrid(y) })),
-    areaMm2: selectedArea / 1_000_000,
+    areaMm2,
     aabb
   }
 }
@@ -668,7 +752,9 @@ function countEnclosedOccupiedCavities(occupied: ReadonlyArray<Path64>): number 
 function measureEnclosedOccupiedCavities(
   occupied: ReadonlyArray<Path64>
 ): CanonicalEnclosedCavityMetrics | undefined {
-  if (occupied.length === 0) return { count: 0, totalAreaMm2: 0 }
+  if (occupied.length === 0) {
+    return { count: 0, totalAreaMm2: 0, totalDoubledAreaGrid2: '0' }
+  }
   const tree = new PolyTree64()
   try {
     // occupied pieces are solids regardless of source-ring winding
@@ -677,7 +763,7 @@ function measureEnclosedOccupiedCavities(
     return undefined
   }
   let count = 0
-  let totalAreaGrid2 = 0
+  let totalDoubledAreaGrid2 = 0n
   const visit = (parent: PolyPath64): boolean => {
     for (let index = 0; index < parent.count; index += 1) {
       let child: PolyPath64
@@ -688,18 +774,20 @@ function measureEnclosedOccupiedCavities(
       }
       if (child.isHole) {
         if (child.polygon === null) return false
-        const cavityArea = Math.abs(area(child.polygon))
-        if (!Number.isFinite(cavityArea)) return false
+        const cavityDoubledArea = canonicalGridAbsoluteDoubledArea(child.polygon)
+        if (cavityDoubledArea === undefined) return false
         count += 1
-        totalAreaGrid2 += cavityArea
+        totalDoubledAreaGrid2 += cavityDoubledArea
       }
       if (!visit(child)) return false
     }
     return true
   }
-  return visit(tree) && Number.isFinite(totalAreaGrid2)
-    ? { count, totalAreaMm2: totalAreaGrid2 / 1_000_000 }
-    : undefined
+  if (!visit(tree)) return undefined
+  const totalAreaMm2 = doubledGridAreaToMm2(totalDoubledAreaGrid2)
+  return totalAreaMm2 === undefined
+    ? undefined
+    : { count, totalAreaMm2, totalDoubledAreaGrid2: totalDoubledAreaGrid2.toString() }
 }
 
 function envelopeAspectRatio(paths: ReadonlyArray<Path64>): number | undefined {
@@ -724,8 +812,28 @@ function envelopeAspectRatio(paths: ReadonlyArray<Path64>): number | undefined {
   return longSide / shortSide
 }
 
-function largestNetRegionArea(tree: PolyPath64): number | undefined {
-  let largest = 0
+function netSolidDoubledArea(node: PolyPath64): bigint | undefined {
+  if (node.polygon === null) return undefined
+  const outerArea = canonicalGridAbsoluteDoubledArea(node.polygon)
+  if (outerArea === undefined) return undefined
+  let netArea = outerArea
+  for (let holeIndex = 0; holeIndex < node.count; holeIndex += 1) {
+    let hole: PolyPath64
+    try {
+      hole = node.child(holeIndex)
+    } catch {
+      return undefined
+    }
+    if (!hole.isHole || hole.polygon === null) continue
+    const holeArea = canonicalGridAbsoluteDoubledArea(hole.polygon)
+    if (holeArea === undefined) return undefined
+    netArea -= holeArea
+  }
+  return netArea >= 0n ? netArea : undefined
+}
+
+function largestNetRegionDoubledArea(tree: PolyPath64): bigint | undefined {
+  let largest = 0n
   const visit = (parent: PolyPath64): boolean => {
     for (let index = 0; index < parent.count; index += 1) {
       let child: PolyPath64
@@ -735,14 +843,9 @@ function largestNetRegionArea(tree: PolyPath64): number | undefined {
         return false
       }
       if (!child.isHole) {
-        if (child.polygon === null) return false
-        let netArea = Math.abs(area(child.polygon))
-        for (let holeIndex = 0; holeIndex < child.count; holeIndex += 1) {
-          const hole = child.child(holeIndex)
-          if (hole.isHole && hole.polygon !== null) netArea -= Math.abs(area(hole.polygon))
-        }
-        if (!Number.isFinite(netArea) || netArea < 0) return false
-        largest = Math.max(largest, netArea)
+        const netArea = netSolidDoubledArea(child)
+        if (netArea === undefined) return false
+        if (netArea > largest) largest = netArea
       }
       if (!visit(child)) return false
     }
@@ -794,39 +897,4 @@ function measureContactGraph(polygons: ReadonlyArray<InternalPolygonWithBounds>)
     isolatedPieceCount: neighbors.filter((neighborsForPiece) => neighborsForPiece.size === 0).length,
     largestPositiveContactComponentSize
   }
-}
-
-function convexHull(points: ReadonlyArray<{ readonly x: number; readonly y: number }>): Path64 {
-  const unique = [...new Map(points.map((point) => [`${point.x},${point.y}`, point])).values()].sort(
-    (first, second) => first.x - second.x || first.y - second.y
-  )
-  if (unique.length <= 1) return unique
-  const lower: Path64 = []
-  for (const point of unique) {
-    while (lower.length >= 2 && cross(lower.at(-2), lower.at(-1), point) <= 0) lower.pop()
-    lower.push(point)
-  }
-  const upper: Path64 = []
-  for (const point of [...unique].reverse()) {
-    while (upper.length >= 2 && cross(upper.at(-2), upper.at(-1), point) <= 0) upper.pop()
-    upper.push(point)
-  }
-  return [...lower.slice(0, -1), ...upper.slice(0, -1)]
-}
-
-function cross(
-  origin: { readonly x: number; readonly y: number } | undefined,
-  first: { readonly x: number; readonly y: number } | undefined,
-  second: { readonly x: number; readonly y: number }
-): number {
-  if (origin === undefined || first === undefined) return 0
-  return (first.x - origin.x) * (second.y - origin.y) - (first.y - origin.y) * (second.x - origin.x)
-}
-
-function signedArea(path: Path64): number {
-  return area(path)
-}
-
-function counterClockwise(path: Path64): Path64 {
-  return signedArea(path) >= 0 ? path : [...path].reverse()
 }

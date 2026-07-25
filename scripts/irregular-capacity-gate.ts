@@ -543,10 +543,16 @@ async function runArm(
             enclosedCavityCount: cohesionEndpoint.metrics.enclosedCavityCount,
             totalEnclosedCavityAreaMm2:
               cohesionEndpoint.metrics.totalEnclosedCavityAreaMm2,
+            totalEnclosedCavityDoubledAreaGrid2:
+              cohesionEndpoint.metrics.totalEnclosedCavityDoubledAreaGrid2,
             envelopeMaximumSideMm:
               cohesionEndpoint.metrics.envelopeMaximumSideMm,
             envelopeAreaMm2: cohesionEndpoint.metrics.envelopeAreaMm2,
             envelopeSpanMm: cohesionEndpoint.metrics.envelopeSpanMm,
+            envelopeMaximumSideGrid:
+              cohesionEndpoint.metrics.envelopeMaximumSideGrid,
+            envelopeAreaGrid2: cohesionEndpoint.metrics.envelopeAreaGrid2,
+            envelopeSpanGrid: cohesionEndpoint.metrics.envelopeSpanGrid,
             canonicalGeometryHash: cohesionEndpoint.canonicalGeometryHash,
             origin: cohesionEndpoint.origin,
             prefixDepth: cohesionEndpoint.prefixDepth,

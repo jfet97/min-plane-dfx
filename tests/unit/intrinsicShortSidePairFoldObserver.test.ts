@@ -134,8 +134,8 @@ function controlledPromotionOutcome(
     readonly longAxisDepthGrid?: number
     readonly envelopeAreaGrid2?: bigint
     readonly materialDoubledAreaGrid2?: bigint
-    readonly hullGapDoubledAreaGrid2?: number
-    readonly hullDoubledAreaGrid2?: number
+    readonly hullGapDoubledAreaGrid2?: bigint
+    readonly hullDoubledAreaGrid2?: bigint
     readonly isolatedPieceCount?: number
     readonly positiveContactComponentCount?: number
     readonly largestPositiveContactComponentSize?: number
@@ -166,9 +166,9 @@ function controlledPromotionOutcome(
       interlocking: {
         ...interlocking,
         largestOccupiedHullGapDoubledAreaGrid2:
-          input.hullGapDoubledAreaGrid2 ?? 1,
+          (input.hullGapDoubledAreaGrid2 ?? 1n).toString(),
         occupiedHullDoubledAreaGrid2:
-          input.hullDoubledAreaGrid2 ?? 10,
+          (input.hullDoubledAreaGrid2 ?? 10n).toString(),
         isolatedPieceCount: input.isolatedPieceCount ?? 0,
         positiveContactComponentCount:
           input.positiveContactComponentCount ?? 1,
@@ -623,24 +623,24 @@ describe('intrinsic short-side pair-fold observer', () => {
 
     const exactHullEquality = compare(
       controlledPromotionOutcome(base, {
-        hullGapDoubledAreaGrid2: 1,
-        hullDoubledAreaGrid2: 3
+        hullGapDoubledAreaGrid2: 1n,
+        hullDoubledAreaGrid2: 3n
       }),
       controlledPromotionOutcome(base, {
-        hullGapDoubledAreaGrid2: 2,
-        hullDoubledAreaGrid2: 6
+        hullGapDoubledAreaGrid2: 2n,
+        hullDoubledAreaGrid2: 6n
       })
     )
     expect(exactHullEquality.hullGapNotRegressed).toBe(true)
 
     const exactHullRegression = compare(
       controlledPromotionOutcome(base, {
-        hullGapDoubledAreaGrid2: 1,
-        hullDoubledAreaGrid2: 3
+        hullGapDoubledAreaGrid2: 1n,
+        hullDoubledAreaGrid2: 3n
       }),
       controlledPromotionOutcome(base, {
-        hullGapDoubledAreaGrid2: 3,
-        hullDoubledAreaGrid2: 6
+        hullGapDoubledAreaGrid2: 3n,
+        hullDoubledAreaGrid2: 6n
       })
     )
     expect(exactHullRegression).toMatchObject({
