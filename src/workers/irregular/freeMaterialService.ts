@@ -10,7 +10,7 @@ import {
   type PolyPath64,
   PolyTree64
 } from 'clipper2-ts'
-import { Effect, Exit, Layer, Schema } from 'effect'
+import { Effect, Layer } from 'effect'
 import {
   FreeMaterialRegion,
   FreeMaterialSnapshot,
@@ -39,39 +39,9 @@ export const FreeMaterialServiceLive = Layer.succeed(
 /** Creates a free-material service with an explicit local Clipper operation. */
 export function createFreeMaterialService(operation: FreeMaterialOperation): FreeMaterialService {
   return {
-    computeFreeMaterial: (input) =>
-      decodeInput(input).pipe(Effect.flatMap((decoded) => deriveFreeMaterial(decoded, operation))),
-    extendFreeMaterial: (input) =>
-      decodeExtendInput(input).pipe(Effect.flatMap((decoded) => deriveExtendedFreeMaterial(decoded)))
+    computeFreeMaterial: (input) => deriveFreeMaterial(input, operation),
+    extendFreeMaterial: (input) => deriveExtendedFreeMaterial(input)
   }
-}
-
-function decodeInput(
-  input: ComputeFreeMaterialInput
-): Effect.Effect<ComputeFreeMaterialInput, IrregularGeometryInputError> {
-  const decoded = Schema.decodeUnknownExit(ComputeFreeMaterialInput)(input)
-  if (Exit.isFailure(decoded)) {
-    return failInvalidGeometry(
-      'computeFreeMaterial',
-      'free-material input must satisfy its schema.'
-    )
-  }
-
-  return Effect.succeed(decoded.value)
-}
-
-function decodeExtendInput(
-  input: ExtendFreeMaterialInput
-): Effect.Effect<ExtendFreeMaterialInput, IrregularGeometryInputError> {
-  const decoded = Schema.decodeUnknownExit(ExtendFreeMaterialInput)(input)
-  if (Exit.isFailure(decoded)) {
-    return failInvalidGeometry(
-      'extendFreeMaterial',
-      'incremental free-material input must satisfy its schema.'
-    )
-  }
-
-  return Effect.succeed(decoded.value)
 }
 
 function deriveFreeMaterial(

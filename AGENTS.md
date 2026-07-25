@@ -45,6 +45,16 @@ If a task touches Effect APIs, inspect the installed packages in `node_modules` 
   those input checks inside services or algorithms. Runtime checks remain only
   for values derived after decoding, external-library output, arithmetic
   overflow, or invariants that cannot be represented by the input schema.
+- Keep `Schema.Class` out of trusted algorithm hot paths. A type the search
+  produces from decoded input, consumes itself, and never sends across a worker,
+  IPC, or persistence boundary as a schema-backed instance must be a plain
+  class: schema construction
+  revalidates the whole nested value every time, including already-validated
+  nested instances passed by reference. See
+  [`docs/architecture/schema-models.md`](./docs/architecture/schema-models.md).
+  Before adding one, confirm the class itself appears in no encoded schema. If
+  an untrusted boundary carries the same structural shape, declare a separate
+  boundary schema beside it and decode there.
 - No `as any`, `as unknown as`, or `as never` in app code. Prefer typed adapters, discriminated unions, guards, and explicit errors.
 - Avoid non-null assertions in runtime code. Use guards or explicit errors.
 - Use `@effect/platform-node` for Node filesystem/path services. Do not hand-roll FileSystem or Path layers.

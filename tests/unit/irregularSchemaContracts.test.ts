@@ -8,14 +8,21 @@ import {
   IrregularLayout,
   IrregularLayoutScoreSummary,
   IrregularOptimizerSettings,
+  IrregularPlacedPiece,
+  IrregularPlacedPieceSchema,
   IrregularPlacement,
+  IrregularPlacementCandidate,
   IrregularPoint,
   IrregularPolygon,
+  TransformedCollisionGeometry,
+  TransformedCollisionGeometrySchema,
   IrregularPortfolioProgress,
   IrregularPortfolioResult,
   FreeMaterialSnapshot,
+  IrregularTransform,
   IrregularTransformCandidate
 } from '@shared/irregular/domain.js'
+import { PieceId } from '@shared/domain/ids.js'
 import {
   DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS,
   DEFAULT_IRREGULAR_WORKER_TIMEOUT_MS,
@@ -630,6 +637,82 @@ describe('irregular schema contracts', () => {
           sheet: { width: 100, height: 100, label: 'test' },
           regions: [],
           diagnostics: []
+        })
+      )
+    ).toBe(true)
+  })
+})
+
+describe('trusted internal search artifacts', () => {
+  const polygon = new IrregularPolygon({
+    points: [new IrregularPoint({ x: 0, y: 0 }), new IrregularPoint({ x: 4, y: 0 }), new IrregularPoint({ x: 0, y: 3 })]
+  })
+  const bounds = new IrregularBounds({ minX: 0, minY: 0, maxX: 4, maxY: 3 })
+  const transform = new IrregularTransformCandidate({
+    index: 0,
+    rotationDeg: 90,
+    mirrored: false,
+    reason: 'configured'
+  })
+  const geometry = new TransformedCollisionGeometry({
+    sourcePieceId: PieceId.make('piece-1'),
+    transform,
+    polygon,
+    bounds
+  })
+  const placedPiece = new IrregularPlacedPiece({
+    placement: new IrregularPlacement({
+      sourcePieceId: PieceId.make('piece-1'),
+      transform: new IrregularTransform({
+        translateX: 1,
+        translateY: 2,
+        rotationDeg: 90,
+        mirrored: false
+      })
+    }),
+    collisionGeometry: geometry
+  })
+
+  it('keeps internal artifacts plain so construction cannot revalidate nested geometry', () => {
+    // these are produced by the search from already-decoded input and cross no
+    // boundary. Schema construction revalidates the whole nested ring on every
+    // instantiation, which the search performs per placement and per quarter
+    // turn, so they must stay plain classes.
+    for (const artifact of [geometry, placedPiece, new IrregularPlacementCandidate({
+      pieceId: PieceId.make('piece-1'),
+      transform,
+      point: new IrregularPoint({ x: 1, y: 1 }),
+      diagnostics: []
+    })]) {
+      expect(Schema.isSchema(artifact.constructor)).toBe(false)
+    }
+  })
+
+  it('keeps the boundary schemas structurally in step with the plain artifacts', () => {
+    // replay NDJSON and imported JSON still validate these shapes, so the
+    // boundary schema must accept exactly what the internal class produces.
+    const geometryDecoded = decode(TransformedCollisionGeometrySchema, JSON.parse(JSON.stringify(geometry)))
+    const placedDecoded = decode(IrregularPlacedPieceSchema, JSON.parse(JSON.stringify(placedPiece)))
+    expect(Exit.isSuccess(geometryDecoded)).toBe(true)
+    expect(Exit.isSuccess(placedDecoded)).toBe(true)
+    if (Exit.isSuccess(geometryDecoded)) {
+      expect(JSON.parse(JSON.stringify(geometryDecoded.value))).toEqual(
+        JSON.parse(JSON.stringify(geometry))
+      )
+    }
+    if (Exit.isSuccess(placedDecoded)) {
+      expect(JSON.parse(JSON.stringify(placedDecoded.value))).toEqual(
+        JSON.parse(JSON.stringify(placedPiece))
+      )
+    }
+  })
+
+  it('rejects boundary payloads that the plain constructor would have accepted silently', () => {
+    expect(
+      Exit.isFailure(
+        decode(TransformedCollisionGeometrySchema, {
+          ...JSON.parse(JSON.stringify(geometry)),
+          bounds: { minX: 0, minY: 0, maxX: Number.NaN, maxY: 3 }
         })
       )
     ).toBe(true)
