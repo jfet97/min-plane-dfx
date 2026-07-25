@@ -17,7 +17,10 @@ import type { ValidatePlacementInput } from '../../src/workers/irregular/service
 import { IrregularGeometryInputError } from '../../src/workers/irregular/services.js'
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import { ConvexPolygonValidation } from '../../src/workers/irregular/convexPolygonValidation.js'
-import { PlacementValidation } from '../../src/workers/irregular/placementValidation.js'
+import {
+  assessPlacement,
+  PlacementValidation
+} from '../../src/workers/irregular/placementValidation.js'
 
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
@@ -181,7 +184,29 @@ describe('PlacementValidation', () => {
     expect(failure).toBeInstanceOf(IrregularGeometryInputError)
     if (!(failure instanceof IrregularGeometryInputError))
       throw new Error('expected geometry input error')
+    expect(failure.operation).toBe('validatePlacement')
     expect(failure.message).toBe('moving translation must produce finite polygon coordinates.')
+  })
+
+  it('preserves typed failure provenance through the pure assessment path', () => {
+    const moving = transformedGeometry('overflow-moving-pure', [
+      point(0, 0),
+      point(Number.MAX_VALUE, 0),
+      point(Number.MAX_VALUE, 1),
+      point(0, 1)
+    ])
+    const assessment = assessPlacement(
+      input(moving, candidate(moving, Number.MAX_VALUE, 0)),
+      true
+    )
+
+    expect('failure' in assessment).toBe(true)
+    if (!('failure' in assessment)) throw new Error('expected geometry input error')
+    expect(assessment.failure).toBeInstanceOf(IrregularGeometryInputError)
+    expect(assessment.failure.operation).toBe('validatePlacement')
+    expect(assessment.failure.message).toBe(
+      'moving translation must produce finite polygon coordinates.'
+    )
   })
 
   it('rejects non-finite coordinates in structural polygon records', () => {

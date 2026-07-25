@@ -58,20 +58,26 @@ function validate(input: ValidatePlacementInput): Effect.Effect<void, IrregularG
   )
 }
 
-function assess(
+/**
+ * Pure exact placement assessment.
+ *
+ * The geometry here never suspends: it validates translated convex polygons and
+ * tests overlap synchronously. Candidate generation calls it once per candidate
+ * point, so wrapping it in `Effect` cost one effect construction and one fiber
+ * step per point for no benefit. The `Effect` surface is preserved by the thin
+ * wrappers below for callers outside the hot path.
+ */
+export function assessPlacement(
   input: ValidatePlacementInput | Omit<ValidatePlacementInput, 'sheet'>,
   enforceSheetBounds: boolean
-): Effect.Effect<PlacementAssessment, IrregularGeometryInputError> {
+): PlacementAssessment | { readonly failure: IrregularGeometryInputError } {
   const movingPolygon = translateAndValidatePolygon(
     input.moving.polygon,
     input.candidate.point,
     'moving'
   )
   if ('message' in movingPolygon) {
-    return failInvalidGeometry(
-      'validatePlacement',
-      movingPolygon.message
-    )
+    return { failure: invalidGeometryFailure(movingPolygon.message) }
   }
 
   const placedPolygons: ValidatedPolygonWithBounds[] = []
@@ -84,13 +90,14 @@ function assess(
   if (indexedEntries !== undefined) {
     for (const entry of indexedEntries) {
       if (entry.validationMessage !== undefined) {
-        return failInvalidGeometry('validatePlacement', entry.validationMessage)
+        return { failure: invalidGeometryFailure(entry.validationMessage) }
       }
       if (entry.translated === undefined) {
-        return failInvalidGeometry(
-          'validatePlacement',
-          'placed translation must produce finite polygon coordinates.'
-        )
+        return {
+          failure: invalidGeometryFailure(
+            'placed translation must produce finite polygon coordinates.'
+          )
+        }
       }
       placedPolygons.push(entry.translated)
     }
@@ -105,10 +112,7 @@ function assess(
         'placed'
       )
       if ('message' in placedPolygon) {
-        return failInvalidGeometry(
-          'validatePlacement',
-          placedPolygon.message
-        )
+        return { failure: invalidGeometryFailure(placedPolygon.message) }
       }
 
       placedPolygons.push(placedPolygon)
@@ -120,24 +124,41 @@ function assess(
     'sheet' in input &&
     !isInsideSheet(movingPolygon.polygon.points, input.sheet.width, input.sheet.height)
   ) {
-    return Effect.succeed({
-      legal: false,
-      message: 'moving polygon must remain inside the sheet.'
-    })
+    return { legal: false, message: 'moving polygon must remain inside the sheet.' }
   }
 
   for (const placedPolygon of placedPolygons) {
     const overlap = polygonsHavePositiveAreaOverlap(movingPolygon, placedPolygon)
-    if ('message' in overlap) return failInvalidGeometry('validatePlacement', overlap.message)
+    if ('message' in overlap) {
+      return { failure: invalidGeometryFailure(overlap.message) }
+    }
     if (overlap.value) {
-      return Effect.succeed({
+      return {
         legal: false,
         message: 'moving polygon has positive-area overlap with placed collision geometry.'
-      })
+      }
     }
   }
 
-  return Effect.succeed({ legal: true, message: '' })
+  return { legal: true, message: '' }
+}
+
+/** Bridges the pure assessment back to the Effect surface for non-hot callers. */
+function assess(
+  input: ValidatePlacementInput | Omit<ValidatePlacementInput, 'sheet'>,
+  enforceSheetBounds: boolean
+): Effect.Effect<PlacementAssessment, IrregularGeometryInputError> {
+  const assessment = assessPlacement(input, enforceSheetBounds)
+  return 'failure' in assessment
+    ? Effect.fail(assessment.failure)
+    : Effect.succeed(assessment)
+}
+
+function invalidGeometryFailure(message: string): IrregularGeometryInputError {
+  return new IrregularGeometryInputError({
+    operation: 'validatePlacement',
+    message
+  })
 }
 
 function isInsideSheet(

@@ -34,7 +34,7 @@ import { ConvexPolygonValidation } from './convexPolygonValidation.js'
 import type { ConvexPolygonWinding } from './convexPolygonValidation.js'
 import { areDisjoint, boundsForPoints } from './convexBounds.js'
 import { GeometryPredicates } from './geometryPredicates.js'
-import { PlacementValidation } from './placementValidation.js'
+import { assessPlacement } from './placementValidation.js'
 import { fromGrid, toGridMm } from './clipper2OffsetPolicy.js'
 import {
   DEFAULT_NFP_CONSTRUCTION_ALGORITHM,
@@ -868,10 +868,15 @@ function generatePlacementCandidatesUncached(
           moving: input.moving,
           candidate
         }
-        const legal = sheetlessNfp
-          ? yield* PlacementValidation.checkSheetless(validationInput)
-          : yield* PlacementValidation.check({ ...validationInput, sheet: input.sheet })
-        if (!legal) {
+        // Assessed synchronously: this runs once per candidate point, and the
+        // assessment never suspends, so an Effect per point was pure overhead.
+        const assessment = sheetlessNfp
+          ? assessPlacement(validationInput, false)
+          : assessPlacement({ ...validationInput, sheet: input.sheet }, true)
+        if ('failure' in assessment) {
+          return yield* Effect.fail(assessment.failure)
+        }
+        if (!assessment.legal) {
           if (provenance !== undefined) provenance.liveConvexRejected += 1
           continue
         }

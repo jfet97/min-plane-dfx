@@ -724,23 +724,37 @@ function canonicalPlacedGeometryKeyAtTranslation(
   translateX: number,
   translateY: number
 ): string {
-  const translatedPoints = placed.collisionGeometry.polygon.points.map((point) => ({
-    x: point.x + translateX,
-    y: point.y + translateY
-  }))
-  return canonicalCollisionPolygonKey(translatedPoints)
+  return canonicalCollisionPolygonKey(
+    placed.collisionGeometry.polygon.points,
+    translateX,
+    translateY
+  )
 }
 
-/** Canonicalizes one absolute collision ring independently of start vertex and winding. */
+/**
+ * Canonicalizes one absolute collision ring independently of start vertex and
+ * winding.
+ *
+ * The translation is applied while reading each vertex rather than by
+ * materializing a translated copy. Anchoring probes this key once per placed
+ * piece per candidate offset, so the copy was allocating a fresh array of fresh
+ * points on every call and discarding it immediately. The emitted key is
+ * unchanged.
+ */
 export function canonicalCollisionPolygonKey(
-  points: ReadonlyArray<{ readonly x: number; readonly y: number }>
+  points: ReadonlyArray<{ readonly x: number; readonly y: number }>,
+  translateX = 0,
+  translateY = 0
 ): string {
-  const canonicalPoints: ReadonlyArray<CanonicalPoint> = points.map(
-    (point): CanonicalPoint => [
-      normalizeCanonicalCoordinate(point.x),
-      normalizeCanonicalCoordinate(point.y)
+  const canonicalPoints: CanonicalPoint[] = new Array(points.length)
+  for (let index = 0; index < points.length; index += 1) {
+    const point = points[index]
+    if (point === undefined) continue
+    canonicalPoints[index] = [
+      normalizeCanonicalCoordinate(point.x + translateX),
+      normalizeCanonicalCoordinate(point.y + translateY)
     ]
-  )
+  }
   return canonicalRecord([['polygon-ring', canonicalRingKey(canonicalPoints)]])
 }
 
