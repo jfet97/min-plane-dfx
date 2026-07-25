@@ -1088,6 +1088,36 @@ describe('IrregularLayoutScorer', () => {
     expect(nextGridPoint).not.toBe(above)
   })
 
+  it('keeps inline translated ring keys identical to explicitly translated rings', () => {
+    const points = [
+      { x: 26.875999999999998, y: -0 },
+      { x: 84.27799999999999, y: 0 },
+      { x: 111.154, y: 75.25200000000002 }
+    ]
+    const variants = [
+      points,
+      [...points.slice(1), ...points.slice(0, 1)],
+      [...points].reverse()
+    ]
+    const translations = [
+      { x: 0, y: 0 },
+      { x: -26.876, y: 75.252 },
+      { x: 0.000_500_000_000_000_1, y: -0.000_499_999_999_999_9 }
+    ]
+
+    for (const variant of variants) {
+      for (const translation of translations) {
+        const explicitlyTranslated = variant.map((candidate) => ({
+          x: candidate.x + translation.x,
+          y: candidate.y + translation.y
+        }))
+        expect(
+          canonicalCollisionPolygonKey(variant, translation.x, translation.y)
+        ).toBe(canonicalCollisionPolygonKey(explicitlyTranslated))
+      }
+    }
+  })
+
   it('does not reuse free material after geometry or sheet inputs change', async () => {
     const snapshot = new FreeMaterialSnapshot({
       sheet: new SheetSpec({ width: 10, height: 10, label: 'snapshot sheet' }),
