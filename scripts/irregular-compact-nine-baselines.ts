@@ -19,10 +19,8 @@ const BASELINES: ReadonlyArray<Baseline> = [
   {
     fixture: 'triangle-20',
     sheet: '2000x2700',
-    collisionIdentitySha256:
-      '371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127',
-    fittedCanonicalSha256:
-      'b4d1fd9af8a1ecb4a17f1031546c1dbbb5afb19b2d99e41bdb646e52084092f7',
+    collisionIdentitySha256: '371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127',
+    fittedCanonicalSha256: 'b4d1fd9af8a1ecb4a17f1031546c1dbbb5afb19b2d99e41bdb646e52084092f7',
     placedCount: 20,
     unplacedCount: 0,
     maximumAreaMm2: 74_428.143126,
@@ -32,10 +30,8 @@ const BASELINES: ReadonlyArray<Baseline> = [
   {
     fixture: 'mixed-61',
     sheet: '2000x2700',
-    collisionIdentitySha256:
-      '3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742',
-    fittedCanonicalSha256:
-      'ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b',
+    collisionIdentitySha256: '3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742',
+    fittedCanonicalSha256: 'ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b',
     placedCount: 61,
     unplacedCount: 0,
     maximumAreaMm2: 391_605.850174,
@@ -45,10 +41,8 @@ const BASELINES: ReadonlyArray<Baseline> = [
   {
     fixture: 'shapes-17',
     sheet: '2000x2700',
-    collisionIdentitySha256:
-      '1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d',
-    fittedCanonicalSha256:
-      '490194ca505f545cfb5880209d20b2f48cdcffbc847c8686705fd12661b5e7bf',
+    collisionIdentitySha256: '1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d',
+    fittedCanonicalSha256: '490194ca505f545cfb5880209d20b2f48cdcffbc847c8686705fd12661b5e7bf',
     placedCount: 17,
     unplacedCount: 0,
     maximumAreaMm2: 281_233.148068,
@@ -58,10 +52,8 @@ const BASELINES: ReadonlyArray<Baseline> = [
   {
     fixture: 'triangle-20',
     sheet: '600x400',
-    collisionIdentitySha256:
-      '371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127',
-    fittedCanonicalSha256:
-      'b4d1fd9af8a1ecb4a17f1031546c1dbbb5afb19b2d99e41bdb646e52084092f7',
+    collisionIdentitySha256: '371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127',
+    fittedCanonicalSha256: 'b4d1fd9af8a1ecb4a17f1031546c1dbbb5afb19b2d99e41bdb646e52084092f7',
     placedCount: 20,
     unplacedCount: 0,
     maximumAreaMm2: 74_428.143126,
@@ -71,10 +63,8 @@ const BASELINES: ReadonlyArray<Baseline> = [
   {
     fixture: 'mixed-61',
     sheet: '600x400',
-    collisionIdentitySha256:
-      '2c53f3123d5d57ab5e120717ae1e49046bb574925c49c4a33ed4febe7e81e414',
-    fittedCanonicalSha256:
-      '39e74c34e0cfcd4929ba3dde53d1b0215ca2c48e383297b15922f07115569f38',
+    collisionIdentitySha256: '2c53f3123d5d57ab5e120717ae1e49046bb574925c49c4a33ed4febe7e81e414',
+    fittedCanonicalSha256: '39e74c34e0cfcd4929ba3dde53d1b0215ca2c48e383297b15922f07115569f38',
     placedCount: 25,
     unplacedCount: 36,
     maximumAreaMm2: 239_484.9666,
@@ -84,10 +74,8 @@ const BASELINES: ReadonlyArray<Baseline> = [
   {
     fixture: 'shapes-17',
     sheet: '600x400',
-    collisionIdentitySha256:
-      '01b2060d87752bb36eebfd4eb8602709687d5cb00c71b8feaec14a6e7cf9ba12',
-    fittedCanonicalSha256:
-      '4472adc8ddfcc26af748adcfeb220e049a4f0e814cb17a99c0dc092db903921e',
+    collisionIdentitySha256: '01b2060d87752bb36eebfd4eb8602709687d5cb00c71b8feaec14a6e7cf9ba12',
+    fittedCanonicalSha256: '4472adc8ddfcc26af748adcfeb220e049a4f0e814cb17a99c0dc092db903921e',
     placedCount: 14,
     unplacedCount: 3,
     maximumAreaMm2: 232_178.021694,
@@ -97,10 +85,8 @@ const BASELINES: ReadonlyArray<Baseline> = [
   {
     fixture: 'triangle-20',
     sheet: '300x300',
-    collisionIdentitySha256:
-      '0f5befd7d02fc111be47ee447fab7f8778f06ae05d045448f22a916d66949410',
-    fittedCanonicalSha256:
-      '2f236b79c7c49a999daf5363e257bbda6b8562239571c6fedab2485cffb38c35',
+    collisionIdentitySha256: '0f5befd7d02fc111be47ee447fab7f8778f06ae05d045448f22a916d66949410',
+    fittedCanonicalSha256: '2f236b79c7c49a999daf5363e257bbda6b8562239571c6fedab2485cffb38c35',
     placedCount: 17,
     unplacedCount: 3,
     maximumAreaMm2: 78_811.504488,
@@ -110,10 +96,8 @@ const BASELINES: ReadonlyArray<Baseline> = [
   {
     fixture: 'mixed-61',
     sheet: '300x300',
-    collisionIdentitySha256:
-      'bb22df3517b4f2bbbdebc1d35704dbf4374f96d264af919a4c8d29dc2168fa33',
-    fittedCanonicalSha256:
-      '37d7bf9c37dfe2b9702bf8df73791782006178eb570ac043b23f1ca20ca22c0b',
+    collisionIdentitySha256: 'bb22df3517b4f2bbbdebc1d35704dbf4374f96d264af919a4c8d29dc2168fa33',
+    fittedCanonicalSha256: '37d7bf9c37dfe2b9702bf8df73791782006178eb570ac043b23f1ca20ca22c0b',
     placedCount: 6,
     unplacedCount: 55,
     maximumAreaMm2: 89_504.369008,
@@ -123,10 +107,8 @@ const BASELINES: ReadonlyArray<Baseline> = [
   {
     fixture: 'shapes-17',
     sheet: '300x300',
-    collisionIdentitySha256:
-      'e4ad1ce1c7fa26e7a00ba38a5d9c11e1908ebf753031ff4811420d5097be7c71',
-    fittedCanonicalSha256:
-      'bccfa5a4b7db4b5009a8c0f12d7c6f308c9a72550df3feb218355f33a5c1ef18',
+    collisionIdentitySha256: 'e4ad1ce1c7fa26e7a00ba38a5d9c11e1908ebf753031ff4811420d5097be7c71',
+    fittedCanonicalSha256: 'bccfa5a4b7db4b5009a8c0f12d7c6f308c9a72550df3feb218355f33a5c1ef18',
     placedCount: 5,
     unplacedCount: 12,
     maximumAreaMm2: 87_791.951625,
@@ -183,25 +165,17 @@ function runBaseline(baseline: Baseline, outputDirectory: string): Promise<void>
         return
       }
       reject(
-        new Error(
-          `${baseline.fixture} ${baseline.sheet} exited with ${code ?? `signal ${signal}`}`
-        )
+        new Error(`${baseline.fixture} ${baseline.sheet} exited with ${code ?? `signal ${signal}`}`)
       )
     })
   })
 }
 
-function focusedExpectedArguments(
-  baseline: Baseline
-): ReadonlyArray<string> {
-  const triangleHash =
-    '371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127'
-  const mixedHash =
-    '3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742'
-  const shapesProtectedHash =
-    'c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a'
-  const shapesPromotedHash =
-    '1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d'
+function focusedExpectedArguments(baseline: Baseline): ReadonlyArray<string> {
+  const triangleHash = '371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127'
+  const mixedHash = '3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742'
+  const shapesProtectedHash = 'c640c06f662050f8a132168f63988c40ba41f2ebc57dc50277a91119b4b4980a'
+  const shapesPromotedHash = '1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d'
   const values =
     baseline.fixture === 'triangle-20' && baseline.sheet !== '300x300'
       ? {
@@ -336,7 +310,13 @@ interface ShortSideProfileReport {
   readonly source:
     | 'guarded-stage1-winner'
     | 'terminal-pair-fold-winner'
+    | 'terminal-multi-row-shelf-winner'
     | 'compact-fallback'
+  readonly profileOutcome:
+    | 'directional-success'
+    | 'short-side-satisfied-by-compact'
+    | 'directional-miss'
+  readonly shortAxisFillRatio: number
   readonly observerStatus: string
   readonly selectedRotationDeg?: 0 | 90
   readonly placedCount: number
@@ -359,13 +339,8 @@ interface ShortSideProfileReport {
 const compactReports: Array<CompactReport> = []
 const shortSideReports: Array<ShortSideProfileReport> = []
 for (const baseline of BASELINES) {
-  const prefix = join(
-    outputDirectory,
-    `${baseline.fixture}-${baseline.sheet}`
-  )
-  compactReports.push(
-    JSON.parse(await readFile(`${prefix}.json`, 'utf8')) as CompactReport
-  )
+  const prefix = join(outputDirectory, `${baseline.fixture}-${baseline.sheet}`)
+  compactReports.push(JSON.parse(await readFile(`${prefix}.json`, 'utf8')) as CompactReport)
   shortSideReports.push(
     JSON.parse(
       await readFile(`${prefix}.short-side-profile.json`, 'utf8')
@@ -378,17 +353,10 @@ for (let index = 0; index < BASELINES.length; index += 1) {
   const baseline = BASELINES[index]
   const compactReport = compactReports[index]
   const shortSideReport = shortSideReports[index]
-  if (
-    baseline === undefined ||
-    compactReport === undefined ||
-    shortSideReport === undefined
-  ) {
+  if (baseline === undefined || compactReport === undefined || shortSideReport === undefined) {
     throw new Error(`missing layout report at matrix index ${index}`)
   }
-  const compactPngPath = join(
-    outputDirectory,
-    `${baseline.fixture}-${baseline.sheet}.png`
-  )
+  const compactPngPath = join(outputDirectory, `${baseline.fixture}-${baseline.sheet}.png`)
   const shortSidePngPath = join(
     outputDirectory,
     `${baseline.fixture}-${baseline.sheet}.short-side-profile.png`
@@ -421,12 +389,9 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       source: 'production-compact',
       placedCount: compactReport.result.placedCount,
       unplacedCount: compactReport.result.unplacedCount,
-      collisionIdentitySha256:
-        compactReport.result.collisionIdentitySha256,
-      fittedCanonicalSha256:
-        compactReport.result.fittedCanonicalSha256,
-      canonicalCavities:
-        compactReport.result.canonicalTopology?.enclosedCavityCount,
+      collisionIdentitySha256: compactReport.result.collisionIdentitySha256,
+      fittedCanonicalSha256: compactReport.result.fittedCanonicalSha256,
+      canonicalCavities: compactReport.result.canonicalTopology?.enclosedCavityCount,
       bounds: compactReport.result.bounds,
       exactPiecePartition: compactReport.checks.exactPiecePartition,
       passed: compactReport.passed,
@@ -438,45 +403,48 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       sheet: baseline.sheet,
       profile: 'short-side',
       source: shortSideReport.source,
+      profileOutcome: shortSideReport.profileOutcome,
+      shortAxisFillRatio: shortSideReport.shortAxisFillRatio,
       observerStatus: shortSideReport.observerStatus,
       selectedRotationDeg: shortSideReport.selectedRotationDeg,
       placedCount: shortSideReport.placedCount,
       unplacedCount: shortSideReport.unplacedCount,
-      collisionIdentitySha256:
-        shortSideReport.collisionIdentitySha256,
-      fittedCanonicalSha256:
-        shortSideReport.fittedCanonicalSha256,
-      canonicalCavities:
-        shortSideReport.canonicalTopology?.enclosedCavityCount,
+      collisionIdentitySha256: shortSideReport.collisionIdentitySha256,
+      fittedCanonicalSha256: shortSideReport.fittedCanonicalSha256,
+      canonicalCavities: shortSideReport.canonicalTopology?.enclosedCavityCount,
       bounds: shortSideReport.bounds,
       exactPiecePartition: shortSideReport.exactPiecePartition,
-      passed:
-        shortSideReport.exactPiecePartition &&
-        compactReport.passed,
+      passed: shortSideReport.exactPiecePartition && compactReport.passed,
       svgPath: shortSideReport.svgPath,
       pngPath: shortSidePngPath
     }
   )
 }
 
-const compactLayoutCount = layoutRecords.filter(
-  ({ profile }) => profile === 'compact'
-).length
-const shortSideLayoutCount = layoutRecords.filter(
-  ({ profile }) => profile === 'short-side'
-).length
+const compactLayoutCount = layoutRecords.filter(({ profile }) => profile === 'compact').length
+const shortSideLayoutCount = layoutRecords.filter(({ profile }) => profile === 'short-side').length
 const guardedStage1WinnerCount = layoutRecords.filter(
-  ({ profile, source }) =>
-    profile === 'short-side' && source === 'guarded-stage1-winner'
+  ({ profile, source }) => profile === 'short-side' && source === 'guarded-stage1-winner'
 ).length
 const terminalPairFoldWinnerCount = layoutRecords.filter(
-  ({ profile, source }) =>
-    profile === 'short-side' &&
-    source === 'terminal-pair-fold-winner'
+  ({ profile, source }) => profile === 'short-side' && source === 'terminal-pair-fold-winner'
+).length
+const terminalMultiRowShelfWinnerCount = layoutRecords.filter(
+  ({ profile, source }) => profile === 'short-side' && source === 'terminal-multi-row-shelf-winner'
 ).length
 const compactFallbackCount = layoutRecords.filter(
-  ({ profile, source }) =>
-    profile === 'short-side' && source === 'compact-fallback'
+  ({ profile, source }) => profile === 'short-side' && source === 'compact-fallback'
+).length
+const directionalSuccessCount = layoutRecords.filter(
+  ({ profile, profileOutcome }) =>
+    profile === 'short-side' && profileOutcome === 'directional-success'
+).length
+const shortSideSatisfiedByCompactCount = layoutRecords.filter(
+  ({ profile, profileOutcome }) =>
+    profile === 'short-side' && profileOutcome === 'short-side-satisfied-by-compact'
+).length
+const directionalMissCount = layoutRecords.filter(
+  ({ profile, profileOutcome }) => profile === 'short-side' && profileOutcome === 'directional-miss'
 ).length
 const layoutContractPassed =
   layoutRecords.length === 18 &&
@@ -484,27 +452,30 @@ const layoutContractPassed =
   shortSideLayoutCount === 9 &&
   guardedStage1WinnerCount +
     terminalPairFoldWinnerCount +
+    terminalMultiRowShelfWinnerCount +
     compactFallbackCount ===
     9 &&
-  layoutRecords.every(({ exactPiecePartition, passed }) =>
-    Boolean(exactPiecePartition && passed)
-  )
+  directionalSuccessCount + shortSideSatisfiedByCompactCount === 9 &&
+  directionalMissCount === 0 &&
+  layoutRecords.every(({ exactPiecePartition, passed }) => Boolean(exactPiecePartition && passed))
 const summaryPath = join(outputDirectory, 'summary.json')
 await writeFile(
   summaryPath,
   `${JSON.stringify(
     {
       generatedAt: new Date().toISOString(),
-      passed:
-        outcomes.every(({ passed }) => passed) &&
-        layoutContractPassed,
+      passed: outcomes.every(({ passed }) => passed) && layoutContractPassed,
       caseCount: BASELINES.length,
       layoutCount: layoutRecords.length,
       compactLayoutCount,
       shortSideLayoutCount,
       guardedStage1WinnerCount,
       terminalPairFoldWinnerCount,
+      terminalMultiRowShelfWinnerCount,
       compactFallbackCount,
+      directionalSuccessCount,
+      shortSideSatisfiedByCompactCount,
+      directionalMissCount,
       outcomes,
       layouts: layoutRecords
     },
@@ -568,9 +539,7 @@ const checksumEntries = [
 const checksumPath = join(outputDirectory, 'SHA256SUMS')
 await writeFile(
   checksumPath,
-  `${checksumEntries
-    .map(({ sha256, name }) => `${sha256}  ${name}`)
-    .join('\n')}\n`
+  `${checksumEntries.map(({ sha256, name }) => `${sha256}  ${name}`).join('\n')}\n`
 )
 for (const { sha256, name } of checksumEntries) {
   const verified = createHash('sha256')
@@ -580,9 +549,7 @@ for (const { sha256, name } of checksumEntries) {
     throw new Error(`provenance checksum mismatch for ${name}`)
   }
 }
-const passed =
-  outcomes.every((outcome) => outcome.passed) &&
-  layoutContractPassed
+const passed = outcomes.every((outcome) => outcome.passed) && layoutContractPassed
 console.log(
   JSON.stringify({
     outputDirectory,
@@ -592,7 +559,11 @@ console.log(
     shortSideLayoutCount,
     guardedStage1WinnerCount,
     terminalPairFoldWinnerCount,
+    terminalMultiRowShelfWinnerCount,
     compactFallbackCount,
+    directionalSuccessCount,
+    shortSideSatisfiedByCompactCount,
+    directionalMissCount,
     passed
   })
 )

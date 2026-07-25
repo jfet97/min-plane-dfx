@@ -508,6 +508,26 @@ const shortSideProfilePolygons =
       })
 const shortSideProfileBounds =
   shortSideProfilePolygons === undefined ? undefined : layoutBounds(shortSideProfilePolygons)
+const shortSideProfileShortAxisSpanMm =
+  shortSideProfileBounds === undefined
+    ? undefined
+    : args.sheet.width < args.sheet.height
+      ? shortSideProfileBounds.width
+      : args.sheet.width > args.sheet.height
+        ? shortSideProfileBounds.height
+        : Math.max(shortSideProfileBounds.width, shortSideProfileBounds.height)
+const shortSideProfileShortAxisFillRatio =
+  shortSideProfileShortAxisSpanMm === undefined
+    ? undefined
+    : shortSideProfileShortAxisSpanMm / Math.min(args.sheet.width, args.sheet.height)
+const shortSideProfileOutcome =
+  shortSideProfileSource === undefined || shortSideProfileShortAxisFillRatio === undefined
+    ? undefined
+    : shortSideProfileShortAxisFillRatio < 0.8
+      ? ('directional-miss' as const)
+      : shortSideProfileSource === 'compact-fallback'
+        ? ('short-side-satisfied-by-compact' as const)
+        : ('directional-success' as const)
 const shortSideProfileTopology =
   shortSideProfilePlacedCollisionGeometries === undefined
     ? undefined
@@ -596,6 +616,8 @@ if (shortSideProfileSource !== undefined && shortSideProfileReportPath !== undef
           height: args.sheet.height
         },
         source: shortSideProfileSource,
+        profileOutcome: shortSideProfileOutcome,
+        shortAxisFillRatio: shortSideProfileShortAxisFillRatio,
         observerStatus: shortSideObserverTrace?.status,
         selectedRotationDeg:
           shortSideProfileSource === 'guarded-stage1-winner'
@@ -695,7 +717,11 @@ const checks = {
       shortSideProfileUnplacedPieceIds !== undefined &&
       shortSideProfileSvgPath !== undefined &&
       shortSideProfileReportPath !== undefined),
-  shortSideProfileExactPiecePartition
+  shortSideProfileExactPiecePartition,
+  shortSideProfileDirectionalContract:
+    !args.captureShortSideObserver ||
+    shortSideProfileOutcome === 'directional-success' ||
+    shortSideProfileOutcome === 'short-side-satisfied-by-compact'
 }
 const passed = Object.values(checks).every(Boolean)
 const report = jsonSafe({
