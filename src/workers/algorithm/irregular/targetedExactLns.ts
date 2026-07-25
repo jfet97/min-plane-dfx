@@ -13,6 +13,10 @@ import {
   type CanonicalGridAabb,
   type CanonicalLayoutStructuralAnalysis
 } from '../../irregular/canonicalLayoutGeometry.js'
+import {
+  compareBigInts,
+  compareCanonicalGridRatios
+} from '../../irregular/canonicalGridMath.js'
 import { IrregularGeometryInputError } from '../../irregular/services.js'
 import {
   measureRelaxationMetrics,
@@ -377,7 +381,7 @@ export function runTargetedExactLns(
                 readonly key: string
               } => candidate !== undefined
             )
-            .toSorted(compareFinalists)
+            .toSorted(compareTargetedExactLnsFinalists)
           const candidate = rankedFinalists[0]
           const legal =
             candidate !== undefined &&
@@ -611,18 +615,60 @@ function enumerateExactQuarterTurnFinalists(
   return [...byKey.values()]
 }
 
-function compareFinalists(
+export function compareTargetedExactLnsFinalists(
   first: { readonly metrics: IntrinsicRelaxationMetrics; readonly key: string },
   second: { readonly metrics: IntrinsicRelaxationMetrics; readonly key: string }
 ): number {
-  const pairs: ReadonlyArray<readonly [number, number]> = [
+  const topologyPairs: ReadonlyArray<readonly [number, number]> = [
     [first.metrics.topology.enclosedCavityCount, second.metrics.topology.enclosedCavityCount],
     [first.metrics.topology.positiveContactComponentCount, second.metrics.topology.positiveContactComponentCount],
     [first.metrics.topology.isolatedPieceCount, second.metrics.topology.isolatedPieceCount],
-    [-first.metrics.topology.largestPositiveContactComponentSize, -second.metrics.topology.largestPositiveContactComponentSize],
-    [first.metrics.topology.largestOccupiedHullGapRatio, second.metrics.topology.largestOccupiedHullGapRatio],
-    [first.metrics.maxSide, second.metrics.maxSide],
-    [first.metrics.area, second.metrics.area],
+    [-first.metrics.topology.largestPositiveContactComponentSize, -second.metrics.topology.largestPositiveContactComponentSize]
+  ]
+  for (const [left, right] of topologyPairs) {
+    if (left !== right) return left < right ? -1 : 1
+  }
+  const firstExact = first.metrics.exact
+  const secondExact = second.metrics.exact
+  const exactHull =
+    firstExact === undefined || secondExact === undefined
+      ? undefined
+      : compareCanonicalGridRatios(
+          BigInt(firstExact.largestHullGapDoubledAreaGrid2),
+          BigInt(firstExact.hullDoubledAreaGrid2),
+          BigInt(secondExact.largestHullGapDoubledAreaGrid2),
+          BigInt(secondExact.hullDoubledAreaGrid2)
+        )
+  if (exactHull !== undefined && exactHull !== 0) return exactHull
+  if (
+    exactHull === undefined &&
+    first.metrics.topology.largestOccupiedHullGapRatio !==
+      second.metrics.topology.largestOccupiedHullGapRatio
+  ) {
+    return first.metrics.topology.largestOccupiedHullGapRatio <
+      second.metrics.topology.largestOccupiedHullGapRatio
+      ? -1
+      : 1
+  }
+  const exactEnvelope =
+    firstExact === undefined || secondExact === undefined
+      ? undefined
+      : compareBigInts(
+            BigInt(firstExact.maximumSideGrid),
+            BigInt(secondExact.maximumSideGrid)
+          ) ||
+        compareBigInts(
+          BigInt(firstExact.envelopeAreaGrid2),
+          BigInt(secondExact.envelopeAreaGrid2)
+        )
+  if (exactEnvelope !== undefined && exactEnvelope !== 0) return exactEnvelope
+  const pairs: ReadonlyArray<readonly [number, number]> = [
+    ...(exactEnvelope === undefined
+      ? [
+          [first.metrics.maxSide, second.metrics.maxSide] as const,
+          [first.metrics.area, second.metrics.area] as const
+        ]
+      : []),
     [-first.metrics.dominantNearCompleteStructuralContactCount, -second.metrics.dominantNearCompleteStructuralContactCount],
     [-first.metrics.nearCompleteStructuralContactCount, -second.metrics.nearCompleteStructuralContactCount],
     [-first.metrics.sharedCollisionBoundaryContactUnits, -second.metrics.sharedCollisionBoundaryContactUnits]

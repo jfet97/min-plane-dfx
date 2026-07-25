@@ -73,10 +73,12 @@ import type { IntrinsicCapacityPrefixSource } from './intrinsicCapacityPrefixes.
 import type { IntrinsicCapacityEndpoint } from './intrinsicCapacityEndpoint.js'
 import {
   observeIntrinsicShortSideOrientations,
+  withMeasuredIntrinsicShortSideObserverTrace,
   type IntrinsicShortSideObserverTrace
 } from './intrinsicShortSideObserver.js'
 import {
   observeIntrinsicShortSidePairFold,
+  withMeasuredIntrinsicShortSidePairFoldTrace,
   type IntrinsicShortSideConstructionKind,
   type IntrinsicShortSidePairFoldTrace
 } from './intrinsicShortSidePairFoldObserver.js'
@@ -1121,10 +1123,10 @@ function coordinateIntrinsicSharedArchive(
           selection: 'archive-endpoint',
           canonicalGeometryHash: winnerHash
         })
-        intrinsicShortSideObserverTrace = {
+        intrinsicShortSideObserverTrace = withMeasuredIntrinsicShortSideObserverTrace({
           ...intrinsicShortSideObserverTrace,
           outputInfluence: 'selected'
-        }
+        })
         archiveDiagnostics.push(
           intrinsicShortSideProfileDiagnostic(
             'selected',
@@ -1184,10 +1186,10 @@ function coordinateIntrinsicSharedArchive(
             selection: pairFoldOutcome.trace.constructionKind ?? 'pair-fold',
             canonicalGeometryHash: pairFoldOutcome.trace.canonicalGeometryHash
           })
-          intrinsicShortSidePairFoldTrace = {
+          intrinsicShortSidePairFoldTrace = withMeasuredIntrinsicShortSidePairFoldTrace({
             ...pairFoldOutcome.trace,
             outputInfluence: 'selected'
-          }
+          })
           archiveDiagnostics.push(
             intrinsicShortSideProfileDiagnostic(
               'selected',

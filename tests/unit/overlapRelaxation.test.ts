@@ -11,7 +11,11 @@ import {
   IrregularTransformCandidate,
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
-import { relaxOverlappingLayout } from '../../src/workers/algorithm/irregular/overlapRelaxation.js'
+import {
+  compareIntrinsicRelaxationMetrics,
+  relaxOverlappingLayout,
+  type IntrinsicRelaxationMetrics
+} from '../../src/workers/algorithm/irregular/overlapRelaxation.js'
 import { relaxOverlappingLayoutV1 } from '../../src/workers/algorithm/irregular/overlapRelaxationV1.js'
 
 function placedSquare(pieceId: string, x: number, y: number, size = 2): IrregularPlacedPiece {
@@ -44,6 +48,41 @@ function placedSquare(pieceId: string, x: number, y: number, size = 2): Irregula
 }
 
 describe('relaxOverlappingLayout', () => {
+  it('orders one-grid-square envelope differences above Number.MAX_SAFE_INTEGER exactly', () => {
+    const metric = (area: string): IntrinsicRelaxationMetrics => ({
+      width: 1_000_000_000,
+      height: 1_000_000_000,
+      maxSide: 1_000_000_000,
+      area: 1_000_000_000_000_000_000,
+      span: 2_000_000_000,
+      topology: {
+        enclosedCavityCount: 0,
+        largestOccupiedHullGapRatio: 0,
+        occupiedEnvelopeAspectRatio: 1,
+        positiveContactComponentCount: 1,
+        isolatedPieceCount: 0,
+        largestPositiveContactComponentSize: 1,
+        largestPositiveContactComponentRatio: 1
+      },
+      nearCompleteStructuralContactCount: 0,
+      dominantNearCompleteStructuralContactCount: 0,
+      sharedCollisionBoundaryContactUnits: 0,
+      exact: {
+        maximumSideGrid: 1_000_000_000,
+        envelopeAreaGrid2: area,
+        largestHullGapDoubledAreaGrid2: '0',
+        hullDoubledAreaGrid2: '1'
+      }
+    })
+
+    expect(
+      compareIntrinsicRelaxationMetrics(
+        metric('999999999999999999'),
+        metric('1000000000000000000')
+      )
+    ).toBeLessThan(0)
+  })
+
   it('keeps the incumbent immutable when an isotropic squeeze cannot be separated', async () => {
     const incumbent = [placedSquare('a', 0, 0), placedSquare('b', 2, 2)]
     const translations = incumbent.map(({ placement }) => ({ ...placement.transform }))

@@ -15,7 +15,8 @@ import {
 import {
   INTRINSIC_SHORT_SIDE_OBSERVER_MAX_RUNTIME_MS,
   INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES,
-  observeIntrinsicShortSideOrientations
+  observeIntrinsicShortSideOrientations,
+  withMeasuredIntrinsicShortSideObserverTrace
 } from '../../src/workers/algorithm/irregular/intrinsicShortSideObserver.js'
 import type { IntrinsicSharedArchiveEndpoint } from '../../src/workers/algorithm/irregular/intrinsicSharedArchivePortfolio.js'
 import type { IntrinsicStrictCompletedMetrics } from '../../src/workers/algorithm/irregular/intrinsicStrictDecoder.js'
@@ -365,6 +366,13 @@ describe('intrinsic short-side observer', () => {
     })
     expect(trace.serializedTraceBytes).toBeLessThanOrEqual(
       INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES
+    )
+    const selected = withMeasuredIntrinsicShortSideObserverTrace({
+      ...trace,
+      outputInfluence: 'selected'
+    })
+    expect(selected.serializedTraceBytes).toBe(
+      Buffer.byteLength(JSON.stringify(selected), 'utf8')
     )
   })
 

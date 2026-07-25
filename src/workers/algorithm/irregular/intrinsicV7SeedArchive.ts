@@ -12,6 +12,7 @@ import {
   measureCanonicalLayoutTopologyExact,
   placedCollisionWorldGridPath
 } from '../../irregular/canonicalLayoutGeometry.js'
+import { compareBigInts } from '../../irregular/canonicalGridMath.js'
 import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import type { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel.js'
 import type {
@@ -96,7 +97,7 @@ export interface IntrinsicV7NumericPressure {
 }
 
 export interface IntrinsicV7LegalEndpointMetric {
-  readonly envelopeAreaGrid2: number
+  readonly envelopeAreaGrid2: string
   readonly envelopeMaximumSideGrid: number
   readonly enclosedCavityCount: number
   readonly hullGapRatio: number
@@ -825,8 +826,8 @@ function makeV7LegalEndpoint(
     terminalIdentity,
     placedCollisionGeometries: placed,
     metric: {
-      envelopeAreaGrid2: Math.round(envelope.areaMm2 * 1_000_000),
-      envelopeMaximumSideGrid: Math.round(envelope.maximumSideMm * 1_000),
+      envelopeAreaGrid2: envelope.envelopeAreaGrid2,
+      envelopeMaximumSideGrid: envelope.maximumSideGrid,
       enclosedCavityCount: cavities.count,
       hullGapRatio: topologyExact.topology.largestOccupiedHullGapRatio,
       hullGapDoubledAreaGrid2: topologyExact.exactHullGapDoubledAreaGrid2,
@@ -837,7 +838,7 @@ function makeV7LegalEndpoint(
         topologyExact.topology.largestPositiveContactComponentRatio,
       dominantContacts: contacts.dominantStructuralContacts,
       totalContacts: contacts.totalStructuralContacts,
-      envelopeSpanGrid: Math.round(envelope.spanMm * 1_000)
+      envelopeSpanGrid: envelope.spanGrid
     }
   }
 }
@@ -928,7 +929,10 @@ function addEndpointOnce(
 
 function compareV7Area(first: IntrinsicV7Endpoint, second: IntrinsicV7Endpoint): number {
   return (
-    first.metric.envelopeAreaGrid2 - second.metric.envelopeAreaGrid2 ||
+    compareBigInts(
+      BigInt(first.metric.envelopeAreaGrid2),
+      BigInt(second.metric.envelopeAreaGrid2)
+    ) ||
     first.metric.envelopeMaximumSideGrid - second.metric.envelopeMaximumSideGrid ||
     first.stateKey.localeCompare(second.stateKey)
   )
@@ -941,7 +945,10 @@ function compareV7Topology(first: IntrinsicV7Endpoint, second: IntrinsicV7Endpoi
     first.metric.positiveContactComponentCount - second.metric.positiveContactComponentCount ||
     second.metric.largestPositiveContactComponentRatio - first.metric.largestPositiveContactComponentRatio ||
     compareHullGapRatio(first.metric, second.metric) ||
-    first.metric.envelopeAreaGrid2 - second.metric.envelopeAreaGrid2 ||
+    compareBigInts(
+      BigInt(first.metric.envelopeAreaGrid2),
+      BigInt(second.metric.envelopeAreaGrid2)
+    ) ||
     first.metric.envelopeMaximumSideGrid - second.metric.envelopeMaximumSideGrid ||
     first.metric.envelopeSpanGrid - second.metric.envelopeSpanGrid ||
     second.metric.dominantContacts - first.metric.dominantContacts ||
@@ -952,7 +959,10 @@ function compareV7Topology(first: IntrinsicV7Endpoint, second: IntrinsicV7Endpoi
 
 function compareV7P(first: IntrinsicV7Endpoint, second: IntrinsicV7Endpoint): number {
   return (
-    first.metric.envelopeAreaGrid2 - second.metric.envelopeAreaGrid2 ||
+    compareBigInts(
+      BigInt(first.metric.envelopeAreaGrid2),
+      BigInt(second.metric.envelopeAreaGrid2)
+    ) ||
     first.metric.envelopeMaximumSideGrid - second.metric.envelopeMaximumSideGrid ||
     first.metric.enclosedCavityCount - second.metric.enclosedCavityCount ||
     compareHullGapRatio(first.metric, second.metric) ||
@@ -969,7 +979,7 @@ function dominatesV7P(first: IntrinsicV7Endpoint, second: IntrinsicV7Endpoint): 
   const firstMetric = first.metric
   const secondMetric = second.metric
   const noWorse =
-    firstMetric.envelopeAreaGrid2 <= secondMetric.envelopeAreaGrid2 &&
+    BigInt(firstMetric.envelopeAreaGrid2) <= BigInt(secondMetric.envelopeAreaGrid2) &&
     firstMetric.envelopeMaximumSideGrid <= secondMetric.envelopeMaximumSideGrid &&
     firstMetric.enclosedCavityCount <= secondMetric.enclosedCavityCount &&
     compareHullGapRatio(firstMetric, secondMetric) <= 0 &&
@@ -979,7 +989,7 @@ function dominatesV7P(first: IntrinsicV7Endpoint, second: IntrinsicV7Endpoint): 
     firstMetric.dominantContacts >= secondMetric.dominantContacts &&
     firstMetric.totalContacts >= secondMetric.totalContacts
   const strictlyBetter =
-    firstMetric.envelopeAreaGrid2 < secondMetric.envelopeAreaGrid2 ||
+    BigInt(firstMetric.envelopeAreaGrid2) < BigInt(secondMetric.envelopeAreaGrid2) ||
     firstMetric.envelopeMaximumSideGrid < secondMetric.envelopeMaximumSideGrid ||
     firstMetric.enclosedCavityCount < secondMetric.enclosedCavityCount ||
     compareHullGapRatio(firstMetric, secondMetric) < 0 ||

@@ -446,20 +446,15 @@ Evidence:
 
 ### P6: canonical-grid metric exactness
 
-Status: audited; high-priority follow-up, not folded into the experimental
-Short Side profile.
+Status: implemented and production-gated.
 
 Clipper2 remains the Boolean geometry authority and robust predicates remain
-the unsnapped source-geometry authority. The audit found that several older
-topology, gap-region, capacity, and strict/archive comparators convert canonical
-integer paths or area accumulators back to `Number` before ranking. The next
-tranche should introduce one shared BigInt shoelace/cross/rational-comparison
-utility and migrate consumers incrementally.
-
-Promotion gate: unchanged current hashes and winners, deterministic resume,
-near-policy-limit paths whose area or hull differs by one grid square, and
-translation-invariant capacity/Short Side winner tests. Do not add a numeric
-epsilon as a substitute.
+the unsnapped source-geometry authority. Shared canonical-grid helpers now keep
+shoelace areas, cross products, envelope products, and hull ratios exact through
+topology, gap-region, strict/archive, capacity, relaxation/LNS, V7, and Short
+Side ranking. The production matrix preserves the accepted hashes and winners;
+targeted regressions cover one-grid-square area differences near the coordinate
+policy limit. Numeric epsilon remains forbidden as a substitute.
 
 ## Open-Source Mechanism Disposition
 

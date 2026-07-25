@@ -237,18 +237,18 @@ export function observeIntrinsicShortSideOrientations(input: {
     observerWinnerCanonicalGeometryHash: winner?.canonicalGeometryHash,
     observerWinnerRotationDeg: winner?.selectedRotationDeg
   } satisfies IntrinsicShortSideObserverTrace
-  const materialized = withMeasuredTraceSize({
+  const measured = withMeasuredIntrinsicShortSideObserverTrace({
     ...observed,
-    runtimeMs: Number.MAX_VALUE
-  })
-  const measured = {
-    ...materialized,
     runtimeMs: Math.max(0, now() - startedAt)
-  }
+  })
   if (measured.runtimeMs > INTRINSIC_SHORT_SIDE_OBSERVER_MAX_RUNTIME_MS) {
     return censoredTrace(measured, 'runtime-budget-exceeded', true)
   }
-  if (measured.serializedTraceBytes <= INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES) {
+  const selectedSize = withMeasuredIntrinsicShortSideObserverTrace({
+    ...measured,
+    outputInfluence: 'selected'
+  }).serializedTraceBytes
+  if (selectedSize <= INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES) {
     return measured
   }
   return censoredTrace(measured, 'trace-budget-exceeded', false)
@@ -719,7 +719,7 @@ function hashCanonicalIdentity(identity: string | undefined): string | undefined
   return identity === undefined ? undefined : createHash('sha256').update(identity).digest('hex')
 }
 
-function withMeasuredTraceSize(
+export function withMeasuredIntrinsicShortSideObserverTrace(
   trace: IntrinsicShortSideObserverTrace
 ): IntrinsicShortSideObserverTrace {
   const firstMeasurement = Buffer.byteLength(JSON.stringify(trace), 'utf8')
@@ -733,7 +733,7 @@ function censoredTrace(
   status: 'runtime-budget-exceeded' | 'trace-budget-exceeded',
   runtimeBudgetExceeded: boolean
 ): IntrinsicShortSideObserverTrace {
-  return withMeasuredTraceSize({
+  return withMeasuredIntrinsicShortSideObserverTrace({
     ...trace,
     status,
     runtimeBudgetExceeded,

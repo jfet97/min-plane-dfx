@@ -491,17 +491,18 @@ and cooperative NFP/IFP checkpoints, and the final composite trace is checked
 against the common `1 MiB` cap. These are runaway guards, not working limits:
 the largest measured case uses about `3.2%` of the observer budget.
 
-This remains an experimental benchmark-side sibling. The production worker and
-UI do not enable the capture callbacks, and the coordinator still returns the
-unchanged Compact result. Promotion here means selection inside the recorded
-Short Side profile only.
+This is now a production-selectable sibling profile. The UI persists the choice,
+the worker executes Compact first and Short Side second in the same sequential
+process, and the coordinator returns an admitted Short Side layout or an
+explicit unchanged-Compact fallback. Capture callbacks remain evidence hooks;
+they are not the activation mechanism.
 
-An exactness audit found broader pre-existing Number conversions after
-canonical Clipper2 Boolean operations in topology, gap-region, capacity, and
-strict/archive ranking. Those paths require a separate shared BigInt
-shoelace/cross/rational-comparison tranche with near-policy-limit
-one-grid-square regressions. They are not silently treated as solved by this
-Short Side change.
+The canonical-grid exactness tranche is also implemented. Shared BigInt
+shoelace, cross-product, envelope-product, and rational-comparison helpers now
+preserve Clipper2-grid decisions through strict/archive, capacity, topology,
+gap-region, relaxation/LNS, V7, and Short Side ranking. Near-policy-limit
+regressions distinguish layouts whose canonical areas differ by one grid square
+even above `Number.MAX_SAFE_INTEGER`.
 
 ### Rejected Stage 8 variant
 

@@ -15,6 +15,7 @@ import {
 import {
   evaluateIntrinsicShortSideContactStripPromotion,
   observeIntrinsicShortSidePairFold,
+  withMeasuredIntrinsicShortSidePairFoldTrace,
   type IntrinsicShortSidePairFoldOutcome,
   type IntrinsicShortSidePairFoldStatus
 } from '../../src/workers/algorithm/irregular/intrinsicShortSidePairFoldObserver.js'
@@ -455,6 +456,22 @@ describe('intrinsic short-side pair-fold observer', () => {
     expect(measured.trace.contactStripPromotion).toBeDefined()
     expect(outcome.trace.status).toBe('trace-cap')
     expect(outcome.placedCollisionGeometries).toBeUndefined()
+  })
+
+  it('remeasures the final selected trace after output influence changes', async () => {
+    const measured = await observe({
+      pieces: acceptedPieces,
+      now: () => 0,
+      currentRssBytes: () => 0
+    })
+    const selected = withMeasuredIntrinsicShortSidePairFoldTrace({
+      ...measured.trace,
+      outputInfluence: 'selected'
+    })
+
+    expect(selected.serializedTraceBytes).toBe(
+      Buffer.byteLength(JSON.stringify(selected), 'utf8')
+    )
   })
 
   it('promotes one exact contact strip identically at q0 and q90', async () => {

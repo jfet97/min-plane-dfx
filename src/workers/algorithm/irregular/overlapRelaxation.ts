@@ -11,6 +11,10 @@ import {
   measureCanonicalLayoutTopologyExact,
   type CanonicalLayoutTopology
 } from '../../irregular/canonicalLayoutGeometry.js'
+import {
+  compareBigInts,
+  compareCanonicalGridRatios
+} from '../../irregular/canonicalGridMath.js'
 import { boundsForPoints } from '../../irregular/convexBounds.js'
 import { measureConvexSatPenetration } from '../../irregular/convexSatPenetration.js'
 import type { InternalPoint } from '../../irregular/internalGeometry.js'
@@ -161,7 +165,7 @@ export function relaxOverlappingLayout(
       if (
         attempt !== undefined &&
         isAdmissibleRelaxationImprovement(incumbentMetrics, attempt.metrics) &&
-        compareMetrics(attempt.metrics, selectedMetrics) < 0
+        compareIntrinsicRelaxationMetrics(attempt.metrics, selectedMetrics) < 0
       ) {
         selected = attempt.placed
         selectedMetrics = attempt.metrics
@@ -668,14 +672,51 @@ export function isAdmissibleRelaxationImprovement(
   return contactFloorsPreserved && intrinsicGuardsPreserved && strictImprovement
 }
 
-function compareMetrics(
+export function compareIntrinsicRelaxationMetrics(
   first: IntrinsicRelaxationMetrics,
   second: IntrinsicRelaxationMetrics
 ): number {
+  const exactEnvelope =
+    first.exact === undefined || second.exact === undefined
+      ? undefined
+      : compareBigInts(
+            BigInt(first.exact.maximumSideGrid),
+            BigInt(second.exact.maximumSideGrid)
+          ) ||
+        compareBigInts(
+          BigInt(first.exact.envelopeAreaGrid2),
+          BigInt(second.exact.envelopeAreaGrid2)
+        )
+  if (exactEnvelope !== undefined && exactEnvelope !== 0) return exactEnvelope
+  const fallbackEnvelope: ReadonlyArray<readonly [number, number]> =
+    exactEnvelope === undefined
+      ? [
+          [first.maxSide, second.maxSide],
+          [first.area, second.area]
+        ]
+      : []
+  for (const [left, right] of fallbackEnvelope) {
+    if (left !== right) return left < right ? -1 : 1
+  }
+  const exactHull =
+    first.exact === undefined || second.exact === undefined
+      ? undefined
+      : compareCanonicalGridRatios(
+          BigInt(first.exact.largestHullGapDoubledAreaGrid2),
+          BigInt(first.exact.hullDoubledAreaGrid2),
+          BigInt(second.exact.largestHullGapDoubledAreaGrid2),
+          BigInt(second.exact.hullDoubledAreaGrid2)
+        )
+  if (exactHull !== undefined && exactHull !== 0) return exactHull
   const pairs: ReadonlyArray<readonly [number, number]> = [
-    [first.maxSide, second.maxSide],
-    [first.area, second.area],
-    [first.topology.largestOccupiedHullGapRatio, second.topology.largestOccupiedHullGapRatio],
+    ...(exactHull === undefined
+      ? [
+          [
+            first.topology.largestOccupiedHullGapRatio,
+            second.topology.largestOccupiedHullGapRatio
+          ] as const
+        ]
+      : []),
     [first.topology.positiveContactComponentCount, second.topology.positiveContactComponentCount],
     [first.topology.isolatedPieceCount, second.topology.isolatedPieceCount],
     [-first.nearCompleteStructuralContactCount, -second.nearCompleteStructuralContactCount]

@@ -586,7 +586,7 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
       runtimeMs: Math.max(0, runtime.now() - runtime.startedAt),
       serializedTraceBytes: 0
     })
-    if (trace.serializedTraceBytes > runtime.maximumTraceBytes) {
+    if (selectedOutputTraceSize(trace) > runtime.maximumTraceBytes) {
       return failedOutcome(
         input,
         runtime,
@@ -978,7 +978,7 @@ function finalizePlacedLayout(input: {
       input.selectedUpperPieceId
     )
   }
-  if (outcome.trace.serializedTraceBytes > input.runtime.maximumTraceBytes) {
+  if (selectedOutputTraceSize(outcome.trace) > input.runtime.maximumTraceBytes) {
     return failedOutcome(
       input.input,
       input.runtime,
@@ -1342,7 +1342,9 @@ function failedOutcome(
   }
 }
 
-function measureTraceSize(trace: IntrinsicShortSidePairFoldTrace): IntrinsicShortSidePairFoldTrace {
+export function withMeasuredIntrinsicShortSidePairFoldTrace(
+  trace: IntrinsicShortSidePairFoldTrace
+): IntrinsicShortSidePairFoldTrace {
   const first = {
     ...trace,
     serializedTraceBytes: Buffer.byteLength(JSON.stringify(trace), 'utf8')
@@ -1351,4 +1353,15 @@ function measureTraceSize(trace: IntrinsicShortSidePairFoldTrace): IntrinsicShor
     ...first,
     serializedTraceBytes: Buffer.byteLength(JSON.stringify(first), 'utf8')
   }
+}
+
+function measureTraceSize(trace: IntrinsicShortSidePairFoldTrace): IntrinsicShortSidePairFoldTrace {
+  return withMeasuredIntrinsicShortSidePairFoldTrace(trace)
+}
+
+function selectedOutputTraceSize(trace: IntrinsicShortSidePairFoldTrace): number {
+  return withMeasuredIntrinsicShortSidePairFoldTrace({
+    ...trace,
+    outputInfluence: 'selected'
+  }).serializedTraceBytes
 }
