@@ -48,7 +48,7 @@ remains the default profile and retains its exact established output.
 
 ## Reproduction
 
-The recorded final-source run at source commit `2f308bb` used
+The recorded final-source run at source commit `31d760c` used
 `pnpm gate:compact-nine-baselines` and reproduced the established canonical
 collision and fitted hashes for all 18 layouts. Earlier development runs
 produced the same geometry; their trace bookkeeping is not part of this

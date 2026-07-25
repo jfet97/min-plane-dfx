@@ -5,9 +5,9 @@
     "width": 600,
     "height": 400
   },
-  "sourceCommit": "2f308bb2c7283805243f68f78bb2e3467fd7067f",
+  "sourceCommit": "31d760ccf19078a3eb8165434a66be57942138fc",
   "runtime": {
-    "elapsedMs": 16282.414208,
+    "elapsedMs": 16076.656040999998,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -887,7 +887,7 @@
       "selectedCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
       "consumedCandidateEvaluations": 0,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 0.7023750000007567,
+      "runtimeMs": 0.7014589999998861,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -911,9 +911,9 @@
       "geometricParetoEligibleEndpointCount": 2,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 30.626667000000452,
+      "runtimeMs": 30.401416999999128,
       "runtimeBudgetExceeded": false,
-      "serializedTraceBytes": 43470,
+      "serializedTraceBytes": 43469,
       "endpoints": [
         {
           "archiveIndex": 0,

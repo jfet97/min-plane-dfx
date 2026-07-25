@@ -5,9 +5,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "2f308bb2c7283805243f68f78bb2e3467fd7067f",
+  "sourceCommit": "31d760ccf19078a3eb8165434a66be57942138fc",
   "runtime": {
-    "elapsedMs": 14402.29775,
+    "elapsedMs": 14156.789416000001,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -1539,7 +1539,7 @@
       "selectedCanonicalGeometryHash": "1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d",
       "consumedCandidateEvaluations": 8035,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 1814.9835000000003,
+      "runtimeMs": 1785.5036660000005,
       "outputInfluence": "selected"
     }
   },
