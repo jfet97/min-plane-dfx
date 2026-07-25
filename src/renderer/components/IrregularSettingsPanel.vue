@@ -25,7 +25,12 @@ const currentSettings = computed(() => props.settings ?? makeDefaultIrregularNes
 const optimizer = computed(() => currentSettings.value.optimizer)
 const geometry = computed(() => currentSettings.value.geometry)
 const uiState = computed(() => irregularSettingsUiState(currentSettings.value))
-const compactArchiveActive = computed(() => uiState.value.mode === 'compact-shared-archive')
+const compactArchiveActive = computed(
+  () =>
+    uiState.value.mode === 'compact-shared-archive' ||
+    uiState.value.mode === 'compact-short-side'
+)
+const shortSideProfileActive = computed(() => uiState.value.mode === 'compact-short-side')
 const configuredRotationsText = computed(() => optimizer.value.configuredRotationDeg.join(', '))
 const transformCapHelp = computed(() => {
   const cap = optimizer.value.transformCap
@@ -98,6 +103,13 @@ function useCompactQualityProfile(): void {
   emit('update', applyCompactQualityPreset(currentSettings.value))
 }
 
+function updateObjectiveProfile(event: Event): void {
+  updateOptimizer({
+    intrinsicObjectiveProfileId:
+      inputValue(event) === 'short-side' ? 'short-side' : 'compact'
+  })
+}
+
 function setConfiguredRotations(event: Event): void {
   const rotations = inputValue(event)
     .split(',')
@@ -109,7 +121,7 @@ function setConfiguredRotations(event: Event): void {
 watch(
   currentSettings,
   (settings) => {
-    if (irregularSettingsUiState(settings).mode !== 'compact-shared-archive') {
+    if (irregularSettingsUiState(settings).mode === 'legacy-requires-migration') {
       useCompactQualityProfile()
     }
   },
@@ -122,19 +134,46 @@ watch(
     <div class="mode-summary compact-active">
       <div class="mode-heading">
         <strong>Convex polygon nesting</strong>
-        <span class="mode-badge">Compact · shared archive</span>
+        <span class="mode-badge">
+          {{ shortSideProfileActive ? 'Compact · Short Side' : 'Compact · shared archive' }}
+        </span>
       </div>
       <p>
-        Builds and ranks complete layouts in one sheet-independent shared archive. Requested-sheet
-        fit at 0° or 90° is applied afterward.
+        {{
+          shortSideProfileActive
+            ? 'Builds Compact first, then runs one bounded exact Short Side selector inside the same worker. If it has no legal improvement, Compact remains the result.'
+            : 'Builds and ranks complete layouts in one sheet-independent shared archive. Requested-sheet fit at 0° or 90° is applied afterward.'
+        }}
       </p>
       <p v-if="!compactArchiveActive" class="warning">
         Updating saved legacy settings to the current Compact profile.
       </p>
       <p class="field-help">
-        Shared archive on · GA off. Only geometry and orientation controls affect this production
-        path.
+        Shared archive on · GA off · one sequential algorithm worker. Only objective, geometry,
+        and orientation controls affect this production path.
       </p>
+    </div>
+
+    <h3 title="Selects the terminal objective after the protected Compact archive has settled.">
+      Objective
+    </h3>
+    <div class="grid">
+      <label
+        title="Compact keeps the settled sheet-independent winner. Short Side retains that construction, then selects an admitted legal directional layout or honestly falls back to Compact."
+      >
+        Compact profile
+        <select
+          :value="optimizer.intrinsicObjectiveProfileId"
+          @change="updateObjectiveProfile"
+        >
+          <option value="compact">Compact</option>
+          <option value="short-side">Compact · Short Side</option>
+        </select>
+        <span class="field-help">
+          Short Side is sheet-aware only at its final bounded selector; it does not change the
+          protected Compact constructor or start another worker.
+        </span>
+      </label>
     </div>
 
     <h3 title="Controls how source curves and padding become conservative collision geometry.">

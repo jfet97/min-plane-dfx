@@ -318,12 +318,7 @@ function buildSyntheticStrategyResult(
   const algorithm = buildSyntheticAlgorithmBenchmark(session)
   return new NestingStrategyResultModel({
     strategyRunId: subRun.subRunId,
-    strategyId:
-      subRun.layout?.kind === 'irregular'
-        ? subRun.layout.source === 'shared-archive'
-          ? 'irregular-convex-shared-archive'
-          : 'irregular-convex-windowed-beam'
-        : 'maxrects-beam-search',
+    strategyId: strategyIdForSubRun(subRun),
     strategyLabel: `Subrun ${subRun.index + 1}`,
     status,
     sortedPieceIds: [...subRun.requestPieceIds],
@@ -333,6 +328,14 @@ function buildSyntheticStrategyResult(
     stats: buildSyntheticStats(subRun.requestPieceIds.length, algorithm),
     warnings: []
   })
+}
+
+function strategyIdForSubRun(subRun: NestingSubRun): string {
+  if (subRun.layout?.kind !== 'irregular') return 'maxrects-beam-search'
+  if (subRun.layout.source !== 'shared-archive') return 'irregular-convex-windowed-beam'
+  return subRun.options.irregularSettings?.optimizer.intrinsicObjectiveProfileId === 'short-side'
+    ? 'irregular-convex-compact-short-side'
+    : 'irregular-convex-shared-archive'
 }
 
 function buildAggregatedResult(session: CsvRunSession, csvImportId: string): NestingResult {

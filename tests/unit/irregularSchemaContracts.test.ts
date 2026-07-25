@@ -20,6 +20,7 @@ import {
   DEFAULT_IRREGULAR_OPTIMIZER_SETTINGS,
   DEFAULT_IRREGULAR_WORKER_TIMEOUT_MS,
   makeCompactQualityIrregularOptimizerSettings,
+  makeCompactShortSideIrregularOptimizerSettings,
   makeDefaultIrregularNestingSettings,
   makeDerivedOrientationIrregularOptimizerSettings,
   makeFastIdentityIrregularOptimizerSettings,
@@ -55,6 +56,7 @@ describe('irregular schema contracts', () => {
     expect(first.optimizer.localCandidateFanout).toBe(4)
     expect(first.optimizer.localRepairBudget).toBe(0)
     expect(first.optimizer.intrinsicSharedArchiveEnabled).toBe(true)
+    expect(first.optimizer.intrinsicObjectiveProfileId).toBe('compact')
     expect(first.optimizer.transformCap).toBe(8)
     expect(first.optimizer.edgeAlignmentEnabled).toBe(true)
     expect(first.optimizer.gaEnabled).toBe(false)
@@ -106,6 +108,7 @@ describe('irregular schema contracts', () => {
       localCandidateFanout: 4,
       localRepairBudget: 0,
       intrinsicSharedArchiveEnabled: true,
+      intrinsicObjectiveProfileId: 'compact',
       transformCap: 8,
       configuredRotationEnabled: true,
       edgeAlignmentEnabled: true,
@@ -113,6 +116,27 @@ describe('irregular schema contracts', () => {
       gaEnabled: false,
       placementPolicyId: 'edge-contact-then-balanced-compactness'
     })
+  })
+
+  it('provides a schema-backed Short Side Compact objective without changing the Compact constructor', () => {
+    const shortSide = makeCompactShortSideIrregularOptimizerSettings()
+
+    expect(shortSide).toMatchObject({
+      intrinsicSharedArchiveEnabled: true,
+      intrinsicObjectiveProfileId: 'short-side',
+      placementPolicyId: 'edge-contact-then-balanced-compactness',
+      gaEnabled: false,
+      baselineOnly: true
+    })
+  })
+
+  it('rejects a Short Side objective that would fall back to a non-Compact execution path', () => {
+    const invalid = decode(IrregularOptimizerSettings, {
+      ...makeCompactShortSideIrregularOptimizerSettings(),
+      intrinsicSharedArchiveEnabled: false
+    })
+
+    expect(Exit.isFailure(invalid)).toBe(true)
   })
 
   it('decodes older incomplete optimizer settings to the safe profile', () => {
@@ -129,6 +153,7 @@ describe('irregular schema contracts', () => {
     expect(decoded.value.localCandidateFanout).toBe(4)
     expect(decoded.value.localRepairBudget).toBe(0)
     expect(decoded.value.intrinsicSharedArchiveEnabled).toBe(false)
+    expect(decoded.value.intrinsicObjectiveProfileId).toBe('compact')
     expect(decoded.value.edgeAlignmentEnabled).toBe(true)
     expect(decoded.value.gaEnabled).toBe(false)
     expect(decoded.value.baselineOnly).toBe(true)

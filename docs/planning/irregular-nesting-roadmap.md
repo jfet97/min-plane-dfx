@@ -314,8 +314,12 @@ width-four Stage 4 rejected at `1163bd3`; exact one-row Stage 5 rejected at
 `999e9fb`; exact terminal pair fold accepted at `2645e7c`; exact multi-row
 terminal shelf accepted at `d57b7d6`; generic stable-baseline shelf orientation
 rejected and reverted after `9193f26`; exact contact-driven directional strip
-accepted as an experimental Stage 8 gate; production Compact influence remains
-zero and no worker or UI path enables the sibling profile yet.
+accepted as an experimental Stage 8 gate. The accepted terminal sequence is
+now exposed as the schema-backed production `short-side` Compact objective;
+ordinary Compact remains the default and retains its settled hash contract.
+The UI and worker use the same single sequential algorithm execution. Short
+Side may select only an admitted canonical-legal all-piece layout and otherwise
+records an explicit Compact/capacity fallback.
 
 The zero-search archive observer establishes exact q0/q90 legality, hard
 cavity/hull eligibility, the existing intrinsic geometric Pareto front,

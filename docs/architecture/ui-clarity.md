@@ -28,8 +28,14 @@ near-angle deduplication are not UI knobs: Compact derives them per collision
 polygon from curve sag and piece scale. The production settings surface does not
 expose beam, local-scoring, terminal-repair, or GA controls: Compact does not
 consume them, so showing them would imply behavior they cannot influence.
-Saved legacy settings are migrated to the current Compact profile when this
-panel opens.
+The objective selector has two production Compact profiles: ordinary Compact
+keeps the settled intrinsic winner, while Compact Short Side runs its bounded
+exact terminal selector only after that same construction has settled. Short
+Side has one sequential worker execution, reports its real selector phase, and
+either returns an admitted legal directional layout or reports an explicit
+Compact fallback. It never starts a second search worker or exposes the legacy
+ordinary `short-side-fill` beam. Saved legacy settings are migrated to the
+current Compact profile when this panel opens.
 
 Do not invent result previews, scores, or history that were not emitted by the worker.
 

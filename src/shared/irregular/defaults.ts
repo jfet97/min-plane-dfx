@@ -45,6 +45,7 @@ const BASE_IRREGULAR_OPTIMIZER_SETTINGS = new IrregularOptimizerSettings({
   localCandidateFanout: DEFAULT_IRREGULAR_LOCAL_CANDIDATE_FANOUT,
   localRepairBudget: 0,
   intrinsicSharedArchiveEnabled: false,
+  intrinsicObjectiveProfileId: 'compact',
   transformCap: 16,
   transformMinimumEdgeLengthMm: 1,
   transformAngleDeduplicationToleranceDeg: 0.01,
@@ -159,6 +160,16 @@ export function makeCompactQualityIrregularOptimizerSettings(
     baselineOnly: true,
     gaEnabled: false,
     placementPolicyId: 'edge-contact-then-balanced-compactness',
+    ...overrides
+  })
+}
+
+/** Creates the Compact profile that applies the bounded Short Side terminal selector. */
+export function makeCompactShortSideIrregularOptimizerSettings(
+  overrides: IrregularOptimizerSettingsOverrides = {}
+): IrregularOptimizerSettings {
+  return makeCompactQualityIrregularOptimizerSettings({
+    intrinsicObjectiveProfileId: 'short-side',
     ...overrides
   })
 }

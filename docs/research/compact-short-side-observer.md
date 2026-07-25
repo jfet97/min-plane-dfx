@@ -6,6 +6,23 @@ Can an alternative Compact profile substantially fill the requested short
 axis while remaining compact along the requested long axis, without reviving the historical
 ordinary `short-side-fill` beam or contaminating production Compact?
 
+## Production activation
+
+The accepted sibling is now a schema-backed production objective profile rather
+than a benchmark-only callback. `intrinsicObjectiveProfileId: 'short-side'`
+preserves the normal protected Compact/cohort execution and then runs the
+accepted terminal sequence inside that same worker: guarded q0/q90 archive
+selection, followed on a miss by pair fold, multi-row shelf, and contact strip.
+Every result remains canonical-legal and has complete placed/unplaced
+accounting. An inadmissible, bounded, square-sheet, or unavailable terminal
+result keeps the Compact/capacity layout and emits an explicit fallback
+diagnostic; it is not represented as a directional success.
+
+This activation does not change ordinary Compact defaults or their canonical
+hashes. It also does not run concurrent algorithm work: the existing Electron
+renderer/main/worker boundary remains, and all Short Side stages advance
+sequentially inside that one algorithm worker execution.
+
 The first experiment is deliberately smaller than a new search lane. It
 observes every settled complete Compact archive endpoint at q0/q90, performs no
 placement or candidate evaluation, and cannot change output.

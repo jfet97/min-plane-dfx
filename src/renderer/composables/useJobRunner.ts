@@ -145,6 +145,9 @@ function progressLabel(status: RunnerStatus, progress: WorkerProgress | null): s
   if (progress.portfolio?.phase === 'validating') {
     return 'replaying selected convex layout'
   }
+  if (progress.portfolio?.phase === 'short_side_profile') {
+    return 'Compact Short Side selector'
+  }
 
   switch (progress.phase) {
     case 'received':

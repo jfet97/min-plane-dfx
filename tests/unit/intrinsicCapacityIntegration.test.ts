@@ -5,7 +5,8 @@ import { JobId, PieceId, SourceFileId } from '@shared/domain/ids.js'
 import { NestingOptions, NestingRequest, SheetSpec } from '@shared/domain/nesting.js'
 import {
   DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
-  makeCompactQualityIrregularOptimizerSettings
+  makeCompactQualityIrregularOptimizerSettings,
+  makeCompactShortSideIrregularOptimizerSettings
 } from '@shared/irregular/defaults.js'
 import { IrregularNestingSettings } from '@shared/irregular/domain.js'
 import { makePresetShapeDocument } from '@shared/presetShapes.js'
@@ -93,6 +94,7 @@ function makeRectangleRequest(input: {
 }
 
 function compute(request: NestingRequest, options?: ComputeIrregularNestingOptions) {
+  const geometrySettings = request.options.irregularSettings ?? settings
   return Effect.runPromise(
     computeIrregularNesting(request, options).pipe(
       Effect.provide(CollisionGeometryBuilder.Live),
@@ -101,12 +103,64 @@ function compute(request: NestingRequest, options?: ComputeIrregularNestingOptio
       Effect.provide(FreeMaterialServiceLive),
       Effect.provide(IrregularPlacementScorer.Live),
       Effect.provide(IrregularLayoutScorer.Live),
-      Effect.provide(Layer.succeed(GeometrySettings, settings))
+      Effect.provide(Layer.succeed(GeometrySettings, geometrySettings))
     )
   )
 }
 
 describe('intrinsic capacity integration', () => {
+  it('runs the Short Side profile through the existing worker result and history path', async () => {
+    const compactRequest = makeRectangleRequest({
+      jobKey: 'short-side-production-slice',
+      count: 2,
+      widthMm: 40,
+      heightMm: 30,
+      sheet: new SheetSpec({ width: 200, height: 300, label: 'short-side production' }),
+      paddingMm: 0
+    })
+    const shortSideSettings = new IrregularNestingSettings({
+      geometry: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS,
+      optimizer: makeCompactShortSideIrregularOptimizerSettings()
+    })
+    const request = new NestingRequest({
+      ...compactRequest,
+      options: new NestingOptions({
+        ...compactRequest.options,
+        irregularSettings: shortSideSettings
+      })
+    })
+
+    const computed = await compute(request)
+    const output = makeIrregularWorkerOutput({
+      request,
+      computed,
+      algorithmBenchmark: {
+        startedAt: '2026-07-25T00:00:00.000Z',
+        endedAt: '2026-07-25T00:00:01.000Z',
+        elapsedMs: 1_000
+      }
+    })
+    const layout = output.result.layout
+    if (layout === undefined || layout.kind !== 'irregular') {
+      throw new Error('expected an irregular Short Side layout')
+    }
+
+    expect(layout.placements).toHaveLength(2)
+    expect(layout.unplacedPieceIds).toEqual([])
+    expect(computed.intrinsicShortSideObserverTrace).toBeDefined()
+    expect(computed.intrinsicShortSideObserverTrace?.status).not.toBe('skipped-square-sheet')
+    expect(
+      computed.diagnostics.some(({ code }) =>
+        ['intrinsic_short_side_selected', 'intrinsic_short_side_compact-fallback'].includes(code)
+      )
+    ).toBe(true)
+    expect(output.result.strategyResults[0]?.strategyId).toBe(
+      'irregular-convex-compact-short-side'
+    )
+    expect(output.historyFrames).toHaveLength(3)
+    expect(output.historyFrames.at(-1)?.placements).toHaveLength(2)
+  })
+
   it(
     'runs focused complete reconstruction by default and preserves the protected duplicate fallback',
     async () => {
