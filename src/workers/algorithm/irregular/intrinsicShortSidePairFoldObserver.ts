@@ -140,7 +140,8 @@ export function observeIntrinsicShortSidePairFold(input: {
   readonly productionEnvelopeAreaMm2: number
   readonly runtimeControl?: IntrinsicShortSidePairFoldRuntimeControl
 }): Effect.Effect<IntrinsicShortSidePairFoldOutcome, never, GeometryKernel> {
-  const now = input.runtimeControl?.now ?? performance.now
+  const now =
+    input.runtimeControl?.now ?? (() => performance.now())
   const currentRssBytes =
     input.runtimeControl?.currentRssBytes ??
     (() => process.memoryUsage.rss())

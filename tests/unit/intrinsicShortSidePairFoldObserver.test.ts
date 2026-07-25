@@ -82,10 +82,6 @@ function preparedRectangle(
   })
 }
 
-function constant(value: number): () => number {
-  return () => value
-}
-
 function readings(...values: ReadonlyArray<number>): () => number {
   let index = 0
   return () => values[Math.min(index++, values.length - 1)] ?? 0
@@ -132,8 +128,10 @@ function observe(input: {
         ...(input.maximumTraceBytes === undefined
           ? {}
           : { maximumTraceBytes: input.maximumTraceBytes }),
-        now: input.now ?? constant(0),
-        currentRssBytes: input.currentRssBytes ?? constant(0)
+        ...(input.now === undefined ? {} : { now: input.now }),
+        ...(input.currentRssBytes === undefined
+          ? {}
+          : { currentRssBytes: input.currentRssBytes })
       }
     }).pipe(
       Effect.provide(GeometryKernel.Live),
