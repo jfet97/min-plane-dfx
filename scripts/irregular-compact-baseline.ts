@@ -414,6 +414,13 @@ const focusedTrace = result.focusedCompleteReconstructionTrace
 const shortSideObserverTrace = result.intrinsicShortSideObserverTrace
 const shortSidePairFoldTrace =
   result.intrinsicShortSidePairFoldTrace
+const shortSidePairFoldExpected =
+  args.captureShortSidePairFoldObserver &&
+  shortSideObserverTrace?.observerWinnerCanonicalGeometryHash ===
+    undefined &&
+  shortSideObserverTrace?.productionShortAxisSpanMm !== undefined &&
+  shortSideObserverTrace.productionMaximumSideMm !== undefined &&
+  shortSideObserverTrace.productionEnvelopeAreaMm2 !== undefined
 const shortSideObserverWinner =
   shortSideObserverTrace?.observerWinnerCanonicalGeometryHash === undefined
     ? undefined
@@ -713,7 +720,7 @@ const checks = {
     !shortSideObserverTrace.runtimeBudgetExceeded,
   shortSideObserverContract: shortSideObserverContractValid,
   shortSidePairFoldTracePresent:
-    !args.captureShortSidePairFoldObserver ||
+    !shortSidePairFoldExpected ||
     result.intrinsicShortSidePairFoldTrace !== undefined,
   shortSidePairFoldOutputInfluence:
     shortSidePairFoldTrace === undefined ||
