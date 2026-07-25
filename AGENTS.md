@@ -26,6 +26,14 @@ If a task touches Effect APIs, inspect the installed packages in `node_modules` 
   collision-artifact construction, and their Effect service boundaries live in
   `src/workers/irregular/`; they must not invent placements, scores, history,
   or search behavior.
+- For irregular geometry, Clipper2 owns Boolean operations on canonical integer
+  paths, exact integer-grid metrics and ordering use `BigInt` shoelace, cross,
+  and rational cross-multiplication, and robust predicates own orientation and
+  intersection decisions on unsnapped source geometry. Never replace those
+  authorities with arbitrary absolute or relative epsilons. A numeric tolerance
+  is allowed only when it is a documented bound derived from quantization,
+  flattening, or offset construction; it must not decide collision legality,
+  topology, or winner ranking.
 - Do not add fake placements, fake free rectangles, fake scores, fake ranking, or fake history.
 - Keep docs up to date with code changes. If implementation changes architecture, protocols, workflows, validation, persistence, or agent conventions, update the relevant `docs/` page and/or this file in the same development cycle.
 - `src/workers/algorithm/sortPiecesForNesting.ts` is the user-owned initial ordering boundary. Do not change its behavior unless the user explicitly asks for algorithm work.
@@ -75,6 +83,11 @@ Then verify the empty state, disabled controls, and that no fake algorithm outpu
 - Run competing placement, search, or scoring experiments on dedicated branches
   and isolated worktrees. Do not stack unrelated hypotheses in the main working
   tree.
+- Create every new `min-plane-dfx` worktree under
+  `/Users/andreasimonecosta/Documents/Work/min-plane-dfx-worktrees/`. Do not
+  create worktrees under `/tmp`, `/private/tmp`, or another transient directory.
+  `/private/tmp/min-plane-provenance/` remains only for immutable experiment
+  manifests and intermediate evidence, never for working checkouts.
 - Before changing an experiment, commit the exact implementation that produced
   any result worth comparing. Use a descriptive human branch and commit name.
 - For every reported layout, record the source commit, uncommitted diff or
