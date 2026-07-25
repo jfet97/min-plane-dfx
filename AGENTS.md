@@ -34,6 +34,13 @@ If a task touches Effect APIs, inspect the installed packages in `node_modules` 
   is allowed only when it is a documented bound derived from quantization,
   flattening, or offset construction; it must not decide collision legality,
   topology, or winner ranking.
+- A `Number` fast path may replace a `BigInt` exact-grid operation only when it
+  is provably exact, never as a tolerance. Prove a bound per operation, check the
+  operands against it *before* any multiplication or accumulation, and fall back
+  to `BigInt` outside it — converting an already-rounded `Number` back cannot
+  recover exactness. Every such path needs a differential test against the
+  `BigInt` implementation that straddles the bound in both directions.
+  `canonicalGridCrossSign` is the worked example.
 - Do not add fake placements, fake free rectangles, fake scores, fake ranking, or fake history.
 - Keep docs up to date with code changes. If implementation changes architecture, protocols, workflows, validation, persistence, or agent conventions, update the relevant `docs/` page and/or this file in the same development cycle.
 - `src/workers/algorithm/sortPiecesForNesting.ts` is the user-owned initial ordering boundary. Do not change its behavior unless the user explicitly asks for algorithm work.

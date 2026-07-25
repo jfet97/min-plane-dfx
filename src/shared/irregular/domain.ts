@@ -446,13 +446,12 @@ export class CollisionGeometry extends Schema.Class<CollisionGeometry>('Collisio
 /**
  * A transformed local collision polygon and its derived finite bounds.
  *
- * This is a trusted internal search artifact produced by the geometry kernel
- * from already-decoded input. The class itself is never used as boundary
- * validation; replay data carrying the same structural shape uses
- * {@link TransformedCollisionGeometrySchema}. It is a plain class rather than a
- * `Schema.Class`, because schema construction revalidates the whole nested ring
- * on every instantiation and the search instantiates this per placement and per
- * quarter turn.
+ * This is a trusted internal search artifact: it is produced by the geometry
+ * kernel from already-decoded input, it never crosses the worker, IPC, or
+ * persistence boundary, and it appears in no encoded schema. It is therefore a
+ * plain class rather than a `Schema.Class`, because schema construction
+ * revalidates the whole nested ring on every instantiation and the search
+ * instantiates this per placement and per quarter turn.
  */
 export class TransformedCollisionGeometry {
   readonly sourcePieceId: PieceId
@@ -507,9 +506,9 @@ export class IrregularPlacement extends Schema.Class<IrregularPlacement>('Irregu
  * A placed piece with the transformed collision geometry used for legality.
  *
  * Trusted internal search artifact, plain for the same reason as
- * {@link TransformedCollisionGeometry}. The worker result exposes its
- * `placement`; replay data carrying the complete structural shape uses
- * {@link IrregularPlacedPieceSchema}.
+ * {@link TransformedCollisionGeometry}. Only its `placement` is externally
+ * visible, and that field remains a schema class because the worker result
+ * emits it.
  */
 export class IrregularPlacedPiece {
   readonly placement: IrregularPlacement

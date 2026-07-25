@@ -1,5 +1,5 @@
 import type { Path64 } from 'clipper2-ts'
-import { canonicalGridCross, type CanonicalGridPoint } from './canonicalGridMath.js'
+import { canonicalGridCrossSign, type CanonicalGridPoint } from './canonicalGridMath.js'
 
 /** Exact-grid contact metrics for canonical collision paths. */
 export interface CanonicalGridBoundaryContact {
@@ -228,10 +228,10 @@ function canonicalGridCollinearOverlap(
   first: CanonicalGridEdge,
   second: CanonicalGridEdge
 ): { readonly lengthMm: number } | undefined {
-  const secondStartCross = canonicalGridCross(first.start, first.end, second.start)
-  const secondEndCross = canonicalGridCross(first.start, first.end, second.end)
+  const secondStartCross = canonicalGridCrossSign(first.start, first.end, second.start)
+  const secondEndCross = canonicalGridCrossSign(first.start, first.end, second.end)
   if (secondStartCross === undefined || secondEndCross === undefined) return undefined
-  if (secondStartCross !== 0n || secondEndCross !== 0n) return { lengthMm: 0 }
+  if (secondStartCross !== 0 || secondEndCross !== 0) return { lengthMm: 0 }
 
   const dx = BigInt(first.end.x) - BigInt(first.start.x)
   const dy = BigInt(first.end.y) - BigInt(first.start.y)
