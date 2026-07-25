@@ -76,6 +76,44 @@ function preparedRectangle(
   })
 }
 
+function preparedTriangle(
+  id: string,
+  width: number,
+  height: number,
+  rotations: ReadonlyArray<number>
+): IrregularPreparedPiece {
+  const points = [point(0, 0), point(width, 0), point(width / 2, height)]
+  const polygon = new IrregularPolygon({ points })
+  return new IrregularPreparedPiece({
+    pieceId: PieceId.make(id),
+    source: sourcePiece(id),
+    allowMirror: false,
+    collisionGeometry: new CollisionGeometry({
+      sourcePieceId: PieceId.make(id),
+      sourceBounds: new IrregularBounds({
+        minX: 0,
+        minY: 0,
+        maxX: width,
+        maxY: height
+      }),
+      sampledPoints: points,
+      convexHull: polygon,
+      collisionPolygon: polygon,
+      placementReference: point(0, 0),
+      diagnostics: []
+    }),
+    transforms: rotations.map(
+      (rotationDeg, index) =>
+        new IrregularTransformCandidate({
+          index,
+          rotationDeg,
+          mirrored: false,
+          reason: 'configured'
+        })
+    )
+  })
+}
+
 function readings(...values: ReadonlyArray<number>): () => number {
   let index = 0
   return () => values[Math.min(index++, values.length - 1)] ?? 0
@@ -264,6 +302,26 @@ describe('intrinsic short-side pair-fold observer', () => {
       }
     })
     expect(outcome.placedCollisionGeometries).toHaveLength(3)
+  })
+
+  it('prefers the longest exact row-baseline support when shelf envelopes tie', async () => {
+    const outcome = await observe({
+      pieces: [
+        preparedTriangle('stable-1', 40, 20, [180, 0]),
+        preparedTriangle('stable-2', 40, 20, [180, 0]),
+        preparedTriangle('stable-3', 40, 20, [180, 0]),
+        preparedTriangle('stable-4', 40, 20, [180, 0])
+      ],
+      productionEnvelopeAreaMm2: 4_000
+    })
+
+    expect(outcome.trace).toMatchObject({
+      status: 'accepted',
+      constructionKind: 'multi-row-shelf'
+    })
+    expect(
+      outcome.placedCollisionGeometries?.map(({ placement }) => placement.transform.rotationDeg)
+    ).toEqual([0, 0, 0, 0])
   })
 
   it('censors after completed transform work with exact counters', async () => {

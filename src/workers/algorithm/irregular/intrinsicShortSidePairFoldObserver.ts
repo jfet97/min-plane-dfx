@@ -116,6 +116,7 @@ interface SelectedTransform {
   readonly heightGrid: number
   readonly minXGrid: number
   readonly minYGrid: number
+  readonly bottomSupportGrid: number
 }
 
 interface SelectedPair {
@@ -264,7 +265,8 @@ function constructPairFold(
           widthGrid: maxXGrid - minXGrid,
           heightGrid: maxYGrid - minYGrid,
           minXGrid,
-          minYGrid
+          minYGrid,
+          bottomSupportGrid: bottomSupportLengthGrid(geometry, minYGrid)
         }
         if (candidate.widthGrid <= 0 || candidate.heightGrid <= 0) {
           continue
@@ -444,10 +446,38 @@ function compareShelfTransforms(first: SelectedTransform, second: SelectedTransf
   return (
     first.heightGrid - second.heightGrid ||
     second.widthGrid - first.widthGrid ||
+    second.bottomSupportGrid - first.bottomSupportGrid ||
     first.geometry.transform.index - second.geometry.transform.index ||
     first.geometry.transform.rotationDeg - second.geometry.transform.rotationDeg ||
     Number(first.geometry.transform.mirrored) - Number(second.geometry.transform.mirrored)
   )
+}
+
+function bottomSupportLengthGrid(
+  geometry: TransformedCollisionGeometry,
+  minimumYGrid: number
+): number {
+  let supportGrid = 0
+  const points = geometry.polygon.points
+  for (let index = 0; index < points.length; index += 1) {
+    const first = points[index]
+    const second = points[(index + 1) % points.length]
+    if (first === undefined || second === undefined) continue
+    const firstXGrid = toGridMm(first.x)
+    const firstYGrid = toGridMm(first.y)
+    const secondXGrid = toGridMm(second.x)
+    const secondYGrid = toGridMm(second.y)
+    if (
+      firstXGrid === undefined ||
+      firstYGrid !== minimumYGrid ||
+      secondXGrid === undefined ||
+      secondYGrid !== minimumYGrid
+    ) {
+      continue
+    }
+    supportGrid += Math.abs(secondXGrid - firstXGrid)
+  }
+  return supportGrid
 }
 
 function compareSelectedPairs(
