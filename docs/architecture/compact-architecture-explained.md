@@ -453,20 +453,32 @@ The short-side profile does not replace production Compact. It first asks
 whether an already-settled complete archive endpoint gives a material,
 exactly-legal fill of the requested short edge. If not, one bounded terminal
 observer may fix each piece's minimum-width transform, enumerate every
-unordered pair once, and stack exactly one pair. It cannot reselect transforms,
-run an NFP search, create a second row, or restart construction.
+unordered pair once, and stack exactly one pair. If that pair is absent or
+fails admission, the same transform evaluation also retains one
+depth-minimizing transform per piece and performs one prepared-order,
+next-fit multi-row shelf. It does not run NFP search, beam search, or restart
+construction.
 
-Shapes-17 on `2000 x 2700` is the one current terminal-pair winner:
+Shapes-17 on `2000 x 2700` remains the terminal-pair winner:
 `1897.173 x 220.526 mm`, all `17/17` pieces, zero cavities, and `94.85865%`
-short-edge fill. The observer costs `2.462–6.912 ms` across the strict matrix.
-If its exact density, topology, fill, depth, and area-cost guards fail, the
-sibling output is the unchanged Compact layout. Square sheets bypass the
-terminal observer entirely.
+short-edge fill. The multi-row shelf additionally produces Triangle-20 at
+`1765.760 x 75.675 mm` and Mixed-61 at
+`1987.776 x 301.187 mm` on `2000 x 2700`, with `88.288%` and `99.389%`
+short-edge fill respectively. Its exact terminal work remains below `13 ms`
+in the accepted matrix.
+
+Exact density, topology, fill, depth, and area-cost guards remain mandatory.
+When Compact already fills at least `80%` of the short edge, reuse is reported
+as `short-side-satisfied-by-compact`; it is not counted as an
+observer-generated winner. Any output below that floor is a
+`directional-miss`, so a corner Compact fallback cannot make the profile gate
+pass. Square sheets use their larger occupied span against the common side.
 
 This remains single-process and sequential. The strict gate contains nine
-unchanged Compact controls plus nine sibling outputs; the current sources are
-one archive winner, one terminal-pair winner, and seven exact Compact
-fallbacks.
+unchanged Compact controls plus nine sibling outputs. The current sources are
+one archive winner, one terminal-pair winner, two multi-row winners, and five
+Compact layouts that already satisfy the short-edge contract. The gate
+requires nine satisfied profiles and zero directional misses.
 
 ## 9. How candidate scoring worked before
 

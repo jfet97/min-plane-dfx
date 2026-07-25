@@ -6,6 +6,8 @@
     "height": 300
   },
   "source": "compact-fallback",
+  "profileOutcome": "short-side-satisfied-by-compact",
+  "shortAxisFillRatio": 0.9985833333333332,
   "observerStatus": "skipped-square-sheet",
   "placedCount": 5,
   "unplacedCount": 12,
@@ -41,5 +43,5 @@
     "span": 592.63
   },
   "exactPiecePartition": true,
-  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/shapes-17-300x300.short-side-profile.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/shapes-17-300x300.short-side-profile.svg"
 }

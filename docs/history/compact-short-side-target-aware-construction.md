@@ -162,3 +162,31 @@ Evidence:
   `/private/tmp/min-plane-provenance/short-side-pair-fold-2645e7c-transpose/`;
 - accepted matrix:
   `/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/`.
+
+## Multi-row terminal follow-up
+
+The accepted pair-fold matrix was later found insufficient as a feature gate:
+it treated seven exact Compact fallbacks as successful short-side profiles.
+Roomy Triangle-20 and Mixed-61 therefore remained corner clusters despite
+passing the 18-layout accounting contract.
+
+The next bounded terminal experiment retained one depth-minimizing transform
+per piece during the existing transform evaluation and applied one
+prepared-order next-fit shelf after a pair miss. At source `d57b7d6` it
+produced:
+
+- Triangle-20 `2000 x 2700`: `1765.760 x 75.675 mm`, `88.288%` fill;
+- Mixed-61 `2000 x 2700`: `1987.776 x 301.187 mm`, `99.389%` fill in four rows.
+
+Both remain exact, complete, zero-cavity layouts and pass the established
+projection, density, production-depth, and area-cost guards. Two clean
+Mixed-61 reproductions are byte-identical. The full sequential matrix keeps
+all nine Compact controls exact and reports four generated directional
+winners, five `short-side-satisfied-by-compact` results, and zero directional
+misses.
+
+Evidence:
+
+- `/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-run3/`;
+- `/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-run4/`;
+- `/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/`.

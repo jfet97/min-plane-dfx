@@ -48,6 +48,15 @@ report sets `geometryEquivalent` to `null`; it is not an invariance result.
 The nine-baseline command runs serially and covers the roomy complete path plus
 `600 x 400` and `300 x 300` constrained final-fit/capacity behavior.
 
+When short-side capture is enabled, the same command also requires nine
+material short-edge outcomes and zero directional misses. An observer winner
+must pass exact legality, accounting, topology, density, projection, depth, and
+area-cost admission. Compact reuse passes only when the materialized geometry
+already fills at least `80%` of the relevant edge, and is reported as
+`short-side-satisfied-by-compact`. The accepted matrix and individual visual
+review are under
+[`../artifacts/compact-short-side-observer/matrix/`](../artifacts/compact-short-side-observer/matrix/).
+
 ## Constrained Capacity Gate
 
 ```sh

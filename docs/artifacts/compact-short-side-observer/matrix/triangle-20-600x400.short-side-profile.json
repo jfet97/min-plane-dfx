@@ -6,6 +6,8 @@
     "height": 400
   },
   "source": "guarded-stage1-winner",
+  "profileOutcome": "directional-success",
+  "shortAxisFillRatio": 0.9873050000000001,
   "observerStatus": "observed",
   "selectedRotationDeg": 90,
   "placedCount": 20,
@@ -29,5 +31,5 @@
     "span": 623.7080000000001
   },
   "exactPiecePartition": true,
-  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-600x400.short-side-profile.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-600x400.short-side-profile.svg"
 }

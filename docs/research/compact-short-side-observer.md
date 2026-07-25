@@ -271,6 +271,42 @@ layout with a bounded shape-generic mechanism, complete exact matrix evidence,
 and protected fallback semantics. It does not justify a second fold or a more
 general shelf search.
 
+## Stage 7 exact multi-row terminal shelf
+
+The previous matrix exposed a semantic failure: seven files named
+`short-side-profile` were legal Compact fallbacks, and the gate counted them as
+success even when roomy Triangle-20 and Mixed-61 occupied only `24.399%` and
+`31.110%` of the requested short edge. Artifact validity was not directional
+success.
+
+Commit `d57b7d6` corrects both layers. After Stage 1 and the exact pair fold
+miss, the terminal observer reuses the transform catalog evaluation to retain
+one depth-minimizing transform per prepared piece and performs exactly one
+prepared-order next-fit shelf. It creates AABB-separated rows, then passes the
+ordinary canonical legality, q0/q90 fit, topology, density, projection, depth,
+and area-cost admission. It performs no NFP search, beam search, or restart.
+
+The strict current-source matrix produced:
+
+| Fixture | Sheet | Source | Short-edge fill | Bounds |
+| --- | --- | --- | ---: | ---: |
+| Triangle-20 | `2000 x 2700` | multi-row shelf | `88.288%` | `1765.760 x 75.675 mm` |
+| Mixed-61 | `2000 x 2700` | multi-row shelf | `99.389%` | `1987.776 x 301.187 mm` |
+| Shapes-17 | `2000 x 2700` | pair fold | `94.859%` | `1897.173 x 220.526 mm` |
+| Triangle-20 | `600 x 400` | archive winner | `98.731%` | `228.786 x 394.922 mm` |
+
+The five remaining constrained or square Compact results already fill
+`98.021–99.858%` of the relevant edge. They are explicitly classified as
+`short-side-satisfied-by-compact`, not observer-generated winners. The matrix
+requires nine satisfied profiles and zero `directional-miss` results.
+
+Two clean Mixed-61 reproductions produced byte-identical SVG/PNG files and the
+same canonical collision hash
+`de6dff6d3b0745055d3cefc54d468b2fa6f5bb72ab4e0a1b749b70c7261f8918`.
+The terminal work measured `11–13 ms`; all production Compact hashes, counts,
+areas, cavities, and scheduler chronology remained exact. Every matrix PNG was
+opened individually and recorded in `matrix/VISUAL_REVIEW.md`.
+
 ## Evidence
 
 - [`../artifacts/compact-short-side-observer/README.md`](../artifacts/compact-short-side-observer/README.md)

@@ -4,9 +4,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "2645e7c",
+  "sourceCommit": "d57b7d627369e6abf2396d8a7eba7c283029df5c",
   "runtime": {
-    "elapsedMs": 68030.720833,
+    "elapsedMs": 72773.30949999999,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -2697,7 +2697,7 @@
       "selectedCanonicalGeometryHash": "3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742",
       "consumedCandidateEvaluations": 12000,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 1500.9969999999885,
+      "runtimeMs": 1674.5697919999948,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -2718,7 +2718,7 @@
       "geometricParetoEligibleEndpointCount": 1,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 69.5995830000029,
+      "runtimeMs": 75.56399999999849,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 15896,
       "endpoints": [
@@ -3325,8 +3325,8 @@
       ]
     },
     "intrinsicShortSidePairFoldTrace": {
-      "version": "intrinsic-short-side-pair-fold-observer-v1",
-      "status": "no-fitting-pair",
+      "version": "intrinsic-short-side-terminal-observer-v2",
+      "status": "accepted",
       "outputInfluence": "none",
       "executionModel": "single-process-sequential",
       "requestedShortAxisMm": 2000,
@@ -3338,11 +3338,30 @@
       "transformEvaluations": 488,
       "expectedPairCount": 1830,
       "evaluatedPairCount": 1830,
-      "placedCount": 0,
-      "runtimeMs": 5.25062499998603,
-      "peakRssDeltaBytes": 16384,
-      "serializedTraceBytes": 613,
-      "failureReason": "no single fixed-transform pair fold fits both requested sheet axes."
+      "constructionKind": "multi-row-shelf",
+      "rowCount": 4,
+      "placedCount": 61,
+      "usedShortAxisSpanMm": 1987.776,
+      "usedLongAxisDepthMm": 301.187,
+      "envelopeAreaMm2": 598692.2901120001,
+      "canonicalGeometryHash": "de6dff6d3b0745055d3cefc54d468b2fa6f5bb72ab4e0a1b749b70c7261f8918",
+      "admission": {
+        "exactLegal": true,
+        "allPiecesPlaced": true,
+        "fillRatio": 0.993888,
+        "depthWithinProductionMaximumSide": true,
+        "projectionCoverageRatio": 1,
+        "projectionComponentCount": 1,
+        "enclosedCavityCount": 0,
+        "collisionEnvelopeDensity": 0.5236208842899154,
+        "shortAxisSpanGainFactor": 3.1582730498087828,
+        "envelopeAreaCostFactor": 1.5288134481289966,
+        "directionallyEfficient": true,
+        "accepted": true
+      },
+      "runtimeMs": 12.524374999993597,
+      "peakRssDeltaBytes": 0,
+      "serializedTraceBytes": 1135
     }
   },
   "checks": {
@@ -3373,10 +3392,11 @@
     "shortSidePairFoldBudget": true,
     "shortSidePairFoldContract": true,
     "shortSideProfileMaterialized": true,
-    "shortSideProfileExactPiecePartition": true
+    "shortSideProfileExactPiecePartition": true,
+    "shortSideProfileDirectionalContract": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-2000x2700.svg",
-  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-2000x2700.short-side-profile.svg",
-  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/mixed-61-2000x2700.short-side-profile.json"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-2000x2700.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-2000x2700.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/mixed-61-2000x2700.short-side-profile.json"
 }

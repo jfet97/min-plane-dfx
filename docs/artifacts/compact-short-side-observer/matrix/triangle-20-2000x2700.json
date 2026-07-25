@@ -4,9 +4,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "2645e7c",
+  "sourceCommit": "d57b7d627369e6abf2396d8a7eba7c283029df5c",
   "runtime": {
-    "elapsedMs": 14366.304542,
+    "elapsedMs": 14783.486041,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -923,7 +923,7 @@
       "selectedCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
       "consumedCandidateEvaluations": 0,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 0.6745840000003227,
+      "runtimeMs": 0.7069579999988491,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -944,7 +944,7 @@
       "geometricParetoEligibleEndpointCount": 2,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 29.13854199999878,
+      "runtimeMs": 30.22979200000009,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 32132,
       "endpoints": [
@@ -2153,8 +2153,8 @@
       ]
     },
     "intrinsicShortSidePairFoldTrace": {
-      "version": "intrinsic-short-side-pair-fold-observer-v1",
-      "status": "rejected-admission",
+      "version": "intrinsic-short-side-terminal-observer-v2",
+      "status": "accepted",
       "outputInfluence": "none",
       "executionModel": "single-process-sequential",
       "requestedShortAxisMm": 2000,
@@ -2166,31 +2166,30 @@
       "transformEvaluations": 160,
       "expectedPairCount": 190,
       "evaluatedPairCount": 190,
-      "selectedBottomPieceId": "triangle-copy-1",
-      "selectedUpperPieceId": "triangle-copy-10",
+      "constructionKind": "multi-row-shelf",
+      "rowCount": 1,
       "placedCount": 20,
-      "usedShortAxisSpanMm": 1437.825,
-      "usedLongAxisDepthMm": 176.576,
-      "envelopeAreaMm2": 253885.3872,
-      "canonicalGeometryHash": "f6462a402e7b03d9f9d01e209a943f9191374f701b58546a5fc451f5bb2238f6",
+      "usedShortAxisSpanMm": 1765.76,
+      "usedLongAxisDepthMm": 75.675,
+      "envelopeAreaMm2": 133623.888,
+      "canonicalGeometryHash": "7a79ebd40029094854748d569acb52f95f32a96e71b3b674941ba7f20f9cfe15",
       "admission": {
         "exactLegal": true,
         "allPiecesPlaced": true,
-        "fillRatio": 0.7189125000000001,
+        "fillRatio": 0.88288,
         "depthWithinProductionMaximumSide": true,
         "projectionCoverageRatio": 1,
         "projectionComponentCount": 1,
         "enclosedCavityCount": 0,
-        "collisionEnvelopeDensity": 0.26315789473684215,
-        "shortAxisSpanGainFactor": 2.946465348178113,
-        "envelopeAreaCostFactor": 3.411147672597386,
-        "directionallyEfficient": false,
-        "accepted": false
+        "collisionEnvelopeDensity": 0.5,
+        "shortAxisSpanGainFactor": 3.6184867095779976,
+        "envelopeAreaCostFactor": 1.7953408803144137,
+        "directionallyEfficient": true,
+        "accepted": true
       },
-      "runtimeMs": 2.831916999999521,
-      "peakRssDeltaBytes": 16384,
-      "serializedTraceBytes": 1250,
-      "failureReason": "exact pair fold failed one or more admission gates."
+      "runtimeMs": 4.149250000000393,
+      "peakRssDeltaBytes": 81920,
+      "serializedTraceBytes": 1105
     }
   },
   "checks": {
@@ -2221,10 +2220,11 @@
     "shortSidePairFoldBudget": true,
     "shortSidePairFoldContract": true,
     "shortSideProfileMaterialized": true,
-    "shortSideProfileExactPiecePartition": true
+    "shortSideProfileExactPiecePartition": true,
+    "shortSideProfileDirectionalContract": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-2000x2700.svg",
-  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-2000x2700.short-side-profile.svg",
-  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-2645e7c/triangle-20-2000x2700.short-side-profile.json"
+  "svgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-2000x2700.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-2000x2700.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-multi-row-d57b7d6-matrix/triangle-20-2000x2700.short-side-profile.json"
 }
