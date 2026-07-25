@@ -443,15 +443,34 @@ export class CollisionGeometry extends Schema.Class<CollisionGeometry>('Collisio
   diagnostics: Schema.Array(CollisionGeometryDiagnostic)
 }) {}
 
-/** A transformed local collision polygon and its derived finite bounds. */
-export class TransformedCollisionGeometry extends Schema.Class<TransformedCollisionGeometry>(
-  'TransformedCollisionGeometry'
-)({
-  sourcePieceId: PieceId,
-  transform: IrregularTransformCandidate,
-  polygon: IrregularPolygon,
-  bounds: IrregularBounds
-}) {}
+/**
+ * A transformed local collision polygon and its derived finite bounds.
+ *
+ * This is a trusted internal search artifact: it is produced by the geometry
+ * kernel from already-decoded input, it never crosses the worker, IPC, or
+ * persistence boundary, and it appears in no encoded schema. It is therefore a
+ * plain class rather than a `Schema.Class`, because schema construction
+ * revalidates the whole nested ring on every instantiation and the search
+ * instantiates this per placement and per quarter turn.
+ */
+export class TransformedCollisionGeometry {
+  readonly sourcePieceId: PieceId
+  readonly transform: IrregularTransformCandidate
+  readonly polygon: IrregularPolygon
+  readonly bounds: IrregularBounds
+
+  constructor(fields: {
+    readonly sourcePieceId: PieceId
+    readonly transform: IrregularTransformCandidate
+    readonly polygon: IrregularPolygon
+    readonly bounds: IrregularBounds
+  }) {
+    this.sourcePieceId = fields.sourcePieceId
+    this.transform = fields.transform
+    this.polygon = fields.polygon
+    this.bounds = fields.bounds
+  }
+}
 
 /** A source piece paired with its prepared collision geometry and transforms. */
 export class IrregularPreparedPiece extends Schema.Class<IrregularPreparedPiece>(
@@ -483,23 +502,73 @@ export class IrregularPlacement extends Schema.Class<IrregularPlacement>('Irregu
   transform: IrregularTransform
 }) {}
 
-/** A placed piece with the transformed collision geometry used for legality. */
-export class IrregularPlacedPiece extends Schema.Class<IrregularPlacedPiece>(
-  'IrregularPlacedPiece'
-)({
-  placement: IrregularPlacement,
-  collisionGeometry: TransformedCollisionGeometry
-}) {}
+/**
+ * A placed piece with the transformed collision geometry used for legality.
+ *
+ * Trusted internal search artifact, plain for the same reason as
+ * {@link TransformedCollisionGeometry}. Only its `placement` is externally
+ * visible, and that field remains a schema class because the worker result
+ * emits it.
+ */
+export class IrregularPlacedPiece {
+  readonly placement: IrregularPlacement
+  readonly collisionGeometry: TransformedCollisionGeometry
 
-/** A candidate placement point plus its transform and diagnostics. */
-export class IrregularPlacementCandidate extends Schema.Class<IrregularPlacementCandidate>(
-  'IrregularPlacementCandidate'
-)({
-  pieceId: PieceId,
+  constructor(fields: {
+    readonly placement: IrregularPlacement
+    readonly collisionGeometry: TransformedCollisionGeometry
+  }) {
+    this.placement = fields.placement
+    this.collisionGeometry = fields.collisionGeometry
+  }
+}
+
+/**
+ * Boundary schema for {@link TransformedCollisionGeometry}.
+ *
+ * The internal artifact is a plain class, so untrusted boundaries that carry it
+ * — imported JSON and replay NDJSON — validate against this schema instead.
+ * Keep the two shapes in step; `tests/unit/irregularSchemaContracts.test.ts`
+ * asserts they agree.
+ */
+export const TransformedCollisionGeometrySchema = Schema.Struct({
+  sourcePieceId: PieceId,
   transform: IrregularTransformCandidate,
-  point: IrregularPoint,
-  diagnostics: Schema.Array(CollisionGeometryDiagnostic)
-}) {}
+  polygon: IrregularPolygon,
+  bounds: IrregularBounds
+})
+
+/** Boundary schema for {@link IrregularPlacedPiece}. */
+export const IrregularPlacedPieceSchema = Schema.Struct({
+  placement: IrregularPlacement,
+  collisionGeometry: TransformedCollisionGeometrySchema
+})
+
+/**
+ * A candidate placement point plus its transform and diagnostics.
+ *
+ * Trusted internal search artifact: candidate generation emits one per legal
+ * grid point and nothing outside the worker consumes it, so it is plain for the
+ * same reason as {@link IrregularPlacedPiece}.
+ */
+export class IrregularPlacementCandidate {
+  readonly pieceId: PieceId
+  readonly transform: IrregularTransformCandidate
+  readonly point: IrregularPoint
+  readonly diagnostics: ReadonlyArray<CollisionGeometryDiagnostic>
+
+  constructor(fields: {
+    readonly pieceId: PieceId
+    readonly transform: IrregularTransformCandidate
+    readonly point: IrregularPoint
+    readonly diagnostics: ReadonlyArray<CollisionGeometryDiagnostic>
+  }) {
+    this.pieceId = fields.pieceId
+    this.transform = fields.transform
+    this.point = fields.point
+    this.diagnostics = fields.diagnostics
+  }
+}
 
 /** A no-fit polygon boundary in moving-placement-coordinate space. */
 export class IrregularNfp extends Schema.Class<IrregularNfp>('IrregularNfp')({

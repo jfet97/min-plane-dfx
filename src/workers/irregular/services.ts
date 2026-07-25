@@ -200,21 +200,26 @@ export interface ValidatePlacementInput {
   readonly candidate: IrregularPlacementCandidate
 }
 
-/** Schema-backed boundary for deriving sheet-space free-material diagnostics. */
-export const ComputeFreeMaterialInput = Schema.Struct({
-  sheet: SheetSpec,
-  placed: Schema.Array(IrregularPlacedPiece),
-  settings: IrregularGeometrySettings
-})
-export type ComputeFreeMaterialInput = Schema.Schema.Type<typeof ComputeFreeMaterialInput>
+/**
+ * Internal input for deriving sheet-space free-material diagnostics.
+ *
+ * This is a worker-internal service call, not an untrusted boundary: the sheet
+ * and settings were decoded on entry and the placed geometry was produced by
+ * the search itself. It is therefore a plain interface, and the service no
+ * longer redecodes it per call.
+ */
+export interface ComputeFreeMaterialInput {
+  readonly sheet: SheetSpec
+  readonly placed: ReadonlyArray<IrregularPlacedPiece>
+  readonly settings: IrregularGeometrySettings
+}
 
-/** Schema-backed input for subtracting one new placement from cached material. */
-export const ExtendFreeMaterialInput = Schema.Struct({
-  parent: FreeMaterialSnapshot,
-  placed: IrregularPlacedPiece,
-  settings: IrregularGeometrySettings
-})
-export type ExtendFreeMaterialInput = Schema.Schema.Type<typeof ExtendFreeMaterialInput>
+/** Internal input for subtracting one new placement from cached material. */
+export interface ExtendFreeMaterialInput {
+  readonly parent: FreeMaterialSnapshot
+  readonly placed: IrregularPlacedPiece
+  readonly settings: IrregularGeometrySettings
+}
 
 export interface BuildPriorityOrderInput {
   readonly pieces: ReadonlyArray<IrregularPreparedPiece>

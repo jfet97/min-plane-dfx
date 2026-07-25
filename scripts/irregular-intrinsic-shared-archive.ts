@@ -14,7 +14,7 @@ import {
 } from '../src/shared/irregular/defaults.js'
 import {
   IrregularNestingSettings,
-  IrregularPlacedPiece,
+  IrregularPlacedPieceSchema,
   IrregularPreparedPiece,
   IrregularPriorityOrderKey,
   type IrregularNestingSettings as IrregularSettings
@@ -722,7 +722,7 @@ function makeSourceAuditReplaySchema() {
               Schema.Tuple([sourceAuditContactRelationSchema, sourceAuditContactRelationSchema])
             )
           }),
-          placements: Schema.Array(IrregularPlacedPiece),
+          placements: Schema.Array(IrregularPlacedPieceSchema),
           seed: Schema.Struct({
             canonicalKey: Schema.String,
             componentCount: Schema.Number,

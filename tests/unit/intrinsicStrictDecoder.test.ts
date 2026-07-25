@@ -21,6 +21,8 @@ import {
   compareIntrinsicStrictCompletedLayoutDominance,
   decodeIntrinsicStrictPriorityOrder,
   constructIntrinsicStrictState,
+  INTRINSIC_STRICT_PHASE_INSTRUMENTATION_ALLOWANCE_MS,
+  INTRINSIC_STRICT_PHASE_MAXIMUM_RELAXED_RESIDUAL_RATIO,
   intrinsicStrictPhaseCoverageComplete,
   intrinsicStrictCompletedLayoutDominates,
   measureIntrinsicStrictCanonicalEnvelope,
@@ -146,6 +148,23 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
   it('fails strict phase coverage when unclassified residual exceeds one percent', () => {
     expect(intrinsicStrictPhaseCoverageComplete(100, 1)).toBe(true)
     expect(intrinsicStrictPhaseCoverageComplete(100, 1.000_001)).toBe(false)
+  })
+
+  it('accepts an instrumentation-sized residual once a phase shrinks below the ratio', () => {
+    // the residual is dominated by the timing calls themselves, so the ratio
+    // stops being meaningful when the phase approaches that cost. Above the
+    // floor the one-percent rule still governs.
+    expect(INTRINSIC_STRICT_PHASE_INSTRUMENTATION_ALLOWANCE_MS).toBe(0.05)
+    expect(INTRINSIC_STRICT_PHASE_MAXIMUM_RELAXED_RESIDUAL_RATIO).toBe(0.05)
+    expect(intrinsicStrictPhaseCoverageComplete(1.57, 0.03)).toBe(true)
+    expect(intrinsicStrictPhaseCoverageComplete(1.57, 0.048)).toBe(true)
+    expect(intrinsicStrictPhaseCoverageComplete(0.5, 0.5)).toBe(false)
+    expect(intrinsicStrictPhaseCoverageComplete(0.5, 0.05)).toBe(false)
+    expect(intrinsicStrictPhaseCoverageComplete(2, 0.05)).toBe(true)
+    expect(intrinsicStrictPhaseCoverageComplete(2, 0.050_001)).toBe(false)
+    // above the allowance the ratio still governs and still rejects
+    expect(intrinsicStrictPhaseCoverageComplete(100, 1.5)).toBe(false)
+    expect(intrinsicStrictPhaseCoverageComplete(1000, 50)).toBe(false)
   })
 
   it('stops strict construction at an exact candidate-evaluation cap', async () => {
