@@ -170,6 +170,7 @@ function runBaseline(baseline: Baseline, outputDirectory: string): Promise<void>
     '--maximum-elapsed-ms',
     String(baseline.maximumElapsedMs),
     '--capture-short-side-observer',
+    '--capture-short-side-pair-fold-observer',
     ...focusedExpectedArguments(baseline)
   ]
 
@@ -332,7 +333,10 @@ interface ShortSideProfileReport {
     readonly width: number
     readonly height: number
   }
-  readonly source: 'guarded-stage1-winner' | 'compact-fallback'
+  readonly source:
+    | 'guarded-stage1-winner'
+    | 'terminal-pair-fold-winner'
+    | 'compact-fallback'
   readonly observerStatus: string
   readonly selectedRotationDeg?: 0 | 90
   readonly placedCount: number
@@ -465,6 +469,11 @@ const guardedStage1WinnerCount = layoutRecords.filter(
   ({ profile, source }) =>
     profile === 'short-side' && source === 'guarded-stage1-winner'
 ).length
+const terminalPairFoldWinnerCount = layoutRecords.filter(
+  ({ profile, source }) =>
+    profile === 'short-side' &&
+    source === 'terminal-pair-fold-winner'
+).length
 const compactFallbackCount = layoutRecords.filter(
   ({ profile, source }) =>
     profile === 'short-side' && source === 'compact-fallback'
@@ -473,7 +482,10 @@ const layoutContractPassed =
   layoutRecords.length === 18 &&
   compactLayoutCount === 9 &&
   shortSideLayoutCount === 9 &&
-  guardedStage1WinnerCount + compactFallbackCount === 9 &&
+  guardedStage1WinnerCount +
+    terminalPairFoldWinnerCount +
+    compactFallbackCount ===
+    9 &&
   layoutRecords.every(({ exactPiecePartition, passed }) =>
     Boolean(exactPiecePartition && passed)
   )
@@ -491,6 +503,7 @@ await writeFile(
       compactLayoutCount,
       shortSideLayoutCount,
       guardedStage1WinnerCount,
+      terminalPairFoldWinnerCount,
       compactFallbackCount,
       outcomes,
       layouts: layoutRecords
@@ -578,6 +591,7 @@ console.log(
     compactLayoutCount,
     shortSideLayoutCount,
     guardedStage1WinnerCount,
+    terminalPairFoldWinnerCount,
     compactFallbackCount,
     passed
   })
