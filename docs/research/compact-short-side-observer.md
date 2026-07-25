@@ -23,6 +23,13 @@ hashes. It also does not run concurrent algorithm work: the existing Electron
 renderer/main/worker boundary remains, and all Short Side stages advance
 sequentially inside that one algorithm worker execution.
 
+The current-source production gate at `2f308bb` executes 18 real requests
+strictly sequentially: one persisted Compact request and one persisted Short
+Side request for each of the nine fixture/sheet pairs. All expected hashes,
+counts, topology gates, strategy identities, and exact partitions pass. Four
+Short Side requests select a directional layout, five retain Compact because it
+already satisfies the short edge, and none report a directional miss.
+
 The first stage is deliberately smaller than a new search lane. It observes
 every settled complete Compact archive endpoint at q0/q90 and performs no
 placement or candidate evaluation. Its trace records `outputInfluence:

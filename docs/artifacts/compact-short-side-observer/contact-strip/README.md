@@ -48,15 +48,17 @@ remains the default profile and retains its exact established output.
 
 ## Reproduction
 
-The recorded final-source run at source commit `0a46c0f` used
+The recorded final-source run at source commit `2f308bb` used
 `pnpm gate:compact-nine-baselines` and reproduced the established canonical
 collision and fitted hashes for all 18 layouts. Earlier development runs
 produced the same geometry; their trace bookkeeping is not part of this
 archive.
 
-The recorded run executed the nine algorithm cases strictly sequentially with
-at most one algorithm process active. `manifest.json` identifies its exact
-source commit and portable reproduction command.
+The recorded run executed 18 production requests strictly sequentially—one
+Compact and one persisted Short Side request for each fixture/sheet pair—with
+at most one algorithm process active. Each report also verifies the worker
+strategy identity. `manifest.json` identifies the exact source commit and
+portable reproduction command.
 
 ## Rejected constructions retained
 

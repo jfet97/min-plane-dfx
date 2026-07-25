@@ -330,9 +330,13 @@ controls plus nine short-side-profile outputs. Missing Stage 1 winners become
 explicit exact Compact fallbacks, so every fixture/sheet pair remains visible
 and honestly sourced.
 
-The `1cd5ac7` promotion run passed all 18 layouts with four guarded Stage 1
-winners, five exact Compact fallbacks, unchanged production hashes, a maximum
-`57.984 ms` observer runtime, and strictly sequential algorithm execution.
+The current-source production run at `2f308bb` passed 18 strictly sequential
+worker executions: one Compact and one persisted Short Side request for every
+fixture/sheet pair. It retained every expected collision/fitted hash and
+placed/unplaced partition, verified the distinct production strategy identity,
+selected four directional layouts (one archive endpoint, pair fold, multi-row
+shelf, and contact strip), and retained five exact Compact fallbacks with zero
+directional misses.
 The reviewed v3 contract places short-axis shortfall before long-axis depth,
 then admits a winner only after material fill, shortfall-closure, and
 Compact-derived depth gates. Legal but immaterial alternatives remain telemetry
