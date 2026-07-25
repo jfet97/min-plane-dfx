@@ -421,6 +421,38 @@ const shortSidePairFoldExpected =
   shortSideObserverTrace?.productionShortAxisSpanMm !== undefined &&
   shortSideObserverTrace.productionMaximumSideMm !== undefined &&
   shortSideObserverTrace.productionEnvelopeAreaMm2 !== undefined
+const pairFoldObserverWinnerHash =
+  pairFoldObserverWinner === undefined
+    ? undefined
+    : sha256CanonicalLayout({
+        placedCollisionGeometries: pairFoldObserverWinner
+      })
+const expectedPairCount =
+  (request.pieces.length * (request.pieces.length - 1)) / 2
+const shortSidePairFoldContractValid =
+  shortSidePairFoldTrace === undefined
+    ? !shortSidePairFoldExpected
+    : shortSidePairFoldTrace.expectedPairCount ===
+        expectedPairCount &&
+      shortSidePairFoldTrace.transformEvaluations >=
+        request.pieces.length &&
+      shortSidePairFoldTrace.evaluatedPairCount <=
+        shortSidePairFoldTrace.expectedPairCount &&
+      (shortSidePairFoldTrace.status === 'accepted'
+        ? pairFoldObserverWinner !== undefined &&
+          shortSidePairFoldTrace.admission?.accepted === true &&
+          shortSidePairFoldTrace.placedCount ===
+            request.pieces.length &&
+          shortSidePairFoldTrace.evaluatedPairCount ===
+            shortSidePairFoldTrace.expectedPairCount &&
+          shortSidePairFoldTrace.selectedBottomPieceId !==
+            undefined &&
+          shortSidePairFoldTrace.selectedUpperPieceId !==
+            undefined &&
+          shortSidePairFoldTrace.canonicalGeometryHash ===
+            pairFoldObserverWinnerHash
+        : pairFoldObserverWinner === undefined &&
+          shortSidePairFoldTrace.admission?.accepted !== true)
 const shortSideObserverWinner =
   shortSideObserverTrace?.observerWinnerCanonicalGeometryHash === undefined
     ? undefined
@@ -489,9 +521,10 @@ const shortSideProfilePlacedCollisionGeometries =
 const shortSideProfileUnplacedPieceIds =
   shortSideProfileSource === undefined
     ? undefined
-    : observerWinner === undefined
-      ? result.unplacedPieceIds
-      : []
+    : observerWinner !== undefined ||
+        pairFoldObserverWinner !== undefined
+      ? []
+      : result.unplacedPieceIds
 const shortSideProfilePolygons =
   shortSideProfilePlacedCollisionGeometries === undefined
     ? undefined
@@ -633,8 +666,12 @@ if (
         source: shortSideProfileSource,
         observerStatus: shortSideObserverTrace?.status,
         selectedRotationDeg:
-          shortSideObserverTrace?.observerWinnerRotationDeg ??
-          shortSidePairFoldTrace?.prescribedRotationDeg,
+          shortSideProfileSource === 'guarded-stage1-winner'
+            ? shortSideObserverTrace?.observerWinnerRotationDeg
+            : shortSideProfileSource ===
+                'terminal-pair-fold-winner'
+              ? shortSidePairFoldTrace?.prescribedRotationDeg
+              : undefined,
         placedCount:
           shortSideProfilePlacedCollisionGeometries?.length ?? 0,
         unplacedCount:
@@ -734,6 +771,7 @@ const checks = {
       shortSidePairFoldTrace.status !== 'trace-cap' &&
       shortSidePairFoldTrace.status !==
         'failed-protected-fallback'),
+  shortSidePairFoldContract: shortSidePairFoldContractValid,
   shortSideProfileMaterialized:
     !args.captureShortSideObserver ||
     (shortSideProfileSource !== undefined &&

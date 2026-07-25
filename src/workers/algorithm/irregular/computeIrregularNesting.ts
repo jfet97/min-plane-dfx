@@ -171,7 +171,7 @@ export interface ComputeIrregularNestingOptions {
         }
       | undefined
   ) => void
-  /** Search-free observer-only pair fold along the physical short edge. */
+  /** Bounded exhaustive pair fold with no NFP or beam search. */
   readonly captureIntrinsicShortSidePairFoldObserver?: boolean
   /** Benchmark hook for one admitted exact pair fold. */
   readonly onIntrinsicShortSidePairFoldObserverWinner?: (
@@ -341,7 +341,7 @@ export interface IrregularComputeResult {
   readonly focusedCompleteReconstructionTrace?: IntrinsicFocusedCompleteReconstructionTrace
   /** Present only when the zero-search Compact short-side observer is enabled. */
   readonly intrinsicShortSideObserverTrace?: IntrinsicShortSideObserverTrace
-  /** Present only when the search-free short-edge pair-fold observer is enabled. */
+  /** Present only when the bounded short-edge pair-fold observer is enabled. */
   readonly intrinsicShortSidePairFoldTrace?: IntrinsicShortSidePairFoldTrace
 }
 

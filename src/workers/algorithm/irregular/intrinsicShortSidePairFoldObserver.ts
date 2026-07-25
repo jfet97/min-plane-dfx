@@ -30,6 +30,14 @@ export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RSS_DELTA_BYTES =
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES =
   1_048_576 as const
 
+export interface IntrinsicShortSidePairFoldRuntimeControl {
+  readonly maximumRuntimeMs?: number
+  readonly maximumRssDeltaBytes?: number
+  readonly maximumTraceBytes?: number
+  readonly now?: () => number
+  readonly currentRssBytes?: () => number
+}
+
 export type IntrinsicShortSidePairFoldStatus =
   | 'accepted'
   | 'skipped-square-sheet'
@@ -95,6 +103,14 @@ interface ObserverRuntime {
   readonly startedAt: number
   readonly startingRssBytes: number
   peakRssBytes: number
+  transformEvaluations: number
+  expectedPairCount: number
+  evaluatedPairCount: number
+  readonly maximumRuntimeMs: number
+  readonly maximumRssDeltaBytes: number
+  readonly maximumTraceBytes: number
+  readonly now: () => number
+  readonly currentRssBytes: () => number
 }
 
 interface SelectedTransform {
@@ -115,18 +131,38 @@ interface SelectedPair {
   readonly envelopeAreaGrid2: bigint
 }
 
-/** Constructs one exact, search-free terminal pair fold along the physical short edge. */
+/** Exhaustively evaluates one bounded exact pair fold without NFP or beam search. */
 export function observeIntrinsicShortSidePairFold(input: {
   readonly sheet: SheetSpec
   readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly productionShortAxisSpanMm: number
   readonly productionMaximumSideMm: number
   readonly productionEnvelopeAreaMm2: number
+  readonly runtimeControl?: IntrinsicShortSidePairFoldRuntimeControl
 }): Effect.Effect<IntrinsicShortSidePairFoldOutcome, never, GeometryKernel> {
+  const now = input.runtimeControl?.now ?? performance.now
+  const currentRssBytes =
+    input.runtimeControl?.currentRssBytes ??
+    (() => process.memoryUsage.rss())
+  const startingRssBytes = currentRssBytes()
   const runtime: ObserverRuntime = {
-    startedAt: performance.now(),
-    startingRssBytes: process.memoryUsage.rss(),
-    peakRssBytes: process.memoryUsage.rss()
+    startedAt: now(),
+    startingRssBytes,
+    peakRssBytes: startingRssBytes,
+    transformEvaluations: 0,
+    expectedPairCount: 0,
+    evaluatedPairCount: 0,
+    maximumRuntimeMs:
+      input.runtimeControl?.maximumRuntimeMs ??
+      INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS,
+    maximumRssDeltaBytes:
+      input.runtimeControl?.maximumRssDeltaBytes ??
+      INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RSS_DELTA_BYTES,
+    maximumTraceBytes:
+      input.runtimeControl?.maximumTraceBytes ??
+      INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES,
+    now,
+    currentRssBytes
   }
   return constructPairFold(input, runtime).pipe(
     Effect.catchTags({
@@ -136,7 +172,11 @@ export function observeIntrinsicShortSidePairFold(input: {
             input,
             runtime,
             'failed-protected-fallback',
-            error.message
+            error.message,
+            runtime.transformEvaluations,
+            0,
+            runtime.expectedPairCount,
+            runtime.evaluatedPairCount
           )
         ),
       IrregularNestingNotImplementedError: (error) =>
@@ -145,7 +185,11 @@ export function observeIntrinsicShortSidePairFold(input: {
             input,
             runtime,
             'failed-protected-fallback',
-            error.message
+            error.message,
+            runtime.transformEvaluations,
+            0,
+            runtime.expectedPairCount,
+            runtime.evaluatedPairCount
           )
         )
     })
@@ -159,6 +203,7 @@ function constructPairFold(
     readonly productionShortAxisSpanMm: number
     readonly productionMaximumSideMm: number
     readonly productionEnvelopeAreaMm2: number
+    readonly runtimeControl?: IntrinsicShortSidePairFoldRuntimeControl
   },
   runtime: ObserverRuntime
 ) {
@@ -177,25 +222,39 @@ function constructPairFold(
     }
     const geometryKernel = yield* GeometryKernel
     const requestedShortAxisGrid = toGridMm(requestedShortAxisMm)
-    if (requestedShortAxisGrid === undefined) {
+    const requestedLongAxisGrid = toGridMm(
+      Math.max(input.sheet.width, input.sheet.height)
+    )
+    if (
+      requestedShortAxisGrid === undefined ||
+      requestedLongAxisGrid === undefined
+    ) {
       return failedOutcome(
         input,
         runtime,
         'failed-protected-fallback',
-        'requested short axis must fit the canonical grid.'
+        'requested sheet axes must fit the canonical grid.'
       )
     }
 
-    let transformEvaluations = 0
     const selectedTransforms: SelectedTransform[] = []
     for (const piece of input.preparedPieces) {
       let selected: SelectedTransform | undefined
       for (const transform of piece.transforms) {
-        transformEvaluations += 1
+        runtime.transformEvaluations += 1
         const geometry = yield* geometryKernel.transformCollisionGeometry({
           geometry: piece.collisionGeometry,
           transform
         })
+        const bounded = boundedStatus(runtime)
+        if (bounded !== undefined) {
+          return failedOutcome(
+            input,
+            runtime,
+            bounded,
+            `${bounded} reached after ${runtime.transformEvaluations} transform evaluations.`
+          )
+        }
         const minXGrid = toGridMm(geometry.bounds.minX)
         const minYGrid = toGridMm(geometry.bounds.minY)
         const maxXGrid = toGridMm(geometry.bounds.maxX)
@@ -230,41 +289,30 @@ function constructPairFold(
           selected = candidate
         }
       }
-      const bounded = boundedStatus(runtime)
-      if (bounded !== undefined) {
-        return failedOutcome(
-          input,
-          runtime,
-          bounded,
-          `${bounded} reached after ${transformEvaluations} transform evaluations.`,
-          transformEvaluations,
-          0
-        )
-      }
       if (selected === undefined) {
         return failedOutcome(
           input,
           runtime,
           'failed-protected-fallback',
           `piece ${piece.pieceId ?? piece.source.id} has no valid pair-fold transform.`,
-          transformEvaluations,
+          runtime.transformEvaluations,
           0
         )
       }
       selectedTransforms.push(selected)
     }
 
-    const expectedPairCount =
+    runtime.expectedPairCount =
       (selectedTransforms.length * (selectedTransforms.length - 1)) / 2
-    if (expectedPairCount === 0) {
+    if (runtime.expectedPairCount === 0) {
       return failedOutcome(
         input,
         runtime,
         'no-pair',
         'the terminal pair fold requires at least two prepared pieces.',
-        transformEvaluations,
+        runtime.transformEvaluations,
         0,
-        expectedPairCount,
+        runtime.expectedPairCount,
         0
       )
     }
@@ -272,7 +320,6 @@ function constructPairFold(
       (sum, selected) => sum + selected.widthGrid,
       0
     )
-    let evaluatedPairCount = 0
     let selectedPair: SelectedPair | undefined
     for (
       let bottomIndex = 0;
@@ -288,18 +335,17 @@ function constructPairFold(
       ) {
         const upper = selectedTransforms[upperIndex]
         if (upper === undefined) continue
-        evaluatedPairCount += 1
-        const bounded = boundedStatus(runtime)
-        if (bounded !== undefined) {
+        const boundedBeforePair = boundedStatus(runtime)
+        if (boundedBeforePair !== undefined) {
           return failedOutcome(
             input,
             runtime,
-            bounded,
-            `${bounded} reached after ${evaluatedPairCount} pair evaluations.`,
-            transformEvaluations,
+            boundedBeforePair,
+            `${boundedBeforePair} reached after ${runtime.evaluatedPairCount} pair evaluations.`,
+            runtime.transformEvaluations,
             0,
-            expectedPairCount,
-            evaluatedPairCount
+            runtime.expectedPairCount,
+            runtime.evaluatedPairCount
           )
         }
         const widthGrid =
@@ -318,7 +364,26 @@ function constructPairFold(
           bottom.heightGrid + upper.heightGrid,
           otherMaximumHeightGrid
         )
-        if (widthGrid > requestedShortAxisGrid) continue
+        runtime.evaluatedPairCount += 1
+        const boundedAfterPair = boundedStatus(runtime)
+        if (boundedAfterPair !== undefined) {
+          return failedOutcome(
+            input,
+            runtime,
+            boundedAfterPair,
+            `${boundedAfterPair} reached after ${runtime.evaluatedPairCount} pair evaluations.`,
+            runtime.transformEvaluations,
+            0,
+            runtime.expectedPairCount,
+            runtime.evaluatedPairCount
+          )
+        }
+        if (
+          widthGrid > requestedShortAxisGrid ||
+          depthGrid > requestedLongAxisGrid
+        ) {
+          continue
+        }
         const candidate: SelectedPair = {
           bottomIndex,
           upperIndex,
@@ -343,11 +408,11 @@ function constructPairFold(
         input,
         runtime,
         'no-fitting-pair',
-        'no single fixed-transform pair fold fits the requested short axis.',
-        transformEvaluations,
+        'no single fixed-transform pair fold fits both requested sheet axes.',
+        runtime.transformEvaluations,
         0,
-        expectedPairCount,
-        evaluatedPairCount
+        runtime.expectedPairCount,
+        runtime.evaluatedPairCount
       )
     }
 
@@ -369,10 +434,10 @@ function constructPairFold(
             runtime,
             'failed-protected-fallback',
             'the selected upper pair member was unavailable.',
-            transformEvaluations,
+            runtime.transformEvaluations,
             placed.length,
-            expectedPairCount,
-            evaluatedPairCount
+            runtime.expectedPairCount,
+            runtime.evaluatedPairCount
           )
         }
         placed.push(createPlacedPiece(selected, cursorGrid, 0))
@@ -395,10 +460,10 @@ function constructPairFold(
           runtime,
           'failed-protected-fallback',
           'selected pair accounting exceeded the requested short axis.',
-          transformEvaluations,
+          runtime.transformEvaluations,
           placed.length,
-          expectedPairCount,
-          evaluatedPairCount
+          runtime.expectedPairCount,
+          runtime.evaluatedPairCount
         )
       }
       placed.push(createPlacedPiece(selected, cursorGrid, 0))
@@ -412,10 +477,10 @@ function constructPairFold(
         runtime,
         beforeFinalization,
         `${beforeFinalization} reached before exact finalization.`,
-        transformEvaluations,
+        runtime.transformEvaluations,
         placed.length,
-        expectedPairCount,
-        evaluatedPairCount,
+        runtime.expectedPairCount,
+        runtime.evaluatedPairCount,
         selectedTransforms[selectedPair.bottomIndex]?.pieceId,
         selectedTransforms[selectedPair.upperIndex]?.pieceId
       )
@@ -445,10 +510,10 @@ function constructPairFold(
         runtime,
         'failed-protected-fallback',
         'the prescribed physical pair-fold orientation failed exact legality.',
-        transformEvaluations,
+        runtime.transformEvaluations,
         placed.length,
-        expectedPairCount,
-        evaluatedPairCount,
+        runtime.expectedPairCount,
+        runtime.evaluatedPairCount,
         selectedTransforms[selectedPair.bottomIndex]?.pieceId,
         selectedTransforms[selectedPair.upperIndex]?.pieceId
       )
@@ -458,9 +523,9 @@ function constructPairFold(
       runtime,
       state: physicalState,
       prescribedRotationDeg,
-      transformEvaluations,
-      expectedPairCount,
-      evaluatedPairCount,
+      transformEvaluations: runtime.transformEvaluations,
+      expectedPairCount: runtime.expectedPairCount,
+      evaluatedPairCount: runtime.evaluatedPairCount,
       selectedBottomPieceId:
         selectedTransforms[selectedPair.bottomIndex]?.pieceId,
       selectedUpperPieceId:
@@ -473,27 +538,27 @@ function constructPairFold(
         runtime,
         boundedAfterFinalization,
         `${boundedAfterFinalization} reached after exact finalization.`,
-        transformEvaluations,
+        runtime.transformEvaluations,
         placed.length,
-        expectedPairCount,
-        evaluatedPairCount,
+        runtime.expectedPairCount,
+        runtime.evaluatedPairCount,
         selectedTransforms[selectedPair.bottomIndex]?.pieceId,
         selectedTransforms[selectedPair.upperIndex]?.pieceId
       )
     }
     if (
       outcome.trace.serializedTraceBytes >
-      INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES
+      runtime.maximumTraceBytes
     ) {
       return failedOutcome(
         input,
         runtime,
         'trace-cap',
         'stabilized pair-fold trace exceeds its byte cap.',
-        transformEvaluations,
+        runtime.transformEvaluations,
         placed.length,
-        expectedPairCount,
-        evaluatedPairCount,
+        runtime.expectedPairCount,
+        runtime.evaluatedPairCount,
         selectedTransforms[selectedPair.bottomIndex]?.pieceId,
         selectedTransforms[selectedPair.upperIndex]?.pieceId
       )
@@ -689,7 +754,7 @@ function finalizeOutcome(input: {
     admission: measuredAdmission,
     runtimeMs: Math.max(
       0,
-      performance.now() - input.runtime.startedAt
+      input.runtime.now() - input.runtime.startedAt
     ),
     peakRssDeltaBytes: sampleRss(input.runtime),
     serializedTraceBytes: 0,
@@ -802,13 +867,13 @@ function boundedStatus(
   runtime: ObserverRuntime
 ): 'deadline' | 'memory-cap' | undefined {
   if (
-    performance.now() - runtime.startedAt >
-    INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS
+    runtime.now() - runtime.startedAt >
+    runtime.maximumRuntimeMs
   ) {
     return 'deadline'
   }
   return sampleRss(runtime) >
-    INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RSS_DELTA_BYTES
+    runtime.maximumRssDeltaBytes
     ? 'memory-cap'
     : undefined
 }
@@ -816,7 +881,7 @@ function boundedStatus(
 function sampleRss(runtime: ObserverRuntime): number {
   runtime.peakRssBytes = Math.max(
     runtime.peakRssBytes,
-    process.memoryUsage.rss()
+    runtime.currentRssBytes()
   )
   return Math.max(
     0,
@@ -837,10 +902,10 @@ function failedOutcome(
     'accepted' | 'rejected-admission'
   >,
   failureReason: string,
-  transformEvaluations = 0,
+  transformEvaluations = runtime.transformEvaluations,
   placedCount = 0,
-  expectedPairCount = 0,
-  evaluatedPairCount = 0,
+  expectedPairCount = runtime.expectedPairCount,
+  evaluatedPairCount = runtime.evaluatedPairCount,
   selectedBottomPieceId?: string,
   selectedUpperPieceId?: string
 ): IntrinsicShortSidePairFoldOutcome {
@@ -883,7 +948,7 @@ function failedOutcome(
       admission: undefined,
       runtimeMs: Math.max(
         0,
-        performance.now() - runtime.startedAt
+        runtime.now() - runtime.startedAt
       ),
       peakRssDeltaBytes: sampleRss(runtime),
       serializedTraceBytes: 0,
