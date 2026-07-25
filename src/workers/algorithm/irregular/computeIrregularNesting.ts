@@ -76,6 +76,10 @@ import {
   type IntrinsicShortSideObserverTrace
 } from './intrinsicShortSideObserver.js'
 import {
+  observeIntrinsicShortSideShelf,
+  type IntrinsicShortSideShelfTrace
+} from './intrinsicShortSideShelfObserver.js'
+import {
   measureIntrinsicCapacityShadowTelemetry,
   type IntrinsicCapacityShadowTelemetry
 } from './intrinsicCapacityTelemetry.js'
@@ -166,6 +170,12 @@ export interface ComputeIrregularNestingOptions {
           readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
         }
       | undefined
+  ) => void
+  /** Search-free observer-only rigid shelf along the physical short edge. */
+  readonly captureIntrinsicShortSideShelfObserver?: boolean
+  /** Benchmark hook for one admitted exact shelf. */
+  readonly onIntrinsicShortSideShelfObserverWinner?: (
+    winner: ReadonlyArray<IrregularPlacedPiece> | undefined
   ) => void
 }
 
@@ -331,6 +341,8 @@ export interface IrregularComputeResult {
   readonly focusedCompleteReconstructionTrace?: IntrinsicFocusedCompleteReconstructionTrace
   /** Present only when the zero-search Compact short-side observer is enabled. */
   readonly intrinsicShortSideObserverTrace?: IntrinsicShortSideObserverTrace
+  /** Present only when the search-free short-edge shelf observer is enabled. */
+  readonly intrinsicShortSideShelfTrace?: IntrinsicShortSideShelfTrace
 }
 
 export type IrregularComputeErrorType =
@@ -476,6 +488,7 @@ function coordinateIntrinsicSharedArchive(
       | ReadonlyArray<IntrinsicSharedArchiveEndpoint>
       | undefined
     let intrinsicShortSideObserverTrace: IntrinsicShortSideObserverTrace | undefined
+    let intrinsicShortSideShelfTrace: IntrinsicShortSideShelfTrace | undefined
 
     if (archiveEnabled) {
       settledCompleteArchiveForShortSideObserver = []
@@ -1091,6 +1104,32 @@ function coordinateIntrinsicSharedArchive(
                 winnerState.placedCollisionGeometries
             }
       )
+      if (
+        input.options.captureIntrinsicShortSideShelfObserver === true &&
+        intrinsicShortSideObserverTrace.observerWinnerCanonicalGeometryHash ===
+          undefined &&
+        intrinsicShortSideObserverTrace.productionShortAxisSpanMm !==
+          undefined &&
+        intrinsicShortSideObserverTrace.productionMaximumSideMm !==
+          undefined &&
+        intrinsicShortSideObserverTrace.productionEnvelopeAreaMm2 !==
+          undefined
+      ) {
+        const shelfOutcome = yield* observeIntrinsicShortSideShelf({
+          sheet: input.request.sheet,
+          preparedPieces: input.preparedPieces,
+          productionShortAxisSpanMm:
+            intrinsicShortSideObserverTrace.productionShortAxisSpanMm,
+          productionMaximumSideMm:
+            intrinsicShortSideObserverTrace.productionMaximumSideMm,
+          productionEnvelopeAreaMm2:
+            intrinsicShortSideObserverTrace.productionEnvelopeAreaMm2
+        })
+        intrinsicShortSideShelfTrace = shelfOutcome.trace
+        input.options.onIntrinsicShortSideShelfObserverWinner?.(
+          shelfOutcome.placedCollisionGeometries
+        )
+      }
     }
     return {
       placedCollisionGeometries: selected.placedCollisionGeometries,
@@ -1118,7 +1157,10 @@ function coordinateIntrinsicSharedArchive(
         : { focusedCompleteReconstructionTrace }),
       ...(intrinsicShortSideObserverTrace === undefined
         ? {}
-        : { intrinsicShortSideObserverTrace })
+        : { intrinsicShortSideObserverTrace }),
+      ...(intrinsicShortSideShelfTrace === undefined
+        ? {}
+        : { intrinsicShortSideShelfTrace })
     }
   })
 }
