@@ -102,9 +102,11 @@ Stage 1 proves that settled archive reuse can sometimes provide the requested
 directional behavior for almost no extra cost. It also proves that raw
 long-axis minimization is unsafe without geometric admissibility.
 
-Stages 2 through 4 tested three materially different ways to go beyond archive
-reuse. All were rejected under their predeclared stop rules, so Stage 1 is the
-only retained short-side mechanism.
+Stages 2 through 5 tested four materially different ways to go beyond archive
+reuse. The fixed-target repair, two construction beams, and exact one-row shelf
+were rejected under their predeclared stop rules. A final narrower terminal
+pair-fold observer succeeded for Shapes-17 without changing production Compact
+or restarting construction.
 
 ## Stage 2 fixed-target result
 
@@ -208,10 +210,72 @@ observer-only enumeration seam were removed; immutable failure provenance
 remains under
 `/private/tmp/min-plane-provenance/short-side-band-1163bd3-run1/`.
 
+## Stage 5 exact one-row shelf result
+
+Commit `999e9fb` selected each prepared piece's exact minimum-width transform
+once and attempted one rigid, search-free row along the requested short edge.
+On Shapes-17 `2000 x 2700`, all `136` transform candidates were evaluated in
+`3.451 ms`, but the row required `2007.195 mm`: `7.195 mm` more than the
+physical short edge. The pilot therefore produced no endpoint and stopped
+without a matrix run or transform reselection.
+
+Immutable evidence remains under:
+
+- `/private/tmp/min-plane-provenance/short-side-shelf-999e9fb-run1/`;
+- `/private/tmp/min-plane-provenance/short-side-shelf-999e9fb-diagnostic/`.
+
+## Stage 6 exact terminal pair fold
+
+Commit `d8f9275` retained the Stage 5 fixed transforms and tested the smallest
+possible generic relaxation: enumerate every unordered pair once and stack
+exactly one pair at the first member's row position. The lower prepared index
+is bottom, the higher index is upper, and all other pieces remain in their
+original one-row order. There is no transform reselection, NFP search, beam,
+row wrapping, second fold, or iterative repair.
+
+Two independent Shapes-17 `2000 x 2700` runs and one `2700 x 2000` transpose
+selected the same pair and canonical geometry:
+
+| Measurement | Value |
+| --- | ---: |
+| fixed-transform evaluations | `136` |
+| expected/evaluated pairs | `136/136` |
+| selected pair | `shapes-17-1` + `shapes-17-10` |
+| short-axis span | `1897.173 mm` |
+| requested short-axis fill | `94.85865%` |
+| long-axis depth | `220.526 mm` |
+| envelope area | `418,375.972998 mm2` |
+| collision-envelope density | `50.2790%` |
+| enclosed cavities | `0` |
+| observer runtime | `6.481 ms`, `7.626 ms` |
+| canonical hash | `4dd34dcee54caa79e1cc0dc3fc88b867ddfa15a98588dda1083e820cdb44c0bb` |
+
+The transpose preserved the same intrinsic identity, pair, span, and depth
+with the prescribed quarter turn. Admission additionally required exact
+legality and piece accounting, at least `80%` short-axis fill, no more depth
+than production Compact's maximum side, `99%` projection coverage in one
+component, zero cavities, at least `50%` exact collision-envelope density, and
+a short-axis gain factor no smaller than the envelope-area cost factor.
+
+The current-source matrix at `e97225c` passed all nine algorithm cases and all
+18 rendered layouts sequentially in one process. Every production Compact
+hash, placed/unplaced count, area ceiling, and cavity gate remained exact. The
+short-side outputs now comprise one guarded Stage 1 winner, one terminal
+pair-fold winner, and seven exact Compact fallbacks. When the pair observer
+runs, measured overhead is `2.350–6.759 ms`; square sheets perform zero pair
+work.
+
+This is a user-directed, narrow exception to the earlier multi-family promotion
+preference. It is accepted because it fixes the explicitly targeted Shapes
+layout with a bounded shape-generic mechanism, complete exact matrix evidence,
+and protected fallback semantics. It does not justify a second fold or a more
+general shelf search.
+
 ## Evidence
 
 - [`../artifacts/compact-short-side-observer/README.md`](../artifacts/compact-short-side-observer/README.md)
 - [`../artifacts/compact-short-side-observer/matrix/summary.json`](../artifacts/compact-short-side-observer/matrix/summary.json)
+- [`../artifacts/compact-short-side-observer/matrix/shapes-17-2000x2700.short-side-profile.png`](../artifacts/compact-short-side-observer/matrix/shapes-17-2000x2700.short-side-profile.png)
 - [`../artifacts/compact-short-side-observer/triangle-600x400-reproduction/triangle-20-600x400.short-side-observer.png`](../artifacts/compact-short-side-observer/triangle-600x400-reproduction/triangle-20-600x400.short-side-observer.png)
 - [`../artifacts/compact-short-side-observer/triangle-600x400-reproduction/triangle-20-600x400.production.png`](../artifacts/compact-short-side-observer/triangle-600x400-reproduction/triangle-20-600x400.production.png)
 - immutable rejected-pilot manifest:

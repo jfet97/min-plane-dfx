@@ -5,9 +5,9 @@
     "width": 2000,
     "height": 2700
   },
-  "source": "guarded-stage1-winner",
-  "observerStatus": "observed",
-  "selectedRotationDeg": 90,
+  "source": "compact-fallback",
+  "observerStatus": "observed-no-directional-improvement",
+  "selectedRotationDeg": 0,
   "placedCount": 61,
   "unplacedCount": 0,
   "unplacedPieceIds": [],
@@ -15,7 +15,7 @@
   "fittedCanonicalSha256": "ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b",
   "canonicalTopology": {
     "enclosedCavityCount": 0,
-    "largestOccupiedHullGapRatio": 0.1611505889724747,
+    "largestOccupiedHullGapRatio": 0.13724449834128455,
     "occupiedEnvelopeAspectRatio": 1.0115476967287151,
     "positiveContactComponentCount": 18,
     "isolatedPieceCount": 7,
@@ -23,11 +23,11 @@
     "largestPositiveContactComponentRatio": 0.22950819672131148
   },
   "bounds": {
-    "width": 629.387,
-    "height": 622.202,
+    "width": 622.202,
+    "height": 629.387,
     "area": 391605.85017399996,
     "span": 1251.589
   },
   "exactPiecePartition": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/mixed-61-2000x2700.short-side-profile.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/mixed-61-2000x2700.short-side-profile.svg"
 }

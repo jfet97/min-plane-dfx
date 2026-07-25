@@ -4,9 +4,9 @@
     "width": 600,
     "height": 400
   },
-  "sourceCommit": "1cd5ac7",
+  "sourceCommit": "e97225c",
   "runtime": {
-    "elapsedMs": 14438.452041,
+    "elapsedMs": 14630.791208999999,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -923,11 +923,11 @@
       "selectedCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
       "consumedCandidateEvaluations": 0,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 0.6447920000009617,
+      "runtimeMs": 0.7278750000004948,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
-      "version": "intrinsic-short-side-observer-v2",
+      "version": "intrinsic-short-side-observer-v3",
       "status": "observed",
       "outputInfluence": "none",
       "requestedSheetWidthMm": 600,
@@ -935,15 +935,18 @@
       "requestedLongAxisMm": 600,
       "requestedShortAxisMm": 400,
       "requestedLongAxis": "width",
+      "productionShortAxisSpanMm": 152.522,
+      "productionMaximumSideMm": 487.983,
+      "productionEnvelopeAreaMm2": 74428.143126,
       "settledEndpointCount": 10,
       "evaluatedOrientationCount": 20,
       "cavityHullGuardEligibleEndpointCount": 3,
       "geometricParetoEligibleEndpointCount": 2,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 25.37987500000054,
+      "runtimeMs": 30.173624999999447,
       "runtimeBudgetExceeded": false,
-      "serializedTraceBytes": 32499,
+      "serializedTraceBytes": 32610,
       "endpoints": [
         {
           "archiveIndex": 0,
@@ -970,8 +973,8 @@
             "sharedBoundaryLengthMm": 262.82500000000005,
             "comparisonTuple": [
               0,
-              341.785,
               62.86200000000002,
+              341.785,
               0,
               0.3312548377545349,
               1,
@@ -1007,8 +1010,8 @@
             "sharedBoundaryLengthMm": 262.82500000000005,
             "comparisonTuple": [
               0,
-              337.138,
               58.214999999999975,
+              337.138,
               0,
               0.3312548377545349,
               1,
@@ -1045,8 +1048,8 @@
             "sharedBoundaryLengthMm": 262.82500000000005,
             "comparisonTuple": [
               0,
-              337.138,
               58.214999999999975,
+              337.138,
               0,
               0.3312548377545349,
               1,
@@ -1090,8 +1093,8 @@
             "sharedBoundaryLengthMm": 388.1070000000001,
             "comparisonTuple": [
               0,
-              487.983,
               247.478,
+              487.983,
               0,
               0.029710516900773094,
               1,
@@ -1127,8 +1130,8 @@
             "sharedBoundaryLengthMm": 388.1070000000001,
             "comparisonTuple": [
               1,
-              152.522,
               -87.983,
+              152.522,
               0,
               0.029710516900773094,
               1,
@@ -1165,8 +1168,8 @@
             "sharedBoundaryLengthMm": 388.1070000000001,
             "comparisonTuple": [
               0,
-              487.983,
               247.478,
+              487.983,
               0,
               0.029710516900773094,
               1,
@@ -1210,8 +1213,8 @@
             "sharedBoundaryLengthMm": 481.16799999999995,
             "comparisonTuple": [
               0,
-              394.922,
               171.214,
+              394.922,
               0,
               0.08690173010305187,
               1,
@@ -1247,8 +1250,8 @@
             "sharedBoundaryLengthMm": 481.16799999999995,
             "comparisonTuple": [
               0,
-              228.786,
               5.0779999999999745,
+              228.786,
               0,
               0.08690173010305187,
               1,
@@ -1285,8 +1288,8 @@
             "sharedBoundaryLengthMm": 481.16799999999995,
             "comparisonTuple": [
               0,
-              228.786,
               5.0779999999999745,
+              228.786,
               0,
               0.08690173010305187,
               1,
@@ -1329,8 +1332,8 @@
             "sharedBoundaryLengthMm": 176.57599999999996,
             "comparisonTuple": [
               0,
-              347.002,
               62.928999999999974,
+              347.002,
               0,
               0.3705751025529532,
               1,
@@ -1366,8 +1369,8 @@
             "sharedBoundaryLengthMm": 176.57599999999996,
             "comparisonTuple": [
               0,
-              337.071,
               52.99799999999999,
+              337.071,
               0,
               0.3705751025529532,
               1,
@@ -1404,8 +1407,8 @@
             "sharedBoundaryLengthMm": 176.57599999999996,
             "comparisonTuple": [
               0,
-              337.071,
               52.99799999999999,
+              337.071,
               0,
               0.3705751025529532,
               1,
@@ -1449,8 +1452,8 @@
             "sharedBoundaryLengthMm": 481.16799999999995,
             "comparisonTuple": [
               0,
-              394.922,
               171.214,
+              394.922,
               0,
               0.10896357947112485,
               1,
@@ -1486,8 +1489,8 @@
             "sharedBoundaryLengthMm": 481.16799999999995,
             "comparisonTuple": [
               0,
-              228.786,
               5.0779999999999745,
+              228.786,
               0,
               0.10896357947112485,
               1,
@@ -1524,8 +1527,8 @@
             "sharedBoundaryLengthMm": 481.16799999999995,
             "comparisonTuple": [
               0,
-              228.786,
               5.0779999999999745,
+              228.786,
               0,
               0.10896357947112485,
               1,
@@ -1569,8 +1572,8 @@
             "sharedBoundaryLengthMm": 436.682,
             "comparisonTuple": [
               0,
-              439.408,
               94.95400000000001,
+              439.408,
               0,
               0.5007766797765806,
               1,
@@ -1606,8 +1609,8 @@
             "sharedBoundaryLengthMm": 436.682,
             "comparisonTuple": [
               1,
-              305.046,
               -39.408000000000015,
+              305.046,
               0,
               0.5007766797765806,
               1,
@@ -1644,8 +1647,8 @@
             "sharedBoundaryLengthMm": 436.682,
             "comparisonTuple": [
               0,
-              439.408,
               94.95400000000001,
+              439.408,
               0,
               0.5007766797765806,
               1,
@@ -1689,8 +1692,8 @@
             "sharedBoundaryLengthMm": 876.09,
             "comparisonTuple": [
               0,
-              484.563,
               171.801,
+              484.563,
               0,
               0.2894520050345961,
               1,
@@ -1726,8 +1729,8 @@
             "sharedBoundaryLengthMm": 876.09,
             "comparisonTuple": [
               1,
-              228.199,
               -84.56299999999999,
+              228.199,
               0,
               0.2894520050345961,
               1,
@@ -1764,8 +1767,8 @@
             "sharedBoundaryLengthMm": 876.09,
             "comparisonTuple": [
               0,
-              484.563,
               171.801,
+              484.563,
               0,
               0.2894520050345961,
               1,
@@ -1809,8 +1812,8 @@
             "sharedBoundaryLengthMm": 700.872,
             "comparisonTuple": [
               1,
-              613.263,
               94.95600000000002,
+              613.263,
               0,
               0.5454545454545454,
               1,
@@ -1846,8 +1849,8 @@
             "sharedBoundaryLengthMm": 700.872,
             "comparisonTuple": [
               1,
-              305.044,
               -213.26300000000003,
+              305.044,
               0,
               0.5454545454545454,
               1,
@@ -1884,8 +1887,8 @@
             "sharedBoundaryLengthMm": 700.872,
             "comparisonTuple": [
               1,
-              305.044,
               -213.26300000000003,
+              305.044,
               0,
               0.5454545454545454,
               1,
@@ -1929,8 +1932,8 @@
             "sharedBoundaryLengthMm": 794.592,
             "comparisonTuple": [
               1,
-              1513.5,
               311.712,
+              1513.5,
               0,
               0.5,
               1,
@@ -1966,8 +1969,8 @@
             "sharedBoundaryLengthMm": 794.592,
             "comparisonTuple": [
               1,
-              88.288,
               -1113.5,
+              88.288,
               0,
               0.5,
               1,
@@ -2004,8 +2007,8 @@
             "sharedBoundaryLengthMm": 794.592,
             "comparisonTuple": [
               1,
-              88.288,
               -1113.5,
+              88.288,
               0,
               0.5,
               1,
@@ -2049,8 +2052,8 @@
             "sharedBoundaryLengthMm": 700.872,
             "comparisonTuple": [
               1,
-              613.263,
               94.95600000000002,
+              613.263,
               0,
               0.5457757596716234,
               1,
@@ -2086,8 +2089,8 @@
             "sharedBoundaryLengthMm": 700.872,
             "comparisonTuple": [
               1,
-              305.044,
               -213.26300000000003,
+              305.044,
               0,
               0.5457757596716234,
               1,
@@ -2124,8 +2127,8 @@
             "sharedBoundaryLengthMm": 700.872,
             "comparisonTuple": [
               1,
-              305.044,
               -213.26300000000003,
+              305.044,
               0,
               0.5457757596716234,
               1,
@@ -2175,11 +2178,14 @@
     "shortSideObserverOutputInfluence": true,
     "shortSideObserverRuntimeBudget": true,
     "shortSideObserverContract": true,
+    "shortSidePairFoldTracePresent": true,
+    "shortSidePairFoldOutputInfluence": true,
+    "shortSidePairFoldBudget": true,
     "shortSideProfileMaterialized": true,
     "shortSideProfileExactPiecePartition": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-600x400.svg",
-  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-600x400.short-side-profile.svg",
-  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-600x400.short-side-profile.json"
+  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-600x400.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-600x400.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-600x400.short-side-profile.json"
 }

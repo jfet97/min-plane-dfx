@@ -5,8 +5,8 @@
     "width": 2000,
     "height": 2700
   },
-  "source": "guarded-stage1-winner",
-  "observerStatus": "observed",
+  "source": "compact-fallback",
+  "observerStatus": "observed-no-directional-improvement",
   "selectedRotationDeg": 0,
   "placedCount": 20,
   "unplacedCount": 0,
@@ -29,5 +29,5 @@
     "span": 640.505
   },
   "exactPiecePartition": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/triangle-20-2000x2700.short-side-profile.svg"
+  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/triangle-20-2000x2700.short-side-profile.svg"
 }

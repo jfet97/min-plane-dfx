@@ -122,3 +122,39 @@ cost without such a witness.
 - rejected width-four source commit: `1163bd3`
 - immutable width-four failure report:
   `/private/tmp/min-plane-provenance/short-side-band-1163bd3-run1/shapes-17-2000x2700.json`
+
+## Exact shelf and terminal pair-fold follow-up
+
+Commit `999e9fb` tested an exact, search-free one-row shelf on Shapes-17
+`2000 x 2700`. It selected one minimum-width transform per piece and evaluated
+all `136` transforms in `3.451 ms`. The resulting row required
+`2007.195 mm`, exceeding the requested short edge by `7.195 mm`, so it was
+rejected without transform reselection, a second row, or a matrix run.
+
+The next reviewed experiment changed only that failed terminal packing:
+commit `d8f9275` enumerated all `136` unordered pairs over the same fixed
+transforms and stacked exactly one pair. Two identical portrait runs and the
+landscape transpose selected `shapes-17-1` below `shapes-17-10`, producing
+the same canonical geometry at `1897.173 x 220.526 mm`, zero cavities, and
+`50.2790%` collision-envelope density. Pair-fold runtime was `6.481 ms` and
+`7.626 ms`; the transpose used `10.483 ms`.
+
+The strict current-source matrix at `e97225c` then passed 9/9 algorithm cases
+and 18/18 rendered layouts with every production Compact hash and count
+unchanged. The terminal observer measured only `2.350–6.759 ms` when eligible
+and performed zero work on square sheets. The accepted implementation remains
+single-process and sequential, runs only after the protected Compact and Stage
+1 archive observer have no winner, and falls back exactly when no pair is
+admitted.
+
+Evidence:
+
+- rejected row:
+  `/private/tmp/min-plane-provenance/short-side-shelf-999e9fb-run1/`;
+- deterministic pair-fold runs:
+  `/private/tmp/min-plane-provenance/short-side-pair-fold-d8f9275-run1/`,
+  `/private/tmp/min-plane-provenance/short-side-pair-fold-d8f9275-run2/`;
+- transpose:
+  `/private/tmp/min-plane-provenance/short-side-pair-fold-d8f9275-transpose/`;
+- accepted matrix:
+  `/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/`.

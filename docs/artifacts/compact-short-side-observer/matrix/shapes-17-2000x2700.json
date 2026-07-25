@@ -4,9 +4,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "1cd5ac7",
+  "sourceCommit": "e97225c",
   "runtime": {
-    "elapsedMs": 12340.381875,
+    "elapsedMs": 12460.255541999999,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -1538,27 +1538,30 @@
       "selectedCanonicalGeometryHash": "1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d",
       "consumedCandidateEvaluations": 8035,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 1706.261625000001,
+      "runtimeMs": 1715.5178749999995,
       "outputInfluence": "selected"
     },
     "intrinsicShortSideObserverTrace": {
-      "version": "intrinsic-short-side-observer-v2",
-      "status": "observed",
+      "version": "intrinsic-short-side-observer-v3",
+      "status": "observed-no-directional-improvement",
       "outputInfluence": "none",
       "requestedSheetWidthMm": 2000,
       "requestedSheetHeightMm": 2700,
       "requestedLongAxisMm": 2700,
       "requestedShortAxisMm": 2000,
       "requestedLongAxis": "height",
+      "productionShortAxisSpanMm": 532.691,
+      "productionMaximumSideMm": 532.691,
+      "productionEnvelopeAreaMm2": 281233.148068,
       "settledEndpointCount": 3,
       "evaluatedOrientationCount": 6,
       "cavityHullGuardEligibleEndpointCount": 1,
       "geometricParetoEligibleEndpointCount": 1,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 24.032749999998487,
+      "runtimeMs": 29.11479099999997,
       "runtimeBudgetExceeded": false,
-      "serializedTraceBytes": 9191,
+      "serializedTraceBytes": 9195,
       "endpoints": [
         {
           "archiveIndex": 0,
@@ -1586,8 +1589,8 @@
             "sharedBoundaryLengthMm": 665.844,
             "comparisonTuple": [
               0,
-              527.948,
               1467.309,
+              527.948,
               0,
               0.1001646831166667,
               1,
@@ -1623,8 +1626,8 @@
             "sharedBoundaryLengthMm": 665.844,
             "comparisonTuple": [
               0,
-              532.691,
               1472.0520000000001,
+              532.691,
               0,
               0.1001646831166667,
               1,
@@ -1661,8 +1664,8 @@
             "sharedBoundaryLengthMm": 665.844,
             "comparisonTuple": [
               0,
-              527.948,
               1467.309,
+              527.948,
               0,
               0.1001646831166667,
               1,
@@ -1705,8 +1708,8 @@
             "sharedBoundaryLengthMm": 106.681,
             "comparisonTuple": [
               0,
-              543.774,
               1440.025,
+              543.774,
               0,
               0.23359145881845145,
               1,
@@ -1742,8 +1745,8 @@
             "sharedBoundaryLengthMm": 106.681,
             "comparisonTuple": [
               0,
-              559.975,
               1456.226,
+              559.975,
               0,
               0.23359145881845145,
               1,
@@ -1780,8 +1783,8 @@
             "sharedBoundaryLengthMm": 106.681,
             "comparisonTuple": [
               0,
-              543.774,
               1440.025,
+              543.774,
               0,
               0.23359145881845145,
               1,
@@ -1824,8 +1827,8 @@
             "sharedBoundaryLengthMm": 251.52199999999996,
             "comparisonTuple": [
               0,
-              536.882,
               1421.5819999999999,
+              536.882,
               0,
               0.24211947627167232,
               1,
@@ -1861,8 +1864,8 @@
             "sharedBoundaryLengthMm": 251.52199999999996,
             "comparisonTuple": [
               0,
-              578.418,
               1463.118,
+              578.418,
               0,
               0.24211947627167232,
               1,
@@ -1899,8 +1902,8 @@
             "sharedBoundaryLengthMm": 251.52199999999996,
             "comparisonTuple": [
               0,
-              536.882,
               1421.5819999999999,
+              536.882,
               0,
               0.24211947627167232,
               1,
@@ -1921,9 +1924,46 @@
       ],
       "rankedCanonicalGeometryHashes": [
         "1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d"
-      ],
-      "observerWinnerCanonicalGeometryHash": "1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d",
-      "observerWinnerRotationDeg": 0
+      ]
+    },
+    "intrinsicShortSidePairFoldTrace": {
+      "version": "intrinsic-short-side-pair-fold-observer-v1",
+      "status": "accepted",
+      "outputInfluence": "none",
+      "executionModel": "single-process-sequential",
+      "requestedShortAxisMm": 2000,
+      "requestedLongAxisMm": 2700,
+      "prescribedRotationDeg": 0,
+      "productionShortAxisSpanMm": 532.691,
+      "productionMaximumSideMm": 532.691,
+      "productionEnvelopeAreaMm2": 281233.148068,
+      "transformEvaluations": 136,
+      "expectedPairCount": 136,
+      "evaluatedPairCount": 136,
+      "selectedBottomPieceId": "shapes-17-1",
+      "selectedUpperPieceId": "shapes-17-10",
+      "placedCount": 17,
+      "usedShortAxisSpanMm": 1897.173,
+      "usedLongAxisDepthMm": 220.526,
+      "envelopeAreaMm2": 418375.97299800004,
+      "canonicalGeometryHash": "4dd34dcee54caa79e1cc0dc3fc88b867ddfa15a98588dda1083e820cdb44c0bb",
+      "admission": {
+        "exactLegal": true,
+        "allPiecesPlaced": true,
+        "fillRatio": 0.9485865,
+        "depthWithinProductionMaximumSide": true,
+        "projectionCoverageRatio": 1,
+        "projectionComponentCount": 1,
+        "enclosedCavityCount": 0,
+        "collisionEnvelopeDensity": 0.5027902837061476,
+        "shortAxisSpanGainFactor": 3.561488743004856,
+        "envelopeAreaCostFactor": 1.4876481519768787,
+        "directionallyEfficient": true,
+        "accepted": true
+      },
+      "runtimeMs": 6.75891700000102,
+      "peakRssDeltaBytes": 0,
+      "serializedTraceBytes": 1154
     }
   },
   "checks": {
@@ -1949,11 +1989,14 @@
     "shortSideObserverOutputInfluence": true,
     "shortSideObserverRuntimeBudget": true,
     "shortSideObserverContract": true,
+    "shortSidePairFoldTracePresent": true,
+    "shortSidePairFoldOutputInfluence": true,
+    "shortSidePairFoldBudget": true,
     "shortSideProfileMaterialized": true,
     "shortSideProfileExactPiecePartition": true
   },
   "passed": true,
-  "svgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-2000x2700.svg",
-  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-2000x2700.short-side-profile.svg",
-  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/short-side-stage1-v2-18-layouts.vKeBv4/shapes-17-2000x2700.short-side-profile.json"
+  "svgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-2000x2700.svg",
+  "shortSideProfileSvgPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-2000x2700.short-side-profile.svg",
+  "shortSideProfileReportPath": "/private/tmp/min-plane-provenance/compact-short-side-pair-fold-e97225c/shapes-17-2000x2700.short-side-profile.json"
 }

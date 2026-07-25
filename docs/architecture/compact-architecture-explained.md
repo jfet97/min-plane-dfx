@@ -447,6 +447,27 @@ did not justify another production mechanism. The lost-interface prototype
 was removed because its continuation deduplication and deadline contract were
 invalid and it found no promotable result.
 
+### 8.1 The optional short-side sibling
+
+The short-side profile does not replace production Compact. It first asks
+whether an already-settled complete archive endpoint gives a material,
+exactly-legal fill of the requested short edge. If not, one bounded terminal
+observer may fix each piece's minimum-width transform, enumerate every
+unordered pair once, and stack exactly one pair. It cannot reselect transforms,
+run an NFP search, create a second row, or restart construction.
+
+Shapes-17 on `2000 x 2700` is the one current terminal-pair winner:
+`1897.173 x 220.526 mm`, all `17/17` pieces, zero cavities, and `94.85865%`
+short-edge fill. The observer costs `2.350–6.759 ms` across the strict matrix.
+If its exact density, topology, fill, depth, and area-cost guards fail, the
+sibling output is the unchanged Compact layout. Square sheets bypass the
+terminal observer entirely.
+
+This remains single-process and sequential. The strict gate contains nine
+unchanged Compact controls plus nine sibling outputs; the current sources are
+one archive winner, one terminal-pair winner, and seven exact Compact
+fallbacks.
+
 ## 9. How candidate scoring worked before
 
 Suppose a partial layout contains 30 pieces and the next piece has 500 legal
