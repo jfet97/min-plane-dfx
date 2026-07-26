@@ -1,0 +1,170 @@
+{
+  "baselineCommit": "51ddca2",
+  "candidateMemoExperimentCommit": "f6e7fb86965d1595ecf7b908571200aac2e6b0f3",
+  "nfpHitTimingExperimentCommit": "9646d5c9dc9ff0ba32c3ee0b38c33b8a47f0a5e6",
+  "request": {
+    "case": "mixed-61",
+    "sheet": "2000x2700",
+    "paddingMm": 10,
+    "fixture": "tests/fixtures/irregularSheetInvariance/mixed61-request.json",
+    "workerMode": "irregular-convex-v2",
+    "objectiveProfile": "compact",
+    "optimizer": {
+      "orderWindow": 4,
+      "beamWidth": 8,
+      "localCandidateFanout": 4,
+      "localRepairBudget": 0,
+      "intrinsicSharedArchiveEnabled": true,
+      "transformCap": 8,
+      "transformMinimumEdgeLengthMm": 1.2,
+      "transformAngleDeduplicationToleranceDeg": 0.051,
+      "configuredRotationEnabled": true,
+      "edgeAlignmentEnabled": true,
+      "configuredRotationDeg": [],
+      "gaEnabled": false,
+      "baselineOnly": true,
+      "gaPopulation": 12,
+      "gaGenerationBudget": 2,
+      "gaEvaluationBudget": 24,
+      "gaTimeBudgetMs": 15000,
+      "gaSeed": "default",
+      "priorityOrderMutationEnabled": true,
+      "transformPreferenceMutationEnabled": true,
+      "placementPolicyMutationEnabled": true,
+      "placementPolicyId": "edge-contact-then-balanced-compactness",
+      "placementPolicyIds": [
+        "balanced-compactness",
+        "short-side-fill",
+        "edge-contact-then-balanced-compactness"
+      ]
+    },
+    "expectedCanonicalSha256": "ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b",
+    "maximumAreaMm2": 391606,
+    "maximumCanonicalCavities": 0,
+    "maximumElapsedMs": 330000
+  },
+  "environment": {
+    "operatingSystem": "macOS 26.5.2 build 25F84",
+    "kernel": "Darwin 25.5.0 arm64",
+    "cpu": "Apple M4 Max",
+    "memoryBytes": 68719476736,
+    "node": "v24.16.0",
+    "pnpm": "11.8.0"
+  },
+  "commands": {
+    "candidateMemo": "MIN_PLANE_EXPERIMENT_DISABLE_CANDIDATE_MEMO={0|1} pnpm corpus:sheet-invariance --case mixed-61 --sheets 2000x2700 --allow-single-sheet --strict --capture-cache-telemetry --source-commit f6e7fb86965d1595ecf7b908571200aac2e6b0f3 --expected-canonical-sha256 ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b --maximum-area-mm2 391606 --maximum-canonical-cavities 0 --maximum-elapsed-ms 330000 --output {pair-output}",
+    "nfpHitTiming": "MIN_PLANE_EXPERIMENT_DISABLE_CANDIDATE_MEMO=0 MIN_PLANE_EXPERIMENT_NFP_HIT_TIMINGS=1 pnpm corpus:sheet-invariance --case mixed-61 --sheets 2000x2700 --allow-single-sheet --strict --capture-cache-telemetry --source-commit 9646d5c9dc9ff0ba32c3ee0b38c33b8a47f0a5e6 --expected-canonical-sha256 ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b --maximum-area-mm2 391606 --maximum-canonical-cavities 0 --maximum-elapsed-ms 330000 --output {run-output}",
+    "checkpoint": "node docs/artifacts/nfp-cache-effect-inventory/checkpoint-benchmark.mjs"
+  },
+  "candidateMemoAlternatingPairs": [
+    {
+      "pair": 1,
+      "controlMs": 40831.631584,
+      "bypassMs": 40522.14137500001,
+      "speedup": 1.0076375580978287
+    },
+    {
+      "pair": 2,
+      "controlMs": 41178.133666,
+      "bypassMs": 40557.495291,
+      "speedup": 1.0153026800729907
+    },
+    {
+      "pair": 3,
+      "controlMs": 41048.08825,
+      "bypassMs": 41177.585542,
+      "speedup": 0.9968551509202035
+    },
+    {
+      "pair": 4,
+      "controlMs": 41348.694792,
+      "bypassMs": 41044.054375,
+      "speedup": 1.0074222788571676
+    },
+    {
+      "pair": 5,
+      "controlMs": 41354.508375000005,
+      "bypassMs": 41113.663875,
+      "speedup": 1.0058580159805814
+    }
+  ],
+  "candidateMemoSummary": {
+    "medianSpeedup": 1.0074222788571676,
+    "meanControlMs": 41152.2113334,
+    "meanBypassMs": 40882.9880916,
+    "meanSpeedup": 1.0066151367857543,
+    "acceptedThreshold": 1.05,
+    "decision": "reject_production_removal"
+  },
+  "nfpHitSample": {
+    "sampleModulo": 256,
+    "runs": 3,
+    "sampledHitsPerRun": 1023,
+    "medianMicrosecondsPerHit": {
+      "inputValidation": 0.6694506353478786,
+      "keyConstruction": 1.6234975561465683,
+      "cacheAndEffectRoundTrip": 2.4154183772633853,
+      "cachedBoundaryValidation": 1.2143225807169038,
+      "translationAndCanonicalization": 0.9972443792593921,
+      "total": 6.919933528734128
+    },
+    "extrapolatedAcross262166HitsMs": 1814.1712934941113,
+    "shareOf41152MsBaseline": 0.044084542590773845,
+    "decision": "no_narrow_rewrite_clears_five_percent_threshold"
+  },
+  "checkpointMicrobenchmark": {
+    "algorithmBaselineCommit": "9646d5c9dc9ff0ba32c3ee0b38c33b8a47f0a5e6",
+    "benchmarkScript": "docs/artifacts/nfp-cache-effect-inventory/checkpoint-benchmark.mjs",
+    "benchmarkScriptSha256": "ae266d709447f1ef6167598b38e77ce724b74bb46fcc9c095bce84e79edaf96c",
+    "liveCheckpointCount": 2975313,
+    "directVoidCount": 0,
+    "composedCount": 2975313,
+    "alternatingPairs": 5,
+    "pairs": [
+      {
+        "pair": 1,
+        "composedMs": 1404.956417,
+        "directMs": 115.93370800000002,
+        "differenceMs": 1289.022709
+      },
+      {
+        "pair": 2,
+        "composedMs": 1387.7299589999998,
+        "directMs": 94.773958,
+        "differenceMs": 1292.9560009999998
+      },
+      {
+        "pair": 3,
+        "composedMs": 1396.2522079999999,
+        "directMs": 108.1249170000001,
+        "differenceMs": 1288.1272909999998
+      },
+      {
+        "pair": 4,
+        "composedMs": 1386.7146670000002,
+        "directMs": 95.27070800000001,
+        "differenceMs": 1291.4439590000002
+      },
+      {
+        "pair": 5,
+        "composedMs": 1392.5918330000004,
+        "directMs": 111.49858399999994,
+        "differenceMs": 1281.0932490000005
+      }
+    ],
+    "medianComposedEffectGenMs": 1392.5918330000004,
+    "medianDirectDeadlineCheckMs": 108.1249170000001,
+    "medianDifferenceMs": 1289.022709,
+    "shareOf41152MsBaseline": 0.03132345147380443,
+    "acceptedThreshold": 0.05,
+    "decision": "insufficient_alone_for_production_fast_path"
+  },
+  "execution": {
+    "singleProcess": true,
+    "parallelAlgorithmRuns": false,
+    "provenanceRoot": "/private/tmp/min-plane-provenance",
+    "candidateMemoArtifacts": "/private/tmp/min-plane-provenance/pr16-candidate-memo-ab/pair-{1..5}-{control|bypass}/{report.json,cache-telemetry.json,time.txt,mixed-61-2000x2700.svg}",
+    "nfpHitArtifacts": "/private/tmp/min-plane-provenance/pr16-nfp-hit-timing/run-{1..3}/{report.json,cache-telemetry.json,nfp-hit-timings.json,time.txt,mixed-61-2000x2700.svg}",
+    "checkpointArtifacts": "pair-level results are embedded above; the committed benchmark script reproduces them"
+  }
+}

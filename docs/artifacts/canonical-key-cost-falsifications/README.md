@@ -126,20 +126,64 @@ makes the whole form translation-equivariant, and the key becomes
 canonical ring, so the equivalence relation is preserved exactly while the
 per-call work drops from `O(n)` string construction to `O(1)`.
 
-**(b) is the better design.** It attacks call count rather than cost per call,
-it keeps string-keyed containers so no module outside the key functions changes,
-and it is the shape a compiled port would want anyway.
+**(b) is the better design** on cost grounds. It attacks call count rather than
+cost per call and it is the shape a compiled port would want anyway. But see the
+correction below before acting on it: the claim that made it look *safe* was
+wrong.
 
-## What review has to decide
+## CORRECTION — the safety argument below was false
 
-Both options change every identity *value* while preserving the equivalence
-relation. That is safe here — these keys are used exclusively for equality and as
-memo keys, verified: there is no ordinal tie-break on them anywhere in the
-search, and the production SHA-256 layout identity is computed by a separate
-path in `canonicalLayoutGeometry.ts` that these keys never feed.
+> **Superseded.** The paragraph this section replaces asserted that these keys
+> are "used exclusively for equality and as memo keys, verified: there is no
+> ordinal tie-break on them anywhere in the search". **That assertion is false.**
+> It was written without tracing the consumers, and it is retracted here rather
+> than silently edited. Full evidence:
+> [`../canonical-key-consumer-inventory/README.md`](../canonical-key-consumer-inventory/README.md).
 
-Correctness would therefore be demonstrated the same way the previous steps
-were: identical canonical hashes, bounds, topologies, partitions and work
-ledgers across all 18 gate layouts. What cannot be demonstrated by the gates,
-and so needs a human decision, is whether changing the canonical representative
-rule is acceptable as a matter of contract.
+The canonical representative rule is the start-vertex choice
+`lowestYThenXIndex` plus the forward/reverse direction minimisation in
+`canonicalRingKey` (`irregularBeamState.ts:761-772`, `:789`). Changing it
+preserves the equivalence relation and changes every key *value* — that much was
+right. What was wrong is the belief that only equality consumes those values.
+
+Key values are an **ordinal ranking axis in the production search**:
+
+| Site | Role |
+| --- | --- |
+| `windowedBeam.ts:2650` | `makeStateOrder` terminates on `Order.mapInput(Order.String, (state) => state.key)`, and `beamStateKey` (`:2685`) is `` `${state.canonicalOccupiedGeometryKey}::…` `` — the canonical key is the leading bytes of the sort axis. Feeds `rankScoredStates` → `productionRanked.slice(0, beamWidth)` (`:2419`) and the final layout pick (`:807`). |
+| `intrinsicCapacitySearch.ts:1769`, `:1795` | Both capacity beam comparators terminate in `compareStrings(first.anchoredOccupiedKey, second.anchoredOccupiedKey)`, driving `.toSorted(…).slice(0, beamWidth)` at `:1817` / `:1820`. |
+| `intrinsicStrictDecoder.ts:1661` | `compareLocalScores` tie-breaks on `canonicalCombinedGeometryKey.localeCompare(…)` — the decoder's per-step placement choice. |
+| `windowedBeam.ts:1941-1953` | `intrinsicStateGeometryKey` is `JSON.stringify(canonicalRings.toSorted())`, so key *order* is baked into the emitted bytes. |
+| `irregularBeamState.ts:184`, `:316`, `:372`, `:436`, `:521` | `canonicalEntryListKey` names fields `entry-${index}` by position in the lexicographically sorted array, so relative key order is baked into the state-level key itself. |
+
+They are also **serialised into committed artifacts**: 22 files under `docs/`
+contain raw key text (255 occurrences of `irregular-occupied-geometry-v2` in
+`current-compact-baselines/shapes-17-300x300.json` alone), reaching disk via
+`intrinsicCapacitySearch.ts:2062` → `scripts/irregular-compact-baseline.ts:809`.
+The `SHA256SUMS` over those trees currently verify.
+
+And they are **hashed into checkpoint integrity digests** that gate control flow
+by strict `!==`: `intrinsicCapacitySearch.ts:1490-1537` (validated at `:1276`)
+and `intrinsicStrictDecoder.ts:1054-1073` (validated at `:942`).
+
+The one sub-claim that held up: `canonicalLayoutGeometry.ts` really does compute
+the production SHA-256 identity by a code-disjoint path with its own
+canonicalisation (`:613`, `:139`) and shares no helper with
+`irregularBeamState.ts`. That does not rescue the conclusion — the search
+upstream selects a *different layout*, which then hashes differently.
+
+**Consequence for (a) and (b).** Neither is an equality-only implementation
+detail. Both can change search decisions on ties and can change regenerated
+artifacts. The maintained corpus compares exact canonical layout hashes for its
+covered requests, while artifact checksums detect changes only when those
+artifacts are explicitly regenerated. Neither proves that every possible tie is
+exercised. Any future attempt must therefore keep a byte-identical legacy key
+for every ordering, serialisation and digest consumer, introduce a fast key only
+for pure-equality consumers, and prove comparator-sign parity directly. That is
+a substantially larger and riskier change than this document originally
+implied, and the ~2% ceiling established above should be weighed against it.
+
+The NFP/IFP geometry cache keys (`pairwiseNfpCacheKey`, `innerFitBoundsCacheKey`)
+and `pointKey` are the exception: every consumer routes through
+`cacheKeyToString` into a plain `Map` or `Set`, with no sort, no digest and no
+artifact. Those are genuinely equality-only.

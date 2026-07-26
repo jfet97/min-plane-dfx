@@ -1,0 +1,38 @@
+{
+  "cacheInstances": 1,
+  "namespaces": {
+    "pairwise-nfp-relative-v3": {
+      "getCalls": 266977,
+      "getPresent": 262166,
+      "setCalls": 4811,
+      "removeCalls": 0
+    },
+    "transform-collision-v1": {
+      "getCalls": 10028,
+      "getPresent": 9540,
+      "setCalls": 488,
+      "removeCalls": 0
+    }
+  },
+  "memo": {
+    "bypasses": 0,
+    "requests": 9420,
+    "hits": 32,
+    "misses": 9388,
+    "provenanceMisses": 0,
+    "restoreCalls": 32,
+    "restoredCandidates": 224
+  },
+  "checkpoints": {
+    "byPhase": {
+      "candidate-points": 140090,
+      "ifp": 28164,
+      "pairwise-nfp-boundary-intersection": 4292842,
+      "placed-nfp": 530874
+    },
+    "live": 2975313,
+    "inert": 2016657,
+    "directVoid": 0,
+    "composed": 2975313
+  }
+}
