@@ -5,7 +5,7 @@ Mixed-61 `2000x2700`, serial and single-process throughout.
 
 ## What the earlier measurements pointed at
 
-Two ceilings were established in
+Two costs were measured separately in
 [`follow-up-measurements.json`](./follow-up-measurements.json), against a
 41,152 ms baseline:
 
@@ -13,14 +13,20 @@ Two ceilings were established in
 | --- | ---: | ---: |
 | NFP cache-hit path, 6.92 µs x 262,166 hits | 1,814 ms | 4.41% |
 | `Effect.gen` checkpoint composition | 1,289 ms | 3.13% |
-| **combined** | **3,103 ms** | **7.54%** |
 
-The checkpoint microbenchmark is the load-bearing one, because of how it was
-built. Both of its arms run their checkpoint through `yield*` on a live fiber;
-they differ only in whether the checkpoint body is an `Effect.gen` (1,392 ms)
-or a direct `Effect.void` / `Effect.fail` (108 ms). **The 1,289 ms difference is
-therefore generator construction alone, not fiber stepping.** Telemetry recorded
-`directVoidCount: 0` — nothing was taking the cheap path.
+**These two are not additive and must not be summed.** They were measured by
+different methods against the same run — a sampled per-hit breakdown and a
+standalone microbenchmark — and the regions they cover overlap, since
+checkpoints fire inside the same candidate-generation work the hit timings span.
+Neither figure is an independent slice of the run, so no combined ceiling is
+derivable from them.
+
+The checkpoint microbenchmark is the one that pointed at the change, because of
+how it was built. Both of its arms run their checkpoint through `yield*` on a
+live fiber; they differ only in whether the checkpoint body is an `Effect.gen`
+(1,392 ms) or a direct `Effect.void` / `Effect.fail` (108 ms). **The 1,289 ms
+difference is therefore generator construction alone, not fiber stepping.**
+Telemetry recorded `directVoidCount: 0` — nothing was taking the cheap path.
 
 That reframes the task. Reaching this cost does not require extracting a
 synchronous kernel; it requires the controls to stop building a generator per
@@ -64,31 +70,57 @@ the route either.
 
 ## Result
 
-Five alternating serial A/B pairs, same host, per the agreed protocol. Run
-twice; the second run was declared in advance as the last.
+### Protocol 1 — the preregistered run
 
-| Pair | Protocol 1 | Protocol 2 |
-| ---: | ---: | ---: |
-| 1 | 1.0495 | 1.0591 |
-| 2 | 1.0398 | 1.0615 |
-| 3 | 1.0411 | 1.0697 |
-| 4 | 1.0761 | 1.0869 |
-| 5 | 1.0781 | 1.0454 |
-| **median** | **1.0495** | **1.0615** |
+Five alternating serial A/B pairs, same host. This is the run the agreed
+acceptance criterion applies to.
 
-**Protocol 1 misses the 1.05 bar. Protocol 2 clears it.** Pooled over all ten
-pairs the median is **1.0603** and the mean **1.0607**; six of ten individual
-pairs clear 1.05, four do not, and the spread runs 1.0398 to 1.0869.
+| Pair | Baseline (ms) | Experiment (ms) | Speedup |
+| ---: | ---: | ---: | ---: |
+| 1 | 50,253 | 47,882 | 1.0495 |
+| 2 | 51,769 | 49,789 | 1.0398 |
+| 3 | 51,730 | 49,688 | 1.0411 |
+| 4 | 52,665 | 48,940 | 1.0761 |
+| 5 | 53,233 | 49,375 | 1.0781 |
+| | | **median** | **1.0495** |
 
-The honest reading is that this change is worth **roughly 4% to 8.7%**, and
-whether any single five-pair median lands above or below 1.05 depends on host
-noise. Protocol 1 showed monotonic upward drift in the baseline arm — 50,253 ms
-rising to 53,233 ms across its five runs — which alternation only partly cancels.
+**Protocol 1 misses the 1.05x threshold**, by 0.05 percentage points.
 
-What raises confidence above "a coin flip near the bar" is that the result
-matches a ceiling predicted independently, before this code was written: 7.54%
-was available, most of the checkpoint share plus part of the cache share was
-targeted, and 5-7% is what came out. The mechanism and the magnitude agree.
+The baseline arm drifted monotonically upward across the run — 50,253 ms rising
+to 53,233 ms — which alternation only partly cancels and which inflates the
+later pairs in both directions.
+
+### Protocol 2 — an additional confirmatory run
+
+Run after protocol 1 and declared in advance as the last. It is **not**
+preregistered and its median does not substitute for protocol 1's.
+
+| Pair | Baseline (ms) | Experiment (ms) | Speedup |
+| ---: | ---: | ---: | ---: |
+| 1 | 52,080 | 49,175 | 1.0591 |
+| 2 | 52,902 | 49,835 | 1.0615 |
+| 3 | 52,784 | 49,343 | 1.0697 |
+| 4 | 54,152 | 49,820 | 1.0869 |
+| 5 | 52,741 | 50,453 | 1.0454 |
+| | | **median** | **1.0615** |
+
+### Reading
+
+Across both runs the per-pair speedup ranges from **1.0398 to 1.0869**, and six
+of ten pairs individually clear 1.05.
+
+The conclusion this supports is a **promising 4% to 8.7% speedup that requires
+code review** — not an automatic acceptance. The preregistered protocol missed
+its threshold. Protocol 2 clearing it is evidence that the effect is real and
+that the five-pair median is sensitive to host noise near the bar; it is not a
+substitute for the criterion that was agreed beforehand.
+
+No pooled median is reported as a decision statistic here. Pooling ten pairs
+after seeing that the first five missed would be choosing the summary that gives
+the desired answer.
+
+What the parity evidence below can carry, and what the 0.05-point miss should
+cost, is a judgement for review rather than something these numbers settle.
 
 ## Parity
 
@@ -101,11 +133,8 @@ Exact, and it is the part with no ambiguity.
 - **Eighteen layouts**: `gate:compact-nine-baselines` reports `passed: true`,
   nine Compact and nine Short-Side, `directionalMissCount: 0`.
 - **Test suite**: 841 passed, 6 failed, 17 skipped — identical counts and
-  identical files to unmodified `9cffb49` on the same host. Five failures are
-  `workspaceProjectService.test.ts` failing to load the `better_sqlite3` native
-  binding in this sandbox; the sixth is the known phase-coverage assertion in
-  `intrinsicStrictDecoder.test.ts:592`, which passes 3 of 3 in isolation and
-  fails under parallel workers.
+  identical files to unmodified `9cffb49` on the same host. Both failing files
+  are pre-existing; see below.
 - **Lint and typecheck**: clean.
 
 Layout parity was checked directly rather than inferred from the gate's pinned
@@ -125,6 +154,37 @@ Peak RSS over four alternating single-case runs per arm, `time -f %M`:
 direction. No material regression. This is the expected shape: the change
 removes allocations rather than adding them, and a shorter run simply gives the
 heap less occasion to be collected before its high-water mark.
+
+## Pre-existing suite failures, recorded not fixed
+
+Neither is caused by this change, and neither is touched by it. Both reproduce
+on unmodified `9cffb49`.
+
+**1. `workspaceProjectService.test.ts`, 5 tests.** `better_sqlite3` native
+binding fails to load in this sandbox (`Could not locate the bindings file`).
+Environmental.
+
+**2. `intrinsicStrictDecoder.test.ts:592`, 1 test.** A load-dependent flake, not
+a code defect:
+
+```
+full suite,  unmodified 9cffb49 :  FAIL  (expected false to be true)
+full suite,  this branch        :  FAIL  (identical assertion, identical line)
+file alone,  this branch        :  PASS 3 of 3
+```
+
+`expect(phaseTimings.coverageComplete).toBe(true)` asserts a property of the
+host, not of the code. `coverageComplete` reports whether the unmeasured
+residual is small relative to the phase total
+(`intrinsicStrictDecoder.ts:1347-1359`); under the suite's parallel workers a
+scheduler slice exceeds the 0.05 ms instrumentation allowance, so the flag
+correctly reports `false`.
+
+A fix — asserting that each flag faithfully reports its own measurement rather
+than asserting `true` — was written in #14 (`4ac115c`) and again in #16. Neither
+merge took the hunk, and `toBe(true)` is on `main` today. **It is deliberately
+not included here.** Carrying it through an unrelated optimization PR is how it
+was lost twice; it needs its own change.
 
 ## What this does not do
 

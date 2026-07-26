@@ -36,7 +36,8 @@
       }
     ],
     "medianSpeedup": 1.049511540980514,
-    "meanSpeedup": 1.0569261859774917
+    "meanSpeedup": 1.0569261859774917,
+    "status": "preregistered; median 1.0495 misses the 1.05 threshold by 0.05 percentage points"
   },
   "protocol2": {
     "pairs": [
@@ -72,15 +73,10 @@
       }
     ],
     "medianSpeedup": 1.0615430922042741,
-    "meanSpeedup": 1.0645312656959662
+    "meanSpeedup": 1.0645312656959662,
+    "status": "additional confirmatory run, not preregistered; its median does not substitute for protocol 1"
   },
   "protocol2Note": "elapsed recorded to whole milliseconds",
-  "pooled": {
-    "medianSpeedup": 1.06030891265018,
-    "meanSpeedup": 1.060728725836729,
-    "pairsAtOrAboveThreshold": 6,
-    "pairs": 10
-  },
   "workLedgerParity": {
     "identicalAcrossEveryPair": true,
     "checkpointsTotal": 4991970,
@@ -106,5 +102,31 @@
     "medianExperiment": 847266,
     "medianDeltaRatio": 1.0030377648869422
   },
-  "decision": "promote"
+  "decision": "promising 4-8.7% speedup requiring code review; not automatically accepted by the preregistered threshold",
+  "perPairSpeedupRange": {
+    "min": 1.0398,
+    "max": 1.0869,
+    "pairsAtOrAbove1_05": 6,
+    "pairs": 10
+  },
+  "ceilingAdditivity": "the 4.41% NFP hit share and the 3.13% checkpoint share are NOT additive: different measurement methods over overlapping regions of the same run, so no combined ceiling is derivable from them",
+  "preExistingSuiteFailures": {
+    "workspaceProjectService": {
+      "tests": 5,
+      "cause": "better_sqlite3 native binding unavailable in sandbox",
+      "reproducesOnUnmodifiedBaseline": true
+    },
+    "intrinsicStrictDecoderPhaseCoverage": {
+      "tests": 1,
+      "location": "tests/unit/intrinsicStrictDecoder.test.ts:592",
+      "fullSuiteOnUnmodified9cffb49": "fail",
+      "fullSuiteOnThisBranch": "fail",
+      "fileAloneOnThisBranch": "pass 3/3",
+      "cause": "asserts a host property; the 0.05 ms instrumentation allowance is smaller than one scheduler slice under parallel workers",
+      "fixWrittenIn": ["#14 4ac115c", "#16"],
+      "fixPresentOnMain": false,
+      "includedHere": false,
+      "reason": "carrying it through an unrelated PR is how it was lost twice"
+    }
+  }
 }
