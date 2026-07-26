@@ -27,7 +27,10 @@ import {
   pairwiseNfpCacheKey,
   transformCollisionGeometryCacheKey
 } from '../../src/workers/irregular/geometryCacheKeys.js'
-import { NfpIfpServiceLayer } from '../../src/workers/irregular/nfpIfpService.js'
+import {
+  makeNfpIfpServiceLayer,
+  NfpIfpServiceLayer
+} from '../../src/workers/irregular/nfpIfpService.js'
 import {
   disableNfpIfpTelemetry,
   enableNfpIfpTelemetry,
@@ -167,41 +170,64 @@ function computeNfpWithCache(
 }
 
 describe('irregular geometry caches', () => {
-  it('keeps synchronous and Effect cache views coherent with one telemetry owner', async () => {
+  it('keeps live sync and Effect views coherent across stale, hit, and clear telemetry', async () => {
     enableNfpIfpTelemetry()
-    const key = pairwiseNfpCacheKey({
+    const input = {
       fixed: placedPiece('fixed-cache-views', 2),
       moving: transformedGeometry('moving-cache-views', 1),
       settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
-    })
+    }
+    const key = pairwiseNfpCacheKey(input)
+    const liveLayer = makeNfpIfpServiceLayer().pipe(Layer.provideMerge(GeometryCacheLive))
 
     const observations = await Effect.runPromise(
-      GeometryCache.use((cache) =>
-        Effect.gen(function* () {
-          const initial = cache.store.get<string>(key)
-          cache.store.set(key, 'stored')
-          const throughEffect = yield* cache.get<string>(key)
-          yield* cache.clear
-          const afterClear = cache.store.get<string>(key)
-          return { initial, throughEffect, afterClear }
-        })
-      ).pipe(Effect.provide(GeometryCacheLive))
+      Effect.gen(function* () {
+        const cache = yield* GeometryCache
+        const service = yield* NfpIfpService
+        cache.store.set(key, { points: [{ x: 0, y: 0 }] })
+        const afterStale = yield* service.computeNfp(input)
+        const throughEffect = yield* service.computeNfp(input)
+        yield* cache.clear
+        const afterClear = cache.store.get(key)
+        return { afterStale, throughEffect, afterClear }
+      }).pipe(Effect.provide(liveLayer))
     )
 
-    expect(observations).toEqual({
-      initial: undefined,
-      throughEffect: 'stored',
-      afterClear: undefined
-    })
+    expect(observations.afterStale).toEqual(observations.throughEffect)
+    expect(observations.afterClear).toBeUndefined()
     expect(nfpIfpTelemetrySnapshot()?.cacheInstances).toBe(1)
     expect(
       nfpIfpTelemetrySnapshot()?.namespaces['pairwise-nfp-relative-v3']
     ).toEqual({
       getCalls: 3,
-      getPresent: 1,
-      setCalls: 1,
-      removeCalls: 0
+      getPresent: 2,
+      setCalls: 2,
+      removeCalls: 1
     })
+  })
+
+  it('keeps live sync and Effect cache work invisible while telemetry is disabled', async () => {
+    const input = {
+      fixed: placedPiece('fixed-cache-disabled', 2),
+      moving: transformedGeometry('moving-cache-disabled', 1),
+      settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+    }
+    const key = pairwiseNfpCacheKey(input)
+    const liveLayer = makeNfpIfpServiceLayer().pipe(Layer.provideMerge(GeometryCacheLive))
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const cache = yield* GeometryCache
+        const service = yield* NfpIfpService
+        cache.store.set(key, { points: [{ x: 0, y: 0 }] })
+        yield* service.computeNfp(input)
+        yield* service.computeNfp(input)
+        yield* cache.clear
+        cache.store.get(key)
+      }).pipe(Effect.provide(liveLayer))
+    )
+
+    expect(nfpIfpTelemetrySnapshot()).toBeUndefined()
   })
 
   it('reuses transformed collision geometry and separates transform keys', async () => {

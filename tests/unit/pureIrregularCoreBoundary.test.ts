@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
+import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 
 const sourceRoot = resolve('src/workers/irregular')
@@ -18,11 +19,13 @@ describe('pure irregular core boundary', () => {
       visited.add(filePath)
       const source = readFileSync(filePath, 'utf8')
 
-      expect(source, filePath).not.toMatch(/from\s+['"]effect['"]/u)
-      expect(source, filePath).not.toMatch(/from\s+['"]@shared\//u)
-      expect(source, filePath).not.toMatch(/import\s+\{[^}]*\bSchema\b[^}]*\}\s+from/u)
+      const specifiers = moduleSpecifiers(source, filePath)
+      expect(
+        specifiers.filter(isProhibitedSpecifier),
+        `${filePath} imports prohibited modules`
+      ).toEqual([])
 
-      for (const specifier of relativeImportSpecifiers(source)) {
+      for (const specifier of specifiers.filter((value) => value.startsWith('.'))) {
         const dependencyPath = resolveTypeScriptDependency(filePath, specifier)
         expect(dependencyPath, `${filePath} imports ${specifier}`).toBeDefined()
         if (dependencyPath !== undefined) pending.push(dependencyPath)
@@ -31,12 +34,73 @@ describe('pure irregular core boundary', () => {
 
     expect(visited.size).toBeGreaterThan(readdirSync(coreRoot).length)
   })
+
+  it('recognizes every prohibited static, side-effect, export, dynamic, and require form', () => {
+    const source = [
+      "import { Effect } from 'effect'",
+      "import * as Schema from 'effect/Schema'",
+      "import 'effect'",
+      "export { value } from '@shared/domain/value.js'",
+      "const lazy = import('effect/Schema')",
+      "const legacy = require('@shared/irregular/domain.js')"
+    ].join('\n')
+
+    expect(moduleSpecifiers(source, 'negative-fixture.ts').filter(isProhibitedSpecifier)).toEqual([
+      'effect',
+      'effect/Schema',
+      'effect',
+      '@shared/domain/value.js',
+      'effect/Schema',
+      '@shared/irregular/domain.js'
+    ])
+  })
 })
 
-function relativeImportSpecifiers(source: string): ReadonlyArray<string> {
-  return [...source.matchAll(/from\s+['"]([^'"]+)['"]/gu)]
-    .map((match) => match[1])
-    .filter((specifier): specifier is string => specifier?.startsWith('.') === true)
+function moduleSpecifiers(source: string, filePath: string): ReadonlyArray<string> {
+  const sourceFile = ts.createSourceFile(
+    filePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS
+  )
+  const specifiers: string[] = []
+
+  const visit = (node: ts.Node): void => {
+    if (
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      node.moduleSpecifier !== undefined &&
+      ts.isStringLiteral(node.moduleSpecifier)
+    ) {
+      specifiers.push(node.moduleSpecifier.text)
+    } else if (
+      ts.isImportEqualsDeclaration(node) &&
+      ts.isExternalModuleReference(node.moduleReference) &&
+      node.moduleReference.expression !== undefined &&
+      ts.isStringLiteral(node.moduleReference.expression)
+    ) {
+      specifiers.push(node.moduleReference.expression.text)
+    } else if (ts.isCallExpression(node)) {
+      const argument = node.arguments[0]
+      const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword
+      const isRequire =
+        ts.isIdentifier(node.expression) && node.expression.text === 'require'
+      if ((isDynamicImport || isRequire) && argument !== undefined && ts.isStringLiteral(argument)) {
+        specifiers.push(argument.text)
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(sourceFile)
+  return specifiers
+}
+
+function isProhibitedSpecifier(specifier: string): boolean {
+  return (
+    specifier === 'effect' ||
+    specifier.startsWith('effect/') ||
+    specifier.startsWith('@shared/')
+  )
 }
 
 function resolveTypeScriptDependency(

@@ -61,10 +61,10 @@ pnpm gate:compact-nine-baselines \
   --output-dir /private/tmp/min-plane-provenance/pure-irregular-core-06c7280
 ```
 
-All nine fixtures and all 18 Compact/Short Side layouts passed. Every pinned
-collision identity, fitted canonical hash, placed/unplaced partition,
-scheduler chronology, focused reconstruction contract, and Short Side
-directional contract remained exact. The manifest records one concurrent
+All nine fixture/sheet cases and all 18 Compact/Short Side layouts passed.
+Every pinned collision identity, fitted canonical hash, placed/unplaced
+partition, scheduler chronology, focused reconstruction contract, and Short
+Side directional contract remained exact. The manifest records one concurrent
 algorithm process and strictly sequential execution.
 
 The immutable raw run remains under
