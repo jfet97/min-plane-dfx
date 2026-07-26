@@ -1,5 +1,5 @@
 import { orient2d } from 'robust-predicates'
-import type { IrregularPoint } from '@shared/irregular/domain.js'
+import type { InternalPoint } from './internalGeometry.js'
 
 export type Orientation = -1 | 0 | 1
 
@@ -14,9 +14,9 @@ export const GeometryPredicates = {
  * means the three points are collinear.
  */
 function orientation(
-  origin: IrregularPoint,
-  first: IrregularPoint,
-  second: IrregularPoint
+  origin: InternalPoint,
+  first: InternalPoint,
+  second: InternalPoint
 ): Orientation {
   const robustResult = orient2d(
     origin.x,

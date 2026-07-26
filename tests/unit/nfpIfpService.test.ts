@@ -194,26 +194,66 @@ interface CacheCounters {
 }
 
 function cacheLayer(values: Map<string, unknown>, counters?: CacheCounters) {
-  return Layer.sync(GeometryCache, () => ({
-    get: <A>(key: Parameters<GeometryCache['get']>[0]) =>
-      Effect.sync(() => {
+  return Layer.sync(GeometryCache, () => {
+    const store: GeometryCache['store'] = {
+      get: <A>(key: Parameters<GeometryCache['get']>[0]) => {
         if (counters !== undefined) counters.gets += 1
         return values.get(cacheKeyToString(key)) as A | undefined
-      }),
-    set: <A>(key: Parameters<GeometryCache['set']>[0], value: A) =>
-      Effect.sync(() => {
+      },
+      set: <A>(key: Parameters<GeometryCache['set']>[0], value: A) => {
         if (counters !== undefined) counters.sets += 1
         values.set(cacheKeyToString(key), value)
-      }),
-    remove: (key: Parameters<GeometryCache['remove']>[0]) =>
-      Effect.sync(() => {
+      },
+      remove: (key: Parameters<GeometryCache['remove']>[0]) => {
         if (counters !== undefined) counters.removes += 1
         values.delete(cacheKeyToString(key))
-      }),
-    clear: Effect.sync(() => {
-      values.clear()
-    })
-  }))
+      },
+      clear: () => values.clear()
+    }
+    return {
+      store,
+      get: <A>(key: Parameters<GeometryCache['get']>[0]) =>
+        Effect.sync(() => store.get<A>(key)),
+      set: <A>(key: Parameters<GeometryCache['set']>[0], value: A) =>
+        Effect.sync(() => store.set(key, value)),
+      remove: (key: Parameters<GeometryCache['remove']>[0]) =>
+        Effect.sync(() => store.remove(key)),
+      clear: Effect.sync(() => store.clear())
+    }
+  })
+}
+
+function loggingCacheLayer(values: Map<string, unknown>, events: string[]) {
+  return Layer.sync(GeometryCache, () => {
+    const store: GeometryCache['store'] = {
+      get: <A>(key: Parameters<GeometryCache['get']>[0]) => {
+        events.push('cache:get')
+        return values.get(cacheKeyToString(key)) as A | undefined
+      },
+      set: <A>(key: Parameters<GeometryCache['set']>[0], value: A) => {
+        events.push('cache:set')
+        values.set(cacheKeyToString(key), value)
+      },
+      remove: (key: Parameters<GeometryCache['remove']>[0]) => {
+        events.push('cache:remove')
+        values.delete(cacheKeyToString(key))
+      },
+      clear: () => {
+        events.push('cache:clear')
+        values.clear()
+      }
+    }
+    return {
+      store,
+      get: <A>(key: Parameters<GeometryCache['get']>[0]) =>
+        Effect.sync(() => store.get<A>(key)),
+      set: <A>(key: Parameters<GeometryCache['set']>[0], value: A) =>
+        Effect.sync(() => store.set(key, value)),
+      remove: (key: Parameters<GeometryCache['remove']>[0]) =>
+        Effect.sync(() => store.remove(key)),
+      clear: Effect.sync(() => store.clear())
+    }
+  })
 }
 
 function computeNfpWithCache(
@@ -781,6 +821,183 @@ describe('NfpIfpServiceLive', () => {
     expect(secondLinear).toEqual(firstLinear)
     expect(secondReference).toEqual(firstReference)
     expect(counters).toEqual({ gets: 4, sets: 2, removes: 0 })
+  })
+
+  it('keeps public NFP validation, keying, and cache access lazy until Effect execution', async () => {
+    const moving = transformedGeometry('moving-lazy-core', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const fixed = placedPiece(
+      'fixed-lazy-core',
+      [point(0, 0), point(4, 0), point(4, 4), point(0, 4)],
+      0,
+      0
+    )
+    const values = new Map<string, unknown>()
+    const counters = { gets: 0, sets: 0, removes: 0 }
+    const effect = NfpIfpService.use((service) =>
+      service.computeNfp({
+        fixed,
+        moving,
+        settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+      })
+    ).pipe(
+      Effect.provide(makeNfpIfpServiceLayer()),
+      Effect.provide(cacheLayer(values, counters))
+    )
+
+    expect(counters).toEqual({ gets: 0, sets: 0, removes: 0 })
+    await Effect.runPromise(effect)
+    expect(counters).toEqual({ gets: 1, sets: 1, removes: 0 })
+  })
+
+  it('runs the pure NFP core strictly between placed-NFP checkpoints', async () => {
+    const moving = transformedGeometry('moving-core-order', [
+      point(0, 0),
+      point(2, 0),
+      point(2, 2),
+      point(0, 2)
+    ])
+    const fixed = placedPiece(
+      'fixed-core-order',
+      [point(0, 0), point(4, 0), point(4, 4), point(0, 4)],
+      0,
+      0
+    )
+    const events: string[] = []
+    const values = new Map<string, unknown>()
+    const layer = loggingCacheLayer(values, events)
+    const input: GeneratePlacementCandidatesInput = {
+      sheet: sheet(10, 10),
+      placed: [fixed],
+      moving,
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      candidateDomain: 'sheetless-nfp',
+      control: {
+        checkpoint: (phase) =>
+          Effect.sync(() => {
+            events.push(`checkpoint:${phase}`)
+          })
+      }
+    }
+
+    await Effect.runPromise(
+      generateCandidatesEffect(input).pipe(
+        Effect.provide(makeNfpIfpServiceLayer()),
+        Effect.provide(layer)
+      )
+    )
+
+    const firstPlacedCheckpoint = events.indexOf('checkpoint:placed-nfp')
+    const coreGet = events.indexOf('cache:get')
+    const coreSet = events.indexOf('cache:set')
+    const secondPlacedCheckpoint = events.indexOf(
+      'checkpoint:placed-nfp',
+      firstPlacedCheckpoint + 1
+    )
+    expect(firstPlacedCheckpoint).toBeGreaterThanOrEqual(0)
+    expect(coreGet).toBeGreaterThan(firstPlacedCheckpoint)
+    expect(coreSet).toBeGreaterThan(coreGet)
+    expect(secondPlacedCheckpoint).toBeGreaterThan(coreSet)
+  })
+
+  it('does not enter the pure NFP core after a failing pre-NFP checkpoint', async () => {
+    const events: string[] = []
+    const values = new Map<string, unknown>()
+    const input: GeneratePlacementCandidatesInput = {
+      sheet: sheet(10, 10),
+      placed: [
+        placedPiece(
+          'fixed-core-pre-abort',
+          [point(0, 0), point(4, 0), point(4, 4), point(0, 4)],
+          0,
+          0
+        )
+      ],
+      moving: transformedGeometry('moving-core-pre-abort', [
+        point(0, 0),
+        point(2, 0),
+        point(2, 2),
+        point(0, 2)
+      ]),
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      candidateDomain: 'sheetless-nfp',
+      control: {
+        checkpoint: (phase) => {
+          events.push(`checkpoint:${phase}`)
+          return phase === 'placed-nfp'
+            ? Effect.fail(
+                new IrregularNfpIfpControlAbortError({
+                  reason: 'cancelled',
+                  message: 'test pre-NFP cancellation'
+                })
+              )
+            : Effect.void
+        }
+      }
+    }
+
+    const failure = await captureFailure(
+      Effect.runPromise(
+        generateCandidatesEffect(input).pipe(
+          Effect.provide(makeNfpIfpServiceLayer()),
+          Effect.provide(loggingCacheLayer(values, events))
+        )
+      )
+    )
+
+    expect(failure).toBeInstanceOf(IrregularNfpIfpControlAbortError)
+    expect(events).toContain('checkpoint:placed-nfp')
+    expect(events).not.toContain('cache:get')
+  })
+
+  it('does not run the post-NFP checkpoint after a pure-core failure', async () => {
+    const events: string[] = []
+    const values = new Map<string, unknown>()
+    const input: GeneratePlacementCandidatesInput = {
+      sheet: sheet(10, 10),
+      placed: [
+        placedPiece(
+          'fixed-core-failure',
+          [point(0, 0), point(4, 0), point(4, 4), point(0, 4)],
+          0,
+          0
+        )
+      ],
+      moving: transformedGeometry('moving-core-failure', [
+        point(0, 0),
+        point(1, 0),
+        point(2, 0)
+      ]),
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      candidateDomain: 'sheetless-nfp',
+      control: {
+        checkpoint: (phase) =>
+          Effect.sync(() => {
+            events.push(`checkpoint:${phase}`)
+          })
+      }
+    }
+
+    const failure = await captureFailure(
+      Effect.runPromise(
+        generateCandidatesEffect(input).pipe(
+          Effect.provide(makeNfpIfpServiceLayer()),
+          Effect.provide(loggingCacheLayer(values, events))
+        )
+      )
+    )
+
+    expect(failure).toBeInstanceOf(IrregularGeometryInputError)
+    if (!(failure instanceof IrregularGeometryInputError))
+      throw new Error('expected core geometry input error')
+    expect(failure.operation).toBe('computeNfp')
+    expect(failure.message).toBe('polygon must not contain collinear vertices.')
+    expect(events.filter((event) => event === 'checkpoint:placed-nfp')).toHaveLength(1)
+    expect(events).not.toContain('cache:get')
   })
 
   it('computes the outer convex NFP for triangles', async () => {

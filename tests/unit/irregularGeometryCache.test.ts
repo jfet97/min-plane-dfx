@@ -1,5 +1,5 @@
 import { Effect, Layer } from 'effect'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { PieceId } from '@shared/domain/ids.js'
 import { SheetSpec } from '@shared/domain/nesting.js'
 import { DEFAULT_IRREGULAR_GEOMETRY_SETTINGS } from '@shared/irregular/defaults.js'
@@ -18,6 +18,7 @@ import {
 import { GeometryKernel, GeometrySettings } from '../../src/workers/irregular/geometryKernel.js'
 import {
   GeometryCache,
+  GeometryCacheLive,
   NfpIfpService,
   cacheKeyToString
 } from '../../src/workers/irregular/services.js'
@@ -27,6 +28,15 @@ import {
   transformCollisionGeometryCacheKey
 } from '../../src/workers/irregular/geometryCacheKeys.js'
 import { NfpIfpServiceLayer } from '../../src/workers/irregular/nfpIfpService.js'
+import {
+  disableNfpIfpTelemetry,
+  enableNfpIfpTelemetry,
+  nfpIfpTelemetrySnapshot
+} from '../../src/workers/irregular/nfpIfpTelemetry.js'
+
+afterEach(() => {
+  disableNfpIfpTelemetry()
+})
 
 interface CacheCounters {
   gets: number
@@ -114,26 +124,33 @@ function collisionGeometry(pieceId: string): CollisionGeometry {
 }
 
 function cacheLayer(counters: CacheCounters, values = new Map<string, unknown>()) {
-  return Layer.sync(GeometryCache, () => ({
-    get: <A>(key: Parameters<GeometryCache['get']>[0]) =>
-      Effect.sync(() => {
+  return Layer.sync(GeometryCache, () => {
+    const store: GeometryCache['store'] = {
+      get: <A>(key: Parameters<GeometryCache['get']>[0]) => {
         counters.gets += 1
         return values.get(cacheKeyToString(key)) as A | undefined
-      }),
-    set: <A>(key: Parameters<GeometryCache['set']>[0], value: A) =>
-      Effect.sync(() => {
+      },
+      set: <A>(key: Parameters<GeometryCache['set']>[0], value: A) => {
         counters.sets += 1
         values.set(cacheKeyToString(key), value)
-      }),
-    remove: (key: Parameters<GeometryCache['remove']>[0]) =>
-      Effect.sync(() => {
+      },
+      remove: (key: Parameters<GeometryCache['remove']>[0]) => {
         counters.removes += 1
         values.delete(cacheKeyToString(key))
-      }),
-    clear: Effect.sync(() => {
-      values.clear()
-    })
-  }))
+      },
+      clear: () => values.clear()
+    }
+    return {
+      store,
+      get: <A>(key: Parameters<GeometryCache['get']>[0]) =>
+        Effect.sync(() => store.get<A>(key)),
+      set: <A>(key: Parameters<GeometryCache['set']>[0], value: A) =>
+        Effect.sync(() => store.set(key, value)),
+      remove: (key: Parameters<GeometryCache['remove']>[0]) =>
+        Effect.sync(() => store.remove(key)),
+      clear: Effect.sync(() => store.clear())
+    }
+  })
 }
 
 function computeNfpWithCache(
@@ -150,6 +167,43 @@ function computeNfpWithCache(
 }
 
 describe('irregular geometry caches', () => {
+  it('keeps synchronous and Effect cache views coherent with one telemetry owner', async () => {
+    enableNfpIfpTelemetry()
+    const key = pairwiseNfpCacheKey({
+      fixed: placedPiece('fixed-cache-views', 2),
+      moving: transformedGeometry('moving-cache-views', 1),
+      settings: DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+    })
+
+    const observations = await Effect.runPromise(
+      GeometryCache.use((cache) =>
+        Effect.gen(function* () {
+          const initial = cache.store.get<string>(key)
+          cache.store.set(key, 'stored')
+          const throughEffect = yield* cache.get<string>(key)
+          yield* cache.clear
+          const afterClear = cache.store.get<string>(key)
+          return { initial, throughEffect, afterClear }
+        })
+      ).pipe(Effect.provide(GeometryCacheLive))
+    )
+
+    expect(observations).toEqual({
+      initial: undefined,
+      throughEffect: 'stored',
+      afterClear: undefined
+    })
+    expect(nfpIfpTelemetrySnapshot()?.cacheInstances).toBe(1)
+    expect(
+      nfpIfpTelemetrySnapshot()?.namespaces['pairwise-nfp-relative-v3']
+    ).toEqual({
+      getCalls: 3,
+      getPresent: 1,
+      setCalls: 1,
+      removeCalls: 0
+    })
+  })
+
   it('reuses transformed collision geometry and separates transform keys', async () => {
     const counters = { gets: 0, sets: 0, removes: 0 }
     const geometry = collisionGeometry('transform-cache')

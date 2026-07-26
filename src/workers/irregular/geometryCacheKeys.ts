@@ -14,18 +14,28 @@ import type {
   TransformCollisionGeometryInput
 } from './services.js'
 import { ConvexPolygonValidation } from './convexPolygonValidation.js'
+import {
+  DEFAULT_NFP_CONSTRUCTION_ALGORITHM,
+  makePairwiseNfpCacheKey,
+  NFP_CONSTRUCTION_ALGORITHMS,
+  NFP_GEOMETRY_CACHE_NAMESPACE,
+  type NfpConstructionAlgorithm
+} from './core/nfpCacheKey.js'
+import { isValidCachedNfpBoundary as isValidCoreCachedNfpBoundary } from './core/nfpBoundaryCore.js'
 
 /** Selects the relative convex NFP construction algorithm. */
-export const NFP_CONSTRUCTION_ALGORITHMS = ['linear-edge-merge', 'vertex-pair-hull'] as const
-export type NfpConstructionAlgorithm = (typeof NFP_CONSTRUCTION_ALGORITHMS)[number]
-export const DEFAULT_NFP_CONSTRUCTION_ALGORITHM: NfpConstructionAlgorithm = 'vertex-pair-hull'
+export {
+  DEFAULT_NFP_CONSTRUCTION_ALGORITHM,
+  NFP_CONSTRUCTION_ALGORITHMS,
+  NFP_GEOMETRY_CACHE_NAMESPACE
+}
+export type { NfpConstructionAlgorithm }
 
 /** Selects the live indexed candidate path or the differential-test reference path. */
 export type NfpCandidatePruningMode = 'indexed' | 'reference'
 
 /** Versioned cache namespaces keep derived artifacts isolated across algorithms. */
 export const TRANSFORM_GEOMETRY_CACHE_NAMESPACE = 'transform-collision-v1'
-export const NFP_GEOMETRY_CACHE_NAMESPACE = 'pairwise-nfp-relative-v3'
 export const IFP_GEOMETRY_CACHE_NAMESPACE = 'sheet-ifp-v1'
 export const LEGAL_CANDIDATE_MEMO_NAMESPACE = 'legal-placement-candidates-v1'
 
@@ -48,15 +58,16 @@ export function pairwiseNfpCacheKey(
   input: ComputeNfpInput,
   constructionAlgorithm: NfpConstructionAlgorithm = DEFAULT_NFP_CONSTRUCTION_ALGORITHM
 ): IrregularGeometryCacheKey {
-  return newKey(NFP_GEOMETRY_CACHE_NAMESPACE, [
-    `fixed-polygon=${canonicalPolygonDigest(input.fixed.collisionGeometry.polygon.points)}`,
-    `moving-polygon=${canonicalPolygonDigest(input.moving.polygon.points)}`,
-    `fixed-transform=${transformDigest(input.fixed.collisionGeometry.transform)}`,
-    `moving-transform=${transformDigest(input.moving.transform)}`,
-    ...geometrySettingsParts(input.settings),
-    'nfp-algorithm=convex-fixed-plus-negated-moving-relative-v3',
-    `nfp-construction=${constructionAlgorithm}`
-  ])
+  return makePairwiseNfpCacheKey(
+    {
+      fixedPolygon: input.fixed.collisionGeometry.polygon.points,
+      movingPolygon: input.moving.polygon.points,
+      fixedTransform: input.fixed.collisionGeometry.transform,
+      movingTransform: input.moving.transform,
+      settings: input.settings
+    },
+    constructionAlgorithm
+  )
 }
 
 /** Builds the identity for a sheet/piece inner-fit bounds artifact. */
@@ -128,20 +139,7 @@ export function isValidCachedTransform(
 export function isValidCachedNfpBoundary(
   value: IrregularPolygon | undefined
 ): value is IrregularPolygon {
-  if (value === undefined || typeof value !== 'object' || value === null) return false
-  if (!Array.isArray(value.points) || value.points.length < 3) return false
-  if (
-    value.points.some(
-      (point) =>
-        point === undefined ||
-        point === null ||
-        !Number.isFinite(point.x) ||
-        !Number.isFinite(point.y)
-    )
-  ) {
-    return false
-  }
-  return !('message' in ConvexPolygonValidation.validateStrictBoundary(value.points))
+  return isValidCoreCachedNfpBoundary(value)
 }
 
 /** Checks the finite bounds shape before a cached IFP is used by candidate generation. */
@@ -188,40 +186,6 @@ function collisionGeometryDigest(geometry: CollisionGeometry): string {
     `hull=${polygonDigest(geometry.convexHull.points)}`,
     `collision=${polygonDigest(geometry.collisionPolygon.points)}`
   ].join(';')
-}
-
-function canonicalPolygonDigest(
-  points: ReadonlyArray<{ readonly x: number; readonly y: number }>
-): string {
-  if (points.length === 0) return ''
-  let startIndex = 0
-  for (let index = 1; index < points.length; index += 1) {
-    const candidate = points[index]
-    const current = points[startIndex]
-    if (candidate === undefined || current === undefined) continue
-    if (candidate.x < current.x || (candidate.x === current.x && candidate.y < current.y)) {
-      startIndex = index
-    }
-  }
-
-  const forward = cyclicPolygonDigest(points, startIndex, 1)
-  const reverse = cyclicPolygonDigest(points, startIndex, -1)
-  return forward < reverse ? forward : reverse
-}
-
-function cyclicPolygonDigest(
-  points: ReadonlyArray<{ readonly x: number; readonly y: number }>,
-  startIndex: number,
-  direction: 1 | -1
-): string {
-  const pointKeys: string[] = []
-  for (let offset = 0; offset < points.length; offset += 1) {
-    const index = (startIndex + direction * offset + points.length * 2) % points.length
-    const point = points[index]
-    if (point === undefined) return ''
-    pointKeys.push(pointDigest(point))
-  }
-  return pointKeys.join(';')
 }
 
 function polygonDigest(points: ReadonlyArray<{ readonly x: number; readonly y: number }>): string {
