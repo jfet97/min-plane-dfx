@@ -1,4 +1,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import {
+  enableNfpIfpTelemetry,
+  nfpIfpTelemetrySnapshot
+} from '../src/workers/irregular/nfpIfpTelemetry.js'
 import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { performance } from 'node:perf_hooks'
@@ -58,6 +62,7 @@ interface CorpusArguments {
   readonly maximumElapsedMs: number | undefined
   readonly inventoryOnly: boolean
   readonly sourceCommit: string | undefined
+  readonly captureCacheTelemetry: boolean
 }
 
 const COMPACT_SHEET = new SheetSpec({ width: 1000, height: 1700, label: 'compact roomy' })
@@ -117,8 +122,13 @@ function parseArguments(argumentsList: ReadonlyArray<string>): CorpusArguments {
   let maximumElapsedMs: number | undefined
   let inventoryOnly = false
   let sourceCommit: string | undefined
+  let captureCacheTelemetry = false
   for (let index = 0; index < argumentsList.length; index += 1) {
     const argument = argumentsList[index]
+    if (argument === '--capture-cache-telemetry') {
+      captureCacheTelemetry = true
+      continue
+    }
     if (argument === '--inventory-only') {
       inventoryOnly = true
       continue
@@ -220,6 +230,7 @@ function parseArguments(argumentsList: ReadonlyArray<string>): CorpusArguments {
     maximumCanonicalCavities,
     maximumElapsedMs,
     inventoryOnly,
+    captureCacheTelemetry,
     sourceCommit
   }
 }
@@ -614,6 +625,14 @@ async function runCorpus(argumentsData: CorpusArguments): Promise<void> {
   const passed = caseReports.every(
     ({ geometryEquivalent, qualityAccepted }) => geometryEquivalent !== false && qualityAccepted
   )
+  // deliberately a separate file: `docs/artifacts/current-compact-baselines/`
+  // manifests and SHA256SUMS verify against the bytes of `report.json`.
+  const telemetry = nfpIfpTelemetrySnapshot()
+  if (telemetry !== undefined) {
+    const telemetryPath = `${argumentsData.outputDirectory}/cache-telemetry.json`
+    await writeFile(telemetryPath, `${JSON.stringify(telemetry, null, 2)}\n`)
+    console.log(JSON.stringify({ telemetryPath }))
+  }
   console.log(JSON.stringify({ reportPath, passed }))
   if (argumentsData.strict && !passed) {
     process.exitCode = 1
@@ -621,6 +640,7 @@ async function runCorpus(argumentsData: CorpusArguments): Promise<void> {
 }
 
 const argumentsData = parseArguments(process.argv.slice(2))
+if (argumentsData.captureCacheTelemetry) enableNfpIfpTelemetry()
 await mkdir(argumentsData.outputDirectory, { recursive: true })
 if (argumentsData.inventoryOnly) {
   console.log(JSON.stringify({ inventoryPath: await writeInventory(argumentsData) }))

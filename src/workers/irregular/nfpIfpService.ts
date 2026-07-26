@@ -29,6 +29,7 @@ import {
   type IrregularNfpIfpCheckpointPhase,
   NfpIfpService
 } from './services.js'
+import * as NfpIfpTelemetry from './nfpIfpTelemetry.js'
 import { ConvexHull } from './convexHull.js'
 import { ConvexPolygonValidation } from './convexPolygonValidation.js'
 import type { ConvexPolygonWinding } from './convexPolygonValidation.js'
@@ -971,6 +972,7 @@ function makeGeneratePlacementCandidates(
   > {
     const scope = input.candidateMemoScope
     if (scope === undefined) {
+      NfpIfpTelemetry.recordMemoBypass()
       return generatePlacementCandidatesUncached(
         input,
         geometryCache,
@@ -990,15 +992,18 @@ function makeGeneratePlacementCandidates(
       cached !== undefined &&
       (input.onCandidateProvenance === undefined || cached.provenance !== undefined)
     ) {
+      NfpIfpTelemetry.recordMemoRequest('hit')
       return nfpCheckpoint(input.control, 'candidate-points').pipe(
         Effect.map(() => {
           if (cached.provenance !== undefined) {
             input.onCandidateProvenance?.(cached.provenance)
           }
+          NfpIfpTelemetry.recordMemoRestore(cached.candidates.length)
           return restoreCachedLegalCandidates(cached.candidates, input.moving)
         })
       )
     }
+    NfpIfpTelemetry.recordMemoRequest(cached === undefined ? 'miss' : 'provenance-miss')
 
     let observedProvenance: NfpIfpCandidateProvenance | undefined
     const uncachedInput: GeneratePlacementCandidatesInput =
@@ -1414,7 +1419,16 @@ function nfpCheckpoint(
   control: IrregularNfpIfpControl | undefined,
   phase: IrregularNfpIfpCheckpointPhase
 ): Effect.Effect<void, IrregularNfpIfpControlAbortError> {
-  return control === undefined ? Effect.void : control.checkpoint(phase)
+  if (control === undefined) {
+    NfpIfpTelemetry.recordCheckpoint(phase, 'inert')
+    return Effect.void
+  }
+  const checkpoint = control.checkpoint(phase)
+  NfpIfpTelemetry.recordCheckpoint(
+    phase,
+    checkpoint === Effect.void ? 'direct-void' : 'composed'
+  )
+  return checkpoint
 }
 
 function intersectSegments(

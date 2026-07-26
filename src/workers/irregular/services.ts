@@ -16,6 +16,7 @@ import type {
 } from '@shared/irregular/domain.js'
 import type { IrregularBeamState } from '../algorithm/irregular/irregularBeamState.js'
 import type { EmitIrregularDecisionTrace } from '../algorithm/irregular/decisionTrace.js'
+import * as NfpIfpTelemetry from './nfpIfpTelemetry.js'
 import type { PlacedCollisionSpatialIndex } from './placedCollisionSpatialIndex.js'
 import {
   CollisionGeometry,
@@ -421,16 +422,23 @@ export const FreeMaterialServiceUnimplemented = Layer.succeed(FreeMaterialServic
 /** Deterministic per-worker cache with no failure entries. */
 export const GeometryCacheLive = Layer.sync(GeometryCache, () => {
   const cache = new Map<string, unknown>()
+  NfpIfpTelemetry.recordCacheInstance()
   return {
     get: <A>(key: IrregularGeometryCacheKey) =>
-      Effect.sync(() => cache.get(cacheKeyToString(key)) as A | undefined),
+      Effect.sync(() => {
+        const entry = cache.get(cacheKeyToString(key)) as A | undefined
+        NfpIfpTelemetry.recordCacheGet(key.namespace, entry !== undefined)
+        return entry
+      }),
     set: <A>(key: IrregularGeometryCacheKey, value: A) =>
       Effect.sync(() => {
         cache.set(cacheKeyToString(key), value)
+        NfpIfpTelemetry.recordCacheSet(key.namespace)
       }),
     remove: (key: IrregularGeometryCacheKey) =>
       Effect.sync(() => {
         cache.delete(cacheKeyToString(key))
+        NfpIfpTelemetry.recordCacheRemove(key.namespace)
       }),
     clear: Effect.sync(() => {
       cache.clear()
