@@ -13,6 +13,9 @@ roadmap:
 - [Compact short-side contact strip](./compact-short-side-contact-strip.md):
   why the AABB shelf could not reach Compact quality, the reverted
   stable-baseline tie-break, and the exact contact-driven replacement.
+- [Pure core boundary decisions](./pure-core-boundary-decisions.md): why the
+  rejected Effect/cache micro-optimization did not close the separate
+  portability program, and the accepted first pairwise-NFP seam.
 - [Historical reviews](./reviews/): dated independent review outputs.
 - [Historical prompts](./prompts/): dated execution and review briefs retained
   as provenance, not current instructions.
