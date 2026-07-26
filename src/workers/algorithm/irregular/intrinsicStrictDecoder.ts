@@ -466,23 +466,27 @@ export function constructIntrinsicStrictState(
     }
     const previousActiveRuntimeMs = input.checkpoint?.activeRuntimeMs ?? 0
     const candidateMemoScope = new IrregularNfpIfpCandidateMemoScope()
-    const control: IrregularNfpIfpControl = {
-      checkpoint: (phase) =>
-        Effect.gen(function* () {
-          if (input.control !== undefined) yield* input.control.checkpoint(phase)
-          if (
-            previousActiveRuntimeMs + performance.now() - startedAt >=
-            maximumRuntimeMs
-          ) {
-            return yield* Effect.fail(
-              new IrregularNfpIfpControlAbortError({
-                reason: 'deadline',
-                message: `intrinsic strict decode exceeded ${maximumRuntimeMs} ms.`
-              })
-            )
+    // Every caller constructs this checkpoint and runs it immediately, so the
+    // deadline read happens at the same point an `Effect.gen` body would reach
+    // it. Returning a shared `Effect.void` instead avoids one generator per
+    // checkpoint, and the strict decode reaches this millions of times.
+    const strictDeadlineReached = (): Effect.Effect<void, IrregularNfpIfpControlAbortError> =>
+      previousActiveRuntimeMs + performance.now() - startedAt >= maximumRuntimeMs
+        ? Effect.fail(
+            new IrregularNfpIfpControlAbortError({
+              reason: 'deadline',
+              message: `intrinsic strict decode exceeded ${maximumRuntimeMs} ms.`
+            })
+          )
+        : Effect.void
+    const upstreamControl = input.control
+    const control: IrregularNfpIfpControl =
+      upstreamControl === undefined
+        ? { checkpoint: () => strictDeadlineReached() }
+        : {
+            checkpoint: (phase) =>
+              Effect.flatMap(upstreamControl.checkpoint(phase), strictDeadlineReached)
           }
-        })
-    }
     let state =
       input.checkpoint?.state ??
       new IrregularBeamState({

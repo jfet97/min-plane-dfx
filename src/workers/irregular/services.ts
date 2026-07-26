@@ -369,6 +369,13 @@ export interface GeometryCache {
   readonly remove: (key: IrregularGeometryCacheKey) => Effect.Effect<void>
   /** Removes every in-memory derived artifact for the current worker process. */
   readonly clear: Effect.Effect<void>
+  /**
+   * Same lookup as `get`, without the effect wrapper, for callers on the
+   * per-candidate path. An implementation whose lookup cannot be performed
+   * synchronously omits it, and those callers fall back to `get`. Counted
+   * identically, so a run's tallies do not depend on which path a caller took.
+   */
+  readonly getSync?: <A>(key: IrregularGeometryCacheKey) => A | undefined
 }
 
 export const TransformGenerator = Context.Service<TransformGenerator>(
@@ -423,13 +430,14 @@ export const FreeMaterialServiceUnimplemented = Layer.succeed(FreeMaterialServic
 export const GeometryCacheLive = Layer.sync(GeometryCache, () => {
   const cache = new Map<string, unknown>()
   NfpIfpTelemetry.recordCacheInstance()
+  const getSync = <A>(key: IrregularGeometryCacheKey): A | undefined => {
+    const entry = cache.get(cacheKeyToString(key)) as A | undefined
+    NfpIfpTelemetry.recordCacheGet(key.namespace, entry !== undefined)
+    return entry
+  }
   return {
-    get: <A>(key: IrregularGeometryCacheKey) =>
-      Effect.sync(() => {
-        const entry = cache.get(cacheKeyToString(key)) as A | undefined
-        NfpIfpTelemetry.recordCacheGet(key.namespace, entry !== undefined)
-        return entry
-      }),
+    getSync,
+    get: <A>(key: IrregularGeometryCacheKey) => Effect.sync(() => getSync<A>(key)),
     set: <A>(key: IrregularGeometryCacheKey, value: A) =>
       Effect.sync(() => {
         cache.set(cacheKeyToString(key), value)

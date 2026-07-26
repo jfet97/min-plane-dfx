@@ -755,19 +755,21 @@ function makeAbsoluteControl(
   startedAt: number,
   maximumRuntimeMs: number
 ): IrregularNfpIfpControl {
+  // Constructed and run immediately at every call site, so evaluating the
+  // deadline here reads the clock at the same point an `Effect.gen` body would.
+  // Avoiding the generator matters because this runs millions of times per decode.
+  const deadlineReached = (): Effect.Effect<void, IrregularNfpIfpControlAbortError> =>
+    performance.now() - startedAt >= maximumRuntimeMs
+      ? Effect.fail(
+          new IrregularNfpIfpControlAbortError({
+            reason: 'deadline',
+            message: 'the intrinsic global portfolio reached its absolute deadline.'
+          })
+        )
+      : Effect.void
+  if (upstream === undefined) return { checkpoint: () => deadlineReached() }
   return {
-    checkpoint: (phase) =>
-      Effect.gen(function* () {
-        if (upstream !== undefined) yield* upstream.checkpoint(phase)
-        if (performance.now() - startedAt >= maximumRuntimeMs) {
-          return yield* Effect.fail(
-            new IrregularNfpIfpControlAbortError({
-              reason: 'deadline',
-              message: 'the intrinsic global portfolio reached its absolute deadline.'
-            })
-          )
-        }
-      })
+    checkpoint: (phase) => Effect.flatMap(upstream.checkpoint(phase), deadlineReached)
   }
 }
 

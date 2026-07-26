@@ -5578,19 +5578,22 @@ function deadlineControl(
   startedAt: number,
   maximumRuntimeMs: number
 ): IrregularNfpIfpControl {
+  // Every caller constructs this checkpoint and runs it immediately, so the
+  // deadline read happens at the same point either way. Returning a shared
+  // `Effect.void` instead of an `Effect.gen` avoids a generator per checkpoint;
+  // the checkpoint runs millions of times per decode.
+  const deadlineReached = (): Effect.Effect<void, IrregularNfpIfpControlAbortError> =>
+    performance.now() - startedAt >= maximumRuntimeMs
+      ? Effect.fail(
+          new IrregularNfpIfpControlAbortError({
+            reason: 'deadline',
+            message: 'the intrinsic global search reached its cooperative deadline.'
+          })
+        )
+      : Effect.void
+  if (control === undefined) return { checkpoint: () => deadlineReached() }
   return {
-    checkpoint: (phase) =>
-      Effect.gen(function* () {
-        if (control !== undefined) yield* control.checkpoint(phase)
-        if (performance.now() - startedAt >= maximumRuntimeMs) {
-          return yield* Effect.fail(
-            new IrregularNfpIfpControlAbortError({
-              reason: 'deadline',
-              message: 'the intrinsic global search reached its cooperative deadline.'
-            })
-          )
-        }
-      })
+    checkpoint: (phase) => Effect.flatMap(control.checkpoint(phase), deadlineReached)
   }
 }
 

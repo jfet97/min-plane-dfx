@@ -1,0 +1,110 @@
+{
+  "baselineCommit": "9cffb49",
+  "case": "mixed-61 2000x2700, serial, single process",
+  "acceptedThreshold": 1.05,
+  "protocol1": {
+    "pairs": [
+      {
+        "pair": 1,
+        "baselineMs": 50252.889573,
+        "experimentMs": 47882.169572,
+        "speedup": 1.049511540980514
+      },
+      {
+        "pair": 2,
+        "baselineMs": 51768.75433,
+        "experimentMs": 49788.839839,
+        "speedup": 1.0397662306935123
+      },
+      {
+        "pair": 3,
+        "baselineMs": 51729.935294,
+        "experimentMs": 49687.641717,
+        "speedup": 1.041102646582264
+      },
+      {
+        "pair": 4,
+        "baselineMs": 52664.718315,
+        "experimentMs": 48940.169293,
+        "speedup": 1.0761041303249583
+      },
+      {
+        "pair": 5,
+        "baselineMs": 53233.4306,
+        "experimentMs": 49374.956428,
+        "speedup": 1.0781463813062102
+      }
+    ],
+    "medianSpeedup": 1.049511540980514,
+    "meanSpeedup": 1.0569261859774917
+  },
+  "protocol2": {
+    "pairs": [
+      {
+        "pair": 1,
+        "baselineMs": 52080,
+        "experimentMs": 49175,
+        "speedup": 1.0590747330960855
+      },
+      {
+        "pair": 2,
+        "baselineMs": 52902,
+        "experimentMs": 49835,
+        "speedup": 1.0615430922042741
+      },
+      {
+        "pair": 3,
+        "baselineMs": 52784,
+        "experimentMs": 49343,
+        "speedup": 1.0697363354477838
+      },
+      {
+        "pair": 4,
+        "baselineMs": 54152,
+        "experimentMs": 49820,
+        "speedup": 1.0869530309112807
+      },
+      {
+        "pair": 5,
+        "baselineMs": 52741,
+        "experimentMs": 50453,
+        "speedup": 1.045349136820407
+      }
+    ],
+    "medianSpeedup": 1.0615430922042741,
+    "meanSpeedup": 1.0645312656959662
+  },
+  "protocol2Note": "elapsed recorded to whole milliseconds",
+  "pooled": {
+    "medianSpeedup": 1.06030891265018,
+    "meanSpeedup": 1.060728725836729,
+    "pairsAtOrAboveThreshold": 6,
+    "pairs": 10
+  },
+  "workLedgerParity": {
+    "identicalAcrossEveryPair": true,
+    "checkpointsTotal": 4991970,
+    "checkpointsLive": 2975313,
+    "checkpointsInert": 2016657,
+    "nfpLookups": 266977,
+    "nfpHits": 262166,
+    "nfpStores": 4811,
+    "memoRequests": 9420,
+    "memoHits": 32
+  },
+  "canonicalSha256": "ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b",
+  "distinctHashesAcross20Runs": 1,
+  "eighteenLayoutGate": {
+    "passed": true,
+    "layoutCount": 18,
+    "svgBytesIdenticalToBaseline": 18
+  },
+  "peakRssKb": {
+    "baseline": [802716, 842788, 846612, 858808],
+    "experiment": [823388, 845908, 848624, 914968],
+    "medianBaseline": 844700,
+    "medianExperiment": 847266,
+    "medianDeltaRatio": 1.0030377648869422
+  },
+  "decision": "promote"
+}

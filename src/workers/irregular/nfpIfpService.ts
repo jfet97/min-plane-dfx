@@ -1,6 +1,7 @@
 import { Effect, Layer } from 'effect'
 import {
   IrregularBounds,
+  type IrregularGeometryCacheKey,
   IrregularIfpBounds,
   IrregularNfp,
   IrregularPlacementCandidate,
@@ -139,17 +140,43 @@ function computeNfpBoundaryCached(
     return failInvalidGeometry('computeNfp', movingValidation.message)
 
   const key = pairwiseNfpCacheKey(input, constructionAlgorithm)
-  return geometryCache.get<InternalPolygon>(key).pipe(
-    Effect.flatMap((cached) => {
-      if (isValidCachedNfpBoundary(cached)) return translateNfpBoundaryInternal(input, cached)
-
-      const removeInvalid = cached === undefined ? Effect.void : geometryCache.remove(key)
-      return removeInvalid.pipe(
-        Effect.flatMap(() => computeNfpBoundaryUncached(input, constructionAlgorithm)),
-        Effect.tap((computed) => geometryCache.set(key, computed)),
-        Effect.flatMap((boundary) => translateNfpBoundaryInternal(input, boundary))
+  // Resolution is written once and reached two ways. A cache that can be read
+  // synchronously skips composing a `flatMap` around the lookup, which this path
+  // pays on every one of its hits; one that cannot falls back to `get`. Both
+  // arms run the same resolution, so a hit cannot behave differently by route.
+  const getSync = geometryCache.getSync
+  if (getSync !== undefined) {
+    return resolveNfpBoundary(
+      input,
+      geometryCache,
+      constructionAlgorithm,
+      key,
+      getSync<InternalPolygon>(key)
+    )
+  }
+  return geometryCache
+    .get<InternalPolygon>(key)
+    .pipe(
+      Effect.flatMap((cached) =>
+        resolveNfpBoundary(input, geometryCache, constructionAlgorithm, key, cached)
       )
-    })
+    )
+}
+
+function resolveNfpBoundary(
+  input: ComputeNfpInput,
+  geometryCache: GeometryCache,
+  constructionAlgorithm: NfpConstructionAlgorithm,
+  key: IrregularGeometryCacheKey,
+  cached: InternalPolygon | undefined
+): Effect.Effect<InternalPolygon, IrregularGeometryInputError> {
+  if (isValidCachedNfpBoundary(cached)) return translateNfpBoundaryInternal(input, cached)
+
+  const removeInvalid = cached === undefined ? Effect.void : geometryCache.remove(key)
+  return removeInvalid.pipe(
+    Effect.flatMap(() => computeNfpBoundaryUncached(input, constructionAlgorithm)),
+    Effect.tap((computed) => geometryCache.set(key, computed)),
+    Effect.flatMap((boundary) => translateNfpBoundaryInternal(input, boundary))
   )
 }
 

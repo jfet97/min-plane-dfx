@@ -1164,22 +1164,29 @@ interface ControlState {
 
 const CHECKPOINTS_PER_EVENT_LOOP_YIELD = 8
 
+/**
+ * Every call site constructs this checkpoint and runs it immediately, so
+ * reading the abort reason here observes the same clock the `Effect.gen` body
+ * used to. Seven of every eight checkpoints therefore return a shared
+ * `Effect.void` with no generator; only the eighth, which suspends on the event
+ * loop, still composes. The checkpoint runs millions of times per decode.
+ */
 function controlCheckpoint(
   control: IrregularWindowedBeamControl | undefined,
   state: ControlState
 ): Effect.Effect<void, IrregularWindowedBeamAbortedError> {
   if (control === undefined) return Effect.void
-  return Effect.gen(function* () {
-    const initialReason = controlAbortReason(control)
-    if (initialReason !== undefined) return yield* failAborted(initialReason)
 
-    state.checkpointsSinceYield += 1
-    if (state.checkpointsSinceYield < CHECKPOINTS_PER_EVENT_LOOP_YIELD) return
-    state.checkpointsSinceYield = 0
-    yield* yieldToEventLoop()
+  const initialReason = controlAbortReason(control)
+  if (initialReason !== undefined) return failAborted(initialReason)
 
+  state.checkpointsSinceYield += 1
+  if (state.checkpointsSinceYield < CHECKPOINTS_PER_EVENT_LOOP_YIELD) return Effect.void
+  state.checkpointsSinceYield = 0
+
+  return Effect.flatMap(yieldToEventLoop(), () => {
     const reasonAfterYield = controlAbortReason(control)
-    if (reasonAfterYield !== undefined) return yield* failAborted(reasonAfterYield)
+    return reasonAfterYield !== undefined ? failAborted(reasonAfterYield) : Effect.void
   })
 }
 
