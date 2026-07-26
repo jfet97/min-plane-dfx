@@ -64,6 +64,25 @@ construction while preserving those public contracts.
 - `IrregularNestingPortfolio`;
 - `GeometryCache`.
 
+Effect is the worker/application shell, not the intended representation of
+deterministic inner computation. The first enforced pure seam lives under
+`src/workers/irregular/core/`: pairwise NFP validation, exact structural hull
+construction, cache identity, cached-boundary validation, cache mutation, and
+fixed-piece translation use plain records, explicit outcomes, and a
+synchronous cache-store interface. The public `NfpIfpService` enters that core
+through a lazy `Effect.suspend`; candidate generation invokes it synchronously
+between the existing cooperative checkpoints. `GeometryCacheLive` owns one
+backing store and exposes its legacy Effect operations as adapters over the
+same store, so telemetry and cache coherence remain authoritative in one
+place.
+
+The complete import closure of the pure core is forbidden from importing
+Effect, Schema, or schema-backed shared domain classes. Boundary adapters still
+construct `IrregularNfp`, `IrregularPolygon`, and typed Effect failures for
+existing callers. This is the first portability slice, not a claim that
+candidate generation, beam search, or the Compact coordinator are already
+Effect-free.
+
 `src/workers/algorithm/irregular/strictPriorityDecoder.ts` is an algorithm
 module rather than another Effect service. `decodeStrictPriorityOrder` consumes
 an already priority-ordered list, transforms each piece's existing transform

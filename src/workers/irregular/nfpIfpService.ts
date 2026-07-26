@@ -30,9 +30,7 @@ import {
   NfpIfpService
 } from './services.js'
 import * as NfpIfpTelemetry from './nfpIfpTelemetry.js'
-import { ConvexHull } from './convexHull.js'
 import { ConvexPolygonValidation } from './convexPolygonValidation.js'
-import type { ConvexPolygonWinding } from './convexPolygonValidation.js'
 import { areDisjoint, boundsForPoints } from './convexBounds.js'
 import { GeometryPredicates } from './geometryPredicates.js'
 import { assessPlacement } from './placementValidation.js'
@@ -41,11 +39,14 @@ import {
   DEFAULT_NFP_CONSTRUCTION_ALGORITHM,
   innerFitBoundsCacheKey,
   isValidCachedIfp,
-  isValidCachedNfpBoundary,
   legalPlacementCandidateMemoKey,
-  pairwiseNfpCacheKey
 } from './geometryCacheKeys.js'
 import type { NfpCandidatePruningMode, NfpConstructionAlgorithm } from './geometryCacheKeys.js'
+import {
+  canonicalizeTranslatedConvexRing as canonicalizeTranslatedConvexRingCore,
+  computeRelativeNfpBoundary as computeRelativeNfpBoundaryCore,
+  resolveNfpBoundary
+} from './core/nfpBoundaryCore.js'
 
 export { DEFAULT_NFP_CONSTRUCTION_ALGORITHM }
 export type { NfpCandidatePruningMode, NfpConstructionAlgorithm }
@@ -127,46 +128,21 @@ function computeNfpBoundaryCached(
   geometryCache: GeometryCache,
   constructionAlgorithm: NfpConstructionAlgorithm
 ): Effect.Effect<InternalPolygon, IrregularGeometryInputError> {
-  const fixedValidation = ConvexPolygonValidation.validateStrictBoundary(
-    input.fixed.collisionGeometry.polygon.points
-  )
-  if ('message' in fixedValidation)
-    return failInvalidGeometry('computeNfp', fixedValidation.message)
-  const movingValidation = ConvexPolygonValidation.validateStrictBoundary(
-    input.moving.polygon.points
-  )
-  if ('message' in movingValidation)
-    return failInvalidGeometry('computeNfp', movingValidation.message)
-
-  const key = pairwiseNfpCacheKey(input, constructionAlgorithm)
-  return geometryCache.get<InternalPolygon>(key).pipe(
-    Effect.flatMap((cached) => {
-      if (isValidCachedNfpBoundary(cached)) return translateNfpBoundaryInternal(input, cached)
-
-      const removeInvalid = cached === undefined ? Effect.void : geometryCache.remove(key)
-      return removeInvalid.pipe(
-        Effect.flatMap(() => computeNfpBoundaryUncached(input, constructionAlgorithm)),
-        Effect.tap((computed) => geometryCache.set(key, computed)),
-        Effect.flatMap((boundary) => translateNfpBoundaryInternal(input, boundary))
-      )
-    })
-  )
+  return Effect.suspend(() => {
+    const result = resolveNfpBoundary(input, geometryCache.store, constructionAlgorithm)
+    return result.ok
+      ? Effect.succeed(result.boundary)
+      : failInvalidGeometry('computeNfp', result.message)
+  })
 }
 
-function computeNfpBoundaryUncached(
+function resolveNfpBoundaryFromServiceStore(
   input: ComputeNfpInput,
+  geometryCache: GeometryCache,
   constructionAlgorithm: NfpConstructionAlgorithm
-): Effect.Effect<InternalPolygon, IrregularGeometryInputError> {
-  const construct =
-    constructionAlgorithm === 'linear-edge-merge'
-      ? computeRelativeNfpBoundaryLinearInternal
-      : computeRelativeNfpBoundaryReferenceInternal
-  const boundary = construct(
-    input.fixed.collisionGeometry.polygon.points,
-    input.moving.polygon.points
-  )
-  if ('message' in boundary) return failInvalidGeometry('computeNfp', boundary.message)
-  return Effect.succeed(boundary)
+): InternalPolygon | { readonly message: string } {
+  const result = resolveNfpBoundary(input, geometryCache.store, constructionAlgorithm)
+  return result.ok ? result.boundary : { message: result.message }
 }
 
 export type NfpBoundaryConstructionResult = IrregularPolygon | { readonly message: string }
@@ -176,76 +152,7 @@ type InternalNfpBoundaryConstructionResult = InternalPolygon | { readonly messag
 export function canonicalizeTranslatedConvexRing(
   points: ReadonlyArray<InternalPoint>
 ): NfpBoundaryConstructionResult {
-  return toPublicBoundary(canonicalizeTranslatedConvexRingInternal(points))
-}
-
-function canonicalizeTranslatedConvexRingInternal(
-  points: ReadonlyArray<InternalPoint>
-): InternalNfpBoundaryConstructionResult {
-  if (points.length < 3) return { message: 'polygon must contain at least three vertices.' }
-
-  const previousIndexes = points.map((_, index) => (index - 1 + points.length) % points.length)
-  const nextIndexes = points.map((_, index) => (index + 1) % points.length)
-  const active = points.map(() => true)
-  const pendingIndexes = points.map((_, index) => index)
-  let activeCount = points.length
-
-  for (let pendingIndex = 0; pendingIndex < pendingIndexes.length; pendingIndex += 1) {
-    const currentIndex = pendingIndexes[pendingIndex]
-    if (currentIndex === undefined || !active[currentIndex]) continue
-    if (activeCount < 3) return { message: 'polygon must contain at least three vertices.' }
-
-    const previousIndex = previousIndexes[currentIndex]
-    const nextIndex = nextIndexes[currentIndex]
-    if (previousIndex === undefined || nextIndex === undefined) {
-      return { message: 'polygon points must form a closed boundary.' }
-    }
-    const previousPoint = points[previousIndex]
-    const currentPoint = points[currentIndex]
-    const nextPoint = points[nextIndex]
-    if (previousPoint === undefined || currentPoint === undefined || nextPoint === undefined) {
-      return { message: 'polygon points must form a closed boundary.' }
-    }
-
-    const repeated =
-      pointsEqual(previousPoint, currentPoint) || pointsEqual(currentPoint, nextPoint)
-    const collinear =
-      GeometryPredicates.orientation(previousPoint, currentPoint, nextPoint) === 0 &&
-      pointIsBetween(previousPoint, currentPoint, nextPoint)
-    if (!repeated && !collinear) continue
-
-    active[currentIndex] = false
-    activeCount -= 1
-    if (activeCount < 3) return { message: 'polygon must contain at least three vertices.' }
-    nextIndexes[previousIndex] = nextIndex
-    previousIndexes[nextIndex] = previousIndex
-    pendingIndexes.push(previousIndex, nextIndex)
-  }
-
-  const firstActiveIndex = active.findIndex((isActive) => isActive)
-  if (firstActiveIndex < 0 || activeCount < 3) {
-    return { message: 'polygon must contain at least three vertices.' }
-  }
-
-  const canonicalPoints: InternalPoint[] = []
-  let currentIndex = firstActiveIndex
-  do {
-    const currentPoint = points[currentIndex]
-    if (currentPoint === undefined)
-      return { message: 'polygon points must form a closed boundary.' }
-    canonicalPoints.push(currentPoint)
-    const nextIndex = nextIndexes[currentIndex]
-    if (nextIndex === undefined) return { message: 'polygon points must form a closed boundary.' }
-    currentIndex = nextIndex
-  } while (currentIndex !== firstActiveIndex)
-
-  if (canonicalPoints.length !== activeCount) {
-    return { message: 'polygon points must form a closed boundary.' }
-  }
-
-  const validation = ConvexPolygonValidation.validateStrictBoundary(canonicalPoints)
-  if ('message' in validation) return validation
-  return { points: rotateToStableStart(canonicalPoints) }
+  return toPublicBoundary(canonicalizeTranslatedConvexRingCore(points))
 }
 
 /** Exposes focused NFP construction and boundary-intersection algorithms to tests. */
@@ -268,258 +175,24 @@ function computeRelativeNfpBoundaryReference(
   fixedPoints: ReadonlyArray<InternalPoint>,
   movingPoints: ReadonlyArray<InternalPoint>
 ): NfpBoundaryConstructionResult {
-  return toPublicBoundary(computeRelativeNfpBoundaryReferenceInternal(fixedPoints, movingPoints))
-}
-
-function computeRelativeNfpBoundaryReferenceInternal(
-  fixedPoints: ReadonlyArray<InternalPoint>,
-  movingPoints: ReadonlyArray<InternalPoint>
-): InternalNfpBoundaryConstructionResult {
-  const inputValidation = validateRelativeNfpInputs(fixedPoints, movingPoints)
-  if ('message' in inputValidation) return inputValidation
-
-  const negatedMovingPoints = movingPoints.map((point) => ({ x: -point.x, y: -point.y }))
-  const minkowskiPoints: InternalPoint[] = []
-  for (const fixedPoint of fixedPoints) {
-    for (const movingPoint of negatedMovingPoints) {
-      const sum = sumPoints(fixedPoint, movingPoint, 'Minkowski sum')
-      if ('message' in sum) return sum
-      minkowskiPoints.push(sum)
-    }
-  }
-
-  const boundary = ConvexHull.compute(minkowskiPoints)
-  const boundaryValidation = ConvexPolygonValidation.validateStrictBoundary(boundary.points)
-  if ('message' in boundaryValidation) return boundaryValidation
-
-  return { points: rotateToStableStart(boundary.points) }
+  return toPublicBoundary(
+    computeRelativeNfpBoundaryCore(fixedPoints, movingPoints, 'vertex-pair-hull')
+  )
 }
 
 function computeRelativeNfpBoundaryLinear(
   fixedPoints: ReadonlyArray<InternalPoint>,
   movingPoints: ReadonlyArray<InternalPoint>
 ): NfpBoundaryConstructionResult {
-  return toPublicBoundary(computeRelativeNfpBoundaryLinearInternal(fixedPoints, movingPoints))
-}
-
-function computeRelativeNfpBoundaryLinearInternal(
-  fixedPoints: ReadonlyArray<InternalPoint>,
-  movingPoints: ReadonlyArray<InternalPoint>
-): InternalNfpBoundaryConstructionResult {
-  const inputValidation = validateRelativeNfpInputs(fixedPoints, movingPoints)
-  if ('message' in inputValidation) return inputValidation
-
-  const fixedBoundary = counterClockwiseStablePoints(fixedPoints, inputValidation.fixedWinding)
-  const negatedMovingPoints = movingPoints.map((point) => ({ x: -point.x, y: -point.y }))
-  const movingBoundary = counterClockwiseStablePoints(
-    negatedMovingPoints,
-    inputValidation.movingWinding
+  return toPublicBoundary(
+    computeRelativeNfpBoundaryCore(fixedPoints, movingPoints, 'linear-edge-merge')
   )
-  const fixedEdges = edgeVectors(fixedBoundary)
-  if ('message' in fixedEdges) return fixedEdges
-  const movingEdges = edgeVectors(movingBoundary)
-  if ('message' in movingEdges) return movingEdges
-
-  const initialFixedPoint = fixedBoundary[0]
-  const initialMovingPoint = movingBoundary[0]
-  if (initialFixedPoint === undefined || initialMovingPoint === undefined) {
-    return { message: 'Minkowski edge merge lost a starting vertex.' }
-  }
-  const initialSum = sumPoints(initialFixedPoint, initialMovingPoint, 'Minkowski sum')
-  if ('message' in initialSum) return initialSum
-
-  let fixedEdgeIndex = 0
-  let movingEdgeIndex = 0
-  const boundaryPoints: InternalPoint[] = [initialSum]
-  while (fixedEdgeIndex < fixedEdges.length || movingEdgeIndex < movingEdges.length) {
-    if (fixedEdgeIndex < fixedEdges.length && movingEdgeIndex < movingEdges.length) {
-      const fixedEdge = fixedEdges[fixedEdgeIndex]
-      const movingEdge = movingEdges[movingEdgeIndex]
-      if (fixedEdge === undefined || movingEdge === undefined) {
-        return { message: 'Minkowski edge merge lost an edge direction.' }
-      }
-      const directionOrder = compareEdgeDirections(fixedEdge, movingEdge)
-      if (directionOrder <= 0) fixedEdgeIndex += 1
-      if (directionOrder >= 0) movingEdgeIndex += 1
-    } else if (fixedEdgeIndex < fixedEdges.length) {
-      fixedEdgeIndex += 1
-    } else {
-      movingEdgeIndex += 1
-    }
-
-    const nextFixedPoint = fixedBoundary[fixedEdgeIndex % fixedBoundary.length]
-    const nextMovingPoint = movingBoundary[movingEdgeIndex % movingBoundary.length]
-    if (nextFixedPoint === undefined || nextMovingPoint === undefined) {
-      return { message: 'Minkowski edge merge lost a polygon vertex.' }
-    }
-    const nextSum = sumPoints(nextFixedPoint, nextMovingPoint, 'Minkowski sum')
-    if ('message' in nextSum) return nextSum
-    if (fixedEdgeIndex < fixedEdges.length || movingEdgeIndex < movingEdges.length) {
-      boundaryPoints.push(nextSum)
-    }
-  }
-
-  const canonicalBoundary = canonicalizeTranslatedConvexRingInternal(boundaryPoints)
-  if (!('message' in canonicalBoundary)) {
-    const canonicalValidation = ConvexPolygonValidation.validateStrictBoundary(
-      canonicalBoundary.points
-    )
-    if (!('message' in canonicalValidation)) {
-      const counterClockwisePoints =
-        canonicalValidation.winding === 1
-          ? canonicalBoundary.points
-          : [...canonicalBoundary.points].reverse()
-      return { points: rotateToStableStart(counterClockwisePoints) }
-    }
-  }
-
-  const boundary = ConvexHull.compute(boundaryPoints)
-  const boundaryValidation = ConvexPolygonValidation.validateStrictBoundary(boundary.points)
-  if ('message' in boundaryValidation) return boundaryValidation
-  const counterClockwisePoints =
-    boundaryValidation.winding === 1 ? boundary.points : [...boundary.points].reverse()
-  return { points: rotateToStableStart(counterClockwisePoints) }
-}
-
-interface ValidatedRelativeNfpInputs {
-  readonly fixedWinding: ConvexPolygonWinding
-  readonly movingWinding: ConvexPolygonWinding
-}
-
-function validateRelativeNfpInputs(
-  fixedPoints: ReadonlyArray<InternalPoint>,
-  movingPoints: ReadonlyArray<InternalPoint>
-): ValidatedRelativeNfpInputs | { readonly message: string } {
-  const fixedFiniteMessage = finitePointsMessage(fixedPoints)
-  if (fixedFiniteMessage !== undefined) return { message: fixedFiniteMessage }
-  const movingFiniteMessage = finitePointsMessage(movingPoints)
-  if (movingFiniteMessage !== undefined) return { message: movingFiniteMessage }
-
-  const fixedValidation = ConvexPolygonValidation.validateStrictBoundary(fixedPoints)
-  if ('message' in fixedValidation) return fixedValidation
-  const movingValidation = ConvexPolygonValidation.validateStrictBoundary(movingPoints)
-  if ('message' in movingValidation) return movingValidation
-  return { fixedWinding: fixedValidation.winding, movingWinding: movingValidation.winding }
-}
-
-function finitePointsMessage(points: ReadonlyArray<InternalPoint>): string | undefined {
-  return points.every((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
-    ? undefined
-    : 'polygon coordinates must be finite.'
-}
-
-function counterClockwiseStablePoints(
-  points: ReadonlyArray<InternalPoint>,
-  winding: ConvexPolygonWinding
-): InternalPoint[] {
-  const counterClockwisePoints = winding === 1 ? [...points] : [...points].reverse()
-  return rotateToStableStart(counterClockwisePoints)
-}
-
-function edgeVectors(
-  points: ReadonlyArray<InternalPoint>
-): ReadonlyArray<InternalPoint> | { readonly message: string } {
-  const vectors: InternalPoint[] = []
-  for (let index = 0; index < points.length; index += 1) {
-    const start = points[index]
-    const end = points[(index + 1) % points.length]
-    if (start === undefined || end === undefined) {
-      return { message: 'Minkowski edge merge lost a polygon edge.' }
-    }
-    const x = end.x - start.x
-    const y = end.y - start.y
-    if (!Number.isFinite(x) || !Number.isFinite(y)) {
-      return { message: 'Minkowski edge arithmetic must produce finite vectors.' }
-    }
-    vectors.push({ x, y })
-  }
-  return vectors
-}
-
-function compareEdgeDirections(firstEdge: InternalPoint, secondEdge: InternalPoint): -1 | 0 | 1 {
-  const firstHalf = edgeDirectionHalf(firstEdge)
-  const secondHalf = edgeDirectionHalf(secondEdge)
-  if (firstHalf !== secondHalf) return firstHalf < secondHalf ? -1 : 1
-
-  const directionTurn = GeometryPredicates.orientation(ORIGIN, firstEdge, secondEdge)
-  if (directionTurn > 0) return -1
-  if (directionTurn < 0) return 1
-  return 0
-}
-
-function edgeDirectionHalf(edge: InternalPoint): 0 | 1 {
-  return edge.y > 0 || (edge.y === 0 && edge.x >= 0) ? 0 : 1
-}
-
-function sumPoints(
-  firstPoint: InternalPoint,
-  secondPoint: InternalPoint,
-  operation: string
-): InternalPoint | { readonly message: string } {
-  const x = firstPoint.x + secondPoint.x
-  const y = firstPoint.y + secondPoint.y
-  if (!Number.isFinite(x) || !Number.isFinite(y)) {
-    return { message: `${operation} must produce finite coordinates.` }
-  }
-  return { x, y }
-}
-
-function pointsEqual(firstPoint: InternalPoint, secondPoint: InternalPoint): boolean {
-  return firstPoint.x === secondPoint.x && firstPoint.y === secondPoint.y
-}
-
-function pointIsBetween(
-  firstPoint: InternalPoint,
-  point: InternalPoint,
-  secondPoint: InternalPoint
-): boolean {
-  return (
-    point.x >= Math.min(firstPoint.x, secondPoint.x) &&
-    point.x <= Math.max(firstPoint.x, secondPoint.x) &&
-    point.y >= Math.min(firstPoint.y, secondPoint.y) &&
-    point.y <= Math.max(firstPoint.y, secondPoint.y)
-  )
-}
-
-function translateNfpBoundaryInternal(
-  input: ComputeNfpInput,
-  relativeBoundary: InternalPolygon
-): Effect.Effect<InternalPolygon, IrregularGeometryInputError> {
-  const translatedPoints: InternalPoint[] = []
-  for (const point of relativeBoundary.points) {
-    const x = point.x + input.fixed.placement.transform.translateX
-    const y = point.y + input.fixed.placement.transform.translateY
-    if (!Number.isFinite(x) || !Number.isFinite(y)) {
-      return failInvalidGeometry('computeNfp', 'fixed translation must produce finite coordinates.')
-    }
-    translatedPoints.push({ x, y })
-  }
-
-  const translatedBoundary = canonicalizeTranslatedConvexRingInternal(translatedPoints)
-  const canonicalBoundary =
-    'message' in translatedBoundary
-      ? canonicalizeTranslatedConvexRingWithHullFallback(translatedPoints)
-      : translatedBoundary
-  if ('message' in canonicalBoundary)
-    return failInvalidGeometry('computeNfp', canonicalBoundary.message)
-
-  return Effect.succeed(canonicalBoundary)
-}
-
-/** Uses the exact hull only when the linear translated-ring pass cannot prove strict convexity. */
-function canonicalizeTranslatedConvexRingWithHullFallback(
-  points: ReadonlyArray<InternalPoint>
-): InternalNfpBoundaryConstructionResult {
-  const boundary = ConvexHull.compute(points)
-  const validation = ConvexPolygonValidation.validateStrictBoundary(boundary.points)
-  if ('message' in validation) return validation
-  return { points: rotateToStableStart(boundary.points) }
 }
 
 function toPublicBoundary(
   result: InternalNfpBoundaryConstructionResult
 ): NfpBoundaryConstructionResult {
-  if ('message' in result) return result
+  if ('message' in result) return { message: result.message }
   return toDomainPolygon(result)
 }
 
@@ -659,7 +332,7 @@ function generatePlacementCandidatesUncached(
 
     for (const placed of input.placed) {
       yield* nfpCheckpoint(input.control, 'placed-nfp')
-      const boundary = yield* computeNfpBoundaryCached(
+      const boundaryResult = resolveNfpBoundaryFromServiceStore(
         {
           fixed: placed,
           moving: input.moving,
@@ -668,6 +341,10 @@ function generatePlacementCandidatesUncached(
         geometryCache,
         constructionAlgorithm
       )
+      if ('message' in boundaryResult) {
+        return yield* failInvalidGeometry('computeNfp', boundaryResult.message)
+      }
+      const boundary = boundaryResult
       yield* nfpCheckpoint(input.control, 'placed-nfp')
       const validation = ConvexPolygonValidation.validateStrictBoundary(boundary.points)
       if ('message' in validation)
@@ -1622,20 +1299,6 @@ function isStrictlyInside(
     if (turn === 0 || turn !== winding) return false
   }
   return true
-}
-
-function rotateToStableStart(points: ReadonlyArray<InternalPoint>): InternalPoint[] {
-  let startIndex = 0
-  for (let index = 1; index < points.length; index += 1) {
-    const candidate = points[index]
-    const current = points[startIndex]
-    if (candidate === undefined || current === undefined) continue
-    if (candidate.y < current.y || (candidate.y === current.y && candidate.x < current.x)) {
-      startIndex = index
-    }
-  }
-
-  return [...points.slice(startIndex), ...points.slice(0, startIndex)]
 }
 
 function toDomainPlacementCandidate(

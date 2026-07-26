@@ -35,6 +35,9 @@ baselines.
   versus accepted contact-strip comparison for the targeted Mixed-61
   `2000 x 2700` case and the retained measurements of the two contact strips
   that were rejected.
+- [`pure-irregular-core-stage1/`](./pure-irregular-core-stage1/): the strict
+  sequential 18-layout parity gate for the first Effect- and Schema-free
+  pairwise NFP core seam, with all reports, SVGs, PNGs, manifest, and checksums.
 
 The executable current gates, including the fitted Mixed production hash, are
 documented in

@@ -89,6 +89,41 @@ reported as proof of infeasibility or settled completeness.
 
 ## Active Priorities
 
+### Portability: pure irregular core
+
+Status: stage 1 accepted on 2026-07-26 at `06c7280`. Pairwise NFP validation,
+keying, structural convex hull construction, cache resolution, translation,
+and explicit failure outcomes now execute without Effect or Schema-backed
+domain objects. The public service is a lazy Effect adapter, and the same pure
+operation runs between the existing candidate-generator checkpoints. One
+synchronous backing store remains authoritative for both the pure route and
+legacy Effect cache calls.
+
+This is an architectural portability program, not a reopening of rejected
+TypeScript micro-optimizations. The stage is retained for its language-port
+boundary even without a claimed runtime gain. The full `858`-test suite and the
+strict sequential 18-layout Compact/Short Side gate preserved every pinned
+hash, placement partition, scheduler check, and directional contract. Portable
+evidence is under
+[`../artifacts/pure-irregular-core-stage1/`](../artifacts/pure-irregular-core-stage1/).
+
+Proceed in bounded slices:
+
+1. move IFP bounds and transformed-geometry cache resolution behind the same
+   pure store;
+2. replace trusted uses of `IrregularPoint`, `IrregularBounds`,
+   `IrregularPolygon`, and `IrregularTransformCandidate` with plain internal
+   records and keep schemas in boundary adapters;
+3. turn candidate generation into a deterministic resumable state machine so
+   the Effect shell observes cancellation and yields between counted quanta;
+4. extract beam/archive/coordinator transitions and plain trace events only
+   after the lower seams are exact.
+
+Every slice retains the one-process rule and requires import-closure, typed
+failure, resume/checkpoint, and production-layout parity before the next one.
+See [`pure-irregular-core.md`](./pure-irregular-core.md) and
+[`../research/pure-irregular-core-stage1.md`](../research/pure-irregular-core-stage1.md).
+
 ### Latest completed quality checkpoint
 
 The bounded focused complete reconstruction is the latest accepted checkpoint.
@@ -489,12 +524,15 @@ These are not active stages:
 - further complete-path performance optimization.
 
 Reopen one only when a current trace identifies its specific missing mechanism.
-The final TypeScript Effect/cache candidate was reviewed into a
+The final TypeScript Effect/cache performance candidate was reviewed into a
 lazy-equivalent implementation and then rejected at `1.03567x` median against a
 predeclared `1.05x` promotion threshold. Do not reopen TypeScript hot-path
 micro-optimization without a new profile identifying a distinct mechanism.
 Future material runtime work belongs to the separately planned backend/runtime
-port, not another unmeasured inner-loop rewrite.
+port, not another unmeasured inner-loop rewrite. The pure-core portability
+stages above are still active because they remove runtime/framework ownership
+from the algorithm boundary; they must not be justified with unpaired timing
+claims.
 
 The dated source comparisons and completed experimental chronology remain in:
 
