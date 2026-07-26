@@ -489,6 +489,13 @@ These are not active stages:
 - further complete-path performance optimization.
 
 Reopen one only when a current trace identifies its specific missing mechanism.
+The final TypeScript Effect/cache candidate was reviewed into a
+lazy-equivalent implementation and then rejected at `1.03567x` median against a
+predeclared `1.05x` promotion threshold. Do not reopen TypeScript hot-path
+micro-optimization without a new profile identifying a distinct mechanism.
+Future material runtime work belongs to the separately planned backend/runtime
+port, not another unmeasured inner-loop rewrite.
+
 The dated source comparisons and completed experimental chronology remain in:
 
 - [`../research/open-source-nesting-strategies.md`](../research/open-source-nesting-strategies.md);

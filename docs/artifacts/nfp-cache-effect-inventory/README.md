@@ -306,10 +306,12 @@ strict decoder's `Effect.gen` deadline-control shape measured a median 1,393 ms,
 versus 108 ms for the same number of direct synchronous deadline reads: a
 1,289 ms difference, about **3.1%** of the representative run.
 
-This is a microbenchmark, not an end-to-end fast-path result. A production
-prototype would need to preserve upstream cancellation, deadline-read count,
-failure points, phase order, and any event-loop yields. The isolated result does
-not clear the five-percent threshold.
+This is a microbenchmark, not an end-to-end fast-path result. Its delta includes
+suspension, iterator creation, generator stepping, and Effect interpretation;
+it is not attributable to generator construction alone. A production prototype
+would need to preserve upstream cancellation, deadline-read count, failure
+points, phase order, and any event-loop yields. The isolated result does not
+clear the five-percent threshold.
 
 ### Decision
 
@@ -319,11 +321,48 @@ None of the three isolated changes qualifies for production:
 - do not prioritize `IrregularPolygon` conversion from this evidence;
 - do not add a checkpoint fast path from the microbenchmark alone.
 
-A broader pure internal candidate-generation kernel could combine some of these
-costs behind unchanged Effect boundaries, but the measured ceilings overlap and
-do not prove that the combination exceeds five percent. It requires a separate,
-explicitly bounded prototype and the same exact-hash, work-ledger, suite, and
-18-layout gates.
+The sampled NFP span begins after its caller's checkpoint, so the two measured
+regions are adjacent rather than overlapping. Their sum is nevertheless only a
+rough engineering ceiling because both values are independently extrapolated
+and the checkpoint result is a microbenchmark.
+
+### Final Effect-composition experiment: rejected
+
+PR #17 first measured an eager implementation that moved deadline and
+cancellation observations from lazy Effect execution to effect construction.
+Exact ordinary outputs did not prove deadline-boundary equivalence, so that
+implementation is rejected regardless of its reported timing.
+
+Review produced a lazy-equivalent candidate at `63c7685`: `Effect.suspend`
+avoids generator iterators while preserving upstream failure ordering,
+deadline-read timing, and the before/after checks around every eighth
+windowed-beam event-loop yield. Differential tests also cover synchronous and
+effect-backed NFP-cache hit, miss, stale eviction, output, counter, and telemetry
+parity.
+
+One confirmation protocol was recorded before running the corrected candidate:
+five serial baseline-then-experiment pairs, exact hash and ledger parity, and a
+required median speedup of at least `1.05x`.
+
+| Pair | Baseline | Lazy candidate | Speedup |
+| ---: | ---: | ---: | ---: |
+| 1 | `39,840.263 ms` | `38,496.737 ms` | `1.03490x` |
+| 2 | `40,127.977 ms` | `38,624.041 ms` | `1.03894x` |
+| 3 | `40,225.167 ms` | `38,776.839 ms` | `1.03735x` |
+| 4 | `40,388.062 ms` | `38,996.893 ms` | `1.03567x` |
+| 5 | `40,485.572 ms` | `39,151.983 ms` | `1.03406x` |
+
+The median is **`1.03567x`**, below the predeclared `1.05x` threshold.
+Every pair has byte-identical SVG and telemetry output, the full local suite
+passes `847` tests with `17` skipped and zero failures, and the serial
+18-layout gate passes. Correctness is strong; the production benefit is not
+large enough. The code remains unmerged and TypeScript hot-path optimization
+stops here.
+
+Portable summary:
+[`lazy-checkpoint-confirmation.json`](./lazy-checkpoint-confirmation.json).
+Immutable raw evidence:
+`/private/tmp/min-plane-provenance/pr17-lazy-checkpoint-confirmation/`.
 
 ## Instrumentation still missing
 

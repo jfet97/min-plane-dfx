@@ -1,0 +1,88 @@
+{
+  "status": "rejected",
+  "reason": "the lazy-equivalent implementation missed the preregistered 1.05 median speedup threshold",
+  "baselineCommit": "9cffb49e4b7b1a382a652d1fe5178c34a07a99a4",
+  "reviewedCandidateCommit": "63c7685e4b0a33b5129692f18c405b0da514dca7",
+  "request": {
+    "fixture": "tests/fixtures/irregularSheetInvariance/mixed61-request.json",
+    "case": "mixed-61",
+    "sheet": "2000x2700",
+    "paddingMm": 10,
+    "expectedCanonicalSha256": "ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b",
+    "maximumAreaMm2": 391606,
+    "maximumCanonicalCavities": 0,
+    "maximumElapsedMs": 330000
+  },
+  "protocol": {
+    "recordedBeforeRuns": true,
+    "execution": "single-process serial baseline-then-experiment pairs",
+    "pairCount": 5,
+    "acceptedMedianSpeedup": 1.05,
+    "stopRule": "reject production promotion when the median is below 1.05"
+  },
+  "commands": {
+    "baseline": "pnpm corpus:sheet-invariance --case mixed-61 --sheets 2000x2700 --allow-single-sheet --strict --capture-cache-telemetry --source-commit 9cffb49e4b7b1a382a652d1fe5178c34a07a99a4 --expected-canonical-sha256 ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b --maximum-area-mm2 391606 --maximum-canonical-cavities 0 --maximum-elapsed-ms 330000 --output <pair-baseline-directory>",
+    "experiment": "pnpm corpus:sheet-invariance --case mixed-61 --sheets 2000x2700 --allow-single-sheet --strict --capture-cache-telemetry --source-commit 63c7685e4b0a33b5129692f18c405b0da514dca7 --expected-canonical-sha256 ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b --maximum-area-mm2 391606 --maximum-canonical-cavities 0 --maximum-elapsed-ms 330000 --output <pair-experiment-directory>"
+  },
+  "pairs": [
+    {
+      "pair": 1,
+      "baselineMs": 39840.262625,
+      "experimentMs": 38496.737208,
+      "speedup": 1.0348997217541025
+    },
+    {
+      "pair": 2,
+      "baselineMs": 40127.976583,
+      "experimentMs": 38624.04075,
+      "speedup": 1.0389378170641042
+    },
+    {
+      "pair": 3,
+      "baselineMs": 40225.166875,
+      "experimentMs": 38776.839041,
+      "speedup": 1.0373503325649789
+    },
+    {
+      "pair": 4,
+      "baselineMs": 40388.06225,
+      "experimentMs": 38996.892833,
+      "speedup": 1.0356738528620097
+    },
+    {
+      "pair": 5,
+      "baselineMs": 40485.571583,
+      "experimentMs": 39151.983,
+      "speedup": 1.034061840060566
+    }
+  ],
+  "medianSpeedup": 1.0356738528620097,
+  "meanSpeedup": 1.0361847128611523,
+  "parity": {
+    "allRunsPassed": true,
+    "canonicalHashIdentical": true,
+    "svgBytesIdenticalPerPair": true,
+    "telemetryBytesIdenticalPerPair": true,
+    "svgSha256": "febad20a8357356edb383086591e3f3f6d455e1efe8d06ec2ce0b04856b6582c",
+    "telemetrySha256": "9c8a72159a8c95215d5186f43a822d9a487722646bceddc6a36cc8bcd6775e1b",
+    "fullSuite": {
+      "passed": 847,
+      "skipped": 17,
+      "failed": 0
+    },
+    "eighteenLayoutGatePassed": true
+  },
+  "environment": {
+    "operatingSystem": "macOS 26.5.2 build 25F84",
+    "kernel": "Darwin 25.5.0 arm64",
+    "cpu": "Apple M4 Max",
+    "memoryBytes": 68719476736,
+    "node": "v24.16.0",
+    "pnpm": "11.8.0"
+  },
+  "provenance": {
+    "immutableRoot": "/private/tmp/min-plane-provenance/pr17-lazy-checkpoint-confirmation",
+    "preregistrationSha256": "1fcd4a1375924faf448242dd883eb045caaa901028a617b6daff1831b99b4aa7",
+    "sha256ManifestSha256": "cfd47c7a48a43ecf9d8ddb670593215a157acca1e08c39478c6deb10a2c0716e"
+  }
+}

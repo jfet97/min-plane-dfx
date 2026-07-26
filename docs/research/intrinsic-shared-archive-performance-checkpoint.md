@@ -171,3 +171,19 @@ exact command, runtime, and artifact hashes. Final evidence:
   `/private/tmp/min-plane-provenance/replay-scoring-final-c3849fd-20260723/`
 - paired sheet gate:
   `/private/tmp/min-plane-provenance/replay-scoring-two-sheet-c3849fd-20260723/`
+
+## Final TypeScript Effect-composition boundary
+
+The last bounded TypeScript hot-path candidate is rejected. An initial eager
+checkpoint implementation produced promising timing but changed when deadline
+and cancellation observations occurred. The reviewed lazy-equivalent version
+at `63c7685` preserved those semantics and exact outputs, but its one
+preregistered five-pair confirmation measured only `1.03567x` median speedup
+against the required `1.05x`.
+
+All five pairs reproduced the exact Mixed-61 hash, byte-identical SVGs, and
+byte-identical telemetry ledgers. The full suite passed `847` tests with `17`
+skipped, and the serial 18-layout Compact/Short-Side gate passed. This closes
+the current TypeScript Effect/cache optimization line on value rather than
+correctness. Evidence is recorded in
+[`../artifacts/nfp-cache-effect-inventory/lazy-checkpoint-confirmation.json`](../artifacts/nfp-cache-effect-inventory/lazy-checkpoint-confirmation.json).
