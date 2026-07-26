@@ -40,17 +40,23 @@ describe('pure irregular core boundary', () => {
       "import { Effect } from 'effect'",
       "import * as Schema from 'effect/Schema'",
       "import 'effect'",
+      "import legacy = require('effect/Schema')",
       "export { value } from '@shared/domain/value.js'",
       "const lazy = import('effect/Schema')",
-      "const legacy = require('@shared/irregular/domain.js')"
+      "const lazyTemplate = import(`effect/Schema`)",
+      "const required = require('@shared/irregular/domain.js')",
+      "const requiredTemplate = require(`@shared/irregular/domain.js`)"
     ].join('\n')
 
     expect(moduleSpecifiers(source, 'negative-fixture.ts').filter(isProhibitedSpecifier)).toEqual([
       'effect',
       'effect/Schema',
       'effect',
+      'effect/Schema',
       '@shared/domain/value.js',
       'effect/Schema',
+      'effect/Schema',
+      '@shared/irregular/domain.js',
       '@shared/irregular/domain.js'
     ])
   })
@@ -85,7 +91,11 @@ function moduleSpecifiers(source: string, filePath: string): ReadonlyArray<strin
       const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword
       const isRequire =
         ts.isIdentifier(node.expression) && node.expression.text === 'require'
-      if ((isDynamicImport || isRequire) && argument !== undefined && ts.isStringLiteral(argument)) {
+      if (
+        (isDynamicImport || isRequire) &&
+        argument !== undefined &&
+        ts.isStringLiteralLike(argument)
+      ) {
         specifiers.push(argument.text)
       }
     }
