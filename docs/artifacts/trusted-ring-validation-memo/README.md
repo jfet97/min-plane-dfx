@@ -1,5 +1,12 @@
 # Trusted Ring Validation Memo
 
+## Final review evidence
+
+[`final-review/`](./final-review/) is the complete accepted final-commit
+evidence for source `59fa2220600c89002b2cbdd7ae4e3ccf6d7591cc`. It contains
+the manifest, summary, checksums, and all `18` Compact and Short Side reports,
+SVGs, and PNGs. Every layout gate passed.
+
 Retained summaries from the original identity-memo experiment. They motivated
 the hardened fingerprint implementation, but they are not a complete portable
 reproduction bundle: the underlying SVGs, raw matrix reports, component

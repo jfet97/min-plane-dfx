@@ -117,14 +117,11 @@ layouts and rendered all `18` SVGs to PNG. Its manifest records the source
 commit and command, and its checksum manifest verifies every report, SVG, PNG,
 and the manifest itself.
 
-One same-host supporting pair observed the current `main` Mixed-61 strict gate
-at `36247.197ms` and the final hardened code at `32999.782ms`, an `8.96%`
-reduction (`1.0984x`). This is one observation, not a statistical benchmark;
-the exact identity gates are the acceptance authority.
-
-Immutable review provenance remains under
-`/private/tmp/min-plane-provenance/pr20-fingerprint-review/`, including the
-final matrix in `final-59fa222-nine-baselines/`.
+The complete portable matrix is committed under
+[`../artifacts/trusted-ring-validation-memo/final-review/`](../artifacts/trusted-ring-validation-memo/final-review/).
+The earlier timing pair lacked a complete main-side source manifest, so it is
+not retained as an accepted performance claim. Exact identity preservation is
+the acceptance authority.
 
 ## Component measurements
 

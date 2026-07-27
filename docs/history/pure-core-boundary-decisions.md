@@ -94,9 +94,9 @@ invalid-to-valid mutation, and an independent oracle-side classifier proves the
 canonical-key corpus exercises the reverse selection branch. Fresh final-commit
 gates accepted the hardened design: `895` tests passed, and all `18` layouts in
 the strict sequential Compact and Short Side matrix passed and rendered on
-source commit `59fa2220600c89002b2cbdd7ae4e3ccf6d7591cc`. One same-host
-Mixed-61 pair observed an `8.96%` reduction; identity preservation, not that
-single timing, is the acceptance authority.
+source commit `59fa2220600c89002b2cbdd7ae4e3ccf6d7591cc`. The earlier timing
+pair lacked complete main-side source provenance and is not retained as an
+accepted performance claim.
 
 The translated ring is still validated: it is a fresh array and float
 translation can round vertices into collinearity. Replacing the quadratic
