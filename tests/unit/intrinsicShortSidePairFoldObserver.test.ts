@@ -405,17 +405,18 @@ describe('intrinsic short-side pair-fold observer', () => {
     })
     expect(outcome.placedCollisionGeometries).toBeUndefined()
     // the causal veto record retains which constructions failed the area term alone
+    expect(outcome.trace.envelopeAreaCostVetoes?.length).toBe(3)
     expect(
-      outcome.trace.envelopeAreaCostVetoes?.length
-    ).toBeGreaterThanOrEqual(2)
-    expect(
-      outcome.trace.envelopeAreaCostVetoes
-        ?.slice(0, 2)
-        .map((veto) => veto.constructionKind)
-    ).toEqual(['pair-fold', 'multi-row-shelf'])
-    expect(
-      outcome.trace.envelopeAreaCostVetoes?.[0]?.admission
-    ).toMatchObject({
+      outcome.trace.envelopeAreaCostVetoes?.map((veto) => veto.constructionKind)
+    ).toEqual(['pair-fold', 'multi-row-shelf', 'contact-strip'])
+    // the composite trace refreshes the aggregate after strip finalization,
+    // so a veto recorded only by the contact strip is not discarded
+    expect(outcome.trace.envelopeAreaCostVetoes?.[2]?.admission).toMatchObject({
+      envelopeAreaCostWithinProductionBound: false,
+      directionallyEfficient: true,
+      accepted: false
+    })
+    expect(outcome.trace.envelopeAreaCostVetoes?.[0]?.admission).toMatchObject({
       envelopeAreaCostWithinProductionBound: false,
       directionallyEfficient: true,
       accepted: false

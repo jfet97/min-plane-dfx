@@ -599,6 +599,13 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
     const selected = promotion.promoted && stripOutcome !== undefined ? stripOutcome : incumbent
     const trace = measureTraceSize({
       ...selected.trace,
+      /*
+       * The selected outcome's trace was snapshotted before the contact strip
+       * finalized, so refresh the causal veto aggregate from the runtime:
+       * a strip-only causal veto must survive into the composite trace.
+       */
+      envelopeAreaCostVetoObserved: runtime.envelopeAreaCostVetoObserved,
+      envelopeAreaCostVetoes: [...runtime.envelopeAreaCostVetoes],
       contactStrip: strip.trace,
       contactStripPromotion: promotion,
       peakRssDeltaBytes: sampleRss(runtime),
