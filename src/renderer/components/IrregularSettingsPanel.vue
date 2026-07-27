@@ -46,7 +46,10 @@ const MIN_FLATTENING_SAG_TOLERANCE_MM = 0.001
 type GeometryNumericField = 'flatteningSagToleranceMm' | 'clearanceSafetyMarginMm'
 
 function inputValue(event: Event): string {
-  return event.target instanceof HTMLInputElement ? event.target.value : ''
+  const target = event.target
+  return target instanceof HTMLInputElement || target instanceof HTMLSelectElement
+    ? target.value
+    : ''
 }
 
 function inputChecked(event: Event): boolean {

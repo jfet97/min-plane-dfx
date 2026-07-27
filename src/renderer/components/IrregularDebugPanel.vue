@@ -54,6 +54,9 @@ const unplacedPieceIds = computed(
 )
 const score = computed(() => finalLayout.value?.score ?? null)
 const diagnostics = computed(() => finalLayout.value?.diagnostics ?? [])
+const elapsedMs = computed(
+  () => history.selectedRun.value?.stats.elapsedMs ?? history.result.value?.stats.elapsedMs ?? null
+)
 const selectedTransform = computed(() => {
   const transform = selectedFrame.value?.selectedTransform
   if (!transform) return null
@@ -94,6 +97,10 @@ function formatArea(value: number): string {
       <div>
         <dt>result status</dt>
         <dd>{{ finalLayout?.status ?? 'awaiting result' }}</dd>
+      </div>
+      <div>
+        <dt>elapsed</dt>
+        <dd>{{ elapsedMs === null ? 'awaiting result' : formatNumber(elapsedMs) + ' ms' }}</dd>
       </div>
       <div>
         <dt>placements</dt>
