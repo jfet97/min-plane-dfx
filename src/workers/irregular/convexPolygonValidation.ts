@@ -198,8 +198,8 @@ function scanTurns(points: ReadonlyArray<InternalPoint>): TurnScan {
  * exact because the sign of an IEEE subtraction agrees with comparing the
  * coordinates it subtracts.
  *
- * This replaces the quadratic non-adjacent edge sweep for every ring that
- * reaches it with consistent turns, which is every valid collision ring.
+ * This replaces the quadratic non-adjacent edge sweep only after consistent
+ * turns and the coordinate-envelope guard have both admitted the ring.
  */
 function completesOneRevolution(edges: ReadonlyArray<BoundaryEdge>): boolean {
   let revolutions = 0

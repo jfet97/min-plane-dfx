@@ -153,9 +153,9 @@ function rotations(points: ReadonlyArray<InternalPoint>): InternalPoint[][] {
 }
 
 /**
- * Reports whether every corner turns the same non-zero way. Only rings that
- * satisfy this reach the linear revolution count; everything else still falls
- * back to the quadratic sweep, so this is what separates the two paths.
+ * Reports whether every corner turns the same non-zero way. This separates the
+ * topology classes exercised by the corpus; production also requires the
+ * independent coordinate-envelope guard before using the linear decision.
  */
 function turnsAreConsistent(points: ReadonlyArray<InternalPoint>): boolean {
   let winding: number | undefined
