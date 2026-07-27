@@ -85,11 +85,15 @@ Effect-free.
 
 The second pure seam covers rectangular IFP bounds and transformed-collision
 cache resolution. IFP retains validation-before-cache ordering; transformed
-geometry retains key/get-before-miss-validation ordering. Both cache plain
-structural artifacts through the same store and expose lazy Effect adapters.
-Candidate generation calls the pure IFP operation between its unchanged
-cooperative checkpoints. The remaining portability boundary is the
-schema-backed collision/prepared-piece carrier graph used by trusted search.
+geometry retains key/get-before-miss-validation ordering. Both resolve plain
+structural envelopes and expose lazy Effect adapters over the same store. IFP
+stores the core-produced structural result directly. Transformed geometry
+materializes its existing public domain object once before storing so cache
+hits preserve the historical object identity without rebuilding nested
+schema-backed points and polygons. Candidate generation calls the pure IFP
+operation between its unchanged cooperative checkpoints. The remaining
+portability boundary is the schema-backed collision/prepared-piece carrier
+graph used by trusted search.
 
 `src/workers/algorithm/irregular/strictPriorityDecoder.ts` is an algorithm
 module rather than another Effect service. `decodeStrictPriorityOrder` consumes

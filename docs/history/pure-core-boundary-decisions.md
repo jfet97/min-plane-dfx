@@ -37,11 +37,13 @@ event orders: IFP validates before cache access, while transformed geometry
 performs key/get before miss-path validation. This distinction is frozen by an
 independent current-main oracle.
 
-The accepted implementation caches plain structural values through the same
-single store, defers public operations with `Effect.suspend`, and adapts typed
-invalid/infeasible outcomes only at the service shell. The full suite and a
-separate strict sequential 18-layout run preserved every production identity
-and contract.
+The accepted implementation caches IFP's plain structural result through the
+same single store. Transformed geometry instead materializes its existing
+public domain object once before storing, preserving historical hit identity
+without repeated nested schema construction. Both public operations remain
+deferred with `Effect.suspend`, and typed invalid/infeasible outcomes are
+adapted only at the service shell. The full suite and a separate strict
+sequential 18-layout run preserved every production identity and contract.
 
 See
 [`../research/pure-irregular-core-stage2.md`](../research/pure-irregular-core-stage2.md)
