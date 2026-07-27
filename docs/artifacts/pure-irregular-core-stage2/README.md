@@ -1,7 +1,7 @@
 # Pure Irregular Core Stage 2
 
 This directory is the portable copy of the strict sequential production gate
-run from source commit `82c679dd448ef396ef89f0dbc5f1a6c6c5eb4955`.
+run from source commit `2f8fd76be08554247b72a0f3f5b6c09d5115f473`.
 
 It contains all 18 Compact and Short Side reports, SVGs, Chromium PNG renders,
 the generated manifest and summary, and their generated `SHA256SUMS`.
@@ -13,6 +13,6 @@ chronology, focused-reconstruction contract, and Short Side directional
 contract remained exact.
 
 The raw immutable run is
-`/private/tmp/min-plane-provenance/pure-irregular-core-stage2-82c679d/`.
+`/private/tmp/min-plane-provenance/pure-irregular-core-stage2-2f8fd76/`.
 This README was added after generation and is intentionally outside the
 generated checksum manifest.

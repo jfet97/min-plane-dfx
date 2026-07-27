@@ -7,7 +7,7 @@ operations now execute over structural data and one synchronous cache store
 without composing Effect inside cache resolution. Public services remain lazy
 Effect adapters with the same typed failures.
 
-Source commit: `82c679dd448ef396ef89f0dbc5f1a6c6c5eb4955`.
+Source commit: `2f8fd76be08554247b72a0f3f5b6c09d5115f473`.
 
 ## Preserved asymmetric cache contracts
 
@@ -39,7 +39,7 @@ cache-instance ledger through the production cache implementation.
 
 ## Evidence
 
-The complete suite passed `870` tests with `17` intentional skips. Lint and
+The complete suite passed `878` tests with `17` intentional skips. Lint and
 node/renderer typechecks passed.
 
 The strict single-process matrix passed all nine fixture/sheet cases and all 18
@@ -48,7 +48,7 @@ hash, placed/unplaced partition, scheduler chronology, focused reconstruction
 contract, and Short Side directional contract remained exact.
 
 Raw provenance:
-`/private/tmp/min-plane-provenance/pure-irregular-core-stage2-82c679d/`.
+`/private/tmp/min-plane-provenance/pure-irregular-core-stage2-2f8fd76/`.
 
 Portable evidence:
 [`../artifacts/pure-irregular-core-stage2/`](../artifacts/pure-irregular-core-stage2/).
