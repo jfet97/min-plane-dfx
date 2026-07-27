@@ -59,7 +59,7 @@ pre-existing term and failed the area-cost term alone. Anything else below
 the floor remains a `directional-miss`, and the gate contract becomes
 `success + satisfied + quality-protected == 9 && miss == 0`.
 
-## Accepted matrix evidence (commit `903657e`)
+## Accepted matrix evidence (commits `903657e` + `536da14`)
 
 Nine unchanged Compact controls, byte-identical hashes. Sources: one archive
 winner (Triangle-20 `600 x 400` zigzag, `1.214x`, kept), one contact-strip
@@ -67,9 +67,11 @@ winner (Mixed-61 roomy, `1.061x`, `100%` fill, kept), five Compact
 satisfactions, two quality-protected fallbacks (Triangle-20 roomy shelf
 `1.795x` vetoed, Shapes-17 roomy pair fold `1.487x` vetoed). Zero directional
 misses. Observer runtime stayed in the same sub-second envelope per case.
+Each quality-protected fallback retains its causal veto record (construction
+kind and full admission terms) in its short-side profile report.
 
 Immutable manifest, reports, SVG/PNG renders, and checksums:
-`/private/tmp/min-plane-provenance/short-side-area-cost-guard-903657e-matrix/`.
+`/private/tmp/min-plane-provenance/short-side-area-cost-guard-536da14-matrix/`.
 Accepted portable copies: `docs/artifacts/compact-short-side-area-cost-guard/`.
 Independent design review: five findings, all accepted and applied (threshold
 math, distinct outcome, causal veto with retained construction evidence,

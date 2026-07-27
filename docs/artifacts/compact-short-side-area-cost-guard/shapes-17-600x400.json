@@ -5,9 +5,9 @@
     "width": 600,
     "height": 400
   },
-  "sourceCommit": "903657e1aeaa80d2578e78436da9b3c810c12672",
+  "sourceCommit": "536da14360f0d5782295d1115747cadbe1b3dd88",
   "runtime": {
-    "elapsedMs": 6236.405,
+    "elapsedMs": 6276.257208,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -1277,11 +1277,11 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 20,
             "topologyMeasurementCount": 36,
-            "topologyMeasurementMs": 16.97211999999854,
+            "topologyMeasurementMs": 17.266665999999987,
             "legalCandidateCount": 4110,
             "contactMeasuredCandidateCount": 48,
             "positiveContactCandidateCount": 10,
-            "contactMeasurementMs": 0.8281650000008085,
+            "contactMeasurementMs": 1.1335009999979775,
             "contactSelectedSuccessorCount": 5,
             "contactDeduplicatedSuccessorCount": 0,
             "contactRetainedSuccessorCount": 5,
@@ -1480,7 +1480,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 341,
           "completedDepths": 5,
-          "elapsedMs": 8.610458000000108,
+          "elapsedMs": 8.309667000000445,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1508,7 +1508,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 335,
           "completedDepths": 5,
-          "elapsedMs": 8.164875000000393,
+          "elapsedMs": 8.159958999999617,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1536,7 +1536,7 @@
           "checkpointRetained": false,
           "consumedPlacementEvaluations": 32273,
           "completedDepths": 17,
-          "elapsedMs": 1161.4989999999998,
+          "elapsedMs": 1179.4118740000022,
           "endpoint": {
             "placedCount": 14,
             "placedDoubledMaterialAreaGrid2": "294455444315",
@@ -1564,7 +1564,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 341,
           "completedDepths": 5,
-          "elapsedMs": 8.378250000000662,
+          "elapsedMs": 8.06750000000011,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1794,11 +1794,11 @@
         "placedMaterialAreaMm2": 147227.7221575,
         "selectedRotationDeg": 0
       },
-      "preflightRuntimeMs": 3.246415999999982,
-      "completeArchiveRuntimeMs": 4499.758833,
-      "prefixTerminalizationMs": 7.479290999999648,
-      "coldSearchMs": 1410.741833,
-      "runtimeMs": 1418.7009579999994
+      "preflightRuntimeMs": 3.0752080000000035,
+      "completeArchiveRuntimeMs": 4523.078875,
+      "prefixTerminalizationMs": 7.642749999999978,
+      "coldSearchMs": 1425.4924999999994,
+      "runtimeMs": 1433.6545420000002
     },
     "intrinsicAnytimeSchedulerTrace": {
       "version": "intrinsic-anytime-scheduler-v1",

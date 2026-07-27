@@ -5,9 +5,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "903657e1aeaa80d2578e78436da9b3c810c12672",
+  "sourceCommit": "536da14360f0d5782295d1115747cadbe1b3dd88",
   "runtime": {
-    "elapsedMs": 3127.8106669999997,
+    "elapsedMs": 3113.843917,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -924,7 +924,7 @@
       "selectedCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
       "consumedCandidateEvaluations": 0,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 0.6899170000001504,
+      "runtimeMs": 0.6680410000003576,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -948,7 +948,7 @@
       "geometricParetoEligibleEndpointCount": 2,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 8.009416999999758,
+      "runtimeMs": 8.250792000000274,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 43193,
       "endpoints": [
@@ -2485,6 +2485,26 @@
         "sharedBoundaryLengthMm": 0
       },
       "envelopeAreaCostVetoObserved": true,
+      "envelopeAreaCostVetoes": [
+        {
+          "constructionKind": "multi-row-shelf",
+          "admission": {
+            "exactLegal": true,
+            "allPiecesPlaced": true,
+            "fillRatio": 0.88288,
+            "depthWithinProductionMaximumSide": true,
+            "projectionCoverageRatio": 1,
+            "projectionComponentCount": 1,
+            "enclosedCavityCount": 0,
+            "collisionEnvelopeDensity": 0.5,
+            "shortAxisSpanGainFactor": 3.6184867095779976,
+            "envelopeAreaCostFactor": 1.7953408803144135,
+            "directionallyEfficient": true,
+            "envelopeAreaCostWithinProductionBound": false,
+            "accepted": false
+          }
+        }
+      ],
       "contactStrip": {
         "version": "intrinsic-short-side-contact-strip-v1",
         "status": "constructed",
@@ -2495,8 +2515,8 @@
         "candidateEvaluations": 2809,
         "placedCount": 20,
         "requestedCount": 20,
-        "runtimeMs": 62.32612500000005,
-        "peakRssDeltaBytes": 1409024
+        "runtimeMs": 62.24137500000006,
+        "peakRssDeltaBytes": 851968
       },
       "contactStripPromotion": {
         "incumbentConstructionKind": "multi-row-shelf",
@@ -2547,9 +2567,9 @@
         "strictlyImproved": true,
         "promoted": false
       },
-      "runtimeMs": 66.19895900000029,
-      "peakRssDeltaBytes": 1507328,
-      "serializedTraceBytes": 3671,
+      "runtimeMs": 66.13541700000042,
+      "peakRssDeltaBytes": 933888,
+      "serializedTraceBytes": 4144,
       "failureReason": "the exact terminal construction failed one or more admission gates."
     }
   },

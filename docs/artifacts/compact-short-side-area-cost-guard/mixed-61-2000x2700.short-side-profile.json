@@ -5,9 +5,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "903657e1aeaa80d2578e78436da9b3c810c12672",
+  "sourceCommit": "536da14360f0d5782295d1115747cadbe1b3dd88",
   "runtime": {
-    "elapsedMs": 33431.904209,
+    "elapsedMs": 33211.179958,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -2754,7 +2754,7 @@
       "selectedCanonicalGeometryHash": "3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742",
       "consumedCandidateEvaluations": 12000,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 737.8082080000022,
+      "runtimeMs": 736.0552920000009,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -2778,9 +2778,9 @@
       "geometricParetoEligibleEndpointCount": 1,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 30.95487499999581,
+      "runtimeMs": 31.040917000002082,
       "runtimeBudgetExceeded": false,
-      "serializedTraceBytes": 21799,
+      "serializedTraceBytes": 21800,
       "endpoints": [
         {
           "archiveIndex": 0,
@@ -3578,6 +3578,26 @@
         "sharedBoundaryLengthMm": 1356.5009999999995
       },
       "envelopeAreaCostVetoObserved": true,
+      "envelopeAreaCostVetoes": [
+        {
+          "constructionKind": "multi-row-shelf",
+          "admission": {
+            "exactLegal": true,
+            "allPiecesPlaced": true,
+            "fillRatio": 0.993888,
+            "depthWithinProductionMaximumSide": true,
+            "projectionCoverageRatio": 1,
+            "projectionComponentCount": 1,
+            "enclosedCavityCount": 0,
+            "collisionEnvelopeDensity": 0.5236208842899154,
+            "shortAxisSpanGainFactor": 3.1582730498087823,
+            "envelopeAreaCostFactor": 1.528813448128996,
+            "directionallyEfficient": true,
+            "envelopeAreaCostWithinProductionBound": false,
+            "accepted": false
+          }
+        }
+      ],
       "contactStrip": {
         "version": "intrinsic-short-side-contact-strip-v1",
         "status": "constructed",
@@ -3588,8 +3608,8 @@
         "candidateEvaluations": 25788,
         "placedCount": 61,
         "requestedCount": 61,
-        "runtimeMs": 722.4360420000012,
-        "peakRssDeltaBytes": 327680
+        "runtimeMs": 713.4055420000041,
+        "peakRssDeltaBytes": 376832
       },
       "contactStripPromotion": {
         "incumbentConstructionKind": "multi-row-shelf",
@@ -3639,9 +3659,9 @@
         "strictlyImproved": true,
         "promoted": true
       },
-      "runtimeMs": 737.8855419999963,
-      "peakRssDeltaBytes": 344064,
-      "serializedTraceBytes": 3501
+      "runtimeMs": 728.4595829999998,
+      "peakRssDeltaBytes": 442368,
+      "serializedTraceBytes": 3991
     }
   },
   "workerOutput": {
