@@ -204,6 +204,7 @@ describe('pure IFP and transformed-cache preservation oracle', () => {
     const afterStale = await runTransform(input, events, values)
 
     expect(second).toEqual(first)
+    expect(second).toBe(first)
     expect(afterStale).toEqual(first)
     expect(events).toEqual([
       { operation: 'get', namespace: 'transform-collision-v1' },
@@ -236,6 +237,30 @@ describe('pure IFP and transformed-cache preservation oracle', () => {
       _tag: 'IrregularGeometryInputError',
       operation: 'transformCollisionGeometry',
       message: 'polygon must be strictly convex with one consistent winding.'
+    })
+    expect(events).toEqual([{ operation: 'get', namespace: 'transform-collision-v1' }])
+  })
+
+  it('preserves transform lookup and no-store behavior for unrepresentable grid coordinates', async () => {
+    const events: CacheEvent[] = []
+    const failure = await runTransform(
+      {
+        geometry: collisionGeometry('transform-grid-overflow', [
+          point(0, 0),
+          point(1e20, 0),
+          point(1e20, 1),
+          point(0, 1)
+        ]),
+        transform: transform()
+      },
+      events
+    ).catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(IrregularGeometryInputError)
+    expect(failure).toMatchObject({
+      _tag: 'IrregularGeometryInputError',
+      operation: 'transformCollisionGeometry',
+      message: 'transformed collision polygon coordinates must fit the canonical collision grid.'
     })
     expect(events).toEqual([{ operation: 'get', namespace: 'transform-collision-v1' }])
   })
@@ -353,5 +378,33 @@ describe('pure IFP and transformed-cache preservation oracle', () => {
         Effect.provide(recordingCacheLayer(events))
       )
     )
+  })
+
+  it('preserves IFP overflow failure after lookup without storing a failure', async () => {
+    const events: CacheEvent[] = []
+    const failure = await runIfp(
+      {
+        sheet: {
+          width: Number.MAX_VALUE,
+          height: 8,
+          label: 'ifp overflow'
+        },
+        moving: transformedGeometry('ifp-overflow', [
+          point(-Number.MAX_VALUE, 0),
+          point(-Number.MAX_VALUE / 2, 0),
+          point(-Number.MAX_VALUE / 2, 1),
+          point(-Number.MAX_VALUE, 1)
+        ])
+      },
+      events
+    ).catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(IrregularGeometryInputError)
+    expect(failure).toMatchObject({
+      _tag: 'IrregularGeometryInputError',
+      operation: 'computeIfpBounds',
+      message: 'IFP arithmetic must produce finite bounds.'
+    })
+    expect(events).toEqual([{ operation: 'get', namespace: 'sheet-ifp-v1' }])
   })
 })

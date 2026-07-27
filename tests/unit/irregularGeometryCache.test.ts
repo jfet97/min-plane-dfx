@@ -24,6 +24,7 @@ import {
 } from '../../src/workers/irregular/services.js'
 import type { ComputeNfpInput } from '../../src/workers/irregular/services.js'
 import {
+  innerFitBoundsCacheKey,
   pairwiseNfpCacheKey,
   transformCollisionGeometryCacheKey
 } from '../../src/workers/irregular/geometryCacheKeys.js'
@@ -224,6 +225,93 @@ describe('irregular geometry caches', () => {
         yield* service.computeNfp(input)
         yield* cache.clear
         cache.store.get(key)
+      }).pipe(Effect.provide(liveLayer))
+    )
+
+    expect(nfpIfpTelemetrySnapshot()).toBeUndefined()
+  })
+
+  it('tracks transform and IFP miss, hit, stale, mixed access, and clear through one live store', async () => {
+    enableNfpIfpTelemetry()
+    const transformInput = {
+      geometry: collisionGeometry('live-transform-cache'),
+      transform: transform(0)
+    }
+    const ifpInput = {
+      sheet: new SheetSpec({ width: 10, height: 8, label: 'live IFP cache' }),
+      moving: transformedGeometry('live-ifp-cache', 2)
+    }
+    const transformKey = transformCollisionGeometryCacheKey(
+      transformInput,
+      DEFAULT_IRREGULAR_GEOMETRY_SETTINGS
+    )
+    const ifpKey = innerFitBoundsCacheKey(ifpInput)
+    const liveLayer = Layer.merge(
+      GeometryKernel.LayerWithCache.pipe(Layer.provide(GeometrySettings.Live)),
+      NfpIfpServiceLayer
+    ).pipe(Layer.provideMerge(GeometryCacheLive))
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const cache = yield* GeometryCache
+        const kernel = yield* GeometryKernel
+        const service = yield* NfpIfpService
+        yield* cache.set(transformKey, { polygon: { points: [] } })
+        cache.store.set(ifpKey, { bounds: { minX: 0, minY: 0, maxX: 999, maxY: 999 } })
+
+        const transformAfterStale = yield* kernel.transformCollisionGeometry(transformInput)
+        const ifpAfterStale = yield* service.computeIfpBounds(ifpInput)
+        const transformHit = yield* kernel.transformCollisionGeometry(transformInput)
+        const ifpHit = yield* service.computeIfpBounds(ifpInput)
+
+        expect(transformHit).toBe(transformAfterStale)
+        expect(ifpHit).toEqual(ifpAfterStale)
+
+        yield* cache.clear
+        yield* cache.get(transformKey)
+        cache.store.get(ifpKey)
+      }).pipe(Effect.provide(liveLayer))
+    )
+
+    expect(nfpIfpTelemetrySnapshot()?.cacheInstances).toBe(1)
+    expect(nfpIfpTelemetrySnapshot()?.namespaces['transform-collision-v1']).toEqual({
+      getCalls: 3,
+      getPresent: 2,
+      setCalls: 2,
+      removeCalls: 1
+    })
+    expect(nfpIfpTelemetrySnapshot()?.namespaces['sheet-ifp-v1']).toEqual({
+      getCalls: 3,
+      getPresent: 2,
+      setCalls: 2,
+      removeCalls: 1
+    })
+  })
+
+  it('keeps live transform and IFP cache work invisible while telemetry is disabled', async () => {
+    const transformInput = {
+      geometry: collisionGeometry('disabled-transform-cache'),
+      transform: transform(0)
+    }
+    const ifpInput = {
+      sheet: new SheetSpec({ width: 10, height: 8, label: 'disabled IFP cache' }),
+      moving: transformedGeometry('disabled-ifp-cache', 2)
+    }
+    const liveLayer = Layer.merge(
+      GeometryKernel.LayerWithCache.pipe(Layer.provide(GeometrySettings.Live)),
+      NfpIfpServiceLayer
+    ).pipe(Layer.provideMerge(GeometryCacheLive))
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const cache = yield* GeometryCache
+        const kernel = yield* GeometryKernel
+        const service = yield* NfpIfpService
+        yield* kernel.transformCollisionGeometry(transformInput)
+        yield* kernel.transformCollisionGeometry(transformInput)
+        yield* service.computeIfpBounds(ifpInput)
+        yield* service.computeIfpBounds(ifpInput)
+        yield* cache.clear
       }).pipe(Effect.provide(liveLayer))
     )
 

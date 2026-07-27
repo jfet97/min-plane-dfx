@@ -181,10 +181,11 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
           const result = resolveTransformedCollisionGeometry(
             input,
             settings.geometry,
-            geometryCache.store
+            geometryCache.store,
+            toDomainTransformedCollisionGeometry
           )
           return result.ok
-            ? Effect.succeed(toDomainTransformedCollisionGeometry(result.value))
+            ? Effect.succeed(result.value)
             : failInvalidGeometryInput('transformCollisionGeometry', result.message)
         }),
       validatePlacement: PlacementValidation.validate

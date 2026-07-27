@@ -110,8 +110,8 @@ describe('pure IFP and transformed geometry cores', () => {
     }
     const store = recordingStore(actions, values)
 
-    const first = resolveTransformedCollisionGeometry(input, settings, store)
-    const second = resolveTransformedCollisionGeometry(input, settings, store)
+    const first = resolveTransformedCollisionGeometry(input, settings, store, identity)
+    const second = resolveTransformedCollisionGeometry(input, settings, store, identity)
 
     expect(first).toEqual(second)
     if (!first.ok) throw new Error(first.message)
@@ -146,11 +146,40 @@ describe('pure IFP and transformed geometry cores', () => {
       transform: transform()
     }
 
-    const result = resolveTransformedCollisionGeometry(input, settings, recordingStore(actions))
+    const result = resolveTransformedCollisionGeometry(
+      input,
+      settings,
+      recordingStore(actions),
+      identity
+    )
 
     expect(result).toEqual({
       ok: false,
       message: 'polygon must be strictly convex with one consistent winding.'
+    })
+    expect(actions).toEqual([{ operation: 'get', namespace: 'transform-collision-v1' }])
+  })
+
+  it('rejects unrepresentable transform coordinates after lookup without storing', () => {
+    const actions: CacheAction[] = []
+    const result = resolveTransformedCollisionGeometry(
+      {
+        geometry: collisionGeometry('pure-transform-overflow', [
+          point(0, 0),
+          point(1e20, 0),
+          point(1e20, 1),
+          point(0, 1)
+        ]),
+        transform: transform()
+      },
+      settings,
+      recordingStore(actions),
+      identity
+    )
+
+    expect(result).toEqual({
+      ok: false,
+      message: 'transformed collision polygon coordinates must fit the canonical collision grid.'
     })
     expect(actions).toEqual([{ operation: 'get', namespace: 'transform-collision-v1' }])
   })
@@ -223,4 +252,31 @@ describe('pure IFP and transformed geometry cores', () => {
     })
     expect(infeasibleActions).toEqual([{ operation: 'get', namespace: 'sheet-ifp-v1' }])
   })
+
+  it('rejects overflowing IFP arithmetic after lookup without storing', () => {
+    const actions: CacheAction[] = []
+    const result = resolveIfpBounds(
+      {
+        sheet: { width: Number.MAX_VALUE, height: 8, label: 'overflow' },
+        moving: transformedGeometry('pure-ifp-overflow', [
+          point(-Number.MAX_VALUE, 0),
+          point(-Number.MAX_VALUE / 2, 0),
+          point(-Number.MAX_VALUE / 2, 1),
+          point(-Number.MAX_VALUE, 1)
+        ])
+      },
+      recordingStore(actions)
+    )
+
+    expect(result).toEqual({
+      ok: false,
+      kind: 'invalid',
+      message: 'IFP arithmetic must produce finite bounds.'
+    })
+    expect(actions).toEqual([{ operation: 'get', namespace: 'sheet-ifp-v1' }])
+  })
 })
+
+function identity<T>(value: T): T {
+  return value
+}

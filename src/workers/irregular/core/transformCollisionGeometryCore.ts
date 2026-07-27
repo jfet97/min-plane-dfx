@@ -37,14 +37,19 @@ export type CoreTransformCollisionResult<
 /** Resolves transformed collision geometry while preserving key/get-before-validation ordering. */
 export function resolveTransformedCollisionGeometry<
   TPieceId extends string,
-  TTransform extends InternalTransformCandidate
+  TTransform extends InternalTransformCandidate,
+  TValue extends InternalTransformedCollisionGeometry<TPieceId, TTransform> =
+    InternalTransformedCollisionGeometry<TPieceId, TTransform>
 >(
   input: TransformCollisionGeometryKeyInput<TPieceId, TTransform>,
   settings: InternalGeometrySettings,
-  cache: GeometryCacheStore
-): CoreTransformCollisionResult<TPieceId, TTransform> {
+  cache: GeometryCacheStore,
+  materialize: (
+    value: InternalTransformedCollisionGeometry<TPieceId, TTransform>
+  ) => TValue
+): CoreTransformCollisionSuccess<TPieceId, TTransform> | CoreTransformCollisionFailure {
   const key = makeTransformCollisionGeometryCacheKey(input, settings)
-  const cached = cache.get<InternalTransformedCollisionGeometry<TPieceId, TTransform>>(key)
+  const cached = cache.get<TValue>(key)
   if (isValidCachedTransformedCollisionGeometry(cached, input)) {
     return { ok: true, value: cached, key }
   }
@@ -52,8 +57,9 @@ export function resolveTransformedCollisionGeometry<
   if (cached !== undefined) cache.remove(key)
   const computed = computeTransformedCollisionGeometry(input)
   if (!computed.ok) return computed
-  cache.set(key, computed.value)
-  return { ...computed, key }
+  const value = materialize(computed.value)
+  cache.set(key, value)
+  return { ok: true, value, key }
 }
 
 /** Computes one mirror-then-rotate transform on the canonical collision grid. */

@@ -18,15 +18,24 @@ The extraction deliberately preserves two different historical orders:
   validates only after a miss or stale removal.
 
 For both paths, a stale value is removed before recomputation, a failed
-computation is never stored, and successful structural values enter the cache
-before boundary adaptation. Direct tests freeze exact key bytes, ordered cache
-actions, error `_tag`/operation/message, infeasible versus invalid IFP outcomes,
-mirror/rotation/grid-snap behavior, lazy construction, and plain cached-value
-prototypes.
+computation is never stored, and successful values enter the cache exactly
+once. The transformed-geometry adapter materializes the public domain object
+before that store, so repeated hits reuse its identity instead of rebuilding
+schema-backed points and polygons. Direct tests freeze exact key bytes, ordered
+cache actions, error `_tag`/operation/message, infeasible versus invalid IFP
+outcomes, numeric failure branches, mirror/rotation/grid-snap behavior, lazy
+construction, and the plain prototypes of structural envelopes created by the
+new core. Incoming transform and sheet objects remain schema-backed until
+Stage 3 replaces the complete trusted runtime graph.
 
 Candidate generation invokes the pure IFP operation only inside its already
-running generator between the unchanged IFP checkpoints. Sheetless generation
-continues to skip IFP work.
+running generator between the unchanged IFP checkpoints. Direct event oracles
+cover success, invalid input, infeasibility, pre-checkpoint abort, and the
+sheetless path; sheetless generation continues to skip IFP cache work.
+
+Live-store tests also exercise transformed and IFP miss, hit, stale removal,
+mixed synchronous/Effect access, clear, disabled telemetry, and the single
+cache-instance ledger through the production cache implementation.
 
 ## Evidence
 
