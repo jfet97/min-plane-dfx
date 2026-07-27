@@ -53,9 +53,9 @@ export const ConvexPolygonValidation = {
  * turn, or `{ message }` describing the rejected invariant.
  *
  * Robust orientation predicates decide every turn: a collinear point has no
- * corner, while an opposite turn would make the boundary concave. A
- * non-adjacent edge check runs first because a star polygon can have the same
- * local turn at every vertex while still crossing itself.
+ * corner, while an opposite turn would make the boundary concave. Consistent
+ * turns use the linear revolution decision inside its proved IEEE-754 envelope;
+ * all other inputs retain the non-adjacent edge sweep and diagnostic order.
  */
 function validateStrictBoundary(
   points: ReadonlyArray<InternalPoint>
@@ -93,12 +93,72 @@ function validateStrictBoundary(
     edges.push({ start, end })
   }
 
+  // the turn scan runs first, but crossing diagnostics still take precedence
+  const turnScan = scanTurns(points)
+
   // a consistent turn sign does not imply a simple ring: star boundaries can
   // cross between vertices without changing any local turn
-  if (hasSelfIntersection(edges)) {
+  const selfIntersects =
+    turnScan.failure === undefined && supportsLinearTopologyDecision(points)
+      ? !completesOneRevolution(edges)
+      : hasSelfIntersection(edges)
+  if (selfIntersects) {
     return { message: 'polygon must form a simple ring without self-intersections.' }
   }
 
+  if (turnScan.failure !== undefined) return { message: turnScan.failure }
+
+  if (turnScan.winding === undefined) {
+    return { message: 'polygon must have a non-zero area.' }
+  }
+
+  return { winding: turnScan.winding }
+}
+
+/*
+ * IEEE-754 safety envelope for the linear topology shortcut.
+ *
+ * Within this envelope, subtraction between finite binary64 coordinates and
+ * every product used by the orientation predicate retain wide overflow and
+ * underflow margins. Values outside it keep the historical edge sweep. Zero is
+ * admitted separately because it is represented exactly.
+ */
+const MIN_LINEAR_TOPOLOGY_NON_ZERO_COORDINATE = 2 ** -450
+const MAX_LINEAR_TOPOLOGY_COORDINATE = 2 ** 500
+
+function supportsLinearTopologyDecision(points: ReadonlyArray<InternalPoint>): boolean {
+  for (let index = 0; index < points.length; index += 1) {
+    const point = points[index]
+    if (point === undefined) return false
+    if (
+      !coordinateSupportsLinearTopology(point.x) ||
+      !coordinateSupportsLinearTopology(point.y)
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
+function coordinateSupportsLinearTopology(value: number): boolean {
+  const magnitude = Math.abs(value)
+  return (
+    magnitude === 0 ||
+    (magnitude >= MIN_LINEAR_TOPOLOGY_NON_ZERO_COORDINATE &&
+      magnitude <= MAX_LINEAR_TOPOLOGY_COORDINATE)
+  )
+}
+
+interface TurnScan {
+  readonly winding: ConvexPolygonWinding | undefined
+  readonly failure: string | undefined
+}
+
+/**
+ * Walks the corners in input order and stops at the first one that fails,
+ * reporting the message the caller would have returned there.
+ */
+function scanTurns(points: ReadonlyArray<InternalPoint>): TurnScan {
   let winding: ConvexPolygonWinding | undefined
   for (let index = 0; index < points.length; index += 1) {
     const previous = points[(index - 1 + points.length) % points.length]
@@ -106,13 +166,13 @@ function validateStrictBoundary(
     const next = points[(index + 1) % points.length]
 
     if (previous === undefined || current === undefined || next === undefined) {
-      return { message: 'polygon points must form a closed boundary.' }
+      return { winding, failure: 'polygon points must form a closed boundary.' }
     }
 
     // robust orientation keeps the winding decision independent of rounded determinants
     const turn = GeometryPredicates.orientation(previous, current, next)
     if (turn === 0) {
-      return { message: 'polygon must not contain collinear vertices.' }
+      return { winding, failure: 'polygon must not contain collinear vertices.' }
     }
 
     if (winding === undefined) {
@@ -121,15 +181,38 @@ function validateStrictBoundary(
     }
 
     if (turn !== winding) {
-      return { message: 'polygon must be strictly convex with one consistent winding.' }
+      return { winding, failure: 'polygon must be strictly convex with one consistent winding.' }
     }
   }
+  return { winding, failure: undefined }
+}
 
-  if (winding === undefined) {
-    return { message: 'polygon must have a non-zero area.' }
+/**
+ * Decides the simple-ring question for a ring whose corners all turn the same
+ * non-zero way.
+ *
+ * Such a ring's edge directions rotate monotonically, so the boundary closes
+ * without crossing itself exactly when those directions complete one single
+ * revolution; a star closes only after several. Counting how often the edge
+ * direction stops pointing downwards counts those revolutions, and the test is
+ * exact because the sign of an IEEE subtraction agrees with comparing the
+ * coordinates it subtracts.
+ *
+ * This replaces the quadratic non-adjacent edge sweep only after consistent
+ * turns and the coordinate-envelope guard have both admitted the ring.
+ */
+function completesOneRevolution(edges: ReadonlyArray<BoundaryEdge>): boolean {
+  let revolutions = 0
+  for (let index = 0; index < edges.length; index += 1) {
+    const edge = edges[index]
+    const nextEdge = edges[(index + 1) % edges.length]
+    if (edge === undefined || nextEdge === undefined) return false
+
+    const pointsDownwards = edge.end.y < edge.start.y
+    const nextPointsDownwards = nextEdge.end.y < nextEdge.start.y
+    if (pointsDownwards && !nextPointsDownwards) revolutions += 1
   }
-
-  return { winding }
+  return revolutions === 1
 }
 
 /**

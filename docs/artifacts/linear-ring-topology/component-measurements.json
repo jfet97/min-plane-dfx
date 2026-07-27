@@ -1,0 +1,29 @@
+{
+  "description": "Time spent inside individual functions, accumulated in process over one Mixed-61 2000x2700 run per ref. This is the measurement that whole-run wall clock could not resolve. Both arms carry the same instrumentation overhead, so the difference is the meaningful figure.",
+  "strictValidation": {
+    "calls": 3012117,
+    "mainTotalMs": 854.2,
+    "branchTotalMs": 514.1,
+    "savedMs": 340.1,
+    "shareOfRun": "0.79%",
+    "retained": true
+  },
+  "pairwiseCacheKey": {
+    "calls": 266977,
+    "mainTotalMs": 487.7,
+    "branchTotalMs": 364,
+    "savedMs": 123.7,
+    "shareOfRun": "0.29%",
+    "retained": false,
+    "reason": "dropped: carries the demonstrated non-atomic guard risk for a third of the validation saving"
+  },
+  "canonicalEntryInsertion": {
+    "calls": 244521,
+    "mainTotalMs": 126.1,
+    "branchTotalMs": 111.2,
+    "savedMs": 14.9,
+    "shareOfRun": "0.035%",
+    "retained": false,
+    "reason": "dropped: no justification at this size"
+  }
+}

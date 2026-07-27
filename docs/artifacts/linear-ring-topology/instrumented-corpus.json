@@ -1,0 +1,34 @@
+{
+  "description": "Counters added temporarily to one Mixed-61 2000x2700 run and then reverted. They decided which candidates were worth implementing and which were not.",
+  "strictValidation": {
+    "calls": 3012117,
+    "invalidResults": 73,
+    "invalidShare": "0.0024%",
+    "vertexBuckets": {
+      "<=8": 2922157,
+      "9-16": 89960,
+      "17-32": 0,
+      "33-64": 0,
+      ">64": 0
+    }
+  },
+  "beamState": {
+    "constructions": 248610,
+    "canonicalEntryInsertions": 244521,
+    "averageInsertionListLength": 34.6,
+    "bottomLeftAnchoredKeyCalls": 249636,
+    "perPieceKeyConstructions": 4621726,
+    "distinctPieceAndTranslationPairs": 922321,
+    "redundancy": "80.0%"
+  },
+  "rejectedCandidates": [
+    {
+      "candidate": "memoize the anchored per-piece key",
+      "evidence": "80% of 4621726 constructions repeat, but a fingerprint guard costs almost as much as the key it protects: measured 7-31% saving at an 80% hit rate, inconsistent across sizes"
+    },
+    {
+      "candidate": "memoize bottomLeftAnchoredCanonicalOccupiedGeometryKey per state",
+      "evidence": "249636 calls against 248610 constructed states is roughly one call per state, so a per-state memo returns nothing"
+    }
+  ]
+}

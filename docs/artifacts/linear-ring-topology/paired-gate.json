@@ -1,0 +1,25 @@
+{
+  "description": "Three alternating strict Mixed-61 2000x2700 gate runs per ref on one sandboxed Linux machine. Reported in full, including the null result.",
+  "canonicalSha256": "ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b",
+  "allSixReportedThatHash": true,
+  "allSixPassed": true,
+  "elapsedMs": {
+    "main": [
+      43420,
+      43445,
+      43412
+    ],
+    "branch": [
+      42685,
+      43132,
+      44475
+    ]
+  },
+  "medianMs": {
+    "main": 43420,
+    "branch": 43132
+  },
+  "medianRatio": 1.0067,
+  "separable": false,
+  "note": "The sets overlap: the slowest branch run (44475ms) is slower than every main run. A 0.67% median difference is not separable from run-to-run noise, and matches the 0.79% predicted by the in-process component measurement."
+}

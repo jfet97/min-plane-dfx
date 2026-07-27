@@ -107,3 +107,38 @@ See
 [`../research/trusted-ring-validation-memo.md`](../research/trusted-ring-validation-memo.md)
 and
 [`../artifacts/trusted-ring-validation-memo/`](../artifacts/trusted-ring-validation-memo/).
+
+## 2026-07-27: measure the piece, not the run, and drop what does not earn its place
+
+A ring whose corners all turn the same non-zero way closes without crossing
+itself exactly when its edge directions complete one revolution. The linear
+decision is used only inside a conservative binary64 coordinate envelope.
+Turn-failing or numerically extreme inputs retain the historical quadratic
+non-adjacent edge sweep and diagnostic order.
+
+The method matters more than the change. Whole-run wall clock cannot separate a
+one percent effect from nine percent run-to-run noise, and reported nothing.
+Timing each function in process over the same corpus showed strict validation
+falling from `854.2ms` to `514.1ms`, a `340ms` saving worth `0.79%` of the run.
+The same method rejected two implemented candidates: the pairwise digest memo
+returned `124ms` while carrying a demonstrated guard defect, and bisecting
+canonical entry insertion returned `15ms`. Both were removed. Two further
+candidates never shipped: the anchored per-piece key repeats `80%` of the time
+but its mutation guard costs almost as much as the key, and a per-state memo is
+worthless at one call per state.
+
+The original small-grid review missed an extreme finite-coordinate
+counterexample because its test oracle did not preserve the historical segment
+predicate literally. The corrected oracle and permanent extreme regression
+require the fallback. On source `8c1862010456f9da1b7f6b6a89f9cc5d4499ac36`,
+`901` tests passed and the final portable matrix passed all `18` layouts. Its
+SVGs, PNGs, and canonical identities match the accepted PR #20 reference in
+every case. That complete bundle, not the original summary, is the acceptance
+authority.
+
+No speedup is claimed. The elapsed-time result is null and is published as such.
+
+See
+[`../research/linear-ring-topology.md`](../research/linear-ring-topology.md)
+and
+[`../artifacts/linear-ring-topology/`](../artifacts/linear-ring-topology/).
