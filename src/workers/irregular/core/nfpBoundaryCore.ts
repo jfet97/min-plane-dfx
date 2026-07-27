@@ -1,6 +1,9 @@
 import type { InternalPoint, InternalPolygon } from '../internalGeometry.js'
 import { ConvexPolygonValidation } from '../convexPolygonValidation.js'
-import type { ConvexPolygonWinding } from '../convexPolygonValidation.js'
+import type {
+  ConvexPolygonWinding,
+  StrictConvexBoundaryValidation
+} from '../convexPolygonValidation.js'
 import { GeometryPredicates } from '../geometryPredicates.js'
 import { computeConvexHull } from './convexHullCore.js'
 import type { GeometryCacheKey, GeometryCacheStore } from './geometryCacheStore.js'
@@ -12,6 +15,71 @@ import {
 } from './nfpCacheKey.js'
 
 const ORIGIN: InternalPoint = { x: 0, y: 0 }
+
+/**
+ * Strict validation is quadratic in the vertex count because the simple-ring
+ * check compares every non-adjacent edge pair. One warm pairwise resolution used
+ * to run it four times: both inputs, the cached relative boundary, and the
+ * translated ring.
+ *
+ * The two inputs are cache-stable arrays owned by the transformed-collision
+ * store. A linear exact-coordinate fingerprint detects runtime mutation before
+ * an identity-memoized result is reused, while unchanged rings avoid repeating
+ * the quadratic simple-ring check. Entries are weakly held and disappear with
+ * the geometry that produced them.
+ */
+const validatedRings = new WeakMap<
+  object,
+  {
+    readonly fingerprint: string
+    readonly validation: StrictConvexBoundaryValidation
+  }
+>()
+
+function validateStrictBoundaryOnce(
+  points: ReadonlyArray<InternalPoint>
+): StrictConvexBoundaryValidation {
+  const fingerprint = ringFingerprint(points)
+  const memoized = validatedRings.get(points)
+  if (fingerprint !== undefined && memoized?.fingerprint === fingerprint) {
+    return memoized.validation
+  }
+
+  const validation = ConvexPolygonValidation.validateStrictBoundary(points)
+  if (fingerprint === undefined) {
+    validatedRings.delete(points)
+  } else {
+    validatedRings.set(points, { fingerprint, validation })
+  }
+  return validation
+}
+
+/**
+ * Builds an unambiguous identity for the exact ordered coordinates currently
+ * held by one ring. Number strings cannot contain `,` or `;`, and the point
+ * count plus both coordinates are emitted for every position. Signed zero is
+ * normalized because strict validation treats it identically to zero.
+ */
+function ringFingerprint(points: ReadonlyArray<InternalPoint>): string | undefined {
+  let fingerprint = `${points.length}:`
+  for (const point of points) {
+    if (
+      point === undefined ||
+      typeof point !== 'object' ||
+      point === null ||
+      !Number.isFinite(point.x) ||
+      !Number.isFinite(point.y)
+    ) {
+      return undefined
+    }
+    fingerprint += `${numberIdentity(point.x)},${numberIdentity(point.y)};`
+  }
+  return fingerprint
+}
+
+function numberIdentity(value: number): string {
+  return Object.is(value, -0) ? '0' : String(value)
+}
 
 export interface CoreNfpInput {
   readonly fixed: {
@@ -53,12 +121,12 @@ export function resolveNfpBoundary(
   cache: GeometryCacheStore,
   constructionAlgorithm: NfpConstructionAlgorithm
 ): CoreNfpResult {
-  const fixedValidation = ConvexPolygonValidation.validateStrictBoundary(
+  const fixedValidation = validateStrictBoundaryOnce(
     input.fixed.collisionGeometry.polygon.points
   )
   if ('message' in fixedValidation) return failure(fixedValidation.message)
 
-  const movingValidation = ConvexPolygonValidation.validateStrictBoundary(input.moving.polygon.points)
+  const movingValidation = validateStrictBoundaryOnce(input.moving.polygon.points)
   if ('message' in movingValidation) return failure(movingValidation.message)
 
   const key = makePairwiseNfpCacheKey(
@@ -175,20 +243,7 @@ export function canonicalizeTranslatedConvexRing(
 export function isValidCachedNfpBoundary(value: unknown): value is InternalPolygon {
   if (value === undefined || typeof value !== 'object' || value === null) return false
   if (!('points' in value) || !Array.isArray(value.points) || value.points.length < 3) return false
-  if (
-    value.points.some(
-      (point) =>
-        typeof point !== 'object' ||
-        point === null ||
-        !('x' in point) ||
-        !('y' in point) ||
-        !Number.isFinite(point.x) ||
-        !Number.isFinite(point.y)
-    )
-  ) {
-    return false
-  }
-  return !('message' in ConvexPolygonValidation.validateStrictBoundary(value.points))
+  return !('message' in validateStrictBoundaryOnce(value.points))
 }
 
 function computeRelativeNfpBoundaryReference(

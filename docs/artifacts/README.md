@@ -35,6 +35,10 @@ baselines.
   versus accepted contact-strip comparison for the targeted Mixed-61
   `2000 x 2700` case and the retained measurements of the two contact strips
   that were rejected.
+- [`trusted-ring-validation-memo/`](./trusted-ring-validation-memo/): paired
+  Mixed-61 gate reports, the 18-layout SVG digest comparison, and the cache
+  telemetry showing a `98.2%` pairwise NFP hit rate, for the change that stopped
+  revalidating rings the trusted path had already proven.
 - [`pure-irregular-core-stage1/`](./pure-irregular-core-stage1/): the strict
   sequential 18-layout parity gate for the first Effect- and Schema-free
   pairwise NFP core seam, with all reports, SVGs, PNGs, manifest, and checksums.

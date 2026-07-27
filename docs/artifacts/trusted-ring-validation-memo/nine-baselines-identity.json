@@ -1,0 +1,194 @@
+{
+  "description": "Strict nine-baseline matrix run on both refs. SVG digests prove the rendered layouts are byte-identical; the PNG render step is omitted because it needs an X server this sandbox does not provide.",
+  "mainCommit": "d55e1b67f244145df491b295a4d6508bd9620a9d",
+  "layoutCount": 18,
+  "allIdentical": true,
+  "allPassed": true,
+  "reportFieldDifferencesBeyondTimeAndMemory": 0,
+  "matrixWallClockMs": {
+    "main": 212942,
+    "branch": 194943
+  },
+  "layouts": [
+    {
+      "layout": "mixed-61-2000x2700.short-side-profile",
+      "mainSvgSha256": "6719813369277b76124b14a58a907e8f6a5ef53afcac63087e386e097b4eedae",
+      "branchSvgSha256": "6719813369277b76124b14a58a907e8f6a5ef53afcac63087e386e097b4eedae",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 51197.767698999996,
+      "branchElapsedMs": 44994.203373
+    },
+    {
+      "layout": "mixed-61-2000x2700",
+      "mainSvgSha256": "b9719ab4aa8c9da652b424e35910ef39e0a073261003bd4b439a2f51ac353a63",
+      "branchSvgSha256": "b9719ab4aa8c9da652b424e35910ef39e0a073261003bd4b439a2f51ac353a63",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 49292.34334399999,
+      "branchElapsedMs": 43435.231558
+    },
+    {
+      "layout": "mixed-61-300x300.short-side-profile",
+      "mainSvgSha256": "0d498d2050cbfc01521c4d1d6c222fd6cfe9c5ad95576ea4567177bff44f6af4",
+      "branchSvgSha256": "0d498d2050cbfc01521c4d1d6c222fd6cfe9c5ad95576ea4567177bff44f6af4",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 782.4621430000001,
+      "branchElapsedMs": 849.2234129999999
+    },
+    {
+      "layout": "mixed-61-300x300",
+      "mainSvgSha256": "0d498d2050cbfc01521c4d1d6c222fd6cfe9c5ad95576ea4567177bff44f6af4",
+      "branchSvgSha256": "0d498d2050cbfc01521c4d1d6c222fd6cfe9c5ad95576ea4567177bff44f6af4",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 750.341361,
+      "branchElapsedMs": 761.2860949999999
+    },
+    {
+      "layout": "mixed-61-600x400.short-side-profile",
+      "mainSvgSha256": "cb29d43c3bf6e55c95f0d848be87b4755db21313463057f9d470c0fcf3aad1fc",
+      "branchSvgSha256": "cb29d43c3bf6e55c95f0d848be87b4755db21313463057f9d470c0fcf3aad1fc",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 4276.741254,
+      "branchElapsedMs": 4298.0264959999995
+    },
+    {
+      "layout": "mixed-61-600x400",
+      "mainSvgSha256": "cb29d43c3bf6e55c95f0d848be87b4755db21313463057f9d470c0fcf3aad1fc",
+      "branchSvgSha256": "cb29d43c3bf6e55c95f0d848be87b4755db21313463057f9d470c0fcf3aad1fc",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 4056.556122,
+      "branchElapsedMs": 4213.641414
+    },
+    {
+      "layout": "shapes-17-2000x2700.short-side-profile",
+      "mainSvgSha256": "88b72398b0894e9b70a80f4c1637861cbd022077650844289998d832a99ae948",
+      "branchSvgSha256": "88b72398b0894e9b70a80f4c1637861cbd022077650844289998d832a99ae948",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 10383.097618,
+      "branchElapsedMs": 9049.842998
+    },
+    {
+      "layout": "shapes-17-2000x2700",
+      "mainSvgSha256": "abbf7e8a5520838de3e37992e0e89eb854302f45f02c99eb8d8ce394f44b361f",
+      "branchSvgSha256": "abbf7e8a5520838de3e37992e0e89eb854302f45f02c99eb8d8ce394f44b361f",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 9323.944817,
+      "branchElapsedMs": 8689.251043
+    },
+    {
+      "layout": "shapes-17-300x300.short-side-profile",
+      "mainSvgSha256": "73deb7cee14096c4041c5933fad3268b2bb5e71ecd8d5ead213e0de83b0b8c87",
+      "branchSvgSha256": "73deb7cee14096c4041c5933fad3268b2bb5e71ecd8d5ead213e0de83b0b8c87",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 2701.177292,
+      "branchElapsedMs": 2674.982608
+    },
+    {
+      "layout": "shapes-17-300x300",
+      "mainSvgSha256": "73deb7cee14096c4041c5933fad3268b2bb5e71ecd8d5ead213e0de83b0b8c87",
+      "branchSvgSha256": "73deb7cee14096c4041c5933fad3268b2bb5e71ecd8d5ead213e0de83b0b8c87",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 2662.682725,
+      "branchElapsedMs": 2682.570041
+    },
+    {
+      "layout": "shapes-17-600x400.short-side-profile",
+      "mainSvgSha256": "dd1f8108a50660fb0c3d7341ba4d4c280430d37d3640af941348401e89b1746c",
+      "branchSvgSha256": "dd1f8108a50660fb0c3d7341ba4d4c280430d37d3640af941348401e89b1746c",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 9893.623622000001,
+      "branchElapsedMs": 9874.565921
+    },
+    {
+      "layout": "shapes-17-600x400",
+      "mainSvgSha256": "dd1f8108a50660fb0c3d7341ba4d4c280430d37d3640af941348401e89b1746c",
+      "branchSvgSha256": "dd1f8108a50660fb0c3d7341ba4d4c280430d37d3640af941348401e89b1746c",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 9765.080615,
+      "branchElapsedMs": 8984.0763
+    },
+    {
+      "layout": "triangle-20-2000x2700.short-side-profile",
+      "mainSvgSha256": "27f4eca3b71b07d5e5b646868098e7071cbcb738bad4f9d735fbce03a72bc27d",
+      "branchSvgSha256": "27f4eca3b71b07d5e5b646868098e7071cbcb738bad4f9d735fbce03a72bc27d",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 4426.078522,
+      "branchElapsedMs": 4356.173348
+    },
+    {
+      "layout": "triangle-20-2000x2700",
+      "mainSvgSha256": "081dbde55846d949b2f093c42c13167fee95f73ed2893f31ca829668697465d6",
+      "branchSvgSha256": "081dbde55846d949b2f093c42c13167fee95f73ed2893f31ca829668697465d6",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 4351.751346,
+      "branchElapsedMs": 4154.520471
+    },
+    {
+      "layout": "triangle-20-300x300.short-side-profile",
+      "mainSvgSha256": "4f79e5616d9c8041a6c0c39ae78fc31294eef57681bfbdb56e2c8d98557e01d4",
+      "branchSvgSha256": "4f79e5616d9c8041a6c0c39ae78fc31294eef57681bfbdb56e2c8d98557e01d4",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 4974.087648000001,
+      "branchElapsedMs": 5045.919354000001
+    },
+    {
+      "layout": "triangle-20-300x300",
+      "mainSvgSha256": "4f79e5616d9c8041a6c0c39ae78fc31294eef57681bfbdb56e2c8d98557e01d4",
+      "branchSvgSha256": "4f79e5616d9c8041a6c0c39ae78fc31294eef57681bfbdb56e2c8d98557e01d4",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 4985.449379,
+      "branchElapsedMs": 5089.094648
+    },
+    {
+      "layout": "triangle-20-600x400.short-side-profile",
+      "mainSvgSha256": "00294a5e9e7910d569662bad8e6129cef5055351f4c463e24dcd0c8155616eab",
+      "branchSvgSha256": "00294a5e9e7910d569662bad8e6129cef5055351f4c463e24dcd0c8155616eab",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 4338.744562,
+      "branchElapsedMs": 4040.901775
+    },
+    {
+      "layout": "triangle-20-600x400",
+      "mainSvgSha256": "af965275b6e4f6b5d956c8617198e4fd21ee3fbdb1f402efc4b278b98afa9aa7",
+      "branchSvgSha256": "af965275b6e4f6b5d956c8617198e4fd21ee3fbdb1f402efc4b278b98afa9aa7",
+      "identical": true,
+      "mainPassed": true,
+      "branchPassed": true,
+      "mainElapsedMs": 4238.702692,
+      "branchElapsedMs": 4079.2559039999996
+    }
+  ]
+}
