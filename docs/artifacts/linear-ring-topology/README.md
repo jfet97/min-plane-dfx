@@ -8,6 +8,17 @@ commands, raw reports, or rendered artifacts.
 The accepted final-commit matrix and complete provenance belong under
 [`final-review/`](./final-review/).
 
+## `final-review/`
+
+Complete accepted evidence for source
+`8c1862010456f9da1b7f6b6a89f9cc5d4499ac36`: manifest, summary, checksums,
+and all `18` Compact and Short Side reports, SVGs, and PNGs. Every gate passed.
+All `18` SVGs and all `18` PNGs are byte-identical to the accepted reference
+under
+[`../trusted-ring-validation-memo/final-review/`](../trusted-ring-validation-memo/final-review/),
+whose manifest records source
+`59fa2220600c89002b2cbdd7ae4e3ccf6d7591cc`.
+
 ## `component-measurements.json`
 
 The measurement that decided the change set. Whole-run wall clock cannot resolve

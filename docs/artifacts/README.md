@@ -36,9 +36,9 @@ baselines.
   `2000 x 2700` case and the retained measurements of the two contact strips
   that were rejected.
 - [`linear-ring-topology/`](./linear-ring-topology/): the per-function
-  measurements that decided which of four candidates survived, the paired gate
-  whose elapsed-time result is null, the 18-layout digest comparison, and the
-  adversarial review record.
+  measurements that decided which of four candidates survived, the historical
+  paired summaries, the guarded topology decision, and the complete accepted
+  18-layout final-review bundle.
 - [`trusted-ring-validation-memo/`](./trusted-ring-validation-memo/): paired
   Mixed-61 gate reports, the 18-layout SVG digest comparison, and the cache
   telemetry showing a `98.2%` pairwise NFP hit rate, for the change that stopped

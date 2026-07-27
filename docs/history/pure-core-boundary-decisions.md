@@ -130,8 +130,11 @@ worthless at one call per state.
 The original small-grid review missed an extreme finite-coordinate
 counterexample because its test oracle did not preserve the historical segment
 predicate literally. The corrected oracle and permanent extreme regression
-require the fallback. Final portable matrix evidence, not the original summary,
-is the acceptance authority.
+require the fallback. On source `8c1862010456f9da1b7f6b6a89f9cc5d4499ac36`,
+`901` tests passed and the final portable matrix passed all `18` layouts. Its
+SVGs, PNGs, and canonical identities match the accepted PR #20 reference in
+every case. That complete bundle, not the original summary, is the acceptance
+authority.
 
 No speedup is claimed. The elapsed-time result is null and is published as such.
 

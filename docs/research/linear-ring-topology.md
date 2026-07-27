@@ -76,6 +76,10 @@ all: `249636` calls against `248610` constructed states is one call per state.
 
 ## Correctness evidence
 
+Lint, both typechecks, and the complete suite passed on source
+`8c1862010456f9da1b7f6b6a89f9cc5d4499ac36`: `901` tests passed and `17`
+were intentionally skipped across `89` files.
+
 The topology test retains the previous validator verbatim as an oracle and
 compares the exact returned object, message included, over star families
 spanning vertex counts 5 to 41, rings pinched by a duplicated non-adjacent
@@ -94,8 +98,14 @@ and returns the historical self-intersection diagnostic.
 
 The original paired and matrix summaries lack the branch source manifest,
 commands, raw reports, and SVGs required for portable reproduction. They remain
-historical motivation only. Accepted final-commit evidence is stored separately
-under the artifact directory and is the sole production-equivalence authority.
+historical motivation only.
+
+The accepted final-commit matrix is committed under
+[`../artifacts/linear-ring-topology/final-review/`](../artifacts/linear-ring-topology/final-review/).
+Its manifest records source, command, and runtime; checksums cover every report,
+SVG, PNG, summary, and manifest. All `18` layouts passed. Direct comparison
+against the accepted PR #20 reference bundle found `0/18` SVG mismatches,
+`0/18` PNG mismatches, and `0/18` canonical-identity mismatches.
 
 ## A narrowed guard, not a closed one
 
