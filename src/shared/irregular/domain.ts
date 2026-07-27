@@ -129,11 +129,22 @@ export type IrregularPortfolioTerminationReason = Schema.Schema.Type<
   typeof IrregularPortfolioTerminationReason
 >
 
-/** One finite source or collision-geometry coordinate in millimeters. */
-export class IrregularPoint extends Schema.Class<IrregularPoint>('IrregularPoint')({
+/** Boundary schema for one finite source or collision-geometry coordinate. */
+export const IrregularPointSchema = Schema.Struct({
   x: FiniteNumber,
   y: FiniteNumber
-}) {}
+})
+
+/** One finite source or collision-geometry coordinate in millimeters. */
+export class IrregularPoint {
+  readonly x: number
+  readonly y: number
+
+  constructor(fields: { readonly x: number; readonly y: number }) {
+    this.x = fields.x
+    this.y = fields.y
+  }
+}
 
 /**
  * Ordered finite bounds in the coordinate system of the associated geometry.
@@ -153,48 +164,113 @@ const IrregularBoundsFields = Schema.Struct({
   )
 )
 
+/** Boundary schema for finite ordered axis-aligned bounds. */
+export const IrregularBoundsSchema = IrregularBoundsFields
+
 /** Finite axis-aligned bounds for source, collision, or transformed geometry. */
-export class IrregularBounds extends Schema.Class<IrregularBounds>('IrregularBounds')(
-  IrregularBoundsFields
-) {}
+export class IrregularBounds {
+  readonly minX: number
+  readonly minY: number
+  readonly maxX: number
+  readonly maxY: number
+
+  constructor(fields: {
+    readonly minX: number
+    readonly minY: number
+    readonly maxX: number
+    readonly maxY: number
+  }) {
+    this.minX = fields.minX
+    this.minY = fields.minY
+    this.maxX = fields.maxX
+    this.maxY = fields.maxY
+  }
+}
+
+/** Boundary schema for a polygon without an implicit closing vertex. */
+export const IrregularPolygonSchema = Schema.Struct({
+  points: Schema.Array(IrregularPointSchema)
+})
 
 /** A polygon represented by finite vertices without an implicit closing vertex. */
-export class IrregularPolygon extends Schema.Class<IrregularPolygon>('IrregularPolygon')({
-  points: Schema.Array(IrregularPoint)
-}) {}
+export class IrregularPolygon {
+  readonly points: ReadonlyArray<IrregularPoint>
+
+  constructor(fields: { readonly points: ReadonlyArray<IrregularPoint> }) {
+    this.points = fields.points
+  }
+}
 
 /**
  * Optional translated collision hulls retained for result and history display.
  * When present, their order exactly matches the associated placement array;
  * older persisted results omit the field and decode to an empty array.
  */
-const IrregularCollisionPolygons = Schema.Array(IrregularPolygon).pipe(
+const IrregularCollisionPolygons = Schema.Array(IrregularPolygonSchema).pipe(
   Schema.optionalKey,
   Schema.withConstructorDefault(Effect.succeed([])),
   Schema.withDecodingDefaultKey(Effect.succeed([]))
 )
 
-/** A finite translation, rotation, and mirror transform for a placed piece. */
-export class IrregularTransform extends Schema.Class<IrregularTransform>('IrregularTransform')({
+/** Boundary schema for one finite placement transform. */
+export const IrregularTransformSchema = Schema.Struct({
   translateX: FiniteNumber,
   translateY: FiniteNumber,
   rotationDeg: FiniteNumber,
   mirrored: Schema.Boolean
-}) {}
+})
+
+/** A finite translation, rotation, and mirror transform for a placed piece. */
+export class IrregularTransform {
+  readonly translateX: number
+  readonly translateY: number
+  readonly rotationDeg: number
+  readonly mirrored: boolean
+
+  constructor(fields: {
+    readonly translateX: number
+    readonly translateY: number
+    readonly rotationDeg: number
+    readonly mirrored: boolean
+  }) {
+    this.translateX = fields.translateX
+    this.translateY = fields.translateY
+    this.rotationDeg = fields.rotationDeg
+    this.mirrored = fields.mirrored
+  }
+}
 
 /**
  * One finite transform choice considered by the irregular optimizer. Rotation
  * values are intentionally not range-limited here: the worker canonicalizes
  * periodic values such as `-90` and `450` without changing their geometry.
  */
-export class IrregularTransformCandidate extends Schema.Class<IrregularTransformCandidate>(
-  'IrregularTransformCandidate'
-)({
+export const IrregularTransformCandidateSchema = Schema.Struct({
   index: NonNegativeFiniteInteger,
   rotationDeg: FiniteNumber,
   mirrored: Schema.Boolean,
   reason: IrregularTransformReason
-}) {}
+})
+
+/** Trusted runtime representation of one finite transform choice. */
+export class IrregularTransformCandidate {
+  readonly index: number
+  readonly rotationDeg: number
+  readonly mirrored: boolean
+  readonly reason: IrregularTransformReason
+
+  constructor(fields: {
+    readonly index: number
+    readonly rotationDeg: number
+    readonly mirrored: boolean
+    readonly reason: IrregularTransformReason
+  }) {
+    this.index = fields.index
+    this.rotationDeg = fields.rotationDeg
+    this.mirrored = fields.mirrored
+    this.reason = fields.reason
+  }
+}
 
 /**
  * Geometry preparation settings. Flattening tolerance is positive, and the
@@ -389,14 +465,29 @@ export class IrregularOptimizerSettings extends Schema.Class<IrregularOptimizerS
   'IrregularOptimizerSettings'
 )(IrregularOptimizerSettingsFields) {}
 
-/** Priority key retained from the user-owned prepared rectangle ordering. */
-export class IrregularPriorityOrderKey extends Schema.Class<IrregularPriorityOrderKey>(
-  'IrregularPriorityOrderKey'
-)({
+/** Boundary schema for the prepared rectangle priority key. */
+export const IrregularPriorityOrderKeySchema = Schema.Struct({
   longSideMm: NonNegativeFiniteNumber,
   areaMm2: NonNegativeFiniteNumber,
   imbalanceMm: NonNegativeFiniteNumber
-}) {}
+})
+
+/** Priority key retained from the user-owned prepared rectangle ordering. */
+export class IrregularPriorityOrderKey {
+  readonly longSideMm: number
+  readonly areaMm2: number
+  readonly imbalanceMm: number
+
+  constructor(fields: {
+    readonly longSideMm: number
+    readonly areaMm2: number
+    readonly imbalanceMm: number
+  }) {
+    this.longSideMm = fields.longSideMm
+    this.areaMm2 = fields.areaMm2
+    this.imbalanceMm = fields.imbalanceMm
+  }
+}
 
 /** Complete geometry and optimizer configuration for one irregular run. */
 export class IrregularNestingSettings extends Schema.Class<IrregularNestingSettings>(
@@ -406,42 +497,103 @@ export class IrregularNestingSettings extends Schema.Class<IrregularNestingSetti
   optimizer: IrregularOptimizerSettings
 }) {}
 
-/** A diagnostic attached to an irregular geometry or portfolio artifact. */
-export class CollisionGeometryDiagnostic extends Schema.Class<CollisionGeometryDiagnostic>(
-  'CollisionGeometryDiagnostic'
-)({
+/** Boundary schema for one irregular geometry diagnostic. */
+export const CollisionGeometryDiagnosticSchema = Schema.Struct({
   code: Schema.String,
   message: Schema.String,
   pieceId: Schema.optional(PieceId)
-}) {}
+})
+
+/** A diagnostic attached to an irregular geometry or portfolio artifact. */
+export class CollisionGeometryDiagnostic {
+  readonly code: string
+  readonly message: string
+  readonly pieceId?: PieceId | undefined
+
+  constructor(fields: {
+    readonly code: string
+    readonly message: string
+    readonly pieceId?: PieceId | undefined
+  }) {
+    this.code = fields.code
+    this.message = fields.message
+    this.pieceId = fields.pieceId
+  }
+}
+
+/** Boundary schema for flattened source samples and diagnostics. */
+export const FlattenedGeometrySchema = Schema.Struct({
+  sourcePieceId: PieceId,
+  sampledPoints: Schema.Array(IrregularPointSchema),
+  diagnostics: Schema.Array(CollisionGeometryDiagnosticSchema)
+})
 
 /** Flattened source samples and diagnostics before hull and offset derivation. */
-export class FlattenedGeometry extends Schema.Class<FlattenedGeometry>('FlattenedGeometry')({
-  sourcePieceId: PieceId,
-  sampledPoints: Schema.Array(IrregularPoint),
-  diagnostics: Schema.Array(CollisionGeometryDiagnostic)
-}) {}
+export class FlattenedGeometry {
+  readonly sourcePieceId: PieceId
+  readonly sampledPoints: ReadonlyArray<IrregularPoint>
+  readonly diagnostics: ReadonlyArray<CollisionGeometryDiagnostic>
+
+  constructor(fields: {
+    readonly sourcePieceId: PieceId
+    readonly sampledPoints: ReadonlyArray<IrregularPoint>
+    readonly diagnostics: ReadonlyArray<CollisionGeometryDiagnostic>
+  }) {
+    this.sourcePieceId = fields.sourcePieceId
+    this.sampledPoints = fields.sampledPoints
+    this.diagnostics = fields.diagnostics
+  }
+}
 
 /**
  * Conservative collision geometry derived from one imported source piece.
  * Polygons are local to the stored padded placement reference.
  */
-export class CollisionGeometry extends Schema.Class<CollisionGeometry>('CollisionGeometry')({
+export const CollisionGeometrySchema = Schema.Struct({
   /** Source piece that produced this derived collision artifact. */
   sourcePieceId: PieceId,
   /** Unpadded convex-hull bounds in original source coordinates. */
-  sourceBounds: IrregularBounds,
+  sourceBounds: IrregularBoundsSchema,
   /** Flattened source points kept in original source coordinates for diagnostics. */
-  sampledPoints: Schema.Array(IrregularPoint),
+  sampledPoints: Schema.Array(IrregularPointSchema),
   /** Convex hull rebased to the collision polygon's placement origin. */
-  convexHull: IrregularPolygon,
+  convexHull: IrregularPolygonSchema,
   /** Padded collision polygon whose lower-left bounds corner is local `(0, 0)`. */
-  collisionPolygon: IrregularPolygon,
+  collisionPolygon: IrregularPolygonSchema,
   /** Source-space coordinate of the padded collision bounds corner used as placement origin. */
-  placementReference: IrregularPoint,
+  placementReference: IrregularPointSchema,
   /** Import and geometry diagnostics carried with this derived artifact. */
-  diagnostics: Schema.Array(CollisionGeometryDiagnostic)
-}) {}
+  diagnostics: Schema.Array(CollisionGeometryDiagnosticSchema)
+})
+
+/** Conservative collision geometry derived from one imported source piece. */
+export class CollisionGeometry {
+  readonly sourcePieceId: PieceId
+  readonly sourceBounds: IrregularBounds
+  readonly sampledPoints: ReadonlyArray<IrregularPoint>
+  readonly convexHull: IrregularPolygon
+  readonly collisionPolygon: IrregularPolygon
+  readonly placementReference: IrregularPoint
+  readonly diagnostics: ReadonlyArray<CollisionGeometryDiagnostic>
+
+  constructor(fields: {
+    readonly sourcePieceId: PieceId
+    readonly sourceBounds: IrregularBounds
+    readonly sampledPoints: ReadonlyArray<IrregularPoint>
+    readonly convexHull: IrregularPolygon
+    readonly collisionPolygon: IrregularPolygon
+    readonly placementReference: IrregularPoint
+    readonly diagnostics: ReadonlyArray<CollisionGeometryDiagnostic>
+  }) {
+    this.sourcePieceId = fields.sourcePieceId
+    this.sourceBounds = fields.sourceBounds
+    this.sampledPoints = fields.sampledPoints
+    this.convexHull = fields.convexHull
+    this.collisionPolygon = fields.collisionPolygon
+    this.placementReference = fields.placementReference
+    this.diagnostics = fields.diagnostics
+  }
+}
 
 /**
  * A transformed local collision polygon and its derived finite bounds.
@@ -473,35 +625,82 @@ export class TransformedCollisionGeometry {
   }
 }
 
-/** A source piece paired with its prepared collision geometry and transforms. */
-export class IrregularPreparedPiece extends Schema.Class<IrregularPreparedPiece>(
-  'IrregularPreparedPiece'
-)({
+/** Boundary schema for a source piece paired with prepared geometry and transforms. */
+export const IrregularPreparedPieceSchema = Schema.Struct({
   /** Prepared or copied identity; legacy payloads fall back to source.id. */
   pieceId: Schema.optional(PieceId),
   /** Search-equivalence class shared only by interchangeable prepared copies. */
   interchangeabilityKey: Schema.optional(Schema.NonEmptyString),
   source: ImportedPiece,
   allowMirror: Schema.Boolean,
-  collisionGeometry: CollisionGeometry,
-  transforms: Schema.Array(IrregularTransformCandidate),
-  priorityOrderKey: Schema.optional(IrregularPriorityOrderKey)
-}) {}
+  collisionGeometry: CollisionGeometrySchema,
+  transforms: Schema.Array(IrregularTransformCandidateSchema),
+  priorityOrderKey: Schema.optional(IrregularPriorityOrderKeySchema)
+})
+
+/** A source piece paired with its prepared collision geometry and transforms. */
+export class IrregularPreparedPiece {
+  readonly pieceId?: PieceId | undefined
+  readonly interchangeabilityKey?: string | undefined
+  readonly source: ImportedPiece
+  readonly allowMirror: boolean
+  readonly collisionGeometry: CollisionGeometry
+  readonly transforms: ReadonlyArray<IrregularTransformCandidate>
+  readonly priorityOrderKey?: IrregularPriorityOrderKey | undefined
+
+  constructor(fields: {
+    readonly pieceId?: PieceId | undefined
+    readonly interchangeabilityKey?: string | undefined
+    readonly source: ImportedPiece
+    readonly allowMirror: boolean
+    readonly collisionGeometry: CollisionGeometry
+    readonly transforms: ReadonlyArray<IrregularTransformCandidate>
+    readonly priorityOrderKey?: IrregularPriorityOrderKey | undefined
+  }) {
+    this.pieceId = fields.pieceId
+    this.interchangeabilityKey = fields.interchangeabilityKey
+    this.source = fields.source
+    this.allowMirror = fields.allowMirror
+    this.collisionGeometry = fields.collisionGeometry
+    this.transforms = fields.transforms
+    this.priorityOrderKey = fields.priorityOrderKey
+  }
+}
 
 /**
  * A prepared piece transform retained as part of a final irregular placement.
  * Its translation positions `placementReference` after mirror-then-rotation
  * around that same source-space point.
  */
-export class IrregularPlacement extends Schema.Class<IrregularPlacement>('IrregularPlacement')({
+export const IrregularPlacementSchema = Schema.Struct({
   /** Prepared or copied piece identity; new results must always emit this id. */
   pieceId: Schema.optional(PieceId),
   /** Original imported piece identity retained for source-geometry lookup. */
   sourcePieceId: PieceId,
   /** Source-space pivot for the transform; new worker results always emit it. */
-  placementReference: Schema.optional(IrregularPoint),
-  transform: IrregularTransform
-}) {}
+  placementReference: Schema.optional(IrregularPointSchema),
+  transform: IrregularTransformSchema
+})
+
+/** Trusted runtime representation of one prepared-piece placement. */
+export class IrregularPlacement {
+  readonly pieceId?: PieceId | undefined
+  readonly sourcePieceId: PieceId
+  readonly placementReference?: IrregularPoint | undefined
+  readonly transform: IrregularTransform
+
+  constructor(fields: {
+    readonly pieceId?: PieceId | undefined
+    readonly sourcePieceId: PieceId
+    readonly placementReference?: IrregularPoint | undefined
+    readonly transform: IrregularTransform
+  }) {
+    this.pieceId = fields.pieceId
+    this.sourcePieceId = fields.sourcePieceId
+    this.placementReference = fields.placementReference
+    this.transform = fields.transform
+  }
+}
 
 /**
  * A placed piece with the transformed collision geometry used for legality.
@@ -534,14 +733,14 @@ export class IrregularPlacedPiece {
  */
 export const TransformedCollisionGeometrySchema = Schema.Struct({
   sourcePieceId: PieceId,
-  transform: IrregularTransformCandidate,
-  polygon: IrregularPolygon,
-  bounds: IrregularBounds
+  transform: IrregularTransformCandidateSchema,
+  polygon: IrregularPolygonSchema,
+  bounds: IrregularBoundsSchema
 })
 
 /** Boundary schema for {@link IrregularPlacedPiece}. */
 export const IrregularPlacedPieceSchema = Schema.Struct({
-  placement: IrregularPlacement,
+  placement: IrregularPlacementSchema,
   collisionGeometry: TransformedCollisionGeometrySchema
 })
 
@@ -571,19 +770,53 @@ export class IrregularPlacementCandidate {
   }
 }
 
-/** A no-fit polygon boundary in moving-placement-coordinate space. */
-export class IrregularNfp extends Schema.Class<IrregularNfp>('IrregularNfp')({
+/** Boundary schema for one no-fit polygon. */
+export const IrregularNfpSchema = Schema.Struct({
   fixedPieceId: PieceId,
   movingPieceId: PieceId,
-  boundary: IrregularPolygon
-}) {}
+  boundary: IrregularPolygonSchema
+})
 
-/** A rectangular inner-fit bound for one transformed moving piece. */
-export class IrregularIfpBounds extends Schema.Class<IrregularIfpBounds>('IrregularIfpBounds')({
+/** A no-fit polygon boundary in moving-placement-coordinate space. */
+export class IrregularNfp {
+  readonly fixedPieceId: PieceId
+  readonly movingPieceId: PieceId
+  readonly boundary: IrregularPolygon
+
+  constructor(fields: {
+    readonly fixedPieceId: PieceId
+    readonly movingPieceId: PieceId
+    readonly boundary: IrregularPolygon
+  }) {
+    this.fixedPieceId = fields.fixedPieceId
+    this.movingPieceId = fields.movingPieceId
+    this.boundary = fields.boundary
+  }
+}
+
+/** Boundary schema for one rectangular inner-fit bound. */
+export const IrregularIfpBoundsSchema = Schema.Struct({
   sheet: Schema.suspend(() => SheetSpec),
   movingPieceId: PieceId,
-  bounds: IrregularBounds
-}) {}
+  bounds: IrregularBoundsSchema
+})
+
+/** A rectangular inner-fit bound for one transformed moving piece. */
+export class IrregularIfpBounds {
+  readonly sheet: SheetSpec
+  readonly movingPieceId: PieceId
+  readonly bounds: IrregularBounds
+
+  constructor(fields: {
+    readonly sheet: SheetSpec
+    readonly movingPieceId: PieceId
+    readonly bounds: IrregularBounds
+  }) {
+    this.sheet = fields.sheet
+    this.movingPieceId = fields.movingPieceId
+    this.bounds = fields.bounds
+  }
+}
 
 /**
  * One sheet-space material region: material inside `boundary` except for its
@@ -593,27 +826,64 @@ export class IrregularIfpBounds extends Schema.Class<IrregularIfpBounds>('Irregu
  * model. It must not be used as an implicit concave or hole-aware placement
  * feature.
  */
-export class FreeMaterialRegion extends Schema.Class<FreeMaterialRegion>('FreeMaterialRegion')({
-  boundary: IrregularPolygon,
-  holes: Schema.Array(IrregularPolygon)
-}) {}
+export const FreeMaterialRegionSchema = Schema.Struct({
+  boundary: IrregularPolygonSchema,
+  holes: Schema.Array(IrregularPolygonSchema)
+})
+
+export class FreeMaterialRegion {
+  readonly boundary: IrregularPolygon
+  readonly holes: ReadonlyArray<IrregularPolygon>
+
+  constructor(fields: {
+    readonly boundary: IrregularPolygon
+    readonly holes: ReadonlyArray<IrregularPolygon>
+  }) {
+    this.boundary = fields.boundary
+    this.holes = fields.holes
+  }
+}
+
+/** Boundary schema for remaining sheet-space material and diagnostics. */
+export const FreeMaterialSnapshotSchema = Schema.Struct({
+  sheet: Schema.suspend(() => SheetSpec),
+  regions: Schema.Array(FreeMaterialRegionSchema),
+  diagnostics: Schema.Array(CollisionGeometryDiagnosticSchema)
+})
 
 /** Remaining sheet-space material and diagnostics after placed collision geometry. */
-export class FreeMaterialSnapshot extends Schema.Class<FreeMaterialSnapshot>(
-  'FreeMaterialSnapshot'
-)({
-  sheet: Schema.suspend(() => SheetSpec),
-  regions: Schema.Array(FreeMaterialRegion),
-  diagnostics: Schema.Array(CollisionGeometryDiagnostic)
-}) {}
+export class FreeMaterialSnapshot {
+  readonly sheet: SheetSpec
+  readonly regions: ReadonlyArray<FreeMaterialRegion>
+  readonly diagnostics: ReadonlyArray<CollisionGeometryDiagnostic>
 
-/** Stable namespace and ordered parts used to identify cached geometry. */
-export class IrregularGeometryCacheKey extends Schema.Class<IrregularGeometryCacheKey>(
-  'IrregularGeometryCacheKey'
-)({
+  constructor(fields: {
+    readonly sheet: SheetSpec
+    readonly regions: ReadonlyArray<FreeMaterialRegion>
+    readonly diagnostics: ReadonlyArray<CollisionGeometryDiagnostic>
+  }) {
+    this.sheet = fields.sheet
+    this.regions = fields.regions
+    this.diagnostics = fields.diagnostics
+  }
+}
+
+/** Boundary schema for a stable geometry-cache identity. */
+export const IrregularGeometryCacheKeySchema = Schema.Struct({
   namespace: Schema.String,
   parts: Schema.Array(Schema.String)
-}) {}
+})
+
+/** Stable namespace and ordered parts used to identify cached geometry. */
+export class IrregularGeometryCacheKey {
+  readonly namespace: string
+  readonly parts: ReadonlyArray<string>
+
+  constructor(fields: { readonly namespace: string; readonly parts: ReadonlyArray<string> }) {
+    this.namespace = fields.namespace
+    this.parts = fields.parts
+  }
+}
 
 /** Named whole-layout criteria retained for an irregular result or progress update. */
 export class IrregularLayoutScoreSummary extends Schema.Class<IrregularLayoutScoreSummary>(
@@ -644,13 +914,13 @@ export class IrregularLayoutScoreSummary extends Schema.Class<IrregularLayoutSco
 
 const IrregularLayoutFields = Schema.Struct({
   kind: Schema.Literal('irregular'),
-  placements: Schema.Array(IrregularPlacement),
+  placements: Schema.Array(IrregularPlacementSchema),
   collisionPolygons: IrregularCollisionPolygons,
   unplacedPieceIds: Schema.Array(PieceId),
   score: IrregularLayoutScoreSummary,
   source: IrregularSearchSource,
   status: IrregularPortfolioStatus,
-  diagnostics: Schema.Array(CollisionGeometryDiagnostic)
+  diagnostics: Schema.Array(CollisionGeometryDiagnosticSchema)
 }).check(
   Schema.makeFilter((layout) =>
     layout.collisionPolygons === undefined ||
@@ -686,8 +956,8 @@ export class IrregularExportPlacement extends Schema.Class<IrregularExportPlacem
   pieceId: PieceId,
   /** original imported source-shape identity. */
   sourcePieceId: PieceId,
-  placementReference: Schema.optional(IrregularPoint),
-  transform: IrregularTransform,
+  placementReference: Schema.optional(IrregularPointSchema),
+  transform: IrregularTransformSchema,
   sourceRow: Schema.optional(IrregularExportSourceRow)
 }) {}
 
@@ -722,7 +992,7 @@ const IrregularHistoryFrameFields = Schema.Struct({
   strategyLabel: Schema.String,
   stepIndex: NonNegativeFiniteInteger,
   title: Schema.String,
-  placements: Schema.Array(IrregularPlacement),
+  placements: Schema.Array(IrregularPlacementSchema),
   collisionPolygons: IrregularCollisionPolygons,
   remainingPieceIds: Schema.Array(PieceId),
   unplacedPieceIds: Schema.Array(PieceId),
@@ -731,7 +1001,7 @@ const IrregularHistoryFrameFields = Schema.Struct({
   candidateCount: Schema.optional(NonNegativeFiniteInteger),
   selectedCandidateId: Schema.optional(Schema.String),
   selectedPieceId: Schema.optional(PieceId),
-  selectedTransform: Schema.optional(IrregularTransform),
+  selectedTransform: Schema.optional(IrregularTransformSchema),
   createdAt: Schema.String
 }).check(
   Schema.makeFilter((frame) =>
@@ -772,7 +1042,7 @@ export class IrregularPortfolioHistoryState extends Schema.Class<IrregularPortfo
   'IrregularPortfolioHistoryState'
 )({
   stepIndex: NonNegativeFiniteInteger,
-  placements: Schema.Array(IrregularPlacement),
+  placements: Schema.Array(IrregularPlacementSchema),
   remainingPieceIds: Schema.Array(PieceId),
   unplacedPieceIds: Schema.Array(PieceId),
   beamRank: NonNegativeFiniteInteger,
@@ -788,8 +1058,8 @@ export class IrregularPortfolioResult extends Schema.Class<IrregularPortfolioRes
   /** Optional for older persisted results; emitted by every current portfolio run. */
   terminationReason: Schema.optional(IrregularPortfolioTerminationReason),
   source: IrregularSearchSource,
-  placements: Schema.Array(IrregularPlacement),
+  placements: Schema.Array(IrregularPlacementSchema),
   unplacedPieceIds: Schema.Array(PieceId),
   score: Schema.optional(IrregularLayoutScoreSummary),
-  diagnostics: Schema.Array(CollisionGeometryDiagnostic)
+  diagnostics: Schema.Array(CollisionGeometryDiagnosticSchema)
 }) {}

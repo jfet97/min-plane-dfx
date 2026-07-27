@@ -2,25 +2,31 @@ import { Exit, Schema } from 'effect'
 import { describe, expect, it } from 'vitest'
 import {
   IrregularBounds,
+  IrregularBoundsSchema,
   IrregularGeometrySettings,
   IrregularHistoryFrame,
-  IrregularIfpBounds,
+  IrregularIfpBoundsSchema,
   IrregularLayout,
   IrregularLayoutScoreSummary,
   IrregularOptimizerSettings,
   IrregularPlacedPiece,
   IrregularPlacedPieceSchema,
   IrregularPlacement,
+  IrregularPlacementSchema,
   IrregularPlacementCandidate,
   IrregularPoint,
+  IrregularPointSchema,
   IrregularPolygon,
+  IrregularPolygonSchema,
   TransformedCollisionGeometry,
   TransformedCollisionGeometrySchema,
   IrregularPortfolioProgress,
   IrregularPortfolioResult,
-  FreeMaterialSnapshot,
+  FreeMaterialSnapshotSchema,
   IrregularTransform,
   IrregularTransformCandidate
+  ,
+  IrregularTransformCandidateSchema
 } from '@shared/irregular/domain.js'
 import { PieceId } from '@shared/domain/ids.js'
 import {
@@ -167,11 +173,11 @@ describe('irregular schema contracts', () => {
   })
 
   it('requires finite coordinates and ordered bounds', () => {
-    expect(Exit.isSuccess(decode(IrregularPoint, { x: -2.5, y: 4 }))).toBe(true)
-    expect(Exit.isFailure(decode(IrregularPoint, { x: Number.NaN, y: 4 }))).toBe(true)
+    expect(Exit.isSuccess(decode(IrregularPointSchema, { x: -2.5, y: 4 }))).toBe(true)
+    expect(Exit.isFailure(decode(IrregularPointSchema, { x: Number.NaN, y: 4 }))).toBe(true)
     expect(
       Exit.isFailure(
-        decode(IrregularBounds, { minX: 4, minY: 0, maxX: 3, maxY: 10 })
+        decode(IrregularBoundsSchema, { minX: 4, minY: 0, maxX: 3, maxY: 10 })
       )
     ).toBe(true)
   })
@@ -179,7 +185,7 @@ describe('irregular schema contracts', () => {
   it('requires finite indexed transform candidates and preserves periodic angles', () => {
     expect(
       Exit.isSuccess(
-        decode(IrregularTransformCandidate, {
+        decode(IrregularTransformCandidateSchema, {
           index: 0,
           rotationDeg: 450,
           mirrored: false,
@@ -189,7 +195,7 @@ describe('irregular schema contracts', () => {
     ).toBe(true)
     expect(
       Exit.isFailure(
-        decode(IrregularTransformCandidate, {
+        decode(IrregularTransformCandidateSchema, {
           index: 1.5,
           rotationDeg: 90,
           mirrored: false,
@@ -199,7 +205,7 @@ describe('irregular schema contracts', () => {
     ).toBe(true)
     expect(
       Exit.isFailure(
-        decode(IrregularTransformCandidate, {
+        decode(IrregularTransformCandidateSchema, {
           index: 0,
           rotationDeg: Number.POSITIVE_INFINITY,
           mirrored: false,
@@ -209,7 +215,7 @@ describe('irregular schema contracts', () => {
     ).toBe(true)
     expect(
       Exit.isFailure(
-        decode(IrregularTransformCandidate, {
+        decode(IrregularTransformCandidateSchema, {
           index: 0,
           rotationDeg: 90,
           mirrored: false,
@@ -219,7 +225,7 @@ describe('irregular schema contracts', () => {
     ).toBe(true)
     expect(
       Exit.isFailure(
-        decode(IrregularTransformCandidate, {
+        decode(IrregularTransformCandidateSchema, {
           index: 0,
           rotationDeg: 0,
           mirrored: false,
@@ -359,7 +365,7 @@ describe('irregular schema contracts', () => {
   it('keeps polygon vertices schema-backed as finite points', () => {
     expect(
       Exit.isSuccess(
-        decode(IrregularPolygon, {
+        decode(IrregularPolygonSchema, {
           points: [
             { x: 0, y: 0 },
             { x: 4, y: 0 },
@@ -370,7 +376,7 @@ describe('irregular schema contracts', () => {
     ).toBe(true)
     expect(
       Exit.isFailure(
-        decode(IrregularPolygon, {
+        decode(IrregularPolygonSchema, {
           points: [
             { x: 0, y: 0 },
             { x: Number.NEGATIVE_INFINITY, y: 0 },
@@ -382,7 +388,7 @@ describe('irregular schema contracts', () => {
   })
 
   it('retains prepared and source identities on new irregular placements', () => {
-    const result = decode(IrregularPlacement, {
+    const result = decode(IrregularPlacementSchema, {
       pieceId: 'copy-1',
       sourcePieceId: 'source-1',
       transform: { translateX: 4, translateY: 5, rotationDeg: 90, mirrored: false }
@@ -394,7 +400,7 @@ describe('irregular schema contracts', () => {
   })
 
   it('decodes legacy irregular placements without fabricating a prepared identity', () => {
-    const result = decode(IrregularPlacement, {
+    const result = decode(IrregularPlacementSchema, {
       sourcePieceId: 'source-1',
       transform: { translateX: 4, translateY: 5, rotationDeg: 90, mirrored: false }
     })
@@ -624,7 +630,7 @@ describe('irregular schema contracts', () => {
     ).toBe(true)
     expect(
       Exit.isSuccess(
-        decode(IrregularIfpBounds, {
+        decode(IrregularIfpBoundsSchema, {
           sheet: { width: 100, height: 100, label: 'test' },
           movingPieceId: 'copy-1',
           bounds: { minX: 0, minY: 0, maxX: 10, maxY: 10 }
@@ -633,7 +639,7 @@ describe('irregular schema contracts', () => {
     ).toBe(true)
     expect(
       Exit.isSuccess(
-        decode(FreeMaterialSnapshot, {
+        decode(FreeMaterialSnapshotSchema, {
           sheet: { width: 100, height: 100, label: 'test' },
           regions: [],
           diagnostics: []
