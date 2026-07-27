@@ -425,7 +425,7 @@ interface CompactReport {
       readonly status: string
       readonly outputInfluence: 'none' | 'selected'
       readonly constructionKind?: 'pair-fold' | 'multi-row-shelf' | 'contact-strip'
-      readonly envelopeAreaCostVetoObserved?: boolean
+      readonly envelopeAreaCostVetoes?: ReadonlyArray<unknown>
     }
   }
   readonly checks: Readonly<Record<string, boolean>>
@@ -493,7 +493,7 @@ for (let index = 0; index < BASELINES.length; index += 1) {
   const stage1AdmissionTerms =
     shortSideReport.result.intrinsicShortSideObserverTrace?.directionalAdmissionTerms
   const shortSideQualityVetoObserved =
-    terminalTrace?.envelopeAreaCostVetoObserved === true ||
+    (terminalTrace?.envelopeAreaCostVetoes?.length ?? 0) > 0 ||
     (stage1AdmissionTerms !== undefined &&
       stage1AdmissionTerms.shortEdgeFillAdmitted &&
       stage1AdmissionTerms.shortfallHalved &&

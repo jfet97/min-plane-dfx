@@ -569,7 +569,7 @@ const shortSideProfileShortAxisFillRatio =
     : shortSideProfileShortAxisSpanMm / Math.min(args.sheet.width, args.sheet.height)
 const shortSideStage1AdmissionTerms = shortSideObserverTrace?.directionalAdmissionTerms
 const shortSideQualityVetoObserved =
-  shortSidePairFoldTrace?.envelopeAreaCostVetoObserved === true ||
+  (shortSidePairFoldTrace?.envelopeAreaCostVetoes?.length ?? 0) > 0 ||
   (shortSideStage1AdmissionTerms !== undefined &&
     shortSideStage1AdmissionTerms.shortEdgeFillAdmitted &&
     shortSideStage1AdmissionTerms.shortfallHalved &&

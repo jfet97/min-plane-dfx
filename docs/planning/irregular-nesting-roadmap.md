@@ -476,8 +476,25 @@ Falsifier: no improvement beyond the accepted sibling sources; a sparse or
 hull-waste regression; fixture-specific construction; target-box restart cost
 dominates; or any production matrix/hash/runtime regression.
 
+Stage 9 adds the honesty guard the fill-gated pipeline was missing. The user
+rejected the roomy Triangle-20 result on sight: the fill floor had promoted a
+point-down AABB shelf at `1.795x` the settled Compact envelope, exactly `50%`
+density, and zero shared boundary. Both admission stages now require
+`3 * candidateEnvelopeArea <= 4 * productionEnvelopeArea` in exact BigInt
+arithmetic, so a directional sibling may trade at most one quarter of the
+production packing density for short-edge fill. The roomy shelf and the
+Shapes-17 pair fold (`1.487x`) are vetoed and retained Compact is reported
+under the new `short-side-quality-protected-compact-fallback` outcome; the
+Mixed-61 contact strip (`1.061x`) and the Triangle-20 `600 x 400` archive
+zigzag (`1.214x`) keep their exact hashes. The accepted contract becomes two
+directional winners, five Compact satisfactions, two quality-protected
+fallbacks, and zero misses, with all nine Compact controls byte-identical.
+The `>= 80%` fill floor and the strip promotion comparator are unchanged.
+
 Evidence:
-[`../research/compact-short-side-observer.md`](../research/compact-short-side-observer.md).
+[`../research/compact-short-side-observer.md`](../research/compact-short-side-observer.md),
+[`../history/compact-short-side-area-cost-guard.md`](../history/compact-short-side-area-cost-guard.md),
+[`../research/compact-short-side-area-cost-guard.md`](../research/compact-short-side-area-cost-guard.md).
 
 ### P6: canonical-grid metric exactness
 

@@ -71,6 +71,6 @@ misses. Observer runtime stayed in the same sub-second envelope per case.
 Immutable manifest, reports, SVG/PNG renders, and checksums:
 `/private/tmp/min-plane-provenance/short-side-area-cost-guard-903657e-matrix/`.
 Accepted portable copies: `docs/artifacts/compact-short-side-area-cost-guard/`.
-Design review: persistent codex dialogue (gpt-5.6-sol, xhigh), five findings
-all accepted and applied (threshold math, distinct outcome, causal veto,
+Independent design review: five findings, all accepted and applied (threshold
+math, distinct outcome, causal veto with retained construction evidence,
 trace-interface correction, provenance flow).

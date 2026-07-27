@@ -404,6 +404,48 @@ describe('intrinsic short-side pair-fold observer', () => {
       }
     })
     expect(outcome.placedCollisionGeometries).toBeUndefined()
+    // the causal veto record retains which constructions failed the area term alone
+    expect(
+      outcome.trace.envelopeAreaCostVetoes?.length
+    ).toBeGreaterThanOrEqual(2)
+    expect(
+      outcome.trace.envelopeAreaCostVetoes
+        ?.slice(0, 2)
+        .map((veto) => veto.constructionKind)
+    ).toEqual(['pair-fold', 'multi-row-shelf'])
+    expect(
+      outcome.trace.envelopeAreaCostVetoes?.[0]?.admission
+    ).toMatchObject({
+      envelopeAreaCostWithinProductionBound: false,
+      directionallyEfficient: true,
+      accepted: false
+    })
+  })
+
+  it('rejects one production grid-area unit below the exact four-thirds bound', async () => {
+    const admitted = await observe({
+      pieces: acceptedPieces,
+      productionEnvelopeAreaMm2: 2_400
+    })
+    const vetoed = await observe({
+      pieces: acceptedPieces,
+      productionEnvelopeAreaMm2: 2_399.999999
+    })
+
+    // 3 * 3200 mm2 <= 4 * 2400 mm2 holds with zero slack at the exact bound
+    expect(admitted.trace.status).toBe('accepted')
+    expect(admitted.trace.admission).toMatchObject({
+      envelopeAreaCostWithinProductionBound: true,
+      accepted: true
+    })
+    // one canonical grid-area unit below it flips only the area-cost term
+    expect(vetoed.trace.status).toBe('rejected-admission')
+    expect(vetoed.trace.envelopeAreaCostVetoObserved).toBe(true)
+    expect(vetoed.trace.admission).toMatchObject({
+      directionallyEfficient: true,
+      envelopeAreaCostWithinProductionBound: false,
+      accepted: false
+    })
   })
 
   it('censors after completed transform work with exact counters', async () => {

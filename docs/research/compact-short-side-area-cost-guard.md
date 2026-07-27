@@ -18,11 +18,12 @@ accepted matrix artifacts are
 3. Guard design: one exact BigInt term added to both admission stages,
    `3 * candidateEnvelopeAreaGrid2 <= 4 * productionEnvelopeAreaGrid2`, plus
    causal per-construction veto telemetry and a distinct fallback outcome.
-4. Verification: focused unit tests with exact 4/3 boundary cases, the
-   terminal-observer probe per roomy fixture, the full 18-matrix before/after,
-   the compact-focused unit set, `gate:mixed61-compact`, and visual review of
-   every changed render. Independent design review by a persistent codex
-   dialogue (gpt-5.6-sol, xhigh effort); five findings, all accepted.
+4. Verification: focused unit tests with exact 4/3 boundary cases (admit at
+   the exact bound, reject one grid step above it), the terminal-observer
+   probe per roomy fixture, the full 18-matrix before/after, the
+   compact-focused unit set, `gate:mixed61-compact`, and visual review of
+   every changed render. Independent design review; five findings, all
+   accepted.
 
 ## Before/after per directional case (roomy `2000 x 2700` unless noted)
 

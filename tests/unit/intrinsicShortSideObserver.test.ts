@@ -311,38 +311,31 @@ describe('intrinsic short-side observer', () => {
     })
   })
 
-  it('vetoes a directional endpoint that exceeds the production area-cost bound', () => {
+  it('vetoes a directional endpoint one grid step above the production area-cost bound', () => {
     const production = endpoint('production', 6, 2)
-    const roomyProduction = endpoint('roomy-production', 6, 3)
-    const candidate = endpoint('candidate', 5, 4)
+    const admittedAtExactBound = endpoint('admitted-at-exact-bound', 4, 4)
+    const vetoedOneGridStepAbove = endpoint('vetoed-one-grid-step-above', 4.001, 4)
     const sheet = new SheetSpec({
       width: 10,
       height: 5,
       label: 'area-cost-boundary'
     })
-    const vetoedTrace = observeIntrinsicShortSideOrientations({
+    const admittedTrace = observeIntrinsicShortSideOrientations({
       sheet,
-      endpoints: [candidate],
+      endpoints: [admittedAtExactBound],
       productionPlacedCollisionGeometries:
         production.placedCollisionGeometries,
       now: deterministicClock(0, 1)
     })
-    const admittedTrace = observeIntrinsicShortSideOrientations({
+    const vetoedTrace = observeIntrinsicShortSideOrientations({
       sheet,
-      endpoints: [candidate],
+      endpoints: [vetoedOneGridStepAbove],
       productionPlacedCollisionGeometries:
-        roomyProduction.placedCollisionGeometries,
+        production.placedCollisionGeometries,
       now: deterministicClock(0, 1)
     })
 
-    expect(vetoedTrace.status).toBe('observed-no-directional-improvement')
-    expect(vetoedTrace.directionalAdmissionTerms).toEqual({
-      shortEdgeFillAdmitted: true,
-      shortfallHalved: true,
-      depthWithinProductionMaximumSide: true,
-      envelopeAreaCostWithinProductionBound: false
-    })
-    expect(vetoedTrace.observerWinnerCanonicalGeometryHash).toBeUndefined()
+    // 4 x 4 against 6 x 2 sits exactly at 3 * 16 mm2 <= 4 * 12 mm2
     expect(admittedTrace.status).toBe('observed')
     expect(admittedTrace.directionalAdmissionTerms).toEqual({
       shortEdgeFillAdmitted: true,
@@ -351,8 +344,17 @@ describe('intrinsic short-side observer', () => {
       envelopeAreaCostWithinProductionBound: true
     })
     expect(admittedTrace.observerWinnerCanonicalGeometryHash).toBe(
-      candidate.sheetlessCanonicalGeometryHash
+      admittedAtExactBound.sheetlessCanonicalGeometryHash
     )
+    // one canonical-grid millimetre of extra span costs the area term alone
+    expect(vetoedTrace.status).toBe('observed-no-directional-improvement')
+    expect(vetoedTrace.directionalAdmissionTerms).toEqual({
+      shortEdgeFillAdmitted: true,
+      shortfallHalved: true,
+      depthWithinProductionMaximumSide: true,
+      envelopeAreaCostWithinProductionBound: false
+    })
+    expect(vetoedTrace.observerWinnerCanonicalGeometryHash).toBeUndefined()
   })
 
   it('uses deterministic intrinsic behavior without a directional shortfall on square sheets', () => {

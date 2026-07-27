@@ -70,6 +70,17 @@ export interface IntrinsicShortSidePairFoldAdmission {
   readonly accepted: boolean
 }
 
+/*
+ * One causal quality veto: the named construction passed every pre-existing
+ * admission term and failed only the production envelope area-cost bound.
+ * Retained so a quality-protected fallback can substantiate which sibling was
+ * vetoed even when a later construction became the selected trace outcome.
+ */
+export interface IntrinsicShortSideEnvelopeAreaCostVeto {
+  readonly constructionKind: IntrinsicShortSideConstructionKind
+  readonly admission: IntrinsicShortSidePairFoldAdmission
+}
+
 /**
  * Interlocking-quality measurements for one terminal construction.
  *
@@ -121,6 +132,7 @@ export interface IntrinsicShortSidePairFoldTrace {
   readonly admission: IntrinsicShortSidePairFoldAdmission | undefined
   readonly interlocking: IntrinsicShortSideInterlockingMetrics | undefined
   readonly envelopeAreaCostVetoObserved: boolean
+  readonly envelopeAreaCostVetoes: ReadonlyArray<IntrinsicShortSideEnvelopeAreaCostVeto>
   readonly contactStrip: IntrinsicShortSideContactStripTrace | undefined
   readonly contactStripPromotion: IntrinsicShortSideContactStripPromotion | undefined
   readonly runtimeMs: number
@@ -177,6 +189,7 @@ interface ObserverRuntime {
   expectedPairCount: number
   evaluatedPairCount: number
   envelopeAreaCostVetoObserved: boolean
+  readonly envelopeAreaCostVetoes: IntrinsicShortSideEnvelopeAreaCostVeto[]
   readonly maximumRuntimeMs: number
   readonly maximumRssDeltaBytes: number
   readonly maximumTraceBytes: number
@@ -239,6 +252,7 @@ export function observeIntrinsicShortSidePairFold(input: {
     expectedPairCount: 0,
     evaluatedPairCount: 0,
     envelopeAreaCostVetoObserved: false,
+    envelopeAreaCostVetoes: [],
     maximumRuntimeMs:
       input.runtimeControl?.maximumRuntimeMs ?? INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS,
     maximumRssDeltaBytes:
@@ -1096,9 +1110,6 @@ function finalizeOutcome(input: {
     topology.enclosedCavityCount === 0 &&
     material.doubledAreaGrid2 >= envelopeAreaGrid2 &&
     directionallyEfficient
-  if (!envelopeAreaCostWithinProductionBound && admittedBesidesAreaCost) {
-    input.runtime.envelopeAreaCostVetoObserved = true
-  }
   const admission: IntrinsicShortSidePairFoldAdmission = {
     exactLegal: true,
     allPiecesPlaced: placed.length === input.input.preparedPieces.length,
@@ -1117,6 +1128,13 @@ function finalizeOutcome(input: {
   const accepted =
     admittedBesidesAreaCost && admission.envelopeAreaCostWithinProductionBound
   const measuredAdmission = { ...admission, accepted }
+  if (!envelopeAreaCostWithinProductionBound && admittedBesidesAreaCost) {
+    input.runtime.envelopeAreaCostVetoObserved = true
+    input.runtime.envelopeAreaCostVetoes.push({
+      constructionKind: input.constructionKind,
+      admission: measuredAdmission
+    })
+  }
   const interlocking: IntrinsicShortSideInterlockingMetrics = {
     largestOccupiedHullGapRatio: topology.largestOccupiedHullGapRatio,
     largestOccupiedHullGapDoubledAreaGrid2:
@@ -1160,6 +1178,7 @@ function finalizeOutcome(input: {
     admission: measuredAdmission,
     interlocking,
     envelopeAreaCostVetoObserved: input.runtime.envelopeAreaCostVetoObserved,
+    envelopeAreaCostVetoes: [...input.runtime.envelopeAreaCostVetoes],
     contactStrip: undefined,
     contactStripPromotion: undefined,
     runtimeMs: Math.max(0, input.runtime.now() - input.runtime.startedAt),
@@ -1349,6 +1368,7 @@ function failedOutcome(
       admission: undefined,
       interlocking: undefined,
       envelopeAreaCostVetoObserved: runtime.envelopeAreaCostVetoObserved,
+      envelopeAreaCostVetoes: [...runtime.envelopeAreaCostVetoes],
       contactStrip: undefined,
       contactStripPromotion: undefined,
       runtimeMs: Math.max(0, runtime.now() - runtime.startedAt),
