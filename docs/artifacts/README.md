@@ -39,6 +39,10 @@ baselines.
   measurements that decided which of four candidates survived, the historical
   paired summaries, the guarded topology decision, and the complete accepted
   18-layout final-review bundle.
+- [`compact-short-side-area-cost-guard/`](./compact-short-side-area-cost-guard/README.md):
+  the accepted 18-layout matrix for the production area-cost honesty guard at
+  `903657e`, with the two vetoed roomy siblings retained as quality-protected
+  Compact fallbacks and zero directional misses.
 - [`trusted-ring-validation-memo/`](./trusted-ring-validation-memo/): paired
   Mixed-61 gate reports, the 18-layout SVG digest comparison, and the cache
   telemetry showing a `98.2%` pairwise NFP hit rate, for the change that stopped

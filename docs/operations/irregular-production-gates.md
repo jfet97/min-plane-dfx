@@ -51,10 +51,15 @@ The nine-baseline command runs serially and covers the roomy complete path plus
 When short-side capture is enabled, the same command also requires nine
 material short-edge outcomes and zero directional misses. An observer winner
 must pass exact legality, accounting, topology, density, projection, depth, and
-area-cost admission. Compact reuse passes only when the materialized geometry
-already fills at least `80%` of the relevant edge, and is reported as
-`short-side-satisfied-by-compact`. The accepted matrix and individual visual
-review are under
+area-cost admission. Both admission stages also bound the sibling's envelope
+area to at most four thirds of the protected Compact envelope area (exact
+BigInt comparison), so a directional layout may trade at most one quarter of
+the production packing density for short-edge fill. Compact reuse passes when
+the materialized geometry already fills at least `80%` of the relevant edge
+and is reported as `short-side-satisfied-by-compact`; a low-fill Compact
+fallback after an area-cost veto is reported as
+`short-side-quality-protected-compact-fallback`. The accepted matrix and
+individual visual review are under
 [`../artifacts/compact-short-side-observer/matrix/`](../artifacts/compact-short-side-observer/matrix/).
 
 The terminal short-side observer now also builds one exact contact-driven strip
