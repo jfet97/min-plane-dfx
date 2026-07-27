@@ -567,13 +567,25 @@ const shortSideProfileShortAxisFillRatio =
   shortSideProfileShortAxisSpanMm === undefined
     ? undefined
     : shortSideProfileShortAxisSpanMm / Math.min(args.sheet.width, args.sheet.height)
+const shortSideStage1AdmissionTerms = shortSideObserverTrace?.directionalAdmissionTerms
+const shortSideQualityVetoObserved =
+  shortSidePairFoldTrace?.envelopeAreaCostVetoObserved === true ||
+  (shortSideStage1AdmissionTerms !== undefined &&
+    shortSideStage1AdmissionTerms.shortEdgeFillAdmitted &&
+    shortSideStage1AdmissionTerms.shortfallHalved &&
+    shortSideStage1AdmissionTerms.depthWithinProductionMaximumSide &&
+    !shortSideStage1AdmissionTerms.envelopeAreaCostWithinProductionBound)
 const shortSideProfileOutcome =
   shortSideProfileSource === undefined || shortSideProfileShortAxisFillRatio === undefined
     ? undefined
-    : shortSideProfileShortAxisFillRatio < 0.8
-      ? ('directional-miss' as const)
-      : shortSideProfileSource === 'compact-fallback'
+    : shortSideProfileSource === 'compact-fallback'
+      ? shortSideProfileShortAxisFillRatio >= 0.8
         ? ('short-side-satisfied-by-compact' as const)
+        : shortSideQualityVetoObserved
+          ? ('short-side-quality-protected-compact-fallback' as const)
+          : ('directional-miss' as const)
+      : shortSideProfileShortAxisFillRatio < 0.8
+        ? ('directional-miss' as const)
         : ('directional-success' as const)
 const shortSideProfileTopology =
   shortSideProfilePlacedCollisionGeometries === undefined

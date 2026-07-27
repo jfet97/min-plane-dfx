@@ -245,9 +245,13 @@ describe('intrinsic short-side pair-fold observer', () => {
   ]
 
   it('selects one deterministic exact pair and preserves transpose identity', async () => {
-    const portrait = await observe({ pieces: acceptedPieces })
+    const portrait = await observe({
+      pieces: acceptedPieces,
+      productionEnvelopeAreaMm2: 2_400
+    })
     const landscape = await observe({
       pieces: acceptedPieces,
+      productionEnvelopeAreaMm2: 2_400,
       sheet: new SheetSpec({
         width: 100,
         height: 80,
@@ -267,9 +271,11 @@ describe('intrinsic short-side pair-fold observer', () => {
       placedCount: 3,
       usedShortAxisSpanMm: 80,
       usedLongAxisDepthMm: 40,
+      envelopeAreaCostVetoObserved: false,
       admission: {
         exactLegal: true,
         allPiecesPlaced: true,
+        envelopeAreaCostWithinProductionBound: true,
         accepted: true
       }
     })
@@ -323,7 +329,8 @@ describe('intrinsic short-side pair-fold observer', () => {
       status: 'rejected-admission',
       expectedPairCount: 3,
       evaluatedPairCount: 3,
-      admission: { accepted: false }
+      envelopeAreaCostVetoObserved: false,
+      admission: { accepted: false, envelopeAreaCostWithinProductionBound: false }
     })
     expect(rejected.placedCollisionGeometries).toBeUndefined()
     expect(noFit.trace).toMatchObject({
@@ -354,7 +361,8 @@ describe('intrinsic short-side pair-fold observer', () => {
         preparedRectangle('shelf-1', 20, 40, [0, 90]),
         preparedRectangle('shelf-2', 20, 40, [0, 90]),
         preparedRectangle('shelf-3', 20, 40, [0, 90])
-      ]
+      ],
+      productionEnvelopeAreaMm2: 2_400
     })
 
     expect(outcome.trace).toMatchObject({
@@ -369,13 +377,33 @@ describe('intrinsic short-side pair-fold observer', () => {
       placedCount: 3,
       usedShortAxisSpanMm: 80,
       usedLongAxisDepthMm: 40,
+      envelopeAreaCostVetoObserved: false,
       admission: {
         exactLegal: true,
         allPiecesPlaced: true,
+        envelopeAreaCostWithinProductionBound: true,
         accepted: true
       }
     })
     expect(outcome.placedCollisionGeometries).toHaveLength(3)
+  })
+
+  it('vetoes a directional construction that more than matches the production area bound', async () => {
+    const outcome = await observe({ pieces: acceptedPieces })
+
+    expect(outcome.trace).toMatchObject({
+      status: 'rejected-admission',
+      constructionKind: 'multi-row-shelf',
+      envelopeAreaCostVetoObserved: true,
+      admission: {
+        allPiecesPlaced: true,
+        envelopeAreaCostFactor: 2,
+        directionallyEfficient: true,
+        envelopeAreaCostWithinProductionBound: false,
+        accepted: false
+      }
+    })
+    expect(outcome.placedCollisionGeometries).toBeUndefined()
   })
 
   it('censors after completed transform work with exact counters', async () => {

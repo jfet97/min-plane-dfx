@@ -154,7 +154,7 @@ function deterministicClock(...readings: ReadonlyArray<number>): () => number {
 describe('intrinsic short-side observer', () => {
   it('rewards material short-axis fill before long-axis depth', () => {
     const fullShortSide = endpoint('full-short-side', 4, 6)
-    const shorterLongAxis = endpoint('shorter-long-axis', 3, 5, {
+    const shorterLongAxis = endpoint('shorter-long-axis', 4, 5, {
       cavities: 1
     })
     const trace = observeIntrinsicShortSideOrientations({
@@ -238,7 +238,7 @@ describe('intrinsic short-side observer', () => {
 
   it('preserves endpoint selection and swaps orientation on a transposed sheet', () => {
     const fullShortSide = endpoint('full-short-side', 4, 6)
-    const shorterLongAxis = endpoint('shorter-long-axis', 3, 5, {
+    const shorterLongAxis = endpoint('shorter-long-axis', 4, 5, {
       cavities: 1
     })
     const landscape = observeIntrinsicShortSideOrientations({
@@ -309,6 +309,50 @@ describe('intrinsic short-side observer', () => {
       requestedLongAxisUsedSpanGrid: 3_999,
       requestedShortAxisShortfallGrid: 1_001
     })
+  })
+
+  it('vetoes a directional endpoint that exceeds the production area-cost bound', () => {
+    const production = endpoint('production', 6, 2)
+    const roomyProduction = endpoint('roomy-production', 6, 3)
+    const candidate = endpoint('candidate', 5, 4)
+    const sheet = new SheetSpec({
+      width: 10,
+      height: 5,
+      label: 'area-cost-boundary'
+    })
+    const vetoedTrace = observeIntrinsicShortSideOrientations({
+      sheet,
+      endpoints: [candidate],
+      productionPlacedCollisionGeometries:
+        production.placedCollisionGeometries,
+      now: deterministicClock(0, 1)
+    })
+    const admittedTrace = observeIntrinsicShortSideOrientations({
+      sheet,
+      endpoints: [candidate],
+      productionPlacedCollisionGeometries:
+        roomyProduction.placedCollisionGeometries,
+      now: deterministicClock(0, 1)
+    })
+
+    expect(vetoedTrace.status).toBe('observed-no-directional-improvement')
+    expect(vetoedTrace.directionalAdmissionTerms).toEqual({
+      shortEdgeFillAdmitted: true,
+      shortfallHalved: true,
+      depthWithinProductionMaximumSide: true,
+      envelopeAreaCostWithinProductionBound: false
+    })
+    expect(vetoedTrace.observerWinnerCanonicalGeometryHash).toBeUndefined()
+    expect(admittedTrace.status).toBe('observed')
+    expect(admittedTrace.directionalAdmissionTerms).toEqual({
+      shortEdgeFillAdmitted: true,
+      shortfallHalved: true,
+      depthWithinProductionMaximumSide: true,
+      envelopeAreaCostWithinProductionBound: true
+    })
+    expect(admittedTrace.observerWinnerCanonicalGeometryHash).toBe(
+      candidate.sheetlessCanonicalGeometryHash
+    )
   })
 
   it('uses deterministic intrinsic behavior without a directional shortfall on square sheets', () => {

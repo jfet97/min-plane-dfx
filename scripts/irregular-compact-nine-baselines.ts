@@ -31,9 +31,9 @@ const BASELINES: ReadonlyArray<Baseline> = [
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 120_000,
     shortSideCollisionIdentitySha256:
-      '7a79ebd40029094854748d569acb52f95f32a96e71b3b674941ba7f20f9cfe15',
+      '371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127',
     shortSideFittedCanonicalSha256:
-      'bc978c3710e6865a68c4c965fde545d0421d5d915319056b5a67689a6e918e5a',
+      'b4d1fd9af8a1ecb4a17f1031546c1dbbb5afb19b2d99e41bdb646e52084092f7',
     shortSidePlacedCount: 20,
     shortSideUnplacedCount: 0
   },
@@ -65,9 +65,9 @@ const BASELINES: ReadonlyArray<Baseline> = [
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 120_000,
     shortSideCollisionIdentitySha256:
-      '4dd34dcee54caa79e1cc0dc3fc88b867ddfa15a98588dda1083e820cdb44c0bb',
+      '1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d',
     shortSideFittedCanonicalSha256:
-      '063f740ff97b154ab9b3116023da7de3da1de33322a27ca53f56b43b21a3c7bb',
+      '490194ca505f545cfb5880209d20b2f48cdcffbc847c8686705fd12661b5e7bf',
     shortSidePlacedCount: 17,
     shortSideUnplacedCount: 0
   },
@@ -414,11 +414,18 @@ interface CompactReport {
       readonly status: string
       readonly outputInfluence: 'none' | 'selected'
       readonly observerWinnerRotationDeg?: 0 | 90
+      readonly directionalAdmissionTerms?: {
+        readonly shortEdgeFillAdmitted: boolean
+        readonly shortfallHalved: boolean
+        readonly depthWithinProductionMaximumSide: boolean
+        readonly envelopeAreaCostWithinProductionBound: boolean
+      }
     }
     readonly intrinsicShortSidePairFoldTrace?: {
       readonly status: string
       readonly outputInfluence: 'none' | 'selected'
       readonly constructionKind?: 'pair-fold' | 'multi-row-shelf' | 'contact-strip'
+      readonly envelopeAreaCostVetoObserved?: boolean
     }
   }
   readonly checks: Readonly<Record<string, boolean>>
@@ -483,12 +490,23 @@ for (let index = 0; index < BASELINES.length; index += 1) {
   const shortAxisFillRatio =
     shortAxisSpan /
     Math.min(shortSideReport.sheet.width, shortSideReport.sheet.height)
+  const stage1AdmissionTerms =
+    shortSideReport.result.intrinsicShortSideObserverTrace?.directionalAdmissionTerms
+  const shortSideQualityVetoObserved =
+    terminalTrace?.envelopeAreaCostVetoObserved === true ||
+    (stage1AdmissionTerms !== undefined &&
+      stage1AdmissionTerms.shortEdgeFillAdmitted &&
+      stage1AdmissionTerms.shortfallHalved &&
+      stage1AdmissionTerms.depthWithinProductionMaximumSide &&
+      !stage1AdmissionTerms.envelopeAreaCostWithinProductionBound)
   const profileOutcome =
     shortSideSource !== 'compact-fallback'
       ? ('directional-success' as const)
       : shortAxisFillRatio >= 0.8
         ? ('short-side-satisfied-by-compact' as const)
-        : ('directional-miss' as const)
+        : shortSideQualityVetoObserved
+          ? ('short-side-quality-protected-compact-fallback' as const)
+          : ('directional-miss' as const)
   layoutRecords.push(
     {
       fixture: baseline.fixture,
@@ -571,6 +589,10 @@ const shortSideSatisfiedByCompactCount = layoutRecords.filter(
 const directionalMissCount = layoutRecords.filter(
   ({ profile, profileOutcome }) => profile === 'short-side' && profileOutcome === 'directional-miss'
 ).length
+const shortSideQualityProtectedFallbackCount = layoutRecords.filter(
+  ({ profile, profileOutcome }) =>
+    profile === 'short-side' && profileOutcome === 'short-side-quality-protected-compact-fallback'
+).length
 const layoutContractPassed =
   layoutRecords.length === 18 &&
   compactLayoutCount === 9 &&
@@ -581,7 +603,9 @@ const layoutContractPassed =
     terminalContactStripWinnerCount +
     compactFallbackCount ===
     9 &&
-  directionalSuccessCount + shortSideSatisfiedByCompactCount === 9 &&
+  directionalSuccessCount + shortSideSatisfiedByCompactCount +
+    shortSideQualityProtectedFallbackCount ===
+    9 &&
   directionalMissCount === 0 &&
   layoutRecords.every(({ exactPiecePartition, passed }) => Boolean(exactPiecePartition && passed))
 const summaryPath = join(outputDirectory, 'summary.json')
@@ -602,6 +626,7 @@ await writeFile(
       compactFallbackCount,
       directionalSuccessCount,
       shortSideSatisfiedByCompactCount,
+      shortSideQualityProtectedFallbackCount,
       directionalMissCount,
       outcomes,
       layouts: layoutRecords
@@ -692,6 +717,7 @@ console.log(
     compactFallbackCount,
     directionalSuccessCount,
     shortSideSatisfiedByCompactCount,
+    shortSideQualityProtectedFallbackCount,
     directionalMissCount,
     passed
   })
