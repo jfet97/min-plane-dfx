@@ -502,12 +502,15 @@ different historical cache orders. Independent full suites and strict
 sequential 18-layout gates preserve every accepted production identity.
 
 Stage 3 separates sixteen trusted geometry/search carriers from their boundary
-schemas. TypeScript AST enforcement rejects schema imports in trusted worker
+schemas. TypeScript symbol-resolution enforcement rejects direct, namespace,
+renamed, and transitively re-exported schema references in trusted worker
 modules and proves those runtime classes do not extend `Schema.Class`; runtime
-assertions retain ordinary structural decoding and validation. The full suite
-and another independent 18-layout gate remained exact. One sequential paired
-matrix observed `13.08%` lower aggregate elapsed time, but the single run is
-supporting evidence rather than a performance guarantee.
+assertions retain ordinary structural decoding, optional-field shape, and
+validation. Deterministic clock fixtures retain incomplete phase-coverage
+detection. The full suite and another independent 18-layout gate remained
+exact. One sequential paired matrix observed `12.23%` lower aggregate elapsed
+time, but the single run is supporting evidence rather than a performance
+guarantee.
 
 The next bounded stage converts candidate generation into resumable pure state
 advanced by the Effect shell in deterministic counted quanta. Schemas remain

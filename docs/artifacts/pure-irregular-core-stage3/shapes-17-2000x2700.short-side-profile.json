@@ -5,9 +5,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "d258acf6286145da7551abfceb3e31d260080deb",
+  "sourceCommit": "70d5b3182f5109fc9b6b7a0718412f029cd26a6f",
   "runtime": {
-    "elapsedMs": 7840.462167,
+    "elapsedMs": 7820.015959,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -1543,7 +1543,7 @@
       "selectedCanonicalGeometryHash": "1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d",
       "consumedCandidateEvaluations": 8035,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 764.9156249999996,
+      "runtimeMs": 754.350042,
       "outputInfluence": "selected"
     },
     "intrinsicShortSideObserverTrace": {
@@ -1567,7 +1567,7 @@
       "geometricParetoEligibleEndpointCount": 1,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 14.898125000000618,
+      "runtimeMs": 14.152208000000428,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 12722,
       "endpoints": [
@@ -2078,8 +2078,8 @@
         "candidateEvaluations": 6561,
         "placedCount": 17,
         "requestedCount": 17,
-        "runtimeMs": 279.6755409999996,
-        "peakRssDeltaBytes": 6324224
+        "runtimeMs": 311.98595899999964,
+        "peakRssDeltaBytes": 14467072
       },
       "contactStripPromotion": {
         "incumbentConstructionKind": "pair-fold",
@@ -2129,9 +2129,9 @@
         "strictlyImproved": true,
         "promoted": false
       },
-      "runtimeMs": 290.68745800000033,
-      "peakRssDeltaBytes": 6340608,
-      "serializedTraceBytes": 3572
+      "runtimeMs": 322.6053750000001,
+      "peakRssDeltaBytes": 14499840,
+      "serializedTraceBytes": 3574
     }
   },
   "workerOutput": {

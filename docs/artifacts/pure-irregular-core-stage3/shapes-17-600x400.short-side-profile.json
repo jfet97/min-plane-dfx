@@ -5,9 +5,9 @@
     "width": 600,
     "height": 400
   },
-  "sourceCommit": "d258acf6286145da7551abfceb3e31d260080deb",
+  "sourceCommit": "70d5b3182f5109fc9b6b7a0718412f029cd26a6f",
   "runtime": {
-    "elapsedMs": 7875.449958,
+    "elapsedMs": 7965.100083,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -1277,11 +1277,11 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 20,
             "topologyMeasurementCount": 36,
-            "topologyMeasurementMs": 17.09150000000045,
+            "topologyMeasurementMs": 16.953582999998616,
             "legalCandidateCount": 4110,
             "contactMeasuredCandidateCount": 48,
             "positiveContactCandidateCount": 10,
-            "contactMeasurementMs": 0.8297100000013415,
+            "contactMeasurementMs": 0.8118300000005547,
             "contactSelectedSuccessorCount": 5,
             "contactDeduplicatedSuccessorCount": 0,
             "contactRetainedSuccessorCount": 5,
@@ -1480,7 +1480,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 341,
           "completedDepths": 5,
-          "elapsedMs": 9.167625000000044,
+          "elapsedMs": 9.983167000000321,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1508,7 +1508,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 335,
           "completedDepths": 5,
-          "elapsedMs": 9.058291000000281,
+          "elapsedMs": 9.356124999999338,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1536,7 +1536,7 @@
           "checkpointRetained": false,
           "consumedPlacementEvaluations": 32273,
           "completedDepths": 17,
-          "elapsedMs": 1333.8527500000018,
+          "elapsedMs": 1383.0226249999978,
           "endpoint": {
             "placedCount": 14,
             "placedDoubledMaterialAreaGrid2": "294455444315",
@@ -1564,7 +1564,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 341,
           "completedDepths": 5,
-          "elapsedMs": 8.481917000000067,
+          "elapsedMs": 8.501667000000452,
           "endpoint": {
             "placedCount": 5,
             "placedDoubledMaterialAreaGrid2": "154619195557",
@@ -1794,11 +1794,11 @@
         "placedMaterialAreaMm2": 147227.7221575,
         "selectedRotationDeg": 0
       },
-      "preflightRuntimeMs": 4.144374999999997,
-      "completeArchiveRuntimeMs": 5611.699791999999,
-      "prefixTerminalizationMs": 8.58233300000029,
-      "coldSearchMs": 1606.5578329999998,
-      "runtimeMs": 1615.675459
+      "preflightRuntimeMs": 4.199791999999974,
+      "completeArchiveRuntimeMs": 5639.908041,
+      "prefixTerminalizationMs": 11.572833000000173,
+      "coldSearchMs": 1660.3561249999993,
+      "runtimeMs": 1672.456792
     },
     "intrinsicAnytimeSchedulerTrace": {
       "version": "intrinsic-anytime-scheduler-v1",
@@ -2076,9 +2076,9 @@
       "geometricParetoEligibleEndpointCount": 0,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 8.577374999999847,
+      "runtimeMs": 9.35241700000006,
       "runtimeBudgetExceeded": false,
-      "serializedTraceBytes": 8744,
+      "serializedTraceBytes": 8743,
       "endpoints": [
         {
           "archiveIndex": 0,
@@ -2404,17 +2404,17 @@
         "candidateEvaluations": 1832,
         "placedCount": 11,
         "requestedCount": 17,
-        "runtimeMs": 160.3825829999996,
-        "peakRssDeltaBytes": 0,
+        "runtimeMs": 158.72925000000032,
+        "peakRssDeltaBytes": 81920,
         "failureReason": "piece shapes-17-10 has no legal contact placement inside the requested short-axis strip."
       },
       "contactStripPromotion": {
         "contactStripAdmitted": false,
         "promoted": false
       },
-      "runtimeMs": 162.6550419999994,
-      "peakRssDeltaBytes": 0,
-      "serializedTraceBytes": 1281,
+      "runtimeMs": 161.035249999999,
+      "peakRssDeltaBytes": 81920,
+      "serializedTraceBytes": 1289,
       "failureReason": "neither the fixed-transform pair fold nor the deterministic multi-row shelf fits both requested sheet axes."
     }
   },
