@@ -102,6 +102,30 @@ These are historical observations for the rejected identity-only trust
 mechanism, not performance claims for the hardened fingerprint implementation.
 The hardened implementation must be judged by fresh final-commit gates.
 
+## Review hardening and final evidence
+
+Review rejected identity-only trust because TypeScript `readonly` does not
+prevent runtime mutation. Commit
+`59fa2220600c89002b2cbdd7ae4e3ccf6d7591cc` replaces it with an exact linear
+coordinate fingerprint. A memo hit is valid only while every ordered coordinate
+is unchanged; both valid-to-invalid and invalid-to-valid mutations are tested.
+
+On that exact commit, lint, both typechecks, and the complete suite passed:
+`895` tests passed, `17` were intentionally skipped, across `87` files. The
+strict sequential nine-case matrix passed all `18` Compact and Short Side
+layouts and rendered all `18` SVGs to PNG. Its manifest records the source
+commit and command, and its checksum manifest verifies every report, SVG, PNG,
+and the manifest itself.
+
+One same-host supporting pair observed the current `main` Mixed-61 strict gate
+at `36247.197ms` and the final hardened code at `32999.782ms`, an `8.96%`
+reduction (`1.0984x`). This is one observation, not a statistical benchmark;
+the exact identity gates are the acceptance authority.
+
+Immutable review provenance remains under
+`/private/tmp/min-plane-provenance/pr20-fingerprint-review/`, including the
+final matrix in `final-59fa222-nine-baselines/`.
+
 ## Component measurements
 
 The original experiment reported the following synthetic component numbers.
