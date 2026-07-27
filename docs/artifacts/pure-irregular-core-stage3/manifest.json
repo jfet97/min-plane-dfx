@@ -1,7 +1,7 @@
 {
   "version": "compact-short-side-production-provenance-v2",
-  "generatedAt": "2026-07-27T09:45:51.668Z",
-  "sourceCommit": "70d5b3182f5109fc9b6b7a0718412f029cd26a6f",
+  "generatedAt": "2026-07-27T09:55:28.009Z",
+  "sourceCommit": "70d5b315b0262548e0d94ba7de36d26757d3d915",
   "command": [
     "pnpm",
     "gate:compact-nine-baselines",
@@ -22,7 +22,7 @@
   "artifacts": [
     {
       "name": "mixed-61-2000x2700.json",
-      "sha256": "9fa023aebcb24d26b57e0b16c8802aada35ef86e45705aac716a70f55dc9f957"
+      "sha256": "e3668f158d1a49e995e43c6449ac0b0eded07b4765acab58c158bbbb9fc768c7"
     },
     {
       "name": "mixed-61-2000x2700.png",
@@ -30,7 +30,7 @@
     },
     {
       "name": "mixed-61-2000x2700.short-side-profile.json",
-      "sha256": "1335945ef73102a134023d641938cd3022a2528cfbb2e0b1fcd4942065466446"
+      "sha256": "3ac3aea25f21af85c8842bda107bbc60181e0ab91ce4b493419c24436c3f1bde"
     },
     {
       "name": "mixed-61-2000x2700.short-side-profile.png",
@@ -46,7 +46,7 @@
     },
     {
       "name": "mixed-61-300x300.json",
-      "sha256": "7fd2049f78facaa29c85e33973460404cf2574b6bf6f9221d228a94bfd82d4a3"
+      "sha256": "d2e04ab8f534385619312b26f346cc6d5da3fef7ecd089865687c73db75dd4a4"
     },
     {
       "name": "mixed-61-300x300.png",
@@ -54,7 +54,7 @@
     },
     {
       "name": "mixed-61-300x300.short-side-profile.json",
-      "sha256": "66deddf4c78f2803007ab280dc4d57dfb086319cb7da1d212e5b5835b9b4febb"
+      "sha256": "6b1a7e501122ea3e95862de4618a0f77333c7beafd4764f0c2c8745a1c20d25c"
     },
     {
       "name": "mixed-61-300x300.short-side-profile.png",
@@ -70,7 +70,7 @@
     },
     {
       "name": "mixed-61-600x400.json",
-      "sha256": "794ba85aeea1ab49c4c2c20f001a8ae737adbea1522b942bfb44e7b23d12a4d9"
+      "sha256": "4626e39b73462c747e9711d1496412bf341a7d46b2036e4abb5c1af8c627e1d0"
     },
     {
       "name": "mixed-61-600x400.png",
@@ -78,7 +78,7 @@
     },
     {
       "name": "mixed-61-600x400.short-side-profile.json",
-      "sha256": "aee75f1d8119a9c079073f1e19dd511039cfd076e5b67fc07cc3b072fe1373cc"
+      "sha256": "526cfb660b368580f08b68271c1d896989b30ebed7b5227328942d9d96db5525"
     },
     {
       "name": "mixed-61-600x400.short-side-profile.png",
@@ -94,7 +94,7 @@
     },
     {
       "name": "shapes-17-2000x2700.json",
-      "sha256": "ffc7f61167863a90350157182d76172d5b8c222911718009311e1fd771af0f66"
+      "sha256": "67b5baed61c840368c55c43b73d6e1fb814fee600641f178a0f88fe7900bab10"
     },
     {
       "name": "shapes-17-2000x2700.png",
@@ -102,7 +102,7 @@
     },
     {
       "name": "shapes-17-2000x2700.short-side-profile.json",
-      "sha256": "95097bac0fe362f99f5f32c1c963a3fd107225ad5301fc0c7aecc02d3c2ab147"
+      "sha256": "edcdb07cb86a60f36df6db635e98f0b3b33220062161b093a7f1ab232e7082eb"
     },
     {
       "name": "shapes-17-2000x2700.short-side-profile.png",
@@ -118,7 +118,7 @@
     },
     {
       "name": "shapes-17-300x300.json",
-      "sha256": "658efe912e7224708e2f8df38f958b1647379db30a0a762236d446636bc17e7b"
+      "sha256": "59f1335a7fb2ff321f51060d4c58471a4bb7ab043a9c70ee58e2485794f50a1c"
     },
     {
       "name": "shapes-17-300x300.png",
@@ -126,7 +126,7 @@
     },
     {
       "name": "shapes-17-300x300.short-side-profile.json",
-      "sha256": "23568248a7c4b3aefb0ccfc0352448b7b2c34d53a75452b27c342c9b4fef1cb7"
+      "sha256": "a2a4e5dabf006a2c81c41d8afc2c389bdae2730384038cfe069b77f53503c1f2"
     },
     {
       "name": "shapes-17-300x300.short-side-profile.png",
@@ -142,7 +142,7 @@
     },
     {
       "name": "shapes-17-600x400.json",
-      "sha256": "cdcdc33f78176848276f7301616c117d6fccbeebc778eb4a3c52adc7da43f488"
+      "sha256": "59ad1d1f8e8945bacc1e8549b3aea47362bee2476673a942402b17bc6a1cd57a"
     },
     {
       "name": "shapes-17-600x400.png",
@@ -150,7 +150,7 @@
     },
     {
       "name": "shapes-17-600x400.short-side-profile.json",
-      "sha256": "c6dad587ef3bec7304ab7606be0ad551d34cdad879d7c6fea741a795f631b651"
+      "sha256": "073304ae857a57108ec8dd32ba0a47f5a6d584391a517bc1992fcd285211e30e"
     },
     {
       "name": "shapes-17-600x400.short-side-profile.png",
@@ -166,11 +166,11 @@
     },
     {
       "name": "summary.json",
-      "sha256": "4f261df4952131463771faf720a39fb0fa8330a97819b9634dcc2a666fd216a2"
+      "sha256": "c5b43f12a46f9952b55777892f1aabc8bc4296912715cc994fed4fe9c6be16fb"
     },
     {
       "name": "triangle-20-2000x2700.json",
-      "sha256": "e897d879f30052ffd4bb30dabda8c87c27d6d199bca7833af99c2f78a8231293"
+      "sha256": "a4045365a2a558d112ef55df4cc2d03d0771faa0377b0fd0a38834958e173b3e"
     },
     {
       "name": "triangle-20-2000x2700.png",
@@ -178,7 +178,7 @@
     },
     {
       "name": "triangle-20-2000x2700.short-side-profile.json",
-      "sha256": "746356af712d5741416c95c416676c2d442c954ed7eaf6244bcdb9b4b6761194"
+      "sha256": "8788b08b6e33c9f8f064e227482aa76239403259ef5cf417c05db8e1c350fb9a"
     },
     {
       "name": "triangle-20-2000x2700.short-side-profile.png",
@@ -194,7 +194,7 @@
     },
     {
       "name": "triangle-20-300x300.json",
-      "sha256": "a14573557db6f35eb681337175137797f1d06c60cfebcb243edae4e3122e3cec"
+      "sha256": "878775aee30c05e282d0844bee1db1b116522cd7d86aa50b7bafe20e5f983b26"
     },
     {
       "name": "triangle-20-300x300.png",
@@ -202,7 +202,7 @@
     },
     {
       "name": "triangle-20-300x300.short-side-profile.json",
-      "sha256": "16de307c645c72033473f1f3c090e4e21ff1f4c96e37370239d5e94074d7636b"
+      "sha256": "f9704be12de58f92888112c88883beb07470e99f45c1d62f5933692465536d37"
     },
     {
       "name": "triangle-20-300x300.short-side-profile.png",
@@ -218,7 +218,7 @@
     },
     {
       "name": "triangle-20-600x400.json",
-      "sha256": "670e1f02c8ecd5b5061abc978095eff4eaa03205b57c36119502f6c2e5a50414"
+      "sha256": "9e2ced38d7cedf6bc1786c7ed7bc8d45c74c8c0b9fd3614d12cf3c786290ac82"
     },
     {
       "name": "triangle-20-600x400.png",
@@ -226,7 +226,7 @@
     },
     {
       "name": "triangle-20-600x400.short-side-profile.json",
-      "sha256": "cc20fce4ccf3c6dec2835ce662286c12bf1e623013e383e1d3748ed71dc6d0cd"
+      "sha256": "fd48d6ef69e1d688a57d4555a48cc368dcc567ef57d63c16197225f1d36ea544"
     },
     {
       "name": "triangle-20-600x400.short-side-profile.png",

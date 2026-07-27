@@ -12,7 +12,7 @@ decoding boundaries. Settings and terminal boundary envelopes remain
 schema-backed where they are decoded or emitted; this stage does not claim the
 whole search is already Effect-free.
 
-Source commit: `70d5b3182f5109fc9b6b7a0718412f029cd26a6f`.
+Source commit: `70d5b315b0262548e0d94ba7de36d26757d3d915`.
 
 ## Boundary proof
 
@@ -44,7 +44,7 @@ Compact/Short Side layouts. Every pinned identity and production contract
 remained exact.
 
 Raw provenance:
-`/private/tmp/min-plane-provenance/pure-irregular-core-stage3-70d5b31/`.
+`/private/tmp/min-plane-provenance/pure-irregular-core-stage3-70d5b315/`.
 
 Portable evidence:
 [`../artifacts/pure-irregular-core-stage3/`](../artifacts/pure-irregular-core-stage3/).
@@ -55,11 +55,11 @@ This was one sequential before/after matrix on the same machine, so it is an
 observation rather than a statistically repeated benchmark. Against the
 immediately preceding Stage 2 run, every one of the 18 layouts was faster:
 
-- aggregate elapsed time: `157,588.357 ms` to `138,316.466 ms`;
-- aggregate reduction: `12.23%` (`1.1393x`);
-- per-layout speedup range: `1.0859x` to `1.3118x`;
-- Mixed-61 `2000 x 2700` Compact: `40,303.953 ms` to `36,927.277 ms`;
-- Triangle-20 `2000 x 2700` Compact: `4,092.070 ms` to `3,181.859 ms`.
+- aggregate elapsed time: `157,588.357 ms` to `137,853.759 ms`;
+- aggregate reduction: `12.52%` (`1.1432x`);
+- per-layout speedup range: `1.0948x` to `1.3198x`;
+- Mixed-61 `2000 x 2700` Compact: `40,303.953 ms` to `36,747.239 ms`;
+- Triangle-20 `2000 x 2700` Compact: `4,092.070 ms` to `3,146.581 ms`.
 
 The consistent direction and the exact output parity support promotion, but no
 stronger performance guarantee is inferred from a single paired pass.

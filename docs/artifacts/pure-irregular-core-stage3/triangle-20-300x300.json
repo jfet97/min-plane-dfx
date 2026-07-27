@@ -5,9 +5,9 @@
     "width": 300,
     "height": 300
   },
-  "sourceCommit": "70d5b3182f5109fc9b6b7a0718412f029cd26a6f",
+  "sourceCommit": "70d5b315b0262548e0d94ba7de36d26757d3d915",
   "runtime": {
-    "elapsedMs": 3777.078916,
+    "elapsedMs": 3769.311542,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -606,7 +606,7 @@
             "retainedCount": 16,
             "bestAccountingStratumCount": 16,
             "topologyMeasurementCount": 16,
-            "topologyMeasurementMs": 1.3328729999998359,
+            "topologyMeasurementMs": 1.2465830000001006,
             "legalCandidateCount": 3193,
             "contactMeasuredCandidateCount": 0,
             "positiveContactCandidateCount": 0,
@@ -809,7 +809,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 137,
           "completedDepths": 6,
-          "elapsedMs": 4.414832999999817,
+          "elapsedMs": 4.448124999999891,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -837,7 +837,7 @@
           "checkpointRetained": false,
           "consumedPlacementEvaluations": 28314,
           "completedDepths": 20,
-          "elapsedMs": 728.4637510000007,
+          "elapsedMs": 727.9482900000012,
           "endpoint": {
             "placedCount": 14,
             "placedDoubledMaterialAreaGrid2": "58800000000",
@@ -865,7 +865,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 123,
           "completedDepths": 6,
-          "elapsedMs": 2.8169590000002245,
+          "elapsedMs": 2.786624999999731,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -893,7 +893,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 173,
           "completedDepths": 11,
-          "elapsedMs": 5.2174589999999625,
+          "elapsedMs": 5.955999999999676,
           "endpoint": {
             "placedCount": 11,
             "placedDoubledMaterialAreaGrid2": "46200000000",
@@ -921,7 +921,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 137,
           "completedDepths": 6,
-          "elapsedMs": 3.3181250000002365,
+          "elapsedMs": 3.6681250000001455,
           "endpoint": {
             "placedCount": 6,
             "placedDoubledMaterialAreaGrid2": "25200000000",
@@ -949,7 +949,7 @@
           "checkpointRetained": true,
           "consumedPlacementEvaluations": 187,
           "completedDepths": 11,
-          "elapsedMs": 5.217333000000053,
+          "elapsedMs": 4.787000000000262,
           "endpoint": {
             "placedCount": 11,
             "placedDoubledMaterialAreaGrid2": "46200000000",
@@ -1234,11 +1234,11 @@
         "placedMaterialAreaMm2": 35700,
         "selectedRotationDeg": 0
       },
-      "preflightRuntimeMs": 2.03125,
-      "completeArchiveRuntimeMs": 2867.452,
-      "prefixTerminalizationMs": 1.7544170000001031,
-      "coldSearchMs": 808.759791,
-      "runtimeMs": 810.9449999999997
+      "preflightRuntimeMs": 2.054333000000014,
+      "completeArchiveRuntimeMs": 2858.025458,
+      "prefixTerminalizationMs": 1.720625000000382,
+      "coldSearchMs": 808.722417,
+      "runtimeMs": 810.8860420000001
     },
     "intrinsicAnytimeSchedulerTrace": {
       "version": "intrinsic-anytime-scheduler-v1",

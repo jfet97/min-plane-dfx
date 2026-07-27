@@ -62,7 +62,7 @@ gate preserved every production identity and contract. TypeScript symbol
 resolution covers direct, namespace, renamed, and transitively re-exported
 schema references, and deterministic clocks prove that incomplete phase
 instrumentation is still detected. One paired matrix also observed every
-layout running faster, with `12.23%` lower aggregate elapsed time, but that
+layout running faster, with `12.52%` lower aggregate elapsed time, but that
 single pass is recorded as supporting evidence rather than a statistical
 performance guarantee.
 

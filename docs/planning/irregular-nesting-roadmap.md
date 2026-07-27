@@ -508,7 +508,7 @@ modules and proves those runtime classes do not extend `Schema.Class`; runtime
 assertions retain ordinary structural decoding, optional-field shape, and
 validation. Deterministic clock fixtures retain incomplete phase-coverage
 detection. The full suite and another independent 18-layout gate remained
-exact. One sequential paired matrix observed `12.23%` lower aggregate elapsed
+exact. One sequential paired matrix observed `12.52%` lower aggregate elapsed
 time, but the single run is supporting evidence rather than a performance
 guarantee.
 
