@@ -508,7 +508,7 @@ export const CollisionGeometryDiagnosticSchema = Schema.Struct({
 export class CollisionGeometryDiagnostic {
   readonly code: string
   readonly message: string
-  readonly pieceId?: PieceId | undefined
+  declare readonly pieceId?: PieceId | undefined
 
   constructor(fields: {
     readonly code: string
@@ -517,7 +517,9 @@ export class CollisionGeometryDiagnostic {
   }) {
     this.code = fields.code
     this.message = fields.message
-    this.pieceId = fields.pieceId
+    if (Object.prototype.hasOwnProperty.call(fields, 'pieceId')) {
+      this.pieceId = fields.pieceId
+    }
   }
 }
 
@@ -640,13 +642,13 @@ export const IrregularPreparedPieceSchema = Schema.Struct({
 
 /** A source piece paired with its prepared collision geometry and transforms. */
 export class IrregularPreparedPiece {
-  readonly pieceId?: PieceId | undefined
-  readonly interchangeabilityKey?: string | undefined
+  declare readonly pieceId?: PieceId | undefined
+  declare readonly interchangeabilityKey?: string | undefined
   readonly source: ImportedPiece
   readonly allowMirror: boolean
   readonly collisionGeometry: CollisionGeometry
   readonly transforms: ReadonlyArray<IrregularTransformCandidate>
-  readonly priorityOrderKey?: IrregularPriorityOrderKey | undefined
+  declare readonly priorityOrderKey?: IrregularPriorityOrderKey | undefined
 
   constructor(fields: {
     readonly pieceId?: PieceId | undefined
@@ -657,13 +659,19 @@ export class IrregularPreparedPiece {
     readonly transforms: ReadonlyArray<IrregularTransformCandidate>
     readonly priorityOrderKey?: IrregularPriorityOrderKey | undefined
   }) {
-    this.pieceId = fields.pieceId
-    this.interchangeabilityKey = fields.interchangeabilityKey
+    if (Object.prototype.hasOwnProperty.call(fields, 'pieceId')) {
+      this.pieceId = fields.pieceId
+    }
+    if (Object.prototype.hasOwnProperty.call(fields, 'interchangeabilityKey')) {
+      this.interchangeabilityKey = fields.interchangeabilityKey
+    }
     this.source = fields.source
     this.allowMirror = fields.allowMirror
     this.collisionGeometry = fields.collisionGeometry
     this.transforms = fields.transforms
-    this.priorityOrderKey = fields.priorityOrderKey
+    if (Object.prototype.hasOwnProperty.call(fields, 'priorityOrderKey')) {
+      this.priorityOrderKey = fields.priorityOrderKey
+    }
   }
 }
 
@@ -684,9 +692,9 @@ export const IrregularPlacementSchema = Schema.Struct({
 
 /** Trusted runtime representation of one prepared-piece placement. */
 export class IrregularPlacement {
-  readonly pieceId?: PieceId | undefined
+  declare readonly pieceId?: PieceId | undefined
   readonly sourcePieceId: PieceId
-  readonly placementReference?: IrregularPoint | undefined
+  declare readonly placementReference?: IrregularPoint | undefined
   readonly transform: IrregularTransform
 
   constructor(fields: {
@@ -695,9 +703,13 @@ export class IrregularPlacement {
     readonly placementReference?: IrregularPoint | undefined
     readonly transform: IrregularTransform
   }) {
-    this.pieceId = fields.pieceId
+    if (Object.prototype.hasOwnProperty.call(fields, 'pieceId')) {
+      this.pieceId = fields.pieceId
+    }
     this.sourcePieceId = fields.sourcePieceId
-    this.placementReference = fields.placementReference
+    if (Object.prototype.hasOwnProperty.call(fields, 'placementReference')) {
+      this.placementReference = fields.placementReference
+    }
     this.transform = fields.transform
   }
 }

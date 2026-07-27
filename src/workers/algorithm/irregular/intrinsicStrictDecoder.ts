@@ -278,6 +278,8 @@ export interface ConstructIntrinsicStrictStateInput {
   readonly maximumCandidateEvaluationCount?: number
   readonly captureCandidateEvaluationCount?: boolean
   readonly capturePhaseTimings?: boolean
+  /** Test-only monotonic source for deterministic runtime and phase accounting. */
+  readonly timingNow?: () => number
   readonly producerRole?: string
   readonly checkpoint?: IntrinsicStrictDirectCheckpoint
   readonly maximumCompletedPieceBoundaries?: number
@@ -407,7 +409,8 @@ export function constructIntrinsicStrictState(
   GeometryKernel | GeometrySettings | NfpIfpService
 > {
   return Effect.gen(function* () {
-    const startedAt = performance.now()
+    const timingNow = input.timingNow ?? performance.now.bind(performance)
+    const startedAt = timingNow()
     const settings = yield* GeometrySettings
     const geometryKernel = yield* GeometryKernel
     const nfpIfpService = yield* NfpIfpService
@@ -471,7 +474,7 @@ export function constructIntrinsicStrictState(
         Effect.gen(function* () {
           if (input.control !== undefined) yield* input.control.checkpoint(phase)
           if (
-            previousActiveRuntimeMs + performance.now() - startedAt >=
+            previousActiveRuntimeMs + timingNow() - startedAt >=
             maximumRuntimeMs
           ) {
             return yield* Effect.fail(
@@ -567,7 +570,7 @@ export function constructIntrinsicStrictState(
       let candidateCount = 0
 
       for (const transform of [...piece.transforms].sort(transformCandidateOrder)) {
-        const candidateGenerationStartedAt = capturePhaseTimings ? performance.now() : 0
+        const candidateGenerationStartedAt = capturePhaseTimings ? timingNow() : 0
         let moving: TransformedCollisionGeometry
         let movingCollisionArea:
           | {
@@ -607,13 +610,13 @@ export function constructIntrinsicStrictState(
                 })
         } finally {
           if (capturePhaseTimings) {
-            candidateGenerationMs += performance.now() - candidateGenerationStartedAt
+            candidateGenerationMs += timingNow() - candidateGenerationStartedAt
           }
         }
         candidateCount += legalCandidates.length
         const family = transformFamilyKey(transform)
         const scoredCandidates: ScoredCandidate[] = []
-        const candidateStateScoringStartedAt = capturePhaseTimings ? performance.now() : 0
+        const candidateStateScoringStartedAt = capturePhaseTimings ? timingNow() : 0
         try {
           for (const candidate of legalCandidates) {
             if (
@@ -637,10 +640,11 @@ export function constructIntrinsicStrictState(
               movingCollisionDoubledAreaGrid2:
                 movingCollisionArea.doubledAreaGrid2,
               gapRegions,
-              phaseTimings: capturePhaseTimings ? candidateStatePhaseTimings : undefined
+              phaseTimings: capturePhaseTimings ? candidateStatePhaseTimings : undefined,
+              timingNow
             })
             if (scored === undefined) continue
-            const candidateSelectionStartedAt = capturePhaseTimings ? performance.now() : 0
+            const candidateSelectionStartedAt = capturePhaseTimings ? timingNow() : 0
             scoredCandidates.push(scored)
             const incumbent = candidatesByFamily.get(family)
             if (incumbent === undefined || compareLocalScores(scored.score, incumbent.score) < 0) {
@@ -658,12 +662,12 @@ export function constructIntrinsicStrictState(
             }
             if (capturePhaseTimings) {
               candidateStatePhaseTimings.candidateSelectionMs +=
-                performance.now() - candidateSelectionStartedAt
+                timingNow() - candidateSelectionStartedAt
             }
           }
         } finally {
           if (capturePhaseTimings) {
-            candidateStateScoringMs += performance.now() - candidateStateScoringStartedAt
+            candidateStateScoringMs += timingNow() - candidateStateScoringStartedAt
           }
         }
         if (candidateProvenance !== undefined) {
@@ -709,10 +713,10 @@ export function constructIntrinsicStrictState(
         typeof input.candidateMode === 'object'
           ? selectGapContainedWinner([...containedCandidatesByFamily.values(), ...familyWinners])
           : selectIntrinsicStrictFamilyWinner(familyWinners, input.candidateMode)
-      const retainedStateAnchoringStartedAt = capturePhaseTimings ? performance.now() : 0
+      const retainedStateAnchoringStartedAt = capturePhaseTimings ? timingNow() : 0
       const selectedState = unanchoredSelected?.state.withBottomLeftAnchored()
       if (capturePhaseTimings) {
-        const retainedStateAnchoringMs = performance.now() - retainedStateAnchoringStartedAt
+        const retainedStateAnchoringMs = timingNow() - retainedStateAnchoringStartedAt
         candidateStateScoringMs += retainedStateAnchoringMs
         candidateStatePhaseTimings.bottomLeftAnchoringMs += retainedStateAnchoringMs
         candidateStatePhaseTimings.totalMs += retainedStateAnchoringMs
@@ -812,7 +816,7 @@ export function constructIntrinsicStrictState(
     }
 
     const runtimeMs =
-      previousActiveRuntimeMs + Math.max(0, performance.now() - startedAt)
+      previousActiveRuntimeMs + Math.max(0, timingNow() - startedAt)
     const nextPieceIndex = firstPieceIndex + completedPieceBoundaries
     const checkpoint =
       pauseReason === 'completed-piece-boundary' &&
@@ -1398,19 +1402,21 @@ function scoreCandidate(input: {
   readonly movingCollisionDoubledAreaGrid2: string
   readonly gapRegions: ReadonlyArray<CanonicalIntrinsicGapRegion> | undefined
   readonly phaseTimings: MutableCandidateStatePhaseTimings | undefined
+  readonly timingNow: () => number
 }): ScoredCandidate | undefined {
-  const startedAt = input.phaseTimings === undefined ? 0 : performance.now()
+  const startedAt = input.phaseTimings === undefined ? 0 : input.timingNow()
   try {
-    const placementStartedAt = input.phaseTimings === undefined ? 0 : performance.now()
+    const placementStartedAt = input.phaseTimings === undefined ? 0 : input.timingNow()
     const placement = makePlacement(input.piece, input.candidate)
     const placed = new IrregularPlacedPiece({
       placement,
       collisionGeometry: input.moving
     })
     if (input.phaseTimings !== undefined) {
-      input.phaseTimings.placementObjectMs += performance.now() - placementStartedAt
+      input.phaseTimings.placementObjectMs += input.timingNow() - placementStartedAt
     }
-    const statePlacementStartedAt = input.phaseTimings === undefined ? 0 : performance.now()
+    const statePlacementStartedAt =
+      input.phaseTimings === undefined ? 0 : input.timingNow()
     const phaseTimings = input.phaseTimings
     const placedState = input.state.withPlacement({
       remainingPreparedPieces: input.remainingPreparedPieces,
@@ -1425,23 +1431,24 @@ function scoreCandidate(input: {
               phaseTimings.statePlacementContactMeasurementMs += timings.contactMeasurementMs
               phaseTimings.statePlacementStateAssemblyMs += timings.stateAssemblyMs
               phaseTimings.statePlacementBookkeepingMs += timings.bookkeepingMs
-            }
+            },
+            timingNow: input.timingNow
           })
     })
     if (input.phaseTimings !== undefined) {
-      input.phaseTimings.statePlacementMs += performance.now() - statePlacementStartedAt
+      input.phaseTimings.statePlacementMs += input.timingNow() - statePlacementStartedAt
     }
-    const anchoringStartedAt = input.phaseTimings === undefined ? 0 : performance.now()
+    const anchoringStartedAt = input.phaseTimings === undefined ? 0 : input.timingNow()
     const canonicalCombinedGeometryKey =
       placedState.bottomLeftAnchoredCanonicalOccupiedGeometryKey()
     if (input.phaseTimings !== undefined) {
-      input.phaseTimings.bottomLeftAnchoringMs += performance.now() - anchoringStartedAt
+      input.phaseTimings.bottomLeftAnchoringMs += input.timingNow() - anchoringStartedAt
     }
     if (canonicalCombinedGeometryKey === undefined) return undefined
-    const envelopeStartedAt = input.phaseTimings === undefined ? 0 : performance.now()
+    const envelopeStartedAt = input.phaseTimings === undefined ? 0 : input.timingNow()
     const envelope = measureIntrinsicStrictEnvelopeFromState(placedState)
     if (input.phaseTimings !== undefined) {
-      input.phaseTimings.envelopeScoringMs += performance.now() - envelopeStartedAt
+      input.phaseTimings.envelopeScoringMs += input.timingNow() - envelopeStartedAt
     }
     if (envelope === undefined) return undefined
     const { maximumSideMm, envelopeAreaMm2, envelopeSpanMm } = envelope
@@ -1454,7 +1461,7 @@ function scoreCandidate(input: {
     ) {
       return undefined
     }
-    const gapStartedAt = input.phaseTimings === undefined ? 0 : performance.now()
+    const gapStartedAt = input.phaseTimings === undefined ? 0 : input.timingNow()
     const containingGap = input.gapRegions
       ?.filter((region) =>
         candidateContainedInIntrinsicGap(input.moving, input.candidate.point, region)
@@ -1464,7 +1471,7 @@ function scoreCandidate(input: {
           first.areaMm2 - second.areaMm2 || first.canonicalKey.localeCompare(second.canonicalKey)
       )[0]
     if (input.phaseTimings !== undefined) {
-      input.phaseTimings.gapClassificationMs += performance.now() - gapStartedAt
+      input.phaseTimings.gapClassificationMs += input.timingNow() - gapStartedAt
     }
     return {
       state: placedState,
@@ -1485,7 +1492,7 @@ function scoreCandidate(input: {
     }
   } finally {
     if (input.phaseTimings !== undefined) {
-      input.phaseTimings.totalMs += performance.now() - startedAt
+      input.phaseTimings.totalMs += input.timingNow() - startedAt
     }
   }
 }

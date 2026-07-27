@@ -561,7 +561,8 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
         remainingPreparedPieces: pieces,
         frozenPlaced: [],
         candidateMode: 'pure-growth',
-        capturePhaseTimings: true
+        capturePhaseTimings: true,
+        timingNow: () => 0
       }).pipe(
         Effect.provide(GeometryKernel.Live),
         Effect.provide(GeometrySettings.Live),
@@ -587,16 +588,29 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
         phaseTimings.candidateStateScoring.candidateSelectionMs +
         phaseTimings.candidateStateScoring.bookkeepingMs
     ).toBeCloseTo(phaseTimings.candidateStateScoring.totalMs, 6)
-    expect(phaseTimings.candidateStateScoring.coverageComplete).toBe(
-      intrinsicStrictPhaseCoverageComplete(
-        phaseTimings.candidateStateScoring.totalMs,
-        phaseTimings.candidateStateScoring.bookkeepingMs
+    expect(phaseTimings.candidateStateScoring.coverageComplete).toBe(true)
+    expect(phaseTimings.candidateStateScoring.gapClassificationMs).toBeGreaterThanOrEqual(0)
+    expect(phaseTimings.coverageComplete).toBe(true)
+
+    let phaseClockTick = 0
+    const incompletelyAccounted = await Effect.runPromise(
+      constructIntrinsicStrictState({
+        allPreparedPieces: pieces,
+        remainingPreparedPieces: pieces,
+        frozenPlaced: [],
+        candidateMode: 'pure-growth',
+        capturePhaseTimings: true,
+        timingNow: () => phaseClockTick++
+      }).pipe(
+        Effect.provide(GeometryKernel.Live),
+        Effect.provide(GeometrySettings.Live),
+        Effect.provide(NfpIfpServiceLive)
       )
     )
-    expect(phaseTimings.candidateStateScoring.gapClassificationMs).toBeGreaterThanOrEqual(0)
-    expect(phaseTimings.coverageComplete).toBe(
-      intrinsicStrictPhaseCoverageComplete(phaseTimings.totalMs, phaseTimings.bookkeepingMs)
-    )
+    expect(incompletelyAccounted.state).toEqual(constructed.state)
+    expect(incompletelyAccounted.stepTrace).toEqual(constructed.stepTrace)
+    expect(incompletelyAccounted.phaseTimings?.candidateStateScoring.coverageComplete).toBe(false)
+    expect(incompletelyAccounted.phaseTimings?.coverageComplete).toBe(false)
   })
 
   it('keeps the strict seed output byte-identical while F0 observes source admission', async () => {
