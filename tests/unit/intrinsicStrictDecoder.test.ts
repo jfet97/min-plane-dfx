@@ -587,9 +587,16 @@ describe('decodeIntrinsicStrictPriorityOrder', () => {
         phaseTimings.candidateStateScoring.candidateSelectionMs +
         phaseTimings.candidateStateScoring.bookkeepingMs
     ).toBeCloseTo(phaseTimings.candidateStateScoring.totalMs, 6)
-    expect(phaseTimings.candidateStateScoring.coverageComplete).toBe(true)
+    expect(phaseTimings.candidateStateScoring.coverageComplete).toBe(
+      intrinsicStrictPhaseCoverageComplete(
+        phaseTimings.candidateStateScoring.totalMs,
+        phaseTimings.candidateStateScoring.bookkeepingMs
+      )
+    )
     expect(phaseTimings.candidateStateScoring.gapClassificationMs).toBeGreaterThanOrEqual(0)
-    expect(phaseTimings.coverageComplete).toBe(true)
+    expect(phaseTimings.coverageComplete).toBe(
+      intrinsicStrictPhaseCoverageComplete(phaseTimings.totalMs, phaseTimings.bookkeepingMs)
+    )
   })
 
   it('keeps the strict seed output byte-identical while F0 observes source admission', async () => {
