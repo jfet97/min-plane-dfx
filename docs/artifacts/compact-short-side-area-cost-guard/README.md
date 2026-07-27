@@ -3,7 +3,7 @@
 Accepted 18-layout matrix (3 fixtures x 3 sheets x Compact/Short Side) for the
 production area-cost honesty guard. The guard implementation is commit
 `903657e1aeaa80d2578e78436da9b3c810c12672`; this bundle was regenerated from
-commit `536da14360f0d5782295d1115747cadbe1b3dd88`, which adds the retained
+commit `a750798f4ec6cd8eb800c5fcaa5b629b79bc44d2`, which adds the retained
 causal-veto evidence and the exact boundary tests. Regenerate with:
 
 ```sh
@@ -11,7 +11,7 @@ pnpm gate:compact-nine-baselines --output-dir <output-directory>
 ```
 
 The immutable original run, including the same manifest, reports, renders, and
-SHA256SUMS, is `/private/tmp/min-plane-provenance/short-side-area-cost-guard-536da14-matrix/`.
+SHA256SUMS, is `/private/tmp/min-plane-provenance/short-side-area-cost-guard-a750798-matrix/`.
 
 Outcome: all nine Compact controls byte-identical; two directional winners kept
 (Triangle-20 `600 x 400` archive zigzag at `1.214x` production envelope,

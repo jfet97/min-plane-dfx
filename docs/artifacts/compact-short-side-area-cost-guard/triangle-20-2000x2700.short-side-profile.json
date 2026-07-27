@@ -5,9 +5,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "536da14360f0d5782295d1115747cadbe1b3dd88",
+  "sourceCommit": "a750798f4ec6cd8eb800c5fcaa5b629b79bc44d2",
   "runtime": {
-    "elapsedMs": 3113.843917,
+    "elapsedMs": 3086.995792,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -924,7 +924,7 @@
       "selectedCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
       "consumedCandidateEvaluations": 0,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 0.6680410000003576,
+      "runtimeMs": 0.7073749999999563,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -948,7 +948,7 @@
       "geometricParetoEligibleEndpointCount": 2,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 8.250792000000274,
+      "runtimeMs": 7.901916000000256,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 43193,
       "endpoints": [
@@ -2515,8 +2515,8 @@
         "candidateEvaluations": 2809,
         "placedCount": 20,
         "requestedCount": 20,
-        "runtimeMs": 62.24137500000006,
-        "peakRssDeltaBytes": 851968
+        "runtimeMs": 61.544832999999926,
+        "peakRssDeltaBytes": 819200
       },
       "contactStripPromotion": {
         "incumbentConstructionKind": "multi-row-shelf",
@@ -2567,9 +2567,9 @@
         "strictlyImproved": true,
         "promoted": false
       },
-      "runtimeMs": 66.13541700000042,
-      "peakRssDeltaBytes": 933888,
-      "serializedTraceBytes": 4144,
+      "runtimeMs": 65.37762500000008,
+      "peakRssDeltaBytes": 966656,
+      "serializedTraceBytes": 4145,
       "failureReason": "the exact terminal construction failed one or more admission gates."
     }
   },

@@ -1,9 +1,10 @@
 # Compact Short-Side Area-Cost Guard
 
 Method and measurements for the production area-cost honesty guard accepted at
-commits `903657e1aeaa80d2578e78436da9b3c810c12672` (guard) and
+commits `903657e1aeaa80d2578e78436da9b3c810c12672` (guard),
 `536da14360f0d5782295d1115747cadbe1b3dd88` (retained causal-veto evidence and
-exact boundary tests). The decision record is
+exact boundary tests), and `a750798f4ec6cd8eb800c5fcaa5b629b79bc44d2`
+(composite veto refresh; accepted evidence bundle source). The decision record is
 [`../history/compact-short-side-area-cost-guard.md`](../history/compact-short-side-area-cost-guard.md);
 accepted matrix artifacts are
 [`../artifacts/compact-short-side-area-cost-guard/`](../artifacts/compact-short-side-area-cost-guard/README.md).
