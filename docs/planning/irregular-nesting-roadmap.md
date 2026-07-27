@@ -491,6 +491,27 @@ Side ranking. The production matrix preserves the accepted hashes and winners;
 targeted regressions cover one-grid-square area differences near the coordinate
 policy limit. Numeric epsilon remains forbidden as a substitute.
 
+### P7: pure irregular core portability
+
+Status: Stage 2 production-gated; plain trusted object graph is next.
+
+Stage 1 extracted cached pairwise NFP resolution behind a synchronous store and
+lazy Effect adapter. Stage 2 now applies the same boundary to rectangular IFP
+bounds and transformed-collision cache resolution while preserving their
+different historical cache orders. Independent full suites and strict
+sequential 18-layout gates preserve every accepted production identity.
+
+The next bounded stage replaces schema-backed collision geometry, transform,
+and prepared-piece carriers inside trusted computation with plain records.
+Schemas remain authoritative at IPC, replay, checkpoint, persistence, and
+export boundaries. Promotion requires TypeScript symbol/import-closure
+enforcement, representative runtime prototype assertions, and another
+independent complete production gate.
+
+Do not describe this as a speed optimization or as completion of the pure
+search core. Candidate generation, beam/archive transitions, scheduler
+coordination, and trace streaming remain later explicit stages.
+
 ## Open-Source Mechanism Disposition
 
 The locally pinned sources under `knowledge/dependencies/` are controls, not

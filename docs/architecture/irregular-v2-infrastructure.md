@@ -83,6 +83,14 @@ existing callers. This is the first portability slice, not a claim that
 candidate generation, beam search, or the Compact coordinator are already
 Effect-free.
 
+The second pure seam covers rectangular IFP bounds and transformed-collision
+cache resolution. IFP retains validation-before-cache ordering; transformed
+geometry retains key/get-before-miss-validation ordering. Both cache plain
+structural artifacts through the same store and expose lazy Effect adapters.
+Candidate generation calls the pure IFP operation between its unchanged
+cooperative checkpoints. The remaining portability boundary is the
+schema-backed collision/prepared-piece carrier graph used by trusted search.
+
 `src/workers/algorithm/irregular/strictPriorityDecoder.ts` is an algorithm
 module rather than another Effect service. `decodeStrictPriorityOrder` consumes
 an already priority-ordered list, transforms each piece's existing transform

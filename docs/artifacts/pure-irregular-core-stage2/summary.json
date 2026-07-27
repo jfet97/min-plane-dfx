@@ -1,0 +1,489 @@
+{
+  "generatedAt": "2026-07-27T08:41:16.786Z",
+  "passed": true,
+  "caseCount": 9,
+  "layoutCount": 18,
+  "compactLayoutCount": 9,
+  "shortSideLayoutCount": 9,
+  "guardedStage1WinnerCount": 1,
+  "terminalPairFoldWinnerCount": 1,
+  "terminalMultiRowShelfWinnerCount": 1,
+  "terminalContactStripWinnerCount": 1,
+  "compactFallbackCount": 5,
+  "directionalSuccessCount": 4,
+  "shortSideSatisfiedByCompactCount": 5,
+  "directionalMissCount": 0,
+  "outcomes": [
+    {
+      "fixture": "triangle-20",
+      "sheet": "2000x2700",
+      "passed": true
+    },
+    {
+      "fixture": "mixed-61",
+      "sheet": "2000x2700",
+      "passed": true
+    },
+    {
+      "fixture": "shapes-17",
+      "sheet": "2000x2700",
+      "passed": true
+    },
+    {
+      "fixture": "triangle-20",
+      "sheet": "600x400",
+      "passed": true
+    },
+    {
+      "fixture": "mixed-61",
+      "sheet": "600x400",
+      "passed": true
+    },
+    {
+      "fixture": "shapes-17",
+      "sheet": "600x400",
+      "passed": true
+    },
+    {
+      "fixture": "triangle-20",
+      "sheet": "300x300",
+      "passed": true
+    },
+    {
+      "fixture": "mixed-61",
+      "sheet": "300x300",
+      "passed": true
+    },
+    {
+      "fixture": "shapes-17",
+      "sheet": "300x300",
+      "passed": true
+    }
+  ],
+  "layouts": [
+    {
+      "fixture": "triangle-20",
+      "sheet": "2000x2700",
+      "profile": "compact",
+      "source": "production-compact",
+      "strategyId": "irregular-convex-shared-archive",
+      "placedCount": 20,
+      "unplacedCount": 0,
+      "collisionIdentitySha256": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+      "fittedCanonicalSha256": "b4d1fd9af8a1ecb4a17f1031546c1dbbb5afb19b2d99e41bdb646e52084092f7",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 487.983,
+        "height": 152.522,
+        "area": 74428.143126,
+        "span": 640.505
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "triangle-20-2000x2700.svg",
+      "pngPath": "triangle-20-2000x2700.png"
+    },
+    {
+      "fixture": "triangle-20",
+      "sheet": "2000x2700",
+      "profile": "short-side",
+      "source": "terminal-multi-row-shelf-winner",
+      "strategyId": "irregular-convex-compact-short-side",
+      "profileOutcome": "directional-success",
+      "shortAxisFillRatio": 0.88288,
+      "observerStatus": "observed-no-directional-improvement",
+      "placedCount": 20,
+      "unplacedCount": 0,
+      "collisionIdentitySha256": "7a79ebd40029094854748d569acb52f95f32a96e71b3b674941ba7f20f9cfe15",
+      "fittedCanonicalSha256": "bc978c3710e6865a68c4c965fde545d0421d5d915319056b5a67689a6e918e5a",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 1765.76,
+        "height": 75.675,
+        "area": 133623.888,
+        "span": 1841.435
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "triangle-20-2000x2700.short-side-profile.svg",
+      "pngPath": "triangle-20-2000x2700.short-side-profile.png"
+    },
+    {
+      "fixture": "mixed-61",
+      "sheet": "2000x2700",
+      "profile": "compact",
+      "source": "production-compact",
+      "strategyId": "irregular-convex-shared-archive",
+      "placedCount": 61,
+      "unplacedCount": 0,
+      "collisionIdentitySha256": "3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742",
+      "fittedCanonicalSha256": "ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 622.202,
+        "height": 629.387,
+        "area": 391605.85017399996,
+        "span": 1251.589
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "mixed-61-2000x2700.svg",
+      "pngPath": "mixed-61-2000x2700.png"
+    },
+    {
+      "fixture": "mixed-61",
+      "sheet": "2000x2700",
+      "profile": "short-side",
+      "source": "terminal-contact-strip-winner",
+      "strategyId": "irregular-convex-compact-short-side",
+      "profileOutcome": "directional-success",
+      "shortAxisFillRatio": 1,
+      "observerStatus": "observed-no-directional-improvement",
+      "placedCount": 61,
+      "unplacedCount": 0,
+      "collisionIdentitySha256": "c6fb2fa21ffa6d3bee75ea5cedc6b4f74a3b0ca0e48b6540be0b10f87ae4ce76",
+      "fittedCanonicalSha256": "914bb181f71cf450d22bff7342ee9310aa4f76ec180126083e43747740b444c0",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 2000,
+        "height": 207.7,
+        "area": 415400,
+        "span": 2207.7
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "mixed-61-2000x2700.short-side-profile.svg",
+      "pngPath": "mixed-61-2000x2700.short-side-profile.png"
+    },
+    {
+      "fixture": "shapes-17",
+      "sheet": "2000x2700",
+      "profile": "compact",
+      "source": "production-compact",
+      "strategyId": "irregular-convex-shared-archive",
+      "placedCount": 17,
+      "unplacedCount": 0,
+      "collisionIdentitySha256": "1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d",
+      "fittedCanonicalSha256": "490194ca505f545cfb5880209d20b2f48cdcffbc847c8686705fd12661b5e7bf",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 532.6909999999999,
+        "height": 527.948,
+        "area": 281233.1480679999,
+        "span": 1060.639
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "shapes-17-2000x2700.svg",
+      "pngPath": "shapes-17-2000x2700.png"
+    },
+    {
+      "fixture": "shapes-17",
+      "sheet": "2000x2700",
+      "profile": "short-side",
+      "source": "terminal-pair-fold-winner",
+      "strategyId": "irregular-convex-compact-short-side",
+      "profileOutcome": "directional-success",
+      "shortAxisFillRatio": 0.9485865,
+      "observerStatus": "observed-no-directional-improvement",
+      "placedCount": 17,
+      "unplacedCount": 0,
+      "collisionIdentitySha256": "4dd34dcee54caa79e1cc0dc3fc88b867ddfa15a98588dda1083e820cdb44c0bb",
+      "fittedCanonicalSha256": "063f740ff97b154ab9b3116023da7de3da1de33322a27ca53f56b43b21a3c7bb",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 1897.173,
+        "height": 220.526,
+        "area": 418375.97299800004,
+        "span": 2117.699
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "shapes-17-2000x2700.short-side-profile.svg",
+      "pngPath": "shapes-17-2000x2700.short-side-profile.png"
+    },
+    {
+      "fixture": "triangle-20",
+      "sheet": "600x400",
+      "profile": "compact",
+      "source": "production-compact",
+      "strategyId": "irregular-convex-shared-archive",
+      "placedCount": 20,
+      "unplacedCount": 0,
+      "collisionIdentitySha256": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+      "fittedCanonicalSha256": "b4d1fd9af8a1ecb4a17f1031546c1dbbb5afb19b2d99e41bdb646e52084092f7",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 487.983,
+        "height": 152.522,
+        "area": 74428.143126,
+        "span": 640.505
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "triangle-20-600x400.svg",
+      "pngPath": "triangle-20-600x400.png"
+    },
+    {
+      "fixture": "triangle-20",
+      "sheet": "600x400",
+      "profile": "short-side",
+      "source": "guarded-stage1-winner",
+      "strategyId": "irregular-convex-compact-short-side",
+      "profileOutcome": "directional-success",
+      "shortAxisFillRatio": 0.9873050000000001,
+      "observerStatus": "observed",
+      "selectedRotationDeg": 90,
+      "placedCount": 20,
+      "unplacedCount": 0,
+      "collisionIdentitySha256": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+      "fittedCanonicalSha256": "bf23f53f3bb796f082dc7a1e1257df3a366351bc2a637bfba08b9f5d0be929a8",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 228.78600000000003,
+        "height": 394.922,
+        "area": 90352.62469200001,
+        "span": 623.7080000000001
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "triangle-20-600x400.short-side-profile.svg",
+      "pngPath": "triangle-20-600x400.short-side-profile.png"
+    },
+    {
+      "fixture": "mixed-61",
+      "sheet": "600x400",
+      "profile": "compact",
+      "source": "production-compact",
+      "strategyId": "irregular-convex-shared-archive",
+      "placedCount": 25,
+      "unplacedCount": 36,
+      "collisionIdentitySha256": "2c53f3123d5d57ab5e120717ae1e49046bb574925c49c4a33ed4febe7e81e414",
+      "fittedCanonicalSha256": "39e74c34e0cfcd4929ba3dde53d1b0215ca2c48e383297b15922f07115569f38",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 599.7620000000001,
+        "height": 399.3,
+        "area": 239484.96660000004,
+        "span": 999.0620000000001
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "mixed-61-600x400.svg",
+      "pngPath": "mixed-61-600x400.png"
+    },
+    {
+      "fixture": "mixed-61",
+      "sheet": "600x400",
+      "profile": "short-side",
+      "source": "compact-fallback",
+      "strategyId": "irregular-convex-compact-short-side",
+      "profileOutcome": "short-side-satisfied-by-compact",
+      "shortAxisFillRatio": 0.9982500000000001,
+      "observerStatus": "skipped-no-settled-complete-endpoints",
+      "placedCount": 25,
+      "unplacedCount": 36,
+      "collisionIdentitySha256": "2c53f3123d5d57ab5e120717ae1e49046bb574925c49c4a33ed4febe7e81e414",
+      "fittedCanonicalSha256": "39e74c34e0cfcd4929ba3dde53d1b0215ca2c48e383297b15922f07115569f38",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 599.7620000000001,
+        "height": 399.3,
+        "area": 239484.96660000004,
+        "span": 999.0620000000001
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "mixed-61-600x400.short-side-profile.svg",
+      "pngPath": "mixed-61-600x400.short-side-profile.png"
+    },
+    {
+      "fixture": "shapes-17",
+      "sheet": "600x400",
+      "profile": "compact",
+      "source": "production-compact",
+      "strategyId": "irregular-convex-shared-archive",
+      "placedCount": 14,
+      "unplacedCount": 3,
+      "collisionIdentitySha256": "01b2060d87752bb36eebfd4eb8602709687d5cb00c71b8feaec14a6e7cf9ba12",
+      "fittedCanonicalSha256": "4472adc8ddfcc26af748adcfeb220e049a4f0e814cb17a99c0dc092db903921e",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 592.167,
+        "height": 392.082,
+        "area": 232178.021694,
+        "span": 984.249
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "shapes-17-600x400.svg",
+      "pngPath": "shapes-17-600x400.png"
+    },
+    {
+      "fixture": "shapes-17",
+      "sheet": "600x400",
+      "profile": "short-side",
+      "source": "compact-fallback",
+      "strategyId": "irregular-convex-compact-short-side",
+      "profileOutcome": "short-side-satisfied-by-compact",
+      "shortAxisFillRatio": 0.980205,
+      "observerStatus": "observed-no-legal-orientation",
+      "placedCount": 14,
+      "unplacedCount": 3,
+      "collisionIdentitySha256": "01b2060d87752bb36eebfd4eb8602709687d5cb00c71b8feaec14a6e7cf9ba12",
+      "fittedCanonicalSha256": "4472adc8ddfcc26af748adcfeb220e049a4f0e814cb17a99c0dc092db903921e",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 592.167,
+        "height": 392.082,
+        "area": 232178.021694,
+        "span": 984.249
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "shapes-17-600x400.short-side-profile.svg",
+      "pngPath": "shapes-17-600x400.short-side-profile.png"
+    },
+    {
+      "fixture": "triangle-20",
+      "sheet": "300x300",
+      "profile": "compact",
+      "source": "production-compact",
+      "strategyId": "irregular-convex-shared-archive",
+      "placedCount": 17,
+      "unplacedCount": 3,
+      "collisionIdentitySha256": "0f5befd7d02fc111be47ee447fab7f8778f06ae05d045448f22a916d66949410",
+      "fittedCanonicalSha256": "2f236b79c7c49a999daf5363e257bbda6b8562239571c6fedab2485cffb38c35",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 296.739,
+        "height": 265.592,
+        "area": 78811.50448799999,
+        "span": 562.3309999999999
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "triangle-20-300x300.svg",
+      "pngPath": "triangle-20-300x300.png"
+    },
+    {
+      "fixture": "triangle-20",
+      "sheet": "300x300",
+      "profile": "short-side",
+      "source": "compact-fallback",
+      "strategyId": "irregular-convex-compact-short-side",
+      "profileOutcome": "short-side-satisfied-by-compact",
+      "shortAxisFillRatio": 0.98913,
+      "observerStatus": "skipped-square-sheet",
+      "placedCount": 17,
+      "unplacedCount": 3,
+      "collisionIdentitySha256": "0f5befd7d02fc111be47ee447fab7f8778f06ae05d045448f22a916d66949410",
+      "fittedCanonicalSha256": "2f236b79c7c49a999daf5363e257bbda6b8562239571c6fedab2485cffb38c35",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 296.739,
+        "height": 265.592,
+        "area": 78811.50448799999,
+        "span": 562.3309999999999
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "triangle-20-300x300.short-side-profile.svg",
+      "pngPath": "triangle-20-300x300.short-side-profile.png"
+    },
+    {
+      "fixture": "mixed-61",
+      "sheet": "300x300",
+      "profile": "compact",
+      "source": "production-compact",
+      "strategyId": "irregular-convex-shared-archive",
+      "placedCount": 6,
+      "unplacedCount": 55,
+      "collisionIdentitySha256": "bb22df3517b4f2bbbdebc1d35704dbf4374f96d264af919a4c8d29dc2168fa33",
+      "fittedCanonicalSha256": "37d7bf9c37dfe2b9702bf8df73791782006178eb570ac043b23f1ca20ca22c0b",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 298.834,
+        "height": 299.512,
+        "area": 89504.369008,
+        "span": 598.346
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "mixed-61-300x300.svg",
+      "pngPath": "mixed-61-300x300.png"
+    },
+    {
+      "fixture": "mixed-61",
+      "sheet": "300x300",
+      "profile": "short-side",
+      "source": "compact-fallback",
+      "strategyId": "irregular-convex-compact-short-side",
+      "profileOutcome": "short-side-satisfied-by-compact",
+      "shortAxisFillRatio": 0.9983733333333333,
+      "observerStatus": "skipped-square-sheet",
+      "placedCount": 6,
+      "unplacedCount": 55,
+      "collisionIdentitySha256": "bb22df3517b4f2bbbdebc1d35704dbf4374f96d264af919a4c8d29dc2168fa33",
+      "fittedCanonicalSha256": "37d7bf9c37dfe2b9702bf8df73791782006178eb570ac043b23f1ca20ca22c0b",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 298.834,
+        "height": 299.512,
+        "area": 89504.369008,
+        "span": 598.346
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "mixed-61-300x300.short-side-profile.svg",
+      "pngPath": "mixed-61-300x300.short-side-profile.png"
+    },
+    {
+      "fixture": "shapes-17",
+      "sheet": "300x300",
+      "profile": "compact",
+      "source": "production-compact",
+      "strategyId": "irregular-convex-shared-archive",
+      "placedCount": 5,
+      "unplacedCount": 12,
+      "collisionIdentitySha256": "e4ad1ce1c7fa26e7a00ba38a5d9c11e1908ebf753031ff4811420d5097be7c71",
+      "fittedCanonicalSha256": "bccfa5a4b7db4b5009a8c0f12d7c6f308c9a72550df3feb218355f33a5c1ef18",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 299.57499999999993,
+        "height": 293.05500000000006,
+        "area": 87791.951625,
+        "span": 592.63
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "shapes-17-300x300.svg",
+      "pngPath": "shapes-17-300x300.png"
+    },
+    {
+      "fixture": "shapes-17",
+      "sheet": "300x300",
+      "profile": "short-side",
+      "source": "compact-fallback",
+      "strategyId": "irregular-convex-compact-short-side",
+      "profileOutcome": "short-side-satisfied-by-compact",
+      "shortAxisFillRatio": 0.9985833333333332,
+      "observerStatus": "skipped-square-sheet",
+      "placedCount": 5,
+      "unplacedCount": 12,
+      "collisionIdentitySha256": "e4ad1ce1c7fa26e7a00ba38a5d9c11e1908ebf753031ff4811420d5097be7c71",
+      "fittedCanonicalSha256": "bccfa5a4b7db4b5009a8c0f12d7c6f308c9a72550df3feb218355f33a5c1ef18",
+      "canonicalCavities": 0,
+      "bounds": {
+        "width": 299.57499999999993,
+        "height": 293.05500000000006,
+        "area": 87791.951625,
+        "span": 592.63
+      },
+      "exactPiecePartition": true,
+      "passed": true,
+      "svgPath": "shapes-17-300x300.short-side-profile.svg",
+      "pngPath": "shapes-17-300x300.short-side-profile.png"
+    }
+  ]
+}

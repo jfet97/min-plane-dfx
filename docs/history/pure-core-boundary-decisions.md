@@ -28,3 +28,22 @@ See
 [`../research/pure-irregular-core-stage1.md`](../research/pure-irregular-core-stage1.md)
 and
 [`../artifacts/pure-irregular-core-stage1/`](../artifacts/pure-irregular-core-stage1/).
+
+## 2026-07-27: preserve cache ordering while expanding the pure seam
+
+Stage 2 moves rectangular IFP bounds and transformed-collision cache resolution
+into the structural core. It does not normalize their different historical
+event orders: IFP validates before cache access, while transformed geometry
+performs key/get before miss-path validation. This distinction is frozen by an
+independent current-main oracle.
+
+The accepted implementation caches plain structural values through the same
+single store, defers public operations with `Effect.suspend`, and adapts typed
+invalid/infeasible outcomes only at the service shell. The full suite and a
+separate strict sequential 18-layout run preserved every production identity
+and contract.
+
+See
+[`../research/pure-irregular-core-stage2.md`](../research/pure-irregular-core-stage2.md)
+and
+[`../artifacts/pure-irregular-core-stage2/`](../artifacts/pure-irregular-core-stage2/).

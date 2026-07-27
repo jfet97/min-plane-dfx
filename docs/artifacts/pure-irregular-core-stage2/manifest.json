@@ -1,0 +1,244 @@
+{
+  "version": "compact-short-side-production-provenance-v2",
+  "generatedAt": "2026-07-27T08:41:16.806Z",
+  "sourceCommit": "82c679dd448ef396ef89f0dbc5f1a6c6c5eb4955",
+  "command": [
+    "pnpm",
+    "gate:compact-nine-baselines",
+    "--output-dir",
+    "<output-directory>"
+  ],
+  "runtime": {
+    "node": "v24.16.0",
+    "v8": "13.6.233.17-node.49"
+  },
+  "svgRenderer": ".agents/skills/render-svg-with-electron/scripts/render-svg.cjs",
+  "execution": {
+    "maximumConcurrentAlgorithmProcesses": 1,
+    "algorithmCases": 18,
+    "materializedLayouts": 18,
+    "strictlySequential": true
+  },
+  "artifacts": [
+    {
+      "name": "mixed-61-2000x2700.json",
+      "sha256": "05402b2362b9c9bcd9e9e58f853a13aafffc52bb00d9c2e72f095fedbb812f07"
+    },
+    {
+      "name": "mixed-61-2000x2700.png",
+      "sha256": "29c9064423e601342b074053833624382e263c8fa99097bb0dac63b46a7e0b39"
+    },
+    {
+      "name": "mixed-61-2000x2700.short-side-profile.json",
+      "sha256": "edba6872e30a180e3cd7926439ef474437d8286bab9b7cf6120a2be8f85b4b69"
+    },
+    {
+      "name": "mixed-61-2000x2700.short-side-profile.png",
+      "sha256": "6029827ccc4f4137bf2bfae6493aa04d81ca2ae41a365073b48077ea901799cc"
+    },
+    {
+      "name": "mixed-61-2000x2700.short-side-profile.svg",
+      "sha256": "6719813369277b76124b14a58a907e8f6a5ef53afcac63087e386e097b4eedae"
+    },
+    {
+      "name": "mixed-61-2000x2700.svg",
+      "sha256": "b9719ab4aa8c9da652b424e35910ef39e0a073261003bd4b439a2f51ac353a63"
+    },
+    {
+      "name": "mixed-61-300x300.json",
+      "sha256": "195a476269dd6210d95a87a83d0cf097aa172e54ce21963e9b5daa0e389db23b"
+    },
+    {
+      "name": "mixed-61-300x300.png",
+      "sha256": "7de13122aca38edacd7602e5562c849aa653e1956198b5c32fb07e95ad92eae9"
+    },
+    {
+      "name": "mixed-61-300x300.short-side-profile.json",
+      "sha256": "1c1eb41af7b8a011ecaa61e0dc430e0138d967296af353e563f236ce06bbe194"
+    },
+    {
+      "name": "mixed-61-300x300.short-side-profile.png",
+      "sha256": "7de13122aca38edacd7602e5562c849aa653e1956198b5c32fb07e95ad92eae9"
+    },
+    {
+      "name": "mixed-61-300x300.short-side-profile.svg",
+      "sha256": "0d498d2050cbfc01521c4d1d6c222fd6cfe9c5ad95576ea4567177bff44f6af4"
+    },
+    {
+      "name": "mixed-61-300x300.svg",
+      "sha256": "0d498d2050cbfc01521c4d1d6c222fd6cfe9c5ad95576ea4567177bff44f6af4"
+    },
+    {
+      "name": "mixed-61-600x400.json",
+      "sha256": "178d2e2e7eaa32db9e34a2c3b7c4238b90db1789df18379bd3deb73904b758d6"
+    },
+    {
+      "name": "mixed-61-600x400.png",
+      "sha256": "52bf52770c4e9b19f15d9d214afaaa8d315264a063646c9903de9c8189688f76"
+    },
+    {
+      "name": "mixed-61-600x400.short-side-profile.json",
+      "sha256": "08e489b3eb368af3cde3f0e9cfbb414ac4b19bfbd9962960d04dbc68e77a4319"
+    },
+    {
+      "name": "mixed-61-600x400.short-side-profile.png",
+      "sha256": "52bf52770c4e9b19f15d9d214afaaa8d315264a063646c9903de9c8189688f76"
+    },
+    {
+      "name": "mixed-61-600x400.short-side-profile.svg",
+      "sha256": "cb29d43c3bf6e55c95f0d848be87b4755db21313463057f9d470c0fcf3aad1fc"
+    },
+    {
+      "name": "mixed-61-600x400.svg",
+      "sha256": "cb29d43c3bf6e55c95f0d848be87b4755db21313463057f9d470c0fcf3aad1fc"
+    },
+    {
+      "name": "shapes-17-2000x2700.json",
+      "sha256": "f87e8bfa3c77a20fe86590a810ff9dc5d771442fbc3a65acf30e1128a3a843f8"
+    },
+    {
+      "name": "shapes-17-2000x2700.png",
+      "sha256": "36dcfd7f0fadb9610e93c1082e2c24ebd4b8619580c4f3a316bec34172e66e5c"
+    },
+    {
+      "name": "shapes-17-2000x2700.short-side-profile.json",
+      "sha256": "f4a9c9caa64eca89823235a935b410fb4488062fb10ae6750b33bf803adec4a6"
+    },
+    {
+      "name": "shapes-17-2000x2700.short-side-profile.png",
+      "sha256": "653ad7b21669e792eeef7bb29d866867fcace6df64df01e9fa3a6048012f7577"
+    },
+    {
+      "name": "shapes-17-2000x2700.short-side-profile.svg",
+      "sha256": "88b72398b0894e9b70a80f4c1637861cbd022077650844289998d832a99ae948"
+    },
+    {
+      "name": "shapes-17-2000x2700.svg",
+      "sha256": "abbf7e8a5520838de3e37992e0e89eb854302f45f02c99eb8d8ce394f44b361f"
+    },
+    {
+      "name": "shapes-17-300x300.json",
+      "sha256": "d387d745f1b321cc15b93d5d3c5612283dc220a7a2fe60d800dc3503866ededb"
+    },
+    {
+      "name": "shapes-17-300x300.png",
+      "sha256": "12c5b8f9dfad323924be4f0ae916d1680648acad5f5eca46dc7380f3497e4d11"
+    },
+    {
+      "name": "shapes-17-300x300.short-side-profile.json",
+      "sha256": "ff5fa787dda6f9289780b89d4ffc2d47e49065b196f9a823dedd4ffb7207cb87"
+    },
+    {
+      "name": "shapes-17-300x300.short-side-profile.png",
+      "sha256": "12c5b8f9dfad323924be4f0ae916d1680648acad5f5eca46dc7380f3497e4d11"
+    },
+    {
+      "name": "shapes-17-300x300.short-side-profile.svg",
+      "sha256": "73deb7cee14096c4041c5933fad3268b2bb5e71ecd8d5ead213e0de83b0b8c87"
+    },
+    {
+      "name": "shapes-17-300x300.svg",
+      "sha256": "73deb7cee14096c4041c5933fad3268b2bb5e71ecd8d5ead213e0de83b0b8c87"
+    },
+    {
+      "name": "shapes-17-600x400.json",
+      "sha256": "99efc5bda637e3e27382ad93d7e03f61b88e60f2c03bda69df6499031bfbe002"
+    },
+    {
+      "name": "shapes-17-600x400.png",
+      "sha256": "1f162e59a19ec3413300849811fc95da69ee263d88ec02abf4ff11881acf31fa"
+    },
+    {
+      "name": "shapes-17-600x400.short-side-profile.json",
+      "sha256": "ce5e69fc7186f89e354dbc389bc6ca235aed081387cb85b3af7a0f18c024e410"
+    },
+    {
+      "name": "shapes-17-600x400.short-side-profile.png",
+      "sha256": "1f162e59a19ec3413300849811fc95da69ee263d88ec02abf4ff11881acf31fa"
+    },
+    {
+      "name": "shapes-17-600x400.short-side-profile.svg",
+      "sha256": "dd1f8108a50660fb0c3d7341ba4d4c280430d37d3640af941348401e89b1746c"
+    },
+    {
+      "name": "shapes-17-600x400.svg",
+      "sha256": "dd1f8108a50660fb0c3d7341ba4d4c280430d37d3640af941348401e89b1746c"
+    },
+    {
+      "name": "summary.json",
+      "sha256": "a5a5666c6f274cca57e6821b28cbd2e982ae6ada041e0151e30fd3cc063b730a"
+    },
+    {
+      "name": "triangle-20-2000x2700.json",
+      "sha256": "42d28849f7f2549a4d04ad1604aab09bec8a0b32ec1dd715635bc440208554b2"
+    },
+    {
+      "name": "triangle-20-2000x2700.png",
+      "sha256": "a9a75618625204e57da68485e1f341f9187fcbe5ab194e2e0effb57adf552559"
+    },
+    {
+      "name": "triangle-20-2000x2700.short-side-profile.json",
+      "sha256": "23d7147e82f3f59deacd02a43f30c1b8f73fb6f3ecfe2744f256eed8a2cc4ec7"
+    },
+    {
+      "name": "triangle-20-2000x2700.short-side-profile.png",
+      "sha256": "4590b971a10d4f55f39d51afbccb0d53e63db043ff3006828c7f04783575f0d8"
+    },
+    {
+      "name": "triangle-20-2000x2700.short-side-profile.svg",
+      "sha256": "27f4eca3b71b07d5e5b646868098e7071cbcb738bad4f9d735fbce03a72bc27d"
+    },
+    {
+      "name": "triangle-20-2000x2700.svg",
+      "sha256": "081dbde55846d949b2f093c42c13167fee95f73ed2893f31ca829668697465d6"
+    },
+    {
+      "name": "triangle-20-300x300.json",
+      "sha256": "f4e4fb6f35e37551b44329be3d94c71782dccdeae42fa3d4339a4d3c8bd91b9f"
+    },
+    {
+      "name": "triangle-20-300x300.png",
+      "sha256": "d9780936abf919963291f1c73066fa62e3d9bcdda440eeaf8ba96f1afcf2d291"
+    },
+    {
+      "name": "triangle-20-300x300.short-side-profile.json",
+      "sha256": "78084b05fc0573fed9f8190d3d307671fd19222d619c231dcf1101e9a271f1b7"
+    },
+    {
+      "name": "triangle-20-300x300.short-side-profile.png",
+      "sha256": "d9780936abf919963291f1c73066fa62e3d9bcdda440eeaf8ba96f1afcf2d291"
+    },
+    {
+      "name": "triangle-20-300x300.short-side-profile.svg",
+      "sha256": "4f79e5616d9c8041a6c0c39ae78fc31294eef57681bfbdb56e2c8d98557e01d4"
+    },
+    {
+      "name": "triangle-20-300x300.svg",
+      "sha256": "4f79e5616d9c8041a6c0c39ae78fc31294eef57681bfbdb56e2c8d98557e01d4"
+    },
+    {
+      "name": "triangle-20-600x400.json",
+      "sha256": "55a734f6130b797413ba777896512578b5fcbb4b23ab2960177ce37fe7025e94"
+    },
+    {
+      "name": "triangle-20-600x400.png",
+      "sha256": "620a9bcb2ddacca23d9241f794216ba9f1614974edf7243146e9f40d3ad166d7"
+    },
+    {
+      "name": "triangle-20-600x400.short-side-profile.json",
+      "sha256": "2d901e54b64a512a57f59e1db02543f802524b9616b081b731e01136c43660fa"
+    },
+    {
+      "name": "triangle-20-600x400.short-side-profile.png",
+      "sha256": "0fd0499707983f53322065044077aaae6f515ddc3ffa67b0e0f638ede07ba3ac"
+    },
+    {
+      "name": "triangle-20-600x400.short-side-profile.svg",
+      "sha256": "00294a5e9e7910d569662bad8e6129cef5055351f4c463e24dcd0c8155616eab"
+    },
+    {
+      "name": "triangle-20-600x400.svg",
+      "sha256": "af965275b6e4f6b5d956c8617198e4fd21ee3fbdb1f402efc4b278b98afa9aa7"
+    }
+  ]
+}
