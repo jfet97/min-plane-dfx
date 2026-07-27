@@ -179,41 +179,45 @@ watch(
       </label>
     </div>
 
-    <h3 title="Controls how source curves and padding become conservative collision geometry.">
-      Geometry
-    </h3>
-    <div class="grid">
-      <label
-        title="Maximum inward curve approximation error in millimeters while flattening DXF arcs and ellipses."
+    <details>
+      <summary
+        title="Controls how source curves and padding become conservative collision geometry. The defaults follow curves within 0.25 mm and offset outward to cover that error."
       >
-        Curve sag tolerance (mm)
-        <input
-          type="number"
-          min="0.001"
-          step="0.01"
-          :value="geometry.flatteningSagToleranceMm"
-          @input="updateGeometryField('flatteningSagToleranceMm', $event)"
-        />
-        <span class="field-help"
-          >Smaller follows curves more closely but creates more polygon vertices.</span
+        Geometry
+      </summary>
+      <div class="grid details-grid">
+        <label
+          title="Maximum inward curve approximation error in millimeters while flattening DXF arcs and ellipses."
         >
-      </label>
-      <label
-        title="Extra conservative clearance added after flattening; it must be at least the sag tolerance."
-      >
-        Safety margin (mm)
-        <input
-          type="number"
-          :min="geometry.flatteningSagToleranceMm"
-          step="0.01"
-          :value="geometry.clearanceSafetyMarginMm"
-          @input="updateGeometryField('clearanceSafetyMarginMm', $event)"
-        />
-        <span class="field-help"
-          >Extra outward buffer after half of the total cutting padding.</span
+          Curve sag tolerance (mm)
+          <input
+            type="number"
+            min="0.001"
+            step="0.01"
+            :value="geometry.flatteningSagToleranceMm"
+            @input="updateGeometryField('flatteningSagToleranceMm', $event)"
+          />
+          <span class="field-help"
+            >Smaller follows curves more closely but creates more polygon vertices.</span
+          >
+        </label>
+        <label
+          title="Extra conservative clearance added after flattening; it must be at least the sag tolerance."
         >
-      </label>
-    </div>
+          Safety margin (mm)
+          <input
+            type="number"
+            :min="geometry.flatteningSagToleranceMm"
+            step="0.01"
+            :value="geometry.clearanceSafetyMarginMm"
+            @input="updateGeometryField('clearanceSafetyMarginMm', $event)"
+          />
+          <span class="field-help"
+            >Extra outward buffer after half of the total cutting padding.</span
+          >
+        </label>
+      </div>
+    </details>
 
     <h3 title="Controls the finite orientations available to both irregular execution paths.">
       Orientations
