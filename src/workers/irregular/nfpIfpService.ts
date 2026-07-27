@@ -16,7 +16,12 @@ import type {
   NfpIfpCandidateProvenance,
   NfpIfpCandidateSource
 } from './services.js'
-import type { InternalBounds, InternalPoint, InternalPolygon } from './internalGeometry.js'
+import type {
+  InternalBounds,
+  InternalIfpBounds,
+  InternalPoint,
+  InternalPolygon
+} from './internalGeometry.js'
 import {
   IrregularGeometryInfeasibleError,
   GeometryCache,
@@ -37,8 +42,6 @@ import { assessPlacement } from './placementValidation.js'
 import { fromGrid, toGridMm } from './clipper2OffsetPolicy.js'
 import {
   DEFAULT_NFP_CONSTRUCTION_ALGORITHM,
-  innerFitBoundsCacheKey,
-  isValidCachedIfp,
   legalPlacementCandidateMemoKey,
 } from './geometryCacheKeys.js'
 import type { NfpCandidatePruningMode, NfpConstructionAlgorithm } from './geometryCacheKeys.js'
@@ -47,6 +50,7 @@ import {
   computeRelativeNfpBoundary as computeRelativeNfpBoundaryCore,
   resolveNfpBoundary
 } from './core/nfpBoundaryCore.js'
+import { resolveIfpBounds } from './core/ifpBoundsCore.js'
 
 export { DEFAULT_NFP_CONSTRUCTION_ALGORITHM }
 export type { NfpCandidatePruningMode, NfpConstructionAlgorithm }
@@ -219,83 +223,44 @@ function computeIfpBoundsCached(
   IrregularIfpBounds,
   IrregularGeometryInputError | IrregularGeometryInfeasibleError
 > {
-  return computeIfpBoundsValuesCached(input, geometryCache).pipe(
-    Effect.map(
-      ({ bounds }) =>
+  return Effect.suspend(
+    (): Effect.Effect<
+      IrregularIfpBounds,
+      IrregularGeometryInputError | IrregularGeometryInfeasibleError
+    > => {
+    const result = resolveIfpBounds(input, geometryCache.store)
+    if (result.ok) {
+      return Effect.succeed(
         new IrregularIfpBounds({
-          sheet: input.sheet,
-          movingPieceId: input.moving.sourcePieceId,
-          bounds: toDomainBounds(bounds)
+          sheet: result.value.sheet,
+          movingPieceId: result.value.movingPieceId,
+          bounds: toDomainBounds(result.value.bounds)
         })
-    )
+      )
+    }
+    return result.kind === 'infeasible'
+      ? Effect.fail(
+          new IrregularGeometryInfeasibleError({
+            operation: 'computeIfpBounds',
+            message: result.message
+          })
+        )
+      : failInvalidGeometry('computeIfpBounds', result.message)
+    }
   )
 }
 
-function computeIfpBoundsValuesCached(
+function resolveIfpBoundsFromServiceStore(
   input: ComputeIfpBoundsInput,
   geometryCache: GeometryCache
-): Effect.Effect<
-  InternalIfpBounds,
-  IrregularGeometryInputError | IrregularGeometryInfeasibleError
-> {
-  const validation = ConvexPolygonValidation.validateStrictBoundary(input.moving.polygon.points)
-  if ('message' in validation) return failInvalidGeometry('computeIfpBounds', validation.message)
-
-  const key = innerFitBoundsCacheKey(input)
-  return geometryCache.get<InternalIfpBounds>(key).pipe(
-    Effect.flatMap((cached) => {
-      if (isValidCachedIfp(cached, input)) return Effect.succeed(cached)
-      const removeInvalid = cached === undefined ? Effect.void : geometryCache.remove(key)
-      return removeInvalid.pipe(
-        Effect.flatMap(() => computeIfpBoundsValuesUncached(input)),
-        Effect.tap((computed) => geometryCache.set(key, computed))
-      )
-    })
-  )
-}
-
-function computeIfpBoundsValuesUncached(
-  input: ComputeIfpBoundsInput
-): Effect.Effect<
-  InternalIfpBounds,
-  IrregularGeometryInputError | IrregularGeometryInfeasibleError
-> {
-  const validation = ConvexPolygonValidation.validateStrictBoundary(input.moving.polygon.points)
-  if ('message' in validation) return failInvalidGeometry('computeIfpBounds', validation.message)
-
-  const polygonBounds = boundsForPoints(input.moving.polygon.points)
-  if (polygonBounds === undefined) {
-    return failInvalidGeometry('computeIfpBounds', 'moving polygon bounds must be finite.')
-  }
-
-  const minX = normalizeNegativeZero(-polygonBounds.minX)
-  const minY = normalizeNegativeZero(-polygonBounds.minY)
-  const maxX = normalizeNegativeZero(input.sheet.width - polygonBounds.maxX)
-  const maxY = normalizeNegativeZero(input.sheet.height - polygonBounds.maxY)
-  if (
-    !Number.isFinite(minX) ||
-    !Number.isFinite(minY) ||
-    !Number.isFinite(maxX) ||
-    !Number.isFinite(maxY)
-  ) {
-    return failInvalidGeometry('computeIfpBounds', 'IFP arithmetic must produce finite bounds.')
-  }
-  if (minX > maxX || minY > maxY) {
-    return Effect.fail(
-      new IrregularGeometryInfeasibleError({
-        operation: 'computeIfpBounds',
-        message: 'moving polygon cannot fit inside the sheet.'
-      })
-    )
-  }
-
-  const bounds: InternalBounds = { minX, minY, maxX, maxY }
-
-  return Effect.succeed({
-    sheet: input.sheet,
-    movingPieceId: input.moving.sourcePieceId,
-    bounds
-  })
+):
+  | InternalIfpBounds<
+      ComputeIfpBoundsInput['moving']['sourcePieceId'],
+      ComputeIfpBoundsInput['sheet']
+    >
+  | { readonly kind: 'invalid' | 'infeasible'; readonly message: string } {
+  const result = resolveIfpBounds(input, geometryCache.store)
+  return result.ok ? result.value : { kind: result.kind, message: result.message }
 }
 
 /** Builds deterministic IFP/NFP contact candidates and filters illegal results. */
@@ -313,12 +278,28 @@ function generatePlacementCandidatesUncached(
       input.onCandidateProvenance === undefined ? undefined : makeCandidateProvenance()
     const sheetlessNfp = input.candidateDomain === 'sheetless-nfp'
     yield* nfpCheckpoint(input.control, 'ifp')
-    const ifp = sheetlessNfp
+    const ifpResult = sheetlessNfp
       ? undefined
-      : yield* computeIfpBoundsValuesCached(
+      : resolveIfpBoundsFromServiceStore(
           { sheet: input.sheet, moving: input.moving },
           geometryCache
-        ).pipe(Effect.catchTag('IrregularGeometryInfeasibleError', () => Effect.succeed(undefined)))
+        )
+    let ifp:
+      | InternalIfpBounds<
+          ComputeIfpBoundsInput['moving']['sourcePieceId'],
+          ComputeIfpBoundsInput['sheet']
+        >
+      | undefined
+    if (ifpResult === undefined) {
+      ifp = undefined
+    } else if ('kind' in ifpResult) {
+      if (ifpResult.kind === 'invalid') {
+        return yield* failInvalidGeometry('computeIfpBounds', ifpResult.message)
+      }
+      ifp = undefined
+    } else {
+      ifp = ifpResult
+    }
     if (!sheetlessNfp && ifp === undefined) {
       emitCandidateProvenance(input, provenance)
       return []
@@ -1001,12 +982,6 @@ function emitCandidateProvenance(
 
 interface SegmentIntersection {
   readonly points: ReadonlyArray<InternalPoint>
-}
-
-interface InternalIfpBounds {
-  readonly sheet: ComputeIfpBoundsInput['sheet']
-  readonly movingPieceId: ComputeIfpBoundsInput['moving']['sourcePieceId']
-  readonly bounds: InternalBounds
 }
 
 interface InternalPlacementCandidate {
