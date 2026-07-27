@@ -101,20 +101,30 @@ The slice is complete only when the public service no longer composes Effects
 inside pairwise NFP cache resolution and the pure module can be called directly
 without an Effect runtime.
 
+## Completed second slice
+
+IFP bounds and transformed-collision cache resolution now use the same pure
+store boundary as NFP. Their distinct cache orders, exact keys, explicit
+invalid/infeasible outcomes, lazy public adapters, and candidate-generation
+checkpoint placement are frozen by an independent current-main oracle and the
+strict sequential 18-layout gate.
+
+## Completed third slice
+
+Trusted geometry and search carriers are now ordinary TypeScript classes with
+separately named boundary schemas. An AST gate rejects schema imports in the
+trusted worker closure and proves the converted runtime classes do not extend
+`Schema.Class`. The complete suite and exact 18-layout gate passed.
+
 ## Later slices
 
-1. Extract IFP bounds and transformed-geometry caching into the same pure cache
-   boundary.
-2. Replace `IrregularPoint`, `IrregularBounds`, `IrregularPolygon`, and
-   `IrregularTransformCandidate` inside trusted computation with plain internal
-   records; retain schemas only in adapters.
-3. Convert candidate generation into a resumable pure state machine. The shell
+1. Convert candidate generation into a resumable pure state machine. The shell
    checks control and yields between deterministic counted quanta rather than
    injecting Effect checkpoints into inner loops.
-4. Move beam transitions, comparators, deduplication, complete/capacity
+2. Move beam transitions, comparators, deduplication, complete/capacity
    scheduler transitions, and archive updates behind explicit pure step
    functions.
-5. Make trace production plain deterministic events, with Effect responsible
+3. Make trace production plain deterministic events, with Effect responsible
    only for streaming and persistence.
 
 Each slice requires exact differential tests and the maintained production

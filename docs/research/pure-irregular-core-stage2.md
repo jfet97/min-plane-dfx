@@ -1,0 +1,65 @@
+# Pure Irregular Core Stage 2
+
+## Decision
+
+Retain the pure IFP and transformed-collision cache extraction. The two
+operations now execute over structural data and one synchronous cache store
+without composing Effect inside cache resolution. Public services remain lazy
+Effect adapters with the same typed failures.
+
+Source commit: `2f8fd76be08554247b72a0f3f5b6c09d5115f473`.
+
+## Preserved asymmetric cache contracts
+
+The extraction deliberately preserves two different historical orders:
+
+- IFP validates the moving polygon before key construction or cache access;
+- transformed geometry constructs its key and performs `get` first, then
+  validates only after a miss or stale removal.
+
+For both paths, a stale value is removed before recomputation, a failed
+computation is never stored, and successful values enter the cache exactly
+once. The transformed-geometry adapter materializes the public domain object
+before that store, so repeated hits reuse its identity instead of rebuilding
+schema-backed points and polygons. Direct tests freeze exact key bytes, ordered
+cache actions, error `_tag`/operation/message, infeasible versus invalid IFP
+outcomes, numeric failure branches, mirror/rotation/grid-snap behavior, lazy
+construction, and the plain prototypes of structural envelopes created by the
+new core. Incoming transform and sheet objects remain schema-backed until
+Stage 3 replaces the complete trusted runtime graph.
+
+Candidate generation invokes the pure IFP operation only inside its already
+running generator between the unchanged IFP checkpoints. Direct event oracles
+cover success, invalid input, infeasibility, pre-checkpoint abort, and the
+sheetless path; sheetless generation continues to skip IFP cache work.
+
+Live-store tests also exercise transformed and IFP miss, hit, stale removal,
+mixed synchronous/Effect access, clear, disabled telemetry, and the single
+cache-instance ledger through the production cache implementation.
+
+## Evidence
+
+The complete suite passed `878` tests with `17` intentional skips. Lint and
+node/renderer typechecks passed.
+
+The strict single-process matrix passed all nine fixture/sheet cases and all 18
+Compact/Short Side layouts. Every pinned collision identity, fitted canonical
+hash, placed/unplaced partition, scheduler chronology, focused reconstruction
+contract, and Short Side directional contract remained exact.
+
+Raw provenance:
+`/private/tmp/min-plane-provenance/pure-irregular-core-stage2-2f8fd76/`.
+
+Portable evidence:
+[`../artifacts/pure-irregular-core-stage2/`](../artifacts/pure-irregular-core-stage2/).
+
+No speedup is claimed; this is an architectural parity stage.
+
+## Next stage
+
+Introduce a genuinely plain trusted object graph for collision geometry,
+transformed geometry, transform candidates, and prepared pieces. Decode
+schema-backed payloads once at the worker/request boundary and keep schemas in
+named IPC, replay, persistence, and export adapters only. Prove the boundary
+with TypeScript symbol/import closure plus representative runtime prototype
+assertions, then repeat the complete independent production gate.

@@ -22,11 +22,12 @@ import { serializeGeometryCacheKey } from './core/geometryCacheStore.js'
 import { makeGeometryCacheStore } from './geometryCacheStoreLive.js'
 import {
   CollisionGeometry,
+  CollisionGeometrySchema,
   FreeMaterialSnapshot,
   IrregularGeometrySettings,
   IrregularOptimizerSettings,
   IrregularPlacedPiece,
-  IrregularPolygon,
+  IrregularPolygonSchema,
   NonNegativeFiniteMillimeters
 } from '@shared/irregular/domain.js'
 
@@ -94,7 +95,7 @@ export interface BuildCollisionGeometryInput {
  * kernel adds its fractional safety margin.
  */
 export const OffsetConvexPolygonInput = Schema.Struct({
-  polygon: IrregularPolygon,
+  polygon: IrregularPolygonSchema,
   totalPaddingMm: NonNegativeFiniteMillimeters
 })
 export type OffsetConvexPolygonInput = Schema.Schema.Type<typeof OffsetConvexPolygonInput>
@@ -106,7 +107,7 @@ export interface TransformCollisionGeometryInput {
 
 /** Schema-backed boundary for finite transform generation. */
 export const GenerateTransformsInput = Schema.Struct({
-  geometry: CollisionGeometry,
+  geometry: CollisionGeometrySchema,
   allowRotation: Schema.Boolean,
   allowMirror: Schema.Boolean,
   geometrySettings: IrregularGeometrySettings,

@@ -62,6 +62,8 @@ ten-sheet Mixed-61 reproductions with identical accepted geometry.
 ## Performance
 
 - [Pure irregular core stage 1](./pure-irregular-core-stage1.md)
+- [Pure irregular core stage 2](./pure-irregular-core-stage2.md)
+- [Pure irregular core stage 3](./pure-irregular-core-stage3.md)
 - [Single-process Compact cohort boundary](./single-process-cohort-boundary.md)
 - [Adaptive Compact transform policy](./adaptive-compact-transform-policy.md)
 - [Intrinsic shared-archive performance checkpoint](./intrinsic-shared-archive-performance-checkpoint.md)

@@ -1,10 +1,9 @@
 import { Effect, Exit, Layer, Schema } from 'effect'
 import type {
   IrregularPoint,
-  IrregularTransformCandidate,
   IrregularTransformReason
 } from '@shared/irregular/domain.js'
-import { IrregularTransformCandidate as IrregularTransformCandidateSchema } from '@shared/irregular/domain.js'
+import { IrregularTransformCandidate } from '@shared/irregular/domain.js'
 import { intrinsicSharedArchiveEligibility } from '@shared/irregular/executionMode.js'
 import {
   GenerateTransformsInput,
@@ -110,7 +109,7 @@ function generateTransforms(
       return Effect.succeed(
         selectedCandidates.map(
           (candidate, index) =>
-            new IrregularTransformCandidateSchema({
+            new IrregularTransformCandidate({
               index,
               rotationDeg: candidate.rotationDeg,
               mirrored: candidate.mirrored,

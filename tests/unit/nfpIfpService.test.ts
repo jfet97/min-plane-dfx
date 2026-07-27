@@ -1000,6 +1000,141 @@ describe('NfpIfpServiceLive', () => {
     expect(events).not.toContain('cache:get')
   })
 
+  it('runs the pure IFP core strictly between IFP checkpoints', async () => {
+    const events: string[] = []
+    const input: GeneratePlacementCandidatesInput = {
+      sheet: sheet(10, 10),
+      placed: [],
+      moving: transformedGeometry('moving-ifp-order', [
+        point(0, 0),
+        point(2, 0),
+        point(2, 2),
+        point(0, 2)
+      ]),
+      settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+      control: {
+        checkpoint: (phase) =>
+          Effect.sync(() => {
+            events.push(`checkpoint:${phase}`)
+          })
+      }
+    }
+
+    await Effect.runPromise(
+      generateCandidatesEffect(input).pipe(
+        Effect.provide(makeNfpIfpServiceLayer()),
+        Effect.provide(loggingCacheLayer(new Map(), events))
+      )
+    )
+
+    expect(
+      events.filter(
+        (event) => event === 'checkpoint:ifp' || event.startsWith('cache:')
+      )
+    ).toEqual([
+      'checkpoint:ifp',
+      'cache:get',
+      'cache:set',
+      'checkpoint:ifp',
+      'checkpoint:ifp'
+    ])
+  })
+
+  it('preserves invalid, infeasible, abort, and sheetless IFP checkpoint sequences', async () => {
+    const run = async (
+      moving: TransformedCollisionGeometry,
+      candidateDomain: GeneratePlacementCandidatesInput['candidateDomain'],
+      abortBeforeIfp = false
+    ) => {
+      const events: string[] = []
+      const input: GeneratePlacementCandidatesInput = {
+        sheet: sheet(10, 10),
+        placed: [],
+        moving,
+        settings: DEFAULT_IRREGULAR_NESTING_SETTINGS,
+        ...(candidateDomain === undefined ? {} : { candidateDomain }),
+        control: {
+          checkpoint: (phase) => {
+            events.push(`checkpoint:${phase}`)
+            return abortBeforeIfp && phase === 'ifp'
+              ? Effect.fail(
+                  new IrregularNfpIfpControlAbortError({
+                    reason: 'cancelled',
+                    message: 'test pre-IFP cancellation'
+                  })
+                )
+              : Effect.void
+          }
+        }
+      }
+      const outcome = await Effect.runPromise(
+        generateCandidatesEffect(input).pipe(
+          Effect.provide(makeNfpIfpServiceLayer()),
+          Effect.provide(loggingCacheLayer(new Map(), events)),
+          Effect.match({
+            onFailure: (failure) => ({ _tag: 'Left' as const, left: failure }),
+            onSuccess: (success) => ({ _tag: 'Right' as const, right: success })
+          })
+        )
+      )
+      return { events, outcome }
+    }
+
+    const invalid = await run(
+      transformedGeometry('moving-ifp-invalid-order', [
+        point(0, 0),
+        point(4, 0),
+        point(2, 1),
+        point(4, 3),
+        point(0, 3)
+      ]),
+      undefined
+    )
+    expect(invalid.outcome._tag).toBe('Left')
+    expect(invalid.events).toEqual(['checkpoint:ifp'])
+
+    const infeasible = await run(
+      transformedGeometry('moving-ifp-infeasible-order', [
+        point(-1, 0),
+        point(11, 0),
+        point(11, 2),
+        point(-1, 2)
+      ]),
+      undefined
+    )
+    expect(infeasible.outcome).toMatchObject({ _tag: 'Right', right: [] })
+    expect(infeasible.events).toEqual(['checkpoint:ifp', 'cache:get'])
+
+    const aborted = await run(
+      transformedGeometry('moving-ifp-aborted-order', [
+        point(0, 0),
+        point(2, 0),
+        point(2, 2),
+        point(0, 2)
+      ]),
+      undefined,
+      true
+    )
+    expect(aborted.outcome._tag).toBe('Left')
+    expect(aborted.events).toEqual(['checkpoint:ifp'])
+
+    const sheetless = await run(
+      transformedGeometry('moving-ifp-sheetless-order', [
+        point(0, 0),
+        point(2, 0),
+        point(2, 2),
+        point(0, 2)
+      ]),
+      'sheetless-nfp'
+    )
+    expect(sheetless.outcome._tag).toBe('Right')
+    expect(
+      sheetless.events.filter(
+        (event) => event === 'checkpoint:ifp' || event.startsWith('cache:')
+      )
+    ).toEqual(['checkpoint:ifp', 'checkpoint:ifp', 'checkpoint:ifp'])
+  })
+
   it('computes the outer convex NFP for triangles', async () => {
     const fixed = placedPiece('fixed-triangle', [point(0, 0), point(4, 0), point(0, 3)], 0, 0)
     const moving = transformedGeometry('moving-triangle', [point(0, 0), point(1, 0), point(0, 1)])

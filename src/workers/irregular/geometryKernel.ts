@@ -16,7 +16,8 @@ import { ArcFlattening } from './arcFlattening.js'
 import { EllipseFlattening } from './ellipseFlattening.js'
 import { ConvexHull } from './convexHull.js'
 import { ConvexPolygonOffset } from './convexPolygonOffset.js'
-import { TransformCollisionGeometry } from './transformCollisionGeometry.js'
+import { toDomainTransformedCollisionGeometry } from './transformCollisionGeometry.js'
+import { resolveTransformedCollisionGeometry } from './core/transformCollisionGeometryCore.js'
 import { PlacementValidation } from './placementValidation.js'
 import { DEFAULT_IRREGULAR_NESTING_SETTINGS } from '@shared/irregular/defaults.js'
 import {
@@ -28,7 +29,6 @@ import {
   TransformedCollisionGeometry
 } from '@shared/irregular/domain.js'
 import type { DxfGeometrySegment } from '@shared/domain/dxf.js'
-import { isValidCachedTransform, transformCollisionGeometryCacheKey } from './geometryCacheKeys.js'
 import { GeometryCacheInMemory } from './services.js'
 
 /** Effect service providing the decoded irregular geometry settings. */
@@ -176,19 +176,18 @@ export class GeometryKernel extends Context.Service<GeometryKernel, GeometryKern
             )
           )
         ),
-      transformCollisionGeometry: (input) => {
-        const key = transformCollisionGeometryCacheKey(input, settings.geometry)
-        return geometryCache.get<TransformedCollisionGeometry>(key).pipe(
-          Effect.flatMap((cached) => {
-            if (isValidCachedTransform(cached, input)) return Effect.succeed(cached)
-            const removeInvalid = cached === undefined ? Effect.void : geometryCache.remove(key)
-            return removeInvalid.pipe(
-              Effect.flatMap(() => TransformCollisionGeometry.compute(input)),
-              Effect.tap((computed) => geometryCache.set(key, computed))
-            )
-          })
-        )
-      },
+      transformCollisionGeometry: (input) =>
+        Effect.suspend(() => {
+          const result = resolveTransformedCollisionGeometry(
+            input,
+            settings.geometry,
+            geometryCache.store,
+            toDomainTransformedCollisionGeometry
+          )
+          return result.ok
+            ? Effect.succeed(result.value)
+            : failInvalidGeometryInput('transformCollisionGeometry', result.message)
+        }),
       validatePlacement: PlacementValidation.validate
     })
   })

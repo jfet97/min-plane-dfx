@@ -174,25 +174,27 @@ export class IrregularBeamState {
     readonly placedCollisionGeometry: IrregularPlacedPiece
     readonly placementOrderPieceId: PieceId
     readonly onPhaseTimings?: (timings: IrregularBeamStatePlacementPhaseTimings) => void
+    readonly timingNow?: () => number
   }): IrregularBeamState {
-    const startedAt = input.onPhaseTimings === undefined ? 0 : performance.now()
+    const timingNow = input.timingNow ?? performance.now.bind(performance)
+    const startedAt = input.onPhaseTimings === undefined ? 0 : timingNow()
     const placedCollisionGeometries = [
       ...this.placedCollisionGeometries,
       input.placedCollisionGeometry
     ]
-    const canonicalEntryStartedAt = input.onPhaseTimings === undefined ? 0 : performance.now()
+    const canonicalEntryStartedAt = input.onPhaseTimings === undefined ? 0 : timingNow()
     const canonicalEntryKeys = insertCanonicalEntryKey(
       this.canonicalEntryKeys,
       canonicalPlacedGeometryKey(input.placedCollisionGeometry)
     )
     const canonicalEntryKeyMs =
-      input.onPhaseTimings === undefined ? 0 : performance.now() - canonicalEntryStartedAt
-    const spatialIndexStartedAt = input.onPhaseTimings === undefined ? 0 : performance.now()
+      input.onPhaseTimings === undefined ? 0 : timingNow() - canonicalEntryStartedAt
+    const spatialIndexStartedAt = input.onPhaseTimings === undefined ? 0 : timingNow()
     const placedCollisionIndex = this.placedCollisionIndex.add(input.placedCollisionGeometry)
     const addedEntry = placedCollisionIndex.entries[placedCollisionIndex.entries.length - 1]
     const spatialIndexMs =
-      input.onPhaseTimings === undefined ? 0 : performance.now() - spatialIndexStartedAt
-    const contactStartedAt = input.onPhaseTimings === undefined ? 0 : performance.now()
+      input.onPhaseTimings === undefined ? 0 : timingNow() - spatialIndexStartedAt
+    const contactStartedAt = input.onPhaseTimings === undefined ? 0 : timingNow()
     const sharedBoundaryMetrics = extendSharedCollisionBoundaryMetrics(
       {
         lengthMm: this.sharedCollisionBoundaryLengthMm,
@@ -205,8 +207,8 @@ export class IrregularBeamState {
       addedEntry
     )
     const contactMeasurementMs =
-      input.onPhaseTimings === undefined ? 0 : performance.now() - contactStartedAt
-    const stateAssemblyStartedAt = input.onPhaseTimings === undefined ? 0 : performance.now()
+      input.onPhaseTimings === undefined ? 0 : timingNow() - contactStartedAt
+    const stateAssemblyStartedAt = input.onPhaseTimings === undefined ? 0 : timingNow()
     const result = IrregularBeamState.fromDerivedMetadata(
       {
         remainingPreparedPieces: input.remainingPreparedPieces,
@@ -234,8 +236,8 @@ export class IrregularBeamState {
       }
     )
     if (input.onPhaseTimings !== undefined) {
-      const stateAssemblyMs = performance.now() - stateAssemblyStartedAt
-      const totalMs = performance.now() - startedAt
+      const stateAssemblyMs = timingNow() - stateAssemblyStartedAt
+      const totalMs = timingNow() - startedAt
       const measuredMs =
         canonicalEntryKeyMs + spatialIndexMs + contactMeasurementMs + stateAssemblyMs
       input.onPhaseTimings({

@@ -83,6 +83,24 @@ existing callers. This is the first portability slice, not a claim that
 candidate generation, beam search, or the Compact coordinator are already
 Effect-free.
 
+The second pure seam covers rectangular IFP bounds and transformed-collision
+cache resolution. IFP retains validation-before-cache ordering; transformed
+geometry retains key/get-before-miss-validation ordering. Both resolve plain
+structural envelopes and expose lazy Effect adapters over the same store. IFP
+stores the core-produced structural result directly. Transformed geometry
+materializes its existing public domain object once before storing so cache
+hits preserve the historical object identity without rebuilding nested
+schema-backed points and polygons. Candidate generation calls the pure IFP
+operation between its unchanged cooperative checkpoints.
+
+Trusted geometry and search carriers no longer extend `Schema.Class`. Points,
+bounds, polygons, transforms, placements, collision geometry, prepared pieces,
+NFP/IFP values, free-material diagnostics, and cache keys are ordinary runtime
+classes with separately named schemas at untrusted boundaries. Settings and
+terminal output envelopes remain schema-backed where they are decoded or
+emitted. Candidate generation and search coordination still use Effect; the
+carrier conversion is not a claim that the complete algorithm is pure yet.
+
 `src/workers/algorithm/irregular/strictPriorityDecoder.ts` is an algorithm
 module rather than another Effect service. `decodeStrictPriorityOrder` consumes
 an already priority-ordered list, transforms each piece's existing transform
