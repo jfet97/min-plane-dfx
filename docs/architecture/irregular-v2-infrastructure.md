@@ -91,9 +91,15 @@ stores the core-produced structural result directly. Transformed geometry
 materializes its existing public domain object once before storing so cache
 hits preserve the historical object identity without rebuilding nested
 schema-backed points and polygons. Candidate generation calls the pure IFP
-operation between its unchanged cooperative checkpoints. The remaining
-portability boundary is the schema-backed collision/prepared-piece carrier
-graph used by trusted search.
+operation between its unchanged cooperative checkpoints.
+
+Trusted geometry and search carriers no longer extend `Schema.Class`. Points,
+bounds, polygons, transforms, placements, collision geometry, prepared pieces,
+NFP/IFP values, free-material diagnostics, and cache keys are ordinary runtime
+classes with separately named schemas at untrusted boundaries. Settings and
+terminal output envelopes remain schema-backed where they are decoded or
+emitted. Candidate generation and search coordination still use Effect; the
+carrier conversion is not a claim that the complete algorithm is pure yet.
 
 `src/workers/algorithm/irregular/strictPriorityDecoder.ts` is an algorithm
 module rather than another Effect service. `decodeStrictPriorityOrder` consumes

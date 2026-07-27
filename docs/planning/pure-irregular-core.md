@@ -109,18 +109,22 @@ invalid/infeasible outcomes, lazy public adapters, and candidate-generation
 checkpoint placement are frozen by an independent current-main oracle and the
 strict sequential 18-layout gate.
 
+## Completed third slice
+
+Trusted geometry and search carriers are now ordinary TypeScript classes with
+separately named boundary schemas. An AST gate rejects schema imports in the
+trusted worker closure and proves the converted runtime classes do not extend
+`Schema.Class`. The complete suite and exact 18-layout gate passed.
+
 ## Later slices
 
-1. Replace schema-backed geometry and carrier objects inside trusted computation
-   with a plain collision/prepared-piece object graph; retain schemas only in
-   named IPC, replay, persistence, and export adapters.
-2. Convert candidate generation into a resumable pure state machine. The shell
+1. Convert candidate generation into a resumable pure state machine. The shell
    checks control and yields between deterministic counted quanta rather than
    injecting Effect checkpoints into inner loops.
-3. Move beam transitions, comparators, deduplication, complete/capacity
+2. Move beam transitions, comparators, deduplication, complete/capacity
    scheduler transitions, and archive updates behind explicit pure step
    functions.
-4. Make trace production plain deterministic events, with Effect responsible
+3. Make trace production plain deterministic events, with Effect responsible
    only for streaming and persistence.
 
 Each slice requires exact differential tests and the maintained production

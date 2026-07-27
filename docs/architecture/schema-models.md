@@ -31,18 +31,21 @@ Boundary schemas still decode untrusted data before use. Decoding may produce cl
 
 Plain interfaces are acceptable for internal algorithm or service DTOs that do
 not cross IPC, worker RPC, or persisted project boundaries. Shared irregular v2
-DTOs under `src/shared/irregular/` are schema-backed classes because they are
-app-level payloads intended for worker diagnostics, request/debug surfaces, and
-future history/progress envelopes. Worker service contracts may still use
-interfaces for operation inputs and Effect service shapes.
+app-level settings, result, history, progress, and export envelopes remain
+schema-backed classes. Trusted geometry carriers use ordinary runtime classes
+paired with separately named schemas when the same structural shape crosses an
+untrusted boundary. Worker service contracts may still use interfaces for
+operation inputs and Effect service shapes.
 
 ## Trusted internal search artifacts
 
-Some irregular v2 types are neither app-level payloads nor boundary models: the
-search produces them from already-decoded input, consumes them itself, and
-discards them. `TransformedCollisionGeometry`, `IrregularPlacedPiece`, and
-`IrregularPlacementCandidate` are the current members, and they are plain
-classes.
+Some irregular v2 types are runtime carriers rather than validation authority:
+the worker produces them from already-decoded input and consumes them inside
+trusted computation. Points, bounds, polygons, transforms, placements,
+collision and flattened geometry, prepared pieces, NFP/IFP values,
+free-material diagnostics, priority keys, and cache keys are ordinary classes.
+`TransformedCollisionGeometry`, `IrregularPlacedPiece`, and
+`IrregularPlacementCandidate` follow the same rule.
 
 They must stay plain. `Schema.Class` construction revalidates the entire nested
 value on every instantiation, including nested values that are already validated

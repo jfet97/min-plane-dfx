@@ -493,7 +493,7 @@ policy limit. Numeric epsilon remains forbidden as a substitute.
 
 ### P7: pure irregular core portability
 
-Status: Stage 2 production-gated; plain trusted object graph is next.
+Status: Stage 3 production-gated; pure candidate-generation state is next.
 
 Stage 1 extracted cached pairwise NFP resolution behind a synchronous store and
 lazy Effect adapter. Stage 2 now applies the same boundary to rectangular IFP
@@ -501,12 +501,17 @@ bounds and transformed-collision cache resolution while preserving their
 different historical cache orders. Independent full suites and strict
 sequential 18-layout gates preserve every accepted production identity.
 
-The next bounded stage replaces schema-backed collision geometry, transform,
-and prepared-piece carriers inside trusted computation with plain records.
-Schemas remain authoritative at IPC, replay, checkpoint, persistence, and
-export boundaries. Promotion requires TypeScript symbol/import-closure
-enforcement, representative runtime prototype assertions, and another
-independent complete production gate.
+Stage 3 separates sixteen trusted geometry/search carriers from their boundary
+schemas. TypeScript AST enforcement rejects schema imports in trusted worker
+modules and proves those runtime classes do not extend `Schema.Class`; runtime
+assertions retain ordinary structural decoding and validation. The full suite
+and another independent 18-layout gate remained exact. One sequential paired
+matrix observed `13.08%` lower aggregate elapsed time, but the single run is
+supporting evidence rather than a performance guarantee.
+
+The next bounded stage converts candidate generation into resumable pure state
+advanced by the Effect shell in deterministic counted quanta. Schemas remain
+authoritative at IPC, replay, checkpoint, persistence, and export boundaries.
 
 Do not describe this as a speed optimization or as completion of the pure
 search core. Candidate generation, beam/archive transitions, scheduler

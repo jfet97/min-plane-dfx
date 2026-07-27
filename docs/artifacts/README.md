@@ -41,6 +41,10 @@ baselines.
 - [`pure-irregular-core-stage2/`](./pure-irregular-core-stage2/): the independent
   strict 18-layout parity gate for pure IFP and transformed-collision cache
   resolution, including complete reports, SVGs, PNGs, manifest, and checksums.
+- [`pure-irregular-core-stage3/`](./pure-irregular-core-stage3/): the strict
+  18-layout parity gate after separating trusted runtime geometry carriers from
+  Effect Schema boundary models, including reports, SVGs, PNGs, manifest, and
+  checksums.
 
 The executable current gates, including the fitted Mixed production hash, are
 documented in

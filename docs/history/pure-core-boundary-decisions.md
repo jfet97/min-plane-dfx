@@ -49,3 +49,21 @@ See
 [`../research/pure-irregular-core-stage2.md`](../research/pure-irregular-core-stage2.md)
 and
 [`../artifacts/pure-irregular-core-stage2/`](../artifacts/pure-irregular-core-stage2/).
+
+## 2026-07-27: separate trusted carriers from boundary schemas
+
+Stage 3 removes `Schema.Class` inheritance from sixteen geometry and search
+carriers constructed inside trusted worker computation. Named schemas remain
+the validation authority at IPC, replay, persistence, export, and other
+untrusted boundaries.
+
+The change is accepted because the full suite and strict sequential 18-layout
+gate preserved every production identity and contract. One paired matrix also
+observed every layout running faster, with `13.08%` lower aggregate elapsed
+time, but that single pass is recorded as supporting evidence rather than a
+statistical performance guarantee.
+
+See
+[`../research/pure-irregular-core-stage3.md`](../research/pure-irregular-core-stage3.md)
+and
+[`../artifacts/pure-irregular-core-stage3/`](../artifacts/pure-irregular-core-stage3/).
