@@ -65,6 +65,7 @@ ten-sheet Mixed-61 reproductions with identical accepted geometry.
 - [Pure irregular core stage 2](./pure-irregular-core-stage2.md)
 - [Pure irregular core stage 3](./pure-irregular-core-stage3.md)
 - [Trusted ring validation memo](./trusted-ring-validation-memo.md)
+- [Linear ring topology](./linear-ring-topology.md)
 - [Single-process Compact cohort boundary](./single-process-cohort-boundary.md)
 - [Adaptive Compact transform policy](./adaptive-compact-transform-policy.md)
 - [Intrinsic shared-archive performance checkpoint](./intrinsic-shared-archive-performance-checkpoint.md)

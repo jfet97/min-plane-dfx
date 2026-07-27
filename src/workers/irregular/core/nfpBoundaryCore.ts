@@ -17,10 +17,10 @@ import {
 const ORIGIN: InternalPoint = { x: 0, y: 0 }
 
 /**
- * Strict validation is quadratic in the vertex count because the simple-ring
- * check compares every non-adjacent edge pair. One warm pairwise resolution used
- * to run it four times: both inputs, the cached relative boundary, and the
- * translated ring.
+ * Strict validation retains a quadratic fallback for inconsistent turns and
+ * coordinates outside the linear topology envelope. One warm pairwise
+ * resolution used to repeat validation four times: both inputs, the cached
+ * relative boundary, and the translated ring.
  *
  * The two inputs are cache-stable arrays owned by the transformed-collision
  * store. A linear exact-coordinate fingerprint detects runtime mutation before
@@ -59,10 +59,16 @@ function validateStrictBoundaryOnce(
  * held by one ring. Number strings cannot contain `,` or `;`, and the point
  * count plus both coordinates are emitted for every position. Signed zero is
  * normalized because strict validation treats it identically to zero.
+ *
+ * Positions are read by index rather than through the iterator, because the
+ * validation this guards also reads the ring by index. Reading it two different
+ * ways would let a supplied iterator observe one content while validation sees
+ * another, and the guard would then certify a result it never saw.
  */
 function ringFingerprint(points: ReadonlyArray<InternalPoint>): string | undefined {
   let fingerprint = `${points.length}:`
-  for (const point of points) {
+  for (let index = 0; index < points.length; index += 1) {
+    const point = points[index]
     if (
       point === undefined ||
       typeof point !== 'object' ||
