@@ -1,0 +1,84 @@
+{
+  "generatedAt": "2026-07-27T10:41:44.917Z",
+  "sheets": [
+    {
+      "width": 2000,
+      "height": 2700,
+      "label": "2000x2700"
+    }
+  ],
+  "comparison": {
+    "gridSizeMm": 0.001,
+    "ignores": [
+      "piece order",
+      "polygon winding",
+      "ring origin",
+      "translation",
+      "quarter-turn"
+    ],
+    "preserves": [
+      "collision geometry",
+      "relative placement",
+      "reflection"
+    ]
+  },
+  "cases": [
+    {
+      "caseId": "mixed-61",
+      "geometryEquivalent": null,
+      "qualityAccepted": true,
+      "qualityChecks": [
+        {
+          "sheet": {
+            "width": 2000,
+            "height": 2700
+          },
+          "canonicalHash": true,
+          "area": true,
+          "canonicalCavities": true,
+          "runtime": true
+        }
+      ],
+      "runs": [
+        {
+          "sheet": {
+            "width": 2000,
+            "height": 2700
+          },
+          "elapsedMs": 50325.24985099999,
+          "placedCount": 61,
+          "unplacedCount": 0,
+          "bounds": {
+            "minX": 0,
+            "minY": 0,
+            "width": 622.202,
+            "height": 629.387,
+            "shortSide": 622.202,
+            "longSide": 629.387,
+            "area": 391605.85017399996,
+            "span": 1251.589
+          },
+          "canonicalSha256": "ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b",
+          "canonicalRotationDeg": 0,
+          "canonicalTopology": {
+            "enclosedCavityCount": 0,
+            "largestOccupiedHullGapRatio": 0.13724449834128455,
+            "occupiedEnvelopeAspectRatio": 1.0115476967287151,
+            "positiveContactComponentCount": 18,
+            "isolatedPieceCount": 7,
+            "largestPositiveContactComponentSize": 14,
+            "largestPositiveContactComponentRatio": 0.22950819672131148
+          },
+          "score": {
+            "occupiedHullWasteRatio": 0.16115069735546944,
+            "nearCompleteStructuralContactCount": 14,
+            "dominantNearCompleteStructuralContactCount": 2,
+            "sharedCollisionBoundaryContactUnits": 31.850192361135615,
+            "freeMaterialHoleCount": 14
+          },
+          "artifactPath": "/tmp/gate-out-main-1/mixed-61-2000x2700.svg"
+        }
+      ]
+    }
+  ]
+}

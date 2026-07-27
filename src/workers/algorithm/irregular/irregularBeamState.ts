@@ -711,8 +711,6 @@ function dominantSignatureCount(counts: ReadonlyMap<string, number>): number {
   return dominantCount
 }
 
-type CanonicalPoint = readonly [x: number, y: number]
-
 function canonicalPlacedGeometryKey(placed: IrregularPlacedPiece): string {
   return canonicalPlacedGeometryKeyAtTranslation(
     placed,
@@ -748,90 +746,84 @@ export function canonicalCollisionPolygonKey(
   translateX = 0,
   translateY = 0
 ): string {
-  const canonicalPoints: CanonicalPoint[] = new Array(points.length)
-  for (let index = 0; index < points.length; index += 1) {
-    const point = points[index]
-    if (point === undefined) continue
-    canonicalPoints[index] = [
-      normalizeCanonicalCoordinate(point.x + translateX),
-      normalizeCanonicalCoordinate(point.y + translateY)
-    ]
-  }
-  return canonicalRecord([['polygon-ring', canonicalRingKey(canonicalPoints)]])
-}
-
-function canonicalRingKey(points: ReadonlyArray<CanonicalPoint>): string {
-  if (points.length === 0) return canonicalRecord([['point-count', '0']])
-
-  const startIndex = lowestYThenXIndex(points)
-  const forward = rotatedRing(points, startIndex, 1)
-  const reverse = rotatedRing(points, startIndex, -1)
-  const canonicalPoints = compareCanonicalPointSequences(forward, reverse) <= 0 ? forward : reverse
   return canonicalRecord([
-    ['point-count', canonicalNumber(canonicalPoints.length)],
-    ...canonicalPoints.map((point, index) => [`point-${index}`, canonicalPointKey(point)])
+    ['polygon-ring', canonicalRingKey(points, translateX, translateY)]
   ])
 }
 
-function rotatedRing(
-  points: ReadonlyArray<CanonicalPoint>,
-  startIndex: number,
-  direction: 1 | -1
-): ReadonlyArray<CanonicalPoint> {
-  const ring: CanonicalPoint[] = []
-  for (let offset = 0; offset < points.length; offset += 1) {
-    const pointIndex = (startIndex + direction * offset + points.length * 2) % points.length
-    const point = points[pointIndex]
-    if (point === undefined) return []
-    ring.push(point)
-  }
-  return ring
-}
+const EMPTY_RING_KEY = canonicalRecord([['point-count', '0']])
 
-function lowestYThenXIndex(points: ReadonlyArray<CanonicalPoint>): number {
+/**
+ * Emits the ring key from per-vertex keys built once.
+ *
+ * Choosing the start vertex and the winding needs each vertex key twice — once
+ * per candidate direction — and the record needs it a third time. Building the
+ * keys up front and rotating by index instead of materializing the two rotated
+ * rings removes that repetition along with the intermediate tuple arrays. The
+ * emitted bytes are unchanged.
+ */
+function canonicalRingKey(
+  points: ReadonlyArray<{ readonly x: number; readonly y: number }>,
+  translateX: number,
+  translateY: number
+): string {
+  const pointCount = points.length
+  if (pointCount === 0) return EMPTY_RING_KEY
+
+  const pointKeys: string[] = new Array<string>(pointCount)
+  const xs: number[] = new Array<number>(pointCount)
+  const ys: number[] = new Array<number>(pointCount)
+  for (let index = 0; index < pointCount; index += 1) {
+    const point = points[index]
+    // a gap leaves no ring to canonicalize, exactly as an absent rotation did
+    if (point === undefined) return EMPTY_RING_KEY
+    const x = normalizeCanonicalCoordinate(point.x + translateX)
+    const y = normalizeCanonicalCoordinate(point.y + translateY)
+    xs[index] = x
+    ys[index] = y
+    pointKeys[index] = canonicalPointKey(x, y)
+  }
+
   let startIndex = 0
-  for (let index = 1; index < points.length; index += 1) {
-    const candidate = points[index]
-    const current = points[startIndex]
-    if (candidate === undefined || current === undefined) continue
-    if (candidate[1] < current[1] || (candidate[1] === current[1] && candidate[0] < current[0])) {
+  for (let index = 1; index < pointCount; index += 1) {
+    const candidateY = ys[index] as number
+    const currentY = ys[startIndex] as number
+    if (
+      candidateY < currentY ||
+      (candidateY === currentY && (xs[index] as number) < (xs[startIndex] as number))
+    ) {
       startIndex = index
     }
   }
-  return startIndex
-}
 
-function compareCanonicalPointSequences(
-  first: ReadonlyArray<CanonicalPoint>,
-  second: ReadonlyArray<CanonicalPoint>
-): number {
-  const pointCountComparison = first.length - second.length
-  if (pointCountComparison !== 0) return pointCountComparison
-
-  for (let index = 0; index < first.length; index += 1) {
-    const firstPoint = first[index]
-    const secondPoint = second[index]
-    if (firstPoint === undefined || secondPoint === undefined) {
-      return firstPoint === undefined && secondPoint === undefined
-        ? 0
-        : firstPoint === undefined
-          ? -1
-          : 1
-    }
-    const pointComparison = compareCanonicalKeys(
-      canonicalPointKey(firstPoint),
-      canonicalPointKey(secondPoint)
-    )
-    if (pointComparison !== 0) return pointComparison
+  // both directions start on the same vertex, so the first offset that differs decides
+  let forwardWins = true
+  for (let offset = 1; offset < pointCount; offset += 1) {
+    const forwardKey = pointKeys[(startIndex + offset) % pointCount] as string
+    const reverseKey = pointKeys[(startIndex - offset + pointCount * 2) % pointCount] as string
+    if (forwardKey === reverseKey) continue
+    forwardWins = compareCanonicalKeys(forwardKey, reverseKey) < 0
+    break
   }
-  return 0
+
+  let ringKey = canonicalToken('point-count') + canonicalToken(canonicalNumber(pointCount))
+  for (let offset = 0; offset < pointCount; offset += 1) {
+    const pointIndex = forwardWins
+      ? (startIndex + offset) % pointCount
+      : (startIndex - offset + pointCount * 2) % pointCount
+    ringKey +=
+      canonicalToken(`point-${offset}`) + canonicalToken(pointKeys[pointIndex] as string)
+  }
+  return ringKey
 }
 
-function canonicalPointKey(point: CanonicalPoint): string {
-  return canonicalRecord([
-    ['x', canonicalNumber(point[0])],
-    ['y', canonicalNumber(point[1])]
-  ])
+function canonicalPointKey(x: number, y: number): string {
+  return (
+    canonicalToken('x') +
+    canonicalToken(canonicalNumber(x)) +
+    canonicalToken('y') +
+    canonicalToken(canonicalNumber(y))
+  )
 }
 
 function canonicalRecord(fields: ReadonlyArray<ReadonlyArray<string>>): string {

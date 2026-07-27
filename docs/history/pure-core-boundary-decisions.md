@@ -70,3 +70,40 @@ See
 [`../research/pure-irregular-core-stage3.md`](../research/pure-irregular-core-stage3.md)
 and
 [`../artifacts/pure-irregular-core-stage3/`](../artifacts/pure-irregular-core-stage3/).
+
+## 2026-07-27: memoize strict validation only while exact coordinates are unchanged
+
+Strict boundary validation stays the authority over what is a valid ring. What
+changes is how often the warm pairwise NFP path re-establishes a conclusion it
+already holds.
+
+The check is quadratic, because a consistent turn sign does not imply a simple
+ring, and one warm resolution previously ran it four times: both inputs, the
+boundary read back from the cache, and the translated ring. Reported cache
+telemetry puts `98.2%` of pairwise lookups on that warm path. An exact linear
+coordinate fingerprint now guards every identity-memoized validation result, so
+runtime mutation forces revalidation; foreign and malformed values still take
+the full check. The canonical ring key builds each vertex key once rather than
+three times.
+
+The original identity-only experiment was rejected during review because
+TypeScript `readonly` does not enforce runtime immutability and its retained
+artifact bundle did not contain the raw SVGs or reports needed to substantiate
+all provenance claims. The hardened design detects valid-to-invalid and
+invalid-to-valid mutation, and an independent oracle-side classifier proves the
+canonical-key corpus exercises the reverse selection branch. Fresh final-commit
+gates accepted the hardened design: `895` tests passed, and all `18` layouts in
+the strict sequential Compact and Short Side matrix passed and rendered on
+source commit `59fa2220600c89002b2cbdd7ae4e3ccf6d7591cc`. The earlier timing
+pair lacked complete main-side source provenance and is not retained as an
+accepted performance claim.
+
+The translated ring is still validated: it is a fresh array and float
+translation can round vertices into collinearity. Replacing the quadratic
+simple-ring test with an `O(n)` turning argument remains open, and is deferred
+because it would change which inputs produce which rejection message.
+
+See
+[`../research/trusted-ring-validation-memo.md`](../research/trusted-ring-validation-memo.md)
+and
+[`../artifacts/trusted-ring-validation-memo/`](../artifacts/trusted-ring-validation-memo/).
