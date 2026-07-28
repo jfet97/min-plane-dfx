@@ -1906,23 +1906,19 @@ function retainCapacityCohesionFrontier(
       if (added >= maximum || retained.length >= beamWidth) return
     }
   }
-  const topologyBucketWidth = Math.max(1, Math.floor(beamWidth / 16))
-  const objectiveBucketWidth = Math.max(
-    1,
-    beamWidth - topologyBucketWidth * 4
-  )
-  reserve(entries.toSorted(compareCapacityBeamEntries), objectiveBucketWidth)
+  const bucketWidth = Math.max(1, Math.floor(beamWidth / 4))
+  reserve(entries.toSorted(compareCapacityBeamEntries), bucketWidth)
   reserve(
     entries.toSorted((first, second) =>
       compareTopology(first, second, 'isolated')
     ),
-    topologyBucketWidth
+    bucketWidth
   )
   reserve(
     entries.toSorted((first, second) =>
       compareTopology(first, second, 'largest-component')
     ),
-    topologyBucketWidth
+    bucketWidth
   )
   reserve(
     entries.toSorted((first, second) =>
