@@ -58,6 +58,8 @@ uncensored complete-archive miss, the coordinator may start one
 - scope: requests with at least twice the production beam width, currently 32
   pieces;
 - admission: strictly greater placed count only;
+- terminal truth: distinct settled, evaluation-cap, and
+  checkpointed-censored trace states;
 - exclusions: exact preflight impossibility, a fitting complete endpoint,
   ties, losses, and smaller requests.
 

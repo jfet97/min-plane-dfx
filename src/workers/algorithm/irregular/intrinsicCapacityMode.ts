@@ -113,6 +113,7 @@ export interface IntrinsicCapacityQualityWarmPrefixTrace {
     | 'skipped-below-minimum-piece-count'
     | 'skipped-no-fitting-canonical-prefix'
     | 'settled'
+    | 'evaluation-cap'
     | 'checkpointed-censored'
   readonly outputInfluence: 'none' | 'strict-count-improvement'
   readonly sourceRole: 'canonical-grid' | undefined
@@ -867,7 +868,9 @@ function runProtectedCapacityLaneCoordinator(input: {
         status:
           qualityResult.status === 'paused'
             ? 'checkpointed-censored'
-            : 'settled',
+            : qualityResult.trace.settlement === 'evaluation-cap'
+              ? 'evaluation-cap'
+              : 'settled',
         outputInfluence: 'none',
         sourceRole: 'canonical-grid',
         prefixDepth: qualityDescriptor.depth,

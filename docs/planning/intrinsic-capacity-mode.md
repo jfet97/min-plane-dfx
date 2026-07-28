@@ -166,6 +166,8 @@ After the ordinary cold and warm-prefix work settles, requests with at least
 `canonical-grid` prefix. It retains 12 objective representatives plus four
 topology representatives inside its own width-16 frontier. It cannot displace
 an incumbent on a tie: admission requires a strictly greater placed count.
+Its trace distinguishes full settlement, evaluation-cap settlement, and a
+retained checkpoint censored before settlement.
 Smaller requests record `skipped-below-minimum-piece-count` and consume zero
 evaluations. This preserves Triangle-20 and Shapes-17 timing while recovering
 Mixed-61 `700 x 500` from 48 to 50 pieces and retaining 59 pieces on
