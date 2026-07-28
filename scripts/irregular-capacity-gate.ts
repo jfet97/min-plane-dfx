@@ -1,5 +1,8 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
 import { Effect, Layer, Schema } from 'effect'
@@ -80,6 +83,15 @@ interface CapacityFixture {
   readonly expectedPlacedCount: number | undefined
   readonly minimumPlacedCount?: number
   readonly expectedCanonicalSha256?: string
+  readonly expectedQualityWarmPrefix?: {
+    readonly status: NonNullable<IntrinsicCapacityTrace['qualityWarmPrefix']>['status']
+    readonly outputInfluence: NonNullable<
+      IntrinsicCapacityTrace['qualityWarmPrefix']
+    >['outputInfluence']
+    readonly sourceRole: string
+    readonly prefixDepth: number
+    readonly endpointCanonicalGeometryHash?: string
+  }
   readonly pairedEligible: boolean
   /** Allows expected shell-side preparation warnings such as piece_does_not_fit. */
   readonly allowPrepareWarnings?: boolean
@@ -148,6 +160,12 @@ const fixtures: ReadonlyArray<CapacityFixture> = [
     minimumPlacedCount: 17,
     expectedCanonicalSha256:
       '2f236b79c7c49a999daf5363e257bbda6b8562239571c6fedab2485cffb38c35',
+    expectedQualityWarmPrefix: {
+      status: 'skipped-below-minimum-piece-count',
+      outputInfluence: 'none',
+      sourceRole: 'canonical-grid',
+      prefixDepth: 10
+    },
     pairedEligible: true
   },
   {
@@ -167,8 +185,18 @@ const fixtures: ReadonlyArray<CapacityFixture> = [
     paddingMm: 10,
     sheet: new SheetSpec({ width: 700, height: 500, label: 'constrained 700x500' }),
     expectedRouting: undefined,
-    expectedPlacedCount: undefined,
-    minimumPlacedCount: 49,
+    expectedPlacedCount: 50,
+    minimumPlacedCount: 50,
+    expectedCanonicalSha256:
+      '97dbc5029a050389b9b8f440dfd764e0b758e75c5cbfdbc8f27e1c0ddcdca04b',
+    expectedQualityWarmPrefix: {
+      status: 'settled',
+      outputInfluence: 'strict-count-improvement',
+      sourceRole: 'canonical-grid',
+      prefixDepth: 15,
+      endpointCanonicalGeometryHash:
+        '0c98259d05531d74d14d7e72eac64d0d1f02e9ffb5e99910aabad048f67bf77d'
+    },
     pairedEligible: true
   },
   {
@@ -178,8 +206,18 @@ const fixtures: ReadonlyArray<CapacityFixture> = [
     paddingMm: 10,
     sheet: new SheetSpec({ width: 700, height: 560, label: 'constrained 700x560' }),
     expectedRouting: undefined,
-    expectedPlacedCount: undefined,
+    expectedPlacedCount: 59,
     minimumPlacedCount: 59,
+    expectedCanonicalSha256:
+      '36cee3489abffe6f5961a7ae96cbe9ce34d33d8754c9822841abb7585117ba16',
+    expectedQualityWarmPrefix: {
+      status: 'settled',
+      outputInfluence: 'strict-count-improvement',
+      sourceRole: 'canonical-grid',
+      prefixDepth: 30,
+      endpointCanonicalGeometryHash:
+        '2d252e359cf482f55bc5de60cdde7b3482a8f6b0493e1c686ae9d94296741e69'
+    },
     pairedEligible: true
   }
 ]
@@ -1034,6 +1072,8 @@ for (const fixture of fixtures) {
         )
       : undefined
   const productionColdSearch = capacityColdSearchTrace(production)
+  const productionQualityWarmPrefix =
+    production.capacity?.qualityWarmPrefix
   const coldOnlyColdSearch =
     coldOnly === undefined ? undefined : capacityColdSearchTrace(coldOnly)
 
@@ -1051,6 +1091,21 @@ for (const fixture of fixtures) {
       fixture.expectedCanonicalSha256 === undefined ||
       cli.retentionMode !== 'objective' ||
       production.canonicalSha256 === fixture.expectedCanonicalSha256,
+    qualityWarmPrefixContract:
+      fixture.expectedQualityWarmPrefix === undefined ||
+      cli.retentionMode !== 'objective' ||
+      (productionQualityWarmPrefix?.status ===
+        fixture.expectedQualityWarmPrefix.status &&
+        productionQualityWarmPrefix.outputInfluence ===
+          fixture.expectedQualityWarmPrefix.outputInfluence &&
+        productionQualityWarmPrefix.sourceRole ===
+          fixture.expectedQualityWarmPrefix.sourceRole &&
+        productionQualityWarmPrefix.prefixDepth ===
+          fixture.expectedQualityWarmPrefix.prefixDepth &&
+        (fixture.expectedQualityWarmPrefix.endpointCanonicalGeometryHash ===
+          undefined ||
+          productionQualityWarmPrefix.endpoint?.canonicalGeometryHash ===
+            fixture.expectedQualityWarmPrefix.endpointCanonicalGeometryHash)),
     capacitySettled:
       production.capacity === undefined ||
       production.terminationReason === 'capacity_subset_settled',
@@ -1149,6 +1204,68 @@ await writeFile(
     null,
     2
   )}\n`
+)
+const sourceCommit =
+  process.env.CAPACITY_SOURCE_COMMIT ??
+  execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+const artifactNames = (await readdir(cli.outputDirectory))
+  .filter(
+    (name) =>
+      name !== 'manifest.json' &&
+      name !== 'SHA256SUMS' &&
+      (name.endsWith('.json') || name.endsWith('.svg') || name.endsWith('.png'))
+  )
+  .sort((first, second) => first.localeCompare(second))
+const artifacts = await Promise.all(
+  artifactNames.map(async (name) => ({
+    name,
+    sha256: createHash('sha256')
+      .update(await readFile(join(cli.outputDirectory, name)))
+      .digest('hex')
+  }))
+)
+const manifestPath = join(cli.outputDirectory, 'manifest.json')
+await writeFile(
+  manifestPath,
+  `${JSON.stringify(
+    {
+      version: 'intrinsic-capacity-gate-provenance-v1',
+      generatedAt: new Date().toISOString(),
+      sourceCommit,
+      command: [
+        'pnpm',
+        'gate:capacity',
+        '--output',
+        '<output-directory>',
+        ...(cli.paired ? ['--paired'] : []),
+        ...(cli.strict ? ['--strict'] : [])
+      ],
+      runtime: {
+        node: process.version,
+        v8: process.versions.v8
+      },
+      execution: {
+        maximumConcurrentAlgorithmProcesses: 1,
+        strictlySequential: true
+      },
+      artifacts
+    },
+    null,
+    2
+  )}\n`
+)
+const checksumEntries = [
+  ...artifacts,
+  {
+    name: 'manifest.json',
+    sha256: createHash('sha256')
+      .update(await readFile(manifestPath))
+      .digest('hex')
+  }
+]
+await writeFile(
+  join(cli.outputDirectory, 'SHA256SUMS'),
+  `${checksumEntries.map(({ sha256, name }) => `${sha256}  ${name}`).join('\n')}\n`
 )
 console.log(JSON.stringify({ reportPath, passed }))
 if (cli.strict && !passed) {

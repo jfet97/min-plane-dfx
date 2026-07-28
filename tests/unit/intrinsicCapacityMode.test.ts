@@ -27,6 +27,7 @@ import {
   intrinsicCapacityPreparedPieceId
 } from '../../src/workers/algorithm/irregular/intrinsicCapacityMaterial.js'
 import {
+  intrinsicCapacityQualityStrictlyImprovesPlacedCount,
   runIntrinsicCapacityMode,
   type IntrinsicCapacityModeResult,
   type RunIntrinsicCapacityModeInput
@@ -65,6 +66,17 @@ import {
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
 }
+
+describe('intrinsic capacity quality admission', () => {
+  it('admits only a strict placed-count improvement', () => {
+    expect(intrinsicCapacityQualityStrictlyImprovesPlacedCount(18, 17)).toBe(true)
+    expect(intrinsicCapacityQualityStrictlyImprovesPlacedCount(17, 17)).toBe(false)
+    expect(intrinsicCapacityQualityStrictlyImprovesPlacedCount(16, 17)).toBe(false)
+    expect(intrinsicCapacityQualityStrictlyImprovesPlacedCount(undefined, 17)).toBe(
+      false
+    )
+  })
+})
 
 function rectanglePoints(width: number, height: number): ReadonlyArray<IrregularPoint> {
   return [point(0, 0), point(width, 0), point(width, height), point(0, height)]

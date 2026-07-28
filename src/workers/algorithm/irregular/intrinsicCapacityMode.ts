@@ -331,6 +331,16 @@ export interface IntrinsicCapacityModeResult {
   readonly phaseTimings: IntrinsicCapacitySearchPhaseTimings | undefined
 }
 
+export function intrinsicCapacityQualityStrictlyImprovesPlacedCount(
+  candidatePlacedCount: number | undefined,
+  incumbentPlacedCount: number | undefined
+): boolean {
+  return (
+    candidatePlacedCount !== undefined &&
+    candidatePlacedCount > (incumbentPlacedCount ?? 0)
+  )
+}
+
 export interface RunIntrinsicCapacityModeInput {
   readonly sheet: SheetSpec
   readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
@@ -1302,8 +1312,10 @@ export function runIntrinsicCapacityMode(
     const qualityEndpoint = coordinated?.qualityEndpoints[0]
     const qualityImprovesPlacedCount =
       qualityEndpoint !== undefined &&
-      qualityEndpoint.metrics.placedCount >
-        (baseSelected?.metrics.placedCount ?? 0)
+      intrinsicCapacityQualityStrictlyImprovesPlacedCount(
+        qualityEndpoint.metrics.placedCount,
+        baseSelected?.metrics.placedCount
+      )
     const candidates = qualityImprovesPlacedCount
       ? retainIntrinsicAnytimeArchiveNamespace({
           namespace: 'partial',
