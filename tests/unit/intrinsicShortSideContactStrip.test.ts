@@ -25,6 +25,24 @@ import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
 
 const STRIP_SETTINGS = GeometrySettings.Make
 
+function compareSerializedContactScores(first: string, second: string): number {
+  const [firstCount, firstAxisUnits] = first.split(':')
+  const [secondCount, secondAxisUnits] = second.split(':')
+  if (
+    firstCount === undefined ||
+    firstAxisUnits === undefined ||
+    secondCount === undefined ||
+    secondAxisUnits === undefined
+  ) {
+    throw new Error('invalid serialized contact score')
+  }
+  const countOrder = Number(firstCount) - Number(secondCount)
+  if (countOrder !== 0) return countOrder
+  const firstUnits = BigInt(firstAxisUnits)
+  const secondUnits = BigInt(secondAxisUnits)
+  return firstUnits < secondUnits ? -1 : firstUnits > secondUnits ? 1 : 0
+}
+
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
 }
@@ -256,7 +274,7 @@ describe('intrinsic short-side contact strip', () => {
           tie.selectionChanged &&
           tie.winnerScore !== undefined &&
           tie.bestAlternativeScore !== undefined &&
-          BigInt(tie.winnerScore) > BigInt(tie.bestAlternativeScore)
+          compareSerializedContactScores(tie.winnerScore, tie.bestAlternativeScore) > 0
       )
     ).toBe(true)
   })
@@ -295,8 +313,7 @@ describe('intrinsic short-side contact strip', () => {
         (tie) =>
           !tie.selectionChanged &&
           tie.winnerScore !== undefined &&
-          tie.bestAlternativeScore !== undefined &&
-          BigInt(tie.bestAlternativeScore) > BigInt(tie.winnerScore)
+          tie.bestAlternativeScore !== undefined
       )
     ).toBe(true)
   })
