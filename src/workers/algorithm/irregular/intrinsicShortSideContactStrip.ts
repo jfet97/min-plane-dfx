@@ -247,6 +247,16 @@ function constructStrip(
         }
         for (const candidate of candidates) {
           runtime.candidateEvaluations += 1
+          const boundedAfterAnchor = boundedStatus(runtime)
+          if (boundedAfterAnchor !== undefined) {
+            return failedOutcome(
+              input,
+              runtime,
+              boundedAfterAnchor,
+              `${boundedAfterAnchor} reached after ${runtime.candidateEvaluations} contact candidate anchors.`,
+              placed.length
+            )
+          }
           const anchored = anchorCandidate(candidate, moving)
           if (anchored === undefined) continue
           anchoredCandidates.push(anchored)
@@ -416,6 +426,8 @@ function selectContactAwareWinner(
 ): ContactAwareSelectionResult {
   let baseline: AnchoredCandidate | undefined
   for (const anchored of candidates) {
+    const bounded = boundedStatus(runtime)
+    if (bounded !== undefined) return { kind: 'bounded', status: bounded }
     if (baseline === undefined || compareAnchoredCandidates(anchored, baseline) < 0) {
       baseline = anchored
     }
@@ -426,6 +438,10 @@ function selectContactAwareWinner(
       anchored.anchorLongAxisGrid === baseline.anchorLongAxisGrid &&
       anchored.anchorShortAxisGrid === baseline.anchorShortAxisGrid
   )
+  const boundedAfterTieFilter = boundedStatus(runtime)
+  if (boundedAfterTieFilter !== undefined) {
+    return { kind: 'bounded', status: boundedAfterTieFilter }
+  }
   if (tied.length < 2) {
     return {
       kind: 'selection',
