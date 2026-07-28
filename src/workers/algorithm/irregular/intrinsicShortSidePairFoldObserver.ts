@@ -37,6 +37,7 @@ export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION =
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS = 30_000 as const
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RSS_DELTA_BYTES = 512 * 1_048_576
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES = 1_048_576 as const
+export const INTRINSIC_SHORT_SIDE_ORDER_CONTINUATION_MAX_PIECES = 8 as const
 
 export interface IntrinsicShortSidePairFoldRuntimeControl {
   readonly maximumRuntimeMs?: number
@@ -529,6 +530,7 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
       preparedPieces: input.preparedPieces,
       settings: input.settings,
       selectionPolicy: 'depth-first',
+      orderPolicy: 'prepared',
       runtimeControl: {
         maximumRuntimeMs: Math.min(
           INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RUNTIME_MS,
@@ -584,6 +586,7 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
       preparedPieces: input.preparedPieces,
       settings: input.settings,
       selectionPolicy: 'contact-first',
+      orderPolicy: 'prepared',
       runtimeControl: {
         maximumCandidateEvaluations:
           INTRINSIC_SHORT_SIDE_CONTACT_FIRST_MAX_CANDIDATE_EVALUATIONS,
@@ -626,12 +629,91 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
             selectedBottomPieceId: undefined,
             selectedUpperPieceId: undefined
           })
-    const stripOutcome = selectDirectionalIncumbent(
+    let stripOutcome = selectDirectionalIncumbent(
       depthStripOutcome,
       contactStripOutcome
     )
-    const selectedStripTrace =
+    let selectedStripTrace =
       stripOutcome === contactStripOutcome ? contactStrip.trace : depthStrip.trace
+    const contactStripLanes = [depthStrip.trace, contactStrip.trace]
+    if (
+      incumbent === undefined &&
+      stripOutcome === undefined &&
+      input.preparedPieces.length <= INTRINSIC_SHORT_SIDE_ORDER_CONTINUATION_MAX_PIECES
+    ) {
+      const orderContinuations = [
+        {
+          orderPolicy: 'reverse' as const,
+          preparedPieces: input.preparedPieces.toReversed()
+        },
+        {
+          orderPolicy: 'area-descending' as const,
+          preparedPieces: sortByExactCollisionArea(input.preparedPieces)
+        }
+      ]
+      for (const continuation of orderContinuations) {
+        const remainingRuntimeMs = Math.max(
+          0,
+          runtime.maximumRuntimeMs - (runtime.now() - runtime.startedAt)
+        )
+        const remainingRssBytes = Math.max(
+          0,
+          runtime.maximumRssDeltaBytes - sampleRss(runtime)
+        )
+        const continuedStrip = yield* constructIntrinsicShortSideContactStrip({
+          stripSheet: new SheetSpec({
+            width: requestedShortAxisMm,
+            height: axes.longAxisMm,
+            label: `short-side-strip-${requestedShortAxisMm}x${axes.longAxisMm}`
+          }),
+          preparedPieces: continuation.preparedPieces,
+          settings: input.settings,
+          selectionPolicy: 'depth-first',
+          orderPolicy: continuation.orderPolicy,
+          runtimeControl: {
+            maximumRuntimeMs: Math.min(
+              INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RUNTIME_MS,
+              remainingRuntimeMs
+            ),
+            maximumRssDeltaBytes: Math.min(
+              INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RSS_DELTA_BYTES,
+              remainingRssBytes
+            ),
+            now: runtime.now,
+            currentRssBytes: () => {
+              const current = runtime.currentRssBytes()
+              runtime.peakRssBytes = Math.max(runtime.peakRssBytes, current)
+              return current
+            }
+          }
+        })
+        contactStripLanes.push(continuedStrip.trace)
+        const boundedAfterContinuation = boundedStatus(runtime)
+        if (boundedAfterContinuation !== undefined) {
+          return failedOutcome(
+            input,
+            runtime,
+            boundedAfterContinuation,
+            `${boundedAfterContinuation} reached during ${continuation.orderPolicy} contact-strip continuation.`
+          )
+        }
+        if (continuedStrip.placedCollisionGeometries === undefined) continue
+        const continuedOutcome = finalizePlacedLayout({
+          input,
+          runtime,
+          placed: continuedStrip.placedCollisionGeometries,
+          constructionKind: 'contact-strip',
+          rowCount: 0,
+          selectedBottomPieceId: undefined,
+          selectedUpperPieceId: undefined
+        })
+        stripOutcome = selectDirectionalIncumbent(stripOutcome, continuedOutcome)
+        if (stripOutcome === continuedOutcome) {
+          selectedStripTrace = continuedStrip.trace
+        }
+        if (stripOutcome !== undefined) break
+      }
+    }
     const promotion = evaluateIntrinsicShortSideContactStripPromotion(
       incumbent,
       stripOutcome,
@@ -659,7 +741,7 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
       envelopeAreaCostVetoObserved: runtime.envelopeAreaCostVetoObserved,
       envelopeAreaCostVetoes: [...runtime.envelopeAreaCostVetoes],
       contactStrip: selectedStripTrace,
-      contactStripLanes: [depthStrip.trace, contactStrip.trace],
+      contactStripLanes,
       contactStripPromotion: promotion,
       peakRssDeltaBytes: sampleRss(runtime),
       runtimeMs: Math.max(0, runtime.now() - runtime.startedAt),
@@ -716,6 +798,30 @@ function selectDirectionalIncumbent(
   ) <= 0
     ? first
     : second
+}
+
+function sortByExactCollisionArea(
+  pieces: ReadonlyArray<IrregularPreparedPiece>
+): ReadonlyArray<IrregularPreparedPiece> {
+  return [...pieces].sort((first, second) => {
+    const firstArea = exactPreparedCollisionEnvelopeArea(first) ?? -1n
+    const secondArea = exactPreparedCollisionEnvelopeArea(second) ?? -1n
+    if (firstArea !== secondArea) return firstArea > secondArea ? -1 : 1
+    const firstId = first.pieceId ?? first.source.id
+    const secondId = second.pieceId ?? second.source.id
+    return firstId < secondId ? -1 : firstId > secondId ? 1 : 0
+  })
+}
+
+function exactPreparedCollisionEnvelopeArea(
+  piece: IrregularPreparedPiece
+): bigint | undefined {
+  const bounds = piece.collisionGeometry.sourceBounds
+  const width = toGridMm(bounds.maxX - bounds.minX)
+  const height = toGridMm(bounds.maxY - bounds.minY)
+  return width === undefined || height === undefined
+    ? undefined
+    : BigInt(width) * BigInt(height)
 }
 
 function directionalFillTier(metrics: {

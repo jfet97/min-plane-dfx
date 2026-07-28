@@ -459,6 +459,24 @@ const directionalTargetCount =
     : request.pieces.length
 const expectedPairCount =
   (directionalTargetCount * (directionalTargetCount - 1)) / 2
+const contactStripLanes = shortSidePairFoldTrace?.contactStripLanes ?? []
+const contactStripLaneContractValid =
+  contactStripLanes.length >= 2 &&
+  contactStripLanes.length <= 4 &&
+  contactStripLanes[0]?.selectionPolicy === 'depth-first' &&
+  contactStripLanes[0]?.orderPolicy === 'prepared' &&
+  contactStripLanes[1]?.selectionPolicy === 'contact-first' &&
+  contactStripLanes[1]?.orderPolicy === 'prepared' &&
+  (contactStripLanes.length === 2 ||
+    (contactStripLanes[0]?.status !== 'constructed' &&
+      contactStripLanes[1]?.status !== 'constructed' &&
+      contactStripLanes
+        .slice(2)
+        .every(
+          (lane, index) =>
+            lane.selectionPolicy === 'depth-first' &&
+            lane.orderPolicy === (index === 0 ? 'reverse' : 'area-descending')
+        )))
 const shortSidePairFoldContractValid =
   shortSidePairFoldTrace === undefined
     ? !shortSidePairFoldExpected
@@ -481,11 +499,7 @@ const shortSidePairFoldContractValid =
                 : shortSidePairFoldTrace.constructionKind === 'contact-strip'
                   ? shortSidePairFoldTrace.rowCount === 0 &&
                     shortSidePairFoldTrace.contactStrip?.status === 'constructed' &&
-                    shortSidePairFoldTrace.contactStripLanes.length === 2 &&
-                    shortSidePairFoldTrace.contactStripLanes[0]?.selectionPolicy ===
-                      'depth-first' &&
-                    shortSidePairFoldTrace.contactStripLanes[1]?.selectionPolicy ===
-                      'contact-first'
+                    contactStripLaneContractValid
                   : false)) &&
           shortSidePairFoldTrace.canonicalGeometryHash ===
             pairFoldSelectedGeometryHash

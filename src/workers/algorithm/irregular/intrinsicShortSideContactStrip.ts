@@ -47,6 +47,7 @@ export interface IntrinsicShortSideContactStripTrace {
   readonly status: IntrinsicShortSideContactStripStatus
   readonly executionModel: 'single-process-sequential'
   readonly selectionPolicy: IntrinsicShortSideContactStripSelectionPolicy
+  readonly orderPolicy: IntrinsicShortSideContactStripOrderPolicy
   readonly stripShortAxisMm: number
   readonly stripLongAxisMm: number
   readonly transformEvaluations: number
@@ -63,6 +64,11 @@ export interface IntrinsicShortSideContactStripTrace {
 export type IntrinsicShortSideContactStripSelectionPolicy =
   | 'depth-first'
   | 'contact-first'
+
+export type IntrinsicShortSideContactStripOrderPolicy =
+  | 'prepared'
+  | 'reverse'
+  | 'area-descending'
 
 export interface IntrinsicShortSideContactStripOutcome {
   readonly trace: IntrinsicShortSideContactStripTrace
@@ -165,6 +171,7 @@ export function constructIntrinsicShortSideContactStrip(input: {
   readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly settings: IrregularNestingSettings
   readonly selectionPolicy?: IntrinsicShortSideContactStripSelectionPolicy
+  readonly orderPolicy?: IntrinsicShortSideContactStripOrderPolicy
   readonly runtimeControl?: IntrinsicShortSideContactStripRuntimeControl
 }): Effect.Effect<
   IntrinsicShortSideContactStripOutcome,
@@ -226,6 +233,7 @@ function constructStrip(
     readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
     readonly settings: IrregularNestingSettings
     readonly selectionPolicy?: IntrinsicShortSideContactStripSelectionPolicy
+    readonly orderPolicy?: IntrinsicShortSideContactStripOrderPolicy
     readonly runtimeControl?: IntrinsicShortSideContactStripRuntimeControl
   },
   runtime: StripRuntime
@@ -418,6 +426,7 @@ function constructStrip(
         status: 'constructed' as const,
         executionModel: 'single-process-sequential' as const,
         selectionPolicy: input.selectionPolicy ?? 'depth-first',
+        orderPolicy: input.orderPolicy ?? 'prepared',
         stripShortAxisMm: input.stripSheet.width,
         stripLongAxisMm: input.stripSheet.height,
         transformEvaluations: runtime.transformEvaluations,
@@ -799,6 +808,7 @@ function failedOutcome(
     readonly stripSheet: SheetSpec
     readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
     readonly selectionPolicy?: IntrinsicShortSideContactStripSelectionPolicy
+    readonly orderPolicy?: IntrinsicShortSideContactStripOrderPolicy
   },
   runtime: StripRuntime,
   status: Exclude<IntrinsicShortSideContactStripStatus, 'constructed'>,
@@ -811,6 +821,7 @@ function failedOutcome(
       status,
       executionModel: 'single-process-sequential',
       selectionPolicy: input.selectionPolicy ?? 'depth-first',
+      orderPolicy: input.orderPolicy ?? 'prepared',
       stripShortAxisMm: input.stripSheet.width,
       stripLongAxisMm: input.stripSheet.height,
       transformEvaluations: runtime.transformEvaluations,
