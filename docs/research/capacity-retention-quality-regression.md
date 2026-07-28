@@ -90,8 +90,11 @@ capacity gate passed every fixture and pinned:
 
 The full 18-layout Compact/Short Side matrix passed with all accepted hashes,
 placed/unplaced partitions, area/cavity metrics, scheduler traces, and profile
-outcomes unchanged. CI now runs both gates on Ubuntu; the matrix uses
-`--skip-png` only to avoid a display dependency.
+outcomes unchanged. Pull-request CI runs the exact production capacity oracle
+and the full matrix as independent jobs; the paired cold-only comparison
+remains the manual research gate. Every individual algorithm execution stays
+single-process and sequential. The matrix uses `--skip-png` only to avoid a
+display dependency.
 
 Portable evidence is under
 [`../artifacts/capacity-retention-quality-guard/`](../artifacts/capacity-retention-quality-guard/README.md).

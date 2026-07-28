@@ -31,6 +31,7 @@
     "gate:mixed61-compact": "pnpm corpus:sheet-invariance --case mixed-61 --sheets 2000x2700 --allow-single-sheet --strict --expected-canonical-sha256 ef2b783ae12491d2a80a12ef94d1bb2801c13cbd43aeb6e2c1cc00d86828fd3b --maximum-area-mm2 391606 --maximum-canonical-cavities 0 --maximum-elapsed-ms 330000",
     "gate:compact-nine-baselines": "tsx --tsconfig tsconfig.node.json scripts/irregular-compact-nine-baselines.ts",
     "gate:capacity": "tsx --tsconfig tsconfig.node.json scripts/irregular-capacity-gate.ts --strict --paired",
+    "gate:capacity:production": "tsx --tsconfig tsconfig.node.json scripts/irregular-capacity-gate.ts --strict",
     "postinstall": "pnpm native:electron"
   },
   "dependencies": {

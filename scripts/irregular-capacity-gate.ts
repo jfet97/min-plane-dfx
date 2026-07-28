@@ -955,6 +955,7 @@ interface CliArguments {
   readonly selectedCaseIds: ReadonlySet<string>
   readonly outputDirectory: string
   readonly paired: boolean
+  readonly quiet: boolean
   readonly strict: boolean
   readonly retentionMode: 'objective' | 'area-first' | 'axis-buckets'
   readonly cohesionShadow: boolean
@@ -969,6 +970,7 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
   let outputDirectory = `${tmpdir()}/irregular-capacity-gate`
   let selected: ReadonlySet<string> = new Set(fixtures.map(({ id }) => id))
   let paired = false
+  let quiet = false
   let strict = false
   let retentionMode: 'objective' | 'area-first' | 'axis-buckets' = 'objective'
   let cohesionShadow = false
@@ -991,6 +993,8 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
       index += 1
     } else if (argument === '--paired') {
       paired = true
+    } else if (argument === '--quiet') {
+      quiet = true
     } else if (argument === '--strict') {
       strict = true
     } else if (argument === '--retention') {
@@ -1028,6 +1032,7 @@ function parseArguments(argv: ReadonlyArray<string>): CliArguments {
     selectedCaseIds: selected,
     outputDirectory,
     paired,
+    quiet,
     strict,
     retentionMode,
     cohesionShadow,
@@ -1183,7 +1188,9 @@ for (const fixture of fixtures) {
     ...(coldOnly === undefined ? {} : { coldOnly })
   })
   caseReports.push(report)
-  console.log(JSON.stringify(report))
+  if (!cli.quiet) {
+    console.log(JSON.stringify(report))
+  }
 }
 const reportPath = `${cli.outputDirectory}/report.json`
 await writeFile(
@@ -1238,6 +1245,7 @@ await writeFile(
         '--output',
         '<output-directory>',
         ...(cli.paired ? ['--paired'] : []),
+        ...(cli.quiet ? ['--quiet'] : []),
         ...(cli.strict ? ['--strict'] : [])
       ],
       runtime: {

@@ -94,9 +94,15 @@ identity. Reports, a source/command/runtime manifest, checksums, and
 sheet-outline SVG renders land under the platform temporary directory by
 default.
 
-CI runs both this gate and the full 18-layout Compact/Short Side matrix. The
-headless matrix uses `--skip-png`; this skips only Chromium rendering and
-retains all exact layout, hash, accounting, and trace checks.
+Pull-request CI runs the exact production arm through
+`pnpm gate:capacity:production --quiet`; the final counts, hashes, causal
+quality-lane contracts, settlement, chronology, and accounting remain pinned,
+while the expensive cold-only comparison stays in the manual paired gate
+above. CI runs the full 18-layout Compact/Short Side matrix as a separate job,
+so the independent gate families may overlap without adding threads or
+concurrency inside an algorithm execution. The headless matrix uses
+`--skip-png`; this skips only Chromium rendering and retains all exact layout,
+hash, accounting, and trace checks.
 
 ## Full Current Sheet Matrix
 
