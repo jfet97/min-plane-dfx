@@ -154,7 +154,7 @@ function deterministicClock(...readings: ReadonlyArray<number>): () => number {
 describe('intrinsic short-side observer', () => {
   it('rewards material short-axis fill before long-axis depth', () => {
     const fullShortSide = endpoint('full-short-side', 4, 6)
-    const shorterLongAxis = endpoint('shorter-long-axis', 4, 5, {
+    const shorterLongAxis = endpoint('shorter-long-axis', 3.6, 5, {
       cavities: 1
     })
     const trace = observeIntrinsicShortSideOrientations({
@@ -238,7 +238,7 @@ describe('intrinsic short-side observer', () => {
 
   it('preserves endpoint selection and swaps orientation on a transposed sheet', () => {
     const fullShortSide = endpoint('full-short-side', 4, 6)
-    const shorterLongAxis = endpoint('shorter-long-axis', 4, 5, {
+    const shorterLongAxis = endpoint('shorter-long-axis', 3.6, 5, {
       cavities: 1
     })
     const landscape = observeIntrinsicShortSideOrientations({
@@ -346,7 +346,7 @@ describe('intrinsic short-side observer', () => {
     expect(admittedTrace.observerWinnerCanonicalGeometryHash).toBe(
       admittedAtExactBound.sheetlessCanonicalGeometryHash
     )
-    // one canonical-grid millimetre of extra span costs the area term alone
+    // one canonical-grid unit (0.001 mm) of extra span costs the area term alone
     expect(vetoedTrace.status).toBe('observed-no-directional-improvement')
     expect(vetoedTrace.directionalAdmissionTerms).toEqual({
       shortEdgeFillAdmitted: true,
