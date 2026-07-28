@@ -6,7 +6,28 @@ Can an alternative Compact profile substantially fill the requested short
 axis while remaining compact along the requested long axis, without reviving the historical
 ordinary `short-side-fill` beam or contaminating production Compact?
 
-## Production activation
+## Current directional-only production contract
+
+Source commit `7009e04` removes Compact geometry from the Short Side output
+space. The settled Compact/capacity result contributes only the exact target
+piece IDs and comparison metrics. Pair-fold, shelf, protected depth-first
+strip, capped resumable contact-first strip, and small-target order
+continuations construct new geometry sequentially in the same worker.
+
+The authoritative matrix under
+[`../artifacts/compact-short-side-directional-contract/`](../artifacts/compact-short-side-directional-contract/)
+passes all 18 layouts: nine unchanged Compact controls, one directional
+multi-row shelf, eight directional contact strips, zero Compact fallbacks, and
+zero misses. Exact placed/unplaced partitions match each paired Compact result.
+All nine Short Side PNGs were visually reviewed; their bytes match the
+pre-promotion inspected renders.
+
+The remainder of this report is chronological experiment history. References
+below to Compact fallback, archive geometry selection, older strip promotion,
+and earlier source counts describe superseded commits and do not define the
+current production contract.
+
+## Historical production activation
 
 The accepted sibling is now a schema-backed production objective profile rather
 than a benchmark-only callback. `intrinsicObjectiveProfileId: 'short-side'`

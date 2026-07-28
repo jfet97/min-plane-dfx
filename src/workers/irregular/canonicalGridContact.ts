@@ -9,6 +9,11 @@ export interface CanonicalGridBoundaryContact {
   readonly nearCompleteStructuralContactSignatures: ReadonlyArray<string>
 }
 
+export type CanonicalGridBoundaryOverlapAxisUnitsResult =
+  | { readonly kind: 'measured'; readonly score: bigint }
+  | { readonly kind: 'undecidable' }
+  | { readonly kind: 'aborted' }
+
 interface CanonicalGridEdge {
   readonly start: CanonicalGridPoint
   readonly end: CanonicalGridPoint
@@ -30,8 +35,8 @@ const STRUCTURAL_CONTACT_TURN_SIGNATURE_SCALE = 1_000
  * robust-predicate path remains authoritative before canonicalization.
  */
 export function hasPositiveCanonicalGridBoundaryContact(
-  first: Path64,
-  second: Path64
+  first: ReadonlyArray<CanonicalGridPoint>,
+  second: ReadonlyArray<CanonicalGridPoint>
 ): boolean | undefined {
   const firstEdges = canonicalGridPathEdges(first)
   const secondEdges = canonicalGridPathEdges(second)
@@ -202,10 +207,14 @@ function structuralEdgeDescriptor(
   return `${edgeRatioKey}:${endpointPair}`
 }
 
-function canonicalGridPathEdges(path: Path64): ReadonlyArray<CanonicalGridEdge> | undefined {
+function canonicalGridPathEdges(
+  path: ReadonlyArray<CanonicalGridPoint>,
+  checkpoint: (() => boolean) | undefined = undefined
+): ReadonlyArray<CanonicalGridEdge> | undefined {
   if (path.length < 3) return undefined
   const edges: CanonicalGridEdge[] = []
   for (let index = 0; index < path.length; index += 1) {
+    if (checkpoint?.() === false) return undefined
     const start = path[index]
     const end = path[(index + 1) % path.length]
     if (
@@ -228,26 +237,20 @@ function canonicalGridCollinearOverlap(
   first: CanonicalGridEdge,
   second: CanonicalGridEdge
 ): { readonly lengthMm: number } | undefined {
-  const secondStartCross = canonicalGridCrossSign(first.start, first.end, second.start)
-  const secondEndCross = canonicalGridCrossSign(first.start, first.end, second.end)
-  if (secondStartCross === undefined || secondEndCross === undefined) return undefined
-  if (secondStartCross !== 0 || secondEndCross !== 0) return { lengthMm: 0 }
+  const axisUnits = canonicalGridCollinearOverlapAxisUnits(first, second)
+  if (axisUnits === undefined || axisUnits <= 0n) {
+    return axisUnits === undefined ? undefined : { lengthMm: 0 }
+  }
 
   const dx = BigInt(first.end.x) - BigInt(first.start.x)
   const dy = BigInt(first.end.y) - BigInt(first.start.y)
   const useX = absoluteBigInt(dx) >= absoluteBigInt(dy)
-  const firstStart = useX ? BigInt(first.start.x) : BigInt(first.start.y)
-  const firstEnd = useX ? BigInt(first.end.x) : BigInt(first.end.y)
-  const secondStart = useX ? BigInt(second.start.x) : BigInt(second.start.y)
-  const secondEnd = useX ? BigInt(second.end.x) : BigInt(second.end.y)
-  const overlappingAxisLength =
-    minimumBigInt(maximumBigInt(firstStart, firstEnd), maximumBigInt(secondStart, secondEnd)) -
-    maximumBigInt(minimumBigInt(firstStart, firstEnd), minimumBigInt(secondStart, secondEnd))
-  if (overlappingAxisLength <= 0n) return { lengthMm: 0 }
-
-  const firstAxisLength = absoluteBigInt(firstEnd - firstStart)
+  const firstAxisLength = absoluteBigInt(
+    (useX ? BigInt(first.end.x) : BigInt(first.end.y)) -
+      (useX ? BigInt(first.start.x) : BigInt(first.start.y))
+  )
   const edgeLengthMm = canonicalGridEdgeLengthMm(first)
-  const overlapAxisLength = Number(overlappingAxisLength)
+  const overlapAxisLength = Number(axisUnits)
   const axisLength = Number(firstAxisLength)
   if (
     edgeLengthMm === undefined ||
@@ -259,6 +262,78 @@ function canonicalGridCollinearOverlap(
   }
   const lengthMm = (overlapAxisLength * edgeLengthMm) / axisLength
   return Number.isFinite(lengthMm) && lengthMm > 0 ? { lengthMm } : undefined
+}
+
+/*
+ * Exact axis-projected overlap of two collinear grid edges in canonical grid
+ * units, or zero when the edges are collinear but disjoint. Not a Euclidean
+ * length: an exact BigInt ordering surrogate shared by every consumer that
+ * must compare contact strength without floating-point rounding.
+ */
+function canonicalGridCollinearOverlapAxisUnits(
+  first: CanonicalGridEdge,
+  second: CanonicalGridEdge
+): bigint | undefined {
+  const secondStartCross = canonicalGridCrossSign(first.start, first.end, second.start)
+  const secondEndCross = canonicalGridCrossSign(first.start, first.end, second.end)
+  if (secondStartCross === undefined || secondEndCross === undefined) return undefined
+  if (secondStartCross !== 0 || secondEndCross !== 0) return 0n
+
+  const dx = BigInt(first.end.x) - BigInt(first.start.x)
+  const dy = BigInt(first.end.y) - BigInt(first.start.y)
+  const useX = absoluteBigInt(dx) >= absoluteBigInt(dy)
+  const firstStart = useX ? BigInt(first.start.x) : BigInt(first.start.y)
+  const firstEnd = useX ? BigInt(first.end.x) : BigInt(first.end.y)
+  const secondStart = useX ? BigInt(second.start.x) : BigInt(second.start.y)
+  const secondEnd = useX ? BigInt(second.end.x) : BigInt(second.end.y)
+  const overlappingAxisLength =
+    minimumBigInt(maximumBigInt(firstStart, firstEnd), maximumBigInt(secondStart, secondEnd)) -
+    maximumBigInt(minimumBigInt(firstStart, firstEnd), minimumBigInt(secondStart, secondEnd))
+  return overlappingAxisLength > 0n ? overlappingAxisLength : 0n
+}
+
+/**
+ * Sums exact overlap units for positive axis-aligned contacts between two
+ * canonical grid paths. A positive diagonal contact makes the result
+ * undecidable because dominant-axis projection is not comparable across
+ * orientations. The optional checkpoint covers path construction and every
+ * edge-pair comparison.
+ */
+export function measureCanonicalGridBoundaryOverlapAxisUnits(
+  first: ReadonlyArray<CanonicalGridPoint>,
+  second: ReadonlyArray<CanonicalGridPoint>,
+  checkpoint: (() => boolean) | undefined = undefined
+): CanonicalGridBoundaryOverlapAxisUnitsResult {
+  let aborted = false
+  const checked = (): boolean => {
+    if (checkpoint === undefined || checkpoint()) return true
+    aborted = true
+    return false
+  }
+  const firstEdges = canonicalGridPathEdges(first, checked)
+  if (firstEdges === undefined) {
+    return { kind: aborted ? 'aborted' : 'undecidable' }
+  }
+  const secondEdges = canonicalGridPathEdges(second, checked)
+  if (secondEdges === undefined) {
+    return { kind: aborted ? 'aborted' : 'undecidable' }
+  }
+  let total = 0n
+  for (const firstEdge of firstEdges) {
+    if (!checked()) return { kind: 'aborted' }
+    for (const secondEdge of secondEdges) {
+      if (!checked()) return { kind: 'aborted' }
+      const axisUnits = canonicalGridCollinearOverlapAxisUnits(firstEdge, secondEdge)
+      if (axisUnits === undefined) return { kind: 'undecidable' }
+      if (axisUnits > 0n) {
+        const dx = BigInt(firstEdge.end.x) - BigInt(firstEdge.start.x)
+        const dy = BigInt(firstEdge.end.y) - BigInt(firstEdge.start.y)
+        if (dx !== 0n && dy !== 0n) return { kind: 'undecidable' }
+      }
+      total += axisUnits
+    }
+  }
+  return { kind: 'measured', score: total }
 }
 
 function longestCanonicalGridEdgeLength(edges: ReadonlyArray<CanonicalGridEdge>): number | undefined {

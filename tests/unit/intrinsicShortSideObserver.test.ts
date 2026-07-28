@@ -357,7 +357,7 @@ describe('intrinsic short-side observer', () => {
     expect(vetoedTrace.observerWinnerCanonicalGeometryHash).toBeUndefined()
   })
 
-  it('uses deterministic intrinsic behavior without a directional shortfall on square sheets', () => {
+  it('uses physical Y as the deterministic short axis on square sheets', () => {
     const candidate = endpoint('square-candidate', 4, 2)
     const trace = observeIntrinsicShortSideOrientations({
       sheet: new SheetSpec({ width: 6, height: 6, label: 'square' }),
@@ -365,13 +365,13 @@ describe('intrinsic short-side observer', () => {
       now: deterministicClock(10, 20)
     })
 
-    expect(trace.requestedLongAxis).toBe('square')
-    expect(trace.status).toBe('skipped-square-sheet')
+    expect(trace.requestedLongAxis).toBe('width')
+    expect(trace.status).toBe('observed-no-directional-improvement')
     expect(trace.observerWinnerCanonicalGeometryHash).toBeUndefined()
-    expect(trace.endpoints[0]?.q0.requestedShortAxisShortfallMm).toBe(0)
-    expect(trace.endpoints[0]?.q90.requestedShortAxisShortfallMm).toBe(0)
+    expect(trace.endpoints[0]?.q0.requestedShortAxisShortfallMm).toBe(4)
+    expect(trace.endpoints[0]?.q90.requestedShortAxisShortfallMm).toBe(2)
     expect(trace.endpoints[0]?.q0.requestedLongAxisUsedSpanMm).toBe(4)
-    expect(trace.endpoints[0]?.q90.requestedLongAxisUsedSpanMm).toBe(4)
+    expect(trace.endpoints[0]?.q90.requestedLongAxisUsedSpanMm).toBe(2)
     expect(trace.runtimeMs).toBe(10)
     expect(trace.runtimeBudgetExceeded).toBe(false)
   })

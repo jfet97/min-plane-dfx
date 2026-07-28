@@ -20,6 +20,7 @@ export const AppErrorCode = [
   'irregular_source_geometry_missing',
   'irregular_geometry_invalid',
   'irregular_scoring_error',
+  'irregular_no_valid_result',
   'not_implemented',
   'unknown_error'
 ] as const

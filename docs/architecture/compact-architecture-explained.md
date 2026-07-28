@@ -457,6 +457,39 @@ invalid and it found no promotable result.
 
 ### 8.1 The Short Side production sibling
 
+The current profile first runs the same protected Compact/capacity coordinator,
+but it does not reuse or rotate that geometry. Compact supplies only the exact
+selected piece-ID set and comparison metrics. Short Side must construct new
+directional geometry for those IDs; failure is a typed
+`irregular_no_valid_result`, never a Compact fallback.
+
+The terminal portfolio remains single-process and sequential: exact pair-fold
+and next-fit shelf candidates, a protected prepared-order depth-first contact
+strip, and a capped contact-first strip that retains resumable depth-first
+decisions. Only targets of at most eight pieces may continue through reverse
+and canonical piece-ID orders after both prepared-order lanes fail. Every
+candidate comes from the exact NFP/IFP and canonical legality authority.
+Square sheets define physical Y as the short axis and X as the long axis.
+
+Completed constructions share one exact total order. Fill is grouped into
+exact `>=99%`, `>=80%`, and lower tiers. Inside the saturated tier, smaller
+envelope area wins before long-axis depth, followed by exact cavity, hull-gap,
+isolation, connectivity, and canonical-identity terms. This lets the clean
+Triangle-20 `600 x 400` interlock at `99.32425%` fill beat a jagged nominal
+`100%` layout with a larger envelope.
+
+The accepted gate contains nine unchanged Compact controls and nine genuinely
+directional Short Side layouts: one multi-row shelf and eight contact-strip
+winners, zero Compact fallbacks, and zero misses. Complete and capacity piece
+counts and exact unplaced-ID sets match pairwise. All work remains in one
+algorithm worker.
+
+#### Historical sibling contract
+
+The remainder of this section records the earlier fallback-bearing stages and
+their rejection evidence. Their fallback semantics and source counts are
+superseded by the directional-only contract above.
+
 The Short Side profile is schema-backed and selectable in the UI. It preserves
 the normal Compact construction first, then evaluates the accepted directional
 archive and terminal stages sequentially in the same algorithm worker.
@@ -485,8 +518,15 @@ prepared order, at the legal candidate whose occupied grid anchor is
 lexicographically smallest in `(y, x)`. Candidates come from the same exact
 NFP/IFP generator and canonical legality check production Compact uses, so a
 piece settles into a neighbour's concavity instead of advancing by bounding box,
-and opposed orientations interlock without any shape-specific rule. There is
-still no beam, no reordering, no repair, and no restart.
+and opposed orientations interlock without any shape-specific rule. When
+several legal candidates share the minimal anchor, the selector measures the
+exact axis-projected overlap each tied candidate makes against the placed
+pieces (BigInt accumulation after exact canonical-grid collinearity) and takes
+the strongest only when every positive contact is axis-aligned, provided the
+challenger is not deeper than the translation-order baseline winner. A
+positive diagonal contact or otherwise undecidable score falls back to the
+historical tuple order because projected units are not comparable across
+orientations. There is still no beam, no reordering, no repair, and no restart.
 
 The two families exist because the historical one cannot express interlocking
 at all. Its cursor advances by the AABB width and its rows are separated by the
@@ -504,8 +544,10 @@ strip stays in the trace with its full measurements rather than disappearing.
 
 On `2000 x 2700` the contact strip wins Mixed-61 with `2000.000 x 207.700 mm`,
 all `61/61` pieces, zero cavities, `100%` short-edge fill, `75.4664%` density,
-and a `0.215088` occupied-hull gap, replacing the shelf's
-`1987.776 x 301.187 mm`, `52.3621%` density, and `0.432505` hull gap. Triangle-20
+a `0.211051` occupied-hull gap, a `1,367.4 mm` shared boundary, `27`
+isolated pieces, `36` positive-contact components, and a largest component of
+`13`, replacing the shelf's `1987.776 x 301.187 mm`, `52.3621%` density, and
+`0.432505` hull gap. Triangle-20
 and Shapes-17 keep their historical sources: their strips are measured, recorded,
 and rejected because the Triangle strip fills only `46.2333%` of the short edge
 and the Shapes strip regresses density and hull gap.

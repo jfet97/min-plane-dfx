@@ -297,7 +297,7 @@ describe('intrinsic short-side pair-fold observer', () => {
     )
   })
 
-  it('reports rejected admission, no fitting pair, and no pair exactly', async () => {
+  it('retains exact directional rows even below historical quality telemetry floors', async () => {
     const rejected = await observe({
       pieces: [
         preparedRectangle('small-1', 20, 20),
@@ -326,15 +326,15 @@ describe('intrinsic short-side pair-fold observer', () => {
     })
 
     expect(rejected.trace).toMatchObject({
-      status: 'rejected-admission',
+      status: 'accepted',
       expectedPairCount: 3,
       evaluatedPairCount: 3,
       envelopeAreaCostVetoObserved: false,
-      admission: { accepted: false, envelopeAreaCostWithinProductionBound: false }
+      admission: { accepted: true, envelopeAreaCostWithinProductionBound: false }
     })
-    expect(rejected.placedCollisionGeometries).toBeUndefined()
+    expect(rejected.placedCollisionGeometries).toHaveLength(3)
     expect(noFit.trace).toMatchObject({
-      status: 'rejected-admission',
+      status: 'accepted',
       constructionKind: 'multi-row-shelf',
       rowCount: 3,
       expectedPairCount: 3,
@@ -348,10 +348,11 @@ describe('intrinsic short-side pair-fold observer', () => {
       evaluatedPairCount: 3
     })
     expect(noPair.trace).toMatchObject({
-      status: 'no-pair',
+      status: 'accepted',
       transformEvaluations: 1,
       expectedPairCount: 0,
-      evaluatedPairCount: 0
+      evaluatedPairCount: 0,
+      placedCount: 1
     })
   })
 
@@ -388,22 +389,22 @@ describe('intrinsic short-side pair-fold observer', () => {
     expect(outcome.placedCollisionGeometries).toHaveLength(3)
   })
 
-  it('vetoes a directional construction that more than matches the production area bound', async () => {
+  it('records the historical area bound without vetoing exact directional output', async () => {
     const outcome = await observe({ pieces: acceptedPieces })
 
     expect(outcome.trace).toMatchObject({
-      status: 'rejected-admission',
-      constructionKind: 'multi-row-shelf',
+      status: 'accepted',
+      constructionKind: 'pair-fold',
       envelopeAreaCostVetoObserved: true,
       admission: {
         allPiecesPlaced: true,
         envelopeAreaCostFactor: 2,
         directionallyEfficient: true,
         envelopeAreaCostWithinProductionBound: false,
-        accepted: false
+        accepted: true
       }
     })
-    expect(outcome.placedCollisionGeometries).toBeUndefined()
+    expect(outcome.placedCollisionGeometries).toHaveLength(3)
     // the causal veto record retains which constructions failed the area term alone
     expect(outcome.trace.envelopeAreaCostVetoes?.length).toBe(3)
     expect(
@@ -414,16 +415,16 @@ describe('intrinsic short-side pair-fold observer', () => {
     expect(outcome.trace.envelopeAreaCostVetoes?.[2]?.admission).toMatchObject({
       envelopeAreaCostWithinProductionBound: false,
       directionallyEfficient: true,
-      accepted: false
+      accepted: true
     })
     expect(outcome.trace.envelopeAreaCostVetoes?.[0]?.admission).toMatchObject({
       envelopeAreaCostWithinProductionBound: false,
       directionallyEfficient: true,
-      accepted: false
+      accepted: true
     })
   })
 
-  it('rejects one production grid-area unit below the exact four-thirds bound', async () => {
+  it('records the exact four-thirds telemetry boundary without changing selection', async () => {
     const admitted = await observe({
       pieces: acceptedPieces,
       productionEnvelopeAreaMm2: 2_400
@@ -439,13 +440,13 @@ describe('intrinsic short-side pair-fold observer', () => {
       envelopeAreaCostWithinProductionBound: true,
       accepted: true
     })
-    // one canonical grid-area unit below it flips only the area-cost term
-    expect(vetoed.trace.status).toBe('rejected-admission')
+    // one canonical grid-area unit below it flips only the area-cost telemetry
+    expect(vetoed.trace.status).toBe('accepted')
     expect(vetoed.trace.envelopeAreaCostVetoObserved).toBe(true)
     expect(vetoed.trace.admission).toMatchObject({
       directionallyEfficient: true,
       envelopeAreaCostWithinProductionBound: false,
-      accepted: false
+      accepted: true
     })
   })
 
@@ -590,11 +591,15 @@ describe('intrinsic short-side pair-fold observer', () => {
     )
   })
 
-  it('records the contact strip and promotes it only without any regression', async () => {
+  it('records both protected strip lanes without making legacy promotion authoritative', async () => {
     const outcome = await observe({ pieces: acceptedPieces })
     const promotion = outcome.trace.contactStripPromotion
 
     expect(outcome.trace.contactStrip?.status).toBe('constructed')
+    expect(outcome.trace.contactStripLanes.map((lane) => lane.selectionPolicy)).toEqual([
+      'depth-first',
+      'contact-first'
+    ])
     expect(outcome.trace.interlocking).toBeDefined()
     expect(promotion).toBeDefined()
     if (promotion === undefined) return
@@ -610,9 +615,11 @@ describe('intrinsic short-side pair-fold observer', () => {
         promotion.largestContactComponentNotRegressed &&
         promotion.strictlyImproved
     )
-    expect(outcome.trace.constructionKind).toBe(
-      promotion.promoted ? 'contact-strip' : promotion.incumbentConstructionKind
-    )
+    expect(
+      outcome.placedCollisionGeometries
+        ?.map((placed) => placed.placement.pieceId ?? placed.placement.sourcePieceId)
+        .toSorted()
+    ).toEqual(acceptedPieces.map((piece) => piece.pieceId).toSorted())
   })
 
   it('compares controlled promotion boundaries instead of trusting emitted flags', async () => {

@@ -20,6 +20,7 @@ import { GeometryKernel, GeometrySettings } from '../../irregular/geometryKernel
 import {
   IrregularGeometryInputError,
   IrregularNfpIfpControlAbortError,
+  IrregularNoValidResultError,
   IrregularNestingNotImplementedError,
   IrregularNestingPortfolio,
   IrregularPortfolioError,
@@ -73,7 +74,6 @@ import type { IntrinsicCapacityPrefixSource } from './intrinsicCapacityPrefixes.
 import type { IntrinsicCapacityEndpoint } from './intrinsicCapacityEndpoint.js'
 import {
   observeIntrinsicShortSideOrientations,
-  withMeasuredIntrinsicShortSideObserverTrace,
   type IntrinsicShortSideObserverTrace
 } from './intrinsicShortSideObserver.js'
 import {
@@ -355,6 +355,7 @@ export type IrregularComputeErrorType =
   | IrregularComputeError
   | IrregularGeometryInputError
   | IrregularNfpIfpControlAbortError
+  | IrregularNoValidResultError
   | IrregularNestingNotImplementedError
   | IrregularPortfolioError
   | IrregularPlacementScoringError
@@ -1120,31 +1121,10 @@ function coordinateIntrinsicSharedArchive(
             }
       )
       let shortSideSelected = false
-      if (shortSideProfileRequested && winnerState !== undefined) {
-        selected = yield* materializeIntrinsicShortSideProfileResult({
-          input,
-          placedCollisionGeometries: winnerState.placedCollisionGeometries,
-          selection: 'archive-endpoint',
-          canonicalGeometryHash: winnerHash
-        })
-        intrinsicShortSideObserverTrace = withMeasuredIntrinsicShortSideObserverTrace({
-          ...intrinsicShortSideObserverTrace,
-          outputInfluence: 'selected'
-        })
-        archiveDiagnostics.push(
-          intrinsicShortSideProfileDiagnostic(
-            'selected',
-            `selected admitted complete archive endpoint ${winnerHash} at q${winnerRotation}`
-          )
-        )
-        shortSideSelected = true
-      }
       if (
         (shortSideProfileRequested ||
           input.options?.captureIntrinsicShortSidePairFoldObserver === true) &&
         !shortSideSelected &&
-        intrinsicShortSideObserverTrace.observerWinnerCanonicalGeometryHash ===
-          undefined &&
         intrinsicShortSideObserverTrace.productionShortAxisSpanMm !==
           undefined &&
         intrinsicShortSideObserverTrace.productionMaximumSideMm !==
@@ -1158,9 +1138,17 @@ function coordinateIntrinsicSharedArchive(
         intrinsicShortSideObserverTrace.productionEnvelopeAreaGrid2 !==
           undefined
       ) {
+        const directionalTargetIds = new Set(
+          selected.placedCollisionGeometries.map(
+            ({ placement }) => placement.pieceId ?? placement.sourcePieceId
+          )
+        )
+        const directionalPreparedPieces = input.preparedPieces.filter((piece) =>
+          directionalTargetIds.has(piece.pieceId ?? piece.source.id)
+        )
         const pairFoldOutcome = yield* observeIntrinsicShortSidePairFold({
           sheet: input.request.sheet,
-          preparedPieces: input.preparedPieces,
+          preparedPieces: directionalPreparedPieces,
           settings: input.settings,
           productionShortAxisSpanMm:
             intrinsicShortSideObserverTrace.productionShortAxisSpanMm,
@@ -1204,11 +1192,11 @@ function coordinateIntrinsicSharedArchive(
         }
       }
       if (shortSideProfileRequested && !shortSideSelected) {
-        archiveDiagnostics.push(
-          intrinsicShortSideProfileDiagnostic(
-            'compact-fallback',
-            `no admitted Short Side layout; retained Compact result (archive=${intrinsicShortSideObserverTrace.status}, terminal=${intrinsicShortSidePairFoldTrace?.status ?? 'not-run'})`
-          )
+        return yield* Effect.fail(
+          new IrregularNoValidResultError({
+            operation: 'intrinsicShortSide',
+            message: `directional Short Side construction invariant failed (archive=${intrinsicShortSideObserverTrace.status}, terminal=${intrinsicShortSidePairFoldTrace?.status ?? 'not-run'})`
+          })
         )
       }
       input.options?.onIntrinsicShortSideObserver?.(intrinsicShortSideObserverTrace)
@@ -1599,9 +1587,18 @@ function materializeIntrinsicShortSideProfileResult(input: {
   readonly canonicalGeometryHash: string | undefined
 }): Effect.Effect<MaterializedDecode, IrregularComputeErrorType> {
   return Effect.gen(function* () {
+    const placedPieceIds = new Set(
+      input.placedCollisionGeometries.map(
+        ({ placement }) => placement.pieceId ?? placement.sourcePieceId
+      )
+    )
+    const unplacedPieceIds = input.input.preparedPieces
+      .map((piece) => piece.pieceId ?? piece.source.id)
+      .filter((pieceId) => !placedPieceIds.has(pieceId))
     const state = new IrregularBeamState({
       remainingPreparedPieces: [],
       placedCollisionGeometries: input.placedCollisionGeometries,
+      unplacedPieceIds,
       placementOrder: input.placedCollisionGeometries.map(
         ({ placement }) => placement.pieceId ?? placement.sourcePieceId
       )
@@ -1615,7 +1612,11 @@ function materializeIntrinsicShortSideProfileResult(input: {
     const stateSnapshots =
       input.input.request.options.historyMode === 'off'
         ? []
-        : selectedLayoutRevealSnapshots(input.input.preparedPieces, input.placedCollisionGeometries)
+        : selectedLayoutRevealSnapshots(
+            input.input.preparedPieces,
+            input.placedCollisionGeometries,
+            unplacedPieceIds
+          )
     const selectionDescription =
       input.selection === 'archive-endpoint'
         ? 'settled archive endpoint'
@@ -1625,7 +1626,7 @@ function materializeIntrinsicShortSideProfileResult(input: {
       terminationReason: 'shared_archive_completed',
       source: 'shared-archive',
       placements: input.placedCollisionGeometries.map(({ placement }) => placement),
-      unplacedPieceIds: [],
+      unplacedPieceIds,
       score: layoutScoreSummary(score),
       diagnostics: [
         intrinsicShortSideProfileDiagnostic(
@@ -1637,7 +1638,7 @@ function materializeIntrinsicShortSideProfileResult(input: {
     return {
       placedCollisionGeometries: input.placedCollisionGeometries,
       score,
-      unplacedPieceIds: [],
+      unplacedPieceIds,
       diagnostics: [],
       sortedPieceIds: input.input.sortedPieceIds,
       stateSnapshots,
@@ -1737,7 +1738,7 @@ function sharedArchiveDiagnostic(
 
 /** Adds a truthful terminal-profile status to the ordinary worker diagnostics. */
 function intrinsicShortSideProfileDiagnostic(
-  status: 'selected' | 'compact-fallback',
+  status: 'selected',
   message: string
 ): CollisionGeometryDiagnostic {
   return new CollisionGeometryDiagnostic({

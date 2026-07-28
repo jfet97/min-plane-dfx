@@ -1059,14 +1059,30 @@ complete cohort.
 
 The schema-backed `intrinsicObjectiveProfileId` may select `compact` or
 `short-side`. Both first run the same protected Compact coordinator on the same
-single worker. `short-side` then observes settled complete endpoints at q0/q90;
-if that has no admitted winner, it evaluates the bounded pair-fold, multi-row
-shelf, and contact-strip terminal constructions sequentially under their shared
-runtime and RSS limits. Only a canonical-legal, all-piece admitted result may
-replace the selected Compact result. Otherwise the worker returns the exact
-Compact or capacity result with an `intrinsic_short_side_compact-fallback`
-diagnostic. The selector changes neither complete-cohort construction nor
-intrinsic archive ranking, and does not create another worker or a concurrent
+single worker. Compact geometry is never a Short Side fallback or terminal
+candidate. The settled Compact/capacity result contributes only its exact
+placed-ID target set and comparison metrics; the terminal Short Side stages
+construct new directional geometry for that target.
+
+Short Side evaluates pair-fold, multi-row shelf, and two protected
+contact-strip lanes sequentially. The depth-first lane guarantees the ordinary
+prepared-order construction; the contact-first lane may resume saved
+depth-first decisions after a dead end. For targets of at most eight pieces,
+failure of both prepared-order lanes activates bounded reverse-order and
+canonical piece-ID-order depth continuations. This is a generic small-target
+portfolio, not fixture-specific code. Every accepted endpoint must be
+canonical-legal and return exactly the Compact-selected target IDs; excluded
+request IDs remain honestly unplaced. Square sheets deterministically use
+physical Y as the short axis and X as the long axis.
+
+All finalized constructions share one exact comparator: directional fill tier,
+envelope area, long-axis depth, exact cavity/hull/contact topology, then
+canonical identity. The contact-first lane is capped at `2,000` candidate
+anchors and four resumable decisions, so the protected prepared-order result
+cannot be displaced by unbounded work. If no directional endpoint exists, the
+worker raises `irregular_no_valid_result`; it never relabels Compact geometry as
+Short Side. The selector changes neither complete-cohort construction nor
+intrinsic archive ranking, and does not create another worker or concurrent
 algorithm execution.
 
 The compact path has no ordinary-beam competitor and no fixed-reference

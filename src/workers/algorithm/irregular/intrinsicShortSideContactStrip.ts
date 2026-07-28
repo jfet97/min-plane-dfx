@@ -12,6 +12,11 @@ import {
 } from '@shared/irregular/domain.js'
 import { toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { GeometryKernel } from '../../irregular/geometryKernel.js'
+import { placedCollisionWorldGridPath } from '../../irregular/canonicalLayoutGeometry.js'
+import {
+  hasPositiveCanonicalGridBoundaryContact,
+  measureCanonicalGridBoundaryOverlapAxisUnits
+} from '../../irregular/canonicalGridContact.js'
 import {
   makeEmptyPlacedCollisionSpatialIndex,
   type PlacedCollisionSpatialIndex
@@ -22,31 +27,48 @@ import {
 } from '../../irregular/services.js'
 
 export const INTRINSIC_SHORT_SIDE_CONTACT_STRIP_VERSION =
-  'intrinsic-short-side-contact-strip-v1' as const
+  'intrinsic-short-side-contact-strip-v3' as const
 export const INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RUNTIME_MS = 20_000 as const
 export const INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RSS_DELTA_BYTES = 256 * 1_048_576
+export const INTRINSIC_SHORT_SIDE_CONTACT_FIRST_MAX_CANDIDATE_EVALUATIONS =
+  2_000 as const
+export const INTRINSIC_SHORT_SIDE_CONTACT_FIRST_MAX_BACKTRACKS = 4 as const
 
 export type IntrinsicShortSideContactStripStatus =
   | 'constructed'
   | 'no-legal-placement'
   | 'deadline'
   | 'memory-cap'
+  | 'evaluation-cap'
   | 'failed-protected-fallback'
 
 export interface IntrinsicShortSideContactStripTrace {
   readonly version: typeof INTRINSIC_SHORT_SIDE_CONTACT_STRIP_VERSION
   readonly status: IntrinsicShortSideContactStripStatus
   readonly executionModel: 'single-process-sequential'
+  readonly selectionPolicy: IntrinsicShortSideContactStripSelectionPolicy
+  readonly orderPolicy: IntrinsicShortSideContactStripOrderPolicy
   readonly stripShortAxisMm: number
   readonly stripLongAxisMm: number
   readonly transformEvaluations: number
   readonly candidateEvaluations: number
+  readonly backtrackCount: number
+  readonly reusedPrefixPlacements: number
   readonly placedCount: number
   readonly requestedCount: number
   readonly runtimeMs: number
   readonly peakRssDeltaBytes: number
   readonly failureReason: string | undefined
 }
+
+export type IntrinsicShortSideContactStripSelectionPolicy =
+  | 'depth-first'
+  | 'contact-first'
+
+export type IntrinsicShortSideContactStripOrderPolicy =
+  | 'prepared'
+  | 'reverse'
+  | 'piece-id-ascending'
 
 export interface IntrinsicShortSideContactStripOutcome {
   readonly trace: IntrinsicShortSideContactStripTrace
@@ -57,8 +79,37 @@ export interface IntrinsicShortSideContactStripOutcome {
 export interface IntrinsicShortSideContactStripRuntimeControl {
   readonly maximumRuntimeMs?: number
   readonly maximumRssDeltaBytes?: number
+  readonly maximumCandidateEvaluations?: number
+  readonly maximumBacktracks?: number
   readonly now?: () => number
   readonly currentRssBytes?: () => number
+  readonly tieEvidenceSink?: (entry: IntrinsicShortSideContactStripTieEvidence) => void
+}
+
+/**
+ * Exact per-tie evidence collected when more than one legal candidate shares
+ * the winning `(long axis, short axis)` anchor for one prepared piece. The
+ * contact score is `<positive-contact-count>:<axis-overlap-units>`. Positive
+ * contact is classified directly on canonical integer-grid edges, including
+ * diagonal edges; the axis-overlap suffix is an exact secondary tie-break.
+ */
+export interface IntrinsicShortSideContactStripTieEvidence {
+  readonly pieceIndex: number
+  readonly tiedCount: number
+  readonly winnerScore: string | undefined
+  readonly bestAlternativeScore: string | undefined
+  readonly winnerMaxCornerSharedByAllTied: boolean
+  readonly selectionChanged: boolean
+  readonly scores: ReadonlyArray<{
+    readonly transformIndex: number
+    readonly rotationDeg: number
+    readonly mirrored: boolean
+    readonly translationShortAxisGrid: number
+    readonly translationLongAxisGrid: number
+    readonly maxShortAxisGrid: number
+    readonly maxLongAxisGrid: number
+    readonly contactAxisUnits: string | undefined
+  }>
 }
 
 interface StripRuntime {
@@ -68,8 +119,12 @@ interface StripRuntime {
   transformEvaluations: number
   candidateEvaluations: number
   placedCount: number
+  backtrackCount: number
+  reusedPrefixPlacements: number
   readonly maximumRuntimeMs: number
   readonly maximumRssDeltaBytes: number
+  readonly maximumCandidateEvaluations: number
+  readonly maximumBacktracks: number
   readonly now: () => number
   readonly currentRssBytes: () => number
 }
@@ -82,9 +137,18 @@ interface AnchoredCandidate {
   readonly anchorShortAxisGrid: number
   readonly translationLongAxisGrid: number
   readonly translationShortAxisGrid: number
+  readonly maxLongAxisGrid: number
+  readonly maxShortAxisGrid: number
   readonly transformIndex: number
   readonly rotationDeg: number
   readonly mirrored: boolean
+}
+
+interface ContactDecisionCheckpoint {
+  readonly pieceIndex: number
+  readonly placedBefore: ReadonlyArray<IrregularPlacedPiece>
+  readonly collisionIndexBefore: PlacedCollisionSpatialIndex
+  readonly baselinePiece: IrregularPlacedPiece
 }
 
 /**
@@ -94,16 +158,20 @@ interface AnchoredCandidate {
  * The strip is expressed in normalized directional coordinates: `x` is the
  * requested short axis and `y` is the requested long axis, so filling the short
  * edge means spreading along `x` and compactness means minimizing `y`. Each
- * prepared piece is placed once, in prepared order, at the legal candidate whose
- * occupied grid anchor is lexicographically smallest in `(y, x)`. Candidates
- * come from the same exact NFP/IFP generator production Compact uses, so every
- * placement is contact-anchored and canonically legal rather than an AABB cursor
- * advance. There is no beam, no reordering, no repair, and no restart.
+ * prepared piece is visited in prepared order. The protected depth-first lane
+ * uses the shallowest exact candidate. The bounded contact-first lane retains
+ * the depth-first decision as a checkpoint, prefers stronger exact contact,
+ * and resumes the most recent saved prefix if the contact choice reaches a
+ * dead end. Candidates come from the same exact NFP/IFP generator production
+ * Compact uses, so every placement is contact-anchored and canonically legal.
+ * There is no reordering, concurrent execution, or restart from empty.
  */
 export function constructIntrinsicShortSideContactStrip(input: {
   readonly stripSheet: SheetSpec
   readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
   readonly settings: IrregularNestingSettings
+  readonly selectionPolicy?: IntrinsicShortSideContactStripSelectionPolicy
+  readonly orderPolicy?: IntrinsicShortSideContactStripOrderPolicy
   readonly runtimeControl?: IntrinsicShortSideContactStripRuntimeControl
 }): Effect.Effect<
   IntrinsicShortSideContactStripOutcome,
@@ -120,11 +188,18 @@ export function constructIntrinsicShortSideContactStrip(input: {
     transformEvaluations: 0,
     candidateEvaluations: 0,
     placedCount: 0,
+    backtrackCount: 0,
+    reusedPrefixPlacements: 0,
     maximumRuntimeMs:
       input.runtimeControl?.maximumRuntimeMs ?? INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RUNTIME_MS,
     maximumRssDeltaBytes:
       input.runtimeControl?.maximumRssDeltaBytes ??
       INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RSS_DELTA_BYTES,
+    maximumCandidateEvaluations:
+      input.runtimeControl?.maximumCandidateEvaluations ??
+      Number.POSITIVE_INFINITY,
+    maximumBacktracks:
+      input.runtimeControl?.maximumBacktracks ?? Number.POSITIVE_INFINITY,
     now,
     currentRssBytes
   }
@@ -157,16 +232,31 @@ function constructStrip(
     readonly stripSheet: SheetSpec
     readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
     readonly settings: IrregularNestingSettings
+    readonly selectionPolicy?: IntrinsicShortSideContactStripSelectionPolicy
+    readonly orderPolicy?: IntrinsicShortSideContactStripOrderPolicy
+    readonly runtimeControl?: IntrinsicShortSideContactStripRuntimeControl
   },
   runtime: StripRuntime
 ) {
   return Effect.gen(function* () {
     const geometryKernel = yield* GeometryKernel
     const nfpIfpService = yield* NfpIfpService
-    const placed: IrregularPlacedPiece[] = []
+    let placed: IrregularPlacedPiece[] = []
     let placedCollisionIndex: PlacedCollisionSpatialIndex = makeEmptyPlacedCollisionSpatialIndex()
+    const checkpoints: ContactDecisionCheckpoint[] = []
 
-    for (const piece of input.preparedPieces) {
+    let pieceIndex = 0
+    while (pieceIndex < input.preparedPieces.length) {
+      const piece = input.preparedPieces[pieceIndex]
+      if (piece === undefined) {
+        return failedOutcome(
+          input,
+          runtime,
+          'failed-protected-fallback',
+          `prepared piece ${pieceIndex} is missing during contact-strip construction.`,
+          placed.length
+        )
+      }
       const bounded = boundedStatus(runtime)
       if (bounded !== undefined) {
         return failedOutcome(
@@ -177,7 +267,7 @@ function constructStrip(
           placed.length
         )
       }
-      let best: AnchoredCandidate | undefined
+      const anchoredCandidates: AnchoredCandidate[] = []
       for (const transform of piece.transforms) {
         runtime.transformEvaluations += 1
         const moving = yield* geometryKernel.transformCollisionGeometry({
@@ -216,14 +306,74 @@ function constructStrip(
         }
         for (const candidate of candidates) {
           runtime.candidateEvaluations += 1
+          if (
+            runtime.candidateEvaluations >
+            runtime.maximumCandidateEvaluations
+          ) {
+            return failedOutcome(
+              input,
+              runtime,
+              'evaluation-cap',
+              `evaluation-cap reached after ${runtime.candidateEvaluations - 1} contact candidate anchors.`,
+              placed.length
+            )
+          }
+          const boundedAfterAnchor = boundedStatus(runtime)
+          if (boundedAfterAnchor !== undefined) {
+            return failedOutcome(
+              input,
+              runtime,
+              boundedAfterAnchor,
+              `${boundedAfterAnchor} reached after ${runtime.candidateEvaluations} contact candidate anchors.`,
+              placed.length
+            )
+          }
           const anchored = anchorCandidate(candidate, moving)
           if (anchored === undefined) continue
-          if (best === undefined || compareAnchoredCandidates(anchored, best) < 0) {
-            best = anchored
-          }
+          anchoredCandidates.push(anchored)
         }
       }
-      if (best === undefined) {
+      const selectionResult = selectContactAwareWinner(
+        anchoredCandidates,
+        placed,
+        piece,
+        input.selectionPolicy ?? 'depth-first',
+        runtime
+      )
+      if (selectionResult.kind === 'bounded') {
+        return failedOutcome(
+          input,
+          runtime,
+          selectionResult.status,
+          `${selectionResult.status} reached during contact-aware tie selection.`,
+          placed.length
+        )
+      }
+      if (selectionResult.kind === 'none') {
+        const checkpoint =
+          input.selectionPolicy === 'contact-first'
+            ? checkpoints.pop()
+            : undefined
+        if (checkpoint !== undefined) {
+          if (runtime.backtrackCount >= runtime.maximumBacktracks) {
+            return failedOutcome(
+              input,
+              runtime,
+              'evaluation-cap',
+              `backtrack cap reached after ${runtime.backtrackCount} resumable contact decisions.`,
+              placed.length
+            )
+          }
+          placed = [...checkpoint.placedBefore, checkpoint.baselinePiece]
+          placedCollisionIndex = checkpoint.collisionIndexBefore.add(
+            checkpoint.baselinePiece
+          )
+          runtime.backtrackCount += 1
+          runtime.reusedPrefixPlacements += checkpoint.placedBefore.length
+          runtime.placedCount = placed.length
+          pieceIndex = checkpoint.pieceIndex + 1
+          continue
+        }
         return failedOutcome(
           input,
           runtime,
@@ -232,13 +382,32 @@ function constructStrip(
           placed.length
         )
       }
+      const selection = selectionResult.selection
+      const best = selection.winner
+      if (selection.tiedCount >= 2) {
+        input.runtimeControl?.tieEvidenceSink?.(
+          measureTieEvidence(placed.length, selection, placed, piece, runtime)
+        )
+      }
       const placedPiece = new IrregularPlacedPiece({
         placement: makeStripPlacement(piece, best),
         collisionGeometry: best.moving
       })
+      if (selection.selectionChanged) {
+        checkpoints.push({
+          pieceIndex,
+          placedBefore: [...placed],
+          collisionIndexBefore: placedCollisionIndex,
+          baselinePiece: new IrregularPlacedPiece({
+            placement: makeStripPlacement(piece, selection.baselineWinner),
+            collisionGeometry: selection.baselineWinner.moving
+          })
+        })
+      }
       placed.push(placedPiece)
       runtime.placedCount = placed.length
       placedCollisionIndex = placedCollisionIndex.add(placedPiece)
+      pieceIndex += 1
     }
 
     const bounded = boundedStatus(runtime)
@@ -256,10 +425,14 @@ function constructStrip(
         version: INTRINSIC_SHORT_SIDE_CONTACT_STRIP_VERSION,
         status: 'constructed' as const,
         executionModel: 'single-process-sequential' as const,
+        selectionPolicy: input.selectionPolicy ?? 'depth-first',
+        orderPolicy: input.orderPolicy ?? 'prepared',
         stripShortAxisMm: input.stripSheet.width,
         stripLongAxisMm: input.stripSheet.height,
         transformEvaluations: runtime.transformEvaluations,
         candidateEvaluations: runtime.candidateEvaluations,
+        backtrackCount: runtime.backtrackCount,
+        reusedPrefixPlacements: runtime.reusedPrefixPlacements,
         placedCount: placed.length,
         requestedCount: input.preparedPieces.length,
         runtimeMs: Math.max(0, runtime.now() - runtime.startedAt),
@@ -286,11 +459,15 @@ function anchorCandidate(
   const anchorLongAxisGrid = toGridMm(moving.bounds.minY + candidate.point.y)
   const translationShortAxisGrid = toGridMm(candidate.point.x)
   const translationLongAxisGrid = toGridMm(candidate.point.y)
+  const maxShortAxisGrid = toGridMm(moving.bounds.maxX + candidate.point.x)
+  const maxLongAxisGrid = toGridMm(moving.bounds.maxY + candidate.point.y)
   if (
     anchorShortAxisGrid === undefined ||
     anchorLongAxisGrid === undefined ||
     translationShortAxisGrid === undefined ||
-    translationLongAxisGrid === undefined
+    translationLongAxisGrid === undefined ||
+    maxShortAxisGrid === undefined ||
+    maxLongAxisGrid === undefined
   ) {
     return undefined
   }
@@ -301,11 +478,33 @@ function anchorCandidate(
     anchorShortAxisGrid,
     translationLongAxisGrid,
     translationShortAxisGrid,
+    maxLongAxisGrid,
+    maxShortAxisGrid,
     transformIndex: moving.transform.index,
     rotationDeg: moving.transform.rotationDeg,
     mirrored: moving.transform.mirrored
   }
 }
+
+interface ContactAwareSelection {
+  readonly winner: AnchoredCandidate
+  readonly baselineWinner: AnchoredCandidate
+  readonly tiedCount: number
+  readonly tied: ReadonlyArray<AnchoredCandidate>
+  readonly winnerScore: ContactScore | undefined
+  readonly baselineScore: ContactScore | undefined
+  readonly selectionChanged: boolean
+}
+
+interface ContactScore {
+  readonly positiveContactCount: number
+  readonly axisUnits: bigint
+}
+
+type ContactAwareSelectionResult =
+  | { readonly kind: 'selection'; readonly selection: ContactAwareSelection }
+  | { readonly kind: 'bounded'; readonly status: 'deadline' | 'memory-cap' }
+  | { readonly kind: 'none' }
 
 /**
  * Orders candidates by the directional bottom-left contract.
@@ -316,14 +515,263 @@ function anchorCandidate(
  */
 function compareAnchoredCandidates(first: AnchoredCandidate, second: AnchoredCandidate): number {
   return (
+    first.maxLongAxisGrid - second.maxLongAxisGrid ||
     first.anchorLongAxisGrid - second.anchorLongAxisGrid ||
     first.anchorShortAxisGrid - second.anchorShortAxisGrid ||
+    first.maxShortAxisGrid - second.maxShortAxisGrid ||
     first.translationShortAxisGrid - second.translationShortAxisGrid ||
     first.translationLongAxisGrid - second.translationLongAxisGrid ||
     first.transformIndex - second.transformIndex ||
     first.rotationDeg - second.rotationDeg ||
     Number(first.mirrored) - Number(second.mirrored)
   )
+}
+
+/**
+ * Selects one legal candidate per prepared piece.
+ *
+ * The depth-first policy limits contact comparison to candidates with the same
+ * shallowest maximum long-axis extent. The contact-first policy compares every
+ * legal candidate by exact positive-contact count, exact axis-overlap units,
+ * then the deterministic depth/anchor order. Its selected deviations retain a
+ * resumable depth-first checkpoint, so a later dead end rolls back to preserved
+ * construction work rather than restarting from empty.
+ */
+function selectContactAwareWinner(
+  candidates: ReadonlyArray<AnchoredCandidate>,
+  placed: ReadonlyArray<IrregularPlacedPiece>,
+  piece: IrregularPreparedPiece,
+  selectionPolicy: IntrinsicShortSideContactStripSelectionPolicy,
+  runtime: StripRuntime
+): ContactAwareSelectionResult {
+  let baseline: AnchoredCandidate | undefined
+  for (const anchored of candidates) {
+    const bounded = boundedStatus(runtime)
+    if (bounded !== undefined) return { kind: 'bounded', status: bounded }
+    if (baseline === undefined || compareAnchoredCandidates(anchored, baseline) < 0) {
+      baseline = anchored
+    }
+  }
+  if (baseline === undefined) return { kind: 'none' }
+  const tied: AnchoredCandidate[] = []
+  for (const anchored of candidates) {
+    const bounded = boundedStatus(runtime)
+    if (bounded !== undefined) return { kind: 'bounded', status: bounded }
+    if (
+      selectionPolicy === 'contact-first' ||
+      anchored.maxLongAxisGrid === baseline.maxLongAxisGrid
+    ) {
+      tied.push(anchored)
+    }
+  }
+  if (tied.length < 2) {
+    return {
+      kind: 'selection',
+      selection: {
+        winner: baseline,
+        baselineWinner: baseline,
+        tiedCount: tied.length,
+        tied,
+        winnerScore: undefined,
+        baselineScore: undefined,
+        selectionChanged: false
+      }
+    }
+  }
+  const baselineMeasurement = candidateContactAxisUnits(baseline, placed, piece, runtime)
+  if (baselineMeasurement.bounded !== undefined) {
+    return { kind: 'bounded', status: baselineMeasurement.bounded }
+  }
+  const baselineScore = baselineMeasurement.score
+  if (baselineScore === undefined) {
+    return {
+      kind: 'selection',
+      selection: {
+        winner: baseline,
+        baselineWinner: baseline,
+        tiedCount: tied.length,
+        tied,
+        winnerScore: undefined,
+        baselineScore: undefined,
+        selectionChanged: false
+      }
+    }
+  }
+  let winner = baseline
+  let winnerScore = baselineScore
+  for (const challenger of tied) {
+    const bounded = boundedStatus(runtime)
+    if (bounded !== undefined) return { kind: 'bounded', status: bounded }
+    if (challenger === baseline) continue
+    if (
+      selectionPolicy === 'depth-first' &&
+      challenger.maxLongAxisGrid > baseline.maxLongAxisGrid
+    ) {
+      continue
+    }
+    const challengerMeasurement = candidateContactAxisUnits(challenger, placed, piece, runtime)
+    if (challengerMeasurement.bounded !== undefined) {
+      return { kind: 'bounded', status: challengerMeasurement.bounded }
+    }
+    const challengerScore = challengerMeasurement.score
+    if (challengerScore === undefined) {
+      return {
+        kind: 'selection',
+        selection: {
+          winner: baseline,
+          baselineWinner: baseline,
+          tiedCount: tied.length,
+          tied,
+          winnerScore: baselineScore,
+          baselineScore,
+          selectionChanged: false
+        }
+      }
+    }
+    const scoreOrder = compareContactScores(challengerScore, winnerScore)
+    if (
+      scoreOrder > 0 ||
+      (scoreOrder === 0 && compareAnchoredCandidates(challenger, winner) < 0)
+    ) {
+      winner = challenger
+      winnerScore = challengerScore
+    }
+  }
+  return {
+    kind: 'selection',
+    selection: {
+      winner,
+      baselineWinner: baseline,
+      tiedCount: tied.length,
+      tied,
+      winnerScore,
+      baselineScore,
+      selectionChanged: winner !== baseline
+    }
+  }
+}
+
+/** Measures exact positive contact against the placed pieces. */
+function candidateContactAxisUnits(
+  anchored: AnchoredCandidate,
+  placed: ReadonlyArray<IrregularPlacedPiece>,
+  piece: IrregularPreparedPiece,
+  runtime: StripRuntime
+): {
+  readonly score: ContactScore | undefined
+  readonly bounded: 'deadline' | 'memory-cap' | undefined
+} {
+  const worldPath = placedCollisionWorldGridPath(
+    new IrregularPlacedPiece({
+      placement: makeStripPlacement(piece, anchored),
+      collisionGeometry: anchored.moving
+    })
+  )
+  if (worldPath === undefined) return { score: undefined, bounded: undefined }
+  let positiveContactCount = 0
+  let axisUnits = 0n
+  for (const placedPiece of placed) {
+    const bounded = boundedStatus(runtime)
+    if (bounded !== undefined) return { score: undefined, bounded }
+    const placedWorldPath = placedCollisionWorldGridPath(placedPiece)
+    if (placedWorldPath === undefined) return { score: undefined, bounded: undefined }
+    const hasPositiveContact = hasPositiveCanonicalGridBoundaryContact(
+      worldPath,
+      placedWorldPath
+    )
+    if (hasPositiveContact === undefined) {
+      return { score: undefined, bounded: undefined }
+    }
+    if (hasPositiveContact) positiveContactCount += 1
+    let boundedDuringScan: 'deadline' | 'memory-cap' | undefined
+    const overlap = measureCanonicalGridBoundaryOverlapAxisUnits(worldPath, placedWorldPath, () => {
+      const bounded = boundedStatus(runtime)
+      if (bounded !== undefined) boundedDuringScan = bounded
+      return bounded === undefined
+    })
+    if (overlap.kind === 'aborted') {
+      return { score: undefined, bounded: boundedDuringScan }
+    }
+    if (overlap.kind === 'measured') axisUnits += overlap.score
+  }
+  return {
+    score: { positiveContactCount, axisUnits },
+    bounded: undefined
+  }
+}
+
+function compareContactScores(first: ContactScore, second: ContactScore): number {
+  if (first.positiveContactCount !== second.positiveContactCount) {
+    return first.positiveContactCount - second.positiveContactCount
+  }
+  return first.axisUnits < second.axisUnits
+    ? -1
+    : first.axisUnits > second.axisUnits
+      ? 1
+      : 0
+}
+
+function serializeContactScore(score: ContactScore | undefined): string | undefined {
+  return score === undefined
+    ? undefined
+    : `${score.positiveContactCount}:${score.axisUnits.toString()}`
+}
+
+function measureTieEvidence(
+  pieceIndex: number,
+  selection: ContactAwareSelection,
+  placed: ReadonlyArray<IrregularPlacedPiece>,
+  piece: IrregularPreparedPiece,
+  runtime: StripRuntime
+): IntrinsicShortSideContactStripTieEvidence {
+  const scored = selection.tied.map((anchored) => {
+    if (anchored === selection.winner) {
+      return { anchored, contactAxisUnits: selection.winnerScore }
+    }
+    if (anchored === selection.baselineWinner) {
+      return { anchored, contactAxisUnits: selection.baselineScore }
+    }
+    const measurement = candidateContactAxisUnits(anchored, placed, piece, runtime)
+    return {
+      anchored,
+      contactAxisUnits: measurement.bounded === undefined ? measurement.score : undefined
+    }
+  })
+  const bestAlternativeScore = scored
+    .filter((entry) => entry.anchored !== selection.winner)
+    .map((entry) => entry.contactAxisUnits)
+    .reduce<ContactScore | undefined>(
+      (maximum, score) =>
+        score === undefined
+          ? maximum
+          : maximum === undefined || compareContactScores(score, maximum) > 0
+            ? score
+            : maximum,
+      undefined
+    )
+  const winnerMaxCornerSharedByAllTied = selection.tied.every(
+    (anchored) =>
+      anchored.maxLongAxisGrid === selection.baselineWinner.maxLongAxisGrid &&
+      anchored.maxShortAxisGrid === selection.baselineWinner.maxShortAxisGrid
+  )
+  return {
+    pieceIndex,
+    tiedCount: selection.tiedCount,
+    winnerScore: serializeContactScore(selection.winnerScore),
+    bestAlternativeScore: serializeContactScore(bestAlternativeScore),
+    winnerMaxCornerSharedByAllTied,
+    selectionChanged: selection.selectionChanged,
+    scores: scored.map(({ anchored, contactAxisUnits }) => ({
+      transformIndex: anchored.transformIndex,
+      rotationDeg: anchored.rotationDeg,
+      mirrored: anchored.mirrored,
+      translationShortAxisGrid: anchored.translationShortAxisGrid,
+      translationLongAxisGrid: anchored.translationLongAxisGrid,
+      maxShortAxisGrid: anchored.maxShortAxisGrid,
+      maxLongAxisGrid: anchored.maxLongAxisGrid,
+      contactAxisUnits: serializeContactScore(contactAxisUnits)
+    }))
+  }
 }
 
 function makeStripPlacement(
@@ -359,6 +807,8 @@ function failedOutcome(
   input: {
     readonly stripSheet: SheetSpec
     readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
+    readonly selectionPolicy?: IntrinsicShortSideContactStripSelectionPolicy
+    readonly orderPolicy?: IntrinsicShortSideContactStripOrderPolicy
   },
   runtime: StripRuntime,
   status: Exclude<IntrinsicShortSideContactStripStatus, 'constructed'>,
@@ -370,10 +820,14 @@ function failedOutcome(
       version: INTRINSIC_SHORT_SIDE_CONTACT_STRIP_VERSION,
       status,
       executionModel: 'single-process-sequential',
+      selectionPolicy: input.selectionPolicy ?? 'depth-first',
+      orderPolicy: input.orderPolicy ?? 'prepared',
       stripShortAxisMm: input.stripSheet.width,
       stripLongAxisMm: input.stripSheet.height,
       transformEvaluations: runtime.transformEvaluations,
       candidateEvaluations: runtime.candidateEvaluations,
+      backtrackCount: runtime.backtrackCount,
+      reusedPrefixPlacements: runtime.reusedPrefixPlacements,
       placedCount,
       requestedCount: input.preparedPieces.length,
       runtimeMs: Math.max(0, runtime.now() - runtime.startedAt),

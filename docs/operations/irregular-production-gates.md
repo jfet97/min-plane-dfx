@@ -48,27 +48,22 @@ report sets `geometryEquivalent` to `null`; it is not an invariance result.
 The nine-baseline command runs serially and covers the roomy complete path plus
 `600 x 400` and `300 x 300` constrained final-fit/capacity behavior.
 
-When short-side capture is enabled, the same command also requires nine
-accounted short-edge outcomes and zero directional misses. Every short-side
-layout lands in exactly one of three accounted states: an admitted
-directional winner, `short-side-satisfied-by-compact` (the materialized
-Compact geometry already fills at least `80%` of the relevant edge), or
-`short-side-quality-protected-compact-fallback` (a low-fill Compact retention
-after at least one candidate was vetoed by the production area-cost guard
-alone). An observer winner must pass exact legality, accounting, topology,
-density, projection, depth, and area-cost admission. Both admission stages
-also bound the sibling's envelope area to at most four thirds of the
-protected Compact envelope area (exact BigInt comparison), so a directional
-layout may trade at most one quarter of the production packing density for
-short-edge fill. The accepted matrix and individual visual review are under
-[`../artifacts/compact-short-side-area-cost-guard/`](../artifacts/compact-short-side-area-cost-guard/README.md).
+When short-side capture is enabled, the same command requires nine genuine
+directional outcomes and zero directional misses. Short Side receives the exact
+piece partition selected by Compact, but never receives Compact placements.
+It must construct a legal directional result for that partition or return the
+typed `irregular_no_valid_result` error; returning Compact geometry is not an
+allowed outcome.
 
-The terminal short-side observer now also builds one exact contact-driven strip
-and promotes it over the historical pair fold or shelf only when it regresses
-none of short-edge fill, envelope area, depth, collision-envelope density,
-occupied-hull gap, or isolated-piece count. A rejected strip stays in the trace
-with its full measurements. Visual review is a first-class promotion gate: do not
-promote a short-side change because the numeric matrix passes.
+The protected depth-first and bounded contact-first lanes share one exact
+directional comparator. Small partitions may additionally continue through
+reverse-depth and canonical piece-ID orders. Every lane uses exact NFP/IFP
+legality and canonical-grid contact measurements. The run remains strictly
+sequential and single-process. The accepted matrix, exact hashes, and individual
+visual review are under
+[`../artifacts/compact-short-side-directional-contract/`](../artifacts/compact-short-side-directional-contract/README.md).
+Visual review is a first-class promotion gate: do not promote a short-side
+change because the numeric matrix passes.
 
 The matrix renders every layout with
 `.agents/skills/render-svg-with-electron/scripts/render-svg.cjs` by default,

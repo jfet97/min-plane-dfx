@@ -348,18 +348,31 @@ defines its operational limits.
 
 ### P5: Compact short-side sibling profile
 
-Status: Stage 1 accepted at `a9504d3`; fixed-target Stage 2 rejected at
-`8f66399`; width-one target-aware Stage 3 rejected at `e19ddf1`; protected
-width-four Stage 4 rejected at `1163bd3`; exact one-row Stage 5 rejected at
-`999e9fb`; exact terminal pair fold accepted at `2645e7c`; exact multi-row
-terminal shelf accepted at `d57b7d6`; generic stable-baseline shelf orientation
-rejected and reverted after `9193f26`; exact contact-driven directional strip
-accepted as an experimental Stage 8 gate. The accepted terminal sequence is
-now exposed as the schema-backed production `short-side` Compact objective;
-ordinary Compact remains the default and retains its settled hash contract.
-The UI and worker use the same single sequential algorithm execution. Short
-Side may select only an admitted canonical-legal all-piece layout and otherwise
-records an explicit Compact/capacity fallback.
+Status: directional-only production contract accepted at `7009e04`. Short Side
+inherits only the exact target piece-ID set and comparison metrics from the
+settled Compact/capacity result; it never returns Compact geometry. The strict
+18-layout gate contains nine unchanged Compact controls and nine genuine
+directional outputs, with zero fallbacks and zero misses. Eight use the exact
+contact-strip family and one uses the exact multi-row shelf. Small targets may
+continue through reverse and canonical piece-ID orders only after both
+prepared-order strip lanes fail. All lanes remain cooperative, sequential, and
+single-process.
+
+Future P5 work requires a concrete regression in this accepted matrix. It must
+preserve the exact paired target-ID partition, the nine Compact hashes, all
+nine directional outputs, deterministic traces, and bounded runtime. Do not
+reintroduce Compact fallback, archive geometry relabelling, fixture-specific
+ordering, or concurrent workers.
+
+#### Historical staged evidence
+
+Stage 1 was accepted at `a9504d3`; fixed-target Stage 2 was rejected at
+`8f66399`; width-one target-aware Stage 3 was rejected at `e19ddf1`; protected
+width-four Stage 4 was rejected at `1163bd3`; exact one-row Stage 5 was rejected
+at `999e9fb`; pair fold and multi-row shelf were later accepted; the
+stable-baseline shelf orientation was rejected after `9193f26`; and the exact
+contact strip became the final directional construction family. The following
+paragraphs retain that chronology, including superseded fallback semantics.
 
 The zero-search archive observer establishes exact q0/q90 legality, hard
 cavity/hull eligibility, the existing intrinsic geometric Pareto front,

@@ -25,6 +25,24 @@ import { NfpIfpServiceLive } from '../../src/workers/irregular/nfpIfpService.js'
 
 const STRIP_SETTINGS = GeometrySettings.Make
 
+function compareSerializedContactScores(first: string, second: string): number {
+  const [firstCount, firstAxisUnits] = first.split(':')
+  const [secondCount, secondAxisUnits] = second.split(':')
+  if (
+    firstCount === undefined ||
+    firstAxisUnits === undefined ||
+    secondCount === undefined ||
+    secondAxisUnits === undefined
+  ) {
+    throw new Error('invalid serialized contact score')
+  }
+  const countOrder = Number(firstCount) - Number(secondCount)
+  if (countOrder !== 0) return countOrder
+  const firstUnits = BigInt(firstAxisUnits)
+  const secondUnits = BigInt(secondAxisUnits)
+  return firstUnits < secondUnits ? -1 : firstUnits > secondUnits ? 1 : 0
+}
+
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
 }
@@ -101,6 +119,9 @@ function construct(input: {
   readonly stripSheet?: SheetSpec
   readonly maximumRuntimeMs?: number
   readonly now?: () => number
+  readonly tieEvidenceSink?: (
+    entry: import('../../src/workers/algorithm/irregular/intrinsicShortSideContactStrip.js').IntrinsicShortSideContactStripTieEvidence
+  ) => void
 }) {
   return Effect.runPromise(
     constructIntrinsicShortSideContactStrip({
@@ -112,7 +133,8 @@ function construct(input: {
         ...(input.maximumRuntimeMs === undefined
           ? {}
           : { maximumRuntimeMs: input.maximumRuntimeMs }),
-        ...(input.now === undefined ? {} : { now: input.now })
+        ...(input.now === undefined ? {} : { now: input.now }),
+        ...(input.tieEvidenceSink === undefined ? {} : { tieEvidenceSink: input.tieEvidenceSink })
       }
     }).pipe(
       Effect.provide(GeometryKernel.Live),
@@ -212,5 +234,87 @@ describe('intrinsic short-side contact strip', () => {
 
     expect(outcome.trace.status).toBe('deadline')
     expect(outcome.placedCollisionGeometries).toBeUndefined()
+  })
+
+  it('settles a tied anchor on the contacting orientation at equal depth', async () => {
+    const ties: Array<{
+      readonly tiedCount: number
+      readonly selectionChanged: boolean
+      readonly winnerScore: string | undefined
+      readonly bestAlternativeScore: string | undefined
+    }> = []
+    const outcome = await construct({
+      pieces: [
+        rectangle('wall', 40, 20),
+        preparedPiece(
+          'leaning',
+          [point(0, 0), point(40, 0), point(40, 20)],
+          [0, 180]
+        ),
+        rectangle('afterwards', 10, 10)
+      ],
+      tieEvidenceSink: (entry) => {
+        ties.push(entry)
+      }
+    })
+
+    expect(outcome.trace.status).toBe('constructed')
+    const placed = outcome.placedCollisionGeometries ?? []
+    expect(placed).toHaveLength(3)
+    // the 180-degree orientation edge-contacts the wall despite losing the
+    // translation-order baseline to the point-contact 0-degree orientation
+    expect(placed[1]?.placement.transform.rotationDeg).toBe(180)
+    // the piece placed after the swap keeps the layout at the depth the
+    // baseline construction would also have reached in this scenario
+    const allPoints = placed.flatMap((entry) => placedCollisionWorldGridPath(entry) ?? [])
+    expect(Math.max(...allPoints.map(({ y }) => y))).toBeLessThanOrEqual(30_000)
+    expect(
+      ties.some(
+        (tie) =>
+          tie.selectionChanged &&
+          tie.winnerScore !== undefined &&
+          tie.bestAlternativeScore !== undefined &&
+          compareSerializedContactScores(tie.winnerScore, tie.bestAlternativeScore) > 0
+      )
+    ).toBe(true)
+  })
+
+  it('refuses a contacting alternative that is deeper than the baseline winner', async () => {
+    const ties: Array<{
+      readonly tiedCount: number
+      readonly selectionChanged: boolean
+      readonly winnerScore: string | undefined
+      readonly bestAlternativeScore: string | undefined
+    }> = []
+    const outcome = await construct({
+      pieces: [
+        rectangle('wall', 40, 40),
+        preparedPiece(
+          'leaning',
+          [point(0, 0), point(40, 0), point(0, 20)],
+          [0, 270]
+        )
+      ],
+      tieEvidenceSink: (entry) => {
+        ties.push(entry)
+      }
+    })
+
+    expect(outcome.trace.status).toBe('constructed')
+    const placed = outcome.placedCollisionGeometries ?? []
+    expect(placed).toHaveLength(2)
+    // the 270-degree orientation offers twice the contact but doubles the
+    // depth, so the depth bound keeps the shallow baseline orientation
+    expect(placed[1]?.placement.transform.rotationDeg).toBe(0)
+    const secondPath = placed[1] === undefined ? [] : (placedCollisionWorldGridPath(placed[1]) ?? [])
+    expect(Math.max(...secondPath.map(({ y }) => y))).toBeLessThanOrEqual(20_000)
+    expect(
+      ties.some(
+        (tie) =>
+          !tie.selectionChanged &&
+          tie.winnerScore !== undefined &&
+          tie.bestAlternativeScore !== undefined
+      )
+    ).toBe(true)
   })
 })

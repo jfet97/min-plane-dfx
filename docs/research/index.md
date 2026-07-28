@@ -38,6 +38,7 @@ quality production path.
 ## Sheet Invariance and Archive Construction
 
 - [Maintained Compact corpus](./compact-maintained-corpus.md)
+- [Compact Short Side directional construction](./compact-short-side-observer.md)
 - [Compact short-side area-cost guard](./compact-short-side-area-cost-guard.md)
 - [Sheet-dimension invariance corpus](./sheet-dimension-invariance-corpus.md)
 - [Mechanism arc and independent-decoder blocker](./sheet-invariance-mechanism-arc-and-blocker.md)

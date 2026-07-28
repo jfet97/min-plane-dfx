@@ -20,10 +20,14 @@ import {
   INTRINSIC_STRICT_COHESION_FLOORS,
   intrinsicStrictCompletedLayoutDominates
 } from './intrinsicStrictDecoder.js'
+import {
+  intrinsicShortSideAxes,
+  type IntrinsicShortSideAxes
+} from './intrinsicShortSideAxes.js'
 import { IrregularBeamState } from './irregularBeamState.js'
 
 export const INTRINSIC_SHORT_SIDE_OBSERVER_VERSION =
-  'intrinsic-short-side-observer-v5' as const
+  'intrinsic-short-side-observer-v6' as const
 export const INTRINSIC_SHORT_SIDE_OBSERVER_MAX_RUNTIME_MS = 250 as const
 export const INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES = 1_048_576 as const
 
@@ -53,7 +57,6 @@ export type IntrinsicShortSideObserverStatus =
   | 'observed-no-legal-orientation'
   | 'observed-no-guard-eligible-endpoint'
   | 'observed-no-directional-improvement'
-  | 'skipped-square-sheet'
   | 'skipped-no-settled-complete-endpoints'
   | 'runtime-budget-exceeded'
   | 'trace-budget-exceeded'
@@ -110,7 +113,7 @@ export interface IntrinsicShortSideObserverTrace {
   readonly requestedSheetHeightMm: number
   readonly requestedLongAxisMm: number
   readonly requestedShortAxisMm: number
-  readonly requestedLongAxis: 'width' | 'height' | 'square'
+  readonly requestedLongAxis: 'width' | 'height'
   readonly productionShortAxisSpanMm: number | undefined
   readonly productionMaximumSideMm: number | undefined
   readonly productionEnvelopeAreaMm2: number | undefined
@@ -142,14 +145,10 @@ export function observeIntrinsicShortSideOrientations(input: {
 }): IntrinsicShortSideObserverTrace {
   const now = input.now ?? performance.now.bind(performance)
   const startedAt = now()
-  const requestedLongAxis =
-    input.sheet.width === input.sheet.height
-      ? ('square' as const)
-      : input.sheet.width > input.sheet.height
-        ? ('width' as const)
-        : ('height' as const)
-  const requestedLongAxisMm = Math.max(input.sheet.width, input.sheet.height)
-  const requestedShortAxisMm = Math.min(input.sheet.width, input.sheet.height)
+  const axes = intrinsicShortSideAxes(input.sheet)
+  const requestedLongAxis = axes.longAxis
+  const requestedLongAxisMm = axes.longAxisMm
+  const requestedShortAxisMm = axes.shortAxisMm
   const requestedShortAxisGrid = toGridMm(requestedShortAxisMm)
   const productionReference = directionalReference({
     sheet: input.sheet,
@@ -157,8 +156,7 @@ export function observeIntrinsicShortSideOrientations(input: {
       input.productionPlacedCollisionGeometries ??
       input.endpoints[0]?.placedCollisionGeometries ??
       [],
-    requestedLongAxis,
-    requestedShortAxisMm
+    axes
   })
   const observedEndpoints = input.endpoints.map((endpoint, archiveIndex) =>
     observeEndpoint({
@@ -219,9 +217,7 @@ export function observeIntrinsicShortSideOrientations(input: {
   const observed = {
     version: INTRINSIC_SHORT_SIDE_OBSERVER_VERSION,
     status:
-      requestedLongAxis === 'square'
-        ? ('skipped-square-sheet' as const)
-        : endpoints.length === 0
+      endpoints.length === 0
         ? ('skipped-no-settled-complete-endpoints' as const)
         : legalEndpoints.length === 0
           ? ('observed-no-legal-orientation' as const)
@@ -286,7 +282,7 @@ function observeEndpoint(input: {
   readonly sheet: SheetSpec
   readonly endpoint: IntrinsicSharedArchiveEndpoint
   readonly archiveIndex: number
-  readonly requestedLongAxis: 'width' | 'height' | 'square'
+  readonly requestedLongAxis: 'width' | 'height'
   readonly requestedShortAxisMm: number
 }): IntrinsicShortSideEndpointObservation {
   const state = new IrregularBeamState({
@@ -346,7 +342,7 @@ function observeOrientation(input: {
   readonly endpoint: IntrinsicSharedArchiveEndpoint
   readonly state: IrregularBeamState
   readonly rotationDeg: IntrinsicShortSideObserverRotation
-  readonly requestedLongAxis: 'width' | 'height' | 'square'
+  readonly requestedLongAxis: 'width' | 'height'
   readonly requestedShortAxisMm: number
 }): IntrinsicShortSideOrientationObservation {
   const oriented = input.state.withQuarterTurnBottomLeft(input.rotationDeg)
@@ -361,13 +357,11 @@ function observeOrientation(input: {
   const usedLongAxisSpanMm =
     dimensions === undefined
       ? undefined
-      : input.requestedLongAxis === 'square'
-        ? Math.max(dimensions.widthMm, dimensions.heightMm)
-        : input.requestedLongAxis === 'width'
-          ? dimensions.widthMm
-          : dimensions.heightMm
+      : input.requestedLongAxis === 'width'
+        ? dimensions.widthMm
+        : dimensions.heightMm
   const usedShortAxisSpanMm =
-    dimensions === undefined || input.requestedLongAxis === 'square'
+    dimensions === undefined
       ? undefined
       : input.requestedLongAxis === 'width'
         ? dimensions.heightMm
@@ -375,31 +369,25 @@ function observeOrientation(input: {
   const usedLongAxisSpanGrid =
     dimensions === undefined
       ? undefined
-      : input.requestedLongAxis === 'square'
-        ? Math.max(dimensions.widthGrid, dimensions.heightGrid)
-        : input.requestedLongAxis === 'width'
-          ? dimensions.widthGrid
-          : dimensions.heightGrid
+      : input.requestedLongAxis === 'width'
+        ? dimensions.widthGrid
+        : dimensions.heightGrid
   const usedShortAxisSpanGrid =
-    dimensions === undefined || input.requestedLongAxis === 'square'
+    dimensions === undefined
       ? undefined
       : input.requestedLongAxis === 'width'
         ? dimensions.heightGrid
         : dimensions.widthGrid
   const requestedShortAxisGrid = toGridMm(input.requestedShortAxisMm)
   const requestedShortAxisShortfallMm =
-    input.requestedLongAxis === 'square'
-      ? 0
-      : usedShortAxisSpanMm === undefined
-        ? undefined
-        : input.requestedShortAxisMm - usedShortAxisSpanMm
+    usedShortAxisSpanMm === undefined
+      ? undefined
+      : input.requestedShortAxisMm - usedShortAxisSpanMm
   const requestedShortAxisShortfallGrid =
-    input.requestedLongAxis === 'square'
-      ? 0
-      : usedShortAxisSpanGrid === undefined ||
-          requestedShortAxisGrid === undefined
-        ? undefined
-        : requestedShortAxisGrid - usedShortAxisSpanGrid
+    usedShortAxisSpanGrid === undefined ||
+    requestedShortAxisGrid === undefined
+      ? undefined
+      : requestedShortAxisGrid - usedShortAxisSpanGrid
   const metrics = input.endpoint.metrics
   const tuple = comparisonTuple({
     exactLegal,
@@ -505,15 +493,12 @@ interface DirectionalReference {
 function directionalReference(input: {
   readonly sheet: SheetSpec
   readonly placedCollisionGeometries: ReadonlyArray<IrregularPlacedPiece>
-  readonly requestedLongAxis: 'width' | 'height' | 'square'
-  readonly requestedShortAxisMm: number
+  readonly axes: IntrinsicShortSideAxes
 }): DirectionalReference | undefined {
-  if (
-    input.requestedLongAxis === 'square' ||
-    input.placedCollisionGeometries.length === 0
-  ) {
+  if (input.placedCollisionGeometries.length === 0) {
     return undefined
   }
+  const shortAxisIsHeight = input.axes.shortAxis === 'height'
   const state = new IrregularBeamState({
     remainingPreparedPieces: [],
     placedCollisionGeometries: input.placedCollisionGeometries,
@@ -534,22 +519,18 @@ function directionalReference(input: {
       oriented.placedCollisionGeometries
     )
     if (dimensions === undefined) return []
-    const usedShortAxisSpanMm =
-      input.requestedLongAxis === 'width'
-        ? dimensions.heightMm
-        : dimensions.widthMm
-    const usedLongAxisSpanMm =
-      input.requestedLongAxis === 'width'
-        ? dimensions.widthMm
-        : dimensions.heightMm
-    const usedShortAxisSpanGrid =
-      input.requestedLongAxis === 'width'
-        ? dimensions.heightGrid
-        : dimensions.widthGrid
-    const usedLongAxisSpanGrid =
-      input.requestedLongAxis === 'width'
-        ? dimensions.widthGrid
-        : dimensions.heightGrid
+    const usedShortAxisSpanMm = shortAxisIsHeight
+      ? dimensions.heightMm
+      : dimensions.widthMm
+    const usedLongAxisSpanMm = shortAxisIsHeight
+      ? dimensions.widthMm
+      : dimensions.heightMm
+    const usedShortAxisSpanGrid = shortAxisIsHeight
+      ? dimensions.heightGrid
+      : dimensions.widthGrid
+    const usedLongAxisSpanGrid = shortAxisIsHeight
+      ? dimensions.widthGrid
+      : dimensions.heightGrid
     const maximumSideGrid = Math.max(dimensions.widthGrid, dimensions.heightGrid)
     const envelopeAreaGrid2 = BigInt(dimensions.widthGrid) * BigInt(dimensions.heightGrid)
     return [

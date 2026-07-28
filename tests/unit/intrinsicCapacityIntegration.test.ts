@@ -148,11 +148,12 @@ describe('intrinsic capacity integration', () => {
     expect(layout.placements).toHaveLength(2)
     expect(layout.unplacedPieceIds).toEqual([])
     expect(computed.intrinsicShortSideObserverTrace).toBeDefined()
-    expect(computed.intrinsicShortSideObserverTrace?.status).not.toBe('skipped-square-sheet')
+    expect(computed.intrinsicShortSidePairFoldTrace).toMatchObject({
+      status: 'accepted',
+      outputInfluence: 'selected'
+    })
     expect(
-      computed.diagnostics.some(({ code }) =>
-        ['intrinsic_short_side_selected', 'intrinsic_short_side_compact-fallback'].includes(code)
-      )
+      computed.diagnostics.some(({ code }) => code === 'intrinsic_short_side_selected')
     ).toBe(true)
     expect(output.result.strategyResults[0]?.strategyId).toBe(
       'irregular-convex-compact-short-side'
@@ -218,13 +219,16 @@ describe('intrinsic capacity integration', () => {
       expect(observed.unplacedPieceIds).toEqual(computed.unplacedPieceIds)
       expect(observed.portfolio).toEqual(computed.portfolio)
       expect(observed.intrinsicShortSideObserverTrace).toMatchObject({
-        status: 'skipped-square-sheet',
+        status: 'observed-no-directional-improvement',
         outputInfluence: 'none',
         placementEvaluations: 0,
         candidateEvaluations: 0
       })
       expect(callbackTrace).toEqual(observed.intrinsicShortSideObserverTrace)
-      expect(observed.intrinsicShortSidePairFoldTrace).toBeUndefined()
+      expect(observed.intrinsicShortSidePairFoldTrace).toMatchObject({
+        status: 'accepted',
+        outputInfluence: 'none'
+      })
     },
     120_000
   )
@@ -301,7 +305,7 @@ describe('intrinsic capacity integration', () => {
         outputInfluence: 'none'
       })
       expect(computed.intrinsicShortSideObserverTrace).toMatchObject({
-        status: 'skipped-square-sheet',
+        status: 'skipped-no-settled-complete-endpoints',
         outputInfluence: 'none',
         settledEndpointCount: 0,
         evaluatedOrientationCount: 0,
