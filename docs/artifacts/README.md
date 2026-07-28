@@ -11,6 +11,10 @@ baselines.
   Chromium-rendered PNG, SVG, and JSON evidence for the nine durable Compact
   baselines: Triangle-20, Mixed-61, and Shapes-17 on `2000 x 2700`,
   `600 x 400`, and `300 x 300`.
+- [`compact-short-side-directional-contract/`](./compact-short-side-directional-contract/README.md):
+  the current strict sequential 18-layout Compact/Short Side gate. All nine
+  Short Side cells contain independently constructed directional geometry,
+  preserve the Compact-selected piece partition, and have no Compact fallback.
 - [`focused-complete-reconstruction-boundary/`](./focused-complete-reconstruction-boundary/):
   enabled/disabled Shapes-17 `540 x 580` evidence proving that focused
   reconstruction starts from the sheetless complete leader even when a
@@ -34,7 +38,7 @@ baselines.
 - [`shapes-17-baseline/`](./shapes-17-baseline/): the all-distinct Shapes-17
   archive baseline.
 - [`compact-short-side-observer/contact-strip/`](./compact-short-side-observer/contact-strip/README.md):
-  the current 18-layout short-side promotion gate, including the rejected-shelf
+  historical short-side promotion evidence, including the rejected-shelf
   versus accepted contact-strip comparison for the targeted Mixed-61
   `2000 x 2700` case and the retained measurements of the two contact strips
   that were rejected.
@@ -43,11 +47,11 @@ baselines.
   paired summaries, the guarded topology decision, and the complete accepted
   18-layout final-review bundle.
 - [`compact-short-side-area-cost-guard/`](./compact-short-side-area-cost-guard/README.md):
-  the accepted 18-layout matrix for the production area-cost honesty guard at
+  historical 18-layout evidence for the area-cost honesty guard at
   `903657e`, with the two vetoed roomy siblings retained as quality-protected
   Compact fallbacks and zero directional misses.
 - [`compact-short-side-contact-tie-break/`](./compact-short-side-contact-tie-break/README.md):
-  the accepted 18-layout matrix for the bounded contact-aware strip
+  historical 18-layout evidence for the bounded contact-aware strip
   tie-break at `51befe5`, with the flagship strip's connectivity strictly
   improved at an identical envelope and zero directional misses.
 - [`trusted-ring-validation-memo/`](./trusted-ring-validation-memo/): paired

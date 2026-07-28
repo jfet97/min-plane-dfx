@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { execFileSync, spawn } from 'node:child_process'
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import {
   intrinsicShortSideAxes,
@@ -378,6 +378,8 @@ function focusedExpectedArguments(baseline: Baseline): ReadonlyArray<string> {
 const outputDirectory =
   argument('--output-dir') ?? '/private/tmp/min-plane-provenance/compact-nine-baselines'
 const skipPng = hasArgument('--skip-png')
+const resumeExisting = hasArgument('--resume-existing')
+const reusePng = hasArgument('--reuse-png')
 await mkdir(outputDirectory, { recursive: true })
 
 const outcomes: Array<{
@@ -386,21 +388,23 @@ const outcomes: Array<{
   readonly passed: boolean
   readonly error?: string
 }> = []
-for (const baseline of BASELINES) {
-  try {
-    await runBaseline(baseline, outputDirectory)
-    outcomes.push({
-      fixture: baseline.fixture,
-      sheet: baseline.sheet,
-      passed: true
-    })
-  } catch (error) {
-    outcomes.push({
-      fixture: baseline.fixture,
-      sheet: baseline.sheet,
-      passed: false,
-      error: error instanceof Error ? error.message : String(error)
-    })
+if (!resumeExisting) {
+  for (const baseline of BASELINES) {
+    try {
+      await runBaseline(baseline, outputDirectory)
+      outcomes.push({
+        fixture: baseline.fixture,
+        sheet: baseline.sheet,
+        passed: true
+      })
+    } catch (error) {
+      outcomes.push({
+        fixture: baseline.fixture,
+        sheet: baseline.sheet,
+        passed: false,
+        error: error instanceof Error ? error.message : String(error)
+      })
+    }
   }
 }
 
@@ -466,6 +470,21 @@ for (const baseline of BASELINES) {
     JSON.parse(await readFile(`${prefix}.short-side-profile.json`, 'utf8')) as CompactReport
   )
 }
+if (resumeExisting) {
+  for (let index = 0; index < BASELINES.length; index += 1) {
+    const baseline = BASELINES[index]
+    const compactReport = compactReports[index]
+    const shortSideReport = shortSideReports[index]
+    if (baseline === undefined || compactReport === undefined || shortSideReport === undefined) {
+      throw new Error(`missing resumed layout report at matrix index ${index}`)
+    }
+    outcomes.push({
+      fixture: baseline.fixture,
+      sheet: baseline.sheet,
+      passed: compactReport.passed && shortSideReport.passed
+    })
+  }
+}
 
 const layoutRecords = []
 for (let index = 0; index < BASELINES.length; index += 1) {
@@ -480,9 +499,12 @@ for (let index = 0; index < BASELINES.length; index += 1) {
     outputDirectory,
     `${baseline.fixture}-${baseline.sheet}.short-side-profile.png`
   )
-  if (!skipPng) {
+  if (!skipPng && !reusePng) {
     renderSvgToPng(join(outputDirectory, compactReport.svgPath), compactPngPath)
     renderSvgToPng(join(outputDirectory, shortSideReport.svgPath), shortSidePngPath)
+  } else if (!skipPng) {
+    await access(compactPngPath)
+    await access(shortSidePngPath)
   }
   const archiveSelected =
     shortSideReport.result.intrinsicShortSideObserverTrace?.outputInfluence ===
@@ -670,6 +692,8 @@ await writeFile(
         'gate:compact-nine-baselines',
         '--output-dir',
         '<output-directory>',
+        ...(resumeExisting ? ['--resume-existing'] : []),
+        ...(reusePng ? ['--reuse-png'] : []),
         ...(skipPng ? ['--skip-png'] : [])
       ],
       runtime: {

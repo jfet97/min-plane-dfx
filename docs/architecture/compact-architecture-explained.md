@@ -457,6 +457,39 @@ invalid and it found no promotable result.
 
 ### 8.1 The Short Side production sibling
 
+The current profile first runs the same protected Compact/capacity coordinator,
+but it does not reuse or rotate that geometry. Compact supplies only the exact
+selected piece-ID set and comparison metrics. Short Side must construct new
+directional geometry for those IDs; failure is a typed
+`irregular_no_valid_result`, never a Compact fallback.
+
+The terminal portfolio remains single-process and sequential: exact pair-fold
+and next-fit shelf candidates, a protected prepared-order depth-first contact
+strip, and a capped contact-first strip that retains resumable depth-first
+decisions. Only targets of at most eight pieces may continue through reverse
+and canonical piece-ID orders after both prepared-order lanes fail. Every
+candidate comes from the exact NFP/IFP and canonical legality authority.
+Square sheets define physical Y as the short axis and X as the long axis.
+
+Completed constructions share one exact total order. Fill is grouped into
+exact `>=99%`, `>=80%`, and lower tiers. Inside the saturated tier, smaller
+envelope area wins before long-axis depth, followed by exact cavity, hull-gap,
+isolation, connectivity, and canonical-identity terms. This lets the clean
+Triangle-20 `600 x 400` interlock at `99.32425%` fill beat a jagged nominal
+`100%` layout with a larger envelope.
+
+The accepted gate contains nine unchanged Compact controls and nine genuinely
+directional Short Side layouts: one multi-row shelf and eight contact-strip
+winners, zero Compact fallbacks, and zero misses. Complete and capacity piece
+counts and exact unplaced-ID sets match pairwise. All work remains in one
+algorithm worker.
+
+#### Historical sibling contract
+
+The remainder of this section records the earlier fallback-bearing stages and
+their rejection evidence. Their fallback semantics and source counts are
+superseded by the directional-only contract above.
+
 The Short Side profile is schema-backed and selectable in the UI. It preserves
 the normal Compact construction first, then evaluates the accepted directional
 archive and terminal stages sequentially in the same algorithm worker.

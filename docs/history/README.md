@@ -21,6 +21,10 @@ roadmap:
   why a `100%`-fill contact strip carrying two cavities and connectivity
   regressions stays unshipped, and why shared-boundary length cannot replace
   the connectivity guards.
+- [Compact Short Side directional-only contract](./compact-short-side-directional-only-contract.md):
+  why Compact geometry is no longer a valid Short Side fallback, how protected
+  directional continuations cover all nine matrix cells, and the exact
+  18-layout evidence.
 - [Pure core boundary decisions](./pure-core-boundary-decisions.md): why the
   rejected Effect/cache micro-optimization did not close the separate
   portability program, and the accepted first pairwise-NFP seam.
