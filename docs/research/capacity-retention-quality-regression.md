@@ -84,9 +84,9 @@ capacity gate passed every fixture and pinned:
 
 - Triangle-20 `300 x 300`: 17, output `2f236b79...`, quality lane skipped;
 - Mixed-61 `700 x 500`: 50, output `97dbc502...`, quality endpoint
-  `0c98259d...`, canonical prefix 15;
+  `0c98259d...`, canonical prefix 15, evaluation-cap settlement;
 - Mixed-61 `700 x 560`: 59, output `36cee348...`, quality endpoint
-  `2d252e35...`, canonical prefix 30.
+  `2d252e35...`, canonical prefix 30, evaluation-cap settlement.
 
 The full 18-layout Compact/Short Side matrix passed with all accepted hashes,
 placed/unplaced partitions, area/cavity metrics, scheduler traces, and profile

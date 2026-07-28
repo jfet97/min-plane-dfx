@@ -190,7 +190,7 @@ const fixtures: ReadonlyArray<CapacityFixture> = [
     expectedCanonicalSha256:
       '97dbc5029a050389b9b8f440dfd764e0b758e75c5cbfdbc8f27e1c0ddcdca04b',
     expectedQualityWarmPrefix: {
-      status: 'settled',
+      status: 'evaluation-cap',
       outputInfluence: 'strict-count-improvement',
       sourceRole: 'canonical-grid',
       prefixDepth: 15,
@@ -211,7 +211,7 @@ const fixtures: ReadonlyArray<CapacityFixture> = [
     expectedCanonicalSha256:
       '36cee3489abffe6f5961a7ae96cbe9ce34d33d8754c9822841abb7585117ba16',
     expectedQualityWarmPrefix: {
-      status: 'settled',
+      status: 'evaluation-cap',
       outputInfluence: 'strict-count-improvement',
       sourceRole: 'canonical-grid',
       prefixDepth: 30,
