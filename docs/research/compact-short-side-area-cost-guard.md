@@ -79,9 +79,8 @@ only scalars already computed for the short-side stages.
   pairwise-NFP zigzag shelf) can win fill and density simultaneously on
   mid-width sheets where the Compact block already fills `60-80%` of the edge;
   such a construction would still have to pass the same area-cost guard.
-- A controlled serial capacity-gate comparison produced identical results and
-  hashes on pristine `main` and this branch: Mixed-61 `700 x 500` placed
-  `48/61` against the historical floor of `49`, and `700 x 560` placed `58/61`
-  against `59`. The gate does not exercise the Short Side path, so this is not
-  a regression of the area-cost guard. The stale quality oracle remains a
-  separate root-cause and baseline decision; this work does not lower it.
+- The separate capacity regression was traced to the global cohesion-frontier
+  promotion at `38e4bf0`, not to Short Side. The protected capacity-quality
+  continuation now places `50/61` on Mixed-61 `700 x 500` and `59/61` on
+  `700 x 560` while preserving every Compact and Short Side matrix identity.
+  The capacity gate pins both outputs and their causal continuation traces.

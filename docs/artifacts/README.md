@@ -22,6 +22,9 @@ baselines.
 - [`intrinsic-anytime-pinned-lane/`](./intrinsic-anytime-pinned-lane/): accepted
   experimental evidence for one protected resumed warm lane, including the
   three constrained falsifiers and the exact six-baseline matrix.
+- [`capacity-retention-quality-guard/`](./capacity-retention-quality-guard/README.md):
+  the protected capacity-quality continuation evidence, including the 50- and
+  59-piece Mixed-61 layouts and the unchanged 18-layout matrix.
 - [`current-production-invariance-matrix/`](./current-production-invariance-matrix/):
   two complete strict runs of the ten-sheet Mixed-61 production matrix at
   `6179cef`, including exact reports and byte-identical SVG/PNG renders.

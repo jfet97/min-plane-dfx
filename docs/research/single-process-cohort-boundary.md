@@ -22,7 +22,7 @@ Mixed-61 `700 x 500` measured:
 
 | Arm | Wall time | Placed | Endpoint |
 | --- | ---: | ---: | --- |
-| Current production | `79.164 s` | `48/61` | warm-prefix continuation selected |
+| Historical production | `79.164 s` | `48/61` | warm-prefix continuation selected |
 | Complete only | `54.116 s` | n/a | no fitting complete endpoint |
 | Cold capacity only | `9.194 s` | `47/61` | cold-search endpoint |
 
@@ -42,5 +42,6 @@ does not authorize parallel execution.
 
 Do not merge the P4 timing-arm or parallel-execution experiment into
 production. Future performance work must optimize or reschedule cooperative
-single-worker execution, preserve the current 48-piece warm-prefix result, and
-pass the existing exact baseline gates.
+single-worker execution and pass the exact baseline gates. The later
+single-process capacity-quality continuation supersedes the historical
+48-piece result with a pinned 50-piece result without authorizing concurrency.

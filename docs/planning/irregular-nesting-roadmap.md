@@ -336,6 +336,11 @@ placed only `47/61`. The current 48th piece therefore depends on warm-prefix
 continuation, and the apparent cold-overlap ceiling was neither an achieved
 speedup nor a quality-preserving result.
 
+The later single-process capacity-quality continuation supersedes this quality
+baseline: it resumes the deepest fitting canonical prefix after a complete
+miss and places `50/61` on `700 x 500` and `59/61` on `700 x 560`. It remains
+cooperative and sequential, so P4 stays paused.
+
 The attempted concurrent pilot was stopped immediately after the user restated
 the constraint. It is not promotable evidence. Reopen P4 only after a new
 explicit user instruction authorizes concurrent algorithm execution and

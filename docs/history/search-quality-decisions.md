@@ -482,3 +482,24 @@ large-first/small-fill observer.
 
 Detailed evidence is in
 [`../research/capacity-one-count-deficit-continuation.md`](../research/capacity-one-count-deficit-continuation.md).
+
+## Protected capacity-quality continuation
+
+The global cohesion-frontier promotion at `38e4bf0` improved the maintained
+constrained matrix but regressed Mixed-61 `700 x 500` from the independently
+reproduced historical 49-piece result to 48 and `700 x 560` from 59 to 58.
+The capacity floors remained red for 155 commits because CI did not run that
+gate.
+
+A global 12-objective/4-topology rebalance was rejected and reverted: it
+recovered 50 and 59 on the 700-wide cases but regressed Mixed-61 and Shapes-17
+inside the 18-layout matrix. Production therefore keeps the cohesion frontier
+unchanged.
+
+The accepted correction is a separate, request-scaled
+`capacity-quality-warm-prefix` lane. On requests with at least 32 pieces it
+resumes the deepest fitting canonical prefix under its own protected 12/4
+frontier. It may influence output only through a strict placed-count gain.
+At `62e5c19`, it selects exact 50- and 59-piece endpoints on the two 700-wide
+Mixed-61 cases while the full 18-layout matrix remains unchanged. The capacity
+gate now pins those outputs and their causal trace, and CI enforces both gates.

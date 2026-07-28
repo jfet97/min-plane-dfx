@@ -87,8 +87,16 @@ coordinator in paired production and cold-only arms. It fails when routing,
 exact placed/unplaced partitioning, deterministic capacity settlement, the
 zero auxiliary-evaluation contract, all-piece-depth coverage, or the
 prefix-not-below-cold-only guarantee under the complete capacity objective is
-violated. Reports and sheet-outline SVG renders land under
-`/private/tmp/irregular-capacity-gate/` by default.
+violated. It also pins Triangle-20 `300 x 300` at 17 pieces, Mixed-61
+`700 x 500` at 50, and Mixed-61 `700 x 560` at 59, including canonical output
+hashes and the causal capacity-quality producer, prefix depth, and endpoint
+identity. Reports, a source/command/runtime manifest, checksums, and
+sheet-outline SVG renders land under the platform temporary directory by
+default.
+
+CI runs both this gate and the full 18-layout Compact/Short Side matrix. The
+headless matrix uses `--skip-png`; this skips only Chromium rendering and
+retains all exact layout, hash, accounting, and trace checks.
 
 ## Full Current Sheet Matrix
 

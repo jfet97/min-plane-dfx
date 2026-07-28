@@ -385,6 +385,14 @@ This single-worker behavior is mandatory, not merely the current
 implementation. Do not turn the logical cohorts into concurrent processes or
 threads without a new explicit user instruction.
 
+After a complete miss, one additional capacity-quality continuation may resume
+the deepest fitting canonical prefix for sufficiently large requests. It is a
+separate protected lane, not a replacement comparator for the ordinary cold
+beam. It may win only by placing strictly more pieces; equal-count layouts keep
+the incumbent unchanged. This is how Compact can recover useful work that one
+retention policy lost without undoing the topology gains that policy provides
+on other constrained sheets.
+
 ## 6. What a capacity checkpoint contains
 
 A checkpoint contains more than geometry. It binds:
