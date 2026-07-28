@@ -101,6 +101,9 @@ function construct(input: {
   readonly stripSheet?: SheetSpec
   readonly maximumRuntimeMs?: number
   readonly now?: () => number
+  readonly tieEvidenceSink?: (
+    entry: import('../../src/workers/algorithm/irregular/intrinsicShortSideContactStrip.js').IntrinsicShortSideContactStripTieEvidence
+  ) => void
 }) {
   return Effect.runPromise(
     constructIntrinsicShortSideContactStrip({
@@ -112,7 +115,8 @@ function construct(input: {
         ...(input.maximumRuntimeMs === undefined
           ? {}
           : { maximumRuntimeMs: input.maximumRuntimeMs }),
-        ...(input.now === undefined ? {} : { now: input.now })
+        ...(input.now === undefined ? {} : { now: input.now }),
+        ...(input.tieEvidenceSink === undefined ? {} : { tieEvidenceSink: input.tieEvidenceSink })
       }
     }).pipe(
       Effect.provide(GeometryKernel.Live),
@@ -212,5 +216,83 @@ describe('intrinsic short-side contact strip', () => {
 
     expect(outcome.trace.status).toBe('deadline')
     expect(outcome.placedCollisionGeometries).toBeUndefined()
+  })
+
+  it('settles a tied anchor on the contacting orientation at equal depth', async () => {
+    const ties: Array<{
+      readonly tiedCount: number
+      readonly selectionChanged: boolean
+      readonly winnerScore: string | undefined
+      readonly bestAlternativeScore: string | undefined
+    }> = []
+    const outcome = await construct({
+      pieces: [
+        rectangle('wall', 40, 20),
+        preparedPiece(
+          'leaning',
+          [point(0, 0), point(40, 0), point(40, 20)],
+          [0, 180]
+        )
+      ],
+      tieEvidenceSink: (entry) => {
+        ties.push(entry)
+      }
+    })
+
+    expect(outcome.trace.status).toBe('constructed')
+    const placed = outcome.placedCollisionGeometries ?? []
+    expect(placed).toHaveLength(2)
+    // the 180-degree orientation edge-contacts the wall despite losing the
+    // translation-order baseline to the point-contact 0-degree orientation
+    expect(placed[1]?.placement.transform.rotationDeg).toBe(180)
+    expect(
+      ties.some(
+        (tie) =>
+          tie.selectionChanged &&
+          tie.winnerScore !== undefined &&
+          tie.bestAlternativeScore !== undefined &&
+          BigInt(tie.winnerScore) > BigInt(tie.bestAlternativeScore)
+      )
+    ).toBe(true)
+  })
+
+  it('refuses a contacting alternative that is deeper than the baseline winner', async () => {
+    const ties: Array<{
+      readonly tiedCount: number
+      readonly selectionChanged: boolean
+      readonly winnerScore: string | undefined
+      readonly bestAlternativeScore: string | undefined
+    }> = []
+    const outcome = await construct({
+      pieces: [
+        rectangle('wall', 40, 40),
+        preparedPiece(
+          'leaning',
+          [point(0, 0), point(40, 0), point(0, 20)],
+          [0, 270]
+        )
+      ],
+      tieEvidenceSink: (entry) => {
+        ties.push(entry)
+      }
+    })
+
+    expect(outcome.trace.status).toBe('constructed')
+    const placed = outcome.placedCollisionGeometries ?? []
+    expect(placed).toHaveLength(2)
+    // the 270-degree orientation offers twice the contact but doubles the
+    // depth, so the depth bound keeps the shallow baseline orientation
+    expect(placed[1]?.placement.transform.rotationDeg).toBe(0)
+    const secondPath = placed[1] === undefined ? [] : (placedCollisionWorldGridPath(placed[1]) ?? [])
+    expect(Math.max(...secondPath.map(({ y }) => y))).toBeLessThanOrEqual(20_000)
+    expect(
+      ties.some(
+        (tie) =>
+          !tie.selectionChanged &&
+          tie.winnerScore !== undefined &&
+          tie.bestAlternativeScore !== undefined &&
+          BigInt(tie.bestAlternativeScore) > BigInt(tie.winnerScore)
+      )
+    ).toBe(true)
   })
 })

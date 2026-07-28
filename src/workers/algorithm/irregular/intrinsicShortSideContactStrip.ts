@@ -12,6 +12,8 @@ import {
 } from '@shared/irregular/domain.js'
 import { toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { GeometryKernel } from '../../irregular/geometryKernel.js'
+import { placedCollisionWorldGridPath } from '../../irregular/canonicalLayoutGeometry.js'
+import { measureCanonicalGridBoundaryOverlapAxisUnits } from '../../irregular/canonicalGridContact.js'
 import {
   makeEmptyPlacedCollisionSpatialIndex,
   type PlacedCollisionSpatialIndex
@@ -22,7 +24,7 @@ import {
 } from '../../irregular/services.js'
 
 export const INTRINSIC_SHORT_SIDE_CONTACT_STRIP_VERSION =
-  'intrinsic-short-side-contact-strip-v1' as const
+  'intrinsic-short-side-contact-strip-v2' as const
 export const INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RUNTIME_MS = 20_000 as const
 export const INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RSS_DELTA_BYTES = 256 * 1_048_576
 
@@ -59,6 +61,32 @@ export interface IntrinsicShortSideContactStripRuntimeControl {
   readonly maximumRssDeltaBytes?: number
   readonly now?: () => number
   readonly currentRssBytes?: () => number
+  readonly tieEvidenceSink?: (entry: IntrinsicShortSideContactStripTieEvidence) => void
+}
+
+/**
+ * Exact per-tie evidence collected when more than one legal candidate shares
+ * the winning `(long axis, short axis)` anchor for one prepared piece. The
+ * contact score is the exact axis-projected overlap in canonical grid units
+ * against the already-placed pieces; `undefined` marks an undecidable path.
+ */
+export interface IntrinsicShortSideContactStripTieEvidence {
+  readonly pieceIndex: number
+  readonly tiedCount: number
+  readonly winnerScore: string | undefined
+  readonly bestAlternativeScore: string | undefined
+  readonly winnerMaxCornerSharedByAllTied: boolean
+  readonly selectionChanged: boolean
+  readonly scores: ReadonlyArray<{
+    readonly transformIndex: number
+    readonly rotationDeg: number
+    readonly mirrored: boolean
+    readonly translationShortAxisGrid: number
+    readonly translationLongAxisGrid: number
+    readonly maxShortAxisGrid: number
+    readonly maxLongAxisGrid: number
+    readonly contactAxisUnits: string | undefined
+  }>
 }
 
 interface StripRuntime {
@@ -82,6 +110,8 @@ interface AnchoredCandidate {
   readonly anchorShortAxisGrid: number
   readonly translationLongAxisGrid: number
   readonly translationShortAxisGrid: number
+  readonly maxLongAxisGrid: number
+  readonly maxShortAxisGrid: number
   readonly transformIndex: number
   readonly rotationDeg: number
   readonly mirrored: boolean
@@ -157,6 +187,7 @@ function constructStrip(
     readonly stripSheet: SheetSpec
     readonly preparedPieces: ReadonlyArray<IrregularPreparedPiece>
     readonly settings: IrregularNestingSettings
+    readonly runtimeControl?: IntrinsicShortSideContactStripRuntimeControl
   },
   runtime: StripRuntime
 ) {
@@ -177,7 +208,7 @@ function constructStrip(
           placed.length
         )
       }
-      let best: AnchoredCandidate | undefined
+      const anchoredCandidates: AnchoredCandidate[] = []
       for (const transform of piece.transforms) {
         runtime.transformEvaluations += 1
         const moving = yield* geometryKernel.transformCollisionGeometry({
@@ -218,18 +249,23 @@ function constructStrip(
           runtime.candidateEvaluations += 1
           const anchored = anchorCandidate(candidate, moving)
           if (anchored === undefined) continue
-          if (best === undefined || compareAnchoredCandidates(anchored, best) < 0) {
-            best = anchored
-          }
+          anchoredCandidates.push(anchored)
         }
       }
-      if (best === undefined) {
+      const selection = selectContactAwareWinner(anchoredCandidates, placed, piece)
+      if (selection === undefined) {
         return failedOutcome(
           input,
           runtime,
           'no-legal-placement',
           `piece ${piece.pieceId ?? piece.source.id} has no legal contact placement inside the requested short-axis strip.`,
           placed.length
+        )
+      }
+      const best = selection.winner
+      if (selection.tiedCount >= 2) {
+        input.runtimeControl?.tieEvidenceSink?.(
+          measureTieEvidence(placed.length, selection, placed, piece)
         )
       }
       const placedPiece = new IrregularPlacedPiece({
@@ -286,11 +322,15 @@ function anchorCandidate(
   const anchorLongAxisGrid = toGridMm(moving.bounds.minY + candidate.point.y)
   const translationShortAxisGrid = toGridMm(candidate.point.x)
   const translationLongAxisGrid = toGridMm(candidate.point.y)
+  const maxShortAxisGrid = toGridMm(moving.bounds.maxX + candidate.point.x)
+  const maxLongAxisGrid = toGridMm(moving.bounds.maxY + candidate.point.y)
   if (
     anchorShortAxisGrid === undefined ||
     anchorLongAxisGrid === undefined ||
     translationShortAxisGrid === undefined ||
-    translationLongAxisGrid === undefined
+    translationLongAxisGrid === undefined ||
+    maxShortAxisGrid === undefined ||
+    maxLongAxisGrid === undefined
   ) {
     return undefined
   }
@@ -301,10 +341,22 @@ function anchorCandidate(
     anchorShortAxisGrid,
     translationLongAxisGrid,
     translationShortAxisGrid,
+    maxLongAxisGrid,
+    maxShortAxisGrid,
     transformIndex: moving.transform.index,
     rotationDeg: moving.transform.rotationDeg,
     mirrored: moving.transform.mirrored
   }
+}
+
+interface ContactAwareSelection {
+  readonly winner: AnchoredCandidate
+  readonly baselineWinner: AnchoredCandidate
+  readonly tiedCount: number
+  readonly tied: ReadonlyArray<AnchoredCandidate>
+  readonly winnerScore: bigint | undefined
+  readonly baselineScore: bigint | undefined
+  readonly selectionChanged: boolean
 }
 
 /**
@@ -324,6 +376,151 @@ function compareAnchoredCandidates(first: AnchoredCandidate, second: AnchoredCan
     first.rotationDeg - second.rotationDeg ||
     Number(first.mirrored) - Number(second.mirrored)
   )
+}
+
+/**
+ * Selects one legal candidate per prepared piece.
+ *
+ * The minimal `(long axis, short axis)` anchor still decides where the piece
+ * lands. When several legal candidates share that anchor, the piece may settle
+ * for a zero-contact orientation chosen only by translation order. This
+ * selector instead measures the exact axis-projected contact each tied
+ * candidate makes against the placed pieces and takes the strongest, provided
+ * the challenger is not deeper than the translation-order baseline winner, so
+ * the directional depth of the strip can never regress through a tie choice.
+ * Silent scores (ties or undecidable paths) fall back to the historical tuple
+ * order, so behavior away from contact-decisive ties is unchanged.
+ */
+function selectContactAwareWinner(
+  candidates: ReadonlyArray<AnchoredCandidate>,
+  placed: ReadonlyArray<IrregularPlacedPiece>,
+  piece: IrregularPreparedPiece
+): ContactAwareSelection | undefined {
+  let baseline: AnchoredCandidate | undefined
+  for (const anchored of candidates) {
+    if (baseline === undefined || compareAnchoredCandidates(anchored, baseline) < 0) {
+      baseline = anchored
+    }
+  }
+  if (baseline === undefined) return undefined
+  const tied = candidates.filter(
+    (anchored) =>
+      anchored.anchorLongAxisGrid === baseline.anchorLongAxisGrid &&
+      anchored.anchorShortAxisGrid === baseline.anchorShortAxisGrid
+  )
+  if (tied.length < 2) {
+    return {
+      winner: baseline,
+      baselineWinner: baseline,
+      tiedCount: tied.length,
+      tied,
+      winnerScore: undefined,
+      baselineScore: undefined,
+      selectionChanged: false
+    }
+  }
+  const baselineScore = candidateContactAxisUnits(baseline, placed, piece)
+  let winner = baseline
+  let winnerScore = baselineScore
+  for (const challenger of tied) {
+    if (challenger === baseline) continue
+    if (challenger.maxLongAxisGrid > baseline.maxLongAxisGrid) continue
+    const challengerScore = candidateContactAxisUnits(challenger, placed, piece)
+    if (challengerScore === undefined) continue
+    if (
+      winnerScore === undefined ||
+      challengerScore > winnerScore ||
+      (challengerScore === winnerScore && compareAnchoredCandidates(challenger, winner) < 0)
+    ) {
+      winner = challenger
+      winnerScore = challengerScore
+    }
+  }
+  return {
+    winner,
+    baselineWinner: baseline,
+    tiedCount: tied.length,
+    tied,
+    winnerScore,
+    baselineScore,
+    selectionChanged: winner !== baseline
+  }
+}
+
+/** Measures the exact contact score of one candidate against the placed pieces. */
+function candidateContactAxisUnits(
+  anchored: AnchoredCandidate,
+  placed: ReadonlyArray<IrregularPlacedPiece>,
+  piece: IrregularPreparedPiece
+): bigint | undefined {
+  const worldPath = placedCollisionWorldGridPath(
+    new IrregularPlacedPiece({
+      placement: makeStripPlacement(piece, anchored),
+      collisionGeometry: anchored.moving
+    })
+  )
+  if (worldPath === undefined) return undefined
+  const path = worldPath.map(({ x, y }) => ({ x, y }))
+  let total = 0n
+  for (const placedPiece of placed) {
+    const placedWorldPath = placedCollisionWorldGridPath(placedPiece)
+    if (placedWorldPath === undefined) return undefined
+    const overlap = measureCanonicalGridBoundaryOverlapAxisUnits(
+      path,
+      placedWorldPath.map(({ x, y }) => ({ x, y }))
+    )
+    if (overlap === undefined) return undefined
+    total += overlap
+  }
+  return total
+}
+
+function measureTieEvidence(
+  pieceIndex: number,
+  selection: ContactAwareSelection,
+  placed: ReadonlyArray<IrregularPlacedPiece>,
+  piece: IrregularPreparedPiece
+): IntrinsicShortSideContactStripTieEvidence {
+  const scored = selection.tied.map((anchored) => ({
+    anchored,
+    contactAxisUnits:
+      anchored === selection.winner
+        ? selection.winnerScore
+        : anchored === selection.baselineWinner
+          ? selection.baselineScore
+          : candidateContactAxisUnits(anchored, placed, piece)
+  }))
+  const bestAlternativeScore = scored
+    .filter((entry) => entry.anchored !== selection.winner)
+    .map((entry) => entry.contactAxisUnits)
+    .reduce<bigint | undefined>(
+      (maximum, score) =>
+        score === undefined ? maximum : maximum === undefined || score > maximum ? score : maximum,
+      undefined
+    )
+  const winnerMaxCornerSharedByAllTied = selection.tied.every(
+    (anchored) =>
+      anchored.maxLongAxisGrid === selection.baselineWinner.maxLongAxisGrid &&
+      anchored.maxShortAxisGrid === selection.baselineWinner.maxShortAxisGrid
+  )
+  return {
+    pieceIndex,
+    tiedCount: selection.tiedCount,
+    winnerScore: selection.winnerScore?.toString(),
+    bestAlternativeScore: bestAlternativeScore?.toString(),
+    winnerMaxCornerSharedByAllTied,
+    selectionChanged: selection.selectionChanged,
+    scores: scored.map(({ anchored, contactAxisUnits }) => ({
+      transformIndex: anchored.transformIndex,
+      rotationDeg: anchored.rotationDeg,
+      mirrored: anchored.mirrored,
+      translationShortAxisGrid: anchored.translationShortAxisGrid,
+      translationLongAxisGrid: anchored.translationLongAxisGrid,
+      maxShortAxisGrid: anchored.maxShortAxisGrid,
+      maxLongAxisGrid: anchored.maxLongAxisGrid,
+      contactAxisUnits: contactAxisUnits?.toString()
+    }))
+  }
 }
 
 function makeStripPlacement(

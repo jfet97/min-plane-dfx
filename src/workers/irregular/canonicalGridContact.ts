@@ -228,26 +228,20 @@ function canonicalGridCollinearOverlap(
   first: CanonicalGridEdge,
   second: CanonicalGridEdge
 ): { readonly lengthMm: number } | undefined {
-  const secondStartCross = canonicalGridCrossSign(first.start, first.end, second.start)
-  const secondEndCross = canonicalGridCrossSign(first.start, first.end, second.end)
-  if (secondStartCross === undefined || secondEndCross === undefined) return undefined
-  if (secondStartCross !== 0 || secondEndCross !== 0) return { lengthMm: 0 }
+  const axisUnits = canonicalGridCollinearOverlapAxisUnits(first, second)
+  if (axisUnits === undefined || axisUnits <= 0n) {
+    return axisUnits === undefined ? undefined : { lengthMm: 0 }
+  }
 
   const dx = BigInt(first.end.x) - BigInt(first.start.x)
   const dy = BigInt(first.end.y) - BigInt(first.start.y)
   const useX = absoluteBigInt(dx) >= absoluteBigInt(dy)
-  const firstStart = useX ? BigInt(first.start.x) : BigInt(first.start.y)
-  const firstEnd = useX ? BigInt(first.end.x) : BigInt(first.end.y)
-  const secondStart = useX ? BigInt(second.start.x) : BigInt(second.start.y)
-  const secondEnd = useX ? BigInt(second.end.x) : BigInt(second.end.y)
-  const overlappingAxisLength =
-    minimumBigInt(maximumBigInt(firstStart, firstEnd), maximumBigInt(secondStart, secondEnd)) -
-    maximumBigInt(minimumBigInt(firstStart, firstEnd), minimumBigInt(secondStart, secondEnd))
-  if (overlappingAxisLength <= 0n) return { lengthMm: 0 }
-
-  const firstAxisLength = absoluteBigInt(firstEnd - firstStart)
+  const firstAxisLength = absoluteBigInt(
+    (useX ? BigInt(first.end.x) : BigInt(first.end.y)) -
+      (useX ? BigInt(first.start.x) : BigInt(first.start.y))
+  )
   const edgeLengthMm = canonicalGridEdgeLengthMm(first)
-  const overlapAxisLength = Number(overlappingAxisLength)
+  const overlapAxisLength = Number(axisUnits)
   const axisLength = Number(firstAxisLength)
   if (
     edgeLengthMm === undefined ||
@@ -259,6 +253,57 @@ function canonicalGridCollinearOverlap(
   }
   const lengthMm = (overlapAxisLength * edgeLengthMm) / axisLength
   return Number.isFinite(lengthMm) && lengthMm > 0 ? { lengthMm } : undefined
+}
+
+/*
+ * Exact axis-projected overlap of two collinear grid edges in canonical grid
+ * units, or zero when the edges are collinear but disjoint. Not a Euclidean
+ * length: an exact BigInt ordering surrogate shared by every consumer that
+ * must compare contact strength without floating-point rounding.
+ */
+function canonicalGridCollinearOverlapAxisUnits(
+  first: CanonicalGridEdge,
+  second: CanonicalGridEdge
+): bigint | undefined {
+  const secondStartCross = canonicalGridCrossSign(first.start, first.end, second.start)
+  const secondEndCross = canonicalGridCrossSign(first.start, first.end, second.end)
+  if (secondStartCross === undefined || secondEndCross === undefined) return undefined
+  if (secondStartCross !== 0 || secondEndCross !== 0) return 0n
+
+  const dx = BigInt(first.end.x) - BigInt(first.start.x)
+  const dy = BigInt(first.end.y) - BigInt(first.start.y)
+  const useX = absoluteBigInt(dx) >= absoluteBigInt(dy)
+  const firstStart = useX ? BigInt(first.start.x) : BigInt(first.start.y)
+  const firstEnd = useX ? BigInt(first.end.x) : BigInt(first.end.y)
+  const secondStart = useX ? BigInt(second.start.x) : BigInt(second.start.y)
+  const secondEnd = useX ? BigInt(second.end.x) : BigInt(second.end.y)
+  const overlappingAxisLength =
+    minimumBigInt(maximumBigInt(firstStart, firstEnd), maximumBigInt(secondStart, secondEnd)) -
+    maximumBigInt(minimumBigInt(firstStart, firstEnd), minimumBigInt(secondStart, secondEnd))
+  return overlappingAxisLength > 0n ? overlappingAxisLength : 0n
+}
+
+/**
+ * Sums the exact axis-projected overlap of every collinear edge pair between
+ * two canonical grid paths. Returns `undefined` when either path cannot be
+ * edged or any overlap cannot be decided exactly.
+ */
+export function measureCanonicalGridBoundaryOverlapAxisUnits(
+  first: Path64,
+  second: Path64
+): bigint | undefined {
+  const firstEdges = canonicalGridPathEdges(first)
+  const secondEdges = canonicalGridPathEdges(second)
+  if (firstEdges === undefined || secondEdges === undefined) return undefined
+  let total = 0n
+  for (const firstEdge of firstEdges) {
+    for (const secondEdge of secondEdges) {
+      const axisUnits = canonicalGridCollinearOverlapAxisUnits(firstEdge, secondEdge)
+      if (axisUnits === undefined) return undefined
+      total += axisUnits
+    }
+  }
+  return total
 }
 
 function longestCanonicalGridEdgeLength(edges: ReadonlyArray<CanonicalGridEdge>): number | undefined {

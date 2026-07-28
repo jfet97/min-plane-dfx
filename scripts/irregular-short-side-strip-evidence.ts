@@ -175,13 +175,25 @@ const stripSheet = new SheetSpec({
   height: Math.max(sheet.width, sheet.height),
   label: `short-side-strip-evidence-${sheet.label}`
 })
+const tieEvidence: Array<{
+  readonly pieceIndex: number
+  readonly tiedCount: number
+  readonly winnerScore: string | undefined
+  readonly bestAlternativeScore: string | undefined
+  readonly winnerMaxCornerSharedByAllTied: boolean
+}> = []
 const outcome = await Effect.runPromise(
   preparePiecesForStrip(request, settings).pipe(
     Effect.flatMap((preparedPieces) =>
       constructIntrinsicShortSideContactStrip({
         stripSheet,
         preparedPieces,
-        settings
+        settings,
+        runtimeControl: {
+          tieEvidenceSink: (entry) => {
+            tieEvidence.push(entry)
+          }
+        }
       })
     ),
     Effect.provide(CollisionGeometryBuilder.Layer),
@@ -211,8 +223,17 @@ const report = jsonSafe({
   placedCount: placed.length,
   topology,
   contacts,
+  tieEvidence,
   fittedCanonicalSha256,
   svgPath
 })
 await writeFile(`${outputPrefix}.json`, `${JSON.stringify(report, null, 2)}\n`)
-console.log(JSON.stringify({ sheet: sheet.label, status: outcome.trace.status, topology, svgPath }))
+console.log(
+  JSON.stringify({
+    sheet: sheet.label,
+    status: outcome.trace.status,
+    topology,
+    tieCount: tieEvidence.length,
+    svgPath
+  })
+)
