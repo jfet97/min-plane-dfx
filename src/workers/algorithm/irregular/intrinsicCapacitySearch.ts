@@ -58,7 +58,7 @@ export const INTRINSIC_CAPACITY_V1_BOUNDS = {
   placementEvaluationQuotaPerDepth: 4_096
 } as const
 
-export const INTRINSIC_ANYTIME_CHECKPOINT_VERSION = 'intrinsic-anytime-checkpoint-v2' as const
+export const INTRINSIC_ANYTIME_CHECKPOINT_VERSION = 'intrinsic-anytime-checkpoint-v3' as const
 
 export type IntrinsicCapacitySettlement = 'exhausted' | 'evaluation-cap' | 'paused'
 
@@ -167,6 +167,7 @@ export interface IntrinsicAnytimeCheckpoint {
   readonly censoring: 'none'
   readonly noSkipFrontier: IntrinsicAnytimeNoSkipFrontierState
   readonly counters: IntrinsicCapacitySearchCounters
+  readonly topologyRetentionDepths: ReadonlyArray<IntrinsicCapacityTopologyRetentionDepthTrace>
   readonly integrityHash: string
 }
 
@@ -481,7 +482,9 @@ export function runIntrinsicCapacityColdSearch(
       }
     const startDepth = input.checkpoint?.nextDepth ?? initialDepth
     let completedDepthBoundariesThisInvocation = 0
-    const topologyRetentionDepths: IntrinsicCapacityTopologyRetentionDepthTrace[] = []
+    const topologyRetentionDepths: IntrinsicCapacityTopologyRetentionDepthTrace[] = [
+      ...(input.checkpoint?.topologyRetentionDepths ?? [])
+    ]
 
     let beam: ReadonlyArray<CapacityBeamEntry>
     if (input.checkpoint === undefined && warmPrefix.entry !== undefined) {
@@ -904,6 +907,7 @@ export function runIntrinsicCapacityColdSearch(
           perDepthBudgetLedgers,
           noSkipFrontier,
           counters,
+          topologyRetentionDepths,
           producerRole,
           schedulerDeficit: input.schedulerDeficit ?? 0,
           sheetWidthGrid,
@@ -1177,6 +1181,7 @@ function makeIntrinsicCapacityCheckpoint(input: {
   readonly perDepthBudgetLedgers: ReadonlyArray<IntrinsicAnytimeDepthBudgetLedger>
   readonly noSkipFrontier: IntrinsicAnytimeNoSkipFrontierState
   readonly counters: IntrinsicCapacitySearchCounters
+  readonly topologyRetentionDepths: ReadonlyArray<IntrinsicCapacityTopologyRetentionDepthTrace>
   readonly producerRole:
     | 'capacity-cold'
     | 'capacity-cohesion-shadow'
@@ -1237,7 +1242,8 @@ function makeIntrinsicCapacityCheckpoint(input: {
     settlement: 'active',
     censoring: 'none',
     noSkipFrontier: input.noSkipFrontier,
-    counters: input.counters
+    counters: input.counters,
+    topologyRetentionDepths: input.topologyRetentionDepths
   }
   return {
     ...checkpointWithoutIntegrity,
@@ -1280,7 +1286,8 @@ function validateIntrinsicCapacityCheckpoint(input: {
     settlement: checkpoint.settlement,
     censoring: checkpoint.censoring,
     noSkipFrontier: checkpoint.noSkipFrontier,
-    counters: checkpoint.counters
+    counters: checkpoint.counters,
+    topologyRetentionDepths: checkpoint.topologyRetentionDepths
   })
   if (checkpoint.integrityHash !== expectedIntegrityHash) {
     return 'checkpoint integrity hash does not match its retained frontier.'
@@ -1554,7 +1561,8 @@ function intrinsicCapacityCheckpointIntegrityHash(
         settlement: checkpoint.settlement,
         censoring: checkpoint.censoring,
         noSkipFrontier: checkpoint.noSkipFrontier,
-        counters: checkpoint.counters
+        counters: checkpoint.counters,
+        topologyRetentionDepths: checkpoint.topologyRetentionDepths
       })
     )
     .digest('hex')

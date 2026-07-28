@@ -109,11 +109,17 @@ export interface IntrinsicCapacityQualityWarmPrefixTrace {
   readonly version: 'intrinsic-capacity-quality-warm-prefix-v1'
   readonly producerRole: 'capacity-quality-warm-prefix'
   readonly policy: 'quality-frontier'
-  readonly status: 'skipped-no-fitting-canonical-prefix' | 'settled' | 'checkpointed-censored'
+  readonly status:
+    | 'skipped-below-minimum-piece-count'
+    | 'skipped-no-fitting-canonical-prefix'
+    | 'settled'
+    | 'checkpointed-censored'
   readonly outputInfluence: 'none' | 'strict-count-improvement'
   readonly sourceRole: 'canonical-grid' | undefined
   readonly prefixDepth: number | undefined
   readonly reusedPlacedCount: number
+  readonly requestPieceCount: number
+  readonly minimumPieceCount: number
   readonly placementEvaluationCap: number
   readonly consumedPlacementEvaluations: number
   readonly completedDepths: number
@@ -274,7 +280,10 @@ export function intrinsicCapacityLaneCoordinatorTraceValid(
   )
   if (qualityLane === undefined) {
     if (qualityQuanta.length !== 0) return false
-  } else if (qualityLane.status === 'skipped-no-fitting-canonical-prefix') {
+  } else if (
+    qualityLane.status === 'skipped-below-minimum-piece-count' ||
+    qualityLane.status === 'skipped-no-fitting-canonical-prefix'
+  ) {
     if (qualityQuanta.length !== 0 || qualityLane.consumedPlacementEvaluations !== 0) {
       return false
     }
@@ -437,6 +446,8 @@ interface ProtectedCapacityLaneCoordinatorResult {
 }
 
 const INTRINSIC_CAPACITY_WARM_PILOT_DEPTH_BOUNDARIES = 1 as const
+const INTRINSIC_CAPACITY_QUALITY_MINIMUM_PIECE_COUNT =
+  INTRINSIC_CAPACITY_V1_BOUNDS.coldBeamWidth * 2
 
 /**
  * Gives every protected lane one bounded sample, then resumes only the best
@@ -470,9 +481,14 @@ function runProtectedCapacityLaneCoordinator(input: {
       input.preparedPieces.length *
         INTRINSIC_CAPACITY_V1_BOUNDS.placementEvaluationQuotaPerDepth
     )
-    const qualityDescriptor = input.fittingDescriptors
+    const deepestQualityDescriptor = input.fittingDescriptors
       .filter(({ role }) => role === 'canonical-grid')
       .toSorted((first, second) => second.depth - first.depth)[0]
+    const qualityDescriptor =
+      input.preparedPieces.length >=
+      INTRINSIC_CAPACITY_QUALITY_MINIMUM_PIECE_COUNT
+        ? deepestQualityDescriptor
+        : undefined
     const aggregatePlacementEvaluationCap =
       basePlacementEvaluationCap * (qualityDescriptor === undefined ? 2 : 3)
     const lanes: ProtectedCapacityLane[] = []
@@ -711,12 +727,27 @@ function runProtectedCapacityLaneCoordinator(input: {
       sourceRole: undefined,
       prefixDepth: undefined,
       reusedPlacedCount: 0,
+      requestPieceCount: input.preparedPieces.length,
+      minimumPieceCount: INTRINSIC_CAPACITY_QUALITY_MINIMUM_PIECE_COUNT,
       placementEvaluationCap: basePlacementEvaluationCap,
       consumedPlacementEvaluations: 0,
       completedDepths: 0,
       checkpointRetained: false,
       elapsedMs: 0,
       endpoint: undefined
+    }
+    if (
+      deepestQualityDescriptor !== undefined &&
+      input.preparedPieces.length <
+        INTRINSIC_CAPACITY_QUALITY_MINIMUM_PIECE_COUNT
+    ) {
+      qualityWarmPrefix = {
+        ...qualityWarmPrefix,
+        status: 'skipped-below-minimum-piece-count',
+        sourceRole: 'canonical-grid',
+        prefixDepth: deepestQualityDescriptor.depth,
+        reusedPlacedCount: deepestQualityDescriptor.placedPreparedIds.length
+      }
     }
     let qualityContinued = false
     if (qualityDescriptor !== undefined) {
@@ -831,6 +862,9 @@ function runProtectedCapacityLaneCoordinator(input: {
         sourceRole: 'canonical-grid',
         prefixDepth: qualityDescriptor.depth,
         reusedPlacedCount: qualityDescriptor.placedPreparedIds.length,
+        requestPieceCount: input.preparedPieces.length,
+        minimumPieceCount:
+          INTRINSIC_CAPACITY_QUALITY_MINIMUM_PIECE_COUNT,
         placementEvaluationCap: basePlacementEvaluationCap,
         consumedPlacementEvaluations:
           qualityResult.trace.consumedPlacementEvaluations,

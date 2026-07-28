@@ -1023,7 +1023,21 @@ describe('intrinsic capacity prefixes', () => {
         checkpoint: qualityCheckpoint
       })
     )
-    expect(qualityResumed.trace).toEqual(qualityUninterrupted.trace)
+    const omitRetentionTimings = (
+      trace: typeof qualityUninterrupted.trace
+    ) => ({
+      ...trace,
+      topologyRetentionDepths: trace.topologyRetentionDepths?.map(
+        ({
+          topologyMeasurementMs: _topologyMeasurementMs,
+          contactMeasurementMs: _contactMeasurementMs,
+          ...depth
+        }) => depth
+      )
+    })
+    expect(omitRetentionTimings(qualityResumed.trace)).toEqual(
+      omitRetentionTimings(qualityUninterrupted.trace)
+    )
     expect(qualityResumed.endpoints).toEqual(qualityUninterrupted.endpoints)
     const crossRoleFailure = await provideGeometry(
       runIntrinsicCapacityColdSearch({
