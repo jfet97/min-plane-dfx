@@ -154,7 +154,7 @@ function deterministicClock(...readings: ReadonlyArray<number>): () => number {
 describe('intrinsic short-side observer', () => {
   it('rewards material short-axis fill before long-axis depth', () => {
     const fullShortSide = endpoint('full-short-side', 4, 6)
-    const shorterLongAxis = endpoint('shorter-long-axis', 3, 5, {
+    const shorterLongAxis = endpoint('shorter-long-axis', 3.6, 5, {
       cavities: 1
     })
     const trace = observeIntrinsicShortSideOrientations({
@@ -238,7 +238,7 @@ describe('intrinsic short-side observer', () => {
 
   it('preserves endpoint selection and swaps orientation on a transposed sheet', () => {
     const fullShortSide = endpoint('full-short-side', 4, 6)
-    const shorterLongAxis = endpoint('shorter-long-axis', 3, 5, {
+    const shorterLongAxis = endpoint('shorter-long-axis', 3.6, 5, {
       cavities: 1
     })
     const landscape = observeIntrinsicShortSideOrientations({
@@ -309,6 +309,52 @@ describe('intrinsic short-side observer', () => {
       requestedLongAxisUsedSpanGrid: 3_999,
       requestedShortAxisShortfallGrid: 1_001
     })
+  })
+
+  it('vetoes a directional endpoint one grid step above the production area-cost bound', () => {
+    const production = endpoint('production', 6, 2)
+    const admittedAtExactBound = endpoint('admitted-at-exact-bound', 4, 4)
+    const vetoedOneGridStepAbove = endpoint('vetoed-one-grid-step-above', 4.001, 4)
+    const sheet = new SheetSpec({
+      width: 10,
+      height: 5,
+      label: 'area-cost-boundary'
+    })
+    const admittedTrace = observeIntrinsicShortSideOrientations({
+      sheet,
+      endpoints: [admittedAtExactBound],
+      productionPlacedCollisionGeometries:
+        production.placedCollisionGeometries,
+      now: deterministicClock(0, 1)
+    })
+    const vetoedTrace = observeIntrinsicShortSideOrientations({
+      sheet,
+      endpoints: [vetoedOneGridStepAbove],
+      productionPlacedCollisionGeometries:
+        production.placedCollisionGeometries,
+      now: deterministicClock(0, 1)
+    })
+
+    // 4 x 4 against 6 x 2 sits exactly at 3 * 16 mm2 <= 4 * 12 mm2
+    expect(admittedTrace.status).toBe('observed')
+    expect(admittedTrace.directionalAdmissionTerms).toEqual({
+      shortEdgeFillAdmitted: true,
+      shortfallHalved: true,
+      depthWithinProductionMaximumSide: true,
+      envelopeAreaCostWithinProductionBound: true
+    })
+    expect(admittedTrace.observerWinnerCanonicalGeometryHash).toBe(
+      admittedAtExactBound.sheetlessCanonicalGeometryHash
+    )
+    // one canonical-grid unit (0.001 mm) of extra span costs the area term alone
+    expect(vetoedTrace.status).toBe('observed-no-directional-improvement')
+    expect(vetoedTrace.directionalAdmissionTerms).toEqual({
+      shortEdgeFillAdmitted: true,
+      shortfallHalved: true,
+      depthWithinProductionMaximumSide: true,
+      envelopeAreaCostWithinProductionBound: false
+    })
+    expect(vetoedTrace.observerWinnerCanonicalGeometryHash).toBeUndefined()
   })
 
   it('uses deterministic intrinsic behavior without a directional shortfall on square sheets', () => {

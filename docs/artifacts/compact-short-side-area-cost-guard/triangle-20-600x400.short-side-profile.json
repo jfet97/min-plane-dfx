@@ -1,0 +1,2440 @@
+{
+  "fixture": "triangle-20",
+  "objectiveProfile": "short-side",
+  "sheet": {
+    "width": 600,
+    "height": 400
+  },
+  "sourceCommit": "a750798f4ec6cd8eb800c5fcaa5b629b79bc44d2",
+  "runtime": {
+    "elapsedMs": 3040.3401249999997,
+    "node": "v24.16.0",
+    "v8": "13.6.233.17-node.49"
+  },
+  "result": {
+    "placedCount": 20,
+    "unplacedCount": 0,
+    "unplacedPieceIds": [],
+    "collisionIdentitySha256": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+    "fittedCanonicalSha256": "bf23f53f3bb796f082dc7a1e1257df3a366351bc2a637bfba08b9f5d0be929a8",
+    "canonicalTopology": {
+      "enclosedCavityCount": 0,
+      "largestOccupiedHullGapRatio": 0.13102827749717894,
+      "occupiedEnvelopeAspectRatio": 1.7261633141888053,
+      "positiveContactComponentCount": 9,
+      "isolatedPieceCount": 7,
+      "largestPositiveContactComponentSize": 8,
+      "largestPositiveContactComponentRatio": 0.4
+    },
+    "bounds": {
+      "width": 228.78600000000003,
+      "height": 394.922,
+      "area": 90352.62469200001,
+      "span": 623.7080000000001
+    },
+    "score": {
+      "unplacedCount": 0,
+      "sharedCollisionBoundaryLengthMm": 481.168,
+      "sharedCollisionBoundaryContactUnits": 5.449991,
+      "sharedCollisionBoundaryContactBand": 5,
+      "nearCompleteStructuralContactCount": 0,
+      "dominantNearCompleteStructuralContactCount": 0,
+      "largestNetFreeMaterialRegionAreaMm2": 173188.06246500002,
+      "freeMaterialRegionCount": 1,
+      "freeMaterialHoleCount": 7,
+      "freeMaterialSliverMetric": 204.92267450068655,
+      "collisionBoundsWorstNormalizedSheetConsumption": 0.9873050000000001,
+      "collisionBoundsNormalizedSpanSum": 1.3686150000000001,
+      "collisionBoundsAreaMm2": 90352.62469200001,
+      "collisionBoundsSpanMm": 623.7080000000001,
+      "occupiedHullWasteRatio": 0.131028,
+      "collisionBoundsBottomMm": 0,
+      "collisionBoundsLeftMm": 0,
+      "freeMaterialSnapshot": {
+        "sheet": {
+          "width": 600,
+          "height": 400,
+          "label": "600x400"
+        },
+        "regions": [
+          {
+            "boundary": {
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 600,
+                  "y": 0
+                },
+                {
+                  "x": 600,
+                  "y": 400
+                },
+                {
+                  "x": 0,
+                  "y": 400
+                },
+                {
+                  "x": 0,
+                  "y": 394.922
+                },
+                {
+                  "x": 76.262,
+                  "y": 350.436
+                },
+                {
+                  "x": 0,
+                  "y": 307.313
+                },
+                {
+                  "x": 76.262,
+                  "y": 262.827
+                },
+                {
+                  "x": 0,
+                  "y": 219.704
+                }
+              ]
+            },
+            "holes": [
+              {
+                "points": [
+                  {
+                    "x": 152.524,
+                    "y": 0
+                  },
+                  {
+                    "x": 76.263,
+                    "y": 44.486
+                  },
+                  {
+                    "x": 152.524,
+                    "y": 87.609
+                  },
+                  {
+                    "x": 76.263,
+                    "y": 132.095
+                  },
+                  {
+                    "x": 152.524,
+                    "y": 175.218
+                  },
+                  {
+                    "x": 76.263,
+                    "y": 219.704
+                  },
+                  {
+                    "x": 152.524,
+                    "y": 262.827
+                  },
+                  {
+                    "x": 76.263,
+                    "y": 307.313
+                  },
+                  {
+                    "x": 152.524,
+                    "y": 350.436
+                  },
+                  {
+                    "x": 152.524,
+                    "y": 394.922
+                  },
+                  {
+                    "x": 228.786,
+                    "y": 350.436
+                  },
+                  {
+                    "x": 152.524,
+                    "y": 307.313
+                  },
+                  {
+                    "x": 228.786,
+                    "y": 262.827
+                  },
+                  {
+                    "x": 152.524,
+                    "y": 219.704
+                  },
+                  {
+                    "x": 228.786,
+                    "y": 175.218
+                  },
+                  {
+                    "x": 152.524,
+                    "y": 132.095
+                  },
+                  {
+                    "x": 228.786,
+                    "y": 87.609
+                  },
+                  {
+                    "x": 152.524,
+                    "y": 44.486
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 228.786,
+                    "y": 0
+                  },
+                  {
+                    "x": 152.525,
+                    "y": 44.486
+                  },
+                  {
+                    "x": 228.786,
+                    "y": 87.609
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 76.262,
+                    "y": 44.486
+                  },
+                  {
+                    "x": 76.262,
+                    "y": 132.095
+                  },
+                  {
+                    "x": 152.524,
+                    "y": 87.609
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 228.786,
+                    "y": 87.609
+                  },
+                  {
+                    "x": 152.525,
+                    "y": 132.095
+                  },
+                  {
+                    "x": 228.786,
+                    "y": 175.218
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 76.262,
+                    "y": 132.095
+                  },
+                  {
+                    "x": 76.262,
+                    "y": 175.218
+                  },
+                  {
+                    "x": 0.001,
+                    "y": 219.704
+                  },
+                  {
+                    "x": 76.262,
+                    "y": 262.827
+                  },
+                  {
+                    "x": 0.001,
+                    "y": 307.313
+                  },
+                  {
+                    "x": 76.262,
+                    "y": 350.436
+                  },
+                  {
+                    "x": 76.262,
+                    "y": 394.922
+                  },
+                  {
+                    "x": 152.524,
+                    "y": 350.436
+                  },
+                  {
+                    "x": 76.262,
+                    "y": 307.313
+                  },
+                  {
+                    "x": 152.524,
+                    "y": 262.827
+                  },
+                  {
+                    "x": 76.262,
+                    "y": 219.704
+                  },
+                  {
+                    "x": 152.524,
+                    "y": 175.218
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 228.786,
+                    "y": 175.218
+                  },
+                  {
+                    "x": 152.525,
+                    "y": 219.704
+                  },
+                  {
+                    "x": 228.786,
+                    "y": 262.827
+                  }
+                ]
+              },
+              {
+                "points": [
+                  {
+                    "x": 228.786,
+                    "y": 262.827
+                  },
+                  {
+                    "x": 152.525,
+                    "y": 307.313
+                  },
+                  {
+                    "x": 228.786,
+                    "y": 350.436
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "diagnostics": []
+      },
+      "placementOrder": [
+        "triangle-copy-1",
+        "triangle-copy-2",
+        "triangle-copy-3",
+        "triangle-copy-4",
+        "triangle-copy-5",
+        "triangle-copy-6",
+        "triangle-copy-7",
+        "triangle-copy-8",
+        "triangle-copy-9",
+        "triangle-copy-10",
+        "triangle-copy-11",
+        "triangle-copy-12",
+        "triangle-copy-13",
+        "triangle-copy-14",
+        "triangle-copy-15",
+        "triangle-copy-16",
+        "triangle-copy-17",
+        "triangle-copy-18",
+        "triangle-copy-19",
+        "triangle-copy-20"
+      ],
+      "unplacedSourcePieceIds": []
+    },
+    "portfolio": {
+      "status": "completed",
+      "terminationReason": "shared_archive_completed",
+      "source": "shared-archive",
+      "placements": [
+        {
+          "pieceId": "triangle-copy-1",
+          "sourcePieceId": "triangle-copy-1",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 266.91700000000003,
+            "translateY": 328.193,
+            "rotationDeg": 149.74342161043447,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-2",
+          "sourcePieceId": "triangle-copy-2",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 190.655,
+            "translateY": 285.07,
+            "rotationDeg": 329.7434216104345,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-3",
+          "sourcePieceId": "triangle-copy-3",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 266.91700000000003,
+            "translateY": 240.584,
+            "rotationDeg": 149.74342161043447,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-4",
+          "sourcePieceId": "triangle-copy-4",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 190.655,
+            "translateY": 197.461,
+            "rotationDeg": 329.7434216104345,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-5",
+          "sourcePieceId": "triangle-copy-5",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 266.91700000000003,
+            "translateY": 152.975,
+            "rotationDeg": 149.74342161043447,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-6",
+          "sourcePieceId": "triangle-copy-6",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 190.655,
+            "translateY": 109.852,
+            "rotationDeg": 329.7434216104345,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-7",
+          "sourcePieceId": "triangle-copy-7",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 266.91700000000003,
+            "translateY": 65.366,
+            "rotationDeg": 149.74342161043447,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-8",
+          "sourcePieceId": "triangle-copy-8",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 190.655,
+            "translateY": 22.243,
+            "rotationDeg": 329.7434216104345,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-9",
+          "sourcePieceId": "triangle-copy-9",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 190.655,
+            "translateY": 328.193,
+            "rotationDeg": 149.74342161043447,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-10",
+          "sourcePieceId": "triangle-copy-10",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 114.393,
+            "translateY": 285.07,
+            "rotationDeg": 329.7434216104345,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-11",
+          "sourcePieceId": "triangle-copy-11",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 190.655,
+            "translateY": 240.584,
+            "rotationDeg": 149.74342161043447,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-12",
+          "sourcePieceId": "triangle-copy-12",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 114.393,
+            "translateY": 197.461,
+            "rotationDeg": 329.7434216104345,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-13",
+          "sourcePieceId": "triangle-copy-13",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 190.655,
+            "translateY": 152.975,
+            "rotationDeg": 149.74342161043447,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-14",
+          "sourcePieceId": "triangle-copy-14",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 114.393,
+            "translateY": 109.852,
+            "rotationDeg": 329.7434216104345,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-15",
+          "sourcePieceId": "triangle-copy-15",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 190.655,
+            "translateY": 65.366,
+            "rotationDeg": 149.74342161043447,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-16",
+          "sourcePieceId": "triangle-copy-16",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 114.393,
+            "translateY": 22.243,
+            "rotationDeg": 329.7434216104345,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-17",
+          "sourcePieceId": "triangle-copy-17",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 114.393,
+            "translateY": 328.193,
+            "rotationDeg": 149.74342161043447,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-18",
+          "sourcePieceId": "triangle-copy-18",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 38.131,
+            "translateY": 285.07,
+            "rotationDeg": 329.7434216104345,
+            "mirrored": true
+          }
+        },
+        {
+          "pieceId": "triangle-copy-19",
+          "sourcePieceId": "triangle-copy-19",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 114.393,
+            "translateY": 240.584,
+            "rotationDeg": 149.74342161043447,
+            "mirrored": false
+          }
+        },
+        {
+          "pieceId": "triangle-copy-20",
+          "sourcePieceId": "triangle-copy-20",
+          "placementReference": {
+            "x": -9.144,
+            "y": -10.423
+          },
+          "transform": {
+            "translateX": 38.131,
+            "translateY": 197.461,
+            "rotationDeg": 329.7434216104345,
+            "mirrored": true
+          }
+        }
+      ],
+      "unplacedPieceIds": [],
+      "score": {
+        "unplacedCount": 0,
+        "sharedCollisionBoundaryLengthMm": 481.168,
+        "sharedCollisionBoundaryContactUnits": 5.449991,
+        "sharedCollisionBoundaryContactBand": 5,
+        "nearCompleteStructuralContactCount": 0,
+        "dominantNearCompleteStructuralContactCount": 0,
+        "largestNetFreeMaterialRegionAreaMm2": 173188.06246500002,
+        "freeMaterialRegionCount": 1,
+        "freeMaterialHoleCount": 7,
+        "freeMaterialSliverMetric": 204.92267450068655,
+        "collisionBoundsWorstNormalizedSheetConsumption": 0.9873050000000001,
+        "collisionBoundsNormalizedSpanSum": 1.3686150000000001,
+        "collisionBoundsAreaMm2": 90352.62469200001,
+        "collisionBoundsSpanMm": 623.7080000000001
+      },
+      "diagnostics": [
+        {
+          "code": "intrinsic_short_side_selected",
+          "message": "selected settled archive endpoint (4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f)"
+        }
+      ]
+    },
+    "intrinsicAnytimeSchedulerTrace": {
+      "version": "intrinsic-anytime-scheduler-v1",
+      "coldQuantumDepths": 4,
+      "coldStartStatus": "paused",
+      "coldStartCompletedDepths": 4,
+      "coldStartConsumedPlacementEvaluations": 2533,
+      "coldCheckpointReused": false,
+      "warmPrefixEndpointsAdmitted": false,
+      "cancellationReason": "complete-endpoint-fitted",
+      "quanta": [
+        {
+          "ordinal": 0,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 1,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 2,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 3,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 4,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 5,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 6,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 7,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 8,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 9,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 10,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 11,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 12,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 13,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 14,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 15,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 16,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 17,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 18,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 19,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 20,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 21,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 22,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 23,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 24,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 25,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 26,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 27,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 28,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 29,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 30,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 31,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 32,
+          "cohort": "partial",
+          "producerRole": "capacity-cold",
+          "outcome": "settled"
+        },
+        {
+          "ordinal": 33,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 34,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 35,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "checkpointed"
+        },
+        {
+          "ordinal": 36,
+          "cohort": "complete",
+          "producerRole": "legacy-complete",
+          "outcome": "settled"
+        }
+      ]
+    },
+    "focusedCompleteReconstructionTrace": {
+      "version": "intrinsic-focused-complete-reconstruction-v1",
+      "status": "duplicate-order",
+      "sourceCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+      "selectedCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+      "consumedCandidateEvaluations": 0,
+      "candidateEvaluationAccountingComplete": true,
+      "runtimeMs": 0.7631249999999454,
+      "outputInfluence": "protected-fallback"
+    },
+    "intrinsicShortSideObserverTrace": {
+      "version": "intrinsic-short-side-observer-v5",
+      "status": "observed",
+      "outputInfluence": "selected",
+      "requestedSheetWidthMm": 600,
+      "requestedSheetHeightMm": 400,
+      "requestedLongAxisMm": 600,
+      "requestedShortAxisMm": 400,
+      "requestedLongAxis": "width",
+      "productionShortAxisSpanMm": 152.522,
+      "productionMaximumSideMm": 487.983,
+      "productionEnvelopeAreaMm2": 74428.143126,
+      "productionShortAxisSpanGrid": 152522,
+      "productionMaximumSideGrid": 487983,
+      "productionEnvelopeAreaGrid2": "74428143126",
+      "settledEndpointCount": 10,
+      "evaluatedOrientationCount": 20,
+      "cavityHullGuardEligibleEndpointCount": 3,
+      "geometricParetoEligibleEndpointCount": 2,
+      "placementEvaluations": 0,
+      "candidateEvaluations": 0,
+      "runtimeMs": 6.709208000000217,
+      "runtimeBudgetExceeded": false,
+      "serializedTraceBytes": 43635,
+      "endpoints": [
+        {
+          "archiveIndex": 0,
+          "role": "legacy-absolute-envelope",
+          "canonicalGeometryHash": "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41",
+          "q0": {
+            "rotationDeg": 0,
+            "exactLegal": true,
+            "canonicalGeometryHash": "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41",
+            "usedWidthMm": 341.785,
+            "usedHeightMm": 337.138,
+            "requestedLongAxisUsedSpanMm": 341.785,
+            "requestedShortAxisShortfallMm": 62.86200000000002,
+            "requestedLongAxisUsedSpanGrid": 341785,
+            "requestedShortAxisShortfallGrid": 62862,
+            "cavityCount": 0,
+            "hullGapRatio": 0.3312548377545349,
+            "hullGapDoubledAreaGrid2": "66189013267",
+            "occupiedHullDoubledAreaGrid2": "199812970931",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.875,
+            "cohesionDeficitNumerator": "23",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 115228.71133,
+            "intrinsicEnvelopeMaximumSideMm": 341.785,
+            "intrinsicEnvelopeSpanMm": 678.923,
+            "intrinsicEnvelopeAreaGrid2": "115228711330",
+            "intrinsicEnvelopeMaximumSideGrid": 341785,
+            "intrinsicEnvelopeSpanGrid": 678923,
+            "dominantStructuralContacts": 2,
+            "totalStructuralContacts": 3,
+            "contactUnits": 2.976906823522997,
+            "sharedBoundaryLengthMm": 262.825,
+            "comparisonTuple": [
+              0,
+              62.86200000000002,
+              341.785,
+              0,
+              0.3312548377545349,
+              1,
+              2.875,
+              115228.71133,
+              341.785,
+              678.923,
+              -2,
+              -3,
+              -2.976906823522997,
+              -262.825,
+              "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41"
+            ]
+          },
+          "q90": {
+            "rotationDeg": 90,
+            "exactLegal": true,
+            "canonicalGeometryHash": "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41",
+            "usedWidthMm": 337.138,
+            "usedHeightMm": 341.785,
+            "requestedLongAxisUsedSpanMm": 337.138,
+            "requestedShortAxisShortfallMm": 58.214999999999975,
+            "requestedLongAxisUsedSpanGrid": 337138,
+            "requestedShortAxisShortfallGrid": 58215,
+            "cavityCount": 0,
+            "hullGapRatio": 0.3312548377545349,
+            "hullGapDoubledAreaGrid2": "66189013267",
+            "occupiedHullDoubledAreaGrid2": "199812970931",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.875,
+            "cohesionDeficitNumerator": "23",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 115228.71133,
+            "intrinsicEnvelopeMaximumSideMm": 341.785,
+            "intrinsicEnvelopeSpanMm": 678.923,
+            "intrinsicEnvelopeAreaGrid2": "115228711330",
+            "intrinsicEnvelopeMaximumSideGrid": 341785,
+            "intrinsicEnvelopeSpanGrid": 678923,
+            "dominantStructuralContacts": 2,
+            "totalStructuralContacts": 3,
+            "contactUnits": 2.976906823522997,
+            "sharedBoundaryLengthMm": 262.825,
+            "comparisonTuple": [
+              0,
+              58.214999999999975,
+              337.138,
+              0,
+              0.3312548377545349,
+              1,
+              2.875,
+              115228.71133,
+              341.785,
+              678.923,
+              -2,
+              -3,
+              -2.976906823522997,
+              -262.825,
+              "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41"
+            ]
+          },
+          "selectedRotationDeg": 90,
+          "selected": {
+            "rotationDeg": 90,
+            "exactLegal": true,
+            "canonicalGeometryHash": "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41",
+            "usedWidthMm": 337.138,
+            "usedHeightMm": 341.785,
+            "requestedLongAxisUsedSpanMm": 337.138,
+            "requestedShortAxisShortfallMm": 58.214999999999975,
+            "requestedLongAxisUsedSpanGrid": 337138,
+            "requestedShortAxisShortfallGrid": 58215,
+            "cavityCount": 0,
+            "hullGapRatio": 0.3312548377545349,
+            "hullGapDoubledAreaGrid2": "66189013267",
+            "occupiedHullDoubledAreaGrid2": "199812970931",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.875,
+            "cohesionDeficitNumerator": "23",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 115228.71133,
+            "intrinsicEnvelopeMaximumSideMm": 341.785,
+            "intrinsicEnvelopeSpanMm": 678.923,
+            "intrinsicEnvelopeAreaGrid2": "115228711330",
+            "intrinsicEnvelopeMaximumSideGrid": 341785,
+            "intrinsicEnvelopeSpanGrid": 678923,
+            "dominantStructuralContacts": 2,
+            "totalStructuralContacts": 3,
+            "contactUnits": 2.976906823522997,
+            "sharedBoundaryLengthMm": 262.825,
+            "comparisonTuple": [
+              0,
+              58.214999999999975,
+              337.138,
+              0,
+              0.3312548377545349,
+              1,
+              2.875,
+              115228.71133,
+              341.785,
+              678.923,
+              -2,
+              -3,
+              -2.976906823522997,
+              -262.825,
+              "7c6cde904a5a7abc9894573ea1212a5395ac89c0869fe9ce169c85d8fff62b41"
+            ]
+          },
+          "cavityHullGuardEligible": false,
+          "geometricParetoEligible": false
+        },
+        {
+          "archiveIndex": 1,
+          "role": "periodic-P2",
+          "sourceId": "raw-witness:P2:x:88972/1,0/1;0/1,76261/1:[\"0,0;0,87609;76261,43123\",\"0,176581;0,88972;76261,132095\",\"0,176581;76261,133458;76261,221067\",\"0,177944;0,265553;76261,221067\",\"0,265553;76261,222430;76261,310039\",\"0,266916;0,354525;76261,310039\",\"0,354525;76261,311402;76261,399011\",\"0,355888;0,443497;76261,399011\",\"0,443497;76261,400374;76261,487983\",\"0,87609;76261,132095;76261,44486\",\"152522,132095;152522,44486;76261,87609\",\"152522,132095;76261,176581;76261,88972\",\"152522,133458;152522,221067;76261,176581\",\"152522,221067;76261,177944;76261,265553\",\"152522,222430;152522,310039;76261,265553\",\"152522,310039;76261,266916;76261,354525\",\"152522,311402;152522,399011;76261,354525\",\"152522,399011;76261,355888;76261,443497\",\"152522,400374;152522,487983;76261,443497\",\"152522,43123;76261,0;76261,87609\"]",
+          "canonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+          "q0": {
+            "rotationDeg": 0,
+            "exactLegal": true,
+            "canonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+            "usedWidthMm": 487.983,
+            "usedHeightMm": 152.522,
+            "requestedLongAxisUsedSpanMm": 487.983,
+            "requestedShortAxisShortfallMm": 247.478,
+            "requestedLongAxisUsedSpanGrid": 487983,
+            "requestedShortAxisShortfallGrid": 247478,
+            "cavityCount": 0,
+            "hullGapRatio": 0.029710516900773094,
+            "hullGapDoubledAreaGrid2": "4224096790",
+            "occupiedHullDoubledAreaGrid2": "142175136303",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.375,
+            "cohesionDeficitNumerator": "11",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 74428.143126,
+            "intrinsicEnvelopeMaximumSideMm": 487.983,
+            "intrinsicEnvelopeSpanMm": 640.505,
+            "intrinsicEnvelopeAreaGrid2": "74428143126",
+            "intrinsicEnvelopeMaximumSideGrid": 487983,
+            "intrinsicEnvelopeSpanGrid": 640505,
+            "dominantStructuralContacts": 0,
+            "totalStructuralContacts": 0,
+            "contactUnits": 4.395927678620074,
+            "sharedBoundaryLengthMm": 388.10699999999997,
+            "comparisonTuple": [
+              0,
+              247.478,
+              487.983,
+              0,
+              0.029710516900773094,
+              1,
+              1.375,
+              74428.143126,
+              487.983,
+              640.505,
+              0,
+              0,
+              -4.395927678620074,
+              -388.10699999999997,
+              "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127"
+            ]
+          },
+          "q90": {
+            "rotationDeg": 90,
+            "exactLegal": false,
+            "canonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+            "usedWidthMm": 152.522,
+            "usedHeightMm": 487.983,
+            "requestedLongAxisUsedSpanMm": 152.522,
+            "requestedShortAxisShortfallMm": -87.983,
+            "requestedLongAxisUsedSpanGrid": 152522,
+            "requestedShortAxisShortfallGrid": -87983,
+            "cavityCount": 0,
+            "hullGapRatio": 0.029710516900773094,
+            "hullGapDoubledAreaGrid2": "4224096790",
+            "occupiedHullDoubledAreaGrid2": "142175136303",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.375,
+            "cohesionDeficitNumerator": "11",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 74428.143126,
+            "intrinsicEnvelopeMaximumSideMm": 487.983,
+            "intrinsicEnvelopeSpanMm": 640.505,
+            "intrinsicEnvelopeAreaGrid2": "74428143126",
+            "intrinsicEnvelopeMaximumSideGrid": 487983,
+            "intrinsicEnvelopeSpanGrid": 640505,
+            "dominantStructuralContacts": 0,
+            "totalStructuralContacts": 0,
+            "contactUnits": 4.395927678620074,
+            "sharedBoundaryLengthMm": 388.10699999999997,
+            "comparisonTuple": [
+              1,
+              -87.983,
+              152.522,
+              0,
+              0.029710516900773094,
+              1,
+              1.375,
+              74428.143126,
+              487.983,
+              640.505,
+              0,
+              0,
+              -4.395927678620074,
+              -388.10699999999997,
+              "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127"
+            ]
+          },
+          "selectedRotationDeg": 0,
+          "selected": {
+            "rotationDeg": 0,
+            "exactLegal": true,
+            "canonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
+            "usedWidthMm": 487.983,
+            "usedHeightMm": 152.522,
+            "requestedLongAxisUsedSpanMm": 487.983,
+            "requestedShortAxisShortfallMm": 247.478,
+            "requestedLongAxisUsedSpanGrid": 487983,
+            "requestedShortAxisShortfallGrid": 247478,
+            "cavityCount": 0,
+            "hullGapRatio": 0.029710516900773094,
+            "hullGapDoubledAreaGrid2": "4224096790",
+            "occupiedHullDoubledAreaGrid2": "142175136303",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.375,
+            "cohesionDeficitNumerator": "11",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 74428.143126,
+            "intrinsicEnvelopeMaximumSideMm": 487.983,
+            "intrinsicEnvelopeSpanMm": 640.505,
+            "intrinsicEnvelopeAreaGrid2": "74428143126",
+            "intrinsicEnvelopeMaximumSideGrid": 487983,
+            "intrinsicEnvelopeSpanGrid": 640505,
+            "dominantStructuralContacts": 0,
+            "totalStructuralContacts": 0,
+            "contactUnits": 4.395927678620074,
+            "sharedBoundaryLengthMm": 388.10699999999997,
+            "comparisonTuple": [
+              0,
+              247.478,
+              487.983,
+              0,
+              0.029710516900773094,
+              1,
+              1.375,
+              74428.143126,
+              487.983,
+              640.505,
+              0,
+              0,
+              -4.395927678620074,
+              -388.10699999999997,
+              "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127"
+            ]
+          },
+          "cavityHullGuardEligible": true,
+          "geometricParetoEligible": true
+        },
+        {
+          "archiveIndex": 2,
+          "role": "periodic-P2",
+          "sourceId": "raw-witness:P2:x:87609/1,0/1;0/1,76262/1:[\"0,0;44486,76261;87609,0\",\"0,76262;44486,152523;87609,76262\",\"132095,152523;175218,76262;87609,76262\",\"132095,152524;175218,76262;219704,152524\",\"132095,152524;44486,152524;87609,76262\",\"132095,76261;175218,0;87609,0\",\"132095,76262;175218,0;219704,76262\",\"132095,76262;44486,76262;87609,0\",\"175218,0;219704,76261;262827,0\",\"175218,152524;219704,228785;262827,152524\",\"175218,76262;219704,152523;262827,76262\",\"219704,152524;262827,76262;307313,152524\",\"219704,228786;262827,152524;307313,228786\",\"219704,76262;262827,0;307313,76262\",\"262827,0;307313,76261;350436,0\",\"262827,152524;307313,228785;350436,152524\",\"262827,76262;307313,152523;350436,76262\",\"307313,152524;350436,76262;394922,152524\",\"307313,228786;350436,152524;394922,228786\",\"307313,76262;350436,0;394922,76262\"]",
+          "canonicalGeometryHash": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+          "q0": {
+            "rotationDeg": 0,
+            "exactLegal": true,
+            "canonicalGeometryHash": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+            "usedWidthMm": 394.922,
+            "usedHeightMm": 228.786,
+            "requestedLongAxisUsedSpanMm": 394.922,
+            "requestedShortAxisShortfallMm": 171.214,
+            "requestedLongAxisUsedSpanGrid": 394922,
+            "requestedShortAxisShortfallGrid": 171214,
+            "cavityCount": 0,
+            "hullGapRatio": 0.08690173010305187,
+            "hullGapDoubledAreaGrid2": "13363088379",
+            "occupiedHullDoubledAreaGrid2": "153772408940",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.5,
+            "cohesionDeficitNumerator": "3",
+            "cohesionDeficitDenominator": "2",
+            "intrinsicEnvelopeAreaMm2": 90352.62469200001,
+            "intrinsicEnvelopeMaximumSideMm": 394.922,
+            "intrinsicEnvelopeSpanMm": 623.7080000000001,
+            "intrinsicEnvelopeAreaGrid2": "90352624692",
+            "intrinsicEnvelopeMaximumSideGrid": 394922,
+            "intrinsicEnvelopeSpanGrid": 623708,
+            "dominantStructuralContacts": 0,
+            "totalStructuralContacts": 0,
+            "contactUnits": 5.4499911861065735,
+            "sharedBoundaryLengthMm": 481.16799999999995,
+            "comparisonTuple": [
+              0,
+              171.214,
+              394.922,
+              0,
+              0.08690173010305187,
+              1,
+              1.5,
+              90352.62469200001,
+              394.922,
+              623.7080000000001,
+              0,
+              0,
+              -5.4499911861065735,
+              -481.16799999999995,
+              "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f"
+            ]
+          },
+          "q90": {
+            "rotationDeg": 90,
+            "exactLegal": true,
+            "canonicalGeometryHash": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+            "usedWidthMm": 228.786,
+            "usedHeightMm": 394.922,
+            "requestedLongAxisUsedSpanMm": 228.786,
+            "requestedShortAxisShortfallMm": 5.0779999999999745,
+            "requestedLongAxisUsedSpanGrid": 228786,
+            "requestedShortAxisShortfallGrid": 5078,
+            "cavityCount": 0,
+            "hullGapRatio": 0.08690173010305187,
+            "hullGapDoubledAreaGrid2": "13363088379",
+            "occupiedHullDoubledAreaGrid2": "153772408940",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.5,
+            "cohesionDeficitNumerator": "3",
+            "cohesionDeficitDenominator": "2",
+            "intrinsicEnvelopeAreaMm2": 90352.62469200001,
+            "intrinsicEnvelopeMaximumSideMm": 394.922,
+            "intrinsicEnvelopeSpanMm": 623.7080000000001,
+            "intrinsicEnvelopeAreaGrid2": "90352624692",
+            "intrinsicEnvelopeMaximumSideGrid": 394922,
+            "intrinsicEnvelopeSpanGrid": 623708,
+            "dominantStructuralContacts": 0,
+            "totalStructuralContacts": 0,
+            "contactUnits": 5.4499911861065735,
+            "sharedBoundaryLengthMm": 481.16799999999995,
+            "comparisonTuple": [
+              0,
+              5.0779999999999745,
+              228.786,
+              0,
+              0.08690173010305187,
+              1,
+              1.5,
+              90352.62469200001,
+              394.922,
+              623.7080000000001,
+              0,
+              0,
+              -5.4499911861065735,
+              -481.16799999999995,
+              "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f"
+            ]
+          },
+          "selectedRotationDeg": 90,
+          "selected": {
+            "rotationDeg": 90,
+            "exactLegal": true,
+            "canonicalGeometryHash": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+            "usedWidthMm": 228.786,
+            "usedHeightMm": 394.922,
+            "requestedLongAxisUsedSpanMm": 228.786,
+            "requestedShortAxisShortfallMm": 5.0779999999999745,
+            "requestedLongAxisUsedSpanGrid": 228786,
+            "requestedShortAxisShortfallGrid": 5078,
+            "cavityCount": 0,
+            "hullGapRatio": 0.08690173010305187,
+            "hullGapDoubledAreaGrid2": "13363088379",
+            "occupiedHullDoubledAreaGrid2": "153772408940",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.5,
+            "cohesionDeficitNumerator": "3",
+            "cohesionDeficitDenominator": "2",
+            "intrinsicEnvelopeAreaMm2": 90352.62469200001,
+            "intrinsicEnvelopeMaximumSideMm": 394.922,
+            "intrinsicEnvelopeSpanMm": 623.7080000000001,
+            "intrinsicEnvelopeAreaGrid2": "90352624692",
+            "intrinsicEnvelopeMaximumSideGrid": 394922,
+            "intrinsicEnvelopeSpanGrid": 623708,
+            "dominantStructuralContacts": 0,
+            "totalStructuralContacts": 0,
+            "contactUnits": 5.4499911861065735,
+            "sharedBoundaryLengthMm": 481.16799999999995,
+            "comparisonTuple": [
+              0,
+              5.0779999999999745,
+              228.786,
+              0,
+              0.08690173010305187,
+              1,
+              1.5,
+              90352.62469200001,
+              394.922,
+              623.7080000000001,
+              0,
+              0,
+              -5.4499911861065735,
+              -481.16799999999995,
+              "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f"
+            ]
+          },
+          "cavityHullGuardEligible": true,
+          "geometricParetoEligible": true
+        },
+        {
+          "archiveIndex": 3,
+          "role": "canonical-grid",
+          "canonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
+          "q0": {
+            "rotationDeg": 0,
+            "exactLegal": true,
+            "canonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
+            "usedWidthMm": 347.002,
+            "usedHeightMm": 337.071,
+            "requestedLongAxisUsedSpanMm": 347.002,
+            "requestedShortAxisShortfallMm": 62.928999999999974,
+            "requestedLongAxisUsedSpanGrid": 347002,
+            "requestedShortAxisShortfallGrid": 62929,
+            "cavityCount": 0,
+            "hullGapRatio": 0.3705751025529532,
+            "hullGapDoubledAreaGrid2": "78671342227",
+            "occupiedHullDoubledAreaGrid2": "212295272092",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.875,
+            "cohesionDeficitNumerator": "23",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 116964.311142,
+            "intrinsicEnvelopeMaximumSideMm": 347.002,
+            "intrinsicEnvelopeSpanMm": 684.0730000000001,
+            "intrinsicEnvelopeAreaGrid2": "116964311142",
+            "intrinsicEnvelopeMaximumSideGrid": 347002,
+            "intrinsicEnvelopeSpanGrid": 684073,
+            "dominantStructuralContacts": 2,
+            "totalStructuralContacts": 2,
+            "contactUnits": 2,
+            "sharedBoundaryLengthMm": 176.576,
+            "comparisonTuple": [
+              0,
+              62.928999999999974,
+              347.002,
+              0,
+              0.3705751025529532,
+              1,
+              2.875,
+              116964.311142,
+              347.002,
+              684.0730000000001,
+              -2,
+              -2,
+              -2,
+              -176.576,
+              "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81"
+            ]
+          },
+          "q90": {
+            "rotationDeg": 90,
+            "exactLegal": true,
+            "canonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
+            "usedWidthMm": 337.071,
+            "usedHeightMm": 347.002,
+            "requestedLongAxisUsedSpanMm": 337.071,
+            "requestedShortAxisShortfallMm": 52.99799999999999,
+            "requestedLongAxisUsedSpanGrid": 337071,
+            "requestedShortAxisShortfallGrid": 52998,
+            "cavityCount": 0,
+            "hullGapRatio": 0.3705751025529532,
+            "hullGapDoubledAreaGrid2": "78671342227",
+            "occupiedHullDoubledAreaGrid2": "212295272092",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.875,
+            "cohesionDeficitNumerator": "23",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 116964.311142,
+            "intrinsicEnvelopeMaximumSideMm": 347.002,
+            "intrinsicEnvelopeSpanMm": 684.0730000000001,
+            "intrinsicEnvelopeAreaGrid2": "116964311142",
+            "intrinsicEnvelopeMaximumSideGrid": 347002,
+            "intrinsicEnvelopeSpanGrid": 684073,
+            "dominantStructuralContacts": 2,
+            "totalStructuralContacts": 2,
+            "contactUnits": 2,
+            "sharedBoundaryLengthMm": 176.576,
+            "comparisonTuple": [
+              0,
+              52.99799999999999,
+              337.071,
+              0,
+              0.3705751025529532,
+              1,
+              2.875,
+              116964.311142,
+              347.002,
+              684.0730000000001,
+              -2,
+              -2,
+              -2,
+              -176.576,
+              "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81"
+            ]
+          },
+          "selectedRotationDeg": 90,
+          "selected": {
+            "rotationDeg": 90,
+            "exactLegal": true,
+            "canonicalGeometryHash": "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81",
+            "usedWidthMm": 337.071,
+            "usedHeightMm": 347.002,
+            "requestedLongAxisUsedSpanMm": 337.071,
+            "requestedShortAxisShortfallMm": 52.99799999999999,
+            "requestedLongAxisUsedSpanGrid": 337071,
+            "requestedShortAxisShortfallGrid": 52998,
+            "cavityCount": 0,
+            "hullGapRatio": 0.3705751025529532,
+            "hullGapDoubledAreaGrid2": "78671342227",
+            "occupiedHullDoubledAreaGrid2": "212295272092",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.875,
+            "cohesionDeficitNumerator": "23",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 116964.311142,
+            "intrinsicEnvelopeMaximumSideMm": 347.002,
+            "intrinsicEnvelopeSpanMm": 684.0730000000001,
+            "intrinsicEnvelopeAreaGrid2": "116964311142",
+            "intrinsicEnvelopeMaximumSideGrid": 347002,
+            "intrinsicEnvelopeSpanGrid": 684073,
+            "dominantStructuralContacts": 2,
+            "totalStructuralContacts": 2,
+            "contactUnits": 2,
+            "sharedBoundaryLengthMm": 176.576,
+            "comparisonTuple": [
+              0,
+              52.99799999999999,
+              337.071,
+              0,
+              0.3705751025529532,
+              1,
+              2.875,
+              116964.311142,
+              347.002,
+              684.0730000000001,
+              -2,
+              -2,
+              -2,
+              -176.576,
+              "ace7d11d9267bc56095696c23fd095796160a08b70fae025b993c62a4d6edb81"
+            ]
+          },
+          "cavityHullGuardEligible": false,
+          "geometricParetoEligible": false
+        },
+        {
+          "archiveIndex": 4,
+          "role": "periodic-P2",
+          "sourceId": "raw-witness:P2:x:87609/1,0/1;0/1,76262/1:[\"0,0;44486,76261;87609,0\",\"0,152524;44486,228785;87609,152524\",\"0,76262;44486,152523;87609,76262\",\"132095,152523;175218,76262;87609,76262\",\"132095,152524;175218,76262;219704,152524\",\"132095,152524;44486,152524;87609,76262\",\"132095,228785;175218,152524;87609,152524\",\"132095,228786;175218,152524;219704,228786\",\"132095,228786;44486,228786;87609,152524\",\"132095,76261;175218,0;87609,0\",\"132095,76262;175218,0;219704,76262\",\"132095,76262;44486,76262;87609,0\",\"175218,152524;219704,228785;262827,152524\",\"175218,76262;219704,152523;262827,76262\",\"219704,152524;262827,76262;307313,152524\",\"219704,228786;262827,152524;307313,228786\",\"262827,152524;307313,228785;350436,152524\",\"262827,76262;307313,152523;350436,76262\",\"307313,152524;350436,76262;394922,152524\",\"307313,228786;350436,152524;394922,228786\"]",
+          "canonicalGeometryHash": "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e",
+          "q0": {
+            "rotationDeg": 0,
+            "exactLegal": true,
+            "canonicalGeometryHash": "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e",
+            "usedWidthMm": 394.922,
+            "usedHeightMm": 228.786,
+            "requestedLongAxisUsedSpanMm": 394.922,
+            "requestedShortAxisShortfallMm": 171.214,
+            "requestedLongAxisUsedSpanGrid": 394922,
+            "requestedShortAxisShortfallGrid": 171214,
+            "cavityCount": 0,
+            "hullGapRatio": 0.10896357947112485,
+            "hullGapDoubledAreaGrid2": "16755592102",
+            "occupiedHullDoubledAreaGrid2": "153772408940",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.5,
+            "cohesionDeficitNumerator": "3",
+            "cohesionDeficitDenominator": "2",
+            "intrinsicEnvelopeAreaMm2": 90352.62469200001,
+            "intrinsicEnvelopeMaximumSideMm": 394.922,
+            "intrinsicEnvelopeSpanMm": 623.7080000000001,
+            "intrinsicEnvelopeAreaGrid2": "90352624692",
+            "intrinsicEnvelopeMaximumSideGrid": 394922,
+            "intrinsicEnvelopeSpanGrid": 623708,
+            "dominantStructuralContacts": 0,
+            "totalStructuralContacts": 0,
+            "contactUnits": 5.4499911861065735,
+            "sharedBoundaryLengthMm": 481.16799999999995,
+            "comparisonTuple": [
+              0,
+              171.214,
+              394.922,
+              0,
+              0.10896357947112485,
+              1,
+              1.5,
+              90352.62469200001,
+              394.922,
+              623.7080000000001,
+              0,
+              0,
+              -5.4499911861065735,
+              -481.16799999999995,
+              "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e"
+            ]
+          },
+          "q90": {
+            "rotationDeg": 90,
+            "exactLegal": true,
+            "canonicalGeometryHash": "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e",
+            "usedWidthMm": 228.786,
+            "usedHeightMm": 394.922,
+            "requestedLongAxisUsedSpanMm": 228.786,
+            "requestedShortAxisShortfallMm": 5.0779999999999745,
+            "requestedLongAxisUsedSpanGrid": 228786,
+            "requestedShortAxisShortfallGrid": 5078,
+            "cavityCount": 0,
+            "hullGapRatio": 0.10896357947112485,
+            "hullGapDoubledAreaGrid2": "16755592102",
+            "occupiedHullDoubledAreaGrid2": "153772408940",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.5,
+            "cohesionDeficitNumerator": "3",
+            "cohesionDeficitDenominator": "2",
+            "intrinsicEnvelopeAreaMm2": 90352.62469200001,
+            "intrinsicEnvelopeMaximumSideMm": 394.922,
+            "intrinsicEnvelopeSpanMm": 623.7080000000001,
+            "intrinsicEnvelopeAreaGrid2": "90352624692",
+            "intrinsicEnvelopeMaximumSideGrid": 394922,
+            "intrinsicEnvelopeSpanGrid": 623708,
+            "dominantStructuralContacts": 0,
+            "totalStructuralContacts": 0,
+            "contactUnits": 5.4499911861065735,
+            "sharedBoundaryLengthMm": 481.16799999999995,
+            "comparisonTuple": [
+              0,
+              5.0779999999999745,
+              228.786,
+              0,
+              0.10896357947112485,
+              1,
+              1.5,
+              90352.62469200001,
+              394.922,
+              623.7080000000001,
+              0,
+              0,
+              -5.4499911861065735,
+              -481.16799999999995,
+              "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e"
+            ]
+          },
+          "selectedRotationDeg": 90,
+          "selected": {
+            "rotationDeg": 90,
+            "exactLegal": true,
+            "canonicalGeometryHash": "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e",
+            "usedWidthMm": 228.786,
+            "usedHeightMm": 394.922,
+            "requestedLongAxisUsedSpanMm": 228.786,
+            "requestedShortAxisShortfallMm": 5.0779999999999745,
+            "requestedLongAxisUsedSpanGrid": 228786,
+            "requestedShortAxisShortfallGrid": 5078,
+            "cavityCount": 0,
+            "hullGapRatio": 0.10896357947112485,
+            "hullGapDoubledAreaGrid2": "16755592102",
+            "occupiedHullDoubledAreaGrid2": "153772408940",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.5,
+            "cohesionDeficitNumerator": "3",
+            "cohesionDeficitDenominator": "2",
+            "intrinsicEnvelopeAreaMm2": 90352.62469200001,
+            "intrinsicEnvelopeMaximumSideMm": 394.922,
+            "intrinsicEnvelopeSpanMm": 623.7080000000001,
+            "intrinsicEnvelopeAreaGrid2": "90352624692",
+            "intrinsicEnvelopeMaximumSideGrid": 394922,
+            "intrinsicEnvelopeSpanGrid": 623708,
+            "dominantStructuralContacts": 0,
+            "totalStructuralContacts": 0,
+            "contactUnits": 5.4499911861065735,
+            "sharedBoundaryLengthMm": 481.16799999999995,
+            "comparisonTuple": [
+              0,
+              5.0779999999999745,
+              228.786,
+              0,
+              0.10896357947112485,
+              1,
+              1.5,
+              90352.62469200001,
+              394.922,
+              623.7080000000001,
+              0,
+              0,
+              -5.4499911861065735,
+              -481.16799999999995,
+              "066cfeb3c532991f57c393a0bb7d9f9ac5238251c3708aafe9068205a457411e"
+            ]
+          },
+          "cavityHullGuardEligible": true,
+          "geometricParetoEligible": false
+        },
+        {
+          "archiveIndex": 5,
+          "role": "periodic-P2",
+          "sourceId": "raw-witness:P2:x:87609/1,0/1;0/1,152523/1:[\"0,0;44486,76261;87609,0\",\"0,152523;44486,228784;87609,152523\",\"132095,228784;175218,152523;87609,152523\",\"132095,228784;176581,305046;88972,305046\",\"132095,76261;175218,0;87609,0\",\"132095,76261;176581,152523;88972,152523\",\"1363,152523;44486,76261;88972,152523\",\"1363,305046;44486,228784;88972,305046\",\"175218,0;219704,76261;262827,0\",\"175218,152523;219704,228784;262827,152523\",\"176581,152523;219704,76261;264190,152523\",\"176581,305046;219704,228784;264190,305046\",\"262827,0;307313,76261;350436,0\",\"262827,152523;307313,228784;350436,152523\",\"264190,152523;307313,76261;351799,152523\",\"264190,305046;307313,228784;351799,305046\",\"350436,0;394922,76261;438045,0\",\"350436,152523;394922,228784;438045,152523\",\"351799,152523;394922,76261;439408,152523\",\"351799,305046;394922,228784;439408,305046\"]",
+          "canonicalGeometryHash": "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c",
+          "q0": {
+            "rotationDeg": 0,
+            "exactLegal": true,
+            "canonicalGeometryHash": "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c",
+            "usedWidthMm": 439.408,
+            "usedHeightMm": 305.046,
+            "requestedLongAxisUsedSpanMm": 439.408,
+            "requestedShortAxisShortfallMm": 94.95400000000001,
+            "requestedLongAxisUsedSpanGrid": 439408,
+            "requestedShortAxisShortfallGrid": 94954,
+            "cavityCount": 0,
+            "hullGapRatio": 0.5007766797765806,
+            "hullGapDoubledAreaGrid2": "134039652768",
+            "occupiedHullDoubledAreaGrid2": "267663527838",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.375,
+            "cohesionDeficitNumerator": "19",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 134039.652768,
+            "intrinsicEnvelopeMaximumSideMm": 439.408,
+            "intrinsicEnvelopeSpanMm": 744.454,
+            "intrinsicEnvelopeAreaGrid2": "134039652768",
+            "intrinsicEnvelopeMaximumSideGrid": 439408,
+            "intrinsicEnvelopeSpanGrid": 744454,
+            "dominantStructuralContacts": 5,
+            "totalStructuralContacts": 5,
+            "contactUnits": 4.946116639367935,
+            "sharedBoundaryLengthMm": 436.68199999999996,
+            "comparisonTuple": [
+              0,
+              94.95400000000001,
+              439.408,
+              0,
+              0.5007766797765806,
+              1,
+              2.375,
+              134039.652768,
+              439.408,
+              744.454,
+              -5,
+              -5,
+              -4.946116639367935,
+              -436.68199999999996,
+              "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c"
+            ]
+          },
+          "q90": {
+            "rotationDeg": 90,
+            "exactLegal": false,
+            "canonicalGeometryHash": "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c",
+            "usedWidthMm": 305.046,
+            "usedHeightMm": 439.408,
+            "requestedLongAxisUsedSpanMm": 305.046,
+            "requestedShortAxisShortfallMm": -39.408000000000015,
+            "requestedLongAxisUsedSpanGrid": 305046,
+            "requestedShortAxisShortfallGrid": -39408,
+            "cavityCount": 0,
+            "hullGapRatio": 0.5007766797765806,
+            "hullGapDoubledAreaGrid2": "134039652768",
+            "occupiedHullDoubledAreaGrid2": "267663527838",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.375,
+            "cohesionDeficitNumerator": "19",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 134039.652768,
+            "intrinsicEnvelopeMaximumSideMm": 439.408,
+            "intrinsicEnvelopeSpanMm": 744.454,
+            "intrinsicEnvelopeAreaGrid2": "134039652768",
+            "intrinsicEnvelopeMaximumSideGrid": 439408,
+            "intrinsicEnvelopeSpanGrid": 744454,
+            "dominantStructuralContacts": 5,
+            "totalStructuralContacts": 5,
+            "contactUnits": 4.946116639367935,
+            "sharedBoundaryLengthMm": 436.68199999999996,
+            "comparisonTuple": [
+              1,
+              -39.408000000000015,
+              305.046,
+              0,
+              0.5007766797765806,
+              1,
+              2.375,
+              134039.652768,
+              439.408,
+              744.454,
+              -5,
+              -5,
+              -4.946116639367935,
+              -436.68199999999996,
+              "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c"
+            ]
+          },
+          "selectedRotationDeg": 0,
+          "selected": {
+            "rotationDeg": 0,
+            "exactLegal": true,
+            "canonicalGeometryHash": "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c",
+            "usedWidthMm": 439.408,
+            "usedHeightMm": 305.046,
+            "requestedLongAxisUsedSpanMm": 439.408,
+            "requestedShortAxisShortfallMm": 94.95400000000001,
+            "requestedLongAxisUsedSpanGrid": 439408,
+            "requestedShortAxisShortfallGrid": 94954,
+            "cavityCount": 0,
+            "hullGapRatio": 0.5007766797765806,
+            "hullGapDoubledAreaGrid2": "134039652768",
+            "occupiedHullDoubledAreaGrid2": "267663527838",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.375,
+            "cohesionDeficitNumerator": "19",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 134039.652768,
+            "intrinsicEnvelopeMaximumSideMm": 439.408,
+            "intrinsicEnvelopeSpanMm": 744.454,
+            "intrinsicEnvelopeAreaGrid2": "134039652768",
+            "intrinsicEnvelopeMaximumSideGrid": 439408,
+            "intrinsicEnvelopeSpanGrid": 744454,
+            "dominantStructuralContacts": 5,
+            "totalStructuralContacts": 5,
+            "contactUnits": 4.946116639367935,
+            "sharedBoundaryLengthMm": 436.68199999999996,
+            "comparisonTuple": [
+              0,
+              94.95400000000001,
+              439.408,
+              0,
+              0.5007766797765806,
+              1,
+              2.375,
+              134039.652768,
+              439.408,
+              744.454,
+              -5,
+              -5,
+              -4.946116639367935,
+              -436.68199999999996,
+              "1170d5406aa5e3f464e479b81865389411bba086eb6ecf37bd1047171ac31e4c"
+            ]
+          },
+          "cavityHullGuardEligible": false,
+          "geometricParetoEligible": false
+        },
+        {
+          "archiveIndex": 6,
+          "role": "periodic-P2",
+          "sourceId": "raw-witness:P2:x:88288/1,0/1;43123/1,76262/1:[\"0,174534;76262,131411;76262,219020\",\"0,262822;76262,219699;76262,307308\",\"0,351110;76262,307987;76262,395596\",\"0,439398;76262,396275;76262,483884\",\"0,86246;76262,130732;76262,43123\",\"151937,175555;76262,131411;76262,219699\",\"151937,263843;76262,219699;76262,307987\",\"151937,352131;76262,307987;76262,396275\",\"151937,440419;76262,396275;76262,484563\",\"151937,87267;76262,131411;76262,43123\",\"152524,0;152524,87609;76262,43123\",\"152524,0;152524,88288;228199,44144\",\"152524,175897;152524,88288;76262,131411\",\"152524,176576;152524,264185;76262,219699\",\"152524,176576;152524,264864;228199,220720\",\"152524,176576;152524,88288;228199,132432\",\"152524,264864;152524,352473;76262,307987\",\"152524,264864;152524,353152;228199,309008\",\"152524,353152;152524,440761;76262,396275\",\"152524,353152;152524,441440;228199,397296\"]",
+          "canonicalGeometryHash": "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7",
+          "q0": {
+            "rotationDeg": 0,
+            "exactLegal": true,
+            "canonicalGeometryHash": "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7",
+            "usedWidthMm": 484.563,
+            "usedHeightMm": 228.199,
+            "requestedLongAxisUsedSpanMm": 484.563,
+            "requestedShortAxisShortfallMm": 171.801,
+            "requestedLongAxisUsedSpanGrid": 484563,
+            "requestedShortAxisShortfallGrid": 171801,
+            "cavityCount": 0,
+            "hullGapRatio": 0.2894520050345961,
+            "hullGapDoubledAreaGrid2": "54433799684",
+            "occupiedHullDoubledAreaGrid2": "188058119264",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.804680033563974,
+            "cohesionDeficitNumerator": "254538549739",
+            "cohesionDeficitDenominator": "141043589448",
+            "intrinsicEnvelopeAreaMm2": 110576.792037,
+            "intrinsicEnvelopeMaximumSideMm": 484.563,
+            "intrinsicEnvelopeSpanMm": 712.762,
+            "intrinsicEnvelopeAreaGrid2": "110576792037",
+            "intrinsicEnvelopeMaximumSideGrid": 484563,
+            "intrinsicEnvelopeSpanGrid": 712762,
+            "dominantStructuralContacts": 10,
+            "totalStructuralContacts": 10,
+            "contactUnits": 9.923092606016672,
+            "sharedBoundaryLengthMm": 876.0900000000001,
+            "comparisonTuple": [
+              0,
+              171.801,
+              484.563,
+              0,
+              0.2894520050345961,
+              1,
+              1.804680033563974,
+              110576.792037,
+              484.563,
+              712.762,
+              -10,
+              -10,
+              -9.923092606016672,
+              -876.0900000000001,
+              "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7"
+            ]
+          },
+          "q90": {
+            "rotationDeg": 90,
+            "exactLegal": false,
+            "canonicalGeometryHash": "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7",
+            "usedWidthMm": 228.199,
+            "usedHeightMm": 484.563,
+            "requestedLongAxisUsedSpanMm": 228.199,
+            "requestedShortAxisShortfallMm": -84.56299999999999,
+            "requestedLongAxisUsedSpanGrid": 228199,
+            "requestedShortAxisShortfallGrid": -84563,
+            "cavityCount": 0,
+            "hullGapRatio": 0.2894520050345961,
+            "hullGapDoubledAreaGrid2": "54433799684",
+            "occupiedHullDoubledAreaGrid2": "188058119264",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.804680033563974,
+            "cohesionDeficitNumerator": "254538549739",
+            "cohesionDeficitDenominator": "141043589448",
+            "intrinsicEnvelopeAreaMm2": 110576.792037,
+            "intrinsicEnvelopeMaximumSideMm": 484.563,
+            "intrinsicEnvelopeSpanMm": 712.762,
+            "intrinsicEnvelopeAreaGrid2": "110576792037",
+            "intrinsicEnvelopeMaximumSideGrid": 484563,
+            "intrinsicEnvelopeSpanGrid": 712762,
+            "dominantStructuralContacts": 10,
+            "totalStructuralContacts": 10,
+            "contactUnits": 9.923092606016672,
+            "sharedBoundaryLengthMm": 876.0900000000001,
+            "comparisonTuple": [
+              1,
+              -84.56299999999999,
+              228.199,
+              0,
+              0.2894520050345961,
+              1,
+              1.804680033563974,
+              110576.792037,
+              484.563,
+              712.762,
+              -10,
+              -10,
+              -9.923092606016672,
+              -876.0900000000001,
+              "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7"
+            ]
+          },
+          "selectedRotationDeg": 0,
+          "selected": {
+            "rotationDeg": 0,
+            "exactLegal": true,
+            "canonicalGeometryHash": "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7",
+            "usedWidthMm": 484.563,
+            "usedHeightMm": 228.199,
+            "requestedLongAxisUsedSpanMm": 484.563,
+            "requestedShortAxisShortfallMm": 171.801,
+            "requestedLongAxisUsedSpanGrid": 484563,
+            "requestedShortAxisShortfallGrid": 171801,
+            "cavityCount": 0,
+            "hullGapRatio": 0.2894520050345961,
+            "hullGapDoubledAreaGrid2": "54433799684",
+            "occupiedHullDoubledAreaGrid2": "188058119264",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.804680033563974,
+            "cohesionDeficitNumerator": "254538549739",
+            "cohesionDeficitDenominator": "141043589448",
+            "intrinsicEnvelopeAreaMm2": 110576.792037,
+            "intrinsicEnvelopeMaximumSideMm": 484.563,
+            "intrinsicEnvelopeSpanMm": 712.762,
+            "intrinsicEnvelopeAreaGrid2": "110576792037",
+            "intrinsicEnvelopeMaximumSideGrid": 484563,
+            "intrinsicEnvelopeSpanGrid": 712762,
+            "dominantStructuralContacts": 10,
+            "totalStructuralContacts": 10,
+            "contactUnits": 9.923092606016672,
+            "sharedBoundaryLengthMm": 876.0900000000001,
+            "comparisonTuple": [
+              0,
+              171.801,
+              484.563,
+              0,
+              0.2894520050345961,
+              1,
+              1.804680033563974,
+              110576.792037,
+              484.563,
+              712.762,
+              -10,
+              -10,
+              -9.923092606016672,
+              -876.0900000000001,
+              "6760002589323060d144b06a82264e1cca79370be8d3d4d2fc2ea4a920832ca7"
+            ]
+          },
+          "cavityHullGuardEligible": false,
+          "geometricParetoEligible": false
+        },
+        {
+          "archiveIndex": 7,
+          "role": "periodic-P2",
+          "sourceId": "[\"triangle-70x60\",\"0,75675;44144,0;88288,75675\"]:P2:P2:0,130732;76261,175218;76261,87609|152522,43123;76261,0;76261,87609:0,-87609;152522,-87609:1",
+          "canonicalGeometryHash": "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae",
+          "q0": {
+            "rotationDeg": 0,
+            "exactLegal": false,
+            "canonicalGeometryHash": "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae",
+            "usedWidthMm": 613.263,
+            "usedHeightMm": 305.044,
+            "requestedLongAxisUsedSpanMm": 613.263,
+            "requestedShortAxisShortfallMm": 94.95600000000002,
+            "requestedLongAxisUsedSpanGrid": 613263,
+            "requestedShortAxisShortfallGrid": 94956,
+            "cavityCount": 0,
+            "hullGapRatio": 0.5454545454545454,
+            "hullGapDoubledAreaGrid2": "160347598776",
+            "occupiedHullDoubledAreaGrid2": "293970597756",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.875,
+            "cohesionDeficitNumerator": "23",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 187072.198572,
+            "intrinsicEnvelopeMaximumSideMm": 613.263,
+            "intrinsicEnvelopeSpanMm": 918.307,
+            "intrinsicEnvelopeAreaGrid2": "187072198572",
+            "intrinsicEnvelopeMaximumSideGrid": 613263,
+            "intrinsicEnvelopeSpanGrid": 918307,
+            "dominantStructuralContacts": 8,
+            "totalStructuralContacts": 8,
+            "contactUnits": 7.938487643793615,
+            "sharedBoundaryLengthMm": 700.8720000000001,
+            "comparisonTuple": [
+              1,
+              94.95600000000002,
+              613.263,
+              0,
+              0.5454545454545454,
+              1,
+              2.875,
+              187072.198572,
+              613.263,
+              918.307,
+              -8,
+              -8,
+              -7.938487643793615,
+              -700.8720000000001,
+              "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae"
+            ]
+          },
+          "q90": {
+            "rotationDeg": 90,
+            "exactLegal": false,
+            "canonicalGeometryHash": "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae",
+            "usedWidthMm": 305.044,
+            "usedHeightMm": 613.263,
+            "requestedLongAxisUsedSpanMm": 305.044,
+            "requestedShortAxisShortfallMm": -213.26300000000003,
+            "requestedLongAxisUsedSpanGrid": 305044,
+            "requestedShortAxisShortfallGrid": -213263,
+            "cavityCount": 0,
+            "hullGapRatio": 0.5454545454545454,
+            "hullGapDoubledAreaGrid2": "160347598776",
+            "occupiedHullDoubledAreaGrid2": "293970597756",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.875,
+            "cohesionDeficitNumerator": "23",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 187072.198572,
+            "intrinsicEnvelopeMaximumSideMm": 613.263,
+            "intrinsicEnvelopeSpanMm": 918.307,
+            "intrinsicEnvelopeAreaGrid2": "187072198572",
+            "intrinsicEnvelopeMaximumSideGrid": 613263,
+            "intrinsicEnvelopeSpanGrid": 918307,
+            "dominantStructuralContacts": 8,
+            "totalStructuralContacts": 8,
+            "contactUnits": 7.938487643793615,
+            "sharedBoundaryLengthMm": 700.8720000000001,
+            "comparisonTuple": [
+              1,
+              -213.26300000000003,
+              305.044,
+              0,
+              0.5454545454545454,
+              1,
+              2.875,
+              187072.198572,
+              613.263,
+              918.307,
+              -8,
+              -8,
+              -7.938487643793615,
+              -700.8720000000001,
+              "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae"
+            ]
+          },
+          "selectedRotationDeg": 90,
+          "selected": {
+            "rotationDeg": 90,
+            "exactLegal": false,
+            "canonicalGeometryHash": "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae",
+            "usedWidthMm": 305.044,
+            "usedHeightMm": 613.263,
+            "requestedLongAxisUsedSpanMm": 305.044,
+            "requestedShortAxisShortfallMm": -213.26300000000003,
+            "requestedLongAxisUsedSpanGrid": 305044,
+            "requestedShortAxisShortfallGrid": -213263,
+            "cavityCount": 0,
+            "hullGapRatio": 0.5454545454545454,
+            "hullGapDoubledAreaGrid2": "160347598776",
+            "occupiedHullDoubledAreaGrid2": "293970597756",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.875,
+            "cohesionDeficitNumerator": "23",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 187072.198572,
+            "intrinsicEnvelopeMaximumSideMm": 613.263,
+            "intrinsicEnvelopeSpanMm": 918.307,
+            "intrinsicEnvelopeAreaGrid2": "187072198572",
+            "intrinsicEnvelopeMaximumSideGrid": 613263,
+            "intrinsicEnvelopeSpanGrid": 918307,
+            "dominantStructuralContacts": 8,
+            "totalStructuralContacts": 8,
+            "contactUnits": 7.938487643793615,
+            "sharedBoundaryLengthMm": 700.8720000000001,
+            "comparisonTuple": [
+              1,
+              -213.26300000000003,
+              305.044,
+              0,
+              0.5454545454545454,
+              1,
+              2.875,
+              187072.198572,
+              613.263,
+              918.307,
+              -8,
+              -8,
+              -7.938487643793615,
+              -700.8720000000001,
+              "5ad9f7aef0f612bdd9874fe9345208c8b86c445395bfa1ead742fa686acb00ae"
+            ]
+          },
+          "cavityHullGuardEligible": false,
+          "geometricParetoEligible": false
+        },
+        {
+          "archiveIndex": 8,
+          "role": "periodic-P2",
+          "sourceId": "[\"triangle-70x60\",\"0,75675;44144,0;88288,75675\"]:P2:P2:0,0;0,88288;75675,44144|151350,0;151350,88288;75675,44144:-151350,0;0,-88288:0",
+          "canonicalGeometryHash": "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7",
+          "q0": {
+            "rotationDeg": 0,
+            "exactLegal": false,
+            "canonicalGeometryHash": "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7",
+            "usedWidthMm": 1513.5,
+            "usedHeightMm": 88.288,
+            "requestedLongAxisUsedSpanMm": 1513.5,
+            "requestedShortAxisShortfallMm": 311.712,
+            "requestedLongAxisUsedSpanGrid": 1513500,
+            "requestedShortAxisShortfallGrid": 311712,
+            "cavityCount": 0,
+            "hullGapRatio": 0.5,
+            "hullGapDoubledAreaGrid2": "133623888000",
+            "occupiedHullDoubledAreaGrid2": "267247776000",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.875,
+            "cohesionDeficitNumerator": "15",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 133623.888,
+            "intrinsicEnvelopeMaximumSideMm": 1513.5,
+            "intrinsicEnvelopeSpanMm": 1601.788,
+            "intrinsicEnvelopeAreaGrid2": "133623888000",
+            "intrinsicEnvelopeMaximumSideGrid": 1513500,
+            "intrinsicEnvelopeSpanGrid": 1601788,
+            "dominantStructuralContacts": 9,
+            "totalStructuralContacts": 9,
+            "contactUnits": 9,
+            "sharedBoundaryLengthMm": 794.592,
+            "comparisonTuple": [
+              1,
+              311.712,
+              1513.5,
+              0,
+              0.5,
+              1,
+              1.875,
+              133623.888,
+              1513.5,
+              1601.788,
+              -9,
+              -9,
+              -9,
+              -794.592,
+              "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7"
+            ]
+          },
+          "q90": {
+            "rotationDeg": 90,
+            "exactLegal": false,
+            "canonicalGeometryHash": "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7",
+            "usedWidthMm": 88.288,
+            "usedHeightMm": 1513.5,
+            "requestedLongAxisUsedSpanMm": 88.288,
+            "requestedShortAxisShortfallMm": -1113.5,
+            "requestedLongAxisUsedSpanGrid": 88288,
+            "requestedShortAxisShortfallGrid": -1113500,
+            "cavityCount": 0,
+            "hullGapRatio": 0.5,
+            "hullGapDoubledAreaGrid2": "133623888000",
+            "occupiedHullDoubledAreaGrid2": "267247776000",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.875,
+            "cohesionDeficitNumerator": "15",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 133623.888,
+            "intrinsicEnvelopeMaximumSideMm": 1513.5,
+            "intrinsicEnvelopeSpanMm": 1601.788,
+            "intrinsicEnvelopeAreaGrid2": "133623888000",
+            "intrinsicEnvelopeMaximumSideGrid": 1513500,
+            "intrinsicEnvelopeSpanGrid": 1601788,
+            "dominantStructuralContacts": 9,
+            "totalStructuralContacts": 9,
+            "contactUnits": 9,
+            "sharedBoundaryLengthMm": 794.592,
+            "comparisonTuple": [
+              1,
+              -1113.5,
+              88.288,
+              0,
+              0.5,
+              1,
+              1.875,
+              133623.888,
+              1513.5,
+              1601.788,
+              -9,
+              -9,
+              -9,
+              -794.592,
+              "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7"
+            ]
+          },
+          "selectedRotationDeg": 90,
+          "selected": {
+            "rotationDeg": 90,
+            "exactLegal": false,
+            "canonicalGeometryHash": "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7",
+            "usedWidthMm": 88.288,
+            "usedHeightMm": 1513.5,
+            "requestedLongAxisUsedSpanMm": 88.288,
+            "requestedShortAxisShortfallMm": -1113.5,
+            "requestedLongAxisUsedSpanGrid": 88288,
+            "requestedShortAxisShortfallGrid": -1113500,
+            "cavityCount": 0,
+            "hullGapRatio": 0.5,
+            "hullGapDoubledAreaGrid2": "133623888000",
+            "occupiedHullDoubledAreaGrid2": "267247776000",
+            "cohesionPasses": false,
+            "cohesionDeficit": 1.875,
+            "cohesionDeficitNumerator": "15",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 133623.888,
+            "intrinsicEnvelopeMaximumSideMm": 1513.5,
+            "intrinsicEnvelopeSpanMm": 1601.788,
+            "intrinsicEnvelopeAreaGrid2": "133623888000",
+            "intrinsicEnvelopeMaximumSideGrid": 1513500,
+            "intrinsicEnvelopeSpanGrid": 1601788,
+            "dominantStructuralContacts": 9,
+            "totalStructuralContacts": 9,
+            "contactUnits": 9,
+            "sharedBoundaryLengthMm": 794.592,
+            "comparisonTuple": [
+              1,
+              -1113.5,
+              88.288,
+              0,
+              0.5,
+              1,
+              1.875,
+              133623.888,
+              1513.5,
+              1601.788,
+              -9,
+              -9,
+              -9,
+              -794.592,
+              "fb228b713eb6e02dbe9f93802d256472261358a20c26fe748f633012637df5b7"
+            ]
+          },
+          "cavityHullGuardEligible": false,
+          "geometricParetoEligible": false
+        },
+        {
+          "archiveIndex": 9,
+          "role": "periodic-P2",
+          "sourceId": "[\"triangle-70x60\",\"0,75675;44144,0;88288,75675\"]:P2:P2:0,130732;76261,175218;76261,87609|152522,43123;76261,0;76261,87609:0,-87609;152522,-87609:0",
+          "canonicalGeometryHash": "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f",
+          "q0": {
+            "rotationDeg": 0,
+            "exactLegal": false,
+            "canonicalGeometryHash": "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f",
+            "usedWidthMm": 613.263,
+            "usedHeightMm": 305.044,
+            "requestedLongAxisUsedSpanMm": 613.263,
+            "requestedShortAxisShortfallMm": 94.95600000000002,
+            "requestedLongAxisUsedSpanGrid": 613263,
+            "requestedShortAxisShortfallGrid": 94956,
+            "cavityCount": 0,
+            "hullGapRatio": 0.5457757596716234,
+            "hullGapDoubledAreaGrid2": "160555486262",
+            "occupiedHullDoubledAreaGrid2": "294178485242",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.875,
+            "cohesionDeficitNumerator": "23",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 187072.198572,
+            "intrinsicEnvelopeMaximumSideMm": 613.263,
+            "intrinsicEnvelopeSpanMm": 918.307,
+            "intrinsicEnvelopeAreaGrid2": "187072198572",
+            "intrinsicEnvelopeMaximumSideGrid": 613263,
+            "intrinsicEnvelopeSpanGrid": 918307,
+            "dominantStructuralContacts": 8,
+            "totalStructuralContacts": 8,
+            "contactUnits": 7.938487643793615,
+            "sharedBoundaryLengthMm": 700.8720000000001,
+            "comparisonTuple": [
+              1,
+              94.95600000000002,
+              613.263,
+              0,
+              0.5457757596716234,
+              1,
+              2.875,
+              187072.198572,
+              613.263,
+              918.307,
+              -8,
+              -8,
+              -7.938487643793615,
+              -700.8720000000001,
+              "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f"
+            ]
+          },
+          "q90": {
+            "rotationDeg": 90,
+            "exactLegal": false,
+            "canonicalGeometryHash": "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f",
+            "usedWidthMm": 305.044,
+            "usedHeightMm": 613.263,
+            "requestedLongAxisUsedSpanMm": 305.044,
+            "requestedShortAxisShortfallMm": -213.26300000000003,
+            "requestedLongAxisUsedSpanGrid": 305044,
+            "requestedShortAxisShortfallGrid": -213263,
+            "cavityCount": 0,
+            "hullGapRatio": 0.5457757596716234,
+            "hullGapDoubledAreaGrid2": "160555486262",
+            "occupiedHullDoubledAreaGrid2": "294178485242",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.875,
+            "cohesionDeficitNumerator": "23",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 187072.198572,
+            "intrinsicEnvelopeMaximumSideMm": 613.263,
+            "intrinsicEnvelopeSpanMm": 918.307,
+            "intrinsicEnvelopeAreaGrid2": "187072198572",
+            "intrinsicEnvelopeMaximumSideGrid": 613263,
+            "intrinsicEnvelopeSpanGrid": 918307,
+            "dominantStructuralContacts": 8,
+            "totalStructuralContacts": 8,
+            "contactUnits": 7.938487643793615,
+            "sharedBoundaryLengthMm": 700.8720000000001,
+            "comparisonTuple": [
+              1,
+              -213.26300000000003,
+              305.044,
+              0,
+              0.5457757596716234,
+              1,
+              2.875,
+              187072.198572,
+              613.263,
+              918.307,
+              -8,
+              -8,
+              -7.938487643793615,
+              -700.8720000000001,
+              "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f"
+            ]
+          },
+          "selectedRotationDeg": 90,
+          "selected": {
+            "rotationDeg": 90,
+            "exactLegal": false,
+            "canonicalGeometryHash": "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f",
+            "usedWidthMm": 305.044,
+            "usedHeightMm": 613.263,
+            "requestedLongAxisUsedSpanMm": 305.044,
+            "requestedShortAxisShortfallMm": -213.26300000000003,
+            "requestedLongAxisUsedSpanGrid": 305044,
+            "requestedShortAxisShortfallGrid": -213263,
+            "cavityCount": 0,
+            "hullGapRatio": 0.5457757596716234,
+            "hullGapDoubledAreaGrid2": "160555486262",
+            "occupiedHullDoubledAreaGrid2": "294178485242",
+            "cohesionPasses": false,
+            "cohesionDeficit": 2.875,
+            "cohesionDeficitNumerator": "23",
+            "cohesionDeficitDenominator": "8",
+            "intrinsicEnvelopeAreaMm2": 187072.198572,
+            "intrinsicEnvelopeMaximumSideMm": 613.263,
+            "intrinsicEnvelopeSpanMm": 918.307,
+            "intrinsicEnvelopeAreaGrid2": "187072198572",
+            "intrinsicEnvelopeMaximumSideGrid": 613263,
+            "intrinsicEnvelopeSpanGrid": 918307,
+            "dominantStructuralContacts": 8,
+            "totalStructuralContacts": 8,
+            "contactUnits": 7.938487643793615,
+            "sharedBoundaryLengthMm": 700.8720000000001,
+            "comparisonTuple": [
+              1,
+              -213.26300000000003,
+              305.044,
+              0,
+              0.5457757596716234,
+              1,
+              2.875,
+              187072.198572,
+              613.263,
+              918.307,
+              -8,
+              -8,
+              -7.938487643793615,
+              -700.8720000000001,
+              "90db122c92c22318cf00dfd4215b9c84118a8e54ce740b67a4b1f96354a6326f"
+            ]
+          },
+          "cavityHullGuardEligible": false,
+          "geometricParetoEligible": false
+        }
+      ],
+      "rankedCanonicalGeometryHashes": [
+        "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+        "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127"
+      ],
+      "directionalAdmissionTerms": {
+        "shortEdgeFillAdmitted": true,
+        "shortfallHalved": true,
+        "depthWithinProductionMaximumSide": true,
+        "envelopeAreaCostWithinProductionBound": true
+      },
+      "observerWinnerCanonicalGeometryHash": "4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f",
+      "observerWinnerRotationDeg": 90
+    }
+  },
+  "workerOutput": {
+    "strategyId": "irregular-convex-compact-short-side",
+    "strategyLabel": "Irregular convex Compact Short Side",
+    "historyFrameCount": 0
+  },
+  "checks": {
+    "collisionIdentity": true,
+    "fittedCanonical": true,
+    "placedCount": true,
+    "unplacedCount": true,
+    "exactPiecePartition": true,
+    "area": true,
+    "canonicalCavities": true,
+    "runtime": true,
+    "schedulerChronology": true,
+    "productionStrategyIdentity": true,
+    "focusedTracePresent": true,
+    "focusedStatus": true,
+    "focusedEvaluations": true,
+    "focusedSourceHash": true,
+    "focusedCandidateHash": true,
+    "focusedSelectedHash": true,
+    "focusedInfluence": true,
+    "focusedAccounting": true,
+    "focusedFailureReason": true,
+    "shortSideObserverTracePresent": true,
+    "shortSideObserverOutputInfluence": true,
+    "shortSideObserverRuntimeBudget": true,
+    "shortSideObserverContract": true,
+    "shortSidePairFoldTracePresent": true,
+    "shortSidePairFoldOutputInfluence": true,
+    "shortSidePairFoldBudget": true,
+    "shortSidePairFoldContract": true,
+    "shortSideProfileMaterialized": true,
+    "shortSideProfileExactPiecePartition": true,
+    "shortSideProfileDirectionalContract": true
+  },
+  "passed": true,
+  "svgPath": "triangle-20-600x400.short-side-profile.svg"
+}

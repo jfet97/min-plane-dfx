@@ -13,6 +13,10 @@ roadmap:
 - [Compact short-side contact strip](./compact-short-side-contact-strip.md):
   why the AABB shelf could not reach Compact quality, the reverted
   stable-baseline tie-break, and the exact contact-driven replacement.
+- [Compact short-side area-cost guard](./compact-short-side-area-cost-guard.md):
+  why the fill-gated sibling promoted worse packings than the settled Compact
+  layout, the four-thirds production envelope bound that vetoes them, and the
+  quality-protected fallback outcome.
 - [Pure core boundary decisions](./pure-core-boundary-decisions.md): why the
   rejected Effect/cache micro-optimization did not close the separate
   portability program, and the accepted first pairwise-NFP seam.

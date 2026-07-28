@@ -245,9 +245,13 @@ describe('intrinsic short-side pair-fold observer', () => {
   ]
 
   it('selects one deterministic exact pair and preserves transpose identity', async () => {
-    const portrait = await observe({ pieces: acceptedPieces })
+    const portrait = await observe({
+      pieces: acceptedPieces,
+      productionEnvelopeAreaMm2: 2_400
+    })
     const landscape = await observe({
       pieces: acceptedPieces,
+      productionEnvelopeAreaMm2: 2_400,
       sheet: new SheetSpec({
         width: 100,
         height: 80,
@@ -267,9 +271,11 @@ describe('intrinsic short-side pair-fold observer', () => {
       placedCount: 3,
       usedShortAxisSpanMm: 80,
       usedLongAxisDepthMm: 40,
+      envelopeAreaCostVetoObserved: false,
       admission: {
         exactLegal: true,
         allPiecesPlaced: true,
+        envelopeAreaCostWithinProductionBound: true,
         accepted: true
       }
     })
@@ -323,7 +329,8 @@ describe('intrinsic short-side pair-fold observer', () => {
       status: 'rejected-admission',
       expectedPairCount: 3,
       evaluatedPairCount: 3,
-      admission: { accepted: false }
+      envelopeAreaCostVetoObserved: false,
+      admission: { accepted: false, envelopeAreaCostWithinProductionBound: false }
     })
     expect(rejected.placedCollisionGeometries).toBeUndefined()
     expect(noFit.trace).toMatchObject({
@@ -354,7 +361,8 @@ describe('intrinsic short-side pair-fold observer', () => {
         preparedRectangle('shelf-1', 20, 40, [0, 90]),
         preparedRectangle('shelf-2', 20, 40, [0, 90]),
         preparedRectangle('shelf-3', 20, 40, [0, 90])
-      ]
+      ],
+      productionEnvelopeAreaMm2: 2_400
     })
 
     expect(outcome.trace).toMatchObject({
@@ -369,13 +377,76 @@ describe('intrinsic short-side pair-fold observer', () => {
       placedCount: 3,
       usedShortAxisSpanMm: 80,
       usedLongAxisDepthMm: 40,
+      envelopeAreaCostVetoObserved: false,
       admission: {
         exactLegal: true,
         allPiecesPlaced: true,
+        envelopeAreaCostWithinProductionBound: true,
         accepted: true
       }
     })
     expect(outcome.placedCollisionGeometries).toHaveLength(3)
+  })
+
+  it('vetoes a directional construction that more than matches the production area bound', async () => {
+    const outcome = await observe({ pieces: acceptedPieces })
+
+    expect(outcome.trace).toMatchObject({
+      status: 'rejected-admission',
+      constructionKind: 'multi-row-shelf',
+      envelopeAreaCostVetoObserved: true,
+      admission: {
+        allPiecesPlaced: true,
+        envelopeAreaCostFactor: 2,
+        directionallyEfficient: true,
+        envelopeAreaCostWithinProductionBound: false,
+        accepted: false
+      }
+    })
+    expect(outcome.placedCollisionGeometries).toBeUndefined()
+    // the causal veto record retains which constructions failed the area term alone
+    expect(outcome.trace.envelopeAreaCostVetoes?.length).toBe(3)
+    expect(
+      outcome.trace.envelopeAreaCostVetoes?.map((veto) => veto.constructionKind)
+    ).toEqual(['pair-fold', 'multi-row-shelf', 'contact-strip'])
+    // the composite trace refreshes the aggregate after strip finalization,
+    // so a veto recorded only by the contact strip is not discarded
+    expect(outcome.trace.envelopeAreaCostVetoes?.[2]?.admission).toMatchObject({
+      envelopeAreaCostWithinProductionBound: false,
+      directionallyEfficient: true,
+      accepted: false
+    })
+    expect(outcome.trace.envelopeAreaCostVetoes?.[0]?.admission).toMatchObject({
+      envelopeAreaCostWithinProductionBound: false,
+      directionallyEfficient: true,
+      accepted: false
+    })
+  })
+
+  it('rejects one production grid-area unit below the exact four-thirds bound', async () => {
+    const admitted = await observe({
+      pieces: acceptedPieces,
+      productionEnvelopeAreaMm2: 2_400
+    })
+    const vetoed = await observe({
+      pieces: acceptedPieces,
+      productionEnvelopeAreaMm2: 2_399.999999
+    })
+
+    // 3 * 3200 mm2 <= 4 * 2400 mm2 holds with zero slack at the exact bound
+    expect(admitted.trace.status).toBe('accepted')
+    expect(admitted.trace.admission).toMatchObject({
+      envelopeAreaCostWithinProductionBound: true,
+      accepted: true
+    })
+    // one canonical grid-area unit below it flips only the area-cost term
+    expect(vetoed.trace.status).toBe('rejected-admission')
+    expect(vetoed.trace.envelopeAreaCostVetoObserved).toBe(true)
+    expect(vetoed.trace.admission).toMatchObject({
+      directionallyEfficient: true,
+      envelopeAreaCostWithinProductionBound: false,
+      accepted: false
+    })
   })
 
   it('censors after completed transform work with exact counters', async () => {

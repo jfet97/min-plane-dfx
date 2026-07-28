@@ -23,9 +23,29 @@ import {
 import { IrregularBeamState } from './irregularBeamState.js'
 
 export const INTRINSIC_SHORT_SIDE_OBSERVER_VERSION =
-  'intrinsic-short-side-observer-v4' as const
+  'intrinsic-short-side-observer-v5' as const
 export const INTRINSIC_SHORT_SIDE_OBSERVER_MAX_RUNTIME_MS = 250 as const
 export const INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES = 1_048_576 as const
+
+export const INTRINSIC_SHORT_SIDE_AREA_COST_BOUND_NUMERATOR = 3n as const
+export const INTRINSIC_SHORT_SIDE_AREA_COST_BOUND_DENOMINATOR = 4n as const
+
+/*
+ * A directional sibling may spend at most one third extra envelope area over
+ * the production Compact layout (equivalently, with every piece placed it may
+ * sacrifice at most one quarter of the production collision-envelope density)
+ * to buy requested-short-edge fill. Compared exactly via BigInt
+ * cross-multiplication; float area ratios remain display telemetry.
+ */
+export function intrinsicShortSideEnvelopeAreaCostWithinProductionBound(
+  candidateEnvelopeAreaGrid2: bigint,
+  productionEnvelopeAreaGrid2: bigint
+): boolean {
+  return (
+    INTRINSIC_SHORT_SIDE_AREA_COST_BOUND_NUMERATOR * candidateEnvelopeAreaGrid2 <=
+    INTRINSIC_SHORT_SIDE_AREA_COST_BOUND_DENOMINATOR * productionEnvelopeAreaGrid2
+  )
+}
 
 export type IntrinsicShortSideObserverRotation = 0 | 90
 export type IntrinsicShortSideObserverStatus =
@@ -108,6 +128,7 @@ export interface IntrinsicShortSideObserverTrace {
   readonly serializedTraceBytes: number
   readonly endpoints: ReadonlyArray<IntrinsicShortSideEndpointObservation>
   readonly rankedCanonicalGeometryHashes: ReadonlyArray<string>
+  readonly directionalAdmissionTerms: IntrinsicShortSideDirectionalAdmissionTerms | undefined
   readonly observerWinnerCanonicalGeometryHash: string | undefined
   readonly observerWinnerRotationDeg: IntrinsicShortSideObserverRotation | undefined
 }
@@ -179,14 +200,20 @@ export function observeIntrinsicShortSideOrientations(input: {
     .filter(({ geometricParetoEligible }) => geometricParetoEligible)
     .toSorted(compareEndpointObservations)
   const rankedWinner = ranked[0]
+  const directionalAdmissionTerms =
+    rankedWinner !== undefined && productionReference !== undefined
+      ? directionalImprovementTerms({
+          candidate: rankedWinner.selected,
+          production: productionReference,
+          requestedShortAxisGrid
+        })
+      : undefined
   const winner =
-    rankedWinner !== undefined &&
-    productionReference !== undefined &&
-    directionalImprovementAdmitted({
-      candidate: rankedWinner.selected,
-      production: productionReference,
-      requestedShortAxisGrid
-    })
+    directionalAdmissionTerms !== undefined &&
+    directionalAdmissionTerms.shortEdgeFillAdmitted &&
+    directionalAdmissionTerms.shortfallHalved &&
+    directionalAdmissionTerms.depthWithinProductionMaximumSide &&
+    directionalAdmissionTerms.envelopeAreaCostWithinProductionBound
       ? rankedWinner
       : undefined
   const observed = {
@@ -234,6 +261,7 @@ export function observeIntrinsicShortSideOrientations(input: {
     rankedCanonicalGeometryHashes: ranked.map(
       ({ canonicalGeometryHash }) => canonicalGeometryHash
     ),
+    directionalAdmissionTerms,
     observerWinnerCanonicalGeometryHash: winner?.canonicalGeometryHash,
     observerWinnerRotationDeg: winner?.selectedRotationDeg
   } satisfies IntrinsicShortSideObserverTrace
@@ -548,11 +576,19 @@ function directionalReference(input: {
   )[0]
 }
 
-function directionalImprovementAdmitted(input: {
+/** Exact per-term breakdown of the guarded directional admission decision. */
+export interface IntrinsicShortSideDirectionalAdmissionTerms {
+  readonly shortEdgeFillAdmitted: boolean
+  readonly shortfallHalved: boolean
+  readonly depthWithinProductionMaximumSide: boolean
+  readonly envelopeAreaCostWithinProductionBound: boolean
+}
+
+function directionalImprovementTerms(input: {
   readonly candidate: IntrinsicShortSideOrientationObservation
   readonly production: DirectionalReference
   readonly requestedShortAxisGrid: number | undefined
-}): boolean {
+}): IntrinsicShortSideDirectionalAdmissionTerms | undefined {
   const candidateShortfall =
     input.candidate.requestedShortAxisShortfallGrid
   const candidateDepth =
@@ -563,7 +599,7 @@ function directionalImprovementAdmitted(input: {
     input.requestedShortAxisGrid === undefined ||
     input.requestedShortAxisGrid <= 0
   ) {
-    return false
+    return undefined
   }
   const candidateShortAxisSpanGrid =
     input.requestedShortAxisGrid - candidateShortfall
@@ -572,12 +608,20 @@ function directionalImprovementAdmitted(input: {
     input.requestedShortAxisGrid -
       input.production.usedShortAxisSpanGrid
   )
-  return (
-    5n * BigInt(candidateShortAxisSpanGrid) >=
-      4n * BigInt(input.requestedShortAxisGrid) &&
-    2n * BigInt(candidateShortfall) <= BigInt(productionShortfall) &&
-    candidateDepth <= input.production.maximumSideGrid
-  )
+  return {
+    shortEdgeFillAdmitted:
+      5n * BigInt(candidateShortAxisSpanGrid) >=
+      4n * BigInt(input.requestedShortAxisGrid),
+    shortfallHalved:
+      2n * BigInt(candidateShortfall) <= BigInt(productionShortfall),
+    depthWithinProductionMaximumSide:
+      candidateDepth <= input.production.maximumSideGrid,
+    envelopeAreaCostWithinProductionBound:
+      intrinsicShortSideEnvelopeAreaCostWithinProductionBound(
+        BigInt(candidateShortAxisSpanGrid) * BigInt(candidateDepth),
+        input.production.envelopeAreaGrid2
+      )
+  }
 }
 
 function compareEndpointObservations(

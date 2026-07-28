@@ -26,10 +26,11 @@ import {
   constructIntrinsicShortSideContactStrip,
   type IntrinsicShortSideContactStripTrace
 } from './intrinsicShortSideContactStrip.js'
+import { intrinsicShortSideEnvelopeAreaCostWithinProductionBound } from './intrinsicShortSideObserver.js'
 import { IrregularBeamState } from './irregularBeamState.js'
 
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION =
-  'intrinsic-short-side-terminal-observer-v4' as const
+  'intrinsic-short-side-terminal-observer-v5' as const
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS = 30_000 as const
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RSS_DELTA_BYTES = 512 * 1_048_576
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES = 1_048_576 as const
@@ -65,7 +66,19 @@ export interface IntrinsicShortSidePairFoldAdmission {
   readonly shortAxisSpanGainFactor: number
   readonly envelopeAreaCostFactor: number
   readonly directionallyEfficient: boolean
+  readonly envelopeAreaCostWithinProductionBound: boolean
   readonly accepted: boolean
+}
+
+/*
+ * One causal quality veto: the named construction passed every pre-existing
+ * admission term and failed only the production envelope area-cost bound.
+ * Retained so a quality-protected fallback can substantiate which sibling was
+ * vetoed even when a later construction became the selected trace outcome.
+ */
+export interface IntrinsicShortSideEnvelopeAreaCostVeto {
+  readonly constructionKind: IntrinsicShortSideConstructionKind
+  readonly admission: IntrinsicShortSidePairFoldAdmission
 }
 
 /**
@@ -118,6 +131,8 @@ export interface IntrinsicShortSidePairFoldTrace {
   readonly canonicalGeometryHash: string | undefined
   readonly admission: IntrinsicShortSidePairFoldAdmission | undefined
   readonly interlocking: IntrinsicShortSideInterlockingMetrics | undefined
+  readonly envelopeAreaCostVetoObserved: boolean
+  readonly envelopeAreaCostVetoes: ReadonlyArray<IntrinsicShortSideEnvelopeAreaCostVeto>
   readonly contactStrip: IntrinsicShortSideContactStripTrace | undefined
   readonly contactStripPromotion: IntrinsicShortSideContactStripPromotion | undefined
   readonly runtimeMs: number
@@ -173,6 +188,8 @@ interface ObserverRuntime {
   transformEvaluations: number
   expectedPairCount: number
   evaluatedPairCount: number
+  envelopeAreaCostVetoObserved: boolean
+  readonly envelopeAreaCostVetoes: IntrinsicShortSideEnvelopeAreaCostVeto[]
   readonly maximumRuntimeMs: number
   readonly maximumRssDeltaBytes: number
   readonly maximumTraceBytes: number
@@ -234,6 +251,8 @@ export function observeIntrinsicShortSidePairFold(input: {
     transformEvaluations: 0,
     expectedPairCount: 0,
     evaluatedPairCount: 0,
+    envelopeAreaCostVetoObserved: false,
+    envelopeAreaCostVetoes: [],
     maximumRuntimeMs:
       input.runtimeControl?.maximumRuntimeMs ?? INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS,
     maximumRssDeltaBytes:
@@ -580,6 +599,13 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
     const selected = promotion.promoted && stripOutcome !== undefined ? stripOutcome : incumbent
     const trace = measureTraceSize({
       ...selected.trace,
+      /*
+       * The selected outcome's trace was snapshotted before the contact strip
+       * finalized, so refresh the causal veto aggregate from the runtime:
+       * a strip-only causal veto must survive into the composite trace.
+       */
+      envelopeAreaCostVetoObserved: runtime.envelopeAreaCostVetoObserved,
+      envelopeAreaCostVetoes: [...runtime.envelopeAreaCostVetoes],
       contactStrip: strip.trace,
       contactStripPromotion: promotion,
       peakRssDeltaBytes: sampleRss(runtime),
@@ -1075,6 +1101,22 @@ function finalizeOutcome(input: {
   const directionallyEfficient =
     BigInt(dimensions.shortAxisGrid) * productionEnvelopeAreaGrid2 >=
     BigInt(productionShortAxisSpanGrid) * envelopeAreaGrid2
+  const envelopeAreaCostWithinProductionBound =
+    intrinsicShortSideEnvelopeAreaCostWithinProductionBound(
+      envelopeAreaGrid2,
+      productionEnvelopeAreaGrid2
+    )
+  const admittedBesidesAreaCost =
+    placed.length === input.input.preparedPieces.length &&
+    5n * BigInt(dimensions.shortAxisGrid) >=
+      4n * BigInt(dimensions.requestedShortAxisGrid) &&
+    depthWithinProductionMaximumSide &&
+    (projection.spanGrid <= 0 ||
+      100n * BigInt(projection.coveredGrid) >= 99n * BigInt(projection.spanGrid)) &&
+    projection.componentCount === 1 &&
+    topology.enclosedCavityCount === 0 &&
+    material.doubledAreaGrid2 >= envelopeAreaGrid2 &&
+    directionallyEfficient
   const admission: IntrinsicShortSidePairFoldAdmission = {
     exactLegal: true,
     allPiecesPlaced: placed.length === input.input.preparedPieces.length,
@@ -1087,20 +1129,19 @@ function finalizeOutcome(input: {
     shortAxisSpanGainFactor,
     envelopeAreaCostFactor,
     directionallyEfficient,
+    envelopeAreaCostWithinProductionBound,
     accepted: false
   }
   const accepted =
-    admission.allPiecesPlaced &&
-    5n * BigInt(dimensions.shortAxisGrid) >=
-      4n * BigInt(dimensions.requestedShortAxisGrid) &&
-    admission.depthWithinProductionMaximumSide &&
-    (projection.spanGrid <= 0 ||
-      100n * BigInt(projection.coveredGrid) >= 99n * BigInt(projection.spanGrid)) &&
-    projection.componentCount === 1 &&
-    topology.enclosedCavityCount === 0 &&
-    material.doubledAreaGrid2 >= envelopeAreaGrid2 &&
-    admission.directionallyEfficient
+    admittedBesidesAreaCost && admission.envelopeAreaCostWithinProductionBound
   const measuredAdmission = { ...admission, accepted }
+  if (!envelopeAreaCostWithinProductionBound && admittedBesidesAreaCost) {
+    input.runtime.envelopeAreaCostVetoObserved = true
+    input.runtime.envelopeAreaCostVetoes.push({
+      constructionKind: input.constructionKind,
+      admission: measuredAdmission
+    })
+  }
   const interlocking: IntrinsicShortSideInterlockingMetrics = {
     largestOccupiedHullGapRatio: topology.largestOccupiedHullGapRatio,
     largestOccupiedHullGapDoubledAreaGrid2:
@@ -1143,6 +1184,8 @@ function finalizeOutcome(input: {
     canonicalGeometryHash: createHash('sha256').update(identity).digest('hex'),
     admission: measuredAdmission,
     interlocking,
+    envelopeAreaCostVetoObserved: input.runtime.envelopeAreaCostVetoObserved,
+    envelopeAreaCostVetoes: [...input.runtime.envelopeAreaCostVetoes],
     contactStrip: undefined,
     contactStripPromotion: undefined,
     runtimeMs: Math.max(0, input.runtime.now() - input.runtime.startedAt),
@@ -1331,6 +1374,8 @@ function failedOutcome(
       canonicalGeometryHash: undefined,
       admission: undefined,
       interlocking: undefined,
+      envelopeAreaCostVetoObserved: runtime.envelopeAreaCostVetoObserved,
+      envelopeAreaCostVetoes: [...runtime.envelopeAreaCostVetoes],
       contactStrip: undefined,
       contactStripPromotion: undefined,
       runtimeMs: Math.max(0, runtime.now() - runtime.startedAt),

@@ -503,17 +503,35 @@ and rejected because the Triangle strip fills only `46.2333%` of the short edge
 and the Shapes strip regresses density and hull gap.
 
 Exact density, topology, fill, depth, and area-cost guards remain mandatory.
+Both admission stages also require the directional sibling to stay honest
+against the protected Compact layout it would replace:
+`3 * candidateEnvelopeArea <= 4 * productionEnvelopeArea`, compared in BigInt.
+A sibling may therefore spend at most one third extra envelope area, or
+equivalently sacrifice at most one quarter of the production packing density
+when every piece is placed, to buy requested-short-edge fill. This guard
+exists because the fill, depth, and fill-gain gates alone admitted a
+Triangle-20 roomy shelf at `1.795x` the Compact envelope area, exactly `50%`
+density, and zero shared boundary, replacing the interleaved herringbone that
+already sat in the same run's archive.
+
 When Compact already fills at least `80%` of the short edge, reuse is reported
 as `short-side-satisfied-by-compact`; it is not counted as an
-observer-generated winner. Any output below that floor is a
-`directional-miss`, so a corner Compact fallback cannot make the profile gate
-pass. Square sheets use their larger occupied span against the common side.
+observer-generated winner. When no sibling is admitted but at least one
+candidate was vetoed by the area-cost guard alone (every other admission term
+passed), the retained Compact layout is reported as
+`short-side-quality-protected-compact-fallback`: the profile actively
+protected the settled packing instead of filling the edge dishonestly. Any
+remaining output below the fill floor is a `directional-miss`, so a corner
+Compact fallback cannot make the profile gate pass. Square sheets use their
+larger occupied span against the common side.
 
 This experiment remains single-process and sequential. The strict gate contains nine
 unchanged Compact controls plus nine sibling outputs. The current sources are
-one archive winner, one terminal-pair winner, one contact-strip winner, one
-multi-row winner, and five Compact layouts that already satisfy the short-edge
-contract. The gate requires nine satisfied profiles and zero directional misses.
+one archive winner, one contact-strip winner, and seven Compact fallbacks,
+of which five satisfy the short edge and two are quality-protected
+(Triangle-20 and Shapes-17 roomy, whose historical shelf and pair-fold
+sources the area-cost guard vetoed). The gate requires nine satisfied or
+protected profiles and zero directional misses.
 
 ## 9. How candidate scoring worked before
 
