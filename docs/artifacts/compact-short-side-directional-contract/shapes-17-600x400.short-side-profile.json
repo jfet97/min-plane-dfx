@@ -5,9 +5,9 @@
     "width": 600,
     "height": 400
   },
-  "sourceCommit": "7009e04d3771b1259567b41722570de45dc20ec0",
+  "sourceCommit": "4bc3c0f613a8094195b1bc8a7243f0e7f91117bd",
   "runtime": {
-    "elapsedMs": 8013.544166999999,
+    "elapsedMs": 7951.61275,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -1460,7 +1460,7 @@
       "geometricParetoEligibleEndpointCount": 0,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 8.862959000000046,
+      "runtimeMs": 8.261749999999665,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 8744,
       "endpoints": [
@@ -1827,8 +1827,8 @@
         "reusedPrefixPlacements": 0,
         "placedCount": 14,
         "requestedCount": 14,
-        "runtimeMs": 186.45870800000012,
-        "peakRssDeltaBytes": 17022976
+        "runtimeMs": 194.5638340000005,
+        "peakRssDeltaBytes": 2228224
       },
       "contactStripLanes": [
         {
@@ -1845,8 +1845,8 @@
           "reusedPrefixPlacements": 0,
           "placedCount": 14,
           "requestedCount": 14,
-          "runtimeMs": 186.45870800000012,
-          "peakRssDeltaBytes": 17022976
+          "runtimeMs": 194.5638340000005,
+          "peakRssDeltaBytes": 2228224
         },
         {
           "version": "intrinsic-short-side-contact-strip-v3",
@@ -1862,8 +1862,8 @@
           "reusedPrefixPlacements": 41,
           "placedCount": 12,
           "requestedCount": 14,
-          "runtimeMs": 1217.1525000000001,
-          "peakRssDeltaBytes": 20938752,
+          "runtimeMs": 1213.2460419999998,
+          "peakRssDeltaBytes": 294912,
           "failureReason": "backtrack cap reached after 4 resumable contact decisions."
         }
       ],
@@ -1905,9 +1905,9 @@
         "contactStripAdmitted": true,
         "promoted": false
       },
-      "runtimeMs": 1409.3352499999992,
-      "peakRssDeltaBytes": 38060032,
-      "serializedTraceBytes": 4250
+      "runtimeMs": 1413.5837499999998,
+      "peakRssDeltaBytes": 2523136,
+      "serializedTraceBytes": 4243
     }
   },
   "workerOutput": {

@@ -476,6 +476,22 @@ describe('intrinsic short-side pair-fold observer', () => {
     })
   })
 
+  it('retains the shared physical axes in a censored square-sheet trace', async () => {
+    const deadline = await observe({
+      pieces: acceptedPieces,
+      sheet: new SheetSpec({ width: 100, height: 100, label: 'square' }),
+      maximumRuntimeMs: 500,
+      now: readings(0, 501)
+    })
+
+    expect(deadline.trace).toMatchObject({
+      status: 'deadline',
+      requestedShortAxisMm: 100,
+      requestedLongAxisMm: 100,
+      prescribedRotationDeg: 90
+    })
+  })
+
   it('shares the outer deadline and RSS ceiling with contact-strip work', async () => {
     let nowCalls = 0
     const deadline = await observe({

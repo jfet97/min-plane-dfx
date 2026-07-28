@@ -1603,20 +1603,16 @@ function failedOutcome(
   selectedBottomPieceId?: string,
   selectedUpperPieceId?: string
 ): IntrinsicShortSidePairFoldOutcome {
+  const axes = intrinsicShortSideAxes(input.sheet)
   return {
     trace: measureTraceSize({
       version: INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION,
       status,
       outputInfluence: 'none',
       executionModel: 'single-process-sequential',
-      requestedShortAxisMm: Math.min(input.sheet.width, input.sheet.height),
-      requestedLongAxisMm: Math.max(input.sheet.width, input.sheet.height),
-      prescribedRotationDeg:
-        input.sheet.width === input.sheet.height
-          ? undefined
-          : input.sheet.width < input.sheet.height
-            ? 0
-            : 90,
+      requestedShortAxisMm: axes.shortAxisMm,
+      requestedLongAxisMm: axes.longAxisMm,
+      prescribedRotationDeg: axes.normalizedToPhysicalRotationDeg,
       productionShortAxisSpanMm: input.productionShortAxisSpanMm,
       productionMaximumSideMm: input.productionMaximumSideMm,
       productionEnvelopeAreaMm2: input.productionEnvelopeAreaMm2,

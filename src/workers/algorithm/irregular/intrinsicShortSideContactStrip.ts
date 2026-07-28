@@ -90,8 +90,10 @@ export interface IntrinsicShortSideContactStripRuntimeControl {
  * Exact per-tie evidence collected when more than one legal candidate shares
  * the winning `(long axis, short axis)` anchor for one prepared piece. The
  * contact score is `<positive-contact-count>:<axis-overlap-units>`. Positive
- * contact is classified directly on canonical integer-grid edges, including
- * diagonal edges; the axis-overlap suffix is an exact secondary tie-break.
+ * contact is classified directly on canonical integer-grid edges. The
+ * axis-overlap suffix is an exact secondary tie-break over the axis-aligned
+ * portion of those contacts. Diagonal contact contributes to the exact count
+ * but deliberately contributes no projected length.
  */
 export interface IntrinsicShortSideContactStripTieEvidence {
   readonly pieceIndex: number
@@ -692,7 +694,10 @@ function candidateContactAxisUnits(
     if (overlap.kind === 'aborted') {
       return { score: undefined, bounded: boundedDuringScan }
     }
-    if (overlap.kind === 'measured') axisUnits += overlap.score
+    if (overlap.kind === 'undecidable') {
+      continue
+    }
+    axisUnits += overlap.score
   }
   return {
     score: { positiveContactCount, axisUnits },

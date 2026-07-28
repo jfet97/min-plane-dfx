@@ -5,9 +5,9 @@
     "width": 600,
     "height": 400
   },
-  "sourceCommit": "7009e04d3771b1259567b41722570de45dc20ec0",
+  "sourceCommit": "4bc3c0f613a8094195b1bc8a7243f0e7f91117bd",
   "runtime": {
-    "elapsedMs": 3402.864125,
+    "elapsedMs": 3436.968083,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -767,7 +767,7 @@
       "selectedCanonicalGeometryHash": "371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127",
       "consumedCandidateEvaluations": 0,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 0.6844169999999394,
+      "runtimeMs": 0.7079170000001795,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -791,7 +791,7 @@
       "geometricParetoEligibleEndpointCount": 2,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 6.221208999999817,
+      "runtimeMs": 6.263416999999663,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 43631,
       "endpoints": [
@@ -2364,8 +2364,8 @@
         "reusedPrefixPlacements": 0,
         "placedCount": 20,
         "requestedCount": 20,
-        "runtimeMs": 244.25983300000007,
-        "peakRssDeltaBytes": 4816896
+        "runtimeMs": 229.31008299999985,
+        "peakRssDeltaBytes": 5160960
       },
       "contactStripLanes": [
         {
@@ -2382,8 +2382,8 @@
           "reusedPrefixPlacements": 0,
           "placedCount": 20,
           "requestedCount": 20,
-          "runtimeMs": 82.64625000000024,
-          "peakRssDeltaBytes": 753664
+          "runtimeMs": 83.89987500000007,
+          "peakRssDeltaBytes": 737280
         },
         {
           "version": "intrinsic-short-side-contact-strip-v3",
@@ -2399,8 +2399,8 @@
           "reusedPrefixPlacements": 0,
           "placedCount": 20,
           "requestedCount": 20,
-          "runtimeMs": 244.25983300000007,
-          "peakRssDeltaBytes": 4816896
+          "runtimeMs": 229.31008299999985,
+          "peakRssDeltaBytes": 5160960
         }
       ],
       "contactStripPromotion": {
@@ -2451,9 +2451,9 @@
         "strictlyImproved": true,
         "promoted": true
       },
-      "runtimeMs": 331.84970799999974,
-      "peakRssDeltaBytes": 5718016,
-      "serializedTraceBytes": 4963
+      "runtimeMs": 318.019667,
+      "peakRssDeltaBytes": 5996544,
+      "serializedTraceBytes": 4955
     }
   },
   "workerOutput": {

@@ -522,11 +522,12 @@ and opposed orientations interlock without any shape-specific rule. When
 several legal candidates share the minimal anchor, the selector measures the
 exact axis-projected overlap each tied candidate makes against the placed
 pieces (BigInt accumulation after exact canonical-grid collinearity) and takes
-the strongest only when every positive contact is axis-aligned, provided the
-challenger is not deeper than the translation-order baseline winner. A
-positive diagonal contact or otherwise undecidable score falls back to the
-historical tuple order because projected units are not comparable across
-orientations. There is still no beam, no reordering, no repair, and no restart.
+the strongest, provided the challenger is not deeper than the
+translation-order baseline winner. Positive diagonal contact contributes to the
+exact contact-count term but deliberately contributes no axis-projected length;
+the secondary suffix therefore expresses an axis-alignment preference, not
+Euclidean boundary length. There is still no beam, no reordering, no repair,
+and no restart.
 
 The two families exist because the historical one cannot express interlocking
 at all. Its cursor advances by the AABB width and its rows are separated by the

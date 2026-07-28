@@ -5,9 +5,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "7009e04d3771b1259567b41722570de45dc20ec0",
+  "sourceCommit": "4bc3c0f613a8094195b1bc8a7243f0e7f91117bd",
   "runtime": {
-    "elapsedMs": 8308.500375,
+    "elapsedMs": 8321.810917,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -1547,7 +1547,7 @@
       "selectedCanonicalGeometryHash": "1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d",
       "consumedCandidateEvaluations": 8035,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 547.6186670000006,
+      "runtimeMs": 552.9735000000001,
       "outputInfluence": "selected"
     },
     "intrinsicShortSideObserverTrace": {
@@ -1571,7 +1571,7 @@
       "geometricParetoEligibleEndpointCount": 1,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 13.783792000000176,
+      "runtimeMs": 13.228250000000116,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 12891,
       "endpoints": [
@@ -2130,8 +2130,8 @@
         "reusedPrefixPlacements": 0,
         "placedCount": 17,
         "requestedCount": 17,
-        "runtimeMs": 326.18012499999986,
-        "peakRssDeltaBytes": 2064384
+        "runtimeMs": 318.56895799999984,
+        "peakRssDeltaBytes": 1196032
       },
       "contactStripLanes": [
         {
@@ -2148,8 +2148,8 @@
           "reusedPrefixPlacements": 0,
           "placedCount": 17,
           "requestedCount": 17,
-          "runtimeMs": 326.18012499999986,
-          "peakRssDeltaBytes": 2064384
+          "runtimeMs": 318.56895799999984,
+          "peakRssDeltaBytes": 1196032
         },
         {
           "version": "intrinsic-short-side-contact-strip-v3",
@@ -2165,8 +2165,8 @@
           "reusedPrefixPlacements": 0,
           "placedCount": 8,
           "requestedCount": 17,
-          "runtimeMs": 1797.7532920000003,
-          "peakRssDeltaBytes": 278528,
+          "runtimeMs": 1789.3272920000009,
+          "peakRssDeltaBytes": 180224,
           "failureReason": "evaluation-cap reached after 2000 contact candidate anchors."
         }
       ],
@@ -2218,8 +2218,8 @@
         "strictlyImproved": true,
         "promoted": true
       },
-      "runtimeMs": 2137.4569580000007,
-      "peakRssDeltaBytes": 2408448,
+      "runtimeMs": 2121.5292089999994,
+      "peakRssDeltaBytes": 1409024,
       "serializedTraceBytes": 5531
     }
   },

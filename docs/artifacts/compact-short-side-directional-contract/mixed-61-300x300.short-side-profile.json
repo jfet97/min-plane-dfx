@@ -5,9 +5,9 @@
     "width": 300,
     "height": 300
   },
-  "sourceCommit": "7009e04d3771b1259567b41722570de45dc20ec0",
+  "sourceCommit": "4bc3c0f613a8094195b1bc8a7243f0e7f91117bd",
   "runtime": {
-    "elapsedMs": 577.002,
+    "elapsedMs": 690.5749169999999,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -481,9 +481,9 @@
       "geometricParetoEligibleEndpointCount": 0,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 0.35066699999993034,
+      "runtimeMs": 0.3625000000000682,
       "runtimeBudgetExceeded": false,
-      "serializedTraceBytes": 811,
+      "serializedTraceBytes": 810,
       "endpoints": [],
       "rankedCanonicalGeometryHashes": []
     },
@@ -555,7 +555,7 @@
         "reusedPrefixPlacements": 0,
         "placedCount": 6,
         "requestedCount": 6,
-        "runtimeMs": 6.592875000000049,
+        "runtimeMs": 7.231291999999939,
         "peakRssDeltaBytes": 1212416
       },
       "contactStripLanes": [
@@ -573,7 +573,7 @@
           "reusedPrefixPlacements": 0,
           "placedCount": 5,
           "requestedCount": 6,
-          "runtimeMs": 7.78612499999997,
+          "runtimeMs": 8.325791999999979,
           "peakRssDeltaBytes": 688128,
           "failureReason": "piece 604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2 has no legal contact placement inside the requested short-axis strip."
         },
@@ -591,8 +591,8 @@
           "reusedPrefixPlacements": 1,
           "placedCount": 5,
           "requestedCount": 6,
-          "runtimeMs": 16.43816700000002,
-          "peakRssDeltaBytes": 1015808,
+          "runtimeMs": 18.11262499999998,
+          "peakRssDeltaBytes": 1032192,
           "failureReason": "piece 604bc424-469c-4ab8-93f1-80c0fc4090b3-copy-2 has no legal contact placement inside the requested short-axis strip."
         },
         {
@@ -609,7 +609,7 @@
           "reusedPrefixPlacements": 0,
           "placedCount": 6,
           "requestedCount": 6,
-          "runtimeMs": 6.592875000000049,
+          "runtimeMs": 7.231291999999939,
           "peakRssDeltaBytes": 1212416
         }
       ],
@@ -651,9 +651,9 @@
         "contactStripAdmitted": true,
         "promoted": false
       },
-      "runtimeMs": 32.84837499999992,
-      "peakRssDeltaBytes": 3031040,
-      "serializedTraceBytes": 4893
+      "runtimeMs": 35.899625000000015,
+      "peakRssDeltaBytes": 3063808,
+      "serializedTraceBytes": 4895
     }
   },
   "workerOutput": {

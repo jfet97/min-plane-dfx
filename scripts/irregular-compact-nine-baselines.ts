@@ -184,9 +184,10 @@ const BASELINES: ReadonlyArray<Baseline> = [
 
 
 const SVG_RENDERER_SCRIPT =
-  process.env.IRREGULAR_SVG_RENDERER === 'magick'
+  process.env.IRREGULAR_SVG_RENDERER_SCRIPT ??
+  (process.env.IRREGULAR_SVG_RENDERER === 'magick'
     ? 'scripts/render-svg-magick.cjs'
-    : '.agents/skills/render-svg-with-electron/scripts/render-svg.cjs'
+    : '.agents/skills/render-svg-with-electron/scripts/render-svg.cjs')
 
 /**
  * Renders one layout SVG to PNG for visual review.
