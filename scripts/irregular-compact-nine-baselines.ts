@@ -2,6 +2,10 @@ import { createHash } from 'node:crypto'
 import { execFileSync, spawn } from 'node:child_process'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
+import {
+  intrinsicShortSideAxes,
+  intrinsicShortSideSpan
+} from '../src/workers/algorithm/irregular/intrinsicShortSideAxes.js'
 
 interface Baseline {
   readonly fixture: 'triangle-20' | 'mixed-61' | 'shapes-17'
@@ -404,6 +408,7 @@ interface CompactReport {
   readonly result: {
     readonly placedCount: number
     readonly unplacedCount: number
+    readonly unplacedPieceIds: ReadonlyArray<string>
     readonly collisionIdentitySha256: string
     readonly fittedCanonicalSha256: string
     readonly canonicalTopology?: {
@@ -429,7 +434,10 @@ interface CompactReport {
     readonly intrinsicShortSidePairFoldTrace?: {
       readonly status: string
       readonly outputInfluence: 'none' | 'selected'
-      readonly constructionKind?: 'pair-fold' | 'multi-row-shelf' | 'contact-strip'
+      readonly constructionKind?:
+        | 'pair-fold'
+        | 'multi-row-shelf'
+        | 'contact-strip'
       readonly envelopeAreaCostVetoes?: ReadonlyArray<unknown>
     }
   }
@@ -484,36 +492,21 @@ for (let index = 0; index < BASELINES.length; index += 1) {
         : terminalTrace.constructionKind === 'multi-row-shelf'
           ? ('terminal-multi-row-shelf-winner' as const)
           : ('terminal-pair-fold-winner' as const)
-      : ('compact-fallback' as const)
-  const shortAxisSpan =
-    shortSideReport.sheet.width === shortSideReport.sheet.height
-      ? Math.max(
-          shortSideReport.result.bounds.width,
-          shortSideReport.result.bounds.height
-        )
-      : shortSideReport.sheet.width < shortSideReport.sheet.height
-        ? shortSideReport.result.bounds.width
-        : shortSideReport.result.bounds.height
+      : ('missing-directional-output' as const)
+  const shortAxisSpan = intrinsicShortSideSpan(
+    intrinsicShortSideAxes(shortSideReport.sheet),
+    shortSideReport.result.bounds
+  )
   const shortAxisFillRatio =
     shortAxisSpan /
     Math.min(shortSideReport.sheet.width, shortSideReport.sheet.height)
-  const stage1AdmissionTerms =
-    shortSideReport.result.intrinsicShortSideObserverTrace?.directionalAdmissionTerms
-  const shortSideQualityVetoObserved =
-    (terminalTrace?.envelopeAreaCostVetoes?.length ?? 0) > 0 ||
-    (stage1AdmissionTerms !== undefined &&
-      stage1AdmissionTerms.shortEdgeFillAdmitted &&
-      stage1AdmissionTerms.shortfallHalved &&
-      stage1AdmissionTerms.depthWithinProductionMaximumSide &&
-      !stage1AdmissionTerms.envelopeAreaCostWithinProductionBound)
   const profileOutcome =
-    shortSideSource !== 'compact-fallback'
-      ? ('directional-success' as const)
-      : shortAxisFillRatio >= 0.8
-        ? ('short-side-satisfied-by-compact' as const)
-        : shortSideQualityVetoObserved
-          ? ('short-side-quality-protected-compact-fallback' as const)
-          : ('directional-miss' as const)
+    shortSideSource === 'missing-directional-output'
+      ? ('directional-miss' as const)
+      : ('directional-success' as const)
+  const inheritedSubsetMatchesCompact =
+    JSON.stringify([...shortSideReport.result.unplacedPieceIds].toSorted()) ===
+    JSON.stringify([...compactReport.result.unplacedPieceIds].toSorted())
   layoutRecords.push(
     {
       fixture: baseline.fixture,
@@ -523,6 +516,7 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       strategyId: compactReport.workerOutput.strategyId,
       placedCount: compactReport.result.placedCount,
       unplacedCount: compactReport.result.unplacedCount,
+      unplacedPieceIds: compactReport.result.unplacedPieceIds,
       collisionIdentitySha256: compactReport.result.collisionIdentitySha256,
       fittedCanonicalSha256: compactReport.result.fittedCanonicalSha256,
       canonicalCavities: compactReport.result.canonicalTopology?.enclosedCavityCount,
@@ -545,11 +539,13 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       observerStatus:
         shortSideReport.result.intrinsicShortSideObserverTrace?.status ??
         'missing',
+      inheritedSubsetMatchesCompact,
       selectedRotationDeg:
         shortSideReport.result.intrinsicShortSideObserverTrace
           ?.observerWinnerRotationDeg,
       placedCount: shortSideReport.result.placedCount,
       unplacedCount: shortSideReport.result.unplacedCount,
+      unplacedPieceIds: shortSideReport.result.unplacedPieceIds,
       collisionIdentitySha256:
         shortSideReport.result.collisionIdentitySha256,
       fittedCanonicalSha256:
@@ -561,6 +557,7 @@ for (let index = 0; index < BASELINES.length; index += 1) {
       passed:
         shortSideReport.objectiveProfile === 'short-side' &&
         Boolean(shortSideReport.checks.exactPiecePartition) &&
+        inheritedSubsetMatchesCompact &&
         shortSideReport.passed,
       svgPath: shortSideReport.svgPath,
       pngPath: skipPng ? undefined : basename(shortSidePngPath)
@@ -583,22 +580,15 @@ const terminalContactStripWinnerCount = layoutRecords.filter(
   ({ profile, source }) => profile === 'short-side' && source === 'terminal-contact-strip-winner'
 ).length
 const compactFallbackCount = layoutRecords.filter(
-  ({ profile, source }) => profile === 'short-side' && source === 'compact-fallback'
+  ({ profile, source }) =>
+    profile === 'short-side' && source === 'missing-directional-output'
 ).length
 const directionalSuccessCount = layoutRecords.filter(
   ({ profile, profileOutcome }) =>
     profile === 'short-side' && profileOutcome === 'directional-success'
 ).length
-const shortSideSatisfiedByCompactCount = layoutRecords.filter(
-  ({ profile, profileOutcome }) =>
-    profile === 'short-side' && profileOutcome === 'short-side-satisfied-by-compact'
-).length
 const directionalMissCount = layoutRecords.filter(
   ({ profile, profileOutcome }) => profile === 'short-side' && profileOutcome === 'directional-miss'
-).length
-const shortSideQualityProtectedFallbackCount = layoutRecords.filter(
-  ({ profile, profileOutcome }) =>
-    profile === 'short-side' && profileOutcome === 'short-side-quality-protected-compact-fallback'
 ).length
 const layoutContractPassed =
   layoutRecords.length === 18 &&
@@ -607,14 +597,16 @@ const layoutContractPassed =
   guardedStage1WinnerCount +
     terminalPairFoldWinnerCount +
     terminalMultiRowShelfWinnerCount +
-    terminalContactStripWinnerCount +
-    compactFallbackCount ===
+    terminalContactStripWinnerCount ===
     9 &&
-  directionalSuccessCount + shortSideSatisfiedByCompactCount +
-    shortSideQualityProtectedFallbackCount ===
-    9 &&
+  guardedStage1WinnerCount === 0 &&
+  compactFallbackCount === 0 &&
+  directionalSuccessCount === 9 &&
   directionalMissCount === 0 &&
-  layoutRecords.every(({ exactPiecePartition, passed }) => Boolean(exactPiecePartition && passed))
+  layoutRecords.every(({ exactPiecePartition, passed }) => Boolean(exactPiecePartition && passed)) &&
+  layoutRecords
+    .filter(({ profile }) => profile === 'short-side')
+    .every(({ inheritedSubsetMatchesCompact }) => inheritedSubsetMatchesCompact === true)
 const summaryPath = join(outputDirectory, 'summary.json')
 await writeFile(
   summaryPath,
@@ -632,8 +624,6 @@ await writeFile(
       terminalContactStripWinnerCount,
       compactFallbackCount,
       directionalSuccessCount,
-      shortSideSatisfiedByCompactCount,
-      shortSideQualityProtectedFallbackCount,
       directionalMissCount,
       outcomes,
       layouts: layoutRecords
@@ -729,8 +719,6 @@ console.log(
     terminalContactStripWinnerCount,
     compactFallbackCount,
     directionalSuccessCount,
-    shortSideSatisfiedByCompactCount,
-    shortSideQualityProtectedFallbackCount,
     directionalMissCount,
     passed
   })

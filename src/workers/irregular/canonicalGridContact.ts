@@ -35,8 +35,8 @@ const STRUCTURAL_CONTACT_TURN_SIGNATURE_SCALE = 1_000
  * robust-predicate path remains authoritative before canonicalization.
  */
 export function hasPositiveCanonicalGridBoundaryContact(
-  first: Path64,
-  second: Path64
+  first: ReadonlyArray<CanonicalGridPoint>,
+  second: ReadonlyArray<CanonicalGridPoint>
 ): boolean | undefined {
   const firstEdges = canonicalGridPathEdges(first)
   const secondEdges = canonicalGridPathEdges(second)

@@ -58,6 +58,14 @@ export class IrregularPortfolioError extends Data.TaggedError('IrregularPortfoli
   readonly message: string
 }> {}
 
+/** Typed failure raised when no exact layout satisfies the requested profile. */
+export class IrregularNoValidResultError extends Data.TaggedError(
+  'IrregularNoValidResultError'
+)<{
+  readonly operation: string
+  readonly message: string
+}> {}
+
 /** internal NFP-only abort signal; this is not the worker supervisor contract. */
 export class IrregularNfpIfpControlAbortError extends Data.TaggedError(
   'IrregularNfpIfpControlAbortError'

@@ -21,16 +21,19 @@ import { fromGrid, toGridMm } from '../../irregular/clipper2OffsetPolicy.js'
 import { GeometryKernel } from '../../irregular/geometryKernel.js'
 import { NfpIfpService } from '../../irregular/services.js'
 import {
+  INTRINSIC_SHORT_SIDE_CONTACT_FIRST_MAX_BACKTRACKS,
+  INTRINSIC_SHORT_SIDE_CONTACT_FIRST_MAX_CANDIDATE_EVALUATIONS,
   INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RSS_DELTA_BYTES,
   INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RUNTIME_MS,
   constructIntrinsicShortSideContactStrip,
   type IntrinsicShortSideContactStripTrace
 } from './intrinsicShortSideContactStrip.js'
 import { intrinsicShortSideEnvelopeAreaCostWithinProductionBound } from './intrinsicShortSideObserver.js'
+import { intrinsicShortSideAxes } from './intrinsicShortSideAxes.js'
 import { IrregularBeamState } from './irregularBeamState.js'
 
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_OBSERVER_VERSION =
-  'intrinsic-short-side-terminal-observer-v5' as const
+  'intrinsic-short-side-terminal-observer-v6' as const
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RUNTIME_MS = 30_000 as const
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_RSS_DELTA_BYTES = 512 * 1_048_576
 export const INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES = 1_048_576 as const
@@ -134,6 +137,7 @@ export interface IntrinsicShortSidePairFoldTrace {
   readonly envelopeAreaCostVetoObserved: boolean
   readonly envelopeAreaCostVetoes: ReadonlyArray<IntrinsicShortSideEnvelopeAreaCostVeto>
   readonly contactStrip: IntrinsicShortSideContactStripTrace | undefined
+  readonly contactStripLanes: ReadonlyArray<IntrinsicShortSideContactStripTrace>
   readonly contactStripPromotion: IntrinsicShortSideContactStripPromotion | undefined
   readonly runtimeMs: number
   readonly peakRssDeltaBytes: number
@@ -141,7 +145,10 @@ export interface IntrinsicShortSidePairFoldTrace {
   readonly failureReason: string | undefined
 }
 
-export type IntrinsicShortSideConstructionKind = 'pair-fold' | 'multi-row-shelf' | 'contact-strip'
+export type IntrinsicShortSideConstructionKind =
+  | 'pair-fold'
+  | 'multi-row-shelf'
+  | 'contact-strip'
 
 /** Measured directional summary of one terminal construction, promoted or not. */
 export interface IntrinsicShortSideConstructionSummary {
@@ -310,18 +317,11 @@ interface TerminalObserverInput {
 
 function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntime) {
   return Effect.gen(function* () {
-    const requestedShortAxisMm = Math.min(input.sheet.width, input.sheet.height)
-    if (input.sheet.width === input.sheet.height) {
-      return failedOutcome(
-        input,
-        runtime,
-        'skipped-square-sheet',
-        'square sheets do not define a physical short edge.'
-      )
-    }
+    const axes = intrinsicShortSideAxes(input.sheet)
+    const requestedShortAxisMm = axes.shortAxisMm
     const geometryKernel = yield* GeometryKernel
     const requestedShortAxisGrid = toGridMm(requestedShortAxisMm)
-    const requestedLongAxisGrid = toGridMm(Math.max(input.sheet.width, input.sheet.height))
+    const requestedLongAxisGrid = toGridMm(axes.longAxisMm)
     if (requestedShortAxisGrid === undefined || requestedLongAxisGrid === undefined) {
       return failedOutcome(
         input,
@@ -397,18 +397,6 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
     }
 
     runtime.expectedPairCount = (selectedTransforms.length * (selectedTransforms.length - 1)) / 2
-    if (runtime.expectedPairCount === 0) {
-      return failedOutcome(
-        input,
-        runtime,
-        'no-pair',
-        'the terminal pair fold requires at least two prepared pieces.',
-        runtime.transformEvaluations,
-        0,
-        runtime.expectedPairCount,
-        0
-      )
-    }
     const totalWidthGrid = selectedTransforms.reduce((sum, selected) => sum + selected.widthGrid, 0)
     let selectedPair: SelectedPair | undefined
     for (let bottomIndex = 0; bottomIndex < selectedTransforms.length - 1; bottomIndex += 1) {
@@ -479,7 +467,7 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
         }
       }
     }
-    let incumbent: IntrinsicShortSidePairFoldOutcome | undefined
+    let pairOutcome: IntrinsicShortSidePairFoldOutcome | undefined
     if (selectedPair !== undefined) {
       const pairPlaced = constructPairLayout(
         selectedTransforms,
@@ -494,7 +482,7 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
           'selected pair accounting exceeded the requested short axis.'
         )
       }
-      const pairOutcome = finalizePlacedLayout({
+      pairOutcome = finalizePlacedLayout({
         input,
         runtime,
         placed: pairPlaced,
@@ -503,39 +491,26 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
         selectedBottomPieceId: selectedTransforms[selectedPair.bottomIndex]?.pieceId,
         selectedUpperPieceId: selectedTransforms[selectedPair.upperIndex]?.pieceId
       })
-      if (pairOutcome.trace.status === 'accepted') {
-        incumbent = pairOutcome
-      }
     }
 
-    if (incumbent === undefined) {
-      const shelf = constructNextFitShelf(
-        shelfTransforms,
-        requestedShortAxisGrid,
-        requestedLongAxisGrid
-      )
-      incumbent =
-        shelf === undefined
-          ? failedOutcome(
-              input,
-              runtime,
-              'no-fitting-pair',
-              'neither the fixed-transform pair fold nor the deterministic multi-row shelf fits both requested sheet axes.',
-              runtime.transformEvaluations,
-              0,
-              runtime.expectedPairCount,
-              runtime.evaluatedPairCount
-            )
-          : finalizePlacedLayout({
-              input,
-              runtime,
-              placed: shelf.placed,
-              constructionKind: 'multi-row-shelf',
-              rowCount: shelf.rowCount,
-              selectedBottomPieceId: undefined,
-              selectedUpperPieceId: undefined
-            })
-    }
+    const shelf = constructNextFitShelf(
+      shelfTransforms,
+      requestedShortAxisGrid,
+      requestedLongAxisGrid
+    )
+    const shelfOutcome =
+      shelf === undefined
+        ? undefined
+        : finalizePlacedLayout({
+            input,
+            runtime,
+            placed: shelf.placed,
+            constructionKind: 'multi-row-shelf',
+            rowCount: shelf.rowCount,
+            selectedBottomPieceId: undefined,
+            selectedUpperPieceId: undefined
+          })
+    const incumbent = selectDirectionalIncumbent(pairOutcome, shelfOutcome)
 
     const outerRuntimeRemainingMs = Math.max(
       0,
@@ -545,14 +520,15 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
       0,
       runtime.maximumRssDeltaBytes - sampleRss(runtime)
     )
-    const strip = yield* constructIntrinsicShortSideContactStrip({
+    const depthStrip = yield* constructIntrinsicShortSideContactStrip({
       stripSheet: new SheetSpec({
         width: requestedShortAxisMm,
-        height: Math.max(input.sheet.width, input.sheet.height),
-        label: `short-side-strip-${requestedShortAxisMm}x${Math.max(input.sheet.width, input.sheet.height)}`
+        height: axes.longAxisMm,
+        label: `short-side-strip-${requestedShortAxisMm}x${axes.longAxisMm}`
       }),
       preparedPieces: input.preparedPieces,
       settings: input.settings,
+      selectionPolicy: 'depth-first',
       runtimeControl: {
         maximumRuntimeMs: Math.min(
           INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RUNTIME_MS,
@@ -570,33 +546,109 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
         }
       }
     })
-    const boundedAfterStrip = boundedStatus(runtime)
-    if (boundedAfterStrip !== undefined) {
+    const boundedAfterDepthStrip = boundedStatus(runtime)
+    if (boundedAfterDepthStrip !== undefined) {
       return failedOutcome(
         input,
         runtime,
-        boundedAfterStrip,
-        `${boundedAfterStrip} reached during contact-strip construction.`
+        boundedAfterDepthStrip,
+        `${boundedAfterDepthStrip} reached during depth-first contact-strip construction.`
       )
     }
-    const stripOutcome =
-      strip.placedCollisionGeometries === undefined
+    const depthStripOutcome =
+      depthStrip.placedCollisionGeometries === undefined
         ? undefined
         : finalizePlacedLayout({
             input,
             runtime,
-            placed: strip.placedCollisionGeometries,
+            placed: depthStrip.placedCollisionGeometries,
             constructionKind: 'contact-strip',
             rowCount: 0,
             selectedBottomPieceId: undefined,
             selectedUpperPieceId: undefined
           })
+    const contactRuntimeRemainingMs = Math.max(
+      0,
+      runtime.maximumRuntimeMs - (runtime.now() - runtime.startedAt)
+    )
+    const contactRssRemainingBytes = Math.max(
+      0,
+      runtime.maximumRssDeltaBytes - sampleRss(runtime)
+    )
+    const contactStrip = yield* constructIntrinsicShortSideContactStrip({
+      stripSheet: new SheetSpec({
+        width: requestedShortAxisMm,
+        height: axes.longAxisMm,
+        label: `short-side-strip-${requestedShortAxisMm}x${axes.longAxisMm}`
+      }),
+      preparedPieces: input.preparedPieces,
+      settings: input.settings,
+      selectionPolicy: 'contact-first',
+      runtimeControl: {
+        maximumCandidateEvaluations:
+          INTRINSIC_SHORT_SIDE_CONTACT_FIRST_MAX_CANDIDATE_EVALUATIONS,
+        maximumBacktracks:
+          INTRINSIC_SHORT_SIDE_CONTACT_FIRST_MAX_BACKTRACKS,
+        maximumRuntimeMs: Math.min(
+          INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RUNTIME_MS,
+          contactRuntimeRemainingMs
+        ),
+        maximumRssDeltaBytes: Math.min(
+          INTRINSIC_SHORT_SIDE_CONTACT_STRIP_MAX_RSS_DELTA_BYTES,
+          contactRssRemainingBytes
+        ),
+        now: runtime.now,
+        currentRssBytes: () => {
+          const current = runtime.currentRssBytes()
+          runtime.peakRssBytes = Math.max(runtime.peakRssBytes, current)
+          return current
+        }
+      }
+    })
+    const boundedAfterContactStrip = boundedStatus(runtime)
+    if (boundedAfterContactStrip !== undefined) {
+      return failedOutcome(
+        input,
+        runtime,
+        boundedAfterContactStrip,
+        `${boundedAfterContactStrip} reached during contact-first strip construction.`
+      )
+    }
+    const contactStripOutcome =
+      contactStrip.placedCollisionGeometries === undefined
+        ? undefined
+        : finalizePlacedLayout({
+            input,
+            runtime,
+            placed: contactStrip.placedCollisionGeometries,
+            constructionKind: 'contact-strip',
+            rowCount: 0,
+            selectedBottomPieceId: undefined,
+            selectedUpperPieceId: undefined
+          })
+    const stripOutcome = selectDirectionalIncumbent(
+      depthStripOutcome,
+      contactStripOutcome
+    )
+    const selectedStripTrace =
+      stripOutcome === contactStripOutcome ? contactStrip.trace : depthStrip.trace
     const promotion = evaluateIntrinsicShortSideContactStripPromotion(
       incumbent,
       stripOutcome,
-      strip.trace
+      selectedStripTrace
     )
-    const selected = promotion.promoted && stripOutcome !== undefined ? stripOutcome : incumbent
+    const selected =
+      selectDirectionalIncumbent(incumbent, stripOutcome) ??
+      failedOutcome(
+        input,
+        runtime,
+        'no-fitting-pair',
+        'no exact directional construction fit both requested sheet axes.',
+        runtime.transformEvaluations,
+        0,
+        runtime.expectedPairCount,
+        runtime.evaluatedPairCount
+      )
     const trace = measureTraceSize({
       ...selected.trace,
       /*
@@ -606,7 +658,8 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
        */
       envelopeAreaCostVetoObserved: runtime.envelopeAreaCostVetoObserved,
       envelopeAreaCostVetoes: [...runtime.envelopeAreaCostVetoes],
-      contactStrip: strip.trace,
+      contactStrip: selectedStripTrace,
+      contactStripLanes: [depthStrip.trace, contactStrip.trace],
       contactStripPromotion: promotion,
       peakRssDeltaBytes: sampleRss(runtime),
       runtimeMs: Math.max(0, runtime.now() - runtime.startedAt),
@@ -627,6 +680,100 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
   })
 }
 
+function selectDirectionalIncumbent(
+  first: IntrinsicShortSidePairFoldOutcome | undefined,
+  second: IntrinsicShortSidePairFoldOutcome | undefined
+): IntrinsicShortSidePairFoldOutcome | undefined {
+  if (first?.trace.status !== 'accepted') return second?.trace.status === 'accepted' ? second : undefined
+  if (second?.trace.status !== 'accepted') return first
+  const firstExact = exactPromotionMetrics(first)
+  const secondExact = exactPromotionMetrics(second)
+  if (firstExact === undefined) return secondExact === undefined ? first : second
+  if (secondExact === undefined) return first
+  const firstFillTier = directionalFillTier(firstExact)
+  const secondFillTier = directionalFillTier(secondExact)
+  if (firstFillTier !== secondFillTier) {
+    return firstFillTier > secondFillTier ? first : second
+  }
+  if (
+    firstFillTier < 2 &&
+    firstExact.shortAxisSpanGrid !== secondExact.shortAxisSpanGrid
+  ) {
+    return firstExact.shortAxisSpanGrid > secondExact.shortAxisSpanGrid ? first : second
+  }
+  if (firstExact.envelopeAreaGrid2 !== secondExact.envelopeAreaGrid2) {
+    return firstExact.envelopeAreaGrid2 < secondExact.envelopeAreaGrid2 ? first : second
+  }
+  if (firstExact.longAxisDepthGrid !== secondExact.longAxisDepthGrid) {
+    return firstExact.longAxisDepthGrid < secondExact.longAxisDepthGrid ? first : second
+  }
+  const topologyOrder = compareDirectionalTopology(first, second)
+  if (topologyOrder !== 0) {
+    return topologyOrder < 0 ? first : second
+  }
+  return (first.trace.canonicalGeometryHash ?? '').localeCompare(
+    second.trace.canonicalGeometryHash ?? ''
+  ) <= 0
+    ? first
+    : second
+}
+
+function directionalFillTier(metrics: {
+  readonly shortAxisSpanGrid: number
+  readonly requestedShortAxisGrid: number
+}): 0 | 1 | 2 {
+  if (
+    100n * BigInt(metrics.shortAxisSpanGrid) >=
+    99n * BigInt(metrics.requestedShortAxisGrid)
+  ) {
+    return 2
+  }
+  return 5n * BigInt(metrics.shortAxisSpanGrid) >=
+    4n * BigInt(metrics.requestedShortAxisGrid)
+    ? 1
+    : 0
+}
+
+function compareDirectionalTopology(
+  first: IntrinsicShortSidePairFoldOutcome,
+  second: IntrinsicShortSidePairFoldOutcome
+): number {
+  const firstCavities = first.trace.admission?.enclosedCavityCount
+  const secondCavities = second.trace.admission?.enclosedCavityCount
+  if (firstCavities !== undefined && secondCavities !== undefined) {
+    if (firstCavities !== secondCavities) {
+      return firstCavities - secondCavities
+    }
+  } else if (firstCavities !== secondCavities) {
+    return firstCavities === undefined ? 1 : -1
+  }
+  const firstInterlocking = first.trace.interlocking
+  const secondInterlocking = second.trace.interlocking
+  if (firstInterlocking === undefined || secondInterlocking === undefined) {
+    return firstInterlocking === undefined
+      ? secondInterlocking === undefined
+        ? 0
+        : 1
+      : -1
+  }
+  const firstGap = BigInt(firstInterlocking.largestOccupiedHullGapDoubledAreaGrid2)
+  const firstHull = BigInt(firstInterlocking.occupiedHullDoubledAreaGrid2)
+  const secondGap = BigInt(secondInterlocking.largestOccupiedHullGapDoubledAreaGrid2)
+  const secondHull = BigInt(secondInterlocking.occupiedHullDoubledAreaGrid2)
+  const firstScaledGap = firstGap * secondHull
+  const secondScaledGap = secondGap * firstHull
+  if (firstScaledGap !== secondScaledGap) {
+    return firstScaledGap < secondScaledGap ? -1 : 1
+  }
+  return (
+    firstInterlocking.isolatedPieceCount - secondInterlocking.isolatedPieceCount ||
+    firstInterlocking.positiveContactComponentCount -
+      secondInterlocking.positiveContactComponentCount ||
+    secondInterlocking.largestPositiveContactComponentSize -
+      firstInterlocking.largestPositiveContactComponentSize
+  )
+}
+
 /**
  * Decides whether the contact strip replaces the historical incumbent.
  *
@@ -637,7 +784,7 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
  * and a strip that merely relocates waste is rejected rather than promoted.
  */
 export function evaluateIntrinsicShortSideContactStripPromotion(
-  incumbent: IntrinsicShortSidePairFoldOutcome,
+  incumbent: IntrinsicShortSidePairFoldOutcome | undefined,
   strip: IntrinsicShortSidePairFoldOutcome | undefined,
   stripTrace: IntrinsicShortSideContactStripTrace
 ): IntrinsicShortSideContactStripPromotion {
@@ -659,7 +806,7 @@ export function evaluateIntrinsicShortSideContactStripPromotion(
           failureReason: strip.trace.failureReason
         }
   const unmeasured: IntrinsicShortSideContactStripPromotion = {
-    incumbentConstructionKind: incumbent.trace.constructionKind,
+    incumbentConstructionKind: incumbent?.trace.constructionKind,
     contactStripSummary,
     contactStripAdmitted: false,
     fillNotRegressed: undefined,
@@ -675,6 +822,9 @@ export function evaluateIntrinsicShortSideContactStripPromotion(
   }
   if (stripTrace.status !== 'constructed' || strip === undefined) return unmeasured
   const contactStripAdmitted = strip.trace.status === 'accepted'
+  if (incumbent === undefined) {
+    return { ...unmeasured, contactStripAdmitted }
+  }
   const stripAdmission = strip.trace.admission
   const stripInterlocking = strip.trace.interlocking
   const incumbentAdmission = incumbent.trace.admission
@@ -776,17 +926,20 @@ function exactPromotionMetrics(
 ):
   | {
       readonly shortAxisSpanGrid: number
+      readonly requestedShortAxisGrid: number
       readonly longAxisDepthGrid: number
       readonly envelopeAreaGrid2: bigint
       readonly materialDoubledAreaGrid2: bigint
     }
   | undefined {
   const shortAxisSpanGrid = outcome.trace.usedShortAxisSpanGrid
+  const requestedShortAxisGrid = toGridMm(outcome.trace.requestedShortAxisMm)
   const longAxisDepthGrid = outcome.trace.usedLongAxisDepthGrid
   const envelopeAreaGrid2 = outcome.trace.envelopeAreaGrid2
   const materialDoubledAreaGrid2 = outcome.trace.collisionMaterialDoubledAreaGrid2
   if (
     shortAxisSpanGrid === undefined ||
+    requestedShortAxisGrid === undefined ||
     longAxisDepthGrid === undefined ||
     envelopeAreaGrid2 === undefined ||
     materialDoubledAreaGrid2 === undefined
@@ -795,6 +948,7 @@ function exactPromotionMetrics(
   }
   return {
     shortAxisSpanGrid,
+    requestedShortAxisGrid,
     longAxisDepthGrid,
     envelopeAreaGrid2: BigInt(envelopeAreaGrid2),
     materialDoubledAreaGrid2: BigInt(materialDoubledAreaGrid2)
@@ -957,7 +1111,8 @@ function finalizePlacedLayout(input: {
     placedCollisionGeometries: input.placed,
     placementOrder: input.input.preparedPieces.map((piece) => piece.pieceId ?? piece.source.id)
   })
-  const prescribedRotationDeg = input.input.sheet.width < input.input.sheet.height ? 0 : 90
+  const prescribedRotationDeg =
+    intrinsicShortSideAxes(input.input.sheet).normalizedToPhysicalRotationDeg
   const physicalState = normalizedState.withQuarterTurnBottomLeft(prescribedRotationDeg)
   if (
     physicalState === undefined ||
@@ -1101,13 +1256,26 @@ function finalizeOutcome(input: {
   const directionallyEfficient =
     BigInt(dimensions.shortAxisGrid) * productionEnvelopeAreaGrid2 >=
     BigInt(productionShortAxisSpanGrid) * envelopeAreaGrid2
+  const expectedPieceIds = input.input.preparedPieces.map(
+    (piece) => piece.pieceId ?? piece.source.id
+  )
+  const placedPieceIds = placed.map(
+    ({ placement }) => placement.pieceId ?? placement.sourcePieceId
+  )
+  const expectedPieceIdSet = new Set(expectedPieceIds)
+  const placedPieceIdSet = new Set(placedPieceIds)
+  const exactTargetIdentity =
+    expectedPieceIdSet.size === expectedPieceIds.length &&
+    placedPieceIdSet.size === placedPieceIds.length &&
+    placedPieceIds.length === expectedPieceIds.length &&
+    expectedPieceIds.every((pieceId) => placedPieceIdSet.has(pieceId))
   const envelopeAreaCostWithinProductionBound =
     intrinsicShortSideEnvelopeAreaCostWithinProductionBound(
       envelopeAreaGrid2,
       productionEnvelopeAreaGrid2
     )
   const admittedBesidesAreaCost =
-    placed.length === input.input.preparedPieces.length &&
+    exactTargetIdentity &&
     5n * BigInt(dimensions.shortAxisGrid) >=
       4n * BigInt(dimensions.requestedShortAxisGrid) &&
     depthWithinProductionMaximumSide &&
@@ -1119,7 +1287,7 @@ function finalizeOutcome(input: {
     directionallyEfficient
   const admission: IntrinsicShortSidePairFoldAdmission = {
     exactLegal: true,
-    allPiecesPlaced: placed.length === input.input.preparedPieces.length,
+    allPiecesPlaced: exactTargetIdentity,
     fillRatio,
     depthWithinProductionMaximumSide,
     projectionCoverageRatio: projection.coverageRatio,
@@ -1132,8 +1300,12 @@ function finalizeOutcome(input: {
     envelopeAreaCostWithinProductionBound,
     accepted: false
   }
-  const accepted =
-    admittedBesidesAreaCost && admission.envelopeAreaCostWithinProductionBound
+  /*
+   * Compact-relative quality terms remain evidence, not admission gates. The
+   * Short Side profile owns a directional terminal contract: every exact
+   * construction that accounts for its complete target piece set is eligible.
+   */
+  const accepted = exactTargetIdentity
   const measuredAdmission = { ...admission, accepted }
   if (!envelopeAreaCostWithinProductionBound && admittedBesidesAreaCost) {
     input.runtime.envelopeAreaCostVetoObserved = true
@@ -1187,6 +1359,7 @@ function finalizeOutcome(input: {
     envelopeAreaCostVetoObserved: input.runtime.envelopeAreaCostVetoObserved,
     envelopeAreaCostVetoes: [...input.runtime.envelopeAreaCostVetoes],
     contactStrip: undefined,
+    contactStripLanes: [],
     contactStripPromotion: undefined,
     runtimeMs: Math.max(0, input.runtime.now() - input.runtime.startedAt),
     peakRssDeltaBytes: sampleRss(input.runtime),
@@ -1230,8 +1403,9 @@ function physicalDimensions(
   if (requestedShortAxisGrid === undefined || requestedLongAxisGrid === undefined) {
     return undefined
   }
-  const shortAxisGrid = sheet.width < sheet.height ? widthGrid : heightGrid
-  const longAxisGrid = sheet.width < sheet.height ? heightGrid : widthGrid
+  const axes = intrinsicShortSideAxes(sheet)
+  const shortAxisGrid = axes.shortAxis === 'width' ? widthGrid : heightGrid
+  const longAxisGrid = axes.longAxis === 'width' ? widthGrid : heightGrid
   return {
     shortAxisMm: fromGrid(shortAxisGrid),
     longAxisMm: fromGrid(longAxisGrid),
@@ -1276,7 +1450,8 @@ function shortAxisProjectionMetrics(
     .flatMap((entry) => {
       const path = placedCollisionWorldGridPath(entry)
       if (path === undefined || path.length === 0) return []
-      const values = path.map((point) => (sheet.width < sheet.height ? point.x : point.y))
+      const shortAxis = intrinsicShortSideAxes(sheet).shortAxis
+      const values = path.map((point) => (shortAxis === 'width' ? point.x : point.y))
       return [{ start: Math.min(...values), end: Math.max(...values) }]
     })
     .toSorted((first, second) => first.start - second.start)
@@ -1377,6 +1552,7 @@ function failedOutcome(
       envelopeAreaCostVetoObserved: runtime.envelopeAreaCostVetoObserved,
       envelopeAreaCostVetoes: [...runtime.envelopeAreaCostVetoes],
       contactStrip: undefined,
+      contactStripLanes: [],
       contactStripPromotion: undefined,
       runtimeMs: Math.max(0, runtime.now() - runtime.startedAt),
       peakRssDeltaBytes: sampleRss(runtime),

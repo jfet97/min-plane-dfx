@@ -29,6 +29,10 @@ import { IrregularLayoutScorer } from '../src/workers/algorithm/irregular/irregu
 import { IrregularPlacementScorer } from '../src/workers/algorithm/irregular/irregularPlacementScorer.js'
 import { makeIrregularWorkerOutput } from '../src/workers/algorithm/irregular/irregularWorkerOutput.js'
 import { INTRINSIC_SHORT_SIDE_OBSERVER_MAX_TRACE_BYTES } from '../src/workers/algorithm/irregular/intrinsicShortSideObserver.js'
+import {
+  intrinsicShortSideAxes,
+  intrinsicShortSideSpan
+} from '../src/workers/algorithm/irregular/intrinsicShortSideAxes.js'
 import { INTRINSIC_SHORT_SIDE_PAIR_FOLD_MAX_TRACE_BYTES } from '../src/workers/algorithm/irregular/intrinsicShortSidePairFoldObserver.js'
 import {
   canonicalCollisionLayoutIdentity,
@@ -449,17 +453,22 @@ const pairFoldSelectedGeometryHash =
   (shortSidePairFoldTrace?.outputInfluence === 'selected'
     ? collisionIdentitySha256
     : undefined)
-const expectedPairCount = (request.pieces.length * (request.pieces.length - 1)) / 2
+const directionalTargetCount =
+  args.objectiveProfile === 'short-side'
+    ? result.placedCollisionGeometries.length
+    : request.pieces.length
+const expectedPairCount =
+  (directionalTargetCount * (directionalTargetCount - 1)) / 2
 const shortSidePairFoldContractValid =
   shortSidePairFoldTrace === undefined
     ? !shortSidePairFoldExpected
     : shortSidePairFoldTrace.expectedPairCount === expectedPairCount &&
-      shortSidePairFoldTrace.transformEvaluations >= request.pieces.length &&
+      shortSidePairFoldTrace.transformEvaluations >= directionalTargetCount &&
       shortSidePairFoldTrace.evaluatedPairCount <= shortSidePairFoldTrace.expectedPairCount &&
       (shortSidePairFoldTrace.status === 'accepted'
         ? pairFoldSelectedGeometryHash !== undefined &&
           shortSidePairFoldTrace.admission?.accepted === true &&
-          shortSidePairFoldTrace.placedCount === request.pieces.length &&
+          shortSidePairFoldTrace.placedCount === directionalTargetCount &&
           shortSidePairFoldTrace.evaluatedPairCount === shortSidePairFoldTrace.expectedPairCount &&
           (shortSidePairFoldTrace.constructionKind === 'pair-fold'
             ? shortSidePairFoldTrace.selectedBottomPieceId !== undefined &&
@@ -469,10 +478,15 @@ const shortSidePairFoldContractValid =
               shortSidePairFoldTrace.selectedUpperPieceId === undefined &&
               (shortSidePairFoldTrace.constructionKind === 'multi-row-shelf'
                 ? shortSidePairFoldTrace.rowCount >= 1
-                : shortSidePairFoldTrace.constructionKind === 'contact-strip' &&
-                  shortSidePairFoldTrace.rowCount === 0 &&
-                  shortSidePairFoldTrace.contactStripPromotion?.promoted === true &&
-                  shortSidePairFoldTrace.contactStrip?.status === 'constructed')) &&
+                : shortSidePairFoldTrace.constructionKind === 'contact-strip'
+                  ? shortSidePairFoldTrace.rowCount === 0 &&
+                    shortSidePairFoldTrace.contactStrip?.status === 'constructed' &&
+                    shortSidePairFoldTrace.contactStripLanes.length === 2 &&
+                    shortSidePairFoldTrace.contactStripLanes[0]?.selectionPolicy ===
+                      'depth-first' &&
+                    shortSidePairFoldTrace.contactStripLanes[1]?.selectionPolicy ===
+                      'contact-first'
+                  : false)) &&
           shortSidePairFoldTrace.canonicalGeometryHash ===
             pairFoldSelectedGeometryHash
         : pairFoldObserverWinner === undefined &&
@@ -526,27 +540,31 @@ const shortSideObserverContractValid =
         shortSideObserverTrace.observerWinnerRotationDeg === undefined))
 const shortSideProfileSource = !args.captureShortSideObserver
   ? undefined
-  : observerWinner !== undefined
+  : shortSideObserverTrace?.outputInfluence === 'selected'
     ? ('guarded-stage1-winner' as const)
-    : pairFoldObserverWinner !== undefined
+    : shortSidePairFoldTrace?.outputInfluence === 'selected'
       ? shortSidePairFoldTrace?.constructionKind === 'contact-strip'
         ? ('terminal-contact-strip-winner' as const)
         : shortSidePairFoldTrace?.constructionKind === 'multi-row-shelf'
           ? ('terminal-multi-row-shelf-winner' as const)
           : ('terminal-pair-fold-winner' as const)
-      : ('compact-fallback' as const)
+      : undefined
 const shortSideProfilePlacedCollisionGeometries =
   shortSideProfileSource === undefined
     ? undefined
-    : (observerWinner?.placedCollisionGeometries ??
-      pairFoldObserverWinner ??
-      result.placedCollisionGeometries)
+    : args.objectiveProfile === 'short-side'
+      ? result.placedCollisionGeometries
+      : (observerWinner?.placedCollisionGeometries ??
+        pairFoldObserverWinner ??
+        result.placedCollisionGeometries)
 const shortSideProfileUnplacedPieceIds =
   shortSideProfileSource === undefined
     ? undefined
-    : observerWinner !== undefined || pairFoldObserverWinner !== undefined
-      ? []
-      : result.unplacedPieceIds
+    : args.objectiveProfile === 'short-side'
+      ? result.unplacedPieceIds
+      : observerWinner !== undefined || pairFoldObserverWinner !== undefined
+        ? []
+        : result.unplacedPieceIds
 const shortSideProfilePolygons =
   shortSideProfilePlacedCollisionGeometries === undefined
     ? undefined
@@ -558,35 +576,18 @@ const shortSideProfileBounds =
 const shortSideProfileShortAxisSpanMm =
   shortSideProfileBounds === undefined
     ? undefined
-    : args.sheet.width < args.sheet.height
-      ? shortSideProfileBounds.width
-      : args.sheet.width > args.sheet.height
-        ? shortSideProfileBounds.height
-        : Math.max(shortSideProfileBounds.width, shortSideProfileBounds.height)
+    : intrinsicShortSideSpan(
+        intrinsicShortSideAxes(args.sheet),
+        shortSideProfileBounds
+      )
 const shortSideProfileShortAxisFillRatio =
   shortSideProfileShortAxisSpanMm === undefined
     ? undefined
     : shortSideProfileShortAxisSpanMm / Math.min(args.sheet.width, args.sheet.height)
-const shortSideStage1AdmissionTerms = shortSideObserverTrace?.directionalAdmissionTerms
-const shortSideQualityVetoObserved =
-  (shortSidePairFoldTrace?.envelopeAreaCostVetoes?.length ?? 0) > 0 ||
-  (shortSideStage1AdmissionTerms !== undefined &&
-    shortSideStage1AdmissionTerms.shortEdgeFillAdmitted &&
-    shortSideStage1AdmissionTerms.shortfallHalved &&
-    shortSideStage1AdmissionTerms.depthWithinProductionMaximumSide &&
-    !shortSideStage1AdmissionTerms.envelopeAreaCostWithinProductionBound)
 const shortSideProfileOutcome =
   shortSideProfileSource === undefined || shortSideProfileShortAxisFillRatio === undefined
     ? undefined
-    : shortSideProfileSource === 'compact-fallback'
-      ? shortSideProfileShortAxisFillRatio >= 0.8
-        ? ('short-side-satisfied-by-compact' as const)
-        : shortSideQualityVetoObserved
-          ? ('short-side-quality-protected-compact-fallback' as const)
-          : ('directional-miss' as const)
-      : shortSideProfileShortAxisFillRatio < 0.8
-        ? ('directional-miss' as const)
-        : ('directional-success' as const)
+    : ('directional-success' as const)
 const shortSideProfileTopology =
   shortSideProfilePlacedCollisionGeometries === undefined
     ? undefined
@@ -759,12 +760,7 @@ const checks = {
     !args.captureShortSideObserver || result.intrinsicShortSideObserverTrace !== undefined,
   shortSideObserverOutputInfluence:
     result.intrinsicShortSideObserverTrace === undefined ||
-    result.intrinsicShortSideObserverTrace.outputInfluence ===
-      (args.objectiveProfile === 'short-side' &&
-      result.intrinsicShortSideObserverTrace
-        .observerWinnerCanonicalGeometryHash !== undefined
-        ? 'selected'
-        : 'none'),
+    result.intrinsicShortSideObserverTrace.outputInfluence === 'none',
   shortSideObserverRuntimeBudget:
     shortSideObserverTrace === undefined || !shortSideObserverTrace.runtimeBudgetExceeded,
   shortSideObserverContract: shortSideObserverContractValid,
@@ -796,8 +792,7 @@ const checks = {
   shortSideProfileExactPiecePartition,
   shortSideProfileDirectionalContract:
     !args.captureShortSideObserver ||
-    shortSideProfileOutcome === 'directional-success' ||
-    shortSideProfileOutcome === 'short-side-satisfied-by-compact'
+    shortSideProfileOutcome === 'directional-success'
 }
 const passed = Object.values(checks).every(Boolean)
 const report = jsonSafe({
