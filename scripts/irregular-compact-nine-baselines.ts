@@ -48,9 +48,9 @@ const BASELINES: ReadonlyArray<Baseline> = [
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 330_000,
     shortSideCollisionIdentitySha256:
-      'c6fb2fa21ffa6d3bee75ea5cedc6b4f74a3b0ca0e48b6540be0b10f87ae4ce76',
+      'd22eaf6a10870b85a0df2bbaddc39f98df12270326cbfbf2c767c99547b61c5d',
     shortSideFittedCanonicalSha256:
-      '914bb181f71cf450d22bff7342ee9310aa4f76ec180126083e43747740b444c0',
+      'f568266469ece9b5a6af298d5df5f8c6c1e28f3f483e72ec8df9e9cc74f2f32a',
     shortSidePlacedCount: 61,
     shortSideUnplacedCount: 0
   },

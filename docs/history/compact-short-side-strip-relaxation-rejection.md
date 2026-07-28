@@ -65,3 +65,34 @@ Evidence: traces `/tmp/ss-inspect/m61-1000x2700-ss.json` (local, reproducible
 with the command above), strip render `/tmp/ss-inspect/strip-1000x2700.png`
 (local, reproducible with `scripts/irregular-short-side-strip-evidence.ts`),
 design document and review transcript retained locally.
+
+## Follow-up: the bounded contact-aware tie-break (2026-07-28)
+
+The research-only option C was then measured and implemented in bounded form.
+Tie-frequency instrumentation (per-piece evidence sink on the strip runtime
+control, reported by `scripts/irregular-short-side-strip-evidence.ts`) shows
+anchor ties are frequent: `23/61` placement decisions on `1000x2700` and
+`21/61` on `2000x2700`. In almost all of them the baseline already picks the
+best-contact orientation or every tied candidate scores zero, but exactly two
+ties per sheet seat a zero-contact orientation while an edge-contacting
+alternative shares the same anchor.
+
+The selector now measures the exact axis-projected overlap of every tied
+candidate against the placed pieces (BigInt surrogate in
+`canonicalGridContact.ts`, no floats) and takes the strongest, provided the
+challenger is not deeper than the translation-order baseline winner, so the
+directional depth can never regress through a tie choice. Silent scores fall
+back to the historical tuple order.
+
+Measured outcomes: the Mixed-61 `2000x2700` flagship keeps span `2000`,
+depth `207.700`, envelope `415,400 mm2`, density, fill, and zero cavities,
+while shared boundary grows `1,279.1` to `1,367.4 mm`, isolated pieces drop
+`28` to `27`, components `37` to `36`, the largest component grows `12` to
+`13`, and the hull gap tightens `0.2151` to `0.2111`; its two accepted hashes
+change and are regenerated in the baselines. Triangle-20 and Shapes-17 strips
+are byte-identical. On `1000x2700` the strip sheds one of its two cavities
+(`2` to `1`) and two isolated pieces (`33` to `31`) but still misses
+admission, so that sheet correctly stays on the quality-protected Compact
+fallback. No gate was relaxed: the improved strip earns its place under the
+unchanged contracts, and the extent-comparator prohibition stands because
+this rule acts only inside exact anchor ties, never on extent.
