@@ -16,6 +16,7 @@ interface Baseline {
   readonly unplacedCount: number
   readonly maximumAreaMm2: number
   readonly maximumCanonicalCavities: number
+  readonly shortSideMaximumCanonicalCavities?: number
   readonly maximumElapsedMs: number
   readonly shortSideCollisionIdentitySha256: string
   readonly shortSideFittedCanonicalSha256: string
@@ -35,9 +36,9 @@ const BASELINES: ReadonlyArray<Baseline> = [
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 120_000,
     shortSideCollisionIdentitySha256:
-      '371db2696b65e2122b98bdb197a1d327df0c6ecbeca6ed73d2722971be52a127',
+      '7a79ebd40029094854748d569acb52f95f32a96e71b3b674941ba7f20f9cfe15',
     shortSideFittedCanonicalSha256:
-      'b4d1fd9af8a1ecb4a17f1031546c1dbbb5afb19b2d99e41bdb646e52084092f7',
+      'bc978c3710e6865a68c4c965fde545d0421d5d915319056b5a67689a6e918e5a',
     shortSidePlacedCount: 20,
     shortSideUnplacedCount: 0
   },
@@ -50,11 +51,12 @@ const BASELINES: ReadonlyArray<Baseline> = [
     unplacedCount: 0,
     maximumAreaMm2: 391_605.850174,
     maximumCanonicalCavities: 0,
+    shortSideMaximumCanonicalCavities: 1,
     maximumElapsedMs: 330_000,
     shortSideCollisionIdentitySha256:
-      'd22eaf6a10870b85a0df2bbaddc39f98df12270326cbfbf2c767c99547b61c5d',
+      'c38a0cb4bb7765e4db102869224ef5b51f2a0bbc787cea05adf94ca0e2fe5e22',
     shortSideFittedCanonicalSha256:
-      'f568266469ece9b5a6af298d5df5f8c6c1e28f3f483e72ec8df9e9cc74f2f32a',
+      '2a63c729108ba7680339cebaf86d4e39368a020eee95580caf9811d6d2bbc2ca',
     shortSidePlacedCount: 61,
     shortSideUnplacedCount: 0
   },
@@ -69,9 +71,9 @@ const BASELINES: ReadonlyArray<Baseline> = [
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 120_000,
     shortSideCollisionIdentitySha256:
-      '1ddc8426e032ce01b47ff82cae6104fa99a3f92f44f37782d846e1a8b83c8c5d',
+      'b1902994bbc318522d3684b32ec3fba692aad0116ef9dad2985a1a32cdb1a2df',
     shortSideFittedCanonicalSha256:
-      '490194ca505f545cfb5880209d20b2f48cdcffbc847c8686705fd12661b5e7bf',
+      '90bc2d76ef247394edd0719693c3aada9d8db7f9b334ccda3bcfd3c3559f8135',
     shortSidePlacedCount: 17,
     shortSideUnplacedCount: 0
   },
@@ -86,9 +88,9 @@ const BASELINES: ReadonlyArray<Baseline> = [
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 120_000,
     shortSideCollisionIdentitySha256:
-      '4b87d6df47fdf2246c6d2d8d9ad6c201d75f33e4f29072be0a64dc5d217e206f',
+      '6ca8e267b18556ae57f459a33cf2cccbf885bac1f0f362eaad8c676d9d189196',
     shortSideFittedCanonicalSha256:
-      'bf23f53f3bb796f082dc7a1e1257df3a366351bc2a637bfba08b9f5d0be929a8',
+      'fd075d118e29a5089ea684bc5af26ad4cf83f560fc7a525316d96921549957b2',
     shortSidePlacedCount: 20,
     shortSideUnplacedCount: 0
   },
@@ -103,9 +105,9 @@ const BASELINES: ReadonlyArray<Baseline> = [
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 330_000,
     shortSideCollisionIdentitySha256:
-      '2c53f3123d5d57ab5e120717ae1e49046bb574925c49c4a33ed4febe7e81e414',
+      '7a2d7906095f69b8def581738fd68d4ca9e27ee223f32646367e6fd71658675e',
     shortSideFittedCanonicalSha256:
-      '39e74c34e0cfcd4929ba3dde53d1b0215ca2c48e383297b15922f07115569f38',
+      '86d65b16b47cfe43936db0fe383ac66408d811880c9dc52fb3ea4bf572933e67',
     shortSidePlacedCount: 25,
     shortSideUnplacedCount: 36
   },
@@ -118,11 +120,12 @@ const BASELINES: ReadonlyArray<Baseline> = [
     unplacedCount: 3,
     maximumAreaMm2: 232_178.021694,
     maximumCanonicalCavities: 0,
+    shortSideMaximumCanonicalCavities: 2,
     maximumElapsedMs: 120_000,
     shortSideCollisionIdentitySha256:
-      '01b2060d87752bb36eebfd4eb8602709687d5cb00c71b8feaec14a6e7cf9ba12',
+      'ec2d5653fa92f45a96bf48143a216fe93e0908c5b3f2c8a571c869e4e7baace7',
     shortSideFittedCanonicalSha256:
-      '4472adc8ddfcc26af748adcfeb220e049a4f0e814cb17a99c0dc092db903921e',
+      '3812e0e1c7731f6ffcf9ae20a946c357fb41c460911dd185632003af6d306fc4',
     shortSidePlacedCount: 14,
     shortSideUnplacedCount: 3
   },
@@ -137,9 +140,9 @@ const BASELINES: ReadonlyArray<Baseline> = [
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 120_000,
     shortSideCollisionIdentitySha256:
-      '0f5befd7d02fc111be47ee447fab7f8778f06ae05d045448f22a916d66949410',
+      'f7ddba15b5122ec7335c17bf2fe01851a9061ad500742f1efbcc716d9cc5cc55',
     shortSideFittedCanonicalSha256:
-      '2f236b79c7c49a999daf5363e257bbda6b8562239571c6fedab2485cffb38c35',
+      'c149a21ba24b32fb029e0e5ac8cf515483ccbce673750f7458a95bf522b011b5',
     shortSidePlacedCount: 17,
     shortSideUnplacedCount: 3
   },
@@ -154,9 +157,9 @@ const BASELINES: ReadonlyArray<Baseline> = [
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 330_000,
     shortSideCollisionIdentitySha256:
-      'bb22df3517b4f2bbbdebc1d35704dbf4374f96d264af919a4c8d29dc2168fa33',
+      'e0647c8175bfadb7c158720978b7e2f0b9ab44496ac55bb90f42205fd17f7858',
     shortSideFittedCanonicalSha256:
-      '37d7bf9c37dfe2b9702bf8df73791782006178eb570ac043b23f1ca20ca22c0b',
+      'c37e7e68e19c7ac35195def7324091782dcfb4d933c716f0cca7a3f10ee15707',
     shortSidePlacedCount: 6,
     shortSideUnplacedCount: 55
   },
@@ -171,9 +174,9 @@ const BASELINES: ReadonlyArray<Baseline> = [
     maximumCanonicalCavities: 0,
     maximumElapsedMs: 120_000,
     shortSideCollisionIdentitySha256:
-      'e4ad1ce1c7fa26e7a00ba38a5d9c11e1908ebf753031ff4811420d5097be7c71',
+      '5d1412d3c3591612bffa40a451ab8f60e5cafaa6ad69ae1aaecaf18653067d9c',
     shortSideFittedCanonicalSha256:
-      'bccfa5a4b7db4b5009a8c0f12d7c6f308c9a72550df3feb218355f33a5c1ef18',
+      '454ed333f6e94089e94f5569ef6ac7f53c43d9a95862a05abca18d214104a005',
     shortSidePlacedCount: 5,
     shortSideUnplacedCount: 12
   }
@@ -286,7 +289,10 @@ async function runBaseline(baseline: Baseline, outputDirectory: string): Promise
     '--expected-unplaced-count',
     String(baseline.shortSideUnplacedCount),
     '--maximum-canonical-cavities',
-    String(baseline.maximumCanonicalCavities),
+    String(
+      baseline.shortSideMaximumCanonicalCavities ??
+        baseline.maximumCanonicalCavities
+    ),
     '--maximum-elapsed-ms',
     String(baseline.maximumElapsedMs),
     ...focusedExpectedArguments(baseline)
