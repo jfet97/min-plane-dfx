@@ -62,29 +62,35 @@ regresses connectivity, the profile retains Compact and reports
 `short-side-quality-protected-compact-fallback`. The strip evidence script
 and this record preserve the investigation.
 
-Evidence: traces `/tmp/ss-inspect/m61-1000x2700-ss.json` (local, reproducible
-with the command above), strip render `/tmp/ss-inspect/strip-1000x2700.png`
-(local, reproducible with `scripts/irregular-short-side-strip-evidence.ts`),
-design document and review transcript retained locally.
+The accepted 18-layout evidence, exact reports, SVGs, complete PNG renders,
+manifest, checksums, and visual review are portable under
+[`../artifacts/compact-short-side-contact-tie-break/`](../artifacts/compact-short-side-contact-tie-break/README.md).
+The raw rejected-strip probe remains reproducible through
+`scripts/irregular-short-side-strip-evidence.ts`; its output is diagnostic and
+is not a production baseline.
 
 ## Follow-up: the bounded contact-aware tie-break (2026-07-28)
 
 The research-only option C was then measured and implemented in bounded form.
-Tie-frequency instrumentation (per-piece evidence sink on the strip runtime
-control, reported by `scripts/irregular-short-side-strip-evidence.ts`) shows
-anchor ties are frequent: `23/61` placement decisions on `1000x2700` and
-`21/61` on `2000x2700`. In almost all of them the baseline already picks the
+Post-change tie-frequency instrumentation (per-piece evidence sink on the strip
+runtime control, reported by `scripts/irregular-short-side-strip-evidence.ts`)
+shows anchor ties are frequent: `23/61` placement decisions on `1000x2700` and
+`26/61` on `2000x2700`. In almost all of them the baseline already picks the
 best-contact orientation or every tied candidate scores zero, but exactly two
 ties per sheet seat a zero-contact orientation while an edge-contacting
 alternative shares the same anchor.
 
 The selector now measures the exact axis-projected overlap of every tied
-candidate against the placed pieces (BigInt surrogate in
-`canonicalGridContact.ts`, no floats) and takes the strongest, provided the
-challenger is not deeper than the translation-order baseline winner, so no tie
-choice ever deepens the tied piece itself. Downstream anchors respond to the
-new geometry, so final strip depth is a measured corpus guarantee rather than
-a structural one. Silent scores fall back to the historical tuple order.
+candidate against the placed pieces (BigInt accumulation in
+`canonicalGridContact.ts` after exact canonical-grid collinearity) only when
+every positive contact is axis-aligned. A positive diagonal contact preserves
+the historical tuple winner because projected units are not comparable across
+orientations. Among decidable ties, the selector takes the strongest candidate
+provided it is not deeper than the translation-order baseline winner, so no tie
+choice ever deepens the tied piece itself.
+Downstream anchors respond to the new geometry, so final strip depth is a
+measured corpus guarantee rather than a structural one. Silent scores fall
+back to the historical tuple order.
 
 Measured outcomes: the Mixed-61 `2000x2700` flagship keeps span `2000`,
 depth `207.700`, envelope `415,400 mm2`, density, fill, and zero cavities,

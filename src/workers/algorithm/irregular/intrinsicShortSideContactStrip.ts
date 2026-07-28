@@ -67,8 +67,9 @@ export interface IntrinsicShortSideContactStripRuntimeControl {
 /**
  * Exact per-tie evidence collected when more than one legal candidate shares
  * the winning `(long axis, short axis)` anchor for one prepared piece. The
- * contact score is the exact axis-projected overlap in canonical grid units
- * against the already-placed pieces; `undefined` marks an undecidable path.
+ * contact score is the exact overlap in canonical grid units for positive
+ * axis-aligned contacts against already-placed pieces; `undefined` marks an
+ * undecidable path, including any positive diagonal contact.
  */
 export interface IntrinsicShortSideContactStripTieEvidence {
   readonly pieceIndex: number
@@ -409,14 +410,13 @@ function compareAnchoredCandidates(first: AnchoredCandidate, second: AnchoredCan
  * The minimal `(long axis, short axis)` anchor still decides where the piece
  * lands. When several legal candidates share that anchor, the piece may settle
  * for a zero-contact orientation chosen only by translation order. This
- * selector instead measures the exact axis-projected contact each tied
- * candidate makes against the placed pieces and takes the strongest, provided
- * the challenger is not deeper than the translation-order baseline winner, so
- * no tie choice ever deepens the tied piece itself. Downstream anchors respond
- * to the new geometry, so final strip depth is a measured corpus guarantee,
- * not a structural one. Silent or undecidable scores fall back to the
- * historical tuple order, so behavior away from contact-decisive ties is
- * unchanged.
+ * selector instead measures exact positive axis-aligned contact against the
+ * placed pieces and takes the strongest, provided the challenger is not deeper
+ * than the translation-order baseline winner, so no tie choice ever deepens
+ * the tied piece itself. Positive diagonal contact and other undecidable scores
+ * preserve the historical winner. Downstream anchors respond to the new
+ * geometry, so final strip depth is a measured corpus guarantee, not a
+ * structural one. Behavior away from contact-decisive ties is unchanged.
  */
 function selectContactAwareWinner(
   candidates: ReadonlyArray<AnchoredCandidate>,
@@ -489,7 +489,20 @@ function selectContactAwareWinner(
       return { kind: 'bounded', status: challengerMeasurement.bounded }
     }
     const challengerScore = challengerMeasurement.score
-    if (challengerScore === undefined) continue
+    if (challengerScore === undefined) {
+      return {
+        kind: 'selection',
+        selection: {
+          winner: baseline,
+          baselineWinner: baseline,
+          tiedCount: tied.length,
+          tied,
+          winnerScore: baselineScore,
+          baselineScore,
+          selectionChanged: false
+        }
+      }
+    }
     if (
       challengerScore > winnerScore ||
       (challengerScore === winnerScore && compareAnchoredCandidates(challenger, winner) < 0)
@@ -512,7 +525,7 @@ function selectContactAwareWinner(
   }
 }
 
-/** Measures the exact contact score of one candidate against the placed pieces. */
+/** Measures exact positive axis-aligned contact against the placed pieces. */
 function candidateContactAxisUnits(
   anchored: AnchoredCandidate,
   placed: ReadonlyArray<IrregularPlacedPiece>,
@@ -526,19 +539,25 @@ function candidateContactAxisUnits(
     })
   )
   if (worldPath === undefined) return { score: undefined, bounded: undefined }
-  const path = worldPath.map(({ x, y }) => ({ x, y }))
   let total = 0n
   for (const placedPiece of placed) {
     const bounded = boundedStatus(runtime)
     if (bounded !== undefined) return { score: undefined, bounded }
     const placedWorldPath = placedCollisionWorldGridPath(placedPiece)
     if (placedWorldPath === undefined) return { score: undefined, bounded: undefined }
-    const overlap = measureCanonicalGridBoundaryOverlapAxisUnits(
-      path,
-      placedWorldPath.map(({ x, y }) => ({ x, y }))
-    )
-    if (overlap === undefined) return { score: undefined, bounded: undefined }
-    total += overlap
+    let boundedDuringScan: 'deadline' | 'memory-cap' | undefined
+    const overlap = measureCanonicalGridBoundaryOverlapAxisUnits(worldPath, placedWorldPath, () => {
+      const bounded = boundedStatus(runtime)
+      if (bounded !== undefined) boundedDuringScan = bounded
+      return bounded === undefined
+    })
+    if (overlap.kind === 'aborted') {
+      return { score: undefined, bounded: boundedDuringScan }
+    }
+    if (overlap.kind === 'undecidable') {
+      return { score: undefined, bounded: undefined }
+    }
+    total += overlap.score
   }
   return { score: total, bounded: undefined }
 }
