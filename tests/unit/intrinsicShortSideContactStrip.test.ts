@@ -279,6 +279,35 @@ describe('intrinsic short-side contact strip', () => {
     ).toBe(true)
   })
 
+  it('falls back to the deterministic tuple when a tied candidate has diagonal contact', async () => {
+    const ties: Array<{
+      readonly selectionChanged: boolean
+      readonly scores: ReadonlyArray<{
+        readonly contactAxisUnits: string | undefined
+      }>
+    }> = []
+    const trianglePoints = [point(0, 0), point(40, 0), point(20, 20)]
+    const outcome = await construct({
+      pieces: [
+        preparedPiece('base', trianglePoints, [0]),
+        preparedPiece('moving', trianglePoints, [0, 180])
+      ],
+      tieEvidenceSink: (entry) => {
+        ties.push(entry)
+      }
+    })
+
+    expect(outcome.trace.status).toBe('constructed')
+    expect(outcome.placedCollisionGeometries).toHaveLength(2)
+    expect(
+      ties.some(
+        (tie) =>
+          !tie.selectionChanged &&
+          tie.scores.some(({ contactAxisUnits }) => contactAxisUnits === undefined)
+      )
+    ).toBe(true)
+  })
+
   it('refuses a contacting alternative that is deeper than the baseline winner', async () => {
     const ties: Array<{
       readonly tiedCount: number
