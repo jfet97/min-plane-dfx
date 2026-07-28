@@ -252,8 +252,17 @@ function constructStrip(
           anchoredCandidates.push(anchored)
         }
       }
-      const selection = selectContactAwareWinner(anchoredCandidates, placed, piece)
-      if (selection === undefined) {
+      const selectionResult = selectContactAwareWinner(anchoredCandidates, placed, piece, runtime)
+      if (selectionResult.kind === 'bounded') {
+        return failedOutcome(
+          input,
+          runtime,
+          selectionResult.status,
+          `${selectionResult.status} reached during contact-aware tie selection.`,
+          placed.length
+        )
+      }
+      if (selectionResult.kind === 'none') {
         return failedOutcome(
           input,
           runtime,
@@ -262,20 +271,11 @@ function constructStrip(
           placed.length
         )
       }
-      const boundedAfterSelection = boundedStatus(runtime)
-      if (boundedAfterSelection !== undefined) {
-        return failedOutcome(
-          input,
-          runtime,
-          boundedAfterSelection,
-          `${boundedAfterSelection} reached after contact-aware tie selection.`,
-          placed.length
-        )
-      }
+      const selection = selectionResult.selection
       const best = selection.winner
       if (selection.tiedCount >= 2) {
         input.runtimeControl?.tieEvidenceSink?.(
-          measureTieEvidence(placed.length, selection, placed, piece)
+          measureTieEvidence(placed.length, selection, placed, piece, runtime)
         )
       }
       const placedPiece = new IrregularPlacedPiece({
@@ -369,6 +369,11 @@ interface ContactAwareSelection {
   readonly selectionChanged: boolean
 }
 
+type ContactAwareSelectionResult =
+  | { readonly kind: 'selection'; readonly selection: ContactAwareSelection }
+  | { readonly kind: 'bounded'; readonly status: 'deadline' | 'memory-cap' }
+  | { readonly kind: 'none' }
+
 /**
  * Orders candidates by the directional bottom-left contract.
  *
@@ -406,15 +411,16 @@ function compareAnchoredCandidates(first: AnchoredCandidate, second: AnchoredCan
 function selectContactAwareWinner(
   candidates: ReadonlyArray<AnchoredCandidate>,
   placed: ReadonlyArray<IrregularPlacedPiece>,
-  piece: IrregularPreparedPiece
-): ContactAwareSelection | undefined {
+  piece: IrregularPreparedPiece,
+  runtime: StripRuntime
+): ContactAwareSelectionResult {
   let baseline: AnchoredCandidate | undefined
   for (const anchored of candidates) {
     if (baseline === undefined || compareAnchoredCandidates(anchored, baseline) < 0) {
       baseline = anchored
     }
   }
-  if (baseline === undefined) return undefined
+  if (baseline === undefined) return { kind: 'none' }
   const tied = candidates.filter(
     (anchored) =>
       anchored.anchorLongAxisGrid === baseline.anchorLongAxisGrid &&
@@ -422,33 +428,49 @@ function selectContactAwareWinner(
   )
   if (tied.length < 2) {
     return {
-      winner: baseline,
-      baselineWinner: baseline,
-      tiedCount: tied.length,
-      tied,
-      winnerScore: undefined,
-      baselineScore: undefined,
-      selectionChanged: false
+      kind: 'selection',
+      selection: {
+        winner: baseline,
+        baselineWinner: baseline,
+        tiedCount: tied.length,
+        tied,
+        winnerScore: undefined,
+        baselineScore: undefined,
+        selectionChanged: false
+      }
     }
   }
-  const baselineScore = candidateContactAxisUnits(baseline, placed, piece)
+  const baselineMeasurement = candidateContactAxisUnits(baseline, placed, piece, runtime)
+  if (baselineMeasurement.bounded !== undefined) {
+    return { kind: 'bounded', status: baselineMeasurement.bounded }
+  }
+  const baselineScore = baselineMeasurement.score
   if (baselineScore === undefined) {
     return {
-      winner: baseline,
-      baselineWinner: baseline,
-      tiedCount: tied.length,
-      tied,
-      winnerScore: undefined,
-      baselineScore: undefined,
-      selectionChanged: false
+      kind: 'selection',
+      selection: {
+        winner: baseline,
+        baselineWinner: baseline,
+        tiedCount: tied.length,
+        tied,
+        winnerScore: undefined,
+        baselineScore: undefined,
+        selectionChanged: false
+      }
     }
   }
   let winner = baseline
   let winnerScore = baselineScore
   for (const challenger of tied) {
+    const bounded = boundedStatus(runtime)
+    if (bounded !== undefined) return { kind: 'bounded', status: bounded }
     if (challenger === baseline) continue
     if (challenger.maxLongAxisGrid > baseline.maxLongAxisGrid) continue
-    const challengerScore = candidateContactAxisUnits(challenger, placed, piece)
+    const challengerMeasurement = candidateContactAxisUnits(challenger, placed, piece, runtime)
+    if (challengerMeasurement.bounded !== undefined) {
+      return { kind: 'bounded', status: challengerMeasurement.bounded }
+    }
+    const challengerScore = challengerMeasurement.score
     if (challengerScore === undefined) continue
     if (
       challengerScore > winnerScore ||
@@ -459,13 +481,16 @@ function selectContactAwareWinner(
     }
   }
   return {
-    winner,
-    baselineWinner: baseline,
-    tiedCount: tied.length,
-    tied,
-    winnerScore,
-    baselineScore,
-    selectionChanged: winner !== baseline
+    kind: 'selection',
+    selection: {
+      winner,
+      baselineWinner: baseline,
+      tiedCount: tied.length,
+      tied,
+      winnerScore,
+      baselineScore,
+      selectionChanged: winner !== baseline
+    }
   }
 }
 
@@ -473,45 +498,53 @@ function selectContactAwareWinner(
 function candidateContactAxisUnits(
   anchored: AnchoredCandidate,
   placed: ReadonlyArray<IrregularPlacedPiece>,
-  piece: IrregularPreparedPiece
-): bigint | undefined {
+  piece: IrregularPreparedPiece,
+  runtime: StripRuntime
+): { readonly score: bigint | undefined; readonly bounded: 'deadline' | 'memory-cap' | undefined } {
   const worldPath = placedCollisionWorldGridPath(
     new IrregularPlacedPiece({
       placement: makeStripPlacement(piece, anchored),
       collisionGeometry: anchored.moving
     })
   )
-  if (worldPath === undefined) return undefined
+  if (worldPath === undefined) return { score: undefined, bounded: undefined }
   const path = worldPath.map(({ x, y }) => ({ x, y }))
   let total = 0n
   for (const placedPiece of placed) {
+    const bounded = boundedStatus(runtime)
+    if (bounded !== undefined) return { score: undefined, bounded }
     const placedWorldPath = placedCollisionWorldGridPath(placedPiece)
-    if (placedWorldPath === undefined) return undefined
+    if (placedWorldPath === undefined) return { score: undefined, bounded: undefined }
     const overlap = measureCanonicalGridBoundaryOverlapAxisUnits(
       path,
       placedWorldPath.map(({ x, y }) => ({ x, y }))
     )
-    if (overlap === undefined) return undefined
+    if (overlap === undefined) return { score: undefined, bounded: undefined }
     total += overlap
   }
-  return total
+  return { score: total, bounded: undefined }
 }
 
 function measureTieEvidence(
   pieceIndex: number,
   selection: ContactAwareSelection,
   placed: ReadonlyArray<IrregularPlacedPiece>,
-  piece: IrregularPreparedPiece
+  piece: IrregularPreparedPiece,
+  runtime: StripRuntime
 ): IntrinsicShortSideContactStripTieEvidence {
-  const scored = selection.tied.map((anchored) => ({
-    anchored,
-    contactAxisUnits:
-      anchored === selection.winner
-        ? selection.winnerScore
-        : anchored === selection.baselineWinner
-          ? selection.baselineScore
-          : candidateContactAxisUnits(anchored, placed, piece)
-  }))
+  const scored = selection.tied.map((anchored) => {
+    if (anchored === selection.winner) {
+      return { anchored, contactAxisUnits: selection.winnerScore }
+    }
+    if (anchored === selection.baselineWinner) {
+      return { anchored, contactAxisUnits: selection.baselineScore }
+    }
+    const measurement = candidateContactAxisUnits(anchored, placed, piece, runtime)
+    return {
+      anchored,
+      contactAxisUnits: measurement.bounded === undefined ? measurement.score : undefined
+    }
+  })
   const bestAlternativeScore = scored
     .filter((entry) => entry.anchored !== selection.winner)
     .map((entry) => entry.contactAxisUnits)

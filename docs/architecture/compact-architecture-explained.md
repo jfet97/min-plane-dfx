@@ -509,7 +509,7 @@ strip stays in the trace with its full measurements rather than disappearing.
 
 On `2000 x 2700` the contact strip wins Mixed-61 with `2000.000 x 207.700 mm`,
 all `61/61` pieces, zero cavities, `100%` short-edge fill, `75.4664%` density,
-a `0.211051` occupied-hull gap, `1,367.4 mm` of exact shared boundary, `27`
+a `0.211051` occupied-hull gap, a `1,367.4 mm` shared boundary, `27`
 isolated pieces, `36` positive-contact components, and a largest component of
 `13`, replacing the shelf's `1987.776 x 301.187 mm`, `52.3621%` density, and
 `0.432505` hull gap. Triangle-20
