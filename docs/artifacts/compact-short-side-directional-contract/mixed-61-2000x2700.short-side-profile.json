@@ -5,9 +5,9 @@
     "width": 2000,
     "height": 2700
   },
-  "sourceCommit": "7009e04d3771b1259567b41722570de45dc20ec0",
+  "sourceCommit": "4bc3c0f613a8094195b1bc8a7243f0e7f91117bd",
   "runtime": {
-    "elapsedMs": 34759.198124999995,
+    "elapsedMs": 35231.093583,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -2711,7 +2711,7 @@
       "selectedCanonicalGeometryHash": "3839e80d26be257381f1962816765a886d4b7e3c3d78120892e4a6a943dfa742",
       "consumedCandidateEvaluations": 12000,
       "candidateEvaluationAccountingComplete": true,
-      "runtimeMs": 751.3658329999962,
+      "runtimeMs": 754.3313750000016,
       "outputInfluence": "protected-fallback"
     },
     "intrinsicShortSideObserverTrace": {
@@ -2735,7 +2735,7 @@
       "geometricParetoEligibleEndpointCount": 1,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 29.844334000001254,
+      "runtimeMs": 30.784083999998984,
       "runtimeBudgetExceeded": false,
       "serializedTraceBytes": 21800,
       "endpoints": [
@@ -3569,8 +3569,8 @@
         "reusedPrefixPlacements": 0,
         "placedCount": 61,
         "requestedCount": 61,
-        "runtimeMs": 1058.810000000005,
-        "peakRssDeltaBytes": 3178496
+        "runtimeMs": 1049.5127500000017,
+        "peakRssDeltaBytes": 2064384
       },
       "contactStripLanes": [
         {
@@ -3587,8 +3587,8 @@
           "reusedPrefixPlacements": 0,
           "placedCount": 61,
           "requestedCount": 61,
-          "runtimeMs": 1058.810000000005,
-          "peakRssDeltaBytes": 3178496
+          "runtimeMs": 1049.5127500000017,
+          "peakRssDeltaBytes": 2064384
         },
         {
           "version": "intrinsic-short-side-contact-strip-v3",
@@ -3604,7 +3604,7 @@
           "reusedPrefixPlacements": 0,
           "placedCount": 14,
           "requestedCount": 61,
-          "runtimeMs": 366.84375,
+          "runtimeMs": 357.2164580000026,
           "peakRssDeltaBytes": 65536,
           "failureReason": "evaluation-cap reached after 2000 contact candidate anchors."
         }
@@ -3657,9 +3657,9 @@
         "strictlyImproved": true,
         "promoted": true
       },
-      "runtimeMs": 1441.8911249999946,
-      "peakRssDeltaBytes": 3244032,
-      "serializedTraceBytes": 5037
+      "runtimeMs": 1422.483791999999,
+      "peakRssDeltaBytes": 2129920,
+      "serializedTraceBytes": 5046
     }
   },
   "workerOutput": {

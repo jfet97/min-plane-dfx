@@ -5,9 +5,9 @@
     "width": 300,
     "height": 300
   },
-  "sourceCommit": "7009e04d3771b1259567b41722570de45dc20ec0",
+  "sourceCommit": "4bc3c0f613a8094195b1bc8a7243f0e7f91117bd",
   "runtime": {
-    "elapsedMs": 1817.0520000000001,
+    "elapsedMs": 1811.1906669999998,
     "node": "v24.16.0",
     "v8": "13.6.233.17-node.49"
   },
@@ -621,9 +621,9 @@
       "geometricParetoEligibleEndpointCount": 0,
       "placementEvaluations": 0,
       "candidateEvaluations": 0,
-      "runtimeMs": 0.432166000000052,
+      "runtimeMs": 0.44533400000000256,
       "runtimeBudgetExceeded": false,
-      "serializedTraceBytes": 809,
+      "serializedTraceBytes": 811,
       "endpoints": [],
       "rankedCanonicalGeometryHashes": []
     },
@@ -695,8 +695,8 @@
         "reusedPrefixPlacements": 0,
         "placedCount": 5,
         "requestedCount": 5,
-        "runtimeMs": 13.265207999999802,
-        "peakRssDeltaBytes": 262144
+        "runtimeMs": 12.654957999999851,
+        "peakRssDeltaBytes": 278528
       },
       "contactStripLanes": [
         {
@@ -713,8 +713,8 @@
           "reusedPrefixPlacements": 0,
           "placedCount": 3,
           "requestedCount": 5,
-          "runtimeMs": 8.313707999999906,
-          "peakRssDeltaBytes": 425984,
+          "runtimeMs": 7.814540999999963,
+          "peakRssDeltaBytes": 393216,
           "failureReason": "piece shapes-17-7 has no legal contact placement inside the requested short-axis strip."
         },
         {
@@ -731,7 +731,7 @@
           "reusedPrefixPlacements": 0,
           "placedCount": 3,
           "requestedCount": 5,
-          "runtimeMs": 27.240374999999858,
+          "runtimeMs": 26.588958000000048,
           "peakRssDeltaBytes": 425984,
           "failureReason": "piece shapes-17-7 has no legal contact placement inside the requested short-axis strip."
         },
@@ -749,8 +749,8 @@
           "reusedPrefixPlacements": 0,
           "placedCount": 4,
           "requestedCount": 5,
-          "runtimeMs": 12.351499999999987,
-          "peakRssDeltaBytes": 360448,
+          "runtimeMs": 12.179665999999997,
+          "peakRssDeltaBytes": 376832,
           "failureReason": "piece shapes-17-15 has no legal contact placement inside the requested short-axis strip."
         },
         {
@@ -767,8 +767,8 @@
           "reusedPrefixPlacements": 0,
           "placedCount": 5,
           "requestedCount": 5,
-          "runtimeMs": 13.265207999999802,
-          "peakRssDeltaBytes": 262144
+          "runtimeMs": 12.654957999999851,
+          "peakRssDeltaBytes": 278528
         }
       ],
       "contactStripPromotion": {
@@ -809,8 +809,8 @@
         "contactStripAdmitted": true,
         "promoted": false
       },
-      "runtimeMs": 65.19491600000015,
-      "peakRssDeltaBytes": 1736704,
+      "runtimeMs": 62.73116699999969,
+      "peakRssDeltaBytes": 1769472,
       "serializedTraceBytes": 5289
     }
   },

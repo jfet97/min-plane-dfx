@@ -32,8 +32,8 @@ absent bounds accessor made the experimental comparator fall through to its ID
 tie-break. Typecheck exposed the mistake; the mechanism and trace were renamed,
 then reproduced identically three times.
 
-The authoritative run at source commit `7009e04` passed all 18 sequential
-layouts:
+The contract was independently reproduced from clean committed source
+`4bc3c0f`. Its algorithm-producing command passed all 18 sequential layouts:
 
 - nine unchanged Compact controls;
 - nine genuine directional Short Side layouts;
@@ -41,11 +41,11 @@ layouts:
 - zero Compact fallbacks and zero directional misses;
 - exact paired placed/unplaced ID partitions.
 
-The worktree Electron package lacked its downloaded binary after all algorithms
-passed. The existing SVGs were rendered with the repository's installed
-Electron helper from the primary checkout, then the matrix's
-`--resume-existing --reuse-png` path assembled and verified the checksummed
-portable archive without recomputing the layouts.
+The reproduction invoked the normal matrix command without
+`--resume-existing`, executed all algorithm cases itself, rendered all PNGs with
+the repository Electron helper, and wrote the final manifest and checksums in
+the same run. All SVG and PNG bytes match the previously reviewed directional
+layouts.
 
 ## Evidence
 
@@ -53,4 +53,3 @@ portable archive without recomputing the layouts.
 - [`../artifacts/compact-short-side-directional-contract/summary.json`](../artifacts/compact-short-side-directional-contract/summary.json)
 - [`../artifacts/compact-short-side-directional-contract/manifest.json`](../artifacts/compact-short-side-directional-contract/manifest.json)
 - [`../artifacts/compact-short-side-directional-contract/SHA256SUMS`](../artifacts/compact-short-side-directional-contract/SHA256SUMS)
-
