@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
 import { Effect, Layer, Schema } from 'effect'
@@ -417,6 +418,7 @@ interface CapacityRunReport {
         readonly coldSearch: unknown
         readonly warmPrefixLanes: IntrinsicCapacityTrace['warmPrefixLanes']
         readonly cohesionShadow: IntrinsicCapacityTrace['cohesionShadow']
+        readonly qualityWarmPrefix: IntrinsicCapacityTrace['qualityWarmPrefix']
         readonly laneCoordinator: IntrinsicCapacityTrace['laneCoordinator']
         readonly selected: IntrinsicCapacityObjective
         readonly preflightRuntimeMs: number | undefined
@@ -662,6 +664,7 @@ async function runArm(
             coldSearch: trace.coldSearch,
             warmPrefixLanes: trace.warmPrefixLanes,
             cohesionShadow: trace.cohesionShadow,
+            qualityWarmPrefix: trace.qualityWarmPrefix,
             laneCoordinator: trace.laneCoordinator,
             selected: trace.selected,
             preflightRuntimeMs: trace.preflightRuntimeMs,
@@ -925,7 +928,7 @@ interface CliArguments {
 }
 
 function parseArguments(argv: ReadonlyArray<string>): CliArguments {
-  let outputDirectory = '/private/tmp/irregular-capacity-gate'
+  let outputDirectory = `${tmpdir()}/irregular-capacity-gate`
   let selected: ReadonlySet<string> = new Set(fixtures.map(({ id }) => id))
   let paired = false
   let strict = false
@@ -1068,7 +1071,8 @@ for (const fixture of fixtures) {
       production.capacity?.laneCoordinator === undefined ||
       intrinsicCapacityLaneCoordinatorTraceValid(
         production.capacity.laneCoordinator,
-        production.capacity.warmPrefixLanes ?? []
+        production.capacity.warmPrefixLanes ?? [],
+        production.capacity.qualityWarmPrefix
       ),
     oneWarmLaneBeyondPilot:
       production.capacity?.laneCoordinator === undefined ||

@@ -200,6 +200,10 @@ function argument(name: string): string | undefined {
   return index < 0 ? undefined : process.argv[index + 1]
 }
 
+function hasArgument(name: string): boolean {
+  return process.argv.includes(name)
+}
+
 function runProcess(
   baseline: Baseline,
   arguments_: ReadonlyArray<string>,
@@ -363,6 +367,7 @@ function focusedExpectedArguments(baseline: Baseline): ReadonlyArray<string> {
 
 const outputDirectory =
   argument('--output-dir') ?? '/private/tmp/min-plane-provenance/compact-nine-baselines'
+const skipPng = hasArgument('--skip-png')
 await mkdir(outputDirectory, { recursive: true })
 
 const outcomes: Array<{
@@ -461,8 +466,10 @@ for (let index = 0; index < BASELINES.length; index += 1) {
     outputDirectory,
     `${baseline.fixture}-${baseline.sheet}.short-side-profile.png`
   )
-  renderSvgToPng(join(outputDirectory, compactReport.svgPath), compactPngPath)
-  renderSvgToPng(join(outputDirectory, shortSideReport.svgPath), shortSidePngPath)
+  if (!skipPng) {
+    renderSvgToPng(join(outputDirectory, compactReport.svgPath), compactPngPath)
+    renderSvgToPng(join(outputDirectory, shortSideReport.svgPath), shortSidePngPath)
+  }
   const archiveSelected =
     shortSideReport.result.intrinsicShortSideObserverTrace?.outputInfluence ===
     'selected'
@@ -525,7 +532,7 @@ for (let index = 0; index < BASELINES.length; index += 1) {
         compactReport.objectiveProfile === 'compact' &&
         compactReport.passed,
       svgPath: compactReport.svgPath,
-      pngPath: basename(compactPngPath)
+      pngPath: skipPng ? undefined : basename(compactPngPath)
     },
     {
       fixture: baseline.fixture,
@@ -556,7 +563,7 @@ for (let index = 0; index < BASELINES.length; index += 1) {
         Boolean(shortSideReport.checks.exactPiecePartition) &&
         shortSideReport.passed,
       svgPath: shortSideReport.svgPath,
-      pngPath: basename(shortSidePngPath)
+      pngPath: skipPng ? undefined : basename(shortSidePngPath)
     }
   )
 }
@@ -662,12 +669,18 @@ await writeFile(
       version: 'compact-short-side-production-provenance-v2',
       generatedAt: new Date().toISOString(),
       sourceCommit,
-      command: ['pnpm', 'gate:compact-nine-baselines', '--output-dir', '<output-directory>'],
+      command: [
+        'pnpm',
+        'gate:compact-nine-baselines',
+        '--output-dir',
+        '<output-directory>',
+        ...(skipPng ? ['--skip-png'] : [])
+      ],
       runtime: {
         node: process.version,
         v8: process.versions.v8
       },
-      svgRenderer: SVG_RENDERER_SCRIPT,
+      svgRenderer: skipPng ? undefined : SVG_RENDERER_SCRIPT,
       execution: {
         maximumConcurrentAlgorithmProcesses: 1,
         algorithmCases: BASELINES.length * 2,
