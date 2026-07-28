@@ -1,8 +1,6 @@
 # Implementation Prompt for Claude Fable 5
 
-You are working in the existing repository at:
-
-`/Users/andreasimonecosta/Documents/Work/min-plane-dfx`
+You are working in an existing checkout of the `min-plane-dfx` repository. Do not assume a machine-specific absolute path. Resolve the repository root with `git rev-parse --show-toplevel` and use repository-relative paths throughout the work.
 
 Your task is to implement a production-grade native Rust backend for the complete polygon-based irregular nesting implementation used by the Compact and Compact Short Side profiles.
 
