@@ -32,8 +32,9 @@ band with two small enclosed voids. Shipping it was evaluated seriously.
 Independent design review ruled to keep the protected Compact result.
 
 - Shared-boundary length cannot replace the connectivity guards. It is
-  floating-point (`Math.hypot` at `canonicalGridContact.ts:227,274`,
-  accumulated as floats at `canonicalLayoutGeometry.ts:226`), and total
+  floating-point (the `Math.hypot` calls in
+  `canonicalGridEdgeLengthMm`, accumulated as floats inside
+  `measureCanonicalLayoutContacts`), and total
   length can grow while contact concentrates in fewer pieces; this strip is
   itself the witness, winning length while regressing every connectivity
   term. The observer research record treats shared boundary as descriptive
@@ -80,9 +81,10 @@ alternative shares the same anchor.
 The selector now measures the exact axis-projected overlap of every tied
 candidate against the placed pieces (BigInt surrogate in
 `canonicalGridContact.ts`, no floats) and takes the strongest, provided the
-challenger is not deeper than the translation-order baseline winner, so the
-directional depth can never regress through a tie choice. Silent scores fall
-back to the historical tuple order.
+challenger is not deeper than the translation-order baseline winner, so no tie
+choice ever deepens the tied piece itself. Downstream anchors respond to the
+new geometry, so final strip depth is a measured corpus guarantee rather than
+a structural one. Silent scores fall back to the historical tuple order.
 
 Measured outcomes: the Mixed-61 `2000x2700` flagship keeps span `2000`,
 depth `207.700`, envelope `415,400 mm2`, density, fill, and zero cavities,

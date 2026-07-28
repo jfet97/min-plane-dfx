@@ -485,8 +485,13 @@ prepared order, at the legal candidate whose occupied grid anchor is
 lexicographically smallest in `(y, x)`. Candidates come from the same exact
 NFP/IFP generator and canonical legality check production Compact uses, so a
 piece settles into a neighbour's concavity instead of advancing by bounding box,
-and opposed orientations interlock without any shape-specific rule. There is
-still no beam, no reordering, no repair, and no restart.
+and opposed orientations interlock without any shape-specific rule. When
+several legal candidates share the minimal anchor, the selector measures the
+exact axis-projected overlap each tied candidate makes against the placed
+pieces (a BigInt surrogate, no floats) and takes the strongest, provided the
+challenger is not deeper than the translation-order baseline winner; silent
+scores fall back to the historical tuple order. There is still no beam, no
+reordering, no repair, and no restart.
 
 The two families exist because the historical one cannot express interlocking
 at all. Its cursor advances by the AABB width and its rows are separated by the
@@ -504,8 +509,10 @@ strip stays in the trace with its full measurements rather than disappearing.
 
 On `2000 x 2700` the contact strip wins Mixed-61 with `2000.000 x 207.700 mm`,
 all `61/61` pieces, zero cavities, `100%` short-edge fill, `75.4664%` density,
-and a `0.215088` occupied-hull gap, replacing the shelf's
-`1987.776 x 301.187 mm`, `52.3621%` density, and `0.432505` hull gap. Triangle-20
+a `0.211051` occupied-hull gap, `1,367.4 mm` of exact shared boundary, `27`
+isolated pieces, `36` positive-contact components, and a largest component of
+`13`, replacing the shelf's `1987.776 x 301.187 mm`, `52.3621%` density, and
+`0.432505` hull gap. Triangle-20
 and Shapes-17 keep their historical sources: their strips are measured, recorded,
 and rejected because the Triangle strip fills only `46.2333%` of the short edge
 and the Shapes strip regresses density and hull gap.

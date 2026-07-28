@@ -232,7 +232,8 @@ describe('intrinsic short-side contact strip', () => {
           'leaning',
           [point(0, 0), point(40, 0), point(40, 20)],
           [0, 180]
-        )
+        ),
+        rectangle('afterwards', 10, 10)
       ],
       tieEvidenceSink: (entry) => {
         ties.push(entry)
@@ -241,10 +242,14 @@ describe('intrinsic short-side contact strip', () => {
 
     expect(outcome.trace.status).toBe('constructed')
     const placed = outcome.placedCollisionGeometries ?? []
-    expect(placed).toHaveLength(2)
+    expect(placed).toHaveLength(3)
     // the 180-degree orientation edge-contacts the wall despite losing the
     // translation-order baseline to the point-contact 0-degree orientation
     expect(placed[1]?.placement.transform.rotationDeg).toBe(180)
+    // the piece placed after the swap keeps the layout at the depth the
+    // baseline construction would also have reached in this scenario
+    const allPoints = placed.flatMap((entry) => placedCollisionWorldGridPath(entry) ?? [])
+    expect(Math.max(...allPoints.map(({ y }) => y))).toBeLessThanOrEqual(30_000)
     expect(
       ties.some(
         (tie) =>

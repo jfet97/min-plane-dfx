@@ -262,6 +262,16 @@ function constructStrip(
           placed.length
         )
       }
+      const boundedAfterSelection = boundedStatus(runtime)
+      if (boundedAfterSelection !== undefined) {
+        return failedOutcome(
+          input,
+          runtime,
+          boundedAfterSelection,
+          `${boundedAfterSelection} reached after contact-aware tie selection.`,
+          placed.length
+        )
+      }
       const best = selection.winner
       if (selection.tiedCount >= 2) {
         input.runtimeControl?.tieEvidenceSink?.(
@@ -387,9 +397,11 @@ function compareAnchoredCandidates(first: AnchoredCandidate, second: AnchoredCan
  * selector instead measures the exact axis-projected contact each tied
  * candidate makes against the placed pieces and takes the strongest, provided
  * the challenger is not deeper than the translation-order baseline winner, so
- * the directional depth of the strip can never regress through a tie choice.
- * Silent scores (ties or undecidable paths) fall back to the historical tuple
- * order, so behavior away from contact-decisive ties is unchanged.
+ * no tie choice ever deepens the tied piece itself. Downstream anchors respond
+ * to the new geometry, so final strip depth is a measured corpus guarantee,
+ * not a structural one. Silent or undecidable scores fall back to the
+ * historical tuple order, so behavior away from contact-decisive ties is
+ * unchanged.
  */
 function selectContactAwareWinner(
   candidates: ReadonlyArray<AnchoredCandidate>,
@@ -420,6 +432,17 @@ function selectContactAwareWinner(
     }
   }
   const baselineScore = candidateContactAxisUnits(baseline, placed, piece)
+  if (baselineScore === undefined) {
+    return {
+      winner: baseline,
+      baselineWinner: baseline,
+      tiedCount: tied.length,
+      tied,
+      winnerScore: undefined,
+      baselineScore: undefined,
+      selectionChanged: false
+    }
+  }
   let winner = baseline
   let winnerScore = baselineScore
   for (const challenger of tied) {
@@ -428,7 +451,6 @@ function selectContactAwareWinner(
     const challengerScore = candidateContactAxisUnits(challenger, placed, piece)
     if (challengerScore === undefined) continue
     if (
-      winnerScore === undefined ||
       challengerScore > winnerScore ||
       (challengerScore === winnerScore && compareAnchoredCandidates(challenger, winner) < 0)
     ) {

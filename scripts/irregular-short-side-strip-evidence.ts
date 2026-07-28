@@ -215,9 +215,12 @@ const contacts = measureCanonicalLayoutContacts(placed)
 const fittedCanonicalSha256 = canonicalizeIrregularLayout(polygons).sha256
 const svgPath = `${outputPrefix}.svg`
 await mkdir(dirname(outputPrefix), { recursive: true })
-await writeFile(svgPath, renderSvg(sheet, polygons))
+// the strip is constructed in normalized (short, long) coordinates, so it is
+// rendered against the normalized frame rather than the requested sheet
+await writeFile(svgPath, renderSvg(stripSheet, polygons))
 const report = jsonSafe({
-  sheet: { width: sheet.width, height: sheet.height },
+  requestedSheet: { width: sheet.width, height: sheet.height },
+  normalizedStripSheet: { width: stripSheet.width, height: stripSheet.height },
   probeElapsedMs: Math.max(0, performance.now() - startedAt),
   stripStatus: outcome.trace.status,
   placedCount: placed.length,
