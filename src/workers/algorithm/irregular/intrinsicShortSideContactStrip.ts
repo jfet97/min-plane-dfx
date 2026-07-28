@@ -433,14 +433,16 @@ function selectContactAwareWinner(
     }
   }
   if (baseline === undefined) return { kind: 'none' }
-  const tied = candidates.filter(
-    (anchored) =>
+  const tied: AnchoredCandidate[] = []
+  for (const anchored of candidates) {
+    const bounded = boundedStatus(runtime)
+    if (bounded !== undefined) return { kind: 'bounded', status: bounded }
+    if (
       anchored.anchorLongAxisGrid === baseline.anchorLongAxisGrid &&
       anchored.anchorShortAxisGrid === baseline.anchorShortAxisGrid
-  )
-  const boundedAfterTieFilter = boundedStatus(runtime)
-  if (boundedAfterTieFilter !== undefined) {
-    return { kind: 'bounded', status: boundedAfterTieFilter }
+    ) {
+      tied.push(anchored)
+    }
   }
   if (tied.length < 2) {
     return {
