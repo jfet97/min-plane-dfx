@@ -279,7 +279,7 @@ describe('intrinsic short-side contact strip', () => {
     ).toBe(true)
   })
 
-  it('retains exact contact count but disables the length suffix for diagonal contact', async () => {
+  it('counts diagonal contact without projecting it into the axis-length suffix', async () => {
     const ties: Array<{
       readonly selectionChanged: boolean
       readonly scores: ReadonlyArray<{
@@ -302,7 +302,7 @@ describe('intrinsic short-side contact strip', () => {
     expect(
       ties.some(
         (tie) =>
-          tie.scores.some(({ contactAxisUnits }) => contactAxisUnits?.endsWith(':undecidable'))
+          tie.scores.some(({ contactAxisUnits }) => contactAxisUnits?.match(/^[1-9]\d*:0$/))
       )
     ).toBe(true)
   })

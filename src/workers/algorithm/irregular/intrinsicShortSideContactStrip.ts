@@ -91,10 +91,9 @@ export interface IntrinsicShortSideContactStripRuntimeControl {
  * the winning `(long axis, short axis)` anchor for one prepared piece. The
  * contact score is `<positive-contact-count>:<axis-overlap-units>`. Positive
  * contact is classified directly on canonical integer-grid edges. The
- * axis-overlap suffix is an exact secondary tie-break only when every positive
- * contact is axis-aligned. Diagonal contact retains its exact positive-contact
- * count but disables the incomparable projected-length suffix, so equal-count
- * candidates fall back to the historical deterministic tuple.
+ * axis-overlap suffix is an exact secondary tie-break over the axis-aligned
+ * portion of those contacts. Diagonal contact contributes to the exact count
+ * but deliberately contributes no projected length.
  */
 export interface IntrinsicShortSideContactStripTieEvidence {
   readonly pieceIndex: number
@@ -501,7 +500,7 @@ interface ContactAwareSelection {
 
 interface ContactScore {
   readonly positiveContactCount: number
-  readonly axisUnits: bigint | undefined
+  readonly axisUnits: bigint
 }
 
 type ContactAwareSelectionResult =
@@ -672,7 +671,7 @@ function candidateContactAxisUnits(
   )
   if (worldPath === undefined) return { score: undefined, bounded: undefined }
   let positiveContactCount = 0
-  let axisUnits: bigint | undefined = 0n
+  let axisUnits = 0n
   for (const placedPiece of placed) {
     const bounded = boundedStatus(runtime)
     if (bounded !== undefined) return { score: undefined, bounded }
@@ -696,10 +695,9 @@ function candidateContactAxisUnits(
       return { score: undefined, bounded: boundedDuringScan }
     }
     if (overlap.kind === 'undecidable') {
-      axisUnits = undefined
       continue
     }
-    if (axisUnits !== undefined) axisUnits += overlap.score
+    axisUnits += overlap.score
   }
   return {
     score: { positiveContactCount, axisUnits },
@@ -711,7 +709,6 @@ function compareContactScores(first: ContactScore, second: ContactScore): number
   if (first.positiveContactCount !== second.positiveContactCount) {
     return first.positiveContactCount - second.positiveContactCount
   }
-  if (first.axisUnits === undefined || second.axisUnits === undefined) return 0
   return first.axisUnits < second.axisUnits
     ? -1
     : first.axisUnits > second.axisUnits
@@ -722,7 +719,7 @@ function compareContactScores(first: ContactScore, second: ContactScore): number
 function serializeContactScore(score: ContactScore | undefined): string | undefined {
   return score === undefined
     ? undefined
-    : `${score.positiveContactCount}:${score.axisUnits?.toString() ?? 'undecidable'}`
+    : `${score.positiveContactCount}:${score.axisUnits.toString()}`
 }
 
 function measureTieEvidence(
