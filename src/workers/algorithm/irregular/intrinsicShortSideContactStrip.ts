@@ -68,7 +68,7 @@ export type IntrinsicShortSideContactStripSelectionPolicy =
 export type IntrinsicShortSideContactStripOrderPolicy =
   | 'prepared'
   | 'reverse'
-  | 'area-descending'
+  | 'piece-id-ascending'
 
 export interface IntrinsicShortSideContactStripOutcome {
   readonly trace: IntrinsicShortSideContactStripTrace

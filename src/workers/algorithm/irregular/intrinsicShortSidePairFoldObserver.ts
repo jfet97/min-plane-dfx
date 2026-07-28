@@ -647,8 +647,8 @@ function constructPairFold(input: TerminalObserverInput, runtime: ObserverRuntim
           preparedPieces: input.preparedPieces.toReversed()
         },
         {
-          orderPolicy: 'area-descending' as const,
-          preparedPieces: sortByExactCollisionArea(input.preparedPieces)
+          orderPolicy: 'piece-id-ascending' as const,
+          preparedPieces: sortByPieceId(input.preparedPieces)
         }
       ]
       for (const continuation of orderContinuations) {
@@ -800,28 +800,14 @@ function selectDirectionalIncumbent(
     : second
 }
 
-function sortByExactCollisionArea(
+function sortByPieceId(
   pieces: ReadonlyArray<IrregularPreparedPiece>
 ): ReadonlyArray<IrregularPreparedPiece> {
   return [...pieces].sort((first, second) => {
-    const firstArea = exactPreparedCollisionEnvelopeArea(first) ?? -1n
-    const secondArea = exactPreparedCollisionEnvelopeArea(second) ?? -1n
-    if (firstArea !== secondArea) return firstArea > secondArea ? -1 : 1
     const firstId = first.pieceId ?? first.source.id
     const secondId = second.pieceId ?? second.source.id
     return firstId < secondId ? -1 : firstId > secondId ? 1 : 0
   })
-}
-
-function exactPreparedCollisionEnvelopeArea(
-  piece: IrregularPreparedPiece
-): bigint | undefined {
-  const bounds = piece.collisionGeometry.sourceBounds
-  const width = toGridMm(bounds.maxX - bounds.minX)
-  const height = toGridMm(bounds.maxY - bounds.minY)
-  return width === undefined || height === undefined
-    ? undefined
-    : BigInt(width) * BigInt(height)
 }
 
 function directionalFillTier(metrics: {

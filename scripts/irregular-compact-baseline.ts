@@ -475,7 +475,8 @@ const contactStripLaneContractValid =
         .every(
           (lane, index) =>
             lane.selectionPolicy === 'depth-first' &&
-            lane.orderPolicy === (index === 0 ? 'reverse' : 'area-descending')
+            lane.orderPolicy ===
+              (index === 0 ? 'reverse' : 'piece-id-ascending')
         )))
 const shortSidePairFoldContractValid =
   shortSidePairFoldTrace === undefined
