@@ -524,10 +524,11 @@ exact axis-projected overlap each tied candidate makes against the placed
 pieces (BigInt accumulation after exact canonical-grid collinearity) and takes
 the strongest only when every positive contact is axis-aligned, provided the
 challenger is not deeper than the translation-order baseline winner. A
-positive diagonal contact or otherwise undecidable score makes the complete
-contact score undefined and falls back to the historical tuple order; partial
-axis-aligned overlap from other contacts cannot rank that candidate. There is
-still no beam, no reordering, no repair, and no restart.
+positive diagonal contact retains its exact contact-count term but disables the
+projected-length suffix. Equal-count candidates then fall back to the historical
+tuple order; partial axis-aligned overlap from other contacts cannot rank the
+diagonal-bearing candidate. There is still no beam, no reordering, no repair,
+and no restart.
 
 The two families exist because the historical one cannot express interlocking
 at all. Its cursor advances by the AABB width and its rows are separated by the

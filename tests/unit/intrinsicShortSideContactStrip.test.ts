@@ -279,7 +279,7 @@ describe('intrinsic short-side contact strip', () => {
     ).toBe(true)
   })
 
-  it('falls back to the deterministic tuple when a tied candidate has diagonal contact', async () => {
+  it('retains exact contact count but disables the length suffix for diagonal contact', async () => {
     const ties: Array<{
       readonly selectionChanged: boolean
       readonly scores: ReadonlyArray<{
@@ -302,8 +302,7 @@ describe('intrinsic short-side contact strip', () => {
     expect(
       ties.some(
         (tie) =>
-          !tie.selectionChanged &&
-          tie.scores.some(({ contactAxisUnits }) => contactAxisUnits === undefined)
+          tie.scores.some(({ contactAxisUnits }) => contactAxisUnits?.endsWith(':undecidable'))
       )
     ).toBe(true)
   })
