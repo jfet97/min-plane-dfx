@@ -58,13 +58,14 @@ export const INTRINSIC_CAPACITY_V1_BOUNDS = {
   placementEvaluationQuotaPerDepth: 4_096
 } as const
 
-export const INTRINSIC_ANYTIME_CHECKPOINT_VERSION = 'intrinsic-anytime-checkpoint-v2' as const
+export const INTRINSIC_ANYTIME_CHECKPOINT_VERSION = 'intrinsic-anytime-checkpoint-v3' as const
 
 export type IntrinsicCapacitySettlement = 'exhausted' | 'evaluation-cap' | 'paused'
 
 export type IntrinsicAnytimeProducerRole =
   | 'capacity-cold'
   | 'capacity-cohesion-shadow'
+  | 'capacity-quality-warm-prefix'
   | 'capacity-warm-prefix'
   | 'legacy-complete'
   | 'experimental-place-defer-complete'
@@ -82,6 +83,7 @@ export type IntrinsicCapacityRetentionMode =
   | 'axis-buckets-shadow'
   | 'cohesion-frontier'
   | 'cohesion-frontier-shadow'
+  | 'quality-frontier'
 
 export interface IntrinsicAnytimeFitMask {
   readonly q0: boolean
@@ -165,6 +167,7 @@ export interface IntrinsicAnytimeCheckpoint {
   readonly censoring: 'none'
   readonly noSkipFrontier: IntrinsicAnytimeNoSkipFrontierState
   readonly counters: IntrinsicCapacitySearchCounters
+  readonly topologyRetentionDepths: ReadonlyArray<IntrinsicCapacityTopologyRetentionDepthTrace>
   readonly integrityHash: string
 }
 
@@ -335,7 +338,8 @@ export function runIntrinsicCapacityColdSearch(
     const capture = input.capturePhaseTimings === true
     const captureTopologyRetention =
       input.retentionMode === 'cohesion-frontier' ||
-      input.retentionMode === 'cohesion-frontier-shadow'
+      input.retentionMode === 'cohesion-frontier-shadow' ||
+      input.retentionMode === 'quality-frontier'
     const settings = yield* GeometrySettings
     const geometryKernel = yield* GeometryKernel
     const nfpIfpService = yield* NfpIfpService
@@ -393,7 +397,9 @@ export function runIntrinsicCapacityColdSearch(
         ? input.retentionMode === 'cohesion-frontier-shadow'
           ? 'capacity-cohesion-shadow'
           : 'capacity-cold'
-        : 'capacity-warm-prefix'
+        : input.retentionMode === 'quality-frontier'
+          ? 'capacity-quality-warm-prefix'
+          : 'capacity-warm-prefix'
     const maximumDepthBoundaries = input.maximumDepthBoundaries
     if (
       maximumDepthBoundaries !== undefined &&
@@ -476,7 +482,9 @@ export function runIntrinsicCapacityColdSearch(
       }
     const startDepth = input.checkpoint?.nextDepth ?? initialDepth
     let completedDepthBoundariesThisInvocation = 0
-    const topologyRetentionDepths: IntrinsicCapacityTopologyRetentionDepthTrace[] = []
+    const topologyRetentionDepths: IntrinsicCapacityTopologyRetentionDepthTrace[] = [
+      ...(input.checkpoint?.topologyRetentionDepths ?? [])
+    ]
 
     let beam: ReadonlyArray<CapacityBeamEntry>
     if (input.checkpoint === undefined && warmPrefix.entry !== undefined) {
@@ -899,6 +907,7 @@ export function runIntrinsicCapacityColdSearch(
           perDepthBudgetLedgers,
           noSkipFrontier,
           counters,
+          topologyRetentionDepths,
           producerRole,
           schedulerDeficit: input.schedulerDeficit ?? 0,
           sheetWidthGrid,
@@ -935,7 +944,8 @@ export function runIntrinsicCapacityColdSearch(
         state: entry.state,
         unplacedPreparedIds,
         origin:
-          producerRole === 'capacity-warm-prefix'
+          producerRole === 'capacity-warm-prefix' ||
+          producerRole === 'capacity-quality-warm-prefix'
             ? 'warm-prefix-continuation'
             : 'cold-search',
         ...(input.warmPrefixSeed === undefined
@@ -1015,7 +1025,8 @@ export function materializeIntrinsicCapacityCheckpointEndpoints(input: {
       state: entry.state,
       unplacedPreparedIds,
       origin:
-        input.checkpoint.producerRole === 'capacity-warm-prefix'
+        input.checkpoint.producerRole === 'capacity-warm-prefix' ||
+        input.checkpoint.producerRole === 'capacity-quality-warm-prefix'
           ? 'warm-prefix-continuation'
           : 'cold-search',
       ...(input.warmPrefixSeed === undefined
@@ -1170,9 +1181,11 @@ function makeIntrinsicCapacityCheckpoint(input: {
   readonly perDepthBudgetLedgers: ReadonlyArray<IntrinsicAnytimeDepthBudgetLedger>
   readonly noSkipFrontier: IntrinsicAnytimeNoSkipFrontierState
   readonly counters: IntrinsicCapacitySearchCounters
+  readonly topologyRetentionDepths: ReadonlyArray<IntrinsicCapacityTopologyRetentionDepthTrace>
   readonly producerRole:
     | 'capacity-cold'
     | 'capacity-cohesion-shadow'
+    | 'capacity-quality-warm-prefix'
     | 'capacity-warm-prefix'
   readonly schedulerDeficit: number
   readonly sheetWidthGrid: number
@@ -1229,7 +1242,8 @@ function makeIntrinsicCapacityCheckpoint(input: {
     settlement: 'active',
     censoring: 'none',
     noSkipFrontier: input.noSkipFrontier,
-    counters: input.counters
+    counters: input.counters,
+    topologyRetentionDepths: input.topologyRetentionDepths
   }
   return {
     ...checkpointWithoutIntegrity,
@@ -1244,6 +1258,7 @@ function validateIntrinsicCapacityCheckpoint(input: {
   readonly producerRole:
     | 'capacity-cold'
     | 'capacity-cohesion-shadow'
+    | 'capacity-quality-warm-prefix'
     | 'capacity-warm-prefix'
   readonly schedulerDeficit: number
   readonly preparedIds: ReadonlyArray<PieceId>
@@ -1271,7 +1286,8 @@ function validateIntrinsicCapacityCheckpoint(input: {
     settlement: checkpoint.settlement,
     censoring: checkpoint.censoring,
     noSkipFrontier: checkpoint.noSkipFrontier,
-    counters: checkpoint.counters
+    counters: checkpoint.counters,
+    topologyRetentionDepths: checkpoint.topologyRetentionDepths
   })
   if (checkpoint.integrityHash !== expectedIntegrityHash) {
     return 'checkpoint integrity hash does not match its retained frontier.'
@@ -1545,7 +1561,8 @@ function intrinsicCapacityCheckpointIntegrityHash(
         settlement: checkpoint.settlement,
         censoring: checkpoint.censoring,
         noSkipFrontier: checkpoint.noSkipFrontier,
-        counters: checkpoint.counters
+        counters: checkpoint.counters,
+        topologyRetentionDepths: checkpoint.topologyRetentionDepths
       })
     )
     .digest('hex')
@@ -1821,12 +1838,19 @@ function retainCapacityBeamEntries(
   }
   if (
     mode === 'cohesion-frontier' ||
-    mode === 'cohesion-frontier-shadow'
+    mode === 'cohesion-frontier-shadow' ||
+    mode === 'quality-frontier'
   ) {
     return retainCapacityCohesionFrontier(
       entries,
       beamWidth,
-      topologyMeasurements ?? makeCapacityTopologyMeasurements()
+      topologyMeasurements ?? makeCapacityTopologyMeasurements(),
+      mode === 'quality-frontier'
+        ? {
+            objectiveBucketWidth: Math.max(1, beamWidth - 4),
+            topologyBucketWidth: 1
+          }
+        : undefined
     )
   }
 
@@ -1857,7 +1881,11 @@ function retainCapacityBeamEntries(
 function retainCapacityCohesionFrontier(
   entries: ReadonlyArray<CapacityBeamEntry>,
   beamWidth: number,
-  topologyMeasurements: CapacityTopologyMeasurements
+  topologyMeasurements: CapacityTopologyMeasurements,
+  allocation?: {
+    readonly objectiveBucketWidth: number
+    readonly topologyBucketWidth: number
+  }
 ): ReadonlyArray<CapacityBeamEntry> {
   const compareTopology = (
     first: CapacityBeamEntry,
@@ -1906,19 +1934,23 @@ function retainCapacityCohesionFrontier(
       if (added >= maximum || retained.length >= beamWidth) return
     }
   }
-  const bucketWidth = Math.max(1, Math.floor(beamWidth / 4))
-  reserve(entries.toSorted(compareCapacityBeamEntries), bucketWidth)
+  const topologyBucketWidth =
+    allocation?.topologyBucketWidth ??
+    Math.max(1, Math.floor(beamWidth / 4))
+  const objectiveBucketWidth =
+    allocation?.objectiveBucketWidth ?? topologyBucketWidth
+  reserve(entries.toSorted(compareCapacityBeamEntries), objectiveBucketWidth)
   reserve(
     entries.toSorted((first, second) =>
       compareTopology(first, second, 'isolated')
     ),
-    bucketWidth
+    topologyBucketWidth
   )
   reserve(
     entries.toSorted((first, second) =>
       compareTopology(first, second, 'largest-component')
     ),
-    bucketWidth
+    topologyBucketWidth
   )
   reserve(
     entries.toSorted((first, second) =>

@@ -278,6 +278,12 @@ after a complete miss the settled/checkpointed cold state transfers directly to
 the capacity coordinator. The production capacity retention frontier protects
 generic compactness and exact contact/topology representatives inside its own
 16-state cohort; it does not alter complete-cohort survivor slots or ranking.
+For requests of at least 32 pieces, a distinct
+`capacity-quality-warm-prefix` producer may subsequently resume the deepest
+fitting canonical prefix with its own 16-state frontier, budget, checkpoint
+role, and trace ledger. It cannot replace an existing partial endpoint unless
+it places strictly more pieces; ties preserve the incumbent byte-for-byte.
+This remains deterministic cooperative work in the same process.
 
 An additional observer-only experimental complete cohort makes one explicit
 place/defer decision by moving the first pending piece to a second pass. Its

@@ -33,6 +33,7 @@ quality production path.
 
 - [Intrinsic capacity mode implementation](./intrinsic-capacity-mode-implementation.md)
 - [Unified intrinsic anytime portfolio](./intrinsic-anytime-portfolio.md)
+- [Capacity retention quality regression](./capacity-retention-quality-regression.md)
 
 ## Sheet Invariance and Archive Construction
 

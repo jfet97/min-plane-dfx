@@ -27,6 +27,7 @@ import {
   intrinsicCapacityPreparedPieceId
 } from '../../src/workers/algorithm/irregular/intrinsicCapacityMaterial.js'
 import {
+  intrinsicCapacityQualityStrictlyImprovesPlacedCount,
   runIntrinsicCapacityMode,
   type IntrinsicCapacityModeResult,
   type RunIntrinsicCapacityModeInput
@@ -65,6 +66,17 @@ import {
 function point(x: number, y: number): IrregularPoint {
   return new IrregularPoint({ x, y })
 }
+
+describe('intrinsic capacity quality admission', () => {
+  it('admits only a strict placed-count improvement', () => {
+    expect(intrinsicCapacityQualityStrictlyImprovesPlacedCount(18, 17)).toBe(true)
+    expect(intrinsicCapacityQualityStrictlyImprovesPlacedCount(17, 17)).toBe(false)
+    expect(intrinsicCapacityQualityStrictlyImprovesPlacedCount(16, 17)).toBe(false)
+    expect(intrinsicCapacityQualityStrictlyImprovesPlacedCount(undefined, 17)).toBe(
+      false
+    )
+  })
+})
 
 function rectanglePoints(width: number, height: number): ReadonlyArray<IrregularPoint> {
   return [point(0, 0), point(width, 0), point(width, height), point(0, height)]
@@ -984,6 +996,76 @@ describe('intrinsic capacity prefixes', () => {
     expect(
       resumed.endpoints.every(({ origin }) => origin === 'warm-prefix-continuation')
     ).toBe(true)
+
+    const qualityUninterrupted = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        warmPrefixSeed,
+        retentionMode: 'quality-frontier'
+      })
+    )
+    const qualityPaused = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        warmPrefixSeed,
+        retentionMode: 'quality-frontier',
+        maximumDepthBoundaries: 1
+      })
+    )
+    expect(qualityPaused.checkpoint?.producerRole).toBe(
+      'capacity-quality-warm-prefix'
+    )
+    const qualityCheckpoint = qualityPaused.checkpoint
+    expect(qualityCheckpoint).toBeDefined()
+    if (qualityCheckpoint === undefined) return
+    const qualityResumed = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        warmPrefixSeed,
+        retentionMode: 'quality-frontier',
+        checkpoint: qualityCheckpoint
+      })
+    )
+    const omitRetentionTimings = (
+      trace: typeof qualityUninterrupted.trace
+    ) => ({
+      ...trace,
+      topologyRetentionDepths: trace.topologyRetentionDepths?.map(
+        ({
+          topologyMeasurementMs: _topologyMeasurementMs,
+          contactMeasurementMs: _contactMeasurementMs,
+          ...depth
+        }) => depth
+      )
+    })
+    expect(omitRetentionTimings(qualityResumed.trace)).toEqual(
+      omitRetentionTimings(qualityUninterrupted.trace)
+    )
+    expect(qualityResumed.endpoints).toEqual(qualityUninterrupted.endpoints)
+    const crossRoleFailure = await provideGeometry(
+      runIntrinsicCapacityColdSearch({
+        sheet: finalSheet,
+        preparedPieces: pieces,
+        materialAreasByPieceId,
+        cavityCache: new Map(),
+        warmPrefixSeed,
+        retentionMode: 'quality-frontier',
+        checkpoint
+      }).pipe(Effect.flip)
+    )
+    expect(crossRoleFailure._tag).toBe('IntrinsicCapacityError')
+    if (crossRoleFailure._tag === 'IntrinsicCapacityError') {
+      expect(crossRoleFailure.message).toContain('fingerprint')
+    }
   })
 
   it('matches cold-only output exactly when no descriptor is captured', async () => {

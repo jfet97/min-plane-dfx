@@ -116,8 +116,9 @@ The first run measured:
 The focused stage adds about `1.7 s` on the selected Shapes roomy case and
 about `2.4 s` on roomy Mixed before its deterministic cap. It adds no
 evaluations on constrained cases where preflight or complete fit makes it
-inapplicable. Mixed-61 `700 x 500` remains the exact `48/61` intertwined
-capacity result and records a zero-work no-fitting-complete skip.
+inapplicable. The later protected capacity-quality continuation improves
+Mixed-61 `700 x 500` to `50/61`; focused complete reconstruction remains
+inapplicable and unchanged.
 
 Shapes-17 on `600 x 600`, `2000 x 2700`, `5000 x 5000`, and
 `10000 x 10000` selects the same `1ddc8426...` canonical geometry with exactly

@@ -290,6 +290,7 @@ describe('intrinsic capacity integration', () => {
       expect(computed.capacityTrace?.routing).toBe('preflight-proven-impossible')
       expect(computed.capacityTrace?.preflight.kind).toBe('proven_impossible')
       expect(computed.capacityTrace?.prefixes.capturedCount).toBe(0)
+      expect(computed.capacityTrace?.qualityWarmPrefix).toBeUndefined()
       expect(computed.capacityTrace?.coldSearch.auxiliaryPlacementEvaluations).toBe(0)
       expect(computed.focusedCompleteReconstructionTrace).toMatchObject({
         status: 'skipped-preflight-proven-impossible',
@@ -512,6 +513,12 @@ describe('intrinsic capacity integration', () => {
         true
       )
       expect(scheduled.capacityTrace?.warmPrefixEndpointsAdmitted).toBe(true)
+      expect(scheduled.capacityTrace?.qualityWarmPrefix).toMatchObject({
+        version: 'intrinsic-capacity-quality-warm-prefix-v1',
+        producerRole: 'capacity-quality-warm-prefix',
+        policy: 'quality-frontier',
+        sourceRole: 'canonical-grid'
+      })
       expect(
         scheduled.intrinsicAnytimeSchedulerTrace === undefined
           ? false
@@ -525,7 +532,8 @@ describe('intrinsic capacity integration', () => {
           ? false
           : intrinsicCapacityLaneCoordinatorTraceValid(
               laneCoordinator,
-              warmPrefixLanes
+              warmPrefixLanes,
+              scheduled.capacityTrace?.qualityWarmPrefix
             )
       ).toBe(true)
       expect(
@@ -559,7 +567,8 @@ describe('intrinsic capacity integration', () => {
                 ...laneCoordinator,
                 quanta: corruptedQuanta
               },
-              warmPrefixLanes
+              warmPrefixLanes,
+              scheduled.capacityTrace?.qualityWarmPrefix
             )
           ).toBe(false)
         }
@@ -591,7 +600,7 @@ describe('intrinsic capacity integration', () => {
       )
       expect(
         scheduled.capacityTrace?.laneCoordinator?.retainedCheckpointCount
-      ).toBeLessThanOrEqual(warmLaneCount)
+      ).toBeLessThanOrEqual(warmLaneCount + 1)
       expect(scheduled.placedCollisionGeometries.length).toBeGreaterThanOrEqual(
         computed.placedCollisionGeometries.length
       )
@@ -620,6 +629,7 @@ describe('intrinsic capacity integration', () => {
       })
 
       expect(computed.capacityTrace).toBeUndefined()
+      expect(computed.capacityTrace?.qualityWarmPrefix).toBeUndefined()
       expect(computed.portfolio.terminationReason).toBe('shared_archive_completed')
       expect(computed.unplacedPieceIds).toEqual([])
       expect(scheduled.placedCollisionGeometries).toEqual(computed.placedCollisionGeometries)

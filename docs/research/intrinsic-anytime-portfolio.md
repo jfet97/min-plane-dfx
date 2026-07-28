@@ -395,14 +395,39 @@ the cold settlement occurs before final complete settlement on the fixture,
 and validate the full quantum chronology. This remains cooperative
 single-worker execution and therefore makes no settled wall-time claim.
 
-The capacity checkpoint is now `intrinsic-anytime-checkpoint-v2`. Each retained
+The capacity checkpoint is now `intrinsic-anytime-checkpoint-v3`. Each retained
 frontier entry records the class-owned continuation identity consumed by its
 next placement, while the checkpoint integrity hash binds the exact decision
 partition, public objective data, incremental contact history, canonical-entry
 cache, and spatial-index identity. Resume additionally rebuilds canonical-entry
 and spatial-index structure from placed geometry. Corruption tests mutate each
 private cache independently and require rejection; uninterrupted and resumed
-endpoint/trace equality remains exact.
+endpoint/trace equality remains exact. Version 3 also carries cumulative
+topology-retention depth records so uninterrupted and resumed quality-frontier
+traces reconcile exactly apart from measured wall time.
+
+### Protected Capacity-Quality Continuation
+
+The production cohesion frontier fixed several constrained baselines but
+reduced Mixed-61 `700 x 500` from the historical 49-piece result to 48. A
+global 12-objective/4-topology rebalance recovered 50 pieces there and 59 on
+`700 x 560`, but regressed Mixed-61 `600 x 400`, changed Mixed-61 `300 x 300`,
+and worsened the Shapes-17 `600 x 400` envelope. It was reverted.
+
+The accepted correction keeps the production cold and warm lanes unchanged.
+After an uncensored complete miss, a third `capacity-quality-warm-prefix`
+producer independently resumes the deepest fitting `canonical-grid` prefix
+with that 12/4 retention split. It has its own checkpoint role, fingerprint,
+budget entitlement, quanta, and ledger. It runs only on requests with at least
+twice the production beam width (32 pieces), and only a strict placed-count
+gain may enter the partial archive. Exact preflight proofs, fitting complete
+endpoints, ties, losses, and smaller requests cannot change output.
+
+At source `62e5c19`, sequential paired evidence placed Mixed-61 `50/61` on
+`700 x 500` from prefix depth 15 and `59/61` on `700 x 560` from depth 30.
+Triangle-20 `300 x 300` remained byte-identical at `17/20` and recorded a
+zero-evaluation scale skip. The full 18-layout Compact/Short Side matrix
+remained exact.
 
 ### Constrained Triangle Protected-Diversity Probe
 

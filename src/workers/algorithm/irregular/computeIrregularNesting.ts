@@ -217,6 +217,7 @@ export interface IntrinsicAnytimeSchedulerTrace {
     readonly cohort: 'partial' | 'complete' | 'experimental-complete'
     readonly producerRole:
       | 'capacity-cold'
+      | 'capacity-quality-warm-prefix'
       | 'legacy-complete'
       | 'capacity-warm-prefix'
       | 'experimental-place-defer-complete'
@@ -268,7 +269,9 @@ export function intrinsicAnytimeSchedulerTraceValid(
     ({ producerRole }) => producerRole === 'capacity-cold'
   )
   const laterWarm = laterPartial.filter(
-    ({ producerRole }) => producerRole === 'capacity-warm-prefix'
+    ({ producerRole }) =>
+      producerRole === 'capacity-warm-prefix' ||
+      producerRole === 'capacity-quality-warm-prefix'
   )
   const coldSettledBeforeComplete = quanta.some(
     ({ producerRole, outcome }, index) =>
@@ -978,7 +981,8 @@ function coordinateIntrinsicSharedArchive(
               .filter(
                 ({ producerRole, phase, outcome }) =>
                   (producerRole === 'capacity-cold' && phase === 'resume') ||
-                  (producerRole === 'capacity-warm-prefix' &&
+                  ((producerRole === 'capacity-warm-prefix' ||
+                    producerRole === 'capacity-quality-warm-prefix') &&
                     (phase === 'initial' ||
                       phase === 'censor' ||
                       outcome === 'settled'))

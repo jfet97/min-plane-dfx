@@ -136,7 +136,7 @@ four-depth no-permanent-skip probe. Verified fitting prefixes may also seed
 independent resumable warm lanes with protected budgets. Telemetry observers
 remain disabled in production and have no routing, ranking, or selection
 consumer.
-The cold checkpoint format is now `intrinsic-anytime-checkpoint-v2`; its
+The cold checkpoint format is now `intrinsic-anytime-checkpoint-v3`; its
 integrity hash binds every frontier decision plus the private canonical,
 incremental-contact, and spatial-index continuation identity. Resume also
 rebuilds canonical-entry and spatial-index structure from exact placed
@@ -159,6 +159,19 @@ every pilot and resume with exact depth and evaluation deltas, and a validator
 reconciles them with aggregate and per-lane ledgers. It does not change
 complete construction, use terminal compactness as a scheduling signal, or
 allow warm and cold states to share survivor slots.
+
+After the ordinary cold and warm-prefix work settles, requests with at least
+32 pieces may run one third, independently protected
+`capacity-quality-warm-prefix` lane from the deepest fitting
+`canonical-grid` prefix. It retains 12 objective representatives plus four
+topology representatives inside its own width-16 frontier. It cannot displace
+an incumbent on a tie: admission requires a strictly greater placed count.
+Its trace distinguishes full settlement, evaluation-cap settlement, and a
+retained checkpoint censored before settlement.
+Smaller requests record `skipped-below-minimum-piece-count` and consume zero
+evaluations. This preserves Triangle-20 and Shapes-17 timing while recovering
+Mixed-61 `700 x 500` from 48 to 50 pieces and retaining 59 pieces on
+`700 x 560`.
 
 The next complete-side seam is now isolated but not scheduled: the strict
 sheetless constructor has an opt-in, versioned checkpoint at fully committed
