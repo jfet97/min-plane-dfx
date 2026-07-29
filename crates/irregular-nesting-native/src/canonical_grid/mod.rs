@@ -6,7 +6,9 @@
 //! `canonicalGridContact.ts`'s contact-measurement functions are a separate
 //! module's assignment and are not ported here.
 
+pub mod contact;
 mod js_local;
+pub mod layout;
 mod math;
 mod offset_policy;
 
