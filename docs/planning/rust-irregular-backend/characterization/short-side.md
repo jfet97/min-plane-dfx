@@ -911,8 +911,8 @@ wall-clock- and RSS-budget-based, using the runtime records described in §4.
   port must reproduce in effect (final trace status is correct) without
   necessarily reproducing the intermediate mislabeling if it never crosses
   an observable boundary — but note it **does** cross into the message string
-  interpolated at `intrinsicShortSideContactStrip.ts:294` ("`${bounded}
-  reached during contact-strip ${phase}.`" — wait, that interpolates the
+  interpolated at `intrinsicShortSideContactStrip.ts:293` ("`${bounded}
+  reached during contact-strip ${phase}.`") — that interpolates the
   *locally recomputed* `bounded`, not the mislabeled `reason`, so the message
   is accurate; only the discarded `IrregularNfpIfpControlAbortError.reason`
   field itself is mislabeled and it is never read after being thrown/caught
